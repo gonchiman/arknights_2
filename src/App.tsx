@@ -6,17 +6,33 @@ import { SummaryCards } from './components/SummaryCards'
 import { DATA_URLS, loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
 import { exportSkillsCsv } from './lib/exportCsv'
-import { SKILL_EFFECT_TYPES, type SkillEffectType, type SkillRecord } from './types/skill'
+import {
+  ACTIVATION_TRIGGERS,
+  DAMAGE_COMPONENT_TYPES,
+  EFFECT_WINDOWS,
+  SKILL_CONDITION_TYPES,
+  type ActivationTriggerType,
+  type DamageComponentType,
+  type EffectWindowType,
+  type SkillClassificationOverride,
+  type SkillConditionType,
+  type SkillRecord,
+} from './types/skill'
 import './index.css'
 
-const OVERRIDE_STORAGE_KEY = 'arknights-skill-effect-overrides'
-const initialFilters: FilterState = { query: '', rarity: 'ALL', effectType: 'ALL' }
+const OVERRIDE_STORAGE_KEY = 'arknights-skill-classification-overrides-v2'
+const initialFilters: FilterState = {
+  query: '',
+  rarity: 'ALL',
+  effectWindow: 'ALL',
+  damageComponent: 'ALL',
+}
 
 export default function App() {
   const [rows, setRows] = useState<SkillRecord[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [filters, setFilters] = useState<FilterState>(initialFilters)
-  const [overrides, setOverrides] = useState<Record<string, SkillEffectType>>(loadOverrides)
+  const [overrides, setOverrides] = useState<Record<string, SkillClassificationOverride>>(loadOverrides)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -45,16 +61,17 @@ export default function App() {
     const query = filters.query.trim().toLowerCase()
     if (query && !`${row.operatorName} ${row.skillName} ${row.description} ${row.skillId}`.toLowerCase().includes(query)) return false
     if (filters.rarity !== 'ALL' && row.rarity !== filters.rarity) return false
-    if (filters.effectType !== 'ALL' && row.classification.type !== filters.effectType) return false
+    if (filters.effectWindow !== 'ALL' && row.classification.effectWindow.value !== filters.effectWindow) return false
+    if (filters.damageComponent !== 'ALL' && !row.classification.damageComponents.value.includes(filters.damageComponent)) return false
     return true
   }), [classifiedRows, filters])
 
   const selected = classifiedRows.find((row) => row.id === selectedId) ?? null
 
-  const updateOverride = (skillId: string, type: SkillEffectType | null) => {
+  const updateOverride = (skillId: string, override: SkillClassificationOverride | null) => {
     setOverrides((current) => {
       const next = { ...current }
-      if (type) next[skillId] = type
+      if (override && Object.keys(override).length > 0) next[skillId] = override
       else delete next[skillId]
       localStorage.setItem(OVERRIDE_STORAGE_KEY, JSON.stringify(next))
       return next
@@ -66,8 +83,8 @@ export default function App() {
       <header className="topbar">
         <div>
           <p className="eyebrow">ARKNIGHTS DATA TOOL</p>
-          <h1>Skill Effect Classifier</h1>
-          <p className="subtitle">説明文とゲームデータから、計算機の出力単位を自動判定する。</p>
+          <h1>Skill Model Classifier</h1>
+          <p className="subtitle">説明文と構造データから、終了条件・発動契機・ダメージ構成・出力可否を個別に判定する。</p>
         </div>
         <div className="top-actions">
           <button className="button secondary" onClick={() => void load()} disabled={loading}>データ再読込</button>
@@ -86,7 +103,11 @@ export default function App() {
           </div>
           <SkillTable rows={filtered} selectedId={selectedId} onSelect={(row) => setSelectedId(row.id)} />
         </div>
-        <SkillDetail skill={selected} onOverride={(type) => selected && updateOverride(selected.id, type)} />
+        <SkillDetail
+          skill={selected}
+          override={selected ? overrides[selected.id] : undefined}
+          onOverride={(override) => selected && updateOverride(selected.id, override)}
+        />
       </section>
 
       <footer>
@@ -98,16 +119,34 @@ export default function App() {
   )
 }
 
-function loadOverrides(): Record<string, SkillEffectType> {
+function loadOverrides(): Record<string, SkillClassificationOverride> {
   try {
     const value = localStorage.getItem(OVERRIDE_STORAGE_KEY)
     const parsed = value ? JSON.parse(value) as Record<string, unknown> : {}
-    return Object.fromEntries(
-      Object.entries(parsed).filter((entry): entry is [string, SkillEffectType] => (
-        typeof entry[1] === 'string' && SKILL_EFFECT_TYPES.includes(entry[1] as SkillEffectType)
-      )),
-    )
+    const result: Record<string, SkillClassificationOverride> = {}
+
+    for (const [skillId, candidate] of Object.entries(parsed)) {
+      if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) continue
+      const raw = candidate as Record<string, unknown>
+      const override: SkillClassificationOverride = {}
+
+      if (isMember(raw.effectWindow, EFFECT_WINDOWS)) override.effectWindow = raw.effectWindow as EffectWindowType
+      if (isMember(raw.activationTrigger, ACTIVATION_TRIGGERS)) override.activationTrigger = raw.activationTrigger as ActivationTriggerType
+      if (isMemberArray(raw.damageComponents, DAMAGE_COMPONENT_TYPES)) override.damageComponents = raw.damageComponents as DamageComponentType[]
+      if (isMemberArray(raw.conditions, SKILL_CONDITION_TYPES)) override.conditions = raw.conditions as SkillConditionType[]
+      if (Object.keys(override).length > 0) result[skillId] = override
+    }
+
+    return result
   } catch {
     return {}
   }
+}
+
+function isMember<T extends string>(value: unknown, options: readonly T[]): value is T {
+  return typeof value === 'string' && options.includes(value as T)
+}
+
+function isMemberArray<T extends string>(value: unknown, options: readonly T[]): value is T[] {
+  return Array.isArray(value) && value.every((item) => isMember(item, options))
 }

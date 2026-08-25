@@ -12,29 +12,89 @@ export interface RawSkillLevel {
   blackboard?: Array<{ key?: string; value?: number }>
 }
 
-export const SKILL_EFFECT_TYPES = [
-  'TIMED',
+export const EFFECT_WINDOWS = [
+  'FIXED_DURATION',
   'AMMO',
   'PERMANENT',
-  'NEXT_ATTACK',
-  'TRAP',
-  'INSTANT',
-  'PASSIVE',
+  'TOGGLE_OR_MODE',
+  'NONE',
   'UNKNOWN',
 ] as const
 
-export type SkillEffectType = typeof SKILL_EFFECT_TYPES[number]
-export type ClassificationConfidence = 'HIGH' | 'MEDIUM' | 'LOW'
-export type SkillOutputMode = 'SKILL_DPS' | 'PER_USE' | 'NORMAL_DPS' | 'REVIEW'
+export type EffectWindowType = typeof EFFECT_WINDOWS[number]
 
-export interface SkillClassification {
-  type: SkillEffectType
-  label: string
-  outputMode: SkillOutputMode
+export const ACTIVATION_TRIGGERS = [
+  'MANUAL',
+  'AUTO_SP',
+  'NEXT_ATTACK',
+  'ON_DEPLOY',
+  'PASSIVE',
+  'CONDITIONAL',
+  'UNKNOWN',
+] as const
+
+export type ActivationTriggerType = typeof ACTIVATION_TRIGGERS[number]
+
+export const DAMAGE_COMPONENT_TYPES = [
+  'BASIC_ATTACK_MODIFIER',
+  'BURST',
+  'PERIODIC',
+  'DEPLOYED_OBJECT',
+  'SUMMON',
+  'DAMAGE_OVER_TIME',
+  'NO_DIRECT_DAMAGE',
+  'UNKNOWN',
+] as const
+
+export type DamageComponentType = typeof DAMAGE_COMPONENT_TYPES[number]
+
+export const SKILL_CONDITION_TYPES = [
+  'CHARGE',
+  'OVERCHARGE',
+  'PHASE',
+  'MODE',
+  'TARGET_STATE',
+  'DEPLOY_TIME',
+  'ACTIVATION_COUNT',
+  'OTHER',
+] as const
+
+export type SkillConditionType = typeof SKILL_CONDITION_TYPES[number]
+export type ClassificationConfidence = 'HIGH' | 'MEDIUM' | 'LOW'
+export type ClassificationSource = 'AUTO' | 'MANUAL'
+
+export interface ClassifiedField<T> {
+  value: T
   confidence: ClassificationConfidence
   reasons: string[]
-  source: 'AUTO' | 'MANUAL'
-  automaticType?: SkillEffectType
+  source: ClassificationSource
+  automaticValue?: T
+}
+
+export interface OutputCapabilities {
+  canShowPerHit: boolean
+  canShowPerActivationTotal: boolean
+  canShowDps: boolean
+  canShowWindowTotal: boolean
+  canShowSteadyStateDps: boolean
+  requiresModeSelection: boolean
+  requiresManualModel: boolean
+}
+
+export interface SkillClassification {
+  effectWindow: ClassifiedField<EffectWindowType>
+  activationTrigger: ClassifiedField<ActivationTriggerType>
+  damageComponents: ClassifiedField<DamageComponentType[]>
+  conditions: ClassifiedField<SkillConditionType[]>
+  outputCapabilities: OutputCapabilities
+  requiresManualModelReasons: string[]
+}
+
+export interface SkillClassificationOverride {
+  effectWindow?: EffectWindowType
+  activationTrigger?: ActivationTriggerType
+  damageComponents?: DamageComponentType[]
+  conditions?: SkillConditionType[]
 }
 
 export interface SkillRecord {
