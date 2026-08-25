@@ -1,85 +1,13 @@
 <!doctype html>
 <html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#111111" />
-  <title>Arknights Skill Analyzer</title>
-  <link rel="stylesheet" href="./styles.css" />
-</head>
-<body>
-  <main class="app-shell">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">ARKNIGHTS DATA TOOL</p>
-        <h1>Skill Analyzer</h1>
-        <p class="subtitle">ゲームデータからスキルの効果タイプを自動分類し、判定根拠と例外を確認する。</p>
-      </div>
-      <div class="top-actions">
-        <button id="reloadButton" class="button secondary">データ再読込</button>
-        <button id="exportButton" class="button" disabled>CSV出力</button>
-      </div>
-    </header>
-
-    <section id="errorBox" class="error-box hidden"></section>
-
-    <section id="summaryGrid" class="summary-grid"></section>
-
-    <section class="workspace">
-      <div class="list-pane">
-        <div class="filters">
-          <input id="searchInput" class="search" placeholder="オペレーター名・スキル名・説明文で検索" />
-          <select id="classFilter"></select>
-          <select id="rarityFilter">
-            <option value="ALL">レアリティ: すべて</option>
-            <option value="6">★6</option>
-            <option value="5">★5</option>
-            <option value="4">★4</option>
-            <option value="3">★3</option>
-            <option value="2">★2</option>
-            <option value="1">★1</option>
-          </select>
-          <select id="confidenceFilter">
-            <option value="ALL">信頼度: すべて</option>
-            <option value="high">高</option>
-            <option value="medium">中</option>
-            <option value="low">低</option>
-          </select>
-        </div>
-
-        <div class="result-meta">
-          <span id="resultCount">0 件表示</span>
-          <span id="overrideCount">手動修正 0 件</span>
-        </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>オペレーター</th>
-                <th>Skill</th>
-                <th>分類</th>
-                <th>信頼度</th>
-                <th>時間</th>
-                <th>SP</th>
-              </tr>
-            </thead>
-            <tbody id="skillTableBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <aside id="detailPane" class="detail-pane">
-        <p class="empty-state">データを読み込んでいます。</p>
-      </aside>
-    </section>
-
-    <footer>
-      <span>Data: ArknightsAssets/ArknightsGamedata (JP)</span>
-      <a id="skillSourceLink" target="_blank" rel="noreferrer">skill_table.json</a>
-      <a id="characterSourceLink" target="_blank" rel="noreferrer">character_table.json</a>
-    </footer>
-  </main>
-  <script type="module" src="./app.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#111111" />
+    <title>Arknights Skill Analyzer</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

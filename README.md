@@ -1,34 +1,51 @@
 # Arknights Skill Analyzer
 
-アークナイツの公開ゲームデータを読み込み、スキルの効果タイプを自動分類・確認するための分析UIです。
+アークナイツのゲームデータからスキル効果タイプを自動分類し、判定根拠・信頼度・例外を確認するための分析ツールです。
 
-## 機能
+## 技術構成
 
-- JP版 `character_table.json` / `skill_table.json` を直接読み込み
-- 「持続」「弾薬」「永続」「通常攻撃強化」「一撃必殺」などへルールベース分類
-- 判定信頼度・判定根拠・検出フラグを表示
-- オペレーター名、スキル名、説明文の検索
-- 分類、レアリティ、信頼度による絞り込み
-- 手動分類の上書き（ブラウザの localStorage に保存）
-- 現在の分類結果をCSVエクスポート
-- 最終スキルレベルのRaw JSON表示
+- Vite
+- React
+- TypeScript
+- ArknightsAssets/ArknightsGamedata の JP データ
+- GitHub Pages
 
-## ローカル実行
-
-依存パッケージはありません。`index.html` をHTTPサーバーで配信してください。
+## 開発
 
 ```bash
-python -m http.server 8000
+npm install
+npm run dev
 ```
 
-その後 `http://localhost:8000` を開きます。
+ビルド確認:
 
-## データソース
+```bash
+npm run build
+```
 
-- `ArknightsAssets/ArknightsGamedata` の `jp/gamedata/excel/character_table.json`
-- `ArknightsAssets/ArknightsGamedata` の `jp/gamedata/excel/skill_table.json`
+## ディレクトリ
 
-## 分類器
+```text
+src/
+├─ components/    # UIコンポーネント
+├─ lib/           # 分類・データ取得・CSV・保存などのロジック
+├─ types/         # 型定義
+├─ App.tsx
+├─ main.tsx
+└─ index.css
+```
 
-現時点はMVPです。`durationType`, `duration`, スキル説明文を使っています。
-「一撃必殺」「持続＋一撃必殺」「条件分岐」「その他」にはヒューリスティックが含まれるため、UIで確認・修正して精度を上げる前提です。
+分類ロジックは `src/lib/classifier.ts` に集約しているため、UIを触らずにルールを追加・修正できます。
+
+## 現在の機能
+
+- スキル一覧・検索・絞り込み
+- `duration` / `durationType` / 説明文による自動分類
+- 判定根拠と信頼度の表示
+- 手動分類の上書きと LocalStorage 保存
+- CSV 出力
+- Raw JSON 表示
+
+## 分類について
+
+現在の分類器はヒューリスティックです。`durationType = AMMO` などの構造化データによる高信頼ルールと、説明文による中・低信頼ルールを分けています。今後は既存の手動分類データを正解データとして照合し、ルールを改善する想定です。
