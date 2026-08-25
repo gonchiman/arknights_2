@@ -1,4 +1,5 @@
 import type { RawSkillLevel, SkillRecord } from '../types/skill'
+import { classifySkill } from './classifier'
 
 const BASE = 'https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/master/jp/gamedata/excel'
 
@@ -9,7 +10,8 @@ export const DATA_URLS = {
 
 type CharacterTable = Record<string, {
   name?: string
-  rarity?: number
+  displayNumber?: string | null
+  rarity?: number | string
   skills?: Array<{ skillId?: string }>
 }>
 
@@ -32,7 +34,9 @@ export async function loadSkillRecords(): Promise<SkillRecord[]> {
   const rows: SkillRecord[] = []
 
   for (const [operatorId, operator] of Object.entries(characters)) {
-    if (!operator.name || !operator.skills?.length) continue
+    // 召喚物やステージギミックも character_table に含まれる。
+    // displayNumber を持つプレイアブルなオペレーターだけを対象にする。
+    if (!operator.name || !operator.displayNumber || !operator.skills?.length) continue
 
     operator.skills.forEach((skillRef, index) => {
       const skillId = skillRef.skillId
@@ -45,7 +49,7 @@ export async function loadSkillRecords(): Promise<SkillRecord[]> {
         id: `${operatorId}:${skillId}`,
         operatorId,
         operatorName: operator.name ?? operatorId,
-        rarity: (operator.rarity ?? 0) + 1,
+        rarity: parseRarity(operator.rarity),
         skillIndex: index + 1,
         skillId,
         skillName: level.name ?? skillId,
@@ -56,12 +60,19 @@ export async function loadSkillRecords(): Promise<SkillRecord[]> {
         spType: level.spData?.spType ?? 'UNKNOWN',
         initSp: typeof level.spData?.initSp === 'number' ? level.spData.initSp : null,
         spCost: typeof level.spData?.spCost === 'number' ? level.spData.spCost : null,
+        classification: classifySkill(level),
         raw: level,
       })
     })
   }
 
   return rows.sort((a, b) => b.rarity - a.rarity || a.operatorName.localeCompare(b.operatorName, 'ja') || a.skillIndex - b.skillIndex)
+}
+
+function parseRarity(value: number | string | undefined): number {
+  if (typeof value === 'number') return value + 1
+  const match = value?.match(/TIER_(\d+)/)
+  return match ? Number(match[1]) : 0
 }
 
 function stripMarkup(value: string): string {
