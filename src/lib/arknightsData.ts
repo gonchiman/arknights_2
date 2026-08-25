@@ -1,4 +1,3 @@
-import { classifySkill } from './classifier'
 import type { RawSkillLevel, SkillRecord } from '../types/skill'
 
 const BASE = 'https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/master/jp/gamedata/excel'
@@ -42,7 +41,6 @@ export async function loadSkillRecords(): Promise<SkillRecord[]> {
       const level = skill?.levels?.at(-1)
       if (!level) return
 
-      const classification = classifySkill(level)
       rows.push({
         id: `${operatorId}:${skillId}`,
         operatorId,
@@ -56,8 +54,8 @@ export async function loadSkillRecords(): Promise<SkillRecord[]> {
         durationType: level.durationType ?? 'UNKNOWN',
         skillType: level.skillType ?? 'UNKNOWN',
         spType: level.spData?.spType ?? 'UNKNOWN',
+        initSp: typeof level.spData?.initSp === 'number' ? level.spData.initSp : null,
         spCost: typeof level.spData?.spCost === 'number' ? level.spData.spCost : null,
-        ...classification,
         raw: level,
       })
     })
