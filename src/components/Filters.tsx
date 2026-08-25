@@ -31,16 +31,34 @@ interface Props {
 export function Filters({ value, professionOptions, subProfessionOptions, onChange }: Props) {
   return (
     <div className="filters">
+      <div className="initial-filter" role="group" aria-label="オペレーター名の頭文字">
+        <span className="initial-filter-label">頭文字</span>
+        <button
+          type="button"
+          className={`initial-button ${value.nameInitial === 'ALL' ? 'active' : ''}`}
+          aria-pressed={value.nameInitial === 'ALL'}
+          onClick={() => onChange({ ...value, nameInitial: 'ALL' })}
+        >
+          すべて
+        </button>
+        {OPERATOR_INITIALS.map((initial) => (
+          <button
+            type="button"
+            className={`initial-button ${value.nameInitial === initial ? 'active' : ''}`}
+            aria-pressed={value.nameInitial === initial}
+            onClick={() => onChange({ ...value, nameInitial: initial })}
+            key={initial}
+          >
+            {OPERATOR_INITIAL_LABELS[initial]}
+          </button>
+        ))}
+      </div>
       <input
         className="search"
         value={value.query}
         onChange={(event) => onChange({ ...value, query: event.target.value })}
         placeholder="オペレーター名・スキル名・説明文で検索"
       />
-      <select value={value.nameInitial} onChange={(event) => onChange({ ...value, nameInitial: event.target.value as OperatorInitial | 'ALL' })}>
-        <option value="ALL">頭文字: すべて</option>
-        {OPERATOR_INITIALS.map((initial) => <option key={initial} value={initial}>{OPERATOR_INITIAL_LABELS[initial]}</option>)}
-      </select>
       <select
         value={value.profession}
         onChange={(event) => onChange({ ...value, profession: event.target.value, subProfession: 'ALL' })}
