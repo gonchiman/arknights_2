@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Filters, type FilterState } from './components/Filters'
+import { Filters, type FilterOption, type FilterState } from './components/Filters'
 import { SkillDetail } from './components/SkillDetail'
 import { SkillTable } from './components/SkillTable'
 import { SummaryCards } from './components/SummaryCards'
@@ -23,6 +23,9 @@ import './index.css'
 const OVERRIDE_STORAGE_KEY = 'arknights-skill-classification-overrides-v2'
 const initialFilters: FilterState = {
   query: '',
+  nameInitial: 'ALL',
+  profession: 'ALL',
+  subProfession: 'ALL',
   rarity: 'ALL',
   effectWindow: 'ALL',
   damageComponent: 'ALL',
@@ -57,9 +60,21 @@ export default function App() {
     classification: applyManualClassification(row.classification, overrides[row.id]),
   })), [rows, overrides])
 
+  const professionOptions = useMemo(() => uniqueOptions(rows.map((row) => ({
+    value: row.profession,
+    label: row.professionLabel,
+  }))), [rows])
+
+  const subProfessionOptions = useMemo(() => uniqueOptions(rows
+    .filter((row) => filters.profession === 'ALL' || row.profession === filters.profession)
+    .map((row) => ({ value: row.subProfessionId, label: row.subProfessionName }))), [rows, filters.profession])
+
   const filtered = useMemo(() => classifiedRows.filter((row) => {
     const query = filters.query.trim().toLowerCase()
     if (query && !`${row.operatorName} ${row.skillName} ${row.description} ${row.skillId}`.toLowerCase().includes(query)) return false
+    if (filters.nameInitial !== 'ALL' && row.nameInitial !== filters.nameInitial) return false
+    if (filters.profession !== 'ALL' && row.profession !== filters.profession) return false
+    if (filters.subProfession !== 'ALL' && row.subProfessionId !== filters.subProfession) return false
     if (filters.rarity !== 'ALL' && row.rarity !== filters.rarity) return false
     if (filters.effectWindow !== 'ALL' && row.classification.effectWindow.value !== filters.effectWindow) return false
     if (filters.damageComponent !== 'ALL' && !row.classification.damageComponents.value.includes(filters.damageComponent)) return false
@@ -97,7 +112,12 @@ export default function App() {
 
       <section className="workspace">
         <div className="list-pane">
-          <Filters value={filters} onChange={setFilters} />
+          <Filters
+            value={filters}
+            professionOptions={professionOptions}
+            subProfessionOptions={subProfessionOptions}
+            onChange={setFilters}
+          />
           <div className="result-meta">
             <span>{loading ? '読み込み中...' : `${filtered.length} 件表示`}</span>
           </div>
@@ -114,6 +134,7 @@ export default function App() {
         <span>Data: ArknightsAssets/ArknightsGamedata (JP)</span>
         <a href={DATA_URLS.skill} target="_blank" rel="noreferrer">skill_table.json</a>
         <a href={DATA_URLS.character} target="_blank" rel="noreferrer">character_table.json</a>
+        <a href={DATA_URLS.uniequip} target="_blank" rel="noreferrer">uniequip_table.json</a>
       </footer>
     </main>
   )
@@ -149,4 +170,9 @@ function isMember<T extends string>(value: unknown, options: readonly T[]): valu
 
 function isMemberArray<T extends string>(value: unknown, options: readonly T[]): value is T[] {
   return Array.isArray(value) && value.every((item) => isMember(item, options))
+}
+
+function uniqueOptions(options: FilterOption[]): FilterOption[] {
+  return [...new Map(options.map((option) => [option.value, option])).values()]
+    .sort((a, b) => a.label.localeCompare(b.label, 'ja'))
 }

@@ -33,7 +33,10 @@ export function SkillTable({ rows, selectedId, onSelect }: Props) {
             const outputs = getOutputCapabilityLabels(row.classification.outputCapabilities)
             return (
               <tr key={row.id} className={selectedId === row.id ? 'selected' : ''} onClick={() => onSelect(row)}>
-                <td><strong>{row.operatorName}</strong><small>★{row.rarity}</small></td>
+                <td>
+                  <strong>{row.operatorName}</strong>
+                  <small>★{row.rarity} · {row.professionLabel} / {row.subProfessionName}</small>
+                </td>
                 <td>S{row.skillIndex}<small>{row.skillName}</small></td>
                 <td>
                   <span className="tag">{EFFECT_WINDOW_LABELS[row.classification.effectWindow.value]}</span>

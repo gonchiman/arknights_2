@@ -69,6 +69,7 @@ export function SkillDetail({ skill, override, onOverride }: Props) {
     <aside className="detail-pane">
       <p className="eyebrow">{skill.operatorName} · S{skill.skillIndex} · ★{skill.rarity}</p>
       <h2>{skill.skillName}</h2>
+      <p className="operator-class">{skill.professionLabel} / {skill.subProfessionName}</p>
       <p className="description">{skill.description || '説明文なし'}</p>
 
       <section className="classification-card">
@@ -171,6 +172,8 @@ export function SkillDetail({ skill, override, onOverride }: Props) {
         <h3>スキル情報</h3>
         <dl>
           <div><dt>skillId</dt><dd>{skill.skillId}</dd></div>
+          <div><dt>職業</dt><dd>{skill.professionLabel}</dd></div>
+          <div><dt>職分</dt><dd>{skill.subProfessionName}</dd></div>
           <div><dt>duration</dt><dd>{skill.duration ?? 'null'}</dd></div>
           <div><dt>durationType</dt><dd>{skill.durationType}</dd></div>
           <div><dt>skillType</dt><dd>{skill.skillType}</dd></div>

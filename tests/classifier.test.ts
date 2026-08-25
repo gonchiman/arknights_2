@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { classifySkill } from '../src/lib/classifier.ts'
+import { getOperatorInitial, getProfessionLabel } from '../src/lib/operatorFilters.ts'
 import type { RawSkillLevel } from '../src/types/skill.ts'
 
 const classify = (level: RawSkillLevel) => classifySkill(level)
@@ -83,4 +84,17 @@ test('ホルンS2: 弾薬制とオーバードライブを独立して保持す�
   assert.equal(result.outputCapabilities.canShowDps, true)
   assert.equal(result.outputCapabilities.canShowWindowTotal, true)
   assert.equal(result.outputCapabilities.requiresModeSelection, true)
+})
+
+test('オペレーター名を五十音行・英字・数字の頭文字へ分類する', () => {
+  assert.equal(getOperatorInitial('アイリーニ'), 'A_ROW')
+  assert.equal(getOperatorInitial('ガヴィル'), 'K_ROW')
+  assert.equal(getOperatorInitial('ヴィグナ'), 'A_ROW')
+  assert.equal(getOperatorInitial('W'), 'LATIN')
+  assert.equal(getOperatorInitial('12F'), 'NUMBER')
+})
+
+test('職業IDを日本語名へ変換する', () => {
+  assert.equal(getProfessionLabel('SNIPER'), '狙撃')
+  assert.equal(getProfessionLabel('MEDIC'), '医療')
 })

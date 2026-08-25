@@ -11,7 +11,7 @@ const quote = (value: unknown) => `"${String(value ?? '').replaceAll('"', '""')}
 
 export function exportSkillsCsv(rows: SkillRecord[]) {
   const header = [
-    'オペレーター名', 'レアリティ', 'スキル番号', 'スキル名', 'skillId',
+    'オペレーター名', '頭文字区分', '職業', '職業ID', '職分', '職分ID', 'レアリティ', 'スキル番号', 'スキル名', 'skillId',
     '終了条件', '終了条件の信頼度', '終了条件の判定元', '終了条件の根拠',
     '発動契機', '発動契機の信頼度', '発動契機の判定元', '発動契機の根拠',
     'ダメージ構成', 'ダメージ構成の信頼度', 'ダメージ構成の判定元', 'ダメージ構成の根拠',
@@ -21,6 +21,11 @@ export function exportSkillsCsv(rows: SkillRecord[]) {
   ]
   const body = rows.map((row) => [
     row.operatorName,
+    row.nameInitial,
+    row.professionLabel,
+    row.profession,
+    row.subProfessionName,
+    row.subProfessionId,
     row.rarity,
     row.skillIndex,
     row.skillName,

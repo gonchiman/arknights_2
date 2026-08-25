@@ -101,6 +101,11 @@ export interface SkillRecord {
   id: string
   operatorId: string
   operatorName: string
+  profession: string
+  professionLabel: string
+  subProfessionId: string
+  subProfessionName: string
+  nameInitial: OperatorInitial
   rarity: number
   skillIndex: number
   skillId: string
@@ -115,3 +120,21 @@ export interface SkillRecord {
   classification: SkillClassification
   raw: RawSkillLevel
 }
+
+export const OPERATOR_INITIALS = [
+  'A_ROW',
+  'K_ROW',
+  'S_ROW',
+  'T_ROW',
+  'N_ROW',
+  'H_ROW',
+  'M_ROW',
+  'Y_ROW',
+  'R_ROW',
+  'W_ROW',
+  'LATIN',
+  'NUMBER',
+  'OTHER',
+] as const
+
+export type OperatorInitial = typeof OPERATOR_INITIALS[number]
