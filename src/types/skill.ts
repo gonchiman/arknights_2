@@ -1,16 +1,3 @@
-export type SkillCategory =
-  | '持続'
-  | '弾薬'
-  | '永続'
-  | '通常攻撃強化'
-  | '一撃必殺'
-  | '持続＋一撃必殺'
-  | '条件分岐'
-  | 'その他'
-  | '要確認'
-
-export type Confidence = 'high' | 'medium' | 'low'
-
 export interface RawSkillLevel {
   name?: string
   description?: string
@@ -38,15 +25,7 @@ export interface SkillRecord {
   durationType: string
   skillType: string
   spType: string
+  initSp: number | null
   spCost: number | null
-  category: SkillCategory
-  confidence: Confidence
-  reasons: string[]
   raw: RawSkillLevel
-}
-
-export interface ClassificationResult {
-  category: SkillCategory
-  confidence: Confidence
-  reasons: string[]
 }
