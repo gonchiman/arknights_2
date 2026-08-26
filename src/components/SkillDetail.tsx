@@ -77,13 +77,12 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
 
   return (
     <section className="detail-page">
-      <button className="back-button" onClick={onBack}>← スキル一覧に戻る</button>
+      <button className="back-button" onClick={onBack}>← オペレーター一覧に戻る</button>
 
       <header className="detail-header">
         <div>
-          <p className="eyebrow">{skill.operatorName} · S{skill.skillIndex} · ★{skill.rarity}</p>
-          <h2>{skill.skillName}</h2>
-          <p className="operator-class">{skill.professionLabel} / {skill.subProfessionName}</p>
+          <h2>{skill.operatorName}</h2>
+          <p className="operator-class">★{skill.rarity} · {skill.professionLabel} / {skill.subProfessionName}</p>
         </div>
       </header>
 
