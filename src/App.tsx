@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { Filters, type FilterOption, type FilterState } from './components/Filters'
 import { SkillDetail } from './components/SkillDetail'
 import { SkillTable } from './components/SkillTable'
-import { SummaryCards } from './components/SummaryCards'
 import { DATA_URLS, loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
 import { exportSkillsCsv } from './lib/exportCsv'
@@ -108,7 +107,6 @@ export default function App() {
       </header>
 
       {error && <section className="error-box">{error}</section>}
-      <SummaryCards rows={classifiedRows} />
 
       <section className="workspace">
         <div className="list-pane">
