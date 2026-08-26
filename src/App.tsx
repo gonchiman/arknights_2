@@ -18,6 +18,7 @@ import {
   type SkillRecord,
 } from './types/skill'
 import './index.css'
+import './navigation.css'
 
 const OVERRIDE_STORAGE_KEY = 'arknights-skill-classification-overrides-v2'
 const initialFilters: FilterState = {
@@ -122,34 +123,50 @@ export default function App() {
     window.location.hash = '#/'
   }
 
+  const classifierActive = route.view !== 'damage'
+
   return (
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">ARKNIGHTS DATA TOOL</p>
-          <h1>Skill Model Classifier</h1>
-          <p className="subtitle">説明文と構造データから、終了条件・発動契機・ダメージ構成・出力可否を個別に判定する。</p>
+          <p className="eyebrow">ARKNIGHTS</p>
+          <h1>Arknights Analyze Tool</h1>
         </div>
-        <div className="top-actions">
-          <button className="button secondary" onClick={() => void load()} disabled={loading}>データ再読込</button>
-        </div>
+        <nav className="site-nav" aria-label="ツール切り替え">
+          <a className={`site-nav-link ${classifierActive ? 'active' : ''}`} aria-current={classifierActive ? 'page' : undefined} href="#/">
+            Skill Model Classifier
+          </a>
+          <a className={`site-nav-link ${route.view === 'damage' ? 'active' : ''}`} aria-current={route.view === 'damage' ? 'page' : undefined} href="#/damage">
+            Damage Calculator
+          </a>
+        </nav>
       </header>
 
-      {error && <section className="error-box">{error}</section>}
+      {error && route.view !== 'damage' && <section className="error-box">{error}</section>}
 
       {route.view === 'list' ? (
-        <section className="list-pane list-view">
-          <Filters
-            value={filters}
-            professionOptions={professionOptions}
-            subProfessionOptions={subProfessionOptions}
-            onChange={setFilters}
-          />
-          <div className="result-meta">
-            <span>{loading ? '読み込み中...' : `${filteredOperators.length} 名表示`}</span>
-            <span>オペレーターを選択すると詳細画面へ移動します</span>
-          </div>
-          <OperatorTable rows={filteredOperators} onSelect={(row) => openSkill(row.id)} />
+        <>
+          <section className="page-intro">
+            <h2>Skill Model Classifier</h2>
+            <p>スキルの終了条件・発動契機・ダメージ構成を確認する。</p>
+          </section>
+          <section className="list-pane list-view">
+            <Filters
+              value={filters}
+              professionOptions={professionOptions}
+              subProfessionOptions={subProfessionOptions}
+              onChange={setFilters}
+            />
+            <div className="result-meta">
+              <span>{loading ? '読み込み中...' : `${filteredOperators.length} 名表示`}</span>
+              <span>オペレーターを選択すると詳細画面へ移動します</span>
+            </div>
+            <OperatorTable rows={filteredOperators} onSelect={(row) => openSkill(row.id)} />
+          </section>
+        </>
+      ) : route.view === 'damage' ? (
+        <section className="damage-page">
+          <h2>Damage Calculator</h2>
         </section>
       ) : selected ? (
         <SkillDetail

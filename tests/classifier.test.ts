@@ -107,5 +107,6 @@ test('スキル詳細のハッシュURLを生成・解析する', () => {
   assert.equal(hash, '#/skills/char_222_bpipe%3Askchr_bpipe_2')
   assert.deepEqual(parseHashRoute(hash), { view: 'skill', skillId })
   assert.deepEqual(parseHashRoute('#/'), { view: 'list' })
+  assert.deepEqual(parseHashRoute('#/damage'), { view: 'damage' })
   assert.deepEqual(parseHashRoute('#/skills/%E0%A4%A'), { view: 'list' })
 })
