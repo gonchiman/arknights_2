@@ -4,7 +4,6 @@ import { OperatorTable } from './components/OperatorTable'
 import { SkillDetail } from './components/SkillDetail'
 import { DATA_URLS, loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
-import { exportSkillsCsv } from './lib/exportCsv'
 import { getSkillRouteHash, parseHashRoute, type AppRoute } from './lib/routes'
 import {
   ACTIVATION_TRIGGERS,
@@ -133,7 +132,6 @@ export default function App() {
         </div>
         <div className="top-actions">
           <button className="button secondary" onClick={() => void load()} disabled={loading}>データ再読込</button>
-          <button className="button" onClick={() => exportSkillsCsv(classifiedRows)} disabled={!classifiedRows.length}>CSV出力</button>
         </div>
       </header>
 
