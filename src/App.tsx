@@ -128,28 +128,29 @@ export default function App() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div>
-          <p className="eyebrow">ARKNIGHTS</p>
-          <h1>Arknights Analyze Tool</h1>
+        <div className="topbar-inner">
+          <a className="site-brand" href="#/" aria-label="Arknights Analyze Tool ホーム">
+            <span className="brand-mark" aria-hidden="true">A</span>
+            <span className="brand-copy">
+              <span className="eyebrow">ARKNIGHTS</span>
+              <h1>Arknights Analyze Tool</h1>
+            </span>
+          </a>
+          <nav className="site-nav" aria-label="ツール切り替え">
+            <a className={`site-nav-link ${classifierActive ? 'active' : ''}`} aria-current={classifierActive ? 'page' : undefined} href="#/">
+              Skill Model Classifier
+            </a>
+            <a className={`site-nav-link ${route.view === 'damage' ? 'active' : ''}`} aria-current={route.view === 'damage' ? 'page' : undefined} href="#/damage">
+              Damage Calculator
+            </a>
+          </nav>
         </div>
-        <nav className="site-nav" aria-label="ツール切り替え">
-          <a className={`site-nav-link ${classifierActive ? 'active' : ''}`} aria-current={classifierActive ? 'page' : undefined} href="#/">
-            Skill Model Classifier
-          </a>
-          <a className={`site-nav-link ${route.view === 'damage' ? 'active' : ''}`} aria-current={route.view === 'damage' ? 'page' : undefined} href="#/damage">
-            Damage Calculator
-          </a>
-        </nav>
       </header>
 
-      {error && route.view !== 'damage' && <section className="error-box">{error}</section>}
+      <div className="app-content">
+        {error && route.view !== 'damage' && <section className="error-box">{error}</section>}
 
-      {route.view === 'list' ? (
-        <>
-          <section className="page-intro">
-            <h2>Skill Model Classifier</h2>
-            <p>スキルの終了条件・発動契機・ダメージ構成を確認する。</p>
-          </section>
+        {route.view === 'list' ? (
           <section className="list-pane list-view">
             <Filters
               value={filters}
@@ -163,34 +164,34 @@ export default function App() {
             </div>
             <OperatorTable rows={filteredOperators} onSelect={(row) => openSkill(row.id)} />
           </section>
-        </>
-      ) : route.view === 'damage' ? (
-        <section className="damage-page">
-          <h2>Damage Calculator</h2>
-        </section>
-      ) : selected ? (
-        <SkillDetail
-          key={selected.id}
-          skill={selected}
-          operatorSkills={operatorSkills}
-          override={overrides[selected.id]}
-          onBack={openList}
-          onSelectSkill={(skill) => openSkill(skill.id)}
-          onOverride={(override) => updateOverride(selected.id, override)}
-        />
-      ) : (
-        <section className="route-state">
-          <h2>{loading ? 'スキルを読み込んでいます…' : 'スキルが見つかりません'}</h2>
-          {!loading && <button className="button secondary" onClick={openList}>一覧に戻る</button>}
-        </section>
-      )}
+        ) : route.view === 'damage' ? (
+          <section className="damage-page">
+            <h2>Damage Calculator</h2>
+          </section>
+        ) : selected ? (
+          <SkillDetail
+            key={selected.id}
+            skill={selected}
+            operatorSkills={operatorSkills}
+            override={overrides[selected.id]}
+            onBack={openList}
+            onSelectSkill={(skill) => openSkill(skill.id)}
+            onOverride={(override) => updateOverride(selected.id, override)}
+          />
+        ) : (
+          <section className="route-state">
+            <h2>{loading ? 'スキルを読み込んでいます…' : 'スキルが見つかりません'}</h2>
+            {!loading && <button className="button secondary" onClick={openList}>一覧に戻る</button>}
+          </section>
+        )}
 
-      <footer>
-        <span>Data: ArknightsAssets/ArknightsGamedata (JP)</span>
-        <a href={DATA_URLS.skill} target="_blank" rel="noreferrer">skill_table.json</a>
-        <a href={DATA_URLS.character} target="_blank" rel="noreferrer">character_table.json</a>
-        <a href={DATA_URLS.uniequip} target="_blank" rel="noreferrer">uniequip_table.json</a>
-      </footer>
+        <footer>
+          <span>Data: ArknightsAssets/ArknightsGamedata (JP)</span>
+          <a href={DATA_URLS.skill} target="_blank" rel="noreferrer">skill_table.json</a>
+          <a href={DATA_URLS.character} target="_blank" rel="noreferrer">character_table.json</a>
+          <a href={DATA_URLS.uniequip} target="_blank" rel="noreferrer">uniequip_table.json</a>
+        </footer>
+      </div>
     </main>
   )
 }
