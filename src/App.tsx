@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Filters, type FilterOption, type FilterState } from './components/Filters'
+import { OperatorTable } from './components/OperatorTable'
 import { SkillDetail } from './components/SkillDetail'
-import { SkillTable } from './components/SkillTable'
 import { DATA_URLS, loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
 import { exportSkillsCsv } from './lib/exportCsv'
+import { getSkillRouteHash, parseHashRoute, type AppRoute } from './lib/routes'
 import {
   ACTIVATION_TRIGGERS,
   DAMAGE_COMPONENT_TYPES,
@@ -32,7 +33,7 @@ const initialFilters: FilterState = {
 
 export default function App() {
   const [rows, setRows] = useState<SkillRecord[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [route, setRoute] = useState<AppRoute>(() => parseHashRoute(window.location.hash))
   const [filters, setFilters] = useState<FilterState>(initialFilters)
   const [overrides, setOverrides] = useState<Record<string, SkillClassificationOverride>>(loadOverrides)
   const [loading, setLoading] = useState(true)
@@ -42,9 +43,7 @@ export default function App() {
     setLoading(true)
     setError(null)
     try {
-      const next = await loadSkillRecords()
-      setRows(next)
-      setSelectedId((current) => current ?? next[0]?.id ?? null)
+      setRows(await loadSkillRecords())
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '不明なエラーが発生しました。')
     } finally {
@@ -53,6 +52,14 @@ export default function App() {
   }
 
   useEffect(() => { void load() }, [])
+  useEffect(() => {
+    const handleHashChange = () => {
+      setRoute(parseHashRoute(window.location.hash))
+      window.scrollTo({ top: 0, behavior: 'instant' })
+    }
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
 
   const classifiedRows = useMemo(() => rows.map((row) => ({
     ...row,
@@ -68,7 +75,7 @@ export default function App() {
     .filter((row) => filters.profession === 'ALL' || row.profession === filters.profession)
     .map((row) => ({ value: row.subProfessionId, label: row.subProfessionName }))), [rows, filters.profession])
 
-  const filtered = useMemo(() => classifiedRows.filter((row) => {
+  const filteredSkills = useMemo(() => classifiedRows.filter((row) => {
     const query = filters.query.trim().toLowerCase()
     if (query && !`${row.operatorName} ${row.skillName} ${row.description} ${row.skillId}`.toLowerCase().includes(query)) return false
     if (filters.nameInitial !== 'ALL' && row.nameInitial !== filters.nameInitial) return false
@@ -80,7 +87,23 @@ export default function App() {
     return true
   }), [classifiedRows, filters])
 
-  const selected = classifiedRows.find((row) => row.id === selectedId) ?? null
+  // 一覧はオペレーターを1人1行だけ表示する。
+  // スキル条件で絞り込んだ場合は、最初に一致したスキルを詳細画面で開く。
+  const filteredOperators = useMemo(() => {
+    const seen = new Set<string>()
+    return filteredSkills.filter((row) => {
+      if (seen.has(row.operatorId)) return false
+      seen.add(row.operatorId)
+      return true
+    })
+  }, [filteredSkills])
+
+  const selected = route.view === 'skill'
+    ? classifiedRows.find((row) => row.id === route.skillId) ?? null
+    : null
+  const operatorSkills = selected
+    ? classifiedRows.filter((row) => row.operatorId === selected.operatorId)
+    : []
 
   const updateOverride = (skillId: string, override: SkillClassificationOverride | null) => {
     setOverrides((current) => {
@@ -90,6 +113,14 @@ export default function App() {
       localStorage.setItem(OVERRIDE_STORAGE_KEY, JSON.stringify(next))
       return next
     })
+  }
+
+  const openSkill = (skillId: string) => {
+    window.location.hash = getSkillRouteHash(skillId)
+  }
+
+  const openList = () => {
+    window.location.hash = '#/'
   }
 
   return (
@@ -108,8 +139,8 @@ export default function App() {
 
       {error && <section className="error-box">{error}</section>}
 
-      <section className="workspace">
-        <div className="list-pane">
+      {route.view === 'list' ? (
+        <section className="list-pane list-view">
           <Filters
             value={filters}
             professionOptions={professionOptions}
@@ -117,16 +148,27 @@ export default function App() {
             onChange={setFilters}
           />
           <div className="result-meta">
-            <span>{loading ? '読み込み中...' : `${filtered.length} 件表示`}</span>
+            <span>{loading ? '読み込み中...' : `${filteredOperators.length} 名表示`}</span>
+            <span>オペレーターを選択すると詳細画面へ移動します</span>
           </div>
-          <SkillTable rows={filtered} selectedId={selectedId} onSelect={(row) => setSelectedId(row.id)} />
-        </div>
+          <OperatorTable rows={filteredOperators} onSelect={(row) => openSkill(row.id)} />
+        </section>
+      ) : selected ? (
         <SkillDetail
+          key={selected.id}
           skill={selected}
-          override={selected ? overrides[selected.id] : undefined}
-          onOverride={(override) => selected && updateOverride(selected.id, override)}
+          operatorSkills={operatorSkills}
+          override={overrides[selected.id]}
+          onBack={openList}
+          onSelectSkill={(skill) => openSkill(skill.id)}
+          onOverride={(override) => updateOverride(selected.id, override)}
         />
-      </section>
+      ) : (
+        <section className="route-state">
+          <h2>{loading ? 'スキルを読み込んでいます…' : 'スキルが見つかりません'}</h2>
+          {!loading && <button className="button secondary" onClick={openList}>一覧に戻る</button>}
+        </section>
+      )}
 
       <footer>
         <span>Data: ArknightsAssets/ArknightsGamedata (JP)</span>

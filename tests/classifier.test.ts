@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { classifySkill } from '../src/lib/classifier.ts'
 import { getOperatorInitial, getProfessionLabel } from '../src/lib/operatorFilters.ts'
+import { getSkillRouteHash, parseHashRoute } from '../src/lib/routes.ts'
 import type { RawSkillLevel } from '../src/types/skill.ts'
 
 const classify = (level: RawSkillLevel) => classifySkill(level)
@@ -97,4 +98,14 @@ test('オペレーター名を五十音行・英字・数字の頭文字へ分�
 test('職業IDを日本語名へ変換する', () => {
   assert.equal(getProfessionLabel('SNIPER'), '狙撃')
   assert.equal(getProfessionLabel('MEDIC'), '医療')
+})
+
+test('スキル詳細のハッシュURLを生成・解析する', () => {
+  const skillId = 'char_222_bpipe:skchr_bpipe_2'
+  const hash = getSkillRouteHash(skillId)
+
+  assert.equal(hash, '#/skills/char_222_bpipe%3Askchr_bpipe_2')
+  assert.deepEqual(parseHashRoute(hash), { view: 'skill', skillId })
+  assert.deepEqual(parseHashRoute('#/'), { view: 'list' })
+  assert.deepEqual(parseHashRoute('#/skills/%E0%A4%A'), { view: 'list' })
 })
