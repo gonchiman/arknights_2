@@ -126,6 +126,5 @@ function getProfessionButtonStyle(profession: string): CSSProperties | undefined
   if (!color) return undefined
   return {
     '--profession-color': color.main,
-    '--profession-tint': color.tint,
   } as CSSProperties
 }

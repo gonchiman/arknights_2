@@ -15,18 +15,17 @@ export type ProfessionId = (typeof PROFESSION_ORDER)[number]
 
 export interface ProfessionColor {
   main: string
-  tint: string
 }
 
 export const PROFESSION_COLORS: Record<ProfessionId, ProfessionColor> = {
-  PIONEER: { main: '#9A5B00', tint: '#FFF4DD' },
-  WARRIOR: { main: '#A92D3A', tint: '#FCEDEF' },
-  TANK: { main: '#365F91', tint: '#EEF3F8' },
-  SNIPER: { main: '#5F6826', tint: '#F4F6E7' },
-  CASTER: { main: '#7045A0', tint: '#F3EEFA' },
-  MEDIC: { main: '#1F7560', tint: '#ECF7F3' },
-  SUPPORT: { main: '#176C89', tint: '#EDF7FA' },
-  SPECIAL: { main: '#8A416F', tint: '#F8EEF4' },
+  PIONEER: { main: '#C9B995' },
+  WARRIOR: { main: '#C5A5AA' },
+  TANK: { main: '#9FB0BF' },
+  SNIPER: { main: '#ABB28F' },
+  CASTER: { main: '#B4A4C1' },
+  MEDIC: { main: '#9EBAB1' },
+  SUPPORT: { main: '#98B5BF' },
+  SPECIAL: { main: '#B9A1B0' },
 }
 
 export const PROFESSION_LABELS: Record<string, string> = {

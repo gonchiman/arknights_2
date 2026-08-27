@@ -112,17 +112,16 @@ test('職業を標準イメージカラーに対応させる', () => {
     PROFESSION_ORDER.map((profession) => [
       getProfessionLabel(profession),
       PROFESSION_COLORS[profession].main,
-      PROFESSION_COLORS[profession].tint,
     ]),
     [
-      ['先鋒', '#9A5B00', '#FFF4DD'],
-      ['前衛', '#A92D3A', '#FCEDEF'],
-      ['重装', '#365F91', '#EEF3F8'],
-      ['狙撃', '#5F6826', '#F4F6E7'],
-      ['術師', '#7045A0', '#F3EEFA'],
-      ['医療', '#1F7560', '#ECF7F3'],
-      ['補助', '#176C89', '#EDF7FA'],
-      ['特殊', '#8A416F', '#F8EEF4'],
+      ['先鋒', '#C9B995'],
+      ['前衛', '#C5A5AA'],
+      ['重装', '#9FB0BF'],
+      ['狙撃', '#ABB28F'],
+      ['術師', '#B4A4C1'],
+      ['医療', '#9EBAB1'],
+      ['補助', '#98B5BF'],
+      ['特殊', '#B9A1B0'],
     ],
   )
 })
