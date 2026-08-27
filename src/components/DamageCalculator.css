@@ -102,7 +102,7 @@
 }
 
 .operator-form-grid {
-  grid-template-columns: minmax(200px, 1.5fr) repeat(3, minmax(120px, .7fr)) minmax(210px, 1.4fr) minmax(120px, .7fr);
+  grid-template-columns: minmax(220px, 1.5fr) repeat(4, minmax(120px, .7fr));
   align-items: end;
 }
 
@@ -113,6 +113,62 @@
 
 .calculator-field {
   min-width: 0;
+}
+
+.skill-picker-field {
+  grid-column: 1 / -1;
+}
+
+.skill-choice-group {
+  display: flex;
+  gap: 6px;
+}
+
+.skill-choice-group button {
+  min-width: 0;
+  height: 48px;
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #cfcfca;
+  border-radius: 8px;
+  background: #fafaf8;
+  color: #555;
+  padding: 0 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.skill-choice-group button:hover,
+.skill-choice-group button:focus-visible {
+  border-color: #777;
+  background: #fff;
+}
+
+.skill-choice-group button > span {
+  flex: 0 0 auto;
+  color: #111;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.skill-choice-group button > strong {
+  overflow: hidden;
+  min-width: 0;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skill-choice-group button.active {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+}
+
+.skill-choice-group button.active > span {
+  color: #fff;
 }
 
 .operator-search-trigger {
@@ -368,20 +424,21 @@
 }
 
 .results-panel {
-  background: #151515;
-  border-color: #151515;
-  color: #fff;
+  background: #eef0ed;
+  border-color: #d8dcd7;
+  color: #111;
+  box-shadow: inset 3px 0 0 #b8c0ba;
 }
 
 .results-panel .panel-heading span,
 .results-panel .panel-heading p,
 .results-panel .result-disclaimer {
-  color: #999;
+  color: #6f7571;
 }
 
 .result-section-label {
   margin: 14px 0 7px;
-  color: #aaa;
+  color: #69716c;
   font-size: 9px;
   font-weight: 800;
   letter-spacing: .14em;
@@ -406,14 +463,14 @@
   min-height: 95px;
   flex-direction: column;
   justify-content: space-between;
-  border: 1px solid #333;
+  border: 1px solid #d7dcd7;
   border-radius: 9px;
-  background: #202020;
+  background: #f8f9f7;
   padding: 13px;
 }
 
 .damage-result-card span {
-  color: #aaa;
+  color: #666d68;
   font-size: 10px;
 }
 
@@ -425,7 +482,7 @@
 }
 
 .damage-result-card small {
-  color: #777;
+  color: #858b87;
   font-size: 8px;
   letter-spacing: .12em;
   text-transform: uppercase;
@@ -503,7 +560,7 @@
   }
 
   .operator-form-grid .calculator-field:first-child,
-  .operator-form-grid .calculator-field:nth-child(5) {
+  .skill-picker-field {
     grid-column: 1 / -1;
   }
 

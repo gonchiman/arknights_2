@@ -175,16 +175,29 @@ export function DamageCalculator({ rows, loading }: Props) {
           </SelectField>
           <NumberField label="オペレーターレベル" value={safeOperatorLevel} min={1} max={maxOperatorLevel} onChange={setOperatorLevel} />
           <NumberField label="信頼度" value={trust} min={0} max={100} suffix="%" onChange={setTrust} />
-          <SelectField label="スキル" value={effectiveSkillId} onChange={setSkillId}>
-            {operatorSkills.map((skill) => (
-              <option value={skill.id} key={skill.id}>S{skill.skillIndex} {skill.skillName}</option>
-            ))}
-          </SelectField>
           <SelectField label="スキルレベル" value={String(safeSkillLevelIndex)} onChange={(value) => setSkillLevelIndex(Number(value))}>
             {skillLevels.map((_, index) => (
               <option value={index} key={index}>{getSkillLevelLabel(index, skillLevels.length)}</option>
             ))}
           </SelectField>
+          <div className="calculator-field skill-picker-field">
+            <span>スキル</span>
+            <div className="skill-choice-group" role="group" aria-label="スキル">
+              {operatorSkills.map((skill) => (
+                <button
+                  type="button"
+                  className={effectiveSkillId === skill.id ? 'active' : ''}
+                  aria-pressed={effectiveSkillId === skill.id}
+                  aria-label={`S${skill.skillIndex} ${skill.skillName}`}
+                  onClick={() => setSkillId(skill.id)}
+                  key={skill.id}
+                >
+                  <span>S{skill.skillIndex}</span>
+                  <strong>{skill.skillName}</strong>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
         {operatorSearchOpen && (
           <div id="damage-operator-search" className="calculator-operator-search">
