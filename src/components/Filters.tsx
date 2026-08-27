@@ -2,8 +2,9 @@ import {
   DAMAGE_COMPONENT_OPTIONS,
   EFFECT_WINDOW_OPTIONS,
 } from '../lib/classifier'
-import { OPERATOR_INITIAL_LABELS } from '../lib/operatorFilters'
+import { getProfessionColor, OPERATOR_INITIAL_LABELS } from '../lib/operatorFilters'
 import { OPERATOR_INITIALS } from '../types/skill'
+import type { CSSProperties } from 'react'
 import type { DamageComponentType, EffectWindowType, OperatorInitial } from '../types/skill'
 
 export interface FilterState {
@@ -83,9 +84,10 @@ export function Filters({ value, professionOptions, subProfessionOptions, onChan
         {professionOptions.map((option) => (
           <button
             type="button"
-            className={`initial-button ${value.profession === option.value ? 'active' : ''}`}
+            className={`initial-button profession-button ${value.profession === option.value ? 'active' : ''}`}
             aria-pressed={value.profession === option.value}
             onClick={() => onChange({ ...value, profession: option.value, subProfession: 'ALL' })}
+            style={getProfessionButtonStyle(option.value)}
             key={option.value}
           >
             {option.label}
@@ -117,4 +119,13 @@ export function Filters({ value, professionOptions, subProfessionOptions, onChan
       </select>
     </div>
   )
+}
+
+function getProfessionButtonStyle(profession: string): CSSProperties | undefined {
+  const color = getProfessionColor(profession)
+  if (!color) return undefined
+  return {
+    '--profession-color': color.main,
+    '--profession-tint': color.tint,
+  } as CSSProperties
 }

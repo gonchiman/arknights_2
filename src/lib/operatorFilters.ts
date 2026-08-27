@@ -11,6 +11,24 @@ export const PROFESSION_ORDER = [
   'SPECIAL',
 ] as const
 
+export type ProfessionId = (typeof PROFESSION_ORDER)[number]
+
+export interface ProfessionColor {
+  main: string
+  tint: string
+}
+
+export const PROFESSION_COLORS: Record<ProfessionId, ProfessionColor> = {
+  PIONEER: { main: '#9A5B00', tint: '#FFF4DD' },
+  WARRIOR: { main: '#A92D3A', tint: '#FCEDEF' },
+  TANK: { main: '#365F91', tint: '#EEF3F8' },
+  SNIPER: { main: '#5F6826', tint: '#F4F6E7' },
+  CASTER: { main: '#7045A0', tint: '#F3EEFA' },
+  MEDIC: { main: '#1F7560', tint: '#ECF7F3' },
+  SUPPORT: { main: '#176C89', tint: '#EDF7FA' },
+  SPECIAL: { main: '#8A416F', tint: '#F8EEF4' },
+}
+
 export const PROFESSION_LABELS: Record<string, string> = {
   PIONEER: '先鋒',
   WARRIOR: '前衛',
@@ -40,6 +58,10 @@ export const OPERATOR_INITIAL_LABELS: Record<OperatorInitial, string> = {
 
 export function getProfessionLabel(profession: string): string {
   return (PROFESSION_LABELS[profession] ?? profession) || '不明'
+}
+
+export function getProfessionColor(profession: string): ProfessionColor | undefined {
+  return PROFESSION_COLORS[profession as ProfessionId]
 }
 
 export function getOperatorInitial(name: string): OperatorInitial {

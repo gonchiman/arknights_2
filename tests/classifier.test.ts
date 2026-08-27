@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { classifySkill } from '../src/lib/classifier.ts'
-import { getOperatorInitial, getProfessionLabel, PROFESSION_ORDER } from '../src/lib/operatorFilters.ts'
+import { getOperatorInitial, getProfessionLabel, PROFESSION_COLORS, PROFESSION_ORDER } from '../src/lib/operatorFilters.ts'
 import { getSkillRouteHash, parseHashRoute } from '../src/lib/routes.ts'
 import type { RawSkillLevel } from '../src/types/skill.ts'
 
@@ -104,6 +104,26 @@ test('職業を標準順に並べる', () => {
   assert.deepEqual(
     PROFESSION_ORDER.map(getProfessionLabel),
     ['先鋒', '前衛', '重装', '狙撃', '術師', '医療', '補助', '特殊'],
+  )
+})
+
+test('職業を標準イメージカラーに対応させる', () => {
+  assert.deepEqual(
+    PROFESSION_ORDER.map((profession) => [
+      getProfessionLabel(profession),
+      PROFESSION_COLORS[profession].main,
+      PROFESSION_COLORS[profession].tint,
+    ]),
+    [
+      ['先鋒', '#9A5B00', '#FFF4DD'],
+      ['前衛', '#A92D3A', '#FCEDEF'],
+      ['重装', '#365F91', '#EEF3F8'],
+      ['狙撃', '#5F6826', '#F4F6E7'],
+      ['術師', '#7045A0', '#F3EEFA'],
+      ['医療', '#1F7560', '#ECF7F3'],
+      ['補助', '#176C89', '#EDF7FA'],
+      ['特殊', '#8A416F', '#F8EEF4'],
+    ],
   )
 })
 
