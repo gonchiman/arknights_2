@@ -28,9 +28,41 @@ export interface RawCharacterPhase {
   attributesKeyFrames?: RawAttributeKeyFrame[]
 }
 
+export interface RawUnlockCondition {
+  phase?: string
+  level?: number
+}
+
+export interface RawTraitCandidate {
+  unlockCondition?: RawUnlockCondition
+  requiredPotentialRank?: number
+  overrideDescripton?: string | null
+  overrideDescription?: string | null
+}
+
+export interface RawCharacterTrait {
+  candidates?: RawTraitCandidate[]
+}
+
+export interface RawTalentCandidate {
+  unlockCondition?: RawUnlockCondition
+  requiredPotentialRank?: number
+  name?: string | null
+  description?: string | null
+  isHideTalent?: boolean
+}
+
+export interface RawCharacterTalent {
+  candidates?: RawTalentCandidate[]
+}
+
 export interface OperatorCombatProfile {
   phases: RawCharacterPhase[]
   favorKeyFrames: RawAttributeKeyFrame[]
+  trait?: RawCharacterTrait | null
+  talents?: RawCharacterTalent[]
+  traitDescription?: string
+  subProfessionTraitDescription?: string
 }
 
 export const EFFECT_WINDOWS = [

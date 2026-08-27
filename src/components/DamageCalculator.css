@@ -318,6 +318,47 @@
   pointer-events: none;
 }
 
+.operator-passive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.operator-passive-card {
+  min-width: 0;
+  border: 1px solid #deded9;
+  border-radius: 8px;
+  background: #fafaf8;
+  padding: 11px 12px;
+}
+
+.operator-passive-card > span {
+  display: block;
+  margin-bottom: 6px;
+  color: #777;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.operator-passive-card strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+
+.operator-passive-card p {
+  margin: 0;
+  color: #555;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.operator-passive-card.muted-passive p {
+  color: #888;
+}
+
 .selected-skill-summary {
   display: grid;
   grid-template-columns: minmax(240px, .8fr) minmax(320px, 1.4fr);

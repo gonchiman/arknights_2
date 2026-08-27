@@ -6,6 +6,7 @@ import {
   deriveSkillModel,
   getOperatorStats,
 } from '../src/lib/damageCalculator.ts'
+import { getOperatorPassives } from '../src/lib/operatorProfile.ts'
 
 test('物理・術・確定ダメージへ敵防御を正しく適用する', () => {
   assert.equal(calculateDamage(1000, 'PHYSICAL', 300, 0), 700)
@@ -64,4 +65,21 @@ test('固定時間スキルの1ヒット・DPS・総量を計算する', () => {
   assert.equal(output.perAttack, 2000)
   assert.equal(output.dps, 1000)
   assert.equal(output.total, 10000)
+})
+
+test('現在の昇進段階で解放済みかつ潜在強化前の特性・素質を選ぶ', () => {
+  const passives = getOperatorPassives({
+    phases: [],
+    favorKeyFrames: [],
+    traitDescription: '通常攻撃が術ダメージを与える',
+    trait: { candidates: [{ unlockCondition: { phase: 'PHASE_0', level: 1 }, requiredPotentialRank: 0 }] },
+    talents: [{ candidates: [
+      { unlockCondition: { phase: 'PHASE_1', level: 1 }, requiredPotentialRank: 0, name: '素質A', description: '基本効果' },
+      { unlockCondition: { phase: 'PHASE_1', level: 1 }, requiredPotentialRank: 4, name: '素質A', description: '潜在強化' },
+      { unlockCondition: { phase: 'PHASE_2', level: 1 }, requiredPotentialRank: 0, name: '素質A', description: '昇進2効果' },
+    ] }],
+  }, 1, 80)
+
+  assert.equal(passives.traitDescription, '通常攻撃が術ダメージを与える')
+  assert.deepEqual(passives.talents, [{ name: '素質A', description: '基本効果' }])
 })

@@ -9,6 +9,7 @@ import {
   type DamageType,
   type SkillModelDefaults,
 } from '../lib/damageCalculator'
+import { getOperatorPassives } from '../lib/operatorProfile'
 import type { RawSkillLevel, SkillRecord } from '../types/skill'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
 import './DamageCalculator.css'
@@ -97,6 +98,9 @@ export function DamageCalculator({ rows, loading }: Props) {
     ? getUnsupportedReasons(selectedSkill)
     : ['スキルを選択してください。']
   const skillSupported = unsupportedReasons.length === 0
+  const operatorPassives = selectedOperator
+    ? getOperatorPassives(selectedOperator.operatorProfile, safePhaseIndex, safeOperatorLevel)
+    : { traitDescription: '', talents: [] }
   const normalPerHit = calculateDamage(operatorStats.attack, damageType, enemyDefense, enemyResistance)
   const normalDps = operatorStats.attackInterval > 0 ? normalPerHit / operatorStats.attackInterval : 0
   const skillOutput = selectedSkill && model && skillSupported
@@ -221,6 +225,24 @@ export function DamageCalculator({ rows, loading }: Props) {
             />
           </div>
         )}
+        <div className="operator-passive-grid">
+          <article className="operator-passive-card">
+            <span>特性</span>
+            <p>{operatorPassives.traitDescription || '特性情報なし'}</p>
+          </article>
+          {operatorPassives.talents.length > 0 ? operatorPassives.talents.map((talent, index) => (
+            <article className="operator-passive-card" key={`${talent.name}-${index}`}>
+              <span>素質</span>
+              <strong>{talent.name}</strong>
+              <p>{talent.description || '説明なし'}</p>
+            </article>
+          )) : (
+            <article className="operator-passive-card muted-passive">
+              <span>素質</span>
+              <p>現在の昇進段階で解放された素質はありません</p>
+            </article>
+          )}
+        </div>
         <div className="selected-skill-summary">
           <div>
             <strong>{selectedOperator.operatorName} · S{selectedSkill.skillIndex} {selectedSkillLevel.name ?? selectedSkill.skillName}</strong>

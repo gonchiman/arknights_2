@@ -1,6 +1,8 @@
 import type {
   RawAttributeKeyFrame,
   RawCharacterPhase,
+  RawCharacterTalent,
+  RawCharacterTrait,
   RawSkillLevel,
   SkillRecord,
 } from '../types/skill'
@@ -17,6 +19,7 @@ export const DATA_URLS = {
 
 type CharacterTable = Record<string, {
   name?: string
+  description?: string
   displayNumber?: string | null
   rarity?: number | string
   profession?: string
@@ -24,6 +27,8 @@ type CharacterTable = Record<string, {
   skills?: Array<{ skillId?: string }>
   phases?: RawCharacterPhase[]
   favorKeyFrames?: RawAttributeKeyFrame[]
+  trait?: RawCharacterTrait | null
+  talents?: RawCharacterTalent[]
 }>
 
 type SkillTable = Record<string, {
@@ -34,6 +39,7 @@ interface UniequipTable {
   subProfDict?: Record<string, {
     subProfessionId?: string
     subProfessionName?: string
+    traitDesc?: string
   }>
 }
 
@@ -62,6 +68,10 @@ export async function loadSkillRecords(): Promise<SkillRecord[]> {
     const operatorProfile = {
       phases: operator.phases ?? [],
       favorKeyFrames: operator.favorKeyFrames ?? [],
+      trait: operator.trait ?? null,
+      talents: operator.talents ?? [],
+      traitDescription: operator.description ?? '',
+      subProfessionTraitDescription: subProfessions[operator.subProfessionId ?? 'UNKNOWN']?.traitDesc ?? '',
     }
 
     operator.skills.forEach((skillRef, index) => {
