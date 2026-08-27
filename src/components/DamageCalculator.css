@@ -371,8 +371,9 @@
 }
 
 .operator-info-heading:focus-visible {
-  outline: 2px solid #777;
-  outline-offset: 1px;
+  outline: none;
+  background: #f4f4f1;
+  box-shadow: inset 3px 0 0 #777;
 }
 
 .operator-info-heading-title {
@@ -415,8 +416,7 @@
 }
 
 .operator-info-body {
-  border-top: 1px solid #ecece8;
-  padding-top: 15px;
+  padding-top: 8px;
 }
 
 .operator-stat-grid {
