@@ -9,7 +9,28 @@ export interface RawSkillLevel {
     initSp?: number
     spCost?: number
   }
-  blackboard?: Array<{ key?: string; value?: number }>
+  blackboard?: Array<{ key?: string; value?: number; valueStr?: string | null }>
+}
+
+export interface RawAttributeData {
+  atk?: number
+  attackSpeed?: number
+  baseAttackTime?: number
+}
+
+export interface RawAttributeKeyFrame {
+  level?: number
+  data?: RawAttributeData
+}
+
+export interface RawCharacterPhase {
+  maxLevel?: number
+  attributesKeyFrames?: RawAttributeKeyFrame[]
+}
+
+export interface OperatorCombatProfile {
+  phases: RawCharacterPhase[]
+  favorKeyFrames: RawAttributeKeyFrame[]
 }
 
 export const EFFECT_WINDOWS = [
@@ -118,6 +139,8 @@ export interface SkillRecord {
   initSp: number | null
   spCost: number | null
   classification: SkillClassification
+  skillLevels: RawSkillLevel[]
+  operatorProfile: OperatorCombatProfile
   raw: RawSkillLevel
 }
 

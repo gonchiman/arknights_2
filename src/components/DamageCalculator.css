@@ -1,0 +1,411 @@
+.calculator-page {
+  display: grid;
+  gap: 16px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.calculator-loading {
+  min-height: 420px;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background: #fff;
+  color: #666;
+}
+
+.calculator-header,
+.calculator-panel {
+  border: 1px solid #dededa;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.calculator-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 26px 28px;
+}
+
+.calculator-header h2 {
+  margin: 3px 0 8px;
+  font-size: 30px;
+}
+
+.calculator-header p {
+  margin: 0;
+  color: #666;
+  font-size: 13px;
+}
+
+.calculator-kicker {
+  color: #777;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .18em;
+}
+
+.calculator-status {
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  padding: 7px 11px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.calculator-panel {
+  padding: 20px;
+}
+
+.panel-heading {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 15px;
+}
+
+.panel-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.panel-heading span {
+  color: #aaa;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.panel-heading h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.panel-heading p {
+  margin: 0;
+  color: #888;
+  font-size: 10px;
+}
+
+.calculator-form-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.operator-form-grid {
+  grid-template-columns: minmax(200px, 1.5fr) repeat(3, minmax(120px, .7fr)) minmax(210px, 1.4fr) minmax(120px, .7fr);
+}
+
+.enemy-form-grid,
+.model-form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.calculator-field {
+  min-width: 0;
+}
+
+.calculator-field > span {
+  display: block;
+  margin: 0 0 6px;
+  color: #666;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.calculator-field select,
+.calculator-field input {
+  width: 100%;
+  height: 39px;
+  border: 1px solid #cfcfca;
+  border-radius: 8px;
+  background: #fafaf8;
+  color: #111;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.calculator-field select:focus,
+.calculator-field input:focus {
+  outline: 2px solid #111;
+  outline-offset: 1px;
+}
+
+.number-input-wrap {
+  position: relative;
+}
+
+.number-input-wrap input {
+  padding-right: 36px;
+}
+
+.number-input-wrap em {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  color: #888;
+  font-size: 10px;
+  font-style: normal;
+  pointer-events: none;
+}
+
+.selected-skill-summary {
+  display: grid;
+  grid-template-columns: minmax(240px, .8fr) minmax(320px, 1.4fr);
+  gap: 24px;
+  margin-top: 14px;
+  border-top: 1px solid #ecece8;
+  padding-top: 14px;
+}
+
+.selected-skill-summary div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.selected-skill-summary strong {
+  font-size: 12px;
+}
+
+.selected-skill-summary span,
+.selected-skill-summary p {
+  color: #666;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.selected-skill-summary p {
+  margin: 0;
+}
+
+.calculator-two-column {
+  display: grid;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  gap: 16px;
+}
+
+.damage-type-switch {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin-bottom: 12px;
+  border-radius: 9px;
+  background: #f1f1ee;
+  padding: 4px;
+}
+
+.damage-type-switch button {
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #666;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.damage-type-switch button.active {
+  background: #111;
+  color: #fff;
+}
+
+.panel-note,
+.result-disclaimer {
+  margin: 12px 0 0;
+  color: #888;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.model-reset {
+  border: 0;
+  background: transparent;
+  color: #666;
+  padding: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  text-decoration: underline;
+}
+
+.model-notes {
+  margin: 11px 0 0;
+  padding-left: 18px;
+  color: #776020;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.unsupported-model {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 12px;
+  border: 1px solid #ead7a0;
+  border-radius: 8px;
+  background: #fff9e9;
+  color: #6f5817;
+  padding: 10px 12px;
+  font-size: 10px;
+}
+
+.unsupported-model strong {
+  font-size: 11px;
+}
+
+.results-panel {
+  background: #151515;
+  border-color: #151515;
+  color: #fff;
+}
+
+.results-panel .panel-heading span,
+.results-panel .panel-heading p,
+.results-panel .result-disclaimer {
+  color: #999;
+}
+
+.result-section-label {
+  margin: 14px 0 7px;
+  color: #aaa;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.damage-result-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.normal-results {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.skill-results {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.damage-result-card {
+  display: flex;
+  min-height: 95px;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid #333;
+  border-radius: 9px;
+  background: #202020;
+  padding: 13px;
+}
+
+.damage-result-card span {
+  color: #aaa;
+  font-size: 10px;
+}
+
+.damage-result-card strong {
+  overflow: hidden;
+  font-size: clamp(22px, 2.4vw, 34px);
+  line-height: 1;
+  text-overflow: ellipsis;
+}
+
+.damage-result-card small {
+  color: #777;
+  font-size: 8px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.sensitivity-table-wrap {
+  overflow: auto;
+}
+
+.sensitivity-table {
+  min-width: 520px;
+}
+
+.sensitivity-table th {
+  position: static;
+}
+
+.sensitivity-table tbody tr {
+  cursor: default;
+}
+
+.sensitivity-table tbody tr.current {
+  background: #eff6ff;
+  font-weight: 700;
+}
+
+.sensitivity-table td small {
+  display: inline-block;
+  margin: 0 0 0 7px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  padding: 2px 6px;
+  font-size: 8px;
+}
+
+@media (max-width: 1250px) {
+  .operator-form-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .calculator-two-column,
+  .selected-skill-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .skill-results {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .calculator-header,
+  .calculator-panel {
+    padding: 16px;
+  }
+
+  .calculator-header h2 {
+    font-size: 24px;
+  }
+
+  .calculator-header p,
+  .panel-heading > p {
+    display: none;
+  }
+
+  .operator-form-grid,
+  .enemy-form-grid,
+  .model-form-grid,
+  .normal-results,
+  .skill-results {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .operator-form-grid .calculator-field:first-child,
+  .operator-form-grid .calculator-field:nth-child(5) {
+    grid-column: 1 / -1;
+  }
+
+  .damage-result-card {
+    min-height: 86px;
+  }
+}

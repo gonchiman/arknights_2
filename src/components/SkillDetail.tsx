@@ -1,11 +1,16 @@
 import { useState, type ReactNode } from 'react'
 import {
+  ACTIVATION_TRIGGER_COLORS,
   ACTIVATION_TRIGGER_LABELS,
   ACTIVATION_TRIGGER_OPTIONS,
+  DAMAGE_COMPONENT_COLORS,
   DAMAGE_COMPONENT_LABELS,
   DAMAGE_COMPONENT_OPTIONS,
+  EFFECT_WINDOW_COLORS,
   EFFECT_WINDOW_LABELS,
   EFFECT_WINDOW_OPTIONS,
+  NO_SKILL_CONDITION_COLOR,
+  SKILL_CONDITION_COLORS,
   SKILL_CONDITION_LABELS,
   SKILL_CONDITION_OPTIONS,
   getOutputCapabilityLabels,
@@ -125,16 +130,19 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
             <SummaryDimension
               title="効果の終了条件"
               labels={[EFFECT_WINDOW_LABELS[classification.effectWindow.value]]}
+              colors={[EFFECT_WINDOW_COLORS[classification.effectWindow.value]]}
               field={classification.effectWindow}
             />
             <SummaryDimension
               title="発動契機"
               labels={[ACTIVATION_TRIGGER_LABELS[classification.activationTrigger.value]]}
+              colors={[ACTIVATION_TRIGGER_COLORS[classification.activationTrigger.value]]}
               field={classification.activationTrigger}
             />
             <SummaryDimension
               title="ダメージ構成"
               labels={classification.damageComponents.value.map((value) => DAMAGE_COMPONENT_LABELS[value])}
+              colors={classification.damageComponents.value.map((value) => DAMAGE_COMPONENT_COLORS[value])}
               field={classification.damageComponents}
             />
             <SummaryDimension
@@ -142,6 +150,9 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
               labels={classification.conditions.value.length
                 ? classification.conditions.value.map((value) => SKILL_CONDITION_LABELS[value])
                 : ['なし']}
+              colors={classification.conditions.value.length
+                ? classification.conditions.value.map((value) => SKILL_CONDITION_COLORS[value])
+                : [NO_SKILL_CONDITION_COLOR]}
               field={classification.conditions}
             />
           </section>
@@ -168,45 +179,60 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
             <ClassificationField
               title="効果の終了条件"
               field={classification.effectWindow}
-              valueLabel={EFFECT_WINDOW_LABELS[classification.effectWindow.value]}
+              valueTags={[{
+                label: EFFECT_WINDOW_LABELS[classification.effectWindow.value],
+                color: EFFECT_WINDOW_COLORS[classification.effectWindow.value],
+              }]}
               isOverridden={override?.effectWindow !== undefined}
               onReset={() => resetField('effectWindow')}
             >
               <select
                 aria-label="効果の終了条件を手動修正"
                 value={classification.effectWindow.value}
+                style={{ backgroundColor: EFFECT_WINDOW_COLORS[classification.effectWindow.value] }}
                 onChange={(event) => setField('effectWindow', event.target.value as EffectWindowType)}
               >
-                {EFFECT_WINDOW_OPTIONS.map(([type, label]) => <option key={type} value={type}>{label}</option>)}
+                {EFFECT_WINDOW_OPTIONS.map(([type, label]) => (
+                  <option style={{ backgroundColor: EFFECT_WINDOW_COLORS[type] }} key={type} value={type}>{label}</option>
+                ))}
               </select>
             </ClassificationField>
 
             <ClassificationField
               title="発動契機"
               field={classification.activationTrigger}
-              valueLabel={ACTIVATION_TRIGGER_LABELS[classification.activationTrigger.value]}
+              valueTags={[{
+                label: ACTIVATION_TRIGGER_LABELS[classification.activationTrigger.value],
+                color: ACTIVATION_TRIGGER_COLORS[classification.activationTrigger.value],
+              }]}
               isOverridden={override?.activationTrigger !== undefined}
               onReset={() => resetField('activationTrigger')}
             >
               <select
                 aria-label="発動契機を手動修正"
                 value={classification.activationTrigger.value}
+                style={{ backgroundColor: ACTIVATION_TRIGGER_COLORS[classification.activationTrigger.value] }}
                 onChange={(event) => setField('activationTrigger', event.target.value as ActivationTriggerType)}
               >
-                {ACTIVATION_TRIGGER_OPTIONS.map(([type, label]) => <option key={type} value={type}>{label}</option>)}
+                {ACTIVATION_TRIGGER_OPTIONS.map(([type, label]) => (
+                  <option style={{ backgroundColor: ACTIVATION_TRIGGER_COLORS[type] }} key={type} value={type}>{label}</option>
+                ))}
               </select>
             </ClassificationField>
 
             <ClassificationField
               title="ダメージ構成（複数可）"
               field={classification.damageComponents}
-              valueLabel={classification.damageComponents.value.map((value) => DAMAGE_COMPONENT_LABELS[value]).join('・')}
+              valueTags={classification.damageComponents.value.map((value) => ({
+                label: DAMAGE_COMPONENT_LABELS[value],
+                color: DAMAGE_COMPONENT_COLORS[value],
+              }))}
               isOverridden={override?.damageComponents !== undefined}
               onReset={() => resetField('damageComponents')}
             >
               <div className="choice-grid">
                 {DAMAGE_COMPONENT_OPTIONS.map(([type, label]) => (
-                  <label className="check-option" key={type}>
+                  <label className="check-option classification-choice" style={{ backgroundColor: DAMAGE_COMPONENT_COLORS[type] }} key={type}>
                     <input
                       type="checkbox"
                       checked={classification.damageComponents.value.includes(type)}
@@ -221,15 +247,18 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
             <ClassificationField
               title="条件・段階（複数可）"
               field={classification.conditions}
-              valueLabel={classification.conditions.value.length
-                ? classification.conditions.value.map((value) => SKILL_CONDITION_LABELS[value]).join('・')
-                : 'なし'}
+              valueTags={classification.conditions.value.length
+                ? classification.conditions.value.map((value) => ({
+                  label: SKILL_CONDITION_LABELS[value],
+                  color: SKILL_CONDITION_COLORS[value],
+                }))
+                : [{ label: 'なし', color: NO_SKILL_CONDITION_COLOR }]}
               isOverridden={override?.conditions !== undefined}
               onReset={() => resetField('conditions')}
             >
               <div className="choice-grid">
                 {SKILL_CONDITION_OPTIONS.map(([type, label]) => (
-                  <label className="check-option" key={type}>
+                  <label className="check-option classification-choice" style={{ backgroundColor: SKILL_CONDITION_COLORS[type] }} key={type}>
                     <input
                       type="checkbox"
                       checked={classification.conditions.value.includes(type)}
@@ -278,10 +307,11 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
 interface SummaryDimensionProps<T> {
   title: string
   labels: string[]
+  colors: string[]
   field: ClassifiedField<T>
 }
 
-function SummaryDimension<T>({ title, labels, field }: SummaryDimensionProps<T>) {
+function SummaryDimension<T>({ title, labels, colors, field }: SummaryDimensionProps<T>) {
   return (
     <article className="summary-dimension">
       <div className="dimension-heading">
@@ -291,7 +321,9 @@ function SummaryDimension<T>({ title, labels, field }: SummaryDimensionProps<T>)
         </span>
       </div>
       <div className="tag-list">
-        {labels.map((label) => <span className="tag" key={label}>{label}</span>)}
+        {labels.map((label, index) => (
+          <span className="tag classification-tag" style={{ backgroundColor: colors[index] }} key={label}>{label}</span>
+        ))}
       </div>
     </article>
   )
@@ -300,7 +332,7 @@ function SummaryDimension<T>({ title, labels, field }: SummaryDimensionProps<T>)
 interface ClassificationFieldProps<T> {
   title: string
   field: ClassifiedField<T>
-  valueLabel: string
+  valueTags: Array<{ label: string, color: string }>
   isOverridden: boolean
   onReset: () => void
   children: ReactNode
@@ -309,7 +341,7 @@ interface ClassificationFieldProps<T> {
 function ClassificationField<T>({
   title,
   field,
-  valueLabel,
+  valueTags,
   isOverridden,
   onReset,
   children,
@@ -322,7 +354,11 @@ function ClassificationField<T>({
           {field.source === 'MANUAL' ? 'manual' : field.confidence.toLowerCase()}
         </span>
       </div>
-      <div className="tag-list"><span className="tag">{valueLabel}</span></div>
+      <div className="tag-list">
+        {valueTags.map(({ label, color }) => (
+          <span className="tag classification-tag" style={{ backgroundColor: color }} key={label}>{label}</span>
+        ))}
+      </div>
       <ul>{field.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
       <div className="manual-editor">{children}</div>
       {isOverridden && <button className="text-button small" onClick={onReset}>この項目を自動判定に戻す</button>}

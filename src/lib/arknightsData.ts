@@ -1,4 +1,9 @@
-import type { RawSkillLevel, SkillRecord } from '../types/skill'
+import type {
+  RawAttributeKeyFrame,
+  RawCharacterPhase,
+  RawSkillLevel,
+  SkillRecord,
+} from '../types/skill'
 import { classifySkill } from './classifier'
 import { getOperatorInitial, getProfessionLabel } from './operatorFilters'
 
@@ -17,6 +22,8 @@ type CharacterTable = Record<string, {
   profession?: string
   subProfessionId?: string
   skills?: Array<{ skillId?: string }>
+  phases?: RawCharacterPhase[]
+  favorKeyFrames?: RawAttributeKeyFrame[]
 }>
 
 type SkillTable = Record<string, {
@@ -52,6 +59,11 @@ export async function loadSkillRecords(): Promise<SkillRecord[]> {
     // displayNumber を持つプレイアブルなオペレーターだけを対象にする。
     if (!operator.name || !operator.displayNumber || !operator.skills?.length) continue
 
+    const operatorProfile = {
+      phases: operator.phases ?? [],
+      favorKeyFrames: operator.favorKeyFrames ?? [],
+    }
+
     operator.skills.forEach((skillRef, index) => {
       const skillId = skillRef.skillId
       if (!skillId) return
@@ -82,6 +94,8 @@ export async function loadSkillRecords(): Promise<SkillRecord[]> {
         initSp: typeof level.spData?.initSp === 'number' ? level.spData.initSp : null,
         spCost: typeof level.spData?.spCost === 'number' ? level.spData.spCost : null,
         classification: classifySkill(level),
+        skillLevels: skill.levels ?? [],
+        operatorProfile,
         raw: level,
       })
     })

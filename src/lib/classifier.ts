@@ -52,6 +52,50 @@ export const SKILL_CONDITION_LABELS: Record<SkillConditionType, string> = {
   OTHER: 'その他の条件',
 }
 
+// 「スキル分類の4項目について」で定義された表示色。
+export const EFFECT_WINDOW_COLORS: Record<EffectWindowType, string> = {
+  FIXED_DURATION: '#DBEAFE',
+  AMMO: '#FEF3C7',
+  PERMANENT: '#DCFCE7',
+  TOGGLE_OR_MODE: '#EDE9FE',
+  NONE: '#CFFAFE',
+  UNKNOWN: '#E5E7EB',
+}
+
+export const ACTIVATION_TRIGGER_COLORS: Record<ActivationTriggerType, string> = {
+  MANUAL: '#E0E7FF',
+  AUTO_SP: '#DCFCE7',
+  NEXT_ATTACK: '#FEF3C7',
+  ON_DEPLOY: '#FFEDD5',
+  PASSIVE: '#CFFAFE',
+  CONDITIONAL: '#FCE7F3',
+  UNKNOWN: '#E5E7EB',
+}
+
+export const DAMAGE_COMPONENT_COLORS: Record<DamageComponentType, string> = {
+  BASIC_ATTACK_MODIFIER: '#DBEAFE',
+  BURST: '#FEE2E2',
+  PERIODIC: '#FFEDD5',
+  DEPLOYED_OBJECT: '#FEF3C7',
+  SUMMON: '#DCFCE7',
+  DAMAGE_OVER_TIME: '#FCE7F3',
+  NO_DIRECT_DAMAGE: '#CCFBF1',
+  UNKNOWN: '#E5E7EB',
+}
+
+export const SKILL_CONDITION_COLORS: Record<SkillConditionType, string> = {
+  CHARGE: '#FEF3C7',
+  OVERCHARGE: '#FFEDD5',
+  PHASE: '#EDE9FE',
+  MODE: '#DBEAFE',
+  TARGET_STATE: '#FCE7F3',
+  DEPLOY_TIME: '#CFFAFE',
+  ACTIVATION_COUNT: '#DCFCE7',
+  OTHER: '#E2E8F0',
+}
+
+export const NO_SKILL_CONDITION_COLOR = '#F3F4F6'
+
 export const EFFECT_WINDOW_OPTIONS = Object.entries(EFFECT_WINDOW_LABELS) as Array<[EffectWindowType, string]>
 export const ACTIVATION_TRIGGER_OPTIONS = Object.entries(ACTIVATION_TRIGGER_LABELS) as Array<[ActivationTriggerType, string]>
 export const DAMAGE_COMPONENT_OPTIONS = Object.entries(DAMAGE_COMPONENT_LABELS) as Array<[DamageComponentType, string]>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Filters, type FilterOption, type FilterState } from './components/Filters'
+import { DamageCalculator } from './components/DamageCalculator'
 import { OperatorTable } from './components/OperatorTable'
 import { SkillDetail } from './components/SkillDetail'
 import { DATA_URLS, loadSkillRecords } from './lib/arknightsData'
@@ -148,7 +149,7 @@ export default function App() {
       </header>
 
       <div className="app-content">
-        {error && route.view !== 'damage' && <section className="error-box">{error}</section>}
+        {error && <section className="error-box">{error}</section>}
 
         {route.view === 'list' ? (
           <section className="list-pane list-view">
@@ -165,9 +166,7 @@ export default function App() {
             <OperatorTable rows={filteredOperators} onSelect={(row) => openSkill(row.id)} />
           </section>
         ) : route.view === 'damage' ? (
-          <section className="damage-page">
-            <h2>Damage Calculator</h2>
-          </section>
+          <DamageCalculator rows={classifiedRows} loading={loading} />
         ) : selected ? (
           <SkillDetail
             key={selected.id}
