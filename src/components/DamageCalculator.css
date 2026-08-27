@@ -101,8 +101,12 @@
   gap: 10px;
 }
 
-.operator-form-grid {
-  grid-template-columns: minmax(220px, 1.5fr) repeat(4, minmax(120px, .7fr));
+.operator-search-summary {
+  max-width: 560px;
+}
+
+.growth-form-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: end;
 }
 
@@ -116,7 +120,7 @@
 }
 
 .skill-picker-field {
-  grid-column: 1 / -1;
+  margin-top: 13px;
 }
 
 .skill-choice-group {
@@ -318,14 +322,78 @@
   pointer-events: none;
 }
 
-.operator-passive-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 8px;
-  margin-top: 14px;
+.condition-subheading,
+.condition-field-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #777;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
 }
 
-.operator-passive-card {
+.condition-divider {
+  margin: 16px 0 14px;
+  border-top: 1px solid #ecece8;
+}
+
+.enemy-condition-row {
+  display: grid;
+  grid-template-columns: minmax(260px, .7fr) minmax(360px, 1.3fr);
+  align-items: end;
+  gap: 14px;
+}
+
+.enemy-condition-row .damage-type-switch {
+  margin-bottom: 0;
+}
+
+.operator-info-heading {
+  margin-bottom: 0;
+}
+
+.operator-info-panel.open .operator-info-heading {
+  margin-bottom: 15px;
+}
+
+.operator-info-toggle {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  border: 0;
+  background: transparent;
+  color: #666;
+  padding: 5px 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+}
+
+.operator-info-toggle > span {
+  color: #666;
+  font-weight: 400;
+}
+
+.operator-info-toggle em {
+  color: #333;
+  font-style: normal;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.operator-info-body {
+  border-top: 1px solid #ecece8;
+  padding-top: 15px;
+}
+
+.operator-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.operator-stat-card,
+.operator-effect-card {
   min-width: 0;
   border: 1px solid #deded9;
   border-radius: 8px;
@@ -333,30 +401,83 @@
   padding: 11px 12px;
 }
 
-.operator-passive-card > span {
-  display: block;
-  margin-bottom: 6px;
+.operator-stat-card header,
+.operator-effect-card header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+.operator-stat-card header > span,
+.operator-effect-card header > span {
   color: #777;
   font-size: 9px;
   font-weight: 800;
-  letter-spacing: .12em;
+  letter-spacing: .1em;
 }
 
-.operator-passive-card strong {
+.operator-stat-card > strong {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.operator-stat-card > small {
+  display: block;
+  color: #777;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.reflection-badge {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #e5eee7;
+  color: #49624f;
+  padding: 3px 6px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.reflection-badge.not-applied {
+  background: #fff0d8;
+  color: #805b1b;
+}
+
+.reflection-badge.no-direct-effect {
+  background: #ececea;
+  color: #70706c;
+}
+
+.operator-effect-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.operator-effect-card > strong {
+  display: block;
+  margin-bottom: 5px;
   font-size: 11px;
 }
 
-.operator-passive-card p {
+.operator-effect-card p {
   margin: 0;
   color: #555;
   font-size: 10px;
   line-height: 1.6;
 }
 
-.operator-passive-card.muted-passive p {
+.operator-info-note {
+  margin: 10px 0 0;
   color: #888;
+  font-size: 9px;
 }
 
 .selected-skill-summary {
@@ -387,12 +508,6 @@
 
 .selected-skill-summary p {
   margin: 0;
-}
-
-.calculator-two-column {
-  display: grid;
-  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
-  gap: 16px;
 }
 
 .damage-type-switch {
@@ -561,15 +676,26 @@
 }
 
 @media (max-width: 1250px) {
-  .operator-form-grid {
+  .growth-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .operator-stat-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 820px) {
-  .calculator-two-column,
   .selected-skill-summary {
     grid-template-columns: 1fr;
+  }
+
+  .enemy-condition-row {
+    grid-template-columns: 1fr;
+  }
+
+  .operator-info-toggle > span {
+    display: none;
   }
 
   .skill-results {
@@ -592,7 +718,7 @@
     display: none;
   }
 
-  .operator-form-grid,
+  .growth-form-grid,
   .enemy-form-grid,
   .model-form-grid,
   .normal-results,
@@ -600,9 +726,12 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  .operator-form-grid .calculator-field:first-child,
   .skill-picker-field {
     grid-column: 1 / -1;
+  }
+
+  .operator-stat-grid {
+    grid-template-columns: 1fr 1fr;
   }
 
   .damage-result-card {

@@ -4,6 +4,7 @@ import {
   calculateDamage,
   calculateSkillDamage,
   deriveSkillModel,
+  getDefaultDamageType,
   getOperatorStats,
 } from '../src/lib/damageCalculator.ts'
 import { getOperatorPassives } from '../src/lib/operatorProfile.ts'
@@ -82,4 +83,10 @@ test('現在の昇進段階で解放済みかつ潜在強化前の特性・素�
 
   assert.equal(passives.traitDescription, '通常攻撃が術ダメージを与える')
   assert.deepEqual(passives.talents, [{ name: '素質A', description: '基本効果' }])
+})
+
+test('オペレーターの特性を優先して初期ダメージ種別を決める', () => {
+  assert.equal(getDefaultDamageType('WARRIOR', '敵に術ダメージを与える'), 'ARTS')
+  assert.equal(getDefaultDamageType('CASTER', '敵に物理ダメージを与える'), 'PHYSICAL')
+  assert.equal(getDefaultDamageType('SNIPER'), 'PHYSICAL')
 })

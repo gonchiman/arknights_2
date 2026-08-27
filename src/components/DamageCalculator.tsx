@@ -19,6 +19,14 @@ interface Props {
   loading: boolean
 }
 
+type ReflectionStatus = 'APPLIED' | 'NOT_APPLIED' | 'NO_DIRECT_EFFECT'
+
+const REFLECTION_STATUS_LABELS: Record<ReflectionStatus, string> = {
+  APPLIED: '計算に反映',
+  NOT_APPLIED: '未反映',
+  NO_DIRECT_EFFECT: '直接影響なし',
+}
+
 const DEFAULT_OPERATOR_NAME = 'スルト'
 
 export function DamageCalculator({ rows, loading }: Props) {
@@ -35,6 +43,7 @@ export function DamageCalculator({ rows, loading }: Props) {
   const [enemyResistance, setEnemyResistance] = useState(0)
   const [model, setModel] = useState<SkillModelDefaults | null>(null)
   const [operatorSearchOpen, setOperatorSearchOpen] = useState(false)
+  const [operatorInfoOpen, setOperatorInfoOpen] = useState(false)
   const [operatorFilters, setOperatorFilters] = useState(EMPTY_OPERATOR_FILTERS)
 
   const defaultOperatorId = operators.find((operator) => operator.operatorName === DEFAULT_OPERATOR_NAME)?.operatorId
@@ -71,7 +80,8 @@ export function DamageCalculator({ rows, loading }: Props) {
     setSkillId((current) => operatorSkills.some((skill) => skill.id === current)
       ? current
       : operatorSkills[0]?.id ?? '')
-    setDamageType(getDefaultDamageType(selectedOperator.profession))
+    const passives = getOperatorPassives(selectedOperator.operatorProfile, nextPhaseIndex, nextMaxLevel)
+    setDamageType(getDefaultDamageType(selectedOperator.profession, passives.traitDescription))
   }, [effectiveOperatorId])
 
   useEffect(() => {
@@ -85,6 +95,13 @@ export function DamageCalculator({ rows, loading }: Props) {
       safePhaseIndex,
       safeOperatorLevel,
       trust,
+    ])
+  const operatorStatsWithoutTrust = useMemo(() => selectedOperator
+    ? getOperatorStats(selectedOperator.operatorProfile, safePhaseIndex, safeOperatorLevel, 0)
+    : { attack: 0, attackSpeed: 100, baseAttackTime: 1, attackInterval: 1 }, [
+      selectedOperator,
+      safePhaseIndex,
+      safeOperatorLevel,
     ])
   const autoModel = useMemo(() => selectedSkillLevel
     ? deriveSkillModel(selectedSkillLevel, operatorStats.attackInterval)
@@ -101,6 +118,8 @@ export function DamageCalculator({ rows, loading }: Props) {
   const operatorPassives = selectedOperator
     ? getOperatorPassives(selectedOperator.operatorProfile, safePhaseIndex, safeOperatorLevel)
     : { traitDescription: '', talents: [] }
+  const trustAttackBonus = Math.max(0, operatorStats.attack - operatorStatsWithoutTrust.attack)
+  const traitReflectionStatus = getTraitReflectionStatus(operatorPassives.traitDescription, damageType)
   const normalPerHit = calculateDamage(operatorStats.attack, damageType, enemyDefense, enemyResistance)
   const normalDps = operatorStats.attackInterval > 0 ? normalPerHit / operatorStats.attackInterval : 0
   const skillOutput = selectedSkill && model && skillSupported
@@ -149,14 +168,14 @@ export function DamageCalculator({ rows, loading }: Props) {
         <span className="calculator-status">初期版</span>
       </header>
 
-      <section className="calculator-panel">
+      <section className="calculator-panel operator-search-panel">
         <div className="panel-heading">
-          <div><span>01</span><h3>オペレーターとスキル</h3></div>
-          <p>潜在・モジュール・味方バフはまだ含みません</p>
+          <div><span>01</span><h3>オペレーター検索</h3></div>
+          <p>計算対象を選択します</p>
         </div>
-        <div className="calculator-form-grid operator-form-grid">
+        <div className="operator-search-summary">
           <div className="calculator-field operator-picker-field">
-            <span>オペレーター</span>
+            <span>選択中のオペレーター</span>
             <button
               className="operator-search-trigger"
               aria-expanded={operatorSearchOpen}
@@ -167,40 +186,6 @@ export function DamageCalculator({ rows, loading }: Props) {
               <small>★{selectedOperator.rarity} · {selectedOperator.professionLabel} / {selectedOperator.subProfessionName}</small>
               <em>{operatorSearchOpen ? '検索を閉じる' : '検索して変更'} ↗</em>
             </button>
-          </div>
-          <SelectField label="昇進段階" value={String(safePhaseIndex)} onChange={(value) => {
-            const nextPhase = Number(value)
-            setPhaseIndex(nextPhase)
-            setOperatorLevel(Math.max(1, phases[nextPhase]?.maxLevel ?? 1))
-          }}>
-            {phases.map((phase, index) => (
-              <option value={index} key={index}>昇進{index}（最大Lv.{phase.maxLevel ?? 1}）</option>
-            ))}
-          </SelectField>
-          <NumberField label="オペレーターレベル" value={safeOperatorLevel} min={1} max={maxOperatorLevel} onChange={setOperatorLevel} />
-          <NumberField label="信頼度" value={trust} min={0} max={100} suffix="%" onChange={setTrust} />
-          <SelectField label="スキルレベル" value={String(safeSkillLevelIndex)} onChange={(value) => setSkillLevelIndex(Number(value))}>
-            {skillLevels.map((_, index) => (
-              <option value={index} key={index}>{getSkillLevelLabel(index, skillLevels.length)}</option>
-            ))}
-          </SelectField>
-          <div className="calculator-field skill-picker-field">
-            <span>スキル</span>
-            <div className="skill-choice-group" role="group" aria-label="スキル">
-              {operatorSkills.map((skill) => (
-                <button
-                  type="button"
-                  className={effectiveSkillId === skill.id ? 'active' : ''}
-                  aria-pressed={effectiveSkillId === skill.id}
-                  aria-label={`S${skill.skillIndex} ${skill.skillName}`}
-                  onClick={() => setSkillId(skill.id)}
-                  key={skill.id}
-                >
-                  <span>S{skill.skillIndex}</span>
-                  <strong>{skill.skillName}</strong>
-                </button>
-              ))}
-            </div>
           </div>
         </div>
         {operatorSearchOpen && (
@@ -225,23 +210,49 @@ export function DamageCalculator({ rows, loading }: Props) {
             />
           </div>
         )}
-        <div className="operator-passive-grid">
-          <article className="operator-passive-card">
-            <span>特性</span>
-            <p>{operatorPassives.traitDescription || '特性情報なし'}</p>
-          </article>
-          {operatorPassives.talents.length > 0 ? operatorPassives.talents.map((talent, index) => (
-            <article className="operator-passive-card" key={`${talent.name}-${index}`}>
-              <span>素質</span>
-              <strong>{talent.name}</strong>
-              <p>{talent.description || '説明なし'}</p>
-            </article>
-          )) : (
-            <article className="operator-passive-card muted-passive">
-              <span>素質</span>
-              <p>現在の昇進段階で解放された素質はありません</p>
-            </article>
-          )}
+      </section>
+
+      <section className="calculator-panel calculation-conditions-panel">
+        <div className="panel-heading">
+          <div><span>02</span><h3>ダメージ計算条件</h3></div>
+          <p>潜在・モジュール・味方バフはまだ含みません</p>
+        </div>
+        <div className="condition-subheading">育成状態</div>
+        <div className="calculator-form-grid growth-form-grid">
+          <SelectField label="昇進段階" value={String(safePhaseIndex)} onChange={(value) => {
+            const nextPhase = Number(value)
+            setPhaseIndex(nextPhase)
+            setOperatorLevel(Math.max(1, phases[nextPhase]?.maxLevel ?? 1))
+          }}>
+            {phases.map((phase, index) => (
+              <option value={index} key={index}>昇進{index}（最大Lv.{phase.maxLevel ?? 1}）</option>
+            ))}
+          </SelectField>
+          <NumberField label="オペレーターレベル" value={safeOperatorLevel} min={1} max={maxOperatorLevel} onChange={setOperatorLevel} />
+          <NumberField label="信頼度" value={trust} min={0} max={100} suffix="%" onChange={setTrust} />
+          <SelectField label="スキルレベル" value={String(safeSkillLevelIndex)} onChange={(value) => setSkillLevelIndex(Number(value))}>
+            {skillLevels.map((_, index) => (
+              <option value={index} key={index}>{getSkillLevelLabel(index, skillLevels.length)}</option>
+            ))}
+          </SelectField>
+        </div>
+        <div className="calculator-field skill-picker-field">
+          <span>スキル</span>
+          <div className="skill-choice-group" role="group" aria-label="スキル">
+            {operatorSkills.map((skill) => (
+              <button
+                type="button"
+                className={effectiveSkillId === skill.id ? 'active' : ''}
+                aria-pressed={effectiveSkillId === skill.id}
+                aria-label={`S${skill.skillIndex} ${skill.skillName}`}
+                onClick={() => setSkillId(skill.id)}
+                key={skill.id}
+              >
+                <span>S{skill.skillIndex}</span>
+                <strong>{skill.skillName}</strong>
+              </button>
+            ))}
+          </div>
         </div>
         <div className="selected-skill-summary">
           <div>
@@ -250,49 +261,114 @@ export function DamageCalculator({ rows, loading }: Props) {
           </div>
           <p>{stripMarkup(selectedSkillLevel.description ?? selectedSkill.description)}</p>
         </div>
-      </section>
-
-      <div className="calculator-two-column">
-        <section className="calculator-panel">
-          <div className="panel-heading">
-            <div><span>02</span><h3>敵とダメージ種別</h3></div>
-          </div>
-          <div className="damage-type-switch" aria-label="ダメージ種別">
-            {(Object.entries(DAMAGE_TYPE_LABELS) as Array<[DamageType, string]>).map(([type, label]) => (
-              <button className={damageType === type ? 'active' : ''} onClick={() => setDamageType(type)} key={type}>{label}</button>
-            ))}
+        <div className="condition-divider" />
+        <div className="condition-subheading">敵とダメージ種別</div>
+        <div className="enemy-condition-row">
+          <div>
+            <span className="condition-field-label">ダメージ種別</span>
+            <div className="damage-type-switch" aria-label="ダメージ種別">
+              {(Object.entries(DAMAGE_TYPE_LABELS) as Array<[DamageType, string]>).map(([type, label]) => (
+                <button className={damageType === type ? 'active' : ''} onClick={() => setDamageType(type)} key={type}>{label}</button>
+              ))}
+            </div>
           </div>
           <div className="calculator-form-grid enemy-form-grid">
             <NumberField label="敵の防御力" value={enemyDefense} min={0} max={10000} onChange={setEnemyDefense} />
             <NumberField label="敵の術耐性" value={enemyResistance} min={0} max={100} suffix="%" onChange={setEnemyResistance} />
           </div>
-          <p className="panel-note">物理ダメージには攻撃力の5%の最低保証、術耐性には95%の上限を適用しています。</p>
-        </section>
+        </div>
+        <p className="panel-note">物理ダメージには攻撃力の5%の最低保証、術耐性には95%の上限を適用しています。</p>
+      </section>
 
-        <section className="calculator-panel">
-          <div className="panel-heading">
-            <div><span>03</span><h3>スキル計算モデル</h3></div>
-            <button className="model-reset" onClick={() => setModel(autoModel)}>自動値に戻す</button>
+      <section className={`calculator-panel operator-info-panel ${operatorInfoOpen ? 'open' : ''}`}>
+        <div className="panel-heading operator-info-heading">
+          <div><span>03</span><h3>オペレーター情報</h3></div>
+          <button
+            type="button"
+            className="operator-info-toggle"
+            aria-expanded={operatorInfoOpen}
+            aria-controls="operator-info-body"
+            onClick={() => setOperatorInfoOpen((open) => !open)}
+          >
+            <span>攻撃力 {formatNumber(operatorStats.attack)} · 攻撃速度 {formatNumber(operatorStats.attackSpeed)} · 攻撃間隔 {formatDecimal(operatorStats.attackInterval)}秒</span>
+            <em>{operatorInfoOpen ? '閉じる' : '詳細を表示'} {operatorInfoOpen ? '−' : '+'}</em>
+          </button>
+        </div>
+        {operatorInfoOpen && (
+          <div id="operator-info-body" className="operator-info-body">
+            <div className="operator-stat-grid">
+              <OperatorMetric
+                label="実効攻撃力"
+                value={formatNumber(operatorStats.attack)}
+                detail={`レベル値 ${formatNumber(operatorStatsWithoutTrust.attack)} + 信頼度 ${formatSignedNumber(trustAttackBonus)}`}
+              />
+              <OperatorMetric
+                label="攻撃速度"
+                value={formatNumber(operatorStats.attackSpeed)}
+                detail="攻撃間隔の算出に使用"
+              />
+              <OperatorMetric
+                label="基礎攻撃時間"
+                value={`${formatDecimal(operatorStats.baseAttackTime)}秒`}
+                detail="攻撃速度適用前"
+              />
+              <OperatorMetric
+                label="実効攻撃間隔"
+                value={`${formatDecimal(operatorStats.attackInterval)}秒`}
+                detail="通常攻撃DPSの算出に使用"
+              />
+              <OperatorMetric
+                label="計算上のダメージ種別"
+                value={DAMAGE_TYPE_LABELS[damageType]}
+                detail="計算条件で変更可能"
+              />
+            </div>
+            <div className="operator-effect-grid">
+              <article className="operator-effect-card">
+                <header><span>特性</span><ReflectionBadge status={traitReflectionStatus} /></header>
+                <p>{operatorPassives.traitDescription || '特性情報なし'}</p>
+              </article>
+              {operatorPassives.talents.length > 0 ? operatorPassives.talents.map((talent, index) => (
+                <article className="operator-effect-card" key={`${talent.name}-${index}`}>
+                  <header><span>素質</span><ReflectionBadge status={getTalentReflectionStatus(talent.description)} /></header>
+                  <strong>{talent.name}</strong>
+                  <p>{talent.description || '説明なし'}</p>
+                </article>
+              )) : (
+                <article className="operator-effect-card muted-passive">
+                  <header><span>素質</span><ReflectionBadge status="NO_DIRECT_EFFECT" /></header>
+                  <p>現在の昇進段階で解放された素質はありません</p>
+                </article>
+              )}
+            </div>
+            <p className="operator-info-note">「未反映」の効果は表示のみで、現在の計算結果には含まれません。</p>
           </div>
-          <div className="calculator-form-grid model-form-grid">
-            <NumberField label="攻撃倍率" value={model.attackMultiplierPercent} min={0} max={10000} step={1} suffix="%" onChange={(value) => updateModel('attackMultiplierPercent', value)} />
-            <NumberField label="1攻撃のヒット数" value={model.hitCount} min={1} max={100} step={1} onChange={(value) => updateModel('hitCount', value)} />
-            <NumberField label="攻撃間隔" value={model.attackInterval} min={0.05} max={60} step={0.01} suffix="秒" onChange={(value) => updateModel('attackInterval', value)} />
-            {selectedSkill.classification.effectWindow.value === 'FIXED_DURATION' && (
-              <NumberField label="効果時間" value={model.duration} min={0} max={999} step={0.1} suffix="秒" onChange={(value) => updateModel('duration', value)} />
-            )}
-            {selectedSkill.classification.effectWindow.value === 'AMMO' && (
-              <NumberField label="弾数" value={model.ammoCount} min={0} max={999} step={1} onChange={(value) => updateModel('ammoCount', value)} />
-            )}
-          </div>
-          {model.notes.length > 0 && <ul className="model-notes">{model.notes.map((note) => <li key={note}>{note}</li>)}</ul>}
-          {!skillSupported && <div className="unsupported-model"><strong>初期版では自動計算できません</strong>{unsupportedReasons.map((reason) => <span key={reason}>{reason}</span>)}</div>}
-        </section>
-      </div>
+        )}
+      </section>
+
+      <section className="calculator-panel">
+        <div className="panel-heading">
+          <div><span>04</span><h3>スキル計算モデル</h3></div>
+          <button className="model-reset" onClick={() => setModel(autoModel)}>自動値に戻す</button>
+        </div>
+        <div className="calculator-form-grid model-form-grid">
+          <NumberField label="攻撃倍率" value={model.attackMultiplierPercent} min={0} max={10000} step={1} suffix="%" onChange={(value) => updateModel('attackMultiplierPercent', value)} />
+          <NumberField label="1攻撃のヒット数" value={model.hitCount} min={1} max={100} step={1} onChange={(value) => updateModel('hitCount', value)} />
+          <NumberField label="攻撃間隔" value={model.attackInterval} min={0.05} max={60} step={0.01} suffix="秒" onChange={(value) => updateModel('attackInterval', value)} />
+          {selectedSkill.classification.effectWindow.value === 'FIXED_DURATION' && (
+            <NumberField label="効果時間" value={model.duration} min={0} max={999} step={0.1} suffix="秒" onChange={(value) => updateModel('duration', value)} />
+          )}
+          {selectedSkill.classification.effectWindow.value === 'AMMO' && (
+            <NumberField label="弾数" value={model.ammoCount} min={0} max={999} step={1} onChange={(value) => updateModel('ammoCount', value)} />
+          )}
+        </div>
+        {model.notes.length > 0 && <ul className="model-notes">{model.notes.map((note) => <li key={note}>{note}</li>)}</ul>}
+        {!skillSupported && <div className="unsupported-model"><strong>初期版では自動計算できません</strong>{unsupportedReasons.map((reason) => <span key={reason}>{reason}</span>)}</div>}
+      </section>
 
       <section className="calculator-panel results-panel">
         <div className="panel-heading">
-          <div><span>04</span><h3>計算結果</h3></div>
+          <div><span>05</span><h3>計算結果</h3></div>
           <p>{DAMAGE_TYPE_LABELS[damageType]} · 防御 {formatNumber(enemyDefense)} · 術耐性 {formatNumber(enemyResistance)}%</p>
         </div>
         <div className="result-section-label">通常攻撃</div>
@@ -312,7 +388,7 @@ export function DamageCalculator({ rows, loading }: Props) {
 
       <section className="calculator-panel sensitivity-panel">
         <div className="panel-heading">
-          <div><span>05</span><h3>{damageType === 'ARTS' ? '術耐性' : damageType === 'PHYSICAL' ? '防御力' : '敵ステータス'}別の比較</h3></div>
+          <div><span>06</span><h3>{damageType === 'ARTS' ? '術耐性' : damageType === 'PHYSICAL' ? '防御力' : '敵ステータス'}別の比較</h3></div>
           <p>敵ステータスを変えたときの単体ダメージ</p>
         </div>
         <div className="sensitivity-table-wrap">
@@ -387,6 +463,20 @@ function NumberField({
       </div>
     </label>
   )
+}
+
+function OperatorMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <article className="operator-stat-card">
+      <header><span>{label}</span><ReflectionBadge status="APPLIED" /></header>
+      <strong>{value}</strong>
+      <small>{detail}</small>
+    </article>
+  )
+}
+
+function ReflectionBadge({ status }: { status: ReflectionStatus }) {
+  return <span className={`reflection-badge ${status.toLowerCase().replaceAll('_', '-')}`}>{REFLECTION_STATUS_LABELS[status]}</span>
 }
 
 function ResultCard({ label, value }: { label: string; value: number | null }) {
@@ -482,6 +572,27 @@ function getSkillLevelLabel(index: number, total: number): string {
   return `Lv.${index + 1}`
 }
 
+function getTraitReflectionStatus(description: string, damageType: DamageType): ReflectionStatus {
+  const impliedDamageType = inferDamageTypeFromText(description)
+  if (impliedDamageType) return impliedDamageType === damageType ? 'APPLIED' : 'NOT_APPLIED'
+  return hasDirectDamageEffect(description) ? 'NOT_APPLIED' : 'NO_DIRECT_EFFECT'
+}
+
+function getTalentReflectionStatus(description: string): ReflectionStatus {
+  return hasDirectDamageEffect(description) ? 'NOT_APPLIED' : 'NO_DIRECT_EFFECT'
+}
+
+function inferDamageTypeFromText(description: string): DamageType | null {
+  if (/確定ダメージ/.test(description)) return 'TRUE'
+  if (/術ダメージ/.test(description)) return 'ARTS'
+  if (/物理ダメージ/.test(description)) return 'PHYSICAL'
+  return null
+}
+
+function hasDirectDamageEffect(description: string): boolean {
+  return /攻撃力|攻撃速度|攻撃間隔|防御力.{0,16}無視|術耐性.{0,16}無視|追加.{0,16}ダメージ|与えるダメージ|連撃|会心/.test(description)
+}
+
 function stripMarkup(value: string): string {
   return value.replace(/<[^>]+>/g, '').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim()
 }
@@ -496,6 +607,10 @@ function formatNumber(value: number): string {
 
 function formatDecimal(value: number): string {
   return new Intl.NumberFormat('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
+}
+
+function formatSignedNumber(value: number): string {
+  return `${value >= 0 ? '+' : ''}${formatNumber(value)}`
 }
 
 function clamp(value: number, min: number, max: number): number {
