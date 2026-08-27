@@ -281,19 +281,22 @@ export function DamageCalculator({ rows, loading }: Props) {
       </section>
 
       <section className={`calculator-panel operator-info-panel ${operatorInfoOpen ? 'open' : ''}`}>
-        <div className="panel-heading operator-info-heading">
-          <div><span>03</span><h3>オペレーター情報</h3></div>
-          <button
-            type="button"
-            className="operator-info-toggle"
-            aria-expanded={operatorInfoOpen}
-            aria-controls="operator-info-body"
-            onClick={() => setOperatorInfoOpen((open) => !open)}
-          >
+        <button
+          type="button"
+          className="panel-heading operator-info-heading"
+          aria-expanded={operatorInfoOpen}
+          aria-controls="operator-info-body"
+          onClick={() => setOperatorInfoOpen((open) => !open)}
+        >
+          <span className="operator-info-heading-title">
+            <span>03</span>
+            <span className="operator-info-heading-label" role="heading" aria-level={3}>オペレーター情報</span>
+          </span>
+          <span className="operator-info-heading-summary">
             <span>攻撃力 {formatNumber(operatorStats.attack)} · 攻撃速度 {formatNumber(operatorStats.attackSpeed)} · 攻撃間隔 {formatDecimal(operatorStats.attackInterval)}秒</span>
             <em>{operatorInfoOpen ? '閉じる' : '詳細を表示'} {operatorInfoOpen ? '−' : '+'}</em>
-          </button>
-        </div>
+          </span>
+        </button>
         {operatorInfoOpen && (
           <div id="operator-info-body" className="operator-info-body">
             <div className="operator-stat-grid">
