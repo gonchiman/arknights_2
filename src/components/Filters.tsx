@@ -41,6 +41,17 @@ export function Filters({ value, professionOptions, subProfessionOptions, onChan
 
   return (
     <div className="filters">
+      <div className="filters-heading">
+        <span>検索条件</span>
+        <button
+          type="button"
+          className="filter-reset-button"
+          disabled={!hasActiveFilters}
+          onClick={onReset}
+        >
+          条件をリセット
+        </button>
+      </div>
       <div className="initial-filter" role="group" aria-label="オペレーター名の頭文字">
         <span className="initial-filter-label">頭文字</span>
         <button
@@ -62,14 +73,6 @@ export function Filters({ value, professionOptions, subProfessionOptions, onChan
             {OPERATOR_INITIAL_LABELS[initial]}
           </button>
         ))}
-        <button
-          type="button"
-          className="filter-reset-button"
-          disabled={!hasActiveFilters}
-          onClick={onReset}
-        >
-          条件をリセット
-        </button>
       </div>
       <div className="initial-filter profession-filter" role="group" aria-label="職業">
         <span className="initial-filter-label">職業</span>
