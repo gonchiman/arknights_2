@@ -103,6 +103,7 @@
 
 .operator-form-grid {
   grid-template-columns: minmax(200px, 1.5fr) repeat(3, minmax(120px, .7fr)) minmax(210px, 1.4fr) minmax(120px, .7fr);
+  align-items: end;
 }
 
 .enemy-form-grid,
@@ -112,6 +113,107 @@
 
 .calculator-field {
   min-width: 0;
+}
+
+.operator-search-trigger {
+  position: relative;
+  width: 100%;
+  height: 58px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  border: 1px solid #cfcfca;
+  border-radius: 8px;
+  background: #fafaf8;
+  color: #111;
+  padding: 7px 78px 7px 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.operator-search-trigger:hover,
+.operator-search-trigger:focus-visible {
+  border-color: #777;
+  background: #fff;
+}
+
+.operator-search-trigger strong {
+  overflow: hidden;
+  max-width: 100%;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operator-search-trigger small {
+  overflow: hidden;
+  max-width: 100%;
+  margin-top: 3px;
+  color: #777;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operator-search-trigger em {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  color: #555;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.calculator-operator-search {
+  margin-top: 14px;
+  border: 1px solid #cfcfca;
+  border-radius: 10px;
+  background: #f5f5f2;
+  padding: 10px;
+}
+
+.operator-search-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 2px 3px 10px;
+}
+
+.operator-search-heading div {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.operator-search-heading strong {
+  font-size: 12px;
+}
+
+.operator-search-heading span {
+  color: #777;
+  font-size: 9px;
+}
+
+.operator-search-heading button {
+  border: 0;
+  background: transparent;
+  color: #555;
+  padding: 5px;
+  cursor: pointer;
+  font-size: 10px;
+  text-decoration: underline;
+}
+
+.damage-operator-search-results {
+  border-radius: 8px;
+}
+
+.damage-operator-search-results .table-wrap {
+  max-height: 340px;
 }
 
 .calculator-field > span {

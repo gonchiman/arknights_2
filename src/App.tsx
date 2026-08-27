@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Filters, type FilterOption, type FilterState } from './components/Filters'
 import { DamageCalculator } from './components/DamageCalculator'
-import { OperatorTable } from './components/OperatorTable'
+import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './components/OperatorSearch'
 import { SkillDetail } from './components/SkillDetail'
 import { DATA_URLS, loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
@@ -22,20 +21,10 @@ import './index.css'
 import './navigation.css'
 
 const OVERRIDE_STORAGE_KEY = 'arknights-skill-classification-overrides-v2'
-const initialFilters: FilterState = {
-  query: '',
-  nameInitial: 'ALL',
-  profession: 'ALL',
-  subProfession: 'ALL',
-  rarity: 'ALL',
-  effectWindow: 'ALL',
-  damageComponent: 'ALL',
-}
-
 export default function App() {
   const [rows, setRows] = useState<SkillRecord[]>([])
   const [route, setRoute] = useState<AppRoute>(() => parseHashRoute(window.location.hash))
-  const [filters, setFilters] = useState<FilterState>(initialFilters)
+  const [filters, setFilters] = useState(EMPTY_OPERATOR_FILTERS)
   const [overrides, setOverrides] = useState<Record<string, SkillClassificationOverride>>(loadOverrides)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -66,38 +55,6 @@ export default function App() {
     ...row,
     classification: applyManualClassification(row.classification, overrides[row.id]),
   })), [rows, overrides])
-
-  const professionOptions = useMemo(() => uniqueOptions(rows.map((row) => ({
-    value: row.profession,
-    label: row.professionLabel,
-  }))), [rows])
-
-  const subProfessionOptions = useMemo(() => uniqueOptions(rows
-    .filter((row) => filters.profession === 'ALL' || row.profession === filters.profession)
-    .map((row) => ({ value: row.subProfessionId, label: row.subProfessionName }))), [rows, filters.profession])
-
-  const filteredSkills = useMemo(() => classifiedRows.filter((row) => {
-    const query = filters.query.trim().toLowerCase()
-    if (query && !`${row.operatorName} ${row.skillName} ${row.description} ${row.skillId}`.toLowerCase().includes(query)) return false
-    if (filters.nameInitial !== 'ALL' && row.nameInitial !== filters.nameInitial) return false
-    if (filters.profession !== 'ALL' && row.profession !== filters.profession) return false
-    if (filters.subProfession !== 'ALL' && row.subProfessionId !== filters.subProfession) return false
-    if (filters.rarity !== 'ALL' && row.rarity !== filters.rarity) return false
-    if (filters.effectWindow !== 'ALL' && row.classification.effectWindow.value !== filters.effectWindow) return false
-    if (filters.damageComponent !== 'ALL' && !row.classification.damageComponents.value.includes(filters.damageComponent)) return false
-    return true
-  }), [classifiedRows, filters])
-
-  // 一覧はオペレーターを1人1行だけ表示する。
-  // スキル条件で絞り込んだ場合は、最初に一致したスキルを詳細画面で開く。
-  const filteredOperators = useMemo(() => {
-    const seen = new Set<string>()
-    return filteredSkills.filter((row) => {
-      if (seen.has(row.operatorId)) return false
-      seen.add(row.operatorId)
-      return true
-    })
-  }, [filteredSkills])
 
   const selected = route.view === 'skill'
     ? classifiedRows.find((row) => row.id === route.skillId) ?? null
@@ -152,19 +109,13 @@ export default function App() {
         {error && <section className="error-box">{error}</section>}
 
         {route.view === 'list' ? (
-          <section className="list-pane list-view">
-            <Filters
-              value={filters}
-              professionOptions={professionOptions}
-              subProfessionOptions={subProfessionOptions}
-              onChange={setFilters}
-            />
-            <div className="result-meta">
-              <span>{loading ? '読み込み中...' : `${filteredOperators.length} 名表示`}</span>
-              <span>オペレーターを選択すると詳細画面へ移動します</span>
-            </div>
-            <OperatorTable rows={filteredOperators} onSelect={(row) => openSkill(row.id)} />
-          </section>
+          <OperatorSearch
+            rows={classifiedRows}
+            filters={filters}
+            loading={loading}
+            onFiltersChange={setFilters}
+            onSelect={(row) => openSkill(row.id)}
+          />
         ) : route.view === 'damage' ? (
           <DamageCalculator rows={classifiedRows} loading={loading} />
         ) : selected ? (
@@ -225,9 +176,4 @@ function isMember<T extends string>(value: unknown, options: readonly T[]): valu
 
 function isMemberArray<T extends string>(value: unknown, options: readonly T[]): value is T[] {
   return Array.isArray(value) && value.every((item) => isMember(item, options))
-}
-
-function uniqueOptions(options: FilterOption[]): FilterOption[] {
-  return [...new Map(options.map((option) => [option.value, option])).values()]
-    .sort((a, b) => a.label.localeCompare(b.label, 'ja'))
 }

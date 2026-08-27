@@ -3,9 +3,12 @@ import type { SkillRecord } from '../types/skill'
 interface Props {
   rows: SkillRecord[]
   onSelect: (row: SkillRecord) => void
+  actionLabel?: string
 }
 
-export function OperatorTable({ rows, onSelect }: Props) {
+export function OperatorTable({ rows, onSelect, actionLabel = '詳細を見る →' }: Props) {
+  const isSelectionTable = actionLabel.startsWith('選択')
+
   return (
     <div className="table-wrap operator-table">
       <table>
@@ -15,7 +18,7 @@ export function OperatorTable({ rows, onSelect }: Props) {
             <th>レアリティ</th>
             <th>職業</th>
             <th>職分</th>
-            <th aria-label="詳細画面" />
+            <th aria-label={isSelectionTable ? '選択' : '詳細画面'} />
           </tr>
         </thead>
         <tbody>
@@ -23,17 +26,17 @@ export function OperatorTable({ rows, onSelect }: Props) {
             <tr
               key={row.operatorId}
               tabIndex={0}
-              aria-label={`${row.operatorName}の詳細を開く`}
+              aria-label={`${row.operatorName}を${isSelectionTable ? '選択' : '開く'}`}
               onClick={() => onSelect(row)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') onSelect(row)
               }}
             >
-              <td><strong>{row.operatorName}</strong></td>
+              <td><span className="operator-name">{row.operatorName}</span></td>
               <td>★{row.rarity}</td>
               <td>{row.professionLabel}</td>
               <td>{row.subProfessionName}</td>
-              <td className="detail-link-cell">詳細を見る →</td>
+              <td className="detail-link-cell">{actionLabel}</td>
             </tr>
           ))}
         </tbody>

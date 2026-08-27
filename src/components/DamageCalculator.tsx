@@ -10,12 +10,15 @@ import {
   type SkillModelDefaults,
 } from '../lib/damageCalculator'
 import type { RawSkillLevel, SkillRecord } from '../types/skill'
+import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
 import './DamageCalculator.css'
 
 interface Props {
   rows: SkillRecord[]
   loading: boolean
 }
+
+const DEFAULT_OPERATOR_NAME = 'スルト'
 
 export function DamageCalculator({ rows, loading }: Props) {
   const operators = useMemo(() => [...new Map(rows.map((row) => [row.operatorId, row])).values()]
@@ -30,10 +33,15 @@ export function DamageCalculator({ rows, loading }: Props) {
   const [enemyDefense, setEnemyDefense] = useState(0)
   const [enemyResistance, setEnemyResistance] = useState(0)
   const [model, setModel] = useState<SkillModelDefaults | null>(null)
+  const [operatorSearchOpen, setOperatorSearchOpen] = useState(false)
+  const [operatorFilters, setOperatorFilters] = useState(EMPTY_OPERATOR_FILTERS)
 
+  const defaultOperatorId = operators.find((operator) => operator.operatorName === DEFAULT_OPERATOR_NAME)?.operatorId
+    ?? operators[0]?.operatorId
+    ?? ''
   const effectiveOperatorId = operators.some((operator) => operator.operatorId === operatorId)
     ? operatorId
-    : operators[0]?.operatorId ?? ''
+    : defaultOperatorId
   const selectedOperator = operators.find((operator) => operator.operatorId === effectiveOperatorId) ?? null
   const operatorSkills = useMemo(() => rows
     .filter((row) => row.operatorId === effectiveOperatorId)
@@ -59,7 +67,9 @@ export function DamageCalculator({ rows, loading }: Props) {
     setPhaseIndex(nextPhaseIndex)
     setOperatorLevel(nextMaxLevel)
     setTrust(100)
-    setSkillId(operatorSkills[0]?.id ?? '')
+    setSkillId((current) => operatorSkills.some((skill) => skill.id === current)
+      ? current
+      : operatorSkills[0]?.id ?? '')
     setDamageType(getDefaultDamageType(selectedOperator.profession))
   }, [effectiveOperatorId])
 
@@ -141,11 +151,19 @@ export function DamageCalculator({ rows, loading }: Props) {
           <p>潜在・モジュール・味方バフはまだ含みません</p>
         </div>
         <div className="calculator-form-grid operator-form-grid">
-          <SelectField label="オペレーター" value={effectiveOperatorId} onChange={(value) => setOperatorId(value)}>
-            {operators.map((operator) => (
-              <option value={operator.operatorId} key={operator.operatorId}>{operator.operatorName}</option>
-            ))}
-          </SelectField>
+          <div className="calculator-field operator-picker-field">
+            <span>オペレーター</span>
+            <button
+              className="operator-search-trigger"
+              aria-expanded={operatorSearchOpen}
+              aria-controls="damage-operator-search"
+              onClick={() => setOperatorSearchOpen((open) => !open)}
+            >
+              <strong>{selectedOperator.operatorName}</strong>
+              <small>★{selectedOperator.rarity} · {selectedOperator.professionLabel} / {selectedOperator.subProfessionName}</small>
+              <em>{operatorSearchOpen ? '検索を閉じる' : '検索して変更'} ↗</em>
+            </button>
+          </div>
           <SelectField label="昇進段階" value={String(safePhaseIndex)} onChange={(value) => {
             const nextPhase = Number(value)
             setPhaseIndex(nextPhase)
@@ -168,6 +186,28 @@ export function DamageCalculator({ rows, loading }: Props) {
             ))}
           </SelectField>
         </div>
+        {operatorSearchOpen && (
+          <div id="damage-operator-search" className="calculator-operator-search">
+            <div className="operator-search-heading">
+              <div><strong>オペレーターを検索</strong><span>一覧画面と同じ条件で絞り込めます</span></div>
+              <button onClick={() => setOperatorSearchOpen(false)}>閉じる</button>
+            </div>
+            <OperatorSearch
+              rows={rows}
+              filters={operatorFilters}
+              loading={loading}
+              onFiltersChange={setOperatorFilters}
+              onSelect={(row) => {
+                setOperatorId(row.operatorId)
+                setSkillId(row.id)
+                setOperatorSearchOpen(false)
+              }}
+              instruction="行を選択すると計算対象へ反映します"
+              actionLabel="選択する →"
+              className="damage-operator-search-results"
+            />
+          </div>
+        )}
         <div className="selected-skill-summary">
           <div>
             <strong>{selectedOperator.operatorName} · S{selectedSkill.skillIndex} {selectedSkillLevel.name ?? selectedSkill.skillName}</strong>

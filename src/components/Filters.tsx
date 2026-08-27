@@ -26,9 +26,18 @@ interface Props {
   professionOptions: FilterOption[]
   subProfessionOptions: FilterOption[]
   onChange: (next: FilterState) => void
+  onReset: () => void
 }
 
-export function Filters({ value, professionOptions, subProfessionOptions, onChange }: Props) {
+export function Filters({ value, professionOptions, subProfessionOptions, onChange, onReset }: Props) {
+  const hasActiveFilters = value.query !== ''
+    || value.nameInitial !== 'ALL'
+    || value.profession !== 'ALL'
+    || value.subProfession !== 'ALL'
+    || value.rarity !== 'ALL'
+    || value.effectWindow !== 'ALL'
+    || value.damageComponent !== 'ALL'
+
   return (
     <div className="filters">
       <div className="initial-filter" role="group" aria-label="オペレーター名の頭文字">
@@ -52,9 +61,18 @@ export function Filters({ value, professionOptions, subProfessionOptions, onChan
             {OPERATOR_INITIAL_LABELS[initial]}
           </button>
         ))}
+        <button
+          type="button"
+          className="filter-reset-button"
+          disabled={!hasActiveFilters}
+          onClick={onReset}
+        >
+          条件をリセット
+        </button>
       </div>
       <input
         className="search"
+        aria-label="オペレーター検索"
         value={value.query}
         onChange={(event) => onChange({ ...value, query: event.target.value })}
         placeholder="オペレーター名・スキル名・説明文で検索"
