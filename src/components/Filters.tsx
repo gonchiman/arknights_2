@@ -1,20 +1,15 @@
-import {
-  DAMAGE_COMPONENT_OPTIONS,
-  EFFECT_WINDOW_OPTIONS,
-} from '../lib/classifier'
 import { getProfessionColor, OPERATOR_INITIAL_LABELS } from '../lib/operatorFilters'
 import { OPERATOR_INITIALS } from '../types/skill'
 import type { CSSProperties } from 'react'
-import type { DamageComponentType, EffectWindowType, OperatorInitial } from '../types/skill'
+import type { OperatorInitial } from '../types/skill'
+
+const RARITIES = [6, 5, 4, 3, 2, 1] as const
 
 export interface FilterState {
   query: string
   nameInitial: OperatorInitial | 'ALL'
   profession: string | 'ALL'
-  subProfession: string | 'ALL'
   rarity: number | 'ALL'
-  effectWindow: EffectWindowType | 'ALL'
-  damageComponent: DamageComponentType | 'ALL'
 }
 
 export interface FilterOption {
@@ -25,19 +20,15 @@ export interface FilterOption {
 interface Props {
   value: FilterState
   professionOptions: FilterOption[]
-  subProfessionOptions: FilterOption[]
   onChange: (next: FilterState) => void
   onReset: () => void
 }
 
-export function Filters({ value, professionOptions, subProfessionOptions, onChange, onReset }: Props) {
+export function Filters({ value, professionOptions, onChange, onReset }: Props) {
   const hasActiveFilters = value.query !== ''
     || value.nameInitial !== 'ALL'
     || value.profession !== 'ALL'
-    || value.subProfession !== 'ALL'
     || value.rarity !== 'ALL'
-    || value.effectWindow !== 'ALL'
-    || value.damageComponent !== 'ALL'
 
   return (
     <div className="filters">
@@ -80,7 +71,7 @@ export function Filters({ value, professionOptions, subProfessionOptions, onChan
           type="button"
           className={`initial-button ${value.profession === 'ALL' ? 'active' : ''}`}
           aria-pressed={value.profession === 'ALL'}
-          onClick={() => onChange({ ...value, profession: 'ALL', subProfession: 'ALL' })}
+          onClick={() => onChange({ ...value, profession: 'ALL' })}
         >
           すべて
         </button>
@@ -89,11 +80,33 @@ export function Filters({ value, professionOptions, subProfessionOptions, onChan
             type="button"
             className={`initial-button profession-button ${value.profession === option.value ? 'active' : ''}`}
             aria-pressed={value.profession === option.value}
-            onClick={() => onChange({ ...value, profession: option.value, subProfession: 'ALL' })}
+            onClick={() => onChange({ ...value, profession: option.value })}
             style={getProfessionButtonStyle(option.value)}
             key={option.value}
           >
             {option.label}
+          </button>
+        ))}
+      </div>
+      <div className="initial-filter rarity-filter" role="group" aria-label="レアリティ">
+        <span className="initial-filter-label">レアリティ</span>
+        <button
+          type="button"
+          className={`initial-button ${value.rarity === 'ALL' ? 'active' : ''}`}
+          aria-pressed={value.rarity === 'ALL'}
+          onClick={() => onChange({ ...value, rarity: 'ALL' })}
+        >
+          すべて
+        </button>
+        {RARITIES.map((rarity) => (
+          <button
+            type="button"
+            className={`initial-button ${value.rarity === rarity ? 'active' : ''}`}
+            aria-pressed={value.rarity === rarity}
+            onClick={() => onChange({ ...value, rarity })}
+            key={rarity}
+          >
+            ★{rarity}
           </button>
         ))}
       </div>
@@ -104,22 +117,6 @@ export function Filters({ value, professionOptions, subProfessionOptions, onChan
         onChange={(event) => onChange({ ...value, query: event.target.value })}
         placeholder="オペレーター名・スキル名・説明文で検索"
       />
-      <select value={value.subProfession} onChange={(event) => onChange({ ...value, subProfession: event.target.value })}>
-        <option value="ALL">職分: すべて</option>
-        {subProfessionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-      </select>
-      <select value={value.rarity} onChange={(event) => onChange({ ...value, rarity: event.target.value === 'ALL' ? 'ALL' : Number(event.target.value) })}>
-        <option value="ALL">レアリティ: すべて</option>
-        {[6, 5, 4, 3, 2, 1].map((rarity) => <option key={rarity} value={rarity}>★{rarity}</option>)}
-      </select>
-      <select value={value.effectWindow} onChange={(event) => onChange({ ...value, effectWindow: event.target.value as EffectWindowType | 'ALL' })}>
-        <option value="ALL">終了条件: すべて</option>
-        {EFFECT_WINDOW_OPTIONS.map(([type, label]) => <option key={type} value={type}>{label}</option>)}
-      </select>
-      <select value={value.damageComponent} onChange={(event) => onChange({ ...value, damageComponent: event.target.value as DamageComponentType | 'ALL' })}>
-        <option value="ALL">ダメージ構成: すべて</option>
-        {DAMAGE_COMPONENT_OPTIONS.map(([type, label]) => <option key={type} value={type}>{label}</option>)}
-      </select>
     </div>
   )
 }

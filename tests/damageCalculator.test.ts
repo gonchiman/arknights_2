@@ -2,7 +2,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   calculateDamage,
+  calculateDamageBreakdown,
   calculateSkillDamage,
+  calculateSkillDamageBreakdown,
   deriveSkillModel,
   getDefaultDamageType,
   getOperatorStats,
@@ -14,6 +16,19 @@ test('物理・術・確定ダメージへ敵防御を正しく適用する', ()
   assert.equal(calculateDamage(1000, 'PHYSICAL', 2000, 0), 50)
   assert.equal(calculateDamage(1000, 'ARTS', 0, 30), 700)
   assert.equal(calculateDamage(1000, 'TRUE', 2000, 100), 1000)
+})
+
+test('物理最低保証と術耐性上限を計算過程として返す', () => {
+  const physical = calculateDamageBreakdown(1000, 'PHYSICAL', 2000, 0)
+  assert.equal(physical.afterDefense, -1000)
+  assert.equal(physical.minimumDamage, 50)
+  assert.equal(physical.minimumApplied, true)
+  assert.equal(physical.result, 50)
+
+  const arts = calculateDamageBreakdown(1000, 'ARTS', 0, 100)
+  assert.equal(arts.inputResistance, 100)
+  assert.equal(arts.appliedResistance, 95)
+  assert.ok(Math.abs(arts.result - 50) < 1e-9)
 })
 
 test('レベルと信頼度から攻撃力・攻撃間隔を補間する', () => {
@@ -66,6 +81,27 @@ test('固定時間スキルの1ヒット・DPS・総量を計算する', () => {
   assert.equal(output.perAttack, 2000)
   assert.equal(output.dps, 1000)
   assert.equal(output.total, 10000)
+})
+
+test('スキルの倍率・軽減・ヒット数・総量を同じ計算過程で返す', () => {
+  const breakdown = calculateSkillDamageBreakdown(1000, 'PHYSICAL', 200, 0, {
+    attackMultiplierPercent: 120,
+    hitCount: 2,
+    attackInterval: 2,
+    duration: 10,
+    ammoCount: 0,
+  }, {
+    canShowDps: true,
+    totalMode: 'DURATION',
+  })
+
+  assert.equal(breakdown.scaledAttack, 1200)
+  assert.equal(breakdown.mitigation.afterDefense, 1000)
+  assert.equal(breakdown.perHit, 1000)
+  assert.equal(breakdown.perAttack, 2000)
+  assert.equal(breakdown.dps, 1000)
+  assert.equal(breakdown.total, 10000)
+  assert.equal(breakdown.totalMode, 'DURATION')
 })
 
 test('現在の昇進段階で解放済みかつ潜在強化前の特性・素質を選ぶ', () => {

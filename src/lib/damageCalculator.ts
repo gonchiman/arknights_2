@@ -37,6 +37,34 @@ export interface SkillDamageOutput {
   total: number | null
 }
 
+export interface DamageCalculationBreakdown {
+  attack: number
+  damageType: DamageType
+  inputDefense: number
+  appliedDefense: number
+  inputResistance: number
+  appliedResistance: number
+  afterDefense: number | null
+  minimumDamage: number | null
+  minimumApplied: boolean
+  result: number
+}
+
+export type SkillTotalMode = 'DURATION' | 'AMMO' | 'ACTIVATION' | 'NONE'
+
+export interface SkillDamageBreakdown extends SkillDamageOutput {
+  baseAttack: number
+  attackMultiplierPercent: number
+  scaledAttack: number
+  hitCount: number
+  attackInterval: number
+  duration: number
+  ammoCount: number
+  canShowDps: boolean
+  totalMode: SkillTotalMode
+  mitigation: DamageCalculationBreakdown
+}
+
 export function getOperatorStats(
   profile: OperatorCombatProfile,
   phaseIndex: number,
@@ -129,16 +157,63 @@ export function calculateDamage(
   enemyDefense: number,
   enemyResistance: number,
 ): number {
-  const attack = Math.max(0, rawAttack)
+  return calculateDamageBreakdown(rawAttack, damageType, enemyDefense, enemyResistance).result
+}
 
-  if (damageType === 'TRUE') return attack
-  if (damageType === 'ARTS') {
-    const resistance = clamp(enemyResistance, 0, 95)
-    return attack * (1 - resistance / 100)
+export function calculateDamageBreakdown(
+  rawAttack: number,
+  damageType: DamageType,
+  enemyDefense: number,
+  enemyResistance: number,
+): DamageCalculationBreakdown {
+  const attack = Math.max(0, rawAttack)
+  const appliedDefense = Math.max(0, enemyDefense)
+  const appliedResistance = clamp(enemyResistance, 0, 95)
+
+  if (damageType === 'TRUE') {
+    return {
+      attack,
+      damageType,
+      inputDefense: enemyDefense,
+      appliedDefense,
+      inputResistance: enemyResistance,
+      appliedResistance,
+      afterDefense: null,
+      minimumDamage: null,
+      minimumApplied: false,
+      result: attack,
+    }
   }
 
-  const afterDefense = attack - Math.max(0, enemyDefense)
-  return Math.max(attack * 0.05, afterDefense)
+  if (damageType === 'ARTS') {
+    return {
+      attack,
+      damageType,
+      inputDefense: enemyDefense,
+      appliedDefense,
+      inputResistance: enemyResistance,
+      appliedResistance,
+      afterDefense: null,
+      minimumDamage: null,
+      minimumApplied: false,
+      result: attack * (1 - appliedResistance / 100),
+    }
+  }
+
+  const afterDefense = attack - appliedDefense
+  const minimumDamage = attack * 0.05
+  return {
+    attack,
+    damageType,
+    inputDefense: enemyDefense,
+    appliedDefense,
+    inputResistance: enemyResistance,
+    appliedResistance,
+    afterDefense,
+    minimumDamage,
+    minimumApplied: minimumDamage > afterDefense,
+    result: Math.max(minimumDamage, afterDefense),
+  }
 }
 
 export function calculateSkillDamage(
@@ -149,26 +224,74 @@ export function calculateSkillDamage(
   model: Omit<SkillModelDefaults, 'notes'>,
   options: {
     canShowDps: boolean
-    totalMode: 'DURATION' | 'AMMO' | 'ACTIVATION' | 'NONE'
+    totalMode: SkillTotalMode
   },
 ): SkillDamageOutput {
-  const scaledAttack = baseAttack * Math.max(0, model.attackMultiplierPercent) / 100
-  const perHit = calculateDamage(scaledAttack, damageType, enemyDefense, enemyResistance)
-  const perAttack = perHit * Math.max(1, model.hitCount)
+  const breakdown = calculateSkillDamageBreakdown(
+    baseAttack,
+    damageType,
+    enemyDefense,
+    enemyResistance,
+    model,
+    options,
+  )
+  return {
+    perHit: breakdown.perHit,
+    perAttack: breakdown.perAttack,
+    dps: breakdown.dps,
+    total: breakdown.total,
+  }
+}
+
+export function calculateSkillDamageBreakdown(
+  baseAttack: number,
+  damageType: DamageType,
+  enemyDefense: number,
+  enemyResistance: number,
+  model: Omit<SkillModelDefaults, 'notes'>,
+  options: {
+    canShowDps: boolean
+    totalMode: SkillTotalMode
+  },
+): SkillDamageBreakdown {
+  const safeBaseAttack = Math.max(0, baseAttack)
+  const attackMultiplierPercent = Math.max(0, model.attackMultiplierPercent)
+  const hitCount = Math.max(1, model.hitCount)
+  const duration = Math.max(0, model.duration)
+  const ammoCount = Math.max(0, model.ammoCount)
+  const scaledAttack = safeBaseAttack * attackMultiplierPercent / 100
+  const mitigation = calculateDamageBreakdown(scaledAttack, damageType, enemyDefense, enemyResistance)
+  const perHit = mitigation.result
+  const perAttack = perHit * hitCount
   const dps = options.canShowDps && model.attackInterval > 0
     ? perAttack / model.attackInterval
     : null
   let total: number | null = null
 
-  if (options.totalMode === 'DURATION' && dps !== null && model.duration > 0) {
-    total = dps * model.duration
-  } else if (options.totalMode === 'AMMO' && model.ammoCount > 0) {
-    total = perAttack * model.ammoCount
+  if (options.totalMode === 'DURATION' && dps !== null && duration > 0) {
+    total = dps * duration
+  } else if (options.totalMode === 'AMMO' && ammoCount > 0) {
+    total = perAttack * ammoCount
   } else if (options.totalMode === 'ACTIVATION') {
     total = perAttack
   }
 
-  return { perHit, perAttack, dps, total }
+  return {
+    baseAttack: safeBaseAttack,
+    attackMultiplierPercent,
+    scaledAttack,
+    hitCount,
+    attackInterval: model.attackInterval,
+    duration,
+    ammoCount,
+    canShowDps: options.canShowDps,
+    totalMode: options.totalMode,
+    mitigation,
+    perHit,
+    perAttack,
+    dps,
+    total,
+  }
 }
 
 export function getDefaultDamageType(profession: string, traitDescription = ''): DamageType {

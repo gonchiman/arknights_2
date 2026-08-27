@@ -8,10 +8,7 @@ export const EMPTY_OPERATOR_FILTERS: FilterState = {
   query: '',
   nameInitial: 'ALL',
   profession: 'ALL',
-  subProfession: 'ALL',
   rarity: 'ALL',
-  effectWindow: 'ALL',
-  damageComponent: 'ALL',
 }
 
 interface Props {
@@ -40,19 +37,12 @@ export function OperatorSearch({
     label: row.professionLabel,
   })))), [rows])
 
-  const subProfessionOptions = useMemo(() => uniqueOptions(rows
-    .filter((row) => filters.profession === 'ALL' || row.profession === filters.profession)
-    .map((row) => ({ value: row.subProfessionId, label: row.subProfessionName }))), [rows, filters.profession])
-
   const filteredSkills = useMemo(() => rows.filter((row) => {
     const query = filters.query.trim().toLowerCase()
     if (query && !`${row.operatorName} ${row.skillName} ${row.description} ${row.skillId}`.toLowerCase().includes(query)) return false
     if (filters.nameInitial !== 'ALL' && row.nameInitial !== filters.nameInitial) return false
     if (filters.profession !== 'ALL' && row.profession !== filters.profession) return false
-    if (filters.subProfession !== 'ALL' && row.subProfessionId !== filters.subProfession) return false
     if (filters.rarity !== 'ALL' && row.rarity !== filters.rarity) return false
-    if (filters.effectWindow !== 'ALL' && row.classification.effectWindow.value !== filters.effectWindow) return false
-    if (filters.damageComponent !== 'ALL' && !row.classification.damageComponents.value.includes(filters.damageComponent)) return false
     return true
   }), [rows, filters])
 
@@ -72,7 +62,6 @@ export function OperatorSearch({
       <Filters
         value={filters}
         professionOptions={professionOptions}
-        subProfessionOptions={subProfessionOptions}
         onChange={onFiltersChange}
         onReset={() => onFiltersChange({ ...EMPTY_OPERATOR_FILTERS })}
       />
