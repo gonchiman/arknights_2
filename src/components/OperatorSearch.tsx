@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Filters, type FilterOption, type FilterState } from './Filters'
 import { OperatorTable } from './OperatorTable'
+import { PROFESSION_ORDER } from '../lib/operatorFilters'
 import type { SkillRecord } from '../types/skill'
 
 export const EMPTY_OPERATOR_FILTERS: FilterState = {
@@ -34,10 +35,10 @@ export function OperatorSearch({
   actionLabel,
   className = '',
 }: Props) {
-  const professionOptions = useMemo(() => uniqueOptions(rows.map((row) => ({
+  const professionOptions = useMemo(() => sortProfessionOptions(uniqueOptions(rows.map((row) => ({
     value: row.profession,
     label: row.professionLabel,
-  }))), [rows])
+  })))), [rows])
 
   const subProfessionOptions = useMemo(() => uniqueOptions(rows
     .filter((row) => filters.profession === 'ALL' || row.profession === filters.profession)
@@ -87,4 +88,13 @@ export function OperatorSearch({
 function uniqueOptions(options: FilterOption[]): FilterOption[] {
   return [...new Map(options.map((option) => [option.value, option])).values()]
     .sort((a, b) => a.label.localeCompare(b.label, 'ja'))
+}
+
+function sortProfessionOptions(options: FilterOption[]): FilterOption[] {
+  const order = new Map<string, number>(PROFESSION_ORDER.map((profession, index) => [profession, index]))
+  return [...options].sort((a, b) => {
+    const aIndex = order.get(a.value) ?? PROFESSION_ORDER.length
+    const bIndex = order.get(b.value) ?? PROFESSION_ORDER.length
+    return aIndex - bIndex || a.label.localeCompare(b.label, 'ja')
+  })
 }

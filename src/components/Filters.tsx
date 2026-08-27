@@ -70,6 +70,28 @@ export function Filters({ value, professionOptions, subProfessionOptions, onChan
           条件をリセット
         </button>
       </div>
+      <div className="initial-filter profession-filter" role="group" aria-label="職業">
+        <span className="initial-filter-label">職業</span>
+        <button
+          type="button"
+          className={`initial-button ${value.profession === 'ALL' ? 'active' : ''}`}
+          aria-pressed={value.profession === 'ALL'}
+          onClick={() => onChange({ ...value, profession: 'ALL', subProfession: 'ALL' })}
+        >
+          すべて
+        </button>
+        {professionOptions.map((option) => (
+          <button
+            type="button"
+            className={`initial-button ${value.profession === option.value ? 'active' : ''}`}
+            aria-pressed={value.profession === option.value}
+            onClick={() => onChange({ ...value, profession: option.value, subProfession: 'ALL' })}
+            key={option.value}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
       <input
         className="search"
         aria-label="オペレーター検索"
@@ -77,13 +99,6 @@ export function Filters({ value, professionOptions, subProfessionOptions, onChan
         onChange={(event) => onChange({ ...value, query: event.target.value })}
         placeholder="オペレーター名・スキル名・説明文で検索"
       />
-      <select
-        value={value.profession}
-        onChange={(event) => onChange({ ...value, profession: event.target.value, subProfession: 'ALL' })}
-      >
-        <option value="ALL">職業: すべて</option>
-        {professionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-      </select>
       <select value={value.subProfession} onChange={(event) => onChange({ ...value, subProfession: event.target.value })}>
         <option value="ALL">職分: すべて</option>
         {subProfessionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}

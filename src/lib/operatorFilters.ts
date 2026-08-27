@@ -1,5 +1,16 @@
 import type { OperatorInitial } from '../types/skill'
 
+export const PROFESSION_ORDER = [
+  'PIONEER',
+  'WARRIOR',
+  'TANK',
+  'SNIPER',
+  'CASTER',
+  'MEDIC',
+  'SUPPORT',
+  'SPECIAL',
+] as const
+
 export const PROFESSION_LABELS: Record<string, string> = {
   PIONEER: '先鋒',
   WARRIOR: '前衛',
