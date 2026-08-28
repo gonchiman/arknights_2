@@ -114,7 +114,7 @@ export default function App() {
   const classifierActive = route.view !== 'damage'
 
   return (
-    <div className={`app-shell ${selected ? 'skill-detail-route' : ''}`}>
+    <div className={`app-shell ${route.view === 'skill' ? 'skill-detail-route' : ''}`}>
       <header className="topbar">
         <div className="topbar-inner">
           <a className="site-brand" href="#/" aria-label="Arknights Analyze Tool ホーム">
@@ -151,19 +151,18 @@ export default function App() {
                 <p>オペレーターを検索し、スキルの分類結果と判定根拠を確認します。</p>
               </header>
             )}
-            <div className={`classifier-workspace ${route.view === 'skill' ? 'has-detail' : ''}`}>
-              <aside className="classifier-master" aria-label="オペレーター検索一覧">
-                <OperatorSearch
-                  rows={classifiedRows}
-                  filters={filters}
-                  loading={loading}
-                  onFiltersChange={updateClassifierFilters}
-                  onSelect={(row) => openSkill(row.id)}
-                  selectedOperatorId={selected?.operatorId}
-                  instruction="選択すると右側に詳細を表示"
-                />
-              </aside>
-              {selected ? (
+            <div className="classifier-workspace">
+              {route.view === 'list' ? (
+                <section className="classifier-master" aria-label="オペレーター検索一覧">
+                  <OperatorSearch
+                    rows={classifiedRows}
+                    filters={filters}
+                    loading={loading}
+                    onFiltersChange={updateClassifierFilters}
+                    onSelect={(row) => openSkill(row.id)}
+                  />
+                </section>
+              ) : selected ? (
                 <div className="classifier-detail">
                   <SkillDetail
                     key={selected.id}
@@ -175,16 +174,10 @@ export default function App() {
                     onOverride={(override) => updateOverride(selected.id, override)}
                   />
                 </div>
-              ) : route.view === 'skill' ? (
+              ) : (
                 <section className="route-state classifier-detail" role="status">
                   <h1>{loading ? 'スキルを読み込んでいます…' : 'スキルが見つかりません'}</h1>
                   {!loading && <button className="button secondary" onClick={openList}>一覧に戻る</button>}
-                </section>
-              ) : (
-                <section className="classifier-detail-placeholder" role="status">
-                  <span className="placeholder-index">DETAIL</span>
-                  <strong>オペレーターを選択</strong>
-                  <p>一覧から選ぶと、スキルの分類と判定根拠がここに表示されます。</p>
                 </section>
               )}
             </div>

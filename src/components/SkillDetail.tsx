@@ -50,7 +50,6 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
   const outputLabels = getOutputCapabilityLabels(classification.outputCapabilities)
 
   useEffect(() => {
-    if (!window.matchMedia('(max-width: 760px)').matches) return
     window.requestAnimationFrame(() => titleRef.current?.focus())
   }, [skill.id])
 

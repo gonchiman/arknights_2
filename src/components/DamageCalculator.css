@@ -127,9 +127,47 @@
   align-items: end;
 }
 
-.enemy-form-grid,
-.model-form-grid {
+.enemy-form-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.model-value-grid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+
+.model-value {
+  min-width: 0;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-soft);
+  padding: 8px 10px;
+}
+
+.model-value dt {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.model-value dd {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 3px 0 0;
+}
+
+.model-value dd strong {
+  font-size: 14px;
+}
+
+.model-value dd span {
+  color: var(--text-muted);
+  font-size: 9px;
 }
 
 .calculator-field,
@@ -300,8 +338,7 @@
 .operator-search-heading strong { font-size: 12px; }
 .operator-search-heading span { color: var(--text-muted); font-size: 9px; }
 
-.operator-search-heading button,
-.model-reset {
+.operator-search-heading button {
   min-height: 28px;
   border: 1px solid var(--border-strong);
   border-radius: 0;
@@ -312,8 +349,7 @@
   cursor: pointer;
 }
 
-.operator-search-heading button:hover,
-.model-reset:hover { background: var(--surface-hover); }
+.operator-search-heading button:hover { background: var(--surface-hover); }
 
 .damage-operator-search-results { border-radius: 0; }
 .damage-operator-search-results .table-wrap { max-height: 340px; }
@@ -770,10 +806,10 @@
 
   .growth-form-grid,
   .enemy-form-grid,
-  .model-form-grid,
   .normal-results,
   .skill-results,
-  .operator-stat-grid { grid-template-columns: minmax(0, 1fr); }
+  .operator-stat-grid,
+  .model-value-grid { grid-template-columns: minmax(0, 1fr); }
 
   .skill-choice-group button {
     height: 46px;
@@ -825,8 +861,7 @@
 @media (pointer: coarse) {
   .skill-choice-group button,
   .damage-type-switch button,
-  .operator-search-heading button,
-  .model-reset { min-height: 44px; }
+  .operator-search-heading button { min-height: 44px; }
 
   .calculator-field select,
   .calculator-field input {

@@ -56,7 +56,6 @@ export function DamageCalculator({ rows, loading }: Props) {
   const [damageType, setDamageType] = useState<DamageType>('PHYSICAL')
   const [enemyDefense, setEnemyDefense] = useState(0)
   const [enemyResistance, setEnemyResistance] = useState(0)
-  const [model, setModel] = useState<SkillModelDefaults | null>(null)
   const [operatorSearchOpen, setOperatorSearchOpen] = useState(false)
   const [operatorInfoOpen, setOperatorInfoOpen] = useState(false)
   const [normalCalculationProcessOpen, setNormalCalculationProcessOpen] = useState(false)
@@ -126,13 +125,9 @@ export function DamageCalculator({ rows, loading }: Props) {
       safeOperatorLevel,
       trust,
     ])
-  const autoModel = useMemo(() => selectedSkillLevel
+  const model = useMemo(() => selectedSkillLevel
     ? deriveSkillModel(selectedSkillLevel, operatorStats.attackInterval)
     : null, [selectedSkillLevel, operatorStats.attackInterval])
-
-  useEffect(() => {
-    setModel(autoModel)
-  }, [effectiveSkillId, safeSkillLevelIndex, autoModel])
 
   const unsupportedReasons = selectedSkill
     ? getUnsupportedReasons(selectedSkill)
@@ -183,9 +178,6 @@ export function DamageCalculator({ rows, loading }: Props) {
     return <section className="damage-page calculator-page"><p className="calculator-loading" role="status">計算できるオペレーターが見つかりません。</p></section>
   }
 
-  const updateModel = (field: Exclude<keyof SkillModelDefaults, 'notes'>, value: number) => {
-    setModel((current) => current ? { ...current, [field]: value } : current)
-  }
   const normalCalculationSteps: CalculationStep[] = [
     ...buildAttackPipelineSteps(operatorStats.baseAttackBreakdown, normalAttackPipeline, 'NORMAL'),
     buildMitigationStep(`${DAMAGE_TYPE_LABELS[damageType]}ダメージ（1ヒット）`, normalBreakdown),
@@ -403,20 +395,20 @@ export function DamageCalculator({ rows, loading }: Props) {
       <section className="calculator-panel">
         <div className="panel-heading">
           <div><span>04</span><h2>スキル計算モデル</h2></div>
-          <button className="model-reset" onClick={() => setModel(autoModel)}>自動値に戻す</button>
+          <p>ダメージ計算条件とゲームデータから自動決定</p>
         </div>
-        <div className="calculator-form-grid model-form-grid">
-          <NumberField label="攻撃力補正 B" value={model.directMultiplierPercent} min={0} max={10000} step={1} suffix="%" onChange={(value) => updateModel('directMultiplierPercent', value)} />
-          <NumberField label="攻撃倍率 E" value={model.attackScalePercent} min={0} max={10000} step={1} suffix="%" onChange={(value) => updateModel('attackScalePercent', value)} />
-          <NumberField label="1攻撃のヒット数" value={model.hitCount} min={1} max={100} step={1} onChange={(value) => updateModel('hitCount', value)} />
-          <NumberField label="攻撃間隔" value={model.attackInterval} min={0.05} max={60} step={0.01} suffix="秒" onChange={(value) => updateModel('attackInterval', value)} />
+        <dl className="model-value-grid" aria-label="自動算出されたスキル計算モデル">
+          <ModelValue label="攻撃力補正 B" value={model.directMultiplierPercent} suffix="%" />
+          <ModelValue label="攻撃倍率 E" value={model.attackScalePercent} suffix="%" />
+          <ModelValue label="1攻撃のヒット数" value={model.hitCount} />
+          <ModelValue label="攻撃間隔" value={model.attackInterval} suffix="秒" />
           {selectedSkill.classification.effectWindow.value === 'FIXED_DURATION' && (
-            <NumberField label="効果時間" value={model.duration} min={0} max={999} step={0.1} suffix="秒" onChange={(value) => updateModel('duration', value)} />
+            <ModelValue label="効果時間" value={model.duration} suffix="秒" />
           )}
           {selectedSkill.classification.effectWindow.value === 'AMMO' && (
-            <NumberField label="弾数" value={model.ammoCount} min={0} max={999} step={1} onChange={(value) => updateModel('ammoCount', value)} />
+            <ModelValue label="弾数" value={model.ammoCount} />
           )}
-        </div>
+        </dl>
         {model.notes.length > 0 && <ul className="model-notes">{model.notes.map((note) => <li key={note}>{note}</li>)}</ul>}
         {!skillSupported && <div className="unsupported-model" role="status"><strong>初期版では自動計算できません</strong>{unsupportedReasons.map((reason) => <span key={reason}>{reason}</span>)}</div>}
       </section>
@@ -589,6 +581,15 @@ function NumberField({
   )
 }
 
+function ModelValue({ label, value, suffix }: { label: string; value: number; suffix?: string }) {
+  return (
+    <div className="model-value">
+      <dt>{label}</dt>
+      <dd><strong>{formatCalculationNumber(value)}</strong>{suffix && <span>{suffix}</span>}</dd>
+    </div>
+  )
+}
+
 function OperatorMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
     <article className="operator-stat-card">
@@ -656,12 +657,12 @@ function buildAttackPipelineSteps(
   const directMultiplierNote = mode === 'SKILL'
     ? pipeline.directMultiplierPercent === 0
       ? '現在のスキル計算モデルでは0%。素質・外部バフは未反映'
-      : 'スキル計算モデルの攻撃力補正B（自動値または手動入力）を適用'
+      : 'スキル計算モデルの攻撃力補正B（自動算出値）を適用'
     : '通常攻撃へ影響する特性・素質・外部バフは未反映'
   const attackScaleNote = mode === 'SKILL'
     ? pipeline.attackScale === 1
       ? '現在のスキル計算モデルでは100%（係数1）'
-      : 'スキル計算モデルの攻撃倍率E（自動値または手動入力）を適用'
+      : 'スキル計算モデルの攻撃倍率E（自動算出値）を適用'
     : '現在の通常攻撃モデルでは1。特性由来の攻撃倍率Eは未反映'
 
   return [
