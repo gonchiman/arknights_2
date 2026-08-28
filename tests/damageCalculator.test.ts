@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  calculateAttackPipeline,
   calculateDamage,
   calculateDamageBreakdown,
   calculateSkillDamage,
@@ -18,7 +19,7 @@ test('物理・術・確定ダメージへ敵防御を正しく適用する', ()
   assert.equal(calculateDamage(1000, 'TRUE', 2000, 100), 1000)
 })
 
-test('物理最低保証と術耐性上限を計算過程として返す', () => {
+test('物理・術の最低保証を計算過程として返す', () => {
   const physical = calculateDamageBreakdown(1000, 'PHYSICAL', 2000, 0)
   assert.equal(physical.afterDefense, -1000)
   assert.equal(physical.minimumDamage, 50)
@@ -27,8 +28,37 @@ test('物理最低保証と術耐性上限を計算過程として返す', () =>
 
   const arts = calculateDamageBreakdown(1000, 'ARTS', 0, 100)
   assert.equal(arts.inputResistance, 100)
-  assert.equal(arts.appliedResistance, 95)
+  assert.equal(arts.appliedResistance, 100)
+  assert.equal(arts.afterResistance, 0)
+  assert.equal(arts.minimumDamage, 50)
+  assert.equal(arts.minimumApplied, true)
   assert.ok(Math.abs(arts.result - 50) < 1e-9)
+})
+
+test('攻撃力をA→B→C→D→Eの順で計算する', () => {
+  const pipeline = calculateAttackPipeline(1000, {
+    directAddition: 50,
+    directMultiplierPercent: 20,
+    finalAddition: 30,
+    finalMultiplier: 0.81,
+    attackScale: 1.5,
+  })
+
+  assert.equal(pipeline.afterDirectAddition, 1050)
+  assert.equal(pipeline.afterDirectMultiplier, 1260)
+  assert.equal(pipeline.afterFinalAddition, 1290)
+  assert.equal(pipeline.afterFinalMultiplier, 1044)
+  assert.equal(pipeline.finalAttack, 1566)
+})
+
+test('Dの切り捨てで整数近傍の浮動小数点誤差を拾わない', () => {
+  const pipeline = calculateAttackPipeline(100, {
+    directMultiplierPercent: 15,
+  })
+
+  assert.equal(pipeline.afterDirectMultiplier, 114.99999999999999)
+  assert.equal(pipeline.afterFinalMultiplier, 115)
+  assert.equal(pipeline.finalAttack, 115)
 })
 
 test('レベルと信頼度から攻撃力・攻撃間隔を補間する', () => {
@@ -48,6 +78,11 @@ test('レベルと信頼度から攻撃力・攻撃間隔を補間する', () =>
 
   assert.equal(stats.attack, 220)
   assert.equal(stats.attackInterval, 1.2)
+  assert.equal(stats.baseAttackBreakdown.levelAttack, 200)
+  assert.equal(stats.baseAttackBreakdown.trustAttack, 20)
+  assert.equal(stats.baseAttackBreakdown.potentialAttack, 0)
+  assert.equal(stats.baseAttackBreakdown.moduleAttack, 0)
+  assert.equal(stats.baseAttackBreakdown.result, 220)
 })
 
 test('Ash S1型のblackboardから攻撃倍率と連撃数を得る', () => {
@@ -60,14 +95,16 @@ test('Ash S1型のblackboardから攻撃倍率と連撃数を得る', () => {
     ],
   }, 1)
 
-  assert.equal(model.attackMultiplierPercent, 115)
+  assert.equal(model.directMultiplierPercent, 15)
+  assert.equal(model.attackScalePercent, 100)
   assert.equal(model.hitCount, 2)
   assert.equal(model.attackInterval, 1)
 })
 
 test('固定時間スキルの1ヒット・DPS・総量を計算する', () => {
   const output = calculateSkillDamage(1000, 'PHYSICAL', 200, 0, {
-    attackMultiplierPercent: 120,
+    directMultiplierPercent: 0,
+    attackScalePercent: 120,
     hitCount: 2,
     attackInterval: 2,
     duration: 10,
@@ -85,7 +122,8 @@ test('固定時間スキルの1ヒット・DPS・総量を計算する', () => {
 
 test('スキルの倍率・軽減・ヒット数・総量を同じ計算過程で返す', () => {
   const breakdown = calculateSkillDamageBreakdown(1000, 'PHYSICAL', 200, 0, {
-    attackMultiplierPercent: 120,
+    directMultiplierPercent: 0,
+    attackScalePercent: 120,
     hitCount: 2,
     attackInterval: 2,
     duration: 10,
@@ -95,13 +133,35 @@ test('スキルの倍率・軽減・ヒット数・総量を同じ計算過程�
     totalMode: 'DURATION',
   })
 
-  assert.equal(breakdown.scaledAttack, 1200)
+  assert.equal(breakdown.attackPipeline.finalAttack, 1200)
   assert.equal(breakdown.mitigation.afterDefense, 1000)
   assert.equal(breakdown.perHit, 1000)
   assert.equal(breakdown.perAttack, 2000)
   assert.equal(breakdown.dps, 1000)
   assert.equal(breakdown.total, 10000)
   assert.equal(breakdown.totalMode, 'DURATION')
+})
+
+test('atkをB、atk_scaleをEとして同時に適用し、damage_scaleは対象外とする', () => {
+  const model = deriveSkillModel({
+    duration: -1,
+    durationType: 'NONE',
+    blackboard: [
+      { key: 'atk', value: 0.2 },
+      { key: 'atk_scale', value: 1.5 },
+      { key: 'damage_scale', value: 2 },
+    ],
+  }, 1)
+
+  assert.equal(model.directMultiplierPercent, 20)
+  assert.equal(model.attackScalePercent, 150)
+  assert.ok(model.notes.some((note) => note.includes('damage_scale')))
+
+  const output = calculateSkillDamage(1000, 'TRUE', 0, 0, model, {
+    canShowDps: true,
+    totalMode: 'ACTIVATION',
+  })
+  assert.equal(output.perHit, 1800)
 })
 
 test('現在の昇進段階で解放済みかつ潜在強化前の特性・素質を選ぶ', () => {

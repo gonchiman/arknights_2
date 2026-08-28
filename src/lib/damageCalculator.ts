@@ -19,10 +19,43 @@ export interface OperatorStats {
   attackSpeed: number
   baseAttackTime: number
   attackInterval: number
+  baseAttackBreakdown: BaseAttackBreakdown
+}
+
+export interface BaseAttackBreakdown {
+  levelAttack: number
+  trustAttack: number
+  potentialAttack: number
+  moduleAttack: number
+  beforeRounding: number
+  result: number
+}
+
+export interface AttackPipelineInput {
+  directAddition?: number
+  directMultiplierPercent?: number
+  finalAddition?: number
+  finalMultiplier?: number
+  attackScale?: number
+}
+
+export interface AttackPipelineBreakdown {
+  baseAttack: number
+  directAddition: number
+  afterDirectAddition: number
+  directMultiplierPercent: number
+  afterDirectMultiplier: number
+  finalAddition: number
+  afterFinalAddition: number
+  finalMultiplier: number
+  afterFinalMultiplier: number
+  attackScale: number
+  finalAttack: number
 }
 
 export interface SkillModelDefaults {
-  attackMultiplierPercent: number
+  directMultiplierPercent: number
+  attackScalePercent: number
   hitCount: number
   attackInterval: number
   duration: number
@@ -45,6 +78,7 @@ export interface DamageCalculationBreakdown {
   inputResistance: number
   appliedResistance: number
   afterDefense: number | null
+  afterResistance: number | null
   minimumDamage: number | null
   minimumApplied: boolean
   result: number
@@ -53,9 +87,7 @@ export interface DamageCalculationBreakdown {
 export type SkillTotalMode = 'DURATION' | 'AMMO' | 'ACTIVATION' | 'NONE'
 
 export interface SkillDamageBreakdown extends SkillDamageOutput {
-  baseAttack: number
-  attackMultiplierPercent: number
-  scaledAttack: number
+  attackPipeline: AttackPipelineBreakdown
   hitCount: number
   attackInterval: number
   duration: number
@@ -85,11 +117,25 @@ export function getOperatorStats(
   const attackSpeed = interpolateAttribute(phaseFrames, normalizedLevel, 'attackSpeed', 100)
   const attackInterval = baseAttackTime * 100 / Math.max(20, attackSpeed)
 
+  const potentialAttack = 0
+  const moduleAttack = 0
+  const beforeRounding = phaseAttack + trustAttack + potentialAttack + moduleAttack
+  const attack = Math.max(0, Math.round(beforeRounding))
+  const baseAttackBreakdown = {
+    levelAttack: phaseAttack,
+    trustAttack,
+    potentialAttack,
+    moduleAttack,
+    beforeRounding,
+    result: attack,
+  }
+
   return {
-    attack: Math.max(0, Math.round(phaseAttack + trustAttack)),
+    attack,
     attackSpeed,
     baseAttackTime,
     attackInterval,
+    baseAttackBreakdown,
   }
 }
 
@@ -102,25 +148,27 @@ export function deriveSkillModel(level: RawSkillLevel, operatorAttackInterval: n
       .map((entry) => [entry.key.toLowerCase(), entry.value]),
   )
   const notes: string[] = []
-  const multiplierEntries = [...values.entries()].filter(([key]) => (
+  const attackScaleEntries = [...values.entries()].filter(([key]) => (
     key === 'atk_scale'
     || key.endsWith('@atk_scale')
-    || key === 'damage_scale'
-    || key === 'atk'
   ))
-  const preferredMultiplier = findValue(values, ['atk_scale', 'attack@atk_scale', 'damage_scale', 'atk'])
-  let attackMultiplierPercent = 100
+  const directMultiplierPercent = Math.max(0, (findValue(values, ['atk'])?.value ?? 0) * 100)
+  const preferredAttackScale = findValue(values, ['atk_scale', 'attack@atk_scale'])
+    ?? (attackScaleEntries[0]
+      ? { key: attackScaleEntries[0][0], value: attackScaleEntries[0][1] }
+      : null)
+  const attackScalePercent = Math.max(0, (preferredAttackScale?.value ?? 1) * 100)
 
-  if (preferredMultiplier) {
-    attackMultiplierPercent = preferredMultiplier.key === 'atk'
-      ? (1 + preferredMultiplier.value) * 100
-      : preferredMultiplier.value * 100
-  } else {
-    notes.push('攻撃倍率をゲームデータから特定できなかったため、100%を初期値にしています。')
+  if (directMultiplierPercent === 0 && !preferredAttackScale) {
+    notes.push('攻撃力補正Bと攻撃倍率Eをゲームデータから特定できなかったため、補正なしを初期値にしています。')
   }
 
-  if (multiplierEntries.length > 1) {
-    notes.push('複数の攻撃倍率を持つスキルです。初期版では代表値1つの簡易モデルとして扱います。')
+  if (attackScaleEntries.length > 1) {
+    notes.push('複数の攻撃倍率Eを持つスキルです。初期版では代表値1つの簡易モデルとして扱います。')
+  }
+
+  if (values.has('damage_scale')) {
+    notes.push('独立ダメージ倍率 damage_scale は初期版の計算対象外です。')
   }
 
   const hitValue = findValue(values, ['attack@times', 'attack_times', 'times', 'multi_times'])
@@ -142,7 +190,8 @@ export function deriveSkillModel(level: RawSkillLevel, operatorAttackInterval: n
   }
 
   return {
-    attackMultiplierPercent: round(attackMultiplierPercent, 2),
+    directMultiplierPercent: round(directMultiplierPercent, 2),
+    attackScalePercent: round(attackScalePercent, 2),
     hitCount,
     attackInterval: round(attackInterval, 3),
     duration,
@@ -160,6 +209,37 @@ export function calculateDamage(
   return calculateDamageBreakdown(rawAttack, damageType, enemyDefense, enemyResistance).result
 }
 
+export function calculateAttackPipeline(
+  rawBaseAttack: number,
+  input: AttackPipelineInput = {},
+): AttackPipelineBreakdown {
+  const baseAttack = Math.max(0, finiteOr(rawBaseAttack, 0))
+  const directAddition = finiteOr(input.directAddition, 0)
+  const directMultiplierPercent = finiteOr(input.directMultiplierPercent, 0)
+  const finalAddition = finiteOr(input.finalAddition, 0)
+  const finalMultiplier = Math.max(0, finiteOr(input.finalMultiplier, 1))
+  const attackScale = Math.max(0, finiteOr(input.attackScale, 1))
+  const afterDirectAddition = baseAttack + directAddition
+  const afterDirectMultiplier = afterDirectAddition * (1 + directMultiplierPercent / 100)
+  const afterFinalAddition = afterDirectMultiplier + finalAddition
+  const afterFinalMultiplier = Math.max(0, floorNearInteger(afterFinalAddition * finalMultiplier))
+  const finalAttack = afterFinalMultiplier * attackScale
+
+  return {
+    baseAttack,
+    directAddition,
+    afterDirectAddition,
+    directMultiplierPercent,
+    afterDirectMultiplier,
+    finalAddition,
+    afterFinalAddition,
+    finalMultiplier,
+    afterFinalMultiplier,
+    attackScale,
+    finalAttack,
+  }
+}
+
 export function calculateDamageBreakdown(
   rawAttack: number,
   damageType: DamageType,
@@ -168,7 +248,7 @@ export function calculateDamageBreakdown(
 ): DamageCalculationBreakdown {
   const attack = Math.max(0, rawAttack)
   const appliedDefense = Math.max(0, enemyDefense)
-  const appliedResistance = clamp(enemyResistance, 0, 95)
+  const appliedResistance = clamp(enemyResistance, 0, 100)
 
   if (damageType === 'TRUE') {
     return {
@@ -179,6 +259,7 @@ export function calculateDamageBreakdown(
       inputResistance: enemyResistance,
       appliedResistance,
       afterDefense: null,
+      afterResistance: null,
       minimumDamage: null,
       minimumApplied: false,
       result: attack,
@@ -186,6 +267,8 @@ export function calculateDamageBreakdown(
   }
 
   if (damageType === 'ARTS') {
+    const afterResistance = attack * (1 - appliedResistance / 100)
+    const minimumDamage = attack * 0.05
     return {
       attack,
       damageType,
@@ -194,9 +277,10 @@ export function calculateDamageBreakdown(
       inputResistance: enemyResistance,
       appliedResistance,
       afterDefense: null,
-      minimumDamage: null,
-      minimumApplied: false,
-      result: attack * (1 - appliedResistance / 100),
+      afterResistance,
+      minimumDamage,
+      minimumApplied: minimumDamage > afterResistance,
+      result: Math.max(minimumDamage, afterResistance),
     }
   }
 
@@ -210,6 +294,7 @@ export function calculateDamageBreakdown(
     inputResistance: enemyResistance,
     appliedResistance,
     afterDefense,
+    afterResistance: null,
     minimumDamage,
     minimumApplied: minimumDamage > afterDefense,
     result: Math.max(minimumDamage, afterDefense),
@@ -254,13 +339,14 @@ export function calculateSkillDamageBreakdown(
     totalMode: SkillTotalMode
   },
 ): SkillDamageBreakdown {
-  const safeBaseAttack = Math.max(0, baseAttack)
-  const attackMultiplierPercent = Math.max(0, model.attackMultiplierPercent)
+  const attackPipeline = calculateAttackPipeline(baseAttack, {
+    directMultiplierPercent: Math.max(0, finiteOr(model.directMultiplierPercent, 0)),
+    attackScale: Math.max(0, finiteOr(model.attackScalePercent, 100)) / 100,
+  })
   const hitCount = Math.max(1, model.hitCount)
   const duration = Math.max(0, model.duration)
   const ammoCount = Math.max(0, model.ammoCount)
-  const scaledAttack = safeBaseAttack * attackMultiplierPercent / 100
-  const mitigation = calculateDamageBreakdown(scaledAttack, damageType, enemyDefense, enemyResistance)
+  const mitigation = calculateDamageBreakdown(attackPipeline.finalAttack, damageType, enemyDefense, enemyResistance)
   const perHit = mitigation.result
   const perAttack = perHit * hitCount
   const dps = options.canShowDps && model.attackInterval > 0
@@ -277,9 +363,7 @@ export function calculateSkillDamageBreakdown(
   }
 
   return {
-    baseAttack: safeBaseAttack,
-    attackMultiplierPercent,
-    scaledAttack,
+    attackPipeline,
     hitCount,
     attackInterval: model.attackInterval,
     duration,
@@ -345,4 +429,16 @@ function clamp(value: number, min: number, max: number): number {
 function round(value: number, digits: number): number {
   const factor = 10 ** digits
   return Math.round(value * factor) / factor
+}
+
+function finiteOr(value: number | undefined, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+function floorNearInteger(value: number): number {
+  const nearestInteger = Math.round(value)
+  const tolerance = Number.EPSILON * Math.max(1, Math.abs(value)) * 8
+  return Math.abs(value - nearestInteger) <= tolerance
+    ? nearestInteger
+    : Math.floor(value)
 }

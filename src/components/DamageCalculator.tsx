@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   DAMAGE_TYPE_LABELS,
+  calculateAttackPipeline,
   calculateDamage,
   calculateDamageBreakdown,
   calculateSkillDamage,
@@ -8,6 +9,8 @@ import {
   deriveSkillModel,
   getDefaultDamageType,
   getOperatorStats,
+  type AttackPipelineBreakdown,
+  type BaseAttackBreakdown,
   type DamageCalculationBreakdown,
   type DamageType,
   type SkillDamageBreakdown,
@@ -56,7 +59,8 @@ export function DamageCalculator({ rows, loading }: Props) {
   const [model, setModel] = useState<SkillModelDefaults | null>(null)
   const [operatorSearchOpen, setOperatorSearchOpen] = useState(false)
   const [operatorInfoOpen, setOperatorInfoOpen] = useState(false)
-  const [calculationProcessOpen, setCalculationProcessOpen] = useState(false)
+  const [normalCalculationProcessOpen, setNormalCalculationProcessOpen] = useState(false)
+  const [skillCalculationProcessOpen, setSkillCalculationProcessOpen] = useState(false)
   const [operatorFilters, setOperatorFilters] = useState(EMPTY_OPERATOR_FILTERS)
 
   const defaultOperatorId = operators.find((operator) => operator.operatorName === DEFAULT_OPERATOR_NAME)?.operatorId
@@ -103,18 +107,24 @@ export function DamageCalculator({ rows, loading }: Props) {
 
   const operatorStats = useMemo(() => selectedOperator
     ? getOperatorStats(selectedOperator.operatorProfile, safePhaseIndex, safeOperatorLevel, trust)
-    : { attack: 0, attackSpeed: 100, baseAttackTime: 1, attackInterval: 1 }, [
+    : {
+      attack: 0,
+      attackSpeed: 100,
+      baseAttackTime: 1,
+      attackInterval: 1,
+      baseAttackBreakdown: {
+        levelAttack: 0,
+        trustAttack: 0,
+        potentialAttack: 0,
+        moduleAttack: 0,
+        beforeRounding: 0,
+        result: 0,
+      },
+    }, [
       selectedOperator,
       safePhaseIndex,
       safeOperatorLevel,
       trust,
-    ])
-  const operatorStatsWithoutTrust = useMemo(() => selectedOperator
-    ? getOperatorStats(selectedOperator.operatorProfile, safePhaseIndex, safeOperatorLevel, 0)
-    : { attack: 0, attackSpeed: 100, baseAttackTime: 1, attackInterval: 1 }, [
-      selectedOperator,
-      safePhaseIndex,
-      safeOperatorLevel,
     ])
   const autoModel = useMemo(() => selectedSkillLevel
     ? deriveSkillModel(selectedSkillLevel, operatorStats.attackInterval)
@@ -131,10 +141,10 @@ export function DamageCalculator({ rows, loading }: Props) {
   const operatorPassives = selectedOperator
     ? getOperatorPassives(selectedOperator.operatorProfile, safePhaseIndex, safeOperatorLevel)
     : { traitDescription: '', talents: [] }
-  const trustAttackBonus = Math.max(0, operatorStats.attack - operatorStatsWithoutTrust.attack)
   const traitReflectionStatus = getTraitReflectionStatus(operatorPassives.traitDescription, damageType)
+  const normalAttackPipeline = calculateAttackPipeline(operatorStats.attack)
   const normalBreakdown = calculateDamageBreakdown(
-    operatorStats.attack,
+    normalAttackPipeline.finalAttack,
     damageType,
     enemyDefense,
     enemyResistance,
@@ -173,22 +183,17 @@ export function DamageCalculator({ rows, loading }: Props) {
     return <section className="damage-page calculator-page"><p className="calculator-loading">計算できるオペレーターが見つかりません。</p></section>
   }
 
-  const updateModel = (field: keyof SkillModelDefaults, value: number) => {
+  const updateModel = (field: Exclude<keyof SkillModelDefaults, 'notes'>, value: number) => {
     setModel((current) => current ? { ...current, [field]: value } : current)
   }
   const normalCalculationSteps: CalculationStep[] = [
-    {
-      label: '実効攻撃力',
-      formula: `${formatCalculationNumber(operatorStatsWithoutTrust.attack)} + ${formatCalculationNumber(trustAttackBonus)}`,
-      result: formatNumber(operatorStats.attack),
-      note: 'レベル値 + 信頼度による攻撃力補正',
-    },
+    ...buildAttackPipelineSteps(operatorStats.baseAttackBreakdown, normalAttackPipeline, 'NORMAL'),
+    buildMitigationStep(`${DAMAGE_TYPE_LABELS[damageType]}ダメージ（1ヒット）`, normalBreakdown),
     {
       label: '攻撃間隔',
       formula: `${formatCalculationNumber(operatorStats.baseAttackTime)}秒 × 100 ÷ max(20, ${formatCalculationNumber(operatorStats.attackSpeed)})`,
       result: `${formatCalculationNumber(operatorStats.attackInterval)}秒`,
     },
-    buildMitigationStep(`${DAMAGE_TYPE_LABELS[damageType]}ダメージ（1ヒット）`, normalBreakdown),
     {
       label: 'DPS',
       formula: `${formatCalculationNumber(normalPerHit)} ÷ ${formatCalculationNumber(operatorStats.attackInterval)}秒`,
@@ -196,7 +201,7 @@ export function DamageCalculator({ rows, loading }: Props) {
     },
   ]
   const skillCalculationSteps = skillBreakdown
-    ? buildSkillCalculationSteps(skillBreakdown)
+    ? buildSkillCalculationSteps(operatorStats.baseAttackBreakdown, skillBreakdown)
     : []
 
   return (
@@ -319,7 +324,7 @@ export function DamageCalculator({ rows, loading }: Props) {
             <NumberField label="敵の術耐性" value={enemyResistance} min={0} max={100} suffix="%" onChange={setEnemyResistance} />
           </div>
         </div>
-        <p className="panel-note">物理ダメージには攻撃力の5%の最低保証、術耐性には95%の上限を適用しています。</p>
+        <p className="panel-note">物理・術ダメージには、軽減前の攻撃力の5%を最低保証として適用しています。</p>
       </section>
 
       <section className={`calculator-panel operator-info-panel ${operatorInfoOpen ? 'open' : ''}`}>
@@ -345,7 +350,7 @@ export function DamageCalculator({ rows, loading }: Props) {
               <OperatorMetric
                 label="実効攻撃力"
                 value={formatNumber(operatorStats.attack)}
-                detail={`レベル値 ${formatNumber(operatorStatsWithoutTrust.attack)} + 信頼度 ${formatSignedNumber(trustAttackBonus)}`}
+                detail={`レベル値 ${formatNumber(operatorStats.baseAttackBreakdown.levelAttack)} + 信頼度 ${formatSignedNumber(operatorStats.baseAttackBreakdown.trustAttack)}`}
               />
               <OperatorMetric
                 label="攻撃速度"
@@ -397,7 +402,8 @@ export function DamageCalculator({ rows, loading }: Props) {
           <button className="model-reset" onClick={() => setModel(autoModel)}>自動値に戻す</button>
         </div>
         <div className="calculator-form-grid model-form-grid">
-          <NumberField label="攻撃倍率" value={model.attackMultiplierPercent} min={0} max={10000} step={1} suffix="%" onChange={(value) => updateModel('attackMultiplierPercent', value)} />
+          <NumberField label="攻撃力補正 B" value={model.directMultiplierPercent} min={0} max={10000} step={1} suffix="%" onChange={(value) => updateModel('directMultiplierPercent', value)} />
+          <NumberField label="攻撃倍率 E" value={model.attackScalePercent} min={0} max={10000} step={1} suffix="%" onChange={(value) => updateModel('attackScalePercent', value)} />
           <NumberField label="1攻撃のヒット数" value={model.hitCount} min={1} max={100} step={1} onChange={(value) => updateModel('hitCount', value)} />
           <NumberField label="攻撃間隔" value={model.attackInterval} min={0.05} max={60} step={0.01} suffix="秒" onChange={(value) => updateModel('attackInterval', value)} />
           {selectedSkill.classification.effectWindow.value === 'FIXED_DURATION' && (
@@ -431,42 +437,64 @@ export function DamageCalculator({ rows, loading }: Props) {
         <p className="result-disclaimer">表示値は単体への理論値です。素質、潜在、モジュール、バフ、敵へのデバフ、攻撃モーション、対象数は含みません。</p>
       </section>
 
-      <section className={`calculator-panel calculation-process-panel ${calculationProcessOpen ? 'open' : ''}`}>
+      <section className={`calculator-panel calculation-process-panel ${normalCalculationProcessOpen ? 'open' : ''}`}>
         <button
           type="button"
           className="panel-heading operator-info-heading calculation-process-heading"
-          aria-expanded={calculationProcessOpen}
-          aria-controls="calculation-process-body"
-          onClick={() => setCalculationProcessOpen((open) => !open)}
+          aria-expanded={normalCalculationProcessOpen}
+          aria-controls="normal-calculation-process-body"
+          onClick={() => setNormalCalculationProcessOpen((open) => !open)}
         >
           <span className="operator-info-heading-title">
             <span>06</span>
-            <span className="operator-info-heading-label" role="heading" aria-level={3}>計算過程</span>
+            <span className="operator-info-heading-label" role="heading" aria-level={3}>通常攻撃の計算過程</span>
           </span>
           <span className="operator-info-heading-summary">
-            <span>通常 1ヒット {formatNumber(normalPerHit)} · スキル 1攻撃 {skillOutput ? formatNumber(skillOutput.perAttack) : '—'}</span>
-            <em>{calculationProcessOpen ? '閉じる' : '式と代入値を表示'} {calculationProcessOpen ? '−' : '+'}</em>
+            <span>1ヒット {formatNumber(normalPerHit)} · DPS {formatNumber(normalDps)}</span>
+            <em>{normalCalculationProcessOpen ? '閉じる' : '式と代入値を表示'} {normalCalculationProcessOpen ? '−' : '+'}</em>
           </span>
         </button>
-        {calculationProcessOpen && (
-          <div id="calculation-process-body" className="calculation-process-body">
-            <div className="calculation-trace-grid">
-              <CalculationTrace
-                title="通常攻撃"
-                summary={`1ヒット ${formatNumber(normalPerHit)} / DPS ${formatNumber(normalDps)}`}
-                steps={normalCalculationSteps}
-              />
-              <CalculationTrace
-                title="スキル"
-                summary={skillOutput
-                  ? `1攻撃 ${formatNumber(skillOutput.perAttack)} / DPS ${skillOutput.dps === null ? '—' : formatNumber(skillOutput.dps)}`
-                  : '自動計算対象外'}
-                steps={skillCalculationSteps}
-                unavailableReasons={skillOutput ? [] : unsupportedReasons}
-              />
-            </div>
+        {normalCalculationProcessOpen && (
+          <div id="normal-calculation-process-body" className="calculation-process-body">
+            <CalculationTrace
+              title="通常攻撃"
+              steps={normalCalculationSteps}
+            />
             <p className="calculation-process-note">
-              式中の値は確認しやすい桁数に省略して表示し、計算自体は丸め前の値で行います。固定時間の総ダメージは、DPS × 効果時間による連続値の理論値です。
+              特性・素質・潜在・モジュール・外部バフに由来するA〜Eは未反映です。式中の値は確認しやすい桁数に省略して表示し、計算自体は表示前の値で行います。
+            </p>
+          </div>
+        )}
+      </section>
+
+      <section className={`calculator-panel calculation-process-panel ${skillCalculationProcessOpen ? 'open' : ''}`}>
+        <button
+          type="button"
+          className="panel-heading operator-info-heading calculation-process-heading"
+          aria-expanded={skillCalculationProcessOpen}
+          aria-controls="skill-calculation-process-body"
+          onClick={() => setSkillCalculationProcessOpen((open) => !open)}
+        >
+          <span className="operator-info-heading-title">
+            <span>07</span>
+            <span className="operator-info-heading-label" role="heading" aria-level={3}>スキルの計算過程</span>
+          </span>
+          <span className="operator-info-heading-summary">
+            <span>{skillOutput
+              ? `1攻撃 ${formatNumber(skillOutput.perAttack)} · DPS ${skillOutput.dps === null ? '—' : formatNumber(skillOutput.dps)}`
+              : '自動計算対象外'}</span>
+            <em>{skillCalculationProcessOpen ? '閉じる' : '式と代入値を表示'} {skillCalculationProcessOpen ? '−' : '+'}</em>
+          </span>
+        </button>
+        {skillCalculationProcessOpen && (
+          <div id="skill-calculation-process-body" className="calculation-process-body">
+            <CalculationTrace
+              title="スキル"
+              steps={skillCalculationSteps}
+              unavailableReasons={skillOutput ? [] : unsupportedReasons}
+            />
+            <p className="calculation-process-note">
+              A・C・Dと、特性・素質・外部効果に由来するB・Eは未反映です。固定時間の総ダメージは、DPS × 効果時間による連続値の理論値です。
             </p>
           </div>
         )}
@@ -474,7 +502,7 @@ export function DamageCalculator({ rows, loading }: Props) {
 
       <section className="calculator-panel sensitivity-panel">
         <div className="panel-heading">
-          <div><span>07</span><h3>{damageType === 'ARTS' ? '術耐性' : damageType === 'PHYSICAL' ? '防御力' : '敵ステータス'}別の比較</h3></div>
+          <div><span>08</span><h3>{damageType === 'ARTS' ? '術耐性' : damageType === 'PHYSICAL' ? '防御力' : '敵ステータス'}別の比較</h3></div>
           <p>敵ステータスを変えたときの単体ダメージ</p>
         </div>
         <div className="sensitivity-table-wrap">
@@ -577,21 +605,15 @@ function ResultCard({ label, value }: { label: string; value: number | null }) {
 
 function CalculationTrace({
   title,
-  summary,
   steps,
   unavailableReasons = [],
 }: {
   title: string
-  summary: string
   steps: CalculationStep[]
   unavailableReasons?: string[]
 }) {
   return (
     <article className="calculation-trace-card" aria-label={`${title}の計算過程`}>
-      <header>
-        <div><span>CALCULATION</span><h4>{title}</h4></div>
-        <strong>{summary}</strong>
-      </header>
       {steps.length > 0 ? (
         <ol className="calculation-step-list">
           {steps.map((step, index) => (
@@ -616,6 +638,62 @@ function CalculationTrace({
   )
 }
 
+function buildAttackPipelineSteps(
+  base: BaseAttackBreakdown,
+  pipeline: AttackPipelineBreakdown,
+  mode: 'NORMAL' | 'SKILL',
+): CalculationStep[] {
+  const directMultiplierNote = mode === 'SKILL'
+    ? pipeline.directMultiplierPercent === 0
+      ? '現在のスキル計算モデルでは0%。素質・外部バフは未反映'
+      : 'スキル計算モデルの攻撃力補正B（自動値または手動入力）を適用'
+    : '通常攻撃へ影響する特性・素質・外部バフは未反映'
+  const attackScaleNote = mode === 'SKILL'
+    ? pipeline.attackScale === 1
+      ? '現在のスキル計算モデルでは100%（係数1）'
+      : 'スキル計算モデルの攻撃倍率E（自動値または手動入力）を適用'
+    : '現在の通常攻撃モデルでは1。特性由来の攻撃倍率Eは未反映'
+
+  return [
+    {
+      label: '基礎攻撃力',
+      formula: `round(${formatCalculationNumber(base.levelAttack)} + ${formatCalculationNumber(base.trustAttack)} + ${formatCalculationNumber(base.potentialAttack)} + ${formatCalculationNumber(base.moduleAttack)})`,
+      result: formatNumber(base.result),
+      note: 'レベル + 信頼度 + 潜在 + モジュール。潜在・モジュールの固定値は現行版では未反映',
+    },
+    {
+      label: '直接加算項 A',
+      formula: `${formatCalculationNumber(pipeline.baseAttack)} + ${formatCalculationNumber(pipeline.directAddition)}`,
+      result: formatNumber(pipeline.afterDirectAddition),
+      note: '固定値加算は現在、自動取得未対応',
+    },
+    {
+      label: '直接乗算項 B',
+      formula: `${formatCalculationNumber(pipeline.afterDirectAddition)} × (1 + ${formatCalculationNumber(pipeline.directMultiplierPercent)}% ÷ 100)`,
+      result: formatNumber(pipeline.afterDirectMultiplier),
+      note: directMultiplierNote,
+    },
+    {
+      label: '最終加算項 C',
+      formula: `${formatCalculationNumber(pipeline.afterDirectMultiplier)} + ${formatCalculationNumber(pipeline.finalAddition)}`,
+      result: formatNumber(pipeline.afterFinalAddition),
+      note: '重複規則を伴う最終加算は現在、自動取得未対応',
+    },
+    {
+      label: '最終乗算項 D',
+      formula: `max(0, floor(${formatCalculationNumber(pipeline.afterFinalAddition)} × ${formatCalculationNumber(pipeline.finalMultiplier)}))`,
+      result: formatNumber(pipeline.afterFinalMultiplier),
+      note: '攻撃力低下などの係数は現在、自動取得未対応。適用効果なしの場合は1',
+    },
+    {
+      label: '攻撃倍率 E',
+      formula: `${formatCalculationNumber(pipeline.afterFinalMultiplier)} × ${formatCalculationNumber(pipeline.attackScale)}`,
+      result: formatNumber(pipeline.finalAttack),
+      note: attackScaleNote,
+    },
+  ]
+}
+
 function buildMitigationStep(label: string, breakdown: DamageCalculationBreakdown): CalculationStep {
   const attack = formatCalculationNumber(breakdown.attack)
 
@@ -628,14 +706,18 @@ function buildMitigationStep(label: string, breakdown: DamageCalculationBreakdow
   }
 
   if (breakdown.damageType === 'ARTS') {
-    const resistanceWasCapped = breakdown.inputResistance !== breakdown.appliedResistance
+    const resistanceWasClamped = breakdown.inputResistance !== breakdown.appliedResistance
+    const afterResistance = breakdown.afterResistance ?? 0
+    const minimumDamage = breakdown.minimumDamage ?? 0
     return {
       label,
-      formula: `${attack} × (1 − ${formatCalculationNumber(breakdown.appliedResistance)}% ÷ 100)`,
+      formula: `max(${attack} × (1 − ${formatCalculationNumber(breakdown.appliedResistance)}% ÷ 100), ${attack} × 5%)`,
       result: formatNumber(breakdown.result),
-      note: resistanceWasCapped
-        ? `入力術耐性 ${formatCalculationNumber(breakdown.inputResistance)}% を上限95%に補正`
-        : `術耐性 ${formatCalculationNumber(breakdown.appliedResistance)}% を適用`,
+      note: resistanceWasClamped
+        ? `入力術耐性 ${formatCalculationNumber(breakdown.inputResistance)}% を0〜100%に補正`
+        : breakdown.minimumApplied
+          ? `耐性適用後 ${formatCalculationNumber(afterResistance)} より大きい最低保証 ${formatCalculationNumber(minimumDamage)} を採用`
+          : `耐性適用後 ${formatCalculationNumber(afterResistance)} を採用（最低保証 ${formatCalculationNumber(minimumDamage)}）`,
     }
   }
 
@@ -651,13 +733,9 @@ function buildMitigationStep(label: string, breakdown: DamageCalculationBreakdow
   }
 }
 
-function buildSkillCalculationSteps(breakdown: SkillDamageBreakdown): CalculationStep[] {
+function buildSkillCalculationSteps(base: BaseAttackBreakdown, breakdown: SkillDamageBreakdown): CalculationStep[] {
   const steps: CalculationStep[] = [
-    {
-      label: '倍率適用後攻撃力',
-      formula: `${formatCalculationNumber(breakdown.baseAttack)} × ${formatCalculationNumber(breakdown.attackMultiplierPercent)}% ÷ 100`,
-      result: formatNumber(breakdown.scaledAttack),
-    },
+    ...buildAttackPipelineSteps(base, breakdown.attackPipeline, 'SKILL'),
     buildMitigationStep(`${DAMAGE_TYPE_LABELS[breakdown.mitigation.damageType]}ダメージ（1ヒット）`, breakdown.mitigation),
     {
       label: '1攻撃ダメージ',

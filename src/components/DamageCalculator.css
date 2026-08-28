@@ -682,52 +682,12 @@
   padding-top: 8px;
 }
 
-.calculation-trace-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
 .calculation-trace-card {
   min-width: 0;
   border: 1px solid #deded9;
   border-radius: 9px;
   background: #fafaf8;
   padding: 13px;
-}
-
-.calculation-trace-card > header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 10px;
-  border-bottom: 1px solid #e4e4df;
-  padding-bottom: 10px;
-}
-
-.calculation-trace-card > header div {
-  min-width: 0;
-}
-
-.calculation-trace-card > header span {
-  display: block;
-  margin-bottom: 3px;
-  color: #999;
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: .14em;
-}
-
-.calculation-trace-card h4 {
-  margin: 0;
-  font-size: 13px;
-}
-
-.calculation-trace-card > header > strong {
-  color: #555;
-  font-size: 10px;
-  text-align: right;
 }
 
 .calculation-step-list {
@@ -868,10 +828,6 @@
 
   .operator-info-heading-summary > span {
     display: none;
-  }
-
-  .calculation-trace-grid {
-    grid-template-columns: 1fr;
   }
 
   .skill-results {
