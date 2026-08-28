@@ -25,7 +25,7 @@ interface Props {
 }
 
 export function Filters({ value, professionOptions, onChange, onReset }: Props) {
-  const hasActiveFilters = value.query !== ''
+  const hasActiveFilters = value.query.trim() !== ''
     || value.nameInitial !== 'ALL'
     || value.profession !== 'ALL'
     || value.rarity !== 'ALL'
@@ -110,13 +110,15 @@ export function Filters({ value, professionOptions, onChange, onReset }: Props) 
           </button>
         ))}
       </div>
-      <input
-        className="search"
-        aria-label="オペレーター検索"
-        value={value.query}
-        onChange={(event) => onChange({ ...value, query: event.target.value })}
-        placeholder="オペレーター名・スキル名・説明文で検索"
-      />
+      <label className="search-filter">
+        <span className="initial-filter-label">文字検索</span>
+        <input
+          className="search"
+          value={value.query}
+          onChange={(event) => onChange({ ...value, query: event.target.value })}
+          placeholder="オペレーター名・スキル名・説明文で検索"
+        />
+      </label>
     </div>
   )
 }

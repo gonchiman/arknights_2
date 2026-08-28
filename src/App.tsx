@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { DamageCalculator } from './components/DamageCalculator'
-import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './components/OperatorSearch'
+import { EMPTY_OPERATOR_FILTERS, matchesOperatorFilters, OperatorSearch } from './components/OperatorSearch'
 import { SkillDetail } from './components/SkillDetail'
 import { DATA_URLS, loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
@@ -28,6 +28,8 @@ export default function App() {
   const [overrides, setOverrides] = useState<Record<string, SkillClassificationOverride>>(loadOverrides)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const lastSelectedOperatorId = useRef<string | null>(null)
+  const previousRouteView = useRef(route.view)
 
   const load = async () => {
     setLoading(true)
@@ -63,6 +65,23 @@ export default function App() {
     ? classifiedRows.filter((row) => row.operatorId === selected.operatorId)
     : []
 
+  useEffect(() => {
+    if (selected) lastSelectedOperatorId.current = selected.operatorId
+  }, [selected])
+
+  useEffect(() => {
+    const previousView = previousRouteView.current
+    previousRouteView.current = route.view
+    if (previousView !== 'skill' || route.view !== 'list') return
+
+    const operatorId = lastSelectedOperatorId.current
+    if (!operatorId) return
+    window.requestAnimationFrame(() => {
+      const operatorRows = document.querySelectorAll<HTMLElement>('[data-operator-id]')
+      Array.from(operatorRows).find((row) => row.dataset.operatorId === operatorId)?.focus()
+    })
+  }, [route.view])
+
   const updateOverride = (skillId: string, override: SkillClassificationOverride | null) => {
     setOverrides((current) => {
       const next = { ...current }
@@ -74,6 +93,8 @@ export default function App() {
   }
 
   const openSkill = (skillId: string) => {
+    const target = classifiedRows.find((row) => row.id === skillId)
+    if (target) lastSelectedOperatorId.current = target.operatorId
     window.location.hash = getSkillRouteHash(skillId)
   }
 
@@ -81,17 +102,26 @@ export default function App() {
     window.location.hash = '#/'
   }
 
+  const updateClassifierFilters = (nextFilters: typeof filters) => {
+    setFilters(nextFilters)
+    if (!selected) return
+    const selectedStillVisible = classifiedRows.some((row) => (
+      row.operatorId === selected.operatorId && matchesOperatorFilters(row, nextFilters)
+    ))
+    if (!selectedStillVisible) window.location.hash = '#/'
+  }
+
   const classifierActive = route.view !== 'damage'
 
   return (
-    <main className="app-shell">
+    <div className={`app-shell ${selected ? 'skill-detail-route' : ''}`}>
       <header className="topbar">
         <div className="topbar-inner">
           <a className="site-brand" href="#/" aria-label="Arknights Analyze Tool ホーム">
             <span className="brand-mark" aria-hidden="true">A</span>
             <span className="brand-copy">
               <span className="eyebrow">ARKNIGHTS</span>
-              <h1>Arknights Analyze Tool</h1>
+              <span className="brand-title">Arknights Analyze Tool</span>
             </span>
           </a>
           <nav className="site-nav" aria-label="ツール切り替え">
@@ -105,44 +135,69 @@ export default function App() {
         </div>
       </header>
 
-      <div className="app-content">
-        {error && <section className="error-box">{error}</section>}
+      <main className="app-content">
+        {error && <section className="error-box" role="alert">{error}</section>}
 
-        {route.view === 'list' ? (
-          <OperatorSearch
-            rows={classifiedRows}
-            filters={filters}
-            loading={loading}
-            onFiltersChange={setFilters}
-            onSelect={(row) => openSkill(row.id)}
-          />
-        ) : route.view === 'damage' ? (
+        {route.view === 'damage' ? (
           <DamageCalculator rows={classifiedRows} loading={loading} />
-        ) : selected ? (
-          <SkillDetail
-            key={selected.id}
-            skill={selected}
-            operatorSkills={operatorSkills}
-            override={overrides[selected.id]}
-            onBack={openList}
-            onSelectSkill={(skill) => openSkill(skill.id)}
-            onOverride={(override) => updateOverride(selected.id, override)}
-          />
         ) : (
-          <section className="route-state">
-            <h2>{loading ? 'スキルを読み込んでいます…' : 'スキルが見つかりません'}</h2>
-            {!loading && <button className="button secondary" onClick={openList}>一覧に戻る</button>}
+          <section className="classifier-route">
+            {route.view === 'list' && (
+              <header className="page-intro">
+                <div>
+                  <span className="page-kicker">SKILL DIRECTORY</span>
+                  <h1>Skill Model Classifier</h1>
+                </div>
+                <p>オペレーターを検索し、スキルの分類結果と判定根拠を確認します。</p>
+              </header>
+            )}
+            <div className={`classifier-workspace ${route.view === 'skill' ? 'has-detail' : ''}`}>
+              <aside className="classifier-master" aria-label="オペレーター検索一覧">
+                <OperatorSearch
+                  rows={classifiedRows}
+                  filters={filters}
+                  loading={loading}
+                  onFiltersChange={updateClassifierFilters}
+                  onSelect={(row) => openSkill(row.id)}
+                  selectedOperatorId={selected?.operatorId}
+                  instruction="選択すると右側に詳細を表示"
+                />
+              </aside>
+              {selected ? (
+                <div className="classifier-detail">
+                  <SkillDetail
+                    key={selected.id}
+                    skill={selected}
+                    operatorSkills={operatorSkills}
+                    override={overrides[selected.id]}
+                    onBack={openList}
+                    onSelectSkill={(skill) => openSkill(skill.id)}
+                    onOverride={(override) => updateOverride(selected.id, override)}
+                  />
+                </div>
+              ) : route.view === 'skill' ? (
+                <section className="route-state classifier-detail" role="status">
+                  <h1>{loading ? 'スキルを読み込んでいます…' : 'スキルが見つかりません'}</h1>
+                  {!loading && <button className="button secondary" onClick={openList}>一覧に戻る</button>}
+                </section>
+              ) : (
+                <section className="classifier-detail-placeholder" role="status">
+                  <span className="placeholder-index">DETAIL</span>
+                  <strong>オペレーターを選択</strong>
+                  <p>一覧から選ぶと、スキルの分類と判定根拠がここに表示されます。</p>
+                </section>
+              )}
+            </div>
           </section>
         )}
-
-        <footer>
+      </main>
+      <footer className="site-footer">
           <span>Data: ArknightsAssets/ArknightsGamedata (JP)</span>
           <a href={DATA_URLS.skill} target="_blank" rel="noreferrer">skill_table.json</a>
           <a href={DATA_URLS.character} target="_blank" rel="noreferrer">character_table.json</a>
           <a href={DATA_URLS.uniequip} target="_blank" rel="noreferrer">uniequip_table.json</a>
-        </footer>
-      </div>
-    </main>
+      </footer>
+    </div>
   )
 }
 

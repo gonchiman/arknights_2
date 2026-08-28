@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
 import {
   ACTIVATION_TRIGGER_COLORS,
   ACTIVATION_TRIGGER_LABELS,
@@ -45,8 +45,23 @@ const DETAIL_TABS: Array<[DetailTab, string]> = [
 
 export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectSkill, onOverride }: Props) {
   const [activeTab, setActiveTab] = useState<DetailTab>('summary')
+  const titleRef = useRef<HTMLHeadingElement>(null)
   const classification = skill.classification
   const outputLabels = getOutputCapabilityLabels(classification.outputCapabilities)
+
+  useEffect(() => {
+    if (!window.matchMedia('(max-width: 760px)').matches) return
+    window.requestAnimationFrame(() => titleRef.current?.focus())
+  }, [skill.id])
+
+  useEffect(() => {
+    if (!window.matchMedia('(max-width: 760px)').matches) return
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onBack()
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [onBack])
 
   const setField = <K extends OverrideField>(field: K, value: SkillClassificationOverride[K]) => {
     onOverride({ ...override, [field]: value })
@@ -80,13 +95,27 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
     setField('conditions', next)
   }
 
+  const handleTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
+    let nextIndex: number | null = null
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % DETAIL_TABS.length
+    if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + DETAIL_TABS.length) % DETAIL_TABS.length
+    if (event.key === 'Home') nextIndex = 0
+    if (event.key === 'End') nextIndex = DETAIL_TABS.length - 1
+    if (nextIndex === null) return
+
+    event.preventDefault()
+    const [nextTab] = DETAIL_TABS[nextIndex]
+    setActiveTab(nextTab)
+    window.requestAnimationFrame(() => document.getElementById(`detail-tab-${nextTab}`)?.focus())
+  }
+
   return (
     <section className="detail-page">
       <button className="back-button" onClick={onBack}>← オペレーター一覧に戻る</button>
 
       <header className="detail-header">
         <div>
-          <h2>{skill.operatorName}</h2>
+          <h1 ref={titleRef} tabIndex={-1}>{skill.operatorName}</h1>
           <p className="operator-class">★{skill.rarity} · {skill.professionLabel} / {skill.subProfessionName}</p>
         </div>
       </header>
@@ -96,6 +125,7 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
           <button
             className={`skill-switch-button ${candidate.id === skill.id ? 'active' : ''}`}
             aria-current={candidate.id === skill.id ? 'page' : undefined}
+            aria-pressed={candidate.id === skill.id}
             onClick={() => onSelectSkill(candidate)}
             key={candidate.id}
           >
@@ -106,12 +136,16 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
       </nav>
 
       <div className="detail-tabs" role="tablist" aria-label="スキル詳細">
-        {DETAIL_TABS.map(([tab, label]) => (
+        {DETAIL_TABS.map(([tab, label], index) => (
           <button
+            id={`detail-tab-${tab}`}
             className={`detail-tab ${activeTab === tab ? 'active' : ''}`}
             role="tab"
             aria-selected={activeTab === tab}
+            aria-controls={`detail-panel-${tab}`}
+            tabIndex={activeTab === tab ? 0 : -1}
             onClick={() => setActiveTab(tab)}
+            onKeyDown={(event) => handleTabKeyDown(event, index)}
             key={tab}
           >
             {label}
@@ -119,10 +153,15 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
         ))}
       </div>
 
-      {activeTab === 'summary' && (
-        <div className="detail-tab-panel" role="tabpanel">
+      <div
+        id="detail-panel-summary"
+        className="detail-tab-panel"
+        role="tabpanel"
+        aria-labelledby="detail-tab-summary"
+        hidden={activeTab !== 'summary'}
+      >
           <section className="overview-section">
-            <h3>スキル説明</h3>
+            <h2>スキル説明</h2>
             <p className="description">{skill.description || '説明文なし'}</p>
           </section>
 
@@ -158,7 +197,7 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
           </section>
 
           <section className="overview-section output-overview">
-            <h3>計算機で表示できる出力</h3>
+            <h2>計算機で表示できる出力</h2>
             <div className="tag-list">
               {outputLabels.length
                 ? outputLabels.map((label) => <span className="tag output-tag" key={label}>{label}</span>)
@@ -170,11 +209,15 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
               </ul>
             )}
           </section>
-        </div>
-      )}
+      </div>
 
-      {activeTab === 'classification' && (
-        <div className="detail-tab-panel" role="tabpanel">
+      <div
+        id="detail-panel-classification"
+        className="detail-tab-panel"
+        role="tabpanel"
+        aria-labelledby="detail-tab-classification"
+        hidden={activeTab !== 'classification'}
+      >
           <section className="classification-card editor-card">
             <ClassificationField
               title="効果の終了条件"
@@ -189,11 +232,11 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
               <select
                 aria-label="効果の終了条件を手動修正"
                 value={classification.effectWindow.value}
-                style={{ backgroundColor: EFFECT_WINDOW_COLORS[classification.effectWindow.value] }}
+                style={getClassificationStyle(EFFECT_WINDOW_COLORS[classification.effectWindow.value])}
                 onChange={(event) => setField('effectWindow', event.target.value as EffectWindowType)}
               >
                 {EFFECT_WINDOW_OPTIONS.map(([type, label]) => (
-                  <option style={{ backgroundColor: EFFECT_WINDOW_COLORS[type] }} key={type} value={type}>{label}</option>
+                  <option key={type} value={type}>{label}</option>
                 ))}
               </select>
             </ClassificationField>
@@ -211,11 +254,11 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
               <select
                 aria-label="発動契機を手動修正"
                 value={classification.activationTrigger.value}
-                style={{ backgroundColor: ACTIVATION_TRIGGER_COLORS[classification.activationTrigger.value] }}
+                style={getClassificationStyle(ACTIVATION_TRIGGER_COLORS[classification.activationTrigger.value])}
                 onChange={(event) => setField('activationTrigger', event.target.value as ActivationTriggerType)}
               >
                 {ACTIVATION_TRIGGER_OPTIONS.map(([type, label]) => (
-                  <option style={{ backgroundColor: ACTIVATION_TRIGGER_COLORS[type] }} key={type} value={type}>{label}</option>
+                  <option key={type} value={type}>{label}</option>
                 ))}
               </select>
             </ClassificationField>
@@ -232,7 +275,7 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
             >
               <div className="choice-grid">
                 {DAMAGE_COMPONENT_OPTIONS.map(([type, label]) => (
-                  <label className="check-option classification-choice" style={{ backgroundColor: DAMAGE_COMPONENT_COLORS[type] }} key={type}>
+                  <label className="check-option classification-choice" style={getClassificationStyle(DAMAGE_COMPONENT_COLORS[type])} key={type}>
                     <input
                       type="checkbox"
                       checked={classification.damageComponents.value.includes(type)}
@@ -258,7 +301,7 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
             >
               <div className="choice-grid">
                 {SKILL_CONDITION_OPTIONS.map(([type, label]) => (
-                  <label className="check-option classification-choice" style={{ backgroundColor: SKILL_CONDITION_COLORS[type] }} key={type}>
+                  <label className="check-option classification-choice" style={getClassificationStyle(SKILL_CONDITION_COLORS[type])} key={type}>
                     <input
                       type="checkbox"
                       checked={classification.conditions.value.includes(type)}
@@ -274,13 +317,17 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
               <button className="text-button" onClick={() => onOverride(null)}>すべて自動判定に戻す</button>
             )}
           </section>
-        </div>
-      )}
+      </div>
 
-      {activeTab === 'data' && (
-        <div className="detail-tab-panel" role="tabpanel">
+      <div
+        id="detail-panel-data"
+        className="detail-tab-panel"
+        role="tabpanel"
+        aria-labelledby="detail-tab-data"
+        hidden={activeTab !== 'data'}
+      >
           <section className="detail-section skill-data-section">
-            <h3>スキル情報</h3>
+            <h2>スキル情報</h2>
             <dl>
               <div><dt>skillId</dt><dd>{skill.skillId}</dd></div>
               <div><dt>職業</dt><dd>{skill.professionLabel}</dd></div>
@@ -298,8 +345,7 @@ export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectS
             <summary>Raw JSON</summary>
             <pre>{JSON.stringify(skill.raw, null, 2)}</pre>
           </details>
-        </div>
-      )}
+      </div>
     </section>
   )
 }
@@ -315,14 +361,14 @@ function SummaryDimension<T>({ title, labels, colors, field }: SummaryDimensionP
   return (
     <article className="summary-dimension">
       <div className="dimension-heading">
-        <h3>{title}</h3>
-        <span className={`confidence ${field.confidence.toLowerCase()}`}>
-          {field.source === 'MANUAL' ? 'manual' : field.confidence.toLowerCase()}
+        <h2>{title}</h2>
+        <span className={`confidence ${field.source === 'MANUAL' ? 'manual' : field.confidence.toLowerCase()}`}>
+          {getConfidenceLabel(field)}
         </span>
       </div>
       <div className="tag-list">
         {labels.map((label, index) => (
-          <span className="tag classification-tag" style={{ backgroundColor: colors[index] }} key={label}>{label}</span>
+          <span className="tag classification-tag" style={getClassificationStyle(colors[index])} key={label}>{label}</span>
         ))}
       </div>
     </article>
@@ -350,13 +396,13 @@ function ClassificationField<T>({
     <div className="classification-dimension">
       <div className="dimension-heading">
         <strong>{title}</strong>
-        <span className={`confidence ${field.confidence.toLowerCase()}`}>
-          {field.source === 'MANUAL' ? 'manual' : field.confidence.toLowerCase()}
+        <span className={`confidence ${field.source === 'MANUAL' ? 'manual' : field.confidence.toLowerCase()}`}>
+          {getConfidenceLabel(field)}
         </span>
       </div>
       <div className="tag-list">
         {valueTags.map(({ label, color }) => (
-          <span className="tag classification-tag" style={{ backgroundColor: color }} key={label}>{label}</span>
+          <span className="tag classification-tag" style={getClassificationStyle(color)} key={label}>{label}</span>
         ))}
       </div>
       <ul>{field.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
@@ -364,4 +410,15 @@ function ClassificationField<T>({
       {isOverridden && <button className="text-button small" onClick={onReset}>この項目を自動判定に戻す</button>}
     </div>
   )
+}
+
+function getClassificationStyle(color: string): CSSProperties {
+  return { '--classification-color': color } as CSSProperties
+}
+
+function getConfidenceLabel<T>(field: ClassifiedField<T>): string {
+  if (field.source === 'MANUAL') return '手動'
+  if (field.confidence === 'HIGH') return '高信頼'
+  if (field.confidence === 'MEDIUM') return '中信頼'
+  return '低信頼'
 }

@@ -4,9 +4,10 @@ interface Props {
   rows: SkillRecord[]
   onSelect: (row: SkillRecord) => void
   actionLabel?: string
+  selectedOperatorId?: string
 }
 
-export function OperatorTable({ rows, onSelect, actionLabel = '詳細を見る →' }: Props) {
+export function OperatorTable({ rows, onSelect, actionLabel = '詳細を見る →', selectedOperatorId }: Props) {
   const isSelectionTable = actionLabel.startsWith('選択')
 
   return (
@@ -22,23 +23,32 @@ export function OperatorTable({ rows, onSelect, actionLabel = '詳細を見る �
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr
-              key={row.operatorId}
-              tabIndex={0}
-              aria-label={`${row.operatorName}を${isSelectionTable ? '選択' : '開く'}`}
-              onClick={() => onSelect(row)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') onSelect(row)
-              }}
-            >
-              <td><span className="operator-name">{row.operatorName}</span></td>
-              <td>★{row.rarity}</td>
-              <td>{row.professionLabel}</td>
-              <td>{row.subProfessionName}</td>
-              <td className="detail-link-cell">{actionLabel}</td>
-            </tr>
-          ))}
+          {rows.map((row) => {
+            const selected = row.operatorId === selectedOperatorId
+            return (
+              <tr
+                key={row.operatorId}
+                className={selected ? 'selected' : undefined}
+                data-operator-id={row.operatorId}
+                tabIndex={0}
+                aria-current={selected ? 'true' : undefined}
+                aria-label={`${row.operatorName}を${isSelectionTable ? '選択' : '開く'}`}
+                onClick={() => onSelect(row)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    onSelect(row)
+                  }
+                }}
+              >
+                <td><span className="operator-name">{row.operatorName}</span></td>
+                <td>★{row.rarity}</td>
+                <td>{row.professionLabel}</td>
+                <td>{row.subProfessionName}</td>
+                <td className="detail-link-cell">{actionLabel}</td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
