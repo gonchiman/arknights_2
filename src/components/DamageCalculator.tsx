@@ -398,8 +398,8 @@ export function DamageCalculator({ rows, loading }: Props) {
           <p>ダメージ計算条件とゲームデータから自動決定</p>
         </div>
         <dl className="model-value-grid" aria-label="自動算出されたスキル計算モデル">
-          <ModelValue label="攻撃力補正 B" value={model.directMultiplierPercent} suffix="%" />
-          <ModelValue label="攻撃倍率 E" value={model.attackScalePercent} suffix="%" />
+          <ModelValue label="攻撃力補正B" value={model.directMultiplierPercent} suffix="%" />
+          <ModelValue label="攻撃力補正E" value={model.attackScalePercent} suffix="%" />
           <ModelValue label="1攻撃のヒット数" value={model.hitCount} />
           <ModelValue label="攻撃間隔" value={model.attackInterval} suffix="秒" />
           {selectedSkill.classification.effectWindow.value === 'FIXED_DURATION' && (
@@ -662,8 +662,8 @@ function buildAttackPipelineSteps(
   const attackScaleNote = mode === 'SKILL'
     ? pipeline.attackScale === 1
       ? '現在のスキル計算モデルでは100%（係数1）'
-      : 'スキル計算モデルの攻撃倍率E（自動算出値）を適用'
-    : '現在の通常攻撃モデルでは1。特性由来の攻撃倍率Eは未反映'
+      : 'スキル計算モデルの攻撃力補正E（自動算出値）を適用'
+    : '現在の通常攻撃モデルでは1。特性由来の攻撃力補正Eは未反映'
 
   return [
     {
@@ -673,31 +673,31 @@ function buildAttackPipelineSteps(
       note: 'レベル + 信頼度 + 潜在 + モジュール。潜在・モジュールの固定値は現行版では未反映',
     },
     {
-      label: '直接加算項 A',
+      label: '攻撃力補正A',
       formula: `${formatCalculationNumber(pipeline.baseAttack)} + ${formatCalculationNumber(pipeline.directAddition)}`,
       result: formatNumber(pipeline.afterDirectAddition),
       note: '固定値加算は現在、自動取得未対応',
     },
     {
-      label: '直接乗算項 B',
+      label: '攻撃力補正B',
       formula: `${formatCalculationNumber(pipeline.afterDirectAddition)} × (1 + ${formatCalculationNumber(pipeline.directMultiplierPercent)}% ÷ 100)`,
       result: formatNumber(pipeline.afterDirectMultiplier),
       note: directMultiplierNote,
     },
     {
-      label: '最終加算項 C',
+      label: '攻撃力補正C',
       formula: `${formatCalculationNumber(pipeline.afterDirectMultiplier)} + ${formatCalculationNumber(pipeline.finalAddition)}`,
       result: formatNumber(pipeline.afterFinalAddition),
       note: '重複規則を伴う最終加算は現在、自動取得未対応',
     },
     {
-      label: '最終乗算項 D',
+      label: '攻撃力補正D',
       formula: `max(0, floor(${formatCalculationNumber(pipeline.afterFinalAddition)} × ${formatCalculationNumber(pipeline.finalMultiplier)}))`,
       result: formatNumber(pipeline.afterFinalMultiplier),
       note: '攻撃力低下などの係数は現在、自動取得未対応。適用効果なしの場合は1',
     },
     {
-      label: '攻撃倍率 E',
+      label: '攻撃力補正E',
       formula: `${formatCalculationNumber(pipeline.afterFinalMultiplier)} × ${formatCalculationNumber(pipeline.attackScale)}`,
       result: formatNumber(pipeline.finalAttack),
       note: attackScaleNote,

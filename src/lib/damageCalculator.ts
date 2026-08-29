@@ -160,11 +160,11 @@ export function deriveSkillModel(level: RawSkillLevel, operatorAttackInterval: n
   const attackScalePercent = Math.max(0, (preferredAttackScale?.value ?? 1) * 100)
 
   if (directMultiplierPercent === 0 && !preferredAttackScale) {
-    notes.push('攻撃力補正Bと攻撃倍率Eをゲームデータから特定できなかったため、補正なしを初期値にしています。')
+    notes.push('攻撃力補正Bと攻撃力補正Eをゲームデータから特定できなかったため、補正なしを初期値にしています。')
   }
 
   if (attackScaleEntries.length > 1) {
-    notes.push('複数の攻撃倍率Eを持つスキルです。初期版では代表値1つの簡易モデルとして扱います。')
+    notes.push('複数の攻撃力補正Eを持つスキルです。初期版では代表値1つの簡易モデルとして扱います。')
   }
 
   if (values.has('damage_scale')) {

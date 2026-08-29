@@ -85,7 +85,7 @@ test('レベルと信頼度から攻撃力・攻撃間隔を補間する', () =>
   assert.equal(stats.baseAttackBreakdown.result, 220)
 })
 
-test('Ash S1型のblackboardから攻撃倍率と連撃数を得る', () => {
+test('Ash S1型のblackboardから攻撃力補正Bと連撃数を得る', () => {
   const model = deriveSkillModel({
     duration: -1,
     durationType: 'NONE',
