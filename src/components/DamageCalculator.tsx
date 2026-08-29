@@ -1,10 +1,8 @@
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import {
   DAMAGE_TYPE_LABELS,
   calculateAttackPipeline,
-  calculateDamage,
   calculateDamageBreakdown,
-  calculateSkillDamage,
   calculateSkillDamageBreakdown,
   deriveSkillModel,
   getDefaultDamageType,
@@ -34,6 +32,21 @@ interface CalculationStep {
   formula: string
   result: string
   note?: string
+}
+
+interface SensitivityRow {
+  point: number
+  label: string
+  normal: number
+  skill: number | null
+  normalMinimumReached: boolean
+  skillMinimumReached: boolean
+  current: boolean
+}
+
+interface SensitivityData {
+  tableRows: SensitivityRow[]
+  chartRows: SensitivityRow[]
 }
 
 const ATTACK_MODIFIER_DESCRIPTIONS = {
@@ -170,7 +183,7 @@ export function DamageCalculator({ rows, loading }: Props) {
     )
     : null
   const skillOutput = skillBreakdown
-  const sensitivityRows = useMemo(() => buildSensitivityRows({
+  const sensitivityData = useMemo(() => buildSensitivityData({
     attack: operatorStats.attack,
     damageType,
     enemyDefense,
@@ -517,22 +530,191 @@ export function DamageCalculator({ rows, loading }: Props) {
           <div><span>08</span><h2>{damageType === 'ARTS' ? '術耐性' : damageType === 'PHYSICAL' ? '防御力' : '敵ステータス'}別の比較</h2></div>
           <p>敵ステータスを変えたときの単体ダメージ</p>
         </div>
+        {damageType === 'TRUE' ? (
+          <p className="sensitivity-chart-unavailable">確定ダメージは防御力・術耐性の影響を受けないため、推移グラフは表示しません。</p>
+        ) : (
+          <SensitivityChart
+            rows={sensitivityData.chartRows}
+            tickRows={sensitivityData.tableRows}
+            axisLabel={damageType === 'ARTS' ? '敵の術耐性（%）' : '敵の防御力'}
+          />
+        )}
+        <div className="sensitivity-table-heading-row">
+          <h3 className="sensitivity-table-heading">数値一覧</h3>
+          {damageType !== 'TRUE' && (
+            <span className="minimum-damage-legend"><i aria-hidden="true" />最低保証ダメージ</span>
+          )}
+        </div>
         <div className="sensitivity-table-wrap">
-          <table className="sensitivity-table">
+          <table className="sensitivity-table" aria-label={`${damageType === 'ARTS' ? '術耐性' : damageType === 'PHYSICAL' ? '防御力' : '敵ステータス'}別のダメージ数値一覧`}>
             <thead><tr><th>{damageType === 'ARTS' ? '術耐性' : damageType === 'PHYSICAL' ? '防御力' : '補正'}</th><th>通常攻撃 1ヒット</th><th>スキル 1攻撃</th></tr></thead>
             <tbody>
-              {sensitivityRows.map((row) => (
-                <tr className={row.current ? 'current' : ''} key={row.label}>
-                  <td>{row.label}{row.current && <small>現在値</small>}</td>
-                  <td>{formatNumber(row.normal)}</td>
-                  <td>{row.skill === null ? '—' : formatNumber(row.skill)}</td>
-                </tr>
-              ))}
+              {sensitivityData.tableRows.map((row) => {
+                const normalValue = formatNumber(row.normal)
+                const skillValue = row.skill === null ? '—' : formatNumber(row.skill)
+                return (
+                  <tr className={row.current ? 'current' : ''} key={row.label}>
+                    <td>{row.label}{row.current && <small>現在値</small>}</td>
+                    <td
+                      className={row.normalMinimumReached ? 'minimum-damage-cell' : undefined}
+                      aria-label={row.normalMinimumReached ? `${normalValue}、最低保証ダメージ` : undefined}
+                    >{normalValue}</td>
+                    <td
+                      className={row.skillMinimumReached ? 'minimum-damage-cell' : undefined}
+                      aria-label={row.skillMinimumReached ? `${skillValue}、最低保証ダメージ` : undefined}
+                    >{skillValue}</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
       </section>
     </section>
+  )
+}
+
+function SensitivityChart({
+  rows,
+  tickRows,
+  axisLabel,
+}: {
+  rows: SensitivityRow[]
+  tickRows: SensitivityRow[]
+  axisLabel: string
+}) {
+  const frameRef = useRef<HTMLDivElement>(null)
+  const [chartWidth, setChartWidth] = useState(720)
+  const titleId = useId()
+  const descriptionId = useId()
+
+  useEffect(() => {
+    const frame = frameRef.current
+    if (!frame) return
+
+    const updateWidth = () => setChartWidth(Math.max(240, Math.round(frame.getBoundingClientRect().width)))
+    updateWidth()
+    const observer = new ResizeObserver(updateWidth)
+    observer.observe(frame)
+    return () => observer.disconnect()
+  }, [])
+
+  const hasSkill = rows.some((row) => row.skill !== null)
+  const chartHeight = chartWidth < 520 ? 250 : 280
+  const margin = chartWidth < 520
+    ? { top: 28, right: 12, bottom: 46, left: 56 }
+    : { top: 30, right: 18, bottom: 48, left: 64 }
+  const plotLeft = margin.left
+  const plotRight = chartWidth - margin.right
+  const plotTop = margin.top
+  const plotBottom = chartHeight - margin.bottom
+  const plotWidth = Math.max(1, plotRight - plotLeft)
+  const plotHeight = Math.max(1, plotBottom - plotTop)
+  const xMin = rows[0]?.point ?? 0
+  const xMax = rows.at(-1)?.point ?? xMin
+  const values = rows.flatMap((row) => row.skill === null ? [row.normal] : [row.normal, row.skill])
+  const { maximum: yMaximum, ticks: yTicks } = getChartScale(Math.max(0, ...values))
+  const getX = (point: number) => xMax === xMin
+    ? plotLeft + plotWidth / 2
+    : plotLeft + ((point - xMin) / (xMax - xMin)) * plotWidth
+  const getY = (value: number) => plotBottom - (value / yMaximum) * plotHeight
+  const xTicks = selectChartTicks(tickRows, chartWidth < 520 ? 4 : 6, (row) => getX(row.point))
+  const currentRow = rows.find((row) => row.current)
+  const currentX = currentRow ? getX(currentRow.point) : null
+  const currentText = currentRow ? `現在 ${currentRow.label}` : ''
+  const currentLabelWidth = Math.max(58, currentText.length * 8 + 14)
+  const currentLabelX = currentX === null
+    ? 0
+    : clamp(currentX - currentLabelWidth / 2, plotLeft, plotRight - currentLabelWidth)
+  const normalPath = buildChartPath(rows.map((row) => ({ x: getX(row.point), y: getY(row.normal) })))
+  const skillRows = rows.filter((row): row is SensitivityRow & { skill: number } => row.skill !== null)
+  const skillPath = buildChartPath(skillRows.map((row) => ({ x: getX(row.point), y: getY(row.skill) })))
+
+  return (
+    <figure className="sensitivity-chart">
+      <figcaption className="sensitivity-chart-caption">
+        <strong>ダメージ推移</strong>
+        <span className="sensitivity-chart-legend" aria-label="凡例">
+          <span><i className="normal" aria-hidden="true" />通常攻撃 1ヒット</span>
+          {hasSkill && <span><i className="skill" aria-hidden="true" />スキル 1攻撃</span>}
+        </span>
+      </figcaption>
+      <div className="sensitivity-chart-frame" ref={frameRef}>
+        <svg
+          className="sensitivity-chart-svg"
+          viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+          width="100%"
+          height={chartHeight}
+          role="img"
+          aria-labelledby={`${titleId} ${descriptionId}`}
+        >
+          <title id={titleId}>{axisLabel}別のダメージ推移</title>
+          <desc id={descriptionId}>{axisLabel}を変えたときの通常攻撃1ヒット{hasSkill ? 'とスキル1攻撃' : ''}の単体ダメージを示します。正確な値は直後の表に記載しています。</desc>
+
+          {yTicks.map((tick) => {
+            const y = getY(tick)
+            return (
+              <g key={tick}>
+                <line className="sensitivity-chart-grid" x1={plotLeft} x2={plotRight} y1={y} y2={y} />
+                <text className="sensitivity-chart-tick" x={plotLeft - 8} y={y + 3} textAnchor="end">{formatNumber(tick)}</text>
+              </g>
+            )
+          })}
+
+          <rect className="sensitivity-chart-plot-frame" x={plotLeft} y={plotTop} width={plotWidth} height={plotHeight} />
+
+          {currentRow && currentX !== null && (
+            <g className="sensitivity-chart-current">
+              <line x1={currentX} x2={currentX} y1={plotTop} y2={plotBottom} />
+              <rect x={currentLabelX} y={4} width={currentLabelWidth} height={18} />
+              <text x={currentLabelX + currentLabelWidth / 2} y={17} textAnchor="middle">{currentText}</text>
+            </g>
+          )}
+
+          <path className="sensitivity-chart-line normal" d={normalPath} />
+          {hasSkill && <path className="sensitivity-chart-line skill" d={skillPath} />}
+
+          {rows.map((row) => (
+            <circle
+              className={`sensitivity-chart-point normal ${row.current ? 'current' : ''}`}
+              cx={getX(row.point)}
+              cy={getY(row.normal)}
+              r={row.current ? 4 : 3}
+              key={`normal-${row.point}`}
+              aria-hidden="true"
+            />
+          ))}
+          {skillRows.map((row) => {
+            const size = row.current ? 8 : 6
+            return (
+              <rect
+                className={`sensitivity-chart-point skill ${row.current ? 'current' : ''}`}
+                x={getX(row.point) - size / 2}
+                y={getY(row.skill) - size / 2}
+                width={size}
+                height={size}
+                key={`skill-${row.point}`}
+                aria-hidden="true"
+              />
+            )
+          })}
+
+          {xTicks.map((row) => {
+            const x = getX(row.point)
+            const anchor = x <= plotLeft + 12 ? 'start' : x >= plotRight - 12 ? 'end' : 'middle'
+            return (
+              <g key={`tick-${row.point}`}>
+                <line className="sensitivity-chart-axis-mark" x1={x} x2={x} y1={plotBottom} y2={plotBottom + 4} />
+                <text className={`sensitivity-chart-tick ${row.current ? 'current' : ''}`} x={x} y={plotBottom + 17} textAnchor={anchor}>{row.label}</text>
+              </g>
+            )
+          })}
+
+          <text className="sensitivity-chart-axis-title" x={(plotLeft + plotRight) / 2} y={chartHeight - 5} textAnchor="middle">{axisLabel}</text>
+          <text className="sensitivity-chart-axis-title" transform={`translate(14 ${(plotTop + plotBottom) / 2}) rotate(-90)`} textAnchor="middle">単体ダメージ</text>
+        </svg>
+      </div>
+    </figure>
   )
 }
 
@@ -862,7 +1044,7 @@ function getTotalLabel(skill: SkillRecord): string {
   return 'スキル総ダメージ'
 }
 
-function buildSensitivityRows({
+function buildSensitivityData({
   attack,
   damageType,
   enemyDefense,
@@ -878,35 +1060,117 @@ function buildSensitivityRows({
   model: SkillModelDefaults | null
   selectedSkill: SkillRecord | null
   skillSupported: boolean
-}) {
-  const points = damageType === 'PHYSICAL'
-    ? uniqueSorted([0, 500, 1000, 1500, 2000, enemyDefense])
-    : damageType === 'ARTS'
-      ? uniqueSorted([0, 20, 40, 60, 80, 95, enemyResistance])
-      : [0]
-
-  return points.map((point) => {
-    const defense = damageType === 'PHYSICAL' ? point : enemyDefense
-    const resistance = damageType === 'ARTS' ? point : enemyResistance
-    const normal = calculateDamage(attack, damageType, defense, resistance)
-    const skill = model && selectedSkill && skillSupported
-      ? calculateSkillDamage(attack, damageType, defense, resistance, model, {
+}): SensitivityData {
+  const calculateSkillAt = (defense: number, resistance: number): SkillDamageBreakdown | null => (
+    model && selectedSkill && skillSupported
+      ? calculateSkillDamageBreakdown(attack, damageType, defense, resistance, model, {
         canShowDps: selectedSkill.classification.outputCapabilities.canShowDps,
         totalMode: getTotalMode(selectedSkill),
-      }).perAttack
+      })
       : null
+  )
+  const tablePoints = damageType === 'PHYSICAL'
+    ? uniqueSorted([0, 500, 1000, 1500, 2000, enemyDefense])
+    : damageType === 'ARTS'
+      ? uniqueSorted([0, 20, 40, 60, 80, 95, 100, enemyResistance])
+      : [0]
+  let chartPoints = tablePoints
+
+  if (damageType === 'PHYSICAL') {
+    const maximumDefense = Math.max(...tablePoints)
+    const skillAtZeroDefense = calculateSkillAt(0, enemyResistance)?.perHit ?? null
+    const minimumDamageBreakpoints = [attack * 0.95, skillAtZeroDefense === null ? null : skillAtZeroDefense * 0.95]
+      .filter((point): point is number => point !== null && point > 0 && point < maximumDefense)
+    chartPoints = uniqueSorted([...tablePoints, ...minimumDamageBreakpoints])
+  } else if (damageType === 'ARTS') {
+    chartPoints = uniqueSorted([...tablePoints, 100])
+  }
+
+  const rowByPoint = new Map<number, SensitivityRow>()
+  for (const point of uniqueSorted([...tablePoints, ...chartPoints])) {
+    const defense = damageType === 'PHYSICAL' ? point : enemyDefense
+    const resistance = damageType === 'ARTS' ? point : enemyResistance
+    const normalBreakdown = calculateDamageBreakdown(attack, damageType, defense, resistance)
+    const skillBreakdown = calculateSkillAt(defense, resistance)
+    const normal = normalBreakdown.result
+    const skill = skillBreakdown?.perAttack ?? null
     const current = damageType === 'PHYSICAL'
       ? point === enemyDefense
       : damageType === 'ARTS'
         ? point === enemyResistance
         : true
-    return {
+    rowByPoint.set(point, {
+      point,
       label: damageType === 'ARTS' ? `${formatNumber(point)}%` : damageType === 'TRUE' ? '軽減なし' : formatNumber(point),
       normal,
       skill,
+      normalMinimumReached: isMinimumDamageReached(normalBreakdown),
+      skillMinimumReached: skillBreakdown ? isMinimumDamageReached(skillBreakdown.mitigation) : false,
       current,
-    }
-  })
+    })
+  }
+
+  return {
+    tableRows: tablePoints.map((point) => rowByPoint.get(point) as SensitivityRow),
+    chartRows: chartPoints.map((point) => rowByPoint.get(point) as SensitivityRow),
+  }
+}
+
+function isMinimumDamageReached(breakdown: DamageCalculationBreakdown): boolean {
+  const minimum = breakdown.minimumDamage
+  if (minimum === null || minimum <= 0) return false
+  const tolerance = Number.EPSILON * Math.max(1, Math.abs(breakdown.attack), Math.abs(minimum), Math.abs(breakdown.result)) * 32
+  return breakdown.result <= minimum + tolerance
+}
+
+function buildChartPath(points: Array<{ x: number; y: number }>): string {
+  return points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')
+}
+
+function getChartScale(maximumValue: number): { maximum: number; ticks: number[] } {
+  if (maximumValue <= 0) return { maximum: 1, ticks: [0, 0.25, 0.5, 0.75, 1] }
+  const roughStep = maximumValue / 4
+  const magnitude = 10 ** Math.floor(Math.log10(roughStep))
+  const fraction = roughStep / magnitude
+  const niceFraction = fraction < 1.5 ? 1 : fraction < 3 ? 2 : fraction < 7 ? 5 : 10
+  const step = niceFraction * magnitude
+  const maximum = Math.ceil(maximumValue / step) * step
+  const ticks = Array.from({ length: Math.round(maximum / step) + 1 }, (_, index) => index * step)
+  return { maximum, ticks }
+}
+
+function selectChartTicks(
+  rows: SensitivityRow[],
+  maximumTicks: number,
+  getX: (row: SensitivityRow) => number,
+): SensitivityRow[] {
+  if (rows.length <= 1) return rows
+  const minimumSpacing = 48
+  const selected: SensitivityRow[] = []
+  const addIfSpaced = (row: SensitivityRow | undefined) => {
+    if (!row || selected.includes(row)) return
+    if (selected.every((candidate) => Math.abs(getX(candidate) - getX(row)) >= minimumSpacing)) selected.push(row)
+  }
+
+  addIfSpaced(rows.find((row) => row.current))
+  addIfSpaced(rows[0])
+  addIfSpaced(rows.at(-1))
+
+  while (selected.length < maximumTicks) {
+    const candidates = rows.filter((row) => !selected.includes(row))
+    const best = candidates
+      .map((row) => ({
+        row,
+        distance: selected.length === 0
+          ? Number.POSITIVE_INFINITY
+          : Math.min(...selected.map((candidate) => Math.abs(getX(candidate) - getX(row)))),
+      }))
+      .sort((a, b) => b.distance - a.distance)[0]
+    if (!best || best.distance < minimumSpacing) break
+    selected.push(best.row)
+  }
+
+  return selected.sort((a, b) => a.point - b.point)
 }
 
 function getSkillLevelLabel(index: number, total: number): string {

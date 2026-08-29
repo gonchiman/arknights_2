@@ -799,6 +799,198 @@
 
 .calculation-unavailable strong { font-size: 11px; }
 
+.sensitivity-chart {
+  min-width: 0;
+  margin: 0 0 14px;
+}
+
+.sensitivity-chart-caption {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 7px;
+}
+
+.sensitivity-chart-caption > strong,
+.sensitivity-table-heading {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.sensitivity-chart-legend {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px 14px;
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.sensitivity-chart-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.sensitivity-chart-legend i {
+  position: relative;
+  width: 22px;
+  height: 8px;
+  display: inline-block;
+  border-top: 2px solid var(--text);
+}
+
+.sensitivity-chart-legend i::after {
+  position: absolute;
+  top: -4px;
+  left: 8px;
+  width: 6px;
+  height: 6px;
+  border: 1.5px solid var(--text);
+  background: #fff;
+  content: '';
+}
+
+.sensitivity-chart-legend i.normal::after { border-radius: 50%; }
+
+.sensitivity-chart-legend i.skill {
+  border-top-color: var(--text-muted);
+  border-top-style: dashed;
+}
+
+.sensitivity-chart-legend i.skill::after {
+  border-color: var(--text-muted);
+  border-radius: 0;
+}
+
+.sensitivity-chart-frame {
+  width: 100%;
+  min-width: 0;
+}
+
+.sensitivity-chart-svg {
+  width: 100%;
+  display: block;
+  overflow: visible;
+  font-family: inherit;
+}
+
+.sensitivity-chart-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.sensitivity-chart-plot-frame {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.sensitivity-chart-line {
+  fill: none;
+  stroke: var(--text);
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.sensitivity-chart-line.skill {
+  stroke: var(--text-muted);
+  stroke-dasharray: 6 4;
+}
+
+.sensitivity-chart-point {
+  fill: #fff;
+  stroke: var(--text);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.sensitivity-chart-point.skill { stroke: var(--text-muted); }
+.sensitivity-chart-point.current { fill: var(--text); stroke-width: 2; }
+
+.sensitivity-chart-current line {
+  stroke: var(--text);
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.sensitivity-chart-current rect { fill: var(--text); }
+
+.sensitivity-chart-current text {
+  fill: #fff;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.sensitivity-chart-tick {
+  fill: var(--text-muted);
+  font-size: 9px;
+}
+
+.sensitivity-chart-tick.current {
+  fill: var(--text);
+  font-weight: 700;
+}
+
+.sensitivity-chart-axis-mark {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.sensitivity-chart-axis-title {
+  fill: var(--text-soft);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.sensitivity-chart-unavailable {
+  margin: 0 0 12px;
+  border-left: 3px solid var(--border-strong);
+  background: var(--surface-soft);
+  padding: 9px 10px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.sensitivity-table-heading-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  margin-bottom: 7px;
+}
+
+.minimum-damage-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--danger);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.minimum-damage-legend i {
+  width: 12px;
+  height: 3px;
+  display: inline-block;
+  background: currentColor;
+}
+
 .sensitivity-table-wrap {
   width: 100%;
   min-width: 0;
@@ -810,9 +1002,8 @@
 .sensitivity-table th { position: static; }
 .sensitivity-table tbody tr { cursor: default; }
 
-.sensitivity-table tbody tr.current {
-  background: var(--surface-hover);
-  box-shadow: inset 3px 0 0 #222;
+.sensitivity-table .minimum-damage-cell {
+  color: var(--danger);
 }
 
 .sensitivity-table td small {
@@ -910,6 +1101,14 @@
 
   .calculation-step code,
   .calculation-step small { margin-left: 29px; }
+
+  .sensitivity-chart-caption {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .sensitivity-chart-legend { justify-content: flex-start; }
 
   .sensitivity-table-wrap { overscroll-behavior-inline: contain; }
 }
