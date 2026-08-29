@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import {
   DAMAGE_TYPE_LABELS,
   calculateAttackPipeline,
@@ -35,6 +35,16 @@ interface CalculationStep {
   result: string
   note?: string
 }
+
+const ATTACK_MODIFIER_DESCRIPTIONS = {
+  攻撃力補正A: '「攻撃力+n」「攻撃力−n」とある固定値を加算する補正です。',
+  攻撃力補正B: '「攻撃力+n%」とある効果を合計し、攻撃力に「1+B÷100」を掛ける補正です。',
+  攻撃力補正C: '鼓舞・奪取などの重複規則を適用したあと、固定値を加算する補正です。',
+  攻撃力補正D: '「攻撃力−n%」などを係数として掛ける補正です。効果がなければ1です。',
+  攻撃力補正E: '「攻撃力がn%まで上昇」「攻撃力のn%のダメージ」などを係数として掛ける補正です。効果がなければ100%（1倍）です。',
+} as const
+
+type AttackModifierTerm = keyof typeof ATTACK_MODIFIER_DESCRIPTIONS
 
 const REFLECTION_STATUS_LABELS: Record<ReflectionStatus, string> = {
   APPLIED: '計算に反映',
@@ -584,9 +594,27 @@ function NumberField({
 function ModelValue({ label, value, suffix }: { label: string; value: number; suffix?: string }) {
   return (
     <div className="model-value">
-      <dt>{label}</dt>
+      <dt><TermLabel label={label} /></dt>
       <dd><strong>{formatCalculationNumber(value)}</strong>{suffix && <span>{suffix}</span>}</dd>
     </div>
+  )
+}
+
+function TermLabel({ label }: { label: string }) {
+  const description = ATTACK_MODIFIER_DESCRIPTIONS[label as AttackModifierTerm]
+  if (!description) return label
+
+  return <TermTooltip term={label} description={description} />
+}
+
+function TermTooltip({ term, description }: { term: string; description: string }) {
+  const tooltipId = useId()
+
+  return (
+    <span className="term-tooltip" tabIndex={0} aria-describedby={tooltipId}>
+      <span className="term-tooltip-label">{term}</span>
+      <span className="term-tooltip-content" id={tooltipId} role="tooltip">{description}</span>
+    </span>
   )
 }
 
@@ -631,7 +659,7 @@ function CalculationTrace({
             <li className="calculation-step" key={`${step.label}-${index}`}>
               <div className="calculation-step-heading">
                 <span>{String(index + 1).padStart(2, '0')}</span>
-                <strong>{step.label}</strong>
+                <strong><TermLabel label={step.label} /></strong>
                 <em>{step.result}</em>
               </div>
               <code>{step.formula}</code>
