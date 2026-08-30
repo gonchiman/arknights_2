@@ -33,7 +33,6 @@ interface Props {
   operatorSkills: SkillRecord[]
   override?: SkillClassificationOverride
   onBack: () => void
-  backLabel?: string
   onSelectSkill: (skill: SkillRecord) => void
   onOverride: (override: SkillClassificationOverride | null) => void
 }
@@ -44,15 +43,7 @@ const DETAIL_TABS: Array<[DetailTab, string]> = [
   ['data', 'ゲームデータ'],
 ]
 
-export function SkillDetail({
-  skill,
-  operatorSkills,
-  override,
-  onBack,
-  backLabel = 'オペレーター一覧に戻る',
-  onSelectSkill,
-  onOverride,
-}: Props) {
+export function SkillDetail({ skill, operatorSkills, override, onBack, onSelectSkill, onOverride }: Props) {
   const [activeTab, setActiveTab] = useState<DetailTab>('summary')
   const titleRef = useRef<HTMLHeadingElement>(null)
   const classification = skill.classification
@@ -119,7 +110,7 @@ export function SkillDetail({
 
   return (
     <section className="detail-page">
-      <button className="back-button" onClick={onBack}>← {backLabel}</button>
+      <button className="back-button" onClick={onBack}>← オペレーター一覧に戻る</button>
 
       <header className="detail-header">
         <div>
