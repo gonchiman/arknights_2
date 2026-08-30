@@ -1,6 +1,21 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { APP_NAV_ITEMS } from '../src/lib/navigation.ts'
 import { getSkillRouteHash, parseHashRoute } from '../src/lib/routes.ts'
+
+test('サイドバーから主要ページへ遷移できる', () => {
+  assert.deepEqual(
+    APP_NAV_ITEMS.map((item) => [item.id, parseHashRoute(item.href).view]),
+    [
+      ['classifier', 'list'],
+      ['skills', 'skills'],
+      ['damage', 'damage'],
+      ['comparison', 'comparison'],
+      ['enemies', 'enemies'],
+    ],
+  )
+  assert.equal(new Set(APP_NAV_ITEMS.map((item) => item.href)).size, APP_NAV_ITEMS.length)
+})
 
 test('比較ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/comparison'), { view: 'comparison' })

@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react'
+import { useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   ACTIVATION_TRIGGER_COLORS,
   ACTIVATION_TRIGGER_LABELS,
@@ -22,12 +22,12 @@ import type {
   EffectWindowType,
   SkillRecord,
 } from '../types/skill'
+import { SkillEffectModal } from './SkillEffectModal'
 import './SkillDirectory.css'
 
 interface Props {
   rows: SkillRecord[]
   loading: boolean
-  onSelect: (row: SkillRecord) => void
 }
 
 const RARITIES = [6, 5, 4, 3, 2, 1] as const
@@ -40,13 +40,15 @@ const SP_TYPE_LABELS: Record<string, string> = {
   UNKNOWN: '要確認',
 }
 
-export function SkillDirectory({ rows, loading, onSelect }: Props) {
+export function SkillDirectory({ rows, loading }: Props) {
   const [filters, setFilters] = useState<SkillDirectoryFilters>({
     ...EMPTY_SKILL_DIRECTORY_FILTERS,
   })
   const [sort, setSort] = useState<SkillDirectorySort>({
     ...DEFAULT_SKILL_DIRECTORY_SORT,
   })
+  const [detailSkill, setDetailSkill] = useState<SkillRecord | null>(null)
+  const skillDetailTriggerRef = useRef<HTMLTableRowElement | null>(null)
 
   const professionOptions = useMemo(() => {
     const options = new Map<string, string>()
@@ -79,6 +81,19 @@ export function SkillDirectory({ rows, loading, onSelect }: Props) {
   }
 
   const resetFilters = () => setFilters({ ...EMPTY_SKILL_DIRECTORY_FILTERS })
+
+  const openSkillEffect = (skill: SkillRecord, trigger: HTMLTableRowElement) => {
+    skillDetailTriggerRef.current = trigger
+    setDetailSkill(skill)
+  }
+
+  const closeSkillEffect = () => {
+    setDetailSkill(null)
+    window.requestAnimationFrame(() => {
+      const trigger = skillDetailTriggerRef.current
+      if (trigger?.isConnected) trigger.focus()
+    })
+  }
 
   return (
     <section className="skill-directory-page">
@@ -195,12 +210,13 @@ export function SkillDirectory({ rows, loading, onSelect }: Props) {
                     key={row.id}
                     data-skill-id={row.id}
                     tabIndex={0}
-                    aria-label={`${row.operatorName}の${row.skillName}を開く`}
-                    onClick={() => onSelect(row)}
+                    aria-haspopup="dialog"
+                    aria-label={`${row.operatorName}、S${row.skillIndex} ${row.skillName}のスキル効果詳細を開く`}
+                    onClick={(event) => openSkillEffect(row, event.currentTarget)}
                     onKeyDown={(event) => {
                       if (event.key !== 'Enter' && event.key !== ' ') return
                       event.preventDefault()
-                      onSelect(row)
+                      openSkillEffect(row, event.currentTarget)
                     }}
                   >
                     <td>
@@ -239,6 +255,7 @@ export function SkillDirectory({ rows, loading, onSelect }: Props) {
           </div>
         )}
       </section>
+      {detailSkill && <SkillEffectModal skill={detailSkill} onClose={closeSkillEffect} />}
     </section>
   )
 }
