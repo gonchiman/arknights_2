@@ -148,7 +148,7 @@
 
 .enemy-statistics-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   margin: 0;
   border-bottom: 1px solid var(--border);
   background: #fff;
@@ -156,26 +156,26 @@
 
 .enemy-statistics-grid > div {
   min-width: 0;
-  min-height: 72px;
+  min-height: 54px;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  padding: 9px 10px;
+  padding: 6px 8px;
 }
 
-.enemy-statistics-grid > div:nth-child(4n) { border-right: 0; }
-.enemy-statistics-grid > div:nth-last-child(-n + 4) { border-bottom: 0; }
+.enemy-statistics-grid > div:nth-child(8n) { border-right: 0; }
+.enemy-statistics-grid > div:nth-last-child(-n + 8) { border-bottom: 0; }
 
 .enemy-statistics-grid dt {
   color: var(--text-muted);
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
 }
 
 .enemy-statistics-grid dd {
-  margin: 5px 0 0;
+  margin: 3px 0 0;
   overflow: hidden;
   color: var(--text);
-  font-size: 17px;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   text-overflow: ellipsis;
@@ -184,9 +184,9 @@
 
 .enemy-statistics-grid span {
   display: block;
-  margin-top: 3px;
+  margin-top: 2px;
   color: var(--text-muted);
-  font-size: 8px;
+  font-size: 7px;
 }
 
 .enemy-chart-toolbar {
@@ -326,6 +326,29 @@
 }
 .enemy-chart-legend .box-mean i { background: currentColor; }
 .enemy-chart-legend .box-outlier { color: var(--text-muted); }
+
+.enemy-level-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.enemy-level-legend span { display: inline-flex; align-items: center; gap: 5px; }
+
+.enemy-level-legend i {
+  width: 7px;
+  height: 7px;
+  display: inline-block;
+  border-radius: 50%;
+}
+
+.enemy-level-legend .normal i { background: var(--text-soft); }
+.enemy-level-legend .elite i { background: var(--link); }
+.enemy-level-legend .boss i { background: var(--danger); }
+.enemy-level-legend .unknown i { background: var(--text-muted); }
 
 .enemy-chart-options {
   flex: 0 0 auto;
@@ -726,11 +749,10 @@
   .enemy-metric-selector { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .enemy-metric-selector button:nth-child(4) { border-right: 0; }
   .enemy-metric-selector button:nth-child(-n + 4) { border-bottom: 1px solid var(--border-strong); }
-  .enemy-statistics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .enemy-statistics-grid > div:nth-child(2n) { border-right: 0; }
+  .enemy-statistics-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .enemy-statistics-grid > div { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
   .enemy-statistics-grid > div:nth-child(4n) { border-right: 0; }
-  .enemy-statistics-grid > div:nth-last-child(-n + 4) { border-bottom: 1px solid var(--border); }
-  .enemy-statistics-grid > div:nth-last-child(-n + 2) { border-bottom: 0; }
+  .enemy-statistics-grid > div:nth-last-child(-n + 4) { border-bottom: 0; }
   .enemy-chart-toolbar { align-items: stretch; flex-direction: column; }
   .enemy-chart-axis-control { align-items: center; grid-template-columns: auto auto; justify-content: space-between; }
   .enemy-result-meta { flex-wrap: wrap; }

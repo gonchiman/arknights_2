@@ -584,6 +584,10 @@ function ScatterPlotFigure({ rows, xMetric, xScale, yMetric, yScale, onYMetricCh
   const titleId = useId()
   const descriptionId = useId()
   const observations = useMemo(() => buildScatterObservations(rows, xMetric.key, yMetric.key), [rows, xMetric.key, yMetric.key])
+  const presentLevelTypes = useMemo(
+    () => LEVEL_ORDER.filter((levelType) => observations.some(({ enemy }) => enemy.levelType === levelType)),
+    [observations],
+  )
 
   return (
     <figure className="enemy-analysis-figure">
@@ -591,6 +595,7 @@ function ScatterPlotFigure({ rows, xMetric, xScale, yMetric, yScale, onYMetricCh
         <div>
           <strong>{xMetric.label}と{yMetric.label}の散布図</strong>
           <span>{scopeLabel} · 両方の値がある{observations.length}体</span>
+          {presentLevelTypes.length > 0 && <EnemyLevelLegend levelTypes={presentLevelTypes} />}
         </div>
         <div className="enemy-scatter-controls">
           <label className="enemy-chart-select-label">
@@ -749,6 +754,18 @@ function MeanMedianLegend() {
     <div className="enemy-chart-legend" aria-label="基準線">
       <span className="mean"><i aria-hidden="true" />平均</span>
       <span className="median"><i aria-hidden="true" />中央値</span>
+    </div>
+  )
+}
+
+function EnemyLevelLegend({ levelTypes }: { levelTypes: EnemyLevelType[] }) {
+  return (
+    <div className="enemy-level-legend" aria-label="点の色（敵の区分）">
+      {levelTypes.map((levelType) => (
+        <span className={levelType.toLowerCase()} key={levelType}>
+          <i aria-hidden="true" />{LEVEL_LABELS[levelType]}
+        </span>
+      ))}
     </div>
   )
 }
