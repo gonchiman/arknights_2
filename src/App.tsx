@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { APP_NAV_ITEMS, AppSidebar, type NavigationPage } from './components/AppSidebar'
+import { AppSidebar } from './components/AppSidebar'
 import { DamageCalculator } from './components/DamageCalculator'
 import { EnemyAnalysis } from './components/EnemyAnalysis'
 import { EMPTY_OPERATOR_FILTERS, matchesOperatorFilters, OperatorSearch } from './components/OperatorSearch'
@@ -10,6 +10,7 @@ import { DATA_URLS, loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
 import { ENEMY_DATA_URLS } from './lib/enemyData'
 import { getSkillRouteHash, parseHashRoute, type AppRoute } from './lib/routes'
+import { APP_NAV_ITEMS, type NavigationPage } from './lib/navigation'
 import {
   ACTIVATION_TRIGGERS,
   DAMAGE_COMPONENT_TYPES,
