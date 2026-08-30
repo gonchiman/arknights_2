@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react'
+
 export type NavigationPage = 'classifier' | 'skills' | 'damage' | 'comparison' | 'enemies'
 
 type NavigationItem = {
@@ -47,6 +49,14 @@ type AppSidebarProps = {
 }
 
 export function AppSidebar({ activePage, open, onClose }: AppSidebarProps) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const frame = window.requestAnimationFrame(() => closeButtonRef.current?.focus())
+    return () => window.cancelAnimationFrame(frame)
+  }, [open])
+
   return (
     <>
       <aside className={`app-sidebar ${open ? 'open' : ''}`} id="app-sidebar" aria-label="メインナビゲーション">
@@ -58,7 +68,7 @@ export function AppSidebar({ activePage, open, onClose }: AppSidebarProps) {
               <span className="brand-title">Analyze Tool</span>
             </span>
           </a>
-          <button className="sidebar-close" type="button" onClick={onClose} aria-label="メニューを閉じる">
+          <button ref={closeButtonRef} className="sidebar-close" type="button" onClick={onClose} aria-label="メニューを閉じる">
             <span aria-hidden="true">×</span>
           </button>
         </div>
@@ -96,6 +106,7 @@ export function AppSidebar({ activePage, open, onClose }: AppSidebarProps) {
         type="button"
         tabIndex={open ? 0 : -1}
         onClick={onClose}
+        aria-hidden={!open}
         aria-label="メニューを閉じる"
       />
     </>

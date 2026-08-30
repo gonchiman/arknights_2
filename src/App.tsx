@@ -26,6 +26,9 @@ import './index.css'
 import './navigation.css'
 
 const OVERRIDE_STORAGE_KEY = 'arknights-skill-classification-overrides-v2'
+const SIDEBAR_DRAWER_QUERY = '(max-width: 1140px)'
+const SIDEBAR_DESKTOP_QUERY = '(min-width: 1141px)'
+
 export default function App() {
   const [rows, setRows] = useState<SkillRecord[]>([])
   const [route, setRoute] = useState<AppRoute>(() => parseHashRoute(window.location.hash))
@@ -34,6 +37,7 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const sidebarToggleRef = useRef<HTMLButtonElement>(null)
   const lastSelectedOperatorId = useRef<string | null>(null)
   const previousRouteView = useRef(route.view)
 
@@ -63,16 +67,35 @@ export default function App() {
   useEffect(() => {
     if (!sidebarOpen) return
 
+    const desktopMedia = window.matchMedia(SIDEBAR_DESKTOP_QUERY)
+    if (desktopMedia.matches) {
+      setSidebarOpen(false)
+      return
+    }
+
     const previousOverflow = document.body.style.overflow
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSidebarOpen(false)
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      setSidebarOpen(false)
+      window.requestAnimationFrame(() => sidebarToggleRef.current?.focus())
+    }
+    const handleDesktopChange = (event: MediaQueryListEvent) => {
+      if (!event.matches) return
+      setSidebarOpen(false)
+      window.requestAnimationFrame(() => {
+        document.querySelector<HTMLAnchorElement>('.sidebar-nav-link.active')?.focus()
+      })
     }
 
     document.body.style.overflow = 'hidden'
-    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown, { capture: true })
+    desktopMedia.addEventListener('change', handleDesktopChange)
     return () => {
       document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keydown', handleKeyDown, { capture: true })
+      desktopMedia.removeEventListener('change', handleDesktopChange)
     }
   }, [sidebarOpen])
 
@@ -134,22 +157,29 @@ export default function App() {
     if (!selectedStillVisible) window.location.hash = '#/'
   }
 
-  const skillDirectoryActive = route.view === 'skills'
-  const classifierActive = route.view === 'list' || route.view === 'skill'
-  const activeNavigationPage: NavigationPage = classifierActive
-    ? 'classifier'
-    : skillDirectoryActive
-      ? 'skills'
-      : route.view
+  const activeNavigationPage: NavigationPage = (
+    route.view === 'skills'
+    || route.view === 'damage'
+    || route.view === 'comparison'
+    || route.view === 'enemies'
+  ) ? route.view : 'classifier'
   const activeNavigationItem = APP_NAV_ITEMS.find((item) => item.id === activeNavigationPage)
+  const closeSidebar = () => {
+    if (!sidebarOpen) return
+    setSidebarOpen(false)
+    if (window.matchMedia(SIDEBAR_DRAWER_QUERY).matches) {
+      window.requestAnimationFrame(() => sidebarToggleRef.current?.focus())
+    }
+  }
 
   return (
     <div className={`app-shell ${route.view === 'skill' ? 'skill-detail-route' : ''}`}>
-      <AppSidebar activePage={activeNavigationPage} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <AppSidebar activePage={activeNavigationPage} open={sidebarOpen} onClose={closeSidebar} />
 
-      <div className="app-main">
+      <div className="app-main" inert={sidebarOpen ? true : undefined}>
         <header className="mobile-topbar">
           <button
+            ref={sidebarToggleRef}
             className="sidebar-toggle"
             type="button"
             aria-controls="app-sidebar"
