@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DamageCalculator } from './components/DamageCalculator'
+import { EnemyAnalysis } from './components/EnemyAnalysis'
 import { EMPTY_OPERATOR_FILTERS, matchesOperatorFilters, OperatorSearch } from './components/OperatorSearch'
 import { OperatorComparison } from './components/OperatorComparison'
 import { SkillDetail } from './components/SkillDetail'
 import { DATA_URLS, loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
+import { ENEMY_DATA_URLS } from './lib/enemyData'
 import { getSkillRouteHash, parseHashRoute, type AppRoute } from './lib/routes'
 import {
   ACTIVATION_TRIGGERS,
@@ -126,26 +128,31 @@ export default function App() {
             </span>
           </a>
           <nav className="site-nav" aria-label="ツール切り替え">
-            <a className={`site-nav-link ${classifierActive ? 'active' : ''}`} aria-current={classifierActive ? 'page' : undefined} href="#/">
+            <a className={`site-nav-link ${classifierActive ? 'active' : ''}`} aria-current={classifierActive ? 'page' : undefined} aria-label="Skill Model Classifier" data-short-label="Skills" href="#/">
               Skill Model Classifier
             </a>
-            <a className={`site-nav-link ${route.view === 'damage' ? 'active' : ''}`} aria-current={route.view === 'damage' ? 'page' : undefined} href="#/damage">
+            <a className={`site-nav-link ${route.view === 'damage' ? 'active' : ''}`} aria-current={route.view === 'damage' ? 'page' : undefined} aria-label="Damage Calculator" data-short-label="Damage" href="#/damage">
               Damage Calculator
             </a>
-            <a className={`site-nav-link ${route.view === 'comparison' ? 'active' : ''}`} aria-current={route.view === 'comparison' ? 'page' : undefined} href="#/comparison">
+            <a className={`site-nav-link ${route.view === 'comparison' ? 'active' : ''}`} aria-current={route.view === 'comparison' ? 'page' : undefined} aria-label="Operator Comparison" data-short-label="Compare" href="#/comparison">
               Operator Comparison
+            </a>
+            <a className={`site-nav-link ${route.view === 'enemies' ? 'active' : ''}`} aria-current={route.view === 'enemies' ? 'page' : undefined} aria-label="Enemy Analysis" data-short-label="Enemies" href="#/enemies">
+              Enemy Analysis
             </a>
           </nav>
         </div>
       </header>
 
       <main className="app-content">
-        {error && <section className="error-box" role="alert">{error}</section>}
+        {error && route.view !== 'enemies' && <section className="error-box" role="alert">{error}</section>}
 
         {route.view === 'damage' ? (
           <DamageCalculator rows={classifiedRows} loading={loading} />
         ) : route.view === 'comparison' ? (
           <OperatorComparison rows={classifiedRows} loading={loading} />
+        ) : route.view === 'enemies' ? (
+          <EnemyAnalysis />
         ) : (
           <section className="classifier-route">
             {route.view === 'list' && (
@@ -195,6 +202,8 @@ export default function App() {
           <a href={DATA_URLS.skill} target="_blank" rel="noreferrer">skill_table.json</a>
           <a href={DATA_URLS.character} target="_blank" rel="noreferrer">character_table.json</a>
           <a href={DATA_URLS.uniequip} target="_blank" rel="noreferrer">uniequip_table.json</a>
+          <a href={ENEMY_DATA_URLS.handbook} target="_blank" rel="noreferrer">enemy_handbook_table.json</a>
+          <a href={ENEMY_DATA_URLS.database} target="_blank" rel="noreferrer">enemy_database.json</a>
       </footer>
     </div>
   )

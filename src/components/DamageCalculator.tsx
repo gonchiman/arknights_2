@@ -345,7 +345,7 @@ export function DamageCalculator({ rows, loading }: Props) {
           </div>
           <div className="calculator-form-grid enemy-form-grid">
             <NumberField label="敵の防御力" value={enemyDefense} min={0} max={10000} onChange={setEnemyDefense} />
-            <NumberField label="敵の術耐性" value={enemyResistance} min={0} max={100} suffix="%" onChange={setEnemyResistance} />
+            <NumberField label="敵の術耐性" value={enemyResistance} min={0} max={100} onChange={setEnemyResistance} />
           </div>
         </div>
         <p className="panel-note">物理・術ダメージには、軽減前の攻撃力の5%を最低保証として適用しています。</p>
@@ -447,7 +447,7 @@ export function DamageCalculator({ rows, loading }: Props) {
       <section className="calculator-panel results-panel" aria-live="polite">
         <div className="panel-heading">
           <div><span>05</span><h2>計算結果</h2></div>
-          <p>{DAMAGE_TYPE_LABELS[damageType]} · 防御 {formatNumber(enemyDefense)} · 術耐性 {formatNumber(enemyResistance)}%</p>
+          <p>{DAMAGE_TYPE_LABELS[damageType]} · 防御 {formatNumber(enemyDefense)} · 術耐性 {formatNumber(enemyResistance)}</p>
         </div>
         <div className="result-section-label">通常攻撃</div>
         <div className="damage-result-grid normal-results">
@@ -564,7 +564,7 @@ export function DamageCalculator({ rows, loading }: Props) {
           <SensitivityChart
             rows={sensitivityData.chartRows}
             tickRows={sensitivityData.tableRows}
-            axisLabel={damageType === 'ARTS' ? '敵の術耐性（%）' : '敵の防御力'}
+            axisLabel={damageType === 'ARTS' ? '敵の術耐性（RES）' : '敵の防御力'}
             metric={sensitivityMetric}
           />
         )}
@@ -966,10 +966,10 @@ function buildMitigationStep(label: string, breakdown: DamageCalculationBreakdow
     const minimumDamage = breakdown.minimumDamage ?? 0
     return {
       label,
-      formula: `max(${attack} × (1 − ${formatCalculationNumber(breakdown.appliedResistance)}% ÷ 100), ${attack} × 5%)`,
+      formula: `max(${attack} × (1 − ${formatCalculationNumber(breakdown.appliedResistance)} ÷ 100), ${attack} × 5%)`,
       result: formatNumber(breakdown.result),
       note: resistanceWasClamped
-        ? `入力術耐性 ${formatCalculationNumber(breakdown.inputResistance)}% を0〜100%に補正`
+        ? `入力術耐性 ${formatCalculationNumber(breakdown.inputResistance)} を0〜100に補正`
         : breakdown.minimumApplied
           ? `耐性適用後 ${formatCalculationNumber(afterResistance)} より大きい最低保証 ${formatCalculationNumber(minimumDamage)} を採用`
           : `耐性適用後 ${formatCalculationNumber(afterResistance)} を採用（最低保証 ${formatCalculationNumber(minimumDamage)}）`,

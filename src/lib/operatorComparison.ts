@@ -151,7 +151,7 @@ export function buildComparisonCsv(
 }
 
 export function getEnemyProfileLabel(profile: Pick<EnemyStatProfile, 'defense' | 'resistance'>): string {
-  return `防御 ${formatCompactNumber(profile.defense)} / 術耐性 ${formatCompactNumber(profile.resistance)}%`
+  return `防御 ${formatCompactNumber(profile.defense)} / 術耐性 ${formatCompactNumber(profile.resistance)}`
 }
 
 function getComparisonUnavailableReasons(

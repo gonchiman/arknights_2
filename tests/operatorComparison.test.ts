@@ -141,7 +141,7 @@ test('CSVは表示行をUTF-8 BOM付きで引用し、敵条件と計算状態�
   const csv = buildComparisonCsv([row], [ENEMY], 'DAMAGE')
 
   assert.ok(csv.startsWith('\uFEFF'))
-  assert.match(csv, /"防御 50 \/ 術耐性 0%"/)
+  assert.match(csv, /"防御 50 \/ 術耐性 0"/)
   assert.match(csv, /"テスト, ""A"""/)
   assert.match(csv, /"100","計算可能"/)
 })

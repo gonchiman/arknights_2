@@ -166,8 +166,12 @@
     flex: 1 1 0;
     justify-content: center;
     overflow: hidden;
+    font-size: 0;
+  }
+
+  .site-nav-link::after {
+    content: attr(data-short-label);
     font-size: 10px;
-    text-overflow: ellipsis;
   }
 }
 

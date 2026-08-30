@@ -16,6 +16,7 @@ import { PROFESSION_ORDER } from '../lib/operatorFilters'
 import { EFFECT_WINDOWS, type EffectWindowType, type SkillRecord } from '../types/skill'
 import { Filters, type FilterOption, type FilterState } from './Filters'
 import { EMPTY_OPERATOR_FILTERS, matchesOperatorFilters } from './OperatorSearch'
+import { SkillEffectModal } from './SkillEffectModal'
 import './OperatorComparison.css'
 
 interface Props {
@@ -41,9 +42,11 @@ export function OperatorComparison({ rows, loading }: Props) {
   const [resultPage, setResultPage] = useState(0)
   const [sort, setSort] = useState<ComparisonSort | null>(null)
   const [enemyAnnouncement, setEnemyAnnouncement] = useState('')
+  const [detailSkill, setDetailSkill] = useState<SkillRecord | null>(null)
   const nextEnemyId = useRef(DEFAULT_ENEMY_STAT_PROFILES.length + 1)
   const comparisonTableRef = useRef<HTMLDivElement | null>(null)
   const enemyDefenseInputRefs = useRef(new Map<string, HTMLInputElement>())
+  const skillDetailTriggerRef = useRef<HTMLButtonElement | null>(null)
 
   const professionOptions = useMemo(() => buildProfessionOptions(rows), [rows])
   const availableMetrics = getAvailableComparisonMetrics(effectWindow)
@@ -171,6 +174,20 @@ export function OperatorComparison({ rows, loading }: Props) {
     setEnemyAnnouncement(`敵条件${removedIndex + 1}を削除しました。残り${remainingProfiles.length}列です。`)
     if (sort?.profileId === id) setSort(null)
     window.requestAnimationFrame(() => enemyDefenseInputRefs.current.get(focusProfile.id)?.focus())
+  }
+
+  const openSkillEffect = (skill: SkillRecord, trigger: HTMLButtonElement) => {
+    skillDetailTriggerRef.current = trigger
+    setDetailSkill(skill)
+  }
+
+  const closeSkillEffect = () => {
+    setDetailSkill(null)
+    window.requestAnimationFrame(() => {
+      const trigger = skillDetailTriggerRef.current
+      if (trigger?.isConnected) trigger.focus()
+      else comparisonTableRef.current?.focus()
+    })
   }
 
   const resetEnemyProfiles = () => {
@@ -324,18 +341,15 @@ export function OperatorComparison({ rows, loading }: Props) {
                 </label>
                 <label>
                   <span>術耐性</span>
-                  <span className="comparison-number-input">
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="5"
-                      value={profile.resistance}
-                      aria-label={`敵条件${index + 1}の術耐性`}
-                      onChange={(event) => updateEnemyProfile(profile.id, 'resistance', event.target.value)}
-                    />
-                    <em>%</em>
-                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={profile.resistance}
+                    aria-label={`敵条件${index + 1}の術耐性`}
+                    onChange={(event) => updateEnemyProfile(profile.id, 'resistance', event.target.value)}
+                  />
                 </label>
               </article>
             ))}
@@ -435,8 +449,17 @@ export function OperatorComparison({ rows, loading }: Props) {
                         <small>★{row.skill.rarity} · {row.skill.professionLabel} / {row.skill.subProfessionName}</small>
                       </th>
                       <td className="comparison-sticky-column skill-column">
-                        <strong>S{row.skill.skillIndex}</strong>
-                        <span>{row.skill.skillName}</span>
+                        <button
+                          type="button"
+                          className="comparison-skill-detail-button"
+                          aria-haspopup="dialog"
+                          aria-label={`${row.skill.operatorName}、S${row.skill.skillIndex} ${row.skill.skillName}のスキル効果詳細を開く`}
+                          onClick={(event) => openSkillEffect(row.skill, event.currentTarget)}
+                        >
+                          <strong>S{row.skill.skillIndex}</strong>
+                          <span>{row.skill.skillName}</span>
+                          <em aria-hidden="true">詳細</em>
+                        </button>
                       </td>
                       <td className="damage-type-column">
                         {row.damageType === null ? '複合' : DAMAGE_TYPE_LABELS[row.damageType]}
@@ -497,6 +520,7 @@ export function OperatorComparison({ rows, loading }: Props) {
           ダメージ種別はスキル説明を優先し、明示がない場合は特性と職業から推定します。複合ダメージや現行モデル未対応のスキルは「—」、倍率を特定できない単純モデルは「概算」で示します。
         </p>
       </section>
+      {detailSkill && <SkillEffectModal skill={detailSkill} onClose={closeSkillEffect} />}
     </section>
   )
 }

@@ -1,0 +1,277 @@
+.enemy-analysis-route { min-width: 0; }
+
+.enemy-directory {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  background: #fff;
+}
+
+.enemy-filters { border-bottom: 1px solid var(--border); }
+
+.enemy-filters-heading {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-soft);
+  padding: 7px 10px;
+}
+
+.enemy-filters-heading strong { font-size: 12px; }
+
+.enemy-filters-heading button {
+  min-height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  padding: 4px 0;
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.enemy-filters-heading button:disabled {
+  color: #aaa;
+  text-decoration: none;
+  cursor: default;
+}
+
+.enemy-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 2fr) minmax(150px, .7fr) minmax(150px, .7fr);
+}
+
+.enemy-filter-grid label {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  border-right: 1px solid var(--border);
+  padding: 8px 10px;
+}
+
+.enemy-filter-grid label:last-child { border-right: 0; }
+
+.enemy-filter-grid label > span {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.enemy-filter-grid input,
+.enemy-filter-grid select {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: #fff;
+  color: var(--text);
+  padding: 0 9px;
+}
+
+.enemy-table-wrap { width: 100%; }
+
+.enemy-table {
+  min-width: 1390px;
+  table-layout: fixed;
+}
+
+.enemy-table caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.enemy-table tbody tr { cursor: default; }
+.enemy-table th, .enemy-table td { padding: 8px; }
+.enemy-table th:nth-child(1) { width: 300px; }
+.enemy-table th:nth-child(2) { width: 92px; }
+.enemy-table th:nth-child(3) { width: 92px; }
+.enemy-table th:nth-child(4) { width: 88px; }
+.enemy-table th:nth-child(5),
+.enemy-table th:nth-child(6),
+.enemy-table th:nth-child(7),
+.enemy-table th:nth-child(8),
+.enemy-table th:nth-child(9),
+.enemy-table th:nth-child(10) { width: 76px; }
+.enemy-table th:nth-child(11) { width: 250px; }
+
+.numeric-heading { text-align: right; }
+
+.enemy-identity-cell { position: relative; padding-left: 47px !important; }
+
+.enemy-identity-cell .enemy-index {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  min-width: 31px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-soft);
+  padding: 2px 4px;
+  font-size: 8px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.enemy-identity-cell strong,
+.enemy-attack-cell strong,
+.enemy-number-cell strong {
+  display: block;
+  font-variant-numeric: tabular-nums;
+}
+
+.enemy-identity-cell strong { margin-bottom: 2px; font-size: 12px; }
+
+.enemy-identity-cell small,
+.enemy-ability-cell > span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
+}
+
+.enemy-identity-cell small {
+  margin: 0;
+  -webkit-line-clamp: 2;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.enemy-identity-cell code {
+  display: block;
+  overflow: hidden;
+  margin-top: 4px;
+  color: #888;
+  font-family: ui-monospace, "Cascadia Mono", monospace;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.enemy-level-badge {
+  display: inline-block;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-soft);
+  padding: 3px 5px;
+  color: var(--text-soft);
+  font-size: 9px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.enemy-level-badge.boss { border-color: #7c3b36; color: #7c211b; }
+.enemy-level-badge.elite { border-color: #80704b; color: #624b10; }
+
+.enemy-attack-cell strong { font-size: 11px; }
+
+.enemy-number-cell {
+  font-size: 11px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.enemy-number-cell small,
+.enemy-attack-cell small,
+.enemy-table td:nth-child(2) small {
+  color: var(--text-muted);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.enemy-ability-cell > span {
+  -webkit-line-clamp: 3;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.enemy-ability-cell small,
+.enemy-ability-cell em {
+  display: block;
+  overflow: hidden;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 8px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.enemy-ability-cell em { color: #888; }
+
+.enemy-pagination {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-soft);
+  padding: 7px 10px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.enemy-pagination > div { display: flex; align-items: center; gap: 8px; }
+
+.enemy-pagination button {
+  min-height: 30px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: #fff;
+  color: var(--text);
+  padding: 4px 10px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.enemy-pagination button:disabled { color: #aaa; cursor: default; }
+.enemy-pagination button:hover:not(:disabled) { background: var(--surface-hover); }
+
+.enemy-load-state {
+  min-height: 260px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 7px;
+  padding: 24px;
+  text-align: center;
+}
+
+.enemy-load-state strong { font-size: 13px; }
+.enemy-load-state span { color: var(--text-muted); font-size: 11px; }
+
+.enemy-data-note {
+  margin: 8px 2px 0;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .enemy-filter-grid { grid-template-columns: minmax(0, 1fr) minmax(130px, .5fr); }
+  .enemy-query-filter { grid-column: 1 / -1; border-right: 0 !important; border-bottom: 1px solid var(--border); }
+}
+
+@media (max-width: 520px) {
+  .enemy-filter-grid { display: block; }
+  .enemy-filter-grid label { border-right: 0; border-bottom: 1px solid var(--border); }
+  .enemy-filter-grid label:last-child { border-bottom: 0; }
+  .enemy-pagination > span { display: none; }
+  .enemy-pagination > div { width: 100%; justify-content: space-between; }
+}
+
+@media (pointer: coarse) {
+  .enemy-filters-heading button,
+  .enemy-filter-grid input,
+  .enemy-filter-grid select,
+  .enemy-pagination button { min-height: 44px; }
+}
