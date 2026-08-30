@@ -77,7 +77,7 @@
 .enemy-table-wrap { width: 100%; }
 
 .enemy-table {
-  min-width: 1390px;
+  min-width: 930px;
   table-layout: fixed;
 }
 
@@ -91,18 +91,24 @@
 }
 
 .enemy-table tbody tr { cursor: default; }
-.enemy-table th, .enemy-table td { padding: 8px; }
-.enemy-table th:nth-child(1) { width: 300px; }
+.enemy-table th,
+.enemy-table td {
+  border-right: 1px solid var(--border);
+  padding: 8px;
+}
+
+.enemy-table th:last-child,
+.enemy-table td:last-child { border-right: 0; }
+
+.enemy-table th:nth-child(1) { width: 270px; }
 .enemy-table th:nth-child(2) { width: 92px; }
-.enemy-table th:nth-child(3) { width: 92px; }
+.enemy-table th:nth-child(3),
 .enemy-table th:nth-child(4) { width: 88px; }
 .enemy-table th:nth-child(5),
 .enemy-table th:nth-child(6),
 .enemy-table th:nth-child(7),
 .enemy-table th:nth-child(8),
-.enemy-table th:nth-child(9),
-.enemy-table th:nth-child(10) { width: 76px; }
-.enemy-table th:nth-child(11) { width: 250px; }
+.enemy-table th:nth-child(9) { width: 76px; }
 
 .numeric-heading { text-align: right; }
 
@@ -121,41 +127,44 @@
   text-align: center;
 }
 
-.enemy-identity-cell strong,
-.enemy-attack-cell strong,
 .enemy-number-cell strong {
   display: block;
   font-variant-numeric: tabular-nums;
 }
 
-.enemy-identity-cell strong { margin-bottom: 2px; font-size: 12px; }
-
-.enemy-identity-cell small,
-.enemy-ability-cell > span {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  text-overflow: ellipsis;
+.enemy-detail-button {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  padding: 3px 0;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
 }
 
-.enemy-identity-cell small {
-  margin: 0;
-  -webkit-line-clamp: 2;
-  color: var(--text-muted);
-  font-size: 9px;
-  line-height: 1.45;
-}
-
-.enemy-identity-cell code {
-  display: block;
+.enemy-detail-button strong {
+  min-width: 0;
   overflow: hidden;
-  margin-top: 4px;
-  color: #888;
-  font-family: ui-monospace, "Cascadia Mono", monospace;
-  font-size: 8px;
+  font-size: 12px;
+  text-decoration: underline;
+  text-decoration-color: #a7b2bb;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.enemy-detail-button span {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.enemy-detail-button:hover strong { text-decoration-color: currentColor; }
+.enemy-detail-button:focus-visible { outline: 2px solid #315f80; outline-offset: 2px; }
 
 .enemy-level-badge {
   display: inline-block;
@@ -171,41 +180,11 @@
 .enemy-level-badge.boss { border-color: #7c3b36; color: #7c211b; }
 .enemy-level-badge.elite { border-color: #80704b; color: #624b10; }
 
-.enemy-attack-cell strong { font-size: 11px; }
-
 .enemy-number-cell {
   font-size: 11px;
   text-align: right;
   white-space: nowrap;
 }
-
-.enemy-number-cell small,
-.enemy-attack-cell small,
-.enemy-table td:nth-child(2) small {
-  color: var(--text-muted);
-  font-size: 8px;
-  white-space: nowrap;
-}
-
-.enemy-ability-cell > span {
-  -webkit-line-clamp: 3;
-  font-size: 9px;
-  line-height: 1.45;
-}
-
-.enemy-ability-cell small,
-.enemy-ability-cell em {
-  display: block;
-  overflow: hidden;
-  margin-top: 4px;
-  color: var(--text-muted);
-  font-size: 8px;
-  font-style: normal;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.enemy-ability-cell em { color: #888; }
 
 .enemy-pagination {
   min-height: 44px;
@@ -273,5 +252,6 @@
   .enemy-filters-heading button,
   .enemy-filter-grid input,
   .enemy-filter-grid select,
+  .enemy-detail-button,
   .enemy-pagination button { min-height: 44px; }
 }

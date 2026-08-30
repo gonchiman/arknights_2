@@ -1,0 +1,215 @@
+.enemy-detail-dialog {
+  width: min(760px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: #fff;
+  padding: 0;
+  color: var(--text);
+  box-shadow: 0 20px 70px rgba(17, 24, 39, .28);
+}
+
+.enemy-detail-dialog::backdrop {
+  background: rgba(15, 23, 42, .56);
+  backdrop-filter: blur(2px);
+}
+
+.enemy-detail-modal {
+  max-height: calc(100dvh - 34px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: #fff;
+}
+
+.enemy-detail-modal-header {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--surface-soft);
+  padding: 16px 18px;
+}
+
+.enemy-detail-modal-header > div { min-width: 0; }
+
+.enemy-detail-modal-header span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+
+.enemy-detail-modal-header h2 {
+  margin: 4px 0 3px;
+  font-size: 19px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.enemy-detail-modal-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.enemy-detail-modal-header button {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: #fff;
+  color: #222;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.enemy-detail-modal-header button:hover { background: var(--surface-hover); }
+
+.enemy-detail-modal-body {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 18px;
+}
+
+.enemy-detail-modal-body > section + section {
+  margin-top: 18px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.enemy-detail-modal-body h3 {
+  margin: 0 0 9px;
+  color: var(--text-soft);
+  font-size: 12px;
+  letter-spacing: .04em;
+}
+
+.enemy-detail-description > p {
+  margin: 0;
+  border-left: 3px solid #607f99;
+  background: #f5f8fa;
+  padding: 13px 14px;
+  color: #222;
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.enemy-detail-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--border-strong);
+  border-left: 1px solid var(--border-strong);
+}
+
+.enemy-detail-combat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.enemy-detail-stat-grid > div {
+  min-width: 0;
+  border-right: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
+  padding: 9px 10px;
+}
+
+.enemy-detail-stat-grid dt {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.enemy-detail-stat-grid dd {
+  margin: 4px 0 0;
+  color: #222;
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.enemy-detail-ability-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.enemy-detail-ability-grid > div {
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  padding: 11px;
+}
+
+.enemy-detail-ability-grid strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.enemy-detail-ability-grid p,
+.enemy-detail-ability-grid ul {
+  margin: 0;
+  color: #222;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.enemy-detail-ability-grid ul { padding-left: 18px; }
+.enemy-detail-ability-grid li + li { margin-top: 5px; }
+
+.enemy-detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.enemy-detail-tags span {
+  border: 1px solid var(--border-strong);
+  background: #fff;
+  padding: 4px 6px;
+  color: var(--text-soft);
+  font-size: 10px;
+}
+
+.enemy-detail-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 18px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.enemy-detail-meta code {
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, "Cascadia Mono", monospace;
+}
+
+@media (max-width: 560px) {
+  .enemy-detail-dialog {
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+
+  .enemy-detail-modal { max-height: calc(100dvh - 18px); }
+  .enemy-detail-modal-header { gap: 10px; padding: 12px; }
+  .enemy-detail-modal-header h2 { font-size: 16px; }
+  .enemy-detail-modal-body { padding: 12px; }
+  .enemy-detail-stat-grid,
+  .enemy-detail-combat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .enemy-detail-ability-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enemy-detail-dialog::backdrop { backdrop-filter: none; }
+}
