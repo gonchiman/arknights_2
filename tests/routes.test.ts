@@ -10,6 +10,10 @@ test('敵分析ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/enemies'), { view: 'enemies' })
 })
 
+test('全スキル一覧ページのhashを解析する', () => {
+  assert.deepEqual(parseHashRoute('#/skills'), { view: 'skills' })
+})
+
 test('既存ルートと不明なhashのフォールバックを維持する', () => {
   assert.deepEqual(parseHashRoute('#/damage'), { view: 'damage' })
   assert.deepEqual(parseHashRoute('#/skills/test%3Aid'), { view: 'skill', skillId: 'test:id' })

@@ -4,6 +4,7 @@ import { EnemyAnalysis } from './components/EnemyAnalysis'
 import { EMPTY_OPERATOR_FILTERS, matchesOperatorFilters, OperatorSearch } from './components/OperatorSearch'
 import { OperatorComparison } from './components/OperatorComparison'
 import { SkillDetail } from './components/SkillDetail'
+import { SkillDirectory } from './components/SkillDirectory'
 import { DATA_URLS, loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
 import { ENEMY_DATA_URLS } from './lib/enemyData'
@@ -32,6 +33,8 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const lastSelectedOperatorId = useRef<string | null>(null)
+  const lastSelectedSkillId = useRef<string | null>(null)
+  const skillDetailReturnView = useRef<'list' | 'skills'>('list')
   const previousRouteView = useRef(route.view)
 
   const load = async () => {
@@ -69,20 +72,33 @@ export default function App() {
     : []
 
   useEffect(() => {
-    if (selected) lastSelectedOperatorId.current = selected.operatorId
+    if (!selected) return
+    lastSelectedOperatorId.current = selected.operatorId
+    lastSelectedSkillId.current = selected.id
   }, [selected])
 
   useEffect(() => {
     const previousView = previousRouteView.current
     previousRouteView.current = route.view
-    if (previousView !== 'skill' || route.view !== 'list') return
+    if (previousView !== 'skill') return
 
-    const operatorId = lastSelectedOperatorId.current
-    if (!operatorId) return
-    window.requestAnimationFrame(() => {
-      const operatorRows = document.querySelectorAll<HTMLElement>('[data-operator-id]')
-      Array.from(operatorRows).find((row) => row.dataset.operatorId === operatorId)?.focus()
-    })
+    if (route.view === 'list') {
+      const operatorId = lastSelectedOperatorId.current
+      if (!operatorId) return
+      window.requestAnimationFrame(() => {
+        const operatorRows = document.querySelectorAll<HTMLElement>('[data-operator-id]')
+        Array.from(operatorRows).find((row) => row.dataset.operatorId === operatorId)?.focus()
+      })
+    }
+
+    if (route.view === 'skills') {
+      const skillId = lastSelectedSkillId.current
+      if (!skillId) return
+      window.requestAnimationFrame(() => {
+        const skillRows = document.querySelectorAll<HTMLElement>('[data-skill-id]')
+        Array.from(skillRows).find((row) => row.dataset.skillId === skillId)?.focus()
+      })
+    }
   }, [route.view])
 
   const updateOverride = (skillId: string, override: SkillClassificationOverride | null) => {
@@ -95,14 +111,18 @@ export default function App() {
     })
   }
 
-  const openSkill = (skillId: string) => {
+  const openSkill = (skillId: string, returnView?: 'list' | 'skills') => {
     const target = classifiedRows.find((row) => row.id === skillId)
-    if (target) lastSelectedOperatorId.current = target.operatorId
+    if (returnView) skillDetailReturnView.current = returnView
+    if (target) {
+      lastSelectedOperatorId.current = target.operatorId
+      lastSelectedSkillId.current = target.id
+    }
     window.location.hash = getSkillRouteHash(skillId)
   }
 
-  const openList = () => {
-    window.location.hash = '#/'
+  const closeSkill = () => {
+    window.location.hash = skillDetailReturnView.current === 'skills' ? '#/skills' : '#/'
   }
 
   const updateClassifierFilters = (nextFilters: typeof filters) => {
@@ -114,7 +134,10 @@ export default function App() {
     if (!selectedStillVisible) window.location.hash = '#/'
   }
 
-  const classifierActive = route.view === 'list' || route.view === 'skill'
+  const skillDirectoryActive = route.view === 'skills'
+    || (route.view === 'skill' && skillDetailReturnView.current === 'skills')
+  const classifierActive = route.view === 'list'
+    || (route.view === 'skill' && !skillDirectoryActive)
 
   return (
     <div className={`app-shell ${route.view === 'skill' ? 'skill-detail-route' : ''}`}>
@@ -130,6 +153,9 @@ export default function App() {
           <nav className="site-nav" aria-label="ツール切り替え">
             <a className={`site-nav-link ${classifierActive ? 'active' : ''}`} aria-current={classifierActive ? 'page' : undefined} aria-label="Skill Model Classifier" data-short-label="Skills" href="#/">
               Skill Model Classifier
+            </a>
+            <a className={`site-nav-link ${skillDirectoryActive ? 'active' : ''}`} aria-current={skillDirectoryActive ? 'page' : undefined} aria-label="All Skills" data-short-label="All Skills" href="#/skills">
+              All Skills
             </a>
             <a className={`site-nav-link ${route.view === 'damage' ? 'active' : ''}`} aria-current={route.view === 'damage' ? 'page' : undefined} aria-label="Damage Calculator" data-short-label="Damage" href="#/damage">
               Damage Calculator
@@ -153,6 +179,12 @@ export default function App() {
           <OperatorComparison rows={classifiedRows} loading={loading} />
         ) : route.view === 'enemies' ? (
           <EnemyAnalysis />
+        ) : route.view === 'skills' ? (
+          <SkillDirectory
+            rows={classifiedRows}
+            loading={loading}
+            onSelect={(row) => openSkill(row.id, 'skills')}
+          />
         ) : (
           <section className="classifier-route">
             {route.view === 'list' && (
@@ -172,7 +204,7 @@ export default function App() {
                     filters={filters}
                     loading={loading}
                     onFiltersChange={updateClassifierFilters}
-                    onSelect={(row) => openSkill(row.id)}
+                    onSelect={(row) => openSkill(row.id, 'list')}
                   />
                 </section>
               ) : selected ? (
@@ -182,7 +214,8 @@ export default function App() {
                     skill={selected}
                     operatorSkills={operatorSkills}
                     override={overrides[selected.id]}
-                    onBack={openList}
+                    onBack={closeSkill}
+                    backLabel={skillDetailReturnView.current === 'skills' ? 'スキル一覧に戻る' : undefined}
                     onSelectSkill={(skill) => openSkill(skill.id)}
                     onOverride={(override) => updateOverride(selected.id, override)}
                   />
@@ -190,7 +223,7 @@ export default function App() {
               ) : (
                 <section className="route-state classifier-detail" role="status">
                   <h1>{loading ? 'スキルを読み込んでいます…' : 'スキルが見つかりません'}</h1>
-                  {!loading && <button className="button secondary" onClick={openList}>一覧に戻る</button>}
+                  {!loading && <button className="button secondary" onClick={closeSkill}>一覧に戻る</button>}
                 </section>
               )}
             </div>
