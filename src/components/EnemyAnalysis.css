@@ -91,7 +91,14 @@
 }
 
 .enemy-table tbody tr { cursor: default; }
-.enemy-table th, .enemy-table td { padding: 8px; }
+.enemy-table th,
+.enemy-table td {
+  border-right: 1px solid var(--border);
+  padding: 8px;
+}
+
+.enemy-table th:last-child,
+.enemy-table td:last-child { border-right: 0; }
 .enemy-table th:nth-child(1) { width: 300px; }
 .enemy-table th:nth-child(2) { width: 92px; }
 .enemy-table th:nth-child(3) { width: 92px; }
@@ -130,20 +137,11 @@
 
 .enemy-identity-cell strong { margin-bottom: 2px; font-size: 12px; }
 
-.enemy-identity-cell small,
 .enemy-ability-cell > span {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
   text-overflow: ellipsis;
-}
-
-.enemy-identity-cell small {
-  margin: 0;
-  -webkit-line-clamp: 2;
-  color: var(--text-muted);
-  font-size: 9px;
-  line-height: 1.45;
 }
 
 .enemy-identity-cell code {

@@ -210,15 +210,7 @@ export default function App() {
           />
         ) : (
           <section className="classifier-route">
-            {route.view === 'list' && (
-              <header className="page-intro">
-                <div>
-                  <span className="page-kicker">SKILL DIRECTORY</span>
-                  <h1>Skill Model Classifier</h1>
-                </div>
-                <p>オペレーターを検索し、スキルの分類結果と判定根拠を確認します。</p>
-              </header>
-            )}
+            {route.view === 'list' && <h1 className="visually-hidden">Skill Model Classifier</h1>}
             <div className="classifier-workspace">
               {route.view === 'list' ? (
                 <section className="classifier-master" aria-label="オペレーター検索一覧">

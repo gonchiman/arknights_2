@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { EFFECT_WINDOW_LABELS } from '../lib/classifier'
 import { DAMAGE_TYPE_LABELS } from '../lib/damageCalculator'
 import {
@@ -212,22 +212,25 @@ export function OperatorComparison({ rows, loading }: Props) {
   }
 
   if (loading && rows.length === 0) {
-    return <section className="comparison-page"><p className="comparison-loading" role="status">ゲームデータを読み込んでいます…</p></section>
+    return (
+      <section className="comparison-page">
+        <h1 className="visually-hidden">Operator Skill Comparison</h1>
+        <p className="comparison-loading" role="status">ゲームデータを読み込んでいます…</p>
+      </section>
+    )
   }
 
   return (
     <section className="comparison-page">
-      <header className="comparison-header">
-        <div>
-          <span className="comparison-kicker">COMPARISON MATRIX</span>
-          <h1>Operator Skill Comparison</h1>
-          <p>条件に合うオペレーター＋スキルを、複数の敵ステータスで横断比較します。</p>
-        </div>
-        <button type="button" className="button secondary" onClick={resetAll}>すべてリセット</button>
-      </header>
+      <h1 className="visually-hidden">Operator Skill Comparison</h1>
 
       <section className="comparison-panel comparison-target-panel">
-        <PanelHeading number="01" title="比較対象" note="終了条件とオペレーター条件でスキルを絞り込みます" />
+        <PanelHeading
+          number="01"
+          title="比較対象"
+          note="終了条件とオペレーター条件でスキルを絞り込みます"
+          action={<button type="button" className="button secondary" onClick={resetAll}>すべてリセット</button>}
+        />
         <Filters
           value={filters}
           professionOptions={professionOptions}
@@ -525,11 +528,14 @@ export function OperatorComparison({ rows, loading }: Props) {
   )
 }
 
-function PanelHeading({ number, title, note }: { number: string; title: string; note: string }) {
+function PanelHeading({ number, title, note, action }: { number: string; title: string; note: string; action?: ReactNode }) {
   return (
     <div className="comparison-panel-heading">
       <div><span>{number}</span><h2>{title}</h2></div>
-      <p>{note}</p>
+      <div className="comparison-panel-heading-actions">
+        <p>{note}</p>
+        {action}
+      </div>
     </div>
   )
 }

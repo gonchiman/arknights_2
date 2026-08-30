@@ -107,13 +107,7 @@ export function EnemyAnalysis() {
 
   return (
     <section className="enemy-analysis-route">
-      <header className="page-intro">
-        <div>
-          <span className="page-kicker">ENEMY DIRECTORY</span>
-          <h1>Enemy Analysis</h1>
-        </div>
-        <p>敵図鑑と戦闘データを結合し、基礎ステータス・攻撃種別・能力を一覧で確認します。</p>
-      </header>
+      <h1 className="visually-hidden">Enemy Analysis</h1>
 
       <section className="enemy-directory" aria-label="敵情報一覧">
         <div className="enemy-filters">
@@ -236,7 +230,6 @@ function EnemyRow({ enemy }: { enemy: EnemyRecord }) {
       <td className="enemy-identity-cell">
         <span className="enemy-index">{enemy.index || '—'}</span>
         <strong>{enemy.name}</strong>
-        <small title={enemy.description || undefined}>{enemy.description || '説明なし'}</small>
         <code>{enemy.id}</code>
       </td>
       <td>

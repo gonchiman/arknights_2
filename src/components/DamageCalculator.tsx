@@ -202,11 +202,21 @@ export function DamageCalculator({ rows, loading }: Props) {
   }), [operatorStats.attack, operatorStats.attackInterval, damageType, enemyDefense, enemyResistance, model, selectedSkill, skillSupported, sensitivityMetric])
 
   if (loading && rows.length === 0) {
-    return <section className="damage-page calculator-page"><p className="calculator-loading" role="status">ゲームデータを読み込んでいます…</p></section>
+    return (
+      <section className="damage-page calculator-page">
+        <h1 className="visually-hidden">Damage Calculator</h1>
+        <p className="calculator-loading" role="status">ゲームデータを読み込んでいます…</p>
+      </section>
+    )
   }
 
   if (!selectedOperator || !selectedSkill || !selectedSkillLevel || !model) {
-    return <section className="damage-page calculator-page"><p className="calculator-loading" role="status">計算できるオペレーターが見つかりません。</p></section>
+    return (
+      <section className="damage-page calculator-page">
+        <h1 className="visually-hidden">Damage Calculator</h1>
+        <p className="calculator-loading" role="status">計算できるオペレーターが見つかりません。</p>
+      </section>
+    )
   }
 
   const normalCalculationSteps: CalculationStep[] = [
@@ -229,14 +239,7 @@ export function DamageCalculator({ rows, loading }: Props) {
 
   return (
     <section className="damage-page calculator-page">
-      <header className="calculator-header">
-        <div>
-          <span className="calculator-kicker">INITIAL RELEASE</span>
-          <h1>Damage Calculator</h1>
-          <p>通常攻撃とスキルの理論値を、オペレーターの育成状態と敵ステータスから計算します。</p>
-        </div>
-        <span className="calculator-status">初期版</span>
-      </header>
+      <h1 className="visually-hidden">Damage Calculator</h1>
 
       <section className="calculator-panel operator-search-panel">
         <div className="panel-heading">

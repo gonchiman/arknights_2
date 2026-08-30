@@ -49,6 +49,16 @@ button, a, input, select, summary, [tabindex] {
 ::selection { background: #222; color: #fff; }
 a { color: var(--link); }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .button {
   min-height: 32px;
   border: 1px solid #222;
@@ -74,41 +84,6 @@ a { color: var(--link); }
   background: var(--surface-disabled);
   color: #999;
   cursor: default;
-}
-
-.page-intro {
-  min-width: 0;
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 12px;
-  border: 1px solid var(--border-strong);
-  background: #fff;
-  padding: 10px 12px;
-}
-
-.page-kicker {
-  display: block;
-  color: var(--text-muted);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: .15em;
-}
-
-.page-intro h1 {
-  margin: 2px 0 0;
-  font-size: 20px;
-  line-height: 1.25;
-}
-
-.page-intro p {
-  max-width: 520px;
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 11px;
-  line-height: 1.55;
-  text-align: right;
 }
 
 .classifier-route, .classifier-workspace, .classifier-master, .classifier-detail { min-width: 0; }
@@ -643,7 +618,6 @@ td small { display: block; margin-top: 3px; color: #888; }
 }
 
 @media (max-width: 760px) {
-  .page-intro { align-items: start; }
   .detail-page { border: 0; }
 
   .back-button {
@@ -705,8 +679,6 @@ td small { display: block; margin-top: 3px; color: #888; }
 }
 
 @media (max-width: 520px) {
-  .page-intro { display: block; }
-  .page-intro p { margin-top: 7px; text-align: left; }
   .initial-filter-label { flex-basis: 100%; margin: 0 0 3px; }
   .search-filter { display: block; }
   .search-filter .initial-filter-label { display: block; margin-bottom: 5px; }

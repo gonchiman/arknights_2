@@ -123,16 +123,6 @@
   line-height: 1.25;
 }
 
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 @media (max-width: 1100px) {
   .skill-directory-filter-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
