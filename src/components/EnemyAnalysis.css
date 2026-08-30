@@ -394,6 +394,103 @@
 
 .enemy-chart-bar:hover { fill-opacity: .95; }
 
+.enemy-frequency-details {
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
+.enemy-frequency-details summary {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  background: var(--surface-soft);
+  color: var(--text-soft);
+  font-size: 10px;
+  font-weight: 700;
+  list-style: none;
+  cursor: pointer;
+}
+
+.enemy-frequency-details summary::-webkit-details-marker { display: none; }
+.enemy-frequency-details summary:hover { background: var(--surface-hover); }
+
+.enemy-frequency-details summary::after {
+  margin-left: auto;
+  color: var(--text-muted);
+  content: '＋';
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.enemy-frequency-details[open] summary::after { content: '－'; }
+
+.enemy-frequency-details summary small {
+  color: var(--text-muted);
+  font-size: 8px;
+  font-weight: 400;
+}
+
+.enemy-frequency-table-wrapper {
+  overflow-x: auto;
+  border-top: 1px solid var(--border);
+}
+
+.enemy-frequency-table {
+  width: 100%;
+  min-width: 460px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 9px;
+}
+
+.enemy-frequency-table th,
+.enemy-frequency-table td {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+}
+
+.enemy-frequency-table tr > :last-child { border-right: 0; }
+.enemy-frequency-table tbody tr:last-child > * { border-bottom: 0; }
+
+.enemy-frequency-table thead th {
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 8px;
+  text-align: right;
+}
+
+.enemy-frequency-table thead th:first-child,
+.enemy-frequency-table tbody th { text-align: left; }
+
+.enemy-frequency-table thead th:first-child { width: 52%; }
+
+.enemy-frequency-table tbody th {
+  color: var(--text-soft);
+  font-weight: 500;
+}
+
+.enemy-frequency-table td {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.enemy-frequency-table tbody tr:nth-child(even) { background: #fcfcfc; }
+
+.enemy-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .enemy-chart-reference { stroke-width: 2; pointer-events: none; }
 .enemy-chart-reference.mean { stroke: var(--link); }
 .enemy-chart-reference.median { stroke: var(--warning); stroke-dasharray: 5 3; }
@@ -788,6 +885,7 @@
   .enemy-chart-visibility label,
   .enemy-chart-select-label select,
   .enemy-chart-scale-switch button,
+  .enemy-frequency-details summary,
   .enemy-stat-mode-switch button,
   .enemy-detail-button,
   .enemy-pagination button { min-height: 44px; }

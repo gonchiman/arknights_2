@@ -5,6 +5,7 @@ import {
   calculateNumericStatistics,
   type BoxPlotStatistics,
   type EmpiricalCdfPoint,
+  type HistogramBin,
   type HistogramScale,
   type NumericStatistics,
 } from '../lib/enemyStatistics'
@@ -303,7 +304,53 @@ function HistogramFigure({
           />
         )}
       </div>
+      {statistics.count > 0 && <FrequencyDistributionTable statistics={statistics} metric={metric} />}
     </figure>
+  )
+}
+
+function FrequencyDistributionTable({ statistics, metric }: { statistics: NumericStatistics; metric: StatMetric }) {
+  let cumulativeCount = 0
+  const rows = statistics.bins.map((bin) => {
+    cumulativeCount += bin.count
+    return {
+      bin,
+      cumulativeCount,
+      proportion: bin.count / statistics.count,
+      cumulativeProportion: cumulativeCount / statistics.count,
+    }
+  })
+
+  return (
+    <details className="enemy-frequency-details">
+      <summary>
+        <span>度数分布表</span>
+        <small>{statistics.bins.length}区間</small>
+      </summary>
+      <div className="enemy-frequency-table-wrapper">
+        <table className="enemy-frequency-table">
+          <caption className="enemy-visually-hidden">{metric.label}の度数分布表</caption>
+          <thead>
+            <tr>
+              <th scope="col">階級</th>
+              <th scope="col">敵数</th>
+              <th scope="col">割合</th>
+              <th scope="col">累積割合</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ bin, cumulativeCount: rowCumulativeCount, proportion, cumulativeProportion }, index) => (
+              <tr key={`${bin.start}-${index}`}>
+                <th scope="row">{formatHistogramRange(bin, statistics, metric)}</th>
+                <td>{bin.count}体</td>
+                <td>{formatNumber(proportion * 100, 1, '%')}</td>
+                <td title={`${rowCumulativeCount}体`}>{formatNumber(cumulativeProportion * 100, 1, '%')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
   )
 }
 
@@ -360,9 +407,7 @@ function HistogramSvg({
         const endX = minimum === maximum ? plotRight : valueScale.position(bin.end)
         const barWidth = Math.max(1, endX - startX - barGap)
         const barTop = y(bin.count)
-        const rangeLabel = minimum === maximum
-          ? formatNumber(minimum, metric.valueDigits, metric.suffix)
-          : `${formatNumber(bin.start, metric.summaryDigits, metric.suffix)}以上、${formatNumber(bin.end, metric.summaryDigits, metric.suffix)}${bin.includesMaximum ? '以下' : '未満'}`
+        const rangeLabel = formatHistogramRange(bin, statistics, metric)
         return (
           <rect className="enemy-chart-bar" x={startX + (barGap / 2)} y={barTop} width={barWidth} height={Math.max(0, plotBottom - barTop)} key={`${bin.start}-${index}`}>
             <title>{rangeLabel}：{bin.count}体</title>
@@ -954,6 +999,13 @@ function observationsCount(groups: IndividualGroup[]): number {
 
 function clampLabelX(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum - 65, Math.max(minimum + 3, value + 4))
+}
+
+function formatHistogramRange(bin: HistogramBin, statistics: NumericStatistics, metric: StatMetric): string {
+  if (statistics.minimum === statistics.maximum) {
+    return formatNumber(statistics.minimum ?? bin.start, metric.valueDigits, metric.suffix)
+  }
+  return `${formatNumber(bin.start, metric.summaryDigits, metric.suffix)}以上、${formatNumber(bin.end, metric.summaryDigits, metric.suffix)}${bin.includesMaximum ? '以下' : '未満'}`
 }
 
 function formatNumber(value: number, maximumFractionDigits: number, suffix = ''): string {
