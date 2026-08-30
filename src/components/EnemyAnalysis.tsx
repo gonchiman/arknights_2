@@ -6,6 +6,7 @@ import {
 } from '../lib/enemyData'
 import type { EnemyLevelType, EnemyRecord } from '../types/enemy'
 import { EnemyDetailModal } from './EnemyDetailModal'
+import { EnemyStatisticsPanel } from './EnemyStatisticsPanel'
 import './EnemyAnalysis.css'
 
 const PAGE_SIZE = 100
@@ -43,6 +44,7 @@ const DAMAGE_TYPE_LABELS: Record<string, string> = {
 
 const INTEGER_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
 const DECIMAL_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
+type EnemyStatDisplayMode = 'RATING' | 'VALUE'
 
 export function EnemyAnalysis() {
   const [rows, setRows] = useState<EnemyRecord[]>([])
@@ -52,6 +54,7 @@ export function EnemyAnalysis() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [detailEnemy, setDetailEnemy] = useState<EnemyRecord | null>(null)
+  const [statDisplayMode, setStatDisplayMode] = useState<EnemyStatDisplayMode>('RATING')
   const detailTriggerRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
@@ -90,6 +93,7 @@ export function EnemyAnalysis() {
   const rangeStart = filteredRows.length === 0 ? 0 : currentPage * PAGE_SIZE + 1
   const rangeEnd = Math.min((currentPage + 1) * PAGE_SIZE, filteredRows.length)
   const filtersActive = filters.query !== '' || filters.levelType !== 'ALL' || filters.damageType !== 'ALL'
+  const scopeLabel = getEnemyScopeLabel(filters)
 
   const updateFilter = <K extends keyof EnemyFilters,>(key: K, value: EnemyFilters[K]) => {
     setFilters((current) => ({ ...current, [key]: value }))
@@ -120,10 +124,10 @@ export function EnemyAnalysis() {
           <span className="page-kicker">ENEMY DIRECTORY</span>
           <h1>Enemy Analysis</h1>
         </div>
-        <p>敵図鑑と戦闘データを結合し、基礎ステータス・攻撃種別・能力を一覧で確認します。</p>
+        <p>敵の基礎ステータスを分布と統計量で分析し、条件ごとの傾向を比較します。</p>
       </header>
 
-      <section className="enemy-directory" aria-label="敵情報一覧">
+      <section className="enemy-directory" aria-label="敵ステータス分析">
         <div className="enemy-filters">
           <div className="enemy-filters-heading">
             <strong>敵を絞り込む</strong>
@@ -165,12 +169,9 @@ export function EnemyAnalysis() {
           </div>
         </div>
 
-        <div className="result-meta enemy-result-meta" role="status" aria-live="polite">
-          <span>{loading ? '敵データを読み込み中…' : `${filteredRows.length} 体表示`}</span>
-          <span>数値は敵DBのLv.0（存在しない場合は最初のレベル）です</span>
-        </div>
-
-        {error ? (
+        {loading ? (
+          <div className="enemy-load-state" role="status">敵データを読み込んでいます…</div>
+        ) : error ? (
           <div className="enemy-load-state" role="alert">
             <strong>敵データを読み込めませんでした</strong>
             <span>{error}</span>
@@ -186,45 +187,86 @@ export function EnemyAnalysis() {
           </div>
         ) : (
           <>
-            <div className="table-wrap enemy-table-wrap">
-              <table className="enemy-table">
-                <caption>敵の基礎ステータス一覧</caption>
-                <thead>
-                  <tr>
-                    <th className="enemy-name-column">敵</th>
-                    <th>区分</th>
-                    <th className="numeric-heading">HP</th>
-                    <th className="numeric-heading">攻撃力</th>
-                    <th className="numeric-heading">防御力</th>
-                    <th className="numeric-heading">術耐性</th>
-                    <th className="numeric-heading">移動速度</th>
-                    <th className="numeric-heading">攻撃間隔</th>
-                    <th className="numeric-heading">重量</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleRows.map((enemy) => (
-                    <EnemyRow enemy={enemy} onOpenDetail={openEnemyDetail} key={enemy.id} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {pageCount > 1 && (
-              <nav className="enemy-pagination" aria-label="敵一覧のページ切り替え">
-                <span>{rangeStart}–{rangeEnd} / {filteredRows.length}</span>
+            <EnemyStatisticsPanel rows={filteredRows} scopeLabel={scopeLabel} />
+
+            <section className="enemy-table-section" aria-labelledby="enemy-table-heading">
+              <header className="enemy-table-section-heading">
                 <div>
-                  <button type="button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>前へ</button>
-                  <span>{currentPage + 1} / {pageCount}</span>
-                  <button type="button" disabled={currentPage >= pageCount - 1} onClick={() => setPage(currentPage + 1)}>次へ</button>
+                  <span>REFERENCE DATA</span>
+                  <h2 id="enemy-table-heading">対象の敵一覧</h2>
                 </div>
-              </nav>
-            )}
+                <div className="enemy-stat-mode-switch" role="group" aria-label="一覧のステータス表記">
+                  <div className="enemy-stat-mode-buttons">
+                    <button
+                      type="button"
+                      className={statDisplayMode === 'RATING' ? 'active' : ''}
+                      aria-pressed={statDisplayMode === 'RATING'}
+                      onClick={() => setStatDisplayMode('RATING')}
+                    >ゲーム内評価</button>
+                    <button
+                      type="button"
+                      className={statDisplayMode === 'VALUE' ? 'active' : ''}
+                      aria-pressed={statDisplayMode === 'VALUE'}
+                      onClick={() => setStatDisplayMode('VALUE')}
+                    >実数値</button>
+                  </div>
+                </div>
+              </header>
+
+              <div className="result-meta enemy-result-meta">
+                <div className="enemy-result-summary" role="status" aria-live="polite">
+                  <span>{filteredRows.length}体</span>
+                  {statDisplayMode === 'RATING' && (
+                    <span>実数値をゲーム内と同じ段階基準で換算しています</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="table-wrap enemy-table-wrap">
+                <table className="enemy-table">
+                  <caption>統計分析の対象となっている敵の基礎ステータス一覧</caption>
+                  <thead>
+                    <tr>
+                      <th className="enemy-name-column">敵</th>
+                      <th>区分</th>
+                      <th className="numeric-heading">{statDisplayMode === 'RATING' ? '耐久' : 'HP'}</th>
+                      <th className="numeric-heading">攻撃力</th>
+                      <th className="numeric-heading">防御力</th>
+                      <th className="numeric-heading">術耐性</th>
+                      <th className="numeric-heading">移動速度</th>
+                      <th className="numeric-heading">攻撃間隔</th>
+                      <th className="numeric-heading">重量</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleRows.map((enemy) => (
+                      <EnemyRow
+                        enemy={enemy}
+                        statDisplayMode={statDisplayMode}
+                        onOpenDetail={openEnemyDetail}
+                        key={enemy.id}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {pageCount > 1 && (
+                <nav className="enemy-pagination" aria-label="敵一覧のページ切り替え">
+                  <span>{rangeStart}–{rangeEnd} / {filteredRows.length}</span>
+                  <div>
+                    <button type="button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>前へ</button>
+                    <span>{currentPage + 1} / {pageCount}</span>
+                    <button type="button" disabled={currentPage >= pageCount - 1} onClick={() => setPage(currentPage + 1)}>次へ</button>
+                  </div>
+                </nav>
+              )}
+            </section>
           </>
         )}
       </section>
 
       <p className="enemy-data-note">
-        ステージ固有の敵レベル、強襲条件、危機契約などの補正は反映していません。複数レベルを持つ敵も、ここでは比較しやすい基礎値を表示します。
+        ステージ固有の条件やイベントによる補正は反映せず、比較用の基礎ステータスを集計しています。
       </p>
       {detailEnemy && <EnemyDetailModal enemy={detailEnemy} onClose={closeEnemyDetail} />}
     </section>
@@ -233,9 +275,11 @@ export function EnemyAnalysis() {
 
 function EnemyRow({
   enemy,
+  statDisplayMode,
   onOpenDetail,
 }: {
   enemy: EnemyRecord
+  statDisplayMode: EnemyStatDisplayMode
   onOpenDetail: (enemy: EnemyRecord, trigger: HTMLButtonElement) => void
 }) {
   return (
@@ -256,16 +300,32 @@ function EnemyRow({
       <td>
         <span className={`enemy-level-badge ${enemy.levelType.toLowerCase()}`}>{LEVEL_LABELS[enemy.levelType]}</span>
       </td>
-      <EnemyNumberCell value={enemy.stats.maxHp} />
-      <EnemyNumberCell value={enemy.stats.attack} />
-      <EnemyNumberCell value={enemy.stats.defense} />
-      <EnemyNumberCell value={enemy.stats.magicResistance} />
+      <EnemyPrimaryStatCell mode={statDisplayMode} rating={enemy.ratings.endurance} value={enemy.stats.maxHp} />
+      <EnemyPrimaryStatCell mode={statDisplayMode} rating={enemy.ratings.attack} value={enemy.stats.attack} />
+      <EnemyPrimaryStatCell mode={statDisplayMode} rating={enemy.ratings.defense} value={enemy.stats.defense} />
+      <EnemyPrimaryStatCell mode={statDisplayMode} rating={enemy.ratings.resistance} value={enemy.stats.magicResistance} />
       <EnemyNumberCell value={enemy.stats.moveSpeed} decimal />
       <td className="enemy-number-cell">
         <strong>{formatDecimal(enemy.stats.baseAttackTime, '秒')}</strong>
       </td>
       <EnemyNumberCell value={enemy.stats.massLevel} />
     </tr>
+  )
+}
+
+function EnemyPrimaryStatCell({
+  mode,
+  rating,
+  value,
+}: {
+  mode: EnemyStatDisplayMode
+  rating: string | null
+  value: number | null
+}) {
+  return (
+    <td className={`enemy-number-cell ${mode === 'RATING' ? 'enemy-rating-cell' : ''}`}>
+      <strong>{mode === 'RATING' ? rating ?? '—' : formatInteger(value)}</strong>
+    </td>
   )
 }
 
@@ -279,6 +339,14 @@ function EnemyNumberCell({ value, decimal = false, suffix = '' }: { value: numbe
 
 function getDamageTypeLabel(value: string): string {
   return DAMAGE_TYPE_LABELS[value] ?? value
+}
+
+function getEnemyScopeLabel(filters: EnemyFilters): string {
+  const parts: string[] = []
+  if (filters.levelType !== 'ALL') parts.push(LEVEL_LABELS[filters.levelType])
+  if (filters.damageType !== 'ALL') parts.push(getDamageTypeLabel(filters.damageType))
+  if (filters.query.trim()) parts.push(`検索「${filters.query.trim()}」`)
+  return parts.length > 0 ? parts.join(' / ') : '全敵'
 }
 
 function formatInteger(value: number | null, suffix = ''): string {

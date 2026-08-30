@@ -1,4 +1,4 @@
-import type { EnemyLevelType, EnemyRecord, EnemyStats } from '../types/enemy'
+import type { EnemyLevelType, EnemyRatings, EnemyRecord, EnemyStats } from '../types/enemy'
 
 const BASE = 'https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/master/jp/gamedata'
 
@@ -89,6 +89,7 @@ export function buildEnemyRecords(handbookSource: unknown, databaseSource: unkno
     const abilities = readAbilities(handbook)
     const damageTypes = readStringArray(handbook.damageType)
     const levelType = parseEnemyLevelType(readString(handbook.enemyLevel) ?? readString(enemyData?.levelType))
+    const stats = attributes ? readEnemyStats(attributes) : { ...EMPTY_STATS }
 
     rows.push({
       id,
@@ -104,7 +105,8 @@ export function buildEnemyRecords(handbookSource: unknown, databaseSource: unkno
       databaseLevel: readNumber(baseLevel?.level),
       databaseLevelCount: levels.length,
       statusImmunities: readStatusImmunities(attributes),
-      stats: attributes ? readEnemyStats(attributes) : { ...EMPTY_STATS },
+      ratings: buildEnemyRatings(stats),
+      stats,
     })
   }
 
@@ -186,6 +188,72 @@ function readEnemyStats(attributes: UnknownRecord): EnemyStats {
     baseAttackTime: readNumber(attributes.baseAttackTime),
     massLevel: readNumber(attributes.massLevel),
   }
+}
+
+function buildEnemyRatings(stats: EnemyStats): EnemyRatings {
+  return {
+    endurance: getEnemyStatRating('maxHp', stats.maxHp),
+    attack: getEnemyStatRating('attack', stats.attack),
+    defense: getEnemyStatRating('defense', stats.defense),
+    resistance: getEnemyStatRating('magicResistance', stats.magicResistance),
+  }
+}
+
+export function getEnemyStatRating(
+  stat: 'maxHp' | 'attack' | 'defense' | 'magicResistance',
+  value: number | null,
+): string | null {
+  if (value === null || !Number.isFinite(value)) return null
+
+  if (stat === 'maxHp') {
+    if (value > 500000) return 'SS'
+    if (value >= 250000) return 'S+'
+    if (value >= 100000) return 'S'
+    if (value >= 25000) return 'A+'
+    if (value >= 12000) return 'A'
+    if (value >= 8000) return 'B+'
+    if (value >= 5000) return 'B'
+    if (value >= 3500) return 'C'
+    if (value >= 1000) return 'D'
+    return 'E'
+  }
+
+  if (stat === 'attack') {
+    if (value > 5000) return 'SS'
+    if (value >= 3000) return 'S+'
+    if (value >= 2000) return 'S'
+    if (value >= 1500) return 'A+'
+    if (value >= 1000) return 'A'
+    if (value >= 700) return 'B+'
+    if (value >= 500) return 'B'
+    if (value >= 300) return 'C'
+    if (value >= 200) return 'D'
+    return 'E'
+  }
+
+  if (stat === 'defense') {
+    if (value > 5000) return 'SS'
+    if (value >= 3000) return 'S+'
+    if (value >= 2000) return 'S'
+    if (value >= 1200) return 'A+'
+    if (value >= 1000) return 'A'
+    if (value >= 800) return 'B+'
+    if (value >= 500) return 'B'
+    if (value >= 200) return 'C'
+    if (value >= 100) return 'D'
+    return 'E'
+  }
+
+  if (value > 90) return 'SS'
+  if (value >= 80) return 'S+'
+  if (value >= 70) return 'S'
+  if (value >= 60) return 'A+'
+  if (value >= 50) return 'A'
+  if (value >= 30) return 'B+'
+  if (value >= 20) return 'B'
+  if (value >= 10) return 'C'
+  if (value > 0) return 'D'
+  return 'E'
 }
 
 function readStatusImmunities(attributes: UnknownRecord | null): string[] {

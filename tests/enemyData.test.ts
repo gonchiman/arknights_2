@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildEnemyRecords, cleanGameText, matchesEnemyFilters } from '../src/lib/enemyData.ts'
+import { buildEnemyRecords, cleanGameText, getEnemyStatRating, matchesEnemyFilters } from '../src/lib/enemyData.ts'
 
 const handbook = {
   enemyData: {
@@ -77,6 +77,12 @@ test('図鑑と基礎戦闘データを敵IDで結合する', () => {
     databaseLevel: 0,
     databaseLevelCount: 2,
     statusImmunities: ['スタン'],
+    ratings: {
+      endurance: 'B',
+      attack: 'B',
+      defense: 'C',
+      resistance: 'B+',
+    },
     stats: {
       maxHp: 5000,
       attack: 650,
@@ -110,4 +116,15 @@ test('名前・説明・内部IDと区分・攻撃種別で絞り込める', () 
 
 test('ゲーム内マークアップと改行を表示用テキストから除去する', () => {
   assert.equal(cleanGameText('<@ba.kw>能力</>\\n  説明'), '能力 説明')
+})
+
+test('敵の実数ステータスをゲーム内と同じ段階評価へ変換する', () => {
+  assert.equal(getEnemyStatRating('maxHp', 550), 'E')
+  assert.equal(getEnemyStatRating('maxHp', 5000), 'B')
+  assert.equal(getEnemyStatRating('attack', 3000), 'S+')
+  assert.equal(getEnemyStatRating('defense', 1200), 'A+')
+  assert.equal(getEnemyStatRating('magicResistance', 0), 'E')
+  assert.equal(getEnemyStatRating('magicResistance', 30), 'B+')
+  assert.equal(getEnemyStatRating('magicResistance', 91), 'SS')
+  assert.equal(getEnemyStatRating('maxHp', null), null)
 })

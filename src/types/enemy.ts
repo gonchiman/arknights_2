@@ -13,6 +13,13 @@ export interface EnemyStats {
   massLevel: number | null
 }
 
+export interface EnemyRatings {
+  endurance: string | null
+  attack: string | null
+  defense: string | null
+  resistance: string | null
+}
+
 export interface EnemyRecord {
   id: string
   index: string
@@ -27,5 +34,6 @@ export interface EnemyRecord {
   databaseLevel: number | null
   databaseLevelCount: number
   statusImmunities: string[]
+  ratings: EnemyRatings
   stats: EnemyStats
 }
