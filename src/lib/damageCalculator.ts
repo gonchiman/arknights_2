@@ -151,6 +151,7 @@ export function deriveSkillModel(level: RawSkillLevel, operatorAttackInterval: n
   const attackScaleEntries = [...values.entries()].filter(([key]) => (
     key === 'atk_scale'
     || key.endsWith('@atk_scale')
+    || key.endsWith('.atk_scale')
   ))
   const directMultiplierPercent = Math.max(0, (findValue(values, ['atk'])?.value ?? 0) * 100)
   const preferredAttackScale = findValue(values, ['atk_scale', 'attack@atk_scale'])
@@ -182,8 +183,20 @@ export function deriveSkillModel(level: RawSkillLevel, operatorAttackInterval: n
     (operatorAttackInterval + intervalOffset) * 100 / Math.max(20, 100 + attackSpeedBonus),
   )
   const duration = typeof level.duration === 'number' && level.duration > 0 ? level.duration : 0
-  const ammoValue = findValue(values, ['max_ammo', 'ammo', 'bullet_count', 'bullet'])
-  const ammoCount = ammoValue ? clamp(Math.round(ammoValue.value), 0, 999) : 0
+  const ammoValue = findValue(values, [
+    'max_ammo',
+    'ammo',
+    'bullet_count',
+    'bullet',
+    'attack@trigger_time',
+    'trigger_time',
+    'attack@s3_trigger_time',
+    's3_trigger_time',
+  ])
+  const descriptionAmmoCount = getAmmoCountFromDescription(level.description ?? '')
+  const ammoCount = ammoValue
+    ? clamp(Math.round(ammoValue.value), 0, 999)
+    : descriptionAmmoCount
 
   if (level.durationType === 'AMMO' && ammoCount === 0) {
     notes.push('弾薬数を自動取得できませんでした。全弾総量を出す場合は弾数を入力してください。')
@@ -420,6 +433,24 @@ function findValue(values: Map<string, number>, keys: string[]): { key: string; 
     if (typeof value === 'number' && Number.isFinite(value)) return { key, value }
   }
   return null
+}
+
+function getAmmoCountFromDescription(description: string): number {
+  const text = description
+    .replace(/<[^>]+>/g, '')
+    .replace(/\\n/g, ' ')
+    .replace(/\s+/g, ' ')
+  const patterns = [
+    /(?:合計|最大)\s*(\d+)\s*発/,
+    /弾薬を\s*(\d+)\s*発(?:装填|補充)/,
+    /(\d+)\s*発(?:分)?の(?:弾薬|銃弾|矢)/,
+  ]
+
+  for (const pattern of patterns) {
+    const value = Number(text.match(pattern)?.[1])
+    if (Number.isFinite(value) && value > 0) return clamp(Math.round(value), 1, 999)
+  }
+  return 0
 }
 
 function clamp(value: number, min: number, max: number): number {

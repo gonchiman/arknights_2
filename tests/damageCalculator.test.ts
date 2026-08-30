@@ -120,6 +120,38 @@ test('固定時間スキルの1ヒット・DPS・総量を計算する', () => {
   assert.equal(output.total, 10000)
 })
 
+test('弾薬数をblackboardの互換キーと説明文の装填数から取得する', () => {
+  const triggerTime = deriveSkillModel({
+    duration: -1,
+    durationType: 'AMMO',
+    blackboard: [{ key: 'attack@s3_trigger_time', value: 10 }],
+  }, 1)
+  assert.equal(triggerTime.ammoCount, 10)
+
+  const genericTriggerTime = deriveSkillModel({
+    duration: -1,
+    durationType: 'AMMO',
+    blackboard: [{ key: 'attack@trigger_time', value: 31 }],
+  }, 1)
+  assert.equal(genericTriggerTime.ammoCount, 31)
+
+  const description = deriveSkillModel({
+    duration: -1,
+    durationType: 'AMMO',
+    description: '<@ba.vup>合計31発</>の弾薬を使用する',
+    blackboard: [],
+  }, 1)
+  assert.equal(description.ammoCount, 31)
+
+  const consumptionOnly = deriveSkillModel({
+    duration: -1,
+    durationType: 'AMMO',
+    description: '攻撃するたびに弾薬を1発消費する',
+    blackboard: [],
+  }, 1)
+  assert.equal(consumptionOnly.ammoCount, 0)
+})
+
 test('スキルの倍率・軽減・ヒット数・総量を同じ計算過程で返す', () => {
   const breakdown = calculateSkillDamageBreakdown(1000, 'PHYSICAL', 200, 0, {
     directMultiplierPercent: 0,
@@ -162,6 +194,13 @@ test('atkをB、atk_scaleをEとして同時に適用し、damage_scaleは対象
     totalMode: 'ACTIVATION',
   })
   assert.equal(output.perHit, 1800)
+
+  const nestedScale = deriveSkillModel({
+    duration: -1,
+    durationType: 'NONE',
+    blackboard: [{ key: 'attack@s1.atk_scale', value: 1.8 }],
+  }, 1)
+  assert.equal(nestedScale.attackScalePercent, 180)
 })
 
 test('現在の昇進段階で解放済みかつ潜在強化前の特性・素質を選ぶ', () => {

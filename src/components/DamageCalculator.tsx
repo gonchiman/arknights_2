@@ -13,9 +13,13 @@ import {
   type DamageType,
   type SkillDamageBreakdown,
   type SkillModelDefaults,
-  type SkillTotalMode,
 } from '../lib/damageCalculator'
 import { getOperatorPassives } from '../lib/operatorProfile'
+import {
+  getSkillDamageUnsupportedReasons as getUnsupportedReasons,
+  getSkillTotalLabel as getTotalLabel,
+  getSkillTotalMode as getTotalMode,
+} from '../lib/skillDamageModel'
 import type { RawSkillLevel, SkillRecord } from '../types/skill'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
 import './DamageCalculator.css'
@@ -1041,37 +1045,6 @@ function buildSkillTotalStep(breakdown: SkillDamageBreakdown): CalculationStep {
     result: '—',
     note: '終了条件を一意に決められないスキルです',
   }
-}
-
-function getUnsupportedReasons(skill: SkillRecord): string[] {
-  const components = new Set(skill.classification.damageComponents.value)
-  const reasons: string[] = []
-  if (components.has('NO_DIRECT_DAMAGE')) reasons.push('直接ダメージを持たないスキルです。')
-  if (components.has('UNKNOWN')) reasons.push('ダメージ構成が未確定です。')
-  if (components.has('SUMMON')) reasons.push('召喚物の独立ステータスが必要です。')
-  if (components.has('DEPLOYED_OBJECT')) reasons.push('設置物の個別モデルが必要です。')
-  if (components.has('PERIODIC') || components.has('DAMAGE_OVER_TIME')) reasons.push('周期・継続ダメージの間隔モデルが必要です。')
-  if (skill.classification.outputCapabilities.requiresModeSelection) reasons.push('段階・モードごとの値を選択する必要があります。')
-  if (!components.has('BASIC_ATTACK_MODIFIER') && !components.has('BURST') && reasons.length === 0) {
-    reasons.push('単純な通常攻撃変化・瞬間攻撃以外のモデルです。')
-  }
-  return reasons
-}
-
-function getTotalMode(skill: SkillRecord): SkillTotalMode {
-  const window = skill.classification.effectWindow.value
-  if (window === 'FIXED_DURATION') return 'DURATION'
-  if (window === 'AMMO') return 'AMMO'
-  if (window === 'NONE') return 'ACTIVATION'
-  return 'NONE'
-}
-
-function getTotalLabel(skill: SkillRecord): string {
-  const window = skill.classification.effectWindow.value
-  if (window === 'FIXED_DURATION') return '効果時間総ダメージ'
-  if (window === 'AMMO') return '全弾総ダメージ'
-  if (window === 'NONE') return '発動総ダメージ'
-  return 'スキル総ダメージ'
 }
 
 function buildSensitivityData({

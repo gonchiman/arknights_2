@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DamageCalculator } from './components/DamageCalculator'
 import { EMPTY_OPERATOR_FILTERS, matchesOperatorFilters, OperatorSearch } from './components/OperatorSearch'
+import { OperatorComparison } from './components/OperatorComparison'
 import { SkillDetail } from './components/SkillDetail'
 import { DATA_URLS, loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
@@ -111,7 +112,7 @@ export default function App() {
     if (!selectedStillVisible) window.location.hash = '#/'
   }
 
-  const classifierActive = route.view !== 'damage'
+  const classifierActive = route.view === 'list' || route.view === 'skill'
 
   return (
     <div className={`app-shell ${route.view === 'skill' ? 'skill-detail-route' : ''}`}>
@@ -131,6 +132,9 @@ export default function App() {
             <a className={`site-nav-link ${route.view === 'damage' ? 'active' : ''}`} aria-current={route.view === 'damage' ? 'page' : undefined} href="#/damage">
               Damage Calculator
             </a>
+            <a className={`site-nav-link ${route.view === 'comparison' ? 'active' : ''}`} aria-current={route.view === 'comparison' ? 'page' : undefined} href="#/comparison">
+              Operator Comparison
+            </a>
           </nav>
         </div>
       </header>
@@ -140,6 +144,8 @@ export default function App() {
 
         {route.view === 'damage' ? (
           <DamageCalculator rows={classifiedRows} loading={loading} />
+        ) : route.view === 'comparison' ? (
+          <OperatorComparison rows={classifiedRows} loading={loading} />
         ) : (
           <section className="classifier-route">
             {route.view === 'list' && (
