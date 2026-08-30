@@ -189,15 +189,91 @@
   font-size: 8px;
 }
 
-.enemy-distribution-figure {
+.enemy-chart-toolbar {
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--surface-soft);
+  padding: 9px 10px;
+}
+
+.enemy-chart-visibility {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.enemy-chart-visibility legend,
+.enemy-chart-axis-control > span {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.enemy-chart-visibility legend { margin-bottom: 6px; padding: 0; }
+
+.enemy-chart-visibility > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.enemy-chart-visibility label {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: #fff;
+  color: var(--text-soft);
+  padding: 4px 8px;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.enemy-chart-visibility label:hover { background: var(--surface-hover); }
+.enemy-chart-visibility label.active {
+  border-color: #222;
+  box-shadow: inset 0 0 0 1px #222;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.enemy-chart-visibility input {
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  accent-color: #222;
+}
+
+.enemy-chart-axis-control {
+  flex: 0 0 auto;
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.enemy-chart-stack { min-width: 0; background: #fff; }
+
+.enemy-analysis-figure {
   min-width: 0;
   margin: 0;
+  border-bottom: 1px solid var(--border);
   background: #fff;
   padding: 10px;
 }
 
-.enemy-distribution-figure figcaption {
-  min-height: 36px;
+.enemy-analysis-figure:last-child { border-bottom: 0; }
+
+.enemy-analysis-figure figcaption {
+  min-height: 38px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -205,14 +281,15 @@
   margin-bottom: 5px;
 }
 
-.enemy-distribution-figure figcaption > div:first-child { min-width: 0; }
-.enemy-distribution-figure figcaption strong { display: block; font-size: 12px; }
+.enemy-analysis-figure figcaption > div:first-child { min-width: 0; }
+.enemy-analysis-figure figcaption strong { display: block; font-size: 12px; }
 
-.enemy-distribution-figure figcaption > div:first-child span {
+.enemy-analysis-figure figcaption > div:first-child > span {
   display: block;
   margin-top: 2px;
   color: var(--text-muted);
   font-size: 9px;
+  line-height: 1.45;
 }
 
 .enemy-chart-legend {
@@ -236,6 +313,19 @@
 .enemy-chart-legend .mean { color: var(--link); }
 .enemy-chart-legend .median { color: var(--warning); }
 .enemy-chart-legend .median i { border-top-style: dashed; }
+
+.enemy-chart-legend.box i { width: 10px; }
+.enemy-chart-legend .box-median { color: var(--warning); }
+.enemy-chart-legend .box-mean { color: var(--link); }
+.enemy-chart-legend .box-mean i,
+.enemy-chart-legend .box-outlier i {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+.enemy-chart-legend .box-mean i { background: currentColor; }
+.enemy-chart-legend .box-outlier { color: var(--text-muted); }
 
 .enemy-chart-options {
   flex: 0 0 auto;
@@ -266,12 +356,12 @@
 .enemy-chart-container {
   width: 100%;
   min-width: 0;
-  min-height: 310px;
 }
 
-.enemy-distribution-chart { display: block; overflow: visible; }
+.enemy-stat-chart { display: block; overflow: visible; }
 .enemy-chart-frame { fill: transparent; stroke: var(--border-strong); stroke-width: 1; }
 .enemy-chart-gridline { stroke: var(--border); stroke-width: 1; }
+.enemy-chart-gridline.vertical { stroke-opacity: .72; }
 
 .enemy-chart-bar {
   fill: var(--text-soft);
@@ -299,6 +389,120 @@
 .enemy-chart-reference-label { font-size: 9px; font-weight: 700; }
 .enemy-chart-reference-label.mean { fill: var(--link); }
 .enemy-chart-reference-label.median { fill: var(--warning); }
+
+.enemy-chart-line.ecdf {
+  fill: none;
+  stroke: var(--link);
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  stroke-width: 2;
+}
+
+.enemy-ecdf-point {
+  fill: var(--link);
+  fill-opacity: .72;
+  stroke: #fff;
+  stroke-width: .5;
+}
+
+.enemy-ecdf-point:hover { fill-opacity: 1; }
+
+.enemy-chart-group-guide {
+  stroke: var(--border);
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+}
+
+.enemy-chart-group-label {
+  fill: var(--text-soft);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.enemy-box-whisker,
+.enemy-box-cap {
+  stroke: var(--text-soft);
+  stroke-width: 1.5;
+}
+
+.enemy-box-body {
+  fill: var(--surface-soft);
+  stroke: var(--text-soft);
+  stroke-width: 1.5;
+}
+
+.enemy-box-median {
+  stroke: var(--warning);
+  stroke-width: 2.5;
+}
+
+.enemy-box-mean {
+  fill: var(--link);
+  stroke: #fff;
+  stroke-width: 1;
+}
+
+.enemy-box-outlier {
+  fill: #fff;
+  stroke-width: 1.5;
+}
+
+.enemy-box-outlier.normal { stroke: var(--text-soft); }
+.enemy-box-outlier.elite { stroke: var(--link); }
+.enemy-box-outlier.boss { stroke: var(--danger); }
+.enemy-box-outlier.unknown { stroke: var(--text-muted); }
+
+.enemy-scatter-controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.enemy-chart-select-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.enemy-chart-select-label select {
+  min-width: 92px;
+  min-height: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: #fff;
+  color: var(--text);
+  padding: 3px 23px 3px 7px;
+  font-size: 9px;
+}
+
+.enemy-scatter-point,
+.enemy-individual-point {
+  stroke: #fff;
+  stroke-width: .6;
+}
+
+.enemy-scatter-point { fill-opacity: .48; }
+.enemy-individual-point { fill-opacity: .62; }
+.enemy-scatter-point.normal,
+.enemy-individual-point.normal { fill: var(--text-soft); }
+.enemy-scatter-point.elite,
+.enemy-individual-point.elite { fill: var(--link); }
+.enemy-scatter-point.boss,
+.enemy-individual-point.boss { fill: var(--danger); }
+.enemy-scatter-point.unknown,
+.enemy-individual-point.unknown { fill: var(--text-muted); }
+.enemy-scatter-point:hover,
+.enemy-individual-point:hover { fill-opacity: 1; stroke: var(--text); }
+
+.enemy-individual-median {
+  stroke: var(--warning);
+  stroke-width: 2.5;
+}
 
 .enemy-chart-empty {
   min-height: 310px;
@@ -527,6 +731,8 @@
   .enemy-statistics-grid > div:nth-child(4n) { border-right: 0; }
   .enemy-statistics-grid > div:nth-last-child(-n + 4) { border-bottom: 1px solid var(--border); }
   .enemy-statistics-grid > div:nth-last-child(-n + 2) { border-bottom: 0; }
+  .enemy-chart-toolbar { align-items: stretch; flex-direction: column; }
+  .enemy-chart-axis-control { align-items: center; grid-template-columns: auto auto; justify-content: space-between; }
   .enemy-result-meta { flex-wrap: wrap; }
   .enemy-result-summary { flex-basis: 100%; }
   .enemy-stat-mode-switch { margin-left: auto; }
@@ -544,9 +750,9 @@
   .enemy-metric-selector button:nth-child(4) { border-right: 1px solid var(--border-strong); border-bottom: 1px solid var(--border-strong); }
   .enemy-metric-selector button:nth-child(2n) { border-right: 0; }
   .enemy-metric-selector button:last-child { grid-column: 1 / -1; border-right: 0; border-bottom: 0; }
-  .enemy-distribution-figure figcaption { align-items: flex-start; }
-  .enemy-distribution-figure figcaption > div:first-child span { line-height: 1.45; }
-  .enemy-chart-options { display: grid; justify-items: end; gap: 5px; }
+  .enemy-analysis-figure figcaption { align-items: flex-start; flex-direction: column; }
+  .enemy-analysis-figure figcaption > div:first-child > span { line-height: 1.45; }
+  .enemy-scatter-controls { width: 100%; justify-content: space-between; }
   .enemy-chart-legend { gap: 7px; }
   .enemy-pagination > span { display: none; }
   .enemy-pagination > div { width: 100%; justify-content: space-between; }
@@ -557,6 +763,8 @@
   .enemy-filter-grid input,
   .enemy-filter-grid select,
   .enemy-metric-selector button,
+  .enemy-chart-visibility label,
+  .enemy-chart-select-label select,
   .enemy-chart-scale-switch button,
   .enemy-stat-mode-switch button,
   .enemy-detail-button,
