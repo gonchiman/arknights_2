@@ -156,58 +156,67 @@ export function OperatorStatisticsPanel({ rows, scopeLabel }: { rows: OperatorDa
           </div>
         </fieldset>
         {statistics.count > 0 && (
-          <div className="operator-statistics-axis-settings">
-            <div className="enemy-chart-axis-control">
-              <span>横軸</span>
-              <ScaleSwitch
-                scale={axisScale}
-                onChange={setAxisScale}
-                label={`${selectedMetric.label}の横軸目盛`}
-              />
-            </div>
-            {selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR' && (
-              <div className="operator-bin-width-control">
-                <label htmlFor={binWidthInputId}>
-                  階級幅{selectedMetric.suffix ? `（${selectedMetric.suffix}）` : ''}
-                </label>
-                <div className="operator-bin-width-input-row">
-                  <input
-                    id={binWidthInputId}
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="any"
-                    value={linearBinWidthInput}
-                    placeholder="自動"
-                    aria-invalid={linearBinWidthError !== null}
-                    aria-describedby={binWidthHelpId}
-                    onChange={(event) => setLinearBinWidthInput(event.target.value)}
-                  />
-                  {linearBinWidthInput !== '' && (
-                    <button
-                      type="button"
-                      onClick={() => setLinearBinWidthInput('')}
-                      aria-label="階級幅を自動設定に戻す"
-                    >
-                      自動
-                    </button>
-                  )}
-                </div>
-                <small
-                  id={binWidthHelpId}
-                  className={linearBinWidthError ? 'error' : ''}
-                  aria-live="polite"
-                >
-                  {linearBinWidthError
-                    ?? (linearBinWidthValidation?.valid
-                      ? `${linearBinWidthValidation.binCount}階級で集計`
-                      : `自動：${formatNumber(statistics.histogram?.binWidth ?? 0, selectedMetric.valueDigits, selectedMetric.suffix)}`)}
-                </small>
-              </div>
-            )}
+          <div className="enemy-chart-axis-control">
+            <span>横軸</span>
+            <ScaleSwitch
+              scale={axisScale}
+              onChange={setAxisScale}
+              label={`${selectedMetric.label}の横軸目盛`}
+            />
           </div>
         )}
       </div>
+
+      {statistics.count > 0 && selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR' && (
+        <div
+          className="operator-histogram-settings"
+          role="group"
+          aria-labelledby="operator-histogram-settings-heading"
+        >
+          <div className="operator-histogram-settings-heading">
+            <strong id="operator-histogram-settings-heading">ヒストグラム設定</strong>
+            <span>線形目盛の階級幅を指定できます</span>
+          </div>
+          <div className="operator-bin-width-control">
+            <label htmlFor={binWidthInputId}>
+              階級幅{selectedMetric.suffix ? `（${selectedMetric.suffix}）` : ''}
+            </label>
+            <div className="operator-bin-width-input-row">
+              <input
+                id={binWidthInputId}
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="any"
+                value={linearBinWidthInput}
+                placeholder="自動"
+                aria-invalid={linearBinWidthError !== null}
+                aria-describedby={binWidthHelpId}
+                onChange={(event) => setLinearBinWidthInput(event.target.value)}
+              />
+              {linearBinWidthInput !== '' && (
+                <button
+                  type="button"
+                  onClick={() => setLinearBinWidthInput('')}
+                  aria-label="階級幅を自動設定に戻す"
+                >
+                  自動
+                </button>
+              )}
+            </div>
+            <small
+              id={binWidthHelpId}
+              className={linearBinWidthError ? 'error' : ''}
+              aria-live="polite"
+            >
+              {linearBinWidthError
+                ?? (linearBinWidthValidation?.valid
+                  ? `${linearBinWidthValidation.binCount}階級で集計`
+                  : `自動：${formatNumber(statistics.histogram?.binWidth ?? 0, selectedMetric.valueDigits, selectedMetric.suffix)}`)}
+            </small>
+          </div>
+        </div>
+      )}
 
       <div className="enemy-chart-stack">
         {selectedChart === 'HISTOGRAM' && (

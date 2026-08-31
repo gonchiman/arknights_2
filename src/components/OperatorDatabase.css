@@ -20,17 +20,57 @@
   grid-template-columns: repeat(9, minmax(0, 1fr));
 }
 
-.operator-statistics-axis-settings {
-  flex: 0 0 auto;
+.operator-histogram-settings {
+  min-width: 0;
   display: flex;
-  align-items: flex-end;
-  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--border-strong);
+  background: #fff;
+  padding: 8px 10px;
+}
+
+.operator-histogram-settings-heading {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.operator-histogram-settings-heading strong {
+  color: var(--text);
+  font-size: 9px;
+  letter-spacing: .06em;
+}
+
+.operator-histogram-settings-heading span {
+  color: var(--text-muted);
+  font-size: 8px;
 }
 
 .operator-bin-width-control {
-  min-width: 116px;
+  min-width: 188px;
   display: grid;
-  gap: 6px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 3px;
+}
+
+.operator-bin-width-control > label {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.operator-bin-width-input-row {
+  grid-column: 2;
+  grid-row: 1;
+  justify-content: flex-end;
+}
+
+.operator-bin-width-control > small {
+  grid-column: 2;
+  grid-row: 2;
 }
 
 .operator-bin-width-control > label,
@@ -454,10 +494,33 @@
   .operator-database-table { min-width: 900px; }
   .operator-detail-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
-  .operator-statistics-axis-settings {
+  .operator-histogram-settings {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .operator-histogram-settings .operator-bin-width-control {
     width: 100%;
-    flex-wrap: wrap;
-    justify-content: space-between;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 10px;
+  }
+
+  .operator-histogram-settings .operator-bin-width-control > label {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .operator-histogram-settings .operator-bin-width-input-row {
+    grid-column: 2;
+    grid-row: 1;
+    justify-content: flex-end;
+  }
+
+  .operator-histogram-settings .operator-bin-width-control > small {
+    grid-column: 2;
+    grid-row: 2;
   }
 
   .operator-statistics-panel .enemy-metric-selector {
