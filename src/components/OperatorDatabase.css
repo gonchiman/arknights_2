@@ -15,37 +15,34 @@
 }
 
 .operator-database-table {
-  min-width: 1460px;
+  min-width: 900px;
   table-layout: fixed;
 }
 
-.operator-database-table th:nth-child(1) { width: 190px; }
-.operator-database-table th:nth-child(2) { width: 90px; }
-.operator-database-table th:nth-child(3) { width: 150px; }
-.operator-database-table th:nth-child(4),
+.operator-database-table th:nth-child(1) { width: 180px; }
+.operator-database-table th:nth-child(2) { width: 84px; }
+.operator-database-table th:nth-child(3) { width: 100px; }
+.operator-database-table th:nth-child(4) { width: 120px; }
 .operator-database-table th:nth-child(5),
 .operator-database-table th:nth-child(6),
-.operator-database-table th:nth-child(7) { width: 82px; }
-.operator-database-table th:nth-child(8) { width: 155px; }
-.operator-database-table th:nth-child(9) { width: 140px; }
-.operator-database-table th:nth-child(10) { width: 180px; }
-.operator-database-table th:nth-child(11) { width: 180px; }
+.operator-database-table th:nth-child(7),
+.operator-database-table th:nth-child(8) { width: 82px; }
+
+.operator-database-table td {
+  padding: 4px 10px;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
 
 .operator-database-table th {
   padding: 0;
 }
 
-.operator-database-table th:not(:has(.operator-database-sort-button)) {
-  padding: 8px 10px;
+.operator-database-table th:nth-child(4) {
+  padding: 6px 10px;
 }
 
-.operator-database-table tbody tr {
-  cursor: default;
-}
-
-.operator-database-table td {
-  overflow-wrap: anywhere;
-}
+.operator-database-table tbody tr { cursor: default; }
 
 .operator-database-table th:first-child,
 .operator-database-table td:first-child {
@@ -92,51 +89,34 @@
   font-size: 8px;
 }
 
-.operator-database-name {
-  display: block;
+.operator-database-name-button {
+  min-height: 24px;
+  border: 0;
+  background: transparent;
+  color: var(--link);
+  padding: 2px 0;
   font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.operator-database-name-button:hover {
+  color: #123f78;
+}
+
+.operator-database-name-button:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid currentcolor;
+  outline-offset: 2px;
 }
 
 .operator-database-stat-cell {
   font-variant-numeric: tabular-nums;
   text-align: right;
-}
-
-.operator-database-summary-cell strong,
-.operator-database-summary-cell small {
-  display: block;
-}
-
-.operator-database-summary-cell strong {
-  color: var(--text-soft);
-  font-size: 10px;
-}
-
-.operator-database-summary-cell small {
-  display: -webkit-box;
-  overflow: hidden;
-  margin-top: 4px;
-  line-height: 1.45;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.operator-database-detail-button {
-  min-height: 32px;
-  display: block;
-  border: 0;
-  background: transparent;
-  color: var(--link);
-  margin-top: 3px;
-  padding: 3px 0;
-  font-size: 10px;
-  font-weight: 700;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.operator-database-detail-button:hover {
-  color: #123f78;
 }
 
 .operator-detail-dialog {
@@ -334,6 +314,35 @@
   font-size: 9px;
 }
 
+.operator-module-effect-levels {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.operator-module-effect-levels > li + li {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.operator-module-effect-group {
+  margin-top: 6px;
+}
+
+.operator-module-effect-group > span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.operator-module-effect-group > p {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
 .operator-detail-meta {
   display: flex;
   align-items: baseline;
@@ -351,7 +360,7 @@
 }
 
 @media (max-width: 760px) {
-  .operator-database-table { min-width: 1460px; }
+  .operator-database-table { min-width: 900px; }
   .operator-detail-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
@@ -374,10 +383,8 @@
 }
 
 @media (pointer: coarse) {
-  .operator-database-sort-button,
-  .operator-database-detail-button {
-    min-height: 44px;
-  }
+  .operator-database-sort-button { min-height: 44px; }
+  .operator-database-name-button { min-height: 32px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -140,7 +140,21 @@ export function OperatorDetailModal({ operator, onClose }: Props) {
                       <strong>{module.name}</strong>
                       <span>{module.typeLabel} · {module.unlockLabel}</span>
                     </div>
-                    <p>{module.description}</p>
+                    {module.effects.length > 0 ? (
+                      <ol
+                        className="operator-module-effect-levels"
+                        aria-label={`${module.name}のレベル別効果`}
+                      >
+                        {module.effects.map((effect) => (
+                          <li key={`${module.id}:${effect.level}`}>
+                            <strong>Lv.{effect.level}</strong>
+                            <ModuleEffectGroup label="能力値補正" values={effect.attributeBonuses} />
+                            <ModuleEffectGroup label="特性変更" values={effect.traitChanges} />
+                            <ModuleEffectGroup label="素質変更" values={effect.talentChanges} />
+                          </li>
+                        ))}
+                      </ol>
+                    ) : <p>表示できる効果データはありません。</p>}
                   </li>
                 ))}
               </ul>
@@ -163,6 +177,17 @@ function DetailValue({ label, value }: { label: string; value: string }) {
 
 function EmptyDetail({ children }: { children: string }) {
   return <p className="operator-detail-empty">{children}</p>
+}
+
+function ModuleEffectGroup({ label, values }: { label: string; values: string[] }) {
+  if (values.length === 0) return null
+
+  return (
+    <div className="operator-module-effect-group">
+      <span>{label}</span>
+      <p>{values.join(' / ')}</p>
+    </div>
+  )
 }
 
 function formatInteger(value: number | null): string {

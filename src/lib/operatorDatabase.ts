@@ -5,6 +5,9 @@ import type {
   OperatorInitial,
   RawAttributeData,
   RawAttributeKeyFrame,
+  RawBlackboardCollection,
+  RawBlackboardEntry,
+  RawOperatorModule,
   SkillRecord,
 } from '../types/skill.ts'
 
@@ -42,9 +45,16 @@ export interface OperatorDatabaseSkill {
 export interface OperatorDatabaseModule {
   id: string
   name: string
-  description: string
   typeLabel: string
   unlockLabel: string
+  effects: OperatorDatabaseModuleEffect[]
+}
+
+export interface OperatorDatabaseModuleEffect {
+  level: number
+  attributeBonuses: string[]
+  traitChanges: string[]
+  talentChanges: string[]
 }
 
 export interface OperatorDatabaseRecord {
@@ -136,7 +146,15 @@ export function filterOperatorDatabaseRecords(
       ...record.potentials.map((potential) => potential.description),
       ...record.talents.flatMap((talent) => [talent.name, talent.description]),
       ...record.skills.flatMap((skill) => [skill.name, skill.description, skill.id]),
-      ...record.modules.flatMap((module) => [module.name, module.description, module.typeLabel]),
+      ...record.modules.flatMap((module) => [
+        module.name,
+        module.typeLabel,
+        ...module.effects.flatMap((effect) => [
+          ...effect.attributeBonuses,
+          ...effect.traitChanges,
+          ...effect.talentChanges,
+        ]),
+      ]),
     ].join(' '))
 
     return searchTarget.includes(query)
@@ -224,9 +242,9 @@ function buildOperatorRecord(operatorRows: SkillRecord[]): OperatorDatabaseRecor
       .map((module, index) => ({
         id: module.uniEquipId ?? `${representative.operatorId}:module:${index}`,
         name: cleanGameText(module.uniEquipName ?? '') || '名称なし',
-        description: cleanGameText(module.uniEquipDesc ?? '') || '説明なし',
         typeLabel: getModuleTypeLabel(module.typeName1, module.typeName2),
         unlockLabel: getModuleUnlockLabel(module.unlockEvolvePhase, module.unlockLevel),
+        effects: buildModuleEffects(module),
       })),
   }
 }
@@ -330,6 +348,151 @@ function getModuleUnlockLabel(phase: string | null | undefined, level: number | 
   const phaseMatch = phase?.match(/(\d+)$/)
   const phaseLabel = phaseMatch ? `昇進${Number(phaseMatch[1])}` : '昇進条件不明'
   return typeof level === 'number' ? `${phaseLabel} Lv.${level}` : phaseLabel
+}
+
+const MODULE_ATTRIBUTE_LABELS: Record<string, string> = {
+  max_hp: '最大HP',
+  atk: '攻撃力',
+  def: '防御力',
+  magic_resistance: '術耐性',
+  attack_speed: '攻撃速度',
+  cost: '配置コスト',
+  respawn_time: '再配置時間',
+  block_cnt: 'ブロック数',
+}
+
+function buildModuleEffects(module: RawOperatorModule): OperatorDatabaseModuleEffect[] {
+  if (!Array.isArray(module.phases)) return []
+
+  return module.phases
+    .map((phase, index) => {
+      const attributeBonuses = normalizeBlackboardEntries(phase.attributeBlackboard)
+        .map(formatModuleAttributeBonus)
+        .filter((value): value is string => Boolean(value))
+      const traitChanges = new Set<string>()
+      const talentChanges = new Set<string>()
+
+      for (const part of Array.isArray(phase.parts) ? phase.parts : []) {
+        const targetPrefix = part.isToken ? '召喚物：' : ''
+        const traitCandidates = selectBasePotentialCandidates(
+          part.overrideTraitDataBundle?.candidates,
+        )
+
+        for (const candidate of traitCandidates) {
+          const descriptions = [
+            candidate.overrideDescripton ?? candidate.overrideDescription,
+            candidate.additionalDescription,
+          ]
+
+          for (const description of descriptions) {
+            const formatted = formatModuleDescription(description, candidate.blackboard)
+            if (formatted) traitChanges.add(`${targetPrefix}${formatted}`)
+          }
+        }
+
+        const talentCandidates = selectBasePotentialCandidates(
+          part.addOrOverrideTalentDataBundle?.candidates,
+        )
+
+        for (const candidate of talentCandidates) {
+          const description = formatModuleDescription(
+            candidate.upgradeDescription,
+            candidate.blackboard,
+          )
+          if (!description) continue
+          const name = cleanGameText(candidate.name ?? '')
+          talentChanges.add(`${targetPrefix}${name ? `${name}：` : ''}${description}`)
+        }
+      }
+
+      return {
+        level: typeof phase.equipLevel === 'number' ? phase.equipLevel : index + 1,
+        attributeBonuses,
+        traitChanges: [...traitChanges],
+        talentChanges: [...talentChanges],
+      }
+    })
+    .filter((effect) => (
+      effect.attributeBonuses.length > 0
+      || effect.traitChanges.length > 0
+      || effect.talentChanges.length > 0
+    ))
+    .sort((a, b) => a.level - b.level)
+}
+
+function selectBasePotentialCandidates<T extends { requiredPotentialRank?: number }>(
+  candidates: T[] | null | undefined,
+): T[] {
+  if (!Array.isArray(candidates) || candidates.length === 0) return []
+  const minimumRank = Math.min(...candidates.map((candidate) => candidate.requiredPotentialRank ?? 0))
+  return candidates.filter((candidate) => (candidate.requiredPotentialRank ?? 0) === minimumRank)
+}
+
+function formatModuleAttributeBonus(entry: RawBlackboardEntry): string | null {
+  if (!entry.key) return null
+  const label = MODULE_ATTRIBUTE_LABELS[entry.key] ?? entry.key
+  const value = typeof entry.value === 'number' && Number.isFinite(entry.value)
+    ? formatSignedNumber(entry.value)
+    : entry.valueStr?.trim()
+  if (!value) return null
+  const unit = entry.key === 'respawn_time' ? '秒' : ''
+  return `${label} ${value}${unit}`
+}
+
+function formatModuleDescription(
+  description: string | null | undefined,
+  blackboard: RawBlackboardCollection | undefined,
+): string {
+  if (!description?.trim()) return ''
+  const values = new Map(normalizeBlackboardEntries(blackboard).flatMap((entry) => (
+    entry.key ? [[entry.key, entry] as const] : []
+  )))
+  const formatted = description.replace(
+    /\{(-?[^}:]+)(?::([^}]+))?\}/g,
+    (placeholder, rawKey: string, format?: string) => {
+      const negative = rawKey.startsWith('-')
+      const key = negative ? rawKey.slice(1) : rawKey
+      const entry = values.get(rawKey) ?? values.get(key)
+      if (!entry) return placeholder
+      if (typeof entry.value !== 'number') return entry.valueStr || placeholder
+      return formatBlackboardValue(negative ? -entry.value : entry.value, format)
+    },
+  )
+  return cleanGameText(formatted)
+}
+
+function normalizeBlackboardEntries(
+  blackboard: RawBlackboardCollection | undefined,
+): RawBlackboardEntry[] {
+  if (Array.isArray(blackboard)) return blackboard
+  if (!blackboard || typeof blackboard !== 'object') return []
+
+  return Object.entries(blackboard).map(([key, value]) => ({
+    key,
+    value: typeof value === 'number' ? value : undefined,
+    valueStr: typeof value === 'string' ? value : null,
+  }))
+}
+
+function formatBlackboardValue(value: number, format?: string): string {
+  const percent = format?.includes('%') ?? false
+  const decimalMatch = format?.match(/0\.(0+)/)
+  const decimals = decimalMatch?.[1].length ?? (format?.includes('0') ? 0 : undefined)
+  const normalized = percent ? value * 100 : value
+  const formatted = decimals === undefined
+    ? formatNumber(normalized)
+    : normalized.toFixed(decimals)
+  const signed = format?.includes('+') && normalized > 0 ? `+${formatted}` : formatted
+  return percent ? `${signed}%` : signed
+}
+
+function formatSignedNumber(value: number): string {
+  const formatted = formatNumber(value)
+  return value > 0 ? `+${formatted}` : formatted
+}
+
+function formatNumber(value: number): string {
+  return Number.isInteger(value) ? String(value) : String(Math.round(value * 100) / 100)
 }
 
 function cleanGameText(value: string): string {
