@@ -17,6 +17,7 @@ export const DATA_URLS = {
   character: `${BASE}/character_table.json`,
   skill: `${BASE}/skill_table.json`,
   uniequip: `${BASE}/uniequip_table.json`,
+  battleEquip: `${BASE}/battle_equip_table.json`,
 }
 
 type CharacterTable = Record<string, {
@@ -49,11 +50,14 @@ interface UniequipTable {
   }>
 }
 
+type BattleEquipTable = Record<string, Pick<RawOperatorModule, 'phases'>>
+
 export async function loadSkillRecords(): Promise<SkillRecord[]> {
-  const [characterResponse, skillResponse, uniequipResponse] = await Promise.all([
+  const [characterResponse, skillResponse, uniequipResponse, battleEquipResponse] = await Promise.all([
     fetch(DATA_URLS.character),
     fetch(DATA_URLS.skill),
     fetch(DATA_URLS.uniequip),
+    fetch(DATA_URLS.battleEquip).catch(() => null),
   ])
 
   if (!characterResponse.ok || !skillResponse.ok || !uniequipResponse.ok) {
@@ -63,8 +67,9 @@ export async function loadSkillRecords(): Promise<SkillRecord[]> {
   const characters = await characterResponse.json() as CharacterTable
   const skills = await skillResponse.json() as SkillTable
   const uniequip = await uniequipResponse.json() as UniequipTable
+  const battleEquips = await readOptionalBattleEquipTable(battleEquipResponse)
   const subProfessions = uniequip.subProfDict ?? {}
-  const modulesByOperator = buildModulesByOperator(uniequip.equipDict ?? {})
+  const modulesByOperator = buildModulesByOperator(uniequip.equipDict ?? {}, battleEquips)
   const rows: SkillRecord[] = []
 
   for (const [operatorId, operator] of Object.entries(characters)) {
@@ -125,13 +130,18 @@ export async function loadSkillRecords(): Promise<SkillRecord[]> {
 
 function buildModulesByOperator(
   equipDict: NonNullable<UniequipTable['equipDict']>,
+  battleEquips: BattleEquipTable,
 ): Map<string, RawOperatorModule[]> {
   const result = new Map<string, RawOperatorModule[]>()
 
   for (const module of Object.values(equipDict)) {
     if (!module.charId || !module.uniEquipName || module.type !== 'ADVANCED') continue
     const modules = result.get(module.charId) ?? []
-    modules.push(module)
+    const battleEquip = module.uniEquipId ? battleEquips[module.uniEquipId] : undefined
+    modules.push({
+      ...module,
+      phases: Array.isArray(battleEquip?.phases) ? battleEquip.phases : [],
+    })
     result.set(module.charId, modules)
   }
 
@@ -141,6 +151,19 @@ function buildModulesByOperator(
   )))
 
   return result
+}
+
+async function readOptionalBattleEquipTable(response: Response | null): Promise<BattleEquipTable> {
+  if (!response?.ok) return {}
+
+  try {
+    const value = await response.json() as unknown
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? value as BattleEquipTable
+      : {}
+  } catch {
+    return {}
+  }
 }
 
 function parseRarity(value: number | string | undefined): number {

@@ -110,58 +110,35 @@ export function OperatorDatabase({ rows, loading }: Props) {
                 <tr>
                   <SortableHeader label="オペレーター" sortKey="operator" sort={sort} onSort={updateSort} />
                   <SortableHeader label="レアリティ" sortKey="rarity" sort={sort} onSort={updateSort} />
-                  <SortableHeader label="職業 / 職分" sortKey="profession" sort={sort} onSort={updateSort} />
+                  <SortableHeader label="職業" sortKey="profession" sort={sort} onSort={updateSort} />
+                  <th scope="col">職分</th>
                   <SortableHeader label="HP" sortKey="maxHp" sort={sort} onSort={updateSort} />
                   <SortableHeader label="攻撃" sortKey="attack" sort={sort} onSort={updateSort} />
                   <SortableHeader label="防御" sortKey="defense" sort={sort} onSort={updateSort} />
                   <SortableHeader label="術耐性" sortKey="magicResistance" sort={sort} onSort={updateSort} />
-                  <th>潜在能力</th>
-                  <th>素質</th>
-                  <th>スキル</th>
-                  <th>モジュール</th>
                 </tr>
               </thead>
               <tbody>
                 {visibleRecords.map((operator) => (
                   <tr key={operator.operatorId}>
                     <td>
-                      <strong className="operator-database-name">{operator.name}</strong>
-                      <small>{operator.operatorId}</small>
                       <button
                         type="button"
-                        className="operator-database-detail-button"
+                        className="operator-database-name-button"
                         aria-haspopup="dialog"
                         aria-label={`${operator.name}の詳細を開く`}
                         onClick={(event) => openDetail(operator, event.currentTarget)}
                       >
-                        詳細を見る →
+                        {operator.name}
                       </button>
                     </td>
                     <td>★{operator.rarity}</td>
-                    <td>
-                      <span>{operator.professionLabel}</span>
-                      <small>{operator.subProfessionName}</small>
-                    </td>
+                    <td>{operator.professionLabel}</td>
+                    <td>{operator.subProfessionName}</td>
                     <StatCell value={operator.stats.maxHp} />
                     <StatCell value={operator.stats.attack} />
                     <StatCell value={operator.stats.defense} />
                     <StatCell value={operator.stats.magicResistance} />
-                    <SummaryCell
-                      count={operator.potentials.length}
-                      summary={operator.potentials.map((potential) => potential.description)}
-                    />
-                    <SummaryCell
-                      count={operator.talents.length}
-                      summary={operator.talents.map((talent) => talent.name)}
-                    />
-                    <SummaryCell
-                      count={operator.skills.length}
-                      summary={operator.skills.map((skill) => `S${skill.index} ${skill.name}`)}
-                    />
-                    <SummaryCell
-                      count={operator.modules.length}
-                      summary={operator.modules.map((module) => module.name)}
-                    />
                   </tr>
                 ))}
               </tbody>
@@ -189,7 +166,7 @@ function SortableHeader({ label, sortKey, sort, onSort }: SortableHeaderProps) {
     : 'none'
 
   return (
-    <th aria-sort={ariaSort}>
+    <th scope="col" aria-sort={ariaSort}>
       <button type="button" className="operator-database-sort-button" onClick={() => onSort(sortKey)}>
         <span>{label}</span>
         <span className="operator-database-sort-indicator" aria-hidden="true">
@@ -202,16 +179,6 @@ function SortableHeader({ label, sortKey, sort, onSort }: SortableHeaderProps) {
 
 function StatCell({ value }: { value: number | null }) {
   return <td className="operator-database-stat-cell">{formatInteger(value)}</td>
-}
-
-function SummaryCell({ count, summary }: { count: number; summary: string[] }) {
-  const text = summary.length > 0 ? summary.join(' / ') : 'なし'
-  return (
-    <td className="operator-database-summary-cell">
-      <strong>{count > 0 ? `${count}件` : 'なし'}</strong>
-      {count > 0 && <small title={text}>{text}</small>}
-    </td>
-  )
 }
 
 function buildProfessionOptions(records: OperatorDatabaseRecord[]): FilterOption[] {

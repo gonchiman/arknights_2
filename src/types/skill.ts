@@ -96,7 +96,44 @@ export interface RawOperatorModule {
   unlockLevel?: number
   charEquipOrder?: number
   isSpecialEquip?: boolean
+  phases?: RawOperatorModulePhase[]
 }
+
+export interface RawOperatorModulePhase {
+  equipLevel?: number
+  parts?: RawOperatorModulePart[]
+  attributeBlackboard?: RawBlackboardCollection
+  tokenAttributeBlackboard?: Record<string, RawBlackboardCollection>
+}
+
+export interface RawOperatorModulePart {
+  target?: string
+  isToken?: boolean
+  addOrOverrideTalentDataBundle?: {
+    candidates?: RawOperatorModuleTalentCandidate[] | null
+  }
+  overrideTraitDataBundle?: {
+    candidates?: RawOperatorModuleTraitCandidate[] | null
+  }
+}
+
+export interface RawOperatorModuleTraitCandidate {
+  additionalDescription?: string | null
+  overrideDescripton?: string | null
+  overrideDescription?: string | null
+  requiredPotentialRank?: number
+  blackboard?: RawBlackboardCollection
+}
+
+export interface RawOperatorModuleTalentCandidate {
+  upgradeDescription?: string | null
+  name?: string | null
+  requiredPotentialRank?: number
+  isHideTalent?: boolean
+  blackboard?: RawBlackboardCollection
+}
+
+export type RawBlackboardCollection = RawBlackboardEntry[] | Record<string, number | string | null>
 
 export interface OperatorCombatProfile {
   phases: RawCharacterPhase[]

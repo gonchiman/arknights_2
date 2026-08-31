@@ -6,7 +6,7 @@ import {
   sortOperatorDatabaseRecords,
   type OperatorDatabaseFilters,
 } from '../src/lib/operatorDatabase.ts'
-import type { OperatorCombatProfile, SkillRecord } from '../src/types/skill.ts'
+import type { OperatorCombatProfile, RawOperatorModule, SkillRecord } from '../src/types/skill.ts'
 
 test('スキル行を1人1レコードへ集約し、最大育成ステータスと全情報を保持する', () => {
   const profile = createProfile()
@@ -56,6 +56,43 @@ test('スキル行を1人1レコードへ集約し、最大育成ステータス
   assert.equal(record.skills[1].description, '攻撃力が50%上昇')
   assert.deepEqual(record.modules.map((module) => module.name), ['モジュールα'])
   assert.equal(record.modules[0].unlockLabel, '昇進2 Lv.60')
+  assert.equal('description' in record.modules[0], false)
+  assert.deepEqual(record.modules[0].effects, [
+    {
+      level: 1,
+      attributeBonuses: ['最大HP +100', '攻撃力 +30'],
+      traitChanges: ['攻撃力が130%まで上昇'],
+      talentChanges: [],
+    },
+    {
+      level: 2,
+      attributeBonuses: ['最大HP +130', '攻撃力 +40'],
+      traitChanges: ['攻撃力が130%まで上昇'],
+      talentChanges: ['基礎素質：攻撃力+15%'],
+    },
+    {
+      level: 3,
+      attributeBonuses: ['最大HP +150', '攻撃力 +50'],
+      traitChanges: ['攻撃力が130%まで上昇'],
+      talentChanges: ['基礎素質：攻撃力+18%'],
+    },
+  ])
+})
+
+test('戦闘用モジュールデータが欠落しても物語説明へ戻さず安全に空効果を返す', () => {
+  const profile = createProfile()
+  profile.modules = [{
+    uniEquipId: 'module_without_battle_data',
+    uniEquipName: '効果データなし',
+    uniEquipDesc: 'これはモジュールの物語説明です',
+    type: 'ADVANCED',
+  }]
+
+  const module = buildOperatorDatabaseRecords([createSkill({ profile })])[0].modules[0]
+
+  assert.deepEqual(module.effects, [])
+  assert.equal('description' in module, false)
+  assert.equal(JSON.stringify(module).includes('物語説明'), false)
 })
 
 test('名前・職分・潜在能力・素質・スキル・モジュールを正規化して検索できる', () => {
@@ -189,7 +226,65 @@ function createProfile(): OperatorCombatProfile {
         typeName1: 'X',
         unlockEvolvePhase: 'PHASE_2',
         unlockLevel: 60,
+        phases: [
+          createModulePhase(1, 100, 30),
+          createModulePhase(2, 130, 40, '攻撃力<@ba.talpu>+15%</>'),
+          createModulePhase(3, 150, 50, '攻撃力<@ba.talpu>+18%</>'),
+        ],
       },
+    ],
+  }
+}
+
+function createModulePhase(
+  level: number,
+  maxHp: number,
+  attack: number,
+  talentDescription?: string,
+): NonNullable<RawOperatorModule['phases']>[number] {
+  return {
+    equipLevel: level,
+    attributeBlackboard: [
+      { key: 'max_hp', value: maxHp },
+      { key: 'atk', value: attack },
+    ],
+    parts: [
+      {
+        target: 'TRAIT',
+        isToken: false,
+        overrideTraitDataBundle: {
+          candidates: [
+            {
+              requiredPotentialRank: 0,
+              overrideDescripton: '攻撃力が<@ba.kw>{atk_scale:0%}</>まで上昇',
+              blackboard: [{ key: 'atk_scale', value: 1.3 }],
+            },
+            {
+              requiredPotentialRank: 4,
+              overrideDescripton: '攻撃力が<@ba.kw>{atk_scale:0%}</>まで上昇',
+              blackboard: [{ key: 'atk_scale', value: 1.35 }],
+            },
+          ],
+        },
+      },
+      ...(talentDescription ? [{
+        target: 'TALENT_DATA_ONLY',
+        isToken: false,
+        addOrOverrideTalentDataBundle: {
+          candidates: [
+            {
+              requiredPotentialRank: 0,
+              name: '基礎素質',
+              upgradeDescription: talentDescription,
+            },
+            {
+              requiredPotentialRank: 4,
+              name: '基礎素質',
+              upgradeDescription: '攻撃力+20%',
+            },
+          ],
+        },
+      }] : []),
     ],
   }
 }

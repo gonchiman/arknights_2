@@ -261,6 +261,7 @@ export default function App() {
           <a href={DATA_URLS.skill} target="_blank" rel="noreferrer">skill_table.json</a>
           <a href={DATA_URLS.character} target="_blank" rel="noreferrer">character_table.json</a>
           <a href={DATA_URLS.uniequip} target="_blank" rel="noreferrer">uniequip_table.json</a>
+          <a href={DATA_URLS.battleEquip} target="_blank" rel="noreferrer">battle_equip_table.json</a>
           <a href={ENEMY_DATA_URLS.handbook} target="_blank" rel="noreferrer">enemy_handbook_table.json</a>
           <a href={ENEMY_DATA_URLS.database} target="_blank" rel="noreferrer">enemy_database.json</a>
         </footer>
