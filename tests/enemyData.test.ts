@@ -105,13 +105,12 @@ test('Key/Value配列形式の敵データにも対応する', () => {
   assert.equal(rows[0]?.databaseLevel, 0)
 })
 
-test('名前・説明・内部IDと区分・攻撃種別で絞り込める', () => {
+test('名前・説明・内部IDと区分で絞り込める', () => {
   const enemy = buildEnemyRecords(handbook, database)[0]
 
-  assert.equal(matchesEnemyFilters(enemy, { query: 'Ｔ１', levelType: 'ALL', damageType: 'ALL' }), true)
-  assert.equal(matchesEnemyFilters(enemy, { query: '灼熱', levelType: 'ELITE', damageType: 'MAGIC' }), true)
-  assert.equal(matchesEnemyFilters(enemy, { query: 'enemy_test', levelType: 'NORMAL', damageType: 'ALL' }), false)
-  assert.equal(matchesEnemyFilters(enemy, { query: '', levelType: 'ALL', damageType: 'PHYSIC' }), false)
+  assert.equal(matchesEnemyFilters(enemy, { query: 'Ｔ１', levelType: 'ALL' }), true)
+  assert.equal(matchesEnemyFilters(enemy, { query: '灼熱', levelType: 'ELITE' }), true)
+  assert.equal(matchesEnemyFilters(enemy, { query: 'enemy_test', levelType: 'NORMAL' }), false)
 })
 
 test('ゲーム内マークアップと改行を表示用テキストから除去する', () => {

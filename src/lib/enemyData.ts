@@ -10,7 +10,6 @@ export const ENEMY_DATA_URLS = {
 export interface EnemyFilters {
   query: string
   levelType: EnemyLevelType | 'ALL'
-  damageType: string | 'ALL'
 }
 
 type UnknownRecord = Record<string, unknown>
@@ -119,7 +118,6 @@ export function buildEnemyRecords(handbookSource: unknown, databaseSource: unkno
 
 export function matchesEnemyFilters(enemy: EnemyRecord, filters: EnemyFilters): boolean {
   if (filters.levelType !== 'ALL' && enemy.levelType !== filters.levelType) return false
-  if (filters.damageType !== 'ALL' && !enemy.damageTypes.includes(filters.damageType)) return false
 
   const query = normalizeSearchText(filters.query)
   if (!query) return true

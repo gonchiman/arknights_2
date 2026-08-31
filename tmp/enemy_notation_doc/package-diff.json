@@ -2,9 +2,10 @@
   "reference": "C:\\Users\\legen\\Documents\\arknights_2\\docs\\enemy-statistics-guide.docx",
   "reference_sha256": "4D946B110F1A1DA51B7BF95EE845998A50D51C425FBBDD661A68D182FB8B0A8C",
   "final": "C:\\Users\\legen\\Documents\\arknights_2\\docs\\enemy-defense-resistance-notation-guide.docx",
-  "final_sha256": "13F7C47919E4EEBC2CBD3978F514CD46CF7A88E98E98DA8274335CE9B96BDEEF",
+  "final_sha256": "EC56215D9004F1E0DEDEE825F3F7941BBD35E4A7685C93CCE00E4739D346627E",
   "changed_parts": [
     "docProps/core.xml",
+    "word/_rels/document.xml.rels",
     "word/document.xml"
   ],
   "unexpected_changed_parts": [],

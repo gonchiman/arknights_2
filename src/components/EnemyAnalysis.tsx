@@ -14,7 +14,6 @@ const PAGE_SIZE = 100
 const DEFAULT_FILTERS: EnemyFilters = {
   query: '',
   levelType: 'ALL',
-  damageType: 'ALL',
 }
 
 const LEVEL_OPTIONS: Array<{ value: EnemyLevelType | 'ALL'; label: string }> = [
@@ -30,16 +29,6 @@ const LEVEL_LABELS: Record<EnemyLevelType, string> = {
   ELITE: 'エリート',
   BOSS: 'ボス',
   UNKNOWN: '未分類',
-}
-
-const DAMAGE_TYPE_LABELS: Record<string, string> = {
-  PHYSIC: '物理',
-  PHYSICAL: '物理',
-  MAGIC: '術',
-  ARTS: '術',
-  PURE: '確定',
-  NO_DAMAGE: '非攻撃',
-  HEAL: '回復',
 }
 
 const INTEGER_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
@@ -78,11 +67,6 @@ export function EnemyAnalysis() {
     return () => { active = false }
   }, [loadVersion])
 
-  const damageTypeOptions = useMemo(() => (
-    [...new Set(rows.flatMap((enemy) => enemy.damageTypes))]
-      .sort((a, b) => getDamageTypeLabel(a).localeCompare(getDamageTypeLabel(b), 'ja'))
-  ), [rows])
-
   const filteredRows = useMemo(
     () => rows.filter((enemy) => matchesEnemyFilters(enemy, filters)),
     [rows, filters],
@@ -92,7 +76,7 @@ export function EnemyAnalysis() {
   const visibleRows = filteredRows.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
   const rangeStart = filteredRows.length === 0 ? 0 : currentPage * PAGE_SIZE + 1
   const rangeEnd = Math.min((currentPage + 1) * PAGE_SIZE, filteredRows.length)
-  const filtersActive = filters.query !== '' || filters.levelType !== 'ALL' || filters.damageType !== 'ALL'
+  const filtersActive = filters.query !== '' || filters.levelType !== 'ALL'
   const scopeLabel = getEnemyScopeLabel(filters)
 
   const updateFilter = <K extends keyof EnemyFilters,>(key: K, value: EnemyFilters[K]) => {
@@ -143,29 +127,22 @@ export function EnemyAnalysis() {
                 onChange={(event) => updateFilter('query', event.target.value)}
               />
             </label>
-            <label>
-              <span>区分</span>
-              <select
-                value={filters.levelType}
-                onChange={(event) => updateFilter('levelType', event.target.value as EnemyFilters['levelType'])}
-              >
+            <div className="enemy-level-filter" role="group" aria-labelledby="enemy-level-filter-label">
+              <span id="enemy-level-filter-label">区分</span>
+              <div className="enemy-level-filter-buttons">
                 {LEVEL_OPTIONS.map((option) => (
-                  <option value={option.value} key={option.value}>{option.label}</option>
+                  <button
+                    type="button"
+                    className={filters.levelType === option.value ? 'active' : ''}
+                    aria-pressed={filters.levelType === option.value}
+                    onClick={() => updateFilter('levelType', option.value)}
+                    key={option.value}
+                  >
+                    {option.label}
+                  </button>
                 ))}
-              </select>
-            </label>
-            <label>
-              <span>攻撃種別</span>
-              <select
-                value={filters.damageType}
-                onChange={(event) => updateFilter('damageType', event.target.value)}
-              >
-                <option value="ALL">すべて</option>
-                {damageTypeOptions.map((damageType) => (
-                  <option value={damageType} key={damageType}>{getDamageTypeLabel(damageType)}</option>
-                ))}
-              </select>
-            </label>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -337,14 +314,9 @@ function EnemyNumberCell({ value, decimal = false, suffix = '' }: { value: numbe
   )
 }
 
-function getDamageTypeLabel(value: string): string {
-  return DAMAGE_TYPE_LABELS[value] ?? value
-}
-
 function getEnemyScopeLabel(filters: EnemyFilters): string {
   const parts: string[] = []
   if (filters.levelType !== 'ALL') parts.push(LEVEL_LABELS[filters.levelType])
-  if (filters.damageType !== 'ALL') parts.push(getDamageTypeLabel(filters.damageType))
   if (filters.query.trim()) parts.push(`検索「${filters.query.trim()}」`)
   return parts.length > 0 ? parts.join(' / ') : '全敵'
 }

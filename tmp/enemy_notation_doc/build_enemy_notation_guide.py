@@ -291,10 +291,32 @@ def add_callout(doc, label, body, *, formula_lines=None):
 
 
 def add_hyperlink(paragraph, text, url):
-    run = paragraph.add_run(text)
-    set_run_font(run, size=9.5, color=BLUE)
-    run.underline = True
-    return None
+    rel_id = paragraph.part.relate_to(
+        url,
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        is_external=True,
+    )
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(qn("r:id"), rel_id)
+    run = OxmlElement("w:r")
+    run_props = OxmlElement("w:rPr")
+    fonts = OxmlElement("w:rFonts")
+    fonts.set(qn("w:ascii"), "Calibri")
+    fonts.set(qn("w:hAnsi"), "Calibri")
+    fonts.set(qn("w:eastAsia"), "Yu Gothic")
+    color = OxmlElement("w:color")
+    color.set(qn("w:val"), BLUE)
+    underline = OxmlElement("w:u")
+    underline.set(qn("w:val"), "single")
+    size = OxmlElement("w:sz")
+    size.set(qn("w:val"), "19")
+    run_props.extend([fonts, color, underline, size])
+    text_node = OxmlElement("w:t")
+    text_node.text = text
+    run.extend([run_props, text_node])
+    hyperlink.append(run)
+    paragraph._p.append(hyperlink)
+    return rel_id
 
 
 def add_source_item(doc, lead, link_text=None, url=None, tail=""):
@@ -352,7 +374,7 @@ def build_body_source():
 
     title = doc.add_paragraph()
     set_paragraph_spacing(title, before=0, after=4, line=1.0, keep_with_next=True)
-    set_run_font(title.add_run("敵の防御力・術耐性　ゲーム内表記ガイド"),
+    set_run_font(title.add_run("敵の防御力・術耐性 表記ガイド"),
                  size=28, color=NAVY, bold=True)
 
     subtitle = doc.add_paragraph(style="Guide Subtitle")
@@ -380,7 +402,17 @@ def build_body_source():
     add_list_item(doc, "本アプリは図鑑の評価文字列を直接読むのではなく、取得した実数値をゲーム内と同じ段階基準として換算します。")
     add_list_item(doc, "値が欠損・未定義・非数値の場合は評価できないため「—」と表示します。")
 
-    add_heading(doc, "本アプリの換算条件", 2)
+    add_callout(
+        doc,
+        "10段階の順序",
+        "左ほど低く、右ほど高い評価です。「+」を含む文字は独立した段階として扱います。",
+        formula_lines=["E < D < C < B < B+ < A < A+ < S < S+ < SS"],
+    )
+
+    pbreak = doc.add_paragraph()
+    pbreak.add_run().add_break(WD_BREAK.PAGE)
+
+    add_heading(doc, "2. 本アプリの換算条件", 1)
     mapping = [
         ("SS", "5000 < x", "整数: 5001以上", "90 < x", "整数: 91以上"),
         ("S+", "3000 ≤ x ≤ 5000", "整数: 3000～5000", "80 ≤ x ≤ 90", "整数: 80～90"),
@@ -421,7 +453,7 @@ def build_body_source():
 
     note = add_body_paragraph(
         doc,
-        "注: 判定は丸め前の値に対して行います。整数の目安は読みやすさのための併記です。境界上では、防御力5000・術耐性90はいずれもS+で、それを超えるとSSです。",
+        "注: 公式にランク境界の数値表はないため、本表は2026-08-31時点の本アプリ実装値です。判定は丸め前の値に対して行い、整数の目安は読みやすさのために併記しています。境界上では、防御力5000・術耐性90はいずれもS+で、それを超えるとSSです。",
         before=4,
         after=0,
         line=1.15,
@@ -434,7 +466,7 @@ def build_body_source():
     pbreak.add_run().add_break(WD_BREAK.PAGE)
 
     # Page 2
-    add_heading(doc, "2. 防御力と術耐性は、同じ文字でも働きが違う", 1)
+    add_heading(doc, "3. 防御力と術耐性は、同じ文字でも働きが違う", 1)
     add_body_paragraph(
         doc,
         "防御力は物理ダメージから固定値を差し引き、術耐性は術ダメージを割合で減らします。そのため、同じB+やAでも軽減量が等しいとは限りません。",
@@ -481,34 +513,32 @@ def build_body_source():
         ],
     )
 
-    add_list_item(doc, "低い1ヒット攻撃力の物理攻撃は、防御力に大きく差し引かれやすく、最低保証の5%へ到達しやすくなります。")
-    add_list_item(doc, "高い1ヒット攻撃力の物理攻撃は、防御力を上回った分を通しやすくなります。")
-    add_list_item(doc, "術耐性は攻撃力に対する割合軽減なので、同じRESなら攻撃力が変わっても軽減率は原則同じです。")
-    add_list_item(doc, "確定ダメージは、防御力・術耐性の影響を受けません。")
+    add_list_item(doc, "物理攻撃は1ヒット攻撃力が低いほど防御力に止められやすく、高いほど防御力を上回った分を通しやすくなります。", after=3, size=10.3)
+    add_list_item(doc, "術耐性は割合軽減なので、同じRESなら攻撃力が変わっても軽減率は原則同じです。", after=3, size=10.3)
+    add_list_item(doc, "確定ダメージは、防御力・術耐性の影響を受けません。", after=3, size=10.3)
 
-    add_heading(doc, "3. Enemy Analysis での使い分け", 1)
-    add_list_item(doc, "「ゲーム内評価」で、物理と術のどちらが通りやすそうかを大まかに判断する。", numbered=True)
-    add_list_item(doc, "「実数値」または敵詳細を開き、境界内のどこにいるかを確認する。", numbered=True)
-    add_list_item(doc, "ダメージ計算機へ実数値を入力し、1ヒット・DPS・総ダメージを比較する。", numbered=True)
-    add_list_item(doc, "ステージ固有補正、形態、自己強化、デバフや無視効果がある場合は、基礎値だけで結論を出さない。", numbered=True)
+    add_heading(doc, "4. Enemy Analysis での使い分け", 1)
+    add_list_item(doc, "「ゲーム内評価」で、物理と術の通りやすさを大まかに判断する。", numbered=True, after=2, size=10.2)
+    add_list_item(doc, "「実数値」または敵詳細で、境界内のどこにいるかを確認する。", numbered=True, after=2, size=10.2)
+    add_list_item(doc, "ダメージ計算機へ実数値を入力し、1ヒット・DPS・総ダメージを比べる。", numbered=True, after=2, size=10.2)
+    add_list_item(doc, "ステージ補正、形態、自己強化、デバフや無視効果がある場合は基礎値だけで結論を出さない。", numbered=True, after=2, size=10.2)
 
     pbreak = doc.add_paragraph()
     pbreak.add_run().add_break(WD_BREAK.PAGE)
 
     # Page 3
-    add_heading(doc, "4. 表示値の前提と例外", 1)
+    add_heading(doc, "5. 表示値の前提と例外", 1)
     definitions = [
-        ("基礎ステータス: ", "本アプリはJP版ゲームデータの敵図鑑と戦闘データを敵IDで結合し、防御力 def と術耐性 magicResistance を読み取ります。"),
-        ("敵レベル: ", "複数レベルがある場合は原則レベル0を採用し、存在しなければレベル順の先頭を用います。"),
-        ("ステージ差: ", "ゲーム内のSp.は、そのステージの敵が図鑑の標準情報と異なることを示します。本アプリの一覧・統計はステージ固有条件やイベント補正を反映しません。"),
-        ("形態・能力: ", "形態変化、自己強化、強襲条件、契約、味方のデバフや防御・術耐性無視により、戦闘中の実効値は変わります。"),
-        ("境界と丸め: ", "評価は丸め前の実数値で判定します。境界付近に小数値がある場合、整数表示との見た目が直感に合わないことがあります。"),
+        ("基礎値: ", "JP版ゲームデータの敵図鑑と戦闘データを敵IDで結合し、防御力 def と術耐性 magicResistance を読み取ります。複数レベルでは原則レベル0を採用します。"),
+        ("ステージ差: ", "ゲーム内のSp.は、そのステージの敵が図鑑の標準情報と異なることを示します。本アプリはステージ固有条件やイベント補正を反映しません。"),
+        ("形態・能力: ", "形態変化、自己強化、強襲条件、契約、デバフや防御・術耐性無視により、戦闘中の実効値は変わります。"),
+        ("境界と丸め: ", "評価は丸め前の値で判定します。境界付近に小数値があると、整数表示との見た目が直感に合わない場合があります。"),
     ]
     for label, body in definitions:
         p = doc.add_paragraph()
-        set_paragraph_spacing(p, before=0, after=6, line=1.25, keep_together=True)
-        set_run_font(p.add_run(label), size=11, color=NAVY, bold=True)
-        set_run_font(p.add_run(body), size=11, color=INK)
+        set_paragraph_spacing(p, before=0, after=4, line=1.2, keep_together=True)
+        set_run_font(p.add_run(label), size=10.3, color=NAVY, bold=True)
+        set_run_font(p.add_run(body), size=10.3, color=INK)
 
     add_callout(
         doc,
@@ -516,18 +546,17 @@ def build_body_source():
         "術耐性（RES）は術ダメージを軽減する値です。スタン・睡眠などへの状態異常耐性、元素耐性、損傷耐性とは別の項目です。",
     )
 
-    add_heading(doc, "5. 読み取りチェックリスト", 1)
+    add_heading(doc, "6. 読み取りチェックリスト", 1)
     checks = [
         "文字ランクは正確な数値ではなく、範囲だと理解している。",
         "防御力は固定値減算、術耐性は割合軽減として別々に読んでいる。",
-        "境界値では実数値表示または敵詳細を確認している。",
-        "ステージ固有補正・Sp.・形態・能力説明を確認している。",
-        "最終判断はダメージ計算機で実数値を使って比較している。",
+        "実数値、Sp.、形態・能力説明、ステージ固有補正を確認している。",
+        "最終判断はダメージ計算機で実数値を使っている。",
     ]
     for check in checks:
-        add_list_item(doc, check, numbered=True, after=3)
+        add_list_item(doc, check, numbered=False, after=2, size=10)
 
-    add_heading(doc, "6. 参照情報", 1)
+    add_heading(doc, "7. 参照情報", 1)
     add_body_paragraph(
         doc,
         "実装根拠: src/lib/enemyData.ts（換算・データ取得）、src/lib/damageCalculator.ts（基本式）、src/components/EnemyAnalysis.tsx（表示切替・基礎値注記）。",
@@ -565,17 +594,6 @@ def build_body_source():
         "https://arknights.wiki.gg/wiki/Damage",
         "（減算・割合軽減・最低保証）",
     )
-    add_body_paragraph(
-        doc,
-        "基準日: 2026-08-31。公式はランク境界の数値表を公開していないため、本書の厳密な境界は本アプリの実装を基準とし、外部Wikiの概算表は補助情報として扱います。",
-        before=4,
-        after=0,
-        line=1.15,
-        size=8.8,
-        color=MUTED,
-        keep_together=True,
-    )
-
     doc.save(BODY_SOURCE)
 
 
