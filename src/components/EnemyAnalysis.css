@@ -2,12 +2,19 @@
 
 .enemy-directory {
   min-width: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.enemy-filters,
+.enemy-statistics-panel,
+.enemy-table-section,
+.enemy-load-state {
+  min-width: 0;
   overflow: hidden;
   border: 1px solid var(--border-strong);
   background: #fff;
 }
-
-.enemy-filters { border-bottom: 1px solid var(--border); }
 
 .enemy-filters-heading {
   min-height: 40px;
@@ -111,11 +118,6 @@
 }
 
 .enemy-level-filter-buttons button:focus-visible { outline: 2px solid #315f80; outline-offset: 1px; }
-
-.enemy-statistics-panel {
-  min-width: 0;
-  border-bottom: 8px solid var(--surface-soft);
-}
 
 .enemy-section-heading,
 .enemy-table-section-heading {
@@ -710,8 +712,6 @@
   color: var(--text-muted);
   font-size: 11px;
 }
-
-.enemy-table-section { min-width: 0; }
 
 .enemy-result-meta { min-height: 44px; }
 

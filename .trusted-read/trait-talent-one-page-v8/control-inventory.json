@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "kind": "google-docs-trusted-read-context",
+  "target": {
+    "documentId": "1hPXvB7uTPKk0vcxfRXppHNtVmya1eGOQ1tjPcS9IRUQ",
+    "title": "特性・素質の実装方針",
+    "revisionId": "ANLCKQm4NHsYKYip0KEr7VW_EloNyTQ7Bgcj5r0yTDck_PlZSF1S3xHr2Eac7C1WWAHpkdgo9UU75aySYWo6-6jF5RqXAyQCjORDmkpoRdY",
+    "documentUrl": "https://docs.google.com/document/d/1hPXvB7uTPKk0vcxfRXppHNtVmya1eGOQ1tjPcS9IRUQ",
+    "selectedTabId": "t.0"
+  },
+  "dropdownMetadata": {
+    "status": "unavailable",
+    "resolvedTool": null,
+    "authoritative": false,
+    "count": 0
+  },
+  "derivedControlInventory": {
+    "hasProtectedControls": false,
+    "authoritativeDropdownCount": 0,
+    "opaqueControlCount": 0,
+    "nativeElementCounts": {},
+    "tabsScanned": [
+      "t.0"
+    ],
+    "controls": [],
+    "nativeElements": []
+  },
+  "editGuidance": {
+    "advisoryOnly": true,
+    "requiresTargetedPreservation": false,
+    "recommendedBehavior": "No protected controls were detected in the scanned scope.",
+    "warnings": []
+  }
+}
