@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
 $inputDoc = 'C:\Users\legen\Documents\arknights_2\tmp\enemy_notation_doc\smoke.docx'
-$outputDir = 'C:\Users\legen\Documents\arknights_2\tmp\enemy_notation_doc\render-smoke'
+$outputDir = 'C:\Users\legen\Documents\arknights_2\.tmp_enemy_notation_render'
 $pdfPath = Join-Path $outputDir 'smoke.pdf'
 
 New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
