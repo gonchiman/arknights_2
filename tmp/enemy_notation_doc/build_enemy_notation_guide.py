@@ -267,7 +267,7 @@ def format_cell_paragraph(paragraph, *, align=WD_ALIGN_PARAGRAPH.LEFT, after=0, 
 
 def add_callout(doc, label, body, *, formula_lines=None):
     table = doc.add_table(rows=1, cols=1)
-    set_table_geometry(table, [9360], borders=False)
+    set_table_geometry(table, [9360], indent=170, borders=False)
     cell = table.cell(0, 0)
     set_cell_shading(cell, LIGHT)
     set_cell_border(cell, left={"sz": 22, "color": BLUE})

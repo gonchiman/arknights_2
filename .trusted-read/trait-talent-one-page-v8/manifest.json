@@ -1,0 +1,57 @@
+{
+  "bridgeVersion": "3.6",
+  "kind": "google-docs-trusted-read",
+  "status": "complete",
+  "outputDir": "/workspace/.trusted-read/trait-talent-one-page-v8",
+  "target": {
+    "documentId": "1hPXvB7uTPKk0vcxfRXppHNtVmya1eGOQ1tjPcS9IRUQ",
+    "title": "特性・素質の実装方針",
+    "revisionId": "ANLCKQm4NHsYKYip0KEr7VW_EloNyTQ7Bgcj5r0yTDck_PlZSF1S3xHr2Eac7C1WWAHpkdgo9UU75aySYWo6-6jF5RqXAyQCjORDmkpoRdY",
+    "documentUrl": "https://docs.google.com/document/d/1hPXvB7uTPKk0vcxfRXppHNtVmya1eGOQ1tjPcS9IRUQ",
+    "selectedTabId": "t.0"
+  },
+  "dropdownMetadata": {
+    "status": "unavailable",
+    "resolvedTool": null,
+    "authoritative": false,
+    "count": 0
+  },
+  "controlAwareness": {
+    "hasProtectedControls": false,
+    "authoritativeDropdownCount": 0,
+    "opaqueControlCount": 0,
+    "affectedParagraphCount": 0,
+    "nativeElementCounts": {},
+    "preservationRequired": false,
+    "recommendedBehavior": "No protected controls were detected in the scanned scope."
+  },
+  "warnings": [],
+  "files": {
+    "document_result": {
+      "path": "/workspace/.trusted-read/trait-talent-one-page-v8/document-result.json",
+      "bytes": 1322026,
+      "sha256": "9c0b6006d1d103257a098b30a2024585b7b94ace92ef0345ea7b9d36920598ca"
+    },
+    "control_inventory": {
+      "path": "/workspace/.trusted-read/trait-talent-one-page-v8/control-inventory.json",
+      "bytes": 1036,
+      "sha256": "b722ef68e4334bf312bb435929e8696a618469dd2c2627e7ec24e255f12ad29e"
+    },
+    "document_outline": {
+      "path": "/workspace/.trusted-read/trait-talent-one-page-v8/document-outline.json",
+      "bytes": 103605,
+      "sha256": "33a04d8b86264deade31a70e71c709e326c98e5b0b414a2caecfca0a7cdc5caf"
+    },
+    "document_text": {
+      "path": "/workspace/.trusted-read/trait-talent-one-page-v8/document-text.md",
+      "bytes": 20182,
+      "sha256": "5ec9b72539f87b52dd50dbdd6f692e51d09304d35983f9b3515a5dedae823f13"
+    },
+    "receipt": {
+      "path": "/workspace/.trusted-read/trait-talent-one-page-v8/receipt.json",
+      "bytes": 967,
+      "sha256": "4e03da57607531191d3c1658abf4b1aac414ca2627e6f958c7e23013779d02e8"
+    }
+  },
+  "error": null
+}
