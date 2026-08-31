@@ -1,3 +1,9 @@
+export interface RawBlackboardEntry {
+  key?: string
+  value?: number
+  valueStr?: string | null
+}
+
 export interface RawSkillLevel {
   name?: string
   description?: string
@@ -9,13 +15,23 @@ export interface RawSkillLevel {
     initSp?: number
     spCost?: number
   }
-  blackboard?: Array<{ key?: string; value?: number; valueStr?: string | null }>
+  blackboard?: RawBlackboardEntry[]
 }
 
 export interface RawAttributeData {
+  maxHp?: number
   atk?: number
+  def?: number
+  magicResistance?: number
+  cost?: number
+  blockCnt?: number
+  moveSpeed?: number
   attackSpeed?: number
   baseAttackTime?: number
+  respawnTime?: number
+  hpRecoveryPerSec?: number
+  spRecoveryPerSec?: number
+  maxDeployCount?: number
 }
 
 export interface RawAttributeKeyFrame {
@@ -36,8 +52,11 @@ export interface RawUnlockCondition {
 export interface RawTraitCandidate {
   unlockCondition?: RawUnlockCondition
   requiredPotentialRank?: number
+  blackboard?: RawBlackboardEntry[]
   overrideDescripton?: string | null
   overrideDescription?: string | null
+  prefabKey?: string | null
+  rangeId?: string | null
 }
 
 export interface RawCharacterTrait {
@@ -47,8 +66,12 @@ export interface RawCharacterTrait {
 export interface RawTalentCandidate {
   unlockCondition?: RawUnlockCondition
   requiredPotentialRank?: number
+  prefabKey?: string | null
   name?: string | null
   description?: string | null
+  rangeId?: string | null
+  blackboard?: RawBlackboardEntry[]
+  tokenKey?: string | null
   isHideTalent?: boolean
 }
 
@@ -56,11 +79,32 @@ export interface RawCharacterTalent {
   candidates?: RawTalentCandidate[]
 }
 
+export interface RawPotentialRank {
+  type?: string
+  description?: string | null
+}
+
+export interface RawOperatorModule {
+  uniEquipId?: string
+  uniEquipName?: string | null
+  uniEquipDesc?: string | null
+  type?: string
+  typeIcon?: string | null
+  typeName1?: string | null
+  typeName2?: string | null
+  unlockEvolvePhase?: string | null
+  unlockLevel?: number
+  charEquipOrder?: number
+  isSpecialEquip?: boolean
+}
+
 export interface OperatorCombatProfile {
   phases: RawCharacterPhase[]
   favorKeyFrames: RawAttributeKeyFrame[]
   trait?: RawCharacterTrait | null
   talents?: RawCharacterTalent[]
+  potentialRanks?: RawPotentialRank[]
+  modules?: RawOperatorModule[]
   traitDescription?: string
   subProfessionTraitDescription?: string
 }

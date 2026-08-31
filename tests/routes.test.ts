@@ -8,6 +8,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
     APP_NAV_ITEMS.map((item) => [item.id, parseHashRoute(item.href).view]),
     [
       ['classifier', 'list'],
+      ['operators', 'operators'],
       ['skills', 'skills'],
       ['damage', 'damage'],
       ['comparison', 'comparison'],
@@ -19,6 +20,10 @@ test('サイドバーから主要ページへ遷移できる', () => {
 
 test('比較ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/comparison'), { view: 'comparison' })
+})
+
+test('オペレーターデータベースのhashを解析する', () => {
+  assert.deepEqual(parseHashRoute('#/operators'), { view: 'operators' })
 })
 
 test('敵分析ページのhashを解析する', () => {

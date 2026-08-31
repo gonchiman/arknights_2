@@ -641,6 +641,21 @@
   color: #684b17;
 }
 
+.reflection-badge.partial,
+.reflection-badge.requires-input {
+  border-color: #c7a76e;
+  border-left-color: #a57b36;
+  background: #fffaf0;
+  color: #684b17;
+}
+
+.reflection-badge.unsupported {
+  border-color: #d6a0a0;
+  border-left-color: #a84b4b;
+  background: #fff6f6;
+  color: #743333;
+}
+
 .reflection-badge.no-direct-effect {
   border-color: var(--border);
   border-left-color: var(--border-strong);
@@ -656,6 +671,29 @@
   font-size: 9px;
   line-height: 1.55;
 }
+
+.operator-effect-value-list {
+  display: grid;
+  gap: 3px;
+  margin: 7px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.operator-effect-value-list li {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: 5px;
+  border-top: 1px solid var(--border);
+  padding-top: 3px;
+  font-size: 8px;
+}
+
+.operator-effect-value-list span { color: var(--text-muted); }
+.operator-effect-value-list strong { color: var(--text); font-size: 9px; }
+.operator-effect-value-list small { color: var(--text-muted); font-size: 8px; }
 
 .operator-effect-card.muted-passive { background: var(--surface-soft); }
 
@@ -732,6 +770,56 @@
   border: 1px solid var(--border);
   border-radius: 0;
   background: #fff;
+}
+
+.passive-reflection-block {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-soft);
+  padding: 9px 10px;
+}
+
+.passive-reflection-block > strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-soft);
+  font-size: 9px;
+}
+
+.passive-reflection-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.passive-reflection-item {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(120px, .8fr) auto minmax(180px, 1.2fr);
+  align-items: center;
+  gap: 7px;
+  border-top: 1px solid var(--border);
+  padding-top: 4px;
+}
+
+.passive-reflection-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.passive-reflection-item > span {
+  min-width: 0;
+  color: var(--text-soft);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.passive-reflection-item > small {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.45;
 }
 
 .calculation-step-list {
@@ -1152,6 +1240,14 @@
 
   .calculation-step code,
   .calculation-step small { margin-left: 29px; }
+
+  .passive-reflection-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .passive-reflection-item > small {
+    grid-column: 1 / -1;
+  }
 
   .sensitivity-chart-caption {
     align-items: flex-start;

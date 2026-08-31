@@ -133,6 +133,69 @@ test('最終昇進・最大レベル・信頼度100・最終スキルレベル�
   assert.equal(row.values[0], 1180)
 })
 
+test('エクシアの無条件攻撃力・攻撃速度素質を比較値へ反映する', () => {
+  const skill = createSkill('FIXED_DURATION')
+  applyExusiaiPassives(skill)
+
+  const damageRow = buildSkillComparisonRow(skill, [ENEMY], 'DAMAGE')
+  const dpsRow = buildSkillComparisonRow(skill, [ENEMY], 'DPS')
+
+  assert.deepEqual(damageRow.unavailableReasons, [])
+  assert.equal(damageRow.values[0], 112)
+  assert.ok(Math.abs((dpsRow.values[0] ?? 0) - 112 / 0.893) < 1e-9)
+  assert.deepEqual(damageRow.warnings, [])
+})
+
+test('スルトの特性と術耐性固定無視を術ダメージへ反映する', () => {
+  const skill = createSkill('FIXED_DURATION')
+  applySurtrPassives(skill)
+  setSkillDescription(skill, '攻撃力が100%まで上昇')
+  const enemy = { id: 'surtr-target', defense: 50, resistance: 50 }
+
+  const row = buildSkillComparisonRow(skill, [enemy], 'DAMAGE')
+
+  assert.equal(row.damageType, 'ARTS')
+  assert.deepEqual(row.unavailableReasons, [])
+  assert.equal(row.values[0], 140)
+})
+
+test('明示されたスキルのダメージ種別を特性の推奨値より優先する', () => {
+  const skill = createSkill('FIXED_DURATION')
+  applySurtrPassives(skill)
+  setSkillDescription(skill, '物理ダメージを与える')
+  const enemy = { id: 'physical-target', defense: 50, resistance: 50 }
+
+  const row = buildSkillComparisonRow(skill, [enemy], 'DAMAGE')
+
+  assert.equal(row.damageType, 'PHYSICAL')
+  assert.equal(row.values[0], 100)
+})
+
+test('条件入力待ちと未対応の特性・素質を警告理由に追加する', () => {
+  const skill = createSkill('FIXED_DURATION')
+  skill.operatorId = 'char_172_svrash'
+  skill.operatorName = 'シルバーアッシュ'
+  skill.operatorProfile.trait = { candidates: [{
+    unlockCondition: { phase: 'PHASE_0', level: 1 },
+    requiredPotentialRank: 0,
+    overrideDescription: '遠距離攻撃時の攻撃力が80%まで低下',
+    blackboard: [{ key: 'atk_scale', value: 0.8 }],
+  }] }
+  skill.operatorProfile.talents = [{ candidates: [{
+    unlockCondition: { phase: 'PHASE_0', level: 1 },
+    requiredPotentialRank: 0,
+    name: '未登録テスト',
+    description: '与えるダメージが上昇',
+    blackboard: [{ key: 'damage_scale', value: 1.2 }],
+  }] }]
+
+  const row = buildSkillComparisonRow(skill, [ENEMY], 'DAMAGE')
+
+  assert.deepEqual(row.unavailableReasons, [])
+  assert.ok(row.warnings.some((warning) => warning.includes('遠距離攻撃かどうかを選択')))
+  assert.ok(row.warnings.some((warning) => warning.includes('blackboard「damage_scale」')))
+})
+
 test('CSVは表示行をUTF-8 BOM付きで引用し、敵条件と計算状態を含める', () => {
   const skill = createSkill('FIXED_DURATION')
   skill.operatorName = 'テスト, "A"'
@@ -150,6 +213,60 @@ function calculateMetric(skill: SkillRecord, metric: ComparisonMetric): number |
   const row = buildSkillComparisonRow(skill, [ENEMY], metric)
   assert.deepEqual(row.unavailableReasons, [])
   return row.values[0]
+}
+
+function applyExusiaiPassives(skill: SkillRecord) {
+  skill.operatorId = 'char_103_angel'
+  skill.operatorName = 'エクシア'
+  skill.operatorProfile.trait = { candidates: [{
+    unlockCondition: { phase: 'PHASE_0', level: 1 },
+    requiredPotentialRank: 0,
+    overrideDescription: '飛行ユニットを優先して攻撃',
+    blackboard: [],
+  }] }
+  skill.operatorProfile.talents = [
+    { candidates: [{
+      unlockCondition: { phase: 'PHASE_0', level: 1 },
+      requiredPotentialRank: 0,
+      name: '高速装填',
+      description: '攻撃速度+12',
+      blackboard: [{ key: 'attack_speed', value: 12 }],
+    }] },
+    { candidates: [{
+      unlockCondition: { phase: 'PHASE_0', level: 1 },
+      requiredPotentialRank: 0,
+      name: '天使の祝福',
+      description: '攻撃力+6%、最大HP+10%',
+      blackboard: [
+        { key: 'atk', value: 0.06 },
+        { key: 'max_hp', value: 0.1 },
+      ],
+    }] },
+  ]
+}
+
+function applySurtrPassives(skill: SkillRecord) {
+  skill.operatorId = 'char_350_surtr'
+  skill.operatorName = 'スルト'
+  skill.operatorProfile.trait = { candidates: [{
+    unlockCondition: { phase: 'PHASE_0', level: 1 },
+    requiredPotentialRank: 0,
+    overrideDescription: '通常攻撃が術ダメージを与える',
+    blackboard: [],
+  }] }
+  skill.operatorProfile.talents = [{ candidates: [{
+    unlockCondition: { phase: 'PHASE_0', level: 1 },
+    requiredPotentialRank: 0,
+    name: '溶剣',
+    description: '攻撃時、対象の術耐性を20無視',
+    blackboard: [{ key: 'magic_resist_penetrate_fixed', value: 20 }],
+  }] }]
+}
+
+function setSkillDescription(skill: SkillRecord, description: string) {
+  skill.description = description
+  skill.raw.description = description
+  for (const level of skill.skillLevels) level.description = description
 }
 
 function createSkill(effectWindow: EffectWindowType): SkillRecord {

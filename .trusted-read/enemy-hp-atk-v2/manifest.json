@@ -1,0 +1,59 @@
+{
+  "bridgeVersion": "3.6",
+  "kind": "google-docs-trusted-read",
+  "status": "complete",
+  "outputDir": "/workspace/.trusted-read/enemy-hp-atk-v2",
+  "target": {
+    "documentId": "1hME5Y6VRY1BD7FWHE89QcSJAjPv_uZWv2oByARawkKk",
+    "title": "敵の防御力・術耐性 表記ガイド",
+    "revisionId": "ANLCKQn6S7UiSdrmgWNgBguB8XYg77cVoYqtpi9bNg6r2UfpWg-VA5tVEHcjx12oEmO7MQFZpSS7L_D6pxsPpDQ3WQVFYjxGNH2OoNdrNHk",
+    "documentUrl": "https://docs.google.com/document/d/1hME5Y6VRY1BD7FWHE89QcSJAjPv_uZWv2oByARawkKk",
+    "selectedTabId": "t.0"
+  },
+  "dropdownMetadata": {
+    "status": "unavailable",
+    "resolvedTool": null,
+    "authoritative": false,
+    "count": 0
+  },
+  "controlAwareness": {
+    "hasProtectedControls": false,
+    "authoritativeDropdownCount": 0,
+    "opaqueControlCount": 0,
+    "affectedParagraphCount": 0,
+    "nativeElementCounts": {
+      "dateElement": 3
+    },
+    "preservationRequired": false,
+    "recommendedBehavior": "No protected controls were detected in the scanned scope."
+  },
+  "warnings": [],
+  "files": {
+    "document_result": {
+      "path": "/workspace/.trusted-read/enemy-hp-atk-v2/document-result.json",
+      "bytes": 417563,
+      "sha256": "440ee83ce968b8f249ead99e0184356690d46971598246925221196f9646b87d"
+    },
+    "control_inventory": {
+      "path": "/workspace/.trusted-read/enemy-hp-atk-v2/control-inventory.json",
+      "bytes": 3325,
+      "sha256": "53c2baba7b59e70f3efe2835d09dfd2e2dbed63f85ce2dfc1c43ac549a000e75"
+    },
+    "document_outline": {
+      "path": "/workspace/.trusted-read/enemy-hp-atk-v2/document-outline.json",
+      "bytes": 51889,
+      "sha256": "8d2c5edadff096249a7e67b5a867305553f7ec3d4ca1d0ae4e277828c2ed48bc"
+    },
+    "document_text": {
+      "path": "/workspace/.trusted-read/enemy-hp-atk-v2/document-text.md",
+      "bytes": 11769,
+      "sha256": "a66f659690474b0560538dcf00698c47fd4de4fc989aa0dcbd2299e0de54d3b1"
+    },
+    "receipt": {
+      "path": "/workspace/.trusted-read/enemy-hp-atk-v2/receipt.json",
+      "bytes": 1008,
+      "sha256": "5a43d30a91091f080ea507e67f6d1423a68a505581ab56cb6c753a3f3aed7cd7"
+    }
+  },
+  "error": null
+}
