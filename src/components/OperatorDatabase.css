@@ -9,6 +9,17 @@
   background: var(--surface);
 }
 
+.operator-database-filter-panel .result-meta { border-bottom: 0; }
+
+.operator-statistics-panel,
+.operator-database-table-panel {
+  margin-top: 12px;
+}
+
+.operator-statistics-panel .enemy-metric-selector {
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+}
+
 .operator-database-table-wrap {
   max-width: 100%;
   overscroll-behavior-x: contain;
@@ -371,6 +382,18 @@
 @media (max-width: 760px) {
   .operator-database-table { min-width: 900px; }
   .operator-detail-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  .operator-statistics-panel .enemy-metric-selector {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .operator-statistics-panel .enemy-metric-selector button {
+    border-right: 1px solid var(--border-strong);
+    border-bottom: 1px solid var(--border-strong);
+  }
+
+  .operator-statistics-panel .enemy-metric-selector button:nth-child(3n) { border-right: 0; }
+  .operator-statistics-panel .enemy-metric-selector button:nth-last-child(-n + 3) { border-bottom: 0; }
 }
 
 @media (max-width: 560px) {
@@ -389,6 +412,37 @@
   .operator-detail-list { grid-template-columns: minmax(0, 1fr); }
   .operator-detail-item-heading { display: block; }
   .operator-detail-item-heading span { display: block; margin-top: 4px; }
+
+  .operator-statistics-panel .enemy-metric-selector {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .operator-statistics-panel .enemy-metric-selector button,
+  .operator-statistics-panel .enemy-metric-selector button:nth-child(3n) {
+    border-right: 1px solid var(--border-strong);
+    border-bottom: 1px solid var(--border-strong);
+  }
+
+  .operator-statistics-panel .enemy-metric-selector button:nth-child(2n) { border-right: 0; }
+
+  .operator-statistics-panel .enemy-metric-selector button:last-child {
+    grid-column: 1 / -1;
+    border-right: 0;
+    border-bottom: 0;
+  }
+
+  .operator-statistics-panel .enemy-statistics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .operator-statistics-panel .enemy-statistics-grid > div,
+  .operator-statistics-panel .enemy-statistics-grid > div:nth-child(4n) {
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .operator-statistics-panel .enemy-statistics-grid > div:nth-child(2n) { border-right: 0; }
+  .operator-statistics-panel .enemy-statistics-grid > div:nth-last-child(-n + 2) { border-bottom: 0; }
 }
 
 @media (pointer: coarse) {
