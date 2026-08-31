@@ -76,6 +76,7 @@ test('図鑑と基礎戦闘データを敵IDで結合する', () => {
     lifePointReduce: 2,
     databaseLevel: 0,
     databaseLevelCount: 2,
+    stageAppearanceCount: null,
     statusImmunities: ['スタン'],
     ratings: {
       endurance: 'B',
@@ -103,6 +104,22 @@ test('Key/Value配列形式の敵データにも対応する', () => {
 
   assert.equal(rows[0]?.stats.maxHp, 5000)
   assert.equal(rows[0]?.databaseLevel, 0)
+})
+
+test('生成済みデータから登場ステージ数を結合し、未登場の敵を0として扱う', () => {
+  const counted = buildEnemyRecords(handbook, database, {
+    schemaVersion: 1,
+    enemies: {
+      enemy_test: { stageCount: 12, stageIds: ['main_00-01'] },
+    },
+  })
+  const zero = buildEnemyRecords(handbook, database, {
+    schemaVersion: 1,
+    enemies: {},
+  })
+
+  assert.equal(counted[0]?.stageAppearanceCount, 12)
+  assert.equal(zero[0]?.stageAppearanceCount, 0)
 })
 
 test('名前・説明・内部IDと区分で絞り込める', () => {

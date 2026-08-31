@@ -206,6 +206,7 @@ export function EnemyAnalysis() {
                     <tr>
                       <th className="enemy-name-column">敵</th>
                       <th>区分</th>
+                      <th className="numeric-heading">登場ステージ数</th>
                       <th className="numeric-heading">{statDisplayMode === 'RATING' ? '耐久' : 'HP'}</th>
                       <th className="numeric-heading">攻撃力</th>
                       <th className="numeric-heading">防御力</th>
@@ -243,7 +244,7 @@ export function EnemyAnalysis() {
       </section>
 
       <p className="enemy-data-note">
-        ステージ固有の条件やイベントによる補正は反映せず、比較用の基礎ステータスを集計しています。
+        登場ステージ数は通常ステージ集計（stage_table内の戦闘ステージをlevelId単位で重複除去）です。ローグライク等の別管理ステージは含みません。「—」は集計データ未取得を示します。ステージ固有の補正は基礎ステータスへ反映していません。
       </p>
       {detailEnemy && <EnemyDetailModal enemy={detailEnemy} onClose={closeEnemyDetail} />}
     </section>
@@ -277,6 +278,7 @@ function EnemyRow({
       <td>
         <span className={`enemy-level-badge ${enemy.levelType.toLowerCase()}`}>{LEVEL_LABELS[enemy.levelType]}</span>
       </td>
+      <EnemyNumberCell value={enemy.stageAppearanceCount} />
       <EnemyPrimaryStatCell mode={statDisplayMode} rating={enemy.ratings.endurance} value={enemy.stats.maxHp} />
       <EnemyPrimaryStatCell mode={statDisplayMode} rating={enemy.ratings.attack} value={enemy.stats.attack} />
       <EnemyPrimaryStatCell mode={statDisplayMode} rating={enemy.ratings.defense} value={enemy.stats.defense} />

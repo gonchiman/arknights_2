@@ -119,6 +119,7 @@ export function EnemyDetailModal({ enemy, onClose }: Props) {
               <EnemyDetailValue label="攻撃種別" value={damageTypes} />
               <EnemyDetailValue label="攻撃範囲" value={getAttackWayLabel(enemy.attackWay)} />
               <EnemyDetailValue label="耐久値減少" value={formatInteger(enemy.lifePointReduce)} />
+              <EnemyDetailValue label="登場ステージ数" value={formatInteger(enemy.stageAppearanceCount)} />
               <EnemyDetailValue label="参照DBレベル" value={databaseInfo} />
             </dl>
           </section>

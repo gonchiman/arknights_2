@@ -1,10 +1,12 @@
 import type { EnemyLevelType, EnemyRatings, EnemyRecord, EnemyStats } from '../types/enemy'
 
 const BASE = 'https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/master/jp/gamedata'
+const APP_BASE = import.meta.env?.BASE_URL ?? '/'
 
 export const ENEMY_DATA_URLS = {
   handbook: `${BASE}/excel/enemy_handbook_table.json`,
   database: `${BASE}/levels/enemydata/enemy_database.json`,
+  stageAppearances: `${APP_BASE.endsWith('/') ? APP_BASE : `${APP_BASE}/`}data/enemy-stage-appearances.json`,
 }
 
 export interface EnemyFilters {
@@ -45,16 +47,20 @@ export function loadEnemyRecords(): Promise<EnemyRecord[]> {
   const request = Promise.all([
     fetch(ENEMY_DATA_URLS.handbook),
     fetch(ENEMY_DATA_URLS.database),
-  ]).then(async ([handbookResponse, databaseResponse]) => {
+    fetch(ENEMY_DATA_URLS.stageAppearances).catch(() => null),
+  ]).then(async ([handbookResponse, databaseResponse, stageAppearancesResponse]) => {
     if (!handbookResponse.ok || !databaseResponse.ok) {
       throw new Error('敵データの取得に失敗しました。')
     }
 
-    const [handbook, database] = await Promise.all([
+    const [handbook, database, stageAppearances] = await Promise.all([
       handbookResponse.json() as Promise<unknown>,
       databaseResponse.json() as Promise<unknown>,
+      stageAppearancesResponse?.ok
+        ? stageAppearancesResponse.json().catch(() => null) as Promise<unknown>
+        : Promise.resolve(null),
     ])
-    return buildEnemyRecords(handbook, database)
+    return buildEnemyRecords(handbook, database, stageAppearances)
   })
 
   enemyRecordsRequest = request.catch((cause) => {
@@ -64,10 +70,15 @@ export function loadEnemyRecords(): Promise<EnemyRecord[]> {
   return enemyRecordsRequest
 }
 
-export function buildEnemyRecords(handbookSource: unknown, databaseSource: unknown): EnemyRecord[] {
+export function buildEnemyRecords(
+  handbookSource: unknown,
+  databaseSource: unknown,
+  stageAppearanceSource: unknown = null,
+): EnemyRecord[] {
   const handbookRoot = asRecord(handbookSource)
   const handbookEntries = getEntries(handbookRoot?.enemyData)
   const database = buildDatabaseMap(databaseSource)
+  const stageAppearances = buildStageAppearanceMap(stageAppearanceSource)
   const rows: EnemyRecord[] = []
 
   for (const [fallbackId, rawEntry] of handbookEntries) {
@@ -103,6 +114,9 @@ export function buildEnemyRecords(handbookSource: unknown, databaseSource: unkno
       lifePointReduce: readNumber(enemyData?.lifePointReduce),
       databaseLevel: readNumber(baseLevel?.level),
       databaseLevelCount: levels.length,
+      stageAppearanceCount: stageAppearances.available
+        ? stageAppearances.counts.get(id) ?? 0
+        : null,
       statusImmunities: readStatusImmunities(attributes),
       ratings: buildEnemyRatings(stats),
       stats,
@@ -114,6 +128,25 @@ export function buildEnemyRecords(handbookSource: unknown, databaseSource: unkno
     || a.index.localeCompare(b.index, 'ja', { numeric: true })
     || a.name.localeCompare(b.name, 'ja')
   ))
+}
+
+function buildStageAppearanceMap(source: unknown): {
+  available: boolean
+  counts: Map<string, number>
+} {
+  const root = asRecord(source)
+  const entries = asRecord(root?.enemies)
+  if (!root || !entries || readNumber(root.schemaVersion) !== 1) {
+    return { available: false, counts: new Map() }
+  }
+
+  const counts = new Map<string, number>()
+  for (const [enemyId, rawEntry] of Object.entries(entries)) {
+    const stageCount = readNumber(asRecord(rawEntry)?.stageCount)
+    if (stageCount === null || !Number.isInteger(stageCount) || stageCount < 0) continue
+    counts.set(enemyId, stageCount)
+  }
+  return { available: true, counts }
 }
 
 export function matchesEnemyFilters(enemy: EnemyRecord, filters: EnemyFilters): boolean {
