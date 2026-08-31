@@ -25,7 +25,8 @@ interface StatMetric {
   suffix: string
   valueDigits: number
   summaryDigits: number
-  binCount: number
+  logBinCount: number
+  minimumLinearBinWidth: number
   defaultScale: HistogramScale
 }
 
@@ -56,13 +57,13 @@ interface IndividualGroup {
 }
 
 const STAT_METRICS: StatMetric[] = [
-  { key: 'maxHp', label: 'HP', axisLabel: 'HP', suffix: '', valueDigits: 0, summaryDigits: 1, binCount: 12, defaultScale: 'LOG' },
-  { key: 'attack', label: '攻撃力', axisLabel: '攻撃力', suffix: '', valueDigits: 0, summaryDigits: 1, binCount: 12, defaultScale: 'LOG' },
-  { key: 'defense', label: '防御力', axisLabel: '防御力', suffix: '', valueDigits: 0, summaryDigits: 1, binCount: 12, defaultScale: 'LOG' },
-  { key: 'magicResistance', label: '術耐性', axisLabel: '術耐性', suffix: '', valueDigits: 0, summaryDigits: 1, binCount: 10, defaultScale: 'LINEAR' },
-  { key: 'moveSpeed', label: '移動速度', axisLabel: '移動速度', suffix: '', valueDigits: 2, summaryDigits: 2, binCount: 10, defaultScale: 'LINEAR' },
-  { key: 'baseAttackTime', label: '攻撃間隔', axisLabel: '攻撃間隔（秒）', suffix: '秒', valueDigits: 2, summaryDigits: 2, binCount: 10, defaultScale: 'LINEAR' },
-  { key: 'massLevel', label: '重量', axisLabel: '重量', suffix: '', valueDigits: 0, summaryDigits: 2, binCount: 10, defaultScale: 'LINEAR' },
+  { key: 'maxHp', label: 'HP', axisLabel: 'HP', suffix: '', valueDigits: 0, summaryDigits: 1, logBinCount: 12, minimumLinearBinWidth: 1, defaultScale: 'LOG' },
+  { key: 'attack', label: '攻撃力', axisLabel: '攻撃力', suffix: '', valueDigits: 0, summaryDigits: 1, logBinCount: 12, minimumLinearBinWidth: 1, defaultScale: 'LOG' },
+  { key: 'defense', label: '防御力', axisLabel: '防御力', suffix: '', valueDigits: 0, summaryDigits: 1, logBinCount: 12, minimumLinearBinWidth: 1, defaultScale: 'LOG' },
+  { key: 'magicResistance', label: '術耐性', axisLabel: '術耐性', suffix: '', valueDigits: 0, summaryDigits: 1, logBinCount: 10, minimumLinearBinWidth: 1, defaultScale: 'LINEAR' },
+  { key: 'moveSpeed', label: '移動速度', axisLabel: '移動速度', suffix: '', valueDigits: 2, summaryDigits: 2, logBinCount: 10, minimumLinearBinWidth: 0.01, defaultScale: 'LINEAR' },
+  { key: 'baseAttackTime', label: '攻撃間隔', axisLabel: '攻撃間隔（秒）', suffix: '秒', valueDigits: 2, summaryDigits: 2, logBinCount: 10, minimumLinearBinWidth: 0.01, defaultScale: 'LINEAR' },
+  { key: 'massLevel', label: '重量', axisLabel: '重量', suffix: '', valueDigits: 0, summaryDigits: 2, logBinCount: 10, minimumLinearBinWidth: 1, defaultScale: 'LINEAR' },
 ]
 
 const CHART_OPTIONS: Array<{ key: ChartKind; label: string }> = [
@@ -103,8 +104,13 @@ export function EnemyStatisticsPanel({ rows, scopeLabel }: { rows: EnemyRecord[]
     [rows, selectedMetric.key],
   )
   const statistics = useMemo(
-    () => calculateNumericStatistics(metricSource, selectedMetric.binCount, axisScale),
-    [metricSource, selectedMetric.binCount, axisScale],
+    () => calculateNumericStatistics(
+      metricSource,
+      selectedMetric.logBinCount,
+      axisScale,
+      selectedMetric.minimumLinearBinWidth,
+    ),
+    [metricSource, selectedMetric.logBinCount, selectedMetric.minimumLinearBinWidth, axisScale],
   )
 
   const selectMetric = (metric: StatMetric) => {
@@ -278,7 +284,7 @@ function HistogramFigure({
   const scaleName = getEffectiveScaleName(scale, statistics.minimum)
   const chartDescription = statistics.count === 0
     ? `${scopeLabel}には${metric.label}の数値データがありません。`
-    : `${scopeLabel}の${metric.label}を${statistics.bins.length}区間の${scaleName}目盛で集計したヒストグラムです。`
+    : `${scopeLabel}の${metric.label}を${statistics.bins.length}階級の${scaleName}目盛で集計したヒストグラムです。`
 
   return (
     <figure className="enemy-analysis-figure">
@@ -304,12 +310,16 @@ function HistogramFigure({
           />
         )}
       </div>
-      {statistics.count > 0 && <FrequencyDistributionTable statistics={statistics} metric={metric} />}
+      {statistics.count > 0 && <FrequencyDistributionTable statistics={statistics} metric={metric} scale={scale} />}
     </figure>
   )
 }
 
-function FrequencyDistributionTable({ statistics, metric }: { statistics: NumericStatistics; metric: StatMetric }) {
+function FrequencyDistributionTable({ statistics, metric, scale }: {
+  statistics: NumericStatistics
+  metric: StatMetric
+  scale: HistogramScale
+}) {
   let cumulativeCount = 0
   const rows = statistics.bins.map((bin) => {
     cumulativeCount += bin.count
@@ -320,20 +330,51 @@ function FrequencyDistributionTable({ statistics, metric }: { statistics: Numeri
       cumulativeProportion: cumulativeCount / statistics.count,
     }
   })
+  const histogram = statistics.histogram
+  const isAdaptiveLinear = scale === 'LINEAR'
+    && histogram?.scale === 'LINEAR'
+    && histogram.binWidth !== null
+    && histogram.normalRangeStart === 0
+  const normalCount = statistics.bins
+    .filter((bin) => !bin.isOverflow)
+    .reduce((sum, bin) => sum + bin.count, 0)
 
   return (
     <details className="enemy-frequency-details">
       <summary>
         <span>度数分布表</span>
-        <small>{statistics.bins.length}区間</small>
+        <small>{statistics.bins.length}階級</small>
       </summary>
+      {isAdaptiveLinear && histogram && (
+        <dl className="enemy-frequency-meta" aria-label={`${metric.label}の階級設定`}>
+          <div>
+            <dt>階級幅</dt>
+            <dd>{formatNumber(histogram.binWidth ?? 0, metric.valueDigits, metric.suffix)}</dd>
+          </div>
+          <div>
+            <dt>通常範囲</dt>
+            <dd>
+              {formatCompactRange(histogram.normalRangeStart, histogram.normalRangeEnd, metric)}
+              （{formatNumber((normalCount / statistics.count) * 100, 1, '%')}）
+            </dd>
+          </div>
+          <div>
+            <dt>上限超過</dt>
+            <dd>{histogram.hasOverflow ? `${formatNumber(histogram.normalRangeEnd, metric.valueDigits, metric.suffix)}超` : 'なし'}</dd>
+          </div>
+          <div>
+            <dt>階級数</dt>
+            <dd>{statistics.bins.length}</dd>
+          </div>
+        </dl>
+      )}
       <div className="enemy-frequency-table-wrapper">
         <table className="enemy-frequency-table">
           <caption className="enemy-visually-hidden">{metric.label}の度数分布表</caption>
           <thead>
             <tr>
               <th scope="col">階級</th>
-              <th scope="col">敵数</th>
+              <th scope="col">度数</th>
               <th scope="col">割合</th>
               <th scope="col">累積割合</th>
             </tr>
@@ -342,9 +383,9 @@ function FrequencyDistributionTable({ statistics, metric }: { statistics: Numeri
             {rows.map(({ bin, cumulativeCount: rowCumulativeCount, proportion, cumulativeProportion }, index) => (
               <tr key={`${bin.start}-${index}`}>
                 <th scope="row">{formatHistogramRange(bin, statistics, metric)}</th>
-                <td>{bin.count}体</td>
+                <td>{bin.count}</td>
                 <td>{formatNumber(proportion * 100, 1, '%')}</td>
-                <td title={`${rowCumulativeCount}体`}>{formatNumber(cumulativeProportion * 100, 1, '%')}</td>
+                <td title={`累積度数：${rowCumulativeCount}`}>{formatNumber(cumulativeProportion * 100, 1, '%')}</td>
               </tr>
             ))}
           </tbody>
@@ -371,8 +412,16 @@ function HistogramSvg({
   description: string
   scale: HistogramScale
 }) {
-  const minimum = statistics.minimum ?? 0
-  const maximum = statistics.maximum ?? minimum
+  const histogram = statistics.histogram
+  const isAdaptiveLinear = scale === 'LINEAR'
+    && histogram?.scale === 'LINEAR'
+    && histogram.binWidth !== null
+    && histogram.normalRangeStart === 0
+  const overflowDisplayWidth = isAdaptiveLinear && histogram.hasOverflow ? histogram.binWidth ?? 0 : 0
+  const minimum = isAdaptiveLinear ? histogram.normalRangeStart : statistics.minimum ?? 0
+  const maximum = isAdaptiveLinear
+    ? histogram.normalRangeEnd + overflowDisplayWidth
+    : statistics.maximum ?? minimum
   const plotLeft = CHART_MARGIN.left
   const plotTop = CHART_MARGIN.top
   const plotRight = width - CHART_MARGIN.right
@@ -383,8 +432,23 @@ function HistogramSvg({
   const countStep = Math.max(1, Math.ceil(maxBinCount / 4))
   const countMaximum = Math.ceil(maxBinCount / countStep) * countStep
   const countTicks = Array.from({ length: Math.floor(countMaximum / countStep) + 1 }, (_, index) => index * countStep)
-  const valueScale = createValueScale(minimum, maximum, plotLeft, plotRight, scale)
-  const xTicks = createScaleTicks(minimum, maximum, width < 480 ? 3 : 5, scale)
+  const valueScale = createValueScale(minimum, maximum, plotLeft, plotRight, isAdaptiveLinear ? 'LINEAR' : scale)
+  const xTicks = isAdaptiveLinear
+    ? createAdaptiveLinearTicks(histogram.normalRangeStart, histogram.normalRangeEnd, width < 480 ? 2 : 5)
+    : createScaleTicks(minimum, maximum, width < 480 ? 3 : 5, scale)
+  const referencePosition = (value: number) => {
+    if (!isAdaptiveLinear) return valueScale.position(value)
+    if (histogram.hasOverflow && value > histogram.normalRangeEnd) {
+      return valueScale.position(histogram.normalRangeEnd + ((histogram.binWidth ?? 0) / 2))
+    }
+    return valueScale.position(Math.min(histogram.normalRangeEnd, Math.max(histogram.normalRangeStart, value)))
+  }
+  const overflowTick = isAdaptiveLinear && histogram.hasOverflow
+    ? {
+      value: histogram.normalRangeEnd + ((histogram.binWidth ?? 0) / 2),
+      label: `${formatNumber(histogram.normalRangeEnd, metric.valueDigits, metric.suffix)}超`,
+    }
+    : undefined
   const y = (value: number) => plotBottom - ((value / countMaximum) * plotHeight)
   const barGap = Math.min(3, Math.max(1, plotWidth / Math.max(1, statistics.bins.length) * 0.08))
 
@@ -409,14 +473,23 @@ function HistogramSvg({
         const barTop = y(bin.count)
         const rangeLabel = formatHistogramRange(bin, statistics, metric)
         return (
-          <rect className="enemy-chart-bar" x={startX + (barGap / 2)} y={barTop} width={barWidth} height={Math.max(0, plotBottom - barTop)} key={`${bin.start}-${index}`}>
+          <rect className={`enemy-chart-bar${bin.isOverflow ? ' overflow' : ''}`} x={startX + (barGap / 2)} y={barTop} width={barWidth} height={Math.max(0, plotBottom - barTop)} key={`${bin.start}-${index}`}>
             <title>{rangeLabel}：{bin.count}体</title>
           </rect>
         )
       })}
 
-      <MeanMedianReferences statistics={statistics} metric={metric} position={valueScale.position} plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop} plotBottom={plotBottom} />
-      <BottomAxis ticks={xTicks} position={valueScale.position} metric={metric} plotLeft={plotLeft} plotRight={plotRight} plotBottom={plotBottom} axisLabel={`${metric.axisLabel}（${valueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛）`} />
+      <MeanMedianReferences statistics={statistics} metric={metric} position={referencePosition} plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop} plotBottom={plotBottom} />
+      <BottomAxis
+        ticks={xTicks}
+        position={valueScale.position}
+        metric={metric}
+        plotLeft={plotLeft}
+        plotRight={plotRight}
+        plotBottom={plotBottom}
+        axisLabel={`${metric.axisLabel}（${valueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛）`}
+        extraTick={overflowTick}
+      />
       <VerticalAxisTitle label="敵数" x={14} plotTop={plotTop} plotBottom={plotBottom} />
     </svg>
   )
@@ -837,7 +910,17 @@ function MeanMedianReferences({ statistics, metric, position, plotLeft, plotRigh
   )
 }
 
-function BottomAxis({ ticks, position, metric, plotLeft, plotRight, plotBottom, axisLabel, chartHeight = CHART_HEIGHT }: {
+function BottomAxis({
+  ticks,
+  position,
+  metric,
+  plotLeft,
+  plotRight,
+  plotBottom,
+  axisLabel,
+  chartHeight = CHART_HEIGHT,
+  extraTick,
+}: {
   ticks: number[]
   position: (value: number) => number
   metric: StatMetric
@@ -846,6 +929,7 @@ function BottomAxis({ ticks, position, metric, plotLeft, plotRight, plotBottom, 
   plotBottom: number
   axisLabel: string
   chartHeight?: number
+  extraTick?: { value: number; label: string }
 }) {
   return (
     <>
@@ -857,6 +941,14 @@ function BottomAxis({ ticks, position, metric, plotLeft, plotRight, plotBottom, 
           </text>
         </g>
       ))}
+      {extraTick && (
+        <g>
+          <line className="enemy-chart-axis-tick" x1={position(extraTick.value)} x2={position(extraTick.value)} y1={plotBottom} y2={plotBottom + 5} />
+          <text className="enemy-chart-tick enemy-chart-overflow-tick" x={position(extraTick.value)} y={plotBottom + 19} textAnchor="middle">
+            {extraTick.label}
+          </text>
+        </g>
+      )}
       <text className="enemy-chart-axis-title" x={(plotLeft + plotRight) / 2} y={chartHeight - 8} textAnchor="middle">{axisLabel}</text>
     </>
   )
@@ -962,6 +1054,10 @@ function createScaleTicks(minimum: number, maximum: number, count: number, scale
   return Array.from({ length: count }, (_, index) => minimum + (((maximum - minimum) * index) / (count - 1)))
 }
 
+function createAdaptiveLinearTicks(minimum: number, maximum: number, divisions: number): number[] {
+  return Array.from({ length: divisions + 1 }, (_, index) => minimum + (((maximum - minimum) * index) / divisions))
+}
+
 function createEcdfPath(points: EmpiricalCdfPoint[], x: (value: number) => number, y: (value: number) => number): string {
   if (points.length === 0) return ''
   let path = `M ${x(points[0].value)} ${y(0)}`
@@ -1002,10 +1098,17 @@ function clampLabelX(value: number, minimum: number, maximum: number): number {
 }
 
 function formatHistogramRange(bin: HistogramBin, statistics: NumericStatistics, metric: StatMetric): string {
+  if (bin.isOverflow) {
+    return `${formatNumber(bin.start, metric.summaryDigits, metric.suffix)}超`
+  }
   if (statistics.minimum === statistics.maximum) {
     return formatNumber(statistics.minimum ?? bin.start, metric.valueDigits, metric.suffix)
   }
   return `${formatNumber(bin.start, metric.summaryDigits, metric.suffix)}以上、${formatNumber(bin.end, metric.summaryDigits, metric.suffix)}${bin.includesMaximum ? '以下' : '未満'}`
+}
+
+function formatCompactRange(start: number, end: number, metric: StatMetric): string {
+  return `${formatNumber(start, metric.valueDigits)}～${formatNumber(end, metric.valueDigits, metric.suffix)}`
 }
 
 function formatNumber(value: number, maximumFractionDigits: number, suffix = ''): string {

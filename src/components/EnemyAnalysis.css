@@ -393,6 +393,13 @@
 }
 
 .enemy-chart-bar:hover { fill-opacity: .95; }
+.enemy-chart-bar.overflow { fill: var(--danger); fill-opacity: .62; }
+.enemy-chart-bar.overflow:hover { fill-opacity: .88; }
+
+.enemy-chart-overflow-tick {
+  fill: var(--danger);
+  font-weight: 700;
+}
 
 .enemy-frequency-details {
   margin-top: 8px;
@@ -431,6 +438,39 @@
   color: var(--text-muted);
   font-size: 8px;
   font-weight: 400;
+}
+
+.enemy-frequency-meta {
+  display: grid;
+  grid-template-columns: .8fr 1.8fr 1fr .7fr;
+  margin: 0;
+  border-top: 1px solid var(--border);
+  background: #fff;
+}
+
+.enemy-frequency-meta > div {
+  min-width: 0;
+  border-right: 1px solid var(--border);
+  padding: 6px 8px;
+}
+
+.enemy-frequency-meta > div:last-child { border-right: 0; }
+
+.enemy-frequency-meta dt {
+  color: var(--text-muted);
+  font-size: 7px;
+  font-weight: 700;
+}
+
+.enemy-frequency-meta dd {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .enemy-frequency-table-wrapper {
@@ -873,6 +913,10 @@
   .enemy-analysis-figure figcaption > div:first-child > span { line-height: 1.45; }
   .enemy-scatter-controls { width: 100%; justify-content: space-between; }
   .enemy-chart-legend { gap: 7px; }
+  .enemy-frequency-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .enemy-frequency-meta > div { border-bottom: 1px solid var(--border); }
+  .enemy-frequency-meta > div:nth-child(2n) { border-right: 0; }
+  .enemy-frequency-meta > div:nth-last-child(-n + 2) { border-bottom: 0; }
   .enemy-pagination > span { display: none; }
   .enemy-pagination > div { width: 100%; justify-content: space-between; }
 }

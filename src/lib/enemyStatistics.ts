@@ -3,9 +3,19 @@ export interface HistogramBin {
   end: number
   count: number
   includesMaximum: boolean
+  isOverflow?: boolean
 }
 
 export type HistogramScale = 'LINEAR' | 'LOG'
+
+export interface HistogramMetadata {
+  scale: HistogramScale
+  binWidth: number | null
+  normalRangeStart: number
+  normalRangeEnd: number
+  normalBinCount: number
+  hasOverflow: boolean
+}
 
 export interface NumericStatistics {
   totalCount: number
@@ -19,6 +29,7 @@ export interface NumericStatistics {
   maximum: number | null
   standardDeviation: number | null
   bins: HistogramBin[]
+  histogram: HistogramMetadata | null
 }
 
 export interface EmpiricalCdfPoint {
@@ -42,11 +53,15 @@ export interface BoxPlotStatistics {
 
 const DEFAULT_BIN_COUNT = 10
 const MAX_BIN_COUNT = 14
+const LINEAR_NORMAL_BIN_COUNT = 10
+const LINEAR_PERCENTILE = 0.95
+const NICE_WIDTH_FACTORS = [1, 2, 2.5, 5, 10] as const
 
 export function calculateNumericStatistics(
   source: ReadonlyArray<number | null | undefined>,
   preferredBinCount = DEFAULT_BIN_COUNT,
   histogramScale: HistogramScale = 'LINEAR',
+  minimumLinearBinWidth = 0,
 ): NumericStatistics {
   const values = getFiniteSortedValues(source)
   const count = values.length
@@ -65,6 +80,7 @@ export function calculateNumericStatistics(
       maximum: null,
       standardDeviation: null,
       bins: [],
+      histogram: null,
     }
   }
 
@@ -72,6 +88,7 @@ export function calculateNumericStatistics(
   const maximum = values[count - 1]
   const mean = values.reduce((sum, value) => sum + value, 0) / count
   const variance = values.reduce((sum, value) => sum + ((value - mean) ** 2), 0) / count
+  const histogram = buildHistogram(values, preferredBinCount, histogramScale, minimumLinearBinWidth)
 
   return {
     totalCount,
@@ -84,7 +101,8 @@ export function calculateNumericStatistics(
     thirdQuartile: quantile(values, 0.75),
     maximum,
     standardDeviation: Math.sqrt(variance),
-    bins: buildHistogram(values, preferredBinCount, histogramScale),
+    bins: histogram.bins,
+    histogram: histogram.metadata,
   }
 }
 
@@ -165,12 +183,27 @@ function buildHistogram(
   sortedValues: ReadonlyArray<number>,
   preferredBinCount: number,
   histogramScale: HistogramScale,
-): HistogramBin[] {
+  minimumLinearBinWidth: number,
+): { bins: HistogramBin[]; metadata: HistogramMetadata } {
   const minimum = sortedValues[0]
   const maximum = sortedValues[sortedValues.length - 1]
 
+  if (histogramScale === 'LINEAR' && minimum >= 0) {
+    return buildAdaptiveLinearHistogram(sortedValues, minimumLinearBinWidth)
+  }
+
   if (minimum === maximum) {
-    return [{ start: minimum, end: maximum, count: sortedValues.length, includesMaximum: true }]
+    return {
+      bins: [{ start: minimum, end: maximum, count: sortedValues.length, includesMaximum: true }],
+      metadata: {
+        scale: histogramScale === 'LOG' && minimum >= 0 ? 'LOG' : 'LINEAR',
+        binWidth: null,
+        normalRangeStart: minimum,
+        normalRangeEnd: maximum,
+        normalBinCount: 1,
+        hasOverflow: false,
+      },
+    }
   }
 
   const requestedBinCount = Number.isFinite(preferredBinCount) ? Math.round(preferredBinCount) : DEFAULT_BIN_COUNT
@@ -195,5 +228,85 @@ function buildHistogram(
     bins[index].count += 1
   }
 
-  return bins
+  return {
+    bins,
+    metadata: {
+      scale: useLogScale ? 'LOG' : 'LINEAR',
+      binWidth: useLogScale ? null : binWidth,
+      normalRangeStart: minimum,
+      normalRangeEnd: maximum,
+      normalBinCount: bins.length,
+      hasOverflow: false,
+    },
+  }
+}
+
+function buildAdaptiveLinearHistogram(
+  sortedValues: ReadonlyArray<number>,
+  minimumBinWidth: number,
+): { bins: HistogramBin[]; metadata: HistogramMetadata } {
+  const percentileValue = quantile(sortedValues, LINEAR_PERCENTILE)
+  const safeMinimumWidth = Number.isFinite(minimumBinWidth) && minimumBinWidth > 0
+    ? minimumBinWidth
+    : 0
+  const rawBinWidth = Math.max(0, percentileValue) / LINEAR_NORMAL_BIN_COUNT
+  const binWidth = roundUpToNiceWidth(Math.max(rawBinWidth, safeMinimumWidth) || 1)
+  const normalRangeEnd = normalizeNumber(binWidth * LINEAR_NORMAL_BIN_COUNT)
+  const bins = Array.from({ length: LINEAR_NORMAL_BIN_COUNT }, (_, index): HistogramBin => ({
+    start: normalizeNumber(binWidth * index),
+    end: normalizeNumber(binWidth * (index + 1)),
+    count: 0,
+    includesMaximum: index === LINEAR_NORMAL_BIN_COUNT - 1,
+  }))
+  let overflowCount = 0
+  const boundaryTolerance = Math.abs(binWidth) * 1e-10
+
+  for (const value of sortedValues) {
+    if (value > normalRangeEnd + boundaryTolerance) {
+      overflowCount += 1
+      continue
+    }
+
+    const index = value >= normalRangeEnd - boundaryTolerance
+      ? LINEAR_NORMAL_BIN_COUNT - 1
+      : Math.min(
+        LINEAR_NORMAL_BIN_COUNT - 1,
+        Math.max(0, Math.floor((value + boundaryTolerance) / binWidth)),
+      )
+    bins[index].count += 1
+  }
+
+  if (overflowCount > 0) {
+    bins.push({
+      start: normalRangeEnd,
+      end: normalizeNumber(normalRangeEnd + binWidth),
+      count: overflowCount,
+      includesMaximum: true,
+      isOverflow: true,
+    })
+  }
+
+  return {
+    bins,
+    metadata: {
+      scale: 'LINEAR',
+      binWidth,
+      normalRangeStart: 0,
+      normalRangeEnd,
+      normalBinCount: LINEAR_NORMAL_BIN_COUNT,
+      hasOverflow: overflowCount > 0,
+    },
+  }
+}
+
+function roundUpToNiceWidth(value: number): number {
+  const exponent = Math.floor(Math.log10(value))
+  const magnitude = 10 ** exponent
+  const normalized = value / magnitude
+  const factor = NICE_WIDTH_FACTORS.find((candidate) => normalized <= candidate + 1e-12) ?? 10
+  return normalizeNumber(factor * magnitude)
+}
+
+function normalizeNumber(value: number): number {
+  return Number(value.toPrecision(12))
 }
