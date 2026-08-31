@@ -34,6 +34,16 @@
   line-height: 1.35;
 }
 
+.operator-database-table th,
+.operator-database-table td {
+  border-right: 1px solid var(--border);
+}
+
+.operator-database-table th:last-child,
+.operator-database-table td:last-child {
+  border-right: 0;
+}
+
 .operator-database-table th {
   padding: 0;
 }
@@ -50,7 +60,6 @@
   left: 0;
   z-index: 2;
   background: #fff;
-  box-shadow: 1px 0 0 var(--border);
 }
 
 .operator-database-table th:first-child {
