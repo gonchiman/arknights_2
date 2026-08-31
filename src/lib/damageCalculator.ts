@@ -16,10 +16,16 @@ export const DAMAGE_TYPE_LABELS: Record<DamageType, string> = {
 
 export interface OperatorStats {
   attack: number
+  baseAttackSpeed: number
+  attackSpeedBonus: number
   attackSpeed: number
   baseAttackTime: number
   attackInterval: number
   baseAttackBreakdown: BaseAttackBreakdown
+}
+
+export interface OperatorStatModifiers {
+  attackSpeedBonus?: number
 }
 
 export interface BaseAttackBreakdown {
@@ -74,14 +80,23 @@ export interface DamageCalculationBreakdown {
   attack: number
   damageType: DamageType
   inputDefense: number
+  defenseBeforeIgnore: number
+  defenseIgnoreFixed: number
   appliedDefense: number
   inputResistance: number
+  resistanceBeforeIgnore: number
+  resistanceIgnoreFixed: number
   appliedResistance: number
   afterDefense: number | null
   afterResistance: number | null
   minimumDamage: number | null
   minimumApplied: boolean
   result: number
+}
+
+export interface MitigationModifiers {
+  defenseIgnoreFixed?: number
+  resistanceIgnoreFixed?: number
 }
 
 export type SkillTotalMode = 'DURATION' | 'AMMO' | 'ACTIVATION' | 'NONE'
@@ -102,6 +117,7 @@ export function getOperatorStats(
   phaseIndex: number,
   level: number,
   trustPercent: number,
+  modifiers: OperatorStatModifiers = {},
 ): OperatorStats {
   const phase = profile.phases[clamp(Math.round(phaseIndex), 0, Math.max(0, profile.phases.length - 1))]
   const phaseFrames = phase?.attributesKeyFrames ?? []
@@ -114,7 +130,9 @@ export function getOperatorStats(
   const phaseAttack = interpolateAttribute(phaseFrames, normalizedLevel, 'atk', 0)
   const trustAttack = interpolateAttribute(profile.favorKeyFrames, trustFrameLevel, 'atk', 0)
   const baseAttackTime = interpolateAttribute(phaseFrames, normalizedLevel, 'baseAttackTime', 1)
-  const attackSpeed = interpolateAttribute(phaseFrames, normalizedLevel, 'attackSpeed', 100)
+  const baseAttackSpeed = interpolateAttribute(phaseFrames, normalizedLevel, 'attackSpeed', 100)
+  const attackSpeedBonus = finiteOr(modifiers.attackSpeedBonus, 0)
+  const attackSpeed = baseAttackSpeed + attackSpeedBonus
   const attackInterval = baseAttackTime * 100 / Math.max(20, attackSpeed)
 
   const potentialAttack = 0
@@ -132,6 +150,8 @@ export function getOperatorStats(
 
   return {
     attack,
+    baseAttackSpeed,
+    attackSpeedBonus,
     attackSpeed,
     baseAttackTime,
     attackInterval,
@@ -139,7 +159,11 @@ export function getOperatorStats(
   }
 }
 
-export function deriveSkillModel(level: RawSkillLevel, operatorAttackInterval: number): SkillModelDefaults {
+export function deriveSkillModel(
+  level: RawSkillLevel,
+  operatorAttackInterval: number,
+  operatorAttackSpeed = 100,
+): SkillModelDefaults {
   const values = new Map(
     (level.blackboard ?? [])
       .filter((entry): entry is { key: string; value: number } => (
@@ -178,9 +202,13 @@ export function deriveSkillModel(level: RawSkillLevel, operatorAttackInterval: n
     : 1
   const attackSpeedBonus = findValue(values, ['attack_speed', 'attack@attack_speed'])?.value ?? 0
   const intervalOffset = findValue(values, ['base_attack_time', 'attack@base_attack_time'])?.value ?? 0
+  const operatorAttackSpeedBeforeClamp = finiteOr(operatorAttackSpeed, 100)
+  const operatorAttackSpeedForCurrentInterval = Math.max(20, operatorAttackSpeedBeforeClamp)
+  const operatorBaseAttackTime = operatorAttackInterval * operatorAttackSpeedForCurrentInterval / 100
   const attackInterval = Math.max(
     0.05,
-    (operatorAttackInterval + intervalOffset) * 100 / Math.max(20, 100 + attackSpeedBonus),
+    (operatorBaseAttackTime + intervalOffset) * 100
+      / Math.max(20, operatorAttackSpeedBeforeClamp + attackSpeedBonus),
   )
   const duration = typeof level.duration === 'number' && level.duration > 0 ? level.duration : 0
   const ammoValue = findValue(values, [
@@ -218,8 +246,9 @@ export function calculateDamage(
   damageType: DamageType,
   enemyDefense: number,
   enemyResistance: number,
+  modifiers: MitigationModifiers = {},
 ): number {
-  return calculateDamageBreakdown(rawAttack, damageType, enemyDefense, enemyResistance).result
+  return calculateDamageBreakdown(rawAttack, damageType, enemyDefense, enemyResistance, modifiers).result
 }
 
 export function calculateAttackPipeline(
@@ -258,18 +287,27 @@ export function calculateDamageBreakdown(
   damageType: DamageType,
   enemyDefense: number,
   enemyResistance: number,
+  modifiers: MitigationModifiers = {},
 ): DamageCalculationBreakdown {
   const attack = Math.max(0, rawAttack)
-  const appliedDefense = Math.max(0, enemyDefense)
-  const appliedResistance = clamp(enemyResistance, 0, 100)
+  const defenseBeforeIgnore = Math.max(0, enemyDefense)
+  const defenseIgnoreFixed = Math.max(0, finiteOr(modifiers.defenseIgnoreFixed, 0))
+  const appliedDefense = Math.max(0, defenseBeforeIgnore - defenseIgnoreFixed)
+  const resistanceBeforeIgnore = clamp(enemyResistance, 0, 100)
+  const resistanceIgnoreFixed = Math.max(0, finiteOr(modifiers.resistanceIgnoreFixed, 0))
+  const appliedResistance = clamp(resistanceBeforeIgnore - resistanceIgnoreFixed, 0, 100)
 
   if (damageType === 'TRUE') {
     return {
       attack,
       damageType,
       inputDefense: enemyDefense,
+      defenseBeforeIgnore,
+      defenseIgnoreFixed,
       appliedDefense,
       inputResistance: enemyResistance,
+      resistanceBeforeIgnore,
+      resistanceIgnoreFixed,
       appliedResistance,
       afterDefense: null,
       afterResistance: null,
@@ -286,8 +324,12 @@ export function calculateDamageBreakdown(
       attack,
       damageType,
       inputDefense: enemyDefense,
+      defenseBeforeIgnore,
+      defenseIgnoreFixed,
       appliedDefense,
       inputResistance: enemyResistance,
+      resistanceBeforeIgnore,
+      resistanceIgnoreFixed,
       appliedResistance,
       afterDefense: null,
       afterResistance,
@@ -303,8 +345,12 @@ export function calculateDamageBreakdown(
     attack,
     damageType,
     inputDefense: enemyDefense,
+    defenseBeforeIgnore,
+    defenseIgnoreFixed,
     appliedDefense,
     inputResistance: enemyResistance,
+    resistanceBeforeIgnore,
+    resistanceIgnoreFixed,
     appliedResistance,
     afterDefense,
     afterResistance: null,
@@ -323,6 +369,8 @@ export function calculateSkillDamage(
   options: {
     canShowDps: boolean
     totalMode: SkillTotalMode
+    attackModifiers?: AttackPipelineInput
+    mitigationModifiers?: MitigationModifiers
   },
 ): SkillDamageOutput {
   const breakdown = calculateSkillDamageBreakdown(
@@ -350,16 +398,30 @@ export function calculateSkillDamageBreakdown(
   options: {
     canShowDps: boolean
     totalMode: SkillTotalMode
+    attackModifiers?: AttackPipelineInput
+    mitigationModifiers?: MitigationModifiers
   },
 ): SkillDamageBreakdown {
+  const passiveAttackModifiers = options.attackModifiers ?? {}
   const attackPipeline = calculateAttackPipeline(baseAttack, {
-    directMultiplierPercent: Math.max(0, finiteOr(model.directMultiplierPercent, 0)),
-    attackScale: Math.max(0, finiteOr(model.attackScalePercent, 100)) / 100,
+    directAddition: passiveAttackModifiers.directAddition,
+    directMultiplierPercent: finiteOr(passiveAttackModifiers.directMultiplierPercent, 0)
+      + Math.max(0, finiteOr(model.directMultiplierPercent, 0)),
+    finalAddition: passiveAttackModifiers.finalAddition,
+    finalMultiplier: passiveAttackModifiers.finalMultiplier,
+    attackScale: finiteOr(passiveAttackModifiers.attackScale, 1)
+      * Math.max(0, finiteOr(model.attackScalePercent, 100)) / 100,
   })
   const hitCount = Math.max(1, model.hitCount)
   const duration = Math.max(0, model.duration)
   const ammoCount = Math.max(0, model.ammoCount)
-  const mitigation = calculateDamageBreakdown(attackPipeline.finalAttack, damageType, enemyDefense, enemyResistance)
+  const mitigation = calculateDamageBreakdown(
+    attackPipeline.finalAttack,
+    damageType,
+    enemyDefense,
+    enemyResistance,
+    options.mitigationModifiers,
+  )
   const perHit = mitigation.result
   const perAttack = perHit * hitCount
   const dps = options.canShowDps && model.attackInterval > 0

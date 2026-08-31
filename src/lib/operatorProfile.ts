@@ -1,5 +1,6 @@
 import type {
   OperatorCombatProfile,
+  RawBlackboardEntry,
   RawTalentCandidate,
   RawTraitCandidate,
   RawUnlockCondition,
@@ -10,9 +11,24 @@ export interface DisplayTalent {
   description: string
 }
 
+export type PassiveSourceKind = 'TRAIT' | 'TALENT'
+
+export interface PassiveSource {
+  sourceKind: PassiveSourceKind
+  sourceName: string
+  talentIndex: number | null
+  description: string
+  blackboard: RawBlackboardEntry[]
+  unlockCondition?: RawUnlockCondition
+  requiredPotentialRank: number
+  prefabKey: string | null
+  tokenKey: string | null
+}
+
 export interface OperatorPassives {
   traitDescription: string
   talents: DisplayTalent[]
+  sources: PassiveSource[]
 }
 
 export function getOperatorPassives(
@@ -33,7 +49,21 @@ export function getOperatorPassives(
       ?? '',
   )
 
-  const talents = (profile.talents ?? []).flatMap((talent) => {
+  const traitSource: PassiveSource | null = traitCandidate || traitDescription
+    ? {
+        sourceKind: 'TRAIT',
+        sourceName: '特性',
+        talentIndex: null,
+        description: traitDescription,
+        blackboard: normalizeBlackboard(traitCandidate?.blackboard),
+        unlockCondition: traitCandidate?.unlockCondition,
+        requiredPotentialRank: traitCandidate?.requiredPotentialRank ?? 0,
+        prefabKey: traitCandidate?.prefabKey ?? null,
+        tokenKey: null,
+      }
+    : null
+
+  const selectedTalents = (profile.talents ?? []).flatMap((talent, talentIndex) => {
     const candidate = getLatestUnlockedCandidate(
       (talent.candidates ?? []).filter((item) => !item.isHideTalent),
       phaseIndex,
@@ -41,13 +71,41 @@ export function getOperatorPassives(
     )
     if (!candidate) return []
 
+    const name = cleanGameText(candidate.name ?? '名称なし')
+    const description = cleanGameText(candidate.description ?? '')
     return [{
-      name: cleanGameText(candidate.name ?? '名称なし'),
-      description: cleanGameText(candidate.description ?? ''),
+      display: { name, description },
+      source: {
+        sourceKind: 'TALENT' as const,
+        sourceName: name,
+        talentIndex,
+        description,
+        blackboard: normalizeBlackboard(candidate.blackboard),
+        unlockCondition: candidate.unlockCondition,
+        requiredPotentialRank: candidate.requiredPotentialRank ?? 0,
+        prefabKey: candidate.prefabKey ?? null,
+        tokenKey: candidate.tokenKey ?? null,
+      },
     }]
   })
 
-  return { traitDescription, talents }
+  return {
+    traitDescription,
+    talents: selectedTalents.map(({ display }) => display),
+    sources: [
+      ...(traitSource ? [traitSource] : []),
+      ...selectedTalents.map(({ source }) => source),
+    ],
+  }
+}
+
+function normalizeBlackboard(value: RawBlackboardEntry[] | undefined): RawBlackboardEntry[] {
+  if (!Array.isArray(value)) return []
+  return value.map((entry) => ({
+    key: entry.key,
+    value: entry.value,
+    valueStr: entry.valueStr ?? null,
+  }))
 }
 
 function getLatestUnlockedCandidate<T extends RawTraitCandidate | RawTalentCandidate>(

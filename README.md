@@ -23,6 +23,14 @@ npm run dev
 npm run build
 ```
 
+敵の登場ステージ数データを更新:
+
+```bash
+npm run generate:enemy-stages
+```
+
+`stage_table.json` の戦闘ステージを `levelId` 単位で重複除去し、各Level JSONから `public/data/enemy-stage-appearances.json` を生成します。取得できなかったLevelと未対応の敵IDは生成物の診断欄に残ります。
+
 ## ディレクトリ
 
 ```text
@@ -62,6 +70,7 @@ src/
   - 表示中の比較結果をUTF-8 CSVで出力
 - 敵分析
   - 敵図鑑と敵戦闘データを敵IDで結合
+  - 敵ごとの登場ステージ数を一覧・詳細・統計グラフ・度数分布表へ表示
   - 敵名・図鑑番号・能力・区分・攻撃種別による検索と絞り込み
   - HP・攻撃力・防御力・術耐性・移動速度・攻撃間隔・重量・状態異常耐性を一覧表示
 

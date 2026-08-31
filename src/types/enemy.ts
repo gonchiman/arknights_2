@@ -33,6 +33,7 @@ export interface EnemyRecord {
   lifePointReduce: number | null
   databaseLevel: number | null
   databaseLevelCount: number
+  stageAppearanceCount: number | null
   statusImmunities: string[]
   ratings: EnemyRatings
   stats: EnemyStats

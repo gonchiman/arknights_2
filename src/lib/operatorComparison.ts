@@ -14,6 +14,10 @@ import {
   getSkillTotalMode,
   inferSkillDamageType,
 } from './skillDamageModel.ts'
+import {
+  evaluateOperatorEffects,
+  type EvaluatedOperatorEffect,
+} from './operatorEffects.ts'
 import type { EffectWindowType, RawSkillLevel, SkillRecord } from '../types/skill.ts'
 
 export const COMPARISON_METRICS = ['DAMAGE', 'DPS', 'TOTAL'] as const
@@ -67,16 +71,30 @@ export function buildSkillComparisonRow(
   const phaseIndex = Math.max(0, skill.operatorProfile.phases.length - 1)
   const phase = skill.operatorProfile.phases[phaseIndex]
   const operatorLevel = Math.max(1, phase?.maxLevel ?? 1)
-  const operatorStats = getOperatorStats(skill.operatorProfile, phaseIndex, operatorLevel, 100)
   const passives = getOperatorPassives(skill.operatorProfile, phaseIndex, operatorLevel)
-  const skillLevel = skill.skillLevels.at(-1) ?? skill.raw
-  const model = deriveSkillModel(skillLevel, operatorStats.attackInterval)
   const explicitDamageTypes = getExplicitDamageTypes(skill.description)
+  const initialOperatorEffects = evaluateOperatorEffects(skill.operatorId, passives)
   const damageType = explicitDamageTypes.length > 1
     ? null
-    : inferSkillDamageType(skill, passives.traitDescription)
+    : explicitDamageTypes[0]
+      ?? initialOperatorEffects.recommendedDamageType
+      ?? inferSkillDamageType(skill, passives.traitDescription)
+  const operatorEffects = evaluateOperatorEffects(
+    skill.operatorId,
+    passives,
+    damageType ?? undefined,
+  )
+  const operatorStats = getOperatorStats(
+    skill.operatorProfile,
+    phaseIndex,
+    operatorLevel,
+    100,
+    { attackSpeedBonus: operatorEffects.modifiers.attackSpeedBonus },
+  )
+  const skillLevel = skill.skillLevels.at(-1) ?? skill.raw
+  const model = deriveSkillModel(skillLevel, operatorStats.attackInterval, operatorStats.attackSpeed)
   const unavailableReasons = getComparisonUnavailableReasons(skill, skillLevel, model, metric)
-  const warnings = getComparisonWarnings(model)
+  const warnings = getComparisonWarnings(model, operatorEffects.effects)
 
   if (unavailableReasons.length > 0 || damageType === null) {
     return {
@@ -99,6 +117,14 @@ export function buildSkillComparisonRow(
       {
         canShowDps: skill.classification.outputCapabilities.canShowDps,
         totalMode,
+        attackModifiers: {
+          directAddition: operatorEffects.modifiers.attackAddition,
+          directMultiplierPercent: operatorEffects.modifiers.attackMultiplierPercent,
+        },
+        mitigationModifiers: {
+          defenseIgnoreFixed: operatorEffects.modifiers.defenseIgnoreFixed,
+          resistanceIgnoreFixed: operatorEffects.modifiers.resistanceIgnoreFixed,
+        },
       },
     )
 
@@ -201,11 +227,19 @@ function getComparisonUnavailableReasons(
   return [...new Set(reasons)]
 }
 
-function getComparisonWarnings(model: SkillModelDefaults): string[] {
-  return [...new Set(model.notes.filter((note) => (
+function getComparisonWarnings(
+  model: SkillModelDefaults,
+  passiveEffects: EvaluatedOperatorEffect[],
+): string[] {
+  const modelWarnings = model.notes.filter((note) => (
     !note.includes('初期版の計算対象外')
     && !note.includes('複数の攻撃力補正E')
-  )))]
+  ))
+  const passiveWarnings = passiveEffects
+    .filter((effect) => effect.status === 'UNSUPPORTED' || effect.status === 'REQUIRES_INPUT')
+    .map((effect) => `${effect.sourceName}「${effect.label}」: ${effect.reason}`)
+
+  return [...new Set([...modelWarnings, ...passiveWarnings])]
 }
 
 function getUnmodeledDamageKeys(level: RawSkillLevel): string[] {

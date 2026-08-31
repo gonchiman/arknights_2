@@ -14,7 +14,7 @@ import type { EnemyLevelType, EnemyRecord, EnemyStats } from '../types/enemy'
 type AnalyzedStatKey = keyof Pick<
   EnemyStats,
   'maxHp' | 'attack' | 'defense' | 'magicResistance' | 'moveSpeed' | 'baseAttackTime' | 'massLevel'
->
+> | 'stageAppearanceCount'
 
 type ChartKind = 'HISTOGRAM' | 'ECDF' | 'BOX' | 'SCATTER' | 'INDIVIDUAL'
 
@@ -64,6 +64,7 @@ const STAT_METRICS: StatMetric[] = [
   { key: 'moveSpeed', label: '移動速度', axisLabel: '移動速度', suffix: '', valueDigits: 2, summaryDigits: 2, logBinCount: 10, minimumLinearBinWidth: 0.01, defaultScale: 'LINEAR' },
   { key: 'baseAttackTime', label: '攻撃間隔', axisLabel: '攻撃間隔（秒）', suffix: '秒', valueDigits: 2, summaryDigits: 2, logBinCount: 10, minimumLinearBinWidth: 0.01, defaultScale: 'LINEAR' },
   { key: 'massLevel', label: '重量', axisLabel: '重量', suffix: '', valueDigits: 0, summaryDigits: 2, logBinCount: 10, minimumLinearBinWidth: 1, defaultScale: 'LINEAR' },
+  { key: 'stageAppearanceCount', label: '登場ステージ数', axisLabel: '登場ステージ数', suffix: '', valueDigits: 0, summaryDigits: 2, logBinCount: 10, minimumLinearBinWidth: 1, defaultScale: 'LINEAR' },
 ]
 
 const CHART_OPTIONS: Array<{ key: ChartKind; label: string }> = [
@@ -96,7 +97,7 @@ export function EnemyStatisticsPanel({ rows, scopeLabel }: { rows: EnemyRecord[]
   const selectedMetric = getMetric(selectedMetricKey)
   const scatterMetric = getMetric(scatterMetricKey)
   const metricSource = useMemo(
-    () => rows.map((enemy) => enemy.stats[selectedMetric.key]),
+    () => rows.map((enemy) => getEnemyMetricValue(enemy, selectedMetric.key)),
     [rows, selectedMetric.key],
   )
   const observations = useMemo(
@@ -349,7 +350,7 @@ function FrequencyDistributionTable({ statistics, metric, scale }: {
         <dl className="enemy-frequency-meta" aria-label={`${metric.label}の階級設定`}>
           <div>
             <dt>階級幅</dt>
-            <dd>{formatNumber(histogram.binWidth ?? 0, metric.valueDigits, metric.suffix)}</dd>
+            <dd>{formatNumber(histogram.binWidth ?? 0, metric.summaryDigits, metric.suffix)}</dd>
           </div>
           <div>
             <dt>通常範囲</dt>
@@ -360,7 +361,7 @@ function FrequencyDistributionTable({ statistics, metric, scale }: {
           </div>
           <div>
             <dt>上限超過</dt>
-            <dd>{histogram.hasOverflow ? `${formatNumber(histogram.normalRangeEnd, metric.valueDigits, metric.suffix)}超` : 'なし'}</dd>
+            <dd>{histogram.hasOverflow ? `${formatNumber(histogram.normalRangeEnd, metric.summaryDigits, metric.suffix)}超` : 'なし'}</dd>
           </div>
           <div>
             <dt>階級数</dt>
@@ -996,17 +997,23 @@ function getMetric(key: AnalyzedStatKey): StatMetric {
 
 function buildMetricObservations(rows: EnemyRecord[], metricKey: AnalyzedStatKey): MetricObservation[] {
   return rows.flatMap((enemy) => {
-    const value = enemy.stats[metricKey]
+    const value = getEnemyMetricValue(enemy, metricKey)
     return typeof value === 'number' && Number.isFinite(value) ? [{ enemy, value }] : []
   })
 }
 
 function buildScatterObservations(rows: EnemyRecord[], xMetricKey: AnalyzedStatKey, yMetricKey: AnalyzedStatKey): ScatterObservation[] {
   return rows.flatMap((enemy) => {
-    const x = enemy.stats[xMetricKey]
-    const y = enemy.stats[yMetricKey]
+    const x = getEnemyMetricValue(enemy, xMetricKey)
+    const y = getEnemyMetricValue(enemy, yMetricKey)
     return typeof x === 'number' && Number.isFinite(x) && typeof y === 'number' && Number.isFinite(y) ? [{ enemy, x, y }] : []
   })
+}
+
+function getEnemyMetricValue(enemy: EnemyRecord, metricKey: AnalyzedStatKey): number | null {
+  return metricKey === 'stageAppearanceCount'
+    ? enemy.stageAppearanceCount
+    : enemy.stats[metricKey]
 }
 
 function buildBoxPlotGroups(observations: MetricObservation[]): BoxPlotGroup[] {
@@ -1108,7 +1115,7 @@ function formatHistogramRange(bin: HistogramBin, statistics: NumericStatistics, 
 }
 
 function formatCompactRange(start: number, end: number, metric: StatMetric): string {
-  return `${formatNumber(start, metric.valueDigits)}～${formatNumber(end, metric.valueDigits, metric.suffix)}`
+  return `${formatNumber(start, metric.summaryDigits)}～${formatNumber(end, metric.summaryDigits, metric.suffix)}`
 }
 
 function formatNumber(value: number, maximumFractionDigits: number, suffix = ''): string {
