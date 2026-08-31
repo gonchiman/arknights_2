@@ -13,9 +13,19 @@ export interface RawSkillLevel {
 }
 
 export interface RawAttributeData {
+  maxHp?: number
   atk?: number
+  def?: number
+  magicResistance?: number
+  cost?: number
+  blockCnt?: number
+  moveSpeed?: number
   attackSpeed?: number
   baseAttackTime?: number
+  respawnTime?: number
+  hpRecoveryPerSec?: number
+  spRecoveryPerSec?: number
+  maxDeployCount?: number
 }
 
 export interface RawAttributeKeyFrame {
@@ -56,11 +66,32 @@ export interface RawCharacterTalent {
   candidates?: RawTalentCandidate[]
 }
 
+export interface RawPotentialRank {
+  type?: string
+  description?: string | null
+}
+
+export interface RawOperatorModule {
+  uniEquipId?: string
+  uniEquipName?: string | null
+  uniEquipDesc?: string | null
+  type?: string
+  typeIcon?: string | null
+  typeName1?: string | null
+  typeName2?: string | null
+  unlockEvolvePhase?: string | null
+  unlockLevel?: number
+  charEquipOrder?: number
+  isSpecialEquip?: boolean
+}
+
 export interface OperatorCombatProfile {
   phases: RawCharacterPhase[]
   favorKeyFrames: RawAttributeKeyFrame[]
   trait?: RawCharacterTrait | null
   talents?: RawCharacterTalent[]
+  potentialRanks?: RawPotentialRank[]
+  modules?: RawOperatorModule[]
   traitDescription?: string
   subProfessionTraitDescription?: string
 }

@@ -1,6 +1,7 @@
 export type AppRoute =
   | { view: 'list' }
   | { view: 'skills' }
+  | { view: 'operators' }
   | { view: 'skill'; skillId: string }
   | { view: 'damage' }
   | { view: 'comparison' }
@@ -9,6 +10,7 @@ export type AppRoute =
 const SKILL_ROUTE_PREFIX = '#/skills/'
 
 export function parseHashRoute(hash: string): AppRoute {
+  if (hash === '#/operators') return { view: 'operators' }
   if (hash === '#/damage') return { view: 'damage' }
   if (hash === '#/comparison') return { view: 'comparison' }
   if (hash === '#/enemies') return { view: 'enemies' }

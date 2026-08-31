@@ -3,6 +3,8 @@ import type {
   RawCharacterPhase,
   RawCharacterTalent,
   RawCharacterTrait,
+  RawOperatorModule,
+  RawPotentialRank,
   RawSkillLevel,
   SkillRecord,
 } from '../types/skill'
@@ -29,6 +31,7 @@ type CharacterTable = Record<string, {
   favorKeyFrames?: RawAttributeKeyFrame[]
   trait?: RawCharacterTrait | null
   talents?: RawCharacterTalent[]
+  potentialRanks?: RawPotentialRank[]
 }>
 
 type SkillTable = Record<string, {
@@ -40,6 +43,9 @@ interface UniequipTable {
     subProfessionId?: string
     subProfessionName?: string
     traitDesc?: string
+  }>
+  equipDict?: Record<string, RawOperatorModule & {
+    charId?: string
   }>
 }
 
@@ -58,6 +64,7 @@ export async function loadSkillRecords(): Promise<SkillRecord[]> {
   const skills = await skillResponse.json() as SkillTable
   const uniequip = await uniequipResponse.json() as UniequipTable
   const subProfessions = uniequip.subProfDict ?? {}
+  const modulesByOperator = buildModulesByOperator(uniequip.equipDict ?? {})
   const rows: SkillRecord[] = []
 
   for (const [operatorId, operator] of Object.entries(characters)) {
@@ -66,10 +73,12 @@ export async function loadSkillRecords(): Promise<SkillRecord[]> {
     if (!operator.name || !operator.displayNumber || !operator.skills?.length) continue
 
     const operatorProfile = {
-      phases: operator.phases ?? [],
-      favorKeyFrames: operator.favorKeyFrames ?? [],
+      phases: Array.isArray(operator.phases) ? operator.phases : [],
+      favorKeyFrames: Array.isArray(operator.favorKeyFrames) ? operator.favorKeyFrames : [],
       trait: operator.trait ?? null,
-      talents: operator.talents ?? [],
+      talents: Array.isArray(operator.talents) ? operator.talents : [],
+      potentialRanks: Array.isArray(operator.potentialRanks) ? operator.potentialRanks : [],
+      modules: modulesByOperator.get(operatorId) ?? [],
       traitDescription: operator.description ?? '',
       subProfessionTraitDescription: subProfessions[operator.subProfessionId ?? 'UNKNOWN']?.traitDesc ?? '',
     }
@@ -112,6 +121,26 @@ export async function loadSkillRecords(): Promise<SkillRecord[]> {
   }
 
   return rows.sort((a, b) => b.rarity - a.rarity || a.operatorName.localeCompare(b.operatorName, 'ja') || a.skillIndex - b.skillIndex)
+}
+
+function buildModulesByOperator(
+  equipDict: NonNullable<UniequipTable['equipDict']>,
+): Map<string, RawOperatorModule[]> {
+  const result = new Map<string, RawOperatorModule[]>()
+
+  for (const module of Object.values(equipDict)) {
+    if (!module.charId || !module.uniEquipName || module.type !== 'ADVANCED') continue
+    const modules = result.get(module.charId) ?? []
+    modules.push(module)
+    result.set(module.charId, modules)
+  }
+
+  result.forEach((modules) => modules.sort((a, b) => (
+    (a.charEquipOrder ?? Number.MAX_SAFE_INTEGER) - (b.charEquipOrder ?? Number.MAX_SAFE_INTEGER)
+    || (a.uniEquipName ?? '').localeCompare(b.uniEquipName ?? '', 'ja')
+  )))
+
+  return result
 }
 
 function parseRarity(value: number | string | undefined): number {

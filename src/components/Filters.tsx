@@ -22,9 +22,16 @@ interface Props {
   professionOptions: FilterOption[]
   onChange: (next: FilterState) => void
   onReset: () => void
+  searchPlaceholder?: string
 }
 
-export function Filters({ value, professionOptions, onChange, onReset }: Props) {
+export function Filters({
+  value,
+  professionOptions,
+  onChange,
+  onReset,
+  searchPlaceholder = 'オペレーター名・スキル名・説明文で検索',
+}: Props) {
   const hasActiveFilters = value.query.trim() !== ''
     || value.nameInitial !== 'ALL'
     || value.profession !== 'ALL'
@@ -116,7 +123,7 @@ export function Filters({ value, professionOptions, onChange, onReset }: Props) 
           className="search"
           value={value.query}
           onChange={(event) => onChange({ ...value, query: event.target.value })}
-          placeholder="オペレーター名・スキル名・説明文で検索"
+          placeholder={searchPlaceholder}
         />
       </label>
     </div>

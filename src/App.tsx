@@ -4,6 +4,7 @@ import { DamageCalculator } from './components/DamageCalculator'
 import { EnemyAnalysis } from './components/EnemyAnalysis'
 import { EMPTY_OPERATOR_FILTERS, matchesOperatorFilters, OperatorSearch } from './components/OperatorSearch'
 import { OperatorComparison } from './components/OperatorComparison'
+import { OperatorDatabase } from './components/OperatorDatabase'
 import { SkillDetail } from './components/SkillDetail'
 import { SkillDirectory } from './components/SkillDirectory'
 import { DATA_URLS, loadSkillRecords } from './lib/arknightsData'
@@ -160,6 +161,7 @@ export default function App() {
 
   const activeNavigationPage: NavigationPage = (
     route.view === 'skills'
+    || route.view === 'operators'
     || route.view === 'damage'
     || route.view === 'comparison'
     || route.view === 'enemies'
@@ -197,7 +199,9 @@ export default function App() {
         <main className="app-content">
         {error && route.view !== 'enemies' && <section className="error-box" role="alert">{error}</section>}
 
-        {route.view === 'damage' ? (
+        {route.view === 'operators' ? (
+          <OperatorDatabase rows={classifiedRows} loading={loading} />
+        ) : route.view === 'damage' ? (
           <DamageCalculator rows={classifiedRows} loading={loading} />
         ) : route.view === 'comparison' ? (
           <OperatorComparison rows={classifiedRows} loading={loading} />

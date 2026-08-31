@@ -1,4 +1,4 @@
-export type NavigationPage = 'classifier' | 'skills' | 'damage' | 'comparison' | 'enemies'
+export type NavigationPage = 'classifier' | 'operators' | 'skills' | 'damage' | 'comparison' | 'enemies'
 
 export type NavigationItem = {
   id: NavigationPage
@@ -13,6 +13,12 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     href: '#/',
     label: 'Skill Model Classifier',
     description: 'オペレーター別のスキル分類',
+  },
+  {
+    id: 'operators',
+    href: '#/operators',
+    label: 'Operator Database',
+    description: '基本情報・素質・モジュール一覧',
   },
   {
     id: 'skills',
