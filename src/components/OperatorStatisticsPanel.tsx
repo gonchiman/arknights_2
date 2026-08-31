@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import {
+  MAX_CUSTOM_LINEAR_BIN_COUNT,
   calculateBoxPlotStatistics,
   calculateEmpiricalCdf,
   type BoxPlotStatistics,
@@ -7,6 +8,7 @@ import {
   type HistogramBin,
   type HistogramScale,
   type NumericStatistics,
+  validateCustomLinearBinWidth,
 } from '../lib/enemyStatistics'
 import { getProfessionColor, getProfessionLabel } from '../lib/operatorFilters'
 import {
@@ -54,11 +56,14 @@ const SCATTER_CHART_HEIGHT = 340
 const CHART_MARGIN = { top: 44, right: 18, bottom: 52, left: 52 }
 
 export function OperatorStatisticsPanel({ rows, scopeLabel }: { rows: OperatorDatabaseRecord[]; scopeLabel: string }) {
+  const binWidthInputId = useId()
+  const binWidthHelpId = useId()
   const [selectedMetricKey, setSelectedMetricKey] = useState<OperatorAnalyzedStatKey>('maxHp')
   const [axisScale, setAxisScale] = useState<HistogramScale>('LOG')
   const [scatterMetricKey, setScatterMetricKey] = useState<OperatorAnalyzedStatKey>('defense')
   const [scatterScale, setScatterScale] = useState<HistogramScale>('LOG')
   const [selectedChart, setSelectedChart] = useState<ChartKind>('HISTOGRAM')
+  const [linearBinWidthInput, setLinearBinWidthInput] = useState('')
 
   const selectedMetric = getOperatorStatMetric(selectedMetricKey)
   const scatterMetric = getOperatorStatMetric(scatterMetricKey)
@@ -66,14 +71,32 @@ export function OperatorStatisticsPanel({ rows, scopeLabel }: { rows: OperatorDa
     () => buildOperatorMetricObservations(rows, selectedMetric.key),
     [rows, selectedMetric.key],
   )
+  const maximumObservedValue = useMemo(
+    () => observations.reduce<number | null>(
+      (maximum, { value }) => maximum === null ? value : Math.max(maximum, value),
+      null,
+    ),
+    [observations],
+  )
+  const parsedLinearBinWidth = linearBinWidthInput.trim() === '' ? null : Number(linearBinWidthInput)
+  const linearBinWidthValidation = parsedLinearBinWidth === null
+    ? null
+    : validateCustomLinearBinWidth(parsedLinearBinWidth, maximumObservedValue)
+  const linearBinWidthError = parsedLinearBinWidth === null
+    ? null
+    : getLinearBinWidthError(linearBinWidthValidation?.error ?? null)
+  const customLinearBinWidth = linearBinWidthValidation?.valid
+    ? parsedLinearBinWidth
+    : null
   const statistics = useMemo(
-    () => calculateOperatorMetricStatistics(rows, selectedMetric.key, axisScale),
-    [rows, selectedMetric.key, axisScale],
+    () => calculateOperatorMetricStatistics(rows, selectedMetric.key, axisScale, customLinearBinWidth),
+    [rows, selectedMetric.key, axisScale, customLinearBinWidth],
   )
 
   const selectMetric = (metric: OperatorStatMetric) => {
     setSelectedMetricKey(metric.key)
     setAxisScale(metric.defaultScale)
+    setLinearBinWidthInput('')
 
     if (scatterMetricKey === metric.key) {
       const fallback = OPERATOR_STAT_METRICS.find((candidate) => candidate.key !== metric.key) ?? OPERATOR_STAT_METRICS[0]
@@ -133,13 +156,55 @@ export function OperatorStatisticsPanel({ rows, scopeLabel }: { rows: OperatorDa
           </div>
         </fieldset>
         {statistics.count > 0 && (
-          <div className="enemy-chart-axis-control">
-            <span>横軸</span>
-            <ScaleSwitch
-              scale={axisScale}
-              onChange={setAxisScale}
-              label={`${selectedMetric.label}の横軸目盛`}
-            />
+          <div className="operator-statistics-axis-settings">
+            <div className="enemy-chart-axis-control">
+              <span>横軸</span>
+              <ScaleSwitch
+                scale={axisScale}
+                onChange={setAxisScale}
+                label={`${selectedMetric.label}の横軸目盛`}
+              />
+            </div>
+            {selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR' && (
+              <div className="operator-bin-width-control">
+                <label htmlFor={binWidthInputId}>
+                  階級幅{selectedMetric.suffix ? `（${selectedMetric.suffix}）` : ''}
+                </label>
+                <div className="operator-bin-width-input-row">
+                  <input
+                    id={binWidthInputId}
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="any"
+                    value={linearBinWidthInput}
+                    placeholder="自動"
+                    aria-invalid={linearBinWidthError !== null}
+                    aria-describedby={binWidthHelpId}
+                    onChange={(event) => setLinearBinWidthInput(event.target.value)}
+                  />
+                  {linearBinWidthInput !== '' && (
+                    <button
+                      type="button"
+                      onClick={() => setLinearBinWidthInput('')}
+                      aria-label="階級幅を自動設定に戻す"
+                    >
+                      自動
+                    </button>
+                  )}
+                </div>
+                <small
+                  id={binWidthHelpId}
+                  className={linearBinWidthError ? 'error' : ''}
+                  aria-live="polite"
+                >
+                  {linearBinWidthError
+                    ?? (linearBinWidthValidation?.valid
+                      ? `${linearBinWidthValidation.binCount}階級で集計`
+                      : `自動：${formatNumber(statistics.histogram?.binWidth ?? 0, selectedMetric.valueDigits, selectedMetric.suffix)}`)}
+                </small>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1034,6 +1099,16 @@ function createEcdfPath(points: EmpiricalCdfPoint[], x: (value: number) => numbe
 
 function getEffectiveScaleName(scale: HistogramScale, minimum: number | null): string {
   return scale === 'LOG' && (minimum ?? 0) >= 0 ? '対数' : '線形'
+}
+
+function getLinearBinWidthError(
+  error: 'INVALID' | 'TOO_MANY_BINS' | null,
+): string | null {
+  if (error === 'INVALID') return '0より大きい数値を入力してください'
+  if (error === 'TOO_MANY_BINS') {
+    return `階級数が多すぎます（最大${MAX_CUSTOM_LINEAR_BIN_COUNT}階級）`
+  }
+  return null
 }
 
 function stableJitter(value: string): number {

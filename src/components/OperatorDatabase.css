@@ -20,6 +20,77 @@
   grid-template-columns: repeat(9, minmax(0, 1fr));
 }
 
+.operator-statistics-axis-settings {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.operator-bin-width-control {
+  min-width: 116px;
+  display: grid;
+  gap: 6px;
+}
+
+.operator-bin-width-control > label,
+.operator-bin-width-control > small {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.operator-bin-width-control > small {
+  min-height: 11px;
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.operator-bin-width-control > small.error { color: var(--danger); }
+
+.operator-bin-width-input-row {
+  display: flex;
+  align-items: stretch;
+}
+
+.operator-bin-width-input-row input {
+  width: 88px;
+  min-width: 0;
+  min-height: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: #fff;
+  color: var(--text);
+  padding: 3px 7px;
+  font: inherit;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.operator-bin-width-input-row input[aria-invalid="true"] { border-color: var(--danger); }
+
+.operator-bin-width-input-row button {
+  min-height: 28px;
+  border: 1px solid var(--border-strong);
+  border-left: 0;
+  border-radius: 0;
+  background: #fff;
+  color: var(--text-soft);
+  padding: 3px 7px;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.operator-bin-width-input-row button:hover { background: var(--surface-hover); }
+
+.operator-bin-width-input-row input:focus-visible,
+.operator-bin-width-input-row button:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
 .operator-database-table-wrap {
   max-width: 100%;
   overscroll-behavior-x: contain;
@@ -383,6 +454,12 @@
   .operator-database-table { min-width: 900px; }
   .operator-detail-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
+  .operator-statistics-axis-settings {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
   .operator-statistics-panel .enemy-metric-selector {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -448,6 +525,8 @@
 @media (pointer: coarse) {
   .operator-database-sort-button { min-height: 44px; }
   .operator-database-name-button { min-height: 32px; }
+  .operator-bin-width-input-row input,
+  .operator-bin-width-input-row button { min-height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

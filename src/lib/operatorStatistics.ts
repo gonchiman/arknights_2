@@ -204,6 +204,7 @@ export function calculateOperatorMetricStatistics(
   rows: ReadonlyArray<OperatorDatabaseRecord>,
   metricKey: OperatorAnalyzedStatKey,
   scale: HistogramScale = getOperatorStatMetric(metricKey).defaultScale,
+  customLinearBinWidth: number | null = null,
 ): NumericStatistics {
   const metric = getOperatorStatMetric(metricKey)
   return calculateNumericStatistics(
@@ -211,6 +212,7 @@ export function calculateOperatorMetricStatistics(
     metric.logBinCount,
     scale,
     metric.minimumLinearBinWidth,
+    customLinearBinWidth,
   )
 }
 

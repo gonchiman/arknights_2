@@ -160,6 +160,27 @@ test('対数目盛で0を含む広い分布を全件いずれかの階級へ含�
   assert.equal(statistics.maximum, 10000)
 })
 
+test('線形目盛へ任意の階級幅を渡してオペレーター全件を集計する', () => {
+  const rows = [0, 10, 20, 21].map((magicResistance, index) => createOperator({
+    operatorId: `operator_${index}`,
+    magicResistance,
+  }))
+
+  const statistics = calculateOperatorMetricStatistics(
+    rows,
+    'magicResistance',
+    'LINEAR',
+    10,
+  )
+
+  assert.equal(statistics.histogram?.binWidth, 10)
+  assert.equal(statistics.histogram?.normalRangeStart, 0)
+  assert.equal(statistics.histogram?.normalRangeEnd, 30)
+  assert.equal(statistics.histogram?.normalBinCount, 3)
+  assert.deepEqual(statistics.bins.map(({ count }) => count), [1, 1, 2])
+  assert.equal(statistics.bins.reduce((sum, bin) => sum + bin.count, 0), rows.length)
+})
+
 test('散布図は両方の指標が有限値のオペレーターだけを使う', () => {
   const rows = [
     createOperator({ operatorId: 'complete', attack: 400, defense: 250 }),

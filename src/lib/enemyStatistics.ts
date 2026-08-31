@@ -17,6 +17,14 @@ export interface HistogramMetadata {
   hasOverflow: boolean
 }
 
+export type CustomLinearBinWidthValidationError = 'INVALID' | 'TOO_MANY_BINS'
+
+export interface CustomLinearBinWidthValidation {
+  valid: boolean
+  binCount: number | null
+  error: CustomLinearBinWidthValidationError | null
+}
+
 export interface NumericStatistics {
   totalCount: number
   count: number
@@ -57,11 +65,14 @@ const LINEAR_NORMAL_BIN_COUNT = 10
 const LINEAR_PERCENTILE = 0.95
 const NICE_WIDTH_FACTORS = [1, 2, 2.5, 5, 10] as const
 
+export const MAX_CUSTOM_LINEAR_BIN_COUNT = 200
+
 export function calculateNumericStatistics(
   source: ReadonlyArray<number | null | undefined>,
   preferredBinCount = DEFAULT_BIN_COUNT,
   histogramScale: HistogramScale = 'LINEAR',
   minimumLinearBinWidth = 0,
+  customLinearBinWidth: number | null = null,
 ): NumericStatistics {
   const values = getFiniteSortedValues(source)
   const count = values.length
@@ -88,7 +99,13 @@ export function calculateNumericStatistics(
   const maximum = values[count - 1]
   const mean = values.reduce((sum, value) => sum + value, 0) / count
   const variance = values.reduce((sum, value) => sum + ((value - mean) ** 2), 0) / count
-  const histogram = buildHistogram(values, preferredBinCount, histogramScale, minimumLinearBinWidth)
+  const histogram = buildHistogram(
+    values,
+    preferredBinCount,
+    histogramScale,
+    minimumLinearBinWidth,
+    customLinearBinWidth,
+  )
 
   return {
     totalCount,
@@ -104,6 +121,37 @@ export function calculateNumericStatistics(
     bins: histogram.bins,
     histogram: histogram.metadata,
   }
+}
+
+export function validateCustomLinearBinWidth(
+  value: number | null | undefined,
+  maximum: number | null | undefined,
+): CustomLinearBinWidthValidation {
+  if (
+    typeof value !== 'number'
+    || !Number.isFinite(value)
+    || value <= 0
+    || typeof maximum !== 'number'
+    || !Number.isFinite(maximum)
+    || maximum < 0
+  ) {
+    return { valid: false, binCount: null, error: 'INVALID' }
+  }
+
+  const rawBinCount = maximum / value
+  const nearestInteger = Math.round(rawBinCount)
+  const integerTolerance = Number.EPSILON * Math.max(1, Math.abs(rawBinCount)) * 8
+  const binCount = Math.max(
+    1,
+    Math.abs(rawBinCount - nearestInteger) <= integerTolerance
+      ? nearestInteger
+      : Math.ceil(rawBinCount),
+  )
+  if (!Number.isSafeInteger(binCount) || binCount > MAX_CUSTOM_LINEAR_BIN_COUNT) {
+    return { valid: false, binCount, error: 'TOO_MANY_BINS' }
+  }
+
+  return { valid: true, binCount, error: null }
 }
 
 export function calculateEmpiricalCdf(
@@ -184,11 +232,16 @@ function buildHistogram(
   preferredBinCount: number,
   histogramScale: HistogramScale,
   minimumLinearBinWidth: number,
+  customLinearBinWidth: number | null,
 ): { bins: HistogramBin[]; metadata: HistogramMetadata } {
   const minimum = sortedValues[0]
   const maximum = sortedValues[sortedValues.length - 1]
 
   if (histogramScale === 'LINEAR' && minimum >= 0) {
+    const validation = validateCustomLinearBinWidth(customLinearBinWidth, maximum)
+    if (validation.valid && validation.binCount !== null && customLinearBinWidth !== null) {
+      return buildCustomLinearHistogram(sortedValues, customLinearBinWidth, validation.binCount)
+    }
     return buildAdaptiveLinearHistogram(sortedValues, minimumLinearBinWidth)
   }
 
@@ -236,6 +289,45 @@ function buildHistogram(
       normalRangeStart: minimum,
       normalRangeEnd: maximum,
       normalBinCount: bins.length,
+      hasOverflow: false,
+    },
+  }
+}
+
+function buildCustomLinearHistogram(
+  sortedValues: ReadonlyArray<number>,
+  binWidth: number,
+  binCount: number,
+): { bins: HistogramBin[]; metadata: HistogramMetadata } {
+  const normalRangeEnd = normalizeNumber(binWidth * binCount)
+  const bins = Array.from({ length: binCount }, (_, index): HistogramBin => ({
+    start: normalizeNumber(binWidth * index),
+    end: normalizeNumber(binWidth * (index + 1)),
+    count: 0,
+    includesMaximum: index === binCount - 1,
+  }))
+  const boundaryTolerance = Number.EPSILON
+    * Math.max(1, Math.abs(binWidth), Math.abs(normalRangeEnd))
+    * 8
+
+  for (const value of sortedValues) {
+    const index = value >= normalRangeEnd - boundaryTolerance
+      ? binCount - 1
+      : Math.min(
+        binCount - 1,
+        Math.max(0, Math.floor((value + boundaryTolerance) / binWidth)),
+      )
+    bins[index].count += 1
+  }
+
+  return {
+    bins,
+    metadata: {
+      scale: 'LINEAR',
+      binWidth,
+      normalRangeStart: 0,
+      normalRangeEnd,
+      normalBinCount: binCount,
       hasOverflow: false,
     },
   }
