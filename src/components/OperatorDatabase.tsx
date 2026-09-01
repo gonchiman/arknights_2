@@ -15,7 +15,6 @@ import type { SkillClassificationOverride, SkillRecord } from '../types/skill'
 import { Filters, type FilterOption } from './Filters'
 import { OperatorDetailModal } from './OperatorDetailModal'
 import { OperatorStatisticsPanel } from './OperatorStatisticsPanel'
-import { SkillDetail } from './SkillDetail'
 import './OperatorDatabase.css'
 
 interface Props {
@@ -23,9 +22,6 @@ interface Props {
   loading: boolean
   overrides: Record<string, SkillClassificationOverride>
   onOverride: (skillId: string, override: SkillClassificationOverride | null) => void
-  selectedClassifierSkillId: string | null
-  onSelectClassifierSkill: (skillId: string, replaceCurrent?: boolean) => void
-  onCloseClassifierSkill: () => void
 }
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
@@ -35,15 +31,11 @@ export function OperatorDatabase({
   loading,
   overrides,
   onOverride,
-  selectedClassifierSkillId,
-  onSelectClassifierSkill,
-  onCloseClassifierSkill,
 }: Props) {
   const [filters, setFilters] = useState({ ...EMPTY_OPERATOR_DATABASE_FILTERS })
   const [sort, setSort] = useState<OperatorDatabaseSort>({ ...DEFAULT_OPERATOR_DATABASE_SORT })
   const [detailOperatorId, setDetailOperatorId] = useState<string | null>(null)
   const detailTriggerRef = useRef<HTMLButtonElement | null>(null)
-  const classifierReturnSkillIdRef = useRef<string | null>(null)
 
   const records = useMemo(() => buildOperatorDatabaseRecords(rows), [rows])
   const professionOptions = useMemo(() => buildProfessionOptions(records), [records])
@@ -61,14 +53,6 @@ export function OperatorDatabase({
     () => detailOperator ? getOperatorSkills(rows, detailOperator.operatorId) : [],
     [rows, detailOperator],
   )
-  const selectedClassifierSkill = useMemo(
-    () => rows.find((skill) => skill.id === selectedClassifierSkillId) ?? null,
-    [rows, selectedClassifierSkillId],
-  )
-  const selectedOperatorSkills = useMemo(
-    () => selectedClassifierSkill ? getOperatorSkills(rows, selectedClassifierSkill.operatorId) : [],
-    [rows, selectedClassifierSkill],
-  )
 
   const updateSort = (key: OperatorDatabaseSortKey) => {
     setSort((current) => ({
@@ -83,7 +67,6 @@ export function OperatorDatabase({
 
   const openDetail = (operator: OperatorDatabaseRecord, trigger: HTMLButtonElement) => {
     detailTriggerRef.current = trigger
-    classifierReturnSkillIdRef.current = null
     setDetailOperatorId(operator.operatorId)
   }
 
@@ -99,43 +82,6 @@ export function OperatorDatabase({
       const buttons = document.querySelectorAll<HTMLButtonElement>('.operator-database-name-button[data-operator-id]')
       Array.from(buttons).find((button) => button.dataset.operatorId === closingOperatorId)?.focus()
     })
-  }
-
-  const openSkillClassification = (skill: SkillRecord, replaceCurrent = false) => {
-    classifierReturnSkillIdRef.current = skill.id
-    onSelectClassifierSkill(skill.id, replaceCurrent)
-  }
-
-  const closeSkillClassification = () => {
-    if (detailOperatorId) window.history.back()
-    else onCloseClassifierSkill()
-  }
-
-  if (selectedClassifierSkill) {
-    return (
-      <SkillDetail
-        skill={selectedClassifierSkill}
-        operatorSkills={selectedOperatorSkills}
-        override={overrides[selectedClassifierSkill.id]}
-        onBack={closeSkillClassification}
-        backLabel={detailOperatorId ? 'オペレーター詳細に戻る' : 'オペレーター一覧に戻る'}
-        onSelectSkill={(skill) => openSkillClassification(skill, true)}
-        onOverride={(override) => onOverride(selectedClassifierSkill.id, override)}
-      />
-    )
-  }
-
-  if (selectedClassifierSkillId) {
-    return (
-      <section className="route-state detail-page" role="status">
-        <h1>{loading ? 'スキルを読み込んでいます…' : 'スキルが見つかりません'}</h1>
-        {!loading && (
-          <button type="button" className="button secondary" onClick={onCloseClassifierSkill}>
-            オペレーター一覧に戻る
-          </button>
-        )}
-      </section>
-    )
   }
 
   return (
@@ -236,8 +182,8 @@ export function OperatorDatabase({
         <OperatorDetailModal
           operator={detailOperator}
           skills={detailOperatorSkills}
-          initialFocusSkillId={classifierReturnSkillIdRef.current}
-          onOpenSkillClassification={openSkillClassification}
+          overrides={overrides}
+          onOverride={onOverride}
           onClose={closeDetail}
         />
       )}
