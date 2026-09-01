@@ -13,6 +13,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['damage', 'damage'],
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
+      ['sources', 'sources'],
     ],
   )
   assert.equal(new Set(APP_NAV_ITEMS.map((item) => item.href)).size, APP_NAV_ITEMS.length)
@@ -32,6 +33,10 @@ test('敵分析ページのhashを解析する', () => {
 
 test('全スキル一覧ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/skills'), { view: 'skills' })
+})
+
+test('参照元ページのhashを解析する', () => {
+  assert.deepEqual(parseHashRoute('#/sources'), { view: 'sources' })
 })
 
 test('既存ルートと不明なhashのフォールバックを維持する', () => {

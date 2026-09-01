@@ -135,6 +135,7 @@ export function buildEnemyStageAppearanceDocument({
       repository: 'ArknightsAssets/ArknightsGamedata',
       region: 'jp',
       stageTableUrl: STAGE_TABLE_URL,
+      handbookTableUrl: HANDBOOK_URL,
       levelBaseUrl: LEVEL_BASE_URL,
     },
     summary: {

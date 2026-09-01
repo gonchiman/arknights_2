@@ -1,11 +1,11 @@
 import type { EnemyLevelType, EnemyRatings, EnemyRecord, EnemyStats } from '../types/enemy'
+import { DATA_SOURCE_URLS } from './dataSources.ts'
 
-const BASE = 'https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/master/jp/gamedata'
 const APP_BASE = import.meta.env?.BASE_URL ?? '/'
 
 export const ENEMY_DATA_URLS = {
-  handbook: `${BASE}/excel/enemy_handbook_table.json`,
-  database: `${BASE}/levels/enemydata/enemy_database.json`,
+  handbook: DATA_SOURCE_URLS.enemyHandbook,
+  database: DATA_SOURCE_URLS.enemyDatabase,
   stageAppearances: `${APP_BASE.endsWith('/') ? APP_BASE : `${APP_BASE}/`}data/enemy-stage-appearances.json`,
 }
 

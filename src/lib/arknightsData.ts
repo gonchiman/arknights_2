@@ -9,15 +9,14 @@ import type {
   SkillRecord,
 } from '../types/skill'
 import { classifySkill } from './classifier'
+import { DATA_SOURCE_URLS } from './dataSources.ts'
 import { getOperatorInitial, getProfessionLabel } from './operatorFilters'
 
-const BASE = 'https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/master/jp/gamedata/excel'
-
 export const DATA_URLS = {
-  character: `${BASE}/character_table.json`,
-  skill: `${BASE}/skill_table.json`,
-  uniequip: `${BASE}/uniequip_table.json`,
-  battleEquip: `${BASE}/battle_equip_table.json`,
+  character: DATA_SOURCE_URLS.character,
+  skill: DATA_SOURCE_URLS.skill,
+  uniequip: DATA_SOURCE_URLS.uniequip,
+  battleEquip: DATA_SOURCE_URLS.battleEquip,
 }
 
 type CharacterTable = Record<string, {
