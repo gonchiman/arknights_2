@@ -957,6 +957,8 @@ function MechAccordDamageTable({ result }: { result: MechAccordDamageRowsResult 
           <thead>
             <tr>
               <th scope="col">攻撃回数</th>
+              <th scope="col">本体</th>
+              <th scope="col">浮遊</th>
               <th scope="col">本体＋浮遊</th>
             </tr>
           </thead>
@@ -968,10 +970,22 @@ function MechAccordDamageTable({ result }: { result: MechAccordDamageRowsResult 
                   <th scope="row">{row.attackCount === 8 ? '8回目以降' : `${row.attackCount}回目`}</th>
                   <td
                     className={row.minimumReached ? 'mech-accord-minimum' : undefined}
-                    aria-label={`合計 ${formatNumber(row.combinedDamage)}、浮遊ユニット ${formatNumber(row.droneDamage)}、攻撃倍率 ${row.multiplierPercent}%${minimumLabel}`}
+                    aria-label={`本体 ${formatNumber(result.mainDamage.result)}${minimumLabel}`}
+                  >
+                    <strong className="mech-accord-cell-value">{formatNumber(result.mainDamage.result)}</strong>
+                  </td>
+                  <td
+                    className={row.minimumReached ? 'mech-accord-minimum' : undefined}
+                    aria-label={`浮遊 ${formatNumber(row.droneDamage)}、攻撃倍率 ${row.multiplierPercent}%${minimumLabel}`}
+                  >
+                    <strong className="mech-accord-cell-value">{formatNumber(row.droneDamage)}</strong>
+                    <small className="mech-accord-cell-meta">{row.multiplierPercent}%</small>
+                  </td>
+                  <td
+                    className={row.minimumReached ? 'mech-accord-minimum' : undefined}
+                    aria-label={`本体＋浮遊 ${formatNumber(row.combinedDamage)}${minimumLabel}`}
                   >
                     <strong className="mech-accord-cell-value">{formatNumber(row.combinedDamage)}</strong>
-                    <small className="mech-accord-cell-meta">浮遊 {formatNumber(row.droneDamage)} · {row.multiplierPercent}%</small>
                   </td>
                 </tr>
               )
