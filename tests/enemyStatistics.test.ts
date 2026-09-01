@@ -1,9 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  MAX_CUSTOM_LINEAR_BIN_COUNT,
   calculateBoxPlotStatistics,
   calculateEmpiricalCdf,
   calculateNumericStatistics,
+  validateCustomLinearBinWidth,
 } from '../src/lib/enemyStatistics.ts'
 
 test('表示対象の有限値だけで統計量を算出する', () => {
@@ -62,6 +64,100 @@ test('階級幅を1・2・2.5・5系列へ切り上げ、整数値の最小幅�
   assert.equal(rounded.histogram?.binWidth, 2_500)
   assert.equal(rounded.histogram?.normalRangeEnd, 25_000)
   assert.equal(minimum.histogram?.binWidth, 1)
+})
+
+test('線形目盛の指定階級幅で0から最大値を覆い、境界上の値を1回ずつ数える', () => {
+  const result = calculateNumericStatistics(
+    [0, 5, 10, 10.1, 20, 25],
+    10,
+    'LINEAR',
+    1,
+    10,
+  )
+
+  assert.deepEqual(result.bins, [
+    { start: 0, end: 10, count: 2, includesMaximum: false },
+    { start: 10, end: 20, count: 2, includesMaximum: false },
+    { start: 20, end: 30, count: 2, includesMaximum: true },
+  ])
+  assert.deepEqual(result.histogram, {
+    scale: 'LINEAR',
+    binWidth: 10,
+    normalRangeStart: 0,
+    normalRangeEnd: 30,
+    normalBinCount: 3,
+    hasOverflow: false,
+  })
+  assert.equal(result.bins.reduce((sum, bin) => sum + bin.count, 0), result.count)
+})
+
+test('小数の指定階級幅でも最大値が境界上なら最後の階級へ含める', () => {
+  const result = calculateNumericStatistics([0, 0.1, 0.2, 0.3], 10, 'LINEAR', 0.01, 0.1)
+  const floatingBoundary = calculateNumericStatistics([0, 0.07], 10, 'LINEAR', 0.001, 0.01)
+  const nearBoundary = calculateNumericStatistics(
+    [0.99999999995, 1, 1.00000000005, 2],
+    10,
+    'LINEAR',
+    0.01,
+    1,
+  )
+
+  assert.deepEqual(result.bins.map(({ start, end, count }) => ({ start, end, count })), [
+    { start: 0, end: 0.1, count: 1 },
+    { start: 0.1, end: 0.2, count: 1 },
+    { start: 0.2, end: 0.3, count: 2 },
+  ])
+  assert.equal(result.bins.reduce((sum, bin) => sum + bin.count, 0), 4)
+  assert.equal(floatingBoundary.histogram?.normalBinCount, 7)
+  assert.equal(floatingBoundary.histogram?.normalRangeEnd, 0.07)
+  assert.equal(floatingBoundary.bins.reduce((sum, bin) => sum + bin.count, 0), 2)
+  assert.deepEqual(nearBoundary.bins.map(({ count }) => count), [1, 3])
+})
+
+test('指定階級幅を検証し、過剰な階級数は従来の自動幅へフォールバックする', () => {
+  assert.deepEqual(validateCustomLinearBinWidth(5, 25), {
+    valid: true,
+    binCount: 5,
+    error: null,
+  })
+  assert.deepEqual(validateCustomLinearBinWidth(5, 0), {
+    valid: true,
+    binCount: 1,
+    error: null,
+  })
+
+  for (const invalidWidth of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+    assert.deepEqual(validateCustomLinearBinWidth(invalidWidth, 25), {
+      valid: false,
+      binCount: null,
+      error: 'INVALID',
+    })
+  }
+
+  const excessiveMaximum = MAX_CUSTOM_LINEAR_BIN_COUNT + 1
+  assert.deepEqual(validateCustomLinearBinWidth(1, excessiveMaximum), {
+    valid: false,
+    binCount: excessiveMaximum,
+    error: 'TOO_MANY_BINS',
+  })
+  assert.deepEqual(validateCustomLinearBinWidth(1, MAX_CUSTOM_LINEAR_BIN_COUNT + 1e-8), {
+    valid: false,
+    binCount: MAX_CUSTOM_LINEAR_BIN_COUNT + 1,
+    error: 'TOO_MANY_BINS',
+  })
+
+  const result = calculateNumericStatistics([0, excessiveMaximum], 10, 'LINEAR', 1, 1)
+  assert.equal(result.histogram?.normalBinCount, 10)
+  assert.notEqual(result.histogram?.binWidth, 1)
+  assert.equal(result.bins.reduce((sum, bin) => sum + bin.count, 0), 2)
+})
+
+test('対数目盛では指定階級幅を無視して従来の対数階級を使う', () => {
+  const result = calculateNumericStatistics([0, 10, 100], 3, 'LOG', 1, 10)
+
+  assert.equal(result.histogram?.scale, 'LOG')
+  assert.equal(result.histogram?.binWidth, null)
+  assert.equal(result.bins.length, 3)
 })
 
 test('対数目盛でも全データをいずれかの区間へ含める', () => {

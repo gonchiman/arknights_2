@@ -5,14 +5,16 @@ import {
   buildOperatorDatabaseRecords,
   filterAndSortOperatorDatabaseRecords,
   hasActiveOperatorDatabaseFilters,
+  type OperatorDatabaseFilters,
   type OperatorDatabaseRecord,
   type OperatorDatabaseSort,
   type OperatorDatabaseSortKey,
 } from '../lib/operatorDatabase'
-import { PROFESSION_ORDER } from '../lib/operatorFilters'
+import { OPERATOR_INITIAL_LABELS, PROFESSION_ORDER } from '../lib/operatorFilters'
 import type { SkillRecord } from '../types/skill'
 import { Filters, type FilterOption } from './Filters'
 import { OperatorDetailModal } from './OperatorDetailModal'
+import { OperatorStatisticsPanel } from './OperatorStatisticsPanel'
 import './OperatorDatabase.css'
 
 interface Props {
@@ -35,6 +37,7 @@ export function OperatorDatabase({ rows, loading }: Props) {
     filters,
     sort,
   ), [records, filters, sort])
+  const scopeLabel = getOperatorScopeLabel(filters, professionOptions)
 
   const updateSort = (key: OperatorDatabaseSortKey) => {
     setSort((current) => ({
@@ -67,10 +70,10 @@ export function OperatorDatabase({ rows, loading }: Props) {
           <span className="page-kicker">OPERATOR DATABASE</span>
           <h1>オペレーターデータベース</h1>
         </div>
-        <p>オペレーターを絞り込み、基本ステータス・潜在能力・素質・スキル・モジュールを横断して確認します。</p>
+        <p>オペレーターを絞り込み、基本ステータスの分布と詳細データを横断して確認します。</p>
       </header>
 
-      <section className="operator-database-panel" aria-label="オペレーターデータベース">
+      <section className="operator-database-panel operator-database-filter-panel" aria-label="オペレーターの絞り込み">
         <Filters
           value={filters}
           professionOptions={professionOptions}
@@ -83,7 +86,13 @@ export function OperatorDatabase({ rows, loading }: Props) {
           <span>{loading ? '読み込み中...' : `${visibleRecords.length} / ${records.length} 名表示`}</span>
           <span>ステータスは最終昇進・最大Lv・信頼度100（潜在能力／モジュール補正なし）</span>
         </div>
+      </section>
 
+      {!loading && visibleRecords.length > 0 && (
+        <OperatorStatisticsPanel rows={visibleRecords} scopeLabel={scopeLabel} />
+      )}
+
+      <section className="operator-database-panel operator-database-table-panel" aria-label="オペレーター一覧">
         {!loading && visibleRecords.length === 0 ? (
           <div className="operator-empty-state" role="status">
             <strong>条件に一致するオペレーターがいません</strong>
@@ -194,6 +203,20 @@ function buildProfessionOptions(records: OperatorDatabaseRecord[]): FilterOption
     - (order.get(b.value) ?? PROFESSION_ORDER.length)
     || a.label.localeCompare(b.label, 'ja')
   ))
+}
+
+function getOperatorScopeLabel(
+  filters: OperatorDatabaseFilters,
+  professionOptions: FilterOption[],
+): string {
+  const parts: string[] = []
+  if (filters.nameInitial !== 'ALL') parts.push(OPERATOR_INITIAL_LABELS[filters.nameInitial])
+  if (filters.profession !== 'ALL') {
+    parts.push(professionOptions.find(({ value }) => value === filters.profession)?.label ?? filters.profession)
+  }
+  if (filters.rarity !== 'ALL') parts.push(`★${filters.rarity}`)
+  if (filters.query.trim()) parts.push(`検索「${filters.query.trim()}」`)
+  return parts.length > 0 ? parts.join(' / ') : '全オペレーター'
 }
 
 function getDefaultSortDirection(key: OperatorDatabaseSortKey): OperatorDatabaseSort['direction'] {
