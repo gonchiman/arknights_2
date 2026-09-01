@@ -20,6 +20,22 @@
   grid-template-columns: repeat(9, minmax(0, 1fr));
 }
 
+.operator-statistics-panel .enemy-statistics-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.operator-statistics-panel .enemy-statistics-grid > div {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.operator-statistics-panel .enemy-statistics-grid > div:nth-child(5n) { border-right: 0; }
+.operator-statistics-panel .enemy-statistics-grid > div:nth-last-child(-n + 5) { border-bottom: 0; }
+
+.operator-statistics-panel .enemy-statistics-grid span {
+  font-size: 8px;
+}
+
 .operator-histogram-settings {
   min-width: 0;
   display: flex;
@@ -576,12 +592,14 @@
   }
 
   .operator-statistics-panel .enemy-statistics-grid > div,
-  .operator-statistics-panel .enemy-statistics-grid > div:nth-child(4n) {
+  .operator-statistics-panel .enemy-statistics-grid > div:nth-child(4n),
+  .operator-statistics-panel .enemy-statistics-grid > div:nth-child(5n) {
     border-right: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
   }
 
   .operator-statistics-panel .enemy-statistics-grid > div:nth-child(2n) { border-right: 0; }
+  .operator-statistics-panel .enemy-statistics-grid > div:nth-last-child(-n + 5) { border-bottom: 1px solid var(--border); }
   .operator-statistics-panel .enemy-statistics-grid > div:nth-last-child(-n + 2) { border-bottom: 0; }
 }
 
