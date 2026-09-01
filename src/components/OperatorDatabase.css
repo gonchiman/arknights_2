@@ -397,6 +397,7 @@
 
 .skill-classifier-popover-panel {
   width: min(780px, 100%);
+  height: min(680px, calc(100dvh - 48px));
   max-height: calc(100dvh - 48px);
   min-height: 0;
   display: grid;
@@ -550,6 +551,7 @@
 
   .skill-classifier-popover-panel {
     width: 100%;
+    height: calc(100dvh - 16px);
     max-height: calc(100dvh - 16px);
   }
 
