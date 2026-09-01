@@ -100,18 +100,28 @@ export function Filters({
         ))}
       </div>
       {subProfessionOptions && (
-        <label className="initial-filter subprofession-filter">
+        <div className="initial-filter subprofession-filter" role="group" aria-label="職分">
           <span className="initial-filter-label">職分</span>
-          <select
-            value={value.subProfession}
-            onChange={(event) => onChange({ ...value, subProfession: event.target.value })}
+          <button
+            type="button"
+            className={`initial-button ${value.subProfession === 'ALL' ? 'active' : ''}`}
+            aria-pressed={value.subProfession === 'ALL'}
+            onClick={() => onChange({ ...value, subProfession: 'ALL' })}
           >
-            <option value="ALL">すべての職分</option>
-            {subProfessionOptions.map((option) => (
-              <option value={option.value} key={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </label>
+            すべて
+          </button>
+          {subProfessionOptions.map((option) => (
+            <button
+              type="button"
+              className={`initial-button ${value.subProfession === option.value ? 'active' : ''}`}
+              aria-pressed={value.subProfession === option.value}
+              onClick={() => onChange({ ...value, subProfession: option.value })}
+              key={option.value}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       )}
       <div className="initial-filter rarity-filter" role="group" aria-label="レアリティ">
         <span className="initial-filter-label">レアリティ</span>
