@@ -5,6 +5,7 @@ import type {
   PassiveSourceKind,
 } from './operatorProfile'
 import type { RawBlackboardEntry } from '../types/skill'
+import { getExplicitDamageTypes } from './skillDamageModel.ts'
 
 export type OperatorEffectStatus =
   | 'APPLIED'
@@ -200,7 +201,7 @@ const OPERATOR_EFFECT_DEFINITIONS: OperatorEffectDefinition[] = [
 export function evaluateOperatorEffects(
   operatorId: string,
   passives: OperatorPassives,
-  selectedDamageType?: DamageType,
+  selectedDamageType?: DamageType | null,
 ): OperatorEffectsEvaluation {
   const modifiers = createEmptyModifiers()
   const effects: EvaluatedOperatorEffect[] = []
@@ -221,14 +222,17 @@ export function evaluateOperatorEffects(
 
     if (explicitDamageType) {
       recommendedDamageType ??= explicitDamageType
-      const matchesSelection = !selectedDamageType || selectedDamageType === explicitDamageType
+      const matchesSelection = selectedDamageType === undefined
+        || selectedDamageType === explicitDamageType
       sourceEffects.push(createEffect(source, {
         label: 'ダメージ種別',
         status: matchesSelection ? 'APPLIED' : 'NOT_APPLIED',
         valueLabel: damageTypeLabel(explicitDamageType),
         reason: matchesSelection
           ? `特性に${damageTypeLabel(explicitDamageType)}ダメージが明示されています。`
-          : `特性は${damageTypeLabel(explicitDamageType)}ダメージですが、計算条件では${damageTypeLabel(selectedDamageType)}ダメージが選択されています。`,
+          : selectedDamageType === null
+            ? 'ダメージ種別を自動判定できないため、この効果は計算に適用しません。'
+            : `特性は${damageTypeLabel(explicitDamageType)}ダメージですが、計算対象は${damageTypeLabel(selectedDamageType)}ダメージです。`,
         scope: 'ATTACK',
       }))
       hasRegisteredDirectEffect = true
@@ -248,7 +252,7 @@ export function evaluateOperatorEffects(
       if (definition.blackboardKey !== null) matchedKeys.add(definition.blackboardKey)
 
       const damageTypeMatches = !definition.requiredDamageType
-        || !selectedDamageType
+        || selectedDamageType === undefined
         || definition.requiredDamageType === selectedDamageType
       const status = damageTypeMatches ? definition.status : 'NOT_APPLIED'
       const value = numericValue(entry)
@@ -261,7 +265,9 @@ export function evaluateOperatorEffects(
         valueLabel: definition.formatValue?.(value) ?? '—',
         reason: damageTypeMatches
           ? definition.reason
-          : `${damageTypeLabel(definition.requiredDamageType as DamageType)}ダメージにだけ影響するため、現在のダメージ種別には適用しません。`,
+          : selectedDamageType === null
+            ? 'ダメージ種別を自動判定できないため、この種別限定効果は計算に適用しません。'
+            : `${damageTypeLabel(definition.requiredDamageType as DamageType)}ダメージにだけ影響するため、現在のダメージ種別には適用しません。`,
         scope: definition.scope,
       }))
     }
@@ -317,7 +323,7 @@ export function evaluateOperatorEffects(
 export function getPassiveSourceStatus(
   operatorId: string,
   source: PassiveSource | null | undefined,
-  selectedDamageType?: DamageType,
+  selectedDamageType?: DamageType | null,
 ): OperatorEffectStatus {
   if (!source) return 'NO_DIRECT_EFFECT'
   const evaluation = evaluateOperatorEffects(operatorId, {
@@ -403,10 +409,8 @@ function normalizeKey(key: string | undefined): string {
 }
 
 function inferDamageTypeFromText(description: string): DamageType | null {
-  if (/確定ダメージ/.test(description)) return 'TRUE'
-  if (/術ダメージ/.test(description)) return 'ARTS'
-  if (/物理ダメージ/.test(description)) return 'PHYSICAL'
-  return null
+  const explicitTypes = getExplicitDamageTypes(description)
+  return explicitTypes.length === 1 ? explicitTypes[0] : null
 }
 
 function hasDirectDamageEffect(description: string): boolean {

@@ -64,6 +64,15 @@ test('スルトの術ダメージと術耐性固定無視を構造化して評�
   )
 })
 
+test('ダメージ種別が自動判定できないときは種別限定効果を適用しない', () => {
+  const passives = getOperatorPassives(createSurtrProfile(), 2, 90)
+  const evaluation = evaluateOperatorEffects('char_350_surtr', passives, null)
+
+  assert.equal(evaluation.modifiers.resistanceIgnoreFixed, 0)
+  assert.equal(findEffect(evaluation.effects, '術耐性固定無視').status, 'NOT_APPLIED')
+  assert.equal(findEffect(evaluation.effects, 'ダメージ種別').status, 'NOT_APPLIED')
+})
+
 test('エクシアの攻撃速度と自己攻撃力を反映し、最大HPを直接影響なしとする', () => {
   const passives = getOperatorPassives(createExusiaiProfile(), 2, 90)
   const evaluation = evaluateOperatorEffects('char_103_angel', passives, 'PHYSICAL')
@@ -148,6 +157,17 @@ test('素質の追加術ダメージを通常攻撃のダメージ種別とし�
   assert.equal(evaluation.recommendedDamageType, null)
   assert.equal(evaluation.effects.some((effect) => effect.label === 'ダメージ種別'), false)
   assert.equal(evaluation.effects.some((effect) => effect.status === 'UNSUPPORTED'), true)
+})
+
+test('特性の被ダメージ説明を通常攻撃の種別として推測しない', () => {
+  const passives = getOperatorPassives({
+    ...emptyStats,
+    traitDescription: '味方が受ける術ダメージを20%軽減する',
+  }, 0, 1)
+  const evaluation = evaluateOperatorEffects('char_unknown', passives, 'PHYSICAL')
+
+  assert.equal(evaluation.recommendedDamageType, null)
+  assert.equal(evaluation.effects.some((effect) => effect.label === 'ダメージ種別'), false)
 })
 
 function createSurtrProfile(): OperatorCombatProfile {

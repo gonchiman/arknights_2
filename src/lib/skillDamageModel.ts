@@ -1,6 +1,46 @@
-import type { SkillRecord } from '../types/skill.ts'
+import type { DamageComponentType, SkillRecord } from '../types/skill.ts'
 import type { DamageType, SkillTotalMode } from './damageCalculator.ts'
-import { getDefaultDamageType } from './damageCalculator.ts'
+
+export type DamageTypeDetectionSource =
+  | 'TRAIT'
+  | 'PROFESSION'
+  | 'SKILL_DESCRIPTION'
+  | 'NORMAL_ATTACK'
+  | 'UNRESOLVED'
+
+export interface DamageTypeDetection {
+  damageType: DamageType | null
+  source: DamageTypeDetectionSource
+  reason: string
+}
+
+const PROFESSION_DEFAULT_DAMAGE_TYPES: Readonly<Record<string, DamageType>> = {
+  PIONEER: 'PHYSICAL',
+  WARRIOR: 'PHYSICAL',
+  TANK: 'PHYSICAL',
+  SNIPER: 'PHYSICAL',
+  CASTER: 'ARTS',
+  SPECIAL: 'PHYSICAL',
+}
+
+const SKILL_TYPE_INHERITANCE_BLOCKERS = new Set<DamageComponentType>([
+  'BURST',
+  'PERIODIC',
+  'DAMAGE_OVER_TIME',
+  'SUMMON',
+  'DEPLOYED_OBJECT',
+  'NO_DIRECT_DAMAGE',
+  'UNKNOWN',
+])
+
+const SKILL_TYPE_DETECTION_BLOCKERS = new Set<DamageComponentType>([
+  'PERIODIC',
+  'DAMAGE_OVER_TIME',
+  'SUMMON',
+  'DEPLOYED_OBJECT',
+  'NO_DIRECT_DAMAGE',
+  'UNKNOWN',
+])
 
 export function getSkillDamageUnsupportedReasons(skill: SkillRecord): string[] {
   const components = new Set(skill.classification.damageComponents.value)
@@ -65,19 +105,190 @@ export function getSkillTotalLabel(skill: SkillRecord): string {
   return 'スキル総ダメージ'
 }
 
-export function inferSkillDamageType(
-  skill: SkillRecord,
+export function detectNormalAttackDamageType(
+  profession: string,
   traitDescription = '',
-): DamageType {
-  const explicitTypes = getExplicitDamageTypes(skill.description)
-  if (explicitTypes.length === 1) return explicitTypes[0]
-  return getDefaultDamageType(skill.profession, traitDescription)
+): DamageTypeDetection {
+  const normalizedTrait = normalizeDescription(traitDescription)
+  if (isNonAttackingTrait(normalizedTrait)) {
+    return {
+      damageType: null,
+      source: 'UNRESOLVED',
+      reason: '通常攻撃を行わない特性です。',
+    }
+  }
+
+  const explicitTypes = getExplicitDamageTypes(normalizedTrait)
+  if (explicitTypes.length === 1) {
+    const conditionalOrIndependentDamage = /(?:スキル(?:発動)?中|スキル発動時|召喚物|配置物|装置|身替り|替身)/.test(normalizedTrait)
+    if (!conditionalOrIndependentDamage) {
+      return {
+        damageType: explicitTypes[0],
+        source: 'TRAIT',
+        reason: '特性の通常攻撃説明から自動判定しました。',
+      }
+    }
+  }
+  if (explicitTypes.length > 1) {
+    return {
+      damageType: null,
+      source: 'UNRESOLVED',
+      reason: '特性に複数のダメージ種別が含まれるため、通常攻撃の種別を自動判定できません。',
+    }
+  }
+  const professionDefault = PROFESSION_DEFAULT_DAMAGE_TYPES[profession]
+  if (professionDefault) {
+    return {
+      damageType: professionDefault,
+      source: 'PROFESSION',
+      reason: '職業の通常攻撃種別から自動判定しました。',
+    }
+  }
+
+  return {
+    damageType: null,
+    source: 'UNRESOLVED',
+    reason: '通常攻撃のダメージ種別を自動判定できません。今後対応予定です。',
+  }
+}
+
+export function detectSkillDamageType(
+  skill: SkillRecord,
+  normalDamageType: DamageType | null,
+  description = skill.description,
+): DamageTypeDetection {
+  const normalizedDescription = normalizeDescription(description)
+  const components = new Set(skill.classification.damageComponents.value)
+  const blockedComponent = [...SKILL_TYPE_DETECTION_BLOCKERS]
+    .find((component) => components.has(component))
+  if (blockedComponent) {
+    return {
+      damageType: null,
+      source: 'UNRESOLVED',
+      reason: blockedComponent === 'NO_DIRECT_DAMAGE'
+        ? '直接ダメージを持たないスキルです。'
+        : '複数の計算式や独立ユニットが必要なため、ダメージ種別を単一の式へ自動適用できません。今後対応予定です。',
+    }
+  }
+  if (components.has('BASIC_ATTACK_MODIFIER') && components.has('BURST')) {
+    return {
+      damageType: null,
+      source: 'UNRESOLVED',
+      reason: '通常攻撃の変化と独立ダメージを別々に判定する必要があります。今後対応予定です。',
+    }
+  }
+  if (hasNegatedTypedDamage(normalizedDescription)) {
+    return {
+      damageType: null,
+      source: 'UNRESOLVED',
+      reason: 'ダメージ種別の否定表現を単一の攻撃種別として自動適用できません。今後対応予定です。',
+    }
+  }
+  if (hasAdditionalDamageComponent(normalizedDescription)) {
+    return {
+      damageType: null,
+      source: 'UNRESOLVED',
+      reason: '通常攻撃と追加ダメージの種別を別々に判定する必要があります。今後対応予定です。',
+    }
+  }
+
+  const explicitTypes = getExplicitDamageTypes(normalizedDescription)
+  if (explicitTypes.length === 1) {
+    return {
+      damageType: explicitTypes[0],
+      source: 'SKILL_DESCRIPTION',
+      reason: 'スキル説明から自動判定しました。',
+    }
+  }
+  if (explicitTypes.length > 1) {
+    return {
+      damageType: null,
+      source: 'UNRESOLVED',
+      reason: '複数のダメージ種別を含むため、現在の単一ダメージ式では自動計算できません。今後対応予定です。',
+    }
+  }
+
+  const inheritsNormalAttack = components.has('BASIC_ATTACK_MODIFIER')
+    && ![...SKILL_TYPE_INHERITANCE_BLOCKERS].some((component) => components.has(component))
+  if (inheritsNormalAttack && normalDamageType) {
+    return {
+      damageType: normalDamageType,
+      source: 'NORMAL_ATTACK',
+      reason: '通常攻撃を変化させるスキルのため、通常攻撃の種別を継承しました。',
+    }
+  }
+
+  return {
+    damageType: null,
+    source: 'UNRESOLVED',
+    reason: 'ダメージ種別を自動判定できないため、このスキルは現在計算できません。今後対応予定です。',
+  }
 }
 
 export function getExplicitDamageTypes(description: string): DamageType[] {
-  const types: DamageType[] = []
-  if (/物理ダメージ/.test(description)) types.push('PHYSICAL')
-  if (/術ダメージ/.test(description)) types.push('ARTS')
-  if (/確定ダメージ/.test(description)) types.push('TRUE')
-  return types
+  const normalized = normalizeDescription(description)
+  return ([
+    ['PHYSICAL', '物理'],
+    ['ARTS', '術'],
+    ['TRUE', '確定'],
+  ] as const)
+    .filter(([, label]) => hasOutgoingDamageType(normalized, label))
+    .map(([type]) => type)
+}
+
+function normalizeDescription(description: string): string {
+  return description
+    .normalize('NFKC')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function isNonAttackingTrait(description: string): boolean {
+  return /敵を攻撃しない|攻撃を行わない|通常時は?攻撃しない|通常時は?攻撃せず|スキル未発動時.{0,8}(?:攻撃しない|攻撃せず|攻撃を行わない)/.test(description)
+}
+
+function hasAdditionalDamageComponent(description: string): boolean {
+  const typedDamage = '(?:物理|術|確定)(?:属性)?(?:の)?(?:範囲)?ダメージ'
+  return new RegExp([
+    `(?:追加(?:で|の)?|さらに|別途).{0,32}${typedDamage}`,
+    `${typedDamage}.{0,16}(?:を)?(?:追加で|さらに|別途)(?:与え|発生)`,
+    '(?:物理|術|確定)(?:属性)?(?:の)?追加ダメージ',
+  ].join('|')).test(description)
+}
+
+function hasNegatedTypedDamage(description: string): boolean {
+  return /(?:物理|術|確定)(?:属性)?(?:の)?(?:範囲)?ダメージ.{0,8}与え(?:ない|ず|なく)|(?:物理|術|確定)(?:属性)?攻撃を(?:行わない|しない)/.test(description)
+}
+
+function hasOutgoingDamageType(description: string, label: string): boolean {
+  const damageNoun = `${label}(?:属性)?(?:の)?(?:範囲)?ダメージ`
+  const directDamage = new RegExp(`${damageNoun}[^\u3002、；;]{0,24}(?:を)?与え`, 'g')
+  for (const match of description.matchAll(directDamage)) {
+    const prefix = description.slice(Math.max(0, (match.index ?? 0) - 12), match.index)
+    const suffix = description.slice((match.index ?? 0) + match[0].length)
+    const pathToVerb = match[0].slice(label.length)
+    const describesIncomingOrNegatedDamage = /(?:受け|軽減|無効|減少)/.test(pathToVerb)
+      || /(?:受ける|受けた|被ダメージ)$/.test(prefix)
+      || /^(?:ない|ず|なく)/.test(suffix)
+      || /^る(?:敵|対象|味方|ユニット|召喚物|装置|罠|地雷)/.test(suffix)
+    if (!describesIncomingOrNegatedDamage) return true
+  }
+
+  const typedAttack = new RegExp(`${label}(?:属性)?攻撃(?:を)?(?:行う|する)`, 'g')
+  for (const match of description.matchAll(typedAttack)) {
+    const prefix = description.slice(Math.max(0, (match.index ?? 0) - 12), match.index)
+    const suffix = description.slice((match.index ?? 0) + match[0].length)
+    if (!/(?:受ける|受けた|回避する)$/.test(prefix)
+      && !/^(?:敵|対象|味方|ユニット|召喚物|装置|罠|地雷)/.test(suffix)) return true
+  }
+
+  const conversion = new RegExp(`(?:通常)?攻撃(?:が|は|を)[^\u3002、；;]{0,24}?${label}(?:属性)?(?:攻撃|ダメージ)(?:に|へ|とな|として)`, 'g')
+  for (const match of description.matchAll(conversion)) {
+    const prefix = description.slice(Math.max(0, (match.index ?? 0) - 12), match.index)
+    if (!/(?:受ける|受けた|敵の|味方の|対象の)$/.test(prefix)) return true
+  }
+
+  return false
 }

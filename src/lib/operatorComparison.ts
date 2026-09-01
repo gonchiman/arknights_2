@@ -9,10 +9,11 @@ import {
 } from './damageCalculator.ts'
 import { getOperatorPassives } from './operatorProfile.ts'
 import {
+  detectNormalAttackDamageType,
+  detectSkillDamageType,
   getExplicitDamageTypes,
   getSkillDamageUnsupportedReasons,
   getSkillTotalMode,
-  inferSkillDamageType,
 } from './skillDamageModel.ts'
 import {
   evaluateOperatorEffects,
@@ -72,17 +73,21 @@ export function buildSkillComparisonRow(
   const phase = skill.operatorProfile.phases[phaseIndex]
   const operatorLevel = Math.max(1, phase?.maxLevel ?? 1)
   const passives = getOperatorPassives(skill.operatorProfile, phaseIndex, operatorLevel)
-  const explicitDamageTypes = getExplicitDamageTypes(skill.description)
-  const initialOperatorEffects = evaluateOperatorEffects(skill.operatorId, passives)
-  const damageType = explicitDamageTypes.length > 1
-    ? null
-    : explicitDamageTypes[0]
-      ?? initialOperatorEffects.recommendedDamageType
-      ?? inferSkillDamageType(skill, passives.traitDescription)
+  const skillLevel = skill.skillLevels.at(-1) ?? skill.raw
+  const normalDamageType = detectNormalAttackDamageType(
+    skill.profession,
+    passives.traitDescription,
+  ).damageType
+  const damageTypeDetection = detectSkillDamageType(
+    skill,
+    normalDamageType,
+    skill.description,
+  )
+  const damageType = damageTypeDetection.damageType
   const operatorEffects = evaluateOperatorEffects(
     skill.operatorId,
     passives,
-    damageType ?? undefined,
+    damageType,
   )
   const operatorStats = getOperatorStats(
     skill.operatorProfile,
@@ -91,9 +96,11 @@ export function buildSkillComparisonRow(
     100,
     { attackSpeedBonus: operatorEffects.modifiers.attackSpeedBonus },
   )
-  const skillLevel = skill.skillLevels.at(-1) ?? skill.raw
   const model = deriveSkillModel(skillLevel, operatorStats.attackInterval, operatorStats.attackSpeed)
-  const unavailableReasons = getComparisonUnavailableReasons(skill, skillLevel, model, metric)
+  const unavailableReasons = [...new Set([
+    ...getComparisonUnavailableReasons(skill, skillLevel, model, metric),
+    ...(damageType === null ? [damageTypeDetection.reason] : []),
+  ])]
   const warnings = getComparisonWarnings(model, operatorEffects.effects)
 
   if (unavailableReasons.length > 0 || damageType === null) {
@@ -161,7 +168,7 @@ export function buildComparisonCsv(
       `★${row.skill.rarity}`,
       `${row.skill.professionLabel} / ${row.skill.subProfessionName}`,
       EFFECT_WINDOW_LABELS[row.skill.classification.effectWindow.value],
-      row.damageType === null ? '複合・要確認' : DAMAGE_TYPE_LABELS[row.damageType],
+      row.damageType === null ? '自動判定不可' : DAMAGE_TYPE_LABELS[row.damageType],
       COMPARISON_METRIC_LABELS[metric],
       ...row.values.map((value) => value === null ? '' : formatCsvNumber(value)),
       row.unavailableReasons.length > 0

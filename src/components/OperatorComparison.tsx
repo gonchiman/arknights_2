@@ -465,7 +465,7 @@ export function OperatorComparison({ rows, loading }: Props) {
                         </button>
                       </td>
                       <td className="damage-type-column">
-                        {row.damageType === null ? '複合' : DAMAGE_TYPE_LABELS[row.damageType]}
+                        {row.damageType === null ? '自動判定不可' : DAMAGE_TYPE_LABELS[row.damageType]}
                       </td>
                       {row.values.map((value, index) => (
                         <td
@@ -520,7 +520,7 @@ export function OperatorComparison({ rows, loading }: Props) {
           </div>
         )}
         <p className="comparison-note">
-          ダメージ種別はスキル説明を優先し、明示がない場合は特性と職業から推定します。複合ダメージや現行モデル未対応のスキルは「—」、倍率を特定できない単純モデルは「概算」で示します。
+          ダメージ種別は、スキル説明の明示を優先し、通常攻撃だけを変化させるスキルは通常攻撃の種別を継承します。複合ダメージや自動判定できないスキルは「—」、倍率を特定できない単純モデルは「概算」で示します。
         </p>
       </section>
       {detailSkill && <SkillEffectModal skill={detailSkill} onClose={closeSkillEffect} />}
