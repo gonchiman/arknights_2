@@ -162,6 +162,7 @@ function filters(overrides: Partial<OperatorDatabaseFilters>): OperatorDatabaseF
     query: '',
     nameInitial: 'ALL',
     profession: 'ALL',
+    subProfession: 'ALL',
     rarity: 'ALL',
     ...overrides,
   }
