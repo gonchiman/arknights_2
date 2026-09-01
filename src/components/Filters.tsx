@@ -100,27 +100,37 @@ export function Filters({
         ))}
       </div>
       {subProfessionOptions && (
-        <div className="initial-filter subprofession-filter" role="group" aria-label="職分">
+        <div
+          className="initial-filter subprofession-filter"
+          role={value.profession === 'ALL' ? undefined : 'group'}
+          aria-label={value.profession === 'ALL' ? undefined : '職分'}
+        >
           <span className="initial-filter-label">職分</span>
-          <button
-            type="button"
-            className={`initial-button ${value.subProfession === 'ALL' ? 'active' : ''}`}
-            aria-pressed={value.subProfession === 'ALL'}
-            onClick={() => onChange({ ...value, subProfession: 'ALL' })}
-          >
-            すべて
-          </button>
-          {subProfessionOptions.map((option) => (
-            <button
-              type="button"
-              className={`initial-button ${value.subProfession === option.value ? 'active' : ''}`}
-              aria-pressed={value.subProfession === option.value}
-              onClick={() => onChange({ ...value, subProfession: option.value })}
-              key={option.value}
-            >
-              {option.label}
-            </button>
-          ))}
+          {value.profession === 'ALL' ? (
+            <span className="subprofession-filter-hint">職業を選択すると職分を選べます</span>
+          ) : (
+            <>
+              <button
+                type="button"
+                className={`initial-button ${value.subProfession === 'ALL' ? 'active' : ''}`}
+                aria-pressed={value.subProfession === 'ALL'}
+                onClick={() => onChange({ ...value, subProfession: 'ALL' })}
+              >
+                すべて
+              </button>
+              {subProfessionOptions.map((option) => (
+                <button
+                  type="button"
+                  className={`initial-button ${value.subProfession === option.value ? 'active' : ''}`}
+                  aria-pressed={value.subProfession === option.value}
+                  onClick={() => onChange({ ...value, subProfession: option.value })}
+                  key={option.value}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
       <div className="initial-filter rarity-filter" role="group" aria-label="レアリティ">

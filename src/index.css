@@ -221,6 +221,12 @@ a { color: var(--link); }
 .profession-button { border-left: 3px solid var(--profession-color, var(--border-strong)); }
 .profession-button.active { border-left-color: var(--profession-color, #fff); }
 
+.subprofession-filter-hint {
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
 .search-filter {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
