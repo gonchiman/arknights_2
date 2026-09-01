@@ -25,7 +25,6 @@ import {
   calculateMechAccordDamageRows,
   isMechAccordSubProfession,
   type MechAccordDamageRowsResult,
-  type MechAccordModuleVariant,
 } from '../lib/mechAccordDamage'
 import { getOperatorPassives } from '../lib/operatorProfile'
 import {
@@ -76,15 +75,6 @@ const ATTACK_MODIFIER_DESCRIPTIONS = {
 } as const
 
 type AttackModifierTerm = keyof typeof ATTACK_MODIFIER_DESCRIPTIONS
-
-const MECH_ACCORD_VARIANT_COLUMNS: Array<{
-  variant: MechAccordModuleVariant
-  label: string
-}> = [
-  { variant: 'NONE', label: 'モジュールなし' },
-  { variant: 'X', label: 'Xモジュール' },
-  { variant: 'Y', label: 'Yモジュール' },
-]
 
 const REFLECTION_STATUS_LABELS: Record<ReflectionStatus, string> = {
   APPLIED: '計算に反映',
@@ -346,7 +336,7 @@ export function DamageCalculator({ rows, loading }: Props) {
       <section className="calculator-panel calculation-conditions-panel">
         <div className="panel-heading">
           <div><span>02</span><h2>ダメージ計算条件</h2></div>
-          <p>潜在・モジュールの能力値補正・味方バフはまだ含みません</p>
+          <p>潜在・モジュール効果・味方バフはまだ含みません</p>
         </div>
         <div className="condition-subheading">育成状態</div>
         <div className="calculator-form-grid growth-form-grid">
@@ -529,7 +519,7 @@ export function DamageCalculator({ rows, loading }: Props) {
           <ResultCard label="DPS" value={skillOutput?.dps ?? null} />
           <ResultCard label={getTotalLabel(selectedSkill)} value={skillOutput?.total ?? null} />
         </div>
-        <p className="result-disclaimer">表示値は単体への理論値です。確認済みの特性・素質だけを反映し、条件入力が必要な効果と未対応効果は計算過程に明示します。潜在、モジュールの能力値補正、外部バフ、敵デバフ、対象数は含みません。</p>
+        <p className="result-disclaimer">表示値は単体への理論値です。確認済みの特性・素質だけを反映し、条件入力が必要な効果と未対応効果は計算過程に明示します。潜在、モジュール効果、外部バフ、敵デバフ、対象数は含みません。</p>
       </section>
 
       {mechAccordDamage && (
@@ -967,36 +957,30 @@ function MechAccordDamageTable({ result }: { result: MechAccordDamageRowsResult 
           <thead>
             <tr>
               <th scope="col">攻撃回数</th>
-              {MECH_ACCORD_VARIANT_COLUMNS.map(({ variant, label }) => (
-                <th scope="col" key={variant}>{label}</th>
-              ))}
+              <th scope="col">本体＋浮遊</th>
             </tr>
           </thead>
           <tbody>
-            {result.rows.map((row) => (
-              <tr key={row.attackCount}>
-                <th scope="row">{row.attackCount === 8 ? '8回目以降' : `${row.attackCount}回目`}</th>
-                {MECH_ACCORD_VARIANT_COLUMNS.map(({ variant, label }) => {
-                  const value = row.variants[variant]
-                  const minimumLabel = value.minimumReached ? '、最低保証ダメージ' : ''
-                  return (
-                    <td
-                      className={value.minimumReached ? 'mech-accord-minimum' : undefined}
-                      aria-label={`${label}、合計 ${formatNumber(value.combinedDamage)}、浮遊ユニット ${formatNumber(value.droneDamage)}、攻撃倍率 ${value.multiplierPercent}%${minimumLabel}`}
-                      key={variant}
-                    >
-                      <strong className="mech-accord-cell-value">{formatNumber(value.combinedDamage)}</strong>
-                      <small className="mech-accord-cell-meta">浮遊 {formatNumber(value.droneDamage)} · {value.multiplierPercent}%</small>
-                    </td>
-                  )
-                })}
-              </tr>
-            ))}
+            {result.rows.map((row) => {
+              const minimumLabel = row.minimumReached ? '、最低保証ダメージ' : ''
+              return (
+                <tr key={row.attackCount}>
+                  <th scope="row">{row.attackCount === 8 ? '8回目以降' : `${row.attackCount}回目`}</th>
+                  <td
+                    className={row.minimumReached ? 'mech-accord-minimum' : undefined}
+                    aria-label={`合計 ${formatNumber(row.combinedDamage)}、浮遊ユニット ${formatNumber(row.droneDamage)}、攻撃倍率 ${row.multiplierPercent}%${minimumLabel}`}
+                  >
+                    <strong className="mech-accord-cell-value">{formatNumber(row.combinedDamage)}</strong>
+                    <small className="mech-accord-cell-meta">浮遊 {formatNumber(row.droneDamage)} · {row.multiplierPercent}%</small>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
       <p className="mech-accord-note">
-        同一対象への連続攻撃を想定し、対象変更時は1回目へ戻ります。X/Yは職分特性倍率の比較で、選択オペレーターの所持状況、モジュールの能力値補正、複数の浮遊ユニットは含みません。赤字は最低保証到達時です。
+        同一対象への連続攻撃を想定し、対象変更時は1回目へ戻ります。モジュールと複数の浮遊ユニットは含みません。赤字は最低保証到達時です。
       </p>
     </section>
   )
@@ -1080,7 +1064,7 @@ function buildAttackPipelineSteps(
       label: '基礎攻撃力',
       formula: `round(${formatCalculationNumber(base.levelAttack)} + ${formatCalculationNumber(base.trustAttack)} + ${formatCalculationNumber(base.potentialAttack)} + ${formatCalculationNumber(base.moduleAttack)})`,
       result: formatNumber(base.result),
-      note: 'レベル + 信頼度 + 潜在 + モジュール。潜在・モジュールの固定値は現行版では未反映',
+      note: 'レベル + 信頼度 + 潜在 + モジュール。潜在・モジュール効果は現行版では未反映',
     },
     {
       label: '攻撃力補正A',
