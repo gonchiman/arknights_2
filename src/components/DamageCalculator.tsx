@@ -542,80 +542,9 @@ export function DamageCalculator({ rows, loading }: Props) {
         </section>
       )}
 
-      <section className={`calculator-panel calculation-process-panel ${normalCalculationProcessOpen ? 'open' : ''}`}>
-        <h2 className="collapsible-panel-title">
-          <button
-            type="button"
-            id="normal-calculation-process-heading"
-            className="panel-heading operator-info-heading calculation-process-heading"
-            aria-expanded={normalCalculationProcessOpen}
-            aria-controls="normal-calculation-process-body"
-            onClick={() => setNormalCalculationProcessOpen((open) => !open)}
-          >
-            <span className="operator-info-heading-title">
-              <span>{mechAccordDamage ? '07' : '06'}</span>
-              <span className="operator-info-heading-label">通常攻撃の計算過程</span>
-            </span>
-            <span className="operator-info-heading-summary">
-              <span>1ヒット {formatNumber(normalPerHit)} · DPS {formatNumber(normalDps)}</span>
-              <em>{normalCalculationProcessOpen ? '閉じる' : '式と代入値を表示'} {normalCalculationProcessOpen ? '−' : '+'}</em>
-            </span>
-          </button>
-        </h2>
-        {normalCalculationProcessOpen && (
-          <div id="normal-calculation-process-body" className="calculation-process-body" role="region" aria-labelledby="normal-calculation-process-heading">
-            <CalculationTrace
-              title="通常攻撃"
-              steps={normalCalculationSteps}
-              passiveEffects={operatorEffects.effects}
-            />
-            <p className="calculation-process-note">
-              上の一覧で「計算に反映」とした効果だけを式へ適用します。潜在・モジュール・外部バフは未反映です。式中の値は確認しやすい桁数に省略して表示し、計算自体は表示前の値で行います。
-            </p>
-          </div>
-        )}
-      </section>
-
-      <section className={`calculator-panel calculation-process-panel ${skillCalculationProcessOpen ? 'open' : ''}`}>
-        <h2 className="collapsible-panel-title">
-          <button
-            type="button"
-            id="skill-calculation-process-heading"
-            className="panel-heading operator-info-heading calculation-process-heading"
-            aria-expanded={skillCalculationProcessOpen}
-            aria-controls="skill-calculation-process-body"
-            onClick={() => setSkillCalculationProcessOpen((open) => !open)}
-          >
-            <span className="operator-info-heading-title">
-              <span>{mechAccordDamage ? '08' : '07'}</span>
-              <span className="operator-info-heading-label">スキルの計算過程</span>
-            </span>
-            <span className="operator-info-heading-summary">
-              <span>{skillOutput
-                ? `1攻撃 ${formatNumber(skillOutput.perAttack)} · DPS ${skillOutput.dps === null ? '—' : formatNumber(skillOutput.dps)}`
-                : '自動計算対象外'}</span>
-              <em>{skillCalculationProcessOpen ? '閉じる' : '式と代入値を表示'} {skillCalculationProcessOpen ? '−' : '+'}</em>
-            </span>
-          </button>
-        </h2>
-        {skillCalculationProcessOpen && (
-          <div id="skill-calculation-process-body" className="calculation-process-body" role="region" aria-labelledby="skill-calculation-process-heading">
-            <CalculationTrace
-              title="スキル"
-              steps={skillCalculationSteps}
-              unavailableReasons={skillOutput ? [] : unsupportedReasons}
-              passiveEffects={operatorEffects.effects}
-            />
-            <p className="calculation-process-note">
-              反映済みの特性・素質はスキル補正と同じA〜Eへ合流します。条件入力が必要・未対応の効果は数値へ加えません。固定時間の総ダメージは、DPS × 効果時間による連続値の理論値です。
-            </p>
-          </div>
-        )}
-      </section>
-
       <section className="calculator-panel sensitivity-panel">
         <div className="panel-heading">
-          <div><span>{mechAccordDamage ? '09' : '08'}</span><h2>{damageType === 'ARTS' ? '術耐性' : damageType === 'PHYSICAL' ? '防御力' : '敵ステータス'}別の比較</h2></div>
+          <div><span>{mechAccordDamage ? '07' : '06'}</span><h2>{damageType === 'ARTS' ? '術耐性' : damageType === 'PHYSICAL' ? '防御力' : '敵ステータス'}別の比較</h2></div>
           <p>敵ステータスを変えたときの{sensitivityMetric === 'DPS' ? 'DPS' : '単体ダメージ'}</p>
         </div>
         <div className="sensitivity-toolbar">
@@ -678,6 +607,77 @@ export function DamageCalculator({ rows, loading }: Props) {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className={`calculator-panel calculation-process-panel ${normalCalculationProcessOpen ? 'open' : ''}`}>
+        <h2 className="collapsible-panel-title">
+          <button
+            type="button"
+            id="normal-calculation-process-heading"
+            className="panel-heading operator-info-heading calculation-process-heading"
+            aria-expanded={normalCalculationProcessOpen}
+            aria-controls="normal-calculation-process-body"
+            onClick={() => setNormalCalculationProcessOpen((open) => !open)}
+          >
+            <span className="operator-info-heading-title">
+              <span>{mechAccordDamage ? '08' : '07'}</span>
+              <span className="operator-info-heading-label">通常攻撃の計算過程</span>
+            </span>
+            <span className="operator-info-heading-summary">
+              <span>1ヒット {formatNumber(normalPerHit)} · DPS {formatNumber(normalDps)}</span>
+              <em>{normalCalculationProcessOpen ? '閉じる' : '式と代入値を表示'} {normalCalculationProcessOpen ? '−' : '+'}</em>
+            </span>
+          </button>
+        </h2>
+        {normalCalculationProcessOpen && (
+          <div id="normal-calculation-process-body" className="calculation-process-body" role="region" aria-labelledby="normal-calculation-process-heading">
+            <CalculationTrace
+              title="通常攻撃"
+              steps={normalCalculationSteps}
+              passiveEffects={operatorEffects.effects}
+            />
+            <p className="calculation-process-note">
+              上の一覧で「計算に反映」とした効果だけを式へ適用します。潜在・モジュール・外部バフは未反映です。式中の値は確認しやすい桁数に省略して表示し、計算自体は表示前の値で行います。
+            </p>
+          </div>
+        )}
+      </section>
+
+      <section className={`calculator-panel calculation-process-panel ${skillCalculationProcessOpen ? 'open' : ''}`}>
+        <h2 className="collapsible-panel-title">
+          <button
+            type="button"
+            id="skill-calculation-process-heading"
+            className="panel-heading operator-info-heading calculation-process-heading"
+            aria-expanded={skillCalculationProcessOpen}
+            aria-controls="skill-calculation-process-body"
+            onClick={() => setSkillCalculationProcessOpen((open) => !open)}
+          >
+            <span className="operator-info-heading-title">
+              <span>{mechAccordDamage ? '09' : '08'}</span>
+              <span className="operator-info-heading-label">スキルの計算過程</span>
+            </span>
+            <span className="operator-info-heading-summary">
+              <span>{skillOutput
+                ? `1攻撃 ${formatNumber(skillOutput.perAttack)} · DPS ${skillOutput.dps === null ? '—' : formatNumber(skillOutput.dps)}`
+                : '自動計算対象外'}</span>
+              <em>{skillCalculationProcessOpen ? '閉じる' : '式と代入値を表示'} {skillCalculationProcessOpen ? '−' : '+'}</em>
+            </span>
+          </button>
+        </h2>
+        {skillCalculationProcessOpen && (
+          <div id="skill-calculation-process-body" className="calculation-process-body" role="region" aria-labelledby="skill-calculation-process-heading">
+            <CalculationTrace
+              title="スキル"
+              steps={skillCalculationSteps}
+              unavailableReasons={skillOutput ? [] : unsupportedReasons}
+              passiveEffects={operatorEffects.effects}
+            />
+            <p className="calculation-process-note">
+              反映済みの特性・素質はスキル補正と同じA〜Eへ合流します。条件入力が必要・未対応の効果は数値へ加えません。固定時間の総ダメージは、DPS × 効果時間による連続値の理論値です。
+            </p>
+          </div>
+        )}
       </section>
     </section>
   )
