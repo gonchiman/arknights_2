@@ -1,15 +1,25 @@
 import { useEffect, useId, useRef, type MouseEvent as ReactMouseEvent } from 'react'
 import type { OperatorDatabaseRecord } from '../lib/operatorDatabase'
+import type { SkillRecord } from '../types/skill'
 
 interface Props {
   operator: OperatorDatabaseRecord
+  skills: SkillRecord[]
+  initialFocusSkillId?: string | null
+  onOpenSkillClassification: (skill: SkillRecord) => void
   onClose: () => void
 }
 
 const INTEGER_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
 const DECIMAL_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 
-export function OperatorDetailModal({ operator, onClose }: Props) {
+export function OperatorDetailModal({
+  operator,
+  skills,
+  initialFocusSkillId,
+  onOpenSkillClassification,
+  onClose,
+}: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const titleId = useId()
@@ -19,7 +29,14 @@ export function OperatorDetailModal({ operator, onClose }: Props) {
     if (!dialog) return
 
     if (!dialog.open) dialog.showModal()
-    window.requestAnimationFrame(() => titleRef.current?.focus())
+    window.requestAnimationFrame(() => {
+      const skillButtons = dialog.querySelectorAll<HTMLButtonElement>('[data-classifier-skill-id]')
+      const returnTarget = initialFocusSkillId
+        ? Array.from(skillButtons).find((button) => button.dataset.classifierSkillId === initialFocusSkillId)
+        : null
+      if (returnTarget) returnTarget.focus()
+      else titleRef.current?.focus()
+    })
     const previousOverflow = document.documentElement.style.overflow
     document.documentElement.style.overflow = 'hidden'
 
@@ -27,7 +44,7 @@ export function OperatorDetailModal({ operator, onClose }: Props) {
       document.documentElement.style.overflow = previousOverflow
       if (dialog.open) dialog.close()
     }
-  }, [operator.operatorId])
+  }, [operator.operatorId, initialFocusSkillId])
 
   const handleBackdropClick = (event: ReactMouseEvent<HTMLDialogElement>) => {
     if (event.target === event.currentTarget) onClose()
@@ -114,18 +131,35 @@ export function OperatorDetailModal({ operator, onClose }: Props) {
           </section>
 
           <section aria-labelledby={`${titleId}-skills`}>
-            <h3 id={`${titleId}-skills`}>スキル</h3>
+            <div className="operator-detail-section-heading">
+              <h3 id={`${titleId}-skills`}>スキル</h3>
+              <span>分類結果・判定根拠・手動修正を確認できます</span>
+            </div>
             {operator.skills.length > 0 ? (
               <ul className="operator-detail-list">
-                {operator.skills.map((skill) => (
-                  <li key={`${skill.id}:${skill.index}`}>
-                    <div className="operator-detail-item-heading">
-                      <strong>S{skill.index} {skill.name}</strong>
-                      <span>初期SP {skill.initSp ?? '—'} / 必要SP {skill.spCost ?? '—'}</span>
-                    </div>
-                    <p>{skill.description}</p>
-                  </li>
-                ))}
+                {operator.skills.map((skill) => {
+                  const classifierSkill = skills.find((candidate) => candidate.skillId === skill.id)
+                  return (
+                    <li key={`${skill.id}:${skill.index}`}>
+                      <div className="operator-detail-item-heading">
+                        <strong>S{skill.index} {skill.name}</strong>
+                        <span>初期SP {skill.initSp ?? '—'} / 必要SP {skill.spCost ?? '—'}</span>
+                      </div>
+                      <p>{skill.description}</p>
+                      {classifierSkill && (
+                        <button
+                          type="button"
+                          className="operator-skill-classifier-button"
+                          data-classifier-skill-id={classifierSkill.id}
+                          aria-label={`${skill.name}の分類結果と判定根拠を開く`}
+                          onClick={() => onOpenSkillClassification(classifierSkill)}
+                        >
+                          Skill Model Classifierで分析
+                        </button>
+                      )}
+                    </li>
+                  )
+                })}
               </ul>
             ) : <EmptyDetail>スキルデータはありません。</EmptyDetail>}
           </section>

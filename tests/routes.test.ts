@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { APP_NAV_ITEMS } from '../src/lib/navigation.ts'
-import { getSkillRouteHash, parseHashRoute } from '../src/lib/routes.ts'
+import { getOperatorSkillRouteHash, getSkillRouteHash, parseHashRoute } from '../src/lib/routes.ts'
 
 test('サイドバーから主要ページへ遷移できる', () => {
   assert.deepEqual(
@@ -25,6 +25,15 @@ test('比較ページのhashを解析する', () => {
 
 test('オペレーターデータベースのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/operators'), { view: 'operators' })
+})
+
+test('オペレーターデータベース内のスキル分類hashを生成・解析する', () => {
+  assert.equal(getOperatorSkillRouteHash('char_test:skill_1'), '#/operators/skills/char_test%3Askill_1')
+  assert.deepEqual(
+    parseHashRoute('#/operators/skills/char_test%3Askill_1'),
+    { view: 'operatorSkill', skillId: 'char_test:skill_1' },
+  )
+  assert.deepEqual(parseHashRoute('#/operators/skills/%E0%A4%A'), { view: 'operators' })
 })
 
 test('敵分析ページのhashを解析する', () => {
