@@ -519,67 +519,108 @@ export function DamageCalculator({ rows, loading }: Props) {
           </div>
           <p>{stripMarkup(selectedSkillLevel.description ?? selectedSkill.description)}</p>
         </div>
-        <div className="module-picker-row">
-          <div className="calculator-field skill-picker-field module-picker-field">
-            <span>モジュール</span>
-            <div className="skill-choice-group module-choice-group" role="group" aria-label="モジュール">
-              <button
-                type="button"
-                className={effectiveModuleId === '' ? 'active' : ''}
-                aria-pressed={effectiveModuleId === ''}
-                onClick={() => {
-                  setModuleId('')
-                  setModuleLevel(1)
-                }}
-              >
-                <span>OFF</span>
-                <strong>未装備</strong>
-              </button>
-              {operatorModules.map((choice, index) => {
-                const levels = getOperatorModuleLevels(choice.module)
-                const unlocked = isOperatorModuleUnlocked(choice.module, safePhaseIndex, safeOperatorLevel)
-                const disabled = levels.length === 0 || !unlocked
-                const unavailableReason = levels.length === 0
-                  ? '戦闘効果データを取得できません'
-                  : `${getOperatorModuleUnlockLabel(choice.module)}で解放`
-                return (
-                  <button
-                    type="button"
-                    className={effectiveModuleId === choice.id ? 'active' : ''}
-                    aria-pressed={effectiveModuleId === choice.id}
-                    aria-label={`${choice.module.uniEquipName ?? '名称なし'}${disabled ? `（${unavailableReason}）` : ''}`}
-                    title={disabled ? unavailableReason : undefined}
-                    disabled={disabled}
-                    onClick={() => {
-                      setModuleId(choice.id)
-                      setModuleLevel(levels.at(-1) ?? 1)
-                    }}
-                    key={choice.id}
-                  >
-                    <span>MOD {index + 1}</span>
-                    <strong>{choice.module.uniEquipName ?? '名称なし'}</strong>
-                  </button>
-                )
-              })}
+        <section className="module-config" aria-labelledby="module-config-title">
+          <div className="module-config-heading">
+            <div>
+              <span id="module-config-title">モジュール</span>
+              <small>{operatorModules.length > 0 ? '装備するモジュールを選択' : '装備可能なモジュールはありません'}</small>
             </div>
+          </div>
+          <div className="module-choice-list" role="group" aria-label="モジュール">
+            <button
+              type="button"
+              className={`module-choice-card ${effectiveModuleId === '' ? 'active' : ''}`}
+              aria-pressed={effectiveModuleId === ''}
+              onClick={() => {
+                setModuleId('')
+                setModuleLevel(1)
+              }}
+            >
+              <span className="module-choice-code">OFF</span>
+              <span className="module-choice-copy">
+                <strong>未装備</strong>
+                <small>モジュール効果を使用しない</small>
+              </span>
+              <span className="module-choice-state" aria-hidden="true">{effectiveModuleId === '' ? '選択中' : '選択'}</span>
+            </button>
+            {operatorModules.map((choice, index) => {
+              const levels = getOperatorModuleLevels(choice.module)
+              const unlocked = isOperatorModuleUnlocked(choice.module, safePhaseIndex, safeOperatorLevel)
+              const disabled = levels.length === 0 || !unlocked
+              const active = effectiveModuleId === choice.id
+              const unavailableReason = levels.length === 0
+                ? '戦闘効果データを取得できません'
+                : `${getOperatorModuleUnlockLabel(choice.module)}で解放`
+              return (
+                <button
+                  type="button"
+                  className={`module-choice-card ${active ? 'active' : ''}`}
+                  aria-pressed={active}
+                  aria-label={`${choice.module.uniEquipName ?? '名称なし'}${disabled ? `（${unavailableReason}）` : ''}`}
+                  title={disabled ? unavailableReason : undefined}
+                  disabled={disabled}
+                  onClick={() => {
+                    setModuleId(choice.id)
+                    setModuleLevel(levels.at(-1) ?? 1)
+                  }}
+                  key={choice.id}
+                >
+                  <span className="module-choice-code">MOD {index + 1}</span>
+                  <span className="module-choice-copy">
+                    <strong>{choice.module.uniEquipName ?? '名称なし'}</strong>
+                    <small>{disabled ? unavailableReason : getOperatorModuleTypeLabel(choice.module)}</small>
+                  </span>
+                  <span className="module-choice-state" aria-hidden="true">{active ? '選択中' : '選択'}</span>
+                </button>
+              )
+            })}
           </div>
           {selectedModule && (
-            <SelectField label="モジュールレベル" value={String(safeModuleLevel)} onChange={(value) => setModuleLevel(Number(value))}>
-              {moduleLevels.map((level) => <option value={level} key={level}>Lv.{level}</option>)}
-            </SelectField>
+            <article className="selected-module-card">
+              <header>
+                <div>
+                  <span>選択中のモジュール</span>
+                  <strong>{moduleApplication.moduleName}</strong>
+                  <small>{getOperatorModuleTypeLabel(selectedModule)}</small>
+                </div>
+                <div className="module-level-picker">
+                  <span>レベル</span>
+                  <div role="group" aria-label="モジュールレベル">
+                    {moduleLevels.map((level) => (
+                      <button
+                        type="button"
+                        className={safeModuleLevel === level ? 'active' : ''}
+                        aria-pressed={safeModuleLevel === level}
+                        onClick={() => setModuleLevel(level)}
+                        key={level}
+                      >Lv.{level}</button>
+                    ))}
+                  </div>
+                </div>
+              </header>
+              {moduleApplication.attributeEffects.length > 0 && (
+                <div className="module-attribute-list" aria-label="能力値補正">
+                  {moduleApplication.attributeEffects.map((effect, index) => (
+                    <span key={`${effect.key}-${index}`}>
+                      <small>{effect.label}</small>
+                      <strong>{effect.valueLabel}</strong>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="module-change-list">
+                {moduleApplication.changes.length > 0 ? moduleApplication.changes.map((change, index) => (
+                  <div key={`${change.label}-${index}`}>
+                    <strong>{change.label}</strong>
+                    <p>{change.description}</p>
+                  </div>
+                )) : (
+                  <p className="module-no-change">特性・素質の変更はありません。</p>
+                )}
+              </div>
+            </article>
           )}
-        </div>
-        {selectedModule && (
-          <div className="selected-skill-summary selected-module-summary">
-            <div>
-              <strong>{moduleApplication.moduleName} · Lv.{moduleApplication.moduleLevel}</strong>
-              <span>{getOperatorModuleTypeLabel(selectedModule)} · {formatModuleAttributeSummary(moduleApplication.attributeEffects)}</span>
-            </div>
-            <p>{moduleApplication.changes.length > 0
-              ? moduleApplication.changes.map((change) => `${change.label}：${change.description}`).join(' / ')
-              : '特性・素質の変更はありません。'}</p>
-          </div>
-        )}
+        </section>
         {selectedModule && moduleApplication.unsupportedReasons.length > 0 && (
           <div className="unsupported-model module-selection-warning" role="status">
             <strong>一部のモジュール効果は未反映です</strong>
@@ -1834,11 +1875,6 @@ function getPassiveSourceLabel(effect: EvaluatedOperatorEffect): string {
   if (effect.sourceKind === 'TRAIT') return '特性'
   if (effect.sourceKind === 'MODULE') return `モジュール「${effect.sourceName}」`
   return `素質「${effect.sourceName}」`
-}
-
-function formatModuleAttributeSummary(effects: OperatorModuleAttributeEffect[]): string {
-  if (effects.length === 0) return '能力値補正なし'
-  return effects.map((effect) => `${effect.label} ${effect.valueLabel}`).join(' · ')
 }
 
 function stripMarkup(value: string): string {
