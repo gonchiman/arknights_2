@@ -86,6 +86,9 @@ test('同じlevelIdは1、異なるlevelIdはそれぞれ1として登場ステ�
   assert.deepEqual(result.diagnostics.unmatchedEnemyIds, ['enemy_unknown'])
   assert.equal(result.summary.uniqueLevelCount, 2)
   assert.equal(result.summary.processedLevelCount, 2)
+  assert.match(result.source.stageTableUrl, /stage_table\.json$/)
+  assert.match(result.source.handbookTableUrl, /enemy_handbook_table\.json$/)
+  assert.match(result.source.levelBaseUrl, /\/levels$/)
 })
 
 test('Level取得失敗を診断へ残し、部分集計として出力する', () => {

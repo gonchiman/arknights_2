@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AppSidebar } from './components/AppSidebar'
 import { DamageCalculator } from './components/DamageCalculator'
+import { DataSourcesPage } from './components/DataSourcesPage'
 import { EnemyAnalysis } from './components/EnemyAnalysis'
 import { EMPTY_OPERATOR_FILTERS, matchesOperatorFilters, OperatorSearch } from './components/OperatorSearch'
 import { OperatorComparison } from './components/OperatorComparison'
 import { OperatorDatabase } from './components/OperatorDatabase'
 import { SkillDetail } from './components/SkillDetail'
 import { SkillDirectory } from './components/SkillDirectory'
-import { DATA_URLS, loadSkillRecords } from './lib/arknightsData'
+import { loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
-import { ENEMY_DATA_URLS } from './lib/enemyData'
+import { ARKNIGHTS_GAMEDATA_REPOSITORY } from './lib/dataSources'
 import { getSkillRouteHash, parseHashRoute, type AppRoute } from './lib/routes'
 import { APP_NAV_ITEMS, type NavigationPage } from './lib/navigation'
 import {
@@ -40,6 +41,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const sidebarToggleRef = useRef<HTMLButtonElement>(null)
+  const skillDataRequestStarted = useRef(false)
   const lastSelectedOperatorId = useRef<string | null>(null)
   const previousRouteView = useRef(route.view)
 
@@ -55,7 +57,11 @@ export default function App() {
     }
   }
 
-  useEffect(() => { void load() }, [])
+  useEffect(() => {
+    if (route.view === 'enemies' || route.view === 'sources' || skillDataRequestStarted.current) return
+    skillDataRequestStarted.current = true
+    void load()
+  }, [route.view])
   useEffect(() => {
     const handleHashChange = () => {
       setRoute(parseHashRoute(window.location.hash))
@@ -165,6 +171,7 @@ export default function App() {
     || route.view === 'damage'
     || route.view === 'comparison'
     || route.view === 'enemies'
+    || route.view === 'sources'
   ) ? route.view : 'classifier'
   const activeNavigationItem = APP_NAV_ITEMS.find((item) => item.id === activeNavigationPage)
   const closeSidebar = () => {
@@ -197,9 +204,11 @@ export default function App() {
         </header>
 
         <main className="app-content">
-        {error && route.view !== 'enemies' && <section className="error-box" role="alert">{error}</section>}
+        {error && route.view !== 'enemies' && route.view !== 'sources' && <section className="error-box" role="alert">{error}</section>}
 
-        {route.view === 'operators' ? (
+        {route.view === 'sources' ? (
+          <DataSourcesPage />
+        ) : route.view === 'operators' ? (
           <OperatorDatabase rows={classifiedRows} loading={loading} />
         ) : route.view === 'damage' ? (
           <DamageCalculator rows={classifiedRows} loading={loading} />
@@ -257,13 +266,15 @@ export default function App() {
         )}
         </main>
         <footer className="site-footer">
-          <span>Data: ArknightsAssets/ArknightsGamedata (JP)</span>
-          <a href={DATA_URLS.skill} target="_blank" rel="noreferrer">skill_table.json</a>
-          <a href={DATA_URLS.character} target="_blank" rel="noreferrer">character_table.json</a>
-          <a href={DATA_URLS.uniequip} target="_blank" rel="noreferrer">uniequip_table.json</a>
-          <a href={DATA_URLS.battleEquip} target="_blank" rel="noreferrer">battle_equip_table.json</a>
-          <a href={ENEMY_DATA_URLS.handbook} target="_blank" rel="noreferrer">enemy_handbook_table.json</a>
-          <a href={ENEMY_DATA_URLS.database} target="_blank" rel="noreferrer">enemy_database.json</a>
+          <a
+            href={ARKNIGHTS_GAMEDATA_REPOSITORY.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="ArknightsAssets/ArknightsGamedata を開く（新しいタブ）"
+          >
+            Data: {ARKNIGHTS_GAMEDATA_REPOSITORY.name} (JP)
+          </a>
+          <a href="#/sources">参照元とデータ利用について</a>
         </footer>
       </div>
     </div>

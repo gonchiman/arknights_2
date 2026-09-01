@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { APP_NAV_ITEMS, type NavigationPage } from '../lib/navigation'
+import { APP_NAV_ITEMS, NAVIGATION_SECTIONS, type NavigationPage } from '../lib/navigation'
 
 type AppSidebarProps = {
   activePage: NavigationPage
@@ -32,26 +32,31 @@ export function AppSidebar({ activePage, open, onClose }: AppSidebarProps) {
           </button>
         </div>
 
-        <nav className="sidebar-nav" aria-label="分析ページ">
-          <p className="sidebar-section-label">ANALYSIS TOOLS</p>
-          {APP_NAV_ITEMS.map((item, index) => {
-            const active = item.id === activePage
-            return (
-              <a
-                key={item.id}
-                className={`sidebar-nav-link ${active ? 'active' : ''}`}
-                href={item.href}
-                aria-current={active ? 'page' : undefined}
-                onClick={onClose}
-              >
-                <span className="sidebar-nav-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-                <span className="sidebar-nav-copy">
-                  <span className="sidebar-nav-title">{item.label}</span>
-                  <span className="sidebar-nav-description">{item.description}</span>
-                </span>
-              </a>
-            )
-          })}
+        <nav className="sidebar-nav" aria-label="メインページ">
+          {NAVIGATION_SECTIONS.map((section) => (
+            <div className="sidebar-nav-group" key={section.id}>
+              <p className="sidebar-section-label">{section.label}</p>
+              {APP_NAV_ITEMS.filter((item) => item.section === section.id).map((item) => {
+                const active = item.id === activePage
+                const index = APP_NAV_ITEMS.indexOf(item)
+                return (
+                  <a
+                    key={item.id}
+                    className={`sidebar-nav-link ${active ? 'active' : ''}`}
+                    href={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    onClick={onClose}
+                  >
+                    <span className="sidebar-nav-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                    <span className="sidebar-nav-copy">
+                      <span className="sidebar-nav-title">{item.label}</span>
+                      <span className="sidebar-nav-description">{item.description}</span>
+                    </span>
+                  </a>
+                )
+              })}
+            </div>
+          ))}
         </nav>
 
         <div className="sidebar-meta" aria-label="データセット情報">

@@ -115,6 +115,8 @@
   letter-spacing: .17em;
 }
 
+.sidebar-nav-group + .sidebar-nav-group { margin-top: 18px; }
+
 .sidebar-nav-link {
   min-width: 0;
   display: grid;

@@ -7,6 +7,7 @@
     "repository": "ArknightsAssets/ArknightsGamedata",
     "region": "jp",
     "stageTableUrl": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/master/jp/gamedata/excel/stage_table.json",
+    "handbookTableUrl": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/master/jp/gamedata/excel/enemy_handbook_table.json",
     "levelBaseUrl": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/master/jp/gamedata/levels"
   },
   "summary": {
