@@ -529,9 +529,18 @@ export function DamageCalculator({ rows, loading }: Props) {
           <ResultCard label="DPS" value={skillOutput?.dps ?? null} />
           <ResultCard label={getTotalLabel(selectedSkill)} value={skillOutput?.total ?? null} />
         </div>
-        {mechAccordDamage && <MechAccordDamageTable result={mechAccordDamage} />}
         <p className="result-disclaimer">表示値は単体への理論値です。確認済みの特性・素質だけを反映し、条件入力が必要な効果と未対応効果は計算過程に明示します。潜在、モジュールの能力値補正、外部バフ、敵デバフ、対象数は含みません。</p>
       </section>
+
+      {mechAccordDamage && (
+        <section className="calculator-panel unique-output-panel">
+          <div className="panel-heading">
+            <div><span>06</span><h2>固有出力</h2></div>
+            <p>{selectedOperator.subProfessionName} · 通常攻撃</p>
+          </div>
+          <MechAccordDamageTable result={mechAccordDamage} />
+        </section>
+      )}
 
       <section className={`calculator-panel calculation-process-panel ${normalCalculationProcessOpen ? 'open' : ''}`}>
         <h2 className="collapsible-panel-title">
@@ -544,7 +553,7 @@ export function DamageCalculator({ rows, loading }: Props) {
             onClick={() => setNormalCalculationProcessOpen((open) => !open)}
           >
             <span className="operator-info-heading-title">
-              <span>06</span>
+              <span>{mechAccordDamage ? '07' : '06'}</span>
               <span className="operator-info-heading-label">通常攻撃の計算過程</span>
             </span>
             <span className="operator-info-heading-summary">
@@ -578,7 +587,7 @@ export function DamageCalculator({ rows, loading }: Props) {
             onClick={() => setSkillCalculationProcessOpen((open) => !open)}
           >
             <span className="operator-info-heading-title">
-              <span>07</span>
+              <span>{mechAccordDamage ? '08' : '07'}</span>
               <span className="operator-info-heading-label">スキルの計算過程</span>
             </span>
             <span className="operator-info-heading-summary">
@@ -606,7 +615,7 @@ export function DamageCalculator({ rows, loading }: Props) {
 
       <section className="calculator-panel sensitivity-panel">
         <div className="panel-heading">
-          <div><span>08</span><h2>{damageType === 'ARTS' ? '術耐性' : damageType === 'PHYSICAL' ? '防御力' : '敵ステータス'}別の比較</h2></div>
+          <div><span>{mechAccordDamage ? '09' : '08'}</span><h2>{damageType === 'ARTS' ? '術耐性' : damageType === 'PHYSICAL' ? '防御力' : '敵ステータス'}別の比較</h2></div>
           <p>敵ステータスを変えたときの{sensitivityMetric === 'DPS' ? 'DPS' : '単体ダメージ'}</p>
         </div>
         <div className="sensitivity-toolbar">
