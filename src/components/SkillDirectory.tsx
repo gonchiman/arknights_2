@@ -97,13 +97,7 @@ export function SkillDirectory({ rows, loading }: Props) {
 
   return (
     <section className="skill-directory-page">
-      <header className="page-intro">
-        <div>
-          <span className="page-kicker">ALL SKILLS</span>
-          <h1>スキル一覧</h1>
-        </div>
-        <p>すべてのスキルを一覧し、条件で絞り込み・並び替えできます。</p>
-      </header>
+      <h1 className="visually-hidden">スキル一覧</h1>
 
       <section className="skill-directory-panel" aria-label="全スキル一覧">
         <div className="skill-directory-filters">

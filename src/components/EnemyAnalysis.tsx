@@ -103,13 +103,7 @@ export function EnemyAnalysis() {
 
   return (
     <section className="enemy-analysis-route">
-      <header className="page-intro">
-        <div>
-          <span className="page-kicker">ENEMY DIRECTORY</span>
-          <h1>Enemy Analysis</h1>
-        </div>
-        <p>敵の基礎ステータスを分布と統計量で分析し、条件ごとの傾向を比較します。</p>
-      </header>
+      <h1 className="visually-hidden">Enemy Analysis</h1>
 
       <section className="enemy-directory" aria-label="敵ステータス分析">
         <div className="enemy-filters">

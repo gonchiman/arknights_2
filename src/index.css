@@ -49,6 +49,16 @@ button, a, input, select, summary, [tabindex] {
 ::selection { background: #222; color: #fff; }
 a { color: var(--link); }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .button {
   min-height: 32px;
   border: 1px solid #222;
