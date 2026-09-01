@@ -121,14 +121,21 @@ export interface RawOperatorModuleTraitCandidate {
   additionalDescription?: string | null
   overrideDescripton?: string | null
   overrideDescription?: string | null
+  unlockCondition?: RawUnlockCondition
   requiredPotentialRank?: number
+  prefabKey?: string | null
   blackboard?: RawBlackboardCollection
 }
 
 export interface RawOperatorModuleTalentCandidate {
   upgradeDescription?: string | null
+  description?: string | null
   name?: string | null
+  talentIndex?: number
+  unlockCondition?: RawUnlockCondition
   requiredPotentialRank?: number
+  prefabKey?: string | null
+  tokenKey?: string | null
   isHideTalent?: boolean
   blackboard?: RawBlackboardCollection
 }
