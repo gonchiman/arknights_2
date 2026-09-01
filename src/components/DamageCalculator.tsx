@@ -7,13 +7,20 @@ import {
   deriveSkillModel,
   getDefaultDamageType,
   getOperatorStats,
+  type AttackPipelineInput,
   type AttackPipelineBreakdown,
   type BaseAttackBreakdown,
   type DamageCalculationBreakdown,
   type DamageType,
+  type MitigationModifiers,
   type SkillDamageBreakdown,
   type SkillModelDefaults,
 } from '../lib/damageCalculator'
+import {
+  evaluateOperatorEffects,
+  type EvaluatedOperatorEffect,
+  type OperatorEffectStatus,
+} from '../lib/operatorEffects'
 import { getOperatorPassives } from '../lib/operatorProfile'
 import {
   getSkillDamageUnsupportedReasons as getUnsupportedReasons,
@@ -29,7 +36,7 @@ interface Props {
   loading: boolean
 }
 
-type ReflectionStatus = 'APPLIED' | 'NOT_APPLIED' | 'NO_DIRECT_EFFECT'
+type ReflectionStatus = OperatorEffectStatus | 'PARTIAL'
 type SensitivityMetric = 'DAMAGE' | 'DPS'
 
 interface CalculationStep {
@@ -66,8 +73,11 @@ type AttackModifierTerm = keyof typeof ATTACK_MODIFIER_DESCRIPTIONS
 
 const REFLECTION_STATUS_LABELS: Record<ReflectionStatus, string> = {
   APPLIED: '計算に反映',
+  PARTIAL: '一部反映',
   NOT_APPLIED: '未反映',
+  REQUIRES_INPUT: '条件入力が必要',
   NO_DIRECT_EFFECT: '直接影響なし',
+  UNSUPPORTED: '未対応',
 }
 
 const DEFAULT_OPERATOR_NAME = 'スルト'
@@ -133,10 +143,30 @@ export function DamageCalculator({ rows, loading }: Props) {
     setSkillLevelIndex(Math.max(0, (selectedSkill?.skillLevels.length ?? 1) - 1))
   }, [effectiveSkillId])
 
+  const operatorPassives = useMemo(() => selectedOperator
+    ? getOperatorPassives(selectedOperator.operatorProfile, safePhaseIndex, safeOperatorLevel)
+    : { traitDescription: '', talents: [], sources: [] }, [selectedOperator, safePhaseIndex, safeOperatorLevel])
+  const operatorEffects = useMemo(() => evaluateOperatorEffects(
+    selectedOperator?.operatorId ?? '',
+    operatorPassives,
+    damageType,
+  ), [selectedOperator?.operatorId, operatorPassives, damageType])
+  const passiveAttackModifiers = useMemo(() => ({
+    directAddition: operatorEffects.modifiers.attackAddition,
+    directMultiplierPercent: operatorEffects.modifiers.attackMultiplierPercent,
+  }), [operatorEffects.modifiers.attackAddition, operatorEffects.modifiers.attackMultiplierPercent])
+  const passiveMitigationModifiers = useMemo<MitigationModifiers>(() => ({
+    defenseIgnoreFixed: operatorEffects.modifiers.defenseIgnoreFixed,
+    resistanceIgnoreFixed: operatorEffects.modifiers.resistanceIgnoreFixed,
+  }), [operatorEffects.modifiers.defenseIgnoreFixed, operatorEffects.modifiers.resistanceIgnoreFixed])
   const operatorStats = useMemo(() => selectedOperator
-    ? getOperatorStats(selectedOperator.operatorProfile, safePhaseIndex, safeOperatorLevel, trust)
+    ? getOperatorStats(selectedOperator.operatorProfile, safePhaseIndex, safeOperatorLevel, trust, {
+      attackSpeedBonus: operatorEffects.modifiers.attackSpeedBonus,
+    })
     : {
       attack: 0,
+      baseAttackSpeed: 100,
+      attackSpeedBonus: 0,
       attackSpeed: 100,
       baseAttackTime: 1,
       attackInterval: 1,
@@ -153,25 +183,24 @@ export function DamageCalculator({ rows, loading }: Props) {
       safePhaseIndex,
       safeOperatorLevel,
       trust,
+      operatorEffects.modifiers.attackSpeedBonus,
     ])
   const model = useMemo(() => selectedSkillLevel
-    ? deriveSkillModel(selectedSkillLevel, operatorStats.attackInterval)
-    : null, [selectedSkillLevel, operatorStats.attackInterval])
+    ? deriveSkillModel(selectedSkillLevel, operatorStats.attackInterval, operatorStats.attackSpeed)
+    : null, [selectedSkillLevel, operatorStats.attackInterval, operatorStats.attackSpeed])
 
   const unsupportedReasons = selectedSkill
     ? getUnsupportedReasons(selectedSkill)
     : ['スキルを選択してください。']
   const skillSupported = unsupportedReasons.length === 0
-  const operatorPassives = selectedOperator
-    ? getOperatorPassives(selectedOperator.operatorProfile, safePhaseIndex, safeOperatorLevel)
-    : { traitDescription: '', talents: [] }
-  const traitReflectionStatus = getTraitReflectionStatus(operatorPassives.traitDescription, damageType)
-  const normalAttackPipeline = calculateAttackPipeline(operatorStats.attack)
+  const traitReflectionStatus = getEffectGroupStatus(operatorEffects.effects.filter((effect) => effect.sourceKind === 'TRAIT'))
+  const normalAttackPipeline = calculateAttackPipeline(operatorStats.attack, passiveAttackModifiers)
   const normalBreakdown = calculateDamageBreakdown(
     normalAttackPipeline.finalAttack,
     damageType,
     enemyDefense,
     enemyResistance,
+    passiveMitigationModifiers,
   )
   const normalPerHit = normalBreakdown.result
   const normalDps = operatorStats.attackInterval > 0 ? normalPerHit / operatorStats.attackInterval : 0
@@ -185,12 +214,15 @@ export function DamageCalculator({ rows, loading }: Props) {
       {
         canShowDps: selectedSkill.classification.outputCapabilities.canShowDps,
         totalMode: getTotalMode(selectedSkill),
+        attackModifiers: passiveAttackModifiers,
+        mitigationModifiers: passiveMitigationModifiers,
       },
     )
     : null
   const skillOutput = skillBreakdown
   const sensitivityData = useMemo(() => buildSensitivityData({
-    attack: operatorStats.attack,
+    baseAttack: operatorStats.attack,
+    normalAttack: normalAttackPipeline.finalAttack,
     normalAttackInterval: operatorStats.attackInterval,
     damageType,
     enemyDefense,
@@ -199,7 +231,9 @@ export function DamageCalculator({ rows, loading }: Props) {
     selectedSkill,
     skillSupported,
     metric: sensitivityMetric,
-  }), [operatorStats.attack, operatorStats.attackInterval, damageType, enemyDefense, enemyResistance, model, selectedSkill, skillSupported, sensitivityMetric])
+    attackModifiers: passiveAttackModifiers,
+    mitigationModifiers: passiveMitigationModifiers,
+  }), [operatorStats.attack, normalAttackPipeline.finalAttack, operatorStats.attackInterval, damageType, enemyDefense, enemyResistance, model, selectedSkill, skillSupported, sensitivityMetric, passiveAttackModifiers, passiveMitigationModifiers])
 
   if (loading && rows.length === 0) {
     return <section className="damage-page calculator-page"><p className="calculator-loading" role="status">ゲームデータを読み込んでいます…</p></section>
@@ -214,8 +248,11 @@ export function DamageCalculator({ rows, loading }: Props) {
     buildMitigationStep(`${DAMAGE_TYPE_LABELS[damageType]}ダメージ（1ヒット）`, normalBreakdown),
     {
       label: '攻撃間隔',
-      formula: `${formatCalculationNumber(operatorStats.baseAttackTime)}秒 × 100 ÷ max(20, ${formatCalculationNumber(operatorStats.attackSpeed)})`,
+      formula: `${formatCalculationNumber(operatorStats.baseAttackTime)}秒 × 100 ÷ max(20, ${formatCalculationNumber(operatorStats.baseAttackSpeed)} + ${formatCalculationNumber(operatorStats.attackSpeedBonus)})`,
       result: `${formatCalculationNumber(operatorStats.attackInterval)}秒`,
+      note: operatorStats.attackSpeedBonus === 0
+        ? '反映済みの特性・素質による攻撃速度補正はありません'
+        : `特性・素質の攻撃速度 ${formatSignedNumber(operatorStats.attackSpeedBonus)} を反映`,
     },
     {
       label: 'DPS',
@@ -328,7 +365,7 @@ export function DamageCalculator({ rows, loading }: Props) {
         <div className="selected-skill-summary">
           <div>
             <strong>{selectedOperator.operatorName} · S{selectedSkill.skillIndex} {selectedSkillLevel.name ?? selectedSkill.skillName}</strong>
-            <span>攻撃力 {formatNumber(operatorStats.attack)} · 攻撃間隔 {formatDecimal(operatorStats.attackInterval)}秒</span>
+            <span>基礎攻撃力 {formatNumber(operatorStats.attack)} · 攻撃間隔 {formatDecimal(operatorStats.attackInterval)}秒</span>
           </div>
           <p>{stripMarkup(selectedSkillLevel.description ?? selectedSkill.description)}</p>
         </div>
@@ -366,7 +403,7 @@ export function DamageCalculator({ rows, loading }: Props) {
               <span className="operator-info-heading-label">オペレーター情報</span>
             </span>
             <span className="operator-info-heading-summary">
-              <span>攻撃力 {formatNumber(operatorStats.attack)} · 攻撃速度 {formatNumber(operatorStats.attackSpeed)} · 攻撃間隔 {formatDecimal(operatorStats.attackInterval)}秒</span>
+              <span>基礎攻撃力 {formatNumber(operatorStats.attack)} · 攻撃速度 {formatNumber(operatorStats.attackSpeed)} · 攻撃間隔 {formatDecimal(operatorStats.attackInterval)}秒</span>
               <em>{operatorInfoOpen ? '閉じる' : '詳細を表示'} {operatorInfoOpen ? '−' : '+'}</em>
             </span>
           </button>
@@ -375,14 +412,20 @@ export function DamageCalculator({ rows, loading }: Props) {
           <div id="operator-info-body" className="operator-info-body" role="region" aria-labelledby="operator-info-heading">
             <div className="operator-stat-grid">
               <OperatorMetric
-                label="実効攻撃力"
-                value={formatNumber(operatorStats.attack)}
-                detail={`レベル値 ${formatNumber(operatorStats.baseAttackBreakdown.levelAttack)} + 信頼度 ${formatSignedNumber(operatorStats.baseAttackBreakdown.trustAttack)}`}
+                label="攻撃力"
+                value={normalAttackPipeline.finalAttack === operatorStats.attack
+                  ? formatNumber(operatorStats.attack)
+                  : `${formatNumber(operatorStats.attack)} → ${formatNumber(normalAttackPipeline.finalAttack)}`}
+                detail={normalAttackPipeline.finalAttack === operatorStats.attack
+                  ? `レベル値 ${formatNumber(operatorStats.baseAttackBreakdown.levelAttack)} + 信頼度 ${formatSignedNumber(operatorStats.baseAttackBreakdown.trustAttack)}`
+                  : '基礎攻撃力 → 特性・素質反映後の通常攻撃力'}
               />
               <OperatorMetric
                 label="攻撃速度"
                 value={formatNumber(operatorStats.attackSpeed)}
-                detail="攻撃間隔の算出に使用"
+                detail={operatorStats.attackSpeedBonus === 0
+                  ? '攻撃間隔の算出に使用'
+                  : `基礎 ${formatNumber(operatorStats.baseAttackSpeed)} + 特性・素質 ${formatSignedNumber(operatorStats.attackSpeedBonus)}`}
               />
               <OperatorMetric
                 label="基礎攻撃時間"
@@ -404,12 +447,14 @@ export function DamageCalculator({ rows, loading }: Props) {
               <article className="operator-effect-card">
                 <header><span>特性</span><ReflectionBadge status={traitReflectionStatus} /></header>
                 <p>{operatorPassives.traitDescription || '特性情報なし'}</p>
+                <OperatorEffectValues effects={operatorEffects.effects.filter((effect) => effect.sourceKind === 'TRAIT')} />
               </article>
               {operatorPassives.talents.length > 0 ? operatorPassives.talents.map((talent, index) => (
                 <article className="operator-effect-card" key={`${talent.name}-${index}`}>
-                  <header><span>素質</span><ReflectionBadge status={getTalentReflectionStatus(talent.description)} /></header>
+                  <header><span>素質</span><ReflectionBadge status={getEffectGroupStatus(operatorEffects.effects.filter((effect) => effect.sourceKind === 'TALENT' && effect.talentIndex === index))} /></header>
                   <strong>{talent.name}</strong>
                   <p>{talent.description || '説明なし'}</p>
+                  <OperatorEffectValues effects={operatorEffects.effects.filter((effect) => effect.sourceKind === 'TALENT' && effect.talentIndex === index)} />
                 </article>
               )) : (
                 <article className="operator-effect-card muted-passive">
@@ -418,7 +463,7 @@ export function DamageCalculator({ rows, loading }: Props) {
                 </article>
               )}
             </div>
-            <p className="operator-info-note">「未反映」の効果は表示のみで、現在の計算結果には含まれません。</p>
+            <p className="operator-info-note">効果ごとの適用値と未反映理由は、通常攻撃・スキルの計算過程に表示します。</p>
           </div>
         )}
       </section>
@@ -461,7 +506,7 @@ export function DamageCalculator({ rows, loading }: Props) {
           <ResultCard label="DPS" value={skillOutput?.dps ?? null} />
           <ResultCard label={getTotalLabel(selectedSkill)} value={skillOutput?.total ?? null} />
         </div>
-        <p className="result-disclaimer">表示値は単体への理論値です。素質、潜在、モジュール、バフ、敵へのデバフ、攻撃モーション、対象数は含みません。</p>
+        <p className="result-disclaimer">表示値は単体への理論値です。確認済みの特性・素質だけを反映し、条件入力が必要な効果と未対応効果は計算過程に明示します。潜在、モジュール、外部バフ、敵デバフ、対象数は含みません。</p>
       </section>
 
       <section className={`calculator-panel calculation-process-panel ${normalCalculationProcessOpen ? 'open' : ''}`}>
@@ -489,9 +534,10 @@ export function DamageCalculator({ rows, loading }: Props) {
             <CalculationTrace
               title="通常攻撃"
               steps={normalCalculationSteps}
+              passiveEffects={operatorEffects.effects}
             />
             <p className="calculation-process-note">
-              特性・素質・潜在・モジュール・外部バフに由来するA〜Eは未反映です。式中の値は確認しやすい桁数に省略して表示し、計算自体は表示前の値で行います。
+              上の一覧で「計算に反映」とした効果だけを式へ適用します。潜在・モジュール・外部バフは未反映です。式中の値は確認しやすい桁数に省略して表示し、計算自体は表示前の値で行います。
             </p>
           </div>
         )}
@@ -525,9 +571,10 @@ export function DamageCalculator({ rows, loading }: Props) {
               title="スキル"
               steps={skillCalculationSteps}
               unavailableReasons={skillOutput ? [] : unsupportedReasons}
+              passiveEffects={operatorEffects.effects}
             />
             <p className="calculation-process-note">
-              A・C・Dと、特性・素質・外部効果に由来するB・Eは未反映です。固定時間の総ダメージは、DPS × 効果時間による連続値の理論値です。
+              反映済みの特性・素質はスキル補正と同じA〜Eへ合流します。条件入力が必要・未対応の効果は数値へ加えません。固定時間の総ダメージは、DPS × 効果時間による連続値の理論値です。
             </p>
           </div>
         )}
@@ -844,6 +891,23 @@ function OperatorMetric({ label, value, detail }: { label: string; value: string
   )
 }
 
+function OperatorEffectValues({ effects }: { effects: EvaluatedOperatorEffect[] }) {
+  const visibleEffects = effects.filter((effect) => effect.valueLabel !== '—')
+  if (visibleEffects.length === 0) return null
+
+  return (
+    <ul className="operator-effect-value-list">
+      {visibleEffects.map((effect, index) => (
+        <li key={`${effect.label}-${index}`}>
+          <span>{effect.label}</span>
+          <strong>{effect.valueLabel}</strong>
+          <small>{effect.status === 'APPLIED' ? '適用' : '候補'}</small>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function ReflectionBadge({ status }: { status: ReflectionStatus }) {
   return <span className={`reflection-badge ${status.toLowerCase().replaceAll('_', '-')}`}>{REFLECTION_STATUS_LABELS[status]}</span>
 }
@@ -862,13 +926,31 @@ function CalculationTrace({
   title,
   steps,
   unavailableReasons = [],
+  passiveEffects,
 }: {
   title: string
   steps: CalculationStep[]
   unavailableReasons?: string[]
+  passiveEffects: EvaluatedOperatorEffect[]
 }) {
   return (
     <article className="calculation-trace-card" aria-label={`${title}の計算過程`}>
+      {passiveEffects.length > 0 && (
+        <div className="passive-reflection-block">
+          <strong>特性・素質の反映</strong>
+          <ul className="passive-reflection-list">
+            {passiveEffects.map((effect, index) => (
+              <li className="passive-reflection-item" key={`${effect.sourceKind}-${effect.talentIndex ?? 'trait'}-${effect.label}-${index}`}>
+                <span>{effect.sourceKind === 'TRAIT' ? '特性' : `素質「${effect.sourceName}」`} / {effect.label}</span>
+                <ReflectionBadge status={effect.status} />
+                <small>{effect.valueLabel === '—'
+                  ? effect.reason
+                  : `${effect.status === 'APPLIED' ? '適用値' : '候補値'}：${effect.valueLabel}。${effect.reason}`}</small>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {steps.length > 0 ? (
         <ol className="calculation-step-list">
           {steps.map((step, index) => (
@@ -900,14 +982,18 @@ function buildAttackPipelineSteps(
 ): CalculationStep[] {
   const directMultiplierNote = mode === 'SKILL'
     ? pipeline.directMultiplierPercent === 0
-      ? '現在のスキル計算モデルでは0%。素質・外部バフは未反映'
-      : 'スキル計算モデルの攻撃力補正B（自動算出値）を適用'
-    : '通常攻撃へ影響する特性・素質・外部バフは未反映'
+      ? 'スキルと反映済み特性・素質の攻撃力補正Bは0%'
+      : 'スキルと反映済み特性・素質の攻撃力補正Bを合算して適用'
+    : pipeline.directMultiplierPercent === 0
+      ? '反映済み特性・素質の攻撃力補正Bはありません'
+      : '反映済み特性・素質の攻撃力補正Bを適用'
   const attackScaleNote = mode === 'SKILL'
     ? pipeline.attackScale === 1
       ? '現在のスキル計算モデルでは100%（係数1）'
-      : 'スキル計算モデルの攻撃力補正E（自動算出値）を適用'
-    : '現在の通常攻撃モデルでは1。特性由来の攻撃力補正Eは未反映'
+      : 'スキルと反映済み特性・素質の攻撃力補正Eを適用'
+    : pipeline.attackScale === 1
+      ? '反映済み特性・素質の攻撃力補正Eはありません'
+      : '反映済み特性・素質の攻撃力補正Eを適用'
 
   return [
     {
@@ -920,7 +1006,9 @@ function buildAttackPipelineSteps(
       label: '攻撃力補正A',
       formula: `${formatCalculationNumber(pipeline.baseAttack)} + ${formatCalculationNumber(pipeline.directAddition)}`,
       result: formatNumber(pipeline.afterDirectAddition),
-      note: '固定値加算は現在、自動取得未対応',
+      note: pipeline.directAddition === 0
+        ? '反映済み特性・素質の固定値加算はありません'
+        : '反映済み特性・素質の固定値加算を適用',
     },
     {
       label: '攻撃力補正B',
@@ -961,30 +1049,43 @@ function buildMitigationStep(label: string, breakdown: DamageCalculationBreakdow
   }
 
   if (breakdown.damageType === 'ARTS') {
-    const resistanceWasClamped = breakdown.inputResistance !== breakdown.appliedResistance
     const afterResistance = breakdown.afterResistance ?? 0
     const minimumDamage = breakdown.minimumDamage ?? 0
+    const notes: string[] = []
+    if (breakdown.inputResistance !== breakdown.resistanceBeforeIgnore) {
+      notes.push(`入力術耐性 ${formatCalculationNumber(breakdown.inputResistance)} を0〜100に補正`)
+    }
+    if (breakdown.resistanceIgnoreFixed > 0) {
+      notes.push(`max(0, 術耐性 ${formatCalculationNumber(breakdown.resistanceBeforeIgnore)} − 固定無視 ${formatCalculationNumber(breakdown.resistanceIgnoreFixed)}) = ${formatCalculationNumber(breakdown.appliedResistance)}`)
+    }
+    notes.push(breakdown.minimumApplied
+      ? `耐性適用後 ${formatCalculationNumber(afterResistance)} より大きい最低保証 ${formatCalculationNumber(minimumDamage)} を採用`
+      : `耐性適用後 ${formatCalculationNumber(afterResistance)} を採用（最低保証 ${formatCalculationNumber(minimumDamage)}）`)
     return {
       label,
       formula: `max(${attack} × (1 − ${formatCalculationNumber(breakdown.appliedResistance)} ÷ 100), ${attack} × 5%)`,
       result: formatNumber(breakdown.result),
-      note: resistanceWasClamped
-        ? `入力術耐性 ${formatCalculationNumber(breakdown.inputResistance)} を0〜100に補正`
-        : breakdown.minimumApplied
-          ? `耐性適用後 ${formatCalculationNumber(afterResistance)} より大きい最低保証 ${formatCalculationNumber(minimumDamage)} を採用`
-          : `耐性適用後 ${formatCalculationNumber(afterResistance)} を採用（最低保証 ${formatCalculationNumber(minimumDamage)}）`,
+      note: notes.join('。'),
     }
   }
 
   const afterDefense = breakdown.afterDefense ?? 0
   const minimumDamage = breakdown.minimumDamage ?? 0
+  const notes: string[] = []
+  if (breakdown.inputDefense !== breakdown.defenseBeforeIgnore) {
+    notes.push(`入力防御力 ${formatCalculationNumber(breakdown.inputDefense)} を0以上に補正`)
+  }
+  if (breakdown.defenseIgnoreFixed > 0) {
+    notes.push(`max(0, 防御力 ${formatCalculationNumber(breakdown.defenseBeforeIgnore)} − 固定無視 ${formatCalculationNumber(breakdown.defenseIgnoreFixed)}) = ${formatCalculationNumber(breakdown.appliedDefense)}`)
+  }
+  notes.push(breakdown.minimumApplied
+    ? `防御差し引き後 ${formatCalculationNumber(afterDefense)} より大きい最低保証 ${formatCalculationNumber(minimumDamage)} を採用`
+    : `防御差し引き後 ${formatCalculationNumber(afterDefense)} を採用（最低保証 ${formatCalculationNumber(minimumDamage)}）`)
   return {
     label,
     formula: `max(${attack} − ${formatCalculationNumber(breakdown.appliedDefense)}, ${attack} × 5%)`,
     result: formatNumber(breakdown.result),
-    note: breakdown.minimumApplied
-      ? `防御差し引き後 ${formatCalculationNumber(afterDefense)} より大きい最低保証 ${formatCalculationNumber(minimumDamage)} を採用`
-      : `防御差し引き後 ${formatCalculationNumber(afterDefense)} を採用（最低保証 ${formatCalculationNumber(minimumDamage)}）`,
+    note: notes.join('。'),
   }
 }
 
@@ -1048,7 +1149,8 @@ function buildSkillTotalStep(breakdown: SkillDamageBreakdown): CalculationStep {
 }
 
 function buildSensitivityData({
-  attack,
+  baseAttack,
+  normalAttack,
   normalAttackInterval,
   damageType,
   enemyDefense,
@@ -1057,8 +1159,11 @@ function buildSensitivityData({
   selectedSkill,
   skillSupported,
   metric,
+  attackModifiers,
+  mitigationModifiers,
 }: {
-  attack: number
+  baseAttack: number
+  normalAttack: number
   normalAttackInterval: number
   damageType: DamageType
   enemyDefense: number
@@ -1067,12 +1172,16 @@ function buildSensitivityData({
   selectedSkill: SkillRecord | null
   skillSupported: boolean
   metric: SensitivityMetric
+  attackModifiers: AttackPipelineInput
+  mitigationModifiers: MitigationModifiers
 }): SensitivityData {
   const calculateSkillAt = (defense: number, resistance: number): SkillDamageBreakdown | null => (
     model && selectedSkill && skillSupported
-      ? calculateSkillDamageBreakdown(attack, damageType, defense, resistance, model, {
+      ? calculateSkillDamageBreakdown(baseAttack, damageType, defense, resistance, model, {
         canShowDps: selectedSkill.classification.outputCapabilities.canShowDps,
         totalMode: getTotalMode(selectedSkill),
+        attackModifiers,
+        mitigationModifiers,
       })
       : null
   )
@@ -1085,19 +1194,39 @@ function buildSensitivityData({
 
   if (damageType === 'PHYSICAL') {
     const maximumDefense = Math.max(...tablePoints)
+    const defenseIgnoreFixed = Math.max(0, mitigationModifiers.defenseIgnoreFixed ?? 0)
     const skillAtZeroDefense = calculateSkillAt(0, enemyResistance)?.perHit ?? null
-    const minimumDamageBreakpoints = [attack * 0.95, skillAtZeroDefense === null ? null : skillAtZeroDefense * 0.95]
+    const minimumDamageBreakpoints = [
+      normalAttack * 0.95 + defenseIgnoreFixed,
+      skillAtZeroDefense === null ? null : skillAtZeroDefense * 0.95 + defenseIgnoreFixed,
+    ]
       .filter((point): point is number => point !== null && point > 0 && point < maximumDefense)
-    chartPoints = uniqueSorted([...tablePoints, ...minimumDamageBreakpoints])
+    const ignoreBreakpoints = defenseIgnoreFixed > 0 && defenseIgnoreFixed < maximumDefense
+      ? [defenseIgnoreFixed]
+      : []
+    chartPoints = uniqueSorted([...tablePoints, ...ignoreBreakpoints, ...minimumDamageBreakpoints])
   } else if (damageType === 'ARTS') {
-    chartPoints = uniqueSorted([...tablePoints, 100])
+    const resistanceIgnoreFixed = Math.max(0, mitigationModifiers.resistanceIgnoreFixed ?? 0)
+    const ignoreBreakpoints = resistanceIgnoreFixed > 0 && resistanceIgnoreFixed < 100
+      ? [resistanceIgnoreFixed]
+      : []
+    const minimumDamageBreakpoint = 95 + resistanceIgnoreFixed
+    const minimumDamageBreakpoints = minimumDamageBreakpoint > 0 && minimumDamageBreakpoint <= 100
+      ? [minimumDamageBreakpoint]
+      : []
+    chartPoints = uniqueSorted([
+      ...tablePoints,
+      ...ignoreBreakpoints,
+      ...minimumDamageBreakpoints,
+      100,
+    ])
   }
 
   const rowByPoint = new Map<number, SensitivityRow>()
   for (const point of uniqueSorted([...tablePoints, ...chartPoints])) {
     const defense = damageType === 'PHYSICAL' ? point : enemyDefense
     const resistance = damageType === 'ARTS' ? point : enemyResistance
-    const normalBreakdown = calculateDamageBreakdown(attack, damageType, defense, resistance)
+    const normalBreakdown = calculateDamageBreakdown(normalAttack, damageType, defense, resistance, mitigationModifiers)
     const skillBreakdown = calculateSkillAt(defense, resistance)
     const normal = metric === 'DPS'
       ? normalAttackInterval > 0 ? normalBreakdown.result / normalAttackInterval : 0
@@ -1189,25 +1318,18 @@ function getSkillLevelLabel(index: number, total: number): string {
   return `Lv.${index + 1}`
 }
 
-function getTraitReflectionStatus(description: string, damageType: DamageType): ReflectionStatus {
-  const impliedDamageType = inferDamageTypeFromText(description)
-  if (impliedDamageType) return impliedDamageType === damageType ? 'APPLIED' : 'NOT_APPLIED'
-  return hasDirectDamageEffect(description) ? 'NOT_APPLIED' : 'NO_DIRECT_EFFECT'
-}
-
-function getTalentReflectionStatus(description: string): ReflectionStatus {
-  return hasDirectDamageEffect(description) ? 'NOT_APPLIED' : 'NO_DIRECT_EFFECT'
-}
-
-function inferDamageTypeFromText(description: string): DamageType | null {
-  if (/確定ダメージ/.test(description)) return 'TRUE'
-  if (/術ダメージ/.test(description)) return 'ARTS'
-  if (/物理ダメージ/.test(description)) return 'PHYSICAL'
-  return null
-}
-
-function hasDirectDamageEffect(description: string): boolean {
-  return /攻撃力|攻撃速度|攻撃間隔|防御力.{0,16}無視|術耐性.{0,16}無視|追加.{0,16}ダメージ|与えるダメージ|連撃|会心/.test(description)
+function getEffectGroupStatus(effects: EvaluatedOperatorEffect[]): ReflectionStatus {
+  const statuses = new Set(effects.map((effect) => effect.status))
+  const hasApplied = statuses.has('APPLIED')
+  const hasUnapplied = statuses.has('NOT_APPLIED')
+    || statuses.has('REQUIRES_INPUT')
+    || statuses.has('UNSUPPORTED')
+  if (hasApplied && hasUnapplied) return 'PARTIAL'
+  if (statuses.has('UNSUPPORTED')) return 'UNSUPPORTED'
+  if (statuses.has('REQUIRES_INPUT')) return 'REQUIRES_INPUT'
+  if (statuses.has('NOT_APPLIED')) return 'NOT_APPLIED'
+  if (hasApplied) return 'APPLIED'
+  return 'NO_DIRECT_EFFECT'
 }
 
 function stripMarkup(value: string): string {

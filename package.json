@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "node --experimental-strip-types --test tests/classifier.test.ts tests/damageCalculator.test.ts tests/enemyData.test.ts tests/enemyStatistics.test.ts tests/operatorComparison.test.ts tests/routes.test.ts tests/skillDirectory.test.ts tests/skillEffectDetails.test.ts",
+    "test": "node --experimental-strip-types --test tests/classifier.test.ts tests/damageCalculator.test.ts tests/damageModifiers.test.ts tests/enemyData.test.ts tests/enemyStatistics.test.ts tests/operatorComparison.test.ts tests/operatorEffects.test.ts tests/routes.test.ts tests/skillDirectory.test.ts tests/skillEffectDetails.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {
