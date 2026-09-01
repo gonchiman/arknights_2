@@ -5,7 +5,6 @@ import {
   calculateDamageBreakdown,
   calculateSkillDamageBreakdown,
   deriveSkillModel,
-  getDefaultDamageType,
   getOperatorStats,
   type AttackPipelineInput,
   type AttackPipelineBreakdown,
@@ -29,9 +28,12 @@ import {
 import { DAMAGE_CALCULATOR_PANEL_DEFAULTS } from '../lib/damageCalculatorPanels'
 import { getOperatorPassives } from '../lib/operatorProfile'
 import {
+  detectNormalAttackDamageType,
+  detectSkillDamageType,
   getSkillDamageUnsupportedReasons as getUnsupportedReasons,
   getSkillTotalLabel as getTotalLabel,
   getSkillTotalMode as getTotalMode,
+  type DamageTypeDetection,
 } from '../lib/skillDamageModel'
 import type { RawSkillLevel, SkillRecord } from '../types/skill'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
@@ -55,7 +57,7 @@ interface CalculationStep {
 interface SensitivityRow {
   point: number
   label: string
-  normal: number
+  normal: number | null
   skill: number | null
   normalMinimumReached: boolean
   skillMinimumReached: boolean
@@ -63,6 +65,7 @@ interface SensitivityRow {
 }
 
 interface SensitivityData {
+  axisDamageType: DamageType | null
   tableRows: SensitivityRow[]
   chartRows: SensitivityRow[]
 }
@@ -97,7 +100,6 @@ export function DamageCalculator({ rows, loading }: Props) {
   const [operatorLevel, setOperatorLevel] = useState(1)
   const [trust, setTrust] = useState(100)
   const [skillLevelIndex, setSkillLevelIndex] = useState(0)
-  const [damageType, setDamageType] = useState<DamageType>('PHYSICAL')
   const [enemyDefense, setEnemyDefense] = useState(0)
   const [enemyResistance, setEnemyResistance] = useState(0)
   const [operatorSearchPanelOpen, setOperatorSearchPanelOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.operatorSearch)
@@ -147,8 +149,6 @@ export function DamageCalculator({ rows, loading }: Props) {
     setSkillId((current) => operatorSkills.some((skill) => skill.id === current)
       ? current
       : operatorSkills[0]?.id ?? '')
-    const passives = getOperatorPassives(selectedOperator.operatorProfile, nextPhaseIndex, nextMaxLevel)
-    setDamageType(getDefaultDamageType(selectedOperator.profession, passives.traitDescription))
   }, [effectiveOperatorId])
 
   useEffect(() => {
@@ -158,22 +158,47 @@ export function DamageCalculator({ rows, loading }: Props) {
   const operatorPassives = useMemo(() => selectedOperator
     ? getOperatorPassives(selectedOperator.operatorProfile, safePhaseIndex, safeOperatorLevel)
     : { traitDescription: '', talents: [], sources: [] }, [selectedOperator, safePhaseIndex, safeOperatorLevel])
-  const operatorEffects = useMemo(() => evaluateOperatorEffects(
+  const normalDamageTypeDetection = useMemo<DamageTypeDetection>(() => selectedOperator
+    ? detectNormalAttackDamageType(selectedOperator.profession, operatorPassives.traitDescription)
+    : unresolvedDamageType('通常攻撃のダメージ種別を自動判定できません。'), [selectedOperator, operatorPassives.traitDescription])
+  const normalDamageType = normalDamageTypeDetection.damageType
+  const skillDamageTypeDetection = useMemo<DamageTypeDetection>(() => selectedSkill
+    ? detectSkillDamageType(
+      selectedSkill,
+      normalDamageType,
+      selectedSkillLevel?.description ?? selectedSkill.description,
+    )
+    : unresolvedDamageType('スキルを選択してください。'), [selectedSkill, selectedSkillLevel, normalDamageType])
+  const skillDamageType = skillDamageTypeDetection.damageType
+  const normalOperatorEffects = useMemo(() => evaluateOperatorEffects(
     selectedOperator?.operatorId ?? '',
     operatorPassives,
-    damageType,
-  ), [selectedOperator?.operatorId, operatorPassives, damageType])
-  const passiveAttackModifiers = useMemo(() => ({
-    directAddition: operatorEffects.modifiers.attackAddition,
-    directMultiplierPercent: operatorEffects.modifiers.attackMultiplierPercent,
-  }), [operatorEffects.modifiers.attackAddition, operatorEffects.modifiers.attackMultiplierPercent])
-  const passiveMitigationModifiers = useMemo<MitigationModifiers>(() => ({
-    defenseIgnoreFixed: operatorEffects.modifiers.defenseIgnoreFixed,
-    resistanceIgnoreFixed: operatorEffects.modifiers.resistanceIgnoreFixed,
-  }), [operatorEffects.modifiers.defenseIgnoreFixed, operatorEffects.modifiers.resistanceIgnoreFixed])
+    normalDamageType,
+  ), [selectedOperator?.operatorId, operatorPassives, normalDamageType])
+  const skillOperatorEffects = useMemo(() => evaluateOperatorEffects(
+    selectedOperator?.operatorId ?? '',
+    operatorPassives,
+    skillDamageType,
+  ), [selectedOperator?.operatorId, operatorPassives, skillDamageType])
+  const normalAttackModifiers = useMemo(() => ({
+    directAddition: normalOperatorEffects.modifiers.attackAddition,
+    directMultiplierPercent: normalOperatorEffects.modifiers.attackMultiplierPercent,
+  }), [normalOperatorEffects.modifiers.attackAddition, normalOperatorEffects.modifiers.attackMultiplierPercent])
+  const skillAttackModifiers = useMemo(() => ({
+    directAddition: skillOperatorEffects.modifiers.attackAddition,
+    directMultiplierPercent: skillOperatorEffects.modifiers.attackMultiplierPercent,
+  }), [skillOperatorEffects.modifiers.attackAddition, skillOperatorEffects.modifiers.attackMultiplierPercent])
+  const normalMitigationModifiers = useMemo<MitigationModifiers>(() => ({
+    defenseIgnoreFixed: normalOperatorEffects.modifiers.defenseIgnoreFixed,
+    resistanceIgnoreFixed: normalOperatorEffects.modifiers.resistanceIgnoreFixed,
+  }), [normalOperatorEffects.modifiers.defenseIgnoreFixed, normalOperatorEffects.modifiers.resistanceIgnoreFixed])
+  const skillMitigationModifiers = useMemo<MitigationModifiers>(() => ({
+    defenseIgnoreFixed: skillOperatorEffects.modifiers.defenseIgnoreFixed,
+    resistanceIgnoreFixed: skillOperatorEffects.modifiers.resistanceIgnoreFixed,
+  }), [skillOperatorEffects.modifiers.defenseIgnoreFixed, skillOperatorEffects.modifiers.resistanceIgnoreFixed])
   const operatorStats = useMemo(() => selectedOperator
     ? getOperatorStats(selectedOperator.operatorProfile, safePhaseIndex, safeOperatorLevel, trust, {
-      attackSpeedBonus: operatorEffects.modifiers.attackSpeedBonus,
+      attackSpeedBonus: normalOperatorEffects.modifiers.attackSpeedBonus,
     })
     : {
       attack: 0,
@@ -195,47 +220,62 @@ export function DamageCalculator({ rows, loading }: Props) {
       safePhaseIndex,
       safeOperatorLevel,
       trust,
-      operatorEffects.modifiers.attackSpeedBonus,
+      normalOperatorEffects.modifiers.attackSpeedBonus,
     ])
   const model = useMemo(() => selectedSkillLevel
     ? deriveSkillModel(selectedSkillLevel, operatorStats.attackInterval, operatorStats.attackSpeed)
     : null, [selectedSkillLevel, operatorStats.attackInterval, operatorStats.attackSpeed])
 
-  const unsupportedReasons = selectedSkill
-    ? getUnsupportedReasons(selectedSkill)
-    : ['スキルを選択してください。']
+  const unsupportedReasons = [...new Set(selectedSkill
+    ? [
+      ...getUnsupportedReasons(selectedSkill),
+      ...(model?.notes.some((note) => note.includes('初期版の計算対象外'))
+        ? ['計算対象外の独立ダメージ倍率を含みます。']
+        : []),
+      ...(model?.notes.some((note) => note.includes('複数の攻撃力補正E'))
+        ? ['複数の攻撃倍率を別々に扱うモデルが必要です。']
+        : []),
+      ...(skillDamageType === null ? [skillDamageTypeDetection.reason] : []),
+    ]
+    : ['スキルを選択してください。'])]
   const skillSupported = unsupportedReasons.length === 0
-  const traitReflectionStatus = getEffectGroupStatus(operatorEffects.effects.filter((effect) => effect.sourceKind === 'TRAIT'))
-  const normalAttackPipeline = calculateAttackPipeline(operatorStats.attack, passiveAttackModifiers)
-  const normalBreakdown = calculateDamageBreakdown(
-    normalAttackPipeline.finalAttack,
-    damageType,
-    enemyDefense,
-    enemyResistance,
-    passiveMitigationModifiers,
-  )
-  const normalPerHit = normalBreakdown.result
-  const normalDps = operatorStats.attackInterval > 0 ? normalPerHit / operatorStats.attackInterval : 0
-  const mechAccordDamage = selectedOperator && isMechAccordSubProfession(selectedOperator.subProfessionId)
+  const traitReflectionStatus = getEffectGroupStatus(normalOperatorEffects.effects.filter((effect) => effect.sourceKind === 'TRAIT'))
+  const normalAttackPipeline = calculateAttackPipeline(operatorStats.attack, normalAttackModifiers)
+  const normalBreakdown = normalDamageType
+    ? calculateDamageBreakdown(
+      normalAttackPipeline.finalAttack,
+      normalDamageType,
+      enemyDefense,
+      enemyResistance,
+      normalMitigationModifiers,
+    )
+    : null
+  const normalPerHit = normalBreakdown?.result ?? null
+  const normalDps = normalPerHit !== null && operatorStats.attackInterval > 0
+    ? normalPerHit / operatorStats.attackInterval
+    : null
+  const mechAccordDamage = selectedOperator
+    && normalDamageType !== null
+    && isMechAccordSubProfession(selectedOperator.subProfessionId)
     ? calculateMechAccordDamageRows(
       normalAttackPipeline.finalAttack,
       enemyDefense,
       enemyResistance,
-      passiveMitigationModifiers,
+      normalMitigationModifiers,
     )
     : null
-  const skillBreakdown = selectedSkill && model && skillSupported
+  const skillBreakdown = selectedSkill && model && skillSupported && skillDamageType
     ? calculateSkillDamageBreakdown(
       operatorStats.attack,
-      damageType,
+      skillDamageType,
       enemyDefense,
       enemyResistance,
       model,
       {
         canShowDps: selectedSkill.classification.outputCapabilities.canShowDps,
         totalMode: getTotalMode(selectedSkill),
-        attackModifiers: passiveAttackModifiers,
-        mitigationModifiers: passiveMitigationModifiers,
+        attackModifiers: skillAttackModifiers,
+        mitigationModifiers: skillMitigationModifiers,
       },
     )
     : null
@@ -244,16 +284,18 @@ export function DamageCalculator({ rows, loading }: Props) {
     baseAttack: operatorStats.attack,
     normalAttack: normalAttackPipeline.finalAttack,
     normalAttackInterval: operatorStats.attackInterval,
-    damageType,
+    normalDamageType,
+    skillDamageType,
     enemyDefense,
     enemyResistance,
     model,
     selectedSkill,
     skillSupported,
     metric: sensitivityMetric,
-    attackModifiers: passiveAttackModifiers,
-    mitigationModifiers: passiveMitigationModifiers,
-  }), [operatorStats.attack, normalAttackPipeline.finalAttack, operatorStats.attackInterval, damageType, enemyDefense, enemyResistance, model, selectedSkill, skillSupported, sensitivityMetric, passiveAttackModifiers, passiveMitigationModifiers])
+    skillAttackModifiers,
+    normalMitigationModifiers,
+    skillMitigationModifiers,
+  }), [operatorStats.attack, normalAttackPipeline.finalAttack, operatorStats.attackInterval, normalDamageType, skillDamageType, enemyDefense, enemyResistance, model, selectedSkill, skillSupported, sensitivityMetric, skillAttackModifiers, normalMitigationModifiers, skillMitigationModifiers])
 
   if (loading && rows.length === 0) {
     return <section className="damage-page calculator-page"><p className="calculator-loading" role="status">ゲームデータを読み込んでいます…</p></section>
@@ -263,9 +305,9 @@ export function DamageCalculator({ rows, loading }: Props) {
     return <section className="damage-page calculator-page"><p className="calculator-loading" role="status">計算できるオペレーターが見つかりません。</p></section>
   }
 
-  const normalCalculationSteps: CalculationStep[] = [
+  const normalCalculationSteps: CalculationStep[] = normalBreakdown && normalDamageType ? [
     ...buildAttackPipelineSteps(operatorStats.baseAttackBreakdown, normalAttackPipeline, 'NORMAL'),
-    buildMitigationStep(`${DAMAGE_TYPE_LABELS[damageType]}ダメージ（1ヒット）`, normalBreakdown),
+    buildMitigationStep(`${DAMAGE_TYPE_LABELS[normalDamageType]}ダメージ（1ヒット）`, normalBreakdown),
     {
       label: '攻撃間隔',
       formula: `${formatCalculationNumber(operatorStats.baseAttackTime)}秒 × 100 ÷ max(20, ${formatCalculationNumber(operatorStats.baseAttackSpeed)} + ${formatCalculationNumber(operatorStats.attackSpeedBonus)})`,
@@ -276,13 +318,27 @@ export function DamageCalculator({ rows, loading }: Props) {
     },
     {
       label: 'DPS',
-      formula: `${formatCalculationNumber(normalPerHit)} ÷ ${formatCalculationNumber(operatorStats.attackInterval)}秒`,
-      result: formatNumber(normalDps),
+      formula: `${formatCalculationNumber(normalBreakdown.result)} ÷ ${formatCalculationNumber(operatorStats.attackInterval)}秒`,
+      result: normalDps === null ? '—' : formatNumber(normalDps),
     },
   ]
+    : []
   const skillCalculationSteps = skillBreakdown
     ? buildSkillCalculationSteps(operatorStats.baseAttackBreakdown, skillBreakdown)
     : []
+  const sensitivityDamageType = sensitivityData.axisDamageType
+  const sensitivityStatLabel = getSensitivityStatLabel(sensitivityDamageType)
+  const damageTypesDiffer = normalDamageType !== null
+    && skillDamageType !== null
+    && normalDamageType !== skillDamageType
+  const hasSensitivitySeries = sensitivityData.chartRows.some((row) => (
+    row.normal !== null || row.skill !== null
+  ))
+  const damageTypeMetricStatus: ReflectionStatus = normalDamageType !== null && skillDamageType !== null
+    ? 'APPLIED'
+    : normalDamageType !== null || skillDamageType !== null
+      ? 'PARTIAL'
+      : 'UNSUPPORTED'
 
   return (
     <section className="damage-page calculator-page">
@@ -400,20 +456,24 @@ export function DamageCalculator({ rows, loading }: Props) {
           <p>{stripMarkup(selectedSkillLevel.description ?? selectedSkill.description)}</p>
         </div>
         <div className="condition-divider" />
-        <div className="condition-subheading">敵とダメージ種別</div>
-        <div className="enemy-condition-row">
-          <div>
-            <span className="condition-field-label">ダメージ種別</span>
-            <div className="damage-type-switch" role="group" aria-label="ダメージ種別">
-              {(Object.entries(DAMAGE_TYPE_LABELS) as Array<[DamageType, string]>).map(([type, label]) => (
-                <button type="button" className={damageType === type ? 'active' : ''} aria-pressed={damageType === type} onClick={() => setDamageType(type)} key={type}>{label}</button>
-              ))}
-            </div>
+        <div className="condition-subheading">ダメージ種別（自動判定）</div>
+        <div className="damage-type-detection-grid" role="status" aria-live="polite">
+          <div className={normalDamageType === null ? 'unresolved' : ''}>
+            <span>通常攻撃</span>
+            <strong>{formatDetectedDamageType(normalDamageType)}</strong>
+            <small>{normalDamageTypeDetection.reason}</small>
           </div>
-          <div className="calculator-form-grid enemy-form-grid">
-            <NumberField label="敵の防御力" value={enemyDefense} min={0} max={10000} onChange={setEnemyDefense} />
-            <NumberField label="敵の術耐性" value={enemyResistance} min={0} max={100} onChange={setEnemyResistance} />
+          <div className={skillDamageType === null ? 'unresolved' : ''}>
+            <span>スキル</span>
+            <strong>{formatDetectedDamageType(skillDamageType)}</strong>
+            <small>{skillDamageTypeDetection.reason}</small>
           </div>
+        </div>
+        <div className="condition-divider" />
+        <div className="condition-subheading">敵ステータス</div>
+        <div className="calculator-form-grid enemy-form-grid">
+          <NumberField label="敵の防御力" value={enemyDefense} min={0} max={10000} onChange={setEnemyDefense} />
+          <NumberField label="敵の術耐性" value={enemyResistance} min={0} max={100} onChange={setEnemyResistance} />
         </div>
         <p className="panel-note">物理・術ダメージには、軽減前の攻撃力の5%を最低保証として適用しています。</p>
       </CollapsibleCalculatorPanel>
@@ -457,23 +517,24 @@ export function DamageCalculator({ rows, loading }: Props) {
                 detail="通常攻撃DPSの算出に使用"
               />
               <OperatorMetric
-                label="計算上のダメージ種別"
-                value={DAMAGE_TYPE_LABELS[damageType]}
-                detail="計算条件で変更可能"
+                label="ダメージ種別（自動）"
+                value={`通常 ${formatDetectedDamageType(normalDamageType)} / スキル ${formatDetectedDamageType(skillDamageType)}`}
+                detail="特性・職業・スキル説明から自動判定"
+                status={damageTypeMetricStatus}
               />
             </div>
             <div className="operator-effect-grid">
               <article className="operator-effect-card">
                 <header><span>特性</span><ReflectionBadge status={traitReflectionStatus} /></header>
                 <p>{operatorPassives.traitDescription || '特性情報なし'}</p>
-                <OperatorEffectValues effects={operatorEffects.effects.filter((effect) => effect.sourceKind === 'TRAIT')} />
+                <OperatorEffectValues effects={normalOperatorEffects.effects.filter((effect) => effect.sourceKind === 'TRAIT')} />
               </article>
               {operatorPassives.talents.length > 0 ? operatorPassives.talents.map((talent, index) => (
                 <article className="operator-effect-card" key={`${talent.name}-${index}`}>
-                  <header><span>素質</span><ReflectionBadge status={getEffectGroupStatus(operatorEffects.effects.filter((effect) => effect.sourceKind === 'TALENT' && effect.talentIndex === index))} /></header>
+                  <header><span>素質</span><ReflectionBadge status={getEffectGroupStatus(normalOperatorEffects.effects.filter((effect) => effect.sourceKind === 'TALENT' && effect.talentIndex === index))} /></header>
                   <strong>{talent.name}</strong>
                   <p>{talent.description || '説明なし'}</p>
-                  <OperatorEffectValues effects={operatorEffects.effects.filter((effect) => effect.sourceKind === 'TALENT' && effect.talentIndex === index)} />
+                  <OperatorEffectValues effects={normalOperatorEffects.effects.filter((effect) => effect.sourceKind === 'TALENT' && effect.talentIndex === index)} />
                 </article>
               )) : (
                 <article className="operator-effect-card muted-passive">
@@ -482,7 +543,7 @@ export function DamageCalculator({ rows, loading }: Props) {
                 </article>
               )}
             </div>
-            <p className="operator-info-note">効果ごとの適用値と未反映理由は、通常攻撃・スキルの計算過程に表示します。</p>
+            <p className="operator-info-note">このパネルの効果状態は通常攻撃を基準に表示します。スキル側の適用値と未反映理由は、スキルの計算過程に表示します。</p>
       </CollapsibleCalculatorPanel>
 
       <CollapsibleCalculatorPanel
@@ -514,7 +575,7 @@ export function DamageCalculator({ rows, loading }: Props) {
         id="results-panel"
         number="05"
         title="計算結果"
-        summary={`${DAMAGE_TYPE_LABELS[damageType]} · 防御 ${formatNumber(enemyDefense)} · 術耐性 ${formatNumber(enemyResistance)}`}
+        summary={`${formatDamageTypeSummary(normalDamageType, skillDamageType)} · 防御 ${formatNumber(enemyDefense)} · 術耐性 ${formatNumber(enemyResistance)}`}
         open={resultsOpen}
         onToggle={() => setResultsOpen((open) => !open)}
         collapsedLabel="結果を表示"
@@ -532,6 +593,12 @@ export function DamageCalculator({ rows, loading }: Props) {
           <ResultCard label="DPS" value={skillOutput?.dps ?? null} />
           <ResultCard label={getTotalLabel(selectedSkill)} value={skillOutput?.total ?? null} />
         </div>
+        {!skillSupported && (
+          <div className="unsupported-model result-unsupported" role="status">
+            <strong>選択中のスキルは現在計算できません</strong>
+            {unsupportedReasons.map((reason) => <span key={reason}>{reason}</span>)}
+          </div>
+        )}
         <p className="result-disclaimer">表示値は単体への理論値です。確認済みの特性・素質だけを反映し、条件入力が必要な効果と未対応効果は計算過程に明示します。潜在、モジュール効果、外部バフ、敵デバフ、対象数は含みません。</p>
       </CollapsibleCalculatorPanel>
 
@@ -553,7 +620,7 @@ export function DamageCalculator({ rows, loading }: Props) {
       <CollapsibleCalculatorPanel
         id="sensitivity-panel"
         number={mechAccordDamage ? '07' : '06'}
-        title={`${damageType === 'ARTS' ? '術耐性' : damageType === 'PHYSICAL' ? '防御力' : '敵ステータス'}別の比較`}
+        title={`${sensitivityStatLabel}別の比較`}
         summary={`敵ステータスを変えたときの${sensitivityMetric === 'DPS' ? 'DPS' : '単体ダメージ'}`}
         open={sensitivityOpen}
         onToggle={() => setSensitivityOpen((open) => !open)}
@@ -580,28 +647,39 @@ export function DamageCalculator({ rows, loading }: Props) {
         {sensitivityMetric === 'DPS' && sensitivityData.tableRows.every((row) => row.skill === null) && (
           <p className="sensitivity-metric-note">選択中のスキルはDPSを算出できないため、スキル欄は「—」で表示します。</p>
         )}
-        {damageType === 'TRUE' ? (
-          <p className="sensitivity-chart-unavailable">確定ダメージは防御力・術耐性の影響を受けないため、推移グラフは表示しません。</p>
+        {damageTypesDiffer && (
+          <p className="sensitivity-metric-note">
+            通常攻撃とスキルの種別が異なるため、{sensitivityStatLabel}だけを変化させ、もう一方の敵ステータスは入力値で固定します。
+          </p>
+        )}
+        {sensitivityDamageType === null || sensitivityDamageType === 'TRUE' || !hasSensitivitySeries ? (
+          <p className="sensitivity-chart-unavailable">
+            {sensitivityDamageType === 'TRUE'
+              ? '比較対象が確定ダメージのため、防御力・術耐性による推移は表示しません。'
+              : sensitivityDamageType === null
+                ? '比較軸となるダメージ種別を自動判定できないため、推移は表示しません。'
+                : '比較できる計算結果がないため、推移は表示しません。'}
+          </p>
         ) : (
           <SensitivityChart
             rows={sensitivityData.chartRows}
             tickRows={sensitivityData.tableRows}
-            axisLabel={damageType === 'ARTS' ? '敵の術耐性（RES）' : '敵の防御力'}
+            axisLabel={getSensitivityAxisLabel(sensitivityDamageType)}
             metric={sensitivityMetric}
           />
         )}
         <div className="sensitivity-table-heading-row">
           <h3 className="sensitivity-table-heading">数値一覧</h3>
-          {damageType !== 'TRUE' && (
+          {sensitivityDamageType !== null && sensitivityDamageType !== 'TRUE' && (
             <span className="minimum-damage-legend"><i aria-hidden="true" />{sensitivityMetric === 'DPS' ? '最低保証ダメージ時' : '最低保証ダメージ'}</span>
           )}
         </div>
         <div className="sensitivity-table-wrap">
-          <table className="sensitivity-table" aria-label={`${damageType === 'ARTS' ? '術耐性' : damageType === 'PHYSICAL' ? '防御力' : '敵ステータス'}別の${sensitivityMetric === 'DPS' ? 'DPS' : 'ダメージ'}数値一覧`}>
-            <thead><tr><th>{damageType === 'ARTS' ? '術耐性' : damageType === 'PHYSICAL' ? '防御力' : '補正'}</th><th>通常攻撃 {sensitivityMetric === 'DPS' ? 'DPS' : '1ヒット'}</th><th>スキル {sensitivityMetric === 'DPS' ? 'DPS' : '1攻撃'}</th></tr></thead>
+          <table className="sensitivity-table" aria-label={`${sensitivityStatLabel}別の${sensitivityMetric === 'DPS' ? 'DPS' : 'ダメージ'}数値一覧`}>
+            <thead><tr><th>{sensitivityDamageType === 'TRUE' || sensitivityDamageType === null ? '補正' : sensitivityStatLabel}</th><th>通常攻撃 {sensitivityMetric === 'DPS' ? 'DPS' : '1ヒット'}</th><th>スキル {sensitivityMetric === 'DPS' ? 'DPS' : '1攻撃'}</th></tr></thead>
             <tbody>
               {sensitivityData.tableRows.map((row) => {
-                const normalValue = formatNumber(row.normal)
+                const normalValue = row.normal === null ? '—' : formatNumber(row.normal)
                 const skillValue = row.skill === null ? '—' : formatNumber(row.skill)
                 return (
                   <tr className={row.current ? 'current' : ''} key={row.label}>
@@ -626,7 +704,7 @@ export function DamageCalculator({ rows, loading }: Props) {
         id="normal-calculation-process-panel"
         number={mechAccordDamage ? '08' : '07'}
         title="通常攻撃の計算過程"
-        summary={`1ヒット ${formatNumber(normalPerHit)} · DPS ${formatNumber(normalDps)}`}
+        summary={`1ヒット ${formatOptionalNumber(normalPerHit)} · DPS ${formatOptionalNumber(normalDps)}`}
         open={normalCalculationProcessOpen}
         onToggle={() => setNormalCalculationProcessOpen((open) => !open)}
         collapsedLabel="式と代入値を表示"
@@ -636,7 +714,8 @@ export function DamageCalculator({ rows, loading }: Props) {
         <CalculationTrace
           title="通常攻撃"
           steps={normalCalculationSteps}
-          passiveEffects={operatorEffects.effects}
+          unavailableReasons={normalDamageType === null ? [normalDamageTypeDetection.reason] : []}
+          passiveEffects={normalOperatorEffects.effects}
         />
         <p className="calculation-process-note">
           上の一覧で「計算に反映」とした効果だけを式へ適用します。潜在・モジュール・外部バフは未反映です。式中の値は確認しやすい桁数に省略して表示し、計算自体は表示前の値で行います。
@@ -660,7 +739,7 @@ export function DamageCalculator({ rows, loading }: Props) {
           title="スキル"
           steps={skillCalculationSteps}
           unavailableReasons={skillOutput ? [] : unsupportedReasons}
-          passiveEffects={operatorEffects.effects}
+          passiveEffects={skillOperatorEffects.effects}
         />
         <p className="calculation-process-note">
           反映済みの特性・素質はスキル補正と同じA〜Eへ合流します。条件入力が必要・未対応の効果は数値へ加えません。固定時間の総ダメージは、DPS × 効果時間による連続値の理論値です。
@@ -757,6 +836,7 @@ function SensitivityChart({
     return () => observer.disconnect()
   }, [])
 
+  const hasNormal = rows.some((row) => row.normal !== null)
   const hasSkill = rows.some((row) => row.skill !== null)
   const chartHeight = chartWidth < 520 ? 250 : 280
   const margin = chartWidth < 520
@@ -770,7 +850,8 @@ function SensitivityChart({
   const plotHeight = Math.max(1, plotBottom - plotTop)
   const xMin = rows[0]?.point ?? 0
   const xMax = rows.at(-1)?.point ?? xMin
-  const values = rows.flatMap((row) => row.skill === null ? [row.normal] : [row.normal, row.skill])
+  const values = rows.flatMap((row) => [row.normal, row.skill])
+    .filter((value): value is number => value !== null)
   const { maximum: yMaximum, ticks: yTicks } = getChartScale(Math.max(0, ...values))
   const getX = (point: number) => xMax === xMin
     ? plotLeft + plotWidth / 2
@@ -784,7 +865,8 @@ function SensitivityChart({
   const currentLabelX = currentX === null
     ? 0
     : clamp(currentX - currentLabelWidth / 2, plotLeft, plotRight - currentLabelWidth)
-  const normalPath = buildChartPath(rows.map((row) => ({ x: getX(row.point), y: getY(row.normal) })))
+  const normalRows = rows.filter((row): row is SensitivityRow & { normal: number } => row.normal !== null)
+  const normalPath = buildChartPath(normalRows.map((row) => ({ x: getX(row.point), y: getY(row.normal) })))
   const skillRows = rows.filter((row): row is SensitivityRow & { skill: number } => row.skill !== null)
   const skillPath = buildChartPath(skillRows.map((row) => ({ x: getX(row.point), y: getY(row.skill) })))
   const chartValueLabel = metric === 'DPS' ? 'DPS' : '単体ダメージ'
@@ -796,7 +878,7 @@ function SensitivityChart({
       <figcaption className="sensitivity-chart-caption">
         <strong>{metric === 'DPS' ? 'DPS推移' : 'ダメージ推移'}</strong>
         <span className="sensitivity-chart-legend" aria-label="凡例">
-          <span><i className="normal" aria-hidden="true" />{normalSeriesLabel}</span>
+          {hasNormal && <span><i className="normal" aria-hidden="true" />{normalSeriesLabel}</span>}
           {hasSkill && <span><i className="skill" aria-hidden="true" />{skillSeriesLabel}</span>}
         </span>
       </figcaption>
@@ -810,7 +892,12 @@ function SensitivityChart({
           aria-labelledby={`${titleId} ${descriptionId}`}
         >
           <title id={titleId}>{axisLabel}別の{chartValueLabel}推移</title>
-          <desc id={descriptionId}>{axisLabel}を変えたときの{normalSeriesLabel}{hasSkill ? `と${skillSeriesLabel}` : ''}を示します。正確な値は直後の表に記載しています。</desc>
+          <desc id={descriptionId}>
+            {axisLabel}を変えたときの{[
+              hasNormal ? normalSeriesLabel : '',
+              hasSkill ? skillSeriesLabel : '',
+            ].filter(Boolean).join('と')}を示します。正確な値は直後の表に記載しています。
+          </desc>
 
           {yTicks.map((tick) => {
             const y = getY(tick)
@@ -832,10 +919,10 @@ function SensitivityChart({
             </g>
           )}
 
-          <path className="sensitivity-chart-line normal" d={normalPath} />
+          {hasNormal && <path className="sensitivity-chart-line normal" d={normalPath} />}
           {hasSkill && <path className="sensitivity-chart-line skill" d={skillPath} />}
 
-          {rows.map((row) => (
+          {normalRows.map((row) => (
             <circle
               className={`sensitivity-chart-point normal ${row.current ? 'current' : ''}`}
               cx={getX(row.point)}
@@ -961,10 +1048,20 @@ function TermTooltip({ term, description }: { term: string; description: string 
   )
 }
 
-function OperatorMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
+function OperatorMetric({
+  label,
+  value,
+  detail,
+  status = 'APPLIED',
+}: {
+  label: string
+  value: string
+  detail: string
+  status?: ReflectionStatus
+}) {
   return (
     <article className="operator-stat-card">
-      <header><span>{label}</span><ReflectionBadge status="APPLIED" /></header>
+      <header><span>{label}</span><ReflectionBadge status={status} /></header>
       <strong>{value}</strong>
       <small>{detail}</small>
     </article>
@@ -1056,7 +1153,7 @@ function CalculationTrace({
 }) {
   return (
     <article className="calculation-trace-card" aria-label={`${title}の計算過程`}>
-      {passiveEffects.length > 0 && (
+      {steps.length > 0 && passiveEffects.length > 0 && (
         <div className="passive-reflection-block">
           <strong>特性・素質の反映</strong>
           <ul className="passive-reflection-list">
@@ -1088,7 +1185,7 @@ function CalculationTrace({
         </ol>
       ) : (
         <div className="calculation-unavailable">
-          <strong>このスキルの計算過程は表示できません</strong>
+          <strong>{title}の計算過程は表示できません</strong>
           {unavailableReasons.map((reason) => <span key={reason}>{reason}</span>)}
         </div>
       )}
@@ -1273,68 +1370,81 @@ function buildSensitivityData({
   baseAttack,
   normalAttack,
   normalAttackInterval,
-  damageType,
+  normalDamageType,
+  skillDamageType,
   enemyDefense,
   enemyResistance,
   model,
   selectedSkill,
   skillSupported,
   metric,
-  attackModifiers,
-  mitigationModifiers,
+  skillAttackModifiers,
+  normalMitigationModifiers,
+  skillMitigationModifiers,
 }: {
   baseAttack: number
   normalAttack: number
   normalAttackInterval: number
-  damageType: DamageType
+  normalDamageType: DamageType | null
+  skillDamageType: DamageType | null
   enemyDefense: number
   enemyResistance: number
   model: SkillModelDefaults | null
   selectedSkill: SkillRecord | null
   skillSupported: boolean
   metric: SensitivityMetric
-  attackModifiers: AttackPipelineInput
-  mitigationModifiers: MitigationModifiers
+  skillAttackModifiers: AttackPipelineInput
+  normalMitigationModifiers: MitigationModifiers
+  skillMitigationModifiers: MitigationModifiers
 }): SensitivityData {
   const calculateSkillAt = (defense: number, resistance: number): SkillDamageBreakdown | null => (
-    model && selectedSkill && skillSupported
-      ? calculateSkillDamageBreakdown(baseAttack, damageType, defense, resistance, model, {
+    model && selectedSkill && skillSupported && skillDamageType
+      ? calculateSkillDamageBreakdown(baseAttack, skillDamageType, defense, resistance, model, {
         canShowDps: selectedSkill.classification.outputCapabilities.canShowDps,
         totalMode: getTotalMode(selectedSkill),
-        attackModifiers,
-        mitigationModifiers,
+        attackModifiers: skillAttackModifiers,
+        mitigationModifiers: skillMitigationModifiers,
       })
       : null
   )
-  const tablePoints = damageType === 'PHYSICAL'
+  const axisDamageType = selectSensitivityDamageType(normalDamageType, skillDamageType)
+  const tablePoints = axisDamageType === 'PHYSICAL'
     ? uniqueSorted([0, 500, 1000, 1500, 2000, enemyDefense])
-    : damageType === 'ARTS'
+    : axisDamageType === 'ARTS'
       ? uniqueSorted([0, 20, 40, 60, 80, 95, 100, enemyResistance])
       : [0]
   let chartPoints = tablePoints
 
-  if (damageType === 'PHYSICAL') {
+  if (axisDamageType === 'PHYSICAL') {
     const maximumDefense = Math.max(...tablePoints)
-    const defenseIgnoreFixed = Math.max(0, mitigationModifiers.defenseIgnoreFixed ?? 0)
     const skillAtZeroDefense = calculateSkillAt(0, enemyResistance)?.perHit ?? null
+    const normalDefenseIgnore = Math.max(0, normalMitigationModifiers.defenseIgnoreFixed ?? 0)
+    const skillDefenseIgnore = Math.max(0, skillMitigationModifiers.defenseIgnoreFixed ?? 0)
     const minimumDamageBreakpoints = [
-      normalAttack * 0.95 + defenseIgnoreFixed,
-      skillAtZeroDefense === null ? null : skillAtZeroDefense * 0.95 + defenseIgnoreFixed,
+      normalDamageType === 'PHYSICAL' ? normalAttack * 0.95 + normalDefenseIgnore : null,
+      skillDamageType === 'PHYSICAL' && skillAtZeroDefense !== null
+        ? skillAtZeroDefense * 0.95 + skillDefenseIgnore
+        : null,
     ]
       .filter((point): point is number => point !== null && point > 0 && point < maximumDefense)
-    const ignoreBreakpoints = defenseIgnoreFixed > 0 && defenseIgnoreFixed < maximumDefense
-      ? [defenseIgnoreFixed]
-      : []
+    const ignoreBreakpoints = [
+      normalDamageType === 'PHYSICAL' ? normalDefenseIgnore : 0,
+      skillDamageType === 'PHYSICAL' ? skillDefenseIgnore : 0,
+    ].filter((point) => point > 0 && point < maximumDefense)
     chartPoints = uniqueSorted([...tablePoints, ...ignoreBreakpoints, ...minimumDamageBreakpoints])
-  } else if (damageType === 'ARTS') {
-    const resistanceIgnoreFixed = Math.max(0, mitigationModifiers.resistanceIgnoreFixed ?? 0)
-    const ignoreBreakpoints = resistanceIgnoreFixed > 0 && resistanceIgnoreFixed < 100
-      ? [resistanceIgnoreFixed]
-      : []
-    const minimumDamageBreakpoint = 95 + resistanceIgnoreFixed
-    const minimumDamageBreakpoints = minimumDamageBreakpoint > 0 && minimumDamageBreakpoint <= 100
-      ? [minimumDamageBreakpoint]
-      : []
+  } else if (axisDamageType === 'ARTS') {
+    const resistanceIgnoreValues = [
+      normalDamageType === 'ARTS'
+        ? Math.max(0, normalMitigationModifiers.resistanceIgnoreFixed ?? 0)
+        : null,
+      skillDamageType === 'ARTS'
+        ? Math.max(0, skillMitigationModifiers.resistanceIgnoreFixed ?? 0)
+        : null,
+    ].filter((value): value is number => value !== null)
+    const ignoreBreakpoints = resistanceIgnoreValues.filter((point) => point > 0 && point < 100)
+    const minimumDamageBreakpoints = resistanceIgnoreValues
+      .map((value) => 95 + value)
+      .filter((point) => point > 0 && point <= 100)
     chartPoints = uniqueSorted([
       ...tablePoints,
       ...ignoreBreakpoints,
@@ -1345,36 +1455,62 @@ function buildSensitivityData({
 
   const rowByPoint = new Map<number, SensitivityRow>()
   for (const point of uniqueSorted([...tablePoints, ...chartPoints])) {
-    const defense = damageType === 'PHYSICAL' ? point : enemyDefense
-    const resistance = damageType === 'ARTS' ? point : enemyResistance
-    const normalBreakdown = calculateDamageBreakdown(normalAttack, damageType, defense, resistance, mitigationModifiers)
+    const defense = axisDamageType === 'PHYSICAL' ? point : enemyDefense
+    const resistance = axisDamageType === 'ARTS' ? point : enemyResistance
+    const normalBreakdown = normalDamageType
+      ? calculateDamageBreakdown(
+        normalAttack,
+        normalDamageType,
+        defense,
+        resistance,
+        normalMitigationModifiers,
+      )
+      : null
     const skillBreakdown = calculateSkillAt(defense, resistance)
-    const normal = metric === 'DPS'
-      ? normalAttackInterval > 0 ? normalBreakdown.result / normalAttackInterval : 0
-      : normalBreakdown.result
+    const normal = normalBreakdown === null
+      ? null
+      : metric === 'DPS'
+        ? normalAttackInterval > 0 ? normalBreakdown.result / normalAttackInterval : 0
+        : normalBreakdown.result
     const skill = metric === 'DPS'
       ? skillBreakdown?.dps ?? null
       : skillBreakdown?.perAttack ?? null
-    const current = damageType === 'PHYSICAL'
+    const current = axisDamageType === 'PHYSICAL'
       ? point === enemyDefense
-      : damageType === 'ARTS'
+      : axisDamageType === 'ARTS'
         ? point === enemyResistance
         : true
     rowByPoint.set(point, {
       point,
-      label: damageType === 'ARTS' ? `${formatNumber(point)}%` : damageType === 'TRUE' ? '軽減なし' : formatNumber(point),
+      label: axisDamageType === 'ARTS'
+        ? `${formatNumber(point)}%`
+        : axisDamageType === 'TRUE'
+          ? '軽減なし'
+          : axisDamageType === null
+            ? '判定不可'
+            : formatNumber(point),
       normal,
       skill,
-      normalMinimumReached: isMinimumDamageReached(normalBreakdown),
+      normalMinimumReached: normalBreakdown ? isMinimumDamageReached(normalBreakdown) : false,
       skillMinimumReached: skill !== null && skillBreakdown ? isMinimumDamageReached(skillBreakdown.mitigation) : false,
       current,
     })
   }
 
   return {
+    axisDamageType,
     tableRows: tablePoints.map((point) => rowByPoint.get(point) as SensitivityRow),
     chartRows: chartPoints.map((point) => rowByPoint.get(point) as SensitivityRow),
   }
+}
+
+function selectSensitivityDamageType(
+  normalDamageType: DamageType | null,
+  skillDamageType: DamageType | null,
+): DamageType | null {
+  if (skillDamageType && skillDamageType !== 'TRUE') return skillDamageType
+  if (normalDamageType && normalDamageType !== 'TRUE') return normalDamageType
+  return skillDamageType ?? normalDamageType
 }
 
 function isMinimumDamageReached(breakdown: DamageCalculationBreakdown): boolean {
@@ -1457,12 +1593,44 @@ function stripMarkup(value: string): string {
   return value.replace(/<[^>]+>/g, '').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
+function unresolvedDamageType(reason: string): DamageTypeDetection {
+  return { damageType: null, source: 'UNRESOLVED', reason }
+}
+
+function formatDetectedDamageType(damageType: DamageType | null): string {
+  return damageType === null ? '自動判定不可' : DAMAGE_TYPE_LABELS[damageType]
+}
+
+function formatDamageTypeSummary(
+  normalDamageType: DamageType | null,
+  skillDamageType: DamageType | null,
+): string {
+  if (normalDamageType !== null && normalDamageType === skillDamageType) {
+    return DAMAGE_TYPE_LABELS[normalDamageType]
+  }
+  return `通常 ${formatDetectedDamageType(normalDamageType)} / スキル ${formatDetectedDamageType(skillDamageType)}`
+}
+
+function getSensitivityStatLabel(damageType: DamageType | null): string {
+  if (damageType === 'ARTS') return '術耐性'
+  if (damageType === 'PHYSICAL') return '防御力'
+  return '敵ステータス'
+}
+
+function getSensitivityAxisLabel(damageType: Exclude<DamageType, 'TRUE'>): string {
+  return damageType === 'ARTS' ? '敵の術耐性（RES）' : '敵の防御力'
+}
+
 function uniqueSorted(values: number[]): number[] {
   return [...new Set(values.map((value) => Math.max(0, value)))].sort((a, b) => a - b)
 }
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 }).format(value)
+}
+
+function formatOptionalNumber(value: number | null): string {
+  return value === null ? '—' : formatNumber(value)
 }
 
 function formatDecimal(value: number): string {

@@ -7,9 +7,120 @@ import {
   type ComparisonMetric,
   type EnemyStatProfile,
 } from '../src/lib/operatorComparison.ts'
+import {
+  detectNormalAttackDamageType,
+  detectSkillDamageType,
+  getExplicitDamageTypes,
+} from '../src/lib/skillDamageModel.ts'
 import type { EffectWindowType, SkillRecord } from '../src/types/skill.ts'
 
 const ENEMY: EnemyStatProfile = { id: 'enemy-test', defense: 50, resistance: 0 }
+
+test('通常攻撃のダメージ種別を特性から優先し、既知の職業へフォールバックする', () => {
+  assert.equal(detectNormalAttackDamageType('WARRIOR', '敵に術ダメージを与える').damageType, 'ARTS')
+  assert.equal(detectNormalAttackDamageType('CASTER').damageType, 'ARTS')
+  assert.equal(detectNormalAttackDamageType('SNIPER').damageType, 'PHYSICAL')
+  assert.equal(detectNormalAttackDamageType('SUPPORT').damageType, null)
+  assert.equal(detectNormalAttackDamageType('MEDIC').damageType, null)
+  assert.equal(detectNormalAttackDamageType('UNKNOWN').damageType, null)
+})
+
+test('非攻撃特性と条件付きの種別説明を通常攻撃と誤認しない', () => {
+  const nonAttacking = detectNormalAttackDamageType(
+    'SUPPORT',
+    '敵を攻撃しない。味方が受ける物理ダメージを軽減する',
+  )
+  assert.equal(nonAttacking.damageType, null)
+  assert.match(nonAttacking.reason, /攻撃を行わない/)
+
+  const conditional = detectNormalAttackDamageType(
+    'WARRIOR',
+    'スキル発動中、敵に術ダメージを与える',
+  )
+  assert.equal(conditional.damageType, 'PHYSICAL')
+  assert.equal(conditional.source, 'PROFESSION')
+})
+
+test('スキル説明の単一種別を検出し、範囲ダメージ表記にも対応する', () => {
+  const skill = createSkill('NONE')
+  skill.classification.damageComponents.value = ['BURST']
+
+  setSkillDescription(skill, '攻撃力の200%の術範囲ダメージを与える')
+  assert.deepEqual(getExplicitDamageTypes(skill.description), ['ARTS'])
+  assert.equal(detectSkillDamageType(skill, 'PHYSICAL').damageType, 'ARTS')
+
+  setSkillDescription(skill, '攻撃力の200%の確定ダメージを与える')
+  assert.equal(detectSkillDamageType(skill, 'PHYSICAL').damageType, 'TRUE')
+})
+
+test('攻撃種別の変化表現とマークアップ・改行を自動検出する', () => {
+  const skill = createSkill('FIXED_DURATION')
+  setSkillDescription(skill, '攻撃力+120%、通常攻撃が術攻撃に変化する')
+  assert.equal(detectSkillDamageType(skill, 'PHYSICAL').damageType, 'ARTS')
+
+  skill.classification.damageComponents.value = ['BURST']
+  const markedUp = '攻撃力の200%の<@ba.vup>術範囲ダメージ</>\\nを与える'
+  assert.deepEqual(getExplicitDamageTypes(markedUp), ['ARTS'])
+  assert.equal(detectSkillDamageType(skill, 'PHYSICAL', markedUp).damageType, 'ARTS')
+})
+
+test('被ダメージ軽減と追加ダメージを単一の攻撃種別と誤認しない', () => {
+  assert.deepEqual(getExplicitDamageTypes('味方が受ける物理ダメージを軽減する'), [])
+  assert.deepEqual(
+    getExplicitDamageTypes('物理ダメージを受けた敵に術ダメージを与える'),
+    ['ARTS'],
+  )
+  assert.deepEqual(getExplicitDamageTypes('物理ダメージを与えない'), [])
+  assert.deepEqual(getExplicitDamageTypes('物理ダメージを与える敵から受けるダメージを軽減する'), [])
+
+  const skill = createSkill('FIXED_DURATION')
+  setSkillDescription(skill, '通常攻撃時、追加で術ダメージを与える')
+  assert.equal(detectSkillDamageType(skill, 'PHYSICAL').damageType, null)
+  setSkillDescription(skill, '通常攻撃時、術ダメージを追加で与える')
+  assert.equal(detectSkillDamageType(skill, 'PHYSICAL').damageType, null)
+  setSkillDescription(skill, '通常攻撃時、追加の術ダメージを与える')
+  assert.equal(detectSkillDamageType(skill, 'PHYSICAL').damageType, null)
+  setSkillDescription(skill, '通常攻撃は術ダメージを与えない')
+  assert.equal(detectSkillDamageType(skill, 'PHYSICAL').damageType, null)
+
+  setSkillDescription(skill, '攻撃時、敵に攻撃力の230%の物理ダメージを与える')
+  assert.equal(detectSkillDamageType(skill, 'PHYSICAL').damageType, 'PHYSICAL')
+
+  skill.classification.damageComponents.value = ['NO_DIRECT_DAMAGE']
+  setSkillDescription(skill, '味方が受ける物理ダメージを軽減する')
+  assert.equal(detectSkillDamageType(skill, 'PHYSICAL').damageType, null)
+})
+
+test('通常攻撃変化は通常種別を継承し、複合・根拠なしの瞬間攻撃は未対応にする', () => {
+  const skill = createSkill('FIXED_DURATION')
+  setSkillDescription(skill, '攻撃力が100%上昇し、2回連続で攻撃する')
+  assert.equal(detectSkillDamageType(skill, 'ARTS').damageType, 'ARTS')
+  assert.equal(detectSkillDamageType(skill, null).damageType, null)
+
+  skill.classification.damageComponents.value = ['BURST']
+  setSkillDescription(skill, '攻撃力の200%のダメージを与える')
+  assert.equal(detectSkillDamageType(skill, 'PHYSICAL').damageType, null)
+
+  setSkillDescription(skill, '物理ダメージと術ダメージを与える')
+  const mixed = detectSkillDamageType(skill, 'PHYSICAL')
+  assert.equal(mixed.damageType, null)
+  assert.match(mixed.reason, /複数のダメージ種別/)
+})
+
+test('自動判定できない比較行をCSVで複合ダメージと断定しない', () => {
+  const skill = createSkill('FIXED_DURATION')
+  skill.profession = 'SUPPORT'
+  skill.professionLabel = '補助'
+  skill.operatorProfile.traitDescription = ''
+  setSkillDescription(skill, '攻撃力+100%')
+
+  const row = buildSkillComparisonRow(skill, [ENEMY], 'DAMAGE')
+  const csv = buildComparisonCsv([row], [ENEMY], 'DAMAGE')
+
+  assert.equal(row.damageType, null)
+  assert.deepEqual(row.values, [null])
+  assert.match(csv, /自動判定不可/)
+})
 
 test('終了条件に応じて選択可能な出力を制限する', () => {
   assert.deepEqual(getAvailableComparisonMetrics('FIXED_DURATION'), ['DAMAGE', 'DPS', 'TOTAL'])

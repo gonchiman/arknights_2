@@ -453,13 +453,6 @@ export function calculateSkillDamageBreakdown(
   }
 }
 
-export function getDefaultDamageType(profession: string, traitDescription = ''): DamageType {
-  if (/確定ダメージ/.test(traitDescription)) return 'TRUE'
-  if (/術ダメージ/.test(traitDescription)) return 'ARTS'
-  if (/物理ダメージ/.test(traitDescription)) return 'PHYSICAL'
-  return profession === 'CASTER' || profession === 'SUPPORT' ? 'ARTS' : 'PHYSICAL'
-}
-
 function interpolateAttribute(
   frames: RawAttributeKeyFrame[],
   level: number,
