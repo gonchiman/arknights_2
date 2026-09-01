@@ -40,6 +40,12 @@ export interface NumericStatistics {
   histogram: HistogramMetadata | null
 }
 
+export interface NumericStatisticsWithDispersion extends NumericStatistics {
+  coefficientOfVariation: number | null
+  interquartileRange: number | null
+  normalizedInterquartileRange: number | null
+}
+
 export interface EmpiricalCdfPoint {
   value: number
   count: number
@@ -121,6 +127,55 @@ export function calculateNumericStatistics(
     bins: histogram.bins,
     histogram: histogram.metadata,
   }
+}
+
+export function calculateNumericStatisticsWithDispersion(
+  source: ReadonlyArray<number | null | undefined>,
+  preferredBinCount = DEFAULT_BIN_COUNT,
+  histogramScale: HistogramScale = 'LINEAR',
+  minimumLinearBinWidth = 0,
+  customLinearBinWidth: number | null = null,
+): NumericStatisticsWithDispersion {
+  const statistics = calculateNumericStatistics(
+    source,
+    preferredBinCount,
+    histogramScale,
+    minimumLinearBinWidth,
+    customLinearBinWidth,
+  )
+  const interquartileRange = statistics.firstQuartile === null || statistics.thirdQuartile === null
+    ? null
+    : statistics.thirdQuartile - statistics.firstQuartile
+  const supportsRelativeDispersion = statistics.minimum !== null && statistics.minimum >= 0
+
+  return {
+    ...statistics,
+    coefficientOfVariation: supportsRelativeDispersion
+      ? divideByPositiveFiniteValue(statistics.standardDeviation, statistics.mean)
+      : null,
+    interquartileRange,
+    normalizedInterquartileRange: supportsRelativeDispersion
+      ? divideByPositiveFiniteValue(interquartileRange, statistics.median)
+      : null,
+  }
+}
+
+function divideByPositiveFiniteValue(
+  numerator: number | null,
+  denominator: number | null,
+): number | null {
+  if (
+    numerator === null
+    || denominator === null
+    || !Number.isFinite(numerator)
+    || !Number.isFinite(denominator)
+    || denominator <= 0
+  ) {
+    return null
+  }
+
+  const ratio = numerator / denominator
+  return Number.isFinite(ratio) ? ratio : null
 }
 
 export function validateCustomLinearBinWidth(

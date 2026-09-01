@@ -5,6 +5,7 @@ import {
   calculateBoxPlotStatistics,
   calculateEmpiricalCdf,
   calculateNumericStatistics,
+  calculateNumericStatisticsWithDispersion,
   validateCustomLinearBinWidth,
 } from '../src/lib/enemyStatistics.ts'
 
@@ -24,6 +25,31 @@ test('表示対象の有限値だけで統計量を算出する', () => {
   assert.equal(result.bins.reduce((sum, bin) => sum + bin.count, 0), 4)
   assert.equal(result.histogram?.binWidth, 0.5)
   assert.equal(result.histogram?.normalRangeEnd, 5)
+})
+
+test('敵とオペレーターで共通のCV・IQR指標を算出する', () => {
+  const result = calculateNumericStatisticsWithDispersion([1, 2, 3, 4])
+
+  assert.ok(result.coefficientOfVariation !== null)
+  assert.ok(result.normalizedInterquartileRange !== null)
+  assert.ok(Math.abs(result.coefficientOfVariation - Math.sqrt(1.25) / 2.5) < 1e-12)
+  assert.equal(result.interquartileRange, 1.5)
+  assert.ok(Math.abs(result.normalizedInterquartileRange - 0.6) < 1e-12)
+})
+
+test('平均・中央値が0または負値を含む場合は相対分散を算出しない', () => {
+  const allZero = calculateNumericStatisticsWithDispersion([0, 0])
+  const zeroMedian = calculateNumericStatisticsWithDispersion([0, 0, 100])
+  const includesNegative = calculateNumericStatisticsWithDispersion([-10, 30])
+
+  assert.equal(allZero.coefficientOfVariation, null)
+  assert.equal(allZero.interquartileRange, 0)
+  assert.equal(allZero.normalizedInterquartileRange, null)
+  assert.ok(zeroMedian.coefficientOfVariation !== null)
+  assert.equal(zeroMedian.normalizedInterquartileRange, null)
+  assert.equal(includesNegative.coefficientOfVariation, null)
+  assert.equal(includesNegative.interquartileRange, 20)
+  assert.equal(includesNegative.normalizedInterquartileRange, null)
 })
 
 test('すべて同じ値でも線形目盛は10個の通常階級を維持する', () => {
