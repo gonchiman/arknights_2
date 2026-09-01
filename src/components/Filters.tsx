@@ -1,5 +1,5 @@
 import { getProfessionColor, OPERATOR_INITIAL_LABELS } from '../lib/operatorFilters'
-import type { FilterState } from '../lib/operatorSearchFilters'
+import { hasActiveOperatorFilters, type FilterState } from '../lib/operatorSearchFilters'
 import { OPERATOR_INITIALS } from '../types/skill'
 import type { CSSProperties } from 'react'
 
@@ -29,11 +29,7 @@ export function Filters({
   onReset,
   searchPlaceholder = 'オペレーター名・スキル名・説明文で検索',
 }: Props) {
-  const hasActiveFilters = value.query.trim() !== ''
-    || value.nameInitial !== 'ALL'
-    || value.profession !== 'ALL'
-    || value.subProfession !== 'ALL'
-    || value.rarity !== 'ALL'
+  const hasActiveFilters = hasActiveOperatorFilters(value)
 
   const changeProfession = (profession: string | 'ALL') => onChange({
     ...value,

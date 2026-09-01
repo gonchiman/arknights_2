@@ -13,12 +13,63 @@ export interface SubProfessionOption {
   label: string
 }
 
+export const RECENT_OPERATOR_LIMIT = 6
+
 export const EMPTY_OPERATOR_FILTERS: FilterState = {
   query: '',
   nameInitial: 'ALL',
   profession: 'ALL',
   subProfession: 'ALL',
   rarity: 'ALL',
+}
+
+export function hasActiveOperatorFilters(filters: FilterState): boolean {
+  return filters.query.trim() !== ''
+    || filters.nameInitial !== 'ALL'
+    || filters.profession !== 'ALL'
+    || filters.subProfession !== 'ALL'
+    || filters.rarity !== 'ALL'
+}
+
+export function addRecentOperatorId(
+  recentOperatorIds: readonly string[],
+  operatorId: string,
+  limit = RECENT_OPERATOR_LIMIT,
+): string[] {
+  return normalizeRecentOperatorIds([operatorId, ...recentOperatorIds], limit)
+}
+
+export function normalizeRecentOperatorIds(
+  recentOperatorIds: readonly string[],
+  limit = RECENT_OPERATOR_LIMIT,
+): string[] {
+  const normalizedLimit = Number.isFinite(limit)
+    ? Math.max(0, Math.floor(limit))
+    : RECENT_OPERATOR_LIMIT
+  if (normalizedLimit === 0) return []
+  const seen = new Set<string>()
+  const normalized: string[] = []
+  for (const operatorId of recentOperatorIds) {
+    const id = operatorId.trim()
+    if (!id || seen.has(id)) continue
+    seen.add(id)
+    normalized.push(id)
+    if (normalized.length >= normalizedLimit) break
+  }
+  return normalized
+}
+
+export function getRecentOperatorRows(
+  rows: SkillRecord[],
+  recentOperatorIds: readonly string[],
+): SkillRecord[] {
+  const firstRowByOperator = new Map<string, SkillRecord>()
+  rows.forEach((row) => {
+    if (!firstRowByOperator.has(row.operatorId)) firstRowByOperator.set(row.operatorId, row)
+  })
+  return recentOperatorIds
+    .map((operatorId) => firstRowByOperator.get(operatorId))
+    .filter((row): row is SkillRecord => row !== undefined)
 }
 
 export function matchesOperatorFilters(row: SkillRecord, filters: FilterState): boolean {
