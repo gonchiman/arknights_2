@@ -526,7 +526,7 @@ export function DamageCalculator({ rows, loading }: Props) {
               <small>{operatorModules.length > 0 ? '装備するモジュールを選択' : '装備可能なモジュールはありません'}</small>
             </div>
           </div>
-          <div className="skill-choice-group" role="group" aria-label="モジュール">
+          <div className="skill-choice-group module-choice-group" role="group" aria-label="モジュール">
             <button
               type="button"
               className={effectiveModuleId === '' ? 'active' : ''}

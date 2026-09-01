@@ -377,6 +377,8 @@
   border-left: 1px solid var(--border-strong);
 }
 
+.module-choice-group { border-top: 0; }
+
 .skill-choice-group button {
   min-width: 0;
   height: 40px;
@@ -393,6 +395,8 @@
   text-align: left;
   cursor: pointer;
 }
+
+.module-choice-group button { border-top: 1px solid var(--border-strong); }
 
 .skill-choice-group button:hover { background: var(--surface-hover); }
 
