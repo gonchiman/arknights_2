@@ -366,10 +366,6 @@
   cursor: pointer;
 }
 
-.operator-skill-classifier-button::after {
-  content: ' →';
-}
-
 .operator-skill-classifier-button:hover {
   background: var(--surface-hover);
   color: #123f78;
@@ -379,6 +375,100 @@
   outline: 2px solid currentcolor;
   outline-offset: -2px;
 }
+
+.skill-classifier-popover {
+  position: fixed;
+  inset: 0;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  box-sizing: border-box;
+  margin: 0;
+  border: 0;
+  background: rgb(15 23 42 / 62%);
+  padding: 24px;
+  color: var(--text);
+  backdrop-filter: blur(2px);
+}
+
+.skill-classifier-popover:popover-open,
+.skill-classifier-popover[data-fallback-open='true'] {
+  display: grid;
+  place-items: center;
+}
+
+.skill-classifier-popover-panel {
+  width: min(780px, 100%);
+  max-height: calc(100dvh - 48px);
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  background: #fff;
+  box-shadow: 0 22px 80px rgb(2 6 23 / 38%);
+}
+
+.skill-classifier-popover-header {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--surface-soft);
+  padding: 14px 16px;
+}
+
+.skill-classifier-popover-header > div { min-width: 0; }
+
+.skill-classifier-popover-header span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+
+.skill-classifier-popover-header h2 {
+  margin: 4px 0 3px;
+  overflow-wrap: anywhere;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.skill-classifier-popover-header h2:focus { outline: none; }
+
+.skill-classifier-popover-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.skill-classifier-popover-header button {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: #fff;
+  color: #222;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.skill-classifier-popover-header button:hover { background: var(--surface-hover); }
+
+.skill-classifier-popover-body {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: #fff;
+}
+
+.skill-classifier-popover .raw-json pre { max-height: none; }
 
 .operator-module-effect-levels {
   display: grid;
@@ -459,6 +549,16 @@
   .operator-detail-item-heading { display: block; }
   .operator-detail-item-heading span { display: block; margin-top: 4px; }
 
+  .skill-classifier-popover { padding: 8px; }
+
+  .skill-classifier-popover-panel {
+    width: 100%;
+    max-height: calc(100dvh - 16px);
+  }
+
+  .skill-classifier-popover-header { gap: 10px; padding: 12px; }
+  .skill-classifier-popover-header h2 { font-size: 16px; }
+
   .operator-statistics-panel .enemy-metric-selector {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -501,4 +601,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .operator-detail-dialog::backdrop { backdrop-filter: none; }
+  .skill-classifier-popover { backdrop-filter: none; }
 }

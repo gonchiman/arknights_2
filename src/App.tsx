@@ -11,7 +11,7 @@ import { SkillDirectory } from './components/SkillDirectory'
 import { loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
 import { ARKNIGHTS_GAMEDATA_REPOSITORY } from './lib/dataSources'
-import { getOperatorSkillRouteHash, getSkillRouteHash, parseHashRoute, type AppRoute } from './lib/routes'
+import { getSkillRouteHash, parseHashRoute, type AppRoute } from './lib/routes'
 import { APP_NAV_ITEMS, type NavigationPage } from './lib/navigation'
 import {
   ACTIVATION_TRIGGERS,
@@ -156,16 +156,6 @@ export default function App() {
     window.location.hash = '#/'
   }
 
-  const selectOperatorSkill = (skillId: string, replaceCurrent = false) => {
-    const targetHash = getOperatorSkillRouteHash(skillId)
-    if (replaceCurrent) window.location.replace(targetHash)
-    else window.location.hash = targetHash
-  }
-
-  const closeOperatorSkill = () => {
-    window.location.replace('#/operators')
-  }
-
   const updateClassifierFilters = (nextFilters: typeof filters) => {
     setFilters(nextFilters)
     if (!selected) return
@@ -175,16 +165,14 @@ export default function App() {
     if (!selectedStillVisible) window.location.hash = '#/'
   }
 
-  const activeNavigationPage: NavigationPage = route.view === 'operatorSkill'
-    ? 'operators'
-    : (
-      route.view === 'skills'
-      || route.view === 'operators'
-      || route.view === 'damage'
-      || route.view === 'comparison'
-      || route.view === 'enemies'
-      || route.view === 'sources'
-    ) ? route.view : 'classifier'
+  const activeNavigationPage: NavigationPage = (
+    route.view === 'skills'
+    || route.view === 'operators'
+    || route.view === 'damage'
+    || route.view === 'comparison'
+    || route.view === 'enemies'
+    || route.view === 'sources'
+  ) ? route.view : 'classifier'
   const activeNavigationItem = APP_NAV_ITEMS.find((item) => item.id === activeNavigationPage)
   const closeSidebar = () => {
     if (!sidebarOpen) return
@@ -195,7 +183,7 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell ${route.view === 'skill' || route.view === 'operatorSkill' ? 'skill-detail-route' : ''}`}>
+    <div className={`app-shell ${route.view === 'skill' ? 'skill-detail-route' : ''}`}>
       <AppSidebar activePage={activeNavigationPage} open={sidebarOpen} onClose={closeSidebar} />
 
       <div className="app-main" inert={sidebarOpen ? true : undefined}>
@@ -220,15 +208,12 @@ export default function App() {
 
         {route.view === 'sources' ? (
           <DataSourcesPage />
-        ) : route.view === 'operators' || route.view === 'operatorSkill' ? (
+        ) : route.view === 'operators' ? (
           <OperatorDatabase
             rows={classifiedRows}
             loading={loading}
             overrides={overrides}
             onOverride={updateOverride}
-            selectedClassifierSkillId={route.view === 'operatorSkill' ? route.skillId : null}
-            onSelectClassifierSkill={selectOperatorSkill}
-            onCloseClassifierSkill={closeOperatorSkill}
           />
         ) : route.view === 'damage' ? (
           <DamageCalculator rows={classifiedRows} loading={loading} />

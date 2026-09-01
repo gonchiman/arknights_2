@@ -1,12 +1,13 @@
-import { useEffect, useId, useRef, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useId, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import type { OperatorDatabaseRecord } from '../lib/operatorDatabase'
-import type { SkillRecord } from '../types/skill'
+import type { SkillClassificationOverride, SkillRecord } from '../types/skill'
+import { SkillClassifierPopover } from './SkillClassifierPopover'
 
 interface Props {
   operator: OperatorDatabaseRecord
   skills: SkillRecord[]
-  initialFocusSkillId?: string | null
-  onOpenSkillClassification: (skill: SkillRecord) => void
+  overrides: Record<string, SkillClassificationOverride>
+  onOverride: (skillId: string, override: SkillClassificationOverride | null) => void
   onClose: () => void
 }
 
@@ -16,13 +17,22 @@ const DECIMAL_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits
 export function OperatorDetailModal({
   operator,
   skills,
-  initialFocusSkillId,
-  onOpenSkillClassification,
+  overrides,
+  onOverride,
   onClose,
 }: Props) {
+  const [selectedClassifierSkillId, setSelectedClassifierSkillId] = useState<string | null>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
+  const classifierTriggerRef = useRef<HTMLButtonElement | null>(null)
   const titleId = useId()
+  const classifierPopoverId = `${useId()}-classifier-popover`
+  const selectedClassifierSkill = selectedClassifierSkillId
+    ? skills.find((skill) => skill.id === selectedClassifierSkillId) ?? null
+    : null
+  const selectedSkillDescription = selectedClassifierSkill
+    ? operator.skills.find((skill) => skill.id === selectedClassifierSkill.skillId)?.description
+    : undefined
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -30,12 +40,7 @@ export function OperatorDetailModal({
 
     if (!dialog.open) dialog.showModal()
     window.requestAnimationFrame(() => {
-      const skillButtons = dialog.querySelectorAll<HTMLButtonElement>('[data-classifier-skill-id]')
-      const returnTarget = initialFocusSkillId
-        ? Array.from(skillButtons).find((button) => button.dataset.classifierSkillId === initialFocusSkillId)
-        : null
-      if (returnTarget) returnTarget.focus()
-      else titleRef.current?.focus()
+      titleRef.current?.focus()
     })
     const previousOverflow = document.documentElement.style.overflow
     document.documentElement.style.overflow = 'hidden'
@@ -44,10 +49,31 @@ export function OperatorDetailModal({
       document.documentElement.style.overflow = previousOverflow
       if (dialog.open) dialog.close()
     }
-  }, [operator.operatorId, initialFocusSkillId])
+  }, [operator.operatorId])
+
+  const openSkillClassification = (skill: SkillRecord, trigger: HTMLButtonElement) => {
+    classifierTriggerRef.current = trigger
+    setSelectedClassifierSkillId(skill.id)
+  }
+
+  const closeSkillClassification = () => {
+    const trigger = classifierTriggerRef.current
+    setSelectedClassifierSkillId(null)
+    window.requestAnimationFrame(() => {
+      if (trigger?.isConnected) trigger.focus()
+    })
+  }
+
+  const requestClose = () => {
+    if (selectedClassifierSkill) {
+      closeSkillClassification()
+      return
+    }
+    onClose()
+  }
 
   const handleBackdropClick = (event: ReactMouseEvent<HTMLDialogElement>) => {
-    if (event.target === event.currentTarget) onClose()
+    if (event.target === event.currentTarget) requestClose()
   }
 
   return (
@@ -58,16 +84,16 @@ export function OperatorDetailModal({
       aria-modal="true"
       onCancel={(event) => {
         event.preventDefault()
-        onClose()
+        requestClose()
       }}
       onKeyDown={(event) => {
         if (event.key !== 'Escape') return
         event.preventDefault()
-        onClose()
+        requestClose()
       }}
       onClick={handleBackdropClick}
     >
-      <article className="operator-detail-modal">
+      <article className="operator-detail-modal" inert={selectedClassifierSkill ? true : undefined}>
         <header className="operator-detail-modal-header">
           <div>
             <span>OPERATOR DETAIL</span>
@@ -151,8 +177,11 @@ export function OperatorDetailModal({
                           type="button"
                           className="operator-skill-classifier-button"
                           data-classifier-skill-id={classifierSkill.id}
+                          aria-haspopup="dialog"
+                          aria-controls={classifierPopoverId}
+                          aria-expanded={selectedClassifierSkill?.id === classifierSkill.id}
                           aria-label={`${skill.name}の分類結果と判定根拠を開く`}
-                          onClick={() => onOpenSkillClassification(classifierSkill)}
+                          onClick={(event) => openSkillClassification(classifierSkill, event.currentTarget)}
                         >
                           Skill Model Classifierで分析
                         </button>
@@ -201,6 +230,18 @@ export function OperatorDetailModal({
           </footer>
         </div>
       </article>
+
+      {selectedClassifierSkill && (
+        <SkillClassifierPopover
+          key={selectedClassifierSkill.id}
+          id={classifierPopoverId}
+          skill={selectedClassifierSkill}
+          description={selectedSkillDescription}
+          override={overrides[selectedClassifierSkill.id]}
+          onOverride={(override) => onOverride(selectedClassifierSkill.id, override)}
+          onClose={closeSkillClassification}
+        />
+      )}
     </dialog>
   )
 }

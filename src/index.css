@@ -247,7 +247,7 @@ a { color: var(--link); }
 
 .search-filter .initial-filter-label { margin: 0; }
 
-.filters input, .filters select, .detail-page select {
+.filters input, .filters select, .skill-classification-content select {
   width: 100%;
   min-width: 0;
   height: 34px;
@@ -419,6 +419,8 @@ td small { display: block; margin-top: 3px; color: #888; }
 
 .skill-switch-button.active, .skill-switch-button.active strong { background: #222; color: #fff; }
 
+.skill-classification-content { min-width: 0; }
+
 .detail-tabs {
   display: flex;
   gap: 18px;
@@ -453,7 +455,9 @@ td small { display: block; margin-top: 3px; color: #888; }
 .overview-section { padding: 12px; }
 .overview-section + .classification-summary-grid, .classification-summary-grid + .overview-section { margin-top: -1px; }
 
-.overview-section h2, .summary-dimension h2, .detail-section h2 {
+.overview-section h2, .overview-section h3,
+.summary-dimension h2, .summary-dimension h3,
+.detail-section h2, .detail-section h3 {
   margin: 0;
   font-size: 12px;
 }
@@ -578,7 +582,7 @@ td small { display: block; margin-top: 3px; color: #888; }
 
 .skill-data-section { max-width: none; margin: 0; padding: 0; }
 
-.skill-data-section h2 {
+.skill-data-section h2, .skill-data-section h3 {
   border-bottom: 1px solid var(--border);
   background: var(--surface-soft);
   padding: 8px 10px;
@@ -767,7 +771,7 @@ td small { display: block; margin-top: 3px; color: #888; }
 
   .filters input,
   .filters select,
-  .detail-page select {
+  .skill-classification-content select {
     height: 44px;
   }
 }
