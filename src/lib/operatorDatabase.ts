@@ -1,4 +1,5 @@
 import { getOperatorPassives } from './operatorProfile.ts'
+import { EMPTY_OPERATOR_FILTERS, type FilterState } from './operatorSearchFilters.ts'
 import { formatSkillEffectDescription } from './skillEffectDetails.ts'
 import type {
   OperatorCombatProfile,
@@ -75,12 +76,7 @@ export interface OperatorDatabaseRecord {
   modules: OperatorDatabaseModule[]
 }
 
-export interface OperatorDatabaseFilters {
-  query: string
-  nameInitial: OperatorInitial | 'ALL'
-  profession: string | 'ALL'
-  rarity: number | 'ALL'
-}
+export type OperatorDatabaseFilters = FilterState
 
 export type OperatorDatabaseSortKey =
   | 'operator'
@@ -97,10 +93,7 @@ export interface OperatorDatabaseSort {
 }
 
 export const EMPTY_OPERATOR_DATABASE_FILTERS: OperatorDatabaseFilters = {
-  query: '',
-  nameInitial: 'ALL',
-  profession: 'ALL',
-  rarity: 'ALL',
+  ...EMPTY_OPERATOR_FILTERS,
 }
 
 export const DEFAULT_OPERATOR_DATABASE_SORT: OperatorDatabaseSort = {
@@ -134,6 +127,7 @@ export function filterOperatorDatabaseRecords(
   return records.filter((record) => {
     if (filters.nameInitial !== 'ALL' && record.nameInitial !== filters.nameInitial) return false
     if (filters.profession !== 'ALL' && record.profession !== filters.profession) return false
+    if (filters.subProfession !== 'ALL' && record.subProfessionId !== filters.subProfession) return false
     if (filters.rarity !== 'ALL' && record.rarity !== filters.rarity) return false
     if (!query) return true
 
@@ -192,6 +186,7 @@ export function hasActiveOperatorDatabaseFilters(filters: OperatorDatabaseFilter
   return filters.query.trim() !== ''
     || filters.nameInitial !== 'ALL'
     || filters.profession !== 'ALL'
+    || filters.subProfession !== 'ALL'
     || filters.rarity !== 'ALL'
 }
 

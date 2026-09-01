@@ -2,14 +2,14 @@ import { useMemo } from 'react'
 import { Filters, type FilterOption, type FilterState } from './Filters'
 import { OperatorTable } from './OperatorTable'
 import { PROFESSION_ORDER } from '../lib/operatorFilters'
+import {
+  EMPTY_OPERATOR_FILTERS,
+  buildSubProfessionOptions,
+  matchesOperatorFilters,
+} from '../lib/operatorSearchFilters'
 import type { SkillRecord } from '../types/skill'
 
-export const EMPTY_OPERATOR_FILTERS: FilterState = {
-  query: '',
-  nameInitial: 'ALL',
-  profession: 'ALL',
-  rarity: 'ALL',
-}
+export { EMPTY_OPERATOR_FILTERS, matchesOperatorFilters } from '../lib/operatorSearchFilters'
 
 interface Props {
   rows: SkillRecord[]
@@ -38,6 +38,10 @@ export function OperatorSearch({
     value: row.profession,
     label: row.professionLabel,
   })))), [rows])
+  const subProfessionOptions = useMemo(
+    () => buildSubProfessionOptions(rows, filters.profession),
+    [rows, filters.profession],
+  )
 
   const filteredSkills = useMemo(
     () => rows.filter((row) => matchesOperatorFilters(row, filters)),
@@ -60,6 +64,7 @@ export function OperatorSearch({
       <Filters
         value={filters}
         professionOptions={professionOptions}
+        subProfessionOptions={subProfessionOptions}
         onChange={onFiltersChange}
         onReset={() => onFiltersChange({ ...EMPTY_OPERATOR_FILTERS })}
       />
@@ -85,19 +90,6 @@ export function OperatorSearch({
       )}
     </section>
   )
-}
-
-export function matchesOperatorFilters(row: SkillRecord, filters: FilterState): boolean {
-  const query = normalizeSearchText(filters.query)
-  if (query && !normalizeSearchText(`${row.operatorName} ${row.skillName} ${row.description} ${row.skillId}`).includes(query)) return false
-  if (filters.nameInitial !== 'ALL' && row.nameInitial !== filters.nameInitial) return false
-  if (filters.profession !== 'ALL' && row.profession !== filters.profession) return false
-  if (filters.rarity !== 'ALL' && row.rarity !== filters.rarity) return false
-  return true
-}
-
-function normalizeSearchText(value: string): string {
-  return value.normalize('NFKC').trim().toLocaleLowerCase('ja')
 }
 
 function uniqueOptions(options: FilterOption[]): FilterOption[] {

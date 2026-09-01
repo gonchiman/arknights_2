@@ -1,16 +1,11 @@
 import { getProfessionColor, OPERATOR_INITIAL_LABELS } from '../lib/operatorFilters'
+import type { FilterState } from '../lib/operatorSearchFilters'
 import { OPERATOR_INITIALS } from '../types/skill'
 import type { CSSProperties } from 'react'
-import type { OperatorInitial } from '../types/skill'
+
+export type { FilterState } from '../lib/operatorSearchFilters'
 
 const RARITIES = [6, 5, 4, 3, 2, 1] as const
-
-export interface FilterState {
-  query: string
-  nameInitial: OperatorInitial | 'ALL'
-  profession: string | 'ALL'
-  rarity: number | 'ALL'
-}
 
 export interface FilterOption {
   value: string
@@ -20,6 +15,7 @@ export interface FilterOption {
 interface Props {
   value: FilterState
   professionOptions: FilterOption[]
+  subProfessionOptions?: FilterOption[]
   onChange: (next: FilterState) => void
   onReset: () => void
   searchPlaceholder?: string
@@ -28,6 +24,7 @@ interface Props {
 export function Filters({
   value,
   professionOptions,
+  subProfessionOptions,
   onChange,
   onReset,
   searchPlaceholder = 'オペレーター名・スキル名・説明文で検索',
@@ -35,7 +32,14 @@ export function Filters({
   const hasActiveFilters = value.query.trim() !== ''
     || value.nameInitial !== 'ALL'
     || value.profession !== 'ALL'
+    || value.subProfession !== 'ALL'
     || value.rarity !== 'ALL'
+
+  const changeProfession = (profession: string | 'ALL') => onChange({
+    ...value,
+    profession,
+    subProfession: profession === value.profession ? value.subProfession : 'ALL',
+  })
 
   return (
     <div className="filters">
@@ -78,7 +82,7 @@ export function Filters({
           type="button"
           className={`initial-button ${value.profession === 'ALL' ? 'active' : ''}`}
           aria-pressed={value.profession === 'ALL'}
-          onClick={() => onChange({ ...value, profession: 'ALL' })}
+          onClick={() => changeProfession('ALL')}
         >
           すべて
         </button>
@@ -87,7 +91,7 @@ export function Filters({
             type="button"
             className={`initial-button profession-button ${value.profession === option.value ? 'active' : ''}`}
             aria-pressed={value.profession === option.value}
-            onClick={() => onChange({ ...value, profession: option.value })}
+            onClick={() => changeProfession(option.value)}
             style={getProfessionButtonStyle(option.value)}
             key={option.value}
           >
@@ -95,6 +99,20 @@ export function Filters({
           </button>
         ))}
       </div>
+      {subProfessionOptions && (
+        <label className="initial-filter subprofession-filter">
+          <span className="initial-filter-label">職分</span>
+          <select
+            value={value.subProfession}
+            onChange={(event) => onChange({ ...value, subProfession: event.target.value })}
+          >
+            <option value="ALL">すべての職分</option>
+            {subProfessionOptions.map((option) => (
+              <option value={option.value} key={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+      )}
       <div className="initial-filter rarity-filter" role="group" aria-label="レアリティ">
         <span className="initial-filter-label">レアリティ</span>
         <button

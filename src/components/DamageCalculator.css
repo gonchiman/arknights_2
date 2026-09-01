@@ -764,6 +764,121 @@
 .damage-result-card strong { display: block; margin: 4px 0 1px; font-size: 20px; line-height: 1.1; }
 .damage-result-card small { color: #78927d; font-size: 8px; text-transform: uppercase; }
 
+.mech-accord-output {
+  min-width: 0;
+  margin-top: 12px;
+  border-top: 1px solid #b9d1bf;
+  padding-top: 10px;
+}
+
+.mech-accord-output-heading {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin: 0 0 7px;
+  color: #46664d;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.mech-accord-output-heading h3 {
+  margin: 0;
+  color: inherit;
+  font: inherit;
+}
+
+.mech-accord-output-heading p,
+.mech-accord-output-heading span {
+  margin: 0;
+  color: #78927d;
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.mech-accord-table-wrap {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.mech-accord-table {
+  min-width: 420px;
+  table-layout: fixed;
+  border: 1px solid #b9d1bf;
+  background: #fff;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mech-accord-table th,
+.mech-accord-table td {
+  position: static;
+  border-right: 1px solid #b9d1bf;
+  border-bottom: 1px solid #b9d1bf;
+  padding: 6px 8px;
+  text-align: right;
+  vertical-align: middle;
+}
+
+.mech-accord-table th {
+  background: #edf6ef;
+  color: #55725b;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.mech-accord-table tbody th {
+  background: #fff;
+  color: var(--text-soft);
+  font-size: 10px;
+}
+
+.mech-accord-table th:first-child,
+.mech-accord-table td:first-child {
+  width: 25%;
+  text-align: left;
+}
+
+.mech-accord-table th:last-child,
+.mech-accord-table td:last-child { border-right: 0; }
+
+.mech-accord-table tbody tr { cursor: default; }
+.mech-accord-table tbody tr:hover { background: transparent; }
+.mech-accord-table tbody tr:last-child th,
+.mech-accord-table tbody tr:last-child td { border-bottom: 0; }
+
+.mech-accord-cell-value {
+  display: block;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.mech-accord-cell-meta {
+  display: block;
+  margin-top: 2px;
+  color: #78927d;
+  font-size: 8px;
+  font-weight: 400;
+  line-height: 1.25;
+}
+
+.mech-accord-note {
+  margin: 7px 0 0;
+  color: #6c8371;
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.mech-accord-minimum,
+.mech-accord-minimum .mech-accord-cell-value { color: var(--danger); }
+
 .calculation-trace-card {
   min-width: 0;
   overflow: visible;
@@ -1228,6 +1343,14 @@
   .operator-info-heading-summary { font-size: 8px; }
   .operator-info-body, .calculation-process-body { padding: 10px; }
   .damage-result-card { padding: 9px; }
+
+  .mech-accord-output-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .mech-accord-table { min-width: 420px; }
 
   .calculation-step-heading {
     grid-template-columns: 22px minmax(0, 1fr);

@@ -231,7 +231,13 @@ a { color: var(--link); }
 
 .search-filter .initial-filter-label { margin: 0; }
 
-.filters input, .detail-page select {
+.subprofession-filter select {
+  flex: 0 1 320px;
+  max-width: 100%;
+  cursor: pointer;
+}
+
+.filters input, .filters select, .detail-page select {
   width: 100%;
   min-width: 0;
   height: 34px;
@@ -240,6 +246,7 @@ a { color: var(--link); }
   background: #fff;
   color: #222;
   padding: 0 9px;
+  font: inherit;
 }
 
 .filters input::placeholder { color: #888; }
@@ -708,6 +715,7 @@ td small { display: block; margin-top: 3px; color: #888; }
   .page-intro { display: block; }
   .page-intro p { margin-top: 7px; text-align: left; }
   .initial-filter-label { flex-basis: 100%; margin: 0 0 3px; }
+  .subprofession-filter select { flex-basis: 100%; }
   .search-filter { display: block; }
   .search-filter .initial-filter-label { display: block; margin-bottom: 5px; }
   .result-meta span:last-child { display: none; }
@@ -749,6 +757,7 @@ td small { display: block; margin-top: 3px; color: #888; }
   }
 
   .filters input,
+  .filters select,
   .detail-page select {
     height: 44px;
   }
