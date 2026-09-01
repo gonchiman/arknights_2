@@ -10,7 +10,22 @@ import {
   getDefaultDamageType,
   getOperatorStats,
 } from '../src/lib/damageCalculator.ts'
+import { DAMAGE_CALCULATOR_PANEL_DEFAULTS } from '../src/lib/damageCalculatorPanels.ts'
 import { getOperatorPassives } from '../src/lib/operatorProfile.ts'
+
+test('各パネルの初期開閉状態を従来表示のまま維持する', () => {
+  assert.deepEqual(DAMAGE_CALCULATOR_PANEL_DEFAULTS, {
+    operatorSearch: true,
+    calculationConditions: true,
+    operatorInfo: false,
+    skillModel: true,
+    results: true,
+    uniqueOutput: true,
+    sensitivity: true,
+    normalCalculationProcess: false,
+    skillCalculationProcess: false,
+  })
+})
 
 test('物理・術・確定ダメージへ敵防御を正しく適用する', () => {
   assert.equal(calculateDamage(1000, 'PHYSICAL', 300, 0), 700)

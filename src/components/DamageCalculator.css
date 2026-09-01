@@ -489,15 +489,14 @@
   line-height: 1.6;
 }
 
-.operator-info-panel,
-.calculation-process-panel { padding: 0; }
+.collapsible-calculator-panel { padding: 0; }
 
 .collapsible-panel-title {
   margin: 0;
   font-size: inherit;
 }
 
-.operator-info-heading {
+.collapsible-panel-heading {
   width: 100%;
   min-width: 0;
   min-height: 42px;
@@ -511,34 +510,33 @@
   text-align: left;
 }
 
-.operator-info-heading:hover { background: var(--surface-hover); }
+.collapsible-panel-heading:hover { background: var(--surface-hover); }
 
-.operator-info-panel.open .operator-info-heading,
-.calculation-process-panel.open .operator-info-heading {
+.collapsible-calculator-panel.open .collapsible-panel-heading {
   margin: 0;
   border-bottom: 1px solid var(--border);
 }
 
-.operator-info-heading-title {
+.collapsible-panel-heading-title {
   min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.operator-info-heading-title > span:first-child {
+.collapsible-panel-heading-title > span:first-child {
   color: #888;
   font-size: 9px;
   font-weight: 800;
 }
 
-.operator-info-heading .operator-info-heading-label {
+.collapsible-panel-heading .collapsible-panel-heading-label {
   color: #222;
   font-size: 14px;
   font-weight: 700;
 }
 
-.operator-info-heading-summary {
+.collapsible-panel-heading-summary {
   min-width: 0;
   display: flex;
   align-items: center;
@@ -548,7 +546,7 @@
   text-align: right;
 }
 
-.operator-info-heading-summary > span {
+.collapsible-panel-heading-summary > span {
   min-width: 0;
   overflow: hidden;
   color: var(--text-muted);
@@ -557,7 +555,7 @@
   white-space: nowrap;
 }
 
-.operator-info-heading-summary em {
+.collapsible-panel-heading-summary em {
   flex: 0 0 auto;
   color: #333;
   font-style: normal;
@@ -565,8 +563,7 @@
   white-space: nowrap;
 }
 
-.operator-info-body,
-.calculation-process-body {
+.collapsible-panel-body {
   min-width: 0;
   padding: 12px 14px;
 }
@@ -730,6 +727,8 @@
   border-bottom-color: #b9d1bf;
   background: #edf6ef;
 }
+
+.results-panel .collapsible-panel-heading:hover { background: #e3f0e6; }
 
 .result-section-label {
   margin: 10px 0 5px;
@@ -1280,7 +1279,7 @@
 @media (max-width: 760px) {
   .calculator-header { align-items: flex-start; }
   .panel-heading > p { display: none; }
-  .operator-info-heading-summary > span { display: none; }
+  .collapsible-panel-heading-summary > span { display: none; }
   .operator-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .operator-effect-grid { grid-template-columns: minmax(0, 1fr); }
   .selected-skill-summary { grid-template-columns: minmax(0, 1fr); }
@@ -1294,8 +1293,7 @@
   .calculator-header p { display: none; }
   .calculator-panel { padding: 10px; }
 
-  .operator-info-panel,
-  .calculation-process-panel { padding: 0; }
+  .collapsible-calculator-panel { padding: 0; }
 
   .panel-heading {
     margin: -10px -10px 10px;
@@ -1331,14 +1329,15 @@
   .operator-search-heading span { display: none; }
   .condition-divider { margin-inline: -10px; }
 
-  .operator-info-heading {
+  .collapsible-panel-heading {
     min-height: 48px;
+    margin: 0;
     padding-inline: 8px;
   }
 
-  .operator-info-heading .operator-info-heading-label { font-size: 13px; }
-  .operator-info-heading-summary { font-size: 8px; }
-  .operator-info-body, .calculation-process-body { padding: 10px; }
+  .collapsible-panel-heading .collapsible-panel-heading-label { font-size: 13px; }
+  .collapsible-panel-heading-summary { font-size: 8px; }
+  .collapsible-panel-body { padding: 10px; }
   .damage-result-card { padding: 9px; }
 
   .mech-accord-output-heading {
