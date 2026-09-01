@@ -140,10 +140,66 @@ test('一定値だけの母集団でも線形・対数目盛の統計を返す',
   assert.equal(logarithmic.bins.length, 1)
   assert.equal(logarithmic.bins[0].count, 3)
   assert.equal(logarithmic.standardDeviation, 0)
+  assert.equal(logarithmic.coefficientOfVariation, 0)
+  assert.equal(logarithmic.interquartileRange, 0)
+  assert.equal(logarithmic.normalizedInterquartileRange, 0)
 
   assert.equal(linear.histogram?.scale, 'LINEAR')
   assert.equal(linear.bins.reduce((sum, bin) => sum + bin.count, 0), 3)
   assert.equal(linear.standardDeviation, 0)
+  assert.equal(linear.coefficientOfVariation, 0)
+  assert.equal(linear.interquartileRange, 0)
+  assert.equal(linear.normalizedInterquartileRange, 0)
+})
+
+test('CVと正規化IQRはステータスの尺度を変えても同じ比率を返す', () => {
+  const baseRows = [1, 2, 3, 4].map((maxHp, index) => createOperator({
+    operatorId: `base_${index}`,
+    maxHp,
+  }))
+  const scaledRows = [100, 200, 300, 400].map((maxHp, index) => createOperator({
+    operatorId: `scaled_${index}`,
+    maxHp,
+  }))
+
+  const base = calculateOperatorMetricStatistics(baseRows, 'maxHp', 'LINEAR')
+  const scaled = calculateOperatorMetricStatistics(scaledRows, 'maxHp', 'LINEAR')
+
+  assert.ok(base.coefficientOfVariation !== null)
+  assert.ok(base.normalizedInterquartileRange !== null)
+  assert.ok(Math.abs(base.coefficientOfVariation - Math.sqrt(1.25) / 2.5) < 1e-12)
+  assert.ok(Math.abs(base.normalizedInterquartileRange - 0.6) < 1e-12)
+  assert.equal(base.interquartileRange, 1.5)
+  assert.ok(Math.abs(scaled.coefficientOfVariation - base.coefficientOfVariation) < 1e-12)
+  assert.ok(Math.abs(scaled.normalizedInterquartileRange - base.normalizedInterquartileRange) < 1e-12)
+  assert.equal(scaled.interquartileRange, 150)
+})
+
+test('分母が0または負値を含む場合は相対的なばらつきを算出しない', () => {
+  const allZero = calculateOperatorMetricStatistics([
+    createOperator({ maxHp: 0 }),
+    createOperator({ operatorId: 'zero_2', maxHp: 0 }),
+  ], 'maxHp', 'LINEAR')
+  const zeroMedian = calculateOperatorMetricStatistics([
+    createOperator({ maxHp: 0 }),
+    createOperator({ operatorId: 'zero_2', maxHp: 0 }),
+    createOperator({ operatorId: 'positive', maxHp: 100 }),
+  ], 'maxHp', 'LINEAR')
+  const includesNegative = calculateOperatorMetricStatistics([
+    createOperator({ maxHp: -10 }),
+    createOperator({ operatorId: 'positive', maxHp: 30 }),
+  ], 'maxHp', 'LINEAR')
+
+  assert.equal(allZero.coefficientOfVariation, null)
+  assert.equal(allZero.interquartileRange, 0)
+  assert.equal(allZero.normalizedInterquartileRange, null)
+
+  assert.ok(zeroMedian.coefficientOfVariation !== null)
+  assert.equal(zeroMedian.normalizedInterquartileRange, null)
+
+  assert.equal(includesNegative.coefficientOfVariation, null)
+  assert.equal(includesNegative.interquartileRange, 20)
+  assert.equal(includesNegative.normalizedInterquartileRange, null)
 })
 
 test('対数目盛で0を含む広い分布を全件いずれかの階級へ含める', () => {

@@ -20,6 +20,7 @@ import {
   groupOperatorObservationsByProfession,
   type OperatorAnalyzedStatKey,
   type OperatorMetricObservation,
+  type OperatorMetricStatistics,
   type OperatorScatterObservation,
   type OperatorStatMetric,
 } from '../lib/operatorStatistics'
@@ -266,10 +267,34 @@ export function OperatorStatisticsPanel({ rows, scopeLabel }: { rows: OperatorDa
   )
 }
 
-function StatisticsSummary({ statistics, metric }: { statistics: NumericStatistics; metric: OperatorStatMetric }) {
+function StatisticsSummary({ statistics, metric }: { statistics: OperatorMetricStatistics; metric: OperatorStatMetric }) {
   const formatValue = (value: number | null, digits = metric.summaryDigits) => (
     value === null ? '—' : formatNumber(value, digits, metric.suffix)
   )
+  const formatPercentage = (value: number | null) => (
+    value === null
+      ? '—'
+      : new Intl.NumberFormat('ja-JP', {
+        style: 'percent',
+        maximumFractionDigits: 1,
+      }).format(value)
+  )
+  const containsNegativeValue = statistics.minimum !== null && statistics.minimum < 0
+  const coefficientOfVariationDetail = statistics.coefficientOfVariation !== null
+    ? '標準偏差 ÷ 平均'
+    : statistics.count === 0
+      ? '有効データなし'
+      : containsNegativeValue
+        ? '負値を含むため算出なし'
+        : '平均が0のため算出なし'
+  const iqrValue = formatValue(statistics.interquartileRange)
+  const normalizedIqrDetail = statistics.normalizedInterquartileRange !== null
+    ? `IQR ${iqrValue}`
+    : statistics.count === 0
+      ? '有効データなし'
+      : containsNegativeValue
+        ? `IQR ${iqrValue}・負値を含むため算出なし`
+        : `IQR ${iqrValue}・中央値が0のため算出なし`
 
   return (
     <dl className="enemy-statistics-grid" aria-label={`${metric.label}の統計量`}>
@@ -281,9 +306,19 @@ function StatisticsSummary({ statistics, metric }: { statistics: NumericStatisti
       <StatisticsItem label="平均" value={formatValue(statistics.mean)} />
       <StatisticsItem label="中央値" value={formatValue(statistics.median)} />
       <StatisticsItem label="標準偏差" value={formatValue(statistics.standardDeviation)} />
+      <StatisticsItem
+        label="変動係数（CV）"
+        value={formatPercentage(statistics.coefficientOfVariation)}
+        detail={coefficientOfVariationDetail}
+      />
       <StatisticsItem label="最小" value={formatValue(statistics.minimum, metric.valueDigits)} />
       <StatisticsItem label="第1四分位" value={formatValue(statistics.firstQuartile)} />
       <StatisticsItem label="第3四分位" value={formatValue(statistics.thirdQuartile)} />
+      <StatisticsItem
+        label="正規化IQR"
+        value={formatPercentage(statistics.normalizedInterquartileRange)}
+        detail={normalizedIqrDetail}
+      />
       <StatisticsItem label="最大" value={formatValue(statistics.maximum, metric.valueDigits)} />
     </dl>
   )

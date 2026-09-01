@@ -51,6 +51,12 @@ export interface OperatorProfessionObservationGroup {
   observations: OperatorMetricObservation[]
 }
 
+export interface OperatorMetricStatistics extends NumericStatistics {
+  coefficientOfVariation: number | null
+  interquartileRange: number | null
+  normalizedInterquartileRange: number | null
+}
+
 export const OPERATOR_STAT_METRICS: readonly OperatorStatMetric[] = [
   {
     key: 'maxHp',
@@ -205,15 +211,48 @@ export function calculateOperatorMetricStatistics(
   metricKey: OperatorAnalyzedStatKey,
   scale: HistogramScale = getOperatorStatMetric(metricKey).defaultScale,
   customLinearBinWidth: number | null = null,
-): NumericStatistics {
+): OperatorMetricStatistics {
   const metric = getOperatorStatMetric(metricKey)
-  return calculateNumericStatistics(
+  const statistics = calculateNumericStatistics(
     buildOperatorMetricSource(rows, metricKey),
     metric.logBinCount,
     scale,
     metric.minimumLinearBinWidth,
     customLinearBinWidth,
   )
+  const interquartileRange = statistics.firstQuartile === null || statistics.thirdQuartile === null
+    ? null
+    : statistics.thirdQuartile - statistics.firstQuartile
+  const supportsRelativeDispersion = statistics.minimum !== null && statistics.minimum >= 0
+
+  return {
+    ...statistics,
+    coefficientOfVariation: supportsRelativeDispersion
+      ? divideByPositiveFiniteValue(statistics.standardDeviation, statistics.mean)
+      : null,
+    interquartileRange,
+    normalizedInterquartileRange: supportsRelativeDispersion
+      ? divideByPositiveFiniteValue(interquartileRange, statistics.median)
+      : null,
+  }
+}
+
+function divideByPositiveFiniteValue(
+  numerator: number | null,
+  denominator: number | null,
+): number | null {
+  if (
+    numerator === null
+    || denominator === null
+    || !Number.isFinite(numerator)
+    || !Number.isFinite(denominator)
+    || denominator <= 0
+  ) {
+    return null
+  }
+
+  const ratio = numerator / denominator
+  return Number.isFinite(ratio) ? ratio : null
 }
 
 export function groupOperatorObservationsByProfession(
