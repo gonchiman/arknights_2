@@ -1,13 +1,16 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import {
+  MAX_CUSTOM_LINEAR_BIN_COUNT,
   calculateBoxPlotStatistics,
   calculateEmpiricalCdf,
-  calculateNumericStatistics,
+  calculateNumericStatisticsWithDispersion,
   type BoxPlotStatistics,
   type EmpiricalCdfPoint,
   type HistogramBin,
   type HistogramScale,
   type NumericStatistics,
+  type NumericStatisticsWithDispersion,
+  validateCustomLinearBinWidth,
 } from '../lib/enemyStatistics'
 import type { EnemyLevelType, EnemyRecord, EnemyStats } from '../types/enemy'
 
@@ -72,7 +75,7 @@ const CHART_OPTIONS: Array<{ key: ChartKind; label: string }> = [
   { key: 'ECDF', label: '累積分布' },
   { key: 'BOX', label: '箱ひげ図' },
   { key: 'SCATTER', label: '散布図' },
-  { key: 'INDIVIDUAL', label: '個体プロット' },
+  { key: 'INDIVIDUAL', label: '個別プロット' },
 ]
 
 const LEVEL_ORDER: EnemyLevelType[] = ['NORMAL', 'ELITE', 'BOSS', 'UNKNOWN']
@@ -88,11 +91,14 @@ const SCATTER_CHART_HEIGHT = 340
 const CHART_MARGIN = { top: 44, right: 18, bottom: 52, left: 52 }
 
 export function EnemyStatisticsPanel({ rows, scopeLabel }: { rows: EnemyRecord[]; scopeLabel: string }) {
+  const binWidthInputId = useId()
+  const binWidthHelpId = useId()
   const [selectedMetricKey, setSelectedMetricKey] = useState<AnalyzedStatKey>('maxHp')
   const [axisScale, setAxisScale] = useState<HistogramScale>('LOG')
   const [scatterMetricKey, setScatterMetricKey] = useState<AnalyzedStatKey>('defense')
   const [scatterScale, setScatterScale] = useState<HistogramScale>('LOG')
   const [selectedChart, setSelectedChart] = useState<ChartKind>('HISTOGRAM')
+  const [linearBinWidthInput, setLinearBinWidthInput] = useState('')
 
   const selectedMetric = getMetric(selectedMetricKey)
   const scatterMetric = getMetric(scatterMetricKey)
@@ -104,19 +110,38 @@ export function EnemyStatisticsPanel({ rows, scopeLabel }: { rows: EnemyRecord[]
     () => buildMetricObservations(rows, selectedMetric.key),
     [rows, selectedMetric.key],
   )
+  const maximumObservedValue = useMemo(
+    () => observations.reduce<number | null>(
+      (maximum, { value }) => maximum === null ? value : Math.max(maximum, value),
+      null,
+    ),
+    [observations],
+  )
+  const parsedLinearBinWidth = linearBinWidthInput.trim() === '' ? null : Number(linearBinWidthInput)
+  const linearBinWidthValidation = parsedLinearBinWidth === null
+    ? null
+    : validateCustomLinearBinWidth(parsedLinearBinWidth, maximumObservedValue)
+  const linearBinWidthError = parsedLinearBinWidth === null
+    ? null
+    : getLinearBinWidthError(linearBinWidthValidation?.error ?? null)
+  const customLinearBinWidth = linearBinWidthValidation?.valid
+    ? parsedLinearBinWidth
+    : null
   const statistics = useMemo(
-    () => calculateNumericStatistics(
+    () => calculateNumericStatisticsWithDispersion(
       metricSource,
       selectedMetric.logBinCount,
       axisScale,
       selectedMetric.minimumLinearBinWidth,
+      customLinearBinWidth,
     ),
-    [metricSource, selectedMetric.logBinCount, selectedMetric.minimumLinearBinWidth, axisScale],
+    [metricSource, selectedMetric.logBinCount, selectedMetric.minimumLinearBinWidth, axisScale, customLinearBinWidth],
   )
 
   const selectMetric = (metric: StatMetric) => {
     setSelectedMetricKey(metric.key)
     setAxisScale(metric.defaultScale)
+    setLinearBinWidthInput('')
 
     if (scatterMetricKey === metric.key) {
       const fallback = STAT_METRICS.find((candidate) => candidate.key !== metric.key) ?? STAT_METRICS[0]
@@ -187,6 +212,57 @@ export function EnemyStatisticsPanel({ rows, scopeLabel }: { rows: EnemyRecord[]
         )}
       </div>
 
+      {statistics.count > 0 && selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR' && (
+        <div
+          className="statistics-histogram-settings"
+          role="group"
+          aria-labelledby="enemy-histogram-settings-heading"
+        >
+          <div className="statistics-histogram-settings-heading">
+            <strong id="enemy-histogram-settings-heading">ヒストグラム設定</strong>
+            <span>線形目盛の階級幅を指定できます</span>
+          </div>
+          <div className="statistics-bin-width-control">
+            <label htmlFor={binWidthInputId}>
+              階級幅{selectedMetric.suffix ? `（${selectedMetric.suffix}）` : ''}
+            </label>
+            <div className="statistics-bin-width-input-row">
+              <input
+                id={binWidthInputId}
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="any"
+                value={linearBinWidthInput}
+                placeholder="自動"
+                aria-invalid={linearBinWidthError !== null}
+                aria-describedby={binWidthHelpId}
+                onChange={(event) => setLinearBinWidthInput(event.target.value)}
+              />
+              {linearBinWidthInput !== '' && (
+                <button
+                  type="button"
+                  onClick={() => setLinearBinWidthInput('')}
+                  aria-label="階級幅を自動設定に戻す"
+                >
+                  自動
+                </button>
+              )}
+            </div>
+            <small
+              id={binWidthHelpId}
+              className={linearBinWidthError ? 'error' : ''}
+              aria-live="polite"
+            >
+              {linearBinWidthError
+                ?? (linearBinWidthValidation?.valid
+                  ? `${linearBinWidthValidation.binCount}階級で集計`
+                  : `自動：${formatNumber(statistics.histogram?.binWidth ?? 0, selectedMetric.summaryDigits, selectedMetric.suffix)}`)}
+            </small>
+          </div>
+        </div>
+      )}
+
       <div className="enemy-chart-stack">
         {selectedChart === 'HISTOGRAM' && (
           <HistogramFigure statistics={statistics} metric={selectedMetric} scopeLabel={scopeLabel} scale={axisScale} />
@@ -235,10 +311,34 @@ export function EnemyStatisticsPanel({ rows, scopeLabel }: { rows: EnemyRecord[]
   )
 }
 
-function StatisticsSummary({ statistics, metric }: { statistics: NumericStatistics; metric: StatMetric }) {
+function StatisticsSummary({ statistics, metric }: { statistics: NumericStatisticsWithDispersion; metric: StatMetric }) {
   const formatValue = (value: number | null, digits = metric.summaryDigits) => (
     value === null ? '—' : formatNumber(value, digits, metric.suffix)
   )
+  const formatPercentage = (value: number | null) => (
+    value === null
+      ? '—'
+      : new Intl.NumberFormat('ja-JP', {
+        style: 'percent',
+        maximumFractionDigits: 1,
+      }).format(value)
+  )
+  const containsNegativeValue = statistics.minimum !== null && statistics.minimum < 0
+  const coefficientOfVariationDetail = statistics.coefficientOfVariation !== null
+    ? '標準偏差 ÷ 平均'
+    : statistics.count === 0
+      ? '有効データなし'
+      : containsNegativeValue
+        ? '負値を含むため算出なし'
+        : '平均が0のため算出なし'
+  const iqrValue = formatValue(statistics.interquartileRange)
+  const normalizedIqrDetail = statistics.normalizedInterquartileRange !== null
+    ? `IQR ${iqrValue}`
+    : statistics.count === 0
+      ? '有効データなし'
+      : containsNegativeValue
+        ? `IQR ${iqrValue}・負値を含むため算出なし`
+        : `IQR ${iqrValue}・中央値が0のため算出なし`
 
   return (
     <dl className="enemy-statistics-grid" aria-label={`${metric.label}の統計量`}>
@@ -250,9 +350,19 @@ function StatisticsSummary({ statistics, metric }: { statistics: NumericStatisti
       <StatisticsItem label="平均" value={formatValue(statistics.mean)} />
       <StatisticsItem label="中央値" value={formatValue(statistics.median)} />
       <StatisticsItem label="標準偏差" value={formatValue(statistics.standardDeviation)} />
+      <StatisticsItem
+        label="変動係数（CV）"
+        value={formatPercentage(statistics.coefficientOfVariation)}
+        detail={coefficientOfVariationDetail}
+      />
       <StatisticsItem label="最小" value={formatValue(statistics.minimum, metric.valueDigits)} />
       <StatisticsItem label="第1四分位" value={formatValue(statistics.firstQuartile)} />
       <StatisticsItem label="第3四分位" value={formatValue(statistics.thirdQuartile)} />
+      <StatisticsItem
+        label="正規化IQR"
+        value={formatPercentage(statistics.normalizedInterquartileRange)}
+        detail={normalizedIqrDetail}
+      />
       <StatisticsItem label="最大" value={formatValue(statistics.maximum, metric.valueDigits)} />
     </dl>
   )
@@ -1078,6 +1188,16 @@ function createEcdfPath(points: EmpiricalCdfPoint[], x: (value: number) => numbe
 
 function getEffectiveScaleName(scale: HistogramScale, minimum: number | null): string {
   return scale === 'LOG' && (minimum ?? 0) >= 0 ? '対数' : '線形'
+}
+
+function getLinearBinWidthError(
+  error: 'INVALID' | 'TOO_MANY_BINS' | null,
+): string | null {
+  if (error === 'INVALID') return '0より大きい数値を入力してください'
+  if (error === 'TOO_MANY_BINS') {
+    return `階級数が多すぎます（最大${MAX_CUSTOM_LINEAR_BIN_COUNT}階級）`
+  }
+  return null
 }
 
 function stableJitter(value: string): number {

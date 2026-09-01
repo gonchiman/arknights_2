@@ -170,19 +170,19 @@ export function OperatorStatisticsPanel({ rows, scopeLabel }: { rows: OperatorDa
 
       {statistics.count > 0 && selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR' && (
         <div
-          className="operator-histogram-settings"
+          className="statistics-histogram-settings"
           role="group"
           aria-labelledby="operator-histogram-settings-heading"
         >
-          <div className="operator-histogram-settings-heading">
+          <div className="statistics-histogram-settings-heading">
             <strong id="operator-histogram-settings-heading">ヒストグラム設定</strong>
             <span>線形目盛の階級幅を指定できます</span>
           </div>
-          <div className="operator-bin-width-control">
+          <div className="statistics-bin-width-control">
             <label htmlFor={binWidthInputId}>
               階級幅{selectedMetric.suffix ? `（${selectedMetric.suffix}）` : ''}
             </label>
-            <div className="operator-bin-width-input-row">
+            <div className="statistics-bin-width-input-row">
               <input
                 id={binWidthInputId}
                 type="number"
@@ -213,7 +213,7 @@ export function OperatorStatisticsPanel({ rows, scopeLabel }: { rows: OperatorDa
               {linearBinWidthError
                 ?? (linearBinWidthValidation?.valid
                   ? `${linearBinWidthValidation.binCount}階級で集計`
-                  : `自動：${formatNumber(statistics.histogram?.binWidth ?? 0, selectedMetric.valueDigits, selectedMetric.suffix)}`)}
+                  : `自動：${formatNumber(statistics.histogram?.binWidth ?? 0, selectedMetric.summaryDigits, selectedMetric.suffix)}`)}
             </small>
           </div>
         </div>

@@ -1,7 +1,7 @@
 import {
-  calculateNumericStatistics,
+  calculateNumericStatisticsWithDispersion,
   type HistogramScale,
-  type NumericStatistics,
+  type NumericStatisticsWithDispersion,
 } from './enemyStatistics.ts'
 import { PROFESSION_ORDER } from './operatorFilters.ts'
 import type {
@@ -51,11 +51,7 @@ export interface OperatorProfessionObservationGroup {
   observations: OperatorMetricObservation[]
 }
 
-export interface OperatorMetricStatistics extends NumericStatistics {
-  coefficientOfVariation: number | null
-  interquartileRange: number | null
-  normalizedInterquartileRange: number | null
-}
+export type OperatorMetricStatistics = NumericStatisticsWithDispersion
 
 export const OPERATOR_STAT_METRICS: readonly OperatorStatMetric[] = [
   {
@@ -213,46 +209,13 @@ export function calculateOperatorMetricStatistics(
   customLinearBinWidth: number | null = null,
 ): OperatorMetricStatistics {
   const metric = getOperatorStatMetric(metricKey)
-  const statistics = calculateNumericStatistics(
+  return calculateNumericStatisticsWithDispersion(
     buildOperatorMetricSource(rows, metricKey),
     metric.logBinCount,
     scale,
     metric.minimumLinearBinWidth,
     customLinearBinWidth,
   )
-  const interquartileRange = statistics.firstQuartile === null || statistics.thirdQuartile === null
-    ? null
-    : statistics.thirdQuartile - statistics.firstQuartile
-  const supportsRelativeDispersion = statistics.minimum !== null && statistics.minimum >= 0
-
-  return {
-    ...statistics,
-    coefficientOfVariation: supportsRelativeDispersion
-      ? divideByPositiveFiniteValue(statistics.standardDeviation, statistics.mean)
-      : null,
-    interquartileRange,
-    normalizedInterquartileRange: supportsRelativeDispersion
-      ? divideByPositiveFiniteValue(interquartileRange, statistics.median)
-      : null,
-  }
-}
-
-function divideByPositiveFiniteValue(
-  numerator: number | null,
-  denominator: number | null,
-): number | null {
-  if (
-    numerator === null
-    || denominator === null
-    || !Number.isFinite(numerator)
-    || !Number.isFinite(denominator)
-    || denominator <= 0
-  ) {
-    return null
-  }
-
-  const ratio = numerator / denominator
-  return Number.isFinite(ratio) ? ratio : null
 }
 
 export function groupOperatorObservationsByProfession(
