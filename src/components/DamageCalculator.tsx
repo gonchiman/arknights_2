@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   DAMAGE_TYPE_LABELS,
   calculateAttackPipeline,
@@ -26,6 +26,7 @@ import {
   isMechAccordSubProfession,
   type MechAccordDamageRowsResult,
 } from '../lib/mechAccordDamage'
+import { DAMAGE_CALCULATOR_PANEL_DEFAULTS } from '../lib/damageCalculatorPanels'
 import { getOperatorPassives } from '../lib/operatorProfile'
 import {
   getSkillDamageUnsupportedReasons as getUnsupportedReasons,
@@ -99,10 +100,16 @@ export function DamageCalculator({ rows, loading }: Props) {
   const [damageType, setDamageType] = useState<DamageType>('PHYSICAL')
   const [enemyDefense, setEnemyDefense] = useState(0)
   const [enemyResistance, setEnemyResistance] = useState(0)
+  const [operatorSearchPanelOpen, setOperatorSearchPanelOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.operatorSearch)
   const [operatorSearchOpen, setOperatorSearchOpen] = useState(false)
-  const [operatorInfoOpen, setOperatorInfoOpen] = useState(false)
-  const [normalCalculationProcessOpen, setNormalCalculationProcessOpen] = useState(false)
-  const [skillCalculationProcessOpen, setSkillCalculationProcessOpen] = useState(false)
+  const [calculationConditionsOpen, setCalculationConditionsOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.calculationConditions)
+  const [operatorInfoOpen, setOperatorInfoOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.operatorInfo)
+  const [skillModelOpen, setSkillModelOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillModel)
+  const [resultsOpen, setResultsOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.results)
+  const [uniqueOutputOpen, setUniqueOutputOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.uniqueOutput)
+  const [sensitivityOpen, setSensitivityOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.sensitivity)
+  const [normalCalculationProcessOpen, setNormalCalculationProcessOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.normalCalculationProcess)
+  const [skillCalculationProcessOpen, setSkillCalculationProcessOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillCalculationProcess)
   const [sensitivityMetric, setSensitivityMetric] = useState<SensitivityMetric>('DAMAGE')
   const [operatorFilters, setOperatorFilters] = useState(EMPTY_OPERATOR_FILTERS)
 
@@ -288,11 +295,16 @@ export function DamageCalculator({ rows, loading }: Props) {
         <span className="calculator-status">初期版</span>
       </header>
 
-      <section className="calculator-panel operator-search-panel">
-        <div className="panel-heading">
-          <div><span>01</span><h2>オペレーター検索</h2></div>
-          <p>計算対象を選択します</p>
-        </div>
+      <CollapsibleCalculatorPanel
+        id="operator-search-panel"
+        number="01"
+        title="オペレーター検索"
+        summary="計算対象を選択します"
+        open={operatorSearchPanelOpen}
+        onToggle={() => setOperatorSearchPanelOpen((open) => !open)}
+        collapsedLabel="検索を表示"
+        className="operator-search-panel"
+      >
         <div className="operator-search-summary">
           <div className="calculator-field operator-picker-field">
             <span>選択中のオペレーター</span>
@@ -331,13 +343,18 @@ export function DamageCalculator({ rows, loading }: Props) {
             />
           </div>
         )}
-      </section>
+      </CollapsibleCalculatorPanel>
 
-      <section className="calculator-panel calculation-conditions-panel">
-        <div className="panel-heading">
-          <div><span>02</span><h2>ダメージ計算条件</h2></div>
-          <p>潜在・モジュール効果・味方バフはまだ含みません</p>
-        </div>
+      <CollapsibleCalculatorPanel
+        id="calculation-conditions-panel"
+        number="02"
+        title="ダメージ計算条件"
+        summary="潜在・モジュール効果・味方バフはまだ含みません"
+        open={calculationConditionsOpen}
+        onToggle={() => setCalculationConditionsOpen((open) => !open)}
+        collapsedLabel="条件を表示"
+        className="calculation-conditions-panel"
+      >
         <div className="condition-subheading">育成状態</div>
         <div className="calculator-form-grid growth-form-grid">
           <SelectField label="昇進段階" value={String(safePhaseIndex)} onChange={(value) => {
@@ -399,30 +416,19 @@ export function DamageCalculator({ rows, loading }: Props) {
           </div>
         </div>
         <p className="panel-note">物理・術ダメージには、軽減前の攻撃力の5%を最低保証として適用しています。</p>
-      </section>
+      </CollapsibleCalculatorPanel>
 
-      <section className={`calculator-panel operator-info-panel ${operatorInfoOpen ? 'open' : ''}`}>
-        <h2 className="collapsible-panel-title">
-          <button
-            type="button"
-            id="operator-info-heading"
-            className="panel-heading operator-info-heading"
-            aria-expanded={operatorInfoOpen}
-            aria-controls="operator-info-body"
-            onClick={() => setOperatorInfoOpen((open) => !open)}
-          >
-            <span className="operator-info-heading-title">
-              <span>03</span>
-              <span className="operator-info-heading-label">オペレーター情報</span>
-            </span>
-            <span className="operator-info-heading-summary">
-              <span>基礎攻撃力 {formatNumber(operatorStats.attack)} · 攻撃速度 {formatNumber(operatorStats.attackSpeed)} · 攻撃間隔 {formatDecimal(operatorStats.attackInterval)}秒</span>
-              <em>{operatorInfoOpen ? '閉じる' : '詳細を表示'} {operatorInfoOpen ? '−' : '+'}</em>
-            </span>
-          </button>
-        </h2>
-        {operatorInfoOpen && (
-          <div id="operator-info-body" className="operator-info-body" role="region" aria-labelledby="operator-info-heading">
+      <CollapsibleCalculatorPanel
+        id="operator-info-panel"
+        number="03"
+        title="オペレーター情報"
+        summary={`基礎攻撃力 ${formatNumber(operatorStats.attack)} · 攻撃速度 ${formatNumber(operatorStats.attackSpeed)} · 攻撃間隔 ${formatDecimal(operatorStats.attackInterval)}秒`}
+        open={operatorInfoOpen}
+        onToggle={() => setOperatorInfoOpen((open) => !open)}
+        collapsedLabel="詳細を表示"
+        className="operator-info-panel"
+        bodyClassName="operator-info-body"
+      >
             <div className="operator-stat-grid">
               <OperatorMetric
                 label="攻撃力"
@@ -477,15 +483,17 @@ export function DamageCalculator({ rows, loading }: Props) {
               )}
             </div>
             <p className="operator-info-note">効果ごとの適用値と未反映理由は、通常攻撃・スキルの計算過程に表示します。</p>
-          </div>
-        )}
-      </section>
+      </CollapsibleCalculatorPanel>
 
-      <section className="calculator-panel">
-        <div className="panel-heading">
-          <div><span>04</span><h2>スキル計算モデル</h2></div>
-          <p>ダメージ計算条件とゲームデータから自動決定</p>
-        </div>
+      <CollapsibleCalculatorPanel
+        id="skill-model-panel"
+        number="04"
+        title="スキル計算モデル"
+        summary="ダメージ計算条件とゲームデータから自動決定"
+        open={skillModelOpen}
+        onToggle={() => setSkillModelOpen((open) => !open)}
+        collapsedLabel="モデルを表示"
+      >
         <dl className="model-value-grid" aria-label="自動算出されたスキル計算モデル">
           <ModelValue label="攻撃力補正B" value={model.directMultiplierPercent} suffix="%" />
           <ModelValue label="攻撃力補正E" value={model.attackScalePercent} suffix="%" />
@@ -500,13 +508,18 @@ export function DamageCalculator({ rows, loading }: Props) {
         </dl>
         {model.notes.length > 0 && <ul className="model-notes">{model.notes.map((note) => <li key={note}>{note}</li>)}</ul>}
         {!skillSupported && <div className="unsupported-model" role="status"><strong>初期版では自動計算できません</strong>{unsupportedReasons.map((reason) => <span key={reason}>{reason}</span>)}</div>}
-      </section>
+      </CollapsibleCalculatorPanel>
 
-      <section className="calculator-panel results-panel">
-        <div className="panel-heading">
-          <div><span>05</span><h2>計算結果</h2></div>
-          <p>{DAMAGE_TYPE_LABELS[damageType]} · 防御 {formatNumber(enemyDefense)} · 術耐性 {formatNumber(enemyResistance)}</p>
-        </div>
+      <CollapsibleCalculatorPanel
+        id="results-panel"
+        number="05"
+        title="計算結果"
+        summary={`${DAMAGE_TYPE_LABELS[damageType]} · 防御 ${formatNumber(enemyDefense)} · 術耐性 ${formatNumber(enemyResistance)}`}
+        open={resultsOpen}
+        onToggle={() => setResultsOpen((open) => !open)}
+        collapsedLabel="結果を表示"
+        className="results-panel"
+      >
         <div className="result-section-label">通常攻撃</div>
         <div className="damage-result-grid normal-results" aria-live="polite">
           <ResultCard label={mechAccordDamage ? '本体 1ヒット' : '1ヒット'} value={normalPerHit} />
@@ -520,23 +533,33 @@ export function DamageCalculator({ rows, loading }: Props) {
           <ResultCard label={getTotalLabel(selectedSkill)} value={skillOutput?.total ?? null} />
         </div>
         <p className="result-disclaimer">表示値は単体への理論値です。確認済みの特性・素質だけを反映し、条件入力が必要な効果と未対応効果は計算過程に明示します。潜在、モジュール効果、外部バフ、敵デバフ、対象数は含みません。</p>
-      </section>
+      </CollapsibleCalculatorPanel>
 
       {mechAccordDamage && (
-        <section className="calculator-panel unique-output-panel">
-          <div className="panel-heading">
-            <div><span>06</span><h2>固有出力</h2></div>
-            <p>{selectedOperator.subProfessionName} · 通常攻撃</p>
-          </div>
+        <CollapsibleCalculatorPanel
+          id="unique-output-panel"
+          number="06"
+          title="固有出力"
+          summary={`${selectedOperator.subProfessionName} · 通常攻撃`}
+          open={uniqueOutputOpen}
+          onToggle={() => setUniqueOutputOpen((open) => !open)}
+          collapsedLabel="固有出力を表示"
+          className="unique-output-panel"
+        >
           <MechAccordDamageTable result={mechAccordDamage} />
-        </section>
+        </CollapsibleCalculatorPanel>
       )}
 
-      <section className="calculator-panel sensitivity-panel">
-        <div className="panel-heading">
-          <div><span>{mechAccordDamage ? '07' : '06'}</span><h2>{damageType === 'ARTS' ? '術耐性' : damageType === 'PHYSICAL' ? '防御力' : '敵ステータス'}別の比較</h2></div>
-          <p>敵ステータスを変えたときの{sensitivityMetric === 'DPS' ? 'DPS' : '単体ダメージ'}</p>
-        </div>
+      <CollapsibleCalculatorPanel
+        id="sensitivity-panel"
+        number={mechAccordDamage ? '07' : '06'}
+        title={`${damageType === 'ARTS' ? '術耐性' : damageType === 'PHYSICAL' ? '防御力' : '敵ステータス'}別の比較`}
+        summary={`敵ステータスを変えたときの${sensitivityMetric === 'DPS' ? 'DPS' : '単体ダメージ'}`}
+        open={sensitivityOpen}
+        onToggle={() => setSensitivityOpen((open) => !open)}
+        collapsedLabel="比較を表示"
+        className="sensitivity-panel"
+      >
         <div className="sensitivity-toolbar">
           <span>表示内容</span>
           <div className="sensitivity-metric-switch" role="group" aria-label="比較の表示内容">
@@ -597,78 +620,112 @@ export function DamageCalculator({ rows, loading }: Props) {
             </tbody>
           </table>
         </div>
-      </section>
+      </CollapsibleCalculatorPanel>
 
-      <section className={`calculator-panel calculation-process-panel ${normalCalculationProcessOpen ? 'open' : ''}`}>
-        <h2 className="collapsible-panel-title">
-          <button
-            type="button"
-            id="normal-calculation-process-heading"
-            className="panel-heading operator-info-heading calculation-process-heading"
-            aria-expanded={normalCalculationProcessOpen}
-            aria-controls="normal-calculation-process-body"
-            onClick={() => setNormalCalculationProcessOpen((open) => !open)}
-          >
-            <span className="operator-info-heading-title">
-              <span>{mechAccordDamage ? '08' : '07'}</span>
-              <span className="operator-info-heading-label">通常攻撃の計算過程</span>
-            </span>
-            <span className="operator-info-heading-summary">
-              <span>1ヒット {formatNumber(normalPerHit)} · DPS {formatNumber(normalDps)}</span>
-              <em>{normalCalculationProcessOpen ? '閉じる' : '式と代入値を表示'} {normalCalculationProcessOpen ? '−' : '+'}</em>
-            </span>
-          </button>
-        </h2>
-        {normalCalculationProcessOpen && (
-          <div id="normal-calculation-process-body" className="calculation-process-body" role="region" aria-labelledby="normal-calculation-process-heading">
-            <CalculationTrace
-              title="通常攻撃"
-              steps={normalCalculationSteps}
-              passiveEffects={operatorEffects.effects}
-            />
-            <p className="calculation-process-note">
-              上の一覧で「計算に反映」とした効果だけを式へ適用します。潜在・モジュール・外部バフは未反映です。式中の値は確認しやすい桁数に省略して表示し、計算自体は表示前の値で行います。
-            </p>
-          </div>
-        )}
-      </section>
+      <CollapsibleCalculatorPanel
+        id="normal-calculation-process-panel"
+        number={mechAccordDamage ? '08' : '07'}
+        title="通常攻撃の計算過程"
+        summary={`1ヒット ${formatNumber(normalPerHit)} · DPS ${formatNumber(normalDps)}`}
+        open={normalCalculationProcessOpen}
+        onToggle={() => setNormalCalculationProcessOpen((open) => !open)}
+        collapsedLabel="式と代入値を表示"
+        className="calculation-process-panel"
+        bodyClassName="calculation-process-body"
+      >
+        <CalculationTrace
+          title="通常攻撃"
+          steps={normalCalculationSteps}
+          passiveEffects={operatorEffects.effects}
+        />
+        <p className="calculation-process-note">
+          上の一覧で「計算に反映」とした効果だけを式へ適用します。潜在・モジュール・外部バフは未反映です。式中の値は確認しやすい桁数に省略して表示し、計算自体は表示前の値で行います。
+        </p>
+      </CollapsibleCalculatorPanel>
 
-      <section className={`calculator-panel calculation-process-panel ${skillCalculationProcessOpen ? 'open' : ''}`}>
-        <h2 className="collapsible-panel-title">
-          <button
-            type="button"
-            id="skill-calculation-process-heading"
-            className="panel-heading operator-info-heading calculation-process-heading"
-            aria-expanded={skillCalculationProcessOpen}
-            aria-controls="skill-calculation-process-body"
-            onClick={() => setSkillCalculationProcessOpen((open) => !open)}
-          >
-            <span className="operator-info-heading-title">
-              <span>{mechAccordDamage ? '09' : '08'}</span>
-              <span className="operator-info-heading-label">スキルの計算過程</span>
-            </span>
-            <span className="operator-info-heading-summary">
-              <span>{skillOutput
-                ? `1攻撃 ${formatNumber(skillOutput.perAttack)} · DPS ${skillOutput.dps === null ? '—' : formatNumber(skillOutput.dps)}`
-                : '自動計算対象外'}</span>
-              <em>{skillCalculationProcessOpen ? '閉じる' : '式と代入値を表示'} {skillCalculationProcessOpen ? '−' : '+'}</em>
-            </span>
-          </button>
-        </h2>
-        {skillCalculationProcessOpen && (
-          <div id="skill-calculation-process-body" className="calculation-process-body" role="region" aria-labelledby="skill-calculation-process-heading">
-            <CalculationTrace
-              title="スキル"
-              steps={skillCalculationSteps}
-              unavailableReasons={skillOutput ? [] : unsupportedReasons}
-              passiveEffects={operatorEffects.effects}
-            />
-            <p className="calculation-process-note">
-              反映済みの特性・素質はスキル補正と同じA〜Eへ合流します。条件入力が必要・未対応の効果は数値へ加えません。固定時間の総ダメージは、DPS × 効果時間による連続値の理論値です。
-            </p>
-          </div>
-        )}
-      </section>
+      <CollapsibleCalculatorPanel
+        id="skill-calculation-process-panel"
+        number={mechAccordDamage ? '09' : '08'}
+        title="スキルの計算過程"
+        summary={skillOutput
+          ? `1攻撃 ${formatNumber(skillOutput.perAttack)} · DPS ${skillOutput.dps === null ? '—' : formatNumber(skillOutput.dps)}`
+          : '自動計算対象外'}
+        open={skillCalculationProcessOpen}
+        onToggle={() => setSkillCalculationProcessOpen((open) => !open)}
+        collapsedLabel="式と代入値を表示"
+        className="calculation-process-panel"
+        bodyClassName="calculation-process-body"
+      >
+        <CalculationTrace
+          title="スキル"
+          steps={skillCalculationSteps}
+          unavailableReasons={skillOutput ? [] : unsupportedReasons}
+          passiveEffects={operatorEffects.effects}
+        />
+        <p className="calculation-process-note">
+          反映済みの特性・素質はスキル補正と同じA〜Eへ合流します。条件入力が必要・未対応の効果は数値へ加えません。固定時間の総ダメージは、DPS × 効果時間による連続値の理論値です。
+        </p>
+      </CollapsibleCalculatorPanel>
+    </section>
+  )
+}
+
+function CollapsibleCalculatorPanel({
+  id,
+  number,
+  title,
+  summary,
+  open,
+  onToggle,
+  collapsedLabel,
+  className = '',
+  bodyClassName = '',
+  children,
+}: {
+  id: string
+  number: string
+  title: string
+  summary: ReactNode
+  open: boolean
+  onToggle: () => void
+  collapsedLabel: string
+  className?: string
+  bodyClassName?: string
+  children: ReactNode
+}) {
+  const headingId = `${id}-heading`
+  const bodyId = `${id}-body`
+
+  return (
+    <section className={`calculator-panel collapsible-calculator-panel ${open ? 'open' : ''} ${className}`.trim()}>
+      <h2 className="collapsible-panel-title">
+        <button
+          type="button"
+          id={headingId}
+          className="panel-heading collapsible-panel-heading"
+          aria-expanded={open}
+          aria-controls={bodyId}
+          onClick={onToggle}
+        >
+          <span className="collapsible-panel-heading-title">
+            <span>{number}</span>
+            <span className="collapsible-panel-heading-label">{title}</span>
+          </span>
+          <span className="collapsible-panel-heading-summary">
+            <span>{summary}</span>
+            <em>{open ? '閉じる' : collapsedLabel} {open ? '−' : '+'}</em>
+          </span>
+        </button>
+      </h2>
+      <div
+        id={bodyId}
+        className={`collapsible-panel-body ${bodyClassName}`.trim()}
+        role="region"
+        aria-labelledby={headingId}
+        hidden={!open}
+      >
+        {children}
+      </div>
     </section>
   )
 }
