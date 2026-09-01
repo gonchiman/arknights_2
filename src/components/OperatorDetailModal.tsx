@@ -159,7 +159,7 @@ export function OperatorDetailModal({
           <section aria-labelledby={`${titleId}-skills`}>
             <div className="operator-detail-section-heading">
               <h3 id={`${titleId}-skills`}>スキル</h3>
-              <span>分類結果・判定根拠・手動修正を確認できます</span>
+              <span>スキル名を選ぶと分類情報を表示します</span>
             </div>
             {operator.skills.length > 0 ? (
               <ul className="operator-detail-list">
@@ -168,24 +168,25 @@ export function OperatorDetailModal({
                   return (
                     <li key={`${skill.id}:${skill.index}`}>
                       <div className="operator-detail-item-heading">
-                        <strong>S{skill.index} {skill.name}</strong>
+                        {classifierSkill ? (
+                          <button
+                            type="button"
+                            className="operator-skill-name-button"
+                            data-classifier-skill-id={classifierSkill.id}
+                            aria-haspopup="dialog"
+                            aria-controls={classifierPopoverId}
+                            aria-expanded={selectedClassifierSkill?.id === classifierSkill.id}
+                            aria-label={`S${skill.index} ${skill.name}の分類情報を開く`}
+                            onClick={(event) => openSkillClassification(classifierSkill, event.currentTarget)}
+                          >
+                            <strong>S{skill.index} {skill.name}</strong>
+                          </button>
+                        ) : (
+                          <strong>S{skill.index} {skill.name}</strong>
+                        )}
                         <span>初期SP {skill.initSp ?? '—'} / 必要SP {skill.spCost ?? '—'}</span>
                       </div>
                       <p>{skill.description}</p>
-                      {classifierSkill && (
-                        <button
-                          type="button"
-                          className="operator-skill-classifier-button"
-                          data-classifier-skill-id={classifierSkill.id}
-                          aria-haspopup="dialog"
-                          aria-controls={classifierPopoverId}
-                          aria-expanded={selectedClassifierSkill?.id === classifierSkill.id}
-                          aria-label={`${skill.name}の分類結果と判定根拠を開く`}
-                          onClick={(event) => openSkillClassification(classifierSkill, event.currentTarget)}
-                        >
-                          Skill Model Classifierで分析
-                        </button>
-                      )}
                     </li>
                   )
                 })}
