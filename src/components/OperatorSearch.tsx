@@ -1,15 +1,21 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Filters, type FilterOption, type FilterState } from './Filters'
 import { OperatorTable } from './OperatorTable'
 import { PROFESSION_ORDER } from '../lib/operatorFilters'
 import {
   EMPTY_OPERATOR_FILTERS,
+  addRecentOperatorId,
   buildSubProfessionOptions,
+  getRecentOperatorRows,
+  hasActiveOperatorFilters,
   matchesOperatorFilters,
+  normalizeRecentOperatorIds,
 } from '../lib/operatorSearchFilters'
 import type { SkillRecord } from '../types/skill'
 
 export { EMPTY_OPERATOR_FILTERS, matchesOperatorFilters } from '../lib/operatorSearchFilters'
+
+const RECENT_OPERATOR_STORAGE_KEY = 'arknights-recent-operator-ids-v1'
 
 interface Props {
   rows: SkillRecord[]
@@ -34,6 +40,7 @@ export function OperatorSearch({
   className = '',
   selectedOperatorId,
 }: Props) {
+  const [recentOperatorIds, setRecentOperatorIds] = useState(loadRecentOperatorIds)
   const professionOptions = useMemo(() => sortProfessionOptions(uniqueOptions(rows.map((row) => ({
     value: row.profession,
     label: row.professionLabel,
@@ -42,10 +49,11 @@ export function OperatorSearch({
     () => buildSubProfessionOptions(rows, filters.profession),
     [rows, filters.profession],
   )
+  const hasActiveFilters = hasActiveOperatorFilters(filters)
 
   const filteredSkills = useMemo(
-    () => rows.filter((row) => matchesOperatorFilters(row, filters)),
-    [rows, filters],
+    () => hasActiveFilters ? rows.filter((row) => matchesOperatorFilters(row, filters)) : [],
+    [rows, filters, hasActiveFilters],
   )
 
   // 一覧はオペレーターを1人1行だけ表示する。
@@ -58,6 +66,22 @@ export function OperatorSearch({
       return true
     })
   }, [filteredSkills])
+  const recentOperators = useMemo(
+    () => getRecentOperatorRows(rows, recentOperatorIds),
+    [rows, recentOperatorIds],
+  )
+  const displayedOperators = hasActiveFilters ? filteredOperators : recentOperators
+
+  const selectOperator = (row: SkillRecord) => {
+    const latestRecentOperatorIds = normalizeRecentOperatorIds([
+      ...loadRecentOperatorIds(),
+      ...recentOperatorIds,
+    ])
+    const nextRecentOperatorIds = addRecentOperatorId(latestRecentOperatorIds, row.operatorId)
+    persistRecentOperatorIds(nextRecentOperatorIds)
+    setRecentOperatorIds(nextRecentOperatorIds)
+    onSelect(row)
+  }
 
   return (
     <section className={`list-pane list-view ${className}`.trim()}>
@@ -69,10 +93,19 @@ export function OperatorSearch({
         onReset={() => onFiltersChange({ ...EMPTY_OPERATOR_FILTERS })}
       />
       <div className="result-meta" role="status" aria-live="polite">
-        <span>{loading ? '読み込み中...' : `${filteredOperators.length} 名表示`}</span>
+        <span>{loading
+          ? '読み込み中...'
+          : hasActiveFilters
+            ? `${displayedOperators.length} 名表示`
+            : `最近選択したオペレーター · ${displayedOperators.length} 名`}</span>
         <span>{instruction}</span>
       </div>
-      {!loading && filteredOperators.length === 0 ? (
+      {!loading && displayedOperators.length === 0 && !hasActiveFilters ? (
+        <div className="operator-empty-state" role="status">
+          <strong>最近選択したオペレーターはまだいません</strong>
+          <span>検索条件を指定してオペレーターを選択すると、ここに最大6名表示されます。</span>
+        </div>
+      ) : !loading && displayedOperators.length === 0 ? (
         <div className="operator-empty-state" role="status">
           <strong>条件に一致するオペレーターがいません</strong>
           <span>検索文字や絞り込み条件を変更してください。</span>
@@ -82,14 +115,36 @@ export function OperatorSearch({
         </div>
       ) : (
         <OperatorTable
-          rows={filteredOperators}
-          onSelect={onSelect}
+          rows={displayedOperators}
+          onSelect={selectOperator}
           actionLabel={actionLabel}
           selectedOperatorId={selectedOperatorId}
         />
       )}
     </section>
   )
+}
+
+function loadRecentOperatorIds(): string[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const stored = window.localStorage.getItem(RECENT_OPERATOR_STORAGE_KEY)
+    if (!stored) return []
+    const parsed: unknown = JSON.parse(stored)
+    if (!Array.isArray(parsed)) return []
+    return normalizeRecentOperatorIds(parsed.filter((value): value is string => typeof value === 'string'))
+  } catch {
+    return []
+  }
+}
+
+function persistRecentOperatorIds(operatorIds: string[]): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(RECENT_OPERATOR_STORAGE_KEY, JSON.stringify(operatorIds))
+  } catch {
+    // ストレージが利用できない場合も、オペレーターの選択操作は続行する。
+  }
 }
 
 function uniqueOptions(options: FilterOption[]): FilterOption[] {
