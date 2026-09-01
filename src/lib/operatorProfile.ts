@@ -11,7 +11,7 @@ export interface DisplayTalent {
   description: string
 }
 
-export type PassiveSourceKind = 'TRAIT' | 'TALENT'
+export type PassiveSourceKind = 'TRAIT' | 'TALENT' | 'MODULE'
 
 export interface PassiveSource {
   sourceKind: PassiveSourceKind

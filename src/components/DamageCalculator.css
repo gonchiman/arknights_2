@@ -234,6 +234,18 @@
 
 .skill-picker-field { margin-top: 12px; }
 
+.module-picker-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px;
+  gap: 8px;
+  align-items: end;
+}
+
+.module-choice-group {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
 .calculator-field > span,
 .condition-field-label {
   display: block;
@@ -297,6 +309,14 @@
 }
 
 .skill-choice-group button:hover { background: var(--surface-hover); }
+
+.skill-choice-group button:disabled {
+  background: var(--surface-soft);
+  color: #999;
+  cursor: not-allowed;
+}
+
+.skill-choice-group button:disabled > span { color: #999; }
 
 .skill-choice-group button > span {
   flex: 0 0 auto;
@@ -478,6 +498,9 @@
 .selected-skill-summary strong { display: block; font-size: 11px; }
 .selected-skill-summary span,
 .selected-skill-summary p { color: var(--text-muted); font-size: 10px; line-height: 1.55; }
+
+.selected-module-summary { margin-top: 0; }
+.module-selection-warning { margin-top: 8px; }
 
 .panel-note,
 .result-disclaimer,
@@ -693,6 +716,24 @@
 .operator-effect-value-list small { color: var(--text-muted); font-size: 8px; }
 
 .operator-effect-card.muted-passive { background: var(--surface-soft); }
+
+.module-effect-card { background: #f7f9fc; }
+
+.module-effect-note {
+  display: block;
+  margin-top: 7px;
+  color: #684b17;
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.module-warning-list {
+  margin: 7px 0 0;
+  padding-left: 15px;
+  color: #743333;
+  font-size: 8px;
+  line-height: 1.5;
+}
 
 .model-notes {
   margin: 9px 0 0;
@@ -1273,6 +1314,7 @@
 
 @media (max-width: 980px) {
   .enemy-condition-row { grid-template-columns: minmax(0, 1fr); }
+  .module-picker-row { grid-template-columns: minmax(0, 1fr); }
   .skill-results { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 

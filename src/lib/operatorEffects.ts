@@ -296,7 +296,11 @@ export function evaluateOperatorEffects(
 
     if (sourceEffects.length === 0) {
       sourceEffects.push(createEffect(source, {
-        label: source.sourceKind === 'TRAIT' ? '特性' : '素質',
+        label: source.sourceKind === 'TRAIT'
+          ? '特性'
+          : source.sourceKind === 'MODULE'
+            ? 'モジュール'
+            : '素質',
         status: 'NO_DIRECT_EFFECT',
         valueLabel: '—',
         reason: '現在の単体ダメージ計算へ直接影響する効果はありません。',

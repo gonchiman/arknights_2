@@ -27,6 +27,17 @@ import {
   type MechAccordDamageRowsResult,
 } from '../lib/mechAccordDamage'
 import { DAMAGE_CALCULATOR_PANEL_DEFAULTS } from '../lib/damageCalculatorPanels'
+import {
+  applyOperatorModule,
+  getOperatorModuleId,
+  getOperatorModuleLevels,
+  getOperatorModuleTypeLabel,
+  getOperatorModuleUnlockLabel,
+  getOperatorModules,
+  isOperatorModuleUnlocked,
+  type OperatorModuleApplication,
+  type OperatorModuleAttributeEffect,
+} from '../lib/operatorModules'
 import { getOperatorPassives } from '../lib/operatorProfile'
 import {
   getSkillDamageUnsupportedReasons as getUnsupportedReasons,
@@ -93,10 +104,12 @@ export function DamageCalculator({ rows, loading }: Props) {
     .sort((a, b) => a.operatorName.localeCompare(b.operatorName, 'ja')), [rows])
   const [operatorId, setOperatorId] = useState('')
   const [skillId, setSkillId] = useState('')
+  const [moduleId, setModuleId] = useState('')
   const [phaseIndex, setPhaseIndex] = useState(0)
   const [operatorLevel, setOperatorLevel] = useState(1)
   const [trust, setTrust] = useState(100)
   const [skillLevelIndex, setSkillLevelIndex] = useState(0)
+  const [moduleLevel, setModuleLevel] = useState(1)
   const [damageType, setDamageType] = useState<DamageType>('PHYSICAL')
   const [enemyDefense, setEnemyDefense] = useState(0)
   const [enemyResistance, setEnemyResistance] = useState(0)
@@ -123,6 +136,12 @@ export function DamageCalculator({ rows, loading }: Props) {
   const operatorSkills = useMemo(() => rows
     .filter((row) => row.operatorId === effectiveOperatorId)
     .sort((a, b) => a.skillIndex - b.skillIndex), [rows, effectiveOperatorId])
+  const operatorModules = useMemo(() => selectedOperator
+    ? getOperatorModules(selectedOperator.operatorProfile).map((module, index) => ({
+        id: getOperatorModuleId(module, index),
+        module,
+      }))
+    : [], [selectedOperator])
   const effectiveSkillId = operatorSkills.some((skill) => skill.id === skillId)
     ? skillId
     : operatorSkills[0]?.id ?? ''
@@ -136,6 +155,17 @@ export function DamageCalculator({ rows, loading }: Props) {
   const skillLevels = selectedSkill?.skillLevels ?? []
   const safeSkillLevelIndex = clamp(skillLevelIndex, 0, Math.max(0, skillLevels.length - 1))
   const selectedSkillLevel = skillLevels[safeSkillLevelIndex] ?? selectedSkill?.raw ?? null
+  const selectedModuleChoice = operatorModules.find((choice) => choice.id === moduleId) ?? null
+  const selectedModule = selectedModuleChoice
+    && getOperatorModuleLevels(selectedModuleChoice.module).length > 0
+    && isOperatorModuleUnlocked(selectedModuleChoice.module, safePhaseIndex, safeOperatorLevel)
+      ? selectedModuleChoice.module
+      : null
+  const effectiveModuleId = selectedModule ? selectedModuleChoice?.id ?? '' : ''
+  const moduleLevels = getOperatorModuleLevels(selectedModule)
+  const safeModuleLevel = moduleLevels.includes(moduleLevel)
+    ? moduleLevel
+    : moduleLevels.at(-1) ?? 0
 
   useEffect(() => {
     if (!selectedOperator) return
@@ -144,6 +174,8 @@ export function DamageCalculator({ rows, loading }: Props) {
     setPhaseIndex(nextPhaseIndex)
     setOperatorLevel(nextMaxLevel)
     setTrust(100)
+    setModuleId('')
+    setModuleLevel(1)
     setSkillId((current) => operatorSkills.some((skill) => skill.id === current)
       ? current
       : operatorSkills[0]?.id ?? '')
@@ -155,14 +187,40 @@ export function DamageCalculator({ rows, loading }: Props) {
     setSkillLevelIndex(Math.max(0, (selectedSkill?.skillLevels.length ?? 1) - 1))
   }, [effectiveSkillId])
 
-  const operatorPassives = useMemo(() => selectedOperator
+  useEffect(() => {
+    if (!selectedModuleChoice) return
+    const hasBattleData = getOperatorModuleLevels(selectedModuleChoice.module).length > 0
+    if (!hasBattleData || !isOperatorModuleUnlocked(
+      selectedModuleChoice.module,
+      safePhaseIndex,
+      safeOperatorLevel,
+    )) {
+      setModuleId('')
+    }
+  }, [selectedModuleChoice, safePhaseIndex, safeOperatorLevel])
+
+  const baseOperatorPassives = useMemo(() => selectedOperator
     ? getOperatorPassives(selectedOperator.operatorProfile, safePhaseIndex, safeOperatorLevel)
     : { traitDescription: '', talents: [], sources: [] }, [selectedOperator, safePhaseIndex, safeOperatorLevel])
+  const moduleApplication = useMemo(() => applyOperatorModule(
+    baseOperatorPassives,
+    selectedModule,
+    safeModuleLevel,
+  ), [baseOperatorPassives, selectedModule, safeModuleLevel])
+  const operatorPassives = moduleApplication.passives
   const operatorEffects = useMemo(() => evaluateOperatorEffects(
     selectedOperator?.operatorId ?? '',
     operatorPassives,
     damageType,
   ), [selectedOperator?.operatorId, operatorPassives, damageType])
+  const moduleRelatedEffects = useMemo(() => operatorEffects.effects.filter((effect) => (
+    moduleApplication.affectedSources.some((source) => (
+      source.sourceKind === effect.sourceKind
+      && source.talentIndex === effect.talentIndex
+      && source.sourceName === effect.sourceName
+    ))
+  )), [operatorEffects.effects, moduleApplication.affectedSources])
+  const moduleReflectionStatus = getModuleReflectionStatus(moduleApplication, moduleRelatedEffects)
   const passiveAttackModifiers = useMemo(() => ({
     directAddition: operatorEffects.modifiers.attackAddition,
     directMultiplierPercent: operatorEffects.modifiers.attackMultiplierPercent,
@@ -173,7 +231,8 @@ export function DamageCalculator({ rows, loading }: Props) {
   }), [operatorEffects.modifiers.defenseIgnoreFixed, operatorEffects.modifiers.resistanceIgnoreFixed])
   const operatorStats = useMemo(() => selectedOperator
     ? getOperatorStats(selectedOperator.operatorProfile, safePhaseIndex, safeOperatorLevel, trust, {
-      attackSpeedBonus: operatorEffects.modifiers.attackSpeedBonus,
+      attackSpeedBonus: operatorEffects.modifiers.attackSpeedBonus + moduleApplication.attackSpeedBonus,
+      moduleAttack: moduleApplication.moduleAttack,
     })
     : {
       attack: 0,
@@ -196,6 +255,8 @@ export function DamageCalculator({ rows, loading }: Props) {
       safeOperatorLevel,
       trust,
       operatorEffects.modifiers.attackSpeedBonus,
+      moduleApplication.attackSpeedBonus,
+      moduleApplication.moduleAttack,
     ])
   const model = useMemo(() => selectedSkillLevel
     ? deriveSkillModel(selectedSkillLevel, operatorStats.attackInterval, operatorStats.attackSpeed)
@@ -271,8 +332,8 @@ export function DamageCalculator({ rows, loading }: Props) {
       formula: `${formatCalculationNumber(operatorStats.baseAttackTime)}秒 × 100 ÷ max(20, ${formatCalculationNumber(operatorStats.baseAttackSpeed)} + ${formatCalculationNumber(operatorStats.attackSpeedBonus)})`,
       result: `${formatCalculationNumber(operatorStats.attackInterval)}秒`,
       note: operatorStats.attackSpeedBonus === 0
-        ? '反映済みの特性・素質による攻撃速度補正はありません'
-        : `特性・素質の攻撃速度 ${formatSignedNumber(operatorStats.attackSpeedBonus)} を反映`,
+        ? '反映済みの特性・素質・モジュールによる攻撃速度補正はありません'
+        : `特性・素質・モジュールの攻撃速度 ${formatSignedNumber(operatorStats.attackSpeedBonus)} を反映`,
     },
     {
       label: 'DPS',
@@ -349,7 +410,7 @@ export function DamageCalculator({ rows, loading }: Props) {
         id="calculation-conditions-panel"
         number="02"
         title="ダメージ計算条件"
-        summary="潜在・モジュール効果・味方バフはまだ含みません"
+        summary="育成状態・スキル・モジュール・敵ステータスを設定します"
         open={calculationConditionsOpen}
         onToggle={() => setCalculationConditionsOpen((open) => !open)}
         collapsedLabel="条件を表示"
@@ -399,6 +460,73 @@ export function DamageCalculator({ rows, loading }: Props) {
           </div>
           <p>{stripMarkup(selectedSkillLevel.description ?? selectedSkill.description)}</p>
         </div>
+        <div className="module-picker-row">
+          <div className="calculator-field skill-picker-field module-picker-field">
+            <span>モジュール</span>
+            <div className="skill-choice-group module-choice-group" role="group" aria-label="モジュール">
+              <button
+                type="button"
+                className={effectiveModuleId === '' ? 'active' : ''}
+                aria-pressed={effectiveModuleId === ''}
+                onClick={() => {
+                  setModuleId('')
+                  setModuleLevel(1)
+                }}
+              >
+                <span>OFF</span>
+                <strong>未装備</strong>
+              </button>
+              {operatorModules.map((choice, index) => {
+                const levels = getOperatorModuleLevels(choice.module)
+                const unlocked = isOperatorModuleUnlocked(choice.module, safePhaseIndex, safeOperatorLevel)
+                const disabled = levels.length === 0 || !unlocked
+                const unavailableReason = levels.length === 0
+                  ? '戦闘効果データを取得できません'
+                  : `${getOperatorModuleUnlockLabel(choice.module)}で解放`
+                return (
+                  <button
+                    type="button"
+                    className={effectiveModuleId === choice.id ? 'active' : ''}
+                    aria-pressed={effectiveModuleId === choice.id}
+                    aria-label={`${choice.module.uniEquipName ?? '名称なし'}${disabled ? `（${unavailableReason}）` : ''}`}
+                    title={disabled ? unavailableReason : undefined}
+                    disabled={disabled}
+                    onClick={() => {
+                      setModuleId(choice.id)
+                      setModuleLevel(levels.at(-1) ?? 1)
+                    }}
+                    key={choice.id}
+                  >
+                    <span>MOD {index + 1}</span>
+                    <strong>{choice.module.uniEquipName ?? '名称なし'}</strong>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          {selectedModule && (
+            <SelectField label="モジュールレベル" value={String(safeModuleLevel)} onChange={(value) => setModuleLevel(Number(value))}>
+              {moduleLevels.map((level) => <option value={level} key={level}>Lv.{level}</option>)}
+            </SelectField>
+          )}
+        </div>
+        {selectedModule && (
+          <div className="selected-skill-summary selected-module-summary">
+            <div>
+              <strong>{moduleApplication.moduleName} · Lv.{moduleApplication.moduleLevel}</strong>
+              <span>{getOperatorModuleTypeLabel(selectedModule)} · {formatModuleAttributeSummary(moduleApplication.attributeEffects)}</span>
+            </div>
+            <p>{moduleApplication.changes.length > 0
+              ? moduleApplication.changes.map((change) => `${change.label}：${change.description}`).join(' / ')
+              : '特性・素質の変更はありません。'}</p>
+          </div>
+        )}
+        {selectedModule && moduleApplication.unsupportedReasons.length > 0 && (
+          <div className="unsupported-model module-selection-warning" role="status">
+            <strong>一部のモジュール効果は未反映です</strong>
+            {moduleApplication.unsupportedReasons.map((reason) => <span key={reason}>{reason}</span>)}
+          </div>
+        )}
         <div className="condition-divider" />
         <div className="condition-subheading">敵とダメージ種別</div>
         <div className="enemy-condition-row">
@@ -436,15 +564,15 @@ export function DamageCalculator({ rows, loading }: Props) {
                   ? formatNumber(operatorStats.attack)
                   : `${formatNumber(operatorStats.attack)} → ${formatNumber(normalAttackPipeline.finalAttack)}`}
                 detail={normalAttackPipeline.finalAttack === operatorStats.attack
-                  ? `レベル値 ${formatNumber(operatorStats.baseAttackBreakdown.levelAttack)} + 信頼度 ${formatSignedNumber(operatorStats.baseAttackBreakdown.trustAttack)}`
-                  : '基礎攻撃力 → 特性・素質反映後の通常攻撃力'}
+                  ? `レベル値 ${formatNumber(operatorStats.baseAttackBreakdown.levelAttack)} + 信頼度 ${formatSignedNumber(operatorStats.baseAttackBreakdown.trustAttack)} + モジュール ${formatSignedNumber(operatorStats.baseAttackBreakdown.moduleAttack)}`
+                  : '基礎攻撃力 → 特性・素質・モジュール反映後の通常攻撃力'}
               />
               <OperatorMetric
                 label="攻撃速度"
                 value={formatNumber(operatorStats.attackSpeed)}
                 detail={operatorStats.attackSpeedBonus === 0
                   ? '攻撃間隔の算出に使用'
-                  : `基礎 ${formatNumber(operatorStats.baseAttackSpeed)} + 特性・素質 ${formatSignedNumber(operatorStats.attackSpeedBonus)}`}
+                  : `基礎 ${formatNumber(operatorStats.baseAttackSpeed)} + 特性・素質・モジュール ${formatSignedNumber(operatorStats.attackSpeedBonus)}`}
               />
               <OperatorMetric
                 label="基礎攻撃時間"
@@ -463,6 +591,13 @@ export function DamageCalculator({ rows, loading }: Props) {
               />
             </div>
             <div className="operator-effect-grid">
+              {selectedModule && (
+                <ModuleEffectCard
+                  application={moduleApplication}
+                  relatedEffects={moduleRelatedEffects}
+                  status={moduleReflectionStatus}
+                />
+              )}
               <article className="operator-effect-card">
                 <header><span>特性</span><ReflectionBadge status={traitReflectionStatus} /></header>
                 <p>{operatorPassives.traitDescription || '特性情報なし'}</p>
@@ -482,7 +617,7 @@ export function DamageCalculator({ rows, loading }: Props) {
                 </article>
               )}
             </div>
-            <p className="operator-info-note">効果ごとの適用値と未反映理由は、通常攻撃・スキルの計算過程に表示します。</p>
+            <p className="operator-info-note">特性・素質・選択モジュールの適用値と未反映理由は、通常攻撃・スキルの計算過程に表示します。</p>
       </CollapsibleCalculatorPanel>
 
       <CollapsibleCalculatorPanel
@@ -532,7 +667,7 @@ export function DamageCalculator({ rows, loading }: Props) {
           <ResultCard label="DPS" value={skillOutput?.dps ?? null} />
           <ResultCard label={getTotalLabel(selectedSkill)} value={skillOutput?.total ?? null} />
         </div>
-        <p className="result-disclaimer">表示値は単体への理論値です。確認済みの特性・素質だけを反映し、条件入力が必要な効果と未対応効果は計算過程に明示します。潜在、モジュール効果、外部バフ、敵デバフ、対象数は含みません。</p>
+        <p className="result-disclaimer">表示値は単体への理論値です。確認済みの特性・素質と選択モジュールを反映し、条件入力が必要な効果と未対応効果は計算過程に明示します。潜在、外部バフ、敵デバフ、対象数は含みません。</p>
       </CollapsibleCalculatorPanel>
 
       {mechAccordDamage && (
@@ -637,9 +772,10 @@ export function DamageCalculator({ rows, loading }: Props) {
           title="通常攻撃"
           steps={normalCalculationSteps}
           passiveEffects={operatorEffects.effects}
+          moduleApplication={moduleApplication}
         />
         <p className="calculation-process-note">
-          上の一覧で「計算に反映」とした効果だけを式へ適用します。潜在・モジュール・外部バフは未反映です。式中の値は確認しやすい桁数に省略して表示し、計算自体は表示前の値で行います。
+          上の一覧で「計算に反映」とした特性・素質・モジュール効果だけを式へ適用します。潜在・外部バフは未反映です。式中の値は確認しやすい桁数に省略して表示し、計算自体は表示前の値で行います。
         </p>
       </CollapsibleCalculatorPanel>
 
@@ -661,9 +797,10 @@ export function DamageCalculator({ rows, loading }: Props) {
           steps={skillCalculationSteps}
           unavailableReasons={skillOutput ? [] : unsupportedReasons}
           passiveEffects={operatorEffects.effects}
+          moduleApplication={moduleApplication}
         />
         <p className="calculation-process-note">
-          反映済みの特性・素質はスキル補正と同じA〜Eへ合流します。条件入力が必要・未対応の効果は数値へ加えません。固定時間の総ダメージは、DPS × 効果時間による連続値の理論値です。
+          反映済みの特性・素質・モジュール効果はスキル補正と同じA〜Eへ合流します。条件入力が必要・未対応の効果は数値へ加えません。固定時間の総ダメージは、DPS × 効果時間による連続値の理論値です。
         </p>
       </CollapsibleCalculatorPanel>
     </section>
@@ -971,6 +1108,50 @@ function OperatorMetric({ label, value, detail }: { label: string; value: string
   )
 }
 
+function ModuleEffectCard({
+  application,
+  relatedEffects,
+  status,
+}: {
+  application: OperatorModuleApplication
+  relatedEffects: EvaluatedOperatorEffect[]
+  status: ReflectionStatus
+}) {
+  return (
+    <article className="operator-effect-card module-effect-card">
+      <header><span>モジュール Lv.{application.moduleLevel}</span><ReflectionBadge status={status} /></header>
+      <strong>{application.moduleName}</strong>
+      <p>{application.changes.length > 0
+        ? application.changes.map((change) => `${change.label}：${change.description}`).join(' / ')
+        : '特性・素質の変更はありません。'}</p>
+      <ModuleAttributeValues effects={application.attributeEffects} />
+      {relatedEffects.some((effect) => effect.status !== 'APPLIED' && effect.status !== 'NO_DIRECT_EFFECT') && (
+        <small className="module-effect-note">条件付き・未登録の変更は数値へ加えていません。</small>
+      )}
+      {application.unsupportedReasons.length > 0 && (
+        <ul className="module-warning-list">
+          {application.unsupportedReasons.map((reason) => <li key={reason}>{reason}</li>)}
+        </ul>
+      )}
+    </article>
+  )
+}
+
+function ModuleAttributeValues({ effects }: { effects: OperatorModuleAttributeEffect[] }) {
+  if (effects.length === 0) return null
+  return (
+    <ul className="operator-effect-value-list">
+      {effects.map((effect, index) => (
+        <li key={`${effect.key}-${index}`}>
+          <span>{effect.label}</span>
+          <strong>{effect.valueLabel}</strong>
+          <small>{effect.status === 'APPLIED' ? '適用' : effect.status === 'UNSUPPORTED' ? '未対応' : '対象外'}</small>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function OperatorEffectValues({ effects }: { effects: EvaluatedOperatorEffect[] }) {
   const visibleEffects = effects.filter((effect) => effect.valueLabel !== '—')
   if (visibleEffects.length === 0) return null
@@ -1037,7 +1218,7 @@ function MechAccordDamageTable({ result }: { result: MechAccordDamageRowsResult 
         </table>
       </div>
       <p className="mech-accord-note">
-        同一対象への連続攻撃を想定し、対象変更時は1回目へ戻ります。モジュールと複数の浮遊ユニットは含みません。赤字は最低保証到達時です。
+        同一対象への連続攻撃を想定し、対象変更時は1回目へ戻ります。選択モジュールの本体攻撃力補正は含みますが、浮遊ユニット固有のモジュール補正と複数ユニットは含みません。赤字は最低保証到達時です。
       </p>
     </section>
   )
@@ -1048,21 +1229,46 @@ function CalculationTrace({
   steps,
   unavailableReasons = [],
   passiveEffects,
+  moduleApplication,
 }: {
   title: string
   steps: CalculationStep[]
   unavailableReasons?: string[]
   passiveEffects: EvaluatedOperatorEffect[]
+  moduleApplication: OperatorModuleApplication
 }) {
   return (
     <article className="calculation-trace-card" aria-label={`${title}の計算過程`}>
+      {moduleApplication.moduleName
+        && (moduleApplication.attributeEffects.length > 0 || moduleApplication.unsupportedReasons.length > 0)
+        && (
+        <div className="passive-reflection-block">
+          <strong>モジュール能力値の反映</strong>
+          <ul className="passive-reflection-list">
+            {moduleApplication.attributeEffects.map((effect, index) => (
+              <li className="passive-reflection-item" key={`${effect.key}-${index}`}>
+                <span>モジュール「{moduleApplication.moduleName}」 / {effect.label}</span>
+                <ReflectionBadge status={effect.status} />
+                <small>値：{effect.valueLabel}。{effect.reason}</small>
+              </li>
+            ))}
+            {moduleApplication.unsupportedReasons.map((reason) => (
+              <li className="passive-reflection-item" key={reason}>
+                <span>モジュール「{moduleApplication.moduleName}」 / 未対応効果</span>
+                <ReflectionBadge status="UNSUPPORTED" />
+                <small>{reason}</small>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {passiveEffects.length > 0 && (
         <div className="passive-reflection-block">
-          <strong>特性・素質の反映</strong>
+          <strong>特性・素質・モジュール変更の反映</strong>
           <ul className="passive-reflection-list">
             {passiveEffects.map((effect, index) => (
               <li className="passive-reflection-item" key={`${effect.sourceKind}-${effect.talentIndex ?? 'trait'}-${effect.label}-${index}`}>
-                <span>{effect.sourceKind === 'TRAIT' ? '特性' : `素質「${effect.sourceName}」`} / {effect.label}</span>
+                <span>{getPassiveSourceLabel(effect)} / {effect.label}</span>
                 <ReflectionBadge status={effect.status} />
                 <small>{effect.valueLabel === '—'
                   ? effect.reason
@@ -1103,33 +1309,35 @@ function buildAttackPipelineSteps(
 ): CalculationStep[] {
   const directMultiplierNote = mode === 'SKILL'
     ? pipeline.directMultiplierPercent === 0
-      ? 'スキルと反映済み特性・素質の攻撃力補正Bは0%'
-      : 'スキルと反映済み特性・素質の攻撃力補正Bを合算して適用'
+      ? 'スキルと反映済み特性・素質・モジュールの攻撃力補正Bは0%'
+      : 'スキルと反映済み特性・素質・モジュールの攻撃力補正Bを合算して適用'
     : pipeline.directMultiplierPercent === 0
-      ? '反映済み特性・素質の攻撃力補正Bはありません'
-      : '反映済み特性・素質の攻撃力補正Bを適用'
+      ? '反映済み特性・素質・モジュールの攻撃力補正Bはありません'
+      : '反映済み特性・素質・モジュールの攻撃力補正Bを適用'
   const attackScaleNote = mode === 'SKILL'
     ? pipeline.attackScale === 1
       ? '現在のスキル計算モデルでは100%（係数1）'
-      : 'スキルと反映済み特性・素質の攻撃力補正Eを適用'
+      : 'スキルと反映済み特性・素質・モジュールの攻撃力補正Eを適用'
     : pipeline.attackScale === 1
-      ? '反映済み特性・素質の攻撃力補正Eはありません'
-      : '反映済み特性・素質の攻撃力補正Eを適用'
+      ? '反映済み特性・素質・モジュールの攻撃力補正Eはありません'
+      : '反映済み特性・素質・モジュールの攻撃力補正Eを適用'
 
   return [
     {
       label: '基礎攻撃力',
       formula: `round(${formatCalculationNumber(base.levelAttack)} + ${formatCalculationNumber(base.trustAttack)} + ${formatCalculationNumber(base.potentialAttack)} + ${formatCalculationNumber(base.moduleAttack)})`,
       result: formatNumber(base.result),
-      note: 'レベル + 信頼度 + 潜在 + モジュール。潜在・モジュール効果は現行版では未反映',
+      note: base.moduleAttack === 0
+        ? 'レベル + 信頼度 + 潜在 + モジュール。潜在は未反映、モジュール攻撃力補正はありません'
+        : `レベル + 信頼度 + 潜在 + モジュール。モジュール攻撃力 ${formatSignedNumber(base.moduleAttack)} を反映（潜在は未反映）`,
     },
     {
       label: '攻撃力補正A',
       formula: `${formatCalculationNumber(pipeline.baseAttack)} + ${formatCalculationNumber(pipeline.directAddition)}`,
       result: formatNumber(pipeline.afterDirectAddition),
       note: pipeline.directAddition === 0
-        ? '反映済み特性・素質の固定値加算はありません'
-        : '反映済み特性・素質の固定値加算を適用',
+        ? '反映済み特性・素質・モジュールの固定値加算はありません'
+        : '反映済み特性・素質・モジュールの固定値加算を適用',
     },
     {
       label: '攻撃力補正B',
@@ -1439,8 +1647,24 @@ function getSkillLevelLabel(index: number, total: number): string {
   return `Lv.${index + 1}`
 }
 
+function getModuleReflectionStatus(
+  application: OperatorModuleApplication,
+  relatedEffects: EvaluatedOperatorEffect[],
+): ReflectionStatus {
+  const statuses: OperatorEffectStatus[] = [
+    ...application.attributeEffects.map((effect) => effect.status),
+    ...relatedEffects.map((effect) => effect.status),
+  ]
+  if (application.unsupportedReasons.length > 0) statuses.push('UNSUPPORTED')
+  return getReflectionStatus(statuses)
+}
+
 function getEffectGroupStatus(effects: EvaluatedOperatorEffect[]): ReflectionStatus {
-  const statuses = new Set(effects.map((effect) => effect.status))
+  return getReflectionStatus(effects.map((effect) => effect.status))
+}
+
+function getReflectionStatus(values: OperatorEffectStatus[]): ReflectionStatus {
+  const statuses = new Set(values)
   const hasApplied = statuses.has('APPLIED')
   const hasUnapplied = statuses.has('NOT_APPLIED')
     || statuses.has('REQUIRES_INPUT')
@@ -1451,6 +1675,17 @@ function getEffectGroupStatus(effects: EvaluatedOperatorEffect[]): ReflectionSta
   if (statuses.has('NOT_APPLIED')) return 'NOT_APPLIED'
   if (hasApplied) return 'APPLIED'
   return 'NO_DIRECT_EFFECT'
+}
+
+function getPassiveSourceLabel(effect: EvaluatedOperatorEffect): string {
+  if (effect.sourceKind === 'TRAIT') return '特性'
+  if (effect.sourceKind === 'MODULE') return `モジュール「${effect.sourceName}」`
+  return `素質「${effect.sourceName}」`
+}
+
+function formatModuleAttributeSummary(effects: OperatorModuleAttributeEffect[]): string {
+  if (effects.length === 0) return '能力値補正なし'
+  return effects.map((effect) => `${effect.label} ${effect.valueLabel}`).join(' · ')
 }
 
 function stripMarkup(value: string): string {
