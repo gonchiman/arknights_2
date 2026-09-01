@@ -804,7 +804,7 @@
 }
 
 .mech-accord-table {
-  min-width: 420px;
+  min-width: 280px;
   table-layout: fixed;
   border: 1px solid #b9d1bf;
   background: #fff;
@@ -837,7 +837,7 @@
 
 .mech-accord-table th:first-child,
 .mech-accord-table td:first-child {
-  width: 25%;
+  width: 40%;
   text-align: left;
 }
 
@@ -1347,7 +1347,7 @@
     gap: 3px;
   }
 
-  .mech-accord-table { min-width: 420px; }
+  .mech-accord-table { min-width: 280px; }
 
   .calculation-step-heading {
     grid-template-columns: 22px minmax(0, 1fr);
