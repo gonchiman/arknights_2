@@ -526,22 +526,18 @@ export function DamageCalculator({ rows, loading }: Props) {
               <small>{operatorModules.length > 0 ? '装備するモジュールを選択' : '装備可能なモジュールはありません'}</small>
             </div>
           </div>
-          <div className="module-choice-list" role="group" aria-label="モジュール">
+          <div className="skill-choice-group" role="group" aria-label="モジュール">
             <button
               type="button"
-              className={`module-choice-card ${effectiveModuleId === '' ? 'active' : ''}`}
+              className={effectiveModuleId === '' ? 'active' : ''}
               aria-pressed={effectiveModuleId === ''}
               onClick={() => {
                 setModuleId('')
                 setModuleLevel(1)
               }}
             >
-              <span className="module-choice-code">OFF</span>
-              <span className="module-choice-copy">
-                <strong>未装備</strong>
-                <small>モジュール効果を使用しない</small>
-              </span>
-              <span className="module-choice-state" aria-hidden="true">{effectiveModuleId === '' ? '選択中' : '選択'}</span>
+              <span>OFF</span>
+              <strong>未装備</strong>
             </button>
             {operatorModules.map((choice, index) => {
               const levels = getOperatorModuleLevels(choice.module)
@@ -554,7 +550,7 @@ export function DamageCalculator({ rows, loading }: Props) {
               return (
                 <button
                   type="button"
-                  className={`module-choice-card ${active ? 'active' : ''}`}
+                  className={active ? 'active' : ''}
                   aria-pressed={active}
                   aria-label={`${choice.module.uniEquipName ?? '名称なし'}${disabled ? `（${unavailableReason}）` : ''}`}
                   title={disabled ? unavailableReason : undefined}
@@ -565,12 +561,8 @@ export function DamageCalculator({ rows, loading }: Props) {
                   }}
                   key={choice.id}
                 >
-                  <span className="module-choice-code">MOD {index + 1}</span>
-                  <span className="module-choice-copy">
-                    <strong>{choice.module.uniEquipName ?? '名称なし'}</strong>
-                    <small>{disabled ? unavailableReason : getOperatorModuleTypeLabel(choice.module)}</small>
-                  </span>
-                  <span className="module-choice-state" aria-hidden="true">{active ? '選択中' : '選択'}</span>
+                  <span>MOD {index + 1}</span>
+                  <strong>{choice.module.uniEquipName ?? '名称なし'}</strong>
                 </button>
               )
             })}

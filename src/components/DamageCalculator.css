@@ -222,90 +222,6 @@
   font-size: 9px;
 }
 
-.module-choice-list {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 6px;
-}
-
-.module-choice-card {
-  min-width: 0;
-  min-height: 52px;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 9px;
-  align-items: center;
-  border: 1px solid var(--border-strong);
-  border-left: 3px solid transparent;
-  border-radius: 0;
-  background: #fff;
-  color: var(--text-soft);
-  padding: 7px 9px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.module-choice-card:hover { background: var(--surface-hover); }
-
-.module-choice-card.active {
-  border-color: var(--border-strong);
-  border-left-color: #222;
-  background: var(--surface-soft);
-  color: #111;
-}
-
-.module-choice-card:disabled {
-  border-color: var(--border);
-  background: var(--surface-soft);
-  color: #888;
-  cursor: not-allowed;
-}
-
-.module-choice-code {
-  border: 1px solid var(--border-strong);
-  background: #fff;
-  padding: 3px 5px;
-  color: #222;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: .04em;
-  white-space: nowrap;
-}
-
-.module-choice-card.active .module-choice-code {
-  background: #222;
-  color: #fff;
-}
-
-.module-choice-copy { min-width: 0; }
-
-.module-choice-copy strong,
-.module-choice-copy small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.module-choice-copy strong { font-size: 10px; }
-.module-choice-copy small { margin-top: 2px; color: var(--text-muted); font-size: 8px; }
-
-.module-choice-state {
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  padding: 2px 5px;
-  font-size: 8px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.module-choice-card.active .module-choice-state {
-  border-color: #222;
-  background: #222;
-  color: #fff;
-}
-
 .selected-module-card {
   min-width: 0;
   margin-top: 8px;
@@ -1500,8 +1416,6 @@
   .operator-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .operator-effect-grid { grid-template-columns: minmax(0, 1fr); }
   .selected-skill-summary { grid-template-columns: minmax(0, 1fr); }
-  .module-choice-list { grid-template-columns: minmax(0, 1fr); }
-
   .selected-module-card > header {
     align-items: stretch;
     flex-direction: column;
@@ -1542,7 +1456,6 @@
 
   .skill-choice-group button > span { display: block; margin-bottom: 2px; }
   .module-config-heading small { display: none; }
-  .module-choice-state { display: none; }
   .operator-search-trigger { padding-right: 10px; }
   .operator-search-trigger em { position: static; transform: none; margin-top: 4px; }
 
@@ -1617,7 +1530,6 @@
 
 @media (pointer: coarse) {
   .skill-choice-group button,
-  .module-choice-card,
   .module-level-picker button,
   .sensitivity-metric-switch button,
   .operator-search-heading button { min-height: 44px; }
