@@ -121,19 +121,7 @@ a { color: var(--link); }
   text-align: right;
 }
 
-.classifier-route, .classifier-workspace, .classifier-master, .classifier-detail { min-width: 0; }
-
-.classifier-workspace {
-  display: block;
-}
-
-.classifier-detail {
-  position: static;
-  max-height: none;
-  overflow: visible;
-}
-
-.list-pane, .detail-page {
+.list-pane {
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--border-strong);
@@ -170,7 +158,7 @@ a { color: var(--link); }
   font-weight: 700;
 }
 
-.filter-reset-button, .text-button, .back-button {
+.filter-reset-button, .text-button {
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -346,78 +334,6 @@ td small { display: block; margin-top: 3px; color: #888; }
 
 .operator-empty-state strong { font-size: 13px; }
 .operator-empty-state span { color: var(--text-muted); font-size: 11px; }
-
-.detail-page {
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 0;
-}
-
-.back-button {
-  width: 100%;
-  min-height: 40px;
-  display: block;
-  border-bottom: 1px solid var(--border-strong);
-  background: var(--surface-soft);
-  padding: 8px 12px;
-  font-size: 11px;
-  font-weight: 700;
-  text-align: left;
-  text-decoration: none;
-}
-
-.back-button:hover { background: var(--surface-hover); color: #111; }
-
-.detail-header {
-  min-height: 70px;
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-hover);
-  padding: 12px 14px;
-}
-
-.detail-header h1 { margin: 0 0 4px; font-size: 20px; line-height: 1.25; }
-.operator-class { margin: 0; color: var(--text-muted); font-size: 11px; }
-
-.skill-switcher {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0;
-  border-bottom: 1px solid var(--border);
-  background: #fff;
-}
-
-.skill-switch-button {
-  min-width: 0;
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  border: 0;
-  border-right: 1px solid var(--border);
-  border-radius: 0;
-  background: #fff;
-  color: var(--text-soft);
-  padding: 7px 10px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.skill-switch-button:last-child { border-right: 0; }
-.skill-switch-button:hover { background: var(--surface-hover); }
-.skill-switch-button strong { flex: 0 0 auto; color: #222; font-size: 10px; }
-
-.skill-switch-button span {
-  min-width: 0;
-  overflow: hidden;
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.skill-switch-button.active, .skill-switch-button.active strong { background: #222; color: #fff; }
 
 .skill-classification-content { min-width: 0; }
 
@@ -631,21 +547,6 @@ td small { display: block; margin-top: 3px; color: #888; }
   font-size: 10px;
 }
 
-.route-state {
-  min-height: 300px;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 12px;
-  border: 1px solid var(--border-strong);
-  border-radius: 0;
-  background: #fff;
-  padding: 32px;
-  text-align: center;
-}
-
-.route-state h1 { margin: 0; font-size: 18px; }
-
 .error-box {
   margin-bottom: 12px;
   border: 1px solid #d4a09b;
@@ -665,22 +566,7 @@ td small { display: block; margin-top: 3px; color: #888; }
 
 @media (max-width: 760px) {
   .page-intro { align-items: start; }
-  .detail-page { border: 0; }
-
-  .back-button {
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    width: 100%;
-    min-height: 44px;
-    display: block;
-    border-bottom: 1px solid var(--border-strong);
-    background: var(--surface-soft);
-    padding: 8px 10px;
-    text-align: left;
-  }
-
-  .classifier-master .table-wrap, .damage-operator-search-results .table-wrap { max-height: none; }
+  .damage-operator-search-results .table-wrap { max-height: none; }
   .operator-table thead { display: none; }
   .operator-table table, .operator-table tbody { display: block; }
 
@@ -689,7 +575,7 @@ td small { display: block; margin-top: 3px; color: #888; }
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .operator-table tr, .classifier-master .operator-table tr {
+  .operator-table tr {
     min-width: 0;
     min-height: 64px;
     display: grid;
@@ -700,24 +586,24 @@ td small { display: block; margin-top: 3px; color: #888; }
   }
 
   .operator-table tr:nth-child(2n) { border-right: 0; }
-  .operator-table td, .classifier-master .operator-table td { display: none; border: 0; }
+  .operator-table td { display: none; border: 0; }
 
-  .operator-table td:nth-child(1), .operator-table td:nth-child(2), .operator-table td:nth-child(3),
-  .classifier-master .operator-table td:nth-child(1), .classifier-master .operator-table td:nth-child(2),
-  .classifier-master .operator-table td:nth-child(3) { display: block; }
+  .operator-table td:nth-child(1),
+  .operator-table td:nth-child(2),
+  .operator-table td:nth-child(3) { display: block; }
 
-  .operator-table td:nth-child(1), .classifier-master .operator-table td:nth-child(1) {
+  .operator-table td:nth-child(1) {
     grid-column: 1 / -1;
     padding: 7px 10px 1px;
   }
 
-  .operator-table td:nth-child(2), .classifier-master .operator-table td:nth-child(2) {
+  .operator-table td:nth-child(2) {
     padding: 1px 0 7px 10px;
     color: var(--text-muted);
     font-size: 10px;
   }
 
-  .operator-table td:nth-child(3), .classifier-master .operator-table td:nth-child(3) {
+  .operator-table td:nth-child(3) {
     padding: 1px 10px 7px 8px;
     color: var(--text-muted);
     font-size: 10px;
@@ -734,15 +620,6 @@ td small { display: block; margin-top: 3px; color: #888; }
   .result-meta span:last-child { display: none; }
   .operator-table tbody { grid-template-columns: minmax(0, 1fr); }
   .operator-table tr, .operator-table tr:nth-child(2n) { border-right: 0; }
-  .detail-header { padding-inline: 10px; }
-
-  .skill-switch-button {
-    display: block;
-    padding: 7px 6px;
-    text-align: center;
-  }
-
-  .skill-switch-button strong { display: block; margin-bottom: 2px; }
   .detail-tabs { gap: 12px; padding-inline: 10px; }
 
   .detail-tab {
@@ -764,8 +641,7 @@ td small { display: block; margin-top: 3px; color: #888; }
   .initial-button,
   .filter-reset-button,
   .detail-tab,
-  .button,
-  .skill-switch-button {
+  .button {
     min-height: 44px;
   }
 

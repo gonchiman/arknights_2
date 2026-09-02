@@ -1,4 +1,4 @@
-export type NavigationPage = 'classifier' | 'operators' | 'skills' | 'damage' | 'comparison' | 'enemies' | 'sources'
+export type NavigationPage = 'operators' | 'skills' | 'damage' | 'comparison' | 'enemies' | 'sources'
 
 export type NavigationSection = 'analysis' | 'information'
 
@@ -16,13 +16,6 @@ export const NAVIGATION_SECTIONS: ReadonlyArray<{ id: NavigationSection; label: 
 ]
 
 export const APP_NAV_ITEMS: readonly NavigationItem[] = [
-  {
-    id: 'classifier',
-    href: '#/',
-    label: 'Skill Model Classifier',
-    description: 'オペレーター別のスキル分類',
-    section: 'analysis',
-  },
   {
     id: 'operators',
     href: '#/operators',

@@ -2,7 +2,6 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { classifySkill } from '../src/lib/classifier.ts'
 import { getOperatorInitial, getProfessionLabel, PROFESSION_COLORS, PROFESSION_ORDER } from '../src/lib/operatorFilters.ts'
-import { getSkillRouteHash, parseHashRoute } from '../src/lib/routes.ts'
 import type { RawSkillLevel } from '../src/types/skill.ts'
 
 const classify = (level: RawSkillLevel) => classifySkill(level)
@@ -124,15 +123,4 @@ test('職業を標準イメージカラーに対応させる', () => {
       ['特殊', '#B9A1B0'],
     ],
   )
-})
-
-test('スキル詳細のハッシュURLを生成・解析する', () => {
-  const skillId = 'char_222_bpipe:skchr_bpipe_2'
-  const hash = getSkillRouteHash(skillId)
-
-  assert.equal(hash, '#/skills/char_222_bpipe%3Askchr_bpipe_2')
-  assert.deepEqual(parseHashRoute(hash), { view: 'skill', skillId })
-  assert.deepEqual(parseHashRoute('#/'), { view: 'list' })
-  assert.deepEqual(parseHashRoute('#/damage'), { view: 'damage' })
-  assert.deepEqual(parseHashRoute('#/skills/%E0%A4%A'), { view: 'list' })
 })
