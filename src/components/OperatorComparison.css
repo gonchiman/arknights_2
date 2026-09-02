@@ -419,6 +419,14 @@
 
 .comparison-subheading > div { min-width: 0; }
 
+.comparison-table-title-tools {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .comparison-subheading span {
   display: block;
   color: #607f99;
@@ -437,6 +445,14 @@
   color: var(--text-muted);
   font-size: 10px;
   text-align: right;
+}
+
+.comparison-copy-button {
+  min-height: 26px;
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  font-size: 9px;
+  white-space: nowrap;
 }
 
 .comparison-output-table-wrap,
@@ -752,7 +768,7 @@
 
 .comparison-table-title-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 6px;
