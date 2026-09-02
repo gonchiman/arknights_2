@@ -16,6 +16,7 @@ import {
   buildOperatorBuildComparisonCsv,
   buildOperatorBuildComparisonSeriesCsv,
   evaluateComparisonBuild,
+  getComparisonInitialAxis,
   getComparisonMetricValue,
   type ComparisonAxis,
   type ComparisonAxisSeries,
@@ -55,13 +56,14 @@ interface SkillEffectState {
 
 const MAX_BUILDS = 6
 const BUILD_COLORS = ['#607f99', '#a84b4b', '#5a8b67', '#7b6d86', '#80704b', '#527d7a']
+const DEFAULT_COMPARISON_METRIC: ComparisonBuildMetric = 'SKILL_PER_ATTACK'
 const NUMBER_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 })
 
 export function OperatorComparison({ rows, loading }: Props) {
   const [builds, setBuilds] = useState<ComparisonBuildConfig[]>([])
   const [enemy, setEnemy] = useState<ComparisonEnemyCondition>({ defense: 0, resistance: 0 })
   const [axis, setAxis] = useState<ComparisonAxis>('DEFENSE')
-  const [metric, setMetric] = useState<ComparisonBuildMetric>('SKILL_PER_ATTACK')
+  const [metric, setMetric] = useState<ComparisonBuildMetric>(DEFAULT_COMPARISON_METRIC)
   const [picker, setPicker] = useState<PickerState | null>(null)
   const [operatorFilters, setOperatorFilters] = useState<FilterState>({ ...EMPTY_OPERATOR_FILTERS })
   const [detailSkill, setDetailSkill] = useState<SkillEffectState | null>(null)
@@ -78,7 +80,11 @@ export function OperatorComparison({ rows, loading }: Props) {
   useEffect(() => {
     if (initializedRef.current || loading || rows.length === 0) return
     initializedRef.current = true
-    setBuilds(createInitialBuilds(rows, allocateSlotId))
+    const initialBuilds = createInitialBuilds(rows, allocateSlotId)
+    setBuilds(initialBuilds)
+    if (initialBuilds[0]) {
+      setAxis(getComparisonInitialAxis(rows, initialBuilds[0], DEFAULT_COMPARISON_METRIC))
+    }
   }, [loading, rows])
 
   const evaluations = useMemo(
@@ -156,7 +162,11 @@ export function OperatorComparison({ rows, loading }: Props) {
       current.slotId,
       current.colorIndex ?? nextAvailableColorIndex(builds),
     )
+    const isPrimaryBuild = builds[0]?.slotId === current.slotId
     setBuilds(builds.map((build) => build.slotId === current.slotId ? nextBuild : build))
+    if (isPrimaryBuild) {
+      setAxis(getComparisonInitialAxis(rows, nextBuild, metric))
+    }
     setPicker(null)
     setAnnouncement(row.operatorName + 'へ変更しました。')
     window.requestAnimationFrame(() => buildPickerButtonRefs.current.get(current.slotId)?.focus())
@@ -195,10 +205,13 @@ export function OperatorComparison({ rows, loading }: Props) {
 
   const resetBuilds = () => {
     nextSlotIdRef.current = 1
-    setBuilds(createInitialBuilds(rows, allocateSlotId))
+    const initialBuilds = createInitialBuilds(rows, allocateSlotId)
+    setBuilds(initialBuilds)
     setEnemy({ defense: 0, resistance: 0 })
-    setAxis('DEFENSE')
-    setMetric('SKILL_PER_ATTACK')
+    setAxis(initialBuilds[0]
+      ? getComparisonInitialAxis(rows, initialBuilds[0], DEFAULT_COMPARISON_METRIC)
+      : 'DEFENSE')
+    setMetric(DEFAULT_COMPARISON_METRIC)
     setAnnouncement('比較内容を初期状態に戻しました。')
   }
 
