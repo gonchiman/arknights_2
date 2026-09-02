@@ -5,6 +5,8 @@ import {
   buildOperatorBuildComparisonCsv,
   buildOperatorBuildComparisonSeriesCsv,
   evaluateComparisonBuild,
+  getComparisonAxisForDamageType,
+  getComparisonInitialAxis,
   getComparisonMetricValue,
   type ComparisonBuildConfig,
 } from '../src/lib/operatorBuildComparison.ts'
@@ -71,6 +73,34 @@ test('通常攻撃とスキルでダメージ種別と素質効果を分離す�
   assert.equal(result.skillEffects.modifiers.resistanceIgnoreFixed, 0)
   assert.equal(result.normalOutput.perHit, 70)
   assert.equal(result.skillOutput.perHit, 50)
+})
+
+test('初期横軸をビルド1の選択出力に対応する攻撃属性から決める', () => {
+  assert.equal(getComparisonAxisForDamageType('PHYSICAL'), 'DEFENSE')
+  assert.equal(getComparisonAxisForDamageType('ARTS'), 'RESISTANCE')
+  assert.equal(getComparisonAxisForDamageType('TRUE'), 'DEFENSE')
+  assert.equal(getComparisonAxisForDamageType(null), 'DEFENSE')
+
+  const skill = createSkill({
+    operatorId: 'char_axis',
+    profession: 'WARRIOR',
+    skillDescription: '敵に物理ダメージを与える',
+    traitDescription: '通常攻撃が術ダメージを与える',
+  })
+  const config = createConfig(skill)
+
+  assert.equal(getComparisonInitialAxis([skill], config), 'DEFENSE')
+  assert.equal(getComparisonInitialAxis([skill], config, 'SKILL_DPS'), 'DEFENSE')
+  assert.equal(getComparisonInitialAxis([skill], config, 'NORMAL_PER_HIT'), 'RESISTANCE')
+  assert.equal(getComparisonInitialAxis([skill], config, 'NORMAL_DPS'), 'RESISTANCE')
+
+  const artsSkill = createSkill({
+    operatorId: 'char_axis_arts',
+    profession: 'CASTER',
+    skillDescription: '敵に術ダメージを与える',
+    traitDescription: '通常攻撃が術ダメージを与える',
+  })
+  assert.equal(getComparisonInitialAxis([artsSkill], createConfig(artsSkill)), 'RESISTANCE')
 })
 
 test('計算対象外スキルは通常攻撃を残し、スキル出力をnullと理由で返す', () => {

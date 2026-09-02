@@ -466,6 +466,24 @@ export function getComparisonMetricValue(
   )
 }
 
+export function getComparisonInitialAxis(
+  rows: SkillRecord[],
+  config: ComparisonBuildConfig,
+  metric: ComparisonBuildMetric = 'SKILL_PER_ATTACK',
+): ComparisonAxis {
+  const prepared = prepareComparisonBuild(rows, config)
+  const damageType = metric === 'NORMAL_PER_HIT' || metric === 'NORMAL_DPS'
+    ? prepared.normalDamageTypeDetection.damageType
+    : prepared.skillDamageTypeDetection.damageType
+  return getComparisonAxisForDamageType(damageType)
+}
+
+export function getComparisonAxisForDamageType(
+  damageType: DamageType | null,
+): ComparisonAxis {
+  return damageType === 'ARTS' ? 'RESISTANCE' : 'DEFENSE'
+}
+
 export function getDefaultComparisonAxisPoints(
   axis: ComparisonAxis,
   enemy: ComparisonEnemyCondition = DEFAULT_COMPARISON_ENEMY,
