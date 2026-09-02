@@ -4,6 +4,7 @@ import {
   buildComparisonAxisSeries,
   buildOperatorBuildComparisonCsv,
   buildOperatorBuildComparisonSeriesCsv,
+  buildOperatorBuildComparisonSeriesTsv,
   evaluateComparisonBuild,
   getComparisonAxisForDamageType,
   getComparisonInitialAxis,
@@ -123,6 +124,7 @@ test('計算対象外スキルは通常攻撃を残し、スキル出力をnull�
   const metric = getComparisonMetricValue(result, 'SKILL_DPS')
   assert.equal(metric.value, null)
   assert.ok(metric.unavailableReasons.length > 0)
+
 })
 
 test('防御力軸では術耐性を固定し、物理と術の系列を同じ点へ重ねる', () => {
@@ -191,6 +193,39 @@ test('現在値と軸別系列をUTF-8 BOM付きCSVへ出力する', () => {
   assert.ok(seriesCsv.startsWith('\uFEFF'))
   assert.match(seriesCsv, /"防御力","モジュール比較, A"/)
   assert.match(seriesCsv, /"50","100"/)
+})
+
+test('正確な数値の表を数値軸と空セルを保つTSVへ出力する', () => {
+  const calculable = createSkill({ operatorId: 'char_calculable' })
+  const unavailable = createSkill({
+    operatorId: 'char_unavailable',
+    operatorName: '非攻撃役',
+    skillDescription: '味方のHPを回復する',
+  })
+  unavailable.classification.damageComponents.value = ['NO_DIRECT_DAMAGE']
+  unavailable.classification.outputCapabilities.canShowPerHit = false
+
+  const series = buildComparisonAxisSeries(
+    [calculable, unavailable],
+    [
+      createConfig(calculable, { slotId: 'calculable', label: '=1+1' }),
+      createConfig(unavailable, { slotId: 'unavailable' }),
+    ],
+    { defense: 50, resistance: 0 },
+    'DEFENSE',
+    'SKILL_PER_HIT',
+    [0, 50],
+  )
+  const tsv = buildOperatorBuildComparisonSeriesTsv(series, 'DEFENSE')
+  const lines = tsv.split('\r\n')
+
+  assert.equal(tsv.startsWith('\uFEFF'), false)
+  assert.equal(lines[0].split('\t').length, 3)
+  assert.equal(lines[1].split('\t').length, 3)
+  assert.match(lines[0], /^防御力\t'=1\+1/)
+  assert.match(lines[0], /\tBuild B/)
+  assert.equal(lines.find((line) => line.startsWith('50\t')), '50\t50\t')
+  assert.equal(tsv.includes('（現在）'), false)
 })
 
 test('解放条件を満たさないモジュール構成は出力をnullにする', () => {

@@ -15,6 +15,7 @@ import {
   buildComparisonAxisSeries,
   buildOperatorBuildComparisonCsv,
   buildOperatorBuildComparisonSeriesCsv,
+  buildOperatorBuildComparisonSeriesTsv,
   evaluateComparisonBuild,
   getComparisonInitialAxis,
   getComparisonMetricValue,
@@ -54,6 +55,15 @@ interface SkillEffectState {
   skillLevelIndex: number
 }
 
+interface CopyFeedback {
+  succeeded: boolean
+}
+
+interface ComparisonAnnouncement {
+  id: number
+  message: string
+}
+
 const MAX_BUILDS = 6
 const BUILD_COLORS = ['#607f99', '#a84b4b', '#5a8b67', '#7b6d86', '#80704b', '#527d7a']
 const DEFAULT_COMPARISON_METRIC: ComparisonBuildMetric = 'SKILL_PER_ATTACK'
@@ -67,13 +77,16 @@ export function OperatorComparison({ rows, loading }: Props) {
   const [picker, setPicker] = useState<PickerState | null>(null)
   const [operatorFilters, setOperatorFilters] = useState<FilterState>({ ...EMPTY_OPERATOR_FILTERS })
   const [detailSkill, setDetailSkill] = useState<SkillEffectState | null>(null)
-  const [announcement, setAnnouncement] = useState('')
+  const [announcement, setAnnouncement] = useState<ComparisonAnnouncement>({ id: 0, message: '' })
+  const [copyFeedback, setCopyFeedback] = useState<CopyFeedback | null>(null)
   const initializedRef = useRef(false)
   const nextSlotIdRef = useRef(1)
   const pickerReturnFocusRef = useRef<HTMLElement | null>(null)
   const buildPickerButtonRefs = useRef(new Map<string, HTMLButtonElement>())
   const addButtonRef = useRef<HTMLButtonElement | null>(null)
   const skillDetailTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const copyFeedbackTimerRef = useRef<number | null>(null)
+  const announcementIdRef = useRef(0)
 
   const allocateSlotId = () => 'comparison-build-' + nextSlotIdRef.current++
 
@@ -86,6 +99,12 @@ export function OperatorComparison({ rows, loading }: Props) {
       setAxis(getComparisonInitialAxis(rows, initialBuilds[0], DEFAULT_COMPARISON_METRIC))
     }
   }, [loading, rows])
+
+  useEffect(() => () => {
+    if (copyFeedbackTimerRef.current !== null) {
+      window.clearTimeout(copyFeedbackTimerRef.current)
+    }
+  }, [])
 
   const evaluations = useMemo(
     () => builds.map((build) => evaluateComparisonBuild(rows, build, enemy)),
@@ -109,13 +128,41 @@ export function OperatorComparison({ rows, loading }: Props) {
   const axisPoints = rawSeries[0]?.points.map((point) => point.x) ?? []
   const calculableCount = rawSeries.filter((series) => series.points.some((point) => point.value !== null)).length
 
+  const announce = (message: string) => {
+    announcementIdRef.current += 1
+    setAnnouncement({ id: announcementIdRef.current, message })
+  }
+
+  const copyTable = async (
+    text: string,
+    label: string,
+  ) => {
+    let succeeded = true
+    try {
+      await writeClipboardText(text)
+      announce(`${label}をコピーしました。Excelへそのまま貼り付けられます。`)
+    } catch {
+      succeeded = false
+      announce(`${label}をコピーできませんでした。CSVダウンロードを利用してください。`)
+    }
+
+    setCopyFeedback({ succeeded })
+    if (copyFeedbackTimerRef.current !== null) {
+      window.clearTimeout(copyFeedbackTimerRef.current)
+    }
+    copyFeedbackTimerRef.current = window.setTimeout(() => {
+      setCopyFeedback(null)
+      copyFeedbackTimerRef.current = null
+    }, 2500)
+  }
+
   const updateBuild = (slotId: string, patch: Partial<ComparisonBuildConfig>) => {
     const current = builds.find((build) => build.slotId === slotId)
     if (!current) return
     const next = normalizeBuildConfig(rows, { ...current, ...patch })
     setBuilds(builds.map((build) => build.slotId === slotId ? next : build))
     if (current.moduleId && !next.moduleId) {
-      setAnnouncement('育成条件では装備できないため、モジュールを「なし」に変更しました。')
+      announce('育成条件では装備できないため、モジュールを「なし」に変更しました。')
     }
   }
 
@@ -150,7 +197,7 @@ export function OperatorComparison({ rows, loading }: Props) {
       const nextBuild = createBuildFromSkill(row, slotId, nextAvailableColorIndex(builds))
       setBuilds([...builds, nextBuild])
       setPicker(null)
-      setAnnouncement(row.operatorName + 'を比較対象に追加しました。')
+      announce(row.operatorName + 'を比較対象に追加しました。')
       window.requestAnimationFrame(() => buildPickerButtonRefs.current.get(slotId)?.focus())
       return
     }
@@ -168,7 +215,7 @@ export function OperatorComparison({ rows, loading }: Props) {
       setAxis(getComparisonInitialAxis(rows, nextBuild, metric))
     }
     setPicker(null)
-    setAnnouncement(row.operatorName + 'へ変更しました。')
+    announce(row.operatorName + 'へ変更しました。')
     window.requestAnimationFrame(() => buildPickerButtonRefs.current.get(current.slotId)?.focus())
   }
 
@@ -185,7 +232,7 @@ export function OperatorComparison({ rows, loading }: Props) {
     const next = [...builds]
     next.splice(index + 1, 0, duplicated)
     setBuilds(next)
-    setAnnouncement('ビルドを複製しました。スキルやモジュールだけを変更して比較できます。')
+    announce('ビルドを複製しました。スキルやモジュールだけを変更して比較できます。')
     window.requestAnimationFrame(() => buildPickerButtonRefs.current.get(duplicated.slotId)?.focus())
   }
 
@@ -196,7 +243,7 @@ export function OperatorComparison({ rows, loading }: Props) {
     const next = builds.filter((build) => build.slotId !== slotId)
     const focusSlotId = next[Math.min(index, next.length - 1)]?.slotId
     setBuilds(next)
-    setAnnouncement('比較対象を削除しました。残り' + next.length + '件です。')
+    announce('比較対象を削除しました。残り' + next.length + '件です。')
     window.requestAnimationFrame(() => {
       if (focusSlotId) buildPickerButtonRefs.current.get(focusSlotId)?.focus()
       else addButtonRef.current?.focus()
@@ -212,7 +259,7 @@ export function OperatorComparison({ rows, loading }: Props) {
       ? getComparisonInitialAxis(rows, initialBuilds[0], DEFAULT_COMPARISON_METRIC)
       : 'DEFENSE')
     setMetric(DEFAULT_COMPARISON_METRIC)
-    setAnnouncement('比較内容を初期状態に戻しました。')
+    announce('比較内容を初期状態に戻しました。')
   }
 
   const openSkillEffect = (
@@ -434,6 +481,11 @@ export function OperatorComparison({ rows, loading }: Props) {
             metric={metric}
             points={axisPoints}
             current={currentAxisValue}
+            copyFeedback={copyFeedback}
+            onCopy={() => void copyTable(
+              buildOperatorBuildComparisonSeriesTsv(rawSeries, axis),
+              '正確な数値の表',
+            )}
           />
         </div>
 
@@ -458,7 +510,7 @@ export function OperatorComparison({ rows, loading }: Props) {
       </section>
 
       <span className="comparison-visually-hidden" role="status" aria-live="polite" aria-atomic="true">
-        {announcement}
+        <span key={announcement.id}>{announcement.message}</span>
       </span>
 
       {picker && (
@@ -729,6 +781,37 @@ function CurrentOutputTable({ evaluations }: { evaluations: ComparisonBuildEvalu
   )
 }
 
+function CopyTableButton({
+  feedback,
+  disabled,
+  ariaLabel,
+  onClick,
+}: {
+  feedback: CopyFeedback | null
+  disabled: boolean
+  ariaLabel: string
+  onClick: () => void
+}) {
+  const label = feedback
+    ? feedback.succeeded ? 'コピー済み' : 'コピー失敗'
+    : '表をコピー'
+  const accessibleLabel = feedback
+    ? `${ariaLabel}（${label}）`
+    : ariaLabel
+
+  return (
+    <button
+      type="button"
+      className="button secondary comparison-copy-button"
+      aria-label={accessibleLabel}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  )
+}
+
 function SeriesValueTable({
   series,
   evaluations,
@@ -736,6 +819,8 @@ function SeriesValueTable({
   metric,
   points,
   current,
+  copyFeedback,
+  onCopy,
 }: {
   series: ComparisonAxisSeries[]
   evaluations: ComparisonBuildEvaluation[]
@@ -743,13 +828,23 @@ function SeriesValueTable({
   metric: ComparisonBuildMetric
   points: number[]
   current: number
+  copyFeedback: CopyFeedback | null
+  onCopy: () => void
 }) {
   const evaluationBySlot = new Map(evaluations.map((evaluation) => [evaluation.config.slotId, evaluation]))
   return (
     <div className="comparison-series-table-section">
       <div className="comparison-table-title-row">
         <h4>正確な数値</h4>
-        <span>{COMPARISON_BUILD_METRIC_LABELS[metric]}</span>
+        <div className="comparison-table-title-tools">
+          <span>{COMPARISON_BUILD_METRIC_LABELS[metric]}</span>
+          <CopyTableButton
+            feedback={copyFeedback}
+            disabled={series.length === 0}
+            ariaLabel="正確な数値の表をコピー"
+            onClick={onCopy}
+          />
+        </div>
       </div>
       <div className="comparison-series-table-wrap" role="region" tabIndex={0} aria-label="グラフと同じ比較数値の表">
         <table className="comparison-series-table">
@@ -1245,6 +1340,42 @@ function downloadCsv(csv: string, filename: string) {
   anchor.click()
   anchor.remove()
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+async function writeClipboardText(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text)
+      return
+    } catch {
+      // 権限がない環境では、同じクリック操作内で従来方式を試します。
+    }
+  }
+
+  const previousFocus = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : null
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.readOnly = true
+  textarea.style.position = 'fixed'
+  textarea.style.left = '-9999px'
+  textarea.style.opacity = '0'
+  textarea.style.pointerEvents = 'none'
+  document.body.append(textarea)
+
+  let copied = false
+  try {
+    textarea.focus({ preventScroll: true })
+    textarea.select()
+    textarea.setSelectionRange(0, textarea.value.length)
+    copied = document.execCommand('copy')
+  } finally {
+    textarea.remove()
+    previousFocus?.focus()
+  }
+
+  if (!copied) throw new Error('クリップボードへコピーできませんでした。')
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {

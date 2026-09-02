@@ -634,6 +634,23 @@ export function buildOperatorBuildComparisonSeriesCsv(
   return `\uFEFF${lines.join('\r\n')}`
 }
 
+export function buildOperatorBuildComparisonSeriesTsv(
+  series: ComparisonAxisSeries[],
+  axis: ComparisonAxis,
+): string {
+  const xValues = uniqueSorted(series.flatMap((item) => item.points.map((point) => point.x)))
+  const rows = [
+    [COMPARISON_AXIS_LABELS[axis], ...series.map((item) => item.label)],
+    ...xValues.map((x) => [
+      formatCsvNumber(x),
+      ...series.map((item) => optionalTsvNumber(
+        item.points.find((point) => point.x === x)?.value ?? null,
+      )),
+    ]),
+  ]
+  return serializeTsv(rows)
+}
+
 export function getComparisonBuildLabel(
   config: Pick<ComparisonBuildConfig, 'label'>,
   skill: Pick<SkillRecord, 'operatorName' | 'skillIndex' | 'skillName'>,
@@ -864,6 +881,24 @@ function escapeCsvCell(value: string): string {
 
 function optionalCsvNumber(value: number | null): string {
   return value === null ? '' : formatCsvNumber(value)
+}
+
+function optionalTsvNumber(value: number | null): string {
+  return value === null ? '' : formatCsvNumber(value)
+}
+
+function serializeTsv(rows: string[][]): string {
+  return rows
+    .map((row) => row.map(sanitizeTsvCell).join('\t'))
+    .join('\r\n')
+}
+
+function sanitizeTsvCell(value: string): string {
+  const sanitized = value.replace(/[\t\r\n]+/g, ' ')
+  const isPlainNumber = /^-?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(sanitized)
+  return /^\s*[=+\-@]/.test(sanitized) && !isPlainNumber
+    ? `'${sanitized}`
+    : sanitized
 }
 
 function formatCsvNumber(value: number): string {
