@@ -16,6 +16,10 @@ import {
   getDamageOutputPanelState,
 } from '../src/lib/damageCalculatorPanels.ts'
 import {
+  DEFAULT_DAMAGE_CALCULATOR_OPERATOR_NAME,
+  resolveDamageCalculatorDefaultOperatorId,
+} from '../src/lib/damageCalculatorPreferences.ts'
+import {
   getDamageSensitivityTablePoints,
   selectDamageSensitivityType,
   selectDamageSensitivityValues,
@@ -35,6 +39,32 @@ test('統合後の各パネルの初期開閉状態を維持する', () => {
     normalCalculationProcess: false,
     skillCalculationProcess: false,
   })
+})
+
+test('初期オペレーターは保存値を優先し、未設定時はゴールデングローにする', () => {
+  const operators = [
+    { operatorId: 'char_350_surtr', operatorName: 'スルト' },
+    { operatorId: 'char_377_gdglow', operatorName: 'ゴールデングロー' },
+  ]
+
+  assert.equal(DEFAULT_DAMAGE_CALCULATOR_OPERATOR_NAME, 'ゴールデングロー')
+  assert.equal(
+    resolveDamageCalculatorDefaultOperatorId(operators, 'char_350_surtr'),
+    'char_350_surtr',
+  )
+  assert.equal(
+    resolveDamageCalculatorDefaultOperatorId(operators, ''),
+    'char_377_gdglow',
+  )
+  assert.equal(
+    resolveDamageCalculatorDefaultOperatorId(operators, 'missing'),
+    'char_377_gdglow',
+  )
+  assert.equal(
+    resolveDamageCalculatorDefaultOperatorId([operators[0]], ''),
+    'char_350_surtr',
+  )
+  assert.equal(resolveDamageCalculatorDefaultOperatorId([], ''), '')
 })
 
 test('出力を共通・職分・オペレーター・スキル固有の順に定義する', () => {

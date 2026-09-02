@@ -37,6 +37,7 @@ import {
   getDamageCalculatorPanelNumbers,
   getDamageOutputPanelState,
 } from '../lib/damageCalculatorPanels'
+import { resolveDamageCalculatorDefaultOperatorId } from '../lib/damageCalculatorPreferences'
 import {
   applyOperatorModule,
   getOperatorModuleId,
@@ -110,7 +111,7 @@ const REFLECTION_STATUS_LABELS: Record<ReflectionStatus, string> = {
   UNSUPPORTED: '未対応',
 }
 
-const DEFAULT_OPERATOR_NAME = 'スルト'
+const DEFAULT_OPERATOR_STORAGE_KEY = 'arknights-damage-calculator-default-operator-id-v1'
 const REFERENCE_ENEMY_DEFENSE = 0
 const REFERENCE_ENEMY_RESISTANCE = 0
 
@@ -138,14 +139,14 @@ export function DamageCalculator({ rows, loading }: Props) {
   const [skillCalculationProcessOpen, setSkillCalculationProcessOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillCalculationProcess)
   const [sensitivityMetric, setSensitivityMetric] = useState<SensitivityMetric>('DAMAGE')
   const [operatorFilters, setOperatorFilters] = useState(EMPTY_OPERATOR_FILTERS)
+  const [preferredDefaultOperatorId, setPreferredDefaultOperatorId] = useState(loadPreferredDefaultOperatorId)
 
-  const defaultOperatorId = operators.find((operator) => operator.operatorName === DEFAULT_OPERATOR_NAME)?.operatorId
-    ?? operators[0]?.operatorId
-    ?? ''
+  const defaultOperatorId = resolveDamageCalculatorDefaultOperatorId(operators, preferredDefaultOperatorId)
   const effectiveOperatorId = operators.some((operator) => operator.operatorId === operatorId)
     ? operatorId
     : defaultOperatorId
   const selectedOperator = operators.find((operator) => operator.operatorId === effectiveOperatorId) ?? null
+  const defaultOperator = operators.find((operator) => operator.operatorId === defaultOperatorId) ?? null
   const operatorSkills = useMemo(() => rows
     .filter((row) => row.operatorId === effectiveOperatorId)
     .sort((a, b) => a.skillIndex - b.skillIndex), [rows, effectiveOperatorId])
@@ -472,6 +473,19 @@ export function DamageCalculator({ rows, loading }: Props) {
               <strong>{selectedOperator.operatorName}</strong>
               <small>★{selectedOperator.rarity} · {selectedOperator.professionLabel} / {selectedOperator.subProfessionName}</small>
               <em>{operatorSearchOpen ? '検索を閉じる' : '検索して変更'} ↗</em>
+            </button>
+          </div>
+          <div className="default-operator-setting">
+            <span>起動時の初期オペレーター <strong>{defaultOperator?.operatorName ?? '未設定'}</strong></span>
+            <button
+              type="button"
+              disabled={effectiveOperatorId === defaultOperatorId}
+              onClick={() => {
+                persistPreferredDefaultOperatorId(effectiveOperatorId)
+                setPreferredDefaultOperatorId(effectiveOperatorId)
+              }}
+            >
+              {effectiveOperatorId === defaultOperatorId ? '初期値に設定済み' : '選択中を初期値に設定'}
             </button>
           </div>
         </div>
@@ -1080,6 +1094,24 @@ function DamageOutputEmptyState({ subject }: { subject: string }) {
       <p>{subject}に固有の追加成分が登録されると、この領域に表示されます。</p>
     </div>
   )
+}
+
+function loadPreferredDefaultOperatorId(): string {
+  if (typeof window === 'undefined') return ''
+  try {
+    return window.localStorage.getItem(DEFAULT_OPERATOR_STORAGE_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function persistPreferredDefaultOperatorId(operatorId: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(DEFAULT_OPERATOR_STORAGE_KEY, operatorId)
+  } catch {
+    // ストレージが利用できない場合も、現在の画面では設定を反映する。
+  }
 }
 
 function SensitivityChart({
