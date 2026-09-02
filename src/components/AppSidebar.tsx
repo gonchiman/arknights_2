@@ -20,7 +20,7 @@ export function AppSidebar({ activePage, open, onClose }: AppSidebarProps) {
     <>
       <aside className={`app-sidebar ${open ? 'open' : ''}`} id="app-sidebar" aria-label="メインナビゲーション">
         <div className="sidebar-header">
-          <a className="site-brand" href="#/" onClick={onClose} aria-label="Arknights Analyze Tool ホーム">
+          <a className="site-brand" href="#/operators" onClick={onClose} aria-label="Arknights Analyze Tool ホーム">
             <span className="brand-mark" aria-hidden="true">A</span>
             <span className="brand-copy">
               <span className="eyebrow">ARKNIGHTS</span>

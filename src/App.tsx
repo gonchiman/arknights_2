@@ -3,15 +3,13 @@ import { AppSidebar } from './components/AppSidebar'
 import { DamageCalculator } from './components/DamageCalculator'
 import { DataSourcesPage } from './components/DataSourcesPage'
 import { EnemyAnalysis } from './components/EnemyAnalysis'
-import { EMPTY_OPERATOR_FILTERS, matchesOperatorFilters, OperatorSearch } from './components/OperatorSearch'
 import { OperatorComparison } from './components/OperatorComparison'
 import { OperatorDatabase } from './components/OperatorDatabase'
-import { SkillDetail } from './components/SkillDetail'
 import { SkillDirectory } from './components/SkillDirectory'
 import { loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
 import { ARKNIGHTS_GAMEDATA_REPOSITORY } from './lib/dataSources'
-import { getSkillRouteHash, parseHashRoute, type AppRoute } from './lib/routes'
+import { parseHashRoute, type AppRoute } from './lib/routes'
 import { APP_NAV_ITEMS, type NavigationPage } from './lib/navigation'
 import {
   ACTIVATION_TRIGGERS,
@@ -35,15 +33,12 @@ const SIDEBAR_DESKTOP_QUERY = '(min-width: 1141px)'
 export default function App() {
   const [rows, setRows] = useState<SkillRecord[]>([])
   const [route, setRoute] = useState<AppRoute>(() => parseHashRoute(window.location.hash))
-  const [filters, setFilters] = useState(EMPTY_OPERATOR_FILTERS)
   const [overrides, setOverrides] = useState<Record<string, SkillClassificationOverride>>(loadOverrides)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const sidebarToggleRef = useRef<HTMLButtonElement>(null)
   const skillDataRequestStarted = useRef(false)
-  const lastSelectedOperatorId = useRef<string | null>(null)
-  const previousRouteView = useRef(route.view)
 
   const load = async () => {
     setLoading(true)
@@ -112,30 +107,6 @@ export default function App() {
     classification: applyManualClassification(row.classification, overrides[row.id]),
   })), [rows, overrides])
 
-  const selected = route.view === 'skill'
-    ? classifiedRows.find((row) => row.id === route.skillId) ?? null
-    : null
-  const operatorSkills = selected
-    ? classifiedRows.filter((row) => row.operatorId === selected.operatorId)
-    : []
-
-  useEffect(() => {
-    if (selected) lastSelectedOperatorId.current = selected.operatorId
-  }, [selected])
-
-  useEffect(() => {
-    const previousView = previousRouteView.current
-    previousRouteView.current = route.view
-    if (previousView !== 'skill' || route.view !== 'list') return
-
-    const operatorId = lastSelectedOperatorId.current
-    if (!operatorId) return
-    window.requestAnimationFrame(() => {
-      const operatorRows = document.querySelectorAll<HTMLElement>('[data-operator-id]')
-      Array.from(operatorRows).find((row) => row.dataset.operatorId === operatorId)?.focus()
-    })
-  }, [route.view])
-
   const updateOverride = (skillId: string, override: SkillClassificationOverride | null) => {
     setOverrides((current) => {
       const next = { ...current }
@@ -146,33 +117,7 @@ export default function App() {
     })
   }
 
-  const openSkill = (skillId: string) => {
-    const target = classifiedRows.find((row) => row.id === skillId)
-    if (target) lastSelectedOperatorId.current = target.operatorId
-    window.location.hash = getSkillRouteHash(skillId)
-  }
-
-  const closeSkill = () => {
-    window.location.hash = '#/'
-  }
-
-  const updateClassifierFilters = (nextFilters: typeof filters) => {
-    setFilters(nextFilters)
-    if (!selected) return
-    const selectedStillVisible = classifiedRows.some((row) => (
-      row.operatorId === selected.operatorId && matchesOperatorFilters(row, nextFilters)
-    ))
-    if (!selectedStillVisible) window.location.hash = '#/'
-  }
-
-  const activeNavigationPage: NavigationPage = (
-    route.view === 'skills'
-    || route.view === 'operators'
-    || route.view === 'damage'
-    || route.view === 'comparison'
-    || route.view === 'enemies'
-    || route.view === 'sources'
-  ) ? route.view : 'classifier'
+  const activeNavigationPage: NavigationPage = route.view
   const activeNavigationItem = APP_NAV_ITEMS.find((item) => item.id === activeNavigationPage)
   const closeSidebar = () => {
     if (!sidebarOpen) return
@@ -183,7 +128,7 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell ${route.view === 'skill' ? 'skill-detail-route' : ''}`}>
+    <div className="app-shell">
       <AppSidebar activePage={activeNavigationPage} open={sidebarOpen} onClose={closeSidebar} />
 
       <div className="app-main" inert={sidebarOpen ? true : undefined}>
@@ -200,7 +145,7 @@ export default function App() {
             <span>Menu</span>
           </button>
           <span className="mobile-page-title">{activeNavigationItem?.label}</span>
-          <a className="mobile-brand-mark" href="#/" aria-label="Arknights Analyze Tool ホーム">A</a>
+          <a className="mobile-brand-mark" href="#/operators" aria-label="Arknights Analyze Tool ホーム">A</a>
         </header>
 
         <main className="app-content">
@@ -208,13 +153,6 @@ export default function App() {
 
         {route.view === 'sources' ? (
           <DataSourcesPage />
-        ) : route.view === 'operators' ? (
-          <OperatorDatabase
-            rows={classifiedRows}
-            loading={loading}
-            overrides={overrides}
-            onOverride={updateOverride}
-          />
         ) : route.view === 'damage' ? (
           <DamageCalculator rows={classifiedRows} loading={loading} />
         ) : route.view === 'comparison' ? (
@@ -227,38 +165,12 @@ export default function App() {
             loading={loading}
           />
         ) : (
-          <section className="classifier-route">
-            {route.view === 'list' && <h1 className="visually-hidden">Skill Model Classifier</h1>}
-            <div className="classifier-workspace">
-              {route.view === 'list' ? (
-                <section className="classifier-master" aria-label="オペレーター検索一覧">
-                  <OperatorSearch
-                    rows={classifiedRows}
-                    filters={filters}
-                    loading={loading}
-                    onFiltersChange={updateClassifierFilters}
-                    onSelect={(row) => openSkill(row.id)}
-                  />
-                </section>
-              ) : selected ? (
-                <div className="classifier-detail">
-                  <SkillDetail
-                    skill={selected}
-                    operatorSkills={operatorSkills}
-                    override={overrides[selected.id]}
-                    onBack={closeSkill}
-                    onSelectSkill={(skill) => openSkill(skill.id)}
-                    onOverride={(override) => updateOverride(selected.id, override)}
-                  />
-                </div>
-              ) : (
-                <section className="route-state classifier-detail" role="status">
-                  <h1>{loading ? 'スキルを読み込んでいます…' : 'スキルが見つかりません'}</h1>
-                  {!loading && <button className="button secondary" onClick={closeSkill}>一覧に戻る</button>}
-                </section>
-              )}
-            </div>
-          </section>
+          <OperatorDatabase
+            rows={classifiedRows}
+            loading={loading}
+            overrides={overrides}
+            onOverride={updateOverride}
+          />
         )}
         </main>
         <footer className="site-footer">

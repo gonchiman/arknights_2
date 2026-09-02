@@ -340,12 +340,6 @@
   .site-footer { width: calc(100% - 24px); }
 }
 
-@media (max-width: 760px) {
-  .skill-detail-route .site-footer { display: none; }
-  .skill-detail-route .app-content { padding: 0; }
-  .skill-detail-route .back-button { position: static; }
-}
-
 @media (max-width: 520px) {
   .mobile-topbar { padding-inline: 10px; }
   .app-content { padding: 10px 10px 32px; }
