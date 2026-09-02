@@ -727,7 +727,7 @@
 
 .results-panel {
   border-color: #87aa90;
-  background: #f4fbf6;
+  background: #fff;
   box-shadow: inset 3px 0 0 #5a8b67;
 }
 
@@ -738,38 +738,55 @@
 
 .results-panel .collapsible-panel-heading:hover { background: #e3f0e6; }
 
-.result-section-label {
-  margin: 10px 0 5px;
-  color: #46664d;
+.result-graph-section {
+  min-width: 0;
+  background: #fff;
+}
+
+.result-graph-header {
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.result-graph-heading-copy { min-width: 0; }
+
+.result-graph-heading-copy h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.result-graph-heading-copy p {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.sensitivity-current-values {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0 0 12px;
+  border-left: 3px solid #87aa90;
+  background: #f4fbf6;
+  padding: 7px 10px;
+  color: var(--text-soft);
+  font-size: 10px;
+}
+
+.sensitivity-current-values > span {
+  color: #55725b;
   font-size: 9px;
   font-weight: 800;
-  letter-spacing: .08em;
 }
 
-.damage-result-grid {
-  min-width: 0;
-  display: grid;
-  gap: 0;
-  border-top: 1px solid #b9d1bf;
-  border-left: 1px solid #b9d1bf;
-}
-
-.normal-results { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.skill-results { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-
-.damage-result-card {
-  min-width: 0;
-  border: 0;
-  border-right: 1px solid #b9d1bf;
-  border-bottom: 1px solid #b9d1bf;
-  border-radius: 0;
-  background: #fff;
-  padding: 10px;
-}
-
-.damage-result-card span { color: #55725b; font-size: 9px; }
-.damage-result-card strong { display: block; margin: 4px 0 1px; font-size: 20px; line-height: 1.1; }
-.damage-result-card small { color: #78927d; font-size: 8px; text-transform: uppercase; }
+.sensitivity-current-values > strong { font-size: 11px; }
 
 .mech-accord-output {
   min-width: 0;
@@ -1012,7 +1029,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  margin: 0 0 12px;
+  margin: 0;
 }
 
 .sensitivity-toolbar > span {
@@ -1021,25 +1038,26 @@
 }
 
 .sensitivity-metric-switch {
-  width: 180px;
+  width: 300px;
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   border-top: 1px solid var(--border-strong);
   border-left: 1px solid var(--border-strong);
 }
 
 .sensitivity-metric-switch button {
   min-width: 0;
-  height: 32px;
+  height: 36px;
   border: 0;
   border-right: 1px solid var(--border-strong);
   border-bottom: 1px solid var(--border-strong);
   border-radius: 0;
   background: #fff;
   color: var(--text-soft);
-  padding: 0 8px;
+  padding: 0 6px;
   font-size: 10px;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -1057,7 +1075,7 @@
 
 .sensitivity-chart {
   min-width: 0;
-  margin: 0 0 14px;
+  margin: 0 0 16px;
 }
 
 .sensitivity-chart-caption {
@@ -1069,11 +1087,10 @@
   margin-bottom: 7px;
 }
 
-.sensitivity-chart-caption > strong,
-.sensitivity-table-heading {
+.sensitivity-chart-caption > strong {
   margin: 0;
   color: var(--text-soft);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -1223,13 +1240,56 @@
   font-size: 10px;
 }
 
-.sensitivity-table-heading-row {
+.sensitivity-table-disclosure {
   min-width: 0;
+  margin-top: 4px;
+  border-top: 1px solid var(--border-strong);
+}
+
+.sensitivity-table-disclosure > summary {
+  min-width: 0;
+  min-height: 44px;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 5px 12px;
+  gap: 8px 14px;
+  padding: 11px 2px;
+  color: var(--text-soft);
+  cursor: pointer;
+  list-style: none;
+}
+
+.sensitivity-table-disclosure > summary::-webkit-details-marker { display: none; }
+
+.sensitivity-table-disclosure > summary::after {
+  content: '+';
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sensitivity-table-disclosure[open] > summary::after { content: '−'; }
+
+.sensitivity-table-disclosure > summary > span {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.sensitivity-table-disclosure > summary > em {
+  flex: 1;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-style: normal;
+  text-align: right;
+}
+
+.sensitivity-table-disclosure-body { padding: 1px 0 4px; }
+
+.sensitivity-table-meta-row {
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
   margin-bottom: 7px;
 }
 
@@ -1257,6 +1317,7 @@
 }
 
 .sensitivity-table { min-width: 520px; }
+.sensitivity-table.total-metric { min-width: 360px; }
 .sensitivity-table th { position: static; }
 .sensitivity-table tbody tr { cursor: default; }
 
@@ -1277,10 +1338,6 @@
   .growth-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .operator-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .operator-effect-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (max-width: 980px) {
-  .skill-results { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 760px) {
@@ -1309,8 +1366,6 @@
 
   .growth-form-grid,
   .enemy-form-grid,
-  .normal-results,
-  .skill-results,
   .operator-stat-grid,
   .damage-type-detection-grid,
   .model-value-grid { grid-template-columns: minmax(0, 1fr); }
@@ -1346,7 +1401,6 @@
   .collapsible-panel-heading .collapsible-panel-heading-label { font-size: 13px; }
   .collapsible-panel-heading-summary { font-size: 8px; }
   .collapsible-panel-body { padding: 10px; }
-  .damage-result-card { padding: 9px; }
 
   .mech-accord-output-heading {
     align-items: flex-start;
@@ -1384,6 +1438,12 @@
 
   .sensitivity-chart-legend { justify-content: flex-start; }
 
+  .result-graph-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 9px;
+  }
+
   .sensitivity-toolbar {
     align-items: stretch;
     flex-direction: column;
@@ -1393,6 +1453,18 @@
   .sensitivity-metric-switch { width: 100%; }
 
   .sensitivity-table-wrap { overscroll-behavior-inline: contain; }
+  .sensitivity-table,
+  .sensitivity-table.total-metric {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  .sensitivity-table th,
+  .sensitivity-table td {
+    padding-inline: 5px;
+    overflow-wrap: anywhere;
+  }
 }
 
 @media (pointer: coarse) {
