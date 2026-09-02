@@ -31,7 +31,7 @@ test('統合後の各パネルの初期開閉状態を維持する', () => {
     operatorSearch: true,
     calculationConditions: true,
     operatorInfo: false,
-    skillModel: true,
+    skillModel: false,
     commonOutput: true,
     subProfessionOutput: true,
     operatorOutput: true,

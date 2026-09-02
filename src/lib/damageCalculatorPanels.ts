@@ -22,7 +22,7 @@ export const DAMAGE_CALCULATOR_PANEL_DEFAULTS: DamageCalculatorPanelDefaults = {
   operatorSearch: true,
   calculationConditions: true,
   operatorInfo: false,
-  skillModel: true,
+  skillModel: false,
   commonOutput: true,
   subProfessionOutput: true,
   operatorOutput: true,
