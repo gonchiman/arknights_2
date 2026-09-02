@@ -1,10 +1,12 @@
 import { useEffect, useId, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import type { OperatorDatabaseRecord } from '../lib/operatorDatabase'
 import type { SkillClassificationOverride, SkillRecord } from '../types/skill'
+import { OperatorStatRadar } from './OperatorStatRadar'
 import { SkillClassifierPopover } from './SkillClassifierPopover'
 
 interface Props {
   operator: OperatorDatabaseRecord
+  comparisonOperators: ReadonlyArray<OperatorDatabaseRecord>
   skills: SkillRecord[]
   overrides: Record<string, SkillClassificationOverride>
   onOverride: (skillId: string, override: SkillClassificationOverride | null) => void
@@ -16,6 +18,7 @@ const DECIMAL_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits
 
 export function OperatorDetailModal({
   operator,
+  comparisonOperators,
   skills,
   overrides,
   onOverride,
@@ -120,6 +123,7 @@ export function OperatorDetailModal({
               <DetailValue label="攻撃速度" value={formatInteger(operator.stats.attackSpeed)} />
               <DetailValue label="攻撃間隔" value={formatDecimal(operator.stats.attackInterval, '秒')} />
             </dl>
+            <OperatorStatRadar operator={operator} operators={comparisonOperators} />
           </section>
 
           <section aria-labelledby={`${titleId}-potentials`}>

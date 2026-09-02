@@ -181,6 +181,7 @@ export function OperatorDatabase({
       {detailOperator && (
         <OperatorDetailModal
           operator={detailOperator}
+          comparisonOperators={records}
           skills={detailOperatorSkills}
           overrides={overrides}
           onOverride={onOverride}

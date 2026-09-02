@@ -1,12 +1,16 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  OPERATOR_RADAR_METRICS,
   OPERATOR_STAT_METRICS,
+  buildOperatorRadarProfile,
   buildOperatorMetricObservations,
   buildOperatorMetricSource,
   buildOperatorScatterObservations,
+  calculateOperatorRadarScore,
   calculateOperatorMetricStatistics,
   groupOperatorObservationsByProfession,
+  selectOperatorRadarPopulation,
 } from '../src/lib/operatorStatistics.ts'
 import {
   EMPTY_OPERATOR_DATABASE_FILTERS,
@@ -277,10 +281,114 @@ test('個体観測を職業ごとの表示グループへまとめる', () => {
   ])
 })
 
+test('レーダーは攻撃速度を除く8指標を定義し、時間・コスト系だけ向きを反転する', () => {
+  assert.deepEqual(
+    OPERATOR_RADAR_METRICS.map(({ key, direction }) => [key, direction]),
+    [
+      ['maxHp', 'HIGHER_OUTWARD'],
+      ['attack', 'HIGHER_OUTWARD'],
+      ['defense', 'HIGHER_OUTWARD'],
+      ['magicResistance', 'HIGHER_OUTWARD'],
+      ['deploymentCost', 'LOWER_OUTWARD'],
+      ['blockCount', 'HIGHER_OUTWARD'],
+      ['redeployTime', 'LOWER_OUTWARD'],
+      ['attackInterval', 'LOWER_OUTWARD'],
+    ],
+  )
+})
+
+test('レーダーの比較対象を全体・同職業・同職分で切り替える', () => {
+  const target = createOperator({
+    operatorId: 'target',
+    profession: 'GUARD',
+    professionLabel: '前衛',
+    subProfessionId: 'fighter',
+  })
+  const rows = [
+    target,
+    createOperator({ operatorId: 'same_branch', profession: 'GUARD', subProfessionId: 'fighter' }),
+    createOperator({ operatorId: 'same_job', profession: 'GUARD', subProfessionId: 'lord' }),
+    createOperator({ operatorId: 'other_job', profession: 'SNIPER', subProfessionId: 'fighter' }),
+  ]
+
+  assert.deepEqual(
+    selectOperatorRadarPopulation(rows, target, 'ALL').map(({ operatorId }) => operatorId),
+    ['target', 'same_branch', 'same_job', 'other_job'],
+  )
+  assert.deepEqual(
+    selectOperatorRadarPopulation(rows, target, 'PROFESSION').map(({ operatorId }) => operatorId),
+    ['target', 'same_branch', 'same_job'],
+  )
+  assert.deepEqual(
+    selectOperatorRadarPopulation(rows, target, 'SUB_PROFESSION').map(({ operatorId }) => operatorId),
+    ['target', 'same_branch'],
+  )
+})
+
+test('レーダーの相対スコアは中間順位で小集団・同順位・一定値を公平に扱う', () => {
+  assertClose(calculateOperatorRadarScore(10, [10, 20, 30]), 100 / 6)
+  assert.equal(calculateOperatorRadarScore(20, [10, 20, 30]), 50)
+  assertClose(calculateOperatorRadarScore(30, [10, 20, 30]), 500 / 6)
+  const tiedMinimum = calculateOperatorRadarScore(10, [10, 10, 20, 30])
+  assert.equal(tiedMinimum, 25)
+  assert.equal(calculateOperatorRadarScore(10, [10, 10, 10]), 50)
+  assert.equal(calculateOperatorRadarScore(10, [10]), 50)
+  assert.equal(calculateOperatorRadarScore(10, [10, 20]), 25)
+  assert.equal(calculateOperatorRadarScore(20, [10, 20]), 75)
+})
+
+test('低いほど外側の指標は順位を反転し、欠損・非有限値を母集団から除外する', () => {
+  assertClose(calculateOperatorRadarScore(10, [10, 20, 30], 'LOWER_OUTWARD'), 500 / 6)
+  assertClose(calculateOperatorRadarScore(30, [10, 20, 30], 'LOWER_OUTWARD'), 100 / 6)
+  assert.equal(calculateOperatorRadarScore(10, [null, Number.NaN, 10, 20], 'LOWER_OUTWARD'), 75)
+  assert.equal(calculateOperatorRadarScore(null, [10, 20], 'LOWER_OUTWARD'), null)
+  assert.equal(calculateOperatorRadarScore(15, [10, 20], 'HIGHER_OUTWARD'), null)
+})
+
+test('レーダープロファイルは指標ごとの有効人数と欠損を保持する', () => {
+  const target = createOperator({
+    operatorId: 'target',
+    maxHp: 2000,
+    attack: null,
+    deploymentCost: 10,
+  })
+  const profile = buildOperatorRadarProfile([
+    createOperator({ operatorId: 'lower', maxHp: 1000, attack: 300, deploymentCost: 20 }),
+    target,
+    createOperator({ operatorId: 'higher', maxHp: 3000, attack: Number.NaN, deploymentCost: null }),
+  ], target, 'ALL')
+  const hp = profile.points.find(({ key }) => key === 'maxHp')
+  const attack = profile.points.find(({ key }) => key === 'attack')
+  const cost = profile.points.find(({ key }) => key === 'deploymentCost')
+
+  assert.equal(profile.populationCount, 3)
+  assert.deepEqual(hp && { value: hp.value, score: hp.score, validCount: hp.validCount }, {
+    value: 2000,
+    score: 50,
+    validCount: 3,
+  })
+  assert.deepEqual(attack && { value: attack.value, score: attack.score, validCount: attack.validCount }, {
+    value: null,
+    score: null,
+    validCount: 1,
+  })
+  assert.deepEqual(cost && { value: cost.value, score: cost.score, validCount: cost.validCount }, {
+    value: 10,
+    score: 75,
+    validCount: 2,
+  })
+})
+
+function assertClose(actual: number | null, expected: number): void {
+  assert.ok(actual !== null && Math.abs(actual - expected) < 1e-12)
+}
+
 interface OperatorFixture extends Partial<OperatorDatabaseStats> {
   operatorId?: string
   profession?: string
   professionLabel?: string
+  subProfessionId?: string
+  subProfessionName?: string
 }
 
 function createOperator(fixture: OperatorFixture = {}): OperatorDatabaseRecord {
@@ -292,8 +400,8 @@ function createOperator(fixture: OperatorFixture = {}): OperatorDatabaseRecord {
     rarity: 6,
     profession: fixture.profession ?? 'GUARD',
     professionLabel: fixture.professionLabel ?? '前衛',
-    subProfessionId: 'fighter',
-    subProfessionName: '勇士',
+    subProfessionId: fixture.subProfessionId ?? 'fighter',
+    subProfessionName: fixture.subProfessionName ?? '勇士',
     stats: {
       maxHp: fixture.maxHp === undefined ? 1000 : fixture.maxHp,
       attack: fixture.attack === undefined ? 300 : fixture.attack,
