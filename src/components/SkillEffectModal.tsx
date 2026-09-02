@@ -5,15 +5,32 @@ import './SkillEffectModal.css'
 
 interface Props {
   skill: SkillRecord
+  skillLevelIndex?: number
   onClose: () => void
 }
 
-export function SkillEffectModal({ skill, onClose }: Props) {
+export function SkillEffectModal({ skill, skillLevelIndex, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const titleId = useId()
-  const details = buildSkillEffectDetails(skill)
-  const description = formatSkillEffectDescription(skill)
+  const resolvedSkillLevelIndex = typeof skillLevelIndex === 'number'
+    ? Math.min(Math.max(0, Math.round(skillLevelIndex)), Math.max(0, skill.skillLevels.length - 1))
+    : Math.max(0, skill.skillLevels.length - 1)
+  const selectedLevel = skill.skillLevels[resolvedSkillLevelIndex] ?? skill.raw
+  const displaySkill: SkillRecord = {
+    ...skill,
+    description: selectedLevel.description ?? skill.description,
+    duration: typeof selectedLevel.duration === 'number' ? selectedLevel.duration : skill.duration,
+    durationType: selectedLevel.durationType ?? skill.durationType,
+    skillType: selectedLevel.skillType ?? skill.skillType,
+    spType: selectedLevel.spData?.spType ?? skill.spType,
+    initSp: typeof selectedLevel.spData?.initSp === 'number' ? selectedLevel.spData.initSp : skill.initSp,
+    spCost: typeof selectedLevel.spData?.spCost === 'number' ? selectedLevel.spData.spCost : skill.spCost,
+    raw: selectedLevel,
+  }
+  const details = buildSkillEffectDetails(displaySkill)
+  const description = formatSkillEffectDescription(displaySkill)
+  const skillLevelLabel = getSkillLevelLabel(resolvedSkillLevelIndex, skill.skillLevels.length)
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -65,7 +82,7 @@ export function SkillEffectModal({ skill, onClose }: Props) {
           <section className="skill-effect-description" aria-labelledby={`${titleId}-effect`}>
             <div className="skill-effect-section-heading">
               <h3 id={`${titleId}-effect`}>スキル効果</h3>
-              <span>最大スキルレベル</span>
+              <span>{skillLevelLabel}</span>
             </div>
             <p>{description}</p>
           </section>
@@ -93,6 +110,11 @@ export function SkillEffectModal({ skill, onClose }: Props) {
       </article>
     </dialog>
   )
+}
+
+function getSkillLevelLabel(index: number, total: number): string {
+  if (total >= 10 && index >= 7) return `特化${index - 6}`
+  return `Lv.${index + 1}`
 }
 
 function SkillEffectTags({ title, values }: { title: string, values: string[] }) {

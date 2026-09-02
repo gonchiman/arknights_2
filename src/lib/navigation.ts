@@ -47,8 +47,8 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
   {
     id: 'comparison',
     href: '#/comparison',
-    label: 'Operator Comparison',
-    description: 'オペレーター性能の横断比較',
+    label: 'Build Comparison',
+    description: '複数ビルドの重ね合わせ比較',
     section: 'analysis',
   },
   {
