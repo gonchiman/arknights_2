@@ -31,7 +31,12 @@ import {
   isMechAccordSubProfession,
   type MechAccordDamageRowsResult,
 } from '../lib/mechAccordDamage'
-import { DAMAGE_CALCULATOR_PANEL_DEFAULTS, getDamageCalculatorPanelNumbers } from '../lib/damageCalculatorPanels'
+import {
+  DAMAGE_CALCULATOR_PANEL_DEFAULTS,
+  DAMAGE_OUTPUT_PANELS,
+  getDamageCalculatorPanelNumbers,
+  getDamageOutputPanelState,
+} from '../lib/damageCalculatorPanels'
 import {
   applyOperatorModule,
   getOperatorModuleId,
@@ -125,8 +130,10 @@ export function DamageCalculator({ rows, loading }: Props) {
   const [calculationConditionsOpen, setCalculationConditionsOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.calculationConditions)
   const [operatorInfoOpen, setOperatorInfoOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.operatorInfo)
   const [skillModelOpen, setSkillModelOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillModel)
-  const [resultsOpen, setResultsOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.results)
-  const [uniqueOutputOpen, setUniqueOutputOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.uniqueOutput)
+  const [commonOutputOpen, setCommonOutputOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.commonOutput)
+  const [subProfessionOutputOpen, setSubProfessionOutputOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.subProfessionOutput)
+  const [operatorOutputOpen, setOperatorOutputOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.operatorOutput)
+  const [skillOutputOpen, setSkillOutputOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillOutput)
   const [normalCalculationProcessOpen, setNormalCalculationProcessOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.normalCalculationProcess)
   const [skillCalculationProcessOpen, setSkillCalculationProcessOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillCalculationProcess)
   const [sensitivityMetric, setSensitivityMetric] = useState<SensitivityMetric>('DAMAGE')
@@ -329,7 +336,13 @@ export function DamageCalculator({ rows, loading }: Props) {
       normalMitigationModifiers,
     )
     : null
-  const panelNumbers = getDamageCalculatorPanelNumbers(mechAccordDamage !== null)
+  const subProfessionOutputPanelState = getDamageOutputPanelState(
+    mechAccordDamage !== null,
+    subProfessionOutputOpen,
+  )
+  const operatorOutputPanelState = getDamageOutputPanelState(false, operatorOutputOpen)
+  const skillOutputPanelState = getDamageOutputPanelState(false, skillOutputOpen)
+  const panelNumbers = getDamageCalculatorPanelNumbers()
   const referenceSkillBreakdown = selectedSkill && model && skillSupported && skillDamageType
     ? calculateSkillDamageBreakdown(
       operatorStats.attack,
@@ -758,14 +771,14 @@ export function DamageCalculator({ rows, loading }: Props) {
       </CollapsibleCalculatorPanel>
 
       <CollapsibleCalculatorPanel
-        id="results-panel"
-        number={panelNumbers.results}
-        title="計算結果"
+        id="common-output-panel"
+        number={panelNumbers.commonOutput}
+        title={DAMAGE_OUTPUT_PANELS.common.title}
         summary={`${formatDamageTypeSummary(normalDamageType, skillDamageType)} · ${sensitivityStatLabel}別 · ${sensitivityMetricLabel}`}
-        open={resultsOpen}
-        onToggle={() => setResultsOpen((open) => !open)}
-        collapsedLabel="結果を表示"
-        className="results-panel"
+        open={commonOutputOpen}
+        onToggle={() => setCommonOutputOpen((open) => !open)}
+        collapsedLabel="共通出力を表示"
+        className="results-panel common-output-panel"
       >
         <section id="sensitivity-panel" className="result-graph-section" aria-labelledby="sensitivity-panel-heading">
           <header className="result-graph-header">
@@ -882,23 +895,66 @@ export function DamageCalculator({ rows, loading }: Props) {
           </details>}
         </section>
 
-        <p className="result-disclaimer">表示値は単体への理論値です。物理・術ダメージには軽減前の攻撃力の5%を最低保証として適用します。計算過程と固有出力の単一値は敵防御力・術耐性0を基準にしています。確認済みの特性・素質と選択モジュールを反映し、条件入力が必要な効果と未対応効果は計算過程に明示します。潜在、外部バフ、敵デバフ、対象数は含みません。</p>
+        <p className="result-disclaimer">表示値は単体への理論値です。物理・術ダメージには軽減前の攻撃力の5%を最低保証として適用します。計算過程と職分固有出力の単一値は敵防御力・術耐性0を基準にしています。確認済みの特性・素質と選択モジュールを反映し、条件入力が必要な効果と未対応効果は計算過程に明示します。潜在、外部バフ、敵デバフ、対象数は含みません。</p>
       </CollapsibleCalculatorPanel>
 
-      {mechAccordDamage && (
-        <CollapsibleCalculatorPanel
-          id="unique-output-panel"
-          number={panelNumbers.uniqueOutput}
-          title="固有出力"
-          summary={`${selectedOperator.subProfessionName} · 防御力0・術耐性0の基準値`}
-          open={uniqueOutputOpen}
-          onToggle={() => setUniqueOutputOpen((open) => !open)}
-          collapsedLabel="固有出力を表示"
-          className="unique-output-panel"
-        >
-          <MechAccordDamageTable result={mechAccordDamage} />
-        </CollapsibleCalculatorPanel>
-      )}
+      <CollapsibleCalculatorPanel
+        id="sub-profession-output-panel"
+        number={panelNumbers.subProfessionOutput}
+        title={DAMAGE_OUTPUT_PANELS.subProfession.title}
+        summary={mechAccordDamage
+          ? `${selectedOperator.subProfessionName} · 防御力0・術耐性0の基準値`
+          : `${selectedOperator.subProfessionName} · 固有出力なし`}
+        open={subProfessionOutputPanelState.open}
+        onToggle={() => setSubProfessionOutputOpen((open) => !open)}
+        collapsedLabel="職分固有出力を表示"
+        disabled={subProfessionOutputPanelState.disabled}
+        disabledLabel="出力なし"
+        className={[
+          'sub-profession-output-panel',
+          subProfessionOutputPanelState.disabled ? 'disabled-output-panel' : 'results-panel',
+        ].join(' ')}
+      >
+        {mechAccordDamage
+          ? <MechAccordDamageTable result={mechAccordDamage} />
+          : <DamageOutputEmptyState subject={selectedOperator.subProfessionName} />}
+      </CollapsibleCalculatorPanel>
+
+      <CollapsibleCalculatorPanel
+        id="operator-output-panel"
+        number={panelNumbers.operatorOutput}
+        title={DAMAGE_OUTPUT_PANELS.operator.title}
+        summary={`${selectedOperator.operatorName} · 固有出力なし`}
+        open={operatorOutputPanelState.open}
+        onToggle={() => setOperatorOutputOpen((open) => !open)}
+        collapsedLabel="オペレーター固有出力を表示"
+        disabled={operatorOutputPanelState.disabled}
+        disabledLabel="出力なし"
+        className={[
+          'operator-output-panel',
+          operatorOutputPanelState.disabled ? 'disabled-output-panel' : 'results-panel',
+        ].join(' ')}
+      >
+        <DamageOutputEmptyState subject={selectedOperator.operatorName} />
+      </CollapsibleCalculatorPanel>
+
+      <CollapsibleCalculatorPanel
+        id="skill-output-panel"
+        number={panelNumbers.skillOutput}
+        title={DAMAGE_OUTPUT_PANELS.skill.title}
+        summary={`S${selectedSkill.skillIndex} ${selectedSkill.skillName} · 固有出力なし`}
+        open={skillOutputPanelState.open}
+        onToggle={() => setSkillOutputOpen((open) => !open)}
+        collapsedLabel="スキル固有出力を表示"
+        disabled={skillOutputPanelState.disabled}
+        disabledLabel="出力なし"
+        className={[
+          'skill-output-panel',
+          skillOutputPanelState.disabled ? 'disabled-output-panel' : 'results-panel',
+        ].join(' ')}
+      >
+        <DamageOutputEmptyState subject={`S${selectedSkill.skillIndex} ${selectedSkill.skillName}`} />
+      </CollapsibleCalculatorPanel>
 
       <CollapsibleCalculatorPanel
         id="normal-calculation-process-panel"
@@ -959,6 +1015,8 @@ function CollapsibleCalculatorPanel({
   open,
   onToggle,
   collapsedLabel,
+  disabled = false,
+  disabledLabel = '操作できません',
   className = '',
   bodyClassName = '',
   children,
@@ -970,22 +1028,26 @@ function CollapsibleCalculatorPanel({
   open: boolean
   onToggle: () => void
   collapsedLabel: string
+  disabled?: boolean
+  disabledLabel?: string
   className?: string
   bodyClassName?: string
   children: ReactNode
 }) {
   const headingId = `${id}-heading`
   const bodyId = `${id}-body`
+  const effectiveOpen = !disabled && open
 
   return (
-    <section className={`calculator-panel collapsible-calculator-panel ${open ? 'open' : ''} ${className}`.trim()}>
+    <section className={`calculator-panel collapsible-calculator-panel ${effectiveOpen ? 'open' : ''} ${disabled ? 'disabled' : ''} ${className}`.trim()}>
       <h2 className="collapsible-panel-title">
         <button
           type="button"
           id={headingId}
           className="panel-heading collapsible-panel-heading"
-          aria-expanded={open}
-          aria-controls={bodyId}
+          aria-expanded={disabled ? undefined : effectiveOpen}
+          aria-controls={disabled ? undefined : bodyId}
+          disabled={disabled}
           onClick={onToggle}
         >
           <span className="collapsible-panel-heading-title">
@@ -994,7 +1056,7 @@ function CollapsibleCalculatorPanel({
           </span>
           <span className="collapsible-panel-heading-summary">
             <span>{summary}</span>
-            <em>{open ? '閉じる' : collapsedLabel} {open ? '−' : '+'}</em>
+            <em>{disabled ? disabledLabel : `${effectiveOpen ? '閉じる' : collapsedLabel} ${effectiveOpen ? '−' : '+'}`}</em>
           </span>
         </button>
       </h2>
@@ -1003,11 +1065,20 @@ function CollapsibleCalculatorPanel({
         className={`collapsible-panel-body ${bodyClassName}`.trim()}
         role="region"
         aria-labelledby={headingId}
-        hidden={!open}
+        hidden={!effectiveOpen}
       >
         {children}
       </div>
     </section>
+  )
+}
+
+function DamageOutputEmptyState({ subject }: { subject: string }) {
+  return (
+    <div className="damage-output-empty">
+      <strong>現在、専用出力はありません</strong>
+      <p>{subject}に固有の追加成分が登録されると、この領域に表示されます。</p>
+    </div>
   )
 }
 
