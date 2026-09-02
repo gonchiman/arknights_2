@@ -52,6 +52,11 @@ test('モジュールLvの攻撃力・攻撃速度と素質上書きを計算モ
     { key: 'magic_resist_penetrate_fixed', value: 26, valueStr: null },
   ])
   const traitSource = application.passives.sources.find((source) => source.sourceKind === 'TRAIT')
+  assert.equal(
+    application.passives.traitDescription,
+    '敵に術ダメージを与える 未ブロック時、攻撃速度+8',
+  )
+  assert.equal(traitSource?.description, application.passives.traitDescription)
   assert.equal(traitSource?.blackboard.some((entry) => entry.key === 'attack_speed' && entry.value === 8), true)
   assert.equal(application.passives.sources.some((source) => source.sourceKind === 'MODULE'), true)
 
@@ -110,6 +115,48 @@ test('召喚物向けモジュール効果は本体へ混ぜず未対応理由�
   assert.equal(application.changes.some((change) => change.kind === 'TOKEN'), true)
   assert.equal(application.unsupportedReasons.some((reason) => reason.includes('召喚物')), true)
   assert.equal(application.passives.talents[0].description, '攻撃時、対象の術耐性を26無視')
+})
+
+test('モジュールの特性上書きと追加説明を表示用特性・出典へ同時に反映する', () => {
+  const module = createModule()
+  const phase = module.phases?.[2]
+  assert.ok(phase)
+  phase.parts = [{
+    target: 'TRAIT',
+    isToken: false,
+    overrideTraitDataBundle: {
+      candidates: [{
+        requiredPotentialRank: 0,
+        overrideDescripton: '   ',
+        overrideDescription: '通常攻撃が{atk_scale:0%}の物理ダメージを与える',
+        additionalDescription: 'さらに攻撃速度+{attack_speed}',
+        blackboard: [
+          { key: 'atk_scale', value: 1.2 },
+          { key: 'attack_speed', value: 8 },
+        ],
+      }],
+    },
+  }]
+
+  const basePassives = getOperatorPassives(createProfile(), 2, 90)
+  const application = applyOperatorModule(basePassives, module, 3)
+  const traitSource = application.passives.sources.find((source) => source.sourceKind === 'TRAIT')
+
+  assert.equal(
+    application.passives.traitDescription,
+    '通常攻撃が120%の物理ダメージを与える さらに攻撃速度+8',
+  )
+  assert.equal(traitSource?.description, application.passives.traitDescription)
+  assert.equal(traitSource?.blackboard.some((entry) => entry.key === 'atk_scale' && entry.value === 1.2), true)
+  assert.equal(traitSource?.blackboard.some((entry) => entry.key === 'attack_speed' && entry.value === 8), true)
+  assert.deepEqual(
+    application.changes.filter((change) => change.kind === 'TRAIT').map((change) => change.description),
+    [
+      '通常攻撃が120%の物理ダメージを与える',
+      'さらに攻撃速度+8',
+    ],
+  )
+  assert.equal(basePassives.traitDescription, '敵に術ダメージを与える')
 })
 
 function createProfile(): OperatorCombatProfile {

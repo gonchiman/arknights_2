@@ -1,21 +1,40 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react'
-import { EFFECT_WINDOW_LABELS } from '../lib/classifier'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+} from 'react'
 import { DAMAGE_TYPE_LABELS } from '../lib/damageCalculator'
 import {
-  COMPARISON_METRICS,
-  COMPARISON_METRIC_LABELS,
-  DEFAULT_ENEMY_STAT_PROFILES,
-  buildComparisonCsv,
-  buildSkillComparisonRow,
-  getAvailableComparisonMetrics,
-  getEnemyProfileLabel,
-  type ComparisonMetric,
-  type EnemyStatProfile,
-} from '../lib/operatorComparison'
-import { PROFESSION_ORDER } from '../lib/operatorFilters'
-import { EFFECT_WINDOWS, type EffectWindowType, type SkillRecord } from '../types/skill'
-import { Filters, type FilterOption, type FilterState } from './Filters'
-import { EMPTY_OPERATOR_FILTERS, matchesOperatorFilters } from './OperatorSearch'
+  COMPARISON_AXES,
+  COMPARISON_AXIS_LABELS,
+  COMPARISON_BUILD_METRICS,
+  COMPARISON_BUILD_METRIC_LABELS,
+  buildComparisonAxisSeries,
+  buildOperatorBuildComparisonCsv,
+  buildOperatorBuildComparisonSeriesCsv,
+  evaluateComparisonBuild,
+  getComparisonMetricValue,
+  type ComparisonAxis,
+  type ComparisonAxisSeries,
+  type ComparisonBuildConfig,
+  type ComparisonBuildEvaluation,
+  type ComparisonBuildMetric,
+  type ComparisonEnemyCondition,
+} from '../lib/operatorBuildComparison'
+import {
+  getOperatorModuleId,
+  getOperatorModuleLevels,
+  getOperatorModules,
+  getOperatorModuleUnlockLabel,
+  isOperatorModuleUnlocked,
+} from '../lib/operatorModules'
+import type { RawOperatorModule, SkillRecord } from '../types/skill'
+import { ComparisonChart, type ComparisonChartSeries } from './ComparisonChart'
+import { type FilterState } from './Filters'
+import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
 import { SkillEffectModal } from './SkillEffectModal'
 import './OperatorComparison.css'
 
@@ -24,197 +43,183 @@ interface Props {
   loading: boolean
 }
 
-const MAX_ENEMY_COLUMNS = 10
-const RESULT_BATCH_SIZE = 100
-const COMPARISON_NUMBER_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 })
-
-interface ComparisonSort {
-  profileId: string
-  direction: 'ASC' | 'DESC'
+interface PickerState {
+  mode: 'ADD' | 'REPLACE'
+  slotId: string | null
 }
 
+interface SkillEffectState {
+  skill: SkillRecord
+  skillLevelIndex: number
+}
+
+const MAX_BUILDS = 6
+const BUILD_COLORS = ['#607f99', '#a84b4b', '#5a8b67', '#7b6d86', '#80704b', '#527d7a']
+const NUMBER_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 })
+
 export function OperatorComparison({ rows, loading }: Props) {
-  const [filters, setFilters] = useState<FilterState>({ ...EMPTY_OPERATOR_FILTERS })
-  const [effectWindow, setEffectWindow] = useState<EffectWindowType>('FIXED_DURATION')
-  const [metric, setMetric] = useState<ComparisonMetric>('DAMAGE')
-  const [enemyProfiles, setEnemyProfiles] = useState<EnemyStatProfile[]>(cloneDefaultEnemyProfiles)
-  const [showUnavailable, setShowUnavailable] = useState(true)
-  const [resultPage, setResultPage] = useState(0)
-  const [sort, setSort] = useState<ComparisonSort | null>(null)
-  const [enemyAnnouncement, setEnemyAnnouncement] = useState('')
-  const [detailSkill, setDetailSkill] = useState<SkillRecord | null>(null)
-  const nextEnemyId = useRef(DEFAULT_ENEMY_STAT_PROFILES.length + 1)
-  const comparisonTableRef = useRef<HTMLDivElement | null>(null)
-  const enemyDefenseInputRefs = useRef(new Map<string, HTMLInputElement>())
+  const [builds, setBuilds] = useState<ComparisonBuildConfig[]>([])
+  const [enemy, setEnemy] = useState<ComparisonEnemyCondition>({ defense: 0, resistance: 0 })
+  const [axis, setAxis] = useState<ComparisonAxis>('DEFENSE')
+  const [metric, setMetric] = useState<ComparisonBuildMetric>('SKILL_PER_ATTACK')
+  const [picker, setPicker] = useState<PickerState | null>(null)
+  const [operatorFilters, setOperatorFilters] = useState<FilterState>({ ...EMPTY_OPERATOR_FILTERS })
+  const [detailSkill, setDetailSkill] = useState<SkillEffectState | null>(null)
+  const [announcement, setAnnouncement] = useState('')
+  const initializedRef = useRef(false)
+  const nextSlotIdRef = useRef(1)
+  const pickerReturnFocusRef = useRef<HTMLElement | null>(null)
+  const buildPickerButtonRefs = useRef(new Map<string, HTMLButtonElement>())
+  const addButtonRef = useRef<HTMLButtonElement | null>(null)
   const skillDetailTriggerRef = useRef<HTMLButtonElement | null>(null)
 
-  const professionOptions = useMemo(() => buildProfessionOptions(rows), [rows])
-  const availableMetrics = getAvailableComparisonMetrics(effectWindow)
-  const matchingSkills = useMemo(() => rows.filter((row) => (
-    row.classification.effectWindow.value === effectWindow
-    && matchesOperatorFilters(row, filters)
-  )), [rows, filters, effectWindow])
-  const comparisonRowStates = useMemo(() => matchingSkills.map((skill) => (
-    buildSkillComparisonRow(skill, [], metric)
-  )), [matchingSkills, metric])
-  const calculableCount = comparisonRowStates.filter((row) => row.unavailableReasons.length === 0).length
-  const approximateCount = comparisonRowStates.filter((row) => (
-    row.unavailableReasons.length === 0 && row.warnings.length > 0
-  )).length
-  const displayedRowStates = useMemo(() => showUnavailable
-    ? comparisonRowStates
-    : comparisonRowStates.filter((row) => row.unavailableReasons.length === 0), [comparisonRowStates, showUnavailable])
-  const sortProfile = sort
-    ? enemyProfiles.find((candidate) => candidate.id === sort.profileId)
-    : undefined
-  const sortedRowStates = useMemo(() => {
-    if (!sort || !sortProfile) return displayedRowStates
+  const allocateSlotId = () => 'comparison-build-' + nextSlotIdRef.current++
 
-    return displayedRowStates.map((row, index) => ({
-      row,
-      index,
-      value: buildSkillComparisonRow(row.skill, [sortProfile], metric).values[0],
-    })).sort((a, b) => {
-      if (a.value === null && b.value === null) return a.index - b.index
-      if (a.value === null) return 1
-      if (b.value === null) return -1
-      const difference = sort.direction === 'DESC' ? b.value - a.value : a.value - b.value
-      return difference || a.index - b.index
-    }).map(({ row }) => row)
-  }, [displayedRowStates, metric, sort, sortProfile])
-  const totalPages = Math.max(1, Math.ceil(sortedRowStates.length / RESULT_BATCH_SIZE))
-  const safeResultPage = Math.min(resultPage, totalPages - 1)
-  const pageStart = safeResultPage * RESULT_BATCH_SIZE
-  const pagedRowStates = useMemo(() => sortedRowStates.slice(
-    pageStart,
-    pageStart + RESULT_BATCH_SIZE,
-  ), [sortedRowStates, pageStart])
-  const renderedRows = useMemo(() => pagedRowStates.map((row) => (
-    buildSkillComparisonRow(row.skill, enemyProfiles, metric)
-  )), [pagedRowStates, enemyProfiles, metric])
+  useEffect(() => {
+    if (initializedRef.current || loading || rows.length === 0) return
+    initializedRef.current = true
+    setBuilds(createInitialBuilds(rows, allocateSlotId))
+  }, [loading, rows])
 
-  const scrollComparisonTableToTop = () => {
-    window.requestAnimationFrame(() => {
-      const table = comparisonTableRef.current
-      if (table) table.scrollTo({ top: 0, left: table.scrollLeft })
+  const evaluations = useMemo(
+    () => builds.map((build) => evaluateComparisonBuild(rows, build, enemy)),
+    [rows, builds, enemy],
+  )
+  const evaluationBySlot = useMemo(
+    () => new Map(evaluations.map((evaluation) => [evaluation.config.slotId, evaluation])),
+    [evaluations],
+  )
+  const rawSeries = useMemo(() => {
+    if (builds.length === 0) return []
+    return buildComparisonAxisSeries(rows, builds, enemy, axis, metric)
+  }, [rows, builds, enemy, axis, metric])
+  const chartSeries = useMemo<ComparisonChartSeries[]>(() => rawSeries.map((series, index) => ({
+    id: series.slotId,
+    label: getSeriesLabel(evaluationBySlot.get(series.slotId), index),
+    color: getBuildColor(series.colorIndex),
+    points: series.points.map((point) => ({ x: point.x, value: point.value })),
+  })), [rawSeries, evaluationBySlot])
+  const currentAxisValue = axis === 'DEFENSE' ? enemy.defense : enemy.resistance
+  const axisPoints = rawSeries[0]?.points.map((point) => point.x) ?? []
+  const calculableCount = rawSeries.filter((series) => series.points.some((point) => point.value !== null)).length
+
+  const updateBuild = (slotId: string, patch: Partial<ComparisonBuildConfig>) => {
+    const current = builds.find((build) => build.slotId === slotId)
+    if (!current) return
+    const next = normalizeBuildConfig(rows, { ...current, ...patch })
+    setBuilds(builds.map((build) => build.slotId === slotId ? next : build))
+    if (current.moduleId && !next.moduleId) {
+      setAnnouncement('育成条件では装備できないため、モジュールを「なし」に変更しました。')
+    }
+  }
+
+  const changeSkill = (slotId: string, skillRecordId: string) => {
+    const skill = rows.find((row) => row.id === skillRecordId)
+    if (!skill) return
+    updateBuild(slotId, {
+      skillRecordId,
+      skillLevelIndex: Math.max(0, skill.skillLevels.length - 1),
     })
   }
 
-  const resetResultPage = () => {
-    setResultPage(0)
-    scrollComparisonTableToTop()
-  }
-
-  const changeResultPage = (nextPage: number) => {
-    setResultPage(nextPage)
-    scrollComparisonTableToTop()
-  }
-
-  const toggleEnemySort = (profileId: string) => {
-    setSort((current) => current?.profileId === profileId
-      ? current.direction === 'DESC'
-        ? { profileId, direction: 'ASC' }
-        : null
-      : { profileId, direction: 'DESC' })
-    resetResultPage()
-  }
-
-  const selectEffectWindow = (nextWindow: EffectWindowType) => {
-    setEffectWindow(nextWindow)
-    resetResultPage()
-    const nextMetrics = getAvailableComparisonMetrics(nextWindow)
-    setMetric((current) => nextMetrics.includes(current) ? current : nextMetrics[0])
-  }
-
-  const resetAll = () => {
-    setFilters({ ...EMPTY_OPERATOR_FILTERS })
-    setEffectWindow('FIXED_DURATION')
-    setMetric('DAMAGE')
-    setEnemyProfiles(cloneDefaultEnemyProfiles())
-    setShowUnavailable(true)
-    setSort(null)
-    resetResultPage()
-  }
-
-  const updateEnemyProfile = (
-    id: string,
-    key: 'defense' | 'resistance',
-    rawValue: string,
+  const openPicker = (
+    nextPicker: PickerState,
+    trigger: HTMLElement,
   ) => {
-    const value = clamp(Number(rawValue), 0, key === 'defense' ? 10000 : 100)
-    setEnemyProfiles((current) => current.map((profile) => (
-      profile.id === id ? { ...profile, [key]: value } : profile
-    )))
+    pickerReturnFocusRef.current = trigger
+    setOperatorFilters({ ...EMPTY_OPERATOR_FILTERS })
+    setPicker(nextPicker)
   }
 
-  const addEnemyProfile = () => {
-    setEnemyProfiles((current) => {
-      if (current.length >= MAX_ENEMY_COLUMNS) return current
-      const last = current.at(-1) ?? { defense: 0, resistance: 0 }
-      const id = `enemy-${nextEnemyId.current}`
-      nextEnemyId.current += 1
-      return [
-        ...current,
-        {
-          id,
-          defense: clamp(last.defense + 500, 0, 10000),
-          resistance: clamp(last.resistance + 20, 0, 100),
-        },
-      ]
+  const closePicker = () => {
+    setPicker(null)
+    window.requestAnimationFrame(() => pickerReturnFocusRef.current?.focus())
+  }
+
+  const selectOperator = (row: SkillRecord) => {
+    if (!picker) return
+    if (picker.mode === 'ADD') {
+      if (builds.length >= MAX_BUILDS) return
+      const slotId = allocateSlotId()
+      const nextBuild = createBuildFromSkill(row, slotId, nextAvailableColorIndex(builds))
+      setBuilds([...builds, nextBuild])
+      setPicker(null)
+      setAnnouncement(row.operatorName + 'を比較対象に追加しました。')
+      window.requestAnimationFrame(() => buildPickerButtonRefs.current.get(slotId)?.focus())
+      return
+    }
+
+    const current = builds.find((build) => build.slotId === picker.slotId)
+    if (!current) return
+    const nextBuild = createBuildFromSkill(
+      row,
+      current.slotId,
+      current.colorIndex ?? nextAvailableColorIndex(builds),
+    )
+    setBuilds(builds.map((build) => build.slotId === current.slotId ? nextBuild : build))
+    setPicker(null)
+    setAnnouncement(row.operatorName + 'へ変更しました。')
+    window.requestAnimationFrame(() => buildPickerButtonRefs.current.get(current.slotId)?.focus())
+  }
+
+  const duplicateBuild = (slotId: string) => {
+    if (builds.length >= MAX_BUILDS) return
+    const index = builds.findIndex((build) => build.slotId === slotId)
+    if (index < 0) return
+    const duplicated: ComparisonBuildConfig = {
+      ...builds[index],
+      slotId: allocateSlotId(),
+      label: null,
+      colorIndex: nextAvailableColorIndex(builds),
+    }
+    const next = [...builds]
+    next.splice(index + 1, 0, duplicated)
+    setBuilds(next)
+    setAnnouncement('ビルドを複製しました。スキルやモジュールだけを変更して比較できます。')
+    window.requestAnimationFrame(() => buildPickerButtonRefs.current.get(duplicated.slotId)?.focus())
+  }
+
+  const removeBuild = (slotId: string) => {
+    if (builds.length <= 1) return
+    const index = builds.findIndex((build) => build.slotId === slotId)
+    if (index < 0) return
+    const next = builds.filter((build) => build.slotId !== slotId)
+    const focusSlotId = next[Math.min(index, next.length - 1)]?.slotId
+    setBuilds(next)
+    setAnnouncement('比較対象を削除しました。残り' + next.length + '件です。')
+    window.requestAnimationFrame(() => {
+      if (focusSlotId) buildPickerButtonRefs.current.get(focusSlotId)?.focus()
+      else addButtonRef.current?.focus()
     })
   }
 
-  const removeEnemyProfile = (id: string) => {
-    if (enemyProfiles.length <= 1) return
-    const removedIndex = enemyProfiles.findIndex((profile) => profile.id === id)
-    if (removedIndex < 0) return
-    const remainingProfiles = enemyProfiles.filter((profile) => profile.id !== id)
-    const focusProfile = remainingProfiles[Math.min(removedIndex, remainingProfiles.length - 1)]
-    setEnemyProfiles(remainingProfiles)
-    setEnemyAnnouncement(`敵条件${removedIndex + 1}を削除しました。残り${remainingProfiles.length}列です。`)
-    if (sort?.profileId === id) setSort(null)
-    window.requestAnimationFrame(() => enemyDefenseInputRefs.current.get(focusProfile.id)?.focus())
+  const resetBuilds = () => {
+    nextSlotIdRef.current = 1
+    setBuilds(createInitialBuilds(rows, allocateSlotId))
+    setEnemy({ defense: 0, resistance: 0 })
+    setAxis('DEFENSE')
+    setMetric('SKILL_PER_ATTACK')
+    setAnnouncement('比較内容を初期状態に戻しました。')
   }
 
-  const openSkillEffect = (skill: SkillRecord, trigger: HTMLButtonElement) => {
+  const openSkillEffect = (
+    skill: SkillRecord,
+    skillLevelIndex: number,
+    trigger: HTMLButtonElement,
+  ) => {
     skillDetailTriggerRef.current = trigger
-    setDetailSkill(skill)
+    setDetailSkill({ skill, skillLevelIndex })
   }
 
   const closeSkillEffect = () => {
     setDetailSkill(null)
-    window.requestAnimationFrame(() => {
-      const trigger = skillDetailTriggerRef.current
-      if (trigger?.isConnected) trigger.focus()
-      else comparisonTableRef.current?.focus()
-    })
-  }
-
-  const resetEnemyProfiles = () => {
-    setEnemyProfiles(cloneDefaultEnemyProfiles())
-    setSort(null)
-    resetResultPage()
-  }
-
-  const downloadCsv = () => {
-    if (displayedRowStates.length === 0) return
-    const csvRows = sortedRowStates.map((row) => buildSkillComparisonRow(row.skill, enemyProfiles, metric))
-    const csv = buildComparisonCsv(csvRows, enemyProfiles, metric)
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = `arknights-operator-comparison-${getLocalDateStamp(new Date())}.csv`
-    document.body.append(anchor)
-    anchor.click()
-    anchor.remove()
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    window.requestAnimationFrame(() => skillDetailTriggerRef.current?.focus())
   }
 
   if (loading && rows.length === 0) {
     return (
       <section className="comparison-page">
-        <h1 className="visually-hidden">Operator Skill Comparison</h1>
+        <h1 className="visually-hidden">Operator Build Comparison</h1>
         <p className="comparison-loading" role="status">ゲームデータを読み込んでいます…</p>
       </section>
     )
@@ -222,316 +227,774 @@ export function OperatorComparison({ rows, loading }: Props) {
 
   return (
     <section className="comparison-page">
-      <h1 className="visually-hidden">Operator Skill Comparison</h1>
+      <h1 className="visually-hidden">Operator Build Comparison</h1>
 
-      <section className="comparison-panel comparison-target-panel">
+      <section className="comparison-panel comparison-build-panel" aria-labelledby="comparison-builds-heading">
         <PanelHeading
           number="01"
-          title="比較対象"
-          note="終了条件とオペレーター条件でスキルを絞り込みます"
-          action={<button type="button" className="button secondary" onClick={resetAll}>すべてリセット</button>}
+          title="比較するビルド"
+          id="comparison-builds-heading"
+          note={builds.length + ' / ' + MAX_BUILDS + '件'}
+          action={<button type="button" className="comparison-text-button" onClick={resetBuilds}>初期状態に戻す</button>}
         />
-        <Filters
-          value={filters}
-          professionOptions={professionOptions}
-          onChange={(nextFilters) => {
-            setFilters(nextFilters)
-            resetResultPage()
-          }}
-          onReset={() => {
-            setFilters({ ...EMPTY_OPERATOR_FILTERS })
-            resetResultPage()
-          }}
+        <p className="comparison-section-lead">
+          1件ずつ独立した育成状態を持ちます。「複製」すると同じオペレーターの差分をすぐ作れます。
+        </p>
+        <div className="comparison-build-grid">
+          {builds.map((build, index) => {
+            const skill = rows.find((row) => row.id === build.skillRecordId)
+            if (!skill) return null
+            return (
+              <BuildCard
+                build={build}
+                index={index}
+                key={build.slotId}
+                skill={skill}
+                rows={rows}
+                canRemove={builds.length > 1}
+                canDuplicate={builds.length < MAX_BUILDS}
+                pickerButtonRef={(button) => {
+                  if (button) buildPickerButtonRefs.current.set(build.slotId, button)
+                  else buildPickerButtonRefs.current.delete(build.slotId)
+                }}
+                onOpenPicker={(trigger) => openPicker({ mode: 'REPLACE', slotId: build.slotId }, trigger)}
+                onDuplicate={() => duplicateBuild(build.slotId)}
+                onRemove={() => removeBuild(build.slotId)}
+                onSkillChange={(skillRecordId) => changeSkill(build.slotId, skillRecordId)}
+                onChange={(patch) => updateBuild(build.slotId, patch)}
+                onOpenSkillEffect={openSkillEffect}
+              />
+            )
+          })}
+          <button
+            ref={addButtonRef}
+            type="button"
+            className="comparison-add-build"
+            disabled={builds.length >= MAX_BUILDS}
+            onClick={(event) => openPicker({ mode: 'ADD', slotId: null }, event.currentTarget)}
+          >
+            <span aria-hidden="true">＋</span>
+            <strong>比較対象を追加</strong>
+            <small>{builds.length >= MAX_BUILDS ? '最大6件です' : '同じオペレーターも追加できます'}</small>
+          </button>
+        </div>
+        <p className="comparison-fixed-note">潜在能力は1で固定しています。モジュールの能力値・特性・素質変更は対応範囲を計算へ反映します。</p>
+      </section>
+
+      <section className="comparison-panel" aria-labelledby="comparison-conditions-heading">
+        <PanelHeading
+          number="02"
+          title="共通の敵条件"
+          id="comparison-conditions-heading"
+          note="すべてのビルドへ同時に適用"
         />
-        <div className="comparison-control-section">
-          <div className="comparison-control-heading">
-            <strong>スキルの終了条件</strong>
-            <span>出力の選択肢はここで選んだ条件に連動します</span>
+        <div className="comparison-condition-layout">
+          <div className="comparison-enemy-fields">
+            <NumberField
+              label="敵の防御力"
+              value={enemy.defense}
+              min={0}
+              max={10000}
+              step={50}
+              onChange={(defense) => setEnemy({ ...enemy, defense })}
+            />
+            <NumberField
+              label="敵の術耐性"
+              value={enemy.resistance}
+              min={0}
+              max={100}
+              step={5}
+              suffix="%"
+              onChange={(resistance) => setEnemy({ ...enemy, resistance })}
+            />
           </div>
-          <div className="comparison-choice-grid effect-window-choice" role="group" aria-label="スキルの終了条件">
-            {EFFECT_WINDOWS.map((window) => (
+          <div className="comparison-condition-copy">
+            <strong>現在値でまず比較し、片方の敵能力を横軸にして推移を重ねます。</strong>
+            <span>防御力の推移では術耐性を固定し、術耐性の推移では防御力を固定します。</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="comparison-panel comparison-results-panel" aria-labelledby="comparison-results-heading">
+        <PanelHeading
+          number="03"
+          title="比較結果"
+          id="comparison-results-heading"
+          note={evaluations.length + '件を計算'}
+          action={(
+            <div className="comparison-export-actions">
               <button
                 type="button"
-                className={effectWindow === window ? 'active' : ''}
-                aria-pressed={effectWindow === window}
-                onClick={() => selectEffectWindow(window)}
-                key={window}
+                className="button secondary"
+                disabled={evaluations.length === 0}
+                onClick={() => downloadCsv(buildOperatorBuildComparisonCsv(evaluations), 'arknights-build-comparison-current.csv')}
               >
-                {EFFECT_WINDOW_LABELS[window]}
+                現在値CSV
               </button>
-            ))}
-          </div>
-        </div>
-        <div className="comparison-match-summary">
-          <strong>{matchingSkills.length} スキルが条件に一致</strong>
-          <span>{calculableCount} スキルで数値を表示できます（概算 {approximateCount}）</span>
-        </div>
-      </section>
-
-      <section className="comparison-panel comparison-output-panel">
-        <PanelHeading number="02" title="出力と敵条件" note="敵条件1つにつき比較表の1列を作ります" />
-        <div className="comparison-control-section output-metric-section">
-          <div className="comparison-control-heading">
-            <strong>表示する数値</strong>
-            <span id="comparison-metric-guidance">{getMetricGuidance(effectWindow)}</span>
-          </div>
-          <div className="comparison-choice-grid metric-choice" role="group" aria-label="表示する数値">
-            {COMPARISON_METRICS.map((candidate) => {
-              const available = availableMetrics.includes(candidate)
-              return (
-                <button
-                  type="button"
-                  className={metric === candidate ? 'active' : ''}
-                  aria-pressed={metric === candidate}
-                  aria-describedby="comparison-metric-guidance"
-                  disabled={!available}
-                  title={available ? undefined : getUnavailableMetricReason(effectWindow, candidate)}
-                  onClick={() => {
-                    setMetric(candidate)
-                    resetResultPage()
-                  }}
-                  key={candidate}
-                >
-                  {COMPARISON_METRIC_LABELS[candidate]}
-                </button>
-              )
-            })}
-          </div>
-          {metric === 'TOTAL' && effectWindow === 'FIXED_DURATION' && (
-            <p className="comparison-metric-detail-note">
-              固定時間の総ダメージは「DPS × 継続秒数」の理論連続値です。攻撃回数は整数に丸めません。
-            </p>
-          )}
-        </div>
-
-        <div className="comparison-control-section enemy-profile-section">
-          <div className="comparison-control-heading enemy-profile-heading">
-            <div>
-              <strong>敵ステータス列</strong>
-              <span>防御力と術耐性を1組として左から順に比較します</span>
+              <button
+                type="button"
+                className="button secondary"
+                disabled={rawSeries.length === 0}
+                onClick={() => downloadCsv(buildOperatorBuildComparisonSeriesCsv(rawSeries, axis), 'arknights-build-comparison-series.csv')}
+              >
+                推移CSV
+              </button>
             </div>
-            <button type="button" className="comparison-text-button" onClick={resetEnemyProfiles}>初期値に戻す</button>
+          )}
+        />
+
+        <div className="comparison-current-summary">
+          <div className="comparison-subheading">
+            <div>
+              <span>CURRENT CONDITION</span>
+              <h3>現在の敵条件での出力</h3>
+            </div>
+            <p>防御 {formatNumber(enemy.defense)} / 術耐性 {formatNumber(enemy.resistance)}%</p>
           </div>
-          <div className="enemy-profile-grid">
-            {enemyProfiles.map((profile, index) => (
-              <article className="enemy-profile-card" key={profile.id}>
-                <header>
-                  <strong>敵条件 {index + 1}</strong>
+          <CurrentOutputTable evaluations={evaluations} />
+        </div>
+
+        <div className="comparison-series-section">
+          <div className="comparison-subheading">
+            <div>
+              <span>OVERLAY</span>
+              <h3>敵能力に対する推移</h3>
+            </div>
+            <p>{calculableCount} / {rawSeries.length}系列を表示できます</p>
+          </div>
+
+          <div className="comparison-series-controls">
+            <fieldset>
+              <legend>横軸</legend>
+              <div className="comparison-segmented-control">
+                {COMPARISON_AXES.map((candidate) => (
                   <button
                     type="button"
-                    aria-label={`敵条件${index + 1}を削除`}
-                    disabled={enemyProfiles.length <= 1}
-                    onClick={() => removeEnemyProfile(profile.id)}
+                    className={axis === candidate ? 'active' : ''}
+                    aria-pressed={axis === candidate}
+                    onClick={() => setAxis(candidate)}
+                    key={candidate}
                   >
-                    削除
+                    {COMPARISON_AXIS_LABELS[candidate]}の推移
                   </button>
-                </header>
-                <label>
-                  <span>防御力</span>
-                  <input
-                    ref={(input) => {
-                      if (input) enemyDefenseInputRefs.current.set(profile.id, input)
-                      else enemyDefenseInputRefs.current.delete(profile.id)
-                    }}
-                    type="number"
-                    min="0"
-                    max="10000"
-                    step="50"
-                    value={profile.defense}
-                    aria-label={`敵条件${index + 1}の防御力`}
-                    onChange={(event) => updateEnemyProfile(profile.id, 'defense', event.target.value)}
-                  />
-                </label>
-                <label>
-                  <span>術耐性</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="5"
-                    value={profile.resistance}
-                    aria-label={`敵条件${index + 1}の術耐性`}
-                    onChange={(event) => updateEnemyProfile(profile.id, 'resistance', event.target.value)}
-                  />
-                </label>
-              </article>
-            ))}
-            <button
-              type="button"
-              className="enemy-profile-add"
-              disabled={enemyProfiles.length >= MAX_ENEMY_COLUMNS}
-              onClick={addEnemyProfile}
-            >
-              <strong>＋ 敵条件を追加</strong>
-              <span>最大 {MAX_ENEMY_COLUMNS} 列</span>
-            </button>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset className="comparison-metric-fieldset">
+              <legend>重ねる出力</legend>
+              <div className="comparison-segmented-control comparison-metric-control">
+                {COMPARISON_BUILD_METRICS.map((candidate) => (
+                  <button
+                    type="button"
+                    className={metric === candidate ? 'active' : ''}
+                    aria-pressed={metric === candidate}
+                    onClick={() => setMetric(candidate)}
+                    key={candidate}
+                  >
+                    {COMPARISON_BUILD_METRIC_LABELS[candidate]}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
           </div>
-        </div>
-        <p className="comparison-note">
-          育成状態は最大昇進・最大レベル・信頼度100・最大スキルレベルで統一します。潜在、モジュール、味方バフ、対象数、攻撃モーションは含みません。
-        </p>
-      </section>
 
-      <section className="comparison-panel comparison-results-panel">
-        <PanelHeading number="03" title="比較結果" note={`${COMPARISON_METRIC_LABELS[metric]}を表示中`} />
-        <div className="comparison-results-toolbar">
-          <div className="comparison-result-count" role="status" aria-live="polite" aria-atomic="true">
-            <strong>
-              {displayedRowStates.length} 行中 {displayedRowStates.length === 0 ? 0 : pageStart + 1}–{pageStart + renderedRows.length} 行表示
-            </strong>
-            <span>数値あり {calculableCount}（概算 {approximateCount}）/ 条件一致 {matchingSkills.length}</span>
-            {enemyAnnouncement && <span className="comparison-visually-hidden">{enemyAnnouncement}</span>}
+          <p className="comparison-axis-note">
+            {axis === 'DEFENSE'
+              ? '術ダメージ・確定ダメージの系列は、防御力を変えても水平になります。術耐性は現在値で固定します。'
+              : '物理ダメージ・確定ダメージの系列は、術耐性を変えても水平になります。防御力は現在値で固定します。'}
+          </p>
+
+          <ComparisonChart
+            axisLabel={COMPARISON_AXIS_LABELS[axis]}
+            metricLabel={COMPARISON_BUILD_METRIC_LABELS[metric]}
+            currentX={currentAxisValue}
+            series={chartSeries}
+          />
+          <SeriesAvailability
+            series={rawSeries}
+            evaluations={evaluations}
+          />
+          <SeriesValueTable
+            series={rawSeries}
+            evaluations={evaluations}
+            axis={axis}
+            metric={metric}
+            points={axisPoints}
+            current={currentAxisValue}
+          />
+        </div>
+
+        <div className="comparison-detail-section">
+          <div className="comparison-subheading">
+            <div>
+              <span>BUILD DETAILS</span>
+              <h3>ビルドごとの計算状態</h3>
+            </div>
+            <p>反映範囲と未対応項目を確認できます</p>
           </div>
-          <div className="comparison-result-actions">
-            <label className="comparison-toggle">
-              <input
-                type="checkbox"
-                checked={showUnavailable}
-                onChange={(event) => {
-                  setShowUnavailable(event.target.checked)
-                  resetResultPage()
-                }}
+          <div className="comparison-detail-list">
+            {evaluations.map((evaluation, index) => (
+              <BuildEvaluationDetails
+                evaluation={evaluation}
+                index={index}
+                key={evaluation.config.slotId}
               />
-              <span>計算できないスキルも表示</span>
-            </label>
-            <button type="button" className="button" disabled={displayedRowStates.length === 0} onClick={downloadCsv}>
-              CSVをダウンロード（全{displayedRowStates.length}行）
-            </button>
+            ))}
           </div>
         </div>
-
-        {displayedRowStates.length === 0 ? (
-          <div className="comparison-empty-state" role="status">
-            <strong>表示できるスキルがありません</strong>
-            <span>検索条件・終了条件を変更するか、計算できないスキルの表示を有効にしてください。</span>
-            <button type="button" className="button secondary" onClick={resetAll}>条件をリセット</button>
-          </div>
-        ) : (
-          <div ref={comparisonTableRef} className="comparison-table-wrap" role="region" tabIndex={0} aria-label="比較表のスクロール領域">
-            <table className="comparison-table" aria-label={`オペレーターとスキルの${COMPARISON_METRIC_LABELS[metric]}比較`}>
-              <thead>
-                <tr>
-                  <th className="comparison-sticky-column operator-column">オペレーター</th>
-                  <th className="comparison-sticky-column skill-column">スキル</th>
-                  <th className="damage-type-column">種別</th>
-                  {enemyProfiles.map((profile, index) => (
-                    <th
-                      className="enemy-value-column"
-                      aria-sort={sort?.profileId === profile.id
-                        ? sort.direction === 'ASC' ? 'ascending' : 'descending'
-                        : 'none'}
-                      key={profile.id}
-                    >
-                      <button
-                        type="button"
-                        className="enemy-sort-button"
-                        aria-label={`敵条件${index + 1}の${COMPARISON_METRIC_LABELS[metric]}で並べ替え`}
-                        onClick={() => toggleEnemySort(profile.id)}
-                      >
-                        <span>
-                          敵条件 {index + 1}
-                          {sort?.profileId === profile.id && <em aria-hidden="true">{sort.direction === 'DESC' ? ' ↓' : ' ↑'}</em>}
-                        </span>
-                        <small>{getEnemyProfileLabel(profile)}</small>
-                      </button>
-                    </th>
-                  ))}
-                  <th className="calculation-state-column">計算状態</th>
-                </tr>
-              </thead>
-              <tbody>
-                {renderedRows.map((row) => {
-                  const unavailable = row.unavailableReasons.length > 0
-                  const approximate = !unavailable && row.warnings.length > 0
-                  const unavailableText = row.unavailableReasons.join(' ')
-                  const warningText = row.warnings.join(' ')
-                  return (
-                    <tr className={unavailable ? 'unavailable' : approximate ? 'approximate' : undefined} key={row.skill.id}>
-                      <th scope="row" className="comparison-sticky-column operator-column">
-                        <strong>{row.skill.operatorName}</strong>
-                        <small>★{row.skill.rarity} · {row.skill.professionLabel} / {row.skill.subProfessionName}</small>
-                      </th>
-                      <td className="comparison-sticky-column skill-column">
-                        <button
-                          type="button"
-                          className="comparison-skill-detail-button"
-                          aria-haspopup="dialog"
-                          aria-label={`${row.skill.operatorName}、S${row.skill.skillIndex} ${row.skill.skillName}のスキル効果詳細を開く`}
-                          onClick={(event) => openSkillEffect(row.skill, event.currentTarget)}
-                        >
-                          <strong>S{row.skill.skillIndex}</strong>
-                          <span>{row.skill.skillName}</span>
-                          <em aria-hidden="true">詳細</em>
-                        </button>
-                      </td>
-                      <td className="damage-type-column">
-                        {row.damageType === null ? '自動判定不可' : DAMAGE_TYPE_LABELS[row.damageType]}
-                      </td>
-                      {row.values.map((value, index) => (
-                        <td
-                          className={`enemy-value-cell ${value === null ? 'unavailable-value' : ''}`}
-                          aria-label={value === null ? '計算不可' : undefined}
-                          key={enemyProfiles[index]?.id ?? index}
-                        >
-                          {value === null ? '—' : formatNumber(value)}
-                        </td>
-                      ))}
-                      <td className="calculation-state-column">
-                        {unavailable ? (
-                          <span className="comparison-unavailable-reason">
-                            <strong>計算不可</strong>
-                            <small tabIndex={0} title={unavailableText}>{unavailableText}</small>
-                          </span>
-                        ) : approximate ? (
-                          <span className="comparison-approximate-reason">
-                            <strong>概算</strong>
-                            <small tabIndex={0} title={warningText}>{warningText}</small>
-                          </span>
-                        ) : (
-                          <span className="comparison-ready">計算可能</span>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {totalPages > 1 && (
-          <div className="comparison-table-footer">
-            <button
-              type="button"
-              className="button secondary"
-              disabled={safeResultPage === 0}
-              onClick={() => changeResultPage(Math.max(0, safeResultPage - 1))}
-            >
-              前の{RESULT_BATCH_SIZE}行
-            </button>
-            <span>{safeResultPage + 1} / {totalPages} ページ</span>
-            <button
-              type="button"
-              className="button secondary"
-              disabled={safeResultPage >= totalPages - 1}
-              onClick={() => changeResultPage(Math.min(totalPages - 1, safeResultPage + 1))}
-            >
-              次の{RESULT_BATCH_SIZE}行
-            </button>
-          </div>
-        )}
-        <p className="comparison-note">
-          ダメージ種別は、スキル説明の明示を優先し、通常攻撃だけを変化させるスキルは通常攻撃の種別を継承します。複合ダメージや自動判定できないスキルは「—」、倍率を特定できない単純モデルは「概算」で示します。
-        </p>
       </section>
-      {detailSkill && <SkillEffectModal skill={detailSkill} onClose={closeSkillEffect} />}
+
+      <span className="comparison-visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+        {announcement}
+      </span>
+
+      {picker && (
+        <OperatorPickerDialog
+          rows={rows}
+          filters={operatorFilters}
+          loading={loading}
+          selectedOperatorId={picker.slotId
+            ? builds.find((build) => build.slotId === picker.slotId)?.operatorId
+            : undefined}
+          mode={picker.mode}
+          onFiltersChange={setOperatorFilters}
+          onSelect={selectOperator}
+          onClose={closePicker}
+        />
+      )}
+      {detailSkill && (
+        <SkillEffectModal
+          skill={detailSkill.skill}
+          skillLevelIndex={detailSkill.skillLevelIndex}
+          onClose={closeSkillEffect}
+        />
+      )}
     </section>
   )
 }
 
-function PanelHeading({ number, title, note, action }: { number: string; title: string; note: string; action?: ReactNode }) {
+function BuildCard({
+  build,
+  index,
+  skill,
+  rows,
+  canRemove,
+  canDuplicate,
+  pickerButtonRef,
+  onOpenPicker,
+  onDuplicate,
+  onRemove,
+  onSkillChange,
+  onChange,
+  onOpenSkillEffect,
+}: {
+  build: ComparisonBuildConfig
+  index: number
+  skill: SkillRecord
+  rows: SkillRecord[]
+  canRemove: boolean
+  canDuplicate: boolean
+  pickerButtonRef: (button: HTMLButtonElement | null) => void
+  onOpenPicker: (trigger: HTMLButtonElement) => void
+  onDuplicate: () => void
+  onRemove: () => void
+  onSkillChange: (skillRecordId: string) => void
+  onChange: (patch: Partial<ComparisonBuildConfig>) => void
+  onOpenSkillEffect: (skill: SkillRecord, skillLevelIndex: number, trigger: HTMLButtonElement) => void
+}) {
+  const operatorSkills = rows
+    .filter((row) => row.operatorId === skill.operatorId)
+    .sort((a, b) => a.skillIndex - b.skillIndex)
+  const phases = skill.operatorProfile.phases
+  const phase = phases[build.phaseIndex]
+  const maxOperatorLevel = Math.max(1, phase?.maxLevel ?? 1)
+  const modules = getOperatorModules(skill.operatorProfile)
+  const moduleEntries = modules.map((module, moduleIndex) => ({
+    module,
+    id: getOperatorModuleId(module, moduleIndex),
+    unlocked: isOperatorModuleUnlocked(module, build.phaseIndex, build.operatorLevel),
+  }))
+  const selectedModule = moduleEntries.find((entry) => entry.id === build.moduleId)?.module ?? null
+  const moduleLevels = getOperatorModuleLevels(selectedModule)
+  const color = getBuildColor(build.colorIndex ?? index)
+  const style = { '--build-color': color } as CSSProperties
+  const buildName = 'BUILD ' + String.fromCharCode(65 + index)
+  const buildTokenId = build.slotId + '-token'
+  const operatorNameId = build.slotId + '-operator'
+
+  return (
+    <article
+      className="comparison-build-card"
+      style={style}
+      aria-labelledby={buildTokenId + ' ' + operatorNameId}
+    >
+      <header className="comparison-build-card-header">
+        <span id={buildTokenId} className="comparison-build-token"><i aria-hidden="true" />{buildName}</span>
+        <div className="comparison-build-actions">
+          <button type="button" aria-label={buildName + 'を複製'} disabled={!canDuplicate} onClick={onDuplicate}>複製</button>
+          <button type="button" aria-label={buildName + 'を削除'} disabled={!canRemove} onClick={onRemove}>削除</button>
+        </div>
+      </header>
+
+      <button
+        ref={pickerButtonRef}
+        type="button"
+        className="comparison-operator-picker-button"
+        aria-label={buildName + 'のオペレーターを変更'}
+        onClick={(event) => onOpenPicker(event.currentTarget)}
+      >
+        <span>
+          <strong id={operatorNameId}>{skill.operatorName}</strong>
+          <small>★{skill.rarity} · {skill.professionLabel} / {skill.subProfessionName}</small>
+        </span>
+        <em>変更</em>
+      </button>
+
+      <div className="comparison-build-fields">
+        <label>
+          <span>スキル</span>
+          <select
+            aria-label={buildName + 'のスキル'}
+            value={build.skillRecordId}
+            onChange={(event) => onSkillChange(event.currentTarget.value)}
+          >
+            {operatorSkills.map((candidate) => (
+              <option value={candidate.id} key={candidate.id}>S{candidate.skillIndex} {candidate.skillName}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>モジュール</span>
+          <select
+            aria-label={buildName + 'のモジュール'}
+            value={build.moduleId ?? ''}
+            onChange={(event) => {
+              const moduleId = event.currentTarget.value || null
+              const nextModule = moduleEntries.find((entry) => entry.id === moduleId)?.module
+              const levels = getOperatorModuleLevels(nextModule)
+              onChange({
+                moduleId,
+                moduleLevel: moduleId ? levels.at(-1) ?? 1 : null,
+              })
+            }}
+          >
+            <option value="">なし</option>
+            {moduleEntries.map((entry) => (
+              <option value={entry.id} disabled={!entry.unlocked} key={entry.id}>
+                {entry.module.uniEquipName || '名称なし'}
+                {entry.unlocked ? '' : '（' + getOperatorModuleUnlockLabel(entry.module) + '）'}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>モジュール段階</span>
+          <select
+            aria-label={buildName + 'のモジュール段階'}
+            value={build.moduleLevel ?? ''}
+            disabled={!selectedModule}
+            onChange={(event) => onChange({ moduleLevel: Number(event.currentTarget.value) })}
+          >
+            {!selectedModule && <option value="">—</option>}
+            {moduleLevels.map((level) => <option value={level} key={level}>Lv.{level}</option>)}
+          </select>
+        </label>
+        <button
+          type="button"
+          className="comparison-skill-effect-button"
+          aria-label={buildName + 'のスキル効果の詳細'}
+          onClick={(event) => onOpenSkillEffect(skill, build.skillLevelIndex, event.currentTarget)}
+        >
+          スキル効果の詳細
+        </button>
+      </div>
+
+      <details className="comparison-growth-details">
+        <summary>
+          <span>育成状態</span>
+          <strong>昇進{build.phaseIndex} Lv.{build.operatorLevel} · 信頼{formatNumber(build.trustPercent)}% · {getSkillLevelLabel(build.skillLevelIndex, skill.skillLevels.length)}</strong>
+        </summary>
+        <div className="comparison-growth-grid">
+          <label>
+            <span>昇進</span>
+            <select
+              aria-label={buildName + 'の昇進段階'}
+              value={build.phaseIndex}
+              onChange={(event) => onChange({ phaseIndex: Number(event.currentTarget.value) })}
+            >
+              {phases.map((_, phaseIndex) => (
+                <option value={phaseIndex} key={phaseIndex}>{phaseIndex === 0 ? '未昇進' : '昇進' + phaseIndex}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>レベル</span>
+            <input
+              aria-label={buildName + 'のオペレーターレベル'}
+              type="number"
+              min={1}
+              max={maxOperatorLevel}
+              value={build.operatorLevel}
+              onChange={(event) => onChange({ operatorLevel: Number(event.currentTarget.value) })}
+            />
+          </label>
+          <label>
+            <span>信頼度</span>
+            <input
+              aria-label={buildName + 'の信頼度'}
+              type="number"
+              min={0}
+              max={100}
+              value={build.trustPercent}
+              onChange={(event) => onChange({ trustPercent: Number(event.currentTarget.value) })}
+            />
+          </label>
+          <label>
+            <span>スキルレベル</span>
+            <select
+              aria-label={buildName + 'のスキルレベル'}
+              value={build.skillLevelIndex}
+              onChange={(event) => onChange({ skillLevelIndex: Number(event.currentTarget.value) })}
+            >
+              {(skill.skillLevels.length > 0 ? skill.skillLevels : [skill.raw]).map((_, skillLevelIndex, levels) => (
+                <option value={skillLevelIndex} key={skillLevelIndex}>
+                  {getSkillLevelLabel(skillLevelIndex, levels.length)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </details>
+    </article>
+  )
+}
+
+function CurrentOutputTable({ evaluations }: { evaluations: ComparisonBuildEvaluation[] }) {
+  return (
+    <div className="comparison-output-table-wrap" role="region" tabIndex={0} aria-label="現在の敵条件での比較表">
+      <table className="comparison-output-table">
+        <thead>
+          <tr>
+            <th>ビルド</th>
+            <th>通常種別</th>
+            <th>通常 1ヒット</th>
+            <th>通常 DPS</th>
+            <th>スキル種別</th>
+            <th>スキル 1ヒット</th>
+            <th>スキル 1攻撃</th>
+            <th>スキル DPS</th>
+            <th>スキル総量</th>
+            <th>計算状態</th>
+          </tr>
+        </thead>
+        <tbody>
+          {evaluations.map((evaluation, index) => (
+            <tr key={evaluation.config.slotId}>
+              <th scope="row">
+                <span className="comparison-table-build-label">
+                  <i style={{ background: getBuildColor(evaluation.config.colorIndex ?? index) }} aria-hidden="true" />
+                  <span>
+                    <strong>{evaluation.skill.operatorName}</strong>
+                    <small>S{evaluation.skill.skillIndex} {evaluation.skill.skillName} · {formatModuleLabel(evaluation)}</small>
+                  </span>
+                </span>
+              </th>
+              <td>{formatDamageType(evaluation.normalOutput.damageTypeDetection.damageType)}</td>
+              <MetricCell evaluation={evaluation} metric="NORMAL_PER_HIT" />
+              <MetricCell evaluation={evaluation} metric="NORMAL_DPS" />
+              <td>{formatDamageType(evaluation.skillOutput.damageTypeDetection.damageType)}</td>
+              <MetricCell evaluation={evaluation} metric="SKILL_PER_HIT" />
+              <MetricCell evaluation={evaluation} metric="SKILL_PER_ATTACK" />
+              <MetricCell evaluation={evaluation} metric="SKILL_DPS" />
+              <MetricCell evaluation={evaluation} metric="SKILL_TOTAL" />
+              <td><OutputStatus evaluation={evaluation} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function SeriesValueTable({
+  series,
+  evaluations,
+  axis,
+  metric,
+  points,
+  current,
+}: {
+  series: ComparisonAxisSeries[]
+  evaluations: ComparisonBuildEvaluation[]
+  axis: ComparisonAxis
+  metric: ComparisonBuildMetric
+  points: number[]
+  current: number
+}) {
+  const evaluationBySlot = new Map(evaluations.map((evaluation) => [evaluation.config.slotId, evaluation]))
+  return (
+    <div className="comparison-series-table-section">
+      <div className="comparison-table-title-row">
+        <h4>正確な数値</h4>
+        <span>{COMPARISON_BUILD_METRIC_LABELS[metric]}</span>
+      </div>
+      <div className="comparison-series-table-wrap" role="region" tabIndex={0} aria-label="グラフと同じ比較数値の表">
+        <table className="comparison-series-table">
+          <thead>
+            <tr>
+              <th>{COMPARISON_AXIS_LABELS[axis]}</th>
+              {series.map((item, index) => (
+                <th key={item.slotId}>
+                  <span className="comparison-series-column-heading">
+                    <i style={{ background: getBuildColor(item.colorIndex) }} aria-hidden="true" />
+                    {getSeriesLabel(evaluationBySlot.get(item.slotId), index)}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {points.map((point) => (
+              <tr className={point === current ? 'current' : undefined} key={point}>
+                <th scope="row">{formatNumber(point)}{point === current ? '（現在）' : ''}</th>
+                {series.map((item) => {
+                  const value = item.points.find((candidate) => candidate.x === point)
+                  return (
+                    <td title={value?.unavailableReasons.join(' ') || undefined} key={item.slotId}>
+                      {formatOptionalNumber(value?.value ?? null)}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function SeriesAvailability({
+  series,
+  evaluations,
+}: {
+  series: ComparisonAxisSeries[]
+  evaluations: ComparisonBuildEvaluation[]
+}) {
+  const evaluationBySlot = new Map(evaluations.map((evaluation) => [evaluation.config.slotId, evaluation]))
+  const unavailable = series
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => item.points.every((point) => point.value === null))
+  if (unavailable.length === 0) return null
+
+  return (
+    <section className="comparison-series-unavailable" aria-labelledby="comparison-series-unavailable-heading">
+      <h4 id="comparison-series-unavailable-heading">この出力を表示できないビルド</h4>
+      <ul>
+        {unavailable.map(({ item, index }) => (
+          <li key={item.slotId}>
+            <strong>{getSeriesLabel(evaluationBySlot.get(item.slotId), index)}</strong>
+            <span>{item.unavailableReasons.join(' ') || 'この出力は現在の計算モデルでは算出できません。'}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+function BuildEvaluationDetails({ evaluation, index }: { evaluation: ComparisonBuildEvaluation; index: number }) {
+  const normalType = formatDamageType(evaluation.normalOutput.damageTypeDetection.damageType)
+  const skillType = formatDamageType(evaluation.skillOutput.damageTypeDetection.damageType)
+  const moduleEffects = evaluation.module.application.attributeEffects
+  const moduleChanges = evaluation.module.application.changes
+  const missingMetrics = getMissingMetrics(evaluation)
+
+  return (
+    <details
+      className="comparison-evaluation-details"
+      style={{ '--build-color': getBuildColor(evaluation.config.colorIndex ?? index) } as CSSProperties}
+    >
+      <summary>
+        <span className="comparison-detail-summary-name">
+          <i aria-hidden="true" />
+          <span>
+            <strong>{evaluation.skill.operatorName} · S{evaluation.skill.skillIndex} {evaluation.skill.skillName}</strong>
+            <small>{formatModuleLabel(evaluation)}</small>
+          </span>
+        </span>
+        <OutputStatus evaluation={evaluation} />
+      </summary>
+      <div className="comparison-evaluation-body">
+        <dl className="comparison-evaluation-stats">
+          <div><dt>基礎攻撃力</dt><dd>{formatNumber(evaluation.operatorStats.attack)}</dd></div>
+          <div><dt>攻撃間隔</dt><dd>{formatNumber(evaluation.operatorStats.attackInterval)}秒</dd></div>
+          <div><dt>通常 / スキル</dt><dd>{normalType} / {skillType}</dd></div>
+          <div><dt>攻撃回数</dt><dd>{formatNumber(evaluation.skillModel.hitCount)}ヒット</dd></div>
+          <div><dt>効果時間</dt><dd>{evaluation.skillModel.duration > 0 ? formatNumber(evaluation.skillModel.duration) + '秒' : '—'}</dd></div>
+          <div><dt>モジュール攻撃力</dt><dd>{formatSignedNumber(evaluation.module.application.moduleAttack)}</dd></div>
+        </dl>
+
+        {moduleEffects.length > 0 && (
+          <section className="comparison-reflection-list">
+            <h4>モジュール能力値</h4>
+            <ul>
+              {moduleEffects.map((effect) => (
+                <li key={effect.key}>
+                  <strong>{effect.label} {effect.valueLabel}</strong>
+                  <span>{effect.reason}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {moduleChanges.length > 0 && (
+          <section className="comparison-reflection-list">
+            <h4>モジュールによる特性・素質変更</h4>
+            <ul>
+              {moduleChanges.map((change) => (
+                <li key={change.kind + ':' + change.label + ':' + change.description}>
+                  <strong>{change.label}</strong>
+                  <span>{change.description}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {(evaluation.unavailableReasons.length > 0 || evaluation.warnings.length > 0 || missingMetrics.length > 0) ? (
+          <div className="comparison-message-grid">
+            {evaluation.unavailableReasons.length > 0 && (
+              <section className="comparison-message comparison-message-error">
+                <h4>計算できない出力</h4>
+                <ul>{evaluation.unavailableReasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
+              </section>
+            )}
+            {missingMetrics.length > 0 && (
+              <section className="comparison-message comparison-message-error">
+                <h4>表示できない出力</h4>
+                <ul>
+                  {missingMetrics.map(({ metric, reasons }) => (
+                    <li key={metric}>
+                      <strong>{COMPARISON_BUILD_METRIC_LABELS[metric]}:</strong>{' '}
+                      {reasons.join(' ') || 'この出力は算出対象外です。'}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            {evaluation.warnings.length > 0 && (
+              <section className="comparison-message comparison-message-warning">
+                <h4>概算・未反映の条件</h4>
+                <ul>{evaluation.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+              </section>
+            )}
+          </div>
+        ) : (
+          <p className="comparison-all-applied">現在の単体ダメージ比較に必要な登録済み効果を反映しています。</p>
+        )}
+      </div>
+    </details>
+  )
+}
+
+function OperatorPickerDialog({
+  rows,
+  filters,
+  loading,
+  selectedOperatorId,
+  mode,
+  onFiltersChange,
+  onSelect,
+  onClose,
+}: {
+  rows: SkillRecord[]
+  filters: FilterState
+  loading: boolean
+  selectedOperatorId?: string
+  mode: 'ADD' | 'REPLACE'
+  onFiltersChange: (filters: FilterState) => void
+  onSelect: (row: SkillRecord) => void
+  onClose: () => void
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const titleRef = useRef<HTMLHeadingElement>(null)
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    if (!dialog.open) dialog.showModal()
+    window.requestAnimationFrame(() => titleRef.current?.focus())
+    const previousOverflow = document.documentElement.style.overflow
+    document.documentElement.style.overflow = 'hidden'
+    return () => {
+      document.documentElement.style.overflow = previousOverflow
+      if (dialog.open) dialog.close()
+    }
+  }, [])
+
+  const handleBackdropClick = (event: ReactMouseEvent<HTMLDialogElement>) => {
+    if (event.target === event.currentTarget) onClose()
+  }
+
+  return (
+    <dialog
+      ref={dialogRef}
+      className="comparison-picker-dialog"
+      aria-labelledby="comparison-picker-title"
+      aria-modal="true"
+      onCancel={(event) => {
+        event.preventDefault()
+        onClose()
+      }}
+      onClick={handleBackdropClick}
+    >
+      <article className="comparison-picker-modal">
+        <header>
+          <div>
+            <span>OPERATOR SELECT</span>
+            <h2 ref={titleRef} id="comparison-picker-title" tabIndex={-1}>
+              {mode === 'ADD' ? '比較するオペレーターを追加' : 'オペレーターを変更'}
+            </h2>
+          </div>
+          <button type="button" aria-label="オペレーター選択を閉じる" onClick={onClose}>×</button>
+        </header>
+        <div className="comparison-picker-body">
+          <OperatorSearch
+            rows={rows}
+            filters={filters}
+            loading={loading}
+            onFiltersChange={onFiltersChange}
+            onSelect={onSelect}
+            instruction="同じオペレーターを複数回選ぶこともできます"
+            actionLabel="選択する →"
+            selectedOperatorId={selectedOperatorId}
+          />
+        </div>
+      </article>
+    </dialog>
+  )
+}
+
+function PanelHeading({
+  number,
+  title,
+  id,
+  note,
+  action,
+}: {
+  number: string
+  title: string
+  id: string
+  note: string
+  action?: React.ReactNode
+}) {
   return (
     <div className="comparison-panel-heading">
-      <div><span>{number}</span><h2>{title}</h2></div>
+      <div className="comparison-panel-title">
+        <span>{number}</span>
+        <h2 id={id}>{title}</h2>
+      </div>
       <div className="comparison-panel-heading-actions">
         <p>{note}</p>
         {action}
@@ -540,48 +1003,238 @@ function PanelHeading({ number, title, note, action }: { number: string; title: 
   )
 }
 
-function buildProfessionOptions(rows: SkillRecord[]): FilterOption[] {
-  const order = new Map<string, number>(PROFESSION_ORDER.map((profession, index) => [profession, index]))
-  return [...new Map(rows.map((row) => [
-    row.profession,
-    { value: row.profession, label: row.professionLabel },
-  ])).values()].sort((a, b) => (
-    (order.get(a.value) ?? PROFESSION_ORDER.length) - (order.get(b.value) ?? PROFESSION_ORDER.length)
-    || a.label.localeCompare(b.label, 'ja')
+function NumberField({
+  label,
+  value,
+  min,
+  max,
+  step,
+  suffix,
+  onChange,
+}: {
+  label: string
+  value: number
+  min: number
+  max: number
+  step: number
+  suffix?: string
+  onChange: (value: number) => void
+}) {
+  return (
+    <label className="comparison-number-field">
+      <span>{label}</span>
+      <span className="comparison-number-input">
+        <input
+          type="number"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(event) => onChange(clamp(Number(event.currentTarget.value), min, max))}
+        />
+        {suffix && <em>{suffix}</em>}
+      </span>
+    </label>
+  )
+}
+
+function MetricCell({
+  evaluation,
+  metric,
+}: {
+  evaluation: ComparisonBuildEvaluation
+  metric: ComparisonBuildMetric
+}) {
+  const result = getComparisonMetricValue(evaluation, metric)
+  const unavailableLabel = result.value === null
+    ? COMPARISON_BUILD_METRIC_LABELS[metric] + 'は表示できません。'
+      + (result.unavailableReasons.join(' ') || 'この出力は算出対象外です。')
+    : undefined
+  return (
+    <td
+      className={result.value === null ? 'comparison-numeric-cell unavailable' : 'comparison-numeric-cell'}
+      title={result.unavailableReasons.join(' ') || undefined}
+      aria-label={unavailableLabel}
+    >
+      {formatOptionalNumber(result.value)}
+    </td>
+  )
+}
+
+function OutputStatus({ evaluation }: { evaluation: ComparisonBuildEvaluation }) {
+  if (evaluation.unavailableReasons.length > 0) {
+    return <span className="comparison-status comparison-status-partial">一部計算不可</span>
+  }
+  if (getMissingMetrics(evaluation).length > 0) {
+    return <span className="comparison-status comparison-status-partial">一部出力なし</span>
+  }
+  if (evaluation.warnings.length > 0) {
+    return <span className="comparison-status comparison-status-warning">概算あり</span>
+  }
+  return <span className="comparison-status comparison-status-ready">計算可能</span>
+}
+
+function getMissingMetrics(evaluation: ComparisonBuildEvaluation): Array<{
+  metric: ComparisonBuildMetric
+  reasons: string[]
+}> {
+  return COMPARISON_BUILD_METRICS.flatMap((metric) => {
+    const result = getComparisonMetricValue(evaluation, metric)
+    return result.value === null
+      ? [{ metric, reasons: result.unavailableReasons }]
+      : []
+  })
+}
+
+function createInitialBuilds(
+  rows: SkillRecord[],
+  allocateSlotId: () => string,
+): ComparisonBuildConfig[] {
+  if (rows.length === 0) return []
+  const groupedByOperator = new Map<string, SkillRecord[]>()
+  for (const row of rows) {
+    const skills = groupedByOperator.get(row.operatorId) ?? []
+    skills.push(row)
+    groupedByOperator.set(row.operatorId, skills)
+  }
+  const grouped = [...groupedByOperator.values()]
+    .map((skills) => skills.sort((a, b) => a.skillIndex - b.skillIndex))
+  const preferred = grouped.find((skills) => skills[0]?.operatorName === 'スルト' && skills.length >= 2)
+    ?? grouped.find((skills) => skills.length >= 2)
+  const initialSkills = preferred
+    ? [preferred[0], preferred.at(-1) as SkillRecord]
+    : [rows[0], rows[1] ?? rows[0]]
+  return initialSkills.map((skill, index) => (
+    createBuildFromSkill(skill, allocateSlotId(), index)
   ))
 }
 
-function cloneDefaultEnemyProfiles(): EnemyStatProfile[] {
-  return DEFAULT_ENEMY_STAT_PROFILES.map((profile) => ({ ...profile }))
-}
-
-function getMetricGuidance(effectWindow: EffectWindowType): string {
-  if (effectWindow === 'NONE') return '継続枠がないためDPSは選択できません'
-  if (effectWindow === 'PERMANENT' || effectWindow === 'TOGGLE_OR_MODE') {
-    return '終了時点を確定できないためスキル総ダメージは選択できません'
+function createBuildFromSkill(
+  skill: SkillRecord,
+  slotId: string,
+  colorIndex: number,
+): ComparisonBuildConfig {
+  const phaseIndex = Math.max(0, skill.operatorProfile.phases.length - 1)
+  const operatorLevel = Math.max(1, skill.operatorProfile.phases[phaseIndex]?.maxLevel ?? 1)
+  return {
+    slotId,
+    label: null,
+    colorIndex,
+    operatorId: skill.operatorId,
+    skillRecordId: skill.id,
+    phaseIndex,
+    operatorLevel,
+    trustPercent: 100,
+    skillLevelIndex: Math.max(0, skill.skillLevels.length - 1),
+    moduleId: null,
+    moduleLevel: null,
   }
-  if (effectWindow === 'UNKNOWN') return '終了条件が未確定なため1回攻撃のダメージのみ表示できます'
-  return '終了条件に応じた3種類の数値を比較できます'
 }
 
-function getUnavailableMetricReason(effectWindow: EffectWindowType, metric: ComparisonMetric): string {
-  if (metric === 'DPS' && effectWindow === 'NONE') return '継続枠がないスキルではDPSを算出しません'
-  if (metric === 'TOTAL') return '終了時点を確定できないためスキル総ダメージを算出できません'
-  return 'この終了条件では選択できません'
+function normalizeBuildConfig(
+  rows: SkillRecord[],
+  requested: ComparisonBuildConfig,
+): ComparisonBuildConfig {
+  const skill = rows.find((row) => row.id === requested.skillRecordId && row.operatorId === requested.operatorId)
+  if (!skill) return requested
+  const phaseIndex = clamp(Math.round(requested.phaseIndex), 0, Math.max(0, skill.operatorProfile.phases.length - 1))
+  const phase = skill.operatorProfile.phases[phaseIndex]
+  const operatorLevel = clamp(Math.round(requested.operatorLevel), 1, Math.max(1, phase?.maxLevel ?? 1))
+  const trustPercent = clamp(requested.trustPercent, 0, 100)
+  const skillLevelIndex = clamp(
+    Math.round(requested.skillLevelIndex),
+    0,
+    Math.max(0, (skill.skillLevels.length || 1) - 1),
+  )
+  const moduleEntries = getOperatorModules(skill.operatorProfile).map((module, index) => ({
+    module,
+    id: getOperatorModuleId(module, index),
+  }))
+  const selectedModule = moduleEntries.find((entry) => entry.id === requested.moduleId)?.module
+  const moduleUnlocked = selectedModule
+    ? isOperatorModuleUnlocked(selectedModule, phaseIndex, operatorLevel)
+    : false
+  const moduleId = selectedModule && moduleUnlocked ? requested.moduleId : null
+  const levels = getOperatorModuleLevels(selectedModule)
+  const moduleLevel = moduleId
+    ? levels.includes(requested.moduleLevel ?? -1)
+      ? requested.moduleLevel
+      : levels.at(-1) ?? 1
+    : null
+
+  return {
+    ...requested,
+    phaseIndex,
+    operatorLevel,
+    trustPercent,
+    skillLevelIndex,
+    moduleId,
+    moduleLevel,
+  }
+}
+
+function getSeriesLabel(evaluation: ComparisonBuildEvaluation | undefined, index: number): string {
+  if (!evaluation) return 'Build ' + String.fromCharCode(65 + index)
+  return [
+    'Build ' + String.fromCharCode(65 + index),
+    evaluation.skill.operatorName,
+    'S' + evaluation.skill.skillIndex + ' ' + evaluation.skill.skillName,
+    formatModuleLabel(evaluation),
+  ].join(' · ')
+}
+
+function formatModuleLabel(evaluation: ComparisonBuildEvaluation): string {
+  return evaluation.module.module
+    ? (evaluation.module.application.moduleName || evaluation.module.module.uniEquipName || '名称なし')
+      + ' Lv.' + evaluation.module.level
+    : 'モジュールなし'
+}
+
+function getBuildColor(colorIndex: number): string {
+  return BUILD_COLORS[Math.abs(colorIndex) % BUILD_COLORS.length]
+}
+
+function nextAvailableColorIndex(builds: ComparisonBuildConfig[]): number {
+  const used = new Set(builds.map((build) => (build.colorIndex ?? 0) % BUILD_COLORS.length))
+  return BUILD_COLORS.findIndex((_, index) => !used.has(index)) >= 0
+    ? BUILD_COLORS.findIndex((_, index) => !used.has(index))
+    : builds.length % BUILD_COLORS.length
+}
+
+function formatDamageType(type: keyof typeof DAMAGE_TYPE_LABELS | null): string {
+  return type === null ? '判定不可' : DAMAGE_TYPE_LABELS[type]
+}
+
+function getSkillLevelLabel(index: number, total: number): string {
+  if (total >= 10 && index >= 7) return '特化' + (index - 6)
+  return 'Lv.' + (index + 1)
+}
+
+function formatOptionalNumber(value: number | null): string {
+  return value === null ? '—' : formatNumber(value)
 }
 
 function formatNumber(value: number): string {
-  return COMPARISON_NUMBER_FORMATTER.format(value)
+  return NUMBER_FORMATTER.format(value)
 }
 
-function clamp(value: number, min: number, max: number): number {
-  if (!Number.isFinite(value)) return min
-  return Math.min(max, Math.max(min, value))
+function formatSignedNumber(value: number): string {
+  return (value > 0 ? '+' : '') + formatNumber(value)
 }
 
-function getLocalDateStamp(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+function downloadCsv(csv: string, filename: string) {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  document.body.append(anchor)
+  anchor.click()
+  anchor.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+function clamp(value: number, minimum: number, maximum: number): number {
+  if (!Number.isFinite(value)) return minimum
+  return Math.min(maximum, Math.max(minimum, value))
 }

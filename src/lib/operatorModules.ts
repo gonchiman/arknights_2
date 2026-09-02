@@ -291,31 +291,51 @@ function applyTraitCandidate(
   candidate: RawOperatorModuleTraitCandidate,
 ) {
   const sourceIndex = passives.sources.findIndex((source) => source.sourceKind === 'TRAIT')
-  const fallbackDescription = formatModuleDescription(
-    candidate.overrideDescripton ?? candidate.overrideDescription ?? candidate.additionalDescription,
+  const rawOverrideDescription = firstNonEmpty(
+    candidate.overrideDescripton,
+    candidate.overrideDescription,
+  )
+  const hasOverrideDescription = Boolean(rawOverrideDescription)
+  const overrideDescription = formatModuleDescription(
+    rawOverrideDescription,
     candidate.blackboard,
   )
+  const additionalDescription = formatModuleDescription(
+    candidate.additionalDescription,
+    candidate.blackboard,
+  )
+  const nextDescription = [
+    hasOverrideDescription ? overrideDescription : passives.traitDescription,
+    additionalDescription,
+  ].filter(Boolean).join(' ')
   if (sourceIndex < 0) {
     passives.sources.unshift({
       sourceKind: 'TRAIT',
       sourceName: '特性',
       talentIndex: null,
-      description: passives.traitDescription || fallbackDescription,
+      description: nextDescription,
       blackboard: normalizeBlackboard(candidate.blackboard),
       unlockCondition: candidate.unlockCondition,
       requiredPotentialRank: candidate.requiredPotentialRank ?? 0,
       prefabKey: candidate.prefabKey ?? null,
       tokenKey: null,
     })
+    passives.traitDescription = nextDescription
     return
   }
 
   const current = passives.sources[sourceIndex]
+  const currentDescription = [
+    hasOverrideDescription ? overrideDescription || current.description : current.description,
+    additionalDescription,
+  ].filter(Boolean).join(' ')
   passives.sources[sourceIndex] = {
     ...current,
+    description: currentDescription,
     blackboard: mergeBlackboards(current.blackboard, normalizeBlackboard(candidate.blackboard)),
     prefabKey: candidate.prefabKey ?? current.prefabKey,
   }
+  passives.traitDescription = currentDescription
 }
 
 function appendTokenChanges(
@@ -343,10 +363,14 @@ function appendTokenChanges(
 
 function getTraitDescriptions(candidate: RawOperatorModuleTraitCandidate): string[] {
   return [
-    candidate.overrideDescripton ?? candidate.overrideDescription,
+    firstNonEmpty(candidate.overrideDescripton, candidate.overrideDescription),
     candidate.additionalDescription,
   ].map((description) => formatModuleDescription(description, candidate.blackboard))
     .filter((description): description is string => Boolean(description))
+}
+
+function firstNonEmpty(...values: Array<string | null | undefined>): string | undefined {
+  return values.find((value): value is string => Boolean(value?.trim()))
 }
 
 function resolveTalentIndex(
