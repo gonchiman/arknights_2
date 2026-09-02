@@ -9,7 +9,12 @@ import {
   deriveSkillModel,
   getOperatorStats,
 } from '../src/lib/damageCalculator.ts'
-import { DAMAGE_CALCULATOR_PANEL_DEFAULTS, getDamageCalculatorPanelNumbers } from '../src/lib/damageCalculatorPanels.ts'
+import {
+  DAMAGE_CALCULATOR_PANEL_DEFAULTS,
+  DAMAGE_OUTPUT_PANELS,
+  getDamageCalculatorPanelNumbers,
+  getDamageOutputPanelState,
+} from '../src/lib/damageCalculatorPanels.ts'
 import {
   getDamageSensitivityTablePoints,
   selectDamageSensitivityType,
@@ -23,25 +28,51 @@ test('統合後の各パネルの初期開閉状態を維持する', () => {
     calculationConditions: true,
     operatorInfo: false,
     skillModel: true,
-    results: true,
-    uniqueOutput: true,
+    commonOutput: true,
+    subProfessionOutput: true,
+    operatorOutput: true,
+    skillOutput: true,
     normalCalculationProcess: false,
     skillCalculationProcess: false,
   })
 })
 
-test('比較パネルの統合後は後続パネル番号を連番にする', () => {
-  assert.deepEqual(getDamageCalculatorPanelNumbers(false), {
-    results: '05',
-    uniqueOutput: '06',
-    normalCalculationProcess: '06',
-    skillCalculationProcess: '07',
+test('出力を共通・職分・オペレーター・スキル固有の順に定義する', () => {
+  assert.deepEqual(DAMAGE_OUTPUT_PANELS, {
+    common: { number: '05', title: '共通出力' },
+    subProfession: { number: '06', title: '職分固有出力' },
+    operator: { number: '07', title: 'オペレーター固有出力' },
+    skill: { number: '08', title: 'スキル固有出力' },
   })
-  assert.deepEqual(getDamageCalculatorPanelNumbers(true), {
-    results: '05',
-    uniqueOutput: '06',
-    normalCalculationProcess: '07',
-    skillCalculationProcess: '08',
+})
+
+test('出力内容が空でも4区分と後続パネルの番号を固定する', () => {
+  assert.deepEqual(getDamageCalculatorPanelNumbers(), {
+    commonOutput: '05',
+    subProfessionOutput: '06',
+    operatorOutput: '07',
+    skillOutput: '08',
+    normalCalculationProcess: '09',
+    skillCalculationProcess: '10',
+  })
+})
+
+test('固有出力がある場合だけ開閉可能にし、初期状態を開く', () => {
+  assert.deepEqual(getDamageOutputPanelState(true, true), {
+    open: true,
+    disabled: false,
+  })
+  assert.deepEqual(getDamageOutputPanelState(true, false), {
+    open: false,
+    disabled: false,
+  })
+  assert.deepEqual(getDamageOutputPanelState(false, true), {
+    open: false,
+    disabled: true,
+  })
+  assert.deepEqual(getDamageOutputPanelState(false, false), {
+    open: false,
+    disabled: true,
   })
 })
 
