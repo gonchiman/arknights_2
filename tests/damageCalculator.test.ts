@@ -10,7 +10,11 @@ import {
   getOperatorStats,
 } from '../src/lib/damageCalculator.ts'
 import { DAMAGE_CALCULATOR_PANEL_DEFAULTS, getDamageCalculatorPanelNumbers } from '../src/lib/damageCalculatorPanels.ts'
-import { selectDamageSensitivityType, selectDamageSensitivityValues } from '../src/lib/damageSensitivity.ts'
+import {
+  getDamageSensitivityTablePoints,
+  selectDamageSensitivityType,
+  selectDamageSensitivityValues,
+} from '../src/lib/damageSensitivity.ts'
 import { getOperatorPassives } from '../src/lib/operatorProfile.ts'
 
 test('統合後の各パネルの初期開閉状態を維持する', () => {
@@ -104,6 +108,15 @@ test('スキル系列を算出できない表示では通常攻撃の種別を�
   assert.equal(selectDamageSensitivityType('PHYSICAL', 'ARTS', 'DPS', false), 'PHYSICAL')
   assert.equal(selectDamageSensitivityType('ARTS', 'PHYSICAL', 'DAMAGE', false), 'ARTS')
   assert.equal(selectDamageSensitivityType('TRUE', 'ARTS', 'DPS', false), 'TRUE')
+})
+
+test('敵入力なしでも比較軸ごとの表点を生成し、物理上限は最低保証地点まで自動拡張する', () => {
+  assert.deepEqual(getDamageSensitivityTablePoints('ARTS'), [0, 20, 40, 60, 80, 95, 100])
+  assert.deepEqual(getDamageSensitivityTablePoints('PHYSICAL'), [0, 500, 1000, 1500, 2000])
+  assert.deepEqual(getDamageSensitivityTablePoints('PHYSICAL', [2800]), [0, 500, 1000, 1500, 2000, 3500])
+  assert.deepEqual(getDamageSensitivityTablePoints('PHYSICAL', [12000]), [0, 500, 1000, 1500, 2000, 12500])
+  assert.deepEqual(getDamageSensitivityTablePoints('TRUE'), [0])
+  assert.deepEqual(getDamageSensitivityTablePoints(null), [0])
 })
 
 test('物理・術・確定ダメージへ敵防御を正しく適用する', () => {

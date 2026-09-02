@@ -88,10 +88,6 @@
   align-items: end;
 }
 
-.enemy-form-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .model-value-grid {
   min-width: 0;
   display: grid;
@@ -896,7 +892,7 @@
   font-size: 10px;
 }
 
-.sensitivity-current-values {
+.sensitivity-reference-values {
   min-width: 0;
   display: flex;
   align-items: baseline;
@@ -910,13 +906,13 @@
   font-size: 10px;
 }
 
-.sensitivity-current-values > span {
+.sensitivity-reference-values > span {
   color: #55725b;
   font-size: 9px;
   font-weight: 800;
 }
 
-.sensitivity-current-values > strong { font-size: 11px; }
+.sensitivity-reference-values > strong { font-size: 11px; }
 
 .mech-accord-output {
   min-width: 0;
@@ -1320,33 +1316,10 @@
 }
 
 .sensitivity-chart-point.skill { stroke: var(--danger); }
-.sensitivity-chart-point.current { stroke-width: 2; }
-.sensitivity-chart-point.normal.current { fill: var(--link); }
-.sensitivity-chart-point.skill.current { fill: var(--danger); }
-
-.sensitivity-chart-current line {
-  stroke: var(--text);
-  stroke-dasharray: 3 3;
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-}
-
-.sensitivity-chart-current rect { fill: var(--text); }
-
-.sensitivity-chart-current text {
-  fill: #fff;
-  font-size: 9px;
-  font-weight: 700;
-}
 
 .sensitivity-chart-tick {
   fill: var(--text-muted);
   font-size: 9px;
-}
-
-.sensitivity-chart-tick.current {
-  fill: var(--text);
-  font-weight: 700;
 }
 
 .sensitivity-chart-axis-mark {
@@ -1455,15 +1428,6 @@
   color: var(--danger);
 }
 
-.sensitivity-table td small {
-  display: inline-block;
-  margin: 0 0 0 6px;
-  border: 1px solid var(--border-strong);
-  padding: 1px 3px;
-  color: var(--text-soft);
-  font-size: 8px;
-}
-
 @media (max-width: 1250px) {
   .growth-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .operator-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -1500,7 +1464,6 @@
   }
 
   .growth-form-grid,
-  .enemy-form-grid,
   .operator-stat-grid,
   .damage-type-detection-grid,
   .model-value-grid { grid-template-columns: minmax(0, 1fr); }
