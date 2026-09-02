@@ -9,10 +9,11 @@ import {
   deriveSkillModel,
   getOperatorStats,
 } from '../src/lib/damageCalculator.ts'
-import { DAMAGE_CALCULATOR_PANEL_DEFAULTS } from '../src/lib/damageCalculatorPanels.ts'
+import { DAMAGE_CALCULATOR_PANEL_DEFAULTS, getDamageCalculatorPanelNumbers } from '../src/lib/damageCalculatorPanels.ts'
+import { selectDamageSensitivityType, selectDamageSensitivityValues } from '../src/lib/damageSensitivity.ts'
 import { getOperatorPassives } from '../src/lib/operatorProfile.ts'
 
-test('各パネルの初期開閉状態を従来表示のまま維持する', () => {
+test('統合後の各パネルの初期開閉状態を維持する', () => {
   assert.deepEqual(DAMAGE_CALCULATOR_PANEL_DEFAULTS, {
     operatorSearch: true,
     calculationConditions: true,
@@ -20,10 +21,89 @@ test('各パネルの初期開閉状態を従来表示のまま維持する', ()
     skillModel: true,
     results: true,
     uniqueOutput: true,
-    sensitivity: true,
     normalCalculationProcess: false,
     skillCalculationProcess: false,
   })
+})
+
+test('比較パネルの統合後は後続パネル番号を連番にする', () => {
+  assert.deepEqual(getDamageCalculatorPanelNumbers(false), {
+    results: '05',
+    uniqueOutput: '06',
+    normalCalculationProcess: '06',
+    skillCalculationProcess: '07',
+  })
+  assert.deepEqual(getDamageCalculatorPanelNumbers(true), {
+    results: '05',
+    uniqueOutput: '06',
+    normalCalculationProcess: '07',
+    skillCalculationProcess: '08',
+  })
+})
+
+test('グラフ表示内容を1攻撃・DPS・総ダメージへ切り替える', () => {
+  const normalBreakdown = calculateDamageBreakdown(1000, 'PHYSICAL', 200, 0)
+  const skillBreakdown = calculateSkillDamageBreakdown(1000, 'PHYSICAL', 200, 0, {
+    directMultiplierPercent: 0,
+    attackScalePercent: 100,
+    hitCount: 2,
+    attackInterval: 2,
+    duration: 10,
+    ammoCount: 0,
+  }, {
+    canShowDps: true,
+    totalMode: 'DURATION',
+  })
+
+  assert.deepEqual(selectDamageSensitivityValues({
+    metric: 'DAMAGE',
+    normalBreakdown,
+    normalAttackInterval: 2,
+    skillBreakdown,
+    canShowSkillTotal: true,
+  }), { normal: 800, skill: 1600 })
+  assert.deepEqual(selectDamageSensitivityValues({
+    metric: 'DPS',
+    normalBreakdown,
+    normalAttackInterval: 2,
+    skillBreakdown,
+    canShowSkillTotal: true,
+  }), { normal: 400, skill: 800 })
+  assert.deepEqual(selectDamageSensitivityValues({
+    metric: 'DPS',
+    normalBreakdown,
+    normalAttackInterval: 0,
+    skillBreakdown,
+    canShowSkillTotal: true,
+  }), { normal: null, skill: 800 })
+  assert.deepEqual(selectDamageSensitivityValues({
+    metric: 'TOTAL',
+    normalBreakdown,
+    normalAttackInterval: 2,
+    skillBreakdown,
+    canShowSkillTotal: true,
+  }), { normal: null, skill: 8000 })
+  assert.deepEqual(selectDamageSensitivityValues({
+    metric: 'TOTAL',
+    normalBreakdown,
+    normalAttackInterval: 2,
+    skillBreakdown,
+    canShowSkillTotal: false,
+  }), { normal: null, skill: null })
+})
+
+test('総ダメージグラフは通常攻撃へフォールバックせずスキル種別だけを軸にする', () => {
+  assert.equal(selectDamageSensitivityType('PHYSICAL', 'ARTS', 'TOTAL', true), 'ARTS')
+  assert.equal(selectDamageSensitivityType('PHYSICAL', 'TRUE', 'TOTAL', true), 'TRUE')
+  assert.equal(selectDamageSensitivityType('PHYSICAL', null, 'TOTAL', false), null)
+  assert.equal(selectDamageSensitivityType('PHYSICAL', 'TRUE', 'DAMAGE', true), 'PHYSICAL')
+  assert.equal(selectDamageSensitivityType('PHYSICAL', 'ARTS', 'DPS', true), 'ARTS')
+})
+
+test('スキル系列を算出できない表示では通常攻撃の種別を比較軸にする', () => {
+  assert.equal(selectDamageSensitivityType('PHYSICAL', 'ARTS', 'DPS', false), 'PHYSICAL')
+  assert.equal(selectDamageSensitivityType('ARTS', 'PHYSICAL', 'DAMAGE', false), 'ARTS')
+  assert.equal(selectDamageSensitivityType('TRUE', 'ARTS', 'DPS', false), 'TRUE')
 })
 
 test('物理・術・確定ダメージへ敵防御を正しく適用する', () => {

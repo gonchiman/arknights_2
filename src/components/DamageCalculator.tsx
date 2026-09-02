@@ -16,6 +16,11 @@ import {
   type SkillModelDefaults,
 } from '../lib/damageCalculator'
 import {
+  selectDamageSensitivityType,
+  selectDamageSensitivityValues,
+  type DamageSensitivityMetric,
+} from '../lib/damageSensitivity'
+import {
   evaluateOperatorEffects,
   type EvaluatedOperatorEffect,
   type OperatorEffectStatus,
@@ -25,7 +30,7 @@ import {
   isMechAccordSubProfession,
   type MechAccordDamageRowsResult,
 } from '../lib/mechAccordDamage'
-import { DAMAGE_CALCULATOR_PANEL_DEFAULTS } from '../lib/damageCalculatorPanels'
+import { DAMAGE_CALCULATOR_PANEL_DEFAULTS, getDamageCalculatorPanelNumbers } from '../lib/damageCalculatorPanels'
 import {
   applyOperatorModule,
   getOperatorModuleId,
@@ -56,7 +61,7 @@ interface Props {
 }
 
 type ReflectionStatus = OperatorEffectStatus | 'PARTIAL'
-type SensitivityMetric = 'DAMAGE' | 'DPS'
+type SensitivityMetric = DamageSensitivityMetric
 
 interface CalculationStep {
   label: string
@@ -122,7 +127,6 @@ export function DamageCalculator({ rows, loading }: Props) {
   const [skillModelOpen, setSkillModelOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillModel)
   const [resultsOpen, setResultsOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.results)
   const [uniqueOutputOpen, setUniqueOutputOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.uniqueOutput)
-  const [sensitivityOpen, setSensitivityOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.sensitivity)
   const [normalCalculationProcessOpen, setNormalCalculationProcessOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.normalCalculationProcess)
   const [skillCalculationProcessOpen, setSkillCalculationProcessOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillCalculationProcess)
   const [sensitivityMetric, setSensitivityMetric] = useState<SensitivityMetric>('DAMAGE')
@@ -325,6 +329,7 @@ export function DamageCalculator({ rows, loading }: Props) {
       normalMitigationModifiers,
     )
     : null
+  const panelNumbers = getDamageCalculatorPanelNumbers(mechAccordDamage !== null)
   const skillBreakdown = selectedSkill && model && skillSupported && skillDamageType
     ? calculateSkillDamageBreakdown(
       operatorStats.attack,
@@ -341,6 +346,16 @@ export function DamageCalculator({ rows, loading }: Props) {
     )
     : null
   const skillOutput = skillBreakdown
+  const skillTotalMode = selectedSkill ? getTotalMode(selectedSkill) : 'NONE'
+  const skillCapabilities = selectedSkill?.classification.outputCapabilities
+  const canShowSkillTotal = skillOutput?.total !== null
+    && skillOutput?.total !== undefined
+    && (
+      (skillTotalMode === 'DURATION' && Boolean(skillCapabilities?.canShowWindowTotal) && (model?.duration ?? 0) > 0)
+      || (skillTotalMode === 'AMMO' && Boolean(skillCapabilities?.canShowWindowTotal) && (model?.ammoCount ?? 0) > 0)
+      || (skillTotalMode === 'ACTIVATION' && Boolean(skillCapabilities?.canShowPerActivationTotal))
+    )
+
   const sensitivityData = useMemo(() => buildSensitivityData({
     baseAttack: operatorStats.attack,
     normalAttack: normalAttackPipeline.finalAttack,
@@ -352,11 +367,12 @@ export function DamageCalculator({ rows, loading }: Props) {
     model,
     selectedSkill,
     skillSupported,
+    canShowSkillTotal,
     metric: sensitivityMetric,
     skillAttackModifiers,
     normalMitigationModifiers,
     skillMitigationModifiers,
-  }), [operatorStats.attack, normalAttackPipeline.finalAttack, operatorStats.attackInterval, normalDamageType, skillDamageType, enemyDefense, enemyResistance, model, selectedSkill, skillSupported, sensitivityMetric, skillAttackModifiers, normalMitigationModifiers, skillMitigationModifiers])
+  }), [operatorStats.attack, normalAttackPipeline.finalAttack, operatorStats.attackInterval, normalDamageType, skillDamageType, enemyDefense, enemyResistance, model, selectedSkill, skillSupported, canShowSkillTotal, sensitivityMetric, skillAttackModifiers, normalMitigationModifiers, skillMitigationModifiers])
 
   if (loading && rows.length === 0) {
     return (
@@ -399,6 +415,11 @@ export function DamageCalculator({ rows, loading }: Props) {
     : []
   const sensitivityDamageType = sensitivityData.axisDamageType
   const sensitivityStatLabel = getSensitivityStatLabel(sensitivityDamageType)
+  const skillTotalLabel = getTotalLabel(selectedSkill)
+  const sensitivityMetricLabel = getSensitivityMetricLabel(sensitivityMetric, skillTotalLabel)
+  const normalSensitivitySeriesLabel = getSensitivitySeriesLabel('NORMAL', sensitivityMetric, skillTotalLabel)
+  const skillSensitivitySeriesLabel = getSensitivitySeriesLabel('SKILL', sensitivityMetric, skillTotalLabel)
+  const currentSensitivityRow = sensitivityData.tableRows.find((row) => row.current) ?? null
   const damageTypesDiffer = normalDamageType !== null
     && skillDamageType !== null
     && normalDamageType !== skillDamageType
@@ -744,7 +765,7 @@ export function DamageCalculator({ rows, loading }: Props) {
 
       <CollapsibleCalculatorPanel
         id="results-panel"
-        number="05"
+        number={panelNumbers.results}
         title="計算結果"
         summary={`${formatDamageTypeSummary(normalDamageType, skillDamageType)} · 防御 ${formatNumber(enemyDefense)} · 術耐性 ${formatNumber(enemyResistance)}`}
         open={resultsOpen}
@@ -752,31 +773,128 @@ export function DamageCalculator({ rows, loading }: Props) {
         collapsedLabel="結果を表示"
         className="results-panel"
       >
-        <div className="result-section-label">通常攻撃</div>
-        <div className="damage-result-grid normal-results" aria-live="polite">
-          <ResultCard label={mechAccordDamage ? '本体 1ヒット' : '1ヒット'} value={normalPerHit} />
-          <ResultCard label={mechAccordDamage ? '本体 DPS' : 'DPS'} value={normalDps} />
-        </div>
-        <div className="result-section-label">スキル</div>
-        <div className="damage-result-grid skill-results" aria-live="polite">
-          <ResultCard label="1ヒット" value={skillOutput?.perHit ?? null} />
-          <ResultCard label={`1攻撃（${model.hitCount}ヒット）`} value={skillOutput?.perAttack ?? null} />
-          <ResultCard label="DPS" value={skillOutput?.dps ?? null} />
-          <ResultCard label={getTotalLabel(selectedSkill)} value={skillOutput?.total ?? null} />
-        </div>
-        {!skillSupported && (
-          <div className="unsupported-model result-unsupported" role="status">
-            <strong>選択中のスキルは現在計算できません</strong>
-            {unsupportedReasons.map((reason) => <span key={reason}>{reason}</span>)}
+        <section id="sensitivity-panel" className="result-graph-section" aria-labelledby="sensitivity-panel-heading">
+          <header className="result-graph-header">
+            <div className="result-graph-heading-copy">
+              <h3 id="sensitivity-panel-heading">{sensitivityStatLabel}別の計算結果</h3>
+              <p>敵ステータスを変えたときの{sensitivityMetricLabel}を表示します。</p>
+            </div>
+            <div className="sensitivity-toolbar">
+              <span>表示内容</span>
+              <div className="sensitivity-metric-switch" role="group" aria-label="比較の表示内容">
+                <button
+                  type="button"
+                  className={sensitivityMetric === 'DAMAGE' ? 'active' : ''}
+                  aria-pressed={sensitivityMetric === 'DAMAGE'}
+                  onClick={() => setSensitivityMetric('DAMAGE')}
+                >1攻撃</button>
+                <button
+                  type="button"
+                  className={sensitivityMetric === 'DPS' ? 'active' : ''}
+                  aria-pressed={sensitivityMetric === 'DPS'}
+                  onClick={() => setSensitivityMetric('DPS')}
+                >DPS</button>
+                <button
+                  type="button"
+                  className={sensitivityMetric === 'TOTAL' ? 'active' : ''}
+                  aria-pressed={sensitivityMetric === 'TOTAL'}
+                  onClick={() => setSensitivityMetric('TOTAL')}
+                >総ダメージ</button>
+              </div>
+            </div>
+          </header>
+          <div className="sensitivity-current-values" role="status" aria-live="polite" aria-atomic="true">
+            <span>現在の条件</span>
+            {sensitivityMetric !== 'TOTAL' && (
+              <strong>{mechAccordDamage ? `本体 ${normalSensitivitySeriesLabel}` : normalSensitivitySeriesLabel} {formatOptionalNumber(currentSensitivityRow?.normal ?? null)}</strong>
+            )}
+            <strong>{skillSensitivitySeriesLabel} {formatOptionalNumber(currentSensitivityRow?.skill ?? null)}</strong>
           </div>
-        )}
+          {!skillSupported && (
+            <div className="unsupported-model result-unsupported" role="status">
+              <strong>選択中のスキルは現在計算できません</strong>
+              {unsupportedReasons.map((reason) => <span key={reason}>{reason}</span>)}
+            </div>
+          )}
+          {sensitivityMetric === 'DPS' && sensitivityData.tableRows.every((row) => row.skill === null) && (
+            <p className="sensitivity-metric-note">選択中のスキルはDPSを算出できないため、スキル欄は「—」で表示します。</p>
+          )}
+          {sensitivityMetric === 'TOTAL' && !canShowSkillTotal && (
+            <p className="sensitivity-metric-note">選択中のスキルは{skillTotalLabel}を算出できません。</p>
+          )}
+          {sensitivityMetric !== 'TOTAL' && damageTypesDiffer && (
+            <p className="sensitivity-metric-note">
+              通常攻撃とスキルの種別が異なるため、{sensitivityStatLabel}だけを変化させ、もう一方の敵ステータスは入力値で固定します。
+            </p>
+          )}
+          {sensitivityDamageType === null || sensitivityDamageType === 'TRUE' || !hasSensitivitySeries ? (
+            <p className="sensitivity-chart-unavailable">
+              {sensitivityDamageType === 'TRUE'
+                ? '比較対象が確定ダメージのため、防御力・術耐性による推移は表示しません。'
+                : sensitivityDamageType === null
+                  ? '比較軸となるダメージ種別を自動判定できないため、推移は表示しません。'
+                  : '比較できる計算結果がないため、推移は表示しません。'}
+            </p>
+          ) : (
+            <SensitivityChart
+              rows={sensitivityData.chartRows}
+              tickRows={sensitivityData.tableRows}
+              axisLabel={getSensitivityAxisLabel(sensitivityDamageType)}
+              metric={sensitivityMetric}
+              totalLabel={skillTotalLabel}
+              normalSeriesLabel={mechAccordDamage ? `本体 ${normalSensitivitySeriesLabel}` : normalSensitivitySeriesLabel}
+              skillSeriesLabel={skillSensitivitySeriesLabel}
+            />
+          )}
+          <details className="sensitivity-table-disclosure">
+            <summary><span>数値一覧</span><em>{sensitivityStatLabel}ごとの正確な値を表示</em></summary>
+            <div className="sensitivity-table-disclosure-body">
+              {sensitivityDamageType !== null && sensitivityDamageType !== 'TRUE' && (
+                <div className="sensitivity-table-meta-row">
+                  <span className="minimum-damage-legend"><i aria-hidden="true" />{getMinimumDamageLegendLabel(sensitivityMetric)}</span>
+                </div>
+              )}
+              <div className="sensitivity-table-wrap">
+                <table className={`sensitivity-table ${sensitivityMetric === 'TOTAL' ? 'total-metric' : ''}`.trim()} aria-label={`${sensitivityStatLabel}別の${sensitivityMetricLabel}数値一覧`}>
+                  <thead><tr>
+                    <th>{sensitivityDamageType === 'TRUE' || sensitivityDamageType === null ? '補正' : sensitivityStatLabel}</th>
+                    {sensitivityMetric !== 'TOTAL' && <th>{mechAccordDamage ? `本体 ${normalSensitivitySeriesLabel}` : normalSensitivitySeriesLabel}</th>}
+                    <th>{skillSensitivitySeriesLabel}</th>
+                  </tr></thead>
+                  <tbody>
+                    {sensitivityData.tableRows.map((row) => {
+                      const normalValue = row.normal === null ? '—' : formatNumber(row.normal)
+                      const skillValue = row.skill === null ? '—' : formatNumber(row.skill)
+                      return (
+                        <tr className={row.current ? 'current' : ''} key={row.label}>
+                          <td>{row.label}{row.current && <small>現在値</small>}</td>
+                          {sensitivityMetric !== 'TOTAL' && (
+                            <td
+                              className={row.normalMinimumReached ? 'minimum-damage-cell' : undefined}
+                              aria-label={row.normalMinimumReached ? `${normalValue}、${getMinimumDamageAriaLabel(sensitivityMetric)}` : undefined}
+                            >{normalValue}</td>
+                          )}
+                          <td
+                            className={row.skillMinimumReached ? 'minimum-damage-cell' : undefined}
+                            aria-label={row.skillMinimumReached ? `${skillValue}、${getMinimumDamageAriaLabel(sensitivityMetric)}` : undefined}
+                          >{skillValue}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </details>
+        </section>
+
         <p className="result-disclaimer">表示値は単体への理論値です。確認済みの特性・素質と選択モジュールを反映し、条件入力が必要な効果と未対応効果は計算過程に明示します。潜在、外部バフ、敵デバフ、対象数は含みません。</p>
       </CollapsibleCalculatorPanel>
 
       {mechAccordDamage && (
         <CollapsibleCalculatorPanel
           id="unique-output-panel"
-          number="06"
+          number={panelNumbers.uniqueOutput}
           title="固有出力"
           summary={`${selectedOperator.subProfessionName} · 通常攻撃`}
           open={uniqueOutputOpen}
@@ -789,91 +907,8 @@ export function DamageCalculator({ rows, loading }: Props) {
       )}
 
       <CollapsibleCalculatorPanel
-        id="sensitivity-panel"
-        number={mechAccordDamage ? '07' : '06'}
-        title={`${sensitivityStatLabel}別の比較`}
-        summary={`敵ステータスを変えたときの${sensitivityMetric === 'DPS' ? 'DPS' : '単体ダメージ'}`}
-        open={sensitivityOpen}
-        onToggle={() => setSensitivityOpen((open) => !open)}
-        collapsedLabel="比較を表示"
-        className="sensitivity-panel"
-      >
-        <div className="sensitivity-toolbar">
-          <span>表示内容</span>
-          <div className="sensitivity-metric-switch" role="group" aria-label="比較の表示内容">
-            <button
-              type="button"
-              className={sensitivityMetric === 'DAMAGE' ? 'active' : ''}
-              aria-pressed={sensitivityMetric === 'DAMAGE'}
-              onClick={() => setSensitivityMetric('DAMAGE')}
-            >ダメージ</button>
-            <button
-              type="button"
-              className={sensitivityMetric === 'DPS' ? 'active' : ''}
-              aria-pressed={sensitivityMetric === 'DPS'}
-              onClick={() => setSensitivityMetric('DPS')}
-            >DPS</button>
-          </div>
-        </div>
-        {sensitivityMetric === 'DPS' && sensitivityData.tableRows.every((row) => row.skill === null) && (
-          <p className="sensitivity-metric-note">選択中のスキルはDPSを算出できないため、スキル欄は「—」で表示します。</p>
-        )}
-        {damageTypesDiffer && (
-          <p className="sensitivity-metric-note">
-            通常攻撃とスキルの種別が異なるため、{sensitivityStatLabel}だけを変化させ、もう一方の敵ステータスは入力値で固定します。
-          </p>
-        )}
-        {sensitivityDamageType === null || sensitivityDamageType === 'TRUE' || !hasSensitivitySeries ? (
-          <p className="sensitivity-chart-unavailable">
-            {sensitivityDamageType === 'TRUE'
-              ? '比較対象が確定ダメージのため、防御力・術耐性による推移は表示しません。'
-              : sensitivityDamageType === null
-                ? '比較軸となるダメージ種別を自動判定できないため、推移は表示しません。'
-                : '比較できる計算結果がないため、推移は表示しません。'}
-          </p>
-        ) : (
-          <SensitivityChart
-            rows={sensitivityData.chartRows}
-            tickRows={sensitivityData.tableRows}
-            axisLabel={getSensitivityAxisLabel(sensitivityDamageType)}
-            metric={sensitivityMetric}
-          />
-        )}
-        <div className="sensitivity-table-heading-row">
-          <h3 className="sensitivity-table-heading">数値一覧</h3>
-          {sensitivityDamageType !== null && sensitivityDamageType !== 'TRUE' && (
-            <span className="minimum-damage-legend"><i aria-hidden="true" />{sensitivityMetric === 'DPS' ? '最低保証ダメージ時' : '最低保証ダメージ'}</span>
-          )}
-        </div>
-        <div className="sensitivity-table-wrap">
-          <table className="sensitivity-table" aria-label={`${sensitivityStatLabel}別の${sensitivityMetric === 'DPS' ? 'DPS' : 'ダメージ'}数値一覧`}>
-            <thead><tr><th>{sensitivityDamageType === 'TRUE' || sensitivityDamageType === null ? '補正' : sensitivityStatLabel}</th><th>通常攻撃 {sensitivityMetric === 'DPS' ? 'DPS' : '1ヒット'}</th><th>スキル {sensitivityMetric === 'DPS' ? 'DPS' : '1攻撃'}</th></tr></thead>
-            <tbody>
-              {sensitivityData.tableRows.map((row) => {
-                const normalValue = row.normal === null ? '—' : formatNumber(row.normal)
-                const skillValue = row.skill === null ? '—' : formatNumber(row.skill)
-                return (
-                  <tr className={row.current ? 'current' : ''} key={row.label}>
-                    <td>{row.label}{row.current && <small>現在値</small>}</td>
-                    <td
-                      className={row.normalMinimumReached ? 'minimum-damage-cell' : undefined}
-                      aria-label={row.normalMinimumReached ? `${normalValue}、${sensitivityMetric === 'DPS' ? '最低保証ダメージ時のDPS' : '最低保証ダメージ'}` : undefined}
-                    >{normalValue}</td>
-                    <td
-                      className={row.skillMinimumReached ? 'minimum-damage-cell' : undefined}
-                      aria-label={row.skillMinimumReached ? `${skillValue}、${sensitivityMetric === 'DPS' ? '最低保証ダメージ時のDPS' : '最低保証ダメージ'}` : undefined}
-                    >{skillValue}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </CollapsibleCalculatorPanel>
-
-      <CollapsibleCalculatorPanel
         id="normal-calculation-process-panel"
-        number={mechAccordDamage ? '08' : '07'}
+        number={panelNumbers.normalCalculationProcess}
         title="通常攻撃の計算過程"
         summary={`1ヒット ${formatOptionalNumber(normalPerHit)} · DPS ${formatOptionalNumber(normalDps)}`}
         open={normalCalculationProcessOpen}
@@ -896,7 +931,7 @@ export function DamageCalculator({ rows, loading }: Props) {
 
       <CollapsibleCalculatorPanel
         id="skill-calculation-process-panel"
-        number={mechAccordDamage ? '09' : '08'}
+        number={panelNumbers.skillCalculationProcess}
         title="スキルの計算過程"
         summary={skillOutput
           ? `1攻撃 ${formatNumber(skillOutput.perAttack)} · DPS ${skillOutput.dps === null ? '—' : formatNumber(skillOutput.dps)}`
@@ -987,11 +1022,17 @@ function SensitivityChart({
   tickRows,
   axisLabel,
   metric,
+  totalLabel,
+  normalSeriesLabel,
+  skillSeriesLabel,
 }: {
   rows: SensitivityRow[]
   tickRows: SensitivityRow[]
   axisLabel: string
   metric: SensitivityMetric
+  totalLabel: string
+  normalSeriesLabel: string
+  skillSeriesLabel: string
 }) {
   const frameRef = useRef<HTMLDivElement>(null)
   const [chartWidth, setChartWidth] = useState(720)
@@ -1011,7 +1052,7 @@ function SensitivityChart({
 
   const hasNormal = rows.some((row) => row.normal !== null)
   const hasSkill = rows.some((row) => row.skill !== null)
-  const chartHeight = chartWidth < 520 ? 250 : 280
+  const chartHeight = chartWidth < 520 ? 260 : 320
   const margin = chartWidth < 520
     ? { top: 28, right: 12, bottom: 46, left: 56 }
     : { top: 30, right: 18, bottom: 48, left: 64 }
@@ -1042,14 +1083,17 @@ function SensitivityChart({
   const normalPath = buildChartPath(normalRows.map((row) => ({ x: getX(row.point), y: getY(row.normal) })))
   const skillRows = rows.filter((row): row is SensitivityRow & { skill: number } => row.skill !== null)
   const skillPath = buildChartPath(skillRows.map((row) => ({ x: getX(row.point), y: getY(row.skill) })))
-  const chartValueLabel = metric === 'DPS' ? 'DPS' : '単体ダメージ'
-  const normalSeriesLabel = metric === 'DPS' ? '通常攻撃 DPS' : '通常攻撃 1ヒット'
-  const skillSeriesLabel = metric === 'DPS' ? 'スキル DPS' : 'スキル 1攻撃'
+  const chartValueLabel = getSensitivityMetricLabel(metric, totalLabel)
+  const chartTitle = metric === 'DPS'
+    ? 'DPS推移'
+    : metric === 'TOTAL'
+      ? `${totalLabel}推移`
+      : '1攻撃ダメージ推移'
 
   return (
     <figure className="sensitivity-chart">
       <figcaption className="sensitivity-chart-caption">
-        <strong>{metric === 'DPS' ? 'DPS推移' : 'ダメージ推移'}</strong>
+        <strong>{chartTitle}</strong>
         <span className="sensitivity-chart-legend" aria-label="凡例">
           {hasNormal && <span><i className="normal" aria-hidden="true" />{normalSeriesLabel}</span>}
           {hasSkill && <span><i className="skill" aria-hidden="true" />{skillSeriesLabel}</span>}
@@ -1069,7 +1113,7 @@ function SensitivityChart({
             {axisLabel}を変えたときの{[
               hasNormal ? normalSeriesLabel : '',
               hasSkill ? skillSeriesLabel : '',
-            ].filter(Boolean).join('と')}を示します。正確な値は直後の表に記載しています。
+            ].filter(Boolean).join('と')}を示します。正確な値は数値一覧を開くと確認できます。
           </desc>
 
           {yTicks.map((tick) => {
@@ -1304,16 +1348,6 @@ function OperatorEffectValues({ effects }: { effects: EvaluatedOperatorEffect[] 
 
 function ReflectionBadge({ status }: { status: ReflectionStatus }) {
   return <span className={`reflection-badge ${status.toLowerCase().replaceAll('_', '-')}`}>{REFLECTION_STATUS_LABELS[status]}</span>
-}
-
-function ResultCard({ label, value }: { label: string; value: number | null }) {
-  return (
-    <article className="damage-result-card">
-      <span>{label}</span>
-      <strong>{value === null ? '—' : formatNumber(value)}</strong>
-      <small>damage</small>
-    </article>
-  )
 }
 
 function MechAccordDamageTable({ result }: { result: MechAccordDamageRowsResult }) {
@@ -1635,6 +1669,7 @@ function buildSensitivityData({
   model,
   selectedSkill,
   skillSupported,
+  canShowSkillTotal,
   metric,
   skillAttackModifiers,
   normalMitigationModifiers,
@@ -1650,6 +1685,7 @@ function buildSensitivityData({
   model: SkillModelDefaults | null
   selectedSkill: SkillRecord | null
   skillSupported: boolean
+  canShowSkillTotal: boolean
   metric: SensitivityMetric
   skillAttackModifiers: AttackPipelineInput
   normalMitigationModifiers: MitigationModifiers
@@ -1665,7 +1701,13 @@ function buildSensitivityData({
       })
       : null
   )
-  const axisDamageType = selectSensitivityDamageType(normalDamageType, skillDamageType)
+  const currentSkillBreakdown = calculateSkillAt(enemyDefense, enemyResistance)
+  const skillSeriesAvailable = metric === 'DPS'
+    ? currentSkillBreakdown?.dps !== null && currentSkillBreakdown?.dps !== undefined
+    : metric === 'TOTAL'
+      ? canShowSkillTotal && currentSkillBreakdown?.total !== null && currentSkillBreakdown?.total !== undefined
+      : currentSkillBreakdown?.perAttack !== null && currentSkillBreakdown?.perAttack !== undefined
+  const axisDamageType = selectDamageSensitivityType(normalDamageType, skillDamageType, metric, skillSeriesAvailable)
   const tablePoints = axisDamageType === 'PHYSICAL'
     ? uniqueSorted([0, 500, 1000, 1500, 2000, enemyDefense])
     : axisDamageType === 'ARTS'
@@ -1679,20 +1721,22 @@ function buildSensitivityData({
     const normalDefenseIgnore = Math.max(0, normalMitigationModifiers.defenseIgnoreFixed ?? 0)
     const skillDefenseIgnore = Math.max(0, skillMitigationModifiers.defenseIgnoreFixed ?? 0)
     const minimumDamageBreakpoints = [
-      normalDamageType === 'PHYSICAL' ? normalAttack * 0.95 + normalDefenseIgnore : null,
+      metric !== 'TOTAL' && normalDamageType === 'PHYSICAL'
+        ? normalAttack * 0.95 + normalDefenseIgnore
+        : null,
       skillDamageType === 'PHYSICAL' && skillAtZeroDefense !== null
         ? skillAtZeroDefense * 0.95 + skillDefenseIgnore
         : null,
     ]
       .filter((point): point is number => point !== null && point > 0 && point < maximumDefense)
     const ignoreBreakpoints = [
-      normalDamageType === 'PHYSICAL' ? normalDefenseIgnore : 0,
+      metric !== 'TOTAL' && normalDamageType === 'PHYSICAL' ? normalDefenseIgnore : 0,
       skillDamageType === 'PHYSICAL' ? skillDefenseIgnore : 0,
     ].filter((point) => point > 0 && point < maximumDefense)
     chartPoints = uniqueSorted([...tablePoints, ...ignoreBreakpoints, ...minimumDamageBreakpoints])
   } else if (axisDamageType === 'ARTS') {
     const resistanceIgnoreValues = [
-      normalDamageType === 'ARTS'
+      metric !== 'TOTAL' && normalDamageType === 'ARTS'
         ? Math.max(0, normalMitigationModifiers.resistanceIgnoreFixed ?? 0)
         : null,
       skillDamageType === 'ARTS'
@@ -1725,14 +1769,13 @@ function buildSensitivityData({
       )
       : null
     const skillBreakdown = calculateSkillAt(defense, resistance)
-    const normal = normalBreakdown === null
-      ? null
-      : metric === 'DPS'
-        ? normalAttackInterval > 0 ? normalBreakdown.result / normalAttackInterval : 0
-        : normalBreakdown.result
-    const skill = metric === 'DPS'
-      ? skillBreakdown?.dps ?? null
-      : skillBreakdown?.perAttack ?? null
+    const { normal, skill } = selectDamageSensitivityValues({
+      metric,
+      normalBreakdown,
+      normalAttackInterval,
+      skillBreakdown,
+      canShowSkillTotal,
+    })
     const current = axisDamageType === 'PHYSICAL'
       ? point === enemyDefense
       : axisDamageType === 'ARTS'
@@ -1760,15 +1803,6 @@ function buildSensitivityData({
     tableRows: tablePoints.map((point) => rowByPoint.get(point) as SensitivityRow),
     chartRows: chartPoints.map((point) => rowByPoint.get(point) as SensitivityRow),
   }
-}
-
-function selectSensitivityDamageType(
-  normalDamageType: DamageType | null,
-  skillDamageType: DamageType | null,
-): DamageType | null {
-  if (skillDamageType && skillDamageType !== 'TRUE') return skillDamageType
-  if (normalDamageType && normalDamageType !== 'TRUE') return normalDamageType
-  return skillDamageType ?? normalDamageType
 }
 
 function isMinimumDamageReached(breakdown: DamageCalculationBreakdown): boolean {
@@ -1895,6 +1929,34 @@ function getSensitivityStatLabel(damageType: DamageType | null): string {
   if (damageType === 'ARTS') return '術耐性'
   if (damageType === 'PHYSICAL') return '防御力'
   return '敵ステータス'
+}
+
+function getSensitivityMetricLabel(metric: SensitivityMetric, totalLabel: string): string {
+  if (metric === 'DPS') return 'DPS'
+  if (metric === 'TOTAL') return totalLabel
+  return '1攻撃ダメージ'
+}
+
+function getSensitivitySeriesLabel(
+  series: 'NORMAL' | 'SKILL',
+  metric: SensitivityMetric,
+  totalLabel: string,
+): string {
+  if (metric === 'TOTAL') return `スキル ${totalLabel}`
+  if (metric === 'DPS') return series === 'NORMAL' ? '通常攻撃 DPS' : 'スキル DPS'
+  return series === 'NORMAL' ? '通常攻撃 1ヒット' : 'スキル 1攻撃'
+}
+
+function getMinimumDamageLegendLabel(metric: SensitivityMetric): string {
+  if (metric === 'TOTAL') return '最低保証ダメージを基に算出'
+  if (metric === 'DPS') return '最低保証ダメージ時'
+  return '最低保証ダメージ'
+}
+
+function getMinimumDamageAriaLabel(metric: SensitivityMetric): string {
+  if (metric === 'TOTAL') return '最低保証ダメージを基に算出した総ダメージ'
+  if (metric === 'DPS') return '最低保証ダメージ時のDPS'
+  return '最低保証ダメージ'
 }
 
 function getSensitivityAxisLabel(damageType: Exclude<DamageType, 'TRUE'>): string {

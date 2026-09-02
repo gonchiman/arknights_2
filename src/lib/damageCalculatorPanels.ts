@@ -5,7 +5,6 @@ export interface DamageCalculatorPanelDefaults {
   skillModel: boolean
   results: boolean
   uniqueOutput: boolean
-  sensitivity: boolean
   normalCalculationProcess: boolean
   skillCalculationProcess: boolean
 }
@@ -17,7 +16,15 @@ export const DAMAGE_CALCULATOR_PANEL_DEFAULTS: DamageCalculatorPanelDefaults = {
   skillModel: true,
   results: true,
   uniqueOutput: true,
-  sensitivity: true,
   normalCalculationProcess: false,
   skillCalculationProcess: false,
+}
+
+export function getDamageCalculatorPanelNumbers(hasUniqueOutput: boolean) {
+  return {
+    results: '05',
+    uniqueOutput: '06',
+    normalCalculationProcess: hasUniqueOutput ? '07' : '06',
+    skillCalculationProcess: hasUniqueOutput ? '08' : '07',
+  }
 }
