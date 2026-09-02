@@ -472,6 +472,51 @@
   font-weight: 700;
 }
 
+.default-operator-setting {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 7px;
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.default-operator-setting span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.default-operator-setting strong {
+  margin-left: 4px;
+  color: var(--text-soft);
+}
+
+.default-operator-setting button {
+  flex: 0 0 auto;
+  min-height: 27px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: #fff;
+  color: var(--text-soft);
+  padding: 4px 8px;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.default-operator-setting button:hover:not(:disabled) { background: var(--surface-hover); }
+
+.default-operator-setting button:disabled {
+  border-color: var(--border);
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  cursor: default;
+}
+
 .calculator-operator-search {
   min-width: 0;
   margin-top: 12px;
@@ -1523,6 +1568,13 @@
   .module-config-heading small { display: none; }
   .operator-search-trigger { padding-right: 10px; }
   .operator-search-trigger em { position: static; transform: none; margin-top: 4px; }
+  .default-operator-setting {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .default-operator-setting span { white-space: normal; }
+  .default-operator-setting button { width: 100%; min-height: 44px; }
 
   .calculator-operator-search {
     margin-inline: -10px;
