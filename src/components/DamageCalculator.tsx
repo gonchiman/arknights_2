@@ -32,6 +32,12 @@ import {
   type MechAccordDamageRowsResult,
 } from '../lib/mechAccordDamage'
 import {
+  calculateGoldenglowExplosion,
+  calculateGoldenglowExpectedDpsFromModel,
+  type GoldenglowExplosionDamageResult,
+  type GoldenglowExpectedDpsResult,
+} from '../lib/goldenglowExplosion'
+import {
   DAMAGE_CALCULATOR_PANEL_DEFAULTS,
   DAMAGE_OUTPUT_PANELS,
   getDamageCalculatorPanelNumbers,
@@ -341,11 +347,41 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
       normalMitigationModifiers,
     )
     : null
+  const goldenglowExplosionAttackPipeline = model
+    ? calculateAttackPipeline(operatorStats.attack, {
+      directAddition: skillAttackModifiers.directAddition,
+      directMultiplierPercent: skillAttackModifiers.directMultiplierPercent + model.directMultiplierPercent,
+    })
+    : null
+  const goldenglowExplosion = selectedOperator && goldenglowExplosionAttackPipeline
+    ? calculateGoldenglowExplosion({
+      operatorId: selectedOperator.operatorId,
+      passives: operatorPassives,
+      skillLevel: selectedSkillLevel,
+      effectiveAttack: goldenglowExplosionAttackPipeline.afterFinalMultiplier,
+      enemyDefense: REFERENCE_ENEMY_DEFENSE,
+      enemyResistance: REFERENCE_ENEMY_RESISTANCE,
+    })
+    : null
+  const goldenglowExpectedDps = goldenglowExplosion && selectedSkill && model
+    ? calculateGoldenglowExpectedDpsFromModel({
+      model: goldenglowExplosion.model,
+      skillIndex: selectedSkill.skillIndex,
+      effectiveAttack: goldenglowExplosion.effectiveAttack,
+      attackInterval: model.attackInterval,
+      duration: model.duration,
+      enemyDefense: REFERENCE_ENEMY_DEFENSE,
+      enemyResistance: REFERENCE_ENEMY_RESISTANCE,
+    })
+    : null
   const subProfessionOutputPanelState = getDamageOutputPanelState(
     mechAccordDamage !== null,
     subProfessionOutputOpen,
   )
-  const operatorOutputPanelState = getDamageOutputPanelState(false, operatorOutputOpen)
+  const operatorOutputPanelState = getDamageOutputPanelState(
+    goldenglowExplosion !== null && goldenglowExpectedDps !== null,
+    operatorOutputOpen,
+  )
   const skillOutputPanelState = getDamageOutputPanelState(false, skillOutputOpen)
   const panelNumbers = getDamageCalculatorPanelNumbers()
   const referenceSkillBreakdown = selectedSkill && model && skillSupported && skillDamageType
@@ -903,7 +939,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
           )}
         </section>
 
-        <p className="result-disclaimer">表示値は単体への理論値です。物理・術ダメージには軽減前の攻撃力の5%を最低保証として適用します。計算過程と職分固有出力の単一値は敵防御力・術耐性0を基準にしています。確認済みの特性・素質と選択モジュールを反映し、条件入力が必要な効果と未対応効果は計算過程に明示します。潜在、外部バフ、敵デバフ、対象数は含みません。</p>
+        <p className="result-disclaimer">表示値は単体への理論値です。物理・術ダメージには軽減前の攻撃力の5%を最低保証として適用します。計算過程と固有出力の単一値は敵防御力・術耐性0を基準にしています。確認済みの特性・素質と選択モジュールを反映し、条件入力が必要な効果と未対応効果は計算過程に明示します。潜在、外部バフ、敵デバフ、対象数は含みません。</p>
       </CollapsibleCalculatorPanel>
 
       <CollapsibleCalculatorPanel
@@ -932,7 +968,9 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         id="operator-output-panel"
         number={panelNumbers.operatorOutput}
         title={DAMAGE_OUTPUT_PANELS.operator.title}
-        summary={`${selectedOperator.operatorName} · 固有出力なし`}
+        summary={goldenglowExplosion && goldenglowExpectedDps
+          ? `期待DPS ${formatNumber(goldenglowExpectedDps.expectedDps)}`
+          : `${selectedOperator.operatorName} · 固有出力なし`}
         open={operatorOutputPanelState.open}
         onToggle={() => setOperatorOutputOpen((open) => !open)}
         collapsedLabel="オペレーター固有出力を表示"
@@ -943,7 +981,15 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
           operatorOutputPanelState.disabled ? 'disabled-output-panel' : 'results-panel',
         ].join(' ')}
       >
-        <DamageOutputEmptyState subject={selectedOperator.operatorName} />
+        {goldenglowExplosion && goldenglowExpectedDps
+          ? (
+            <GoldenglowExpectedDpsOutput
+              explosion={goldenglowExplosion}
+              expectation={goldenglowExpectedDps}
+              skillLabel={`S${selectedSkill.skillIndex} ${selectedSkillLevel.name ?? selectedSkill.skillName}`}
+            />
+          )
+          : <DamageOutputEmptyState subject={selectedOperator.operatorName} />}
       </CollapsibleCalculatorPanel>
 
       <CollapsibleCalculatorPanel
@@ -1307,6 +1353,57 @@ function MechAccordDamageTable({ result }: { result: MechAccordDamageRowsResult 
       </div>
       <p className="mech-accord-note">
         同一対象への連続攻撃を想定し、対象変更時は1回目へ戻ります。選択モジュールの本体攻撃力補正は含みますが、浮遊ユニット固有のモジュール補正と複数ユニットは含みません。赤字は最低保証到達時です。
+      </p>
+    </section>
+  )
+}
+
+function GoldenglowExpectedDpsOutput({
+  explosion,
+  expectation,
+  skillLabel,
+}: {
+  explosion: GoldenglowExplosionDamageResult
+  expectation: GoldenglowExpectedDpsResult
+  skillLabel: string
+}) {
+  const { model } = explosion
+  const isFiniteWindow = expectation.mode === 'FINITE_WINDOW'
+  const expectedExplosionMetric = isFiniteWindow
+    ? expectation.allDrones.expectedExplosionCount ?? 0
+    : expectation.expectedExplosionsPerSecondPerDrone * model.activeDroneCount
+
+  return (
+    <section className="goldenglow-output">
+      <table className="goldenglow-output-table">
+        <caption>
+          {skillLabel} · {isFiniteWindow ? `${formatNumber(expectation.duration ?? 0)}秒` : '永続'}
+          {' '}· 浮遊{model.activeDroneCount}体 · 術耐性0
+        </caption>
+        <thead>
+          <tr><th scope="col">出力</th><th scope="col">値</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">爆発込み期待DPS</th>
+            <td>{formatNumber(expectation.expectedDps)}</td>
+          </tr>
+          <tr>
+            <th scope="row">期待総ダメージ</th>
+            <td>{isFiniteWindow ? formatNumber(expectation.combinedExpectedTotalDamage ?? 0) : '—（永続）'}</td>
+          </tr>
+          <tr>
+            <th scope="row">{isFiniteWindow ? '期待爆発回数' : '爆発頻度'}</th>
+            <td>{isFiniteWindow ? `${formatNumber(expectedExplosionMetric)}回` : `${formatDecimal(expectedExplosionMetric)}回/秒`}</td>
+          </tr>
+          <tr>
+            <th scope="row">爆発1回</th>
+            <td>{formatNumber(explosion.damageAfterMitigation)}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p className="goldenglow-note">
+        本体と全浮遊ユニットを合算した単体への理論値です（S3は浮遊のみ）。S1・S3は攻撃位相平均、S2は定常値、爆発後の戻り時間は0として計算します。
       </p>
     </section>
   )

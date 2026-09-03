@@ -73,6 +73,27 @@ test('ダメージ種別が自動判定できないときは種別限定効果�
   assert.equal(findEffect(evaluation.effects, 'ダメージ種別').status, 'NOT_APPLIED')
 })
 
+test('ゴールデングローの爆発倍率を通常攻撃へ混ぜず、術耐性固定無視だけを適用する', () => {
+  const passives = getOperatorPassives(createGoldenglowProfile(), 2, 90)
+  const evaluation = evaluateOperatorEffects('char_377_gdglow', passives, 'ARTS')
+
+  assert.deepEqual(evaluation.modifiers, {
+    attackAddition: 0,
+    attackMultiplierPercent: 0,
+    attackSpeedBonus: 0,
+    defenseIgnoreFixed: 0,
+    resistanceIgnoreFixed: 15,
+  })
+  assert.equal(findEffect(evaluation.effects, '電流暴走の爆発倍率').status, 'NO_DIRECT_EFFECT')
+  assert.equal(findEffect(evaluation.effects, '電流暴走の爆発倍率').valueLabel, '300%')
+  assert.equal(findEffect(evaluation.effects, '術耐性固定無視').status, 'APPLIED')
+  assert.equal(findEffect(evaluation.effects, '浮遊ユニットの初回倍率').valueLabel, '20%')
+  assert.equal(findEffect(evaluation.effects, '浮遊ユニットの倍率上昇').valueLabel, '15%')
+  assert.equal(findEffect(evaluation.effects, '浮遊ユニットの上限倍率').valueLabel, '110%')
+  assert.equal(findEffect(evaluation.effects, '浮遊ユニットの倍率上昇回数').valueLabel, '6')
+  assert.equal(evaluation.effects.some((effect) => effect.status === 'UNSUPPORTED'), false)
+})
+
 test('エクシアの攻撃速度と自己攻撃力を反映し、最大HPを直接影響なしとする', () => {
   const passives = getOperatorPassives(createExusiaiProfile(), 2, 90)
   const evaluation = evaluateOperatorEffects('char_103_angel', passives, 'PHYSICAL')
@@ -188,6 +209,49 @@ function createSurtrProfile(): OperatorCombatProfile {
           talentCandidate('PHASE_2', 0, '余燼', '致命的なダメージを受けてもHPが1残る\n効果発動から8秒後強制退場', 'surtr_t_2[withdraw].interval', 8),
           talentCandidate('PHASE_2', 2, '余燼', '致命的なダメージを受けてもHPが1残る\n効果発動から9秒後強制退場', 'surtr_t_2[withdraw].interval', 9),
         ],
+      },
+    ],
+  }
+}
+
+function createGoldenglowProfile(): OperatorCombatProfile {
+  return {
+    ...emptyStats,
+    traitDescription: '浮遊ユニットを操作して敵に術ダメージを与える。同一対象への連続攻撃時、浮遊ユニットの与ダメージが上昇する',
+    trait: {
+      candidates: [{
+        unlockCondition: { phase: 'PHASE_0', level: 1 },
+        requiredPotentialRank: 0,
+        blackboard: [
+          { key: 'init_atk_scale', value: 0.2 },
+          { key: 'delta_atk_scale', value: 0.15 },
+          { key: 'max_atk_scale', value: 1.1 },
+          { key: 'max_stack_cnt', value: 6 },
+        ],
+      }],
+    },
+    talents: [
+      {
+        candidates: [{
+          unlockCondition: { phase: 'PHASE_2', level: 1 },
+          requiredPotentialRank: 0,
+          name: '電流暴走',
+          description: 'スキル発動中、浮遊ユニットが攻撃時10%の確率で自爆し、攻撃力の300%の術ダメージを与える',
+          blackboard: [
+            { key: 'attack@atk_scale_2', value: 3 },
+            { key: 'attack@prob', value: 0.015 },
+            { key: 'attack@max_stack_cnt', value: 40 },
+          ],
+        }],
+      },
+      {
+        candidates: [{
+          unlockCondition: { phase: 'PHASE_2', level: 1 },
+          requiredPotentialRank: 0,
+          name: '精密誘電',
+          description: '攻撃時、対象の術耐性を15無視',
+          blackboard: [{ key: 'magic_resist_penetrate_fixed', value: 15 }],
+        }],
       },
     ],
   }
