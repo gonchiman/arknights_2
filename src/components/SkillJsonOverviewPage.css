@@ -1,0 +1,259 @@
+.skill-json-overview-page,
+.skill-json-overview-section,
+.skill-json-overview-table-wrap {
+  min-width: 0;
+}
+
+.skill-json-overview-section,
+.skill-json-overview-state {
+  border: 1px solid var(--border-strong);
+  background: #fff;
+}
+
+.skill-json-overview-section {
+  overflow: hidden;
+}
+
+.skill-json-overview-section-heading {
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid var(--border-strong);
+  padding: 10px 12px;
+}
+
+.skill-json-overview-section-heading > div {
+  min-width: 0;
+}
+
+.skill-json-overview-section-heading span {
+  color: var(--text-muted);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+
+.skill-json-overview-section-heading h2 {
+  margin: 2px 0 0;
+  font-size: 14px;
+}
+
+.skill-json-overview-section-heading p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 9px;
+  text-align: right;
+}
+
+.skill-json-overview-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-soft);
+  padding: 10px 12px;
+}
+
+.skill-json-overview-toolbar label {
+  width: min(100%, 420px);
+  display: grid;
+  gap: 5px;
+}
+
+.skill-json-overview-toolbar label > span {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.skill-json-overview-toolbar input {
+  width: 100%;
+  height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: #fff;
+  color: var(--text);
+  padding: 0 9px;
+}
+
+.skill-json-overview-toolbar > small {
+  max-width: 360px;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.skill-json-overview-table-wrap {
+  max-height: 620px;
+  overscroll-behavior: contain;
+}
+
+.skill-json-key-inventory-table {
+  min-width: 620px;
+  table-layout: fixed;
+}
+
+.skill-json-key-inventory-table th:nth-child(1) {
+  width: 34%;
+}
+
+.skill-json-key-inventory-table th:nth-child(2) {
+  width: 22%;
+}
+
+.skill-json-key-inventory-table th:nth-child(3) {
+  width: 44%;
+}
+
+.skill-json-overview-table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--surface-soft);
+}
+
+.skill-json-overview-table-wrap th,
+.skill-json-overview-table-wrap td {
+  padding: 8px 10px;
+  vertical-align: top;
+}
+
+.skill-json-overview-table-wrap tbody tr:hover {
+  background: #fafafa;
+}
+
+.skill-json-overview-table-wrap th:first-child,
+.skill-json-overview-table-wrap td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  border-right: 1px solid var(--border-strong);
+  background: #fff;
+}
+
+.skill-json-overview-table-wrap thead th:first-child {
+  z-index: 4;
+  background: var(--surface-soft);
+}
+
+.skill-json-overview-table-wrap code {
+  overflow-wrap: anywhere;
+  font-size: 10px;
+}
+
+.skill-json-overview-table-wrap td > strong {
+  display: block;
+  font-size: 10px;
+}
+
+.skill-json-overview-table-wrap td > small,
+.skill-json-overview-example small {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skill-json-overview-example {
+  min-width: 0;
+}
+
+.skill-json-overview-example a {
+  color: var(--text);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.skill-json-overview-example a:hover {
+  text-decoration: none;
+}
+
+.skill-json-overview-muted {
+  color: var(--text-muted);
+}
+
+.skill-json-overview-empty {
+  margin: 0;
+  background: var(--surface-soft);
+  padding: 24px 12px;
+  color: var(--text-muted);
+  font-size: 10px;
+  text-align: center;
+}
+
+.skill-json-overview-pagination {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border-top: 1px solid var(--border-strong);
+  background: var(--surface-soft);
+  padding: 7px 10px;
+}
+
+.skill-json-overview-pagination button {
+  min-height: 30px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: #fff;
+  padding: 4px 9px;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.skill-json-overview-pagination button:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.skill-json-overview-pagination button:disabled {
+  border-color: var(--border);
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.skill-json-overview-pagination span {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.skill-json-overview-state {
+  min-height: 180px;
+}
+
+@media (max-width: 700px) {
+  .skill-json-overview-intro,
+  .skill-json-overview-section-heading,
+  .skill-json-overview-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .skill-json-overview-intro p,
+  .skill-json-overview-section-heading p,
+  .skill-json-overview-toolbar > small {
+    max-width: none;
+    text-align: left;
+  }
+
+  .skill-json-overview-toolbar label {
+    width: 100%;
+  }
+}
+
+@media (pointer: coarse) {
+  .skill-json-overview-toolbar input,
+  .skill-json-overview-pagination button {
+    min-height: 44px;
+  }
+}

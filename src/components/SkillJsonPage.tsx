@@ -12,13 +12,16 @@ import {
   type BlackboardDiffKind,
 } from '../lib/skillJsonAnalysis'
 import type { FilterState } from '../lib/operatorSearchFilters'
+import { createSkillJsonHash, type SkillJsonRouteSelection } from '../lib/routes'
 import type { RawBlackboardEntry, SkillRecord } from '../types/skill'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
+import { SkillJsonViewNav } from './SkillJsonViewNav'
 import './SkillJsonPage.css'
 
 interface Props {
   rows: SkillRecord[]
   loading: boolean
+  initialSelection?: SkillJsonRouteSelection
 }
 
 const DIFF_LABELS: Record<BlackboardDiffKind, string> = {
@@ -28,10 +31,16 @@ const DIFF_LABELS: Record<BlackboardDiffKind, string> = {
   UNCHANGED: '同一',
 }
 
-export function SkillJsonPage({ rows, loading }: Props) {
-  const [selectedKey, setSelectedKey] = useState<string | null>(null)
-  const [requestedLevelIndex, setRequestedLevelIndex] = useState<number | null>(null)
-  const [requestedCompareIndex, setRequestedCompareIndex] = useState<number | null>(null)
+export function SkillJsonPage({ rows, loading, initialSelection }: Props) {
+  const [selectedKey, setSelectedKey] = useState<string | null>(() => (
+    initialSelection ? createSkillJsonSelectionKey(initialSelection) : null
+  ))
+  const [requestedLevelIndex, setRequestedLevelIndex] = useState<number | null>(
+    initialSelection?.levelIndex ?? null,
+  )
+  const [requestedCompareIndex, setRequestedCompareIndex] = useState<number | null>(
+    initialSelection ? Math.max(0, initialSelection.levelIndex - 1) : null,
+  )
   const [operatorSearchOpen, setOperatorSearchOpen] = useState(false)
   const [operatorFilters, setOperatorFilters] = useState<FilterState>({ ...EMPTY_OPERATOR_FILTERS })
   const [preferredDefaultOperatorId, setPreferredDefaultOperatorId] = useState(loadPreferredDefaultOperatorId)
@@ -49,7 +58,9 @@ export function SkillJsonPage({ rows, loading }: Props) {
     [rows, defaultOperatorId],
   )
   const selectedSkill = useMemo(
-    () => rows.find((row) => createSkillJsonSelectionKey(row) === selectedKey) ?? defaultSkill,
+    () => selectedKey === null
+      ? defaultSkill
+      : rows.find((row) => createSkillJsonSelectionKey(row) === selectedKey) ?? null,
     [rows, selectedKey, defaultSkill],
   )
   const selectedOperatorId = selectedSkill?.operatorId ?? null
@@ -67,10 +78,30 @@ export function SkillJsonPage({ rows, loading }: Props) {
   }
 
   if (!selectedSkill) {
+    if (selectedKey !== null && rows.length > 0) {
+      return (
+        <SkillJsonPageStateShell
+          title="リンク先のスキルが見つかりません"
+          description="現在のゲームデータには存在しない指定です。包括分析または個別分析から選び直してください。"
+        />
+      )
+    }
     return (
       <SkillJsonPageState
         title="表示できるスキルがありません"
         description="ゲームデータを取得できる状態か確認してください。"
+      />
+    )
+  }
+
+  const availableLevelCount = selectedSkill.skillLevels.length > 0
+    ? selectedSkill.skillLevels.length
+    : 1
+  if (requestedLevelIndex !== null && requestedLevelIndex >= availableLevelCount) {
+    return (
+      <SkillJsonPageStateShell
+        title="リンク先のスキルレベルが見つかりません"
+        description="現在のゲームデータには存在しないレベル指定です。包括分析から選び直してください。"
       />
     )
   }
@@ -98,22 +129,20 @@ export function SkillJsonPage({ rows, loading }: Props) {
     setSelectedKey(createSkillJsonSelectionKey(skill))
     setRequestedLevelIndex(nextLastIndex)
     setRequestedCompareIndex(Math.max(0, nextLastIndex - 1))
+    navigateToSkillJsonSelection(skill, nextLastIndex)
   }
 
   const chooseLevel = (nextIndex: number) => {
     setRequestedLevelIndex(nextIndex)
     setRequestedCompareIndex(Math.max(0, nextIndex - 1))
+    navigateToSkillJsonSelection(selectedSkill, nextIndex)
   }
 
   return (
     <section className="skill-json-page">
-      <header className="page-intro skill-json-page-intro">
-        <div>
-          <span className="page-kicker">SKILL TABLE INSPECTOR</span>
-          <h1>Skill JSON</h1>
-        </div>
-        <p>skill_table.json の生データと、description との照合結果を分けて確認できます。</p>
-      </header>
+      <SkillJsonPageHeader />
+
+      <SkillJsonViewNav active="detail" />
 
       <section className="skill-json-picker" aria-label="オペレーターとスキルの選択">
         <div className="operator-search-summary">
@@ -497,6 +526,38 @@ function SkillJsonPageState({ title, description }: { title: string, description
       {description && <span>{description}</span>}
     </section>
   )
+}
+
+function SkillJsonPageStateShell({ title, description }: { title: string, description: string }) {
+  return (
+    <section className="skill-json-page">
+      <SkillJsonPageHeader />
+      <SkillJsonViewNav active="detail" />
+      <SkillJsonPageState title={title} description={description} />
+    </section>
+  )
+}
+
+function SkillJsonPageHeader() {
+  return (
+    <header className="page-intro skill-json-page-intro">
+      <div>
+        <span className="page-kicker">SKILL TABLE INSPECTOR</span>
+        <h1>Skill JSON</h1>
+      </div>
+      <p>skill_table.json の生データと、description との照合結果を分けて確認できます。</p>
+    </header>
+  )
+}
+
+function navigateToSkillJsonSelection(skill: SkillRecord, levelIndex: number): void {
+  const nextHash = createSkillJsonHash({
+    operatorId: skill.operatorId,
+    skillIndex: skill.skillIndex,
+    skillId: skill.skillId,
+    levelIndex,
+  })
+  if (window.location.hash !== nextHash) window.location.hash = nextHash
 }
 
 function asBlackboardEntries(value: unknown): RawBlackboardEntry[] {

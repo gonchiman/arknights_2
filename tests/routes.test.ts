@@ -1,7 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { APP_NAV_ITEMS } from '../src/lib/navigation.ts'
-import { createOperatorDetailHash, parseHashRoute } from '../src/lib/routes.ts'
+import {
+  createOperatorDetailHash,
+  createSkillJsonHash,
+  parseHashRoute,
+} from '../src/lib/routes.ts'
 
 test('サイドバーから主要ページへ遷移できる', () => {
   assert.deepEqual(
@@ -70,6 +74,63 @@ test('全スキル一覧ページのhashを解析する', () => {
 test('Skill JSONページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/skill-json'), { view: 'skill-json' })
   assert.deepEqual(parseHashRoute('#/skill-json/extra'), { view: 'operators' })
+})
+
+test('Skill JSONキー一覧ページのhashを解析する', () => {
+  assert.deepEqual(parseHashRoute('#/skill-json/overview'), { view: 'skill-json-overview' })
+  assert.deepEqual(parseHashRoute('#/skill-json/overview/extra'), { view: 'operators' })
+})
+
+test('Skill JSON個別分析の共有hashを生成・解析する', () => {
+  const selection = {
+    operatorId: 'char/日本',
+    skillIndex: 2,
+    skillId: 'skchr_test[2]&mode=1',
+    levelIndex: 9,
+  }
+  const hash = createSkillJsonHash(selection)
+
+  assert.equal(
+    hash,
+    '#/skill-json?operatorId=char%2F%E6%97%A5%E6%9C%AC&skillIndex=2&skillId=skchr_test%5B2%5D%26mode%3D1&levelIndex=9',
+  )
+  assert.deepEqual(parseHashRoute(hash), { view: 'skill-json', selection })
+})
+
+test('Skill JSON個別分析は完全で一意な選択指定だけを採用する', () => {
+  const base = { view: 'skill-json' }
+
+  assert.deepEqual(
+    parseHashRoute('#/skill-json?operatorId=char_test&skillIndex=1&skillId=skill_test'),
+    base,
+  )
+  assert.deepEqual(
+    parseHashRoute('#/skill-json?operatorId=char_test&skillIndex=0&skillId=skill_test&levelIndex=0'),
+    base,
+  )
+  assert.deepEqual(
+    parseHashRoute('#/skill-json?operatorId=char_test&skillIndex=1.5&skillId=skill_test&levelIndex=0'),
+    base,
+  )
+  assert.deepEqual(
+    parseHashRoute('#/skill-json?operatorId=char_a&operatorId=char_b&skillIndex=1&skillId=skill_test&levelIndex=0'),
+    base,
+  )
+})
+
+test('Skill JSON個別分析のhash生成は不正な選択値を拒否する', () => {
+  assert.throws(
+    () => createSkillJsonHash({ operatorId: '', skillIndex: 1, skillId: 'skill', levelIndex: 0 }),
+    TypeError,
+  )
+  assert.throws(
+    () => createSkillJsonHash({ operatorId: 'char', skillIndex: 0, skillId: 'skill', levelIndex: 0 }),
+    RangeError,
+  )
+  assert.throws(
+    () => createSkillJsonHash({ operatorId: 'char', skillIndex: 1, skillId: 'skill', levelIndex: -1 }),
+    RangeError,
+  )
 })
 
 test('参照元ページのhashを解析する', () => {

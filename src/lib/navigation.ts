@@ -34,7 +34,7 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     id: 'skill-json',
     href: '#/skill-json',
     label: 'Skill JSON',
-    description: 'blackboard・説明文・レベル差分',
+    description: 'blackboardの個別表示・キー一覧',
     section: 'analysis',
   },
   {

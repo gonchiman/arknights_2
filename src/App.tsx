@@ -10,6 +10,7 @@ import { OperatorDetailPage } from './components/OperatorDetailPage'
 import type { OpenOperatorDetail } from './components/OperatorDetailLink'
 import { SkillDirectory } from './components/SkillDirectory'
 import { SkillJsonPage } from './components/SkillJsonPage'
+import { SkillJsonOverviewPage } from './components/SkillJsonOverviewPage'
 import { loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
 import { ARKNIGHTS_GAMEDATA_REPOSITORY } from './lib/dataSources'
@@ -174,7 +175,9 @@ export default function App() {
   const displayedRoute = detailBackgroundRoute ?? route
   const activeNavigationPage: NavigationPage = displayedRoute.view === 'operator-detail'
     ? 'operators'
-    : displayedRoute.view
+    : displayedRoute.view === 'skill-json-overview'
+      ? 'skill-json'
+      : displayedRoute.view
   const activeNavigationItem = APP_NAV_ITEMS.find((item) => item.id === activeNavigationPage)
   const closeSidebar = () => {
     if (!sidebarOpen) return
@@ -231,7 +234,16 @@ export default function App() {
             onOpenOperatorDetail={openOperatorDetail}
           />
         ) : displayedRoute.view === 'skill-json' ? (
-          <SkillJsonPage rows={classifiedRows} loading={loading} />
+          <SkillJsonPage
+            key={displayedRoute.selection
+              ? JSON.stringify(displayedRoute.selection)
+              : 'skill-json-default'}
+            rows={classifiedRows}
+            loading={loading}
+            initialSelection={displayedRoute.selection}
+          />
+        ) : displayedRoute.view === 'skill-json-overview' ? (
+          <SkillJsonOverviewPage rows={classifiedRows} loading={loading} />
         ) : displayedRoute.view === 'operator-detail' ? (
           loading ? (
             <OperatorDetailRouteState title="オペレーター詳細を読み込んでいます" />
