@@ -1,7 +1,6 @@
 .skill-json-page,
 .skill-json-picker,
 .skill-json-content,
-.skill-json-section,
 .skill-json-block {
   min-width: 0;
 }
@@ -33,47 +32,17 @@
   margin-top: 12px;
 }
 
+.skill-json-content {
+  overflow: hidden;
+}
+
 .skill-json-selection-summary,
-.skill-json-section-heading,
-.skill-json-block-heading,
-.skill-json-diff-heading {
+.skill-json-block-heading {
   min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-}
-
-.skill-json-selection-summary > div > span,
-.skill-json-section-heading span {
-  color: var(--text-muted);
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: .14em;
-}
-
-.skill-json-selection-summary label > span,
-.skill-json-diff-controls label > span,
-.skill-json-diff-controls > div > span {
-  color: var(--text-muted);
-  font-size: 9px;
-  font-weight: 700;
-}
-
-.skill-json-selection-summary select,
-.skill-json-diff-controls select {
-  width: 100%;
-  min-width: 0;
-  height: 36px;
-  border: 1px solid var(--border-strong);
-  border-radius: 0;
-  background: #fff;
-  color: var(--text);
-  padding: 0 9px;
-}
-
-.skill-json-content {
-  overflow: hidden;
 }
 
 .skill-json-selection-summary {
@@ -87,17 +56,18 @@
   min-width: 0;
 }
 
-.skill-json-selection-summary h2 {
-  overflow-wrap: anywhere;
-  margin: 3px 0 2px;
-  font-size: 17px;
-  line-height: 1.35;
+.skill-json-selection-summary > div > span {
+  color: var(--text-muted);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .14em;
 }
 
-.skill-json-selection-summary p {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 10px;
+.skill-json-selection-summary h2 {
+  overflow-wrap: anywhere;
+  margin: 3px 0 0;
+  font-size: 17px;
+  line-height: 1.35;
 }
 
 .skill-json-selection-summary label {
@@ -107,72 +77,32 @@
   gap: 5px;
 }
 
-.skill-json-record-identity {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 100px minmax(0, 1fr) minmax(260px, 1.5fr);
-  margin: 0;
-  border-bottom: 1px solid var(--border-strong);
-}
-
-.skill-json-record-identity > div {
-  min-width: 0;
-  border-right: 1px solid var(--border);
-  padding: 8px 10px;
-}
-
-.skill-json-record-identity > div:last-child {
-  border-right: 0;
-}
-
-.skill-json-record-identity dt {
+.skill-json-selection-summary label > span {
   color: var(--text-muted);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 700;
 }
 
-.skill-json-record-identity dd {
-  margin: 3px 0 0;
-  overflow-wrap: anywhere;
-}
-
-.skill-json-record-identity code {
-  font-size: 9px;
-}
-
-.skill-json-section + .skill-json-section {
-  border-top: 8px solid var(--surface-soft);
-}
-
-.skill-json-section-heading {
-  align-items: flex-end;
-  border-bottom: 1px solid var(--border-strong);
-  padding: 11px 12px;
-}
-
-.skill-json-section-heading h2 {
-  margin: 2px 0 0;
-  font-size: 14px;
-}
-
-.skill-json-section-heading p {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 9px;
-  text-align: right;
+.skill-json-selection-summary select {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: #fff;
+  color: var(--text);
+  padding: 0 9px;
 }
 
 .skill-json-block {
   padding: 12px;
 }
 
-.skill-json-block + .skill-json-block,
-.skill-json-json-grid + .skill-json-block,
-.skill-json-interpretation-notice + .skill-json-block {
+.skill-json-block + .skill-json-block {
   border-top: 1px solid var(--border);
 }
 
-.skill-json-block h3,
-.skill-json-diff-heading h3 {
+.skill-json-block h3 {
   margin: 0;
   font-size: 11px;
 }
@@ -203,32 +133,27 @@
   white-space: pre-wrap;
 }
 
-.skill-json-description.expanded {
-  border-left-color: #315f78;
-  background: #f5f8fa;
-  color: #222;
-}
-
 .skill-json-table-wrap {
   border: 1px solid var(--border);
   overscroll-behavior-x: contain;
 }
 
-.skill-json-page table {
-  min-width: 620px;
+.skill-json-blackboard-table {
+  min-width: 540px;
   table-layout: auto;
 }
 
-.skill-json-page th,
-.skill-json-page td {
+.skill-json-blackboard-table th,
+.skill-json-blackboard-table td {
+  width: calc(100% / 3);
   padding: 7px 8px;
 }
 
-.skill-json-page tbody tr {
+.skill-json-blackboard-table tbody tr {
   cursor: default;
 }
 
-.skill-json-page tbody tr:hover {
+.skill-json-blackboard-table tbody tr:hover {
   background: transparent;
 }
 
@@ -236,203 +161,9 @@
   outline-offset: -2px;
 }
 
-.skill-json-page td code {
+.skill-json-blackboard-table td code {
   overflow-wrap: anywhere;
   font-size: 10px;
-}
-
-.skill-json-blackboard-table th:first-child {
-  width: 48px;
-}
-
-.skill-json-blackboard-table th:not(:first-child) {
-  width: calc((100% - 48px) / 3);
-}
-
-.skill-json-json-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  border-top: 1px solid var(--border);
-  padding: 12px;
-}
-
-.skill-json-json-grid .raw-json {
-  min-width: 0;
-  margin: 0;
-}
-
-.skill-json-json-grid .raw-json summary {
-  min-height: 36px;
-  font-weight: 700;
-}
-
-.skill-json-json-grid .raw-json pre {
-  max-width: 100%;
-  min-height: 210px;
-}
-
-.skill-json-interpretation-section {
-  background: #fff;
-}
-
-.skill-json-interpretation-notice {
-  display: grid;
-  gap: 4px;
-  border-bottom: 1px solid var(--border);
-  border-left: 3px solid #765400;
-  background: #fffaf0;
-  padding: 10px 12px;
-  color: #5f4300;
-  font-size: 10px;
-  line-height: 1.55;
-}
-
-.skill-json-interpretation-notice code {
-  border: 1px solid #dfc992;
-  background: #fff;
-  padding: 1px 3px;
-  color: #4d3600;
-}
-
-.skill-json-placeholder-table,
-.skill-json-diff-table {
-  min-width: 900px !important;
-}
-
-.skill-json-reference-table {
-  min-width: 680px !important;
-}
-
-.skill-json-status {
-  display: inline-block;
-  border: 1px solid var(--border-strong);
-  background: #fff;
-  padding: 2px 5px;
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 1.3;
-  white-space: nowrap;
-}
-
-.skill-json-status.matched,
-.skill-json-status.added {
-  border-color: #78a985;
-  background: #f1faf3;
-  color: #176329;
-}
-
-.skill-json-status.unmatched,
-.skill-json-status.removed {
-  border-color: #d4a09b;
-  background: #fff4f2;
-  color: #8e2b20;
-}
-
-.skill-json-status.changed {
-  border-color: #c9ab64;
-  background: #fff8e8;
-  color: #765400;
-}
-
-.skill-json-status.unchanged,
-.skill-json-status.uninterpreted {
-  color: var(--text-muted);
-}
-
-.skill-json-diff-heading {
-  align-items: flex-end;
-  margin-bottom: 9px;
-}
-
-.skill-json-diff-heading p {
-  margin: 3px 0 0;
-  color: var(--text-muted);
-  font-size: 9px;
-}
-
-.skill-json-diff-controls {
-  display: flex;
-  align-items: end;
-  gap: 7px;
-}
-
-.skill-json-diff-controls label,
-.skill-json-diff-controls > div {
-  min-width: 118px;
-  display: grid;
-  gap: 4px;
-}
-
-.skill-json-diff-controls > div strong {
-  min-height: 36px;
-  display: flex;
-  align-items: center;
-  border: 1px solid var(--border);
-  background: var(--surface-soft);
-  padding: 0 9px;
-  font-size: 10px;
-}
-
-.skill-json-diff-table .changed-cell {
-  background: #fff8e8;
-  font-weight: 700;
-}
-
-.skill-json-diff-table tr.diff-added td {
-  background: #f7fbf8;
-}
-
-.skill-json-diff-table tr.diff-removed td {
-  background: #fff8f7;
-}
-
-.skill-json-diff-table tr.diff-changed:hover td,
-.skill-json-diff-table tr.diff-added:hover td,
-.skill-json-diff-table tr.diff-removed:hover td {
-  filter: brightness(.985);
-}
-
-.skill-json-placeholder-table th:first-child,
-.skill-json-placeholder-table td:first-child,
-.skill-json-diff-table th:first-child,
-.skill-json-diff-table td:first-child {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  width: 64px;
-  min-width: 64px;
-  background: #fff;
-}
-
-.skill-json-placeholder-table th:nth-child(2),
-.skill-json-placeholder-table td:nth-child(2),
-.skill-json-diff-table th:nth-child(2),
-.skill-json-diff-table td:nth-child(2) {
-  position: sticky;
-  left: 64px;
-  z-index: 2;
-  min-width: 150px;
-  border-right: 1px solid var(--border-strong);
-  background: #fff;
-}
-
-.skill-json-placeholder-table th:first-child,
-.skill-json-placeholder-table th:nth-child(2),
-.skill-json-diff-table th:first-child,
-.skill-json-diff-table th:nth-child(2) {
-  z-index: 3;
-  background: var(--surface-soft);
-}
-
-.skill-json-diff-table tr.diff-added td:first-child,
-.skill-json-diff-table tr.diff-added td:nth-child(2) {
-  background: #f7fbf8;
-}
-
-.skill-json-diff-table tr.diff-removed td:first-child,
-.skill-json-diff-table tr.diff-removed td:nth-child(2) {
-  background: #fff8f7;
 }
 
 .skill-json-empty-row {
@@ -449,39 +180,15 @@
   background: #fff;
 }
 
-@media (max-width: 1100px) {
-  .skill-json-record-identity {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .skill-json-selection-key {
-    grid-column: 1 / -1;
-    border-top: 1px solid var(--border);
-  }
-}
-
-@media (max-width: 900px) {
-  .skill-json-json-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .skill-json-json-grid .raw-json pre {
-    min-height: 0;
-  }
-}
-
 @media (max-width: 640px) {
   .skill-json-page-intro,
-  .skill-json-selection-summary,
-  .skill-json-section-heading,
-  .skill-json-diff-heading {
+  .skill-json-selection-summary {
     align-items: stretch;
     flex-direction: column;
     gap: 8px;
   }
 
-  .skill-json-page-intro p,
-  .skill-json-section-heading p {
+  .skill-json-page-intro p {
     max-width: none;
     text-align: left;
   }
@@ -490,65 +197,21 @@
     width: 100%;
   }
 
-  .skill-json-record-identity {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .skill-json-record-identity > div {
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .skill-json-record-identity > div:last-child {
-    border-bottom: 0;
-  }
-
-  .skill-json-selection-key {
-    grid-column: auto;
-    border-top: 0;
-  }
-
-  .skill-json-diff-controls {
-    align-items: center;
-  }
-
-  .skill-json-diff-controls label,
-  .skill-json-diff-controls > div {
-    min-width: 0;
-    flex: 1 1 0;
-  }
-
-  .skill-json-page th,
-  .skill-json-page td,
-  .skill-json-page td code,
-  .skill-json-description,
-  .skill-json-record-identity code,
-  .skill-json-json-grid .raw-json pre {
+  .skill-json-blackboard-table th,
+  .skill-json-blackboard-table td,
+  .skill-json-blackboard-table td code,
+  .skill-json-description {
     font-size: 11px;
   }
 
-  .skill-json-selection-summary label > span {
+  .skill-json-selection-summary label > span,
+  .skill-json-block-heading > span {
     font-size: 10px;
-  }
-
-  .skill-json-block-heading > span,
-  .skill-json-diff-heading p,
-  .skill-json-section-heading p {
-    font-size: 10px;
-  }
-}
-
-@media (max-width: 420px) {
-  .skill-json-diff-controls {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   }
 }
 
 @media (pointer: coarse) {
-  .skill-json-selection-summary select,
-  .skill-json-diff-controls select,
-  .skill-json-json-grid .raw-json summary {
+  .skill-json-selection-summary select {
     min-height: 44px;
   }
 }

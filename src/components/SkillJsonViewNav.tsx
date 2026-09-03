@@ -11,7 +11,7 @@ export function SkillJsonViewNav({ active }: { active: SkillJsonView }) {
         aria-current={active === 'detail' ? 'page' : undefined}
       >
         <span>INDIVIDUAL</span>
-        <strong>個別分析</strong>
+        <strong>個別表示</strong>
       </a>
       <a
         className={active === 'overview' ? 'active' : ''}
