@@ -437,9 +437,6 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
     : []
   const sensitivityDamageType = sensitivityData.damageType
   const sensitivityStatLabel = getSensitivityStatLabel(sensitivityDamageType)
-  const sensitivitySubjectLabel = sensitivityStatLabel === '敵ステータス'
-    ? sensitivityStatLabel
-    : `敵の${sensitivityStatLabel}`
   const skillTotalLabel = getTotalLabel(selectedSkill)
   const sensitivityMetricLabel = getSensitivityMetricLabel(sensitivityMetric, skillTotalLabel)
   const sensitivityAttackLabel = sensitivityTarget === 'NORMAL' ? '通常攻撃' : 'スキル'
@@ -825,12 +822,8 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         collapsedLabel="共通出力を表示"
         className="results-panel common-output-panel"
       >
-        <section id="sensitivity-panel" className="sensitivity-results-section" aria-labelledby="sensitivity-panel-heading">
-          <header className="sensitivity-results-header">
-            <div className="sensitivity-results-heading-copy">
-              <h3 id="sensitivity-panel-heading">{sensitivityAttackLabel} · {sensitivityStatLabel}別の計算結果</h3>
-              <p>{sensitivityAttackLabel}について、{sensitivitySubjectLabel}ごとの{sensitivityMetricLabel}を表示します。</p>
-            </div>
+        <div id="sensitivity-panel" className="sensitivity-results-section">
+          <div className="sensitivity-results-header">
             <div className="sensitivity-toolbar">
               <div className="sensitivity-control">
                 <span>表示対象</span>
@@ -874,7 +867,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
                 </div>
               </div>
             </div>
-          </header>
+          </div>
           {sensitivityTarget === 'SKILL' && !skillSupported && (
             <div className="unsupported-model result-unsupported" role="status">
               <strong>選択中のスキルは現在計算できません</strong>
@@ -900,7 +893,12 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
                   <span className="minimum-damage-legend"><span aria-hidden="true">※</span>{getMinimumDamageLegendLabel(sensitivityMetric)}</span>
                 </div>
               )}
-              <div className="sensitivity-table-wrap" role="region" aria-labelledby="sensitivity-panel-heading" tabIndex={0}>
+              <div
+                className="sensitivity-table-wrap"
+                role="region"
+                aria-label={`${sensitivityAttackLabel}・${sensitivityStatLabel}別の${sensitivityMetricLabel}数値一覧`}
+                tabIndex={0}
+              >
                 <table className="sensitivity-table">
                   <caption className="visually-hidden">{sensitivityAttackLabel}・{sensitivityStatLabel}別の{sensitivityMetricLabel}数値一覧</caption>
                   <thead><tr>
@@ -924,7 +922,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
               </div>
             </div>
           )}
-        </section>
+        </div>
 
         <p className="result-disclaimer">表示値は単体への理論値です。物理・術ダメージには軽減前の攻撃力の5%を最低保証として適用します。計算過程と職分固有出力の単一値は敵防御力・術耐性0を基準にしています。確認済みの特性・素質と選択モジュールを反映し、条件入力が必要な効果と未対応効果は計算過程に明示します。潜在、外部バフ、敵デバフ、対象数は含みません。</p>
       </CollapsibleCalculatorPanel>
