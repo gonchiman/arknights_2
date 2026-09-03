@@ -1374,34 +1374,39 @@ function GoldenglowExpectedDpsOutput({
     : expectation.expectedExplosionsPerSecondPerDrone * model.activeDroneCount
 
   return (
-    <section className="goldenglow-output">
-      <table className="goldenglow-output-table">
-        <caption>
+    <section className="goldenglow-output" aria-labelledby="goldenglow-output-heading" aria-live="off">
+      <div className="goldenglow-output-heading">
+        <h3 id="goldenglow-output-heading">ゴールデングロー・爆発込み期待値</h3>
+        <p>
           {skillLabel} · {isFiniteWindow ? `${formatNumber(expectation.duration ?? 0)}秒` : '永続'}
           {' '}· 浮遊{model.activeDroneCount}体 · 術耐性0
-        </caption>
-        <thead>
-          <tr><th scope="col">出力</th><th scope="col">値</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <th scope="row">爆発込み期待DPS</th>
-            <td>{formatNumber(expectation.expectedDps)}</td>
-          </tr>
-          <tr>
-            <th scope="row">期待総ダメージ</th>
-            <td>{isFiniteWindow ? formatNumber(expectation.combinedExpectedTotalDamage ?? 0) : '—（永続）'}</td>
-          </tr>
-          <tr>
-            <th scope="row">{isFiniteWindow ? '期待爆発回数' : '爆発頻度'}</th>
-            <td>{isFiniteWindow ? `${formatNumber(expectedExplosionMetric)}回` : `${formatDecimal(expectedExplosionMetric)}回/秒`}</td>
-          </tr>
-          <tr>
-            <th scope="row">爆発1回</th>
-            <td>{formatNumber(explosion.damageAfterMitigation)}</td>
-          </tr>
-        </tbody>
-      </table>
+        </p>
+      </div>
+      <div className="goldenglow-table-wrap">
+        <table className="goldenglow-output-table" aria-labelledby="goldenglow-output-heading">
+          <thead>
+            <tr><th scope="col">出力</th><th scope="col">値</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">爆発込み期待DPS</th>
+              <td>{formatNumber(expectation.expectedDps)}</td>
+            </tr>
+            <tr>
+              <th scope="row">期待総ダメージ</th>
+              <td>{isFiniteWindow ? formatNumber(expectation.combinedExpectedTotalDamage ?? 0) : '—（永続）'}</td>
+            </tr>
+            <tr>
+              <th scope="row">{isFiniteWindow ? '期待爆発回数' : '爆発頻度'}</th>
+              <td>{isFiniteWindow ? `${formatNumber(expectedExplosionMetric)}回` : `${formatDecimal(expectedExplosionMetric)}回/秒`}</td>
+            </tr>
+            <tr>
+              <th scope="row">爆発1回</th>
+              <td>{formatNumber(explosion.damageAfterMitigation)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <p className="goldenglow-note">
         本体と全浮遊ユニットを合算した単体への理論値です（S3は浮遊のみ）。S1・S3は攻撃位相平均、S2は定常値、爆発後の戻り時間は0として計算します。
       </p>
