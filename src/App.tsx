@@ -9,6 +9,7 @@ import { OperatorDetailModal } from './components/OperatorDetailModal'
 import { OperatorDetailPage } from './components/OperatorDetailPage'
 import type { OpenOperatorDetail } from './components/OperatorDetailLink'
 import { SkillDirectory } from './components/SkillDirectory'
+import { SkillJsonPage } from './components/SkillJsonPage'
 import { loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
 import { ARKNIGHTS_GAMEDATA_REPOSITORY } from './lib/dataSources'
@@ -229,6 +230,8 @@ export default function App() {
             loading={loading}
             onOpenOperatorDetail={openOperatorDetail}
           />
+        ) : displayedRoute.view === 'skill-json' ? (
+          <SkillJsonPage rows={classifiedRows} loading={loading} />
         ) : displayedRoute.view === 'operator-detail' ? (
           loading ? (
             <OperatorDetailRouteState title="オペレーター詳細を読み込んでいます" />

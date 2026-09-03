@@ -1,4 +1,4 @@
-export type NavigationPage = 'operators' | 'skills' | 'damage' | 'comparison' | 'enemies' | 'sources'
+export type NavigationPage = 'operators' | 'skills' | 'skill-json' | 'damage' | 'comparison' | 'enemies' | 'sources'
 
 export type NavigationSection = 'analysis' | 'information'
 
@@ -28,6 +28,13 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     href: '#/skills',
     label: 'All Skills',
     description: '全スキルの一覧と絞り込み',
+    section: 'analysis',
+  },
+  {
+    id: 'skill-json',
+    href: '#/skill-json',
+    label: 'Skill JSON',
+    description: 'blackboard・説明文・レベル差分',
     section: 'analysis',
   },
   {

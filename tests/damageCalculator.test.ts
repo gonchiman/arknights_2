@@ -269,6 +269,14 @@ test('Ash S1型のblackboardから攻撃力補正Bと連撃数を得る', () => 
   assert.equal(model.attackInterval, 1)
 })
 
+test('裸のtimesは用途が一定しないため連撃数へ自動解釈しない', () => {
+  const model = deriveSkillModel({
+    blackboard: [{ key: 'times', value: 7 }],
+  }, 1)
+
+  assert.equal(model.hitCount, 1)
+})
+
 test('固定時間スキルの1ヒット・DPS・総量を計算する', () => {
   const output = calculateSkillDamage(1000, 'PHYSICAL', 200, 0, {
     directMultiplierPercent: 0,

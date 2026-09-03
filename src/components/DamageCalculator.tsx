@@ -37,7 +37,11 @@ import {
   getDamageCalculatorPanelNumbers,
   getDamageOutputPanelState,
 } from '../lib/damageCalculatorPanels'
-import { resolveDamageCalculatorDefaultOperatorId } from '../lib/damageCalculatorPreferences'
+import {
+  loadPreferredDefaultOperatorId,
+  persistPreferredDefaultOperatorId,
+  resolveDamageCalculatorDefaultOperatorId,
+} from '../lib/damageCalculatorPreferences'
 import {
   applyOperatorModule,
   getOperatorModuleId,
@@ -113,7 +117,6 @@ const REFLECTION_STATUS_LABELS: Record<ReflectionStatus, string> = {
   UNSUPPORTED: '未対応',
 }
 
-const DEFAULT_OPERATOR_STORAGE_KEY = 'arknights-damage-calculator-default-operator-id-v1'
 const REFERENCE_ENEMY_DEFENSE = 0
 const REFERENCE_ENEMY_RESISTANCE = 0
 
@@ -1107,24 +1110,6 @@ function DamageOutputEmptyState({ subject }: { subject: string }) {
       <p>{subject}に固有の追加成分が登録されると、この領域に表示されます。</p>
     </div>
   )
-}
-
-function loadPreferredDefaultOperatorId(): string {
-  if (typeof window === 'undefined') return ''
-  try {
-    return window.localStorage.getItem(DEFAULT_OPERATOR_STORAGE_KEY) ?? ''
-  } catch {
-    return ''
-  }
-}
-
-function persistPreferredDefaultOperatorId(operatorId: string): void {
-  if (typeof window === 'undefined') return
-  try {
-    window.localStorage.setItem(DEFAULT_OPERATOR_STORAGE_KEY, operatorId)
-  } catch {
-    // ストレージが利用できない場合も、現在の画面では設定を反映する。
-  }
 }
 
 function SensitivityChart({

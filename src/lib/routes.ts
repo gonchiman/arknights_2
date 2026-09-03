@@ -2,6 +2,7 @@ export type AppRoute =
   | { view: 'skills' }
   | { view: 'operators' }
   | { view: 'operator-detail'; operatorId: string }
+  | { view: 'skill-json' }
   | { view: 'damage' }
   | { view: 'comparison' }
   | { view: 'enemies' }
@@ -34,6 +35,7 @@ export function parseHashRoute(hash: string): AppRoute {
       return { view: 'operators' }
     }
   }
+  if (hash === '#/skill-json') return { view: 'skill-json' }
   if (hash === '#/damage') return { view: 'damage' }
   if (hash === '#/comparison') return { view: 'comparison' }
   if (hash === '#/enemies') return { view: 'enemies' }

@@ -9,6 +9,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
     [
       ['operators', 'operators'],
       ['skills', 'skills'],
+      ['skill-json', 'skill-json'],
       ['damage', 'damage'],
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
@@ -64,6 +65,11 @@ test('敵分析ページのhashを解析する', () => {
 
 test('全スキル一覧ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/skills'), { view: 'skills' })
+})
+
+test('Skill JSONページのhashを解析する', () => {
+  assert.deepEqual(parseHashRoute('#/skill-json'), { view: 'skill-json' })
+  assert.deepEqual(parseHashRoute('#/skill-json/extra'), { view: 'operators' })
 })
 
 test('参照元ページのhashを解析する', () => {

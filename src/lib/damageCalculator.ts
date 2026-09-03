@@ -197,7 +197,9 @@ export function deriveSkillModel(
     notes.push('独立ダメージ倍率 damage_scale は初期版の計算対象外です。')
   }
 
-  const hitValue = findValue(values, ['attack@times', 'attack_times', 'times', 'multi_times'])
+  // A bare `times` key has no stable gameplay meaning across skill records.
+  // Only keys that explicitly describe an attack/multi-hit context are safe defaults.
+  const hitValue = findValue(values, ['attack@times', 'attack_times', 'multi_times'])
   const hitCount = hitValue && Number.isFinite(hitValue.value)
     ? clamp(Math.round(hitValue.value), 1, 100)
     : 1
