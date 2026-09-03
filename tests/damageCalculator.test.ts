@@ -21,6 +21,7 @@ import {
 } from '../src/lib/damageCalculatorPreferences.ts'
 import {
   DEFAULT_DAMAGE_SENSITIVITY_TARGET,
+  getDamageSensitivityBreakdown,
   getDamageSensitivityMetricForTarget,
   getDamageSensitivityTableHeaders,
   getDamageSensitivityTablePoints,
@@ -177,6 +178,84 @@ test('選択した攻撃だけの1攻撃・DPS・総ダメージを返す', () =
     metric: 'TOTAL',
     normalBreakdown,
     normalAttackInterval: 2,
+    skillBreakdown,
+    canShowSkillTotal: false,
+  }), null)
+})
+
+test('通常攻撃の軽減内訳を表と同じ表示単位で返す', () => {
+  const normalBreakdown = calculateDamageBreakdown(1000, 'PHYSICAL', 300, 0, {
+    defenseIgnoreFixed: 100,
+  })
+  const breakdown = getDamageSensitivityBreakdown({
+    target: 'NORMAL',
+    metric: 'DAMAGE',
+    normalBreakdown,
+    normalAttackInterval: 2,
+    skillBreakdown: null,
+    canShowSkillTotal: false,
+  })
+
+  assert.deepEqual(breakdown, {
+    damageType: 'PHYSICAL',
+    beforeMitigation: 1000,
+    afterMitigation: 800,
+    minimumDamage: 50,
+    minimumApplied: false,
+    minimumReached: false,
+    finalValue: 800,
+    inputMitigationStat: 300,
+    fixedIgnore: 100,
+    appliedMitigationStat: 200,
+  })
+  assert.equal(getDamageSensitivityBreakdown({
+    target: 'NORMAL',
+    metric: 'DPS',
+    normalBreakdown,
+    normalAttackInterval: 0,
+    skillBreakdown: null,
+    canShowSkillTotal: false,
+  }), null)
+})
+
+test('スキル総ダメージの最低保証を表と同じ表示単位へ換算する', () => {
+  const skillBreakdown = calculateSkillDamageBreakdown(1000, 'ARTS', 0, 100, {
+    directMultiplierPercent: 0,
+    attackScalePercent: 100,
+    hitCount: 2,
+    attackInterval: 2,
+    duration: 10,
+    ammoCount: 0,
+  }, {
+    canShowDps: true,
+    totalMode: 'DURATION',
+  })
+  const breakdown = getDamageSensitivityBreakdown({
+    target: 'SKILL',
+    metric: 'TOTAL',
+    normalBreakdown: null,
+    normalAttackInterval: 0,
+    skillBreakdown,
+    canShowSkillTotal: true,
+  })
+
+  assert.deepEqual(breakdown, {
+    damageType: 'ARTS',
+    beforeMitigation: 10000,
+    afterMitigation: 0,
+    minimumDamage: 500,
+    minimumApplied: true,
+    minimumReached: true,
+    finalValue: 500,
+    inputMitigationStat: 100,
+    fixedIgnore: 0,
+    appliedMitigationStat: 100,
+  })
+  assert.equal(getDamageSensitivityBreakdown({
+    target: 'SKILL',
+    metric: 'TOTAL',
+    normalBreakdown: null,
+    normalAttackInterval: 0,
     skillBreakdown,
     canShowSkillTotal: false,
   }), null)

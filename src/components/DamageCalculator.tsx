@@ -17,12 +17,14 @@ import {
 } from '../lib/damageCalculator'
 import {
   DEFAULT_DAMAGE_SENSITIVITY_TARGET,
+  getDamageSensitivityBreakdown,
   getDamageSensitivityMetricForTarget,
   getDamageSensitivityTableHeaders,
   getDamageSensitivityTablePoints,
   isDamageSensitivityMetricAvailable,
   selectDamageSensitivityType,
   selectDamageSensitivityValue,
+  type DamageSensitivityBreakdown,
   type DamageSensitivityMetric,
   type DamageSensitivityTarget,
 } from '../lib/damageSensitivity'
@@ -94,6 +96,7 @@ interface SensitivityRow {
   label: string
   value: number | null
   minimumReached: boolean
+  breakdown: DamageSensitivityBreakdown | null
 }
 
 interface SensitivityData {
@@ -148,6 +151,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const [skillCalculationProcessOpen, setSkillCalculationProcessOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillCalculationProcess)
   const [sensitivityTarget, setSensitivityTarget] = useState<SensitivityTarget>(DEFAULT_DAMAGE_SENSITIVITY_TARGET)
   const [sensitivityMetric, setSensitivityMetric] = useState<SensitivityMetric>('DAMAGE')
+  const [sensitivityBreakdownPoint, setSensitivityBreakdownPoint] = useState<number | null>(null)
   const [operatorFilters, setOperatorFilters] = useState(EMPTY_OPERATOR_FILTERS)
   const [preferredDefaultOperatorId, setPreferredDefaultOperatorId] = useState(loadPreferredDefaultOperatorId)
 
@@ -455,6 +459,10 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const hasSensitivityResults = sensitivityData.tableRows.some((row) => (
     row.value !== null
   ))
+  const sensitivityBreakdownRow = selectSensitivityBreakdownRow(
+    sensitivityData.tableRows,
+    sensitivityBreakdownPoint,
+  )
   const hasMinimumDamageResults = sensitivityData.tableRows.some((row) => row.minimumReached)
   const damageTypeMetricStatus: ReflectionStatus = normalDamageType !== null && skillDamageType !== null
     ? 'APPLIED'
@@ -889,42 +897,68 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
                 : `${sensitivityAttackLabel}の表示できる計算結果がありません。`}
             </p>
           ) : (
-            <div
-              className="sensitivity-table-section"
-              style={{ maxWidth: `${sensitivityTableMaxWidth}px` }}
-            >
-              {hasMinimumDamageResults && (
-                <div className="sensitivity-table-meta-row">
-                  <span className="minimum-damage-legend"><span aria-hidden="true">※</span>{getMinimumDamageLegendLabel(sensitivityMetric)}</span>
-                </div>
-              )}
+            <div className="sensitivity-output-layout">
               <div
-                className="sensitivity-table-wrap"
-                role="region"
-                aria-label={`${sensitivityAttackLabel}・${sensitivityStatLabel}別の${sensitivityMetricLabel}数値一覧`}
-                tabIndex={0}
+                className="sensitivity-table-section"
+                style={{ maxWidth: `${sensitivityTableMaxWidth}px` }}
               >
-                <table className="sensitivity-table">
-                  <caption className="visually-hidden">{sensitivityAttackLabel}・{sensitivityStatLabel}別の{sensitivityMetricLabel}数値一覧</caption>
-                  <thead><tr>
-                    {sensitivityTableHeaders.map((header) => <th scope="col" key={header}>{header}</th>)}
-                  </tr></thead>
-                  <tbody>
-                    {sensitivityData.tableRows.map((row) => {
-                      const value = row.value === null ? '—' : formatNumber(row.value)
-                      return (
-                        <tr key={row.label}>
-                          <th scope="row">{row.label}</th>
-                          <td
-                            className={row.minimumReached ? 'minimum-damage-cell' : undefined}
-                            aria-label={row.minimumReached ? `${value}、${getMinimumDamageAriaLabel(sensitivityMetric)}` : undefined}
-                          >{value}{row.minimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                {hasMinimumDamageResults && (
+                  <div className="sensitivity-table-meta-row">
+                    <span className="minimum-damage-legend"><span aria-hidden="true">※</span>{getMinimumDamageLegendLabel(sensitivityMetric)}</span>
+                  </div>
+                )}
+                <div
+                  className="sensitivity-table-wrap"
+                  role="region"
+                  aria-label={`${sensitivityAttackLabel}・${sensitivityStatLabel}別の${sensitivityMetricLabel}数値一覧`}
+                  tabIndex={0}
+                >
+                  <table className="sensitivity-table">
+                    <caption className="visually-hidden">{sensitivityAttackLabel}・{sensitivityStatLabel}別の{sensitivityMetricLabel}数値一覧</caption>
+                    <thead><tr>
+                      {sensitivityTableHeaders.map((header) => <th scope="col" key={header}>{header}</th>)}
+                    </tr></thead>
+                    <tbody>
+                      {sensitivityData.tableRows.map((row) => {
+                        const value = row.value === null ? '—' : formatNumber(row.value)
+                        const breakdownSelected = row.point === sensitivityBreakdownRow?.point
+                        return (
+                          <tr className={breakdownSelected ? 'sensitivity-breakdown-selected-row' : undefined} key={row.label}>
+                            <th scope="row">
+                              <span className="sensitivity-row-label">{row.label}</span>
+                              {row.breakdown && (
+                                <button
+                                  type="button"
+                                  className="sensitivity-breakdown-selector"
+                                  aria-controls="sensitivity-damage-breakdown"
+                                  aria-pressed={breakdownSelected}
+                                  aria-label={`${sensitivityStatLabel}${row.label}のダメージ内訳を表示`}
+                                  onClick={() => setSensitivityBreakdownPoint(row.point)}
+                                >
+                                  <span>{row.label}</span>
+                                  <span aria-hidden="true">→</span>
+                                </button>
+                              )}
+                            </th>
+                            <td
+                              className={row.minimumReached ? 'minimum-damage-cell' : undefined}
+                              aria-label={row.minimumReached ? `${value}、${getMinimumDamageAriaLabel(sensitivityMetric)}` : undefined}
+                            >{value}{row.minimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
+              {sensitivityBreakdownRow?.breakdown && (
+                <SensitivityDamageBreakdown
+                  id="sensitivity-damage-breakdown"
+                  row={sensitivityBreakdownRow}
+                  statLabel={sensitivityStatLabel}
+                  valueLabel={sensitivityTableHeaders[1]}
+                />
+              )}
             </div>
           )}
         </div>
@@ -1114,6 +1148,98 @@ function DamageOutputEmptyState({ subject }: { subject: string }) {
       <p>{subject}に固有の追加成分が登録されると、この領域に表示されます。</p>
     </div>
   )
+}
+
+function SensitivityDamageBreakdown({
+  id,
+  row,
+  statLabel,
+  valueLabel,
+}: {
+  id: string
+  row: SensitivityRow
+  statLabel: string
+  valueLabel: string
+}) {
+  const breakdown = row.breakdown
+  if (!breakdown) return null
+
+  const maximumValue = Math.max(
+    breakdown.beforeMitigation,
+    breakdown.afterMitigation,
+    breakdown.finalValue,
+    breakdown.minimumDamage ?? 0,
+    1,
+  )
+  const stages = [
+    { key: 'before', label: '軽減前', value: breakdown.beforeMitigation },
+    { key: 'after', label: '軽減後', value: breakdown.afterMitigation },
+    { key: 'final', label: '最終値', value: breakdown.finalValue },
+  ]
+  const mitigationLoss = Math.max(0, breakdown.beforeMitigation - breakdown.afterMitigation)
+  const statUnit = breakdown.damageType === 'ARTS' ? '%' : ''
+  const mitigationCondition = breakdown.damageType === 'TRUE'
+    ? '防御力・術耐性の影響なし'
+    : breakdown.fixedIgnore > 0
+      ? `${statLabel} ${formatNumber(breakdown.inputMitigationStat ?? 0)}${statUnit}・固定無視 ${formatNumber(breakdown.fixedIgnore)}${statUnit} → 適用 ${formatNumber(breakdown.appliedMitigationStat ?? 0)}${statUnit}`
+      : `${statLabel} ${formatNumber(breakdown.appliedMitigationStat ?? 0)}${statUnit}を適用`
+  const minimumStatus = breakdown.minimumApplied
+    ? '適用'
+    : breakdown.minimumReached
+      ? '到達'
+      : '未到達'
+
+  return (
+    <figure className="sensitivity-breakdown" id={id}>
+      <figcaption className="sensitivity-breakdown-caption">
+        <span>ダメージ内訳</span>
+        <strong>{valueLabel}</strong>
+      </figcaption>
+      <p className="sensitivity-breakdown-condition">{mitigationCondition}</p>
+      <div className="sensitivity-breakdown-stages">
+        {stages.map((stage) => (
+          <div className={`sensitivity-breakdown-stage ${stage.key}`} key={stage.key}>
+            <div>
+              <span>{stage.label}</span>
+              <strong>{formatNumber(stage.value)}</strong>
+            </div>
+            <div className="sensitivity-breakdown-track" aria-hidden="true">
+              <span style={{ width: `${getDamageBreakdownBarWidth(stage.value, maximumValue)}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <dl className="sensitivity-breakdown-details">
+        <div>
+          <dt>軽減量</dt>
+          <dd>{mitigationLoss > 0 ? `−${formatNumber(mitigationLoss)}` : '0'}</dd>
+        </div>
+        <div>
+          <dt>最低保証</dt>
+          <dd className={breakdown.minimumReached ? 'minimum-reached' : undefined}>
+            {breakdown.minimumDamage === null
+              ? 'なし'
+              : `${formatNumber(breakdown.minimumDamage)}（${minimumStatus}）`}
+          </dd>
+        </div>
+      </dl>
+    </figure>
+  )
+}
+
+function selectSensitivityBreakdownRow(
+  rows: SensitivityRow[],
+  selectedPoint: number | null,
+): SensitivityRow | null {
+  const availableRows = rows.filter((row) => row.breakdown !== null)
+  return availableRows.find((row) => row.point === selectedPoint)
+    ?? availableRows[Math.floor(availableRows.length / 2)]
+    ?? null
+}
+
+function getDamageBreakdownBarWidth(value: number, maximumValue: number): number {
+  if (maximumValue <= 0) return 0
+  return clamp(value / maximumValue * 100, 0, 100)
 }
 
 function SelectField({
@@ -1667,6 +1793,14 @@ function buildSensitivityData({
       skillBreakdown,
       canShowSkillTotal,
     })
+    const breakdown = getDamageSensitivityBreakdown({
+      target,
+      metric,
+      normalBreakdown,
+      normalAttackInterval,
+      skillBreakdown,
+      canShowSkillTotal,
+    })
     return {
       point,
       label: tableDamageType === 'ARTS'
@@ -1677,9 +1811,8 @@ function buildSensitivityData({
             ? '判定不可'
             : formatNumber(point),
       value,
-      minimumReached: target === 'NORMAL'
-        ? normalBreakdown ? isMinimumDamageReached(normalBreakdown) : false
-        : value !== null && skillBreakdown ? isMinimumDamageReached(skillBreakdown.mitigation) : false,
+      minimumReached: breakdown?.minimumReached ?? false,
+      breakdown,
     }
   })
 
@@ -1687,13 +1820,6 @@ function buildSensitivityData({
     damageType: tableDamageType,
     tableRows,
   }
-}
-
-function isMinimumDamageReached(breakdown: DamageCalculationBreakdown): boolean {
-  const minimum = breakdown.minimumDamage
-  if (minimum === null || minimum <= 0) return false
-  const tolerance = Number.EPSILON * Math.max(1, Math.abs(breakdown.attack), Math.abs(minimum), Math.abs(breakdown.result)) * 32
-  return breakdown.result <= minimum + tolerance
 }
 
 function getSkillLevelLabel(index: number, total: number): string {
