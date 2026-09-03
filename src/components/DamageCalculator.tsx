@@ -563,7 +563,7 @@ export function DamageCalculator({ rows, loading }: Props) {
         </div>
         <div className="selected-skill-summary">
           <div>
-            <strong>{selectedOperator.operatorName} · S{selectedSkill.skillIndex} {selectedSkillLevel.name ?? selectedSkill.skillName}</strong>
+            <strong>S{selectedSkill.skillIndex} {selectedSkillLevel.name ?? selectedSkill.skillName}</strong>
             <span>基礎攻撃力 {formatNumber(operatorStats.attack)} · 攻撃間隔 {formatDecimal(operatorStats.attackInterval)}秒</span>
           </div>
           <p>{stripMarkup(selectedSkillLevel.description ?? selectedSkill.description)}</p>
