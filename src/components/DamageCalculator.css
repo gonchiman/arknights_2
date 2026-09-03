@@ -1296,6 +1296,7 @@
 }
 
 .sensitivity-table-section {
+  width: 100%;
   min-width: 0;
   margin-top: 4px;
 }
@@ -1360,7 +1361,7 @@
 
 .sensitivity-table th:first-child,
 .sensitivity-table td:first-child {
-  width: 28%;
+  width: 42%;
   text-align: left;
 }
 

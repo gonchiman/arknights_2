@@ -122,6 +122,7 @@ const REFLECTION_STATUS_LABELS: Record<ReflectionStatus, string> = {
 
 const REFERENCE_ENEMY_DEFENSE = 0
 const REFERENCE_ENEMY_RESISTANCE = 0
+const SENSITIVITY_TABLE_MAX_WIDTH_PER_COLUMN = 260
 
 export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props) {
   const operators = useMemo(() => [...new Map(rows.map((row) => [row.operatorId, row])).values()]
@@ -450,6 +451,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
     skillTotalLabel,
     normalPrefix: mechAccordDamage ? '本体 ' : '',
   })
+  const sensitivityTableMaxWidth = sensitivityTableHeaders.length * SENSITIVITY_TABLE_MAX_WIDTH_PER_COLUMN
   const hasSensitivityResults = sensitivityData.tableRows.some((row) => (
     row.value !== null
   ))
@@ -887,7 +889,10 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
                 : `${sensitivityAttackLabel}の表示できる計算結果がありません。`}
             </p>
           ) : (
-            <div className="sensitivity-table-section">
+            <div
+              className="sensitivity-table-section"
+              style={{ maxWidth: `${sensitivityTableMaxWidth}px` }}
+            >
               {hasMinimumDamageResults && (
                 <div className="sensitivity-table-meta-row">
                   <span className="minimum-damage-legend"><span aria-hidden="true">※</span>{getMinimumDamageLegendLabel(sensitivityMetric)}</span>
