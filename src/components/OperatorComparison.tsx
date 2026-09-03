@@ -37,12 +37,14 @@ import type { RawOperatorModule, SkillRecord } from '../types/skill'
 import { ComparisonChart, type ComparisonChartSeries } from './ComparisonChart'
 import { type FilterState } from './Filters'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
+import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
 import { SkillEffectModal } from './SkillEffectModal'
 import './OperatorComparison.css'
 
 interface Props {
   rows: SkillRecord[]
   loading: boolean
+  onOpenOperatorDetail: OpenOperatorDetail
 }
 
 interface PickerState {
@@ -69,7 +71,7 @@ const BUILD_COLORS = ['#607f99', '#a84b4b', '#5a8b67', '#7b6d86', '#80704b', '#5
 const DEFAULT_COMPARISON_METRIC: ComparisonBuildMetric = 'SKILL_PER_ATTACK'
 const NUMBER_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 })
 
-export function OperatorComparison({ rows, loading }: Props) {
+export function OperatorComparison({ rows, loading, onOpenOperatorDetail }: Props) {
   const [builds, setBuilds] = useState<ComparisonBuildConfig[]>([])
   const [enemy, setEnemy] = useState<ComparisonEnemyCondition>({ defense: 0, resistance: 0 })
   const [axis, setAxis] = useState<ComparisonAxis>('DEFENSE')
@@ -411,7 +413,10 @@ export function OperatorComparison({ rows, loading }: Props) {
             </div>
             <p>防御 {formatNumber(enemy.defense)} / 術耐性 {formatNumber(enemy.resistance)}%</p>
           </div>
-          <CurrentOutputTable evaluations={evaluations} />
+          <CurrentOutputTable
+            evaluations={evaluations}
+            onOpenOperatorDetail={onOpenOperatorDetail}
+          />
         </div>
 
         <div className="comparison-series-section">
@@ -734,7 +739,13 @@ function BuildCard({
   )
 }
 
-function CurrentOutputTable({ evaluations }: { evaluations: ComparisonBuildEvaluation[] }) {
+function CurrentOutputTable({
+  evaluations,
+  onOpenOperatorDetail,
+}: {
+  evaluations: ComparisonBuildEvaluation[]
+  onOpenOperatorDetail: OpenOperatorDetail
+}) {
   return (
     <div className="comparison-output-table-wrap" role="region" tabIndex={0} aria-label="現在の敵条件での比較表">
       <table className="comparison-output-table">
@@ -759,7 +770,16 @@ function CurrentOutputTable({ evaluations }: { evaluations: ComparisonBuildEvalu
                 <span className="comparison-table-build-label">
                   <i style={{ background: getBuildColor(evaluation.config.colorIndex ?? index) }} aria-hidden="true" />
                   <span>
-                    <strong>{evaluation.skill.operatorName}</strong>
+                    <strong>
+                      <OperatorDetailLink
+                        operatorId={evaluation.skill.operatorId}
+                        onOpenOperatorDetail={onOpenOperatorDetail}
+                        className="comparison-operator-detail-link"
+                        aria-label={`${evaluation.skill.operatorName}の詳細を開く`}
+                      >
+                        {evaluation.skill.operatorName}
+                      </OperatorDetailLink>
+                    </strong>
                     <small>S{evaluation.skill.skillIndex} {evaluation.skill.skillName} · {formatModuleLabel(evaluation)}</small>
                   </span>
                 </span>

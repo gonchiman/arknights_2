@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   DEFAULT_OPERATOR_DATABASE_SORT,
   EMPTY_OPERATOR_DATABASE_FILTERS,
@@ -11,17 +11,16 @@ import {
   type OperatorDatabaseSortKey,
 } from '../lib/operatorDatabase'
 import { OPERATOR_INITIAL_LABELS, PROFESSION_ORDER } from '../lib/operatorFilters'
-import type { SkillClassificationOverride, SkillRecord } from '../types/skill'
+import type { SkillRecord } from '../types/skill'
 import { Filters, type FilterOption } from './Filters'
-import { OperatorDetailModal } from './OperatorDetailModal'
+import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
 import { OperatorStatisticsPanel } from './OperatorStatisticsPanel'
 import './OperatorDatabase.css'
 
 interface Props {
   rows: SkillRecord[]
   loading: boolean
-  overrides: Record<string, SkillClassificationOverride>
-  onOverride: (skillId: string, override: SkillClassificationOverride | null) => void
+  onOpenOperatorDetail: OpenOperatorDetail
 }
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
@@ -29,13 +28,10 @@ const NUMBER_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits:
 export function OperatorDatabase({
   rows,
   loading,
-  overrides,
-  onOverride,
+  onOpenOperatorDetail,
 }: Props) {
   const [filters, setFilters] = useState({ ...EMPTY_OPERATOR_DATABASE_FILTERS })
   const [sort, setSort] = useState<OperatorDatabaseSort>({ ...DEFAULT_OPERATOR_DATABASE_SORT })
-  const [detailOperatorId, setDetailOperatorId] = useState<string | null>(null)
-  const detailTriggerRef = useRef<HTMLButtonElement | null>(null)
 
   const records = useMemo(() => buildOperatorDatabaseRecords(rows), [rows])
   const professionOptions = useMemo(() => buildProfessionOptions(records), [records])
@@ -45,14 +41,6 @@ export function OperatorDatabase({
     sort,
   ), [records, filters, sort])
   const scopeLabel = getOperatorScopeLabel(filters, professionOptions)
-  const detailOperator = useMemo(
-    () => records.find((operator) => operator.operatorId === detailOperatorId) ?? null,
-    [records, detailOperatorId],
-  )
-  const detailOperatorSkills = useMemo(
-    () => detailOperator ? getOperatorSkills(rows, detailOperator.operatorId) : [],
-    [rows, detailOperator],
-  )
 
   const updateSort = (key: OperatorDatabaseSortKey) => {
     setSort((current) => ({
@@ -64,25 +52,6 @@ export function OperatorDatabase({
   }
 
   const resetFilters = () => setFilters({ ...EMPTY_OPERATOR_DATABASE_FILTERS })
-
-  const openDetail = (operator: OperatorDatabaseRecord, trigger: HTMLButtonElement) => {
-    detailTriggerRef.current = trigger
-    setDetailOperatorId(operator.operatorId)
-  }
-
-  const closeDetail = () => {
-    const closingOperatorId = detailOperatorId
-    setDetailOperatorId(null)
-    window.requestAnimationFrame(() => {
-      const trigger = detailTriggerRef.current
-      if (trigger?.isConnected) {
-        trigger.focus()
-        return
-      }
-      const buttons = document.querySelectorAll<HTMLButtonElement>('.operator-database-name-button[data-operator-id]')
-      Array.from(buttons).find((button) => button.dataset.operatorId === closingOperatorId)?.focus()
-    })
-  }
 
   return (
     <section className="operator-database-page">
@@ -152,16 +121,15 @@ export function OperatorDatabase({
                 {visibleRecords.map((operator) => (
                   <tr key={operator.operatorId}>
                     <td>
-                      <button
-                        type="button"
+                      <OperatorDetailLink
+                        operatorId={operator.operatorId}
+                        onOpenOperatorDetail={onOpenOperatorDetail}
                         className="operator-database-name-button"
                         data-operator-id={operator.operatorId}
-                        aria-haspopup="dialog"
                         aria-label={`${operator.name}の詳細を開く`}
-                        onClick={(event) => openDetail(operator, event.currentTarget)}
                       >
                         {operator.name}
-                      </button>
+                      </OperatorDetailLink>
                     </td>
                     <td>★{operator.rarity}</td>
                     <td>{operator.professionLabel}</td>
@@ -178,16 +146,6 @@ export function OperatorDatabase({
         )}
       </section>
 
-      {detailOperator && (
-        <OperatorDetailModal
-          operator={detailOperator}
-          comparisonOperators={records}
-          skills={detailOperatorSkills}
-          overrides={overrides}
-          onOverride={onOverride}
-          onClose={closeDetail}
-        />
-      )}
     </section>
   )
 }
@@ -234,12 +192,6 @@ function buildProfessionOptions(records: OperatorDatabaseRecord[]): FilterOption
     - (order.get(b.value) ?? PROFESSION_ORDER.length)
     || a.label.localeCompare(b.label, 'ja')
   ))
-}
-
-function getOperatorSkills(rows: SkillRecord[], operatorId: string): SkillRecord[] {
-  return rows
-    .filter((skill) => skill.operatorId === operatorId)
-    .sort((a, b) => a.skillIndex - b.skillIndex || a.skillName.localeCompare(b.skillName, 'ja'))
 }
 
 function getOperatorScopeLabel(

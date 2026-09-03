@@ -22,12 +22,14 @@ import type {
   EffectWindowType,
   SkillRecord,
 } from '../types/skill'
+import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
 import { SkillEffectModal } from './SkillEffectModal'
 import './SkillDirectory.css'
 
 interface Props {
   rows: SkillRecord[]
   loading: boolean
+  onOpenOperatorDetail: OpenOperatorDetail
 }
 
 const RARITIES = [6, 5, 4, 3, 2, 1] as const
@@ -40,7 +42,7 @@ const SP_TYPE_LABELS: Record<string, string> = {
   UNKNOWN: '要確認',
 }
 
-export function SkillDirectory({ rows, loading }: Props) {
+export function SkillDirectory({ rows, loading, onOpenOperatorDetail }: Props) {
   const [filters, setFilters] = useState<SkillDirectoryFilters>({
     ...EMPTY_SKILL_DIRECTORY_FILTERS,
   })
@@ -206,15 +208,26 @@ export function SkillDirectory({ rows, loading }: Props) {
                     tabIndex={0}
                     aria-haspopup="dialog"
                     aria-label={`${row.operatorName}、S${row.skillIndex} ${row.skillName}のスキル効果詳細を開く`}
-                    onClick={(event) => openSkillEffect(row, event.currentTarget)}
+                    onClick={(event) => {
+                      if (isInteractiveTarget(event.target)) return
+                      openSkillEffect(row, event.currentTarget)
+                    }}
                     onKeyDown={(event) => {
+                      if (event.target !== event.currentTarget) return
                       if (event.key !== 'Enter' && event.key !== ' ') return
                       event.preventDefault()
                       openSkillEffect(row, event.currentTarget)
                     }}
                   >
                     <td>
-                      <span className="skill-directory-operator">{row.operatorName}</span>
+                      <OperatorDetailLink
+                        operatorId={row.operatorId}
+                        onOpenOperatorDetail={onOpenOperatorDetail}
+                        className="skill-directory-operator skill-directory-operator-link"
+                        aria-label={`${row.operatorName}の詳細を開く`}
+                      >
+                        {row.operatorName}
+                      </OperatorDetailLink>
                     </td>
                     <td>
                       <span className="skill-directory-skill-name">{row.skillName}</span>
@@ -252,6 +265,10 @@ export function SkillDirectory({ rows, loading }: Props) {
       {detailSkill && <SkillEffectModal skill={detailSkill} onClose={closeSkillEffect} />}
     </section>
   )
+}
+
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && Boolean(target.closest('a, button, input, select, textarea'))
 }
 
 interface FilterSelectProps {

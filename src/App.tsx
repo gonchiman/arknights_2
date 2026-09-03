@@ -5,11 +5,15 @@ import { DataSourcesPage } from './components/DataSourcesPage'
 import { EnemyAnalysis } from './components/EnemyAnalysis'
 import { OperatorComparison } from './components/OperatorComparison'
 import { OperatorDatabase } from './components/OperatorDatabase'
+import { OperatorDetailModal } from './components/OperatorDetailModal'
+import { OperatorDetailPage } from './components/OperatorDetailPage'
+import type { OpenOperatorDetail } from './components/OperatorDetailLink'
 import { SkillDirectory } from './components/SkillDirectory'
 import { loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
 import { ARKNIGHTS_GAMEDATA_REPOSITORY } from './lib/dataSources'
-import { parseHashRoute, type AppRoute } from './lib/routes'
+import { buildOperatorDatabaseRecords } from './lib/operatorDatabase'
+import { createOperatorDetailHash, parseHashRoute, type AppRoute } from './lib/routes'
 import { APP_NAV_ITEMS, type NavigationPage } from './lib/navigation'
 import {
   ACTIVATION_TRIGGERS,
@@ -29,15 +33,19 @@ import './navigation.css'
 const OVERRIDE_STORAGE_KEY = 'arknights-skill-classification-overrides-v2'
 const SIDEBAR_DRAWER_QUERY = '(max-width: 1140px)'
 const SIDEBAR_DESKTOP_QUERY = '(min-width: 1141px)'
+type BaseAppRoute = Exclude<AppRoute, { view: 'operator-detail' }>
 
 export default function App() {
   const [rows, setRows] = useState<SkillRecord[]>([])
   const [route, setRoute] = useState<AppRoute>(() => parseHashRoute(window.location.hash))
+  const [detailBackgroundRoute, setDetailBackgroundRoute] = useState<BaseAppRoute | null>(null)
   const [overrides, setOverrides] = useState<Record<string, SkillClassificationOverride>>(loadOverrides)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const sidebarToggleRef = useRef<HTMLButtonElement>(null)
+  const detailBackgroundRouteRef = useRef<BaseAppRoute | null>(null)
+  const detailTriggerRef = useRef<HTMLAnchorElement | null>(null)
   const skillDataRequestStarted = useRef(false)
 
   const load = async () => {
@@ -59,8 +67,23 @@ export default function App() {
   }, [route.view])
   useEffect(() => {
     const handleHashChange = () => {
-      setRoute(parseHashRoute(window.location.hash))
+      const nextRoute = parseHashRoute(window.location.hash)
+      const closingOverlay = detailBackgroundRouteRef.current !== null
+
+      detailBackgroundRouteRef.current = null
+      setDetailBackgroundRoute(null)
+      setRoute(nextRoute)
       setSidebarOpen(false)
+
+      if (closingOverlay) {
+        const trigger = detailTriggerRef.current
+        detailTriggerRef.current = null
+        window.requestAnimationFrame(() => {
+          if (trigger?.isConnected) trigger.focus()
+        })
+        return
+      }
+
       window.scrollTo({ top: 0, behavior: 'instant' })
     }
     window.addEventListener('hashchange', handleHashChange)
@@ -106,6 +129,18 @@ export default function App() {
     ...row,
     classification: applyManualClassification(row.classification, overrides[row.id]),
   })), [rows, overrides])
+  const operatorRecords = useMemo(
+    () => buildOperatorDatabaseRecords(classifiedRows),
+    [classifiedRows],
+  )
+  const detailOperator = route.view === 'operator-detail'
+    ? operatorRecords.find((operator) => operator.operatorId === route.operatorId) ?? null
+    : null
+  const detailOperatorSkills = route.view === 'operator-detail'
+    ? classifiedRows
+      .filter((skill) => skill.operatorId === route.operatorId)
+      .sort((a, b) => a.skillIndex - b.skillIndex || a.skillName.localeCompare(b.skillName, 'ja'))
+    : []
 
   const updateOverride = (skillId: string, override: SkillClassificationOverride | null) => {
     setOverrides((current) => {
@@ -117,7 +152,28 @@ export default function App() {
     })
   }
 
-  const activeNavigationPage: NavigationPage = route.view
+  const openOperatorDetail: OpenOperatorDetail = (operatorId, trigger) => {
+    if (route.view === 'operator-detail') {
+      window.location.hash = createOperatorDetailHash(operatorId)
+      return
+    }
+
+    detailTriggerRef.current = trigger
+    detailBackgroundRouteRef.current = route
+    setDetailBackgroundRoute(route)
+    window.history.pushState(null, '', createOperatorDetailHash(operatorId))
+    setRoute({ view: 'operator-detail', operatorId })
+    setSidebarOpen(false)
+  }
+
+  const closeOperatorDetail = () => {
+    if (detailBackgroundRouteRef.current) window.history.back()
+  }
+
+  const displayedRoute = detailBackgroundRoute ?? route
+  const activeNavigationPage: NavigationPage = displayedRoute.view === 'operator-detail'
+    ? 'operators'
+    : displayedRoute.view
   const activeNavigationItem = APP_NAV_ITEMS.find((item) => item.id === activeNavigationPage)
   const closeSidebar = () => {
     if (!sidebarOpen) return
@@ -149,27 +205,52 @@ export default function App() {
         </header>
 
         <main className="app-content">
-        {error && route.view !== 'enemies' && route.view !== 'sources' && <section className="error-box" role="alert">{error}</section>}
+        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'sources' && <section className="error-box" role="alert">{error}</section>}
 
-        {route.view === 'sources' ? (
+        {displayedRoute.view === 'sources' ? (
           <DataSourcesPage />
-        ) : route.view === 'damage' ? (
-          <DamageCalculator rows={classifiedRows} loading={loading} />
-        ) : route.view === 'comparison' ? (
-          <OperatorComparison rows={classifiedRows} loading={loading} />
-        ) : route.view === 'enemies' ? (
+        ) : displayedRoute.view === 'damage' ? (
+          <DamageCalculator
+            rows={classifiedRows}
+            loading={loading}
+            onOpenOperatorDetail={openOperatorDetail}
+          />
+        ) : displayedRoute.view === 'comparison' ? (
+          <OperatorComparison
+            rows={classifiedRows}
+            loading={loading}
+            onOpenOperatorDetail={openOperatorDetail}
+          />
+        ) : displayedRoute.view === 'enemies' ? (
           <EnemyAnalysis />
-        ) : route.view === 'skills' ? (
+        ) : displayedRoute.view === 'skills' ? (
           <SkillDirectory
             rows={classifiedRows}
             loading={loading}
+            onOpenOperatorDetail={openOperatorDetail}
           />
+        ) : displayedRoute.view === 'operator-detail' ? (
+          loading ? (
+            <OperatorDetailRouteState title="オペレーター詳細を読み込んでいます" />
+          ) : detailOperator ? (
+            <OperatorDetailPage
+              operator={detailOperator}
+              comparisonOperators={operatorRecords}
+              skills={detailOperatorSkills}
+              overrides={overrides}
+              onOverride={updateOverride}
+            />
+          ) : (
+            <OperatorDetailRouteState
+              title="オペレーターが見つかりません"
+              description="URLに対応するオペレーターを確認できませんでした。"
+            />
+          )
         ) : (
           <OperatorDatabase
             rows={classifiedRows}
             loading={loading}
-            overrides={overrides}
-            onOverride={updateOverride}
+            onOpenOperatorDetail={openOperatorDetail}
           />
         )}
         </main>
@@ -185,7 +266,35 @@ export default function App() {
           <a href="#/sources">参照元とデータ利用について</a>
         </footer>
       </div>
+
+      {route.view === 'operator-detail' && detailBackgroundRoute && detailOperator && (
+        <OperatorDetailModal
+          operator={detailOperator}
+          comparisonOperators={operatorRecords}
+          skills={detailOperatorSkills}
+          overrides={overrides}
+          onOverride={updateOverride}
+          onClose={closeOperatorDetail}
+        />
+      )}
     </div>
+  )
+}
+
+function OperatorDetailRouteState({
+  title,
+  description,
+}: {
+  title: string
+  description?: string
+}) {
+  return (
+    <section className="operator-detail-route-state" role="status">
+      <span className="page-kicker">OPERATOR DETAIL</span>
+      <h1>{title}</h1>
+      {description && <p>{description}</p>}
+      <a className="button secondary" href="#/operators">オペレーターデータベースへ戻る</a>
+    </section>
   )
 }
 
