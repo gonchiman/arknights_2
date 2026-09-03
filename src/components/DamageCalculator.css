@@ -638,6 +638,15 @@
 .selected-skill-summary span,
 .selected-skill-summary p { color: var(--text-muted); font-size: 10px; line-height: 1.55; }
 
+.damage-operator-detail-link {
+  color: inherit;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.damage-operator-detail-link:hover { color: var(--accent); }
+
 .module-selection-warning { margin-top: 8px; }
 
 .panel-note,

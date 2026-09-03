@@ -1,6 +1,7 @@
 export type AppRoute =
   | { view: 'skills' }
   | { view: 'operators' }
+  | { view: 'operator-detail'; operatorId: string }
   | { view: 'damage' }
   | { view: 'comparison' }
   | { view: 'enemies' }
@@ -8,6 +9,11 @@ export type AppRoute =
 
 const LEGACY_CLASSIFIER_SKILL_ROUTE_PREFIX = '#/skills/'
 const OPERATOR_SKILL_ROUTE_PREFIX = '#/operators/skills/'
+const OPERATOR_DETAIL_ROUTE_PREFIX = '#/operators/'
+
+export function createOperatorDetailHash(operatorId: string): string {
+  return `${OPERATOR_DETAIL_ROUTE_PREFIX}${encodeURIComponent(operatorId)}`
+}
 
 export function parseHashRoute(hash: string): AppRoute {
   if (
@@ -17,6 +23,17 @@ export function parseHashRoute(hash: string): AppRoute {
     return { view: 'operators' }
   }
   if (hash === '#/operators') return { view: 'operators' }
+  if (hash.startsWith(OPERATOR_DETAIL_ROUTE_PREFIX)) {
+    const encodedOperatorId = hash.slice(OPERATOR_DETAIL_ROUTE_PREFIX.length)
+    if (!encodedOperatorId || encodedOperatorId.includes('/')) return { view: 'operators' }
+
+    try {
+      const operatorId = decodeURIComponent(encodedOperatorId)
+      return operatorId ? { view: 'operator-detail', operatorId } : { view: 'operators' }
+    } catch {
+      return { view: 'operators' }
+    }
+  }
   if (hash === '#/damage') return { view: 'damage' }
   if (hash === '#/comparison') return { view: 'comparison' }
   if (hash === '#/enemies') return { view: 'enemies' }

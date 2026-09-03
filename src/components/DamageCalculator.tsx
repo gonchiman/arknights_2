@@ -60,11 +60,13 @@ import {
 } from '../lib/skillDamageModel'
 import type { RawSkillLevel, SkillRecord } from '../types/skill'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
+import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
 import './DamageCalculator.css'
 
 interface Props {
   rows: SkillRecord[]
   loading: boolean
+  onOpenOperatorDetail: OpenOperatorDetail
 }
 
 type ReflectionStatus = OperatorEffectStatus | 'PARTIAL'
@@ -115,7 +117,7 @@ const DEFAULT_OPERATOR_STORAGE_KEY = 'arknights-damage-calculator-default-operat
 const REFERENCE_ENEMY_DEFENSE = 0
 const REFERENCE_ENEMY_RESISTANCE = 0
 
-export function DamageCalculator({ rows, loading }: Props) {
+export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props) {
   const operators = useMemo(() => [...new Map(rows.map((row) => [row.operatorId, row])).values()]
     .sort((a, b) => a.operatorName.localeCompare(b.operatorName, 'ja')), [rows])
   const [operatorId, setOperatorId] = useState('')
@@ -563,7 +565,17 @@ export function DamageCalculator({ rows, loading }: Props) {
         </div>
         <div className="selected-skill-summary">
           <div>
-            <strong>{selectedOperator.operatorName} · S{selectedSkill.skillIndex} {selectedSkillLevel.name ?? selectedSkill.skillName}</strong>
+            <strong>
+              <OperatorDetailLink
+                operatorId={selectedOperator.operatorId}
+                onOpenOperatorDetail={onOpenOperatorDetail}
+                className="damage-operator-detail-link"
+                aria-label={`${selectedOperator.operatorName}の詳細を開く`}
+              >
+                {selectedOperator.operatorName}
+              </OperatorDetailLink>
+              {' · S'}{selectedSkill.skillIndex} {selectedSkillLevel.name ?? selectedSkill.skillName}
+            </strong>
             <span>基礎攻撃力 {formatNumber(operatorStats.attack)} · 攻撃間隔 {formatDecimal(operatorStats.attackInterval)}秒</span>
           </div>
           <p>{stripMarkup(selectedSkillLevel.description ?? selectedSkill.description)}</p>

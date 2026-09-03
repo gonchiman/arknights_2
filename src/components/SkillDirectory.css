@@ -112,6 +112,15 @@
   line-height: 1.45;
 }
 
+.skill-directory-operator-link {
+  color: inherit;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.skill-directory-operator-link:hover { color: var(--accent); }
+
 .skill-directory-classification-tag {
   display: inline-block;
   border: 1px solid color-mix(in srgb, var(--skill-directory-tag-color) 65%, #777);

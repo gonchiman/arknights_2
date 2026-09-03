@@ -127,6 +127,8 @@
 
 .operator-database-name-button {
   min-height: 24px;
+  display: inline-flex;
+  align-items: center;
   border: 0;
   background: transparent;
   color: var(--link);
@@ -202,7 +204,7 @@
   letter-spacing: .14em;
 }
 
-.operator-detail-modal-header h2 {
+.operator-detail-modal-header :is(h1, h2) {
   margin: 4px 0 3px;
   overflow-wrap: anywhere;
   font-size: 20px;
@@ -811,7 +813,7 @@
 
   .operator-detail-modal { max-height: calc(100dvh - 18px); }
   .operator-detail-modal-header { gap: 10px; padding: 12px; }
-  .operator-detail-modal-header h2 { font-size: 17px; }
+  .operator-detail-modal-header :is(h1, h2) { font-size: 17px; }
   .operator-detail-modal-body { padding: 12px; }
   .operator-detail-section-heading { display: block; }
   .operator-detail-section-heading span { display: block; margin-top: 4px; text-align: left; }

@@ -509,6 +509,15 @@
   gap: 8px;
 }
 
+.comparison-operator-detail-link {
+  color: inherit;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.comparison-operator-detail-link:hover { color: var(--accent); }
+
 .comparison-table-build-label > i {
   width: 4px;
   height: 31px;
