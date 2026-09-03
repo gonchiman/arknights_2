@@ -106,7 +106,7 @@ test('固有出力がある場合だけ開閉可能にし、初期状態を開�
   })
 })
 
-test('グラフ表示内容を1攻撃・DPS・総ダメージへ切り替える', () => {
+test('表の表示内容を1攻撃・DPS・総ダメージへ切り替える', () => {
   const normalBreakdown = calculateDamageBreakdown(1000, 'PHYSICAL', 200, 0)
   const skillBreakdown = calculateSkillDamageBreakdown(1000, 'PHYSICAL', 200, 0, {
     directMultiplierPercent: 0,
@@ -157,7 +157,7 @@ test('グラフ表示内容を1攻撃・DPS・総ダメージへ切り替える'
   }), { normal: null, skill: null })
 })
 
-test('総ダメージグラフは通常攻撃へフォールバックせずスキル種別だけを軸にする', () => {
+test('総ダメージ表は通常攻撃へフォールバックせずスキル種別だけを対象にする', () => {
   assert.equal(selectDamageSensitivityType('PHYSICAL', 'ARTS', 'TOTAL', true), 'ARTS')
   assert.equal(selectDamageSensitivityType('PHYSICAL', 'TRUE', 'TOTAL', true), 'TRUE')
   assert.equal(selectDamageSensitivityType('PHYSICAL', null, 'TOTAL', false), null)
@@ -165,13 +165,13 @@ test('総ダメージグラフは通常攻撃へフォールバックせずス�
   assert.equal(selectDamageSensitivityType('PHYSICAL', 'ARTS', 'DPS', true), 'ARTS')
 })
 
-test('スキル系列を算出できない表示では通常攻撃の種別を比較軸にする', () => {
+test('スキル値を算出できない表では通常攻撃の種別を対象にする', () => {
   assert.equal(selectDamageSensitivityType('PHYSICAL', 'ARTS', 'DPS', false), 'PHYSICAL')
   assert.equal(selectDamageSensitivityType('ARTS', 'PHYSICAL', 'DAMAGE', false), 'ARTS')
   assert.equal(selectDamageSensitivityType('TRUE', 'ARTS', 'DPS', false), 'TRUE')
 })
 
-test('敵入力なしでも比較軸ごとの表点を生成し、物理上限は最低保証地点まで自動拡張する', () => {
+test('敵入力なしでも対象ダメージ種別ごとの表点を生成し、物理上限は最低保証地点まで自動拡張する', () => {
   assert.deepEqual(getDamageSensitivityTablePoints('ARTS'), [0, 20, 40, 60, 80, 95, 100])
   assert.deepEqual(getDamageSensitivityTablePoints('PHYSICAL'), [0, 500, 1000, 1500, 2000])
   assert.deepEqual(getDamageSensitivityTablePoints('PHYSICAL', [2800]), [0, 500, 1000, 1500, 2000, 3500])
