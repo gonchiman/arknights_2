@@ -1039,7 +1039,8 @@
   overscroll-behavior-inline: contain;
 }
 
-.goldenglow-table-wrap:focus-visible {
+.goldenglow-table-wrap:focus-visible,
+.mech-accord-table-wrap:focus-visible {
   outline: 2px solid var(--link);
   outline-offset: 2px;
 }
@@ -1192,6 +1193,43 @@
   min-width: 0;
 }
 
+.mech-accord-output-block + .mech-accord-output-block {
+  margin-top: 18px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.mech-accord-attack-count-control {
+  width: 260px;
+  max-width: 100%;
+  display: grid;
+  gap: 3px;
+  margin: 0 0 10px;
+}
+
+.mech-accord-attack-count-control label {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.mech-accord-attack-count-control select {
+  width: 100%;
+  height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: #fff;
+  padding: 0 9px;
+  color: var(--text);
+  font: inherit;
+  font-size: 10px;
+}
+
+.mech-accord-table-meta-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 7px;
+}
+
 .mech-accord-table {
   min-width: 400px;
   table-layout: fixed;
@@ -1229,6 +1267,9 @@
   width: 28%;
   text-align: left;
 }
+
+.mech-accord-resistance-table th:first-child,
+.mech-accord-resistance-table td:first-child { width: 22%; }
 
 .mech-accord-table th:last-child,
 .mech-accord-table td:last-child { border-right: 0; }
@@ -1815,6 +1856,7 @@
     gap: 3px;
   }
 
+  .mech-accord-attack-count-control { width: 100%; }
   .mech-accord-table { min-width: 320px; }
 
   .calculation-step-heading {
@@ -1872,6 +1914,8 @@
   .sensitivity-target-switch button,
   .sensitivity-metric-switch button,
   .operator-search-heading button { min-height: 44px; }
+
+  .mech-accord-attack-count-control select { height: 44px; }
 
   .calculator-field select,
   .calculator-field input {

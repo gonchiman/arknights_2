@@ -35,9 +35,14 @@ import {
   type OperatorEffectStatus,
 } from '../lib/operatorEffects'
 import {
+  MECH_ACCORD_ATTACK_COUNTS,
   calculateMechAccordDamageRows,
+  calculateMechAccordResistanceTable,
+  getMechAccordMultiplierPercent,
   isMechAccordSubProfession,
+  type MechAccordAttackCount,
   type MechAccordDamageRowsResult,
+  type MechAccordResistanceTableResult,
 } from '../lib/mechAccordDamage'
 import {
   buildGoldenglowResistanceDamageRows,
@@ -175,6 +180,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const [sensitivityTarget, setSensitivityTarget] = useState<SensitivityTarget>(DEFAULT_DAMAGE_SENSITIVITY_TARGET)
   const [sensitivityMetric, setSensitivityMetric] = useState<SensitivityMetric>('DAMAGE')
   const [sensitivityBreakdownPoint, setSensitivityBreakdownPoint] = useState<number | null>(null)
+  const [mechAccordAttackCount, setMechAccordAttackCount] = useState<MechAccordAttackCount>(1)
   const [operatorFilters, setOperatorFilters] = useState(EMPTY_OPERATOR_FILTERS)
   const [preferredDefaultOperatorId, setPreferredDefaultOperatorId] = useState(loadPreferredDefaultOperatorId)
 
@@ -364,13 +370,21 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const normalDps = normalPerHit !== null && operatorStats.attackInterval > 0
     ? normalPerHit / operatorStats.attackInterval
     : null
-  const mechAccordDamage = selectedOperator
+  const mechAccordAttackCountDamage = selectedOperator
     && normalDamageType !== null
     && isMechAccordSubProfession(selectedOperator.subProfessionId)
     ? calculateMechAccordDamageRows(
       normalAttackPipeline.finalAttack,
       REFERENCE_ENEMY_DEFENSE,
       REFERENCE_ENEMY_RESISTANCE,
+      normalMitigationModifiers,
+    )
+    : null
+  const mechAccordResistanceDamage = mechAccordAttackCountDamage
+    ? calculateMechAccordResistanceTable(
+      normalAttackPipeline.finalAttack,
+      REFERENCE_ENEMY_DEFENSE,
+      mechAccordAttackCount,
       normalMitigationModifiers,
     )
     : null
@@ -525,7 +539,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
     target: sensitivityTarget,
     metric: sensitivityMetric,
     skillTotalLabel,
-    normalPrefix: mechAccordDamage ? '本体 ' : '',
+    normalPrefix: mechAccordAttackCountDamage ? '本体 ' : '',
   })
   const sensitivityTableMaxWidth = sensitivityTableHeaders.length * SENSITIVITY_TABLE_MAX_WIDTH_PER_COLUMN
   const hasSensitivityResults = sensitivityData.tableRows.some((row) => (
@@ -899,7 +913,9 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         number={panelNumbers.damageResult}
         title={primaryOutputTitle}
         summary={primaryOutputKind === 'SUB_PROFESSION'
-          ? `${selectedOperator.subProfessionName} · 通常攻撃 · 防御力0・術耐性0`
+          ? mechAccordResistanceDamage
+            ? `${selectedOperator.subProfessionName} · 攻撃回数別 · ${mechAccordResistanceDamage.attackCountLabel}の術耐性別`
+            : `${selectedOperator.subProfessionName} · 通常攻撃`
           : `${sensitivityAttackLabel} · ${formatDetectedDamageType(sensitivityDamageType)} · ${sensitivityStatLabel}別 · ${sensitivityMetricLabel}`}
         open={damageResultOpen}
         onToggle={() => setDamageResultOpen((open) => !open)}
@@ -907,10 +923,14 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         className="results-panel damage-result-panel"
       >
         {primaryOutputKind === 'SUB_PROFESSION' ? (
-          mechAccordDamage
+          mechAccordAttackCountDamage && mechAccordResistanceDamage
             ? (
               <>
-                <MechAccordDamageTable result={mechAccordDamage} />
+                <MechAccordDamageTables
+                  attackCountResult={mechAccordAttackCountDamage}
+                  resistanceResult={mechAccordResistanceDamage}
+                  onAttackCountChange={setMechAccordAttackCount}
+                />
                 {isGoldenglowSkill3Selected && (
                   <p className="sensitivity-metric-note">
                     この結果は操機術師の通常攻撃を表示しています。S3の期待値は「{skillOutputPanelLabel}」で確認できます。
@@ -1532,56 +1552,173 @@ function ReflectionBadge({ status }: { status: ReflectionStatus }) {
   return <span className={`reflection-badge ${status.toLowerCase().replaceAll('_', '-')}`}>{REFLECTION_STATUS_LABELS[status]}</span>
 }
 
-function MechAccordDamageTable({ result }: { result: MechAccordDamageRowsResult }) {
+function MechAccordDamageTables({
+  attackCountResult,
+  resistanceResult,
+  onAttackCountChange,
+}: {
+  attackCountResult: MechAccordDamageRowsResult
+  resistanceResult: MechAccordResistanceTableResult
+  onAttackCountChange: (attackCount: MechAccordAttackCount) => void
+}) {
+  const outputId = useId()
+  const attackCountHeadingId = `${outputId}-attack-count-heading`
+  const resistanceHeadingId = `${outputId}-resistance-heading`
+  const attackCountSelectId = useId()
+  const resistanceTableId = `${attackCountSelectId}-table`
+  const hasAttackCountMinimumDamage = attackCountResult.rows.some((row) => row.minimumReached)
+  const hasResistanceMinimumDamage = resistanceResult.rows.some((row) => row.combinedMinimumReached)
+
   return (
-    <section className="mech-accord-output" aria-labelledby="mech-accord-output-heading" aria-live="off">
-      <div className="mech-accord-output-heading">
-        <h3 id="mech-accord-output-heading">操機術師・攻撃回数別ダメージ</h3>
-        <p>本体 {formatNumber(result.mainDamage.result)} ＋ 浮遊ユニット1体 · 術</p>
+    <section className="mech-accord-output" aria-label="操機術師固有出力">
+      <div className="mech-accord-output-block">
+        <div className="mech-accord-output-heading">
+          <h3 id={attackCountHeadingId}>操機術師・攻撃回数別ダメージ</h3>
+          <p>本体 {formatNumber(attackCountResult.mainDamage.result)} ＋ 浮遊ユニット1体 · 術耐性0</p>
+        </div>
+        {hasAttackCountMinimumDamage && (
+          <div className="mech-accord-table-meta-row">
+            <span className="minimum-damage-legend"><span aria-hidden="true">※</span>最低保証ダメージ（合計は最低保証を含む）</span>
+          </div>
+        )}
+        <div
+          className="mech-accord-table-wrap"
+          role="region"
+          aria-labelledby={attackCountHeadingId}
+          tabIndex={0}
+        >
+          <table className="mech-accord-table mech-accord-attack-count-table">
+            <caption className="visually-hidden">術耐性0の操機術師・攻撃回数別ダメージ</caption>
+            <thead>
+              <tr>
+                <th scope="col">攻撃回数</th>
+                <th scope="col">本体</th>
+                <th scope="col">浮遊</th>
+                <th scope="col">本体＋浮遊</th>
+              </tr>
+            </thead>
+            <tbody>
+              {attackCountResult.rows.map((row) => {
+                const minimumLabel = row.minimumReached ? '、最低保証ダメージ' : ''
+                return (
+                  <tr key={row.attackCount}>
+                    <th scope="row">{row.attackCount === MECH_ACCORD_ATTACK_COUNTS.length ? '8回目以降' : `${row.attackCount}回目`}</th>
+                    <td aria-label={`本体 ${formatNumber(attackCountResult.mainDamage.result)}`}>
+                      <strong className="mech-accord-cell-value">{formatNumber(attackCountResult.mainDamage.result)}</strong>
+                    </td>
+                    <td
+                      className={row.minimumReached ? 'mech-accord-minimum' : undefined}
+                      aria-label={`浮遊 ${formatNumber(row.droneDamage)}、攻撃倍率 ${row.multiplierPercent}%${minimumLabel}`}
+                    >
+                      <strong className="mech-accord-cell-value">
+                        {formatNumber(row.droneDamage)}
+                        {row.minimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}
+                      </strong>
+                      <small className="mech-accord-cell-meta">{row.multiplierPercent}%</small>
+                    </td>
+                    <td
+                      className={row.minimumReached ? 'mech-accord-minimum' : undefined}
+                      aria-label={`本体＋浮遊 ${formatNumber(row.combinedDamage)}${row.minimumReached ? '、最低保証ダメージを含む' : ''}`}
+                    >
+                      <strong className="mech-accord-cell-value">
+                        {formatNumber(row.combinedDamage)}
+                        {row.minimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}
+                      </strong>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div className="mech-accord-table-wrap">
-        <table className="mech-accord-table" aria-labelledby="mech-accord-output-heading">
-          <thead>
-            <tr>
-              <th scope="col">攻撃回数</th>
-              <th scope="col">本体</th>
-              <th scope="col">浮遊</th>
-              <th scope="col">本体＋浮遊</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.rows.map((row) => {
-              const minimumLabel = row.minimumReached ? '、最低保証ダメージ' : ''
-              return (
-                <tr key={row.attackCount}>
-                  <th scope="row">{row.attackCount === 8 ? '8回目以降' : `${row.attackCount}回目`}</th>
-                  <td
-                    className={row.minimumReached ? 'mech-accord-minimum' : undefined}
-                    aria-label={`本体 ${formatNumber(result.mainDamage.result)}${minimumLabel}`}
-                  >
-                    <strong className="mech-accord-cell-value">{formatNumber(result.mainDamage.result)}</strong>
-                  </td>
-                  <td
-                    className={row.minimumReached ? 'mech-accord-minimum' : undefined}
-                    aria-label={`浮遊 ${formatNumber(row.droneDamage)}、攻撃倍率 ${row.multiplierPercent}%${minimumLabel}`}
-                  >
-                    <strong className="mech-accord-cell-value">{formatNumber(row.droneDamage)}</strong>
-                    <small className="mech-accord-cell-meta">{row.multiplierPercent}%</small>
-                  </td>
-                  <td
-                    className={row.minimumReached ? 'mech-accord-minimum' : undefined}
-                    aria-label={`本体＋浮遊 ${formatNumber(row.combinedDamage)}${minimumLabel}`}
-                  >
-                    <strong className="mech-accord-cell-value">{formatNumber(row.combinedDamage)}</strong>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+
+      <div className="mech-accord-output-block">
+        <div className="mech-accord-output-heading">
+          <h3 id={resistanceHeadingId}>操機術師・術耐性別ダメージ</h3>
+          <p aria-live="polite">{resistanceResult.attackCountLabel} · 浮遊ユニット1体 {resistanceResult.multiplierPercent}% · 術</p>
+        </div>
+        <div className="mech-accord-attack-count-control">
+          <label htmlFor={attackCountSelectId}>攻撃回数</label>
+          <select
+            id={attackCountSelectId}
+            value={resistanceResult.attackCount}
+            aria-controls={resistanceTableId}
+            onChange={(event) => onAttackCountChange(Number(event.target.value) as MechAccordAttackCount)}
+          >
+            {MECH_ACCORD_ATTACK_COUNTS.map((attackCount) => (
+              <option value={attackCount} key={attackCount}>
+                {attackCount === MECH_ACCORD_ATTACK_COUNTS.length ? '8回目以降' : `${attackCount}回目`}
+                （{getMechAccordMultiplierPercent(attackCount)}%）
+              </option>
+            ))}
+          </select>
+        </div>
+        {hasResistanceMinimumDamage && (
+          <div className="mech-accord-table-meta-row">
+            <span className="minimum-damage-legend"><span aria-hidden="true">※</span>最低保証ダメージ（合計は最低保証を含む）</span>
+          </div>
+        )}
+        <div
+          className="mech-accord-table-wrap"
+          role="region"
+          aria-label={`${resistanceResult.attackCountLabel}の術耐性別ダメージ表`}
+          tabIndex={0}
+        >
+          <table className="mech-accord-table mech-accord-resistance-table" id={resistanceTableId}>
+            <caption className="visually-hidden">{resistanceResult.attackCountLabel}の操機術師・術耐性別ダメージ</caption>
+            <thead>
+              <tr>
+                <th scope="col">術耐性</th>
+                <th scope="col">本体</th>
+                <th scope="col">浮遊</th>
+                <th scope="col">本体＋浮遊</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resistanceResult.rows.map((row) => {
+                const mainMinimumLabel = row.mainMinimumReached ? '、最低保証ダメージ' : ''
+                const droneMinimumLabel = row.droneMinimumReached ? '、最低保証ダメージ' : ''
+                const combinedMinimumLabel = row.combinedMinimumReached ? '、最低保証ダメージを含む' : ''
+                return (
+                  <tr key={row.resistance}>
+                    <th scope="row">{formatNumber(row.resistance)}%</th>
+                    <td
+                      className={row.mainMinimumReached ? 'mech-accord-minimum' : undefined}
+                      aria-label={`本体 ${formatNumber(row.mainDamage)}${mainMinimumLabel}`}
+                    >
+                      <strong className="mech-accord-cell-value">
+                        {formatNumber(row.mainDamage)}
+                        {row.mainMinimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}
+                      </strong>
+                    </td>
+                    <td
+                      className={row.droneMinimumReached ? 'mech-accord-minimum' : undefined}
+                      aria-label={`浮遊 ${formatNumber(row.droneDamage)}、攻撃倍率 ${resistanceResult.multiplierPercent}%${droneMinimumLabel}`}
+                    >
+                      <strong className="mech-accord-cell-value">
+                        {formatNumber(row.droneDamage)}
+                        {row.droneMinimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}
+                      </strong>
+                    </td>
+                    <td
+                      className={row.combinedMinimumReached ? 'mech-accord-minimum' : undefined}
+                      aria-label={`本体＋浮遊 ${formatNumber(row.combinedDamage)}${combinedMinimumLabel}`}
+                    >
+                      <strong className="mech-accord-cell-value">
+                        {formatNumber(row.combinedDamage)}
+                        {row.combinedMinimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}
+                      </strong>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
       <p className="mech-accord-note">
-        同一対象への連続攻撃を想定し、対象変更時は1回目へ戻ります。選択モジュールの本体攻撃力補正は含みますが、浮遊ユニット固有のモジュール補正と複数ユニットは含みません。赤字は最低保証到達時です。
+        同一対象への連続攻撃を想定し、対象変更時は1回目へ戻ります。選択モジュールの本体攻撃力補正は含みますが、浮遊ユニット固有のモジュール補正と複数ユニットは含みません。
       </p>
     </section>
   )
