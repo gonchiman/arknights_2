@@ -1722,10 +1722,7 @@ function GoldenglowSkill3FocusOutput({
           </thead>
           <tbody>
             {output.rows.map((row) => (
-              <tr
-                key={row.droneCount}
-                className={row.droneCount === output.activeDroneCount ? 'goldenglow-s3-all-drones' : undefined}
-              >
+              <tr key={row.droneCount}>
                 <th scope="row">
                   {row.droneCount}体{row.droneCount === output.activeDroneCount ? '（全機）' : ''}
                 </th>

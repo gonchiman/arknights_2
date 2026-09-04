@@ -1108,16 +1108,6 @@
   width: 19%;
 }
 
-.goldenglow-s3-table tbody tr.goldenglow-s3-all-drones {
-  background: #f1f8f3;
-}
-
-.goldenglow-s3-table tbody tr.goldenglow-s3-all-drones th,
-.goldenglow-s3-table tbody tr.goldenglow-s3-all-drones td {
-  color: #365c40;
-  font-weight: 800;
-}
-
 .goldenglow-note {
   margin: 7px 0 0;
   color: #6c8371;
@@ -1176,9 +1166,6 @@
 .goldenglow-output-table tbody tr:hover,
 .mech-accord-table tbody tr:hover { background: transparent; }
 
-.goldenglow-s3-table tbody tr.goldenglow-s3-all-drones:hover {
-  background: #f1f8f3;
-}
 .mech-accord-table tbody tr:last-child th,
 .mech-accord-table tbody tr:last-child td { border-bottom: 0; }
 
