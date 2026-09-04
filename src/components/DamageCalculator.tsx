@@ -523,6 +523,9 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
     sensitivityData.tableRows,
     sensitivityCalculationPoint,
   )
+  const sensitivityAttackPipeline = sensitivityTarget === 'NORMAL'
+    ? normalAttackPipeline
+    : referenceSkillBreakdown?.attackPipeline ?? null
   const hasMinimumDamageResults = sensitivityData.tableRows.some((row) => row.minimumReached)
   const damageTypeMetricStatus: ReflectionStatus = normalDamageType !== null && skillDamageType !== null
     ? 'APPLIED'
@@ -1044,12 +1047,14 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
                   </table>
                 </div>
               </div>
-              {sensitivityCalculationRow?.breakdown && (
+              {sensitivityCalculationRow?.breakdown && sensitivityAttackPipeline && (
                 <SensitivityCalculationProcess
                   id="sensitivity-calculation-process"
                   row={sensitivityCalculationRow}
                   statLabel={sensitivityStatLabel}
                   valueLabel={sensitivityTableHeaders[1]}
+                  baseAttackBreakdown={operatorStats.baseAttackBreakdown}
+                  attackPipeline={sensitivityAttackPipeline}
                 />
               )}
             </div>
@@ -1264,11 +1269,15 @@ function SensitivityCalculationProcess({
   row,
   statLabel,
   valueLabel,
+  baseAttackBreakdown,
+  attackPipeline,
 }: {
   id: string
   row: SensitivityRow
   statLabel: string
   valueLabel: string
+  baseAttackBreakdown: BaseAttackBreakdown
+  attackPipeline: AttackPipelineBreakdown
 }) {
   const breakdown = row.breakdown
   if (!breakdown) return null
@@ -1277,7 +1286,11 @@ function SensitivityCalculationProcess({
   const conditionLabel = breakdown.mitigation.damageType === 'TRUE'
     ? '防御力・術耐性を適用しない'
     : `${statLabel} ${row.label}`
-  const steps = buildSensitivityCalculationSteps(breakdown)
+  const steps = buildSensitivityCalculationSteps(
+    breakdown,
+    baseAttackBreakdown,
+    attackPipeline,
+  )
 
   return (
     <section className="sensitivity-calculation-process" id={id} aria-labelledby={headingId}>
@@ -1294,10 +1307,18 @@ function SensitivityCalculationProcess({
   )
 }
 
-function buildSensitivityCalculationSteps(breakdown: DamageSensitivityBreakdown): CalculationStep[] {
+function buildSensitivityCalculationSteps(
+  breakdown: DamageSensitivityBreakdown,
+  baseAttackBreakdown: BaseAttackBreakdown,
+  attackPipeline: AttackPipelineBreakdown,
+): CalculationStep[] {
   const mitigation = breakdown.mitigation
   const attack = formatCalculationNumber(mitigation.attack)
-  const steps: CalculationStep[] = []
+  const steps = buildAttackPipelineSteps(
+    baseAttackBreakdown,
+    attackPipeline,
+    breakdown.target,
+  )
 
   if (mitigation.damageType === 'TRUE') {
     steps.push({
@@ -1307,13 +1328,6 @@ function buildSensitivityCalculationSteps(breakdown: DamageSensitivityBreakdown)
       note: '確定ダメージには最低保証を適用しません',
     })
   } else {
-    steps.push({
-      label: '軽減前ダメージ（1ヒット）',
-      formula: `反映済み攻撃力 ${attack} × 1ヒット`,
-      result: formatNumber(mitigation.attack),
-      note: '攻撃力補正A〜Eまでを反映した値です',
-    })
-
     const isArts = mitigation.damageType === 'ARTS'
     const statLabel = isArts ? '術耐性' : '防御力'
     const statUnit = isArts ? '%' : ''
