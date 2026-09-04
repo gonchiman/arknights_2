@@ -20,9 +20,14 @@ import {
   resolveDamageCalculatorDefaultOperatorId,
 } from '../src/lib/damageCalculatorPreferences.ts'
 import {
+  DEFAULT_DAMAGE_SENSITIVITY_TARGET,
+  getDamageSensitivityBreakdown,
+  getDamageSensitivityMetricForTarget,
+  getDamageSensitivityTableHeaders,
   getDamageSensitivityTablePoints,
+  isDamageSensitivityMetricAvailable,
   selectDamageSensitivityType,
-  selectDamageSensitivityValues,
+  selectDamageSensitivityValue,
 } from '../src/lib/damageSensitivity.ts'
 import { getOperatorPassives } from '../src/lib/operatorProfile.ts'
 import {
@@ -110,7 +115,7 @@ test('固有出力がある場合だけ開閉可能にし、初期状態を開�
   })
 })
 
-test('表の表示内容を1攻撃・DPS・総ダメージへ切り替える', () => {
+test('選択した攻撃だけの1攻撃・DPS・総ダメージを返す', () => {
   const normalBreakdown = calculateDamageBreakdown(1000, 'PHYSICAL', 200, 0)
   const skillBreakdown = calculateSkillDamageBreakdown(1000, 'PHYSICAL', 200, 0, {
     directMultiplierPercent: 0,
@@ -124,55 +129,197 @@ test('表の表示内容を1攻撃・DPS・総ダメージへ切り替える', (
     totalMode: 'DURATION',
   })
 
-  assert.deepEqual(selectDamageSensitivityValues({
+  assert.equal(selectDamageSensitivityValue({
+    target: 'NORMAL',
     metric: 'DAMAGE',
     normalBreakdown,
     normalAttackInterval: 2,
     skillBreakdown,
     canShowSkillTotal: true,
-  }), { normal: 800, skill: 1600 })
-  assert.deepEqual(selectDamageSensitivityValues({
+  }), 800)
+  assert.equal(selectDamageSensitivityValue({
+    target: 'NORMAL',
     metric: 'DPS',
     normalBreakdown,
     normalAttackInterval: 2,
     skillBreakdown,
     canShowSkillTotal: true,
-  }), { normal: 400, skill: 800 })
-  assert.deepEqual(selectDamageSensitivityValues({
+  }), 400)
+  assert.equal(selectDamageSensitivityValue({
+    target: 'NORMAL',
     metric: 'DPS',
     normalBreakdown,
     normalAttackInterval: 0,
     skillBreakdown,
     canShowSkillTotal: true,
-  }), { normal: null, skill: 800 })
-  assert.deepEqual(selectDamageSensitivityValues({
+  }), null)
+  assert.equal(selectDamageSensitivityValue({
+    target: 'SKILL',
+    metric: 'DAMAGE',
+    normalBreakdown,
+    normalAttackInterval: 2,
+    skillBreakdown,
+    canShowSkillTotal: true,
+  }), 1600)
+  assert.equal(selectDamageSensitivityValue({
+    target: 'SKILL',
+    metric: 'DPS',
+    normalBreakdown,
+    normalAttackInterval: 2,
+    skillBreakdown,
+    canShowSkillTotal: true,
+  }), 800)
+  assert.equal(selectDamageSensitivityValue({
+    target: 'SKILL',
     metric: 'TOTAL',
     normalBreakdown,
     normalAttackInterval: 2,
     skillBreakdown,
     canShowSkillTotal: true,
-  }), { normal: null, skill: 8000 })
-  assert.deepEqual(selectDamageSensitivityValues({
+  }), 8000)
+  assert.equal(selectDamageSensitivityValue({
+    target: 'SKILL',
     metric: 'TOTAL',
     normalBreakdown,
     normalAttackInterval: 2,
     skillBreakdown,
     canShowSkillTotal: false,
-  }), { normal: null, skill: null })
+  }), null)
 })
 
-test('総ダメージ表は通常攻撃へフォールバックせずスキル種別だけを対象にする', () => {
-  assert.equal(selectDamageSensitivityType('PHYSICAL', 'ARTS', 'TOTAL', true), 'ARTS')
-  assert.equal(selectDamageSensitivityType('PHYSICAL', 'TRUE', 'TOTAL', true), 'TRUE')
-  assert.equal(selectDamageSensitivityType('PHYSICAL', null, 'TOTAL', false), null)
-  assert.equal(selectDamageSensitivityType('PHYSICAL', 'TRUE', 'DAMAGE', true), 'PHYSICAL')
-  assert.equal(selectDamageSensitivityType('PHYSICAL', 'ARTS', 'DPS', true), 'ARTS')
+test('通常攻撃の軽減内訳を表と同じ表示単位で返す', () => {
+  const normalBreakdown = calculateDamageBreakdown(1000, 'PHYSICAL', 300, 0, {
+    defenseIgnoreFixed: 100,
+  })
+  const breakdown = getDamageSensitivityBreakdown({
+    target: 'NORMAL',
+    metric: 'DAMAGE',
+    normalBreakdown,
+    normalAttackInterval: 2,
+    skillBreakdown: null,
+    canShowSkillTotal: false,
+  })
+
+  assert.deepEqual(breakdown, {
+    damageType: 'PHYSICAL',
+    beforeMitigation: 1000,
+    afterMitigation: 800,
+    minimumDamage: 50,
+    minimumApplied: false,
+    minimumReached: false,
+    finalValue: 800,
+    inputMitigationStat: 300,
+    fixedIgnore: 100,
+    appliedMitigationStat: 200,
+  })
+  assert.equal(getDamageSensitivityBreakdown({
+    target: 'NORMAL',
+    metric: 'DPS',
+    normalBreakdown,
+    normalAttackInterval: 0,
+    skillBreakdown: null,
+    canShowSkillTotal: false,
+  }), null)
 })
 
-test('スキル値を算出できない表では通常攻撃の種別を対象にする', () => {
-  assert.equal(selectDamageSensitivityType('PHYSICAL', 'ARTS', 'DPS', false), 'PHYSICAL')
-  assert.equal(selectDamageSensitivityType('ARTS', 'PHYSICAL', 'DAMAGE', false), 'ARTS')
-  assert.equal(selectDamageSensitivityType('TRUE', 'ARTS', 'DPS', false), 'TRUE')
+test('スキル総ダメージの最低保証を表と同じ表示単位へ換算する', () => {
+  const skillBreakdown = calculateSkillDamageBreakdown(1000, 'ARTS', 0, 100, {
+    directMultiplierPercent: 0,
+    attackScalePercent: 100,
+    hitCount: 2,
+    attackInterval: 2,
+    duration: 10,
+    ammoCount: 0,
+  }, {
+    canShowDps: true,
+    totalMode: 'DURATION',
+  })
+  const breakdown = getDamageSensitivityBreakdown({
+    target: 'SKILL',
+    metric: 'TOTAL',
+    normalBreakdown: null,
+    normalAttackInterval: 0,
+    skillBreakdown,
+    canShowSkillTotal: true,
+  })
+
+  assert.deepEqual(breakdown, {
+    damageType: 'ARTS',
+    beforeMitigation: 10000,
+    afterMitigation: 0,
+    minimumDamage: 500,
+    minimumApplied: true,
+    minimumReached: true,
+    finalValue: 500,
+    inputMitigationStat: 100,
+    fixedIgnore: 0,
+    appliedMitigationStat: 100,
+  })
+  assert.equal(getDamageSensitivityBreakdown({
+    target: 'SKILL',
+    metric: 'TOTAL',
+    normalBreakdown: null,
+    normalAttackInterval: 0,
+    skillBreakdown,
+    canShowSkillTotal: false,
+  }), null)
+})
+
+test('初期表示はスキルにし、通常攻撃では総ダメージを1攻撃へ戻す', () => {
+  assert.equal(DEFAULT_DAMAGE_SENSITIVITY_TARGET, 'SKILL')
+  assert.equal(getDamageSensitivityMetricForTarget('NORMAL', 'TOTAL'), 'DAMAGE')
+  assert.equal(getDamageSensitivityMetricForTarget('NORMAL', 'DAMAGE'), 'DAMAGE')
+  assert.equal(getDamageSensitivityMetricForTarget('NORMAL', 'DPS'), 'DPS')
+  assert.equal(getDamageSensitivityMetricForTarget('SKILL', 'TOTAL'), 'TOTAL')
+  assert.equal(isDamageSensitivityMetricAvailable('NORMAL', 'TOTAL'), false)
+  assert.equal(isDamageSensitivityMetricAvailable('NORMAL', 'DPS'), true)
+  assert.equal(isDamageSensitivityMetricAvailable('SKILL', 'TOTAL'), true)
+})
+
+test('選択した攻撃のダメージ種別だけを対象にし、もう一方へフォールバックしない', () => {
+  assert.equal(selectDamageSensitivityType('NORMAL', 'PHYSICAL', 'ARTS'), 'PHYSICAL')
+  assert.equal(selectDamageSensitivityType('SKILL', 'PHYSICAL', 'ARTS'), 'ARTS')
+  assert.equal(selectDamageSensitivityType('NORMAL', null, 'ARTS'), null)
+  assert.equal(selectDamageSensitivityType('SKILL', 'PHYSICAL', null), null)
+  assert.equal(selectDamageSensitivityType('NORMAL', 'TRUE', 'ARTS'), 'TRUE')
+  assert.equal(selectDamageSensitivityType('SKILL', 'PHYSICAL', 'TRUE'), 'TRUE')
+})
+
+test('表見出しは軸と選択中の攻撃値だけの2列にする', () => {
+  const normalHeaders = getDamageSensitivityTableHeaders({
+    axisLabel: '防御力',
+    target: 'NORMAL',
+    metric: 'DAMAGE',
+    skillTotalLabel: '効果時間総ダメージ',
+  })
+  const mechAccordHeaders = getDamageSensitivityTableHeaders({
+    axisLabel: '術耐性',
+    target: 'NORMAL',
+    metric: 'DPS',
+    skillTotalLabel: '効果時間総ダメージ',
+    normalPrefix: '本体 ',
+  })
+  const skillHeaders = getDamageSensitivityTableHeaders({
+    axisLabel: '術耐性',
+    target: 'SKILL',
+    metric: 'DPS',
+    skillTotalLabel: '効果時間総ダメージ',
+  })
+  const skillTotalHeaders = getDamageSensitivityTableHeaders({
+    axisLabel: '防御力',
+    target: 'SKILL',
+    metric: 'TOTAL',
+    skillTotalLabel: '効果時間総ダメージ',
+  })
+
+  assert.deepEqual(normalHeaders, ['防御力', '通常攻撃 1ヒット'])
+  assert.deepEqual(mechAccordHeaders, ['術耐性', '本体 通常攻撃 DPS'])
+  assert.deepEqual(skillHeaders, ['術耐性', 'スキル DPS'])
+  assert.deepEqual(skillTotalHeaders, ['防御力', 'スキル 効果時間総ダメージ'])
+  assert.equal(normalHeaders.length, 2)
+  assert.equal(skillHeaders.length, 2)
+  assert.equal(normalHeaders.some((header) => header.includes('スキル')), false)
+  assert.equal(skillHeaders.some((header) => header.includes('通常攻撃')), false)
 })
 
 test('敵入力なしでも対象ダメージ種別ごとの表点を生成し、物理上限は最低保証地点まで自動拡張する', () => {
