@@ -179,8 +179,8 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const [skillCalculationProcessOpen, setSkillCalculationProcessOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillCalculationProcess)
   const [sensitivityTarget, setSensitivityTarget] = useState<SensitivityTarget>(DEFAULT_DAMAGE_SENSITIVITY_TARGET)
   const [sensitivityMetric, setSensitivityMetric] = useState<SensitivityMetric>('DAMAGE')
-  const [sensitivityBreakdownPoint, setSensitivityBreakdownPoint] = useState<number | null>(null)
   const [mechAccordAttackCount, setMechAccordAttackCount] = useState<MechAccordAttackCount>(1)
+  const [sensitivityCalculationPoint, setSensitivityCalculationPoint] = useState<number | null>(null)
   const [operatorFilters, setOperatorFilters] = useState(EMPTY_OPERATOR_FILTERS)
   const [preferredDefaultOperatorId, setPreferredDefaultOperatorId] = useState(loadPreferredDefaultOperatorId)
 
@@ -545,10 +545,13 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const hasSensitivityResults = sensitivityData.tableRows.some((row) => (
     row.value !== null
   ))
-  const sensitivityBreakdownRow = selectSensitivityBreakdownRow(
+  const sensitivityCalculationRow = selectSensitivityCalculationRow(
     sensitivityData.tableRows,
-    sensitivityBreakdownPoint,
+    sensitivityCalculationPoint,
   )
+  const sensitivityAttackPipeline = sensitivityTarget === 'NORMAL'
+    ? normalAttackPipeline
+    : referenceSkillBreakdown?.attackPipeline ?? null
   const hasMinimumDamageResults = sensitivityData.tableRows.some((row) => row.minimumReached)
   const damageTypeMetricStatus: ReflectionStatus = normalDamageType !== null && skillDamageType !== null
     ? 'APPLIED'
@@ -1046,24 +1049,23 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
                     <tbody>
                       {sensitivityData.tableRows.map((row) => {
                         const value = row.value === null ? '—' : formatNumber(row.value)
-                        const breakdownSelected = row.point === sensitivityBreakdownRow?.point
+                        const calculationSelected = row.point === sensitivityCalculationRow?.point
                         return (
-                          <tr className={breakdownSelected ? 'sensitivity-breakdown-selected-row' : undefined} key={row.label}>
+                          <tr className={calculationSelected ? 'sensitivity-calculation-selected-row' : undefined} key={row.label}>
                             <th scope="row">
-                              <span className="sensitivity-row-label">{row.label}</span>
-                              {row.breakdown && (
+                              {row.breakdown ? (
                                 <button
                                   type="button"
-                                  className="sensitivity-breakdown-selector"
-                                  aria-controls="sensitivity-damage-breakdown"
-                                  aria-pressed={breakdownSelected}
-                                  aria-label={`${sensitivityStatLabel}${row.label}のダメージ内訳を表示`}
-                                  onClick={() => setSensitivityBreakdownPoint(row.point)}
+                                  className="sensitivity-calculation-selector"
+                                  aria-controls="sensitivity-calculation-process"
+                                  aria-pressed={calculationSelected}
+                                  aria-label={`${sensitivityStatLabel}${row.label}の計算過程を表示`}
+                                  onClick={() => setSensitivityCalculationPoint(row.point)}
                                 >
                                   <span>{row.label}</span>
-                                  <span aria-hidden="true">→</span>
+                                  <span aria-hidden="true">計算</span>
                                 </button>
-                              )}
+                              ) : <span className="sensitivity-row-label">{row.label}</span>}
                             </th>
                             <td
                               className={row.minimumReached ? 'minimum-damage-cell' : undefined}
@@ -1076,12 +1078,14 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
                   </table>
                 </div>
               </div>
-              {sensitivityBreakdownRow?.breakdown && (
-                <SensitivityDamageBreakdown
-                  id="sensitivity-damage-breakdown"
-                  row={sensitivityBreakdownRow}
+              {sensitivityCalculationRow?.breakdown && sensitivityAttackPipeline && (
+                <SensitivityCalculationProcess
+                  id="sensitivity-calculation-process"
+                  row={sensitivityCalculationRow}
                   statLabel={sensitivityStatLabel}
                   valueLabel={sensitivityTableHeaders[1]}
+                  baseAttackBreakdown={operatorStats.baseAttackBreakdown}
+                  attackPipeline={sensitivityAttackPipeline}
                 />
               )}
             </div>
@@ -1293,84 +1297,180 @@ function DamageOutputEmptyState({ subject }: { subject: string }) {
   )
 }
 
-function SensitivityDamageBreakdown({
+function SensitivityCalculationProcess({
   id,
   row,
   statLabel,
   valueLabel,
+  baseAttackBreakdown,
+  attackPipeline,
 }: {
   id: string
   row: SensitivityRow
   statLabel: string
   valueLabel: string
+  baseAttackBreakdown: BaseAttackBreakdown
+  attackPipeline: AttackPipelineBreakdown
 }) {
   const breakdown = row.breakdown
-  if (!breakdown) return null
+  if (!breakdown || row.value === null) return null
 
-  const maximumValue = Math.max(
-    breakdown.beforeMitigation,
-    breakdown.afterMitigation,
-    breakdown.finalValue,
-    breakdown.minimumDamage ?? 0,
-    1,
+  const headingId = `${id}-heading`
+  const conditionLabel = breakdown.mitigation.damageType === 'TRUE'
+    ? '防御力・術耐性を適用しない'
+    : `${statLabel} ${row.label}`
+  const displayedValue = row.value
+  const attackSteps = buildAttackPipelineSteps(
+    baseAttackBreakdown,
+    attackPipeline,
+    breakdown.target,
   )
-  const stages = [
-    { key: 'before', label: '軽減前', value: breakdown.beforeMitigation },
-    { key: 'after', label: '軽減後', value: breakdown.afterMitigation },
-    { key: 'final', label: '最終値', value: breakdown.finalValue },
-  ]
-  const mitigationLoss = Math.max(0, breakdown.beforeMitigation - breakdown.afterMitigation)
-  const statUnit = breakdown.damageType === 'ARTS' ? '%' : ''
-  const mitigationCondition = breakdown.damageType === 'TRUE'
-    ? '防御力・術耐性の影響なし'
-    : breakdown.fixedIgnore > 0
-      ? `${statLabel} ${formatNumber(breakdown.inputMitigationStat ?? 0)}${statUnit}・固定無視 ${formatNumber(breakdown.fixedIgnore)}${statUnit} → 適用 ${formatNumber(breakdown.appliedMitigationStat ?? 0)}${statUnit}`
-      : `${statLabel} ${formatNumber(breakdown.appliedMitigationStat ?? 0)}${statUnit}を適用`
-  const minimumStatus = breakdown.minimumApplied
-    ? '適用'
-    : breakdown.minimumReached
-      ? '到達'
-      : '未到達'
+  const steps = buildSensitivityCalculationSteps(breakdown)
+  const attackModifierSummary = getAttackModifierSummary(attackPipeline)
 
   return (
-    <figure className="sensitivity-breakdown" id={id}>
-      <figcaption className="sensitivity-breakdown-caption">
-        <span>ダメージ内訳</span>
-        <strong>{valueLabel}</strong>
-      </figcaption>
-      <p className="sensitivity-breakdown-condition">{mitigationCondition}</p>
-      <div className="sensitivity-breakdown-stages">
-        {stages.map((stage) => (
-          <div className={`sensitivity-breakdown-stage ${stage.key}`} key={stage.key}>
-            <div>
-              <span>{stage.label}</span>
-              <strong>{formatNumber(stage.value)}</strong>
-            </div>
-            <div className="sensitivity-breakdown-track" aria-hidden="true">
-              <span style={{ width: `${getDamageBreakdownBarWidth(stage.value, maximumValue)}%` }} />
-            </div>
-          </div>
-        ))}
-      </div>
-      <dl className="sensitivity-breakdown-details">
-        <div>
-          <dt>軽減量</dt>
-          <dd>{mitigationLoss > 0 ? `−${formatNumber(mitigationLoss)}` : '0'}</dd>
+    <section className="sensitivity-calculation-process" id={id} aria-labelledby={headingId}>
+      <header className="sensitivity-calculation-caption">
+        <div className="sensitivity-calculation-heading">
+          <h3 id={headingId}>選択行の計算過程</h3>
+          <span>{conditionLabel}</span>
         </div>
-        <div>
-          <dt>最低保証</dt>
-          <dd className={breakdown.minimumReached ? 'minimum-reached' : undefined}>
-            {breakdown.minimumDamage === null
-              ? 'なし'
-              : `${formatNumber(breakdown.minimumDamage)}（${minimumStatus}）`}
-          </dd>
+        <div className="sensitivity-calculation-result">
+          <span>{valueLabel}</span>
+          <strong>{formatNumber(displayedValue)}</strong>
+          {row.minimumReached && <small>最低保証</small>}
         </div>
-      </dl>
-    </figure>
+      </header>
+      <p className="visually-hidden" aria-live="polite" aria-atomic="true">
+        {conditionLabel}、{valueLabel} {formatNumber(displayedValue)}の計算過程を表示中
+      </p>
+      <details className="sensitivity-attack-details">
+        <summary>
+          <span className="sensitivity-attack-disclosure" aria-hidden="true" />
+          <span className="sensitivity-attack-summary-copy">
+            <strong>最終攻撃力</strong>
+            <small>全行共通 · {attackModifierSummary}</small>
+          </span>
+          <strong className="sensitivity-attack-summary-value">{formatNumber(attackPipeline.finalAttack)}</strong>
+        </summary>
+        <CalculationStepList steps={attackSteps} className="sensitivity-attack-step-list" compact />
+      </details>
+      <CalculationStepList steps={steps} className="sensitivity-calculation-step-list" compact />
+    </section>
   )
 }
 
-function selectSensitivityBreakdownRow(
+function buildSensitivityCalculationSteps(breakdown: DamageSensitivityBreakdown): CalculationStep[] {
+  const mitigation = breakdown.mitigation
+  const attack = formatCalculationNumber(mitigation.attack)
+  const steps: CalculationStep[] = []
+
+  if (mitigation.damageType === 'TRUE') {
+    steps.push({
+      label: '確定ダメージ（1ヒット）',
+      formula: `${attack}（防御力・術耐性を適用しない）`,
+      result: formatNumber(breakdown.perHit),
+      note: '確定ダメージには最低保証を適用しません',
+    })
+  } else {
+    const isArts = mitigation.damageType === 'ARTS'
+    const statLabel = isArts ? '術耐性' : '防御力'
+    const statUnit = isArts ? '%' : ''
+    const inputStat = isArts ? mitigation.inputResistance : mitigation.inputDefense
+    const statBeforeIgnore = isArts ? mitigation.resistanceBeforeIgnore : mitigation.defenseBeforeIgnore
+    const fixedIgnore = isArts ? mitigation.resistanceIgnoreFixed : mitigation.defenseIgnoreFixed
+    const appliedStat = isArts ? mitigation.appliedResistance : mitigation.appliedDefense
+    const normalizedInputNote = inputStat === statBeforeIgnore
+      ? undefined
+      : `入力値 ${formatCalculationNumber(inputStat)}${statUnit} を ${formatCalculationNumber(statBeforeIgnore)}${statUnit} に補正`
+    steps.push({
+      label: `適用${statLabel}`,
+      formula: fixedIgnore > 0
+        ? `max(0, ${formatCalculationNumber(statBeforeIgnore)}${statUnit} − ${formatCalculationNumber(fixedIgnore)}${statUnit})`
+        : `${formatCalculationNumber(statBeforeIgnore)}${statUnit}（固定無視なし）`,
+      result: `${formatNumber(appliedStat)}${statUnit}`,
+      note: normalizedInputNote,
+    })
+
+    const afterMitigation = isArts ? mitigation.afterResistance ?? 0 : mitigation.afterDefense ?? 0
+    steps.push({
+      label: '軽減式の結果（最低保証前）',
+      formula: isArts
+        ? `${attack} × (1 − ${formatCalculationNumber(appliedStat)} ÷ 100)`
+        : `${attack} − ${formatCalculationNumber(appliedStat)}`,
+      result: formatNumber(afterMitigation),
+    })
+
+    const minimumDamage = mitigation.minimumDamage ?? 0
+    const minimumNote = mitigation.minimumApplied
+      ? '軽減後の計算値より大きいため、最低保証を採用'
+      : breakdown.minimumReached
+        ? '軽減後の計算値が最低保証と同値'
+        : '軽減後の計算値を採用'
+    steps.push({
+      label: '1ヒットダメージ',
+      formula: `max(${formatCalculationNumber(afterMitigation)}, ${formatCalculationNumber(minimumDamage)})`,
+      result: formatNumber(breakdown.perHit),
+      note: `最低保証 ${formatCalculationNumber(mitigation.attack)} × 5% = ${formatCalculationNumber(minimumDamage)}。${minimumNote}`,
+    })
+  }
+
+  if (breakdown.target === 'SKILL') {
+    steps.push({
+      label: '1攻撃ダメージ',
+      formula: `${formatCalculationNumber(breakdown.perHit)} × ${formatCalculationNumber(breakdown.hitCount)}ヒット`,
+      result: formatNumber(breakdown.perAttack),
+    })
+  }
+
+  const needsDps = breakdown.metric === 'DPS'
+    || (breakdown.metric === 'TOTAL' && breakdown.totalMode === 'DURATION')
+  if (needsDps) {
+    steps.push({
+      label: 'DPS',
+      formula: `${formatCalculationNumber(breakdown.perAttack)} ÷ ${formatCalculationNumber(breakdown.attackInterval)}秒`,
+      result: breakdown.dps === null ? '—' : formatNumber(breakdown.dps),
+      note: breakdown.metric === 'TOTAL' ? '効果時間総ダメージの算出に使用' : undefined,
+    })
+  }
+
+  if (breakdown.metric === 'TOTAL') {
+    if (breakdown.totalMode === 'DURATION') {
+      steps.push({
+        label: '効果時間総ダメージ',
+        formula: `${formatCalculationNumber(breakdown.dps ?? 0)} × ${formatCalculationNumber(breakdown.duration)}秒`,
+        result: formatNumber(breakdown.finalValue),
+        note: '端数の攻撃回数を含む連続値の理論量',
+      })
+    } else if (breakdown.totalMode === 'AMMO') {
+      steps.push({
+        label: '全弾総ダメージ',
+        formula: `${formatCalculationNumber(breakdown.perAttack)} × ${formatCalculationNumber(breakdown.ammoCount)}発`,
+        result: formatNumber(breakdown.finalValue),
+      })
+    } else if (breakdown.totalMode === 'ACTIVATION') {
+      steps.push({
+        label: '発動総ダメージ',
+        formula: `${formatCalculationNumber(breakdown.perAttack)} × 1回`,
+        result: formatNumber(breakdown.finalValue),
+      })
+    }
+  }
+
+  return steps
+}
+
+function getAttackModifierSummary(pipeline: AttackPipelineBreakdown): string {
+  const modifiers: string[] = []
+  if (pipeline.directAddition !== 0) modifiers.push(`A ${formatSignedNumber(pipeline.directAddition)}`)
+  if (pipeline.directMultiplierPercent !== 0) modifiers.push(`B ${formatSignedNumber(pipeline.directMultiplierPercent)}%`)
+  if (pipeline.finalAddition !== 0) modifiers.push(`C ${formatSignedNumber(pipeline.finalAddition)}`)
+  if (pipeline.finalMultiplier !== 1) modifiers.push(`D ×${formatCalculationNumber(pipeline.finalMultiplier)}`)
+  if (pipeline.attackScale !== 1) modifiers.push(`E ×${formatCalculationNumber(pipeline.attackScale)}`)
+  return modifiers.length > 0 ? modifiers.join(' · ') : 'A〜E補正なし'
+}
+
+function selectSensitivityCalculationRow(
   rows: SensitivityRow[],
   selectedPoint: number | null,
 ): SensitivityRow | null {
@@ -1378,11 +1478,6 @@ function selectSensitivityBreakdownRow(
   return availableRows.find((row) => row.point === selectedPoint)
     ?? availableRows[Math.floor(availableRows.length / 2)]
     ?? null
-}
-
-function getDamageBreakdownBarWidth(value: number, maximumValue: number): number {
-  if (maximumValue <= 0) return 0
-  return clamp(value / maximumValue * 100, 0, 100)
 }
 
 function SelectField({
@@ -1449,11 +1544,18 @@ function ModelValue({ label, value, suffix }: { label: string; value: number; su
   )
 }
 
-function TermLabel({ label }: { label: string }) {
+function TermLabel({
+  label,
+  supplementalDescription,
+}: {
+  label: string
+  supplementalDescription?: string
+}) {
   const description = ATTACK_MODIFIER_DESCRIPTIONS[label as AttackModifierTerm]
-  if (!description) return label
+  const tooltipDescription = [description, supplementalDescription].filter(Boolean).join(' ')
+  if (!tooltipDescription) return label
 
-  return <TermTooltip term={label} description={description} />
+  return <TermTooltip term={label} description={tooltipDescription} />
 }
 
 function TermTooltip({ term, description }: { term: string; description: string }) {
@@ -2056,19 +2158,7 @@ function CalculationTrace({
         </div>
       )}
       {steps.length > 0 ? (
-        <ol className="calculation-step-list">
-          {steps.map((step, index) => (
-            <li className="calculation-step" key={`${step.label}-${index}`}>
-              <div className="calculation-step-heading">
-                <span>{String(index + 1).padStart(2, '0')}</span>
-                <strong><TermLabel label={step.label} /></strong>
-                <em>{step.result}</em>
-              </div>
-              <code>{step.formula}</code>
-              {step.note && <small>{step.note}</small>}
-            </li>
-          ))}
-        </ol>
+        <CalculationStepList steps={steps} />
       ) : (
         <div className="calculation-unavailable">
           <strong>{title}の計算過程は表示できません</strong>
@@ -2076,6 +2166,45 @@ function CalculationTrace({
         </div>
       )}
     </article>
+  )
+}
+
+function CalculationStepList({
+  steps,
+  className = '',
+  compact = false,
+}: {
+  steps: CalculationStep[]
+  className?: string
+  compact?: boolean
+}) {
+  return (
+    <ol className={`calculation-step-list ${className}`.trim()}>
+      {steps.map((step, index) => compact ? (
+        <li className="calculation-step compact" key={`${step.label}-${index}`}>
+          <strong className="calculation-step-label">
+            <TermLabel label={step.label} supplementalDescription={step.note} />
+          </strong>
+          <span className="calculation-step-equation">
+            <code>{step.formula}</code>
+            <span className="calculation-step-result-tail">
+              <span className="calculation-step-equals">＝</span>
+              <em className="calculation-step-result">{step.result}</em>
+            </span>
+          </span>
+        </li>
+      ) : (
+        <li className="calculation-step" key={`${step.label}-${index}`}>
+          <div className="calculation-step-heading">
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <strong><TermLabel label={step.label} /></strong>
+            <em className="calculation-step-result">{step.result}</em>
+          </div>
+          <code>{step.formula}</code>
+          {step.note && <small>{step.note}</small>}
+        </li>
+      ))}
+    </ol>
   )
 }
 
