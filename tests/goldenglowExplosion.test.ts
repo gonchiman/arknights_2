@@ -6,9 +6,11 @@ import {
   calculateGoldenglowExplosionDamage,
   calculateGoldenglowExpectedDps,
   calculateGoldenglowExpectedDpsFromModel,
+  buildGoldenglowSkill3Output,
   deriveGoldenglowExplosionModel,
   getGoldenglowDroneAttackScalePercent,
   getGoldenglowNextExplosionChancePercent,
+  isGoldenglowSkill3,
   type GoldenglowExplosionModel,
 } from '../src/lib/goldenglowExplosion.ts'
 import type { OperatorPassives, PassiveSource } from '../src/lib/operatorProfile.ts'
@@ -325,6 +327,81 @@ test('S3は本体攻撃を0にし、3体の浮遊ユニットだけを有限窓�
   assertClose(result.allDrones.expectedExplosionCount, 2.016972796160515)
   assertClose(result.combinedExpectedTotalDamage, result.allDrones.expectedTotalDamage)
   assertClose(result.expectedDps, 2.4485704899227124)
+})
+
+test('S3固有出力は同一対象へ集中する浮遊ユニット1〜3体の期待値を返す', () => {
+  const model = requireModel(
+    createPassives({ attackScale: 3, resistanceIgnore: null }),
+    2,
+  )
+  const expectation = calculateGoldenglowExpectedDpsFromModel({
+    model,
+    skillIndex: 3,
+    effectiveAttack: 1,
+    attackInterval: 1,
+    duration: 10,
+  })
+  const output = buildGoldenglowSkill3Output(
+    GOLDENGLOW_OPERATOR_ID,
+    3,
+    expectation,
+  )
+
+  assert.ok(expectation)
+  assert.ok(output)
+  assert.equal(output.duration, 10)
+  assert.equal(output.activeDroneCount, 3)
+  assert.equal(output.attackOpportunitiesPerDrone, 10)
+  assert.deepEqual(output.rows.map((row) => row.droneCount), [1, 2, 3])
+
+  const first = output.rows[0]
+  const second = output.rows[1]
+  const all = output.rows[2]
+  assertClose(first.expectedNormalDamage, expectation.perDrone.expectedNormalDamage ?? 0)
+  assertClose(first.expectedExplosionDamage, expectation.perDrone.expectedExplosionDamage ?? 0)
+  assertClose(first.expectedTotalDamage, expectation.perDrone.expectedTotalDamage ?? 0)
+  assertClose(first.expectedDps, expectation.perDrone.dps)
+  assertClose(first.expectedExplosionCount, expectation.perDrone.expectedExplosionCount ?? 0)
+  assertClose(second.expectedNormalDamage, (expectation.perDrone.expectedNormalDamage ?? 0) * 2)
+  assertClose(second.expectedExplosionDamage, (expectation.perDrone.expectedExplosionDamage ?? 0) * 2)
+  assertClose(second.expectedTotalDamage, (expectation.perDrone.expectedTotalDamage ?? 0) * 2)
+  assertClose(second.expectedDps, expectation.perDrone.dps * 2)
+  assertClose(second.expectedExplosionCount, (expectation.perDrone.expectedExplosionCount ?? 0) * 2)
+  assertClose(all.expectedNormalDamage, expectation.allDrones.expectedNormalDamage ?? 0)
+  assertClose(all.expectedExplosionDamage, expectation.allDrones.expectedExplosionDamage ?? 0)
+  assertClose(all.expectedTotalDamage, expectation.allDrones.expectedTotalDamage ?? 0)
+  assertClose(all.expectedDps, expectation.expectedDps)
+  assertClose(all.expectedExplosionCount, expectation.allDrones.expectedExplosionCount ?? 0)
+})
+
+test('S3固有出力はゴールデングローS3の有限期待値だけを受け付ける', () => {
+  const model = requireModel(
+    createPassives({ attackScale: 3, resistanceIgnore: null }),
+    2,
+  )
+  const s3 = calculateGoldenglowExpectedDpsFromModel({
+    model,
+    skillIndex: 3,
+    effectiveAttack: 1,
+    attackInterval: 1,
+    duration: 10,
+  })
+  const steady = calculateGoldenglowExpectedDpsFromModel({
+    model,
+    skillIndex: 2,
+    effectiveAttack: 1,
+    attackInterval: 1,
+    duration: 0,
+  })
+
+  assert.equal(buildGoldenglowSkill3Output('char_unknown', 3, s3), null)
+  assert.equal(buildGoldenglowSkill3Output(GOLDENGLOW_OPERATOR_ID, 1, s3), null)
+  assert.equal(buildGoldenglowSkill3Output(GOLDENGLOW_OPERATOR_ID, 3, steady), null)
+  assert.equal(buildGoldenglowSkill3Output(GOLDENGLOW_OPERATOR_ID, 3, null), null)
+  assert.equal(isGoldenglowSkill3(GOLDENGLOW_OPERATOR_ID, 3), true)
+  assert.equal(isGoldenglowSkill3(GOLDENGLOW_OPERATOR_ID, 3.5), false)
+  assert.equal(isGoldenglowSkill3(GOLDENGLOW_OPERATOR_ID, 2), false)
+  assert.equal(isGoldenglowSkill3('char_unknown', 3), false)
 })
 
 test('本体・通常浮遊・爆発へ術耐性固定無視と最低保証をそれぞれ適用する', () => {
