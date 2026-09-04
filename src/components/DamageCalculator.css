@@ -184,38 +184,35 @@
 }
 
 .calculator-field,
-.number-input-wrap,
-.skill-picker-field {
+.number-input-wrap {
   min-width: 0;
 }
 
-.skill-picker-field { margin-top: 12px; }
-
-.module-config {
+.damage-build-navigation {
+  position: sticky;
+  top: 0;
+  z-index: 15;
   min-width: 0;
-  margin-top: 12px;
-}
-
-.module-config-heading {
+  align-self: start;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  border: 1px solid var(--border-strong);
+  background: rgb(255 255 255 / 96%);
+  padding: 8px 10px 10px;
+  backdrop-filter: blur(8px);
 }
 
-.module-config-heading > div > span {
+.damage-build-navigation.is-stuck { box-shadow: 0 2px 6px rgb(0 0 0 / 6%); }
+
+.damage-build-navigation-group { min-width: 0; }
+
+.damage-build-navigation-label {
   display: block;
+  margin-bottom: 5px;
   color: var(--text-muted);
   font-size: 10px;
   font-weight: 700;
-}
-
-.module-config-heading small {
-  display: block;
-  margin-top: 1px;
-  color: var(--text-muted);
-  font-size: 9px;
 }
 
 .selected-module-card {
@@ -1886,6 +1883,10 @@
   .sensitivity-calculation-selector { min-height: 44px; }
 }
 
+@media (max-width: 1140px) {
+  .damage-build-navigation { top: 58px; }
+}
+
 @media (max-width: 1250px) {
   .growth-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .operator-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -1916,6 +1917,26 @@
 
   .collapsible-calculator-panel { padding: 0; }
 
+  .damage-build-navigation {
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .damage-build-navigation-label {
+    margin-bottom: 4px;
+    font-size: 8px;
+  }
+
+  .damage-build-navigation .skill-choice-group button {
+    height: 44px;
+    display: grid;
+    place-items: center;
+    padding: 4px 2px;
+  }
+
+  .damage-build-navigation .skill-choice-group button > span { margin: 0; }
+  .damage-build-navigation .skill-choice-group button > strong { display: none; }
+
   .panel-heading {
     margin: -10px -10px 10px;
     padding-inline: 8px;
@@ -1934,7 +1955,6 @@
   }
 
   .skill-choice-group button > span { display: block; margin-bottom: 2px; }
-  .module-config-heading small { display: none; }
   .operator-search-trigger { padding-right: 10px; }
   .operator-search-trigger em { position: static; transform: none; margin-top: 4px; }
   .default-operator-setting {

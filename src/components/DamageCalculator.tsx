@@ -183,6 +183,8 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const [sensitivityCalculationPoint, setSensitivityCalculationPoint] = useState<number | null>(null)
   const [operatorFilters, setOperatorFilters] = useState(EMPTY_OPERATOR_FILTERS)
   const [preferredDefaultOperatorId, setPreferredDefaultOperatorId] = useState(loadPreferredDefaultOperatorId)
+  const [buildNavigationStuck, setBuildNavigationStuck] = useState(false)
+  const buildNavigationRef = useRef<HTMLDivElement | null>(null)
 
   const defaultOperatorId = resolveDamageCalculatorDefaultOperatorId(operators, preferredDefaultOperatorId)
   const effectiveOperatorId = operators.some((operator) => operator.operatorId === operatorId)
@@ -253,6 +255,37 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
       setModuleId('')
     }
   }, [selectedModuleChoice, safePhaseIndex, safeOperatorLevel])
+
+  useEffect(() => {
+    const navigation = buildNavigationRef.current
+    if (!navigation) return
+    let animationFrameId = 0
+    const updateStuckState = () => {
+      const stickyTop = Number.parseFloat(window.getComputedStyle(navigation).top) || 0
+      const stuck = Math.abs(navigation.getBoundingClientRect().top - stickyTop) <= 0.5
+      setBuildNavigationStuck((current) => current === stuck ? current : stuck)
+    }
+    const requestUpdate = () => {
+      window.cancelAnimationFrame(animationFrameId)
+      animationFrameId = window.requestAnimationFrame(updateStuckState)
+    }
+
+    updateStuckState()
+    window.addEventListener('scroll', requestUpdate, { passive: true })
+    window.addEventListener('resize', requestUpdate)
+    const resizeObserver = new ResizeObserver(requestUpdate)
+    resizeObserver.observe(navigation)
+    if (navigation.parentElement) resizeObserver.observe(navigation.parentElement)
+    if (navigation.previousElementSibling instanceof HTMLElement) {
+      resizeObserver.observe(navigation.previousElementSibling)
+    }
+    return () => {
+      window.cancelAnimationFrame(animationFrameId)
+      window.removeEventListener('scroll', requestUpdate)
+      window.removeEventListener('resize', requestUpdate)
+      resizeObserver.disconnect()
+    }
+  }, [loading, rows.length])
 
   const baseOperatorPassives = useMemo(() => selectedOperator
     ? getOperatorPassives(selectedOperator.operatorProfile, safePhaseIndex, safeOperatorLevel)
@@ -641,37 +674,13 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         )}
       </CollapsibleCalculatorPanel>
 
-      <CollapsibleCalculatorPanel
-        id="calculation-conditions-panel"
-        number="02"
-        title="ダメージ計算条件"
-        summary="育成状態・スキル・モジュールを設定します"
-        open={calculationConditionsOpen}
-        onToggle={() => setCalculationConditionsOpen((open) => !open)}
-        collapsedLabel="条件を表示"
-        className="calculation-conditions-panel"
+      <div
+        className={`damage-build-navigation${buildNavigationStuck ? ' is-stuck' : ''}`}
+        aria-label="スキルとモジュールの選択"
+        ref={buildNavigationRef}
       >
-        <div className="condition-subheading">育成状態</div>
-        <div className="calculator-form-grid growth-form-grid">
-          <SelectField label="昇進段階" value={String(safePhaseIndex)} onChange={(value) => {
-            const nextPhase = Number(value)
-            setPhaseIndex(nextPhase)
-            setOperatorLevel(Math.max(1, phases[nextPhase]?.maxLevel ?? 1))
-          }}>
-            {phases.map((phase, index) => (
-              <option value={index} key={index}>昇進{index}（最大Lv.{phase.maxLevel ?? 1}）</option>
-            ))}
-          </SelectField>
-          <NumberField label="オペレーターレベル" value={safeOperatorLevel} min={1} max={maxOperatorLevel} onChange={setOperatorLevel} />
-          <NumberField label="信頼度" value={trust} min={0} max={100} suffix="%" onChange={setTrust} />
-          <SelectField label="スキルレベル" value={String(safeSkillLevelIndex)} onChange={(value) => setSkillLevelIndex(Number(value))}>
-            {skillLevels.map((_, index) => (
-              <option value={index} key={index}>{getSkillLevelLabel(index, skillLevels.length)}</option>
-            ))}
-          </SelectField>
-        </div>
-        <div className="calculator-field skill-picker-field">
-          <span>スキル</span>
+        <div className="damage-build-navigation-group">
+          <span className="damage-build-navigation-label">スキル</span>
           <div className="skill-choice-group" role="group" aria-label="スキル">
             {operatorSkills.map((skill) => (
               <button
@@ -688,25 +697,14 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
             ))}
           </div>
         </div>
-        <div className="selected-skill-summary">
-          <div>
-            <strong>S{selectedSkill.skillIndex} {selectedSkillLevel.name ?? selectedSkill.skillName}</strong>
-            <span>基礎攻撃力 {formatNumber(operatorStats.attack)} · 攻撃間隔 {formatDecimal(operatorStats.attackInterval)}秒</span>
-          </div>
-          <p>{stripMarkup(selectedSkillLevel.description ?? selectedSkill.description)}</p>
-        </div>
-        <section className="module-config" aria-labelledby="module-config-title">
-          <div className="module-config-heading">
-            <div>
-              <span id="module-config-title">モジュール</span>
-              <small>{operatorModules.length > 0 ? '装備するモジュールを選択' : '装備可能なモジュールはありません'}</small>
-            </div>
-          </div>
+        <div className="damage-build-navigation-group">
+          <span className="damage-build-navigation-label">モジュール</span>
           <div className="skill-choice-group module-choice-group" role="group" aria-label="モジュール">
             <button
               type="button"
               className={effectiveModuleId === '' ? 'active' : ''}
               aria-pressed={effectiveModuleId === ''}
+              aria-label="モジュール未装備"
               onClick={() => {
                 setModuleId('')
                 setModuleLevel(1)
@@ -743,52 +741,90 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
               )
             })}
           </div>
-          {selectedModule && (
-            <article className="selected-module-card">
-              <header>
-                <div>
-                  <span>選択中のモジュール</span>
-                  <strong>{moduleApplication.moduleName}</strong>
-                  <small>{getOperatorModuleTypeLabel(selectedModule)}</small>
-                </div>
-                <div className="module-level-picker">
-                  <span>レベル</span>
-                  <div role="group" aria-label="モジュールレベル">
-                    {moduleLevels.map((level) => (
-                      <button
-                        type="button"
-                        className={safeModuleLevel === level ? 'active' : ''}
-                        aria-pressed={safeModuleLevel === level}
-                        onClick={() => setModuleLevel(level)}
-                        key={level}
-                      >Lv.{level}</button>
-                    ))}
-                  </div>
-                </div>
-              </header>
-              {moduleApplication.attributeEffects.length > 0 && (
-                <div className="module-attribute-list" aria-label="能力値補正">
-                  {moduleApplication.attributeEffects.map((effect, index) => (
-                    <span key={`${effect.key}-${index}`}>
-                      <small>{effect.label}</small>
-                      <strong>{effect.valueLabel}</strong>
-                    </span>
+        </div>
+      </div>
+
+      <CollapsibleCalculatorPanel
+        id="calculation-conditions-panel"
+        number="02"
+        title="ダメージ計算条件"
+        summary="育成状態・スキル・モジュールを設定します"
+        open={calculationConditionsOpen}
+        onToggle={() => setCalculationConditionsOpen((open) => !open)}
+        collapsedLabel="条件を表示"
+        className="calculation-conditions-panel"
+      >
+        <div className="condition-subheading">育成状態</div>
+        <div className="calculator-form-grid growth-form-grid">
+          <SelectField label="昇進段階" value={String(safePhaseIndex)} onChange={(value) => {
+            const nextPhase = Number(value)
+            setPhaseIndex(nextPhase)
+            setOperatorLevel(Math.max(1, phases[nextPhase]?.maxLevel ?? 1))
+          }}>
+            {phases.map((phase, index) => (
+              <option value={index} key={index}>昇進{index}（最大Lv.{phase.maxLevel ?? 1}）</option>
+            ))}
+          </SelectField>
+          <NumberField label="オペレーターレベル" value={safeOperatorLevel} min={1} max={maxOperatorLevel} onChange={setOperatorLevel} />
+          <NumberField label="信頼度" value={trust} min={0} max={100} suffix="%" onChange={setTrust} />
+          <SelectField label="スキルレベル" value={String(safeSkillLevelIndex)} onChange={(value) => setSkillLevelIndex(Number(value))}>
+            {skillLevels.map((_, index) => (
+              <option value={index} key={index}>{getSkillLevelLabel(index, skillLevels.length)}</option>
+            ))}
+          </SelectField>
+        </div>
+        <div className="selected-skill-summary">
+          <div>
+            <strong>S{selectedSkill.skillIndex} {selectedSkillLevel.name ?? selectedSkill.skillName}</strong>
+            <span>基礎攻撃力 {formatNumber(operatorStats.attack)} · 攻撃間隔 {formatDecimal(operatorStats.attackInterval)}秒</span>
+          </div>
+          <p>{stripMarkup(selectedSkillLevel.description ?? selectedSkill.description)}</p>
+        </div>
+        {selectedModule && (
+          <article className="selected-module-card">
+            <header>
+              <div>
+                <span>選択中のモジュール</span>
+                <strong>{moduleApplication.moduleName}</strong>
+                <small>{getOperatorModuleTypeLabel(selectedModule)}</small>
+              </div>
+              <div className="module-level-picker">
+                <span>レベル</span>
+                <div role="group" aria-label="モジュールレベル">
+                  {moduleLevels.map((level) => (
+                    <button
+                      type="button"
+                      className={safeModuleLevel === level ? 'active' : ''}
+                      aria-pressed={safeModuleLevel === level}
+                      onClick={() => setModuleLevel(level)}
+                      key={level}
+                    >Lv.{level}</button>
                   ))}
                 </div>
-              )}
-              <div className="module-change-list">
-                {moduleApplication.changes.length > 0 ? moduleApplication.changes.map((change, index) => (
-                  <div key={`${change.label}-${index}`}>
-                    <strong>{change.label}</strong>
-                    <p>{change.description}</p>
-                  </div>
-                )) : (
-                  <p className="module-no-change">特性・素質の変更はありません。</p>
-                )}
               </div>
-            </article>
-          )}
-        </section>
+            </header>
+            {moduleApplication.attributeEffects.length > 0 && (
+              <div className="module-attribute-list" aria-label="能力値補正">
+                {moduleApplication.attributeEffects.map((effect, index) => (
+                  <span key={`${effect.key}-${index}`}>
+                    <small>{effect.label}</small>
+                    <strong>{effect.valueLabel}</strong>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="module-change-list">
+              {moduleApplication.changes.length > 0 ? moduleApplication.changes.map((change, index) => (
+                <div key={`${change.label}-${index}`}>
+                  <strong>{change.label}</strong>
+                  <p>{change.description}</p>
+                </div>
+              )) : (
+                <p className="module-no-change">特性・素質の変更はありません。</p>
+              )}
+            </div>
+          </article>
+        )}
         {selectedModule && moduleApplication.unsupportedReasons.length > 0 && (
           <div className="unsupported-model module-selection-warning" role="status">
             <strong>一部のモジュール効果は未反映です</strong>
