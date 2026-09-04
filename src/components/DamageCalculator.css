@@ -942,8 +942,8 @@
 
 .results-panel .collapsible-panel-heading:hover { background: #e3f0e6; }
 
-.common-output-panel > .collapsible-panel-body {
-  container-name: common-output;
+.damage-result-panel > .collapsible-panel-body {
+  container-name: damage-result;
   container-type: inline-size;
 }
 
@@ -1636,7 +1636,7 @@
 
 .sensitivity-breakdown-details dd.minimum-reached { color: var(--danger); }
 
-@container common-output (min-width: 800px) {
+@container damage-result (min-width: 800px) {
   .sensitivity-output-layout {
     display: grid;
     grid-template-columns: minmax(0, 520px) minmax(280px, 1fr);

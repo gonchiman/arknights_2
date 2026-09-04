@@ -14,6 +14,8 @@ import {
   DAMAGE_OUTPUT_PANELS,
   getDamageCalculatorPanelNumbers,
   getDamageOutputPanelState,
+  getPrimaryDamageOutputKind,
+  getPrimaryDamageOutputTitle,
 } from '../src/lib/damageCalculatorPanels.ts'
 import {
   DEFAULT_DAMAGE_CALCULATOR_OPERATOR_NAME,
@@ -41,8 +43,7 @@ test('統合後の各パネルの初期開閉状態を維持する', () => {
     calculationConditions: true,
     operatorInfo: false,
     skillModel: false,
-    commonOutput: true,
-    subProfessionOutput: true,
+    damageResult: true,
     operatorOutput: true,
     skillOutput: true,
     normalCalculationProcess: false,
@@ -76,24 +77,35 @@ test('初期オペレーターは保存値を優先し、未設定時はゴー�
   assert.equal(resolveDamageCalculatorDefaultOperatorId([], ''), '')
 })
 
-test('出力を共通・職分・オペレーター・スキル固有の順に定義する', () => {
+test('統合した計算結果とオペレーター・スキル固有出力を順に定義する', () => {
   assert.deepEqual(DAMAGE_OUTPUT_PANELS, {
-    common: { number: '05', title: '共通出力' },
-    subProfession: { number: '06', title: '職分固有出力' },
-    operator: { number: '07', title: 'オペレーター固有出力' },
-    skill: { number: '08', title: 'スキル固有出力' },
+    result: {
+      number: '05',
+      titles: {
+        DEFAULT: 'デフォルト出力',
+        SUB_PROFESSION: '職分固有出力',
+      },
+    },
+    operator: { number: '06', title: 'オペレーター固有出力' },
+    skill: { number: '07', title: 'スキル固有出力' },
   })
 })
 
-test('出力内容が空でも4区分と後続パネルの番号を固定する', () => {
+test('統合後の計算結果と後続パネルの番号を固定する', () => {
   assert.deepEqual(getDamageCalculatorPanelNumbers(), {
-    commonOutput: '05',
-    subProfessionOutput: '06',
-    operatorOutput: '07',
-    skillOutput: '08',
-    normalCalculationProcess: '09',
-    skillCalculationProcess: '10',
+    damageResult: '05',
+    operatorOutput: '06',
+    skillOutput: '07',
+    normalCalculationProcess: '08',
+    skillCalculationProcess: '09',
   })
+})
+
+test('職分固有出力がある場合だけデフォルト出力と置き換える', () => {
+  assert.equal(getPrimaryDamageOutputKind(true), 'SUB_PROFESSION')
+  assert.equal(getPrimaryDamageOutputKind(false), 'DEFAULT')
+  assert.equal(getPrimaryDamageOutputTitle('SUB_PROFESSION'), '職分固有出力')
+  assert.equal(getPrimaryDamageOutputTitle('DEFAULT'), 'デフォルト出力')
 })
 
 test('固有出力がある場合だけ開閉可能にし、初期状態を開く', () => {

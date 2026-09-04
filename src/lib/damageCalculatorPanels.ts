@@ -3,8 +3,7 @@ export interface DamageCalculatorPanelDefaults {
   calculationConditions: boolean
   operatorInfo: boolean
   skillModel: boolean
-  commonOutput: boolean
-  subProfessionOutput: boolean
+  damageResult: boolean
   operatorOutput: boolean
   skillOutput: boolean
   normalCalculationProcess: boolean
@@ -12,19 +11,25 @@ export interface DamageCalculatorPanelDefaults {
 }
 
 export const DAMAGE_OUTPUT_PANELS = {
-  common: { number: '05', title: '共通出力' },
-  subProfession: { number: '06', title: '職分固有出力' },
-  operator: { number: '07', title: 'オペレーター固有出力' },
-  skill: { number: '08', title: 'スキル固有出力' },
+  result: {
+    number: '05',
+    titles: {
+      DEFAULT: 'デフォルト出力',
+      SUB_PROFESSION: '職分固有出力',
+    },
+  },
+  operator: { number: '06', title: 'オペレーター固有出力' },
+  skill: { number: '07', title: 'スキル固有出力' },
 } as const
+
+export type PrimaryDamageOutputKind = 'DEFAULT' | 'SUB_PROFESSION'
 
 export const DAMAGE_CALCULATOR_PANEL_DEFAULTS: DamageCalculatorPanelDefaults = {
   operatorSearch: true,
   calculationConditions: true,
   operatorInfo: false,
   skillModel: false,
-  commonOutput: true,
-  subProfessionOutput: true,
+  damageResult: true,
   operatorOutput: true,
   skillOutput: true,
   normalCalculationProcess: false,
@@ -33,13 +38,22 @@ export const DAMAGE_CALCULATOR_PANEL_DEFAULTS: DamageCalculatorPanelDefaults = {
 
 export function getDamageCalculatorPanelNumbers() {
   return {
-    commonOutput: DAMAGE_OUTPUT_PANELS.common.number,
-    subProfessionOutput: DAMAGE_OUTPUT_PANELS.subProfession.number,
+    damageResult: DAMAGE_OUTPUT_PANELS.result.number,
     operatorOutput: DAMAGE_OUTPUT_PANELS.operator.number,
     skillOutput: DAMAGE_OUTPUT_PANELS.skill.number,
-    normalCalculationProcess: '09',
-    skillCalculationProcess: '10',
+    normalCalculationProcess: '08',
+    skillCalculationProcess: '09',
   }
+}
+
+export function getPrimaryDamageOutputKind(
+  hasSubProfessionOutput: boolean,
+): PrimaryDamageOutputKind {
+  return hasSubProfessionOutput ? 'SUB_PROFESSION' : 'DEFAULT'
+}
+
+export function getPrimaryDamageOutputTitle(kind: PrimaryDamageOutputKind) {
+  return DAMAGE_OUTPUT_PANELS.result.titles[kind]
 }
 
 export function getDamageOutputPanelState(hasOutput: boolean, requestedOpen: boolean) {

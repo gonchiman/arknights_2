@@ -53,6 +53,8 @@ import {
   DAMAGE_OUTPUT_PANELS,
   getDamageCalculatorPanelNumbers,
   getDamageOutputPanelState,
+  getPrimaryDamageOutputKind,
+  getPrimaryDamageOutputTitle,
 } from '../lib/damageCalculatorPanels'
 import {
   loadPreferredDefaultOperatorId,
@@ -153,8 +155,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const [calculationConditionsOpen, setCalculationConditionsOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.calculationConditions)
   const [operatorInfoOpen, setOperatorInfoOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.operatorInfo)
   const [skillModelOpen, setSkillModelOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillModel)
-  const [commonOutputOpen, setCommonOutputOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.commonOutput)
-  const [subProfessionOutputOpen, setSubProfessionOutputOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.subProfessionOutput)
+  const [damageResultOpen, setDamageResultOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.damageResult)
   const [operatorOutputOpen, setOperatorOutputOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.operatorOutput)
   const [skillOutputOpen, setSkillOutputOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillOutput)
   const [normalCalculationProcessOpen, setNormalCalculationProcessOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.normalCalculationProcess)
@@ -401,10 +402,11 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
     )
     : null
   const genericSkillSupported = skillSupported && !isGoldenglowSkill3Selected
-  const subProfessionOutputPanelState = getDamageOutputPanelState(
-    mechAccordDamage !== null,
-    subProfessionOutputOpen,
+  const hasSubProfessionOutput = Boolean(
+    selectedOperator && isMechAccordSubProfession(selectedOperator.subProfessionId),
   )
+  const primaryOutputKind = getPrimaryDamageOutputKind(hasSubProfessionOutput)
+  const primaryOutputTitle = getPrimaryDamageOutputTitle(primaryOutputKind)
   const operatorOutputPanelState = getDamageOutputPanelState(
     goldenglowExplosion !== null && goldenglowExpectedDps !== null,
     operatorOutputOpen,
@@ -414,6 +416,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
     skillOutputOpen,
   )
   const panelNumbers = getDamageCalculatorPanelNumbers()
+  const skillOutputPanelLabel = `${panelNumbers.skillOutput} ${DAMAGE_OUTPUT_PANELS.skill.title}`
   const referenceSkillBreakdown = selectedSkill && model && genericSkillSupported && skillDamageType
     ? calculateSkillDamageBreakdown(
       operatorStats.attack,
@@ -501,7 +504,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const skillTotalLabel = getTotalLabel(selectedSkill)
   const sensitivityMetricLabel = getSensitivityMetricLabel(sensitivityMetric, skillTotalLabel)
   const sensitivityAttackLabel = sensitivityTarget === 'NORMAL' ? '通常攻撃' : 'スキル'
-  const isGoldenglowSkill3CommonOutput = sensitivityTarget === 'SKILL' && isGoldenglowSkill3Selected
+  const isGoldenglowSkill3DefaultOutput = sensitivityTarget === 'SKILL' && isGoldenglowSkill3Selected
   const sensitivityAxisHeader = sensitivityDamageType === 'TRUE' || sensitivityDamageType === null
     ? '補正'
     : sensitivityStatLabel
@@ -880,15 +883,37 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
       </CollapsibleCalculatorPanel>
 
       <CollapsibleCalculatorPanel
-        id="common-output-panel"
-        number={panelNumbers.commonOutput}
-        title={DAMAGE_OUTPUT_PANELS.common.title}
-        summary={`${sensitivityAttackLabel} · ${formatDetectedDamageType(sensitivityDamageType)} · ${sensitivityStatLabel}別 · ${sensitivityMetricLabel}`}
-        open={commonOutputOpen}
-        onToggle={() => setCommonOutputOpen((open) => !open)}
-        collapsedLabel="共通出力を表示"
-        className="results-panel common-output-panel"
+        id="damage-result-panel"
+        number={panelNumbers.damageResult}
+        title={primaryOutputTitle}
+        summary={primaryOutputKind === 'SUB_PROFESSION'
+          ? `${selectedOperator.subProfessionName} · 通常攻撃 · 防御力0・術耐性0`
+          : `${sensitivityAttackLabel} · ${formatDetectedDamageType(sensitivityDamageType)} · ${sensitivityStatLabel}別 · ${sensitivityMetricLabel}`}
+        open={damageResultOpen}
+        onToggle={() => setDamageResultOpen((open) => !open)}
+        collapsedLabel={`${primaryOutputTitle}を表示`}
+        className="results-panel damage-result-panel"
       >
+        {primaryOutputKind === 'SUB_PROFESSION' ? (
+          mechAccordDamage
+            ? (
+              <>
+                <MechAccordDamageTable result={mechAccordDamage} />
+                {isGoldenglowSkill3Selected && (
+                  <p className="sensitivity-metric-note">
+                    この結果は操機術師の通常攻撃を表示しています。S3の期待値は「{skillOutputPanelLabel}」で確認できます。
+                  </p>
+                )}
+              </>
+            )
+            : (
+              <div className="damage-output-empty" role="status">
+                <strong>職分固有出力を計算できません</strong>
+                <p>通常攻撃のダメージ種別を自動判定できないため、現在の条件では表示できません。</p>
+              </div>
+            )
+        ) : (
+          <>
         <div id="sensitivity-panel" className="sensitivity-results-section">
           <div className="sensitivity-results-header">
             <div className="sensitivity-toolbar">
@@ -941,14 +966,14 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
               {unsupportedReasons.map((reason) => <span key={reason}>{reason}</span>)}
             </div>
           )}
-          {isGoldenglowSkill3CommonOutput && (
+          {isGoldenglowSkill3DefaultOutput && (
             <p className="sensitivity-metric-note">
               {goldenglowSkill3Output
-                ? 'ゴールデングローS3は本体が攻撃しないため、汎用式によるスキル値は表示しません。正確な期待値は「08 スキル固有出力」で確認できます。'
+                ? `ゴールデングローS3は本体が攻撃しないため、汎用式によるスキル値は表示しません。正確な期待値は「${skillOutputPanelLabel}」で確認できます。`
                 : 'ゴールデングローS3は専用期待値モデルの対象です。現在の育成状態では必要な素質データを取得できないため、スキル値を表示しません。'}
             </p>
           )}
-          {!isGoldenglowSkill3CommonOutput && sensitivityMetric === 'DPS' && !hasSensitivityResults && (
+          {!isGoldenglowSkill3DefaultOutput && sensitivityMetric === 'DPS' && !hasSensitivityResults && (
             <p className="sensitivity-metric-note">{sensitivityAttackLabel}のDPSを算出できません。</p>
           )}
           {sensitivityTarget === 'SKILL' && !isGoldenglowSkill3Selected && sensitivityMetric === 'TOTAL' && !canShowSkillTotal && (
@@ -956,10 +981,10 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
           )}
           {!hasSensitivityResults ? (
             <p className="sensitivity-results-unavailable">
-              {isGoldenglowSkill3CommonOutput
+              {isGoldenglowSkill3DefaultOutput
                 ? goldenglowSkill3Output
-                  ? 'この表示内容は共通出力の対象外です。S3の期待DPS・期待総ダメージは「08 スキル固有出力」で確認できます。'
-                  : 'この表示内容は共通出力の対象外です。S3固有出力に必要な素質が解放される育成状態を選択してください。'
+                  ? `この表示内容はデフォルト出力の対象外です。S3の期待DPS・期待総ダメージは「${skillOutputPanelLabel}」で確認できます。`
+                  : 'この表示内容はデフォルト出力の対象外です。S3固有出力に必要な素質が解放される育成状態を選択してください。'
                 : sensitivityDamageType === null
                   ? `${sensitivityAttackLabel}のダメージ種別を自動判定できないため、計算結果を表示できません。`
                   : `${sensitivityAttackLabel}の表示できる計算結果がありません。`}
@@ -1032,28 +1057,8 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         </div>
 
         <p className="result-disclaimer">表示値は単体への理論値です。物理・術ダメージには軽減前の攻撃力の5%を最低保証として適用します。計算過程と固有出力の単一値は敵防御力・術耐性0を基準にしています。確認済みの特性・素質と選択モジュールを反映し、条件入力が必要な効果と未対応効果は計算過程に明示します。潜在、外部バフ、敵デバフ、対象数は含みません。</p>
-      </CollapsibleCalculatorPanel>
-
-      <CollapsibleCalculatorPanel
-        id="sub-profession-output-panel"
-        number={panelNumbers.subProfessionOutput}
-        title={DAMAGE_OUTPUT_PANELS.subProfession.title}
-        summary={mechAccordDamage
-          ? `${selectedOperator.subProfessionName} · 防御力0・術耐性0の基準値`
-          : `${selectedOperator.subProfessionName} · 固有出力なし`}
-        open={subProfessionOutputPanelState.open}
-        onToggle={() => setSubProfessionOutputOpen((open) => !open)}
-        collapsedLabel="職分固有出力を表示"
-        disabled={subProfessionOutputPanelState.disabled}
-        disabledLabel="出力なし"
-        className={[
-          'sub-profession-output-panel',
-          subProfessionOutputPanelState.disabled ? 'disabled-output-panel' : 'results-panel',
-        ].join(' ')}
-      >
-        {mechAccordDamage
-          ? <MechAccordDamageTable result={mechAccordDamage} />
-          : <DamageOutputEmptyState subject={selectedOperator.subProfessionName} />}
+          </>
+        )}
       </CollapsibleCalculatorPanel>
 
       <CollapsibleCalculatorPanel
@@ -1140,7 +1145,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         title="スキルの計算過程"
         summary={isGoldenglowSkill3Selected
           ? goldenglowSkill3Output
-            ? 'S3専用期待値モデル · 08 スキル固有出力を参照'
+            ? `S3専用期待値モデル · ${skillOutputPanelLabel}を参照`
             : 'S3専用期待値モデル · 現在の育成状態では出力不可'
           : skillOutput
             ? `防御力0・術耐性0 · 1攻撃 ${formatNumber(skillOutput.perAttack)} · DPS ${skillOutput.dps === null ? '—' : formatNumber(skillOutput.dps)}`
@@ -1157,7 +1162,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
               ? 'S3は専用の確率モデルで計算しています'
               : 'S3固有出力に必要な素質データを取得できません'}</strong>
             <span>{goldenglowSkill3Output
-              ? '本体停止、浮遊ユニットの連続攻撃倍率、自爆の疑似ランダム分布をまとめた計算結果を「08 スキル固有出力」に表示します。'
+              ? `本体停止、浮遊ユニットの連続攻撃倍率、自爆の疑似ランダム分布をまとめた計算結果を「${skillOutputPanelLabel}」に表示します。`
               : '爆発素質が解放される昇進段階を選択すると、S3固有の期待値を計算できます。'}</span>
           </div>
         ) : (
