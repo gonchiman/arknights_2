@@ -1319,9 +1319,9 @@ function SensitivityCalculationProcess({
           </span>
           <strong className="sensitivity-attack-summary-value">{formatNumber(attackPipeline.finalAttack)}</strong>
         </summary>
-        <CalculationStepList steps={attackSteps} className="sensitivity-attack-step-list" />
+        <CalculationStepList steps={attackSteps} className="sensitivity-attack-step-list" compact />
       </details>
-      <CalculationStepList steps={steps} className="sensitivity-calculation-step-list" />
+      <CalculationStepList steps={steps} className="sensitivity-calculation-step-list" compact />
     </section>
   )
 }
@@ -1911,18 +1911,32 @@ function CalculationTrace({
 function CalculationStepList({
   steps,
   className = '',
+  compact = false,
 }: {
   steps: CalculationStep[]
   className?: string
+  compact?: boolean
 }) {
   return (
     <ol className={`calculation-step-list ${className}`.trim()}>
-      {steps.map((step, index) => (
+      {steps.map((step, index) => compact ? (
+        <li className="calculation-step compact" key={`${step.label}-${index}`}>
+          <strong className="calculation-step-label"><TermLabel label={step.label} /></strong>
+          <span className="calculation-step-equation">
+            <code>{step.formula}</code>
+            <span className="calculation-step-result-tail">
+              <span className="calculation-step-equals">＝</span>
+              <em className="calculation-step-result">{step.result}</em>
+            </span>
+          </span>
+          {step.note && <small>{step.note}</small>}
+        </li>
+      ) : (
         <li className="calculation-step" key={`${step.label}-${index}`}>
           <div className="calculation-step-heading">
             <span>{String(index + 1).padStart(2, '0')}</span>
             <strong><TermLabel label={step.label} /></strong>
-            <em>{step.result}</em>
+            <em className="calculation-step-result">{step.result}</em>
           </div>
           <code>{step.formula}</code>
           {step.note && <small>{step.note}</small>}

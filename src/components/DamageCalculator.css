@@ -1691,12 +1691,74 @@
 .sensitivity-calculation-process .calculation-step code,
 .sensitivity-calculation-process .calculation-step small { margin-left: 29px; }
 
+.sensitivity-calculation-process .calculation-step.compact {
+  display: grid;
+  grid-template-columns: minmax(82px, .65fr) minmax(0, 1.35fr);
+  align-items: baseline;
+  gap: 3px 8px;
+  padding: 6px 10px;
+}
+
+.sensitivity-calculation-process .calculation-step.compact .calculation-step-label {
+  min-width: 0;
+  color: var(--text-soft);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.sensitivity-calculation-process .calculation-step-equation {
+  min-width: 0;
+  display: block;
+}
+
+.sensitivity-calculation-process .calculation-step.compact .calculation-step-equation code {
+  display: inline;
+  overflow: visible;
+  margin: 0;
+  background: transparent;
+  padding: 0;
+  font-size: 9px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.sensitivity-calculation-process .calculation-step-result-tail {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-left: 4px;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+
+.sensitivity-calculation-process .calculation-step-equals {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.sensitivity-calculation-process .calculation-step.compact .calculation-step-result {
+  color: var(--text);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sensitivity-calculation-process .calculation-step.compact > small {
+  grid-column: 2;
+  margin: 0;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
 .sensitivity-calculation-step-list .calculation-step:last-child {
   background: #f1f7f2;
   box-shadow: inset 3px 0 0 #5a8b67;
 }
 
-.sensitivity-calculation-step-list .calculation-step:last-child .calculation-step-heading > em {
+.sensitivity-calculation-step-list .calculation-step:last-child .calculation-step-result {
   color: #386946;
 }
 
