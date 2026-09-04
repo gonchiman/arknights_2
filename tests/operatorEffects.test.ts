@@ -12,7 +12,7 @@ const emptyStats = {
   favorKeyFrames: [],
 }
 
-test('潜在0の最新候補を選び、出典・blackboard・素質番号を保持する', () => {
+test('潜在1の最新候補を選び、出典・blackboard・素質番号を保持する', () => {
   const passives = getOperatorPassives(createSurtrProfile(), 2, 90)
 
   assert.deepEqual(passives.talents, [
@@ -34,6 +34,25 @@ test('潜在0の最新候補を選び、出典・blackboard・素質番号を保
   assert.equal(ember?.talentIndex, 1)
   assert.deepEqual(ember?.blackboard, [
     { key: 'surtr_t_2[withdraw].interval', value: 8, valueStr: null },
+  ])
+})
+
+test('選択した潜在以下で昇進条件を満たす最新の素質候補を選ぶ', () => {
+  const passives = getOperatorPassives(createSurtrProfile(), 2, 90, 5)
+  const conflagration = passives.sources.find((source) => source.talentIndex === 0)
+  const ember = passives.sources.find((source) => source.talentIndex === 1)
+
+  assert.deepEqual(passives.talents, [
+    { name: '劫火', description: '攻撃時、対象の術耐性を22無視' },
+    { name: '余燼', description: '致命的なダメージを受けてもHPが1残る 効果発動から9秒後強制退場' },
+  ])
+  assert.equal(conflagration?.requiredPotentialRank, 4)
+  assert.deepEqual(conflagration?.blackboard, [
+    { key: 'magic_resist_penetrate_fixed', value: 22, valueStr: null },
+  ])
+  assert.equal(ember?.requiredPotentialRank, 2)
+  assert.deepEqual(ember?.blackboard, [
+    { key: 'surtr_t_2[withdraw].interval', value: 9, valueStr: null },
   ])
 })
 
@@ -194,6 +213,7 @@ test('特性の被ダメージ説明を通常攻撃の種別として推測し�
 function createSurtrProfile(): OperatorCombatProfile {
   return {
     ...emptyStats,
+    potentialRanks: Array.from({ length: 5 }, () => ({})),
     traitDescription: '敵に<@ba.kw>術ダメージ</>を与える',
     talents: [
       {

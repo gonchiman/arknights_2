@@ -72,6 +72,22 @@ test('モジュールLvの攻撃力・攻撃速度と素質上書きを計算モ
   )), true)
 })
 
+test('モジュール内では選択潜在以下の最大候補だけを適用する', () => {
+  const profile = createProfile()
+  const basePassives = getOperatorPassives(profile, 2, 90, 5)
+  const application = applyOperatorModule(basePassives, createModule(), 3, 5)
+  const talentSource = application.passives.sources.find((source) => (
+    source.sourceKind === 'TALENT' && source.talentIndex === 0
+  ))
+  const talentChanges = application.changes.filter((change) => change.talentIndex === 0)
+
+  assert.equal(application.passives.talents[0].description, '潜在強化値')
+  assert.deepEqual(talentSource?.blackboard, [
+    { key: 'magic_resist_penetrate_fixed', value: 99, valueStr: null },
+  ])
+  assert.deepEqual(talentChanges.map((change) => change.description), ['潜在強化値'])
+})
+
 test('モジュール能力値を基礎攻撃力と攻撃間隔へ反映する', () => {
   const profile = createProfile()
   const stats = getOperatorStats(profile, 2, 90, 100, {
@@ -176,6 +192,7 @@ function createProfile(): OperatorCombatProfile {
       { level: 0, data: { atk: 0 } },
       { level: 50, data: { atk: 50 } },
     ],
+    potentialRanks: Array.from({ length: 5 }, () => ({})),
     traitDescription: '敵に術ダメージを与える',
     trait: {
       candidates: [{

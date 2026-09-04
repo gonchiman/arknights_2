@@ -120,6 +120,7 @@ export function applyOperatorModule(
   basePassives: OperatorPassives,
   module: RawOperatorModule | null | undefined,
   level: number,
+  potentialRank = 1,
 ): OperatorModuleApplication {
   const passives = clonePassives(basePassives)
   if (!module) return emptyApplication(passives)
@@ -141,6 +142,10 @@ export function applyOperatorModule(
   const attackSpeedBonus = sumAttribute(phase.attributeBlackboard, 'attack_speed')
   const changes: OperatorModuleChange[] = []
   const affectedSources: OperatorModuleSourceRef[] = []
+  const requiredPotentialRank = Math.max(
+    0,
+    (Number.isFinite(potentialRank) ? Math.round(potentialRank) : 1) - 1,
+  )
   const unsupportedReasons: string[] = attributeEffects
     .filter((effect) => effect.status === 'UNSUPPORTED')
     .map((effect) => effect.reason)
@@ -161,11 +166,13 @@ export function applyOperatorModule(
   }
 
   for (const part of Array.isArray(phase.parts) ? phase.parts : []) {
-    const traitCandidates = selectBasePotentialCandidates(
+    const traitCandidates = selectPotentialCandidates(
       part.overrideTraitDataBundle?.candidates,
+      requiredPotentialRank,
     )
-    const talentCandidates = selectBasePotentialCandidates(
+    const talentCandidates = selectPotentialCandidates(
       part.addOrOverrideTalentDataBundle?.candidates,
+      requiredPotentialRank,
     )
 
     if (part.isToken) {
@@ -394,11 +401,19 @@ function resolveTalentIndex(
   return -1
 }
 
-function selectBasePotentialCandidates<T extends { requiredPotentialRank?: number }>(
+function selectPotentialCandidates<T extends { requiredPotentialRank?: number }>(
   candidates: T[] | null | undefined,
+  requiredPotentialRank: number,
 ): T[] {
   if (!Array.isArray(candidates)) return []
-  return candidates.filter((candidate) => (candidate.requiredPotentialRank ?? 0) <= 0)
+  const selectable = candidates.filter((candidate) => (
+    (candidate.requiredPotentialRank ?? 0) <= requiredPotentialRank
+  ))
+  const selectedRank = Math.max(
+    -1,
+    ...selectable.map((candidate) => candidate.requiredPotentialRank ?? 0),
+  )
+  return selectable.filter((candidate) => (candidate.requiredPotentialRank ?? 0) === selectedRank)
 }
 
 function buildAttributeEffect(entry: RawBlackboardEntry): OperatorModuleAttributeEffect[] {

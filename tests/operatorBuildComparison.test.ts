@@ -8,7 +8,11 @@ import {
   evaluateComparisonBuild,
   getComparisonAxisForDamageType,
   getComparisonInitialAxis,
+  getComparisonMaximumSkillLevelIndex,
   getComparisonMetricValue,
+  getComparisonMinimumPhaseIndex,
+  normalizeComparisonBuildConfig,
+  retargetComparisonBuildConfigs,
   type ComparisonBuildConfig,
 } from '../src/lib/operatorBuildComparison.ts'
 import type {
@@ -191,7 +195,7 @@ test('現在値と軸別系列をUTF-8 BOM付きCSVへ出力する', () => {
   )
   const seriesCsv = buildOperatorBuildComparisonSeriesCsv(series, 'DEFENSE')
   assert.ok(seriesCsv.startsWith('\uFEFF'))
-  assert.match(seriesCsv, /"防御力","モジュール比較, A"/)
+  assert.match(seriesCsv, /"防御力","モジュール比較, A ·/)
   assert.match(seriesCsv, /"50","100"/)
 })
 
@@ -346,6 +350,154 @@ test('モジュール違いの系列CSV見出しを一意にする', () => {
   assert.match(csv, /モジュールα Lv\.3/)
 })
 
+test('潜在の攻撃力と攻撃速度を比較計算へ反映する', () => {
+  const skill = createSkill()
+  skill.operatorProfile.potentialRanks = [
+    {
+      type: 'BUFF',
+      description: '攻撃力+20',
+      buff: {
+        attributes: {
+          attributeModifiers: [{
+            attributeType: 'ATK',
+            formulaItem: 'ADDITION',
+            value: 20,
+          }],
+        },
+      },
+    },
+    {
+      type: 'BUFF',
+      description: '攻撃速度+10',
+      buff: {
+        attributes: {
+          attributeModifiers: [{
+            attributeType: 'ATTACK_SPEED',
+            formulaItem: 'ADDITION',
+            value: 10,
+          }],
+        },
+      },
+    },
+  ]
+
+  const baseline = evaluateComparisonBuild([skill], createConfig(skill, { potentialRank: 1 }))
+  const maxPotential = evaluateComparisonBuild([skill], createConfig(skill, { potentialRank: 3 }))
+
+  assert.equal(baseline.operatorStats.attack, 100)
+  assert.equal(maxPotential.potential.potentialRank, 3)
+  assert.equal(maxPotential.operatorStats.baseAttackBreakdown.potentialAttack, 20)
+  assert.equal(maxPotential.operatorStats.attack, 120)
+  assert.equal(maxPotential.operatorStats.attackSpeed, 110)
+  assert.equal(maxPotential.normalOutput.perHit, 120)
+  assert.ok((maxPotential.normalOutput.dps ?? 0) > (baseline.normalOutput.dps ?? 0))
+  assert.match(buildOperatorBuildComparisonCsv([maxPotential]), /"潜在"/)
+  assert.match(buildOperatorBuildComparisonCsv([maxPotential]), /"潜在3"/)
+})
+
+test('昇進段階に応じてスキル解放とスキルレベル上限を正規化する', () => {
+  const skill = createSkill({ skillIndex: 3, module: createAttackModule() })
+  skill.operatorProfile.phases = [
+    { maxLevel: 50, attributesKeyFrames: [{ level: 1, data: { atk: 100 } }] },
+    { maxLevel: 80, attributesKeyFrames: [{ level: 1, data: { atk: 120 } }] },
+    { maxLevel: 90, attributesKeyFrames: [{ level: 1, data: { atk: 140 } }] },
+  ]
+  skill.operatorProfile.potentialRanks = Array.from({ length: 5 }, () => ({ type: 'CUSTOM' }))
+  skill.skillLevels = Array.from({ length: 10 }, (_, index) => ({
+    ...skill.raw,
+    name: `スキルLv${index + 1}`,
+  }))
+  const module = skill.operatorProfile.modules?.[0]
+  if (module) {
+    module.unlockEvolvePhase = 'PHASE_2'
+    module.unlockLevel = 60
+  }
+
+  assert.equal(getComparisonMinimumPhaseIndex(skill), 2)
+  assert.equal(getComparisonMaximumSkillLevelIndex(skill, 0), 3)
+  assert.equal(getComparisonMaximumSkillLevelIndex(skill, 1), 6)
+  assert.equal(getComparisonMaximumSkillLevelIndex(skill, 2), 9)
+
+  const normalized = normalizeComparisonBuildConfig([skill], createConfig(skill, {
+    phaseIndex: -10,
+    operatorLevel: 1,
+    potentialRank: 99,
+    trustPercent: 120,
+    skillLevelIndex: 99,
+    moduleId: 'module_alpha',
+    moduleLevel: 99,
+  }))
+
+  assert.equal(normalized.phaseIndex, 2)
+  assert.equal(normalized.operatorLevel, 1)
+  assert.equal(normalized.potentialRank, 6)
+  assert.equal(normalized.trustPercent, 100)
+  assert.equal(normalized.skillLevelIndex, 9)
+  assert.equal(normalized.moduleId, null)
+  assert.equal(normalized.moduleLevel, null)
+})
+
+test('比較対象の変更時に全ビルドを同じoperator・skillへ一括retargetする', () => {
+  const first = createSkill({ operatorId: 'char_common', skillId: 'skill_1', skillIndex: 1 })
+  const target = createSkill({ operatorId: 'char_common', skillId: 'skill_2', skillIndex: 2 })
+  const other = createSkill({ operatorId: 'char_other', skillId: 'skill_other', skillIndex: 1 })
+  first.operatorProfile.phases = target.operatorProfile.phases = [
+    { maxLevel: 50, attributesKeyFrames: [{ level: 1, data: { atk: 100 } }] },
+    { maxLevel: 80, attributesKeyFrames: [{ level: 1, data: { atk: 120 } }] },
+    { maxLevel: 90, attributesKeyFrames: [{ level: 1, data: { atk: 140 } }] },
+  ]
+  target.skillLevels = Array.from({ length: 10 }, () => ({ ...target.raw }))
+
+  const configs = [
+    createConfig(first, { slotId: 'a', colorIndex: 2, phaseIndex: 0 }),
+    createConfig(other, {
+      slotId: 'b',
+      colorIndex: 4,
+      phaseIndex: 2,
+      moduleId: 'other-module',
+      moduleLevel: 3,
+    }),
+  ]
+  const retargeted = retargetComparisonBuildConfigs(
+    [first, target, other],
+    configs,
+    target.id,
+  )
+
+  assert.deepEqual(retargeted.map((config) => config.operatorId), ['char_common', 'char_common'])
+  assert.deepEqual(retargeted.map((config) => config.skillRecordId), [target.id, target.id])
+  assert.deepEqual(retargeted.map((config) => config.slotId), ['a', 'b'])
+  assert.deepEqual(retargeted.map((config) => config.colorIndex), [2, 4])
+  assert.equal(retargeted[0].phaseIndex, 1)
+  assert.equal(retargeted[0].skillLevelIndex, 0)
+  assert.equal(retargeted[1].moduleId, null)
+})
+
+test('系列ラベルにビルド名と育成条件を含めて同一対象の差を識別する', () => {
+  const skill = createSkill({ module: createAttackModule() })
+  const series = buildComparisonAxisSeries(
+    [skill],
+    [
+      createConfig(skill, { slotId: 'a', label: '基準', potentialRank: 1 }),
+      createConfig(skill, {
+        slotId: 'b',
+        label: '比較',
+        potentialRank: 1,
+        moduleId: 'module_alpha',
+        moduleLevel: 2,
+      }),
+    ],
+    { defense: 0, resistance: 0 },
+    'DEFENSE',
+    'NORMAL_PER_HIT',
+  )
+
+  assert.match(series[0].label, /^基準 · テスト · S1 テストスキル · 昇進0 Lv\.1 · 潜在1/)
+  assert.match(series[1].label, /^比較 · テスト · S1 テストスキル · 昇進0 Lv\.1 · 潜在1/)
+  assert.match(series[1].label, /モジュールα Lv\.2/)
+  assert.notEqual(series[0].label, series[1].label)
+})
+
 function createConfig(
   skill: SkillRecord,
   overrides: Partial<ComparisonBuildConfig> = {},
@@ -358,6 +510,7 @@ function createConfig(
     skillRecordId: skill.id,
     phaseIndex: 0,
     operatorLevel: 1,
+    potentialRank: 1,
     trustPercent: 100,
     skillLevelIndex: 0,
     moduleId: null,
@@ -392,6 +545,7 @@ function createSkill({
   operatorName = 'テスト',
   profession = 'SNIPER',
   skillId = 'skill_test',
+  skillIndex = 1,
   skillDescription = '敵に物理ダメージを与える',
   traitDescription = '敵に物理ダメージを与える',
   module,
@@ -401,6 +555,7 @@ function createSkill({
   operatorName?: string
   profession?: string
   skillId?: string
+  skillIndex?: number
   skillDescription?: string
   traitDescription?: string
   module?: RawOperatorModule
@@ -428,7 +583,7 @@ function createSkill({
     subProfessionName: 'テスト職分',
     nameInitial: 'T_ROW',
     rarity: 6,
-    skillIndex: 1,
+    skillIndex,
     skillId,
     skillName: 'テストスキル',
     description: skillDescription,

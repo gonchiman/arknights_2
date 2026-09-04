@@ -18,7 +18,11 @@ import {
   buildOperatorBuildComparisonSeriesTsv,
   evaluateComparisonBuild,
   getComparisonInitialAxis,
+  getComparisonMaximumSkillLevelIndex,
   getComparisonMetricValue,
+  getComparisonMinimumPhaseIndex,
+  normalizeComparisonBuildConfig,
+  retargetComparisonBuildConfigs,
   type ComparisonAxis,
   type ComparisonAxisSeries,
   type ComparisonBuildConfig,
@@ -47,11 +51,6 @@ interface Props {
   onOpenOperatorDetail: OpenOperatorDetail
 }
 
-interface PickerState {
-  mode: 'ADD' | 'REPLACE'
-  slotId: string | null
-}
-
 interface SkillEffectState {
   skill: SkillRecord
   skillLevelIndex: number
@@ -67,7 +66,7 @@ interface ComparisonAnnouncement {
 }
 
 const MAX_BUILDS = 6
-const BUILD_COLORS = ['#607f99', '#a84b4b', '#5a8b67', '#7b6d86', '#80704b', '#527d7a']
+const BUILD_COLORS = ['#58758a', '#95615d', '#64806b', '#776d7f', '#827452', '#5b7b78']
 const DEFAULT_COMPARISON_METRIC: ComparisonBuildMetric = 'SKILL_PER_ATTACK'
 const NUMBER_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 })
 
@@ -76,7 +75,7 @@ export function OperatorComparison({ rows, loading, onOpenOperatorDetail }: Prop
   const [enemy, setEnemy] = useState<ComparisonEnemyCondition>({ defense: 0, resistance: 0 })
   const [axis, setAxis] = useState<ComparisonAxis>('DEFENSE')
   const [metric, setMetric] = useState<ComparisonBuildMetric>(DEFAULT_COMPARISON_METRIC)
-  const [picker, setPicker] = useState<PickerState | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [operatorFilters, setOperatorFilters] = useState<FilterState>({ ...EMPTY_OPERATOR_FILTERS })
   const [detailSkill, setDetailSkill] = useState<SkillEffectState | null>(null)
   const [announcement, setAnnouncement] = useState<ComparisonAnnouncement>({ id: 0, message: '' })
@@ -84,7 +83,8 @@ export function OperatorComparison({ rows, loading, onOpenOperatorDetail }: Prop
   const initializedRef = useRef(false)
   const nextSlotIdRef = useRef(1)
   const pickerReturnFocusRef = useRef<HTMLElement | null>(null)
-  const buildPickerButtonRefs = useRef(new Map<string, HTMLButtonElement>())
+  const commonOperatorButtonRef = useRef<HTMLButtonElement | null>(null)
+  const buildCardRefs = useRef(new Map<string, HTMLElement>())
   const addButtonRef = useRef<HTMLButtonElement | null>(null)
   const skillDetailTriggerRef = useRef<HTMLButtonElement | null>(null)
   const copyFeedbackTimerRef = useRef<number | null>(null)
@@ -129,6 +129,12 @@ export function OperatorComparison({ rows, loading, onOpenOperatorDetail }: Prop
   const currentAxisValue = axis === 'DEFENSE' ? enemy.defense : enemy.resistance
   const axisPoints = rawSeries[0]?.points.map((point) => point.x) ?? []
   const calculableCount = rawSeries.filter((series) => series.points.some((point) => point.value !== null)).length
+  const targetSkill = rows.find((row) => row.id === builds[0]?.skillRecordId) ?? null
+  const targetOperatorSkills = targetSkill
+    ? rows
+        .filter((row) => row.operatorId === targetSkill.operatorId)
+        .sort((a, b) => a.skillIndex - b.skillIndex)
+    : []
 
   const announce = (message: string) => {
     announcementIdRef.current += 1
@@ -161,64 +167,59 @@ export function OperatorComparison({ rows, loading, onOpenOperatorDetail }: Prop
   const updateBuild = (slotId: string, patch: Partial<ComparisonBuildConfig>) => {
     const current = builds.find((build) => build.slotId === slotId)
     if (!current) return
-    const next = normalizeBuildConfig(rows, { ...current, ...patch })
+    const next = normalizeComparisonBuildConfig(rows, { ...current, ...patch })
     setBuilds(builds.map((build) => build.slotId === slotId ? next : build))
     if (current.moduleId && !next.moduleId) {
       announce('育成条件では装備できないため、モジュールを「なし」に変更しました。')
     }
   }
 
-  const changeSkill = (slotId: string, skillRecordId: string) => {
+  const changeTargetSkill = (skillRecordId: string) => {
     const skill = rows.find((row) => row.id === skillRecordId)
     if (!skill) return
-    updateBuild(slotId, {
-      skillRecordId,
-      skillLevelIndex: Math.max(0, skill.skillLevels.length - 1),
-    })
+    const nextBuilds = retargetComparisonBuildConfigs(rows, builds, skillRecordId)
+    setBuilds(nextBuilds)
+    if (nextBuilds[0]) setAxis(getComparisonInitialAxis(rows, nextBuilds[0], metric))
+    announce(`全ビルドをS${skill.skillIndex} ${skill.skillName}へ変更しました。`)
   }
 
-  const openPicker = (
-    nextPicker: PickerState,
-    trigger: HTMLElement,
-  ) => {
+  const openPicker = (trigger: HTMLElement) => {
     pickerReturnFocusRef.current = trigger
     setOperatorFilters({ ...EMPTY_OPERATOR_FILTERS })
-    setPicker(nextPicker)
+    setPickerOpen(true)
   }
 
   const closePicker = () => {
-    setPicker(null)
+    setPickerOpen(false)
     window.requestAnimationFrame(() => pickerReturnFocusRef.current?.focus())
   }
 
   const selectOperator = (row: SkillRecord) => {
-    if (!picker) return
-    if (picker.mode === 'ADD') {
-      if (builds.length >= MAX_BUILDS) return
-      const slotId = allocateSlotId()
-      const nextBuild = createBuildFromSkill(row, slotId, nextAvailableColorIndex(builds))
-      setBuilds([...builds, nextBuild])
-      setPicker(null)
-      announce(row.operatorName + 'を比較対象に追加しました。')
-      window.requestAnimationFrame(() => buildPickerButtonRefs.current.get(slotId)?.focus())
-      return
-    }
+    const operatorSkills = rows
+      .filter((candidate) => candidate.operatorId === row.operatorId)
+      .sort((a, b) => a.skillIndex - b.skillIndex)
+    const nextSkill = operatorSkills.find((candidate) => candidate.skillIndex === targetSkill?.skillIndex)
+      ?? operatorSkills[0]
+      ?? row
+    const nextBuilds = retargetComparisonBuildConfigs(rows, builds, nextSkill.id)
+    setBuilds(nextBuilds)
+    if (nextBuilds[0]) setAxis(getComparisonInitialAxis(rows, nextBuilds[0], metric))
+    setPickerOpen(false)
+    announce(`${nextSkill.operatorName}のS${nextSkill.skillIndex}へ全ビルドを変更しました。`)
+    window.requestAnimationFrame(() => commonOperatorButtonRef.current?.focus())
+  }
 
-    const current = builds.find((build) => build.slotId === picker.slotId)
-    if (!current) return
-    const nextBuild = createBuildFromSkill(
-      row,
-      current.slotId,
-      current.colorIndex ?? nextAvailableColorIndex(builds),
-    )
-    const isPrimaryBuild = builds[0]?.slotId === current.slotId
-    setBuilds(builds.map((build) => build.slotId === current.slotId ? nextBuild : build))
-    if (isPrimaryBuild) {
-      setAxis(getComparisonInitialAxis(rows, nextBuild, metric))
-    }
-    setPicker(null)
-    announce(row.operatorName + 'へ変更しました。')
-    window.requestAnimationFrame(() => buildPickerButtonRefs.current.get(current.slotId)?.focus())
+  const addBuild = () => {
+    if (builds.length >= MAX_BUILDS || !builds[0]) return
+    const added = normalizeComparisonBuildConfig(rows, {
+      ...builds[0],
+      slotId: allocateSlotId(),
+      label: null,
+      colorIndex: nextAvailableColorIndex(builds),
+    })
+    setBuilds([...builds, added])
+    announce('ビルドを追加しました。共通の比較対象とビルドAの育成条件を引き継いでいます。')
+    window.requestAnimationFrame(() => buildCardRefs.current.get(added.slotId)?.focus())
   }
 
   const duplicateBuild = (slotId: string) => {
@@ -234,8 +235,8 @@ export function OperatorComparison({ rows, loading, onOpenOperatorDetail }: Prop
     const next = [...builds]
     next.splice(index + 1, 0, duplicated)
     setBuilds(next)
-    announce('ビルドを複製しました。スキルやモジュールだけを変更して比較できます。')
-    window.requestAnimationFrame(() => buildPickerButtonRefs.current.get(duplicated.slotId)?.focus())
+    announce('ビルドを複製しました。育成条件の差を設定して比較できます。')
+    window.requestAnimationFrame(() => buildCardRefs.current.get(duplicated.slotId)?.focus())
   }
 
   const removeBuild = (slotId: string) => {
@@ -247,7 +248,7 @@ export function OperatorComparison({ rows, loading, onOpenOperatorDetail }: Prop
     setBuilds(next)
     announce('比較対象を削除しました。残り' + next.length + '件です。')
     window.requestAnimationFrame(() => {
-      if (focusSlotId) buildPickerButtonRefs.current.get(focusSlotId)?.focus()
+      if (focusSlotId) buildCardRefs.current.get(focusSlotId)?.focus()
       else addButtonRef.current?.focus()
     })
   }
@@ -291,16 +292,70 @@ export function OperatorComparison({ rows, loading, onOpenOperatorDetail }: Prop
     <section className="comparison-page">
       <h1 className="visually-hidden">Operator Build Comparison</h1>
 
-      <section className="comparison-panel comparison-build-panel" aria-labelledby="comparison-builds-heading">
+      <section className="comparison-panel comparison-target-panel" aria-labelledby="comparison-target-heading">
         <PanelHeading
           number="01"
+          title="比較対象"
+          id="comparison-target-heading"
+          note="全ビルド共通"
+          action={<button type="button" className="comparison-text-button" onClick={resetBuilds}>初期状態に戻す</button>}
+        />
+        {targetSkill ? (
+          <div className="comparison-target-layout">
+            <div className="comparison-target-operator-field">
+              <span className="comparison-field-label">オペレーター</span>
+              <button
+                ref={commonOperatorButtonRef}
+                type="button"
+                className="comparison-target-operator-button"
+                aria-label="全ビルド共通のオペレーターを変更"
+                onClick={(event) => openPicker(event.currentTarget)}
+              >
+                <span>
+                  <strong>{targetSkill.operatorName}</strong>
+                  <small>★{targetSkill.rarity} · {targetSkill.professionLabel} / {targetSkill.subProfessionName}</small>
+                </span>
+                <em>変更</em>
+              </button>
+              <OperatorDetailLink
+                operatorId={targetSkill.operatorId}
+                onOpenOperatorDetail={onOpenOperatorDetail}
+                className="comparison-target-detail-link"
+                aria-label={`${targetSkill.operatorName}の詳細を開く`}
+              >
+                オペレーター詳細を見る →
+              </OperatorDetailLink>
+            </div>
+            <label className="comparison-target-skill-field">
+              <span className="comparison-field-label">スキル</span>
+              <select
+                aria-label="全ビルド共通のスキル"
+                value={targetSkill.id}
+                onChange={(event) => changeTargetSkill(event.currentTarget.value)}
+              >
+                {targetOperatorSkills.map((candidate) => (
+                  <option value={candidate.id} key={candidate.id}>
+                    S{candidate.skillIndex} {candidate.skillName}
+                  </option>
+                ))}
+              </select>
+              <small>オペレーターとスキルは、すべてのビルドへ同時に反映されます。</small>
+            </label>
+          </div>
+        ) : (
+          <p className="comparison-empty-target">比較対象を読み込めませんでした。</p>
+        )}
+      </section>
+
+      <section className="comparison-panel comparison-build-panel" aria-labelledby="comparison-builds-heading">
+        <PanelHeading
+          number="02"
           title="比較するビルド"
           id="comparison-builds-heading"
           note={builds.length + ' / ' + MAX_BUILDS + '件'}
-          action={<button type="button" className="comparison-text-button" onClick={resetBuilds}>初期状態に戻す</button>}
         />
         <p className="comparison-section-lead">
-          1件ずつ独立した育成状態を持ちます。「複製」すると同じオペレーターの差分をすぐ作れます。
+          同じ対象の育成条件だけを変えて比較します。ビルドAを基準に、レベル・潜在・スキルレベル・モジュールなどの差を設定してください。
         </p>
         <div className="comparison-build-grid">
           {builds.map((build, index) => {
@@ -312,17 +367,14 @@ export function OperatorComparison({ rows, loading, onOpenOperatorDetail }: Prop
                 index={index}
                 key={build.slotId}
                 skill={skill}
-                rows={rows}
                 canRemove={builds.length > 1}
                 canDuplicate={builds.length < MAX_BUILDS}
-                pickerButtonRef={(button) => {
-                  if (button) buildPickerButtonRefs.current.set(build.slotId, button)
-                  else buildPickerButtonRefs.current.delete(build.slotId)
+                cardRef={(card) => {
+                  if (card) buildCardRefs.current.set(build.slotId, card)
+                  else buildCardRefs.current.delete(build.slotId)
                 }}
-                onOpenPicker={(trigger) => openPicker({ mode: 'REPLACE', slotId: build.slotId }, trigger)}
                 onDuplicate={() => duplicateBuild(build.slotId)}
                 onRemove={() => removeBuild(build.slotId)}
-                onSkillChange={(skillRecordId) => changeSkill(build.slotId, skillRecordId)}
                 onChange={(patch) => updateBuild(build.slotId, patch)}
                 onOpenSkillEffect={openSkillEffect}
               />
@@ -333,19 +385,19 @@ export function OperatorComparison({ rows, loading, onOpenOperatorDetail }: Prop
             type="button"
             className="comparison-add-build"
             disabled={builds.length >= MAX_BUILDS}
-            onClick={(event) => openPicker({ mode: 'ADD', slotId: null }, event.currentTarget)}
+            onClick={addBuild}
           >
             <span aria-hidden="true">＋</span>
-            <strong>比較対象を追加</strong>
-            <small>{builds.length >= MAX_BUILDS ? '最大6件です' : '同じオペレーターも追加できます'}</small>
+            <strong>ビルドを追加</strong>
+            <small>{builds.length >= MAX_BUILDS ? '最大6件です' : 'ビルドAの条件を引き継ぎます'}</small>
           </button>
         </div>
-        <p className="comparison-fixed-note">潜在能力は1で固定しています。モジュールの能力値・特性・素質変更は対応範囲を計算へ反映します。</p>
+        <p className="comparison-fixed-note">各ビルドの育成差を計算へ反映します。比較対象を変えても、設定できる範囲で育成条件を引き継ぎます。</p>
       </section>
 
       <section className="comparison-panel" aria-labelledby="comparison-conditions-heading">
         <PanelHeading
-          number="02"
+          number="03"
           title="共通の敵条件"
           id="comparison-conditions-heading"
           note="すべてのビルドへ同時に適用"
@@ -379,7 +431,7 @@ export function OperatorComparison({ rows, loading, onOpenOperatorDetail }: Prop
 
       <section className="comparison-panel comparison-results-panel" aria-labelledby="comparison-results-heading">
         <PanelHeading
-          number="03"
+          number="04"
           title="比較結果"
           id="comparison-results-heading"
           note={evaluations.length + '件を計算'}
@@ -413,10 +465,7 @@ export function OperatorComparison({ rows, loading, onOpenOperatorDetail }: Prop
             </div>
             <p>防御 {formatNumber(enemy.defense)} / 術耐性 {formatNumber(enemy.resistance)}%</p>
           </div>
-          <CurrentOutputTable
-            evaluations={evaluations}
-            onOpenOperatorDetail={onOpenOperatorDetail}
-          />
+          <CurrentOutputTable evaluations={evaluations} />
         </div>
 
         <div className="comparison-series-section">
@@ -453,7 +502,10 @@ export function OperatorComparison({ rows, loading, onOpenOperatorDetail }: Prop
                     type="button"
                     className={metric === candidate ? 'active' : ''}
                     aria-pressed={metric === candidate}
-                    onClick={() => setMetric(candidate)}
+                    onClick={() => {
+                      setMetric(candidate)
+                      if (builds[0]) setAxis(getComparisonInitialAxis(rows, builds[0], candidate))
+                    }}
                     key={candidate}
                   >
                     {COMPARISON_BUILD_METRIC_LABELS[candidate]}
@@ -518,15 +570,12 @@ export function OperatorComparison({ rows, loading, onOpenOperatorDetail }: Prop
         <span key={announcement.id}>{announcement.message}</span>
       </span>
 
-      {picker && (
+      {pickerOpen && (
         <OperatorPickerDialog
           rows={rows}
           filters={operatorFilters}
           loading={loading}
-          selectedOperatorId={picker.slotId
-            ? builds.find((build) => build.slotId === picker.slotId)?.operatorId
-            : undefined}
-          mode={picker.mode}
+          selectedOperatorId={targetSkill?.operatorId}
           onFiltersChange={setOperatorFilters}
           onSelect={selectOperator}
           onClose={closePicker}
@@ -547,37 +596,32 @@ function BuildCard({
   build,
   index,
   skill,
-  rows,
   canRemove,
   canDuplicate,
-  pickerButtonRef,
-  onOpenPicker,
+  cardRef,
   onDuplicate,
   onRemove,
-  onSkillChange,
   onChange,
   onOpenSkillEffect,
 }: {
   build: ComparisonBuildConfig
   index: number
   skill: SkillRecord
-  rows: SkillRecord[]
   canRemove: boolean
   canDuplicate: boolean
-  pickerButtonRef: (button: HTMLButtonElement | null) => void
-  onOpenPicker: (trigger: HTMLButtonElement) => void
+  cardRef: (card: HTMLElement | null) => void
   onDuplicate: () => void
   onRemove: () => void
-  onSkillChange: (skillRecordId: string) => void
   onChange: (patch: Partial<ComparisonBuildConfig>) => void
   onOpenSkillEffect: (skill: SkillRecord, skillLevelIndex: number, trigger: HTMLButtonElement) => void
 }) {
-  const operatorSkills = rows
-    .filter((row) => row.operatorId === skill.operatorId)
-    .sort((a, b) => a.skillIndex - b.skillIndex)
   const phases = skill.operatorProfile.phases
   const phase = phases[build.phaseIndex]
   const maxOperatorLevel = Math.max(1, phase?.maxLevel ?? 1)
+  const maximumPotentialRank = Math.max(1, (skill.operatorProfile.potentialRanks?.length ?? 0) + 1)
+  const minimumPhaseIndex = getComparisonMinimumPhaseIndex(skill)
+  const maximumSkillLevelIndex = getComparisonMaximumSkillLevelIndex(skill, build.phaseIndex)
+  const skillLevels = skill.skillLevels.length > 0 ? skill.skillLevels : [skill.raw]
   const modules = getOperatorModules(skill.operatorProfile)
   const moduleEntries = modules.map((module, moduleIndex) => ({
     module,
@@ -590,13 +634,15 @@ function BuildCard({
   const style = { '--build-color': color } as CSSProperties
   const buildName = 'BUILD ' + String.fromCharCode(65 + index)
   const buildTokenId = build.slotId + '-token'
-  const operatorNameId = build.slotId + '-operator'
+  const buildSummaryId = build.slotId + '-summary'
 
   return (
     <article
+      ref={cardRef}
+      tabIndex={-1}
       className="comparison-build-card"
       style={style}
-      aria-labelledby={buildTokenId + ' ' + operatorNameId}
+      aria-labelledby={buildTokenId + ' ' + buildSummaryId}
     >
       <header className="comparison-build-card-header">
         <span id={buildTokenId} className="comparison-build-token"><i aria-hidden="true" />{buildName}</span>
@@ -606,30 +652,79 @@ function BuildCard({
         </div>
       </header>
 
-      <button
-        ref={pickerButtonRef}
-        type="button"
-        className="comparison-operator-picker-button"
-        aria-label={buildName + 'のオペレーターを変更'}
-        onClick={(event) => onOpenPicker(event.currentTarget)}
-      >
-        <span>
-          <strong id={operatorNameId}>{skill.operatorName}</strong>
-          <small>★{skill.rarity} · {skill.professionLabel} / {skill.subProfessionName}</small>
-        </span>
-        <em>変更</em>
-      </button>
+      <p id={buildSummaryId} className="comparison-build-summary">
+        {formatBuildConfigSummary(build, skill, selectedModule)}
+      </p>
 
       <div className="comparison-build-fields">
         <label>
-          <span>スキル</span>
+          <span>昇進</span>
           <select
-            aria-label={buildName + 'のスキル'}
-            value={build.skillRecordId}
-            onChange={(event) => onSkillChange(event.currentTarget.value)}
+            aria-label={buildName + 'の昇進段階'}
+            value={build.phaseIndex}
+            onChange={(event) => onChange({ phaseIndex: Number(event.currentTarget.value) })}
           >
-            {operatorSkills.map((candidate) => (
-              <option value={candidate.id} key={candidate.id}>S{candidate.skillIndex} {candidate.skillName}</option>
+            {phases.map((_, phaseIndex) => (
+              <option value={phaseIndex} disabled={phaseIndex < minimumPhaseIndex} key={phaseIndex}>
+                {phaseIndex === 0 ? '未昇進' : '昇進' + phaseIndex}
+                {phaseIndex < minimumPhaseIndex ? '（スキル未解放）' : ''}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>レベル</span>
+          <input
+            aria-label={buildName + 'のオペレーターレベル'}
+            type="number"
+            min={1}
+            max={maxOperatorLevel}
+            value={build.operatorLevel}
+            onChange={(event) => onChange({ operatorLevel: Number(event.currentTarget.value) })}
+          />
+        </label>
+        <label>
+          <span>潜在</span>
+          <select
+            aria-label={buildName + 'の潜在段階'}
+            value={build.potentialRank}
+            onChange={(event) => onChange({ potentialRank: Number(event.currentTarget.value) })}
+          >
+            {Array.from({ length: maximumPotentialRank }, (_, potentialIndex) => (
+              <option value={potentialIndex + 1} key={potentialIndex + 1}>潜在{potentialIndex + 1}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>信頼度</span>
+          <span className="comparison-input-with-suffix">
+            <input
+              aria-label={buildName + 'の信頼度'}
+              type="number"
+              min={0}
+              max={100}
+              value={build.trustPercent}
+              onChange={(event) => onChange({ trustPercent: Number(event.currentTarget.value) })}
+            />
+            <em>%</em>
+          </span>
+        </label>
+        <label>
+          <span>スキルレベル</span>
+          <select
+            aria-label={buildName + 'のスキルレベル'}
+            value={build.skillLevelIndex}
+            onChange={(event) => onChange({ skillLevelIndex: Number(event.currentTarget.value) })}
+          >
+            {skillLevels.map((_, skillLevelIndex) => (
+              <option
+                value={skillLevelIndex}
+                disabled={skillLevelIndex > maximumSkillLevelIndex}
+                key={skillLevelIndex}
+              >
+                {getSkillLevelLabel(skillLevelIndex, skillLevels.length)}
+                {skillLevelIndex > maximumSkillLevelIndex ? '（昇進段階不足）' : ''}
+              </option>
             ))}
           </select>
         </label>
@@ -675,76 +770,18 @@ function BuildCard({
           aria-label={buildName + 'のスキル効果の詳細'}
           onClick={(event) => onOpenSkillEffect(skill, build.skillLevelIndex, event.currentTarget)}
         >
-          スキル効果の詳細
+          <span>スキル効果の詳細</span>
+          <small>{getSkillLevelLabel(build.skillLevelIndex, skillLevels.length)}</small>
         </button>
       </div>
-
-      <details className="comparison-growth-details">
-        <summary>
-          <span>育成状態</span>
-          <strong>昇進{build.phaseIndex} Lv.{build.operatorLevel} · 信頼{formatNumber(build.trustPercent)}% · {getSkillLevelLabel(build.skillLevelIndex, skill.skillLevels.length)}</strong>
-        </summary>
-        <div className="comparison-growth-grid">
-          <label>
-            <span>昇進</span>
-            <select
-              aria-label={buildName + 'の昇進段階'}
-              value={build.phaseIndex}
-              onChange={(event) => onChange({ phaseIndex: Number(event.currentTarget.value) })}
-            >
-              {phases.map((_, phaseIndex) => (
-                <option value={phaseIndex} key={phaseIndex}>{phaseIndex === 0 ? '未昇進' : '昇進' + phaseIndex}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>レベル</span>
-            <input
-              aria-label={buildName + 'のオペレーターレベル'}
-              type="number"
-              min={1}
-              max={maxOperatorLevel}
-              value={build.operatorLevel}
-              onChange={(event) => onChange({ operatorLevel: Number(event.currentTarget.value) })}
-            />
-          </label>
-          <label>
-            <span>信頼度</span>
-            <input
-              aria-label={buildName + 'の信頼度'}
-              type="number"
-              min={0}
-              max={100}
-              value={build.trustPercent}
-              onChange={(event) => onChange({ trustPercent: Number(event.currentTarget.value) })}
-            />
-          </label>
-          <label>
-            <span>スキルレベル</span>
-            <select
-              aria-label={buildName + 'のスキルレベル'}
-              value={build.skillLevelIndex}
-              onChange={(event) => onChange({ skillLevelIndex: Number(event.currentTarget.value) })}
-            >
-              {(skill.skillLevels.length > 0 ? skill.skillLevels : [skill.raw]).map((_, skillLevelIndex, levels) => (
-                <option value={skillLevelIndex} key={skillLevelIndex}>
-                  {getSkillLevelLabel(skillLevelIndex, levels.length)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </details>
     </article>
   )
 }
 
 function CurrentOutputTable({
   evaluations,
-  onOpenOperatorDetail,
 }: {
   evaluations: ComparisonBuildEvaluation[]
-  onOpenOperatorDetail: OpenOperatorDetail
 }) {
   return (
     <div className="comparison-output-table-wrap" role="region" tabIndex={0} aria-label="現在の敵条件での比較表">
@@ -770,17 +807,8 @@ function CurrentOutputTable({
                 <span className="comparison-table-build-label">
                   <i style={{ background: getBuildColor(evaluation.config.colorIndex ?? index) }} aria-hidden="true" />
                   <span>
-                    <strong>
-                      <OperatorDetailLink
-                        operatorId={evaluation.skill.operatorId}
-                        onOpenOperatorDetail={onOpenOperatorDetail}
-                        className="comparison-operator-detail-link"
-                        aria-label={`${evaluation.skill.operatorName}の詳細を開く`}
-                      >
-                        {evaluation.skill.operatorName}
-                      </OperatorDetailLink>
-                    </strong>
-                    <small>S{evaluation.skill.skillIndex} {evaluation.skill.skillName} · {formatModuleLabel(evaluation)}</small>
+                    <strong>Build {String.fromCharCode(65 + index)}</strong>
+                    <small>{formatEvaluationBuildSummary(evaluation)}</small>
                   </span>
                 </span>
               </th>
@@ -946,8 +974,8 @@ function BuildEvaluationDetails({ evaluation, index }: { evaluation: ComparisonB
         <span className="comparison-detail-summary-name">
           <i aria-hidden="true" />
           <span>
-            <strong>{evaluation.skill.operatorName} · S{evaluation.skill.skillIndex} {evaluation.skill.skillName}</strong>
-            <small>{formatModuleLabel(evaluation)}</small>
+            <strong>Build {String.fromCharCode(65 + index)}</strong>
+            <small>{formatEvaluationBuildSummary(evaluation)}</small>
           </span>
         </span>
         <OutputStatus evaluation={evaluation} />
@@ -959,6 +987,7 @@ function BuildEvaluationDetails({ evaluation, index }: { evaluation: ComparisonB
           <div><dt>通常 / スキル</dt><dd>{normalType} / {skillType}</dd></div>
           <div><dt>攻撃回数</dt><dd>{formatNumber(evaluation.skillModel.hitCount)}ヒット</dd></div>
           <div><dt>効果時間</dt><dd>{evaluation.skillModel.duration > 0 ? formatNumber(evaluation.skillModel.duration) + '秒' : '—'}</dd></div>
+          <div><dt>潜在</dt><dd>潜在{evaluation.config.potentialRank}</dd></div>
           <div><dt>モジュール攻撃力</dt><dd>{formatSignedNumber(evaluation.module.application.moduleAttack)}</dd></div>
         </dl>
 
@@ -1031,7 +1060,6 @@ function OperatorPickerDialog({
   filters,
   loading,
   selectedOperatorId,
-  mode,
   onFiltersChange,
   onSelect,
   onClose,
@@ -1040,7 +1068,6 @@ function OperatorPickerDialog({
   filters: FilterState
   loading: boolean
   selectedOperatorId?: string
-  mode: 'ADD' | 'REPLACE'
   onFiltersChange: (filters: FilterState) => void
   onSelect: (row: SkillRecord) => void
   onClose: () => void
@@ -1082,7 +1109,7 @@ function OperatorPickerDialog({
           <div>
             <span>OPERATOR SELECT</span>
             <h2 ref={titleRef} id="comparison-picker-title" tabIndex={-1}>
-              {mode === 'ADD' ? '比較するオペレーターを追加' : 'オペレーターを変更'}
+              比較するオペレーターを変更
             </h2>
           </div>
           <button type="button" aria-label="オペレーター選択を閉じる" onClick={onClose}>×</button>
@@ -1094,7 +1121,7 @@ function OperatorPickerDialog({
             loading={loading}
             onFiltersChange={onFiltersChange}
             onSelect={onSelect}
-            instruction="同じオペレーターを複数回選ぶこともできます"
+            instruction="選択したオペレーターをすべてのビルドへ反映します"
             actionLabel="選択する →"
             selectedOperatorId={selectedOperatorId}
           />
@@ -1227,13 +1254,12 @@ function createInitialBuilds(
   }
   const grouped = [...groupedByOperator.values()]
     .map((skills) => skills.sort((a, b) => a.skillIndex - b.skillIndex))
-  const preferred = grouped.find((skills) => skills[0]?.operatorName === 'スルト' && skills.length >= 2)
+  const preferredSkills = grouped.find((skills) => skills[0]?.operatorName === 'スルト')
     ?? grouped.find((skills) => skills.length >= 2)
-  const initialSkills = preferred
-    ? [preferred[0], preferred.at(-1) as SkillRecord]
-    : [rows[0], rows[1] ?? rows[0]]
-  return initialSkills.map((skill, index) => (
-    createBuildFromSkill(skill, allocateSlotId(), index)
+    ?? grouped[0]
+  const initialSkill = preferredSkills?.at(-1) ?? rows[0]
+  return [0, 1].map((colorIndex) => (
+    createBuildFromSkill(initialSkill, allocateSlotId(), colorIndex)
   ))
 }
 
@@ -1252,6 +1278,7 @@ function createBuildFromSkill(
     skillRecordId: skill.id,
     phaseIndex,
     operatorLevel,
+    potentialRank: 1,
     trustPercent: 100,
     skillLevelIndex: Math.max(0, skill.skillLevels.length - 1),
     moduleId: null,
@@ -1259,55 +1286,41 @@ function createBuildFromSkill(
   }
 }
 
-function normalizeBuildConfig(
-  rows: SkillRecord[],
-  requested: ComparisonBuildConfig,
-): ComparisonBuildConfig {
-  const skill = rows.find((row) => row.id === requested.skillRecordId && row.operatorId === requested.operatorId)
-  if (!skill) return requested
-  const phaseIndex = clamp(Math.round(requested.phaseIndex), 0, Math.max(0, skill.operatorProfile.phases.length - 1))
-  const phase = skill.operatorProfile.phases[phaseIndex]
-  const operatorLevel = clamp(Math.round(requested.operatorLevel), 1, Math.max(1, phase?.maxLevel ?? 1))
-  const trustPercent = clamp(requested.trustPercent, 0, 100)
-  const skillLevelIndex = clamp(
-    Math.round(requested.skillLevelIndex),
-    0,
-    Math.max(0, (skill.skillLevels.length || 1) - 1),
-  )
-  const moduleEntries = getOperatorModules(skill.operatorProfile).map((module, index) => ({
-    module,
-    id: getOperatorModuleId(module, index),
-  }))
-  const selectedModule = moduleEntries.find((entry) => entry.id === requested.moduleId)?.module
-  const moduleUnlocked = selectedModule
-    ? isOperatorModuleUnlocked(selectedModule, phaseIndex, operatorLevel)
-    : false
-  const moduleId = selectedModule && moduleUnlocked ? requested.moduleId : null
-  const levels = getOperatorModuleLevels(selectedModule)
-  const moduleLevel = moduleId
-    ? levels.includes(requested.moduleLevel ?? -1)
-      ? requested.moduleLevel
-      : levels.at(-1) ?? 1
-    : null
-
-  return {
-    ...requested,
-    phaseIndex,
-    operatorLevel,
-    trustPercent,
-    skillLevelIndex,
-    moduleId,
-    moduleLevel,
-  }
-}
-
 function getSeriesLabel(evaluation: ComparisonBuildEvaluation | undefined, index: number): string {
   if (!evaluation) return 'Build ' + String.fromCharCode(65 + index)
-  return [
-    'Build ' + String.fromCharCode(65 + index),
-    evaluation.skill.operatorName,
-    'S' + evaluation.skill.skillIndex + ' ' + evaluation.skill.skillName,
+  return `${evaluation.config.label?.trim() || 'Build ' + String.fromCharCode(65 + index)} · ${formatEvaluationBuildSummary(evaluation)}`
+}
+
+function formatEvaluationBuildSummary(evaluation: ComparisonBuildEvaluation): string {
+  return formatBuildSettings(
+    evaluation.config,
+    evaluation.skill,
     formatModuleLabel(evaluation),
+  )
+}
+
+function formatBuildConfigSummary(
+  build: ComparisonBuildConfig,
+  skill: SkillRecord,
+  module: RawOperatorModule | null,
+): string {
+  const moduleLabel = module
+    ? `${module.uniEquipName || '名称なし'} Lv.${build.moduleLevel ?? 1}`
+    : 'モジュールなし'
+  return formatBuildSettings(build, skill, moduleLabel)
+}
+
+function formatBuildSettings(
+  build: ComparisonBuildConfig,
+  skill: SkillRecord,
+  moduleLabel: string,
+): string {
+  return [
+    `昇進${build.phaseIndex} Lv.${build.operatorLevel}`,
+    `潜在${build.potentialRank}`,
+    `信頼${formatNumber(build.trustPercent)}%`,
+    getSkillLevelLabel(build.skillLevelIndex, skill.skillLevels.length),
+    moduleLabel,
   ].join(' · ')
 }
 

@@ -26,6 +26,10 @@ import {
 } from './operatorModules.ts'
 import { getOperatorPassives, type OperatorPassives } from './operatorProfile.ts'
 import {
+  getOperatorMaxPotentialRank,
+  getOperatorPotentialApplication,
+} from './operatorPotentials.ts'
+import {
   detectNormalAttackDamageType,
   detectSkillDamageType,
   getSkillDamageUnsupportedReasons,
@@ -70,6 +74,7 @@ export interface ComparisonBuildConfig {
   skillRecordId: string
   phaseIndex: number
   operatorLevel: number
+  potentialRank: number
   trustPercent: number
   skillLevelIndex: number
   moduleId: string | null
@@ -107,6 +112,7 @@ export interface PreparedComparisonBuild {
   skill: SkillRecord
   skillLevel: RawSkillLevel
   passives: OperatorPassives
+  potential: ReturnType<typeof getOperatorPotentialApplication>
   module: ComparisonModuleSelection
   operatorStats: OperatorStats
   skillModel: SkillModelDefaults
@@ -127,6 +133,7 @@ export interface ComparisonBuildEvaluation {
   skill: SkillRecord
   skillLevel: RawSkillLevel
   passives: OperatorPassives
+  potential: ReturnType<typeof getOperatorPotentialApplication>
   module: ComparisonModuleSelection
   operatorStats: OperatorStats
   skillModel: SkillModelDefaults
@@ -172,6 +179,55 @@ export const DEFAULT_COMPARISON_ENEMY: Readonly<ComparisonEnemyCondition> = {
 const DEFAULT_DEFENSE_POINTS = [0, 500, 1000, 1500, 2000]
 const DEFAULT_RESISTANCE_POINTS = [0, 20, 40, 60, 80, 95, 100]
 
+/** Returns the first promotion phase in which the selected skill can be used. */
+export function getComparisonMinimumPhaseIndex(
+  skill: Pick<SkillRecord, 'skillIndex'>,
+): number {
+  if (skill.skillIndex <= 1) return 0
+  if (skill.skillIndex === 2) return 1
+  return 2
+}
+
+/** Returns the highest selectable zero-based skill level for a promotion phase. */
+export function getComparisonMaximumSkillLevelIndex(
+  skill: Pick<SkillRecord, 'skillLevels'>,
+  phaseIndex: number,
+): number {
+  const lastLevelIndex = Math.max(0, (skill.skillLevels.length || 1) - 1)
+  if (phaseIndex <= 0) return Math.min(lastLevelIndex, 3)
+  if (phaseIndex === 1) return Math.min(lastLevelIndex, 6)
+  return lastLevelIndex
+}
+
+/**
+ * Normalizes editable build state for the selected operator and skill.
+ * Modules which do not exist or are not unlocked for the resulting build are removed.
+ */
+export function normalizeComparisonBuildConfig(
+  rows: SkillRecord[],
+  requestedConfig: ComparisonBuildConfig,
+): ComparisonBuildConfig {
+  const skill = findComparisonSkill(rows, requestedConfig)
+  return skill
+    ? normalizeComparisonBuildConfigForSkill(requestedConfig, skill, true)
+    : requestedConfig
+}
+
+/** Retargets every build to one common operator/skill while preserving valid growth settings. */
+export function retargetComparisonBuildConfigs(
+  rows: SkillRecord[],
+  configs: ComparisonBuildConfig[],
+  skillRecordId: string,
+): ComparisonBuildConfig[] {
+  const skill = rows.find((row) => row.id === skillRecordId)
+  if (!skill) return configs
+  return configs.map((config) => normalizeComparisonBuildConfigForSkill({
+    ...config,
+    operatorId: skill.operatorId,
+    skillRecordId: skill.id,
+  }, skill, true))
+}
+
 /**
  * Resolves all operator-dependent state once. Axis series should prepare a build
  * once and then evaluate it against each enemy point.
@@ -180,58 +236,53 @@ export function prepareComparisonBuild(
   rows: SkillRecord[],
   requestedConfig: ComparisonBuildConfig,
 ): PreparedComparisonBuild {
-  const skill = rows.find((row) => (
-    row.id === requestedConfig.skillRecordId
-    && row.operatorId === requestedConfig.operatorId
-  ))
+  const skill = findComparisonSkill(rows, requestedConfig)
   if (!skill) {
     throw new Error(`比較対象のスキルが見つかりません: ${requestedConfig.skillRecordId}`)
   }
 
-  const phases = skill.operatorProfile.phases
-  const phaseIndex = clampInteger(requestedConfig.phaseIndex, 0, Math.max(0, phases.length - 1))
-  const phase = phases[phaseIndex]
-  const operatorLevel = clampInteger(
-    requestedConfig.operatorLevel,
-    1,
-    Math.max(1, phase?.maxLevel ?? 1),
+  // Keep invalid module selections observable in the low-level evaluator. The UI
+  // uses normalizeComparisonBuildConfig, which clears them before evaluation.
+  const normalizedConfig = normalizeComparisonBuildConfigForSkill(
+    requestedConfig,
+    skill,
+    false,
   )
-  const trustPercent = clamp(finiteOr(requestedConfig.trustPercent, 100), 0, 100)
+  const phaseIndex = normalizedConfig.phaseIndex
+  const operatorLevel = normalizedConfig.operatorLevel
+  const trustPercent = normalizedConfig.trustPercent
   const skillLevels = skill.skillLevels.length > 0 ? skill.skillLevels : [skill.raw]
-  const skillLevelIndex = clampInteger(
-    requestedConfig.skillLevelIndex,
-    0,
-    Math.max(0, skillLevels.length - 1),
-  )
+  const skillLevelIndex = normalizedConfig.skillLevelIndex
   const skillLevel = skillLevels[skillLevelIndex] ?? skill.raw
   const modules = getOperatorModules(skill.operatorProfile)
   const moduleResolution = resolveModuleSelection(
     modules,
-    requestedConfig.moduleId,
-    requestedConfig.moduleLevel,
+    normalizedConfig.moduleId,
+    normalizedConfig.moduleLevel,
     phaseIndex,
     operatorLevel,
   )
   const config: ComparisonBuildConfig = {
-    ...requestedConfig,
-    colorIndex: Math.max(0, clampInteger(requestedConfig.colorIndex ?? 0, 0, Number.MAX_SAFE_INTEGER)),
-    phaseIndex,
-    operatorLevel,
-    trustPercent,
-    skillLevelIndex,
+    ...normalizedConfig,
     moduleId: moduleResolution.id,
     moduleLevel: moduleResolution.module ? moduleResolution.level : null,
   }
+  const potential = getOperatorPotentialApplication(
+    skill.operatorProfile,
+    config.potentialRank,
+  )
 
   const basePassives = getOperatorPassives(
     skill.operatorProfile,
     phaseIndex,
     operatorLevel,
+    potential.potentialRank,
   )
   const moduleApplication = applyOperatorModule(
     basePassives,
     moduleResolution.module,
     moduleResolution.level,
+    potential.potentialRank,
   )
   const passives = moduleApplication.passives
   const normalDamageTypeDetection = detectNormalAttackDamageType(
@@ -249,7 +300,10 @@ export function prepareComparisonBuild(
     operatorLevel,
     trustPercent,
     {
-      attackSpeedBonus: normalEffects.modifiers.attackSpeedBonus + moduleApplication.attackSpeedBonus,
+      attackSpeedBonus: potential.attackSpeedBonus
+        + normalEffects.modifiers.attackSpeedBonus
+        + moduleApplication.attackSpeedBonus,
+      potentialAttack: potential.potentialAttack,
       moduleAttack: moduleApplication.moduleAttack,
     },
   )
@@ -292,13 +346,16 @@ export function prepareComparisonBuild(
       ? [skillDamageTypeDetection.reason]
       : []),
   ])
-  const moduleWarnings = moduleApplication.unsupportedReasons
+  const configurationWarnings = [
+    ...potential.unsupportedReasons,
+    ...moduleApplication.unsupportedReasons,
+  ]
   const normalWarnings = unique([
-    ...moduleWarnings,
+    ...configurationWarnings,
     ...getEffectWarnings(normalEffects),
   ])
   const skillWarnings = unique([
-    ...moduleWarnings,
+    ...configurationWarnings,
     ...getModelWarnings(skillModel),
     ...getEffectWarnings(skillEffects),
   ])
@@ -312,6 +369,7 @@ export function prepareComparisonBuild(
     skill,
     skillLevel,
     passives,
+    potential,
     module: {
       ...moduleResolution,
       application: moduleApplication,
@@ -415,6 +473,7 @@ export function evaluatePreparedComparisonBuild(
     skill: prepared.skill,
     skillLevel: prepared.skillLevel,
     passives: prepared.passives,
+    potential: prepared.potential,
     module: prepared.module,
     operatorStats: prepared.operatorStats,
     skillModel: prepared.skillModel,
@@ -558,6 +617,7 @@ export function buildOperatorBuildComparisonCsv(
     'スキル',
     '昇進',
     'レベル',
+    '潜在',
     '信頼度',
     'スキルレベル',
     'モジュール',
@@ -588,6 +648,7 @@ export function buildOperatorBuildComparisonCsv(
       `S${skill.skillIndex} ${skill.skillName}`,
       `昇進${config.phaseIndex}`,
       String(config.operatorLevel),
+      `潜在${config.potentialRank}`,
       `${formatCsvNumber(config.trustPercent)}%`,
       getSkillLevelLabel(config.skillLevelIndex, skill.skillLevels.length),
       moduleLabel,
@@ -658,6 +719,77 @@ export function getComparisonBuildLabel(
   return config.label?.trim() || `${skill.operatorName} · S${skill.skillIndex} ${skill.skillName}`
 }
 
+function findComparisonSkill(
+  rows: SkillRecord[],
+  config: Pick<ComparisonBuildConfig, 'operatorId' | 'skillRecordId'>,
+): SkillRecord | undefined {
+  return rows.find((row) => (
+    row.id === config.skillRecordId
+    && row.operatorId === config.operatorId
+  ))
+}
+
+function normalizeComparisonBuildConfigForSkill(
+  requested: ComparisonBuildConfig,
+  skill: SkillRecord,
+  clearUnavailableModule: boolean,
+): ComparisonBuildConfig {
+  const phases = skill.operatorProfile.phases
+  const maximumPhaseIndex = Math.max(0, phases.length - 1)
+  const minimumPhaseIndex = Math.min(
+    maximumPhaseIndex,
+    getComparisonMinimumPhaseIndex(skill),
+  )
+  const phaseIndex = clampInteger(
+    requested.phaseIndex,
+    minimumPhaseIndex,
+    maximumPhaseIndex,
+  )
+  const operatorLevel = clampInteger(
+    requested.operatorLevel,
+    1,
+    Math.max(1, phases[phaseIndex]?.maxLevel ?? 1),
+  )
+  const trustPercent = clamp(finiteOr(requested.trustPercent, 100), 0, 100)
+  const potentialRank = clampInteger(
+    requested.potentialRank,
+    1,
+    Math.max(1, getOperatorMaxPotentialRank(skill.operatorProfile)),
+  )
+  const skillLevelIndex = clampInteger(
+    requested.skillLevelIndex,
+    0,
+    getComparisonMaximumSkillLevelIndex(skill, phaseIndex),
+  )
+  const moduleResolution = resolveModuleSelection(
+    getOperatorModules(skill.operatorProfile),
+    requested.moduleId,
+    requested.moduleLevel,
+    phaseIndex,
+    operatorLevel,
+  )
+  const removeModule = clearUnavailableModule
+    && Boolean(moduleResolution.id)
+    && (!moduleResolution.module || !moduleResolution.unlocked)
+
+  return {
+    ...requested,
+    operatorId: skill.operatorId,
+    skillRecordId: skill.id,
+    colorIndex: Math.max(
+      0,
+      clampInteger(requested.colorIndex ?? 0, 0, Number.MAX_SAFE_INTEGER),
+    ),
+    phaseIndex,
+    operatorLevel,
+    potentialRank,
+    trustPercent,
+    skillLevelIndex,
+    moduleId: removeModule ? null : moduleResolution.id,
+    moduleLevel: removeModule || !moduleResolution.module ? null : moduleResolution.level,
+  }
+}
+
 function resolveModuleSelection(
   modules: RawOperatorModule[],
   requestedId: string | null,
@@ -688,8 +820,11 @@ function resolveModuleSelection(
 
 function resolveModuleLevel(levels: number[], requestedLevel: number | null): number {
   if (levels.length === 0) return Math.max(1, clampInteger(requestedLevel ?? 1, 1, Number.MAX_SAFE_INTEGER))
-  if (requestedLevel !== null && levels.includes(requestedLevel)) return requestedLevel
-  return levels.at(-1) ?? 1
+  if (requestedLevel === null || !Number.isFinite(requestedLevel)) return levels.at(-1) ?? 1
+  const normalized = clampInteger(requestedLevel, levels[0], levels.at(-1) ?? levels[0])
+  return levels.reduce((closest, level) => (
+    Math.abs(level - normalized) < Math.abs(closest - normalized) ? level : closest
+  ), levels[0])
 }
 
 function getModuleConfigurationErrors(
@@ -763,11 +898,18 @@ function getComparisonAxisSeriesLabel(
   seriesIndex: number,
 ): string {
   const customLabel = prepared.config.label?.trim()
-  if (customLabel) return customLabel
   const moduleLabel = prepared.module.module
     ? `${prepared.module.application.moduleName || '名称なし'} Lv.${prepared.module.level}`
     : 'モジュールなし'
-  return `Build ${String.fromCharCode(65 + seriesIndex)} · ${getComparisonBuildLabel(prepared.config, prepared.skill)} · ${moduleLabel}`
+  return [
+    customLabel || `Build ${String.fromCharCode(65 + seriesIndex)}`,
+    `${prepared.skill.operatorName} · S${prepared.skill.skillIndex} ${prepared.skill.skillName}`,
+    `昇進${prepared.config.phaseIndex} Lv.${prepared.config.operatorLevel}`,
+    `潜在${prepared.config.potentialRank}`,
+    `信頼度${formatCsvNumber(prepared.config.trustPercent)}%`,
+    getSkillLevelLabel(prepared.config.skillLevelIndex, prepared.skill.skillLevels.length),
+    moduleLabel,
+  ].join(' · ')
 }
 
 function getModelWarnings(model: SkillModelDefaults): string[] {

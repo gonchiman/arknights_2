@@ -5,6 +5,7 @@ import type {
   RawTraitCandidate,
   RawUnlockCondition,
 } from '../types/skill'
+import { getOperatorPotentialApplication } from './operatorPotentials.ts'
 
 export interface DisplayTalent {
   name: string
@@ -35,11 +36,17 @@ export function getOperatorPassives(
   profile: OperatorCombatProfile,
   phaseIndex: number,
   operatorLevel: number,
+  potentialRank = 1,
 ): OperatorPassives {
+  const requiredPotentialRank = getOperatorPotentialApplication(
+    profile,
+    potentialRank,
+  ).requiredPotentialRank
   const traitCandidate = getLatestUnlockedCandidate(
     profile.trait?.candidates ?? [],
     phaseIndex,
     operatorLevel,
+    requiredPotentialRank,
   )
   const traitDescription = cleanGameText(
     traitCandidate?.overrideDescripton
@@ -68,6 +75,7 @@ export function getOperatorPassives(
       (talent.candidates ?? []).filter((item) => !item.isHideTalent),
       phaseIndex,
       operatorLevel,
+      requiredPotentialRank,
     )
     if (!candidate) return []
 
@@ -112,11 +120,15 @@ function getLatestUnlockedCandidate<T extends RawTraitCandidate | RawTalentCandi
   candidates: T[],
   phaseIndex: number,
   operatorLevel: number,
+  requiredPotentialRank: number,
 ): T | null {
   return candidates
-    .filter((candidate) => (candidate.requiredPotentialRank ?? 0) <= 0)
+    .filter((candidate) => (candidate.requiredPotentialRank ?? 0) <= requiredPotentialRank)
     .filter((candidate) => isUnlocked(candidate.unlockCondition, phaseIndex, operatorLevel))
-    .sort((a, b) => compareUnlockConditions(a.unlockCondition, b.unlockCondition))
+    .sort((a, b) => (
+      compareUnlockConditions(a.unlockCondition, b.unlockCondition)
+      || (a.requiredPotentialRank ?? 0) - (b.requiredPotentialRank ?? 0)
+    ))
     .at(-1) ?? null
 }
 
