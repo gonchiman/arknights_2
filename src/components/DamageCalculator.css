@@ -1527,12 +1527,12 @@
 
 .sensitivity-breakdown-details dd.minimum-reached { color: var(--danger); }
 
-@container common-output (min-width: 960px) {
+@container common-output (min-width: 800px) {
   .sensitivity-output-layout {
     display: grid;
-    grid-template-columns: minmax(0, 520px) minmax(360px, 1fr);
+    grid-template-columns: minmax(0, 520px) minmax(280px, 1fr);
     align-items: start;
-    gap: 24px;
+    gap: 20px;
   }
 
   .sensitivity-breakdown { display: block; }
