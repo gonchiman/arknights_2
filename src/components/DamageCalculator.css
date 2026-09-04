@@ -1746,13 +1746,6 @@
   white-space: nowrap;
 }
 
-.sensitivity-calculation-process .calculation-step.compact > small {
-  grid-column: 2;
-  margin: 0;
-  font-size: 8px;
-  line-height: 1.4;
-}
-
 .sensitivity-calculation-step-list .calculation-step:last-child {
   background: #f1f7f2;
   box-shadow: inset 3px 0 0 #5a8b67;

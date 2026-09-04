@@ -1510,11 +1510,18 @@ function ModelValue({ label, value, suffix }: { label: string; value: number; su
   )
 }
 
-function TermLabel({ label }: { label: string }) {
+function TermLabel({
+  label,
+  supplementalDescription,
+}: {
+  label: string
+  supplementalDescription?: string
+}) {
   const description = ATTACK_MODIFIER_DESCRIPTIONS[label as AttackModifierTerm]
-  if (!description) return label
+  const tooltipDescription = [description, supplementalDescription].filter(Boolean).join(' ')
+  if (!tooltipDescription) return label
 
-  return <TermTooltip term={label} description={description} />
+  return <TermTooltip term={label} description={tooltipDescription} />
 }
 
 function TermTooltip({ term, description }: { term: string; description: string }) {
@@ -1921,7 +1928,9 @@ function CalculationStepList({
     <ol className={`calculation-step-list ${className}`.trim()}>
       {steps.map((step, index) => compact ? (
         <li className="calculation-step compact" key={`${step.label}-${index}`}>
-          <strong className="calculation-step-label"><TermLabel label={step.label} /></strong>
+          <strong className="calculation-step-label">
+            <TermLabel label={step.label} supplementalDescription={step.note} />
+          </strong>
           <span className="calculation-step-equation">
             <code>{step.formula}</code>
             <span className="calculation-step-result-tail">
@@ -1929,7 +1938,6 @@ function CalculationStepList({
               <em className="calculation-step-result">{step.result}</em>
             </span>
           </span>
-          {step.note && <small>{step.note}</small>}
         </li>
       ) : (
         <li className="calculation-step" key={`${step.label}-${index}`}>
