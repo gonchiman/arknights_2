@@ -1021,8 +1021,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
                         return (
                           <tr className={calculationSelected ? 'sensitivity-calculation-selected-row' : undefined} key={row.label}>
                             <th scope="row">
-                              <span className="sensitivity-row-label">{row.label}</span>
-                              {row.breakdown && (
+                              {row.breakdown ? (
                                 <button
                                   type="button"
                                   className="sensitivity-calculation-selector"
@@ -1032,9 +1031,9 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
                                   onClick={() => setSensitivityCalculationPoint(row.point)}
                                 >
                                   <span>{row.label}</span>
-                                  <span aria-hidden="true">→</span>
+                                  <span aria-hidden="true">計算</span>
                                 </button>
-                              )}
+                              ) : <span className="sensitivity-row-label">{row.label}</span>}
                             </th>
                             <td
                               className={row.minimumReached ? 'minimum-damage-cell' : undefined}
@@ -1280,45 +1279,57 @@ function SensitivityCalculationProcess({
   attackPipeline: AttackPipelineBreakdown
 }) {
   const breakdown = row.breakdown
-  if (!breakdown) return null
+  if (!breakdown || row.value === null) return null
 
   const headingId = `${id}-heading`
   const conditionLabel = breakdown.mitigation.damageType === 'TRUE'
     ? '防御力・術耐性を適用しない'
     : `${statLabel} ${row.label}`
-  const steps = buildSensitivityCalculationSteps(
-    breakdown,
+  const displayedValue = row.value
+  const attackSteps = buildAttackPipelineSteps(
     baseAttackBreakdown,
     attackPipeline,
+    breakdown.target,
   )
+  const steps = buildSensitivityCalculationSteps(breakdown)
+  const attackModifierSummary = getAttackModifierSummary(attackPipeline)
 
   return (
     <section className="sensitivity-calculation-process" id={id} aria-labelledby={headingId}>
       <header className="sensitivity-calculation-caption">
-        <h3 id={headingId}>選択行の計算過程</h3>
-        <strong>{valueLabel}</strong>
+        <div className="sensitivity-calculation-heading">
+          <h3 id={headingId}>選択行の計算過程</h3>
+          <span>{conditionLabel}</span>
+        </div>
+        <div className="sensitivity-calculation-result">
+          <span>{valueLabel}</span>
+          <strong>{formatNumber(displayedValue)}</strong>
+          {row.minimumReached && <small>最低保証</small>}
+        </div>
       </header>
       <p className="visually-hidden" aria-live="polite" aria-atomic="true">
-        {conditionLabel}の計算過程を表示中
+        {conditionLabel}、{valueLabel} {formatNumber(displayedValue)}の計算過程を表示中
       </p>
-      <p className="sensitivity-calculation-condition">{conditionLabel}</p>
+      <details className="sensitivity-attack-details">
+        <summary>
+          <span className="sensitivity-attack-disclosure" aria-hidden="true" />
+          <span className="sensitivity-attack-summary-copy">
+            <strong>最終攻撃力</strong>
+            <small>全行共通 · {attackModifierSummary}</small>
+          </span>
+          <strong className="sensitivity-attack-summary-value">{formatNumber(attackPipeline.finalAttack)}</strong>
+        </summary>
+        <CalculationStepList steps={attackSteps} className="sensitivity-attack-step-list" />
+      </details>
       <CalculationStepList steps={steps} className="sensitivity-calculation-step-list" />
     </section>
   )
 }
 
-function buildSensitivityCalculationSteps(
-  breakdown: DamageSensitivityBreakdown,
-  baseAttackBreakdown: BaseAttackBreakdown,
-  attackPipeline: AttackPipelineBreakdown,
-): CalculationStep[] {
+function buildSensitivityCalculationSteps(breakdown: DamageSensitivityBreakdown): CalculationStep[] {
   const mitigation = breakdown.mitigation
   const attack = formatCalculationNumber(mitigation.attack)
-  const steps = buildAttackPipelineSteps(
-    baseAttackBreakdown,
-    attackPipeline,
-    breakdown.target,
-  )
+  const steps: CalculationStep[] = []
 
   if (mitigation.damageType === 'TRUE') {
     steps.push({
@@ -1349,7 +1360,7 @@ function buildSensitivityCalculationSteps(
 
     const afterMitigation = isArts ? mitigation.afterResistance ?? 0 : mitigation.afterDefense ?? 0
     steps.push({
-      label: '軽減後の計算値',
+      label: '軽減式の結果（最低保証前）',
       formula: isArts
         ? `${attack} × (1 − ${formatCalculationNumber(appliedStat)} ÷ 100)`
         : `${attack} − ${formatCalculationNumber(appliedStat)}`,
@@ -1413,6 +1424,16 @@ function buildSensitivityCalculationSteps(
   }
 
   return steps
+}
+
+function getAttackModifierSummary(pipeline: AttackPipelineBreakdown): string {
+  const modifiers: string[] = []
+  if (pipeline.directAddition !== 0) modifiers.push(`A ${formatSignedNumber(pipeline.directAddition)}`)
+  if (pipeline.directMultiplierPercent !== 0) modifiers.push(`B ${formatSignedNumber(pipeline.directMultiplierPercent)}%`)
+  if (pipeline.finalAddition !== 0) modifiers.push(`C ${formatSignedNumber(pipeline.finalAddition)}`)
+  if (pipeline.finalMultiplier !== 1) modifiers.push(`D ×${formatCalculationNumber(pipeline.finalMultiplier)}`)
+  if (pipeline.attackScale !== 1) modifiers.push(`E ×${formatCalculationNumber(pipeline.attackScale)}`)
+  return modifiers.length > 0 ? modifiers.join(' · ') : 'A〜E補正なし'
 }
 
 function selectSensitivityCalculationRow(
