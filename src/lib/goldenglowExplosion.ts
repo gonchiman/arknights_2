@@ -92,6 +92,24 @@ export interface GoldenglowExpectedDpsResult {
   expectedDps: number
 }
 
+export interface GoldenglowSkill3FocusRow {
+  droneCount: number
+  expectedNormalDamage: number
+  expectedExplosionDamage: number
+  expectedTotalDamage: number
+  normalDps: number
+  explosionDps: number
+  expectedDps: number
+  expectedExplosionCount: number
+}
+
+export interface GoldenglowSkill3Output {
+  duration: number
+  activeDroneCount: number
+  attackOpportunitiesPerDrone: number
+  rows: GoldenglowSkill3FocusRow[]
+}
+
 export interface GoldenglowExpectedDpsCalculationInput {
   operatorId: string
   passives: OperatorPassives
@@ -379,6 +397,59 @@ export function calculateGoldenglowExpectedDpsFromModel(
     combinedExpectedTotalDamage,
     expectedDps: combinedExpectedTotalDamage / duration,
   }
+}
+
+/**
+ * Builds the S3-only presentation model for showing how its three independently
+ * targeting Drones scale when one, two, or all three stay on the same enemy.
+ */
+export function buildGoldenglowSkill3Output(
+  operatorId: string,
+  skillIndex: number,
+  expectation: GoldenglowExpectedDpsResult | null | undefined,
+): GoldenglowSkill3Output | null {
+  if (
+    !isGoldenglowSkill3(operatorId, skillIndex)
+    || !expectation
+    || expectation.mode !== 'FINITE_WINDOW'
+    || expectation.body.active
+    || expectation.duration === null
+    || expectation.duration <= 0
+    || expectation.theoreticalAttackCount === null
+    || expectation.perDrone.expectedNormalDamage === null
+    || expectation.perDrone.expectedExplosionDamage === null
+    || expectation.perDrone.expectedTotalDamage === null
+    || expectation.perDrone.expectedExplosionCount === null
+  ) {
+    return null
+  }
+
+  const activeDroneCount = Math.max(0, Math.floor(expectation.model.activeDroneCount))
+  if (activeDroneCount <= 0) return null
+
+  const perDrone = expectation.perDrone
+  return {
+    duration: expectation.duration,
+    activeDroneCount,
+    attackOpportunitiesPerDrone: expectation.theoreticalAttackCount,
+    rows: Array.from({ length: activeDroneCount }, (_, index) => {
+      const droneCount = index + 1
+      return {
+        droneCount,
+        expectedNormalDamage: (perDrone.expectedNormalDamage ?? 0) * droneCount,
+        expectedExplosionDamage: (perDrone.expectedExplosionDamage ?? 0) * droneCount,
+        expectedTotalDamage: (perDrone.expectedTotalDamage ?? 0) * droneCount,
+        normalDps: perDrone.normalDps * droneCount,
+        explosionDps: perDrone.explosionDps * droneCount,
+        expectedDps: perDrone.dps * droneCount,
+        expectedExplosionCount: (perDrone.expectedExplosionCount ?? 0) * droneCount,
+      }
+    }),
+  }
+}
+
+export function isGoldenglowSkill3(operatorId: string, skillIndex: number): boolean {
+  return operatorId === GOLDENGLOW_OPERATOR_ID && skillIndex === 3
 }
 
 /** Returns the PRD chance for the next drone attack after consecutive misses. */

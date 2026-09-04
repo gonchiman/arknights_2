@@ -1025,6 +1025,23 @@
   font-weight: 400;
 }
 
+.goldenglow-output-heading-tools {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.goldenglow-copy-button {
+  min-height: 24px;
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  font-size: 9px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
 .goldenglow-table-wrap,
 .mech-accord-table-wrap {
   width: 100%;
@@ -1032,6 +1049,11 @@
   max-width: 100%;
   overflow-x: auto;
   overscroll-behavior-inline: contain;
+}
+
+.goldenglow-table-wrap:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
 }
 
 .goldenglow-output-table {
@@ -1083,6 +1105,26 @@
   color: var(--text);
   font-size: 11px;
   font-weight: 700;
+}
+
+.goldenglow-s3-table {
+  min-width: 680px;
+  table-layout: auto;
+}
+
+.goldenglow-s3-table th:first-child,
+.goldenglow-s3-table td:first-child {
+  width: 19%;
+}
+
+.goldenglow-s3-table tbody tr.goldenglow-s3-all-drones {
+  background: #f1f8f3;
+}
+
+.goldenglow-s3-table tbody tr.goldenglow-s3-all-drones th,
+.goldenglow-s3-table tbody tr.goldenglow-s3-all-drones td {
+  color: #365c40;
+  font-weight: 800;
 }
 
 .goldenglow-note {
@@ -1142,6 +1184,10 @@
 
 .goldenglow-output-table tbody tr:hover,
 .mech-accord-table tbody tr:hover { background: transparent; }
+
+.goldenglow-s3-table tbody tr.goldenglow-s3-all-drones:hover {
+  background: #f1f8f3;
+}
 .mech-accord-table tbody tr:last-child th,
 .mech-accord-table tbody tr:last-child td { border-bottom: 0; }
 
@@ -1294,6 +1340,12 @@
 }
 
 .calculation-unavailable strong { font-size: 11px; }
+
+.goldenglow-s3-calculation-route {
+  border-left-color: #5a8b67;
+  background: #f1f8f3;
+  color: #46664d;
+}
 
 .sensitivity-toolbar {
   min-width: 0;
@@ -1527,6 +1579,11 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 3px;
+  }
+
+  .goldenglow-output-heading-tools {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .mech-accord-table { min-width: 320px; }
