@@ -1,4 +1,5 @@
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
+import { writeClipboardText } from '../lib/clipboard'
 import {
   DAMAGE_TYPE_LABELS,
   calculateAttackPipeline,
@@ -32,10 +33,13 @@ import {
   type MechAccordDamageRowsResult,
 } from '../lib/mechAccordDamage'
 import {
+  buildGoldenglowSkill3Output,
   calculateGoldenglowExplosion,
   calculateGoldenglowExpectedDpsFromModel,
+  isGoldenglowSkill3,
   type GoldenglowExplosionDamageResult,
   type GoldenglowExpectedDpsResult,
+  type GoldenglowSkill3Output,
 } from '../lib/goldenglowExplosion'
 import {
   DAMAGE_CALCULATOR_PANEL_DEFAULTS,
@@ -374,6 +378,19 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
       enemyResistance: REFERENCE_ENEMY_RESISTANCE,
     })
     : null
+  const isGoldenglowSkill3Selected = Boolean(
+    selectedOperator
+    && selectedSkill
+    && isGoldenglowSkill3(selectedOperator.operatorId, selectedSkill.skillIndex),
+  )
+  const goldenglowSkill3Output = selectedOperator && selectedSkill
+    ? buildGoldenglowSkill3Output(
+      selectedOperator.operatorId,
+      selectedSkill.skillIndex,
+      goldenglowExpectedDps,
+    )
+    : null
+  const genericSkillSupported = skillSupported && !isGoldenglowSkill3Selected
   const subProfessionOutputPanelState = getDamageOutputPanelState(
     mechAccordDamage !== null,
     subProfessionOutputOpen,
@@ -382,9 +399,12 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
     goldenglowExplosion !== null && goldenglowExpectedDps !== null,
     operatorOutputOpen,
   )
-  const skillOutputPanelState = getDamageOutputPanelState(false, skillOutputOpen)
+  const skillOutputPanelState = getDamageOutputPanelState(
+    goldenglowSkill3Output !== null,
+    skillOutputOpen,
+  )
   const panelNumbers = getDamageCalculatorPanelNumbers()
-  const referenceSkillBreakdown = selectedSkill && model && skillSupported && skillDamageType
+  const referenceSkillBreakdown = selectedSkill && model && genericSkillSupported && skillDamageType
     ? calculateSkillDamageBreakdown(
       operatorStats.attack,
       skillDamageType,
@@ -418,13 +438,13 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
     skillDamageType,
     model,
     selectedSkill,
-    skillSupported,
+    skillSupported: genericSkillSupported,
     canShowSkillTotal,
     metric: sensitivityMetric,
     skillAttackModifiers,
     normalMitigationModifiers,
     skillMitigationModifiers,
-  }), [operatorStats.attack, normalAttackPipeline.finalAttack, operatorStats.attackInterval, normalDamageType, skillDamageType, model, selectedSkill, skillSupported, canShowSkillTotal, sensitivityMetric, skillAttackModifiers, normalMitigationModifiers, skillMitigationModifiers])
+  }), [operatorStats.attack, normalAttackPipeline.finalAttack, operatorStats.attackInterval, normalDamageType, skillDamageType, model, selectedSkill, genericSkillSupported, canShowSkillTotal, sensitivityMetric, skillAttackModifiers, normalMitigationModifiers, skillMitigationModifiers])
 
   if (loading && rows.length === 0) {
     return (
@@ -880,10 +900,17 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
               {unsupportedReasons.map((reason) => <span key={reason}>{reason}</span>)}
             </div>
           )}
-          {sensitivityMetric === 'DPS' && sensitivityData.tableRows.every((row) => row.skill === null) && (
+          {isGoldenglowSkill3Selected && (
+            <p className="sensitivity-metric-note">
+              {goldenglowSkill3Output
+                ? 'ゴールデングローS3は本体が攻撃しないため、汎用式によるスキル値は表示しません。正確な期待値は「08 スキル固有出力」で確認できます。'
+                : 'ゴールデングローS3は専用期待値モデルの対象です。現在の育成状態では必要な素質データを取得できないため、スキル値を表示しません。'}
+            </p>
+          )}
+          {!isGoldenglowSkill3Selected && sensitivityMetric === 'DPS' && sensitivityData.tableRows.every((row) => row.skill === null) && (
             <p className="sensitivity-metric-note">選択中のスキルはDPSを算出できないため、スキル欄は「—」で表示します。</p>
           )}
-          {sensitivityMetric === 'TOTAL' && !canShowSkillTotal && (
+          {!isGoldenglowSkill3Selected && sensitivityMetric === 'TOTAL' && !canShowSkillTotal && (
             <p className="sensitivity-metric-note">選択中のスキルは{skillTotalLabel}を算出できません。</p>
           )}
           {sensitivityMetric !== 'TOTAL' && damageTypesDiffer && (
@@ -893,7 +920,11 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
           )}
           {!hasSensitivityResults ? (
             <p className="sensitivity-results-unavailable">
-              {sensitivityDamageType === null
+              {isGoldenglowSkill3Selected
+                ? goldenglowSkill3Output
+                  ? 'この表示内容は共通出力の対象外です。S3の期待DPS・期待総ダメージは「08 スキル固有出力」で確認できます。'
+                  : 'この表示内容は共通出力の対象外です。S3固有出力に必要な素質が解放される育成状態を選択してください。'
+                : sensitivityDamageType === null
                 ? '基準となるダメージ種別を自動判定できないため、計算結果を表示できません。'
                 : '表示できる計算結果がありません。'}
             </p>
@@ -996,7 +1027,9 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         id="skill-output-panel"
         number={panelNumbers.skillOutput}
         title={DAMAGE_OUTPUT_PANELS.skill.title}
-        summary={`S${selectedSkill.skillIndex} ${selectedSkill.skillName} · 固有出力なし`}
+        summary={goldenglowSkill3Output
+          ? `S3 ${selectedSkill.skillName} · 浮遊${goldenglowSkill3Output.activeDroneCount}体集中時 期待DPS ${formatNumber(goldenglowSkill3Output.rows.at(-1)?.expectedDps ?? 0)}`
+          : `S${selectedSkill.skillIndex} ${selectedSkill.skillName} · 固有出力なし`}
         open={skillOutputPanelState.open}
         onToggle={() => setSkillOutputOpen((open) => !open)}
         collapsedLabel="スキル固有出力を表示"
@@ -1007,7 +1040,14 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
           skillOutputPanelState.disabled ? 'disabled-output-panel' : 'results-panel',
         ].join(' ')}
       >
-        <DamageOutputEmptyState subject={`S${selectedSkill.skillIndex} ${selectedSkill.skillName}`} />
+        {goldenglowSkill3Output
+          ? (
+            <GoldenglowSkill3FocusOutput
+              output={goldenglowSkill3Output}
+              skillLabel={`S3 ${selectedSkillLevel.name ?? selectedSkill.skillName}`}
+            />
+          )
+          : <DamageOutputEmptyState subject={`S${selectedSkill.skillIndex} ${selectedSkill.skillName}`} />}
       </CollapsibleCalculatorPanel>
 
       <CollapsibleCalculatorPanel
@@ -1037,25 +1077,42 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         id="skill-calculation-process-panel"
         number={panelNumbers.skillCalculationProcess}
         title="スキルの計算過程"
-        summary={skillOutput
-          ? `防御力0・術耐性0 · 1攻撃 ${formatNumber(skillOutput.perAttack)} · DPS ${skillOutput.dps === null ? '—' : formatNumber(skillOutput.dps)}`
-          : '自動計算対象外'}
+        summary={isGoldenglowSkill3Selected
+          ? goldenglowSkill3Output
+            ? 'S3専用期待値モデル · 08 スキル固有出力を参照'
+            : 'S3専用期待値モデル · 現在の育成状態では出力不可'
+          : skillOutput
+            ? `防御力0・術耐性0 · 1攻撃 ${formatNumber(skillOutput.perAttack)} · DPS ${skillOutput.dps === null ? '—' : formatNumber(skillOutput.dps)}`
+            : '自動計算対象外'}
         open={skillCalculationProcessOpen}
         onToggle={() => setSkillCalculationProcessOpen((open) => !open)}
         collapsedLabel="式と代入値を表示"
         className="calculation-process-panel"
         bodyClassName="calculation-process-body"
       >
-        <CalculationTrace
-          title="スキル"
-          steps={skillCalculationSteps}
-          unavailableReasons={skillOutput ? [] : unsupportedReasons}
-          passiveEffects={skillOperatorEffects.effects}
-          moduleApplication={moduleApplication}
-        />
-        <p className="calculation-process-note">
-          この式は敵防御力・術耐性0の基準値です。反映済みの特性・素質・モジュール効果はスキル補正と同じA〜Eへ合流します。条件入力が必要・未対応の効果は数値へ加えません。固定時間の総ダメージは、DPS × 効果時間による連続値の理論値です。
-        </p>
+        {isGoldenglowSkill3Selected ? (
+          <div className="calculation-unavailable goldenglow-s3-calculation-route">
+            <strong>{goldenglowSkill3Output
+              ? 'S3は専用の確率モデルで計算しています'
+              : 'S3固有出力に必要な素質データを取得できません'}</strong>
+            <span>{goldenglowSkill3Output
+              ? '本体停止、浮遊ユニットの連続攻撃倍率、自爆の疑似ランダム分布をまとめた計算結果を「08 スキル固有出力」に表示します。'
+              : '爆発素質が解放される昇進段階を選択すると、S3固有の期待値を計算できます。'}</span>
+          </div>
+        ) : (
+          <>
+            <CalculationTrace
+              title="スキル"
+              steps={skillCalculationSteps}
+              unavailableReasons={skillOutput ? [] : unsupportedReasons}
+              passiveEffects={skillOperatorEffects.effects}
+              moduleApplication={moduleApplication}
+            />
+            <p className="calculation-process-note">
+              この式は敵防御力・術耐性0の基準値です。反映済みの特性・素質・モジュール効果はスキル補正と同じA〜Eへ合流します。条件入力が必要・未対応の効果は数値へ加えません。固定時間の総ダメージは、DPS × 効果時間による連続値の理論値です。
+            </p>
+          </>
+        )}
       </CollapsibleCalculatorPanel>
     </section>
   )
@@ -1367,20 +1424,89 @@ function GoldenglowExpectedDpsOutput({
   expectation: GoldenglowExpectedDpsResult
   skillLabel: string
 }) {
+  const [copyState, setCopyState] = useState<'IDLE' | 'COPIED' | 'FAILED'>('IDLE')
+  const copyFeedbackTimerRef = useRef<number | null>(null)
   const { model } = explosion
   const isFiniteWindow = expectation.mode === 'FINITE_WINDOW'
   const expectedExplosionMetric = isFiniteWindow
     ? expectation.allDrones.expectedExplosionCount ?? 0
     : expectation.expectedExplosionsPerSecondPerDrone * model.activeDroneCount
+  const outputRows = [
+    { label: '爆発込み期待DPS', value: formatNumber(expectation.expectedDps) },
+    {
+      label: '期待総ダメージ',
+      value: isFiniteWindow ? formatNumber(expectation.combinedExpectedTotalDamage ?? 0) : '—（永続）',
+    },
+    {
+      label: isFiniteWindow ? '期待爆発回数' : '爆発頻度',
+      value: isFiniteWindow
+        ? `${formatNumber(expectedExplosionMetric)}回`
+        : `${formatDecimal(expectedExplosionMetric)}回/秒`,
+    },
+    { label: '爆発1回', value: formatNumber(explosion.damageAfterMitigation) },
+  ]
+  const tableText = [
+    ['出力', '値'],
+    ...outputRows.map((row) => [row.label, row.value]),
+  ].map((row) => row.join('\t')).join('\r\n')
+  const copyLabel = copyState === 'COPIED'
+    ? 'コピー済み'
+    : copyState === 'FAILED' ? 'コピー失敗' : '表をコピー'
+  const copyAnnouncement = copyState === 'COPIED'
+    ? 'ゴールデングローの期待値表をコピーしました。'
+    : copyState === 'FAILED' ? 'ゴールデングローの期待値表をコピーできませんでした。' : ''
+
+  useEffect(() => {
+    setCopyState('IDLE')
+    return () => {
+      if (copyFeedbackTimerRef.current !== null) {
+        window.clearTimeout(copyFeedbackTimerRef.current)
+        copyFeedbackTimerRef.current = null
+      }
+    }
+  }, [tableText])
+
+  const copyOutputTable = async () => {
+    let nextState: 'COPIED' | 'FAILED' = 'COPIED'
+    try {
+      await writeClipboardText(tableText)
+    } catch {
+      nextState = 'FAILED'
+    }
+
+    setCopyState(nextState)
+    if (copyFeedbackTimerRef.current !== null) {
+      window.clearTimeout(copyFeedbackTimerRef.current)
+    }
+    copyFeedbackTimerRef.current = window.setTimeout(() => {
+      setCopyState('IDLE')
+      copyFeedbackTimerRef.current = null
+    }, 2500)
+  }
 
   return (
     <section className="goldenglow-output" aria-labelledby="goldenglow-output-heading" aria-live="off">
       <div className="goldenglow-output-heading">
         <h3 id="goldenglow-output-heading">ゴールデングロー・爆発込み期待値</h3>
-        <p>
-          {skillLabel} · {isFiniteWindow ? `${formatNumber(expectation.duration ?? 0)}秒` : '永続'}
-          {' '}· 浮遊{model.activeDroneCount}体 · 術耐性0
-        </p>
+        <div className="goldenglow-output-heading-tools">
+          <p>
+            {skillLabel} · {isFiniteWindow ? `${formatNumber(expectation.duration ?? 0)}秒` : '永続'}
+            {' '}· 浮遊{model.activeDroneCount}体 · 術耐性0
+          </p>
+          <button
+            type="button"
+            className="button secondary goldenglow-copy-button"
+            aria-label={copyState === 'IDLE'
+              ? 'ゴールデングローの期待値表をコピー'
+              : `ゴールデングローの期待値表をコピー（${copyLabel}）`}
+            onClick={() => void copyOutputTable()}
+          >
+            {copyLabel}
+          </button>
+          <span className="visually-hidden" role="status" aria-live="polite">
+            {copyAnnouncement}
+          </span>
+        </div>
       </div>
       <div className="goldenglow-table-wrap">
         <table className="goldenglow-output-table" aria-labelledby="goldenglow-output-heading">
@@ -1388,27 +1514,79 @@ function GoldenglowExpectedDpsOutput({
             <tr><th scope="col">出力</th><th scope="col">値</th></tr>
           </thead>
           <tbody>
-            <tr>
-              <th scope="row">爆発込み期待DPS</th>
-              <td>{formatNumber(expectation.expectedDps)}</td>
-            </tr>
-            <tr>
-              <th scope="row">期待総ダメージ</th>
-              <td>{isFiniteWindow ? formatNumber(expectation.combinedExpectedTotalDamage ?? 0) : '—（永続）'}</td>
-            </tr>
-            <tr>
-              <th scope="row">{isFiniteWindow ? '期待爆発回数' : '爆発頻度'}</th>
-              <td>{isFiniteWindow ? `${formatNumber(expectedExplosionMetric)}回` : `${formatDecimal(expectedExplosionMetric)}回/秒`}</td>
-            </tr>
-            <tr>
-              <th scope="row">爆発1回</th>
-              <td>{formatNumber(explosion.damageAfterMitigation)}</td>
-            </tr>
+            {outputRows.map((row) => (
+              <tr key={row.label}>
+                <th scope="row">{row.label}</th>
+                <td>{row.value}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
       <p className="goldenglow-note">
         本体と全浮遊ユニットを合算した単体への理論値です（S3は浮遊のみ）。S1・S3は攻撃位相平均、S2は定常値、爆発後の戻り時間は0として計算します。
+      </p>
+    </section>
+  )
+}
+
+function GoldenglowSkill3FocusOutput({
+  output,
+  skillLabel,
+}: {
+  output: GoldenglowSkill3Output
+  skillLabel: string
+}) {
+  const allDrones = output.rows.at(-1)
+
+  return (
+    <section className="goldenglow-output goldenglow-s3-output" aria-labelledby="goldenglow-s3-output-heading" aria-live="off">
+      <div className="goldenglow-output-heading">
+        <h3 id="goldenglow-s3-output-heading">全画面索敵・同一対象への集中期待値</h3>
+        <p>
+          {skillLabel} · {formatNumber(output.duration)}秒 · 浮遊{output.activeDroneCount}体
+          {' '}· 全機の期待自爆{formatNumber(allDrones?.expectedExplosionCount ?? 0)}回 · 術耐性0
+        </p>
+      </div>
+      <div
+        className="goldenglow-table-wrap"
+        role="region"
+        aria-labelledby="goldenglow-s3-output-heading"
+        tabIndex={0}
+      >
+        <table className="goldenglow-output-table goldenglow-s3-table">
+          <caption className="visually-hidden">
+            ゴールデングローS3で同じ敵を攻撃する浮遊ユニット数ごとの期待値
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">同一対象への浮遊</th>
+              <th scope="col">浮遊通常攻撃の期待DPS</th>
+              <th scope="col">自爆の期待DPS</th>
+              <th scope="col">合計期待DPS</th>
+              <th scope="col">期待総ダメージ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {output.rows.map((row) => (
+              <tr
+                key={row.droneCount}
+                className={row.droneCount === output.activeDroneCount ? 'goldenglow-s3-all-drones' : undefined}
+              >
+                <th scope="row">
+                  {row.droneCount}体{row.droneCount === output.activeDroneCount ? '（全機）' : ''}
+                </th>
+                <td>{formatNumber(row.normalDps)}</td>
+                <td>{formatNumber(row.explosionDps)}</td>
+                <td>{formatNumber(row.expectedDps)}</td>
+                <td>{formatNumber(row.expectedTotalDamage)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="goldenglow-note">
+        1〜{output.activeDroneCount}体が同じ単体を{formatNumber(output.duration)}秒間攻撃し続ける場合の理論期待値です。1体あたりの攻撃機会は{formatNumber(output.attackOpportunitiesPerDrone)}回として、本体攻撃は0、自爆は通常攻撃との置き換えで集計します。自爆の範囲巻き込みと0.5秒の足止めはダメージに含めず、攻撃位相を平均し、帰還・再索敵時間は0として計算します。
       </p>
     </section>
   )
