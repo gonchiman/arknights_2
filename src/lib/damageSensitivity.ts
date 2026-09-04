@@ -2,22 +2,27 @@ import type {
   DamageCalculationBreakdown,
   DamageType,
   SkillDamageBreakdown,
+  SkillTotalMode,
 } from './damageCalculator'
 
 export type DamageSensitivityMetric = 'DAMAGE' | 'DPS' | 'TOTAL'
 export type DamageSensitivityTarget = 'NORMAL' | 'SKILL'
 
 export interface DamageSensitivityBreakdown {
-  damageType: DamageType
-  beforeMitigation: number
-  afterMitigation: number
-  minimumDamage: number | null
-  minimumApplied: boolean
+  target: DamageSensitivityTarget
+  metric: DamageSensitivityMetric
+  mitigation: DamageCalculationBreakdown
+  hitCount: number
+  perHit: number
+  perAttack: number
+  attackInterval: number
+  dps: number | null
+  totalMode: SkillTotalMode
+  duration: number
+  ammoCount: number
+  total: number | null
   minimumReached: boolean
   finalValue: number
-  inputMitigationStat: number | null
-  fixedIgnore: number
-  appliedMitigationStat: number | null
 }
 
 export const DEFAULT_DAMAGE_SENSITIVITY_TARGET: DamageSensitivityTarget = 'SKILL'
@@ -127,6 +132,7 @@ export function getDamageSensitivityBreakdown({
   canShowSkillTotal: boolean
 }): DamageSensitivityBreakdown | null {
   const mitigation = target === 'NORMAL' ? normalBreakdown : skillBreakdown?.mitigation ?? null
+  const effectiveMetric = getDamageSensitivityMetricForTarget(target, metric)
   const finalValue = selectDamageSensitivityValue({
     target,
     metric,
@@ -135,94 +141,58 @@ export function getDamageSensitivityBreakdown({
     skillBreakdown,
     canShowSkillTotal,
   })
-  const metricScale = getDamageSensitivityMetricScale({
-    target,
-    metric,
-    normalAttackInterval,
-    skillBreakdown,
-    canShowSkillTotal,
-  })
-  if (mitigation === null || finalValue === null || metricScale === null) return null
+  if (mitigation === null || finalValue === null) return null
+  const perHit = mitigation.result
+  let hitCount: number
+  let perAttack: number
+  let attackInterval: number
+  let dps: number | null
+  let totalMode: SkillTotalMode
+  let duration: number
+  let ammoCount: number
+  let total: number | null
 
-  const afterMitigationPerHit = mitigation.damageType === 'PHYSICAL'
-    ? mitigation.afterDefense ?? mitigation.attack
-    : mitigation.damageType === 'ARTS'
-      ? mitigation.afterResistance ?? mitigation.attack
-      : mitigation.attack
-  const beforeMitigation = mitigation.attack * metricScale
-  const afterMitigation = Math.max(0, afterMitigationPerHit) * metricScale
-  const minimumDamage = mitigation.minimumDamage === null
-    ? null
-    : mitigation.minimumDamage * metricScale
+  if (target === 'NORMAL') {
+    hitCount = 1
+    perAttack = perHit
+    attackInterval = normalAttackInterval
+    dps = attackInterval > 0 ? perAttack / attackInterval : null
+    totalMode = 'NONE'
+    duration = 0
+    ammoCount = 0
+    total = null
+  } else {
+    if (skillBreakdown === null) return null
+    hitCount = skillBreakdown.hitCount
+    perAttack = skillBreakdown.perAttack
+    attackInterval = skillBreakdown.attackInterval
+    dps = skillBreakdown.dps
+    totalMode = skillBreakdown.totalMode
+    duration = skillBreakdown.duration
+    ammoCount = skillBreakdown.ammoCount
+    total = skillBreakdown.total
+  }
+  const minimumDamage = mitigation.minimumDamage
   const minimumTolerance = minimumDamage === null
     ? 0
-    : Number.EPSILON * Math.max(1, Math.abs(beforeMitigation), Math.abs(minimumDamage), Math.abs(finalValue)) * 32
+    : Number.EPSILON * Math.max(1, Math.abs(mitigation.attack), Math.abs(minimumDamage), Math.abs(perHit)) * 32
 
   return {
-    damageType: mitigation.damageType,
-    beforeMitigation,
-    afterMitigation,
-    minimumDamage,
-    minimumApplied: mitigation.minimumApplied,
+    target,
+    metric: effectiveMetric,
+    mitigation,
+    hitCount,
+    perHit,
+    perAttack,
+    attackInterval,
+    dps,
+    totalMode,
+    duration,
+    ammoCount,
+    total,
     minimumReached: minimumDamage !== null
       && minimumDamage > 0
-      && finalValue <= minimumDamage + minimumTolerance,
+      && perHit <= minimumDamage + minimumTolerance,
     finalValue,
-    inputMitigationStat: mitigation.damageType === 'PHYSICAL'
-      ? mitigation.defenseBeforeIgnore
-      : mitigation.damageType === 'ARTS'
-        ? mitigation.resistanceBeforeIgnore
-        : null,
-    fixedIgnore: mitigation.damageType === 'PHYSICAL'
-      ? mitigation.defenseIgnoreFixed
-      : mitigation.damageType === 'ARTS'
-        ? mitigation.resistanceIgnoreFixed
-        : 0,
-    appliedMitigationStat: mitigation.damageType === 'PHYSICAL'
-      ? mitigation.appliedDefense
-      : mitigation.damageType === 'ARTS'
-        ? mitigation.appliedResistance
-        : null,
   }
-}
-
-function getDamageSensitivityMetricScale({
-  target,
-  metric,
-  normalAttackInterval,
-  skillBreakdown,
-  canShowSkillTotal,
-}: {
-  target: DamageSensitivityTarget
-  metric: DamageSensitivityMetric
-  normalAttackInterval: number
-  skillBreakdown: SkillDamageBreakdown | null
-  canShowSkillTotal: boolean
-}): number | null {
-  const effectiveMetric = getDamageSensitivityMetricForTarget(target, metric)
-  if (target === 'NORMAL') {
-    return effectiveMetric === 'DPS'
-      ? normalAttackInterval > 0 ? 1 / normalAttackInterval : null
-      : 1
-  }
-  if (skillBreakdown === null) return null
-  if (effectiveMetric === 'DAMAGE') return skillBreakdown.hitCount
-  if (effectiveMetric === 'DPS') {
-    return skillBreakdown.dps !== null && skillBreakdown.attackInterval > 0
-      ? skillBreakdown.hitCount / skillBreakdown.attackInterval
-      : null
-  }
-  if (!canShowSkillTotal || skillBreakdown.total === null) return null
-  if (skillBreakdown.totalMode === 'DURATION') {
-    return skillBreakdown.attackInterval > 0 && skillBreakdown.duration > 0
-      ? skillBreakdown.hitCount * skillBreakdown.duration / skillBreakdown.attackInterval
-      : null
-  }
-  if (skillBreakdown.totalMode === 'AMMO') {
-    return skillBreakdown.ammoCount > 0
-      ? skillBreakdown.hitCount * skillBreakdown.ammoCount
-      : null
-  }
-  if (skillBreakdown.totalMode === 'ACTIVATION') return skillBreakdown.hitCount
-  return null
 }

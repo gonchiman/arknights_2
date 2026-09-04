@@ -199,7 +199,7 @@ test('選択した攻撃だけの1攻撃・DPS・総ダメージを返す', () =
   }), null)
 })
 
-test('通常攻撃の軽減内訳を表と同じ表示単位で返す', () => {
+test('通常攻撃の選択行計算データを1ヒット単位で返す', () => {
   const normalBreakdown = calculateDamageBreakdown(1000, 'PHYSICAL', 300, 0, {
     defenseIgnoreFixed: 100,
   })
@@ -213,16 +213,20 @@ test('通常攻撃の軽減内訳を表と同じ表示単位で返す', () => {
   })
 
   assert.deepEqual(breakdown, {
-    damageType: 'PHYSICAL',
-    beforeMitigation: 1000,
-    afterMitigation: 800,
-    minimumDamage: 50,
-    minimumApplied: false,
+    target: 'NORMAL',
+    metric: 'DAMAGE',
+    mitigation: normalBreakdown,
+    hitCount: 1,
+    perHit: 800,
+    perAttack: 800,
+    attackInterval: 2,
+    dps: 400,
+    totalMode: 'NONE',
+    duration: 0,
+    ammoCount: 0,
+    total: null,
     minimumReached: false,
     finalValue: 800,
-    inputMitigationStat: 300,
-    fixedIgnore: 100,
-    appliedMitigationStat: 200,
   })
   assert.equal(getDamageSensitivityBreakdown({
     target: 'NORMAL',
@@ -234,7 +238,28 @@ test('通常攻撃の軽減内訳を表と同じ表示単位で返す', () => {
   }), null)
 })
 
-test('スキル総ダメージの最低保証を表と同じ表示単位へ換算する', () => {
+test('物理の軽減後が負数でも選択行の計算過程用データへ保持する', () => {
+  const normalBreakdown = calculateDamageBreakdown(1000, 'PHYSICAL', 2000, 0, {
+    defenseIgnoreFixed: 100,
+  })
+  const breakdown = getDamageSensitivityBreakdown({
+    target: 'NORMAL',
+    metric: 'DAMAGE',
+    normalBreakdown,
+    normalAttackInterval: 2,
+    skillBreakdown: null,
+    canShowSkillTotal: false,
+  })
+
+  assert.equal(breakdown?.mitigation.appliedDefense, 1900)
+  assert.equal(breakdown?.mitigation.afterDefense, -900)
+  assert.equal(breakdown?.mitigation.minimumDamage, 50)
+  assert.equal(breakdown?.perHit, 50)
+  assert.equal(breakdown?.minimumReached, true)
+  assert.equal(breakdown?.finalValue, 50)
+})
+
+test('スキル総ダメージの計算過程を1ヒットから総量まで保持する', () => {
   const skillBreakdown = calculateSkillDamageBreakdown(1000, 'ARTS', 0, 100, {
     directMultiplierPercent: 0,
     attackScalePercent: 100,
@@ -256,16 +281,20 @@ test('スキル総ダメージの最低保証を表と同じ表示単位へ換�
   })
 
   assert.deepEqual(breakdown, {
-    damageType: 'ARTS',
-    beforeMitigation: 10000,
-    afterMitigation: 0,
-    minimumDamage: 500,
-    minimumApplied: true,
+    target: 'SKILL',
+    metric: 'TOTAL',
+    mitigation: skillBreakdown.mitigation,
+    hitCount: 2,
+    perHit: 50,
+    perAttack: 100,
+    attackInterval: 2,
+    dps: 50,
+    totalMode: 'DURATION',
+    duration: 10,
+    ammoCount: 0,
+    total: 500,
     minimumReached: true,
     finalValue: 500,
-    inputMitigationStat: 100,
-    fixedIgnore: 0,
-    appliedMitigationStat: 100,
   })
   assert.equal(getDamageSensitivityBreakdown({
     target: 'SKILL',
