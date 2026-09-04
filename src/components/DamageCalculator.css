@@ -1016,23 +1016,6 @@
   font-weight: 400;
 }
 
-.goldenglow-output-heading-tools {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.goldenglow-copy-button {
-  min-height: 24px;
-  flex: 0 0 auto;
-  padding: 2px 7px;
-  font-size: 9px;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
 .goldenglow-output-control {
   margin: 0 0 8px;
 }
@@ -1059,6 +1042,78 @@
 .goldenglow-table-wrap:focus-visible {
   outline: 2px solid var(--link);
   outline-offset: 2px;
+}
+
+.goldenglow-copyable-table {
+  position: relative;
+}
+
+.goldenglow-table-copy-button {
+  position: absolute;
+  z-index: 2;
+  top: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #b9d1bf;
+  border-radius: 3px;
+  background: #fff;
+  color: var(--text-muted);
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.goldenglow-table-copy-button svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.goldenglow-table-copy-button:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.goldenglow-table-copy-button:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 1px;
+}
+
+.goldenglow-table-copy-button.is-copied {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.goldenglow-table-copy-button.is-failed {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.goldenglow-copyable-table .goldenglow-output-table thead th:last-child {
+  padding-right: 40px;
+}
+
+.goldenglow-copyable-table .goldenglow-output-table thead th {
+  height: 36px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .goldenglow-table-copy-button {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .goldenglow-copyable-table:hover .goldenglow-table-copy-button,
+  .goldenglow-copyable-table:focus-within .goldenglow-table-copy-button,
+  .goldenglow-table-copy-button.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .goldenglow-output-table {
@@ -1758,11 +1813,6 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 3px;
-  }
-
-  .goldenglow-output-heading-tools {
-    width: 100%;
-    justify-content: space-between;
   }
 
   .mech-accord-table { min-width: 320px; }

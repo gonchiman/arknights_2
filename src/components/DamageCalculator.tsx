@@ -1683,25 +1683,10 @@ function GoldenglowResistanceDamageOutput({
     <section className="goldenglow-output" aria-labelledby="goldenglow-output-heading" aria-live="off">
       <div className="goldenglow-output-heading">
         <h3 id="goldenglow-output-heading">ゴールデングロー・術耐性別ダメージ</h3>
-        <div className="goldenglow-output-heading-tools">
-          <p>
-            {skillLabel} · 爆発倍率{formatNumber(model.attackScalePercent)}%
-            {' '}· 術耐性固定無視{formatNumber(model.resistanceIgnoreFixed)}
-          </p>
-          <button
-            type="button"
-            className="button secondary goldenglow-copy-button"
-            aria-label={copyState === 'IDLE'
-              ? `ゴールデングローの${outputOption.buttonLabel}表をコピー`
-              : `ゴールデングローの${outputOption.buttonLabel}表をコピー（${copyLabel}）`}
-            onClick={() => void copyOutputTable()}
-          >
-            {copyLabel}
-          </button>
-          <span className="visually-hidden" role="status" aria-live="polite">
-            {copyAnnouncement}
-          </span>
-        </div>
+        <p>
+          {skillLabel} · 爆発倍率{formatNumber(model.attackScalePercent)}%
+          {' '}· 術耐性固定無視{formatNumber(model.resistanceIgnoreFixed)}
+        </p>
       </div>
       <div className="sensitivity-control goldenglow-output-control">
         <span>出力を選択</span>
@@ -1735,33 +1720,69 @@ function GoldenglowResistanceDamageOutput({
           <span className="minimum-damage-legend"><span aria-hidden="true">※</span>術ダメージ最低保証</span>
         </div>
       )}
-      <div
-        className="goldenglow-table-wrap"
-        role="region"
-        aria-label={`術耐性別の${outputOption.tableLabel}`}
-        tabIndex={0}
-      >
-        <table className="goldenglow-output-table" aria-labelledby="goldenglow-output-heading">
-          <thead>
-            <tr><th scope="col">術耐性</th><th scope="col">{outputOption.tableLabel}</th></tr>
-          </thead>
-          <tbody>
-            {outputRows.map((row) => (
-              <tr key={row.enemyResistance}>
-                <th scope="row">{formatNumber(row.enemyResistance)}%</th>
-                <td
-                  className={row.minimumReached ? 'minimum-damage-cell' : undefined}
-                  aria-label={row.minimumReached && row.value !== null
-                    ? `${formatNumber(row.value)}、術ダメージ最低保証`
-                    : undefined}
-                >
-                  {row.value === null ? '—' : formatNumber(row.value)}
-                  {row.minimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="goldenglow-copyable-table">
+        <div
+          className="goldenglow-table-wrap"
+          role="region"
+          aria-label={`術耐性別の${outputOption.tableLabel}`}
+          tabIndex={0}
+        >
+          <table className="goldenglow-output-table" aria-labelledby="goldenglow-output-heading">
+            <thead>
+              <tr><th scope="col">術耐性</th><th scope="col">{outputOption.tableLabel}</th></tr>
+            </thead>
+            <tbody>
+              {outputRows.map((row) => (
+                <tr key={row.enemyResistance}>
+                  <th scope="row">{formatNumber(row.enemyResistance)}%</th>
+                  <td
+                    className={row.minimumReached ? 'minimum-damage-cell' : undefined}
+                    aria-label={row.minimumReached && row.value !== null
+                      ? `${formatNumber(row.value)}、術ダメージ最低保証`
+                      : undefined}
+                  >
+                    {row.value === null ? '—' : formatNumber(row.value)}
+                    {row.minimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <button
+          type="button"
+          className={[
+            'goldenglow-table-copy-button',
+            copyState !== 'IDLE' ? 'is-visible' : '',
+            copyState === 'COPIED' ? 'is-copied' : '',
+            copyState === 'FAILED' ? 'is-failed' : '',
+          ].filter(Boolean).join(' ')}
+          aria-label={`ゴールデングローの${outputOption.buttonLabel}表をコピー`}
+          title={copyLabel}
+          onClick={() => void copyOutputTable()}
+        >
+          {copyState === 'COPIED'
+            ? (
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                <path d="m5 12 4 4L19 6" />
+              </svg>
+            )
+            : copyState === 'FAILED'
+              ? (
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                  <path d="m7 7 10 10M17 7 7 17" />
+                </svg>
+              )
+              : (
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                  <rect x="8" y="8" width="11" height="11" rx="1.5" />
+                  <path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" />
+                </svg>
+              )}
+        </button>
+        <span className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+          {copyAnnouncement}
+        </span>
       </div>
       <p className="goldenglow-note">
         入力術耐性から固定無視を差し引き、術ダメージの5%最低保証を適用します。爆発1回は浮遊ユニット1体分、期待値は本体と全浮遊ユニットの合算です（S3は浮遊のみ）。
