@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   calculateMechAccordDamageRows,
+  calculateMechAccordResistanceTable,
   getMechAccordMultiplierPercent,
   isMechAccordSubProfession,
 } from '../src/lib/mechAccordDamage.ts'
@@ -75,9 +76,74 @@ test('術耐性固定無視を本体と全ての浮遊ユニット出力へ適�
   assert.equal(first.combinedDamage, 840)
 })
 
+test('選択した攻撃回数について術耐性別の本体・浮遊・合計を返す', () => {
+  const table = calculateMechAccordResistanceTable(1000, 9999, 1)
+  const values = table.rows.map((row) => [
+    row.resistance,
+    roundForTest(row.mainDamage),
+    roundForTest(row.droneDamage),
+    roundForTest(row.combinedDamage),
+  ])
+
+  assert.equal(table.attackCount, 1)
+  assert.equal(table.attackCountLabel, '1回目')
+  assert.equal(table.multiplierPercent, 20)
+  assert.deepEqual(values, [
+    [0, 1000, 200, 1200],
+    [20, 800, 160, 960],
+    [40, 600, 120, 720],
+    [60, 400, 80, 480],
+    [80, 200, 40, 240],
+    [95, 50, 10, 60],
+    [100, 50, 10, 60],
+  ])
+  assert.equal(table.rows[5].mainBreakdown.minimumApplied, false)
+  assert.equal(table.rows[5].droneBreakdown.minimumApplied, false)
+  assert.equal(table.rows[5].mainMinimumReached, true)
+  assert.equal(table.rows[5].droneMinimumReached, true)
+  assert.equal(table.rows[5].combinedMinimumReached, true)
+  assert.equal(table.rows[6].mainBreakdown.minimumApplied, true)
+  assert.equal(table.rows[6].droneBreakdown.minimumApplied, true)
+})
+
+test('術耐性別出力で選択回数の倍率と8回目以降への正規化を適用する', () => {
+  const fourth = calculateMechAccordResistanceTable(1000, 0, 4)
+  const eighth = calculateMechAccordResistanceTable(1000, 0, 99)
+
+  assert.equal(fourth.attackCount, 4)
+  assert.equal(fourth.attackCountLabel, '4回目')
+  assert.equal(fourth.multiplierPercent, 65)
+  assert.equal(fourth.rows[0].mainDamage, 1000)
+  assert.equal(fourth.rows[0].droneDamage, 650)
+  assert.equal(fourth.rows[0].combinedDamage, 1650)
+  const ignored = calculateMechAccordResistanceTable(1000, 0, 1, {
+    resistanceIgnoreFixed: 20,
+  })
+  const resistance100 = ignored.rows.at(-1)
+
+  assert.equal(eighth.attackCount, 8)
+  assert.equal(eighth.attackCountLabel, '8回目以降')
+  assert.equal(eighth.multiplierPercent, 110)
+  assert.equal(eighth.rows[0].mainDamage, 1000)
+  assert.equal(eighth.rows[0].droneDamage, 1100)
+  assert.equal(eighth.rows[0].combinedDamage, 2100)
+  assert.equal(calculateMechAccordResistanceTable(1000, 0, Number.NaN).attackCount, 1)
+  assert.ok(resistance100)
+  assert.equal(resistance100.mainBreakdown.appliedResistance, 80)
+  assert.equal(resistance100.droneBreakdown.appliedResistance, 80)
+  assert.equal(roundForTest(resistance100.mainDamage), 200)
+  assert.equal(roundForTest(resistance100.droneDamage), 40)
+  assert.equal(roundForTest(resistance100.combinedDamage), 240)
+  assert.equal(resistance100.combinedMinimumReached, false)
+})
+
 test('操機術師の実データ職分ID funnelだけを対象とする', () => {
   assert.equal(isMechAccordSubProfession('funnel'), true)
   assert.equal(isMechAccordSubProfession('core_caster'), false)
   assert.equal(isMechAccordSubProfession('mech_accord'), false)
   assert.equal(isMechAccordSubProfession(''), false)
 })
+
+function roundForTest(value: number): number {
+  return Math.round(value * 1e9) / 1e9
+}

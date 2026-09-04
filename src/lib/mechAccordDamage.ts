@@ -3,8 +3,12 @@ import {
   type DamageCalculationBreakdown,
   type MitigationModifiers,
 } from './damageCalculator.ts'
+import { getDamageSensitivityTablePoints } from './damageSensitivity.ts'
 
 export const MECH_ACCORD_SUB_PROFESSION_ID = 'funnel'
+
+export const MECH_ACCORD_ATTACK_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8] as const
+export type MechAccordAttackCount = typeof MECH_ACCORD_ATTACK_COUNTS[number]
 
 export interface MechAccordDamageRow {
   attackCount: number
@@ -22,19 +26,34 @@ export interface MechAccordDamageRowsResult {
   rows: MechAccordDamageRow[]
 }
 
-const MECH_ACCORD_MULTIPLIERS = [20, 35, 50, 65, 80, 95, 110, 110] as const
+export interface MechAccordResistanceDamageRow {
+  resistance: number
+  mainDamage: number
+  droneDamage: number
+  combinedDamage: number
+  mainMinimumReached: boolean
+  droneMinimumReached: boolean
+  combinedMinimumReached: boolean
+  mainBreakdown: DamageCalculationBreakdown
+  droneBreakdown: DamageCalculationBreakdown
+}
 
-const DISPLAY_ATTACK_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8] as const
+export interface MechAccordResistanceTableResult {
+  attackCount: MechAccordAttackCount
+  attackCountLabel: string
+  multiplierPercent: number
+  rows: MechAccordResistanceDamageRow[]
+}
+
+const MECH_ACCORD_MULTIPLIERS = [20, 35, 50, 65, 80, 95, 110, 110] as const
 
 export function isMechAccordSubProfession(subProfessionId: string): boolean {
   return subProfessionId === MECH_ACCORD_SUB_PROFESSION_ID
 }
 
 export function getMechAccordMultiplierPercent(attackCount: number): number {
-  const normalizedAttackCount = Number.isFinite(attackCount)
-    ? Math.max(1, Math.floor(attackCount))
-    : 1
-  const multiplierIndex = Math.min(normalizedAttackCount, DISPLAY_ATTACK_COUNTS.length) - 1
+  const normalizedAttackCount = normalizeMechAccordAttackCount(attackCount)
+  const multiplierIndex = normalizedAttackCount - 1
   return MECH_ACCORD_MULTIPLIERS[multiplierIndex]
 }
 
@@ -66,7 +85,7 @@ export function calculateMechAccordDamageRows(
 
     return {
       attackCount,
-      attackCountLabel: attackCount === DISPLAY_ATTACK_COUNTS.length
+      attackCountLabel: attackCount === MECH_ACCORD_ATTACK_COUNTS.length
         ? `${attackCount}以上`
         : String(attackCount),
       multiplierPercent,
@@ -80,8 +99,57 @@ export function calculateMechAccordDamageRows(
 
   return {
     mainDamage,
-    rows: DISPLAY_ATTACK_COUNTS.map(createRow),
+    rows: MECH_ACCORD_ATTACK_COUNTS.map(createRow),
   }
+}
+
+export function calculateMechAccordResistanceTable(
+  rawAttack: number,
+  enemyDefense: number,
+  attackCount: number,
+  mitigationModifiers: MitigationModifiers = {},
+): MechAccordResistanceTableResult {
+  const normalizedAttackCount = normalizeMechAccordAttackCount(attackCount)
+  const multiplierPercent = getMechAccordMultiplierPercent(normalizedAttackCount)
+  const rows = getDamageSensitivityTablePoints('ARTS').map((resistance): MechAccordResistanceDamageRow => {
+    const damage = calculateMechAccordDamageRows(
+      rawAttack,
+      enemyDefense,
+      resistance,
+      mitigationModifiers,
+    )
+    const selectedDamage = damage.rows[normalizedAttackCount - 1]
+    const mainMinimumReached = isMinimumDamageReached(damage.mainDamage)
+    const droneMinimumReached = selectedDamage.minimumReached
+
+    return {
+      resistance,
+      mainDamage: damage.mainDamage.result,
+      droneDamage: selectedDamage.droneDamage,
+      combinedDamage: selectedDamage.combinedDamage,
+      mainMinimumReached,
+      droneMinimumReached,
+      combinedMinimumReached: mainMinimumReached || droneMinimumReached,
+      mainBreakdown: damage.mainDamage,
+      droneBreakdown: selectedDamage.droneBreakdown,
+    }
+  })
+
+  return {
+    attackCount: normalizedAttackCount,
+    attackCountLabel: normalizedAttackCount === MECH_ACCORD_ATTACK_COUNTS.length
+      ? `${normalizedAttackCount}回目以降`
+      : `${normalizedAttackCount}回目`,
+    multiplierPercent,
+    rows,
+  }
+}
+
+function normalizeMechAccordAttackCount(attackCount: number): MechAccordAttackCount {
+  const normalizedAttackCount = Number.isFinite(attackCount)
+    ? Math.max(1, Math.floor(attackCount))
+    : 1
+  return Math.min(normalizedAttackCount, MECH_ACCORD_ATTACK_COUNTS.length) as MechAccordAttackCount
 }
 
 function isMinimumDamageReached(breakdown: DamageCalculationBreakdown): boolean {
