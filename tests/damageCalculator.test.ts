@@ -25,6 +25,10 @@ import {
   selectDamageSensitivityValues,
 } from '../src/lib/damageSensitivity.ts'
 import { getOperatorPassives } from '../src/lib/operatorProfile.ts'
+import {
+  getOperatorMaxPotentialRank,
+  getOperatorPotentialApplication,
+} from '../src/lib/operatorPotentials.ts'
 
 test('統合後の各パネルの初期開閉状態を維持する', () => {
   assert.deepEqual(DAMAGE_CALCULATOR_PANEL_DEFAULTS, {
@@ -251,6 +255,83 @@ test('レベルと信頼度から攻撃力・攻撃間隔を補間する', () =>
   assert.equal(stats.baseAttackBreakdown.potentialAttack, 0)
   assert.equal(stats.baseAttackBreakdown.moduleAttack, 0)
   assert.equal(stats.baseAttackBreakdown.result, 220)
+})
+
+test('潜在のATKと攻撃速度を累積し、表示ランクを内部条件へ変換する', () => {
+  const profile = {
+    phases: [{
+      maxLevel: 50,
+      attributesKeyFrames: [
+        { level: 1, data: { atk: 100, attackSpeed: 100, baseAttackTime: 1.2 } },
+        { level: 50, data: { atk: 200, attackSpeed: 100, baseAttackTime: 1.2 } },
+      ],
+    }],
+    favorKeyFrames: [
+      { level: 0, data: { atk: 0 } },
+      { level: 50, data: { atk: 20 } },
+    ],
+    potentialRanks: [
+      {
+        description: '攻撃力+10',
+        buff: { attributes: { attributeModifiers: [
+          { attributeType: 'ATK', formulaItem: 'ADDITION', value: 10 },
+        ] } },
+      },
+      {
+        description: '攻撃力+15',
+        buff: { attributes: { attributeModifiers: [
+          { attributeType: 1, formulaItem: 0, value: 15 },
+        ] } },
+      },
+      {
+        description: '攻撃速度+5',
+        buff: { attributes: { attributeModifiers: [
+          { attributeType: 7, formulaItem: 0, value: 5 },
+        ] } },
+      },
+      {
+        description: '防御力+50',
+        buff: { attributes: { attributeModifiers: [
+          { attributeType: 'DEF', formulaItem: 'ADDITION', value: 50 },
+          { attributeType: 'MYSTERY_DAMAGE', formulaItem: 'ADDITION', value: 99 },
+        ] } },
+      },
+      {
+        description: '未対応の攻撃力式',
+        buff: { attributes: { attributeModifiers: [
+          { attributeType: 'ATK', formulaItem: 'MULTIPLICATION', value: 1.1 },
+        ] } },
+      },
+    ],
+  }
+
+  assert.equal(getOperatorMaxPotentialRank(profile), 6)
+  assert.equal(getOperatorPotentialApplication(profile, 0).potentialRank, 1)
+
+  const potential = getOperatorPotentialApplication(profile, 4)
+  assert.equal(potential.potentialRank, 4)
+  assert.equal(potential.requiredPotentialRank, 3)
+  assert.equal(potential.potentialAttack, 25)
+  assert.equal(potential.attackSpeedBonus, 5)
+  assert.equal(potential.unsupportedReasons.length, 0)
+
+  const stats = getOperatorStats(profile, 0, 50, 100, {
+    potentialAttack: potential.potentialAttack,
+    attackSpeedBonus: potential.attackSpeedBonus,
+  })
+  assert.equal(stats.baseAttackBreakdown.potentialAttack, 25)
+  assert.equal(stats.attack, 245)
+  assert.equal(stats.attackSpeed, 105)
+  assert.ok(Math.abs(stats.attackInterval - (1.2 * 100 / 105)) < 1e-9)
+
+  const maximum = getOperatorPotentialApplication(profile, 99)
+  assert.equal(maximum.potentialRank, 6)
+  assert.equal(maximum.requiredPotentialRank, 5)
+  assert.equal(maximum.potentialAttack, 25)
+  assert.equal(maximum.effects.some((effect) => effect.status === 'NO_DIRECT_EFFECT'), true)
+  assert.equal(maximum.effects.some((effect) => effect.status === 'UNSUPPORTED'), true)
+  assert.equal(maximum.unsupportedReasons.some((reason) => reason.includes('MULTIPLICATION')), true)
+  assert.equal(maximum.unsupportedReasons.some((reason) => reason.includes('MYSTERY_DAMAGE')), true)
 })
 
 test('Ash S1型のblackboardから攻撃力補正Bと連撃数を得る', () => {

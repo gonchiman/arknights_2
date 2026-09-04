@@ -26,6 +26,7 @@ export interface OperatorStats {
 
 export interface OperatorStatModifiers {
   attackSpeedBonus?: number
+  potentialAttack?: number
   moduleAttack?: number
 }
 
@@ -136,7 +137,7 @@ export function getOperatorStats(
   const attackSpeed = baseAttackSpeed + attackSpeedBonus
   const attackInterval = baseAttackTime * 100 / Math.max(20, attackSpeed)
 
-  const potentialAttack = 0
+  const potentialAttack = finiteOr(modifiers.potentialAttack, 0)
   const moduleAttack = finiteOr(modifiers.moduleAttack, 0)
   const beforeRounding = phaseAttack + trustAttack + potentialAttack + moduleAttack
   const attack = Math.max(0, Math.round(beforeRounding))

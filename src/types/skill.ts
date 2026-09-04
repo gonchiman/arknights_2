@@ -82,6 +82,23 @@ export interface RawCharacterTalent {
 export interface RawPotentialRank {
   type?: string
   description?: string | null
+  buff?: RawPotentialBuff | null
+}
+
+export interface RawPotentialBuff {
+  attributes?: RawPotentialAttributes | null
+}
+
+export interface RawPotentialAttributes {
+  attributeModifiers?: RawPotentialAttributeModifier[] | null
+}
+
+export interface RawPotentialAttributeModifier {
+  attributeType?: string | number
+  formulaItem?: string | number
+  value?: number
+  loadFromBlackboard?: boolean
+  fetchBaseValueFromSourceEntity?: boolean
 }
 
 export interface RawOperatorModule {
