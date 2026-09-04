@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   GOLDENGLOW_OPERATOR_ID,
+  buildGoldenglowResistanceDamageRows,
   calculateGoldenglowExplosion,
   calculateGoldenglowExplosionDamage,
   calculateGoldenglowExpectedDps,
@@ -109,6 +110,58 @@ test('術耐性100かつ固定無視なしでは軽減前ダメージの5%を最
   assert.equal(result.breakdown.minimumDamage, 150)
   assert.equal(result.breakdown.minimumApplied, true)
   assert.equal(result.damageAfterMitigation, 150)
+})
+
+test('術耐性別出力は標準点ごとに爆発単発と有限時間の期待値を再計算する', () => {
+  const model = requireModel(createPassives({ attackScale: 3, resistanceIgnore: null }))
+  const rows = buildGoldenglowResistanceDamageRows({
+    model,
+    skillIndex: 1,
+    effectiveAttack: 1000,
+    attackInterval: 1,
+    duration: 10,
+    enemyResistances: [0, 20, 40, 60, 80, 95, 100],
+  })
+
+  assert.deepEqual(
+    rows.map((row) => row.enemyResistance),
+    [0, 20, 40, 60, 80, 95, 100],
+  )
+  assertSequenceClose(
+    rows.map((row) => row.explosionDamage),
+    [3000, 2400, 1800, 1200, 600, 150, 150],
+  )
+  assert.deepEqual(
+    rows.map((row) => row.minimumReached),
+    [false, false, false, false, false, true, true],
+  )
+
+  rows.forEach((row) => {
+    assert.notEqual(row.expectedDps, null)
+    assert.notEqual(row.expectedTotalDamage, null)
+    assertClose(row.expectedTotalDamage, (row.expectedDps ?? 0) * 10, 1e-9)
+  })
+  for (let index = 1; index < rows.length; index += 1) {
+    assert.ok((rows[index]?.expectedDps ?? 0) <= (rows[index - 1]?.expectedDps ?? 0))
+  }
+})
+
+test('S2の術耐性別出力は定常期待DPSだけを返す', () => {
+  const model = requireModel(createPassives({ attackScale: 3, resistanceIgnore: 15 }))
+  const rows = buildGoldenglowResistanceDamageRows({
+    model,
+    skillIndex: 2,
+    effectiveAttack: 1000,
+    attackInterval: 1,
+    duration: 0,
+    enemyResistances: [0, 100],
+  })
+
+  assert.equal(rows.length, 2)
+  assert.ok(rows.every((row) => row.expectedDps !== null))
+  assert.ok(rows.every((row) => row.expectedTotalDamage === null))
+  assertClose(rows[0]?.explosionDamage ?? null, 3000)
+  assertClose(rows[1]?.explosionDamage ?? null, 450)
 })
 
 test('一括APIはモデル導出と爆発1回の計算を結合する', () => {

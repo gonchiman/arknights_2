@@ -40,12 +40,13 @@ import {
   type MechAccordDamageRowsResult,
 } from '../lib/mechAccordDamage'
 import {
+  buildGoldenglowResistanceDamageRows,
   buildGoldenglowSkill3Output,
   calculateGoldenglowExplosion,
   calculateGoldenglowExpectedDpsFromModel,
   isGoldenglowSkill3,
   type GoldenglowExplosionDamageResult,
-  type GoldenglowExpectedDpsResult,
+  type GoldenglowResistanceDamageRow,
   type GoldenglowSkill3Output,
 } from '../lib/goldenglowExplosion'
 import {
@@ -95,6 +96,17 @@ interface Props {
 type ReflectionStatus = OperatorEffectStatus | 'PARTIAL'
 type SensitivityMetric = DamageSensitivityMetric
 type SensitivityTarget = DamageSensitivityTarget
+type GoldenglowOperatorOutputMetric = 'EXPLOSION_DAMAGE' | 'EXPECTED_DPS' | 'EXPECTED_TOTAL_DAMAGE'
+
+const GOLDENGLOW_OPERATOR_OUTPUT_OPTIONS: Array<{
+  value: GoldenglowOperatorOutputMetric
+  buttonLabel: string
+  tableLabel: string
+}> = [
+  { value: 'EXPLOSION_DAMAGE', buttonLabel: '爆発1回', tableLabel: '爆発1回のダメージ' },
+  { value: 'EXPECTED_DPS', buttonLabel: '期待DPS', tableLabel: '爆発込み期待DPS' },
+  { value: 'EXPECTED_TOTAL_DAMAGE', buttonLabel: '期待総ダメージ', tableLabel: '爆発込み期待総ダメージ' },
+]
 
 interface CalculationStep {
   label: string
@@ -408,7 +420,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const primaryOutputKind = getPrimaryDamageOutputKind(hasSubProfessionOutput)
   const primaryOutputTitle = getPrimaryDamageOutputTitle(primaryOutputKind)
   const operatorOutputPanelState = getDamageOutputPanelState(
-    goldenglowExplosion !== null && goldenglowExpectedDps !== null,
+    goldenglowExplosion !== null,
     operatorOutputOpen,
   )
   const skillOutputPanelState = getDamageOutputPanelState(
@@ -1065,8 +1077,8 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         id="operator-output-panel"
         number={panelNumbers.operatorOutput}
         title={DAMAGE_OUTPUT_PANELS.operator.title}
-        summary={goldenglowExplosion && goldenglowExpectedDps
-          ? `期待DPS ${formatNumber(goldenglowExpectedDps.expectedDps)}`
+        summary={goldenglowExplosion
+          ? `爆発1回 ${formatNumber(goldenglowExplosion.damageAfterMitigation)} · 術耐性別`
           : `${selectedOperator.operatorName} · 固有出力なし`}
         open={operatorOutputPanelState.open}
         onToggle={() => setOperatorOutputOpen((open) => !open)}
@@ -1078,11 +1090,13 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
           operatorOutputPanelState.disabled ? 'disabled-output-panel' : 'results-panel',
         ].join(' ')}
       >
-        {goldenglowExplosion && goldenglowExpectedDps
+        {goldenglowExplosion
           ? (
-            <GoldenglowExpectedDpsOutput
+            <GoldenglowResistanceDamageOutput
               explosion={goldenglowExplosion}
-              expectation={goldenglowExpectedDps}
+              skillIndex={selectedSkill.skillIndex}
+              attackInterval={model.attackInterval}
+              duration={model.duration}
               skillLabel={`S${selectedSkill.skillIndex} ${selectedSkillLevel.name ?? selectedSkill.skillName}`}
             />
           )
@@ -1573,49 +1587,73 @@ function MechAccordDamageTable({ result }: { result: MechAccordDamageRowsResult 
   )
 }
 
-function GoldenglowExpectedDpsOutput({
+function GoldenglowResistanceDamageOutput({
   explosion,
-  expectation,
+  skillIndex,
+  attackInterval,
+  duration,
   skillLabel,
 }: {
   explosion: GoldenglowExplosionDamageResult
-  expectation: GoldenglowExpectedDpsResult
+  skillIndex: number
+  attackInterval: number
+  duration: number
   skillLabel: string
 }) {
-  const [copyState, setCopyState] = useState<'IDLE' | 'COPIED' | 'FAILED'>('IDLE')
+  const [selectedOutput, setSelectedOutput] = useState<GoldenglowOperatorOutputMetric>('EXPLOSION_DAMAGE')
+  const [copyFeedback, setCopyFeedback] = useState<{
+    state: 'COPIED' | 'FAILED'
+    tableText: string
+    outputLabel: string
+  } | null>(null)
   const copyFeedbackTimerRef = useRef<number | null>(null)
   const { model } = explosion
-  const isFiniteWindow = expectation.mode === 'FINITE_WINDOW'
-  const expectedExplosionMetric = isFiniteWindow
-    ? expectation.allDrones.expectedExplosionCount ?? 0
-    : expectation.expectedExplosionsPerSecondPerDrone * model.activeDroneCount
-  const outputRows = [
-    { label: '爆発込み期待DPS', value: formatNumber(expectation.expectedDps) },
-    {
-      label: '期待総ダメージ',
-      value: isFiniteWindow ? formatNumber(expectation.combinedExpectedTotalDamage ?? 0) : '—（永続）',
-    },
-    {
-      label: isFiniteWindow ? '期待爆発回数' : '爆発頻度',
-      value: isFiniteWindow
-        ? `${formatNumber(expectedExplosionMetric)}回`
-        : `${formatDecimal(expectedExplosionMetric)}回/秒`,
-    },
-    { label: '爆発1回', value: formatNumber(explosion.damageAfterMitigation) },
-  ]
+  const totalDamageAvailable = skillIndex !== 2
+  const effectiveOutput = selectedOutput === 'EXPECTED_TOTAL_DAMAGE' && !totalDamageAvailable
+    ? 'EXPLOSION_DAMAGE'
+    : selectedOutput
+  const outputOption = GOLDENGLOW_OPERATOR_OUTPUT_OPTIONS.find((option) => option.value === effectiveOutput)
+    ?? GOLDENGLOW_OPERATOR_OUTPUT_OPTIONS[0]
+  const resistanceRows = useMemo(() => buildGoldenglowResistanceDamageRows({
+    model,
+    skillIndex,
+    effectiveAttack: explosion.effectiveAttack,
+    attackInterval,
+    duration,
+    enemyResistances: getDamageSensitivityTablePoints('ARTS'),
+  }), [model, skillIndex, explosion.effectiveAttack, attackInterval, duration])
+  const outputRows = resistanceRows.map((row) => ({
+    ...row,
+    value: selectGoldenglowResistanceOutputValue(row, effectiveOutput),
+  }))
+  const hasMinimumDamageResults = outputRows.some((row) => row.minimumReached)
+  const tableHeaders = ['術耐性', outputOption.tableLabel]
   const tableText = [
-    ['出力', '値'],
-    ...outputRows.map((row) => [row.label, row.value]),
+    tableHeaders,
+    ...outputRows.map((row) => [
+      `${formatNumber(row.enemyResistance)}%`,
+      row.value === null ? '—' : formatNumber(row.value),
+    ]),
   ].map((row) => row.join('\t')).join('\r\n')
+  const copyState = copyFeedback?.tableText === tableText ? copyFeedback.state : 'IDLE'
   const copyLabel = copyState === 'COPIED'
     ? 'コピー済み'
     : copyState === 'FAILED' ? 'コピー失敗' : '表をコピー'
+  const copyOutputLabel = copyFeedback?.tableText === tableText
+    ? copyFeedback.outputLabel
+    : outputOption.buttonLabel
   const copyAnnouncement = copyState === 'COPIED'
-    ? 'ゴールデングローの期待値表をコピーしました。'
-    : copyState === 'FAILED' ? 'ゴールデングローの期待値表をコピーできませんでした。' : ''
+    ? `ゴールデングローの${copyOutputLabel}表をコピーしました。`
+    : copyState === 'FAILED' ? `ゴールデングローの${copyOutputLabel}表をコピーできませんでした。` : ''
 
   useEffect(() => {
-    setCopyState('IDLE')
+    if (!totalDamageAvailable && selectedOutput === 'EXPECTED_TOTAL_DAMAGE') {
+      setSelectedOutput('EXPLOSION_DAMAGE')
+    }
+  }, [selectedOutput, totalDamageAvailable])
+
+  useEffect(() => {
+    setCopyFeedback(null)
     return () => {
       if (copyFeedbackTimerRef.current !== null) {
         window.clearTimeout(copyFeedbackTimerRef.current)
@@ -1632,12 +1670,16 @@ function GoldenglowExpectedDpsOutput({
       nextState = 'FAILED'
     }
 
-    setCopyState(nextState)
+    setCopyFeedback({
+      state: nextState,
+      tableText,
+      outputLabel: outputOption.buttonLabel,
+    })
     if (copyFeedbackTimerRef.current !== null) {
       window.clearTimeout(copyFeedbackTimerRef.current)
     }
     copyFeedbackTimerRef.current = window.setTimeout(() => {
-      setCopyState('IDLE')
+      setCopyFeedback(null)
       copyFeedbackTimerRef.current = null
     }, 2500)
   }
@@ -1645,47 +1687,122 @@ function GoldenglowExpectedDpsOutput({
   return (
     <section className="goldenglow-output" aria-labelledby="goldenglow-output-heading" aria-live="off">
       <div className="goldenglow-output-heading">
-        <h3 id="goldenglow-output-heading">ゴールデングロー・爆発込み期待値</h3>
-        <div className="goldenglow-output-heading-tools">
-          <p>
-            {skillLabel} · {isFiniteWindow ? `${formatNumber(expectation.duration ?? 0)}秒` : '永続'}
-            {' '}· 浮遊{model.activeDroneCount}体 · 術耐性0
-          </p>
-          <button
-            type="button"
-            className="button secondary goldenglow-copy-button"
-            aria-label={copyState === 'IDLE'
-              ? 'ゴールデングローの期待値表をコピー'
-              : `ゴールデングローの期待値表をコピー（${copyLabel}）`}
-            onClick={() => void copyOutputTable()}
-          >
-            {copyLabel}
-          </button>
-          <span className="visually-hidden" role="status" aria-live="polite">
-            {copyAnnouncement}
-          </span>
+        <h3 id="goldenglow-output-heading">ゴールデングロー・術耐性別ダメージ</h3>
+        <p>
+          {skillLabel} · 爆発倍率{formatNumber(model.attackScalePercent)}%
+          {' '}· 術耐性固定無視{formatNumber(model.resistanceIgnoreFixed)}
+        </p>
+      </div>
+      <div className="sensitivity-control goldenglow-output-control">
+        <span>出力を選択</span>
+        <div
+          className="sensitivity-metric-switch"
+          role="group"
+          aria-label="術耐性別テーブルの出力"
+          aria-describedby={!totalDamageAvailable ? 'goldenglow-output-unavailable-note' : undefined}
+        >
+          {GOLDENGLOW_OPERATOR_OUTPUT_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={effectiveOutput === option.value ? 'active' : ''}
+              aria-pressed={effectiveOutput === option.value}
+              disabled={option.value === 'EXPECTED_TOTAL_DAMAGE' && !totalDamageAvailable}
+              onClick={() => setSelectedOutput(option.value)}
+            >
+              {option.buttonLabel}
+            </button>
+          ))}
         </div>
       </div>
-      <div className="goldenglow-table-wrap">
-        <table className="goldenglow-output-table" aria-labelledby="goldenglow-output-heading">
-          <thead>
-            <tr><th scope="col">出力</th><th scope="col">値</th></tr>
-          </thead>
-          <tbody>
-            {outputRows.map((row) => (
-              <tr key={row.label}>
-                <th scope="row">{row.label}</th>
-                <td>{row.value}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {!totalDamageAvailable && (
+        <p id="goldenglow-output-unavailable-note" className="goldenglow-output-unavailable-note">
+          S2は永続スキルのため、期待総ダメージは算出しません。
+        </p>
+      )}
+      {hasMinimumDamageResults && (
+        <div className="sensitivity-table-meta-row goldenglow-table-meta-row">
+          <span className="minimum-damage-legend"><span aria-hidden="true">※</span>術ダメージ最低保証</span>
+        </div>
+      )}
+      <div className="goldenglow-copyable-table">
+        <div
+          className="goldenglow-table-wrap"
+          role="region"
+          aria-label={`術耐性別の${outputOption.tableLabel}`}
+          tabIndex={0}
+        >
+          <table className="goldenglow-output-table" aria-labelledby="goldenglow-output-heading">
+            <thead>
+              <tr><th scope="col">術耐性</th><th scope="col">{outputOption.tableLabel}</th></tr>
+            </thead>
+            <tbody>
+              {outputRows.map((row) => (
+                <tr key={row.enemyResistance}>
+                  <th scope="row">{formatNumber(row.enemyResistance)}%</th>
+                  <td
+                    className={row.minimumReached ? 'minimum-damage-cell' : undefined}
+                    aria-label={row.minimumReached && row.value !== null
+                      ? `${formatNumber(row.value)}、術ダメージ最低保証`
+                      : undefined}
+                  >
+                    {row.value === null ? '—' : formatNumber(row.value)}
+                    {row.minimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <button
+          type="button"
+          className={[
+            'goldenglow-table-copy-button',
+            copyState !== 'IDLE' ? 'is-visible' : '',
+            copyState === 'COPIED' ? 'is-copied' : '',
+            copyState === 'FAILED' ? 'is-failed' : '',
+          ].filter(Boolean).join(' ')}
+          aria-label={`ゴールデングローの${outputOption.buttonLabel}表をコピー`}
+          title={copyLabel}
+          onClick={() => void copyOutputTable()}
+        >
+          {copyState === 'COPIED'
+            ? (
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                <path d="m5 12 4 4L19 6" />
+              </svg>
+            )
+            : copyState === 'FAILED'
+              ? (
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                  <path d="m7 7 10 10M17 7 7 17" />
+                </svg>
+              )
+              : (
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                  <rect x="8" y="8" width="11" height="11" rx="1.5" />
+                  <path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" />
+                </svg>
+              )}
+        </button>
+        <span className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+          {copyAnnouncement}
+        </span>
       </div>
       <p className="goldenglow-note">
-        本体と全浮遊ユニットを合算した単体への理論値です（S3は浮遊のみ）。S1・S3は攻撃位相平均、S2は定常値、爆発後の戻り時間は0として計算します。
+        入力術耐性から固定無視を差し引き、術ダメージの5%最低保証を適用します。爆発1回は浮遊ユニット1体分、期待値は本体と全浮遊ユニットの合算です（S3は浮遊のみ）。
       </p>
     </section>
   )
+}
+
+function selectGoldenglowResistanceOutputValue(
+  row: GoldenglowResistanceDamageRow,
+  output: GoldenglowOperatorOutputMetric,
+): number | null {
+  if (output === 'EXPECTED_DPS') return row.expectedDps
+  if (output === 'EXPECTED_TOTAL_DAMAGE') return row.expectedTotalDamage
+  return row.explosionDamage
 }
 
 function GoldenglowSkill3FocusOutput({
