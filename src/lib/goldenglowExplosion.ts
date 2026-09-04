@@ -110,6 +110,23 @@ export interface GoldenglowSkill3Output {
   rows: GoldenglowSkill3FocusRow[]
 }
 
+export interface GoldenglowResistanceDamageRow {
+  enemyResistance: number
+  explosionDamage: number
+  expectedDps: number | null
+  expectedTotalDamage: number | null
+  minimumReached: boolean
+}
+
+export interface GoldenglowResistanceDamageRowsInput {
+  model: GoldenglowExplosionModel
+  skillIndex: number
+  effectiveAttack: number
+  attackInterval: number
+  duration: number
+  enemyResistances: readonly number[]
+}
+
 export interface GoldenglowExpectedDpsCalculationInput {
   operatorId: string
   passives: OperatorPassives
@@ -397,6 +414,52 @@ export function calculateGoldenglowExpectedDpsFromModel(
     combinedExpectedTotalDamage,
     expectedDps: combinedExpectedTotalDamage / duration,
   }
+}
+
+/**
+ * Builds the operator-specific output table across enemy RES values. The same
+ * rows back each selectable output so changing the displayed metric never
+ * changes the table axis or mitigation assumptions.
+ */
+export function buildGoldenglowResistanceDamageRows(
+  input: GoldenglowResistanceDamageRowsInput,
+): GoldenglowResistanceDamageRow[] {
+  return input.enemyResistances.map((enemyResistance) => {
+    const explosion = calculateGoldenglowExplosionDamage(
+      input.effectiveAttack,
+      0,
+      enemyResistance,
+      input.model,
+    )
+    const expectation = calculateGoldenglowExpectedDpsFromModel({
+      model: input.model,
+      skillIndex: input.skillIndex,
+      effectiveAttack: input.effectiveAttack,
+      attackInterval: input.attackInterval,
+      duration: input.duration,
+      enemyDefense: 0,
+      enemyResistance,
+    })
+    const minimumDamage = explosion.breakdown.minimumDamage
+    const minimumTolerance = minimumDamage === null
+      ? 0
+      : Number.EPSILON * Math.max(
+        1,
+        Math.abs(explosion.rawExplosionDamage),
+        Math.abs(minimumDamage),
+        Math.abs(explosion.damageAfterMitigation),
+      ) * 32
+
+    return {
+      enemyResistance,
+      explosionDamage: explosion.damageAfterMitigation,
+      expectedDps: expectation?.expectedDps ?? null,
+      expectedTotalDamage: expectation?.combinedExpectedTotalDamage ?? null,
+      minimumReached: minimumDamage !== null
+        && minimumDamage > 0
+        && explosion.damageAfterMitigation <= minimumDamage + minimumTolerance,
+    }
+  })
 }
 
 /**
