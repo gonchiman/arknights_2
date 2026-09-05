@@ -129,7 +129,7 @@ export function MechAccordDefaultTable({
   return (
     <section className="mech-accord-output" aria-labelledby={headingId}>
       <div className="mech-accord-output-heading">
-        <h3 id={headingId}>デフォルトテーブル</h3>
+        <h3 id={headingId}>メイン出力</h3>
         <p aria-live="polite">{attackLabel} · {metricLabel} · {result.attackCountLabel} · {droneLabel}（1体 {result.multiplierPercent}%） · 術</p>
       </div>
       <div className="sensitivity-toolbar">

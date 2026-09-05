@@ -117,7 +117,7 @@ test('GGの3テーブルはそれぞれ独立した連番パネルになる', ()
     operatorId: 'char_377_gdglow', skillIndex: 3, subProfessionId: 'funnel', target: 'SKILL',
   })
   assert.deepEqual(getDamageOutputPanels(definition), [
-    { id: 'DEFAULT', number: '05', title: 'デフォルトテーブル' },
+    { id: 'DEFAULT', number: '05', title: 'メイン出力' },
     { id: 'ATTACK_COUNT', number: '06', title: '攻撃回数別ダメージ' },
     { id: 'EXPLOSION', number: '07', title: '爆発ダメージ' },
   ])

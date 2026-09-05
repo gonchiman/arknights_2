@@ -24,7 +24,7 @@ export interface DamageOutputSelection {
 }
 
 const DAMAGE_OUTPUT_TABLE_TITLES = {
-  DEFAULT: 'デフォルトテーブル',
+  DEFAULT: 'メイン出力',
   ATTACK_COUNT: '攻撃回数別ダメージ',
   EXPLOSION: '爆発ダメージ',
 } as const
