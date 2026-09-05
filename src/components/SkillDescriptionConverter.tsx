@@ -48,7 +48,7 @@ export function SkillDescriptionConverter({ skill, levelIndex, levelLabel }: Pro
             )}
             {result.effects.map((effect, index) => (
               <tr key={`${effect.key}:${index}`}>
-                <th scope="row">{effect.sourceKey ?? '—'}</th>
+                <th scope="row">{effect.sourceKey ?? effect.key}</th>
                 <td className="skill-description-effect-value">{formatSkillDescriptionEffectValue(effect)}</td>
                 <td>{effect.sourceText}</td>
               </tr>
