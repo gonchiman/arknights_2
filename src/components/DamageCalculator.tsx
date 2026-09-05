@@ -182,7 +182,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const [sensitivityTarget, setSensitivityTarget] = useState<SensitivityTarget>(DEFAULT_DAMAGE_SENSITIVITY_TARGET)
   const [sensitivityMetric, setSensitivityMetric] = useState<SensitivityMetric>('DAMAGE')
   const [mechAccordAttackCount, setMechAccordAttackCount] = useState<MechAccordAttackCount>(1)
-  const [mechAccordTarget, setMechAccordTarget] = useState<SensitivityTarget>('NORMAL')
+  const [mechAccordTarget, setMechAccordTarget] = useState<SensitivityTarget>(DEFAULT_DAMAGE_SENSITIVITY_TARGET)
   const [sensitivityCalculationPoint, setSensitivityCalculationPoint] = useState<number | null>(null)
   const [operatorFilters, setOperatorFilters] = useState(EMPTY_OPERATOR_FILTERS)
   const [preferredDefaultOperatorId, setPreferredDefaultOperatorId] = useState(loadPreferredDefaultOperatorId)
@@ -1752,6 +1752,7 @@ function MechAccordDamageTables({
 }) {
   const outputId = useId()
   const attackCountHeadingId = `${outputId}-attack-count-heading`
+  const attackCountNoteId = `${outputId}-attack-count-note`
   const resistanceHeadingId = `${outputId}-resistance-heading`
   const attackCountSelectId = useId()
   const resistanceTableId = `${attackCountSelectId}-table`
@@ -1769,7 +1770,7 @@ function MechAccordDamageTables({
         </div>
         {hasAttackCountMinimumDamage && (
           <div className="mech-accord-table-meta-row">
-            <span className="minimum-damage-legend"><span aria-hidden="true">※</span>最低保証ダメージ（合計は最低保証を含む）</span>
+            <span className="minimum-damage-legend">赤字：最低保証ダメージ（合計は最低保証を含む）</span>
           </div>
         )}
         <div
@@ -1778,7 +1779,7 @@ function MechAccordDamageTables({
           aria-labelledby={attackCountHeadingId}
           tabIndex={0}
         >
-          <table className="mech-accord-table mech-accord-attack-count-table">
+          <table className="mech-accord-table mech-accord-attack-count-table" aria-describedby={attackCountNoteId}>
             <caption className="visually-hidden">{attackLabel}・術耐性0の操機術師・攻撃回数別ダメージ</caption>
             <thead>
               <tr>
@@ -1793,27 +1794,24 @@ function MechAccordDamageTables({
                 const minimumLabel = row.minimumReached ? '、最低保証ダメージ' : ''
                 return (
                   <tr key={row.attackCount}>
-                    <th scope="row">{row.attackCount === MECH_ACCORD_ATTACK_COUNTS.length ? '8回目以降' : `${row.attackCount}回目`}</th>
+                    <th scope="row" aria-label={row.attackCount === MECH_ACCORD_ATTACK_COUNTS.length ? '8回目以降' : `${row.attackCount}回目`}>{row.attackCount}</th>
                     <td aria-label={`本体 ${formatNumber(attackCountResult.mainDamage.result)}`}>
-                      <strong className="mech-accord-cell-value">{formatNumber(attackCountResult.mainDamage.result)}</strong>
+                      <strong className="mech-accord-cell-value">{formatTableNumber(attackCountResult.mainDamage.result)}</strong>
                     </td>
                     <td
                       className={row.minimumReached ? 'mech-accord-minimum' : undefined}
                       aria-label={`${droneLabel} ${formatNumber(row.droneDamage)}、1体の攻撃倍率 ${row.multiplierPercent}%${minimumLabel}`}
                     >
                       <strong className="mech-accord-cell-value">
-                        {formatNumber(row.droneDamage)}
-                        {row.minimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}
+                        {formatTableNumber(row.droneDamage)}
                       </strong>
-                      <small className="mech-accord-cell-meta">{row.multiplierPercent}%</small>
                     </td>
                     <td
                       className={row.minimumReached ? 'mech-accord-minimum' : undefined}
                       aria-label={`本体＋浮遊 ${formatNumber(row.combinedDamage)}${row.minimumReached ? '、最低保証ダメージを含む' : ''}`}
                     >
                       <strong className="mech-accord-cell-value">
-                        {formatNumber(row.combinedDamage)}
-                        {row.minimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}
+                        {formatTableNumber(row.combinedDamage)}
                       </strong>
                     </td>
                   </tr>
@@ -1822,6 +1820,10 @@ function MechAccordDamageTables({
             </tbody>
           </table>
         </div>
+        <p className="mech-accord-note" id={attackCountNoteId}>
+          攻撃回数の「8」は8回目以降を表します。浮遊ユニット1体の倍率（1〜8回目）：
+          {attackCountResult.rows.map((row) => `${row.multiplierPercent}%`).join(' / ')}。
+        </p>
       </div>
 
       <div className="mech-accord-output-block">
@@ -1847,7 +1849,7 @@ function MechAccordDamageTables({
         </div>
         {hasResistanceMinimumDamage && (
           <div className="mech-accord-table-meta-row">
-            <span className="minimum-damage-legend"><span aria-hidden="true">※</span>最低保証ダメージ（合計は最低保証を含む）</span>
+            <span className="minimum-damage-legend">赤字：最低保証ダメージ（合計は最低保証を含む）</span>
           </div>
         )}
         <div
@@ -1860,7 +1862,7 @@ function MechAccordDamageTables({
             <caption className="visually-hidden">{attackLabel}・{resistanceResult.attackCountLabel}の操機術師・術耐性別ダメージ</caption>
             <thead>
               <tr>
-                <th scope="col">術耐性</th>
+                <th scope="col">術耐性（%）</th>
                 <th scope="col">{mainLabel}</th>
                 <th scope="col">{droneLabel}</th>
                 <th scope="col">本体＋浮遊</th>
@@ -1873,14 +1875,13 @@ function MechAccordDamageTables({
                 const combinedMinimumLabel = row.combinedMinimumReached ? '、最低保証ダメージを含む' : ''
                 return (
                   <tr key={row.resistance}>
-                    <th scope="row">{formatNumber(row.resistance)}%</th>
+                    <th scope="row">{formatTableNumber(row.resistance)}</th>
                     <td
                       className={row.mainMinimumReached ? 'mech-accord-minimum' : undefined}
                       aria-label={`本体 ${formatNumber(row.mainDamage)}${mainMinimumLabel}`}
                     >
                       <strong className="mech-accord-cell-value">
-                        {formatNumber(row.mainDamage)}
-                        {row.mainMinimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}
+                        {formatTableNumber(row.mainDamage)}
                       </strong>
                     </td>
                     <td
@@ -1888,8 +1889,7 @@ function MechAccordDamageTables({
                       aria-label={`${droneLabel} ${formatNumber(row.droneDamage)}、1体の攻撃倍率 ${resistanceResult.multiplierPercent}%${droneMinimumLabel}`}
                     >
                       <strong className="mech-accord-cell-value">
-                        {formatNumber(row.droneDamage)}
-                        {row.droneMinimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}
+                        {formatTableNumber(row.droneDamage)}
                       </strong>
                     </td>
                     <td
@@ -1897,8 +1897,7 @@ function MechAccordDamageTables({
                       aria-label={`本体＋浮遊 ${formatNumber(row.combinedDamage)}${combinedMinimumLabel}`}
                     >
                       <strong className="mech-accord-cell-value">
-                        {formatNumber(row.combinedDamage)}
-                        {row.combinedMinimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}
+                        {formatTableNumber(row.combinedDamage)}
                       </strong>
                     </td>
                   </tr>
@@ -2656,6 +2655,10 @@ function getMinimumDamageAriaLabel(metric: SensitivityMetric): string {
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 }).format(value)
+}
+
+function formatTableNumber(value: number): string {
+  return new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1, useGrouping: false }).format(value)
 }
 
 function formatOptionalNumber(value: number | null): string {
