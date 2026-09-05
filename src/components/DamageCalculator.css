@@ -727,6 +727,35 @@
   font-weight: 700;
 }
 
+.collapsible-panel-heading.has-title-badge {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
+.collapsible-panel-heading.has-title-badge .collapsible-panel-heading-title {
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.collapsible-panel-heading .collapsible-panel-heading-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #ccc;
+  border-radius: 999px;
+  background: #eee;
+  color: #444;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.collapsible-panel-heading.has-title-badge .collapsible-panel-heading-summary {
+  margin-left: auto;
+}
+
 .collapsible-panel-heading-summary {
   min-width: 0;
   display: flex;

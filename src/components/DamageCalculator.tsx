@@ -45,6 +45,7 @@ import {
   type MechAccordResistanceTableResult,
 } from '../lib/mechAccordDamage'
 import {
+  GOLDENGLOW_OPERATOR_ID,
   buildGoldenglowResistanceDamageRows,
   buildGoldenglowSkill3Output,
   calculateGoldenglowExplosion,
@@ -1137,6 +1138,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         id="operator-output-panel"
         number={panelNumbers.operatorOutput}
         title={DAMAGE_OUTPUT_PANELS.operator.title}
+        titleBadge={selectedOperator.operatorId === GOLDENGLOW_OPERATOR_ID ? '自爆ダメージ分析' : undefined}
         summary={goldenglowExplosion
           ? `爆発1回 ${formatNumber(goldenglowExplosion.damageAfterMitigation)} · 術耐性別`
           : `${selectedOperator.operatorName} · 固有出力なし`}
@@ -1262,6 +1264,7 @@ function CollapsibleCalculatorPanel({
   id,
   number,
   title,
+  titleBadge,
   summary,
   open,
   onToggle,
@@ -1275,6 +1278,7 @@ function CollapsibleCalculatorPanel({
   id: string
   number: string
   title: string
+  titleBadge?: string
   summary: ReactNode
   open: boolean
   onToggle: () => void
@@ -1295,7 +1299,7 @@ function CollapsibleCalculatorPanel({
         <button
           type="button"
           id={headingId}
-          className="panel-heading collapsible-panel-heading"
+          className={`panel-heading collapsible-panel-heading${titleBadge ? ' has-title-badge' : ''}`}
           aria-expanded={disabled ? undefined : effectiveOpen}
           aria-controls={disabled ? undefined : bodyId}
           disabled={disabled}
@@ -1304,6 +1308,7 @@ function CollapsibleCalculatorPanel({
           <span className="collapsible-panel-heading-title">
             <span>{number}</span>
             <span className="collapsible-panel-heading-label">{title}</span>
+            {titleBadge && <span className="collapsible-panel-heading-badge">{titleBadge}</span>}
           </span>
           <span className="collapsible-panel-heading-summary">
             <span>{summary}</span>
