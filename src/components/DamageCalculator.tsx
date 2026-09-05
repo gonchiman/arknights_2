@@ -459,6 +459,8 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
     && isGoldenglowSkill3(selectedOperator.operatorId, selectedSkill.skillIndex),
   )
   const genericSkillSupported = skillSupported && !isGoldenglowSkill3Selected
+  // Ordinary skill buffs use shared calculations; S3 adds skill-specific attack-stop handling.
+  const hasMainOutputSkillInfluence = sensitivityTarget === 'SKILL' && isGoldenglowSkill3Selected
   const outputDefinition = resolveDamageOutputDefinition({
     operatorId: selectedOperator?.operatorId ?? '',
     skillIndex: selectedSkill?.skillIndex ?? 0,
@@ -950,10 +952,10 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
           outputTable={panel.id}
           number={panel.number}
           title={panel.title}
-          titleIcons={panel.id === 'DEFAULT' && (hasSubProfessionOutput || sensitivityTarget === 'SKILL') ? (
+          titleIcons={panel.id === 'DEFAULT' && (hasSubProfessionOutput || hasMainOutputSkillInfluence) ? (
             <DamageOutputInfluenceIcons
               subProfessionName={hasSubProfessionOutput ? selectedOperator.subProfessionName : undefined}
-              skillLabel={sensitivityTarget === 'SKILL' ? `S${selectedSkill.skillIndex} ${selectedSkill.skillName}` : undefined}
+              skillLabel={hasMainOutputSkillInfluence ? `S${selectedSkill.skillIndex} ${selectedSkill.skillName}` : undefined}
             />
           ) : undefined}
           summary={panel.id === 'EXPLOSION'
