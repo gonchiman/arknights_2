@@ -1466,6 +1466,15 @@
   margin: 0;
 }
 
+.mech-accord-output-toolbar {
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
+.mech-accord-output-toolbar .mech-accord-attack-count-control {
+  margin-bottom: 0;
+}
+
 .sensitivity-control {
   min-width: 0;
   display: grid;

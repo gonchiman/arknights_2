@@ -132,7 +132,7 @@ export function MechAccordDefaultTable({
         <h3 id={headingId}>メイン出力</h3>
         <p aria-live="polite">{attackLabel} · {metricLabel} · {result.attackCountLabel} · {droneLabel}（1体 {result.multiplierPercent}%） · 術</p>
       </div>
-      <div className="sensitivity-toolbar">
+      <div className="sensitivity-toolbar mech-accord-output-toolbar">
         <div className="mech-accord-attack-count-control">
           <label htmlFor={attackCountSelectId}>攻撃回数</label>
           <select
