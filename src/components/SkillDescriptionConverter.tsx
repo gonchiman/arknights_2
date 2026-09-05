@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { convertSkillDescription, type SkillDescriptionEffect } from '../lib/skillDescriptionEffects'
+import { convertSkillDescription } from '../lib/skillDescriptionEffects'
+import { formatSkillDescriptionEffectValue } from '../lib/skillDescriptionEffectFormat'
 import type { SkillRecord } from '../types/skill'
 import { SkillJsonDetailModal } from './SkillJsonDetailModal'
 import './SkillDescriptionConverter.css'
@@ -8,40 +9,6 @@ interface Props {
   skill: SkillRecord
   levelIndex: number
   levelLabel: string
-}
-
-const UNIT_SUFFIXES: Record<string, string> = {
-  multiplier: '倍',
-  points: '',
-  seconds: '秒',
-  count: '',
-  cost: 'コスト',
-}
-
-const DAMAGE_TYPE_LABELS: Record<string, string> = {
-  physical: '物理',
-  arts: '術',
-  true: '確定',
-}
-
-function formatEffectValue(effect: SkillDescriptionEffect): string {
-  if (typeof effect.value !== 'number') {
-    return effect.key === 'damageType'
-      ? DAMAGE_TYPE_LABELS[String(effect.value)] ?? String(effect.value)
-      : String(effect.value)
-  }
-
-  const isChange = effect.unit === 'ratio' || effect.unit === 'points'
-    || effect.key === 'attackIntervalDeltaSeconds' || effect.key === 'targetCountBonus'
-  const value = effect.value.toLocaleString('ja-JP', {
-    style: effect.unit === 'ratio' ? 'percent' : 'decimal',
-    maximumFractionDigits: 10,
-    signDisplay: isChange ? 'exceptZero' : 'auto',
-  })
-  if (effect.unit === 'ratio') return value
-  if (effect.key === 'hitsPerAttack') return `${value}回`
-  if (effect.key === 'targetCount' || effect.key === 'targetCountBonus') return `${value}体`
-  return `${value}${UNIT_SUFFIXES[effect.unit] ?? effect.unit}`
 }
 
 export function SkillDescriptionConverter({ skill, levelIndex, levelLabel }: Props) {
@@ -82,7 +49,7 @@ export function SkillDescriptionConverter({ skill, levelIndex, levelLabel }: Pro
             {result.effects.map((effect, index) => (
               <tr key={`${effect.key}:${index}`}>
                 <th scope="row">{effect.sourceKey ?? '—'}</th>
-                <td className="skill-description-effect-value">{formatEffectValue(effect)}</td>
+                <td className="skill-description-effect-value">{formatSkillDescriptionEffectValue(effect)}</td>
                 <td>{effect.sourceText}</td>
               </tr>
             ))}

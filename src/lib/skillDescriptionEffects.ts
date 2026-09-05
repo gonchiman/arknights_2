@@ -1,5 +1,10 @@
 import type { RawBlackboardEntry } from '../types/skill'
 import { analyzeDescriptionPlaceholders } from './skillJsonAnalysis.ts'
+import { BARE_NUMBER_START, NUMBER, NUMBER_END, numericEffect, type EffectValue, type Rule } from './skillDescriptionRuleTypes.ts'
+import { MECHANIC_RULES } from './skillDescriptionMechanicRules.ts'
+import { BEHAVIOR_RULES } from './skillDescriptionBehaviorRules.ts'
+import { STAT_RULES } from './skillDescriptionStatRules.ts'
+import { COMBAT_RULES } from './skillDescriptionCombatRules.ts'
 
 export interface SkillDescriptionEffect {
   key: string
@@ -18,33 +23,15 @@ export interface SkillDescriptionConversion {
   unresolvedPlaceholders: string[]
 }
 
-interface EffectValue {
-  key: string
-  label: string
-  value: number | string | boolean
-  unit: string
-  sourceGroups: number[]
-}
-
 interface TrackedDescription {
   text: string
   sourceKeys: string[][]
-}
-
-interface Rule {
-  pattern: RegExp
-  convert: (match: RegExpMatchArray) => EffectValue[]
 }
 
 interface LocatedEffect extends SkillDescriptionEffect {
   index: number
 }
 
-const NUMBER = String.raw`\d+(?:\.\d+)?`
-// Do not read the numeric prefix of a fraction, exponent, percentage or expression
-// as a complete unitless value, including when separated by whitespace.
-const NUMBER_END = String.raw`(?!\s*(?:[\dA-Za-z_.%倍/／+\-×÷*=]|[,，]\s*\d))`
-const BARE_NUMBER_START = String.raw`(?<![\dA-Za-z_.,，/+*／\-×÷=]\s*)`
 const STAT = '(?:攻撃力|防御力|最大HP)'
 const STAT_GROUP = `${STAT}(?:(?:と|・|および)${STAT})*`
 const STAT_KEYS: Record<string, [string, string]> = {
@@ -53,10 +40,6 @@ const STAT_KEYS: Record<string, [string, string]> = {
   最大HP: ['maxHpBonusRatio', '最大HPの加算割合'],
 }
 const DAMAGE_TYPES: Record<string, string> = { 物理: 'physical', 術: 'arts', 確定: 'true' }
-
-function numericEffect(key: string, label: string, value: number, unit: string, sourceGroups = [1]): EffectValue[] {
-  return Number.isFinite(value) ? [{ key, label, value, unit, sourceGroups }] : []
-}
 
 function statEffects(names: string, value: number): EffectValue[] {
   if (!Number.isFinite(value)) return []
@@ -73,6 +56,9 @@ function damageTypeEffect(type: string, sourceGroup = 1): EffectValue {
 // damage multipliers are factors (150% = 1.5), and point/count changes stay separate
 // from absolute values. Rules use the visible description, never blackboard key names.
 const RULES: Rule[] = [
+  ...STAT_RULES,
+  ...COMBAT_RULES,
+  ...MECHANIC_RULES,
   {
     pattern: new RegExp(`(${STAT_GROUP})\\s*([+-])\\s*(${NUMBER})\\s*%`, 'g'),
     convert: (match) => statEffects(match[1], Number(`${match[2]}${match[3]}`) / 100),
@@ -153,6 +139,7 @@ const RULES: Rule[] = [
     pattern: new RegExp(`(?:スキルの)?(?:効果時間|持続時間|継続時間)(?:は|が|:)?\\s*(${NUMBER})\\s*秒(?:間)?`, 'g'),
     convert: (match) => numericEffect('durationSeconds', '効果の持続時間', Number(match[1]), 'seconds'),
   },
+  ...BEHAVIOR_RULES,
 ]
 
 function positiveCount(key: string, label: string, text: string): EffectValue[] {
@@ -217,6 +204,10 @@ export function convertSkillDescription(
       const index = match.index ?? 0
       const end = index + match[0].length
       if (consumed.slice(index, end).some(Boolean)) continue
+      // A positive-looking prefix of a negation or hypothetical is not an effect.
+      if (/^(?:ない|なく|なかった|ません|しない|せず|されない|ではない|ではなく|とは限ら|の場合|した場合|た場合|た時|たとき|する(?:たび|度|ごと|時|とき|場合)|している場合|耐性|への耐性|に(?:は)?なら|にしない|以上|以下|未満|程度|ほど|[~〜～])/.test(searchable.slice(end).trimStart())) continue
+      if (/(?:約|およそ|[~〜～])[^\S\r\n]*$/.test(searchable.slice(Math.max(0, index - 8), index))) continue
+      if (rule.accepts && !rule.accepts(match, searchable)) continue
       const values = rule.convert(match)
       if (!values.length) continue
       consumed.fill(1, index, end)
@@ -273,10 +264,13 @@ function stripDescriptionMarkup(description: TrackedDescription): TrackedDescrip
   result = replaceTrackedText(result, /<(?:\/?[A-Za-z@$][^>]*|\/)>/g, '')
   result = replaceTrackedText(result, /\\n/g, '\n')
   result = replaceTrackedText(result, /[０-９]/g, (digit) => String(digit.charCodeAt(0) - 0xff10))
+  result = replaceTrackedText(result, /．/g, '.')
   result = replaceTrackedText(result, /[＋]/g, '+')
   result = replaceTrackedText(result, /[－−]/g, '-')
   result = replaceTrackedText(result, /％/g, '%')
   result = replaceTrackedText(result, /：/g, ':')
+  result = replaceTrackedText(result, /｢/g, '「')
+  result = replaceTrackedText(result, /｣/g, '」')
   return replaceTrackedText(result, /^\s+|\s+$/g, '')
 }
 

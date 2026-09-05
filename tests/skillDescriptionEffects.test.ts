@@ -91,7 +91,7 @@ test('一部だけを変換できる説明文でも未対応の効果を落と�
   const result = convertSkillDescription('攻撃力+50%、攻撃範囲拡大、敵をかなりの力で突き飛ばす')
 
   assertEffect(result, 'attackPowerBonusRatio', 0.5, 'ratio')
-  assert.match(result.unconvertedText.join('\n'), /攻撃範囲拡大/)
+  assertEffect(result, 'attackRangeChange', '拡大', '')
   assert.match(result.unconvertedText.join('\n'), /突き飛ばす/)
 })
 
@@ -101,7 +101,7 @@ test('blackboardのtimesや説明文の単なる回数を攻撃ヒット数に�
   const withoutCount = convertSkillDescription('攻撃範囲拡大', blackboard)
 
   assert.equal(withCount.effects.some((effect) => effect.key === 'hitsPerAttack'), false)
-  assert.match(withCount.unconvertedText.join('\n'), /4回/)
+  assertEffect(withCount, 'skillUseLimit', 4, 'count')
   assert.equal(withoutCount.effects.some((effect) => effect.key === 'hitsPerAttack'), false)
   assert.equal(withoutCount.effects.some((effect) => effect.key === 'attackPowerBonusRatio'), false)
 })
@@ -125,7 +125,7 @@ test('スキル発動時の連続攻撃回数を通常攻撃一回のヒット�
     const result = convertSkillDescription(description)
 
     assert.equal(result.effects.some((effect) => effect.key === 'hitsPerAttack'), false, description)
-    assert.match(result.unconvertedText.join('\n'), /[345]/)
+    assertEffect(result, 'attackSequenceHitCount', Number(description.match(/[345]/)?.[0]), 'count')
   }
 })
 
@@ -134,7 +134,7 @@ test('攻撃速度の割合表記を速度ポイントの加算値へ読み替�
     const result = convertSkillDescription(description)
 
     assert.equal(result.effects.some((effect) => effect.key === 'attackSpeedBonus'), false, description)
-    assert.ok(result.unconvertedText.length > 0)
+    assertEffect(result, 'attackSpeedBonusRatio', 0.5, 'ratio')
   }
 })
 
@@ -223,7 +223,7 @@ test('攻撃間隔の設定値を増減量へ誤変換しない', () => {
   const result = convertSkillDescription('攻撃間隔を1秒に短縮')
 
   assert.equal(result.effects.some((effect) => effect.key === 'attackIntervalDeltaSeconds'), false)
-  assert.match(result.unconvertedText.join('\n'), /1秒/)
+  assertEffect(result, 'attackIntervalSeconds', 1, 'seconds')
 })
 
 test('無効な数値を効果として出力せず有効な残りの効果は変換する', () => {
