@@ -99,7 +99,9 @@
 }
 
 .skill-description-unconverted {
+  width: 100%;
   min-width: 0;
+  max-width: var(--skill-description-table-max-width);
   border: 1px solid #d8c49e;
   background: #fffcf5;
   padding: 10px 12px;
