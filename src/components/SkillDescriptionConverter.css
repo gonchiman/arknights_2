@@ -1,4 +1,22 @@
-.skill-description-converter { min-width: 0; }
+.skill-description-converter {
+  min-width: 0;
+  container: skill-description / inline-size;
+}
+
+.skill-description-results {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  min-width: 0;
+}
+
+@container skill-description (min-width: 1100px) {
+  .skill-description-results.has-unconverted {
+    grid-template-columns: minmax(0, 960px) minmax(280px, 1fr);
+    gap: 16px;
+  }
+}
 
 .skill-description-converter button {
   min-height: 34px;
@@ -80,7 +98,7 @@
 }
 
 .skill-description-unconverted {
-  margin-top: 12px;
+  min-width: 0;
   border: 1px solid #d8c49e;
   background: #fffcf5;
   padding: 10px 12px;
