@@ -727,6 +727,30 @@
   font-weight: 700;
 }
 
+.collapsible-panel-heading-icons {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+}
+
+.damage-output-influence-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  color: #555;
+}
+
+.damage-output-influence-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
 .collapsible-panel-heading.has-title-badge {
   flex-wrap: wrap;
   row-gap: 6px;

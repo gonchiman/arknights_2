@@ -950,6 +950,12 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
           outputTable={panel.id}
           number={panel.number}
           title={panel.title}
+          titleIcons={panel.id === 'DEFAULT' && (hasSubProfessionOutput || sensitivityTarget === 'SKILL') ? (
+            <DamageOutputInfluenceIcons
+              subProfessionName={hasSubProfessionOutput ? selectedOperator.subProfessionName : undefined}
+              skillLabel={sensitivityTarget === 'SKILL' ? `S${selectedSkill.skillIndex} ${selectedSkill.skillName}` : undefined}
+            />
+          ) : undefined}
           summary={panel.id === 'EXPLOSION'
             ? goldenglowExplosion
               ? `爆発1回 ${formatNumber(goldenglowExplosion.damageAfterMitigation)} · 術耐性別・期待値`
@@ -1201,11 +1207,52 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   )
 }
 
+function DamageOutputInfluenceIcons({
+  subProfessionName,
+  skillLabel,
+}: {
+  subProfessionName?: string
+  skillLabel?: string
+}) {
+  return (
+    <>
+      {subProfessionName && (
+        <span
+          className="damage-output-influence-icon"
+          data-output-influence="sub-profession"
+          role="img"
+          aria-label={`職分の影響：${subProfessionName}`}
+          title={`職分の影響：${subProfessionName}`}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+            <path d="m12 3 9 4.5-9 4.5-9-4.5L12 3Z" />
+            <path d="m3 12 9 4.5 9-4.5M3 16.5l9 4.5 9-4.5" />
+          </svg>
+        </span>
+      )}
+      {skillLabel && (
+        <span
+          className="damage-output-influence-icon"
+          data-output-influence="skill"
+          role="img"
+          aria-label={`スキルの影響：${skillLabel}`}
+          title={`スキルの影響：${skillLabel}`}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+            <path d="m13 2-9 12h7l-1 8 10-12h-7l1-8Z" />
+          </svg>
+        </span>
+      )}
+    </>
+  )
+}
+
 function CollapsibleCalculatorPanel({
   id,
   number,
   title,
   titleBadge,
+  titleIcons,
   outputTable,
   summary,
   open,
@@ -1221,6 +1268,7 @@ function CollapsibleCalculatorPanel({
   number: string
   title: string
   titleBadge?: string
+  titleIcons?: ReactNode
   outputTable?: string
   summary: ReactNode
   open: boolean
@@ -1251,6 +1299,7 @@ function CollapsibleCalculatorPanel({
           <span className="collapsible-panel-heading-title">
             <span>{number}</span>
             <span className="collapsible-panel-heading-label">{title}</span>
+            {titleIcons && <span className="collapsible-panel-heading-icons">{titleIcons}</span>}
             {titleBadge && <span className="collapsible-panel-heading-badge">{titleBadge}</span>}
           </span>
           <span className="collapsible-panel-heading-summary">
