@@ -38,6 +38,7 @@ import {
   MECH_ACCORD_ATTACK_COUNTS,
   calculateMechAccordDamageRows,
   calculateMechAccordResistanceTable,
+  deriveMechAccordSkillOutput,
   getMechAccordMultiplierPercent,
   isMechAccordSubProfession,
   type MechAccordAttackCount,
@@ -180,6 +181,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const [sensitivityTarget, setSensitivityTarget] = useState<SensitivityTarget>(DEFAULT_DAMAGE_SENSITIVITY_TARGET)
   const [sensitivityMetric, setSensitivityMetric] = useState<SensitivityMetric>('DAMAGE')
   const [mechAccordAttackCount, setMechAccordAttackCount] = useState<MechAccordAttackCount>(1)
+  const [mechAccordTarget, setMechAccordTarget] = useState<SensitivityTarget>('NORMAL')
   const [sensitivityCalculationPoint, setSensitivityCalculationPoint] = useState<number | null>(null)
   const [operatorFilters, setOperatorFilters] = useState(EMPTY_OPERATOR_FILTERS)
   const [preferredDefaultOperatorId, setPreferredDefaultOperatorId] = useState(loadPreferredDefaultOperatorId)
@@ -403,22 +405,50 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const normalDps = normalPerHit !== null && operatorStats.attackInterval > 0
     ? normalPerHit / operatorStats.attackInterval
     : null
-  const mechAccordAttackCountDamage = selectedOperator
-    && normalDamageType !== null
-    && isMechAccordSubProfession(selectedOperator.subProfessionId)
+  const hasSubProfessionOutput = Boolean(
+    selectedOperator && isMechAccordSubProfession(selectedOperator.subProfessionId),
+  )
+  const mechAccordSkillOutput = hasSubProfessionOutput && selectedSkill && selectedSkillLevel && model
+    ? deriveMechAccordSkillOutput(selectedSkill, selectedSkillLevel, model)
+    : null
+  const mechAccordSkillAttackPipeline = model
+    ? calculateAttackPipeline(operatorStats.attack, {
+      ...skillAttackModifiers,
+      directMultiplierPercent: skillAttackModifiers.directMultiplierPercent + model.directMultiplierPercent,
+      attackScale: model.attackScalePercent / 100,
+    })
+    : null
+  const mechAccordUnsupportedReasons = mechAccordTarget === 'NORMAL'
+    ? normalDamageType === null ? [normalDamageTypeDetection.reason] : []
+    : mechAccordSkillOutput?.unsupportedReasons ?? ['スキルを選択してください。']
+  const mechAccordAttack = mechAccordTarget === 'NORMAL'
+    ? normalAttackPipeline.finalAttack
+    : mechAccordSkillAttackPipeline?.finalAttack ?? 0
+  const mechAccordMitigationModifiers = mechAccordTarget === 'NORMAL'
+    ? normalMitigationModifiers
+    : skillMitigationModifiers
+  const mechAccordAttackOptions = mechAccordTarget === 'SKILL'
+    ? mechAccordSkillOutput ?? undefined
+    : undefined
+  const mechAccordTargetLabel = mechAccordTarget === 'NORMAL'
+    ? '通常攻撃'
+    : `S${selectedSkill?.skillIndex ?? ''} ${selectedSkill?.skillName ?? 'スキル'}`
+  const mechAccordAttackCountDamage = hasSubProfessionOutput && mechAccordUnsupportedReasons.length === 0
     ? calculateMechAccordDamageRows(
-      normalAttackPipeline.finalAttack,
+      mechAccordAttack,
       REFERENCE_ENEMY_DEFENSE,
       REFERENCE_ENEMY_RESISTANCE,
-      normalMitigationModifiers,
+      mechAccordMitigationModifiers,
+      mechAccordAttackOptions,
     )
     : null
   const mechAccordResistanceDamage = mechAccordAttackCountDamage
     ? calculateMechAccordResistanceTable(
-      normalAttackPipeline.finalAttack,
+      mechAccordAttack,
       REFERENCE_ENEMY_DEFENSE,
       mechAccordAttackCount,
-      normalMitigationModifiers,
+      mechAccordMitigationModifiers,
+      mechAccordAttackOptions,
     )
     : null
   const goldenglowExplosionAttackPipeline = model
@@ -461,9 +491,6 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
     )
     : null
   const genericSkillSupported = skillSupported && !isGoldenglowSkill3Selected
-  const hasSubProfessionOutput = Boolean(
-    selectedOperator && isMechAccordSubProfession(selectedOperator.subProfessionId),
-  )
   const primaryOutputKind = getPrimaryDamageOutputKind(hasSubProfessionOutput)
   const primaryOutputTitle = getPrimaryDamageOutputTitle(primaryOutputKind)
   const operatorOutputPanelState = getDamageOutputPanelState(
@@ -953,8 +980,8 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         title={primaryOutputTitle}
         summary={primaryOutputKind === 'SUB_PROFESSION'
           ? mechAccordResistanceDamage
-            ? `${selectedOperator.subProfessionName} · 攻撃回数別 · ${mechAccordResistanceDamage.attackCountLabel}の術耐性別`
-            : `${selectedOperator.subProfessionName} · 通常攻撃`
+            ? `${selectedOperator.subProfessionName} · ${mechAccordTargetLabel} · 攻撃回数別 · ${mechAccordResistanceDamage.attackCountLabel}の術耐性別`
+            : `${selectedOperator.subProfessionName} · ${mechAccordTargetLabel}`
           : `${sensitivityAttackLabel} · ${formatDetectedDamageType(sensitivityDamageType)} · ${sensitivityStatLabel}別 · ${sensitivityMetricLabel}`}
         open={damageResultOpen}
         onToggle={() => setDamageResultOpen((open) => !open)}
@@ -962,49 +989,41 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         className="results-panel damage-result-panel"
       >
         {primaryOutputKind === 'SUB_PROFESSION' ? (
-          mechAccordAttackCountDamage && mechAccordResistanceDamage
+          <>
+          <div className="sensitivity-results-header">
+            <DamageOutputTargetSwitch target={mechAccordTarget} onChange={setMechAccordTarget} />
+          </div>
+          {mechAccordAttackCountDamage && mechAccordResistanceDamage
             ? (
               <>
                 <MechAccordDamageTables
                   attackCountResult={mechAccordAttackCountDamage}
                   resistanceResult={mechAccordResistanceDamage}
+                  attackLabel={mechAccordTargetLabel}
                   onAttackCountChange={setMechAccordAttackCount}
                 />
-                {isGoldenglowSkill3Selected && (
+                {mechAccordTarget === 'SKILL' && goldenglowExplosion && (
                   <p className="sensitivity-metric-note">
-                    この結果は操機術師の通常攻撃を表示しています。S3の期待値は「{skillOutputPanelLabel}」で確認できます。
+                    この表は浮遊ユニットの自爆を含みません。自爆を含む期待値は「{isGoldenglowSkill3Selected
+                      ? skillOutputPanelLabel
+                      : `${panelNumbers.operatorOutput} ${DAMAGE_OUTPUT_PANELS.operator.title}`}」で確認できます。
                   </p>
                 )}
               </>
             )
             : (
               <div className="damage-output-empty" role="status">
-                <strong>職分固有出力を計算できません</strong>
-                <p>通常攻撃のダメージ種別を自動判定できないため、現在の条件では表示できません。</p>
+                <strong>{mechAccordTarget === 'SKILL' ? '選択中のスキルは現在計算できません' : '職分固有出力を計算できません'}</strong>
+                {mechAccordUnsupportedReasons.map((reason) => <p key={reason}>{reason}</p>)}
               </div>
-            )
+            )}
+          </>
         ) : (
           <>
         <div id="sensitivity-panel" className="sensitivity-results-section">
           <div className="sensitivity-results-header">
             <div className="sensitivity-toolbar">
-              <div className="sensitivity-control">
-                <span>表示対象</span>
-                <div className="sensitivity-target-switch" role="group" aria-label="表示する攻撃">
-                  <button
-                    type="button"
-                    className={sensitivityTarget === 'NORMAL' ? 'active' : ''}
-                    aria-pressed={sensitivityTarget === 'NORMAL'}
-                    onClick={() => changeSensitivityTarget('NORMAL')}
-                  >通常攻撃</button>
-                  <button
-                    type="button"
-                    className={sensitivityTarget === 'SKILL' ? 'active' : ''}
-                    aria-pressed={sensitivityTarget === 'SKILL'}
-                    onClick={() => changeSensitivityTarget('SKILL')}
-                  >スキル</button>
-                </div>
-              </div>
+              <DamageOutputTargetSwitch target={sensitivityTarget} onChange={changeSensitivityTarget} />
               <div className="sensitivity-control">
                 <span>表示内容</span>
                 <div className="sensitivity-metric-switch" role="group" aria-label="表の表示内容">
@@ -1690,13 +1709,40 @@ function ReflectionBadge({ status }: { status: ReflectionStatus }) {
   return <span className={`reflection-badge ${status.toLowerCase().replaceAll('_', '-')}`}>{REFLECTION_STATUS_LABELS[status]}</span>
 }
 
+function DamageOutputTargetSwitch({ target, onChange }: {
+  target: SensitivityTarget
+  onChange: (target: SensitivityTarget) => void
+}) {
+  return (
+    <div className="sensitivity-control">
+      <span>表示対象</span>
+      <div className="sensitivity-target-switch" role="group" aria-label="表示する攻撃">
+        <button
+          type="button"
+          className={target === 'NORMAL' ? 'active' : ''}
+          aria-pressed={target === 'NORMAL'}
+          onClick={() => onChange('NORMAL')}
+        >通常攻撃</button>
+        <button
+          type="button"
+          className={target === 'SKILL' ? 'active' : ''}
+          aria-pressed={target === 'SKILL'}
+          onClick={() => onChange('SKILL')}
+        >スキル</button>
+      </div>
+    </div>
+  )
+}
+
 function MechAccordDamageTables({
   attackCountResult,
   resistanceResult,
+  attackLabel,
   onAttackCountChange,
 }: {
   attackCountResult: MechAccordDamageRowsResult
   resistanceResult: MechAccordResistanceTableResult
+  attackLabel: string
   onAttackCountChange: (attackCount: MechAccordAttackCount) => void
 }) {
   const outputId = useId()
@@ -1706,13 +1752,15 @@ function MechAccordDamageTables({
   const resistanceTableId = `${attackCountSelectId}-table`
   const hasAttackCountMinimumDamage = attackCountResult.rows.some((row) => row.minimumReached)
   const hasResistanceMinimumDamage = resistanceResult.rows.some((row) => row.combinedMinimumReached)
+  const droneLabel = `浮遊${attackCountResult.droneCount}体`
+  const mainLabel = attackCountResult.mainAttackEnabled ? '本体' : '本体（攻撃停止）'
 
   return (
     <section className="mech-accord-output" aria-label="操機術師固有出力">
       <div className="mech-accord-output-block">
         <div className="mech-accord-output-heading">
           <h3 id={attackCountHeadingId}>操機術師・攻撃回数別ダメージ</h3>
-          <p>本体 {formatNumber(attackCountResult.mainDamage.result)} ＋ 浮遊ユニット1体 · 術耐性0</p>
+          <p>{attackLabel} · 1攻撃あたり · {mainLabel} {formatNumber(attackCountResult.mainDamage.result)} ＋ {droneLabel} · 術耐性0</p>
         </div>
         {hasAttackCountMinimumDamage && (
           <div className="mech-accord-table-meta-row">
@@ -1726,12 +1774,12 @@ function MechAccordDamageTables({
           tabIndex={0}
         >
           <table className="mech-accord-table mech-accord-attack-count-table">
-            <caption className="visually-hidden">術耐性0の操機術師・攻撃回数別ダメージ</caption>
+            <caption className="visually-hidden">{attackLabel}・術耐性0の操機術師・攻撃回数別ダメージ</caption>
             <thead>
               <tr>
                 <th scope="col">攻撃回数</th>
-                <th scope="col">本体</th>
-                <th scope="col">浮遊</th>
+                <th scope="col">{mainLabel}</th>
+                <th scope="col">{droneLabel}</th>
                 <th scope="col">本体＋浮遊</th>
               </tr>
             </thead>
@@ -1746,7 +1794,7 @@ function MechAccordDamageTables({
                     </td>
                     <td
                       className={row.minimumReached ? 'mech-accord-minimum' : undefined}
-                      aria-label={`浮遊 ${formatNumber(row.droneDamage)}、攻撃倍率 ${row.multiplierPercent}%${minimumLabel}`}
+                      aria-label={`${droneLabel} ${formatNumber(row.droneDamage)}、1体の攻撃倍率 ${row.multiplierPercent}%${minimumLabel}`}
                     >
                       <strong className="mech-accord-cell-value">
                         {formatNumber(row.droneDamage)}
@@ -1774,7 +1822,7 @@ function MechAccordDamageTables({
       <div className="mech-accord-output-block">
         <div className="mech-accord-output-heading">
           <h3 id={resistanceHeadingId}>操機術師・術耐性別ダメージ</h3>
-          <p aria-live="polite">{resistanceResult.attackCountLabel} · 浮遊ユニット1体 {resistanceResult.multiplierPercent}% · 術</p>
+          <p aria-live="polite">{attackLabel} · 1攻撃あたり · {resistanceResult.attackCountLabel} · {droneLabel}（1体 {resistanceResult.multiplierPercent}%） · 術</p>
         </div>
         <div className="mech-accord-attack-count-control">
           <label htmlFor={attackCountSelectId}>攻撃回数</label>
@@ -1804,12 +1852,12 @@ function MechAccordDamageTables({
           tabIndex={0}
         >
           <table className="mech-accord-table mech-accord-resistance-table" id={resistanceTableId}>
-            <caption className="visually-hidden">{resistanceResult.attackCountLabel}の操機術師・術耐性別ダメージ</caption>
+            <caption className="visually-hidden">{attackLabel}・{resistanceResult.attackCountLabel}の操機術師・術耐性別ダメージ</caption>
             <thead>
               <tr>
                 <th scope="col">術耐性</th>
-                <th scope="col">本体</th>
-                <th scope="col">浮遊</th>
+                <th scope="col">{mainLabel}</th>
+                <th scope="col">{droneLabel}</th>
                 <th scope="col">本体＋浮遊</th>
               </tr>
             </thead>
@@ -1832,7 +1880,7 @@ function MechAccordDamageTables({
                     </td>
                     <td
                       className={row.droneMinimumReached ? 'mech-accord-minimum' : undefined}
-                      aria-label={`浮遊 ${formatNumber(row.droneDamage)}、攻撃倍率 ${resistanceResult.multiplierPercent}%${droneMinimumLabel}`}
+                      aria-label={`${droneLabel} ${formatNumber(row.droneDamage)}、1体の攻撃倍率 ${resistanceResult.multiplierPercent}%${droneMinimumLabel}`}
                     >
                       <strong className="mech-accord-cell-value">
                         {formatNumber(row.droneDamage)}
@@ -1856,7 +1904,7 @@ function MechAccordDamageTables({
         </div>
       </div>
       <p className="mech-accord-note">
-        同一対象への連続攻撃を想定し、対象変更時は1回目へ戻ります。選択モジュールの本体攻撃力補正は含みますが、浮遊ユニット固有のモジュール補正と複数ユニットは含みません。
+        同一対象に全ユニットが同じ回数だけ連続攻撃した場合の値です。対象変更時は1回目へ戻ります。選択モジュールの本体攻撃力補正を含みます。浮遊ユニット固有のモジュール補正、自爆などの追加ダメージ、攻撃速度によるDPSの変化は含みません。
       </p>
     </section>
   )
