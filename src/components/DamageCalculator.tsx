@@ -1222,7 +1222,7 @@ function DamageOutputInfluenceIcons({
           data-output-influence="sub-profession"
           role="img"
           aria-label={`職分の影響：${subProfessionName}`}
-          title={`職分の影響：${subProfessionName}`}
+          data-tooltip={`職分の影響：${subProfessionName}`}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
             <path d="m12 3 9 4.5-9 4.5-9-4.5L12 3Z" />
@@ -1236,7 +1236,7 @@ function DamageOutputInfluenceIcons({
           data-output-influence="skill"
           role="img"
           aria-label={`スキルの影響：${skillLabel}`}
-          title={`スキルの影響：${skillLabel}`}
+          data-tooltip={`スキルの影響：${skillLabel}`}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
             <path d="m13 2-9 12h7l-1 8 10-12h-7l1-8Z" />
