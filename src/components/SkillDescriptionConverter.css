@@ -79,8 +79,6 @@
   font-weight: 700;
 }
 
-.skill-description-converter summary { cursor: pointer; }
-
 .skill-description-unconverted {
   margin-top: 12px;
   border: 1px solid #d8c49e;
@@ -97,25 +95,11 @@
 .skill-description-unconverted ul { margin: 6px 0 0; padding-left: 20px; }
 .skill-description-unconverted li { white-space: pre-wrap; }
 
-.skill-description-json { margin-top: 14px; font-size: 12px; }
-.skill-description-json > summary { font-weight: 700; }
-.skill-description-json-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
-.skill-description-json-actions span { font-size: 11px; }
-.skill-description-json textarea {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  height: 70vh;
-  min-height: 320px;
-  resize: vertical;
-  border: 1px solid var(--border-strong);
-  background: #f7f8fa;
-  color: var(--text);
-  padding: 10px;
-  font-family: ui-monospace, monospace;
-  font-size: 11px;
-  line-height: 1.6;
-  white-space: pre;
+.skill-description-json-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
 }
 
 @media (pointer: coarse) {

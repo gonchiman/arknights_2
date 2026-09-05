@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { convertSkillDescription, type SkillDescriptionEffect } from '../lib/skillDescriptionEffects'
 import type { SkillRecord } from '../types/skill'
+import { SkillJsonDetailModal } from './SkillJsonDetailModal'
 import './SkillDescriptionConverter.css'
 
 interface Props {
@@ -44,7 +45,7 @@ function formatEffectValue(effect: SkillDescriptionEffect): string {
 }
 
 export function SkillDescriptionConverter({ skill, levelIndex, levelLabel }: Props) {
-  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const [jsonDetail, setJsonDetail] = useState<'analysis' | 'source' | null>(null)
   const sourceDescription = skill.raw.description ?? skill.description
   const result = useMemo(
     () => convertSkillDescription(sourceDescription, skill.raw.blackboard ?? []),
@@ -59,17 +60,7 @@ export function SkillDescriptionConverter({ skill, levelIndex, levelLabel }: Pro
     sourceDescription,
     ...result,
   }, null, 2), [result, skill.operatorId, skill.skillId, levelIndex, levelLabel, sourceDescription])
-
-  useEffect(() => setCopyState('idle'), [json])
-
-  const copyJson = async () => {
-    try {
-      await navigator.clipboard.writeText(json)
-      setCopyState('copied')
-    } catch {
-      setCopyState('failed')
-    }
-  }
+  const sourceJson = useMemo(() => JSON.stringify(skill.raw, null, 2), [skill.raw])
 
   return (
     <section className="skill-description-converter" aria-label={`${levelLabel}のスキル効果の解析結果`}>
@@ -111,17 +102,19 @@ export function SkillDescriptionConverter({ skill, levelIndex, levelLabel }: Pro
         </div>
       )}
 
-      <details className="skill-description-json">
-        <summary>解析結果のJSON</summary>
-        <div className="skill-description-json-actions">
-          <button type="button" onClick={() => void copyJson()}>JSONをコピー</button>
-          <span role="status">
-            {copyState === 'copied' && 'コピーしました'}
-            {copyState === 'failed' && 'コピーできませんでした。下のJSONを選択してコピーしてください。'}
-          </span>
-        </div>
-        <textarea aria-label="解析結果のJSON" readOnly value={json} spellCheck={false} />
-      </details>
+      <div className="skill-description-json-buttons">
+        <button type="button" aria-haspopup="dialog" onClick={() => setJsonDetail('analysis')}>解析結果のJSON</button>
+        <button type="button" aria-haspopup="dialog" onClick={() => setJsonDetail('source')}>元データのJSON</button>
+      </div>
+
+      {jsonDetail !== null && (
+        <SkillJsonDetailModal
+          title={jsonDetail === 'source' ? '元データのJSON' : '解析結果のJSON'}
+          subtitle={`${skill.operatorName} · S${skill.skillIndex} ${skill.skillName} · ${levelLabel}`}
+          json={jsonDetail === 'source' ? sourceJson : json}
+          onClose={() => setJsonDetail(null)}
+        />
+      )}
     </section>
   )
 }
