@@ -3,8 +3,10 @@ import assert from 'node:assert/strict'
 import { APP_NAV_ITEMS } from '../src/lib/navigation.ts'
 import {
   createOperatorDetailHash,
+  createSkillEffectsHash,
   createSkillJsonHash,
   parseHashRoute,
+  type SkillEffectsRouteSelection,
 } from '../src/lib/routes.ts'
 
 test('サイドバーから主要ページへ遷移できる', () => {
@@ -13,6 +15,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
     [
       ['operators', 'operators'],
       ['skills', 'skills'],
+      ['skill-effects', 'skill-effects'],
       ['skill-json', 'skill-json'],
       ['damage', 'damage'],
       ['comparison', 'comparison'],
@@ -69,6 +72,80 @@ test('敵分析ページのhashを解析する', () => {
 
 test('全スキル一覧ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/skills'), { view: 'skills' })
+})
+
+test('スキル効果解析ページは全スキル一覧とは独立したhashで開く', () => {
+  assert.deepEqual(parseHashRoute('#/skill-effects'), { view: 'skill-effects' })
+  assert.deepEqual(parseHashRoute('#/skill-effects/extra'), { view: 'operators' })
+})
+
+test('スキル効果解析の共有hashは選択したスキルとレベルを復元する', () => {
+  const selections: SkillEffectsRouteSelection[] = [
+    { operatorId: 'char_test', skillIndex: 1, skillId: 'skill_test', levelIndex: 0 },
+    {
+      operatorId: 'char/日本',
+      skillIndex: 2,
+      skillId: 'skchr_test[2]&mode=1',
+      levelIndex: 9,
+    },
+  ]
+
+  for (const selection of selections) {
+    const hash = createSkillEffectsHash(selection)
+    assert.ok(hash.startsWith('#/skill-effects?'))
+    assert.deepEqual(parseHashRoute(hash), { view: 'skill-effects', selection })
+  }
+})
+
+test('スキル効果解析の不完全・不正・重複した選択指定は解析ページへ戻す', () => {
+  const selection = {
+    operatorId: 'char_test',
+    skillIndex: '1',
+    skillId: 'skill_test',
+    levelIndex: '0',
+  }
+  const invalidValues = {
+    operatorId: ['', ' char_test', 'char_test ', '\u0000char', 'x'.repeat(257), '\ufffd'],
+    skillId: ['', ' skill_test', 'skill_test ', 'skill\u007f', 'x'.repeat(257), '\ufffd'],
+    skillIndex: ['0', '-1', '1.5', '01', 'NaN', '9007199254740992'],
+    levelIndex: ['-1', '0.5', '01', 'NaN', '9007199254740992'],
+  }
+  const base = { view: 'skill-effects' }
+
+  assert.deepEqual(parseHashRoute('#/skill-effects?'), base)
+  for (const key of Object.keys(selection) as (keyof typeof selection)[]) {
+    const missing = new URLSearchParams(selection)
+    missing.delete(key)
+    assert.deepEqual(parseHashRoute(`#/skill-effects?${missing}`), base, `missing ${key}`)
+
+    const duplicate = new URLSearchParams(selection)
+    duplicate.append(key, selection[key])
+    assert.deepEqual(parseHashRoute(`#/skill-effects?${duplicate}`), base, `duplicate ${key}`)
+
+    for (const value of invalidValues[key]) {
+      const invalid = new URLSearchParams(selection)
+      invalid.set(key, value)
+      assert.deepEqual(parseHashRoute(`#/skill-effects?${invalid}`), base, `${key}=${JSON.stringify(value)}`)
+    }
+  }
+})
+
+test('スキル効果解析の共有hash生成は無効なIDと選択番号を拒否する', () => {
+  const selection: SkillEffectsRouteSelection = {
+    operatorId: 'char_test', skillIndex: 1, skillId: 'skill_test', levelIndex: 0,
+  }
+
+  for (const key of ['operatorId', 'skillId'] as const) {
+    for (const value of ['', ' leading', 'trailing ', '\u0000', 'x'.repeat(257)]) {
+      assert.throws(() => createSkillEffectsHash({ ...selection, [key]: value }), TypeError)
+    }
+  }
+  for (const value of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(() => createSkillEffectsHash({ ...selection, skillIndex: value }), RangeError)
+  }
+  for (const value of [-1, 0.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(() => createSkillEffectsHash({ ...selection, levelIndex: value }), RangeError)
+  }
 })
 
 test('Skill JSONページのhashを解析する', () => {

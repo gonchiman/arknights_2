@@ -1,5 +1,6 @@
 export type AppRoute =
   | { view: 'skills' }
+  | { view: 'skill-effects'; selection?: SkillEffectsRouteSelection }
   | { view: 'operators' }
   | { view: 'operator-detail'; operatorId: string }
   | { view: 'skill-json'; selection?: SkillJsonRouteSelection }
@@ -13,19 +14,31 @@ const LEGACY_CLASSIFIER_SKILL_ROUTE_PREFIX = '#/skills/'
 const OPERATOR_SKILL_ROUTE_PREFIX = '#/operators/skills/'
 const OPERATOR_DETAIL_ROUTE_PREFIX = '#/operators/'
 const SKILL_JSON_ROUTE = '#/skill-json'
+const SKILL_EFFECTS_ROUTE = '#/skill-effects'
 
-export interface SkillJsonRouteSelection {
+export interface SkillRouteSelection {
   operatorId: string
   skillIndex: number
   skillId: string
   levelIndex: number
 }
 
+export type SkillJsonRouteSelection = SkillRouteSelection
+export type SkillEffectsRouteSelection = SkillRouteSelection
+
 export function createOperatorDetailHash(operatorId: string): string {
   return `${OPERATOR_DETAIL_ROUTE_PREFIX}${encodeURIComponent(operatorId)}`
 }
 
 export function createSkillJsonHash(selection: SkillJsonRouteSelection): string {
+  return createSkillSelectionHash(SKILL_JSON_ROUTE, selection)
+}
+
+export function createSkillEffectsHash(selection: SkillEffectsRouteSelection): string {
+  return createSkillSelectionHash(SKILL_EFFECTS_ROUTE, selection)
+}
+
+function createSkillSelectionHash(route: string, selection: SkillRouteSelection): string {
   assertRouteId(selection.operatorId, 'operatorId')
   assertRouteId(selection.skillId, 'skillId')
   assertInteger(selection.skillIndex, 1, 'skillIndex')
@@ -37,7 +50,7 @@ export function createSkillJsonHash(selection: SkillJsonRouteSelection): string 
     skillId: selection.skillId,
     levelIndex: String(selection.levelIndex),
   })
-  return `${SKILL_JSON_ROUTE}?${query.toString()}`
+  return `${route}?${query.toString()}`
 }
 
 export function parseHashRoute(hash: string): AppRoute {
@@ -60,9 +73,13 @@ export function parseHashRoute(hash: string): AppRoute {
     }
   }
   if (hash === '#/skill-json/overview') return { view: 'skill-json-overview' }
+  if (hash === SKILL_EFFECTS_ROUTE) return { view: 'skill-effects' }
+  if (hash.startsWith(`${SKILL_EFFECTS_ROUTE}?`)) {
+    return parseSkillSelectionRoute('skill-effects', hash.slice(SKILL_EFFECTS_ROUTE.length + 1))
+  }
   if (hash === SKILL_JSON_ROUTE) return { view: 'skill-json' }
   if (hash.startsWith(`${SKILL_JSON_ROUTE}?`)) {
-    return parseSkillJsonRoute(hash.slice(SKILL_JSON_ROUTE.length + 1))
+    return parseSkillSelectionRoute('skill-json', hash.slice(SKILL_JSON_ROUTE.length + 1))
   }
   if (hash === '#/damage') return { view: 'damage' }
   if (hash === '#/comparison') return { view: 'comparison' }
@@ -72,7 +89,7 @@ export function parseHashRoute(hash: string): AppRoute {
   return { view: 'operators' }
 }
 
-function parseSkillJsonRoute(query: string): AppRoute {
+function parseSkillSelectionRoute(view: 'skill-json' | 'skill-effects', query: string): AppRoute {
   const params = new URLSearchParams(query)
   const operatorId = readRouteId(params, 'operatorId')
   const skillId = readRouteId(params, 'skillId')
@@ -80,11 +97,11 @@ function parseSkillJsonRoute(query: string): AppRoute {
   const levelIndex = readInteger(params, 'levelIndex', 0)
 
   if (operatorId === null || skillId === null || skillIndex === null || levelIndex === null) {
-    return { view: 'skill-json' }
+    return { view }
   }
 
   return {
-    view: 'skill-json',
+    view,
     selection: { operatorId, skillIndex, skillId, levelIndex },
   }
 }
