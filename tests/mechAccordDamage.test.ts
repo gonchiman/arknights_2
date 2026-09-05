@@ -1,9 +1,9 @@
+import { deriveMechAccordSkillOutput } from '../src/lib/mechAccordSkillDamage.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   calculateMechAccordDamageRows,
   calculateMechAccordResistanceTable,
-  deriveMechAccordSkillOutput,
   getMechAccordMultiplierPercent,
   isMechAccordSubProfession,
 } from '../src/lib/mechAccordDamage.ts'

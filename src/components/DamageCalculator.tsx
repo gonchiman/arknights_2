@@ -1,5 +1,4 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
-import { writeClipboardText } from '../lib/clipboard'
 import {
   DAMAGE_TYPE_LABELS,
   calculateAttackPipeline,
@@ -35,34 +34,22 @@ import {
   type OperatorEffectStatus,
 } from '../lib/operatorEffects'
 import {
-  MECH_ACCORD_ATTACK_COUNTS,
   calculateMechAccordDamageRows,
   calculateMechAccordResistanceTable,
-  deriveMechAccordSkillOutput,
-  getMechAccordMultiplierPercent,
   isMechAccordSubProfession,
   type MechAccordAttackCount,
-  type MechAccordDamageRowsResult,
-  type MechAccordResistanceTableResult,
 } from '../lib/mechAccordDamage'
+import { deriveMechAccordSkillOutput } from '../lib/mechAccordSkillDamage'
 import {
-  GOLDENGLOW_OPERATOR_ID,
-  buildGoldenglowResistanceDamageRows,
-  buildGoldenglowSkill3Output,
   calculateGoldenglowExplosion,
   calculateGoldenglowExpectedDpsFromModel,
   isGoldenglowSkill3,
-  type GoldenglowExplosionDamageResult,
-  type GoldenglowResistanceDamageRow,
-  type GoldenglowSkill3Output,
 } from '../lib/goldenglowExplosion'
 import {
   DAMAGE_CALCULATOR_PANEL_DEFAULTS,
-  DAMAGE_OUTPUT_PANELS,
   getDamageCalculatorPanelNumbers,
-  getDamageOutputPanelState,
-  getPrimaryDamageOutputKind,
-  getPrimaryDamageOutputTitle,
+  getDamageOutputPanels,
+  resolveDamageOutputDefinition,
 } from '../lib/damageCalculatorPanels'
 import {
   loadPreferredDefaultOperatorId,
@@ -92,6 +79,8 @@ import {
 import type { RawSkillLevel, SkillRecord } from '../types/skill'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
 import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
+import { MechAccordAttackCountTable, MechAccordDefaultTable } from './MechAccordOutputTables'
+import { GoldenglowDamageTable } from './GoldenglowDamageTable'
 import './DamageCalculator.css'
 
 interface Props {
@@ -103,18 +92,6 @@ interface Props {
 type ReflectionStatus = OperatorEffectStatus | 'PARTIAL'
 type SensitivityMetric = DamageSensitivityMetric
 type SensitivityTarget = DamageSensitivityTarget
-type GoldenglowOperatorOutputMetric = 'EXPLOSION_DAMAGE' | 'EXPECTED_DPS' | 'EXPECTED_TOTAL_DAMAGE'
-
-const GOLDENGLOW_OPERATOR_OUTPUT_OPTIONS: Array<{
-  value: GoldenglowOperatorOutputMetric
-  buttonLabel: string
-  tableLabel: string
-}> = [
-  { value: 'EXPLOSION_DAMAGE', buttonLabel: '爆発1回', tableLabel: '爆発1回のダメージ' },
-  { value: 'EXPECTED_DPS', buttonLabel: '期待DPS', tableLabel: '爆発込み期待DPS' },
-  { value: 'EXPECTED_TOTAL_DAMAGE', buttonLabel: '期待総ダメージ', tableLabel: '爆発込み期待総ダメージ' },
-]
-
 interface CalculationStep {
   label: string
   formula: string
@@ -174,15 +151,12 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const [calculationConditionsOpen, setCalculationConditionsOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.calculationConditions)
   const [operatorInfoOpen, setOperatorInfoOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.operatorInfo)
   const [skillModelOpen, setSkillModelOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillModel)
-  const [damageResultOpen, setDamageResultOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.damageResult)
-  const [operatorOutputOpen, setOperatorOutputOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.operatorOutput)
-  const [skillOutputOpen, setSkillOutputOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillOutput)
+  const [outputPanelsOpen, setOutputPanelsOpen] = useState<Record<string, boolean>>({})
   const [normalCalculationProcessOpen, setNormalCalculationProcessOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.normalCalculationProcess)
   const [skillCalculationProcessOpen, setSkillCalculationProcessOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillCalculationProcess)
   const [sensitivityTarget, setSensitivityTarget] = useState<SensitivityTarget>(DEFAULT_DAMAGE_SENSITIVITY_TARGET)
   const [sensitivityMetric, setSensitivityMetric] = useState<SensitivityMetric>('DAMAGE')
   const [mechAccordAttackCount, setMechAccordAttackCount] = useState<MechAccordAttackCount>(1)
-  const [mechAccordTarget, setMechAccordTarget] = useState<SensitivityTarget>(DEFAULT_DAMAGE_SENSITIVITY_TARGET)
   const [sensitivityCalculationPoint, setSensitivityCalculationPoint] = useState<number | null>(null)
   const [operatorFilters, setOperatorFilters] = useState(EMPTY_OPERATOR_FILTERS)
   const [preferredDefaultOperatorId, setPreferredDefaultOperatorId] = useState(loadPreferredDefaultOperatorId)
@@ -419,19 +393,19 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
       attackScale: model.attackScalePercent / 100,
     })
     : null
-  const mechAccordUnsupportedReasons = mechAccordTarget === 'NORMAL'
+  const mechAccordUnsupportedReasons = sensitivityTarget === 'NORMAL'
     ? normalDamageType === null ? [normalDamageTypeDetection.reason] : []
     : mechAccordSkillOutput?.unsupportedReasons ?? ['スキルを選択してください。']
-  const mechAccordAttack = mechAccordTarget === 'NORMAL'
+  const mechAccordAttack = sensitivityTarget === 'NORMAL'
     ? normalAttackPipeline.finalAttack
     : mechAccordSkillAttackPipeline?.finalAttack ?? 0
-  const mechAccordMitigationModifiers = mechAccordTarget === 'NORMAL'
+  const mechAccordMitigationModifiers = sensitivityTarget === 'NORMAL'
     ? normalMitigationModifiers
     : skillMitigationModifiers
-  const mechAccordAttackOptions = mechAccordTarget === 'SKILL'
+  const mechAccordAttackOptions = sensitivityTarget === 'SKILL'
     ? mechAccordSkillOutput ?? undefined
     : undefined
-  const mechAccordTargetLabel = mechAccordTarget === 'NORMAL'
+  const outputAttackLabel = sensitivityTarget === 'NORMAL'
     ? '通常攻撃'
     : `S${selectedSkill?.skillIndex ?? ''} ${selectedSkill?.skillName ?? 'スキル'}`
   const mechAccordAttackCountDamage = hasSubProfessionOutput && mechAccordUnsupportedReasons.length === 0
@@ -484,26 +458,17 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
     && selectedSkill
     && isGoldenglowSkill3(selectedOperator.operatorId, selectedSkill.skillIndex),
   )
-  const goldenglowSkill3Output = selectedOperator && selectedSkill
-    ? buildGoldenglowSkill3Output(
-      selectedOperator.operatorId,
-      selectedSkill.skillIndex,
-      goldenglowExpectedDps,
-    )
-    : null
   const genericSkillSupported = skillSupported && !isGoldenglowSkill3Selected
-  const primaryOutputKind = getPrimaryDamageOutputKind(hasSubProfessionOutput)
-  const primaryOutputTitle = getPrimaryDamageOutputTitle(primaryOutputKind)
-  const operatorOutputPanelState = getDamageOutputPanelState(
-    goldenglowExplosion !== null,
-    operatorOutputOpen,
-  )
-  const skillOutputPanelState = getDamageOutputPanelState(
-    goldenglowSkill3Output !== null,
-    skillOutputOpen,
-  )
-  const panelNumbers = getDamageCalculatorPanelNumbers()
-  const skillOutputPanelLabel = `${panelNumbers.skillOutput} ${DAMAGE_OUTPUT_PANELS.skill.title}`
+  const outputDefinition = resolveDamageOutputDefinition({
+    operatorId: selectedOperator?.operatorId ?? '',
+    skillIndex: selectedSkill?.skillIndex ?? 0,
+    subProfessionId: selectedOperator?.subProfessionId ?? '',
+    target: sensitivityTarget,
+  })
+  const outputPanels = getDamageOutputPanels(outputDefinition)
+  const panelNumbers = getDamageCalculatorPanelNumbers(outputPanels.length)
+  const explosionPanel = outputPanels.find((panel) => panel.id === 'EXPLOSION')
+  const explosionPanelLabel = explosionPanel ? `${explosionPanel.number} ${explosionPanel.title}` : 'スキルの爆発ダメージテーブル'
   const referenceSkillBreakdown = selectedSkill && model && genericSkillSupported && skillDamageType
     ? calculateSkillDamageBreakdown(
       operatorStats.attack,
@@ -591,7 +556,6 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const skillTotalLabel = getTotalLabel(selectedSkill)
   const sensitivityMetricLabel = getSensitivityMetricLabel(sensitivityMetric, skillTotalLabel)
   const sensitivityAttackLabel = sensitivityTarget === 'NORMAL' ? '通常攻撃' : 'スキル'
-  const isGoldenglowSkill3DefaultOutput = sensitivityTarget === 'SKILL' && isGoldenglowSkill3Selected
   const sensitivityAxisHeader = sensitivityDamageType === 'TRUE' || sensitivityDamageType === null
     ? '補正'
     : sensitivityStatLabel
@@ -975,247 +939,199 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         {!skillSupported && <div className="unsupported-model" role="status"><strong>初期版では自動計算できません</strong>{unsupportedReasons.map((reason) => <span key={reason}>{reason}</span>)}</div>}
       </CollapsibleCalculatorPanel>
 
-      <CollapsibleCalculatorPanel
-        id="damage-result-panel"
-        number={panelNumbers.damageResult}
-        title={primaryOutputTitle}
-        summary={primaryOutputKind === 'SUB_PROFESSION'
-          ? mechAccordResistanceDamage
-            ? `${selectedOperator.subProfessionName} · ${mechAccordTargetLabel} · 攻撃回数別 · ${mechAccordResistanceDamage.attackCountLabel}の術耐性別`
-            : `${selectedOperator.subProfessionName} · ${mechAccordTargetLabel}`
-          : `${sensitivityAttackLabel} · ${formatDetectedDamageType(sensitivityDamageType)} · ${sensitivityStatLabel}別 · ${sensitivityMetricLabel}`}
-        open={damageResultOpen}
-        onToggle={() => setDamageResultOpen((open) => !open)}
-        collapsedLabel={`${primaryOutputTitle}を表示`}
-        className="results-panel damage-result-panel"
-      >
-        {primaryOutputKind === 'SUB_PROFESSION' ? (
-          <>
-          <div className="sensitivity-results-header">
-            <DamageOutputTargetSwitch target={mechAccordTarget} onChange={setMechAccordTarget} />
-          </div>
-          {mechAccordAttackCountDamage && mechAccordResistanceDamage
-            ? (
+      <div className="damage-output-toolbar" data-output-source={outputDefinition.source}>
+        <DamageOutputTargetSwitch target={sensitivityTarget} onChange={changeSensitivityTarget} />
+        <span>{outputAttackLabel} · {outputPanels.length}つのテーブル</span>
+      </div>
+      {outputPanels.map((panel) => (
+        <CollapsibleCalculatorPanel
+          key={panel.id}
+          id={`damage-output-${panel.id.toLowerCase()}`}
+          outputTable={panel.id}
+          number={panel.number}
+          title={panel.title}
+          summary={panel.id === 'EXPLOSION'
+            ? goldenglowExplosion
+              ? `爆発1回 ${formatNumber(goldenglowExplosion.damageAfterMitigation)} · 術耐性別・期待値`
+              : '現在の育成状態では爆発素質を利用できません'
+            : panel.id === 'ATTACK_COUNT'
+              ? `${outputAttackLabel} · 1〜8回目以降 · 本体と浮遊`
+              : hasSubProfessionOutput
+                ? `${outputAttackLabel} · ${mechAccordResistanceDamage?.attackCountLabel ?? '攻撃回数指定'} · 術耐性別`
+                : `${sensitivityAttackLabel} · ${formatDetectedDamageType(sensitivityDamageType)} · ${sensitivityStatLabel}別 · ${sensitivityMetricLabel}`}
+          open={outputPanelsOpen[panel.id] ?? DAMAGE_CALCULATOR_PANEL_DEFAULTS.output}
+          onToggle={() => setOutputPanelsOpen((previous) => ({
+            ...previous,
+            [panel.id]: !(previous[panel.id] ?? DAMAGE_CALCULATOR_PANEL_DEFAULTS.output),
+          }))}
+          collapsedLabel={`${panel.title}を表示`}
+          className="results-panel damage-table-panel"
+        >
+          {panel.id === 'DEFAULT' ? (
+            hasSubProfessionOutput ? (
+              mechAccordResistanceDamage ? (
+                <>
+                  <MechAccordDefaultTable
+                    result={mechAccordResistanceDamage}
+                    attackLabel={outputAttackLabel}
+                    onAttackCountChange={setMechAccordAttackCount}
+                    attackInterval={sensitivityTarget === 'NORMAL' ? operatorStats.attackInterval : model.attackInterval}
+                    duration={model.duration}
+                    allowTotal={sensitivityTarget === 'SKILL' && skillTotalMode === 'DURATION' && model.duration > 0}
+                    metric={sensitivityMetric}
+                    onMetricChange={setSensitivityMetric}
+                  />
+                  {explosionPanel && goldenglowExplosion && (
+                    <p className="sensitivity-metric-note">
+                      自爆を含む期待値は「{explosionPanelLabel}」で確認できます。
+                    </p>
+                  )}
+                </>
+              ) : <UnavailableDamageTable reasons={mechAccordUnsupportedReasons} />
+            ) : (
               <>
-                <MechAccordDamageTables
-                  attackCountResult={mechAccordAttackCountDamage}
-                  resistanceResult={mechAccordResistanceDamage}
-                  attackLabel={mechAccordTargetLabel}
-                  onAttackCountChange={setMechAccordAttackCount}
-                />
-                {mechAccordTarget === 'SKILL' && goldenglowExplosion && (
-                  <p className="sensitivity-metric-note">
-                    この表は浮遊ユニットの自爆を含みません。自爆を含む期待値は「{isGoldenglowSkill3Selected
-                      ? skillOutputPanelLabel
-                      : `${panelNumbers.operatorOutput} ${DAMAGE_OUTPUT_PANELS.operator.title}`}」で確認できます。
-                  </p>
-                )}
+                <div id="sensitivity-panel" className="sensitivity-results-section">
+                  <div className="sensitivity-results-header">
+                    <div className="sensitivity-toolbar">
+                      <div className="sensitivity-control">
+                        <span>表示内容</span>
+                        <div className="sensitivity-metric-switch" role="group" aria-label="表の表示内容">
+                          <button
+                            type="button"
+                            className={sensitivityMetric === 'DAMAGE' ? 'active' : ''}
+                            aria-pressed={sensitivityMetric === 'DAMAGE'}
+                            onClick={() => setSensitivityMetric('DAMAGE')}
+                          >1攻撃</button>
+                          <button
+                            type="button"
+                            className={sensitivityMetric === 'DPS' ? 'active' : ''}
+                            aria-pressed={sensitivityMetric === 'DPS'}
+                            onClick={() => setSensitivityMetric('DPS')}
+                          >DPS</button>
+                          <button
+                            type="button"
+                            className={sensitivityMetric === 'TOTAL' ? 'active' : ''}
+                            aria-pressed={sensitivityMetric === 'TOTAL'}
+                            disabled={!isDamageSensitivityMetricAvailable(sensitivityTarget, 'TOTAL')}
+                            onClick={() => setSensitivityMetric('TOTAL')}
+                          >総ダメージ</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {sensitivityTarget === 'SKILL' && !skillSupported && (
+                    <div className="unsupported-model result-unsupported" role="status">
+                      <strong>選択中のスキルは現在計算できません</strong>
+                      {unsupportedReasons.map((reason) => <span key={reason}>{reason}</span>)}
+                    </div>
+                  )}
+                  {sensitivityMetric === 'DPS' && !hasSensitivityResults && (
+                    <p className="sensitivity-metric-note">{sensitivityAttackLabel}のDPSを算出できません。</p>
+                  )}
+                  {sensitivityTarget === 'SKILL' && sensitivityMetric === 'TOTAL' && !canShowSkillTotal && (
+                    <p className="sensitivity-metric-note">選択中のスキルは{skillTotalLabel}を算出できません。</p>
+                  )}
+                  {!hasSensitivityResults ? (
+                    <p className="sensitivity-results-unavailable">
+                      {sensitivityDamageType === null
+                          ? `${sensitivityAttackLabel}のダメージ種別を自動判定できないため、計算結果を表示できません。`
+                          : `${sensitivityAttackLabel}の表示できる計算結果がありません。`}
+                    </p>
+                  ) : (
+                    <div className="sensitivity-output-layout">
+                      <div
+                        className="sensitivity-table-section"
+                        style={{ maxWidth: `${sensitivityTableMaxWidth}px` }}
+                      >
+                        {hasMinimumDamageResults && (
+                          <div className="sensitivity-table-meta-row">
+                            <span className="minimum-damage-legend"><span aria-hidden="true">※</span>{getMinimumDamageLegendLabel(sensitivityMetric)}</span>
+                          </div>
+                        )}
+                        <div
+                          className="sensitivity-table-wrap"
+                          role="region"
+                          aria-label={`${sensitivityAttackLabel}・${sensitivityStatLabel}別の${sensitivityMetricLabel}数値一覧`}
+                          tabIndex={0}
+                        >
+                          <table className="sensitivity-table">
+                            <caption className="visually-hidden">{sensitivityAttackLabel}・{sensitivityStatLabel}別の{sensitivityMetricLabel}数値一覧</caption>
+                            <thead><tr>
+                              {sensitivityTableHeaders.map((header) => <th scope="col" key={header}>{header}</th>)}
+                            </tr></thead>
+                            <tbody>
+                              {sensitivityData.tableRows.map((row) => {
+                                const value = row.value === null ? '—' : formatNumber(row.value)
+                                const calculationSelected = row.point === sensitivityCalculationRow?.point
+                                return (
+                                  <tr className={calculationSelected ? 'sensitivity-calculation-selected-row' : undefined} key={row.label}>
+                                    <th scope="row">
+                                      {row.breakdown ? (
+                                        <button
+                                          type="button"
+                                          className="sensitivity-calculation-selector"
+                                          aria-controls="sensitivity-calculation-process"
+                                          aria-pressed={calculationSelected}
+                                          aria-label={`${sensitivityStatLabel}${row.label}の計算過程を表示`}
+                                          onClick={() => setSensitivityCalculationPoint(row.point)}
+                                        >
+                                          <span>{row.label}</span>
+                                          <span aria-hidden="true">計算</span>
+                                        </button>
+                                      ) : <span className="sensitivity-row-label">{row.label}</span>}
+                                    </th>
+                                    <td
+                                      className={row.minimumReached ? 'minimum-damage-cell' : undefined}
+                                      aria-label={row.minimumReached ? `${value}、${getMinimumDamageAriaLabel(sensitivityMetric)}` : undefined}
+                                    >{value}{row.minimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}</td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                      {sensitivityCalculationRow?.breakdown && sensitivityAttackPipeline && (
+                        <SensitivityCalculationProcess
+                          id="sensitivity-calculation-process"
+                          row={sensitivityCalculationRow}
+                          statLabel={sensitivityStatLabel}
+                          valueLabel={sensitivityTableHeaders[1]}
+                          baseAttackBreakdown={operatorStats.baseAttackBreakdown}
+                          attackPipeline={sensitivityAttackPipeline}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <p className="result-disclaimer">表示値は単体への理論値です。物理・術ダメージには軽減前の攻撃力の5%を最低保証として適用します。計算過程と固有出力の単一値は敵防御力・術耐性0を基準にしています。確認済みの特性・素質と選択モジュールを反映し、条件入力が必要な効果と未対応効果は計算過程に明示します。潜在、外部バフ、敵デバフ、対象数は含みません。</p>
               </>
             )
-            : (
-              <div className="damage-output-empty" role="status">
-                <strong>{mechAccordTarget === 'SKILL' ? '選択中のスキルは現在計算できません' : '職分固有出力を計算できません'}</strong>
-                {mechAccordUnsupportedReasons.map((reason) => <p key={reason}>{reason}</p>)}
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-        <div id="sensitivity-panel" className="sensitivity-results-section">
-          <div className="sensitivity-results-header">
-            <div className="sensitivity-toolbar">
-              <DamageOutputTargetSwitch target={sensitivityTarget} onChange={changeSensitivityTarget} />
-              <div className="sensitivity-control">
-                <span>表示内容</span>
-                <div className="sensitivity-metric-switch" role="group" aria-label="表の表示内容">
-                  <button
-                    type="button"
-                    className={sensitivityMetric === 'DAMAGE' ? 'active' : ''}
-                    aria-pressed={sensitivityMetric === 'DAMAGE'}
-                    onClick={() => setSensitivityMetric('DAMAGE')}
-                  >1攻撃</button>
-                  <button
-                    type="button"
-                    className={sensitivityMetric === 'DPS' ? 'active' : ''}
-                    aria-pressed={sensitivityMetric === 'DPS'}
-                    onClick={() => setSensitivityMetric('DPS')}
-                  >DPS</button>
-                  <button
-                    type="button"
-                    className={sensitivityMetric === 'TOTAL' ? 'active' : ''}
-                    aria-pressed={sensitivityMetric === 'TOTAL'}
-                    disabled={!isDamageSensitivityMetricAvailable(sensitivityTarget, 'TOTAL')}
-                    onClick={() => setSensitivityMetric('TOTAL')}
-                  >総ダメージ</button>
-                </div>
-              </div>
-            </div>
-          </div>
-          {sensitivityTarget === 'SKILL' && !skillSupported && (
-            <div className="unsupported-model result-unsupported" role="status">
-              <strong>選択中のスキルは現在計算できません</strong>
-              {unsupportedReasons.map((reason) => <span key={reason}>{reason}</span>)}
-            </div>
-          )}
-          {isGoldenglowSkill3DefaultOutput && (
-            <p className="sensitivity-metric-note">
-              {goldenglowSkill3Output
-                ? `ゴールデングローS3は本体が攻撃しないため、汎用式によるスキル値は表示しません。正確な期待値は「${skillOutputPanelLabel}」で確認できます。`
-                : 'ゴールデングローS3は専用期待値モデルの対象です。現在の育成状態では必要な素質データを取得できないため、スキル値を表示しません。'}
-            </p>
-          )}
-          {!isGoldenglowSkill3DefaultOutput && sensitivityMetric === 'DPS' && !hasSensitivityResults && (
-            <p className="sensitivity-metric-note">{sensitivityAttackLabel}のDPSを算出できません。</p>
-          )}
-          {sensitivityTarget === 'SKILL' && !isGoldenglowSkill3Selected && sensitivityMetric === 'TOTAL' && !canShowSkillTotal && (
-            <p className="sensitivity-metric-note">選択中のスキルは{skillTotalLabel}を算出できません。</p>
-          )}
-          {!hasSensitivityResults ? (
-            <p className="sensitivity-results-unavailable">
-              {isGoldenglowSkill3DefaultOutput
-                ? goldenglowSkill3Output
-                  ? `この表示内容はデフォルト出力の対象外です。S3の期待DPS・期待総ダメージは「${skillOutputPanelLabel}」で確認できます。`
-                  : 'この表示内容はデフォルト出力の対象外です。S3固有出力に必要な素質が解放される育成状態を選択してください。'
-                : sensitivityDamageType === null
-                  ? `${sensitivityAttackLabel}のダメージ種別を自動判定できないため、計算結果を表示できません。`
-                  : `${sensitivityAttackLabel}の表示できる計算結果がありません。`}
-            </p>
-          ) : (
-            <div className="sensitivity-output-layout">
-              <div
-                className="sensitivity-table-section"
-                style={{ maxWidth: `${sensitivityTableMaxWidth}px` }}
-              >
-                {hasMinimumDamageResults && (
-                  <div className="sensitivity-table-meta-row">
-                    <span className="minimum-damage-legend"><span aria-hidden="true">※</span>{getMinimumDamageLegendLabel(sensitivityMetric)}</span>
-                  </div>
-                )}
-                <div
-                  className="sensitivity-table-wrap"
-                  role="region"
-                  aria-label={`${sensitivityAttackLabel}・${sensitivityStatLabel}別の${sensitivityMetricLabel}数値一覧`}
-                  tabIndex={0}
-                >
-                  <table className="sensitivity-table">
-                    <caption className="visually-hidden">{sensitivityAttackLabel}・{sensitivityStatLabel}別の{sensitivityMetricLabel}数値一覧</caption>
-                    <thead><tr>
-                      {sensitivityTableHeaders.map((header) => <th scope="col" key={header}>{header}</th>)}
-                    </tr></thead>
-                    <tbody>
-                      {sensitivityData.tableRows.map((row) => {
-                        const value = row.value === null ? '—' : formatNumber(row.value)
-                        const calculationSelected = row.point === sensitivityCalculationRow?.point
-                        return (
-                          <tr className={calculationSelected ? 'sensitivity-calculation-selected-row' : undefined} key={row.label}>
-                            <th scope="row">
-                              {row.breakdown ? (
-                                <button
-                                  type="button"
-                                  className="sensitivity-calculation-selector"
-                                  aria-controls="sensitivity-calculation-process"
-                                  aria-pressed={calculationSelected}
-                                  aria-label={`${sensitivityStatLabel}${row.label}の計算過程を表示`}
-                                  onClick={() => setSensitivityCalculationPoint(row.point)}
-                                >
-                                  <span>{row.label}</span>
-                                  <span aria-hidden="true">計算</span>
-                                </button>
-                              ) : <span className="sensitivity-row-label">{row.label}</span>}
-                            </th>
-                            <td
-                              className={row.minimumReached ? 'minimum-damage-cell' : undefined}
-                              aria-label={row.minimumReached ? `${value}、${getMinimumDamageAriaLabel(sensitivityMetric)}` : undefined}
-                            >{value}{row.minimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}</td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              {sensitivityCalculationRow?.breakdown && sensitivityAttackPipeline && (
-                <SensitivityCalculationProcess
-                  id="sensitivity-calculation-process"
-                  row={sensitivityCalculationRow}
-                  statLabel={sensitivityStatLabel}
-                  valueLabel={sensitivityTableHeaders[1]}
-                  baseAttackBreakdown={operatorStats.baseAttackBreakdown}
-                  attackPipeline={sensitivityAttackPipeline}
-                />
-              )}
-            </div>
-          )}
-        </div>
-
-        <p className="result-disclaimer">表示値は単体への理論値です。物理・術ダメージには軽減前の攻撃力の5%を最低保証として適用します。計算過程と固有出力の単一値は敵防御力・術耐性0を基準にしています。確認済みの特性・素質と選択モジュールを反映し、条件入力が必要な効果と未対応効果は計算過程に明示します。潜在、外部バフ、敵デバフ、対象数は含みません。</p>
-          </>
-        )}
-      </CollapsibleCalculatorPanel>
-
-      <CollapsibleCalculatorPanel
-        id="operator-output-panel"
-        number={panelNumbers.operatorOutput}
-        title={DAMAGE_OUTPUT_PANELS.operator.title}
-        titleBadge={selectedOperator.operatorId === GOLDENGLOW_OPERATOR_ID ? '自爆ダメージ分析' : undefined}
-        summary={goldenglowExplosion
-          ? `爆発1回 ${formatNumber(goldenglowExplosion.damageAfterMitigation)} · 術耐性別`
-          : `${selectedOperator.operatorName} · 固有出力なし`}
-        open={operatorOutputPanelState.open}
-        onToggle={() => setOperatorOutputOpen((open) => !open)}
-        collapsedLabel="オペレーター固有出力を表示"
-        disabled={operatorOutputPanelState.disabled}
-        disabledLabel="出力なし"
-        className={[
-          'operator-output-panel',
-          operatorOutputPanelState.disabled ? 'disabled-output-panel' : 'results-panel',
-        ].join(' ')}
-      >
-        {goldenglowExplosion
-          ? (
-            <GoldenglowResistanceDamageOutput
+          ) : panel.id === 'ATTACK_COUNT' ? (
+            mechAccordAttackCountDamage
+              ? <MechAccordAttackCountTable result={mechAccordAttackCountDamage} attackLabel={outputAttackLabel} />
+              : <UnavailableDamageTable reasons={mechAccordUnsupportedReasons} />
+          ) : goldenglowExplosion ? (
+            <GoldenglowDamageTable
+              key={selectedSkill.id}
               explosion={goldenglowExplosion}
               skillIndex={selectedSkill.skillIndex}
               attackInterval={model.attackInterval}
               duration={model.duration}
               skillLabel={`S${selectedSkill.skillIndex} ${selectedSkillLevel.name ?? selectedSkill.skillName}`}
             />
-          )
-          : <DamageOutputEmptyState subject={selectedOperator.operatorName} />}
-      </CollapsibleCalculatorPanel>
-
-      <CollapsibleCalculatorPanel
-        id="skill-output-panel"
-        number={panelNumbers.skillOutput}
-        title={DAMAGE_OUTPUT_PANELS.skill.title}
-        summary={goldenglowSkill3Output
-          ? `S3 ${selectedSkill.skillName} · 浮遊${goldenglowSkill3Output.activeDroneCount}体集中時 期待DPS ${formatNumber(goldenglowSkill3Output.rows.at(-1)?.expectedDps ?? 0)}`
-          : `S${selectedSkill.skillIndex} ${selectedSkill.skillName} · 固有出力なし`}
-        open={skillOutputPanelState.open}
-        onToggle={() => setSkillOutputOpen((open) => !open)}
-        collapsedLabel="スキル固有出力を表示"
-        disabled={skillOutputPanelState.disabled}
-        disabledLabel="出力なし"
-        className={[
-          'skill-output-panel',
-          skillOutputPanelState.disabled ? 'disabled-output-panel' : 'results-panel',
-        ].join(' ')}
-      >
-        {goldenglowSkill3Output
-          ? (
-            <GoldenglowSkill3FocusOutput
-              output={goldenglowSkill3Output}
-              skillLabel={`S3 ${selectedSkillLevel.name ?? selectedSkill.skillName}`}
-            />
-          )
-          : <DamageOutputEmptyState subject={`S${selectedSkill.skillIndex} ${selectedSkill.skillName}`} />}
-      </CollapsibleCalculatorPanel>
+          ) : (
+            <UnavailableDamageTable reasons={['爆発素質が解放される昇進段階を選択すると、爆発ダメージと期待値を計算できます。']} />
+          )}
+        </CollapsibleCalculatorPanel>
+      ))}
 
       <CollapsibleCalculatorPanel
         id="normal-calculation-process-panel"
         number={panelNumbers.normalCalculationProcess}
         title="通常攻撃の計算過程"
-        summary={`防御力0・術耐性0 · 1ヒット ${formatOptionalNumber(normalPerHit)} · DPS ${formatOptionalNumber(normalDps)}`}
+        summary={`${hasSubProfessionOutput ? '本体分 · ' : ''}防御力0・術耐性0 · 1ヒット ${formatOptionalNumber(normalPerHit)} · DPS ${formatOptionalNumber(normalDps)}`}
         open={normalCalculationProcessOpen}
         onToggle={() => setNormalCalculationProcessOpen((open) => !open)}
         collapsedLabel="式と代入値を表示"
@@ -1230,6 +1146,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
           moduleApplication={moduleApplication}
         />
         <p className="calculation-process-note">
+          {hasSubProfessionOutput && 'この計算過程は本体分です。浮遊ユニットを含む値は出力テーブルに表示します。'}
           この式は敵防御力・術耐性0の基準値です。上の一覧で「計算に反映」とした特性・素質・モジュール効果だけを式へ適用します。潜在・外部バフは未反映です。式中の値は確認しやすい桁数に省略して表示し、計算自体は表示前の値で行います。
         </p>
       </CollapsibleCalculatorPanel>
@@ -1239,11 +1156,13 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         number={panelNumbers.skillCalculationProcess}
         title="スキルの計算過程"
         summary={isGoldenglowSkill3Selected
-          ? goldenglowSkill3Output
-            ? `S3専用期待値モデル · ${skillOutputPanelLabel}を参照`
+          ? goldenglowExpectedDps
+            ? explosionPanel
+              ? `S3専用期待値モデル · ${explosionPanelLabel}を参照`
+              : 'S3専用期待値モデル · 表示対象をスキルに切り替えて確認'
             : 'S3専用期待値モデル · 現在の育成状態では出力不可'
           : skillOutput
-            ? `防御力0・術耐性0 · 1攻撃 ${formatNumber(skillOutput.perAttack)} · DPS ${skillOutput.dps === null ? '—' : formatNumber(skillOutput.dps)}`
+            ? `${hasSubProfessionOutput ? '本体分 · ' : ''}防御力0・術耐性0 · 1攻撃 ${formatNumber(skillOutput.perAttack)} · DPS ${skillOutput.dps === null ? '—' : formatNumber(skillOutput.dps)}`
             : '自動計算対象外'}
         open={skillCalculationProcessOpen}
         onToggle={() => setSkillCalculationProcessOpen((open) => !open)}
@@ -1253,11 +1172,13 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
       >
         {isGoldenglowSkill3Selected ? (
           <div className="calculation-unavailable goldenglow-s3-calculation-route">
-            <strong>{goldenglowSkill3Output
+            <strong>{goldenglowExpectedDps
               ? 'S3は専用の確率モデルで計算しています'
               : 'S3固有出力に必要な素質データを取得できません'}</strong>
-            <span>{goldenglowSkill3Output
-              ? `本体停止、浮遊ユニットの連続攻撃倍率、自爆の疑似ランダム分布をまとめた計算結果を「${skillOutputPanelLabel}」に表示します。`
+            <span>{goldenglowExpectedDps
+              ? explosionPanel
+                ? `本体停止、浮遊ユニットの連続攻撃倍率、自爆の疑似ランダム分布をまとめた期待値を「${explosionPanelLabel}」に表示します。`
+                : '上の「表示対象」を「スキル」に切り替えると、本体停止、浮遊ユニットの連続攻撃倍率、自爆の疑似ランダム分布を反映した期待値を爆発ダメージテーブルで確認できます。'
               : '爆発素質が解放される昇進段階を選択すると、S3固有の期待値を計算できます。'}</span>
           </div>
         ) : (
@@ -1270,6 +1191,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
               moduleApplication={moduleApplication}
             />
             <p className="calculation-process-note">
+              {hasSubProfessionOutput && 'この計算過程は本体分です。浮遊ユニットを含む値は出力テーブルに表示します。'}
               この式は敵防御力・術耐性0の基準値です。反映済みの特性・素質・モジュール効果はスキル補正と同じA〜Eへ合流します。条件入力が必要・未対応の効果は数値へ加えません。固定時間の総ダメージは、DPS × 効果時間による連続値の理論値です。
             </p>
           </>
@@ -1284,6 +1206,7 @@ function CollapsibleCalculatorPanel({
   number,
   title,
   titleBadge,
+  outputTable,
   summary,
   open,
   onToggle,
@@ -1298,6 +1221,7 @@ function CollapsibleCalculatorPanel({
   number: string
   title: string
   titleBadge?: string
+  outputTable?: string
   summary: ReactNode
   open: boolean
   onToggle: () => void
@@ -1313,7 +1237,7 @@ function CollapsibleCalculatorPanel({
   const effectiveOpen = !disabled && open
 
   return (
-    <section className={`calculator-panel collapsible-calculator-panel ${effectiveOpen ? 'open' : ''} ${disabled ? 'disabled' : ''} ${className}`.trim()}>
+    <section data-output-table={outputTable} className={`calculator-panel collapsible-calculator-panel ${effectiveOpen ? 'open' : ''} ${disabled ? 'disabled' : ''} ${className}`.trim()}>
       <h2 className="collapsible-panel-title">
         <button
           type="button"
@@ -1348,11 +1272,11 @@ function CollapsibleCalculatorPanel({
   )
 }
 
-function DamageOutputEmptyState({ subject }: { subject: string }) {
+function UnavailableDamageTable({ reasons }: { reasons: string[] }) {
   return (
-    <div className="damage-output-empty">
-      <strong>現在、専用出力はありません</strong>
-      <p>{subject}に固有の追加成分が登録されると、この領域に表示されます。</p>
+    <div className="damage-output-empty" role="status">
+      <strong>現在の条件では、このテーブルを計算できません</strong>
+      {reasons.map((reason) => <p key={reason}>{reason}</p>)}
     </div>
   )
 }
@@ -1736,458 +1660,6 @@ function DamageOutputTargetSwitch({ target, onChange }: {
         >スキル</button>
       </div>
     </div>
-  )
-}
-
-function MechAccordDamageTables({
-  attackCountResult,
-  resistanceResult,
-  attackLabel,
-  onAttackCountChange,
-}: {
-  attackCountResult: MechAccordDamageRowsResult
-  resistanceResult: MechAccordResistanceTableResult
-  attackLabel: string
-  onAttackCountChange: (attackCount: MechAccordAttackCount) => void
-}) {
-  const outputId = useId()
-  const attackCountHeadingId = `${outputId}-attack-count-heading`
-  const attackCountNoteId = `${outputId}-attack-count-note`
-  const resistanceHeadingId = `${outputId}-resistance-heading`
-  const attackCountSelectId = useId()
-  const resistanceTableId = `${attackCountSelectId}-table`
-  const hasAttackCountMinimumDamage = attackCountResult.rows.some((row) => row.minimumReached)
-  const hasResistanceMinimumDamage = resistanceResult.rows.some((row) => row.combinedMinimumReached)
-  const droneLabel = `浮遊${attackCountResult.droneCount}体`
-  const mainLabel = attackCountResult.mainAttackEnabled ? '本体' : '本体（攻撃停止）'
-
-  return (
-    <section className="mech-accord-output" aria-label="操機術師固有出力">
-      <div className="mech-accord-output-block">
-        <div className="mech-accord-output-heading">
-          <h3 id={attackCountHeadingId}>操機術師・攻撃回数別ダメージ</h3>
-          <p>{attackLabel} · 1攻撃あたり · {mainLabel} {formatNumber(attackCountResult.mainDamage.result)} ＋ {droneLabel} · 術耐性0</p>
-        </div>
-        {hasAttackCountMinimumDamage && (
-          <div className="mech-accord-table-meta-row">
-            <span className="minimum-damage-legend">赤字：最低保証ダメージ（合計は最低保証を含む）</span>
-          </div>
-        )}
-        <div
-          className="mech-accord-table-wrap"
-          role="region"
-          aria-labelledby={attackCountHeadingId}
-          tabIndex={0}
-        >
-          <table className="mech-accord-table mech-accord-attack-count-table" aria-describedby={attackCountNoteId}>
-            <caption className="visually-hidden">{attackLabel}・術耐性0の操機術師・攻撃回数別ダメージ</caption>
-            <thead>
-              <tr>
-                <th scope="col">攻撃回数</th>
-                <th scope="col">{mainLabel}</th>
-                <th scope="col">{droneLabel}</th>
-                <th scope="col">本体＋浮遊</th>
-              </tr>
-            </thead>
-            <tbody>
-              {attackCountResult.rows.map((row) => {
-                const minimumLabel = row.minimumReached ? '、最低保証ダメージ' : ''
-                return (
-                  <tr key={row.attackCount}>
-                    <th scope="row" aria-label={row.attackCount === MECH_ACCORD_ATTACK_COUNTS.length ? '8回目以降' : `${row.attackCount}回目`}>{row.attackCount}</th>
-                    <td aria-label={`本体 ${formatNumber(attackCountResult.mainDamage.result)}`}>
-                      <strong className="mech-accord-cell-value">{formatTableNumber(attackCountResult.mainDamage.result)}</strong>
-                    </td>
-                    <td
-                      className={row.minimumReached ? 'mech-accord-minimum' : undefined}
-                      aria-label={`${droneLabel} ${formatNumber(row.droneDamage)}、1体の攻撃倍率 ${row.multiplierPercent}%${minimumLabel}`}
-                    >
-                      <strong className="mech-accord-cell-value">
-                        {formatTableNumber(row.droneDamage)}
-                      </strong>
-                    </td>
-                    <td
-                      className={row.minimumReached ? 'mech-accord-minimum' : undefined}
-                      aria-label={`本体＋浮遊 ${formatNumber(row.combinedDamage)}${row.minimumReached ? '、最低保証ダメージを含む' : ''}`}
-                    >
-                      <strong className="mech-accord-cell-value">
-                        {formatTableNumber(row.combinedDamage)}
-                      </strong>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-        <p className="mech-accord-note" id={attackCountNoteId}>
-          攻撃回数の「8」は8回目以降を表します。浮遊ユニット1体の倍率（1〜8回目）：
-          {attackCountResult.rows.map((row) => `${row.multiplierPercent}%`).join(' / ')}。
-        </p>
-      </div>
-
-      <div className="mech-accord-output-block">
-        <div className="mech-accord-output-heading">
-          <h3 id={resistanceHeadingId}>操機術師・術耐性別ダメージ</h3>
-          <p aria-live="polite">{attackLabel} · 1攻撃あたり · {resistanceResult.attackCountLabel} · {droneLabel}（1体 {resistanceResult.multiplierPercent}%） · 術</p>
-        </div>
-        <div className="mech-accord-attack-count-control">
-          <label htmlFor={attackCountSelectId}>攻撃回数</label>
-          <select
-            id={attackCountSelectId}
-            value={resistanceResult.attackCount}
-            aria-controls={resistanceTableId}
-            onChange={(event) => onAttackCountChange(Number(event.target.value) as MechAccordAttackCount)}
-          >
-            {MECH_ACCORD_ATTACK_COUNTS.map((attackCount) => (
-              <option value={attackCount} key={attackCount}>
-                {attackCount === MECH_ACCORD_ATTACK_COUNTS.length ? '8回目以降' : `${attackCount}回目`}
-                （{getMechAccordMultiplierPercent(attackCount)}%）
-              </option>
-            ))}
-          </select>
-        </div>
-        {hasResistanceMinimumDamage && (
-          <div className="mech-accord-table-meta-row">
-            <span className="minimum-damage-legend">赤字：最低保証ダメージ（合計は最低保証を含む）</span>
-          </div>
-        )}
-        <div
-          className="mech-accord-table-wrap"
-          role="region"
-          aria-label={`${resistanceResult.attackCountLabel}の術耐性別ダメージ表`}
-          tabIndex={0}
-        >
-          <table className="mech-accord-table mech-accord-resistance-table" id={resistanceTableId}>
-            <caption className="visually-hidden">{attackLabel}・{resistanceResult.attackCountLabel}の操機術師・術耐性別ダメージ</caption>
-            <thead>
-              <tr>
-                <th scope="col">術耐性（%）</th>
-                <th scope="col">{mainLabel}</th>
-                <th scope="col">{droneLabel}</th>
-                <th scope="col">本体＋浮遊</th>
-              </tr>
-            </thead>
-            <tbody>
-              {resistanceResult.rows.map((row) => {
-                const mainMinimumLabel = row.mainMinimumReached ? '、最低保証ダメージ' : ''
-                const droneMinimumLabel = row.droneMinimumReached ? '、最低保証ダメージ' : ''
-                const combinedMinimumLabel = row.combinedMinimumReached ? '、最低保証ダメージを含む' : ''
-                return (
-                  <tr key={row.resistance}>
-                    <th scope="row">{formatTableNumber(row.resistance)}</th>
-                    <td
-                      className={row.mainMinimumReached ? 'mech-accord-minimum' : undefined}
-                      aria-label={`本体 ${formatNumber(row.mainDamage)}${mainMinimumLabel}`}
-                    >
-                      <strong className="mech-accord-cell-value">
-                        {formatTableNumber(row.mainDamage)}
-                      </strong>
-                    </td>
-                    <td
-                      className={row.droneMinimumReached ? 'mech-accord-minimum' : undefined}
-                      aria-label={`${droneLabel} ${formatNumber(row.droneDamage)}、1体の攻撃倍率 ${resistanceResult.multiplierPercent}%${droneMinimumLabel}`}
-                    >
-                      <strong className="mech-accord-cell-value">
-                        {formatTableNumber(row.droneDamage)}
-                      </strong>
-                    </td>
-                    <td
-                      className={row.combinedMinimumReached ? 'mech-accord-minimum' : undefined}
-                      aria-label={`本体＋浮遊 ${formatNumber(row.combinedDamage)}${combinedMinimumLabel}`}
-                    >
-                      <strong className="mech-accord-cell-value">
-                        {formatTableNumber(row.combinedDamage)}
-                      </strong>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <p className="mech-accord-note">
-        同一対象に全ユニットが同じ回数だけ連続攻撃した場合の値です。対象変更時は1回目へ戻ります。選択モジュールの本体攻撃力補正を含みます。浮遊ユニット固有のモジュール補正、自爆などの追加ダメージ、攻撃速度によるDPSの変化は含みません。
-      </p>
-    </section>
-  )
-}
-
-function GoldenglowResistanceDamageOutput({
-  explosion,
-  skillIndex,
-  attackInterval,
-  duration,
-  skillLabel,
-}: {
-  explosion: GoldenglowExplosionDamageResult
-  skillIndex: number
-  attackInterval: number
-  duration: number
-  skillLabel: string
-}) {
-  const [selectedOutput, setSelectedOutput] = useState<GoldenglowOperatorOutputMetric>('EXPLOSION_DAMAGE')
-  const [copyFeedback, setCopyFeedback] = useState<{
-    state: 'COPIED' | 'FAILED'
-    tableText: string
-    outputLabel: string
-  } | null>(null)
-  const copyFeedbackTimerRef = useRef<number | null>(null)
-  const { model } = explosion
-  const totalDamageAvailable = skillIndex !== 2
-  const effectiveOutput = selectedOutput === 'EXPECTED_TOTAL_DAMAGE' && !totalDamageAvailable
-    ? 'EXPLOSION_DAMAGE'
-    : selectedOutput
-  const outputOption = GOLDENGLOW_OPERATOR_OUTPUT_OPTIONS.find((option) => option.value === effectiveOutput)
-    ?? GOLDENGLOW_OPERATOR_OUTPUT_OPTIONS[0]
-  const resistanceRows = useMemo(() => buildGoldenglowResistanceDamageRows({
-    model,
-    skillIndex,
-    effectiveAttack: explosion.effectiveAttack,
-    attackInterval,
-    duration,
-    enemyResistances: getDamageSensitivityTablePoints('ARTS'),
-  }), [model, skillIndex, explosion.effectiveAttack, attackInterval, duration])
-  const outputRows = resistanceRows.map((row) => ({
-    ...row,
-    value: selectGoldenglowResistanceOutputValue(row, effectiveOutput),
-  }))
-  const hasMinimumDamageResults = outputRows.some((row) => row.minimumReached)
-  const tableHeaders = ['術耐性', outputOption.tableLabel]
-  const tableText = [
-    tableHeaders,
-    ...outputRows.map((row) => [
-      `${formatNumber(row.enemyResistance)}%`,
-      row.value === null ? '—' : formatNumber(row.value),
-    ]),
-  ].map((row) => row.join('\t')).join('\r\n')
-  const copyState = copyFeedback?.tableText === tableText ? copyFeedback.state : 'IDLE'
-  const copyLabel = copyState === 'COPIED'
-    ? 'コピー済み'
-    : copyState === 'FAILED' ? 'コピー失敗' : '表をコピー'
-  const copyOutputLabel = copyFeedback?.tableText === tableText
-    ? copyFeedback.outputLabel
-    : outputOption.buttonLabel
-  const copyAnnouncement = copyState === 'COPIED'
-    ? `ゴールデングローの${copyOutputLabel}表をコピーしました。`
-    : copyState === 'FAILED' ? `ゴールデングローの${copyOutputLabel}表をコピーできませんでした。` : ''
-
-  useEffect(() => {
-    if (!totalDamageAvailable && selectedOutput === 'EXPECTED_TOTAL_DAMAGE') {
-      setSelectedOutput('EXPLOSION_DAMAGE')
-    }
-  }, [selectedOutput, totalDamageAvailable])
-
-  useEffect(() => {
-    setCopyFeedback(null)
-    return () => {
-      if (copyFeedbackTimerRef.current !== null) {
-        window.clearTimeout(copyFeedbackTimerRef.current)
-        copyFeedbackTimerRef.current = null
-      }
-    }
-  }, [tableText])
-
-  const copyOutputTable = async () => {
-    let nextState: 'COPIED' | 'FAILED' = 'COPIED'
-    try {
-      await writeClipboardText(tableText)
-    } catch {
-      nextState = 'FAILED'
-    }
-
-    setCopyFeedback({
-      state: nextState,
-      tableText,
-      outputLabel: outputOption.buttonLabel,
-    })
-    if (copyFeedbackTimerRef.current !== null) {
-      window.clearTimeout(copyFeedbackTimerRef.current)
-    }
-    copyFeedbackTimerRef.current = window.setTimeout(() => {
-      setCopyFeedback(null)
-      copyFeedbackTimerRef.current = null
-    }, 2500)
-  }
-
-  return (
-    <section className="goldenglow-output" aria-labelledby="goldenglow-output-heading" aria-live="off">
-      <div className="goldenglow-output-heading">
-        <h3 id="goldenglow-output-heading">ゴールデングロー・術耐性別ダメージ</h3>
-        <p>
-          {skillLabel} · 爆発倍率{formatNumber(model.attackScalePercent)}%
-          {' '}· 術耐性固定無視{formatNumber(model.resistanceIgnoreFixed)}
-        </p>
-      </div>
-      <div className="sensitivity-control goldenglow-output-control">
-        <span>出力を選択</span>
-        <div
-          className="sensitivity-metric-switch"
-          role="group"
-          aria-label="術耐性別テーブルの出力"
-          aria-describedby={!totalDamageAvailable ? 'goldenglow-output-unavailable-note' : undefined}
-        >
-          {GOLDENGLOW_OPERATOR_OUTPUT_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={effectiveOutput === option.value ? 'active' : ''}
-              aria-pressed={effectiveOutput === option.value}
-              disabled={option.value === 'EXPECTED_TOTAL_DAMAGE' && !totalDamageAvailable}
-              onClick={() => setSelectedOutput(option.value)}
-            >
-              {option.buttonLabel}
-            </button>
-          ))}
-        </div>
-      </div>
-      {!totalDamageAvailable && (
-        <p id="goldenglow-output-unavailable-note" className="goldenglow-output-unavailable-note">
-          S2は永続スキルのため、期待総ダメージは算出しません。
-        </p>
-      )}
-      {hasMinimumDamageResults && (
-        <div className="sensitivity-table-meta-row goldenglow-table-meta-row">
-          <span className="minimum-damage-legend"><span aria-hidden="true">※</span>術ダメージ最低保証</span>
-        </div>
-      )}
-      <div className="goldenglow-copyable-table">
-        <div
-          className="goldenglow-table-wrap"
-          role="region"
-          aria-label={`術耐性別の${outputOption.tableLabel}`}
-          tabIndex={0}
-        >
-          <table className="goldenglow-output-table" aria-labelledby="goldenglow-output-heading">
-            <thead>
-              <tr><th scope="col">術耐性</th><th scope="col">{outputOption.tableLabel}</th></tr>
-            </thead>
-            <tbody>
-              {outputRows.map((row) => (
-                <tr key={row.enemyResistance}>
-                  <th scope="row">{formatNumber(row.enemyResistance)}%</th>
-                  <td
-                    className={row.minimumReached ? 'minimum-damage-cell' : undefined}
-                    aria-label={row.minimumReached && row.value !== null
-                      ? `${formatNumber(row.value)}、術ダメージ最低保証`
-                      : undefined}
-                  >
-                    {row.value === null ? '—' : formatNumber(row.value)}
-                    {row.minimumReached && <span className="minimum-damage-mark" aria-hidden="true">※</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <button
-          type="button"
-          className={[
-            'goldenglow-table-copy-button',
-            copyState !== 'IDLE' ? 'is-visible' : '',
-            copyState === 'COPIED' ? 'is-copied' : '',
-            copyState === 'FAILED' ? 'is-failed' : '',
-          ].filter(Boolean).join(' ')}
-          aria-label={`ゴールデングローの${outputOption.buttonLabel}表をコピー`}
-          title={copyLabel}
-          onClick={() => void copyOutputTable()}
-        >
-          {copyState === 'COPIED'
-            ? (
-              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
-                <path d="m5 12 4 4L19 6" />
-              </svg>
-            )
-            : copyState === 'FAILED'
-              ? (
-                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
-                  <path d="m7 7 10 10M17 7 7 17" />
-                </svg>
-              )
-              : (
-                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
-                  <rect x="8" y="8" width="11" height="11" rx="1.5" />
-                  <path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" />
-                </svg>
-              )}
-        </button>
-        <span className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
-          {copyAnnouncement}
-        </span>
-      </div>
-      <p className="goldenglow-note">
-        入力術耐性から固定無視を差し引き、術ダメージの5%最低保証を適用します。爆発1回は浮遊ユニット1体分、期待値は本体と全浮遊ユニットの合算です（S3は浮遊のみ）。
-      </p>
-    </section>
-  )
-}
-
-function selectGoldenglowResistanceOutputValue(
-  row: GoldenglowResistanceDamageRow,
-  output: GoldenglowOperatorOutputMetric,
-): number | null {
-  if (output === 'EXPECTED_DPS') return row.expectedDps
-  if (output === 'EXPECTED_TOTAL_DAMAGE') return row.expectedTotalDamage
-  return row.explosionDamage
-}
-
-function GoldenglowSkill3FocusOutput({
-  output,
-  skillLabel,
-}: {
-  output: GoldenglowSkill3Output
-  skillLabel: string
-}) {
-  const allDrones = output.rows.at(-1)
-
-  return (
-    <section className="goldenglow-output goldenglow-s3-output" aria-labelledby="goldenglow-s3-output-heading" aria-live="off">
-      <div className="goldenglow-output-heading">
-        <h3 id="goldenglow-s3-output-heading">全画面索敵・同一対象への集中期待値</h3>
-        <p>
-          {skillLabel} · {formatNumber(output.duration)}秒 · 浮遊{output.activeDroneCount}体
-          {' '}· 全機の期待自爆{formatNumber(allDrones?.expectedExplosionCount ?? 0)}回 · 術耐性0
-        </p>
-      </div>
-      <div
-        className="goldenglow-table-wrap"
-        role="region"
-        aria-labelledby="goldenglow-s3-output-heading"
-        tabIndex={0}
-      >
-        <table className="goldenglow-output-table goldenglow-s3-table">
-          <caption className="visually-hidden">
-            ゴールデングローS3で同じ敵を攻撃する浮遊ユニット数ごとの期待値
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">同一対象への浮遊</th>
-              <th scope="col">浮遊通常攻撃の期待DPS</th>
-              <th scope="col">自爆の期待DPS</th>
-              <th scope="col">合計期待DPS</th>
-              <th scope="col">期待総ダメージ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {output.rows.map((row) => (
-              <tr key={row.droneCount}>
-                <th scope="row">
-                  {row.droneCount}体{row.droneCount === output.activeDroneCount ? '（全機）' : ''}
-                </th>
-                <td>{formatNumber(row.normalDps)}</td>
-                <td>{formatNumber(row.explosionDps)}</td>
-                <td>{formatNumber(row.expectedDps)}</td>
-                <td>{formatNumber(row.expectedTotalDamage)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="goldenglow-note">
-        1〜{output.activeDroneCount}体が同じ単体を{formatNumber(output.duration)}秒間攻撃し続ける場合の理論期待値です。1体あたりの攻撃機会は{formatNumber(output.attackOpportunitiesPerDrone)}回として、本体攻撃は0、自爆は通常攻撃との置き換えで集計します。自爆の範囲巻き込みと0.5秒の足止めはダメージに含めず、攻撃位相を平均し、帰還・再索敵時間は0として計算します。
-      </p>
-    </section>
   )
 }
 
@@ -2655,10 +2127,6 @@ function getMinimumDamageAriaLabel(metric: SensitivityMetric): string {
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 }).format(value)
-}
-
-function formatTableNumber(value: number): string {
-  return new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1, useGrouping: false }).format(value)
 }
 
 function formatOptionalNumber(value: number | null): string {

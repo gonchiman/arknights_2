@@ -11,11 +11,9 @@ import {
 } from '../src/lib/damageCalculator.ts'
 import {
   DAMAGE_CALCULATOR_PANEL_DEFAULTS,
-  DAMAGE_OUTPUT_PANELS,
   getDamageCalculatorPanelNumbers,
-  getDamageOutputPanelState,
-  getPrimaryDamageOutputKind,
-  getPrimaryDamageOutputTitle,
+  getDamageOutputPanels,
+  resolveDamageOutputDefinition,
 } from '../src/lib/damageCalculatorPanels.ts'
 import {
   DEFAULT_DAMAGE_CALCULATOR_OPERATOR_NAME,
@@ -37,15 +35,13 @@ import {
   getOperatorPotentialApplication,
 } from '../src/lib/operatorPotentials.ts'
 
-test('統合後の各パネルの初期開閉状態を維持する', () => {
+test('各テーブルを初期表示し、情報と計算過程は閉じておく', () => {
   assert.deepEqual(DAMAGE_CALCULATOR_PANEL_DEFAULTS, {
     operatorSearch: true,
     calculationConditions: true,
     operatorInfo: false,
     skillModel: false,
-    damageResult: true,
-    operatorOutput: true,
-    skillOutput: true,
+    output: true,
     normalCalculationProcess: false,
     skillCalculationProcess: false,
   })
@@ -77,53 +73,73 @@ test('初期オペレーターは保存値を優先し、未設定時はゴー�
   assert.equal(resolveDamageCalculatorDefaultOperatorId([], ''), '')
 })
 
-test('統合した計算結果とオペレーター・スキル固有出力を順に定義する', () => {
-  assert.deepEqual(DAMAGE_OUTPUT_PANELS, {
-    result: {
-      number: '05',
-      titles: {
-        DEFAULT: 'デフォルト出力',
-        SUB_PROFESSION: '職分固有出力',
-      },
-    },
-    operator: { number: '06', title: 'オペレーター固有出力' },
-    skill: { number: '07', title: 'スキル固有出力' },
+test('スキル、オペレーター、職分、共通の順に最も具体的な出力定義を選ぶ', () => {
+  const goldenglow = {
+    operatorId: 'char_377_gdglow',
+    skillIndex: 3,
+    subProfessionId: 'funnel',
+    target: 'SKILL' as const,
+  }
+  assert.deepEqual(resolveDamageOutputDefinition(goldenglow), {
+    source: 'SKILL', tables: ['DEFAULT', 'ATTACK_COUNT', 'EXPLOSION'],
   })
+  for (const skillIndex of [1, 2]) {
+    assert.deepEqual(resolveDamageOutputDefinition({ ...goldenglow, skillIndex }), {
+      source: 'OPERATOR', tables: ['DEFAULT', 'ATTACK_COUNT', 'EXPLOSION'],
+    })
+  }
+  assert.deepEqual(resolveDamageOutputDefinition({ ...goldenglow, operatorId: 'char_328_cammou' }), {
+    source: 'SUB_PROFESSION', tables: ['DEFAULT', 'ATTACK_COUNT'],
+  })
+  assert.deepEqual(resolveDamageOutputDefinition({
+    ...goldenglow, operatorId: 'char_350_surtr', subProfessionId: 'artsfghter',
+  }), { source: 'COMMON', tables: ['DEFAULT'] })
 })
 
-test('統合後の計算結果と後続パネルの番号を固定する', () => {
+test('通常攻撃では選択スキルにかかわらずGGの爆発テーブルを表示しない', () => {
+  for (const skillIndex of [1, 2, 3]) {
+    assert.deepEqual(resolveDamageOutputDefinition({
+      operatorId: 'char_377_gdglow', skillIndex, subProfessionId: 'funnel', target: 'NORMAL',
+    }), { source: 'OPERATOR', tables: ['DEFAULT', 'ATTACK_COUNT'] })
+  }
+})
+
+test('未対応の操機術師スキルも職分の出力定義を保持して共通式へ戻さない', () => {
+  for (const target of ['SKILL', 'NORMAL'] as const) {
+    assert.deepEqual(resolveDamageOutputDefinition({
+      operatorId: 'char_4040_rockr', skillIndex: 2, subProfessionId: 'funnel', target,
+    }), { source: 'SUB_PROFESSION', tables: ['DEFAULT', 'ATTACK_COUNT'] })
+  }
+})
+
+test('GGの3テーブルはそれぞれ独立した連番パネルになる', () => {
+  const definition = resolveDamageOutputDefinition({
+    operatorId: 'char_377_gdglow', skillIndex: 3, subProfessionId: 'funnel', target: 'SKILL',
+  })
+  assert.deepEqual(getDamageOutputPanels(definition), [
+    { id: 'DEFAULT', number: '05', title: 'デフォルトテーブル' },
+    { id: 'ATTACK_COUNT', number: '06', title: '攻撃回数別ダメージ' },
+    { id: 'EXPLOSION', number: '07', title: '爆発ダメージ' },
+  ])
+})
+
+test('表示する1〜3テーブルの直後から計算過程の番号を付ける', () => {
+  const cases = [
+    { operatorId: 'char_350_surtr', skillIndex: 3, subProfessionId: 'artsfghter', count: 1 },
+    { operatorId: 'char_328_cammou', skillIndex: 1, subProfessionId: 'funnel', count: 2 },
+    { operatorId: 'char_377_gdglow', skillIndex: 3, subProfessionId: 'funnel', count: 3 },
+  ]
+  for (const { count, ...selection } of cases) {
+    const panels = getDamageOutputPanels(resolveDamageOutputDefinition({ ...selection, target: 'SKILL' }))
+    const traceNumbers = getDamageCalculatorPanelNumbers(panels.length)
+    assert.equal(panels.length, count)
+    assert.deepEqual(panels.map((panel) => Number(panel.number)),
+      Array.from({ length: count }, (_, index) => index + 5))
+    assert.equal(Number(traceNumbers.normalCalculationProcess), Number(panels.at(-1)!.number) + 1)
+    assert.equal(Number(traceNumbers.skillCalculationProcess), Number(traceNumbers.normalCalculationProcess) + 1)
+  }
   assert.deepEqual(getDamageCalculatorPanelNumbers(), {
-    damageResult: '05',
-    operatorOutput: '06',
-    skillOutput: '07',
-    normalCalculationProcess: '08',
-    skillCalculationProcess: '09',
-  })
-})
-
-test('職分固有出力がある場合だけデフォルト出力と置き換える', () => {
-  assert.equal(getPrimaryDamageOutputKind(true), 'SUB_PROFESSION')
-  assert.equal(getPrimaryDamageOutputKind(false), 'DEFAULT')
-  assert.equal(getPrimaryDamageOutputTitle('SUB_PROFESSION'), '職分固有出力')
-  assert.equal(getPrimaryDamageOutputTitle('DEFAULT'), 'デフォルト出力')
-})
-
-test('固有出力がある場合だけ開閉可能にし、初期状態を開く', () => {
-  assert.deepEqual(getDamageOutputPanelState(true, true), {
-    open: true,
-    disabled: false,
-  })
-  assert.deepEqual(getDamageOutputPanelState(true, false), {
-    open: false,
-    disabled: false,
-  })
-  assert.deepEqual(getDamageOutputPanelState(false, true), {
-    open: false,
-    disabled: true,
-  })
-  assert.deepEqual(getDamageOutputPanelState(false, false), {
-    open: false,
-    disabled: true,
+    normalCalculationProcess: '06', skillCalculationProcess: '07',
   })
 })
 

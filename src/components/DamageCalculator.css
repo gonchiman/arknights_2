@@ -2079,3 +2079,16 @@
     height: 44px;
   }
 }
+.damage-output-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  padding: 4px 2px;
+}
+
+.damage-output-toolbar > span {
+  color: var(--text-muted, #64748b);
+  font-size: 13px;
+}
