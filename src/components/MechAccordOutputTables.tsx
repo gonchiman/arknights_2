@@ -133,22 +133,6 @@ export function MechAccordDefaultTable({
         <p aria-live="polite">{attackLabel} · {metricLabel} · {result.attackCountLabel} · {droneLabel}（1体 {result.multiplierPercent}%） · 術</p>
       </div>
       <div className="sensitivity-toolbar mech-accord-output-toolbar">
-        <div className="mech-accord-attack-count-control">
-          <label htmlFor={attackCountSelectId}>攻撃回数</label>
-          <select
-            id={attackCountSelectId}
-            value={result.attackCount}
-            aria-controls={tableId}
-            onChange={(event) => onAttackCountChange(Number(event.target.value) as MechAccordAttackCount)}
-          >
-            {MECH_ACCORD_ATTACK_COUNTS.map((attackCount) => (
-              <option value={attackCount} key={attackCount}>
-                {attackCount === MECH_ACCORD_ATTACK_COUNTS.length ? '8回目以降' : `${attackCount}回目`}
-                （{getMechAccordMultiplierPercent(attackCount)}%）
-              </option>
-            ))}
-          </select>
-        </div>
         <div className="sensitivity-control">
           <span>表示内容</span>
           <div className="sensitivity-metric-switch" role="group" aria-label="表の表示内容">
@@ -164,6 +148,22 @@ export function MechAccordDefaultTable({
               >{option === 'DAMAGE' ? '1攻撃' : option === 'DPS' ? 'DPS' : '総ダメージ'}</button>
             ))}
           </div>
+        </div>
+        <div className="mech-accord-attack-count-control">
+          <label htmlFor={attackCountSelectId}>攻撃回数</label>
+          <select
+            id={attackCountSelectId}
+            value={result.attackCount}
+            aria-controls={tableId}
+            onChange={(event) => onAttackCountChange(Number(event.target.value) as MechAccordAttackCount)}
+          >
+            {MECH_ACCORD_ATTACK_COUNTS.map((attackCount) => (
+              <option value={attackCount} key={attackCount}>
+                {attackCount === MECH_ACCORD_ATTACK_COUNTS.length ? '8回目以降' : `${attackCount}回目`}
+                （{getMechAccordMultiplierPercent(attackCount)}%）
+              </option>
+            ))}
+          </select>
         </div>
       </div>
       {effectiveMetric !== 'DAMAGE' && (
