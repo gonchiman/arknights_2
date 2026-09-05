@@ -45,6 +45,7 @@ function formatEffectValue(effect: SkillDescriptionEffect): string {
 
 export function SkillDescriptionConverter({ skill, levelIndex, levelLabel }: Props) {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const [sourceCopyState, setSourceCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
   const sourceDescription = skill.raw.description ?? skill.description
   const result = useMemo(
     () => convertSkillDescription(sourceDescription, skill.raw.blackboard ?? []),
@@ -59,15 +60,18 @@ export function SkillDescriptionConverter({ skill, levelIndex, levelLabel }: Pro
     sourceDescription,
     ...result,
   }, null, 2), [result, skill.operatorId, skill.skillId, levelIndex, levelLabel, sourceDescription])
+  const sourceJson = useMemo(() => JSON.stringify(skill.raw, null, 2), [skill.raw])
 
   useEffect(() => setCopyState('idle'), [json])
+  useEffect(() => setSourceCopyState('idle'), [sourceJson])
 
-  const copyJson = async () => {
+  const copyJson = async (source = false) => {
+    const setState = source ? setSourceCopyState : setCopyState
     try {
-      await navigator.clipboard.writeText(json)
-      setCopyState('copied')
+      await navigator.clipboard.writeText(source ? sourceJson : json)
+      setState('copied')
     } catch {
-      setCopyState('failed')
+      setState('failed')
     }
   }
 
@@ -121,6 +125,18 @@ export function SkillDescriptionConverter({ skill, levelIndex, levelLabel }: Pro
           </span>
         </div>
         <textarea aria-label="解析結果のJSON" readOnly value={json} spellCheck={false} />
+      </details>
+
+      <details className="skill-description-json">
+        <summary>元データのJSON</summary>
+        <div className="skill-description-json-actions">
+          <button type="button" aria-label="元データのJSONをコピー" onClick={() => void copyJson(true)}>JSONをコピー</button>
+          <span role="status">
+            {sourceCopyState === 'copied' && 'コピーしました'}
+            {sourceCopyState === 'failed' && 'コピーできませんでした。下のJSONを選択してコピーしてください。'}
+          </span>
+        </div>
+        <textarea aria-label="元データのJSON" readOnly value={sourceJson} spellCheck={false} />
       </details>
     </section>
   )
