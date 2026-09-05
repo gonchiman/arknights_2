@@ -13,7 +13,7 @@ export function SkillEffectModal({ skill, skillLevelIndex, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const titleId = useId()
-  const resolvedSkillLevelIndex = typeof skillLevelIndex === 'number'
+  const resolvedSkillLevelIndex = typeof skillLevelIndex === 'number' && Number.isFinite(skillLevelIndex)
     ? Math.min(Math.max(0, Math.round(skillLevelIndex)), Math.max(0, skill.skillLevels.length - 1))
     : Math.max(0, skill.skillLevels.length - 1)
   const selectedLevel = skill.skillLevels[resolvedSkillLevelIndex] ?? skill.raw
@@ -30,6 +30,9 @@ export function SkillEffectModal({ skill, skillLevelIndex, onClose }: Props) {
   }
   const details = buildSkillEffectDetails(displaySkill)
   const description = formatSkillEffectDescription(displaySkill)
+    .replace(/<br\s*\/?\s*>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\\n/g, '\n')
   const skillLevelLabel = getSkillLevelLabel(resolvedSkillLevelIndex, skill.skillLevels.length)
 
   useEffect(() => {

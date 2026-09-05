@@ -9,6 +9,7 @@ import { OperatorDetailModal } from './components/OperatorDetailModal'
 import { OperatorDetailPage } from './components/OperatorDetailPage'
 import type { OpenOperatorDetail } from './components/OperatorDetailLink'
 import { SkillDirectory } from './components/SkillDirectory'
+import { SkillEffectsPage } from './components/SkillEffectsPage'
 import { SkillJsonPage } from './components/SkillJsonPage'
 import { SkillJsonOverviewPage } from './components/SkillJsonOverviewPage'
 import { loadSkillRecords } from './lib/arknightsData'
@@ -232,6 +233,12 @@ export default function App() {
             rows={classifiedRows}
             loading={loading}
             onOpenOperatorDetail={openOperatorDetail}
+          />
+        ) : displayedRoute.view === 'skill-effects' ? (
+          <SkillEffectsPage
+            rows={classifiedRows}
+            loading={loading}
+            initialSelection={displayedRoute.selection}
           />
         ) : displayedRoute.view === 'skill-json' ? (
           <SkillJsonPage
