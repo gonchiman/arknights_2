@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import type { DamageSensitivityMetric } from '../lib/damageSensitivity'
+import type { GoldenglowMainOutputTable } from '../lib/goldenglowMainOutput'
 import {
   MECH_ACCORD_ATTACK_COUNTS,
   getMechAccordMultiplierPercent,
@@ -96,6 +97,7 @@ export function MechAccordDefaultTable({
   allowTotal,
   metric,
   onMetricChange,
+  explosionExpectation,
 }: {
   result: MechAccordResistanceTableResult
   attackLabel: string
@@ -105,6 +107,12 @@ export function MechAccordDefaultTable({
   allowTotal: boolean
   metric: DamageSensitivityMetric
   onMetricChange: (metric: DamageSensitivityMetric) => void
+  explosionExpectation?: {
+    enabled: boolean
+    output: GoldenglowMainOutputTable | null
+    unavailableReason?: string
+    onChange: (enabled: boolean) => void
+  }
 }) {
   const outputId = useId()
   const headingId = `${outputId}-heading`
@@ -112,11 +120,16 @@ export function MechAccordDefaultTable({
   const projectionNoteId = `${outputId}-projection-note`
   const attackCountSelectId = `${outputId}-attack-count`
   const tableId = `${outputId}-table`
+  const unavailableNoteId = `${outputId}-explosion-unavailable`
+  const expectedOutput = explosionExpectation?.enabled ? explosionExpectation.output : null
   const effectiveMetric = metric === 'TOTAL' && !allowTotal ? 'DAMAGE' : metric
-  const metricLabel = effectiveMetric === 'TOTAL' ? '総ダメージ（理論値）' : effectiveMetric === 'DPS' ? 'DPS（理論値）' : '1攻撃あたり'
-  const hasMinimumDamage = result.rows.some((row) => row.combinedMinimumReached)
-  const droneLabel = `浮遊${result.droneCount}体`
+  const metricLabel = expectedOutput
+    ? effectiveMetric === 'TOTAL' ? '期待総ダメージ' : effectiveMetric === 'DPS' ? '期待DPS' : '平均1攻撃'
+    : effectiveMetric === 'TOTAL' ? '総ダメージ（理論値）' : effectiveMetric === 'DPS' ? 'DPS（理論値）' : '1攻撃あたり'
+  const droneLabel = `浮遊${expectedOutput?.droneCount ?? result.droneCount}体${expectedOutput ? '（通常）' : ''}`
   const mainLabel = result.mainAttackEnabled ? '本体' : '本体（攻撃停止）'
+  const combinedLabel = expectedOutput ? '爆発込み合計' : '本体＋浮遊'
+  const outputBasisLabel = expectedOutput ? '爆発込み期待値' : result.attackCountLabel
   const validInterval = Number.isFinite(attackInterval) && attackInterval > 0
   const validDuration = Number.isFinite(duration) && duration > 0
   const projectDamage = (value: number): number | null => {
@@ -125,12 +138,30 @@ export function MechAccordDefaultTable({
     const dps = value / attackInterval
     return effectiveMetric === 'TOTAL' ? validDuration ? dps * duration : null : dps
   }
+  const outputRows = expectedOutput
+    ? expectedOutput.rows.map((row) => ({
+      ...row,
+      mainMinimumReached: row.minimumReached && (row.mainDamage ?? 0) > 0,
+      droneMinimumReached: row.minimumReached && (row.droneDamage ?? 0) > 0,
+      combinedMinimumReached: row.minimumReached,
+    }))
+    : result.rows.map((row) => ({
+      ...row,
+      mainDamage: projectDamage(row.mainDamage),
+      droneDamage: projectDamage(row.droneDamage),
+      combinedDamage: projectDamage(row.combinedDamage),
+      explosionDamage: null,
+    }))
+  const hasMinimumDamage = outputRows.some((row) => row.combinedMinimumReached)
 
   return (
     <section className="mech-accord-output" aria-labelledby={headingId}>
       <div className="mech-accord-output-heading">
         <h3 id={headingId}>メイン出力</h3>
-        <p aria-live="polite">{attackLabel} · {metricLabel} · {result.attackCountLabel} · {droneLabel}（1体 {result.multiplierPercent}%） · 術</p>
+        <p aria-live="polite">
+          {attackLabel} · {metricLabel} · {outputBasisLabel} · 浮遊{expectedOutput?.droneCount ?? result.droneCount}体
+          {!expectedOutput && `（1体 ${result.multiplierPercent}%）`} · 術
+        </p>
       </div>
       <div className="sensitivity-toolbar mech-accord-output-toolbar">
         <div className="sensitivity-control">
@@ -145,11 +176,11 @@ export function MechAccordDefaultTable({
                 aria-controls={tableId}
                 disabled={option === 'TOTAL' && !allowTotal}
                 onClick={() => onMetricChange(option)}
-              >{option === 'DAMAGE' ? '1攻撃' : option === 'DPS' ? 'DPS' : '総ダメージ'}</button>
+              >{option === 'DAMAGE' ? expectedOutput ? '平均1攻撃' : '1攻撃' : option === 'DPS' ? expectedOutput ? '期待DPS' : 'DPS' : expectedOutput ? '期待総ダメージ' : '総ダメージ'}</button>
             ))}
           </div>
         </div>
-        <div className="mech-accord-attack-count-control">
+        {!expectedOutput && <div className="mech-accord-attack-count-control">
           <label htmlFor={attackCountSelectId}>攻撃回数</label>
           <select
             id={attackCountSelectId}
@@ -164,9 +195,33 @@ export function MechAccordDefaultTable({
               </option>
             ))}
           </select>
-        </div>
+        </div>}
+        {explosionExpectation && (
+          <label className="main-output-explosion-toggle">
+            <input
+              type="checkbox"
+              checked={explosionExpectation.enabled}
+              disabled={Boolean(explosionExpectation.unavailableReason)}
+              aria-controls={tableId}
+              aria-describedby={explosionExpectation.unavailableReason ? unavailableNoteId : undefined}
+              onChange={(event) => explosionExpectation.onChange(event.target.checked)}
+            />
+            <span>爆発期待値を含める</span>
+          </label>
+        )}
       </div>
-      {effectiveMetric !== 'DAMAGE' && (
+      {explosionExpectation?.unavailableReason && (
+        <p className="sensitivity-metric-note" id={unavailableNoteId}>{explosionExpectation.unavailableReason}</p>
+      )}
+      {expectedOutput ? (
+        <p className="sensitivity-metric-note" id={projectionNoteId}>
+          {expectedOutput.mode === 'STEADY_STATE'
+            ? '永続スキルのため長時間の平均を表示し、期待総ダメージは算出しません。'
+            : `スキル時間${formatTableNumber(expectedOutput.duration)}秒の平均期待値です。`}
+          {effectiveMetric === 'DAMAGE' && '平均1攻撃は、期待DPSに攻撃間隔を掛けた攻撃機会1回あたりの値です。'}
+          爆発による通常攻撃の置き換え、浮遊の倍率上昇と爆発後のリセットを含みます。
+        </p>
+      ) : effectiveMetric !== 'DAMAGE' && (
         <p className="sensitivity-metric-note" id={projectionNoteId}>
           選択した攻撃回数の倍率を固定し、1攻撃のダメージを攻撃間隔で割った理論DPSです。
           {effectiveMetric === 'TOTAL' && '総ダメージは、このDPSにスキル時間を掛けた理論値です。'}
@@ -180,49 +235,62 @@ export function MechAccordDefaultTable({
           <span className="minimum-damage-legend">赤字：最低保証ダメージを基に算出（合計は最低保証を含む）</span>
         </div>
       )}
-      <div className="mech-accord-table-wrap" role="region" aria-label={`${result.attackCountLabel}の術耐性別${metricLabel}表`} tabIndex={0}>
+      <div className="mech-accord-table-wrap" role="region" aria-label={`${outputBasisLabel}の術耐性別${metricLabel}表`} tabIndex={0}>
         <table
-          className="mech-accord-table mech-accord-resistance-table"
+          className={`mech-accord-table mech-accord-resistance-table${expectedOutput ? ' main-output-expectation-table' : ''}`}
           id={tableId}
-          aria-describedby={effectiveMetric === 'DAMAGE' ? noteId : `${projectionNoteId} ${noteId}`}
+          aria-describedby={!expectedOutput && effectiveMetric === 'DAMAGE' ? noteId : `${projectionNoteId} ${noteId}`}
         >
-          <caption className="visually-hidden">{attackLabel}・{result.attackCountLabel}の術耐性別{metricLabel}</caption>
+          <caption className="visually-hidden">{attackLabel}・{outputBasisLabel}の術耐性別{metricLabel}</caption>
           <thead>
             <tr>
               <th scope="col">術耐性（%）</th>
               <th scope="col">{mainLabel}</th>
               <th scope="col">{droneLabel}</th>
-              <th scope="col">本体＋浮遊</th>
+              {expectedOutput && <th scope="col">浮遊の爆発</th>}
+              <th scope="col">{combinedLabel}</th>
             </tr>
           </thead>
           <tbody>
-            {result.rows.map((row) => (
+            {outputRows.map((row) => (
               <tr key={row.resistance}>
                 <th scope="row">{formatTableNumber(row.resistance)}</th>
                 <td
                   className={row.mainMinimumReached ? 'mech-accord-minimum' : undefined}
-                  aria-label={`${mainLabel} ${formatTableNumber(projectDamage(row.mainDamage))}${row.mainMinimumReached ? '、最低保証ダメージを基に算出' : ''}`}
+                  aria-label={`${mainLabel} ${formatTableNumber(row.mainDamage)}${row.mainMinimumReached ? '、最低保証ダメージを基に算出' : ''}`}
                 >
-                  <strong className="mech-accord-cell-value">{formatTableNumber(projectDamage(row.mainDamage))}</strong>
+                  <strong className="mech-accord-cell-value">{formatTableNumber(row.mainDamage)}</strong>
                 </td>
                 <td
                   className={row.droneMinimumReached ? 'mech-accord-minimum' : undefined}
-                  aria-label={`${droneLabel} ${formatTableNumber(projectDamage(row.droneDamage))}、1体の攻撃倍率 ${result.multiplierPercent}%${row.droneMinimumReached ? '、最低保証ダメージを基に算出' : ''}`}
+                  aria-label={`${droneLabel} ${formatTableNumber(row.droneDamage)}${expectedOutput ? '' : `、1体の攻撃倍率 ${result.multiplierPercent}%`}${row.droneMinimumReached ? '、最低保証ダメージを基に算出' : ''}`}
                 >
-                  <strong className="mech-accord-cell-value">{formatTableNumber(projectDamage(row.droneDamage))}</strong>
+                  <strong className="mech-accord-cell-value">{formatTableNumber(row.droneDamage)}</strong>
                 </td>
+                {expectedOutput && (
+                  <td
+                    className={row.combinedMinimumReached && (row.explosionDamage ?? 0) > 0 ? 'mech-accord-minimum' : undefined}
+                    aria-label={`浮遊の爆発 ${formatTableNumber(row.explosionDamage)}${row.combinedMinimumReached ? '、最低保証ダメージを基に算出' : ''}`}
+                  >
+                    <strong className="mech-accord-cell-value">{formatTableNumber(row.explosionDamage)}</strong>
+                  </td>
+                )}
                 <td
                   className={row.combinedMinimumReached ? 'mech-accord-minimum' : undefined}
-                  aria-label={`本体＋浮遊 ${formatTableNumber(projectDamage(row.combinedDamage))}${row.combinedMinimumReached ? '、最低保証ダメージを含む' : ''}`}
+                  aria-label={`${combinedLabel} ${formatTableNumber(row.combinedDamage)}${row.combinedMinimumReached ? '、最低保証ダメージを含む' : ''}`}
                 >
-                  <strong className="mech-accord-cell-value">{formatTableNumber(projectDamage(row.combinedDamage))}</strong>
+                  <strong className="mech-accord-cell-value">{formatTableNumber(row.combinedDamage)}</strong>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="mech-accord-note" id={noteId}>{commonNote}</p>
+      <p className="mech-accord-note" id={noteId}>
+        {expectedOutput
+          ? '全機が同じ単体を継続して攻撃する期待値です。浮遊の倍率と爆発倍率には選択モジュールの反映済みデータを使います。攻撃位相を平均し、帰還・再索敵時間は0として計算します。範囲巻き込みと足止めは含みません。'
+          : commonNote}
+      </p>
     </section>
   )
 }

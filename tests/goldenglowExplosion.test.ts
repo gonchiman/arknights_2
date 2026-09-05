@@ -16,6 +16,7 @@ import {
 } from '../src/lib/goldenglowExplosion.ts'
 import type { OperatorPassives, PassiveSource } from '../src/lib/operatorProfile.ts'
 import type { RawSkillLevel } from '../src/types/skill.ts'
+import { buildGoldenglowMainOutputTable } from '../src/lib/goldenglowMainOutput.ts'
 
 test('選択済み素質とスキルから爆発倍率・PRD・浮遊ユニット数を導出する', () => {
   const model = deriveGoldenglowExplosionModel(
@@ -537,6 +538,129 @@ test('モジュールX3・Y3のランプと爆発倍率を定常期待DPSに反�
   assert.ok(yResult)
   assertClose(xResult.perDrone.dps, 1.1404605028726866)
   assertClose(yResult.perDrone.dps, 1.0315169955173027)
+})
+
+test('メイン出力の平均1攻撃・DPS・総量は同じ有限窓の内訳を保つ', () => {
+  const input = {
+    model: requireModel(createPassives({ attackScale: 3, resistanceIgnore: null }), 1),
+    skillIndex: 1,
+    effectiveAttack: 1,
+    attackInterval: 2,
+    duration: 3,
+    enemyResistances: [0],
+  }
+  const total = buildGoldenglowMainOutputTable({ ...input, metric: 'TOTAL' })
+  const dps = buildGoldenglowMainOutputTable({ ...input, metric: 'DPS' })
+  const perAttack = buildGoldenglowMainOutputTable({ ...input, metric: 'DAMAGE' })
+  assert.ok(total && dps && perAttack)
+  assert.equal(total.mode, 'FINITE_WINDOW')
+  assert.equal(total.droneCount, 2)
+  assert.equal(total.mainAttackEnabled, true)
+  assert.equal(total.duration, 3)
+  const totalRow = total.rows[0]
+  assertClose(totalRow.mainDamage, 1.5)
+  assertClose(totalRow.droneDamage, 0.7313625)
+  assertClose(totalRow.explosionDamage, 0.179325)
+  assertClose(totalRow.combinedDamage, 2.4106875)
+  for (const column of ['mainDamage', 'droneDamage', 'explosionDamage', 'combinedDamage'] as const) {
+    assertClose(dps.rows[0][column], totalRow[column]! / input.duration)
+    assertClose(perAttack.rows[0][column], totalRow[column]! / 1.5)
+  }
+})
+
+test('メイン出力のS3は本体を0にし、確定爆発へ通常攻撃を二重加算しない', () => {
+  const model = {
+    ...requireModel(createPassives({ attackScale: 3, resistanceIgnore: null }), 2),
+    prdStep: 1,
+  }
+  for (const metric of ['DAMAGE', 'DPS', 'TOTAL'] as const) {
+    const table = buildGoldenglowMainOutputTable({
+      model, metric, skillIndex: 3, effectiveAttack: 100,
+      attackInterval: 2, duration: 6, enemyResistances: [0],
+    })
+    assert.ok(table)
+    assert.equal(table.mainAttackEnabled, false)
+    assert.equal(table.droneCount, 3)
+    const expected = metric === 'TOTAL' ? 2700 : metric === 'DPS' ? 450 : 900
+    assert.deepEqual(table.rows[0], {
+      resistance: 0, mainDamage: 0, droneDamage: 0,
+      explosionDamage: expected, combinedDamage: expected, minimumReached: false,
+    })
+  }
+})
+
+test('メイン出力のS2は長期平均を使い、総量の全内訳を算出しない', () => {
+  const input = {
+    model: requireModel(createPassives({ attackScale: 3, resistanceIgnore: null }), 1),
+    skillIndex: 2, effectiveAttack: 1, attackInterval: 2, duration: 0,
+    enemyResistances: [0, 100],
+  }
+  const perAttack = buildGoldenglowMainOutputTable({ ...input, metric: 'DAMAGE' })
+  const dps = buildGoldenglowMainOutputTable({ ...input, metric: 'DPS' })
+  const total = buildGoldenglowMainOutputTable({ ...input, metric: 'TOTAL' })
+  assert.ok(perAttack && dps && total)
+  assert.equal(perAttack.mode, 'STEADY_STATE')
+  assert.equal(perAttack.duration, null)
+  assertClose(perAttack.rows[0].combinedDamage, 3.001692871619895)
+  for (const column of ['mainDamage', 'droneDamage', 'explosionDamage', 'combinedDamage'] as const) {
+    assertClose(perAttack.rows[0][column], dps.rows[0][column]! * input.attackInterval)
+  }
+  for (const row of total.rows) {
+    assert.equal(row.mainDamage, null)
+    assert.equal(row.droneDamage, null)
+    assert.equal(row.explosionDamage, null)
+    assert.equal(row.combinedDamage, null)
+    assert.equal(row.minimumReached, false)
+  }
+})
+
+test('メイン出力へモジュールの浮遊倍率・爆発倍率・術耐性無視と最低保証を引き継ぐ', () => {
+  const model = requireModel(createPassives({
+    attackScale: 3.6,
+    resistanceIgnore: 20,
+    droneRamp: { initialScale: 0.35, scaleStep: 0.15, maximumScale: 1.1, maximumStack: 5 },
+  }), 0)
+  const table = buildGoldenglowMainOutputTable({
+    model, metric: 'DPS', skillIndex: 2, effectiveAttack: 1,
+    attackInterval: 1, duration: 0, enemyResistances: [0, 20, 100],
+  })
+  assert.ok(table)
+  assertClose(table.rows[0].combinedDamage, 2.1404605028726866)
+  assertClose(table.rows[1].combinedDamage, table.rows[0].combinedDamage!)
+  assertClose(table.rows[2].combinedDamage, table.rows[0].combinedDamage! * 0.2)
+  assert.deepEqual(table.rows.map((row) => row.minimumReached), [false, false, false])
+  for (const row of table.rows) {
+    assertClose(row.combinedDamage, row.mainDamage! + row.droneDamage! + row.explosionDamage!)
+  }
+  const minimum = buildGoldenglowMainOutputTable({
+    model: { ...model, resistanceIgnoreFixed: 0 }, metric: 'DPS', skillIndex: 2,
+    effectiveAttack: 1, attackInterval: 1, duration: 0, enemyResistances: [95, 100],
+  })
+  assert.ok(minimum)
+  for (const row of minimum.rows) {
+    assertClose(row.combinedDamage, table.rows[0].combinedDamage! * 0.05)
+    assert.equal(row.minimumReached, true)
+  }
+})
+
+test('メイン出力はモデルや攻撃間隔・有限スキル時間が不正な場合に代替の値を作らない', () => {
+  const input = {
+    model: requireModel(createPassives({ attackScale: 3, resistanceIgnore: null })),
+    metric: 'DAMAGE' as const, skillIndex: 1, effectiveAttack: 1,
+    attackInterval: 1, duration: 10, enemyResistances: [0],
+  }
+  for (const override of [
+    { skillIndex: 0 },
+    { skillIndex: 1.5 },
+    { attackInterval: 0 },
+    { attackInterval: Number.NaN },
+    { duration: 0 },
+    { duration: Number.POSITIVE_INFINITY },
+    { model: { ...input.model, prdStep: 0 } },
+    { model: { ...input.model, activeDroneCount: 0 } },
+  ]) {
+    assert.equal(buildGoldenglowMainOutputTable({ ...input, ...override }), null)
+  }
 })
 
 function requireModel(

@@ -41,10 +41,12 @@ import {
 } from '../lib/mechAccordDamage'
 import { deriveMechAccordSkillOutput } from '../lib/mechAccordSkillDamage'
 import {
+  GOLDENGLOW_OPERATOR_ID,
   calculateGoldenglowExplosion,
   calculateGoldenglowExpectedDpsFromModel,
   isGoldenglowSkill3,
 } from '../lib/goldenglowExplosion'
+import { buildGoldenglowMainOutputTable } from '../lib/goldenglowMainOutput'
 import {
   DAMAGE_CALCULATOR_PANEL_DEFAULTS,
   getDamageCalculatorPanelNumbers,
@@ -157,6 +159,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const [sensitivityTarget, setSensitivityTarget] = useState<SensitivityTarget>(DEFAULT_DAMAGE_SENSITIVITY_TARGET)
   const [sensitivityMetric, setSensitivityMetric] = useState<SensitivityMetric>('DAMAGE')
   const [mechAccordAttackCount, setMechAccordAttackCount] = useState<MechAccordAttackCount>(1)
+  const [includeMainOutputExplosion, setIncludeMainOutputExplosion] = useState(false)
   const [sensitivityCalculationPoint, setSensitivityCalculationPoint] = useState<number | null>(null)
   const [operatorFilters, setOperatorFilters] = useState(EMPTY_OPERATOR_FILTERS)
   const [preferredDefaultOperatorId, setPreferredDefaultOperatorId] = useState(loadPreferredDefaultOperatorId)
@@ -488,6 +491,19 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
     : null
   const skillOutput = referenceSkillBreakdown
   const skillTotalMode = selectedSkill ? getTotalMode(selectedSkill) : 'NONE'
+  const mechAccordAllowTotal = sensitivityTarget === 'SKILL' && skillTotalMode === 'DURATION' && (model?.duration ?? 0) > 0
+  const hasMainOutputExplosionOption = selectedOperator?.operatorId === GOLDENGLOW_OPERATOR_ID && sensitivityTarget === 'SKILL'
+  const mainOutputExpectation = hasMainOutputExplosionOption && includeMainOutputExplosion && goldenglowExplosion && selectedSkill && model
+    ? buildGoldenglowMainOutputTable({
+      model: goldenglowExplosion.model,
+      skillIndex: selectedSkill.skillIndex,
+      effectiveAttack: goldenglowExplosion.effectiveAttack,
+      attackInterval: model.attackInterval,
+      duration: model.duration,
+      enemyResistances: getDamageSensitivityTablePoints('ARTS'),
+      metric: sensitivityMetric === 'TOTAL' && !mechAccordAllowTotal ? 'DAMAGE' : sensitivityMetric,
+    })
+    : null
   const skillCapabilities = selectedSkill?.classification.outputCapabilities
   const canShowSkillTotal = skillOutput?.total !== null
     && skillOutput?.total !== undefined
@@ -955,6 +971,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
           titleIcons={panel.id === 'DEFAULT' && (hasSubProfessionOutput || hasMainOutputSkillInfluence) ? (
             <DamageOutputInfluenceIcons
               subProfessionName={hasSubProfessionOutput ? selectedOperator.subProfessionName : undefined}
+              operatorLabel={mainOutputExpectation ? `${selectedOperator.operatorName}（爆発期待値）` : undefined}
               skillLabel={hasMainOutputSkillInfluence ? `S${selectedSkill.skillIndex} ${selectedSkill.skillName}` : undefined}
             />
           ) : undefined}
@@ -965,7 +982,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
             : panel.id === 'ATTACK_COUNT'
               ? `${outputAttackLabel} · 1〜8回目以降 · 本体と浮遊`
               : hasSubProfessionOutput
-                ? `${outputAttackLabel} · ${mechAccordResistanceDamage?.attackCountLabel ?? '攻撃回数指定'} · 術耐性別`
+                ? `${outputAttackLabel} · ${mainOutputExpectation ? '爆発込み期待値' : mechAccordResistanceDamage?.attackCountLabel ?? '攻撃回数指定'} · 術耐性別`
                 : `${sensitivityAttackLabel} · ${formatDetectedDamageType(sensitivityDamageType)} · ${sensitivityStatLabel}別 · ${sensitivityMetricLabel}`}
           open={outputPanelsOpen[panel.id] ?? DAMAGE_CALCULATOR_PANEL_DEFAULTS.output}
           onToggle={() => setOutputPanelsOpen((previous) => ({
@@ -985,13 +1002,21 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
                     onAttackCountChange={setMechAccordAttackCount}
                     attackInterval={sensitivityTarget === 'NORMAL' ? operatorStats.attackInterval : model.attackInterval}
                     duration={model.duration}
-                    allowTotal={sensitivityTarget === 'SKILL' && skillTotalMode === 'DURATION' && model.duration > 0}
+                    allowTotal={mechAccordAllowTotal}
                     metric={sensitivityMetric}
                     onMetricChange={setSensitivityMetric}
+                    explosionExpectation={hasMainOutputExplosionOption ? {
+                      enabled: Boolean(mainOutputExpectation),
+                      output: mainOutputExpectation,
+                      onChange: setIncludeMainOutputExplosion,
+                      unavailableReason: !goldenglowExplosion
+                        ? '爆発素質が解放される昇進段階を選ぶと利用できます。'
+                        : !goldenglowExpectedDps ? '期待値に必要な攻撃間隔・スキル時間を取得できません。' : undefined,
+                    } : undefined}
                   />
                   {explosionPanel && goldenglowExplosion && (
                     <p className="sensitivity-metric-note">
-                      自爆を含む期待値は「{explosionPanelLabel}」で確認できます。
+                      浮遊ユニット数を変えた場合の期待値は「{explosionPanelLabel}」で確認できます。
                     </p>
                   )}
                 </>
@@ -1211,9 +1236,11 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
 
 function DamageOutputInfluenceIcons({
   subProfessionName,
+  operatorLabel,
   skillLabel,
 }: {
   subProfessionName?: string
+  operatorLabel?: string
   skillLabel?: string
 }) {
   return (
@@ -1229,6 +1256,20 @@ function DamageOutputInfluenceIcons({
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
             <path d="m12 3 9 4.5-9 4.5-9-4.5L12 3Z" />
             <path d="m3 12 9 4.5 9-4.5M3 16.5l9 4.5 9-4.5" />
+          </svg>
+        </span>
+      )}
+      {operatorLabel && (
+        <span
+          className="damage-output-influence-icon"
+          data-output-influence="operator"
+          role="img"
+          aria-label={`オペレーターの影響：${operatorLabel}`}
+          data-tooltip={`オペレーターの影響：${operatorLabel}`}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="7" r="4" />
+            <path d="M4 21v-2a8 8 0 0 1 16 0v2" />
           </svg>
         </span>
       )}

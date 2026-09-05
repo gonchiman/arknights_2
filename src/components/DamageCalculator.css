@@ -1541,6 +1541,33 @@
   margin-bottom: 0;
 }
 
+.main-output-explosion-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  color: var(--text-soft);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.main-output-explosion-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #386946;
+}
+
+.main-output-explosion-toggle:has(input:disabled) {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.main-output-expectation-table { min-width: 420px; }
+
+.main-output-expectation-table th:first-child,
+.main-output-expectation-table td:first-child { width: 18%; }
+
 .sensitivity-control {
   min-width: 0;
   display: grid;
@@ -2148,6 +2175,7 @@
   .operator-search-heading button { min-height: 44px; }
 
   .mech-accord-attack-count-control select { height: 44px; }
+  .main-output-explosion-toggle { min-height: 44px; }
 
   .calculator-field select,
   .calculator-field input {
