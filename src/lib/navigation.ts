@@ -1,4 +1,4 @@
-export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'damage' | 'comparison' | 'enemies' | 'sources'
+export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'damage' | 'comparison' | 'enemies' | 'sources' | 'goldenglow-guide'
 
 export type NavigationSection = 'analysis' | 'information'
 
@@ -70,6 +70,13 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     href: '#/sources',
     label: 'Data Sources',
     description: '利用データと参照元・算出方法',
+    section: 'information',
+  },
+  {
+    id: 'goldenglow-guide',
+    href: '#/guides/goldenglow-explosion',
+    label: 'GG 爆発期待値',
+    description: '確率・計算方法・数値例',
     section: 'information',
   },
 ]

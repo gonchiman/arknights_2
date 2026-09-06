@@ -21,6 +21,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
       ['sources', 'sources'],
+      ['goldenglow-guide', 'goldenglow-guide'],
     ],
   )
   assert.equal(new Set(APP_NAV_ITEMS.map((item) => item.href)).size, APP_NAV_ITEMS.length)
