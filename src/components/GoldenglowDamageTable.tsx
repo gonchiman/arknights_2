@@ -30,6 +30,7 @@ export interface GoldenglowDamageTableProps {
   attackInterval: number
   duration: number
   skillLabel: string
+  onExpectationChange?: (usesExpectation: boolean) => void
 }
 
 export function GoldenglowDamageTable({
@@ -38,6 +39,7 @@ export function GoldenglowDamageTable({
   attackInterval,
   duration,
   skillLabel,
+  onExpectationChange,
 }: GoldenglowDamageTableProps) {
   const headingId = useId()
   const unavailableNoteId = useId()
@@ -59,6 +61,10 @@ export function GoldenglowDamageTable({
     ? 'EXPLOSION_DAMAGE'
     : selectedOutput
   const isExplosionOnly = effectiveOutput === 'EXPLOSION_DAMAGE'
+  useEffect(() => {
+    onExpectationChange?.(!isExplosionOnly)
+    return () => onExpectationChange?.(false)
+  }, [isExplosionOnly, onExpectationChange])
   const outputLabel = OUTPUT_OPTIONS.find((option) => option.value === effectiveOutput)?.label
     ?? OUTPUT_OPTIONS[0].label
   const focusedModel = useMemo(() => ({
