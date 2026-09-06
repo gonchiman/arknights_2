@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { AppSidebar } from './components/AppSidebar'
 import { DamageCalculator } from './components/DamageCalculator'
 import { DataSourcesPage } from './components/DataSourcesPage'
+import { GoldenglowGuidePage } from './components/GoldenglowGuidePage'
 import { EnemyAnalysis } from './components/EnemyAnalysis'
 import { OperatorComparison } from './components/OperatorComparison'
 import { OperatorDatabase } from './components/OperatorDatabase'
@@ -64,7 +65,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (route.view === 'enemies' || route.view === 'sources' || skillDataRequestStarted.current) return
+    if (route.view === 'enemies' || route.view === 'sources' || route.view === 'goldenglow-guide' || skillDataRequestStarted.current) return
     skillDataRequestStarted.current = true
     void load()
   }, [route.view])
@@ -210,10 +211,12 @@ export default function App() {
         </header>
 
         <main className="app-content">
-        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'sources' && <section className="error-box" role="alert">{error}</section>}
+        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'goldenglow-guide' && <section className="error-box" role="alert">{error}</section>}
 
         {displayedRoute.view === 'sources' ? (
           <DataSourcesPage />
+        ) : displayedRoute.view === 'goldenglow-guide' ? (
+          <GoldenglowGuidePage />
         ) : displayedRoute.view === 'damage' ? (
           <DamageCalculator
             rows={classifiedRows}

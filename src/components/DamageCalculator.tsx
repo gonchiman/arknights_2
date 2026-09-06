@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import {
   DAMAGE_TYPE_LABELS,
   calculateAttackPipeline,
@@ -83,6 +83,7 @@ import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
 import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
 import { MechAccordAttackCountTable, MechAccordDefaultTable } from './MechAccordOutputTables'
 import { GoldenglowDamageTable } from './GoldenglowDamageTable'
+import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import './DamageCalculator.css'
 
 interface Props {
@@ -609,6 +610,9 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   return (
     <section className="damage-page calculator-page">
       <h1 className="visually-hidden">Damage Calculator</h1>
+      {selectedOperator.operatorId === 'char_377_gdglow' && (
+        <p><a href="#/guides/goldenglow-explosion">GGの爆発期待値：計算方法と数値例 →</a></p>
+      )}
 
       <CollapsibleCalculatorPanel
         id="operator-search-panel"
@@ -1287,80 +1291,6 @@ function DamageOutputInfluenceIcons({
         </span>
       )}
     </>
-  )
-}
-
-function CollapsibleCalculatorPanel({
-  id,
-  number,
-  title,
-  titleBadge,
-  titleIcons,
-  outputTable,
-  summary,
-  open,
-  onToggle,
-  collapsedLabel,
-  disabled = false,
-  disabledLabel = '操作できません',
-  className = '',
-  bodyClassName = '',
-  children,
-}: {
-  id: string
-  number: string
-  title: string
-  titleBadge?: string
-  titleIcons?: ReactNode
-  outputTable?: string
-  summary: ReactNode
-  open: boolean
-  onToggle: () => void
-  collapsedLabel: string
-  disabled?: boolean
-  disabledLabel?: string
-  className?: string
-  bodyClassName?: string
-  children: ReactNode
-}) {
-  const headingId = `${id}-heading`
-  const bodyId = `${id}-body`
-  const effectiveOpen = !disabled && open
-
-  return (
-    <section data-output-table={outputTable} className={`calculator-panel collapsible-calculator-panel ${effectiveOpen ? 'open' : ''} ${disabled ? 'disabled' : ''} ${className}`.trim()}>
-      <h2 className="collapsible-panel-title">
-        <button
-          type="button"
-          id={headingId}
-          className={`panel-heading collapsible-panel-heading${titleBadge ? ' has-title-badge' : ''}`}
-          aria-expanded={disabled ? undefined : effectiveOpen}
-          aria-controls={disabled ? undefined : bodyId}
-          disabled={disabled}
-          onClick={onToggle}
-        >
-          <span className="collapsible-panel-heading-title">
-            <span>{number}</span>
-            <span className="collapsible-panel-heading-label">{title}</span>
-            {titleIcons && <span className="collapsible-panel-heading-icons">{titleIcons}</span>}
-            {titleBadge && <span className="collapsible-panel-heading-badge">{titleBadge}</span>}
-          </span>
-          <span className="collapsible-panel-heading-summary">
-            <span>{summary}</span>
-            <em>{disabled ? disabledLabel : `${effectiveOpen ? '閉じる' : collapsedLabel} ${effectiveOpen ? '−' : '+'}`}</em>
-          </span>
-        </button>
-      </h2>
-      <div
-        id={bodyId}
-        className={`collapsible-panel-body ${bodyClassName}`.trim()}
-        role="region"
-        aria-labelledby={headingId}
-        hidden={!effectiveOpen}
-      >
-        {children}
-      </div>
-    </section>
   )
 }
 

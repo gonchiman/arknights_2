@@ -30,6 +30,11 @@ export interface GoldenglowDamageTableProps {
   attackInterval: number
   duration: number
   skillLabel: string
+  initialOutput?: OutputMetric
+  showGuideLink?: boolean
+  compactNotes?: boolean
+  showDroneControl?: boolean
+  droneFocus?: { count: number; onChange: (count: number) => void }
 }
 
 export function GoldenglowDamageTable({
@@ -38,6 +43,11 @@ export function GoldenglowDamageTable({
   attackInterval,
   duration,
   skillLabel,
+  initialOutput = 'EXPLOSION_DAMAGE',
+  showGuideLink = true,
+  compactNotes = false,
+  showDroneControl = true,
+  droneFocus,
 }: GoldenglowDamageTableProps) {
   const headingId = useId()
   const unavailableNoteId = useId()
@@ -45,10 +55,13 @@ export function GoldenglowDamageTable({
   const activeDroneCount = Math.max(1, Math.floor(model.activeDroneCount))
   const focusKey = `${skillIndex}:${activeDroneCount}`
   const [focus, setFocus] = useState({ key: focusKey, count: activeDroneCount })
-  const focusedDroneCount = focus.key === focusKey
+  const localDroneCount = focus.key === focusKey
     ? Math.min(activeDroneCount, Math.max(1, focus.count))
     : activeDroneCount
-  const [selectedOutput, setSelectedOutput] = useState<OutputMetric>('EXPLOSION_DAMAGE')
+  const focusedDroneCount = droneFocus
+    ? Math.min(activeDroneCount, Math.max(1, droneFocus.count))
+    : localDroneCount
+  const [selectedOutput, setSelectedOutput] = useState<OutputMetric>(initialOutput)
   const [copyFeedback, setCopyFeedback] = useState<{
     state: 'COPIED' | 'FAILED'
     tableText: string
@@ -171,10 +184,13 @@ export function GoldenglowDamageTable({
     <section className="goldenglow-output" aria-labelledby={headingId} aria-live="off">
       <div className="goldenglow-output-heading">
         <h3 id={headingId}>爆発ダメージ・術耐性別</h3>
-        <p>
-          {skillLabel} · 爆発倍率{numberFormatter.format(model.attackScalePercent)}%
-          {' '}· 術耐性固定無視{numberFormatter.format(model.resistanceIgnoreFixed)}
-        </p>
+        {showGuideLink && <a href="#/guides/goldenglow-explosion">爆発期待値の計算方法を読む →</a>}
+        {!compactNotes && (
+          <p>
+            {skillLabel} · 爆発倍率{numberFormatter.format(model.attackScalePercent)}%
+            {' '}· 術耐性固定無視{numberFormatter.format(model.resistanceIgnoreFixed)}
+          </p>
+        )}
       </div>
       <div className="sensitivity-control goldenglow-output-control">
         <span>出力を選択</span>
@@ -203,7 +219,7 @@ export function GoldenglowDamageTable({
           S2は永続スキルのため、期待DPSは長時間の平均値を使い、期待総ダメージは算出しません。
         </p>
       )}
-      {!isExplosionOnly && (
+      {!isExplosionOnly && showDroneControl && (
         <div className="sensitivity-control goldenglow-output-control">
           <span>同じ敵を攻撃する浮遊ユニット</span>
           <div
@@ -218,13 +234,15 @@ export function GoldenglowDamageTable({
                 type="button"
                 className={focusedDroneCount === count ? 'active' : ''}
                 aria-pressed={focusedDroneCount === count}
-                onClick={() => setFocus({ key: focusKey, count })}
+                onClick={() => droneFocus
+                  ? droneFocus.onChange(count)
+                  : setFocus({ key: focusKey, count })}
               >
                 {count}体{count === activeDroneCount ? '（全機）' : ''}
               </button>
             ))}
           </div>
-          {expectation && (
+          {!compactNotes && expectation && (
             <p className="goldenglow-note">
               浮遊{focusedDroneCount}体の期待爆発
               {expectation.allDrones.expectedExplosionCount === null
@@ -309,15 +327,25 @@ export function GoldenglowDamageTable({
           {copyAnnouncement}
         </span>
       </div>
-      <p className="goldenglow-note">
-        入力術耐性から固定無視を差し引き、術ダメージの5%最低保証を適用します。爆発1回は浮遊ユニット1体分です。
-        期待値の合計は本体・選択した浮遊の通常攻撃・爆発を含み、S3の本体攻撃は0です。
-      </p>
-      {!isExplosionOnly && (
-        <p className="goldenglow-note">
-          同じ単体を継続して攻撃する理論期待値です。爆発は通常攻撃との置き換えで集計し、浮遊の倍率上昇と爆発後のリセットを反映します。
-          攻撃位相を平均し、帰還・再索敵時間は0として計算します。範囲巻き込みと足止めはダメージに含めません。
+      {compactNotes ? (
+        <p className="calculation-process-note">
+          {isExplosionOnly
+            ? '浮遊1体分 · 術ダメージの最低保証5%'
+            : '単体への理論値 · 帰還・再索敵0秒 · 範囲巻き込み・足止めは対象外'}
         </p>
+      ) : (
+        <>
+          <p className="goldenglow-note">
+            入力術耐性から固定無視を差し引き、術ダメージの5%最低保証を適用します。爆発1回は浮遊ユニット1体分です。
+            期待値の合計は本体・選択した浮遊の通常攻撃・爆発を含み、S3の本体攻撃は0です。
+          </p>
+          {!isExplosionOnly && (
+            <p className="goldenglow-note">
+              同じ単体を継続して攻撃する理論期待値です。爆発は通常攻撃との置き換えで集計し、浮遊の倍率上昇と爆発後のリセットを反映します。
+              攻撃位相を平均し、帰還・再索敵時間は0として計算します。範囲巻き込みと足止めはダメージに含めません。
+            </p>
+          )}
+        </>
       )}
     </section>
   )
