@@ -1,0 +1,8 @@
+.gg-first-explosion-flow-table { min-width: 640px; }
+.gg-first-explosion-detail-list { margin-top: 16px; border-top: 1px solid var(--border); }
+.gg-first-explosion-detail-list summary { padding: 12px 0 0; color: var(--text-soft); font-size: 11px; cursor: pointer; }
+.gg-first-explosion-detail-list summary:focus-visible, .gg-first-explosion-list-wrap:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.gg-first-explosion-list-wrap { margin-top: 12px; border: 1px solid var(--border); overflow-x: auto; }
+.gg-first-explosion-list-table { min-width: 680px; }
+.gg-probability-table.gg-first-explosion-list-table th:first-child { width: 14%; }
+.gg-probability-table.gg-first-explosion-list-table thead th { position: static; }

@@ -1,0 +1,9 @@
+.gg-attack-detail-note { margin: 0 0 12px; color: var(--text-soft); font-size: 11px; line-height: 1.8; }
+.gg-attack-detail-table-wrap { border: 1px solid var(--border); overflow-x: auto; }
+.gg-attack-detail-table { min-width: 640px; }
+.gg-attack-detail-table th:first-child { width: 40%; }
+.gg-attack-detail-table thead th { position: static; }
+.gg-attack-detail-total { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-strong); }
+.gg-attack-detail-total span { color: var(--text-soft); font-size: 11px; }
+.gg-attack-detail-total strong { font-size: 20px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.gg-attack-detail-table-wrap:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }

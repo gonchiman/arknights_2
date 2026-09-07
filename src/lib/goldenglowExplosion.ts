@@ -16,6 +16,7 @@ const DEFAULT_DRONE_INITIAL_ATTACK_SCALE = 0.2
 const DEFAULT_DRONE_ATTACK_SCALE_STEP = 0.15
 const DEFAULT_DRONE_MAX_ATTACK_SCALE = 1.1
 const DEFAULT_DRONE_MAX_STACK = 6
+const MAX_FIRST_EXPLOSION_DISTRIBUTION_STACK = 1000
 
 export type GoldenglowExpectedDpsMode = 'FINITE_WINDOW' | 'STEADY_STATE'
 
@@ -46,6 +47,13 @@ export interface GoldenglowExplosionDamageResult {
   rawExplosionDamage: number
   damageAfterMitigation: number
   breakdown: DamageCalculationBreakdown
+}
+
+export interface GoldenglowFirstExplosionRow {
+  attackNumber: number
+  reachProbability: number
+  explosionChancePercent: number
+  firstExplosionProbability: number
 }
 
 export interface GoldenglowExplosionCalculationInput {
@@ -527,6 +535,42 @@ export function getGoldenglowNextExplosionChancePercent(
   if (misses >= maximumStack) return 100
   const stack = Math.min(misses + 1, maximumStack)
   return Math.min(1, finiteNonNegative(model.prdStep) * stack) * 100
+}
+
+/**
+ * Follows one drone from a reset until its first explosion. Reach and first-
+ * explosion probabilities are unconditional; the attack's chance is conditional
+ * on reaching that attack without an earlier explosion. Invalid or oversized
+ * models return no rows so malformed data cannot create an unbounded table.
+ */
+export function buildGoldenglowFirstExplosionDistribution(
+  model: Pick<GoldenglowExplosionModel, 'prdStep' | 'prdMaxStack'>,
+): GoldenglowFirstExplosionRow[] {
+  if (
+    !Number.isFinite(model.prdStep)
+    || model.prdStep < 0
+    || !Number.isInteger(model.prdMaxStack)
+    || model.prdMaxStack < 1
+    || model.prdMaxStack > MAX_FIRST_EXPLOSION_DISTRIBUTION_STACK
+  ) return []
+
+  const rows: GoldenglowFirstExplosionRow[] = []
+  let reachProbability = 1
+
+  for (let misses = 0; misses <= model.prdMaxStack; misses += 1) {
+    const explosionChancePercent = getGoldenglowNextExplosionChancePercent(misses, model)
+    const explosionProbability = explosionChancePercent / 100
+    rows.push({
+      attackNumber: misses + 1,
+      reachProbability,
+      explosionChancePercent,
+      firstExplosionProbability: reachProbability * explosionProbability,
+    })
+    reachProbability *= 1 - explosionProbability
+    if (reachProbability === 0) break
+  }
+
+  return rows
 }
 
 export function getGoldenglowDroneAttackScalePercent(

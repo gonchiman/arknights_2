@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   GOLDENGLOW_OPERATOR_ID,
+  buildGoldenglowFirstExplosionDistribution,
   buildGoldenglowResistanceDamageRows,
   calculateGoldenglowExplosion,
   calculateGoldenglowExplosionDamage,
@@ -191,6 +192,85 @@ test('PRDの次回確率は40スタックまで増え、その攻撃も不発な
   assert.equal(getGoldenglowNextExplosionChancePercent(40, model), 100)
   assert.equal(getGoldenglowNextExplosionChancePercent(999, model), 100)
   assert.equal(getGoldenglowNextExplosionChancePercent(Number.NaN, model), 1.5)
+})
+
+test('初回爆発の分布は判定確率と未爆発の到達確率を分ける', () => {
+  const rows = buildGoldenglowFirstExplosionDistribution({ prdStep: 0.015, prdMaxStack: 40 })
+
+  assert.deepEqual(rows[0], {
+    attackNumber: 1,
+    reachProbability: 1,
+    explosionChancePercent: 1.5,
+    firstExplosionProbability: 0.015,
+  })
+  assert.equal(rows[1].attackNumber, 2)
+  assert.equal(rows[1].explosionChancePercent, 3)
+  assertClose(rows[1].reachProbability, 0.985)
+  assertClose(rows[1].firstExplosionProbability, 0.02955)
+  assertClose(rows[2].reachProbability, 0.95545)
+  assertClose(rows[2].firstExplosionProbability, 0.04299525)
+  assertClose(rows[7].firstExplosionProbability, 0.07754014278048675)
+})
+
+test('初回爆発の確率質量は微小な41回目の確定爆発まで含めて1になる', () => {
+  const rows = buildGoldenglowFirstExplosionDistribution({ prdStep: 0.015, prdMaxStack: 40 })
+
+  assert.equal(rows.length, 41)
+  assert.equal(rows[39].explosionChancePercent, 60)
+  const guaranteed = rows[40]
+  assert.equal(guaranteed.attackNumber, 41)
+  assert.equal(guaranteed.explosionChancePercent, 100)
+  assert.equal(guaranteed.firstExplosionProbability, guaranteed.reachProbability)
+  assert.ok(guaranteed.firstExplosionProbability > 0)
+  assert.ok(Math.abs(guaranteed.firstExplosionProbability - 1.096907589786037e-7) < 1e-18)
+  assertClose(rows.reduce((sum, row) => sum + row.firstExplosionProbability, 0), 1)
+  rows.forEach((row, index) => {
+    assert.ok(row.reachProbability >= 0 && row.reachProbability <= 1)
+    assert.ok(row.firstExplosionProbability >= 0 && row.firstExplosionProbability <= row.reachProbability)
+    assertClose(
+      rows.slice(0, index).reduce((sum, earlier) => sum + earlier.firstExplosionProbability, 0)
+        + row.reachProbability,
+      1,
+    )
+  })
+})
+
+test('分布から求めた平均攻撃回数は既存の長期期待値と一致する', () => {
+  const model = requireModel(createPassives({ attackScale: 3, resistanceIgnore: 15 }))
+  const rows = buildGoldenglowFirstExplosionDistribution(model)
+  const expectation = calculateGoldenglowExpectedDpsFromModel({
+    model,
+    skillIndex: 2,
+    effectiveAttack: 625,
+    attackInterval: 1.3,
+    duration: 0,
+  })
+  assert.ok(expectation)
+  const mean = rows.reduce((sum, row) => sum + row.attackNumber * row.firstExplosionProbability, 0)
+  assertClose(mean, 9.912289362621474)
+  assertClose(mean, expectation.meanAttacksPerExplosion)
+})
+
+test('初回爆発の分布は確定判定で終了し次の周期を含めない', () => {
+  const fallback = buildGoldenglowFirstExplosionDistribution({ prdStep: 0, prdMaxStack: 2 })
+  assert.deepEqual(fallback.map((row) => row.firstExplosionProbability), [0, 0, 1])
+  assert.deepEqual(fallback.map((row) => row.reachProbability), [1, 1, 1])
+
+  const early = buildGoldenglowFirstExplosionDistribution({ prdStep: 0.5, prdMaxStack: 40 })
+  assert.deepEqual(early.map((row) => row.explosionChancePercent), [50, 100])
+  assert.deepEqual(early.map((row) => row.firstExplosionProbability), [0.5, 0.5])
+  const always = buildGoldenglowFirstExplosionDistribution({ prdStep: 1, prdMaxStack: 40 })
+  assert.equal(always.length, 1)
+  assert.equal(always[0].firstExplosionProbability, 1)
+})
+
+test('初回爆発の分布は不正または過大なPRD設定で配列を作らない', () => {
+  for (const prdStep of [Number.NaN, Number.POSITIVE_INFINITY, -0.015]) {
+    assert.deepEqual(buildGoldenglowFirstExplosionDistribution({ prdStep, prdMaxStack: 40 }), [])
+  }
+  for (const prdMaxStack of [Number.NaN, Number.POSITIVE_INFINITY, 0, -1, 1.5, 1001]) {
+    assert.deepEqual(buildGoldenglowFirstExplosionDistribution({ prdStep: 0.015, prdMaxStack }), [])
+  }
 })
 
 test('特性blackboardから基礎・モジュールX・モジュールYの浮遊ユニット倍率列を導出する', () => {

@@ -1,0 +1,10 @@
+.gg-damage-detail-table-wrap { border: 1px solid var(--border); overflow-x: auto; }
+.gg-damage-detail-table-wrap:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.gg-damage-detail-table { min-width: 560px; }
+.gg-probability-table.gg-damage-detail-table th:first-child { width: 28%; }
+.gg-probability-table.gg-damage-detail-table th:nth-child(2), .gg-probability-table.gg-damage-detail-table td:nth-child(2) { width: 49%; text-align: left; }
+.gg-probability-table.gg-damage-detail-table thead th { position: static; }
+.gg-damage-detail-table code { font-size: inherit; line-height: 1.7; }
+.gg-damage-detail-notes { margin-top: 12px; color: var(--text-soft); font-size: 11px; line-height: 1.8; }
+.gg-damage-detail-notes p { margin: 6px 0 0; }
+.gg-attack-source-note { margin: 0 0 12px; color: var(--text-soft); font-size: 11px; line-height: 1.8; }

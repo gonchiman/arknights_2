@@ -1,0 +1,6 @@
+.gg-combined-conditions-wrap { margin-bottom: 16px; border: 1px solid var(--border); }
+.gg-probability-table.gg-combined-conditions-table th:first-child { width: 50%; }
+.gg-combined-damage-detail-table { min-width: 640px; }
+.gg-combined-detail-assumptions { margin-top: 16px; border-top: 1px solid var(--border); }
+.gg-combined-detail-assumptions summary { padding: 12px 0 0; color: var(--text-soft); font-size: 11px; cursor: pointer; }
+.gg-combined-detail-assumptions summary:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }

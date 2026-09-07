@@ -1,0 +1,4 @@
+.gg-probability-table-wrap.gg-combined-attack-table-wrap { max-height: 360px; margin: 0; }
+.gg-combined-attack-table { min-width: 720px; }
+.gg-probability-table.gg-combined-attack-table th:first-child { width: 12%; }
+.gg-combined-attack-table td:last-child { font-weight: 700; }

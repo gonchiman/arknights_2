@@ -65,7 +65,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (route.view === 'enemies' || route.view === 'sources' || route.view === 'goldenglow-guide' || skillDataRequestStarted.current) return
+    if (route.view === 'enemies' || route.view === 'sources' || skillDataRequestStarted.current) return
     skillDataRequestStarted.current = true
     void load()
   }, [route.view])
@@ -216,7 +216,7 @@ export default function App() {
         {displayedRoute.view === 'sources' ? (
           <DataSourcesPage />
         ) : displayedRoute.view === 'goldenglow-guide' ? (
-          <GoldenglowGuidePage />
+          <GoldenglowGuidePage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
         ) : displayedRoute.view === 'damage' ? (
           <DamageCalculator
             rows={classifiedRows}

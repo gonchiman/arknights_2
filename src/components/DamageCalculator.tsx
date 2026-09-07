@@ -610,9 +610,6 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   return (
     <section className="damage-page calculator-page">
       <h1 className="visually-hidden">Damage Calculator</h1>
-      {selectedOperator.operatorId === 'char_377_gdglow' && (
-        <p><a href="#/guides/goldenglow-explosion">GGの爆発期待値：計算方法と数値例 →</a></p>
-      )}
 
       <CollapsibleCalculatorPanel
         id="operator-search-panel"
@@ -1157,6 +1154,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
               attackInterval={model.attackInterval}
               duration={model.duration}
               skillLabel={`S${selectedSkill.skillIndex} ${selectedSkillLevel.name ?? selectedSkill.skillName}`}
+              showGuideLink={false}
             />
           ) : (
             <UnavailableDamageTable reasons={['爆発素質が解放される昇進段階を選択すると、爆発ダメージと期待値を計算できます。']} />
