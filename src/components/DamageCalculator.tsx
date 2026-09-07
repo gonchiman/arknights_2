@@ -161,6 +161,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const [sensitivityMetric, setSensitivityMetric] = useState<SensitivityMetric>('DAMAGE')
   const [mechAccordAttackCount, setMechAccordAttackCount] = useState<MechAccordAttackCount>(1)
   const [includeMainOutputExplosion, setIncludeMainOutputExplosion] = useState(false)
+  const [explosionUsesExpectation, setExplosionUsesExpectation] = useState(false)
   const [sensitivityCalculationPoint, setSensitivityCalculationPoint] = useState<number | null>(null)
   const [operatorFilters, setOperatorFilters] = useState(EMPTY_OPERATOR_FILTERS)
   const [preferredDefaultOperatorId, setPreferredDefaultOperatorId] = useState(loadPreferredDefaultOperatorId)
@@ -464,7 +465,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   )
   const genericSkillSupported = skillSupported && !isGoldenglowSkill3Selected
   // Ordinary skill buffs use shared calculations; S3 adds skill-specific attack-stop handling.
-  const hasMainOutputSkillInfluence = sensitivityTarget === 'SKILL' && isGoldenglowSkill3Selected
+  const hasOutputSkillInfluence = sensitivityTarget === 'SKILL' && isGoldenglowSkill3Selected
   const outputDefinition = resolveDamageOutputDefinition({
     operatorId: selectedOperator?.operatorId ?? '',
     skillIndex: selectedSkill?.skillIndex ?? 0,
@@ -969,11 +970,16 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
           outputTable={panel.id}
           number={panel.number}
           title={panel.title}
-          titleIcons={panel.id === 'DEFAULT' && (hasSubProfessionOutput || hasMainOutputSkillInfluence) ? (
+          titleIcons={hasSubProfessionOutput || hasOutputSkillInfluence || panel.id === 'EXPLOSION' ? (
             <DamageOutputInfluenceIcons
-              subProfessionName={hasSubProfessionOutput ? selectedOperator.subProfessionName : undefined}
-              operatorLabel={mainOutputExpectation ? `${selectedOperator.operatorName}（爆発期待値）` : undefined}
-              skillLabel={hasMainOutputSkillInfluence ? `S${selectedSkill.skillIndex} ${selectedSkill.skillName}` : undefined}
+              subProfessionName={hasSubProfessionOutput && (panel.id !== 'EXPLOSION' || goldenglowExplosion && explosionUsesExpectation)
+                ? selectedOperator.subProfessionName : undefined}
+              operatorLabel={panel.id === 'EXPLOSION'
+                ? `${selectedOperator.operatorName}（浮遊の爆発）`
+                : panel.id === 'DEFAULT' && mainOutputExpectation
+                  ? `${selectedOperator.operatorName}（爆発期待値）` : undefined}
+              skillLabel={hasOutputSkillInfluence && (panel.id !== 'EXPLOSION' || goldenglowExplosion && explosionUsesExpectation)
+                ? `S${selectedSkill.skillIndex} ${selectedSkill.skillName}` : undefined}
             />
           ) : undefined}
           summary={panel.id === 'EXPLOSION'
@@ -1155,6 +1161,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
               duration={model.duration}
               skillLabel={`S${selectedSkill.skillIndex} ${selectedSkillLevel.name ?? selectedSkill.skillName}`}
               showGuideLink={false}
+              onExpectationChange={setExplosionUsesExpectation}
             />
           ) : (
             <UnavailableDamageTable reasons={['爆発素質が解放される昇進段階を選択すると、爆発ダメージと期待値を計算できます。']} />
