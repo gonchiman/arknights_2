@@ -102,7 +102,7 @@ export function GoldenglowCombinedAttackDetailModal({ row, skill, attack, explos
         <div className="gg-damage-detail-notes">
           <p>すべての浮遊ユニットが倍率{format(skill.explosionModel.droneInitialAttackScale * 100)}%・爆発確率のリセットから開始し、同じ敵1体を攻撃し続けます。{row.bodyAttackEnabled && '敵は本体の攻撃範囲内にいる条件です。'}</p>
           <p>初回攻撃は攻撃間隔後、帰還・再索敵にかかる時間は0秒として計算します。</p>
-          <p>爆発する回は通常攻撃を行いません。爆発する回も倍率を進める攻撃回数に含める条件で、爆発後も同じ敵への倍率を引き継ぎます。</p>
+          <p>「浮遊ユニット」列は爆発分を含みません。爆発する回は通常攻撃を行いません。爆発する回も倍率を進める攻撃回数に含める条件で、爆発後も同じ敵への倍率を引き継ぎます。</p>
           {skill.duration === null && <p>S2は永続のため、この表は指定した表示時間までを扱います。</p>}
           <p>maxは大きい方の値を採用し、軽減前の5%を最低保証とします。表示は概数で、計算には丸める前の数値を使います。</p>
         </div>

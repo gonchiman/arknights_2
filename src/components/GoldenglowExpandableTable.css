@@ -1,0 +1,9 @@
+.gg-expandable-table { min-width: 0; }
+.gg-expandable-table > .gg-probability-table-wrap.gg-expandable-table-wrap { max-height: none; margin: 0; overflow-x: auto; overflow-y: hidden; }
+.gg-expandable-table + .gg-table-title { margin-top: 16px; }
+.gg-expandable-table-controls { display: flex; justify-content: flex-end; margin-top: 8px; }
+.gg-expandable-table-controls .button { min-height: 36px; font-size: 11px; }
+
+@media (pointer: coarse) {
+  .gg-expandable-table-controls .button { min-height: 44px; }
+}

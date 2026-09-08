@@ -1,0 +1,7 @@
+.gg-module-effect .gg-module-effect-name { margin: 0 0 12px; color: var(--text); font-size: 12px; font-weight: 700; line-height: 1.8; overflow-wrap: anywhere; }
+.gg-module-effect-section + .gg-module-effect-section { margin-top: 16px; }
+.gg-module-effect .gg-probability-table-wrap { max-height: none; margin: 0; overflow: visible; }
+.gg-module-effect .gg-module-effect-table th:first-child { width: 30%; }
+.gg-module-effect-table th, .gg-module-effect-table td { vertical-align: top; line-height: 1.8; }
+.gg-module-effect .gg-module-effect-descriptions td { text-align: left; }
+.gg-skill-selection .gg-module-effect-status, .gg-module-effect-status { margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }

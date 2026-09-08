@@ -1,0 +1,5 @@
+.gg-result-table td { font-weight: 700; }
+.gg-probability-table-wrap.gg-result-breakdown-wrap { margin-bottom: 0; }
+.gg-result-assumptions { margin-top: 16px; color: var(--text-soft); font-size: 11px; line-height: 1.8; }
+.gg-result-assumptions summary { cursor: pointer; }
+.gg-result-assumptions summary:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
