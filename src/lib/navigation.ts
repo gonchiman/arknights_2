@@ -1,4 +1,4 @@
-export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'damage' | 'comparison' | 'enemies' | 'sources' | 'goldenglow-guide'
+export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'damage' | 'comparison' | 'enemies' | 'sources' | 'goldenglow-guide' | 'goldenglow-target-switch'
 
 export type NavigationSection = 'analysis' | 'information'
 
@@ -49,6 +49,13 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     href: '#/damage',
     label: 'Damage Calculator',
     description: '攻撃・スキルダメージ計算',
+    section: 'analysis',
+  },
+  {
+    id: 'goldenglow-target-switch',
+    href: '#/analysis/goldenglow-target-switch',
+    label: 'GG 撃破・目標切り替え',
+    description: '敵HP・撃破・スキル中の総ダメージ',
     section: 'analysis',
   },
   {

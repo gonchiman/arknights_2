@@ -3,6 +3,7 @@ import { AppSidebar } from './components/AppSidebar'
 import { DamageCalculator } from './components/DamageCalculator'
 import { DataSourcesPage } from './components/DataSourcesPage'
 import { GoldenglowGuidePage } from './components/GoldenglowGuidePage'
+import { GoldenglowTargetSwitchPage } from './components/GoldenglowTargetSwitchPage'
 import { EnemyAnalysis } from './components/EnemyAnalysis'
 import { OperatorComparison } from './components/OperatorComparison'
 import { OperatorDatabase } from './components/OperatorDatabase'
@@ -211,12 +212,14 @@ export default function App() {
         </header>
 
         <main className="app-content">
-        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'goldenglow-guide' && <section className="error-box" role="alert">{error}</section>}
+        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-target-switch' && <section className="error-box" role="alert">{error}</section>}
 
         {displayedRoute.view === 'sources' ? (
           <DataSourcesPage />
         ) : displayedRoute.view === 'goldenglow-guide' ? (
           <GoldenglowGuidePage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
+        ) : displayedRoute.view === 'goldenglow-target-switch' ? (
+          <GoldenglowTargetSwitchPage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
         ) : displayedRoute.view === 'damage' ? (
           <DamageCalculator
             rows={classifiedRows}

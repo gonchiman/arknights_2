@@ -18,6 +18,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['skill-effects', 'skill-effects'],
       ['skill-json', 'skill-json'],
       ['damage', 'damage'],
+      ['goldenglow-target-switch', 'goldenglow-target-switch'],
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
       ['sources', 'sources'],
@@ -29,6 +30,12 @@ test('サイドバーから主要ページへ遷移できる', () => {
 
 test('比較ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/comparison'), { view: 'comparison' })
+})
+
+test('GGの目標切り替え分析は同一目標の分析と別ページで開く', () => {
+  assert.deepEqual(parseHashRoute('#/analysis/goldenglow-target-switch'), { view: 'goldenglow-target-switch' })
+  assert.deepEqual(parseHashRoute('#/guides/goldenglow-explosion'), { view: 'goldenglow-guide' })
+  assert.deepEqual(parseHashRoute('#/analysis/goldenglow-target-switch/extra'), { view: 'operators' })
 })
 
 test('オペレーターデータベースのhashを解析する', () => {
