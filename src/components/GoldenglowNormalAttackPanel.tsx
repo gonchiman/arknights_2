@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { GoldenglowGuideSkill } from '../lib/goldenglowGuideSkill'
 import { buildGoldenglowNormalAttackTable } from '../lib/goldenglowNormalAttackTable'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
+import { GoldenglowExpandableTable } from './GoldenglowExpandableTable'
 import { GoldenglowNormalAttackDetailModal } from './GoldenglowNormalAttackDetailModal'
 import './GoldenglowNormalAttackPanel.css'
 
@@ -35,7 +36,7 @@ export function GoldenglowNormalAttackPanel({ skill, attack, resistance, resista
   return (
     <CollapsibleCalculatorPanel
       id="gg-normal-attacks"
-      number="05"
+      number="07"
       title="浮遊ユニットの通常攻撃"
       summary={skill ? `S${skill.skillIndex}・浮遊ユニット1体・同一目標` : '浮遊ユニット1体・同一目標'}
       open={open}
@@ -76,8 +77,12 @@ export function GoldenglowNormalAttackPanel({ skill, attack, resistance, resista
           </table>
         </div>
         <h3 className="gg-table-title" id="gg-normal-attack-table-title">攻撃ごとの通常攻撃期待値</h3>
-        {attackRows.length > 0 ? <div className="gg-probability-table-wrap gg-normal-attack-table-wrap" tabIndex={0} role="region" aria-label="スキル中の通常攻撃テーブル">
-          <table className="gg-probability-table gg-normal-attack-table" aria-labelledby="gg-normal-attack-table-title">
+        {attackRows.length > 0 ? <GoldenglowExpandableTable
+          rows={attackRows}
+          regionLabel="スキル中の通常攻撃テーブル"
+          tableWrapperClassName="gg-normal-attack-table-wrap"
+        >
+          {(visibleRows) => <table className="gg-probability-table gg-normal-attack-table" aria-labelledby="gg-normal-attack-table-title">
             <thead>
               <tr>
                 <th scope="col">攻撃回数</th>
@@ -89,7 +94,7 @@ export function GoldenglowNormalAttackPanel({ skill, attack, resistance, resista
               </tr>
             </thead>
             <tbody>
-              {attackRows.map((row) => <tr
+              {visibleRows.map((row) => <tr
                 key={row.attackNumber}
                 className="gg-detail-row"
                 onClick={(event) => {
@@ -109,8 +114,8 @@ export function GoldenglowNormalAttackPanel({ skill, attack, resistance, resista
                 <td>{format(row.cumulativeExpectedNormalDamage)}</td>
               </tr>)}
             </tbody>
-          </table>
-        </div> : <p className="gg-probability-intro" role="status">この時間内には攻撃がありません。</p>}
+          </table>}
+        </GoldenglowExpandableTable> : <p className="gg-probability-intro" role="status">この時間内には攻撃がありません。</p>}
         {selectedRow && <GoldenglowNormalAttackDetailModal
           row={selectedRow}
           attack={attack}

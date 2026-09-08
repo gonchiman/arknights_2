@@ -20,7 +20,7 @@ export function GoldenglowAttackDetailModal({ skill, attackOverride, onClose }: 
 
   return (
     <GoldenglowDetailModal title="最終攻撃力の計算" closeLabel="攻撃力の計算詳細を閉じる" onClose={onClose}>
-      <p className="gg-attack-source-note">S{skill.skillIndex} {skill.skillName}・{skill.skillLevelLabel}／昇進2 Lv{level}・信頼100・潜在1・モジュールなし</p>
+      <p className="gg-attack-source-note">S{skill.skillIndex} {skill.skillName}・{skill.skillLevelLabel}／昇進2 Lv{level}・信頼100・潜在1・{skill.moduleApplication.moduleName ? `${skill.moduleApplication.moduleName} Lv.${skill.moduleApplication.moduleLevel}` : 'モジュールなし'}</p>
       <h3 className="gg-table-title" id={titleId}>計算フロー</h3>
       <div className="gg-damage-detail-table-wrap" tabIndex={0} role="region" aria-label="最終攻撃力の計算内訳">
         <table className="gg-probability-table gg-damage-detail-table" aria-labelledby={titleId}>

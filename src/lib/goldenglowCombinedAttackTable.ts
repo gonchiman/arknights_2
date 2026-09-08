@@ -26,6 +26,38 @@ export interface GoldenglowCombinedAttackRow {
   cumulativeExpectedTotalDamage: number
 }
 
+export interface GoldenglowCombinedAttackSummary {
+  expectedBodyDamage: number
+  expectedDroneNormalDamage: number
+  expectedExplosionDamage: number
+  expectedTotalDamage: number
+  expectedDps: number | null
+}
+
+/** Uses the displayed attack rows and the full calculation window for DPS. */
+export function summarizeGoldenglowCombinedAttackTable(
+  rows: readonly GoldenglowCombinedAttackRow[],
+  duration: number,
+): GoldenglowCombinedAttackSummary {
+  let expectedBodyDamage = 0
+  let expectedDroneNormalDamage = 0
+  let expectedExplosionDamage = 0
+  for (const row of rows) {
+    expectedBodyDamage += row.expectedBodyDamage
+    expectedDroneNormalDamage += row.expectedDroneNormalDamage
+    expectedExplosionDamage += row.expectedExplosionDamage
+  }
+  const expectedTotalDamage = rows.at(-1)?.cumulativeExpectedTotalDamage ?? 0
+
+  return {
+    expectedBodyDamage,
+    expectedDroneNormalDamage,
+    expectedExplosionDamage,
+    expectedTotalDamage,
+    expectedDps: Number.isFinite(duration) && duration > 0 ? expectedTotalDamage / duration : null,
+  }
+}
+
 /** All drones share the guide's initial state, timing and single-enemy target. */
 export function buildGoldenglowCombinedAttackTable(
   input: GoldenglowCombinedAttackTableInput,

@@ -64,7 +64,7 @@ export function GoldenglowExplosionDamageModal({ attack, explosionScale, resista
       </div>
       <div className="gg-damage-detail-notes">
         <p>maxは、大きい方の値を採用します。術耐性は0を下限とし、軽減後のダメージと軽減前の5%を比べて、単発爆発ダメージを決めます。</p>
-        <p>攻撃力は選択したスキルの補正を反映し、手入力でも変更できます。爆発倍率300%・術耐性無視15は、潜在1・モジュールなしの値です。</p>
+        <p>攻撃力・爆発倍率・術耐性無視は、選択したスキルとモジュールを反映します。手入力で変更した場合は、その値を使います。</p>
         <p>術ダメージ・敵1体あたり。表示は小数第3位までの概数です。</p>
       </div>
     </GoldenglowDetailModal>

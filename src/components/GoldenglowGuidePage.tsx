@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { calculateDamageBreakdown } from '../lib/damageCalculator'
-import { buildGoldenglowFirstExplosionDistribution } from '../lib/goldenglowExplosion'
+import { buildGoldenglowFirstExplosionDistribution, GOLDENGLOW_OPERATOR_ID, type GoldenglowFirstExplosionRow } from '../lib/goldenglowExplosion'
+import { getOperatorModules, getOperatorModuleId, getOperatorModuleLevels, isOperatorModuleUnlocked } from '../lib/operatorModules'
 import { deriveGoldenglowGuideSkills, type GoldenglowGuideSkill } from '../lib/goldenglowGuideSkill'
 import { buildGoldenglowSkillAttackTable } from '../lib/goldenglowSkillAttackTable'
 import { buildGoldenglowAttackProbabilityDetail } from '../lib/goldenglowAttackProbability'
+import { buildGoldenglowCombinedAttackTable } from '../lib/goldenglowCombinedAttackTable'
 import type { SkillRecord } from '../types/skill'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { GoldenglowAttackProbabilityModal } from './GoldenglowAttackProbabilityModal'
@@ -14,18 +16,18 @@ import { GoldenglowExpectationDetailModal } from './GoldenglowExpectationDetailM
 import { GoldenglowExpectationMeaningModal } from './GoldenglowExpectationMeaningModal'
 import { GoldenglowNormalAttackPanel } from './GoldenglowNormalAttackPanel'
 import { GoldenglowCombinedAttackPanel } from './GoldenglowCombinedAttackPanel'
+import { GoldenglowResultPanel } from './GoldenglowResultPanel'
+import { GoldenglowExpandableTable } from './GoldenglowExpandableTable'
+import { GoldenglowOperatorInfo } from './GoldenglowOperatorInfo'
+import { GoldenglowBuildControls } from './GoldenglowBuildControls'
+import { GoldenglowDetailModal } from './GoldenglowDetailModal'
+import { GoldenglowModuleEffect } from './GoldenglowModuleEffect'
 import './DamageCalculator.css'
 import './GoldenglowGuidePage.css'
 
 const format = (value: number) => new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 }).format(value)
 const probabilityFormat = new Intl.NumberFormat('ja-JP', { maximumSignificantDigits: 4 })
 const formatProbability = (probability: number) => `${probabilityFormat.format(probability * 100)}%`
-const explosionDistribution = buildGoldenglowFirstExplosionDistribution({ prdStep: 0.015, prdMaxStack: 40 })
-const expectationRows = explosionDistribution.map((row) => ({
-  ...row,
-  contribution: row.attackNumber * row.firstExplosionProbability,
-}))
-const meanAttacksPerExplosion = expectationRows.reduce((sum, row) => sum + row.contribution, 0)
 
 export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
   rows: readonly SkillRecord[]
@@ -33,14 +35,32 @@ export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
   error: string | null
   onRetry: () => void
 }) {
-  const skills = useMemo(() => deriveGoldenglowGuideSkills(rows), [rows])
+  const [moduleId, setModuleId] = useState('')
+  const [moduleLevel, setModuleLevel] = useState(3)
+  const [skillLevelIndex, setSkillLevelIndex] = useState<number | undefined>(undefined)
+  const buildNavigationRef = useRef<HTMLDivElement>(null)
+  const compactNavigationRef = useRef<HTMLDivElement>(null)
+  const [navigation, setNavigation] = useState({ compact: false, left: 0, width: 0 })
+  const pendingNavigationFocus = useRef<string | null>(null)
+  const [effectDetail, setEffectDetail] = useState<'skill' | 'module' | null>(null)
+  const operatorProfile = rows.find((row) => row.operatorId === GOLDENGLOW_OPERATOR_ID)?.operatorProfile
+  const moduleChoices = useMemo(() => operatorProfile ? getOperatorModules(operatorProfile).map((module, index) => ({
+    module,
+    id: getOperatorModuleId(module, index),
+    label: ['MOD', module.typeName2?.trim()].filter(Boolean).join(' '),
+    levels: getOperatorModuleLevels(module),
+    unlocked: isOperatorModuleUnlocked(module, 2, operatorProfile.phases[2]?.maxLevel ?? 1),
+  })) : [], [operatorProfile])
+  const skills = useMemo(() => deriveGoldenglowGuideSkills(rows, moduleId, moduleLevel, skillLevelIndex), [rows, moduleId, moduleLevel, skillLevelIndex])
   const [skillIndex, setSkillIndex] = useState(3)
   const skill = skills.find((item) => item.skillIndex === skillIndex) ?? skills[0] ?? null
   const [attackOverride, setAttackOverride] = useState<number | null>(null)
   const attack = attackOverride ?? skill?.effectiveAttack ?? 391
-  const [explosionScale, setExplosionScale] = useState(300)
+  const [explosionScaleOverride, setExplosionScale] = useState<number | null>(null)
+  const explosionScale = explosionScaleOverride ?? skill?.explosionModel.attackScalePercent ?? 300
   const [resistance, setResistance] = useState(0)
-  const [resistanceIgnore, setResistanceIgnore] = useState(15)
+  const [resistanceIgnoreOverride, setResistanceIgnore] = useState<number | null>(null)
+  const resistanceIgnore = resistanceIgnoreOverride ?? skill?.explosionModel.resistanceIgnoreFixed ?? 15
   const [viewingDuration, setViewingDuration] = useState(30)
   const [open, setOpen] = useState(true)
   const [singleDetail, setSingleDetail] = useState<'attack' | 'damage' | null>(null)
@@ -48,6 +68,108 @@ export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
   const damage = calculateDamageBreakdown(rawDamage, 'ARTS', 0, resistance, {
     resistanceIgnoreFixed: resistanceIgnore,
   })
+  const duration = skill?.duration ?? viewingDuration
+  const moduleLabel = skill?.moduleApplication.moduleName
+    ? `${skill.moduleApplication.moduleName} Lv.${skill.moduleApplication.moduleLevel}` : 'モジュールなし'
+  const explosionDistribution = useMemo(() => skill ? buildGoldenglowFirstExplosionDistribution(skill.explosionModel) : [], [skill])
+  const changeModule = (id: string, level: number) => {
+    setModuleId(id)
+    setModuleLevel(level)
+    setAttackOverride(null)
+    setExplosionScale(null)
+    setResistanceIgnore(null)
+    setSingleDetail(null)
+    if (!id) setEffectDetail((current) => current === 'module' ? null : current)
+  }
+  const combinedAttackRows = useMemo(() => skill ? buildGoldenglowCombinedAttackTable({
+    model: skill.explosionModel,
+    skillIndex: skill.skillIndex,
+    attack,
+    explosionDamage: damage.result,
+    attackInterval: skill.attackInterval,
+    duration,
+    resistance,
+    resistanceIgnore,
+  }) : [], [skill, attack, damage.result, duration, resistance, resistanceIgnore])
+
+  useLayoutEffect(() => {
+    const normal = buildNavigationRef.current
+    const compactNavigation = compactNavigationRef.current
+    if (!normal || !compactNavigation) return
+    let animationFrameId = 0
+    const updateStuckState = () => {
+      const stickyTop = Number.parseFloat(window.getComputedStyle(compactNavigation).top) || 0
+      const bounds = normal.getBoundingClientRect()
+      // The normal controls keep their real height and stay in the page flow.
+      const compact = bounds.bottom <= stickyTop
+      const wasCompact = !compactNavigation.hidden
+      if (compact !== wasCompact) {
+        const previous = wasCompact ? compactNavigation : normal
+        const focused = document.activeElement
+        if (focused instanceof HTMLElement && previous.contains(focused)) {
+          pendingNavigationFocus.current = focused.getAttribute('data-gg-build-control')
+          focused.blur()
+        }
+      }
+      setNavigation((current) => (
+        current.compact === compact && current.left === bounds.left && current.width === bounds.width
+          ? current : { compact, left: bounds.left, width: bounds.width }
+      ))
+    }
+    const requestUpdate = () => {
+      window.cancelAnimationFrame(animationFrameId)
+      animationFrameId = window.requestAnimationFrame(updateStuckState)
+    }
+
+    updateStuckState()
+    window.addEventListener('scroll', requestUpdate, { passive: true })
+    window.addEventListener('resize', requestUpdate)
+    const resizeObserver = new ResizeObserver(requestUpdate)
+    resizeObserver.observe(normal)
+    if (normal.parentElement) resizeObserver.observe(normal.parentElement)
+    if (normal.previousElementSibling instanceof HTMLElement) resizeObserver.observe(normal.previousElementSibling)
+    return () => {
+      window.cancelAnimationFrame(animationFrameId)
+      window.removeEventListener('scroll', requestUpdate)
+      window.removeEventListener('resize', requestUpdate)
+      resizeObserver.disconnect()
+    }
+  }, [loading, skills.length])
+
+  useLayoutEffect(() => {
+    const key = pendingNavigationFocus.current
+    pendingNavigationFocus.current = null
+    if (!key) return
+    const target = navigation.compact ? compactNavigationRef.current : buildNavigationRef.current
+    const controls = Array.from(target?.querySelectorAll<HTMLElement>('[data-gg-build-control]') ?? [])
+    const visibleControl = (controlKey: string) => controls.find((control) => (
+      control.getAttribute('data-gg-build-control') === controlKey
+        && !control.matches(':disabled') && control.getClientRects().length > 0
+    ))
+    const control = visibleControl(key) ?? visibleControl(key.replace(/-content$/, ''))
+      ?? (key.startsWith('module-effect') ? visibleControl('module-off') : undefined)
+    control?.focus({ preventScroll: true })
+  }, [navigation.compact])
+
+  const renderBuildControls = (compact: boolean) => skill && <GoldenglowBuildControls
+    skill={skill}
+    skills={skills}
+    moduleChoices={moduleChoices}
+    compact={compact}
+    onShowEffect={setEffectDetail}
+    resistance={resistance}
+    onResistanceChange={setResistance}
+    onSkillChange={(index) => {
+      setSkillIndex(index)
+      setAttackOverride(null)
+    }}
+    onSkillLevelChange={(index) => {
+      setSkillLevelIndex(index)
+      setAttackOverride(null)
+      setSingleDetail(null)
+    }}
+    onModuleChange={changeModule}
+  />
 
   return (
     <section className="calculator-page gg-reference-page" aria-labelledby="gg-reference-title">
@@ -58,38 +180,51 @@ export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
         </div>
         <a className="gg-reference-link" href="#/damage">ダメージ計算へ →</a>
       </header>
-      <div className="gg-skill-selection">
-        {loading ? <p role="status">スキル情報を読み込み中…</p> : skill ? (
-          <>
-            <div className="skill-choice-group" role="group" aria-label="スキル">
-              {skills.map((item) => (
-                <button
-                  key={item.skillIndex}
-                  type="button"
-                  className={item.skillIndex === skill.skillIndex ? 'active' : ''}
-                  aria-pressed={item.skillIndex === skill.skillIndex}
-                  aria-label={`S${item.skillIndex} ${item.skillName}`}
-                  onClick={() => {
-                    setSkillIndex(item.skillIndex)
-                    setAttackOverride(null)
-                  }}
-                >
-                  <span>S{item.skillIndex}</span><strong>{item.skillName}</strong>
-                </button>
-              ))}
-            </div>
-            <p>{skill.skillLevelLabel}・昇進2最大レベル・信頼100・潜在1・モジュールなし</p>
-          </>
-        ) : (
-          <div className="gg-skill-load-error" role="alert">
-            <p>{error ?? 'ゴールデングローのスキル情報を取得できませんでした。'}</p>
-            <button type="button" className="button secondary" onClick={onRetry}>再読み込み</button>
+      {loading ? <div className="gg-skill-selection"><p role="status">スキル情報を読み込み中…</p></div> : skill ? (
+        <>
+          <div className="damage-build-navigation gg-skill-navigation gg-normal-navigation"
+            ref={buildNavigationRef} inert={navigation.compact} aria-hidden={navigation.compact}>
+            {renderBuildControls(false)}
           </div>
-        )}
-      </div>
+          <div
+            className="damage-build-navigation gg-skill-navigation gg-compact-navigation is-stuck"
+            ref={compactNavigationRef}
+            hidden={!navigation.compact}
+            style={{ left: navigation.left, width: navigation.width }}
+          >
+            {renderBuildControls(true)}
+          </div>
+          <div className="gg-skill-selection">
+            <p>{skill.skillLevelLabel}・昇進2最大レベル・信頼100・潜在1・{moduleLabel}</p>
+          </div>
+        </>
+      ) : (
+        <div className="gg-skill-selection gg-skill-load-error" role="alert">
+          <p>{error ?? 'ゴールデングローのスキル情報を取得できませんでした。'}</p>
+          <button type="button" className="button secondary" onClick={onRetry}>再読み込み</button>
+        </div>
+      )}
+      {effectDetail && skill && <GoldenglowDetailModal
+        title={effectDetail === 'skill'
+          ? `S${skill.skillIndex} ${skill.skillName} ${skill.skillLevelLabel}・スキル効果`
+          : 'モジュール効果'}
+        closeLabel={effectDetail === 'skill' ? 'スキル効果を閉じる' : 'モジュール効果を閉じる'}
+        onClose={() => setEffectDetail(null)}
+      >
+        {effectDetail === 'skill'
+          ? <p className="gg-skill-effect-description">{skill.skillDescription || 'スキル効果の説明を取得できませんでした。'}</p>
+          : <GoldenglowModuleEffect application={skill.moduleApplication} />}
+      </GoldenglowDetailModal>}
+      <GoldenglowOperatorInfo skill={skill} loading={loading} />
+      <GoldenglowResultPanel
+        skill={skill}
+        attackRows={combinedAttackRows}
+        duration={duration}
+        loading={loading}
+      />
       <CollapsibleCalculatorPanel
         id="gg-single-explosion"
-        number="01"
+        number="03"
         title="単発の爆発ダメージ"
         summary="術ダメージ・敵1体・爆発1回"
         open={open}
@@ -170,8 +305,8 @@ export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
           onClose={() => setSingleDetail(null)}
         />
       )}
-      <FirstExplosionPanel />
-      <ExplosionExpectationPanel />
+      <FirstExplosionPanel explosionDistribution={explosionDistribution} />
+      <ExplosionExpectationPanel explosionDistribution={explosionDistribution} />
       <SkillAttackPanel
         skill={skill}
         explosionDamage={damage.result}
@@ -190,6 +325,7 @@ export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
       />
       <GoldenglowCombinedAttackPanel
         skill={skill}
+        attackRows={combinedAttackRows}
         attack={attack}
         explosionDamage={damage.result}
         resistance={resistance}
@@ -202,12 +338,14 @@ export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
   )
 }
 
-function FirstExplosionPanel() {
+function FirstExplosionPanel({ explosionDistribution }: { explosionDistribution: readonly GoldenglowFirstExplosionRow[] }) {
   const [open, setOpen] = useState(true)
-  const [attackNumber, setAttackNumber] = useState(2)
+  const [selectedAttackNumber, setAttackNumber] = useState(2)
   const [detailOpen, setDetailOpen] = useState(false)
-  const row = explosionDistribution[attackNumber - 1]
   const lastAttack = explosionDistribution.length
+  const attackNumber = Math.min(selectedAttackNumber, lastAttack)
+  const row = explosionDistribution[attackNumber - 1]
+  if (!row) return null
   const probabilityRows = [
     { label: '不発が続いた場合の爆発確率', value: row.explosionChancePercent / 100 },
     { label: 'それまで爆発しない確率', value: row.reachProbability },
@@ -217,8 +355,8 @@ function FirstExplosionPanel() {
   return (
     <CollapsibleCalculatorPanel
       id="gg-first-explosion"
-      number="02"
-      title="何回目の攻撃で爆発するか"
+      number="04"
+      title="爆発確率"
       summary="浮遊ユニット1体・初回爆発まで"
       open={open}
       onToggle={() => setOpen((value) => !value)}
@@ -267,23 +405,28 @@ function FirstExplosionPanel() {
   )
 }
 
-function ExplosionExpectationPanel() {
+function ExplosionExpectationPanel({ explosionDistribution }: { explosionDistribution: readonly GoldenglowFirstExplosionRow[] }) {
   const [open, setOpen] = useState(true)
   const [selectedDetail, setSelectedDetail] = useState<number | 'mean' | 'meaning' | null>(null)
+  const expectationRows = useMemo(() => explosionDistribution.map((row) => ({
+    ...row, contribution: row.attackNumber * row.firstExplosionProbability,
+  })), [explosionDistribution])
+  const meanAttacksPerExplosion = expectationRows.reduce((sum, row) => sum + row.contribution, 0)
+  if (expectationRows.length === 0) return null
 
   return (
     <CollapsibleCalculatorPanel
       id="gg-explosion-expectation"
-      number="03"
-      title="期待値計算"
+      number="05"
+      title="爆発までの平均攻撃回数"
       summary="浮遊ユニット1体・次の爆発まで"
       open={open}
       onToggle={() => setOpen((value) => !value)}
       collapsedLabel="テーブルを表示"
     >
       <h3 className="gg-table-title" id="gg-expectation-breakdown-title">攻撃回数ごとの計算</h3>
-      <div className="gg-probability-table-wrap gg-expectation-table-wrap" tabIndex={0} role="region" aria-label="平均攻撃回数の計算内訳">
-        <table className="gg-probability-table gg-expectation-table" aria-labelledby="gg-expectation-breakdown-title">
+      <GoldenglowExpandableTable rows={expectationRows} regionLabel="平均攻撃回数の計算内訳" tableWrapperClassName="gg-expectation-table-wrap">
+        {(visibleRows) => <table className="gg-probability-table gg-expectation-table" aria-labelledby="gg-expectation-breakdown-title">
           <thead>
             <tr>
               <th scope="col">攻撃回数</th>
@@ -303,7 +446,7 @@ function ExplosionExpectationPanel() {
             </tr>
           </thead>
           <tbody>
-            {expectationRows.map((row) => (
+            {visibleRows.map((row) => (
               <tr
                 key={row.attackNumber}
                 className="gg-detail-row"
@@ -322,8 +465,8 @@ function ExplosionExpectationPanel() {
               </tr>
             ))}
           </tbody>
-        </table>
-      </div>
+        </table>}
+      </GoldenglowExpandableTable>
       <h3 className="gg-table-title" id="gg-expectation-result-title">計算結果</h3>
       <div className="gg-probability-table-wrap gg-value-table-wrap gg-expectation-result-table-wrap">
         <table className="gg-probability-table gg-value-table" aria-labelledby="gg-expectation-result-title">
@@ -346,7 +489,7 @@ function ExplosionExpectationPanel() {
         </table>
       </div>
       {selectedDetail === 'meaning' && <GoldenglowExpectationMeaningModal
-        example={expectationRows[2]}
+        example={expectationRows[2] ?? expectationRows[0]}
         meanAttacks={meanAttacksPerExplosion}
         onClose={() => setSelectedDetail(null)}
       />}
@@ -386,8 +529,8 @@ function SkillAttackPanel({ skill, explosionDamage, viewingDuration, onViewingDu
   return (
     <CollapsibleCalculatorPanel
       id="gg-skill-attacks"
-      number="04"
-      title="スキル中の攻撃"
+      number="06"
+      title="爆発期待値"
       summary={skill ? `S${skill.skillIndex}・浮遊ユニット1体` : '浮遊ユニット1体'}
       open={open}
       onToggle={() => setOpen((value) => !value)}
@@ -420,8 +563,8 @@ function SkillAttackPanel({ skill, explosionDamage, viewingDuration, onViewingDu
           {lastRow ? (
             <>
               <h3 className="gg-table-title" id="gg-skill-attack-table-title">攻撃ごとの爆発期待値</h3>
-              <div className="gg-probability-table-wrap gg-skill-attack-table-wrap" tabIndex={0} role="region" aria-label="スキル中の攻撃テーブル">
-                <table className="gg-probability-table gg-skill-attack-table" aria-labelledby="gg-skill-attack-table-title">
+              <GoldenglowExpandableTable rows={attackRows} regionLabel="爆発期待値テーブル" tableWrapperClassName="gg-skill-attack-table-wrap">
+                {(visibleRows) => <table className="gg-probability-table gg-skill-attack-table" aria-labelledby="gg-skill-attack-table-title">
                   <thead>
                     <tr>
                       <th scope="col">攻撃回数</th>
@@ -433,7 +576,7 @@ function SkillAttackPanel({ skill, explosionDamage, viewingDuration, onViewingDu
                     </tr>
                   </thead>
                   <tbody>
-                    {attackRows.map((row) => (
+                    {visibleRows.map((row) => (
                       <tr
                         key={row.attackNumber}
                         className="gg-skill-attack-row"
@@ -460,8 +603,8 @@ function SkillAttackPanel({ skill, explosionDamage, viewingDuration, onViewingDu
                       </tr>
                     ))}
                   </tbody>
-                </table>
-              </div>
+                </table>}
+              </GoldenglowExpandableTable>
               <div className="gg-probability-equation gg-expectation-sum" aria-live="polite" aria-atomic="true">
                 <span>累計爆発回数の期待値 × 単発爆発ダメージ</span>
                 <code>{format(lastRow.expectedExplosionCount)}回 × {format(explosionDamage)} ≈ {format(lastRow.expectedExplosionDamage)}</code>

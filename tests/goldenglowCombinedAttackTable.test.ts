@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   buildGoldenglowCombinedAttackTable,
+  summarizeGoldenglowCombinedAttackTable,
   type GoldenglowCombinedAttackTableInput,
 } from '../src/lib/goldenglowCombinedAttackTable.ts'
 import { MAX_GOLDENGLOW_SKILL_ATTACK_ROWS } from '../src/lib/goldenglowSkillAttackTable.ts'
@@ -180,6 +181,73 @@ test('不正なスキル・浮遊ユニット数・爆発ダメージと継承�
     { model: { ...example.model, prdStep: -1 } },
     { model: { ...example.model, droneMaxStack: 1.5 } },
   ]) assert.deepEqual(buildGoldenglowCombinedAttackTable({ ...example, ...patch }), [])
+})
+
+test('S3の集計結果は各ダメージの内訳と最終行の累計を保ち、30秒全体でDPSを求める', () => {
+  const rows = buildGoldenglowCombinedAttackTable(example)
+  const before = structuredClone(rows)
+  const summary = summarizeGoldenglowCombinedAttackTable(rows, 30)
+  assert.equal(summary.expectedBodyDamage, 0)
+  assertClose(summary.expectedDroneNormalDamage, 42329.87855787044)
+  assertClose(summary.expectedExplosionDamage, 12648.69925362206)
+  assert.equal(summary.expectedTotalDamage, rows.at(-1)!.cumulativeExpectedTotalDamage)
+  assertClose(summary.expectedTotalDamage, 54978.577811492505)
+  assertClose(summary.expectedDps!, 1832.6192603830834)
+  assert.equal(summary.expectedDps, summary.expectedTotalDamage / 30)
+  assert.notEqual(summary.expectedDps, summary.expectedTotalDamage / rows.at(-1)!.elapsedSeconds)
+  assert.deepEqual(rows, before)
+})
+
+test('S1の集計に本体28回分を含め、各ダメージの内訳と合計を対応させる', () => {
+  const input = {
+    ...example,
+    model: { ...example.model, activeDroneCount: 2 },
+    skillIndex: 1, attack: 547, attackInterval: 0.867, duration: 25, explosionDamage: 1641,
+  }
+  const rows = buildGoldenglowCombinedAttackTable(input)
+  const summary = summarizeGoldenglowCombinedAttackTable(rows, input.duration)
+  assert.equal(summary.expectedBodyDamage, 15316)
+  assertClose(summary.expectedDroneNormalDamage, 27368.399685469056)
+  assertClose(summary.expectedExplosionDamage, 8214.923185817017)
+  assert.equal(summary.expectedTotalDamage, rows.at(-1)!.cumulativeExpectedTotalDamage)
+  assertClose(summary.expectedTotalDamage, 50899.322871286065)
+  assertClose(summary.expectedDps!, 2035.9729148514425)
+})
+
+test('S2の短い表示時間でもその時間内の攻撃だけを集計し、指定した表示時間で割る', () => {
+  const input = {
+    ...example,
+    model: { ...example.model, activeDroneCount: 2 },
+    skillIndex: 2, attack: 625, duration: 3, explosionDamage: 1875,
+  }
+  const rows = buildGoldenglowCombinedAttackTable(input)
+  assert.equal(rows.length, 2)
+  const summary = summarizeGoldenglowCombinedAttackTable(rows, input.duration)
+  assert.equal(summary.expectedBodyDamage, 1250)
+  assertClose(summary.expectedDroneNormalDamage, 670.7234375)
+  assertClose(summary.expectedExplosionDamage, 167.90625)
+  assertClose(summary.expectedTotalDamage, 2088.6296875)
+  assert.equal(summary.expectedTotalDamage, rows.at(-1)!.cumulativeExpectedTotalDamage)
+  assertClose(summary.expectedDps!, 696.2098958333334)
+})
+
+test('空の表は合計0となり、0秒や不正な時間ではDPSを算出しない', () => {
+  assert.deepEqual(summarizeGoldenglowCombinedAttackTable([], 1), {
+    expectedBodyDamage: 0,
+    expectedDroneNormalDamage: 0,
+    expectedExplosionDamage: 0,
+    expectedTotalDamage: 0,
+    expectedDps: 0,
+  })
+  const rows = buildGoldenglowCombinedAttackTable(example)
+  for (const duration of [0, -1, NaN, Infinity, -Infinity]) {
+    const empty = summarizeGoldenglowCombinedAttackTable([], duration)
+    assert.equal(empty.expectedTotalDamage, 0)
+    assert.equal(empty.expectedDps, null)
+    const populated = summarizeGoldenglowCombinedAttackTable(rows, duration)
+    assert.equal(populated.expectedTotalDamage, rows.at(-1)!.cumulativeExpectedTotalDamage)
+    assert.equal(populated.expectedDps, null)
+  }
 })
 
 function assertClose(actual: number, expected: number): void {

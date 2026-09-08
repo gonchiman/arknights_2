@@ -1,10 +1,12 @@
 import type { RawSkillLevel, SkillRecord } from '../types/skill.ts'
+import { classifySkill } from './classifier.ts'
 import {
   calculateAttackPipeline,
   deriveSkillModel,
   getOperatorStats,
   type AttackPipelineBreakdown,
   type BaseAttackBreakdown,
+  type OperatorStats,
 } from './damageCalculator.ts'
 import {
   deriveGoldenglowExplosionModel,
@@ -12,7 +14,14 @@ import {
   type GoldenglowExplosionModel,
 } from './goldenglowExplosion.ts'
 import { evaluateOperatorEffects } from './operatorEffects.ts'
-import { getOperatorPassives } from './operatorProfile.ts'
+import {
+  applyOperatorModule,
+  getOperatorModuleId,
+  getOperatorModules,
+  isOperatorModuleUnlocked,
+  type OperatorModuleApplication,
+} from './operatorModules.ts'
+import { getOperatorPassives, type OperatorPassives } from './operatorProfile.ts'
 import { expandSkillDescription, getSkillLevelLabel } from './skillJsonAnalysis.ts'
 
 export interface GoldenglowGuideAttackCalculation {
@@ -26,7 +35,14 @@ export interface GoldenglowGuideAttackCalculation {
 export interface GoldenglowGuideSkill {
   skillIndex: number
   skillName: string
+  skillLevelIndex: number
+  skillLevelCount: number
   skillLevelLabel: string
+  operatorStats: OperatorStats
+  basePassives: OperatorPassives
+  passives: OperatorPassives
+  moduleApplication: OperatorModuleApplication
+  moduleId: string
   effectiveAttack: number
   attackCalculation: GoldenglowGuideAttackCalculation
   attackInterval: number
@@ -35,18 +51,28 @@ export interface GoldenglowGuideSkill {
   skillDescription: string
 }
 
-/** Guide presets use E2 maximum level, 100% trust, potential 1 and no module. */
-export function deriveGoldenglowGuideSkills(records: readonly SkillRecord[]): GoldenglowGuideSkill[] {
+/** Guide presets use E2 maximum level, 100% trust, potential 1 and the selected module. */
+export function deriveGoldenglowGuideSkills(
+  records: readonly SkillRecord[],
+  moduleId = '',
+  moduleLevel = 3,
+  skillLevelIndex?: number,
+): GoldenglowGuideSkill[] {
   return records
     .filter((record) => record.operatorId === GOLDENGLOW_OPERATOR_ID)
     .flatMap((record) => {
-      const result = deriveSkill(record)
+      const result = deriveSkill(record, moduleId, moduleLevel, skillLevelIndex)
       return result ? [result] : []
     })
     .sort((a, b) => a.skillIndex - b.skillIndex)
 }
 
-function deriveSkill(record: SkillRecord): GoldenglowGuideSkill | null {
+function deriveSkill(
+  record: SkillRecord,
+  moduleId: string,
+  moduleLevel: number,
+  requestedSkillLevelIndex: number | undefined,
+): GoldenglowGuideSkill | null {
   if (![1, 2, 3].includes(record.skillIndex)) return null
   const phase = record.operatorProfile.phases[2]
   const maxLevel = phase?.maxLevel
@@ -60,14 +86,24 @@ function deriveSkill(record: SkillRecord): GoldenglowGuideSkill | null {
     .at(-1)
   if (!isNonNegative(trustFrame?.data?.atk)) return null
 
-  const level = record.skillLevels.at(-1)
+  const skillLevelIndex = requestedSkillLevelIndex ?? record.skillLevels.length - 1
+  if (!Number.isInteger(skillLevelIndex) || skillLevelIndex < 0) return null
+  const level = record.skillLevels[skillLevelIndex]
   if (!level || !hasUsableSkillValues(level)) return null
   const skillName = (level.name ?? record.skillName).trim()
   if (!skillName) return null
-  const permanent = record.classification.effectWindow.value === 'PERMANENT'
+  const recordPermanent = record.classification.effectWindow.value === 'PERMANENT'
+  if ((record.skillIndex === 2) !== recordPermanent) return null
+  const permanent = classifySkill(level).effectWindow.value === 'PERMANENT'
   if (record.skillIndex === 2 ? !permanent : permanent || !isPositive(level.duration)) return null
 
-  const passives = getOperatorPassives(record.operatorProfile, 2, maxLevel, 1)
+  const basePassives = getOperatorPassives(record.operatorProfile, 2, maxLevel, 1)
+  const module = getOperatorModules(record.operatorProfile).find((candidate, index) => (
+    getOperatorModuleId(candidate, index) === moduleId
+      && isOperatorModuleUnlocked(candidate, 2, maxLevel)
+  ))
+  const moduleApplication = applyOperatorModule(basePassives, module, moduleLevel, 1)
+  const passives = moduleApplication.passives
   const resistanceIgnore = passives.sources
     .find((source) => source.sourceKind === 'TALENT' && source.talentIndex === 1)
     ?.blackboard.find((entry) => entry.key === 'magic_resist_penetrate_fixed')?.value
@@ -78,7 +114,8 @@ function deriveSkill(record: SkillRecord): GoldenglowGuideSkill | null {
 
   const effects = evaluateOperatorEffects(record.operatorId, passives, 'ARTS')
   const stats = getOperatorStats(record.operatorProfile, 2, maxLevel, 100, {
-    attackSpeedBonus: effects.modifiers.attackSpeedBonus,
+    moduleAttack: moduleApplication.moduleAttack,
+    attackSpeedBonus: effects.modifiers.attackSpeedBonus + moduleApplication.attackSpeedBonus,
   })
   const model = deriveSkillModel(level, stats.attackInterval, stats.attackSpeed)
   const attack = calculateAttackPipeline(stats.attack, {
@@ -90,7 +127,14 @@ function deriveSkill(record: SkillRecord): GoldenglowGuideSkill | null {
   return {
     skillIndex: record.skillIndex,
     skillName,
-    skillLevelLabel: getSkillLevelLabel(record.skillLevels.length - 1, record.skillLevels.length),
+    skillLevelIndex,
+    skillLevelCount: record.skillLevels.length,
+    skillLevelLabel: getSkillLevelLabel(skillLevelIndex, record.skillLevels.length),
+    operatorStats: stats,
+    basePassives,
+    passives,
+    moduleApplication,
+    moduleId: module ? moduleId : '',
     effectiveAttack: attack.afterFinalMultiplier,
     attackCalculation: {
       level: maxLevel,

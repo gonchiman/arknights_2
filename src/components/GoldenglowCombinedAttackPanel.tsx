@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { GoldenglowGuideSkill } from '../lib/goldenglowGuideSkill'
-import { buildGoldenglowCombinedAttackTable } from '../lib/goldenglowCombinedAttackTable'
+import type { GoldenglowCombinedAttackRow } from '../lib/goldenglowCombinedAttackTable'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
+import { GoldenglowExpandableTable } from './GoldenglowExpandableTable'
 import { GoldenglowCombinedAttackDetailModal } from './GoldenglowCombinedAttackDetailModal'
 import './GoldenglowCombinedAttackPanel.css'
 
 const format = (value: number) => new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 }).format(value)
 
-export function GoldenglowCombinedAttackPanel({ skill, attack, explosionDamage, resistance, resistanceIgnore, viewingDuration, onViewingDurationChange, loading }: {
+export function GoldenglowCombinedAttackPanel({ skill, attackRows, attack, explosionDamage, resistance, resistanceIgnore, viewingDuration, onViewingDurationChange, loading }: {
   skill: GoldenglowGuideSkill | null
+  attackRows: readonly GoldenglowCombinedAttackRow[]
   attack: number
   explosionDamage: number
   resistance: number
@@ -20,16 +22,6 @@ export function GoldenglowCombinedAttackPanel({ skill, attack, explosionDamage, 
   const [open, setOpen] = useState(true)
   const [selectedAttackNumber, setSelectedAttackNumber] = useState<number | null>(null)
   const duration = skill?.duration ?? viewingDuration
-  const attackRows = useMemo(() => skill ? buildGoldenglowCombinedAttackTable({
-    model: skill.explosionModel,
-    skillIndex: skill.skillIndex,
-    attack,
-    explosionDamage,
-    attackInterval: skill.attackInterval,
-    duration,
-    resistance,
-    resistanceIgnore,
-  }) : [], [skill, attack, explosionDamage, duration, resistance, resistanceIgnore])
   const selectedRow = attackRows.find((row) => row.attackNumber === selectedAttackNumber)
 
   useEffect(() => setSelectedAttackNumber(null), [skill?.skillIndex, attack, explosionDamage, duration, resistance, resistanceIgnore])
@@ -37,7 +29,7 @@ export function GoldenglowCombinedAttackPanel({ skill, attack, explosionDamage, 
   return (
     <CollapsibleCalculatorPanel
       id="gg-combined-attacks"
-      number="06"
+      number="08"
       title="スキルダメージ期待値"
       summary={skill ? `S${skill.skillIndex}・浮遊ユニット${skill.explosionModel.activeDroneCount}体・同一目標` : '本体・浮遊ユニット・爆発'}
       open={open}
@@ -79,20 +71,24 @@ export function GoldenglowCombinedAttackPanel({ skill, attack, explosionDamage, 
           </table>
         </div>
         <h3 className="gg-table-title" id="gg-combined-attack-table-title">攻撃ごとの合計ダメージ期待値</h3>
-        {attackRows.length > 0 ? <div className="gg-probability-table-wrap gg-combined-attack-table-wrap" tabIndex={0} role="region" aria-label="スキル中の合計ダメージテーブル">
-          <table className="gg-probability-table gg-combined-attack-table" aria-labelledby="gg-combined-attack-table-title">
+        {attackRows.length > 0 ? <GoldenglowExpandableTable
+          rows={attackRows}
+          regionLabel="スキル中の合計ダメージテーブル"
+          tableWrapperClassName="gg-combined-attack-table-wrap"
+        >
+          {(visibleRows) => <table className="gg-probability-table gg-combined-attack-table" aria-labelledby="gg-combined-attack-table-title">
             <thead>
               <tr>
                 <th scope="col">攻撃回数</th>
-                <th scope="col">本体攻撃</th>
-                <th scope="col">浮遊ユニット<br />通常攻撃</th>
-                <th scope="col">爆発</th>
-                <th scope="col">今回合計</th>
+                <th scope="col">本体</th>
+                <th scope="col">浮遊ユニット（{skill.explosionModel.activeDroneCount}体）</th>
+                <th scope="col">爆発（{skill.explosionModel.activeDroneCount}体）</th>
+                <th scope="col">合計</th>
                 <th scope="col">累計</th>
               </tr>
             </thead>
             <tbody>
-              {attackRows.map((row) => <tr
+              {visibleRows.map((row) => <tr
                 key={row.attackNumber}
                 className="gg-detail-row"
                 onClick={(event) => {
@@ -112,8 +108,8 @@ export function GoldenglowCombinedAttackPanel({ skill, attack, explosionDamage, 
                 <td>{format(row.cumulativeExpectedTotalDamage)}</td>
               </tr>)}
             </tbody>
-          </table>
-        </div> : <p className="gg-probability-intro" role="status">この時間内には攻撃がありません。</p>}
+          </table>}
+        </GoldenglowExpandableTable> : <p className="gg-probability-intro" role="status">この時間内には攻撃がありません。</p>}
         {selectedRow && <GoldenglowCombinedAttackDetailModal
           row={selectedRow}
           skill={skill}
