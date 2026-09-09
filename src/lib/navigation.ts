@@ -1,6 +1,6 @@
 export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'damage' | 'comparison' | 'enemies' | 'sources' | 'goldenglow-guide' | 'goldenglow-target-switch'
 
-export type NavigationSection = 'analysis' | 'information'
+export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
 export type NavigationItem = {
   id: NavigationPage
@@ -12,6 +12,7 @@ export type NavigationItem = {
 
 export const NAVIGATION_SECTIONS: ReadonlyArray<{ id: NavigationSection; label: string }> = [
   { id: 'analysis', label: 'ANALYSIS TOOLS' },
+  { id: 'operator-analysis', label: 'OPERATOR ANALYSIS' },
   { id: 'information', label: 'INFORMATION' },
 ]
 
@@ -52,13 +53,6 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     section: 'analysis',
   },
   {
-    id: 'goldenglow-target-switch',
-    href: '#/analysis/goldenglow-target-switch',
-    label: 'GG 撃破・目標切り替え',
-    description: '敵HP・撃破・スキル中の総ダメージ',
-    section: 'analysis',
-  },
-  {
     id: 'comparison',
     href: '#/comparison',
     label: 'Build Comparison',
@@ -73,17 +67,24 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     section: 'analysis',
   },
   {
-    id: 'sources',
-    href: '#/sources',
-    label: 'Data Sources',
-    description: '利用データと参照元・算出方法',
-    section: 'information',
-  },
-  {
     id: 'goldenglow-guide',
     href: '#/guides/goldenglow-explosion',
     label: 'Goldenglow Talent Analysis',
     description: 'ゴールデングローの素質・爆発期待値の解析',
+    section: 'operator-analysis',
+  },
+  {
+    id: 'goldenglow-target-switch',
+    href: '#/analysis/goldenglow-target-switch',
+    label: 'Goldenglow Target Switching Analysis',
+    description: '敵HP・撃破・スキル中の総ダメージ',
+    section: 'operator-analysis',
+  },
+  {
+    id: 'sources',
+    href: '#/sources',
+    label: 'Data Sources',
+    description: '利用データと参照元・算出方法',
     section: 'information',
   },
 ]

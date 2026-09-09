@@ -86,7 +86,7 @@ export function EnemySearch({ rows, filters, loading, onFiltersChange, onSelect,
       <span>{loading ? '敵データを読み込み中…' : hasActiveFilters
         ? `${NUMBER_FORMATTER.format(displayedEnemies.length)}体表示`
         : `最近選択した敵 · ${displayedEnemies.length}体`}</span>
-      <span>行を選択すると敵のHP・防御力・術耐性を反映します</span>
+      <span>行を選択すると敵のHP・術耐性を反映します</span>
     </div>
     {loading ? <div className="enemy-search-empty-state"><span>敵データを読み込んでいます。</span></div>
       : displayedEnemies.length === 0 ? <div className="enemy-search-empty-state">

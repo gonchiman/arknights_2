@@ -9,7 +9,7 @@ import './GoldenglowGuidePage.css'
 
 export type GoldenglowTargetSwitchDetail =
   | { kind: 'metric'; metric: 'effectiveDamage' | 'effectiveDps' | 'rawDamage' | 'rawDps' | 'overkillDamage' | 'kills' | 'explosions' | 'confidence' | 'percentiles' }
-  | { kind: 'condition'; condition: 'enemyHp' | 'enemyDefense' | 'enemyResistance' | 'attackInterval' | 'duration' | 'drones' | 'switchDelay' | 'sampling' }
+  | { kind: 'condition'; condition: 'enemyHp' | 'enemyResistance' | 'attackInterval' | 'duration' | 'drones' | 'switchDelay' | 'sampling' }
   | { kind: 'comparison'; mode: 'baseline' | 'raw' | 'effective' }
   | { kind: 'timeline'; index: number }
   | { kind: 'trace'; index: number }
@@ -181,10 +181,6 @@ function conditionDetail(condition: Extract<GoldenglowTargetSwitchDetail, { kind
       <p>同じステータスの敵が制限なく続く条件です。最初の敵も、撃破後の次の敵も満HPから始めます。本体と全浮遊が同じ敵に一斉攻撃し、その後に撃破を判定します。</p>
       <Equation>その回の有効ダメージ = min（攻撃前の残HP, その回の攻撃ダメージ）</Equation>
       <p>残HPを超えた余剰ダメージは次の敵に引き継ぎません。次の敵へ切り替わると全浮遊の通常攻撃倍率が初期値に戻ります。</p>
-    </> }
-    case 'enemyDefense': return { title: '敵防御力の扱い', body: <>
-      <ValueTable title="防御力とダメージ種別" rows={[['敵防御力', format(input.enemyDefense)], ['本体・浮遊通常・爆発', '術ダメージ']]} />
-      <p>このモデルの攻撃は全て術ダメージです。敵防御力は入力条件として保存しますが、ダメージの計算には影響しません。軽減は術耐性と固定術耐性無視で計算します。</p>
     </> }
     case 'enemyResistance': return { title: '術耐性適用後のダメージ', body: <>
       <ValueTable title="術耐性の条件" rows={[
@@ -363,7 +359,7 @@ function sampleDetail(input: GoldenglowTargetSwitchInput, result: GoldenglowTarg
 function modelDetail(input: GoldenglowTargetSwitchInput): DetailContent {
   return { title: '計算モデルと参照元', body: <>
     <ValueTable title="このページの計算条件" text rows={[
-      ['敵と攻撃対象', '同じHP・防御力・術耐性の敵が1体ずつ無制限に続きます。本体と全浮遊は同じ敵を攻撃し、撃破後に次の満HPの敵へ切り替えます。爆発の周囲巻き込みは含めません。'],
+      ['敵と攻撃対象', '同じHP・術耐性の敵が1体ずつ無制限に続きます。本体と全浮遊は同じ敵を攻撃し、撃破後に次の満HPの敵へ切り替えます。爆発の周囲巻き込みは含めません。'],
       ['開始時点', `全浮遊の通常倍率${format(input.model.droneInitialAttackScale * 100)}%・連続不発0回から計測します。スキル発動そのものがゲーム内でこれらを初期化する、という意味ではありません。発動前の攻撃は含めません。`],
       ['通常倍率', `浮遊ごとに、通常攻撃のたびに${format(input.model.droneAttackScaleStep * 100)}ポイント増え、最大${format(input.model.droneMaxAttackScale * 100)}%。自爆は通常攻撃を置き換え、同じ敵なら倍率を維持します。撃破で全浮遊の通常倍率を初期値へ戻します。`],
       ['爆発確率', '浮遊ごとに連続不発回数を管理し、爆発した浮遊だけ0に戻します。対象変更でも不発回数を維持するのは、参照資料の初期化条件から採用した扱いです。'],

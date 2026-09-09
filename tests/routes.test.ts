@@ -18,11 +18,11 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['skill-effects', 'skill-effects'],
       ['skill-json', 'skill-json'],
       ['damage', 'damage'],
-      ['goldenglow-target-switch', 'goldenglow-target-switch'],
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
-      ['sources', 'sources'],
       ['goldenglow-guide', 'goldenglow-guide'],
+      ['goldenglow-target-switch', 'goldenglow-target-switch'],
+      ['sources', 'sources'],
     ],
   )
   assert.equal(new Set(APP_NAV_ITEMS.map((item) => item.href)).size, APP_NAV_ITEMS.length)

@@ -2,7 +2,6 @@ import type { EnemyRecord } from '../types/enemy.ts'
 
 export interface EnemyCombatInputValues {
   hp: string
-  defense: string
   resistance: string
 }
 
@@ -11,7 +10,6 @@ export function getEnemyCombatInputValues(enemy: EnemyRecord): EnemyCombatInputV
   const inputValue = (value: number | null) => value !== null && Number.isFinite(value) ? String(value) : ''
   return {
     hp: inputValue(enemy.stats.maxHp),
-    defense: inputValue(enemy.stats.defense),
     resistance: inputValue(enemy.stats.magicResistance),
   }
 }

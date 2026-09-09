@@ -30,14 +30,13 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry }: {
   const [skillIndex, setSkillIndex] = useState(3)
   const skill = skills.find((item) => item.skillIndex === skillIndex) ?? null
   const [hp, setHp] = useState('5000')
-  const [defense, setDefense] = useState('0')
   const [resistance, setResistance] = useState('0')
   const [selectedEnemy, setSelectedEnemy] = useState<EnemyRecord | null>(null)
   const [enemySearchOpen, setEnemySearchOpen] = useState(false)
   const [enemyFilters, setEnemyFilters] = useState<EnemySearchFilters>({ ...EMPTY_ENEMY_SEARCH_FILTERS })
   const enemySearchTrigger = useRef<HTMLButtonElement>(null)
   const enemyCatalog = useEnemyCatalog(enemySearchOpen)
-  const enemyAdjusted = selectedEnemy ? hasEnemyCombatInputChanges(selectedEnemy, { hp, defense, resistance }) : false
+  const enemyAdjusted = selectedEnemy ? hasEnemyCombatInputChanges(selectedEnemy, { hp, resistance }) : false
   const closeEnemySearch = () => {
     setEnemySearchOpen(false)
     enemySearchTrigger.current?.focus({ preventScroll: true })
@@ -46,7 +45,6 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry }: {
     const values = getEnemyCombatInputValues(enemy)
     setSelectedEnemy(enemy)
     setHp(values.hp)
-    setDefense(values.defense)
     setResistance(values.resistance)
     closeEnemySearch()
   }
@@ -62,20 +60,19 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry }: {
   const interval = intervalOverride ?? String(skill?.attackInterval ?? 1.3)
   const duration = skill?.duration ?? Number(viewingDuration)
   const fieldError = [
-    invalidNumber(hp, 1, 1e9, '敵HP'),
-    invalidNumber(defense, 0, 1e6, '防御力'),
+    invalidNumber(hp, 0, 1e9, '敵HP'),
     invalidNumber(resistance, 0, 100, '術耐性'),
     invalidNumber(switchDelay, 0, 5, '切り替えの追加時間'),
     invalidNumber(attack, 0, 1e6, 'スキル中の攻撃力'),
     invalidNumber(interval, 0.05, 300, '攻撃間隔'),
     skillIndex === 2 ? invalidNumber(viewingDuration, 0.1, 300, '計測時間') : null,
   ].find(Boolean) ?? null
-  const input = useMemo<GoldenglowTargetSwitchInput | null>(() => skill && !fieldError ? {
+  const input = useMemo<GoldenglowTargetSwitchInput | null>(() => skill && !fieldError && Number(hp) >= 1 ? {
     model: skill.explosionModel, skillIndex: skill.skillIndex,
     effectiveAttack: Number(attack), attackInterval: Number(interval), duration,
-    enemyHp: Number(hp), enemyDefense: Number(defense), enemyResistance: Number(resistance),
+    enemyHp: Number(hp), enemyDefense: 0, enemyResistance: Number(resistance),
     switchDelay: Number(switchDelay), trials, seed,
-  } : null, [skill, fieldError, attack, interval, duration, hp, defense, resistance, switchDelay, trials, seed])
+  } : null, [skill, fieldError, attack, interval, duration, hp, resistance, switchDelay, trials, seed])
   const calculation = useSimulation(input)
   useEffect(() => setDetail(null), [input])
   const openCondition = (condition: Extract<GoldenglowTargetSwitchDetail, { kind: 'condition' }>['condition']) => (
@@ -85,8 +82,7 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry }: {
   return (
     <section className="calculator-page gg-switch-page" aria-labelledby="gg-switch-title">
       <header className="page-intro">
-        <div><span className="page-kicker">GOLDENGLOW / TARGET SWITCHING</span><h1 id="gg-switch-title">GG 撃破・目標切り替え分析</h1></div>
-        <a className="gg-reference-link" href="#/guides/goldenglow-explosion">同一目標の分析へ →</a>
+        <div><span className="page-kicker">GOLDENGLOW / TARGET SWITCHING</span><h1 id="gg-switch-title">Goldenglow Target Switching Analysis</h1></div>
       </header>
       {loading ? <p className="calculator-loading" role="status">スキル情報を読み込み中…</p> : !skill ? (
         <div className="error-box" role="alert"><p>{error ?? 'ゴールデングローのスキル情報を取得できませんでした。'}</p><button type="button" className="button secondary" onClick={onRetry}>再読み込み</button></div>
@@ -111,7 +107,7 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry }: {
               <ValueRow label="敵の選択" value={<div className="ggs-enemy-picker">
                 <button ref={enemySearchTrigger} type="button" className="operator-search-trigger ggs-enemy-search-trigger" aria-label="敵を検索して選択" aria-expanded={enemySearchOpen} aria-controls="ggs-enemy-search" onClick={() => setEnemySearchOpen((value) => !value)}>
                   <strong>{selectedEnemy?.name ?? '数値入力'}</strong>
-                  <small>{selectedEnemy ? `${selectedEnemy.index || '図鑑番号なし'} · ${enemyAdjusted ? '数値を調整済み' : '基礎ステータス'}` : 'HP・防御力・術耐性を指定'}</small>
+                  <small>{selectedEnemy ? `${selectedEnemy.index || '図鑑番号なし'} · ${enemyAdjusted ? '数値を調整済み' : '基礎ステータス'}` : 'HP・術耐性を指定'}</small>
                   <em>{enemySearchOpen ? '検索を閉じる' : '検索して選択'} ↗</em>
                 </button>
                 {selectedEnemy && <div className="ggs-enemy-actions">
@@ -126,9 +122,8 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry }: {
                     : <EnemySearch rows={enemyCatalog.rows} filters={enemyFilters} loading={enemyCatalog.loading} onFiltersChange={setEnemyFilters} onSelect={applyEnemy} selectedEnemyId={selectedEnemy?.id} />}
                 </div>
               </td></tr>}
-              <ValueRow label="敵HP（次の敵も同じ）" onOpen={openCondition('enemyHp')} value={<NumericInput id="ggs-hp" label="敵HP" value={hp} onChange={setHp} min={1} max={1e9} />} />
-              <ValueRow label="敵の防御力（術攻撃に影響なし）" onOpen={openCondition('enemyDefense')} value={<NumericInput id="ggs-defense" label="防御力" value={defense} onChange={setDefense} min={0} max={1e6} />} />
-              <ValueRow label="敵の術耐性" onOpen={openCondition('enemyResistance')} value={<NumericInput id="ggs-resistance" label="術耐性" value={resistance} onChange={setResistance} min={0} max={100} />} />
+              <ValueRow label="敵HP（次の敵も同じ）" onOpen={openCondition('enemyHp')} value={<HpInput value={hp} onChange={setHp} />} />
+              <ValueRow label="敵の術耐性" onOpen={openCondition('enemyResistance')} value={<ResistanceInput value={resistance} onChange={setResistance} />} />
             </tbody>
           </TableSection>
           {selectedEnemy && <p className="ggs-caption">図鑑の基礎ステータスを反映。ステージ補正・敵の能力は含めません。各数値は選択後も変更できます。{Object.values(getEnemyCombatInputValues(selectedEnemy)).some((value) => value === '') && '未取得のステータスは空欄です。数値を入力してください。'}</p>}
@@ -150,7 +145,7 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry }: {
             <div className="ggs-actions"><button className="button secondary" type="button" onClick={() => { setAttackOverride(null); setIntervalOverride(null); setSwitchDelay('0') }}>攻撃力・間隔・切り替え時間を標準に戻す</button><button className="button secondary" type="button" onClick={() => setSeed((value) => (value + 1) >>> 0)}>別の抽選で再計算</button></div>
           </details>
           {fieldError && <p className="ggs-error" role="alert">{fieldError}</p>}
-          <p className="ggs-status" role="status" aria-live="polite">{fieldError ? '入力値を確認してください。' : calculation.error ?? (calculation.result ? `${format(trials, 0)}回の試行平均・${format(duration)}秒間` : '爆発の抽選と撃破を計算中…')}</p>
+          <p className="ggs-status" role="status" aria-live="polite">{fieldError ? '入力値を確認してください。' : Number(hp) < 1 ? '敵HPを1以上にすると計算します。' : calculation.error ?? (calculation.result ? `${format(trials, 0)}回の試行平均・${format(duration)}秒間` : '爆発の抽選と撃破を計算中…')}</p>
           {input && calculation.result && <OutputTables result={calculation.result} onOpen={setDetail} />}
         </CollapsibleCalculatorPanel>
         {input && calculation.result && <HistoryTables result={calculation.result} input={input} onOpen={setDetail} />}
@@ -319,6 +314,43 @@ function DetailTableRow({ label, detailLabel, children, onOpen, className = '' }
   } : undefined}>
     <th scope="row">{onOpen ? <button type="button" className="gg-detail-trigger" aria-label={detailLabel ?? `${label}の詳細`} aria-haspopup="dialog" onClick={onOpen}>{label}<span aria-hidden="true">›</span></button> : label}</th>{children}
   </tr>
+}
+
+function HpInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const numericValue = Number(value)
+  const invalid = !!invalidNumber(value, 0, 1e9, '敵HP')
+  return <div className="ggs-hp-input">
+    <NumericInput id="ggs-hp" label="敵HP" value={value} onChange={onChange} min={0} max={1e9} />
+    <div className="ggs-hp-adjustments" role="group" aria-label="敵HPの増減">
+      {[1000, 10000].map((step) => <div className="ggs-hp-adjustment-pair" key={step}>
+        {[-step, step].map((delta) => <button key={delta} type="button"
+          aria-label={`敵HPを${format(step, 0)}${delta < 0 ? '減らす' : '増やす'}`}
+          disabled={invalid || (delta < 0 ? numericValue <= 0 : numericValue >= 1e9)}
+          onClick={() => onChange(String(Math.max(0, Math.min(1e9, numericValue + delta))))}>
+          {delta < 0 ? '−' : '＋'}{format(step, 0)}
+        </button>)}
+      </div>)}
+    </div>
+  </div>
+}
+
+function ResistanceInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const numericValue = Number(value)
+  // 敵選択や数値入力の値は保ち、スライダーの位置だけを5刻みに合わせる。
+  const sliderValue = Number.isFinite(numericValue) ? Math.max(0, Math.min(100, Math.round(numericValue / 5) * 5)) : 0
+  return <div className="ggs-stat-input ggs-resistance-input">
+    <label className="ggs-stat-range">
+      <input id="ggs-resistance-slider" type="range" min={0} max={100} step={5} value={sliderValue}
+        aria-label="術耐性（5刻み）"
+        onChange={(event) => onChange(event.target.value)}
+        onPointerUp={(event) => { if (event.button === 0) onChange(event.currentTarget.value) }}
+        onKeyUp={(event) => {
+          if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(event.key)) onChange(event.currentTarget.value)
+        }} />
+      <span className="ggs-stat-range-ends" aria-hidden="true"><span>0</span><span>5刻み</span><span>100</span></span>
+    </label>
+    <NumericInput id="ggs-resistance" label="術耐性" value={value} onChange={onChange} min={0} max={100} />
+  </div>
 }
 
 function NumericInput({ id, label, value, onChange, min, max, unit }: { id: string; label: string; value: string; onChange: (value: string) => void; min: number; max: number; unit?: string }) {

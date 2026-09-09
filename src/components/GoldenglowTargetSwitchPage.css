@@ -6,6 +6,19 @@
 .gg-switch-page .gg-value-table td { font-weight: 500; }
 .gg-switch-page .gg-value-table .ggs-skill-select { max-width: 260px; }
 .gg-switch-page .number-input-wrap input { text-align: right; }
+.ggs-stat-input { --ggs-input-width: 80px; display: grid; grid-template-columns: minmax(0, 1fr) var(--ggs-input-width); align-items: center; gap: 12px; max-width: 420px; margin-left: auto; }
+.ggs-stat-range { display: block; min-width: 0; }
+.ggs-stat-range input { display: block; width: 100%; height: 28px; margin: 0; padding: 0; accent-color: var(--text); cursor: pointer; }
+.ggs-stat-range-ends { display: flex; justify-content: space-between; color: var(--text-muted); font-size: 9px; }
+.gg-switch-page .ggs-stat-input .calculator-field { width: var(--ggs-input-width); }
+.gg-switch-page .ggs-stat-input .number-input-wrap input { padding-right: 8px; }
+.ggs-hp-input { display: grid; gap: 8px; max-width: 420px; margin-left: auto; }
+.gg-switch-page .ggs-hp-input .calculator-field { width: 160px; max-width: 100%; }
+.ggs-hp-adjustments { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 12px; }
+.ggs-hp-adjustment-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; width: 134px; max-width: 100%; }
+.ggs-hp-adjustments button { min-width: 0; min-height: 32px; border: 1px solid var(--border-strong); padding: 6px 8px; background: var(--surface); color: var(--text); font: inherit; font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; }
+.ggs-hp-adjustments button:hover:not(:disabled) { background: var(--surface-hover); }
+.ggs-hp-adjustments button:disabled { opacity: 0.4; cursor: default; }
 .gg-switch-page input[aria-invalid="true"] { border-color: var(--danger); }
 .gg-switch-page .gg-detail-row:hover { background: var(--surface-hover); }
 .gg-switch-page .gg-detail-trigger { line-height: 1.7; }
@@ -62,6 +75,7 @@
   .gg-switch-page .page-intro h1 { font-size: 18px; }
   .gg-switch-page .gg-value-table th:first-child { width: 48%; }
   .gg-switch-page .gg-value-table .calculator-field { max-width: 100%; }
+  .ggs-stat-input { grid-template-columns: minmax(0, 1fr); gap: 6px; }
   .gg-switch-page .ggs-enemy-search-trigger { height: auto; min-height: 68px; padding: 8px; }
   .ggs-enemy-search-trigger em { position: static; transform: none; margin-top: 4px; }
   .gg-switch-page .ggs-enemy-search-row > td { padding: 8px; }
@@ -70,4 +84,8 @@
   .gg-switch-page .ggs-comparison-table th, .gg-switch-page .ggs-comparison-table td { padding: 8px 6px; }
   .ggs-chart text { font-size: 17px; }
   .ggs-detail-content .gg-value-table th:first-child { width: 40%; }
+}
+@media (pointer: coarse) {
+  .ggs-stat-range input { height: 44px; }
+  .ggs-hp-adjustments button { min-height: 44px; }
 }
