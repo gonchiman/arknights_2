@@ -69,8 +69,8 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
   {
     id: 'goldenglow-guide',
     href: '#/guides/goldenglow-explosion',
-    label: 'Goldenglow Talent Analysis',
-    description: 'ゴールデングローの素質・爆発期待値の解析',
+    label: 'Goldenglow Explosion Analysis',
+    description: 'ゴールデングローの爆発期待値・計算過程',
     section: 'operator-analysis',
   },
   {

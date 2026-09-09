@@ -176,7 +176,7 @@ export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
       <header className="page-intro">
         <div>
           <span className="page-kicker">CALCULATION REFERENCE</span>
-          <h1 id="gg-reference-title">Goldenglow Talent Analysis</h1>
+          <h1 id="gg-reference-title">Goldenglow Explosion Analysis</h1>
         </div>
       </header>
       {loading ? <div className="gg-skill-selection"><p role="status">スキル情報を読み込み中…</p></div> : skill ? (
