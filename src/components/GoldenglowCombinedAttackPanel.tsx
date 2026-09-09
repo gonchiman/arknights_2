@@ -8,7 +8,7 @@ import './GoldenglowCombinedAttackPanel.css'
 
 const format = (value: number) => new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 }).format(value)
 
-export function GoldenglowCombinedAttackPanel({ skill, attackRows, attack, explosionDamage, resistance, resistanceIgnore, viewingDuration, onViewingDurationChange, loading }: {
+export function GoldenglowCombinedAttackPanel({ skill, attackRows, attack, explosionDamage, resistance, resistanceIgnore, viewingDuration, loading }: {
   skill: GoldenglowGuideSkill | null
   attackRows: readonly GoldenglowCombinedAttackRow[]
   attack: number
@@ -16,7 +16,6 @@ export function GoldenglowCombinedAttackPanel({ skill, attackRows, attack, explo
   resistance: number
   resistanceIgnore: number
   viewingDuration: number
-  onViewingDurationChange: (duration: number) => void
   loading: boolean
 }) {
   const [open, setOpen] = useState(true)
@@ -29,7 +28,7 @@ export function GoldenglowCombinedAttackPanel({ skill, attackRows, attack, explo
   return (
     <CollapsibleCalculatorPanel
       id="gg-combined-attacks"
-      number="08"
+      number="09"
       title="スキルダメージ期待値"
       summary={skill ? `S${skill.skillIndex}・浮遊ユニット${skill.explosionModel.activeDroneCount}体・同一目標` : '本体・浮遊ユニット・爆発'}
       open={open}
@@ -37,39 +36,6 @@ export function GoldenglowCombinedAttackPanel({ skill, attackRows, attack, explo
       collapsedLabel="テーブルを表示"
     >
       {skill ? <>
-        <h3 className="gg-table-title" id="gg-combined-conditions-title">攻撃条件</h3>
-        <div className="gg-probability-table-wrap gg-value-table-wrap">
-          <table className="gg-probability-table gg-value-table" aria-labelledby="gg-combined-conditions-title">
-            <tbody>
-              <tr><th scope="row">攻撃間隔</th><td>{format(skill.attackInterval)}秒</td></tr>
-              <tr>
-                <th scope="row">{skill.duration === null ? '表示時間' : 'スキル時間'}</th>
-                <td>{skill.duration === null ? <label className="calculator-field">
-                  <span>表示時間</span>
-                  <div className="number-input-wrap">
-                    <input
-                      type="number"
-                      aria-label="合計ダメージの表示時間"
-                      min={0}
-                      max={600}
-                      step="any"
-                      value={viewingDuration}
-                      onChange={(event) => {
-                        const value = event.target.valueAsNumber
-                        onViewingDurationChange(Number.isFinite(value) ? Math.min(600, Math.max(0, value)) : 0)
-                      }}
-                    />
-                    <em>秒</em>
-                  </div>
-                </label> : `${format(duration)}秒`}</td>
-              </tr>
-              <tr><th scope="row">攻撃回数（各ユニット）</th><td>{attackRows.length}回</td></tr>
-              <tr><th scope="row">浮遊ユニット数</th><td>{skill.explosionModel.activeDroneCount}体</td></tr>
-              <tr><th scope="row">初回の特性倍率（全ユニット）</th><td>{format(skill.explosionModel.droneInitialAttackScalePercent)}%</td></tr>
-              <tr><th scope="row">本体攻撃</th><td>{skill.skillIndex === 3 ? 'なし' : 'あり（敵が射程内）'}</td></tr>
-            </tbody>
-          </table>
-        </div>
         <h3 className="gg-table-title" id="gg-combined-attack-table-title">攻撃ごとの合計ダメージ期待値</h3>
         {attackRows.length > 0 ? <GoldenglowExpandableTable
           rows={attackRows}

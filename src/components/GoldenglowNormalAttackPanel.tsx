@@ -9,13 +9,12 @@ import './GoldenglowNormalAttackPanel.css'
 const format = (value: number) => new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 }).format(value)
 const formatProbability = (percent: number) => `${new Intl.NumberFormat('ja-JP', { maximumSignificantDigits: 4 }).format(percent)}%`
 
-export function GoldenglowNormalAttackPanel({ skill, attack, resistance, resistanceIgnore, viewingDuration, onViewingDurationChange, loading }: {
+export function GoldenglowNormalAttackPanel({ skill, attack, resistance, resistanceIgnore, viewingDuration, loading }: {
   skill: GoldenglowGuideSkill | null
   attack: number
   resistance: number
   resistanceIgnore: number
   viewingDuration: number
-  onViewingDurationChange: (duration: number) => void
   loading: boolean
 }) {
   const [open, setOpen] = useState(true)
@@ -36,7 +35,7 @@ export function GoldenglowNormalAttackPanel({ skill, attack, resistance, resista
   return (
     <CollapsibleCalculatorPanel
       id="gg-normal-attacks"
-      number="07"
+      number="08"
       title="浮遊ユニットの通常攻撃"
       summary={skill ? `S${skill.skillIndex}・浮遊ユニット1体・同一目標` : '浮遊ユニット1体・同一目標'}
       open={open}
@@ -44,38 +43,6 @@ export function GoldenglowNormalAttackPanel({ skill, attack, resistance, resista
       collapsedLabel="テーブルを表示"
     >
       {skill ? <>
-        <h3 className="gg-table-title" id="gg-normal-conditions-title">攻撃条件</h3>
-        <div className="gg-probability-table-wrap gg-value-table-wrap">
-          <table className="gg-probability-table gg-value-table" aria-labelledby="gg-normal-conditions-title">
-            <tbody>
-              <tr><th scope="row">攻撃力</th><td>{format(attack)}</td></tr>
-              <tr><th scope="row">攻撃間隔</th><td>{format(skill.attackInterval)}秒</td></tr>
-              <tr>
-                <th scope="row">{skill.duration === null ? '表示時間' : 'スキル時間'}</th>
-                <td>{skill.duration === null ? <label className="calculator-field">
-                  <span>表示時間</span>
-                  <div className="number-input-wrap">
-                    <input
-                      type="number"
-                      aria-label="通常攻撃の表示時間"
-                      min={0}
-                      max={600}
-                      step="any"
-                      value={viewingDuration}
-                      onChange={(event) => {
-                        const value = event.target.valueAsNumber
-                        onViewingDurationChange(Number.isFinite(value) ? Math.min(600, Math.max(0, value)) : 0)
-                      }}
-                    />
-                    <em>秒</em>
-                  </div>
-                </label> : `${format(duration)}秒`}</td>
-              </tr>
-              <tr><th scope="row">攻撃回数</th><td>{attackRows.length}回</td></tr>
-              <tr><th scope="row">初回の特性倍率</th><td>{format(skill.explosionModel.droneInitialAttackScalePercent)}%</td></tr>
-            </tbody>
-          </table>
-        </div>
         <h3 className="gg-table-title" id="gg-normal-attack-table-title">攻撃ごとの通常攻撃期待値</h3>
         {attackRows.length > 0 ? <GoldenglowExpandableTable
           rows={attackRows}

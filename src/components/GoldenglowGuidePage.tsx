@@ -178,7 +178,6 @@ export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
           <span className="page-kicker">CALCULATION REFERENCE</span>
           <h1 id="gg-reference-title">Goldenglow Talent Analysis</h1>
         </div>
-        <a className="gg-reference-link" href="#/damage">ダメージ計算へ →</a>
       </header>
       {loading ? <div className="gg-skill-selection"><p role="status">スキル情報を読み込み中…</p></div> : skill ? (
         <>
@@ -222,9 +221,18 @@ export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
         duration={duration}
         loading={loading}
       />
+      <AttackConditionsPanel
+        skill={skill}
+        attack={attack}
+        attackCount={combinedAttackRows.length}
+        viewingDuration={viewingDuration}
+        onViewingDurationChange={setViewingDuration}
+        onShowAttackDetail={() => setSingleDetail('attack')}
+        loading={loading}
+      />
       <CollapsibleCalculatorPanel
         id="gg-single-explosion"
-        number="03"
+        number="04"
         title="単発の爆発ダメージ"
         summary="術ダメージ・敵1体・爆発1回"
         open={open}
@@ -311,7 +319,6 @@ export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
         skill={skill}
         explosionDamage={damage.result}
         viewingDuration={viewingDuration}
-        onViewingDurationChange={setViewingDuration}
         loading={loading}
       />
       <GoldenglowNormalAttackPanel
@@ -320,7 +327,6 @@ export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
         resistance={resistance}
         resistanceIgnore={resistanceIgnore}
         viewingDuration={viewingDuration}
-        onViewingDurationChange={setViewingDuration}
         loading={loading}
       />
       <GoldenglowCombinedAttackPanel
@@ -331,7 +337,6 @@ export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
         resistance={resistance}
         resistanceIgnore={resistanceIgnore}
         viewingDuration={viewingDuration}
-        onViewingDurationChange={setViewingDuration}
         loading={loading}
       />
     </section>
@@ -355,7 +360,7 @@ function FirstExplosionPanel({ explosionDistribution }: { explosionDistribution:
   return (
     <CollapsibleCalculatorPanel
       id="gg-first-explosion"
-      number="04"
+      number="05"
       title="爆発確率"
       summary="浮遊ユニット1体・初回爆発まで"
       open={open}
@@ -417,7 +422,7 @@ function ExplosionExpectationPanel({ explosionDistribution }: { explosionDistrib
   return (
     <CollapsibleCalculatorPanel
       id="gg-explosion-expectation"
-      number="05"
+      number="06"
       title="爆発までの平均攻撃回数"
       summary="浮遊ユニット1体・次の爆発まで"
       open={open}
@@ -503,11 +508,71 @@ function ExplosionExpectationPanel({ explosionDistribution }: { explosionDistrib
   )
 }
 
-function SkillAttackPanel({ skill, explosionDamage, viewingDuration, onViewingDurationChange, loading }: {
+function AttackConditionsPanel({ skill, attack, attackCount, viewingDuration, onViewingDurationChange, onShowAttackDetail, loading }: {
+  skill: GoldenglowGuideSkill | null
+  attack: number
+  attackCount: number
+  viewingDuration: number
+  onViewingDurationChange: (duration: number) => void
+  onShowAttackDetail: () => void
+  loading: boolean
+}) {
+  const [open, setOpen] = useState(true)
+  const duration = skill?.duration ?? viewingDuration
+
+  return (
+    <CollapsibleCalculatorPanel
+      id="gg-attack-conditions"
+      number="03"
+      title="攻撃条件"
+      summary={skill ? `S${skill.skillIndex}・同一目標` : '各ダメージ期待値の共通条件'}
+      open={open}
+      onToggle={() => setOpen((value) => !value)}
+      collapsedLabel="条件を表示"
+    >
+      {skill ? <>
+        <h3 className="gg-table-title" id="gg-attack-conditions-table-title">スキル中の攻撃条件</h3>
+        <div className="gg-probability-table-wrap gg-value-table-wrap">
+          <table className="gg-probability-table gg-value-table" aria-labelledby="gg-attack-conditions-table-title">
+            <tbody>
+              <tr
+                className="gg-detail-row"
+                onClick={(event) => {
+                  event.currentTarget.querySelector('button')?.focus({ preventScroll: true })
+                  onShowAttackDetail()
+                }}
+              >
+                <th scope="row">
+                  <button type="button" className="gg-detail-trigger" aria-label="最終攻撃力の計算詳細" aria-haspopup="dialog">
+                    最終攻撃力<span aria-hidden="true">›</span>
+                  </button>
+                </th>
+                <td>{format(attack)}</td>
+              </tr>
+              <tr><th scope="row">攻撃間隔</th><td>{format(skill.attackInterval)}秒</td></tr>
+              <tr>
+                <th scope="row">{skill.duration === null ? '表示時間' : 'スキル時間'}</th>
+                <td>{skill.duration === null
+                  ? <ExplosionInput label="表示時間" value={viewingDuration} max={600} suffix="秒" onChange={onViewingDurationChange} />
+                  : `${format(duration)}秒`}</td>
+              </tr>
+              <tr><th scope="row">攻撃回数（各ユニット）</th><td>{attackCount}回</td></tr>
+              <tr><th scope="row">浮遊ユニット数</th><td>{skill.explosionModel.activeDroneCount}体</td></tr>
+              <tr><th scope="row">初回の特性倍率（全ユニット）</th><td>{format(skill.explosionModel.droneInitialAttackScalePercent)}%</td></tr>
+              <tr><th scope="row">本体攻撃</th><td>{skill.skillIndex === 3 ? 'なし' : 'あり（敵が射程内）'}</td></tr>
+            </tbody>
+          </table>
+        </div>
+        {skill.duration === null && <p className="gg-probability-intro">S2は永続のため、表示時間を指定します。</p>}
+      </> : <p className="gg-probability-intro" role="status">{loading ? 'スキル情報を読み込み中…' : 'スキル情報の読み込み後に表示します。'}</p>}
+    </CollapsibleCalculatorPanel>
+  )
+}
+
+function SkillAttackPanel({ skill, explosionDamage, viewingDuration, loading }: {
   skill: GoldenglowGuideSkill | null
   explosionDamage: number
   viewingDuration: number
-  onViewingDurationChange: (duration: number) => void
   loading: boolean
 }) {
   const [open, setOpen] = useState(true)
@@ -529,7 +594,7 @@ function SkillAttackPanel({ skill, explosionDamage, viewingDuration, onViewingDu
   return (
     <CollapsibleCalculatorPanel
       id="gg-skill-attacks"
-      number="06"
+      number="07"
       title="爆発期待値"
       summary={skill ? `S${skill.skillIndex}・浮遊ユニット1体` : '浮遊ユニット1体'}
       open={open}
@@ -538,28 +603,6 @@ function SkillAttackPanel({ skill, explosionDamage, viewingDuration, onViewingDu
     >
       {skill ? (
         <>
-          <h3 className="gg-table-title" id="gg-skill-timing-title">攻撃条件</h3>
-          <div className="gg-probability-table-wrap gg-value-table-wrap">
-            <table className="gg-probability-table gg-value-table" aria-labelledby="gg-skill-timing-title">
-              <tbody>
-                <tr>
-                  <th scope="row">攻撃間隔</th>
-                  <td>{format(skill.attackInterval)}秒</td>
-                </tr>
-                <tr>
-                  <th scope="row">{skill.duration === null ? '表示時間' : 'スキル時間'}</th>
-                  <td>{skill.duration === null
-                    ? <ExplosionInput label="表示時間" value={viewingDuration} max={600} suffix="秒" onChange={onViewingDurationChange} />
-                    : `${format(duration)}秒`}</td>
-                </tr>
-                <tr>
-                  <th scope="row">攻撃回数</th>
-                  <td>{attackRows.length}回</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          {skill.duration === null && <p className="gg-probability-intro">S2は永続のため、表示時間を指定します。</p>}
           {lastRow ? (
             <>
               <h3 className="gg-table-title" id="gg-skill-attack-table-title">攻撃ごとの爆発期待値</h3>

@@ -1,0 +1,31 @@
+.gg-attack-step-popover {
+  position: fixed;
+  inset: auto;
+  width: min(380px, calc(100vw - 24px));
+  max-width: 380px;
+  max-height: calc(100dvh - 24px);
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 8px 28px rgba(17, 24, 39, .2);
+}
+
+.gg-attack-step-popover::backdrop { background: transparent; pointer-events: none; }
+.gg-attack-step-popover-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px 8px 12px; border-bottom: 1px solid var(--border); background: var(--surface-soft); }
+.gg-attack-step-popover-header h3 { min-width: 0; margin: 0; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.gg-attack-step-popover-header h3:focus { outline: none; }
+.gg-attack-step-popover-header button { width: 32px; height: 32px; flex: 0 0 32px; padding: 0; font-size: 20px; line-height: 1; }
+.gg-attack-step-popover-header button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.gg-attack-step-popover-content { padding: 12px; }
+.gg-attack-step-popover-content > p { margin: 0 0 10px; color: var(--text-soft); font-size: 11px; line-height: 1.8; overflow-wrap: anywhere; }
+.gg-attack-step-popover-breakdown { width: 100%; min-width: 0; border: 1px solid var(--border); border-collapse: separate; border-spacing: 0; background: var(--surface); font-size: 11px; line-height: 1.6; }
+.gg-attack-step-popover-breakdown th, .gg-attack-step-popover-breakdown td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.gg-attack-step-popover-breakdown th { position: static; width: 75%; text-align: left; font-size: inherit; font-weight: 500; white-space: normal; overflow-wrap: anywhere; }
+.gg-attack-step-popover-breakdown td { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gg-attack-step-popover-breakdown tr { cursor: default; }
+.gg-attack-step-popover-breakdown tr:last-child > * { border-bottom: 0; }

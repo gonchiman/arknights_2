@@ -1,0 +1,5 @@
+.gg-attack-final-result > td:last-child { font-weight: 700; }
+.gg-attack-flow-reference { margin-top: 12px; color: var(--text-soft); font-size: 11px; line-height: 1.8; }
+.gg-attack-flow-reference summary { cursor: pointer; }
+.gg-attack-flow-reference summary:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+.gg-attack-flow-reference p { margin: 8px 0; }
