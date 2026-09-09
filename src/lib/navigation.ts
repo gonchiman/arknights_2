@@ -1,4 +1,4 @@
-export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'damage' | 'comparison' | 'enemies' | 'sources' | 'goldenglow-guide' | 'goldenglow-target-switch'
+export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'damage' | 'comparison' | 'enemies' | 'sources' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -71,6 +71,13 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     href: '#/guides/goldenglow-explosion',
     label: 'Goldenglow Explosion Analysis',
     description: 'ゴールデングローの爆発期待値・計算過程',
+    section: 'operator-analysis',
+  },
+  {
+    id: 'goldenglow-performance',
+    href: '#/analysis/goldenglow-performance',
+    label: 'Goldenglow Performance Analysis',
+    description: 'モジュール・潜在別のスキルダメージ比較',
     section: 'operator-analysis',
   },
   {

@@ -21,6 +21,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
       ['goldenglow-guide', 'goldenglow-guide'],
+      ['goldenglow-performance', 'goldenglow-performance'],
       ['goldenglow-target-switch', 'goldenglow-target-switch'],
       ['sources', 'sources'],
     ],
@@ -36,6 +37,22 @@ test('GGの目標切り替え分析は同一目標の分析と別ページで開
   assert.deepEqual(parseHashRoute('#/analysis/goldenglow-target-switch'), { view: 'goldenglow-target-switch' })
   assert.deepEqual(parseHashRoute('#/guides/goldenglow-explosion'), { view: 'goldenglow-guide' })
   assert.deepEqual(parseHashRoute('#/analysis/goldenglow-target-switch/extra'), { view: 'operators' })
+})
+
+test('GGの性能分析は独立したhashとオペレーター分析のメニューから開く', () => {
+  assert.deepEqual(parseHashRoute('#/analysis/goldenglow-performance'), { view: 'goldenglow-performance' })
+  for (const suffix of ['/', '/extra', '?skill=3']) {
+    assert.deepEqual(parseHashRoute(`#/analysis/goldenglow-performance${suffix}`), { view: 'operators' })
+  }
+
+  const explosionIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'goldenglow-guide')
+  assert.deepEqual(APP_NAV_ITEMS[explosionIndex + 1], {
+    id: 'goldenglow-performance',
+    href: '#/analysis/goldenglow-performance',
+    label: 'Goldenglow Performance Analysis',
+    description: 'モジュール・潜在別のスキルダメージ比較',
+    section: 'operator-analysis',
+  })
 })
 
 test('オペレーターデータベースのhashを解析する', () => {

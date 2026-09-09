@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import './ComparisonChart.css'
 
 export interface ComparisonChartPoint {
   x: number
@@ -15,7 +16,9 @@ export interface ComparisonChartSeries {
 export interface ComparisonChartProps {
   axisLabel: string
   metricLabel: string
-  currentX: number
+  currentX?: number
+  showPoints?: boolean
+  formatValue?: (value: number) => string
   series: ComparisonChartSeries[]
 }
 
@@ -43,7 +46,9 @@ const NUMBER_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits:
 export function ComparisonChart({
   axisLabel,
   metricLabel,
-  currentX,
+  currentX = Number.NaN,
+  showPoints = true,
+  formatValue = formatNumber,
   series,
 }: ComparisonChartProps) {
   const frameRef = useRef<HTMLDivElement>(null)
@@ -113,13 +118,13 @@ export function ComparisonChart({
   const currentPosition = Number.isFinite(currentX)
     ? clamp(getX(currentX), plotLeft, plotRight)
     : null
-  const currentText = Number.isFinite(currentX) ? `現在 ${formatNumber(currentX)}` : ''
+  const currentText = Number.isFinite(currentX) ? `現在 ${formatValue(currentX)}` : ''
   const currentLabelWidth = Math.max(60, currentText.length * 8 + 14)
   const currentLabelX = currentPosition === null
     ? 0
     : clamp(currentPosition - currentLabelWidth / 2, plotLeft, plotRight - currentLabelWidth)
   const description = hasValues
-    ? `${axisLabel}を変えたときの${metricLabel}を、${normalizedSeries.filter((item) => item.hasValues).map((item) => item.label).join('、')}について示します。正確な値はグラフに続く数値表で確認できます。`
+    ? `${axisLabel}を変えたときの${metricLabel}を、${normalizedSeries.filter((item) => item.hasValues).map((item) => item.label).join('、')}について示します。正確な値は数値表で確認できます。`
     : `${axisLabel}別の${metricLabel}を表示できる系列データがありません。`
 
   return (
@@ -182,7 +187,7 @@ export function ComparisonChart({
                   y={y + 3}
                   textAnchor="end"
                 >
-                  {formatNumber(tick)}
+                  {formatValue(tick)}
                 </text>
               </g>
             )
@@ -246,7 +251,7 @@ export function ComparisonChart({
                     key={`${item.id}-path-${pathIndex}`}
                   />
                 ))}
-                {visiblePoints.map((point, pointIndex) => {
+                {showPoints && visiblePoints.map((point, pointIndex) => {
                   const current = isSameNumber(point.x, currentX)
                   return (
                     <circle
@@ -257,8 +262,9 @@ export function ComparisonChart({
                       fill={current ? item.color : '#fff'}
                       stroke={item.color}
                       key={`${item.id}-point-${point.x}-${pointIndex}`}
-                      aria-hidden="true"
-                    />
+                    >
+                      <title>{`${item.label}・${axisLabel} ${formatValue(point.x)}・${metricLabel} ${formatValue(point.value)}`}</title>
+                    </circle>
                   )
                 })}
               </g>
@@ -283,7 +289,7 @@ export function ComparisonChart({
                   y={plotBottom + 18}
                   textAnchor={anchor}
                 >
-                  {formatNumber(tick)}
+                  {formatValue(tick)}
                 </text>
               </g>
             )
