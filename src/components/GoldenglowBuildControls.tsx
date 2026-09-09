@@ -29,9 +29,9 @@ export function GoldenglowBuildControls({
   skills: readonly GoldenglowGuideSkill[]
   moduleChoices: readonly GoldenglowGuideModuleChoice[]
   compact: boolean
-  onShowEffect: (effect: 'skill' | 'module') => void
-  resistance: number
-  onResistanceChange: (value: number) => void
+  onShowEffect?: (effect: 'skill' | 'module') => void
+  resistance?: number
+  onResistanceChange?: (value: number) => void
   onSkillChange: (skillIndex: number) => void
   onSkillLevelChange: (index: number) => void
   onModuleChange: (id: string, level: number) => void
@@ -57,7 +57,7 @@ export function GoldenglowBuildControls({
             </button>
           ))}
         </div>
-        {compact && <button type="button" className="gg-compact-effect-trigger" aria-label="スキル効果を表示"
+        {compact && onShowEffect && <button type="button" className="gg-compact-effect-trigger" aria-label="スキル効果を表示"
           data-gg-build-control="skill-effect"
           aria-haspopup="dialog" onClick={() => onShowEffect('skill')}>効果</button>}
         <label className="gg-build-level-control">
@@ -102,7 +102,7 @@ export function GoldenglowBuildControls({
             <span>{choice.label}</span><strong>{choice.module.uniEquipName}</strong>
           </button>)}
         </div>
-        {compact && <button type="button" className="gg-compact-effect-trigger" aria-label="モジュール効果を表示"
+        {compact && onShowEffect && <button type="button" className="gg-compact-effect-trigger" aria-label="モジュール効果を表示"
           data-gg-build-control="module-effect"
           aria-haspopup="dialog" disabled={!selectedModule}
           onClick={() => onShowEffect('module')}>効果</button>}
@@ -131,7 +131,7 @@ export function GoldenglowBuildControls({
           </div>
         </details>}
       </div>
-      <label className="gg-resistance-slider">
+      {resistance !== undefined && onResistanceChange && <label className="gg-resistance-slider">
         <span className="gg-resistance-slider-heading"><span><span className="gg-resistance-label-prefix">敵の</span>術耐性</span><strong>{format(resistance)}</strong></span>
         <input
           type="range"
@@ -144,7 +144,7 @@ export function GoldenglowBuildControls({
           onChange={(event) => onResistanceChange(event.target.valueAsNumber)}
         />
         <span className="gg-resistance-slider-ends" aria-hidden="true"><span>0</span><span>100</span></span>
-      </label>
+      </label>}
     </>
   )
 }
