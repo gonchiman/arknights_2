@@ -7,6 +7,7 @@ export type AppRoute =
   | { view: 'skill-json-overview' }
   | { view: 'damage' }
   | { view: 'goldenglow-guide' }
+  | { view: 'goldenglow-performance' }
   | { view: 'goldenglow-target-switch' }
   | { view: 'comparison' }
   | { view: 'enemies' }
@@ -85,6 +86,7 @@ export function parseHashRoute(hash: string): AppRoute {
   }
   if (hash === '#/damage') return { view: 'damage' }
   if (hash === '#/guides/goldenglow-explosion') return { view: 'goldenglow-guide' }
+  if (hash === '#/analysis/goldenglow-performance') return { view: 'goldenglow-performance' }
   if (hash === '#/analysis/goldenglow-target-switch') return { view: 'goldenglow-target-switch' }
   if (hash === '#/comparison') return { view: 'comparison' }
   if (hash === '#/enemies') return { view: 'enemies' }

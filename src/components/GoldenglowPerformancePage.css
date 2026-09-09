@@ -1,0 +1,50 @@
+.gg-performance-table-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+.gg-performance-table-toolbar .gg-table-title { margin: 0; }
+.gg-performance-table-actions { display: flex; align-items: end; flex-wrap: wrap; gap: 10px; }
+.gg-performance-table-actions .button { min-height: 38px; }
+.gg-performance-duration, .gg-performance-step { width: 120px; }
+.gg-performance-table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid var(--border); }
+.gg-performance-table-wrap:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.gg-performance-graphs { margin-top: 24px; }
+.gg-performance-graph-controls { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; }
+.gg-performance-graph-controls .gg-table-title { margin: 0; align-self: center; }
+.gg-performance-graph-types { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); flex: 1; min-width: 280px; max-width: 480px; border: 1px solid var(--border-strong); }
+.gg-performance-graph-types button { min-width: 0; min-height: 36px; padding: 8px; border: 0; border-right: 1px solid var(--border-strong); background: var(--surface); color: var(--text-soft); font: inherit; font-size: 11px; cursor: pointer; }
+.gg-performance-graph-types button:last-child { border-right: 0; }
+.gg-performance-graph-types button:hover { background: var(--surface-hover); }
+.gg-performance-graph-types button[aria-pressed="true"] { background: var(--text); color: var(--surface); font-weight: 700; }
+.gg-performance-graph-types button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; position: relative; z-index: 1; }
+.gg-performance-graph-resistance { width: 120px; }
+.gg-performance-save-image { min-height: 36px; white-space: nowrap; }
+.gg-performance-table th:first-child { width: 88px; }
+.gg-performance-table th, .gg-performance-table td { border-right: 1px solid var(--border); white-space: nowrap; }
+.gg-performance-table tr > :last-child { border-right: 0; }
+.gg-performance-table thead th { padding: 0; vertical-align: middle; }
+.gg-performance-table thead th:first-child { padding: 10px; }
+.gg-performance-table tbody th, .gg-performance-table thead th:first-child { position: sticky; left: 0; background: var(--surface-soft); z-index: 1; }
+.gg-performance-table thead th:first-child { z-index: 2; }
+.gg-performance-table tbody td { height: 36px; }
+.gg-performance-table tbody tr:hover > * { background: var(--surface-hover); }
+.gg-performance-column-trigger { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 100%; min-height: 65px; border: 0; padding: 10px 8px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.gg-performance-column-trigger strong { color: var(--text); font-size: 12px; }
+.gg-performance-column-trigger > span { color: var(--text-muted); font-size: 10px; font-weight: 400; }
+.gg-performance-column-trigger:hover { background: var(--surface-hover); }
+.gg-performance-column-trigger:focus-visible { outline: 2px solid var(--text); outline-offset: -3px; }
+.gg-performance-status { margin: 12px 0 0; color: var(--text-soft); font-size: 11px; line-height: 1.8; }
+.gg-performance-assumptions { margin-top: 14px; color: var(--text-soft); font-size: 11px; line-height: 1.8; }
+.gg-performance-assumptions summary { cursor: pointer; }
+.gg-performance-assumptions summary:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+.gg-performance-assumptions p { margin: 8px 0 0; }
+.gg-performance-column-fields { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); gap: 16px; }
+.gg-performance-column-form-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+.gg-performance-remove { margin-right: auto; }
+@media (max-width: 640px) {
+  .gg-performance-graph-types { flex-basis: 100%; max-width: none; }
+  .gg-performance-graph-types button { min-height: 44px; }
+  .gg-performance-save-image { min-height: 44px; }
+  .gg-performance-column-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .gg-performance-column-fields > :first-child { grid-column: 1 / -1; }
+  .gg-performance-table-actions { width: 100%; justify-content: space-between; }
+  .gg-performance-table-actions .button { min-height: 44px; }
+  .gg-performance-column-form-actions .button { min-height: 44px; }
+}

@@ -1,0 +1,47 @@
+.comparison-chart-image-host {
+  position: fixed;
+  top: 0;
+  left: -100000px;
+  pointer-events: none;
+}
+
+.comparison-chart-image-surface {
+  box-sizing: border-box;
+  width: 100%;
+  background: #fff;
+  color: #222;
+  font-family: "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+  --surface: #fff;
+  --surface-soft: #f7f7f7;
+  --border: #d6d6d6;
+  --border-strong: #aaa;
+  --text: #222;
+  --text-soft: #444;
+  --text-muted: #666;
+}
+
+.comparison-chart-image-surface figure { margin: 0; }
+.comparison-chart-image-surface .build-comparison-chart-caption { flex-direction: row; align-items: flex-start; gap: 18px; }
+.comparison-chart-image-surface .build-comparison-chart-legend { justify-content: flex-end; }
+.comparison-chart-image-surface .build-comparison-chart-heading,
+.comparison-chart-image-surface .gg-performance-bar-caption > strong,
+.comparison-chart-image-surface .gg-performance-heatmap-caption strong { font-size: 12px; }
+.comparison-chart-image-surface .build-comparison-chart-legend-item,
+.comparison-chart-image-surface .gg-performance-bar-legend li,
+.comparison-chart-image-surface .gg-performance-heatmap-caption > span { font-size: 10px; }
+
+.comparison-chart-image-surface .gg-performance-heatmap-scroll { max-width: none; overflow: visible; }
+.comparison-chart-image-surface .gg-performance-heatmap-table { width: 100%; }
+.comparison-chart-image-surface .gg-performance-heatmap-table th:first-child { position: static; }
+.comparison-chart-image-surface .gg-performance-heatmap-table th,
+.comparison-chart-image-surface .gg-performance-heatmap-table td { padding: 8px 10px; }
+
+.comparison-chart-image-surface .gg-performance-bar-rows {
+  grid-template-columns: minmax(100px, 180px) minmax(0, 1fr) minmax(80px, max-content);
+  column-gap: 12px;
+}
+.comparison-chart-image-surface .gg-performance-bar-row { grid-template-columns: subgrid; gap: 8px 12px; }
+.comparison-chart-image-surface .gg-performance-bar-label { grid-column: 1; grid-row: 1; font-size: 11px; }
+.comparison-chart-image-surface .gg-performance-bar-track { grid-column: 2; grid-row: 1; }
+.comparison-chart-image-surface .gg-performance-bar-total { grid-column: 3; grid-row: 1; }
+.comparison-chart-image-surface .gg-performance-bar-scale { grid-column: 2; }

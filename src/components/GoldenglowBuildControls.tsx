@@ -1,7 +1,7 @@
 import type { GoldenglowGuideSkill } from '../lib/goldenglowGuideSkill'
-import { getSkillLevelLabel } from '../lib/skillJsonAnalysis'
 import type { RawOperatorModule } from '../types/skill'
 import { GoldenglowModuleEffect } from './GoldenglowModuleEffect'
+import { GoldenglowSkillControls } from './GoldenglowSkillControls'
 
 const format = (value: number) => new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 }).format(value)
 
@@ -29,7 +29,7 @@ export function GoldenglowBuildControls({
   skills: readonly GoldenglowGuideSkill[]
   moduleChoices: readonly GoldenglowGuideModuleChoice[]
   compact: boolean
-  onShowEffect?: (effect: 'skill' | 'module') => void
+  onShowEffect: (effect: 'skill' | 'module') => void
   resistance?: number
   onResistanceChange?: (value: number) => void
   onSkillChange: (skillIndex: number) => void
@@ -40,48 +40,14 @@ export function GoldenglowBuildControls({
 
   return (
     <>
-      <div className="damage-build-navigation-group gg-skill-controls">
-        <span className="damage-build-navigation-label">スキル</span>
-        <div className="skill-choice-group" role="group" aria-label="スキル">
-          {skills.map((item) => (
-            <button
-              key={item.skillIndex}
-              type="button"
-              className={item.skillIndex === skill.skillIndex ? 'active' : ''}
-              aria-pressed={item.skillIndex === skill.skillIndex}
-              aria-label={`S${item.skillIndex} ${item.skillName}`}
-              data-gg-build-control={`skill-${item.skillIndex}`}
-              onClick={() => onSkillChange(item.skillIndex)}
-            >
-              <span>S{item.skillIndex}</span><strong>{item.skillName}</strong>
-            </button>
-          ))}
-        </div>
-        {compact && onShowEffect && <button type="button" className="gg-compact-effect-trigger" aria-label="スキル効果を表示"
-          data-gg-build-control="skill-effect"
-          aria-haspopup="dialog" onClick={() => onShowEffect('skill')}>効果</button>}
-        <label className="gg-build-level-control">
-          <span>レベル</span>
-          <select className="gg-build-level-select" aria-label="スキルレベル"
-            data-gg-build-control="skill-level"
-            value={skill.skillLevelIndex}
-            onChange={(event) => onSkillLevelChange(Number(event.target.value))}>
-            {Array.from({ length: skill.skillLevelCount }, (_, index) => (
-              <option key={index} value={index}>{getSkillLevelLabel(index, skill.skillLevelCount)}</option>
-            ))}
-          </select>
-        </label>
-        {!compact && <details className="gg-skill-effect">
-          <summary data-gg-build-control="skill-effect">
-            <span>スキル効果</span>
-            <span className="gg-skill-effect-disclosure" aria-hidden="true" />
-          </summary>
-          <div className="gg-skill-effect-body" tabIndex={0} role="region" aria-label="スキル効果の説明"
-            data-gg-build-control="skill-effect-content">
-            <p className="gg-skill-effect-description">{skill.skillDescription || 'スキル効果の説明を取得できませんでした。'}</p>
-          </div>
-        </details>}
-      </div>
+      <GoldenglowSkillControls
+        skill={skill}
+        skills={skills}
+        compact={compact}
+        onShowEffect={() => onShowEffect('skill')}
+        onSkillChange={onSkillChange}
+        onSkillLevelChange={onSkillLevelChange}
+      />
       <div className="damage-build-navigation-group gg-module-controls">
         <span className="damage-build-navigation-label">モジュール</span>
         <div className="skill-choice-group module-choice-group" role="group" aria-label="モジュール">
@@ -102,7 +68,7 @@ export function GoldenglowBuildControls({
             <span>{choice.label}</span><strong>{choice.module.uniEquipName}</strong>
           </button>)}
         </div>
-        {compact && onShowEffect && <button type="button" className="gg-compact-effect-trigger" aria-label="モジュール効果を表示"
+        {compact && <button type="button" className="gg-compact-effect-trigger" aria-label="モジュール効果を表示"
           data-gg-build-control="module-effect"
           aria-haspopup="dialog" disabled={!selectedModule}
           onClick={() => onShowEffect('module')}>効果</button>}

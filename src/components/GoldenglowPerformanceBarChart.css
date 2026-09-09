@@ -1,0 +1,74 @@
+.gg-performance-bar-chart {
+  min-width: 0;
+  margin: 10px 0 0;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+
+.gg-performance-bar-caption {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 7px 18px;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 10px;
+  background: var(--surface-soft);
+}
+
+.gg-performance-bar-caption > strong { font-size: 10px; }
+
+.gg-performance-bar-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gg-performance-bar-legend li { display: inline-flex; align-items: center; gap: 5px; color: var(--text-soft); font-size: 9px; }
+.gg-performance-bar-legend i { width: 14px; height: 6px; flex: 0 0 14px; }
+
+.gg-performance-bar-rows {
+  display: grid;
+  grid-template-columns: minmax(100px, 180px) minmax(0, 1fr) minmax(80px, max-content);
+  column-gap: 12px;
+  padding: 0 10px 8px;
+}
+
+.gg-performance-bar-row {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 10px 0;
+}
+
+.gg-performance-bar-label { min-width: 0; color: var(--text-soft); font-size: 10px; line-height: 1.6; overflow-wrap: anywhere; }
+.gg-performance-bar-total { min-width: 0; color: var(--text); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+
+.gg-performance-bar-track {
+  display: flex;
+  min-width: 0;
+  height: 20px;
+  border-left: 1px solid var(--border-strong);
+  background: var(--surface-soft);
+  overflow: hidden;
+}
+
+.gg-performance-bar-segment { display: block; flex: 0 0 auto; height: 100%; }
+.gg-performance-bar-scale { display: flex; grid-column: 2; justify-content: space-between; padding-top: 6px; color: var(--text-muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) {
+  .gg-performance-bar-rows { grid-template-columns: minmax(0, 1fr) max-content; column-gap: 10px; }
+  .gg-performance-bar-row { row-gap: 6px; }
+  .gg-performance-bar-label { grid-column: 1; grid-row: 1; }
+  .gg-performance-bar-total { grid-column: 2; grid-row: 1; }
+  .gg-performance-bar-track { grid-column: 1 / -1; grid-row: 2; height: 20px; }
+  .gg-performance-bar-scale { grid-column: 1 / -1; }
+}
