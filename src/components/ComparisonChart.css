@@ -17,8 +17,18 @@
 }
 
 .build-comparison-chart-heading {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-width: 0;
   font-size: 10px;
+}
+
+.build-comparison-chart-caption-detail {
+  margin: 4px 0 0;
+  color: var(--text-soft);
+  font-size: 9px;
+  font-weight: 400;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .build-comparison-chart-legend {
@@ -67,6 +77,11 @@
   stroke: #e1e5e9;
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
+}
+
+.build-comparison-chart-zero {
+  stroke: #596776;
+  stroke-width: 1.5;
 }
 
 .build-comparison-chart-axis {
@@ -127,4 +142,16 @@
 @media (max-width: 760px) {
   .build-comparison-chart-caption { align-items: flex-start; flex-direction: column; gap: 7px; }
   .build-comparison-chart-legend { justify-content: flex-start; }
+}
+
+.build-comparison-chart-end-label text {
+  fill: var(--text, #222);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.build-comparison-chart-end-label .build-comparison-chart-end-detail {
+  fill: var(--text-soft, #444);
+  font-size: 10px;
+  font-weight: 400;
 }
