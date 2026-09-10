@@ -1,4 +1,5 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useLayoutEffect, useId, useMemo, useRef, useState } from 'react'
+import { placeChartEndLabels } from '../lib/comparisonChartEndLabels'
 import './ComparisonChart.css'
 
 export interface ComparisonChartPoint {
@@ -10,6 +11,8 @@ export interface ComparisonChartSeries {
   id: string
   label: string
   color: string
+  shortLabel?: string
+  detailLabel?: string
   points: ComparisonChartPoint[]
 }
 
@@ -18,7 +21,15 @@ export interface ComparisonChartProps {
   metricLabel: string
   currentX?: number
   showPoints?: boolean
+  showEndLabels?: boolean
+  minHeight?: number
   formatValue?: (value: number) => string
+  formatAxisValue?: (value: number) => string
+  captionDetail?: string
+  valueDescription?: string
+  emphasizeZero?: boolean
+  integerYTicks?: boolean
+  fitYAxisLabels?: boolean
   series: ComparisonChartSeries[]
 }
 
@@ -48,21 +59,32 @@ export function ComparisonChart({
   metricLabel,
   currentX = Number.NaN,
   showPoints = true,
+  showEndLabels = false,
+  minHeight,
   formatValue = formatNumber,
+  formatAxisValue = formatValue,
+  captionDetail,
+  valueDescription,
+  emphasizeZero = false,
+  integerYTicks = false,
+  fitYAxisLabels = false,
   series,
 }: ComparisonChartProps) {
   const frameRef = useRef<HTMLDivElement>(null)
+  const captionRef = useRef<HTMLElement>(null)
   const [chartWidth, setChartWidth] = useState(720)
+  const [captionHeight, setCaptionHeight] = useState(0)
   const titleId = useId()
   const descriptionId = useId()
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const frame = frameRef.current
     if (!frame) return
 
     const updateWidth = () => {
-      const nextWidth = Math.round(frame.getBoundingClientRect().width)
+      const nextWidth = Math.round((showEndLabels ? frame.querySelector('svg') ?? frame : frame).getBoundingClientRect().width)
       if (nextWidth > 0) setChartWidth(Math.max(240, nextWidth))
+      setCaptionHeight(captionRef.current?.getBoundingClientRect().height ?? 0)
     }
 
     updateWidth()
@@ -73,8 +95,9 @@ export function ComparisonChart({
 
     const observer = new ResizeObserver(updateWidth)
     observer.observe(frame)
+    if (captionRef.current) observer.observe(captionRef.current)
     return () => observer.disconnect()
-  }, [])
+  }, [showEndLabels])
 
   const normalizedSeries = useMemo<NormalizedSeries[]>(() => series.map((item) => {
     const points = item.points
@@ -97,16 +120,31 @@ export function ComparisonChart({
   const xScale = createXScale(xValues)
   const yScale = createYScale(normalizedSeries.flatMap((item) => item.points.flatMap((point) => (
     point.value === null ? [] : [point.value]
-  ))))
+  ))), integerYTicks)
   const hasValues = normalizedSeries.some((item) => item.hasValues)
+  const availableSeries = normalizedSeries.filter((item) => item.hasValues)
+  const labelGap = 34
+  const labelWidth = showEndLabels ? Math.max(86, ...availableSeries.map((item) => Math.max(
+    estimateLabelWidth(item.shortLabel ?? item.label, 11),
+    estimateLabelWidth(item.detailLabel ?? '', 10),
+  ))) + 26 : 0
 
   const compact = chartWidth < 520
-  const chartHeight = compact ? 260 : 300
+  const requestedHeight = minHeight === undefined
+    ? compact ? 260 : 300
+    : Math.max(160, minHeight - captionHeight - 5)
   const margin = compact
     ? { top: 34, right: 14, bottom: 50, left: 58 }
     : { top: 36, right: 20, bottom: 52, left: 68 }
+  if (emphasizeZero || fitYAxisLabels) {
+    margin.left = Math.max(margin.left, ...yScale.ticks.map((tick) => formatValue(tick).length * 5.5 + 30))
+  }
+  // Keep adjacent two-line labels readable, even when all curves end at the same value.
+  const chartHeight = showEndLabels
+    ? Math.max(requestedHeight, margin.top + margin.bottom + Math.max(0, availableSeries.length - 1) * labelGap + 24)
+    : requestedHeight
   const plotLeft = margin.left
-  const plotRight = chartWidth - margin.right
+  const plotRight = chartWidth - margin.right - labelWidth
   const plotTop = margin.top
   const plotBottom = chartHeight - margin.bottom
   const plotWidth = Math.max(1, plotRight - plotLeft)
@@ -118,21 +156,31 @@ export function ComparisonChart({
   const currentPosition = Number.isFinite(currentX)
     ? clamp(getX(currentX), plotLeft, plotRight)
     : null
-  const currentText = Number.isFinite(currentX) ? `現在 ${formatValue(currentX)}` : ''
+  const currentText = Number.isFinite(currentX) ? `現在 ${formatAxisValue(currentX)}` : ''
   const currentLabelWidth = Math.max(60, currentText.length * 8 + 14)
   const currentLabelX = currentPosition === null
     ? 0
     : clamp(currentPosition - currentLabelWidth / 2, plotLeft, plotRight - currentLabelWidth)
+  const endpoints = showEndLabels ? availableSeries.flatMap((item) => {
+    const point = item.points.slice().reverse().find((point) => point.value !== null)
+    return point && point.value !== null ? [{ item, point, x: getX(point.x), y: getY(point.value) }] : []
+  }) : []
+  const labelPositions = new Map(placeChartEndLabels(endpoints.map(({ item, y }) => ({ id: item.id, y })),
+    plotTop + 12, plotBottom - 12, labelGap).map((item) => [item.id, item.y]))
   const description = hasValues
-    ? `${axisLabel}を変えたときの${metricLabel}を、${normalizedSeries.filter((item) => item.hasValues).map((item) => item.label).join('、')}について示します。正確な値は数値表で確認できます。`
+    ? `${axisLabel}を変えたときの${metricLabel}を、${normalizedSeries.filter((item) => item.hasValues).map((item) => item.label).join('、')}について示します。${valueDescription ?? '正確な値は数値表で確認できます。'}`
     : `${axisLabel}別の${metricLabel}を表示できる系列データがありません。`
 
   return (
-    <figure className="build-comparison-chart">
-      <figcaption className="build-comparison-chart-caption">
-        <strong className="build-comparison-chart-heading">{metricLabel}推移</strong>
-        <ul className="build-comparison-chart-legend" aria-label="比較系列の凡例">
+    <figure className={`build-comparison-chart${showEndLabels ? ' build-comparison-chart--end-labels' : ''}`} style={{ minHeight }}>
+      <figcaption className="build-comparison-chart-caption" ref={captionRef}>
+        <div className="build-comparison-chart-heading">
+          <strong>{metricLabel}推移</strong>
+          {captionDetail && <p className="build-comparison-chart-caption-detail">{captionDetail}</p>}
+        </div>
+        {(!showEndLabels || normalizedSeries.some((item) => !item.hasValues)) && <ul className="build-comparison-chart-legend" aria-label="比較系列の凡例">
           {normalizedSeries.map((item, index) => {
+            if (showEndLabels && item.hasValues) return null
             const dashPattern = SERIES_DASH_PATTERNS[index % SERIES_DASH_PATTERNS.length]
             return (
               <li className="build-comparison-chart-legend-item" key={`${item.id}-${index}`}>
@@ -155,7 +203,7 @@ export function ComparisonChart({
               </li>
             )
           })}
-        </ul>
+        </ul>}
       </figcaption>
 
       <div className="build-comparison-chart-frame" ref={frameRef}>
@@ -175,7 +223,7 @@ export function ComparisonChart({
             return (
               <g key={`y-${tick}`}>
                 <line
-                  className="build-comparison-chart-grid"
+                  className={`build-comparison-chart-grid${emphasizeZero && tick === 0 ? ' build-comparison-chart-zero' : ''}`}
                   x1={plotLeft}
                   x2={plotRight}
                   y1={y}
@@ -263,7 +311,7 @@ export function ComparisonChart({
                       stroke={item.color}
                       key={`${item.id}-point-${point.x}-${pointIndex}`}
                     >
-                      <title>{`${item.label}・${axisLabel} ${formatValue(point.x)}・${metricLabel} ${formatValue(point.value)}`}</title>
+                      <title>{`${item.label}・${axisLabel} ${formatAxisValue(point.x)}・${metricLabel} ${formatValue(point.value)}`}</title>
                     </circle>
                   )
                 })}
@@ -271,9 +319,21 @@ export function ComparisonChart({
             )
           })}
 
-          {xScale.ticks.map((tick, index) => {
+          {endpoints.map(({ item, point, x, y }) => {
+            const labelY = labelPositions.get(item.id) ?? y
+            const labelX = plotRight + 22
+            return <g className="build-comparison-chart-end-label" key={`label-${item.id}`}>
+              <title>{`${item.label}・${axisLabel} ${formatAxisValue(point.x)}・${metricLabel} ${formatValue(point.value!)}`}</title>
+              <path d={`M ${x} ${y} L ${plotRight + 10} ${labelY} L ${labelX - 5} ${labelY}`}
+                fill="none" stroke={item.color} strokeWidth={1} />
+              <text x={labelX} y={labelY + (item.detailLabel ? -2 : 4)}>{item.shortLabel ?? item.label}</text>
+              {item.detailLabel && <text className="build-comparison-chart-end-detail" x={labelX} y={labelY + 12}>{item.detailLabel}</text>}
+            </g>
+          })}
+
+          {xScale.ticks.filter((_, index) => !showEndLabels || !compact || index % 2 === 0).map((tick, index, ticks) => {
             const x = getX(tick)
-            const anchor = index === 0 ? 'start' : index === xScale.ticks.length - 1 ? 'end' : 'middle'
+            const anchor = index === 0 ? 'start' : index === ticks.length - 1 ? 'end' : 'middle'
             return (
               <g key={`x-${tick}`}>
                 <line
@@ -289,7 +349,7 @@ export function ComparisonChart({
                   y={plotBottom + 18}
                   textAnchor={anchor}
                 >
-                  {formatValue(tick)}
+                  {formatAxisValue(tick)}
                 </text>
               </g>
             )
@@ -344,16 +404,17 @@ function createXScale(values: number[]): NumericScale {
   }
 }
 
-function createYScale(values: number[]): NumericScale {
-  if (values.length === 0) return { minimum: 0, maximum: 1, ticks: [0, 0.25, 0.5, 0.75, 1] }
+function createYScale(values: number[], integerTicks: boolean): NumericScale {
+  const zeroScale = { minimum: 0, maximum: 1, ticks: integerTicks ? [0, 1] : [0, 0.25, 0.5, 0.75, 1] }
+  if (values.length === 0) return zeroScale
 
   const rawMinimum = Math.min(0, ...values)
   const rawMaximum = Math.max(0, ...values)
   if (rawMinimum === rawMaximum) {
-    return { minimum: 0, maximum: 1, ticks: [0, 0.25, 0.5, 0.75, 1] }
+    return zeroScale
   }
 
-  const step = niceStep((rawMaximum - rawMinimum) / 4)
+  const step = Math.max(integerTicks ? 1 : 0, niceStep((rawMaximum - rawMinimum) / 4))
   const minimum = Math.floor(rawMinimum / step) * step
   const maximum = Math.ceil(rawMaximum / step) * step
   const ticks: number[] = []
@@ -418,4 +479,8 @@ function formatNumber(value: number): string {
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value))
+}
+
+function estimateLabelWidth(text: string, fontSize: number): number {
+  return Array.from(text).reduce((width, char) => width + fontSize * (/[^\x00-\x7f]/.test(char) ? 1 : 0.62), 0)
 }

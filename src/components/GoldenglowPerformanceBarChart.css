@@ -1,4 +1,8 @@
 .gg-performance-bar-chart {
+  --gg-bar-label-size: 12px;
+  --gg-bar-value-size: 13px;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   margin: 10px 0 0;
   border: 1px solid var(--border-strong);
@@ -10,65 +14,101 @@
   align-items: flex-start;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 7px 18px;
+  gap: 10px 18px;
+  margin: 0 16px;
   border-bottom: 1px solid var(--border);
-  padding: 8px 10px;
-  background: var(--surface-soft);
+  padding: 14px 0;
 }
+.gg-performance-bar-heading { display: grid; gap: 6px; min-width: 0; }
+.gg-performance-bar-heading strong { color: var(--text); font-size: var(--gg-bar-label-size); }
+.gg-performance-bar-heading > span { color: var(--text-muted); font-size: 10px; line-height: 1.6; }
+.gg-performance-bar-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin: 0; padding: 0; list-style: none; }
+.gg-performance-bar-legend li { display: inline-flex; align-items: center; gap: 5px; color: var(--text-soft); font-size: 10px; }
+.gg-performance-bar-legend i { width: 12px; height: 6px; flex: 0 0 12px; }
 
-.gg-performance-bar-caption > strong { font-size: 10px; }
-
-.gg-performance-bar-legend {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.gg-performance-bar-legend li { display: inline-flex; align-items: center; gap: 5px; color: var(--text-soft); font-size: 9px; }
-.gg-performance-bar-legend i { width: 14px; height: 6px; flex: 0 0 14px; }
-
-.gg-performance-bar-rows {
-  display: grid;
-  grid-template-columns: minmax(100px, 180px) minmax(0, 1fr) minmax(80px, max-content);
-  column-gap: 12px;
-  padding: 0 10px 8px;
-}
-
+/* Extra height belongs around the group, not between a label and its bar. */
+.gg-performance-bar-plot { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 20px 16px; min-width: 0; }
+.gg-performance-bar-rows { display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: 20px 12px; }
 .gg-performance-bar-row {
+  position: relative;
   display: grid;
   grid-template-columns: subgrid;
   grid-column: 1 / -1;
   align-items: center;
+  align-content: center;
   gap: 8px 12px;
   min-width: 0;
-  border-bottom: 1px solid var(--border);
-  padding: 10px 0;
 }
-
-.gg-performance-bar-label { min-width: 0; color: var(--text-soft); font-size: 10px; line-height: 1.6; overflow-wrap: anywhere; }
-.gg-performance-bar-total { min-width: 0; color: var(--text); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
-
-.gg-performance-bar-track {
-  display: flex;
-  min-width: 0;
-  height: 20px;
-  border-left: 1px solid var(--border-strong);
-  background: var(--surface-soft);
-  overflow: hidden;
-}
-
+.gg-performance-bar-label { grid-column: 1; grid-row: 1; min-width: 0; color: var(--text-soft); font-size: var(--gg-bar-label-size); line-height: 1.6; overflow-wrap: anywhere; }
+.gg-performance-bar-total { grid-column: 2; grid-row: 1; min-width: 0; color: var(--text); font-size: var(--gg-bar-value-size); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.gg-performance-bar-track { grid-column: 1 / -1; grid-row: 2; display: flex; min-width: 0; height: 30px; background: var(--surface-soft); overflow: hidden; }
 .gg-performance-bar-segment { display: block; flex: 0 0 auto; height: 100%; }
-.gg-performance-bar-scale { display: flex; grid-column: 2; justify-content: space-between; padding-top: 6px; color: var(--text-muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.gg-performance-bar-segment + .gg-performance-bar-segment { box-shadow: -1px 0 0 #ffffff80; }
+.gg-performance-bar-scale { grid-column: 1 / -1; margin-top: -12px; color: var(--text-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.gg-performance-bar-ticks { position: relative; min-height: 16px; line-height: 16px; }
+.gg-performance-bar-ticks > span { position: absolute; left: var(--gg-bar-tick-position); transform: translateX(-50%); white-space: nowrap; }
+.gg-performance-bar-ticks > .gg-performance-bar-tick-start { transform: none; }
+.gg-performance-bar-ticks > .gg-performance-bar-tick-end { transform: translateX(-100%); }
+.gg-performance-bar-ticks-compact { display: none; }
+.gg-performance-bar-difference .gg-performance-bar-track { position: relative; }
+.gg-performance-bar-difference .gg-performance-bar-segment { position: absolute; top: 0; }
+.gg-performance-bar-zero { position: absolute; top: 0; bottom: 0; left: clamp(0px, var(--gg-bar-tick-position), calc(100% - 1px)); width: 1px; background: var(--text-soft); pointer-events: none; }
+.gg-performance-bar-difference .gg-performance-bar-tick-zero { color: var(--text); font-weight: 600; }
 
-@media (max-width: 640px) {
-  .gg-performance-bar-rows { grid-template-columns: minmax(0, 1fr) max-content; column-gap: 10px; }
-  .gg-performance-bar-row { row-gap: 6px; }
-  .gg-performance-bar-label { grid-column: 1; grid-row: 1; }
-  .gg-performance-bar-total { grid-column: 2; grid-row: 1; }
-  .gg-performance-bar-track { grid-column: 1 / -1; grid-row: 2; height: 20px; }
-  .gg-performance-bar-scale { grid-column: 1 / -1; }
+.gg-performance-bar-variant-axis .gg-performance-bar-rows { grid-template-columns: minmax(100px, 160px) minmax(0, 1fr) max-content; row-gap: 0; }
+.gg-performance-bar-variant-axis .gg-performance-bar-row { padding: 14px 0; }
+.gg-performance-bar-variant-axis .gg-performance-bar-track { grid-column: 2; grid-row: 1; height: 24px; background: transparent; }
+.gg-performance-bar-variant-axis .gg-performance-bar-total { grid-column: 3; }
+.gg-performance-bar-variant-axis .gg-performance-bar-scale { grid-column: 2; margin-top: 8px; }
+.gg-performance-bar-guides { position: relative; grid-column: 2; pointer-events: none; }
+.gg-performance-bar-guides > i { position: absolute; top: 0; bottom: 0; left: var(--gg-bar-tick-position); border-left: 1px solid var(--border); opacity: .65; }
+.gg-performance-bar-guides > .gg-performance-bar-guide-zero { border-color: var(--text-soft); opacity: 1; }
+
+.gg-performance-bar-variant-detail .gg-performance-bar-rows { row-gap: 10px; }
+.gg-performance-bar-variant-detail .gg-performance-bar-row { grid-template-columns: minmax(0, 1fr) max-content; padding: 12px; border: 1px solid var(--border); background: var(--surface-soft); }
+.gg-performance-bar-variant-detail .gg-performance-bar-total { font-size: 15px; }
+.gg-performance-bar-variant-detail .gg-performance-bar-track { height: 16px; background: var(--surface); }
+.gg-performance-bar-variant-detail .gg-performance-bar-scale { margin: 0 13px; }
+.gg-performance-bar-parts { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 16px; margin: 2px 0 0; color: var(--text-soft); font-size: 10px; }
+.gg-performance-bar-parts > div { display: grid; grid-template-columns: minmax(0, 1fr) max-content; align-items: center; gap: 4px 8px; min-width: 0; }
+.gg-performance-bar-parts dt { display: flex; align-items: center; gap: 5px; }
+.gg-performance-bar-parts dt i { width: 8px; height: 8px; flex: 0 0 8px; }
+.gg-performance-bar-parts dd { margin: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Vertical bars share one value axis; labels and detail rows never scale with the bars. */
+.gg-performance-vertical-plot { flex: 1; display: flex; flex-direction: column; min-width: 0; padding: 24px 16px 20px; }
+.gg-performance-vertical-grid { flex: 1; display: grid; min-width: 0; gap: 12px 16px; }
+.gg-performance-vertical-column { display: grid; grid-template-rows: subgrid; grid-row: 1 / -1; min-width: 0; position: relative; }
+.gg-performance-vertical-label { grid-row: 3; color: var(--text-soft); font-size: var(--gg-bar-label-size); line-height: 1.6; text-align: center; overflow-wrap: anywhere; }
+.gg-performance-vertical-total { grid-row: 1; align-self: end; color: var(--text); font-size: var(--gg-bar-value-size); font-weight: 600; font-variant-numeric: tabular-nums; text-align: center; white-space: nowrap; }
+.gg-performance-vertical-track { grid-row: 2; position: relative; justify-self: center; width: min(60%, 80px); min-width: 24px; height: 100%; background: var(--surface-soft); }
+.gg-performance-vertical-segment { display: block; position: absolute; left: 0; width: 100%; }
+.gg-performance-vertical-segment + .gg-performance-vertical-segment { box-shadow: 0 1px 0 #ffffff80; }
+.gg-performance-vertical-scale { grid-column: 1; grid-row: 2; position: relative; min-width: 64px; color: var(--text-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.gg-performance-vertical-scale > span { position: absolute; right: 0; bottom: var(--gg-bar-tick-position); transform: translateY(50%); white-space: nowrap; }
+.gg-performance-vertical-guides { grid-column: 2 / -1; grid-row: 2; position: relative; pointer-events: none; }
+.gg-performance-vertical-guides > i { position: absolute; left: 0; right: 0; bottom: var(--gg-bar-tick-position); border-top: 1px solid var(--border); }
+.gg-performance-vertical-guides > .gg-performance-vertical-guide-zero { border-color: var(--border-strong); }
+.gg-performance-vertical-zero { position: absolute; left: 0; right: 0; bottom: clamp(0px, var(--gg-bar-tick-position), calc(100% - 1px)); height: 1px; background: var(--text-soft); pointer-events: none; }
+.gg-performance-bar-variant-axis .gg-performance-vertical-track { width: min(50%, 64px); background: transparent; }
+.gg-performance-bar-variant-detail .gg-performance-vertical-column { padding: 12px; border: 1px solid var(--border); background: var(--surface-soft); }
+.gg-performance-bar-variant-detail .gg-performance-vertical-total { font-size: 15px; }
+.gg-performance-bar-variant-detail .gg-performance-vertical-track { width: min(35%, 40px); background: var(--surface); }
+.gg-performance-vertical-column .gg-performance-bar-parts { grid-column: 1; grid-row: 4; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.gg-performance-vertical-column .gg-performance-bar-parts > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; }
+.gg-performance-vertical-column .gg-performance-bar-parts dd { margin-left: auto; text-align: right; }
+
+/* The chart's own width also governs detached PNG renders. */
+@container gg-performance-chart (max-width: 640px) {
+  .gg-performance-bar-caption { flex-direction: column; margin: 0 12px; }
+  .gg-performance-bar-plot { padding: 20px 12px; }
+  .gg-performance-bar-variant-axis .gg-performance-bar-rows { grid-template-columns: minmax(0, 1fr) max-content; }
+  .gg-performance-bar-variant-axis .gg-performance-bar-total { grid-column: 2; }
+  .gg-performance-bar-variant-axis .gg-performance-bar-track { grid-column: 1 / -1; grid-row: 2; border-left: 1px solid var(--border); border-right: 1px solid var(--border); background: linear-gradient(90deg, transparent calc(50% - .5px), var(--border) 50%, transparent calc(50% + .5px)); }
+  .gg-performance-bar-variant-axis.gg-performance-bar-difference .gg-performance-bar-track { background: transparent; }
+  .gg-performance-bar-variant-axis .gg-performance-bar-scale { grid-column: 1 / -1; margin-top: -6px; }
+  .gg-performance-bar-guides { display: none; }
+  .gg-performance-bar-variant-axis .gg-performance-bar-ticks { display: none; }
+  .gg-performance-bar-variant-axis .gg-performance-bar-ticks-compact { display: block; }
+  .gg-performance-bar-parts { grid-template-columns: minmax(0, 1fr); gap: 5px; }
 }

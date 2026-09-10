@@ -12,9 +12,21 @@ const SVG_IMAGE_STYLES = [
   'dominant-baseline', 'vector-effect', 'opacity',
 ] as const
 
-const waitForLayout = () => new Promise<void>((resolve) => {
-  window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()))
-})
+async function waitForLayout(host: HTMLElement, surface: HTMLElement): Promise<void> {
+  let previousSize = ''
+  let stableFrames = 0
+  // Responsive charts can need several renders to fit their caption and dense table rows.
+  for (let frame = 0; frame < 30; frame += 1) {
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+    if (surface.scrollWidth > surface.clientWidth) host.style.width = `${surface.scrollWidth}px`
+    const bounds = surface.getBoundingClientRect()
+    const size = `${bounds.width}:${bounds.height}:${surface.scrollWidth}:${surface.scrollHeight}`
+    stableFrames = size === previousSize ? stableFrames + 1 : 0
+    if (stableFrames >= 3) return
+    previousSize = size
+  }
+  throw new Error('グラフのサイズ調整が完了しませんでした。')
+}
 
 export async function saveComparisonChartImage({
   chart,
@@ -43,15 +55,10 @@ export async function saveComparisonChartImage({
     ))
 
     await document.fonts.ready
-    await waitForLayout()
     const surface = host.querySelector<HTMLElement>('.comparison-chart-image-surface')
     if (!surface) throw new Error('保存するグラフを表示できませんでした。')
 
-    // Let wide tables determine the full export size instead of capturing a scroll viewport.
-    if (surface.scrollWidth > surface.clientWidth) {
-      host.style.width = `${surface.scrollWidth}px`
-      await waitForLayout()
-    }
+    await waitForLayout(host, surface)
     const bounds = surface.getBoundingClientRect()
     const imageWidth = Math.ceil(Math.max(bounds.width, surface.scrollWidth))
     const imageHeight = Math.ceil(Math.max(bounds.height, surface.scrollHeight))

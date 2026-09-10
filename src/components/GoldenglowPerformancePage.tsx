@@ -1,10 +1,13 @@
 import { useMemo, useRef, useState } from 'react'
 import { writeClipboardText } from '../lib/clipboard'
 import { GOLDENGLOW_OPERATOR_ID } from '../lib/goldenglowExplosion'
+import { buildGoldenglowPerformanceDifferenceCurve, buildGoldenglowPerformanceDifferences } from '../lib/goldenglowPerformanceDifference'
+import { buildGoldenglowPerformancePresets } from '../lib/goldenglowPerformancePresets'
 import { deriveGoldenglowGuideSkills } from '../lib/goldenglowGuideSkill'
 import {
   buildGoldenglowPerformanceComparison,
   buildGoldenglowPerformanceComparisonTsv,
+  buildGoldenglowPerformanceAtResistance,
   buildGoldenglowPerformanceCurve,
   buildGoldenglowResistanceValues,
   DEFAULT_GOLDENGLOW_RESISTANCE_STEP,
@@ -16,8 +19,8 @@ import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { ComparisonChart, type ComparisonChartSeries } from './ComparisonChart'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { GoldenglowOperatorInfo } from './GoldenglowOperatorInfo'
-import { GoldenglowPerformanceBarChart } from './GoldenglowPerformanceBarChart'
-import { GoldenglowPerformanceHeatmap } from './GoldenglowPerformanceHeatmap'
+import { GoldenglowPerformanceBarChart, type GoldenglowBarOrientation, type GoldenglowBarVariant } from './GoldenglowPerformanceBarChart'
+import { GoldenglowPerformanceChartFrame } from './GoldenglowPerformanceChartFrame'
 import { GoldenglowPerformanceSkillNavigation } from './GoldenglowPerformanceSkillNavigation'
 import type { GoldenglowPerformanceChartColumn } from './goldenglowPerformanceChartTypes'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
@@ -26,14 +29,23 @@ import './GoldenglowGuidePage.css'
 import './GoldenglowPerformancePage.css'
 
 const format = (value: number) => new Intl.NumberFormat('ja-JP', { useGrouping: false, maximumFractionDigits: 3 }).format(value)
+const integerFormat = new Intl.NumberFormat('ja-JP', { useGrouping: false, maximumFractionDigits: 0 })
 const chartColors = ['#58758a', '#95615d', '#64806b', '#776d7f', '#827452', '#5b7b78']
 const chartTypes = [
   { value: 'line', label: '折れ線' },
-  { value: 'bar', label: '横棒' },
-  { value: 'heatmap', label: 'ヒートマップ' },
-  { value: 'stacked', label: '積み上げ棒' },
+  { value: 'bar', label: '棒グラフ' },
 ] as const
 type ChartType = typeof chartTypes[number]['value']
+const barVariants = [
+  { value: 'axis', label: 'A：軸をそろえて比較' },
+  { value: 'label', label: 'B：ラベルと棒をまとめる' },
+  { value: 'detail', label: 'C：合計と内訳を表示' },
+] as const
+const chartDimensions = [
+  { key: 'width', label: '幅（px）', min: 320, max: 4096 },
+  { key: 'height', label: '最小高さ（px）', min: 240, max: 8192 },
+] as const
+const chartAspectPresets = ['16:9', '2:1', '21:9', '3:1'] as const
 
 interface ModuleChoice {
   id: string
@@ -60,17 +72,34 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
   const [skillIndex, setSkillIndex] = useState(3)
   const [skillLevelIndex, setSkillLevelIndex] = useState<number | undefined>(undefined)
   const [viewingDuration, setViewingDuration] = useState(30)
+  const [showDecimals, setShowDecimals] = useState(false)
+  const formatDamage = showDecimals ? format : integerFormat.format
+  const formatChartDamage = useMemo(() => new Intl.NumberFormat('ja-JP', {
+    maximumFractionDigits: showDecimals ? 3 : 0,
+  }).format, [showDecimals])
   const [resistanceStep, setResistanceStep] = useState(DEFAULT_GOLDENGLOW_RESISTANCE_STEP)
   const [resistanceStepInput, setResistanceStepInput] = useState(String(DEFAULT_GOLDENGLOW_RESISTANCE_STEP))
-  const [chartResistanceStep, setChartResistanceStep] = useState(DEFAULT_GOLDENGLOW_RESISTANCE_STEP)
-  const [chartResistanceStepInput, setChartResistanceStepInput] = useState(String(DEFAULT_GOLDENGLOW_RESISTANCE_STEP))
   const [chartType, setChartType] = useState<ChartType>('line')
+  const [showLineEndLabels, setShowLineEndLabels] = useState(false)
+  const [displayMetric, setDisplayMetric] = useState<'total' | 'difference'>('total')
+  const [baselineId, setBaselineId] = useState('default-off')
+  const [stackedBars, setStackedBars] = useState(false)
+  const [barOrientation, setBarOrientation] = useState<GoldenglowBarOrientation>('vertical')
+  const [barVariant, setBarVariant] = useState<GoldenglowBarVariant>('axis')
   const [chartResistance, setChartResistance] = useState(0)
+  const [chartResistanceInput, setChartResistanceInput] = useState('0')
+  const [chartSize, setChartSize] = useState<{ width?: number; height?: number }>({})
+  const [chartSizeInput, setChartSizeInput] = useState({ width: '', height: '' })
+  const [chartAspectPreset, setChartAspectPreset] = useState('auto')
+  const [chartAspect, setChartAspect] = useState({ width: 16, height: 9 })
+  const [chartAspectInput, setChartAspectInput] = useState({ width: '16', height: '9' })
   const [savingImage, setSavingImage] = useState(false)
   const [imageFeedback, setImageFeedback] = useState<'saved' | 'failed' | null>(null)
   const imageSaveInProgress = useRef(false)
-  const [open, setOpen] = useState(true)
+  const [tableOpen, setTableOpen] = useState(true)
+  const [graphOpen, setGraphOpen] = useState(true)
   const [savedBuilds, setSavedBuilds] = useState<GoldenglowComparisonBuild[] | null>(null)
+  const [buildPresetId, setBuildPresetId] = useState('modules')
   const [editor, setEditor] = useState<{ build: GoldenglowComparisonBuild; adding: boolean } | null>(null)
   const [copying, setCopying] = useState(false)
   const [copyFeedback, setCopyFeedback] = useState<{ text: string; state: 'copied' | 'failed' } | null>(null)
@@ -84,56 +113,97 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
     levels: getOperatorModuleLevels(module),
     unlocked: isOperatorModuleUnlocked(module, 2, profile.phases[2]?.maxLevel ?? 1),
   })) : [], [profile])
-  const defaultBuilds = useMemo<GoldenglowComparisonBuild[]>(() => [
-    { id: 'default-off', moduleId: '', moduleLevel: 3, potential: 1 },
-    ...moduleChoices.map((choice) => ({
-      id: `default-${choice.id}`, moduleId: choice.id, moduleLevel: choice.levels.at(-1) ?? 3, potential: 1,
-    })),
-  ], [moduleChoices])
-  const builds = savedBuilds ?? defaultBuilds
+  const buildPresets = useMemo(() => buildGoldenglowPerformancePresets(moduleChoices), [moduleChoices])
+  const selectedBuildPreset = buildPresets.find((preset) => preset.id === buildPresetId) ?? buildPresets[0]
+  const customBuilds = buildPresetId === 'custom' ? savedBuilds : null
+  const builds = customBuilds ?? selectedBuildPreset.builds
+  const effectiveBuildPresetId = customBuilds ? 'custom' : selectedBuildPreset.id
   const skills = useMemo(() => deriveGoldenglowGuideSkills(rows, '', 3, skillLevelIndex), [rows, skillLevelIndex])
   const skill = skills.find((candidate) => candidate.skillIndex === skillIndex) ?? skills[0] ?? null
   const resistanceValues = useMemo(() => buildGoldenglowResistanceValues(resistanceStep), [resistanceStep])
-  const chartResistanceValues = useMemo(() => buildGoldenglowResistanceValues(chartResistanceStep), [chartResistanceStep])
-  const activeChartResistance = chartResistanceValues.reduce((closest, value) => (
-    Math.abs(value - chartResistance) < Math.abs(closest - chartResistance) ? value : closest
-  ), chartResistanceValues[0])
   const comparison = useMemo(() => skill ? buildGoldenglowPerformanceComparison(
     rows, builds, skill.skillIndex, skill.skillLevelIndex, viewingDuration, resistanceStep,
   ) : [], [rows, builds, skill, viewingDuration, resistanceStep])
-  const chartComparison = useMemo(() => skill ? buildGoldenglowPerformanceComparison(
-    rows, builds, skill.skillIndex, skill.skillLevelIndex, viewingDuration, chartResistanceStep,
-  ) : [], [rows, builds, skill, viewingDuration, chartResistanceStep])
+  const barComparison = useMemo(() => skill ? buildGoldenglowPerformanceAtResistance(
+    rows, builds, skill.skillIndex, skill.skillLevelIndex, viewingDuration, chartResistance,
+  ) : [], [rows, builds, skill, viewingDuration, chartResistance])
   const lineComparison = useMemo(() => skill ? buildGoldenglowPerformanceCurve(
     rows, builds, skill.skillIndex, skill.skillLevelIndex, viewingDuration,
   ) : [], [rows, builds, skill, viewingDuration])
+  const baselineColumn = comparison.find((column) => column.build.id === baselineId) ?? comparison[0]
+  const effectiveBaselineId = baselineColumn?.build.id ?? ''
+  const baselineLabel = baselineColumn
+    ? `${moduleLabel(baselineColumn.build, moduleChoices)}（${buildCondition(baselineColumn.build)}）` : ''
+  const isDifference = displayMetric === 'difference'
+  const tableComparison = useMemo(() => isDifference
+    ? buildGoldenglowPerformanceDifferences(comparison, effectiveBaselineId)
+      .filter((column) => column.build.id !== effectiveBaselineId) : comparison,
+  [comparison, effectiveBaselineId, isDifference])
+  const differenceComparison = useMemo(() => isDifference
+    ? buildGoldenglowPerformanceDifferenceCurve(lineComparison, effectiveBaselineId) : [],
+  [lineComparison, effectiveBaselineId, isDifference])
+  const formatDifference = useMemo(() => new Intl.NumberFormat('ja-JP', {
+    useGrouping: false, maximumFractionDigits: showDecimals ? 3 : 0, signDisplay: 'exceptZero',
+  }).format, [showDecimals])
+  const formatOutput = isDifference ? formatDifference : formatDamage
+  const formatChartOutput = useMemo(() => new Intl.NumberFormat('ja-JP', {
+    maximumFractionDigits: showDecimals ? 3 : 0, signDisplay: isDifference ? 'exceptZero' : 'auto',
+  }).format, [showDecimals, isDifference])
+  const chartComparison = useMemo(() => isDifference
+    ? buildGoldenglowPerformanceDifferences(barComparison, effectiveBaselineId) : barComparison,
+  [barComparison, effectiveBaselineId, isDifference])
   const chartColumns = useMemo<GoldenglowPerformanceChartColumn[]>(() => chartComparison.map((column, index) => ({
     id: column.build.id,
     label: `${moduleLabel(column.build, moduleChoices)}（${buildCondition(column.build)}）`,
     color: chartColors[index % chartColors.length],
     values: column.values,
-  })), [chartComparison, moduleChoices])
-  const chartSeries = useMemo<ComparisonChartSeries[]>(() => lineComparison.map((column, index) => ({
+  })).filter((column) => !isDifference || column.id !== effectiveBaselineId),
+  [chartComparison, moduleChoices, isDifference, effectiveBaselineId])
+  const chartSeries = useMemo<ComparisonChartSeries[]>(() => (isDifference ? differenceComparison : lineComparison).map((column, index) => ({
     id: column.build.id,
     label: `${moduleLabel(column.build, moduleChoices)}（${buildCondition(column.build)}）`,
+    shortLabel: moduleLabel(column.build, moduleChoices),
+    detailLabel: buildCondition(column.build),
     color: chartColors[index % chartColors.length],
     points: column.values.map((value) => ({ x: value.resistance, value: value.expectedTotalDamage })),
-  })), [lineComparison, moduleChoices])
-  const tableText = useMemo(() => buildGoldenglowPerformanceComparisonTsv(comparison.map((column) => ({
-    label: `${moduleLabel(column.build, moduleChoices)}（${buildCondition(column.build)}）`,
+  })).filter((series) => !isDifference || series.id !== effectiveBaselineId),
+  [lineComparison, differenceComparison, isDifference, effectiveBaselineId, moduleChoices])
+  const tableText = useMemo(() => buildGoldenglowPerformanceComparisonTsv(tableComparison.map((column) => ({
+    label: `${moduleLabel(column.build, moduleChoices)}（${buildCondition(column.build)}）${isDifference ? `［差分・基準：${baselineLabel}］` : ''}`,
     values: column.values,
-  }))), [comparison, moduleChoices])
+  })), showDecimals), [tableComparison, moduleChoices, showDecimals, isDifference, baselineLabel])
   const copyState = copyFeedback?.text === tableText ? copyFeedback.state : null
   const permanent = skill?.duration === null
   const duration = skill?.duration ?? viewingDuration
-  const outputTitle = permanent ? '表示時間内の総ダメージ期待値' : 'スキル総ダメージ期待値'
+  const outputTitle = isDifference ? '総ダメージ期待値の差分'
+    : permanent ? '集計時間内の総ダメージ期待値' : 'スキル総ダメージ期待値'
+  const conditionLabel = skill ? `${isDifference ? `基準：${baselineLabel} ／ ` : ''}S${skill.skillIndex} ${skill.skillLevelLabel}・${format(duration)}秒` : undefined
   const unavailable = comparison.filter((column) => !column.skill)
+  const chartMinWidth = chartType === 'bar' && barOrientation === 'vertical'
+    ? Math.max(320, chartColumns.length * 160 + 80) : 320
+  const chartWidth = chartSize.width === undefined ? undefined : Math.max(chartSize.width, chartMinWidth)
+  const chartAspectRatio = chartAspectPreset === 'auto' ? undefined : chartAspect.width / chartAspect.height
+  const chartLabel = chartType === 'bar'
+    ? `${barOrientation === 'horizontal' ? '横棒' : '縦棒'}${stackedBars ? '（積み上げ）' : ''}・${barVariants.find((variant) => variant.value === barVariant)?.label}`
+    : chartTypes.find((type) => type.value === chartType)?.label
+  const noComparisonTargets = isDifference && tableComparison.length === 0
+  const emptyComparisonMessage = '基準列以外の比較対象がありません。「比較列を追加」から列を追加してください。'
 
   const renderChart = () => {
-    if (chartType === 'line') return <ComparisonChart axisLabel="敵の術耐性" metricLabel={outputTitle} series={chartSeries} formatValue={format} showPoints={false} />
-    if (chartType === 'heatmap') return <GoldenglowPerformanceHeatmap columns={chartColumns} metricLabel={outputTitle} formatValue={format} />
-    return <GoldenglowPerformanceBarChart columns={chartColumns} metricLabel={outputTitle}
-      resistance={activeChartResistance} stacked={chartType === 'stacked'} formatValue={format} />
+    if (noComparisonTargets) return <p className="gg-performance-status" role="status">{emptyComparisonMessage}</p>
+    return <GoldenglowPerformanceChartFrame width={chartWidth} minWidth={chartMinWidth}
+      minHeight={chartSize.height} aspectRatio={chartAspectRatio}>
+      {(minHeight) => chartType === 'line'
+        ? <ComparisonChart axisLabel="敵の術耐性" metricLabel={outputTitle} series={chartSeries}
+          formatValue={formatChartOutput} formatAxisValue={formatChartDamage}
+          showEndLabels={showLineEndLabels}
+          captionDetail={conditionLabel}
+          valueDescription={isDifference ? `基準は${baselineLabel}です。各列の総ダメージ期待値から基準の値を引いた差分で、プラスは増加、マイナスは減少を示します。` : undefined}
+          emphasizeZero={isDifference} integerYTicks={!showDecimals} fitYAxisLabels showPoints={false} minHeight={minHeight} />
+        : <GoldenglowPerformanceBarChart columns={chartColumns} metricLabel={outputTitle}
+          conditionLabel={conditionLabel} difference={isDifference} integerTicks={!showDecimals}
+          resistance={chartResistance} stacked={stackedBars} orientation={barOrientation} variant={barVariant} formatValue={formatChartOutput} minHeight={minHeight} />}
+    </GoldenglowPerformanceChartFrame>
   }
 
   const saveChartImage = async () => {
@@ -141,12 +211,13 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
     imageSaveInProgress.current = true
     setSavingImage(true)
     setImageFeedback(null)
-    const singleResistance = chartType === 'bar' || chartType === 'stacked'
+    const singleResistance = chartType === 'bar'
+    const imageChartType = singleResistance && stackedBars ? 'stacked' : chartType
     try {
       await saveComparisonChartImage({
         chart: renderChart(),
-        filename: `goldenglow-S${skill.skillIndex}-${skill.skillLevelLabel}-${format(duration)}s-${chartType}${singleResistance ? `-res${activeChartResistance}` : ''}.png`,
-        width: chartType === 'heatmap' ? Math.max(1120, 88 + chartColumns.length * 150 + 2) : 1120,
+        filename: `goldenglow-S${skill.skillIndex}-${skill.skillLevelLabel}-${format(duration)}s-${imageChartType}${isDifference ? `-difference-from-${baselineLabel}` : ''}${singleResistance ? `-${barOrientation}-${barVariant}-res${chartResistance}` : showLineEndLabels ? '-end-labels' : ''}.png`,
+        width: chartWidth ?? 1120,
       })
       setImageFeedback('saved')
     } catch {
@@ -203,20 +274,83 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
         <button type="button" className="button secondary" onClick={onRetry}>再読み込み</button>
       </div>}
 
-      <GoldenglowOperatorInfo skill={skill} loading={loading} />
+      <GoldenglowOperatorInfo skill={skill} loading={loading} defaultOpen={false} />
+
+      {skill && <fieldset className="gg-performance-common-settings">
+        <legend>表・グラフの共通設定</legend>
+        <div className="gg-performance-common-controls">
+          {permanent && <label className="calculator-field gg-performance-duration">
+            <span>集計時間（秒）</span>
+            <input type="number" aria-label="集計時間（秒）" min={0} max={600} step="any" value={viewingDuration}
+              onChange={(event) => {
+                const value = event.target.valueAsNumber
+                setViewingDuration(Number.isFinite(value) ? Math.max(0, Math.min(600, value)) : 0)
+              }} />
+          </label>}
+          <div className="gg-performance-display-options">
+            <label>
+              <input type="checkbox" checked={showDecimals} aria-describedby="gg-performance-decimals-description"
+                onChange={(event) => setShowDecimals(event.target.checked)} />
+              小数点以下を表示
+            </label>
+            <span id="gg-performance-decimals-description">非表示時は四捨五入</span>
+          </div>
+          <label className="calculator-field gg-performance-metric">
+            <span>表示値</span>
+            <select aria-label="表・グラフの表示値" value={displayMetric}
+              onChange={(event) => setDisplayMetric(event.target.value as 'total' | 'difference')}>
+              <option value="total">総ダメージ</option>
+              <option value="difference">基準との差分</option>
+            </select>
+          </label>
+          {isDifference && <label className="calculator-field gg-performance-baseline">
+            <span>基準列</span>
+            <select aria-label="表・グラフの基準列" value={effectiveBaselineId}
+              onChange={(event) => setBaselineId(event.target.value)}>
+              {comparison.map((column) => <option key={column.build.id} value={column.build.id}>
+                {moduleLabel(column.build, moduleChoices)}（{buildCondition(column.build)}）
+              </option>)}
+            </select>
+          </label>}
+        </div>
+        {isDifference && <p className="gg-performance-difference-help" role="status">
+          表・グラフともに各列 − 基準列を表示します。プラスは増加、マイナスは減少、0は同じ値です。
+          基準列自体は表・グラフに表示しません。
+          {!baselineColumn?.values.some((value) => value.expectedTotalDamage !== null) && ' 基準列のデータがないため、差分を計算できません。'}
+        </p>}
+        <details className="gg-performance-assumptions">
+          <summary>計算条件</summary>
+          <p>昇進2最大レベル・信頼100。敵1体を攻撃し続けたときの、本体・浮遊ユニット・爆発を合わせた総ダメージ期待値です。術耐性無視と、モジュール・潜在段階による攻撃力・攻撃速度・特性・素質の変化を各列に反映します。</p>
+          <p>初回攻撃は攻撃間隔後、浮遊ユニットの帰還・再索敵は0秒として計算します。S2は永続のため、指定した集計時間内の結果です。ダメージ表示は{showDecimals ? '小数点以下3桁まで' : '整数'}の概数です。</p>
+        </details>
+      </fieldset>}
 
       <CollapsibleCalculatorPanel
         id="gg-performance-results"
         number="02"
-        title="モジュール比較"
-        summary={skill ? `S${skill.skillIndex}・${format(duration)}秒・${builds.length}列` : '術耐性別のスキル総ダメージ期待値'}
-        open={open}
-        onToggle={() => setOpen((value) => !value)}
-        collapsedLabel="結果を表示"
+        title="比較表"
+        summary={skill ? `S${skill.skillIndex}・${format(duration)}秒・${tableComparison.length}列${isDifference ? `・差分（基準：${baselineLabel}）` : ''}` : '術耐性別のスキル総ダメージ期待値'}
+        open={tableOpen}
+        onToggle={() => setTableOpen((value) => !value)}
+        collapsedLabel="表を表示"
       >
         {skill ? <>
           <div className="gg-performance-table-toolbar">
-            <h3 className="gg-table-title" id="gg-performance-output-title">{outputTitle}</h3>
+            <label className="calculator-field gg-performance-table-preset">
+              <span>比較プリセット</span>
+              <select aria-label="比較表のプリセット" value={effectiveBuildPresetId} onChange={(event) => {
+                const presetId = event.target.value
+                const nextBuilds = presetId === 'custom' ? savedBuilds
+                  : buildPresets.find((preset) => preset.id === presetId)?.builds
+                if (!nextBuilds) return
+                setBuildPresetId(presetId)
+                setBaselineId(nextBuilds[0]?.id ?? '')
+                setEditor(null)
+              }}>
+                {buildPresets.map((preset) => <option key={preset.id} value={preset.id}>{preset.label}</option>)}
+                {savedBuilds && <option value="custom">カスタム</option>}
+              </select>
+            </label>
             <div className="gg-performance-table-actions">
               <label className="calculator-field gg-performance-step">
                 <span>術耐性の刻み</span>
@@ -230,15 +364,7 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
                   onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }}
                 />
               </label>
-              {permanent && <label className="calculator-field gg-performance-duration">
-                <span>表示時間（秒）</span>
-                <input type="number" aria-label="表示時間（秒）" min={0} max={600} step="any" value={viewingDuration}
-                  onChange={(event) => {
-                    const value = event.target.valueAsNumber
-                    setViewingDuration(Number.isFinite(value) ? Math.max(0, Math.min(600, value)) : 0)
-                  }} />
-              </label>}
-              <button type="button" className="button secondary" aria-label="比較表をコピー" title="Excel用にコピー（小数は計算式で貼り付け）"
+              <button type="button" className="button secondary" aria-label="比較表をコピー" title="Excel用にコピー（現在の表示桁数を反映）"
                 disabled={copying || !tableText} aria-busy={copying} onClick={() => void copyTable()}>
                 {copying ? 'コピー中…' : copyState === 'copied' ? 'コピー済み' : copyState === 'failed' ? 'コピー失敗' : '表をコピー'}
               </button>
@@ -249,13 +375,17 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
               <button ref={addButtonRef} type="button" className="button secondary" aria-haspopup="dialog" onClick={addColumn}>＋ 比較列を追加</button>
             </div>
           </div>
-          <div className="gg-performance-table-wrap" tabIndex={0} role="region" aria-labelledby="gg-performance-output-title">
+          <h3 className="gg-table-title gg-performance-output-title" id="gg-performance-output-title">{outputTitle}</h3>
+          {isDifference && <p className="gg-performance-table-condition" id="gg-performance-table-condition">{conditionLabel}</p>}
+          {noComparisonTargets ? <p className="gg-performance-status" role="status">{emptyComparisonMessage}</p>
+            : <div className="gg-performance-table-wrap" tabIndex={0} role="region" aria-labelledby="gg-performance-output-title">
             <table className="gg-probability-table gg-performance-table" aria-labelledby="gg-performance-output-title"
-              style={{ minWidth: 88 + builds.length * 150 }}>
-              <colgroup><col style={{ width: 88 }} />{builds.map((build) => <col key={build.id} />)}</colgroup>
+              aria-describedby={isDifference ? 'gg-performance-table-condition' : undefined}
+              style={{ minWidth: 88 + tableComparison.length * 150 }}>
+              <colgroup><col style={{ width: 88 }} />{tableComparison.map(({ build }) => <col key={build.id} />)}</colgroup>
               <thead><tr>
                 <th scope="col">敵の術耐性</th>
-                {builds.map((build) => <th scope="col" key={build.id}>
+                {tableComparison.map(({ build }) => <th scope="col" key={build.id}>
                   <button type="button" className="gg-performance-column-trigger" aria-haspopup="dialog"
                     aria-label={`${moduleLabel(build, moduleChoices)} ${buildCondition(build)}の比較条件`}
                     onClick={() => setEditor({ build, adding: false })}>
@@ -266,59 +396,149 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
               </tr></thead>
               <tbody>{resistanceValues.map((resistance, rowIndex) => <tr key={resistance}>
                 <th scope="row">{resistance}</th>
-                {comparison.map((column) => {
+                {tableComparison.map((column) => {
                   const value = column.values[rowIndex]?.expectedTotalDamage
-                  return <td key={column.build.id}>{value === null || value === undefined ? '—' : format(value)}</td>
+                  return <td key={column.build.id}>{value === null || value === undefined ? '—' : formatOutput(value)}</td>
                 })}
               </tr>)}</tbody>
             </table>
-          </div>
+          </div>}
           {unavailable.length > 0 && <p className="gg-performance-status" role="status">
             {unavailable.map((column) => `${moduleLabel(column.build, moduleChoices)}（${buildCondition(column.build)}）`).join('、')}の計算に必要なデータを取得できませんでした。
           </p>}
-          <section className="gg-performance-graphs" aria-label="比較グラフ">
+        </> : <p className="gg-probability-intro" role="status">{loading ? 'スキル情報を読み込み中…' : 'スキル情報の読み込み後に表示します。'}</p>}
+      </CollapsibleCalculatorPanel>
+
+      <CollapsibleCalculatorPanel
+        id="gg-performance-graphs"
+        number="03"
+        title="比較グラフ"
+        summary={skill ? `S${skill.skillIndex}・${format(duration)}秒・${chartLabel}${isDifference ? `・差分（基準：${baselineLabel}）` : ''}` : '術耐性別のスキル総ダメージ期待値'}
+        open={graphOpen}
+        onToggle={() => setGraphOpen((value) => !value)}
+        collapsedLabel="グラフを表示"
+      >
+        {skill ? <section aria-label="比較グラフ">
             <div className="gg-performance-graph-controls">
-              <h3 className="gg-table-title">グラフ</h3>
               <div className="gg-performance-graph-types" role="group" aria-label="表示グラフ">
                 {chartTypes.map((type) => <button key={type.value} type="button" aria-pressed={chartType === type.value}
                   onClick={() => setChartType(type.value)}>{type.label}</button>)}
               </div>
-              {chartType !== 'line' && <label className="calculator-field gg-performance-step">
-                <span>術耐性の刻み</span>
-                <input type="number" aria-label="グラフの術耐性の刻み" min={1} max={100} step={1} value={chartResistanceStepInput}
+            </div>
+            {chartType === 'line' && <div className="gg-performance-graph-options" role="group"
+              aria-label="折れ線グラフの設定">
+              <label className="gg-performance-stacked-option">
+                <input type="checkbox" checked={showLineEndLabels}
+                  onChange={(event) => setShowLineEndLabels(event.target.checked)} />
+                線の端に系列名を表示
+              </label>
+            </div>}
+            {chartType === 'bar' && <div className="gg-performance-graph-options" role="group"
+              aria-label="棒グラフの設定">
+              <label className="calculator-field gg-performance-graph-resistance">
+                <span>敵の術耐性</span>
+                <input type="number" aria-label="グラフの術耐性" min={0} max={100} step={1} value={chartResistanceInput}
                   onChange={(event) => {
-                    setChartResistanceStepInput(event.target.value)
+                    setChartResistanceInput(event.target.value)
                     const value = event.target.valueAsNumber
-                    if (Number.isInteger(value) && value >= 1 && value <= 100) setChartResistanceStep(value)
+                    if (Number.isInteger(value) && value >= 0 && value <= 100) setChartResistance(value)
                   }}
-                  onBlur={() => setChartResistanceStepInput(String(chartResistanceStep))}
+                  onBlur={() => setChartResistanceInput(String(chartResistance))}
                   onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }}
                 />
-              </label>}
-              {(chartType === 'bar' || chartType === 'stacked') && <label className="calculator-field gg-performance-graph-resistance">
-                <span>敵の術耐性</span>
-                <select aria-label="グラフの術耐性" value={activeChartResistance}
-                  onChange={(event) => setChartResistance(Number(event.target.value))}>
-                  {chartResistanceValues.map((value) => <option key={value} value={value}>{value}</option>)}
+              </label>
+              <label className="calculator-field gg-performance-bar-orientation">
+                <span>向き</span>
+                <select aria-label="棒グラフの向き" value={barOrientation}
+                  onChange={(event) => setBarOrientation(event.target.value as GoldenglowBarOrientation)}>
+                  <option value="horizontal">横</option>
+                  <option value="vertical">縦</option>
                 </select>
-              </label>}
+              </label>
+              <label className="calculator-field gg-performance-bar-design">
+                <span>棒グラフのデザイン</span>
+                <select aria-label="棒グラフのデザイン" value={barVariant}
+                  onChange={(event) => setBarVariant(event.target.value as GoldenglowBarVariant)}>
+                  {barVariants.map((variant) => <option key={variant.value} value={variant.value}>{variant.label}</option>)}
+                </select>
+              </label>
+              <label className="gg-performance-stacked-option">
+                <input type="checkbox" checked={stackedBars} onChange={(event) => setStackedBars(event.target.checked)} />
+                積み上げ表示
+              </label>
+            </div>}
+            <div className="gg-performance-graph-size-controls" role="group" aria-label="グラフの表示サイズ">
+              <label className="calculator-field gg-performance-graph-dimension">
+                <span>縦横比（幅:高さ）</span>
+                <select aria-label="グラフの縦横比" value={chartAspectPreset} onChange={(event) => {
+                  const preset = event.target.value
+                  setChartAspectPreset(preset)
+                  if (preset !== 'auto' && preset !== 'custom') {
+                    const [width, height] = preset.split(':').map(Number)
+                    setChartAspect({ width, height })
+                    setChartAspectInput({ width: String(width), height: String(height) })
+                  }
+                }}>
+                  <option value="auto">指定なし</option>
+                  {chartAspectPresets.map((preset) => <option key={preset} value={preset}>{preset}</option>)}
+                  <option value="custom">カスタム</option>
+                </select>
+              </label>
+              {chartAspectPreset === 'custom' && <div className="gg-performance-graph-ratio" role="group" aria-label="任意の縦横比">
+                {(['width', 'height'] as const).map((key, index) => <label key={key} className="calculator-field">
+                  <span>比率の{index === 0 ? '幅' : '高さ'}</span>
+                  <input type="number" aria-label={`グラフの比率の${index === 0 ? '幅' : '高さ'}`} min={1} max={100} step={1}
+                    value={chartAspectInput[key]} onChange={(event) => {
+                      const input = event.target.value
+                      const value = event.target.valueAsNumber
+                      setChartAspectInput((current) => ({ ...current, [key]: input }))
+                      if (Number.isInteger(value) && value >= 1 && value <= 100) {
+                        setChartAspect((current) => ({ ...current, [key]: value }))
+                      }
+                    }}
+                    onBlur={() => setChartAspectInput((current) => ({ ...current, [key]: String(chartAspect[key]) }))}
+                    onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }} />
+                </label>)}
+              </div>}
+              {chartDimensions.filter(({ key }) => key === 'width' || chartAspectPreset === 'auto').map(({ key, label, min, max }) => <label key={key} className="calculator-field gg-performance-graph-dimension">
+                <span>{label}</span>
+                <input type="number" aria-label={`グラフの${label}`} aria-describedby="gg-performance-size-help"
+                  min={min} max={max} step={1} placeholder="自動" value={chartSizeInput[key]}
+                  onChange={(event) => {
+                    const input = event.target.value
+                    const value = event.target.valueAsNumber
+                    setChartSizeInput((current) => ({ ...current, [key]: input }))
+                    if (input === '' || (Number.isInteger(value) && value >= min && value <= max)) {
+                      setChartSize((current) => ({ ...current, [key]: input === '' ? undefined : value }))
+                    }
+                  }}
+                  onBlur={() => setChartSizeInput((current) => ({ ...current, [key]: chartSize[key]?.toString() ?? '' }))}
+                  onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }}
+                />
+              </label>)}
+              <button type="button" className="button secondary" onClick={() => {
+                setChartSize({})
+                setChartSizeInput({ width: '', height: '' })
+                setChartAspectPreset('auto')
+                setChartAspect({ width: 16, height: 9 })
+                setChartAspectInput({ width: '16', height: '9' })
+              }}>自動に戻す</button>
               <button type="button" className="button secondary gg-performance-save-image"
                 aria-label="グラフをPNG画像で保存" title="選択中のグラフをPNG画像で保存"
                 disabled={savingImage || chartColumns.length === 0} aria-busy={savingImage}
                 onClick={() => void saveChartImage()}>{savingImage ? '画像を作成中…' : '画像を保存'}</button>
+              <p id="gg-performance-size-help">{chartAspectPreset === 'auto'
+                ? '空欄は自動で調整します。'
+                : '見出し・凡例を含む全体の比率です。幅が空欄なら画面に合わせ、内容が収まらない場合は比率を保って拡大します。'}</p>
             </div>
             <p role="status" className={imageFeedback === 'failed' ? 'gg-performance-status' : 'visually-hidden'}>
               {imageFeedback === 'failed' ? '画像を保存できませんでした。もう一度お試しください。'
                 : imageFeedback === 'saved' ? 'PNG画像のダウンロードを開始しました。' : ''}
             </p>
-            {renderChart()}
-          </section>
-          <details className="gg-performance-assumptions">
-            <summary>計算条件</summary>
-            <p>昇進2最大レベル・信頼100。敵1体を攻撃し続けたときの、本体・浮遊ユニット・爆発を合わせた総ダメージ期待値です。術耐性無視と、モジュール・潜在段階による攻撃力・攻撃速度・特性・素質の変化を各列に反映します。</p>
-            <p>初回攻撃は攻撃間隔後、浮遊ユニットの帰還・再索敵は0秒として計算します。S2は永続のため、指定した表示時間内の結果です。表示は小数点以下3桁までの概数です。</p>
-          </details>
-        </> : <p className="gg-probability-intro" role="status">{loading ? 'スキル情報を読み込み中…' : 'スキル情報の読み込み後に表示します。'}</p>}
+            <div className="gg-performance-chart-viewport" tabIndex={0} role="region" aria-label="グラフ表示領域">
+              {renderChart()}
+            </div>
+        </section> : <p className="gg-probability-intro" role="status">{loading ? 'スキル情報を読み込み中…' : 'スキル情報の読み込み後に表示します。'}</p>}
       </CollapsibleCalculatorPanel>
       {editor && <ComparisonColumnEditor
         key={editor.build.id}
@@ -329,10 +549,12 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
         onClose={() => setEditor(null)}
         onSave={(build) => {
           setSavedBuilds(editor.adding ? [...builds, build] : builds.map((current) => current.id === build.id ? build : current))
+          setBuildPresetId('custom')
           setEditor(null)
         }}
         onRemove={() => {
           setSavedBuilds(builds.filter((build) => build.id !== editor.build.id))
+          setBuildPresetId('custom')
           setEditor(null)
           window.requestAnimationFrame(() => addButtonRef.current?.focus({ preventScroll: true }))
         }}
