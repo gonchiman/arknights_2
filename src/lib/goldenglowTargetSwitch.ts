@@ -52,6 +52,23 @@ export interface GoldenglowTargetSwitchTotals {
   volleys: number
 }
 
+export interface GoldenglowTargetSwitchDroneTrace {
+  /** One-based, stable across all volleys in the trial. */
+  droneNumber: number
+  normalStackBefore: number
+  /** State for the next attack, including a reset when this volley kills. */
+  normalStackAfter: number
+  missesBefore: number
+  missesAfter: number
+  /** The would-be normal-attack multiplier before choosing normal or explosion. */
+  normalScalePercent: number
+  explosionChancePercent: number
+  rollPercent: number
+  exploded: boolean
+  /** After resistance, before the original target's remaining-HP cap. */
+  damage: number
+}
+
 export interface GoldenglowTargetSwitchTraceRow {
   time: number
   targetNumber: number
@@ -65,6 +82,7 @@ export interface GoldenglowTargetSwitchTraceRow {
   overkillDamage: number
   killed: boolean
   explosions: number
+  drones: GoldenglowTargetSwitchDroneTrace[]
 }
 
 export interface GoldenglowTargetSwitchTrial {
@@ -99,7 +117,7 @@ export interface GoldenglowTargetSwitchResult {
   sample: GoldenglowTargetSwitchTrial
 }
 
-interface PreparedSimulation {
+export interface GoldenglowTargetSwitchPreparedSimulation {
   input: GoldenglowTargetSwitchInput
   normalDamageByStack: number[]
   explosionDamage: number
@@ -122,7 +140,7 @@ interface PreparedSimulation {
 export function simulateGoldenglowTargetSwitch(
   input: GoldenglowTargetSwitchInput,
 ): GoldenglowTargetSwitchResult {
-  const prepared = prepareSimulation(input)
+  const prepared = prepareGoldenglowTargetSwitchSimulation(input)
   const timeline = createTimeline(input.duration)
   const total = emptyTotals()
   const dpsValues: number[] = []
@@ -133,8 +151,8 @@ export function simulateGoldenglowTargetSwitch(
 
   for (let trialIndex = 0; trialIndex < input.trials; trialIndex += 1) {
     const trialSeed = (input.seed + Math.imul(trialIndex, 0x9e3779b9)) >>> 0
-    const trial = runTrial(prepared, seededRandom(trialSeed), false, trialIndex === 0, timeline)
-    const baseline = runTrial(prepared, seededRandom(trialSeed), true, false, timeline)
+    const trial = runTrial(prepared, createGoldenglowTargetSwitchRandom(trialSeed), false, trialIndex === 0, timeline)
+    const baseline = runTrial(prepared, createGoldenglowTargetSwitchRandom(trialSeed), true, false, timeline)
     if (trialIndex === 0) sample = trial
     addTotals(total, trial.totals)
     baselineDamage += baseline.totals.rawDamage
@@ -184,8 +202,8 @@ export function simulateGoldenglowTargetSwitchTrial(
   input: GoldenglowTargetSwitchInput,
   random?: () => number,
 ): GoldenglowTargetSwitchTrial {
-  const prepared = prepareSimulation(input)
-  const source = random ?? seededRandom(input.seed)
+  const prepared = prepareGoldenglowTargetSwitchSimulation(input)
+  const source = random ?? createGoldenglowTargetSwitchRandom(input.seed)
   const checkedRandom = () => {
     const value = source()
     if (!Number.isFinite(value) || value < 0 || value >= 1) {
@@ -197,7 +215,7 @@ export function simulateGoldenglowTargetSwitchTrial(
 }
 
 function runTrial(
-  prepared: PreparedSimulation,
+  prepared: GoldenglowTargetSwitchPreparedSimulation,
   random: () => number,
   immortalTarget: boolean,
   recordTrace: boolean,
@@ -234,8 +252,14 @@ function runTrial(
     let normalDamage = 0
     let volleyExplosionDamage = 0
     let explosions = 0
+    const drones: GoldenglowTargetSwitchDroneTrace[] | undefined = recordTrace ? [] : undefined
     for (let droneIndex = 0; droneIndex < misses.length; droneIndex += 1) {
-      if (random() < explosionChances[misses[droneIndex]]) {
+      const normalStackBefore = normalStacks[droneIndex]
+      const missesBefore = misses[droneIndex]
+      const explosionChance = explosionChances[missesBefore]
+      const roll = random()
+      const exploded = roll < explosionChance
+      if (exploded) {
         volleyExplosionDamage += explosionDamage
         explosions += 1
         misses[droneIndex] = 0
@@ -243,6 +267,20 @@ function runTrial(
         normalDamage += normalDamageByStack[normalStacks[droneIndex]]
         normalStacks[droneIndex] = Math.min(normalStacks[droneIndex] + 1, input.model.droneMaxStack)
         misses[droneIndex] = Math.min(misses[droneIndex] + 1, input.model.prdMaxStack)
+      }
+      if (drones) {
+        drones.push({
+          droneNumber: droneIndex + 1,
+          normalStackBefore,
+          normalStackAfter: normalStacks[droneIndex],
+          missesBefore,
+          missesAfter: misses[droneIndex],
+          normalScalePercent: getGoldenglowDroneAttackScalePercent(normalStackBefore + 1, input.model),
+          explosionChancePercent: explosionChance * 100,
+          rollPercent: roll * 100,
+          exploded,
+          damage: exploded ? explosionDamage : normalDamageByStack[normalStackBefore],
+        })
       }
     }
 
@@ -257,6 +295,9 @@ function runTrial(
     const hpAfter = killed ? 0 : hpRemainder
     const overkillDamage = rawDamage - effectiveDamage
     if (recordTrace) {
+      if (killed) {
+        for (const drone of drones!) drone.normalStackAfter = 0
+      }
       trace.push({
         time,
         targetNumber: totals.kills + 1,
@@ -270,6 +311,7 @@ function runTrial(
         overkillDamage,
         killed,
         explosions,
+        drones: drones!,
       })
     }
     totals.normalDamage += normalDamage
@@ -295,7 +337,8 @@ function runTrial(
   return { totals, trace }
 }
 
-function prepareSimulation(input: GoldenglowTargetSwitchInput): PreparedSimulation {
+/** Shared by the full single-condition output and the mean-only grid. */
+export function prepareGoldenglowTargetSwitchSimulation(input: GoldenglowTargetSwitchInput): GoldenglowTargetSwitchPreparedSimulation {
   validateInput(input)
   const { model, effectiveAttack, enemyDefense, enemyResistance } = input
   const normalDamageByStack = Array.from({ length: model.droneMaxStack + 1 }, (_, stack) => (
@@ -400,7 +443,7 @@ function percentile(sorted: number[], fraction: number): number {
 }
 
 /** Mulberry32; trial seeds are derived independently so trial-count changes keep the first trace. */
-function seededRandom(seed: number): () => number {
+export function createGoldenglowTargetSwitchRandom(seed: number): () => number {
   let state = seed >>> 0
   return () => {
     state = (state + 0x6d2b79f5) >>> 0

@@ -1,0 +1,17 @@
+.ggs-bars-hp-selection { display: grid; gap: 10px; padding: 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.ggs-bars-hp-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.ggs-bars-hp-buttons button { min-width: 68px; min-height: 36px; padding: 6px 10px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; }
+.ggs-bars-hp-buttons button[aria-pressed="true"] { border-color: var(--text-soft); box-shadow: inset 0 -2px 0 var(--text-soft); font-weight: 700; }
+.ggs-bars-hp-buttons button:disabled { cursor: default; }
+.ggs-bars-hp-buttons button:disabled[aria-pressed="false"] { opacity: .4; }
+.ggs-bars-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+.ggs-bars-svg { display: block; overflow: hidden; }
+.ggs-chart-bar { cursor: pointer; outline: none; }
+.ggs-chart-bar-fill { pointer-events: none; }
+.ggs-chart-bar-target { fill: transparent; stroke: transparent; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.ggs-chart-bar.selected .ggs-chart-bar-target { stroke: var(--text-soft); }
+.ggs-chart-bar:focus-visible .ggs-chart-bar-target { stroke: var(--text); }
+@media (max-width: 640px) {
+  .ggs-bars-hp-selection { padding: 10px; }
+  .ggs-bars-hp-buttons button { min-height: 44px; }
+}

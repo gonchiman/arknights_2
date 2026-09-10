@@ -49,6 +49,7 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [footerContainer, setFooterContainer] = useState<HTMLElement | null>(null)
   const sidebarToggleRef = useRef<HTMLButtonElement>(null)
   const detailBackgroundRouteRef = useRef<BaseAppRoute | null>(null)
   const detailTriggerRef = useRef<HTMLAnchorElement | null>(null)
@@ -222,7 +223,7 @@ export default function App() {
         ) : displayedRoute.view === 'goldenglow-performance' ? (
           <GoldenglowPerformancePage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
         ) : displayedRoute.view === 'goldenglow-target-switch' ? (
-          <GoldenglowTargetSwitchPage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
+          <GoldenglowTargetSwitchPage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} footerContainer={footerContainer} />
         ) : displayedRoute.view === 'damage' ? (
           <DamageCalculator
             rows={classifiedRows}
@@ -285,7 +286,7 @@ export default function App() {
           />
         )}
         </main>
-        <footer className="site-footer">
+        <footer className="site-footer" ref={setFooterContainer}>
           <a
             href={ARKNIGHTS_GAMEDATA_REPOSITORY.url}
             target="_blank"

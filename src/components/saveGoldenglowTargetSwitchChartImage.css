@@ -1,0 +1,19 @@
+.ggs-chart-image {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 24px;
+  background: #fff;
+  color: #222;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.ggs-chart-image-heading { margin-bottom: 8px; text-align: center; }
+.ggs-chart-image-heading h1 { margin: 0; font-size: 20px; line-height: 1.4; overflow-wrap: anywhere; }
+.ggs-chart-image-legend { display: flex; align-items: flex-start; gap: 8px 18px; margin-bottom: 8px; }
+.ggs-chart-image-legend > strong { white-space: nowrap; }
+.ggs-chart-image-legend ul { display: flex; flex: 1; min-width: 0; align-items: center; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; list-style: none; }
+.ggs-chart-image-legend li { display: inline-flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ggs-chart-image-legend svg { flex: 0 0 auto; }
+.ggs-chart-image-plot { width: 100%; }
+.ggs-chart-image-plot > svg { display: block; width: 100%; max-width: none; height: auto; }

@@ -1,10 +1,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { loadEnemyRecords } from '../lib/enemyData'
 import { getEnemyCombatInputValues, hasEnemyCombatInputChanges } from '../lib/enemySelection'
 import { deriveGoldenglowGuideSkills } from '../lib/goldenglowGuideSkill'
 import { GOLDENGLOW_OPERATOR_ID } from '../lib/goldenglowExplosion'
 import { getOperatorModules, getOperatorModuleId, getOperatorModuleLevels, isOperatorModuleUnlocked } from '../lib/operatorModules'
 import type { GoldenglowTargetSwitchInput, GoldenglowTargetSwitchResult } from '../lib/goldenglowTargetSwitch'
+import type { GoldenglowTargetSwitchGridSetup } from '../lib/goldenglowTargetSwitchGrid'
+import { useGoldenglowTargetSwitchPanelOpen } from '../lib/useGoldenglowTargetSwitchPanelOpen'
 import type { SkillRecord } from '../types/skill'
 import type { EnemyRecord } from '../types/enemy'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
@@ -14,6 +17,9 @@ import { GoldenglowBuildControls } from './GoldenglowBuildControls'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { GoldenglowModuleEffect } from './GoldenglowModuleEffect'
 import { GoldenglowTargetSwitchDetailModal, type GoldenglowTargetSwitchDetail } from './GoldenglowTargetSwitchDetailModal'
+import { GOLDENGLOW_TARGET_SWITCH_HP_PRESETS, GoldenglowTargetSwitchGridPanels } from './GoldenglowTargetSwitchGridPanel'
+import { GoldenglowTargetSwitchHelpModal } from './GoldenglowTargetSwitchHelpModal'
+import { GoldenglowTargetSwitchTrialPanel } from './GoldenglowTargetSwitchTrialPanel'
 import './DamageCalculator.css'
 import './GoldenglowGuidePage.css'
 import './GoldenglowTargetSwitchPage.css'
@@ -22,11 +28,12 @@ const formatters = [0, 1, 2, 3].map((maximumFractionDigits) => new Intl.NumberFo
 const format = (value: number, digits = 1) => formatters[digits].format(value)
 type PageDetail = GoldenglowTargetSwitchDetail | { kind: 'attack' }
 
-export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry }: {
+export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, footerContainer }: {
   rows: readonly SkillRecord[]
   loading: boolean
   error: string | null
   onRetry: () => void
+  footerContainer: HTMLElement | null
 }) {
   const [moduleId, setModuleId] = useState('')
   const [moduleLevel, setModuleLevel] = useState(3)
@@ -55,6 +62,11 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry }: {
   const enemySearchTrigger = useRef<HTMLButtonElement>(null)
   const enemyCatalog = useEnemyCatalog(enemySearchOpen)
   const enemyAdjusted = selectedEnemy ? hasEnemyCombatInputChanges(selectedEnemy, { hp, resistance }) : false
+  const selectedEnemyBase = selectedEnemy ? getEnemyCombatInputValues(selectedEnemy) : null
+  const enemyNeedsInput = selectedEnemyBase && (
+    (selectedEnemyBase.hp === '' && hp.trim() === '')
+    || (selectedEnemyBase.resistance === '' && resistance.trim() === '')
+  )
   const closeEnemySearch = () => {
     setEnemySearchOpen(false)
     enemySearchTrigger.current?.focus({ preventScroll: true })
@@ -72,8 +84,9 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry }: {
   const [intervalOverride, setIntervalOverride] = useState<string | null>(null)
   const [trials, setTrials] = useState(10000)
   const [seed, setSeed] = useState(20260908)
-  const [open, setOpen] = useState(true)
-  const [resultsOpen, setResultsOpen] = useState(true)
+  const [open, setOpen] = useGoldenglowTargetSwitchPanelOpen('conditions')
+  const [resultsOpen, setResultsOpen] = useGoldenglowTargetSwitchPanelOpen('results')
+  const [helpOpen, setHelpOpen] = useState(false)
   const [detail, setDetail] = useState<PageDetail | null>(null)
   const attack = attackOverride ?? String(skill?.effectiveAttack ?? 0)
   const interval = intervalOverride ?? String(skill?.attackInterval ?? 1.3)
@@ -86,14 +99,19 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry }: {
     setDetail(null)
     setEffectDetail(null)
   }
-  const fieldError = [
-    invalidNumber(hp, 0, 1e9, '敵HP'),
-    invalidNumber(resistance, 0, 100, '術耐性'),
+  const commonFieldError = [
     invalidNumber(switchDelay, 0, 5, '切り替えの追加時間'),
     invalidNumber(attack, 0, 1e6, 'スキル中の攻撃力'),
     invalidNumber(interval, 0.05, 300, '攻撃間隔'),
     skill?.skillIndex === 2 ? invalidNumber(viewingDuration, 0.1, 300, '計測時間') : null,
   ].find(Boolean) ?? null
+  const fieldError = invalidNumber(hp, 0, 1e9, '敵HP')
+    ?? invalidNumber(resistance, 0, 100, '術耐性') ?? commonFieldError
+  const gridInput = useMemo<GoldenglowTargetSwitchGridSetup | null>(() => skill && !commonFieldError ? {
+    model: skill.explosionModel, skillIndex: skill.skillIndex,
+    effectiveAttack: Number(attack), attackInterval: Number(interval), duration,
+    enemyDefense: 0, switchDelay: Number(switchDelay), trials, seed,
+  } : null, [skill, commonFieldError, attack, interval, duration, switchDelay, trials, seed])
   const input = useMemo<GoldenglowTargetSwitchInput | null>(() => skill && !fieldError && Number(hp) >= 1 ? {
     model: skill.explosionModel, skillIndex: skill.skillIndex,
     effectiveAttack: Number(attack), attackInterval: Number(interval), duration,
@@ -101,6 +119,9 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry }: {
     switchDelay: Number(switchDelay), trials, seed,
   } : null, [skill, fieldError, attack, interval, duration, hp, resistance, switchDelay, trials, seed])
   const calculation = useSimulation(input)
+  const resultStatus = fieldError ? '入力値を確認してください。'
+    : Number(hp) < 1 ? '敵HPを1以上にすると計算します。'
+      : calculation.error ?? (calculation.result ? null : '爆発の抽選と撃破を計算中…')
   useEffect(() => setDetail(null), [input])
   const openCondition = (condition: Extract<GoldenglowTargetSwitchDetail, { kind: 'condition' }>['condition']) => (
     input ? () => setDetail({ kind: 'condition', condition }) : undefined
@@ -207,7 +228,6 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry }: {
               <ValueRow label="術耐性の固定無視" onOpen={openCondition('enemyResistance')} value={format(skill.explosionModel.resistanceIgnoreFixed)} />
             </tbody>
           </TableSection>
-          <p className="ggs-caption">{skill.skillLevelLabel}・昇進2最大レベル・信頼100・潜在1・{moduleLabel}。› の行から詳細を表示。</p>
           <TableSection id="ggs-enemy-conditions" title="敵">
             <tbody>
               <ValueRow label="敵の選択" value={<div className="ggs-enemy-picker">
@@ -232,7 +252,7 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry }: {
               <ValueRow label="敵の術耐性" onOpen={openCondition('enemyResistance')} value={<ResistanceInput value={resistance} onChange={setResistance} />} />
             </tbody>
           </TableSection>
-          {selectedEnemy && <p className="ggs-caption">図鑑の基礎ステータスを反映。ステージ補正・敵の能力は含めません。各数値は選択後も変更できます。{Object.values(getEnemyCombatInputValues(selectedEnemy)).some((value) => value === '') && '未取得のステータスは空欄です。数値を入力してください。'}</p>}
+          {enemyNeedsInput && <p className="ggs-status" role="status">未取得のステータスは空欄です。数値を入力してください。</p>}
           <TableSection id="ggs-battle-conditions" title="戦闘・計測条件">
             <tbody>
               {skill.skillIndex === 2 && <ValueRow label="発動後の計測時間" onOpen={openCondition('duration')} value={<NumericInput id="ggs-duration" label="発動後の計測時間" value={viewingDuration} onChange={setViewingDuration} min={0.1} max={300} unit="秒" />} />}
@@ -254,9 +274,18 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry }: {
         </CollapsibleCalculatorPanel>
         <CollapsibleCalculatorPanel id="ggs-results-panel" number="02" title="計算結果" summary={`S${skill.skillIndex}・${skill.duration === null ? '計測時間' : 'スキル時間'}${format(duration)}秒・撃破後に次の敵へ`}
           open={resultsOpen} onToggle={() => setResultsOpen((value) => !value)} collapsedLabel="結果を表示">
-          <p className="ggs-status" role="status" aria-live="polite">{fieldError ? '入力値を確認してください。' : Number(hp) < 1 ? '敵HPを1以上にすると計算します。' : calculation.error ?? (calculation.result ? `${format(trials, 0)}回の試行平均・${format(duration)}秒間` : '爆発の抽選と撃破を計算中…')}</p>
+          {resultStatus && <p className="ggs-status" role="status" aria-live="polite">{resultStatus}</p>}
           {input && calculation.result && <OutputTables result={calculation.result} input={input} onOpen={setDetail} />}
         </CollapsibleCalculatorPanel>
+        <GoldenglowTargetSwitchGridPanels input={gridInput} error={commonFieldError} />
+        <GoldenglowTargetSwitchTrialPanel input={input} result={calculation.result} status={resultStatus} onOpen={setDetail} />
+        {footerContainer && createPortal(<button type="button" className="ggs-footer-link" aria-haspopup="dialog"
+          onClick={() => setHelpOpen(true)}>計算条件と結果の見方</button>, footerContainer)}
+        {helpOpen && <GoldenglowTargetSwitchHelpModal
+          buildLabel={`S${skill.skillIndex} ${skill.skillLevelLabel}・${moduleLabel}`}
+          duration={duration} permanent={skill.skillIndex === 2} trials={trials}
+          droneCount={skill.explosionModel.activeDroneCount} hpRanges={Object.values(GOLDENGLOW_TARGET_SWITCH_HP_PRESETS)}
+          onClose={() => setHelpOpen(false)} />}
         {input && detail && (detail.kind === 'attack' ? <GoldenglowAttackDetailModal skill={skill} attackOverride={attackOverride === null ? null : Number(attackOverride)} onClose={() => setDetail(null)} />
           : <GoldenglowTargetSwitchDetailModal detail={detail} input={input} result={calculation.result} onClose={() => setDetail(null)} />)}
       </>}
@@ -297,8 +326,6 @@ function OutputTables({ result, input, onOpen }: { result: GoldenglowTargetSwitc
         <ValueRow label="爆発" value={format(mean.explosionDamage, 3)} />
       </tbody>
     </TableSection>
-    <p className="ggs-caption">攻撃回数・ダメージは試行平均です。浮遊ユニット攻撃回数と爆発回数は全{droneCount}体の合計で、攻撃回数には爆発も1回として含みます。</p>
-    <p className="ggs-caption">ダメージは術耐性適用後で、撃破時に残HPを超えた分も含みます。内訳の「浮遊ユニット」は爆発分を含みません。DPSは総ダメージを{format(result.duration, 3)}秒で割った値です。{permanent && 'S2は永続のため、指定した計測時間内の結果です。'}</p>
   </>
 }
 

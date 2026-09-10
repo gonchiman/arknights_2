@@ -1,0 +1,61 @@
+.ggs-chart { min-width: 0; margin: 0; border: 1px solid var(--border-strong); background: var(--surface); }
+.ggs-chart-legend { display: grid; gap: 10px; padding: 12px; border-bottom: 1px solid var(--border); background: var(--surface-soft); }
+.ggs-chart-legend-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 12px; }
+.ggs-chart-legend-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ggs-chart-legend-actions button { min-height: 32px; padding: 4px 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-soft); font: inherit; font-size: 11px; cursor: pointer; }
+.ggs-chart-legend-actions button:disabled { opacity: .45; cursor: default; }
+.ggs-chart-series-buttons { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.ggs-chart-series-buttons button { display: inline-flex; justify-content: center; align-items: center; gap: 7px; min-width: 66px; min-height: 36px; padding: 6px 10px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-size: 12px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.ggs-chart-series-buttons button[aria-pressed="true"] { border-color: var(--text-soft); box-shadow: inset 0 -2px 0 var(--text-soft); font-weight: 700; }
+.ggs-chart-series-buttons button[aria-pressed="false"] { color: var(--text-muted); }
+.ggs-chart-series-buttons button[aria-pressed="false"] svg { opacity: .25; }
+.ggs-chart-series-buttons svg { width: 24px; height: 8px; flex: 0 0 24px; }
+.ggs-chart button:hover:not(:disabled) { background: var(--surface-hover); }
+.ggs-chart button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.ggs-chart-frame { position: relative; min-width: 0; width: 100%; }
+.ggs-chart-svg { display: block; max-width: 100%; overflow: visible; }
+.ggs-chart-grid { stroke: var(--border); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.ggs-chart-axis { fill: none; stroke: #aeb6bd; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.ggs-chart-tick { fill: var(--text-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
+.ggs-chart-axis-title { fill: var(--text-soft); font-size: 12px; font-weight: 700; }
+.ggs-chart-axis-mark { stroke: #aeb6bd; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.ggs-chart-line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.ggs-chart-point { cursor: pointer; outline: none; }
+.ggs-chart-point-target { fill: transparent; }
+.ggs-chart-point-dot { stroke-width: 1.5; vector-effect: non-scaling-stroke; pointer-events: none; }
+.ggs-chart-point:focus-visible .ggs-chart-point-target { fill: #ffffffb3; stroke: var(--text); stroke-width: 2; }
+.ggs-chart-empty { position: absolute; inset: 38% 22px auto 72px; margin: 0; padding: 12px; background: var(--surface); color: var(--text-soft); font-size: 12px; line-height: 1.7; text-align: center; }
+.ggs-chart-selected { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; min-height: 44px; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
+.ggs-chart-selected span { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 640px) {
+  .ggs-chart-legend { padding: 10px; }
+  .ggs-chart-legend-actions button, .ggs-chart-series-buttons button { min-height: 44px; }
+  .ggs-chart-series-buttons button { min-width: 65px; }
+  .ggs-chart-selected { gap: 8px 16px; padding: 12px; }
+}
+.ggs-chart-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 16px; padding: 12px; border: 1px solid var(--border-strong); border-bottom: 0; background: var(--surface); }
+.gg-switch-page .ggs-chart-heading .gg-table-title { margin: 0; }
+.ggs-chart-display-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 12px; max-width: 100%; }
+.ggs-chart-save-image { min-height: 36px; white-space: nowrap; font-size: 12px; }
+.ggs-chart-color-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; max-width: 100%; }
+.ggs-chart-custom-color { display: inline-flex; align-items: center; gap: 8px; }
+.ggs-chart-palette { display: inline-flex; align-items: center; gap: 8px; color: var(--text-soft); font-size: 12px; }
+.ggs-chart-palette select, .ggs-chart-color-code { min-height: 36px; padding: 6px 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-size: 12px; }
+.ggs-chart-color-code { width: 88px; box-sizing: border-box; font-variant-numeric: tabular-nums; }
+.ggs-chart-color-picker { width: 36px; height: 36px; padding: 3px; border: 1px solid var(--border-strong); background: var(--surface); cursor: pointer; }
+.ggs-chart-color-controls input:focus-visible, .ggs-chart-palette select:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.ggs-chart-type { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 100%; border: 1px solid var(--border-strong); }
+.ggs-chart-type button { min-height: 36px; padding: 8px 14px; border: 0; background: var(--surface); color: var(--text-soft); font: inherit; font-size: 12px; cursor: pointer; }
+.ggs-chart-type button + button { border-left: 1px solid var(--border-strong); }
+.ggs-chart-type button[aria-pressed="true"] { background: var(--text); color: var(--surface); font-weight: 700; }
+.ggs-chart-type button:hover:not([aria-pressed="true"]) { background: var(--surface-hover); }
+.ggs-chart-type button:focus-visible { position: relative; z-index: 1; outline: 2px solid var(--text); outline-offset: 2px; }
+@media (max-width: 640px) {
+  .ggs-chart-heading { padding: 10px; }
+  .ggs-chart-display-controls { justify-content: flex-start; }
+  .ggs-chart-palette select, .ggs-chart-color-code { min-height: 44px; font-size: 16px; }
+  .ggs-chart-color-code { width: 98px; }
+  .ggs-chart-color-picker { width: 44px; height: 44px; }
+  .ggs-chart-type button { min-height: 44px; }
+  .ggs-chart-save-image { min-height: 44px; }
+}

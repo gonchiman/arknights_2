@@ -113,6 +113,11 @@ test('確定爆発はPRDだけを初期化し、同一目標の通常倍率を�
   }))
   assert.deepEqual(result.sample.trace.map((row) => row.explosions), [0, 0, 1, 0, 0, 1, 0])
   result.sample.trace.forEach((row, index) => close(row.normalDamage, [20, 35, 0, 50, 65, 0, 80][index]))
+  assert.deepEqual(result.sample.trace.map((row) => row.drones[0].normalStackBefore), [0, 1, 2, 2, 3, 4, 4])
+  assert.deepEqual(result.sample.trace.map((row) => row.drones[0].normalStackAfter), [1, 2, 2, 3, 4, 4, 5])
+  assert.deepEqual(result.sample.trace.map((row) => row.drones[0].missesBefore), [0, 1, 2, 0, 1, 2, 0])
+  assert.deepEqual(result.sample.trace.map((row) => row.drones[0].missesAfter), [1, 2, 0, 1, 2, 0, 1])
+  assert.deepEqual(result.sample.trace.map((row) => row.drones[0].explosionChancePercent), [0, 0, 100, 0, 0, 100, 0])
   close(result.mean.normalDamage, 250)
   close(result.mean.explosionDamage, 600)
   close(result.mean.rawDamage, 850)
@@ -131,12 +136,39 @@ test('撃破による目標変更をまたいでもPRDの不発回数を保持�
 })
 
 test('浮遊ごとにPRDと通常倍率を独立して保持する', () => {
+  const rolls = [0.1, 0.9, 0.3, 0.3, 0.9, 0.9]
+  let randomCalls = 0
   const trial = simulateGoldenglowTargetSwitchTrial(input({
     model: { ...model, prdStep: 0.25, activeDroneCount: 2 }, enemyHp: 1_000_000, duration: 3,
-  }), sequence([0.1, 0.9, 0.3, 0.3, 0.9, 0.9]))
+  }), () => rolls[randomCalls++])
   assert.deepEqual(trial.trace.map((row) => row.explosions), [1, 1, 0])
   trial.trace.forEach((row, index) => close(row.normalDamage, [20, 20, 70][index]))
   close(trial.totals.rawDamage, 710)
+  assert.equal(randomCalls, 6, 'one RNG call per drone attack, including recorded attacks')
+  const drones = trial.trace.flatMap((row) => row.drones)
+  assert.deepEqual(drones.map((drone) => drone.droneNumber), [1, 2, 1, 2, 1, 2])
+  assert.deepEqual(drones.map((drone) => drone.rollPercent), [10, 90, 30, 30, 90, 90])
+  assert.deepEqual(drones.map((drone) => drone.explosionChancePercent), [25, 25, 25, 50, 50, 25])
+  assert.deepEqual(drones.map((drone) => drone.exploded), [true, false, false, true, false, false])
+  assert.deepEqual(drones.map((drone) => drone.normalStackBefore), [0, 0, 0, 1, 1, 1])
+  assert.deepEqual(drones.map((drone) => drone.normalStackAfter), [0, 1, 1, 1, 2, 2])
+  assert.deepEqual(drones.map((drone) => drone.missesBefore), [0, 0, 0, 1, 1, 0])
+  assert.deepEqual(drones.map((drone) => drone.missesAfter), [0, 1, 1, 0, 2, 1])
+  drones.forEach((drone, index) => {
+    close(drone.normalScalePercent, [20, 20, 20, 35, 35, 35][index])
+    close(drone.damage, [300, 20, 20, 300, 35, 35][index])
+  })
+})
+
+test('爆発判定と同じ乱数を記録し、発動確率と同値の乱数では爆発しない', () => {
+  const trial = simulateGoldenglowTargetSwitchTrial(input({
+    model: { ...model, prdStep: 0.25, activeDroneCount: 2 }, enemyHp: 1_000_000, duration: 2,
+  }), sequence([0.25, 0.249999, 0.5, 0.25]))
+  const drones = trial.trace.flatMap((row) => row.drones)
+  assert.deepEqual(drones.map((drone) => drone.exploded), [false, true, false, false])
+  for (const drone of drones) {
+    assert.equal(drone.exploded, drone.rollPercent < drone.explosionChancePercent)
+  }
 })
 
 test('ひとつの浮遊が撃破しても次の目標では全浮遊の通常倍率を初期化する', () => {
@@ -146,6 +178,11 @@ test('ひとつの浮遊が撃破しても次の目標では全浮遊の通常�
   assert.equal(trial.trace[0].killed, true)
   close(trial.trace[1].normalDamage, 40)
   assert.equal(trial.trace[1].targetNumber, 2)
+  assert.deepEqual(trial.trace[0].drones.map((drone) => drone.normalStackAfter), [0, 0])
+  assert.deepEqual(trial.trace[1].drones.map((drone) => drone.normalStackBefore), [0, 0])
+  assert.deepEqual(trial.trace[0].drones.map((drone) => drone.missesAfter), [0, 1])
+  assert.deepEqual(trial.trace[1].drones.map((drone) => drone.missesBefore), [0, 1])
+  assert.deepEqual(trial.trace[1].drones.map((drone) => drone.explosionChancePercent), [25, 50])
 })
 
 test('同じ一斉攻撃の本体と浮遊を合算し、一度に複数の敵は倒さない', () => {
@@ -231,7 +268,13 @@ test('術攻撃は防御を無視し、耐性無視と5%の最低保証を全成
 
 test('通常倍率は上限で停止する', () => {
   const trial = simulateGoldenglowTargetSwitchTrial(input({ enemyHp: 1_000_000, duration: 10 }))
-  trial.trace.forEach((row, index) => close(row.normalDamage, [20, 35, 50, 65, 80, 95, 110, 110, 110, 110][index]))
+  trial.trace.forEach((row, index) => {
+    const expectedScale = [20, 35, 50, 65, 80, 95, 110, 110, 110, 110][index]
+    close(row.normalDamage, expectedScale)
+    close(row.drones[0].normalScalePercent, expectedScale)
+    assert.equal(row.drones[0].normalStackBefore, Math.min(index, 6))
+    assert.equal(row.drones[0].normalStackAfter, Math.min(index + 1, 6))
+  })
 })
 
 test('乱数シードで全結果を再現でき、試行数を変えても最初の実行例は変わらない', () => {
@@ -284,6 +327,21 @@ test('平均・実行例・時間推移でダメージ保存則と終端の一�
   close(endpoint.baselineRawDamage, result.baseline.rawDamage)
   close(endpoint.kills, result.mean.kills)
   close(result.sample.trace.reduce((sum, row) => sum + row.effectiveDamage, 0), result.sample.totals.effectiveDamage)
+  result.sample.trace.forEach((row, rowIndex) => {
+    assert.equal(row.drones.length, 2)
+    close(row.drones.filter((drone) => !drone.exploded).reduce((sum, drone) => sum + drone.damage, 0), row.normalDamage)
+    close(row.drones.filter((drone) => drone.exploded).reduce((sum, drone) => sum + drone.damage, 0), row.explosionDamage)
+    close(row.drones.reduce((sum, drone) => sum + drone.damage, row.bodyDamage), row.rawDamage)
+    assert.equal(row.drones.filter((drone) => drone.exploded).length, row.explosions)
+    for (const [droneIndex, drone] of row.drones.entries()) {
+      if (row.killed) assert.equal(drone.normalStackAfter, 0)
+      const nextDrone = result.sample.trace[rowIndex + 1]?.drones[droneIndex]
+      if (nextDrone) {
+        assert.equal(nextDrone.normalStackBefore, drone.normalStackAfter)
+        assert.equal(nextDrone.missesBefore, drone.missesAfter)
+      }
+    }
+  })
 })
 
 test('単一試行では標準誤差を算出せず、攻撃力0でもHPを減らさない', () => {

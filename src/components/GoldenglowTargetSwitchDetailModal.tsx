@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react'
 import { DATA_SOURCE_URLS } from '../lib/dataSources'
+import { getGoldenglowDroneAttackScalePercent } from '../lib/goldenglowExplosion'
 import type {
   GoldenglowTargetSwitchInput,
   GoldenglowTargetSwitchResult,
+  GoldenglowTargetSwitchTrial,
 } from '../lib/goldenglowTargetSwitch'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import './GoldenglowGuidePage.css'
@@ -12,8 +14,7 @@ export type GoldenglowTargetSwitchDetail =
   | { kind: 'condition'; condition: 'enemyHp' | 'enemyResistance' | 'attackInterval' | 'duration' | 'drones' | 'switchDelay' | 'sampling' }
   | { kind: 'comparison'; mode: 'baseline' | 'raw' | 'effective' }
   | { kind: 'timeline'; index: number }
-  | { kind: 'trace'; index: number }
-  | { kind: 'sample' }
+  | { kind: 'trace'; index: number; seed: number; trial: GoldenglowTargetSwitchTrial }
   | { kind: 'model' }
 
 type Props = {
@@ -50,13 +51,12 @@ export function GoldenglowTargetSwitchDetailModal({ detail, input, result, onClo
 function getDetailContent(detail: GoldenglowTargetSwitchDetail, input: GoldenglowTargetSwitchInput, result: GoldenglowTargetSwitchResult | null): DetailContent | null {
   if (detail.kind === 'condition') return conditionDetail(detail.condition, input)
   if (detail.kind === 'model') return modelDetail(input)
+  if (detail.kind === 'trace') return traceDetail(detail.index, input, detail.trial, detail.seed)
   if (!result) return null
   switch (detail.kind) {
     case 'metric': return metricDetail(detail.metric, input, result)
     case 'comparison': return comparisonDetail(detail.mode, input, result)
     case 'timeline': return timelineDetail(detail.index, result)
-    case 'trace': return traceDetail(detail.index, input, result)
-    case 'sample': return sampleDetail(input, result)
   }
 }
 
@@ -220,7 +220,7 @@ function conditionDetail(condition: Extract<GoldenglowTargetSwitchDetail, { kind
         ['本体の攻撃', input.skillIndex === 3 ? 'なし（S3）' : 'あり'],
       ]} />
       <p>通常攻撃倍率と爆発の連続不発回数は浮遊ごとに管理します。自爆はその浮遊の通常攻撃を置き換え、不発回数だけを0に戻します。同じ敵なら通常倍率を維持し、撃破で敵が変わると全浮遊の通常倍率が初期値へ戻ります。</p>
-      <p>敵が変わっても連続不発回数を維持する扱いは、参照資料の初期化条件から採用した仮定です。浮遊ごとの抽選結果や倍率の履歴は出力していません。</p>
+      <p>敵が変わっても連続不発回数を維持する扱いは、参照資料の初期化条件から採用した仮定です。パネル5の攻撃履歴から、浮遊ごとの抽選結果や倍率の変化を確認できます。</p>
     </> }
     case 'switchDelay': return { title: '撃破後の切り替え時間', body: <>
       <ValueTable title="次の敵を攻撃するまでの時間" rows={[
@@ -286,13 +286,13 @@ function timelineDetail(index: number, result: GoldenglowTargetSwitchResult): De
   </> }
 }
 
-function traceDetail(index: number, input: GoldenglowTargetSwitchInput, result: GoldenglowTargetSwitchResult): DetailContent | null {
-  if (!Number.isInteger(index) || index < 0 || index >= result.sample.trace.length) return null
-  const row = result.sample.trace[index]
-  const nextRow = result.sample.trace[index + 1]
+function traceDetail(index: number, input: GoldenglowTargetSwitchInput, trial: GoldenglowTargetSwitchTrial, seed: number): DetailContent | null {
+  if (!Number.isInteger(index) || index < 0 || index >= trial.trace.length) return null
+  const row = trial.trace[index]
+  const nextRow = trial.trace[index + 1]
   const nextTime = row.time + input.attackInterval + (row.killed ? input.switchDelay : 0)
   return { title: `${index + 1}回目の攻撃・${format(row.time)}秒`, body: <>
-    <p>抽選番号{format(result.seed, 0)}の最初の1試行です。全試行の平均値や代表例ではありません。</p>
+    <p>抽選番号{format(seed, 0)}で計算した1回分の攻撃履歴です。</p>
     <ValueTable title={`敵#${row.targetNumber}への一斉攻撃`} rows={[
       ['着弾時刻', `${format(row.time)}秒`],
       ['攻撃前の残HP', format(row.hpBefore)],
@@ -306,6 +306,29 @@ function traceDetail(index: number, input: GoldenglowTargetSwitchInput, result: 
       ['攻撃後の残HP', format(row.hpAfter)],
       ['結果', row.killed ? `撃破 → 敵#${row.targetNumber + 1}` : `敵#${row.targetNumber}を継続`],
     ]} />
+    <h3 className="gg-table-title" id="ggs-drone-rolls-title">浮遊ユニットごとの抽選</h3>
+    <div className="gg-probability-table-wrap" tabIndex={0} role="region" aria-labelledby="ggs-drone-rolls-title">
+      <table className="ggs-drone-trace-table" aria-labelledby="ggs-drone-rolls-title">
+        <thead><tr><th scope="col">浮遊ユニット</th><th scope="col">爆発確率</th><th scope="col">抽選値</th><th scope="col">結果</th><th scope="col">適用倍率</th><th scope="col">ダメージ</th></tr></thead>
+        <tbody>{row.drones.map((drone) => <tr key={drone.droneNumber}>
+          <th scope="row">#{drone.droneNumber}</th><td>{drone.explosionChancePercent.toLocaleString('ja-JP', { maximumFractionDigits: 6 })}%</td>
+          <td>{drone.rollPercent.toLocaleString('ja-JP', { maximumFractionDigits: 6 })}%</td><td>{drone.exploded ? '爆発' : '通常攻撃'}</td>
+          <td>{format(drone.exploded ? input.model.attackScale * 100 : drone.normalScalePercent)}%</td><td>{format(drone.damage)}</td>
+        </tr>)}</tbody>
+      </table>
+    </div>
+    <p>抽選値（0以上100未満）が爆発確率を下回ると爆発します。判定には丸め前の値を使います。爆発した浮遊は、その回の通常攻撃を行いません。</p>
+    <h3 className="gg-table-title" id="ggs-drone-state-title">次回へ引き継ぐ状態</h3>
+    <div className="gg-probability-table-wrap" tabIndex={0} role="region" aria-labelledby="ggs-drone-state-title">
+      <table className="ggs-drone-trace-table" aria-labelledby="ggs-drone-state-title">
+        <thead><tr><th scope="col">浮遊ユニット</th><th scope="col">通常倍率（今回 → 次回）</th><th scope="col">連続不発回数（攻撃前 → 後）</th></tr></thead>
+        <tbody>{row.drones.map((drone) => <tr key={drone.droneNumber}>
+          <th scope="row">#{drone.droneNumber}</th>
+          <td>{format(drone.normalScalePercent)}% → {format(getGoldenglowDroneAttackScalePercent(drone.normalStackAfter + 1, input.model))}%</td>
+          <td>{drone.missesBefore}回 → {drone.missesAfter}回</td>
+        </tr>)}</tbody>
+      </table>
+    </div>
     <Equation>攻撃ダメージ = 本体 + 浮遊通常 + 爆発<br />{format(row.bodyDamage)} + {format(row.normalDamage)} + {format(row.explosionDamage)} = {format(row.rawDamage)}</Equation>
     <Equation>有効ダメージ = min（残HP, 攻撃ダメージ）<br />min（{format(row.hpBefore)}, {format(row.rawDamage)}）= {format(row.effectiveDamage)}</Equation>
     <Equation>余剰ダメージ = max（0, 攻撃ダメージ − 残HP）<br />max（0, {format(row.rawDamage)} − {format(row.hpBefore)}）= {format(row.overkillDamage)}<br />攻撃後の残HP = max（0, {format(row.hpBefore)} − {format(row.effectiveDamage)}）= {format(row.hpAfter)}</Equation>
@@ -319,40 +342,7 @@ function traceDetail(index: number, input: GoldenglowTargetSwitchInput, result: 
     <p>{row.killed
       ? `撃破したので全浮遊の通常攻撃倍率を${format(input.model.droneInitialAttackScale * 100)}%へ戻し、次の満HPの敵を攻撃します。`
       : '同じ敵を攻撃し続けます。通常攻撃した浮遊の倍率は上限まで増え、自爆した浮遊は同じ敵への通常倍率を維持します。'}爆発の不発回数は自爆した浮遊だけ0になり、それ以外の浮遊は引き継ぎます。</p>
-    <p>本体と全浮遊のダメージを同じ敵へ同時に適用した後、撃破を判定します。全ダメージは術耐性適用後です。表示は小数第3位までに丸め、計算には丸め前の値を使います。ここに浮遊ごとの倍率や抽選履歴の内訳は含まれません。</p>
-  </> }
-}
-
-function sampleDetail(input: GoldenglowTargetSwitchInput, result: GoldenglowTargetSwitchResult): DetailContent {
-  const { totals, trace } = result.sample
-  const remainder = trace.reduce((damage, row) => row.killed ? 0 : damage + row.effectiveDamage, 0)
-  const killCount = trace.filter((row) => row.killed).length
-  return { title: '最初の1試行のダメージ・撃破数', body: <>
-    <ValueTable title="この結果の対象" rows={[
-      ['抽選番号', format(result.seed, 0)],
-      ['対象の試行', `${format(result.trials, 0)}回のうち最初の1回`],
-      ['計測時間', `${format(result.duration)}秒`],
-      ['敵1体の最大HP', format(input.enemyHp)],
-      ['攻撃回数（一斉攻撃）', `${format(totals.volleys, 0)}回`],
-    ]} />
-    <ValueTable title="この試行のダメージ結果" rows={[
-      ['本体の攻撃ダメージ', format(totals.bodyDamage)],
-      ['浮遊の通常攻撃ダメージ', format(totals.normalDamage)],
-      ['浮遊の爆発ダメージ', format(totals.explosionDamage)],
-      ['攻撃ダメージの合計', format(totals.rawDamage)],
-      ['余剰ダメージ', format(totals.overkillDamage)],
-      ['総ダメージ（有効）', format(totals.effectiveDamage)],
-      ['有効DPS', format(totals.effectiveDps)],
-      ['撃破数', `${format(totals.kills, 0)}体`],
-      ['最後の未撃破の敵に与えた有効ダメージ', format(remainder)],
-    ]} />
-    <Equation>攻撃ダメージ = 本体 + 浮遊通常 + 爆発<br />{format(totals.bodyDamage)} + {format(totals.normalDamage)} + {format(totals.explosionDamage)} = {format(totals.rawDamage)}</Equation>
-    <Equation>総ダメージ（有効） = 攻撃ダメージ − 余剰ダメージ<br />{format(totals.rawDamage)} − {format(totals.overkillDamage)} = {format(totals.effectiveDamage)}</Equation>
-    <Equation>有効DPS = 総ダメージ（有効） ÷ 計測時間<br />{format(totals.effectiveDamage)} ÷ {format(result.duration)} = {format(totals.effectiveDps)}</Equation>
-    <Equation>撃破数 = 攻撃履歴で「撃破」となった回数 = {format(killCount, 0)}体<br />総ダメージ（有効） = 撃破数 × 最大HP + 最後の敵に与えた有効ダメージ<br />{format(totals.kills, 0)} × {format(input.enemyHp)} + {format(remainder)} ≈ {format(totals.effectiveDamage)}</Equation>
-    <p>攻撃履歴の各回で、残HPを上限として計算した有効ダメージを合計しています。余剰ダメージは次の敵へ引き継がず、倒しきれなかった最後の敵に与えたダメージも合計に含めます。</p>
-    <p>全て術耐性適用後の値です。DPSの分母には最初の攻撃までの待機、切り替え時間、最後の攻撃後の端数時間も含みます。</p>
-    <p>この結果は最初の1試行の記録で、全試行の平均値や代表値ではありません。履歴の表示を「撃破した回のみ」に変更しても、集計はこの試行の全攻撃を対象にします。表示は小数第3位までに丸め、計算には丸め前の値を使います。</p>
+    <p>本体と全浮遊のダメージを同じ敵へ同時に適用した後、撃破を判定します。全ダメージは術耐性適用後です。ダメージは小数第3位、抽選値と爆発確率は小数第6位まで表示し、計算には丸め前の値を使います。</p>
   </> }
 }
 
@@ -366,7 +356,7 @@ function modelDetail(input: GoldenglowTargetSwitchInput): DetailContent {
       ['攻撃時刻', '初回は攻撃間隔1回分の後に着弾します。終了時刻ちょうどまでを含み、端数回は加えません。S2は永続のため、発動後の指定時間を計測します。'],
       ['同時攻撃', '各回の本体・全浮遊の着弾をまとめて同じ敵に適用し、その後に撃破判定します。同じ回の余剰ダメージを次の敵に流しません。S3では本体は攻撃しません。'],
       ['移動・再索敵', '帰還・移動・自爆演出は0秒とする簡略モデルです。撃破後は「攻撃間隔＋切り替えの追加時間」の後に次の敵を攻撃します。追加時間は実測値ではなく影響を調べるための仮定です。射程、敵の移動、飛翔中の攻撃は再現しません。'],
-      ['ダメージの定義', '総ダメージは敵HPを削った有効ダメージの合計で、最後の未撃破の敵へのダメージも含みます。攻撃ダメージは術耐性適用後・残HPで制限する前の値です。その差が余剰ダメージで、DPSはそれぞれを計測時間全体で割ります。'],
+      ['ダメージの定義', '総ダメージは術耐性適用後・残HPで制限する前の攻撃ダメージの合計です。有効ダメージは実際に敵HPを削った分で、最後の未撃破の敵へのダメージも含みます。その差が余剰ダメージです。DPSは総ダメージを計測時間全体で割ります。'],
       ['推定とばらつき', '結果は爆発を抽選する反復計算の平均です。95%信頼区間は平均DPSの推定誤差、P10・P50・P90は1戦ごとのばらつきを示します。履歴は最初の1試行で、平均ではありません。'],
       ['同一目標との比較', 'HP無限・切り替えなしで、同じモデルと対応する抽選番号を使って再計算します。通常倍率の維持、初撃、終了時刻のルールも共通です。既存の分析ページとは開始条件や端数回の扱いが異なる場合があります。'],
     ]} />

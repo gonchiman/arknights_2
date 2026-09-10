@@ -29,9 +29,18 @@
 .gg-switch-page .ggs-enemy-search-row > td { text-align: left; padding: 10px; }
 .ggs-enemy-search-row .calculator-operator-search { margin-top: 0; border: 0; padding: 0; }
 .ggs-enemy-load-error { font-size: 11px; }
-.ggs-caption, .ggs-status { margin: 10px 0; color: var(--text-muted); font-size: 10px; line-height: 1.7; }
-.ggs-status { min-height: 17px; }
-.ggs-error { margin: 10px 0; color: var(--danger); font-size: 11px; }
+.ggs-status { margin: 12px 0; color: var(--text-soft); font-size: 12px; line-height: 1.7; }
+.ggs-error { margin: 12px 0; color: var(--danger); font-size: 12px; line-height: 1.7; }
+.ggs-footer-link { border: 0; padding: 0; background: none; color: inherit; font: inherit; text-align: left; text-decoration: underline; cursor: pointer; }
+.ggs-footer-link:focus-visible { outline: 2px solid var(--text-soft); outline-offset: 2px; }
+.ggs-help-content { color: var(--text-soft); font-size: 12px; line-height: 1.8; }
+.ggs-help-content section + section { margin-top: 20px; }
+.ggs-help-content h3 { margin: 20px 0 10px; color: var(--text); font-size: 13px; }
+.ggs-help-content h3:first-child { margin-top: 0; }
+.ggs-help-content p { margin: 0 0 12px; }
+.ggs-help-content dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; margin: 0 0 12px; }
+.ggs-help-content dt { font-weight: 500; }
+.ggs-help-content dd { margin: 0; overflow-wrap: anywhere; }
 .ggs-settings { margin: 12px 0 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 8px 0; }
 .ggs-settings summary { cursor: pointer; font-size: 11px; line-height: 1.7; }
 .ggs-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
