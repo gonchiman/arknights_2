@@ -16,11 +16,12 @@ const describeSource = (source: PassiveSource | undefined) => source
     .trim()
   : ''
 
-export function GoldenglowOperatorInfo({ skill, loading }: {
+export function GoldenglowOperatorInfo({ skill, loading, defaultOpen = true }: {
   skill: GoldenglowGuideSkill | null
   loading: boolean
+  defaultOpen?: boolean
 }) {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(defaultOpen)
   const info = useMemo(() => {
     if (!skill) return null
     const module = skill.moduleApplication

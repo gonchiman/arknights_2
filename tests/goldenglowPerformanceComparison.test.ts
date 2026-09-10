@@ -6,6 +6,7 @@ import { buildGoldenglowCombinedAttackTable, summarizeGoldenglowCombinedAttackTa
 import { calculateGoldenglowExplosionDamage, GOLDENGLOW_OPERATOR_ID } from '../src/lib/goldenglowExplosion.ts'
 import { deriveGoldenglowGuideSkills } from '../src/lib/goldenglowGuideSkill.ts'
 import {
+  buildGoldenglowPerformanceAtResistance,
   buildGoldenglowPerformanceComparison,
   buildGoldenglowPerformanceCurve,
   buildGoldenglowPerformanceComparisonTsv,
@@ -232,6 +233,59 @@ test('刻みを変えても共通の術耐性の結果は変わらず、無効�
   }
 })
 
+test('単一の術耐性は刻みに丸めず、全スキル・MOD・潜在の各成分を算出する', () => {
+  const records = createRecords()
+  const comparisonBuilds = builds.flatMap((build) => [1, 4, 5].map((potential) => ({
+    ...build, id: `${build.id}-${potential}`, potential,
+  })))
+  for (const skillIndex of [1, 2, 3]) {
+    const dense = buildGoldenglowPerformanceComparison(records, comparisonBuilds, skillIndex, undefined, 30, 1)
+    for (const resistance of [0, 37, 100]) {
+      const columns = buildGoldenglowPerformanceAtResistance(records, comparisonBuilds, skillIndex, undefined, 30, resistance)
+      assert.deepEqual(columns, dense.map((column) => ({ ...column, values: [column.values[resistance]] })))
+    }
+    const fractional = buildGoldenglowPerformanceAtResistance(records, comparisonBuilds, skillIndex, undefined, 30, 37.5)
+    for (const column of fractional) {
+      assert.equal(column.values.length, 1)
+      assert.equal(column.values[0].resistance, 37.5)
+      assertCurveMatchesCombinedTable(column, 37.5)
+    }
+  }
+  assert.deepEqual(
+    buildGoldenglowPerformanceAtResistance(records, builds, 3),
+    buildGoldenglowPerformanceAtResistance(records, builds, 3, undefined, 30, 0),
+  )
+})
+
+test('単一の術耐性は範囲外を拒否し、データ不足の列を指定した術耐性のnullとして残す', () => {
+  const records = createRecords()
+  for (const resistance of [-0.01, 100.01, NaN, Infinity, -Infinity]) {
+    assert.deepEqual(buildGoldenglowPerformanceAtResistance(records, builds, 3, undefined, 30, resistance), [])
+  }
+  assert.deepEqual(buildGoldenglowPerformanceAtResistance(records, [], 3, undefined, 30, 37), [])
+  const missingCases = [
+    buildGoldenglowPerformanceAtResistance([], builds, 3, undefined, 30, 37),
+    buildGoldenglowPerformanceAtResistance(records, [{ ...builds[0], moduleId: 'missing' }], 3, undefined, 30, 37),
+    buildGoldenglowPerformanceAtResistance(records, builds, 4, undefined, 30, 37),
+    buildGoldenglowPerformanceAtResistance(records, builds, 2, undefined, NaN, 37),
+  ]
+  for (const columns of missingCases) {
+    assert.ok(columns.length > 0)
+    for (const column of columns) {
+      assert.deepEqual(column.values, [{
+        resistance: 37, expectedTotalDamage: null, expectedBodyDamage: null,
+        expectedDroneNormalDamage: null, expectedExplosionDamage: null,
+      }])
+    }
+  }
+  for (const column of buildGoldenglowPerformanceAtResistance(records, builds, 2, undefined, 0, 37)) {
+    assert.deepEqual(column.values, [{
+      resistance: 37, expectedTotalDamage: 0, expectedBodyDamage: 0,
+      expectedDroneNormalDamage: 0, expectedExplosionDamage: 0,
+    }])
+  }
+})
+
 test('連続グラフはMODごとの折れ点を持ち、その間の小数術耐性でも既存の全ダメージ成分に一致する', () => {
   const records = createRecords()
   for (const skillIndex of [1, 2, 3]) {
@@ -321,6 +375,7 @@ test('表示中の列順・術耐性順でTSVを作り、欠測を空セル、�
     '100\t\t\t',
   ].join('\r\n'))
   assert.deepEqual(columns, before)
+  assert.equal(buildGoldenglowPerformanceComparisonTsv(columns, true), buildGoldenglowPerformanceComparisonTsv(columns))
 })
 
 test('Excelが小数点を桁区切りと誤解釈しないよう、小数を整数の割り算でコピーする', () => {
@@ -374,6 +429,41 @@ test('整数割り算は表示用の小数3桁丸めを保ち、負数・負の0
       assert.equal(Number(parts[1]) / Number(parts[2]), cases[index].rounded)
     } else if (cell !== '') assert.equal(Number(cell), cases[index].rounded)
   })
+})
+
+test('小数非表示のTSVはダメージだけを直接整数に丸め、術耐性・欠測・見出し保護を維持する', () => {
+  const cases: Array<{ value: number | null; text: string }> = [
+    { value: 54978.577811492505, text: '54979' },
+    { value: 0.4999, text: '0' },
+    { value: 0.5, text: '1' },
+    { value: -0.4999, text: '0' },
+    { value: -0.5, text: '-1' },
+    { value: -0, text: '0' },
+    { value: 999.4999, text: '999' },
+    { value: 999.5, text: '1000' },
+    { value: null, text: '' },
+    { value: NaN, text: '' },
+    { value: Infinity, text: '' },
+    { value: -Infinity, text: '' },
+  ]
+  const columns = [
+    { label: '=結果\t一覧', values: cases.map(({ value }, index) => ({
+      resistance: index === 0 ? 0.25 : index, expectedTotalDamage: value,
+    })) },
+    { label: '一部のみ', values: [{ resistance: 0.25, expectedTotalDamage: 1.5 }] },
+  ]
+  const before = structuredClone(columns)
+  const decimalRows = buildGoldenglowPerformanceComparisonTsv(columns).split('\r\n')
+  const rows = buildGoldenglowPerformanceComparisonTsv(columns, false).split('\r\n')
+  assert.equal(rows[0], "敵の術耐性\t'=結果 一覧\t一部のみ")
+  assert.equal(rows[1], '=25/100\t54979\t2')
+  rows.slice(1).forEach((row, index) => {
+    const [resistance, damage, optionalDamage] = row.split('\t')
+    assert.equal(resistance, decimalRows[index + 1].split('\t')[0])
+    assert.equal(damage, cases[index].text)
+    assert.equal(optionalDamage, index === 0 ? '2' : '')
+  })
+  assert.deepEqual(columns, before)
 })
 
 test('TSVの見出しは1行だけで、制御文字や数式化するラベルを文字列として扱う', () => {

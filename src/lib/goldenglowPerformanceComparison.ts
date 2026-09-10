@@ -59,6 +59,21 @@ export function buildGoldenglowPerformanceComparison(
   )
 }
 
+/** Calculates one exact resistance without snapping to the table or heatmap intervals. */
+export function buildGoldenglowPerformanceAtResistance(
+  records: readonly SkillRecord[],
+  builds: readonly GoldenglowComparisonBuild[],
+  skillIndex: number,
+  skillLevelIndex?: number,
+  viewingDuration = 30,
+  resistance = 0,
+): GoldenglowPerformanceComparisonColumn[] {
+  if (!Number.isFinite(resistance) || resistance < 0 || resistance > 100) return []
+  return buildGoldenglowPerformanceColumns(
+    records, builds, skillIndex, skillLevelIndex, viewingDuration, () => [resistance],
+  )
+}
+
 /**
  * Every damage component shares arts mitigation, with no resistance-dependent
  * attack probabilities. Its exact curve changes slope only when resistance
@@ -144,7 +159,7 @@ function buildGoldenglowPerformanceColumns(
 export function buildGoldenglowPerformanceComparisonTsv(columns: readonly {
   label: string
   values: readonly { resistance: number; expectedTotalDamage: number | null }[]
-}[]): string {
+}[], showDecimals = true): string {
   if (columns.length === 0) return ''
   const valuesByResistance = columns.map((column) => new Map(
     column.values.map((row) => [row.resistance, row.expectedTotalDamage]),
@@ -153,7 +168,7 @@ export function buildGoldenglowPerformanceComparisonTsv(columns: readonly {
     ['敵の術耐性', ...columns.map((column) => sanitizeComparisonTsvLabel(column.label))],
     ...columns[0].values.map(({ resistance }) => [
       formatComparisonTsvNumber(resistance),
-      ...valuesByResistance.map((values) => formatComparisonTsvNumber(values.get(resistance))),
+      ...valuesByResistance.map((values) => formatComparisonTsvNumber(values.get(resistance), showDecimals)),
     ]),
   ]
   return rows.map((row) => row.join('\t')).join('\r\n')
@@ -163,10 +178,14 @@ const comparisonTsvNumberFormat = new Intl.NumberFormat('en-US', {
   useGrouping: false,
   maximumFractionDigits: 3,
 })
+const comparisonTsvIntegerFormat = new Intl.NumberFormat('en-US', {
+  useGrouping: false,
+  maximumFractionDigits: 0,
+})
 
-function formatComparisonTsvNumber(value: number | null | undefined): string {
+function formatComparisonTsvNumber(value: number | null | undefined, showDecimals = true): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return ''
-  const formatted = comparisonTsvNumberFormat.format(value)
+  const formatted = (showDecimals ? comparisonTsvNumberFormat : comparisonTsvIntegerFormat).format(value)
   if (formatted === '-0') return '0'
   const [integer, fraction] = formatted.split('.')
   if (!fraction) return integer
