@@ -33,6 +33,8 @@ export interface GoldenglowTargetSwitchInput {
   enemyResistance: number
   /** Extra seconds before the next volley following a kill. */
   switchDelay: number
+  /** Model remaining attacks in a volley as immediately retargeting after a kill. */
+  retargetRemainingDrones?: boolean
   trials: number
   seed: number
 }
@@ -65,8 +67,20 @@ export interface GoldenglowTargetSwitchDroneTrace {
   explosionChancePercent: number
   rollPercent: number
   exploded: boolean
-  /** After resistance, before the original target's remaining-HP cap. */
+  /** After resistance, before the attacked target's remaining-HP cap. */
   damage: number
+}
+
+export interface GoldenglowTargetSwitchAttackTrace {
+  actor: 'body' | 'drone'
+  droneNumber?: number
+  targetNumber: number
+  hpBefore: number
+  hpAfter: number
+  damage: number
+  effectiveDamage: number
+  overkillDamage: number
+  killed: boolean
 }
 
 export interface GoldenglowTargetSwitchTraceRow {
@@ -81,8 +95,14 @@ export interface GoldenglowTargetSwitchTraceRow {
   effectiveDamage: number
   overkillDamage: number
   killed: boolean
+  /** Number of enemies defeated in this volley. */
+  kills: number
+  nextTargetNumber: number
+  nextTargetHp: number
   explosions: number
   drones: GoldenglowTargetSwitchDroneTrace[]
+  /** Sequential hit destinations, present when immediate retargeting is enabled. */
+  attacks?: GoldenglowTargetSwitchAttackTrace[]
 }
 
 export interface GoldenglowTargetSwitchTrial {
@@ -128,10 +148,14 @@ export interface GoldenglowTargetSwitchPreparedSimulation {
 
 /**
  * Simulates each kill before averaging complete independent trials. All drone
- * and body attacks form one synchronous volley on the original target. Damage
- * beyond its HP never transfers. The first volley lands at attackInterval and
- * only complete volleys at or before duration count. Travel/return time is zero;
- * switchDelay is the explicit extra delay after a kill.
+ * and body attacks normally form one synchronous volley on the original target.
+ * With retargetRemainingDrones enabled, body (S1/S2) then drones in number order
+ * resolve at the same timestamp, and each remaining attack can hit a new target.
+ * This order is a modeling assumption, not an established game mechanic. Damage
+ * beyond an individual target's HP never transfers. The first volley lands at
+ * attackInterval and only complete volleys at or before duration count.
+ * Travel/return time is zero; switchDelay applies once after each killing volley,
+ * including a volley with multiple kills, before the next volley.
  *
  * Each drone has independent PRD misses and normal-attack ramp stacks. Explosion
  * replaces its normal attack and resets PRD alone; a target change resets every
@@ -226,7 +250,9 @@ function runTrial(
   const normalStacks = new Uint16Array(input.model.activeDroneCount)
   const totals = emptyTotals()
   const trace: GoldenglowTargetSwitchTraceRow[] = []
+  const retargetRemainingDrones = !immortalTarget && input.retargetRemainingDrones === true
   let hp = input.enemyHp
+  let killingVolleys = 0
   let timelineIndex = 0
 
   const addTimelinePoint = () => {
@@ -243,7 +269,7 @@ function runTrial(
   while (true) {
     // Multiplication avoids accumulating floating-point timing drift each volley.
     const nextTime = (totals.volleys + 1) * input.attackInterval
-      + (immortalTarget ? 0 : totals.kills * input.switchDelay)
+      + killingVolleys * input.switchDelay
     if (nextTime > input.duration + prepared.timeTolerance) break
     const time = Math.min(nextTime, input.duration)
     while (timeline && timelineIndex < timeline.length
@@ -252,7 +278,41 @@ function runTrial(
     let normalDamage = 0
     let volleyExplosionDamage = 0
     let explosions = 0
+    const targetNumber = totals.kills + 1
+    const hpBefore = hp
+    let volleyKills = 0
+    let sequentialEffectiveDamage = 0
+    let lastTargetHpAfter = hp
     const drones: GoldenglowTargetSwitchDroneTrace[] | undefined = recordTrace ? [] : undefined
+    const attacks: GoldenglowTargetSwitchAttackTrace[] | undefined = recordTrace && retargetRemainingDrones ? [] : undefined
+    const applyAttack = (damage: number, actor: 'body' | 'drone', droneNumber?: number) => {
+      const attackHpBefore = hp
+      const effectiveDamage = Math.min(hp, damage)
+      const hpRemainder = Math.max(0, hp - effectiveDamage)
+      const killTolerance = Number.EPSILON * Math.max(hp, damage) * 4
+      const killed = damage > 0 && hpRemainder <= killTolerance
+      lastTargetHpAfter = killed ? 0 : hpRemainder
+      sequentialEffectiveDamage += effectiveDamage
+      attacks?.push({
+        actor,
+        ...(droneNumber === undefined ? {} : { droneNumber }),
+        targetNumber: targetNumber + volleyKills,
+        hpBefore: attackHpBefore,
+        hpAfter: lastTargetHpAfter,
+        damage,
+        effectiveDamage,
+        overkillDamage: damage - effectiveDamage,
+        killed,
+      })
+      if (killed) {
+        volleyKills += 1
+        hp = input.enemyHp
+        normalStacks.fill(0)
+      } else {
+        hp = hpRemainder
+      }
+    }
+    if (retargetRemainingDrones && input.skillIndex !== 3) applyAttack(bodyDamage, 'body')
     for (let droneIndex = 0; droneIndex < misses.length; droneIndex += 1) {
       const normalStackBefore = normalStacks[droneIndex]
       const missesBefore = misses[droneIndex]
@@ -282,26 +342,37 @@ function runTrial(
           damage: exploded ? explosionDamage : normalDamageByStack[normalStackBefore],
         })
       }
+      if (retargetRemainingDrones) {
+        applyAttack(exploded ? explosionDamage : normalDamageByStack[normalStackBefore], 'drone', droneIndex + 1)
+      }
     }
 
     const rawDamage = normalDamage + volleyExplosionDamage + bodyDamage
-    const effectiveDamage = immortalTarget ? rawDamage : Math.min(hp, rawDamage)
+    // Grouped component addition and sequential hit addition can differ by an ulp.
+    // Keep aggregate effective damage within the aggregate landed damage as well.
+    const effectiveDamage = retargetRemainingDrones ? Math.min(rawDamage, sequentialEffectiveDamage)
+      : immortalTarget ? rawDamage : Math.min(hp, rawDamage)
     const hpRemainder = immortalTarget ? hp : Math.max(0, hp - effectiveDamage)
     // Decimal HP/attack values can leave a few rounding bits after an exact kill.
     // Restrict tolerance to the comparison: never credit more damage than landed,
     // and avoid an absolute epsilon floor that could erase genuinely small HP.
     const killTolerance = Number.EPSILON * Math.max(hp, rawDamage) * 4
-    const killed = !immortalTarget && rawDamage > 0 && hpRemainder <= killTolerance
-    const hpAfter = killed ? 0 : hpRemainder
+    const killed = retargetRemainingDrones ? volleyKills > 0
+      : !immortalTarget && rawDamage > 0 && hpRemainder <= killTolerance
+    const hpAfter = retargetRemainingDrones ? lastTargetHpAfter : killed ? 0 : hpRemainder
     const overkillDamage = rawDamage - effectiveDamage
+    if (!retargetRemainingDrones) {
+      volleyKills = killed ? 1 : 0
+      hp = killed ? input.enemyHp : hpAfter
+      if (killed) normalStacks.fill(0)
+    }
     if (recordTrace) {
-      if (killed) {
-        for (const drone of drones!) drone.normalStackAfter = 0
-      }
+      // A later attack can reset earlier drones' stacks; expose the final state.
+      for (const drone of drones!) drone.normalStackAfter = normalStacks[drone.droneNumber - 1]
       trace.push({
         time,
-        targetNumber: totals.kills + 1,
-        hpBefore: hp,
+        targetNumber,
+        hpBefore,
         hpAfter,
         normalDamage,
         explosionDamage: volleyExplosionDamage,
@@ -310,8 +381,12 @@ function runTrial(
         effectiveDamage,
         overkillDamage,
         killed,
+        kills: volleyKills,
+        nextTargetNumber: targetNumber + volleyKills,
+        nextTargetHp: hp,
         explosions,
         drones: drones!,
+        ...(attacks ? { attacks } : {}),
       })
     }
     totals.normalDamage += normalDamage
@@ -322,13 +397,8 @@ function runTrial(
     totals.overkillDamage += overkillDamage
     totals.explosions += explosions
     totals.volleys += 1
-    if (killed) {
-      totals.kills += 1
-      hp = input.enemyHp
-      normalStacks.fill(0)
-    } else {
-      hp = hpAfter
-    }
+    totals.kills += volleyKills
+    if (killed) killingVolleys += 1
   }
 
   while (timeline && timelineIndex < timeline.length) addTimelinePoint()
@@ -375,6 +445,9 @@ function validateInput(input: GoldenglowTargetSwitchInput): void {
   bounded('enemyDefense', input.enemyDefense, 0, limits.maxEnemyDefense)
   bounded('enemyResistance', input.enemyResistance, 0, limits.maxEnemyResistance)
   bounded('switchDelay', input.switchDelay, 0, limits.maxSwitchDelay)
+  if (input.retargetRemainingDrones !== undefined && typeof input.retargetRemainingDrones !== 'boolean') {
+    throw new RangeError('retargetRemainingDrones は true または false で指定してください。')
+  }
   bounded('trials', input.trials, 1, limits.maxTrials, true)
   bounded('seed', input.seed, 0, limits.maxSeed, true)
   const model = input.model

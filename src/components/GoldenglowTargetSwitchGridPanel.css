@@ -7,8 +7,6 @@
 .ggs-grid-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .ggs-grid-step { display: inline-flex; align-items: center; gap: 6px; color: var(--text-soft); font-size: 11px; }
 .ggs-grid-step select { min-height: 36px; border: 1px solid var(--border-strong); padding: 6px 8px; background: var(--surface); color: var(--text); font: inherit; }
-.ggs-grid-decimals { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; color: var(--text-soft); font-size: 11px; cursor: pointer; }
-.ggs-grid-decimals input { margin: 0; accent-color: var(--text); }
 .ggs-grid-actions .button { font-size: 11px; }
 .ggs-grid-scroll { max-width: 100%; max-height: 460px; overflow: auto; border: 1px solid var(--border); overscroll-behavior: contain; }
 .ggs-grid-scroll:focus-visible { outline: 2px solid var(--text-soft); outline-offset: 2px; }
@@ -26,6 +24,5 @@
   .ggs-grid-presets button { min-height: 44px; padding: 8px 12px; }
   .ggs-grid-actions .button { min-height: 44px; }
   .ggs-grid-step select { min-height: 44px; }
-  .ggs-grid-decimals { min-height: 44px; }
   .ggs-grid-scroll { max-height: 400px; }
 }

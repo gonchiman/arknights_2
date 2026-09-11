@@ -138,12 +138,16 @@ function createExplosionPatterns(
 }
 
 function calculateMeanDamage(
-  { input, normalDamageByStack, explosionDamage, bodyDamage, timeTolerance }: GoldenglowTargetSwitchPreparedSimulation,
+  prepared: GoldenglowTargetSwitchPreparedSimulation,
   enemyHp: number,
   patterns: Uint16Array,
   maxVolleys: number,
 ): number {
   if (maxVolleys === 0) return 0
+  if (prepared.input.retargetRemainingDrones) {
+    return calculateMeanRetargetingDamage(prepared, enemyHp, patterns, maxVolleys)
+  }
+  const { input, normalDamageByStack, explosionDamage, bodyDamage, timeTolerance } = prepared
   const normalStacks = new Uint16Array(input.model.activeDroneCount)
   let total = 0
   for (let trialIndex = 0; trialIndex < input.trials; trialIndex += 1) {
@@ -181,6 +185,61 @@ function calculateMeanDamage(
       } else {
         hp = hpRemainder
       }
+    }
+    total += trialDamage
+  }
+  return total / input.trials
+}
+
+/** Replays the same PRD pattern, resolving body then drones exactly as runTrial. */
+function calculateMeanRetargetingDamage(
+  { input, normalDamageByStack, explosionDamage, bodyDamage, timeTolerance }: GoldenglowTargetSwitchPreparedSimulation,
+  enemyHp: number,
+  patterns: Uint16Array,
+  maxVolleys: number,
+): number {
+  const normalStacks = new Uint16Array(input.model.activeDroneCount)
+  const firstActor = input.skillIndex === 3 ? 0 : -1
+  let total = 0
+  for (let trialIndex = 0; trialIndex < input.trials; trialIndex += 1) {
+    normalStacks.fill(0)
+    let hp = enemyHp
+    let killingVolleys = 0
+    let trialDamage = 0
+    const offset = trialIndex * maxVolleys
+    for (let volley = 0; volley < maxVolleys; volley += 1) {
+      const nextTime = (volley + 1) * input.attackInterval + killingVolleys * input.switchDelay
+      if (nextTime > input.duration + timeTolerance) break
+      const mask = patterns[offset + volley]
+      let normalDamage = 0
+      let volleyExplosionDamage = 0
+      let killedInVolley = false
+      for (let actor = firstActor; actor < normalStacks.length; actor += 1) {
+        let damage: number
+        if (actor === -1) {
+          damage = bodyDamage
+        } else if (mask & (1 << actor)) {
+          damage = explosionDamage
+          volleyExplosionDamage += damage
+        } else {
+          damage = normalDamageByStack[normalStacks[actor]]
+          normalDamage += damage
+          normalStacks[actor] = Math.min(normalStacks[actor] + 1, input.model.droneMaxStack)
+        }
+        const effectiveDamage = Math.min(hp, damage)
+        const hpRemainder = Math.max(0, hp - effectiveDamage)
+        const killTolerance = Number.EPSILON * Math.max(hp, damage) * 4
+        if (damage > 0 && hpRemainder <= killTolerance) {
+          killedInVolley = true
+          hp = enemyHp
+          normalStacks.fill(0)
+        } else {
+          hp = hpRemainder
+        }
+      }
+      // The main engine sums components in this order even for sequential hits.
+      trialDamage += normalDamage + volleyExplosionDamage + bodyDamage
+      if (killedInVolley) killingVolleys += 1
     }
     total += trialDamage
   }
@@ -239,7 +298,8 @@ function localizeInputError(message: string): string {
     'model.damageType': 'ダメージ種別',
     skillIndex: 'スキル番号', effectiveAttack: '攻撃力', attackInterval: '攻撃間隔',
     duration: '計測時間', enemyHp: '敵HP', enemyDefense: '敵の防御力', enemyResistance: '敵の術耐性',
-    switchDelay: '切り替えの追加時間', trials: '試行回数', seed: '抽選番号',
+    switchDelay: '切り替えの追加時間', retargetRemainingDrones: '残りの浮遊ユニットの攻撃先変更',
+    trials: '試行回数', seed: '抽選番号',
     ARTS: '術ダメージ',
   }
   for (const [key, label] of Object.entries(labels)) message = message.replaceAll(key, label)

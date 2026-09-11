@@ -6,27 +6,30 @@ import type { GoldenglowTargetSwitchDetail } from './GoldenglowTargetSwitchDetai
 import './GoldenglowTargetSwitchTrialPanel.css'
 
 const numberFormat = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
+const integerFormat = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
 const format = (value: number) => numberFormat.format(value)
 const PAGE_SIZE = 100
 
-export function GoldenglowTargetSwitchTrialPanel({ input, result, status, onOpen }: {
+export function GoldenglowTargetSwitchTrialPanel({ input, result, status, showDecimals, onOpen }: {
   input: GoldenglowTargetSwitchInput | null
   result: GoldenglowTargetSwitchResult | null
   status: string | null
+  showDecimals: boolean
   onOpen: (detail: GoldenglowTargetSwitchDetail) => void
 }) {
   const [open, setOpen] = useGoldenglowTargetSwitchPanelOpen('trial')
   return <CollapsibleCalculatorPanel id="ggs-trial-panel" number="05" title="シミュレーション1回分"
     summary="1回分の攻撃と撃破の記録" open={open} onToggle={() => setOpen((value) => !value)} collapsedLabel="履歴を表示">
     {input && result
-      ? <TrialOutput key={`${result.seed}:${result.duration}:${input.enemyHp}:${input.enemyResistance}`} input={input} result={result} onOpen={onOpen} />
+      ? <TrialOutput key={`${result.seed}:${result.duration}:${input.enemyHp}:${input.enemyResistance}:${Boolean(input.retargetRemainingDrones)}`} input={input} result={result} showDecimals={showDecimals} onOpen={onOpen} />
       : <p className="ggs-status" role="status">{status ?? '計算条件を入力すると表示します。'}</p>}
   </CollapsibleCalculatorPanel>
 }
 
-function TrialOutput({ input, result, onOpen }: {
+function TrialOutput({ input, result, showDecimals, onOpen }: {
   input: GoldenglowTargetSwitchInput
   result: GoldenglowTargetSwitchResult
+  showDecimals: boolean
   onOpen: (detail: GoldenglowTargetSwitchDetail) => void
 }) {
   const [page, setPage] = useState(0)
@@ -56,17 +59,19 @@ function TrialOutput({ input, result, onOpen }: {
     </div>
     <div className="ggs-trial-scroll" tabIndex={0} role="region" aria-labelledby="ggs-trial-history-title">
       <table className="ggs-trial-table" aria-labelledby="ggs-trial-history-title">
-        <caption className="visually-hidden">本体と各浮遊ユニットを個別の行で表示します。同じ攻撃回は同時に着弾し、合計ダメージ・攻撃後の敵の残りHP・余剰ダメージ・累計撃破数を共有します。</caption>
+        <caption className="visually-hidden">{input.retargetRemainingDrones
+          ? '本体・浮遊ユニットの順で攻撃し、撃破後は残りの浮遊が次の敵へ切り替える仮定です。各攻撃者の対象・攻撃後の残りHP・余剰ダメージを表示し、攻撃時刻・合計ダメージ・累計撃破数は同じ攻撃回で共有します。'
+          : '本体と各浮遊ユニットを個別の行で表示します。同じ攻撃回は同時に着弾し、合計ダメージ・攻撃後の敵の残りHP・余剰ダメージ・累計撃破数を共有します。'}</caption>
         <thead><tr>
           <th scope="col" className="ggs-trial-attack">攻撃・時刻</th>
-          <th scope="col">攻撃者</th><th scope="col" className="ggs-trial-explosion-status">自爆</th>
+          <th scope="col">攻撃者</th>{input.retargetRemainingDrones && <th scope="col">攻撃対象</th>}<th scope="col" className="ggs-trial-explosion-status">自爆</th>
           <th scope="col">適用倍率</th><th scope="col">個別ダメージ</th>
           <th scope="col">連続不発回数</th>
           <th scope="col">合計ダメージ</th><th scope="col">攻撃後の敵の残りHP</th><th scope="col">余剰ダメージ</th>
           <th scope="col">撃破数</th>
         </tr></thead>
-        {visible.length === 0 ? <tbody><tr><td colSpan={10}>計測時間内に攻撃は発生しません。</td></tr></tbody>
-          : visible.map(({ row, index }) => <AttackRows key={index} input={input} row={row} index={index} onOpen={openAttack} />)}
+        {visible.length === 0 ? <tbody><tr><td colSpan={input.retargetRemainingDrones ? 11 : 10}>計測時間内に攻撃は発生しません。</td></tr></tbody>
+          : visible.map(({ row, index }) => <AttackRows key={index} input={input} row={row} index={index} showDecimals={showDecimals} onOpen={openAttack} />)}
       </table>
     </div>
     {pageCount > 1 && <div className="ggs-trial-pagination">
@@ -77,12 +82,14 @@ function TrialOutput({ input, result, onOpen }: {
   </>
 }
 
-function AttackRows({ input, row, index, onOpen }: {
+function AttackRows({ input, row, index, showDecimals, onOpen }: {
   input: GoldenglowTargetSwitchInput
   row: GoldenglowTargetSwitchTraceRow
   index: number
+  showDecimals: boolean
   onOpen: (index: number) => void
 }) {
+  const formatOutput = (value: number) => (showDecimals ? numberFormat : integerFormat).format(value)
   const actors = [
     {
       id: 'body', name: '本体',
@@ -97,9 +104,11 @@ function AttackRows({ input, row, index, onOpen }: {
     })),
   ]
   const groupSize = actors.length
-  const cumulativeKills = row.targetNumber - 1 + (row.killed ? 1 : 0)
+  const cumulativeKills = row.nextTargetNumber - 1
   return <tbody className="ggs-trial-volley" data-attack={index + 1}>
-    {actors.map((actor, actorIndex) => <tr key={actor.id} data-actor={actor.id}
+    {actors.map((actor, actorIndex) => {
+      const attack = row.attacks?.find((hit) => actor.id === 'body' ? hit.actor === 'body' : actor.id === `drone-${hit.droneNumber}`)
+      return <tr key={actor.id} data-actor={actor.id}
       onClick={(event) => {
         if (event.target instanceof Element && event.target.closest('button')) return
         event.currentTarget.closest('tbody')?.querySelector('button')?.focus({ preventScroll: true })
@@ -112,16 +121,20 @@ function AttackRows({ input, row, index, onOpen }: {
         </th>
       }
       <th scope="row" className="ggs-trial-actor">{actor.name}</th>
+      {input.retargetRemainingDrones && <td className="ggs-trial-target-number">{attack ? `敵#${attack.targetNumber}` : '—'}</td>}
       <td className={`ggs-trial-explosion-status${actor.exploded ? ' ggs-trial-explosion' : ''}`}>
         {actor.id === 'body' ? '—' : actor.exploded ? '発動' : '不発'}
       </td>
-      <td>{actor.scale}</td><td>{format(actor.damage)}</td><td>{actor.misses}</td>
-      {actorIndex === 0 && <>
-        <td rowSpan={groupSize} className="ggs-trial-shared ggs-trial-total">{format(row.rawDamage)}</td>
-        <td rowSpan={groupSize} className="ggs-trial-shared ggs-trial-target">{format(row.hpAfter)}</td>
-        <td rowSpan={groupSize} className="ggs-trial-shared ggs-trial-overkill">{format(row.overkillDamage)}</td>
-        <td rowSpan={groupSize} className="ggs-trial-shared ggs-trial-kills">{format(cumulativeKills)}</td>
+      <td>{actor.scale}</td><td>{formatOutput(actor.damage)}</td><td>{actor.misses}</td>
+      {actorIndex === 0 && <td rowSpan={groupSize} className="ggs-trial-shared ggs-trial-total">{formatOutput(row.rawDamage)}</td>}
+      {input.retargetRemainingDrones ? <>
+        <td className="ggs-trial-target">{attack ? formatOutput(attack.hpAfter) : '—'}</td>
+        <td className="ggs-trial-overkill">{attack ? formatOutput(attack.overkillDamage) : '—'}</td>
+      </> : actorIndex === 0 && <>
+        <td rowSpan={groupSize} className="ggs-trial-shared ggs-trial-target">{formatOutput(row.hpAfter)}</td>
+        <td rowSpan={groupSize} className="ggs-trial-shared ggs-trial-overkill">{formatOutput(row.overkillDamage)}</td>
       </>}
-    </tr>)}
+      {actorIndex === 0 && <td rowSpan={groupSize} className="ggs-trial-shared ggs-trial-kills">{format(cumulativeKills)}</td>}
+    </tr>})}
   </tbody>
 }

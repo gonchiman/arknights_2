@@ -95,16 +95,20 @@ test('表の各セルはS1・S2・S3とモジュール相当の倍率・速度�
       effectiveAttack: 821.25, attackInterval: 1.3 / 1.1,
     },
   ]
-  variants.forEach((variant) => checkAgainstSingleCells(input(variant)))
+  for (const retargetRemainingDrones of [false, true]) {
+    variants.forEach((variant) => checkAgainstSingleCells(input({ ...variant, retargetRemainingDrones })))
+  }
 })
 
 test('切り替え待ちがある場合もHPごとの撃破時刻と抽選回数を単独計算と揃える', () => {
-  for (const switchDelay of [0.15, 5]) {
-    checkAgainstSingleCells(input({
-      model: { ...model, prdStep: 0.2 },
-      skillIndex: 1, switchDelay, enemyHps: [1, 601.7, 1_000_000],
-      attackInterval: 0.867, duration: 12.35,
-    }))
+  for (const retargetRemainingDrones of [false, true]) {
+    for (const switchDelay of [0.15, 5]) {
+      checkAgainstSingleCells(input({
+        model: { ...model, prdStep: 0.2 },
+        skillIndex: 1, switchDelay, enemyHps: [1, 601.7, 1_000_000],
+        attackInterval: 0.867, duration: 12.35, retargetRemainingDrones,
+      }))
+    }
   }
 })
 
@@ -118,33 +122,44 @@ test('1試行でもHPで制限する前の総ダメージを返し、余剰ダ�
 })
 
 test('攻撃力0・攻撃できない時間窓・初撃と終撃の丸め境界を単独計算と揃える', () => {
-  const zero = checkAgainstSingleCells(input({ effectiveAttack: 0, enemyHps: [Number.MIN_VALUE, 500] }))
-  assert.ok(zero.rows.every((row) => row.expectedDamages.every((damage) => damage === 0)))
-  for (const duration of [0.05, 0.1 - 1e-15, 0.1, 0.299999, 0.3]) {
-    checkAgainstSingleCells(input({
-      model: { ...model, prdStep: 0, prdMaxStack: 1_000 },
-      attackInterval: 0.1, duration, enemyHps: [10, 1_000], enemyResistances: [0], trials: 1,
+  for (const retargetRemainingDrones of [false, true]) {
+    const zero = checkAgainstSingleCells(input({
+      effectiveAttack: 0, enemyHps: [Number.MIN_VALUE, 500], retargetRemainingDrones,
     }))
+    assert.ok(zero.rows.every((row) => row.expectedDamages.every((damage) => damage === 0)))
+    for (const duration of [0.05, 0.1 - 1e-15, 0.1, 0.299999, 0.3]) {
+      checkAgainstSingleCells(input({
+        model: { ...model, prdStep: 0, prdMaxStack: 1_000 },
+        attackInterval: 0.1, duration, enemyHps: [10, 1_000], enemyResistances: [0], trials: 1,
+        retargetRemainingDrones,
+      }))
+    }
   }
 })
 
 test('小数HPの同値撃破と実際の不足を区別し、撃破後の通常倍率を正しく初期化する', () => {
-  for (const scale of [1e-6, 1, 1_000]) {
-    const result = checkAgainstSingleCells(input({
-      model: { ...model, activeDroneCount: 2, prdStep: 0, prdMaxStack: 1_000, resistanceIgnoreFixed: 0 },
-      effectiveAttack: 547 * scale, attackInterval: 1, duration: 3,
-      enemyHps: [601.7 * scale, (601.7 + 1e-10) * scale], enemyResistances: [0, 37.5], trials: 1,
-    }))
-    assert.ok(result.rows[0].expectedDamages[0] < result.rows[0].expectedDamages[1])
+  for (const retargetRemainingDrones of [false, true]) {
+    for (const scale of [1e-6, 1, 1_000]) {
+      const result = checkAgainstSingleCells(input({
+        model: { ...model, activeDroneCount: 2, prdStep: 0, prdMaxStack: 1_000, resistanceIgnoreFixed: 0 },
+        effectiveAttack: 547 * scale, attackInterval: 1, duration: 3,
+        enemyHps: [601.7 * scale, (601.7 + 1e-10) * scale], enemyResistances: [0, 37.5], trials: 1,
+        retargetRemainingDrones,
+      }))
+      assert.ok(result.rows[0].expectedDamages[0] < result.rows[0].expectedDamages[1])
+    }
   }
 })
 
 test('最大16浮遊の最上位ビットを含む爆発と通常攻撃を欠落させない', () => {
-  for (const prdStep of [0.15, 1]) {
-    checkAgainstSingleCells(input({
-      model: { ...model, activeDroneCount: 16, prdStep },
-      duration: 8, enemyHps: [100, 100_000], enemyResistances: [0, 80], trials: 12,
-    }))
+  for (const retargetRemainingDrones of [false, true]) {
+    for (const prdStep of [0.15, 1]) {
+      checkAgainstSingleCells(input({
+        model: { ...model, activeDroneCount: 16, prdStep },
+        duration: 8, enemyHps: [100, 100_000], enemyResistances: [0, 80], trials: 12,
+        retargetRemainingDrones,
+      }))
+    }
   }
 })
 
@@ -229,5 +244,69 @@ test('列数・行数・セル数・抽選列の容量・単一条件と表全�
     let notified = false
     assert.throws(() => simulateGoldenglowTargetSwitchGrid(input(override), () => { notified = true }), RangeError)
     assert.equal(notified, false, 'excessive work must be rejected before rows are calculated')
+  }
+})
+
+test('即時切り替えの有無を省略した表は無効指定と一致し、有効指定では撃破後の倍率低下を反映する', () => {
+  const setup = input({
+    model: { ...model, prdStep: 0, prdMaxStack: 1_000, resistanceIgnoreFixed: 0 },
+    effectiveAttack: 100, attackInterval: 1, duration: 2,
+    enemyHps: [80, 1_000_000], enemyResistances: [0], trials: 1,
+  })
+  const defaultResult = simulateGoldenglowTargetSwitchGrid(setup)
+  assert.deepEqual(simulateGoldenglowTargetSwitchGrid({ ...setup, retargetRemainingDrones: false }), defaultResult)
+  assert.deepEqual(defaultResult.rows[0].expectedDamages, [165, 165])
+  const enabled = checkAgainstSingleCells({ ...setup, retargetRemainingDrones: true })
+  assert.deepEqual(enabled.rows[0].expectedDamages, [135, 165])
+})
+
+test('即時切り替えでも重複HP・実効耐性の等しい行・入力順の進捗通知を保つ', () => {
+  const setup = input({
+    enemyHps: [80, 5_000, 80], enemyResistances: [50, 15, 0, 5, 15, 100],
+    effectiveAttack: 100, attackInterval: 0.3, duration: 4.5, switchDelay: 0.15,
+    retargetRemainingDrones: true, trials: 17,
+  })
+  const notifications: { enemyResistance: number; expectedDamages: number[]; completed: number; total: number }[] = []
+  const result = simulateGoldenglowTargetSwitchGrid(setup, (row, completed, total) => {
+    notifications.push({ ...row, expectedDamages: [...row.expectedDamages], completed, total })
+  })
+  assert.deepEqual(notifications, result.rows.map((row, index) => ({
+    ...row, completed: index + 1, total: setup.enemyResistances.length,
+  })))
+  for (const rowIndex of [2, 3, 4]) {
+    assert.deepEqual(result.rows[rowIndex].expectedDamages, result.rows[1].expectedDamages)
+  }
+  for (const row of result.rows) assert.equal(row.expectedDamages[0], row.expectedDamages[2])
+  assert.deepEqual(result, checkAgainstSingleCells(setup))
+})
+
+test('小数の独自倍率・爆発ダメージ・時間・耐性を使う即時切り替えでも単独計算と一致する', () => {
+  for (const skillIndex of [1, 2, 3]) {
+    for (const switchDelay of [0, 0.137]) {
+      checkAgainstSingleCells(input({
+        model: {
+          ...model, activeDroneCount: 5, prdStep: 0.13, prdMaxStack: 7,
+          attackScale: 2.731, attackScalePercent: 273.1,
+          droneInitialAttackScale: 0.217, droneInitialAttackScalePercent: 21.7,
+          droneAttackScaleStep: 0.137, droneAttackScaleStepPercent: 13.7,
+          droneMaxAttackScale: 1.317, droneMaxAttackScalePercent: 131.7, droneMaxStack: 9,
+          resistanceIgnoreFixed: 13.7,
+        },
+        skillIndex, effectiveAttack: 703.217, attackInterval: 0.867, duration: 14.781,
+        enemyHps: [Number.MIN_VALUE, 121.631, 703.217, 5_000.000000001, 1_000_000],
+        enemyResistances: [0, 37.217, 99.9], switchDelay, retargetRemainingDrones: true,
+        trials: 19, seed: 20260911,
+      }))
+    }
+  }
+})
+
+test('即時切り替えに不正な真偽値を渡した表は進捗を出さずに拒否する', () => {
+  for (const value of [null, 0, 1, 'false', 'true', {}, []]) {
+    let notified = false
+    assert.throws(() => simulateGoldenglowTargetSwitchGrid(input({
+      retargetRemainingDrones: value as unknown as boolean,
+    }), () => { notified = true }), RangeError)
+    assert.equal(notified, false)
   }
 })

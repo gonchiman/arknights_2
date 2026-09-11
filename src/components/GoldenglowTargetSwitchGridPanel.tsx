@@ -13,12 +13,12 @@ export const GOLDENGLOW_TARGET_SWITCH_HP_PRESETS = {
 }
 const RESISTANCE_STEPS = [5, 10, 20, 25, 50, 100] as const
 
-export function GoldenglowTargetSwitchGridPanels({ input: setup, error }: {
+export function GoldenglowTargetSwitchGridPanels({ input: setup, error, showDecimals }: {
   input: GoldenglowTargetSwitchGridSetup | null
   error: string | null
+  showDecimals: boolean
 }) {
   const [open, setOpen] = useGoldenglowTargetSwitchPanelOpen('grid')
-  const [showDecimals, setShowDecimals] = useState(false)
   const [resistanceStep, setResistanceStep] = useState(20)
   const [presetKey, setPresetKey] = useState<keyof typeof GOLDENGLOW_TARGET_SWITCH_HP_PRESETS>('normal')
   const preset = GOLDENGLOW_TARGET_SWITCH_HP_PRESETS[presetKey]
@@ -44,10 +44,6 @@ export function GoldenglowTargetSwitchGridPanels({ input: setup, error }: {
           <select value={resistanceStep} onChange={(event) => setResistanceStep(Number(event.target.value))}>
             {RESISTANCE_STEPS.map((step) => <option key={step} value={step}>{step}</option>)}
           </select>
-        </label>
-        <label className="ggs-grid-decimals">
-          <input type="checkbox" checked={showDecimals} onChange={(event) => setShowDecimals(event.target.checked)} />
-          小数点以下を表示
         </label>
         <button className="button" type="button" disabled={!input || running} onClick={calculation.start}>
           {calculation.status === 'complete' ? '再計算する' : '計算する'}

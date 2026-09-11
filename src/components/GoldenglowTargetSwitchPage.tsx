@@ -12,13 +12,13 @@ import type { SkillRecord } from '../types/skill'
 import type { EnemyRecord } from '../types/enemy'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { EnemySearch, EMPTY_ENEMY_SEARCH_FILTERS, type EnemySearchFilters } from './EnemySearch'
-import { GoldenglowAttackDetailModal } from './GoldenglowAttackDetailModal'
 import { GoldenglowBuildControls } from './GoldenglowBuildControls'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { GoldenglowModuleEffect } from './GoldenglowModuleEffect'
 import { GoldenglowTargetSwitchDetailModal, type GoldenglowTargetSwitchDetail } from './GoldenglowTargetSwitchDetailModal'
 import { GOLDENGLOW_TARGET_SWITCH_HP_PRESETS, GoldenglowTargetSwitchGridPanels } from './GoldenglowTargetSwitchGridPanel'
 import { GoldenglowTargetSwitchHelpModal } from './GoldenglowTargetSwitchHelpModal'
+import { GoldenglowTargetSwitchOperatorInfo } from './GoldenglowTargetSwitchOperatorInfo'
 import { GoldenglowTargetSwitchTrialPanel } from './GoldenglowTargetSwitchTrialPanel'
 import './DamageCalculator.css'
 import './GoldenglowGuidePage.css'
@@ -26,7 +26,7 @@ import './GoldenglowTargetSwitchPage.css'
 
 const formatters = [0, 1, 2, 3].map((maximumFractionDigits) => new Intl.NumberFormat('ja-JP', { maximumFractionDigits }))
 const format = (value: number, digits = 1) => formatters[digits].format(value)
-type PageDetail = GoldenglowTargetSwitchDetail | { kind: 'attack' }
+type PageDetail = GoldenglowTargetSwitchDetail
 
 export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, footerContainer }: {
   rows: readonly SkillRecord[]
@@ -79,45 +79,43 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, foot
     closeEnemySearch()
   }
   const [switchDelay, setSwitchDelay] = useState('0')
+  const [retargetRemainingDrones, setRetargetRemainingDrones] = useState(false)
+  const [showDecimals, setShowDecimals] = useState(false)
   const [viewingDuration, setViewingDuration] = useState('30')
-  const [attackOverride, setAttackOverride] = useState<string | null>(null)
-  const [intervalOverride, setIntervalOverride] = useState<string | null>(null)
   const [trials, setTrials] = useState(10000)
   const [seed, setSeed] = useState(20260908)
   const [open, setOpen] = useGoldenglowTargetSwitchPanelOpen('conditions')
   const [resultsOpen, setResultsOpen] = useGoldenglowTargetSwitchPanelOpen('results')
   const [helpOpen, setHelpOpen] = useState(false)
   const [detail, setDetail] = useState<PageDetail | null>(null)
-  const attack = attackOverride ?? String(skill?.effectiveAttack ?? 0)
-  const interval = intervalOverride ?? String(skill?.attackInterval ?? 1.3)
+  const attack = skill?.effectiveAttack ?? 0
+  const interval = skill?.attackInterval ?? 1.3
   const duration = skill?.duration ?? Number(viewingDuration)
   const moduleLabel = skill?.moduleApplication.moduleName
     ? `${skill.moduleApplication.moduleName} Lv.${skill.moduleApplication.moduleLevel}` : 'モジュールなし'
-  const resetBuildOverrides = () => {
-    setAttackOverride(null)
-    setIntervalOverride(null)
+  const closeBuildDetails = () => {
     setDetail(null)
     setEffectDetail(null)
   }
   const commonFieldError = [
     invalidNumber(switchDelay, 0, 5, '切り替えの追加時間'),
-    invalidNumber(attack, 0, 1e6, 'スキル中の攻撃力'),
-    invalidNumber(interval, 0.05, 300, '攻撃間隔'),
+    invalidNumber(String(attack), 0, 1e6, 'スキル中の攻撃力'),
+    invalidNumber(String(interval), 0.05, 300, '攻撃間隔'),
     skill?.skillIndex === 2 ? invalidNumber(viewingDuration, 0.1, 300, '計測時間') : null,
   ].find(Boolean) ?? null
   const fieldError = invalidNumber(hp, 0, 1e9, '敵HP')
     ?? invalidNumber(resistance, 0, 100, '術耐性') ?? commonFieldError
   const gridInput = useMemo<GoldenglowTargetSwitchGridSetup | null>(() => skill && !commonFieldError ? {
     model: skill.explosionModel, skillIndex: skill.skillIndex,
-    effectiveAttack: Number(attack), attackInterval: Number(interval), duration,
-    enemyDefense: 0, switchDelay: Number(switchDelay), trials, seed,
-  } : null, [skill, commonFieldError, attack, interval, duration, switchDelay, trials, seed])
+    effectiveAttack: attack, attackInterval: interval, duration,
+    enemyDefense: 0, switchDelay: Number(switchDelay), retargetRemainingDrones, trials, seed,
+  } : null, [skill, commonFieldError, attack, interval, duration, switchDelay, retargetRemainingDrones, trials, seed])
   const input = useMemo<GoldenglowTargetSwitchInput | null>(() => skill && !fieldError && Number(hp) >= 1 ? {
     model: skill.explosionModel, skillIndex: skill.skillIndex,
-    effectiveAttack: Number(attack), attackInterval: Number(interval), duration,
+    effectiveAttack: attack, attackInterval: interval, duration,
     enemyHp: Number(hp), enemyDefense: 0, enemyResistance: Number(resistance),
-    switchDelay: Number(switchDelay), trials, seed,
-  } : null, [skill, fieldError, attack, interval, duration, hp, resistance, switchDelay, trials, seed])
+    switchDelay: Number(switchDelay), retargetRemainingDrones, trials, seed,
+  } : null, [skill, fieldError, attack, interval, duration, hp, resistance, switchDelay, retargetRemainingDrones, trials, seed])
   const calculation = useSimulation(input)
   const resultStatus = fieldError ? '入力値を確認してください。'
     : Number(hp) < 1 ? '敵HPを1以上にすると計算します。'
@@ -188,9 +186,9 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, foot
   const renderBuildControls = (compact: boolean) => skill && <GoldenglowBuildControls
     skill={skill} skills={skills} moduleChoices={moduleChoices} compact={compact}
     onShowEffect={setEffectDetail}
-    onSkillChange={(index) => { setSkillIndex(index); resetBuildOverrides() }}
-    onSkillLevelChange={(index) => { setSkillLevelIndex(index); resetBuildOverrides() }}
-    onModuleChange={(id, level) => { setModuleId(id); setModuleLevel(level); resetBuildOverrides() }} />
+    onSkillChange={(index) => { setSkillIndex(index); closeBuildDetails() }}
+    onSkillLevelChange={(index) => { setSkillLevelIndex(index); closeBuildDetails() }}
+    onModuleChange={(id, level) => { setModuleId(id); setModuleLevel(level); closeBuildDetails() }} />
 
   return (
     <section className="calculator-page gg-switch-page" aria-labelledby="gg-switch-title">
@@ -217,17 +215,9 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, foot
             ? <p className="gg-skill-effect-description">{skill.skillDescription || 'スキル効果の説明を取得できませんでした。'}</p>
             : <GoldenglowModuleEffect application={skill.moduleApplication} />}
         </GoldenglowDetailModal>}
+        <GoldenglowTargetSwitchOperatorInfo skill={skill} key={`${skill.skillIndex}:${skill.skillLevelIndex}:${skill.moduleId}:${moduleLevel}`} />
         <CollapsibleCalculatorPanel id="ggs-output" number="01" title="計算条件" summary={`S${skill.skillIndex}・浮遊${skill.explosionModel.activeDroneCount}体・撃破後に次の敵へ`}
           open={open} onToggle={() => setOpen((value) => !value)} collapsedLabel="表を表示">
-          <TableSection id="ggs-operator-conditions" title="オペレーター">
-            <tbody>
-              <ValueRow label="スキル中の攻撃力" onOpen={input ? () => setDetail({ kind: 'attack' }) : undefined} value={<NumericInput id="ggs-attack" label="スキル中の攻撃力" value={attack} onChange={setAttackOverride} min={0} max={1e6} />} />
-              <ValueRow label="攻撃間隔" onOpen={openCondition('attackInterval')} value={<NumericInput id="ggs-interval" label="攻撃間隔" value={interval} onChange={setIntervalOverride} min={0.05} max={300} unit="秒" />} />
-              <ValueRow label="スキル持続時間" onOpen={openCondition('duration')} value={skill.skillIndex === 2 ? '永続' : `${format(duration)}秒`} />
-              <ValueRow label="浮遊ユニット数 / 本体攻撃" onOpen={openCondition('drones')} value={`${skill.explosionModel.activeDroneCount}体 / ${skill.skillIndex === 3 ? 'なし' : 'あり'}`} />
-              <ValueRow label="術耐性の固定無視" onOpen={openCondition('enemyResistance')} value={format(skill.explosionModel.resistanceIgnoreFixed)} />
-            </tbody>
-          </TableSection>
           <TableSection id="ggs-enemy-conditions" title="敵">
             <tbody>
               <ValueRow label="敵の選択" value={<div className="ggs-enemy-picker">
@@ -256,45 +246,59 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, foot
           <TableSection id="ggs-battle-conditions" title="戦闘・計測条件">
             <tbody>
               {skill.skillIndex === 2 && <ValueRow label="発動後の計測時間" onOpen={openCondition('duration')} value={<NumericInput id="ggs-duration" label="発動後の計測時間" value={viewingDuration} onChange={setViewingDuration} min={0.1} max={300} unit="秒" />} />}
+              <ValueRow label="残り浮遊の切り替え（仮定）" onOpen={openCondition('retargetRemainingDrones')} value={<label className="calculator-field">
+                <span>残り浮遊の切り替え（仮定）</span>
+                <select id="ggs-retarget" aria-label="残り浮遊の切り替え（仮定）" value={retargetRemainingDrones ? 'on' : 'off'} onChange={(event) => setRetargetRemainingDrones(event.target.value === 'on')}>
+                  <option value="off">なし</option><option value="on">あり</option>
+                </select>
+              </label>} />
               <ValueRow label="切り替えの追加時間" onOpen={openCondition('switchDelay')} value={<NumericInput id="ggs-delay" label="切り替えの追加時間" value={switchDelay} onChange={setSwitchDelay} min={0} max={5} unit="秒" />} />
-              <ValueRow label="計算モデル・参照元" onOpen={input ? () => setDetail({ kind: 'model' }) : undefined} value="一斉着弾・帰還と移動0秒" />
+              <ValueRow label="計算モデル・参照元" onOpen={input ? () => setDetail({ kind: 'model' }) : undefined} value={`${retargetRemainingDrones ? '残り浮遊の切り替えあり' : '一斉着弾'}・帰還と移動0秒`} />
             </tbody>
           </TableSection>
-          <details className="ggs-settings">
-            <summary>試行回数・抽選設定</summary>
-            <TableSection id="ggs-sampling" title="試行条件">
-              <tbody>
-                <ValueRow label="試行回数" onOpen={openCondition('sampling')} value={<label className="calculator-field"><span>試行回数</span><select id="ggs-trials" aria-label="試行回数" value={trials} onChange={(event) => setTrials(Number(event.target.value))}><option value={1000}>1,000回</option><option value={10000}>10,000回</option><option value={20000}>20,000回</option></select></label>} />
-                <ValueRow label="抽選番号" onOpen={openCondition('sampling')} value={seed} />
-              </tbody>
-            </TableSection>
-            <div className="ggs-actions"><button className="button secondary" type="button" onClick={() => { setAttackOverride(null); setIntervalOverride(null); setSwitchDelay('0') }}>攻撃力・間隔・切り替え時間を標準に戻す</button><button className="button secondary" type="button" onClick={() => setSeed((value) => (value + 1) >>> 0)}>別の抽選で再計算</button></div>
-          </details>
+          <div className="ggs-actions"><button className="button secondary" type="button" onClick={() => setSwitchDelay('0')}>切り替え時間を標準に戻す</button></div>
+          <TableSection id="ggs-sampling" title="試行回数・抽選設定">
+            <tbody>
+              <ValueRow label="試行回数" onOpen={openCondition('sampling')} value={<label className="calculator-field"><span>試行回数</span><select id="ggs-trials" aria-label="試行回数" value={trials} onChange={(event) => setTrials(Number(event.target.value))}><option value={1000}>1,000回</option><option value={10000}>10,000回</option><option value={20000}>20,000回</option></select></label>} />
+              <ValueRow label="抽選番号" onOpen={openCondition('sampling')} value={<div className="ggs-seed-control">
+                <span>{seed}</span>
+                <button className="button secondary" type="button" onClick={() => setSeed((value) => (value + 1) >>> 0)}>別の抽選で再計算</button>
+              </div>} />
+            </tbody>
+          </TableSection>
+          <TableSection id="ggs-display-settings" title="表示設定">
+            <tbody><ValueRow label="小数点以下" value={<label className="ggs-display-decimals">
+              <input type="checkbox" aria-label="小数点以下を表示" checked={showDecimals} onChange={(event) => setShowDecimals(event.target.checked)} />
+              表示する
+            </label>} /></tbody>
+          </TableSection>
           {fieldError && <p className="ggs-error" role="alert">{fieldError}</p>}
         </CollapsibleCalculatorPanel>
         <CollapsibleCalculatorPanel id="ggs-results-panel" number="02" title="計算結果" summary={`S${skill.skillIndex}・${skill.duration === null ? '計測時間' : 'スキル時間'}${format(duration)}秒・撃破後に次の敵へ`}
           open={resultsOpen} onToggle={() => setResultsOpen((value) => !value)} collapsedLabel="結果を表示">
           {resultStatus && <p className="ggs-status" role="status" aria-live="polite">{resultStatus}</p>}
-          {input && calculation.result && <OutputTables result={calculation.result} input={input} onOpen={setDetail} />}
+          {input && calculation.result && <OutputTables result={calculation.result} input={input} showDecimals={showDecimals} onOpen={setDetail} />}
         </CollapsibleCalculatorPanel>
-        <GoldenglowTargetSwitchGridPanels input={gridInput} error={commonFieldError} />
-        <GoldenglowTargetSwitchTrialPanel input={input} result={calculation.result} status={resultStatus} onOpen={setDetail} />
+        <GoldenglowTargetSwitchGridPanels input={gridInput} error={commonFieldError} showDecimals={showDecimals} />
+        <GoldenglowTargetSwitchTrialPanel input={input} result={calculation.result} status={resultStatus} showDecimals={showDecimals} onOpen={setDetail} />
         {footerContainer && createPortal(<button type="button" className="ggs-footer-link" aria-haspopup="dialog"
           onClick={() => setHelpOpen(true)}>計算条件と結果の見方</button>, footerContainer)}
         {helpOpen && <GoldenglowTargetSwitchHelpModal
           buildLabel={`S${skill.skillIndex} ${skill.skillLevelLabel}・${moduleLabel}`}
           duration={duration} permanent={skill.skillIndex === 2} trials={trials}
+          retargetRemainingDrones={retargetRemainingDrones}
+          showDecimals={showDecimals}
           droneCount={skill.explosionModel.activeDroneCount} hpRanges={Object.values(GOLDENGLOW_TARGET_SWITCH_HP_PRESETS)}
           onClose={() => setHelpOpen(false)} />}
-        {input && detail && (detail.kind === 'attack' ? <GoldenglowAttackDetailModal skill={skill} attackOverride={attackOverride === null ? null : Number(attackOverride)} onClose={() => setDetail(null)} />
-          : <GoldenglowTargetSwitchDetailModal detail={detail} input={input} result={calculation.result} onClose={() => setDetail(null)} />)}
+        {input && detail && <GoldenglowTargetSwitchDetailModal detail={detail} input={input} result={calculation.result} showDecimals={showDecimals} onClose={() => setDetail(null)} />}
       </>}
     </section>
   )
 }
 
-function OutputTables({ result, input, onOpen }: { result: GoldenglowTargetSwitchResult; input: GoldenglowTargetSwitchInput; onOpen: (detail: PageDetail) => void }) {
+function OutputTables({ result, input, showDecimals, onOpen }: { result: GoldenglowTargetSwitchResult; input: GoldenglowTargetSwitchInput; showDecimals: boolean; onOpen: (detail: PageDetail) => void }) {
   const { mean } = result
+  const digits = showDecimals ? 3 : 0
   const permanent = input.skillIndex === 2
   const droneCount = input.model.activeDroneCount
   const metric = (name: Extract<GoldenglowTargetSwitchDetail, { kind: 'metric' }>['metric']) => () => onOpen({ kind: 'metric', metric: name })
@@ -308,22 +312,22 @@ function OutputTables({ result, input, onOpen }: { result: GoldenglowTargetSwitc
     <TableSection id="ggs-result-attacks" title="スキル時間・攻撃回数">
       <tbody>
         <ValueRow label="スキル持続時間" value={permanent ? `永続（計測${format(result.duration, 3)}秒）` : `${format(result.duration, 3)}秒`} />
-        <ValueRow label="本体攻撃回数" value={`${format(input.skillIndex === 3 ? 0 : mean.volleys, 3)}回`} />
-        <ValueRow label="浮遊ユニット攻撃回数" value={`${format(mean.volleys * droneCount, 3)}回`} />
-        <ValueRow label="爆発回数期待値" value={`${format(mean.explosions, 3)}回`} onOpen={metric('explosions')} />
+        <ValueRow label="本体攻撃回数" value={`${format(input.skillIndex === 3 ? 0 : mean.volleys, digits)}回`} />
+        <ValueRow label="浮遊ユニット攻撃回数" value={`${format(mean.volleys * droneCount, digits)}回`} />
+        <ValueRow label="爆発回数期待値" value={`${format(mean.explosions, digits)}回`} onOpen={metric('explosions')} />
       </tbody>
     </TableSection>
     <TableSection id="ggs-results" title="スキルダメージ期待値" columns="gg-value-table ggs-result-table">
       <tbody>
-        <ValueRow label="スキル時間総ダメージ" value={format(mean.rawDamage, 3)} onOpen={metric('rawDamage')} />
-        <ValueRow label="スキル期待DPS" value={format(mean.rawDps, 3)} onOpen={metric('rawDps')} />
+        <ValueRow label="スキル時間総ダメージ" value={format(mean.rawDamage, digits)} onOpen={metric('rawDamage')} />
+        <ValueRow label="スキル期待DPS" value={format(mean.rawDps, digits)} onOpen={metric('rawDps')} />
       </tbody>
     </TableSection>
     <TableSection id="ggs-results-breakdown" title="ダメージ内訳">
       <tbody>
-        <ValueRow label="本体" value={format(mean.bodyDamage, 3)} />
-        <ValueRow label="浮遊ユニット" value={format(mean.normalDamage, 3)} />
-        <ValueRow label="爆発" value={format(mean.explosionDamage, 3)} />
+        <ValueRow label="本体" value={format(mean.bodyDamage, digits)} />
+        <ValueRow label="浮遊ユニット" value={format(mean.normalDamage, digits)} />
+        <ValueRow label="爆発" value={format(mean.explosionDamage, digits)} />
       </tbody>
     </TableSection>
   </>
