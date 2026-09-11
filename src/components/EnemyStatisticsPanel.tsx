@@ -93,18 +93,76 @@ const CHART_HEIGHT = 310
 const SCATTER_CHART_HEIGHT = 340
 const CHART_MARGIN = { top: 44, right: 18, bottom: 52, left: 52 }
 
-export function EnemyStatisticsPanel({ rows, scopeLabel }: { rows: EnemyRecord[]; scopeLabel: string }) {
-  const binWidthInputId = useId()
-  const binWidthHelpId = useId()
+export function useEnemyStatisticsControls() {
   const [selectedMetricKey, setSelectedMetricKey] = useState<AnalyzedStatKey>('maxHp')
   const [axisScale, setAxisScale] = useState<HistogramScale>('LOG')
   const [scatterMetricKey, setScatterMetricKey] = useState<AnalyzedStatKey>('defense')
   const [scatterScale, setScatterScale] = useState<HistogramScale>('LOG')
-  const [selectedChart, setSelectedChart] = useState<ChartKind>('HISTOGRAM')
   const [linearBinWidthInput, setLinearBinWidthInput] = useState('')
 
   const selectedMetric = getMetric(selectedMetricKey)
   const scatterMetric = getMetric(scatterMetricKey)
+  const selectMetric = (metric: StatMetric) => {
+    setSelectedMetricKey(metric.key)
+    setAxisScale(metric.defaultScale)
+    setLinearBinWidthInput('')
+
+    if (scatterMetricKey === metric.key) {
+      const fallback = STAT_METRICS.find((candidate) => candidate.key !== metric.key) ?? STAT_METRICS[0]
+      setScatterMetricKey(fallback.key)
+      setScatterScale(fallback.defaultScale)
+    }
+  }
+
+  const selectScatterMetric = (metricKey: AnalyzedStatKey) => {
+    const metric = getMetric(metricKey)
+    setScatterMetricKey(metric.key)
+    setScatterScale(metric.defaultScale)
+  }
+
+  return {
+    selectedMetric, selectMetric, axisScale, setAxisScale,
+    scatterMetric, selectScatterMetric, scatterScale, setScatterScale,
+    linearBinWidthInput, setLinearBinWidthInput,
+  }
+}
+
+type EnemyStatisticsControls = ReturnType<typeof useEnemyStatisticsControls>
+
+export function EnemyStatisticsSettings({ controls }: { controls: EnemyStatisticsControls }) {
+  return (
+    <fieldset className="enemy-statistics-settings">
+      <legend>統計表・グラフの共通設定</legend>
+      <div className="enemy-metric-selector" role="group" aria-label="分析するステータス">
+        {STAT_METRICS.map((metric) => (
+          <button
+            type="button"
+            className={metric.key === controls.selectedMetric.key ? 'active' : ''}
+            aria-pressed={metric.key === controls.selectedMetric.key}
+            onClick={() => controls.selectMetric(metric)}
+            key={metric.key}
+          >
+            {metric.label}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
+export function EnemyStatisticsPanel({ rows, scopeLabel, controls }: {
+  rows: EnemyRecord[]
+  scopeLabel: string
+  controls: EnemyStatisticsControls
+}) {
+  const binWidthInputId = useId()
+  const binWidthHelpId = useId()
+  const [selectedChart, setSelectedChart] = useState<ChartKind>('HISTOGRAM')
+  const {
+    selectedMetric, axisScale, setAxisScale,
+    scatterMetric, selectScatterMetric, scatterScale, setScatterScale,
+    linearBinWidthInput, setLinearBinWidthInput,
+  } = controls
   const metricSource = useMemo(
     () => rows.map((enemy) => getEnemyMetricValue(enemy, selectedMetric.key)),
     [rows, selectedMetric.key],
@@ -141,43 +199,8 @@ export function EnemyStatisticsPanel({ rows, scopeLabel }: { rows: EnemyRecord[]
     [metricSource, selectedMetric.logBinCount, selectedMetric.minimumLinearBinWidth, axisScale, customLinearBinWidth],
   )
 
-  const selectMetric = (metric: StatMetric) => {
-    setSelectedMetricKey(metric.key)
-    setAxisScale(metric.defaultScale)
-    setLinearBinWidthInput('')
-
-    if (scatterMetricKey === metric.key) {
-      const fallback = STAT_METRICS.find((candidate) => candidate.key !== metric.key) ?? STAT_METRICS[0]
-      setScatterMetricKey(fallback.key)
-      setScatterScale(fallback.defaultScale)
-    }
-  }
-
-  const selectScatterMetric = (metricKey: AnalyzedStatKey) => {
-    const metric = getMetric(metricKey)
-    setScatterMetricKey(metric.key)
-    setScatterScale(metric.defaultScale)
-  }
-
   return (
     <>
-      <fieldset className="enemy-statistics-settings">
-        <legend>統計表・グラフの共通設定</legend>
-        <div className="enemy-metric-selector" role="group" aria-label="分析するステータス">
-          {STAT_METRICS.map((metric) => (
-            <button
-              type="button"
-              className={metric.key === selectedMetric.key ? 'active' : ''}
-              aria-pressed={metric.key === selectedMetric.key}
-              onClick={() => selectMetric(metric)}
-              key={metric.key}
-            >
-              {metric.label}
-            </button>
-          ))}
-        </div>
-      </fieldset>
-
       <CollapsibleCalculatorPanel
         id="enemy-statistics"
         number="01"

@@ -31,14 +31,27 @@
 .enemy-filter-compact .enemy-level-filter-buttons button + button { border-left: 0; }
 .enemy-filter-compact > .button { min-height: 36px; padding: 4px 8px; font-size: 11px; }
 
+.enemy-filter-compact .enemy-statistics-settings {
+  grid-column: 1 / -1;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  padding: 6px 0 0;
+  background: transparent;
+}
+.enemy-filter-compact .enemy-statistics-settings legend { padding: 0 6px 0 0; font-size: 10px; }
+
 @media (max-width: 760px) {
   .damage-build-navigation.enemy-filter-compact { grid-template-columns: minmax(0, 1fr) auto; }
   .enemy-filter-compact .enemy-level-filter-buttons { grid-column: 1 / -1; grid-row: 2; }
   .enemy-filter-compact > .button { grid-column: 2; grid-row: 1; }
+  .enemy-filter-compact .enemy-statistics-settings { grid-row: 3; }
+  .enemy-filter-compact .enemy-metric-selector { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 @media (max-width: 760px), (pointer: coarse) {
   .enemy-filter-compact input,
   .enemy-filter-compact .enemy-level-filter-buttons button,
+  .enemy-filter-compact .enemy-metric-selector button,
   .enemy-filter-compact > .button { min-height: 44px; }
 }

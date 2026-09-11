@@ -7,7 +7,7 @@ import {
 import type { EnemyLevelType, EnemyRecord } from '../types/enemy'
 import { EnemyDetailModal } from './EnemyDetailModal'
 import { EnemyFilterPanel } from './EnemyFilterPanel'
-import { EnemyStatisticsPanel } from './EnemyStatisticsPanel'
+import { EnemyStatisticsPanel, EnemyStatisticsSettings, useEnemyStatisticsControls } from './EnemyStatisticsPanel'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { PersistentDetails } from './PersistentDetails'
 import './DamageCalculator.css'
@@ -40,6 +40,7 @@ const DECIMAL_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits
 type EnemyStatDisplayMode = 'RATING' | 'VALUE'
 
 export function EnemyAnalysis() {
+  const statisticsControls = useEnemyStatisticsControls()
   const [rows, setRows] = useState<EnemyRecord[]>([])
   const [filters, setFilters] = useState<EnemyFilters>({ ...DEFAULT_FILTERS })
   const [page, setPage] = useState(0)
@@ -115,7 +116,7 @@ export function EnemyAnalysis() {
       </header>
 
       <section className="enemy-directory" aria-label="敵ステータス分析">
-        <EnemyFilterPanel>
+        <EnemyFilterPanel sharedSettings={<EnemyStatisticsSettings controls={statisticsControls} />}>
           <input
             type="search"
             aria-label="検索"
@@ -155,7 +156,7 @@ export function EnemyAnalysis() {
           </div>
         ) : (
           <>
-            <EnemyStatisticsPanel rows={filteredRows} scopeLabel={scopeLabel} />
+            <EnemyStatisticsPanel rows={filteredRows} scopeLabel={scopeLabel} controls={statisticsControls} />
 
             <CollapsibleCalculatorPanel
               id="enemy-reference"
