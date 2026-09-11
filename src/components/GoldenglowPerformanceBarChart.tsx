@@ -1,5 +1,7 @@
 import { useId, type CSSProperties } from 'react'
 import type { GoldenglowPerformanceChartColumn } from './goldenglowPerformanceChartTypes'
+import { GoldenglowPerformanceBarLegend } from './GoldenglowPerformanceBarLegend'
+import { useChartImageHeading } from './useChartImageHeading'
 import './GoldenglowPerformanceBarChart.css'
 
 export type GoldenglowBarVariant = 'axis' | 'label' | 'detail'
@@ -23,6 +25,7 @@ export function GoldenglowPerformanceBarChart({
   minHeight,
   difference = false,
   integerTicks = false,
+  imageOutput = false,
 }: {
   columns: readonly GoldenglowPerformanceChartColumn[]
   metricLabel: string
@@ -35,9 +38,16 @@ export function GoldenglowPerformanceBarChart({
   minHeight?: number
   difference?: boolean
   integerTicks?: boolean
+  imageOutput?: boolean
 }) {
   const titleId = useId()
   const vertical = orientation === 'vertical'
+  const condition = `${conditionLabel ? `${conditionLabel} / ` : ''}敵の術耐性 ${resistance}`
+  const note = difference && stacked
+    ? `内訳ごとの増減を${vertical ? '上下' : '左右'}に表示。合計は差し引き後の値。`
+    : undefined
+  const { headingRef, titleRef, conditionInLegend } = useChartImageHeading(imageOutput, metricLabel, condition)
+  const autoLegend = imageOutput && (stacked || conditionInLegend)
   const isDamageValue = (value: number | null | undefined): value is number => (
     typeof value === 'number' && Number.isFinite(value) && (difference || value >= 0)
   )
@@ -104,19 +114,19 @@ export function GoldenglowPerformanceBarChart({
   return (
     <figure className={`gg-performance-bar-chart gg-performance-bar-variant-${variant}${vertical ? ' gg-performance-bar-vertical' : ''}${difference ? ' gg-performance-bar-difference' : ''}`} aria-labelledby={titleId} style={{ minHeight }}>
       <figcaption className="gg-performance-bar-caption">
-        <div className="gg-performance-bar-heading">
-          <strong id={titleId}>{metricLabel}{stacked ? 'の内訳' : '比較'}</strong>
-          <span>{conditionLabel && `${conditionLabel} / `}敵の術耐性 {resistance}</span>
-          {difference && stacked && <span>内訳ごとの増減を{vertical ? '上下' : '左右'}に表示。合計は差し引き後の値。</span>}
+        <div className={`gg-performance-bar-heading${imageOutput ? ' gg-performance-bar-heading-inline' : ''}`} ref={headingRef}>
+          <strong id={titleId}><span ref={titleRef}>{metricLabel}{imageOutput ? '' : stacked ? 'の内訳' : '比較'}</span></strong>
+          {!conditionInLegend && <span className="gg-performance-bar-condition">{condition}</span>}
+          {!imageOutput && note && <span>{note}</span>}
         </div>
-        {stacked && <ul className="gg-performance-bar-legend" aria-label="ダメージ内訳の凡例">
+        {stacked && !autoLegend && <ul className="gg-performance-bar-legend" aria-label="ダメージ内訳の凡例">
           {DAMAGE_PARTS.map((part) => <li key={part.key}>
             <i style={{ backgroundColor: part.color }} aria-hidden="true" />
             <span>{part.label}</span>
           </li>)}
         </ul>}
       </figcaption>
-      <div className={vertical ? 'gg-performance-vertical-plot' : 'gg-performance-bar-plot'}>
+      <div className={`${vertical ? 'gg-performance-vertical-plot' : 'gg-performance-bar-plot'}${autoLegend ? ' gg-performance-bar-auto-legend-plot' : ''}`}>
         <div className={vertical ? 'gg-performance-vertical-grid' : 'gg-performance-bar-rows'}
           style={vertical ? {
             gridTemplateColumns: `max-content repeat(${Math.max(1, rows.length)}, minmax(0, 1fr))`,
@@ -149,7 +159,8 @@ export function GoldenglowPerformanceBarChart({
             return (
               <div className={vertical ? 'gg-performance-vertical-column' : 'gg-performance-bar-row'} key={row.id}
                 style={vertical ? { gridColumn: index + 2 } : { gridRow: index + 1 }}>
-                <span className={vertical ? 'gg-performance-vertical-label' : 'gg-performance-bar-label'}>{row.label}</span>
+                <span className={vertical ? 'gg-performance-vertical-label' : 'gg-performance-bar-label'}
+                  style={imageOutput && !stacked ? { color: row.color } : undefined}>{row.label}</span>
                 <div className={vertical ? 'gg-performance-vertical-track' : 'gg-performance-bar-track'} role="img" aria-label={description} title={description}>
                   {hasTotal && (stacked
                     ? hasParts && parts.map((part) => {
@@ -174,7 +185,7 @@ export function GoldenglowPerformanceBarChart({
                 <strong className={vertical ? 'gg-performance-vertical-total' : 'gg-performance-bar-total'}>{displayValue(total)}</strong>
                 {variant === 'detail' && stacked && <dl className="gg-performance-bar-parts" aria-label={`${row.label}のダメージ内訳`}>
                   {parts.map((part) => <div key={part.key}>
-                    <dt><i style={{ backgroundColor: part.color }} aria-hidden="true" />{part.label}</dt>
+                    <dt style={imageOutput ? { color: part.color } : undefined}><i style={{ backgroundColor: part.color }} aria-hidden="true" />{part.label}</dt>
                     <dd>{displayValue(part.value)}</dd>
                   </div>)}
                 </dl>}
@@ -186,6 +197,13 @@ export function GoldenglowPerformanceBarChart({
               : renderTicks(endTicks, false)}
           </div>}
         </div>
+        {autoLegend && <GoldenglowPerformanceBarLegend
+          key={JSON.stringify([orientation, variant, minHeight, stacked, conditionInLegend, condition, note, rows.map((row) => [row.label, row.value])])}
+          vertical={vertical}
+          parts={stacked ? DAMAGE_PARTS : []}
+          condition={conditionInLegend ? condition : undefined}
+          note={note}
+        />}
       </div>
     </figure>
   )

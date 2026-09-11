@@ -30,12 +30,13 @@
 .gg-performance-difference-help { margin: 10px 0 0; color: var(--text-soft); font-size: 11px; line-height: 1.7; }
 .gg-performance-table-condition { margin: 0 0 8px; color: var(--text-soft); font-size: 11px; line-height: 1.7; }
 .gg-performance-bar-design { width: 240px; max-width: 100%; }
+.gg-performance-line-design { width: 180px; max-width: 100%; }
 .gg-performance-stacked-option { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; color: var(--text); font-size: 11px; cursor: pointer; }
 .gg-performance-stacked-option input { width: 16px; height: 16px; margin: 0; accent-color: var(--text); }
 .gg-performance-stacked-option input:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
 .gg-performance-save-image { margin-left: auto; min-height: 36px; white-space: nowrap; }
 .gg-performance-graph-size-controls { display: flex; align-items: end; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
-.gg-performance-graph-dimension { width: 140px; }
+.gg-performance-aspect-preset { width: 140px; }
 .gg-performance-graph-ratio { display: flex; gap: 8px; }
 .gg-performance-graph-ratio .calculator-field { width: 84px; }
 .gg-performance-chart-layout { min-width: 0; width: 100%; }
