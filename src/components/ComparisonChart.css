@@ -79,6 +79,9 @@
   vector-effect: non-scaling-stroke;
 }
 
+.build-comparison-chart--styled .build-comparison-chart-grid:not(.build-comparison-chart-zero) { stroke: #e8ecef; }
+.build-comparison-chart--styled .build-comparison-chart-axis { stroke: #9ca8b0; }
+
 .build-comparison-chart-zero {
   stroke: #596776;
   stroke-width: 1.5;
@@ -150,8 +153,19 @@
   font-weight: 700;
 }
 
+.build-comparison-chart-end-leader {
+  stroke: currentColor;
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.build-comparison-chart-end-label .build-comparison-chart-end-name { fill: currentColor; }
+
 .build-comparison-chart-end-label .build-comparison-chart-end-detail {
   fill: var(--text-soft, #444);
   font-size: 10px;
   font-weight: 400;
 }
+
+.build-comparison-chart-image-legend text { fill: var(--text, #222); }
