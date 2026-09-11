@@ -6,6 +6,7 @@ import {
 } from '../lib/enemyData'
 import type { EnemyLevelType, EnemyRecord } from '../types/enemy'
 import { EnemyDetailModal } from './EnemyDetailModal'
+import { EnemyFilterPanel } from './EnemyFilterPanel'
 import { EnemyStatisticsPanel } from './EnemyStatisticsPanel'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { PersistentDetails } from './PersistentDetails'
@@ -114,16 +115,34 @@ export function EnemyAnalysis() {
       </header>
 
       <section className="enemy-directory" aria-label="敵ステータス分析">
-        <section className="calculator-panel enemy-filters" aria-labelledby="enemy-filters-heading">
-          <header className="panel-heading">
-            <div>
-              <span>01</span>
-              <h2 id="enemy-filters-heading">対象の絞り込み</h2>
+        <EnemyFilterPanel
+          summary={`${scopeLabel}${loading ? ' · 読み込み中' : error ? ' · 読み込み失敗' : ` · ${filteredRows.length}体`}`}
+          compactControls={<>
+            <input
+              type="search"
+              aria-label="検索"
+              data-enemy-filter-control="query"
+              value={filters.query}
+              placeholder="敵名・図鑑番号・能力・内部ID"
+              onChange={(event) => updateFilter('query', event.target.value)}
+            />
+            <div className="enemy-level-filter-buttons" role="group" aria-label="区分">
+              {LEVEL_OPTIONS.map((option) => (
+                <button
+                  type="button"
+                  className={filters.levelType === option.value ? 'active' : ''}
+                  aria-pressed={filters.levelType === option.value}
+                  data-enemy-filter-control={`level-${option.value}`}
+                  onClick={() => updateFilter('levelType', option.value)}
+                  key={option.value}
+                >{option.label}</button>
+              ))}
             </div>
-            <p>{`${scopeLabel}${loading ? ' · 読み込み中' : error ? ' · 読み込み失敗' : ` · ${filteredRows.length}体`}`}</p>
-          </header>
+            <button type="button" className="button secondary" data-enemy-filter-control="reset" onClick={resetFilters} disabled={!filtersActive} aria-label="条件をリセット">リセット</button>
+          </>}
+        >
           <div className="enemy-filter-toolbar">
-            <button type="button" className="button secondary" onClick={resetFilters} disabled={!filtersActive}>条件をリセット</button>
+            <button type="button" className="button secondary" data-enemy-filter-control="reset" onClick={resetFilters} disabled={!filtersActive}>条件をリセット</button>
           </div>
           <h3 className="enemy-table-title" id="enemy-filter-table-title">検索条件</h3>
           <div className="enemy-value-table-wrap">
@@ -135,6 +154,7 @@ export function EnemyAnalysis() {
                     <input
                       id="enemy-query"
                       type="search"
+                      data-enemy-filter-control="query"
                       value={filters.query}
                       placeholder="敵名・図鑑番号・能力・内部ID"
                       onChange={(event) => updateFilter('query', event.target.value)}
@@ -150,6 +170,7 @@ export function EnemyAnalysis() {
                           type="button"
                           className={filters.levelType === option.value ? 'active' : ''}
                           aria-pressed={filters.levelType === option.value}
+                          data-enemy-filter-control={`level-${option.value}`}
                           onClick={() => updateFilter('levelType', option.value)}
                           key={option.value}
                         >
@@ -162,7 +183,7 @@ export function EnemyAnalysis() {
               </tbody>
             </table>
           </div>
-        </section>
+        </EnemyFilterPanel>
 
         {loading ? (
           <div className="enemy-load-state" role="status">敵データを読み込んでいます…</div>

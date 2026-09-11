@@ -1,0 +1,46 @@
+.enemy-filter-normal,
+.enemy-filter-compact { min-width: 0; overflow-anchor: none; }
+
+.damage-build-navigation.enemy-filter-compact {
+  position: fixed;
+  grid-template-columns: minmax(140px, 1fr) minmax(280px, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+}
+.enemy-filter-compact[hidden] { display: none; }
+.enemy-filter-compact input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 8px;
+  font-size: 11px;
+}
+.enemy-filter-compact .enemy-level-filter-buttons {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+}
+.enemy-filter-compact .enemy-level-filter-buttons button {
+  min-height: 36px;
+  padding: 4px 2px;
+}
+.enemy-filter-compact .enemy-level-filter-buttons button + button { border-left: 0; }
+.enemy-filter-compact > .button { min-height: 36px; padding: 4px 8px; font-size: 11px; }
+
+@media (max-width: 760px) {
+  .damage-build-navigation.enemy-filter-compact { grid-template-columns: minmax(0, 1fr) auto; }
+  .enemy-filter-compact .enemy-level-filter-buttons { grid-column: 1 / -1; grid-row: 2; }
+  .enemy-filter-compact > .button { grid-column: 2; grid-row: 1; }
+}
+
+@media (max-width: 760px), (pointer: coarse) {
+  .enemy-filter-compact input,
+  .enemy-filter-compact .enemy-level-filter-buttons button,
+  .enemy-filter-compact > .button { min-height: 44px; }
+}
