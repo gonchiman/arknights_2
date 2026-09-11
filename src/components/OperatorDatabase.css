@@ -16,25 +16,138 @@
   margin-top: 12px;
 }
 
-.operator-statistics-panel .enemy-metric-selector {
-  grid-template-columns: repeat(9, minmax(0, 1fr));
+/* Preserve operator statistics while the shared enemy output uses its own layout. */
+.operator-statistics-panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  background: #fff;
 }
 
+.operator-statistics-panel .enemy-section-heading {
+  min-width: 0;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+  padding: 8px 10px;
+}
+
+.operator-statistics-panel .enemy-section-heading > div { min-width: 0; }
+
+.operator-statistics-panel .enemy-section-heading > div > span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .13em;
+}
+
+.operator-statistics-panel .enemy-section-heading h2 {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.operator-statistics-panel .enemy-section-heading p {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 10px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operator-statistics-panel .enemy-metric-selector {
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  border: 0;
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--surface-soft);
+}
+
+.operator-statistics-panel .enemy-metric-selector button { border-bottom: 0; }
+.operator-statistics-panel .enemy-metric-selector button:last-child { border-right: 0; }
+
 .operator-statistics-panel .enemy-statistics-grid {
+  display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
 }
 
 .operator-statistics-panel .enemy-statistics-grid > div {
+  min-width: 0;
+  min-height: 54px;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
 }
 
 .operator-statistics-panel .enemy-statistics-grid > div:nth-child(5n) { border-right: 0; }
 .operator-statistics-panel .enemy-statistics-grid > div:nth-last-child(-n + 5) { border-bottom: 0; }
 
+.operator-statistics-panel .enemy-statistics-grid dt {
+  color: var(--text-muted);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.operator-statistics-panel .enemy-statistics-grid dd {
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .operator-statistics-panel .enemy-statistics-grid span {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
   font-size: 8px;
 }
+
+.operator-statistics-panel .enemy-chart-toolbar { flex-wrap: nowrap; margin-bottom: 0; }
+.operator-statistics-panel .enemy-chart-visibility label { min-height: 28px; font-size: 9px; }
+.operator-statistics-panel .enemy-chart-visibility label.active {
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #222;
+  color: var(--text);
+}
+.operator-statistics-panel .enemy-chart-visibility label.active:hover { background: var(--surface-hover); }
+.operator-statistics-panel .enemy-chart-visibility label.active input { accent-color: #222; }
+.operator-statistics-panel .enemy-chart-scale-switch button { min-height: 26px; font-size: 9px; }
+.operator-statistics-panel .enemy-chart-select-label select { min-height: 28px; font-size: 9px; }
+.operator-statistics-panel .statistics-bin-width-input-row input { min-height: 28px; font-size: 10px; }
+.operator-statistics-panel .statistics-bin-width-input-row button { min-height: 28px; font-size: 9px; }
+
+.operator-statistics-panel .enemy-analysis-figure {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+  padding: 10px;
+}
+.operator-statistics-panel .enemy-analysis-figure:last-child { border-bottom: 0; }
+.operator-statistics-panel .enemy-analysis-figure figcaption {
+  align-items: center;
+  flex-direction: row;
+  margin-bottom: 5px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+.operator-statistics-panel .enemy-analysis-figure figcaption > div:first-child > span { line-height: 1.45; }
+.operator-statistics-panel .enemy-chart-legend { flex-wrap: nowrap; gap: 12px; }
+.operator-statistics-panel .enemy-scatter-controls { flex-wrap: nowrap; }
 
 .operator-database-table-wrap {
   max-width: 100%;
@@ -878,7 +991,19 @@
   .operator-statistics-panel .enemy-statistics-grid > div:nth-last-child(-n + 2) { border-bottom: 0; }
 }
 
+@media (max-width: 520px) {
+  .operator-statistics-panel .enemy-section-heading { display: block; }
+  .operator-statistics-panel .enemy-section-heading p { margin-top: 5px; text-align: left; }
+  .operator-statistics-panel .enemy-analysis-figure figcaption { align-items: flex-start; flex-direction: column; }
+  .operator-statistics-panel .enemy-chart-legend { gap: 7px; }
+}
+
 @media (pointer: coarse) {
+  .operator-statistics-panel .enemy-chart-visibility label,
+  .operator-statistics-panel .enemy-chart-select-label select,
+  .operator-statistics-panel .enemy-chart-scale-switch button,
+  .operator-statistics-panel .statistics-bin-width-input-row input,
+  .operator-statistics-panel .statistics-bin-width-input-row button { min-height: 44px; }
   .operator-database-sort-button { min-height: 44px; }
   .operator-database-name-button { min-height: 32px; }
   .operator-skill-name-button { min-height: 44px; }
