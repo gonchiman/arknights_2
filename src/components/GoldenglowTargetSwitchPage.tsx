@@ -7,10 +7,10 @@ import { GOLDENGLOW_OPERATOR_ID } from '../lib/goldenglowExplosion'
 import { getOperatorModules, getOperatorModuleId, getOperatorModuleLevels, isOperatorModuleUnlocked } from '../lib/operatorModules'
 import type { GoldenglowTargetSwitchInput, GoldenglowTargetSwitchResult } from '../lib/goldenglowTargetSwitch'
 import type { GoldenglowTargetSwitchGridSetup } from '../lib/goldenglowTargetSwitchGrid'
-import { useGoldenglowTargetSwitchPanelOpen } from '../lib/useGoldenglowTargetSwitchPanelOpen'
 import type { SkillRecord } from '../types/skill'
 import type { EnemyRecord } from '../types/enemy'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
+import { PersistentDetails } from './PersistentDetails'
 import { EnemySearch, EMPTY_ENEMY_SEARCH_FILTERS, type EnemySearchFilters } from './EnemySearch'
 import { GoldenglowAttackDetailModal } from './GoldenglowAttackDetailModal'
 import { GoldenglowBuildControls } from './GoldenglowBuildControls'
@@ -84,8 +84,6 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, foot
   const [intervalOverride, setIntervalOverride] = useState<string | null>(null)
   const [trials, setTrials] = useState(10000)
   const [seed, setSeed] = useState(20260908)
-  const [open, setOpen] = useGoldenglowTargetSwitchPanelOpen('conditions')
-  const [resultsOpen, setResultsOpen] = useGoldenglowTargetSwitchPanelOpen('results')
   const [helpOpen, setHelpOpen] = useState(false)
   const [detail, setDetail] = useState<PageDetail | null>(null)
   const attack = attackOverride ?? String(skill?.effectiveAttack ?? 0)
@@ -218,7 +216,7 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, foot
             : <GoldenglowModuleEffect application={skill.moduleApplication} />}
         </GoldenglowDetailModal>}
         <CollapsibleCalculatorPanel id="ggs-output" number="01" title="計算条件" summary={`S${skill.skillIndex}・浮遊${skill.explosionModel.activeDroneCount}体・撃破後に次の敵へ`}
-          open={open} onToggle={() => setOpen((value) => !value)} collapsedLabel="表を表示">
+          collapsedLabel="表を表示">
           <TableSection id="ggs-operator-conditions" title="オペレーター">
             <tbody>
               <ValueRow label="スキル中の攻撃力" onOpen={input ? () => setDetail({ kind: 'attack' }) : undefined} value={<NumericInput id="ggs-attack" label="スキル中の攻撃力" value={attack} onChange={setAttackOverride} min={0} max={1e6} />} />
@@ -260,7 +258,7 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, foot
               <ValueRow label="計算モデル・参照元" onOpen={input ? () => setDetail({ kind: 'model' }) : undefined} value="一斉着弾・帰還と移動0秒" />
             </tbody>
           </TableSection>
-          <details className="ggs-settings">
+          <PersistentDetails persistenceId="ggs-settings" className="ggs-settings">
             <summary>試行回数・抽選設定</summary>
             <TableSection id="ggs-sampling" title="試行条件">
               <tbody>
@@ -269,11 +267,11 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, foot
               </tbody>
             </TableSection>
             <div className="ggs-actions"><button className="button secondary" type="button" onClick={() => { setAttackOverride(null); setIntervalOverride(null); setSwitchDelay('0') }}>攻撃力・間隔・切り替え時間を標準に戻す</button><button className="button secondary" type="button" onClick={() => setSeed((value) => (value + 1) >>> 0)}>別の抽選で再計算</button></div>
-          </details>
+          </PersistentDetails>
           {fieldError && <p className="ggs-error" role="alert">{fieldError}</p>}
         </CollapsibleCalculatorPanel>
         <CollapsibleCalculatorPanel id="ggs-results-panel" number="02" title="計算結果" summary={`S${skill.skillIndex}・${skill.duration === null ? '計測時間' : 'スキル時間'}${format(duration)}秒・撃破後に次の敵へ`}
-          open={resultsOpen} onToggle={() => setResultsOpen((value) => !value)} collapsedLabel="結果を表示">
+          collapsedLabel="結果を表示">
           {resultStatus && <p className="ggs-status" role="status" aria-live="polite">{resultStatus}</p>}
           {input && calculation.result && <OutputTables result={calculation.result} input={input} onOpen={setDetail} />}
         </CollapsibleCalculatorPanel>

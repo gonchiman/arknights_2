@@ -14,6 +14,7 @@ import {
   type StageSnapshotSummary,
 } from '../lib/dataSources'
 import { ENEMY_DATA_URLS } from '../lib/enemyData'
+import { PersistentDetails } from './PersistentDetails'
 import './DataSourcesPage.css'
 
 type SnapshotState =
@@ -174,10 +175,10 @@ export function DataSourcesPage() {
             </a>
           </div>
           <SnapshotWarning state={snapshotState} />
-          <details className="source-disclosure">
+          <PersistentDetails persistenceId="source-snapshot-details" className="source-disclosure">
             <summary>集計の詳細</summary>
             <SnapshotDetails state={snapshotState} />
-          </details>
+          </PersistentDetails>
         </div>
       </section>
 
@@ -197,7 +198,7 @@ export function DataSourcesPage() {
         </ul>
       </section>
 
-      <details className="source-notice">
+      <PersistentDetails persistenceId="source-notice" className="source-notice">
         <summary>権利・更新について</summary>
         <div className="source-notice-body">
           <ul>
@@ -207,7 +208,7 @@ export function DataSourcesPage() {
             <li>外部の画像、音声、Webフォントは現在使用していません。将来追加した場合は、このページへ参照元を追記します。</li>
           </ul>
         </div>
-      </details>
+      </PersistentDetails>
     </section>
   )
 }

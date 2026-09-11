@@ -14,7 +14,6 @@ export function GoldenglowResultPanel({ skill, attackRows, duration, loading }: 
   duration: number
   loading: boolean
 }) {
-  const [open, setOpen] = useState(true)
   const [detail, setDetail] = useState<'total' | 'dps' | null>(null)
   const result = useMemo(() => summarizeGoldenglowCombinedAttackTable(attackRows, duration), [attackRows, duration])
   const permanent = skill?.duration === null
@@ -39,8 +38,6 @@ export function GoldenglowResultPanel({ skill, attackRows, duration, loading }: 
       number="02"
       title="計算結果"
       summary={skill ? `S${skill.skillIndex}・${durationLabel}${format(duration)}秒・敵1体` : 'スキル期待総ダメージ・スキル期待DPS'}
-      open={open}
-      onToggle={() => setOpen((value) => !value)}
       collapsedLabel="結果を表示"
     >
       {skill ? <>

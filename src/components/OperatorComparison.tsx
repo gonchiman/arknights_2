@@ -44,6 +44,7 @@ import { type FilterState } from './Filters'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
 import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
 import { SkillEffectModal } from './SkillEffectModal'
+import { PersistentDetails } from './PersistentDetails'
 import './OperatorComparison.css'
 
 interface Props {
@@ -965,9 +966,12 @@ function BuildEvaluationDetails({ evaluation, index }: { evaluation: ComparisonB
   const moduleEffects = evaluation.module.application.attributeEffects
   const moduleChanges = evaluation.module.application.changes
   const missingMetrics = getMissingMetrics(evaluation)
+  // Build contents are not persisted; remember the layout of the labeled A/B positions.
+  const persistenceId = `build-evaluation-${index}`
 
   return (
-    <details
+    <PersistentDetails
+      persistenceId={persistenceId}
       className="comparison-evaluation-details"
       style={{ '--build-color': getBuildColor(evaluation.config.colorIndex ?? index) } as CSSProperties}
     >
@@ -1052,7 +1056,7 @@ function BuildEvaluationDetails({ evaluation, index }: { evaluation: ComparisonB
           <p className="comparison-all-applied">現在の単体ダメージ比較に必要な登録済み効果を反映しています。</p>
         )}
       </div>
-    </details>
+    </PersistentDetails>
   )
 }
 

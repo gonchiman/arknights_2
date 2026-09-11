@@ -2,6 +2,7 @@ import type { GoldenglowGuideSkill } from '../lib/goldenglowGuideSkill'
 import type { RawOperatorModule } from '../types/skill'
 import { GoldenglowModuleEffect } from './GoldenglowModuleEffect'
 import { GoldenglowSkillControls } from './GoldenglowSkillControls'
+import { PersistentDetails } from './PersistentDetails'
 
 const format = (value: number) => new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 }).format(value)
 
@@ -86,7 +87,7 @@ export function GoldenglowBuildControls({
               : <option value="">—</option>}
           </select>
         </label>
-        {!compact && <details className="gg-skill-effect gg-module-effect">
+        {!compact && <PersistentDetails persistenceId="gg-module-effect" className="gg-skill-effect gg-module-effect">
           <summary data-gg-build-control="module-effect">
             <span>モジュール効果</span>
             <span className="gg-skill-effect-disclosure" aria-hidden="true" />
@@ -95,7 +96,7 @@ export function GoldenglowBuildControls({
             data-gg-build-control="module-effect-content">
             <GoldenglowModuleEffect application={skill.moduleApplication} />
           </div>
-        </details>}
+        </PersistentDetails>}
       </div>
       {resistance !== undefined && onResistanceChange && <label className="gg-resistance-slider">
         <span className="gg-resistance-slider-heading"><span><span className="gg-resistance-label-prefix">敵の</span>術耐性</span><strong>{format(resistance)}</strong></span>

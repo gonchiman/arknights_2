@@ -1,5 +1,6 @@
 import type { GoldenglowGuideSkill } from '../lib/goldenglowGuideSkill'
 import { getSkillLevelLabel } from '../lib/skillJsonAnalysis'
+import { PersistentDetails } from './PersistentDetails'
 
 export function GoldenglowSkillControls({
   skill,
@@ -48,7 +49,7 @@ export function GoldenglowSkillControls({
           ))}
         </select>
       </label>
-      {!compact && <details className="gg-skill-effect">
+      {!compact && <PersistentDetails persistenceId="gg-skill-effect" className="gg-skill-effect">
         <summary data-gg-build-control="skill-effect">
           <span>スキル効果</span>
           <span className="gg-skill-effect-disclosure" aria-hidden="true" />
@@ -57,7 +58,7 @@ export function GoldenglowSkillControls({
           data-gg-build-control="skill-effect-content">
           <p className="gg-skill-effect-description">{skill.skillDescription || 'スキル効果の説明を取得できませんでした。'}</p>
         </div>
-      </details>}
+      </PersistentDetails>}
     </div>
   )
 }

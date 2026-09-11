@@ -62,7 +62,6 @@ export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
   const [resistanceIgnoreOverride, setResistanceIgnore] = useState<number | null>(null)
   const resistanceIgnore = resistanceIgnoreOverride ?? skill?.explosionModel.resistanceIgnoreFixed ?? 15
   const [viewingDuration, setViewingDuration] = useState(30)
-  const [open, setOpen] = useState(true)
   const [singleDetail, setSingleDetail] = useState<'attack' | 'damage' | null>(null)
   const rawDamage = attack * explosionScale / 100
   const damage = calculateDamageBreakdown(rawDamage, 'ARTS', 0, resistance, {
@@ -235,8 +234,6 @@ export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
         number="04"
         title="単発の爆発ダメージ"
         summary="術ダメージ・敵1体・爆発1回"
-        open={open}
-        onToggle={() => setOpen((value) => !value)}
         collapsedLabel="テーブルを表示"
       >
         <h3 className="gg-table-title" id="gg-explosion-conditions-title">数値条件</h3>
@@ -344,7 +341,6 @@ export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
 }
 
 function FirstExplosionPanel({ explosionDistribution }: { explosionDistribution: readonly GoldenglowFirstExplosionRow[] }) {
-  const [open, setOpen] = useState(true)
   const [selectedAttackNumber, setAttackNumber] = useState(2)
   const [detailOpen, setDetailOpen] = useState(false)
   const lastAttack = explosionDistribution.length
@@ -363,8 +359,6 @@ function FirstExplosionPanel({ explosionDistribution }: { explosionDistribution:
       number="05"
       title="爆発確率"
       summary="浮遊ユニット1体・初回爆発まで"
-      open={open}
-      onToggle={() => setOpen((value) => !value)}
       collapsedLabel="テーブルを表示"
     >
       <label className="gg-first-explosion-slider">
@@ -411,7 +405,6 @@ function FirstExplosionPanel({ explosionDistribution }: { explosionDistribution:
 }
 
 function ExplosionExpectationPanel({ explosionDistribution }: { explosionDistribution: readonly GoldenglowFirstExplosionRow[] }) {
-  const [open, setOpen] = useState(true)
   const [selectedDetail, setSelectedDetail] = useState<number | 'mean' | 'meaning' | null>(null)
   const expectationRows = useMemo(() => explosionDistribution.map((row) => ({
     ...row, contribution: row.attackNumber * row.firstExplosionProbability,
@@ -425,12 +418,10 @@ function ExplosionExpectationPanel({ explosionDistribution }: { explosionDistrib
       number="06"
       title="爆発までの平均攻撃回数"
       summary="浮遊ユニット1体・次の爆発まで"
-      open={open}
-      onToggle={() => setOpen((value) => !value)}
       collapsedLabel="テーブルを表示"
     >
       <h3 className="gg-table-title" id="gg-expectation-breakdown-title">攻撃回数ごとの計算</h3>
-      <GoldenglowExpandableTable rows={expectationRows} regionLabel="平均攻撃回数の計算内訳" tableWrapperClassName="gg-expectation-table-wrap">
+      <GoldenglowExpandableTable persistenceId="explosion-expectation-rows" rows={expectationRows} regionLabel="平均攻撃回数の計算内訳" tableWrapperClassName="gg-expectation-table-wrap">
         {(visibleRows) => <table className="gg-probability-table gg-expectation-table" aria-labelledby="gg-expectation-breakdown-title">
           <thead>
             <tr>
@@ -517,7 +508,6 @@ function AttackConditionsPanel({ skill, attack, attackCount, viewingDuration, on
   onShowAttackDetail: () => void
   loading: boolean
 }) {
-  const [open, setOpen] = useState(true)
   const duration = skill?.duration ?? viewingDuration
 
   return (
@@ -526,8 +516,6 @@ function AttackConditionsPanel({ skill, attack, attackCount, viewingDuration, on
       number="03"
       title="攻撃条件"
       summary={skill ? `S${skill.skillIndex}・同一目標` : '各ダメージ期待値の共通条件'}
-      open={open}
-      onToggle={() => setOpen((value) => !value)}
       collapsedLabel="条件を表示"
     >
       {skill ? <>
@@ -575,7 +563,6 @@ function SkillAttackPanel({ skill, explosionDamage, viewingDuration, loading }: 
   viewingDuration: number
   loading: boolean
 }) {
-  const [open, setOpen] = useState(true)
   const [selectedAttackNumber, setSelectedAttackNumber] = useState<number | null>(null)
   const duration = skill?.duration ?? viewingDuration
   const attackRows = useMemo(() => skill ? buildGoldenglowSkillAttackTable({
@@ -597,8 +584,6 @@ function SkillAttackPanel({ skill, explosionDamage, viewingDuration, loading }: 
       number="07"
       title="爆発期待値"
       summary={skill ? `S${skill.skillIndex}・浮遊ユニット1体` : '浮遊ユニット1体'}
-      open={open}
-      onToggle={() => setOpen((value) => !value)}
       collapsedLabel="テーブルを表示"
     >
       {skill ? (
@@ -606,7 +591,7 @@ function SkillAttackPanel({ skill, explosionDamage, viewingDuration, loading }: 
           {lastRow ? (
             <>
               <h3 className="gg-table-title" id="gg-skill-attack-table-title">攻撃ごとの爆発期待値</h3>
-              <GoldenglowExpandableTable rows={attackRows} regionLabel="爆発期待値テーブル" tableWrapperClassName="gg-skill-attack-table-wrap">
+              <GoldenglowExpandableTable persistenceId="skill-attacks-rows" rows={attackRows} regionLabel="爆発期待値テーブル" tableWrapperClassName="gg-skill-attack-table-wrap">
                 {(visibleRows) => <table className="gg-probability-table gg-skill-attack-table" aria-labelledby="gg-skill-attack-table-title">
                   <thead>
                     <tr>

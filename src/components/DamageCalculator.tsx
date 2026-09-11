@@ -84,6 +84,7 @@ import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLin
 import { MechAccordAttackCountTable, MechAccordDefaultTable } from './MechAccordOutputTables'
 import { GoldenglowDamageTable } from './GoldenglowDamageTable'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
+import { PersistentDetails } from './PersistentDetails'
 import './DamageCalculator.css'
 
 interface Props {
@@ -149,14 +150,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
   const [trust, setTrust] = useState(100)
   const [skillLevelIndex, setSkillLevelIndex] = useState(0)
   const [moduleLevel, setModuleLevel] = useState(1)
-  const [operatorSearchPanelOpen, setOperatorSearchPanelOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.operatorSearch)
   const [operatorSearchOpen, setOperatorSearchOpen] = useState(false)
-  const [calculationConditionsOpen, setCalculationConditionsOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.calculationConditions)
-  const [operatorInfoOpen, setOperatorInfoOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.operatorInfo)
-  const [skillModelOpen, setSkillModelOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillModel)
-  const [outputPanelsOpen, setOutputPanelsOpen] = useState<Record<string, boolean>>({})
-  const [normalCalculationProcessOpen, setNormalCalculationProcessOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.normalCalculationProcess)
-  const [skillCalculationProcessOpen, setSkillCalculationProcessOpen] = useState(DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillCalculationProcess)
   const [sensitivityTarget, setSensitivityTarget] = useState<SensitivityTarget>(DEFAULT_DAMAGE_SENSITIVITY_TARGET)
   const [sensitivityMetric, setSensitivityMetric] = useState<SensitivityMetric>('DAMAGE')
   const [mechAccordAttackCount, setMechAccordAttackCount] = useState<MechAccordAttackCount>(1)
@@ -617,8 +611,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         number="01"
         title="オペレーター検索"
         summary="計算対象を選択します"
-        open={operatorSearchPanelOpen}
-        onToggle={() => setOperatorSearchPanelOpen((open) => !open)}
+        defaultOpen={DAMAGE_CALCULATOR_PANEL_DEFAULTS.operatorSearch}
         collapsedLabel="検索を表示"
         className="operator-search-panel"
       >
@@ -761,8 +754,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         number="02"
         title="ダメージ計算条件"
         summary="育成状態・スキル・モジュールを設定します"
-        open={calculationConditionsOpen}
-        onToggle={() => setCalculationConditionsOpen((open) => !open)}
+        defaultOpen={DAMAGE_CALCULATOR_PANEL_DEFAULTS.calculationConditions}
         collapsedLabel="条件を表示"
         className="calculation-conditions-panel"
       >
@@ -864,8 +856,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         number="03"
         title="オペレーター情報"
         summary={`基礎攻撃力 ${formatNumber(operatorStats.attack)} · 攻撃速度 ${formatNumber(operatorStats.attackSpeed)} · 攻撃間隔 ${formatDecimal(operatorStats.attackInterval)}秒`}
-        open={operatorInfoOpen}
-        onToggle={() => setOperatorInfoOpen((open) => !open)}
+        defaultOpen={DAMAGE_CALCULATOR_PANEL_DEFAULTS.operatorInfo}
         collapsedLabel="詳細を表示"
         className="operator-info-panel"
         bodyClassName="operator-info-body"
@@ -939,8 +930,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         number="04"
         title="スキル計算モデル"
         summary="ダメージ計算条件とゲームデータから自動決定"
-        open={skillModelOpen}
-        onToggle={() => setSkillModelOpen((open) => !open)}
+        defaultOpen={DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillModel}
         collapsedLabel="モデルを表示"
       >
         <dl className="model-value-grid" aria-label="自動算出されたスキル計算モデル">
@@ -991,11 +981,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
               : hasSubProfessionOutput
                 ? `${outputAttackLabel} · ${mainOutputExpectation ? '爆発込み期待値' : mechAccordResistanceDamage?.attackCountLabel ?? '攻撃回数指定'} · 術耐性別`
                 : `${sensitivityAttackLabel} · ${formatDetectedDamageType(sensitivityDamageType)} · ${sensitivityStatLabel}別 · ${sensitivityMetricLabel}`}
-          open={outputPanelsOpen[panel.id] ?? DAMAGE_CALCULATOR_PANEL_DEFAULTS.output}
-          onToggle={() => setOutputPanelsOpen((previous) => ({
-            ...previous,
-            [panel.id]: !(previous[panel.id] ?? DAMAGE_CALCULATOR_PANEL_DEFAULTS.output),
-          }))}
+          defaultOpen={DAMAGE_CALCULATOR_PANEL_DEFAULTS.output}
           collapsedLabel={`${panel.title}を表示`}
           className="results-panel damage-table-panel"
         >
@@ -1174,8 +1160,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
         number={panelNumbers.normalCalculationProcess}
         title="通常攻撃の計算過程"
         summary={`${hasSubProfessionOutput ? '本体分 · ' : ''}防御力0・術耐性0 · 1ヒット ${formatOptionalNumber(normalPerHit)} · DPS ${formatOptionalNumber(normalDps)}`}
-        open={normalCalculationProcessOpen}
-        onToggle={() => setNormalCalculationProcessOpen((open) => !open)}
+        defaultOpen={DAMAGE_CALCULATOR_PANEL_DEFAULTS.normalCalculationProcess}
         collapsedLabel="式と代入値を表示"
         className="calculation-process-panel"
         bodyClassName="calculation-process-body"
@@ -1206,8 +1191,7 @@ export function DamageCalculator({ rows, loading, onOpenOperatorDetail }: Props)
           : skillOutput
             ? `${hasSubProfessionOutput ? '本体分 · ' : ''}防御力0・術耐性0 · 1攻撃 ${formatNumber(skillOutput.perAttack)} · DPS ${skillOutput.dps === null ? '—' : formatNumber(skillOutput.dps)}`
             : '自動計算対象外'}
-        open={skillCalculationProcessOpen}
-        onToggle={() => setSkillCalculationProcessOpen((open) => !open)}
+        defaultOpen={DAMAGE_CALCULATOR_PANEL_DEFAULTS.skillCalculationProcess}
         collapsedLabel="式と代入値を表示"
         className="calculation-process-panel"
         bodyClassName="calculation-process-body"
@@ -1355,7 +1339,7 @@ function SensitivityCalculationProcess({
       <p className="visually-hidden" aria-live="polite" aria-atomic="true">
         {conditionLabel}、{valueLabel} {formatNumber(displayedValue)}の計算過程を表示中
       </p>
-      <details className="sensitivity-attack-details">
+      <PersistentDetails persistenceId="sensitivity-attack-details" className="sensitivity-attack-details">
         <summary>
           <span className="sensitivity-attack-disclosure" aria-hidden="true" />
           <span className="sensitivity-attack-summary-copy">
@@ -1365,7 +1349,7 @@ function SensitivityCalculationProcess({
           <strong className="sensitivity-attack-summary-value">{formatNumber(attackPipeline.finalAttack)}</strong>
         </summary>
         <CalculationStepList steps={attackSteps} className="sensitivity-attack-step-list" compact />
-      </details>
+      </PersistentDetails>
       <CalculationStepList steps={steps} className="sensitivity-calculation-step-list" compact />
     </section>
   )
