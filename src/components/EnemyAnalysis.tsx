@@ -114,14 +114,14 @@ export function EnemyAnalysis() {
       </header>
 
       <section className="enemy-directory" aria-label="敵ステータス分析">
-        <CollapsibleCalculatorPanel
-          id="enemy-filters"
-          number="01"
-          title="対象の絞り込み"
-          summary={`${scopeLabel}${loading ? ' · 読み込み中' : error ? ' · 読み込み失敗' : ` · ${filteredRows.length}体`}`}
-          collapsedLabel="条件を表示"
-          className="enemy-filters"
-        >
+        <section className="calculator-panel enemy-filters" aria-labelledby="enemy-filters-heading">
+          <header className="panel-heading">
+            <div>
+              <span>01</span>
+              <h2 id="enemy-filters-heading">対象の絞り込み</h2>
+            </div>
+            <p>{`${scopeLabel}${loading ? ' · 読み込み中' : error ? ' · 読み込み失敗' : ` · ${filteredRows.length}体`}`}</p>
+          </header>
           <div className="enemy-filter-toolbar">
             <button type="button" className="button secondary" onClick={resetFilters} disabled={!filtersActive}>条件をリセット</button>
           </div>
@@ -162,7 +162,7 @@ export function EnemyAnalysis() {
               </tbody>
             </table>
           </div>
-        </CollapsibleCalculatorPanel>
+        </section>
 
         {loading ? (
           <div className="enemy-load-state" role="status">敵データを読み込んでいます…</div>
