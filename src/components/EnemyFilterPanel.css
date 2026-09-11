@@ -1,14 +1,12 @@
-.enemy-filter-normal,
 .enemy-filter-compact { min-width: 0; overflow-anchor: none; }
 
 .damage-build-navigation.enemy-filter-compact {
-  position: fixed;
+  position: sticky;
   grid-template-columns: minmax(140px, 1fr) minmax(280px, 1fr) auto;
   align-items: center;
   gap: 6px;
   padding: 6px;
 }
-.enemy-filter-compact[hidden] { display: none; }
 .enemy-filter-compact input {
   display: block;
   width: 100%;

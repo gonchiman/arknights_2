@@ -180,7 +180,7 @@ export function EnemyStatisticsPanel({ rows, scopeLabel }: { rows: EnemyRecord[]
 
       <CollapsibleCalculatorPanel
         id="enemy-statistics"
-        number="02"
+        number="01"
         title="統計表"
         summary={`${selectedMetric.label} · ${scopeLabel} · ${statistics.count}体`}
         defaultOpen
@@ -193,7 +193,7 @@ export function EnemyStatisticsPanel({ rows, scopeLabel }: { rows: EnemyRecord[]
 
       <CollapsibleCalculatorPanel
         id="enemy-distribution"
-        number="03"
+        number="02"
         title="分布グラフ"
         summary={`${selectedMetric.label} · ${CHART_OPTIONS.find((chart) => chart.key === selectedChart)?.label} · ${scopeLabel}`}
         defaultOpen

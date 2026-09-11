@@ -49,20 +49,6 @@
   line-height: 1.5;
 }
 
-.enemy-filter-toolbar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
-.enemy-filter-toolbar button { font-size: 11px; }
-.enemy-filter-table input {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  height: 34px;
-  border: 1px solid var(--border-strong);
-  border-radius: 0;
-  background: var(--surface);
-  color: var(--text);
-  padding: 0 9px;
-  font-size: 11px;
-}
 .enemy-level-filter-buttons {
   display: flex;
   justify-content: flex-end;
@@ -978,8 +964,6 @@
 }
 
 @media (pointer: coarse) {
-  .enemy-filter-toolbar button,
-  .enemy-filter-table input,
   .enemy-level-filter-buttons button,
   .enemy-metric-selector button,
   .enemy-chart-visibility label,
