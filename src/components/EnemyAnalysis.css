@@ -761,7 +761,13 @@
 .enemy-table th:nth-child(2) { width: 8%; }
 .enemy-table th:nth-child(3) { width: 10%; }
 .enemy-table th:nth-child(n + 4) { width: calc(60% / 7); }
-.enemy-cell-label { display: none; }
+.enemy-table-compact-note {
+  display: none;
+  margin: 0 0 8px;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
 
 .numeric-heading { text-align: right; }
 
@@ -803,12 +809,13 @@
 
 .enemy-detail-button strong {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
   font-size: 11px;
   font-weight: 500;
   text-decoration: underline;
   text-decoration-color: #a7b2bb;
-  white-space: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .enemy-detail-button span {
@@ -837,7 +844,7 @@
 .enemy-number-cell {
   font-size: 11px;
   text-align: right;
-  white-space: normal;
+  white-space: nowrap;
 }
 
 .enemy-rating-cell strong {
@@ -928,65 +935,41 @@
 .enemy-data-details[open] > summary > span::before { content: '−'; }
 
 @container enemy-reference (max-width: 900px) {
-  .enemy-table,
-  .enemy-table tbody { display: block; }
-  .enemy-table thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  .enemy-table thead th { position: static; }
-  .enemy-table tbody tr {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    border-bottom: 1px solid var(--border-strong);
-  }
-  .enemy-table tbody tr:last-child { border-bottom: 0; }
-  .enemy-table tbody td {
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
-    padding: 8px;
-    font-size: 11px;
-  }
-  .enemy-table .enemy-identity-cell {
-    grid-column: 1 / -1;
-    position: relative;
-    left: auto;
-    z-index: auto;
-    display: block;
-    border-right: 0;
-    background: var(--surface-soft);
-  }
-  .enemy-table .enemy-detail-button { min-height: 32px; }
-  .enemy-table .enemy-index { top: 16px; }
-  .enemy-cell-label {
-    min-width: 0;
-    display: block;
-    color: var(--text-muted);
-    font-size: 10px;
-    font-weight: 400;
-    text-align: left;
-  }
-  .enemy-table tbody td > strong { min-width: 0; }
-  .enemy-table tbody td:nth-child(3n + 1) { border-right: 0; }
-  .enemy-table tbody td:nth-last-child(-n + 3) { border-bottom: 0; }
+  .enemy-table-compact-note { display: block; }
+  .enemy-table th:nth-child(3),
+  .enemy-table td:nth-child(3),
+  .enemy-table th:nth-child(10),
+  .enemy-table td:nth-child(10) { display: none; }
+  .enemy-table th:first-child { width: 26%; }
+  .enemy-table th:nth-child(2) { width: 10%; }
+  .enemy-table th:nth-child(n + 4) { width: calc(64% / 6); }
+  .enemy-table th:nth-child(9),
+  .enemy-table td:nth-child(9) { border-right: 0; }
+  .enemy-detail-button span { display: none; }
 }
 
-@container enemy-reference (max-width: 420px) {
-  .enemy-table tbody tr { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .enemy-table tbody td { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-  .enemy-table tbody td:nth-child(3n + 1) { border-right: 1px solid var(--border); }
-  .enemy-table tbody td:nth-last-child(-n + 3) { border-bottom: 1px solid var(--border); }
-  .enemy-table tbody .enemy-identity-cell,
-  .enemy-table tbody td:nth-child(2n + 1),
-  .enemy-table tbody td:last-child { border-right: 0; }
-  .enemy-table tbody td:last-child { grid-column: 1 / -1; border-bottom: 0; }
+@container enemy-reference (max-width: 660px) {
+  .enemy-table th:nth-child(2),
+  .enemy-table td:nth-child(2),
+  .enemy-table th:nth-child(8),
+  .enemy-table td:nth-child(8),
+  .enemy-table th:nth-child(9),
+  .enemy-table td:nth-child(9) { display: none; }
+  .enemy-table th:first-child { width: 32%; }
+  .enemy-table th:nth-child(4) { width: 24%; }
+  .enemy-table th:nth-child(5) { width: 17%; }
+  .enemy-table th:nth-child(6) { width: 14%; }
+  .enemy-table th:nth-child(7) { width: 13%; }
+  .enemy-table th:nth-child(7),
+  .enemy-table td:nth-child(7) { border-right: 0; }
+  .enemy-table th,
+  .enemy-table td { padding: 6px 3px; }
+  .enemy-table th { font-size: 10px; }
+  .enemy-table .enemy-identity-cell { padding: 6px !important; }
+  .enemy-identity-cell .enemy-index { position: static; display: inline-block; margin-bottom: 2px; }
+  .enemy-detail-button { min-height: 26px; }
+  .enemy-number-cell,
+  .enemy-rating-cell strong { font-size: 10px; }
 }
 
 @media (max-width: 760px) {

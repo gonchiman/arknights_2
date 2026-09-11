@@ -193,6 +193,7 @@ export function EnemyAnalysis() {
               </div>
 
               <h3 className="enemy-table-title" id="enemy-table-heading">敵の基礎ステータス</h3>
+              <p className="enemy-table-compact-note">画面幅に合わせて一部の列を省略しています。全項目は敵名を押すと確認できます。</p>
               <div className="table-wrap enemy-table-wrap" tabIndex={0} role="region" aria-label="敵の基礎ステータス一覧・縦スクロール領域">
                 <table className="enemy-table" role="table" aria-labelledby="enemy-table-heading">
                   <caption>統計分析の対象となっている敵の基礎ステータス一覧</caption>
@@ -266,6 +267,7 @@ function EnemyRow({
           className="enemy-detail-button"
           aria-haspopup="dialog"
           aria-label={`${enemy.name}の詳細を開く`}
+          title={enemy.name}
           onClick={(event) => onOpenDetail(enemy, event.currentTarget)}
         >
           <strong>{enemy.name}</strong>
@@ -273,49 +275,43 @@ function EnemyRow({
         </button>
       </td>
       <td role="cell" headers="enemy-column-level">
-        <span className="enemy-cell-label" aria-hidden="true">区分</span>
         <span className={`enemy-level-badge ${enemy.levelType.toLowerCase()}`}>{LEVEL_LABELS[enemy.levelType]}</span>
       </td>
-      <EnemyNumberCell column="stages" label="登場ステージ数" value={enemy.stageAppearanceCount} />
-      <EnemyPrimaryStatCell column="hp" label={statDisplayMode === 'RATING' ? '耐久' : 'HP'} mode={statDisplayMode} rating={enemy.ratings.endurance} value={enemy.stats.maxHp} />
-      <EnemyPrimaryStatCell column="attack" label="攻撃力" mode={statDisplayMode} rating={enemy.ratings.attack} value={enemy.stats.attack} />
-      <EnemyPrimaryStatCell column="defense" label="防御力" mode={statDisplayMode} rating={enemy.ratings.defense} value={enemy.stats.defense} />
-      <EnemyPrimaryStatCell column="resistance" label="術耐性" mode={statDisplayMode} rating={enemy.ratings.resistance} value={enemy.stats.magicResistance} />
-      <EnemyNumberCell column="speed" label="移動速度" value={enemy.stats.moveSpeed} decimal />
+      <EnemyNumberCell column="stages" value={enemy.stageAppearanceCount} />
+      <EnemyPrimaryStatCell column="hp" mode={statDisplayMode} rating={enemy.ratings.endurance} value={enemy.stats.maxHp} />
+      <EnemyPrimaryStatCell column="attack" mode={statDisplayMode} rating={enemy.ratings.attack} value={enemy.stats.attack} />
+      <EnemyPrimaryStatCell column="defense" mode={statDisplayMode} rating={enemy.ratings.defense} value={enemy.stats.defense} />
+      <EnemyPrimaryStatCell column="resistance" mode={statDisplayMode} rating={enemy.ratings.resistance} value={enemy.stats.magicResistance} />
+      <EnemyNumberCell column="speed" value={enemy.stats.moveSpeed} decimal />
       <td className="enemy-number-cell" role="cell" headers="enemy-column-interval">
-        <span className="enemy-cell-label" aria-hidden="true">攻撃間隔</span>
         <strong>{formatDecimal(enemy.stats.baseAttackTime, '秒')}</strong>
       </td>
-      <EnemyNumberCell column="weight" label="重量" value={enemy.stats.massLevel} />
+      <EnemyNumberCell column="weight" value={enemy.stats.massLevel} />
     </tr>
   )
 }
 
 function EnemyPrimaryStatCell({
   column,
-  label,
   mode,
   rating,
   value,
 }: {
   column: string
-  label: string
   mode: EnemyStatDisplayMode
   rating: string | null
   value: number | null
 }) {
   return (
     <td className={`enemy-number-cell ${mode === 'RATING' ? 'enemy-rating-cell' : ''}`} role="cell" headers={`enemy-column-${column}`}>
-      <span className="enemy-cell-label" aria-hidden="true">{label}</span>
       <strong>{mode === 'RATING' ? rating ?? '—' : formatInteger(value)}</strong>
     </td>
   )
 }
 
-function EnemyNumberCell({ column, label, value, decimal = false, suffix = '' }: { column: string; label: string; value: number | null; decimal?: boolean; suffix?: string }) {
+function EnemyNumberCell({ column, value, decimal = false, suffix = '' }: { column: string; value: number | null; decimal?: boolean; suffix?: string }) {
   return (
     <td className="enemy-number-cell" role="cell" headers={`enemy-column-${column}`}>
-      <span className="enemy-cell-label" aria-hidden="true">{label}</span>
       <strong>{decimal ? formatDecimal(value, suffix) : formatInteger(value, suffix)}</strong>
     </td>
   )
