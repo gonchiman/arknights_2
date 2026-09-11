@@ -7,6 +7,9 @@ import {
 import type { EnemyLevelType, EnemyRecord } from '../types/enemy'
 import { EnemyDetailModal } from './EnemyDetailModal'
 import { EnemyStatisticsPanel } from './EnemyStatisticsPanel'
+import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
+import { PersistentDetails } from './PersistentDetails'
+import './DamageCalculator.css'
 import './EnemyAnalysis.css'
 
 const PAGE_SIZE = 100
@@ -102,43 +105,64 @@ export function EnemyAnalysis() {
   }
 
   return (
-    <section className="enemy-analysis-route">
-      <h1 className="visually-hidden">Enemy Analysis</h1>
+    <section className="calculator-page enemy-analysis-route">
+      <header className="page-intro">
+        <div>
+          <span className="page-kicker">ENEMY ANALYSIS</span>
+          <h1>敵ステータス分析</h1>
+        </div>
+      </header>
 
       <section className="enemy-directory" aria-label="敵ステータス分析">
-        <div className="enemy-filters">
-          <div className="enemy-filters-heading">
-            <strong>敵を絞り込む</strong>
-            <button type="button" onClick={resetFilters} disabled={!filtersActive}>条件をリセット</button>
+        <CollapsibleCalculatorPanel
+          id="enemy-filters"
+          number="01"
+          title="対象の絞り込み"
+          summary={`${scopeLabel}${loading ? ' · 読み込み中' : error ? ' · 読み込み失敗' : ` · ${filteredRows.length}体`}`}
+          collapsedLabel="条件を表示"
+          className="enemy-filters"
+        >
+          <div className="enemy-filter-toolbar">
+            <button type="button" className="button secondary" onClick={resetFilters} disabled={!filtersActive}>条件をリセット</button>
           </div>
-          <div className="enemy-filter-grid">
-            <label className="enemy-query-filter">
-              <span>検索</span>
-              <input
-                type="search"
-                value={filters.query}
-                placeholder="敵名・図鑑番号・能力・内部ID"
-                onChange={(event) => updateFilter('query', event.target.value)}
-              />
-            </label>
-            <div className="enemy-level-filter" role="group" aria-labelledby="enemy-level-filter-label">
-              <span id="enemy-level-filter-label">区分</span>
-              <div className="enemy-level-filter-buttons">
-                {LEVEL_OPTIONS.map((option) => (
-                  <button
-                    type="button"
-                    className={filters.levelType === option.value ? 'active' : ''}
-                    aria-pressed={filters.levelType === option.value}
-                    onClick={() => updateFilter('levelType', option.value)}
-                    key={option.value}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <h3 className="enemy-table-title" id="enemy-filter-table-title">検索条件</h3>
+          <div className="enemy-value-table-wrap">
+            <table className="enemy-value-table enemy-filter-table" aria-labelledby="enemy-filter-table-title">
+              <tbody>
+                <tr>
+                  <th scope="row"><label htmlFor="enemy-query">検索</label></th>
+                  <td>
+                    <input
+                      id="enemy-query"
+                      type="search"
+                      value={filters.query}
+                      placeholder="敵名・図鑑番号・能力・内部ID"
+                      onChange={(event) => updateFilter('query', event.target.value)}
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row" id="enemy-level-filter-label">区分</th>
+                  <td>
+                    <div className="enemy-level-filter-buttons" role="group" aria-labelledby="enemy-level-filter-label">
+                      {LEVEL_OPTIONS.map((option) => (
+                        <button
+                          type="button"
+                          className={filters.levelType === option.value ? 'active' : ''}
+                          aria-pressed={filters.levelType === option.value}
+                          onClick={() => updateFilter('levelType', option.value)}
+                          key={option.value}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-        </div>
+        </CollapsibleCalculatorPanel>
 
         {loading ? (
           <div className="enemy-load-state" role="status">敵データを読み込んでいます…</div>
@@ -160,13 +184,17 @@ export function EnemyAnalysis() {
           <>
             <EnemyStatisticsPanel rows={filteredRows} scopeLabel={scopeLabel} />
 
-            <section className="enemy-table-section" aria-labelledby="enemy-table-heading">
-              <header className="enemy-table-section-heading">
-                <div>
-                  <span>REFERENCE DATA</span>
-                  <h2 id="enemy-table-heading">対象の敵一覧</h2>
-                </div>
+            <CollapsibleCalculatorPanel
+              id="enemy-reference"
+              number="04"
+              title="対象の敵一覧"
+              summary={`${scopeLabel} · ${filteredRows.length}体 · ${statDisplayMode === 'RATING' ? 'ゲーム内評価' : '実数値'}`}
+              collapsedLabel="一覧を表示"
+              className="enemy-table-section"
+            >
+              <div className="enemy-table-toolbar">
                 <div className="enemy-stat-mode-switch" role="group" aria-label="一覧のステータス表記">
+                  <span>ステータス表記</span>
                   <div className="enemy-stat-mode-buttons">
                     <button
                       type="button"
@@ -182,9 +210,6 @@ export function EnemyAnalysis() {
                     >実数値</button>
                   </div>
                 </div>
-              </header>
-
-              <div className="result-meta enemy-result-meta">
                 <div className="enemy-result-summary" role="status" aria-live="polite">
                   <span>{filteredRows.length}体</span>
                   {statDisplayMode === 'RATING' && (
@@ -193,8 +218,9 @@ export function EnemyAnalysis() {
                 </div>
               </div>
 
-              <div className="table-wrap enemy-table-wrap">
-                <table className="enemy-table">
+              <h3 className="enemy-table-title" id="enemy-table-heading">敵の基礎ステータス</h3>
+              <div className="table-wrap enemy-table-wrap" tabIndex={0} role="region" aria-label="敵の基礎ステータス一覧・スクロール領域">
+                <table className="enemy-table" aria-labelledby="enemy-table-heading">
                   <caption>統計分析の対象となっている敵の基礎ステータス一覧</caption>
                   <thead>
                     <tr>
@@ -232,14 +258,17 @@ export function EnemyAnalysis() {
                   </div>
                 </nav>
               )}
-            </section>
+            </CollapsibleCalculatorPanel>
           </>
         )}
       </section>
 
-      <p className="enemy-data-note">
-        登場ステージ数は通常ステージ集計（stage_table内の戦闘ステージをlevelId単位で重複除去）です。ローグライク等の別管理ステージは含みません。「—」は集計データ未取得を示します。ステージ固有の補正は基礎ステータスへ反映していません。
-      </p>
+      <PersistentDetails persistenceId="enemy-data-notes" className="enemy-data-details">
+        <summary>データの範囲と表記<span aria-hidden="true" /></summary>
+        <p className="enemy-data-note">
+          登場ステージ数は通常ステージ集計（stage_table内の戦闘ステージをlevelId単位で重複除去）です。ローグライク等の別管理ステージは含みません。「—」は集計データ未取得を示します。ステージ固有の補正は基礎ステータスへ反映していません。
+        </p>
+      </PersistentDetails>
       {detailEnemy && <EnemyDetailModal enemy={detailEnemy} onClose={closeEnemyDetail} />}
     </section>
   )

@@ -37,6 +37,7 @@ const DECIMAL_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits
 export function EnemyDetailModal({ enemy, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
+  const backdropPointerDownRef = useRef(false)
   const titleId = useId()
   const damageTypes = enemy.damageTypes.length > 0
     ? enemy.damageTypes.map(getDamageTypeLabel).join('・')
@@ -62,7 +63,8 @@ export function EnemyDetailModal({ enemy, onClose }: Props) {
   }, [enemy.id])
 
   const handleBackdropClick = (event: ReactMouseEvent<HTMLDialogElement>) => {
-    if (event.target === event.currentTarget) onClose()
+    if (backdropPointerDownRef.current && event.target === event.currentTarget) onClose()
+    backdropPointerDownRef.current = false
   }
 
   return (
@@ -79,6 +81,12 @@ export function EnemyDetailModal({ enemy, onClose }: Props) {
         if (event.key !== 'Escape') return
         event.preventDefault()
         onClose()
+      }}
+      onPointerDown={(event) => {
+        backdropPointerDownRef.current = event.target === event.currentTarget
+      }}
+      onPointerCancel={() => {
+        backdropPointerDownRef.current = false
       }}
       onClick={handleBackdropClick}
     >
@@ -100,46 +108,56 @@ export function EnemyDetailModal({ enemy, onClose }: Props) {
 
           <section aria-labelledby={`${titleId}-stats`}>
             <h3 id={`${titleId}-stats`}>基礎ステータス</h3>
-            <dl className="enemy-detail-stat-grid">
-              <EnemyDetailValue label="HP" value={formatInteger(enemy.stats.maxHp)} />
-              <EnemyDetailValue label="攻撃力" value={formatInteger(enemy.stats.attack)} />
-              <EnemyDetailValue label="防御力" value={formatInteger(enemy.stats.defense)} />
-              <EnemyDetailValue label="術耐性" value={formatInteger(enemy.stats.magicResistance)} />
-              <EnemyDetailValue label="移動速度" value={formatDecimal(enemy.stats.moveSpeed)} />
-              <EnemyDetailValue label="攻撃間隔" value={formatDecimal(enemy.stats.baseAttackTime, '秒')} />
-              <EnemyDetailValue label="攻撃速度" value={formatInteger(enemy.stats.attackSpeed)} />
-              <EnemyDetailValue label="重量" value={formatInteger(enemy.stats.massLevel)} />
-            </dl>
+            <table className="enemy-detail-table" aria-labelledby={`${titleId}-stats`}>
+              <tbody>
+                <EnemyDetailValue label="HP" value={formatInteger(enemy.stats.maxHp)} numeric />
+                <EnemyDetailValue label="攻撃力" value={formatInteger(enemy.stats.attack)} numeric />
+                <EnemyDetailValue label="防御力" value={formatInteger(enemy.stats.defense)} numeric />
+                <EnemyDetailValue label="術耐性" value={formatInteger(enemy.stats.magicResistance)} numeric />
+                <EnemyDetailValue label="移動速度" value={formatDecimal(enemy.stats.moveSpeed)} numeric />
+                <EnemyDetailValue label="攻撃間隔" value={formatDecimal(enemy.stats.baseAttackTime, '秒')} numeric />
+                <EnemyDetailValue label="攻撃速度" value={formatInteger(enemy.stats.attackSpeed)} numeric />
+                <EnemyDetailValue label="重量" value={formatInteger(enemy.stats.massLevel)} numeric />
+              </tbody>
+            </table>
           </section>
 
           <section aria-labelledby={`${titleId}-combat`}>
             <h3 id={`${titleId}-combat`}>戦闘情報</h3>
-            <dl className="enemy-detail-stat-grid enemy-detail-combat-grid">
-              <EnemyDetailValue label="区分" value={LEVEL_LABELS[enemy.levelType]} />
-              <EnemyDetailValue label="攻撃種別" value={damageTypes} />
-              <EnemyDetailValue label="攻撃範囲" value={getAttackWayLabel(enemy.attackWay)} />
-              <EnemyDetailValue label="耐久値減少" value={formatInteger(enemy.lifePointReduce)} />
-              <EnemyDetailValue label="登場ステージ数" value={formatInteger(enemy.stageAppearanceCount)} />
-              <EnemyDetailValue label="参照DBレベル" value={databaseInfo} />
-            </dl>
+            <table className="enemy-detail-table" aria-labelledby={`${titleId}-combat`}>
+              <tbody>
+                <EnemyDetailValue label="区分" value={LEVEL_LABELS[enemy.levelType]} />
+                <EnemyDetailValue label="攻撃種別" value={damageTypes} />
+                <EnemyDetailValue label="攻撃範囲" value={getAttackWayLabel(enemy.attackWay)} />
+                <EnemyDetailValue label="耐久値減少" value={formatInteger(enemy.lifePointReduce)} numeric />
+                <EnemyDetailValue label="登場ステージ数" value={formatInteger(enemy.stageAppearanceCount)} numeric />
+                <EnemyDetailValue label="参照DBレベル" value={databaseInfo} numeric />
+              </tbody>
+            </table>
           </section>
 
           <section aria-labelledby={`${titleId}-abilities`}>
             <h3 id={`${titleId}-abilities`}>能力・状態異常耐性</h3>
-            <div className="enemy-detail-ability-grid">
-              <div>
-                <strong>能力</strong>
-                {enemy.abilities.length > 0
-                  ? <ul>{enemy.abilities.map((ability) => <li key={ability}>{ability}</li>)}</ul>
-                  : <p>特記事項なし</p>}
-              </div>
-              <div>
-                <strong>無効化する状態異常</strong>
-                {enemy.statusImmunities.length > 0
-                  ? <div className="enemy-detail-tags">{enemy.statusImmunities.map((immunity) => <span key={immunity}>{immunity}</span>)}</div>
-                  : <p>なし</p>}
-              </div>
-            </div>
+            <table className="enemy-detail-table enemy-detail-ability-table" aria-labelledby={`${titleId}-abilities`}>
+              <tbody>
+                <tr>
+                  <th scope="row">能力</th>
+                  <td>
+                    {enemy.abilities.length > 0
+                      ? <ul>{enemy.abilities.map((ability) => <li key={ability}>{ability}</li>)}</ul>
+                      : <p>特記事項なし</p>}
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">無効化する状態異常</th>
+                  <td>
+                    {enemy.statusImmunities.length > 0
+                      ? <div className="enemy-detail-tags">{enemy.statusImmunities.map((immunity) => <span key={immunity}>{immunity}</span>)}</div>
+                      : <p>なし</p>}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </section>
 
           <footer className="enemy-detail-meta">
@@ -152,8 +170,8 @@ export function EnemyDetailModal({ enemy, onClose }: Props) {
   )
 }
 
-function EnemyDetailValue({ label, value }: { label: string; value: string }) {
-  return <div><dt>{label}</dt><dd>{value}</dd></div>
+function EnemyDetailValue({ label, value, numeric = false }: { label: string; value: string; numeric?: boolean }) {
+  return <tr><th scope="row">{label}</th><td className={numeric ? 'enemy-detail-number' : undefined}>{value}</td></tr>
 }
 
 function getDamageTypeLabel(value: string): string {

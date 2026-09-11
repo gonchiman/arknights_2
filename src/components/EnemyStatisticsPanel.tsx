@@ -13,6 +13,7 @@ import {
   validateCustomLinearBinWidth,
 } from '../lib/enemyStatistics'
 import type { EnemyLevelType, EnemyRecord, EnemyStats } from '../types/enemy'
+import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { PersistentDetails } from './PersistentDetails'
 
 type AnalyzedStatKey = keyof Pick<
@@ -158,161 +159,179 @@ export function EnemyStatisticsPanel({ rows, scopeLabel }: { rows: EnemyRecord[]
   }
 
   return (
-    <section className="enemy-statistics-panel" aria-labelledby="enemy-statistics-heading">
-      <header className="enemy-section-heading">
-        <div>
-          <span>STATISTICAL ANALYSIS</span>
-          <h2 id="enemy-statistics-heading">ステータス分布</h2>
-        </div>
-        <p>{scopeLabel} · {rows.length}体</p>
-      </header>
-
-      <div className="enemy-metric-selector" role="group" aria-label="分析するステータス">
-        {STAT_METRICS.map((metric) => (
-          <button
-            type="button"
-            className={metric.key === selectedMetric.key ? 'active' : ''}
-            aria-pressed={metric.key === selectedMetric.key}
-            onClick={() => selectMetric(metric)}
-            key={metric.key}
-          >
-            {metric.label}
-          </button>
-        ))}
-      </div>
-
-      <StatisticsSummary statistics={statistics} metric={selectedMetric} />
-
-      <div className="enemy-chart-toolbar">
-        <fieldset className="enemy-chart-visibility">
-          <legend>表示するグラフ</legend>
-          <div role="radiogroup" aria-label="グラフの選択">
-            {CHART_OPTIONS.map((chart) => (
-              <label className={selectedChart === chart.key ? 'active' : ''} key={chart.key}>
-                <input
-                  type="radio"
-                  name="enemy-statistics-chart"
-                  value={chart.key}
-                  checked={selectedChart === chart.key}
-                  onChange={() => setSelectedChart(chart.key)}
-                />
-                <span>{chart.label}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-        {statistics.count > 0 && (
-          <div className="enemy-chart-axis-control">
-            <span>横軸</span>
-            <ScaleSwitch
-              scale={axisScale}
-              onChange={setAxisScale}
-              label={`${selectedMetric.label}の横軸目盛`}
-            />
-          </div>
-        )}
-      </div>
-
-      {statistics.count > 0 && selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR' && (
-        <div
-          className="statistics-histogram-settings"
-          role="group"
-          aria-labelledby="enemy-histogram-settings-heading"
-        >
-          <div className="statistics-histogram-settings-heading">
-            <strong id="enemy-histogram-settings-heading">ヒストグラム設定</strong>
-            <span>線形目盛の階級幅を指定できます</span>
-          </div>
-          <div className="statistics-bin-width-control">
-            <label htmlFor={binWidthInputId}>
-              階級幅{selectedMetric.suffix ? `（${selectedMetric.suffix}）` : ''}
-            </label>
-            <div className="statistics-bin-width-input-row">
-              <input
-                id={binWidthInputId}
-                type="number"
-                inputMode="decimal"
-                min="0"
-                step="any"
-                value={linearBinWidthInput}
-                placeholder="自動"
-                aria-invalid={linearBinWidthError !== null}
-                aria-describedby={binWidthHelpId}
-                onChange={(event) => setLinearBinWidthInput(event.target.value)}
-              />
-              {linearBinWidthInput !== '' && (
-                <button
-                  type="button"
-                  onClick={() => setLinearBinWidthInput('')}
-                  aria-label="階級幅を自動設定に戻す"
-                >
-                  自動
-                </button>
-              )}
-            </div>
-            <small
-              id={binWidthHelpId}
-              className={linearBinWidthError ? 'error' : ''}
-              aria-live="polite"
+    <>
+      <fieldset className="enemy-statistics-settings">
+        <legend>統計表・グラフの共通設定</legend>
+        <div className="enemy-metric-selector" role="group" aria-label="分析するステータス">
+          {STAT_METRICS.map((metric) => (
+            <button
+              type="button"
+              className={metric.key === selectedMetric.key ? 'active' : ''}
+              aria-pressed={metric.key === selectedMetric.key}
+              onClick={() => selectMetric(metric)}
+              key={metric.key}
             >
-              {linearBinWidthError
-                ?? (linearBinWidthValidation?.valid
-                  ? `${linearBinWidthValidation.binCount}階級で集計`
-                  : `自動：${formatNumber(statistics.histogram?.binWidth ?? 0, selectedMetric.summaryDigits, selectedMetric.suffix)}`)}
-            </small>
-          </div>
+              {metric.label}
+            </button>
+          ))}
         </div>
-      )}
+      </fieldset>
 
-      <div className="enemy-chart-stack">
-        {selectedChart === 'HISTOGRAM' && (
-          <HistogramFigure statistics={statistics} metric={selectedMetric} scopeLabel={scopeLabel} scale={axisScale} />
+      <CollapsibleCalculatorPanel
+        id="enemy-statistics"
+        number="02"
+        title="統計表"
+        summary={`${selectedMetric.label} · ${scopeLabel} · ${statistics.count}体`}
+        defaultOpen
+        collapsedLabel="統計表を開く"
+        className="enemy-statistics-panel"
+        bodyClassName="enemy-statistics-body"
+      >
+        <StatisticsSummary statistics={statistics} metric={selectedMetric} />
+      </CollapsibleCalculatorPanel>
+
+      <CollapsibleCalculatorPanel
+        id="enemy-distribution"
+        number="03"
+        title="分布グラフ"
+        summary={`${selectedMetric.label} · ${CHART_OPTIONS.find((chart) => chart.key === selectedChart)?.label} · ${scopeLabel}`}
+        defaultOpen
+        collapsedLabel="グラフを開く"
+        className="enemy-distribution-panel"
+        bodyClassName="enemy-distribution-body"
+      >
+        <div className="enemy-chart-toolbar">
+          <fieldset className="enemy-chart-visibility">
+            <legend>表示するグラフ</legend>
+            <div role="radiogroup" aria-label="グラフの選択">
+              {CHART_OPTIONS.map((chart) => (
+                <label className={selectedChart === chart.key ? 'active' : ''} key={chart.key}>
+                  <input
+                    type="radio"
+                    name="enemy-statistics-chart"
+                    value={chart.key}
+                    checked={selectedChart === chart.key}
+                    onChange={() => setSelectedChart(chart.key)}
+                  />
+                  <span>{chart.label}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          {statistics.count > 0 && (
+            <div className="enemy-chart-axis-control">
+              <span>横軸</span>
+              <ScaleSwitch
+                scale={axisScale}
+                onChange={setAxisScale}
+                label={`${selectedMetric.label}の横軸目盛`}
+              />
+            </div>
+          )}
+        </div>
+
+        {statistics.count > 0 && selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR' && (
+          <div
+            className="statistics-histogram-settings"
+            role="group"
+            aria-labelledby="enemy-histogram-settings-heading"
+          >
+            <div className="statistics-histogram-settings-heading">
+              <strong id="enemy-histogram-settings-heading">ヒストグラム設定</strong>
+              <span>線形目盛の階級幅を指定できます</span>
+            </div>
+            <div className="statistics-bin-width-control">
+              <label htmlFor={binWidthInputId}>
+                階級幅{selectedMetric.suffix ? `（${selectedMetric.suffix}）` : ''}
+              </label>
+              <div className="statistics-bin-width-input-row">
+                <input
+                  id={binWidthInputId}
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="any"
+                  value={linearBinWidthInput}
+                  placeholder="自動"
+                  aria-invalid={linearBinWidthError !== null}
+                  aria-describedby={binWidthHelpId}
+                  onChange={(event) => setLinearBinWidthInput(event.target.value)}
+                />
+                {linearBinWidthInput !== '' && (
+                  <button
+                    type="button"
+                    onClick={() => setLinearBinWidthInput('')}
+                    aria-label="階級幅を自動設定に戻す"
+                  >
+                    自動
+                  </button>
+                )}
+              </div>
+              <small
+                id={binWidthHelpId}
+                className={linearBinWidthError ? 'error' : ''}
+                aria-live="polite"
+              >
+                {linearBinWidthError
+                  ?? (linearBinWidthValidation?.valid
+                    ? `${linearBinWidthValidation.binCount}階級で集計`
+                    : `自動：${formatNumber(statistics.histogram?.binWidth ?? 0, selectedMetric.summaryDigits, selectedMetric.suffix)}`)}
+              </small>
+            </div>
+          </div>
         )}
-        {selectedChart === 'ECDF' && (
-          <EcdfFigure
-            statistics={statistics}
-            observations={observations}
-            metric={selectedMetric}
-            scopeLabel={scopeLabel}
-            scale={axisScale}
-          />
-        )}
-        {selectedChart === 'BOX' && (
-          <BoxPlotFigure
-            statistics={statistics}
-            observations={observations}
-            metric={selectedMetric}
-            scopeLabel={scopeLabel}
-            scale={axisScale}
-          />
-        )}
-        {selectedChart === 'SCATTER' && (
-          <ScatterPlotFigure
-            rows={rows}
-            xMetric={selectedMetric}
-            xScale={axisScale}
-            yMetric={scatterMetric}
-            yScale={scatterScale}
-            onYMetricChange={selectScatterMetric}
-            onYScaleChange={setScatterScale}
-            scopeLabel={scopeLabel}
-          />
-        )}
-        {selectedChart === 'INDIVIDUAL' && (
-          <IndividualPlotFigure
-            statistics={statistics}
-            observations={observations}
-            metric={selectedMetric}
-            scopeLabel={scopeLabel}
-            scale={axisScale}
-          />
-        )}
-      </div>
-    </section>
+
+        <div className="enemy-chart-stack">
+          {selectedChart === 'HISTOGRAM' && (
+            <HistogramFigure statistics={statistics} metric={selectedMetric} scopeLabel={scopeLabel} scale={axisScale} />
+          )}
+          {selectedChart === 'ECDF' && (
+            <EcdfFigure
+              statistics={statistics}
+              observations={observations}
+              metric={selectedMetric}
+              scopeLabel={scopeLabel}
+              scale={axisScale}
+            />
+          )}
+          {selectedChart === 'BOX' && (
+            <BoxPlotFigure
+              statistics={statistics}
+              observations={observations}
+              metric={selectedMetric}
+              scopeLabel={scopeLabel}
+              scale={axisScale}
+            />
+          )}
+          {selectedChart === 'SCATTER' && (
+            <ScatterPlotFigure
+              rows={rows}
+              xMetric={selectedMetric}
+              xScale={axisScale}
+              yMetric={scatterMetric}
+              yScale={scatterScale}
+              onYMetricChange={selectScatterMetric}
+              onYScaleChange={setScatterScale}
+              scopeLabel={scopeLabel}
+            />
+          )}
+          {selectedChart === 'INDIVIDUAL' && (
+            <IndividualPlotFigure
+              statistics={statistics}
+              observations={observations}
+              metric={selectedMetric}
+              scopeLabel={scopeLabel}
+              scale={axisScale}
+            />
+          )}
+        </div>
+      </CollapsibleCalculatorPanel>
+    </>
   )
 }
 
 function StatisticsSummary({ statistics, metric }: { statistics: NumericStatisticsWithDispersion; metric: StatMetric }) {
+  const headingId = useId()
   const formatValue = (value: number | null, digits = metric.summaryDigits) => (
     value === null ? '—' : formatNumber(value, digits, metric.suffix)
   )
@@ -342,40 +361,49 @@ function StatisticsSummary({ statistics, metric }: { statistics: NumericStatisti
         : `IQR ${iqrValue}・中央値が0のため算出なし`
 
   return (
-    <dl className="enemy-statistics-grid" aria-label={`${metric.label}の統計量`}>
-      <StatisticsItem
-        label="有効データ"
-        value={`${statistics.count}体`}
-        detail={statistics.missingCount > 0 ? `値なし ${statistics.missingCount}体を除外` : '表示範囲の全対象'}
-      />
-      <StatisticsItem label="平均" value={formatValue(statistics.mean)} />
-      <StatisticsItem label="中央値" value={formatValue(statistics.median)} />
-      <StatisticsItem label="標準偏差" value={formatValue(statistics.standardDeviation)} />
-      <StatisticsItem
-        label="変動係数（CV）"
-        value={formatPercentage(statistics.coefficientOfVariation)}
-        detail={coefficientOfVariationDetail}
-      />
-      <StatisticsItem label="最小" value={formatValue(statistics.minimum, metric.valueDigits)} />
-      <StatisticsItem label="第1四分位" value={formatValue(statistics.firstQuartile)} />
-      <StatisticsItem label="第3四分位" value={formatValue(statistics.thirdQuartile)} />
-      <StatisticsItem
-        label="正規化IQR"
-        value={formatPercentage(statistics.normalizedInterquartileRange)}
-        detail={normalizedIqrDetail}
-      />
-      <StatisticsItem label="最大" value={formatValue(statistics.maximum, metric.valueDigits)} />
-    </dl>
+    <>
+      <h3 className="enemy-table-title" id={headingId}>{metric.label}の統計量</h3>
+      <div className="enemy-value-table-wrap">
+        <table className="enemy-value-table" aria-labelledby={headingId}>
+          <tbody>
+            <StatisticsItem
+              label="有効データ"
+              value={`${statistics.count}体`}
+              detail={statistics.missingCount > 0 ? `値なし ${statistics.missingCount}体を除外` : '表示範囲の全対象'}
+            />
+            <StatisticsItem label="平均" value={formatValue(statistics.mean)} />
+            <StatisticsItem label="中央値" value={formatValue(statistics.median)} />
+            <StatisticsItem label="標準偏差" value={formatValue(statistics.standardDeviation)} />
+            <StatisticsItem
+              label="変動係数（CV）"
+              value={formatPercentage(statistics.coefficientOfVariation)}
+              detail={coefficientOfVariationDetail}
+            />
+            <StatisticsItem label="最小" value={formatValue(statistics.minimum, metric.valueDigits)} />
+            <StatisticsItem label="第1四分位" value={formatValue(statistics.firstQuartile)} />
+            <StatisticsItem label="第3四分位" value={formatValue(statistics.thirdQuartile)} />
+            <StatisticsItem
+              label="正規化IQR"
+              value={formatPercentage(statistics.normalizedInterquartileRange)}
+              detail={normalizedIqrDetail}
+            />
+            <StatisticsItem label="最大" value={formatValue(statistics.maximum, metric.valueDigits)} />
+          </tbody>
+        </table>
+      </div>
+    </>
   )
 }
 
 function StatisticsItem({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
-    <div>
-      <dt>{label}</dt>
-      <dd>{value}</dd>
-      {detail && <span>{detail}</span>}
-    </div>
+    <tr>
+      <th scope="row">
+        {label}
+        {detail && <small className="enemy-value-note">{detail}</small>}
+      </th>
+      <td>{value}</td>
+    </tr>
   )
 }
 
