@@ -18,6 +18,7 @@ import type { SkillRecord } from '../types/skill'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { PersistentDetails } from './PersistentDetails'
 import { ComparisonChart, type ComparisonChartSeries } from './ComparisonChart'
+import { ChartImageSaveDialog } from './ChartImageSaveDialog'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { GoldenglowOperatorInfo } from './GoldenglowOperatorInfo'
 import { GoldenglowPerformanceBarChart, type GoldenglowBarOrientation, type GoldenglowBarVariant } from './GoldenglowPerformanceBarChart'
@@ -90,6 +91,7 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
   const [chartAspect, setChartAspect] = useState({ width: 16, height: 9 })
   const [chartAspectInput, setChartAspectInput] = useState({ width: '16', height: '9' })
   const [savingImage, setSavingImage] = useState(false)
+  const [imageFilename, setImageFilename] = useState<string | null>(null)
   const [imageFeedback, setImageFeedback] = useState<'saved' | 'failed' | null>(null)
   const imageSaveInProgress = useRef(false)
   const [savedBuilds, setSavedBuilds] = useState<GoldenglowComparisonBuild[] | null>(null)
@@ -201,19 +203,26 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
     </GoldenglowPerformanceChartFrame>
   }
 
-  const saveChartImage = async () => {
+  const openImageSaveDialog = () => {
     if (!skill || imageSaveInProgress.current) return
+    const singleResistance = chartType === 'bar'
+    const imageChartType = singleResistance && stackedBars ? 'stacked' : chartType
+    setImageFeedback(null)
+    setImageFilename(`goldenglow-S${skill.skillIndex}-${skill.skillLevelLabel}-${format(duration)}s-${imageChartType}${isDifference ? `-difference-from-${baselineLabel}` : ''}${singleResistance ? `-${barOrientation}-${barVariant}-res${chartResistance}` : showLineEndLabels ? '-end-labels' : ''}.png`)
+  }
+
+  const saveChartImage = async (filename: string) => {
+    if (!skill || imageSaveInProgress.current || !filename.trim()) return
     imageSaveInProgress.current = true
     setSavingImage(true)
     setImageFeedback(null)
-    const singleResistance = chartType === 'bar'
-    const imageChartType = singleResistance && stackedBars ? 'stacked' : chartType
     try {
       await saveComparisonChartImage({
         chart: renderChart(true),
-        filename: `goldenglow-S${skill.skillIndex}-${skill.skillLevelLabel}-${format(duration)}s-${imageChartType}${isDifference ? `-difference-from-${baselineLabel}` : ''}${singleResistance ? `-${barOrientation}-${barVariant}-res${chartResistance}` : showLineEndLabels ? '-end-labels' : ''}.png`,
+        filename,
       })
       setImageFeedback('saved')
+      setImageFilename(null)
     } catch {
       setImageFeedback('failed')
     } finally {
@@ -504,22 +513,32 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
                 setChartAspectInput({ width: '16', height: '9' })
               }}>自動に戻す</button>
               <button type="button" className="button secondary gg-performance-save-image"
-                aria-label="グラフをPNG画像で保存" title="選択中のグラフをPNG画像で保存"
+                aria-label="グラフをPNG画像で保存" title="選択中のグラフをPNG画像で保存" aria-haspopup="dialog"
                 disabled={savingImage || chartColumns.length === 0} aria-busy={savingImage}
-                onClick={() => void saveChartImage()}>{savingImage ? '画像を作成中…' : '画像を保存'}</button>
+                onClick={openImageSaveDialog}>{savingImage ? '画像を作成中…' : '画像を保存'}</button>
               <p id="gg-performance-size-help">{chartAspectPreset === 'auto'
                 ? 'グラフの幅は画面に合わせて自動で調整します。'
                 : 'グラフ全体の比率です。画面に合わせて調整し、内容が収まらない場合は比率を保って拡大します。'}</p>
             </div>
-            <p role="status" className={imageFeedback === 'failed' ? 'gg-performance-status' : 'visually-hidden'}>
-              {imageFeedback === 'failed' ? '画像を保存できませんでした。もう一度お試しください。'
-                : imageFeedback === 'saved' ? 'PNG画像のダウンロードを開始しました。' : ''}
+            <p role="status" className="visually-hidden">
+              {imageFeedback === 'saved' ? 'PNG画像のダウンロードを開始しました。' : ''}
             </p>
             <div className="gg-performance-chart-viewport" tabIndex={0} role="region" aria-label="グラフ表示領域">
               {renderChart()}
             </div>
         </section> : <p className="gg-probability-intro" role="status">{loading ? 'スキル情報を読み込み中…' : 'スキル情報の読み込み後に表示します。'}</p>}
       </CollapsibleCalculatorPanel>
+      {imageFilename !== null && <ChartImageSaveDialog
+        initialFilename={imageFilename}
+        saving={savingImage}
+        error={imageFeedback === 'failed'}
+        onClose={() => {
+          if (imageSaveInProgress.current) return
+          setImageFilename(null)
+          setImageFeedback(null)
+        }}
+        onSave={(filename) => void saveChartImage(filename)}
+      />}
       {editor && <ComparisonColumnEditor
         key={editor.build.id}
         initial={editor.build}
