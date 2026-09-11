@@ -721,6 +721,21 @@
 .enemy-result-summary { display: grid; gap: 4px; color: var(--text-muted); font-size: 9px; text-align: right; }
 .enemy-result-summary > span:first-child { color: var(--text-soft); font-size: 11px; }
 
+.enemy-sort-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 10px; color: var(--text-muted); }
+.enemy-sort-controls button {
+  min-height: 32px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text-soft);
+  padding: 4px 8px;
+  font: inherit;
+  cursor: pointer;
+}
+.enemy-sort-controls button:disabled { color: var(--text-muted); cursor: default; opacity: .55; }
+.enemy-sort-controls button:hover:not(:disabled) { background: var(--surface-hover); }
+.enemy-sort-controls button:focus-visible { outline: 2px solid #315f80; outline-offset: 2px; }
+
 .enemy-table-section { container: enemy-reference / inline-size; }
 
 .enemy-table-wrap {
@@ -769,6 +784,30 @@
 .enemy-table th:nth-child(10) { width: 6%; }
 
 .numeric-heading { text-align: right; }
+
+.enemy-table thead th { padding: 0; }
+.enemy-sort-button {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 5px 3px;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+.numeric-heading .enemy-sort-button { justify-content: flex-end; }
+.enemy-sort-button > span:first-child { min-width: 0; }
+.enemy-sort-indicator { flex: 0 0 auto; font-size: 8px; color: var(--text-muted); }
+.enemy-sort-button:hover { background: var(--surface-hover); color: var(--text); }
+.enemy-sort-button:focus-visible { outline: 2px solid #315f80; outline-offset: -2px; }
+.enemy-table th[aria-sort] { color: var(--text); }
+.enemy-table th[aria-sort] .enemy-sort-indicator { color: var(--text); }
 
 .enemy-identity-cell { position: relative; padding-left: 41px !important; }
 
@@ -983,6 +1022,8 @@
   .statistics-bin-width-input-row button,
   .enemy-frequency-details summary,
   .enemy-stat-mode-switch button,
+  .enemy-sort-button,
+  .enemy-sort-controls button,
   .enemy-table .enemy-detail-button,
   .enemy-pagination button,
   .enemy-data-details summary { min-height: 44px; }

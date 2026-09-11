@@ -5,6 +5,7 @@ import {
   type EnemyFilters,
 } from '../lib/enemyData'
 import type { EnemyLevelType, EnemyRecord } from '../types/enemy'
+import { sortEnemyRows, type EnemyTableSort, type EnemyTableSortKey } from '../lib/enemyTableSort'
 import { EnemyDetailModal } from './EnemyDetailModal'
 import { EnemyFilterPanel } from './EnemyFilterPanel'
 import { EnemyStatisticsPanel, EnemyStatisticsSettings, useEnemyStatisticsControls } from './EnemyStatisticsPanel'
@@ -39,6 +40,19 @@ const INTEGER_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits
 const DECIMAL_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 type EnemyStatDisplayMode = 'RATING' | 'VALUE'
 
+const TABLE_COLUMNS: Array<{ key: EnemyTableSortKey; label: string }> = [
+  { key: 'name', label: '敵' },
+  { key: 'level', label: '区分' },
+  { key: 'stages', label: '登場ステージ数' },
+  { key: 'hp', label: 'HP' },
+  { key: 'attack', label: '攻撃力' },
+  { key: 'defense', label: '防御力' },
+  { key: 'resistance', label: '術耐性' },
+  { key: 'speed', label: '移動速度' },
+  { key: 'interval', label: '攻撃間隔' },
+  { key: 'weight', label: '重量' },
+]
+
 export function EnemyAnalysis() {
   const statisticsControls = useEnemyStatisticsControls()
   const [rows, setRows] = useState<EnemyRecord[]>([])
@@ -49,7 +63,9 @@ export function EnemyAnalysis() {
   const [error, setError] = useState<string | null>(null)
   const [detailEnemy, setDetailEnemy] = useState<EnemyRecord | null>(null)
   const [statDisplayMode, setStatDisplayMode] = useState<EnemyStatDisplayMode>('RATING')
+  const [sort, setSort] = useState<EnemyTableSort | null>(null)
   const detailTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const tableScrollRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     let active = true
@@ -76,13 +92,28 @@ export function EnemyAnalysis() {
     () => rows.filter((enemy) => matchesEnemyFilters(enemy, filters)),
     [rows, filters],
   )
+  const sortedRows = useMemo(() => sortEnemyRows(filteredRows, sort), [filteredRows, sort])
   const pageCount = Math.ceil(filteredRows.length / PAGE_SIZE)
   const currentPage = Math.min(page, Math.max(0, pageCount - 1))
-  const visibleRows = filteredRows.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
+  const visibleRows = sortedRows.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
   const rangeStart = filteredRows.length === 0 ? 0 : currentPage * PAGE_SIZE + 1
   const rangeEnd = Math.min((currentPage + 1) * PAGE_SIZE, filteredRows.length)
   const filtersActive = filters.query !== '' || filters.levelType !== 'ALL'
   const scopeLabel = getEnemyScopeLabel(filters)
+
+  useEffect(() => {
+    if (tableScrollRef.current) tableScrollRef.current.scrollTop = 0
+  }, [currentPage, sort, filters])
+
+  const updateSort = (key: EnemyTableSortKey) => {
+    setSort((current) => ({ key, direction: getNextSortDirection(key, current) }))
+    setPage(0)
+  }
+
+  const resetSort = () => {
+    setSort(null)
+    setPage(0)
+  }
 
   const updateFilter = <K extends keyof EnemyFilters,>(key: K, value: EnemyFilters[K]) => {
     setFilters((current) => ({ ...current, [key]: value }))
@@ -184,30 +215,31 @@ export function EnemyAnalysis() {
                     >実数値</button>
                   </div>
                 </div>
+                <div className="enemy-sort-controls">
+                  <span role="status" aria-live="polite">
+                    {sort
+                      ? `${getColumnLabel(sort.key, statDisplayMode)}：${sort.direction === 'asc' ? '昇順' : '降順'}`
+                      : '図鑑順'}
+                  </span>
+                  <button type="button" onClick={resetSort} disabled={!sort}>図鑑順に戻す</button>
+                </div>
                 <div className="enemy-result-summary" role="status" aria-live="polite">
                   <span>{filteredRows.length}体</span>
                   {statDisplayMode === 'RATING' && (
-                    <span>実数値をゲーム内と同じ段階基準で換算しています</span>
+                    <span>評価は実数値から換算し、並べ替えも実数値を基準にします</span>
                   )}
                 </div>
               </div>
 
               <h3 className="enemy-table-title" id="enemy-table-heading">敵の基礎ステータス</h3>
-              <div className="table-wrap enemy-table-wrap" tabIndex={0} role="region" aria-label="敵の基礎ステータス一覧・スクロール領域">
+              <div ref={tableScrollRef} className="table-wrap enemy-table-wrap" tabIndex={0} role="region" aria-label="敵の基礎ステータス一覧・スクロール領域">
                 <table className="enemy-table" role="table" aria-labelledby="enemy-table-heading">
                   <caption>統計分析の対象となっている敵の基礎ステータス一覧</caption>
                   <thead role="rowgroup">
                     <tr role="row">
-                      <th scope="col" role="columnheader" id="enemy-column-name" className="enemy-name-column">敵</th>
-                      <th scope="col" role="columnheader" id="enemy-column-level">区分</th>
-                      <th scope="col" role="columnheader" id="enemy-column-stages" className="numeric-heading">登場ステージ数</th>
-                      <th scope="col" role="columnheader" id="enemy-column-hp" className="numeric-heading">{statDisplayMode === 'RATING' ? '耐久' : 'HP'}</th>
-                      <th scope="col" role="columnheader" id="enemy-column-attack" className="numeric-heading">攻撃力</th>
-                      <th scope="col" role="columnheader" id="enemy-column-defense" className="numeric-heading">防御力</th>
-                      <th scope="col" role="columnheader" id="enemy-column-resistance" className="numeric-heading">術耐性</th>
-                      <th scope="col" role="columnheader" id="enemy-column-speed" className="numeric-heading">移動速度</th>
-                      <th scope="col" role="columnheader" id="enemy-column-interval" className="numeric-heading">攻撃間隔</th>
-                      <th scope="col" role="columnheader" id="enemy-column-weight" className="numeric-heading">重量</th>
+                      {TABLE_COLUMNS.map(({ key }) => (
+                        <EnemySortableHeader key={key} column={key} label={getColumnLabel(key, statDisplayMode)} sort={sort} onSort={updateSort} />
+                      ))}
                     </tr>
                   </thead>
                   <tbody role="rowgroup">
@@ -245,6 +277,46 @@ export function EnemyAnalysis() {
       </PersistentDetails>
       {detailEnemy && <EnemyDetailModal enemy={detailEnemy} onClose={closeEnemyDetail} />}
     </section>
+  )
+}
+
+function getColumnLabel(key: EnemyTableSortKey, mode: EnemyStatDisplayMode): string {
+  if (key === 'hp' && mode === 'RATING') return '耐久'
+  return TABLE_COLUMNS.find((column) => column.key === key)!.label
+}
+
+function getNextSortDirection(key: EnemyTableSortKey, sort: EnemyTableSort | null): EnemyTableSort['direction'] {
+  if (sort?.key === key) return sort.direction === 'asc' ? 'desc' : 'asc'
+  return key === 'name' || key === 'level' ? 'asc' : 'desc'
+}
+
+function EnemySortableHeader({ column, label, sort, onSort }: {
+  column: EnemyTableSortKey
+  label: string
+  sort: EnemyTableSort | null
+  onSort: (key: EnemyTableSortKey) => void
+}) {
+  const active = sort?.key === column
+  const numeric = column !== 'name' && column !== 'level'
+  const nextDirection = getNextSortDirection(column, sort)
+  return (
+    <th
+      scope="col"
+      role="columnheader"
+      id={`enemy-column-${column}`}
+      className={numeric ? 'numeric-heading' : undefined}
+      aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : undefined}
+    >
+      <button
+        type="button"
+        className="enemy-sort-button"
+        aria-label={`${label}を${nextDirection === 'asc' ? '昇順' : '降順'}に並べ替え`}
+        onClick={() => onSort(column)}
+      >
+        <span>{label}</span>
+        <span className="enemy-sort-indicator" aria-hidden="true">{active ? (sort.direction === 'asc' ? '▲' : '▼') : '↕'}</span>
+      </button>
+    </th>
   )
 }
 
