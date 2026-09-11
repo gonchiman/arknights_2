@@ -1,0 +1,129 @@
+/* Keep the distribution part of the output panel; shared chart styles also serve the operator page. */
+.enemy-distribution-panel .enemy-distribution-body { padding: 0; }
+
+.enemy-distribution-panel .enemy-chart-toolbar {
+  align-items: flex-end;
+  gap: 8px 20px;
+  margin: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: 10px;
+}
+
+.enemy-distribution-panel .enemy-chart-visibility { gap: 0; }
+.enemy-distribution-panel .enemy-chart-visibility legend,
+.enemy-distribution-panel .enemy-chart-axis-control > span {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+.enemy-distribution-panel .enemy-chart-visibility legend { margin-bottom: 4px; }
+.enemy-distribution-panel .enemy-chart-visibility > div { gap: 0; }
+.enemy-distribution-panel .enemy-chart-visibility label {
+  position: relative;
+  min-height: 36px;
+  justify-content: center;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: var(--surface);
+  padding: 7px 10px 5px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.enemy-distribution-panel .enemy-chart-visibility label:hover { background: var(--surface-hover); }
+.enemy-distribution-panel .enemy-chart-visibility label.active {
+  border-bottom-color: var(--accent);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+}
+.enemy-distribution-panel .enemy-chart-visibility input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.enemy-distribution-panel .enemy-chart-visibility label:has(input:focus-visible) {
+  outline: 2px solid var(--text);
+  outline-offset: -2px;
+}
+
+.enemy-distribution-panel .enemy-chart-axis-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.enemy-distribution-panel .enemy-chart-scale-switch button,
+.enemy-distribution-panel .enemy-chart-select-label select,
+.enemy-distribution-panel .statistics-bin-width-input-row input,
+.enemy-distribution-panel .statistics-bin-width-input-row button {
+  min-height: 34px;
+  font-size: 11px;
+}
+.enemy-distribution-panel .enemy-chart-scale-switch button { padding: 5px 10px; }
+.enemy-distribution-panel .statistics-histogram-settings { border-bottom-color: var(--border); }
+.enemy-distribution-panel .statistics-histogram-settings-heading strong,
+.enemy-distribution-panel .statistics-bin-width-control > label,
+.enemy-distribution-panel .enemy-chart-select-label { font-size: 10px; }
+.enemy-distribution-panel .statistics-histogram-settings-heading span,
+.enemy-distribution-panel .statistics-bin-width-control > small { font-size: 10px; }
+
+.enemy-distribution-panel .enemy-analysis-figure,
+.enemy-distribution-panel .enemy-analysis-figure:last-child { border: 0; }
+.enemy-distribution-panel .enemy-analysis-figure figcaption {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px 16px;
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  background: var(--surface);
+  padding: 12px 10px 6px;
+  line-height: 1.6;
+}
+.enemy-distribution-panel .enemy-analysis-figure figcaption > div:first-child > span,
+.enemy-distribution-panel .enemy-chart-legend,
+.enemy-distribution-panel .enemy-level-legend { font-size: 10px; line-height: 1.6; }
+.enemy-distribution-panel .enemy-chart-legend { flex-wrap: wrap; gap: 6px 12px; }
+.enemy-distribution-panel .enemy-chart-empty { border: 0; }
+
+.enemy-distribution-panel .enemy-frequency-details {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+.enemy-distribution-panel .enemy-frequency-details summary {
+  min-height: 36px;
+  padding: 8px 10px;
+  font-size: 11px;
+}
+.enemy-distribution-panel .enemy-frequency-details summary small,
+.enemy-distribution-panel .enemy-frequency-meta dt { font-size: 10px; }
+.enemy-distribution-panel .enemy-frequency-meta dd,
+.enemy-distribution-panel .enemy-frequency-table { font-size: 11px; }
+.enemy-distribution-panel .enemy-frequency-table thead th { font-size: 10px; }
+
+@media (max-width: 760px) {
+  .enemy-distribution-panel .enemy-chart-toolbar { align-items: stretch; gap: 8px; }
+  .enemy-distribution-panel .enemy-chart-axis-control { justify-content: flex-end; }
+  .enemy-distribution-panel .enemy-analysis-figure figcaption { gap: 4px; }
+}
+
+@media (max-width: 520px) {
+  .enemy-distribution-panel .enemy-chart-visibility > div {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .enemy-distribution-panel .enemy-chart-visibility label { padding-inline: 4px; }
+}
+
+@media (pointer: coarse) {
+  .enemy-distribution-panel .enemy-chart-visibility label,
+  .enemy-distribution-panel .enemy-chart-scale-switch button,
+  .enemy-distribution-panel .enemy-chart-select-label select,
+  .enemy-distribution-panel .statistics-bin-width-input-row input,
+  .enemy-distribution-panel .statistics-bin-width-input-row button,
+  .enemy-distribution-panel .enemy-frequency-details summary { min-height: 44px; }
+}

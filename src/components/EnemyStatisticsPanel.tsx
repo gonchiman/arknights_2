@@ -15,6 +15,7 @@ import {
 import type { EnemyLevelType, EnemyRecord, EnemyStats } from '../types/enemy'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { PersistentDetails } from './PersistentDetails'
+import './EnemyDistribution.css'
 
 type AnalyzedStatKey = keyof Pick<
   EnemyStats,
