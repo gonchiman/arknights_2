@@ -17,7 +17,6 @@ export function GoldenglowNormalAttackPanel({ skill, attack, resistance, resista
   viewingDuration: number
   loading: boolean
 }) {
-  const [open, setOpen] = useState(true)
   const [selectedAttackNumber, setSelectedAttackNumber] = useState<number | null>(null)
   const duration = skill?.duration ?? viewingDuration
   const attackRows = useMemo(() => skill ? buildGoldenglowNormalAttackTable({
@@ -38,13 +37,12 @@ export function GoldenglowNormalAttackPanel({ skill, attack, resistance, resista
       number="08"
       title="浮遊ユニットの通常攻撃"
       summary={skill ? `S${skill.skillIndex}・浮遊ユニット1体・同一目標` : '浮遊ユニット1体・同一目標'}
-      open={open}
-      onToggle={() => setOpen((value) => !value)}
       collapsedLabel="テーブルを表示"
     >
       {skill ? <>
         <h3 className="gg-table-title" id="gg-normal-attack-table-title">攻撃ごとの通常攻撃期待値</h3>
         {attackRows.length > 0 ? <GoldenglowExpandableTable
+          persistenceId="normal-attacks-rows"
           rows={attackRows}
           regionLabel="スキル中の通常攻撃テーブル"
           tableWrapperClassName="gg-normal-attack-table-wrap"

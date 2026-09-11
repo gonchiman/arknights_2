@@ -21,6 +21,7 @@ import { ARKNIGHTS_GAMEDATA_REPOSITORY } from './lib/dataSources'
 import { buildOperatorDatabaseRecords } from './lib/operatorDatabase'
 import { createOperatorDetailHash, parseHashRoute, type AppRoute } from './lib/routes'
 import { APP_NAV_ITEMS, type NavigationPage } from './lib/navigation'
+import { PanelStateScope } from './lib/PanelStateScope'
 import {
   ACTIVATION_TRIGGERS,
   DAMAGE_COMPONENT_TYPES,
@@ -214,6 +215,7 @@ export default function App() {
         </header>
 
         <main className="app-content">
+        <PanelStateScope.Provider value={displayedRoute.view}>
         {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && <section className="error-box" role="alert">{error}</section>}
 
         {displayedRoute.view === 'sources' ? (
@@ -285,6 +287,7 @@ export default function App() {
             onOpenOperatorDetail={openOperatorDetail}
           />
         )}
+        </PanelStateScope.Provider>
         </main>
         <footer className="site-footer" ref={setFooterContainer}>
           <a

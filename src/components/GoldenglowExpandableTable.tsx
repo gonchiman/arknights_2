@@ -1,15 +1,17 @@
-import { useId, useState, type ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
+import { usePanelOpen } from '../lib/usePanelOpen'
 import './GoldenglowExpandableTable.css'
 
 const PREVIEW_ROW_COUNT = 10
 
-export function GoldenglowExpandableTable<T>({ rows, regionLabel, tableWrapperClassName = '', children }: {
+export function GoldenglowExpandableTable<T>({ persistenceId, rows, regionLabel, tableWrapperClassName = '', children }: {
+  persistenceId: string
   rows: readonly T[]
   regionLabel: string
   tableWrapperClassName?: string
   children: (visibleRows: readonly T[]) => ReactNode
 }) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = usePanelOpen(persistenceId, false)
   const tableId = useId()
   const visibleRows = expanded ? rows : rows.slice(0, PREVIEW_ROW_COUNT)
   const toggleLabel = expanded ? `先頭${PREVIEW_ROW_COUNT}行に戻す` : `すべて表示（全${rows.length}行）`
@@ -32,7 +34,7 @@ export function GoldenglowExpandableTable<T>({ rows, regionLabel, tableWrapperCl
           aria-expanded={expanded}
           aria-controls={tableId}
           aria-label={`${regionLabel}：${toggleLabel}`}
-          onClick={() => setExpanded((value) => !value)}
+          onClick={() => setExpanded(!expanded)}
         >
           {toggleLabel}
         </button>

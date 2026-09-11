@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type { GoldenglowGuideSkill } from '../lib/goldenglowGuideSkill'
 import type { PassiveSource } from '../lib/operatorProfile'
 import { splitPassiveDescriptionChanges } from '../lib/passiveDescriptionChanges'
@@ -21,7 +21,6 @@ export function GoldenglowOperatorInfo({ skill, loading, defaultOpen = true }: {
   loading: boolean
   defaultOpen?: boolean
 }) {
-  const [open, setOpen] = useState(defaultOpen)
   const info = useMemo(() => {
     if (!skill) return null
     const module = skill.moduleApplication
@@ -54,8 +53,7 @@ export function GoldenglowOperatorInfo({ skill, loading, defaultOpen = true }: {
       number="01"
       title="ゴールデングロー情報"
       summary={info?.condition ?? '基本ステータス・特性・素質'}
-      open={open}
-      onToggle={() => setOpen((value) => !value)}
+      defaultOpen={defaultOpen}
       collapsedLabel="情報を表示"
       className="gg-operator-info"
     >

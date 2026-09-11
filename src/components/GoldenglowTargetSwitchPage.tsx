@@ -7,7 +7,6 @@ import { GOLDENGLOW_OPERATOR_ID } from '../lib/goldenglowExplosion'
 import { getOperatorModules, getOperatorModuleId, getOperatorModuleLevels, isOperatorModuleUnlocked } from '../lib/operatorModules'
 import type { GoldenglowTargetSwitchInput, GoldenglowTargetSwitchResult } from '../lib/goldenglowTargetSwitch'
 import type { GoldenglowTargetSwitchGridSetup } from '../lib/goldenglowTargetSwitchGrid'
-import { useGoldenglowTargetSwitchPanelOpen } from '../lib/useGoldenglowTargetSwitchPanelOpen'
 import type { SkillRecord } from '../types/skill'
 import type { EnemyRecord } from '../types/enemy'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
@@ -84,8 +83,6 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, foot
   const [viewingDuration, setViewingDuration] = useState('30')
   const [trials, setTrials] = useState(10000)
   const [seed, setSeed] = useState(20260908)
-  const [open, setOpen] = useGoldenglowTargetSwitchPanelOpen('conditions')
-  const [resultsOpen, setResultsOpen] = useGoldenglowTargetSwitchPanelOpen('results')
   const [helpOpen, setHelpOpen] = useState(false)
   const [detail, setDetail] = useState<PageDetail | null>(null)
   const attack = skill?.effectiveAttack ?? 0
@@ -217,7 +214,7 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, foot
         </GoldenglowDetailModal>}
         <GoldenglowTargetSwitchOperatorInfo skill={skill} key={`${skill.skillIndex}:${skill.skillLevelIndex}:${skill.moduleId}:${moduleLevel}`} />
         <CollapsibleCalculatorPanel id="ggs-output" number="01" title="計算条件" summary={`S${skill.skillIndex}・浮遊${skill.explosionModel.activeDroneCount}体・撃破後に次の敵へ`}
-          open={open} onToggle={() => setOpen((value) => !value)} collapsedLabel="表を表示">
+          collapsedLabel="表を表示">
           <TableSection id="ggs-enemy-conditions" title="敵">
             <tbody>
               <ValueRow label="敵の選択" value={<div className="ggs-enemy-picker">
@@ -275,7 +272,7 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, foot
           {fieldError && <p className="ggs-error" role="alert">{fieldError}</p>}
         </CollapsibleCalculatorPanel>
         <CollapsibleCalculatorPanel id="ggs-results-panel" number="02" title="計算結果" summary={`S${skill.skillIndex}・${skill.duration === null ? '計測時間' : 'スキル時間'}${format(duration)}秒・撃破後に次の敵へ`}
-          open={resultsOpen} onToggle={() => setResultsOpen((value) => !value)} collapsedLabel="結果を表示">
+          collapsedLabel="結果を表示">
           {resultStatus && <p className="ggs-status" role="status" aria-live="polite">{resultStatus}</p>}
           {input && calculation.result && <OutputTables result={calculation.result} input={input} showDecimals={showDecimals} onOpen={setDetail} />}
         </CollapsibleCalculatorPanel>

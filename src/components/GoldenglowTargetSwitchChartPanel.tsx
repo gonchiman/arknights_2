@@ -3,7 +3,6 @@ import type { KeyboardEvent, ReactNode } from 'react'
 import type { GoldenglowTargetSwitchGridRow } from '../lib/goldenglowTargetSwitchGrid'
 import { createGoldenglowBarPalette, GOLDENGLOW_BAR_PALETTES, goldenglowResistanceBarColor } from '../lib/goldenglowTargetSwitchChart'
 import type { GoldenglowBarPaletteKey } from '../lib/goldenglowTargetSwitchChart'
-import { useGoldenglowTargetSwitchPanelOpen } from '../lib/useGoldenglowTargetSwitchPanelOpen'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { GoldenglowTargetSwitchGroupedBars } from './GoldenglowTargetSwitchGroupedBars'
 import { saveGoldenglowTargetSwitchChartImage } from './saveGoldenglowTargetSwitchChartImage'
@@ -32,7 +31,6 @@ const dashPatterns = [undefined, '8 3', '3 3', '9 3 2 3'] as const
 export function GoldenglowTargetSwitchChartPanel({
   enemyHps, enemyResistances, rows, status, error, showDecimals, controls, rangeLabel,
 }: ChartPanelProps) {
-  const [open, setOpen] = useGoldenglowTargetSwitchPanelOpen('chart')
   const [chartType, setChartType] = useState<'bar' | 'line'>('bar')
   const figureRef = useRef<HTMLElement>(null)
   const imageSaveInProgress = useRef(false)
@@ -166,7 +164,7 @@ export function GoldenglowTargetSwitchChartPanel({
   }
 
   return <CollapsibleCalculatorPanel id="ggs-chart-panel" number="04" title="HP別の期待ダメージ比較"
-    summary={rangeLabel} open={open} onToggle={() => setOpen((value) => !value)} collapsedLabel="グラフを表示">
+    summary={rangeLabel} collapsedLabel="グラフを表示">
     {controls}
     {status === 'running' && <p className="ggs-status" role="status">計算中… {rows.length} / {enemyResistances.length}行</p>}
     <div className="ggs-chart-heading">

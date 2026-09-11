@@ -18,7 +18,6 @@ export function GoldenglowCombinedAttackPanel({ skill, attackRows, attack, explo
   viewingDuration: number
   loading: boolean
 }) {
-  const [open, setOpen] = useState(true)
   const [selectedAttackNumber, setSelectedAttackNumber] = useState<number | null>(null)
   const duration = skill?.duration ?? viewingDuration
   const selectedRow = attackRows.find((row) => row.attackNumber === selectedAttackNumber)
@@ -31,13 +30,12 @@ export function GoldenglowCombinedAttackPanel({ skill, attackRows, attack, explo
       number="09"
       title="スキルダメージ期待値"
       summary={skill ? `S${skill.skillIndex}・浮遊ユニット${skill.explosionModel.activeDroneCount}体・同一目標` : '本体・浮遊ユニット・爆発'}
-      open={open}
-      onToggle={() => setOpen((value) => !value)}
       collapsedLabel="テーブルを表示"
     >
       {skill ? <>
         <h3 className="gg-table-title" id="gg-combined-attack-table-title">攻撃ごとの合計ダメージ期待値</h3>
         {attackRows.length > 0 ? <GoldenglowExpandableTable
+          persistenceId="combined-attacks-rows"
           rows={attackRows}
           regionLabel="スキル中の合計ダメージテーブル"
           tableWrapperClassName="gg-combined-attack-table-wrap"

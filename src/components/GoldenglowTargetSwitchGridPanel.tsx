@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { GoldenglowTargetSwitchGridInput, GoldenglowTargetSwitchGridMessage, GoldenglowTargetSwitchGridRow, GoldenglowTargetSwitchGridSetup } from '../lib/goldenglowTargetSwitchGrid'
-import { useGoldenglowTargetSwitchPanelOpen } from '../lib/useGoldenglowTargetSwitchPanelOpen'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { GoldenglowTargetSwitchChartPanel } from './GoldenglowTargetSwitchChartPanel'
 import './GoldenglowTargetSwitchGridPanel.css'
@@ -18,7 +17,6 @@ export function GoldenglowTargetSwitchGridPanels({ input: setup, error, showDeci
   error: string | null
   showDecimals: boolean
 }) {
-  const [open, setOpen] = useGoldenglowTargetSwitchPanelOpen('grid')
   const [resistanceStep, setResistanceStep] = useState(20)
   const [presetKey, setPresetKey] = useState<keyof typeof GOLDENGLOW_TARGET_SWITCH_HP_PRESETS>('normal')
   const preset = GOLDENGLOW_TARGET_SWITCH_HP_PRESETS[presetKey]
@@ -55,7 +53,7 @@ export function GoldenglowTargetSwitchGridPanels({ input: setup, error, showDeci
   return <>
     <CollapsibleCalculatorPanel id="ggs-grid-panel" number="03" title="HP・術耐性別の期待ダメージ"
       summary={`横軸：HP・縦軸：術耐性・${preset.label}`}
-      open={open} onToggle={() => setOpen((value) => !value)} collapsedLabel="表を表示">
+      collapsedLabel="表を表示">
     {renderControls('表')}
     {status && <p className="ggs-status" role="status" aria-live="polite">{status}</p>}
     {(error || calculation.error) && <p className="ggs-error" role="alert">{error || calculation.error}</p>}

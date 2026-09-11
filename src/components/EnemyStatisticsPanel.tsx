@@ -13,6 +13,7 @@ import {
   validateCustomLinearBinWidth,
 } from '../lib/enemyStatistics'
 import type { EnemyLevelType, EnemyRecord, EnemyStats } from '../types/enemy'
+import { PersistentDetails } from './PersistentDetails'
 
 type AnalyzedStatKey = keyof Pick<
   EnemyStats,
@@ -451,7 +452,7 @@ function FrequencyDistributionTable({ statistics, metric, scale }: {
     .reduce((sum, bin) => sum + bin.count, 0)
 
   return (
-    <details className="enemy-frequency-details">
+    <PersistentDetails persistenceId="frequency-distribution" className="enemy-frequency-details">
       <summary>
         <span>度数分布表</span>
         <small>{statistics.bins.length}階級</small>
@@ -502,7 +503,7 @@ function FrequencyDistributionTable({ statistics, metric, scale }: {
           </tbody>
         </table>
       </div>
-    </details>
+    </PersistentDetails>
   )
 }
 

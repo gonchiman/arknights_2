@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { usePanelOpen } from '../lib/usePanelOpen'
 
 export function CollapsibleCalculatorPanel({
   id,
@@ -8,8 +9,7 @@ export function CollapsibleCalculatorPanel({
   titleIcons,
   outputTable,
   summary,
-  open,
-  onToggle,
+  defaultOpen = true,
   collapsedLabel,
   disabled = false,
   disabledLabel = '操作できません',
@@ -24,8 +24,7 @@ export function CollapsibleCalculatorPanel({
   titleIcons?: ReactNode
   outputTable?: string
   summary: ReactNode
-  open: boolean
-  onToggle: () => void
+  defaultOpen?: boolean
   collapsedLabel: string
   disabled?: boolean
   disabledLabel?: string
@@ -33,6 +32,7 @@ export function CollapsibleCalculatorPanel({
   bodyClassName?: string
   children: ReactNode
 }) {
+  const [open, setOpen] = usePanelOpen(id, defaultOpen)
   const headingId = `${id}-heading`
   const bodyId = `${id}-body`
   const effectiveOpen = !disabled && open
@@ -47,7 +47,7 @@ export function CollapsibleCalculatorPanel({
           aria-expanded={disabled ? undefined : effectiveOpen}
           aria-controls={disabled ? undefined : bodyId}
           disabled={disabled}
-          onClick={onToggle}
+          onClick={() => setOpen(!open)}
         >
           <span className="collapsible-panel-heading-title">
             <span>{number}</span>

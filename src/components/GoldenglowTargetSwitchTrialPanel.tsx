@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react'
 import { simulateGoldenglowTargetSwitchTrial, type GoldenglowTargetSwitchInput, type GoldenglowTargetSwitchResult, type GoldenglowTargetSwitchTraceRow, type GoldenglowTargetSwitchTrial } from '../lib/goldenglowTargetSwitch'
-import { useGoldenglowTargetSwitchPanelOpen } from '../lib/useGoldenglowTargetSwitchPanelOpen'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import type { GoldenglowTargetSwitchDetail } from './GoldenglowTargetSwitchDetailModal'
 import './GoldenglowTargetSwitchTrialPanel.css'
@@ -17,9 +16,8 @@ export function GoldenglowTargetSwitchTrialPanel({ input, result, status, showDe
   showDecimals: boolean
   onOpen: (detail: GoldenglowTargetSwitchDetail) => void
 }) {
-  const [open, setOpen] = useGoldenglowTargetSwitchPanelOpen('trial')
   return <CollapsibleCalculatorPanel id="ggs-trial-panel" number="05" title="シミュレーション1回分"
-    summary="1回分の攻撃と撃破の記録" open={open} onToggle={() => setOpen((value) => !value)} collapsedLabel="履歴を表示">
+    summary="1回分の攻撃と撃破の記録" collapsedLabel="履歴を表示">
     {input && result
       ? <TrialOutput key={`${result.seed}:${result.duration}:${input.enemyHp}:${input.enemyResistance}:${Boolean(input.retargetRemainingDrones)}`} input={input} result={result} showDecimals={showDecimals} onOpen={onOpen} />
       : <p className="ggs-status" role="status">{status ?? '計算条件を入力すると表示します。'}</p>}

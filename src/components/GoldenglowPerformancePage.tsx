@@ -16,6 +16,7 @@ import {
 import { getOperatorModuleId, getOperatorModuleLevels, getOperatorModules, isOperatorModuleUnlocked } from '../lib/operatorModules'
 import type { SkillRecord } from '../types/skill'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
+import { PersistentDetails } from './PersistentDetails'
 import { ComparisonChart, type ComparisonChartSeries } from './ComparisonChart'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { GoldenglowOperatorInfo } from './GoldenglowOperatorInfo'
@@ -96,8 +97,6 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
   const [savingImage, setSavingImage] = useState(false)
   const [imageFeedback, setImageFeedback] = useState<'saved' | 'failed' | null>(null)
   const imageSaveInProgress = useRef(false)
-  const [tableOpen, setTableOpen] = useState(true)
-  const [graphOpen, setGraphOpen] = useState(true)
   const [savedBuilds, setSavedBuilds] = useState<GoldenglowComparisonBuild[] | null>(null)
   const [buildPresetId, setBuildPresetId] = useState('modules')
   const [editor, setEditor] = useState<{ build: GoldenglowComparisonBuild; adding: boolean } | null>(null)
@@ -318,11 +317,11 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
           基準列自体は表・グラフに表示しません。
           {!baselineColumn?.values.some((value) => value.expectedTotalDamage !== null) && ' 基準列のデータがないため、差分を計算できません。'}
         </p>}
-        <details className="gg-performance-assumptions">
+        <PersistentDetails persistenceId="gg-performance-assumptions" className="gg-performance-assumptions">
           <summary>計算条件</summary>
           <p>昇進2最大レベル・信頼100。敵1体を攻撃し続けたときの、本体・浮遊ユニット・爆発を合わせた総ダメージ期待値です。術耐性無視と、モジュール・潜在段階による攻撃力・攻撃速度・特性・素質の変化を各列に反映します。</p>
           <p>初回攻撃は攻撃間隔後、浮遊ユニットの帰還・再索敵は0秒として計算します。S2は永続のため、指定した集計時間内の結果です。ダメージ表示は{showDecimals ? '小数点以下3桁まで' : '整数'}の概数です。</p>
-        </details>
+        </PersistentDetails>
       </fieldset>}
 
       <CollapsibleCalculatorPanel
@@ -330,8 +329,6 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
         number="02"
         title="比較表"
         summary={skill ? `S${skill.skillIndex}・${format(duration)}秒・${tableComparison.length}列${isDifference ? `・差分（基準：${baselineLabel}）` : ''}` : '術耐性別のスキル総ダメージ期待値'}
-        open={tableOpen}
-        onToggle={() => setTableOpen((value) => !value)}
         collapsedLabel="表を表示"
       >
         {skill ? <>
@@ -414,8 +411,6 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
         number="03"
         title="比較グラフ"
         summary={skill ? `S${skill.skillIndex}・${format(duration)}秒・${chartLabel}${isDifference ? `・差分（基準：${baselineLabel}）` : ''}` : '術耐性別のスキル総ダメージ期待値'}
-        open={graphOpen}
-        onToggle={() => setGraphOpen((value) => !value)}
         collapsedLabel="グラフを表示"
       >
         {skill ? <section aria-label="比較グラフ">
