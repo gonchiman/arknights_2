@@ -721,6 +721,8 @@
 .enemy-result-summary { display: grid; gap: 4px; color: var(--text-muted); font-size: 9px; text-align: right; }
 .enemy-result-summary > span:first-child { color: var(--text-soft); font-size: 11px; }
 
+.enemy-table-section { container: enemy-reference / inline-size; }
+
 .enemy-table-wrap {
   width: 100%;
   max-height: 460px;
@@ -729,7 +731,7 @@
 }
 
 .enemy-table {
-  min-width: 1010px;
+  min-width: 0;
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
@@ -748,22 +750,18 @@
 .enemy-table th,
 .enemy-table td {
   border-right: 1px solid var(--border);
-  padding: 8px 10px;
+  padding: 8px 6px;
+  overflow-wrap: anywhere;
 }
 
 .enemy-table th:last-child,
 .enemy-table td:last-child { border-right: 0; }
 
-.enemy-table th:nth-child(1) { width: 250px; }
-.enemy-table th:nth-child(2) { width: 88px; }
-.enemy-table th:nth-child(3) { width: 100px; }
-.enemy-table th:nth-child(4),
-.enemy-table th:nth-child(5) { width: 88px; }
-.enemy-table th:nth-child(6),
-.enemy-table th:nth-child(7),
-.enemy-table th:nth-child(8),
-.enemy-table th:nth-child(9),
-.enemy-table th:nth-child(10) { width: 76px; }
+.enemy-table th:nth-child(1) { width: 22%; }
+.enemy-table th:nth-child(2) { width: 8%; }
+.enemy-table th:nth-child(3) { width: 10%; }
+.enemy-table th:nth-child(n + 4) { width: calc(60% / 7); }
+.enemy-cell-label { display: none; }
 
 .numeric-heading { text-align: right; }
 
@@ -805,13 +803,12 @@
 
 .enemy-detail-button strong {
   min-width: 0;
-  overflow: hidden;
+  overflow-wrap: anywhere;
   font-size: 11px;
   font-weight: 500;
   text-decoration: underline;
   text-decoration-color: #a7b2bb;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .enemy-detail-button span {
@@ -840,7 +837,7 @@
 .enemy-number-cell {
   font-size: 11px;
   text-align: right;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .enemy-rating-cell strong {
@@ -930,6 +927,68 @@
 .enemy-data-details > summary > span::before { content: '+'; }
 .enemy-data-details[open] > summary > span::before { content: '−'; }
 
+@container enemy-reference (max-width: 900px) {
+  .enemy-table,
+  .enemy-table tbody { display: block; }
+  .enemy-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .enemy-table thead th { position: static; }
+  .enemy-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-bottom: 1px solid var(--border-strong);
+  }
+  .enemy-table tbody tr:last-child { border-bottom: 0; }
+  .enemy-table tbody td {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 8px;
+    font-size: 11px;
+  }
+  .enemy-table .enemy-identity-cell {
+    grid-column: 1 / -1;
+    position: relative;
+    left: auto;
+    z-index: auto;
+    display: block;
+    border-right: 0;
+    background: var(--surface-soft);
+  }
+  .enemy-table .enemy-detail-button { min-height: 32px; }
+  .enemy-table .enemy-index { top: 16px; }
+  .enemy-cell-label {
+    min-width: 0;
+    display: block;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 400;
+    text-align: left;
+  }
+  .enemy-table tbody td > strong { min-width: 0; }
+  .enemy-table tbody td:nth-child(3n + 1) { border-right: 0; }
+  .enemy-table tbody td:nth-last-child(-n + 3) { border-bottom: 0; }
+}
+
+@container enemy-reference (max-width: 420px) {
+  .enemy-table tbody tr { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .enemy-table tbody td { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .enemy-table tbody td:nth-child(3n + 1) { border-right: 1px solid var(--border); }
+  .enemy-table tbody td:nth-last-child(-n + 3) { border-bottom: 1px solid var(--border); }
+  .enemy-table tbody .enemy-identity-cell,
+  .enemy-table tbody td:nth-child(2n + 1),
+  .enemy-table tbody td:last-child { border-right: 0; }
+  .enemy-table tbody td:last-child { grid-column: 1 / -1; border-bottom: 0; }
+}
+
 @media (max-width: 760px) {
   .enemy-metric-selector { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .enemy-chart-toolbar { align-items: stretch; flex-direction: column; }
@@ -942,7 +1001,6 @@
 
 @media (max-width: 640px) {
   .enemy-table-wrap { max-height: 400px; }
-  .enemy-table th:nth-child(1) { width: 190px; }
   .enemy-result-summary { text-align: left; }
 }
 
@@ -973,7 +1031,7 @@
   .statistics-bin-width-input-row button,
   .enemy-frequency-details summary,
   .enemy-stat-mode-switch button,
-  .enemy-detail-button,
+  .enemy-table .enemy-detail-button,
   .enemy-pagination button,
   .enemy-data-details summary { min-height: 44px; }
 }

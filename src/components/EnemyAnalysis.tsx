@@ -193,24 +193,24 @@ export function EnemyAnalysis() {
               </div>
 
               <h3 className="enemy-table-title" id="enemy-table-heading">敵の基礎ステータス</h3>
-              <div className="table-wrap enemy-table-wrap" tabIndex={0} role="region" aria-label="敵の基礎ステータス一覧・スクロール領域">
-                <table className="enemy-table" aria-labelledby="enemy-table-heading">
+              <div className="table-wrap enemy-table-wrap" tabIndex={0} role="region" aria-label="敵の基礎ステータス一覧・縦スクロール領域">
+                <table className="enemy-table" role="table" aria-labelledby="enemy-table-heading">
                   <caption>統計分析の対象となっている敵の基礎ステータス一覧</caption>
-                  <thead>
-                    <tr>
-                      <th className="enemy-name-column">敵</th>
-                      <th>区分</th>
-                      <th className="numeric-heading">登場ステージ数</th>
-                      <th className="numeric-heading">{statDisplayMode === 'RATING' ? '耐久' : 'HP'}</th>
-                      <th className="numeric-heading">攻撃力</th>
-                      <th className="numeric-heading">防御力</th>
-                      <th className="numeric-heading">術耐性</th>
-                      <th className="numeric-heading">移動速度</th>
-                      <th className="numeric-heading">攻撃間隔</th>
-                      <th className="numeric-heading">重量</th>
+                  <thead role="rowgroup">
+                    <tr role="row">
+                      <th scope="col" role="columnheader" id="enemy-column-name" className="enemy-name-column">敵</th>
+                      <th scope="col" role="columnheader" id="enemy-column-level">区分</th>
+                      <th scope="col" role="columnheader" id="enemy-column-stages" className="numeric-heading">登場ステージ数</th>
+                      <th scope="col" role="columnheader" id="enemy-column-hp" className="numeric-heading">{statDisplayMode === 'RATING' ? '耐久' : 'HP'}</th>
+                      <th scope="col" role="columnheader" id="enemy-column-attack" className="numeric-heading">攻撃力</th>
+                      <th scope="col" role="columnheader" id="enemy-column-defense" className="numeric-heading">防御力</th>
+                      <th scope="col" role="columnheader" id="enemy-column-resistance" className="numeric-heading">術耐性</th>
+                      <th scope="col" role="columnheader" id="enemy-column-speed" className="numeric-heading">移動速度</th>
+                      <th scope="col" role="columnheader" id="enemy-column-interval" className="numeric-heading">攻撃間隔</th>
+                      <th scope="col" role="columnheader" id="enemy-column-weight" className="numeric-heading">重量</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody role="rowgroup">
                     {visibleRows.map((enemy) => (
                       <EnemyRow
                         enemy={enemy}
@@ -258,8 +258,8 @@ function EnemyRow({
   onOpenDetail: (enemy: EnemyRecord, trigger: HTMLButtonElement) => void
 }) {
   return (
-    <tr>
-      <td className="enemy-identity-cell">
+    <tr role="row">
+      <td className="enemy-identity-cell" role="cell" headers="enemy-column-name">
         <span className="enemy-index">{enemy.index || '—'}</span>
         <button
           type="button"
@@ -272,42 +272,50 @@ function EnemyRow({
           <span aria-hidden="true">詳細</span>
         </button>
       </td>
-      <td>
+      <td role="cell" headers="enemy-column-level">
+        <span className="enemy-cell-label" aria-hidden="true">区分</span>
         <span className={`enemy-level-badge ${enemy.levelType.toLowerCase()}`}>{LEVEL_LABELS[enemy.levelType]}</span>
       </td>
-      <EnemyNumberCell value={enemy.stageAppearanceCount} />
-      <EnemyPrimaryStatCell mode={statDisplayMode} rating={enemy.ratings.endurance} value={enemy.stats.maxHp} />
-      <EnemyPrimaryStatCell mode={statDisplayMode} rating={enemy.ratings.attack} value={enemy.stats.attack} />
-      <EnemyPrimaryStatCell mode={statDisplayMode} rating={enemy.ratings.defense} value={enemy.stats.defense} />
-      <EnemyPrimaryStatCell mode={statDisplayMode} rating={enemy.ratings.resistance} value={enemy.stats.magicResistance} />
-      <EnemyNumberCell value={enemy.stats.moveSpeed} decimal />
-      <td className="enemy-number-cell">
+      <EnemyNumberCell column="stages" label="登場ステージ数" value={enemy.stageAppearanceCount} />
+      <EnemyPrimaryStatCell column="hp" label={statDisplayMode === 'RATING' ? '耐久' : 'HP'} mode={statDisplayMode} rating={enemy.ratings.endurance} value={enemy.stats.maxHp} />
+      <EnemyPrimaryStatCell column="attack" label="攻撃力" mode={statDisplayMode} rating={enemy.ratings.attack} value={enemy.stats.attack} />
+      <EnemyPrimaryStatCell column="defense" label="防御力" mode={statDisplayMode} rating={enemy.ratings.defense} value={enemy.stats.defense} />
+      <EnemyPrimaryStatCell column="resistance" label="術耐性" mode={statDisplayMode} rating={enemy.ratings.resistance} value={enemy.stats.magicResistance} />
+      <EnemyNumberCell column="speed" label="移動速度" value={enemy.stats.moveSpeed} decimal />
+      <td className="enemy-number-cell" role="cell" headers="enemy-column-interval">
+        <span className="enemy-cell-label" aria-hidden="true">攻撃間隔</span>
         <strong>{formatDecimal(enemy.stats.baseAttackTime, '秒')}</strong>
       </td>
-      <EnemyNumberCell value={enemy.stats.massLevel} />
+      <EnemyNumberCell column="weight" label="重量" value={enemy.stats.massLevel} />
     </tr>
   )
 }
 
 function EnemyPrimaryStatCell({
+  column,
+  label,
   mode,
   rating,
   value,
 }: {
+  column: string
+  label: string
   mode: EnemyStatDisplayMode
   rating: string | null
   value: number | null
 }) {
   return (
-    <td className={`enemy-number-cell ${mode === 'RATING' ? 'enemy-rating-cell' : ''}`}>
+    <td className={`enemy-number-cell ${mode === 'RATING' ? 'enemy-rating-cell' : ''}`} role="cell" headers={`enemy-column-${column}`}>
+      <span className="enemy-cell-label" aria-hidden="true">{label}</span>
       <strong>{mode === 'RATING' ? rating ?? '—' : formatInteger(value)}</strong>
     </td>
   )
 }
 
-function EnemyNumberCell({ value, decimal = false, suffix = '' }: { value: number | null; decimal?: boolean; suffix?: string }) {
+function EnemyNumberCell({ column, label, value, decimal = false, suffix = '' }: { column: string; label: string; value: number | null; decimal?: boolean; suffix?: string }) {
   return (
-    <td className="enemy-number-cell">
+    <td className="enemy-number-cell" role="cell" headers={`enemy-column-${column}`}>
+      <span className="enemy-cell-label" aria-hidden="true">{label}</span>
       <strong>{decimal ? formatDecimal(value, suffix) : formatInteger(value, suffix)}</strong>
     </td>
   )
