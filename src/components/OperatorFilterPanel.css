@@ -1,0 +1,137 @@
+.damage-build-navigation.operator-filter-compact {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  min-width: 0;
+  align-self: start;
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) repeat(2, minmax(112px, .5fr)) minmax(138px, .6fr) auto;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: rgb(255 255 255 / 96%);
+  padding: 6px;
+  overflow-anchor: none;
+  backdrop-filter: blur(8px);
+}
+
+.operator-filter-compact .operator-filter-query,
+.operator-filter-compact .operator-filter-select select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 8px;
+  font: inherit;
+  font-size: 11px;
+}
+
+.operator-filter-compact .operator-filter-select {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+}
+
+.operator-filter-compact .operator-filter-select > span {
+  color: var(--text-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.operator-filter-compact .operator-filter-select select { cursor: pointer; }
+
+.operator-filter-compact > .operator-filter-reset {
+  min-height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  padding: 4px 8px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.operator-filter-compact .operator-filter-query:focus-visible,
+.operator-filter-compact .operator-filter-select select:focus-visible,
+.operator-filter-compact .operator-filter-reset:focus-visible,
+.operator-filter-compact .enemy-metric-selector button:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.operator-filter-compact .enemy-statistics-settings {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  padding: 6px 0 0;
+  background: transparent;
+}
+
+.operator-filter-compact .enemy-statistics-settings legend {
+  padding: 0 6px 0 0;
+  color: var(--text-soft);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.operator-filter-compact .enemy-metric-selector.operator-metric-selector {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  border-top: 1px solid var(--border-strong);
+  border-left: 1px solid var(--border-strong);
+}
+
+.operator-filter-compact .enemy-metric-selector button {
+  min-width: 0;
+  min-height: 36px;
+  border: 0;
+  border-right: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text-soft);
+  padding: 6px 4px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.operator-filter-compact .enemy-metric-selector button:hover { background: var(--surface-hover); }
+.operator-filter-compact .enemy-metric-selector button.active {
+  background: var(--accent);
+  color: var(--surface);
+  font-weight: 700;
+}
+
+@media (max-width: 1140px) {
+  .damage-build-navigation.operator-filter-compact { top: 58px; }
+}
+
+@media (max-width: 760px) {
+  .damage-build-navigation.operator-filter-compact { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .operator-filter-compact .operator-filter-query { grid-column: 1 / 5; grid-row: 1; }
+  .operator-filter-compact > .operator-filter-reset { grid-column: 5 / -1; grid-row: 1; }
+  .operator-filter-compact .operator-filter-select {
+    grid-column: span 2;
+    grid-row: 2;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+  }
+  .operator-filter-compact .enemy-statistics-settings { grid-row: 3; }
+  .operator-filter-compact .enemy-metric-selector.operator-metric-selector { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px), (pointer: coarse) {
+  .operator-filter-compact .operator-filter-query,
+  .operator-filter-compact .operator-filter-select select,
+  .operator-filter-compact .enemy-metric-selector button,
+  .operator-filter-compact > .operator-filter-reset { min-height: 44px; }
+}

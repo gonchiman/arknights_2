@@ -1,197 +1,72 @@
-.operator-database-page,
-.operator-database-panel {
-  min-width: 0;
-}
+.operator-database-page { min-width: 0; }
+.operator-database-page .page-intro { margin: 0; }
 
-.operator-database-panel {
-  overflow: hidden;
+.operator-directory {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.operator-directory > * { min-width: 0; max-width: 100%; }
+
+.operator-directory-state {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
   border: 1px solid var(--border-strong);
   background: var(--surface);
+  padding: 18px;
+  color: var(--text-soft);
+  font-size: 12px;
 }
 
-.operator-database-filter-panel .result-meta { border-bottom: 0; }
-
-.operator-statistics-panel,
-.operator-database-table-panel {
-  margin-top: 12px;
-}
-
-/* Preserve operator statistics while the shared enemy output uses its own layout. */
-.operator-statistics-panel {
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid var(--border-strong);
-  background: #fff;
-}
-
-.operator-statistics-panel .enemy-section-heading {
-  min-width: 0;
-  min-height: 52px;
+.operator-table-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  border-bottom: 1px solid var(--border);
-  background: #fff;
-  padding: 8px 10px;
-}
-
-.operator-statistics-panel .enemy-section-heading > div { min-width: 0; }
-
-.operator-statistics-panel .enemy-section-heading > div > span {
-  display: block;
-  color: var(--text-muted);
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: .13em;
-}
-
-.operator-statistics-panel .enemy-section-heading h2 {
-  margin: 2px 0 0;
-  font-size: 14px;
-  line-height: 1.25;
-}
-
-.operator-statistics-panel .enemy-section-heading p {
-  min-width: 0;
-  margin: 0;
-  overflow: hidden;
+  gap: 6px 16px;
+  margin-bottom: 12px;
   color: var(--text-muted);
   font-size: 10px;
-  text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.6;
 }
-
-.operator-statistics-panel .enemy-metric-selector {
-  grid-template-columns: repeat(9, minmax(0, 1fr));
-  border: 0;
-  border-bottom: 1px solid var(--border-strong);
-  background: var(--surface-soft);
-}
-
-.operator-statistics-panel .enemy-metric-selector button { border-bottom: 0; }
-.operator-statistics-panel .enemy-metric-selector button:last-child { border-right: 0; }
-
-.operator-statistics-panel .enemy-statistics-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  margin: 0;
-  border-bottom: 1px solid var(--border);
-  background: #fff;
-}
-
-.operator-statistics-panel .enemy-statistics-grid > div {
-  min-width: 0;
-  min-height: 54px;
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  padding: 6px 8px;
-}
-
-.operator-statistics-panel .enemy-statistics-grid > div:nth-child(5n) { border-right: 0; }
-.operator-statistics-panel .enemy-statistics-grid > div:nth-last-child(-n + 5) { border-bottom: 0; }
-
-.operator-statistics-panel .enemy-statistics-grid dt {
-  color: var(--text-muted);
-  font-size: 8px;
-  font-weight: 700;
-}
-
-.operator-statistics-panel .enemy-statistics-grid dd {
-  margin: 3px 0 0;
-  overflow: hidden;
-  color: var(--text);
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.operator-statistics-panel .enemy-statistics-grid span {
-  display: block;
-  margin-top: 2px;
-  color: var(--text-muted);
-  font-size: 8px;
-}
-
-.operator-statistics-panel .enemy-chart-toolbar { flex-wrap: nowrap; margin-bottom: 0; }
-.operator-statistics-panel .enemy-chart-visibility label { min-height: 28px; font-size: 9px; }
-.operator-statistics-panel .enemy-chart-visibility label.active {
-  background: #fff;
-  box-shadow: inset 0 0 0 1px #222;
-  color: var(--text);
-}
-.operator-statistics-panel .enemy-chart-visibility label.active:hover { background: var(--surface-hover); }
-.operator-statistics-panel .enemy-chart-visibility label.active input { accent-color: #222; }
-.operator-statistics-panel .enemy-chart-scale-switch button { min-height: 26px; font-size: 9px; }
-.operator-statistics-panel .enemy-chart-select-label select { min-height: 28px; font-size: 9px; }
-.operator-statistics-panel .statistics-bin-width-input-row input { min-height: 28px; font-size: 10px; }
-.operator-statistics-panel .statistics-bin-width-input-row button { min-height: 28px; font-size: 9px; }
-
-.operator-statistics-panel .enemy-analysis-figure {
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  background: #fff;
-  padding: 10px;
-}
-.operator-statistics-panel .enemy-analysis-figure:last-child { border-bottom: 0; }
-.operator-statistics-panel .enemy-analysis-figure figcaption {
-  align-items: center;
-  flex-direction: row;
-  margin-bottom: 5px;
-  border: 0;
-  background: transparent;
-  padding: 0;
-}
-.operator-statistics-panel .enemy-analysis-figure figcaption > div:first-child > span { line-height: 1.45; }
-.operator-statistics-panel .enemy-chart-legend { flex-wrap: nowrap; gap: 12px; }
-.operator-statistics-panel .enemy-scatter-controls { flex-wrap: nowrap; }
 
 .operator-database-table-wrap {
   max-width: 100%;
-  overscroll-behavior-x: contain;
+  max-height: 460px;
+  border: 1px solid var(--border);
+  overscroll-behavior: contain;
 }
 
 .operator-database-table {
-  min-width: 900px;
+  width: 100%;
+  min-width: 600px;
   table-layout: fixed;
+  font-size: 11px;
 }
 
-.operator-database-table th:nth-child(1) { width: 180px; }
-.operator-database-table th:nth-child(2) { width: 84px; }
-.operator-database-table th:nth-child(3) { width: 100px; }
-.operator-database-table th:nth-child(4) { width: 120px; }
-.operator-database-table th:nth-child(5),
+.operator-database-table th:nth-child(1) { width: 24%; }
+.operator-database-table th:nth-child(2) { width: 12%; }
+.operator-database-table th:nth-child(3) { width: 8%; }
+.operator-database-table th:nth-child(4) { width: 18%; }
+.operator-database-table th:nth-child(5) { width: 11%; }
 .operator-database-table th:nth-child(6),
 .operator-database-table th:nth-child(7),
-.operator-database-table th:nth-child(8) { width: 82px; }
+.operator-database-table th:nth-child(8) { width: 9%; }
 
 .operator-database-table td {
-  padding: 4px 10px;
+  padding: 5px 6px;
   overflow-wrap: anywhere;
-  line-height: 1.35;
+  line-height: 1.4;
 }
 
 .operator-database-table th,
-.operator-database-table td {
-  border-right: 1px solid var(--border);
-}
-
+.operator-database-table td { border-right: 1px solid var(--border); }
 .operator-database-table th:last-child,
-.operator-database-table td:last-child {
-  border-right: 0;
-}
-
-.operator-database-table th {
-  padding: 0;
-}
-
-.operator-database-table th:nth-child(4) {
-  padding: 6px 10px;
-}
-
+.operator-database-table td:last-child { border-right: 0; }
+.operator-database-table th { padding: 0; font-size: 10px; }
+.operator-database-table th:nth-child(4) { padding: 6px; }
 .operator-database-table tbody tr { cursor: default; }
 
 .operator-database-table th:first-child,
@@ -199,44 +74,35 @@
   position: sticky;
   left: 0;
   z-index: 2;
-  background: #fff;
+  background: var(--surface);
 }
-
 .operator-database-table th:first-child {
   z-index: 3;
   background: var(--surface-soft);
 }
-
-.operator-database-table tbody tr:hover td:first-child {
-  background: var(--surface-hover);
-}
+.operator-database-table tbody tr:hover td:first-child { background: var(--surface-hover); }
 
 .operator-database-sort-button {
   width: 100%;
-  min-height: 38px;
+  min-height: 34px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: 3px;
   border: 0;
   background: transparent;
   color: inherit;
-  padding: 8px 10px;
+  padding: 6px 4px;
   font: inherit;
   font-weight: 700;
   text-align: left;
   cursor: pointer;
 }
-
-.operator-database-sort-button:hover {
-  background: #ededed;
-  color: var(--text);
-}
-
-.operator-database-sort-indicator {
-  color: #777;
-  font-size: 8px;
-}
+.operator-database-sort-button:hover { background: #ededed; color: var(--text); }
+.operator-database-sort-button:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
+.operator-database-sort-indicator { flex-shrink: 0; color: #777; font-size: 8px; }
+.operator-database-table th[aria-sort='ascending'] .operator-database-sort-button,
+.operator-database-table th[aria-sort='descending'] .operator-database-sort-button { background: #e8e8e8; }
 
 .operator-database-name-button {
   min-height: 24px;
@@ -246,28 +112,20 @@
   background: transparent;
   color: var(--link);
   padding: 2px 0;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.4;
   text-align: left;
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
 }
+.operator-database-name-button:hover { color: #123f78; }
+.operator-database-name-button:focus-visible { outline: 2px solid currentcolor; outline-offset: 2px; }
+.operator-database-stat-cell { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 
-.operator-database-name-button:hover {
-  color: #123f78;
-}
-
-.operator-database-name-button:focus-visible {
-  border-radius: 2px;
-  outline: 2px solid currentcolor;
-  outline-offset: 2px;
-}
-
-.operator-database-stat-cell {
-  font-variant-numeric: tabular-nums;
-  text-align: right;
+@media (max-width: 760px) {
+  .operator-database-table-wrap { max-height: 400px; }
 }
 
 .operator-detail-dialog {
@@ -894,7 +752,6 @@
 }
 
 @media (max-width: 760px) {
-  .operator-database-table { min-width: 900px; }
   .operator-detail-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
   .operator-stat-radar-layout { grid-template-columns: minmax(0, 1fr); }
@@ -904,18 +761,6 @@
   .operator-stat-radar-values > div { border-right: 1px solid var(--border); }
   .operator-stat-radar-values > div:nth-child(4n) { border-right: 0; }
   .operator-stat-radar-values > div:nth-last-child(-n + 4) { border-bottom: 0; }
-
-  .operator-statistics-panel .enemy-metric-selector {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .operator-statistics-panel .enemy-metric-selector button {
-    border-right: 1px solid var(--border-strong);
-    border-bottom: 1px solid var(--border-strong);
-  }
-
-  .operator-statistics-panel .enemy-metric-selector button:nth-child(3n) { border-right: 0; }
-  .operator-statistics-panel .enemy-metric-selector button:nth-last-child(-n + 3) { border-bottom: 0; }
 }
 
 @media (max-width: 560px) {
@@ -956,54 +801,9 @@
 
   .skill-classifier-popover-header { gap: 10px; padding: 12px; }
   .skill-classifier-popover-header h2 { font-size: 16px; }
-
-  .operator-statistics-panel .enemy-metric-selector {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .operator-statistics-panel .enemy-metric-selector button,
-  .operator-statistics-panel .enemy-metric-selector button:nth-child(3n) {
-    border-right: 1px solid var(--border-strong);
-    border-bottom: 1px solid var(--border-strong);
-  }
-
-  .operator-statistics-panel .enemy-metric-selector button:nth-child(2n) { border-right: 0; }
-
-  .operator-statistics-panel .enemy-metric-selector button:last-child {
-    grid-column: 1 / -1;
-    border-right: 0;
-    border-bottom: 0;
-  }
-
-  .operator-statistics-panel .enemy-statistics-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .operator-statistics-panel .enemy-statistics-grid > div,
-  .operator-statistics-panel .enemy-statistics-grid > div:nth-child(4n),
-  .operator-statistics-panel .enemy-statistics-grid > div:nth-child(5n) {
-    border-right: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .operator-statistics-panel .enemy-statistics-grid > div:nth-child(2n) { border-right: 0; }
-  .operator-statistics-panel .enemy-statistics-grid > div:nth-last-child(-n + 5) { border-bottom: 1px solid var(--border); }
-  .operator-statistics-panel .enemy-statistics-grid > div:nth-last-child(-n + 2) { border-bottom: 0; }
-}
-
-@media (max-width: 520px) {
-  .operator-statistics-panel .enemy-section-heading { display: block; }
-  .operator-statistics-panel .enemy-section-heading p { margin-top: 5px; text-align: left; }
-  .operator-statistics-panel .enemy-analysis-figure figcaption { align-items: flex-start; flex-direction: column; }
-  .operator-statistics-panel .enemy-chart-legend { gap: 7px; }
 }
 
 @media (pointer: coarse) {
-  .operator-statistics-panel .enemy-chart-visibility label,
-  .operator-statistics-panel .enemy-chart-select-label select,
-  .operator-statistics-panel .enemy-chart-scale-switch button,
-  .operator-statistics-panel .statistics-bin-width-input-row input,
-  .operator-statistics-panel .statistics-bin-width-input-row button { min-height: 44px; }
   .operator-database-sort-button { min-height: 44px; }
   .operator-database-name-button { min-height: 32px; }
   .operator-skill-name-button { min-height: 44px; }

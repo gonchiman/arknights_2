@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   DEFAULT_OPERATOR_DATABASE_SORT,
   EMPTY_OPERATOR_DATABASE_FILTERS,
@@ -12,9 +12,12 @@ import {
 } from '../lib/operatorDatabase'
 import { OPERATOR_INITIAL_LABELS, PROFESSION_ORDER } from '../lib/operatorFilters'
 import type { SkillRecord } from '../types/skill'
-import { Filters, type FilterOption } from './Filters'
+import type { FilterOption } from './Filters'
+import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
-import { OperatorStatisticsPanel } from './OperatorStatisticsPanel'
+import { OperatorFilterPanel } from './OperatorFilterPanel'
+import { OperatorStatisticsPanel, OperatorStatisticsSettings, useOperatorStatisticsControls } from './OperatorStatisticsPanel'
+import './DamageCalculator.css'
 import './OperatorDatabase.css'
 
 interface Props {
@@ -30,8 +33,10 @@ export function OperatorDatabase({
   loading,
   onOpenOperatorDetail,
 }: Props) {
+  const statisticsControls = useOperatorStatisticsControls()
   const [filters, setFilters] = useState({ ...EMPTY_OPERATOR_DATABASE_FILTERS })
   const [sort, setSort] = useState<OperatorDatabaseSort>({ ...DEFAULT_OPERATOR_DATABASE_SORT })
+  const tableScrollRef = useRef<HTMLDivElement | null>(null)
 
   const records = useMemo(() => buildOperatorDatabaseRecords(rows), [rows])
   const professionOptions = useMemo(() => buildProfessionOptions(records), [records])
@@ -41,6 +46,10 @@ export function OperatorDatabase({
     sort,
   ), [records, filters, sort])
   const scopeLabel = getOperatorScopeLabel(filters, professionOptions)
+
+  useEffect(() => {
+    if (tableScrollRef.current) tableScrollRef.current.scrollTop = 0
+  }, [filters, sort])
 
   const updateSort = (key: OperatorDatabaseSortKey) => {
     setSort((current) => ({
@@ -54,37 +63,27 @@ export function OperatorDatabase({
   const resetFilters = () => setFilters({ ...EMPTY_OPERATOR_DATABASE_FILTERS })
 
   return (
-    <section className="operator-database-page">
+    <section className="calculator-page operator-database-page">
       <header className="page-intro">
         <div>
           <span className="page-kicker">OPERATOR DATABASE</span>
           <h1>オペレーターデータベース</h1>
         </div>
-        <p>オペレーターを絞り込み、基本ステータスの分布・詳細データ・スキル分類を横断して確認します。</p>
       </header>
 
-      <section className="operator-database-panel operator-database-filter-panel" aria-label="オペレーターの絞り込み">
-        <Filters
+      <section className="operator-directory" aria-label="オペレーターデータベース">
+        <OperatorFilterPanel
           value={filters}
           professionOptions={professionOptions}
           onChange={setFilters}
           onReset={resetFilters}
-          searchPlaceholder="名前・職分・潜在能力・素質・スキル・モジュールで検索"
+          sharedSettings={<OperatorStatisticsSettings controls={statisticsControls} />}
         />
 
-        <div className="result-meta" role="status" aria-live="polite">
-          <span>{loading ? '読み込み中...' : `${visibleRecords.length} / ${records.length} 名表示`}</span>
-          <span>ステータスは最終昇進・最大Lv・信頼度100（潜在能力／モジュール補正なし）</span>
-        </div>
-      </section>
-
-      {!loading && visibleRecords.length > 0 && (
-        <OperatorStatisticsPanel rows={visibleRecords} scopeLabel={scopeLabel} />
-      )}
-
-      <section className="operator-database-panel operator-database-table-panel" aria-label="オペレーター一覧">
-        {!loading && visibleRecords.length === 0 ? (
-          <div className="operator-empty-state" role="status">
+        {loading ? (
+          <div className="operator-directory-state" role="status">オペレーターデータを読み込んでいます…</div>
+        ) : visibleRecords.length === 0 ? (
+          <div className="operator-directory-state" role="status">
             <strong>条件に一致するオペレーターがいません</strong>
             <span>検索文字や絞り込み条件を変更してください。</span>
             <button
@@ -97,52 +96,70 @@ export function OperatorDatabase({
             </button>
           </div>
         ) : (
-          <div
-            className="table-wrap operator-database-table-wrap"
-            role="region"
-            tabIndex={0}
-            aria-label="オペレーター一覧。横方向にスクロールできます"
-          >
-            <table className="operator-database-table">
-              <caption className="visually-hidden">オペレーター情報の検索結果</caption>
-              <thead>
-                <tr>
-                  <SortableHeader label="オペレーター" sortKey="operator" sort={sort} onSort={updateSort} />
-                  <SortableHeader label="レアリティ" sortKey="rarity" sort={sort} onSort={updateSort} />
-                  <SortableHeader label="職業" sortKey="profession" sort={sort} onSort={updateSort} />
-                  <th scope="col">職分</th>
-                  <SortableHeader label="HP" sortKey="maxHp" sort={sort} onSort={updateSort} />
-                  <SortableHeader label="攻撃" sortKey="attack" sort={sort} onSort={updateSort} />
-                  <SortableHeader label="防御" sortKey="defense" sort={sort} onSort={updateSort} />
-                  <SortableHeader label="術耐性" sortKey="magicResistance" sort={sort} onSort={updateSort} />
-                </tr>
-              </thead>
-              <tbody>
-                {visibleRecords.map((operator) => (
-                  <tr key={operator.operatorId}>
-                    <td>
-                      <OperatorDetailLink
-                        operatorId={operator.operatorId}
-                        onOpenOperatorDetail={onOpenOperatorDetail}
-                        className="operator-database-name-button"
-                        data-operator-id={operator.operatorId}
-                        aria-label={`${operator.name}の詳細を開く`}
-                      >
-                        {operator.name}
-                      </OperatorDetailLink>
-                    </td>
-                    <td>★{operator.rarity}</td>
-                    <td>{operator.professionLabel}</td>
-                    <td>{operator.subProfessionName}</td>
-                    <StatCell value={operator.stats.maxHp} />
-                    <StatCell value={operator.stats.attack} />
-                    <StatCell value={operator.stats.defense} />
-                    <StatCell value={operator.stats.magicResistance} />
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <OperatorStatisticsPanel rows={visibleRecords} scopeLabel={scopeLabel} controls={statisticsControls} />
+            <CollapsibleCalculatorPanel
+              id="operator-reference"
+              number="03"
+              title="対象のオペレーター一覧"
+              summary={`${scopeLabel} · ${visibleRecords.length}名`}
+              collapsedLabel="一覧を表示"
+              className="operator-reference-panel"
+            >
+              <div className="operator-table-toolbar">
+                <span role="status" aria-live="polite">{visibleRecords.length} / {records.length} 名表示</span>
+                <span>ステータスは最終昇進・最大Lv・信頼度100（潜在能力／モジュール補正なし）</span>
+              </div>
+              <h3 className="enemy-table-title" id="operator-table-heading">オペレーターの基礎ステータス</h3>
+              <div
+                ref={tableScrollRef}
+                className="table-wrap operator-database-table-wrap"
+                role="region"
+                tabIndex={0}
+                aria-label="オペレーターの基礎ステータス一覧・スクロール領域"
+              >
+                <table className="operator-database-table" aria-labelledby="operator-table-heading">
+                  <caption className="visually-hidden">オペレーター情報の検索結果</caption>
+                  <thead>
+                    <tr>
+                      <SortableHeader label="オペレーター" sortKey="operator" sort={sort} onSort={updateSort} />
+                      <SortableHeader label="レアリティ" sortKey="rarity" sort={sort} onSort={updateSort} />
+                      <SortableHeader label="職業" sortKey="profession" sort={sort} onSort={updateSort} />
+                      <th scope="col">職分</th>
+                      <SortableHeader label="HP" sortKey="maxHp" sort={sort} onSort={updateSort} />
+                      <SortableHeader label="攻撃" sortKey="attack" sort={sort} onSort={updateSort} />
+                      <SortableHeader label="防御" sortKey="defense" sort={sort} onSort={updateSort} />
+                      <SortableHeader label="術耐性" sortKey="magicResistance" sort={sort} onSort={updateSort} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleRecords.map((operator) => (
+                      <tr key={operator.operatorId}>
+                        <td>
+                          <OperatorDetailLink
+                            operatorId={operator.operatorId}
+                            onOpenOperatorDetail={onOpenOperatorDetail}
+                            className="operator-database-name-button"
+                            data-operator-id={operator.operatorId}
+                            aria-label={`${operator.name}の詳細を開く`}
+                          >
+                            {operator.name}
+                          </OperatorDetailLink>
+                        </td>
+                        <td>★{operator.rarity}</td>
+                        <td>{operator.professionLabel}</td>
+                        <td>{operator.subProfessionName}</td>
+                        <StatCell value={operator.stats.maxHp} />
+                        <StatCell value={operator.stats.attack} />
+                        <StatCell value={operator.stats.defense} />
+                        <StatCell value={operator.stats.magicResistance} />
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CollapsibleCalculatorPanel>
+          </>
         )}
       </section>
 
