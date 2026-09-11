@@ -731,7 +731,7 @@
 }
 
 .enemy-table {
-  min-width: 0;
+  min-width: 600px;
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
@@ -750,7 +750,7 @@
 .enemy-table th,
 .enemy-table td {
   border-right: 1px solid var(--border);
-  padding: 8px 6px;
+  padding: 6px 4px;
   overflow-wrap: anywhere;
 }
 
@@ -758,26 +758,25 @@
 .enemy-table td:last-child { border-right: 0; }
 
 .enemy-table th:nth-child(1) { width: 22%; }
-.enemy-table th:nth-child(2) { width: 8%; }
+.enemy-table th:nth-child(2) { width: 9%; }
 .enemy-table th:nth-child(3) { width: 10%; }
-.enemy-table th:nth-child(n + 4) { width: calc(60% / 7); }
-.enemy-table-compact-note {
-  display: none;
-  margin: 0 0 8px;
-  color: var(--text-muted);
-  font-size: 10px;
-  line-height: 1.6;
-}
+.enemy-table th:nth-child(4) { width: 11%; }
+.enemy-table th:nth-child(5) { width: 9%; }
+.enemy-table th:nth-child(6) { width: 8%; }
+.enemy-table th:nth-child(7) { width: 8%; }
+.enemy-table th:nth-child(8) { width: 8%; }
+.enemy-table th:nth-child(9) { width: 9%; }
+.enemy-table th:nth-child(10) { width: 6%; }
 
 .numeric-heading { text-align: right; }
 
-.enemy-identity-cell { position: relative; padding-left: 47px !important; }
+.enemy-identity-cell { position: relative; padding-left: 41px !important; }
 
 .enemy-identity-cell .enemy-index {
   position: absolute;
   top: 8px;
-  left: 8px;
-  min-width: 31px;
+  left: 4px;
+  min-width: 29px;
   border: 1px solid var(--border-strong);
   background: var(--surface-soft);
   padding: 2px 4px;
@@ -935,41 +934,11 @@
 .enemy-data-details[open] > summary > span::before { content: '−'; }
 
 @container enemy-reference (max-width: 900px) {
-  .enemy-table-compact-note { display: block; }
-  .enemy-table th:nth-child(3),
-  .enemy-table td:nth-child(3),
-  .enemy-table th:nth-child(10),
-  .enemy-table td:nth-child(10) { display: none; }
-  .enemy-table th:first-child { width: 26%; }
-  .enemy-table th:nth-child(2) { width: 10%; }
-  .enemy-table th:nth-child(n + 4) { width: calc(64% / 6); }
-  .enemy-table th:nth-child(9),
-  .enemy-table td:nth-child(9) { border-right: 0; }
   .enemy-detail-button span { display: none; }
-}
-
-@container enemy-reference (max-width: 660px) {
-  .enemy-table th:nth-child(2),
-  .enemy-table td:nth-child(2),
-  .enemy-table th:nth-child(8),
-  .enemy-table td:nth-child(8),
-  .enemy-table th:nth-child(9),
-  .enemy-table td:nth-child(9) { display: none; }
-  .enemy-table th:first-child { width: 32%; }
-  .enemy-table th:nth-child(4) { width: 24%; }
-  .enemy-table th:nth-child(5) { width: 17%; }
-  .enemy-table th:nth-child(6) { width: 14%; }
-  .enemy-table th:nth-child(7) { width: 13%; }
-  .enemy-table th:nth-child(7),
-  .enemy-table td:nth-child(7) { border-right: 0; }
   .enemy-table th,
   .enemy-table td { padding: 6px 3px; }
   .enemy-table th { font-size: 10px; }
-  .enemy-table .enemy-identity-cell { padding: 6px !important; }
-  .enemy-identity-cell .enemy-index { position: static; display: inline-block; margin-bottom: 2px; }
-  .enemy-detail-button { min-height: 26px; }
-  .enemy-number-cell,
-  .enemy-rating-cell strong { font-size: 10px; }
+  .enemy-level-badge { padding: 3px 2px; }
 }
 
 @media (max-width: 760px) {

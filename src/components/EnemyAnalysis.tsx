@@ -193,8 +193,7 @@ export function EnemyAnalysis() {
               </div>
 
               <h3 className="enemy-table-title" id="enemy-table-heading">敵の基礎ステータス</h3>
-              <p className="enemy-table-compact-note">画面幅に合わせて一部の列を省略しています。全項目は敵名を押すと確認できます。</p>
-              <div className="table-wrap enemy-table-wrap" tabIndex={0} role="region" aria-label="敵の基礎ステータス一覧・縦スクロール領域">
+              <div className="table-wrap enemy-table-wrap" tabIndex={0} role="region" aria-label="敵の基礎ステータス一覧・スクロール領域">
                 <table className="enemy-table" role="table" aria-labelledby="enemy-table-heading">
                   <caption>統計分析の対象となっている敵の基礎ステータス一覧</caption>
                   <thead role="rowgroup">
