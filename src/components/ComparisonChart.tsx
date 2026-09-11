@@ -1,5 +1,8 @@
 import { useLayoutEffect, useId, useMemo, useRef, useState } from 'react'
-import { placeChartEndLabels } from '../lib/comparisonChartEndLabels'
+import { placeChartEndLabelsInside } from '../lib/comparisonChartEndLabels'
+import { placeChartLegend } from '../lib/chartLegendPlacement'
+import { ComparisonChartImageLegend, useImageChartLegend } from './ComparisonChartImageLegend'
+import { useChartImageHeading } from './useChartImageHeading'
 import './ComparisonChart.css'
 
 export interface ComparisonChartPoint {
@@ -22,6 +25,8 @@ export interface ComparisonChartProps {
   currentX?: number
   showPoints?: boolean
   showEndLabels?: boolean
+  lineStyle?: 'solid' | 'dashed'
+  imageOutput?: boolean
   minHeight?: number
   formatValue?: (value: number) => string
   formatAxisValue?: (value: number) => string
@@ -52,6 +57,9 @@ const SERIES_DASH_PATTERNS = [
   '4 3 1 3',
   '12 3 4 3',
 ] as const
+const DESIGN_DASH_PATTERNS = [undefined, '12 6', '3 5', '12 4 2 4', '6 3 2 3', '16 4 6 4'] as const
+const END_LABEL_SWATCH_WIDTH = 42
+const END_LABEL_SWATCH_SPACE = END_LABEL_SWATCH_WIDTH + 8
 const NUMBER_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 
 export function ComparisonChart({
@@ -60,6 +68,8 @@ export function ComparisonChart({
   currentX = Number.NaN,
   showPoints = true,
   showEndLabels = false,
+  lineStyle,
+  imageOutput = false,
   minHeight,
   formatValue = formatNumber,
   formatAxisValue = formatValue,
@@ -74,6 +84,7 @@ export function ComparisonChart({
   const captionRef = useRef<HTMLElement>(null)
   const [chartWidth, setChartWidth] = useState(720)
   const [captionHeight, setCaptionHeight] = useState(0)
+  const [endLabelMetrics, setEndLabelMetrics] = useState<Record<string, { width: number; titleWidth: number }>>({})
   const titleId = useId()
   const descriptionId = useId()
 
@@ -82,7 +93,7 @@ export function ComparisonChart({
     if (!frame) return
 
     const updateWidth = () => {
-      const nextWidth = Math.round((showEndLabels ? frame.querySelector('svg') ?? frame : frame).getBoundingClientRect().width)
+      const nextWidth = Math.round((frame.querySelector('svg') ?? frame).getBoundingClientRect().width)
       if (nextWidth > 0) setChartWidth(Math.max(240, nextWidth))
       setCaptionHeight(captionRef.current?.getBoundingClientRect().height ?? 0)
     }
@@ -97,7 +108,7 @@ export function ComparisonChart({
     observer.observe(frame)
     if (captionRef.current) observer.observe(captionRef.current)
     return () => observer.disconnect()
-  }, [showEndLabels])
+  }, [])
 
   const normalizedSeries = useMemo<NormalizedSeries[]>(() => series.map((item) => {
     const points = item.points
@@ -123,34 +134,139 @@ export function ComparisonChart({
   ))), integerYTicks)
   const hasValues = normalizedSeries.some((item) => item.hasValues)
   const availableSeries = normalizedSeries.filter((item) => item.hasValues)
-  const labelGap = 34
-  const labelWidth = showEndLabels ? Math.max(86, ...availableSeries.map((item) => Math.max(
-    estimateLabelWidth(item.shortLabel ?? item.label, 11),
-    estimateLabelWidth(item.detailLabel ?? '', 10),
-  ))) + 26 : 0
+  const { headingRef, titleRef: headingTitleRef, conditionInLegend } = useChartImageHeading(
+    imageOutput && hasValues, metricLabel, captionDetail,
+  )
+  const dashPatterns = lineStyle === 'dashed' ? DESIGN_DASH_PATTERNS : SERIES_DASH_PATTERNS
+  const lineWidth = lineStyle ? 2.5 : 2
+  const imageLegendItems = useMemo(() => normalizedSeries.map((item, index) => ({
+    id: item.id,
+    label: `${item.label}${item.hasValues ? '' : '（データなし）'}`,
+    color: item.color,
+    dashPattern: lineStyle === 'solid' ? undefined : dashPatterns[index % dashPatterns.length],
+    lineWidth,
+    hasValues: item.hasValues,
+  })), [normalizedSeries, lineStyle, dashPatterns, lineWidth])
+  const missingLegendItems = useMemo(() => imageLegendItems.filter((item) => !item.hasValues), [imageLegendItems])
+  const fullImageLegend = useImageChartLegend((imageOutput || showEndLabels) && hasValues,
+    imageLegendItems, chartWidth - 16, frameRef, conditionInLegend ? captionDetail : undefined, imageOutput ? 15 : 10)
+  const conditionImageLegend = useImageChartLegend(imageOutput && showEndLabels && hasValues
+    && (conditionInLegend || missingLegendItems.length > 0), missingLegendItems, chartWidth - 16, frameRef,
+    conditionInLegend ? captionDetail : undefined)
+  const labelFontSize = imageOutput ? 15 : 11
+  const labelDetailSize = imageOutput ? 13 : 10
+  const labelLineGap = imageOutput ? 18 : 14
+  useLayoutEffect(() => {
+    if (!showEndLabels) return
+    let cancelled = false
+    const measure = () => {
+      if (cancelled || !frameRef.current) return
+      const context = document.createElement('canvas').getContext('2d')
+      if (!context) return
+      const family = getComputedStyle(frameRef.current).fontFamily
+      const metrics: Record<string, { width: number; titleWidth: number }> = {}
+      for (const item of normalizedSeries) {
+        context.font = `700 ${labelFontSize}px ${family}`
+        const titleWidth = context.measureText(item.shortLabel ?? item.label).width
+        context.font = `${labelDetailSize}px ${family}`
+        metrics[item.id] = { titleWidth,
+          width: Math.ceil(Math.max(titleWidth + END_LABEL_SWATCH_SPACE, context.measureText(item.detailLabel ?? '').width)) + 8,
+        }
+      }
+      setEndLabelMetrics((current) => JSON.stringify(current) === JSON.stringify(metrics) ? current : metrics)
+    }
+    measure()
+    void document.fonts.ready.then(measure)
+    document.fonts.addEventListener('loadingdone', measure)
+    return () => {
+      cancelled = true
+      document.fonts.removeEventListener('loadingdone', measure)
+    }
+  }, [showEndLabels, normalizedSeries, labelFontSize, labelDetailSize])
 
   const compact = chartWidth < 520
   const requestedHeight = minHeight === undefined
-    ? compact ? 260 : 300
-    : Math.max(160, minHeight - captionHeight - 5)
-  const margin = compact
+    ? imageOutput ? compact ? 310 : 360 : compact ? 260 : 300
+    : Math.max(160, minHeight - captionHeight - (imageOutput ? 48 : 5))
+  const margin = imageOutput
+    ? { top: 20, right: 16, bottom: 56, left: 78 }
+    : compact
     ? { top: 34, right: 14, bottom: 50, left: 58 }
     : { top: 36, right: 20, bottom: 52, left: 68 }
   if (emphasizeZero || fitYAxisLabels) {
-    margin.left = Math.max(margin.left, ...yScale.ticks.map((tick) => formatValue(tick).length * 5.5 + 30))
+    margin.left = Math.max(margin.left, ...yScale.ticks.map((tick) => formatValue(tick).length * (imageOutput ? 6.5 : 5.5) + 30))
   }
-  // Keep adjacent two-line labels readable, even when all curves end at the same value.
-  const chartHeight = showEndLabels
-    ? Math.max(requestedHeight, margin.top + margin.bottom + Math.max(0, availableSeries.length - 1) * labelGap + 24)
-    : requestedHeight
+  // The axis title must fit even when a requested export is very short.
+  const minimumChartHeight = Math.max(
+    160,
+    imageOutput ? margin.top + margin.bottom + estimateLabelWidth(metricLabel, 12) + 16 : 0,
+  )
+  const baseChartHeight = Math.max(requestedHeight, minimumChartHeight)
   const plotLeft = margin.left
-  const plotRight = chartWidth - margin.right - labelWidth
+  const plotRight = chartWidth - margin.right
   const plotTop = margin.top
-  const plotBottom = chartHeight - margin.bottom
   const plotWidth = Math.max(1, plotRight - plotLeft)
-  const plotHeight = Math.max(1, plotBottom - plotTop)
   const getX = (value: number) => plotLeft
     + ((value - xScale.minimum) / (xScale.maximum - xScale.minimum)) * plotWidth
+  const basePlotBottom = baseChartHeight - margin.bottom
+  const getBaseY = (value: number) => basePlotBottom
+    - ((value - yScale.minimum) / (yScale.maximum - yScale.minimum)) * Math.max(1, basePlotBottom - plotTop)
+  const plotLines = [
+    ...normalizedSeries.map((item) => item.points.map((point) => point.value === null ? null : { x: getX(point.x), y: getBaseY(point.value) })),
+    ...(Number.isFinite(currentX) ? [[{ x: getX(currentX), y: plotTop }, { x: getX(currentX), y: basePlotBottom }]] : []),
+    ...(emphasizeZero ? [[{ x: plotLeft, y: getBaseY(0) }, { x: plotRight, y: getBaseY(0) }]] : []),
+  ]
+  const endpoints = showEndLabels ? availableSeries.flatMap((item) => {
+    const point = item.points.slice().reverse().find((point) => point.value !== null)
+    return point && point.value !== null ? [{ item, point, x: getX(point.x), y: getBaseY(point.value) }] : []
+  }) : []
+  let endLabelPlacement = showEndLabels ? placeChartEndLabelsInside({
+    plot: { x: plotLeft, y: plotTop, width: plotWidth, height: basePlotBottom - plotTop },
+    labels: endpoints.map(({ item, x, y }) => ({ id: item.id, x, y,
+      width: endLabelMetrics[item.id]?.width ?? Math.max(estimateLabelWidth(item.shortLabel ?? item.label, labelFontSize) + END_LABEL_SWATCH_SPACE,
+        estimateLabelWidth(item.detailLabel ?? '', labelDetailSize)) + 8,
+      height: labelFontSize + 8 + (item.detailLabel ? labelLineGap : 0),
+    })),
+    lines: plotLines,
+    inset: 24,
+    clearance: 6,
+    gap: 5,
+    maxDisplacement: imageOutput ? 180 : 140,
+  }) : null
+  const leaders = endLabelPlacement?.map((label) => {
+    const endpoint = endpoints.find(({ item }) => item.id === label.id)!
+    return [{ x: endpoint.x, y: endpoint.y }, { x: label.x + label.width + 3, y: label.y + label.height / 2 }]
+  }) ?? []
+  // The leader for a short/missing-ended series must not pass through another name.
+  if (endLabelPlacement?.some((label, index) => !placeChartLegend({
+    plot: label, legend: label, inset: 0, clearance: 2,
+    lines: leaders.filter((_, leaderIndex) => leaderIndex !== index),
+  }))) endLabelPlacement = null
+  let useEndLabels = endLabelPlacement !== null && endpoints.length > 0
+  let imageLegend = useEndLabels ? conditionImageLegend : fullImageLegend
+  // Test the full plot before reserving any outside-legend space. This keeps fallback stable.
+  const placeLegend = (legend: typeof fullImageLegend, includeEndLabels: boolean) => legend ? placeChartLegend({
+    plot: { x: plotLeft, y: plotTop, width: plotWidth, height: basePlotBottom - plotTop },
+    legend,
+    lines: includeEndLabels ? [...plotLines, ...leaders] : plotLines,
+    obstacles: includeEndLabels ? endLabelPlacement ?? [] : [],
+  }) : null
+  let imageLegendPlacement = placeLegend(imageLegend, useEndLabels)
+  if (useEndLabels && imageLegend && !imageLegendPlacement) {
+    // Put all names and conditions together when the condition box needs outside space.
+    // Reserving that space before drawing prevents stale endpoint coordinates and
+    // repeated size expansion when the chart frame enforces an aspect ratio.
+    useEndLabels = false
+    endLabelPlacement = null
+    imageLegend = fullImageLegend
+    imageLegendPlacement = placeLegend(imageLegend, false)
+  }
+  const labelPositions = new Map((endLabelPlacement ?? []).map((label) => [label.id, label]))
+  const autoImageLegend = hasValues && (imageOutput || (showEndLabels && !useEndLabels))
+  const outsideLegendHeight = imageLegend && !imageLegendPlacement ? imageLegend.height + 12 : 0
+  const chartHeight = Math.max(baseChartHeight, minimumChartHeight + outsideLegendHeight)
+  const plotBottom = chartHeight - margin.bottom - outsideLegendHeight
+  const plotHeight = Math.max(1, plotBottom - plotTop)
   const getY = (value: number) => plotBottom
     - ((value - yScale.minimum) / (yScale.maximum - yScale.minimum)) * plotHeight
   const currentPosition = Number.isFinite(currentX)
@@ -161,42 +277,40 @@ export function ComparisonChart({
   const currentLabelX = currentPosition === null
     ? 0
     : clamp(currentPosition - currentLabelWidth / 2, plotLeft, plotRight - currentLabelWidth)
-  const endpoints = showEndLabels ? availableSeries.flatMap((item) => {
-    const point = item.points.slice().reverse().find((point) => point.value !== null)
-    return point && point.value !== null ? [{ item, point, x: getX(point.x), y: getY(point.value) }] : []
-  }) : []
-  const labelPositions = new Map(placeChartEndLabels(endpoints.map(({ item, y }) => ({ id: item.id, y })),
-    plotTop + 12, plotBottom - 12, labelGap).map((item) => [item.id, item.y]))
   const description = hasValues
     ? `${axisLabel}を変えたときの${metricLabel}を、${normalizedSeries.filter((item) => item.hasValues).map((item) => item.label).join('、')}について示します。${valueDescription ?? '正確な値は数値表で確認できます。'}`
     : `${axisLabel}別の${metricLabel}を表示できる系列データがありません。`
 
   return (
-    <figure className={`build-comparison-chart${showEndLabels ? ' build-comparison-chart--end-labels' : ''}`} style={{ minHeight }}>
+    <figure className={`build-comparison-chart${showEndLabels ? ' build-comparison-chart--end-labels' : ''}${lineStyle ? ' build-comparison-chart--styled' : ''}`} style={{ minHeight }}
+      data-end-label-placement={showEndLabels ? useEndLabels ? 'inside' : 'legend' : undefined}>
       <figcaption className="build-comparison-chart-caption" ref={captionRef}>
-        <div className="build-comparison-chart-heading">
-          <strong>{metricLabel}推移</strong>
-          {captionDetail && <p className="build-comparison-chart-caption-detail">{captionDetail}</p>}
+        <div className={`build-comparison-chart-heading${imageOutput && hasValues ? ' build-comparison-chart-heading-inline' : ''}`} ref={headingRef}>
+          <strong><span ref={headingTitleRef}>{metricLabel}{imageOutput ? '' : '推移'}</span></strong>
+          {captionDetail && !conditionInLegend && <p className="build-comparison-chart-caption-detail">{captionDetail}</p>}
         </div>
-        {(!showEndLabels || normalizedSeries.some((item) => !item.hasValues)) && <ul className="build-comparison-chart-legend" aria-label="比較系列の凡例">
+        {!autoImageLegend && (!showEndLabels || normalizedSeries.some((item) => !item.hasValues)) && <ul className="build-comparison-chart-legend" aria-label="比較系列の凡例">
           {normalizedSeries.map((item, index) => {
             if (showEndLabels && item.hasValues) return null
-            const dashPattern = SERIES_DASH_PATTERNS[index % SERIES_DASH_PATTERNS.length]
+            const dashPattern = lineStyle === 'solid' ? undefined : dashPatterns[index % dashPatterns.length]
             return (
               <li className="build-comparison-chart-legend-item" key={`${item.id}-${index}`}>
                 <svg
                   className="build-comparison-chart-legend-swatch"
-                  viewBox="0 0 24 6"
+                  viewBox={lineStyle ? '0 0 44 6' : '0 0 24 6'}
+                  style={lineStyle ? { width: 44, flexBasis: 44 } : undefined}
                   aria-hidden="true"
                 >
                   <line
                     x1="1"
-                    x2="23"
+                    x2={lineStyle ? 43 : 23}
                     y1="3"
                     y2="3"
                     stroke={item.color}
                     strokeDasharray={dashPattern}
-                    strokeWidth="2"
+                    strokeWidth={lineWidth}
+                    strokeLinecap={lineStyle ? 'round' : undefined}
+                    vectorEffect={lineStyle ? 'non-scaling-stroke' : undefined}
                   />
                 </svg>
                 <span>{item.label}{item.hasValues ? '' : '（データなし）'}</span>
@@ -241,13 +355,14 @@ export function ComparisonChart({
             )
           })}
 
-          <rect
+          {lineStyle ? <path className="build-comparison-chart-axis"
+            d={`M ${plotLeft} ${plotTop} V ${plotBottom} H ${plotRight}`} /> : <rect
             className="build-comparison-chart-axis"
             x={plotLeft}
             y={plotTop}
             width={plotWidth}
             height={plotHeight}
-          />
+          />}
 
           {currentPosition !== null && (
             <g className="build-comparison-chart-current">
@@ -277,7 +392,7 @@ export function ComparisonChart({
           )}
 
           {normalizedSeries.map((item, seriesIndex) => {
-            const dashPattern = SERIES_DASH_PATTERNS[seriesIndex % SERIES_DASH_PATTERNS.length]
+            const dashPattern = lineStyle === 'solid' ? undefined : dashPatterns[seriesIndex % dashPatterns.length]
             const pathSegments = buildPathSegments(item.points, getX, getY)
             const visiblePoints = item.points.filter((point): point is { x: number; value: number } => (
               point.value !== null
@@ -296,6 +411,7 @@ export function ComparisonChart({
                     fill="none"
                     stroke={item.color}
                     strokeDasharray={dashPattern}
+                    style={lineStyle ? { strokeWidth: lineWidth } : undefined}
                     key={`${item.id}-path-${pathIndex}`}
                   />
                 ))}
@@ -319,19 +435,28 @@ export function ComparisonChart({
             )
           })}
 
-          {endpoints.map(({ item, point, x, y }) => {
-            const labelY = labelPositions.get(item.id) ?? y
-            const labelX = plotRight + 22
-            return <g className="build-comparison-chart-end-label" key={`label-${item.id}`}>
+          {useEndLabels && endpoints.map(({ item, point, x, y }) => {
+            const placement = labelPositions.get(item.id)!
+            const labelX = placement.x + placement.width - 4
+            const labelY = placement.y + 4 + labelFontSize
+            const titleWidth = endLabelMetrics[item.id]?.titleWidth ?? estimateLabelWidth(item.shortLabel ?? item.label, labelFontSize)
+            const swatchRight = labelX - titleWidth - 8
+            const swatchY = labelY - labelFontSize / 2 + 1
+            const dashPattern = imageLegendItems.find((entry) => entry.id === item.id)?.dashPattern
+            return <g className="build-comparison-chart-end-label" key={`label-${item.id}`} style={{ color: item.color }}>
               <title>{`${item.label}・${axisLabel} ${formatAxisValue(point.x)}・${metricLabel} ${formatValue(point.value!)}`}</title>
-              <path d={`M ${x} ${y} L ${plotRight + 10} ${labelY} L ${labelX - 5} ${labelY}`}
-                fill="none" stroke={item.color} strokeWidth={1} />
-              <text x={labelX} y={labelY + (item.detailLabel ? -2 : 4)}>{item.shortLabel ?? item.label}</text>
-              {item.detailLabel && <text className="build-comparison-chart-end-detail" x={labelX} y={labelY + 12}>{item.detailLabel}</text>}
+              <path d={`M ${x} ${y} L ${placement.x + placement.width + 3} ${placement.y + placement.height / 2}`}
+                className="build-comparison-chart-end-leader" fill="none" />
+              <circle cx={x} cy={y} r={2.5} fill={item.color} />
+              <line className="build-comparison-chart-end-swatch"
+                x1={swatchRight - END_LABEL_SWATCH_WIDTH} x2={swatchRight} y1={swatchY} y2={swatchY}
+                stroke={item.color} strokeWidth={lineWidth} strokeDasharray={dashPattern} strokeLinecap="round" />
+              <text className="build-comparison-chart-end-name" x={labelX} y={labelY} textAnchor="end">{item.shortLabel ?? item.label}</text>
+              {item.detailLabel && <text className="build-comparison-chart-end-detail" x={labelX} y={labelY + labelLineGap} textAnchor="end">{item.detailLabel}</text>}
             </g>
           })}
 
-          {xScale.ticks.filter((_, index) => !showEndLabels || !compact || index % 2 === 0).map((tick, index, ticks) => {
+          {xScale.ticks.map((tick, index, ticks) => {
             const x = getX(tick)
             const anchor = index === 0 ? 'start' : index === ticks.length - 1 ? 'end' : 'middle'
             return (
@@ -358,7 +483,7 @@ export function ComparisonChart({
           <text
             className="build-comparison-chart-axis-title"
             x={(plotLeft + plotRight) / 2}
-            y={chartHeight - 6}
+            y={chartHeight - outsideLegendHeight - 6}
             textAnchor="middle"
           >
             {axisLabel}
@@ -370,6 +495,10 @@ export function ComparisonChart({
           >
             {metricLabel}
           </text>
+          {imageLegend && <ComparisonChartImageLegend layout={imageLegend}
+            x={imageLegendPlacement?.x ?? (chartWidth - imageLegend.width) / 2}
+            y={imageLegendPlacement?.y ?? chartHeight - outsideLegendHeight + 12}
+            placement={imageLegendPlacement?.corner ?? 'outside'} />}
         </svg>
 
         {!hasValues && (

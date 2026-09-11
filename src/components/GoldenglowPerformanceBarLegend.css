@@ -1,0 +1,68 @@
+.gg-performance-bar-auto-legend-plot { position: relative; }
+
+.gg-performance-bar-auto-legend-plot > .gg-performance-bar-image-legend {
+  box-sizing: border-box;
+  display: grid;
+  gap: 4px;
+  width: max-content;
+  max-width: calc(100% - 20px);
+  margin: 0;
+  border: 0;
+  padding: 8px 10px;
+  list-style: none;
+  background: #fff;
+  color: #222;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.gg-performance-bar-image-legend > li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.gg-performance-bar-image-legend > li > i {
+  display: block;
+  width: 18px;
+  height: 10px;
+  flex: 0 0 18px;
+}
+
+.gg-performance-bar-image-legend > :is(.gg-performance-bar-image-legend-condition, .gg-performance-bar-image-legend-note) {
+  display: block;
+  max-width: 360px;
+  color: #666;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.gg-performance-bar-image-legend-measure,
+.gg-performance-bar-image-legend-inside {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  top: 0;
+}
+
+.gg-performance-bar-image-legend-measure { visibility: hidden; }
+
+.gg-performance-bar-auto-legend-plot > .gg-performance-bar-image-legend-outside {
+  display: flex;
+  align-self: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 18px;
+  max-width: 100%;
+  margin-top: 12px;
+  border: 0;
+  padding: 0;
+}
+
+.gg-performance-bar-image-legend-outside > :is(.gg-performance-bar-image-legend-condition, .gg-performance-bar-image-legend-note) {
+  flex-basis: 100%;
+  max-width: 100%;
+  text-align: center;
+}
