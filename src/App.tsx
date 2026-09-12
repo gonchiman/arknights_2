@@ -42,9 +42,19 @@ const SIDEBAR_DRAWER_QUERY = '(max-width: 1140px)'
 const SIDEBAR_DESKTOP_QUERY = '(min-width: 1141px)'
 type BaseAppRoute = Exclude<AppRoute, { view: 'operator-detail' }>
 
+interface OperatorDirectoryPosition {
+  top: number
+  tableTop: number
+  tableLeft: number
+  trigger: HTMLElement | null
+}
+
 export default function App() {
   const [rows, setRows] = useState<SkillRecord[]>([])
   const [route, setRoute] = useState<AppRoute>(() => parseHashRoute(window.location.hash))
+  const [operatorDirectoryVisited, setOperatorDirectoryVisited] = useState(route.view === 'operators')
+  const currentRouteRef = useRef(route)
+  const operatorDirectoryPositionRef = useRef<OperatorDirectoryPosition | null>(null)
   const [detailBackgroundRoute, setDetailBackgroundRoute] = useState<BaseAppRoute | null>(null)
   const [overrides, setOverrides] = useState<Record<string, SkillClassificationOverride>>(loadOverrides)
   const [loading, setLoading] = useState(true)
@@ -76,6 +86,18 @@ export default function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const nextRoute = parseHashRoute(window.location.hash)
+      const previousRoute = currentRouteRef.current
+      currentRouteRef.current = nextRoute
+      if (nextRoute.view === 'operators') setOperatorDirectoryVisited(true)
+      if (previousRoute.view === 'operators' && nextRoute.view === 'operator-detail') {
+        const table = document.querySelector<HTMLElement>('.operator-database-table-wrap')
+        operatorDirectoryPositionRef.current = {
+          top: window.scrollY,
+          tableTop: table?.scrollTop ?? 0,
+          tableLeft: table?.scrollLeft ?? 0,
+          trigger: document.activeElement instanceof HTMLElement ? document.activeElement : null,
+        }
+      }
       const closingOverlay = detailBackgroundRouteRef.current !== null
 
       detailBackgroundRouteRef.current = null
@@ -88,6 +110,20 @@ export default function App() {
         detailTriggerRef.current = null
         window.requestAnimationFrame(() => {
           if (trigger?.isConnected) trigger.focus()
+        })
+        return
+      }
+
+      if (nextRoute.view === 'operators' && previousRoute.view === 'operator-detail' && operatorDirectoryPositionRef.current) {
+        const position = operatorDirectoryPositionRef.current
+        window.requestAnimationFrame(() => {
+          const table = document.querySelector<HTMLElement>('.operator-database-table-wrap')
+          if (table) {
+            table.scrollTop = position.tableTop
+            table.scrollLeft = position.tableLeft
+          }
+          if (position.trigger?.isConnected) position.trigger.focus({ preventScroll: true })
+          window.scrollTo({ top: position.top, behavior: 'instant' })
         })
         return
       }
@@ -170,6 +206,7 @@ export default function App() {
     detailBackgroundRouteRef.current = route
     setDetailBackgroundRoute(route)
     window.history.pushState(null, '', createOperatorDetailHash(operatorId))
+    currentRouteRef.current = { view: 'operator-detail', operatorId }
     setRoute({ view: 'operator-detail', operatorId })
     setSidebarOpen(false)
   }
@@ -217,6 +254,15 @@ export default function App() {
         <main className="app-content">
         <PanelStateScope.Provider value={displayedRoute.view}>
         {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && <section className="error-box" role="alert">{error}</section>}
+
+        {/* Keep the directory mounted while viewing a detail page so filters, sort and charts survive returning. */}
+        {operatorDirectoryVisited && (displayedRoute.view === 'operators' || displayedRoute.view === 'operator-detail') && (
+          <div hidden={displayedRoute.view !== 'operators'}>
+            <PanelStateScope.Provider value="operators">
+              <OperatorDatabase rows={classifiedRows} loading={loading} />
+            </PanelStateScope.Provider>
+          </div>
+        )}
 
         {displayedRoute.view === 'sources' ? (
           <DataSourcesPage />
@@ -280,13 +326,7 @@ export default function App() {
               description="URLに対応するオペレーターを確認できませんでした。"
             />
           )
-        ) : (
-          <OperatorDatabase
-            rows={classifiedRows}
-            loading={loading}
-            onOpenOperatorDetail={openOperatorDetail}
-          />
-        )}
+        ) : null}
         </PanelStateScope.Provider>
         </main>
         <footer className="site-footer" ref={setFooterContainer}>

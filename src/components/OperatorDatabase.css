@@ -32,6 +32,24 @@
   line-height: 1.6;
 }
 
+.operator-distribution-settings { padding: 12px 10px 0; }
+.operator-distribution-settings .operator-filter-inline { margin-bottom: 0; }
+.operator-distribution-settings .enemy-statistics-settings {
+  margin: 10px;
+  border: 0;
+  padding: 0;
+}
+.operator-distribution-settings .enemy-statistics-settings legend {
+  padding: 0;
+  margin-bottom: 6px;
+}
+.operator-distribution-settings .operator-metric-selector { grid-template-columns: repeat(9, minmax(0, 1fr)); }
+.operator-distribution-panel .operator-summary-panel { margin: 12px 10px; }
+
+@media (max-width: 760px) {
+  .operator-distribution-settings .operator-metric-selector { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
 .operator-database-table-wrap {
   max-width: 100%;
   max-height: 460px;

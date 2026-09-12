@@ -31,6 +31,26 @@
   font-size: 11px;
 }
 
+.operator-filter-inline {
+  min-width: 0;
+  border: 1px solid var(--border-strong);
+  margin-bottom: 12px;
+}
+
+.operator-filter-inline .filters { border-bottom: 0; }
+
+.operator-filter-inline button:focus-visible,
+.operator-filter-inline input:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px), (pointer: coarse) {
+  .operator-filter-inline .initial-button,
+  .operator-filter-inline .filter-reset-button,
+  .operator-filter-inline input { min-height: 44px; }
+}
+
 .operator-filter-compact .operator-filter-select {
   min-width: 0;
   display: grid;

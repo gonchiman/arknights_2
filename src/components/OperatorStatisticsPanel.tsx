@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   MAX_CUSTOM_LINEAR_BIN_COUNT,
   calculateBoxPlotStatistics,
@@ -116,10 +116,11 @@ export function OperatorStatisticsSettings({ controls }: { controls: OperatorSta
   )
 }
 
-export function OperatorStatisticsPanel({ rows, scopeLabel, controls }: {
+export function OperatorStatisticsPanel({ rows, scopeLabel, controls, filterSettings }: {
   rows: OperatorDatabaseRecord[]
   scopeLabel: string
   controls: OperatorStatisticsControls
+  filterSettings: ReactNode
 }) {
   const binWidthInputId = useId()
   const binWidthHelpId = useId()
@@ -156,30 +157,29 @@ export function OperatorStatisticsPanel({ rows, scopeLabel, controls }: {
   )
 
   return (
-    <>
-      <CollapsibleCalculatorPanel
-        id="operator-statistics"
-        number="01"
-        title="統計表"
-        summary={`${selectedMetric.label} · ${scopeLabel} · ${statistics.count}名`}
-        defaultOpen
-        collapsedLabel="統計表を開く"
-        className="enemy-statistics-panel operator-summary-panel"
-        bodyClassName="enemy-statistics-body"
-      >
-        <StatisticsSummary statistics={statistics} metric={selectedMetric} />
-      </CollapsibleCalculatorPanel>
-
       <CollapsibleCalculatorPanel
         id="operator-distribution"
-        number="02"
+        number="01"
         title="分布グラフ"
         summary={`${selectedMetric.label} · ${CHART_OPTIONS.find((chart) => chart.key === selectedChart)?.label} · ${scopeLabel}`}
-        defaultOpen
+        defaultOpen={false}
         collapsedLabel="グラフを開く"
         className="enemy-distribution-panel operator-distribution-panel"
         bodyClassName="enemy-distribution-body"
       >
+        <div className="operator-distribution-settings">{filterSettings}</div>
+        <CollapsibleCalculatorPanel
+          id="operator-statistics"
+          number="01-1"
+          title="統計表"
+          summary={`${selectedMetric.label} · ${scopeLabel} · ${statistics.count}名`}
+          defaultOpen={false}
+          collapsedLabel="統計表を開く"
+          className="enemy-statistics-panel operator-summary-panel"
+          bodyClassName="enemy-statistics-body"
+        >
+          <StatisticsSummary statistics={statistics} metric={selectedMetric} />
+        </CollapsibleCalculatorPanel>
         <div className="enemy-chart-toolbar">
           <fieldset className="enemy-chart-visibility">
             <legend>表示するグラフ</legend>
@@ -306,7 +306,6 @@ export function OperatorStatisticsPanel({ rows, scopeLabel, controls }: {
           )}
         </div>
       </CollapsibleCalculatorPanel>
-    </>
   )
 }
 

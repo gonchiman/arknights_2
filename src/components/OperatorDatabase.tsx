@@ -4,13 +4,13 @@ import {
   EMPTY_OPERATOR_DATABASE_FILTERS,
   buildOperatorDatabaseRecords,
   filterAndSortOperatorDatabaseRecords,
-  hasActiveOperatorDatabaseFilters,
   type OperatorDatabaseFilters,
   type OperatorDatabaseRecord,
   type OperatorDatabaseSort,
   type OperatorDatabaseSortKey,
 } from '../lib/operatorDatabase'
 import { OPERATOR_INITIAL_LABELS, PROFESSION_ORDER } from '../lib/operatorFilters'
+import { buildSubProfessionOptions } from '../lib/operatorSearchFilters'
 import type { SkillRecord } from '../types/skill'
 import type { FilterOption } from './Filters'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
@@ -23,7 +23,7 @@ import './OperatorDatabase.css'
 interface Props {
   rows: SkillRecord[]
   loading: boolean
-  onOpenOperatorDetail: OpenOperatorDetail
+  onOpenOperatorDetail?: OpenOperatorDetail
 }
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
@@ -35,21 +35,33 @@ export function OperatorDatabase({
 }: Props) {
   const statisticsControls = useOperatorStatisticsControls()
   const [filters, setFilters] = useState({ ...EMPTY_OPERATOR_DATABASE_FILTERS })
+  const [tableFilters, setTableFilters] = useState({ ...EMPTY_OPERATOR_DATABASE_FILTERS })
   const [sort, setSort] = useState<OperatorDatabaseSort>({ ...DEFAULT_OPERATOR_DATABASE_SORT })
   const tableScrollRef = useRef<HTMLDivElement | null>(null)
 
   const records = useMemo(() => buildOperatorDatabaseRecords(rows), [rows])
   const professionOptions = useMemo(() => buildProfessionOptions(records), [records])
+  const statisticsFilters = useMemo(() => ({ ...filters, nameInitial: 'ALL' as const, query: '' }), [filters])
+  const statisticsSubProfessionOptions = useMemo(
+    () => buildSubProfessionOptions(rows, statisticsFilters.profession),
+    [rows, statisticsFilters.profession],
+  )
   const visibleRecords = useMemo(() => filterAndSortOperatorDatabaseRecords(
     records,
-    filters,
+    statisticsFilters,
+    DEFAULT_OPERATOR_DATABASE_SORT,
+  ), [records, statisticsFilters])
+  const scopeLabel = getOperatorScopeLabel(statisticsFilters, professionOptions, statisticsSubProfessionOptions)
+  const tableRecords = useMemo(() => filterAndSortOperatorDatabaseRecords(
+    records,
+    tableFilters,
     sort,
-  ), [records, filters, sort])
-  const scopeLabel = getOperatorScopeLabel(filters, professionOptions)
+  ), [records, tableFilters, sort])
+  const tableScopeLabel = getOperatorScopeLabel(tableFilters, professionOptions)
 
   useEffect(() => {
     if (tableScrollRef.current) tableScrollRef.current.scrollTop = 0
-  }, [filters, sort])
+  }, [tableFilters, sort])
 
   const updateSort = (key: OperatorDatabaseSortKey) => {
     setSort((current) => ({
@@ -61,6 +73,7 @@ export function OperatorDatabase({
   }
 
   const resetFilters = () => setFilters({ ...EMPTY_OPERATOR_DATABASE_FILTERS })
+  const resetTableFilters = () => setTableFilters({ ...EMPTY_OPERATOR_DATABASE_FILTERS })
 
   return (
     <section className="calculator-page operator-database-page">
@@ -72,42 +85,50 @@ export function OperatorDatabase({
       </header>
 
       <section className="operator-directory" aria-label="オペレーターデータベース">
-        <OperatorFilterPanel
-          value={filters}
-          professionOptions={professionOptions}
-          onChange={setFilters}
-          onReset={resetFilters}
-          sharedSettings={<OperatorStatisticsSettings controls={statisticsControls} />}
-        />
-
         {loading ? (
           <div className="operator-directory-state" role="status">オペレーターデータを読み込んでいます…</div>
-        ) : visibleRecords.length === 0 ? (
-          <div className="operator-directory-state" role="status">
-            <strong>条件に一致するオペレーターがいません</strong>
-            <span>検索文字や絞り込み条件を変更してください。</span>
-            <button
-              type="button"
-              className="button secondary"
-              disabled={!hasActiveOperatorDatabaseFilters(filters)}
-              onClick={resetFilters}
-            >
-              条件をリセット
-            </button>
-          </div>
         ) : (
           <>
-            <OperatorStatisticsPanel rows={visibleRecords} scopeLabel={scopeLabel} controls={statisticsControls} />
+            <OperatorStatisticsPanel
+              rows={visibleRecords}
+              scopeLabel={scopeLabel}
+              controls={statisticsControls}
+              filterSettings={(
+                <>
+                  <OperatorFilterPanel
+                    inline
+                    label="統計の対象の絞り込み"
+                    value={statisticsFilters}
+                    professionOptions={professionOptions}
+                    subProfessionOptions={statisticsSubProfessionOptions}
+                    showNameInitial={false}
+                    showSearch={false}
+                    headingLabel="絞り込み条件"
+                    onChange={setFilters}
+                    onReset={resetFilters}
+                    sharedSettings={<OperatorStatisticsSettings controls={statisticsControls} />}
+                  />
+                </>
+              )}
+            />
             <CollapsibleCalculatorPanel
               id="operator-reference"
-              number="03"
+              number="02"
               title="対象のオペレーター一覧"
-              summary={`${scopeLabel} · ${visibleRecords.length}名`}
+              summary={`${tableScopeLabel} · ${tableRecords.length}名`}
               collapsedLabel="一覧を表示"
               className="operator-reference-panel"
             >
+              <h3 className="enemy-table-title">オペレーターの絞り込み</h3>
+              <OperatorFilterPanel
+                inline
+                value={tableFilters}
+                professionOptions={professionOptions}
+                onChange={setTableFilters}
+                onReset={resetTableFilters}
+              />
               <div className="operator-table-toolbar">
-                <span role="status" aria-live="polite">{visibleRecords.length} / {records.length} 名表示</span>
+                <span role="status" aria-live="polite">{tableRecords.length} / {records.length} 名表示</span>
                 <span>ステータスは最終昇進・最大Lv・信頼度100（潜在能力／モジュール補正なし）</span>
               </div>
               <h3 className="enemy-table-title" id="operator-table-heading">オペレーターの基礎ステータス</h3>
@@ -133,7 +154,14 @@ export function OperatorDatabase({
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleRecords.map((operator) => (
+                    {tableRecords.length === 0 && (
+                      <tr>
+                        <td colSpan={8}>
+                          条件に一致するオペレーターがいません。一覧の絞り込み条件を変更してください。
+                        </td>
+                      </tr>
+                    )}
+                    {tableRecords.map((operator) => (
                       <tr key={operator.operatorId}>
                         <td>
                           <OperatorDetailLink
@@ -214,11 +242,15 @@ function buildProfessionOptions(records: OperatorDatabaseRecord[]): FilterOption
 function getOperatorScopeLabel(
   filters: OperatorDatabaseFilters,
   professionOptions: FilterOption[],
+  subProfessionOptions: FilterOption[] = [],
 ): string {
   const parts: string[] = []
   if (filters.nameInitial !== 'ALL') parts.push(OPERATOR_INITIAL_LABELS[filters.nameInitial])
   if (filters.profession !== 'ALL') {
     parts.push(professionOptions.find(({ value }) => value === filters.profession)?.label ?? filters.profession)
+  }
+  if (filters.subProfession !== 'ALL') {
+    parts.push(subProfessionOptions.find(({ value }) => value === filters.subProfession)?.label ?? filters.subProfession)
   }
   if (filters.rarity !== 'ALL') parts.push(`★${filters.rarity}`)
   if (filters.query.trim()) parts.push(`検索「${filters.query.trim()}」`)

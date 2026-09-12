@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { hasActiveOperatorDatabaseFilters, type OperatorDatabaseFilters } from '../lib/operatorDatabase'
 import { OPERATOR_INITIAL_LABELS } from '../lib/operatorFilters'
 import { OPERATOR_INITIALS } from '../types/skill'
-import type { FilterOption } from './Filters'
+import { Filters, type FilterOption } from './Filters'
 import './OperatorFilterPanel.css'
 
 interface Props {
@@ -10,12 +10,23 @@ interface Props {
   professionOptions: FilterOption[]
   onChange: (value: OperatorDatabaseFilters) => void
   onReset: () => void
-  sharedSettings: ReactNode
+  sharedSettings?: ReactNode
+  inline?: boolean
+  label?: string
+  subProfessionOptions?: FilterOption[]
+  showNameInitial?: boolean
+  showSearch?: boolean
+  headingLabel?: string | null
 }
 
 const RARITIES = [6, 5, 4, 3, 2, 1] as const
 
-export function OperatorFilterPanel({ value, professionOptions, onChange, onReset, sharedSettings }: Props) {
+export function OperatorFilterPanel({
+  value, professionOptions, onChange, onReset, sharedSettings,
+  inline = false, label = '一覧のオペレーター絞り込み',
+  subProfessionOptions, showNameInitial = true, showSearch = true,
+  headingLabel,
+}: Props) {
   const changeInitial = (next: string) => {
     const nameInitial = next === 'ALL' ? 'ALL' : OPERATOR_INITIALS.find((initial) => initial === next)
     if (nameInitial === undefined) return
@@ -38,8 +49,31 @@ export function OperatorFilterPanel({ value, professionOptions, onChange, onRese
     onChange({ ...value, rarity })
   }
 
+  if (inline) {
+    return (
+      <div className="operator-filter-inline" role="region" aria-label={label}>
+        <Filters
+          value={value}
+          professionOptions={professionOptions}
+          subProfessionOptions={subProfessionOptions}
+          showNameInitial={showNameInitial}
+          showSearch={showSearch}
+          headingLabel={headingLabel}
+          onChange={onChange}
+          onReset={onReset}
+          searchPlaceholder="名前・職分・潜在能力・素質・スキル・モジュールで検索"
+        />
+        {sharedSettings}
+      </div>
+    )
+  }
+
   return (
-    <div className="damage-build-navigation operator-filter-compact" role="region" aria-label="オペレーターの絞り込み・統計設定">
+    <div
+      className="damage-build-navigation operator-filter-compact"
+      role="region"
+      aria-label="オペレーターの絞り込み・統計設定"
+    >
       <input
         className="operator-filter-query"
         type="search"
