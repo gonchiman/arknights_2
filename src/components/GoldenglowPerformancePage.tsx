@@ -19,6 +19,7 @@ import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { PersistentDetails } from './PersistentDetails'
 import { ComparisonChart, type ComparisonChartSeries } from './ComparisonChart'
 import { ChartImageSaveDialog } from './ChartImageSaveDialog'
+import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { GoldenglowOperatorInfo } from './GoldenglowOperatorInfo'
 import { GoldenglowPerformanceBarChart, type GoldenglowBarOrientation, type GoldenglowBarVariant } from './GoldenglowPerformanceBarChart'
@@ -92,8 +93,9 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
   const [chartAspectInput, setChartAspectInput] = useState({ width: '16', height: '9' })
   const [savingImage, setSavingImage] = useState(false)
   const [imageFilename, setImageFilename] = useState<string | null>(null)
-  const [imageFeedback, setImageFeedback] = useState<'saved' | 'failed' | null>(null)
+  const [imageFeedback, setImageFeedback] = useState<'saved' | 'downloaded' | 'failed' | null>(null)
   const imageSaveInProgress = useRef(false)
+  const imageSavePicker = getChartImageSavePicker()
   const [savedBuilds, setSavedBuilds] = useState<GoldenglowComparisonBuild[] | null>(null)
   const [buildPresetId, setBuildPresetId] = useState('modules')
   const [editor, setEditor] = useState<{ build: GoldenglowComparisonBuild; adding: boolean } | null>(null)
@@ -217,11 +219,15 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
     setSavingImage(true)
     setImageFeedback(null)
     try {
+      // Open the picker during this click, before asynchronous image rendering consumes user activation.
+      const destination = await selectChartImageDestination(filename, imageSavePicker)
+      if (destination.type === 'cancelled') return
       await saveComparisonChartImage({
         chart: renderChart(true),
         filename,
+        writeBlob: destination.type === 'file' ? destination.write : undefined,
       })
-      setImageFeedback('saved')
+      setImageFeedback(destination.type === 'file' ? 'saved' : 'downloaded')
       setImageFilename(null)
     } catch {
       setImageFeedback('failed')
@@ -515,13 +521,13 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
               <button type="button" className="button secondary gg-performance-save-image"
                 aria-label="グラフをPNG画像で保存" title="選択中のグラフをPNG画像で保存" aria-haspopup="dialog"
                 disabled={savingImage || chartColumns.length === 0} aria-busy={savingImage}
-                onClick={openImageSaveDialog}>{savingImage ? '画像を作成中…' : '画像を保存'}</button>
+                onClick={openImageSaveDialog}>{savingImage ? '画像を保存中…' : '画像を保存'}</button>
               <p id="gg-performance-size-help">{chartAspectPreset === 'auto'
                 ? 'グラフの幅は画面に合わせて自動で調整します。'
                 : 'グラフ全体の比率です。画面に合わせて調整し、内容が収まらない場合は比率を保って拡大します。'}</p>
             </div>
             <p role="status" className="visually-hidden">
-              {imageFeedback === 'saved' ? 'PNG画像のダウンロードを開始しました。' : ''}
+              {imageFeedback === 'saved' ? 'PNG画像を保存しました。' : imageFeedback === 'downloaded' ? 'PNG画像のダウンロードを開始しました。' : ''}
             </p>
             <div className="gg-performance-chart-viewport" tabIndex={0} role="region" aria-label="グラフ表示領域">
               {renderChart()}
@@ -530,6 +536,7 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
       </CollapsibleCalculatorPanel>
       {imageFilename !== null && <ChartImageSaveDialog
         initialFilename={imageFilename}
+        canChooseLocation={!!imageSavePicker}
         saving={savingImage}
         error={imageFeedback === 'failed'}
         onClose={() => {

@@ -2,8 +2,9 @@ import { useId, useRef, useState } from 'react'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import './ChartImageSaveDialog.css'
 
-export function ChartImageSaveDialog({ initialFilename, saving, error, onClose, onSave }: {
+export function ChartImageSaveDialog({ initialFilename, canChooseLocation, saving, error, onClose, onSave }: {
   initialFilename: string
+  canChooseLocation: boolean
   saving: boolean
   error: boolean
   onClose: () => void
@@ -48,11 +49,16 @@ export function ChartImageSaveDialog({ initialFilename, saving, error, onClose, 
         <p id={hintId} className="chart-image-save-hint">.png は省略できます。</p>
         {validationError && <p id={validationId} className="chart-image-save-error" role="alert">{validationError}</p>}
       </div>
-      {error && <p className="chart-image-save-error" role="alert">画像を保存できませんでした。もう一度「保存」を押してください。</p>}
+      <p className="chart-image-save-hint">
+        {canChooseLocation
+          ? '次の画面で保存先フォルダを選べます。'
+          : 'このブラウザーでは保存先フォルダを選択できません。ブラウザーの設定に従ってダウンロードします。'}
+      </p>
+      {error && <p className="chart-image-save-error" role="alert">画像を保存できませんでした。保存先を確認して、もう一度お試しください。</p>}
       <div className="chart-image-save-actions">
         <button type="button" className="button secondary" disabled={saving} onClick={onClose}>キャンセル</button>
         <button type="submit" className="button" disabled={saving || !!validationError}>
-          {saving ? '画像を作成中…' : '保存'}
+          {saving ? '画像を保存中…' : canChooseLocation ? '保存先を選ぶ' : 'ダウンロード'}
         </button>
       </div>
     </form>
