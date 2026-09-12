@@ -32,10 +32,12 @@ export async function saveComparisonChartImage({
   chart,
   filename,
   width = 1120,
+  writeBlob,
 }: {
   chart: ReactNode
   filename: string
   width?: number
+  writeBlob?: (blob: Blob) => Promise<void>
 }): Promise<void> {
   const host = document.createElement('div')
   host.className = 'comparison-chart-image-host'
@@ -94,6 +96,11 @@ export async function saveComparisonChartImage({
     await image.decode()
     if (image.naturalWidth === 0 || image.naturalHeight === 0) {
       throw new Error('作成したPNG画像を確認できませんでした。')
+    }
+
+    if (writeBlob) {
+      await writeBlob(blob)
+      return
     }
 
     const anchor = document.createElement('a')
