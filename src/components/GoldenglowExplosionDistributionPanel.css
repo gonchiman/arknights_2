@@ -1,0 +1,38 @@
+.gg-explosion-distribution { min-width: 0; --distribution-trial: #607f90; --distribution-theory: #a36d53; }
+.gg-distribution-toolbar, .gg-distribution-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.gg-distribution-toolbar { justify-content: space-between; margin-bottom: 12px; color: var(--text-soft); font-size: 11px; }
+.gg-distribution-trial-input { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.gg-distribution-trial-input input { width: 110px; min-width: 0; box-sizing: border-box; padding: 8px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); font: inherit; font-variant-numeric: tabular-nums; }
+.gg-distribution-trial-input input:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.gg-distribution-trial-count { margin-top: 4px; color: var(--text-soft); font-variant-numeric: tabular-nums; }
+.gg-distribution-range { padding: 0 10px 10px; color: var(--text-soft); font-size: 11px; }
+.gg-distribution-actions button { padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: 0; color: var(--text); background: var(--surface); font: inherit; cursor: pointer; }
+.gg-distribution-actions button:hover { background: var(--surface-hover); }
+.gg-distribution-actions button:focus-visible, .gg-distribution-legend button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.gg-distribution-figure { margin: 0; border: 1px solid var(--border-strong); }
+.gg-distribution-figure figcaption { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 8px 10px; background: var(--surface-soft); border-bottom: 1px solid var(--border); font-size: 11px; }
+.gg-distribution-legend { display: flex; flex-wrap: wrap; gap: 12px; }
+.gg-distribution-legend button { display: inline-flex; align-items: center; gap: 6px; padding: 3px 0; border: 0; background: transparent; color: var(--text); font: inherit; cursor: pointer; }
+.gg-distribution-legend button[aria-pressed="false"] { opacity: .45; }
+.gg-distribution-bar-key { width: 12px; height: 10px; background: var(--distribution-trial); opacity: .65; }
+.gg-distribution-line-key { position: relative; width: 20px; height: 2px; background: var(--distribution-theory); }
+.gg-distribution-line-key::after { content: ''; position: absolute; top: -2px; left: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--distribution-theory); }
+.gg-distribution-chart { position: relative; min-width: 0; min-height: 320px; }
+.gg-distribution-chart > p { padding: 12px; }
+.gg-distribution-actions button:disabled { color: var(--text-muted); background: var(--surface-soft); cursor: default; }
+.gg-distribution-chart svg { display: block; width: 100%; color: var(--text); }
+.gg-distribution-chart text { font-family: inherit; font-size: 11px; fill: var(--text); }
+.gg-distribution-grid { stroke: var(--border); stroke-width: 1; }
+.gg-distribution-frame { fill: none; stroke: var(--border-strong); }
+.gg-distribution-bar { fill: var(--distribution-trial); fill-opacity: .55; }
+.gg-distribution-theory path { stroke: var(--distribution-theory); stroke-width: 1.5; fill: none; }
+.gg-distribution-theory circle { fill: var(--distribution-theory); }
+.gg-distribution-guide { stroke: var(--text-muted); stroke-dasharray: 3 3; }
+.gg-distribution-tooltip { position: absolute; pointer-events: none; display: grid; gap: 6px; width: 208px; box-sizing: border-box; padding: 10px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font-size: 11px; line-height: 1.6; box-shadow: 0 3px 10px #0002; }
+.gg-distribution-conditions { margin-top: 12px; color: var(--text-soft); font-size: 11px; line-height: 1.8; }
+.gg-distribution-conditions summary { cursor: pointer; width: fit-content; }
+.gg-distribution-conditions p { margin: 8px 0 0; }
+.gg-distribution-values { width: 100%; table-layout: fixed; }
+.gg-distribution-values caption { text-align: left; padding-bottom: 12px; }
+.gg-distribution-values th, .gg-distribution-values td { overflow-wrap: anywhere; }
+@media (pointer: coarse) { .gg-distribution-actions button, .gg-distribution-legend button, .gg-distribution-conditions summary, .gg-distribution-trial-input input { min-height: 44px; } }
