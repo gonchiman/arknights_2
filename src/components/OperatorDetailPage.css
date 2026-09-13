@@ -2,6 +2,148 @@
   min-width: 0;
 }
 
+.operator-profile-layout .page-intro { margin: 0; }
+.operator-profile-layout .operator-profile-intro { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.operator-profile-intro .operator-profile-subtitle {
+  margin: 5px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: left;
+}
+.operator-profile-condition {
+  margin: 0 0 10px;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.7;
+}
+.operator-profile-table-title {
+  margin: 0 0 8px;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+.operator-profile-table-section + .operator-profile-table-section,
+.operator-profile-table-section + .operator-profile-table-title { margin-top: 16px; }
+.operator-profile-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  border: 1px solid var(--border-strong);
+  font-size: 11px;
+}
+.operator-profile-table th,
+.operator-profile-table td {
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  vertical-align: top;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.8;
+}
+.operator-profile-table th {
+  width: 30%;
+  background: var(--surface-soft);
+  color: var(--text-soft);
+  font-weight: 500;
+}
+.operator-profile-table.numeric th { width: 50%; }
+.operator-profile-table.numeric td { text-align: right; font-variant-numeric: tabular-nums; }
+.operator-profile-table.paired th { width: 25%; }
+.operator-profile-table.paired tbody tr { cursor: default; }
+.operator-profile-table.paired tbody tr:hover { background: transparent; }
+@media (hover: hover) {
+  .operator-profile-table.paired th:hover,
+  .operator-profile-table.paired th:has(+ td:hover),
+  .operator-profile-table.paired th:hover + td,
+  .operator-profile-table.paired th + td:hover { background: var(--surface-hover); }
+}
+.operator-profile-effects { display: grid; gap: 8px; min-width: 0; }
+.operator-profile-skills { container: operator-profile-skills / inline-size; min-width: 0; }
+.operator-profile-skill-navigation {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+}
+.operator-profile-skill-navigation button { display: flex; height: auto; min-height: 44px; gap: 8px; padding: 8px 10px; }
+.operator-profile-skill-navigation button > span,
+.operator-profile-skill-navigation button > strong { font-size: 11px; font-weight: 500; }
+.operator-profile-skill-navigation button > span { margin: 0; }
+.operator-profile-skill-navigation button > strong { white-space: normal; overflow-wrap: anywhere; }
+.operator-profile-skill-navigation button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.operator-profile-skill-content { display: grid; gap: 16px; margin-top: 16px; min-width: 0; }
+.operator-profile-skill-information {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.operator-profile-skill-information th,
+.operator-profile-skill-information td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: middle; line-height: 1.6; white-space: normal; overflow-wrap: anywhere; }
+.operator-profile-skill-information th { background: var(--surface-soft); color: var(--text-soft); font-size: 11px; font-weight: 500; }
+.operator-profile-skill-information td { color: var(--text); font-size: 12px; font-variant-numeric: tabular-nums; }
+.operator-profile-skill-information tbody tr { cursor: default; }
+.operator-profile-skill-information tbody tr:hover { background: transparent; }
+.operator-profile-skill-effect { display: block; min-width: 0; border: 1px solid var(--border); background: var(--surface); color: var(--text); text-decoration: none; }
+.operator-profile-skill-effect:hover { border-color: var(--border-strong); color: var(--text); }
+.operator-profile-skill-effect:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.operator-profile-skill-effect h3 { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface-soft); color: var(--text-soft); font-size: 12px; font-weight: 500; line-height: 1.6; }
+.operator-profile-skill-effect:hover h3 { background: var(--surface-hover); color: var(--text); }
+.operator-profile-skill-effect .operator-profile-description { padding: 14px; }
+@container operator-profile-skills (max-width: 460px) {
+  .operator-profile-skill-navigation button { flex-direction: column; justify-content: center; gap: 3px; padding: 8px 5px; text-align: center; }
+  .operator-profile-skill-content { gap: 12px; margin-top: 12px; }
+  .operator-profile-skill-information th,
+  .operator-profile-skill-information td { padding: 8px 4px; font-size: 11px; }
+}
+.operator-profile-effect {
+  min-width: 0;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+.operator-profile-effect > summary {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  color: var(--text-soft);
+  font-size: 11px;
+  cursor: pointer;
+  list-style: none;
+}
+.operator-profile-effect > summary::-webkit-details-marker { display: none; }
+.operator-profile-effect > summary:hover { background: var(--surface-hover); }
+.operator-profile-effect > summary strong { min-width: 0; overflow-wrap: anywhere; }
+.operator-profile-effect[open] > summary { border-bottom: 1px solid var(--border); }
+.operator-profile-disclosure::before { content: '+'; }
+.operator-profile-effect[open] > summary .operator-profile-disclosure::before { content: '−'; }
+.operator-profile-effect-body { padding: 12px; }
+.operator-profile-description { margin: 0; font-size: 12px; line-height: 1.9; overflow-wrap: anywhere; }
+.operator-detail-page-back:focus-visible,
+.operator-profile-effect > summary:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
+.operator-profile-empty { margin: 0; font-size: 11px; color: var(--text-muted); line-height: 1.7; }
+.operator-profile-id { margin: 0; font-size: 9px; color: var(--text-muted); overflow-wrap: anywhere; }
+.operator-profile-id code { margin-left: 8px; }
+.operator-profile-layout .operator-stat-radar { margin: 0; border: 0; }
+.operator-profile-layout .operator-stat-radar-scope button[aria-pressed='true'] { background: var(--accent); }
+
+@media (max-width: 640px) {
+  .operator-profile-intro { flex-wrap: wrap; }
+  .operator-profile-table th { width: 34%; }
+  .operator-profile-effect-body { padding: 10px; }
+  .operator-profile-table.paired th,
+  .operator-profile-table.paired td { padding: 8px 6px; }
+}
+@media (max-width: 760px), (pointer: coarse) {
+  .operator-profile-effect > summary,
+  .operator-detail-page .operator-detail-page-back { min-height: 44px; }
+}
+
 .operator-detail-route-state {
   min-height: 260px;
   display: flex;

@@ -10,6 +10,7 @@ import type {
 } from '../types/skill'
 import { classifySkill } from './classifier'
 import { DATA_SOURCE_URLS } from './dataSources.ts'
+import { getOperatorAffiliation, type OperatorAffiliationIds, type OperatorAffiliationTable } from './operatorAffiliation.ts'
 import { getOperatorInitial, getProfessionLabel } from './operatorFilters'
 
 export const DATA_URLS = {
@@ -17,9 +18,10 @@ export const DATA_URLS = {
   skill: DATA_SOURCE_URLS.skill,
   uniequip: DATA_SOURCE_URLS.uniequip,
   battleEquip: DATA_SOURCE_URLS.battleEquip,
+  handbookTeam: DATA_SOURCE_URLS.handbookTeam,
 }
 
-type CharacterTable = Record<string, {
+type CharacterTable = Record<string, OperatorAffiliationIds & {
   name?: string
   description?: string
   displayNumber?: string | null
@@ -52,11 +54,14 @@ interface UniequipTable {
 type BattleEquipTable = Record<string, Pick<RawOperatorModule, 'phases'>>
 
 export async function loadSkillRecords(): Promise<SkillRecord[]> {
-  const [characterResponse, skillResponse, uniequipResponse, battleEquipResponse] = await Promise.all([
+  const [characterResponse, skillResponse, uniequipResponse, battleEquipResponse, affiliations] = await Promise.all([
     fetch(DATA_URLS.character),
     fetch(DATA_URLS.skill),
     fetch(DATA_URLS.uniequip),
     fetch(DATA_URLS.battleEquip).catch(() => null),
+    fetch(DATA_URLS.handbookTeam)
+      .then(async (response): Promise<OperatorAffiliationTable> => response.ok ? await response.json() : {})
+      .catch((): OperatorAffiliationTable => ({})),
   ])
 
   if (!characterResponse.ok || !skillResponse.ok || !uniequipResponse.ok) {
@@ -77,6 +82,7 @@ export async function loadSkillRecords(): Promise<SkillRecord[]> {
     if (!operator.name || !operator.displayNumber || !operator.skills?.length) continue
 
     const operatorProfile = {
+      affiliation: getOperatorAffiliation(operator, affiliations),
       phases: Array.isArray(operator.phases) ? operator.phases : [],
       favorKeyFrames: Array.isArray(operator.favorKeyFrames) ? operator.favorKeyFrames : [],
       trait: operator.trait ?? null,
