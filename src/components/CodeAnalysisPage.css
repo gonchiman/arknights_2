@@ -1,0 +1,65 @@
+.code-analysis-page .code-analysis-value-table th { background: var(--surface-soft); }
+.code-analysis-value-table td { font-weight: 500; }
+.code-analysis-page .code-analysis-value-wrap { margin-top: 0; }
+.code-analysis-value-table input:not([type="file"]),
+.code-analysis-value-table select { width: 100%; max-width: 360px; height: 34px; min-width: 0; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); padding: 0 9px; font: inherit; font-size: 11px; }
+.code-analysis-value-table select:disabled { background: var(--surface-disabled); color: var(--text-muted); }
+.code-analysis-file-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.code-analysis-file-controls input { width: 300px; max-width: 100%; min-width: 0; font: inherit; }
+.code-analysis-file-controls input::file-selector-button { min-height: 32px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); padding: 6px 12px; font: inherit; cursor: pointer; }
+.code-analysis-file-controls input::file-selector-button:hover { background: var(--surface-hover); }
+.code-analysis-page .button, .code-analysis-detail-content .button { font-size: 11px; white-space: nowrap; }
+.code-analysis-help { color: var(--text); font-size: 14px; line-height: 1.9; }
+.code-analysis-help p { margin: 0 0 8px; }
+.code-analysis-help p:last-child { margin-bottom: 0; }
+.code-analysis-error { margin: 0 0 12px; color: var(--danger); font-size: 14px; line-height: 1.8; overflow-wrap: anywhere; }
+.code-analysis-note { margin: 9px 0 0; color: var(--text); font-size: 14px; line-height: 1.8; }
+.code-analysis-page .code-analysis-candidates { table-layout: fixed; min-width: 850px; }
+.code-analysis-page .code-analysis-candidates .code-analysis-name-column { width: 260px; }
+.code-analysis-page .code-analysis-candidates .code-analysis-kind-column { width: 100px; }
+.code-analysis-page .code-analysis-candidates .code-analysis-owner-column { width: 260px; }
+.code-analysis-page .code-analysis-candidates .code-analysis-position-column { width: 115px; }
+.code-analysis-page .code-analysis-candidates th, .code-analysis-page .code-analysis-candidates td { text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.code-analysis-page .code-analysis-candidates th:first-child { width: 260px; min-width: 260px; }
+.code-analysis-page .code-analysis-candidates thead th { font-size: 10px; line-height: 1.6; }
+.code-analysis-page .code-analysis-candidates td:nth-child(n+4), .code-analysis-page .code-analysis-candidates thead th:nth-child(n+4) { text-align: right; white-space: nowrap; }
+.code-analysis-page .code-analysis-selectable { cursor: pointer; }
+.code-analysis-page .code-analysis-selectable:hover > *, .code-analysis-page .code-analysis-selectable:focus-within > * { background: var(--surface-hover); }
+.code-analysis-page .code-analysis-candidates .gg-detail-trigger { display: inline-flex; align-items: center; gap: 5px; width: 100%; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.code-analysis-page .code-analysis-candidates code { min-width: 0; font: inherit; overflow-wrap: anywhere; }
+.code-analysis-page .code-analysis-candidates .gg-detail-trigger:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+.code-analysis-owner-filter { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
+.code-analysis-owner-filter span { overflow-wrap: anywhere; min-width: 0; }
+.code-analysis-toolbar { align-items: flex-start; }
+.code-analysis-filters { flex: 1 1 320px; min-width: 0; }
+.code-analysis-filters input[type="search"] { width: 200px; max-width: 100%; min-width: 0; min-height: 36px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); padding: 6px 8px; font: inherit; }
+.code-analysis-filters .code-analysis-owner-filter { flex-basis: 100%; justify-content: flex-start; font-size: 11px; }
+.code-analysis-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.code-analysis-pagination > span { margin-right: auto; color: var(--text-soft); font-size: 14px; }
+.code-analysis-detail-content .gg-detail-trigger { white-space: normal; overflow-wrap: anywhere; }
+.code-analysis-workflow-table td { text-align: left; line-height: 1.9; }
+.code-analysis-detail-content { color: var(--text-soft); font-size: 12px; line-height: 1.9; }
+.code-analysis-detail-content .code-analysis-value-table th { background: var(--surface-soft); }
+.code-analysis-detail-content .gg-value-table th:first-child { width: 40%; }
+.code-analysis-detail-content .code-analysis-value-wrap { margin-top: 0; }
+.code-analysis-detail-content pre { margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--border); background: var(--surface-soft); font: 12px/1.9 ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; }
+.code-analysis-detail-content p { margin: 8px 0 0; }
+.code-analysis-detail-actions { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.code-analysis-reference-label { display: block; margin-top: 4px; color: var(--text-muted); font-size: 11px; font-weight: 400; line-height: 1.6; text-align: left; white-space: normal; }
+.code-analysis-export { min-width: 0; max-width: 100%; margin-left: auto; }
+.code-analysis-extraction-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 640px) {
+  .code-analysis-page .code-analysis-candidates { min-width: 720px; }
+  .code-analysis-page .code-analysis-candidates .code-analysis-name-column, .code-analysis-page .code-analysis-candidates th:first-child { width: 180px; min-width: 180px; }
+  .code-analysis-page .code-analysis-candidates .code-analysis-owner-column { width: 210px; }
+  .code-analysis-toolbar .button, .code-analysis-filters input[type="search"] { min-height: 44px; }
+  .code-analysis-page .code-analysis-candidates-wrap { max-height: 400px; }
+  .code-analysis-file-controls { align-items: stretch; }
+}
+@media (pointer: coarse) {
+  .code-analysis-value-table input:not([type="file"]), .code-analysis-value-table select,
+  .code-analysis-filters input, .code-analysis-filters select,
+  .code-analysis-file-controls input::file-selector-button,
+  .code-analysis-page .button, .code-analysis-detail-content .button,
+  .code-analysis-page .gg-detail-trigger { min-height: 44px; }
+}

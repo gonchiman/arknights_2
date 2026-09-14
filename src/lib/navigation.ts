@@ -1,4 +1,4 @@
-export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'damage' | 'comparison' | 'enemies' | 'sources' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch'
+export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'sources' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -43,6 +43,13 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     href: '#/skill-json',
     label: 'Skill JSON',
     description: 'blackboardの個別表示・キー一覧',
+    section: 'analysis',
+  },
+  {
+    id: 'code-analysis',
+    href: '#/analysis/code',
+    label: 'GGのDAT解析',
+    description: 'GG関連の名前・クラス・処理を調べる',
     section: 'analysis',
   },
   {

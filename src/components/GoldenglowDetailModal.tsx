@@ -1,11 +1,12 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 import './GoldenglowDetailModal.css'
 
-export function GoldenglowDetailModal({ title, closeLabel, children, onClose }: {
+export function GoldenglowDetailModal({ title, closeLabel, children, onClose, closeOnContextMenu = false }: {
   title: string
   closeLabel: string
   children: ReactNode
   onClose: () => void
+  closeOnContextMenu?: boolean
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
@@ -36,6 +37,11 @@ export function GoldenglowDetailModal({ title, closeLabel, children, onClose }: 
       className="gg-detail-dialog"
       aria-labelledby={titleId}
       aria-modal="true"
+      onContextMenu={closeOnContextMenu ? (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        onClose()
+      } : undefined}
       onCancel={(event) => {
         event.preventDefault()
         onClose()

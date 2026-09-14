@@ -17,6 +17,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['skills', 'skills'],
       ['skill-effects', 'skill-effects'],
       ['skill-json', 'skill-json'],
+      ['code-analysis', 'code-analysis'],
       ['damage', 'damage'],
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],

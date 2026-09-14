@@ -5,6 +5,7 @@ export type AppRoute =
   | { view: 'operator-detail'; operatorId: string }
   | { view: 'skill-json'; selection?: SkillJsonRouteSelection }
   | { view: 'skill-json-overview' }
+  | { view: 'code-analysis' }
   | { view: 'damage' }
   | { view: 'goldenglow-guide' }
   | { view: 'goldenglow-performance' }
@@ -85,6 +86,7 @@ export function parseHashRoute(hash: string): AppRoute {
     return parseSkillSelectionRoute('skill-json', hash.slice(SKILL_JSON_ROUTE.length + 1))
   }
   if (hash === '#/damage') return { view: 'damage' }
+  if (hash === '#/analysis/code') return { view: 'code-analysis' }
   if (hash === '#/guides/goldenglow-explosion') return { view: 'goldenglow-guide' }
   if (hash === '#/analysis/goldenglow-performance') return { view: 'goldenglow-performance' }
   if (hash === '#/analysis/goldenglow-target-switch') return { view: 'goldenglow-target-switch' }
