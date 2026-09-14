@@ -60,6 +60,7 @@ export interface OperatorDatabaseModuleEffect {
 
 export interface OperatorDatabaseRecord {
   operatorId: string
+  affiliation: string | null
   name: string
   nameInitial: OperatorInitial
   rarity: number
@@ -204,6 +205,7 @@ function buildOperatorRecord(operatorRows: SkillRecord[]): OperatorDatabaseRecor
 
   return {
     operatorId: representative.operatorId,
+    affiliation: profile.affiliation ?? null,
     name: representative.operatorName,
     nameInitial: representative.nameInitial,
     rarity: representative.rarity,

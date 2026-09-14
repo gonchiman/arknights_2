@@ -1,25 +1,25 @@
 import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
 import './GoldenglowPerformanceChartFrame.css'
+import './GoldenglowPerformanceChartImage.css'
 
 /** Sizes the whole figure, including its caption, without hiding dense chart data. */
-export function GoldenglowPerformanceChartFrame({ width, minWidth, minHeight, aspectRatio, children }: {
-  width?: number
+export function GoldenglowPerformanceChartFrame({ minWidth, aspectRatio, imageOutput = false, children }: {
   minWidth: number
-  minHeight?: number
   aspectRatio?: number
+  imageOutput?: boolean
   children: (minHeight?: number) => ReactNode
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [availableWidth, setAvailableWidth] = useState(1120)
-  const baseWidth = Math.max(width ?? availableWidth, minWidth)
+  const baseWidth = Math.max(availableWidth, minWidth)
   // New content or settings must discard previous expansion so dense charts can shrink again.
   const request = useMemo(() => ({}), [baseWidth, aspectRatio, children])
   const [expansion, setExpansion] = useState<{ request: object; width: number } | null>(null)
   const chartWidth = aspectRatio === undefined
-    ? width === undefined ? undefined : baseWidth
+    ? undefined
     : Math.max(baseWidth, expansion?.request === request ? expansion.width : 0)
-  const chartHeight = aspectRatio === undefined ? minHeight : chartWidth! / aspectRatio
+  const chartHeight = aspectRatio === undefined ? undefined : chartWidth! / aspectRatio
 
   useLayoutEffect(() => {
     const container = containerRef.current
@@ -58,7 +58,7 @@ export function GoldenglowPerformanceChartFrame({ width, minWidth, minHeight, as
   }, [aspectRatio, chartWidth, request])
 
   return <div ref={containerRef} className="gg-performance-chart-layout">
-    <div className="gg-performance-chart-size" style={{ width: chartWidth, minWidth }}>
+    <div className={`gg-performance-chart-size${imageOutput ? ' gg-performance-chart-image' : ''}`} style={{ width: chartWidth, minWidth }}>
       {children(chartHeight)}
     </div>
   </div>

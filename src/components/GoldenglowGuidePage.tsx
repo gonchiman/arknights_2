@@ -22,6 +22,8 @@ import { GoldenglowOperatorInfo } from './GoldenglowOperatorInfo'
 import { GoldenglowBuildControls } from './GoldenglowBuildControls'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { GoldenglowModuleEffect } from './GoldenglowModuleEffect'
+import { GoldenglowExplosionDistributionPanel } from './GoldenglowExplosionDistributionPanel'
+import { GoldenglowSkillExplosionDistributionPanel } from './GoldenglowSkillExplosionDistributionPanel'
 import './DamageCalculator.css'
 import './GoldenglowGuidePage.css'
 
@@ -336,6 +338,8 @@ export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
         viewingDuration={viewingDuration}
         loading={loading}
       />
+      <GoldenglowExplosionDistributionPanel model={skill?.explosionModel ?? null} loading={loading} />
+      <GoldenglowSkillExplosionDistributionPanel skill={skill} attackCount={combinedAttackRows.length} duration={duration} loading={loading} />
     </section>
   )
 }

@@ -1,0 +1,132 @@
+.operator-module-comparison {
+  container: operator-module-comparison / inline-size;
+  min-width: 0;
+}
+
+.operator-module-comparison-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-bottom: 16px;
+}
+
+.operator-module-comparison-levels,
+.operator-module-comparison-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.operator-module-comparison-levels > div { display: flex; flex: 0 0 auto; }
+.operator-module-comparison-levels button {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text-soft);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.operator-module-comparison-levels button + button { border-left: 0; }
+.operator-module-comparison-levels button:hover { background: var(--surface-hover); }
+.operator-module-comparison-levels button[aria-pressed='true'] { background: var(--accent); color: #fff; }
+.operator-module-comparison-levels button:disabled { opacity: .6; cursor: default; }
+
+.operator-module-comparison-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+.operator-module-comparison-save { flex: 0 0 auto; min-height: 36px; font-size: 11px; }
+.operator-module-comparison-save-error { margin: 0 0 12px; color: #a32c2c; font-size: 12px; }
+
+.operator-module-comparison-image-settings,
+.operator-module-comparison-image-preset,
+.operator-module-comparison-image-custom,
+.operator-module-comparison-image-custom label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.operator-module-comparison-image-settings { justify-content: flex-end; }
+.operator-module-comparison-image-settings select,
+.operator-module-comparison-image-settings input {
+  box-sizing: border-box;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+.operator-module-comparison-image-settings select { width: 94px; }
+.operator-module-comparison-image-settings input { width: 64px; }
+.operator-module-comparison-image-settings input[aria-invalid='true'] { border-color: #a32c2c; }
+.operator-module-comparison-image-settings :is(select, input):disabled { opacity: .6; }
+
+.operator-module-comparison mark {
+  background: #fff0b8;
+  color: #59410c;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.operator-module-comparison-legend mark { padding: 0 4px; }
+.operator-module-comparison-scroll { max-width: 100%; overflow-x: auto; }
+.operator-module-comparison-table {
+  width: 100%;
+  margin: 0;
+  table-layout: fixed;
+  border-collapse: collapse;
+  background: var(--surface);
+  font-size: 12px;
+}
+.operator-module-comparison-table th,
+.operator-module-comparison-table td {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.8;
+  font-weight: 400;
+}
+.operator-module-comparison-table th { background: var(--surface-soft); }
+.operator-module-comparison-table th:first-child { width: 72px; }
+.operator-module-comparison-table thead th { font-weight: 500; }
+.operator-module-comparison-table tbody th,
+.operator-module-comparison-type { color: var(--text-muted); font-size: 11px; }
+.operator-module-comparison-type { display: block; }
+.operator-module-comparison-name { display: block; margin-top: 3px; color: var(--text); font-weight: 500; }
+.operator-module-comparison-value { font-variant-numeric: tabular-nums; }
+.operator-module-comparison-table tbody tr { cursor: default; }
+.operator-module-comparison-table tbody tr:hover { background: transparent; }
+
+@container operator-module-comparison (max-width: 500px) {
+  .operator-module-comparison-table th:first-child { width: 40px; }
+  .operator-module-comparison-table th,
+  .operator-module-comparison-table td { padding: 8px 5px; }
+}
+@media (pointer: coarse) {
+  .operator-module-comparison-levels button { min-height: 44px; }
+}

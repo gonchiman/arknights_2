@@ -160,6 +160,7 @@ export interface RawOperatorModuleTalentCandidate {
 export type RawBlackboardCollection = RawBlackboardEntry[] | Record<string, number | string | null>
 
 export interface OperatorCombatProfile {
+  affiliation?: string | null
   phases: RawCharacterPhase[]
   favorKeyFrames: RawAttributeKeyFrame[]
   trait?: RawCharacterTrait | null

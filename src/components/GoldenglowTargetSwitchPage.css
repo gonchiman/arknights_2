@@ -1,4 +1,5 @@
 .gg-switch-page .page-intro { margin-bottom: 0; }
+.ggs-operator-info > h2 { margin: 0 0 12px; font-size: 14px; line-height: 1.5; }
 .gg-switch-page .gg-table-title { margin-top: 16px; }
 .gg-switch-page .collapsible-panel-body > .gg-table-title:first-child { margin-top: 0; }
 .gg-switch-page .gg-probability-table-wrap { margin-top: 0; }
@@ -41,10 +42,12 @@
 .ggs-help-content dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; margin: 0 0 12px; }
 .ggs-help-content dt { font-weight: 500; }
 .ggs-help-content dd { margin: 0; overflow-wrap: anywhere; }
-.ggs-settings { margin: 12px 0 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 8px 0; }
-.ggs-settings summary { cursor: pointer; font-size: 11px; line-height: 1.7; }
 .ggs-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .ggs-actions .button { font-size: 10px; }
+.ggs-seed-control { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 12px; }
+.ggs-seed-control .button { min-width: 0; max-width: 100%; white-space: normal; font-size: 10px; }
+.ggs-display-decimals { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; cursor: pointer; }
+.ggs-display-decimals input { margin: 0; accent-color: var(--text); }
 .gg-switch-page .ggs-comparison-table th:first-child { width: 50%; }
 .gg-switch-page .ggs-percentile-table th:first-child { width: 28%; }
 .ggs-detail-content { font-size: 11px; line-height: 1.8; }
@@ -70,6 +73,7 @@
   .ggs-detail-content .gg-value-table th:first-child { width: 40%; }
 }
 @media (pointer: coarse) {
+  .ggs-display-decimals { min-height: 44px; }
   .ggs-stat-range input { height: 44px; }
   .ggs-hp-adjustments button { min-height: 44px; }
 }

@@ -1,5 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { buildGoldenglowSkillExplosionDistribution, simulateGoldenglowSkillExplosions } from '../src/lib/goldenglowSkillExplosionDistribution.ts'
+import { buildGoldenglowSkillAttackTable } from '../src/lib/goldenglowSkillAttackTable.ts'
+import { simulateGoldenglowFirstExplosion } from '../src/lib/goldenglowExplosionSimulation.ts'
+import { createGoldenglowTargetSwitchRandom } from '../src/lib/goldenglowTargetSwitch.ts'
 import {
   GOLDENGLOW_OPERATOR_ID,
   buildGoldenglowFirstExplosionDistribution,
@@ -859,3 +863,101 @@ function createPassives({
     sources,
   }
 }
+test('first-explosion simulation resets each trial and records the attack that explodes', () => {
+  const rolls = [.9, 0, 0, .9, .9, 0]
+  let draws = 0
+  const rows = simulateGoldenglowFirstExplosion({ prdStep: .015, prdMaxStack: 40 }, 3, () => rolls[draws++])
+  assert.equal(draws, 6)
+  assert.deepEqual(rows.slice(0, 3).map(row => row.observedCount), [1, 1, 1])
+  assert.equal(rows.reduce((sum, row) => sum + row.observedCount, 0), 3)
+  assert.equal(rows[1].observedProbability, 1 / 3)
+  assert.ok(Math.abs(rows[1].firstExplosionProbability - .985 * .03) < 1e-12)
+})
+
+test('first-explosion simulation uses conditional chances and strict random boundaries', () => {
+  const rows = simulateGoldenglowFirstExplosion({ prdStep: .015, prdMaxStack: 40 }, 1, () => .015)
+  assert.equal(rows[0].observedCount, 0)
+  assert.equal(rows[1].observedCount, 1)
+})
+
+test('first-explosion simulation always terminates at the guaranteed attack, including zero PRD', () => {
+  const guaranteed = simulateGoldenglowFirstExplosion({ prdStep: 0, prdMaxStack: 40 }, 10, () => .999999)
+  assert.equal(guaranteed.length, 41)
+  assert.equal(guaranteed[40].observedCount, 10)
+  assert.equal(guaranteed[40].firstExplosionProbability, 1)
+  const immediate = simulateGoldenglowFirstExplosion({ prdStep: 1, prdMaxStack: 40 }, 10, () => .999999)
+  assert.equal(immediate.length, 1)
+  assert.equal(immediate[0].observedCount, 10)
+})
+
+test('first-explosion simulation conserves trials and approaches the theoretical distribution', () => {
+  for (const model of [{ prdStep: .015, prdMaxStack: 40 }, { prdStep: .025, prdMaxStack: 20 }]) {
+    const rows = simulateGoldenglowFirstExplosion(model, 100_000, createGoldenglowTargetSwitchRandom(731))
+    assert.equal(rows.reduce((sum, row) => sum + row.observedCount, 0), 100_000)
+    assert.ok(Math.abs(rows.reduce((sum, row) => sum + row.firstExplosionProbability, 0) - 1) < 1e-12)
+    for (const row of rows) assert.ok(Math.abs(row.observedProbability - row.firstExplosionProbability) < .006)
+  }
+})
+
+test('first-explosion simulation rejects invalid models, trial counts, and random values', () => {
+  const model = { prdStep: .015, prdMaxStack: 40 }
+  for (const count of [0, -1, 1.5, NaN, Infinity, 100_001]) assert.deepEqual(simulateGoldenglowFirstExplosion(model, count), [])
+  assert.deepEqual(simulateGoldenglowFirstExplosion({ ...model, prdStep: NaN }, 10), [])
+  assert.deepEqual(simulateGoldenglowFirstExplosion({ ...model, prdMaxStack: 1001 }, 10), [])
+  for (const roll of [-1, 1, NaN, Infinity]) assert.throws(() => simulateGoldenglowFirstExplosion(model, 1, () => roll), RangeError)
+})
+
+
+test('skill explosion count theory includes zero explosions, resets, and independent drones', () => {
+  const model = { prdStep: .015, prdMaxStack: 40 }
+  const two = buildGoldenglowSkillExplosionDistribution({ model, attackCount: 2, droneCount: 1 })
+  const expected = [.985 * .97, .015 * .985 + .985 * .03, .015 ** 2]
+  two.forEach((value, index) => assert.ok(Math.abs(value - expected[index]) < 1e-12))
+  const three = buildGoldenglowSkillExplosionDistribution({ model, attackCount: 1, droneCount: 3 })
+  const binomial = [.985 ** 3, 3 * .015 * .985 ** 2, 3 * .015 ** 2 * .985, .015 ** 3]
+  three.forEach((value, index) => assert.ok(Math.abs(value - binomial[index]) < 1e-12))
+})
+
+test('skill explosion count distribution has unit mass and the existing attack-table mean', () => {
+  for (const model of [{ prdStep: .015, prdMaxStack: 40 }, { prdStep: .025, prdMaxStack: 20 }]) {
+    for (const attackCount of [0, 1, 2, 23, 40, 100]) for (const droneCount of [1, 2, 3]) {
+      const distribution = buildGoldenglowSkillExplosionDistribution({ model, attackCount, droneCount })
+      assert.ok(distribution.every(value => value >= 0 && value <= 1))
+      assert.ok(Math.abs(distribution.reduce((sum, value) => sum + value, 0) - 1) < 1e-10)
+      const mean = distribution.reduce((sum, value, count) => sum + count * value, 0)
+      const attacks = buildGoldenglowSkillAttackTable({ model, attackInterval: 1, duration: attackCount, explosionDamage: 1 })
+      const expected = (attacks.at(-1)?.expectedExplosionCount ?? 0) * droneCount
+      assert.ok(Math.abs(mean - expected) < 1e-9, `${attackCount} attacks, ${droneCount} drones: ${mean} vs ${expected}`)
+    }
+  }
+})
+
+test('skill explosion count simulation handles no attacks and guaranteed boundary explosions', () => {
+  const model = { prdStep: 0, prdMaxStack: 40 }
+  const noAttacks = simulateGoldenglowSkillExplosions({ model, attackCount: 0, droneCount: 3 }, 12, () => { throw new Error('no roll expected') })
+  assert.deepEqual(noAttacks, [{ value: 0, theoreticalProbability: 1, observedCount: 12, observedProbability: 1 }])
+  for (const attackCount of [40, 41, 82]) {
+    const count = Math.floor(attackCount / 41) * 3
+    const rows = simulateGoldenglowSkillExplosions({ model, attackCount, droneCount: 3 }, 10, () => .9)
+    assert.equal(rows[count].observedCount, 10)
+    assert.equal(rows[count].theoreticalProbability, 1)
+  }
+  const everyAttack = simulateGoldenglowSkillExplosions({ model: { prdStep: 1, prdMaxStack: 40 }, attackCount: 23, droneCount: 3 }, 10, () => .99)
+  assert.equal(everyAttack[69].observedCount, 10)
+  assert.equal(everyAttack[69].theoreticalProbability, 1)
+})
+
+test('skill explosion count simulation matches its theory across independent reset cycles', () => {
+  const rows = simulateGoldenglowSkillExplosions({ model: { prdStep: .015, prdMaxStack: 40 }, attackCount: 23, droneCount: 3 }, 100_000, createGoldenglowTargetSwitchRandom(42))
+  assert.equal(rows.reduce((sum, row) => sum + row.observedCount, 0), 100_000)
+  for (const row of rows) assert.ok(Math.abs(row.theoreticalProbability - row.observedProbability) < .006)
+})
+
+test('skill explosion count rejects invalid input and random sources', () => {
+  const input = { model: { prdStep: .015, prdMaxStack: 40 }, attackCount: 23, droneCount: 3 }
+  for (const attackCount of [-1, 1.5, 1001, NaN, Infinity]) assert.deepEqual(buildGoldenglowSkillExplosionDistribution({ ...input, attackCount }), [])
+  for (const droneCount of [0, 1.5, 9, NaN]) assert.deepEqual(buildGoldenglowSkillExplosionDistribution({ ...input, droneCount }), [])
+  for (const trialCount of [0, 100_001, NaN]) assert.deepEqual(simulateGoldenglowSkillExplosions(input, trialCount), [])
+  assert.deepEqual(buildGoldenglowSkillExplosionDistribution({ ...input, model: { prdStep: NaN, prdMaxStack: 40 } }), [])
+  for (const roll of [-1, 1, NaN]) assert.throws(() => simulateGoldenglowSkillExplosions(input, 1, () => roll), RangeError)
+})

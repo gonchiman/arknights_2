@@ -5,8 +5,13 @@ import {
   type EnemyFilters,
 } from '../lib/enemyData'
 import type { EnemyLevelType, EnemyRecord } from '../types/enemy'
+import { sortEnemyRows, type EnemyTableSort, type EnemyTableSortKey } from '../lib/enemyTableSort'
 import { EnemyDetailModal } from './EnemyDetailModal'
-import { EnemyStatisticsPanel } from './EnemyStatisticsPanel'
+import { EnemyFilterPanel } from './EnemyFilterPanel'
+import { EnemyStatisticsPanel, EnemyStatisticsSettings, useEnemyStatisticsControls } from './EnemyStatisticsPanel'
+import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
+import { PersistentDetails } from './PersistentDetails'
+import './DamageCalculator.css'
 import './EnemyAnalysis.css'
 
 const PAGE_SIZE = 100
@@ -35,7 +40,21 @@ const INTEGER_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits
 const DECIMAL_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 type EnemyStatDisplayMode = 'RATING' | 'VALUE'
 
+const TABLE_COLUMNS: Array<{ key: EnemyTableSortKey; label: string }> = [
+  { key: 'name', label: '敵' },
+  { key: 'level', label: '区分' },
+  { key: 'stages', label: '登場ステージ数' },
+  { key: 'hp', label: 'HP' },
+  { key: 'attack', label: '攻撃力' },
+  { key: 'defense', label: '防御力' },
+  { key: 'resistance', label: '術耐性' },
+  { key: 'speed', label: '移動速度' },
+  { key: 'interval', label: '攻撃間隔' },
+  { key: 'weight', label: '重量' },
+]
+
 export function EnemyAnalysis() {
+  const statisticsControls = useEnemyStatisticsControls()
   const [rows, setRows] = useState<EnemyRecord[]>([])
   const [filters, setFilters] = useState<EnemyFilters>({ ...DEFAULT_FILTERS })
   const [page, setPage] = useState(0)
@@ -44,7 +63,9 @@ export function EnemyAnalysis() {
   const [error, setError] = useState<string | null>(null)
   const [detailEnemy, setDetailEnemy] = useState<EnemyRecord | null>(null)
   const [statDisplayMode, setStatDisplayMode] = useState<EnemyStatDisplayMode>('RATING')
+  const [sort, setSort] = useState<EnemyTableSort | null>(null)
   const detailTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const tableScrollRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     let active = true
@@ -71,13 +92,28 @@ export function EnemyAnalysis() {
     () => rows.filter((enemy) => matchesEnemyFilters(enemy, filters)),
     [rows, filters],
   )
+  const sortedRows = useMemo(() => sortEnemyRows(filteredRows, sort), [filteredRows, sort])
   const pageCount = Math.ceil(filteredRows.length / PAGE_SIZE)
   const currentPage = Math.min(page, Math.max(0, pageCount - 1))
-  const visibleRows = filteredRows.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
+  const visibleRows = sortedRows.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
   const rangeStart = filteredRows.length === 0 ? 0 : currentPage * PAGE_SIZE + 1
   const rangeEnd = Math.min((currentPage + 1) * PAGE_SIZE, filteredRows.length)
   const filtersActive = filters.query !== '' || filters.levelType !== 'ALL'
   const scopeLabel = getEnemyScopeLabel(filters)
+
+  useEffect(() => {
+    if (tableScrollRef.current) tableScrollRef.current.scrollTop = 0
+  }, [currentPage, sort, filters])
+
+  const updateSort = (key: EnemyTableSortKey) => {
+    setSort((current) => ({ key, direction: getNextSortDirection(key, current) }))
+    setPage(0)
+  }
+
+  const resetSort = () => {
+    setSort(null)
+    setPage(0)
+  }
 
   const updateFilter = <K extends keyof EnemyFilters,>(key: K, value: EnemyFilters[K]) => {
     setFilters((current) => ({ ...current, [key]: value }))
@@ -102,43 +138,36 @@ export function EnemyAnalysis() {
   }
 
   return (
-    <section className="enemy-analysis-route">
-      <h1 className="visually-hidden">Enemy Analysis</h1>
+    <section className="calculator-page enemy-analysis-route">
+      <header className="page-intro">
+        <div>
+          <span className="page-kicker">ENEMY ANALYSIS</span>
+          <h1>敵ステータス分析</h1>
+        </div>
+      </header>
 
       <section className="enemy-directory" aria-label="敵ステータス分析">
-        <div className="enemy-filters">
-          <div className="enemy-filters-heading">
-            <strong>敵を絞り込む</strong>
-            <button type="button" onClick={resetFilters} disabled={!filtersActive}>条件をリセット</button>
+        <EnemyFilterPanel sharedSettings={<EnemyStatisticsSettings controls={statisticsControls} />}>
+          <input
+            type="search"
+            aria-label="検索"
+            value={filters.query}
+            placeholder="敵名・図鑑番号・能力・内部ID"
+            onChange={(event) => updateFilter('query', event.target.value)}
+          />
+          <div className="enemy-level-filter-buttons" role="group" aria-label="区分">
+            {LEVEL_OPTIONS.map((option) => (
+              <button
+                type="button"
+                className={filters.levelType === option.value ? 'active' : ''}
+                aria-pressed={filters.levelType === option.value}
+                onClick={() => updateFilter('levelType', option.value)}
+                key={option.value}
+              >{option.label}</button>
+            ))}
           </div>
-          <div className="enemy-filter-grid">
-            <label className="enemy-query-filter">
-              <span>検索</span>
-              <input
-                type="search"
-                value={filters.query}
-                placeholder="敵名・図鑑番号・能力・内部ID"
-                onChange={(event) => updateFilter('query', event.target.value)}
-              />
-            </label>
-            <div className="enemy-level-filter" role="group" aria-labelledby="enemy-level-filter-label">
-              <span id="enemy-level-filter-label">区分</span>
-              <div className="enemy-level-filter-buttons">
-                {LEVEL_OPTIONS.map((option) => (
-                  <button
-                    type="button"
-                    className={filters.levelType === option.value ? 'active' : ''}
-                    aria-pressed={filters.levelType === option.value}
-                    onClick={() => updateFilter('levelType', option.value)}
-                    key={option.value}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+          <button type="button" className="button secondary" onClick={resetFilters} disabled={!filtersActive} aria-label="条件をリセット">リセット</button>
+        </EnemyFilterPanel>
 
         {loading ? (
           <div className="enemy-load-state" role="status">敵データを読み込んでいます…</div>
@@ -158,15 +187,19 @@ export function EnemyAnalysis() {
           </div>
         ) : (
           <>
-            <EnemyStatisticsPanel rows={filteredRows} scopeLabel={scopeLabel} />
+            <EnemyStatisticsPanel rows={filteredRows} scopeLabel={scopeLabel} controls={statisticsControls} />
 
-            <section className="enemy-table-section" aria-labelledby="enemy-table-heading">
-              <header className="enemy-table-section-heading">
-                <div>
-                  <span>REFERENCE DATA</span>
-                  <h2 id="enemy-table-heading">対象の敵一覧</h2>
-                </div>
+            <CollapsibleCalculatorPanel
+              id="enemy-reference"
+              number="03"
+              title="対象の敵一覧"
+              summary={`${scopeLabel} · ${filteredRows.length}体 · ${statDisplayMode === 'RATING' ? 'ゲーム内評価' : '実数値'}`}
+              collapsedLabel="一覧を表示"
+              className="enemy-table-section"
+            >
+              <div className="enemy-table-toolbar">
                 <div className="enemy-stat-mode-switch" role="group" aria-label="一覧のステータス表記">
+                  <span>ステータス表記</span>
                   <div className="enemy-stat-mode-buttons">
                     <button
                       type="button"
@@ -182,35 +215,34 @@ export function EnemyAnalysis() {
                     >実数値</button>
                   </div>
                 </div>
-              </header>
-
-              <div className="result-meta enemy-result-meta">
+                <div className="enemy-sort-controls">
+                  <span role="status" aria-live="polite">
+                    {sort
+                      ? `${getColumnLabel(sort.key, statDisplayMode)}：${sort.direction === 'asc' ? '昇順' : '降順'}`
+                      : '図鑑順'}
+                  </span>
+                  <button type="button" onClick={resetSort} disabled={!sort}>図鑑順に戻す</button>
+                </div>
                 <div className="enemy-result-summary" role="status" aria-live="polite">
                   <span>{filteredRows.length}体</span>
                   {statDisplayMode === 'RATING' && (
-                    <span>実数値をゲーム内と同じ段階基準で換算しています</span>
+                    <span>評価は実数値から換算し、並べ替えも実数値を基準にします</span>
                   )}
                 </div>
               </div>
 
-              <div className="table-wrap enemy-table-wrap">
-                <table className="enemy-table">
+              <h3 className="enemy-table-title" id="enemy-table-heading">敵の基礎ステータス</h3>
+              <div ref={tableScrollRef} className="table-wrap enemy-table-wrap" tabIndex={0} role="region" aria-label="敵の基礎ステータス一覧・スクロール領域">
+                <table className="enemy-table" role="table" aria-labelledby="enemy-table-heading">
                   <caption>統計分析の対象となっている敵の基礎ステータス一覧</caption>
-                  <thead>
-                    <tr>
-                      <th className="enemy-name-column">敵</th>
-                      <th>区分</th>
-                      <th className="numeric-heading">登場ステージ数</th>
-                      <th className="numeric-heading">{statDisplayMode === 'RATING' ? '耐久' : 'HP'}</th>
-                      <th className="numeric-heading">攻撃力</th>
-                      <th className="numeric-heading">防御力</th>
-                      <th className="numeric-heading">術耐性</th>
-                      <th className="numeric-heading">移動速度</th>
-                      <th className="numeric-heading">攻撃間隔</th>
-                      <th className="numeric-heading">重量</th>
+                  <thead role="rowgroup">
+                    <tr role="row">
+                      {TABLE_COLUMNS.map(({ key }) => (
+                        <EnemySortableHeader key={key} column={key} label={getColumnLabel(key, statDisplayMode)} sort={sort} onSort={updateSort} />
+                      ))}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody role="rowgroup">
                     {visibleRows.map((enemy) => (
                       <EnemyRow
                         enemy={enemy}
@@ -232,16 +264,59 @@ export function EnemyAnalysis() {
                   </div>
                 </nav>
               )}
-            </section>
+            </CollapsibleCalculatorPanel>
           </>
         )}
       </section>
 
-      <p className="enemy-data-note">
-        登場ステージ数は通常ステージ集計（stage_table内の戦闘ステージをlevelId単位で重複除去）です。ローグライク等の別管理ステージは含みません。「—」は集計データ未取得を示します。ステージ固有の補正は基礎ステータスへ反映していません。
-      </p>
+      <PersistentDetails persistenceId="enemy-data-notes" className="enemy-data-details">
+        <summary>データの範囲と表記<span aria-hidden="true" /></summary>
+        <p className="enemy-data-note">
+          登場ステージ数は通常ステージ集計（stage_table内の戦闘ステージをlevelId単位で重複除去）です。ローグライク等の別管理ステージは含みません。「—」は集計データ未取得を示します。ステージ固有の補正は基礎ステータスへ反映していません。
+        </p>
+      </PersistentDetails>
       {detailEnemy && <EnemyDetailModal enemy={detailEnemy} onClose={closeEnemyDetail} />}
     </section>
+  )
+}
+
+function getColumnLabel(key: EnemyTableSortKey, mode: EnemyStatDisplayMode): string {
+  if (key === 'hp' && mode === 'RATING') return '耐久'
+  return TABLE_COLUMNS.find((column) => column.key === key)!.label
+}
+
+function getNextSortDirection(key: EnemyTableSortKey, sort: EnemyTableSort | null): EnemyTableSort['direction'] {
+  if (sort?.key === key) return sort.direction === 'asc' ? 'desc' : 'asc'
+  return key === 'name' || key === 'level' ? 'asc' : 'desc'
+}
+
+function EnemySortableHeader({ column, label, sort, onSort }: {
+  column: EnemyTableSortKey
+  label: string
+  sort: EnemyTableSort | null
+  onSort: (key: EnemyTableSortKey) => void
+}) {
+  const active = sort?.key === column
+  const numeric = column !== 'name' && column !== 'level'
+  const nextDirection = getNextSortDirection(column, sort)
+  return (
+    <th
+      scope="col"
+      role="columnheader"
+      id={`enemy-column-${column}`}
+      className={numeric ? 'numeric-heading' : undefined}
+      aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : undefined}
+    >
+      <button
+        type="button"
+        className="enemy-sort-button"
+        aria-label={`${label}を${nextDirection === 'asc' ? '昇順' : '降順'}に並べ替え`}
+        onClick={() => onSort(column)}
+      >
+        <span>{label}</span>
+        <span className="enemy-sort-indicator" aria-hidden="true">{active ? (sort.direction === 'asc' ? '▲' : '▼') : '↕'}</span>
+      </button>
+    </th>
   )
 }
 
@@ -255,56 +330,59 @@ function EnemyRow({
   onOpenDetail: (enemy: EnemyRecord, trigger: HTMLButtonElement) => void
 }) {
   return (
-    <tr>
-      <td className="enemy-identity-cell">
+    <tr role="row">
+      <td className="enemy-identity-cell" role="cell" headers="enemy-column-name">
         <span className="enemy-index">{enemy.index || '—'}</span>
         <button
           type="button"
           className="enemy-detail-button"
           aria-haspopup="dialog"
           aria-label={`${enemy.name}の詳細を開く`}
+          title={enemy.name}
           onClick={(event) => onOpenDetail(enemy, event.currentTarget)}
         >
           <strong>{enemy.name}</strong>
           <span aria-hidden="true">詳細</span>
         </button>
       </td>
-      <td>
+      <td role="cell" headers="enemy-column-level">
         <span className={`enemy-level-badge ${enemy.levelType.toLowerCase()}`}>{LEVEL_LABELS[enemy.levelType]}</span>
       </td>
-      <EnemyNumberCell value={enemy.stageAppearanceCount} />
-      <EnemyPrimaryStatCell mode={statDisplayMode} rating={enemy.ratings.endurance} value={enemy.stats.maxHp} />
-      <EnemyPrimaryStatCell mode={statDisplayMode} rating={enemy.ratings.attack} value={enemy.stats.attack} />
-      <EnemyPrimaryStatCell mode={statDisplayMode} rating={enemy.ratings.defense} value={enemy.stats.defense} />
-      <EnemyPrimaryStatCell mode={statDisplayMode} rating={enemy.ratings.resistance} value={enemy.stats.magicResistance} />
-      <EnemyNumberCell value={enemy.stats.moveSpeed} decimal />
-      <td className="enemy-number-cell">
+      <EnemyNumberCell column="stages" value={enemy.stageAppearanceCount} />
+      <EnemyPrimaryStatCell column="hp" mode={statDisplayMode} rating={enemy.ratings.endurance} value={enemy.stats.maxHp} />
+      <EnemyPrimaryStatCell column="attack" mode={statDisplayMode} rating={enemy.ratings.attack} value={enemy.stats.attack} />
+      <EnemyPrimaryStatCell column="defense" mode={statDisplayMode} rating={enemy.ratings.defense} value={enemy.stats.defense} />
+      <EnemyPrimaryStatCell column="resistance" mode={statDisplayMode} rating={enemy.ratings.resistance} value={enemy.stats.magicResistance} />
+      <EnemyNumberCell column="speed" value={enemy.stats.moveSpeed} decimal />
+      <td className="enemy-number-cell" role="cell" headers="enemy-column-interval">
         <strong>{formatDecimal(enemy.stats.baseAttackTime, '秒')}</strong>
       </td>
-      <EnemyNumberCell value={enemy.stats.massLevel} />
+      <EnemyNumberCell column="weight" value={enemy.stats.massLevel} />
     </tr>
   )
 }
 
 function EnemyPrimaryStatCell({
+  column,
   mode,
   rating,
   value,
 }: {
+  column: string
   mode: EnemyStatDisplayMode
   rating: string | null
   value: number | null
 }) {
   return (
-    <td className={`enemy-number-cell ${mode === 'RATING' ? 'enemy-rating-cell' : ''}`}>
+    <td className={`enemy-number-cell ${mode === 'RATING' ? 'enemy-rating-cell' : ''}`} role="cell" headers={`enemy-column-${column}`}>
       <strong>{mode === 'RATING' ? rating ?? '—' : formatInteger(value)}</strong>
     </td>
   )
 }
 
-function EnemyNumberCell({ value, decimal = false, suffix = '' }: { value: number | null; decimal?: boolean; suffix?: string }) {
+function EnemyNumberCell({ column, value, decimal = false, suffix = '' }: { column: string; value: number | null; decimal?: boolean; suffix?: string }) {
   return (
-    <td className="enemy-number-cell">
+    <td className="enemy-number-cell" role="cell" headers={`enemy-column-${column}`}>
       <strong>{decimal ? formatDecimal(value, suffix) : formatInteger(value, suffix)}</strong>
     </td>
   )

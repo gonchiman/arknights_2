@@ -1,0 +1,136 @@
+/* PNG appearance follows the target-switch export without changing the page chart. */
+.gg-performance-chart-size.gg-performance-chart-image > figure {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 24px;
+  border: 0;
+  background: #fff;
+  color: #222;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.gg-performance-chart-size.gg-performance-chart-image > figure > :is(
+  .build-comparison-chart-caption,
+  .gg-performance-bar-caption
+) {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 0 0 8px;
+  border: 0;
+  background: #fff;
+}
+
+.gg-performance-chart-size.gg-performance-chart-image > figure :is(
+  .build-comparison-chart-heading,
+  .gg-performance-bar-heading
+) {
+  width: 100%;
+  min-width: 0;
+  text-align: center;
+}
+
+.gg-performance-chart-size.gg-performance-chart-image > figure figcaption :is(
+  .build-comparison-chart-heading strong,
+  .gg-performance-bar-heading strong
+) {
+  display: block;
+  color: #222;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.gg-performance-chart-size.gg-performance-chart-image > figure figcaption :is(
+  .build-comparison-chart-caption-detail,
+  .gg-performance-bar-heading > span
+) {
+  color: #666;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.gg-performance-chart-size.gg-performance-chart-image > figure figcaption :is(
+  .build-comparison-chart-legend,
+  .gg-performance-bar-legend
+) {
+  width: 100%;
+  min-width: 0;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0;
+  padding: 0;
+}
+
+.gg-performance-chart-size.gg-performance-chart-image > figure figcaption :is(
+  .build-comparison-chart-legend-item,
+  .gg-performance-bar-legend li
+) {
+  min-width: 0;
+  max-width: 100%;
+  gap: 8px;
+  color: #222;
+  font-size: 15px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.gg-performance-chart-size.gg-performance-chart-image > figure .build-comparison-chart-legend-swatch {
+  width: 28px;
+  height: 12px;
+  flex: 0 0 28px;
+}
+
+.gg-performance-chart-size.gg-performance-chart-image > figure .gg-performance-bar-legend i {
+  width: 18px;
+  height: 10px;
+  flex: 0 0 18px;
+}
+
+.gg-performance-chart-size.gg-performance-chart-image > figure .build-comparison-chart-frame { padding: 0; }
+.gg-performance-chart-size.gg-performance-chart-image > figure .build-comparison-chart-grid:not(.build-comparison-chart-zero) { stroke: var(--border); }
+.gg-performance-chart-size.gg-performance-chart-image > .build-comparison-chart--styled .build-comparison-chart-grid:not(.build-comparison-chart-zero) { stroke: #e8ecef; }
+.gg-performance-chart-size.gg-performance-chart-image > figure .build-comparison-chart-tick { fill: var(--text-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
+.gg-performance-chart-size.gg-performance-chart-image > figure .build-comparison-chart-axis-title { fill: var(--text-soft); font-size: 12px; }
+.gg-performance-chart-size.gg-performance-chart-image > figure .build-comparison-chart-axis-mark { stroke: #aeb6bd; }
+.gg-performance-chart-size.gg-performance-chart-image > figure .build-comparison-chart-image-legend text { fill: #222; font-size: 15px; font-weight: 400; }
+.gg-performance-chart-size.gg-performance-chart-image > figure .build-comparison-chart-image-legend .build-comparison-chart-image-condition { fill: #666; font-size: 12px; }
+.gg-performance-chart-size.gg-performance-chart-image > figure :is(.build-comparison-chart-heading-inline, .gg-performance-bar-heading-inline) { position: relative; }
+.gg-performance-chart-size.gg-performance-chart-image > figure :is(.build-comparison-chart-heading-inline, .gg-performance-bar-heading-inline) strong > span { display: inline-block; max-width: 100%; }
+.gg-performance-chart-size.gg-performance-chart-image > figure :is(.build-comparison-chart-heading-inline .build-comparison-chart-caption-detail, .gg-performance-bar-heading-inline .gg-performance-bar-condition) {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  margin: 0;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+.gg-performance-chart-size.gg-performance-chart-image > figure .build-comparison-chart-end-label text { font-size: 15px; }
+.gg-performance-chart-size.gg-performance-chart-image > figure .build-comparison-chart-end-label .build-comparison-chart-end-detail { font-size: 13px; }
+
+.gg-performance-chart-size.gg-performance-chart-image > .gg-performance-bar-chart {
+  --gg-bar-label-size: 15px;
+  --gg-bar-value-size: 15px;
+}
+.gg-performance-chart-size.gg-performance-chart-image > figure .gg-performance-bar-guides > i {
+  border-color: #e8ecef;
+  opacity: 1;
+}
+.gg-performance-chart-size.gg-performance-chart-image > figure .gg-performance-vertical-guides > i { border-color: #e8ecef; }
+.gg-performance-chart-size.gg-performance-chart-image > figure :is(.gg-performance-bar-guides > .gg-performance-bar-guide-zero, .gg-performance-vertical-guides > .gg-performance-vertical-guide-zero) { border-color: #9ca8b0; }
+.gg-performance-chart-size.gg-performance-chart-image > figure .gg-performance-bar-plot { padding: 16px 0 4px; }
+.gg-performance-chart-size.gg-performance-chart-image > figure .gg-performance-vertical-plot { padding: 24px 0 8px; }
+.gg-performance-chart-size.gg-performance-chart-image > figure :is(
+  .gg-performance-bar-scale,
+  .gg-performance-vertical-scale,
+  .gg-performance-bar-parts
+) { font-size: 11px; }

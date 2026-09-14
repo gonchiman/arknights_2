@@ -10,6 +10,7 @@ import type { OperatorDatabaseRecord } from '../lib/operatorDatabase'
 interface Props {
   operator: OperatorDatabaseRecord
   operators: ReadonlyArray<OperatorDatabaseRecord>
+  compact?: boolean
 }
 
 interface RadarCoordinate {
@@ -32,9 +33,12 @@ const LABEL_RADIUS = 174
 const GRID_LEVELS = [25, 50, 75, 100] as const
 const SCORE_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
 
-export function OperatorStatRadar({ operator, operators }: Props) {
+export function OperatorStatRadar({ operator, operators, compact = false }: Props) {
   const [scope, setScope] = useState<OperatorRadarScope>('ALL')
+  const [chartType, setChartType] = useState<'radar' | 'bars'>('radar')
+  const showBars = compact && chartType === 'bars'
   const titleId = useId()
+  const chartId = `${titleId}-chart`
   const descriptionId = useId()
   const profiles = useMemo<Record<OperatorRadarScope, OperatorRadarProfile>>(() => ({
     ALL: buildOperatorRadarProfile(operators, operator, 'ALL'),
@@ -52,13 +56,13 @@ export function OperatorStatRadar({ operator, operators }: Props) {
   ))
 
   return (
-    <div className="operator-stat-radar">
+    <div className={`operator-stat-radar${compact ? ' operator-stat-radar-compact' : ''}`}>
       <div className="operator-stat-radar-header">
-        <div>
+        {!compact && <div>
           <h4>ステータス傾向</h4>
           <p>比較対象内での順位を0〜100の相対スコアに変換しています。</p>
-        </div>
-        <div className="operator-stat-radar-scope" role="group" aria-label="レーダーの比較範囲">
+        </div>}
+        <div className="operator-stat-radar-scope" role="group" aria-label="ステータスの比較範囲">
           {SCOPE_OPTIONS.map((option) => {
             const count = profiles[option.value].populationCount
             return (
@@ -75,14 +79,34 @@ export function OperatorStatRadar({ operator, operators }: Props) {
             )
           })}
         </div>
+        {compact && <div className="operator-profile-chart-types" role="group" aria-label="グラフの表示方法">
+          {([['radar', 'レーダー'], ['bars', '横棒']] as const).map(([value, label]) => (
+            <button type="button" key={value} aria-pressed={chartType === value}
+              aria-controls={chartId} onClick={() => setChartType(value)}>{label}</button>
+          ))}
+        </div>}
       </div>
 
       <p className="operator-stat-radar-summary" aria-live="polite">
         {scopeLabel}の{profile.populationCount}名を基準に表示
       </p>
 
-      <div className="operator-stat-radar-layout">
-        <div className="operator-stat-radar-chart-wrap">
+      <div className={`operator-stat-radar-layout${showBars ? ' is-bars' : ''}`}>
+        <div className="operator-stat-radar-chart-wrap" id={chartId}>
+          {showBars ? <div className="operator-profile-stat-bars" role="group" aria-label={`${operator.name}の相対スコア横棒グラフ`}>
+            <div className="operator-profile-stat-bar-axis" aria-hidden="true">
+              <span /><span><span>0</span><span>50</span><span>100</span></span><span />
+            </div>
+            {profile.points.map((point) => (
+              <div className="operator-profile-stat-bar" key={point.key} role="group" aria-label={formatPointDescription(point)}>
+                <span>{point.label}</span>
+                <span className="operator-profile-stat-bar-track" aria-hidden="true">
+                  {point.score !== null && <span style={{ width: `${point.score}%` }} />}
+                </span>
+                <span>{point.score === null ? '—' : SCORE_FORMATTER.format(point.score)}</span>
+              </div>
+            ))}
+          </div> : <>
           <svg
             className="operator-stat-radar-svg"
             viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
@@ -181,9 +205,24 @@ export function OperatorStatRadar({ operator, operators }: Props) {
             <span />
             <strong>相対スコア</strong>
           </div>
+          </>}
         </div>
 
-        <dl className="operator-stat-radar-values" aria-label="実数値と相対スコア">
+        {compact ? <div className="operator-profile-radar-breakdown">
+          <table className="operator-profile-table" aria-label="実数値と相対スコア">
+            <thead><tr><th scope="col">項目</th><th scope="col">実数値</th><th scope="col">相対 / 100</th></tr></thead>
+            <tbody>{profile.points.map((point) => (
+              <tr key={point.key}>
+                <th scope="row">{point.label}</th>
+                <td>{formatRadarValue(point)}</td>
+                <td>{point.score === null ? 'データなし' : SCORE_FORMATTER.format(point.score)}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+          <p className="operator-profile-radar-valid-counts">有効データ：{profile.points.every((point) => point.validCount === profile.points[0]?.validCount)
+            ? `各項目${profile.points[0]?.validCount ?? 0}名`
+            : profile.points.map((point) => `${point.label} ${point.validCount}名`).join(' / ')}</p>
+        </div> : <dl className="operator-stat-radar-values" aria-label="実数値と相対スコア">
           {profile.points.map((point) => (
             <div key={point.key}>
               <dt>
@@ -197,7 +236,7 @@ export function OperatorStatRadar({ operator, operators }: Props) {
               </dd>
             </div>
           ))}
-        </dl>
+        </dl>}
       </div>
 
       {hasSingleObservation && (
@@ -207,12 +246,12 @@ export function OperatorStatRadar({ operator, operators }: Props) {
       )}
       {!completeProfile && (
         <p className="operator-stat-radar-caution">
-          データがない軸は図形を結ばず、一覧に「データなし」と表示します。
+          {showBars ? 'データがない項目は棒を描かず、数値表に「データなし」と表示します。' : 'データがない軸は図形を結ばず、一覧に「データなし」と表示します。'}
         </p>
       )}
-      <p className="operator-stat-radar-note">
+      {!compact && <p className="operator-stat-radar-note">
         外側ほど比較対象内で相対的に高い位置です。これはステータス傾向であり、総合的な強さを示すものではありません。
-      </p>
+      </p>}
     </div>
   )
 }

@@ -1,0 +1,30 @@
+.gg-detail-dialog.chart-image-save-dialog { width: min(560px, calc(100vw - 32px)); }
+.chart-image-save-dialog .gg-detail-header h2 { font-size: 17px; }
+.chart-image-save-form { display: grid; gap: 18px; }
+.chart-image-save-field { display: grid; gap: 8px; min-width: 0; }
+.chart-image-save-field label { color: var(--text); font-size: 13px; font-weight: 600; }
+.chart-image-save-field input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid var(--border-strong);
+  padding: 9px 10px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+.chart-image-save-field input:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.chart-image-save-field input[aria-invalid="true"] { border-color: #a32c2c; }
+.chart-image-save-hint,
+.chart-image-save-error { margin: 0; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.chart-image-save-hint { color: var(--text-muted); }
+.chart-image-save-error { color: #a32c2c; }
+.chart-image-save-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.chart-image-save-actions .button { min-width: 88px; }
+.chart-image-save-dialog :is(input, button):disabled { cursor: default; opacity: .6; }
+
+@media (max-width: 640px) {
+  .gg-detail-dialog.chart-image-save-dialog { width: min(560px, calc(100vw - 16px)); }
+}

@@ -28,6 +28,7 @@ test('実行時に取得する全データが参照元カタログに登録さ�
       'skill-table',
       'uniequip-table',
       'battle-equip-table',
+      'handbook-team-table',
       'enemy-handbook-table',
       'enemy-database',
     ],

@@ -1,12 +1,15 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react'
 import './GoldenglowDetailModal.css'
 
-export function GoldenglowDetailModal({ title, closeLabel, children, onClose, closeOnContextMenu = false }: {
+export function GoldenglowDetailModal({ title, closeLabel, children, onClose, className, initialFocusRef, closeDisabled = false, closeOnContextMenu = false }: {
   title: string
   closeLabel: string
   children: ReactNode
   onClose: () => void
   closeOnContextMenu?: boolean
+  className?: string
+  initialFocusRef?: RefObject<HTMLElement | null>
+  closeDisabled?: boolean
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
@@ -21,7 +24,7 @@ export function GoldenglowDetailModal({ title, closeLabel, children, onClose, cl
     const previousOverflow = document.documentElement.style.overflow
     if (!dialog.open) dialog.showModal()
     document.documentElement.style.overflow = 'hidden'
-    const focusFrame = window.requestAnimationFrame(() => titleRef.current?.focus())
+    const focusFrame = window.requestAnimationFrame(() => (initialFocusRef?.current ?? titleRef.current)?.focus())
 
     return () => {
       window.cancelAnimationFrame(focusFrame)
@@ -29,31 +32,32 @@ export function GoldenglowDetailModal({ title, closeLabel, children, onClose, cl
       if (dialog.open) dialog.close()
       if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus({ preventScroll: true })
     }
-  }, [])
+  }, [initialFocusRef])
 
   return (
     <dialog
       ref={dialogRef}
-      className="gg-detail-dialog"
+      className={`gg-detail-dialog${className ? ` ${className}` : ''}`}
       aria-labelledby={titleId}
       aria-modal="true"
       onContextMenu={closeOnContextMenu ? (event) => {
         event.preventDefault()
         event.stopPropagation()
-        onClose()
+        if (!closeDisabled) onClose()
       } : undefined}
       onCancel={(event) => {
         event.preventDefault()
-        onClose()
+        if (!closeDisabled) onClose()
       }}
       onPointerDown={(event) => { backdropPointerDown.current = event.target === event.currentTarget }}
       onClick={(event) => {
-        if (backdropPointerDown.current && event.target === event.currentTarget) onClose()
+        if (!closeDisabled && backdropPointerDown.current && event.target === event.currentTarget) onClose()
       }}
     >
       <header className="gg-detail-header">
         <h2 ref={titleRef} id={titleId} tabIndex={-1}>{title}</h2>
-        <button type="button" aria-label={closeLabel} onClick={onClose}>×</button>
+        <button type="button" aria-label={closeLabel} disabled={closeDisabled}
+          onClick={() => { if (!closeDisabled) onClose() }}>×</button>
       </header>
       <div className="gg-detail-body">{children}</div>
     </dialog>

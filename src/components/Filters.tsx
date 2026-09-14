@@ -19,6 +19,9 @@ interface Props {
   onChange: (next: FilterState) => void
   onReset: () => void
   searchPlaceholder?: string
+  showNameInitial?: boolean
+  showSearch?: boolean
+  headingLabel?: string | null
 }
 
 export function Filters({
@@ -28,6 +31,9 @@ export function Filters({
   onChange,
   onReset,
   searchPlaceholder = 'オペレーター名・スキル名・説明文で検索',
+  showNameInitial = true,
+  showSearch = true,
+  headingLabel = '検索条件',
 }: Props) {
   const hasActiveFilters = hasActiveOperatorFilters(value)
 
@@ -39,8 +45,8 @@ export function Filters({
 
   return (
     <div className="filters">
-      <div className="filters-heading">
-        <span>検索条件</span>
+      {headingLabel !== null && <div className="filters-heading">
+        {headingLabel && <span>{headingLabel}</span>}
         <button
           type="button"
           className="filter-reset-button"
@@ -49,8 +55,8 @@ export function Filters({
         >
           条件をリセット
         </button>
-      </div>
-      <div className="initial-filter" role="group" aria-label="オペレーター名の頭文字">
+      </div>}
+      {showNameInitial && <div className="initial-filter" role="group" aria-label="オペレーター名の頭文字">
         <span className="initial-filter-label">頭文字</span>
         <button
           type="button"
@@ -71,7 +77,7 @@ export function Filters({
             {OPERATOR_INITIAL_LABELS[initial]}
           </button>
         ))}
-      </div>
+      </div>}
       <div className="initial-filter profession-filter" role="group" aria-label="職業">
         <span className="initial-filter-label">職業</span>
         <button
@@ -151,7 +157,7 @@ export function Filters({
           </button>
         ))}
       </div>
-      <label className="search-filter">
+      {showSearch && <label className="search-filter">
         <span className="initial-filter-label">文字検索</span>
         <input
           className="search"
@@ -159,7 +165,7 @@ export function Filters({
           onChange={(event) => onChange({ ...value, query: event.target.value })}
           placeholder={searchPlaceholder}
         />
-      </label>
+      </label>}
     </div>
   )
 }

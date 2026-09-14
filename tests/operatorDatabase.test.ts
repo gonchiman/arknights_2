@@ -7,6 +7,29 @@ import {
   type OperatorDatabaseFilters,
 } from '../src/lib/operatorDatabase.ts'
 import type { OperatorCombatProfile, RawOperatorModule, SkillRecord } from '../src/types/skill.ts'
+import { getOperatorAffiliation } from '../src/lib/operatorAffiliation.ts'
+
+const affiliationNames = {
+  victoria: { powerName: 'ヴィクトリア' },
+  rhodes: { powerName: 'ロドス・アイランド' },
+  reserve1: { powerName: '行動予備隊A1' },
+  lungmen: { powerName: '炎−龍門' },
+  penguin: { powerName: 'ペンギン急便' },
+  none: { powerName: '所属なし' },
+}
+
+test('所属陣営は国より具体的な組織・チームを表示する', () => {
+  assert.equal(getOperatorAffiliation({ nationId: 'victoria', groupId: null, teamId: null }, affiliationNames), 'ヴィクトリア')
+  assert.equal(getOperatorAffiliation({ nationId: 'lungmen', groupId: 'penguin' }, affiliationNames), 'ペンギン急便')
+  assert.equal(getOperatorAffiliation({ nationId: 'rhodes', groupId: 'rhodes', teamId: 'reserve1' }, affiliationNames), '行動予備隊A1')
+})
+
+test('所属未設定と明示的な所属なしを区別し、名称未収録でも所属IDを保持する', () => {
+  assert.equal(getOperatorAffiliation({ nationId: null, groupId: '', teamId: null }, affiliationNames), null)
+  assert.equal(getOperatorAffiliation({ nationId: 'none' }, affiliationNames), '所属なし')
+  assert.equal(getOperatorAffiliation({ nationId: 'lungmen', groupId: 'new_group' }, affiliationNames), 'new_group')
+  assert.equal(getOperatorAffiliation({ nationId: 'victoria' }, {}), 'victoria')
+})
 
 test('スキル行を1人1レコードへ集約し、最大育成ステータスと全情報を保持する', () => {
   const profile = createProfile()
@@ -35,6 +58,7 @@ test('スキル行を1人1レコードへ集約し、最大育成ステータス
   assert.equal(records.length, 1)
   const record = records[0]
   assert.equal(record.name, 'テスト')
+  assert.equal(record.affiliation, 'ヴィクトリア')
   assert.deepEqual(record.stats, {
     maxHp: 1100,
     attack: 330,
@@ -147,6 +171,8 @@ test('数値を指定方向へ並べ、欠落値は末尾で安定させる', ()
     }),
   ])
 
+  assert.equal(records[1].affiliation, null)
+
   assert.deepEqual(
     sortOperatorDatabaseRecords(records, { key: 'attack', direction: 'desc' }).map((record) => record.name),
     ['テスト', 'データなし'],
@@ -170,6 +196,7 @@ function filters(overrides: Partial<OperatorDatabaseFilters>): OperatorDatabaseF
 
 function createProfile(): OperatorCombatProfile {
   return {
+    affiliation: getOperatorAffiliation({ nationId: 'victoria' }, affiliationNames),
     phases: [
       {
         maxLevel: 50,
