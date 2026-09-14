@@ -1,0 +1,27 @@
+.operator-module-comparison-image {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0;
+  background: #fff;
+  color: #222;
+  font-size: 14px;
+  line-height: 1.8;
+  --surface: #fff;
+  --surface-soft: #f7f7f7;
+  --border: #d6d6d6;
+  --text: #222;
+  --text-soft: #444;
+  --text-muted: #666;
+}
+
+.operator-module-comparison-image .operator-module-comparison-table,
+.operator-module-comparison-image .operator-module-comparison-table tbody th,
+.operator-module-comparison-image .operator-module-comparison-type {
+  font-size: 14px;
+}
+.operator-module-comparison-image .operator-module-comparison-table th,
+.operator-module-comparison-image .operator-module-comparison-table td {
+  padding: 10px 12px;
+}
+.operator-module-comparison-image .operator-module-comparison-table th:first-child { width: 90px; }
+.operator-module-comparison-image .operator-module-comparison-table { box-sizing: border-box; }

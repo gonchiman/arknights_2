@@ -21,20 +21,14 @@ export function splitPassiveDescriptionChanges(before: string, after: string): P
     else segments.push({ text, changed })
   }
 
-  // Anchor shared edges first so an inserted clause containing repeated words
-  // remains one highlight rather than borrowing characters from its neighbors.
+  // Anchor the shared prefix, then align the rest in reading order. A shared
+  // suffix may belong to newly appended prose rather than the original ending.
   let start = 0
   while (start < previous.length && start < current.length && previous[start] === current[start]) start += 1
-  let previousEnd = previous.length
-  let currentEnd = current.length
-  while (previousEnd > start && currentEnd > start && previous[previousEnd - 1] === current[currentEnd - 1]) {
-    previousEnd -= 1
-    currentEnd -= 1
-  }
   append(current.slice(0, start).join(''), false)
 
-  const previousMiddle = previous.slice(start, previousEnd)
-  const currentMiddle = current.slice(start, currentEnd)
+  const previousMiddle = previous.slice(start)
+  const currentMiddle = current.slice(start)
   const lengths = Array.from({ length: previousMiddle.length + 1 }, () => new Uint32Array(currentMiddle.length + 1))
   for (let i = previousMiddle.length - 1; i >= 0; i -= 1) {
     for (let j = currentMiddle.length - 1; j >= 0; j -= 1) {
@@ -58,6 +52,5 @@ export function splitPassiveDescriptionChanges(before: string, after: string): P
       j += 1
     }
   }
-  append(current.slice(currentEnd).join(''), false)
   return segments
 }

@@ -42,6 +42,29 @@ test('multiple distant changes keep the intervening description unchanged', () =
   ])
 })
 
+test('W talent upgrades preserve the original ending and highlight the entire added effect', () => {
+  const original = '配置から10秒後、物理回避と術回避+60%、敵に狙われにくくなる'
+  const unchanged = '秒後、物理回避と術回避+60%、敵に狙われにくくなる'
+  const level2Addition = '。ダメージを受けていない場合、20秒間攻撃力が徐々に上昇し（最大110%まで）、ダメージを受けると攻撃力はリセットされる'
+  const level3Addition = '。ダメージを受けていない場合、16秒間攻撃力が徐々に上昇し（最大120%まで）、ダメージを受けると攻撃力はリセットされる'
+  const level2 = original + level2Addition
+  const level3 = `配置から8${unchanged}${level3Addition}`
+
+  assert.deepEqual(splitPassiveDescriptionChanges(original, level2), [
+    { text: original, changed: false },
+    { text: level2Addition, changed: true },
+  ])
+  assert.deepEqual(splitPassiveDescriptionChanges(original, level3), [
+    { text: '配置から', changed: false },
+    { text: '8', changed: true },
+    { text: unchanged, changed: false },
+    { text: level3Addition, changed: true },
+  ])
+  for (const updated of [level2, level3]) {
+    assert.equal(splitPassiveDescriptionChanges(original, updated).map((part) => part.text).join(''), updated)
+  }
+})
+
 test('deletions do not create highlights or invent replacement text', () => {
   assert.deepEqual(splitPassiveDescriptionChanges('敵全員に追加の術ダメージを与える', '敵に術ダメージを与える'), [
     { text: '敵に術ダメージを与える', changed: false },
