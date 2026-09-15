@@ -18,7 +18,7 @@ import type { SkillRecord } from '../types/skill'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { PersistentDetails } from './PersistentDetails'
 import { ComparisonChart, type ComparisonChartSeries } from './ComparisonChart'
-import { ChartImageSaveDialog } from './ChartImageSaveDialog'
+import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { GoldenglowOperatorInfo } from './GoldenglowOperatorInfo'
@@ -44,7 +44,6 @@ const barVariants = [
   { value: 'label', label: 'B：ラベルと棒をまとめる' },
   { value: 'detail', label: 'C：合計と内訳を表示' },
 ] as const
-const chartAspectPresets = ['16:9', '2:1', '21:9', '3:1'] as const
 
 interface ModuleChoice {
   id: string
@@ -88,9 +87,7 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
   const [barVariant, setBarVariant] = useState<GoldenglowBarVariant>('axis')
   const [chartResistance, setChartResistance] = useState(0)
   const [chartResistanceInput, setChartResistanceInput] = useState('0')
-  const [chartAspectPreset, setChartAspectPreset] = useState('auto')
-  const [chartAspect, setChartAspect] = useState({ width: 16, height: 9 })
-  const [chartAspectInput, setChartAspectInput] = useState({ width: '16', height: '9' })
+  const [imageAspect, setImageAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [savingImage, setSavingImage] = useState(false)
   const [imageFilename, setImageFilename] = useState<string | null>(null)
   const [imageFeedback, setImageFeedback] = useState<'saved' | 'downloaded' | 'failed' | null>(null)
@@ -179,17 +176,16 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
   const unavailable = comparison.filter((column) => !column.skill)
   const chartMinWidth = chartType === 'bar' && barOrientation === 'vertical'
     ? Math.max(320, chartColumns.length * 160 + 80) : 320
-  const chartAspectRatio = chartAspectPreset === 'auto' ? undefined : chartAspect.width / chartAspect.height
   const chartLabel = chartType === 'bar'
     ? `${barOrientation === 'horizontal' ? '横棒' : '縦棒'}${stackedBars ? '（積み上げ）' : ''}・${barVariants.find((variant) => variant.value === barVariant)?.label}`
     : chartTypes.find((type) => type.value === chartType)?.label
   const noComparisonTargets = isDifference && tableComparison.length === 0
   const emptyComparisonMessage = '基準列以外の比較対象がありません。「比較列を追加」から列を追加してください。'
 
-  const renderChart = (imageOutput = false) => {
+  const renderChart = (imageOutput = false, aspectRatio?: number) => {
     if (noComparisonTargets) return <p className="gg-performance-status" role="status">{emptyComparisonMessage}</p>
     return <GoldenglowPerformanceChartFrame minWidth={chartMinWidth}
-      aspectRatio={chartAspectRatio} imageOutput={imageOutput}>
+      aspectRatio={imageOutput ? aspectRatio : undefined} imageOutput={imageOutput}>
       {(minHeight) => chartType === 'line'
         ? <ComparisonChart axisLabel="敵の術耐性" metricLabel={outputTitle} series={chartSeries}
           formatValue={formatChartOutput} formatAxisValue={formatChartDamage}
@@ -213,7 +209,7 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
     setImageFilename(`goldenglow-S${skill.skillIndex}-${skill.skillLevelLabel}-${format(duration)}s-${imageChartType}${isDifference ? `-difference-from-${baselineLabel}` : ''}${singleResistance ? `-${barOrientation}-${barVariant}-res${chartResistance}` : showLineEndLabels ? '-end-labels' : ''}.png`)
   }
 
-  const saveChartImage = async (filename: string) => {
+  const saveChartImage = async (filename: string, aspectRatio?: number) => {
     if (!skill || imageSaveInProgress.current || !filename.trim()) return
     imageSaveInProgress.current = true
     setSavingImage(true)
@@ -223,7 +219,7 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
       const destination = await selectChartImageDestination(filename, imageSavePicker)
       if (destination.type === 'cancelled') return
       await saveComparisonChartImage({
-        chart: renderChart(true),
+        chart: renderChart(true, aspectRatio),
         filename,
         writeBlob: destination.type === 'file' ? destination.write : undefined,
       })
@@ -430,8 +426,9 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
                   onClick={() => setChartType(type.value)}>{type.label}</button>)}
               </div>
             </div>
-            {chartType === 'line' && <div className="gg-performance-graph-options" role="group"
-              aria-label="折れ線グラフの設定">
+            <div className="gg-performance-graph-options" role="group"
+              aria-label={chartType === 'line' ? '折れ線グラフの設定' : '棒グラフの設定'}>
+              {chartType === 'line' && <>
               <label className="calculator-field gg-performance-line-design">
                 <span>線のデザイン</span>
                 <select aria-label="線のデザイン" value={lineStyle}
@@ -445,9 +442,8 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
                   onChange={(event) => setShowLineEndLabels(event.target.checked)} />
                 線の端に系列名を表示
               </label>
-            </div>}
-            {chartType === 'bar' && <div className="gg-performance-graph-options" role="group"
-              aria-label="棒グラフの設定">
+              </>}
+              {chartType === 'bar' && <>
               <label className="calculator-field gg-performance-graph-resistance">
                 <span>敵の術耐性</span>
                 <input type="number" aria-label="グラフの術耐性" min={0} max={100} step={1} value={chartResistanceInput}
@@ -479,52 +475,11 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
                 <input type="checkbox" checked={stackedBars} onChange={(event) => setStackedBars(event.target.checked)} />
                 積み上げ表示
               </label>
-            </div>}
-            <div className="gg-performance-graph-size-controls" role="group" aria-label="グラフの比率と画像保存">
-              <label className="calculator-field gg-performance-aspect-preset">
-                <span>縦横比（幅:高さ）</span>
-                <select aria-label="グラフの縦横比" value={chartAspectPreset} onChange={(event) => {
-                  const preset = event.target.value
-                  setChartAspectPreset(preset)
-                  if (preset !== 'auto' && preset !== 'custom') {
-                    const [width, height] = preset.split(':').map(Number)
-                    setChartAspect({ width, height })
-                    setChartAspectInput({ width: String(width), height: String(height) })
-                  }
-                }}>
-                  <option value="auto">指定なし</option>
-                  {chartAspectPresets.map((preset) => <option key={preset} value={preset}>{preset}</option>)}
-                  <option value="custom">カスタム</option>
-                </select>
-              </label>
-              {chartAspectPreset === 'custom' && <div className="gg-performance-graph-ratio" role="group" aria-label="任意の縦横比">
-                {(['width', 'height'] as const).map((key, index) => <label key={key} className="calculator-field">
-                  <span>比率の{index === 0 ? '幅' : '高さ'}</span>
-                  <input type="number" aria-label={`グラフの比率の${index === 0 ? '幅' : '高さ'}`} min={1} max={100} step={1}
-                    value={chartAspectInput[key]} onChange={(event) => {
-                      const input = event.target.value
-                      const value = event.target.valueAsNumber
-                      setChartAspectInput((current) => ({ ...current, [key]: input }))
-                      if (Number.isInteger(value) && value >= 1 && value <= 100) {
-                        setChartAspect((current) => ({ ...current, [key]: value }))
-                      }
-                    }}
-                    onBlur={() => setChartAspectInput((current) => ({ ...current, [key]: String(chartAspect[key]) }))}
-                    onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }} />
-                </label>)}
-              </div>}
-              <button type="button" className="button secondary" onClick={() => {
-                setChartAspectPreset('auto')
-                setChartAspect({ width: 16, height: 9 })
-                setChartAspectInput({ width: '16', height: '9' })
-              }}>自動に戻す</button>
+              </>}
               <button type="button" className="button secondary gg-performance-save-image"
                 aria-label="グラフをPNG画像で保存" title="選択中のグラフをPNG画像で保存" aria-haspopup="dialog"
                 disabled={savingImage || chartColumns.length === 0} aria-busy={savingImage}
                 onClick={openImageSaveDialog}>{savingImage ? '画像を保存中…' : '画像を保存'}</button>
-              <p id="gg-performance-size-help">{chartAspectPreset === 'auto'
-                ? 'グラフの幅は画面に合わせて自動で調整します。'
-                : 'グラフ全体の比率です。画面に合わせて調整し、内容が収まらない場合は比率を保って拡大します。'}</p>
             </div>
             <p role="status" className="visually-hidden">
               {imageFeedback === 'saved' ? 'PNG画像を保存しました。' : imageFeedback === 'downloaded' ? 'PNG画像のダウンロードを開始しました。' : ''}
@@ -536,6 +491,8 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
       </CollapsibleCalculatorPanel>
       {imageFilename !== null && <ChartImageSaveDialog
         initialFilename={imageFilename}
+        aspect={imageAspect}
+        onAspectChange={setImageAspect}
         canChooseLocation={!!imageSavePicker}
         saving={savingImage}
         error={imageFeedback === 'failed'}
@@ -544,7 +501,7 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
           setImageFilename(null)
           setImageFeedback(null)
         }}
-        onSave={(filename) => void saveChartImage(filename)}
+        onSave={(filename, aspectRatio) => void saveChartImage(filename, aspectRatio)}
       />}
       {editor && <ComparisonColumnEditor
         key={editor.build.id}
