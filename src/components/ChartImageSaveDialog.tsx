@@ -2,13 +2,23 @@ import { useId, useRef, useState } from 'react'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import './ChartImageSaveDialog.css'
 
-export function ChartImageSaveDialog({ initialFilename, canChooseLocation, saving, error, onClose, onSave }: {
+const imageAspectPresets = ['16:9', '2:1', '21:9', '3:1'] as const
+
+export interface ChartImageAspectSettings {
+  preset: string
+  width: string
+  height: string
+}
+
+export function ChartImageSaveDialog({ initialFilename, aspect, onAspectChange, canChooseLocation, saving, error, onClose, onSave }: {
   initialFilename: string
+  aspect?: ChartImageAspectSettings
+  onAspectChange?: (aspect: ChartImageAspectSettings) => void
   canChooseLocation: boolean
   saving: boolean
   error: boolean
   onClose: () => void
-  onSave: (filename: string) => void
+  onSave: (filename: string, aspectRatio?: number) => void
 }) {
   const [filename, setFilename] = useState(initialFilename)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -19,13 +29,18 @@ export function ChartImageSaveDialog({ initialFilename, canChooseLocation, savin
   const hintId = `${id}-hint`
   const validationId = `${id}-validation`
   const validationError = validateFilename(filename)
+  const aspectHintId = `${id}-aspect-hint`
+  const aspectErrorId = `${id}-aspect-error`
+  const invalidAspect = aspect?.preset === 'custom'
+    && ![aspect.width, aspect.height].every((value) => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100)
+  const aspectRatio = !aspect || aspect.preset === 'auto' ? undefined : Number(aspect.width) / Number(aspect.height)
 
   return <GoldenglowDetailModal title="画像を保存" closeLabel="画像の保存を閉じる"
     className="chart-image-save-dialog" initialFocusRef={inputRef} closeDisabled={saving} onClose={onClose}>
     <form className="chart-image-save-form" aria-busy={saving}
       onSubmit={(event) => {
         event.preventDefault()
-        if (!saving && !composing.current && !validationError) onSave(filename.trim())
+        if (!saving && !composing.current && !validationError && !invalidAspect) onSave(filename.trim(), aspectRatio)
       }}
       onKeyDown={(event) => {
         if (event.key === 'Enter' && (composing.current || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229)) {
@@ -49,6 +64,36 @@ export function ChartImageSaveDialog({ initialFilename, canChooseLocation, savin
         <p id={hintId} className="chart-image-save-hint">.png は省略できます。</p>
         {validationError && <p id={validationId} className="chart-image-save-error" role="alert">{validationError}</p>}
       </div>
+      {aspect && onAspectChange && <fieldset className="chart-image-save-aspect" disabled={saving} aria-describedby={aspectHintId}>
+        <legend>画像の縦横比（幅:高さ）</legend>
+        <div className="chart-image-save-aspect-controls">
+          <select aria-label="画像の縦横比" value={aspect.preset} onChange={(event) => {
+            const preset = event.target.value
+            const [width, height] = preset.split(':')
+            onAspectChange(preset === 'auto' || preset === 'custom'
+              ? { ...aspect, preset }
+              : { preset, width, height })
+          }}>
+            <option value="auto">指定なし</option>
+            {imageAspectPresets.map((preset) => <option key={preset} value={preset}>{preset}</option>)}
+            <option value="custom">カスタム</option>
+          </select>
+          <button type="button" className="button secondary" onClick={() => {
+            onAspectChange({ preset: 'auto', width: '16', height: '9' })
+          }}>自動に戻す</button>
+        </div>
+        {aspect.preset === 'custom' && <div className="chart-image-save-ratio">
+          {(['width', 'height'] as const).map((key) => <label key={key} className="chart-image-save-field">
+            <span>比率の{key === 'width' ? '幅' : '高さ'}</span>
+            <input type="number" min={1} max={100} step={1} required value={aspect[key]}
+              aria-invalid={invalidAspect}
+              aria-describedby={invalidAspect ? aspectErrorId : undefined}
+              onChange={(event) => onAspectChange({ ...aspect, [key]: event.target.value })} />
+          </label>)}
+        </div>}
+        {invalidAspect && <p id={aspectErrorId} className="chart-image-save-error" role="alert">幅と高さを1〜100の整数で入力してください。</p>}
+        <p id={aspectHintId} className="chart-image-save-hint">タイトル・凡例を含む画像全体の比率です。指定なしでは内容に合わせて自動調整します。</p>
+      </fieldset>}
       <p className="chart-image-save-hint">
         {canChooseLocation
           ? '次の画面で保存先フォルダを選べます。'
@@ -57,7 +102,7 @@ export function ChartImageSaveDialog({ initialFilename, canChooseLocation, savin
       {error && <p className="chart-image-save-error" role="alert">画像を保存できませんでした。保存先を確認して、もう一度お試しください。</p>}
       <div className="chart-image-save-actions">
         <button type="button" className="button secondary" disabled={saving} onClick={onClose}>キャンセル</button>
-        <button type="submit" className="button" disabled={saving || !!validationError}>
+        <button type="submit" className="button" disabled={saving || !!validationError || invalidAspect}>
           {saving ? '画像を保存中…' : canChooseLocation ? '保存先を選ぶ' : 'ダウンロード'}
         </button>
       </div>
