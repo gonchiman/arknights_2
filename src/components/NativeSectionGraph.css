@@ -1,6 +1,11 @@
 .code-analysis-page .native-section-graph { min-width: 0; }
 .code-analysis-page .native-section-scroll { min-width: 0; width: 100%; background: var(--surface); }
 .code-analysis-page .native-section-sidebar { min-width: 0; }
+.code-analysis-page .native-section-details-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 44px; padding: 12px 0; border: 0; border-top: 1px solid var(--border); background: transparent; color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.code-analysis-page .native-section-details-toggle:hover { background: var(--surface-hover); }
+.code-analysis-page .native-section-details-toggle:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.code-analysis-page .native-section-sidebar-content { display: none; min-width: 0; padding-top: 12px; }
+.code-analysis-page .native-section-sidebar-content.is-open { display: block; }
 .code-analysis-page .native-section-sidebar .native-flow-details { margin-top: 16px; }
 .code-analysis-page .native-section-warning { grid-column: 1 / -1; }
 /* Match navigation.css: wait for the permanent sidebar before using spare width,
@@ -9,7 +14,8 @@
   @container native-flow-content (min-width: 920px) {
     .code-analysis-page .native-section-graph { display: grid; grid-template-columns: minmax(560px, 1.6fr) minmax(320px, 1fr); gap: 16px 24px; align-items: start; }
     .code-analysis-page .native-section-sidebar { border-left: 1px solid var(--border); padding: 12px 0 0 20px; }
-    .code-analysis-page .native-section-sidebar .native-section-selection { border-top: 0; padding-top: 0; }
+    .code-analysis-page .native-section-details-toggle { display: none; }
+    .code-analysis-page .native-section-sidebar-content { display: block; padding-top: 0; }
   }
 }
 .code-analysis-page .native-section-canvas { position: relative; }
@@ -26,7 +32,7 @@
 .code-analysis-page .native-section-node:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
 .code-analysis-page .native-section-node:disabled { cursor: default; }
 .code-analysis-page .native-section-call { margin-top: 4px; overflow-wrap: anywhere; }
-.code-analysis-page .native-section-selection { border-top: 1px solid var(--border); padding-top: 12px; font-size: 14px; line-height: 1.8; }
+.code-analysis-page .native-section-selection { font-size: 14px; line-height: 1.8; }
 .code-analysis-page .native-section-selection-heading { display: flex; align-items: baseline; gap: 4px 16px; flex-wrap: wrap; }
 .code-analysis-page .native-section-selection-heading > strong { font-weight: 600; }
 .code-analysis-page .native-section-selection-heading > span, .code-analysis-page .native-section-position { color: var(--text-soft); }

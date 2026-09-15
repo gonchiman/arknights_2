@@ -8,6 +8,8 @@ const shortName = (name: string) => name.includes('(') ? name.split('(')[0].spli
 export function NativeSectionGraph({ graph, current, busy, onSelect, renderDetails }: { graph: Graph; current: number; busy: boolean; onSelect: (rva: number) => void; renderDetails: (conditions: ReactNode) => ReactNode }) {
   const host = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(680)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const detailsId = useId()
   const marker = useId().replace(/:/g, '')
   useEffect(() => {
     const element = host.current
@@ -72,13 +74,18 @@ export function NativeSectionGraph({ graph, current, busy, onSelect, renderDetai
       </div>
     </div>
     <div className="native-section-sidebar">
-    {selected && <div className="native-section-selection" aria-live="polite">
-      <div className="native-section-selection-heading"><strong>区間{selected.id}全体</strong><span>{selected.body.instructions.length}命令 · 呼出し {selected.callCount}件</span></div>
-      {current !== selected.start && <div className="native-section-position">選択位置 {address(current)}</div>}
-      <div className="native-section-call" title={selected.calls.join('\n')}>{callExamples.length ? `呼出し例：${callExamples.join(' / ')}` : selected.callCount ? '呼び出し先の名前は未特定' : '呼出しなし'}</div>
-      <div className="native-section-targets"><span>移動先：</span>{targets.length ? targets.map((edge, i) => <span className="native-section-destination" key={i}>{destinationLink(edge)}</span>) : <span>読み取れませんでした。</span>}</div>
-    </div>}
-    {renderDetails(conditions)}
+      <button type="button" className="native-section-details-toggle" aria-expanded={detailsOpen} aria-controls={detailsId} onClick={() => setDetailsOpen(open => !open)}>
+        <span>区間の詳細</span><span aria-hidden="true">{detailsOpen ? '−' : '+'}</span>
+      </button>
+      <div id={detailsId} className={`native-section-sidebar-content${detailsOpen ? ' is-open' : ''}`}>
+        {selected && <div className="native-section-selection" aria-live="polite">
+          <div className="native-section-selection-heading"><strong>区間{selected.id}全体</strong><span>{selected.body.instructions.length}命令 · 呼出し {selected.callCount}件</span></div>
+          {current !== selected.start && <div className="native-section-position">選択位置 {address(current)}</div>}
+          <div className="native-section-call" title={selected.calls.join('\n')}>{callExamples.length ? `呼出し例：${callExamples.join(' / ')}` : selected.callCount ? '呼び出し先の名前は未特定' : '呼出しなし'}</div>
+          <div className="native-section-targets"><span>移動先：</span>{targets.length ? targets.map((edge, i) => <span className="native-section-destination" key={i}>{destinationLink(edge)}</span>) : <span>読み取れませんでした。</span>}</div>
+        </div>}
+        {renderDetails(conditions)}
+      </div>
     </div>
     {(graph.warnings.length > 0) && <p className="code-analysis-note native-section-warning" role="status">{graph.warnings.join(' ')}</p>}
   </section>
