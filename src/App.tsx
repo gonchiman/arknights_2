@@ -16,6 +16,7 @@ import { SkillDirectory } from './components/SkillDirectory'
 import { SkillEffectsPage } from './components/SkillEffectsPage'
 import { SkillJsonPage } from './components/SkillJsonPage'
 import { SkillJsonOverviewPage } from './components/SkillJsonOverviewPage'
+import { SlideMakerPage } from './components/SlideMakerPage'
 import { loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
 import { ARKNIGHTS_GAMEDATA_REPOSITORY } from './lib/dataSources'
@@ -80,7 +81,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (route.view === 'enemies' || route.view === 'sources' || route.view === 'code-analysis' || skillDataRequestStarted.current) return
+    if (route.view === 'enemies' || route.view === 'sources' || route.view === 'code-analysis' || route.view === 'slide-maker' || skillDataRequestStarted.current) return
     skillDataRequestStarted.current = true
     void load()
   }, [route.view])
@@ -254,7 +255,7 @@ export default function App() {
 
         <main className="app-content">
         <PanelStateScope.Provider value={displayedRoute.view}>
-        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && <section className="error-box" role="alert">{error}</section>}
+        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && <section className="error-box" role="alert">{error}</section>}
 
         {/* Keep the directory mounted while viewing a detail page so filters, sort and charts survive returning. */}
         {operatorDirectoryVisited && (displayedRoute.view === 'operators' || displayedRoute.view === 'operator-detail') && (
@@ -269,6 +270,8 @@ export default function App() {
           <CodeAnalysisPage />
         ) : displayedRoute.view === 'sources' ? (
           <DataSourcesPage />
+        ) : displayedRoute.view === 'slide-maker' ? (
+          <SlideMakerPage />
         ) : displayedRoute.view === 'goldenglow-guide' ? (
           <GoldenglowGuidePage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
         ) : displayedRoute.view === 'goldenglow-performance' ? (

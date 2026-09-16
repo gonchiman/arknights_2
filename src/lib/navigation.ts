@@ -1,4 +1,4 @@
-export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'sources' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch'
+export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'sources' | 'slide-maker' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -93,6 +93,13 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     label: 'Goldenglow Target Switching Analysis',
     description: '敵HP・撃破・スキル中の総ダメージ',
     section: 'operator-analysis',
+  },
+  {
+    id: 'slide-maker',
+    href: '#/slide-maker',
+    label: 'スライド作成',
+    description: '画像と字幕から解説用スライドを作成',
+    section: 'information',
   },
   {
     id: 'sources',

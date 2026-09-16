@@ -24,6 +24,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['goldenglow-guide', 'goldenglow-guide'],
       ['goldenglow-performance', 'goldenglow-performance'],
       ['goldenglow-target-switch', 'goldenglow-target-switch'],
+      ['slide-maker', 'slide-maker'],
       ['sources', 'sources'],
     ],
   )
@@ -32,6 +33,18 @@ test('サイドバーから主要ページへ遷移できる', () => {
 
 test('比較ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/comparison'), { view: 'comparison' })
+})
+
+test('スライド作成はアプリ内の独立したページとしてメニューから開く', () => {
+  assert.deepEqual(parseHashRoute('#/slide-maker'), { view: 'slide-maker' })
+  assert.deepEqual(APP_NAV_ITEMS.find((item) => item.id === 'slide-maker'), {
+    id: 'slide-maker',
+    href: '#/slide-maker',
+    label: 'スライド作成',
+    description: '画像と字幕から解説用スライドを作成',
+    section: 'information',
+  })
+  assert.deepEqual(parseHashRoute('#/slide-maker/extra'), { view: 'operators' })
 })
 
 test('GGの目標切り替え分析は同一目標の分析と別ページで開く', () => {
