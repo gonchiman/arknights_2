@@ -24,6 +24,8 @@
 .gg-performance-graph-types button[aria-pressed="true"] { background: var(--text); color: var(--surface); font-weight: 700; }
 .gg-performance-graph-types button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; position: relative; z-index: 1; }
 .gg-performance-graph-resistance { width: 120px; }
+.gg-performance-bar-mode { width: 180px; }
+.gg-performance-color-scheme { width: 240px; }
 .gg-performance-bar-orientation { width: 100px; }
 .gg-performance-metric { width: 160px; max-width: 100%; }
 .gg-performance-baseline { width: 260px; max-width: 100%; }
@@ -41,6 +43,7 @@
 .gg-performance-chart-size { min-width: 0; container: gg-performance-chart / inline-size; }
 .gg-performance-chart-size > figure { margin: 0; }
 .gg-performance-chart-size figcaption { flex-shrink: 0; }
+.gg-performance-chart-size .build-comparison-chart-end-label .build-comparison-chart-end-name { fill: var(--text); }
 .gg-performance-table th:first-child { width: 88px; }
 .gg-performance-table th, .gg-performance-table td { border-right: 1px solid var(--border); white-space: nowrap; }
 .gg-performance-table tr > :last-child { border-right: 0; }

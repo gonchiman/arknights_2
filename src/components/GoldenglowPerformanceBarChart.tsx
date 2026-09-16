@@ -159,9 +159,9 @@ export function GoldenglowPerformanceBarChart({
             return (
               <div className={vertical ? 'gg-performance-vertical-column' : 'gg-performance-bar-row'} key={row.id}
                 style={vertical ? { gridColumn: index + 2 } : { gridRow: index + 1 }}>
-                <span className={vertical ? 'gg-performance-vertical-label' : 'gg-performance-bar-label'}
-                  style={imageOutput && !stacked ? { color: row.color } : undefined}>{row.label}</span>
-                <div className={vertical ? 'gg-performance-vertical-track' : 'gg-performance-bar-track'} role="img" aria-label={description} title={description}>
+                <span className={vertical ? 'gg-performance-vertical-label' : 'gg-performance-bar-label'}>{row.label}</span>
+                <div className={vertical ? 'gg-performance-vertical-track' : 'gg-performance-bar-track'} role="img" aria-label={description}
+                  title={imageOutput ? description : undefined}>
                   {hasTotal && (stacked
                     ? hasParts && parts.map((part) => {
                       const value = part.value ?? 0
@@ -174,7 +174,7 @@ export function GoldenglowPerformanceBarChart({
                         className={vertical ? 'gg-performance-vertical-segment' : 'gg-performance-bar-segment'}
                         style={difference || vertical ? segmentStyle(start, end, part.color)
                           : { width: `${value / scale * 100}%`, backgroundColor: part.color }}
-                        title={`${row.label}・${part.label} ${displayValue(part.value)}`}
+                        title={imageOutput ? `${row.label}・${part.label} ${displayValue(part.value)}` : undefined}
                       />
                     })
                     : <span className={vertical ? 'gg-performance-vertical-segment' : 'gg-performance-bar-segment'}

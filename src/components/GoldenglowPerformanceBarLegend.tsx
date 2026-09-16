@@ -13,14 +13,18 @@ const OBSTACLE_SELECTOR = [
   '.gg-performance-bar-parts', '.gg-performance-bar-ticks > span',
   '.gg-performance-vertical-scale > span',
   '.gg-performance-bar-zero', '.gg-performance-vertical-zero',
+  '.gg-performance-grouped-segment', '.gg-performance-grouped-zero',
+  '.gg-performance-grouped-missing', '.gg-performance-grouped-tick',
 ].join(', ')
 
 /** Keeps the export legend out of the caption without covering any drawn values. */
-export function GoldenglowPerformanceBarLegend({ vertical, parts, condition, note }: {
+export function GoldenglowPerformanceBarLegend({ vertical, parts, condition, note, ariaLabel, neutralLabels = false }: {
   vertical: boolean
   parts: readonly { key: string; label: string; color: string }[]
   condition?: string
   note?: string
+  ariaLabel?: string
+  neutralLabels?: boolean
 }) {
   const legendRef = useRef<HTMLUListElement>(null)
   const [layout, setLayout] = useState<LegendLayout>({ mode: 'measure' })
@@ -49,7 +53,7 @@ export function GoldenglowPerformanceBarLegend({ vertical, parts, condition, not
         return { x: rect.left - host.left, y: rect.top - host.top, width: rect.width, height: rect.height }
       }
       const tracks = [...plotElement.querySelectorAll('.gg-performance-bar-track')].map(rectFor)
-      const guide = plotElement.querySelector('.gg-performance-vertical-guides')
+      const guide = plotElement.querySelector('.gg-performance-vertical-guides, .gg-performance-grouped-guides')
       const padding = getComputedStyle(plotElement)
       const horizontalLeft = tracks.length ? Math.min(...tracks.map((track) => track.x)) : 0
       const horizontalRight = tracks.length ? Math.max(...tracks.map((track) => track.x + track.width)) : host.width
@@ -94,14 +98,14 @@ export function GoldenglowPerformanceBarLegend({ vertical, parts, condition, not
   return <ul
     ref={legendRef}
     className={`gg-performance-bar-image-legend gg-performance-bar-image-legend-${layout.mode}`}
-    aria-label={parts.length ? 'ダメージ内訳の凡例と条件' : 'グラフの条件'}
+    aria-label={ariaLabel ?? (parts.length ? 'ダメージ内訳の凡例と条件' : 'グラフの条件')}
     data-legend-placement={layout.mode === 'inside' ? layout.placement.corner : layout.mode}
     style={layout.mode === 'inside' ? { left: layout.placement.x, top: layout.placement.y } : undefined}
   >
     {condition && <li className="gg-performance-bar-image-legend-condition">{condition}</li>}
     {parts.map((part) => <li key={part.key}>
       <i style={{ backgroundColor: part.color }} aria-hidden="true" />
-      <span style={{ color: part.color }}>{part.label}</span>
+      <span style={neutralLabels ? undefined : { color: part.color }}>{part.label}</span>
     </li>)}
     {note && <li className="gg-performance-bar-image-legend-note">{note}</li>}
   </ul>
