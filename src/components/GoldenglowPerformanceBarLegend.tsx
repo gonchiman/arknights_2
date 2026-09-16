@@ -13,8 +13,10 @@ const OBSTACLE_SELECTOR = [
   '.gg-performance-bar-parts', '.gg-performance-bar-ticks > span',
   '.gg-performance-vertical-scale > span',
   '.gg-performance-bar-zero', '.gg-performance-vertical-zero',
+  '.gg-performance-bar-reference', '.gg-performance-vertical-reference',
   '.gg-performance-grouped-segment', '.gg-performance-grouped-zero',
   '.gg-performance-grouped-missing', '.gg-performance-grouped-tick',
+  '.gg-performance-grouped-reference',
 ].join(', ')
 
 /** Keeps the export legend out of the caption without covering any drawn values. */
