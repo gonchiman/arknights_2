@@ -95,8 +95,38 @@
 .gg-performance-bar-variant-detail .gg-performance-vertical-total { font-size: 15px; }
 .gg-performance-bar-variant-detail .gg-performance-vertical-track { width: min(35%, 40px); background: var(--surface); }
 .gg-performance-vertical-column .gg-performance-bar-parts { grid-column: 1; grid-row: 4; grid-template-columns: minmax(0, 1fr); gap: 8px; }
-.gg-performance-vertical-column .gg-performance-bar-parts > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; }
-.gg-performance-vertical-column .gg-performance-bar-parts dd { margin-left: auto; text-align: right; }
+/* Keep each value with its label when PNG cloning fixes computed widths and margins. */
+.gg-performance-vertical-column .gg-performance-bar-parts > div { display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: 2px 8px; }
+.gg-performance-vertical-column .gg-performance-bar-parts dt { min-width: 0; overflow-wrap: anywhere; }
+.gg-performance-vertical-column .gg-performance-bar-parts dd { margin: 0; text-align: right; }
+
+.gg-performance-bar-has-reference .gg-performance-bar-track { position: relative; }
+.gg-performance-bar-reference {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: clamp(0px, var(--gg-bar-tick-position), calc(100% - 1.5px));
+  border-left: 1.5px dashed #66717e;
+  pointer-events: none;
+}
+.gg-performance-vertical-reference-layer {
+  position: relative;
+  grid-column: 2 / -1;
+  grid-row: 2;
+  pointer-events: none;
+}
+.gg-performance-vertical-reference {
+  position: absolute;
+  right: 0;
+  left: 0;
+  bottom: clamp(0px, var(--gg-bar-tick-position), calc(100% - 1.5px));
+  border-top: 1.5px dashed #66717e;
+}
+.gg-performance-bar-heading > .gg-performance-bar-reference-caption { display: flex; align-items: center; gap: 6px; color: #596776; }
+.gg-performance-bar-reference-caption > i { width: 24px; border-top: 1.5px dashed #66717e; }
+.gg-performance-bar-value-axis-label { margin-top: 6px; color: var(--text-muted); font-size: 11px; line-height: 1.5; text-align: center; }
+.gg-performance-bar-value-axis-label-vertical { margin: 0 0 14px; text-align: left; }
+.gg-performance-chart-image .gg-performance-bar-value-axis-label { color: #666; font-size: 12px; }
 
 /* The chart's own width also governs detached PNG renders. */
 @container gg-performance-chart (max-width: 640px) {

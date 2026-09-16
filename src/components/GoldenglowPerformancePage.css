@@ -15,7 +15,12 @@
 .gg-performance-table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid var(--border); }
 .gg-performance-table-wrap:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 .gg-performance-graph-controls { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; }
-.gg-performance-graph-types { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1; min-width: 0; max-width: 320px; border: 1px solid var(--border-strong); }
+.gg-performance-graph-types { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; border: 1px solid var(--border-strong); }
+.gg-performance-chart-format { flex: 1 1 220px; max-width: 260px; min-width: 0; }
+.gg-performance-chart-format > span { display: block; margin-bottom: 5px; color: var(--text-soft); font-size: 11px; }
+.gg-performance-chart-metric { width: 180px; max-width: 100%; }
+.gg-performance-graph-controls .gg-performance-baseline { width: 230px; }
+.gg-performance-chart-precision { width: 100px; }
 .gg-performance-graph-options { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
 .gg-performance-graph-options > .calculator-field { max-width: 100%; }
 .gg-performance-graph-types button { min-width: 0; min-height: 36px; padding: 8px; border: 0; border-right: 1px solid var(--border-strong); background: var(--surface); color: var(--text-soft); font: inherit; font-size: 11px; cursor: pointer; }
@@ -66,8 +71,17 @@
 .gg-performance-column-fields { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); gap: 16px; }
 .gg-performance-column-form-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 24px; }
 .gg-performance-remove { margin-right: auto; }
+.gg-ratio-resistance { width: 170px; flex: 0 0 170px; }
+.gg-ratio-details { margin-top: 14px; color: var(--text-soft); font-size: 11px; }
+.gg-ratio-details > summary { width: fit-content; cursor: pointer; line-height: 1.8; }
+.gg-ratio-reading { display: flex; flex-wrap: wrap; align-items: start; gap: 16px; margin-top: 12px; }
+.gg-ratio-reading dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); flex: 1 1 300px; gap: 10px 20px; min-width: 0; margin: 0; }
+.gg-ratio-reading dl > div { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; min-width: 0; }
+.gg-ratio-reading dt { display: flex; align-items: baseline; gap: 6px; overflow-wrap: anywhere; }
+.gg-ratio-reading dt i { display: inline-block; flex: 0 0 10px; width: 10px; height: 8px; }
+.gg-ratio-reading dd { margin: 0; color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 @media (max-width: 640px) {
-  .gg-performance-graph-types { flex-basis: 100%; max-width: none; }
+  .gg-performance-chart-format { flex-basis: 100%; max-width: none; }
   .gg-performance-graph-types button { min-height: 44px; }
   .gg-performance-stacked-option { min-height: 44px; }
   .gg-performance-save-image { min-height: 44px; }
