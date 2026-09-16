@@ -1,0 +1,87 @@
+.gg-performance-grouped-plot {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding: 14px 16px 18px;
+}
+
+.gg-performance-grouped-y-title,
+.gg-performance-grouped-x-title {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.gg-performance-grouped-y-title { margin-bottom: 16px; }
+.gg-performance-grouped-x-title { grid-column: 2; grid-row: 3; text-align: center; }
+
+.gg-performance-grouped-grid {
+  display: grid;
+  flex: 1;
+  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-rows: minmax(220px, 1fr) auto auto;
+  gap: 10px 12px;
+  min-width: 0;
+}
+
+.gg-performance-grouped-scale {
+  position: relative;
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 40px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+.gg-performance-grouped-scale-width { visibility: hidden; white-space: nowrap; }
+.gg-performance-grouped-tick { position: absolute; right: 0; transform: translateY(50%); white-space: nowrap; }
+
+.gg-performance-grouped-guides {
+  position: relative;
+  grid-column: 2;
+  grid-row: 1;
+  pointer-events: none;
+}
+
+.gg-performance-grouped-guides > i { position: absolute; right: 0; left: 0; border-top: 1px solid var(--border); }
+.gg-performance-grouped-guides > .gg-performance-grouped-guide-zero { border-color: var(--border-strong); }
+
+.gg-performance-grouped-clusters,
+.gg-performance-grouped-resistances {
+  display: grid;
+  grid-column: 2;
+  min-width: 0;
+  column-gap: 12px;
+}
+
+.gg-performance-grouped-clusters { grid-row: 1; }
+.gg-performance-grouped-cluster {
+  display: grid;
+  min-width: 0;
+  column-gap: 3px;
+  padding: 0 8%;
+}
+
+.gg-performance-grouped-track { position: relative; min-width: 0; }
+.gg-performance-grouped-segment,
+.gg-performance-grouped-zero {
+  position: absolute;
+  right: 0;
+  left: 0;
+  display: block;
+  max-width: 48px;
+  margin: 0 auto;
+}
+
+.gg-performance-grouped-zero { height: 2px; transform: translateY(50%); }
+.gg-performance-grouped-missing { position: absolute; right: 0; left: 0; color: var(--text-muted); font-size: 10px; line-height: 1; text-align: center; transform: translateY(50%); }
+.gg-performance-grouped-resistances { grid-row: 2; color: var(--text-soft); font-size: 11px; font-variant-numeric: tabular-nums; text-align: center; }
+
+.gg-performance-chart-size.gg-performance-chart-image > .gg-performance-grouped-chart .gg-performance-grouped-plot { padding: 8px 0 0; }
+.gg-performance-chart-image .gg-performance-grouped-guides > i { border-color: #e8ecef; }
+.gg-performance-chart-image .gg-performance-grouped-guides > .gg-performance-grouped-guide-zero { border-color: #9ca8b0; }
+.gg-performance-chart-image :is(.gg-performance-grouped-y-title, .gg-performance-grouped-x-title) { color: #666; font-size: 12px; }
+.gg-performance-chart-image :is(.gg-performance-grouped-scale, .gg-performance-grouped-resistances, .gg-performance-grouped-missing) { color: #666; font-size: 11px; }
