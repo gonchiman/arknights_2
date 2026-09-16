@@ -16,6 +16,8 @@ const DAMAGE_PARTS = [
 export function GoldenglowPerformanceBarChart({
   columns,
   metricLabel,
+  valueAxisLabel,
+  referenceY,
   resistance,
   stacked,
   variant = 'axis',
@@ -29,6 +31,8 @@ export function GoldenglowPerformanceBarChart({
 }: {
   columns: readonly GoldenglowPerformanceChartColumn[]
   metricLabel: string
+  valueAxisLabel?: string
+  referenceY?: { value: number; label: string }
   resistance: number
   stacked: boolean
   variant?: GoldenglowBarVariant
@@ -42,12 +46,15 @@ export function GoldenglowPerformanceBarChart({
 }) {
   const titleId = useId()
   const vertical = orientation === 'vertical'
+  const reference = referenceY && Number.isFinite(referenceY.value) ? referenceY : null
+  const signedAxis = difference || (reference !== null && reference.value < 0)
   const condition = `${conditionLabel ? `${conditionLabel} / ` : ''}敵の術耐性 ${resistance}`
   const note = difference && stacked
     ? `内訳ごとの増減を${vertical ? '上下' : '左右'}に表示。合計は差し引き後の値。`
     : undefined
+  const legendNote = [note, reference ? `破線：${reference.label}` : undefined].filter(Boolean).join(' ') || undefined
   const { headingRef, titleRef, conditionInLegend } = useChartImageHeading(imageOutput, metricLabel, condition)
-  const autoLegend = imageOutput && (stacked || conditionInLegend)
+  const autoLegend = imageOutput && (stacked || conditionInLegend || reference !== null)
   const isDamageValue = (value: number | null | undefined): value is number => (
     typeof value === 'number' && Number.isFinite(value) && (difference || value >= 0)
   )
@@ -67,28 +74,29 @@ export function GoldenglowPerformanceBarChart({
       parts.reduce((sum, value) => sum + Math.max(0, value), 0),
     ]
   })
+  if (reference) extentValues.push(reference.value)
   const minimum = Math.min(0, ...extentValues)
   const maximum = Math.max(0, ...extentValues)
   // Round the axis up without rounding the values used to draw either bar type.
   const magnitude = maximum > 0 ? 10 ** Math.floor(Math.log10(maximum)) : 1
   const scale = maximum > 0 ? Math.max(integerTicks ? 1 : 0, Math.ceil(maximum / magnitude) * magnitude) : 1
   const hasExtent = minimum < 0 || maximum > 0
-  const step = (difference ? (hasExtent ? maximum - minimum : 2) : scale) / 4
+  const step = (signedAxis ? (hasExtent ? maximum - minimum : 2) : scale) / 4
   const stepMagnitude = 10 ** Math.floor(Math.log10(step))
   const tickStep = Math.max(integerTicks ? 1 : 0,
     [1, 2, 5, 10].find((value) => value * stepMagnitude >= step)! * stepMagnitude)
-  const firstTick = difference ? (hasExtent ? Math.floor(minimum / tickStep) : -1 / tickStep) : 0
-  const lastTick = difference ? (hasExtent ? Math.ceil(maximum / tickStep) : 1 / tickStep) : scale / tickStep
+  const firstTick = signedAxis ? (hasExtent ? Math.floor(minimum / tickStep) : -1 / tickStep) : 0
+  const lastTick = signedAxis ? (hasExtent ? Math.ceil(maximum / tickStep) : 1 / tickStep) : scale / tickStep
   const axisMinimum = firstTick * tickStep
   const axisMaximum = lastTick * tickStep
   const axisSpan = axisMaximum - axisMinimum
-  const ticks = difference
+  const ticks = signedAxis
     ? (hasExtent ? Array.from({ length: lastTick - firstTick + 1 }, (_, index) => (firstTick + index) * tickStep) : [0])
     : (maximum > 0
       ? [...Array.from({ length: Math.ceil(scale / tickStep) }, (_, index) => index * tickStep), scale]
       : [0])
   const endTicks = hasExtent ? [...new Set([axisMinimum, 0, axisMaximum])] : [0]
-  const compactTicks = difference ? endTicks : maximum > 0
+  const compactTicks = signedAxis ? endTicks : maximum > 0
     ? [...new Set([0, integerTicks ? Math.round(scale / 2) : scale / 2, scale])]
     : [0]
   const displayValue = (value: number | null | undefined) => isDamageValue(value) ? formatValue(value) : '—'
@@ -112,12 +120,13 @@ export function GoldenglowPerformanceBarChart({
   </div>
 
   return (
-    <figure className={`gg-performance-bar-chart gg-performance-bar-variant-${variant}${vertical ? ' gg-performance-bar-vertical' : ''}${difference ? ' gg-performance-bar-difference' : ''}`} aria-labelledby={titleId} style={{ minHeight }}>
+    <figure className={`gg-performance-bar-chart gg-performance-bar-variant-${variant}${vertical ? ' gg-performance-bar-vertical' : ''}${signedAxis ? ' gg-performance-bar-difference' : ''}${reference ? ' gg-performance-bar-has-reference' : ''}`} aria-labelledby={titleId} style={{ minHeight }}>
       <figcaption className="gg-performance-bar-caption">
         <div className={`gg-performance-bar-heading${imageOutput ? ' gg-performance-bar-heading-inline' : ''}`} ref={headingRef}>
           <strong id={titleId}><span ref={titleRef}>{metricLabel}{imageOutput ? '' : stacked ? 'の内訳' : '比較'}</span></strong>
           {!conditionInLegend && <span className="gg-performance-bar-condition">{condition}</span>}
           {!imageOutput && note && <span>{note}</span>}
+          {!imageOutput && reference && <span className="gg-performance-bar-reference-caption"><i aria-hidden="true" />{reference.label}</span>}
         </div>
         {stacked && !autoLegend && <ul className="gg-performance-bar-legend" aria-label="ダメージ内訳の凡例">
           {DAMAGE_PARTS.map((part) => <li key={part.key}>
@@ -127,6 +136,7 @@ export function GoldenglowPerformanceBarChart({
         </ul>}
       </figcaption>
       <div className={`${vertical ? 'gg-performance-vertical-plot' : 'gg-performance-bar-plot'}${autoLegend ? ' gg-performance-bar-auto-legend-plot' : ''}`}>
+        {vertical && valueAxisLabel && <div className="gg-performance-bar-value-axis-label gg-performance-bar-value-axis-label-vertical">{valueAxisLabel}</div>}
         <div className={vertical ? 'gg-performance-vertical-grid' : 'gg-performance-bar-rows'}
           style={vertical ? {
             gridTemplateColumns: `max-content repeat(${Math.max(1, rows.length)}, minmax(0, 1fr))`,
@@ -137,13 +147,13 @@ export function GoldenglowPerformanceBarChart({
               {ticks.map((tick) => <span key={tick} style={tickStyle(tick)}>{formatValue(tick)}</span>)}
             </div>
             <div className="gg-performance-vertical-guides" aria-hidden="true">
-              {(variant === 'axis' ? ticks : [0]).map((tick) => <i key={tick} style={tickStyle(tick)}
+              {(variant === 'axis' ? ticks : [0]).filter((tick) => tick !== reference?.value).map((tick) => <i key={tick} style={tickStyle(tick)}
                 className={tick === 0 ? 'gg-performance-vertical-guide-zero' : undefined} />)}
             </div>
           </>}
           {!vertical && variant === 'axis' && rows.length > 0 && <div className="gg-performance-bar-guides" aria-hidden="true"
             style={{ gridRow: `1 / span ${rows.length}` }}>
-            {ticks.map((tick) => <i key={tick} style={tickStyle(tick)}
+            {ticks.filter((tick) => tick !== reference?.value).map((tick) => <i key={tick} style={tickStyle(tick)}
               className={difference && tick === 0 ? 'gg-performance-bar-guide-zero' : undefined} />)}
           </div>}
           {rows.map((row, index) => {
@@ -172,15 +182,16 @@ export function GoldenglowPerformanceBarChart({
                       return <span
                         key={part.key}
                         className={vertical ? 'gg-performance-vertical-segment' : 'gg-performance-bar-segment'}
-                        style={difference || vertical ? segmentStyle(start, end, part.color)
+                        style={signedAxis || vertical ? segmentStyle(start, end, part.color)
                           : { width: `${value / scale * 100}%`, backgroundColor: part.color }}
                         title={imageOutput ? `${row.label}・${part.label} ${displayValue(part.value)}` : undefined}
                       />
                     })
                     : <span className={vertical ? 'gg-performance-vertical-segment' : 'gg-performance-bar-segment'}
-                      style={difference || vertical ? segmentStyle(0, total, row.color)
+                      style={signedAxis || vertical ? segmentStyle(0, total, row.color)
                         : { width: `${total / scale * 100}%`, backgroundColor: row.color }} />)}
-                  {difference && <i className={vertical ? 'gg-performance-vertical-zero' : 'gg-performance-bar-zero'} style={tickStyle(0)} aria-hidden="true" />}
+                  {difference && reference?.value !== 0 && <i className={vertical ? 'gg-performance-vertical-zero' : 'gg-performance-bar-zero'} style={tickStyle(0)} aria-hidden="true" />}
+                  {!vertical && reference && <i className="gg-performance-bar-reference" style={tickStyle(reference.value)} aria-hidden="true" />}
                 </div>
                 <strong className={vertical ? 'gg-performance-vertical-total' : 'gg-performance-bar-total'}>{displayValue(total)}</strong>
                 {variant === 'detail' && stacked && <dl className="gg-performance-bar-parts" aria-label={`${row.label}のダメージ内訳`}>
@@ -192,17 +203,21 @@ export function GoldenglowPerformanceBarChart({
               </div>
             )
           })}
+          {vertical && reference && <div className="gg-performance-vertical-reference-layer" aria-hidden="true">
+            <i className="gg-performance-vertical-reference" style={tickStyle(reference.value)} />
+          </div>}
           {!vertical && <div className="gg-performance-bar-scale" aria-hidden="true">
             {variant === 'axis' ? <>{renderTicks(ticks, false)}{renderTicks(compactTicks, true)}</>
               : renderTicks(endTicks, false)}
+            {valueAxisLabel && <div className="gg-performance-bar-value-axis-label">{valueAxisLabel}</div>}
           </div>}
         </div>
         {autoLegend && <GoldenglowPerformanceBarLegend
-          key={JSON.stringify([orientation, variant, minHeight, stacked, conditionInLegend, condition, note, rows.map((row) => [row.label, row.value])])}
+          key={JSON.stringify([orientation, variant, minHeight, stacked, conditionInLegend, condition, legendNote, reference?.value, valueAxisLabel, rows.map((row) => [row.label, row.value])])}
           vertical={vertical}
           parts={stacked ? DAMAGE_PARTS : []}
           condition={conditionInLegend ? condition : undefined}
-          note={note}
+          note={legendNote}
         />}
       </div>
     </figure>

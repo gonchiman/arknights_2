@@ -85,3 +85,30 @@
 .gg-performance-chart-image .gg-performance-grouped-guides > .gg-performance-grouped-guide-zero { border-color: #9ca8b0; }
 .gg-performance-chart-image :is(.gg-performance-grouped-y-title, .gg-performance-grouped-x-title) { color: #666; font-size: 12px; }
 .gg-performance-chart-image :is(.gg-performance-grouped-scale, .gg-performance-grouped-resistances, .gg-performance-grouped-missing) { color: #666; font-size: 11px; }
+
+.gg-performance-grouped-reference-layer {
+  position: relative;
+  grid-column: 2;
+  grid-row: 1;
+  pointer-events: none;
+}
+
+.gg-performance-grouped-reference {
+  position: absolute;
+  right: 0;
+  left: 0;
+  border-top: 1.5px dashed #66717e;
+}
+
+.gg-performance-grouped-reference-caption {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 16px;
+  color: #596776;
+}
+
+.gg-performance-grouped-reference-caption > i {
+  width: 24px;
+  border-top: 1.5px dashed #66717e;
+}

@@ -10,6 +10,8 @@ export function GoldenglowPerformanceGroupedBarChart({
   columns,
   resistances,
   metricLabel,
+  valueAxisLabel,
+  referenceY,
   conditionLabel,
   difference = false,
   integerTicks = false,
@@ -20,6 +22,8 @@ export function GoldenglowPerformanceGroupedBarChart({
   columns: readonly GoldenglowPerformanceChartColumn[]
   resistances: readonly number[]
   metricLabel: string
+  valueAxisLabel?: string
+  referenceY?: { value: number; label: string }
   conditionLabel?: string
   difference?: boolean
   integerTicks?: boolean
@@ -42,6 +46,8 @@ export function GoldenglowPerformanceGroupedBarChart({
     })),
   }))
   const values = groups.flatMap((group) => group.bars.map((bar) => bar.value).filter(isDamageValue))
+  const reference = referenceY && Number.isFinite(referenceY.value) ? referenceY : null
+  if (reference) values.push(reference.value)
   const minimum = Math.min(0, ...values)
   const maximum = Math.max(0, ...values)
   const hasExtent = maximum > minimum
@@ -78,7 +84,12 @@ export function GoldenglowPerformanceGroupedBarChart({
       </ul>}
     </figcaption>
     <div className={`gg-performance-grouped-plot${imageOutput ? ' gg-performance-bar-auto-legend-plot' : ''}`}>
-      <div className="gg-performance-grouped-y-title">{difference ? '総ダメージの差分' : '総ダメージ'}</div>
+      <div className="gg-performance-grouped-y-title">
+        {valueAxisLabel ?? (difference ? '総ダメージの差分' : '総ダメージ')}
+        {reference && !imageOutput && <span className="gg-performance-grouped-reference-caption">
+          <i aria-hidden="true" />{reference.label}
+        </span>}
+      </div>
       <div className="gg-performance-grouped-grid">
         <div className="gg-performance-grouped-scale" aria-hidden="true">
           <span className="gg-performance-grouped-scale-width">{widestTick}</span>
@@ -87,7 +98,7 @@ export function GoldenglowPerformanceGroupedBarChart({
           </span>)}
         </div>
         <div className="gg-performance-grouped-guides" aria-hidden="true">
-          {ticks.map((tick) => <i key={tick} style={tickStyle(tick)}
+          {ticks.filter((tick) => tick !== reference?.value).map((tick) => <i key={tick} style={tickStyle(tick)}
             className={tick === 0 ? 'gg-performance-grouped-guide-zero' : undefined} />)}
         </div>
         <div className="gg-performance-grouped-clusters" style={groupStyle}>
@@ -112,6 +123,9 @@ export function GoldenglowPerformanceGroupedBarChart({
             })}
           </div>)}
         </div>
+        {reference && <div className="gg-performance-grouped-reference-layer" aria-hidden="true">
+          <i className="gg-performance-grouped-reference" style={tickStyle(reference.value)} />
+        </div>}
         <div className="gg-performance-grouped-resistances" style={groupStyle} aria-hidden="true">
           {resistances.map((resistance) => <span key={resistance}>{resistance}</span>)}
         </div>
@@ -120,6 +134,7 @@ export function GoldenglowPerformanceGroupedBarChart({
       {imageOutput && <GoldenglowPerformanceBarLegend vertical neutralLabels
         parts={columns.map((column) => ({ key: column.id, label: column.label, color: column.color }))}
         condition={conditionInLegend ? conditionLabel : undefined}
+        note={reference ? `破線：${reference.label}` : undefined}
         ariaLabel="比較条件の凡例とグラフの条件" />}
     </div>
   </figure>

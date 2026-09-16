@@ -169,3 +169,13 @@
 }
 
 .build-comparison-chart-image-legend text { fill: var(--text, #222); }
+
+.build-comparison-chart-reference { pointer-events: none; }
+.build-comparison-chart-reference-line {
+  stroke: #66717e;
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+  vector-effect: non-scaling-stroke;
+}
+.build-comparison-chart-reference-label-bg { fill: #fff; fill-opacity: 0.94; }
+.build-comparison-chart-reference-label { fill: #596776; font-weight: 600; }
