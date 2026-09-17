@@ -125,7 +125,6 @@ export function GoldenglowPerformanceBarChart({
         <div className={`gg-performance-bar-heading${imageOutput ? ' gg-performance-bar-heading-inline' : ''}`} ref={headingRef}>
           <strong id={titleId}><span ref={titleRef}>{metricLabel}{imageOutput ? '' : stacked ? 'の内訳' : '比較'}</span></strong>
           {!conditionInLegend && <span className="gg-performance-bar-condition">{condition}</span>}
-          {!imageOutput && note && <span>{note}</span>}
           {!imageOutput && reference && <span className="gg-performance-bar-reference-caption"><i aria-hidden="true" />{reference.label}</span>}
         </div>
         {stacked && !autoLegend && <ul className="gg-performance-bar-legend" aria-label="ダメージ内訳の凡例">
