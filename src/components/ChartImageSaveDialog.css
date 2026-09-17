@@ -2,7 +2,9 @@
 .chart-image-save-dialog .gg-detail-header h2 { font-size: 17px; }
 .chart-image-save-form { display: grid; gap: 18px; }
 .chart-image-save-field { display: grid; gap: 8px; min-width: 0; }
+.chart-image-save-field-heading { display: flex; align-items: center; gap: 8px; }
 .chart-image-save-field label,
+.chart-image-save-field-heading,
 .chart-image-save-field > span,
 .chart-image-save-aspect legend { color: var(--text); font-size: 13px; font-weight: 600; }
 .chart-image-save-field input,

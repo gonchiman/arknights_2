@@ -1,5 +1,6 @@
 import { useId, useRef, useState } from 'react'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
+import { HelpPopover } from './HelpPopover'
 import './ChartImageSaveDialog.css'
 
 const imageAspectPresets = ['16:9', '2:1', '21:9', '3:1'] as const
@@ -10,7 +11,7 @@ export interface ChartImageAspectSettings {
   height: string
 }
 
-export function ChartImageSaveDialog({ initialFilename, aspect, onAspectChange, canChooseLocation, saving, error, onClose, onSave }: {
+export function ChartImageSaveDialog({ initialFilename, aspect, onAspectChange, canChooseLocation, saving, error, onClose, onSave, helpMode = 'inline' }: {
   initialFilename: string
   aspect?: ChartImageAspectSettings
   onAspectChange?: (aspect: ChartImageAspectSettings) => void
@@ -19,6 +20,7 @@ export function ChartImageSaveDialog({ initialFilename, aspect, onAspectChange, 
   error: boolean
   onClose: () => void
   onSave: (filename: string, aspectRatio?: number) => void
+  helpMode?: 'inline' | 'popover'
 }) {
   const [filename, setFilename] = useState(initialFilename)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -34,6 +36,12 @@ export function ChartImageSaveDialog({ initialFilename, aspect, onAspectChange, 
   const invalidAspect = aspect?.preset === 'custom'
     && ![aspect.width, aspect.height].every((value) => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100)
   const aspectRatio = !aspect || aspect.preset === 'auto' ? undefined : Number(aspect.width) / Number(aspect.height)
+  const filenameHint = '.png は省略できます。'
+  const aspectHint = 'タイトル・凡例を含む画像全体の比率です。指定なしでは内容に合わせて自動調整します。'
+  const destinationHint = canChooseLocation
+    ? '次の画面で保存先フォルダを選べます。'
+    : 'このブラウザーでは保存先フォルダを選択できません。ブラウザーの設定に従ってダウンロードします。'
+  const popoverHelp = helpMode === 'popover'
 
   return <GoldenglowDetailModal title="画像を保存" closeLabel="画像の保存を閉じる"
     className="chart-image-save-dialog" initialFocusRef={inputRef} closeDisabled={saving} onClose={onClose}>
@@ -48,8 +56,12 @@ export function ChartImageSaveDialog({ initialFilename, aspect, onAspectChange, 
         }
       }}>
       <div className="chart-image-save-field">
-        <label htmlFor={inputId}>ファイル名</label>
-        <input ref={inputRef} id={inputId} type="text" value={filename} disabled={saving}
+        {popoverHelp ? <div className="chart-image-save-field-heading">
+          <HelpPopover label="ファイル名の説明" triggerText="ファイル名">
+            <p>{filenameHint}</p>
+          </HelpPopover>
+        </div> : <label htmlFor={inputId}>ファイル名</label>}
+        <input ref={inputRef} id={inputId} type="text" aria-label="ファイル名" value={filename} disabled={saving}
           autoComplete="off" spellCheck={false} aria-required="true" aria-invalid={!!validationError}
           aria-describedby={`${hintId}${validationError ? ` ${validationId}` : ''}`}
           onChange={(event) => setFilename(event.target.value)}
@@ -61,11 +73,13 @@ export function ChartImageSaveDialog({ initialFilename, aspect, onAspectChange, 
             const value = event.currentTarget.value
             event.currentTarget.setSelectionRange(0, /\.png$/i.test(value) ? value.length - 4 : value.length)
           }} />
-        <p id={hintId} className="chart-image-save-hint">.png は省略できます。</p>
+        <p id={hintId} className={popoverHelp ? 'visually-hidden' : 'chart-image-save-hint'}>{filenameHint}</p>
         {validationError && <p id={validationId} className="chart-image-save-error" role="alert">{validationError}</p>}
       </div>
       {aspect && onAspectChange && <fieldset className="chart-image-save-aspect" disabled={saving} aria-describedby={aspectHintId}>
-        <legend>画像の縦横比（幅:高さ）</legend>
+        <legend>{popoverHelp ? <HelpPopover label="画像の縦横比の説明" triggerText="画像の縦横比（幅:高さ）">
+          <p>{aspectHint}</p>
+        </HelpPopover> : '画像の縦横比（幅:高さ）'}</legend>
         <div className="chart-image-save-aspect-controls">
           <select aria-label="画像の縦横比" value={aspect.preset} onChange={(event) => {
             const preset = event.target.value
@@ -92,13 +106,9 @@ export function ChartImageSaveDialog({ initialFilename, aspect, onAspectChange, 
           </label>)}
         </div>}
         {invalidAspect && <p id={aspectErrorId} className="chart-image-save-error" role="alert">幅と高さを1〜100の整数で入力してください。</p>}
-        <p id={aspectHintId} className="chart-image-save-hint">タイトル・凡例を含む画像全体の比率です。指定なしでは内容に合わせて自動調整します。</p>
+        <p id={aspectHintId} className={popoverHelp ? 'visually-hidden' : 'chart-image-save-hint'}>{aspectHint}</p>
       </fieldset>}
-      <p className="chart-image-save-hint">
-        {canChooseLocation
-          ? '次の画面で保存先フォルダを選べます。'
-          : 'このブラウザーでは保存先フォルダを選択できません。ブラウザーの設定に従ってダウンロードします。'}
-      </p>
+      {!popoverHelp && <p className="chart-image-save-hint">{destinationHint}</p>}
       {error && <p className="chart-image-save-error" role="alert">画像を保存できませんでした。保存先を確認して、もう一度お試しください。</p>}
       <div className="chart-image-save-actions">
         <button type="button" className="button secondary" disabled={saving} onClick={onClose}>キャンセル</button>
