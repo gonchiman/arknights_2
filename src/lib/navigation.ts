@@ -20,7 +20,7 @@ export const GOLDENGLOW_ANALYSIS_ITEMS: readonly NavigationItem[] = [
   {
     id: 'goldenglow-performance',
     href: '#/analysis/goldenglow/performance',
-    label: '性能分析',
+    label: 'スキルダメージ比較',
     description: 'モジュール・潜在比較',
     section: 'operator-analysis',
   },
@@ -101,7 +101,7 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     id: 'goldenglow-home',
     href: '#/analysis/goldenglow',
     label: 'ゴールデングロー',
-    description: '性能・爆発・ターゲット切替',
+    description: 'スキルダメージ・爆発・ターゲット切替',
     section: 'operator-analysis',
   },
   {

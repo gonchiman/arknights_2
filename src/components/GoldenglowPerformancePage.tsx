@@ -274,7 +274,7 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
 
   return (
     <section className="calculator-page gg-reference-page gg-performance-page" aria-labelledby="gg-performance-title">
-      <GoldenglowAnalysisHeader id="gg-performance-title" title="性能分析" />
+      <GoldenglowAnalysisHeader id="gg-performance-title" title="スキルダメージ比較" />
       <GoldenglowOperatorInfo skill={skill} loading={loading} defaultOpen={false} />
 
       <CollapsibleCalculatorPanel

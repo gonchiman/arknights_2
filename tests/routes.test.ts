@@ -52,7 +52,7 @@ test('GGの専用トップはサイドバーの入口を一つにまとめる', 
       id: 'goldenglow-home',
       href: '#/analysis/goldenglow',
       label: 'ゴールデングロー',
-      description: '性能・爆発・ターゲット切替',
+      description: 'スキルダメージ・爆発・ターゲット切替',
       section: 'operator-analysis',
     },
   ])
@@ -64,7 +64,7 @@ test('GGの専用トップから三つの分析を個別のhashで開く', () =>
       id, href, label, description, section, parseHashRoute(href).view,
     ]),
     [
-      ['goldenglow-performance', '#/analysis/goldenglow/performance', '性能分析', 'モジュール・潜在比較', 'operator-analysis', 'goldenglow-performance'],
+      ['goldenglow-performance', '#/analysis/goldenglow/performance', 'スキルダメージ比較', 'モジュール・潜在比較', 'operator-analysis', 'goldenglow-performance'],
       ['goldenglow-guide', '#/analysis/goldenglow/explosion', '爆発分析', '爆発確率・期待値', 'operator-analysis', 'goldenglow-guide'],
       ['goldenglow-target-switch', '#/analysis/goldenglow/target-switch', 'ターゲット切替', '敵HP・切替時間', 'operator-analysis', 'goldenglow-target-switch'],
     ],
