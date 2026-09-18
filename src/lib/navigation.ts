@@ -16,6 +16,8 @@ export const NAVIGATION_SECTIONS: ReadonlyArray<{ id: NavigationSection; label: 
   { id: 'information', label: 'INFORMATION' },
 ]
 
+export const GOLDENGLOW_HOME_LINK = { label: 'ゴールデングロー', href: '#/analysis/goldenglow' } as const
+
 export const GOLDENGLOW_ANALYSIS_ITEMS: readonly NavigationItem[] = [
   {
     id: 'goldenglow-performance',

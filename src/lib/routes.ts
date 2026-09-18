@@ -2,7 +2,7 @@ export type AppRoute =
   | { view: 'skills' }
   | { view: 'skill-effects'; selection?: SkillEffectsRouteSelection }
   | { view: 'operators' }
-  | { view: 'operator-detail'; operatorId: string }
+  | { view: 'operator-detail'; operatorId: string; source?: 'goldenglow-home' }
   | { view: 'skill-json'; selection?: SkillJsonRouteSelection }
   | { view: 'skill-json-overview' }
   | { view: 'code-analysis' }
@@ -32,8 +32,12 @@ export interface SkillRouteSelection {
 export type SkillJsonRouteSelection = SkillRouteSelection
 export type SkillEffectsRouteSelection = SkillRouteSelection
 
-export function createOperatorDetailHash(operatorId: string): string {
-  return `${OPERATOR_DETAIL_ROUTE_PREFIX}${encodeURIComponent(operatorId)}`
+export function createOperatorDetailHash(
+  operatorId: string,
+  options?: { source?: 'goldenglow-home' },
+): string {
+  const sourceQuery = options?.source === 'goldenglow-home' ? '?from=goldenglow' : ''
+  return `${OPERATOR_DETAIL_ROUTE_PREFIX}${encodeURIComponent(operatorId)}${sourceQuery}`
 }
 
 export function createSkillJsonHash(selection: SkillJsonRouteSelection): string {
@@ -68,12 +72,19 @@ export function parseHashRoute(hash: string): AppRoute {
   }
   if (hash === '#/operators') return { view: 'operators' }
   if (hash.startsWith(OPERATOR_DETAIL_ROUTE_PREFIX)) {
-    const encodedOperatorId = hash.slice(OPERATOR_DETAIL_ROUTE_PREFIX.length)
+    const detailPath = hash.slice(OPERATOR_DETAIL_ROUTE_PREFIX.length)
+    const queryIndex = detailPath.indexOf('?')
+    const encodedOperatorId = queryIndex < 0 ? detailPath : detailPath.slice(0, queryIndex)
     if (!encodedOperatorId || encodedOperatorId.includes('/')) return { view: 'operators' }
 
     try {
       const operatorId = decodeURIComponent(encodedOperatorId)
-      return operatorId ? { view: 'operator-detail', operatorId } : { view: 'operators' }
+      if (!operatorId) return { view: 'operators' }
+
+      const sources = new URLSearchParams(queryIndex < 0 ? '' : detailPath.slice(queryIndex + 1)).getAll('from')
+      return sources.length === 1 && sources[0] === 'goldenglow'
+        ? { view: 'operator-detail', operatorId, source: 'goldenglow-home' }
+        : { view: 'operator-detail', operatorId }
     } catch {
       return { view: 'operators' }
     }

@@ -7,7 +7,7 @@ import './GoldenglowHomePage.css'
 const homeItems = [
   {
     id: 'operator-detail',
-    href: createOperatorDetailHash(GOLDENGLOW_OPERATOR_ID),
+    href: createOperatorDetailHash(GOLDENGLOW_OPERATOR_ID, { source: 'goldenglow-home' }),
     label: 'オペレーター情報',
     description: '基本情報・スキル・モジュール',
   },
