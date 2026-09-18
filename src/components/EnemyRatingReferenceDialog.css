@@ -1,0 +1,98 @@
+.enemy-rating-dialog {
+  width: min(480px, calc(100vw - 24px));
+  max-width: none;
+  max-height: calc(100dvh - 24px);
+  margin: auto;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  padding: 0;
+  color: var(--text);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .16);
+}
+
+.enemy-rating-dialog::backdrop { background: rgba(0, 0, 0, .44); }
+
+.enemy-rating-reference {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: calc(100dvh - 26px);
+}
+
+.enemy-rating-reference-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--surface-soft);
+  padding: 10px 16px;
+}
+
+.enemy-rating-reference-header h2 { margin: 0; font-size: 17px; font-weight: 600; }
+.enemy-rating-reference-header button {
+  min-height: 44px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  padding: 6px 12px;
+  color: var(--text-soft);
+  font-size: 11px;
+  cursor: pointer;
+}
+.enemy-rating-reference-header button:hover { background: var(--surface-hover); }
+.enemy-rating-reference-header button:focus-visible,
+.enemy-rating-stat-picker select:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+.enemy-rating-reference-body {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+}
+.enemy-rating-reference-body:focus-visible { outline: 2px solid var(--text); outline-offset: -3px; }
+.enemy-rating-stat-picker { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.enemy-rating-stat-picker label { color: var(--text-muted); font-size: 11px; font-weight: 600; }
+.enemy-rating-stat-picker select {
+  min-width: 0;
+  min-height: 40px;
+  flex: 1;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  padding: 6px 10px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.enemy-rating-reference-table { table-layout: fixed; margin: 0; font-size: 12px; line-height: 1.5; }
+.enemy-rating-reference-table th,
+.enemy-rating-reference-table td {
+  position: static;
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.enemy-rating-reference-table th:first-child { width: 64px; text-align: center; }
+.enemy-rating-reference-table tbody tr { cursor: default; }
+.enemy-rating-reference-table tbody tr:hover { background: transparent; }
+.enemy-rating-reference-table tbody th { background: var(--surface); color: var(--text); font-size: inherit; font-weight: 600; }
+.enemy-rating-reference-notes { margin-top: 12px; color: var(--text-muted); font-size: 11px; line-height: 1.7; }
+.enemy-rating-reference-notes p { margin: 0; }
+.enemy-rating-reference-notes p + p { margin-top: 6px; }
+
+@media (max-width: 400px) {
+  .enemy-rating-reference-header { padding: 8px 12px; }
+  .enemy-rating-reference-body { padding: 12px; }
+  .enemy-rating-reference-table th,
+  .enemy-rating-reference-table td { padding: 6px 8px; }
+  .enemy-rating-reference-table th:first-child { width: 52px; }
+}
+
+@media (pointer: coarse) {
+  .enemy-rating-stat-picker select { min-height: 44px; }
+}

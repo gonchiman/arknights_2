@@ -1,0 +1,11 @@
+.page-heading-with-breadcrumbs { display: grid; min-width: 0; gap: 8px; }
+.page-heading-with-breadcrumbs > .page-intro { margin: 0; }
+.page-breadcrumbs { min-width: 0; padding: 0 4px; font-size: 13px; line-height: 1.6; }
+.page-breadcrumbs ol { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding: 0; list-style: none; }
+.page-breadcrumbs li { display: inline-flex; align-items: center; gap: 12px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.page-breadcrumbs a { display: inline-flex; align-items: center; min-width: 0; min-height: 28px; color: var(--text-muted); text-decoration: none; }
+.page-breadcrumbs a:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.page-breadcrumbs a:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+.page-breadcrumbs [aria-current='page'] { color: var(--text); }
+.page-breadcrumbs-separator { flex: none; color: var(--text-muted); }
+@media (pointer: coarse) { .page-breadcrumbs a { min-height: 44px; } }

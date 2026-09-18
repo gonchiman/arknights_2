@@ -3,6 +3,7 @@ import type { OperatorDetailCommonProps } from './OperatorDetailContent'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { OperatorStatRadar } from './OperatorStatRadar'
 import { OperatorModuleComparison } from './OperatorModuleComparison'
+import { PageBreadcrumbs, type PageBreadcrumbsProps } from './PageBreadcrumbs'
 import { buildSkillEffectDetails } from '../lib/skillEffectDetails'
 import { createSkillEffectsHash } from '../lib/routes'
 import './DamageCalculator.css'
@@ -12,6 +13,7 @@ import './OperatorDetailPage.css'
 export interface OperatorDetailPageProps extends OperatorDetailCommonProps {
   backHref?: string
   backLabel?: string
+  breadcrumbs?: PageBreadcrumbsProps
 }
 
 const INTEGER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
@@ -23,6 +25,7 @@ const formatStat = (value: number | null, suffix = '') => value === null
 export function OperatorDetailPage({
   operator, comparisonOperators, skills,
   backHref = '#/operators', backLabel = 'オペレーター一覧へ戻る',
+  breadcrumbs,
 }: OperatorDetailPageProps) {
   const titleId = useId()
   const [skillSelection, setSkillSelection] = useState<{ operatorId: string; skillId: string } | null>(null)
@@ -50,14 +53,17 @@ export function OperatorDetailPage({
   return (
     <section className="operator-detail-page" aria-labelledby={titleId}>
       <div className="calculator-page operator-profile-layout">
-        <header className="page-intro operator-profile-intro">
-          <div>
-            <span className="page-kicker">OPERATOR DETAIL</span>
-            <h1 id={titleId}>{operator.name}</h1>
-            <p className="operator-profile-subtitle">★{operator.rarity} · {operator.professionLabel} / {operator.subProfessionName}</p>
-          </div>
-          <a className="operator-detail-page-back" href={backHref}>{backLabel}</a>
-        </header>
+        <div className={breadcrumbs ? 'page-heading-with-breadcrumbs' : undefined}>
+          {breadcrumbs && <PageBreadcrumbs {...breadcrumbs} />}
+          <header className="page-intro operator-profile-intro">
+            <div>
+              {!breadcrumbs && <span className="page-kicker">OPERATOR DETAIL</span>}
+              <h1 id={titleId}>{operator.name}</h1>
+              <p className="operator-profile-subtitle">★{operator.rarity} · {operator.professionLabel} / {operator.subProfessionName}</p>
+            </div>
+            {!breadcrumbs && <a className="operator-detail-page-back" href={backHref}>{backLabel}</a>}
+          </header>
+        </div>
 
         <CollapsibleCalculatorPanel
           id="operator-profile-basics" number="01" title="基本情報"

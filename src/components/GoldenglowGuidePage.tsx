@@ -8,6 +8,7 @@ import { buildGoldenglowAttackProbabilityDetail } from '../lib/goldenglowAttackP
 import { buildGoldenglowCombinedAttackTable } from '../lib/goldenglowCombinedAttackTable'
 import type { SkillRecord } from '../types/skill'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
+import { GoldenglowAnalysisHeader } from './GoldenglowAnalysisHeader'
 import { GoldenglowAttackProbabilityModal } from './GoldenglowAttackProbabilityModal'
 import { GoldenglowExplosionDamageModal } from './GoldenglowExplosionDamageModal'
 import { GoldenglowAttackDetailModal } from './GoldenglowAttackDetailModal'
@@ -174,12 +175,7 @@ export function GoldenglowGuidePage({ rows, loading, error, onRetry }: {
 
   return (
     <section className="calculator-page gg-reference-page" aria-labelledby="gg-reference-title">
-      <header className="page-intro">
-        <div>
-          <span className="page-kicker">CALCULATION REFERENCE</span>
-          <h1 id="gg-reference-title">Goldenglow Explosion Analysis</h1>
-        </div>
-      </header>
+      <GoldenglowAnalysisHeader id="gg-reference-title" title="爆発分析" />
       {loading ? <div className="gg-skill-selection"><p role="status">スキル情報を読み込み中…</p></div> : skill ? (
         <>
           <div className="damage-build-navigation gg-skill-navigation gg-normal-navigation"

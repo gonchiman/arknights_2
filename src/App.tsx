@@ -4,6 +4,7 @@ import { DamageCalculator } from './components/DamageCalculator'
 import { DataSourcesPage } from './components/DataSourcesPage'
 import { CodeAnalysisPage } from './components/CodeAnalysisPage'
 import { GoldenglowGuidePage } from './components/GoldenglowGuidePage'
+import { GoldenglowHomePage } from './components/GoldenglowHomePage'
 import { GoldenglowPerformancePage } from './components/GoldenglowPerformancePage'
 import { GoldenglowTargetSwitchPage } from './components/GoldenglowTargetSwitchPage'
 import { EnemyAnalysis } from './components/EnemyAnalysis'
@@ -11,6 +12,7 @@ import { OperatorComparison } from './components/OperatorComparison'
 import { OperatorDatabase } from './components/OperatorDatabase'
 import { OperatorDetailModal } from './components/OperatorDetailModal'
 import { OperatorDetailPage } from './components/OperatorDetailPage'
+import { PageBreadcrumbs, type PageBreadcrumbsProps } from './components/PageBreadcrumbs'
 import type { OpenOperatorDetail } from './components/OperatorDetailLink'
 import { SkillDirectory } from './components/SkillDirectory'
 import { SkillEffectsPage } from './components/SkillEffectsPage'
@@ -22,7 +24,8 @@ import { applyManualClassification } from './lib/classifier'
 import { ARKNIGHTS_GAMEDATA_REPOSITORY } from './lib/dataSources'
 import { buildOperatorDatabaseRecords } from './lib/operatorDatabase'
 import { createOperatorDetailHash, parseHashRoute, type AppRoute } from './lib/routes'
-import { APP_NAV_ITEMS, type NavigationPage } from './lib/navigation'
+import { APP_NAV_ITEMS, GOLDENGLOW_ANALYSIS_ITEMS, GOLDENGLOW_HOME_LINK, type NavigationPage } from './lib/navigation'
+import { GOLDENGLOW_OPERATOR_ID } from './lib/goldenglowExplosion'
 import { PanelStateScope } from './lib/PanelStateScope'
 import {
   ACTIVATION_TRIGGERS,
@@ -81,7 +84,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (route.view === 'enemies' || route.view === 'sources' || route.view === 'code-analysis' || route.view === 'slide-maker' || skillDataRequestStarted.current) return
+    if (route.view === 'enemies' || route.view === 'sources' || route.view === 'code-analysis' || route.view === 'slide-maker' || route.view === 'goldenglow-home' || skillDataRequestStarted.current) return
     skillDataRequestStarted.current = true
     void load()
   }, [route.view])
@@ -218,11 +221,20 @@ export default function App() {
   }
 
   const displayedRoute = detailBackgroundRoute ?? route
+  const isGoldenglowAnalysis = GOLDENGLOW_ANALYSIS_ITEMS.some((item) => item.id === displayedRoute.view)
+  const isGoldenglowOperatorDetail = displayedRoute.view === 'operator-detail'
+    && displayedRoute.operatorId === GOLDENGLOW_OPERATOR_ID
+    && displayedRoute.source === 'goldenglow-home'
+  const operatorBreadcrumbs: PageBreadcrumbsProps | undefined = isGoldenglowOperatorDetail
+    ? { parents: [GOLDENGLOW_HOME_LINK], current: 'オペレーター情報' }
+    : undefined
   const activeNavigationPage: NavigationPage = displayedRoute.view === 'operator-detail'
-    ? 'operators'
+    ? isGoldenglowOperatorDetail ? 'goldenglow-home' : 'operators'
     : displayedRoute.view === 'skill-json-overview'
       ? 'skill-json'
-      : displayedRoute.view
+      : isGoldenglowAnalysis
+        ? 'goldenglow-home'
+        : displayedRoute.view
   const activeNavigationItem = APP_NAV_ITEMS.find((item) => item.id === activeNavigationPage)
   const closeSidebar = () => {
     if (!sidebarOpen) return
@@ -255,7 +267,7 @@ export default function App() {
 
         <main className="app-content">
         <PanelStateScope.Provider value={displayedRoute.view}>
-        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && <section className="error-box" role="alert">{error}</section>}
+        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && <section className="error-box" role="alert">{error}</section>}
 
         {/* Keep the directory mounted while viewing a detail page so filters, sort and charts survive returning. */}
         {operatorDirectoryVisited && (displayedRoute.view === 'operators' || displayedRoute.view === 'operator-detail') && (
@@ -272,6 +284,8 @@ export default function App() {
           <DataSourcesPage />
         ) : displayedRoute.view === 'slide-maker' ? (
           <SlideMakerPage />
+        ) : displayedRoute.view === 'goldenglow-home' ? (
+          <GoldenglowHomePage />
         ) : displayedRoute.view === 'goldenglow-guide' ? (
           <GoldenglowGuidePage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
         ) : displayedRoute.view === 'goldenglow-performance' ? (
@@ -317,7 +331,7 @@ export default function App() {
           <SkillJsonOverviewPage rows={classifiedRows} loading={loading} />
         ) : displayedRoute.view === 'operator-detail' ? (
           loading ? (
-            <OperatorDetailRouteState title="オペレーター詳細を読み込んでいます" />
+            <OperatorDetailRouteState title="オペレーター詳細を読み込んでいます" breadcrumbs={operatorBreadcrumbs} />
           ) : detailOperator ? (
             <OperatorDetailPage
               operator={detailOperator}
@@ -325,11 +339,13 @@ export default function App() {
               skills={detailOperatorSkills}
               overrides={overrides}
               onOverride={updateOverride}
+              breadcrumbs={operatorBreadcrumbs}
             />
           ) : (
             <OperatorDetailRouteState
               title="オペレーターが見つかりません"
               description="URLに対応するオペレーターを確認できませんでした。"
+              breadcrumbs={operatorBreadcrumbs}
             />
           )
         ) : null}
@@ -365,17 +381,22 @@ export default function App() {
 function OperatorDetailRouteState({
   title,
   description,
+  breadcrumbs,
 }: {
   title: string
   description?: string
+  breadcrumbs?: PageBreadcrumbsProps
 }) {
   return (
-    <section className="operator-detail-route-state" role="status">
-      <span className="page-kicker">OPERATOR DETAIL</span>
-      <h1>{title}</h1>
-      {description && <p>{description}</p>}
-      <a className="button secondary" href="#/operators">オペレーターデータベースへ戻る</a>
-    </section>
+    <div className={breadcrumbs ? 'page-heading-with-breadcrumbs' : undefined}>
+      {breadcrumbs && <PageBreadcrumbs {...breadcrumbs} />}
+      <section className="operator-detail-route-state" role="status">
+        {!breadcrumbs && <span className="page-kicker">OPERATOR DETAIL</span>}
+        <h1>{title}</h1>
+        {description && <p>{description}</p>}
+        {!breadcrumbs && <a className="button secondary" href="#/operators">オペレーターデータベースへ戻る</a>}
+      </section>
+    </div>
   )
 }
 

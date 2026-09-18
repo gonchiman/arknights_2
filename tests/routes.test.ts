@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { APP_NAV_ITEMS } from '../src/lib/navigation.ts'
+import { APP_NAV_ITEMS, GOLDENGLOW_ANALYSIS_ITEMS } from '../src/lib/navigation.ts'
 import {
   createOperatorDetailHash,
   createSkillEffectsHash,
@@ -21,9 +21,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['damage', 'damage'],
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
-      ['goldenglow-guide', 'goldenglow-guide'],
-      ['goldenglow-performance', 'goldenglow-performance'],
-      ['goldenglow-target-switch', 'goldenglow-target-switch'],
+      ['goldenglow-home', 'goldenglow-home'],
       ['slide-maker', 'slide-maker'],
       ['sources', 'sources'],
     ],
@@ -47,26 +45,72 @@ test('スライド作成はアプリ内の独立したページとしてメニ�
   assert.deepEqual(parseHashRoute('#/slide-maker/extra'), { view: 'operators' })
 })
 
-test('GGの目標切り替え分析は同一目標の分析と別ページで開く', () => {
-  assert.deepEqual(parseHashRoute('#/analysis/goldenglow-target-switch'), { view: 'goldenglow-target-switch' })
-  assert.deepEqual(parseHashRoute('#/guides/goldenglow-explosion'), { view: 'goldenglow-guide' })
-  assert.deepEqual(parseHashRoute('#/analysis/goldenglow-target-switch/extra'), { view: 'operators' })
+test('GGの専用トップはサイドバーの入口を一つにまとめる', () => {
+  assert.deepEqual(parseHashRoute('#/analysis/goldenglow'), { view: 'goldenglow-home' })
+  assert.deepEqual(APP_NAV_ITEMS.filter((item) => item.section === 'operator-analysis'), [
+    {
+      id: 'goldenglow-home',
+      href: '#/analysis/goldenglow',
+      label: 'ゴールデングロー',
+      description: 'スキルダメージ・爆発・ターゲット切替',
+      section: 'operator-analysis',
+    },
+  ])
 })
 
-test('GGの性能分析は独立したhashとオペレーター分析のメニューから開く', () => {
-  assert.deepEqual(parseHashRoute('#/analysis/goldenglow-performance'), { view: 'goldenglow-performance' })
-  for (const suffix of ['/', '/extra', '?skill=3']) {
-    assert.deepEqual(parseHashRoute(`#/analysis/goldenglow-performance${suffix}`), { view: 'operators' })
-  }
+test('GGの専用トップから三つの分析を個別のhashで開く', () => {
+  assert.deepEqual(
+    GOLDENGLOW_ANALYSIS_ITEMS.map(({ id, href, label, description, section }) => [
+      id, href, label, description, section, parseHashRoute(href).view,
+    ]),
+    [
+      ['goldenglow-performance', '#/analysis/goldenglow/performance', 'スキルダメージ比較', 'モジュール・潜在比較', 'operator-analysis', 'goldenglow-performance'],
+      ['goldenglow-guide', '#/analysis/goldenglow/explosion', '爆発分析', '爆発確率・期待値', 'operator-analysis', 'goldenglow-guide'],
+      ['goldenglow-target-switch', '#/analysis/goldenglow/target-switch', 'ターゲット切替', '敵HP・切替時間', 'operator-analysis', 'goldenglow-target-switch'],
+    ],
+  )
+})
 
-  const explosionIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'goldenglow-guide')
-  assert.deepEqual(APP_NAV_ITEMS[explosionIndex + 1], {
-    id: 'goldenglow-performance',
-    href: '#/analysis/goldenglow-performance',
-    label: 'Goldenglow Performance Analysis',
-    description: 'モジュール・潜在別のスキルダメージ比較',
-    section: 'operator-analysis',
+test('GGの既存の分析URLを引き続き開ける', () => {
+  const routes = [
+    ['#/analysis/goldenglow-performance', 'goldenglow-performance'],
+    ['#/guides/goldenglow-explosion', 'goldenglow-guide'],
+    ['#/analysis/goldenglow-target-switch', 'goldenglow-target-switch'],
+  ] as const
+
+  for (const [hash, view] of routes) {
+    assert.deepEqual(parseHashRoute(hash), { view })
+    for (const suffix of ['/', '/extra', '?skill=3']) {
+      assert.deepEqual(parseHashRoute(`${hash}${suffix}`), { view: 'operators' })
+    }
+  }
+})
+
+test('GGの不正な専用ページURLを分析ページと誤認しない', () => {
+  const hashes = [
+    '#/analysis/goldenglow',
+    ...GOLDENGLOW_ANALYSIS_ITEMS.map((item) => item.href),
+  ]
+  for (const hash of hashes) {
+    for (const suffix of ['/', '/extra', '?skill=3']) {
+      assert.deepEqual(parseHashRoute(`${hash}${suffix}`), { view: 'operators' })
+    }
+  }
+  for (const suffix of ['unknown', '%E0%A4%A', 'performance-extra']) {
+    assert.deepEqual(parseHashRoute(`#/analysis/goldenglow/${suffix}`), { view: 'operators' })
+  }
+})
+
+test('GGの専用ページとオペレーター詳細のURLは区別する', () => {
+  assert.deepEqual(parseHashRoute('#/operators/char_377_gdglow'), {
+    view: 'operator-detail',
+    operatorId: 'char_377_gdglow',
   })
+  assert.deepEqual(parseHashRoute('#/operators/goldenglow'), {
+    view: 'operator-detail',
+    operatorId: 'goldenglow',
+  })
+  assert.deepEqual(parseHashRoute('#/operators/char_377_gdglow/performance'), { view: 'operators' })
 })
 
 test('オペレーターデータベースのhashを解析する', () => {
@@ -86,16 +130,74 @@ test('オペレーター詳細のhashを解析する', () => {
 
 test('オペレーター詳細のhashを生成する', () => {
   assert.equal(createOperatorDetailHash('char_456_ash'), '#/operators/char_456_ash')
+  assert.equal(createOperatorDetailHash('char_456_ash', {}), '#/operators/char_456_ash')
   assert.equal(
     createOperatorDetailHash('アーク/ナイツ'),
     '#/operators/%E3%82%A2%E3%83%BC%E3%82%AF%2F%E3%83%8A%E3%82%A4%E3%83%84',
   )
 })
 
+test('GGトップから開くオペレーター詳細はURLだけで参照元を復元する', () => {
+  const hash = createOperatorDetailHash('char_377_gdglow', { source: 'goldenglow-home' })
+
+  assert.equal(hash, '#/operators/char_377_gdglow?from=goldenglow')
+  assert.deepEqual(parseHashRoute(hash), {
+    view: 'operator-detail',
+    operatorId: 'char_377_gdglow',
+    source: 'goldenglow-home',
+  })
+  assert.deepEqual(parseHashRoute(createOperatorDetailHash('char_377_gdglow')), {
+    view: 'operator-detail',
+    operatorId: 'char_377_gdglow',
+  })
+})
+
+test('オペレーター詳細の未知・不正・重複した参照元は通常の詳細表示として扱う', () => {
+  const queries = [
+    '',
+    'from',
+    'from=',
+    'from=unknown',
+    'from=Goldenglow',
+    'from=goldenglow%20',
+    'from=%E0%A4%A',
+    'from=goldenglow&from=goldenglow',
+    'from=goldenglow&from=unknown',
+    'from=unknown&from=goldenglow',
+    'from=goldenglow&%66rom=goldenglow',
+    'from=https%3A%2F%2Fexample.com%2F',
+    'returnTo=https%3A%2F%2Fexample.com%2F',
+  ]
+
+  for (const query of queries) {
+    assert.deepEqual(parseHashRoute(`#/operators/char_377_gdglow?${query}`), {
+      view: 'operator-detail',
+      operatorId: 'char_377_gdglow',
+    }, query)
+  }
+})
+
+test('オペレーターID内の符号化された区切り文字を参照元のクエリと混同しない', () => {
+  for (const operatorId of ['アーク/ナイツ', 'char?from=goldenglow', 'char/?from=other&from=goldenglow#%']) {
+    assert.deepEqual(parseHashRoute(createOperatorDetailHash(operatorId)), {
+      view: 'operator-detail',
+      operatorId,
+    })
+    assert.deepEqual(parseHashRoute(createOperatorDetailHash(operatorId, { source: 'goldenglow-home' })), {
+      view: 'operator-detail',
+      operatorId,
+      source: 'goldenglow-home',
+    })
+  }
+})
+
 test('不正なオペレーター詳細のhashはデータベースへフォールバックする', () => {
   assert.deepEqual(parseHashRoute('#/operators/'), { view: 'operators' })
   assert.deepEqual(parseHashRoute('#/operators/char_test/extra'), { view: 'operators' })
   assert.deepEqual(parseHashRoute('#/operators/%E0%A4%A'), { view: 'operators' })
+  assert.deepEqual(parseHashRoute('#/operators/?from=goldenglow'), { view: 'operators' })
+  assert.deepEqual(parseHashRoute('#/operators/char_test/extra?from=goldenglow'), { view: 'operators' })
+  assert.deepEqual(parseHashRoute('#/operators/%E0%A4%A?from=goldenglow'), { view: 'operators' })
 })
 
 test('削除済みのスキル分類ページのhashはデータベースへ戻す', () => {

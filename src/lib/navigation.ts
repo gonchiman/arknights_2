@@ -1,4 +1,4 @@
-export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'sources' | 'slide-maker' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch'
+export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -14,6 +14,32 @@ export const NAVIGATION_SECTIONS: ReadonlyArray<{ id: NavigationSection; label: 
   { id: 'analysis', label: 'ANALYSIS TOOLS' },
   { id: 'operator-analysis', label: 'OPERATOR ANALYSIS' },
   { id: 'information', label: 'INFORMATION' },
+]
+
+export const GOLDENGLOW_HOME_LINK = { label: 'ゴールデングロー', href: '#/analysis/goldenglow' } as const
+
+export const GOLDENGLOW_ANALYSIS_ITEMS: readonly NavigationItem[] = [
+  {
+    id: 'goldenglow-performance',
+    href: '#/analysis/goldenglow/performance',
+    label: 'スキルダメージ比較',
+    description: 'モジュール・潜在比較',
+    section: 'operator-analysis',
+  },
+  {
+    id: 'goldenglow-guide',
+    href: '#/analysis/goldenglow/explosion',
+    label: '爆発分析',
+    description: '爆発確率・期待値',
+    section: 'operator-analysis',
+  },
+  {
+    id: 'goldenglow-target-switch',
+    href: '#/analysis/goldenglow/target-switch',
+    label: 'ターゲット切替',
+    description: '敵HP・切替時間',
+    section: 'operator-analysis',
+  },
 ]
 
 export const APP_NAV_ITEMS: readonly NavigationItem[] = [
@@ -74,24 +100,10 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     section: 'analysis',
   },
   {
-    id: 'goldenglow-guide',
-    href: '#/guides/goldenglow-explosion',
-    label: 'Goldenglow Explosion Analysis',
-    description: 'ゴールデングローの爆発期待値・計算過程',
-    section: 'operator-analysis',
-  },
-  {
-    id: 'goldenglow-performance',
-    href: '#/analysis/goldenglow-performance',
-    label: 'Goldenglow Performance Analysis',
-    description: 'モジュール・潜在別のスキルダメージ比較',
-    section: 'operator-analysis',
-  },
-  {
-    id: 'goldenglow-target-switch',
-    href: '#/analysis/goldenglow-target-switch',
-    label: 'Goldenglow Target Switching Analysis',
-    description: '敵HP・撃破・スキル中の総ダメージ',
+    id: 'goldenglow-home',
+    href: '#/analysis/goldenglow',
+    label: 'ゴールデングロー',
+    description: 'スキルダメージ・爆発・ターゲット切替',
     section: 'operator-analysis',
   },
   {

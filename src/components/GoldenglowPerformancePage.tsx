@@ -27,6 +27,7 @@ import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImag
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { GoldenglowOperatorInfo } from './GoldenglowOperatorInfo'
+import { GoldenglowAnalysisHeader } from './GoldenglowAnalysisHeader'
 import { GoldenglowPerformanceBarChart, type GoldenglowBarOrientation, type GoldenglowBarVariant } from './GoldenglowPerformanceBarChart'
 import { GoldenglowPerformanceGroupedBarChart } from './GoldenglowPerformanceGroupedBarChart'
 import { GoldenglowPerformanceChartFrame } from './GoldenglowPerformanceChartFrame'
@@ -273,12 +274,7 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
 
   return (
     <section className="calculator-page gg-reference-page gg-performance-page" aria-labelledby="gg-performance-title">
-      <header className="page-intro">
-        <div>
-          <span className="page-kicker">OPERATOR ANALYSIS</span>
-          <h1 id="gg-performance-title">Goldenglow Performance Analysis</h1>
-        </div>
-      </header>
+      <GoldenglowAnalysisHeader id="gg-performance-title" title="スキルダメージ比較" />
       <GoldenglowOperatorInfo skill={skill} loading={loading} defaultOpen={false} />
 
       <CollapsibleCalculatorPanel

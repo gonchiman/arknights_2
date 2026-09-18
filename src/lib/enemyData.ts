@@ -1,5 +1,8 @@
 import type { EnemyLevelType, EnemyRatings, EnemyRecord, EnemyStats } from '../types/enemy'
 import { DATA_SOURCE_URLS } from './dataSources.ts'
+import { getEnemyStatRating } from './enemyStatRatings.ts'
+
+export { getEnemyStatRating } from './enemyStatRatings.ts'
 
 const APP_BASE = import.meta.env?.BASE_URL ?? '/'
 
@@ -228,63 +231,6 @@ function buildEnemyRatings(stats: EnemyStats): EnemyRatings {
     defense: getEnemyStatRating('defense', stats.defense),
     resistance: getEnemyStatRating('magicResistance', stats.magicResistance),
   }
-}
-
-export function getEnemyStatRating(
-  stat: 'maxHp' | 'attack' | 'defense' | 'magicResistance',
-  value: number | null,
-): string | null {
-  if (value === null || !Number.isFinite(value)) return null
-
-  if (stat === 'maxHp') {
-    if (value > 500000) return 'SS'
-    if (value >= 250000) return 'S+'
-    if (value >= 100000) return 'S'
-    if (value >= 25000) return 'A+'
-    if (value >= 12000) return 'A'
-    if (value >= 8000) return 'B+'
-    if (value >= 5000) return 'B'
-    if (value >= 3500) return 'C'
-    if (value >= 1000) return 'D'
-    return 'E'
-  }
-
-  if (stat === 'attack') {
-    if (value > 5000) return 'SS'
-    if (value >= 3000) return 'S+'
-    if (value >= 2000) return 'S'
-    if (value >= 1500) return 'A+'
-    if (value >= 1000) return 'A'
-    if (value >= 700) return 'B+'
-    if (value >= 500) return 'B'
-    if (value >= 300) return 'C'
-    if (value >= 200) return 'D'
-    return 'E'
-  }
-
-  if (stat === 'defense') {
-    if (value > 5000) return 'SS'
-    if (value >= 3000) return 'S+'
-    if (value >= 2000) return 'S'
-    if (value >= 1200) return 'A+'
-    if (value >= 1000) return 'A'
-    if (value >= 800) return 'B+'
-    if (value >= 500) return 'B'
-    if (value >= 200) return 'C'
-    if (value >= 100) return 'D'
-    return 'E'
-  }
-
-  if (value > 90) return 'SS'
-  if (value >= 80) return 'S+'
-  if (value >= 70) return 'S'
-  if (value >= 60) return 'A+'
-  if (value >= 50) return 'A'
-  if (value >= 30) return 'B+'
-  if (value >= 20) return 'B'
-  if (value >= 10) return 'C'
-  if (value > 0) return 'D'
-  return 'E'
 }
 
 function readStatusImmunities(attributes: UnknownRecord | null): string[] {
