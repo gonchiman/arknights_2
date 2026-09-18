@@ -17,7 +17,14 @@ const homeItems = [
 export function GoldenglowHomePage() {
   return (
     <section className="calculator-page gg-home-page" aria-labelledby="gg-home-title">
-      <h1 className="gg-home-title" id="gg-home-title">ゴールデングロー</h1>
+      <header className="gg-home-header">
+        <h1 className="gg-home-title" id="gg-home-title">ゴールデングロー</h1>
+        <ul className="gg-home-profile" aria-label="基本情報">
+          <li aria-label="レアリティ6">★6</li>
+          <li>術師</li>
+          <li>操機術師</li>
+        </ul>
+      </header>
       <nav aria-label="ゴールデングローの情報・分析">
         <ul className="gg-home-analysis-list">
           {homeItems.map((item) => <li key={item.id}>
