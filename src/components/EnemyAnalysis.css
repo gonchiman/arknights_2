@@ -705,6 +705,19 @@
 }
 .enemy-stat-mode-switch { min-width: 0; display: grid; gap: 5px; }
 .enemy-stat-mode-switch > span { color: var(--text-muted); font-size: 10px; font-weight: 700; }
+.enemy-stat-mode-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.enemy-rating-reference-trigger {
+  min-height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text-soft);
+  padding: 6px 10px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.enemy-rating-reference-trigger:hover { background: var(--surface-hover); }
+.enemy-rating-reference-trigger:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 .enemy-stat-mode-buttons { display: inline-flex; border: 1px solid var(--border-strong); }
 .enemy-stat-mode-buttons button {
   min-height: 32px;

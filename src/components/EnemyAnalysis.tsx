@@ -9,6 +9,7 @@ import { sortEnemyRows, type EnemyTableSort, type EnemyTableSortKey } from '../l
 import { EnemyDetailModal } from './EnemyDetailModal'
 import { EnemyFilterPanel } from './EnemyFilterPanel'
 import { EnemyNumericFilter } from './EnemyNumericFilter'
+import { EnemyRatingReferenceDialog } from './EnemyRatingReferenceDialog'
 import { formatEnemyNumericCondition, matchesEnemyNumericConditions, type EnemyNumericCondition } from '../lib/enemyNumericFilters'
 import { EnemyStatisticsPanel, EnemyStatisticsSettings, useEnemyStatisticsControls } from './EnemyStatisticsPanel'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
@@ -65,9 +66,11 @@ export function EnemyAnalysis() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [detailEnemy, setDetailEnemy] = useState<EnemyRecord | null>(null)
+  const [ratingReferenceOpen, setRatingReferenceOpen] = useState(false)
   const [statDisplayMode, setStatDisplayMode] = useState<EnemyStatDisplayMode>('RATING')
   const [sort, setSort] = useState<EnemyTableSort | null>(null)
   const detailTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const ratingReferenceTriggerRef = useRef<HTMLButtonElement>(null)
   const tableScrollRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -150,6 +153,13 @@ export function EnemyAnalysis() {
     })
   }
 
+  const closeRatingReference = () => {
+    setRatingReferenceOpen(false)
+    window.requestAnimationFrame(() => {
+      if (ratingReferenceTriggerRef.current?.isConnected) ratingReferenceTriggerRef.current.focus()
+    })
+  }
+
   return (
     <section className="calculator-page enemy-analysis-route">
       <header className="page-intro">
@@ -208,19 +218,28 @@ export function EnemyAnalysis() {
               <div className="enemy-table-toolbar">
                 <div className="enemy-stat-mode-switch" role="group" aria-label="一覧のステータス表記">
                   <span>ステータス表記</span>
-                  <div className="enemy-stat-mode-buttons">
+                  <div className="enemy-stat-mode-actions">
+                    <div className="enemy-stat-mode-buttons">
+                      <button
+                        type="button"
+                        className={statDisplayMode === 'RATING' ? 'active' : ''}
+                        aria-pressed={statDisplayMode === 'RATING'}
+                        onClick={() => setStatDisplayMode('RATING')}
+                      >ゲーム内評価</button>
+                      <button
+                        type="button"
+                        className={statDisplayMode === 'VALUE' ? 'active' : ''}
+                        aria-pressed={statDisplayMode === 'VALUE'}
+                        onClick={() => setStatDisplayMode('VALUE')}
+                      >実数値</button>
+                    </div>
                     <button
+                      ref={ratingReferenceTriggerRef}
                       type="button"
-                      className={statDisplayMode === 'RATING' ? 'active' : ''}
-                      aria-pressed={statDisplayMode === 'RATING'}
-                      onClick={() => setStatDisplayMode('RATING')}
-                    >ゲーム内評価</button>
-                    <button
-                      type="button"
-                      className={statDisplayMode === 'VALUE' ? 'active' : ''}
-                      aria-pressed={statDisplayMode === 'VALUE'}
-                      onClick={() => setStatDisplayMode('VALUE')}
-                    >実数値</button>
+                      className="enemy-rating-reference-trigger"
+                      aria-haspopup="dialog"
+                      onClick={() => setRatingReferenceOpen(true)}
+                    >評価基準</button>
                   </div>
                 </div>
                 <div className="enemy-sort-controls">
@@ -233,9 +252,6 @@ export function EnemyAnalysis() {
                 </div>
                 <div className="enemy-result-summary" role="status" aria-live="polite">
                   <span>{tableRows.length} / {filteredRows.length}体</span>
-                  {statDisplayMode === 'RATING' && (
-                    <span>評価は実数値から換算し、並べ替えも実数値を基準にします</span>
-                  )}
                 </div>
               </div>
 
@@ -289,6 +305,7 @@ export function EnemyAnalysis() {
         </p>
       </PersistentDetails>
       {detailEnemy && <EnemyDetailModal enemy={detailEnemy} onClose={closeEnemyDetail} />}
+      {ratingReferenceOpen && <EnemyRatingReferenceDialog onClose={closeRatingReference} />}
     </section>
   )
 }

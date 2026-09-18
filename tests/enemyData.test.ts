@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { buildEnemyRecords, cleanGameText, getEnemyStatRating, matchesEnemyFilters } from '../src/lib/enemyData.ts'
 import type { EnemyRecord } from '../src/types/enemy.ts'
+import { ENEMY_RATING_STATS, getEnemyRatingRanges, type EnemyRatingStat } from '../src/lib/enemyStatRatings.ts'
 import {
   formatEnemyNumericCondition,
   matchesEnemyNumericConditions,
@@ -152,6 +153,73 @@ test('敵の実数ステータスをゲーム内と同じ段階評価へ変換�
   assert.equal(getEnemyStatRating('magicResistance', 30), 'B+')
   assert.equal(getEnemyStatRating('magicResistance', 91), 'SS')
   assert.equal(getEnemyStatRating('maxHp', null), null)
+})
+
+test('4ステータスの全評価境界で小数を丸めず、S+の上端と術耐性0を含めて判定する', () => {
+  const ratings = ['E', 'D', 'C', 'B', 'B+', 'A', 'A+', 'S', 'S+', 'SS']
+  const boundaries: Record<EnemyRatingStat, readonly number[]> = {
+    maxHp: [1000, 3500, 5000, 8000, 12000, 25000, 100000, 250000, 500000],
+    attack: [200, 300, 500, 700, 1000, 1500, 2000, 3000, 5000],
+    defense: [100, 200, 500, 800, 1000, 1200, 2000, 3000, 5000],
+    magicResistance: [0, 10, 20, 30, 50, 60, 70, 80, 90],
+  }
+  for (const stat of Object.keys(boundaries) as EnemyRatingStat[]) {
+    for (const [index, boundary] of boundaries[stat].entries()) {
+      const upperInclusive = index === 8 || (stat === 'magicResistance' && index === 0)
+      assert.equal(getEnemyStatRating(stat, boundary - 0.25), ratings[index], `${stat}: ${boundary}直前`)
+      assert.equal(getEnemyStatRating(stat, boundary), ratings[upperInclusive ? index : index + 1], `${stat}: ${boundary}`)
+      assert.equal(getEnemyStatRating(stat, boundary + 0.25), ratings[index + 1], `${stat}: ${boundary}直後`)
+    }
+    assert.equal(getEnemyStatRating(stat, -Number.MAX_VALUE), 'E')
+    assert.equal(getEnemyStatRating(stat, Number.MAX_VALUE), 'SS')
+  }
+})
+
+test('評価は欠損・非有限値を未取得として扱い、有限の0や負数と区別する', () => {
+  for (const stat of ['maxHp', 'attack', 'defense', 'magicResistance'] as const) {
+    for (const value of [null, NaN, Infinity, -Infinity]) {
+      assert.equal(getEnemyStatRating(stat, value), null, `${stat}: ${value}`)
+    }
+    assert.equal(getEnemyStatRating(stat, 0), 'E')
+    assert.equal(getEnemyStatRating(stat, -0.25), 'E')
+  }
+  assert.equal(getEnemyStatRating('magicResistance', Number.MIN_VALUE), 'D')
+})
+
+test('評価基準表は全4項目のEからSSまで実数値に正しい開区間・閉区間で表示する', () => {
+  assert.deepEqual(ENEMY_RATING_STATS, [
+    { key: 'maxHp', label: 'HP（耐久）' },
+    { key: 'attack', label: '攻撃力' },
+    { key: 'defense', label: '防御力' },
+    { key: 'magicResistance', label: '術耐性' },
+  ])
+  const expectedLabels: Record<EnemyRatingStat, readonly string[]> = {
+    maxHp: [
+      '1,000 未満', '1,000 以上 3,500 未満', '3,500 以上 5,000 未満', '5,000 以上 8,000 未満',
+      '8,000 以上 12,000 未満', '12,000 以上 25,000 未満', '25,000 以上 100,000 未満',
+      '100,000 以上 250,000 未満', '250,000 以上 500,000 以下', '500,000 超',
+    ],
+    attack: [
+      '200 未満', '200 以上 300 未満', '300 以上 500 未満', '500 以上 700 未満',
+      '700 以上 1,000 未満', '1,000 以上 1,500 未満', '1,500 以上 2,000 未満',
+      '2,000 以上 3,000 未満', '3,000 以上 5,000 以下', '5,000 超',
+    ],
+    defense: [
+      '100 未満', '100 以上 200 未満', '200 以上 500 未満', '500 以上 800 未満',
+      '800 以上 1,000 未満', '1,000 以上 1,200 未満', '1,200 以上 2,000 未満',
+      '2,000 以上 3,000 未満', '3,000 以上 5,000 以下', '5,000 超',
+    ],
+    magicResistance: [
+      '0 以下', '0 超 10 未満', '10 以上 20 未満', '20 以上 30 未満',
+      '30 以上 50 未満', '50 以上 60 未満', '60 以上 70 未満',
+      '70 以上 80 未満', '80 以上 90 以下', '90 超',
+    ],
+  }
+  for (const stat of Object.keys(expectedLabels) as EnemyRatingStat[]) {
+    const ranges = getEnemyRatingRanges(stat)
+    assert.deepEqual(ranges.map(({ rating }) => rating), ['E', 'D', 'C', 'B', 'B+', 'A', 'A+', 'S', 'S+', 'SS'])
+    assert.deepEqual(ranges.map(({ label }) => label), expectedLabels[stat])
+  }
 })
 
 test('数値条件は0・小数・負数を受け入れ、空欄・不正な文字列・非有限値を無効にする', () => {
