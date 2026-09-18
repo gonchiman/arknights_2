@@ -82,7 +82,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (route.view === 'enemies' || route.view === 'sources' || route.view === 'code-analysis' || route.view === 'slide-maker' || skillDataRequestStarted.current) return
+    if (route.view === 'enemies' || route.view === 'sources' || route.view === 'code-analysis' || route.view === 'slide-maker' || route.view === 'goldenglow-home' || skillDataRequestStarted.current) return
     skillDataRequestStarted.current = true
     void load()
   }, [route.view])
@@ -277,7 +277,7 @@ export default function App() {
         ) : displayedRoute.view === 'slide-maker' ? (
           <SlideMakerPage />
         ) : displayedRoute.view === 'goldenglow-home' ? (
-          <GoldenglowHomePage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
+          <GoldenglowHomePage />
         ) : displayedRoute.view === 'goldenglow-guide' ? (
           <GoldenglowGuidePage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
         ) : displayedRoute.view === 'goldenglow-performance' ? (

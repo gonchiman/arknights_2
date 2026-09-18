@@ -1,12 +1,7 @@
-import { useMemo } from 'react'
 import { GOLDENGLOW_OPERATOR_ID } from '../lib/goldenglowExplosion'
-import { deriveGoldenglowGuideSkills } from '../lib/goldenglowGuideSkill'
 import { GOLDENGLOW_ANALYSIS_ITEMS } from '../lib/navigation'
 import { createOperatorDetailHash } from '../lib/routes'
-import type { SkillRecord } from '../types/skill'
-import { GoldenglowOperatorInfo } from './GoldenglowOperatorInfo'
 import './DamageCalculator.css'
-import './GoldenglowGuidePage.css'
 import './GoldenglowHomePage.css'
 
 const homeItems = [
@@ -19,41 +14,16 @@ const homeItems = [
   ...GOLDENGLOW_ANALYSIS_ITEMS,
 ]
 
-export function GoldenglowHomePage({ rows, loading, error, onRetry }: {
-  rows: readonly SkillRecord[]
-  loading: boolean
-  error: string | null
-  onRetry: () => void
-}) {
-  const skill = useMemo(() => {
-    const skills = deriveGoldenglowGuideSkills(rows)
-    return skills.find((candidate) => candidate.skillIndex === 3) ?? skills[0] ?? null
-  }, [rows])
-
+export function GoldenglowHomePage() {
   return (
-    <section className="calculator-page gg-reference-page gg-home-page" aria-labelledby="gg-home-title">
-      <header className="page-intro gg-home-intro">
-        <div>
-          <span className="page-kicker">OPERATOR ANALYSIS</span>
-          <h1 id="gg-home-title">ゴールデングロー</h1>
-          <p className="gg-home-profession">★6 · 術師 / 操機術師</p>
-        </div>
-        <span className="gg-home-mark" aria-hidden="true">GG</span>
-      </header>
-
-      <GoldenglowOperatorInfo skill={skill} loading={loading} defaultOpen={false} />
-      {!loading && !skill && <div className="gg-home-load-error" role="alert">
-        <p>{error ?? 'ゴールデングローの情報を取得できませんでした。'}</p>
-        <button type="button" className="button secondary" onClick={onRetry}>再読み込み</button>
-      </div>}
-
-      <nav className="gg-home-analyses" aria-labelledby="gg-home-analyses-title">
-        <h2 id="gg-home-analyses-title">情報・分析</h2>
+    <section className="calculator-page gg-home-page" aria-labelledby="gg-home-title">
+      <h1 className="gg-home-title" id="gg-home-title">ゴールデングロー</h1>
+      <nav aria-label="ゴールデングローの情報・分析">
         <ul className="gg-home-analysis-list">
           {homeItems.map((item) => <li key={item.id}>
             <a className="gg-home-analysis-link" href={item.href} aria-labelledby={`gg-home-${item.id}`}>
               <AnalysisIcon page={item.id} />
-              <h3 id={`gg-home-${item.id}`}>{item.label}</h3>
+              <h2 id={`gg-home-${item.id}`}>{item.label}</h2>
               <span className="gg-home-analysis-description">{item.description}</span>
               <span className="gg-home-analysis-action" aria-hidden="true">開く <span>→</span></span>
             </a>
