@@ -1,4 +1,6 @@
-.gg-detail-dialog.chart-image-save-dialog { width: min(560px, calc(100vw - 32px)); }
+.gg-detail-dialog.chart-image-save-dialog { width: min(var(--chart-image-save-width, 560px), calc(100vw - 32px)); }
+.chart-image-save-dialog-with-preview { --chart-image-save-width: 760px; }
+.chart-image-save-preview { min-width: 0; max-width: 100%; }
 .chart-image-save-dialog .gg-detail-header h2 { font-size: 17px; }
 .chart-image-save-form { display: grid; gap: 18px; }
 .chart-image-save-field { display: grid; gap: 8px; min-width: 0; }
@@ -39,5 +41,5 @@
 .chart-image-save-aspect > p { margin-top: 8px; }
 
 @media (max-width: 640px) {
-  .gg-detail-dialog.chart-image-save-dialog { width: min(560px, calc(100vw - 16px)); }
+  .gg-detail-dialog.chart-image-save-dialog { width: min(var(--chart-image-save-width, 560px), calc(100vw - 16px)); }
 }

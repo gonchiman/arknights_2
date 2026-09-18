@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   MAX_CUSTOM_LINEAR_BIN_COUNT,
   calculateBoxPlotStatistics,
@@ -15,14 +15,17 @@ import {
 import type { EnemyLevelType, EnemyRecord, EnemyStats } from '../types/enemy'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { PersistentDetails } from './PersistentDetails'
+import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
+import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
+import { getEnemyChartImageFilename, getEnemyChartImageLayout, type EnemyChartKind as ChartKind } from '../lib/enemyChartImage'
+import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './EnemyDistribution.css'
+import './EnemyChartImage.css'
 
 type AnalyzedStatKey = keyof Pick<
   EnemyStats,
   'maxHp' | 'attack' | 'defense' | 'magicResistance' | 'moveSpeed' | 'baseAttackTime' | 'massLevel'
 > | 'stageAppearanceCount'
-
-type ChartKind = 'HISTOGRAM' | 'ECDF' | 'BOX' | 'SCATTER' | 'INDIVIDUAL'
 
 interface StatMetric {
   key: AnalyzedStatKey
@@ -158,6 +161,12 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls }: {
   const binWidthInputId = useId()
   const binWidthHelpId = useId()
   const [selectedChart, setSelectedChart] = useState<ChartKind>('HISTOGRAM')
+  const [imageData, setImageData] = useState<EnemyChartImageData | null>(null)
+  const [imageAspect, setImageAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
+  const [savingImage, setSavingImage] = useState(false)
+  const [imageFeedback, setImageFeedback] = useState<'saved' | 'downloaded' | 'failed' | null>(null)
+  const imageSaveInProgress = useRef(false)
+  const imageSavePicker = getChartImageSavePicker()
   const {
     selectedMetric, axisScale, setAxisScale,
     scatterMetric, selectScatterMetric, scatterScale, setScatterScale,
@@ -198,6 +207,47 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls }: {
     ),
     [metricSource, selectedMetric.logBinCount, selectedMetric.minimumLinearBinWidth, axisScale, customLinearBinWidth],
   )
+  const scatterObservations = useMemo(
+    () => selectedChart === 'SCATTER' ? buildScatterObservations(rows, selectedMetric.key, scatterMetric.key) : [],
+    [rows, selectedChart, selectedMetric.key, scatterMetric.key],
+  )
+  const canSaveImage = (selectedChart === 'SCATTER' ? scatterObservations.length : statistics.count) > 0
+    && !(selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR' && linearBinWidthError)
+  const previewAspect = imageAspect.preset === 'auto' ? undefined : Number(imageAspect.width) / Number(imageAspect.height)
+
+  const openImageSaveDialog = () => {
+    if (!canSaveImage || imageSaveInProgress.current) return
+    setImageFeedback(null)
+    // Keep the preview and saved image on the same data, even if the source updates.
+    setImageData({ kind: selectedChart, metric: selectedMetric, scale: axisScale, statistics, observations,
+      scatterObservations, scatterMetric, scatterScale, scopeLabel })
+  }
+
+  const saveChartImage = async (filename: string, aspectRatio?: number) => {
+    if (!imageData || imageSaveInProgress.current) return
+    imageSaveInProgress.current = true
+    setSavingImage(true)
+    setImageFeedback(null)
+    try {
+      const destination = await selectChartImageDestination(filename, imageSavePicker)
+      if (destination.type === 'cancelled') return
+      const groupCount = new Set(imageData.observations.map(({ enemy }) => enemy.levelType)).size
+      const layout = getEnemyChartImageLayout({ kind: imageData.kind, aspectRatio, groupCount })
+      await saveComparisonChartImage({
+        chart: <EnemyChartImage data={imageData} aspectRatio={aspectRatio} />,
+        width: layout.width,
+        filename,
+        writeBlob: destination.type === 'file' ? destination.write : undefined,
+      })
+      setImageFeedback(destination.type === 'file' ? 'saved' : 'downloaded')
+      setImageData(null)
+    } catch {
+      setImageFeedback('failed')
+    } finally {
+      imageSaveInProgress.current = false
+      setSavingImage(false)
+    }
+  }
 
   return (
     <>
@@ -252,6 +302,9 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls }: {
               />
             </div>
           )}
+          <button type="button" className="button secondary enemy-chart-save-button"
+            aria-haspopup="dialog" disabled={!canSaveImage || savingImage} aria-busy={savingImage}
+            onClick={openImageSaveDialog}>{savingImage ? '画像を保存中…' : '画像を保存'}</button>
         </div>
 
         {statistics.count > 0 && selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR' && (
@@ -349,9 +402,149 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls }: {
             />
           )}
         </div>
+        <p className="visually-hidden" role="status">
+          {imageFeedback === 'saved' ? 'PNG画像を保存しました。'
+            : imageFeedback === 'downloaded' ? 'PNG画像のダウンロードを開始しました。' : ''}
+        </p>
       </CollapsibleCalculatorPanel>
+      {imageData && <ChartImageSaveDialog
+        initialFilename={getEnemyChartImageFilename({ kind: imageData.kind, metricLabel: imageData.metric.label,
+          secondaryMetricLabel: imageData.scatterMetric.label })}
+        aspect={imageAspect}
+        onAspectChange={setImageAspect}
+        canChooseLocation={!!imageSavePicker}
+        saving={savingImage}
+        error={imageFeedback === 'failed'}
+        helpMode="popover"
+        preview={<EnemyChartImagePreview key={`${imageData.kind}-${previewAspect}`} data={imageData} aspectRatio={previewAspect} />}
+        onClose={() => {
+          if (imageSaveInProgress.current) return
+          setImageData(null)
+          setImageFeedback(null)
+        }}
+        onSave={(filename, aspectRatio) => void saveChartImage(filename, aspectRatio)}
+      />}
     </>
   )
+}
+
+interface EnemyChartImageData {
+  kind: ChartKind
+  metric: StatMetric
+  scale: HistogramScale
+  statistics: NumericStatistics
+  observations: MetricObservation[]
+  scatterObservations: ScatterObservation[]
+  scatterMetric: StatMetric
+  scatterScale: HistogramScale
+  scopeLabel: string
+}
+
+function EnemyChartImage({ data, aspectRatio, onLayout }: {
+  data: EnemyChartImageData
+  aspectRatio?: number
+  onLayout?: (size: { width: number; height: number }) => void
+}) {
+  const headingRef = useRef<HTMLElement>(null)
+  const footerRef = useRef<HTMLDivElement>(null)
+  const [chromeHeight, setChromeHeight] = useState(76)
+  const titleId = useId()
+  const descriptionId = useId()
+  const { kind, metric, scale, statistics, observations, scatterObservations, scatterMetric, scatterScale, scopeLabel } = data
+  const boxGroups = useMemo(() => kind === 'BOX' ? buildBoxPlotGroups(observations) : [], [kind, observations])
+  const individualGroups = useMemo(() => kind === 'INDIVIDUAL' ? buildIndividualGroups(observations) : [], [kind, observations])
+  const cdfPoints = useMemo(() => kind === 'ECDF' ? calculateEmpiricalCdf(observations.map(({ value }) => value)) : [], [kind, observations])
+  const presentLevels = LEVEL_ORDER.filter((levelType) => (kind === 'SCATTER' ? scatterObservations : observations)
+    .some(({ enemy }) => enemy.levelType === levelType))
+  const layout = getEnemyChartImageLayout({ kind, aspectRatio, groupCount: presentLevels.length, chromeHeight })
+  const width = layout.width - 32
+  const title = kind === 'SCATTER' ? `${metric.label}と${scatterMetric.label}の散布図`
+    : `${metric.label}の${CHART_OPTIONS.find((option) => option.key === kind)?.label}`
+  const count = kind === 'SCATTER' ? scatterObservations.length : statistics.count
+  const missingCount = statistics.count + statistics.missingCount - count
+  const axisMinimum = kind === 'SCATTER' ? Math.min(...scatterObservations.map(({ x }) => x)) : statistics.minimum
+  const axisLabel = `${metric.axisLabel}（${getEffectiveScaleName(scale, axisMinimum)}目盛）`
+  const conditions = [scopeLabel, `有効データ ${count}体`]
+  if (missingCount > 0) conditions.push(`値なし ${missingCount}体を除外`)
+  if (kind === 'HISTOGRAM') {
+    const binWidth = statistics.histogram?.binWidth
+    conditions.push(scale === 'LINEAR' && binWidth != null
+      ? `階級幅 ${formatNumber(binWidth, metric.summaryDigits, metric.suffix)}`
+      : `${statistics.bins.length}階級`)
+  }
+
+  useLayoutEffect(() => {
+    const heading = headingRef.current
+    const footer = footerRef.current
+    if (!heading || !footer) return
+    const measure = () => {
+      const measured = heading.offsetHeight + footer.offsetHeight + 24
+      // Growing monotonically avoids a width/wrapping feedback loop on long searches.
+      setChromeHeight((current) => Math.max(current, measured))
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(heading)
+    observer.observe(footer)
+    return () => observer.disconnect()
+  }, [])
+
+  useLayoutEffect(() => { onLayout?.({ width: layout.width, height: layout.height }) }, [onLayout, layout.width, layout.height])
+
+  const shared = { metric, statistics, scale, width, height: layout.chartHeight, titleId, descriptionId, image: true }
+  return <figure className="enemy-chart-image" style={{ width: layout.width, height: layout.height }} aria-label={title}>
+    <figcaption ref={headingRef} className="enemy-chart-image-heading">
+      <div className="enemy-chart-image-legends">
+        {kind === 'BOX' && <BoxPlotLegend />}
+        {(kind === 'SCATTER' || kind === 'INDIVIDUAL') && <EnemyLevelLegend levelTypes={presentLevels} />}
+        {kind === 'INDIVIDUAL' && <div className="enemy-chart-legend"><span className="median"><i aria-hidden="true" />中央値</span></div>}
+      </div>
+      <strong>{title}</strong>
+      <p className="enemy-chart-image-conditions">{conditions.join(' · ')}</p>
+    </figcaption>
+    <div className="enemy-chart-image-plot">
+      {kind === 'HISTOGRAM' && <HistogramSvg {...shared} description={`${scopeLabel}の${metric.label}のヒストグラム`} />}
+      {kind === 'ECDF' && <EcdfSvg {...shared} points={cdfPoints} description={`${scopeLabel}の${metric.label}の累積分布`} />}
+      {kind === 'BOX' && <BoxPlotSvg {...shared} groups={boxGroups} />}
+      {kind === 'SCATTER' && <ScatterSvg observations={scatterObservations} xMetric={metric} xScale={scale}
+        yMetric={scatterMetric} yScale={scatterScale} width={width} height={layout.chartHeight}
+        titleId={titleId} descriptionId={descriptionId} image />}
+      {kind === 'INDIVIDUAL' && <IndividualPlotSvg {...shared} groups={individualGroups} />}
+    </div>
+    <div ref={footerRef} className="enemy-chart-image-footer">
+      <p className="enemy-chart-image-axis-title">{axisLabel}</p>
+    </div>
+  </figure>
+}
+
+function EnemyChartImagePreview({ data, aspectRatio }: { data: EnemyChartImageData; aspectRatio?: number }) {
+  const previewRef = useRef<HTMLDivElement>(null)
+  const [availableWidth, setAvailableWidth] = useState(600)
+  const [size, setSize] = useState<{ width: number; height: number }>(() => getEnemyChartImageLayout({ kind: data.kind, aspectRatio,
+    groupCount: new Set(data.observations.map(({ enemy }) => enemy.levelType)).size }))
+  useLayoutEffect(() => {
+    const element = previewRef.current
+    if (!element) return
+    const measure = () => setAvailableWidth(Math.max(1, element.clientWidth))
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+  const scale = Math.min(availableWidth / size.width, 380 / size.height, 1)
+  const pixelRatio = Math.min(2, 16_000 / size.width, 16_000 / size.height, Math.sqrt(32_000_000 / size.width / size.height))
+  return <div className="enemy-chart-image-preview">
+    <div className="enemy-chart-image-preview-heading"><span>プレビュー</span><span>PNG</span></div>
+    <div ref={previewRef} className="enemy-chart-image-preview-frame" style={{ height: Math.ceil(size.height * scale) }}>
+      <div className="enemy-chart-image-preview-position" style={{ width: size.width, height: size.height,
+        left: (availableWidth - size.width * scale) / 2, transform: `scale(${scale})` }}>
+        <EnemyChartImage data={data} aspectRatio={aspectRatio} onLayout={setSize} />
+      </div>
+    </div>
+    <span className="enemy-chart-image-preview-size" aria-live="polite">
+      {formatNumber(Math.floor(size.width * pixelRatio), 0)} × {formatNumber(Math.floor(size.height * pixelRatio), 0)} px
+    </span>
+  </div>
 }
 
 function StatisticsSummary({ statistics, metric }: { statistics: NumericStatisticsWithDispersion; metric: StatMetric }) {
@@ -567,6 +760,8 @@ function HistogramSvg({
   descriptionId,
   description,
   scale,
+  height = CHART_HEIGHT,
+  image = false,
 }: {
   statistics: NumericStatistics
   metric: StatMetric
@@ -575,6 +770,8 @@ function HistogramSvg({
   descriptionId: string
   description: string
   scale: HistogramScale
+  height?: number
+  image?: boolean
 }) {
   const histogram = statistics.histogram
   const isAdaptiveLinear = scale === 'LINEAR'
@@ -587,11 +784,9 @@ function HistogramSvg({
     ? histogram.normalRangeEnd + overflowDisplayWidth
     : statistics.maximum ?? minimum
   const plotLeft = CHART_MARGIN.left
-  const plotTop = CHART_MARGIN.top
   const plotRight = width - CHART_MARGIN.right
-  const plotBottom = CHART_HEIGHT - CHART_MARGIN.bottom
+  const plotBottom = height - (image ? 18 : CHART_MARGIN.bottom)
   const plotWidth = Math.max(1, plotRight - plotLeft)
-  const plotHeight = plotBottom - plotTop
   const maxBinCount = Math.max(1, ...statistics.bins.map((bin) => bin.count))
   const countStep = Math.max(1, Math.ceil(maxBinCount / 4))
   const countMaximum = Math.ceil(maxBinCount / countStep) * countStep
@@ -607,6 +802,9 @@ function HistogramSvg({
     }
     return valueScale.position(Math.min(histogram.normalRangeEnd, Math.max(histogram.normalRangeStart, value)))
   }
+  const referenceLabels = useImageReferenceLabels(statistics, metric, referencePosition, plotLeft, plotRight, image)
+  const plotTop = image ? referenceLabels.top : CHART_MARGIN.top
+  const plotHeight = plotBottom - plotTop
   const overflowTick = isAdaptiveLinear && histogram.hasOverflow
     ? {
       value: histogram.normalRangeEnd + ((histogram.binWidth ?? 0) / 2),
@@ -617,7 +815,7 @@ function HistogramSvg({
   const barGap = Math.min(3, Math.max(1, plotWidth / Math.max(1, statistics.bins.length) * 0.08))
 
   return (
-    <svg className="enemy-stat-chart" viewBox={`0 0 ${width} ${CHART_HEIGHT}`} width="100%" height={CHART_HEIGHT} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
+    <svg className="enemy-stat-chart" viewBox={`0 0 ${width} ${height}`} width="100%" height={height} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
       <title id={titleId}>{metric.label}のヒストグラム</title>
       <desc id={descriptionId}>{description}</desc>
 
@@ -643,7 +841,7 @@ function HistogramSvg({
         )
       })}
 
-      <MeanMedianReferences statistics={statistics} metric={metric} position={referencePosition} plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop} plotBottom={plotBottom} />
+      <MeanMedianReferences statistics={statistics} metric={metric} position={referencePosition} plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop} plotBottom={plotBottom} imageLabels={image ? referenceLabels : undefined} />
       <BottomAxis
         ticks={xTicks}
         position={valueScale.position}
@@ -653,6 +851,8 @@ function HistogramSvg({
         plotBottom={plotBottom}
         axisLabel={`${metric.axisLabel}（${valueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛）`}
         extraTick={overflowTick}
+        chartHeight={height}
+        showTitle={!image}
       />
       <VerticalAxisTitle label="敵数" x={14} plotTop={plotTop} plotBottom={plotBottom} />
     </svg>
@@ -707,7 +907,7 @@ function EcdfFigure({
   )
 }
 
-function EcdfSvg({ statistics, points, metric, width, scale, titleId, descriptionId, description }: {
+function EcdfSvg({ statistics, points, metric, width, scale, titleId, descriptionId, description, height = CHART_HEIGHT, image = false }: {
   statistics: NumericStatistics
   points: EmpiricalCdfPoint[]
   metric: StatMetric
@@ -716,23 +916,26 @@ function EcdfSvg({ statistics, points, metric, width, scale, titleId, descriptio
   titleId: string
   descriptionId: string
   description: string
+  height?: number
+  image?: boolean
 }) {
   const minimum = statistics.minimum ?? 0
   const maximum = statistics.maximum ?? minimum
   const plotLeft = CHART_MARGIN.left
-  const plotTop = CHART_MARGIN.top
   const plotRight = width - CHART_MARGIN.right
-  const plotBottom = CHART_HEIGHT - CHART_MARGIN.bottom
+  const plotBottom = height - (image ? 18 : CHART_MARGIN.bottom)
   const plotWidth = Math.max(1, plotRight - plotLeft)
-  const plotHeight = plotBottom - plotTop
   const valueScale = createValueScale(minimum, maximum, plotLeft, plotRight, scale)
+  const referenceLabels = useImageReferenceLabels(statistics, metric, valueScale.position, plotLeft, plotRight, image)
+  const plotTop = image ? referenceLabels.top : CHART_MARGIN.top
+  const plotHeight = plotBottom - plotTop
   const xTicks = createScaleTicks(minimum, maximum, width < 480 ? 3 : 5, scale)
   const yTicks = [0, 0.25, 0.5, 0.75, 1]
   const y = (value: number) => plotBottom - (value * plotHeight)
   const path = createEcdfPath(points, valueScale.position, y)
 
   return (
-    <svg className="enemy-stat-chart" viewBox={`0 0 ${width} ${CHART_HEIGHT}`} width="100%" height={CHART_HEIGHT} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
+    <svg className="enemy-stat-chart" viewBox={`0 0 ${width} ${height}`} width="100%" height={height} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
       <title id={titleId}>{metric.label}の累積分布</title>
       <desc id={descriptionId}>{description}</desc>
       {yTicks.map((tick) => (
@@ -743,13 +946,13 @@ function EcdfSvg({ statistics, points, metric, width, scale, titleId, descriptio
       ))}
       <rect className="enemy-chart-frame" x={plotLeft} y={plotTop} width={plotWidth} height={plotHeight} />
       <path className="enemy-chart-line ecdf" d={path} />
-      {points.map((point) => (
+      {!image && points.map((point) => (
         <circle className="enemy-ecdf-point" cx={valueScale.position(point.value)} cy={y(point.proportion)} r={2.5} key={point.value}>
           <title>{formatNumber(point.value, metric.valueDigits, metric.suffix)}以下：{point.cumulativeCount}体（{formatNumber(point.proportion * 100, 1)}%）</title>
         </circle>
       ))}
-      <MeanMedianReferences statistics={statistics} metric={metric} position={valueScale.position} plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop} plotBottom={plotBottom} />
-      <BottomAxis ticks={xTicks} position={valueScale.position} metric={metric} plotLeft={plotLeft} plotRight={plotRight} plotBottom={plotBottom} axisLabel={`${metric.axisLabel}（${valueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛）`} />
+      <MeanMedianReferences statistics={statistics} metric={metric} position={valueScale.position} plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop} plotBottom={plotBottom} imageLabels={image ? referenceLabels : undefined} />
+      <BottomAxis ticks={xTicks} position={valueScale.position} metric={metric} plotLeft={plotLeft} plotRight={plotRight} plotBottom={plotBottom} axisLabel={`${metric.axisLabel}（${valueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛）`} chartHeight={height} showTitle={!image} />
       <VerticalAxisTitle label="累積割合" x={14} plotTop={plotTop} plotBottom={plotBottom} />
     </svg>
   )
@@ -776,11 +979,7 @@ function BoxPlotFigure({ statistics, observations, metric, scopeLabel, scale }: 
           <span>{groups.length > 1 ? '区分ごとの中央値・中央50%・外れ値を比較' : `${scopeLabel}の中央値・中央50%・外れ値`} · {scaleName}目盛</span>
         </div>
         {statistics.count > 0 && (
-          <div className="enemy-chart-legend box" aria-label="箱ひげ図の凡例">
-            <span className="box-median"><i aria-hidden="true" />中央値</span>
-            <span className="box-mean"><i aria-hidden="true" />平均</span>
-            <span className="box-outlier"><i aria-hidden="true" />外れ値</span>
-          </div>
+          <BoxPlotLegend />
         )}
       </figcaption>
       <div className="enemy-chart-container" ref={chartContainerRef}>
@@ -794,7 +993,7 @@ function BoxPlotFigure({ statistics, observations, metric, scopeLabel, scale }: 
   )
 }
 
-function BoxPlotSvg({ statistics, groups, metric, width, scale, titleId, descriptionId }: {
+function BoxPlotSvg({ statistics, groups, metric, width, scale, titleId, descriptionId, height: imageHeight, image = false }: {
   statistics: NumericStatistics
   groups: BoxPlotGroup[]
   metric: StatMetric
@@ -802,12 +1001,14 @@ function BoxPlotSvg({ statistics, groups, metric, width, scale, titleId, descrip
   scale: HistogramScale
   titleId: string
   descriptionId: string
+  height?: number
+  image?: boolean
 }) {
-  const height = Math.max(190, 80 + (groups.length * 54))
+  const height = imageHeight ?? Math.max(190, 80 + (groups.length * 54))
   const plotLeft = width < 440 ? 64 : 82
   const plotRight = width - 18
-  const plotTop = 20
-  const plotBottom = height - 48
+  const plotTop = image ? 6 : 20
+  const plotBottom = height - (image ? 18 : 48)
   const minimum = statistics.minimum ?? 0
   const maximum = statistics.maximum ?? minimum
   const valueScale = createValueScale(minimum, maximum, plotLeft, plotRight, scale)
@@ -847,7 +1048,7 @@ function BoxPlotSvg({ statistics, groups, metric, width, scale, titleId, descrip
           </g>
         )
       })}
-      <BottomAxis ticks={ticks} position={valueScale.position} metric={metric} plotLeft={plotLeft} plotRight={plotRight} plotBottom={plotBottom} axisLabel={`${metric.axisLabel}（${valueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛）`} chartHeight={height} />
+      <BottomAxis ticks={ticks} position={valueScale.position} metric={metric} plotLeft={plotLeft} plotRight={plotRight} plotBottom={plotBottom} axisLabel={`${metric.axisLabel}（${valueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛）`} chartHeight={height} showTitle={!image} />
     </svg>
   )
 }
@@ -902,7 +1103,7 @@ function ScatterPlotFigure({ rows, xMetric, xScale, yMetric, yScale, onYMetricCh
   )
 }
 
-function ScatterSvg({ observations, xMetric, xScale, yMetric, yScale, width, titleId, descriptionId }: {
+function ScatterSvg({ observations, xMetric, xScale, yMetric, yScale, width, titleId, descriptionId, height = SCATTER_CHART_HEIGHT, image = false }: {
   observations: ScatterObservation[]
   xMetric: StatMetric
   xScale: HistogramScale
@@ -911,11 +1112,13 @@ function ScatterSvg({ observations, xMetric, xScale, yMetric, yScale, width, tit
   width: number
   titleId: string
   descriptionId: string
+  height?: number
+  image?: boolean
 }) {
   const plotLeft = width < 480 ? 58 : 66
-  const plotTop = 22
+  const plotTop = image ? 6 : 22
   const plotRight = width - 18
-  const plotBottom = SCATTER_CHART_HEIGHT - 58
+  const plotBottom = height - (image ? 18 : 58)
   const xMinimum = Math.min(...observations.map(({ x }) => x))
   const xMaximum = Math.max(...observations.map(({ x }) => x))
   const yMinimum = Math.min(...observations.map(({ y }) => y))
@@ -927,7 +1130,7 @@ function ScatterSvg({ observations, xMetric, xScale, yMetric, yScale, width, tit
   const radius = getPointRadius(observations.length)
 
   return (
-    <svg className="enemy-stat-chart enemy-scatter-chart" viewBox={`0 0 ${width} ${SCATTER_CHART_HEIGHT}`} width="100%" height={SCATTER_CHART_HEIGHT} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
+    <svg className="enemy-stat-chart enemy-scatter-chart" viewBox={`0 0 ${width} ${height}`} width="100%" height={height} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
       <title id={titleId}>{xMetric.label}と{yMetric.label}の散布図</title>
       <desc id={descriptionId}>点は敵1体を表し、横軸が{xMetric.label}、縦軸が{yMetric.label}です。</desc>
       {yTicks.map((tick, index) => (
@@ -945,7 +1148,7 @@ function ScatterSvg({ observations, xMetric, xScale, yMetric, yScale, width, tit
           <title>{observation.enemy.name}：{xMetric.label} {formatNumber(observation.x, xMetric.valueDigits, xMetric.suffix)}、{yMetric.label} {formatNumber(observation.y, yMetric.valueDigits, yMetric.suffix)}</title>
         </circle>
       ))}
-      <BottomAxis ticks={xTicks} position={xValueScale.position} metric={xMetric} plotLeft={plotLeft} plotRight={plotRight} plotBottom={plotBottom} axisLabel={`${xMetric.axisLabel}（${xValueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛）`} chartHeight={SCATTER_CHART_HEIGHT} />
+      <BottomAxis ticks={xTicks} position={xValueScale.position} metric={xMetric} plotLeft={plotLeft} plotRight={plotRight} plotBottom={plotBottom} axisLabel={`${xMetric.axisLabel}（${xValueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛）`} chartHeight={height} showTitle={!image} />
       <VerticalAxisTitle label={`${yMetric.axisLabel}（${yValueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛）`} x={15} plotTop={plotTop} plotBottom={plotBottom} />
     </svg>
   )
@@ -983,7 +1186,7 @@ function IndividualPlotFigure({ statistics, observations, metric, scopeLabel, sc
   )
 }
 
-function IndividualPlotSvg({ statistics, groups, metric, width, scale, titleId, descriptionId }: {
+function IndividualPlotSvg({ statistics, groups, metric, width, scale, titleId, descriptionId, height: imageHeight, image = false }: {
   statistics: NumericStatistics
   groups: IndividualGroup[]
   metric: StatMetric
@@ -991,12 +1194,14 @@ function IndividualPlotSvg({ statistics, groups, metric, width, scale, titleId, 
   scale: HistogramScale
   titleId: string
   descriptionId: string
+  height?: number
+  image?: boolean
 }) {
-  const height = Math.max(190, 78 + (groups.length * 54))
+  const height = imageHeight ?? Math.max(190, 78 + (groups.length * 54))
   const plotLeft = width < 440 ? 64 : 82
   const plotRight = width - 18
-  const plotTop = 20
-  const plotBottom = height - 48
+  const plotTop = image ? 6 : 20
+  const plotBottom = height - (image ? 18 : 48)
   const minimum = statistics.minimum ?? 0
   const maximum = statistics.maximum ?? minimum
   const valueScale = createValueScale(minimum, maximum, plotLeft, plotRight, scale)
@@ -1026,9 +1231,17 @@ function IndividualPlotSvg({ statistics, groups, metric, width, scale, titleId, 
           </g>
         )
       })}
-      <BottomAxis ticks={ticks} position={valueScale.position} metric={metric} plotLeft={plotLeft} plotRight={plotRight} plotBottom={plotBottom} axisLabel={`${metric.axisLabel}（${valueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛）`} chartHeight={height} />
+      <BottomAxis ticks={ticks} position={valueScale.position} metric={metric} plotLeft={plotLeft} plotRight={plotRight} plotBottom={plotBottom} axisLabel={`${metric.axisLabel}（${valueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛）`} chartHeight={height} showTitle={!image} />
     </svg>
   )
+}
+
+function BoxPlotLegend() {
+  return <div className="enemy-chart-legend box" aria-label="箱ひげ図の凡例">
+    <span className="box-median"><i aria-hidden="true" />中央値</span>
+    <span className="box-mean"><i aria-hidden="true" />平均</span>
+    <span className="box-outlier"><i aria-hidden="true" />外れ値</span>
+  </div>
 }
 
 function MeanMedianLegend() {
@@ -1052,7 +1265,40 @@ function EnemyLevelLegend({ levelTypes }: { levelTypes: EnemyLevelType[] }) {
   )
 }
 
-function MeanMedianReferences({ statistics, metric, position, plotLeft, plotRight, plotTop, plotBottom }: {
+function useImageReferenceLabels(statistics: NumericStatistics, metric: StatMetric, position: (value: number) => number,
+  plotLeft: number, plotRight: number, enabled: boolean) {
+  const meanRef = useRef<SVGTextElement>(null)
+  const medianRef = useRef<SVGTextElement>(null)
+  const meanText = `平均 ${formatNumber(statistics.mean ?? 0, metric.summaryDigits, metric.suffix)}`
+  const medianText = `中央値 ${formatNumber(statistics.median ?? 0, metric.summaryDigits, metric.suffix)}`
+  const [widths, setWidths] = useState({ mean: 0, median: 0 })
+  useLayoutEffect(() => {
+    if (!enabled) return
+    let active = true
+    const measure = () => {
+      if (!active || !meanRef.current || !medianRef.current) return
+      const mean = meanRef.current.getComputedTextLength()
+      const median = medianRef.current.getComputedTextLength()
+      setWidths((current) => current.mean === mean && current.median === median ? current : { mean, median })
+    }
+    measure()
+    void document.fonts.ready.then(measure)
+    return () => { active = false }
+  }, [enabled, meanText, medianText])
+
+  const mean = { x: position(statistics.mean ?? statistics.minimum ?? 0), width: widths.mean || meanText.length * 11, y: 10 }
+  const median = { x: position(statistics.median ?? statistics.minimum ?? 0), width: widths.median || medianText.length * 11, y: 10 }
+  const [left, right] = median.x <= mean.x ? [median, mean] : [mean, median]
+  const clampStart = (x: number, width: number) => Math.max(plotLeft, Math.min(plotRight - width, x))
+  left.x = clampStart(left.x - left.width - 4, left.width)
+  right.x = clampStart(right.x + 4, right.width)
+  // Keep each label beside its line; only edge collisions need a second row.
+  const overlap = left.x + left.width + 6 > right.x
+  if (overlap) right.y += 16
+  return { meanRef, medianRef, mean, median, top: overlap ? 32 : 16 }
+}
+
+function MeanMedianReferences({ statistics, metric, position, plotLeft, plotRight, plotTop, plotBottom, imageLabels }: {
   statistics: NumericStatistics
   metric: StatMetric
   position: (value: number) => number
@@ -1060,6 +1306,7 @@ function MeanMedianReferences({ statistics, metric, position, plotLeft, plotRigh
   plotRight: number
   plotTop: number
   plotBottom: number
+  imageLabels?: ReturnType<typeof useImageReferenceLabels>
 }) {
   const meanX = position(statistics.mean ?? statistics.minimum ?? 0)
   const medianX = position(statistics.median ?? statistics.minimum ?? 0)
@@ -1068,8 +1315,8 @@ function MeanMedianReferences({ statistics, metric, position, plotLeft, plotRigh
     <>
       <line className="enemy-chart-reference mean" x1={meanX} x2={meanX} y1={plotTop} y2={plotBottom} />
       <line className="enemy-chart-reference median" x1={medianX} x2={medianX} y1={plotTop} y2={plotBottom} />
-      <text className="enemy-chart-reference-label mean" x={clampLabelX(meanX, plotLeft, plotRight)} y={14}>平均 {formatNumber(statistics.mean ?? 0, metric.summaryDigits, metric.suffix)}</text>
-      <text className="enemy-chart-reference-label median" x={clampLabelX(medianX, plotLeft, plotRight)} y={labelsOverlap ? 29 : 14}>中央値 {formatNumber(statistics.median ?? 0, metric.summaryDigits, metric.suffix)}</text>
+      <text ref={imageLabels?.meanRef} className="enemy-chart-reference-label mean" x={imageLabels?.mean.x ?? clampLabelX(meanX, plotLeft, plotRight)} y={imageLabels?.mean.y ?? 14}>平均 {formatNumber(statistics.mean ?? 0, metric.summaryDigits, metric.suffix)}</text>
+      <text ref={imageLabels?.medianRef} className="enemy-chart-reference-label median" x={imageLabels?.median.x ?? clampLabelX(medianX, plotLeft, plotRight)} y={imageLabels?.median.y ?? (labelsOverlap ? 29 : 14)}>中央値 {formatNumber(statistics.median ?? 0, metric.summaryDigits, metric.suffix)}</text>
     </>
   )
 }
@@ -1084,6 +1331,7 @@ function BottomAxis({
   axisLabel,
   chartHeight = CHART_HEIGHT,
   extraTick,
+  showTitle = true,
 }: {
   ticks: number[]
   position: (value: number) => number
@@ -1094,6 +1342,7 @@ function BottomAxis({
   axisLabel: string
   chartHeight?: number
   extraTick?: { value: number; label: string }
+  showTitle?: boolean
 }) {
   return (
     <>
@@ -1113,7 +1362,7 @@ function BottomAxis({
           </text>
         </g>
       )}
-      <text className="enemy-chart-axis-title" x={(plotLeft + plotRight) / 2} y={chartHeight - 8} textAnchor="middle">{axisLabel}</text>
+      {showTitle && <text className="enemy-chart-axis-title" x={(plotLeft + plotRight) / 2} y={chartHeight - 8} textAnchor="middle">{axisLabel}</text>}
     </>
   )
 }

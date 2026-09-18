@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react'
+import { useId, useRef, useState, type ReactNode } from 'react'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { HelpPopover } from './HelpPopover'
 import './ChartImageSaveDialog.css'
@@ -11,7 +11,7 @@ export interface ChartImageAspectSettings {
   height: string
 }
 
-export function ChartImageSaveDialog({ initialFilename, aspect, onAspectChange, canChooseLocation, saving, error, onClose, onSave, helpMode = 'inline' }: {
+export function ChartImageSaveDialog({ initialFilename, aspect, onAspectChange, canChooseLocation, saving, error, onClose, onSave, helpMode = 'inline', preview }: {
   initialFilename: string
   aspect?: ChartImageAspectSettings
   onAspectChange?: (aspect: ChartImageAspectSettings) => void
@@ -21,6 +21,7 @@ export function ChartImageSaveDialog({ initialFilename, aspect, onAspectChange, 
   onClose: () => void
   onSave: (filename: string, aspectRatio?: number) => void
   helpMode?: 'inline' | 'popover'
+  preview?: ReactNode
 }) {
   const [filename, setFilename] = useState(initialFilename)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -42,9 +43,10 @@ export function ChartImageSaveDialog({ initialFilename, aspect, onAspectChange, 
     ? '次の画面で保存先フォルダを選べます。'
     : 'このブラウザーでは保存先フォルダを選択できません。ブラウザーの設定に従ってダウンロードします。'
   const popoverHelp = helpMode === 'popover'
+  const hasPreview = Boolean(preview)
 
   return <GoldenglowDetailModal title="画像を保存" closeLabel="画像の保存を閉じる"
-    className="chart-image-save-dialog" initialFocusRef={inputRef} closeDisabled={saving} onClose={onClose}>
+    className={`chart-image-save-dialog${hasPreview ? ' chart-image-save-dialog-with-preview' : ''}`} initialFocusRef={inputRef} closeDisabled={saving} onClose={onClose}>
     <form className="chart-image-save-form" aria-busy={saving}
       onSubmit={(event) => {
         event.preventDefault()
@@ -108,6 +110,7 @@ export function ChartImageSaveDialog({ initialFilename, aspect, onAspectChange, 
         {invalidAspect && <p id={aspectErrorId} className="chart-image-save-error" role="alert">幅と高さを1〜100の整数で入力してください。</p>}
         <p id={aspectHintId} className={popoverHelp ? 'visually-hidden' : 'chart-image-save-hint'}>{aspectHint}</p>
       </fieldset>}
+      {hasPreview && <div className="chart-image-save-preview">{preview}</div>}
       {!popoverHelp && <p className="chart-image-save-hint">{destinationHint}</p>}
       {error && <p className="chart-image-save-error" role="alert">画像を保存できませんでした。保存先を確認して、もう一度お試しください。</p>}
       <div className="chart-image-save-actions">
