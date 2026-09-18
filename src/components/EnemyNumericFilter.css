@@ -1,0 +1,52 @@
+.enemy-numeric-filter {
+  min-width: 0;
+  margin: 0 0 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 0 0 12px;
+}
+.enemy-numeric-filter legend { padding: 0; margin-bottom: 8px; font-size: 11px; }
+.enemy-numeric-filter legend span { margin-left: 6px; color: var(--text-muted); font-size: 10px; }
+.enemy-numeric-conditions { display: grid; gap: 8px; }
+.enemy-numeric-condition {
+  display: grid;
+  grid-template-columns: minmax(100px, 1.3fr) minmax(100px, 1fr) minmax(70px, 1fr) auto;
+  gap: 6px;
+  align-items: end;
+}
+.enemy-numeric-condition label { display: grid; gap: 3px; min-width: 0; color: var(--text-muted); font-size: 10px; }
+.enemy-numeric-filter select,
+.enemy-numeric-filter input,
+.enemy-numeric-filter button {
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 11px;
+}
+.enemy-numeric-filter select,
+.enemy-numeric-filter input { width: 100%; }
+.enemy-numeric-filter button { cursor: pointer; }
+.enemy-numeric-filter button:hover:not(:disabled) { background: var(--surface-hover); }
+.enemy-numeric-filter button:disabled { cursor: default; opacity: .55; }
+.enemy-numeric-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.enemy-numeric-filter .enemy-numeric-add { border-style: dashed; }
+.enemy-numeric-error { grid-column: 1 / -1; color: var(--danger); font-size: 11px; }
+.enemy-numeric-condition input[aria-invalid="true"] { border-color: var(--danger); }
+
+@container enemy-reference (max-width: 480px) {
+  .enemy-numeric-condition { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .enemy-numeric-condition label:first-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 760px), (pointer: coarse) {
+  .enemy-numeric-filter input,
+  .enemy-numeric-filter select,
+  .enemy-numeric-filter button { min-height: 44px; }
+  .enemy-numeric-filter input,
+  .enemy-numeric-filter select { font-size: 16px; }
+}

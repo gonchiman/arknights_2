@@ -8,6 +8,8 @@ import type { EnemyLevelType, EnemyRecord } from '../types/enemy'
 import { sortEnemyRows, type EnemyTableSort, type EnemyTableSortKey } from '../lib/enemyTableSort'
 import { EnemyDetailModal } from './EnemyDetailModal'
 import { EnemyFilterPanel } from './EnemyFilterPanel'
+import { EnemyNumericFilter } from './EnemyNumericFilter'
+import { formatEnemyNumericCondition, matchesEnemyNumericConditions, type EnemyNumericCondition } from '../lib/enemyNumericFilters'
 import { EnemyStatisticsPanel, EnemyStatisticsSettings, useEnemyStatisticsControls } from './EnemyStatisticsPanel'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { PersistentDetails } from './PersistentDetails'
@@ -57,6 +59,7 @@ export function EnemyAnalysis() {
   const statisticsControls = useEnemyStatisticsControls()
   const [rows, setRows] = useState<EnemyRecord[]>([])
   const [filters, setFilters] = useState<EnemyFilters>({ ...DEFAULT_FILTERS })
+  const [numericConditions, setNumericConditions] = useState<readonly EnemyNumericCondition[]>([])
   const [page, setPage] = useState(0)
   const [loadVersion, setLoadVersion] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -92,18 +95,23 @@ export function EnemyAnalysis() {
     () => rows.filter((enemy) => matchesEnemyFilters(enemy, filters)),
     [rows, filters],
   )
-  const sortedRows = useMemo(() => sortEnemyRows(filteredRows, sort), [filteredRows, sort])
-  const pageCount = Math.ceil(filteredRows.length / PAGE_SIZE)
+  const tableRows = useMemo(
+    () => filteredRows.filter((enemy) => matchesEnemyNumericConditions(enemy, numericConditions)),
+    [filteredRows, numericConditions],
+  )
+  const sortedRows = useMemo(() => sortEnemyRows(tableRows, sort), [tableRows, sort])
+  const pageCount = Math.ceil(tableRows.length / PAGE_SIZE)
   const currentPage = Math.min(page, Math.max(0, pageCount - 1))
   const visibleRows = sortedRows.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
-  const rangeStart = filteredRows.length === 0 ? 0 : currentPage * PAGE_SIZE + 1
-  const rangeEnd = Math.min((currentPage + 1) * PAGE_SIZE, filteredRows.length)
+  const rangeStart = tableRows.length === 0 ? 0 : currentPage * PAGE_SIZE + 1
+  const rangeEnd = Math.min((currentPage + 1) * PAGE_SIZE, tableRows.length)
   const filtersActive = filters.query !== '' || filters.levelType !== 'ALL'
   const scopeLabel = getEnemyScopeLabel(filters)
+  const tableScopeLabel = [scopeLabel, ...numericConditions.map(formatEnemyNumericCondition)].filter(Boolean).join(' / ')
 
   useEffect(() => {
     if (tableScrollRef.current) tableScrollRef.current.scrollTop = 0
-  }, [currentPage, sort, filters])
+  }, [currentPage, sort, filters, numericConditions])
 
   const updateSort = (key: EnemyTableSortKey) => {
     setSort((current) => ({ key, direction: getNextSortDirection(key, current) }))
@@ -122,6 +130,11 @@ export function EnemyAnalysis() {
 
   const resetFilters = () => {
     setFilters({ ...DEFAULT_FILTERS })
+    setPage(0)
+  }
+
+  const updateNumericConditions = (conditions: readonly EnemyNumericCondition[]) => {
+    setNumericConditions(conditions)
     setPage(0)
   }
 
@@ -166,7 +179,7 @@ export function EnemyAnalysis() {
               >{option.label}</button>
             ))}
           </div>
-          <button type="button" className="button secondary" onClick={resetFilters} disabled={!filtersActive} aria-label="条件をリセット">リセット</button>
+          <button type="button" className="button secondary" onClick={resetFilters} disabled={!filtersActive} aria-label="検索・区分をリセット">リセット</button>
         </EnemyFilterPanel>
 
         {loading ? (
@@ -179,12 +192,6 @@ export function EnemyAnalysis() {
               再読み込み
             </button>
           </div>
-        ) : !loading && filteredRows.length === 0 ? (
-          <div className="enemy-load-state" role="status">
-            <strong>条件に一致する敵がいません</strong>
-            <span>検索文字や絞り込み条件を変更してください。</span>
-            <button type="button" className="button secondary" onClick={resetFilters}>条件をリセット</button>
-          </div>
         ) : (
           <>
             <EnemyStatisticsPanel rows={filteredRows} scopeLabel={scopeLabel} controls={statisticsControls} />
@@ -193,10 +200,11 @@ export function EnemyAnalysis() {
               id="enemy-reference"
               number="03"
               title="対象の敵一覧"
-              summary={`${scopeLabel} · ${filteredRows.length}体 · ${statDisplayMode === 'RATING' ? 'ゲーム内評価' : '実数値'}`}
+              summary={`${tableScopeLabel} · ${tableRows.length} / ${filteredRows.length}体 · ${statDisplayMode === 'RATING' ? 'ゲーム内評価' : '実数値'}`}
               collapsedLabel="一覧を表示"
               className="enemy-table-section"
             >
+              <EnemyNumericFilter conditions={numericConditions} onChange={updateNumericConditions} />
               <div className="enemy-table-toolbar">
                 <div className="enemy-stat-mode-switch" role="group" aria-label="一覧のステータス表記">
                   <span>ステータス表記</span>
@@ -224,7 +232,7 @@ export function EnemyAnalysis() {
                   <button type="button" onClick={resetSort} disabled={!sort}>図鑑順に戻す</button>
                 </div>
                 <div className="enemy-result-summary" role="status" aria-live="polite">
-                  <span>{filteredRows.length}体</span>
+                  <span>{tableRows.length} / {filteredRows.length}体</span>
                   {statDisplayMode === 'RATING' && (
                     <span>評価は実数値から換算し、並べ替えも実数値を基準にします</span>
                   )}
@@ -232,9 +240,14 @@ export function EnemyAnalysis() {
               </div>
 
               <h3 className="enemy-table-title" id="enemy-table-heading">敵の基礎ステータス</h3>
-              <div ref={tableScrollRef} className="table-wrap enemy-table-wrap" tabIndex={0} role="region" aria-label="敵の基礎ステータス一覧・スクロール領域">
+              {tableRows.length === 0 && (
+                <div className="enemy-load-state" role="status">
+                  {filteredRows.length === 0 ? '検索・区分に一致する敵がいません' : '一覧の条件に一致する敵がいません'}
+                </div>
+              )}
+              <div ref={tableScrollRef} className="table-wrap enemy-table-wrap" hidden={tableRows.length === 0} tabIndex={0} role="region" aria-label="敵の基礎ステータス一覧・スクロール領域">
                 <table className="enemy-table" role="table" aria-labelledby="enemy-table-heading">
-                  <caption>統計分析の対象となっている敵の基礎ステータス一覧</caption>
+                  <caption>検索・区分と一覧の数値条件に一致する敵の基礎ステータス一覧</caption>
                   <thead role="rowgroup">
                     <tr role="row">
                       {TABLE_COLUMNS.map(({ key }) => (
@@ -256,7 +269,7 @@ export function EnemyAnalysis() {
               </div>
               {pageCount > 1 && (
                 <nav className="enemy-pagination" aria-label="敵一覧のページ切り替え">
-                  <span>{rangeStart}–{rangeEnd} / {filteredRows.length}</span>
+                  <span>{rangeStart}–{rangeEnd} / {tableRows.length}</span>
                   <div>
                     <button type="button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>前へ</button>
                     <span>{currentPage + 1} / {pageCount}</span>
