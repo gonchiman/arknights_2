@@ -4,6 +4,7 @@ import { loadEnemyRecords } from '../lib/enemyData'
 import { getEnemyCombatInputValues, hasEnemyCombatInputChanges } from '../lib/enemySelection'
 import { deriveGoldenglowGuideSkills } from '../lib/goldenglowGuideSkill'
 import { GOLDENGLOW_OPERATOR_ID } from '../lib/goldenglowExplosion'
+import { GoldenglowAnalysisHeader } from './GoldenglowAnalysisHeader'
 import { getOperatorModules, getOperatorModuleId, getOperatorModuleLevels, isOperatorModuleUnlocked } from '../lib/operatorModules'
 import type { GoldenglowTargetSwitchInput, GoldenglowTargetSwitchResult } from '../lib/goldenglowTargetSwitch'
 import type { GoldenglowTargetSwitchGridSetup } from '../lib/goldenglowTargetSwitchGrid'
@@ -189,9 +190,7 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, foot
 
   return (
     <section className="calculator-page gg-switch-page" aria-labelledby="gg-switch-title">
-      <header className="page-intro">
-        <div><span className="page-kicker">GOLDENGLOW / TARGET SWITCHING</span><h1 id="gg-switch-title">Goldenglow Target Switching Analysis</h1></div>
-      </header>
+      <GoldenglowAnalysisHeader id="gg-switch-title" title="ターゲット切替" />
       {loading ? <p className="calculator-loading" role="status">スキル情報を読み込み中…</p> : !skill ? (
         <div className="error-box" role="alert"><p>{error ?? 'ゴールデングローのスキル情報を取得できませんでした。'}</p><button type="button" className="button secondary" onClick={onRetry}>再読み込み</button></div>
       ) : <>

@@ -1,0 +1,4 @@
+.calculator-page .gg-analysis-intro { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.gg-analysis-home-link { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; color: var(--text-muted); text-decoration: none; font-size: 12px; }
+.gg-analysis-home-link:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+@media (pointer: coarse) { .gg-analysis-home-link { min-height: 44px; } }

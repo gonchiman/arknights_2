@@ -7,6 +7,7 @@ export type AppRoute =
   | { view: 'skill-json-overview' }
   | { view: 'code-analysis' }
   | { view: 'damage' }
+  | { view: 'goldenglow-home' }
   | { view: 'goldenglow-guide' }
   | { view: 'goldenglow-performance' }
   | { view: 'goldenglow-target-switch' }
@@ -88,6 +89,10 @@ export function parseHashRoute(hash: string): AppRoute {
   }
   if (hash === '#/damage') return { view: 'damage' }
   if (hash === '#/analysis/code') return { view: 'code-analysis' }
+  if (hash === '#/analysis/goldenglow') return { view: 'goldenglow-home' }
+  if (hash === '#/analysis/goldenglow/performance') return { view: 'goldenglow-performance' }
+  if (hash === '#/analysis/goldenglow/explosion') return { view: 'goldenglow-guide' }
+  if (hash === '#/analysis/goldenglow/target-switch') return { view: 'goldenglow-target-switch' }
   if (hash === '#/guides/goldenglow-explosion') return { view: 'goldenglow-guide' }
   if (hash === '#/analysis/goldenglow-performance') return { view: 'goldenglow-performance' }
   if (hash === '#/analysis/goldenglow-target-switch') return { view: 'goldenglow-target-switch' }

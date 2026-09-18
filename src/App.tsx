@@ -4,6 +4,7 @@ import { DamageCalculator } from './components/DamageCalculator'
 import { DataSourcesPage } from './components/DataSourcesPage'
 import { CodeAnalysisPage } from './components/CodeAnalysisPage'
 import { GoldenglowGuidePage } from './components/GoldenglowGuidePage'
+import { GoldenglowHomePage } from './components/GoldenglowHomePage'
 import { GoldenglowPerformancePage } from './components/GoldenglowPerformancePage'
 import { GoldenglowTargetSwitchPage } from './components/GoldenglowTargetSwitchPage'
 import { EnemyAnalysis } from './components/EnemyAnalysis'
@@ -22,7 +23,7 @@ import { applyManualClassification } from './lib/classifier'
 import { ARKNIGHTS_GAMEDATA_REPOSITORY } from './lib/dataSources'
 import { buildOperatorDatabaseRecords } from './lib/operatorDatabase'
 import { createOperatorDetailHash, parseHashRoute, type AppRoute } from './lib/routes'
-import { APP_NAV_ITEMS, type NavigationPage } from './lib/navigation'
+import { APP_NAV_ITEMS, GOLDENGLOW_ANALYSIS_ITEMS, type NavigationPage } from './lib/navigation'
 import { PanelStateScope } from './lib/PanelStateScope'
 import {
   ACTIVATION_TRIGGERS,
@@ -218,11 +219,14 @@ export default function App() {
   }
 
   const displayedRoute = detailBackgroundRoute ?? route
+  const isGoldenglowAnalysis = GOLDENGLOW_ANALYSIS_ITEMS.some((item) => item.id === displayedRoute.view)
   const activeNavigationPage: NavigationPage = displayedRoute.view === 'operator-detail'
     ? 'operators'
     : displayedRoute.view === 'skill-json-overview'
       ? 'skill-json'
-      : displayedRoute.view
+      : isGoldenglowAnalysis
+        ? 'goldenglow-home'
+        : displayedRoute.view
   const activeNavigationItem = APP_NAV_ITEMS.find((item) => item.id === activeNavigationPage)
   const closeSidebar = () => {
     if (!sidebarOpen) return
@@ -255,7 +259,7 @@ export default function App() {
 
         <main className="app-content">
         <PanelStateScope.Provider value={displayedRoute.view}>
-        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && <section className="error-box" role="alert">{error}</section>}
+        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && <section className="error-box" role="alert">{error}</section>}
 
         {/* Keep the directory mounted while viewing a detail page so filters, sort and charts survive returning. */}
         {operatorDirectoryVisited && (displayedRoute.view === 'operators' || displayedRoute.view === 'operator-detail') && (
@@ -272,6 +276,8 @@ export default function App() {
           <DataSourcesPage />
         ) : displayedRoute.view === 'slide-maker' ? (
           <SlideMakerPage />
+        ) : displayedRoute.view === 'goldenglow-home' ? (
+          <GoldenglowHomePage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
         ) : displayedRoute.view === 'goldenglow-guide' ? (
           <GoldenglowGuidePage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
         ) : displayedRoute.view === 'goldenglow-performance' ? (
