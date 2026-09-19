@@ -6,6 +6,7 @@ import type {
   GoldenglowTargetSwitchResult,
   GoldenglowTargetSwitchTrial,
 } from '../lib/goldenglowTargetSwitch'
+import type { GoldenglowTargetSwitchHistoryAttack, GoldenglowTargetSwitchHistoryDelay, GoldenglowTargetSwitchHistoryTarget } from '../lib/goldenglowTargetSwitchHistory'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import './GoldenglowGuidePage.css'
 
@@ -15,6 +16,9 @@ export type GoldenglowTargetSwitchDetail =
   | { kind: 'comparison'; mode: 'baseline' | 'raw' | 'effective' }
   | { kind: 'timeline'; index: number }
   | { kind: 'trace'; index: number; seed: number; trial: GoldenglowTargetSwitchTrial }
+  | { kind: 'attack'; entry: GoldenglowTargetSwitchHistoryAttack; seed: number }
+  | { kind: 'delay'; entry: GoldenglowTargetSwitchHistoryDelay; seed: number }
+  | { kind: 'targetHp'; target: GoldenglowTargetSwitchHistoryTarget; seed: number }
   | { kind: 'model' }
 
 type Props = {
@@ -45,7 +49,7 @@ const metricTitles = {
 export function GoldenglowTargetSwitchDetailModal({ detail, input, result, showDecimals, onClose }: Props) {
   const content = getDetailContent(detail, input, result, showDecimals)
   if (!content) return null
-  return <GoldenglowDetailModal title={content.title} closeLabel={`${content.title}を閉じる`} onClose={onClose}>
+  return <GoldenglowDetailModal title={content.title} closeLabel={`${content.title}を閉じる`} onClose={onClose} closeOnContextMenu={detail.kind === 'attack' || detail.kind === 'delay' || detail.kind === 'targetHp'}>
     <div className="ggs-detail-content">{content.body}</div>
   </GoldenglowDetailModal>
 }
@@ -53,7 +57,10 @@ export function GoldenglowTargetSwitchDetailModal({ detail, input, result, showD
 function getDetailContent(detail: GoldenglowTargetSwitchDetail, input: GoldenglowTargetSwitchInput, result: GoldenglowTargetSwitchResult | null, showDecimals: boolean): DetailContent | null {
   if (detail.kind === 'condition') return conditionDetail(detail.condition, input)
   if (detail.kind === 'model') return modelDetail(input)
-  if (detail.kind === 'trace') return traceDetail(detail.index, input, detail.trial, detail.seed, showDecimals)
+  if (detail.kind === 'trace') return input.retargetRemainingDrones ? null : traceDetail(detail.index, input, detail.trial, detail.seed, showDecimals)
+  if (detail.kind === 'attack') return input.retargetRemainingDrones ? attackDetail(detail.entry, input, detail.seed, showDecimals) : null
+  if (detail.kind === 'delay') return input.retargetRemainingDrones ? delayDetail(detail.entry, input, detail.seed) : null
+  if (detail.kind === 'targetHp') return input.retargetRemainingDrones ? targetHpDetail(detail.target, detail.seed, showDecimals) : null
   if (!result) return null
   switch (detail.kind) {
     case 'metric': return metricDetail(detail.metric, input, result, showDecimals)
@@ -141,12 +148,12 @@ function metricDetail(metric: Extract<GoldenglowTargetSwitchDetail, { kind: 'met
     body = <>
       <ValueTable title="爆発回数の集計" rows={[
         ['攻撃する浮遊', `${format(input.model.activeDroneCount, 0)}体`],
-        ['平均攻撃回数（一斉攻撃）', `${formatOutput(mean.volleys)}回`],
+        ['平均攻撃回数（全浮遊の合計）', `${formatOutput(mean.droneAttacks)}回`],
         ['平均爆発回数（全浮遊の合計）', `${formatOutput(mean.explosions)}回`],
         ['平均爆発ダメージ（術耐性適用後）', formatOutput(mean.explosionDamage)],
       ]} />
       <Equation>平均爆発回数 = 全試行・全浮遊の爆発回数の合計 ÷ 試行回数<br />{format(Math.round(mean.explosions * result.trials), 0)} ÷ {format(result.trials, 0)} ≈ {formatOutput(mean.explosions)}回</Equation>
-      <p>各浮遊は攻撃機会ごとに独立して爆発を抽選し、爆発した回の通常攻撃は発生しません。同じ一斉攻撃で浮遊2体が爆発すれば2回と数えます。</p>
+      <p>各浮遊は実際に攻撃するときに爆発を抽選し、爆発した回の通常攻撃は発生しません。浮遊2体が爆発すれば2回と数えます。切り替えの待機中には抽選しません。</p>
     </>
   } else if (metric === 'confidence') {
     const interval = result.dpsConfidence95
@@ -182,7 +189,7 @@ function conditionDetail(condition: Extract<GoldenglowTargetSwitchDetail, { kind
   switch (condition) {
     case 'enemyHp': return { title: '敵HPと次の攻撃対象', body: <>
       <ValueTable title="敵の条件" rows={[['最大HP', format(input.enemyHp)], ['各攻撃の対象', '1体']]} />
-      <p>同じステータスの敵が制限なく続く条件です。最初の敵も、撃破後の次の敵も満HPから始めます。{input.retargetRemainingDrones ? '本体・浮遊#1・#2…の順に個別攻撃し、撃破した時点で残りの浮遊が次の敵へ切り替えます。同じ攻撃回で複数の敵を攻撃・撃破する場合があります。' : '本体と全浮遊が同じ敵に一斉攻撃し、その後に撃破を判定します。'}</p>
+      <p>同じステータスの敵が制限なく続く条件です。最初の敵も、撃破後の次の敵も満HPから始めます。{input.retargetRemainingDrones ? 'ユニットごとの攻撃時刻順にダメージと撃破を判定します。撃破後は、攻撃間隔と切り替え時間の両方の待機が終わったユニットから次の敵を攻撃します。' : '本体と全浮遊が同じ敵に一斉攻撃し、その後に撃破を判定します。'}</p>
       <Equation>{input.retargetRemainingDrones ? '個別攻撃' : 'その回'}の有効ダメージ = min（攻撃前の対象の残HP, {input.retargetRemainingDrones ? '個別' : 'その回の'}攻撃ダメージ）</Equation>
       <p>残HPを超えた余剰ダメージは次の敵に引き継ぎません。次の敵へ切り替わると全浮遊の通常攻撃倍率が初期値に戻ります。</p>
     </> }
@@ -200,17 +207,19 @@ function conditionDetail(condition: Extract<GoldenglowTargetSwitchDetail, { kind
       <ValueTable title="時間の条件" rows={[
         ['攻撃間隔', `${format(input.attackInterval)}秒`],
         ['初回の着弾時刻', `${format(input.attackInterval)}秒`],
-        ['撃破した攻撃回から次回まで', `${format(input.attackInterval + input.switchDelay)}秒`],
+        [input.retargetRemainingDrones ? '対象変更後の待ち時間' : '撃破した攻撃回から次回まで', `${format(input.retargetRemainingDrones ? input.switchDelay : input.attackInterval + input.switchDelay)}秒`],
       ]} />
-      <Equation>n回目の着弾時刻 = n × {format(input.attackInterval)}秒 + それまでに撃破が起きた攻撃回数 × {format(input.switchDelay)}秒</Equation>
-      <p>本体と全浮遊に共通の間隔です。計測開始から1間隔後に初回が着弾します。終了時刻ちょうどの着弾は含め、終了時刻を超える攻撃や端数回の攻撃は含めません。</p>
-      {input.retargetRemainingDrones && <p>同じ攻撃回内の個別攻撃・対象切り替えには時間を加えません。その回で何体倒しても、次回までに加える切り替えの追加時間は1回分です。</p>}
+      {input.retargetRemainingDrones ? <>
+        <Equation>各ユニットの次回攻撃予定 = そのユニットが攻撃した時刻 + {format(input.attackInterval)}秒<br />対象変更後の攻撃時刻 = max（元の攻撃予定, 撃破時刻 + {format(input.switchDelay)}秒）</Equation>
+        <p>攻撃間隔の待ち時間と切り替え時間は重ねて扱います。攻撃が遅れたユニットは、その攻撃時刻から次の間隔を数えるので、その後も時刻がずれます。</p>
+      </> : <Equation>n回目の着弾時刻 = n × {format(input.attackInterval)}秒 + それまでに撃破が起きた攻撃回数 × {format(input.switchDelay)}秒</Equation>}
+      <p>計測開始から1間隔後に初回が着弾します。終了時刻ちょうどの着弾は含め、終了時刻を超える攻撃は含めません。{input.retargetRemainingDrones && '終了直前に一部のユニットだけが攻撃した場合は、その攻撃だけを数えます。'}</p>
     </> }
     case 'duration': return { title: input.skillIndex === 2 ? 'S2発動後の計測時間' : `S${input.skillIndex}の計測時間`, body: <>
       <ValueTable title="集計する時間" rows={[
         ['計測時間', `${format(input.duration)}秒`],
         ['攻撃間隔', `${format(input.attackInterval)}秒`],
-        ['切り替え遅延がない場合の攻撃回数', `${format(Math.floor(input.duration / input.attackInterval + 1e-9), 0)}回`],
+        ['切り替え遅延がない場合の各ユニットの攻撃回数', `${format(Math.floor(input.duration / input.attackInterval + 1e-9), 0)}回`],
       ]} />
       <p>{input.skillIndex === 2 ? 'S2は永続スキルのため、発動後の指定時間だけを集計します。' : 'スキル持続時間を集計します。'}発動前の攻撃、SPを貯める時間、スキルの再発動は含めません。</p>
       <p>計測の初期状態は全浮遊の通常倍率{format(model.droneInitialAttackScale * 100)}%・連続不発0回です。スキル発動が実際に倍率や不発回数を初期化する、という意味ではありません。</p>
@@ -225,27 +234,33 @@ function conditionDetail(condition: Extract<GoldenglowTargetSwitchDetail, { kind
         ['本体の攻撃', input.skillIndex === 3 ? 'なし（S3）' : 'あり'],
       ]} />
       <p>通常攻撃倍率と爆発の連続不発回数は浮遊ごとに管理します。自爆はその浮遊の通常攻撃を置き換え、不発回数だけを0に戻します。同じ敵なら通常倍率を維持し、撃破で敵が変わると全浮遊の通常倍率が初期値へ戻ります。</p>
-      <p>敵が変わっても連続不発回数を維持する扱いは、参照資料の初期化条件から採用した仮定です。パネル5の攻撃履歴から、浮遊ごとの抽選結果や倍率の変化を確認できます。</p>
+      <p>敵が変わっても連続不発回数を維持する扱いは、参照資料の初期化条件から採用した仮定です。パネル5の攻撃履歴から、浮遊ごとの抽選結果や適用倍率を確認できます。</p>
     </> }
     case 'switchDelay': return { title: '撃破後の切り替え時間', body: <>
       <ValueTable title="次の敵を攻撃するまでの時間" rows={[
         ['通常の攻撃間隔', `${format(input.attackInterval)}秒`],
-        ['切り替えの追加時間', `${format(input.switchDelay)}秒`],
-        ['撃破した攻撃回から次回まで', `${format(input.attackInterval + input.switchDelay)}秒`],
+        ['切り替え時間', `${format(input.switchDelay)}秒`],
+        ...(!input.retargetRemainingDrones ? [['撃破した攻撃回から次回まで', `${format(input.attackInterval + input.switchDelay)}秒`] as TableRow] : []),
       ]} />
-      <Equation>次の攻撃回の着弾時刻 = 撃破した攻撃回の時刻 + {format(input.attackInterval)} + {format(input.switchDelay)}秒</Equation>
-      <p>追加時間は、撃破が起きた攻撃回の次回に1回分だけ加算します。実測済みの仕様値ではなく、切り替えの遅れが出力に与える影響を調べるための仮定です。</p>
-      <p>浮遊の帰還、移動、自爆演出は0秒としています。追加時間が0秒でも、次の攻撃回は攻撃間隔1回分の後です。{input.retargetRemainingDrones && '同じ攻撃回内では、残りの浮遊は時間を加えず次の敵に攻撃します。'}</p>
+      {input.retargetRemainingDrones ? <>
+        <Equation>各ユニットの攻撃時刻 = max（元の攻撃予定, 撃破時刻 + {format(input.switchDelay)}秒）</Equation>
+        <p>撃破後は、切り替え時間が経過するまで次の敵を攻撃しません。すでに攻撃したユニットの攻撃間隔は、この待ち時間と重ねて数えます。待機中に次の敵も倒れた場合は、その撃破時刻から切り替え時間を数え直します。</p>
+        <p>初期値0.1秒は、映像で観測した「撃破から残りの浮遊が別の敵に現れるまで」の時間を、攻撃の待ち時間として取り入れた暫定値です。内部処理に固定の0.1秒があると確認できたわけではありません。</p>
+      </> : <>
+        <Equation>次の攻撃回の着弾時刻 = 撃破した攻撃回の時刻 + {format(input.attackInterval)} + {format(input.switchDelay)}秒</Equation>
+        <p>「残り浮遊の切り替え」が「なし」の場合は、撃破が起きた攻撃回の次回に、切り替え時間を1回分加算します。</p>
+      </>}
+      <p>帰還・飛翔・自爆演出の時間は個別に計算しません。敵の移動や射程も含まない簡略モデルです。</p>
     </> }
     case 'retargetRemainingDrones': return { title: '撃破後の残り浮遊の切り替え（仮定）', body: <>
       <ValueTable title="現在の設定" rows={[['残りの浮遊の切り替え', input.retargetRemainingDrones ? 'あり' : 'なし']]} />
-      <p>実際にこの仕様があるかは未確認です。敵HPを先読みして攻撃数を割り当てる処理ではなく、撃破後に、まだ攻撃していない浮遊を次の敵へ切り替えられるという仮定を比較します。</p>
+      <p>撃破後に残りの浮遊が別の敵へ移る映像をもとにした暫定モデルです。敵HPを先読みして攻撃数を割り当てる処理は行いません。</p>
       <ValueTable title="2つの計算方法" text rows={[
         ['なし', '本体と全浮遊が同じ敵へ攻撃し、合計ダメージを与えた後に撃破を判定します。'],
-        ['あり', '本体（S1・S2）→浮遊#1→#2…の順に攻撃し、1回ごとに撃破を判定します。撃破後の残りの浮遊は次の敵を攻撃します。S3では本体は攻撃しません。'],
+        ['あり', 'ユニットごとの攻撃時刻順に撃破を判定します。撃破後は、攻撃間隔と切り替え時間の待機が終わったユニットから次の敵を攻撃します。S3では本体は攻撃しません。'],
       ]} />
-      <p>攻撃順も比較用の仮定です。「あり」では、撃破のたびに全浮遊の通常倍率を初期化し、残りの浮遊は切り替え後の倍率で攻撃します。連続不発回数は対象変更ではリセットせず、自爆した浮遊だけ0に戻します。</p>
-      <p>どちらも余剰ダメージは次の敵に引き継ぎません。同じ攻撃回内の処理は同じ時刻とし、切り替えの追加時間は撃破があった回の次回に1回分だけ加えます。</p>
+      <p>同時刻の攻撃は、本体（S1・S2）→浮遊#1→#2…の順に処理します。この順序、一定の切り替え時間、攻撃間隔との重ね方は仮定です。</p>
+      <p>「あり」では、撃破のたびに全浮遊の通常倍率を初期化します。連続不発回数は対象変更ではリセットせず、自爆した浮遊だけ0に戻します。どちらの設定でも余剰ダメージは次の敵に引き継ぎません。</p>
     </> }
     case 'sampling': return { title: '試行回数と抽選番号', body: <>
       <ValueTable title="反復計算の条件" rows={[
@@ -275,7 +290,7 @@ function comparisonDetail(mode: Extract<GoldenglowTargetSwitchDetail, { kind: 'c
     {mode === 'baseline' ? <p>HP無限の敵を同じ時間攻撃します。撃破・切り替え・余剰ダメージはなく、通常倍率は自爆後も維持します。全ダメージが有効なため、攻撃ダメージと有効ダメージは一致します。</p>
       : <>
         <Equation>攻撃ダメージの差 = 同一目標 − 切り替え後の攻撃ダメージ<br />{formatOutput(result.baseline.rawDamage)} − {formatOutput(result.mean.rawDamage)} ≈ {formatOutput(result.baseline.rawDamage - result.mean.rawDamage)}</Equation>
-        <p>この差には撃破で通常倍率が初期値に戻る影響と、切り替えの追加時間（{format(input.switchDelay)}秒）で攻撃回数が減る影響を含みます。影響ごとの内訳は分離していません。</p>
+        <p>この差には撃破で通常倍率が初期値に戻る影響と、切り替え時間（{format(input.switchDelay)}秒）で攻撃回数が減る影響を含みます。影響ごとの内訳は分離していません。</p>
         {mode === 'effective' && <Equation>切り替え後の有効ダメージ = 攻撃ダメージ − 余剰ダメージ<br />{formatOutput(result.mean.rawDamage)} − {formatOutput(result.mean.overkillDamage)} ≈ {formatOutput(result.mean.effectiveDamage)}</Equation>}
       </>}
     <p>比較する各試行は同じ抽選番号から始め、同じ攻撃力・術耐性・浮遊数・初期状態・着弾時刻のルールを使います。切り替え時間によって攻撃機会が減ると、抽選回数も変わります。</p>
@@ -300,6 +315,76 @@ function timelineDetail(index: number, result: GoldenglowTargetSwitchResult, sho
     <p>選んだ時刻ちょうどの攻撃も含みます。各試行の撃破タイミングと着弾時刻は異なるため、その時刻までの値を各試行で集計してから平均しています。平均的な1戦の履歴を示しているわけではありません。</p>
     <p>開始時刻の累積値は0です。終了時刻の累積値は「ダメージ結果」の総ダメージに一致します。</p>
     <AverageNote result={result} showDecimals={showDecimals} />
+  </> }
+}
+
+function targetHpDetail(target: GoldenglowTargetSwitchHistoryTarget, seed: number, showDecimals: boolean): DetailContent {
+  const formatOutput = outputFormatter(showDecimals)
+  return { title: `${target.time.toFixed(3)}秒・敵${target.targetNumber}のHP`, body: <>
+    <dl className="ggs-target-hp-start"><dt>この時刻の攻撃前</dt><dd>{formatOutput(target.hpBefore)}</dd></dl>
+    <div className="gg-probability-table-wrap" tabIndex={0} role="region" aria-label={`敵${target.targetNumber}への攻撃順と残HP`}>
+      <table className="gg-probability-table ggs-target-hp-detail-table">
+        <caption className="visually-hidden">敵{target.targetNumber}への攻撃順と残HP</caption>
+        <thead><tr><th scope="col">攻撃者</th><th scope="col">ダメージ</th><th scope="col">攻撃後のHP</th></tr></thead>
+        <tbody>{target.attacks.map((entry) => <tr key={entry.attackIndex}>
+          <th scope="row">{entry.attack.actor === 'body' ? '本体' : `浮遊${String.fromCharCode(0x245f + (entry.attack.droneNumber ?? 1))}`}{entry.drone?.exploded && <span className="ggs-trial-secondary">自爆</span>}</th>
+          <td>{formatOutput(entry.attack.damage)}</td>
+          <td><span className="ggs-target-hp-result"><span>{formatOutput(entry.attack.hpAfter)}</span>{entry.attack.killed && <span className="ggs-trial-kill-label">撃破</span>}</span></td>
+        </tr>)}</tbody>
+      </table>
+    </div>
+    <p>抽選番号 {format(seed, 0)}</p>
+  </> }
+}
+
+function delayDetail(entry: GoldenglowTargetSwitchHistoryDelay, input: GoldenglowTargetSwitchInput, seed: number): DetailContent {
+  const { delay } = entry
+  const timeTolerance = Number.EPSILON * Math.max(1, input.duration, input.attackInterval) * 32
+  const actor = delay.actor === 'body' ? '本体' : `浮遊${String.fromCharCode(0x245f + (delay.droneNumber ?? 1))}`
+  const cause = delay.causeActor === 'body' ? '本体' : `浮遊${String.fromCharCode(0x245f + (delay.causeDroneNumber ?? 1))}`
+  return { title: `${actor}の攻撃延期`, body: <>
+    <ValueTable title="切り替えによる延期" rows={[
+      ['切り替えの発生', `${entry.time.toFixed(3)}秒`],
+      ['きっかけ', `${cause}が敵${delay.targetNumber}を撃破`],
+      ['対象の変更', `敵${delay.targetNumber} → 敵${delay.nextTargetNumber}`],
+      ['変更前の攻撃予定', `${delay.previousAttackTime.toFixed(3)}秒`],
+      ['変更後の攻撃予定', `${delay.nextAttackTime.toFixed(3)}秒`],
+      ['今回増えた待ち時間', `${delay.addedDelay.toFixed(3)}秒`],
+      ...(delay.nextAttackTime > input.duration + timeTolerance ? [['計測終了', `${input.duration.toFixed(3)}秒（変更後の予定は計測時間外）`] as TableRow] : []),
+    ]} />
+    <p>変更後の時刻は、この時点の攻撃予定です。その後に別の敵が倒れると、さらに延期される場合があります。</p>
+    <p>抽選番号 {format(seed, 0)}</p>
+  </> }
+}
+
+function attackDetail(entry: GoldenglowTargetSwitchHistoryAttack, input: GoldenglowTargetSwitchInput, seed: number, showDecimals: boolean): DetailContent {
+  const formatOutput = outputFormatter(showDecimals)
+  const { attack, drone } = entry
+  const actor = attack.actor === 'body' ? '本体' : `浮遊${String.fromCharCode(0x245f + (attack.droneNumber ?? 1))}`
+  const scale = attack.actor === 'body' ? 100
+    : drone?.exploded ? input.model.attackScale * 100 : drone?.normalScalePercent
+  return { title: `${actor}・${entry.actorAttackNumber}回目の攻撃`, body: <>
+    <ValueTable title="今回の攻撃" rows={[
+      ['着弾時刻', `${entry.time.toFixed(3)}秒`],
+      ['攻撃対象', `敵#${attack.targetNumber}`],
+      ['敵HP（攻撃前 → 後）', `${formatOutput(attack.hpBefore)} → ${formatOutput(attack.hpAfter)}`],
+      ['結果', attack.killed ? '撃破' : '生存'],
+      ['攻撃ダメージ', formatOutput(attack.damage)],
+      ['有効ダメージ', formatOutput(attack.effectiveDamage)],
+      ['余剰ダメージ', formatOutput(attack.overkillDamage)],
+      ['適用倍率', scale === undefined ? '—' : `${format(scale)}%`],
+    ]} />
+    {attack.actor === 'drone' && drone && <ValueTable title="爆発の抽選" rows={[
+      ['抽選結果', drone.exploded ? '爆発' : '通常攻撃'],
+      ['爆発確率', `${drone.explosionChancePercent.toLocaleString('ja-JP', { maximumFractionDigits: 6 })}%`],
+      ['抽選値', `${drone.rollPercent.toLocaleString('ja-JP', { maximumFractionDigits: 6 })}%`],
+      ['連続不発回数（攻撃前 → 後）', `${drone.missesBefore}回 → ${drone.missesAfter}回`],
+    ]} />}
+    <ValueTable title={`${actor}の攻撃時刻`} rows={[
+      ['前回からの間隔', entry.previousAttackTime === null ? '初回攻撃' : `${(entry.time - entry.previousAttackTime).toFixed(3)}秒`],
+      ['次回の着弾時刻', entry.nextAttackTime === null ? '計測時間内の次回攻撃なし' : `${entry.nextAttackTime.toFixed(3)}秒`],
+    ]} />
+    <p>抽選番号 {format(seed, 0)}</p>
   </> }
 }
 
@@ -390,20 +475,20 @@ function traceDetail(index: number, input: GoldenglowTargetSwitchInput, trial: G
 function modelDetail(input: GoldenglowTargetSwitchInput): DetailContent {
   return { title: '計算モデルと参照元', body: <>
     <ValueTable title="このページの計算条件" text rows={[
-      ['敵と攻撃対象', `同じHP・術耐性の敵が1体ずつ無制限に続きます。撃破後に次の満HPの敵へ切り替えます。${input.retargetRemainingDrones ? '同じ攻撃回内でも、残りの浮遊が次の敵を攻撃する仮定です。' : '各攻撃回の本体と全浮遊は同じ敵を攻撃します。'}爆発の周囲巻き込みは含めません。`],
+      ['敵と攻撃対象', `同じHP・術耐性の敵が1体ずつ無制限に続きます。撃破後に次の満HPの敵へ切り替えます。${input.retargetRemainingDrones ? '切り替えと攻撃間隔の待機が終わったユニットから次の敵を攻撃します。' : '各攻撃回の本体と全浮遊は同じ敵を攻撃します。'}爆発の周囲巻き込みは含めません。`],
       ['開始時点', `全浮遊の通常倍率${format(input.model.droneInitialAttackScale * 100)}%・連続不発0回から計測します。スキル発動そのものがゲーム内でこれらを初期化する、という意味ではありません。発動前の攻撃は含めません。`],
       ['通常倍率', `浮遊ごとに、通常攻撃のたびに${format(input.model.droneAttackScaleStep * 100)}ポイント増え、最大${format(input.model.droneMaxAttackScale * 100)}%。自爆は通常攻撃を置き換え、同じ敵なら倍率を維持します。撃破で全浮遊の通常倍率を初期値へ戻します。`],
       ['爆発確率', '浮遊ごとに連続不発回数を管理し、爆発した浮遊だけ0に戻します。対象変更でも不発回数を維持するのは、参照資料の初期化条件から採用した扱いです。'],
       ['攻撃時刻', '初回は攻撃間隔1回分の後に着弾します。終了時刻ちょうどまでを含み、端数回は加えません。S2は永続のため、発動後の指定時間を計測します。'],
       ['残りの浮遊の切り替え', input.retargetRemainingDrones
-        ? 'あり：本体→浮遊#1→#2…の順に個別攻撃し、撃破後の残りの浮遊は次の敵を攻撃します。個別攻撃の余剰ダメージは次の敵へ与えません。S3では本体は攻撃しません。'
+        ? 'あり：各ユニットの攻撃時刻順に個別攻撃します。同時刻なら本体→浮遊#1→#2…の順です。余剰ダメージは次の敵へ与えません。S3では本体は攻撃しません。'
         : 'なし：各回の本体・全浮遊の着弾をまとめて同じ敵に適用し、その後に撃破判定します。同じ回の余剰ダメージを次の敵に流しません。S3では本体は攻撃しません。'],
-      ['移動・再索敵', `帰還・移動・自爆演出は0秒とする簡略モデルです。撃破が起きた攻撃回から次回まで「攻撃間隔＋切り替えの追加時間」を空けます。${input.retargetRemainingDrones ? '同じ攻撃回内の切り替えは0秒とし、何体倒しても追加時間は次回までに1回分だけ加えます。' : ''}追加時間は実測値ではなく影響を調べるための仮定です。射程、敵の移動、飛翔中の攻撃は再現しません。`],
+      ['移動・再索敵', `${input.retargetRemainingDrones ? '各ユニットの次の攻撃時刻は「元の攻撃予定」と「撃破時刻＋切り替え時間」の遅い方です。攻撃間隔と切り替え待ちは重ねて扱い、遅れた攻撃から次の間隔を数えます。' : '撃破した攻撃回から次回まで「攻撃間隔＋切り替え時間」を空けます。'}帰還・飛翔・自爆演出の時間は個別に計算せず、射程や敵の移動も再現しません。`],
       ['ダメージの定義', '総ダメージは術耐性適用後・残HPで制限する前の攻撃ダメージの合計です。有効ダメージは実際に敵HPを削った分で、最後の未撃破の敵へのダメージも含みます。その差が余剰ダメージです。DPSは総ダメージを計測時間全体で割ります。'],
       ['推定とばらつき', '結果は爆発を抽選する反復計算の平均です。95%信頼区間は平均DPSの推定誤差、P10・P50・P90は1戦ごとのばらつきを示します。履歴は最初の1試行で、平均ではありません。'],
       ['同一目標との比較', 'HP無限・切り替えなしで、同じモデルと対応する抽選番号を使って再計算します。通常倍率の維持、初撃、終了時刻のルールも共通です。既存の分析ページとは開始条件や端数回の扱いが異なる場合があります。'],
     ]} />
-    <p>撃破後に残りの浮遊が次の敵へ切り替える仕様の有無は未確認です。「あり」「なし」を切り替えて結果を比較するためのモデルで、攻撃順も仮定です。敵HPを先読みして攻撃数を割り当てる処理は行いません。</p>
+    <p>初期値0.1秒は、映像での撃破表示から残りの浮遊が別の敵に現れるまでの時間をもとにした暫定値です。内部処理の固定時間を確認したものではありません。同時刻の攻撃順や攻撃間隔との重ね方も仮定です。敵HPを先読みして攻撃数を割り当てる処理は行いません。</p>
     <h3 className="gg-table-title">参照元</h3>
     <div className="ggs-detail-sources">
       <a href={DATA_SOURCE_URLS.character} target="_blank" rel="noopener noreferrer">日本版ゲームデータ：ステータス・素質 ↗</a>

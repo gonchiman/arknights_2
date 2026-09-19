@@ -2,6 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   GOLDENGLOW_TARGET_SWITCH_LIMITS,
+  prepareGoldenglowTargetSwitchSimulation,
+  runGoldenglowRetargetingTrial,
   simulateGoldenglowTargetSwitch,
   simulateGoldenglowTargetSwitchTrial,
   type GoldenglowTargetSwitchInput,
@@ -475,15 +477,15 @@ test('S1・S2では本体を先に処理し、本体の撃破後に浮遊が次�
   }
 })
 
-test('同一攻撃中に複数撃破しても各攻撃者は1回ずつ攻撃し、追加時間は次の一斉攻撃へ1回だけ加える', () => {
+test('遅延0では同時刻に複数撃破しても各攻撃者は1回ずつ攻撃し元の攻撃間隔を維持する', () => {
   for (const skillIndex of [1, 2, 3]) {
     const actors = skillIndex === 3 ? 3 : 4
     const setup = input({
       skillIndex, model: { ...model, activeDroneCount: 3, prdStep: 1 },
-      enemyHp: 80, duration: 4, switchDelay: 0.5, retargetRemainingDrones: true,
+      enemyHp: 80, duration: 3, switchDelay: 0, retargetRemainingDrones: true,
     })
     const result = simulateGoldenglowTargetSwitch(setup)
-    assert.deepEqual(result.sample.trace.map((row) => row.time), [1, 2.5, 4])
+    assert.deepEqual(result.sample.trace.map((row) => row.time), [1, 2, 3])
     assert.equal(result.mean.volleys, 3)
     assert.equal(result.mean.kills, 3 * actors)
     assert.equal(result.mean.explosions, 9)
@@ -500,7 +502,9 @@ test('同一攻撃中に複数撃破しても各攻撃者は1回ずつ攻撃し�
     }
     close(result.mean.effectiveDamage, 80 * 3 * actors)
     close(result.mean.rawDamage, (skillIndex === 3 ? 900 : 1_000) * 3)
-    assert.equal(simulateGoldenglowTargetSwitchTrial({ ...setup, duration: 3.99999 }).totals.volleys, 2)
+    assert.equal(simulateGoldenglowTargetSwitchTrial({ ...setup, duration: 2.99999 }).totals.volleys, 2)
+    assert.equal(result.mean.bodyAttacks, skillIndex === 3 ? 0 : 3)
+    assert.equal(result.mean.droneAttacks, 9)
     close(result.timeline.at(-1)!.kills, result.mean.kills)
   }
 })
@@ -525,6 +529,218 @@ test('撃破がなければ切り替えの有無でダメージ・抽選・基�
     close(point.effectiveDamage, off.timeline[index].effectiveDamage)
     close(point.baselineRawDamage, off.timeline[index].baselineRawDamage)
   }
+})
+
+test('先行機が1秒で撃破すると残り2機は1.1秒へ移り、その後も2秒と2.1秒に分かれる', () => {
+  const setup = input({
+    model: { ...model, activeDroneCount: 3, prdStep: 0.25 },
+    enemyHp: 300, duration: 2.1, switchDelay: 0.1, retargetRemainingDrones: true,
+  })
+  const trial = simulateGoldenglowTargetSwitchTrial(setup, sequence([0, 0.9, 0.9, 0.9, 0.9, 0.9]))
+  assert.deepEqual(trial.trace.map((row) => row.time), [1, 1.1, 2, 2.1])
+  assert.deepEqual(trial.trace.map((row) => row.drones.map((drone) => drone.droneNumber)), [[1], [2, 3], [1], [2, 3]])
+  assert.deepEqual(trial.trace.map((row) => row.attacks!.map((attack) => attack.targetNumber)), [[1], [2, 2], [2], [2, 2]])
+  assert.deepEqual(trial.trace.map((row) => row.drones.map((drone) => drone.normalStackBefore)), [[0], [0, 0], [0], [1, 1]])
+  assert.equal(trial.totals.droneAttacks, 6)
+  assert.equal(trial.totals.bodyAttacks, 0)
+  assert.equal(trial.totals.volleys, 4)
+  close(trial.totals.rawDamage, 430)
+  close(trial.totals.effectiveDamage, 430)
+
+  const calls: number[][] = []
+  const endpoint = runGoldenglowRetargetingTrial(
+    prepareGoldenglowTargetSwitchSimulation({ ...setup, duration: 2.05 }),
+    (droneIndex, attackIndex, misses) => {
+      calls.push([droneIndex, attackIndex, misses])
+      return droneIndex === 0 && attackIndex === 0 ? 0 : 0.9
+    }, true,
+  )
+  assert.deepEqual(endpoint.trace.map((row) => row.time), [1, 1.1, 2])
+  assert.equal(endpoint.totals.droneAttacks, 4)
+  assert.deepEqual(calls, [[0, 0, 0], [1, 0, 0], [2, 0, 0], [0, 1, 0]])
+  close(endpoint.totals.rawDamage, 360)
+})
+
+test('切替待ちが攻撃間隔より長ければ撃破した機体も待ち、待機後の実際の攻撃時刻から再開する', () => {
+  const setup = input({
+    model: { ...model, activeDroneCount: 3, prdStep: 0.25 },
+    enemyHp: 300, duration: 3.5, switchDelay: 1.5, retargetRemainingDrones: true,
+  })
+  const trial = runGoldenglowRetargetingTrial(prepareGoldenglowTargetSwitchSimulation(setup),
+    (droneIndex, attackIndex) => droneIndex === 0 && attackIndex === 0 ? 0 : 0.99, true)
+  assert.deepEqual(trial.trace.map((row) => row.time), [1, 2.5, 3.5])
+  assert.deepEqual(trial.trace.map((row) => row.drones.map((drone) => drone.droneNumber)), [[1], [1, 2, 3], [1, 2, 3]])
+  assert.equal(trial.totals.droneAttacks, 7)
+  assert.equal(trial.totals.kills, 1)
+  close(trial.totals.rawDamage, 465)
+})
+
+test('待機中に別の機体が再び撃破すると未攻撃機は最新目標の切替時刻まで待つ', () => {
+  const calls: number[][] = []
+  const trial = runGoldenglowRetargetingTrial(prepareGoldenglowTargetSwitchSimulation(input({
+    model: { ...model, activeDroneCount: 3, prdStep: 0.25 },
+    enemyHp: 80, duration: 2.1, switchDelay: 0.4, retargetRemainingDrones: true,
+  })), (droneIndex, attackIndex, misses) => {
+    calls.push([droneIndex, attackIndex, misses])
+    return droneIndex < 2 && attackIndex === 0 ? 0 : 0.9
+  }, true)
+  trial.trace.forEach((row, index) => close(row.time, [1, 1.4, 1.8, 2][index]))
+  assert.deepEqual(trial.trace.map((row) => row.drones.map((drone) => drone.droneNumber)), [[1], [2], [3], [1]])
+  assert.deepEqual(trial.trace.map((row) => row.attacks![0].targetNumber), [1, 2, 3, 3])
+  assert.deepEqual(calls, [[0, 0, 0], [1, 0, 0], [2, 0, 0], [0, 1, 0]])
+  assert.equal(trial.totals.kills, 2)
+  assert.equal(trial.totals.droneAttacks, calls.length)
+  assert.equal(trial.trace.at(-1)!.drones[0].missesAfter, 1)
+})
+
+test('S1・S2の本体も独立した攻撃時刻を保ち、残り浮遊のみが撃破直後の待機に入る', () => {
+  for (const skillIndex of [1, 2]) {
+    const trial = simulateGoldenglowTargetSwitchTrial(input({
+      skillIndex, model: { ...model, activeDroneCount: 3 },
+      enemyHp: 80, duration: 2.05, switchDelay: 0.1, retargetRemainingDrones: true,
+    }))
+    assert.deepEqual(trial.trace.map((row) => row.time), [1, 1.1, 2])
+    assert.deepEqual(trial.trace.map((row) => row.attacks!.map((attack) => attack.actor)), [
+      ['body'], ['drone', 'drone', 'drone'], ['body'],
+    ])
+    assert.deepEqual(trial.trace.map((row) => row.bodyDamage), [100, 0, 100])
+    assert.equal(trial.totals.bodyAttacks, 2)
+    assert.equal(trial.totals.droneAttacks, 3)
+    close(trial.totals.rawDamage, 260)
+    close(trial.totals.effectiveDamage, 160)
+  }
+})
+
+test('遅れて攻撃する機体は目標変更で通常倍率だけを戻し、待機前のPRD不発回数を維持する', () => {
+  const trial = simulateGoldenglowTargetSwitchTrial(input({
+    model: { ...model, activeDroneCount: 3, prdStep: 0.25 },
+    enemyHp: 80, duration: 2.1, switchDelay: 0.1, retargetRemainingDrones: true,
+  }), sequence([0.9, 0.9, 0.9, 0.3, 0.9, 0.9]))
+  assert.deepEqual(trial.trace.map((row) => row.time), [1, 2, 2.1])
+  assert.deepEqual(trial.trace[1].drones.map((drone) => [drone.droneNumber, drone.missesBefore, drone.missesAfter]), [[1, 1, 0]])
+  assert.deepEqual(trial.trace[2].drones.map((drone) => [drone.droneNumber, drone.normalStackBefore, drone.missesBefore, drone.missesAfter]), [
+    [2, 0, 1, 2], [3, 0, 1, 2],
+  ])
+})
+
+test('先行機の次の攻撃が未攻撃機を追い越してもシード抽選を機体と攻撃序数の対応で維持する', () => {
+  const setup = input({
+    model: { ...model, activeDroneCount: 3, prdStep: 1 },
+    enemyHp: 80, duration: 3.5, switchDelay: 0.75, retargetRemainingDrones: true,
+  })
+  const trial = simulateGoldenglowTargetSwitchTrial(setup)
+  const synchronous = simulateGoldenglowTargetSwitchTrial({
+    ...setup, enemyHp: 1_000_000, switchDelay: 0, retargetRemainingDrones: false,
+  })
+  assert.deepEqual(trial.trace.map((row) => row.drones.map((drone) => drone.droneNumber)), [[1], [2], [1], [2]])
+  const ordinals = [0, 0, 0]
+  for (const drone of trial.trace.flatMap((row) => row.drones)) {
+    const droneIndex = drone.droneNumber - 1
+    assert.equal(drone.rollPercent, synchronous.trace[ordinals[droneIndex]++].drones[droneIndex].rollPercent)
+  }
+  assert.deepEqual(ordinals, [2, 2, 0])
+})
+
+test('1機でも切替待ちは攻撃後の待ち時間と重なり、遅延0なら従来結果を保つ', () => {
+  for (const switchDelay of [0, 0.1, 1, 1.5]) {
+    const setup = input({ enemyHp: 10, duration: 4, switchDelay, retargetRemainingDrones: true })
+    const trial = simulateGoldenglowTargetSwitchTrial(setup)
+    const times = switchDelay <= 1 ? [1, 2, 3, 4] : [1, 2.5, 4]
+    assert.deepEqual(trial.trace.map((row) => row.time), times)
+    assert.equal(trial.totals.droneAttacks, times.length)
+    assert.equal(trial.totals.kills, times.length)
+    if (switchDelay === 0) {
+      const legacy = simulateGoldenglowTargetSwitchTrial({ ...setup, retargetRemainingDrones: false })
+      assert.deepEqual(trial.totals, legacy.totals)
+      assert.deepEqual(trial.trace.map(({ attacks: _attacks, ...row }) => row), legacy.trace)
+    }
+  }
+})
+
+test('長時間の撃破待ちを反復しても小数誤差を累積せず、終端の攻撃だけを正しく数える', () => {
+  for (const attackInterval of [0.05, 0.1, 0.137, 0.25, 0.867]) {
+    for (const switchDelay of [0.051, 0.07, 0.1, 0.137, 0.2, 0.3, 0.7, 1.3]) {
+      const cadence = Math.max(attackInterval, switchDelay)
+      const expectedAttacks = Math.floor((300 - attackInterval) / cadence) + 1
+      const duration = Math.min(300, attackInterval + (expectedAttacks - 1) * cadence)
+      const setup = input({
+        model: { ...model, prdStep: 1 }, enemyHp: 1, attackInterval, switchDelay,
+        duration, trials: 1, retargetRemainingDrones: true,
+      })
+      const prepared = prepareGoldenglowTargetSwitchSimulation(setup)
+      const exact = runGoldenglowRetargetingTrial(prepared, () => 0)
+      assert.equal(exact.totals.droneAttacks, expectedAttacks, `interval=${attackInterval}, delay=${switchDelay}`)
+      assert.equal(exact.totals.kills, expectedAttacks)
+      const before = runGoldenglowRetargetingTrial(prepareGoldenglowTargetSwitchSimulation({
+        ...setup, duration: duration - prepared.timeTolerance * 8,
+      }), () => 0)
+      assert.equal(before.totals.droneAttacks, expectedAttacks - 1, `before endpoint: interval=${attackInterval}, delay=${switchDelay}`)
+    }
+  }
+
+  for (const [attackInterval, switchDelay, duration, expectedAttacks] of [
+    [0.05, 0.3, 299.75, 1000], [0.1, 0.1, 299.9, 2999],
+  ]) {
+    const result = simulateGoldenglowTargetSwitch(input({
+      model: { ...model, prdStep: 1 }, enemyHp: 1,
+      attackInterval, switchDelay, duration, trials: 1, retargetRemainingDrones: true,
+    }))
+    assert.equal(result.mean.droneAttacks, expectedAttacks)
+    assert.equal(result.sample.trace.length, expectedAttacks)
+    assert.equal(result.sample.trace.at(-1)!.time, duration)
+    assert.equal(result.timeline.at(-1)!.kills, expectedAttacks)
+    assert.equal(result.timeline.at(-1)!.rawDamage, result.mean.rawDamage)
+  }
+})
+
+test('別機体の撃破が連鎖する長い観測窓でも切替時刻の整数成分を維持する', () => {
+  const setup = input({
+    model: { ...model, activeDroneCount: 3, prdStep: 1 }, enemyHp: 1,
+    attackInterval: 0.05, switchDelay: 0.03, duration: 299.99,
+    trials: 1, retargetRemainingDrones: true,
+  })
+  const prepared = prepareGoldenglowTargetSwitchSimulation(setup)
+  const exact = runGoldenglowRetargetingTrial(prepared, () => 0)
+  assert.equal(exact.totals.droneAttacks, 9999)
+  assert.equal(exact.totals.kills, 9999)
+  const before = runGoldenglowRetargetingTrial(prepareGoldenglowTargetSwitchSimulation({
+    ...setup, duration: setup.duration - prepared.timeTolerance * 8,
+  }), () => 0)
+  assert.equal(before.totals.droneAttacks, 9998)
+})
+
+test('攻撃序数ごとの抽選は非同期の攻撃時刻でも再現でき、トレース有無と終端集計に影響されない', () => {
+  const setup = input({
+    skillIndex: 2, model: { ...model, activeDroneCount: 3, prdStep: 0.2 },
+    enemyHp: 180, duration: 25.7, attackInterval: 0.867, switchDelay: 0.15,
+    retargetRemainingDrones: true,
+  })
+  const full = simulateGoldenglowTargetSwitch(setup)
+  assert.deepEqual(simulateGoldenglowTargetSwitch(setup), full)
+  assert.deepEqual(simulateGoldenglowTargetSwitchTrial(setup), full.sample)
+  const recordedDraws: number[][] = [[], [], []]
+  for (const drone of full.sample.trace.flatMap((row) => row.drones)) recordedDraws[drone.droneNumber - 1].push(drone.rollPercent / 100)
+  const timeline = full.timeline.map(({ time }) => ({ time, effectiveDamage: 0, rawDamage: 0, baselineRawDamage: 0, kills: 0 }))
+  const replay = runGoldenglowRetargetingTrial(prepareGoldenglowTargetSwitchSimulation(setup),
+    (droneIndex, attackIndex) => recordedDraws[droneIndex][attackIndex], false, timeline)
+  assert.deepEqual(replay.totals, full.sample.totals)
+  assert.deepEqual(replay.trace, [])
+  for (const point of timeline) {
+    const landed = full.sample.trace.filter((row) => row.time <= point.time + 1e-12)
+    close(point.rawDamage, landed.reduce((sum, row) => sum + row.rawDamage, 0))
+    close(point.effectiveDamage, landed.reduce((sum, row) => sum + row.effectiveDamage, 0))
+    assert.equal(point.kills, landed.reduce((sum, row) => sum + row.kills, 0))
+  }
+  const previousTime = new Map<string, number>()
+  for (const row of full.sample.trace) {
+    for (const attack of row.attacks!) {
+      const actor = `${attack.actor}:${attack.droneNumber ?? 0}`
+      const previous = previousTime.get(actor)
+      if (previous !== undefined) assert.ok(row.time - previous >= setup.attackInterval - 1e-12)
+      previousTime.set(actor, row.time)
+    }
+  }
+  assert.deepEqual(full.baseline, simulateGoldenglowTargetSwitch({ ...setup, retargetRemainingDrones: false }).baseline)
 })
 
 test('即時切り替えの小数同値撃破・実際の不足・微小HPと攻撃力0を区別する', () => {
@@ -572,7 +788,7 @@ test('本体・通常攻撃・爆発の小数加算順が異なっても有効�
   close(row.attacks!.reduce((sum, attack) => sum + attack.effectiveDamage, 0), row.effectiveDamage)
 })
 
-test('即時切り替えの攻撃明細・一斉攻撃・集計・時間推移は同じダメージと目標状態を表す', () => {
+test('個別切り替えの攻撃明細・時刻グループ・集計・時間推移は同じダメージと目標状態を表す', () => {
   const result = simulateGoldenglowTargetSwitch(input({
     skillIndex: 1, model: { ...model, activeDroneCount: 3, prdStep: 0.2 },
     enemyHp: 180, enemyResistance: 37.5, duration: 16.25, attackInterval: 0.867,
@@ -580,7 +796,9 @@ test('即時切り替えの攻撃明細・一斉攻撃・集計・時間推移�
   }))
   for (const [index, row] of result.sample.trace.entries()) {
     const attacks = row.attacks!
-    assert.equal(attacks.length, 4)
+    assert.ok(attacks.length >= 1 && attacks.length <= 4)
+    assert.equal(row.drones.length, attacks.filter((attack) => attack.actor === 'drone').length)
+    assert.ok(attacks.filter((attack) => attack.actor === 'body').length <= 1)
     assert.equal(row.targetNumber, attacks[0].targetNumber)
     close(row.hpBefore, attacks[0].hpBefore)
     close(row.hpAfter, attacks.at(-1)!.hpAfter)
@@ -603,15 +821,24 @@ test('即時切り替えの攻撃明細・一斉攻撃・集計・時間推移�
     if (nextRow) {
       assert.equal(nextRow.targetNumber, row.nextTargetNumber)
       close(nextRow.hpBefore, row.nextTargetHp)
-      row.drones.forEach((drone, droneIndex) => {
-        assert.equal(nextRow.drones[droneIndex].missesBefore, drone.missesAfter)
-      })
     }
   }
   for (const totals of [result.mean, result.sample.totals]) {
     close(totals.effectiveDamage + totals.overkillDamage, totals.rawDamage)
     close(totals.normalDamage + totals.explosionDamage + totals.bodyDamage, totals.rawDamage)
-    assert.ok(totals.kills <= totals.volleys * 4)
+    assert.ok(totals.kills <= totals.bodyAttacks + totals.droneAttacks)
+  }
+  const allAttacks = result.sample.trace.flatMap((row) => row.attacks!)
+  assert.equal(result.sample.totals.volleys, result.sample.trace.length)
+  assert.equal(result.sample.totals.bodyAttacks, allAttacks.filter((attack) => attack.actor === 'body').length)
+  assert.equal(result.sample.totals.droneAttacks, allAttacks.filter((attack) => attack.actor === 'drone').length)
+  const previousMisses = [0, 0, 0]
+  for (const drone of result.sample.trace.flatMap((row) => row.drones)) {
+    assert.equal(drone.missesBefore, previousMisses[drone.droneNumber - 1])
+    previousMisses[drone.droneNumber - 1] = drone.missesAfter
+  }
+  for (const point of result.timeline) {
+    assert.ok(point.effectiveDamage <= point.rawDamage + 1e-8)
   }
   close(result.sample.trace.reduce((sum, row) => sum + row.kills, 0), result.sample.totals.kills)
   close(result.sample.trace.reduce((sum, row) => sum + row.effectiveDamage, 0), result.sample.totals.effectiveDamage)
@@ -625,5 +852,161 @@ test('残り浮遊の切り替えは真偽値以外を受け付けない', () =>
     const setup = input({ retargetRemainingDrones: value as unknown as boolean })
     assert.throws(() => simulateGoldenglowTargetSwitch(setup), RangeError)
     assert.throws(() => simulateGoldenglowTargetSwitchTrial(setup), RangeError)
+  }
+})
+
+test('撃破で実際に予定が遅れた後続機だけを記録し、通常CDで待てる機体は延期に含めない', () => {
+  const trial = runGoldenglowRetargetingTrial(prepareGoldenglowTargetSwitchSimulation(input({
+    model: { ...model, activeDroneCount: 3, prdStep: 0.25 },
+    enemyHp: 300, duration: 2.1, switchDelay: 0.1, retargetRemainingDrones: true,
+  })), (droneIndex, attackIndex) => droneIndex === 0 && attackIndex === 0 ? 0 : 0.99, true)
+  const delays = trial.trace[0].delays!
+  assert.equal(delays.length, 2)
+  assert.deepEqual(delays.map((delay) => [delay.actor, delay.droneNumber, delay.causeActor, delay.causeDroneNumber, delay.causeAttackIndex]), [
+    ['drone', 2, 'drone', 1, 0], ['drone', 3, 'drone', 1, 0],
+  ])
+  for (const delay of delays) {
+    assert.equal(delay.targetNumber, 1)
+    assert.equal(delay.nextTargetNumber, 2)
+    assert.equal(delay.previousAttackTime, 1)
+    assert.equal(delay.nextAttackTime, 1.1)
+    close(delay.addedDelay, 0.1)
+  }
+  assert.ok(trial.trace.slice(1).every((row) => row.delays === undefined))
+  assert.deepEqual(trial.trace.map((row) => row.time), [1, 1.1, 2, 2.1])
+})
+
+test('延期原因は浮遊番号や個体攻撃序数ではなく同じ行の実攻撃indexを参照する', () => {
+  const trial = simulateGoldenglowTargetSwitchTrial(input({
+    skillIndex: 1, model: { ...model, activeDroneCount: 3 },
+    enemyHp: 130, duration: 1.1, switchDelay: 0.1, retargetRemainingDrones: true,
+  }))
+  const row = trial.trace[0]
+  assert.deepEqual(row.attacks!.map((attack) => [attack.actor, attack.droneNumber, attack.killed]), [
+    ['body', undefined, false], ['drone', 1, false], ['drone', 2, true],
+  ])
+  assert.equal(row.delays!.length, 1)
+  const delay = row.delays![0]
+  assert.equal(delay.causeAttackIndex, 2)
+  assert.equal(delay.causeActor, 'drone')
+  assert.equal(delay.causeDroneNumber, 2)
+  assert.equal(delay.droneNumber, 3)
+  assert.equal(delay.targetNumber, row.attacks![delay.causeAttackIndex].targetNumber)
+  assert.equal(delay.nextTargetNumber, 2)
+  assert.equal(trial.trace[1].drones[0].droneNumber, 3)
+})
+
+test('待機が通常CDより長ければ攻撃済みの本体や機体も延期し、観測終端後の予定を残す', () => {
+  for (const skillIndex of [1, 2, 3]) {
+    const trial = simulateGoldenglowTargetSwitchTrial(input({
+      skillIndex, model: { ...model, activeDroneCount: 3, prdStep: 1 },
+      enemyHp: 80, duration: 1, switchDelay: 1.5, retargetRemainingDrones: true,
+    }))
+    assert.equal(trial.trace.length, 1)
+    const row = trial.trace[0]
+    assert.equal(row.attacks!.length, 1)
+    const delays = row.delays!
+    assert.equal(delays.length, skillIndex === 3 ? 3 : 4)
+    const killer = row.attacks![0]
+    const ownDelay = delays[0]
+    assert.equal(ownDelay.actor, killer.actor)
+    assert.equal(ownDelay.droneNumber, killer.droneNumber)
+    assert.equal(ownDelay.previousAttackTime, 2)
+    assert.equal(ownDelay.nextAttackTime, 2.5)
+    assert.equal(ownDelay.addedDelay, 0.5)
+    for (const delay of delays) {
+      assert.equal(delay.causeActor, killer.actor)
+      assert.equal(delay.causeDroneNumber, killer.droneNumber)
+      assert.equal(delay.causeAttackIndex, 0)
+      assert.equal(delay.targetNumber, 1)
+      assert.equal(delay.nextTargetNumber, 2)
+      assert.equal(delay.nextAttackTime, 2.5)
+      assert.ok(delay.nextAttackTime > row.time)
+    }
+    for (const delay of delays.slice(1)) {
+      assert.equal(delay.previousAttackTime, 1)
+      assert.equal(delay.addedDelay, 1.5)
+    }
+  }
+})
+
+test('同じ未攻撃機の再延期は直前の予定と新しい撃破原因を別々に記録する', () => {
+  const trial = runGoldenglowRetargetingTrial(prepareGoldenglowTargetSwitchSimulation(input({
+    model: { ...model, activeDroneCount: 3, prdStep: 0.25 },
+    enemyHp: 80, duration: 1.5, switchDelay: 0.4, retargetRemainingDrones: true,
+  })), (droneIndex, attackIndex) => droneIndex < 2 && attackIndex === 0 ? 0 : 0.99, true)
+  assert.deepEqual(trial.trace.map((row) => row.time), [1, 1.4])
+  const first = trial.trace[0].delays!.find((delay) => delay.droneNumber === 3)!
+  const second = trial.trace[1].delays![0]
+  assert.equal(trial.trace[1].delays!.length, 1)
+  assert.equal(second.droneNumber, 3)
+  assert.equal(first.causeDroneNumber, 1)
+  assert.equal(second.causeDroneNumber, 2)
+  assert.equal(second.previousAttackTime, first.nextAttackTime)
+  close(second.nextAttackTime, 1.8)
+  close(second.addedDelay, 0.4)
+  assert.equal(first.targetNumber, 1)
+  assert.equal(first.nextTargetNumber, 2)
+  assert.equal(second.targetNumber, 2)
+  assert.equal(second.nextTargetNumber, 3)
+  assert.ok(trial.trace.every((row) => row.attacks!.every((attack) => attack.droneNumber !== 3)))
+})
+
+test('遅延0・通常CD内の待機・撃破なし・従来モードは延期明細を生成しない', () => {
+  for (const switchDelay of [0, 0.1, 1]) {
+    const trial = simulateGoldenglowTargetSwitchTrial(input({
+      enemyHp: 1, duration: 4, switchDelay, retargetRemainingDrones: true,
+    }))
+    assert.equal(trial.totals.kills, 4)
+    assert.ok(trial.trace.every((row) => row.delays === undefined))
+  }
+  const multipleKills = simulateGoldenglowTargetSwitchTrial(input({
+    skillIndex: 1, model: { ...model, activeDroneCount: 3, prdStep: 1 },
+    enemyHp: 1, switchDelay: 0, retargetRemainingDrones: true,
+  }))
+  assert.ok(multipleKills.trace.every((row) => row.kills === 4 && row.delays === undefined))
+  const noKills = simulateGoldenglowTargetSwitchTrial(input({
+    enemyHp: 1_000_000, switchDelay: 5, retargetRemainingDrones: true,
+  }))
+  const legacy = simulateGoldenglowTargetSwitchTrial(input({ enemyHp: 1, switchDelay: 1 }))
+  for (const trial of [noKills, legacy]) assert.ok(trial.trace.every((row) => row.delays === undefined))
+})
+
+test('延期トレースの有無で抽選回数・攻撃序数・ダメージ・時間推移を変えない', () => {
+  const setup = input({
+    skillIndex: 2, model: { ...model, activeDroneCount: 3, prdStep: 0.2 },
+    enemyHp: 150, duration: 13.7, attackInterval: 0.137,
+    switchDelay: 0.3, retargetRemainingDrones: true,
+  })
+  const prepared = prepareGoldenglowTargetSwitchSimulation(setup)
+  const runs = [true, false].map((recordTrace) => {
+    const calls: number[][] = []
+    const timeline = [0, 3, setup.duration].map((time) => ({
+      time, effectiveDamage: 0, rawDamage: 0, baselineRawDamage: 0, kills: 0,
+    }))
+    const trial = runGoldenglowRetargetingTrial(prepared, (droneIndex, attackIndex, misses) => {
+      calls.push([droneIndex, attackIndex, misses])
+      return (droneIndex + attackIndex) % 7 === 0 ? 0 : 0.99
+    }, recordTrace, timeline)
+    return { trial, calls, timeline }
+  })
+  assert.ok(runs[0].trial.trace.some((row) => row.delays?.length))
+  assert.deepEqual(runs[1].trial.trace, [])
+  assert.deepEqual(runs[0].calls, runs[1].calls)
+  assert.deepEqual(runs[0].trial.totals, runs[1].trial.totals)
+  assert.deepEqual(runs[0].timeline, runs[1].timeline)
+  assert.equal(runs[0].calls.length, runs[0].trial.totals.droneAttacks)
+  for (const row of runs[0].trial.trace) {
+    for (const delay of row.delays ?? []) {
+      const cause = row.attacks![delay.causeAttackIndex]
+      assert.equal(cause.killed, true)
+      assert.equal(delay.causeActor, cause.actor)
+      assert.equal(delay.causeDroneNumber, cause.droneNumber)
+      assert.equal(delay.targetNumber, cause.targetNumber)
+      assert.equal(delay.nextTargetNumber, cause.targetNumber + 1)
+      assert.ok(delay.addedDelay > prepared.timeTolerance)
+      assert.equal(delay.addedDelay, delay.nextAttackTime - delay.previousAttackTime)
+      close(delay.nextAttackTime, row.time + setup.switchDelay)
+    }
   }
 })

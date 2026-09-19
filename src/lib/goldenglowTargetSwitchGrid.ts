@@ -2,6 +2,7 @@ import {
   GOLDENGLOW_TARGET_SWITCH_LIMITS,
   createGoldenglowTargetSwitchRandom,
   prepareGoldenglowTargetSwitchSimulation,
+  runGoldenglowRetargetingTrial,
   type GoldenglowTargetSwitchInput,
   type GoldenglowTargetSwitchPreparedSimulation,
 } from './goldenglowTargetSwitch.ts'
@@ -48,7 +49,8 @@ interface PreparedRow {
 /**
  * Shares each trial's PRD draws across the grid, but evaluates HP, normal-attack
  * ramps and kill delays separately in every cell. PRD only resets on explosion,
- * so the same indexed draws remain valid when a cell stops attacking earlier.
+ * so draws indexed by each drone's attack count remain valid when the drones'
+ * attack times diverge or a cell stops attacking earlier.
  *
  * Rows and columns retain the supplied order, including duplicates. Completed
  * rows are emitted synchronously; a UI can run this function in a Worker and
@@ -191,59 +193,25 @@ function calculateMeanDamage(
   return total / input.trials
 }
 
-/** Replays the same PRD pattern, resolving body then drones exactly as runTrial. */
+/** Reuses the individual-actor scheduler with each drone's indexed PRD pattern. */
 function calculateMeanRetargetingDamage(
-  { input, normalDamageByStack, explosionDamage, bodyDamage, timeTolerance }: GoldenglowTargetSwitchPreparedSimulation,
+  prepared: GoldenglowTargetSwitchPreparedSimulation,
   enemyHp: number,
   patterns: Uint16Array,
   maxVolleys: number,
 ): number {
-  const normalStacks = new Uint16Array(input.model.activeDroneCount)
-  const firstActor = input.skillIndex === 3 ? 0 : -1
+  // Damage lookups can be shared across HP columns; the scheduler's target HP
+  // must belong to this cell without modifying the prepared resistance row.
+  const cell = { ...prepared, input: { ...prepared.input, enemyHp } }
   let total = 0
-  for (let trialIndex = 0; trialIndex < input.trials; trialIndex += 1) {
-    normalStacks.fill(0)
-    let hp = enemyHp
-    let killingVolleys = 0
-    let trialDamage = 0
+  for (let trialIndex = 0; trialIndex < cell.input.trials; trialIndex += 1) {
     const offset = trialIndex * maxVolleys
-    for (let volley = 0; volley < maxVolleys; volley += 1) {
-      const nextTime = (volley + 1) * input.attackInterval + killingVolleys * input.switchDelay
-      if (nextTime > input.duration + timeTolerance) break
-      const mask = patterns[offset + volley]
-      let normalDamage = 0
-      let volleyExplosionDamage = 0
-      let killedInVolley = false
-      for (let actor = firstActor; actor < normalStacks.length; actor += 1) {
-        let damage: number
-        if (actor === -1) {
-          damage = bodyDamage
-        } else if (mask & (1 << actor)) {
-          damage = explosionDamage
-          volleyExplosionDamage += damage
-        } else {
-          damage = normalDamageByStack[normalStacks[actor]]
-          normalDamage += damage
-          normalStacks[actor] = Math.min(normalStacks[actor] + 1, input.model.droneMaxStack)
-        }
-        const effectiveDamage = Math.min(hp, damage)
-        const hpRemainder = Math.max(0, hp - effectiveDamage)
-        const killTolerance = Number.EPSILON * Math.max(hp, damage) * 4
-        if (damage > 0 && hpRemainder <= killTolerance) {
-          killedInVolley = true
-          hp = enemyHp
-          normalStacks.fill(0)
-        } else {
-          hp = hpRemainder
-        }
-      }
-      // The main engine sums components in this order even for sequential hits.
-      trialDamage += normalDamage + volleyExplosionDamage + bodyDamage
-      if (killedInVolley) killingVolleys += 1
-    }
-    total += trialDamage
+    const trial = runGoldenglowRetargetingTrial(cell, (droneIndex, attackIndex) => (
+      patterns[offset + attackIndex] & (1 << droneIndex) ? 0 : 1
+    ))
+    total += trial.totals.rawDamage
   }
-  return total / input.trials
+  return total / cell.input.trials
 }
 
 function validateAxes(input: GoldenglowTargetSwitchGridInput): void {

@@ -78,8 +78,8 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, foot
     setResistance(values.resistance)
     closeEnemySearch()
   }
-  const [switchDelay, setSwitchDelay] = useState('0')
-  const [retargetRemainingDrones, setRetargetRemainingDrones] = useState(false)
+  const [switchDelay, setSwitchDelay] = useState('0.1')
+  const [retargetRemainingDrones, setRetargetRemainingDrones] = useState(true)
   const [showDecimals, setShowDecimals] = useState(false)
   const [viewingDuration, setViewingDuration] = useState('30')
   const [trials, setTrials] = useState(10000)
@@ -96,7 +96,7 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, foot
     setEffectDetail(null)
   }
   const commonFieldError = [
-    invalidNumber(switchDelay, 0, 5, '切り替えの追加時間'),
+    invalidNumber(switchDelay, 0, 5, '切り替え時間'),
     invalidNumber(String(attack), 0, 1e6, 'スキル中の攻撃力'),
     invalidNumber(String(interval), 0.05, 300, '攻撃間隔'),
     skill?.skillIndex === 2 ? invalidNumber(viewingDuration, 0.1, 300, '計測時間') : null,
@@ -248,11 +248,11 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, foot
                   <option value="off">なし</option><option value="on">あり</option>
                 </select>
               </label>} />
-              <ValueRow label="切り替えの追加時間" onOpen={openCondition('switchDelay')} value={<NumericInput id="ggs-delay" label="切り替えの追加時間" value={switchDelay} onChange={setSwitchDelay} min={0} max={5} unit="秒" />} />
-              <ValueRow label="計算モデル・参照元" onOpen={input ? () => setDetail({ kind: 'model' }) : undefined} value={`${retargetRemainingDrones ? '残り浮遊の切り替えあり' : '一斉着弾'}・帰還と移動0秒`} />
+              <ValueRow label="切り替え時間" onOpen={openCondition('switchDelay')} value={<NumericInput id="ggs-delay" label="切り替え時間" value={switchDelay} onChange={setSwitchDelay} min={0} max={5} unit="秒" />} />
+              <ValueRow label="計算モデル・参照元" onOpen={input ? () => setDetail({ kind: 'model' }) : undefined} value={retargetRemainingDrones ? 'ユニットごとに攻撃' : '一斉着弾'} />
             </tbody>
           </TableSection>
-          <div className="ggs-actions"><button className="button secondary" type="button" onClick={() => setSwitchDelay('0')}>切り替え時間を標準に戻す</button></div>
+          <div className="ggs-actions"><button className="button secondary" type="button" onClick={() => setSwitchDelay('0.1')}>切り替え時間を0.1秒に戻す</button></div>
           <TableSection id="ggs-sampling" title="試行回数・抽選設定">
             <tbody>
               <ValueRow label="試行回数" onOpen={openCondition('sampling')} value={<label className="calculator-field"><span>試行回数</span><select id="ggs-trials" aria-label="試行回数" value={trials} onChange={(event) => setTrials(Number(event.target.value))}><option value={1000}>1,000回</option><option value={10000}>10,000回</option><option value={20000}>20,000回</option></select></label>} />
@@ -276,7 +276,8 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, foot
           {input && calculation.result && <OutputTables result={calculation.result} input={input} showDecimals={showDecimals} onOpen={setDetail} />}
         </CollapsibleCalculatorPanel>
         <GoldenglowTargetSwitchGridPanels input={gridInput} error={commonFieldError} showDecimals={showDecimals} />
-        <GoldenglowTargetSwitchTrialPanel input={input} result={calculation.result} status={resultStatus} showDecimals={showDecimals} onOpen={setDetail} />
+        <GoldenglowTargetSwitchTrialPanel input={input} result={calculation.result} status={resultStatus} showDecimals={showDecimals} onOpen={setDetail}
+          onSwitchDelayChange={(delay, trialSeed) => { setSwitchDelay(String(delay)); setSeed(trialSeed) }} />
         {footerContainer && createPortal(<button type="button" className="ggs-footer-link" aria-haspopup="dialog"
           onClick={() => setHelpOpen(true)}>計算条件と結果の見方</button>, footerContainer)}
         {helpOpen && <GoldenglowTargetSwitchHelpModal
@@ -296,7 +297,6 @@ function OutputTables({ result, input, showDecimals, onOpen }: { result: Goldeng
   const { mean } = result
   const digits = showDecimals ? 3 : 0
   const permanent = input.skillIndex === 2
-  const droneCount = input.model.activeDroneCount
   const metric = (name: Extract<GoldenglowTargetSwitchDetail, { kind: 'metric' }>['metric']) => () => onOpen({ kind: 'metric', metric: name })
   return <>
     <TableSection id="ggs-result-enemy" title="敵">
@@ -308,8 +308,8 @@ function OutputTables({ result, input, showDecimals, onOpen }: { result: Goldeng
     <TableSection id="ggs-result-attacks" title="スキル時間・攻撃回数">
       <tbody>
         <ValueRow label="スキル持続時間" value={permanent ? `永続（計測${format(result.duration, 3)}秒）` : `${format(result.duration, 3)}秒`} />
-        <ValueRow label="本体攻撃回数" value={`${format(input.skillIndex === 3 ? 0 : mean.volleys, digits)}回`} />
-        <ValueRow label="浮遊ユニット攻撃回数" value={`${format(mean.volleys * droneCount, digits)}回`} />
+        <ValueRow label="本体攻撃回数" value={`${format(mean.bodyAttacks, digits)}回`} />
+        <ValueRow label="浮遊ユニット攻撃回数" value={`${format(mean.droneAttacks, digits)}回`} />
         <ValueRow label="爆発回数期待値" value={`${format(mean.explosions, digits)}回`} onOpen={metric('explosions')} />
       </tbody>
     </TableSection>

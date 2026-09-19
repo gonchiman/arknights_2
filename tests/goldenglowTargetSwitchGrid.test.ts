@@ -112,6 +112,49 @@ test('切り替え待ちがある場合もHPごとの撃破時刻と抽選回数
   }
 })
 
+test('個別切り替えでは計測終了までに着弾した浮遊だけを数え、次周期にも時刻のずれを保つ', () => {
+  const boundaries = [
+    [1, 20], [1.249999, 20], [1.25, 40], [1.499999, 40],
+    [1.5, 60], [1.999999, 60], [2, 80], [2.25, 100], [2.5, 120],
+  ]
+  for (const [duration, expectedDamage] of boundaries) {
+    const result = checkAgainstSingleCells(input({
+      model: { ...model, prdStep: 0, prdMaxStack: 1_000, resistanceIgnoreFixed: 0 },
+      effectiveAttack: 100, attackInterval: 1, duration, switchDelay: 0.25,
+      enemyHps: [20, 1_000_000], enemyResistances: [0], trials: 1,
+      retargetRemainingDrones: true,
+    }))
+    assert.equal(result.rows[0].expectedDamages[0], expectedDamage, `duration ${duration}`)
+    assert.equal(result.rows[0].expectedDamages[1], duration < 2 ? 60 : 165)
+  }
+})
+
+test('本体撃破で未着弾の浮遊が終了時刻を越えたセルは本体だけのダメージを返す', () => {
+  for (const skillIndex of [1, 2]) {
+    for (const [duration, expectedDamage] of [[1.249999, 100], [1.25, 160], [2, 260]]) {
+      const result = checkAgainstSingleCells(input({
+        model: { ...model, prdStep: 0, prdMaxStack: 1_000, resistanceIgnoreFixed: 0 },
+        skillIndex, effectiveAttack: 100, attackInterval: 1, duration, switchDelay: 0.25,
+        enemyHps: [80, 1_000_000], enemyResistances: [0], trials: 1,
+        retargetRemainingDrones: true,
+      }))
+      assert.equal(result.rows[0].expectedDamages[0], expectedDamage, `S${skillIndex}, duration ${duration}`)
+    }
+  }
+})
+
+test('撃破のない個別切り替えセルは待ち時間を変えても同一シードの出力が変わらない', () => {
+  for (const skillIndex of [1, 2, 3]) {
+    const setup = input({
+      skillIndex, enemyHps: [1_000_000, 1_000_000_000], retargetRemainingDrones: true,
+    })
+    const withoutDelay = checkAgainstSingleCells(setup)
+    for (const switchDelay of [0.15, 5]) {
+      assert.deepEqual(checkAgainstSingleCells({ ...setup, switchDelay }), withoutDelay)
+    }
+  }
+})
+
 test('1試行でもHPで制限する前の総ダメージを返し、余剰ダメージを切り捨てない', () => {
   const result = checkAgainstSingleCells(input({
     model: { ...model, activeDroneCount: 1, prdStep: 1, resistanceIgnoreFixed: 0 },
@@ -164,16 +207,18 @@ test('最大16浮遊の最上位ビットを含む爆発と通常攻撃を欠落
 })
 
 test('同一シードの結果を再現し、入力配列・モデル・設定を変更しない', () => {
-  const setup = input({ model: { ...model, prdStep: 0.2 }, trials: 31 })
-  const original = structuredClone(setup)
-  Object.freeze(setup.enemyHps)
-  Object.freeze(setup.enemyResistances)
-  Object.freeze(setup.model)
-  Object.freeze(setup)
-  const result = simulateGoldenglowTargetSwitchGrid(setup)
-  assert.deepEqual(simulateGoldenglowTargetSwitchGrid(setup), result)
-  assert.deepEqual(setup, original)
-  assert.notDeepEqual(simulateGoldenglowTargetSwitchGrid({ ...setup, seed: setup.seed + 1 }).rows, result.rows)
+  for (const retargetRemainingDrones of [false, true]) {
+    const setup = input({ model: { ...model, prdStep: 0.2 }, switchDelay: 0.15, retargetRemainingDrones, trials: 31 })
+    const original = structuredClone(setup)
+    Object.freeze(setup.enemyHps)
+    Object.freeze(setup.enemyResistances)
+    Object.freeze(setup.model)
+    Object.freeze(setup)
+    const result = simulateGoldenglowTargetSwitchGrid(setup)
+    assert.deepEqual(simulateGoldenglowTargetSwitchGrid(setup), result)
+    assert.deepEqual(setup, original)
+    assert.notDeepEqual(simulateGoldenglowTargetSwitchGrid({ ...setup, seed: setup.seed + 1 }).rows, result.rows)
+  }
 })
 
 test('行の進捗通知は入力順に1回ずつ届き、同じ実効術耐性の行も省略しない', () => {
