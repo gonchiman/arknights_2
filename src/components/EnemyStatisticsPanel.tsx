@@ -20,6 +20,7 @@ import { getChartImageSavePicker, selectChartImageDestination } from '../lib/cha
 import { getEnemyChartImageFilename, getEnemyChartImageLayout, type EnemyChartKind as ChartKind } from '../lib/enemyChartImage'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './EnemyDistribution.css'
+import './EnemyStatisticsSummary.css'
 import './EnemyChartImage.css'
 
 type AnalyzedStatKey = keyof Pick<
@@ -135,7 +136,7 @@ type EnemyStatisticsControls = ReturnType<typeof useEnemyStatisticsControls>
 export function EnemyStatisticsSettings({ controls }: { controls: EnemyStatisticsControls }) {
   return (
     <fieldset className="enemy-statistics-settings">
-      <legend>統計表・グラフの共通設定</legend>
+      <legend>統計・グラフの共通設定</legend>
       <div className="enemy-metric-selector" role="group" aria-label="分析するステータス">
         {STAT_METRICS.map((metric) => (
           <button
@@ -254,10 +255,10 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls }: {
       <CollapsibleCalculatorPanel
         id="enemy-statistics"
         number="01"
-        title="統計表"
-        summary={`${selectedMetric.label} · ${scopeLabel} · ${statistics.count}体`}
+        title="統計サマリー"
+        summary={`${selectedMetric.label} · ${scopeLabel} · 値なし ${statistics.missingCount}体`}
         defaultOpen
-        collapsedLabel="統計表を開く"
+        collapsedLabel="統計を開く"
         className="enemy-statistics-panel"
         bodyClassName="enemy-statistics-body"
       >
@@ -548,7 +549,6 @@ function EnemyChartImagePreview({ data, aspectRatio }: { data: EnemyChartImageDa
 }
 
 function StatisticsSummary({ statistics, metric }: { statistics: NumericStatisticsWithDispersion; metric: StatMetric }) {
-  const headingId = useId()
   const formatValue = (value: number | null, digits = metric.summaryDigits) => (
     value === null ? '—' : formatNumber(value, digits, metric.suffix)
   )
@@ -562,7 +562,7 @@ function StatisticsSummary({ statistics, metric }: { statistics: NumericStatisti
   )
   const containsNegativeValue = statistics.minimum !== null && statistics.minimum < 0
   const coefficientOfVariationDetail = statistics.coefficientOfVariation !== null
-    ? '標準偏差 ÷ 平均'
+    ? null
     : statistics.count === 0
       ? '有効データなし'
       : containsNegativeValue
@@ -570,57 +570,71 @@ function StatisticsSummary({ statistics, metric }: { statistics: NumericStatisti
         : '平均が0のため算出なし'
   const iqrValue = formatValue(statistics.interquartileRange)
   const normalizedIqrDetail = statistics.normalizedInterquartileRange !== null
-    ? `IQR ${iqrValue}`
+    ? null
     : statistics.count === 0
       ? '有効データなし'
       : containsNegativeValue
-        ? `IQR ${iqrValue}・負値を含むため算出なし`
-        : `IQR ${iqrValue}・中央値が0のため算出なし`
+        ? '負値を含むため算出なし'
+        : '中央値が0のため算出なし'
 
   return (
-    <>
-      <h3 className="enemy-table-title" id={headingId}>{metric.label}の統計量</h3>
-      <div className="enemy-value-table-wrap">
-        <table className="enemy-value-table" aria-labelledby={headingId}>
-          <tbody>
-            <StatisticsItem
-              label="有効データ"
-              value={`${statistics.count}体`}
-              detail={statistics.missingCount > 0 ? `値なし ${statistics.missingCount}体を除外` : '表示範囲の全対象'}
-            />
-            <StatisticsItem label="平均" value={formatValue(statistics.mean)} />
-            <StatisticsItem label="中央値" value={formatValue(statistics.median)} />
-            <StatisticsItem label="標準偏差" value={formatValue(statistics.standardDeviation)} />
-            <StatisticsItem
-              label="変動係数（CV）"
-              value={formatPercentage(statistics.coefficientOfVariation)}
-              detail={coefficientOfVariationDetail}
-            />
-            <StatisticsItem label="最小" value={formatValue(statistics.minimum, metric.valueDigits)} />
-            <StatisticsItem label="第1四分位" value={formatValue(statistics.firstQuartile)} />
-            <StatisticsItem label="第3四分位" value={formatValue(statistics.thirdQuartile)} />
-            <StatisticsItem
-              label="正規化IQR"
-              value={formatPercentage(statistics.normalizedInterquartileRange)}
-              detail={normalizedIqrDetail}
-            />
-            <StatisticsItem label="最大" value={formatValue(statistics.maximum, metric.valueDigits)} />
-          </tbody>
-        </table>
-      </div>
-    </>
+    <div className="enemy-stat-summary">
+      <dl className="enemy-stat-summary-grid" aria-label={`${metric.label}の統計量`}>
+        <StatisticsItem label="最小" value={formatValue(statistics.minimum, metric.valueDigits)} />
+        <StatisticsItem label="第1四分位" value={formatValue(statistics.firstQuartile)} />
+        <StatisticsItem label="中央値" value={formatValue(statistics.median)} />
+        <StatisticsItem label="第3四分位" value={formatValue(statistics.thirdQuartile)} />
+        <StatisticsItem label="最大" value={formatValue(statistics.maximum, metric.valueDigits)} />
+        <StatisticsItem label="有効データ" value={`${statistics.count}体`} />
+        <StatisticsItem label="平均" value={formatValue(statistics.mean)} />
+        <StatisticsItem label="標準偏差" value={formatValue(statistics.standardDeviation)} />
+        <StatisticsItem label="変動係数（CV）" value={formatPercentage(statistics.coefficientOfVariation)} />
+        <StatisticsItem label="正規化IQR" value={formatPercentage(statistics.normalizedInterquartileRange)} detail={`IQR ${iqrValue}`} />
+      </dl>
+      <details className="enemy-stat-summary-help">
+        <summary>統計量の見方</summary>
+        <dl>
+          <div>
+            <dt>有効データ・値なし</dt>
+            <dd>数値のないデータは集計から除外します。0は有効データに含めます。</dd>
+          </div>
+          <div>
+            <dt>第1・第3四分位</dt>
+            <dd>データを小さい順に並べたときの25%点・75%点です。</dd>
+          </div>
+          <div>
+            <dt>変動係数（CV）</dt>
+            <dd>
+              標準偏差 ÷ 平均を%で表示します。平均が0、または負値を含む場合は算出しません。
+              {coefficientOfVariationDetail && <span className="enemy-stat-summary-note">現在の対象：{coefficientOfVariationDetail}</span>}
+            </dd>
+          </div>
+          <div>
+            <dt>四分位範囲（IQR）</dt>
+            <dd>第3四分位 − 第1四分位です。</dd>
+          </div>
+          <div>
+            <dt>正規化IQR</dt>
+            <dd>
+              IQR ÷ 中央値を%で表示します。中央値が0、または負値を含む場合は算出しません。
+              {normalizedIqrDetail && <span className="enemy-stat-summary-note">現在の対象：{normalizedIqrDetail}</span>}
+            </dd>
+          </div>
+        </dl>
+      </details>
+    </div>
   )
 }
 
 function StatisticsItem({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
-    <tr>
-      <th scope="row">
-        {label}
-        {detail && <small className="enemy-value-note">{detail}</small>}
-      </th>
-      <td>{value}</td>
-    </tr>
+    <div className="enemy-stat-summary-item">
+      <dt>{label}</dt>
+      <dd>
+        {value}
+        {detail && <small className="enemy-stat-summary-note">{detail}</small>}
+      </dd>
+    </div>
   )
 }
 
