@@ -8,6 +8,8 @@ import {
 import {
   chooseHpComparisonBaseline,
   createHpComparisonDisplaySeries,
+  createHpComparisonUnequippedDifferenceSeries,
+  selectHpComparisonBarHps,
   simulateGoldenglowTargetSwitchHpComparison,
   validateHpComparisonInput,
   type HpComparisonBuild,
@@ -239,4 +241,82 @@ test('存在しない基準は未装備、次に先頭へ戻し、有限でな�
   const bad = [{ id: 'X', label: 'X', points: [{ enemyHp: 1_000, expectedDamage: NaN }] }]
   assert.deepEqual(createHpComparisonDisplaySeries(bad, [1_000], 'total', 'X')[0].points,
     [{ enemyHp: 1_000, value: null }])
+})
+
+test('棒グラフの代表HPは全範囲を5点に分け、最大HPを含める', () => {
+  const hps = Object.freeze(Array.from({ length: 20 }, (_, index) => (index + 1) * 1_000))
+  assert.deepEqual(selectHpComparisonBarHps(hps), [4_000, 8_000, 12_000, 16_000, 20_000])
+  assert.deepEqual(selectHpComparisonBarHps([30_000, 900, 50, 8_000, 400, 15_000, 1_300]),
+    [400, 900, 8_000, 15_000, 30_000])
+  assert.deepEqual(hps, Array.from({ length: 20 }, (_, index) => (index + 1) * 1_000))
+})
+
+test('5点以下のHPは全点を残し、重複・非正数・有限でない値だけを除く', () => {
+  const hps = Object.freeze([3_000, 0, 1_000, 2_000, 1_000, -1, NaN, Infinity, -Infinity])
+  assert.deepEqual(selectHpComparisonBarHps(hps), [1_000, 2_000, 3_000])
+  assert.deepEqual(selectHpComparisonBarHps([0, NaN, -1]), [])
+  assert.deepEqual(selectHpComparisonBarHps([5, 4, 3, 2, 1], 3), [1, 2, 3, 4, 5])
+})
+
+test('表で選択したHPは一番近い代表点と入れ替え、等距離では小さい代表点を使う', () => {
+  const hps = Array.from({ length: 20 }, (_, index) => (index + 1) * 1_000)
+  assert.deepEqual(selectHpComparisonBarHps(hps, 1_000), [1_000, 8_000, 12_000, 16_000, 20_000])
+  assert.deepEqual(selectHpComparisonBarHps(hps, 6_000), [6_000, 8_000, 12_000, 16_000, 20_000])
+  assert.deepEqual(selectHpComparisonBarHps(hps, 11_000), [4_000, 8_000, 11_000, 16_000, 20_000])
+  for (const selected of [20_000, 8_000, 1_500, NaN, Infinity, null]) {
+    assert.deepEqual(selectHpComparisonBarHps(hps, selected), [4_000, 8_000, 12_000, 16_000, 20_000])
+  }
+})
+
+test('未装備との差は全精度の正負の差とゼロ基準を保ち、入力と装備情報を変えない', () => {
+  const series: HpComparisonSeries[] = [
+    { ...totals[1], moduleType: 'X', potential: 4 },
+    { ...totals[0], moduleType: null, potential: 1 },
+  ]
+  const before = structuredClone(series)
+  for (const item of series) {
+    item.points.forEach(Object.freeze)
+    Object.freeze(item.points)
+    Object.freeze(item)
+  }
+  Object.freeze(series)
+  const result = createHpComparisonUnequippedDifferenceSeries(series, [1_000, 2_000, 3_000, 4_000])
+  assert.deepEqual(result[0], { id: 'X', label: 'MOD X', moduleType: 'X', potential: 4, points: [
+    { enemyHp: 1_000, value: 50.125 }, { enemyHp: 2_000, value: -100 },
+    { enemyHp: 3_000, value: 10 }, { enemyHp: 4_000, value: null },
+  ] })
+  assert.deepEqual(result[1], { id: 'none', label: '未装備', moduleType: null, potential: 1, points: [
+    { enemyHp: 1_000, value: 0 }, { enemyHp: 2_000, value: 0 },
+    { enemyHp: 3_000, value: 0 }, { enemyHp: 4_000, value: null },
+  ] })
+  assert.deepEqual(series, before)
+})
+
+test('未装備がない差分では他の装備を基準にせず、全点を未計算にする', () => {
+  const series: HpComparisonSeries[] = [
+    { ...totals[1], moduleType: 'X', potential: 4 },
+    { ...totals[0], id: 'opaque-none', moduleType: null, potential: 1 },
+  ]
+  const result = createHpComparisonUnequippedDifferenceSeries(series, [1_000, 2_000])
+  assert.deepEqual(result, series.map(({ points: _points, ...identity }) => ({
+    ...identity,
+    points: [{ enemyHp: 1_000, value: null }, { enemyHp: 2_000, value: null }],
+  })))
+  assert.deepEqual(createHpComparisonUnequippedDifferenceSeries([], [1_000]), [])
+})
+
+test('未装備との差は途中結果と不正値を補間したりゼロ扱いしたりしない', () => {
+  const result = createHpComparisonUnequippedDifferenceSeries([
+    { id: 'none', label: '未装備', points: [
+      { enemyHp: 1_000, expectedDamage: 100 }, { enemyHp: 2_000, expectedDamage: Infinity },
+    ] },
+    { id: 'X', label: 'MOD X', points: [
+      { enemyHp: 1_000, expectedDamage: NaN }, { enemyHp: 2_000, expectedDamage: 200 },
+      { enemyHp: 3_000, expectedDamage: 300 },
+    ] },
+    { id: 'Y', label: 'MOD Y', points: [] },
+  ], [1_000, 2_000, 3_000])
+  assert.deepEqual(result[0].points.map(({ value }) => value), [0, null, null])
+  assert.deepEqual(result[1].points.map(({ value }) => value), [null, null, null])
+  assert.deepEqual(result[2].points.map(({ value }) => value), [null, null, null])
 })
