@@ -51,11 +51,7 @@
 .gg2-table-groups { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; }
 .gg2-table-group { min-width: 0; }
 .gg2-table-group + .gg2-table-group { border-left: 1px solid var(--border-strong); }
-.gg2-results-layout[data-layout="side"] { grid-template-columns: minmax(0, 1fr) var(--gg2-table-width); }
-.gg2-results-layout[data-layout="split"] { grid-template-columns: minmax(0, 1fr) var(--gg2-table-split-width); }
-.gg2-results-layout:not([data-layout="stacked"]) .gg2-table-view { height: var(--gg2-chart-height, 430px); }
-.gg2-results-layout:not([data-layout="stacked"]) .gg2-table-scroll { flex: 1; }
-.gg2-results-layout[data-layout="split"] .gg2-table-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.gg2-results-layout[data-table-layout="split"] .gg2-table-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .gg2-table-range { padding: 8px 10px; color: var(--text-soft); font-size: 11px; text-align: left; font-variant-numeric: tabular-nums; }
 .gg2-run-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .gg2-run-actions button { min-height: 36px; font-size: 11px; }
@@ -72,7 +68,6 @@
 .gg2-error { margin: 10px 0; color: var(--danger); font-size: 12px; }
 .gg2-table-title { margin: 0; font-size: 12px; }
 .gg2-results-table { min-width: var(--gg2-table-width); margin: 0; border: 0; font-size: 12px; }
-.gg2-results-layout:not([data-layout="stacked"]) .gg2-results-table { min-width: 0; }
 .gg2-results-table th:first-child { width: 90px; }
 .gg2-results-table thead th { white-space: normal; }
 .gg2-results-table .gg-performance-column-label { min-height: 38px; align-items: flex-end; }
