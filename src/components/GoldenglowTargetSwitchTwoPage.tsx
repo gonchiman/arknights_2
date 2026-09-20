@@ -47,7 +47,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const [delay, setDelay] = useState('0.1')
   const [duration, setDuration] = useState('30')
   const [startHp, setStartHp] = useState('1000')
-  const [endHp, setEndHp] = useState('20000')
+  const [endHp, setEndHp] = useState('30000')
   const [stepHp, setStepHp] = useState('1000')
   const [trials, setTrials] = useState(10000)
   const [seed, setSeed] = useState('20260908')
@@ -358,7 +358,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
             </button>
           </div>
           <div className="gg2-chart-area" aria-busy={running}>
-            <GoldenglowTargetSwitchHpChart series={displaySeries} maxHp={shownHps.at(-1) ?? 20000}
+            <GoldenglowTargetSwitchHpChart series={displaySeries} maxHp={shownHps.at(-1) ?? 30000}
               selectedHp={selectedHp} onSelectHp={setSelectedHp} stale={stale} digits={digits} metric={metric} baselineId={baselineId} />
             {!hasDisplayPoints && <span className="gg2-empty">{running ? '計算中…' : calculation.status === 'idle' ? '未計算' : metric !== 'total' && completedPoints ? '比較できる結果なし' : '計算結果なし'}</span>}
           </div>

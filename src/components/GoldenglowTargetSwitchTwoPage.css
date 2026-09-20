@@ -13,7 +13,7 @@
 .gg2-module-choice select { min-height: 34px; padding: 5px 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-size: 12px; }
 .gg2-module-choice:has(input:disabled:not(:checked)) { opacity: .6; }
 .gg2-condition-fields > .calculator-field { width: 150px; max-width: 100%; }
-.gg2-settings { min-width: 0; flex: 1 1 290px; align-self: start; }
+.gg2-settings { min-width: 0; flex: 1 1 100%; }
 .gg2-settings summary { width: fit-content; padding: 4px 0; color: var(--text-soft); font-size: 11px; cursor: pointer; }
 .gg2-settings-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
 .gg2-output-panel > .collapsible-panel-header { display: flex; align-items: center; flex-wrap: wrap; background: var(--surface-soft); }
@@ -91,7 +91,6 @@
 @container (max-width: 600px) {
   .gg2-condition-fields { gap: 12px; }
   .gg2-condition-fields > .calculator-field { flex: 1 1 130px; }
-  .gg2-settings { flex-basis: 100%; }
   .gg2-settings-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .gg2-output-panel .collapsible-panel-header > .collapsible-panel-title { flex-basis: 100%; }
   .gg2-output-panel .collapsible-panel-actions { flex: 1 1 100%; gap: 8px 10px; padding-top: 0; }
