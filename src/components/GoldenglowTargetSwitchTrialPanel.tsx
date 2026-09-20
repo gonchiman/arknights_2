@@ -86,7 +86,7 @@ function TrialOutput({ input, result, showDecimals, onOpen, onSwitchDelayChange 
         <button type="button" className="button secondary" onClick={resimulate}>もう一度実行</button>
       </div>
     </div>
-    {individual ? <UnitHistoryTable history={history} input={input} start={safePage * PAGE_SIZE} showDecimals={showDecimals} onOpen={openEvent}
+    {individual ? <GoldenglowTargetSwitchHistoryTable history={history} input={input} start={safePage * PAGE_SIZE} showDecimals={showDecimals} onOpen={openEvent}
         onOpenHp={(target) => onOpen({ kind: 'targetHp', target, seed: simulation.seed })} />
       : <div className="ggs-trial-scroll" tabIndex={0} role="region" aria-labelledby="ggs-trial-history-title">
       <table className="ggs-trial-table" aria-labelledby="ggs-trial-history-title">
@@ -111,13 +111,17 @@ function TrialOutput({ input, result, showDecimals, onOpen, onSwitchDelayChange 
   </>
 }
 
-function UnitHistoryTable({ history, input, start, showDecimals, onOpen, onOpenHp }: {
+export function GoldenglowTargetSwitchHistoryTable({ history, input, start, showDecimals, onOpen, onOpenHp, pageSize = PAGE_SIZE, headingId = 'ggs-trial-history-title', showHelp = true, compact = false }: {
   history: readonly GoldenglowTargetSwitchHistoryRow[]
   input: GoldenglowTargetSwitchInput
   start: number
   showDecimals: boolean
   onOpen: (event: GoldenglowTargetSwitchHistoryEvent) => void
   onOpenHp: (target: GoldenglowTargetSwitchHistoryTarget) => void
+  pageSize?: number
+  headingId?: string
+  showHelp?: boolean
+  compact?: boolean
 }) {
   const formatOutput = (value: number) => (showDecimals ? numberFormat : integerFormat).format(value)
   const actors = [
@@ -125,14 +129,14 @@ function UnitHistoryTable({ history, input, start, showDecimals, onOpen, onOpenH
     ...Array.from({ length: input.model.activeDroneCount }, (_, index) => ({ key: `drone-${index + 1}`, name: `浮遊${String.fromCharCode(0x2460 + index)}` })),
   ]
   return <>
-    <div className="ggs-trial-scroll" tabIndex={0} role="region" aria-labelledby="ggs-trial-history-title">
-    <table className="ggs-trial-table ggs-trial-unit-table" style={{ minWidth: 254 + actors.length * 132 }} aria-labelledby="ggs-trial-history-title">
+    <div className={`ggs-trial-scroll${compact ? ' ggs-trial-scroll--compact' : ''}`} tabIndex={0} role="region" aria-labelledby={headingId}>
+    <table className={`ggs-trial-table ggs-trial-unit-table${compact ? ' ggs-trial-unit-table--compact' : ''}`} style={compact ? undefined : { minWidth: 254 + actors.length * 132 }} aria-labelledby={headingId}>
       <caption className="visually-hidden">時刻を縦、攻撃者を横に表示します。同時刻の攻撃は左から順に処理するモデルです。切り替えで攻撃予定が遅くなった箇所に延期を表示し、記録のないセルは横線にします。</caption>
       <colgroup><col className="ggs-trial-time-column" />{actors.map((actor) => <col key={actor.key} />)}<col className="ggs-trial-hp-column" /></colgroup>
       <thead><tr><th scope="col" className="ggs-trial-attack">時刻 (s)</th>{actors.map((actor) => <th key={actor.key} scope="col">{actor.name}</th>)}<th scope="col">敵HP<span className="ggs-trial-hp-heading">攻撃前 → 攻撃後</span></th></tr></thead>
       <tbody>
         {history.length === 0 ? <tr><td colSpan={actors.length + 2}>計測時間内に攻撃は発生しません。</td></tr>
-          : history.slice(start, start + PAGE_SIZE).map((row) => {
+          : history.slice(start, start + pageSize).map((row) => {
             const time = timeFormat.format(row.time)
             const targets = groupGoldenglowTargetSwitchHistoryTargets(row)
             return <tr key={row.traceIndex}>
@@ -150,11 +154,13 @@ function UnitHistoryTable({ history, input, start, showDecimals, onOpen, onOpenH
                   {events.length === 0 ? <span className="ggs-trial-empty" aria-label="この時刻の攻撃・延期記録なし">—</span>
                     : events.map((event) => event.kind === 'delay'
                       ? <button type="button" key={`delay-${event.delayIndex}`} className="ggs-trial-event ggs-trial-delay-event" aria-haspopup="dialog"
-                          aria-label={`${time}秒 ${actor.name} 切り替えで${timeFormat.format(event.delay.nextAttackTime)}秒へ延期。詳細を表示`}
+                          aria-label={`${time}秒 ${actor.name} 敵${event.delay.nextTargetNumber}へ切り替えで${timeFormat.format(event.delay.nextAttackTime)}秒へ延期。詳細を表示`}
                           onClick={() => onOpen(event)}>
+                          {compact ? <span className="ggs-trial-event-title">敵{event.delay.nextTargetNumber}へ 延期 → {timeFormat.format(event.delay.nextAttackTime)} s</span> : <>
                           <span className="ggs-trial-event-title">切替で延期</span>
                           <span>{timeFormat.format(event.delay.nextAttackTime)} s へ</span>
                           <span className="ggs-trial-event-value">＋{timeFormat.format(event.delay.addedDelay)} s</span>
+                          </>}
                         </button>
                       : <button type="button" key={`attack-${event.entry.attackIndex}`} className="ggs-trial-event" aria-haspopup="dialog"
                           aria-label={`${time}秒 ${actor.name} ${event.entry.actorAttackNumber}回目の攻撃の詳細${event.entry.attack.killed ? '・撃破' : ''}`}
@@ -175,7 +181,8 @@ function UnitHistoryTable({ history, input, start, showDecimals, onOpen, onOpenH
                   : targets.map((target) => <button type="button" key={target.targetNumber} className="ggs-trial-event ggs-trial-hp-event" aria-haspopup="dialog"
                     aria-label={`${time}秒 敵${target.targetNumber}のHP変化の詳細`} onClick={() => onOpenHp(target)}>
                     <span className="ggs-trial-event-title">敵{target.targetNumber}<span aria-hidden="true">›</span></span>
-                    <span className="ggs-trial-hp-values"><span>{formatOutput(target.hpBefore)}</span><span>→</span><span>{formatOutput(target.hpAfter)}</span></span>
+                    {compact ? <span className="ggs-trial-hp-values"><span>{formatOutput(target.hpBefore)} → {formatOutput(target.hpAfter)}</span></span>
+                      : <span className="ggs-trial-hp-values"><span>{formatOutput(target.hpBefore)}</span><span>→</span><span>{formatOutput(target.hpAfter)}</span></span>}
                   </button>)}
               </td>
             </tr>
@@ -183,10 +190,10 @@ function UnitHistoryTable({ history, input, start, showDecimals, onOpen, onOpenH
       </tbody>
     </table>
     </div>
-    <details className="ggs-trial-table-help"><summary>表の見方</summary>
+    {showHelp && <details className="ggs-trial-table-help"><summary>表の見方</summary>
       <p>同時刻の攻撃は左から順に処理するモデルです。色付きのセルは、切り替えで攻撃予定が遅くなった箇所です。「—」はその時刻の攻撃・延期記録なし。各セルを押すと詳細を確認できます。</p>
       <p>敵HPは、その時刻に攻撃された敵ごとの「最初の攻撃前 → 最後の攻撃後」です。HP欄を押すと各攻撃後の変化を確認できます。0秒設定で同時刻に複数の敵を攻撃した場合も、敵ごとに表示します。</p>
-    </details>
+    </details>}
   </>
 }
 

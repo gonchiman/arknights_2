@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { AppSidebar } from './components/AppSidebar'
 import { DamageCalculator } from './components/DamageCalculator'
 import { DataSourcesPage } from './components/DataSourcesPage'
@@ -46,6 +46,7 @@ import './navigation.css'
 const OVERRIDE_STORAGE_KEY = 'arknights-skill-classification-overrides-v2'
 const SIDEBAR_DRAWER_QUERY = '(max-width: 1140px)'
 const SIDEBAR_DESKTOP_QUERY = '(min-width: 1141px)'
+const GoldenglowSingleTrialPage = lazy(() => import('./components/GoldenglowSingleTrialPage').then((module) => ({ default: module.GoldenglowSingleTrialPage })))
 type BaseAppRoute = Exclude<AppRoute, { view: 'operator-detail' }>
 
 interface OperatorDirectoryPosition {
@@ -268,7 +269,7 @@ export default function App() {
 
         <main className="app-content">
         <PanelStateScope.Provider value={displayedRoute.view}>
-        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'enemy-analysis' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && <section className="error-box" role="alert">{error}</section>}
+        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'enemy-analysis' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-single-trial' && <section className="error-box" role="alert">{error}</section>}
 
         {/* Keep the directory mounted while viewing a detail page so filters, sort and charts survive returning. */}
         {operatorDirectoryVisited && (displayedRoute.view === 'operators' || displayedRoute.view === 'operator-detail') && (
@@ -293,6 +294,10 @@ export default function App() {
           <GoldenglowPerformancePage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
         ) : displayedRoute.view === 'goldenglow-target-switch' ? (
           <GoldenglowTargetSwitchPage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} footerContainer={footerContainer} />
+        ) : displayedRoute.view === 'goldenglow-single-trial' ? (
+          <Suspense fallback={<p className="calculator-loading" role="status">単発シミュレーションを読み込み中…</p>}>
+            <GoldenglowSingleTrialPage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} footerContainer={footerContainer} />
+          </Suspense>
         ) : displayedRoute.view === 'damage' ? (
           <DamageCalculator
             rows={classifiedRows}
