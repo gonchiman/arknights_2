@@ -1,4 +1,4 @@
-export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch'
+export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -38,6 +38,13 @@ export const GOLDENGLOW_ANALYSIS_ITEMS: readonly NavigationItem[] = [
     href: '#/analysis/goldenglow/target-switch',
     label: 'ターゲット切替',
     description: '敵HP・切替時間',
+    section: 'operator-analysis',
+  },
+  {
+    id: 'goldenglow-target-switch-two',
+    href: '#/analysis/goldenglow/target-switch-2',
+    label: 'ターゲット切替2',
+    description: '敵HP・スキル総ダメージ',
     section: 'operator-analysis',
   },
 ]

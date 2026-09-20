@@ -1,0 +1,120 @@
+.gg2-page { container-type: inline-size; }
+.gg2-form, .gg2-fields { min-width: 0; margin: 0; padding: 0; border: 0; }
+.gg2-fields input[aria-invalid="true"] { border-color: var(--danger); }
+.gg2-fields:disabled .skill-choice-group button { opacity: .6; cursor: default; }
+.gg-skill-navigation .gg2-module-controls { min-width: 0; grid-template-columns: minmax(0, 1fr); row-gap: 8px; margin-top: 10px; }
+.gg2-module-choices { grid-column: 1 / -1; grid-row: 2; display: flex; flex-wrap: wrap; gap: 8px; }
+.gg2-module-choice { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border-strong); background: var(--surface); }
+.gg2-module-choice.active { border-color: var(--text-soft); background: var(--surface-soft); }
+.gg2-module-check { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.gg2-module-check input, .gg2-difference-toggle input { width: 16px; height: 16px; margin: 0; accent-color: var(--text); }
+.gg2-module-check > span { display: grid; gap: 4px; font-size: 12px; }
+.gg2-module-check > span > span { color: var(--text-soft); font-size: 11px; }
+.gg2-module-choice select { min-height: 34px; padding: 5px 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-size: 12px; }
+.gg2-module-choice:has(input:disabled:not(:checked)) { opacity: .6; }
+.gg2-condition-fields > .calculator-field { width: 150px; max-width: 100%; }
+.gg2-settings { min-width: 0; flex: 1 1 290px; align-self: start; }
+.gg2-settings summary { width: fit-content; padding: 4px 0; color: var(--text-soft); font-size: 11px; cursor: pointer; }
+.gg2-settings-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.gg2-output-panel > .collapsible-panel-header { display: flex; align-items: center; flex-wrap: wrap; background: var(--surface-soft); }
+.gg2-output-panel.open > .collapsible-panel-header { border-bottom: 1px solid var(--border); }
+.gg2-output-panel .collapsible-panel-header > .collapsible-panel-title { flex: 1 1 210px; min-width: 0; }
+.gg2-output-panel .collapsible-panel-header .collapsible-panel-heading { border-bottom: 0; }
+.gg2-output-panel.open .collapsible-panel-heading-summary > span { display: none; }
+.gg2-output-panel .collapsible-panel-actions { position: relative; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 14px; min-width: 0; max-width: 100%; padding: 8px 12px; }
+.gg2-output-panel .collapsible-panel-actions[hidden] { display: none; }
+.gg2-output-precision { display: flex; align-items: center; gap: 8px; color: var(--text-soft); font-size: 11px; }
+.gg2-output-precision select { min-height: 34px; padding: 5px 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; }
+.gg2-output-conditions { font-size: 11px; }
+.gg2-output-conditions summary { display: flex; align-items: center; gap: 12px; min-height: 34px; padding: 6px 10px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); list-style: none; cursor: pointer; }
+.gg2-output-conditions summary::-webkit-details-marker { display: none; }
+.gg2-output-conditions summary::after { content: '+'; color: var(--text-muted); }
+.gg2-output-conditions[open] summary::after { content: '−'; }
+.gg2-output-conditions dl { position: absolute; right: 0; top: 100%; z-index: 5; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 20px; width: min(340px, calc(100cqw - 36px)); margin: 8px 0 0; padding: 16px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font-size: 12px; }
+.gg2-output-conditions dt { color: var(--text-soft); }
+.gg2-output-conditions dd { margin: 0; text-align: right; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.gg2-comparison-options { font-size: 11px; }
+.gg2-comparison-options summary { display: flex; align-items: center; gap: 12px; min-height: 34px; padding: 6px 10px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); list-style: none; cursor: pointer; }
+.gg2-comparison-options summary::-webkit-details-marker { display: none; }
+.gg2-comparison-options summary::after { content: '+'; color: var(--text-muted); }
+.gg2-comparison-options[open] summary::after { content: '−'; }
+.gg2-comparison-popover { position: absolute; right: 0; top: 100%; z-index: 6; display: grid; gap: 16px; width: min(280px, calc(100cqw - 36px)); margin-top: 8px; padding: 16px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); }
+.gg2-difference-toggle { display: flex; align-items: center; gap: 10px; font-size: 12px; cursor: pointer; }
+.gg2-comparison-popover .calculator-field { min-width: 0; width: 100%; }
+.gg2-baseline-label { display: block; margin-top: 4px; color: var(--text-soft); font-weight: 400; }
+.gg2-results-layout { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 24px; min-width: 0; }
+.gg2-chart-column { min-width: 0; border: 1px solid var(--border-strong); background: var(--surface); }
+.gg2-output .gg2-table-view { display: flex; flex-direction: column; min-width: 0; margin: 0; padding: 0; border: 1px solid var(--border-strong); background: var(--surface); }
+.gg2-table-view .gg-performance-table-toolbar { flex-shrink: 0; align-items: center; min-height: 53px; margin: 0; padding: 8px 10px; border-bottom: 1px solid var(--border); background: var(--surface-soft); }
+.gg2-table-view .gg-performance-copy-table { min-height: 32px; padding: 6px 10px; }
+.gg2-table-scroll { min-height: 0; overflow: auto; scroll-padding-block: 56px 8px; }
+.gg2-table-groups { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; }
+.gg2-table-group { min-width: 0; }
+.gg2-table-group + .gg2-table-group { border-left: 1px solid var(--border-strong); }
+.gg2-results-layout[data-layout="side"] { grid-template-columns: minmax(0, 1fr) var(--gg2-table-width); }
+.gg2-results-layout[data-layout="split"] { grid-template-columns: minmax(0, 1fr) var(--gg2-table-split-width); }
+.gg2-results-layout:not([data-layout="stacked"]) .gg2-table-view { height: var(--gg2-chart-height, 430px); }
+.gg2-results-layout:not([data-layout="stacked"]) .gg2-table-scroll { flex: 1; }
+.gg2-results-layout[data-layout="split"] .gg2-table-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.gg2-table-range { padding: 8px 10px; color: var(--text-soft); font-size: 11px; text-align: left; font-variant-numeric: tabular-nums; }
+.gg2-run-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.gg2-run-actions button { min-height: 36px; font-size: 11px; }
+.gg2-output { min-width: 0; }
+.gg2-chart-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; min-height: 53px; padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--surface-soft); }
+.gg2-chart-heading h3 { margin: 0; font-size: 12px; }
+.gg2-save-image { flex-shrink: 0; min-height: 32px; padding: 6px 10px; font-size: 11px; }
+.gg2-status { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 12px; font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.gg2-status progress { width: 130px; height: 6px; border: 0; accent-color: var(--text); }
+.gg2-chart-area { position: relative; min-width: 0; }
+.gg2-chart-area .ggs-hp-chart-frame { width: calc(100% - 24px); margin-inline: 12px; padding-top: 8px; }
+.gg2-chart-area .ggs-hp-chart-readout { margin-top: 0; padding: 10px 12px; background: var(--surface-soft); font-size: 12px; }
+.gg2-empty { position: absolute; top: 140px; left: 0; right: 0; text-align: center; color: var(--text-muted); font-size: 12px; pointer-events: none; }
+.gg2-error { margin: 10px 0; color: var(--danger); font-size: 12px; }
+.gg2-table-title { margin: 0; font-size: 12px; }
+.gg2-results-table { min-width: var(--gg2-table-width); margin: 0; border: 0; font-size: 12px; }
+.gg2-results-layout:not([data-layout="stacked"]) .gg2-results-table { min-width: 0; }
+.gg2-results-table th:first-child { width: 90px; }
+.gg2-results-table thead th { white-space: normal; }
+.gg2-results-table .gg-performance-column-label { min-height: 38px; align-items: flex-end; }
+.gg2-results-table .gg-performance-column-label strong { font-size: 11px; }
+.gg2-results-table th { overflow-wrap: anywhere; white-space: normal; }
+.gg2-results-table td { white-space: nowrap; }
+.gg2-table-baseline { color: var(--text-muted); font-size: 10px; }
+.gg2-results-table thead th { border-bottom-color: var(--border-strong); }
+.gg2-results-table thead th:first-child { top: 0; }
+.gg2-results-table tbody th { position: sticky; left: 0; }
+.gg2-results-table tbody th { padding: 0; }
+.gg2-results-table .gg2-table-hp { display: block; width: 100%; min-height: 36px; padding: 8px 10px; border: 0; background: transparent; color: var(--text-soft); font: inherit; font-variant-numeric: tabular-nums; text-align: left; cursor: pointer; }
+.gg2-results-table .gg2-table-hp:focus-visible { outline-offset: -3px; }
+.gg2-results-table tbody tr { cursor: pointer; }
+.gg2-results-table .gg-performance-selected-resistance > * { background: color-mix(in srgb, var(--link) 9%, var(--surface)); }
+.gg2-results-table .gg2-table-empty { height: 64px; text-align: center; color: var(--text-muted); cursor: default; }
+.gg2-table-stale tbody td { color: var(--text-muted); }
+.gg2-help { margin-top: 14px; color: var(--text-soft); font-size: 11px; line-height: 1.8; }
+.gg2-help summary { cursor: pointer; }
+.gg2-help p { margin: 8px 0 0; }
+@container (max-width: 600px) {
+  .gg2-condition-fields { gap: 12px; }
+  .gg2-condition-fields > .calculator-field { flex: 1 1 130px; }
+  .gg2-settings { flex-basis: 100%; }
+  .gg2-settings-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gg2-output-panel .collapsible-panel-header > .collapsible-panel-title { flex-basis: 100%; }
+  .gg2-output-panel .collapsible-panel-actions { flex: 1 1 100%; gap: 8px 10px; padding-top: 0; }
+  .gg2-results-layout { gap: 20px; }
+  .gg2-chart-area .ggs-hp-chart-frame { width: calc(100% - 12px); margin-inline: 6px; }
+  .gg2-output-precision select, .gg2-output-conditions summary, .gg2-comparison-options summary, .gg2-run-actions button { min-height: 44px; }
+  .gg2-output-precision select { font-size: 16px; }
+}
+@container (max-width: 350px) {
+  .gg2-settings-fields { grid-template-columns: minmax(0, 1fr); }
+}
+@media (pointer: coarse) {
+  .gg2-fields .calculator-field input, .gg2-fields .calculator-field select { font-size: 16px; min-height: 44px; }
+  .gg2-settings summary, .gg2-results-table .gg2-table-hp { min-height: 44px; }
+  .gg2-run-actions button { min-height: 44px; }
+  .gg2-output-precision select { min-height: 44px; font-size: 16px; }
+  .gg2-output-conditions summary, .gg2-table-view .gg-performance-copy-table { min-height: 44px; }
+  .gg2-comparison-options summary, .gg2-module-choice select { min-height: 44px; }
+  .gg2-save-image { min-height: 44px; }
+  .gg2-chart-heading { min-height: 61px; }
+}

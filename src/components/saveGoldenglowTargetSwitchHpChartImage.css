@@ -1,0 +1,30 @@
+.gg2-chart-image {
+  --surface: #fff;
+  --surface-soft: #f7f7f7;
+  --border: #d6d6d6;
+  --border-strong: #aaa;
+  --text: #222;
+  --text-soft: #444;
+  --text-muted: #666;
+}
+
+.gg2-chart-image .ggs-hp-chart-tick {
+  fill: #555;
+  font-size: 11px;
+}
+
+.gg2-chart-image .ggs-hp-chart-axis-title {
+  fill: #444;
+  font-size: 12px;
+}
+
+.gg2-chart-image-preview { display: grid; gap: 8px; min-width: 0; }
+.gg2-chart-image-preview-heading { display: flex; justify-content: space-between; gap: 12px; color: var(--text-muted); font-size: 12px; }
+.gg2-chart-image-preview-frame {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--surface-soft);
+}
+.gg2-chart-image-preview-position { position: absolute; top: 0; transform-origin: top left; pointer-events: none; }
+.gg2-chart-image-preview-size { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }

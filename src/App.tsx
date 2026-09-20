@@ -7,6 +7,7 @@ import { GoldenglowGuidePage } from './components/GoldenglowGuidePage'
 import { GoldenglowHomePage } from './components/GoldenglowHomePage'
 import { GoldenglowPerformancePage } from './components/GoldenglowPerformancePage'
 import { GoldenglowTargetSwitchPage } from './components/GoldenglowTargetSwitchPage'
+import { GoldenglowTargetSwitchTwoPage } from './components/GoldenglowTargetSwitchTwoPage'
 import { EnemyAnalysis } from './components/EnemyAnalysis'
 import { OperatorComparison } from './components/OperatorComparison'
 import { OperatorDatabase } from './components/OperatorDatabase'
@@ -267,7 +268,7 @@ export default function App() {
 
         <main className="app-content">
         <PanelStateScope.Provider value={displayedRoute.view}>
-        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && <section className="error-box" role="alert">{error}</section>}
+        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-target-switch-two' && <section className="error-box" role="alert">{error}</section>}
 
         {/* Keep the directory mounted while viewing a detail page so filters, sort and charts survive returning. */}
         {operatorDirectoryVisited && (displayedRoute.view === 'operators' || displayedRoute.view === 'operator-detail') && (
@@ -292,6 +293,8 @@ export default function App() {
           <GoldenglowPerformancePage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
         ) : displayedRoute.view === 'goldenglow-target-switch' ? (
           <GoldenglowTargetSwitchPage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} footerContainer={footerContainer} />
+        ) : displayedRoute.view === 'goldenglow-target-switch-two' ? (
+          <GoldenglowTargetSwitchTwoPage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
         ) : displayedRoute.view === 'damage' ? (
           <DamageCalculator
             rows={classifiedRows}

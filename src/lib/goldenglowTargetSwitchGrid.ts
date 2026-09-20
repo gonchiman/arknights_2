@@ -28,6 +28,13 @@ export interface GoldenglowTargetSwitchGridRow {
   expectedDamages: number[]
 }
 
+export interface GoldenglowTargetSwitchGridCell {
+  enemyHp: number
+  enemyResistance: number
+  /** After mitigation, including damage in excess of the target's remaining HP. */
+  expectedDamage: number
+}
+
 export interface GoldenglowTargetSwitchGridResult {
   rows: GoldenglowTargetSwitchGridRow[]
   trials: number
@@ -53,13 +60,49 @@ interface PreparedRow {
  * attack times diverge or a cell stops attacking earlier.
  *
  * Rows and columns retain the supplied order, including duplicates. Completed
- * rows are emitted synchronously; a UI can run this function in a Worker and
- * terminate that Worker when the conditions change.
+ * rows and optional cells are emitted synchronously in supplied row/column
+ * order, after the full workload has been validated. A UI can run this function
+ * in a Worker and terminate that Worker when the conditions change.
  */
 export function simulateGoldenglowTargetSwitchGrid(
   input: GoldenglowTargetSwitchGridInput,
   onRow?: (row: GoldenglowTargetSwitchGridRow, completedRows: number, totalRows: number) => void,
+  onCell?: (cell: GoldenglowTargetSwitchGridCell, completedCells: number, totalCells: number) => void,
 ): GoldenglowTargetSwitchGridResult {
+  const { enemyHps, preparedRows, maxVolleys } = prepareGrid(input)
+  const first = preparedRows[0].simulation
+  const patterns = createExplosionPatterns(first, maxVolleys)
+  const rowCache = new Map<string, Map<number, number>>()
+  const rows: GoldenglowTargetSwitchGridRow[] = []
+  let completedCells = 0
+  const totalCells = enemyHps.length * preparedRows.length
+  for (const { enemyResistance, simulation, damageKey } of preparedRows) {
+    let damages = rowCache.get(damageKey)
+    if (!damages) {
+      damages = new Map<number, number>()
+      rowCache.set(damageKey, damages)
+    }
+    for (const enemyHp of enemyHps) {
+      if (!damages.has(enemyHp)) {
+        damages.set(enemyHp, calculateMeanDamage(simulation, enemyHp, patterns, maxVolleys))
+      }
+      completedCells += 1
+      onCell?.({ enemyHp, enemyResistance, expectedDamage: damages.get(enemyHp)! }, completedCells, totalCells)
+    }
+    // A callback/consumer cannot alter the cached values for a later equal row.
+    const row = { enemyResistance, expectedDamages: enemyHps.map((hp) => damages.get(hp)!) }
+    rows.push(row)
+    onRow?.(row, rows.length, preparedRows.length)
+  }
+  return { rows, trials: first.input.trials, seed: first.input.seed, duration: first.input.duration }
+}
+
+/** Validate without drawing random numbers or running trials; returns the work estimate. */
+export function validateGoldenglowTargetSwitchGridWorkload(input: GoldenglowTargetSwitchGridInput): number {
+  return prepareGrid(input).droneOpportunities
+}
+
+function prepareGrid(input: GoldenglowTargetSwitchGridInput) {
   validateAxes(input)
   const enemyHps = [...input.enemyHps]
   const enemyResistances = [...input.enemyResistances]
@@ -85,23 +128,8 @@ export function simulateGoldenglowTargetSwitchGrid(
   const maxVolleys = getMaximumVolleyCount(first)
   const uniqueHps = [...new Set(enemyHps)]
   const uniqueRows = new Set(preparedRows.map((row) => row.damageKey)).size
-  validateWorkload(first.input, maxVolleys, uniqueHps.length * uniqueRows)
-
-  const patterns = createExplosionPatterns(first, maxVolleys)
-  const rowCache = new Map<string, Map<number, number>>()
-  const rows: GoldenglowTargetSwitchGridRow[] = []
-  for (const { enemyResistance, simulation, damageKey } of preparedRows) {
-    let damages = rowCache.get(damageKey)
-    if (!damages) {
-      damages = new Map(uniqueHps.map((hp) => [hp, calculateMeanDamage(simulation, hp, patterns, maxVolleys)]))
-      rowCache.set(damageKey, damages)
-    }
-    // A callback/consumer cannot alter the cached values for a later equal row.
-    const row = { enemyResistance, expectedDamages: enemyHps.map((hp) => damages.get(hp)!) }
-    rows.push(row)
-    onRow?.(row, rows.length, preparedRows.length)
-  }
-  return { rows, trials: first.input.trials, seed: first.input.seed, duration: first.input.duration }
+  const droneOpportunities = validateWorkload(first.input, maxVolleys, uniqueHps.length * uniqueRows)
+  return { enemyHps, preparedRows, maxVolleys, droneOpportunities }
 }
 
 function getMaximumVolleyCount({ input, timeTolerance }: GoldenglowTargetSwitchPreparedSimulation): number {
@@ -240,16 +268,18 @@ function validateAxes(input: GoldenglowTargetSwitchGridInput): void {
   }
 }
 
-function validateWorkload(input: GoldenglowTargetSwitchInput, maxVolleys: number, uniqueCells: number): void {
+function validateWorkload(input: GoldenglowTargetSwitchInput, maxVolleys: number, uniqueCells: number): number {
   const limits = GOLDENGLOW_TARGET_SWITCH_GRID_LIMITS
   const patternCount = maxVolleys * input.trials
   if (patternCount * Uint16Array.BYTES_PER_ELEMENT > limits.maxPatternBytes) {
     throw new RangeError('表の抽選データが大きすぎます。計測時間・試行回数を減らすか、攻撃間隔を長くしてください。')
   }
   // Include the shared draw generation as well as each distinct cell's replay.
-  if (patternCount * input.model.activeDroneCount * (uniqueCells + 1) > limits.maxDroneOpportunities) {
+  const droneOpportunities = patternCount * input.model.activeDroneCount * (uniqueCells + 1)
+  if (droneOpportunities > limits.maxDroneOpportunities) {
     throw new RangeError('表全体の計算量が上限を超えています。HP・術耐性の点数、計測時間・試行回数を減らすか、攻撃間隔を長くしてください。')
   }
+  return droneOpportunities
 }
 
 function localizeInputError(message: string): string {
