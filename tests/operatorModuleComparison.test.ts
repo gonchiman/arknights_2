@@ -12,6 +12,9 @@ test('元の効果を残し、異なる素質を強化するモジュールを�
   const comparison = buildOperatorModuleComparison(profile, null)
   assert.equal(comparison.level, 3)
   assert.deepEqual(comparison.levels, [1, 2, 3])
+  assert.equal(comparison.potentialRank, 1)
+  assert.deepEqual(comparison.potentialRanks, [1, 2, 3, 4, 5, 6])
+  assert.deepEqual(comparison.potentialEffects, [])
   assert.equal(comparison.condition, '昇進2・潜在1')
   assert.deepEqual(comparison.columns.map((column) => [column.id, column.level]), [
     ['none', null], ['module-x', 3], ['module-y', 3],
@@ -43,6 +46,94 @@ test('元の効果を残し、異なる素質を強化するモジュールを�
     null, '敵に範囲物理ダメージを与える', '敵に範囲物理ダメージを与える',
   ])
   assert.equal(profile.talents?.[0].candidates?.[0].description, originalFirst)
+})
+
+test('潜在の解放段階で未装備・各MODの素質を更新し、同じ潜在を差分の基準にする', () => {
+  const profile = createProfile()
+  const beforeUnlock = buildOperatorModuleComparison(profile, 3, 4)
+  const afterUnlock = buildOperatorModuleComparison(profile, 3, 5)
+  assert.equal(beforeUnlock.rows.find((row) => row.id === 'talent:1')!.cells[0].text, originalSecond)
+  assert.match(beforeUnlock.rows.find((row) => row.id === 'talent:1')!.cells[1].text, /\+24%/)
+  assert.deepEqual(afterUnlock.rows.find((row) => row.id === 'talent:1')!.cells, [
+    { text: '潜在強化後', baseline: null },
+    { text: '潜在強化後のモジュール', baseline: '潜在強化後' },
+    { text: '潜在強化後', baseline: null },
+  ])
+  assert.deepEqual(afterUnlock.rows.find((row) => row.id === 'talent:0')!.cells, [
+    { text: originalFirst, baseline: null },
+    { text: originalFirst, baseline: null },
+    { text: '潜在強化後のモジュール', baseline: originalFirst },
+  ])
+  assert.equal(afterUnlock.condition, '昇進2・潜在5')
+  assert.equal(afterUnlock.potentialRank, 5)
+  assert.deepEqual(buildOperatorModuleComparison(profile, 3, 6).rows, afterUnlock.rows)
+
+  const levelOne = buildOperatorModuleComparison(profile, 1, 5)
+  assert.deepEqual(levelOne.rows.find((row) => row.id === 'talent:1')!.cells, [
+    { text: '潜在強化後', baseline: null },
+    { text: '潜在強化後', baseline: null },
+    { text: '潜在強化後', baseline: null },
+  ])
+})
+
+test('共通の潜在補正を累積表示し、MOD能力値の加算量には混ぜない', () => {
+  const profile = createProfile()
+  profile.potentialRanks = [
+    { description: 'コスト-1', buff: { attributes: { attributeModifiers: [{ attributeType: 4, formulaItem: 0, value: -1 }] } } },
+    { description: '第一素質強化' },
+    { description: '攻撃力+25', buff: { attributes: { attributeModifiers: [{ attributeType: 'ATK', formulaItem: 'ADDITION', value: 25 }] } } },
+    { description: 'コスト-1', buff: { attributes: { attributeModifiers: [{ attributeType: '4', formulaItem: '0', value: -1 }] } } },
+    { description: '<@ba.kw>第二素質強化</>' },
+  ]
+  const base = buildOperatorModuleComparison(profile, 3, 1)
+  const middle = buildOperatorModuleComparison(profile, 3, 3)
+  const maximum = buildOperatorModuleComparison(profile, 3, 6)
+  assert.deepEqual(base.potentialEffects, [])
+  assert.deepEqual(middle.potentialEffects, ['配置コスト-1', '第一素質強化'])
+  assert.deepEqual(maximum.potentialEffects, ['配置コスト-2', '攻撃力+25', '第一素質強化', '第二素質強化'])
+  assert.deepEqual(maximum.rows.filter((row) => row.kind === 'attribute'), base.rows.filter((row) => row.kind === 'attribute'))
+  assert.deepEqual(maximum.rows.find((row) => row.id === 'attribute:atk')!.cells.map((cell) => cell.text), ['—', '+60', '+60'])
+  assert.equal(maximum.rows.some((row) => row.id === 'attribute:cost'), false)
+})
+
+test('単純な加算と確認できない潜在補正は合計せず、元の説明を表示する', () => {
+  const profile = createProfile()
+  profile.potentialRanks = [
+    { description: '条件付きコスト減少', buff: { attributes: { attributeModifiers: [
+      { attributeType: 4, formulaItem: 0, value: -1, loadFromBlackboard: true },
+    ] } } },
+    { description: '割合攻撃力強化', buff: { attributes: { attributeModifiers: [
+      { attributeType: 'ATK', formulaItem: 'MULTIPLICATION', value: 1.1 },
+    ] } } },
+    { description: '参照元に応じたHP増加', buff: { attributes: { attributeModifiers: [
+      { attributeType: 'MAX_HP', formulaItem: 0, value: 100, fetchBaseValueFromSourceEntity: true },
+    ] } } },
+    { description: '再配置時間-4秒', buff: { attributes: { attributeModifiers: [
+      { attributeType: 'RESPAWN_TIME', formulaItem: 0, value: -4 },
+    ] } } },
+  ]
+  assert.deepEqual(buildOperatorModuleComparison(profile, 3, 5).potentialEffects, [
+    '再配置時間-4秒', '条件付きコスト減少', '割合攻撃力強化', '参照元に応じたHP増加',
+  ])
+})
+
+test('潜在の入力を既存の規則で丸め、オペレーターごとの解放可能範囲に収める', () => {
+  const profile = createProfile()
+  assert.equal(buildOperatorModuleComparison(profile, 3, Number.NaN).potentialRank, 1)
+  assert.equal(buildOperatorModuleComparison(profile, 3, Number.POSITIVE_INFINITY).potentialRank, 1)
+  assert.equal(buildOperatorModuleComparison(profile, 3, -2).potentialRank, 1)
+  assert.equal(buildOperatorModuleComparison(profile, 3, 4.6).potentialRank, 5)
+  assert.equal(buildOperatorModuleComparison(profile, 3, 99).potentialRank, 6)
+  profile.potentialRanks = [{}, {}]
+  const limited = buildOperatorModuleComparison(profile, 3, 99)
+  assert.equal(limited.potentialRank, 3)
+  assert.deepEqual(limited.potentialRanks, [1, 2, 3])
+  assert.equal(limited.condition, '昇進2・潜在3')
+  assert.equal(limited.rows.find((row) => row.id === 'talent:1')!.cells[0].text, originalSecond)
+  delete profile.potentialRanks
+  const noPotentials = buildOperatorModuleComparison(profile, 3, 6)
+  assert.equal(noPotentials.potentialRank, 1)
+  assert.deepEqual(noPotentials.potentialRanks, [1])
 })
 
 test('特性のブロック数変更だけをハイライトし、元の効果・未変更・データ欠損は強調しない', () => {

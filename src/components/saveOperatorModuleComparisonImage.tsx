@@ -22,7 +22,7 @@ export async function saveOperatorModuleComparisonImage({
   const ratio = aspect === null ? null : parseTableImageAspect(String(aspect.width), String(aspect.height))
   if (aspect !== null && ratio === null) throw new Error('画像の縦横比が正しくありません。')
   const imageFilename = filename ?? getOperatorModuleComparisonImageFilename({
-    operatorName, operatorId, level: comparison.level, aspect: ratio,
+    operatorName, operatorId, level: comparison.level, potentialRank: comparison.potentialRank, aspect: ratio,
   })
   const initialWidth = Math.max(960, 90 + comparison.columns.length * 280)
   let layoutError: unknown = null

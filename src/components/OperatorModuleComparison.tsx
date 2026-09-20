@@ -17,6 +17,7 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
 }) {
   const contentId = useId()
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null)
+  const [selectedPotential, setSelectedPotential] = useState(1)
   const imageSaveInProgress = useRef(false)
   const [savingImage, setSavingImage] = useState(false)
   const [imageFilename, setImageFilename] = useState<string | null>(null)
@@ -32,8 +33,8 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
   const invalidImageAspect = imageAspectPreset !== 'auto' && imageAspect === null
   const imageAspectErrorId = `${contentId}-image-aspect-error`
   const comparison = useMemo(() => profile
-    ? buildOperatorModuleComparison(profile, selectedLevel)
-    : null, [profile, selectedLevel])
+    ? buildOperatorModuleComparison(profile, selectedLevel, selectedPotential)
+    : null, [profile, selectedLevel, selectedPotential])
 
   if (!comparison || comparison.columns.length < 2) {
     return <p className="operator-profile-empty">実装済みモジュールはありません。</p>
@@ -43,7 +44,7 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
     if (imageSaveInProgress.current || invalidImageAspect) return
     setImageFeedback(null)
     setImageFilename(getOperatorModuleComparisonImageFilename({
-      operatorName, operatorId, level: comparison.level, aspect: imageAspect,
+      operatorName, operatorId, level: comparison.level, potentialRank: comparison.potentialRank, aspect: imageAspect,
     }))
   }
 
@@ -73,24 +74,39 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
   return (
     <div className="operator-module-comparison">
       <div className="operator-module-comparison-controls">
-        {comparison.levels.length > 0 && (
-          <div className="operator-module-comparison-levels">
-            <span>モジュールレベル</span>
-            <div role="group" aria-label="モジュールレベル">
-              {comparison.levels.map((level) => (
-                <button type="button" key={level}
-                  aria-pressed={level === comparison.level}
+        <div className="operator-module-comparison-selections">
+          {comparison.levels.length > 0 && (
+            <div className="operator-module-comparison-levels">
+              <span>モジュールレベル</span>
+              <div role="group" aria-label="モジュールレベル">
+                {comparison.levels.map((level) => (
+                  <button type="button" key={level}
+                    aria-pressed={level === comparison.level}
+                    aria-controls={contentId}
+                    disabled={savingImage}
+                    onClick={() => { setSelectedLevel(level); setImageFeedback(null) }}
+                  >Lv.{level}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="operator-module-comparison-potentials">
+            <span>潜在</span>
+            <div role="group" aria-label="潜在（全MOD共通）">
+              {comparison.potentialRanks.map((potential) => (
+                <button type="button" key={potential}
+                  aria-label={`潜在${potential}`}
+                  aria-pressed={potential === comparison.potentialRank}
                   aria-controls={contentId}
                   disabled={savingImage}
-                  onClick={() => { setSelectedLevel(level); setImageFeedback(null) }}
-                >Lv.{level}</button>
+                  onClick={() => { setSelectedPotential(potential); setImageFeedback(null) }}
+                >{potential}</button>
               ))}
             </div>
           </div>
-        )}
+        </div>
         <div className="operator-module-comparison-actions">
           <div className="operator-module-comparison-legend">
-            <span>{comparison.condition}</span>
             <mark>特性・素質の変更・追加</mark>
           </div>
           <div className="operator-module-comparison-image-settings" role="group" aria-label="画像の保存設定">
@@ -138,6 +154,10 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
         {imageFeedback === 'saved' ? 'PNG画像を保存しました。'
           : imageFeedback === 'downloaded' ? 'PNG画像のダウンロードを開始しました。' : ''}
       </p>
+      <div className="operator-module-comparison-condition" aria-live="polite">
+        <span>{comparison.condition}（全列共通）</span>
+        {comparison.potentialEffects.length > 0 && <span>{comparison.potentialEffects.join(' ／ ')}</span>}
+      </div>
       <div id={contentId} className="operator-module-comparison-scroll" aria-live="polite">
         <OperatorModuleComparisonTable comparison={comparison} />
       </div>

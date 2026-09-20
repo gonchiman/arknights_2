@@ -24,7 +24,10 @@
 .operator-profile-stat-navigation button:hover { background: var(--surface-hover); }
 .operator-profile-stat-navigation button[aria-pressed='true'] { background: var(--accent); color: #fff; }
 .operator-profile-stat-navigation button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
-.operator-profile-traits { margin-top: 20px; }
+.operator-profile-traits,
+.operator-profile-potentials { margin-top: 20px; }
+.operator-profile-potentials .operator-profile-table { border-color: var(--border); }
+.operator-profile-potentials .operator-profile-table th { width: 116px; }
 .operator-profile-basics .operator-stat-radar-header { display: flex; flex-wrap: wrap; gap: 12px; padding: 0; border: 0; background: transparent; }
 .operator-profile-basics .operator-stat-radar-header > .operator-stat-radar-scope { flex: 1 1 230px; min-width: min(230px, 100%); max-width: 340px; margin: 0; }
 .operator-profile-basics .operator-stat-radar-scope strong { font-size: 11px; font-weight: 500; }
@@ -185,6 +188,7 @@
 @media (max-width: 640px) {
   .operator-profile-intro { flex-wrap: wrap; }
   .operator-profile-table th { width: 34%; }
+  .operator-profile-potentials .operator-profile-table th { width: 88px; }
   .operator-profile-table.paired th,
   .operator-profile-table.paired td { padding: 8px 6px; }
 }
