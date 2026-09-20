@@ -1,9 +1,12 @@
+import { getChartImageLayout, type ChartImageLayout } from './chartImageLayout.ts'
+
 export type EnemyChartKind = 'HISTOGRAM' | 'ECDF' | 'BOX' | 'SCATTER' | 'INDIVIDUAL'
 
-export interface EnemyChartImageLayout {
-  width: number
-  height: number
-  chartHeight: number
+export type EnemyChartImageLayout = ChartImageLayout
+
+export function getEnemyChartNaturalHeight(kind: EnemyChartKind, groupCount = 0): number {
+  const groups = Number.isFinite(groupCount) ? Math.max(0, Math.floor(groupCount)) : 0
+  return kind === 'BOX' || kind === 'INDIVIDUAL' ? 24 + Math.max(1, groups) * 70 : 334
 }
 
 /** Reserve readable chart space before fitting the complete image to its ratio. */
@@ -11,27 +14,14 @@ export function getEnemyChartImageLayout({
   kind,
   aspectRatio,
   groupCount = 0,
-  chromeHeight = 76,
+  chromeHeight,
 }: {
   kind: EnemyChartKind
   aspectRatio?: number
   groupCount?: number
   chromeHeight?: number
 }): EnemyChartImageLayout {
-  const groups = Number.isFinite(groupCount) ? Math.max(0, Math.floor(groupCount)) : 0
-  const chrome = Number.isFinite(chromeHeight) && chromeHeight >= 0 ? Math.ceil(chromeHeight) : 76
-  const rows = kind === 'BOX' || kind === 'INDIVIDUAL'
-  const naturalChartHeight = rows ? 24 + Math.max(1, groups) * 70 : 334
-  const validRatio = aspectRatio !== undefined && Number.isFinite(aspectRatio) && aspectRatio >= 0.01 && aspectRatio <= 100
-
-  if (!validRatio) return { width: 960, height: naturalChartHeight + chrome, chartHeight: naturalChartHeight }
-
-  // Widen short, panoramic images instead of squeezing rows or changing the
-  // selected ratio. The shared exporter handles rasterization size limits.
-  const minimumChartHeight = naturalChartHeight
-  const width = Math.ceil(Math.max(960, (minimumChartHeight + chrome) * aspectRatio))
-  const height = Math.ceil(width / aspectRatio)
-  return { width, height, chartHeight: height - chrome }
+  return getChartImageLayout({ naturalChartHeight: getEnemyChartNaturalHeight(kind, groupCount), aspectRatio, chromeHeight })
 }
 
 const chartNames: Record<EnemyChartKind, string> = {

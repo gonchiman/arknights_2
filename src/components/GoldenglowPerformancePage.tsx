@@ -3,11 +3,7 @@ import { GOLDENGLOW_OPERATOR_ID } from '../lib/goldenglowExplosion'
 import { buildGoldenglowPerformanceDifferenceCurve, buildGoldenglowPerformanceDifferences } from '../lib/goldenglowPerformanceDifference'
 import { buildGoldenglowPerformancePresets } from '../lib/goldenglowPerformancePresets'
 import { buildGoldenglowPerformanceRatios, buildGoldenglowPerformanceRatioCurve, type GoldenglowPerformanceRatioMode } from '../lib/goldenglowPerformanceRatio'
-import {
-  getGoldenglowPerformanceColor,
-  GOLDENGLOW_PERFORMANCE_COLOR_SCHEMES,
-  type GoldenglowPerformanceColorScheme,
-} from '../lib/goldenglowPerformanceColors'
+import { getGoldenglowPerformanceColor } from '../lib/goldenglowPerformanceColors'
 import { deriveGoldenglowGuideSkills } from '../lib/goldenglowGuideSkill'
 import {
   buildGoldenglowPerformanceComparison,
@@ -89,7 +85,6 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
   const [chartBaselineId, setChartBaselineId] = useState('default-off')
   const [chartDigits, setChartDigits] = useState(0)
   const [yAxisFromZero, setYAxisFromZero] = useState(false)
-  const [colorScheme, setColorScheme] = useState<GoldenglowPerformanceColorScheme>('A')
   const [lineStyle, setLineStyle] = useState<'solid' | 'dashed'>('solid')
   const [showLineEndLabels, setShowLineEndLabels] = useState(false)
   const [barMode, setBarMode] = useState<'single' | 'grouped'>('single')
@@ -165,19 +160,19 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
   const chartColumns = useMemo<GoldenglowPerformanceChartColumn[]>(() => chartComparison.map((column) => ({
     id: column.build.id,
     label: `${moduleLabel(column.build, moduleChoices)}（${buildCondition(column.build)}）`,
-    color: getGoldenglowPerformanceColor(column.build, moduleChoices, colorScheme),
+    color: getGoldenglowPerformanceColor(column.build, moduleChoices),
     values: column.values,
   })).filter((column) => !chartRelative || column.id !== effectiveChartBaselineId),
-  [chartComparison, moduleChoices, colorScheme, chartRelative, effectiveChartBaselineId])
+  [chartComparison, moduleChoices, chartRelative, effectiveChartBaselineId])
   const chartSeries = useMemo<ComparisonChartSeries[]>(() => chartCurve.map((column) => ({
     id: column.build.id,
     label: `${moduleLabel(column.build, moduleChoices)}（${buildCondition(column.build)}）`,
     shortLabel: moduleLabel(column.build, moduleChoices),
     detailLabel: buildCondition(column.build),
-    color: getGoldenglowPerformanceColor(column.build, moduleChoices, colorScheme),
+    color: getGoldenglowPerformanceColor(column.build, moduleChoices),
     points: column.values.map((value) => ({ x: value.resistance, value: value.expectedTotalDamage })),
   })).filter((series) => !chartRelative || series.id !== effectiveChartBaselineId),
-  [chartCurve, chartRelative, effectiveChartBaselineId, moduleChoices, colorScheme])
+  [chartCurve, chartRelative, effectiveChartBaselineId, moduleChoices])
   const permanent = skill?.duration === null
   const duration = skill?.duration ?? viewingDuration
   const chartTitle = chartMetric === 'ratio' ? 'スキル総ダメージの基準比' : chartMetric === 'growth' ? 'スキル総ダメージの増減率'
@@ -458,13 +453,6 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
               </label>
               </>}
               </>}
-              {(chartType === 'line' || isGroupedBar || !stackedBars) && <label className="calculator-field gg-performance-color-scheme">
-                <span>配色</span>
-                <select aria-label="グラフの配色" value={colorScheme}
-                  onChange={(event) => setColorScheme(event.target.value as GoldenglowPerformanceColorScheme)}>
-                  {GOLDENGLOW_PERFORMANCE_COLOR_SCHEMES.map((scheme) => <option key={scheme.id} value={scheme.id}>{scheme.label}</option>)}
-                </select>
-              </label>}
             </div>
             <p role="status" className="visually-hidden">
               {imageFeedback === 'saved' ? 'PNG画像を保存しました。' : imageFeedback === 'downloaded' ? 'PNG画像のダウンロードを開始しました。' : ''}

@@ -1,4 +1,4 @@
-export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two'
+export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'enemy-analysis' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-single-trial'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -45,6 +45,13 @@ export const GOLDENGLOW_ANALYSIS_ITEMS: readonly NavigationItem[] = [
     href: '#/analysis/goldenglow/target-switch-2',
     label: 'ターゲット切替2',
     description: '敵HP・スキル総ダメージ',
+    section: 'operator-analysis',
+  },
+  {
+    id: 'goldenglow-single-trial',
+    href: '#/analysis/goldenglow/single-trial',
+    label: '単発シミュレーション',
+    description: '',
     section: 'operator-analysis',
   },
 ]
@@ -102,8 +109,15 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
   {
     id: 'enemies',
     href: '#/enemies',
-    label: 'Enemy Analysis',
-    description: '敵ステータスの検索と分析',
+    label: '敵データベース',
+    description: '敵の検索・ステータス・能力',
+    section: 'analysis',
+  },
+  {
+    id: 'enemy-analysis',
+    href: '#/analysis/enemies',
+    label: '敵の統計分析',
+    description: '敵ステータスの分布・統計量',
     section: 'analysis',
   },
   {

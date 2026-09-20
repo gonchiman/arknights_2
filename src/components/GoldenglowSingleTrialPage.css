@@ -1,0 +1,69 @@
+.gg-single-page { min-width: 0; container-type: inline-size; }
+.gg-single-page .page-intro { margin-bottom: 0; }
+.gg-single-settings-body .gg-single-build { margin: 0; border: 0; padding: 0; background: transparent; backdrop-filter: none; }
+.gg-single-conditions { margin: 20px 0 0; padding-top: 16px; border-top: 1px solid var(--border); }
+.gg-single-enemy-selection { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 14px; }
+.gg-single-enemy-selection > span { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; font-size: 13px; overflow-wrap: anywhere; }
+.gg-single-enemy-index, .gg-single-enemy-adjusted { color: var(--text-soft); font-size: 12px; }
+.gg-single-enemy-dialog { width: min(800px, calc(100vw - 32px)); }
+.gg-single-inputs { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 24px; }
+.gg-single-field { display: block; width: 140px; max-width: 100%; }
+.gg-single-field input { font-variant-numeric: tabular-nums; }
+.gg-single-field input[aria-invalid="true"] { border-color: var(--danger); }
+.gg-single-duration { min-width: 80px; }
+.gg-single-duration strong { display: flex; align-items: center; min-height: 34px; font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.gg-single-run { margin-left: auto; min-height: 38px; }
+.gg-single-seed { margin-top: 14px; font-size: 11px; }
+.gg-single-seed summary, .gg-single-help summary { width: fit-content; cursor: pointer; color: var(--text-soft); }
+.gg-single-seed-mode, .gg-single-decimals { display: flex; align-items: center; gap: 8px; width: fit-content; min-height: 32px; font-size: 12px; cursor: pointer; }
+.gg-single-seed-mode { margin-top: 10px; }
+.gg-single-seed-mode input, .gg-single-decimals input { width: 16px; height: 16px; margin: 0; accent-color: var(--text); }
+.gg-single-seed-fields { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.gg-single-seed-fields .gg-single-field { width: 180px; }
+.gg-single-seed p { color: var(--text-soft); margin: 8px 0 0; }
+.gg-single-error { color: var(--danger); font-size: 11px; margin: 12px 0 0; line-height: 1.8; }
+.gg-single-result { min-width: 0; }
+.gg-single-history-heading { margin: 24px 0 10px; scroll-margin-top: 90px; }
+.gg-single-history-heading h3 { margin: 0; font-size: 13px; font-weight: 500; }
+.gg-single-result-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 14px; }
+.gg-single-result-state { display: flex; justify-content: space-between; flex-wrap: wrap; flex: 1 1 360px; gap: 8px 18px; color: var(--text-soft); font-size: 11px; line-height: 1.8; overflow-wrap: anywhere; }
+.gg-single-decimals { flex-shrink: 0; margin-left: auto; }
+.gg-single-result-state strong { font-weight: 500; color: var(--warning); }
+.gg-single-page .ggs-trial-scroll { border: 1px solid var(--border); }
+.gg-single-page .ggs-trial-unit-table { min-width: 680px; border-collapse: collapse; }
+.gg-single-page .ggs-trial-hp-column { width: 190px; }
+.gg-single-page .ggs-trial-unit-table th, .gg-single-page .ggs-trial-unit-table td { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.gg-single-page .ggs-trial-unit-table thead th { position: static; }
+.gg-single-page .ggs-trial-unit-table tbody .ggs-trial-attack { padding: 14px 8px; }
+.gg-single-page .ggs-trial-unit-table tbody td { padding: 7px 8px; }
+.gg-single-page .ggs-trial-event { min-height: 30px; padding: 3px 0; }
+.gg-single-page .ggs-trial-delay-event { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; gap: 4px 8px; padding: 4px 6px; box-shadow: none; }
+.gg-single-page .ggs-trial-event-title { font-weight: 400; }
+.gg-single-page .ggs-trial-kill-label { color: var(--text); background: var(--surface-soft); }
+.gg-single-page .ggs-trial-hp-event { flex-direction: row; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; }
+.gg-single-page .ggs-trial-hp-values { font-weight: 400; gap: 4px; }
+.gg-single-page .ggs-trial-hp-values > span { white-space: normal; overflow-wrap: anywhere; }
+.gg-single-page .ggs-trial-empty { padding: 3px 0; }
+.gg-single-history-controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 12px; font-size: 12px; color: var(--text-soft); font-variant-numeric: tabular-nums; }
+.gg-single-history-controls > div { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
+.gg-single-history-controls .button { min-height: 34px; font-size: 12px; white-space: normal; }
+.gg-single-help { margin-top: 14px; font-size: 11px; color: var(--text-soft); }
+.gg-single-help p { margin: 8px 0 0; line-height: 1.8; }
+@container (min-width: 850px) {
+  .gg-single-page .gg-single-build { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; }
+  .gg-single-build .gg-module-controls { margin-top: 0; }
+}
+@container (max-width: 560px) {
+  .gg-single-field { flex: 1 1 120px; width: auto; }
+  .gg-single-run { margin-left: 0; }
+  .gg-single-build .skill-choice-group { height: auto; min-height: 44px; }
+  .gg-single-build .skill-choice-group button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px; }
+  .gg-single-build .skill-choice-group button > strong { display: block; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
+}
+@media (max-width: 760px), (pointer: coarse) {
+  .gg-single-page .gg-single-field input { min-height: 44px; font-size: 16px; }
+  .gg-single-duration strong { min-height: 44px; }
+  .gg-single-page .button, .gg-single-page .ggs-trial-event { min-height: 44px; }
+  .gg-single-seed summary, .gg-single-help summary { min-height: 44px; padding-top: 10px; }
+  .gg-single-seed-mode, .gg-single-decimals { min-height: 44px; }
+}

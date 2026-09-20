@@ -14,12 +14,15 @@ import {
 } from '../lib/enemyStatistics'
 import type { EnemyLevelType, EnemyRecord, EnemyStats } from '../types/enemy'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
+import { EnemyFilterPanel } from './EnemyFilterPanel'
 import { PersistentDetails } from './PersistentDetails'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
+import { ChartImageFrame } from './ChartImageFrame'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
-import { getEnemyChartImageFilename, getEnemyChartImageLayout, type EnemyChartKind as ChartKind } from '../lib/enemyChartImage'
+import { getEnemyChartImageFilename, getEnemyChartImageLayout, getEnemyChartNaturalHeight, type EnemyChartKind as ChartKind } from '../lib/enemyChartImage'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './EnemyDistribution.css'
+import './EnemyStatisticsSummary.css'
 import './EnemyChartImage.css'
 
 type AnalyzedStatKey = keyof Pick<
@@ -132,10 +135,10 @@ export function useEnemyStatisticsControls() {
 
 type EnemyStatisticsControls = ReturnType<typeof useEnemyStatisticsControls>
 
-export function EnemyStatisticsSettings({ controls }: { controls: EnemyStatisticsControls }) {
+function EnemyStatisticsSettings({ controls }: { controls: EnemyStatisticsControls }) {
   return (
     <fieldset className="enemy-statistics-settings">
-      <legend>統計表・グラフの共通設定</legend>
+      <legend>ステータス</legend>
       <div className="enemy-metric-selector" role="group" aria-label="分析するステータス">
         {STAT_METRICS.map((metric) => (
           <button
@@ -153,10 +156,12 @@ export function EnemyStatisticsSettings({ controls }: { controls: EnemyStatistic
   )
 }
 
-export function EnemyStatisticsPanel({ rows, scopeLabel, controls }: {
+export function EnemyStatisticsPanel({ rows, scopeLabel, controls, levelType, onLevelTypeChange }: {
   rows: EnemyRecord[]
   scopeLabel: string
   controls: EnemyStatisticsControls
+  levelType: EnemyLevelType | 'ALL'
+  onLevelTypeChange: (levelType: EnemyLevelType | 'ALL') => void
 }) {
   const binWidthInputId = useId()
   const binWidthHelpId = useId()
@@ -254,10 +259,10 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls }: {
       <CollapsibleCalculatorPanel
         id="enemy-statistics"
         number="01"
-        title="統計表"
-        summary={`${selectedMetric.label} · ${scopeLabel} · ${statistics.count}体`}
+        title="統計サマリー"
+        summary={`${selectedMetric.label} · ${scopeLabel} · 値なし ${statistics.missingCount}体`}
         defaultOpen
-        collapsedLabel="統計表を開く"
+        collapsedLabel="統計を開く"
         className="enemy-statistics-panel"
         bodyClassName="enemy-statistics-body"
       >
@@ -274,6 +279,8 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls }: {
         className="enemy-distribution-panel"
         bodyClassName="enemy-distribution-body"
       >
+        <EnemyFilterPanel levelType={levelType} onChange={onLevelTypeChange} />
+        <EnemyStatisticsSettings controls={controls} />
         <div className="enemy-chart-toolbar">
           <fieldset className="enemy-chart-visibility">
             <legend>表示するグラフ</legend>
@@ -445,9 +452,6 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
   aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
 }) {
-  const headingRef = useRef<HTMLElement>(null)
-  const footerRef = useRef<HTMLDivElement>(null)
-  const [chromeHeight, setChromeHeight] = useState(76)
   const titleId = useId()
   const descriptionId = useId()
   const { kind, metric, scale, statistics, observations, scatterObservations, scatterMetric, scatterScale, scopeLabel } = data
@@ -456,8 +460,6 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
   const cdfPoints = useMemo(() => kind === 'ECDF' ? calculateEmpiricalCdf(observations.map(({ value }) => value)) : [], [kind, observations])
   const presentLevels = LEVEL_ORDER.filter((levelType) => (kind === 'SCATTER' ? scatterObservations : observations)
     .some(({ enemy }) => enemy.levelType === levelType))
-  const layout = getEnemyChartImageLayout({ kind, aspectRatio, groupCount: presentLevels.length, chromeHeight })
-  const width = layout.width - 32
   const title = kind === 'SCATTER' ? `${metric.label}と${scatterMetric.label}の散布図`
     : `${metric.label}の${CHART_OPTIONS.find((option) => option.key === kind)?.label}`
   const count = kind === 'SCATTER' ? scatterObservations.length : statistics.count
@@ -473,48 +475,26 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
       : `${statistics.bins.length}階級`)
   }
 
-  useLayoutEffect(() => {
-    const heading = headingRef.current
-    const footer = footerRef.current
-    if (!heading || !footer) return
-    const measure = () => {
-      const measured = heading.offsetHeight + footer.offsetHeight + 24
-      // Growing monotonically avoids a width/wrapping feedback loop on long searches.
-      setChromeHeight((current) => Math.max(current, measured))
-    }
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(heading)
-    observer.observe(footer)
-    return () => observer.disconnect()
-  }, [])
-
-  useLayoutEffect(() => { onLayout?.({ width: layout.width, height: layout.height }) }, [onLayout, layout.width, layout.height])
-
-  const shared = { metric, statistics, scale, width, height: layout.chartHeight, titleId, descriptionId, image: true }
-  return <figure className="enemy-chart-image" style={{ width: layout.width, height: layout.height }} aria-label={title}>
-    <figcaption ref={headingRef} className="enemy-chart-image-heading">
-      <div className="enemy-chart-image-legends">
-        {kind === 'BOX' && <BoxPlotLegend />}
-        {(kind === 'SCATTER' || kind === 'INDIVIDUAL') && <EnemyLevelLegend levelTypes={presentLevels} />}
-        {kind === 'INDIVIDUAL' && <div className="enemy-chart-legend"><span className="median"><i aria-hidden="true" />中央値</span></div>}
-      </div>
-      <strong>{title}</strong>
-      <p className="enemy-chart-image-conditions">{conditions.join(' · ')}</p>
-    </figcaption>
-    <div className="enemy-chart-image-plot">
-      {kind === 'HISTOGRAM' && <HistogramSvg {...shared} description={`${scopeLabel}の${metric.label}のヒストグラム`} />}
-      {kind === 'ECDF' && <EcdfSvg {...shared} points={cdfPoints} description={`${scopeLabel}の${metric.label}の累積分布`} />}
-      {kind === 'BOX' && <BoxPlotSvg {...shared} groups={boxGroups} />}
-      {kind === 'SCATTER' && <ScatterSvg observations={scatterObservations} xMetric={metric} xScale={scale}
-        yMetric={scatterMetric} yScale={scatterScale} width={width} height={layout.chartHeight}
-        titleId={titleId} descriptionId={descriptionId} image />}
-      {kind === 'INDIVIDUAL' && <IndividualPlotSvg {...shared} groups={individualGroups} />}
-    </div>
-    <div ref={footerRef} className="enemy-chart-image-footer">
-      <p className="enemy-chart-image-axis-title">{axisLabel}</p>
-    </div>
-  </figure>
+  return <ChartImageFrame className="enemy-chart-image" title={title} conditions={conditions.join(' · ')}
+    axisTitle={axisLabel} naturalChartHeight={getEnemyChartNaturalHeight(kind, presentLevels.length)}
+    aspectRatio={aspectRatio} onLayout={onLayout} legend={<>
+      {kind === 'BOX' && <BoxPlotLegend />}
+      {(kind === 'SCATTER' || kind === 'INDIVIDUAL') && <EnemyLevelLegend levelTypes={presentLevels} />}
+      {kind === 'INDIVIDUAL' && <div className="enemy-chart-legend"><span className="median"><i aria-hidden="true" />中央値</span></div>}
+    </>}>
+    {({ width, height }) => {
+      const shared = { metric, statistics, scale, width, height, titleId, descriptionId, image: true }
+      return <>
+        {kind === 'HISTOGRAM' && <HistogramSvg {...shared} description={`${scopeLabel}の${metric.label}のヒストグラム`} />}
+        {kind === 'ECDF' && <EcdfSvg {...shared} points={cdfPoints} description={`${scopeLabel}の${metric.label}の累積分布`} />}
+        {kind === 'BOX' && <BoxPlotSvg {...shared} groups={boxGroups} />}
+        {kind === 'SCATTER' && <ScatterSvg observations={scatterObservations} xMetric={metric} xScale={scale}
+          yMetric={scatterMetric} yScale={scatterScale} width={width} height={height}
+          titleId={titleId} descriptionId={descriptionId} image />}
+        {kind === 'INDIVIDUAL' && <IndividualPlotSvg {...shared} groups={individualGroups} />}
+      </>
+    }}
+  </ChartImageFrame>
 }
 
 function EnemyChartImagePreview({ data, aspectRatio }: { data: EnemyChartImageData; aspectRatio?: number }) {
@@ -548,7 +528,6 @@ function EnemyChartImagePreview({ data, aspectRatio }: { data: EnemyChartImageDa
 }
 
 function StatisticsSummary({ statistics, metric }: { statistics: NumericStatisticsWithDispersion; metric: StatMetric }) {
-  const headingId = useId()
   const formatValue = (value: number | null, digits = metric.summaryDigits) => (
     value === null ? '—' : formatNumber(value, digits, metric.suffix)
   )
@@ -562,7 +541,7 @@ function StatisticsSummary({ statistics, metric }: { statistics: NumericStatisti
   )
   const containsNegativeValue = statistics.minimum !== null && statistics.minimum < 0
   const coefficientOfVariationDetail = statistics.coefficientOfVariation !== null
-    ? '標準偏差 ÷ 平均'
+    ? null
     : statistics.count === 0
       ? '有効データなし'
       : containsNegativeValue
@@ -570,57 +549,71 @@ function StatisticsSummary({ statistics, metric }: { statistics: NumericStatisti
         : '平均が0のため算出なし'
   const iqrValue = formatValue(statistics.interquartileRange)
   const normalizedIqrDetail = statistics.normalizedInterquartileRange !== null
-    ? `IQR ${iqrValue}`
+    ? null
     : statistics.count === 0
       ? '有効データなし'
       : containsNegativeValue
-        ? `IQR ${iqrValue}・負値を含むため算出なし`
-        : `IQR ${iqrValue}・中央値が0のため算出なし`
+        ? '負値を含むため算出なし'
+        : '中央値が0のため算出なし'
 
   return (
-    <>
-      <h3 className="enemy-table-title" id={headingId}>{metric.label}の統計量</h3>
-      <div className="enemy-value-table-wrap">
-        <table className="enemy-value-table" aria-labelledby={headingId}>
-          <tbody>
-            <StatisticsItem
-              label="有効データ"
-              value={`${statistics.count}体`}
-              detail={statistics.missingCount > 0 ? `値なし ${statistics.missingCount}体を除外` : '表示範囲の全対象'}
-            />
-            <StatisticsItem label="平均" value={formatValue(statistics.mean)} />
-            <StatisticsItem label="中央値" value={formatValue(statistics.median)} />
-            <StatisticsItem label="標準偏差" value={formatValue(statistics.standardDeviation)} />
-            <StatisticsItem
-              label="変動係数（CV）"
-              value={formatPercentage(statistics.coefficientOfVariation)}
-              detail={coefficientOfVariationDetail}
-            />
-            <StatisticsItem label="最小" value={formatValue(statistics.minimum, metric.valueDigits)} />
-            <StatisticsItem label="第1四分位" value={formatValue(statistics.firstQuartile)} />
-            <StatisticsItem label="第3四分位" value={formatValue(statistics.thirdQuartile)} />
-            <StatisticsItem
-              label="正規化IQR"
-              value={formatPercentage(statistics.normalizedInterquartileRange)}
-              detail={normalizedIqrDetail}
-            />
-            <StatisticsItem label="最大" value={formatValue(statistics.maximum, metric.valueDigits)} />
-          </tbody>
-        </table>
-      </div>
-    </>
+    <div className="enemy-stat-summary">
+      <dl className="enemy-stat-summary-grid" aria-label={`${metric.label}の統計量`}>
+        <StatisticsItem label="最小" value={formatValue(statistics.minimum, metric.valueDigits)} />
+        <StatisticsItem label="第1四分位" value={formatValue(statistics.firstQuartile)} />
+        <StatisticsItem label="中央値" value={formatValue(statistics.median)} />
+        <StatisticsItem label="第3四分位" value={formatValue(statistics.thirdQuartile)} />
+        <StatisticsItem label="最大" value={formatValue(statistics.maximum, metric.valueDigits)} />
+        <StatisticsItem label="有効データ" value={`${statistics.count}体`} />
+        <StatisticsItem label="平均" value={formatValue(statistics.mean)} />
+        <StatisticsItem label="標準偏差" value={formatValue(statistics.standardDeviation)} />
+        <StatisticsItem label="変動係数（CV）" value={formatPercentage(statistics.coefficientOfVariation)} />
+        <StatisticsItem label="正規化IQR" value={formatPercentage(statistics.normalizedInterquartileRange)} detail={`IQR ${iqrValue}`} />
+      </dl>
+      <details className="enemy-stat-summary-help">
+        <summary>統計量の見方</summary>
+        <dl>
+          <div>
+            <dt>有効データ・値なし</dt>
+            <dd>数値のないデータは集計から除外します。0は有効データに含めます。</dd>
+          </div>
+          <div>
+            <dt>第1・第3四分位</dt>
+            <dd>データを小さい順に並べたときの25%点・75%点です。</dd>
+          </div>
+          <div>
+            <dt>変動係数（CV）</dt>
+            <dd>
+              標準偏差 ÷ 平均を%で表示します。平均が0、または負値を含む場合は算出しません。
+              {coefficientOfVariationDetail && <span className="enemy-stat-summary-note">現在の対象：{coefficientOfVariationDetail}</span>}
+            </dd>
+          </div>
+          <div>
+            <dt>四分位範囲（IQR）</dt>
+            <dd>第3四分位 − 第1四分位です。</dd>
+          </div>
+          <div>
+            <dt>正規化IQR</dt>
+            <dd>
+              IQR ÷ 中央値を%で表示します。中央値が0、または負値を含む場合は算出しません。
+              {normalizedIqrDetail && <span className="enemy-stat-summary-note">現在の対象：{normalizedIqrDetail}</span>}
+            </dd>
+          </div>
+        </dl>
+      </details>
+    </div>
   )
 }
 
 function StatisticsItem({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
-    <tr>
-      <th scope="row">
-        {label}
-        {detail && <small className="enemy-value-note">{detail}</small>}
-      </th>
-      <td>{value}</td>
-    </tr>
+    <div className="enemy-stat-summary-item">
+      <dt>{label}</dt>
+      <dd>
+        {value}
+        {detail && <small className="enemy-stat-summary-note">{detail}</small>}
+      </dd>
+    </div>
   )
 }
 
