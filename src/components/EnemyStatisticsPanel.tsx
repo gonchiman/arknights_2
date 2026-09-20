@@ -14,6 +14,7 @@ import {
 } from '../lib/enemyStatistics'
 import type { EnemyLevelType, EnemyRecord, EnemyStats } from '../types/enemy'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
+import { EnemyFilterPanel } from './EnemyFilterPanel'
 import { PersistentDetails } from './PersistentDetails'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
@@ -154,10 +155,12 @@ function EnemyStatisticsSettings({ controls }: { controls: EnemyStatisticsContro
   )
 }
 
-export function EnemyStatisticsPanel({ rows, scopeLabel, controls }: {
+export function EnemyStatisticsPanel({ rows, scopeLabel, controls, levelType, onLevelTypeChange }: {
   rows: EnemyRecord[]
   scopeLabel: string
   controls: EnemyStatisticsControls
+  levelType: EnemyLevelType | 'ALL'
+  onLevelTypeChange: (levelType: EnemyLevelType | 'ALL') => void
 }) {
   const binWidthInputId = useId()
   const binWidthHelpId = useId()
@@ -275,6 +278,7 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls }: {
         className="enemy-distribution-panel"
         bodyClassName="enemy-distribution-body"
       >
+        <EnemyFilterPanel levelType={levelType} onChange={onLevelTypeChange} />
         <EnemyStatisticsSettings controls={controls} />
         <div className="enemy-chart-toolbar">
           <fieldset className="enemy-chart-visibility">

@@ -1,4 +1,5 @@
-.enemy-analysis-route .page-intro { margin: 0; }
+.enemy-analysis-route .page-intro { display: flex; flex-wrap: wrap; gap: 10px 16px; margin: 0; }
+.enemy-page-link { flex: 0 0 auto; display: inline-flex; align-items: center; text-decoration: none; }
 
 .enemy-directory {
   min-width: 0;

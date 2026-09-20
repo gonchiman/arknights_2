@@ -13,6 +13,7 @@ export type AppRoute =
   | { view: 'goldenglow-target-switch' }
   | { view: 'comparison' }
   | { view: 'enemies' }
+  | { view: 'enemy-analysis' }
   | { view: 'sources' }
   | { view: 'slide-maker' }
 
@@ -109,6 +110,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/analysis/goldenglow-target-switch') return { view: 'goldenglow-target-switch' }
   if (hash === '#/comparison') return { view: 'comparison' }
   if (hash === '#/enemies') return { view: 'enemies' }
+  if (hash === '#/analysis/enemies') return { view: 'enemy-analysis' }
   if (hash === '#/sources') return { view: 'sources' }
   if (hash === '#/slide-maker') return { view: 'slide-maker' }
   if (hash === '#/skills') return { view: 'skills' }
