@@ -36,7 +36,6 @@
 .gg-performance-graph-types button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; position: relative; z-index: 1; }
 .gg-performance-graph-resistance { width: 120px; }
 .gg-performance-bar-mode { width: 180px; }
-.gg-performance-color-scheme { width: 240px; }
 .gg-performance-bar-orientation { width: 100px; }
 .gg-performance-baseline { width: 260px; max-width: 100%; }
 .gg-performance-bar-design { width: 240px; max-width: 100%; }
