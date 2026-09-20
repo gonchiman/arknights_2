@@ -110,6 +110,45 @@ export function createHpComparisonDisplaySeries(
   }))
 }
 
+/** A bar chart shows up to five sampled HPs, including a selected table row. */
+export function selectHpComparisonBarHps(
+  enemyHps: readonly number[],
+  selectedHp: number | null = null,
+): number[] {
+  const hps = [...new Set(enemyHps.filter((hp) => Number.isFinite(hp) && hp > 0))]
+    .sort((left, right) => left - right)
+  const count = 5
+  if (hps.length <= count) return hps
+  const sampled = Array.from({ length: count }, (_, index) => (
+    hps[Math.ceil(hps.length * (index + 1) / count) - 1]
+  ))
+  if (selectedHp !== null && hps.includes(selectedHp) && !sampled.includes(selectedHp)) {
+    let closestIndex = 0
+    for (let index = 1; index < sampled.length; index += 1) {
+      if (Math.abs(sampled[index] - selectedHp) < Math.abs(sampled[closestIndex] - selectedHp)) {
+        closestIndex = index
+      }
+    }
+    sampled[closestIndex] = selectedHp
+    sampled.sort((left, right) => left - right)
+  }
+  return sampled
+}
+
+/** Unlike the configurable comparison, an unequipped difference never changes its baseline. */
+export function createHpComparisonUnequippedDifferenceSeries(
+  series: readonly HpComparisonSeries[],
+  enemyHps: readonly number[],
+): HpComparisonDisplaySeries[] {
+  if (series.some((item) => item.id === 'none')) {
+    return createHpComparisonDisplaySeries(series, enemyHps, 'difference', 'none')
+  }
+  return series.map((item) => ({
+    ...copyComparisonIdentity(item),
+    points: enemyHps.map((enemyHp) => ({ enemyHp, value: null })),
+  }))
+}
+
 function copyComparisonIdentity(item: HpComparisonIdentity): HpComparisonIdentity {
   return {
     id: item.id,

@@ -116,15 +116,6 @@ export function OperatorDetailPage({
           />
         </CollapsibleCalculatorPanel>
 
-        <CollapsibleCalculatorPanel
-          id="operator-profile-potentials" number="04" title="潜在能力"
-          summary={`${operator.potentials.length}段階`} collapsedLabel="潜在能力を表示" defaultOpen={false}
-        >
-          <ProfileTable title="潜在能力による変化" rows={operator.potentials.map((potential) => [
-            `潜在${potential.rank}`, potential.description,
-          ])} empty="潜在能力データはありません。" />
-        </CollapsibleCalculatorPanel>
-
         <p className="operator-profile-id">内部ID <code>{operator.operatorId}</code></p>
       </div>
     </section>
@@ -168,6 +159,11 @@ function ProfileBasics({ operator, comparisonOperators }: Pick<OperatorDetailCom
           ...(operator.traitDescription ? [['特性', operator.traitDescription] as const] : []),
           ...operator.talents.map((talent) => [talent.name, talent.description] as const),
         ]} empty="表示できる特性・素質はありません。" />
+      </div>
+      <div className="operator-profile-potentials">
+        <ProfileTable title="潜在能力" rows={operator.potentials.map((potential) => [
+          `潜在${potential.rank}`, potential.description,
+        ])} empty="潜在能力データはありません。" />
       </div>
     </div>
   )

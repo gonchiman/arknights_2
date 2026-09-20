@@ -8,6 +8,10 @@ import {
   type OperatorModuleApplication,
 } from './operatorModules.ts'
 import { getOperatorPassives, type OperatorPassives } from './operatorProfile.ts'
+import {
+  getOperatorPotentialApplication,
+  type OperatorPotentialApplication,
+} from './operatorPotentials.ts'
 
 export interface OperatorModuleComparisonCell {
   text: string
@@ -33,6 +37,9 @@ export interface OperatorModuleComparisonRow {
 export interface OperatorModuleComparison {
   level: number | null
   levels: number[]
+  potentialRank: number
+  potentialRanks: number[]
+  potentialEffects: string[]
   condition: string
   columns: OperatorModuleComparisonColumn[]
   rows: OperatorModuleComparisonRow[]
@@ -44,14 +51,18 @@ const ATTRIBUTE_ORDER = [
 const EMPTY = '—'
 const MISSING = 'データなし'
 
-/** Compare modules at the operator's final promotion and base potential. */
+/** Compare modules at the operator's final promotion and a shared potential. */
 export function buildOperatorModuleComparison(
   profile: OperatorCombatProfile,
   requestedLevel: number | null,
+  requestedPotentialRank = 1,
 ): OperatorModuleComparison {
   const phaseIndex = Math.max(0, profile.phases.length - 1)
   const operatorLevel = Math.max(1, profile.phases[phaseIndex]?.maxLevel ?? 1)
-  const basePassives = getOperatorPassives(profile, phaseIndex, operatorLevel, 1)
+  const potential = getOperatorPotentialApplication(profile, requestedPotentialRank)
+  const { potentialRank } = potential
+  const potentialRanks = Array.from({ length: potential.maxPotentialRank }, (_, index) => index + 1)
+  const basePassives = getOperatorPassives(profile, phaseIndex, operatorLevel, potentialRank)
   const baseTalents = basePassives.sources.filter((source) => (
     source.sourceKind === 'TALENT' && source.talentIndex !== null
   ))
@@ -73,7 +84,7 @@ export function buildOperatorModuleComparison(
       indexBaseTalents(basePassives),
       separateAdditionalTalents(module, basePassives),
       actualLevel,
-      1,
+      potentialRank,
     )
     // A named module without any effect records must not look like a known, unchanged module.
     const available = Boolean(application && (
@@ -172,7 +183,58 @@ export function buildOperatorModuleComparison(
     })
   }
 
-  return { level, levels, condition: `昇進${phaseIndex}・潜在1`, columns, rows }
+  return {
+    level,
+    levels,
+    potentialRank,
+    potentialRanks,
+    potentialEffects: summarizePotentialEffects(profile, potential),
+    condition: `昇進${phaseIndex}・潜在${potentialRank}`,
+    columns,
+    rows,
+  }
+}
+
+/** Common potential bonuses stay separate from the module-only attribute rows. */
+function summarizePotentialEffects(
+  profile: OperatorCombatProfile,
+  potential: OperatorPotentialApplication,
+): string[] {
+  const totals = new Map<string, { label: string; value: number }>()
+  const descriptions = new Set<string>()
+  const ranks = profile.potentialRanks?.slice(0, potential.requiredPotentialRank) ?? []
+  ranks.forEach((rank, index) => {
+    const modifiers = rank.buff?.attributes?.attributeModifiers ?? []
+    const effects = potential.effects.filter((effect) => effect.potentialRank === index + 2)
+    const canCombine = modifiers.length > 0 && effects.length === modifiers.length
+      && effects.every((effect, effectIndex) => (
+        effect.status !== 'UNSUPPORTED'
+        && effect.formulaItem === 'ADDITION'
+        && effect.value !== null
+        && !modifiers[effectIndex].loadFromBlackboard
+        && !modifiers[effectIndex].fetchBaseValueFromSourceEntity
+      ))
+    if (!canCombine) {
+      const description = cleanText(rank.description ?? '')
+      if (description) descriptions.add(description)
+      return
+    }
+    for (const effect of effects) {
+      const previous = totals.get(effect.attributeType)
+      totals.set(effect.attributeType, {
+        label: effect.label,
+        value: (previous?.value ?? 0) + effect.value!,
+      })
+    }
+  })
+  return [
+    ...[...totals].filter(([, effect]) => effect.value !== 0).map(([type, effect]) => {
+      const value = Math.round(effect.value * 10000) / 10000
+      const suffix = type === 'RESPAWN_TIME' ? '秒' : ''
+      return `${effect.label}${value >= 0 ? '+' : ''}${value}${suffix}`
+    }),
+    ...descriptions,
+  ]
 }
 
 function cell(text: string, baseline: string | null = null): OperatorModuleComparisonCell {

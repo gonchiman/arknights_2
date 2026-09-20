@@ -6,7 +6,7 @@ import {
   createGoldenglowTargetSwitchHpValues,
 } from '../lib/goldenglowTargetSwitchHp'
 import {
-  chooseHpComparisonBaseline, createHpComparisonDisplaySeries,
+  chooseHpComparisonBaseline, createHpComparisonDisplaySeries, createHpComparisonUnequippedDifferenceSeries, selectHpComparisonBarHps,
   type HpComparisonInput, type HpComparisonMessage, type HpComparisonMetric, type HpComparisonSeries,
 } from '../lib/goldenglowTargetSwitchHpComparison'
 import { getOperatorModuleId, getOperatorModuleLevels, getOperatorModules, isOperatorModuleUnlocked } from '../lib/operatorModules'
@@ -29,6 +29,7 @@ import './GoldenglowTargetSwitchTwoPage.css'
 const number = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
 const format = (value: number) => number.format(value)
 const limits = GOLDENGLOW_TARGET_SWITCH_LIMITS
+type ChartDisplay = 'line' | 'bar'
 
 export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }: {
   rows: readonly SkillRecord[]
@@ -41,6 +42,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const [moduleSelection, setModuleSelection] = useState<Record<string, boolean>>({})
   const [moduleLevels, setModuleLevels] = useState<Record<string, number>>({})
   const [metric, setMetric] = useState<HpComparisonMetric>('total')
+  const [chartKind, setChartKind] = useState<ChartDisplay>('bar')
   const [differenceMetric, setDifferenceMetric] = useState<'difference' | 'percent'>('difference')
   const [requestedBaselineId, setRequestedBaselineId] = useState('none')
   const [resistance, setResistance] = useState('0')
@@ -153,20 +155,30 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const shownSeries = useMemo(() => request ? calculation.series : builds.map((build) => ({
     id: build.id, label: build.label, moduleType: build.moduleType, potential: build.potential, points: [],
   })), [request, calculation.series, builds])
+  const hideBaseline = chartKind === 'bar' && metric !== 'total'
   const baselineId = chooseHpComparisonBaseline(shownSeries, requestedBaselineId)
   const baselineLabel = shownSeries.find((series) => series.id === baselineId)?.label ?? ''
-  const displaySeries = useMemo(() => createHpComparisonDisplaySeries(shownSeries, shownHps, metric, baselineId), [shownSeries, shownHps, metric, baselineId])
-  const metricLabel = metric === 'total' ? 'スキル総ダメージ期待値' : metric === 'difference' ? '基準との差' : '基準からの増加率'
+  const displaySeries = useMemo(() => metric === 'difference' && baselineId === 'none'
+    ? createHpComparisonUnequippedDifferenceSeries(shownSeries, shownHps)
+    : createHpComparisonDisplaySeries(shownSeries, shownHps, metric, baselineId), [shownSeries, shownHps, metric, baselineId])
+  const visibleSeries = useMemo(() => hideBaseline ? displaySeries.filter((series) => series.id !== baselineId) : displaySeries, [displaySeries, baselineId, hideBaseline])
+  const barHps = useMemo(() => selectHpComparisonBarHps(shownHps, selectedHp), [shownHps, selectedHp])
+  const metricLabel = metric === 'total' ? 'スキル総ダメージ期待値'
+    : metric === 'difference' ? hideBaseline ? `${baselineLabel}との差` : '基準との差'
+      : hideBaseline ? `${baselineLabel}からの増加率` : '基準からの増加率'
   const displayCondition = `${resultCondition}${metric === 'total' ? '' : `・基準 ${baselineLabel}・${metricLabel}`}`
-  const hasDisplayPoints = displaySeries.some((series) => series.points.some((point) => point.value !== null))
+  const hasDisplayPoints = visibleSeries.some((series) => series.points.some((point) => point.value !== null))
+  const hasChartPoints = visibleSeries.some((series) => series.points.some((point) => point.value !== null && (chartKind === 'line' || barHps.includes(point.enemyHp))))
+  const comparisonError = hideBaseline && !visibleSeries.length
+    ? '共通設定で比較する装備を2つ以上選んで計算してください。' : null
   const formatDamage = useMemo(() => {
     const formatter = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: digits, signDisplay: metric === 'total' ? 'auto' : 'exceptZero' })
     return (value: number) => `${formatter.format(value)}${metric === 'percent' ? '%' : ''}`
   }, [digits, metric])
   const tableText = request && hasDisplayPoints ? [
     `${metricLabel}［${displayCondition}・${format(sharedInput!.trials)}回/点・抽選番号${sharedInput!.seed}${calculation.status !== 'complete' ? '・途中結果' : ''}］`,
-    ['敵HP', ...displaySeries.map((series) => `${series.label}${metric !== 'total' && series.id === baselineId ? '（基準）' : ''}`)].join('\t'),
-    ...shownHps.map((hp, index) => [hp, ...displaySeries.map((series) => {
+    ['敵HP', ...visibleSeries.map((series) => `${series.label}${metric !== 'total' && series.id === baselineId ? '（基準）' : ''}`)].join('\t'),
+    ...shownHps.map((hp, index) => [hp, ...visibleSeries.map((series) => {
       const value = series.points[index]?.value
       return value == null ? '—' : `${value.toFixed(digits)}${metric === 'percent' ? '%' : ''}`
     })].join('\t')),
@@ -182,7 +194,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
       setCopyFeedback({ text: tableText, ok: false })
     } finally { setCopying(false) }
   }
-  const canSaveImage = !!request && !!sharedInput && hasDisplayPoints && !running
+  const canSaveImage = !!request && !!sharedInput && hasChartPoints && !running
   const openImageSaveDialog = () => {
     if (!canSaveImage || !request || !sharedInput || imageSaveInProgress.current) return
     setImageFeedback(null)
@@ -190,10 +202,10 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
     // the form has been edited or a partial calculation has been cancelled.
     setImageExport({
       id: ++imageSnapshotId.current,
-      filename: `goldenglow-target-switch-2-S${sharedInput.skillIndex}-${metric}-res${sharedInput.enemyResistance}.png`,
+      filename: `goldenglow-target-switch-2-S${sharedInput.skillIndex}-${chartKind}-${metric}-res${sharedInput.enemyResistance}.png`,
       snapshot: {
         series: structuredClone(displaySeries), maxHp: sharedInput.enemyHps.at(-1)!,
-        metric, baselineId, digits, title: `ゴールデングロー：${metricLabel}`,
+        metric, baselineId, digits, chartKind, hideBaseline, barHps: [...barHps], title: `ゴールデングロー：${metricLabel}`,
         conditions: `${request.skillLabel}・術耐性 ${format(sharedInput.enemyResistance)}`,
         notice: calculation.status === 'complete' ? undefined : `途中結果：${completedPoints} / ${totalPoints}点`,
       },
@@ -280,6 +292,12 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
       <CollapsibleCalculatorPanel id="gg2-output" number="03" title="計算結果"
         summary={request ? `${request.buildLabel}・敵HP別` : rangeLabel}
         collapsedLabel="結果を表示" className="gg2-output-panel" headerActions={<>
+          <label className="gg2-output-precision"><span>グラフ</span>
+            <select aria-label="グラフの表示形式" value={chartKind} onChange={(event) => setChartKind(event.target.value as ChartDisplay)}>
+              <option value="line">折れ線</option>
+              <option value="bar">棒グラフ</option>
+            </select>
+          </label>
           <details name="gg2-output-options" className="gg2-comparison-options" onKeyDown={(event) => {
             if (event.key === 'Escape') {
               event.currentTarget.open = false
@@ -338,7 +356,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
       <section className="gg2-output" aria-labelledby="gg2-chart-title">
         {fieldError && <p className="gg2-error" role="alert">{fieldError}</p>}
         {calculation.error && <p className="gg2-error" role="alert">{calculation.error}</p>}
-        <GoldenglowTargetSwitchHpResults series={displaySeries} enemyHps={shownHps} metric={metric} baselineId={baselineId}
+        <GoldenglowTargetSwitchHpResults series={visibleSeries} enemyHps={shownHps} metric={metric} baselineId={baselineId}
           selectedHp={selectedHp} onSelectHp={setSelectedHp} formatDamage={formatDamage}
           condition={displayCondition} running={running} stale={stale} toolbar={<>
           <div className="gg-performance-table-toolbar">
@@ -351,7 +369,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
           <span className="visually-hidden" role="status">{copyState === true ? '数値表をコピーしました。' : copyState === false ? '数値表をコピーできませんでした。' : ''}</span>
           </>}>
           <div className="gg2-chart-heading">
-            <h3 id="gg2-chart-title">{metricLabel}{metric !== 'total' && <span className="gg2-baseline-label">基準：{baselineLabel}</span>}</h3>
+            <h3 id="gg2-chart-title">{metricLabel}{metric !== 'total' && !hideBaseline && <span className="gg2-baseline-label">基準：{baselineLabel}</span>}</h3>
             <button type="button" className="button secondary gg2-save-image" aria-label="グラフをPNG画像で保存" aria-haspopup="dialog"
               disabled={!canSaveImage || savingImage} aria-busy={savingImage} onClick={openImageSaveDialog}>
               {savingImage ? '保存中…' : '画像を保存'}
@@ -359,8 +377,9 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
           </div>
           <div className="gg2-chart-area" aria-busy={running}>
             <GoldenglowTargetSwitchHpChart series={displaySeries} maxHp={shownHps.at(-1) ?? 30000}
-              selectedHp={selectedHp} onSelectHp={setSelectedHp} stale={stale} digits={digits} metric={metric} baselineId={baselineId} />
-            {!hasDisplayPoints && <span className="gg2-empty">{running ? '計算中…' : calculation.status === 'idle' ? '未計算' : metric !== 'total' && completedPoints ? '比較できる結果なし' : '計算結果なし'}</span>}
+              selectedHp={selectedHp} onSelectHp={setSelectedHp} stale={stale} digits={digits} metric={metric} baselineId={baselineId}
+              chartKind={chartKind} barHps={barHps} hideBaseline={hideBaseline} />
+            {!hasChartPoints && <span className="gg2-empty">{comparisonError ?? (running ? '計算中…' : calculation.status === 'idle' ? '未計算' : hasDisplayPoints ? '表から計算済みのHPを選択してください' : metric !== 'total' && completedPoints ? '比較できる結果なし' : '計算結果なし')}</span>}
           </div>
         </GoldenglowTargetSwitchHpResults>
         <div className="gg2-status" role="status" aria-live="polite">
@@ -374,6 +393,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
           <p>切り替え時間0.1秒は映像からの暫定値です。撃破時に各ユニットが攻撃先を選び直し、次の攻撃時刻を「元の予定」と「撃破時刻＋切り替え時間」の遅い方にするモデルです。同時刻は本体、浮遊ユニットの順に処理します。</p>
           <p>昇進2 Lv.{skill.attackCalculation.level}・信頼100・潜在1。各MODの攻撃力・攻撃速度・素質の変化を適用します。S2は発動後の計測時間内を計算します。抽選番号を固定すると、同じ条件の結果を再現できます。</p>
           <p>ダメージ差は「比較する装備 − 基準の装備」、増加率は「ダメージ差 ÷ 基準の総ダメージ × 100」です。基準が0の増加率と未計算の値は「—」で表示します。差分は計算済みの値から求めるため、表示の切り替えに再計算は不要です。小さな差には試行ごとのばらつきも含まれます。</p>
+          <p>棒グラフは計算したHPから最大5点を選んで表示します。表や敵HP欄で別のHPを選ぶと、近い1点を入れ替えて表示します。差分表示では基準の装備を0として、ほかの装備を表示します。数値表にはすべてのHPを表示します。</p>
         </details>
       </section>
       </CollapsibleCalculatorPanel>
@@ -381,7 +401,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
         aspect={imageAspect} onAspectChange={setImageAspect}
         canChooseLocation={!!imageSavePicker} saving={savingImage} error={imageFeedback === 'failed'} helpMode="popover"
         preview={<GoldenglowTargetSwitchHpChartImagePreview
-          key={`${imageExport.id}:${imageExport.snapshot.metric}:${previewAspect ?? 'auto'}`}
+          key={`${imageExport.id}:${imageExport.snapshot.chartKind}:${imageExport.snapshot.metric}:${previewAspect ?? 'auto'}`}
           snapshot={imageExport.snapshot} aspectRatio={previewAspect} />}
         onClose={() => {
           if (imageSaveInProgress.current) return

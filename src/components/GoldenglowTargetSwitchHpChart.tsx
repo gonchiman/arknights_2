@@ -14,6 +14,9 @@ interface GoldenglowTargetSwitchHpChartProps {
   metric: 'total' | 'difference' | 'percent'
   baselineId: string
   imageOutput?: boolean
+  chartKind?: 'line' | 'bar'
+  barHps?: readonly number[]
+  hideBaseline?: boolean
 }
 
 interface GoldenglowTargetSwitchHpChartSvgProps {
@@ -23,6 +26,10 @@ interface GoldenglowTargetSwitchHpChartSvgProps {
   digits?: number
   width: number
   height: number
+  chartKind?: 'line' | 'bar'
+  barHps?: readonly number[]
+  hideBaseline?: boolean
+  baselineId?: string
 }
 
 interface HpChartContentProps extends GoldenglowTargetSwitchHpChartProps {
@@ -53,14 +60,14 @@ export function GoldenglowTargetSwitchHpChart(props: GoldenglowTargetSwitchHpCha
 }
 
 export function GoldenglowTargetSwitchHpChartSvg({
-  width, height, ...props
+  width, height, baselineId = '', ...props
 }: GoldenglowTargetSwitchHpChartSvgProps) {
   return (
     <HpChartContent
       {...props}
       selectedHp={null}
       onSelectHp={() => undefined}
-      baselineId=""
+      baselineId={baselineId}
       imageOutput
       plotDimensions={{ width, height }}
     />
@@ -69,7 +76,7 @@ export function GoldenglowTargetSwitchHpChartSvg({
 
 function HpChartContent({
   series, maxHp, selectedHp, onSelectHp, stale = false, digits = 2, metric, baselineId, imageOutput = false,
-  plotDimensions,
+  plotDimensions, chartKind = 'line', barHps, hideBaseline = false,
 }: HpChartContentProps) {
   const frameRef = useRef<HTMLDivElement>(null)
   const [measuredWidth, setWidth] = useState(640)
@@ -116,14 +123,22 @@ function HpChartContent({
         value: point.value != null && Number.isFinite(point.value) && (metric !== 'total' || point.value >= 0)
           ? point.value : null,
       })).sort((left, right) => left.enemyHp - right.enemyHp),
-    }))
-  }, [series, hpLimit, metric])
+    })).filter((item) => !hideBaseline || item.id !== baselineId)
+  }, [series, hpLimit, metric, hideBaseline, baselineId])
   const availableHps = [...new Set(chartSeries.flatMap((item) => (
     item.points.filter((point) => point.value !== null).map((point) => point.enemyHp)
   )))].sort((left, right) => left - right)
   const hpValues = [...new Set(chartSeries.flatMap((item) => item.points.map((point) => point.enemyHp)))].sort((left, right) => left - right)
+  const categoryHps = [...new Set(barHps ?? hpValues)]
+    .filter((hp) => Number.isFinite(hp) && hp > 0 && hp <= hpLimit)
+    .sort((left, right) => left - right)
+  const plottedHps = chartKind === 'bar' ? categoryHps : hpValues
+  const plottedHpSet = new Set(plottedHps)
+  const selectableHps = chartKind === 'bar' ? availableHps.filter((hp) => plottedHpSet.has(hp)) : availableHps
   const selection = !imageOutput && selectedHp !== null && hpValues.includes(selectedHp) ? selectedHp : null
-  const values = chartSeries.flatMap((item) => item.points.flatMap((point) => point.value === null ? [] : [point.value]))
+  const values = chartSeries.flatMap((item) => item.points.flatMap((point) => (
+    point.value === null || !plottedHpSet.has(point.enemyHp) ? [] : [point.value]
+  )))
   const minimum = Math.min(0, ...values)
   const maximum = Math.max(0, ...values)
   const valueStep = niceStep((maximum - minimum) / 4)
@@ -147,25 +162,38 @@ function HpChartContent({
   const plotBottom = height - margin.bottom
   const plotWidth = plotRight - margin.left
   const plotHeight = plotBottom - margin.top
-  const x = (hp: number) => margin.left + hp / hpLimit * plotWidth
+  const categoryWidth = plotWidth / Math.max(1, categoryHps.length)
+  const x = (hp: number) => chartKind === 'bar'
+    ? margin.left + (categoryHps.indexOf(hp) + 0.5) * categoryWidth
+    : margin.left + hp / hpLimit * plotWidth
   const y = (value: number) => plotBottom - (value - lowerLimit) / (upperLimit - lowerLimit) * plotHeight
   // The last label is right-aligned, so reserve its full width plus half
   // of the preceding centered label, including for billion-HP ranges.
   const xLabelWidth = integerFormat.format(hpLimit).length * characterWidth
   const xTickSpacing = Math.max(80, xLabelWidth * 1.5 + 12)
   const xTickCount = Math.max(2, Math.min(6, Math.floor(plotWidth / xTickSpacing) + 1))
-  const xTicks = [...new Set(Array.from({ length: xTickCount }, (_, index) => (
+  const xTicks = chartKind === 'bar' ? categoryHps : [...new Set(Array.from({ length: xTickCount }, (_, index) => (
     index === xTickCount - 1 ? hpLimit : Math.round(index * hpLimit / (xTickCount - 1))
   )))].sort((left, right) => left - right)
+  const compactHpFormat = new Intl.NumberFormat('ja-JP', { notation: 'compact', maximumFractionDigits: 1 })
+  const categoryLabelWidth = Math.max(1, categoryWidth - 8)
+  const formatHpTick = (hp: number) => {
+    const fullLabel = integerFormat.format(hp)
+    return chartKind === 'bar' && fullLabel.length * characterWidth > categoryLabelWidth
+      ? compactHpFormat.format(hp) : fullLabel
+  }
+  const barGap = Math.min(6, categoryWidth * 0.035)
+  const groupWidth = Math.min(categoryWidth * 0.72, chartSeries.length * 36 + Math.max(0, chartSeries.length - 1) * barGap)
+  const barWidth = Math.max(0.5, (groupWidth - Math.max(0, chartSeries.length - 1) * barGap) / Math.max(1, chartSeries.length))
 
   const selectFromChart = (event: MouseEvent<SVGSVGElement>) => {
-    if (!availableHps.length) return
+    if (!selectableHps.length) return
     const bounds = event.currentTarget.getBoundingClientRect()
     if (bounds.width <= 0 || bounds.height <= 0) return
     const pointerX = (event.clientX - bounds.left) / bounds.width * width
     const pointerY = (event.clientY - bounds.top) / bounds.height * height
     if (pointerX < margin.left || pointerX > plotRight || pointerY < margin.top || pointerY > plotBottom) return
-    const nearest = availableHps.reduce((best, hp) => Math.abs(x(hp) - pointerX) < Math.abs(x(best) - pointerX) ? hp : best)
+    const nearest = selectableHps.reduce((best, hp) => Math.abs(x(hp) - pointerX) < Math.abs(x(best) - pointerX) ? hp : best)
     onSelectHp(nearest)
   }
 
@@ -180,10 +208,10 @@ function HpChartContent({
       aria-labelledby={`${titleId} ${descriptionId}`}
       onClick={imageOutput ? undefined : selectFromChart}
     >
-      <title id={titleId}>{`敵HPと${metricLabel}のMOD比較`}</title>
+      <title id={titleId}>{`敵HPと${metricLabel}のMOD比較${chartKind === 'bar' ? '（棒グラフ）' : ''}`}</title>
       <desc id={descriptionId}>
         横軸は敵HP、縦軸は{metricLabel}。{chartSeries.length}種類のMODを比較しています。
-        {!imageOutput && '点の値は下の敵HP選択欄で確認できます。'}
+        {!imageOutput && '各値は下の敵HP選択欄で確認できます。'}
       </desc>
       <text className="ggs-hp-chart-axis-title" x={margin.left} y={18}>{metricLabel}</text>
       {yTicks.map((tick, index) => (
@@ -196,14 +224,38 @@ function HpChartContent({
       {xTicks.map((tick, index) => (
         <g key={tick}>
           <line className="ggs-hp-chart-axis" x1={x(tick)} x2={x(tick)} y1={plotBottom} y2={plotBottom + 5} />
-          <text className="ggs-hp-chart-tick" x={x(tick)} y={plotBottom + 21} textAnchor={index === 0 ? 'start' : index === xTicks.length - 1 ? 'end' : 'middle'}>
-            {integerFormat.format(tick)}
+          <text className="ggs-hp-chart-tick" x={x(tick)} y={plotBottom + 21}
+            textAnchor={chartKind === 'bar' ? 'middle' : index === 0 ? 'start' : index === xTicks.length - 1 ? 'end' : 'middle'}
+            textLength={chartKind === 'bar' && formatHpTick(tick).length * characterWidth > categoryLabelWidth ? categoryLabelWidth : undefined}
+            lengthAdjust="spacingAndGlyphs"
+          >
+            {formatHpTick(tick)}
+            {chartKind === 'bar' && <title>{`敵HP ${integerFormat.format(tick)}`}</title>}
           </text>
         </g>
       ))}
       {!plotDimensions && <text className="ggs-hp-chart-axis-title" x={(margin.left + plotRight) / 2} y={height - 6} textAnchor="middle">敵HP</text>}
-      {selection !== null && <line className="ggs-hp-chart-guide" x1={x(selection)} x2={x(selection)} y1={margin.top} y2={plotBottom} />}
-      {chartSeries.map((item) => {
+      {selection !== null && plottedHpSet.has(selection) && (chartKind === 'bar'
+        ? <rect className="ggs-hp-chart-selected-group" x={x(selection) - categoryWidth / 2 + 2} y={margin.top} width={Math.max(0, categoryWidth - 4)} height={plotHeight} />
+        : <line className="ggs-hp-chart-guide" x1={x(selection)} x2={x(selection)} y1={margin.top} y2={plotBottom} />
+      )}
+      {chartSeries.map((item, seriesIndex) => {
+        if (chartKind === 'bar') return (
+          <g key={item.id} style={{ color: item.style.color }}>
+            {item.points.map((point) => point.value === null || !plottedHpSet.has(point.enemyHp) ? null : (
+              <rect
+                key={point.enemyHp}
+                className="ggs-hp-chart-bar"
+                x={x(point.enemyHp) - groupWidth / 2 + seriesIndex * (barWidth + barGap)}
+                y={Math.min(y(0), y(point.value))}
+                width={barWidth}
+                height={Math.abs(y(point.value) - y(0))}
+              >
+                <title>{`${item.label}・敵HP ${integerFormat.format(point.enemyHp)}・${metricLabel} ${formatValue(point.value)}`}</title>
+              </rect>
+            ))}
+          </g>
+        )
         let connected = false
         const path = item.points.map((point) => {
           if (point.value === null) { connected = false; return '' }
@@ -237,7 +289,10 @@ function HpChartContent({
         {chartSeries.map((item) => (
           <li key={item.id}>
             <svg width="24" height="12" aria-hidden="true" style={{ color: item.style.color }}>
-              <line x1="0" x2="24" y1="6" y2="6" stroke="currentColor" strokeWidth="2" strokeDasharray={item.style.dashArray} />
+              {chartKind === 'bar'
+                ? <rect x="7" y="1" width="10" height="10" fill="currentColor" />
+                : <line x1="0" x2="24" y1="6" y2="6" stroke="currentColor" strokeWidth="2" strokeDasharray={item.style.dashArray} />
+              }
             </svg>
             <span>{item.label}{metric !== 'total' && item.id === baselineId ? '（基準）' : ''}</span>
           </li>

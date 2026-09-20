@@ -12,7 +12,15 @@
   margin-bottom: 16px;
 }
 
+.operator-module-comparison-selections {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+
 .operator-module-comparison-levels,
+.operator-module-comparison-potentials,
 .operator-module-comparison-legend {
   display: flex;
   align-items: center;
@@ -22,8 +30,8 @@
   font-size: 11px;
 }
 
-.operator-module-comparison-levels > div { display: flex; flex: 0 0 auto; }
-.operator-module-comparison-levels button {
+.operator-module-comparison-selections [role='group'] { display: flex; flex: 0 0 auto; }
+.operator-module-comparison-selections button {
   flex: 0 0 44px;
   width: 44px;
   height: 36px;
@@ -37,10 +45,21 @@
   font-weight: 500;
   cursor: pointer;
 }
-.operator-module-comparison-levels button + button { border-left: 0; }
-.operator-module-comparison-levels button:hover { background: var(--surface-hover); }
-.operator-module-comparison-levels button[aria-pressed='true'] { background: var(--accent); color: #fff; }
-.operator-module-comparison-levels button:disabled { opacity: .6; cursor: default; }
+.operator-module-comparison-potentials button { flex-basis: 36px; width: 36px; }
+.operator-module-comparison-selections button + button { border-left: 0; }
+.operator-module-comparison-selections button:hover { background: var(--surface-hover); }
+.operator-module-comparison-selections button[aria-pressed='true'] { background: var(--accent); color: #fff; }
+.operator-module-comparison-selections button:disabled { opacity: .6; cursor: default; }
+
+.operator-module-comparison-condition {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-bottom: 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
 
 .operator-module-comparison-actions {
   display: flex;
@@ -128,5 +147,5 @@
   .operator-module-comparison-table td { padding: 8px 5px; }
 }
 @media (pointer: coarse) {
-  .operator-module-comparison-levels button { min-height: 44px; }
+  .operator-module-comparison-selections button { min-height: 44px; }
 }
