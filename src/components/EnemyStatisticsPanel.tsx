@@ -133,10 +133,10 @@ export function useEnemyStatisticsControls() {
 
 type EnemyStatisticsControls = ReturnType<typeof useEnemyStatisticsControls>
 
-export function EnemyStatisticsSettings({ controls }: { controls: EnemyStatisticsControls }) {
+function EnemyStatisticsSettings({ controls }: { controls: EnemyStatisticsControls }) {
   return (
     <fieldset className="enemy-statistics-settings">
-      <legend>統計・グラフの共通設定</legend>
+      <legend>ステータス</legend>
       <div className="enemy-metric-selector" role="group" aria-label="分析するステータス">
         {STAT_METRICS.map((metric) => (
           <button
@@ -275,6 +275,7 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls }: {
         className="enemy-distribution-panel"
         bodyClassName="enemy-distribution-body"
       >
+        <EnemyStatisticsSettings controls={controls} />
         <div className="enemy-chart-toolbar">
           <fieldset className="enemy-chart-visibility">
             <legend>表示するグラフ</legend>

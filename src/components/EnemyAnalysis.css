@@ -695,6 +695,33 @@
   font-size: 11px;
 }
 
+.enemy-table-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.enemy-table-search label { display: grid; flex: 1 1 240px; min-width: 0; gap: 5px; font-size: 11px; }
+.enemy-table-search input,
+.enemy-table-search button {
+  min-height: 36px;
+  min-width: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 11px;
+}
+.enemy-table-search input { width: 100%; }
+.enemy-table-search button { cursor: pointer; }
+.enemy-table-search button:disabled { opacity: .55; cursor: default; }
+.enemy-table-search button:hover:not(:disabled) { background: var(--surface-hover); }
+.enemy-table-search input:focus-visible,
+.enemy-table-search button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
 .enemy-table-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -1026,6 +1053,8 @@
 }
 
 @media (pointer: coarse) {
+  .enemy-table-search input,
+  .enemy-table-search button,
   .enemy-level-filter-buttons button,
   .enemy-metric-selector button,
   .enemy-chart-visibility label,
@@ -1040,4 +1069,9 @@
   .enemy-table .enemy-detail-button,
   .enemy-pagination button,
   .enemy-data-details summary { min-height: 44px; }
+}
+
+@media (max-width: 760px), (pointer: coarse) {
+  .enemy-table-search input { min-height: 44px; font-size: 16px; }
+  .enemy-table-search button { min-height: 44px; }
 }
