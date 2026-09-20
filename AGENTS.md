@@ -6,5 +6,6 @@
 
 | 読むタイミング | 参照先 |
 | --- | --- |
+| AGENTS.mdまたはその参照先の指示ファイルを作成・修正・分割するとき | [指示ファイルの管理方針](instructions/agents-writing.md) |
 | このサイトのテーブルを新規作成・修正するとき | [テーブルの表示方針](instructions/table-ui.md) |
 | グラフの画像出力を作成・変更するとき | [グラフ画像出力のテンプレート](docs/chart-image/README.md) |
