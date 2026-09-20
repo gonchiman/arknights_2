@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildOperatorModuleComparison } from '../src/lib/operatorModuleComparison.ts'
+import { buildOperatorModuleComparison, type OperatorModuleComparisonCell } from '../src/lib/operatorModuleComparison.ts'
 import { splitPassiveDescriptionChanges } from '../src/lib/passiveDescriptionChanges.ts'
 import type { OperatorCombatProfile, RawOperatorModule } from '../src/types/skill.ts'
 
@@ -26,12 +26,12 @@ test('元の効果を残し、異なる素質を強化するモジュールを�
   const second = comparison.rows.find((row) => row.id === 'talent:1')!
   assert.equal(first.name, '潜伏')
   assert.equal(second.name, '悪巧み')
-  assert.deepEqual(first.cells, [
+  assert.deepEqual(first.cells.map(rawCell), [
     { text: originalFirst, baseline: null },
     { text: originalFirst, baseline: null },
     { text: '配置から8秒後、物理回避と術回避+60%、敵に狙われにくくなる。攻撃力が上昇', baseline: originalFirst },
   ])
-  assert.deepEqual(second.cells, [
+  assert.deepEqual(second.cells.map(rawCell), [
     { text: originalSecond, baseline: null },
     { text: '攻撃範囲内のスタン状態の敵が受ける物理ダメージ+24%、敵を倒す度SP+1', baseline: originalSecond },
     { text: originalSecond, baseline: null },
@@ -54,12 +54,12 @@ test('潜在の解放段階で未装備・各MODの素質を更新し、同じ�
   const afterUnlock = buildOperatorModuleComparison(profile, 3, 5)
   assert.equal(beforeUnlock.rows.find((row) => row.id === 'talent:1')!.cells[0].text, originalSecond)
   assert.match(beforeUnlock.rows.find((row) => row.id === 'talent:1')!.cells[1].text, /\+24%/)
-  assert.deepEqual(afterUnlock.rows.find((row) => row.id === 'talent:1')!.cells, [
+  assert.deepEqual(afterUnlock.rows.find((row) => row.id === 'talent:1')!.cells.map(rawCell), [
     { text: '潜在強化後', baseline: null },
     { text: '潜在強化後のモジュール', baseline: '潜在強化後' },
     { text: '潜在強化後', baseline: null },
   ])
-  assert.deepEqual(afterUnlock.rows.find((row) => row.id === 'talent:0')!.cells, [
+  assert.deepEqual(afterUnlock.rows.find((row) => row.id === 'talent:0')!.cells.map(rawCell), [
     { text: originalFirst, baseline: null },
     { text: originalFirst, baseline: null },
     { text: '潜在強化後のモジュール', baseline: originalFirst },
@@ -69,7 +69,7 @@ test('潜在の解放段階で未装備・各MODの素質を更新し、同じ�
   assert.deepEqual(buildOperatorModuleComparison(profile, 3, 6).rows, afterUnlock.rows)
 
   const levelOne = buildOperatorModuleComparison(profile, 1, 5)
-  assert.deepEqual(levelOne.rows.find((row) => row.id === 'talent:1')!.cells, [
+  assert.deepEqual(levelOne.rows.find((row) => row.id === 'talent:1')!.cells.map(rawCell), [
     { text: '潜在強化後', baseline: null },
     { text: '潜在強化後', baseline: null },
     { text: '潜在強化後', baseline: null },
@@ -148,7 +148,7 @@ test('特性のブロック数変更だけをハイライトし、元の効果�
   profile.modules![1].phases![2].parts = []
   profile.modules!.push({ type: 'ADVANCED', uniEquipId: 'missing', uniEquipName: 'データ未取得' })
   const trait = buildOperatorModuleComparison(profile, 3).rows.find((row) => row.id === 'trait')!
-  assert.deepEqual(trait.cells, [
+  assert.deepEqual(trait.cells.map(rawCell), [
     { text: '敵を3体までブロック', baseline: null },
     { text: '敵を4体までブロック', baseline: '敵を3体までブロック' },
     { text: '敵を3体までブロック', baseline: null },
@@ -243,7 +243,7 @@ test('素質名の変更は元の名称を失わずに表示し、名称だけ�
   const talent = buildOperatorModuleComparison(profile, 3).rows.find((row) => row.id === 'talent:1')!
   assert.equal(talent.name, '悪巧み')
   assert.equal(talent.cells[0].text, originalSecond)
-  assert.deepEqual(talent.cells[1], {
+  assert.deepEqual(rawCell(talent.cells[1]), {
     text: `強化された悪巧み：${originalSecond}`,
     baseline: `悪巧み：${originalSecond}`,
   })
@@ -306,10 +306,143 @@ test('空の効果レコードを既知の変更なしとして表示しない',
   }, null)
   assert.equal(comparison.columns[1].level, 1)
   assert.equal(comparison.columns[1].available, false)
-  assert.deepEqual(comparison.rows[0].cells, [
+  assert.deepEqual(comparison.rows[0].cells.map(rawCell), [
     { text: '—', baseline: null }, { text: 'データなし', baseline: null },
   ])
 })
+
+test('GGの素質を潜在1・3・6で比較し、MOD・潜在・両方の数値変更を区別する', () => {
+  const profile = createGoldenglowProfile()
+  const original = structuredClone(profile)
+  const one = buildOperatorModuleComparison(profile, 3, 1)
+  const three = buildOperatorModuleComparison(profile, 3, 3)
+  const six = buildOperatorModuleComparison(profile, 3, 6)
+  const cells = (comparison: ReturnType<typeof buildOperatorModuleComparison>, id: string) => (
+    comparison.rows.find((row) => row.id === id)!.cells
+  )
+  const sources = (entry: OperatorModuleComparisonCell) => [...new Set(entry.highlights!.segments
+    .map((segment) => segment.source).filter((source) => source !== null))]
+  assert.deepEqual(cells(one, 'talent:0').map(sources), [[], ['module'], []])
+  assert.deepEqual(cells(one, 'talent:1').map(sources), [[], [], ['module']])
+  assert.deepEqual(cells(three, 'talent:0').map(sources), [['potential'], ['both'], ['potential']])
+  assert.deepEqual(cells(three, 'talent:1').map(sources), [[], [], ['module']])
+  assert.deepEqual(cells(six, 'talent:1').map(sources), [['potential'], ['potential'], ['both']])
+
+  const explosion = cells(six, 'talent:0')[1]
+  assert.equal(explosion.text, '攻撃力の375%（+15%）の術ダメージ（自爆後に消滅）')
+  assert.deepEqual(explosion.highlights && {
+    base: explosion.highlights.base,
+    withoutModule: explosion.highlights.withoutModule,
+    withoutPotential: explosion.highlights.withoutPotential,
+    current: explosion.highlights.current,
+  }, {
+    base: '攻撃力の300%の術ダメージ（自爆後に消滅）',
+    withoutModule: '攻撃力の315%の術ダメージ（自爆後に消滅）',
+    withoutPotential: '攻撃力の360%の術ダメージ（自爆後に消滅）',
+    current: '攻撃力の375%の術ダメージ（自爆後に消滅）',
+  })
+  const resistance = cells(six, 'talent:1')[2]
+  assert.equal(resistance.text, '敵の術耐性を23(+3)無視する')
+  assert.equal(resistance.highlights!.current, '敵の術耐性を23無視する')
+  assert.equal(resistance.highlights!.base, '敵の術耐性を15無視する')
+  assert.equal(resistance.highlights!.withoutModule, '敵の術耐性を18無視する')
+  assert.equal(resistance.highlights!.withoutPotential, '敵の術耐性を20無視する')
+  assert.deepEqual(cells(six, 'attribute:atk').map(sources), [[], ['module'], ['module']])
+  assert.deepEqual(cells(six, 'attribute:atk').map((entry) => entry.text), ['—', '+38', '+45'])
+  for (const comparison of [one, three, six]) {
+    for (const row of comparison.rows) {
+      for (const entry of row.cells) {
+        assert.equal(entry.highlights!.segments.map((segment) => segment.text).join(''), entry.highlights!.current)
+      }
+    }
+  }
+  assert.deepEqual(profile, original)
+})
+
+test('潜在で追加効果が途中に増えても既存効果を取り違えず、空欄と欠損データを強調しない', () => {
+  const profile = createGoldenglowProfile()
+  profile.modules![0].phases![0].parts!.push(
+    { addOrOverrideTalentDataBundle: { candidates: [{
+      name: '潜在追加', isHideTalent: true, requiredPotentialRank: 5, upgradeDescription: '追加の回復効果',
+    }] } },
+    { addOrOverrideTalentDataBundle: { candidates: [{
+      name: '既存追加', isHideTalent: true, upgradeDescription: '攻撃速度+10',
+    }] } },
+  )
+  profile.modules!.push({ type: 'ADVANCED', uniEquipId: 'missing', uniEquipName: '未取得' })
+  const before = buildOperatorModuleComparison(profile, 3, 1)
+  const after = buildOperatorModuleComparison(profile, 3, 6)
+  const beforeExtra = before.rows.find((row) => row.name === '既存追加')!
+  const afterExtra = after.rows.find((row) => row.name === '既存追加')!
+  assert.equal(afterExtra.id, beforeExtra.id)
+  assert.equal(afterExtra.cells[1].highlights!.withoutPotential, '攻撃速度+10')
+  assert.deepEqual(afterExtra.cells[1].highlights, beforeExtra.cells[1].highlights)
+  assert.ok(afterExtra.cells[1].highlights!.segments.some((segment) => segment.source === 'module'))
+  assert.ok(after.rows.find((row) => row.name === '潜在追加')!.cells[1].highlights!.segments
+    .every((segment) => segment.source === 'both'))
+  for (const row of after.rows) {
+    for (const entry of row.cells.filter((entry) => entry.text === '—' || entry.text === 'データなし')) {
+      assert.ok(entry.highlights!.segments.every((segment) => segment.source === null))
+    }
+  }
+})
+
+test('MODによる素質名変更は同じ名前を基準として比べ、潜在による変更と誤認しない', () => {
+  const profile = createGoldenglowProfile()
+  const candidates = profile.modules![0].phases![0].parts![0].addOrOverrideTalentDataBundle!.candidates!
+  candidates.forEach((candidate) => { candidate.name = '強化された素質' })
+  const entry = buildOperatorModuleComparison(profile, 3, 3).rows.find((row) => row.id === 'talent:0')!.cells[1]
+  assert.equal(entry.highlights!.base, '爆発：攻撃力の300%の術ダメージ（自爆後に消滅）')
+  assert.equal(entry.highlights!.withoutPotential, '強化された素質：攻撃力の360%の術ダメージ（自爆後に消滅）')
+  assert.equal(entry.highlights!.withoutModule, '爆発：攻撃力の315%の術ダメージ（自爆後に消滅）')
+  const segments = entry.highlights!.segments
+  assert.ok(segments.some((segment) => segment.source === 'module' && segment.text.includes('強化された素質')))
+  assert.ok(segments.some((segment) => segment.source === 'both' && segment.text.includes('375')))
+})
+
+function createGoldenglowProfile(): OperatorCombatProfile {
+  const explosion = (value: number, annotation = '') => `攻撃力の${value}%${annotation}の術ダメージ（自爆後に消滅）`
+  const resistance = (value: number, annotation = '') => `敵の術耐性を${value}${annotation}無視する`
+  return {
+    phases: [{ maxLevel: 50 }, { maxLevel: 80 }, { maxLevel: 90 }],
+    favorKeyFrames: [],
+    potentialRanks: [{}, {}, {}, {}, {}],
+    talents: [
+      { candidates: [
+        { name: '爆発', description: explosion(300), requiredPotentialRank: 0 },
+        { name: '爆発', description: explosion(315, '（+15%）'), requiredPotentialRank: 2 },
+      ] },
+      { candidates: [
+        { name: '術耐性無視', description: resistance(15), requiredPotentialRank: 0 },
+        { name: '術耐性無視', description: resistance(18, '(+3)'), requiredPotentialRank: 5 },
+      ] },
+    ],
+    modules: [
+      {
+        type: 'ADVANCED', uniEquipId: 'gg-x', uniEquipName: 'MOD-X', typeName2: 'X',
+        phases: [{ equipLevel: 3, attributeBlackboard: { atk: 38 }, parts: [
+          { addOrOverrideTalentDataBundle: { candidates: [
+            { talentIndex: 0, name: '爆発', upgradeDescription: explosion(360), requiredPotentialRank: 0 },
+            { talentIndex: 0, name: '爆発', upgradeDescription: explosion(375, '（+15%）'), requiredPotentialRank: 2 },
+          ] } },
+        ] }],
+      },
+      {
+        type: 'ADVANCED', uniEquipId: 'gg-y', uniEquipName: 'MOD-Y', typeName2: 'Y',
+        phases: [{ equipLevel: 3, attributeBlackboard: { atk: 45 }, parts: [
+          { addOrOverrideTalentDataBundle: { candidates: [
+            { talentIndex: 1, name: '術耐性無視', upgradeDescription: resistance(20), requiredPotentialRank: 0 },
+            { talentIndex: 1, name: '術耐性無視', upgradeDescription: resistance(23, '(+3)'), requiredPotentialRank: 5 },
+          ] } },
+        ] }],
+      },
+    ],
+  }
+}
+
+function rawCell({ text, baseline }: OperatorModuleComparisonCell) {
+  return { text, baseline }
+}
 
 function createProfile(): OperatorCombatProfile {
   return {

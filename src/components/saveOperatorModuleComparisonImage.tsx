@@ -80,6 +80,6 @@ function ModuleComparisonImage({ comparison, aspect, initialWidth, onLayoutError
     }
   }, [aspect, initialWidth, onLayoutError])
   return <div ref={imageRef} className="operator-module-comparison operator-module-comparison-image">
-    <OperatorModuleComparisonTable comparison={comparison} />
+    <OperatorModuleComparisonTable comparison={comparison} interactive={false} showLegend />
   </div>
 }
