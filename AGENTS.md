@@ -7,6 +7,7 @@
 | 読むタイミング | 参照先 |
 | --- | --- |
 | AGENTS.mdまたはその参照先の指示ファイルを作成・修正・分割するとき | [指示ファイルの管理方針](instructions/agents-writing.md) |
+| このプロジェクトのUI・配色・グラフなどをテンプレ化・標準化するとき、または既存テンプレートを更新するとき | [テンプレート作成の共通手順](instructions/template-creation.md) |
 | このサイトのテーブルを新規作成・修正するとき | [テーブルの表示方針](instructions/table-ui.md) |
 | グラフの画像出力を作成・変更するとき | [グラフ画像出力のテンプレート](docs/chart-image/README.md) |
 | MODの種類や潜在を色で区別する表示を新規作成・修正するとき | [MOD共通配色の仕様と見本](docs/module-colors/README.md) |
