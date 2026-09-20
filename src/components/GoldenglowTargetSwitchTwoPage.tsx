@@ -6,7 +6,8 @@ import {
   createGoldenglowTargetSwitchHpValues,
 } from '../lib/goldenglowTargetSwitchHp'
 import {
-  chooseHpComparisonBaseline, createHpComparisonDisplaySeries, createHpComparisonUnequippedDifferenceSeries, selectHpComparisonBarHps,
+  chooseHpComparisonBaseline, createHpComparisonDisplaySeries, createHpComparisonUnequippedDifferenceSeries,
+  getHpComparisonAutoBarCount, selectHpComparisonBarHps,
   type HpComparisonInput, type HpComparisonMessage, type HpComparisonMetric, type HpComparisonSeries,
 } from '../lib/goldenglowTargetSwitchHpComparison'
 import { getOperatorModuleId, getOperatorModuleLevels, getOperatorModules, isOperatorModuleUnlocked } from '../lib/operatorModules'
@@ -30,6 +31,7 @@ const number = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
 const format = (value: number) => number.format(value)
 const limits = GOLDENGLOW_TARGET_SWITCH_LIMITS
 type ChartDisplay = 'line' | 'bar'
+type BarCountDisplay = 'auto' | '5' | '10' | '15' | 'all'
 
 export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }: {
   rows: readonly SkillRecord[]
@@ -43,6 +45,8 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const [moduleLevels, setModuleLevels] = useState<Record<string, number>>({})
   const [metric, setMetric] = useState<HpComparisonMetric>('total')
   const [chartKind, setChartKind] = useState<ChartDisplay>('bar')
+  const [barCountDisplay, setBarCountDisplay] = useState<BarCountDisplay>('auto')
+  const [chartPlotWidth, setChartPlotWidth] = useState(560)
   const [differenceMetric, setDifferenceMetric] = useState<'difference' | 'percent'>('difference')
   const [requestedBaselineId, setRequestedBaselineId] = useState('none')
   const [resistance, setResistance] = useState('0')
@@ -162,7 +166,9 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
     ? createHpComparisonUnequippedDifferenceSeries(shownSeries, shownHps)
     : createHpComparisonDisplaySeries(shownSeries, shownHps, metric, baselineId), [shownSeries, shownHps, metric, baselineId])
   const visibleSeries = useMemo(() => hideBaseline ? displaySeries.filter((series) => series.id !== baselineId) : displaySeries, [displaySeries, baselineId, hideBaseline])
-  const barHps = useMemo(() => selectHpComparisonBarHps(shownHps, selectedHp), [shownHps, selectedHp])
+  const autoBarCount = getHpComparisonAutoBarCount(chartPlotWidth, visibleSeries.length)
+  const barCount = barCountDisplay === 'auto' ? autoBarCount : barCountDisplay === 'all' ? 'all' : Number(barCountDisplay)
+  const barHps = useMemo(() => selectHpComparisonBarHps(shownHps, selectedHp, barCount), [shownHps, selectedHp, barCount])
   const metricLabel = metric === 'total' ? 'スキル総ダメージ期待値'
     : metric === 'difference' ? hideBaseline ? `${baselineLabel}との差` : '基準との差'
       : hideBaseline ? `${baselineLabel}からの増加率` : '基準からの増加率'
@@ -298,6 +304,13 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
               <option value="bar">棒グラフ</option>
             </select>
           </label>
+          {chartKind === 'bar' && <label className="gg2-output-precision"><span>表示HP数</span>
+            <select aria-label="棒グラフの表示HP数" value={barCountDisplay} onChange={(event) => setBarCountDisplay(event.target.value as BarCountDisplay)}>
+              <option value="auto">自動（{Math.min(autoBarCount, shownHps.length)}点）</option>
+              <option value="5">5点</option><option value="10">10点</option><option value="15">15点</option>
+              <option value="all">すべて</option>
+            </select>
+          </label>}
           <details name="gg2-output-options" className="gg2-comparison-options" onKeyDown={(event) => {
             if (event.key === 'Escape') {
               event.currentTarget.open = false
@@ -378,7 +391,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
           <div className="gg2-chart-area" aria-busy={running}>
             <GoldenglowTargetSwitchHpChart series={displaySeries} maxHp={shownHps.at(-1) ?? 30000}
               selectedHp={selectedHp} onSelectHp={setSelectedHp} stale={stale} digits={digits} metric={metric} baselineId={baselineId}
-              chartKind={chartKind} barHps={barHps} hideBaseline={hideBaseline} />
+              chartKind={chartKind} barHps={barHps} hideBaseline={hideBaseline} onPlotWidthChange={setChartPlotWidth} />
             {!hasChartPoints && <span className="gg2-empty">{comparisonError ?? (running ? '計算中…' : calculation.status === 'idle' ? '未計算' : hasDisplayPoints ? '表から計算済みのHPを選択してください' : metric !== 'total' && completedPoints ? '比較できる結果なし' : '計算結果なし')}</span>}
           </div>
         </GoldenglowTargetSwitchHpResults>
@@ -393,7 +406,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
           <p>切り替え時間0.1秒は映像からの暫定値です。撃破時に各ユニットが攻撃先を選び直し、次の攻撃時刻を「元の予定」と「撃破時刻＋切り替え時間」の遅い方にするモデルです。同時刻は本体、浮遊ユニットの順に処理します。</p>
           <p>昇進2 Lv.{skill.attackCalculation.level}・信頼100・潜在1。各MODの攻撃力・攻撃速度・素質の変化を適用します。S2は発動後の計測時間内を計算します。抽選番号を固定すると、同じ条件の結果を再現できます。</p>
           <p>ダメージ差は「比較する装備 − 基準の装備」、増加率は「ダメージ差 ÷ 基準の総ダメージ × 100」です。基準が0の増加率と未計算の値は「—」で表示します。差分は計算済みの値から求めるため、表示の切り替えに再計算は不要です。小さな差には試行ごとのばらつきも含まれます。</p>
-          <p>棒グラフは計算したHPから最大5点を選んで表示します。表や敵HP欄で別のHPを選ぶと、近い1点を入れ替えて表示します。差分表示では基準の装備を0として、ほかの装備を表示します。数値表にはすべてのHPを表示します。</p>
+          <p>棒グラフの表示HP数は、横幅と表示する装備数に合わせて自動調整します。5点・10点・15点・すべての指定もできます。最小・最大HPと選択したHPを含めて表示し、点数が多いときは目盛りの文字を間引きます。表示数を変えても再計算は不要です。画像には保存画面を開いた時点のHPを使います。差分表示では基準以外の装備を表示し、数値表にはすべてのHPを表示します。</p>
         </details>
       </section>
       </CollapsibleCalculatorPanel>

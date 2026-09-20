@@ -110,21 +110,29 @@ export function createHpComparisonDisplaySeries(
   }))
 }
 
-/** A bar chart shows up to five sampled HPs, including a selected table row. */
+/**
+ * Samples the complete HP range and retains a selected table row. Counts below
+ * one become one; fractions round down and non-finite counts fall back to five.
+ * With at least three samples, the minimum and maximum HP are always retained.
+ */
 export function selectHpComparisonBarHps(
   enemyHps: readonly number[],
   selectedHp: number | null = null,
+  count: number | 'all' = 5,
 ): number[] {
   const hps = [...new Set(enemyHps.filter((hp) => Number.isFinite(hp) && hp > 0))]
     .sort((left, right) => left - right)
-  const count = 5
-  if (hps.length <= count) return hps
-  const sampled = Array.from({ length: count }, (_, index) => (
-    hps[Math.ceil(hps.length * (index + 1) / count) - 1]
+  const sampleCount = count === 'all' ? hps.length
+    : Math.min(hps.length, Number.isFinite(count) ? Math.max(1, Math.floor(count)) : 5)
+  if (hps.length <= sampleCount) return hps
+  const sampled = Array.from({ length: sampleCount }, (_, index) => (
+    hps[sampleCount === 1 ? 0 : Math.round(index * (hps.length - 1) / (sampleCount - 1))]
   ))
   if (selectedHp !== null && hps.includes(selectedHp) && !sampled.includes(selectedHp)) {
-    let closestIndex = 0
-    for (let index = 1; index < sampled.length; index += 1) {
+    const firstReplaceableIndex = sampleCount >= 3 ? 1 : 0
+    const lastReplaceableIndex = sampleCount >= 3 ? sampleCount - 2 : sampleCount - 1
+    let closestIndex = firstReplaceableIndex
+    for (let index = firstReplaceableIndex + 1; index <= lastReplaceableIndex; index += 1) {
       if (Math.abs(sampled[index] - selectedHp) < Math.abs(sampled[closestIndex] - selectedHp)) {
         closestIndex = index
       }
@@ -133,6 +141,17 @@ export function selectHpComparisonBarHps(
     sampled.sort((left, right) => left - right)
   }
   return sampled
+}
+
+/**
+ * Uses the plot width excluding margins, with room for each grouped series.
+ * Unmeasured/invalid widths use five HPs; invalid series counts use one series.
+ */
+export function getHpComparisonAutoBarCount(plotWidth: number, seriesCount: number): number {
+  if (!Number.isFinite(plotWidth) || plotWidth <= 0) return 5
+  const visibleSeries = Number.isFinite(seriesCount) && seriesCount > 0 ? Math.ceil(seriesCount) : 1
+  const groupWidth = Math.max(62, visibleSeries * 16 + 14)
+  return Math.max(5, Math.min(15, Math.floor(plotWidth / groupWidth)))
 }
 
 /** Unlike the configurable comparison, an unequipped difference never changes its baseline. */
