@@ -8,6 +8,7 @@ import { GoldenglowHomePage } from './components/GoldenglowHomePage'
 import { GoldenglowPerformancePage } from './components/GoldenglowPerformancePage'
 import { GoldenglowTargetSwitchPage } from './components/GoldenglowTargetSwitchPage'
 import { EnemyAnalysis } from './components/EnemyAnalysis'
+import { EnemyDatabase } from './components/EnemyDatabase'
 import { OperatorComparison } from './components/OperatorComparison'
 import { OperatorDatabase } from './components/OperatorDatabase'
 import { OperatorDetailModal } from './components/OperatorDetailModal'
@@ -85,7 +86,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (route.view === 'enemies' || route.view === 'sources' || route.view === 'code-analysis' || route.view === 'slide-maker' || route.view === 'goldenglow-home' || skillDataRequestStarted.current) return
+    if (route.view === 'enemies' || route.view === 'enemy-analysis' || route.view === 'sources' || route.view === 'code-analysis' || route.view === 'slide-maker' || route.view === 'goldenglow-home' || skillDataRequestStarted.current) return
     skillDataRequestStarted.current = true
     void load()
   }, [route.view])
@@ -268,7 +269,7 @@ export default function App() {
 
         <main className="app-content">
         <PanelStateScope.Provider value={displayedRoute.view}>
-        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-single-trial' && <section className="error-box" role="alert">{error}</section>}
+        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'enemy-analysis' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-single-trial' && <section className="error-box" role="alert">{error}</section>}
 
         {/* Keep the directory mounted while viewing a detail page so filters, sort and charts survive returning. */}
         {operatorDirectoryVisited && (displayedRoute.view === 'operators' || displayedRoute.view === 'operator-detail') && (
@@ -310,6 +311,8 @@ export default function App() {
             onOpenOperatorDetail={openOperatorDetail}
           />
         ) : displayedRoute.view === 'enemies' ? (
+          <EnemyDatabase />
+        ) : displayedRoute.view === 'enemy-analysis' ? (
           <EnemyAnalysis />
         ) : displayedRoute.view === 'skills' ? (
           <SkillDirectory

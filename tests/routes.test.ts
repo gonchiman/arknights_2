@@ -21,6 +21,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['damage', 'damage'],
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
+      ['enemy-analysis', 'enemy-analysis'],
       ['goldenglow-home', 'goldenglow-home'],
       ['slide-maker', 'slide-maker'],
       ['sources', 'sources'],
@@ -208,8 +209,27 @@ test('削除済みのスキル分類ページのhashはデータベースへ戻�
   assert.deepEqual(parseHashRoute('#/skills/%E0%A4%A'), { view: 'operators' })
 })
 
-test('敵分析ページのhashを解析する', () => {
+test('敵データベースの既存URLを維持し、統計分析は独立したURLで開く', () => {
   assert.deepEqual(parseHashRoute('#/enemies'), { view: 'enemies' })
+  assert.deepEqual(parseHashRoute('#/analysis/enemies'), { view: 'enemy-analysis' })
+
+  const databaseIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'enemies')
+  assert.ok(databaseIndex >= 0)
+  assert.deepEqual(
+    APP_NAV_ITEMS.slice(databaseIndex, databaseIndex + 2).map(({ id, href, label, section }) => ({ id, href, label, section })),
+    [
+      { id: 'enemies', href: '#/enemies', label: '敵データベース', section: 'analysis' },
+      { id: 'enemy-analysis', href: '#/analysis/enemies', label: '敵の統計分析', section: 'analysis' },
+    ],
+  )
+})
+
+test('敵の各ページの不正なURLはデータベースへフォールバックする', () => {
+  for (const hash of ['#/enemies', '#/analysis/enemies']) {
+    for (const suffix of ['/', '/extra', '?enemy=001', '-extra']) {
+      assert.deepEqual(parseHashRoute(`${hash}${suffix}`), { view: 'operators' })
+    }
+  }
 })
 
 test('全スキル一覧ページのhashを解析する', () => {
