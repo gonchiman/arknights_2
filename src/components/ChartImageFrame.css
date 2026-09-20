@@ -1,0 +1,60 @@
+.chart-image-frame {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  margin: 0;
+  padding: 12px 16px;
+  background: #fff;
+  color: var(--text, #222);
+  font-family: "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+}
+.chart-image-frame-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) fit-content(44%) minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+  text-align: center;
+}
+.chart-image-frame-heading > strong {
+  display: block;
+  font-size: 17px;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+.chart-image-frame-legends {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.chart-image-frame-legends > * { min-width: 0; max-width: 100%; }
+.chart-image-frame-conditions {
+  justify-self: end;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  color: var(--text-muted, #666);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.chart-image-frame-plot { min-width: 0; }
+.chart-image-frame-plot > svg { display: block; }
+.chart-image-frame-footer { min-width: 0; }
+.chart-image-frame-footer.has-axis-title { padding-top: 12px; }
+.chart-image-frame-axis-title {
+  margin: 0;
+  color: var(--text-soft, #444);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}

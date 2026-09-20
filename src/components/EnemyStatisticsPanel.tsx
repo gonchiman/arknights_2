@@ -16,8 +16,9 @@ import type { EnemyLevelType, EnemyRecord, EnemyStats } from '../types/enemy'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { PersistentDetails } from './PersistentDetails'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
+import { ChartImageFrame } from './ChartImageFrame'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
-import { getEnemyChartImageFilename, getEnemyChartImageLayout, type EnemyChartKind as ChartKind } from '../lib/enemyChartImage'
+import { getEnemyChartImageFilename, getEnemyChartImageLayout, getEnemyChartNaturalHeight, type EnemyChartKind as ChartKind } from '../lib/enemyChartImage'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './EnemyDistribution.css'
 import './EnemyChartImage.css'
@@ -445,9 +446,6 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
   aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
 }) {
-  const headingRef = useRef<HTMLElement>(null)
-  const footerRef = useRef<HTMLDivElement>(null)
-  const [chromeHeight, setChromeHeight] = useState(76)
   const titleId = useId()
   const descriptionId = useId()
   const { kind, metric, scale, statistics, observations, scatterObservations, scatterMetric, scatterScale, scopeLabel } = data
@@ -456,8 +454,6 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
   const cdfPoints = useMemo(() => kind === 'ECDF' ? calculateEmpiricalCdf(observations.map(({ value }) => value)) : [], [kind, observations])
   const presentLevels = LEVEL_ORDER.filter((levelType) => (kind === 'SCATTER' ? scatterObservations : observations)
     .some(({ enemy }) => enemy.levelType === levelType))
-  const layout = getEnemyChartImageLayout({ kind, aspectRatio, groupCount: presentLevels.length, chromeHeight })
-  const width = layout.width - 32
   const title = kind === 'SCATTER' ? `${metric.label}と${scatterMetric.label}の散布図`
     : `${metric.label}の${CHART_OPTIONS.find((option) => option.key === kind)?.label}`
   const count = kind === 'SCATTER' ? scatterObservations.length : statistics.count
@@ -473,48 +469,26 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
       : `${statistics.bins.length}階級`)
   }
 
-  useLayoutEffect(() => {
-    const heading = headingRef.current
-    const footer = footerRef.current
-    if (!heading || !footer) return
-    const measure = () => {
-      const measured = heading.offsetHeight + footer.offsetHeight + 24
-      // Growing monotonically avoids a width/wrapping feedback loop on long searches.
-      setChromeHeight((current) => Math.max(current, measured))
-    }
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(heading)
-    observer.observe(footer)
-    return () => observer.disconnect()
-  }, [])
-
-  useLayoutEffect(() => { onLayout?.({ width: layout.width, height: layout.height }) }, [onLayout, layout.width, layout.height])
-
-  const shared = { metric, statistics, scale, width, height: layout.chartHeight, titleId, descriptionId, image: true }
-  return <figure className="enemy-chart-image" style={{ width: layout.width, height: layout.height }} aria-label={title}>
-    <figcaption ref={headingRef} className="enemy-chart-image-heading">
-      <div className="enemy-chart-image-legends">
-        {kind === 'BOX' && <BoxPlotLegend />}
-        {(kind === 'SCATTER' || kind === 'INDIVIDUAL') && <EnemyLevelLegend levelTypes={presentLevels} />}
-        {kind === 'INDIVIDUAL' && <div className="enemy-chart-legend"><span className="median"><i aria-hidden="true" />中央値</span></div>}
-      </div>
-      <strong>{title}</strong>
-      <p className="enemy-chart-image-conditions">{conditions.join(' · ')}</p>
-    </figcaption>
-    <div className="enemy-chart-image-plot">
-      {kind === 'HISTOGRAM' && <HistogramSvg {...shared} description={`${scopeLabel}の${metric.label}のヒストグラム`} />}
-      {kind === 'ECDF' && <EcdfSvg {...shared} points={cdfPoints} description={`${scopeLabel}の${metric.label}の累積分布`} />}
-      {kind === 'BOX' && <BoxPlotSvg {...shared} groups={boxGroups} />}
-      {kind === 'SCATTER' && <ScatterSvg observations={scatterObservations} xMetric={metric} xScale={scale}
-        yMetric={scatterMetric} yScale={scatterScale} width={width} height={layout.chartHeight}
-        titleId={titleId} descriptionId={descriptionId} image />}
-      {kind === 'INDIVIDUAL' && <IndividualPlotSvg {...shared} groups={individualGroups} />}
-    </div>
-    <div ref={footerRef} className="enemy-chart-image-footer">
-      <p className="enemy-chart-image-axis-title">{axisLabel}</p>
-    </div>
-  </figure>
+  return <ChartImageFrame className="enemy-chart-image" title={title} conditions={conditions.join(' · ')}
+    axisTitle={axisLabel} naturalChartHeight={getEnemyChartNaturalHeight(kind, presentLevels.length)}
+    aspectRatio={aspectRatio} onLayout={onLayout} legend={<>
+      {kind === 'BOX' && <BoxPlotLegend />}
+      {(kind === 'SCATTER' || kind === 'INDIVIDUAL') && <EnemyLevelLegend levelTypes={presentLevels} />}
+      {kind === 'INDIVIDUAL' && <div className="enemy-chart-legend"><span className="median"><i aria-hidden="true" />中央値</span></div>}
+    </>}>
+    {({ width, height }) => {
+      const shared = { metric, statistics, scale, width, height, titleId, descriptionId, image: true }
+      return <>
+        {kind === 'HISTOGRAM' && <HistogramSvg {...shared} description={`${scopeLabel}の${metric.label}のヒストグラム`} />}
+        {kind === 'ECDF' && <EcdfSvg {...shared} points={cdfPoints} description={`${scopeLabel}の${metric.label}の累積分布`} />}
+        {kind === 'BOX' && <BoxPlotSvg {...shared} groups={boxGroups} />}
+        {kind === 'SCATTER' && <ScatterSvg observations={scatterObservations} xMetric={metric} xScale={scale}
+          yMetric={scatterMetric} yScale={scatterScale} width={width} height={height}
+          titleId={titleId} descriptionId={descriptionId} image />}
+        {kind === 'INDIVIDUAL' && <IndividualPlotSvg {...shared} groups={individualGroups} />}
+      </>
+    }}
+  </ChartImageFrame>
 }
 
 function EnemyChartImagePreview({ data, aspectRatio }: { data: EnemyChartImageData; aspectRatio?: number }) {
