@@ -7,9 +7,10 @@ import {
 } from '../lib/enemyNumericFilters'
 import './EnemyNumericFilter.css'
 
-export function EnemyNumericFilter({ conditions, onChange }: {
+export function EnemyNumericFilter({ conditions, onChange, legend = '一覧の数値条件' }: {
   conditions: readonly EnemyNumericCondition[]
   onChange: (conditions: readonly EnemyNumericCondition[]) => void
+  legend?: string
 }) {
   const nextId = useRef(1)
   const pendingFocus = useRef<{ id: number; control: 'input' | 'select' } | 'add' | null>(null)
@@ -45,7 +46,7 @@ export function EnemyNumericFilter({ conditions, onChange }: {
   }
 
   return <fieldset className="enemy-numeric-filter">
-    <legend>一覧の数値条件 <span>実数値・すべて満たす</span></legend>
+    <legend>{legend} <span>実数値・すべて満たす</span></legend>
     <div className="enemy-numeric-conditions" ref={rowsRef}>
       {conditions.map((condition, index) => (
         <EnemyNumericConditionRow

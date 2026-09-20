@@ -36,17 +36,38 @@ export function getEnemyChartImageFilename({
   kind,
   metricLabel,
   secondaryMetricLabel,
+  scopeLabel,
 }: {
   kind: EnemyChartKind
   metricLabel: string
   secondaryMetricLabel?: string
+  scopeLabel?: string
 }): string {
   const metrics = [sanitizeFilenamePart(metricLabel) || 'ステータス']
   if (kind === 'SCATTER' && secondaryMetricLabel) {
     const secondary = sanitizeFilenamePart(secondaryMetricLabel)
     if (secondary) metrics.push(secondary)
   }
-  return `敵_${metrics.join('_')}_${chartNames[kind]}.png`
+  const scope = (scopeLabel ?? '').trim().replace(/^全敵(?:\s*·\s*|$)/, '').replace(/\s*·\s*/g, '_')
+  const safeScope = sanitizeFilenamePart(scope)
+  const base = `敵_${metrics.join('_')}_${chartNames[kind]}${safeScope ? `_${safeScope}` : ''}`
+  const encoder = new TextEncoder()
+  if (safeScope !== scope || encoder.encode(`${base}.png`).length > 200) {
+    // Preserve distinctions lost through replacement or shortening, including the condition's tail.
+    const identity = JSON.stringify([kind, metricLabel, secondaryMetricLabel, scopeLabel])
+    let hash = 2166136261
+    for (let index = 0; index < identity.length; index += 1) {
+      hash = Math.imul(hash ^ identity.charCodeAt(index), 16777619)
+    }
+    const suffix = `_${(hash >>> 0).toString(16).padStart(8, '0')}.png`
+    let prefix = ''
+    for (const character of base) {
+      if (encoder.encode(prefix + character + suffix).length > 200) break
+      prefix += character
+    }
+    return prefix + suffix
+  }
+  return `${base}.png`
 }
 
 function sanitizeFilenamePart(value: string): string {
