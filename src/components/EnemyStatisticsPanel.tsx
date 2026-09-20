@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   MAX_CUSTOM_LINEAR_BIN_COUNT,
   calculateBoxPlotStatistics,
@@ -14,7 +14,6 @@ import {
 } from '../lib/enemyStatistics'
 import type { EnemyLevelType, EnemyRecord, EnemyStats } from '../types/enemy'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
-import { EnemyFilterPanel } from './EnemyFilterPanel'
 import { PersistentDetails } from './PersistentDetails'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
 import { ChartImageFrame } from './ChartImageFrame'
@@ -138,7 +137,7 @@ type EnemyStatisticsControls = ReturnType<typeof useEnemyStatisticsControls>
 function EnemyStatisticsSettings({ controls }: { controls: EnemyStatisticsControls }) {
   return (
     <fieldset className="enemy-statistics-settings">
-      <legend>ステータス</legend>
+      <legend>分布を見るステータス</legend>
       <div className="enemy-metric-selector" role="group" aria-label="分析するステータス">
         {STAT_METRICS.map((metric) => (
           <button
@@ -156,12 +155,11 @@ function EnemyStatisticsSettings({ controls }: { controls: EnemyStatisticsContro
   )
 }
 
-export function EnemyStatisticsPanel({ rows, scopeLabel, controls, levelType, onLevelTypeChange }: {
+export function EnemyStatisticsPanel({ rows, scopeLabel, controls, filterControls }: {
   rows: EnemyRecord[]
   scopeLabel: string
   controls: EnemyStatisticsControls
-  levelType: EnemyLevelType | 'ALL'
-  onLevelTypeChange: (levelType: EnemyLevelType | 'ALL') => void
+  filterControls: ReactNode
 }) {
   const binWidthInputId = useId()
   const binWidthHelpId = useId()
@@ -273,13 +271,13 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, levelType, on
         id="enemy-distribution"
         number="02"
         title="分布グラフ"
-        summary={`${selectedMetric.label} · ${CHART_OPTIONS.find((chart) => chart.key === selectedChart)?.label} · ${scopeLabel}`}
+        summary={`${selectedMetric.label} · ${CHART_OPTIONS.find((chart) => chart.key === selectedChart)?.label} · ${scopeLabel} · 対象 ${rows.length}体`}
         defaultOpen
         collapsedLabel="グラフを開く"
         className="enemy-distribution-panel"
         bodyClassName="enemy-distribution-body"
       >
-        <EnemyFilterPanel levelType={levelType} onChange={onLevelTypeChange} />
+        {filterControls}
         <EnemyStatisticsSettings controls={controls} />
         <div className="enemy-chart-toolbar">
           <fieldset className="enemy-chart-visibility">
@@ -366,6 +364,7 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, levelType, on
         )}
 
         <div className="enemy-chart-stack">
+          {rows.length === 0 ? <ChartEmpty message="条件に一致する敵がいません" /> : <>
           {selectedChart === 'HISTOGRAM' && (
             <HistogramFigure statistics={statistics} metric={selectedMetric} scopeLabel={scopeLabel} scale={axisScale} />
           )}
@@ -408,6 +407,7 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, levelType, on
               scale={axisScale}
             />
           )}
+          </>}
         </div>
         <p className="visually-hidden" role="status">
           {imageFeedback === 'saved' ? 'PNG画像を保存しました。'
@@ -416,7 +416,7 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, levelType, on
       </CollapsibleCalculatorPanel>
       {imageData && <ChartImageSaveDialog
         initialFilename={getEnemyChartImageFilename({ kind: imageData.kind, metricLabel: imageData.metric.label,
-          secondaryMetricLabel: imageData.scatterMetric.label })}
+          secondaryMetricLabel: imageData.scatterMetric.label, scopeLabel: imageData.scopeLabel })}
         aspect={imageAspect}
         onAspectChange={setImageAspect}
         canChooseLocation={!!imageSavePicker}

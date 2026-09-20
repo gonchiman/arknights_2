@@ -1,4 +1,5 @@
 .enemy-numeric-filter {
+  container: enemy-numeric-filter / inline-size;
   min-width: 0;
   margin: 0 0 12px;
   border: 0;
@@ -38,7 +39,7 @@
 .enemy-numeric-error { grid-column: 1 / -1; color: var(--danger); font-size: 11px; }
 .enemy-numeric-condition input[aria-invalid="true"] { border-color: var(--danger); }
 
-@container enemy-reference (max-width: 480px) {
+@container enemy-numeric-filter (max-width: 480px) {
   .enemy-numeric-condition { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
   .enemy-numeric-condition label:first-child { grid-column: 1 / -1; }
 }

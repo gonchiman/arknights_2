@@ -13,9 +13,10 @@ const LEVEL_OPTIONS: Array<{ value: EnemyLevelType | 'ALL'; label: string }> = [
   ...Object.entries(ENEMY_LEVEL_LABELS).map(([value, label]) => ({ value: value as EnemyLevelType, label })),
 ]
 
-export function EnemyFilterPanel({ levelType, onChange }: {
+export function EnemyFilterPanel({ levelType, onChange, showReset = true }: {
   levelType: EnemyLevelType | 'ALL'
   onChange: (levelType: EnemyLevelType | 'ALL') => void
+  showReset?: boolean
 }) {
   return <fieldset className="enemy-level-filter">
     <legend>対象の敵</legend>
@@ -31,7 +32,7 @@ export function EnemyFilterPanel({ levelType, onChange }: {
           >{option.label}</button>
         ))}
       </div>
-      <button type="button" className="button secondary" onClick={() => onChange('ALL')} disabled={levelType === 'ALL'} aria-label="区分をリセット">リセット</button>
+      {showReset && <button type="button" className="button secondary" onClick={() => onChange('ALL')} disabled={levelType === 'ALL'} aria-label="区分をリセット">リセット</button>}
     </div>
   </fieldset>
 }

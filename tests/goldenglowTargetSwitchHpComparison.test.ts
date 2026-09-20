@@ -9,6 +9,7 @@ import {
   chooseHpComparisonBaseline,
   createHpComparisonDisplaySeries,
   createHpComparisonUnequippedDifferenceSeries,
+  getHpComparisonAutoBarCount,
   selectHpComparisonBarHps,
   simulateGoldenglowTargetSwitchHpComparison,
   validateHpComparisonInput,
@@ -243,11 +244,11 @@ test('存在しない基準は未装備、次に先頭へ戻し、有限でな�
     [{ enemyHp: 1_000, value: null }])
 })
 
-test('棒グラフの代表HPは全範囲を5点に分け、最大HPを含める', () => {
+test('棒グラフの代表HPは全範囲から均等に5点を選び、最小・最大HPを含める', () => {
   const hps = Object.freeze(Array.from({ length: 20 }, (_, index) => (index + 1) * 1_000))
-  assert.deepEqual(selectHpComparisonBarHps(hps), [4_000, 8_000, 12_000, 16_000, 20_000])
+  assert.deepEqual(selectHpComparisonBarHps(hps), [1_000, 6_000, 11_000, 15_000, 20_000])
   assert.deepEqual(selectHpComparisonBarHps([30_000, 900, 50, 8_000, 400, 15_000, 1_300]),
-    [400, 900, 8_000, 15_000, 30_000])
+    [50, 900, 1_300, 15_000, 30_000])
   assert.deepEqual(hps, Array.from({ length: 20 }, (_, index) => (index + 1) * 1_000))
 })
 
@@ -258,14 +259,93 @@ test('5点以下のHPは全点を残し、重複・非正数・有限でない�
   assert.deepEqual(selectHpComparisonBarHps([5, 4, 3, 2, 1], 3), [1, 2, 3, 4, 5])
 })
 
-test('表で選択したHPは一番近い代表点と入れ替え、等距離では小さい代表点を使う', () => {
+test('選択したHPは両端以外の一番近い代表点と入れ替え、等距離では小さい代表点を使う', () => {
   const hps = Array.from({ length: 20 }, (_, index) => (index + 1) * 1_000)
-  assert.deepEqual(selectHpComparisonBarHps(hps, 1_000), [1_000, 8_000, 12_000, 16_000, 20_000])
-  assert.deepEqual(selectHpComparisonBarHps(hps, 6_000), [6_000, 8_000, 12_000, 16_000, 20_000])
-  assert.deepEqual(selectHpComparisonBarHps(hps, 11_000), [4_000, 8_000, 11_000, 16_000, 20_000])
-  for (const selected of [20_000, 8_000, 1_500, NaN, Infinity, null]) {
-    assert.deepEqual(selectHpComparisonBarHps(hps, selected), [4_000, 8_000, 12_000, 16_000, 20_000])
+  assert.deepEqual(selectHpComparisonBarHps(hps, 2_000), [1_000, 2_000, 11_000, 15_000, 20_000])
+  assert.deepEqual(selectHpComparisonBarHps(hps, 19_000), [1_000, 6_000, 11_000, 19_000, 20_000])
+  assert.deepEqual(selectHpComparisonBarHps(hps, 13_000), [1_000, 6_000, 13_000, 15_000, 20_000])
+  for (const selected of [1_000, 20_000, 6_000, 1_500, NaN, Infinity, null]) {
+    assert.deepEqual(selectHpComparisonBarHps(hps, selected), [1_000, 6_000, 11_000, 15_000, 20_000])
   }
+})
+
+test('棒グラフの手動点数と全点指定は、重複なしで指定数と全範囲を保つ', () => {
+  const hps = Object.freeze(Array.from({ length: 100 }, (_, index) => (index + 1) * 1_000))
+  for (const count of [3, 5, 10, 15, 99, 100, 120]) {
+    for (const selectedHp of [null, ...hps]) {
+      const sampled = selectHpComparisonBarHps(hps, selectedHp, count)
+      assert.equal(sampled.length, Math.min(count, hps.length))
+      assert.equal(new Set(sampled).size, sampled.length)
+      assert.equal(sampled[0], hps[0])
+      assert.equal(sampled.at(-1), hps.at(-1))
+      assert.deepEqual(sampled, [...sampled].sort((left, right) => left - right))
+      assert.ok(sampled.every((hp) => hps.includes(hp)))
+      if (selectedHp !== null) assert.ok(sampled.includes(selectedHp))
+    }
+  }
+  assert.deepEqual(selectHpComparisonBarHps(hps, 7_000, 'all'), hps)
+  assert.deepEqual(selectHpComparisonBarHps([3, NaN, 1, 2, 2, 0, -1, Infinity], 2, 'all'), [1, 2, 3])
+  assert.deepEqual(selectHpComparisonBarHps([], null, 'all'), [])
+})
+
+test('小さい点数は選択HPを優先し、小数・不正な点数・空配列も安全に扱う', () => {
+  const hps = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  assert.deepEqual(selectHpComparisonBarHps(hps, null, 1), [1])
+  assert.deepEqual(selectHpComparisonBarHps(hps, 7, 1), [7])
+  assert.deepEqual(selectHpComparisonBarHps(hps, null, 2), [1, 9])
+  assert.deepEqual(selectHpComparisonBarHps(hps, 2, 2), [2, 9])
+  assert.deepEqual(selectHpComparisonBarHps(hps, null, 3.9), [1, 5, 9])
+  for (const count of [0, -1, 0.5]) {
+    assert.deepEqual(selectHpComparisonBarHps(hps, null, count), [1])
+    assert.deepEqual(selectHpComparisonBarHps(hps, 7, count), [7])
+  }
+  for (const count of [NaN, Infinity, -Infinity]) {
+    assert.deepEqual(selectHpComparisonBarHps(hps, null, count), [1, 3, 5, 7, 9])
+  }
+  for (const count of [0, 1, 2, 5, 100, NaN, Infinity]) {
+    assert.deepEqual(selectHpComparisonBarHps([], 1, count), [])
+    assert.deepEqual(selectHpComparisonBarHps([0, NaN, -1], 1, count), [])
+  }
+})
+
+test('自動の棒グラフ点数は描画幅に応じて5〜15点で単調に増える', () => {
+  assert.equal(getHpComparisonAutoBarCount(310, 3), 5)
+  assert.equal(getHpComparisonAutoBarCount(620, 3), 10)
+  assert.equal(getHpComparisonAutoBarCount(930, 3), 15)
+  let previous = 5
+  for (let width = 1; width <= 2_000; width += 17) {
+    const count = getHpComparisonAutoBarCount(width, 3)
+    assert.ok(Number.isInteger(count) && count >= 5 && count <= 15)
+    assert.ok(count >= previous)
+    previous = count
+  }
+})
+
+test('自動の棒グラフ点数は系列が多いほど減らし、少ない系列も間隔を確保する', () => {
+  assert.equal(getHpComparisonAutoBarCount(620, 1), 10)
+  assert.equal(getHpComparisonAutoBarCount(620, 2), 10)
+  assert.equal(getHpComparisonAutoBarCount(620, 4), 7)
+  assert.equal(getHpComparisonAutoBarCount(620, 8), 5)
+  for (const width of [310, 620, 930, 1_240, 2_000]) {
+    let previous = 15
+    for (let series = 1; series <= 8; series += 1) {
+      const count = getHpComparisonAutoBarCount(width, series)
+      assert.ok(count <= previous)
+      previous = count
+    }
+  }
+})
+
+test('自動の棒グラフ点数は未測定・不正な幅や系列数でも有限の整数を返す', () => {
+  for (const width of [0, -1, NaN, Infinity, -Infinity]) {
+    assert.equal(getHpComparisonAutoBarCount(width, 3), 5)
+  }
+  for (const series of [0, -1, NaN, Infinity, -Infinity]) {
+    assert.equal(getHpComparisonAutoBarCount(620, series), 10)
+  }
+  assert.equal(getHpComparisonAutoBarCount(620, 3.1), 7)
+  assert.equal(getHpComparisonAutoBarCount(Number.MAX_VALUE, 3), 15)
+  assert.equal(getHpComparisonAutoBarCount(620, Number.MAX_VALUE), 5)
 })
 
 test('未装備との差は全精度の正負の差とゼロ基準を保ち、入力と装備情報を変えない', () => {

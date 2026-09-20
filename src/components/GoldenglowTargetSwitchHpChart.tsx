@@ -17,6 +17,7 @@ interface GoldenglowTargetSwitchHpChartProps {
   chartKind?: 'line' | 'bar'
   barHps?: readonly number[]
   hideBaseline?: boolean
+  onPlotWidthChange?: (width: number) => void
 }
 
 interface GoldenglowTargetSwitchHpChartSvgProps {
@@ -76,7 +77,7 @@ export function GoldenglowTargetSwitchHpChartSvg({
 
 function HpChartContent({
   series, maxHp, selectedHp, onSelectHp, stale = false, digits = 2, metric, baselineId, imageOutput = false,
-  plotDimensions, chartKind = 'line', barHps, hideBaseline = false,
+  plotDimensions, chartKind = 'line', barHps, hideBaseline = false, onPlotWidthChange,
 }: HpChartContentProps) {
   const frameRef = useRef<HTMLDivElement>(null)
   const [measuredWidth, setWidth] = useState(640)
@@ -137,7 +138,7 @@ function HpChartContent({
   const selectableHps = chartKind === 'bar' ? availableHps.filter((hp) => plottedHpSet.has(hp)) : availableHps
   const selection = !imageOutput && selectedHp !== null && hpValues.includes(selectedHp) ? selectedHp : null
   const values = chartSeries.flatMap((item) => item.points.flatMap((point) => (
-    point.value === null || !plottedHpSet.has(point.enemyHp) ? [] : [point.value]
+    point.value === null ? [] : [point.value]
   )))
   const minimum = Math.min(0, ...values)
   const maximum = Math.max(0, ...values)
@@ -161,6 +162,7 @@ function HpChartContent({
   const plotRight = Math.max(margin.left + 1, width - margin.right)
   const plotBottom = height - margin.bottom
   const plotWidth = plotRight - margin.left
+  useEffect(() => { onPlotWidthChange?.(plotWidth) }, [plotWidth, onPlotWidthChange])
   const plotHeight = plotBottom - margin.top
   const categoryWidth = plotWidth / Math.max(1, categoryHps.length)
   const x = (hp: number) => chartKind === 'bar'
@@ -172,19 +174,36 @@ function HpChartContent({
   const xLabelWidth = integerFormat.format(hpLimit).length * characterWidth
   const xTickSpacing = Math.max(80, xLabelWidth * 1.5 + 12)
   const xTickCount = Math.max(2, Math.min(6, Math.floor(plotWidth / xTickSpacing) + 1))
-  const xTicks = chartKind === 'bar' ? categoryHps : [...new Set(Array.from({ length: xTickCount }, (_, index) => (
-    index === xTickCount - 1 ? hpLimit : Math.round(index * hpLimit / (xTickCount - 1))
-  )))].sort((left, right) => left - right)
   const compactHpFormat = new Intl.NumberFormat('ja-JP', { notation: 'compact', maximumFractionDigits: 1 })
-  const categoryLabelWidth = Math.max(1, categoryWidth - 8)
+  const categoryLabelWidth = Math.max(1, plotWidth / 2 - 12)
   const formatHpTick = (hp: number) => {
     const fullLabel = integerFormat.format(hp)
     return chartKind === 'bar' && fullLabel.length * characterWidth > categoryLabelWidth
       ? compactHpFormat.format(hp) : fullLabel
   }
+  const barTicks: number[] = []
+  if (chartKind === 'bar' && categoryHps.length) {
+    const last = categoryHps.at(-1)!
+    const lastLeft = x(last) - formatHpTick(last).length * characterWidth
+    let previousRight = -Infinity
+    // Reserve the final label, then retain only labels that fit at their actual positions.
+    for (const [index, tick] of categoryHps.slice(0, -1).entries()) {
+      const labelWidth = formatHpTick(tick).length * characterWidth
+      const left = x(tick) - (index === 0 ? 0 : labelWidth / 2)
+      const right = left + labelWidth
+      if (left >= previousRight + 8 && right + 8 <= lastLeft) {
+        barTicks.push(tick)
+        previousRight = right
+      }
+    }
+    barTicks.push(last)
+  }
+  const xTicks = chartKind === 'bar' ? barTicks : [...new Set(Array.from({ length: xTickCount }, (_, index) => (
+    index === xTickCount - 1 ? hpLimit : Math.round(index * hpLimit / (xTickCount - 1))
+  )))].sort((left, right) => left - right)
   const barGap = Math.min(6, categoryWidth * 0.035)
   const groupWidth = Math.min(categoryWidth * 0.72, chartSeries.length * 36 + Math.max(0, chartSeries.length - 1) * barGap)
-  const barWidth = Math.max(0.5, (groupWidth - Math.max(0, chartSeries.length - 1) * barGap) / Math.max(1, chartSeries.length))
+  const barWidth = Math.max(0, (groupWidth - Math.max(0, chartSeries.length - 1) * barGap) / Math.max(1, chartSeries.length))
 
   const selectFromChart = (event: MouseEvent<SVGSVGElement>) => {
     if (!selectableHps.length) return
@@ -211,6 +230,7 @@ function HpChartContent({
       <title id={titleId}>{`敵HPと${metricLabel}のMOD比較${chartKind === 'bar' ? '（棒グラフ）' : ''}`}</title>
       <desc id={descriptionId}>
         横軸は敵HP、縦軸は{metricLabel}。{chartSeries.length}種類のMODを比較しています。
+        {chartKind === 'bar' && `${categoryHps.length}点のHPを表示しています。`}
         {!imageOutput && '各値は下の敵HP選択欄で確認できます。'}
       </desc>
       <text className="ggs-hp-chart-axis-title" x={margin.left} y={18}>{metricLabel}</text>
@@ -225,9 +245,9 @@ function HpChartContent({
         <g key={tick}>
           <line className="ggs-hp-chart-axis" x1={x(tick)} x2={x(tick)} y1={plotBottom} y2={plotBottom + 5} />
           <text className="ggs-hp-chart-tick" x={x(tick)} y={plotBottom + 21}
-            textAnchor={chartKind === 'bar' ? 'middle' : index === 0 ? 'start' : index === xTicks.length - 1 ? 'end' : 'middle'}
-            textLength={chartKind === 'bar' && formatHpTick(tick).length * characterWidth > categoryLabelWidth ? categoryLabelWidth : undefined}
-            lengthAdjust="spacingAndGlyphs"
+            textAnchor={chartKind === 'bar'
+              ? categoryHps.length === 1 ? 'middle' : tick === categoryHps[0] ? 'start' : tick === categoryHps.at(-1) ? 'end' : 'middle'
+              : index === 0 ? 'start' : index === xTicks.length - 1 ? 'end' : 'middle'}
           >
             {formatHpTick(tick)}
             {chartKind === 'bar' && <title>{`敵HP ${integerFormat.format(tick)}`}</title>}
