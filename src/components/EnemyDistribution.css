@@ -1,6 +1,24 @@
 /* Keep the distribution part of the output panel; shared chart styles also serve the operator page. */
 .enemy-distribution-panel .enemy-distribution-body { padding: 0; }
 
+.enemy-analysis-route .enemy-distribution-panel .enemy-statistics-settings {
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 10px;
+}
+.enemy-analysis-route .enemy-distribution-panel .enemy-statistics-settings legend {
+  padding: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+.enemy-analysis-route .enemy-distribution-panel .enemy-metric-selector button:focus-visible {
+  position: relative;
+  outline: 2px solid var(--text);
+  outline-offset: -2px;
+}
+
 .enemy-distribution-panel .enemy-chart-toolbar {
   align-items: flex-end;
   gap: 8px 20px;
