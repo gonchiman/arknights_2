@@ -9,6 +9,11 @@ import {
 } from './operatorModules.ts'
 import { getOperatorPassives, type OperatorPassives } from './operatorProfile.ts'
 import {
+  removePotentialBonusAnnotations,
+  splitOperatorEffectChanges,
+  type EffectChangeSegment,
+} from './operatorEffectHighlights.ts'
+import {
   getOperatorPotentialApplication,
   type OperatorPotentialApplication,
 } from './operatorPotentials.ts'
@@ -16,6 +21,13 @@ import {
 export interface OperatorModuleComparisonCell {
   text: string
   baseline: string | null
+  highlights?: {
+    segments: EffectChangeSegment[]
+    base: string
+    withoutModule: string
+    withoutPotential: string
+    current: string
+  }
 }
 
 export interface OperatorModuleComparisonColumn {
@@ -56,6 +68,56 @@ export function buildOperatorModuleComparison(
   profile: OperatorCombatProfile,
   requestedLevel: number | null,
   requestedPotentialRank = 1,
+): OperatorModuleComparison {
+  const current = buildRawOperatorModuleComparison(profile, requestedLevel, requestedPotentialRank)
+  const minimum = current.potentialRank === 1
+    ? current
+    : buildRawOperatorModuleComparison(profile, current.level, 1)
+  const minimumRows = new Map(minimum.rows.map((row) => [row.id, row]))
+  const minimumColumnIndices = new Map(minimum.columns.map((column, index) => [column.id, index]))
+
+  return {
+    ...current,
+    rows: current.rows.map((row) => ({
+      ...row,
+      cells: row.cells.map((entry, columnIndex) => {
+        const column = current.columns[columnIndex]
+        const minimumRow = minimumRows.get(row.id)
+        const minimumColumnIndex = minimumColumnIndices.get(column.id)
+        const previous = minimumColumnIndex === undefined ? undefined : minimumRow?.cells[minimumColumnIndex]
+        const includeTalentName = row.kind === 'talent'
+          && Boolean(row.name && entry.baseline?.startsWith(`${row.name}：`))
+        const base = comparisonDescription(minimumRow, minimumRow?.cells[0], includeTalentName)
+        const rawWithoutModule = comparisonDescription(row, row.cells[0], includeTalentName)
+        const withoutPotential = comparisonDescription(minimumRow, previous, includeTalentName)
+        const withoutModule = removePotentialBonusAnnotations(rawWithoutModule, base)
+        const normalizedCurrent = removePotentialBonusAnnotations(entry.text, withoutPotential)
+        const descriptions = { base, withoutModule, withoutPotential, current: normalizedCurrent }
+        const unknownBaseline = minimumColumnIndex === undefined
+          || !minimum.columns[minimumColumnIndex].available
+          || previous?.text === MISSING
+        const unavailable = !column.available || isEmptyDescription(entry.text)
+
+        let segments: EffectChangeSegment[]
+        if (unavailable || unknownBaseline) {
+          segments = [{ text: normalizedCurrent, source: null }]
+        } else if (row.kind === 'attribute') {
+          // These values are the module's own bonuses, never the operator's potential stats.
+          segments = [{ text: normalizedCurrent, source: columnIndex === 0 ? null : 'module' }]
+        } else {
+          segments = splitOperatorEffectChanges(descriptions)
+        }
+        return { ...entry, highlights: { ...descriptions, segments } }
+      }),
+    })),
+  }
+}
+
+/** Retain source descriptions separately from the normalized display and attribution. */
+function buildRawOperatorModuleComparison(
+  profile: OperatorCombatProfile,
+  requestedLevel: number | null,
+  requestedPotentialRank: number,
 ): OperatorModuleComparison {
   const phaseIndex = Math.max(0, profile.phases.length - 1)
   const operatorLevel = Math.max(1, profile.phases[phaseIndex]?.maxLevel ?? 1)
@@ -159,10 +221,15 @@ export function buildOperatorModuleComparison(
     const extras = application?.changes.filter((change) => (
       change.kind === 'TOKEN' || (change.kind === 'TALENT' && change.talentIndex === null)
     )) ?? []
-    extras.forEach((change, index) => {
+    const occurrences = new Map<string, number>()
+    extras.forEach((change) => {
       const label = change.kind === 'TOKEN' ? '召喚物' : '追加効果'
+      // Inserting a newly unlocked effect must not pair all subsequent rows with the wrong effect.
+      const identity = `${change.kind}:${change.label}`
+      const occurrence = occurrences.get(identity) ?? 0
+      occurrences.set(identity, occurrence + 1)
       rows.push({
-        id: `extra:${columns[moduleIndex + 1].id}:${index}`,
+        id: `extra:${columns[moduleIndex + 1].id}:${identity}:${occurrence}`,
         label,
         ...(change.label && change.label !== label ? { name: change.label } : {}),
         kind: 'extra',
@@ -193,6 +260,23 @@ export function buildOperatorModuleComparison(
     columns,
     rows,
   }
+}
+
+function isEmptyDescription(text: string): boolean {
+  return !text || text === EMPTY || text === MISSING
+}
+
+function comparisonDescription(
+  row: OperatorModuleComparisonRow | undefined,
+  entry: OperatorModuleComparisonCell | undefined,
+  includeTalentName: boolean,
+): string {
+  if (!entry || isEmptyDescription(entry.text)) return ''
+  if (includeTalentName && row?.kind === 'talent' && row.name
+    && !entry.baseline?.startsWith(`${row.name}：`)) {
+    return `${row.name}：${entry.text}`
+  }
+  return entry.text
 }
 
 /** Common potential bonuses stay separate from the module-only attribute rows. */

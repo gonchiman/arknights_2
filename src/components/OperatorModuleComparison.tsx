@@ -5,7 +5,7 @@ import { getOperatorModuleComparisonImageFilename } from '../lib/operatorModuleC
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { parseTableImageAspect } from '../lib/tableImageAspect'
 import { ChartImageSaveDialog } from './ChartImageSaveDialog'
-import { OperatorModuleComparisonTable } from './OperatorModuleComparisonTable'
+import { OperatorEffectLegend, OperatorModuleComparisonTable } from './OperatorModuleComparisonTable'
 import './OperatorModuleComparison.css'
 
 const IMAGE_ASPECT_PRESETS = ['16:9', '4:3', '1:1', '2:1', '9:16'] as const
@@ -106,9 +106,7 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
           </div>
         </div>
         <div className="operator-module-comparison-actions">
-          <div className="operator-module-comparison-legend">
-            <mark>特性・素質の変更・追加</mark>
-          </div>
+          <OperatorEffectLegend />
           <div className="operator-module-comparison-image-settings" role="group" aria-label="画像の保存設定">
             <label className="operator-module-comparison-image-preset">
               <span>画像比率</span>
