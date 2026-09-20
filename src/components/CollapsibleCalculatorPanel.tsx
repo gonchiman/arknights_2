@@ -7,6 +7,7 @@ export function CollapsibleCalculatorPanel({
   title,
   titleBadge,
   titleIcons,
+  headerActions,
   outputTable,
   summary,
   defaultOpen = true,
@@ -22,6 +23,7 @@ export function CollapsibleCalculatorPanel({
   title: string
   titleBadge?: string
   titleIcons?: ReactNode
+  headerActions?: ReactNode
   outputTable?: string
   summary: ReactNode
   defaultOpen?: boolean
@@ -37,9 +39,7 @@ export function CollapsibleCalculatorPanel({
   const bodyId = `${id}-body`
   const effectiveOpen = !disabled && open
 
-  return (
-    <section data-output-table={outputTable} className={`calculator-panel collapsible-calculator-panel ${effectiveOpen ? 'open' : ''} ${disabled ? 'disabled' : ''} ${className}`.trim()}>
-      <h2 className="collapsible-panel-title">
+  const heading = <h2 className="collapsible-panel-title">
         <button
           type="button"
           id={headingId}
@@ -61,6 +61,13 @@ export function CollapsibleCalculatorPanel({
           </span>
         </button>
       </h2>
+
+  return (
+    <section data-output-table={outputTable} className={`calculator-panel collapsible-calculator-panel ${effectiveOpen ? 'open' : ''} ${disabled ? 'disabled' : ''} ${className}`.trim()}>
+      {headerActions ? <div className="collapsible-panel-header">
+        {heading}
+        <div className="collapsible-panel-actions" hidden={!effectiveOpen}>{headerActions}</div>
+      </div> : heading}
       <div
         id={bodyId}
         className={`collapsible-panel-body ${bodyClassName}`.trim()}

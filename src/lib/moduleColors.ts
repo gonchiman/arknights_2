@@ -11,8 +11,17 @@ export const MODULE_BASE_COLORS = Object.freeze({
 
 export type ModuleColorKey = keyof typeof MODULE_BASE_COLORS
 
+export interface ModuleColorSeries {
+  moduleType?: string | null
+  potential?: number
+}
+
 /** Positive amounts mix toward white; negative amounts mix toward black. */
 export const MODULE_POTENTIAL_SHADES = Object.freeze([0.4, 0.25, 0.1, -0.05, -0.2, -0.35] as const)
+
+function normalizeModulePotential(potential: number): number {
+  return Number.isInteger(potential) && potential >= 1 && potential <= 6 ? potential : 1
+}
 
 /** null explicitly means unequipped; missing or unrecognized equipped types stay unknown. */
 export function getModuleColorKey(moduleType: string | null | undefined): ModuleColorKey {
@@ -35,11 +44,21 @@ export function getModuleColorKey(moduleType: string | null | undefined): Module
 export function getModuleColor(moduleType: string | null | undefined, potential?: number): string {
   const base = MODULE_BASE_COLORS[getModuleColorKey(moduleType)]
   if (potential === undefined) return base
-  const index = Number.isInteger(potential) && potential >= 1 && potential <= 6 ? potential - 1 : 0
+  const index = normalizeModulePotential(potential) - 1
   const amount = MODULE_POTENTIAL_SHADES[index]
   const target = amount >= 0 ? 255 : 0
   return `#${[1, 3, 5].map((offset) => {
     const channel = Number.parseInt(base.slice(offset, offset + 2), 16)
     return Math.round(channel + (target - channel) * Math.abs(amount)).toString(16).padStart(2, '0')
   }).join('')}`
+}
+
+/** Use potential shades only when the compared series include different known potentials. */
+export function getModuleComparisonColors(series: readonly ModuleColorSeries[]): string[] {
+  const potentials = new Set<number>()
+  for (const item of series) {
+    if (item.potential !== undefined) potentials.add(normalizeModulePotential(item.potential))
+  }
+  const comparePotentials = potentials.size > 1
+  return series.map((item) => getModuleColor(item.moduleType, comparePotentials ? item.potential : undefined))
 }

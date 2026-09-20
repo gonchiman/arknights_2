@@ -11,6 +11,7 @@ export type AppRoute =
   | { view: 'goldenglow-guide' }
   | { view: 'goldenglow-performance' }
   | { view: 'goldenglow-target-switch' }
+  | { view: 'goldenglow-target-switch-two' }
   | { view: 'goldenglow-single-trial' }
   | { view: 'comparison' }
   | { view: 'enemies' }
@@ -106,6 +107,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/analysis/goldenglow/performance') return { view: 'goldenglow-performance' }
   if (hash === '#/analysis/goldenglow/explosion') return { view: 'goldenglow-guide' }
   if (hash === '#/analysis/goldenglow/target-switch') return { view: 'goldenglow-target-switch' }
+  if (hash === '#/analysis/goldenglow/target-switch-2') return { view: 'goldenglow-target-switch-two' }
   if (hash === '#/analysis/goldenglow/single-trial') return { view: 'goldenglow-single-trial' }
   if (hash === '#/guides/goldenglow-explosion') return { view: 'goldenglow-guide' }
   if (hash === '#/analysis/goldenglow-performance') return { view: 'goldenglow-performance' }

@@ -26,15 +26,35 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 18px;
+  gap: 6px 10px;
   min-width: 0;
   max-width: 100%;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 18px;
   text-align: left;
   overflow-wrap: anywhere;
 }
 .chart-image-frame-legends > * { min-width: 0; max-width: 100%; }
+.chart-image-frame-legend-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+.chart-image-frame-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+}
+.chart-image-frame-legend-swatch { flex: 0 0 18px; }
 .chart-image-frame-conditions {
   justify-self: end;
   max-width: 100%;
