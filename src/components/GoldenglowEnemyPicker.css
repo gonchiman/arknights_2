@@ -1,0 +1,55 @@
+.gg-enemy-picker { min-width: 0; color: var(--text); font-size: 12px; }
+.gg-enemy-picker .gg-enemy-picker-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.gg-enemy-picker .gg-enemy-picker-levels { display: flex; flex-wrap: wrap; gap: 0; }
+.gg-enemy-picker .gg-enemy-picker-levels button { min-height: 36px; padding: 6px 14px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+.gg-enemy-picker .gg-enemy-picker-levels button + button { margin-left: -1px; }
+.gg-enemy-picker .gg-enemy-picker-levels button[aria-pressed="true"] { color: var(--surface); background: var(--text); }
+.gg-enemy-picker .gg-enemy-picker-reset { margin-left: auto; min-height: 36px; border: 0; padding: 4px 0; background: transparent; color: var(--text-soft); font: inherit; cursor: pointer; }
+.gg-enemy-picker .gg-enemy-picker-reset:disabled { color: var(--text-muted); cursor: default; opacity: .55; }
+.gg-enemy-picker .gg-enemy-picker-ranges { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.gg-enemy-picker .gg-enemy-picker-range { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.gg-enemy-picker .gg-enemy-picker-range legend { padding: 0; margin-bottom: 6px; font-weight: 500; }
+.gg-enemy-picker .gg-enemy-picker-range label { display: grid; gap: 4px; min-width: 0; }
+.gg-enemy-picker .gg-enemy-picker-range label > span { color: var(--text-soft); font-size: 11px; }
+.gg-enemy-picker input { width: 100%; min-width: 0; min-height: 36px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 0; background: var(--surface); color: var(--text); font: inherit; font-variant-numeric: tabular-nums; }
+.gg-enemy-picker input[aria-invalid="true"] { border-color: var(--danger); }
+.gg-enemy-picker .gg-enemy-picker-error { margin: 10px 0 0; color: var(--danger); line-height: 1.7; }
+.gg-enemy-picker .gg-enemy-picker-search { margin-top: 14px; }
+.gg-enemy-picker .gg-enemy-picker-search summary { width: fit-content; min-height: 28px; padding: 4px 0; color: var(--text-soft); cursor: pointer; }
+.gg-enemy-picker .gg-enemy-picker-search label { display: block; margin-top: 6px; }
+.gg-enemy-picker .gg-enemy-picker-count { margin: 14px 0 8px; color: var(--text-soft); font-variant-numeric: tabular-nums; }
+.gg-enemy-picker .gg-enemy-picker-scroll { width: 100%; max-width: 100%; max-height: 420px; overflow: auto; overscroll-behavior: contain; }
+.gg-enemy-picker .gg-enemy-picker-table { width: 100%; min-width: 620px; border-collapse: collapse; table-layout: fixed; border: 1px solid var(--border); font-size: 12px; font-variant-numeric: tabular-nums; }
+.gg-enemy-picker .gg-enemy-picker-name-column { width: 34%; }
+.gg-enemy-picker .gg-enemy-picker-level-column { width: 14%; }
+.gg-enemy-picker .gg-enemy-picker-stages-column { width: 132px; }
+.gg-enemy-picker .gg-enemy-picker-table th, .gg-enemy-picker .gg-enemy-picker-table td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; overflow-wrap: anywhere; }
+.gg-enemy-picker .gg-enemy-picker-table th { position: sticky; top: 0; z-index: 1; background: var(--surface-soft); color: var(--text-soft); font-weight: 500; }
+.gg-enemy-picker .gg-enemy-picker-table .gg-enemy-picker-number { text-align: right; white-space: nowrap; }
+.gg-enemy-picker .gg-enemy-picker-sort { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; min-height: 28px; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.gg-enemy-picker .gg-enemy-picker-sort span { color: var(--text-muted); }
+.gg-enemy-picker .gg-enemy-picker-table tbody tr[data-enemy-id] { cursor: pointer; }
+.gg-enemy-picker .gg-enemy-picker-table tbody tr[data-enemy-id]:hover, .gg-enemy-picker .gg-enemy-picker-table tbody tr:focus-within { background: var(--surface-hover); }
+.gg-enemy-picker .gg-enemy-picker-table .is-selected { background: var(--surface-soft); }
+.gg-enemy-picker .gg-enemy-picker-table .is-selected td:first-child { box-shadow: inset 3px 0 var(--text-soft); }
+.gg-enemy-picker .gg-enemy-picker-select { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; width: 100%; min-height: 28px; padding: 0; border: 0; color: inherit; background: transparent; font: inherit; line-height: 1.6; text-align: left; cursor: pointer; }
+.gg-enemy-picker .gg-enemy-picker-select small { color: var(--text-soft); font-size: 11px; white-space: nowrap; }
+.gg-enemy-picker .gg-enemy-picker-table .gg-enemy-picker-state { height: 100px; padding: 20px; text-align: center; color: var(--text-soft); }
+.gg-enemy-picker .gg-enemy-picker-state p { margin: 0 0 12px; }
+.gg-enemy-picker .gg-enemy-picker-more { display: block; min-height: 36px; margin: 14px auto 0; font-size: 12px; }
+.gg-enemy-picker button:focus-visible, .gg-enemy-picker input:focus-visible, .gg-enemy-picker summary:focus-visible, .gg-enemy-picker .gg-enemy-picker-scroll:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+@media (max-width: 560px) {
+  .gg-enemy-picker .gg-enemy-picker-ranges { gap: 12px; }
+  .gg-enemy-picker .gg-enemy-picker-range { gap: 6px; }
+  .gg-enemy-picker .gg-enemy-picker-levels button { padding: 6px 10px; }
+  .gg-enemy-picker .gg-enemy-picker-reset { margin-left: 0; }
+}
+@media (max-width: 760px), (pointer: coarse) {
+  .gg-enemy-picker input { min-height: 44px; font-size: 16px; }
+  .gg-enemy-picker button, .gg-enemy-picker .gg-enemy-picker-levels button, .gg-enemy-picker .gg-enemy-picker-reset,
+  .gg-enemy-picker .gg-enemy-picker-sort, .gg-enemy-picker .gg-enemy-picker-select, .gg-enemy-picker .gg-enemy-picker-more { min-height: 44px; }
+  .gg-enemy-picker .gg-enemy-picker-search summary { min-height: 44px; padding-top: 12px; }
+}
+@media (max-width: 440px) {
+  .gg-enemy-picker .gg-enemy-picker-ranges { grid-template-columns: minmax(0, 1fr); }
+}

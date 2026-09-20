@@ -40,6 +40,7 @@ function AnalysisIcon({ page }: { page: string }) {
   return <svg className="gg-home-analysis-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     {page === 'goldenglow-performance' ? <><path d="M4 4v16h16" /><path d="m7 14 4-5 4 3 5-6" /></>
       : page === 'goldenglow-guide' ? <path d="m13 3-8 11h6l-1 7 9-12h-6l1-6" />
-        : <><circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="2" /><path d="M12 2v3m0 14v3M2 12h3m14 0h3" /></>}
+        : page === 'goldenglow-single-trial' ? <><path d="m4 3 7 5-7 5V3Z" /><path d="M14 5h6m-6 6h6M4 17h16M4 21h16" /></>
+          : <><circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="2" /><path d="M12 2v3m0 14v3M2 12h3m14 0h3" /></>}
   </svg>
 }
