@@ -48,7 +48,7 @@ export function getEnemyChartImageFilename({
     const secondary = sanitizeFilenamePart(secondaryMetricLabel)
     if (secondary) metrics.push(secondary)
   }
-  const scope = (scopeLabel ?? '').trim().replace(/^全敵(?:\s*·\s*|$)/, '').replace(/\s*·\s*/g, '_')
+  const scope = (scopeLabel ?? '').trim().replace(/^全敵(?:\s*·\s*|$)/, '')
   const safeScope = sanitizeFilenamePart(scope)
   const base = `敵_${metrics.join('_')}_${chartNames[kind]}${safeScope ? `_${safeScope}` : ''}`
   const encoder = new TextEncoder()
