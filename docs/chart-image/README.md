@@ -12,6 +12,7 @@
 | [chartImageLayout.ts](../../src/lib/chartImageLayout.ts) | 自然なグラフの高さを保った画像サイズの計算 |
 | [saveComparisonChartImage.tsx](../../src/components/saveComparisonChartImage.tsx) | 描画完了の待機、PNG生成、保存処理 |
 | [ChartImageSaveDialog.tsx](../../src/components/ChartImageSaveDialog.tsx) | ファイル名、画像全体の縦横比、保存先の操作 |
+| [chartImageFilename.ts](../../src/lib/chartImageFilename.ts) | 設定を識別する既定ファイル名と縦横比の付与 |
 | [examples/](examples/) | 承認済みデザインの見本画像 |
 
 配置を変更するときは共通部品とこの仕様を一緒に更新する。各ページに同じ枠組みを複製しない。グラフの計算、線種、ラベルの内容は利用側で決める。MODを比較する色は [moduleColors.ts](../../src/lib/moduleColors.ts) の `getModuleComparisonColors` に系列全体を渡して決め、独自のパレットを作らない。PNG生成処理は表の画像保存でも使われるため、共通の保存処理にグラフ専用の配置を持ち込まない。
@@ -147,6 +148,32 @@ await saveComparisonChartImage({
 利用側のグラフは、受け取った幅と高さで描画する。横軸名をフレームに渡す場合、グラフ内の同じ軸名とそのための余白は外して二重表示を避ける。ヘッダーや横軸名を利用側で追加しない。SVG内の文字が境界からはみ出さないよう、目盛り・縦軸名・直接ラベルに必要な余白はグラフ内で確保する。
 
 保存時は画面の設定とデータをひとまとまりで保持し、プレビューと実際のPNGに同じ内容を渡す。ファイル名と縦横比は `ChartImageSaveDialog` を使い、既存の保存先選択とダウンロードの処理を再利用する。
+
+## 画像名
+
+既定の画像名は「読める名前＋設定の識別子＋縦横比＋`.png`」とする。同じ有効設定なら同じ名前になり、出力に使う設定が異なれば識別できるようにする。保存日時や乱数は含めない。
+
+- `createChartImageFilename(prefix, options)` で名前を作る。設定をキー順に整えたJSONからSHA-256を計算し、64桁すべてを使用する。配列の順序と数値の精度は維持する。読める部分の長さとファイル名に使えない文字の処理は共通関数に任せる。
+- 設定には、スキル・計算時間・順序を含む比較対象・表示値・基準列・小数桁・そのグラフで有効な表示オプションを含める。折れ線の線種と系列名、棒の向き・積み上げ・レイアウト、集合棒の刻み・数値表示なども対象とする。
+- 非表示のグラフ形式に残っている設定、プリセット名、内部の連番ID、表だけの設定、入力途中の未確定値、画面の開閉状態は含めない。比較対象はMOD・装備時のレベル・潜在などの実際の条件で表す。
+- `withChartImageAspect(filename, aspectRatio)` で、指定なしは `-auto`、指定ありは `-ratio` と実効比率を末尾に加える。16:9と32:18のような同じ比率は同じ名前になる。
+- 保存画面には `getDefaultFilename` を渡し、縦横比変更時に自動名を更新する。ユーザーがファイル名を手入力した後は自動で書き換えない。設定による識別は自動名に適用し、ユーザー指定名は優先する。
+- 名前と画像は同じ時点の設定から作る。保存先選択は保存ボタンを押した直後に呼び出し、識別子の生成待ちでブラウザーの操作権限を失わないようにする。
+
+GGのスキルダメージ比較では、[goldenglowPerformanceImageFilename.ts](../../src/lib/goldenglowPerformanceImageFilename.ts) が有効設定の選択を担当する。形式例は `goldenglow-S3-特化3-30s-grouped-bar-step20-value-labels-[64桁の識別子]-auto.png`。識別子の表記は説明用で、実際は設定から計算した16進文字列になる。
+
+```tsx
+// prefix と options は利用側で用意する、読める名前と有効な出力設定。
+// saveDialogProps は aspect や保存操作など、既存の保存画面のプロパティ。
+const baseFilename = await createChartImageFilename(prefix, options)
+<ChartImageSaveDialog
+  {...saveDialogProps}
+  initialFilename={baseFilename}
+  getDefaultFilename={(aspectRatio) => withChartImageAspect(baseFilename, aspectRatio)}
+/>
+```
+
+この命名方式の適用済み範囲は、GGのスキルダメージ比較の折れ線・単一棒・集合棒。ほかの画像出力の既定名は未移行。設定項目を追加したときは、命名用の有効設定とテストも更新する。同じ設定・無関係な設定で名前が変わらないこと、有効設定・比較順序・比率の変更で名前が変わること、手入力名を保持することを確認する。共通関数の確認例は [chartImageFilename.test.ts](../../tests/chartImageFilename.test.ts)、GG固有の確認例は [goldenglowPerformanceImageFilename.test.ts](../../tests/goldenglowPerformanceImageFilename.test.ts) に置く。
 
 ## 見本画像と適用状況
 

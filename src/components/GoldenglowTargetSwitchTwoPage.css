@@ -76,6 +76,13 @@
 .gg2-output { min-width: 0; }
 .gg2-chart-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; min-height: 53px; padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--surface-soft); }
 .gg2-chart-heading h3 { margin: 0; font-size: 12px; }
+.gg2-chart-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 12px; max-width: 100%; margin-left: auto; }
+.gg2-chart-axis { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--text-soft); font-size: 11px; }
+.gg2-chart-axis select, .gg2-chart-axis input { min-height: 32px; max-width: 100%; padding: 5px 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; }
+.gg2-chart-axis input { width: 100px; min-width: 0; }
+.gg2-chart-axis input[aria-invalid="true"] { border-color: var(--danger, #b42318); }
+.gg2-chart-axis-bounds { display: flex; flex-wrap: wrap; gap: 8px 12px; max-width: 100%; }
+.gg2-chart-axis-error { flex-basis: 100%; margin: 0; color: var(--danger, #b42318); font-size: 12px; }
 .gg2-save-image { flex-shrink: 0; min-height: 32px; padding: 6px 10px; font-size: 11px; }
 .gg2-status { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 12px; font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .gg2-status progress { width: 130px; height: 6px; border: 0; accent-color: var(--text); }
@@ -118,6 +125,7 @@
   .gg2-chart-area .ggs-hp-chart-frame { width: calc(100% - 12px); margin-inline: 6px; }
   .gg2-output-precision select, .gg2-output-conditions summary, .gg2-comparison-options summary, .gg2-run-actions button { min-height: 44px; }
   .gg2-output-precision select { font-size: 16px; }
+  .gg2-chart-axis select, .gg2-chart-axis input { min-height: 44px; font-size: 16px; }
 }
 @container (max-width: 350px) {
   .gg2-settings-fields { grid-template-columns: minmax(0, 1fr); }
@@ -131,5 +139,6 @@
   .gg2-output-conditions summary, .gg2-table-view .gg-performance-copy-table { min-height: 44px; }
   .gg2-comparison-options summary, .gg2-module-choice select { min-height: 44px; }
   .gg2-save-image { min-height: 44px; }
+  .gg2-chart-axis select, .gg2-chart-axis input { min-height: 44px; font-size: 16px; }
   .gg2-chart-heading { min-height: 61px; }
 }

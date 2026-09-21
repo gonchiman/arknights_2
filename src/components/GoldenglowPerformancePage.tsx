@@ -1,10 +1,12 @@
-import { useMemo, useRef, useState, type ComponentProps } from 'react'
+import { useMemo, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { GOLDENGLOW_OPERATOR_ID } from '../lib/goldenglowExplosion'
 import { buildGoldenglowPerformanceDifferenceCurve, buildGoldenglowPerformanceDifferences } from '../lib/goldenglowPerformanceDifference'
 import { buildGoldenglowPerformancePresets } from '../lib/goldenglowPerformancePresets'
 import { buildGoldenglowPerformanceRatios, buildGoldenglowPerformanceRatioCurve, type GoldenglowPerformanceRatioMode } from '../lib/goldenglowPerformanceRatio'
 import { getModuleComparisonColors } from '../lib/moduleColors'
 import { getChartImageLayout } from '../lib/chartImageLayout'
+import { withChartImageAspect } from '../lib/chartImageFilename'
+import { getGoldenglowPerformanceImageFilename } from '../lib/goldenglowPerformanceImageFilename'
 import { deriveGoldenglowGuideSkills } from '../lib/goldenglowGuideSkill'
 import {
   buildGoldenglowPerformanceComparison,
@@ -101,6 +103,7 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
   const [imageAspect, setImageAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [savingImage, setSavingImage] = useState(false)
   const [imageFilename, setImageFilename] = useState<string | null>(null)
+  const [imageChartRenderer, setImageChartRenderer] = useState<((aspectRatio?: number) => ReactNode) | null>(null)
   const [groupedImageExport, setGroupedImageExport] = useState<{
     id: number
     props: ComponentProps<typeof GoldenglowPerformanceGroupedBarChart>
@@ -241,27 +244,41 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
     </GoldenglowPerformanceChartFrame>
   }
 
-  const openImageSaveDialog = () => {
+  const openImageSaveDialog = async () => {
     if (!skill || imageSaveInProgress.current || !hasChartValues) return
-    const singleResistance = chartType === 'bar' && !isGroupedBar
-    const imageChartType = isGroupedBar ? 'grouped-bar' : singleResistance && stackedBars ? 'stacked' : chartType
-    const chartDetails = isGroupedBar ? `-step${groupedResistanceStep}`
-      : singleResistance ? `-${barOrientation}-${barVariant}-res${chartResistance}` : showLineEndLabels ? '-end-labels' : ''
+    imageSaveInProgress.current = true
+    setSavingImage(true)
     setImageFeedback(null)
-    setGroupedImageExport(isGroupedBar ? {
-      id: nextImageId.current++,
-      props: {
-        columns: structuredClone(chartColumns), resistances: [...groupedResistanceValues],
-        metricLabel: chartTitle, valueAxisLabel, referenceY, conditionLabel: chartConditionLabel,
-        difference: chartSigned, integerTicks: chartDigits === 0, formatValue: formatChartOutput,
-        showValues: showGroupedBarValues, imageOutput: true,
-      },
-    } : null)
-    setImageFilename(`goldenglow-S${skill.skillIndex}-${skill.skillLevelLabel}-${format(duration)}s-${imageChartType}${chartRelative ? `-${chartMetric}-from-${chartBaselineLabel}` : ''}${chartDetails}.png`)
+    try {
+      const filename = await getGoldenglowPerformanceImageFilename({
+        skillIndex: skill.skillIndex, skillLevelIndex: skill.skillLevelIndex,
+        skillLevelLabel: skill.skillLevelLabel, duration, builds,
+        baselineId: effectiveChartBaselineId, chartType, chartMetric, chartDigits,
+        lineStyle, showLineEndLabels, yAxisFromZero, barMode, showGroupedBarValues,
+        groupedResistanceStep, stackedBars, barOrientation, barVariant, chartResistance,
+      })
+      setGroupedImageExport(isGroupedBar ? {
+        id: nextImageId.current++,
+        props: {
+          columns: structuredClone(chartColumns), resistances: [...groupedResistanceValues],
+          metricLabel: chartTitle, valueAxisLabel, referenceY, conditionLabel: chartConditionLabel,
+          difference: chartSigned, integerTicks: chartDigits === 0, formatValue: formatChartOutput,
+          showValues: showGroupedBarValues, imageOutput: true,
+        },
+      } : null)
+      // Keep the rendered chart and the filename bound to the same click's settings.
+      setImageChartRenderer(() => (aspectRatio?: number) => renderChart(true, aspectRatio))
+      setImageFilename(filename)
+    } catch {
+      setImageFeedback('failed')
+    } finally {
+      imageSaveInProgress.current = false
+      setSavingImage(false)
+    }
   }
 
   const saveChartImage = async (filename: string, aspectRatio?: number) => {
-    if (!skill || imageSaveInProgress.current || !filename.trim()) return
+    if (!imageChartRenderer || imageSaveInProgress.current || !filename.trim()) return
     imageSaveInProgress.current = true
     setSavingImage(true)
     setImageFeedback(null)
@@ -272,13 +289,14 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
       await saveComparisonChartImage({
         chart: groupedImageExport
           ? <GoldenglowPerformanceGroupedBarChart {...groupedImageExport.props} aspectRatio={aspectRatio} />
-          : renderChart(true, aspectRatio),
+          : imageChartRenderer(aspectRatio),
         width: groupedImageExport ? getChartImageLayout({ naturalChartHeight: 334, aspectRatio }).width : undefined,
         filename,
         writeBlob: destination.type === 'file' ? destination.write : undefined,
       })
       setImageFeedback(destination.type === 'file' ? 'saved' : 'downloaded')
       setImageFilename(null)
+      setImageChartRenderer(null)
       setGroupedImageExport(null)
     } catch {
       setImageFeedback('failed')
@@ -496,6 +514,7 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
             <p role="status" className="visually-hidden">
               {imageFeedback === 'saved' ? 'PNG画像を保存しました。' : imageFeedback === 'downloaded' ? 'PNG画像のダウンロードを開始しました。' : ''}
             </p>
+            {imageFeedback === 'failed' && imageFilename === null && <p role="alert">画像の保存を準備できませんでした。</p>}
             <div className="gg-performance-chart-viewport" tabIndex={0} role="region" aria-label="グラフ表示領域">
               {renderChart()}
             </div>
@@ -511,6 +530,7 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
       </CollapsibleCalculatorPanel>
       {imageFilename !== null && <ChartImageSaveDialog
         initialFilename={imageFilename}
+        getDefaultFilename={(aspectRatio) => withChartImageAspect(imageFilename, aspectRatio)}
         helpMode="popover"
         aspect={imageAspect}
         onAspectChange={setImageAspect}
@@ -527,6 +547,7 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
         onClose={() => {
           if (imageSaveInProgress.current) return
           setImageFilename(null)
+          setImageChartRenderer(null)
           setGroupedImageExport(null)
           setImageFeedback(null)
         }}
