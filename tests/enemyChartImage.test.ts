@@ -2,10 +2,10 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { getEnemyChartImageFilename, getEnemyChartImageLayout, type EnemyChartKind } from '../src/lib/enemyChartImage.ts'
 
-const kinds: EnemyChartKind[] = ['HISTOGRAM', 'ECDF', 'BOX', 'SCATTER', 'INDIVIDUAL']
+const kinds: EnemyChartKind[] = ['HISTOGRAM', 'ECDF', 'BOX', 'SCATTER', 'INDIVIDUAL', 'COMPARISON']
 
 test('自動比率ではグラフの自然な高さに見出しと余白を加える', () => {
-  for (const kind of ['HISTOGRAM', 'ECDF', 'SCATTER'] as const) {
+  for (const kind of ['HISTOGRAM', 'ECDF', 'SCATTER', 'COMPARISON'] as const) {
     assert.deepEqual(getEnemyChartImageLayout({ kind }), { width: 960, height: 410, chartHeight: 334 })
   }
   assert.deepEqual(getEnemyChartImageLayout({ kind: 'HISTOGRAM', chromeHeight: 143.5 }), { width: 960, height: 478, chartHeight: 334 })
@@ -92,7 +92,7 @@ test('絞り込みのない旧名を維持し、異なる対象条件を保存�
   assert.equal(getEnemyChartImageFilename({ ...options, scopeLabel: '全敵 · 術耐性＝60' }), '敵_HP_ヒストグラム_術耐性＝60.png')
   assert.equal(getEnemyChartImageFilename({ kind: 'SCATTER', metricLabel: 'HP', secondaryMetricLabel: '攻撃力',
     scopeLabel: 'ボス · 検索「巨像」 · 術耐性＝50 · HP≥10000' }), '敵_HP_攻撃力_散布図_ボス · 検索「巨像」 · 術耐性＝50 · HP≥10000.png')
-  for (const kind of kinds) {
+  for (const kind of kinds.filter((kind) => kind !== 'COMPARISON')) {
     assert.ok(getEnemyChartImageFilename({ ...options, kind, scopeLabel: 'エリート · 移動速度＜0.8' }).endsWith('_エリート · 移動速度＜0.8.png'))
   }
 })
@@ -237,5 +237,100 @@ test('長い条件でも補助線を読めるまま保持し補助線差と条�
     assert.ok(new TextEncoder().encode(name).length <= 200)
     assert.match(name, /_縦線(?:10000|20000)_横線(?:80|90)pct_[0-9a-f]{8}\.png$/)
     assert.ok(!name.includes('\ufffd'))
+  }
+})
+
+const comparisonSettings = {
+  seriesLabels: ['通常敵', 'エリート敵'],
+  yAxis: 'PERCENT' as const,
+  scale: 'LINEAR' as const,
+  binWidth: 5000,
+  upperBound: 100000,
+}
+
+test('分布比較は表示系列と共通設定を保存名に含め、他グラフ用の対象条件を使わない', () => {
+  const options = { kind: 'COMPARISON' as const, metricLabel: 'HP' }
+  assert.equal(getEnemyChartImageFilename(options), '敵_HP_分布比較.png')
+  assert.equal(getEnemyChartImageFilename({ ...options, scopeLabel: '全敵 · 術耐性＝50' }), '敵_HP_分布比較.png')
+  assert.equal(getEnemyChartImageFilename({ ...options, comparisonSettings }),
+    '敵_HP_分布比較_通常敵_vs_エリート敵_割合_線形_幅5000_上限100000.png')
+  assert.equal(getEnemyChartImageFilename({ ...options, scopeLabel: '全敵 · 術耐性＝50', comparisonSettings }),
+    getEnemyChartImageFilename({ ...options, comparisonSettings }))
+  assert.equal(getEnemyChartImageFilename({ ...options, comparisonSettings: { ...comparisonSettings, seriesLabels: ['通常敵'] } }),
+    '敵_HP_分布比較_通常敵_割合_線形_幅5000_上限100000.png')
+})
+
+test('分布比較は系列条件・順序・縦軸・横軸・階級設定の違いを識別する', () => {
+  const filename = (settings: Parameters<typeof getEnemyChartImageFilename>[0]['comparisonSettings']) =>
+    getEnemyChartImageFilename({ kind: 'COMPARISON', metricLabel: 'HP', comparisonSettings: settings })
+  const names = [
+    filename(comparisonSettings),
+    filename({ ...comparisonSettings, seriesLabels: ['通常敵 · 術耐性＝0', '通常敵 · 術耐性＝50'] }),
+    filename({ ...comparisonSettings, seriesLabels: ['エリート敵', '通常敵'] }),
+    filename({ ...comparisonSettings, yAxis: 'COUNT' }),
+    filename({ ...comparisonSettings, scale: 'LOG' }),
+    filename({ ...comparisonSettings, binWidth: 10000 }),
+    filename({ ...comparisonSettings, upperBound: 200000 }),
+  ]
+  assert.equal(new Set(names).size, names.length)
+  assert.match(names[3], /_敵数_線形_幅5000_上限100000\.png$/)
+  assert.match(names[4], /_割合_対数\.png$/)
+  assert.equal(names[4], filename({ ...comparisonSettings, scale: 'LOG', binWidth: null, upperBound: null }))
+})
+
+test('分布比較の禁止文字や区切り文字を含む条件は置換前の条件も区別する', () => {
+  const filename = (seriesLabels: readonly string[]) => getEnemyChartImageFilename({
+    kind: 'COMPARISON', metricLabel: 'HP', comparisonSettings: { ...comparisonSettings, seriesLabels },
+  })
+  const slash = filename(['検索「A/B」', '通常敵'])
+  const colon = filename(['検索「A:B」', '通常敵'])
+  assert.match(slash, /^敵_HP_分布比較_検索「A_B」_vs_通常敵_割合_線形_幅5000_上限100000_[0-9a-f]{8}\.png$/)
+  assert.notEqual(slash, colon)
+  assert.equal(slash, filename(['検索「A/B」', '通常敵']))
+  assert.notEqual(filename(['通常敵_vs_エリート敵', 'ボス']), filename(['通常敵', 'エリート敵_vs_ボス']))
+  assert.ok(!/[<>:"/\\|?*\u0000-\u001f\u007f]/.test(filename(['<>"/\\|?*\u0000', '通常敵'])))
+})
+
+test('長い比較条件は全文・順序・設定をハッシュに保持し200バイト以内に収める', () => {
+  const longLabel = `検索「${'敵😀'.repeat(100)}」 · 術耐性＝50`
+  const settings = { ...comparisonSettings, seriesLabels: [longLabel, '通常敵', 'エリート敵', 'ボス'] }
+  const filename = (comparisonSettings: Parameters<typeof getEnemyChartImageFilename>[0]['comparisonSettings']) =>
+    getEnemyChartImageFilename({ kind: 'COMPARISON', metricLabel: 'HP', comparisonSettings })
+  const names = [
+    filename(settings),
+    filename({ ...settings, seriesLabels: [longLabel.replace('50', '0'), '通常敵', 'エリート敵', 'ボス'] }),
+    filename({ ...settings, seriesLabels: [longLabel, '通常敵', 'ボス', 'エリート敵'] }),
+    filename({ ...settings, yAxis: 'COUNT' }),
+    filename({ ...settings, scale: 'LOG' }),
+    filename({ ...settings, binWidth: 10000 }),
+    filename({ ...settings, upperBound: 200000 }),
+  ]
+  assert.equal(new Set(names).size, names.length)
+  assert.equal(new Set(names.map((name) => name.match(/_([0-9a-f]{8})\.png$/)?.[1])).size, names.length)
+  for (const name of names) {
+    assert.ok(new TextEncoder().encode(name).length <= 200)
+    assert.ok(!name.includes('\ufffd'))
+    assert.match(name, /_(?:割合|敵数)_(?:対数|線形_幅(?:5000|10000)_上限(?:100000|200000))_[0-9a-f]{8}\.png$/)
+  }
+})
+
+test('分布比較の小数は丸めず、不正な階級値は保存名に含めない', () => {
+  const options = { kind: 'COMPARISON' as const, metricLabel: '移動速度' }
+  const settings = { ...comparisonSettings, binWidth: 0.05, upperBound: 1.25 }
+  assert.equal(getEnemyChartImageFilename({ ...options, comparisonSettings: settings }),
+    '敵_移動速度_分布比較_通常敵_vs_エリート敵_割合_線形_幅0.05_上限1.25.png')
+  const automatic = getEnemyChartImageFilename({ ...options,
+    comparisonSettings: { ...settings, binWidth: null, upperBound: null } })
+  for (const value of [0, -1, NaN, Infinity, -Infinity]) {
+    assert.equal(getEnemyChartImageFilename({ ...options,
+      comparisonSettings: { ...settings, binWidth: value, upperBound: value } }), automatic)
+  }
+})
+
+test('分布比較用の設定を既存グラフに渡しても保存名は変化しない', () => {
+  for (const kind of kinds.filter((kind) => kind !== 'COMPARISON')) {
+    const options = { kind, metricLabel: 'HP', scopeLabel: '全敵 · 検索「A/B」',
+      histogramSettings: { binWidth: 5000, upperBound: 100000 }, ecdfGuides: { x: 10000, yPercent: 80 } }
+    assert.equal(getEnemyChartImageFilename({ ...options, comparisonSettings }), getEnemyChartImageFilename(options))
   }
 })

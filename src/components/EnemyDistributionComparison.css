@@ -1,0 +1,44 @@
+.enemy-comparison, .enemy-comparison-image {
+  --enemy-comparison-series-1: #2865ac;
+  --enemy-comparison-series-2: #9a6808;
+  --enemy-comparison-series-3: #8057a5;
+  --enemy-comparison-series-4: #287f6d;
+}
+.enemy-comparison[hidden] { display: none; }
+.enemy-chart-stack[hidden] { display: none; }
+.enemy-comparison-settings { border-bottom: 1px solid var(--border); padding: 10px; }
+.enemy-comparison-axis-settings { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px 20px; }
+.enemy-comparison-axis-settings > div { display: grid; gap: 4px; }
+.enemy-comparison-axis-settings > div > span { font-size: 10px; color: var(--text-muted); }
+.enemy-comparison-axis-settings .enemy-chart-save-button { margin-left: auto; }
+.enemy-comparison-bin-settings { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 20px; margin-top: 12px; }
+.enemy-comparison-bin-settings > label, .enemy-comparison-upper { display: grid; gap: 4px; flex: 1 1 160px; max-width: 260px; min-width: 0; }
+.enemy-comparison-bin-settings label > span, .enemy-comparison-upper label { font-size: 10px; color: var(--text-muted); }
+.enemy-comparison-bin-settings input { width: 100%; min-width: 0; min-height: 34px; padding: 6px 8px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); font: inherit; font-size: 11px; }
+.enemy-comparison-bin-settings small { font-size: 10px; color: var(--text-muted); }
+.enemy-comparison-upper > div { display: flex; align-items: center; gap: 4px; height: 20px; }
+.enemy-comparison-bin-settings label > span { height: 20px; display: flex; align-items: center; }
+.enemy-comparison-bin-settings > button { align-self: center; min-height: 34px; background: var(--surface); color: var(--text-muted); font: inherit; font-size: 11px; border: 1px solid var(--border); padding: 5px 10px; }
+.enemy-comparison-error { padding: 16px 10px; color: var(--danger); font-size: 12px; }
+.enemy-comparison-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.enemy-comparison-legend button { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 3px 0; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 10px; text-align: left; overflow-wrap: anywhere; }
+.enemy-comparison-legend button[aria-pressed="false"] { color: var(--text-muted); text-decoration: line-through; }
+.enemy-comparison-swatch { flex: 0 0 18px; }
+.enemy-comparison-chart-container { padding: 0 6px; min-width: 0; }
+.enemy-comparison-line { fill: none; stroke-width: 2; stroke-linejoin: round; }
+.enemy-comparison-chart { touch-action: pan-y; }
+.enemy-comparison-chart:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
+.enemy-comparison-hover { pointer-events: none; }
+.enemy-comparison-readout { padding: 0 10px; min-height: 22px; font-size: 10px; color: var(--text-muted); overflow-wrap: anywhere; }
+.enemy-comparison-overflow { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 5px 18px; padding: 8px 10px; font-size: 10px; color: var(--text-muted); overflow-wrap: anywhere; }
+.enemy-comparison-overflow:empty { display: none; }
+.enemy-comparison-overflow > span { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; }
+.enemy-comparison-image .enemy-comparison-overflow { padding: 6px 0 0 60px; font-size: 11px; }
+.enemy-comparison-image .chart-image-frame-legend-item { align-items: flex-start; }
+.enemy-comparison-image .enemy-comparison-swatch { margin-top: 3px; }
+.enemy-comparison-image .enemy-comparison-chart .enemy-chart-tick { font-size: 11px; }
+.enemy-comparison-image .enemy-comparison-chart .enemy-chart-axis-title { font-size: 12px; }
+@media (pointer: coarse) {
+  .enemy-comparison-bin-settings input, .enemy-comparison-bin-settings > button, .enemy-comparison-legend button { min-height: 44px; }
+  .enemy-comparison-bin-settings input { font-size: 16px; }
+}
