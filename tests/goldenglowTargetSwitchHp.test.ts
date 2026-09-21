@@ -59,6 +59,7 @@ test('S1・S2・S3の各点は待ち時間0秒・0.1秒とも既存の表と単�
       const actual = simulateGoldenglowTargetSwitchHp(setup)
       const grid = simulateGoldenglowTargetSwitchGrid({ ...setup, enemyResistances: [setup.enemyResistance] })
       assert.deepEqual(actual.points.map((point) => point.expectedDamage), grid.rows[0].expectedDamages)
+      assert.deepEqual(actual.points.map((point) => point.damageBreakdown), grid.rows[0].damageBreakdowns)
       assert.equal(actual.trials, setup.trials)
       assert.equal(actual.seed, setup.seed)
       assert.equal(actual.duration, setup.duration)
@@ -67,6 +68,11 @@ test('S1・S2・S3の各点は待ち時間0秒・0.1秒とも既存の表と単�
         const tolerance = Math.max(1, single.mean.rawDamage) * 1e-10
         assert.ok(Math.abs(point.expectedDamage - single.mean.rawDamage) <= tolerance,
           `S${skillIndex}, delay ${switchDelay}, HP ${point.enemyHp}`)
+        assert.ok(point.damageBreakdown)
+        for (const component of ['normalDamage', 'explosionDamage', 'bodyDamage'] as const) {
+          assert.ok(Math.abs(point.damageBreakdown[component] - single.mean[component]) <= tolerance,
+            `S${skillIndex}, delay ${switchDelay}, HP ${point.enemyHp}, ${component}`)
+        }
       }
     }
   }
@@ -78,22 +84,31 @@ test('平均ダメージは残りHPで切り捨てず、術耐性適用後の余
     effectiveAttack: 100, duration: 1, attackInterval: 1, enemyHps: [1],
     enemyResistance: 50, switchDelay: 0, trials: 1,
   })
-  assert.deepEqual(simulateGoldenglowTargetSwitchHp(setup).points, [{ enemyHp: 1, expectedDamage: 150 }])
+  assert.deepEqual(simulateGoldenglowTargetSwitchHp(setup).points, [{
+    enemyHp: 1, expectedDamage: 150,
+    damageBreakdown: { normalDamage: 0, explosionDamage: 150, bodyDamage: 0 },
+  }])
 })
 
 test('点の進捗は入力順に届き、重複HPを含めて通知して結果を再現する', () => {
   const setup = input({ enemyHps: [20_000, 1_000, 20_000, 10_000] })
   const notifications: { point: GoldenglowTargetSwitchHpPoint; completed: number; total: number }[] = []
   const result = simulateGoldenglowTargetSwitchHp(setup, (point, completed, total) => {
-    notifications.push({ point: { ...point }, completed, total })
+    notifications.push({ point: structuredClone(point), completed, total })
     point.enemyHp = -1
     point.expectedDamage = -1
+    assert.ok(point.damageBreakdown)
+    point.damageBreakdown.normalDamage = -1
+    point.damageBreakdown.explosionDamage = -1
+    point.damageBreakdown.bodyDamage = -1
   })
   assert.deepEqual(notifications, result.points.map((point, index) => ({
     point, completed: index + 1, total: setup.enemyHps.length,
   })))
   assert.deepEqual(result, simulateGoldenglowTargetSwitchHp(setup))
   assert.equal(result.points[0].expectedDamage, result.points[2].expectedDamage)
+  result.points[0].damageBreakdown!.normalDamage = -2
+  assert.notEqual(result.points[2].damageBreakdown!.normalDamage, -2)
 })
 
 test('点ごとの通知は行の完了を待たず、キャッシュ済みの行・列も通知する', () => {
@@ -104,6 +119,7 @@ test('点ごとの通知は行の完了を待たず、キャッシュ済みの�
   }, (cell, completed, total) => {
     events.push(`cell:${cell.enemyResistance}:${cell.enemyHp}:${completed}/${total}`)
     cell.expectedDamage = -1
+    cell.damageBreakdown.normalDamage = -1
   })
   assert.deepEqual(events, [
     'cell:0:1000:1/6', 'cell:0:10000:2/6', 'cell:0:1000:3/6', 'row:0:1/2',

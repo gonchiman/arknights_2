@@ -4,6 +4,7 @@ import { simulateGoldenglowTargetSwitch } from '../src/lib/goldenglowTargetSwitc
 import {
   GOLDENGLOW_TARGET_SWITCH_GRID_LIMITS,
   simulateGoldenglowTargetSwitchGrid,
+  type GoldenglowTargetSwitchGridRow,
 } from '../src/lib/goldenglowTargetSwitchGrid.ts'
 import type { GoldenglowExplosionModel } from '../src/lib/goldenglowExplosion.ts'
 
@@ -62,13 +63,21 @@ function checkAgainstSingleCells(setup: GridInput): ReturnType<typeof simulateGo
   const { enemyHps, enemyResistances, ...shared } = setup
   result.rows.forEach((row, rowIndex) => {
     assert.equal(row.expectedDamages.length, enemyHps.length)
+    assert.equal(row.damageBreakdowns.length, enemyHps.length)
     row.expectedDamages.forEach((actual, columnIndex) => {
       const expected = simulateGoldenglowTargetSwitch({
         ...shared,
         enemyHp: enemyHps[columnIndex],
         enemyResistance: enemyResistances[rowIndex],
-      }).mean.rawDamage
-      close(actual, expected, `S${setup.skillIndex}, HP ${enemyHps[columnIndex]}, RES ${row.enemyResistance}`)
+      }).mean
+      const label = `S${setup.skillIndex}, HP ${enemyHps[columnIndex]}, RES ${row.enemyResistance}`
+      close(actual, expected.rawDamage, label)
+      const breakdown = row.damageBreakdowns[columnIndex]
+      for (const component of ['normalDamage', 'explosionDamage', 'bodyDamage'] as const) {
+        close(breakdown[component], expected[component], `${label}, ${component}`)
+        assert.ok(breakdown[component] >= 0)
+      }
+      close(breakdown.normalDamage + breakdown.explosionDamage + breakdown.bodyDamage, actual, `${label}, total`)
     })
   })
   return result
@@ -225,11 +234,10 @@ test('行の進捗通知は入力順に1回ずつ届き、同じ実効術耐性�
   const setup = input({
     enemyHps: [5_000, 500, 5_000], enemyResistances: [50, 15, 0, 5, 15, 100], trials: 20,
   })
-  const notifications: { enemyResistance: number; expectedDamages: number[]; completed: number; total: number }[] = []
+  const notifications: (GoldenglowTargetSwitchGridRow & { completed: number; total: number })[] = []
   const result = simulateGoldenglowTargetSwitchGrid(setup, (row, completedRows, totalRows) => {
     notifications.push({
-      enemyResistance: row.enemyResistance,
-      expectedDamages: [...row.expectedDamages], completed: completedRows, total: totalRows,
+      ...structuredClone(row), completed: completedRows, total: totalRows,
     })
   })
   assert.deepEqual(notifications, result.rows.map((row, index) => ({
@@ -311,9 +319,9 @@ test('即時切り替えでも重複HP・実効耐性の等しい行・入力順
     effectiveAttack: 100, attackInterval: 0.3, duration: 4.5, switchDelay: 0.15,
     retargetRemainingDrones: true, trials: 17,
   })
-  const notifications: { enemyResistance: number; expectedDamages: number[]; completed: number; total: number }[] = []
+  const notifications: (GoldenglowTargetSwitchGridRow & { completed: number; total: number })[] = []
   const result = simulateGoldenglowTargetSwitchGrid(setup, (row, completed, total) => {
-    notifications.push({ ...row, expectedDamages: [...row.expectedDamages], completed, total })
+    notifications.push({ ...structuredClone(row), completed, total })
   })
   assert.deepEqual(notifications, result.rows.map((row, index) => ({
     ...row, completed: index + 1, total: setup.enemyResistances.length,
@@ -353,5 +361,83 @@ test('即時切り替えに不正な真偽値を渡した表は進捗を出さ�
       retargetRemainingDrones: value as unknown as boolean,
     }), () => { notified = true }), RangeError)
     assert.equal(notified, false)
+  }
+})
+
+test('内訳追加前の同一シードの総量を丸めまで完全に保つ', () => {
+  // Captured before adding component aggregation; keep total accumulation independent.
+  const expected = [
+    [
+      [32288.79, 43158.927500000005, 70663.80249999999],
+      [27445.471500000007, 36642.51293750001, 60064.23212499998],
+      [6126.249562499999, 9114.570750000003, 10599.570375],
+    ],
+    [
+      [22104.956250000003, 29622.6625, 54494.80249999999],
+      [18789.2128125, 26976.39475, 46320.582125000015],
+      [4153.939125000002, 6814.838062500002, 8174.220374999997],
+    ],
+    [
+      [36570.059999999976, 42346.08375, 70663.80249999999],
+      [31084.55099999997, 36964.44300000001, 60064.23212499998],
+      [6091.846500000001, 9451.747125, 10599.570375],
+    ],
+    [
+      [21956.447499999987, 30257.119999999995, 54494.80249999999],
+      [18662.980374999996, 26590.228062500006, 46320.582125000015],
+      [4145.371312499999, 7115.766000000003, 8174.220374999997],
+    ],
+  ]
+  for (const retargetRemainingDrones of [false, true]) {
+    for (const skillIndex of [1, 2, 3]) {
+      const result = simulateGoldenglowTargetSwitchGrid(input({ skillIndex, switchDelay: 0.15, retargetRemainingDrones }))
+      assert.deepEqual(result.rows.map((row) => row.expectedDamages),
+        expected[Number(retargetRemainingDrones) * 2 + Number(skillIndex === 3)])
+    }
+  }
+})
+
+test('内訳は攻撃なし・通常のみ・爆発のみ・本体のみもゼロ成分を保つ', () => {
+  for (const retargetRemainingDrones of [false, true]) {
+    const base = input({
+      model: { ...model, activeDroneCount: 1, resistanceIgnoreFixed: 0, prdStep: 1 },
+      effectiveAttack: 100, attackInterval: 1, duration: 1, enemyHps: [1],
+      enemyResistances: [0], trials: 1, retargetRemainingDrones,
+    })
+    const cases: [Partial<GridInput>, { normalDamage: number; explosionDamage: number; bodyDamage: number }][] = [
+      [{ duration: 0.5 }, { normalDamage: 0, explosionDamage: 0, bodyDamage: 0 }],
+      [{ effectiveAttack: 0 }, { normalDamage: 0, explosionDamage: 0, bodyDamage: 0 }],
+      [{}, { normalDamage: 0, explosionDamage: 300, bodyDamage: 0 }],
+      [{ model: { ...base.model, prdStep: 0 } }, { normalDamage: 20, explosionDamage: 0, bodyDamage: 0 }],
+    ]
+    if (retargetRemainingDrones) {
+      cases.push([{ skillIndex: 1, switchDelay: 0.1 }, { normalDamage: 0, explosionDamage: 0, bodyDamage: 100 }])
+    }
+    for (const [override, expected] of cases) {
+      const result = checkAgainstSingleCells({ ...base, ...override })
+      assert.deepEqual(result.rows[0].damageBreakdowns[0], expected)
+    }
+  }
+})
+
+test('進捗コールバックと重複セルの内訳を変更してもキャッシュや他の結果に伝わらない', () => {
+  for (const retargetRemainingDrones of [false, true]) {
+    const setup = input({ enemyHps: [500, 5_000, 500], enemyResistances: [0, 15, 0], retargetRemainingDrones })
+    const expected = simulateGoldenglowTargetSwitchGrid(setup)
+    const result = simulateGoldenglowTargetSwitchGrid(setup, (row) => {
+      row.damageBreakdowns[0].normalDamage = -1
+      row.damageBreakdowns[1].explosionDamage = -1
+      row.damageBreakdowns.push({ normalDamage: -1, explosionDamage: -1, bodyDamage: -1 })
+      row.expectedDamages[0] = -1
+    }, (cell) => {
+      cell.damageBreakdown.normalDamage = -2
+      cell.damageBreakdown.explosionDamage = -2
+      cell.damageBreakdown.bodyDamage = -2
+      cell.expectedDamage = -2
+    })
+    assert.deepEqual(result, expected)
+    result.rows[0].damageBreakdowns[0].normalDamage = -3
+    assert.deepEqual(result.rows[0].damageBreakdowns[2], expected.rows[0].damageBreakdowns[2])
+    assert.deepEqual(result.rows[1], expected.rows[1])
   }
 })

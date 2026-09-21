@@ -1,7 +1,9 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { HpComparisonDisplaySeries, HpComparisonMetric } from '../lib/goldenglowTargetSwitchHpComparison'
 import { getChartImageLayout } from '../lib/chartImageLayout'
+import { getHpDamageBreakdownComponents, type HpComparisonBarMode } from '../lib/goldenglowTargetSwitchHpBreakdown'
 import { ChartImageFrame } from './ChartImageFrame'
+import { GoldenglowDamagePatternSwatch } from './GoldenglowDamagePattern'
 import { GoldenglowTargetSwitchHpChartSvg, getHpComparisonSeriesStyles } from './GoldenglowTargetSwitchHpChart'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './saveGoldenglowTargetSwitchHpChartImage.css'
@@ -16,6 +18,7 @@ export interface HpChartImageSnapshot {
   conditions: string
   notice?: string
   chartKind?: 'line' | 'bar'
+  barMode?: HpComparisonBarMode
   barHps?: readonly number[]
   hideBaseline?: boolean
 }
@@ -31,10 +34,19 @@ interface HpChartImageProps {
 export function GoldenglowTargetSwitchHpChartImage({ snapshot, aspectRatio, onLayout }: HpChartImageProps) {
   const title = snapshot.notice ? `${snapshot.title}（${snapshot.notice}）` : snapshot.title
   const styles = getHpComparisonSeriesStyles(snapshot.series)
+  const isBreakdown = snapshot.chartKind === 'bar' && snapshot.metric === 'total'
+    && (snapshot.barMode === 'breakdown' || snapshot.barMode === 'composition')
+  const visibleSeries = snapshot.series.filter((item) => !snapshot.hideBaseline || item.id !== snapshot.baselineId)
+  const components = isBreakdown ? getHpDamageBreakdownComponents(visibleSeries) : []
   return <ChartImageFrame className="gg2-chart-image" title={title}
     conditions={snapshot.conditions} axisTitle="敵HP" naturalChartHeight={naturalChartHeight}
     aspectRatio={aspectRatio} onLayout={onLayout}
-    legend={<ul className="chart-image-frame-legend-list" aria-label="比較するMOD">
+    legend={<ul className="chart-image-frame-legend-list" aria-label={isBreakdown ? '攻撃の種類とMODの配色' : '比較するMOD'}>
+      {components.map((component) => <li className="chart-image-frame-legend-item" key={component.key}>
+        <GoldenglowDamagePatternSwatch componentKey={component.key}
+          className="chart-image-frame-legend-swatch" width={18} height={12} />
+        <span>{component.label}</span>
+      </li>)}
       {snapshot.series.map((item, index) => {
         if (snapshot.hideBaseline && item.id === snapshot.baselineId) return null
         const style = styles[index]
@@ -50,7 +62,7 @@ export function GoldenglowTargetSwitchHpChartImage({ snapshot, aspectRatio, onLa
     </ul>}>
     {({ width, height }) => <GoldenglowTargetSwitchHpChartSvg series={snapshot.series}
       maxHp={snapshot.maxHp} metric={snapshot.metric} digits={snapshot.digits} width={width} height={height}
-      chartKind={snapshot.chartKind} barHps={snapshot.barHps} hideBaseline={snapshot.hideBaseline} baselineId={snapshot.baselineId} />}
+      chartKind={snapshot.chartKind} barMode={snapshot.barMode} barHps={snapshot.barHps} hideBaseline={snapshot.hideBaseline} baselineId={snapshot.baselineId} />}
   </ChartImageFrame>
 }
 
