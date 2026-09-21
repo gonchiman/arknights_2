@@ -2,8 +2,11 @@ import { GOLDENGLOW_TARGET_SWITCH_LIMITS, type GoldenglowTargetSwitchExecutionOp
 import {
   GOLDENGLOW_TARGET_SWITCH_GRID_LIMITS,
   simulateGoldenglowTargetSwitchGrid,
+  type GoldenglowDamageBreakdown,
   type GoldenglowTargetSwitchGridSetup,
 } from './goldenglowTargetSwitchGrid.ts'
+
+export type { GoldenglowDamageBreakdown } from './goldenglowTargetSwitchGrid.ts'
 
 export const GOLDENGLOW_TARGET_SWITCH_HP_LIMITS = {
   maxPoints: GOLDENGLOW_TARGET_SWITCH_GRID_LIMITS.maxHpColumns,
@@ -19,6 +22,8 @@ export interface GoldenglowTargetSwitchHpPoint {
   enemyHp: number
   /** Mean total damage after resistance, including overkill. */
   expectedDamage: number
+  /** Present for simulation output; optional for previously stored points. */
+  damageBreakdown?: GoldenglowDamageBreakdown
 }
 
 export interface GoldenglowTargetSwitchHpResult {
@@ -62,11 +67,15 @@ export function simulateGoldenglowTargetSwitchHp(
     const result = simulateGoldenglowTargetSwitchGrid({
       ...input, enemyHps, enemyResistances: [input.enemyResistance],
     }, undefined, (cell, completedPoints, totalPoints) => {
-      onPoint?.({ enemyHp: cell.enemyHp, expectedDamage: cell.expectedDamage }, completedPoints, totalPoints)
+      onPoint?.({
+        enemyHp: cell.enemyHp, expectedDamage: cell.expectedDamage,
+        damageBreakdown: { ...cell.damageBreakdown },
+      }, completedPoints, totalPoints)
     }, options)
     return {
       points: result.rows[0].expectedDamages.map((expectedDamage, index) => ({
         enemyHp: enemyHps[index], expectedDamage,
+        damageBreakdown: { ...result.rows[0].damageBreakdowns[index] },
       })),
       trials: result.trials,
       seed: result.seed,

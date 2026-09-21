@@ -1,0 +1,19 @@
+.enemy-histogram-overflow-help {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-self: center;
+  vertical-align: middle;
+}
+
+.enemy-histogram-overflow-help-content h4 {
+  margin: 12px 0 4px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.enemy-histogram-overflow-help-boundary {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}

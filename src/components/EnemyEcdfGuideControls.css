@@ -1,0 +1,97 @@
+.enemy-ecdf-guide-settings {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: 10px;
+}
+
+.enemy-ecdf-guide-settings h3 {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.enemy-ecdf-guide-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 20px;
+  max-width: 560px;
+}
+
+.enemy-ecdf-guide-field {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.enemy-ecdf-guide-field > label {
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.enemy-ecdf-guide-input-row {
+  display: flex;
+  min-width: 0;
+}
+
+.enemy-ecdf-guide-input-row input,
+.enemy-ecdf-guide-input-row button {
+  min-height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+}
+
+.enemy-ecdf-guide-input-row input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 6px 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.enemy-ecdf-guide-input-row input[aria-invalid="true"] { border-color: var(--danger); }
+
+.enemy-ecdf-guide-input-row button {
+  flex: 0 0 auto;
+  border-left: 0;
+  padding: 5px 10px;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+
+.enemy-ecdf-guide-input-row button:hover:not(:disabled) { background: var(--surface-hover); }
+.enemy-ecdf-guide-input-row button:disabled { cursor: default; opacity: .45; }
+
+.enemy-ecdf-guide-input-row input:focus-visible,
+.enemy-ecdf-guide-input-row button:focus-visible {
+  position: relative;
+  outline: 2px solid var(--text);
+  outline-offset: -2px;
+}
+
+.enemy-ecdf-guide-readout {
+  min-height: 18px;
+  color: var(--text-soft);
+  font-size: 10px;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.enemy-ecdf-guide-readout.error { color: var(--danger); }
+
+@media (max-width: 520px) {
+  .enemy-ecdf-guide-fields { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+}
+
+@media (pointer: coarse) {
+  .enemy-ecdf-guide-input-row input,
+  .enemy-ecdf-guide-input-row button { min-height: 44px; }
+  .enemy-ecdf-guide-input-row input { font-size: 16px; }
+}

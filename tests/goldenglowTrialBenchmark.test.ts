@@ -74,7 +74,10 @@ test('専用ベンチマークは100,000回を実計算し、通常の全上限�
   const result = simulateGoldenglowTrialBenchmark(input)
   assert.deepEqual(result, [{
     id: 'none', label: 'none', moduleType: null, potential: 1,
-    points: [{ enemyHp: 50, expectedDamage: 100 }, { enemyHp: 1_000, expectedDamage: 100 }],
+    points: [
+      { enemyHp: 50, expectedDamage: 100, damageBreakdown: { normalDamage: 100, explosionDamage: 0, bodyDamage: 0 } },
+      { enemyHp: 1_000, expectedDamage: 100, damageBreakdown: { normalDamage: 100, explosionDamage: 0, bodyDamage: 0 } },
+    ],
   }])
   assert.deepEqual([GOLDENGLOW_TARGET_SWITCH_LIMITS, GOLDENGLOW_TARGET_SWITCH_GRID_LIMITS, HP_COMPARISON_LIMITS], limits)
   assert.equal(GOLDENGLOW_TARGET_SWITCH_LIMITS.maxTrials, 20_000)
@@ -85,8 +88,10 @@ test('プリセット以外も1〜100,000の整数なら許可し、同じHP計�
     assert.equal(isGoldenglowTrialBenchmarkCount(trials), true)
     const input = { builds: [build('none', { trials })] }
     assert.doesNotThrow(() => validateGoldenglowTrialBenchmarkInput(input))
-    assert.deepEqual(simulateGoldenglowTrialBenchmark(input)[0].points,
-      [{ enemyHp: 50, expectedDamage: 100 }, { enemyHp: 1_000, expectedDamage: 100 }])
+    assert.deepEqual(simulateGoldenglowTrialBenchmark(input)[0].points, [
+      { enemyHp: 50, expectedDamage: 100, damageBreakdown: { normalDamage: 100, explosionDamage: 0, bodyDamage: 0 } },
+      { enemyHp: 1_000, expectedDamage: 100, damageBreakdown: { normalDamage: 100, explosionDamage: 0, bodyDamage: 0 } },
+    ])
     if (trials <= 20_000) {
       assert.deepEqual(simulateGoldenglowTrialBenchmark(input), simulateGoldenglowTargetSwitchHpComparison(input))
     } else {

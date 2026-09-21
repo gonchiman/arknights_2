@@ -23,10 +23,18 @@ export interface GoldenglowTargetSwitchGridInput extends GoldenglowTargetSwitchG
   enemyResistances: readonly number[]
 }
 
+/** Mean damage after mitigation, including overkill, from the same trials as the total. */
+export type GoldenglowDamageBreakdown = {
+  normalDamage: number
+  explosionDamage: number
+  bodyDamage: number
+}
+
 export interface GoldenglowTargetSwitchGridRow {
   enemyResistance: number
   /** After mitigation, including damage in excess of the target's remaining HP. */
   expectedDamages: number[]
+  damageBreakdowns: GoldenglowDamageBreakdown[]
 }
 
 export interface GoldenglowTargetSwitchGridCell {
@@ -34,6 +42,7 @@ export interface GoldenglowTargetSwitchGridCell {
   enemyResistance: number
   /** After mitigation, including damage in excess of the target's remaining HP. */
   expectedDamage: number
+  damageBreakdown: GoldenglowDamageBreakdown
 }
 
 export interface GoldenglowTargetSwitchGridResult {
@@ -52,6 +61,11 @@ interface PreparedRow {
   enemyResistance: number
   simulation: GoldenglowTargetSwitchPreparedSimulation
   damageKey: string
+}
+
+interface MeanDamage {
+  expectedDamage: number
+  damageBreakdown: GoldenglowDamageBreakdown
 }
 
 /**
@@ -74,14 +88,14 @@ export function simulateGoldenglowTargetSwitchGrid(
   const { enemyHps, preparedRows, maxVolleys } = prepareGrid(input, options)
   const first = preparedRows[0].simulation
   const patterns = createExplosionPatterns(first, maxVolleys)
-  const rowCache = new Map<string, Map<number, number>>()
+  const rowCache = new Map<string, Map<number, MeanDamage>>()
   const rows: GoldenglowTargetSwitchGridRow[] = []
   let completedCells = 0
   const totalCells = enemyHps.length * preparedRows.length
   for (const { enemyResistance, simulation, damageKey } of preparedRows) {
     let damages = rowCache.get(damageKey)
     if (!damages) {
-      damages = new Map<number, number>()
+      damages = new Map<number, MeanDamage>()
       rowCache.set(damageKey, damages)
     }
     for (const enemyHp of enemyHps) {
@@ -89,12 +103,23 @@ export function simulateGoldenglowTargetSwitchGrid(
         damages.set(enemyHp, calculateMeanDamage(simulation, enemyHp, patterns, maxVolleys))
       }
       completedCells += 1
-      onCell?.({ enemyHp, enemyResistance, expectedDamage: damages.get(enemyHp)! }, completedCells, totalCells)
+      const damage = damages.get(enemyHp)!
+      onCell?.({
+        enemyHp, enemyResistance, expectedDamage: damage.expectedDamage,
+        damageBreakdown: { ...damage.damageBreakdown },
+      }, completedCells, totalCells)
     }
     // A callback/consumer cannot alter the cached values for a later equal row.
-    const row = { enemyResistance, expectedDamages: enemyHps.map((hp) => damages.get(hp)!) }
+    const row = {
+      enemyResistance,
+      expectedDamages: enemyHps.map((hp) => damages.get(hp)!.expectedDamage),
+      damageBreakdowns: enemyHps.map((hp) => ({ ...damages.get(hp)!.damageBreakdown })),
+    }
     rows.push(row)
-    onRow?.(row, rows.length, preparedRows.length)
+    onRow?.({
+      ...row, expectedDamages: [...row.expectedDamages],
+      damageBreakdowns: row.damageBreakdowns.map((damage) => ({ ...damage })),
+    }, rows.length, preparedRows.length)
   }
   return { rows, trials: first.input.trials, seed: first.input.seed, duration: first.input.duration }
 }
@@ -177,19 +202,27 @@ function calculateMeanDamage(
   enemyHp: number,
   patterns: Uint16Array,
   maxVolleys: number,
-): number {
-  if (maxVolleys === 0) return 0
+): MeanDamage {
+  if (maxVolleys === 0) {
+    return { expectedDamage: 0, damageBreakdown: { normalDamage: 0, explosionDamage: 0, bodyDamage: 0 } }
+  }
   if (prepared.input.retargetRemainingDrones) {
     return calculateMeanRetargetingDamage(prepared, enemyHp, patterns, maxVolleys)
   }
   const { input, normalDamageByStack, explosionDamage, bodyDamage, timeTolerance } = prepared
   const normalStacks = new Uint16Array(input.model.activeDroneCount)
   let total = 0
+  let totalNormalDamage = 0
+  let totalExplosionDamage = 0
+  let totalBodyDamage = 0
   for (let trialIndex = 0; trialIndex < input.trials; trialIndex += 1) {
     normalStacks.fill(0)
     let hp = enemyHp
     let kills = 0
     let trialDamage = 0
+    let trialNormalDamage = 0
+    let trialExplosionDamage = 0
+    let trialBodyDamage = 0
     const offset = trialIndex * maxVolleys
     for (let volley = 0; volley < maxVolleys; volley += 1) {
       const nextTime = (volley + 1) * input.attackInterval + kills * input.switchDelay
@@ -213,6 +246,9 @@ function calculateMeanDamage(
       const killTolerance = Number.EPSILON * Math.max(hp, rawDamage) * 4
       const killed = rawDamage > 0 && hpRemainder <= killTolerance
       trialDamage += rawDamage
+      trialNormalDamage += normalDamage
+      trialExplosionDamage += volleyExplosionDamage
+      trialBodyDamage += bodyDamage
       if (killed) {
         kills += 1
         hp = enemyHp
@@ -222,8 +258,18 @@ function calculateMeanDamage(
       }
     }
     total += trialDamage
+    totalNormalDamage += trialNormalDamage
+    totalExplosionDamage += trialExplosionDamage
+    totalBodyDamage += trialBodyDamage
   }
-  return total / input.trials
+  return {
+    expectedDamage: total / input.trials,
+    damageBreakdown: {
+      normalDamage: totalNormalDamage / input.trials,
+      explosionDamage: totalExplosionDamage / input.trials,
+      bodyDamage: totalBodyDamage / input.trials,
+    },
+  }
 }
 
 /** Reuses the individual-actor scheduler with each drone's indexed PRD pattern. */
@@ -232,19 +278,32 @@ function calculateMeanRetargetingDamage(
   enemyHp: number,
   patterns: Uint16Array,
   maxVolleys: number,
-): number {
+): MeanDamage {
   // Damage lookups can be shared across HP columns; the scheduler's target HP
   // must belong to this cell without modifying the prepared resistance row.
   const cell = { ...prepared, input: { ...prepared.input, enemyHp } }
   let total = 0
+  let totalNormalDamage = 0
+  let totalExplosionDamage = 0
+  let totalBodyDamage = 0
   for (let trialIndex = 0; trialIndex < cell.input.trials; trialIndex += 1) {
     const offset = trialIndex * maxVolleys
     const trial = runGoldenglowRetargetingTrial(cell, (droneIndex, attackIndex) => (
       patterns[offset + attackIndex] & (1 << droneIndex) ? 0 : 1
     ))
     total += trial.totals.rawDamage
+    totalNormalDamage += trial.totals.normalDamage
+    totalExplosionDamage += trial.totals.explosionDamage
+    totalBodyDamage += trial.totals.bodyDamage
   }
-  return total / cell.input.trials
+  return {
+    expectedDamage: total / cell.input.trials,
+    damageBreakdown: {
+      normalDamage: totalNormalDamage / cell.input.trials,
+      explosionDamage: totalExplosionDamage / cell.input.trials,
+      bodyDamage: totalBodyDamage / cell.input.trials,
+    },
+  }
 }
 
 function validateAxes(input: GoldenglowTargetSwitchGridInput): void {

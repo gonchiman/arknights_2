@@ -64,6 +64,15 @@
 .help-popover-panel p + p { margin-top: 8px; }
 .help-popover-panel strong { color: var(--text); }
 
+.help-popover-dialog { width: min(360px, calc(100vw - 24px)); padding: 0; }
+.help-popover-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 8px 8px 12px; border-bottom: 1px solid var(--border); background: var(--surface-soft); }
+.help-popover-dialog-header h3 { min-width: 0; margin: 0; color: var(--text); font-size: 13px; line-height: 1.6; }
+.help-popover-dialog-header h3:focus { outline: none; }
+.help-popover-dialog-header button { display: grid; place-items: center; flex: 0 0 32px; width: 32px; height: 32px; padding: 0; border: 0; background: transparent; color: var(--text-soft); font-size: 20px; line-height: 1; cursor: pointer; }
+.help-popover-dialog-header button:hover { background: var(--surface-hover); color: var(--text); }
+.help-popover-dialog-header button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.help-popover-dialog-content { padding: 12px; }
+
 @media (max-width: 640px), (pointer: coarse) {
   .help-popover .help-popover-trigger { width: 32px; min-width: 32px; height: 32px; }
   .help-popover .help-popover-trigger.help-popover-text-trigger { min-width: 44px; min-height: 44px; }

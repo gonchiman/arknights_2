@@ -344,7 +344,7 @@ test('bounds saved conditions and samples, retaining the most recent completed m
 })
 
 test('read tolerates malformed, unavailable, old-version and wrong-engine browser storage', () => {
-  for (const raw of ['', '{broken', 'null', '[]', '{}', JSON.stringify({ ...calibrated(), version: 999 }), JSON.stringify({ ...calibrated(), engine: 'old' }), 'x'.repeat(2_000_001)]) {
+  for (const raw of ['', '{broken', 'null', '[]', '{}', JSON.stringify({ ...calibrated(), version: 999 }), JSON.stringify({ ...calibrated(), engine: 'old' }), JSON.stringify({ ...calibrated(), engine: 'goldenglow-hp-comparison-v1' }), 'x'.repeat(2_000_001)]) {
     assert.deepEqual(readRuntimePredictionHistory({ getItem: () => raw }, NOW), emptyRuntimePredictionHistory())
   }
   assert.deepEqual(readRuntimePredictionHistory({ getItem: () => { throw new Error('blocked') } }), emptyRuntimePredictionHistory())

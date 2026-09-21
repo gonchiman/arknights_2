@@ -3,7 +3,7 @@ import { GOLDENGLOW_TARGET_SWITCH_BENCHMARK_MAX_TRIALS } from './goldenglowTarge
 
 const HISTORY_VERSION = 1
 /** Bump when the simulation or the timed benchmark boundary changes. */
-const ENGINE_VERSION = 'goldenglow-hp-comparison-v1'
+const ENGINE_VERSION = 'goldenglow-hp-comparison-v2-breakdown'
 export const RUNTIME_PREDICTION_STORAGE_KEY = 'arknights.goldenglow.runtime-prediction.v1'
 export const RUNTIME_PREDICTION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1_000
 export const RUNTIME_PREDICTION_MAX_CONDITIONS = 10

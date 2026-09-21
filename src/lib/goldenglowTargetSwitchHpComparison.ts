@@ -1,6 +1,7 @@
 import {
   GOLDENGLOW_TARGET_SWITCH_HP_LIMITS,
   simulateGoldenglowTargetSwitchHp,
+  type GoldenglowDamageBreakdown,
   type GoldenglowTargetSwitchHpInput,
   type GoldenglowTargetSwitchHpPoint,
 } from './goldenglowTargetSwitchHp.ts'
@@ -42,7 +43,7 @@ export type HpComparisonMessage =
 export type HpComparisonMetric = 'total' | 'difference' | 'percent'
 
 export interface HpComparisonDisplaySeries extends HpComparisonIdentity {
-  points: { enemyHp: number; value: number | null }[]
+  points: { enemyHp: number; value: number | null; damageBreakdown?: GoldenglowDamageBreakdown }[]
 }
 
 /** All selected builds must pass validation before any simulation starts. */
@@ -65,7 +66,14 @@ export function simulateGoldenglowTargetSwitchHpComparison(
   return builds.map((build) => {
     const result = simulateGoldenglowTargetSwitchHp(build.input, (point) => {
       completedPoints += 1
-      onPoint?.({ type: 'point', buildId: build.id, point: { ...point }, completedPoints, totalPoints })
+      onPoint?.({
+        type: 'point', buildId: build.id,
+        point: {
+          ...point,
+          ...(point.damageBreakdown ? { damageBreakdown: { ...point.damageBreakdown } } : {}),
+        },
+        completedPoints, totalPoints,
+      })
     }, options)
     return { ...copyComparisonIdentity(build), points: result.points }
   })
@@ -91,14 +99,15 @@ export function createHpComparisonDisplaySeries(
   const selectedBaseline = chooseHpComparisonBaseline(series, baselineId)
   const values = new Map(series.map((item) => [
     item.id,
-    new Map(item.points.map((point) => [point.enemyHp, point.expectedDamage])),
+    new Map(item.points.map((point) => [point.enemyHp, point])),
   ]))
   const baseline = values.get(selectedBaseline)
   return series.map((item) => ({
     ...copyComparisonIdentity(item),
     points: enemyHps.map((enemyHp) => {
-      const total = values.get(item.id)?.get(enemyHp)
-      const base = baseline?.get(enemyHp)
+      const point = values.get(item.id)?.get(enemyHp)
+      const total = point?.expectedDamage
+      const base = baseline?.get(enemyHp)?.expectedDamage
       let value: number | null = null
       if (total !== undefined && Number.isFinite(total)) {
         if (metric === 'total') value = total
@@ -107,7 +116,11 @@ export function createHpComparisonDisplaySeries(
           else if (base !== 0) value = (total - base) / base * 100
         }
       }
-      return { enemyHp, value }
+      return {
+        enemyHp, value,
+        ...(metric === 'total' && value !== null && point?.damageBreakdown
+          ? { damageBreakdown: { ...point.damageBreakdown } } : {}),
+      }
     }),
   }))
 }

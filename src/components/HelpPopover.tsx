@@ -1,19 +1,23 @@
 import { useCallback, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import './HelpPopover.css'
 
-export function HelpPopover({ label, children, triggerText }: {
+export function HelpPopover({ label, children, triggerText, mode = 'tooltip', title = label }: {
   label: string
   children: ReactNode
   triggerText?: string
+  mode?: 'tooltip' | 'dialog'
+  title?: string
 }) {
   const id = useId()
+  const titleId = useId()
   const triggerRef = useRef<HTMLButtonElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
+  const titleRef = useRef<HTMLHeadingElement>(null)
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [hovered, setHovered] = useState(false)
   const [focused, setFocused] = useState(false)
   const [pinned, setPinned] = useState(false)
-  const open = hovered || focused || pinned
+  const open = mode === 'dialog' ? pinned : hovered || focused || pinned
 
   const clearHoverTimer = useCallback(() => {
     if (hoverTimerRef.current !== null) clearTimeout(hoverTimerRef.current)
@@ -28,13 +32,13 @@ export function HelpPopover({ label, children, triggerText }: {
   }, [clearHoverTimer])
 
   const enter = (pointerType: string) => {
-    if (pointerType === 'touch') return
+    if (mode === 'dialog' || pointerType === 'touch') return
     clearHoverTimer()
     setHovered(true)
   }
 
   const leave = (pointerType: string) => {
-    if (pointerType === 'touch') return
+    if (mode === 'dialog' || pointerType === 'touch') return
     clearHoverTimer()
     hoverTimerRef.current = setTimeout(() => {
       hoverTimerRef.current = null
@@ -84,6 +88,7 @@ export function HelpPopover({ label, children, triggerText }: {
     if (typeof popover.showPopover === 'function') popover.showPopover()
     else popover.dataset.fallbackOpen = 'true'
     position()
+    if (mode === 'dialog') titleRef.current?.focus({ preventScroll: true })
 
     const resizeObserver = new ResizeObserver(position)
     resizeObserver.observe(trigger)
@@ -106,10 +111,15 @@ export function HelpPopover({ label, children, triggerText }: {
       document.removeEventListener('keydown', onKeyDown, true)
       window.removeEventListener('scroll', position, true)
       window.removeEventListener('resize', position)
+      if (mode === 'dialog' && popover.contains(document.activeElement)
+        && trigger.isConnected && trigger.getClientRects().length > 0
+        && getComputedStyle(trigger).visibility === 'visible') {
+        trigger.focus({ preventScroll: true })
+      }
       if (typeof popover.hidePopover === 'function' && popover.matches(':popover-open')) popover.hidePopover()
       delete popover.dataset.fallbackOpen
     }
-  }, [open, close])
+  }, [open, close, mode])
 
   return <span className="help-popover">
     <button
@@ -118,11 +128,12 @@ export function HelpPopover({ label, children, triggerText }: {
       type="button"
       aria-label={label}
       aria-controls={id}
-      aria-describedby={id}
+      aria-describedby={mode === 'tooltip' ? id : undefined}
       aria-expanded={open}
+      aria-haspopup={mode === 'dialog' ? 'dialog' : undefined}
       onPointerEnter={(event) => enter(event.pointerType)}
       onPointerLeave={(event) => leave(event.pointerType)}
-      onFocus={() => setFocused(true)}
+      onFocus={() => { if (mode === 'tooltip') setFocused(true) }}
       onBlur={() => setFocused(false)}
       onClick={() => {
         if (pinned) close()
@@ -134,13 +145,20 @@ export function HelpPopover({ label, children, triggerText }: {
     <div
       ref={popoverRef}
       id={id}
-      className="help-popover-panel"
+      className={`help-popover-panel${mode === 'dialog' ? ' help-popover-dialog' : ''}`}
       popover="manual"
-      role="tooltip"
+      role={mode}
+      aria-labelledby={mode === 'dialog' ? titleId : undefined}
       onPointerEnter={(event) => enter(event.pointerType)}
       onPointerLeave={(event) => leave(event.pointerType)}
     >
-      {children}
+      {mode === 'dialog' ? <>
+        <header className="help-popover-dialog-header">
+          <h3 ref={titleRef} id={titleId} tabIndex={-1}>{title}</h3>
+          <button type="button" aria-label={`${title}を閉じる`} onClick={close}>×</button>
+        </header>
+        <div className="help-popover-dialog-content">{children}</div>
+      </> : children}
     </div>
   </span>
 }
