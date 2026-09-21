@@ -3,9 +3,10 @@ import type { HpComparisonDisplaySeries, HpComparisonMetric } from '../lib/golde
 import type { HpChartYAxisMode, HpChartYAxisRange } from '../lib/goldenglowTargetSwitchHpAxis'
 import { getChartImageLayout } from '../lib/chartImageLayout'
 import { getHpDamageBreakdownComponents, type HpComparisonBarMode } from '../lib/goldenglowTargetSwitchHpBreakdown'
+import type { HpRankBackgroundMode } from '../lib/hpRankBands'
 import { ChartImageFrame } from './ChartImageFrame'
 import { GoldenglowDamagePatternSwatch } from './GoldenglowDamagePattern'
-import { GoldenglowTargetSwitchHpChartSvg, getHpComparisonSeriesStyles } from './GoldenglowTargetSwitchHpChart'
+import { GoldenglowTargetSwitchHpChartSvg, getHpComparisonSeriesStyles, type HpChartGridStyle } from './GoldenglowTargetSwitchHpChart'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './saveGoldenglowTargetSwitchHpChartImage.css'
 
@@ -20,6 +21,8 @@ export interface HpChartImageSnapshot {
   notice?: string
   chartKind?: 'line' | 'bar'
   barMode?: HpComparisonBarMode
+  hpRankBackground?: HpRankBackgroundMode
+  gridStyle?: HpChartGridStyle
   yAxisMode?: HpChartYAxisMode
   manualYAxisRange?: HpChartYAxisRange
   barHps?: readonly number[]
@@ -65,7 +68,9 @@ export function GoldenglowTargetSwitchHpChartImage({ snapshot, aspectRatio, onLa
     </ul>}>
     {({ width, height }) => <GoldenglowTargetSwitchHpChartSvg series={snapshot.series}
       maxHp={snapshot.maxHp} metric={snapshot.metric} digits={snapshot.digits} width={width} height={height}
-      chartKind={snapshot.chartKind} barMode={snapshot.barMode} yAxisMode={snapshot.yAxisMode} manualYAxisRange={snapshot.manualYAxisRange} barHps={snapshot.barHps} hideBaseline={snapshot.hideBaseline} baselineId={snapshot.baselineId} />}
+      chartKind={snapshot.chartKind} barMode={snapshot.barMode} hpRankBackground={snapshot.hpRankBackground} gridStyle={snapshot.gridStyle}
+      yAxisMode={snapshot.yAxisMode} manualYAxisRange={snapshot.manualYAxisRange}
+      barHps={snapshot.barHps} hideBaseline={snapshot.hideBaseline} baselineId={snapshot.baselineId} />}
   </ChartImageFrame>
 }
 
