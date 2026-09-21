@@ -11,8 +11,9 @@ export interface ChartImageAspectSettings {
   height: string
 }
 
-export function ChartImageSaveDialog({ initialFilename, aspect, onAspectChange, canChooseLocation, saving, error, onClose, onSave, helpMode = 'inline', preview }: {
+export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspect, onAspectChange, canChooseLocation, saving, error, onClose, onSave, helpMode = 'inline', preview }: {
   initialFilename: string
+  getDefaultFilename?: (aspectRatio?: number) => string
   aspect?: ChartImageAspectSettings
   onAspectChange?: (aspect: ChartImageAspectSettings) => void
   canChooseLocation: boolean
@@ -23,7 +24,7 @@ export function ChartImageSaveDialog({ initialFilename, aspect, onAspectChange, 
   helpMode?: 'inline' | 'popover'
   preview?: ReactNode
 }) {
-  const [filename, setFilename] = useState(initialFilename)
+  const [customFilename, setCustomFilename] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const selectedInitialName = useRef(false)
   const composing = useRef(false)
@@ -31,12 +32,13 @@ export function ChartImageSaveDialog({ initialFilename, aspect, onAspectChange, 
   const inputId = `${id}-filename`
   const hintId = `${id}-hint`
   const validationId = `${id}-validation`
-  const validationError = validateFilename(filename)
   const aspectHintId = `${id}-aspect-hint`
   const aspectErrorId = `${id}-aspect-error`
   const invalidAspect = aspect?.preset === 'custom'
     && ![aspect.width, aspect.height].every((value) => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100)
   const aspectRatio = !aspect || aspect.preset === 'auto' ? undefined : Number(aspect.width) / Number(aspect.height)
+  const filename = customFilename ?? (getDefaultFilename?.(invalidAspect ? undefined : aspectRatio) ?? initialFilename)
+  const validationError = validateFilename(filename)
   const filenameHint = '.png は省略できます。'
   const aspectHint = 'タイトル・凡例を含む画像全体の比率です。指定なしでは内容に合わせて自動調整します。'
   const destinationHint = canChooseLocation
@@ -66,7 +68,7 @@ export function ChartImageSaveDialog({ initialFilename, aspect, onAspectChange, 
         <input ref={inputRef} id={inputId} type="text" aria-label="ファイル名" value={filename} disabled={saving}
           autoComplete="off" spellCheck={false} aria-required="true" aria-invalid={!!validationError}
           aria-describedby={`${hintId}${validationError ? ` ${validationId}` : ''}`}
-          onChange={(event) => setFilename(event.target.value)}
+          onChange={(event) => setCustomFilename(event.target.value)}
           onCompositionStart={() => { composing.current = true }}
           onCompositionEnd={() => { composing.current = false }}
           onFocus={(event) => {
