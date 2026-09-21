@@ -7,6 +7,7 @@ import {
 } from '../lib/goldenglowTargetSwitchHp'
 import type { HpComparisonBarMode } from '../lib/goldenglowTargetSwitchHpBreakdown'
 import type { HpRankBackgroundMode } from '../lib/hpRankBands'
+import { getHpChartValueAxis, isValidHpChartYAxisRange, type HpChartYAxisMode, type HpChartYAxisRange } from '../lib/goldenglowTargetSwitchHpAxis'
 import {
   chooseHpComparisonBaseline, createHpComparisonDisplaySeries, createHpComparisonUnequippedDifferenceSeries,
   getHpComparisonAutoBarCount, selectHpComparisonBarHps,
@@ -34,6 +35,7 @@ const format = (value: number) => number.format(value)
 const limits = GOLDENGLOW_TARGET_SWITCH_LIMITS
 type ChartDisplay = 'line' | 'bar'
 type BarCountDisplay = 'auto' | '5' | '10' | '15' | 'all'
+type YAxisDraft = { min: string; max: string; applied: HpChartYAxisRange }
 
 export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }: {
   rows: readonly SkillRecord[]
@@ -47,6 +49,9 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const [moduleLevels, setModuleLevels] = useState<Record<string, number>>({})
   const [metric, setMetric] = useState<HpComparisonMetric>('total')
   const [chartKind, setChartKind] = useState<ChartDisplay>('bar')
+  const [yAxisModes, setYAxisModes] = useState<Partial<Record<HpComparisonMetric, HpChartYAxisMode>>>({})
+  const yAxisMode = yAxisModes[metric] ?? 'auto'
+  const [yAxisDrafts, setYAxisDrafts] = useState<Partial<Record<HpComparisonMetric, YAxisDraft>>>({})
   const [barCountDisplay, setBarCountDisplay] = useState<BarCountDisplay>('auto')
   const [showBreakdown, setShowBreakdown] = useState(true)
   const [breakdownScale, setBreakdownScale] = useState<'damage' | 'ratio'>('damage')
@@ -174,6 +179,32 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
     ? createHpComparisonUnequippedDifferenceSeries(shownSeries, shownHps)
     : createHpComparisonDisplaySeries(shownSeries, shownHps, metric, baselineId), [shownSeries, shownHps, metric, baselineId])
   const visibleSeries = useMemo(() => hideBaseline ? displaySeries.filter((series) => series.id !== baselineId) : displaySeries, [displaySeries, baselineId, hideBaseline])
+  const initialYAxisRange = useMemo(() => {
+    const values = displaySeries.flatMap((series) => series.points.flatMap((point) =>
+      point.value !== null && Number.isFinite(point.value) && (metric !== 'total' || point.value >= 0) ? [point.value] : []))
+    const axis = getHpChartValueAxis(values, { mode: yAxisMode === 'zero' ? 'zero' : 'auto', nonNegative: metric === 'total' })
+    return { min: axis.lowerLimit, max: axis.upperLimit }
+  }, [displaySeries, metric, yAxisMode])
+  const yAxisDraft = yAxisDrafts[metric] ?? {
+    min: String(initialYAxisRange.min), max: String(initialYAxisRange.max), applied: initialYAxisRange,
+  }
+  const manualYAxisRange = yAxisDraft.applied
+  const yAxisError = chartKind !== 'line' || yAxisMode !== 'manual' ? null
+    : !yAxisDraft.min.trim() || !yAxisDraft.max.trim() ? '最小値・最大値を入力してください。'
+      : !isValidHpChartYAxisRange({ min: Number(yAxisDraft.min), max: Number(yAxisDraft.max) })
+        ? '有限の数値で、最小値より大きい最大値を指定してください。' : null
+  const changeYAxisMode = (mode: HpChartYAxisMode) => {
+    if (mode === 'manual' && !yAxisDrafts[metric]) {
+      setYAxisDrafts((drafts) => ({ ...drafts, [metric]: yAxisDraft }))
+    }
+    setYAxisModes((modes) => ({ ...modes, [metric]: mode }))
+  }
+  const changeYAxisBound = (bound: 'min' | 'max', value: string) => {
+    const draft = { ...yAxisDraft, [bound]: value }
+    const range = { min: Number(draft.min), max: Number(draft.max) }
+    if (draft.min.trim() && draft.max.trim() && isValidHpChartYAxisRange(range)) draft.applied = range
+    setYAxisDrafts((drafts) => ({ ...drafts, [metric]: draft }))
+  }
   const autoBarCount = getHpComparisonAutoBarCount(chartPlotWidth, visibleSeries.length)
   const barCount = barCountDisplay === 'auto' ? autoBarCount : barCountDisplay === 'all' ? 'all' : Number(barCountDisplay)
   const barHps = useMemo(() => selectHpComparisonBarHps(shownHps, selectedHp, barCount), [shownHps, selectedHp, barCount])
@@ -210,7 +241,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
       setCopyFeedback({ text: tableText, ok: false })
     } finally { setCopying(false) }
   }
-  const canSaveImage = !!request && !!sharedInput && hasChartPoints && !running
+  const canSaveImage = !!request && !!sharedInput && hasChartPoints && !running && !yAxisError
   const openImageSaveDialog = () => {
     if (!canSaveImage || !request || !sharedInput || imageSaveInProgress.current) return
     setImageFeedback(null)
@@ -221,7 +252,8 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
       filename: `goldenglow-target-switch-2-S${sharedInput.skillIndex}-${chartKind}-${metric}${barMode === 'total' ? '' : `-${barMode}`}-res${sharedInput.enemyResistance}.png`,
       snapshot: {
         series: structuredClone(displaySeries), maxHp: sharedInput.enemyHps.at(-1)!,
-        metric, baselineId, digits, chartKind, barMode, hpRankBackground, gridStyle, hideBaseline, barHps: [...barHps], title: `ゴールデングロー：${chartLabel}`,
+        metric, baselineId, digits, chartKind, barMode, hpRankBackground, gridStyle, yAxisMode, hideBaseline, barHps: [...barHps], title: `ゴールデングロー：${chartLabel}`,
+        manualYAxisRange: { ...manualYAxisRange },
         conditions: `${request.skillLabel}・術耐性 ${format(sharedInput.enemyResistance)}`,
         notice: calculation.status === 'complete' ? undefined : `途中結果：${completedPoints} / ${totalPoints}点`,
       },
@@ -422,15 +454,35 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
           </>}>
           <div className="gg2-chart-heading">
             <h3 id="gg2-chart-title">{chartLabel}{metric !== 'total' && !hideBaseline && <span className="gg2-baseline-label">基準：{baselineLabel}</span>}</h3>
-            <button type="button" className="button secondary gg2-save-image" aria-label="グラフをPNG画像で保存" aria-haspopup="dialog"
-              disabled={!canSaveImage || savingImage} aria-busy={savingImage} onClick={openImageSaveDialog}>
-              {savingImage ? '保存中…' : '画像を保存'}
-            </button>
+            <div className="gg2-chart-actions">
+              {chartKind === 'line' && <><label className="gg2-chart-axis">
+                <span>縦軸</span>
+                <select aria-label="縦軸の表示範囲" value={yAxisMode} onChange={(event) => changeYAxisMode(event.target.value as HpChartYAxisMode)}>
+                  <option value="zero">{metric === 'total' ? '0から' : '0を含む'}</option>
+                  <option value="auto">データに合わせる</option>
+                  <option value="manual">範囲を指定</option>
+                </select>
+              </label>
+              {yAxisMode === 'manual' && <div className="gg2-chart-axis-bounds" role="group" aria-label="縦軸の範囲指定">
+                {(['min', 'max'] as const).map((bound) => <label className="gg2-chart-axis" key={bound}>
+                  <span>{bound === 'min' ? '最小' : '最大'}{metric === 'percent' ? ' (%)' : ''}</span>
+                  <input type="number" step="any" aria-label={`縦軸の${bound === 'min' ? '最小値' : '最大値'}${metric === 'percent' ? ' (%)' : ''}`}
+                    value={yAxisDraft[bound]} onChange={(event) => changeYAxisBound(bound, event.target.value)}
+                    aria-invalid={!!yAxisError} aria-describedby={yAxisError ? 'gg2-axis-error' : undefined} />
+                </label>)}
+              </div>}</>}
+              <button type="button" className="button secondary gg2-save-image" aria-label="グラフをPNG画像で保存" aria-haspopup="dialog"
+                disabled={!canSaveImage || savingImage} aria-busy={savingImage} onClick={openImageSaveDialog}>
+                {savingImage ? '保存中…' : '画像を保存'}
+              </button>
+            </div>
+            {yAxisError && <p id="gg2-axis-error" className="gg2-chart-axis-error" role="alert">{yAxisError}</p>}
           </div>
           <div className="gg2-chart-area" aria-busy={running}>
             <GoldenglowTargetSwitchHpChart series={displaySeries} maxHp={shownHps.at(-1) ?? 30000}
               selectedHp={selectedHp} onSelectHp={setSelectedHp} stale={stale} digits={digits} metric={metric} baselineId={baselineId}
-              chartKind={chartKind} barMode={barMode} hpRankBackground={hpRankBackground} gridStyle={gridStyle} barHps={barHps} hideBaseline={hideBaseline} onPlotWidthChange={setChartPlotWidth} />
+              chartKind={chartKind} barMode={barMode} hpRankBackground={hpRankBackground} gridStyle={gridStyle}
+              yAxisMode={yAxisMode} manualYAxisRange={manualYAxisRange} barHps={barHps} hideBaseline={hideBaseline} onPlotWidthChange={setChartPlotWidth} />
             {!hasChartPoints && <span className="gg2-empty">{comparisonError ?? (running ? '計算中…' : calculation.status === 'idle' ? '未計算' : hasDisplayPoints ? '表から計算済みのHPを選択してください' : metric !== 'total' && completedPoints ? '比較できる結果なし' : '計算結果なし')}</span>}
           </div>
         </GoldenglowTargetSwitchHpResults>

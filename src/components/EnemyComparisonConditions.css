@@ -1,0 +1,67 @@
+.enemy-comparison-conditions {
+  min-width: 0;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.enemy-comparison-conditions-heading,
+.enemy-comparison-condition-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  min-width: 0;
+}
+
+.enemy-comparison-conditions-heading { flex-wrap: wrap; margin-bottom: 6px; }
+.enemy-comparison-conditions-heading h3 { margin: 0; color: var(--text); font-size: 11px; font-weight: 700; }
+.enemy-comparison-conditions-heading h3 span { margin-left: 8px; color: var(--text-muted); font-size: 10px; font-weight: 400; }
+.enemy-comparison-condition + .enemy-comparison-condition { border-top: 1px solid var(--border); }
+.enemy-comparison-condition-summary { padding: 7px 0; }
+.enemy-comparison-condition-description { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.enemy-comparison-condition-swatch { flex: 0 0 28px; width: 28px; height: 12px; }
+.enemy-comparison-condition-name { min-width: 0; color: var(--text); font-size: 11px; overflow-wrap: anywhere; }
+.enemy-comparison-condition-count { color: var(--text-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.enemy-comparison-condition-actions { display: flex; flex-shrink: 0; gap: 6px; }
+.enemy-comparison-editor-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0 0 10px; }
+
+.enemy-comparison-conditions-heading > button,
+.enemy-comparison-condition-actions > button,
+.enemy-comparison-editor-actions > button {
+  min-height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  padding: 5px 9px;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.enemy-comparison-conditions-heading > .enemy-comparison-add { border-style: dashed; }
+.enemy-comparison-editor-actions > .enemy-comparison-apply { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+.enemy-comparison-conditions-heading > button:hover:not(:disabled),
+.enemy-comparison-condition-actions > button:hover:not(:disabled),
+.enemy-comparison-editor-actions > button:hover:not(:disabled) { background: var(--surface-hover); }
+.enemy-comparison-editor-actions > .enemy-comparison-apply:hover:not(:disabled) { background: var(--text-soft); }
+.enemy-comparison-conditions-heading > button:disabled,
+.enemy-comparison-condition-actions > button:disabled,
+.enemy-comparison-editor-actions > button:disabled { cursor: default; opacity: .45; }
+.enemy-comparison-conditions button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.enemy-comparison-condition-editor > .enemy-analysis-filters { padding: 4px 0 10px; border: 0; }
+.enemy-comparison-condition-error { color: var(--danger); font-size: 11px; }
+
+@media (max-width: 520px) {
+  .enemy-comparison-condition-summary { align-items: flex-start; gap: 8px; }
+  .enemy-comparison-condition-description { display: grid; grid-template-columns: 28px minmax(0, 1fr); padding-top: 6px; }
+  .enemy-comparison-condition-count { grid-column: 2; }
+  .enemy-comparison-condition-actions { gap: 4px; }
+  .enemy-comparison-condition-actions > button { padding-inline: 7px; }
+}
+
+@media (max-width: 760px), (pointer: coarse) {
+  .enemy-comparison-conditions-heading > button,
+  .enemy-comparison-condition-actions > button,
+  .enemy-comparison-editor-actions > button { min-height: 44px; }
+}

@@ -20,6 +20,7 @@ import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImag
 import { ChartImageFrame } from './ChartImageFrame'
 import { EnemyHistogramOverflowHelp } from './EnemyHistogramOverflowHelp'
 import { EnemyEcdfGuideControls } from './EnemyEcdfGuideControls'
+import { EnemyDistributionComparison } from './EnemyDistributionComparison'
 import { calculateEcdfGuideReadings, parseEcdfGuideInput, type EcdfGuideValues } from '../lib/enemyEcdfGuides'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { getEnemyChartImageFilename, getEnemyChartImageLayout, getEnemyChartNaturalHeight, type EnemyChartKind as ChartKind } from '../lib/enemyChartImage'
@@ -85,9 +86,7 @@ const STAT_METRICS: StatMetric[] = [
 const CHART_OPTIONS: Array<{ key: ChartKind; label: string }> = [
   { key: 'HISTOGRAM', label: 'ヒストグラム' },
   { key: 'ECDF', label: '累積分布' },
-  { key: 'BOX', label: '箱ひげ図' },
-  { key: 'SCATTER', label: '散布図' },
-  { key: 'INDIVIDUAL', label: '個別プロット' },
+  { key: 'COMPARISON', label: '分布比較' },
 ]
 
 const LEVEL_ORDER: EnemyLevelType[] = ['NORMAL', 'ELITE', 'BOSS', 'UNKNOWN']
@@ -173,8 +172,9 @@ function EnemyStatisticsSettings({ controls }: { controls: EnemyStatisticsContro
   )
 }
 
-export function EnemyStatisticsPanel({ rows, scopeLabel, controls, filterControls }: {
+export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filterControls }: {
   rows: EnemyRecord[]
+  allRows: EnemyRecord[]
   scopeLabel: string
   controls: EnemyStatisticsControls
   filterControls: ReactNode
@@ -183,7 +183,8 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, filterControl
   const binWidthHelpId = useId()
   const upperBoundInputId = useId()
   const upperBoundHelpId = useId()
-  const [selectedChart, setSelectedChart] = useState<ChartKind>('HISTOGRAM')
+  const [chartChoice, setSelectedChart] = useState<ChartKind>('HISTOGRAM')
+  const selectedChart = CHART_OPTIONS.some(({ key }) => key === chartChoice) ? chartChoice : 'HISTOGRAM'
   const [imageData, setImageData] = useState<EnemyChartImageData | null>(null)
   const [imageAspect, setImageAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [savingImage, setSavingImage] = useState(false)
@@ -271,7 +272,7 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, filterControl
   const previewAspect = imageAspect.preset === 'auto' ? undefined : Number(imageAspect.width) / Number(imageAspect.height)
 
   const openImageSaveDialog = () => {
-    if (!canSaveImage || imageSaveInProgress.current) return
+    if (!canSaveImage || imageSaveInProgress.current || selectedChart === 'COMPARISON') return
     setImageFeedback(null)
     // Keep the preview and saved image on the same data, even if the source updates.
     setImageData({ kind: selectedChart, metric: selectedMetric, scale: axisScale, statistics, observations,
@@ -324,13 +325,14 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, filterControl
         id="enemy-distribution"
         number="02"
         title="分布グラフ"
-        summary={`${selectedMetric.label} · ${CHART_OPTIONS.find((chart) => chart.key === selectedChart)?.label} · ${scopeLabel} · 対象 ${rows.length}体`}
+        summary={selectedChart === 'COMPARISON' ? `${selectedMetric.label} · 分布比較`
+          : `${selectedMetric.label} · ${CHART_OPTIONS.find((chart) => chart.key === selectedChart)?.label} · ${scopeLabel} · 対象 ${rows.length}体`}
         defaultOpen
         collapsedLabel="グラフを開く"
         className="enemy-distribution-panel"
         bodyClassName="enemy-distribution-body"
       >
-        {filterControls}
+        {selectedChart !== 'COMPARISON' && filterControls}
         <EnemyStatisticsSettings controls={controls} />
         <div className="enemy-chart-toolbar">
           <fieldset className="enemy-chart-visibility">
@@ -350,7 +352,7 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, filterControl
               ))}
             </div>
           </fieldset>
-          {statistics.count > 0 && (
+          {selectedChart !== 'COMPARISON' && statistics.count > 0 && (
             <div className="enemy-chart-axis-control">
               <span>横軸</span>
               <ScaleSwitch
@@ -360,9 +362,9 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, filterControl
               />
             </div>
           )}
-          <button type="button" className="button secondary enemy-chart-save-button"
+          {selectedChart !== 'COMPARISON' && <button type="button" className="button secondary enemy-chart-save-button"
             aria-haspopup="dialog" disabled={!canSaveImage || savingImage} aria-busy={savingImage}
-            onClick={openImageSaveDialog}>{savingImage ? '画像を保存中…' : '画像を保存'}</button>
+            onClick={openImageSaveDialog}>{savingImage ? '画像を保存中…' : '画像を保存'}</button>}
         </div>
 
         {selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR' && (
@@ -447,7 +449,9 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, filterControl
           xError={ecdfX.error} yError={ecdfY.error} readings={ecdfReadings} hasData={statistics.count > 0}
         />}
 
-        <div className="enemy-chart-stack">
+        <EnemyDistributionComparison rows={allRows} metric={selectedMetric} active={selectedChart === 'COMPARISON'} />
+
+        <div className="enemy-chart-stack" hidden={selectedChart === 'COMPARISON'}>
           {rows.length === 0 && !hasFixedEmptyHistogram ? <ChartEmpty message="条件に一致する敵がいません" /> : <>
           {selectedChart === 'HISTOGRAM' && (
             <HistogramFigure statistics={statistics} metric={selectedMetric} scopeLabel={scopeLabel} scale={axisScale}
@@ -502,7 +506,7 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, filterControl
             : imageFeedback === 'downloaded' ? 'PNG画像のダウンロードを開始しました。' : ''}
         </p>
       </CollapsibleCalculatorPanel>
-      {imageData && <ChartImageSaveDialog
+      {imageData && CHART_OPTIONS.some(({ key }) => key === imageData.kind) && <ChartImageSaveDialog
         initialFilename={getEnemyChartImageFilename({ kind: imageData.kind, metricLabel: imageData.metric.label,
           secondaryMetricLabel: imageData.scatterMetric.label, scopeLabel: imageData.scopeLabel,
           ecdfGuides: imageData.kind === 'ECDF' ? imageData.ecdfGuides : undefined,

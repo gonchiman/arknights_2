@@ -41,6 +41,7 @@ export function EnemyAnalysis() {
         <EnemyDataContent loading={loading} error={error} onRetry={retry}>
           <EnemyStatisticsPanel
             rows={scopedRows}
+            allRows={rows}
             scopeLabel={scopeLabel}
             controls={statisticsControls}
             filterControls={<EnemyAnalysisFilters

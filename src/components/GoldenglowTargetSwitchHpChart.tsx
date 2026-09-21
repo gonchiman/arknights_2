@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { MouseEvent } from 'react'
 import type { HpComparisonDisplaySeries } from '../lib/goldenglowTargetSwitchHpComparison'
+import { getHpChartValueAxis, type HpChartYAxisMode, type HpChartYAxisRange } from '../lib/goldenglowTargetSwitchHpAxis'
 import {
   getHpDamageBreakdownComponents,
   getHpDamageBreakdownSegments,
@@ -28,6 +29,8 @@ interface GoldenglowTargetSwitchHpChartProps {
   barMode?: HpComparisonBarMode
   hpRankBackground?: HpRankBackgroundMode
   gridStyle?: HpChartGridStyle
+  yAxisMode?: HpChartYAxisMode
+  manualYAxisRange?: HpChartYAxisRange
   barHps?: readonly number[]
   hideBaseline?: boolean
   onPlotWidthChange?: (width: number) => void
@@ -44,6 +47,8 @@ interface GoldenglowTargetSwitchHpChartSvgProps {
   barMode?: HpComparisonBarMode
   hpRankBackground?: HpRankBackgroundMode
   gridStyle?: HpChartGridStyle
+  yAxisMode?: HpChartYAxisMode
+  manualYAxisRange?: HpChartYAxisRange
   barHps?: readonly number[]
   hideBaseline?: boolean
   baselineId?: string
@@ -63,13 +68,6 @@ export function getHpComparisonSeriesStyles(series: readonly Pick<HpComparisonDi
       dashArray: key === 'none' ? '3 4' : key === 'X' ? undefined : key === 'Y' ? '8 4' : '8 3 2 3',
     }
   })
-}
-
-function niceStep(value: number): number {
-  if (!Number.isFinite(value) || value <= 0) return 1
-  const power = 10 ** Math.floor(Math.log10(value))
-  const factor = value / power
-  return (factor <= 1 ? 1 : factor <= 2 ? 2 : factor <= 5 ? 5 : 10) * power
 }
 
 export function GoldenglowTargetSwitchHpChart(props: GoldenglowTargetSwitchHpChartProps) {
@@ -93,7 +91,7 @@ export function GoldenglowTargetSwitchHpChartSvg({
 
 function HpChartContent({
   series, maxHp, selectedHp, onSelectHp, stale = false, digits = 2, metric, baselineId, imageOutput = false,
-  plotDimensions, chartKind = 'line', barMode = 'total', barHps, hideBaseline = false, onPlotWidthChange,
+  plotDimensions, chartKind = 'line', barMode = 'total', yAxisMode = 'zero', manualYAxisRange, barHps, hideBaseline = false, onPlotWidthChange,
   hpRankBackground = 'none', gridStyle = 'solid',
 }: HpChartContentProps) {
   const frameRef = useRef<HTMLDivElement>(null)
@@ -103,6 +101,7 @@ function HpChartContent({
   const descriptionId = useId()
   const selectionId = useId()
   const patternId = `gg-damage-chart-${useId()}`
+  const plotClipId = `gg-hp-plot-${useId()}`
   const valueFormat = useMemo(() => new Intl.NumberFormat('ja-JP', {
     maximumFractionDigits: digits,
     signDisplay: metric === 'total' ? 'auto' : 'exceptZero',
@@ -173,16 +172,18 @@ function HpChartContent({
     if (isBreakdown) return point.segments ? [point.segments.at(-1)!.end] : []
     return [point.value]
   }))
-  const minimum = isComposition ? 0 : Math.min(0, ...values)
-  const maximum = isComposition ? 100 : Math.max(0, ...values)
-  const valueStep = isComposition ? 25 : niceStep((maximum - minimum) / 4)
-  const lowerLimit = Math.floor(minimum / valueStep) * valueStep
-  const upperLimit = maximum === minimum ? lowerLimit + valueStep : Math.ceil(maximum / valueStep) * valueStep
-  const yTicks = Array.from({ length: Math.round((upperLimit - lowerLimit) / valueStep) + 1 }, (_, index) => {
-    const tick = lowerLimit + index * valueStep
-    return Math.abs(tick) < valueStep * 1e-8 ? 0 : tick
+  const { lowerLimit, upperLimit, valueStep, yTicks } = getHpChartValueAxis(values, {
+    mode: chartKind === 'line' ? yAxisMode : 'zero',
+    manualRange: manualYAxisRange,
+    nonNegative: metric === 'total',
+    composition: isComposition,
   })
-  const tickFormat = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: Math.min(8, Math.max(0, -Math.floor(Math.log10(valueStep)))) })
+  const tickPrecision = (chartKind === 'line' && yAxisMode === 'manual' ? [valueStep, lowerLimit, upperLimit] : [valueStep])
+    .reduce((precision, value) => {
+      const [coefficient, exponent = '0'] = String(value).split('e')
+      return Math.max(precision, (coefficient.split('.')[1]?.length ?? 0) - Number(exponent))
+    }, 0)
+  const tickFormat = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: Math.min(20, tickPrecision) })
   const formatYTick = (value: number) => `${tickFormat.format(value)}${isComposition ? '%' : ''}`
   const height = plotDimensions?.height ?? (imageOutput ? 480 : 340)
   const characterWidth = plotDimensions ? 6.8 : imageOutput ? 7.5 : 6.8
@@ -273,6 +274,9 @@ function HpChartContent({
         {rankBands.length > 0 && `HPランクは${chartKind === 'bar' ? '各HPグループ' : '実際のHP境界'}で区分しています。${rankBands.map((band) => `${band.rating}: ${band.label}`).join('。')}`}
         {!imageOutput && '各値は下の敵HP選択欄で確認できます。'}
       </desc>
+      <defs><clipPath id={plotClipId}>
+        <rect x={margin.left} y={margin.top} width={plotWidth} height={plotHeight} />
+      </clipPath></defs>
       {isBreakdown && chartSeries.map((item, index) => (
         <GoldenglowDamagePatternDefs key={item.id} idPrefix={`${patternId}-${index}`} color={item.style.color} />
       ))}
@@ -369,7 +373,7 @@ function HpChartContent({
           return command
         }).join(' ')
         return (
-          <g key={item.id} style={{ color: item.style.color }}>
+          <g key={item.id} style={{ color: item.style.color }} clipPath={yAxisMode === 'manual' ? `url(#${plotClipId})` : undefined}>
             {path.trim() && <path className="ggs-hp-chart-line" d={path} strokeDasharray={item.style.dashArray} />}
             {item.points.map((point) => point.value === null ? null : (
               <circle
