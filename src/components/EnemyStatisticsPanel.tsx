@@ -4,6 +4,7 @@ import {
   calculateBoxPlotStatistics,
   calculateEmpiricalCdf,
   calculateNumericStatisticsWithDispersion,
+  getCustomLinearHistogramMaximum,
   type BoxPlotStatistics,
   type EmpiricalCdfPoint,
   type HistogramBin,
@@ -17,6 +18,7 @@ import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { PersistentDetails } from './PersistentDetails'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
 import { ChartImageFrame } from './ChartImageFrame'
+import { EnemyHistogramOverflowHelp } from './EnemyHistogramOverflowHelp'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { getEnemyChartImageFilename, getEnemyChartImageLayout, getEnemyChartNaturalHeight, type EnemyChartKind as ChartKind } from '../lib/enemyChartImage'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
@@ -104,6 +106,7 @@ export function useEnemyStatisticsControls() {
   const [scatterMetricKey, setScatterMetricKey] = useState<AnalyzedStatKey>('defense')
   const [scatterScale, setScatterScale] = useState<HistogramScale>('LOG')
   const [linearBinWidthInput, setLinearBinWidthInput] = useState('')
+  const [linearUpperBoundInput, setLinearUpperBoundInput] = useState('')
 
   const selectedMetric = getMetric(selectedMetricKey)
   const scatterMetric = getMetric(scatterMetricKey)
@@ -111,6 +114,7 @@ export function useEnemyStatisticsControls() {
     setSelectedMetricKey(metric.key)
     setAxisScale(metric.defaultScale)
     setLinearBinWidthInput('')
+    setLinearUpperBoundInput('')
 
     if (scatterMetricKey === metric.key) {
       const fallback = STAT_METRICS.find((candidate) => candidate.key !== metric.key) ?? STAT_METRICS[0]
@@ -129,6 +133,7 @@ export function useEnemyStatisticsControls() {
     selectedMetric, selectMetric, axisScale, setAxisScale,
     scatterMetric, selectScatterMetric, scatterScale, setScatterScale,
     linearBinWidthInput, setLinearBinWidthInput,
+    linearUpperBoundInput, setLinearUpperBoundInput,
   }
 }
 
@@ -163,6 +168,8 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, filterControl
 }) {
   const binWidthInputId = useId()
   const binWidthHelpId = useId()
+  const upperBoundInputId = useId()
+  const upperBoundHelpId = useId()
   const [selectedChart, setSelectedChart] = useState<ChartKind>('HISTOGRAM')
   const [imageData, setImageData] = useState<EnemyChartImageData | null>(null)
   const [imageAspect, setImageAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
@@ -174,6 +181,7 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, filterControl
     selectedMetric, axisScale, setAxisScale,
     scatterMetric, selectScatterMetric, scatterScale, setScatterScale,
     linearBinWidthInput, setLinearBinWidthInput,
+    linearUpperBoundInput, setLinearUpperBoundInput,
   } = controls
   const metricSource = useMemo(
     () => rows.map((enemy) => getEnemyMetricValue(enemy, selectedMetric.key)),
@@ -183,23 +191,43 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, filterControl
     () => buildMetricObservations(rows, selectedMetric.key),
     [rows, selectedMetric.key],
   )
-  const maximumObservedValue = useMemo(
-    () => observations.reduce<number | null>(
-      (maximum, { value }) => maximum === null ? value : Math.max(maximum, value),
-      null,
-    ),
-    [observations],
+  const customHistogramMaximum = useMemo(
+    () => getCustomLinearHistogramMaximum(metricSource, selectedMetric.minimumLinearBinWidth),
+    [metricSource, selectedMetric.minimumLinearBinWidth],
   )
+  const automaticLinearStatistics = useMemo(
+    () => calculateNumericStatisticsWithDispersion(metricSource, selectedMetric.logBinCount, 'LINEAR', selectedMetric.minimumLinearBinWidth),
+    [metricSource, selectedMetric.logBinCount, selectedMetric.minimumLinearBinWidth],
+  )
+  const automaticBinWidth = automaticLinearStatistics.histogram?.binWidth ?? selectedMetric.minimumLinearBinWidth
+  const parsedLinearUpperBound = linearUpperBoundInput.trim() === '' ? null : Number(linearUpperBoundInput)
+  const invalidUpperBound = parsedLinearUpperBound !== null
+    && (!Number.isFinite(parsedLinearUpperBound) || parsedLinearUpperBound <= 0)
+  const requestedUpperBound = invalidUpperBound ? null : parsedLinearUpperBound
   const parsedLinearBinWidth = linearBinWidthInput.trim() === '' ? null : Number(linearBinWidthInput)
   const linearBinWidthValidation = parsedLinearBinWidth === null
     ? null
-    : validateCustomLinearBinWidth(parsedLinearBinWidth, maximumObservedValue)
+    : validateCustomLinearBinWidth(parsedLinearBinWidth, requestedUpperBound ?? customHistogramMaximum ?? 0)
+  const upperBoundValidation = requestedUpperBound === null || parsedLinearBinWidth !== null
+    ? null
+    : validateCustomLinearBinWidth(automaticBinWidth, requestedUpperBound)
+  const invalidDisplayRange = requestedUpperBound !== null
+    && !Number.isFinite(requestedUpperBound + (parsedLinearBinWidth ?? automaticBinWidth))
+  const linearUpperBoundError = invalidUpperBound
+    ? '0より大きい数値を入力してください'
+    : invalidDisplayRange
+      ? '上限または階級幅を小さくしてください'
+    : upperBoundValidation?.error === 'TOO_MANY_BINS'
+      ? `通常階級は最大${MAX_CUSTOM_LINEAR_BIN_COUNT}階級です。上限を小さくするか、階級幅を指定してください`
+      : null
   const linearBinWidthError = parsedLinearBinWidth === null
     ? null
     : getLinearBinWidthError(linearBinWidthValidation?.error ?? null)
-  const customLinearBinWidth = linearBinWidthValidation?.valid
+  const histogramSettingsError = linearBinWidthError ?? linearUpperBoundError
+  const customLinearBinWidth = !histogramSettingsError && linearBinWidthValidation?.valid
     ? parsedLinearBinWidth
     : null
+  const customLinearUpperBound = histogramSettingsError ? null : requestedUpperBound
   const statistics = useMemo(
     () => calculateNumericStatisticsWithDispersion(
       metricSource,
@@ -207,15 +235,18 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, filterControl
       axisScale,
       selectedMetric.minimumLinearBinWidth,
       customLinearBinWidth,
+      customLinearUpperBound,
     ),
-    [metricSource, selectedMetric.logBinCount, selectedMetric.minimumLinearBinWidth, axisScale, customLinearBinWidth],
+    [metricSource, selectedMetric.logBinCount, selectedMetric.minimumLinearBinWidth, axisScale, customLinearBinWidth, customLinearUpperBound],
   )
   const scatterObservations = useMemo(
     () => selectedChart === 'SCATTER' ? buildScatterObservations(rows, selectedMetric.key, scatterMetric.key) : [],
     [rows, selectedChart, selectedMetric.key, scatterMetric.key],
   )
   const canSaveImage = (selectedChart === 'SCATTER' ? scatterObservations.length : statistics.count) > 0
-    && !(selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR' && linearBinWidthError)
+    && !(selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR' && histogramSettingsError)
+  const hasFixedEmptyHistogram = selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR'
+    && customLinearUpperBound !== null && statistics.bins.length > 0
   const previewAspect = imageAspect.preset === 'auto' ? undefined : Number(imageAspect.width) / Number(imageAspect.height)
 
   const openImageSaveDialog = () => {
@@ -223,7 +254,7 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, filterControl
     setImageFeedback(null)
     // Keep the preview and saved image on the same data, even if the source updates.
     setImageData({ kind: selectedChart, metric: selectedMetric, scale: axisScale, statistics, observations,
-      scatterObservations, scatterMetric, scatterScale, scopeLabel })
+      scatterObservations, scatterMetric, scatterScale, scopeLabel, customLinearUpperBound })
   }
 
   const saveChartImage = async (filename: string, aspectRatio?: number) => {
@@ -312,16 +343,16 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, filterControl
             onClick={openImageSaveDialog}>{savingImage ? '画像を保存中…' : '画像を保存'}</button>
         </div>
 
-        {statistics.count > 0 && selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR' && (
+        {selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR' && (
           <div
-            className="statistics-histogram-settings"
+            className="statistics-histogram-settings enemy-histogram-settings"
             role="group"
             aria-labelledby="enemy-histogram-settings-heading"
           >
             <div className="statistics-histogram-settings-heading">
               <strong id="enemy-histogram-settings-heading">ヒストグラム設定</strong>
-              <span>線形目盛の階級幅を指定できます</span>
             </div>
+            <div className="enemy-histogram-fields">
             <div className="statistics-bin-width-control">
               <label htmlFor={binWidthInputId}>
                 階級幅{selectedMetric.suffix ? `（${selectedMetric.suffix}）` : ''}
@@ -356,15 +387,40 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, filterControl
               >
                 {linearBinWidthError
                   ?? (linearBinWidthValidation?.valid
-                    ? `${linearBinWidthValidation.binCount}階級で集計`
-                    : `自動：${formatNumber(statistics.histogram?.binWidth ?? 0, selectedMetric.summaryDigits, selectedMetric.suffix)}`)}
+                    ? `${statistics.bins.length}階級で集計`
+                    : `自動：${formatHistogramSetting(automaticBinWidth, selectedMetric.suffix)}`)}
               </small>
+            </div>
+            <div className="statistics-bin-width-control">
+              <div className="enemy-histogram-upper-label">
+                <label htmlFor={upperBoundInputId}>通常階級の上限{selectedMetric.suffix ? `（${selectedMetric.suffix}）` : ''}</label>
+                <EnemyHistogramOverflowHelp
+                  upperBoundLabel={histogramSettingsError || !statistics.histogram ? null
+                    : formatHistogramSetting(statistics.histogram.normalRangeEnd, selectedMetric.suffix)}
+                  isCustom={customLinearUpperBound !== null}
+                  hasOverflow={statistics.bins.some((bin) => bin.isOverflow && bin.count > 0)}
+                />
+              </div>
+              <div className="statistics-bin-width-input-row">
+                <input id={upperBoundInputId} type="number" inputMode="decimal" min="0" step="any"
+                  value={linearUpperBoundInput} placeholder="自動"
+                  aria-invalid={linearUpperBoundError !== null} aria-describedby={upperBoundHelpId}
+                  onChange={(event) => setLinearUpperBoundInput(event.target.value)} />
+                {linearUpperBoundInput !== '' && <button type="button"
+                  onClick={() => setLinearUpperBoundInput('')} aria-label="通常階級の上限を自動設定に戻す">自動</button>}
+              </div>
+              <small id={upperBoundHelpId} className={linearUpperBoundError ? 'error' : ''} aria-live="polite">
+                {linearUpperBoundError ?? (statistics.histogram
+                  ? `${customLinearUpperBound === null ? '自動' : '固定'}：${formatHistogramSetting(statistics.histogram.normalRangeEnd, selectedMetric.suffix)}${statistics.histogram.hasOverflow ? '超をまとめる' : ''}`
+                  : '数値データがありません')}
+              </small>
+            </div>
             </div>
           </div>
         )}
 
         <div className="enemy-chart-stack">
-          {rows.length === 0 ? <ChartEmpty message="条件に一致する敵がいません" /> : <>
+          {rows.length === 0 && !hasFixedEmptyHistogram ? <ChartEmpty message="条件に一致する敵がいません" /> : <>
           {selectedChart === 'HISTOGRAM' && (
             <HistogramFigure statistics={statistics} metric={selectedMetric} scopeLabel={scopeLabel} scale={axisScale} />
           )}
@@ -416,7 +472,10 @@ export function EnemyStatisticsPanel({ rows, scopeLabel, controls, filterControl
       </CollapsibleCalculatorPanel>
       {imageData && <ChartImageSaveDialog
         initialFilename={getEnemyChartImageFilename({ kind: imageData.kind, metricLabel: imageData.metric.label,
-          secondaryMetricLabel: imageData.scatterMetric.label, scopeLabel: imageData.scopeLabel })}
+          secondaryMetricLabel: imageData.scatterMetric.label, scopeLabel: imageData.scopeLabel,
+          histogramSettings: imageData.kind === 'HISTOGRAM' && imageData.scale === 'LINEAR' && imageData.statistics.histogram?.binWidth
+            ? { binWidth: imageData.statistics.histogram.binWidth, upperBound: imageData.statistics.histogram.normalRangeEnd }
+            : undefined })}
         aspect={imageAspect}
         onAspectChange={setImageAspect}
         canChooseLocation={!!imageSavePicker}
@@ -445,6 +504,7 @@ interface EnemyChartImageData {
   scatterMetric: StatMetric
   scatterScale: HistogramScale
   scopeLabel: string
+  customLinearUpperBound: number | null
 }
 
 function EnemyChartImage({ data, aspectRatio, onLayout }: {
@@ -471,8 +531,11 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
   if (kind === 'HISTOGRAM') {
     const binWidth = statistics.histogram?.binWidth
     conditions.push(scale === 'LINEAR' && binWidth != null
-      ? `階級幅 ${formatNumber(binWidth, metric.summaryDigits, metric.suffix)}`
+      ? `階級幅 ${formatHistogramSetting(binWidth, metric.suffix)}`
       : `${statistics.bins.length}階級`)
+    if (scale === 'LINEAR' && data.customLinearUpperBound !== null) {
+      conditions.push(`上限 ${formatHistogramSetting(data.customLinearUpperBound, metric.suffix)}`)
+    }
   }
 
   return <ChartImageFrame className="enemy-chart-image" title={title} conditions={conditions.join(' · ')}
@@ -646,7 +709,7 @@ function HistogramFigure({
         {statistics.count > 0 && <MeanMedianLegend />}
       </figcaption>
       <div className="enemy-chart-container" ref={chartContainerRef}>
-        {statistics.count === 0 ? (
+        {statistics.bins.length === 0 ? (
           <ChartEmpty />
         ) : (
           <HistogramSvg
@@ -660,7 +723,7 @@ function HistogramFigure({
           />
         )}
       </div>
-      {statistics.count > 0 && <FrequencyDistributionTable statistics={statistics} metric={metric} scale={scale} />}
+      {statistics.bins.length > 0 && <FrequencyDistributionTable statistics={statistics} metric={metric} scale={scale} />}
     </figure>
   )
 }
@@ -699,18 +762,18 @@ function FrequencyDistributionTable({ statistics, metric, scale }: {
         <dl className="enemy-frequency-meta" aria-label={`${metric.label}の階級設定`}>
           <div>
             <dt>階級幅</dt>
-            <dd>{formatNumber(histogram.binWidth ?? 0, metric.summaryDigits, metric.suffix)}</dd>
+            <dd>{formatHistogramSetting(histogram.binWidth ?? 0, metric.suffix)}</dd>
           </div>
           <div>
             <dt>通常範囲</dt>
             <dd>
               {formatCompactRange(histogram.normalRangeStart, histogram.normalRangeEnd, metric)}
-              （{formatNumber((normalCount / statistics.count) * 100, 1, '%')}）
+              （{statistics.count > 0 ? formatNumber((normalCount / statistics.count) * 100, 1, '%') : '—'}）
             </dd>
           </div>
           <div>
             <dt>上限超過</dt>
-            <dd>{histogram.hasOverflow ? `${formatNumber(histogram.normalRangeEnd, metric.summaryDigits, metric.suffix)}超` : 'なし'}</dd>
+            <dd>{histogram.hasOverflow ? `${formatHistogramSetting(histogram.normalRangeEnd, metric.suffix)}超` : 'なし'}</dd>
           </div>
           <div>
             <dt>階級数</dt>
@@ -734,8 +797,8 @@ function FrequencyDistributionTable({ statistics, metric, scale }: {
               <tr key={`${bin.start}-${index}`}>
                 <th scope="row">{formatHistogramRange(bin, statistics, metric)}</th>
                 <td>{bin.count}</td>
-                <td>{formatNumber(proportion * 100, 1, '%')}</td>
-                <td title={`累積度数：${rowCumulativeCount}`}>{formatNumber(cumulativeProportion * 100, 1, '%')}</td>
+                <td>{statistics.count > 0 ? formatNumber(proportion * 100, 1, '%') : '—'}</td>
+                <td title={`累積度数：${rowCumulativeCount}`}>{statistics.count > 0 ? formatNumber(cumulativeProportion * 100, 1, '%') : '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -801,7 +864,7 @@ function HistogramSvg({
   const overflowTick = isAdaptiveLinear && histogram.hasOverflow
     ? {
       value: histogram.normalRangeEnd + ((histogram.binWidth ?? 0) / 2),
-      label: `${formatNumber(histogram.normalRangeEnd, metric.valueDigits, metric.suffix)}超`,
+      label: `${formatHistogramSetting(histogram.normalRangeEnd, metric.suffix)}超`,
     }
     : undefined
   const y = (value: number) => plotBottom - ((value / countMaximum) * plotHeight)
@@ -834,7 +897,7 @@ function HistogramSvg({
         )
       })}
 
-      <MeanMedianReferences statistics={statistics} metric={metric} position={referencePosition} plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop} plotBottom={plotBottom} imageLabels={image ? referenceLabels : undefined} />
+      {statistics.count > 0 && <MeanMedianReferences statistics={statistics} metric={metric} position={referencePosition} plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop} plotBottom={plotBottom} imageLabels={image ? referenceLabels : undefined} />}
       <BottomAxis
         ticks={xTicks}
         position={valueScale.position}
@@ -844,6 +907,7 @@ function HistogramSvg({
         plotBottom={plotBottom}
         axisLabel={`${metric.axisLabel}（${valueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛）`}
         extraTick={overflowTick}
+        preciseTicks={isAdaptiveLinear}
         chartHeight={height}
         showTitle={!image}
       />
@@ -1324,6 +1388,7 @@ function BottomAxis({
   axisLabel,
   chartHeight = CHART_HEIGHT,
   extraTick,
+  preciseTicks = false,
   showTitle = true,
 }: {
   ticks: number[]
@@ -1335,22 +1400,61 @@ function BottomAxis({
   axisLabel: string
   chartHeight?: number
   extraTick?: { value: number; label: string }
+  preciseTicks?: boolean
   showTitle?: boolean
 }) {
+  const tickLabelRefs = useRef<Array<SVGTextElement | null>>([])
+  const extraLabelRef = useRef<SVGTextElement>(null)
+  const labels = ticks.map((tick) => preciseTicks ? formatHistogramSetting(tick) : formatNumber(tick, metric.valueDigits))
+  const labelKey = JSON.stringify(labels)
+  const [labelWidths, setLabelWidths] = useState<{ ticks: number[]; extra: number }>({ ticks: [], extra: 0 })
+  useLayoutEffect(() => {
+    if (!extraTick) return
+    let active = true
+    const measure = () => {
+      if (!active || !extraLabelRef.current) return
+      const ticks = tickLabelRefs.current.map((element) => element?.getComputedTextLength() ?? 0)
+      const extra = extraLabelRef.current.getComputedTextLength()
+      setLabelWidths((current) => current.extra === extra
+        && current.ticks.length === ticks.length
+        && current.ticks.every((width, index) => width === ticks[index])
+        ? current
+        : { ticks, extra })
+    }
+    measure()
+    void document.fonts.ready.then(measure)
+    return () => { active = false }
+  }, [labelKey, extraTick?.label, plotLeft, plotRight])
+
+  const extraLabelWidth = labelWidths.extra || (extraTick?.label.length ?? 0) * 11
+  const extraLabelX = extraTick
+    ? Math.max(plotLeft + extraLabelWidth / 2, Math.min(plotRight - extraLabelWidth / 2, position(extraTick.value)))
+    : 0
+  const overlapsExtraLabel = (index: number) => {
+    if (!extraTick) return false
+    const width = labelWidths.ticks[index] || labels[index].length * 11
+    const x = position(ticks[index])
+    const left = index === 0 ? x : index === ticks.length - 1 ? x - width : x - width / 2
+    return left < extraLabelX + extraLabelWidth / 2 + 8
+      && left + width > extraLabelX - extraLabelWidth / 2 - 8
+  }
+
   return (
     <>
       {ticks.map((tick, index) => (
         <g key={`${tick}-${index}`}>
           <line className="enemy-chart-axis-tick" x1={position(tick)} x2={position(tick)} y1={plotBottom} y2={plotBottom + 5} />
-          <text className="enemy-chart-tick" x={position(tick)} y={plotBottom + 19} textAnchor={index === 0 ? 'start' : index === ticks.length - 1 ? 'end' : 'middle'}>
-            {formatNumber(tick, metric.valueDigits)}
+          <text ref={(element) => { tickLabelRefs.current[index] = element }} className="enemy-chart-tick"
+            x={position(tick)} y={plotBottom + 19} textAnchor={index === 0 ? 'start' : index === ticks.length - 1 ? 'end' : 'middle'}
+            visibility={overlapsExtraLabel(index) ? 'hidden' : undefined} aria-hidden={overlapsExtraLabel(index) || undefined}>
+            {labels[index]}
           </text>
         </g>
       ))}
       {extraTick && (
         <g>
           <line className="enemy-chart-axis-tick" x1={position(extraTick.value)} x2={position(extraTick.value)} y1={plotBottom} y2={plotBottom + 5} />
-          <text className="enemy-chart-tick enemy-chart-overflow-tick" x={position(extraTick.value)} y={plotBottom + 19} textAnchor="middle">
+          <text ref={extraLabelRef} className="enemy-chart-tick enemy-chart-overflow-tick" x={extraLabelX} y={plotBottom + 19} textAnchor="middle">
             {extraTick.label}
           </text>
         </g>
@@ -1490,7 +1594,7 @@ function getLinearBinWidthError(
 ): string | null {
   if (error === 'INVALID') return '0より大きい数値を入力してください'
   if (error === 'TOO_MANY_BINS') {
-    return `階級数が多すぎます（最大${MAX_CUSTOM_LINEAR_BIN_COUNT}階級）`
+    return `階級数が多すぎます（通常階級は最大${MAX_CUSTOM_LINEAR_BIN_COUNT}階級）`
   }
   return null
 }
@@ -1520,17 +1624,24 @@ function clampLabelX(value: number, minimum: number, maximum: number): number {
 }
 
 function formatHistogramRange(bin: HistogramBin, statistics: NumericStatistics, metric: StatMetric): string {
+  const format = (value: number) => statistics.histogram?.binWidth !== null
+    ? formatHistogramSetting(value, metric.suffix)
+    : formatNumber(value, metric.summaryDigits, metric.suffix)
   if (bin.isOverflow) {
-    return `${formatNumber(bin.start, metric.summaryDigits, metric.suffix)}超`
+    return `${format(bin.start)}超`
   }
-  if (statistics.minimum === statistics.maximum) {
-    return formatNumber(statistics.minimum ?? bin.start, metric.valueDigits, metric.suffix)
+  if (bin.start === bin.end) {
+    return format(bin.start)
   }
-  return `${formatNumber(bin.start, metric.summaryDigits, metric.suffix)}以上、${formatNumber(bin.end, metric.summaryDigits, metric.suffix)}${bin.includesMaximum ? '以下' : '未満'}`
+  return `${format(bin.start)}以上、${format(bin.end)}${bin.includesMaximum ? '以下' : '未満'}`
 }
 
 function formatCompactRange(start: number, end: number, metric: StatMetric): string {
-  return `${formatNumber(start, metric.summaryDigits)}～${formatNumber(end, metric.summaryDigits, metric.suffix)}`
+  return `${formatHistogramSetting(start)}～${formatHistogramSetting(end, metric.suffix)}`
+}
+
+function formatHistogramSetting(value: number, suffix = ''): string {
+  return `${new Intl.NumberFormat('ja-JP', { maximumSignificantDigits: 12 }).format(value)}${suffix}`
 }
 
 function formatNumber(value: number, maximumFractionDigits: number, suffix = ''): string {

@@ -1,8 +1,9 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   MAX_CUSTOM_LINEAR_BIN_COUNT,
   calculateBoxPlotStatistics,
   calculateEmpiricalCdf,
+  getCustomLinearHistogramMaximum,
   type BoxPlotStatistics,
   type EmpiricalCdfPoint,
   type HistogramBin,
@@ -134,17 +135,17 @@ export function OperatorStatisticsPanel({ rows, scopeLabel, controls, filterSett
     () => buildOperatorMetricObservations(rows, selectedMetric.key),
     [rows, selectedMetric.key],
   )
-  const maximumObservedValue = useMemo(
-    () => observations.reduce<number | null>(
-      (maximum, { value }) => maximum === null ? value : Math.max(maximum, value),
-      null,
+  const customHistogramMaximum = useMemo(
+    () => getCustomLinearHistogramMaximum(
+      observations.map(({ value }) => value),
+      selectedMetric.minimumLinearBinWidth,
     ),
-    [observations],
+    [observations, selectedMetric.minimumLinearBinWidth],
   )
   const parsedLinearBinWidth = linearBinWidthInput.trim() === '' ? null : Number(linearBinWidthInput)
   const linearBinWidthValidation = parsedLinearBinWidth === null
     ? null
-    : validateCustomLinearBinWidth(parsedLinearBinWidth, maximumObservedValue)
+    : validateCustomLinearBinWidth(parsedLinearBinWidth, customHistogramMaximum)
   const linearBinWidthError = parsedLinearBinWidth === null
     ? null
     : getLinearBinWidthError(linearBinWidthValidation?.error ?? null)
@@ -254,7 +255,7 @@ export function OperatorStatisticsPanel({ rows, scopeLabel, controls, filterSett
               >
                 {linearBinWidthError
                   ?? (linearBinWidthValidation?.valid
-                    ? `${linearBinWidthValidation.binCount}階級で集計`
+                    ? `${statistics.bins.length}階級で集計`
                     : `自動：${formatNumber(statistics.histogram?.binWidth ?? 0, selectedMetric.summaryDigits, selectedMetric.suffix)}`)}
               </small>
             </div>
@@ -1074,20 +1075,58 @@ function BottomAxis({
   chartHeight?: number
   extraTick?: { value: number; label: string }
 }) {
+  const tickLabelRefs = useRef<Array<SVGTextElement | null>>([])
+  const extraLabelRef = useRef<SVGTextElement>(null)
+  const labels = ticks.map((tick) => formatNumber(tick, metric.valueDigits))
+  const labelKey = JSON.stringify(labels)
+  const [labelWidths, setLabelWidths] = useState<{ ticks: number[]; extra: number }>({ ticks: [], extra: 0 })
+  useLayoutEffect(() => {
+    if (!extraTick) return
+    let active = true
+    const measure = () => {
+      if (!active || !extraLabelRef.current) return
+      const ticks = tickLabelRefs.current.map((element) => element?.getComputedTextLength() ?? 0)
+      const extra = extraLabelRef.current.getComputedTextLength()
+      setLabelWidths((current) => current.extra === extra
+        && current.ticks.length === ticks.length
+        && current.ticks.every((width, index) => width === ticks[index])
+        ? current
+        : { ticks, extra })
+    }
+    measure()
+    void document.fonts.ready.then(measure)
+    return () => { active = false }
+  }, [labelKey, extraTick?.label, plotLeft, plotRight])
+
+  const extraLabelWidth = labelWidths.extra || (extraTick?.label.length ?? 0) * 11
+  const extraLabelX = extraTick
+    ? Math.max(plotLeft + extraLabelWidth / 2, Math.min(plotRight - extraLabelWidth / 2, position(extraTick.value)))
+    : 0
+  const overlapsExtraLabel = (index: number) => {
+    if (!extraTick) return false
+    const width = labelWidths.ticks[index] || labels[index].length * 11
+    const x = position(ticks[index])
+    const left = index === 0 ? x : index === ticks.length - 1 ? x - width : x - width / 2
+    return left < extraLabelX + extraLabelWidth / 2 + 8
+      && left + width > extraLabelX - extraLabelWidth / 2 - 8
+  }
+
   return (
     <>
       {ticks.map((tick, index) => (
         <g key={`${tick}-${index}`}>
           <line className="enemy-chart-axis-tick" x1={position(tick)} x2={position(tick)} y1={plotBottom} y2={plotBottom + 5} />
-          <text className="enemy-chart-tick" x={position(tick)} y={plotBottom + 19} textAnchor={index === 0 ? 'start' : index === ticks.length - 1 ? 'end' : 'middle'}>
-            {formatNumber(tick, metric.valueDigits)}
+          <text ref={(element) => { tickLabelRefs.current[index] = element }} className="enemy-chart-tick"
+            x={position(tick)} y={plotBottom + 19} textAnchor={index === 0 ? 'start' : index === ticks.length - 1 ? 'end' : 'middle'}
+            visibility={overlapsExtraLabel(index) ? 'hidden' : undefined} aria-hidden={overlapsExtraLabel(index) || undefined}>
+            {labels[index]}
           </text>
         </g>
       ))}
       {extraTick && (
         <g>
           <line className="enemy-chart-axis-tick" x1={position(extraTick.value)} x2={position(extraTick.value)} y1={plotBottom} y2={plotBottom + 5} />
-          <text className="enemy-chart-tick enemy-chart-overflow-tick" x={position(extraTick.value)} y={plotBottom + 19} textAnchor="middle">
+          <text ref={extraLabelRef} className="enemy-chart-tick enemy-chart-overflow-tick" x={extraLabelX} y={plotBottom + 19} textAnchor="middle">
             {extraTick.label}
           </text>
         </g>
@@ -1202,7 +1241,7 @@ function getLinearBinWidthError(
 ): string | null {
   if (error === 'INVALID') return '0より大きい数値を入力してください'
   if (error === 'TOO_MANY_BINS') {
-    return `階級数が多すぎます（最大${MAX_CUSTOM_LINEAR_BIN_COUNT}階級）`
+    return `階級数が多すぎます（通常階級は最大${MAX_CUSTOM_LINEAR_BIN_COUNT}階級）`
   }
   return null
 }
