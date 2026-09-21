@@ -1,0 +1,18 @@
+.gg-trial-benchmark-chart { min-width: 0; margin: 0; background: var(--surface); }
+.gg-trial-benchmark-chart-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 12px 14px 8px; color: var(--text-soft); font-size: 11px; list-style: none; }
+.gg-trial-benchmark-chart-legend li { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.gg-trial-benchmark-chart-legend svg { flex: 0 0 24px; }
+.gg-trial-benchmark-chart-frame { width: 100%; min-width: 0; }
+.gg-trial-benchmark-chart-svg { display: block; width: 100%; max-width: 100%; height: 320px; overflow: hidden; }
+.gg-trial-benchmark-chart-svg--selectable { cursor: crosshair; }
+.gg-trial-benchmark-chart-grid { stroke: var(--border); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.gg-trial-benchmark-chart-axis { fill: none; stroke: var(--border-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.gg-trial-benchmark-chart-tick { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.gg-trial-benchmark-chart-axis-title { fill: var(--text-soft); font-size: 12px; font-weight: 700; }
+.gg-trial-benchmark-chart-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.gg-trial-benchmark-chart-range { fill: none; stroke: var(--text-muted); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.gg-trial-benchmark-chart-point { fill: var(--surface); stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.gg-trial-benchmark-chart-point--selected { fill: var(--accent); stroke-width: 2; }
+.gg-trial-benchmark-chart-threshold { stroke: var(--text-muted); stroke-width: 1.5; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }
+.gg-trial-benchmark-chart-guide { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; }
+.gg-trial-benchmark-chart-empty { fill: var(--text-muted); font-size: 12px; paint-order: stroke; stroke: var(--surface); stroke-width: 6; stroke-linejoin: round; }

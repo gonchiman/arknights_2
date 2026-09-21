@@ -3,6 +3,7 @@ import {
   createGoldenglowTargetSwitchRandom,
   prepareGoldenglowTargetSwitchSimulation,
   runGoldenglowRetargetingTrial,
+  type GoldenglowTargetSwitchExecutionOptions,
   type GoldenglowTargetSwitchInput,
   type GoldenglowTargetSwitchPreparedSimulation,
 } from './goldenglowTargetSwitch.ts'
@@ -82,8 +83,9 @@ export function simulateGoldenglowTargetSwitchGrid(
   input: GoldenglowTargetSwitchGridInput,
   onRow?: (row: GoldenglowTargetSwitchGridRow, completedRows: number, totalRows: number) => void,
   onCell?: (cell: GoldenglowTargetSwitchGridCell, completedCells: number, totalCells: number) => void,
+  options?: GoldenglowTargetSwitchExecutionOptions,
 ): GoldenglowTargetSwitchGridResult {
-  const { enemyHps, preparedRows, maxVolleys } = prepareGrid(input)
+  const { enemyHps, preparedRows, maxVolleys } = prepareGrid(input, options)
   const first = preparedRows[0].simulation
   const patterns = createExplosionPatterns(first, maxVolleys)
   const rowCache = new Map<string, Map<number, MeanDamage>>()
@@ -123,11 +125,14 @@ export function simulateGoldenglowTargetSwitchGrid(
 }
 
 /** Validate without drawing random numbers or running trials; returns the work estimate. */
-export function validateGoldenglowTargetSwitchGridWorkload(input: GoldenglowTargetSwitchGridInput): number {
-  return prepareGrid(input).droneOpportunities
+export function validateGoldenglowTargetSwitchGridWorkload(
+  input: GoldenglowTargetSwitchGridInput,
+  options?: GoldenglowTargetSwitchExecutionOptions,
+): number {
+  return prepareGrid(input, options).droneOpportunities
 }
 
-function prepareGrid(input: GoldenglowTargetSwitchGridInput) {
+function prepareGrid(input: GoldenglowTargetSwitchGridInput, options?: GoldenglowTargetSwitchExecutionOptions) {
   validateAxes(input)
   const enemyHps = [...input.enemyHps]
   const enemyResistances = [...input.enemyResistances]
@@ -137,7 +142,7 @@ function prepareGrid(input: GoldenglowTargetSwitchGridInput) {
     try {
       simulation = prepareGoldenglowTargetSwitchSimulation({
         ...setup, enemyHp: enemyHps[0], enemyResistance,
-      })
+      }, options)
     } catch (cause) {
       if (cause instanceof RangeError) throw new RangeError(localizeInputError(cause.message))
       throw cause

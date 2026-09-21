@@ -1,0 +1,70 @@
+.ggb-page { min-width: 0; container-type: inline-size; }
+.ggb-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.ggb-fields input[aria-invalid="true"] { border-color: var(--danger); }
+.ggb-module-choices { display: flex; align-items: center; gap: 10px 20px; flex-wrap: wrap; border: 0; min-width: 0; padding: 0; margin: 16px 0; }
+.ggb-module-choices legend { margin-bottom: 8px; color: var(--text-soft); font-size: 12px; }
+.ggb-module-choice { display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); padding: 8px 10px; background: var(--surface); }
+.ggb-module-choice.active { background: var(--surface-soft); border-color: var(--border-strong); }
+.ggb-module-choice label { display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; min-height: 32px; }
+.ggb-module-choice input { width: 16px; height: 16px; accent-color: var(--text); margin: 0; }
+.ggb-module-choice select { min-height: 34px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); padding: 5px 8px; font: inherit; font-size: 12px; }
+.ggb-condition-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; padding-top: 16px; border-top: 1px solid var(--border); }
+.ggb-run-panel > .collapsible-panel-header { display: flex; align-items: center; background: var(--surface-soft); }
+.ggb-run-panel.open > .collapsible-panel-header { border-bottom: 1px solid var(--border); }
+.ggb-run-panel .collapsible-panel-title { flex: 1; min-width: 0; }
+.ggb-run-panel .collapsible-panel-header .collapsible-panel-heading { border-bottom: 0; }
+.ggb-run-panel .collapsible-panel-actions { padding: 6px 12px; }
+.ggb-run-panel .collapsible-panel-actions button { min-height: 36px; font-size: 12px; min-width: 94px; }
+.ggb-run-panel .collapsible-panel-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px 20px; align-items: end; }
+.ggb-run-panel .collapsible-panel-body[hidden] { display: none; }
+.ggb-run-panel .ggb-fields { display: contents; }
+.ggb-trial-choices { grid-column: 1 / -1; min-width: 0; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+.ggb-count-label { display: block; color: var(--text-soft); font-size: 12px; }
+.ggb-count-entry { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.ggb-count-entry .ggb-count-value { display: flex; align-items: center; gap: 8px; width: 180px; max-width: 100%; }
+.ggb-count-value input { width: 145px; min-width: 0; font-variant-numeric: tabular-nums; }
+.ggb-count-entry .button { min-height: 36px; font-size: 12px; }
+.ggb-count-list { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 14px 0 0; }
+.ggb-count-list li { display: flex; align-items: center; gap: 4px; padding-left: 10px; border: 1px solid var(--border); background: var(--surface-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
+.ggb-count-list button { min-width: 34px; min-height: 34px; padding: 6px 8px; border: 0; background: transparent; color: var(--text); font: inherit; cursor: pointer; }
+.ggb-count-list button:hover:not(:disabled) { background: var(--surface-hover); }
+.ggb-count-list button:disabled { opacity: .4; cursor: default; }
+.ggb-trial-choices .ggb-error { margin-top: 10px; }
+.ggb-input-help { grid-column: 1 / -1; }
+.ggb-run-panel .ggb-input-help { margin-top: 0; }
+.ggb-repeat { width: 160px; max-width: 100%; }
+.ggb-run-footer { display: flex; align-items: end; gap: 12px 20px; flex-wrap: wrap; min-width: 0; }
+.ggb-run-footer .calculator-field { width: 160px; max-width: 100%; }
+.ggb-run-panel .calculator-field > span, .ggb-condition-fields .calculator-field > span { font-size: 12px; font-weight: 400; }
+.ggb-progress { color: var(--text-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
+.ggb-run-footer .ggb-progress { margin-left: auto; padding-bottom: 8px; }
+.ggb-error { grid-column: 1 / -1; color: var(--danger); font-size: 12px; margin: 0; }
+.ggb-table-scroll { max-width: 100%; overflow-x: auto; margin-top: 20px; border: 1px solid var(--border); }
+.ggb-table { min-width: 570px; width: 100%; border-collapse: collapse; margin: 0; border: 0; font-size: 12px; font-variant-numeric: tabular-nums; }
+.ggb-table th, .ggb-table td { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 9px 10px; text-align: right; white-space: nowrap; }
+.ggb-table tr > :last-child { border-right: 0; text-align: left; }
+.ggb-table tbody tr:last-child > * { border-bottom: 0; }
+.ggb-table thead th { position: static; background: var(--surface-soft); font-weight: 500; vertical-align: bottom; }
+.ggb-table th:first-child { text-align: left; }
+.ggb-table thead th > span { display: block; color: var(--text-soft); font-weight: 400; }
+.ggb-table tbody th { position: static; padding: 0; font-weight: 400; }
+.ggb-select-row { display: block; min-height: 38px; width: 100%; padding: 9px 10px; text-align: left; border: 0; background: transparent; color: var(--text); font: inherit; cursor: pointer; }
+.ggb-select-row:disabled { cursor: default; }
+.ggb-table tr.ggb-selected > * { background: var(--surface-soft); }
+.ggb-select-row[aria-pressed="true"] { font-weight: 700; }
+.ggb-stale tbody td { color: var(--text-muted); }
+.ggb-help { margin-top: 16px; color: var(--text-soft); font-size: 12px; line-height: 1.8; }
+.ggb-help summary { width: fit-content; cursor: pointer; }
+.ggb-help p { margin: 8px 0 0; }
+@container (max-width: 650px) {
+  .ggb-run-panel .collapsible-panel-body { gap: 14px; }
+  .ggb-run-panel .ggb-fields { display: block; grid-column: 1 / -1; }
+  .ggb-repeat { margin-top: 14px; }
+  .ggb-run-footer { grid-column: 1 / -1; }
+  .ggb-condition-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (pointer: coarse), (max-width: 640px) {
+  .ggb-page .calculator-field input, .ggb-page .calculator-field select, .ggb-module-choice select { min-height: 44px; font-size: 16px; }
+  .ggb-module-choice label, .ggb-select-row, .ggb-run-panel .collapsible-panel-actions button, .ggb-count-entry .button, .ggb-count-list button { min-height: 44px; }
+  .ggb-count-list button { min-width: 44px; }
+}

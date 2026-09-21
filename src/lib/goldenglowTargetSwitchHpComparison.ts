@@ -9,6 +9,7 @@ import {
   GOLDENGLOW_TARGET_SWITCH_GRID_LIMITS,
   validateGoldenglowTargetSwitchGridWorkload,
 } from './goldenglowTargetSwitchGrid.ts'
+import type { GoldenglowTargetSwitchExecutionOptions } from './goldenglowTargetSwitch.ts'
 
 export const HP_COMPARISON_LIMITS = {
   maxBuilds: 8,
@@ -46,8 +47,8 @@ export interface HpComparisonDisplaySeries extends HpComparisonIdentity {
 }
 
 /** All selected builds must pass validation before any simulation starts. */
-export function validateHpComparisonInput(input: HpComparisonInput): void {
-  snapshotComparison(input)
+export function validateHpComparisonInput(input: HpComparisonInput, options?: GoldenglowTargetSwitchExecutionOptions): void {
+  snapshotComparison(input, options)
 }
 
 /**
@@ -57,8 +58,9 @@ export function validateHpComparisonInput(input: HpComparisonInput): void {
 export function simulateGoldenglowTargetSwitchHpComparison(
   input: HpComparisonInput,
   onPoint?: (message: Extract<HpComparisonMessage, { type: 'point' }>) => void,
+  options?: GoldenglowTargetSwitchExecutionOptions,
 ): HpComparisonSeries[] {
-  const builds = snapshotComparison(input)
+  const builds = snapshotComparison(input, options)
   const totalPoints = builds.reduce((total, build) => total + build.input.enemyHps.length, 0)
   let completedPoints = 0
   return builds.map((build) => {
@@ -72,7 +74,7 @@ export function simulateGoldenglowTargetSwitchHpComparison(
         },
         completedPoints, totalPoints,
       })
-    })
+    }, options)
     return { ...copyComparisonIdentity(build), points: result.points }
   })
 }
@@ -190,7 +192,7 @@ function copyComparisonIdentity(item: HpComparisonIdentity): HpComparisonIdentit
   }
 }
 
-function snapshotComparison(input: HpComparisonInput): HpComparisonBuild[] {
+function snapshotComparison(input: HpComparisonInput, options?: GoldenglowTargetSwitchExecutionOptions): HpComparisonBuild[] {
   if (!input || !Array.isArray(input.builds)
     || input.builds.length < 1 || input.builds.length > HP_COMPARISON_LIMITS.maxBuilds) {
     throw new RangeError(`比較するMODは1〜${HP_COMPARISON_LIMITS.maxBuilds}件選んでください。`)
@@ -216,7 +218,7 @@ function snapshotComparison(input: HpComparisonInput): HpComparisonBuild[] {
     try {
       totalWork += validateGoldenglowTargetSwitchGridWorkload({
         ...snapshot, enemyResistances: [snapshot.enemyResistance],
-      })
+      }, options)
     } catch (cause) {
       if (cause instanceof RangeError) {
         throw new RangeError(cause.message.replaceAll('表全体', 'HP全体')

@@ -16,6 +16,24 @@
 .gg2-settings { min-width: 0; flex: 1 1 100%; }
 .gg2-settings summary { width: fit-content; padding: 4px 0; color: var(--text-soft); font-size: 11px; cursor: pointer; }
 .gg2-settings-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.gg2-common-panel > .collapsible-panel-header { position: relative; display: flex; align-items: center; flex-wrap: wrap; background: var(--surface-soft); }
+.gg2-common-panel.open > .collapsible-panel-header { border-bottom: 1px solid var(--border); }
+.gg2-common-panel .collapsible-panel-header > .collapsible-panel-title { flex: 1 1 170px; min-width: 0; }
+.gg2-common-panel .collapsible-panel-header .collapsible-panel-heading { border-bottom: 0; }
+.gg2-common-panel .collapsible-panel-actions { margin-left: auto; padding: 4px 12px; }
+.gg2-common-panel .collapsible-panel-actions[hidden] { display: none; }
+.gg2-workload { color: var(--text-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
+.gg2-workload summary { display: flex; align-items: center; gap: 6px; min-height: 34px; list-style: none; cursor: pointer; white-space: nowrap; }
+.gg2-workload summary::-webkit-details-marker { display: none; }
+.gg2-workload summary::after { content: '+'; margin-left: 3px; color: var(--text-muted); }
+.gg2-workload[open] summary::after { content: '−'; }
+.gg2-workload summary strong { color: var(--text); font-weight: 600; }
+.gg2-workload-popover { position: absolute; top: 100%; right: 10px; z-index: 8; width: min(290px, calc(100% - 20px)); margin-top: 6px; padding: 16px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); }
+.gg2-workload-label { color: var(--text-soft); }
+.gg2-workload-total { display: block; margin: 4px 0 16px; font-size: 22px; font-weight: 600; }
+.gg2-workload dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; margin: 0; }
+.gg2-workload dt { color: var(--text-soft); }
+.gg2-workload dd { margin: 0; text-align: right; }
 .gg2-output-panel > .collapsible-panel-header { display: flex; align-items: center; flex-wrap: wrap; background: var(--surface-soft); }
 .gg2-output-panel.open > .collapsible-panel-header { border-bottom: 1px solid var(--border); }
 .gg2-output-panel .collapsible-panel-header > .collapsible-panel-title { flex: 1 1 210px; min-width: 0; }
@@ -89,6 +107,8 @@
 .gg2-help summary { cursor: pointer; }
 .gg2-help p { margin: 8px 0 0; }
 @container (max-width: 600px) {
+  .gg2-common-panel .collapsible-panel-heading-summary > span { display: none; }
+  .gg2-workload summary { min-height: 44px; }
   .gg2-condition-fields { gap: 12px; }
   .gg2-condition-fields > .calculator-field { flex: 1 1 130px; }
   .gg2-settings-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -103,6 +123,7 @@
   .gg2-settings-fields { grid-template-columns: minmax(0, 1fr); }
 }
 @media (pointer: coarse) {
+  .gg2-workload summary { min-height: 44px; }
   .gg2-fields .calculator-field input, .gg2-fields .calculator-field select { font-size: 16px; min-height: 44px; }
   .gg2-settings summary, .gg2-results-table .gg2-table-hp { min-height: 44px; }
   .gg2-run-actions button { min-height: 44px; }

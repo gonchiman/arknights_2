@@ -8,6 +8,7 @@ import { GoldenglowHomePage } from './components/GoldenglowHomePage'
 import { GoldenglowPerformancePage } from './components/GoldenglowPerformancePage'
 import { GoldenglowTargetSwitchPage } from './components/GoldenglowTargetSwitchPage'
 import { GoldenglowTargetSwitchTwoPage } from './components/GoldenglowTargetSwitchTwoPage'
+import { GoldenglowTrialBenchmarkPage } from './components/GoldenglowTrialBenchmarkPage'
 import { EnemyAnalysis } from './components/EnemyAnalysis'
 import { EnemyDatabase } from './components/EnemyDatabase'
 import { OperatorComparison } from './components/OperatorComparison'
@@ -270,7 +271,7 @@ export default function App() {
 
         <main className="app-content">
         <PanelStateScope.Provider value={displayedRoute.view}>
-        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'enemy-analysis' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-target-switch-two' && displayedRoute.view !== 'goldenglow-single-trial' && <section className="error-box" role="alert">{error}</section>}
+        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'enemy-analysis' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-target-switch-two' && displayedRoute.view !== 'goldenglow-single-trial' && displayedRoute.view !== 'goldenglow-trial-benchmark' && <section className="error-box" role="alert">{error}</section>}
 
         {/* Keep the directory mounted while viewing a detail page so filters, sort and charts survive returning. */}
         {operatorDirectoryVisited && (displayedRoute.view === 'operators' || displayedRoute.view === 'operator-detail') && (
@@ -297,6 +298,8 @@ export default function App() {
           <GoldenglowTargetSwitchPage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} footerContainer={footerContainer} />
         ) : displayedRoute.view === 'goldenglow-target-switch-two' ? (
           <GoldenglowTargetSwitchTwoPage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
+        ) : displayedRoute.view === 'goldenglow-trial-benchmark' ? (
+          <GoldenglowTrialBenchmarkPage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
         ) : displayedRoute.view === 'goldenglow-single-trial' ? (
           <Suspense fallback={<p className="calculator-loading" role="status">単発シミュレーションを読み込み中…</p>}>
             <GoldenglowSingleTrialPage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} footerContainer={footerContainer} />
