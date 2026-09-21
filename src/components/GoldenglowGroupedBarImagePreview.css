@@ -1,0 +1,5 @@
+.gg-grouped-image-preview { display: grid; gap: 8px; min-width: 0; }
+.gg-grouped-image-preview-heading { display: flex; justify-content: space-between; gap: 12px; color: var(--text-muted); font-size: 12px; }
+.gg-grouped-image-preview-frame { position: relative; min-width: 0; overflow: hidden; background: var(--surface-soft); }
+.gg-grouped-image-preview-position { position: absolute; top: 0; transform-origin: top left; pointer-events: none; }
+.gg-grouped-image-preview-size { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }

@@ -1,9 +1,10 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, type ComponentProps } from 'react'
 import { GOLDENGLOW_OPERATOR_ID } from '../lib/goldenglowExplosion'
 import { buildGoldenglowPerformanceDifferenceCurve, buildGoldenglowPerformanceDifferences } from '../lib/goldenglowPerformanceDifference'
 import { buildGoldenglowPerformancePresets } from '../lib/goldenglowPerformancePresets'
 import { buildGoldenglowPerformanceRatios, buildGoldenglowPerformanceRatioCurve, type GoldenglowPerformanceRatioMode } from '../lib/goldenglowPerformanceRatio'
-import { getGoldenglowPerformanceColor } from '../lib/goldenglowPerformanceColors'
+import { getModuleComparisonColors } from '../lib/moduleColors'
+import { getChartImageLayout } from '../lib/chartImageLayout'
 import { deriveGoldenglowGuideSkills } from '../lib/goldenglowGuideSkill'
 import {
   buildGoldenglowPerformanceComparison,
@@ -26,6 +27,7 @@ import { GoldenglowOperatorInfo } from './GoldenglowOperatorInfo'
 import { GoldenglowAnalysisHeader } from './GoldenglowAnalysisHeader'
 import { GoldenglowPerformanceBarChart, type GoldenglowBarOrientation, type GoldenglowBarVariant } from './GoldenglowPerformanceBarChart'
 import { GoldenglowPerformanceGroupedBarChart } from './GoldenglowPerformanceGroupedBarChart'
+import { GoldenglowGroupedBarImagePreview } from './GoldenglowGroupedBarImagePreview'
 import { GoldenglowPerformanceChartFrame } from './GoldenglowPerformanceChartFrame'
 import { GoldenglowPerformanceSkillNavigation } from './GoldenglowPerformanceSkillNavigation'
 import { GoldenglowPerformanceNumericTable } from './GoldenglowPerformanceNumericTable'
@@ -88,6 +90,7 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
   const [lineStyle, setLineStyle] = useState<'solid' | 'dashed'>('solid')
   const [showLineEndLabels, setShowLineEndLabels] = useState(false)
   const [barMode, setBarMode] = useState<'single' | 'grouped'>('single')
+  const [showGroupedBarValues, setShowGroupedBarValues] = useState(false)
   const [groupedResistanceStep, setGroupedResistanceStep] = useState(DEFAULT_GOLDENGLOW_RESISTANCE_STEP)
   const [groupedResistanceStepInput, setGroupedResistanceStepInput] = useState(String(DEFAULT_GOLDENGLOW_RESISTANCE_STEP))
   const [stackedBars, setStackedBars] = useState(false)
@@ -98,6 +101,11 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
   const [imageAspect, setImageAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [savingImage, setSavingImage] = useState(false)
   const [imageFilename, setImageFilename] = useState<string | null>(null)
+  const [groupedImageExport, setGroupedImageExport] = useState<{
+    id: number
+    props: ComponentProps<typeof GoldenglowPerformanceGroupedBarChart>
+  } | null>(null)
+  const nextImageId = useRef(1)
   const [imageFeedback, setImageFeedback] = useState<'saved' | 'downloaded' | 'failed' | null>(null)
   const imageSaveInProgress = useRef(false)
   const imageSavePicker = getChartImageSavePicker()
@@ -157,22 +165,34 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
     ? buildGoldenglowPerformanceRatioCurve(lineComparison, chartMetric, effectiveChartBaselineId)
     : chartMetric === 'difference' ? buildGoldenglowPerformanceDifferenceCurve(lineComparison, effectiveChartBaselineId) : lineComparison,
   [lineComparison, chartMetric, effectiveChartBaselineId])
-  const chartColumns = useMemo<GoldenglowPerformanceChartColumn[]>(() => chartComparison.map((column) => ({
-    id: column.build.id,
-    label: `${moduleLabel(column.build, moduleChoices)}（${buildCondition(column.build)}）`,
-    color: getGoldenglowPerformanceColor(column.build, moduleChoices),
-    values: column.values,
-  })).filter((column) => !chartRelative || column.id !== effectiveChartBaselineId),
-  [chartComparison, moduleChoices, chartRelative, effectiveChartBaselineId])
-  const chartSeries = useMemo<ComparisonChartSeries[]>(() => chartCurve.map((column) => ({
-    id: column.build.id,
-    label: `${moduleLabel(column.build, moduleChoices)}（${buildCondition(column.build)}）`,
-    shortLabel: moduleLabel(column.build, moduleChoices),
-    detailLabel: buildCondition(column.build),
-    color: getGoldenglowPerformanceColor(column.build, moduleChoices),
-    points: column.values.map((value) => ({ x: value.resistance, value: value.expectedTotalDamage })),
-  })).filter((series) => !chartRelative || series.id !== effectiveChartBaselineId),
-  [chartCurve, chartRelative, effectiveChartBaselineId, moduleChoices])
+  const chartColumns = useMemo<GoldenglowPerformanceChartColumn[]>(() => {
+    const visible = chartComparison.filter((column) => !chartRelative || column.build.id !== effectiveChartBaselineId)
+    const colors = getModuleComparisonColors(visible.map(({ build }) => ({
+      moduleType: build.moduleId ? moduleChoices.find((choice) => choice.id === build.moduleId)?.type : null,
+      potential: build.potential,
+    })))
+    return visible.map((column, index) => ({
+      id: column.build.id,
+      label: `${moduleLabel(column.build, moduleChoices)}（${buildCondition(column.build)}）`,
+      color: colors[index],
+      values: column.values,
+    }))
+  }, [chartComparison, moduleChoices, chartRelative, effectiveChartBaselineId])
+  const chartSeries = useMemo<ComparisonChartSeries[]>(() => {
+    const visible = chartCurve.filter((column) => !chartRelative || column.build.id !== effectiveChartBaselineId)
+    const colors = getModuleComparisonColors(visible.map(({ build }) => ({
+      moduleType: build.moduleId ? moduleChoices.find((choice) => choice.id === build.moduleId)?.type : null,
+      potential: build.potential,
+    })))
+    return visible.map((column, index) => ({
+      id: column.build.id,
+      label: `${moduleLabel(column.build, moduleChoices)}（${buildCondition(column.build)}）`,
+      shortLabel: moduleLabel(column.build, moduleChoices),
+      detailLabel: buildCondition(column.build),
+      color: colors[index],
+      points: column.values.map((value) => ({ x: value.resistance, value: value.expectedTotalDamage })),
+    }))
+  }, [chartCurve, chartRelative, effectiveChartBaselineId, moduleChoices])
   const permanent = skill?.duration === null
   const duration = skill?.duration ?? viewingDuration
   const chartTitle = chartMetric === 'ratio' ? 'スキル総ダメージの基準比' : chartMetric === 'growth' ? 'スキル総ダメージの増減率'
@@ -213,6 +233,7 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
         : isGroupedBar ? <GoldenglowPerformanceGroupedBarChart columns={chartColumns} resistances={groupedResistanceValues}
           metricLabel={chartTitle} valueAxisLabel={valueAxisLabel} referenceY={referenceY} conditionLabel={chartConditionLabel} difference={chartSigned}
           integerTicks={chartDigits === 0} imageOutput={imageOutput} formatValue={formatChartOutput}
+          showValues={showGroupedBarValues}
           minHeight={minHeight ?? (imageOutput ? 500 : undefined)} />
         : <GoldenglowPerformanceBarChart columns={chartColumns} metricLabel={chartTitle} valueAxisLabel={valueAxisLabel} referenceY={referenceY}
           conditionLabel={chartConditionLabel} difference={chartSigned} integerTicks={chartDigits === 0} imageOutput={imageOutput}
@@ -227,6 +248,15 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
     const chartDetails = isGroupedBar ? `-step${groupedResistanceStep}`
       : singleResistance ? `-${barOrientation}-${barVariant}-res${chartResistance}` : showLineEndLabels ? '-end-labels' : ''
     setImageFeedback(null)
+    setGroupedImageExport(isGroupedBar ? {
+      id: nextImageId.current++,
+      props: {
+        columns: structuredClone(chartColumns), resistances: [...groupedResistanceValues],
+        metricLabel: chartTitle, valueAxisLabel, referenceY, conditionLabel: chartConditionLabel,
+        difference: chartSigned, integerTicks: chartDigits === 0, formatValue: formatChartOutput,
+        showValues: showGroupedBarValues, imageOutput: true,
+      },
+    } : null)
     setImageFilename(`goldenglow-S${skill.skillIndex}-${skill.skillLevelLabel}-${format(duration)}s-${imageChartType}${chartRelative ? `-${chartMetric}-from-${chartBaselineLabel}` : ''}${chartDetails}.png`)
   }
 
@@ -240,12 +270,16 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
       const destination = await selectChartImageDestination(filename, imageSavePicker)
       if (destination.type === 'cancelled') return
       await saveComparisonChartImage({
-        chart: renderChart(true, aspectRatio),
+        chart: groupedImageExport
+          ? <GoldenglowPerformanceGroupedBarChart {...groupedImageExport.props} aspectRatio={aspectRatio} />
+          : renderChart(true, aspectRatio),
+        width: groupedImageExport ? getChartImageLayout({ naturalChartHeight: 334, aspectRatio }).width : undefined,
         filename,
         writeBlob: destination.type === 'file' ? destination.write : undefined,
       })
       setImageFeedback(destination.type === 'file' ? 'saved' : 'downloaded')
       setImageFilename(null)
+      setGroupedImageExport(null)
     } catch {
       setImageFeedback('failed')
     } finally {
@@ -408,7 +442,7 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
                   <option value="grouped">集合棒グラフ</option>
                 </select>
               </label>
-              {isGroupedBar ? <label className="calculator-field gg-performance-graph-resistance">
+              {isGroupedBar ? <><label className="calculator-field gg-performance-graph-resistance">
                 <span>術耐性の刻み</span>
                 <input type="number" aria-label="グラフの術耐性の刻み" min={1} max={100} step={1} value={groupedResistanceStepInput}
                   onChange={(event) => {
@@ -419,7 +453,12 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
                   onBlur={() => setGroupedResistanceStepInput(String(groupedResistanceStep))}
                   onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }}
                 />
-              </label> : <>
+              </label>
+              <label className="gg-performance-stacked-option">
+                <input type="checkbox" checked={showGroupedBarValues}
+                  onChange={(event) => setShowGroupedBarValues(event.target.checked)} />
+                数値を表示
+              </label></> : <>
               <label className="calculator-field gg-performance-graph-resistance">
                 <span>敵の術耐性</span>
                 <input type="number" aria-label="グラフの術耐性" min={0} max={100} step={1} value={chartResistanceInput}
@@ -478,9 +517,17 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
         canChooseLocation={!!imageSavePicker}
         saving={savingImage}
         error={imageFeedback === 'failed'}
+        preview={groupedImageExport && <GoldenglowGroupedBarImagePreview
+          key={`${groupedImageExport.id}:${imageAspect.preset}:${imageAspect.width}:${imageAspect.height}`}
+          chartProps={groupedImageExport.props}
+          aspectRatio={imageAspect.preset !== 'auto' && [imageAspect.width, imageAspect.height]
+            .every((value) => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100)
+            ? Number(imageAspect.width) / Number(imageAspect.height) : undefined}
+        />}
         onClose={() => {
           if (imageSaveInProgress.current) return
           setImageFilename(null)
+          setGroupedImageExport(null)
           setImageFeedback(null)
         }}
         onSave={(filename, aspectRatio) => void saveChartImage(filename, aspectRatio)}
