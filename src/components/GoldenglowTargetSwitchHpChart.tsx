@@ -8,8 +8,11 @@ import {
   type HpDamageBreakdownSegment,
 } from '../lib/goldenglowTargetSwitchHpBreakdown'
 import { getModuleComparisonColors, getModuleColorKey } from '../lib/moduleColors'
+import { getHpRankBands, type HpRankBackgroundMode } from '../lib/hpRankBands'
 import { GoldenglowDamagePatternDefs, GoldenglowDamagePatternSwatch, getGoldenglowDamagePatternFill } from './GoldenglowDamagePattern'
 import './GoldenglowTargetSwitchHpChart.css'
+
+export type HpChartGridStyle = 'none' | 'dashed' | 'solid'
 
 interface GoldenglowTargetSwitchHpChartProps {
   series: readonly HpComparisonDisplaySeries[]
@@ -23,6 +26,8 @@ interface GoldenglowTargetSwitchHpChartProps {
   imageOutput?: boolean
   chartKind?: 'line' | 'bar'
   barMode?: HpComparisonBarMode
+  hpRankBackground?: HpRankBackgroundMode
+  gridStyle?: HpChartGridStyle
   barHps?: readonly number[]
   hideBaseline?: boolean
   onPlotWidthChange?: (width: number) => void
@@ -37,6 +42,8 @@ interface GoldenglowTargetSwitchHpChartSvgProps {
   height: number
   chartKind?: 'line' | 'bar'
   barMode?: HpComparisonBarMode
+  hpRankBackground?: HpRankBackgroundMode
+  gridStyle?: HpChartGridStyle
   barHps?: readonly number[]
   hideBaseline?: boolean
   baselineId?: string
@@ -87,6 +94,7 @@ export function GoldenglowTargetSwitchHpChartSvg({
 function HpChartContent({
   series, maxHp, selectedHp, onSelectHp, stale = false, digits = 2, metric, baselineId, imageOutput = false,
   plotDimensions, chartKind = 'line', barMode = 'total', barHps, hideBaseline = false, onPlotWidthChange,
+  hpRankBackground = 'none', gridStyle = 'solid',
 }: HpChartContentProps) {
   const frameRef = useRef<HTMLDivElement>(null)
   const [measuredWidth, setWidth] = useState(640)
@@ -154,6 +162,8 @@ function HpChartContent({
   const categoryHps = [...new Set(barHps ?? hpValues)]
     .filter((hp) => Number.isFinite(hp) && hp > 0 && hp <= hpLimit)
     .sort((left, right) => left - right)
+  const rankBands = hpRankBackground === 'none' ? [] : getHpRankBands({ chartKind, maxHp: hpLimit, barHps: categoryHps })
+  const rankHeaderHeight = rankBands.length ? 24 : 0
   const plottedHps = chartKind === 'bar' ? categoryHps : hpValues
   const plottedHpSet = new Set(plottedHps)
   const selectableHps = chartKind === 'bar' ? availableHps.filter((hp) => plottedHpSet.has(hp)) : availableHps
@@ -180,7 +190,7 @@ function HpChartContent({
   const margin = {
     left: Math.max(plotDimensions ? 62 : imageOutput ? 56 : 48, Math.ceil(labelWidth + 12)),
     right: 15,
-    top: plotDimensions ? 32 : 34,
+    top: (plotDimensions ? 32 : 34) + rankHeaderHeight,
     bottom: plotDimensions ? 28 : 50,
   }
   const plotRight = Math.max(margin.left + 1, width - margin.right)
@@ -249,6 +259,8 @@ function HpChartContent({
       style={plotDimensions ? { height } : undefined}
       role="img"
       data-bar-mode={activeBarMode}
+      data-hp-rank-background={hpRankBackground}
+      data-grid-style={gridStyle}
       aria-labelledby={`${titleId} ${descriptionId}`}
       onClick={imageOutput ? undefined : selectFromChart}
     >
@@ -258,15 +270,32 @@ function HpChartContent({
         {chartKind === 'bar' && `${categoryHps.length}点のHPを表示しています。`}
         {isBreakdown && `各HPの棒は左から${chartSeries.map((item) => item.label).join('、')}。色はMODの種類と潜在、無地は通常攻撃、斜線は爆発${visibleComponentKeys.has('bodyDamage') ? '、点模様は本体攻撃' : ''}を表します。`}
         {isComposition && '各MODの同じHPでの合計を100%としています。合計がゼロの場合は0%です。'}
+        {rankBands.length > 0 && `HPランクは${chartKind === 'bar' ? '各HPグループ' : '実際のHP境界'}で区分しています。${rankBands.map((band) => `${band.rating}: ${band.label}`).join('。')}`}
         {!imageOutput && '各値は下の敵HP選択欄で確認できます。'}
       </desc>
       {isBreakdown && chartSeries.map((item, index) => (
         <GoldenglowDamagePatternDefs key={item.id} idPrefix={`${patternId}-${index}`} color={item.style.color} />
       ))}
       <text className="ggs-hp-chart-axis-title" x={margin.left} y={18}>{axisLabel}</text>
+      {rankBands.map((band, index) => {
+        const bandLeft = margin.left + band.start * plotWidth
+        const bandWidth = (band.end - band.start) * plotWidth
+        const bandTop = margin.top - rankHeaderHeight
+        return <g key={`${band.rating}-${band.start}`} className="ggs-hp-rank-band" data-rank={band.rating}>
+          <title>{`HPランク ${band.rating}：${band.label}`}</title>
+          <rect className={`ggs-hp-rank-fill ggs-hp-rank-fill--${hpRankBackground}`}
+            data-rank-index={band.index}
+            x={bandLeft} y={bandTop} width={bandWidth}
+            height={hpRankBackground === 'ribbon' ? rankHeaderHeight - 3 : plotBottom - bandTop}
+            fillOpacity={hpRankBackground === 'mono' ? 0.04 + band.index * 0.013 : hpRankBackground === 'ribbon' ? 0.24 : 0.10} />
+          {index > 0 && <line className="ggs-hp-rank-boundary" x1={bandLeft} x2={bandLeft} y1={bandTop} y2={plotBottom} />}
+          {bandWidth >= band.rating.length * 7 + 12 && <text className="ggs-hp-rank-label"
+            x={bandLeft + bandWidth / 2} y={margin.top - 9} textAnchor="middle">{band.rating}</text>}
+        </g>
+      })}
       {yTicks.map((tick, index) => (
         <g key={index}>
-          <line className={`ggs-hp-chart-grid${metric !== 'total' && Math.abs(tick) < valueStep / 2 ? ' ggs-hp-chart-zero' : ''}`} x1={margin.left} x2={plotRight} y1={y(tick)} y2={y(tick)} />
+          {gridStyle !== 'none' && <line className={`ggs-hp-chart-grid${gridStyle === 'dashed' ? ' ggs-hp-chart-grid--dashed' : ''}${metric !== 'total' && Math.abs(tick) < valueStep / 2 ? ' ggs-hp-chart-zero' : ''}`} x1={margin.left} x2={plotRight} y1={y(tick)} y2={y(tick)} />}
           <text className="ggs-hp-chart-tick" x={margin.left - 8} y={y(tick) + 4} textAnchor="end">{formatYTick(tick)}</text>
         </g>
       ))}

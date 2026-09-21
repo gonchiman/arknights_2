@@ -2,9 +2,10 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import type { HpComparisonDisplaySeries, HpComparisonMetric } from '../lib/goldenglowTargetSwitchHpComparison'
 import { getChartImageLayout } from '../lib/chartImageLayout'
 import { getHpDamageBreakdownComponents, type HpComparisonBarMode } from '../lib/goldenglowTargetSwitchHpBreakdown'
+import type { HpRankBackgroundMode } from '../lib/hpRankBands'
 import { ChartImageFrame } from './ChartImageFrame'
 import { GoldenglowDamagePatternSwatch } from './GoldenglowDamagePattern'
-import { GoldenglowTargetSwitchHpChartSvg, getHpComparisonSeriesStyles } from './GoldenglowTargetSwitchHpChart'
+import { GoldenglowTargetSwitchHpChartSvg, getHpComparisonSeriesStyles, type HpChartGridStyle } from './GoldenglowTargetSwitchHpChart'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './saveGoldenglowTargetSwitchHpChartImage.css'
 
@@ -19,6 +20,8 @@ export interface HpChartImageSnapshot {
   notice?: string
   chartKind?: 'line' | 'bar'
   barMode?: HpComparisonBarMode
+  hpRankBackground?: HpRankBackgroundMode
+  gridStyle?: HpChartGridStyle
   barHps?: readonly number[]
   hideBaseline?: boolean
 }
@@ -62,7 +65,8 @@ export function GoldenglowTargetSwitchHpChartImage({ snapshot, aspectRatio, onLa
     </ul>}>
     {({ width, height }) => <GoldenglowTargetSwitchHpChartSvg series={snapshot.series}
       maxHp={snapshot.maxHp} metric={snapshot.metric} digits={snapshot.digits} width={width} height={height}
-      chartKind={snapshot.chartKind} barMode={snapshot.barMode} barHps={snapshot.barHps} hideBaseline={snapshot.hideBaseline} baselineId={snapshot.baselineId} />}
+      chartKind={snapshot.chartKind} barMode={snapshot.barMode} hpRankBackground={snapshot.hpRankBackground} gridStyle={snapshot.gridStyle}
+      barHps={snapshot.barHps} hideBaseline={snapshot.hideBaseline} baselineId={snapshot.baselineId} />}
   </ChartImageFrame>
 }
 

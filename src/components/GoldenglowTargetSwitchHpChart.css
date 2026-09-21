@@ -7,10 +7,26 @@
 .ggs-hp-chart--image .ggs-hp-chart-svg { height: 480px; }
 .ggs-hp-chart-svg--export .ggs-hp-chart-point, .ggs-hp-chart-svg--export .ggs-hp-chart-bar { cursor: default; }
 .ggs-hp-chart-grid { stroke: var(--border); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.ggs-hp-chart-grid--dashed { stroke: var(--text-muted); stroke-dasharray: 4 6; stroke-linecap: butt; stroke-opacity: .65; }
 .ggs-hp-chart-zero { stroke: var(--text-muted); }
 .ggs-hp-chart-axis { fill: none; stroke: var(--border-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .ggs-hp-chart-tick { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .ggs-hp-chart-axis-title { fill: var(--text-soft); font-size: 12px; font-weight: 700; }
+.ggs-hp-rank-fill { fill: var(--ggs-hp-rank-color); }
+/* Equal RGB steps from E (blue) to SS (green), independent of the visible HP range. */
+.ggs-hp-rank-fill[data-rank-index="0"] { --ggs-hp-rank-color: #5e89ae; }
+.ggs-hp-rank-fill[data-rank-index="1"] { --ggs-hp-rank-color: #628ba8; }
+.ggs-hp-rank-fill[data-rank-index="2"] { --ggs-hp-rank-color: #668da2; }
+.ggs-hp-rank-fill[data-rank-index="3"] { --ggs-hp-rank-color: #6a909c; }
+.ggs-hp-rank-fill[data-rank-index="4"] { --ggs-hp-rank-color: #6e9296; }
+.ggs-hp-rank-fill[data-rank-index="5"] { --ggs-hp-rank-color: #72948f; }
+.ggs-hp-rank-fill[data-rank-index="6"] { --ggs-hp-rank-color: #769689; }
+.ggs-hp-rank-fill[data-rank-index="7"] { --ggs-hp-rank-color: #7a9983; }
+.ggs-hp-rank-fill[data-rank-index="8"] { --ggs-hp-rank-color: #7e9b7d; }
+.ggs-hp-rank-fill[data-rank-index="9"] { --ggs-hp-rank-color: #829d77; }
+.ggs-hp-rank-fill--mono { fill: #63748b; }
+.ggs-hp-rank-boundary { stroke: var(--text-muted); stroke-opacity: .2; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.ggs-hp-rank-label { fill: var(--text-soft); font-size: 11px; font-weight: 600; }
 .ggs-hp-chart-line { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .ggs-hp-chart-point { fill: var(--surface); stroke: currentColor; stroke-width: 1.5; vector-effect: non-scaling-stroke; cursor: pointer; }
 .ggs-hp-chart-point--selected { fill: currentColor; stroke-width: 2; }
