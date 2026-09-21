@@ -1,6 +1,36 @@
 /* Keep the distribution part of the output panel; shared chart styles also serve the operator page. */
 .enemy-distribution-panel .enemy-distribution-body { padding: 0; }
 
+.enemy-distribution-panel,
+.enemy-chart-image { --enemy-ecdf-guide-color: #8556ac; }
+.enemy-ecdf-guide-line { stroke: var(--enemy-ecdf-guide-color); stroke-width: 1.8; pointer-events: none; }
+.enemy-ecdf-guide-line.vertical { stroke-dasharray: 7 4; }
+.enemy-ecdf-guide-line.horizontal { stroke-dasharray: 3 4; }
+.enemy-ecdf-guide-point { fill: var(--enemy-ecdf-guide-color); }
+.enemy-stat-chart .enemy-ecdf-guide-label {
+  fill: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.enemy-ecdf-guide-label-background { fill: var(--surface); pointer-events: none; }
+.enemy-chart-legend .ecdf-guide { color: var(--enemy-ecdf-guide-color); }
+.enemy-chart-legend .ecdf-guide i { border-top-style: dashed; }
+
+.enemy-reference-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  cursor: pointer;
+}
+.enemy-reference-controls input { margin: 0; accent-color: currentColor; }
+.enemy-reference-controls label:has(input:not(:checked)) { color: var(--text-muted); }
+.enemy-reference-controls label:has(input:focus-visible) {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
 .enemy-analysis-route .enemy-distribution-panel .enemy-statistics-settings {
   margin: 0;
   border: 0;
@@ -169,6 +199,7 @@
 }
 
 @media (pointer: coarse) {
+  .enemy-reference-controls label,
   .enemy-distribution-panel .enemy-chart-visibility label,
   .enemy-distribution-panel .enemy-chart-scale-switch button,
   .enemy-distribution-panel .enemy-chart-select-label select,

@@ -176,3 +176,66 @@ test('長い条件でも階級設定を読めるまま保持し設定差と条�
     assert.ok(!name.includes('\ufffd'))
   }
 })
+
+test('累積分布の保存名に縦線と横線の指定を個別・同時に反映する', () => {
+  const options = { kind: 'ECDF' as const, metricLabel: 'HP', scopeLabel: '全敵 · 術耐性＝50' }
+  assert.equal(getEnemyChartImageFilename({ ...options, ecdfGuides: { x: 10000, yPercent: 80 } }),
+    '敵_HP_累積分布_術耐性＝50_縦線10000_横線80pct.png')
+  assert.equal(getEnemyChartImageFilename({ ...options, ecdfGuides: { x: 10000, yPercent: null } }),
+    '敵_HP_累積分布_術耐性＝50_縦線10000.png')
+  assert.equal(getEnemyChartImageFilename({ ...options, ecdfGuides: { x: null, yPercent: 80 } }),
+    '敵_HP_累積分布_術耐性＝50_横線80pct.png')
+})
+
+test('補助線の0と100%を保持し小数・指数表記も丸めない', () => {
+  const options = { kind: 'ECDF' as const, metricLabel: '移動速度' }
+  assert.equal(getEnemyChartImageFilename({ ...options, ecdfGuides: { x: 0, yPercent: 0 } }),
+    '敵_移動速度_累積分布_縦線0_横線0pct.png')
+  assert.equal(getEnemyChartImageFilename({ ...options, ecdfGuides: { x: 1.23456789, yPercent: 100 } }),
+    '敵_移動速度_累積分布_縦線1.23456789_横線100pct.png')
+  assert.equal(getEnemyChartImageFilename({ ...options, ecdfGuides: { x: 1e-7, yPercent: 80.123456789 } }),
+    '敵_移動速度_累積分布_縦線1e-7_横線80.123456789pct.png')
+})
+
+test('空欄や不正な補助線は保存名と既存ハッシュに影響しない', () => {
+  const options = { kind: 'ECDF' as const, metricLabel: 'HP', scopeLabel: '全敵 · 検索「A/B」' }
+  const previousName = getEnemyChartImageFilename(options)
+  assert.equal(getEnemyChartImageFilename({ ...options, ecdfGuides: { x: null, yPercent: null } }), previousName)
+  for (const value of [-1, NaN, Infinity, -Infinity]) {
+    assert.equal(getEnemyChartImageFilename({ ...options, ecdfGuides: { x: value, yPercent: null } }), previousName)
+    assert.equal(getEnemyChartImageFilename({ ...options, ecdfGuides: { x: null, yPercent: value } }), previousName)
+  }
+  assert.equal(getEnemyChartImageFilename({ ...options, ecdfGuides: { x: null, yPercent: 100.001 } }), previousName)
+  assert.equal(getEnemyChartImageFilename({ ...options, ecdfGuides: { x: 10000, yPercent: 101 } }),
+    getEnemyChartImageFilename({ ...options, ecdfGuides: { x: 10000, yPercent: null } }))
+  assert.equal(getEnemyChartImageFilename({ ...options, ecdfGuides: { x: -1, yPercent: 80 } }),
+    getEnemyChartImageFilename({ ...options, ecdfGuides: { x: null, yPercent: 80 } }))
+})
+
+test('累積分布以外への補助線指定は既存名と階級設定を変えない', () => {
+  for (const kind of kinds.filter((kind) => kind !== 'ECDF')) {
+    const options = { kind, metricLabel: 'HP', scopeLabel: '全敵 · 検索「A/B」',
+      histogramSettings: { binWidth: 5000, upperBound: 100000 } }
+    assert.equal(getEnemyChartImageFilename({ ...options, ecdfGuides: { x: 10000, yPercent: 80 } }),
+      getEnemyChartImageFilename(options))
+  }
+})
+
+test('長い条件でも補助線を読めるまま保持し補助線差と条件差を識別する', () => {
+  const scopeLabel = `全敵 · 検索「${'敵😀'.repeat(100)}」 · 術耐性＝50`
+  const options = { kind: 'ECDF' as const, metricLabel: 'HP', scopeLabel,
+    ecdfGuides: { x: 10000, yPercent: 80 } }
+  const names = [
+    getEnemyChartImageFilename(options),
+    getEnemyChartImageFilename({ ...options, ecdfGuides: { x: 20000, yPercent: 80 } }),
+    getEnemyChartImageFilename({ ...options, ecdfGuides: { x: 10000, yPercent: 90 } }),
+    getEnemyChartImageFilename({ ...options, scopeLabel: scopeLabel.replace('50', '0') }),
+  ]
+  assert.equal(new Set(names).size, names.length)
+  assert.equal(new Set(names.map((name) => name.match(/_([0-9a-f]{8})\.png$/)?.[1])).size, names.length)
+  for (const name of names) {
+    assert.ok(new TextEncoder().encode(name).length <= 200)
+    assert.match(name, /_縦線(?:10000|20000)_横線(?:80|90)pct_[0-9a-f]{8}\.png$/)
+    assert.ok(!name.includes('\ufffd'))
+  }
+})

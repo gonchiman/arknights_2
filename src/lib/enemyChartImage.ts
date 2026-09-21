@@ -38,12 +38,14 @@ export function getEnemyChartImageFilename({
   secondaryMetricLabel,
   scopeLabel,
   histogramSettings,
+  ecdfGuides,
 }: {
   kind: EnemyChartKind
   metricLabel: string
   secondaryMetricLabel?: string
   scopeLabel?: string
   histogramSettings?: { binWidth: number; upperBound: number }
+  ecdfGuides?: { x: number | null; yPercent: number | null }
 }): string {
   const metrics = [sanitizeFilenamePart(metricLabel) || 'ステータス']
   if (kind === 'SCATTER' && secondaryMetricLabel) {
@@ -56,13 +58,21 @@ export function getEnemyChartImageFilename({
     && Number.isFinite(histogramSettings.binWidth) && histogramSettings.binWidth > 0
     && Number.isFinite(histogramSettings.upperBound) && histogramSettings.upperBound > 0
     ? histogramSettings : null
-  const settingsSuffix = settings ? `_幅${settings.binWidth}_上限${settings.upperBound}` : ''
+  const guideX = kind === 'ECDF' && ecdfGuides?.x != null
+    && Number.isFinite(ecdfGuides.x) && ecdfGuides.x >= 0 ? ecdfGuides.x : null
+  const guideYPercent = kind === 'ECDF' && ecdfGuides?.yPercent != null
+    && Number.isFinite(ecdfGuides.yPercent) && ecdfGuides.yPercent >= 0 && ecdfGuides.yPercent <= 100
+    ? ecdfGuides.yPercent : null
+  const settingsSuffix = (settings ? `_幅${settings.binWidth}_上限${settings.upperBound}` : '')
+    + (guideX !== null ? `_縦線${guideX}` : '')
+    + (guideYPercent !== null ? `_横線${guideYPercent}pct` : '')
   const base = `敵_${metrics.join('_')}_${chartNames[kind]}${safeScope ? `_${safeScope}` : ''}`
   const encoder = new TextEncoder()
   if (safeScope !== scope || encoder.encode(`${base}${settingsSuffix}.png`).length > 200) {
     // Preserve distinctions lost through replacement or shortening, including the condition's tail.
     const identityParts: unknown[] = [kind, metricLabel, secondaryMetricLabel, scopeLabel]
     if (settings) identityParts.push(settings.binWidth, settings.upperBound)
+    if (guideX !== null || guideYPercent !== null) identityParts.push('ecdfGuides', guideX, guideYPercent)
     const identity = JSON.stringify(identityParts)
     let hash = 2166136261
     for (let index = 0; index < identity.length; index += 1) {
