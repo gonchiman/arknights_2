@@ -26,6 +26,10 @@
 .ggs-hp-chart-damage { display: flex; flex-direction: column; gap: 3px; }
 .ggs-hp-chart-damage > span { color: var(--text-soft); font-size: 10px; }
 .ggs-hp-chart-damage strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+.ggs-hp-chart-component-values { display: grid; gap: 4px; margin-top: 4px; }
+.ggs-hp-chart-component-values > span { display: flex; align-items: center; gap: 6px; }
+.ggs-hp-chart-component-values b { margin-left: auto; color: var(--text-soft); font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.ggs-hp-chart-component-swatch { flex: 0 0 14px; width: 14px; height: 12px; }
 @media (max-width: 640px) {
   .ggs-hp-chart-readout select { min-height: 44px; font-size: 16px; }
   .ggs-hp-chart-values { flex-basis: 100%; justify-content: space-between; gap: 10px 12px; }

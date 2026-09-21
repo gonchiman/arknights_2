@@ -71,6 +71,10 @@ test('進捗はMOD順・HP順に通知し、全MODに通じた点数を返す', 
     progress.push(structuredClone(message))
     message.point.expectedDamage = -1
     message.point.enemyHp = -1
+    assert.ok(message.point.damageBreakdown)
+    message.point.damageBreakdown.normalDamage = -1
+    message.point.damageBreakdown.explosionDamage = -1
+    message.point.damageBreakdown.bodyDamage = -1
   })
   assert.deepEqual(progress.map((message) => [message.buildId, message.point.enemyHp, message.completedPoints, message.totalPoints]), [
     ['none', 1_000, 1, 6], ['none', 10_000, 2, 6], ['none', 20_000, 3, 6],
@@ -216,6 +220,33 @@ test('表示値はHPで対応づけ、全精度の総量・正負の差・増加
   assert.deepEqual(percent[0].points.map((point) => point.value), [0, 0, null, null])
   assert.deepEqual(percent[1].points.map((point) => point.value), [50, -50, null, null])
   assert.deepEqual(totals, before)
+})
+
+test('内訳は総量表示だけに引き継ぎ、表示値や重複HPから元の内訳を変更できない', () => {
+  const series: HpComparisonSeries[] = [{
+    id: 'none', label: '未装備', points: [
+      { enemyHp: 1_000, expectedDamage: 100.25,
+        damageBreakdown: { normalDamage: 60.125, explosionDamage: 30, bodyDamage: 10.125 } },
+      { enemyHp: 2_000, expectedDamage: 0,
+        damageBreakdown: { normalDamage: 0, explosionDamage: 0, bodyDamage: 0 } },
+      { enemyHp: 3_000, expectedDamage: NaN,
+        damageBreakdown: { normalDamage: 1, explosionDamage: 2, bodyDamage: 3 } },
+      { enemyHp: 4_000, expectedDamage: 20 },
+    ],
+  }]
+  const before = structuredClone(series)
+  const hps = [1_000, 2_000, 3_000, 4_000, 5_000, 1_000]
+  const total = createHpComparisonDisplaySeries(series, hps, 'total', 'none')
+  assert.deepEqual(total[0].points[0].damageBreakdown, series[0].points[0].damageBreakdown)
+  assert.deepEqual(total[0].points[1].damageBreakdown, { normalDamage: 0, explosionDamage: 0, bodyDamage: 0 })
+  for (const index of [2, 3, 4]) assert.equal('damageBreakdown' in total[0].points[index], false)
+  total[0].points[0].damageBreakdown!.normalDamage = -1
+  assert.deepEqual(total[0].points[5].damageBreakdown, series[0].points[0].damageBreakdown)
+  assert.deepEqual(series, before)
+  for (const metric of ['difference', 'percent'] as const) {
+    const display = createHpComparisonDisplaySeries(series, hps, metric, 'none')
+    assert.ok(display[0].points.every((point) => !('damageBreakdown' in point)))
+  }
 })
 
 test('基準を変更すると同じ計算結果から差分を作り直せる', () => {

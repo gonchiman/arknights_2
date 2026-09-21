@@ -1,7 +1,14 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { MouseEvent } from 'react'
 import type { HpComparisonDisplaySeries } from '../lib/goldenglowTargetSwitchHpComparison'
+import {
+  getHpDamageBreakdownComponents,
+  getHpDamageBreakdownSegments,
+  type HpComparisonBarMode,
+  type HpDamageBreakdownSegment,
+} from '../lib/goldenglowTargetSwitchHpBreakdown'
 import { getModuleComparisonColors, getModuleColorKey } from '../lib/moduleColors'
+import { GoldenglowDamagePatternDefs, GoldenglowDamagePatternSwatch, getGoldenglowDamagePatternFill } from './GoldenglowDamagePattern'
 import './GoldenglowTargetSwitchHpChart.css'
 
 interface GoldenglowTargetSwitchHpChartProps {
@@ -15,6 +22,7 @@ interface GoldenglowTargetSwitchHpChartProps {
   baselineId: string
   imageOutput?: boolean
   chartKind?: 'line' | 'bar'
+  barMode?: HpComparisonBarMode
   barHps?: readonly number[]
   hideBaseline?: boolean
   onPlotWidthChange?: (width: number) => void
@@ -28,6 +36,7 @@ interface GoldenglowTargetSwitchHpChartSvgProps {
   width: number
   height: number
   chartKind?: 'line' | 'bar'
+  barMode?: HpComparisonBarMode
   barHps?: readonly number[]
   hideBaseline?: boolean
   baselineId?: string
@@ -77,7 +86,7 @@ export function GoldenglowTargetSwitchHpChartSvg({
 
 function HpChartContent({
   series, maxHp, selectedHp, onSelectHp, stale = false, digits = 2, metric, baselineId, imageOutput = false,
-  plotDimensions, chartKind = 'line', barHps, hideBaseline = false, onPlotWidthChange,
+  plotDimensions, chartKind = 'line', barMode = 'total', barHps, hideBaseline = false, onPlotWidthChange,
 }: HpChartContentProps) {
   const frameRef = useRef<HTMLDivElement>(null)
   const [measuredWidth, setWidth] = useState(640)
@@ -85,6 +94,7 @@ function HpChartContent({
   const titleId = useId()
   const descriptionId = useId()
   const selectionId = useId()
+  const patternId = `gg-damage-chart-${useId()}`
   const valueFormat = useMemo(() => new Intl.NumberFormat('ja-JP', {
     maximumFractionDigits: digits,
     signDisplay: metric === 'total' ? 'auto' : 'exceptZero',
@@ -93,6 +103,14 @@ function HpChartContent({
     value == null || !Number.isFinite(value) ? '—' : `${valueFormat.format(value)}${metric === 'percent' ? '%' : ''}`
   )
   const metricLabel = metric === 'total' ? '総ダメージ' : metric === 'difference' ? 'ダメージ差' : '増加率 (%)'
+  const activeBarMode = chartKind === 'bar' && metric === 'total' ? barMode : 'total'
+  const isBreakdown = activeBarMode !== 'total'
+  const isComposition = activeBarMode === 'composition'
+  const axisLabel = isComposition ? '構成比 (%)' : metricLabel
+  const percentageFormat = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: digits })
+  const formatComponent = (segment: HpDamageBreakdownSegment) => (
+    `${formatValue(segment.damage)}${isComposition ? ` (${percentageFormat.format(segment.percentage)}%)` : ''}`
+  )
 
   useEffect(() => {
     const frame = frameRef.current
@@ -123,9 +141,12 @@ function HpChartContent({
         ...point,
         value: point.value != null && Number.isFinite(point.value) && (metric !== 'total' || point.value >= 0)
           ? point.value : null,
+        segments: activeBarMode === 'total' ? null : getHpDamageBreakdownSegments(point.damageBreakdown, activeBarMode),
       })).sort((left, right) => left.enemyHp - right.enemyHp),
     })).filter((item) => !hideBaseline || item.id !== baselineId)
-  }, [series, hpLimit, metric, hideBaseline, baselineId])
+  }, [series, hpLimit, metric, hideBaseline, baselineId, activeBarMode])
+  const components = getHpDamageBreakdownComponents(chartSeries)
+  const visibleComponentKeys = new Set(components.map(({ key }) => key))
   const availableHps = [...new Set(chartSeries.flatMap((item) => (
     item.points.filter((point) => point.value !== null).map((point) => point.enemyHp)
   )))].sort((left, right) => left - right)
@@ -137,12 +158,14 @@ function HpChartContent({
   const plottedHpSet = new Set(plottedHps)
   const selectableHps = chartKind === 'bar' ? availableHps.filter((hp) => plottedHpSet.has(hp)) : availableHps
   const selection = !imageOutput && selectedHp !== null && hpValues.includes(selectedHp) ? selectedHp : null
-  const values = chartSeries.flatMap((item) => item.points.flatMap((point) => (
-    point.value === null ? [] : [point.value]
-  )))
-  const minimum = Math.min(0, ...values)
-  const maximum = Math.max(0, ...values)
-  const valueStep = niceStep((maximum - minimum) / 4)
+  const values = chartSeries.flatMap((item) => item.points.flatMap((point) => {
+    if (point.value === null) return []
+    if (isBreakdown) return point.segments ? [point.segments.at(-1)!.end] : []
+    return [point.value]
+  }))
+  const minimum = isComposition ? 0 : Math.min(0, ...values)
+  const maximum = isComposition ? 100 : Math.max(0, ...values)
+  const valueStep = isComposition ? 25 : niceStep((maximum - minimum) / 4)
   const lowerLimit = Math.floor(minimum / valueStep) * valueStep
   const upperLimit = maximum === minimum ? lowerLimit + valueStep : Math.ceil(maximum / valueStep) * valueStep
   const yTicks = Array.from({ length: Math.round((upperLimit - lowerLimit) / valueStep) + 1 }, (_, index) => {
@@ -150,9 +173,10 @@ function HpChartContent({
     return Math.abs(tick) < valueStep * 1e-8 ? 0 : tick
   })
   const tickFormat = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: Math.min(8, Math.max(0, -Math.floor(Math.log10(valueStep)))) })
+  const formatYTick = (value: number) => `${tickFormat.format(value)}${isComposition ? '%' : ''}`
   const height = plotDimensions?.height ?? (imageOutput ? 480 : 340)
   const characterWidth = plotDimensions ? 6.8 : imageOutput ? 7.5 : 6.8
-  const labelWidth = Math.max(...yTicks.map((tick) => tickFormat.format(tick).length)) * characterWidth
+  const labelWidth = Math.max(...yTicks.map((tick) => formatYTick(tick).length)) * characterWidth
   const margin = {
     left: Math.max(plotDimensions ? 62 : imageOutput ? 56 : 48, Math.ceil(labelWidth + 12)),
     right: 15,
@@ -224,20 +248,26 @@ function HpChartContent({
       height={height}
       style={plotDimensions ? { height } : undefined}
       role="img"
+      data-bar-mode={activeBarMode}
       aria-labelledby={`${titleId} ${descriptionId}`}
       onClick={imageOutput ? undefined : selectFromChart}
     >
-      <title id={titleId}>{`敵HPと${metricLabel}のMOD比較${chartKind === 'bar' ? '（棒グラフ）' : ''}`}</title>
+      <title id={titleId}>{`敵HPと${isComposition ? 'ダメージ構成比' : isBreakdown ? 'ダメージ内訳' : metricLabel}のMOD比較${chartKind === 'bar' ? '（棒グラフ）' : ''}`}</title>
       <desc id={descriptionId}>
-        横軸は敵HP、縦軸は{metricLabel}。{chartSeries.length}種類のMODを比較しています。
+        横軸は敵HP、縦軸は{axisLabel}。{chartSeries.length}種類のMODを比較しています。
         {chartKind === 'bar' && `${categoryHps.length}点のHPを表示しています。`}
+        {isBreakdown && `各HPの棒は左から${chartSeries.map((item) => item.label).join('、')}。色はMODの種類と潜在、無地は通常攻撃、斜線は爆発${visibleComponentKeys.has('bodyDamage') ? '、点模様は本体攻撃' : ''}を表します。`}
+        {isComposition && '各MODの同じHPでの合計を100%としています。合計がゼロの場合は0%です。'}
         {!imageOutput && '各値は下の敵HP選択欄で確認できます。'}
       </desc>
-      <text className="ggs-hp-chart-axis-title" x={margin.left} y={18}>{metricLabel}</text>
+      {isBreakdown && chartSeries.map((item, index) => (
+        <GoldenglowDamagePatternDefs key={item.id} idPrefix={`${patternId}-${index}`} color={item.style.color} />
+      ))}
+      <text className="ggs-hp-chart-axis-title" x={margin.left} y={18}>{axisLabel}</text>
       {yTicks.map((tick, index) => (
         <g key={index}>
           <line className={`ggs-hp-chart-grid${metric !== 'total' && Math.abs(tick) < valueStep / 2 ? ' ggs-hp-chart-zero' : ''}`} x1={margin.left} x2={plotRight} y1={y(tick)} y2={y(tick)} />
-          <text className="ggs-hp-chart-tick" x={margin.left - 8} y={y(tick) + 4} textAnchor="end">{tickFormat.format(tick)}</text>
+          <text className="ggs-hp-chart-tick" x={margin.left - 8} y={y(tick) + 4} textAnchor="end">{formatYTick(tick)}</text>
         </g>
       ))}
       <path className="ggs-hp-chart-axis" d={`M${margin.left},${margin.top}V${plotBottom}H${plotRight}`} />
@@ -262,18 +292,44 @@ function HpChartContent({
       {chartSeries.map((item, seriesIndex) => {
         if (chartKind === 'bar') return (
           <g key={item.id} style={{ color: item.style.color }}>
-            {item.points.map((point) => point.value === null || !plottedHpSet.has(point.enemyHp) ? null : (
-              <rect
-                key={point.enemyHp}
-                className="ggs-hp-chart-bar"
-                x={x(point.enemyHp) - groupWidth / 2 + seriesIndex * (barWidth + barGap)}
-                y={Math.min(y(0), y(point.value))}
-                width={barWidth}
-                height={Math.abs(y(point.value) - y(0))}
-              >
-                <title>{`${item.label}・敵HP ${integerFormat.format(point.enemyHp)}・${metricLabel} ${formatValue(point.value)}`}</title>
-              </rect>
-            ))}
+            {item.points.map((point) => {
+              if (point.value === null || !plottedHpSet.has(point.enemyHp)) return null
+              const barX = x(point.enemyHp) - groupWidth / 2 + seriesIndex * (barWidth + barGap)
+              if (isBreakdown) {
+                if (!point.segments) return null
+                const detail = `${item.label}・敵HP ${integerFormat.format(point.enemyHp)}・総ダメージ ${formatValue(point.value)}・${point.segments.filter(({ key }) => visibleComponentKeys.has(key)).map((segment) => `${segment.label} ${formatComponent(segment)}`).join('・')}`
+                return (
+                  <g key={point.enemyHp} data-series-id={item.id} data-enemy-hp={point.enemyHp}>
+                    {point.segments.filter(({ key }) => visibleComponentKeys.has(key)).map((segment) => (
+                      <rect
+                        key={segment.key}
+                        className="ggs-hp-chart-bar"
+                        data-component={segment.key}
+                        style={{ fill: getGoldenglowDamagePatternFill(segment.key, `${patternId}-${seriesIndex}`, item.style.color) }}
+                        x={barX}
+                        y={y(segment.end)}
+                        width={barWidth}
+                        height={Math.max(0, y(segment.start) - y(segment.end))}
+                      >
+                        <title>{detail}</title>
+                      </rect>
+                    ))}
+                  </g>
+                )
+              }
+              return (
+                <rect
+                  key={point.enemyHp}
+                  className="ggs-hp-chart-bar"
+                  x={barX}
+                  y={Math.min(y(0), y(point.value))}
+                  width={barWidth}
+                  height={Math.abs(y(point.value) - y(0))}
+                >
+                  <title>{`${item.label}・敵HP ${integerFormat.format(point.enemyHp)}・${metricLabel} ${formatValue(point.value)}`}</title>
+                </rect>
+              )
+            })}
           </g>
         )
         let connected = false
@@ -305,6 +361,12 @@ function HpChartContent({
 
   return (
     <figure className={`ggs-hp-chart${stale && !imageOutput ? ' ggs-hp-chart--stale' : ''}${imageOutput ? ' ggs-hp-chart--image' : ''}`}>
+      {isBreakdown && <ul className="ggs-hp-chart-legend ggs-hp-chart-component-legend" aria-label="ダメージ内訳">
+        {components.map((component) => <li key={component.key}>
+          <GoldenglowDamagePatternSwatch componentKey={component.key} />
+          <span>{component.label}</span>
+        </li>)}
+      </ul>}
       <ul className="ggs-hp-chart-legend" aria-label="比較するMOD">
         {chartSeries.map((item) => (
           <li key={item.id}>
@@ -330,12 +392,25 @@ function HpChartContent({
           </select>
         </label>
         <div className="ggs-hp-chart-values" aria-live="polite" aria-atomic="true">
-          {chartSeries.map((item) => (
-            <span className="ggs-hp-chart-damage" key={item.id}>
-              <span>{item.label}</span>
-              <strong style={{ color: item.style.color }}>{formatValue(item.points.find((point) => point.enemyHp === selection)?.value)}</strong>
-            </span>
-          ))}
+          {chartSeries.map((item) => {
+            const point = item.points.find((point) => point.enemyHp === selection)
+            return (
+              <span className="ggs-hp-chart-damage" key={item.id}>
+                <span>{item.label}</span>
+                <strong style={{ color: item.style.color }}>{isBreakdown && '総ダメージ '}{formatValue(point?.value)}</strong>
+                {isBreakdown && <span className="ggs-hp-chart-component-values">
+                  {components.map((component) => {
+                    const segment = point?.value != null ? point.segments?.find(({ key }) => key === component.key) : undefined
+                    return <span key={component.key}>
+                      <GoldenglowDamagePatternSwatch className="ggs-hp-chart-component-swatch" componentKey={component.key} color={item.style.color} width={14} height={12} />
+                      <span>{component.label}</span>
+                      <b>{segment ? formatComponent(segment) : '—'}</b>
+                    </span>
+                  })}
+                </span>}
+              </span>
+            )
+          })}
         </div>
       </figcaption>}
     </figure>

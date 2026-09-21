@@ -5,6 +5,7 @@ import { GOLDENGLOW_TARGET_SWITCH_LIMITS } from '../lib/goldenglowTargetSwitch'
 import {
   createGoldenglowTargetSwitchHpValues,
 } from '../lib/goldenglowTargetSwitchHp'
+import type { HpComparisonBarMode } from '../lib/goldenglowTargetSwitchHpBreakdown'
 import {
   chooseHpComparisonBaseline, createHpComparisonDisplaySeries, createHpComparisonUnequippedDifferenceSeries,
   getHpComparisonAutoBarCount, selectHpComparisonBarHps,
@@ -46,6 +47,8 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const [metric, setMetric] = useState<HpComparisonMetric>('total')
   const [chartKind, setChartKind] = useState<ChartDisplay>('bar')
   const [barCountDisplay, setBarCountDisplay] = useState<BarCountDisplay>('auto')
+  const [showBreakdown, setShowBreakdown] = useState(true)
+  const [breakdownScale, setBreakdownScale] = useState<'damage' | 'ratio'>('damage')
   const [chartPlotWidth, setChartPlotWidth] = useState(560)
   const [differenceMetric, setDifferenceMetric] = useState<'difference' | 'percent'>('difference')
   const [requestedBaselineId, setRequestedBaselineId] = useState('none')
@@ -160,6 +163,8 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
     id: build.id, label: build.label, moduleType: build.moduleType, potential: build.potential, points: [],
   })), [request, calculation.series, builds])
   const hideBaseline = chartKind === 'bar' && metric !== 'total'
+  const barMode: HpComparisonBarMode = chartKind === 'bar' && metric === 'total' && showBreakdown
+    ? breakdownScale === 'ratio' ? 'composition' : 'breakdown' : 'total'
   const baselineId = chooseHpComparisonBaseline(shownSeries, requestedBaselineId)
   const baselineLabel = shownSeries.find((series) => series.id === baselineId)?.label ?? ''
   const displaySeries = useMemo(() => metric === 'difference' && baselineId === 'none'
@@ -172,6 +177,8 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const metricLabel = metric === 'total' ? 'スキル総ダメージ期待値'
     : metric === 'difference' ? hideBaseline ? `${baselineLabel}との差` : '基準との差'
       : hideBaseline ? `${baselineLabel}からの増加率` : '基準からの増加率'
+  const chartLabel = barMode === 'composition' ? 'スキル総ダメージの構成比'
+    : barMode === 'breakdown' ? 'スキル総ダメージの内訳' : metricLabel
   const displayCondition = `${resultCondition}${metric === 'total' ? '' : `・基準 ${baselineLabel}・${metricLabel}`}`
   const hasDisplayPoints = visibleSeries.some((series) => series.points.some((point) => point.value !== null))
   const hasChartPoints = visibleSeries.some((series) => series.points.some((point) => point.value !== null && (chartKind === 'line' || barHps.includes(point.enemyHp))))
@@ -208,10 +215,10 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
     // the form has been edited or a partial calculation has been cancelled.
     setImageExport({
       id: ++imageSnapshotId.current,
-      filename: `goldenglow-target-switch-2-S${sharedInput.skillIndex}-${chartKind}-${metric}-res${sharedInput.enemyResistance}.png`,
+      filename: `goldenglow-target-switch-2-S${sharedInput.skillIndex}-${chartKind}-${metric}${barMode === 'total' ? '' : `-${barMode}`}-res${sharedInput.enemyResistance}.png`,
       snapshot: {
         series: structuredClone(displaySeries), maxHp: sharedInput.enemyHps.at(-1)!,
-        metric, baselineId, digits, chartKind, hideBaseline, barHps: [...barHps], title: `ゴールデングロー：${metricLabel}`,
+        metric, baselineId, digits, chartKind, barMode, hideBaseline, barHps: [...barHps], title: `ゴールデングロー：${chartLabel}`,
         conditions: `${request.skillLabel}・術耐性 ${format(sharedInput.enemyResistance)}`,
         notice: calculation.status === 'complete' ? undefined : `途中結果：${completedPoints} / ${totalPoints}点`,
       },
@@ -313,6 +320,16 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
               <option value="all">すべて</option>
             </select>
           </label>}
+          {chartKind === 'bar' && metric === 'total' && <>
+            <label className="gg2-difference-toggle"><input type="checkbox" checked={showBreakdown}
+              onChange={(event) => setShowBreakdown(event.target.checked)} />内訳表示</label>
+            {showBreakdown && <label className="gg2-output-precision"><span>内訳</span>
+              <select aria-label="棒グラフの内訳の表示方法" value={breakdownScale}
+                onChange={(event) => setBreakdownScale(event.target.value as 'damage' | 'ratio')}>
+                <option value="damage">ダメージ量</option><option value="ratio">割合（100%）</option>
+              </select>
+            </label>}
+          </>}
           <details name="gg2-output-options" className="gg2-comparison-options" onKeyDown={(event) => {
             if (event.key === 'Escape') {
               event.currentTarget.open = false
@@ -384,7 +401,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
           <span className="visually-hidden" role="status">{copyState === true ? '数値表をコピーしました。' : copyState === false ? '数値表をコピーできませんでした。' : ''}</span>
           </>}>
           <div className="gg2-chart-heading">
-            <h3 id="gg2-chart-title">{metricLabel}{metric !== 'total' && !hideBaseline && <span className="gg2-baseline-label">基準：{baselineLabel}</span>}</h3>
+            <h3 id="gg2-chart-title">{chartLabel}{metric !== 'total' && !hideBaseline && <span className="gg2-baseline-label">基準：{baselineLabel}</span>}</h3>
             <button type="button" className="button secondary gg2-save-image" aria-label="グラフをPNG画像で保存" aria-haspopup="dialog"
               disabled={!canSaveImage || savingImage} aria-busy={savingImage} onClick={openImageSaveDialog}>
               {savingImage ? '保存中…' : '画像を保存'}
@@ -393,7 +410,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
           <div className="gg2-chart-area" aria-busy={running}>
             <GoldenglowTargetSwitchHpChart series={displaySeries} maxHp={shownHps.at(-1) ?? 30000}
               selectedHp={selectedHp} onSelectHp={setSelectedHp} stale={stale} digits={digits} metric={metric} baselineId={baselineId}
-              chartKind={chartKind} barHps={barHps} hideBaseline={hideBaseline} onPlotWidthChange={setChartPlotWidth} />
+              chartKind={chartKind} barMode={barMode} barHps={barHps} hideBaseline={hideBaseline} onPlotWidthChange={setChartPlotWidth} />
             {!hasChartPoints && <span className="gg2-empty">{comparisonError ?? (running ? '計算中…' : calculation.status === 'idle' ? '未計算' : hasDisplayPoints ? '表から計算済みのHPを選択してください' : metric !== 'total' && completedPoints ? '比較できる結果なし' : '計算結果なし')}</span>}
           </div>
         </GoldenglowTargetSwitchHpResults>
@@ -409,6 +426,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
           <p>昇進2 Lv.{skill.attackCalculation.level}・信頼100・潜在1。各MODの攻撃力・攻撃速度・素質の変化を適用します。S2は発動後の計測時間内を計算します。抽選番号を固定すると、同じ条件の結果を再現できます。</p>
           <p>ダメージ差は「比較する装備 − 基準の装備」、増加率は「ダメージ差 ÷ 基準の総ダメージ × 100」です。基準が0の増加率と未計算の値は「—」で表示します。差分は計算済みの値から求めるため、表示の切り替えに再計算は不要です。小さな差には試行ごとのばらつきも含まれます。</p>
           <p>棒グラフの表示HP数は、横幅と表示する装備数に合わせて自動調整します。5点・10点・15点・すべての指定もできます。最小・最大HPと選択したHPを含めて表示し、点数が多いときは目盛りの文字を間引きます。表示数を変えても再計算は不要です。画像には保存画面を開いた時点のHPを使います。差分表示では基準以外の装備を表示し、数値表にはすべてのHPを表示します。</p>
+          <p>棒グラフの内訳は、同じ試行で集計した浮遊ユニットの通常攻撃・爆発・本体攻撃の平均です。色はMOD、模様は攻撃の種類を表し、通常攻撃は無地、爆発は斜線、本体攻撃は点模様です。本体攻撃のないS3では2項目になります。割合は各装備・各HPの平均総ダメージを100%とした構成比で、表示を切り替えても再計算しません。数値表は総ダメージを表示します。内訳は総ダメージ表示で利用できます。</p>
         </details>
       </section>
       </CollapsibleCalculatorPanel>
@@ -416,7 +434,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
         aspect={imageAspect} onAspectChange={setImageAspect}
         canChooseLocation={!!imageSavePicker} saving={savingImage} error={imageFeedback === 'failed'} helpMode="popover"
         preview={<GoldenglowTargetSwitchHpChartImagePreview
-          key={`${imageExport.id}:${imageExport.snapshot.chartKind}:${imageExport.snapshot.metric}:${previewAspect ?? 'auto'}`}
+          key={`${imageExport.id}:${imageExport.snapshot.chartKind}:${imageExport.snapshot.metric}:${imageExport.snapshot.barMode}:${previewAspect ?? 'auto'}`}
           snapshot={imageExport.snapshot} aspectRatio={previewAspect} />}
         onClose={() => {
           if (imageSaveInProgress.current) return
