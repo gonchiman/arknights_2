@@ -21,6 +21,14 @@ export const GOLDENGLOW_TARGET_SWITCH_LIMITS = {
   maxDroneOpportunities: 20_000_000,
 } as const
 
+/** Trusted execution policy, kept separate from user/worker simulation inputs. */
+export interface GoldenglowTargetSwitchExecutionOptions {
+  /** Only the dedicated benchmark opts in; every other resource limit remains. */
+  trialLimit?: 'benchmark'
+}
+
+export const GOLDENGLOW_TARGET_SWITCH_BENCHMARK_MAX_TRIALS = 100_000
+
 export interface GoldenglowTargetSwitchInput {
   model: GoldenglowExplosionModel
   skillIndex: number
@@ -600,8 +608,11 @@ export function runGoldenglowRetargetingTrial(
 }
 
 /** Shared by the full single-condition output and the mean-only grid. */
-export function prepareGoldenglowTargetSwitchSimulation(input: GoldenglowTargetSwitchInput): GoldenglowTargetSwitchPreparedSimulation {
-  validateInput(input)
+export function prepareGoldenglowTargetSwitchSimulation(
+  input: GoldenglowTargetSwitchInput,
+  options?: GoldenglowTargetSwitchExecutionOptions,
+): GoldenglowTargetSwitchPreparedSimulation {
+  validateInput(input, options)
   const { model, effectiveAttack, enemyDefense, enemyResistance } = input
   const normalDamageByStack = Array.from({ length: model.droneMaxStack + 1 }, (_, stack) => (
     calculateDamageBreakdown(
@@ -627,7 +638,7 @@ export function prepareGoldenglowTargetSwitchSimulation(input: GoldenglowTargetS
   }
 }
 
-function validateInput(input: GoldenglowTargetSwitchInput): void {
+function validateInput(input: GoldenglowTargetSwitchInput, options?: GoldenglowTargetSwitchExecutionOptions): void {
   const limits = GOLDENGLOW_TARGET_SWITCH_LIMITS
   bounded('skillIndex', input.skillIndex, 1, 3, true)
   bounded('effectiveAttack', input.effectiveAttack, 0, limits.maxEffectiveAttack)
@@ -640,7 +651,8 @@ function validateInput(input: GoldenglowTargetSwitchInput): void {
   if (input.retargetRemainingDrones !== undefined && typeof input.retargetRemainingDrones !== 'boolean') {
     throw new RangeError('retargetRemainingDrones は true または false で指定してください。')
   }
-  bounded('trials', input.trials, 1, limits.maxTrials, true)
+  const maxTrials = options?.trialLimit === 'benchmark' ? GOLDENGLOW_TARGET_SWITCH_BENCHMARK_MAX_TRIALS : limits.maxTrials
+  bounded('trials', input.trials, 1, maxTrials, true)
   bounded('seed', input.seed, 0, limits.maxSeed, true)
   const model = input.model
   if (!model || model.damageType !== 'ARTS') throw new RangeError('model.damageType は ARTS が必要です。')

@@ -1,4 +1,4 @@
-import { GOLDENGLOW_TARGET_SWITCH_LIMITS } from './goldenglowTargetSwitch.ts'
+import { GOLDENGLOW_TARGET_SWITCH_LIMITS, type GoldenglowTargetSwitchExecutionOptions } from './goldenglowTargetSwitch.ts'
 import {
   GOLDENGLOW_TARGET_SWITCH_GRID_LIMITS,
   simulateGoldenglowTargetSwitchGrid,
@@ -52,6 +52,7 @@ export function createGoldenglowTargetSwitchHpValues(start: number, end: number,
 export function simulateGoldenglowTargetSwitchHp(
   input: GoldenglowTargetSwitchHpInput,
   onPoint?: (point: GoldenglowTargetSwitchHpPoint, completedPoints: number, totalPoints: number) => void,
+  options?: GoldenglowTargetSwitchExecutionOptions,
 ): GoldenglowTargetSwitchHpResult {
   if (!input || !Array.isArray(input.enemyHps)) throw new RangeError('敵HPを配列で指定してください。')
   validatePointCount(input.enemyHps.length)
@@ -62,7 +63,7 @@ export function simulateGoldenglowTargetSwitchHp(
       ...input, enemyHps, enemyResistances: [input.enemyResistance],
     }, undefined, (cell, completedPoints, totalPoints) => {
       onPoint?.({ enemyHp: cell.enemyHp, expectedDamage: cell.expectedDamage }, completedPoints, totalPoints)
-    })
+    }, options)
     return {
       points: result.rows[0].expectedDamages.map((expectedDamage, index) => ({
         enemyHp: enemyHps[index], expectedDamage,

@@ -1,4 +1,4 @@
-export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'enemy-analysis' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-single-trial'
+export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'enemy-analysis' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -52,6 +52,13 @@ export const GOLDENGLOW_ANALYSIS_ITEMS: readonly NavigationItem[] = [
     href: '#/analysis/goldenglow/single-trial',
     label: '単発シミュレーション',
     description: '',
+    section: 'operator-analysis',
+  },
+  {
+    id: 'goldenglow-trial-benchmark',
+    href: '#/analysis/goldenglow/trial-benchmark',
+    label: '試行回数の調査',
+    description: '試行回数・計算時間',
     section: 'operator-analysis',
   },
 ]

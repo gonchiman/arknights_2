@@ -245,6 +245,8 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
       <GoldenglowOperatorInfo skill={skill} loading={loading} defaultOpen={false} />
       <CollapsibleCalculatorPanel id="gg2-common-settings" number="02" title="共通設定"
         summary={`${buildLabel}・術耐性 ${resistance}・切り替え ${delay}秒`}
+        className="gg2-common-panel" headerActionsWhenCollapsed
+        headerActions={<SimulationWorkload input={input} />}
         collapsedLabel="設定を表示" defaultOpen={false} bodyClassName="gg-performance-settings-body">
       <form className="gg2-form" noValidate onSubmit={(event) => { event.preventDefault(); calculate() }}>
         <fieldset className="gg2-fields" disabled={running} aria-label="計算条件">
@@ -423,6 +425,48 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
         onSave={(filename, aspectRatio) => void saveChartImage(filename, aspectRatio)} />}
     </>}
   </section>
+}
+
+function SimulationWorkload({ input }: { input: HpComparisonInput | null }) {
+  const detailsRef = useRef<HTMLDetailsElement>(null)
+  // Use the current form input, not the snapshot belonging to previous results.
+  const total = input?.builds.reduce((sum, build) => sum + build.input.enemyHps.length * build.input.trials, 0)
+  const shared = input?.builds[0]?.input
+  const totalLabel = total === undefined ? '—' : total >= 10000 ? `${format(total / 10000)}万回` : `${format(total)}回`
+
+  useEffect(() => {
+    const onOutsidePointer = (event: PointerEvent) => {
+      const details = detailsRef.current
+      if (details?.open && event.target instanceof Node && !details.contains(event.target)) details.open = false
+    }
+    const onEscape = (event: KeyboardEvent) => {
+      const details = detailsRef.current
+      if (event.key !== 'Escape' || !details?.open) return
+      details.open = false
+      details.querySelector('summary')?.focus()
+    }
+    document.addEventListener('pointerdown', onOutsidePointer)
+    document.addEventListener('keydown', onEscape)
+    return () => {
+      document.removeEventListener('pointerdown', onOutsidePointer)
+      document.removeEventListener('keydown', onEscape)
+    }
+  }, [])
+
+  return <details ref={detailsRef} className="gg2-workload" onBlur={(event) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false
+  }}>
+    <summary aria-label={`総試行回数 ${totalLabel}・内訳`}><span>総試行</span><strong>{totalLabel}</strong></summary>
+    <div className="gg2-workload-popover">
+      <span className="gg2-workload-label">総試行回数</span>
+      <strong className="gg2-workload-total">{total === undefined ? '—' : `${format(total)}回`}</strong>
+      <dl>
+        <dt>HPの計算点数</dt><dd>{shared ? `${format(shared.enemyHps.length)}点` : '—'}</dd>
+        <dt>比較する装備</dt><dd>{input ? `${format(input.builds.length)}種類` : '—'}</dd>
+        <dt>試行回数 / 点・装備</dt><dd>{shared ? `${format(shared.trials)}回` : '—'}</dd>
+      </dl>
+    </div>
+  </details>
 }
 
 function NumericField({ label, value, onChange, min, max, step = 'any', invalid }: {
