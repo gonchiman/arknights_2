@@ -79,12 +79,16 @@ export function calculateNumericStatistics(
   histogramScale: HistogramScale = 'LINEAR',
   minimumLinearBinWidth = 0,
   customLinearBinWidth: number | null = null,
+  customLinearUpperBound: number | null = null,
 ): NumericStatistics {
   const values = getFiniteSortedValues(source)
   const count = values.length
   const totalCount = source.length
 
   if (count === 0) {
+    const histogram = histogramScale === 'LINEAR'
+      ? buildFixedUpperBoundLinearHistogram(values, minimumLinearBinWidth, customLinearBinWidth, customLinearUpperBound)
+      : null
     return {
       totalCount,
       count,
@@ -96,8 +100,8 @@ export function calculateNumericStatistics(
       thirdQuartile: null,
       maximum: null,
       standardDeviation: null,
-      bins: [],
-      histogram: null,
+      bins: histogram?.bins ?? [],
+      histogram: histogram?.metadata ?? null,
     }
   }
 
@@ -111,6 +115,7 @@ export function calculateNumericStatistics(
     histogramScale,
     minimumLinearBinWidth,
     customLinearBinWidth,
+    customLinearUpperBound,
   )
 
   return {
@@ -135,6 +140,7 @@ export function calculateNumericStatisticsWithDispersion(
   histogramScale: HistogramScale = 'LINEAR',
   minimumLinearBinWidth = 0,
   customLinearBinWidth: number | null = null,
+  customLinearUpperBound: number | null = null,
 ): NumericStatisticsWithDispersion {
   const statistics = calculateNumericStatistics(
     source,
@@ -142,6 +148,7 @@ export function calculateNumericStatisticsWithDispersion(
     histogramScale,
     minimumLinearBinWidth,
     customLinearBinWidth,
+    customLinearUpperBound,
   )
   const interquartileRange = statistics.firstQuartile === null || statistics.thirdQuartile === null
     ? null
@@ -176,6 +183,17 @@ function divideByPositiveFiniteValue(
 
   const ratio = numerator / denominator
   return Number.isFinite(ratio) ? ratio : null
+}
+
+export function getCustomLinearHistogramMaximum(
+  source: ReadonlyArray<number | null | undefined>,
+  minimumLinearBinWidth = 0,
+): number | null {
+  const values = getFiniteSortedValues(source)
+  if (values.length === 0 || values[0] < 0) return null
+
+  const range = getAdaptiveLinearHistogramRange(values, minimumLinearBinWidth)
+  return range.hasOverflow ? range.normalRangeEnd : values[values.length - 1]
 }
 
 export function validateCustomLinearBinWidth(
@@ -288,14 +306,33 @@ function buildHistogram(
   histogramScale: HistogramScale,
   minimumLinearBinWidth: number,
   customLinearBinWidth: number | null,
+  customLinearUpperBound: number | null,
 ): { bins: HistogramBin[]; metadata: HistogramMetadata } {
   const minimum = sortedValues[0]
   const maximum = sortedValues[sortedValues.length - 1]
 
   if (histogramScale === 'LINEAR' && minimum >= 0) {
-    const validation = validateCustomLinearBinWidth(customLinearBinWidth, maximum)
+    if (customLinearUpperBound !== null) {
+      return buildFixedUpperBoundLinearHistogram(
+        sortedValues,
+        minimumLinearBinWidth,
+        customLinearBinWidth,
+        customLinearUpperBound,
+      ) ?? buildAdaptiveLinearHistogram(sortedValues, minimumLinearBinWidth)
+    }
+    const range = getAdaptiveLinearHistogramRange(sortedValues, minimumLinearBinWidth)
+    const validation = validateCustomLinearBinWidth(
+      customLinearBinWidth,
+      range.hasOverflow ? range.normalRangeEnd : maximum,
+    )
     if (validation.valid && validation.binCount !== null && customLinearBinWidth !== null) {
-      return buildCustomLinearHistogram(sortedValues, customLinearBinWidth, validation.binCount)
+      return buildCustomLinearHistogram(
+        sortedValues,
+        customLinearBinWidth,
+        validation.binCount,
+        range.hasOverflow ? range.normalRangeEnd : null,
+        range.boundaryTolerance,
+      )
     }
     return buildAdaptiveLinearHistogram(sortedValues, minimumLinearBinWidth)
   }
@@ -349,23 +386,53 @@ function buildHistogram(
   }
 }
 
+function buildFixedUpperBoundLinearHistogram(
+  sortedValues: ReadonlyArray<number>,
+  minimumLinearBinWidth: number,
+  customLinearBinWidth: number | null,
+  upperBound: number | null,
+): { bins: HistogramBin[]; metadata: HistogramMetadata } | null {
+  if (upperBound === null || !Number.isFinite(upperBound) || upperBound <= 0) return null
+
+  const emptyBinWidth = Number.isFinite(minimumLinearBinWidth) && minimumLinearBinWidth > 0
+    ? minimumLinearBinWidth
+    : 1
+  const binWidth = customLinearBinWidth ?? (sortedValues.length > 0
+    ? getAdaptiveLinearHistogramRange(sortedValues, minimumLinearBinWidth).binWidth
+    : emptyBinWidth)
+  if (!Number.isFinite(upperBound + binWidth)) return null
+  const validation = validateCustomLinearBinWidth(binWidth, upperBound)
+  if (!validation.valid || validation.binCount === null) return null
+
+  return buildCustomLinearHistogram(sortedValues, binWidth, validation.binCount, upperBound, 0, true)
+}
+
 function buildCustomLinearHistogram(
   sortedValues: ReadonlyArray<number>,
   binWidth: number,
   binCount: number,
+  overflowThreshold: number | null,
+  overflowTolerance: number,
+  keepEmptyOverflow = false,
 ): { bins: HistogramBin[]; metadata: HistogramMetadata } {
-  const normalRangeEnd = normalizeNumber(binWidth * binCount)
+  const normalRangeEnd = overflowThreshold ?? normalizeNumber(binWidth * binCount)
   const bins = Array.from({ length: binCount }, (_, index): HistogramBin => ({
     start: normalizeNumber(binWidth * index),
-    end: normalizeNumber(binWidth * (index + 1)),
+    end: index === binCount - 1 ? normalRangeEnd : normalizeNumber(binWidth * (index + 1)),
     count: 0,
     includesMaximum: index === binCount - 1,
   }))
   const boundaryTolerance = Number.EPSILON
-    * Math.max(1, Math.abs(binWidth), Math.abs(normalRangeEnd))
+    * Math.max(keepEmptyOverflow ? 0 : 1, Math.abs(binWidth), Math.abs(normalRangeEnd))
     * 8
+  let overflowCount = 0
 
   for (const value of sortedValues) {
+    if (overflowThreshold !== null && value > overflowThreshold + overflowTolerance) {
+      overflowCount += 1
+      continue
+    }
+
     const index = value >= normalRangeEnd - boundaryTolerance
       ? binCount - 1
       : Math.min(
@@ -373,6 +440,17 @@ function buildCustomLinearHistogram(
         Math.max(0, Math.floor((value + boundaryTolerance) / binWidth)),
       )
     bins[index].count += 1
+  }
+
+  const hasOverflow = keepEmptyOverflow || overflowCount > 0
+  if (hasOverflow) {
+    bins.push({
+      start: normalRangeEnd,
+      end: normalizeNumber(normalRangeEnd + binWidth),
+      count: overflowCount,
+      includesMaximum: true,
+      isOverflow: true,
+    })
   }
 
   return {
@@ -383,15 +461,15 @@ function buildCustomLinearHistogram(
       normalRangeStart: 0,
       normalRangeEnd,
       normalBinCount: binCount,
-      hasOverflow: false,
+      hasOverflow,
     },
   }
 }
 
-function buildAdaptiveLinearHistogram(
+function getAdaptiveLinearHistogramRange(
   sortedValues: ReadonlyArray<number>,
   minimumBinWidth: number,
-): { bins: HistogramBin[]; metadata: HistogramMetadata } {
+) {
   const percentileValue = quantile(sortedValues, LINEAR_PERCENTILE)
   const safeMinimumWidth = Number.isFinite(minimumBinWidth) && minimumBinWidth > 0
     ? minimumBinWidth
@@ -399,6 +477,17 @@ function buildAdaptiveLinearHistogram(
   const rawBinWidth = Math.max(0, percentileValue) / LINEAR_NORMAL_BIN_COUNT
   const binWidth = roundUpToNiceWidth(Math.max(rawBinWidth, safeMinimumWidth) || 1)
   const normalRangeEnd = normalizeNumber(binWidth * LINEAR_NORMAL_BIN_COUNT)
+  const boundaryTolerance = Math.abs(binWidth) * 1e-10
+  const hasOverflow = sortedValues[sortedValues.length - 1] > normalRangeEnd + boundaryTolerance
+
+  return { binWidth, normalRangeEnd, boundaryTolerance, hasOverflow }
+}
+
+function buildAdaptiveLinearHistogram(
+  sortedValues: ReadonlyArray<number>,
+  minimumBinWidth: number,
+): { bins: HistogramBin[]; metadata: HistogramMetadata } {
+  const { binWidth, normalRangeEnd, boundaryTolerance } = getAdaptiveLinearHistogramRange(sortedValues, minimumBinWidth)
   const bins = Array.from({ length: LINEAR_NORMAL_BIN_COUNT }, (_, index): HistogramBin => ({
     start: normalizeNumber(binWidth * index),
     end: normalizeNumber(binWidth * (index + 1)),
@@ -406,7 +495,6 @@ function buildAdaptiveLinearHistogram(
     includesMaximum: index === LINEAR_NORMAL_BIN_COUNT - 1,
   }))
   let overflowCount = 0
-  const boundaryTolerance = Math.abs(binWidth) * 1e-10
 
   for (const value of sortedValues) {
     if (value > normalRangeEnd + boundaryTolerance) {

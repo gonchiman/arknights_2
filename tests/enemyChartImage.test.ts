@@ -122,3 +122,57 @@ test('長い条件は末尾の違いを保持し、散布図の両軸を含む�
     assert.ok(!name.includes('\ufffd'))
   }
 })
+
+test('ヒストグラムの保存名で階級幅と通常階級の上限を区別する', () => {
+  const options = { kind: 'HISTOGRAM' as const, metricLabel: 'HP', scopeLabel: '全敵 · 術耐性＝50' }
+  const histogramSettings = { binWidth: 5000, upperBound: 100000 }
+  const filename = getEnemyChartImageFilename({ ...options, histogramSettings })
+  assert.equal(filename, '敵_HP_ヒストグラム_術耐性＝50_幅5000_上限100000.png')
+  assert.equal(getEnemyChartImageFilename({ ...options, scopeLabel: '全敵', histogramSettings }),
+    '敵_HP_ヒストグラム_幅5000_上限100000.png')
+  assert.notEqual(filename, getEnemyChartImageFilename({ ...options,
+    histogramSettings: { ...histogramSettings, binWidth: 10000 } }))
+  assert.notEqual(filename, getEnemyChartImageFilename({ ...options,
+    histogramSettings: { ...histogramSettings, upperBound: 200000 } }))
+  assert.notEqual(filename, getEnemyChartImageFilename({ ...options, scopeLabel: '全敵 · 術耐性＝0', histogramSettings }))
+})
+
+test('小数や指数表記の階級設定も数値を丸めず保存名へ反映する', () => {
+  const options = { kind: 'HISTOGRAM' as const, metricLabel: '移動速度' }
+  assert.equal(getEnemyChartImageFilename({ ...options, histogramSettings: { binWidth: 0.05, upperBound: 1.25 } }),
+    '敵_移動速度_ヒストグラム_幅0.05_上限1.25.png')
+  assert.equal(getEnemyChartImageFilename({ ...options, histogramSettings: { binWidth: 1e-7, upperBound: 1e21 } }),
+    '敵_移動速度_ヒストグラム_幅1e-7_上限1e+21.png')
+})
+
+test('不正な階級設定やヒストグラム以外への指定は旧名を変えない', () => {
+  const options = { kind: 'HISTOGRAM' as const, metricLabel: 'HP', scopeLabel: '全敵 · 検索「A/B」' }
+  const previousName = getEnemyChartImageFilename(options)
+  for (const value of [0, -1, NaN, Infinity, -Infinity]) {
+    for (const histogramSettings of [{ binWidth: value, upperBound: 100000 }, { binWidth: 5000, upperBound: value }]) {
+      assert.equal(getEnemyChartImageFilename({ ...options, histogramSettings }), previousName)
+    }
+  }
+  for (const kind of kinds.filter((kind) => kind !== 'HISTOGRAM')) {
+    assert.equal(getEnemyChartImageFilename({ ...options, kind, histogramSettings: { binWidth: 5000, upperBound: 100000 } }),
+      getEnemyChartImageFilename({ ...options, kind }))
+  }
+})
+
+test('長い条件でも階級設定を読めるまま保持し設定差と条件差を識別する', () => {
+  const scopeLabel = `全敵 · 検索「${'敵😀'.repeat(100)}」 · 術耐性＝50`
+  const options = { kind: 'HISTOGRAM' as const, metricLabel: 'HP', scopeLabel,
+    histogramSettings: { binWidth: 5000, upperBound: 100000 } }
+  const names = [
+    getEnemyChartImageFilename(options),
+    getEnemyChartImageFilename({ ...options, histogramSettings: { ...options.histogramSettings, binWidth: 10000 } }),
+    getEnemyChartImageFilename({ ...options, histogramSettings: { ...options.histogramSettings, upperBound: 200000 } }),
+    getEnemyChartImageFilename({ ...options, scopeLabel: scopeLabel.replace('50', '0') }),
+  ]
+  assert.equal(new Set(names).size, names.length)
+  for (const name of names) {
+    assert.ok(new TextEncoder().encode(name).length <= 200)
+    assert.match(name, /_幅(?:5000|10000)_上限(?:100000|200000)_[0-9a-f]{8}\.png$/)
+    assert.ok(!name.includes('\ufffd'))
+  }
+})

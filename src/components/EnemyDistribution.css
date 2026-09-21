@@ -88,6 +88,37 @@
 .enemy-distribution-panel .statistics-histogram-settings-heading span,
 .enemy-distribution-panel .statistics-bin-width-control > small { font-size: 10px; }
 
+.enemy-distribution-panel .enemy-histogram-settings {
+  display: block;
+  padding: 10px;
+}
+.enemy-histogram-settings .statistics-histogram-settings-heading { margin-bottom: 8px; }
+.enemy-histogram-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 20px;
+  max-width: 560px;
+}
+.enemy-histogram-settings .statistics-bin-width-control {
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 28px auto auto;
+  gap: 4px;
+  align-content: start;
+}
+.enemy-histogram-settings .statistics-bin-width-control > label,
+.enemy-histogram-upper-label {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+}
+.enemy-histogram-upper-label { display: flex; align-items: center; gap: 4px; }
+.enemy-histogram-upper-label label { color: var(--text-muted); font-size: 10px; }
+.enemy-histogram-settings .statistics-bin-width-input-row { grid-column: 1; grid-row: 2; }
+.enemy-histogram-settings .statistics-bin-width-input-row input { width: 100%; min-width: 0; flex: 1; }
+.enemy-histogram-settings .statistics-bin-width-input-row button { flex: 0 0 auto; }
+.enemy-histogram-settings .statistics-bin-width-control > small { grid-column: 1; grid-row: 3; }
+
 .enemy-distribution-panel .enemy-analysis-figure,
 .enemy-distribution-panel .enemy-analysis-figure:last-child { border: 0; }
 .enemy-distribution-panel .enemy-analysis-figure figcaption {
