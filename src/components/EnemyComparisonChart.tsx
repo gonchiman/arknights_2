@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import type { EnemyNumericFilterField } from '../lib/enemyNumericFilters'
 import type { HistogramBin, HistogramScale } from '../lib/enemyStatistics'
 import type { EnemyComparisonDistribution, EnemyComparisonSeries, EnemyComparisonYAxis } from '../lib/enemyDistributionComparison'
+import { buildEnemyComparisonCurvePath } from '../lib/enemyComparisonCurve'
 import { ChartImageFrame } from './ChartImageFrame'
 import { getEnemyChartImageLayout } from '../lib/enemyChartImage'
 
@@ -46,7 +47,7 @@ export function EnemyComparisonFigure({ data, onToggle }: { data: EnemyCompariso
   }, [])
   return <figure className="enemy-analysis-figure enemy-comparison-figure">
     <figcaption>
-      <strong>{data.metric.label}の度数折れ線</strong>
+      <strong>{data.metric.label}の分布比較</strong>
       <div className="enemy-comparison-legend" role="group" aria-label="比較系列の表示">
         {data.distribution.series.map((series) => <button type="button" key={series.condition.id}
           aria-pressed={series.condition.visible} onClick={() => onToggle(series.condition.id)}>
@@ -86,6 +87,7 @@ function EnemyComparisonSvg({ data, width, height, image = false }: {
   const center = (bin: HistogramBin) => log
     ? Math.expm1((Math.log1p(bin.start) + Math.log1p(bin.end)) / 2)
     : bin.start + (bin.end - bin.start) / 2
+  const showPoints = bins.length === 1 || bins.slice(1).every((bin, index) => x(center(bin)) - x(center(bins[index])) >= 8)
   // Legend visibility changes neither the shared bins nor the vertical scale.
   const maximumY = Math.max(0, ...allSeries.flatMap((series) => series.bins.map((bin) => amount(bin.count, series.count, yAxis))))
   const step = niceStep(maximumY / 4, yAxis === 'COUNT' ? 1 : 0)
@@ -125,7 +127,7 @@ function EnemyComparisonSvg({ data, width, height, image = false }: {
       onPointerDown={image ? undefined : (event) => { pinned.current = !pinned.current; chooseAt(event.clientX, event.currentTarget) }}>
       <title id={titleId}>{metric.label}の分布比較</title>
       <desc id={descriptionId}>{allSeries.map((series) => `${series.label}：有効データ${series.count}体`).join('。')}。
-        縦軸は{yAxis === 'PERCENT' ? '各条件の有効データ数に対する割合' : '敵数'}。{!image && '左右矢印キーで階級ごとの値を確認できます。'}</desc>
+        縦軸は{yAxis === 'PERCENT' ? '各条件の有効データ数に対する割合' : '敵数'}。各階級の中央の点を曲線でつないでいます。{!image && '左右矢印キーで階級ごとの値を確認できます。'}</desc>
       {ticksY.map((tick) => <g key={tick}>
         <line className="enemy-chart-gridline" x1={left} x2={right} y1={y(tick)} y2={y(tick)} />
         <text className="enemy-chart-tick" x={left - 8} y={y(tick) + 4} textAnchor="end">{format(tick)}{yAxis === 'PERCENT' ? '%' : ''}</text>
@@ -133,8 +135,10 @@ function EnemyComparisonSvg({ data, width, height, image = false }: {
       <rect className="enemy-chart-frame" x={left} y={top} width={right - left} height={bottom - top} />
       {visible.map((series) => <g key={series.condition.id} data-comparison-series={series.condition.id}>
         <path className="enemy-comparison-line" stroke={comparisonColor(series.condition.colorIndex)}
-          d={series.bins.map((bin, i) => `${i === 0 ? 'M' : 'L'} ${x(center(bin))} ${y(amount(bin.count, series.count, yAxis))}`).join(' ')} />
-        {series.bins.length === 1 && <circle cx={x(center(series.bins[0]))} cy={y(amount(series.bins[0].count, series.count, yAxis))} r="3" fill={comparisonColor(series.condition.colorIndex)} />}
+          d={buildEnemyComparisonCurvePath(series.bins.map((bin) => ({ x: x(center(bin)), y: y(amount(bin.count, series.count, yAxis)) })))} />
+        {showPoints && series.bins.map((bin, index) => <circle key={index} className="enemy-comparison-point"
+          cx={x(center(bin))} cy={y(amount(bin.count, series.count, yAxis))} r={series.bins.length === 1 ? 3 : 2.2}
+          stroke={comparisonColor(series.condition.colorIndex)} />)}
       </g>)}
       {active && !image && <g className="enemy-comparison-hover">
         <line x1={selectedX} x2={selectedX} y1={top} y2={bottom} stroke="var(--text-muted)" strokeDasharray="3 3" />
