@@ -13,15 +13,6 @@ interface RatingRange {
   upperInclusive?: boolean
 }
 
-export interface EnemyRatingNumericRange {
-  rating: string
-  label: string
-  lowerBound: number | null
-  lowerInclusive: boolean
-  upperBound: number | null
-  upperInclusive: boolean
-}
-
 // Ranges are contiguous in this order; each lower bound is the previous upper bound.
 const RATING_RANGES: Record<EnemyRatingStat, readonly RatingRange[]> = {
   maxHp: [
@@ -86,21 +77,6 @@ export function getEnemyRatingRanges(stat: EnemyRatingStat): readonly { rating: 
       ? `${BOUND_FORMATTER.format(range.upperBound)} ${range.upperInclusive ? '以下' : '未満'}`
       : ''
     return { rating: range.rating, label: [lower, upper].filter(Boolean).join(' ') }
-  })
-}
-
-export function getEnemyRatingNumericRanges(stat: EnemyRatingStat): readonly EnemyRatingNumericRange[] {
-  const labels = getEnemyRatingRanges(stat)
-  return RATING_RANGES[stat].map((range, index, ranges) => {
-    const previous = ranges[index - 1]
-    return {
-      rating: range.rating,
-      label: labels[index].label,
-      lowerBound: previous?.upperBound ?? null,
-      lowerInclusive: previous !== undefined && !previous.upperInclusive,
-      upperBound: range.upperBound,
-      upperInclusive: range.upperInclusive === true,
-    }
   })
 }
 
