@@ -6,7 +6,6 @@ import {
   createGoldenglowTargetSwitchHpValues,
 } from '../lib/goldenglowTargetSwitchHp'
 import type { HpComparisonBarMode } from '../lib/goldenglowTargetSwitchHpBreakdown'
-import type { HpRankBackgroundMode } from '../lib/hpRankBands'
 import { getHpChartValueAxis, isValidHpChartYAxisRange, type HpChartYAxisMode, type HpChartYAxisRange } from '../lib/goldenglowTargetSwitchHpAxis'
 import {
   chooseHpComparisonBaseline, createHpComparisonDisplaySeries, createHpComparisonUnequippedDifferenceSeries,
@@ -55,7 +54,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const [barCountDisplay, setBarCountDisplay] = useState<BarCountDisplay>('auto')
   const [showBreakdown, setShowBreakdown] = useState(true)
   const [breakdownScale, setBreakdownScale] = useState<'damage' | 'ratio'>('damage')
-  const [hpRankBackground, setHpRankBackground] = useState<HpRankBackgroundMode>('none')
+  const [showHpRanks, setShowHpRanks] = useState(true)
   const [gridStyle, setGridStyle] = useState<HpChartGridStyle>('none')
   const [chartPlotWidth, setChartPlotWidth] = useState(560)
   const [differenceMetric, setDifferenceMetric] = useState<'difference' | 'percent'>('difference')
@@ -252,7 +251,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
       filename: `goldenglow-target-switch-2-S${sharedInput.skillIndex}-${chartKind}-${metric}${barMode === 'total' ? '' : `-${barMode}`}-res${sharedInput.enemyResistance}.png`,
       snapshot: {
         series: structuredClone(displaySeries), maxHp: sharedInput.enemyHps.at(-1)!,
-        metric, baselineId, digits, chartKind, barMode, hpRankBackground, gridStyle, yAxisMode, hideBaseline, barHps: [...barHps], title: `ゴールデングロー：${chartLabel}`,
+        metric, baselineId, digits, chartKind, barMode, showHpRanks, gridStyle, yAxisMode, hideBaseline, barHps: [...barHps], title: `ゴールデングロー：${chartLabel}`,
         manualYAxisRange: { ...manualYAxisRange },
         conditions: `${request.skillLabel}・術耐性 ${format(sharedInput.enemyResistance)}`,
         notice: calculation.status === 'complete' ? undefined : `途中結果：${completedPoints} / ${totalPoints}点`,
@@ -365,15 +364,8 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
               </select>
             </label>}
           </>}
-          <label className="gg2-output-precision"><span>HPランク背景</span>
-            <select aria-label="HPランク背景" value={hpRankBackground}
-              onChange={(event) => setHpRankBackground(event.target.value as HpRankBackgroundMode)}>
-              <option value="none">なし</option>
-              <option value="color">ランク別の色</option>
-              <option value="mono">同系色の濃淡</option>
-              <option value="ribbon">上部の帯</option>
-            </select>
-          </label>
+          <label className="gg2-difference-toggle"><input type="checkbox" checked={showHpRanks}
+            onChange={(event) => setShowHpRanks(event.target.checked)} />HPランク表示</label>
           <label className="gg2-output-precision"><span>横の目盛線</span>
             <select aria-label="横の目盛線" value={gridStyle}
               onChange={(event) => setGridStyle(event.target.value as HpChartGridStyle)}>
@@ -481,7 +473,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
           <div className="gg2-chart-area" aria-busy={running}>
             <GoldenglowTargetSwitchHpChart series={displaySeries} maxHp={shownHps.at(-1) ?? 30000}
               selectedHp={selectedHp} onSelectHp={setSelectedHp} stale={stale} digits={digits} metric={metric} baselineId={baselineId}
-              chartKind={chartKind} barMode={barMode} hpRankBackground={hpRankBackground} gridStyle={gridStyle}
+              chartKind={chartKind} barMode={barMode} showHpRanks={showHpRanks} gridStyle={gridStyle}
               yAxisMode={yAxisMode} manualYAxisRange={manualYAxisRange} barHps={barHps} hideBaseline={hideBaseline} onPlotWidthChange={setChartPlotWidth} />
             {!hasChartPoints && <span className="gg2-empty">{comparisonError ?? (running ? '計算中…' : calculation.status === 'idle' ? '未計算' : hasDisplayPoints ? '表から計算済みのHPを選択してください' : metric !== 'total' && completedPoints ? '比較できる結果なし' : '計算結果なし')}</span>}
           </div>
@@ -499,7 +491,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
           <p>ダメージ差は「比較する装備 − 基準の装備」、増加率は「ダメージ差 ÷ 基準の総ダメージ × 100」です。基準が0の増加率と未計算の値は「—」で表示します。差分は計算済みの値から求めるため、表示の切り替えに再計算は不要です。小さな差には試行ごとのばらつきも含まれます。</p>
           <p>棒グラフの表示HP数は、横幅と表示する装備数に合わせて自動調整します。5点・10点・15点・すべての指定もできます。最小・最大HPと選択したHPを含めて表示し、点数が多いときは目盛りの文字を間引きます。表示数を変えても再計算は不要です。画像には保存画面を開いた時点のHPを使います。差分表示では基準以外の装備を表示し、数値表にはすべてのHPを表示します。</p>
           <p>棒グラフの内訳は、同じ試行で集計した浮遊ユニットの通常攻撃・爆発・本体攻撃の平均です。色はMOD、模様は攻撃の種類を表し、通常攻撃は無地、爆発は斜線、本体攻撃は点模様です。本体攻撃のないS3では2項目になります。割合は各装備・各HPの平均総ダメージを100%とした構成比で、表示を切り替えても再計算しません。数値表は総ダメージを表示します。内訳は総ダメージ表示で利用できます。</p>
-          <p>HPランク背景はサイト共通のHP区分を使います。棒グラフでは表示したHPグループごと、折れ線では実際のHP境界で区切ります。変更に再計算は不要で、保存画像にも反映されます。</p>
+          <p>HPランクはサイト共通の区分を使い、上部の帯で表示します。棒グラフでは表示したHPグループごと、折れ線では実際のHP境界で区切ります。表示の切り替えに再計算は不要で、保存画像にも反映されます。</p>
         </details>
       </section>
       </CollapsibleCalculatorPanel>
@@ -507,7 +499,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
         aspect={imageAspect} onAspectChange={setImageAspect}
         canChooseLocation={!!imageSavePicker} saving={savingImage} error={imageFeedback === 'failed'} helpMode="popover"
         preview={<GoldenglowTargetSwitchHpChartImagePreview
-          key={`${imageExport.id}:${imageExport.snapshot.chartKind}:${imageExport.snapshot.metric}:${imageExport.snapshot.barMode}:${imageExport.snapshot.hpRankBackground}:${imageExport.snapshot.gridStyle}:${previewAspect ?? 'auto'}`}
+          key={`${imageExport.id}:${imageExport.snapshot.chartKind}:${imageExport.snapshot.metric}:${imageExport.snapshot.barMode}:${imageExport.snapshot.showHpRanks}:${imageExport.snapshot.gridStyle}:${previewAspect ?? 'auto'}`}
           snapshot={imageExport.snapshot} aspectRatio={previewAspect} />}
         onClose={() => {
           if (imageSaveInProgress.current) return

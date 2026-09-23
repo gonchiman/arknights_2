@@ -1,7 +1,5 @@
 import { getEnemyRatingNumericRanges, getEnemyStatRating } from './enemyStatRatings.ts'
 
-export type HpRankBackgroundMode = 'none' | 'color' | 'mono' | 'ribbon'
-
 export interface HpRankBand {
   rating: string
   label: string
