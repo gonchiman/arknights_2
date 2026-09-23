@@ -12,6 +12,8 @@
 .ggs-hp-chart-axis { fill: none; stroke: var(--border-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .ggs-hp-chart-tick { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .ggs-hp-chart-axis-title { fill: var(--text-soft); font-size: 12px; font-weight: 700; }
+.ggs-hp-rank-fill { fill: var(--text-muted); }
+.ggs-hp-rank-label { fill: var(--text-soft); font-size: 11px; font-weight: 600; }
 .ggs-hp-chart-line { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .ggs-hp-chart-point { fill: var(--surface); stroke: currentColor; stroke-width: 1.5; vector-effect: non-scaling-stroke; cursor: pointer; }
 .ggs-hp-chart-point--selected { fill: currentColor; stroke-width: 2; }

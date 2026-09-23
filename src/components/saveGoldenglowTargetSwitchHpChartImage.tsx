@@ -21,6 +21,7 @@ export interface HpChartImageSnapshot {
   notice?: string
   chartKind?: 'line' | 'bar'
   barMode?: HpComparisonBarMode
+  showHpRanks?: boolean
   gridStyle?: HpChartGridStyle
   yAxisMode?: HpChartYAxisMode
   manualYAxisRange?: HpChartYAxisRange
@@ -67,7 +68,7 @@ export function GoldenglowTargetSwitchHpChartImage({ snapshot, aspectRatio, onLa
     </ul>}>
     {({ width, height }) => <GoldenglowTargetSwitchHpChartSvg series={snapshot.series}
       minHp={snapshot.minHp} maxHp={snapshot.maxHp} metric={snapshot.metric} digits={snapshot.digits} width={width} height={height}
-      chartKind={snapshot.chartKind} barMode={snapshot.barMode} gridStyle={snapshot.gridStyle}
+      chartKind={snapshot.chartKind} barMode={snapshot.barMode} showHpRanks={snapshot.showHpRanks} gridStyle={snapshot.gridStyle}
       yAxisMode={snapshot.yAxisMode} manualYAxisRange={snapshot.manualYAxisRange}
       barHps={snapshot.barHps} hideBaseline={snapshot.hideBaseline} baselineId={snapshot.baselineId} />}
   </ChartImageFrame>
