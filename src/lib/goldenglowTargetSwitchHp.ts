@@ -38,15 +38,17 @@ export type GoldenglowTargetSwitchHpMessage =
   | { type: 'complete'; result: GoldenglowTargetSwitchHpResult }
   | { type: 'error'; error: string }
 
-/** HP 0 is an axis origin, never a simulation target. The last sample is <= end. */
+/** Replace a zero starting sample with HP 1 while keeping subsequent multiples of step. */
 export function createGoldenglowTargetSwitchHpValues(start: number, end: number, step: number): number[] {
-  validateHpInteger(start, '開始HP')
+  validateHpInteger(start, '開始HP', 0)
   validateHpInteger(end, '終了HP')
   validateHpInteger(step, 'HPの刻み')
   if (start > end) throw new RangeError('終了HPは開始HP以上にしてください。')
-  const count = Math.floor((end - start) / step) + 1
+  // A one-HP step already includes HP 1, so do not simulate that point twice.
+  const first = start === 0 && step === 1 ? 1 : start
+  const count = Math.floor((end - first) / step) + 1
   validatePointCount(count)
-  return Array.from({ length: count }, (_, index) => start + index * step)
+  return Array.from({ length: count }, (_, index) => Math.max(1, first + index * step))
 }
 
 /**
@@ -92,9 +94,9 @@ export function simulateGoldenglowTargetSwitchHp(
   }
 }
 
-function validateHpInteger(value: number, label: string): void {
-  if (!Number.isSafeInteger(value) || value < 1 || value > GOLDENGLOW_TARGET_SWITCH_HP_LIMITS.maxEnemyHp) {
-    throw new RangeError(`${label}は1〜1,000,000,000の整数で指定してください。`)
+function validateHpInteger(value: number, label: string, minimum = 1): void {
+  if (!Number.isSafeInteger(value) || value < minimum || value > GOLDENGLOW_TARGET_SWITCH_HP_LIMITS.maxEnemyHp) {
+    throw new RangeError(`${label}は${minimum}〜1,000,000,000の整数で指定してください。`)
   }
 }
 
