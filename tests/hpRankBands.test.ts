@@ -92,3 +92,40 @@ test('無効な表示上限ではどちらの形式も帯を作らない', () =>
     }
   }
 })
+
+test('折れ線は表示下限で切り、表示範囲に合わせてランクの幅を計算する', () => {
+  const bands = getHpRankBands({ chartKind: 'line', minHp: 4000, maxHp: 15000, barHps: [] })
+  assert.deepEqual(bands.map(({ rating, start, end }) => [rating, start, end]), [
+    ['C', 0, 1000 / 11000],
+    ['B', 1000 / 11000, 4000 / 11000],
+    ['B+', 4000 / 11000, 8000 / 11000],
+    ['A', 8000 / 11000, 1],
+  ])
+  assert.equal(bands[0].label, '3,500 以上 5,000 未満')
+})
+
+test('表示HPが一点だけの場合は境界の包含規則を守って全幅のランクを表示する', () => {
+  for (const [hp, rating] of [[3500, 'C'], [500000, 'S+'], [500001, 'SS']] as const) {
+    for (const chartKind of ['line', 'bar'] as const) {
+      const bands = getHpRankBands({ chartKind, minHp: hp, maxHp: hp, barHps: [hp] })
+      assert.deepEqual(bands.map(({ rating, start, end }) => [rating, start, end]), [[rating, 0, 1]])
+    }
+  }
+})
+
+test('棒は表示下限より小さいHPを除外してからグループ幅を計算する', () => {
+  const bands = getHpRankBands({ chartKind: 'bar', minHp: 5000, maxHp: 12000, barHps: [1000, 4000, 5000, 7000, 8000, 12000, 14000] })
+  assert.deepEqual(bands.map(({ rating, start, end }) => [rating, start, end]), [
+    ['B', 0, 0.5], ['B+', 0.5, 0.75], ['A', 0.75, 1],
+  ])
+})
+
+test('無効な表示下限はグラフと同じく0に戻す', () => {
+  for (const chartKind of ['line', 'bar'] as const) {
+    const options = { chartKind, maxHp: 5000, barHps: [1000, 5000] }
+    const expected = getHpRankBands(options)
+    for (const minHp of [-1, NaN, Infinity, 6000]) {
+      assert.deepEqual(getHpRankBands({ ...options, minHp }), expected)
+    }
+  }
+})

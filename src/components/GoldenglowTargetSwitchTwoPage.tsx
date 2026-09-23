@@ -47,7 +47,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const [moduleSelection, setModuleSelection] = useState<Record<string, boolean>>({})
   const [moduleLevels, setModuleLevels] = useState<Record<string, number>>({})
   const [metric, setMetric] = useState<HpComparisonMetric>('total')
-  const [chartKind, setChartKind] = useState<ChartDisplay>('bar')
+  const [chartKind, setChartKind] = useState<ChartDisplay>('line')
   const [yAxisModes, setYAxisModes] = useState<Partial<Record<HpComparisonMetric, HpChartYAxisMode>>>({})
   const yAxisMode = yAxisModes[metric] ?? 'auto'
   const [yAxisDrafts, setYAxisDrafts] = useState<Partial<Record<HpComparisonMetric, YAxisDraft>>>({})
@@ -250,7 +250,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
       id: ++imageSnapshotId.current,
       filename: `goldenglow-target-switch-2-S${sharedInput.skillIndex}-${chartKind}-${metric}${barMode === 'total' ? '' : `-${barMode}`}-res${sharedInput.enemyResistance}.png`,
       snapshot: {
-        series: structuredClone(displaySeries), maxHp: sharedInput.enemyHps.at(-1)!,
+        series: structuredClone(displaySeries), minHp: sharedInput.enemyHps[0], maxHp: sharedInput.enemyHps.at(-1)!,
         metric, baselineId, digits, chartKind, barMode, showHpRanks, gridStyle, yAxisMode, hideBaseline, barHps: [...barHps], title: `ゴールデングロー：${chartLabel}`,
         manualYAxisRange: { ...manualYAxisRange },
         conditions: `${request.skillLabel}・術耐性 ${format(sharedInput.enemyResistance)}`,
@@ -471,7 +471,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
             {yAxisError && <p id="gg2-axis-error" className="gg2-chart-axis-error" role="alert">{yAxisError}</p>}
           </div>
           <div className="gg2-chart-area" aria-busy={running}>
-            <GoldenglowTargetSwitchHpChart series={displaySeries} maxHp={shownHps.at(-1) ?? 30000}
+            <GoldenglowTargetSwitchHpChart series={displaySeries} minHp={shownHps[0] ?? 1000} maxHp={shownHps.at(-1) ?? 30000}
               selectedHp={selectedHp} onSelectHp={setSelectedHp} stale={stale} digits={digits} metric={metric} baselineId={baselineId}
               chartKind={chartKind} barMode={barMode} showHpRanks={showHpRanks} gridStyle={gridStyle}
               yAxisMode={yAxisMode} manualYAxisRange={manualYAxisRange} barHps={barHps} hideBaseline={hideBaseline} onPlotWidthChange={setChartPlotWidth} />

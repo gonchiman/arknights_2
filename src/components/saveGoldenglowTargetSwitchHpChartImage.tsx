@@ -11,6 +11,7 @@ import './saveGoldenglowTargetSwitchHpChartImage.css'
 
 export interface HpChartImageSnapshot {
   series: readonly HpComparisonDisplaySeries[]
+  minHp: number
   maxHp: number
   metric: HpComparisonMetric
   baselineId: string
@@ -66,7 +67,7 @@ export function GoldenglowTargetSwitchHpChartImage({ snapshot, aspectRatio, onLa
       })}
     </ul>}>
     {({ width, height }) => <GoldenglowTargetSwitchHpChartSvg series={snapshot.series}
-      maxHp={snapshot.maxHp} metric={snapshot.metric} digits={snapshot.digits} width={width} height={height}
+      minHp={snapshot.minHp} maxHp={snapshot.maxHp} metric={snapshot.metric} digits={snapshot.digits} width={width} height={height}
       chartKind={snapshot.chartKind} barMode={snapshot.barMode} showHpRanks={snapshot.showHpRanks} gridStyle={snapshot.gridStyle}
       yAxisMode={snapshot.yAxisMode} manualYAxisRange={snapshot.manualYAxisRange}
       barHps={snapshot.barHps} hideBaseline={snapshot.hideBaseline} baselineId={snapshot.baselineId} />}

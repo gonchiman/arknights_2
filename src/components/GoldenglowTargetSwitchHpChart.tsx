@@ -17,6 +17,7 @@ export type HpChartGridStyle = 'none' | 'dashed' | 'solid'
 
 interface GoldenglowTargetSwitchHpChartProps {
   series: readonly HpComparisonDisplaySeries[]
+  minHp: number
   maxHp: number
   selectedHp: number | null
   onSelectHp: (hp: number) => void
@@ -38,6 +39,7 @@ interface GoldenglowTargetSwitchHpChartProps {
 
 interface GoldenglowTargetSwitchHpChartSvgProps {
   series: readonly HpComparisonDisplaySeries[]
+  minHp: number
   maxHp: number
   metric: GoldenglowTargetSwitchHpChartProps['metric']
   digits?: number
@@ -90,7 +92,7 @@ export function GoldenglowTargetSwitchHpChartSvg({
 }
 
 function HpChartContent({
-  series, maxHp, selectedHp, onSelectHp, stale = false, digits = 2, metric, baselineId, imageOutput = false,
+  series, minHp, maxHp, selectedHp, onSelectHp, stale = false, digits = 2, metric, baselineId, imageOutput = false,
   plotDimensions, chartKind = 'line', barMode = 'total', yAxisMode = 'zero', manualYAxisRange, barHps, hideBaseline = false, onPlotWidthChange,
   showHpRanks = true, gridStyle = 'none',
 }: HpChartContentProps) {
@@ -137,13 +139,15 @@ function HpChartContent({
   }, [])
 
   const hpLimit = Number.isFinite(maxHp) && maxHp > 0 ? maxHp : 1
+  const hpStart = Number.isFinite(minHp) && minHp >= 0 && minHp <= hpLimit ? minHp : 0
+  const hpSpan = hpLimit - hpStart
   const chartSeries = useMemo(() => {
     const styles = getHpComparisonSeriesStyles(series)
     return series.map((item, index) => ({
       ...item,
       style: styles[index],
       points: item.points.filter((point) => (
-        Number.isFinite(point.enemyHp) && point.enemyHp > 0 && point.enemyHp <= hpLimit
+        Number.isFinite(point.enemyHp) && point.enemyHp > 0 && point.enemyHp >= hpStart && point.enemyHp <= hpLimit
       )).map((point) => ({
         ...point,
         value: point.value != null && Number.isFinite(point.value) && (metric !== 'total' || point.value >= 0)
@@ -151,7 +155,7 @@ function HpChartContent({
         segments: activeBarMode === 'total' ? null : getHpDamageBreakdownSegments(point.damageBreakdown, activeBarMode),
       })).sort((left, right) => left.enemyHp - right.enemyHp),
     })).filter((item) => !hideBaseline || item.id !== baselineId)
-  }, [series, hpLimit, metric, hideBaseline, baselineId, activeBarMode])
+  }, [series, hpStart, hpLimit, metric, hideBaseline, baselineId, activeBarMode])
   const components = getHpDamageBreakdownComponents(chartSeries)
   const visibleComponentKeys = new Set(components.map(({ key }) => key))
   const availableHps = [...new Set(chartSeries.flatMap((item) => (
@@ -159,9 +163,9 @@ function HpChartContent({
   )))].sort((left, right) => left - right)
   const hpValues = [...new Set(chartSeries.flatMap((item) => item.points.map((point) => point.enemyHp)))].sort((left, right) => left - right)
   const categoryHps = [...new Set(barHps ?? hpValues)]
-    .filter((hp) => Number.isFinite(hp) && hp > 0 && hp <= hpLimit)
+    .filter((hp) => Number.isFinite(hp) && hp > 0 && hp >= hpStart && hp <= hpLimit)
     .sort((left, right) => left - right)
-  const rankBands = showHpRanks ? getHpRankBands({ chartKind, maxHp: hpLimit, barHps: categoryHps }) : []
+  const rankBands = showHpRanks ? getHpRankBands({ chartKind, minHp: hpStart, maxHp: hpLimit, barHps: categoryHps }) : []
   const rankHeaderHeight = rankBands.length ? 28 : 0
   const plottedHps = chartKind === 'bar' ? categoryHps : hpValues
   const plottedHpSet = new Set(plottedHps)
@@ -202,7 +206,7 @@ function HpChartContent({
   const categoryWidth = plotWidth / Math.max(1, categoryHps.length)
   const x = (hp: number) => chartKind === 'bar'
     ? margin.left + (categoryHps.indexOf(hp) + 0.5) * categoryWidth
-    : margin.left + hp / hpLimit * plotWidth
+    : margin.left + (hpSpan > 0 ? (hp - hpStart) / hpSpan : 0.5) * plotWidth
   const y = (value: number) => plotBottom - (value - lowerLimit) / (upperLimit - lowerLimit) * plotHeight
   // The last label is right-aligned, so reserve its full width plus half
   // of the preceding centered label, including for billion-HP ranges.
@@ -234,7 +238,7 @@ function HpChartContent({
     barTicks.push(last)
   }
   const xTicks = chartKind === 'bar' ? barTicks : [...new Set(Array.from({ length: xTickCount }, (_, index) => (
-    index === xTickCount - 1 ? hpLimit : Math.round(index * hpLimit / (xTickCount - 1))
+    index === xTickCount - 1 ? hpLimit : Math.round(hpStart + index * hpSpan / (xTickCount - 1))
   )))].sort((left, right) => left - right)
   const barGap = Math.min(6, categoryWidth * 0.035)
   const groupWidth = Math.min(categoryWidth * 0.72, chartSeries.length * 36 + Math.max(0, chartSeries.length - 1) * barGap)
@@ -310,7 +314,7 @@ function HpChartContent({
           <text className="ggs-hp-chart-tick" x={x(tick)} y={plotBottom + 21}
             textAnchor={chartKind === 'bar'
               ? categoryHps.length === 1 ? 'middle' : tick === categoryHps[0] ? 'start' : tick === categoryHps.at(-1) ? 'end' : 'middle'
-              : index === 0 ? 'start' : index === xTicks.length - 1 ? 'end' : 'middle'}
+              : xTicks.length === 1 ? 'middle' : index === 0 ? 'start' : index === xTicks.length - 1 ? 'end' : 'middle'}
           >
             {formatHpTick(tick)}
             {chartKind === 'bar' && <title>{`敵HP ${integerFormat.format(tick)}`}</title>}
