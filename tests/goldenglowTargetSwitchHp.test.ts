@@ -38,12 +38,26 @@ test('HPは正の整数を等間隔で取り、端数の終了HPを追加しな�
   assert.equal(createGoldenglowTargetSwitchHpValues(1, 100, 1).length, GOLDENGLOW_TARGET_SWITCH_HP_LIMITS.maxPoints)
 })
 
-test('HP範囲は0・負数・小数・非有限値・逆順・上限超過を拒否する', () => {
-  for (const bad of [0, -1, 0.5, NaN, Infinity, 1_000_000_001, Number.MAX_SAFE_INTEGER + 1]) {
+test('開始HPが0なら最初だけ1に置き換え、以降の刻みと終了範囲を保つ', () => {
+  assert.deepEqual(createGoldenglowTargetSwitchHpValues(0, 3_000, 1_000), [1, 1_000, 2_000, 3_000])
+  assert.deepEqual(createGoldenglowTargetSwitchHpValues(0, 3_500, 1_000), [1, 1_000, 2_000, 3_000])
+  assert.deepEqual(createGoldenglowTargetSwitchHpValues(0, 1, 1_000), [1])
+  assert.deepEqual(createGoldenglowTargetSwitchHpValues(0, 3, 1), [1, 2, 3])
+  assert.deepEqual(createGoldenglowTargetSwitchHpValues(0, 1, 1), [1])
+  assert.deepEqual(createGoldenglowTargetSwitchHpValues(0, 100, 1), createGoldenglowTargetSwitchHpValues(1, 100, 1))
+  assert.equal(createGoldenglowTargetSwitchHpValues(0, 99_000, 1_000).length, GOLDENGLOW_TARGET_SWITCH_HP_LIMITS.maxPoints)
+  assert.throws(() => createGoldenglowTargetSwitchHpValues(0, 101, 1), /100点/)
+  assert.throws(() => createGoldenglowTargetSwitchHpValues(0, 100_000, 1_000), /100点/)
+})
+
+test('HP範囲は負数・小数・非有限値・逆順・上限超過と終了HP・刻みの0を拒否する', () => {
+  for (const bad of [-1, 0.5, NaN, Infinity, 1_000_000_001, Number.MAX_SAFE_INTEGER + 1]) {
     assert.throws(() => createGoldenglowTargetSwitchHpValues(bad, 20_000, 1_000), RangeError)
     assert.throws(() => createGoldenglowTargetSwitchHpValues(1_000, bad, 1_000), RangeError)
     assert.throws(() => createGoldenglowTargetSwitchHpValues(1_000, 20_000, bad), RangeError)
   }
+  assert.throws(() => createGoldenglowTargetSwitchHpValues(0, 0, 1_000), /終了HP/)
+  assert.throws(() => createGoldenglowTargetSwitchHpValues(0, 20_000, 0), /HPの刻み/)
   assert.throws(() => createGoldenglowTargetSwitchHpValues(2_000, 1_000, 1_000), /終了HP/)
   assert.throws(() => createGoldenglowTargetSwitchHpValues(1, 101, 1), /100点/)
 })
@@ -52,7 +66,7 @@ test('S1・S2・S3の各点は待ち時間0秒・0.1秒とも既存の表と単�
   for (const skillIndex of [1, 2, 3]) {
     for (const switchDelay of [0, 0.1]) {
       const setup = input({
-        skillIndex, switchDelay, enemyHps: [80, 1_000, 10_000, 20_000],
+        skillIndex, switchDelay, enemyHps: [1, 80, 1_000, 10_000, 20_000],
         model: { ...model, activeDroneCount: skillIndex === 3 ? 3 : 2 },
         attackInterval: skillIndex === 1 ? 1.3 / 1.7 : 1.3,
       })

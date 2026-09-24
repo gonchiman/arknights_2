@@ -62,6 +62,8 @@ export function GoldenglowTrialBenchmarkPage({ rows, loading, error, onRetry }: 
     return { id: choice.id, label: choice.id === 'none' ? choice.label : `${choice.label} Lv.${level}`, moduleType: choice.moduleType, skill: valid ? derived : null }
   })
   const hpRange = useMemo(() => {
+    const startError = numericError(startHp, 1, limits.maxEnemyHp, '開始HP')
+    if (startError) return { values: [], error: startError }
     try { return { values: createGoldenglowTargetSwitchHpValues(Number(startHp), Number(endHp), Number(stepHp)), error: null } }
     catch (cause) { return { values: [], error: cause instanceof Error ? cause.message : 'HPの範囲を確認してください。' } }
   }, [startHp, endHp, stepHp])

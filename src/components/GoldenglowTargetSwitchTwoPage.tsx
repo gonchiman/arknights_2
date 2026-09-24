@@ -64,7 +64,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const [resistance, setResistance] = useState('0')
   const [delay, setDelay] = useState('0.1')
   const [duration, setDuration] = useState('30')
-  const [startHp, setStartHp] = useState('1000')
+  const [startHp, setStartHp] = useState('0')
   const [endHp, setEndHp] = useState('30000')
   const [stepHp, setStepHp] = useState('1000')
   const [trials, setTrials] = useState(10000)
@@ -113,10 +113,11 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
 
   const hpRange = useMemo(() => {
     try {
+      if (!startHp.trim()) throw new RangeError('開始HPを入力してください。')
       const values = createGoldenglowTargetSwitchHpValues(Number(startHp), Number(endHp), Number(stepHp))
-      return { values, error: null }
+      return { values, minHp: Number(startHp), error: null }
     } catch (cause) {
-      return { values: [], error: cause instanceof Error ? cause.message : 'HPの範囲を確認してください。' }
+      return { values: [], minHp: 0, error: cause instanceof Error ? cause.message : 'HPの範囲を確認してください。' }
     }
   }, [startHp, endHp, stepHp])
   const resistanceError = validateNumber(resistance, 0, limits.maxEnemyResistance, '術耐性')
@@ -162,7 +163,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   } : null, [skill, builds, fieldError, duration, resistance, hpRange.values, delay, trials, seed])
   const skillLabel = skill ? `S${skill.skillIndex} ${skill.skillLevelLabel}` : ''
   const buildLabel = skill ? `${skillLabel}・${builds.map((build) => build.label).join(' / ')}` : ''
-  const inputKey = input ? JSON.stringify({ input, buildLabel }) : null
+  const inputKey = input ? JSON.stringify({ input, minHp: hpRange.minHp, buildLabel }) : null
   const request = calculation.request
   const stale = !!request && request.key !== inputKey
   const rangeLabel = hpRange.values.length
@@ -171,7 +172,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const calculate = () => {
     if (!input || !inputKey || running) return
     setSelectedHp(null)
-    calculation.start({ input, key: inputKey, buildLabel, skillLabel,
+    calculation.start({ input, minHp: hpRange.minHp, key: inputKey, buildLabel, skillLabel,
       operatorLabel: `昇進2 Lv.${skill!.attackCalculation.level}・信頼100・潜在1` })
   }
   const sharedInput = request?.input.builds[0]?.input
@@ -186,6 +187,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const resultCondition = request && sharedInput ? `${request.buildLabel}・${format(sharedInput.duration)}秒・術耐性 ${format(sharedInput.enemyResistance)}・切り替え ${format(sharedInput.switchDelay)}秒` : ''
   const shownInput = sharedInput ?? input?.builds[0]?.input
   const shownHps = shownInput?.enemyHps ?? hpRange.values
+  const shownMinHp = request?.minHp ?? hpRange.minHp
   const shownSeries = useMemo(() => request ? calculation.series : builds.map((build) => ({
     id: build.id, label: build.label, moduleType: build.moduleType, potential: build.potential, points: [],
   })), [request, calculation.series, builds])
@@ -270,7 +272,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
       id: ++imageSnapshotId.current,
       filename: `goldenglow-target-switch-2-S${sharedInput.skillIndex}-${chartKind}-${metric}${barMode === 'total' ? '' : `-${barMode}`}-res${sharedInput.enemyResistance}.png`,
       snapshot: {
-        series: structuredClone(displaySeries), minHp: sharedInput.enemyHps[0], maxHp: sharedInput.enemyHps.at(-1)!,
+        series: structuredClone(displaySeries), minHp: request.minHp, maxHp: sharedInput.enemyHps.at(-1)!,
         metric, baselineId, digits, chartKind, barMode, showHpRanks, gridStyle, yAxisMode, hideBaseline, barHps: [...barHps], title: `ゴールデングロー：${chartLabel}`,
         manualYAxisRange: { ...manualYAxisRange },
         conditions: `${request.skillLabel}・術耐性 ${format(sharedInput.enemyResistance)}`,
@@ -345,7 +347,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
             <details className="gg2-settings">
               <summary>計算設定</summary>
               <div className="gg2-settings-fields">
-                <NumericField label="開始HP" value={startHp} onChange={setStartHp} min={1} max={limits.maxEnemyHp} step="1" invalid={!!hpRange.error} />
+                <NumericField label="開始HP" value={startHp} onChange={setStartHp} min={0} max={limits.maxEnemyHp} step="1" invalid={!!hpRange.error} />
                 <NumericField label="終了HP" value={endHp} onChange={setEndHp} min={1} max={limits.maxEnemyHp} step="1" invalid={!!hpRange.error} />
                 <NumericField label="HPの刻み" value={stepHp} onChange={setStepHp} min={1} max={limits.maxEnemyHp} step="1" invalid={!!hpRange.error} />
                 <label className="calculator-field"><span>試行回数 / 点</span><select value={trials} onChange={(event) => setTrials(Number(event.target.value))}>
@@ -491,7 +493,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
             {yAxisError && <p id="gg2-axis-error" className="gg2-chart-axis-error" role="alert">{yAxisError}</p>}
           </div>
           <div className="gg2-chart-area" aria-busy={running}>
-            <GoldenglowTargetSwitchHpChart series={displaySeries} minHp={shownHps[0] ?? 1000} maxHp={shownHps.at(-1) ?? 30000}
+            <GoldenglowTargetSwitchHpChart series={displaySeries} minHp={shownMinHp} maxHp={shownHps.at(-1) ?? 30000}
               selectedHp={selectedHp} onSelectHp={setSelectedHp} stale={stale} digits={digits} metric={metric} baselineId={baselineId}
               chartKind={chartKind} barMode={barMode} showHpRanks={showHpRanks} gridStyle={gridStyle}
               yAxisMode={yAxisMode} manualYAxisRange={manualYAxisRange} barHps={barHps} hideBaseline={hideBaseline} onPlotWidthChange={setChartPlotWidth} />
@@ -505,7 +507,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
         <span className="visually-hidden" role="status">{imageFeedback === 'saved' ? 'PNG画像を保存しました。' : imageFeedback === 'downloaded' ? 'PNG画像のダウンロードを開始しました。' : ''}</span>
         <details className="gg2-help">
           <summary>計算とグラフについて</summary>
-          <p>各点は、同じHP・術耐性の敵が撃破後に続けて現れる条件での総ダメージの平均です。術耐性を適用した後の値で、敵の残りHPを超えたダメージも含みます。点の間の線は補間で、HP 0では計算しません。</p>
+          <p>各点は、同じHP・術耐性の敵が撃破後に続けて現れる条件での総ダメージの平均です。術耐性を適用した後の値で、敵の残りHPを超えたダメージも含みます。点の間の線は補間です。開始HPが0の場合は、最初の点だけHP 1で計算し、表やツールチップにも1と表示します。</p>
           <p>切り替え時間0.1秒は映像からの暫定値です。撃破時に各ユニットが攻撃先を選び直し、次の攻撃時刻を「元の予定」と「撃破時刻＋切り替え時間」の遅い方にするモデルです。同時刻は本体、浮遊ユニットの順に処理します。</p>
           <p>昇進2 Lv.{skill.attackCalculation.level}・信頼100・潜在1。各MODの攻撃力・攻撃速度・素質の変化を適用します。S2は発動後の計測時間内を計算します。抽選番号を固定すると、同じ条件の結果を再現できます。</p>
           <p>ダメージ差は「比較する装備 − 基準の装備」、増加率は「ダメージ差 ÷ 基準の総ダメージ × 100」です。基準が0の増加率と未計算の値は「—」で表示します。差分は計算済みの値から求めるため、表示の切り替えに再計算は不要です。小さな差には試行ごとのばらつきも含まれます。</p>
@@ -588,7 +590,7 @@ function validateNumber(value: string, min: number, max: number, label: string, 
     ? `${label}は${format(min)}〜${format(max)}の${integer ? '整数' : '数値'}で入力してください。` : null
 }
 
-interface HpRequest { input: HpComparisonInput; key: string; buildLabel: string; skillLabel: string; operatorLabel: string }
+interface HpRequest { input: HpComparisonInput; minHp: number; key: string; buildLabel: string; skillLabel: string; operatorLabel: string }
 interface HpCalculation {
   request: HpRequest | null
   series: HpComparisonSeries[]
