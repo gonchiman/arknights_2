@@ -1,0 +1,46 @@
+.gg-crossover-panel { --crossover-first: #737982; --crossover-sustained: #3f7699; }
+.gg-crossover-settings { margin-bottom: 20px; }
+.gg-crossover-settings[hidden] { display: none; }
+.gg-crossover-settings fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.gg-crossover-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 18px; }
+.gg-crossover-fields .calculator-field { min-width: 0; }
+.gg-crossover-common, .gg-crossover-workload { margin-bottom: 12px; color: var(--text-soft); font-size: 12px; }
+.gg-crossover-workload { margin: 12px 0 0; font-variant-numeric: tabular-nums; }
+.gg-crossover-advanced { margin-top: 8px; }
+.gg-crossover-advanced .gg-crossover-fields { margin-top: 8px; }
+.gg-crossover-settings-toggle { min-height: 34px; padding: 6px 10px; font-size: 11px; }
+.gg-crossover-comparison { color: var(--text-soft); font-size: 12px; }
+.gg-crossover-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 12px 12px 4px; font-size: 12px; }
+.gg-crossover-legend > span { display: inline-flex; align-items: center; gap: 7px; }
+.gg-crossover-legend i { width: 22px; border-top: 2px solid var(--crossover-sustained); }
+.gg-crossover-legend i.first { border-color: var(--crossover-first); border-top-style: dashed; }
+.gg-crossover-chart { margin-inline: 12px; min-width: 0; }
+.gg-crossover-chart svg { display: block; max-width: 100%; overflow: visible; }
+.gg-crossover-chart text { fill: var(--text); font-size: 12px; font-variant-numeric: tabular-nums; }
+.gg-crossover-chart .tick, .gg-crossover-chart .empty { fill: var(--text-muted); }
+.gg-crossover-chart .grid { stroke: var(--border); stroke-width: 1; }
+.gg-crossover-chart .horizontal { stroke-dasharray: 4 6; }
+.gg-crossover-chart .axis { fill: none; stroke: var(--border-strong); stroke-width: 1; }
+.gg-crossover-chart .series-line { fill: none; stroke: currentColor; stroke-width: 2; }
+.gg-crossover-chart .first { color: var(--crossover-first); fill: var(--crossover-first); }
+.gg-crossover-chart .first .series-line { stroke-dasharray: 5 4; }
+.gg-crossover-chart .first rect { fill-opacity: .65; }
+.gg-crossover-chart .sustained { color: var(--crossover-sustained); fill: var(--crossover-sustained); }
+.gg-crossover-chart .selection { stroke: var(--text-muted); stroke-dasharray: 2 4; stroke-width: 1; }
+.gg-crossover-readout { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin-top: 8px; padding: 10px 12px; border-top: 1px solid var(--border); background: var(--surface-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
+.gg-crossover-readout label { display: flex; align-items: center; gap: 8px; }
+.gg-crossover-readout select { min-height: 32px; padding: 4px 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; }
+.gg-crossover-table { width: 100%; min-width: 0; table-layout: fixed; border-collapse: collapse; border: 1px solid var(--border); }
+.gg-crossover-table th, .gg-crossover-table td { border: 1px solid var(--border); padding: 8px 10px; text-align: right; }
+.gg-crossover-table th:first-child { width: 90px; text-align: left; }
+.gg-crossover-table thead th { background: var(--surface-soft); font-size: 12px; }
+.gg-crossover-table td { white-space: normal; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+@container (max-width: 540px) {
+  .gg-crossover-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gg-crossover-table th:first-child { width: 64px; }
+  .gg-crossover-table th, .gg-crossover-table td { padding: 8px 6px; }
+}
+@media (pointer: coarse) {
+  .gg-crossover-settings-toggle, .gg-crossover-readout select, .gg-crossover-table .gg2-table-hp { min-height: 44px; }
+  .gg-crossover-readout select { font-size: 16px; }
+}

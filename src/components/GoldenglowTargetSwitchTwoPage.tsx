@@ -19,6 +19,8 @@ import type { SkillRecord } from '../types/skill'
 import { GoldenglowAnalysisHeader } from './GoldenglowAnalysisHeader'
 import { GoldenglowTargetSwitchHpChart, type HpChartGridStyle } from './GoldenglowTargetSwitchHpChart'
 import { GoldenglowTargetSwitchHpResults } from './GoldenglowTargetSwitchHpResults'
+import { GoldenglowCrossoverPanel } from './GoldenglowCrossoverPanel'
+import type { CrossoverBuild } from '../lib/goldenglowCrossover'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { GoldenglowOperatorInfo } from './GoldenglowOperatorInfo'
 import { GoldenglowSkillControls } from './GoldenglowSkillControls'
@@ -121,6 +123,24 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const delayError = validateNumber(delay, 0, limits.maxSwitchDelay, '切り替え時間')
   const durationError = skill?.skillIndex === 2 ? validateNumber(duration, 0.1, limits.maxDuration, '計測時間') : null
   const seedError = validateNumber(seed, 0, limits.maxSeed, '抽選番号', true)
+  const crossoverBuilds = useMemo(() => {
+    const result: { x: CrossoverBuild | null; y: CrossoverBuild | null } = { x: null, y: null }
+    for (const item of modules) {
+      const type = item.module.typeName2?.trim().toLowerCase()
+      if (type !== 'x' && type !== 'y') continue
+      const level = moduleLevels[item.id] ?? item.levels.at(-1) ?? 3
+      const derived = deriveGoldenglowGuideSkills(rows, item.id, level, skillLevelIndex)
+        .find(value => value.skillIndex === skill?.skillIndex)
+      if (!item.unlocked || !item.levels.includes(level) || !derived || derived.moduleId !== item.id
+        || derived.moduleApplication.moduleLevel !== level) continue
+      result[type] = { label: `${item.label} Lv.${level}`, input: {
+        model: derived.explosionModel, skillIndex: derived.skillIndex, effectiveAttack: derived.effectiveAttack,
+        attackInterval: derived.attackInterval, duration: derived.duration ?? Number(duration), enemyDefense: 0,
+        switchDelay: Number(delay), retargetRemainingDrones: true,
+      } }
+    }
+    return result
+  }, [modules, moduleLevels, rows, skillLevelIndex, skill?.skillIndex, duration, delay])
   const moduleError = !builds.length ? '比較する装備を1つ以上選択してください。'
     : builds.some((item) => !item.skill) ? '選択したMODの情報を取得できませんでした。装備とレベルを確認してください。' : null
   const fieldError = resistanceError ?? delayError ?? durationError ?? hpRange.error ?? seedError ?? moduleError
@@ -495,6 +515,8 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
         </details>
       </section>
       </CollapsibleCalculatorPanel>
+      <GoldenglowCrossoverPanel x={crossoverBuilds.x} y={crossoverBuilds.y} skillLabel={skillLabel}
+        sharedError={delayError ?? durationError} />
       {imageExport && <ChartImageSaveDialog initialFilename={imageExport.filename}
         aspect={imageAspect} onAspectChange={setImageAspect}
         canChooseLocation={!!imageSavePicker} saving={savingImage} error={imageFeedback === 'failed'} helpMode="popover"
