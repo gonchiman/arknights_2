@@ -1,0 +1,9 @@
+.gg-resistance-chart { min-width: 0; margin: 0; background: var(--surface); }
+.gg-resistance-chart-scroll { width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+.gg-resistance-chart-svg { display: block; max-width: none; overflow: hidden; }
+.gg-resistance-chart-divider { stroke: var(--border); stroke-width: 1; }
+.gg-resistance-chart-hp { fill: var(--text-soft); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gg-resistance-chart-rank-title { fill: var(--text-soft); font-size: 10px; font-weight: 700; }
+.gg-resistance-chart-hit { fill: transparent; cursor: pointer; }
+.gg-resistance-chart-hit:focus-visible { outline: none; stroke: var(--text-soft); stroke-width: 1.5; }
+.gg-resistance-chart--stale .gg-resistance-chart-bar { opacity: .45; }

@@ -19,6 +19,13 @@ import type { SkillRecord } from '../types/skill'
 import { GoldenglowAnalysisHeader } from './GoldenglowAnalysisHeader'
 import { GoldenglowTargetSwitchHpChart, type HpChartGridStyle } from './GoldenglowTargetSwitchHpChart'
 import { GoldenglowTargetSwitchHpResults } from './GoldenglowTargetSwitchHpResults'
+import { GoldenglowResistanceComparisonResults } from './GoldenglowResistanceComparisonResults'
+import { GoldenglowResistanceComparisonChart } from './GoldenglowResistanceComparisonChart'
+import { useGoldenglowResistanceSimulation } from './useGoldenglowResistanceSimulation'
+import { createResistanceComparisonDisplaySeries } from '../lib/goldenglowResistanceComparison'
+import { parseComparisonValues, getResistanceComparisonImageFilename } from '../lib/goldenglowResistanceComparisonSettings'
+import { withChartImageAspect } from '../lib/chartImageFilename'
+import { GoldenglowResistanceComparisonImagePreview, saveGoldenglowResistanceComparisonImage, type ResistanceChartImageSnapshot } from './saveGoldenglowResistanceComparisonImage'
 import { GoldenglowCrossoverPanel } from './GoldenglowCrossoverPanel'
 import type { CrossoverBuild } from '../lib/goldenglowCrossover'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
@@ -37,6 +44,9 @@ const limits = GOLDENGLOW_TARGET_SWITCH_LIMITS
 type ChartDisplay = 'line' | 'bar'
 type BarCountDisplay = 'auto' | '5' | '10' | '15' | 'all'
 type YAxisDraft = { min: string; max: string; applied: HpChartYAxisRange }
+type ImageExport = { id: number; filename: string } & (
+  { kind: 'hp'; snapshot: HpChartImageSnapshot } | { kind: 'resistance'; snapshot: ResistanceChartImageSnapshot }
+)
 
 export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }: {
   rows: readonly SkillRecord[]
@@ -50,6 +60,11 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const [moduleLevels, setModuleLevels] = useState<Record<string, number>>({})
   const [metric, setMetric] = useState<HpComparisonMetric>('total')
   const [chartKind, setChartKind] = useState<ChartDisplay>('line')
+  const [compareResistances, setCompareResistances] = useState(false)
+  const resistanceMode = chartKind === 'bar' && compareResistances
+  const [comparisonHps, setComparisonHps] = useState('500, 2000, 4000, 6000, 10000, 20000')
+  const [comparisonResistances, setComparisonResistances] = useState('0, 20, 40, 60, 80, 100')
+  const [selectedResistance, setSelectedResistance] = useState<number | null>(null)
   const [yAxisModes, setYAxisModes] = useState<Partial<Record<HpComparisonMetric, HpChartYAxisMode>>>({})
   const yAxisMode = yAxisModes[metric] ?? 'auto'
   const [yAxisDrafts, setYAxisDrafts] = useState<Partial<Record<HpComparisonMetric, YAxisDraft>>>({})
@@ -73,7 +88,8 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const [digits, setDigits] = useState(0)
   const [copyFeedback, setCopyFeedback] = useState<{ text: string; ok: boolean } | null>(null)
   const [copying, setCopying] = useState(false)
-  const [imageExport, setImageExport] = useState<{ id: number; filename: string; snapshot: HpChartImageSnapshot } | null>(null)
+  const [imageExport, setImageExport] = useState<ImageExport | null>(null)
+  const [preparingImage, setPreparingImage] = useState(false)
   const [imageAspect, setImageAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const imageSnapshotId = useRef(0)
   const previewAspect = imageAspect.preset !== 'auto'
@@ -83,7 +99,9 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const [imageFeedback, setImageFeedback] = useState<'saved' | 'downloaded' | 'failed' | null>(null)
   const imageSaveInProgress = useRef(false)
   const imageSavePicker = getChartImageSavePicker()
-  const calculation = useHpSimulation()
+  const hpCalculation = useHpSimulation()
+  const resistanceCalculation = useGoldenglowResistanceSimulation()
+  const calculation = resistanceMode ? resistanceCalculation : hpCalculation
   const running = calculation.status === 'running'
 
   const profile = rows.find((row) => row.operatorId === GOLDENGLOW_OPERATOR_ID)?.operatorProfile
@@ -121,6 +139,9 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
     }
   }, [startHp, endHp, stepHp])
   const resistanceError = validateNumber(resistance, 0, limits.maxEnemyResistance, '術耐性')
+  const hpSelection = useMemo(() => parseComparisonValues(comparisonHps, '比較するHP', 1, limits.maxEnemyHp, 100), [comparisonHps])
+  const resistanceSelection = useMemo(() => parseComparisonValues(comparisonResistances, '比較する術耐性', 0, limits.maxEnemyResistance, 101), [comparisonResistances])
+  const activeHps = resistanceMode ? hpSelection.values : hpRange.values
   const delayError = validateNumber(delay, 0, limits.maxSwitchDelay, '切り替え時間')
   const durationError = skill?.skillIndex === 2 ? validateNumber(duration, 0.1, limits.maxDuration, '計測時間') : null
   const seedError = validateNumber(seed, 0, limits.maxSeed, '抽選番号', true)
@@ -144,7 +165,8 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   }, [modules, moduleLevels, rows, skillLevelIndex, skill?.skillIndex, duration, delay])
   const moduleError = !builds.length ? '比較する装備を1つ以上選択してください。'
     : builds.some((item) => !item.skill) ? '選択したMODの情報を取得できませんでした。装備とレベルを確認してください。' : null
-  const fieldError = resistanceError ?? delayError ?? durationError ?? hpRange.error ?? seedError ?? moduleError
+  const fieldError = (resistanceMode ? hpSelection.error ?? resistanceSelection.error : resistanceError ?? hpRange.error)
+    ?? delayError ?? durationError ?? seedError ?? moduleError
   const input = useMemo<HpComparisonInput | null>(() => skill && !fieldError ? {
     builds: builds.map((build) => ({ id: build.id, label: build.label, moduleType: build.moduleType, potential: build.potential, input: {
       model: build.skill!.explosionModel,
@@ -153,17 +175,19 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
       attackInterval: build.skill!.attackInterval,
       duration: build.skill!.duration ?? Number(duration),
       enemyDefense: 0,
-      enemyResistance: Number(resistance),
-      enemyHps: hpRange.values,
+      enemyResistance: resistanceMode ? 0 : Number(resistance),
+      enemyHps: activeHps,
       switchDelay: Number(delay),
       retargetRemainingDrones: true,
       trials,
       seed: Number(seed),
     } })),
-  } : null, [skill, builds, fieldError, duration, resistance, hpRange.values, delay, trials, seed])
+  } : null, [skill, builds, fieldError, duration, resistance, resistanceMode, activeHps, delay, trials, seed])
   const skillLabel = skill ? `S${skill.skillIndex} ${skill.skillLevelLabel}` : ''
   const buildLabel = skill ? `${skillLabel}・${builds.map((build) => build.label).join(' / ')}` : ''
-  const inputKey = input ? JSON.stringify({ input, minHp: hpRange.minHp, buildLabel }) : null
+  const activeMinHp = resistanceMode ? activeHps[0] ?? 0 : hpRange.minHp
+  const inputKey = input ? JSON.stringify({ input, minHp: activeMinHp, buildLabel,
+    enemyResistances: resistanceMode ? resistanceSelection.values : undefined }) : null
   const request = calculation.request
   const stale = !!request && request.key !== inputKey
   const rangeLabel = hpRange.values.length
@@ -172,33 +196,42 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const calculate = () => {
     if (!input || !inputKey || running) return
     setSelectedHp(null)
-    calculation.start({ input, minHp: hpRange.minHp, key: inputKey, buildLabel, skillLabel,
-      operatorLabel: `昇進2 Lv.${skill!.attackCalculation.level}・信頼100・潜在1` })
+    setSelectedResistance(null)
+    const nextRequest = { input, minHp: activeMinHp, key: inputKey, buildLabel, skillLabel,
+      operatorLabel: `昇進2 Lv.${skill!.attackCalculation.level}・信頼100・潜在1` }
+    if (resistanceMode) resistanceCalculation.start({ ...nextRequest, input: { ...input, enemyResistances: resistanceSelection.values } })
+    else hpCalculation.start(nextRequest)
   }
   const sharedInput = request?.input.builds[0]?.input
-  const totalPoints = request?.input.builds.reduce((sum, build) => sum + build.input.enemyHps.length, 0) ?? 0
+  const shownResistances = resistanceCalculation.request?.input.enemyResistances ?? resistanceSelection.values
+  const totalPoints = (request?.input.builds.reduce((sum, build) => sum + build.input.enemyHps.length, 0) ?? 0)
+    * (resistanceMode ? shownResistances.length : 1)
   const completedPoints = calculation.series.reduce((sum, series) => sum + series.points.length, 0)
   const statusText = running ? `計算中 ${completedPoints} / ${totalPoints}点`
     : stale ? '条件変更あり・再計算で更新'
       : calculation.status === 'cancelled' ? `中止・${completedPoints} / ${totalPoints}点`
-        : calculation.status === 'complete' ? `${request!.input.builds.length}装備 × ${sharedInput!.enemyHps.length}点・${format(sharedInput!.trials)}回 / 点`
+        : calculation.status === 'complete' ? `${request!.input.builds.length}装備 × HP ${sharedInput!.enemyHps.length}点${resistanceMode ? ` × 術耐性 ${shownResistances.length}点` : ''}・${format(sharedInput!.trials)}回 / 点`
           : calculation.status === 'error' ? '計算未完了' : ''
 
-  const resultCondition = request && sharedInput ? `${request.buildLabel}・${format(sharedInput.duration)}秒・術耐性 ${format(sharedInput.enemyResistance)}・切り替え ${format(sharedInput.switchDelay)}秒` : ''
+  const resultCondition = request && sharedInput ? `${request.buildLabel}・${format(sharedInput.duration)}秒・術耐性 ${resistanceMode ? shownResistances.map(format).join(' / ') : format(sharedInput.enemyResistance)}・切り替え ${format(sharedInput.switchDelay)}秒` : ''
   const shownInput = sharedInput ?? input?.builds[0]?.input
-  const shownHps = shownInput?.enemyHps ?? hpRange.values
+  const shownHps = shownInput?.enemyHps ?? activeHps
   const shownMinHp = request?.minHp ?? hpRange.minHp
   const shownSeries = useMemo(() => request ? calculation.series : builds.map((build) => ({
     id: build.id, label: build.label, moduleType: build.moduleType, potential: build.potential, points: [],
   })), [request, calculation.series, builds])
   const hideBaseline = chartKind === 'bar' && metric !== 'total'
-  const barMode: HpComparisonBarMode = chartKind === 'bar' && metric === 'total' && showBreakdown
+  const barMode: HpComparisonBarMode = chartKind === 'bar' && !resistanceMode && metric === 'total' && showBreakdown
     ? breakdownScale === 'ratio' ? 'composition' : 'breakdown' : 'total'
   const baselineId = chooseHpComparisonBaseline(shownSeries, requestedBaselineId)
   const baselineLabel = shownSeries.find((series) => series.id === baselineId)?.label ?? ''
-  const displaySeries = useMemo(() => metric === 'difference' && baselineId === 'none'
+  const hpDisplaySeries = useMemo(() => metric === 'difference' && baselineId === 'none'
     ? createHpComparisonUnequippedDifferenceSeries(shownSeries, shownHps)
     : createHpComparisonDisplaySeries(shownSeries, shownHps, metric, baselineId), [shownSeries, shownHps, metric, baselineId])
+  const resistanceDisplaySeries = useMemo(() => createResistanceComparisonDisplaySeries(
+    resistanceCalculation.request ? resistanceCalculation.series : builds.map(build => ({ ...build, points: [] })),
+    shownHps, shownResistances, metric, baselineId), [resistanceCalculation.request, resistanceCalculation.series, builds, shownHps, shownResistances, metric, baselineId])
+  const displaySeries = resistanceMode ? resistanceDisplaySeries : hpDisplaySeries
   const visibleSeries = useMemo(() => hideBaseline ? displaySeries.filter((series) => series.id !== baselineId) : displaySeries, [displaySeries, baselineId, hideBaseline])
   const initialYAxisRange = useMemo(() => {
     const values = displaySeries.flatMap((series) => series.points.flatMap((point) =>
@@ -236,21 +269,32 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
     : barMode === 'breakdown' ? 'スキル総ダメージの内訳' : metricLabel
   const displayCondition = `${resultCondition}${metric === 'total' ? '' : `・基準 ${baselineLabel}・${metricLabel}`}`
   const hasDisplayPoints = visibleSeries.some((series) => series.points.some((point) => point.value !== null))
-  const hasChartPoints = visibleSeries.some((series) => series.points.some((point) => point.value !== null && (chartKind === 'line' || barHps.includes(point.enemyHp))))
+  const hasChartPoints = visibleSeries.some((series) => series.points.some((point) => point.value !== null && (resistanceMode || chartKind === 'line' || barHps.includes(point.enemyHp))))
   const comparisonError = hideBaseline && !visibleSeries.length
     ? '共通設定で比較する装備を2つ以上選んで計算してください。' : null
   const formatDamage = useMemo(() => {
     const formatter = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: digits, signDisplay: metric === 'total' ? 'auto' : 'exceptZero' })
     return (value: number) => `${formatter.format(value)}${metric === 'percent' ? '%' : ''}`
   }, [digits, metric])
-  const tableText = request && hasDisplayPoints ? [
+  const tableText = useMemo(() => {
+    if (!request || !hasDisplayPoints) return ''
+    const resistanceColumns = resistanceDisplaySeries.filter(series => !hideBaseline || series.id !== baselineId)
+      .map(series => new Map(series.points.map(point => [`${point.enemyHp}:${point.enemyResistance}`, point.value])))
+    return [
     `${metricLabel}［${displayCondition}・${format(sharedInput!.trials)}回/点・抽選番号${sharedInput!.seed}${calculation.status !== 'complete' ? '・途中結果' : ''}］`,
-    ['敵HP', ...visibleSeries.map((series) => `${series.label}${metric !== 'total' && series.id === baselineId ? '（基準）' : ''}`)].join('\t'),
-    ...shownHps.map((hp, index) => [hp, ...visibleSeries.map((series) => {
+    ['敵HP', ...(resistanceMode ? ['術耐性'] : []), ...visibleSeries.map((series) => `${series.label}${metric !== 'total' && series.id === baselineId ? '（基準）' : ''}`)].join('\t'),
+    ...shownHps.flatMap((hp, index) => resistanceMode ? shownResistances.map(res => [hp, res,
+      ...resistanceColumns.map(values => {
+        const value = values.get(`${hp}:${res}`)
+        return value == null ? '—' : `${value.toFixed(digits)}${metric === 'percent' ? '%' : ''}`
+      }),
+    ].join('\t')) : [[hp, ...visibleSeries.map((series) => {
       const value = series.points[index]?.value
       return value == null ? '—' : `${value.toFixed(digits)}${metric === 'percent' ? '%' : ''}`
-    })].join('\t')),
-  ].join('\n') : ''
+    })].join('\t')]),
+    ].join('\n')
+  }, [request, hasDisplayPoints, resistanceDisplaySeries, hideBaseline, baselineId, metricLabel, displayCondition,
+    sharedInput, calculation.status, resistanceMode, visibleSeries, shownHps, shownResistances, metric, digits])
   const copyState = copyFeedback?.text === tableText ? copyFeedback.ok : null
   const copyTable = async () => {
     if (!tableText || copying) return
@@ -263,12 +307,29 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
     } finally { setCopying(false) }
   }
   const canSaveImage = !!request && !!sharedInput && hasChartPoints && !running && !yAxisError
-  const openImageSaveDialog = () => {
-    if (!canSaveImage || !request || !sharedInput || imageSaveInProgress.current) return
+  const openImageSaveDialog = async () => {
+    if (!canSaveImage || !request || !sharedInput || imageSaveInProgress.current || preparingImage) return
     setImageFeedback(null)
+    if (resistanceMode && resistanceCalculation.request) {
+      const snapshot: ResistanceChartImageSnapshot = {
+        series: structuredClone(resistanceDisplaySeries), enemyHps: [...shownHps], enemyResistances: [...shownResistances],
+        metric, baselineId, hideBaseline, digits, showHpRanks, gridStyle,
+        title: metricLabel, conditions: request.skillLabel,
+        notice: calculation.status === 'complete' ? undefined : '途中結果',
+      }
+      setPreparingImage(true)
+      try {
+        const filename = await getResistanceComparisonImageFilename(resistanceCalculation.request.input, snapshot)
+        setImageAspect({ preset: '16:9', width: '16', height: '9' })
+        setImageExport({ id: ++imageSnapshotId.current, kind: 'resistance', filename, snapshot })
+      } catch { setImageFeedback('failed') }
+      finally { setPreparingImage(false) }
+      return
+    }
     // Keep the displayed results and their own conditions together, including when
     // the form has been edited or a partial calculation has been cancelled.
     setImageExport({
+      kind: 'hp',
       id: ++imageSnapshotId.current,
       filename: `goldenglow-target-switch-2-S${sharedInput.skillIndex}-${chartKind}-${metric}${barMode === 'total' ? '' : `-${barMode}`}-res${sharedInput.enemyResistance}.png`,
       snapshot: {
@@ -282,14 +343,15 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   }
   const saveChartImage = async (filename: string, aspectRatio?: number) => {
     if (!imageExport || imageSaveInProgress.current || !filename.trim()) return
-    const snapshot = imageExport.snapshot
     imageSaveInProgress.current = true
     setSavingImage(true)
     setImageFeedback(null)
     try {
       const destination = await selectChartImageDestination(filename, imageSavePicker)
       if (destination.type === 'cancelled') return
-      await saveGoldenglowTargetSwitchHpChartImage(snapshot, filename, destination.type === 'file' ? destination.write : undefined, aspectRatio)
+      const writeBlob = destination.type === 'file' ? destination.write : undefined
+      if (imageExport.kind === 'resistance') await saveGoldenglowResistanceComparisonImage({ snapshot: imageExport.snapshot, filename, writeBlob, aspectRatio })
+      else await saveGoldenglowTargetSwitchHpChartImage(imageExport.snapshot, filename, writeBlob, aspectRatio)
       setImageFeedback(destination.type === 'file' ? 'saved' : 'downloaded')
       setImageExport(null)
     } catch {
@@ -300,6 +362,12 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
     }
   }
 
+  const Results = resistanceMode ? GoldenglowResistanceComparisonResults : GoldenglowTargetSwitchHpResults
+  const tableSeries = resistanceMode ? resistanceDisplaySeries : visibleSeries.map(series => ({
+    ...series, points: series.points.map(point => ({ ...point, enemyResistance: shownInput?.enemyResistance ?? 0 })),
+  }))
+  const selectPoint = (hp: number, res: number) => { setSelectedHp(hp); setSelectedResistance(res) }
+
   return <section className="calculator-page gg-reference-page gg2-page" aria-labelledby="gg2-title">
     <GoldenglowAnalysisHeader id="gg2-title" title="ターゲット切替2" />
     {loading ? <p className="calculator-loading" role="status">スキル情報を読み込み中…</p> : !skill ? (
@@ -307,9 +375,9 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
     ) : <>
       <GoldenglowOperatorInfo skill={skill} loading={loading} defaultOpen={false} />
       <CollapsibleCalculatorPanel id="gg2-common-settings" number="02" title="共通設定"
-        summary={`${buildLabel}・術耐性 ${resistance}・切り替え ${delay}秒`}
+        summary={`${buildLabel}・${resistanceMode ? '術耐性比較' : `術耐性 ${resistance}`}・切り替え ${delay}秒`}
         className="gg2-common-panel" headerActionsWhenCollapsed
-        headerActions={<SimulationWorkload input={input} />}
+        headerActions={<SimulationWorkload input={input} resistanceCount={resistanceMode ? resistanceSelection.values.length : 1} />}
         collapsedLabel="設定を表示" defaultOpen={false} bodyClassName="gg-performance-settings-body">
       <form className="gg2-form" noValidate onSubmit={(event) => { event.preventDefault(); calculate() }}>
         <fieldset className="gg2-fields" disabled={running} aria-label="計算条件">
@@ -341,15 +409,15 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
             </div>
           </div>
           <div className="gg2-condition-fields gg-performance-common-controls">
-            <NumericField label="術耐性" value={resistance} onChange={setResistance} min={0} max={limits.maxEnemyResistance} invalid={!!resistanceError} />
+            {!resistanceMode && <NumericField label="術耐性" value={resistance} onChange={setResistance} min={0} max={limits.maxEnemyResistance} invalid={!!resistanceError} />}
             <NumericField label="切り替え時間（秒）" value={delay} onChange={setDelay} min={0} max={limits.maxSwitchDelay} step="0.1" invalid={!!delayError} />
             {skill.skillIndex === 2 && <NumericField label="発動後の計測時間（秒）" value={duration} onChange={setDuration} min={0.1} max={limits.maxDuration} invalid={!!durationError} />}
             <details className="gg2-settings">
               <summary>計算設定</summary>
               <div className="gg2-settings-fields">
-                <NumericField label="開始HP" value={startHp} onChange={setStartHp} min={0} max={limits.maxEnemyHp} step="1" invalid={!!hpRange.error} />
+                {!resistanceMode && <><NumericField label="開始HP" value={startHp} onChange={setStartHp} min={0} max={limits.maxEnemyHp} step="1" invalid={!!hpRange.error} />
                 <NumericField label="終了HP" value={endHp} onChange={setEndHp} min={1} max={limits.maxEnemyHp} step="1" invalid={!!hpRange.error} />
-                <NumericField label="HPの刻み" value={stepHp} onChange={setStepHp} min={1} max={limits.maxEnemyHp} step="1" invalid={!!hpRange.error} />
+                <NumericField label="HPの刻み" value={stepHp} onChange={setStepHp} min={1} max={limits.maxEnemyHp} step="1" invalid={!!hpRange.error} /></>}
                 <label className="calculator-field"><span>試行回数 / 点</span><select value={trials} onChange={(event) => setTrials(Number(event.target.value))}>
                   {[1000, 5000, 10000, 20000].map((value) => <option key={value} value={value}>{format(value)}回</option>)}
                 </select></label>
@@ -364,19 +432,21 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
         summary={request ? `${request.buildLabel}・敵HP別` : rangeLabel}
         collapsedLabel="結果を表示" className="gg2-output-panel" headerActions={<>
           <label className="gg2-output-precision"><span>グラフ</span>
-            <select aria-label="グラフの表示形式" value={chartKind} onChange={(event) => setChartKind(event.target.value as ChartDisplay)}>
+            <select aria-label="グラフの表示形式" value={chartKind} disabled={running} onChange={(event) => setChartKind(event.target.value as ChartDisplay)}>
               <option value="line">折れ線</option>
               <option value="bar">棒グラフ</option>
             </select>
           </label>
-          {chartKind === 'bar' && <label className="gg2-output-precision"><span>表示HP数</span>
+          {chartKind === 'bar' && <label className="gg2-difference-toggle"><input type="checkbox" checked={compareResistances} disabled={running}
+            onChange={event => { setCompareResistances(event.target.checked); setSelectedHp(null); setSelectedResistance(null) }} />術耐性比較</label>}
+          {chartKind === 'bar' && !resistanceMode && <label className="gg2-output-precision"><span>表示HP数</span>
             <select aria-label="棒グラフの表示HP数" value={barCountDisplay} onChange={(event) => setBarCountDisplay(event.target.value as BarCountDisplay)}>
               <option value="auto">自動（{Math.min(autoBarCount, shownHps.length)}点）</option>
               <option value="5">5点</option><option value="10">10点</option><option value="15">15点</option>
               <option value="all">すべて</option>
             </select>
           </label>}
-          {chartKind === 'bar' && metric === 'total' && <>
+          {chartKind === 'bar' && !resistanceMode && metric === 'total' && <>
             <label className="gg2-difference-toggle"><input type="checkbox" checked={showBreakdown}
               onChange={(event) => setShowBreakdown(event.target.checked)} />内訳表示</label>
             {showBreakdown && <label className="gg2-output-precision"><span>内訳</span>
@@ -438,10 +508,10 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
             <dl>
               <dt>装備・スキル</dt><dd>{request?.buildLabel ?? buildLabel}</dd>
               <dt>計測時間</dt><dd>{shownInput ? `${format(shownInput.duration)}秒` : '—'}</dd>
-              <dt>術耐性</dt><dd>{shownInput ? format(shownInput.enemyResistance) : '—'}</dd>
+              <dt>術耐性</dt><dd>{resistanceMode ? shownResistances.map(format).join(' / ') : shownInput ? format(shownInput.enemyResistance) : '—'}</dd>
               <dt>切り替え時間</dt><dd>{shownInput ? `${format(shownInput.switchDelay)}秒` : '—'}</dd>
               <dt>敵HP</dt><dd>{shownHps.length ? `${format(shownHps[0])}〜${format(shownHps.at(-1)!)}` : '—'}</dd>
-              <dt>計算点数</dt><dd>{shownHps.length}点</dd>
+              <dt>計算点数 / 装備</dt><dd>{shownHps.length * (resistanceMode ? shownResistances.length : 1)}点</dd>
               <dt>試行回数 / 点</dt><dd>{format(shownInput?.trials ?? trials)}回</dd>
               <dt>抽選番号</dt><dd>{shownInput?.seed ?? '—'}</dd>
             </dl>
@@ -452,9 +522,17 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
           </div>
         </>}>
       <section className="gg2-output" aria-labelledby="gg2-chart-title">
+        {resistanceMode && <fieldset className="gg2-resistance-settings" disabled={running} aria-label="術耐性比較の計算条件">
+          <label className="calculator-field"><span>比較するHP（カンマ区切り）</span><input type="text" value={comparisonHps}
+            onChange={event => setComparisonHps(event.target.value)} aria-invalid={!!hpSelection.error} /></label>
+          <label className="calculator-field"><span>比較する術耐性（カンマ区切り）</span><input type="text" value={comparisonResistances}
+            onChange={event => setComparisonResistances(event.target.value)} aria-invalid={!!resistanceSelection.error} /></label>
+        </fieldset>}
         {fieldError && <p className="gg2-error" role="alert">{fieldError}</p>}
         {calculation.error && <p className="gg2-error" role="alert">{calculation.error}</p>}
-        <GoldenglowTargetSwitchHpResults series={visibleSeries} enemyHps={shownHps} metric={metric} baselineId={baselineId}
+        {imageFeedback === 'failed' && !imageExport && <p className="gg2-error" role="alert">画像の準備ができませんでした。もう一度お試しください。</p>}
+        <Results series={tableSeries} enemyHps={shownHps} metric={metric} baselineId={baselineId} hideBaseline={hideBaseline}
+          enemyResistances={shownResistances} selectedResistance={selectedResistance} onSelectPoint={selectPoint}
           selectedHp={selectedHp} onSelectHp={setSelectedHp} formatDamage={formatDamage}
           condition={displayCondition} running={running} stale={stale} toolbar={<>
           <div className="gg-performance-table-toolbar">
@@ -486,20 +564,24 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
                 </label>)}
               </div>}</>}
               <button type="button" className="button secondary gg2-save-image" aria-label="グラフをPNG画像で保存" aria-haspopup="dialog"
-                disabled={!canSaveImage || savingImage} aria-busy={savingImage} onClick={openImageSaveDialog}>
-                {savingImage ? '保存中…' : '画像を保存'}
+                disabled={!canSaveImage || savingImage || preparingImage} aria-busy={savingImage || preparingImage} onClick={() => void openImageSaveDialog()}>
+                {savingImage ? '保存中…' : preparingImage ? '準備中…' : '画像を保存'}
               </button>
             </div>
             {yAxisError && <p id="gg2-axis-error" className="gg2-chart-axis-error" role="alert">{yAxisError}</p>}
           </div>
           <div className="gg2-chart-area" aria-busy={running}>
-            <GoldenglowTargetSwitchHpChart series={displaySeries} minHp={shownMinHp} maxHp={shownHps.at(-1) ?? 30000}
+            {resistanceMode ? <GoldenglowResistanceComparisonChart series={resistanceDisplaySeries}
+              enemyHps={shownHps} enemyResistances={shownResistances} metric={metric} baselineId={baselineId} hideBaseline={hideBaseline}
+              selectedHp={selectedHp} selectedResistance={selectedResistance} onSelectPoint={selectPoint}
+              stale={stale} digits={digits} showHpRanks={showHpRanks} gridStyle={gridStyle} />
+              : <GoldenglowTargetSwitchHpChart series={hpDisplaySeries} minHp={shownMinHp} maxHp={shownHps.at(-1) ?? 30000}
               selectedHp={selectedHp} onSelectHp={setSelectedHp} stale={stale} digits={digits} metric={metric} baselineId={baselineId}
               chartKind={chartKind} barMode={barMode} showHpRanks={showHpRanks} gridStyle={gridStyle}
-              yAxisMode={yAxisMode} manualYAxisRange={manualYAxisRange} barHps={barHps} hideBaseline={hideBaseline} onPlotWidthChange={setChartPlotWidth} />
+              yAxisMode={yAxisMode} manualYAxisRange={manualYAxisRange} barHps={barHps} hideBaseline={hideBaseline} onPlotWidthChange={setChartPlotWidth} />}
             {!hasChartPoints && <span className="gg2-empty">{comparisonError ?? (running ? '計算中…' : calculation.status === 'idle' ? '未計算' : hasDisplayPoints ? '表から計算済みのHPを選択してください' : metric !== 'total' && completedPoints ? '比較できる結果なし' : '計算結果なし')}</span>}
           </div>
-        </GoldenglowTargetSwitchHpResults>
+        </Results>
         <div className="gg2-status" role="status" aria-live="polite">
           {running && <progress aria-label="装備・HPごとの計算進捗" value={completedPoints} max={totalPoints} />}
           <span>{statusText}</span>
@@ -507,6 +589,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
         <span className="visually-hidden" role="status">{imageFeedback === 'saved' ? 'PNG画像を保存しました。' : imageFeedback === 'downloaded' ? 'PNG画像のダウンロードを開始しました。' : ''}</span>
         <details className="gg2-help">
           <summary>計算とグラフについて</summary>
+          <p>術耐性比較は、指定したHPと術耐性の全組み合わせを各装備で計算します。1本ずつの棒が各装備の総ダメージです。未装備、MOD X、MOD Yの順に少しずらして重ねており、積み上げではありません。試行回数は共通設定から変更できます。通常のグラフと計算結果は別に保持します。</p>
           <p>各点は、同じHP・術耐性の敵が撃破後に続けて現れる条件での総ダメージの平均です。術耐性を適用した後の値で、敵の残りHPを超えたダメージも含みます。点の間の線は補間です。開始HPが0の場合は、最初の点だけHP 1で計算し、表やツールチップにも1と表示します。</p>
           <p>切り替え時間0.1秒は映像からの暫定値です。撃破時に各ユニットが攻撃先を選び直し、次の攻撃時刻を「元の予定」と「撃破時刻＋切り替え時間」の遅い方にするモデルです。同時刻は本体、浮遊ユニットの順に処理します。</p>
           <p>昇進2 Lv.{skill.attackCalculation.level}・信頼100・潜在1。各MODの攻撃力・攻撃速度・素質の変化を適用します。S2は発動後の計測時間内を計算します。抽選番号を固定すると、同じ条件の結果を再現できます。</p>
@@ -520,11 +603,12 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
       <GoldenglowCrossoverPanel x={crossoverBuilds.x} y={crossoverBuilds.y} skillLabel={skillLabel}
         sharedError={delayError ?? durationError} />
       {imageExport && <ChartImageSaveDialog initialFilename={imageExport.filename}
+        getDefaultFilename={imageExport.kind === 'resistance' ? aspect => withChartImageAspect(imageExport.filename, aspect) : undefined}
         aspect={imageAspect} onAspectChange={setImageAspect}
         canChooseLocation={!!imageSavePicker} saving={savingImage} error={imageFeedback === 'failed'} helpMode="popover"
-        preview={<GoldenglowTargetSwitchHpChartImagePreview
-          key={`${imageExport.id}:${imageExport.snapshot.chartKind}:${imageExport.snapshot.metric}:${imageExport.snapshot.barMode}:${imageExport.snapshot.showHpRanks}:${imageExport.snapshot.gridStyle}:${previewAspect ?? 'auto'}`}
-          snapshot={imageExport.snapshot} aspectRatio={previewAspect} />}
+        preview={imageExport.kind === 'resistance'
+          ? <GoldenglowResistanceComparisonImagePreview key={`${imageExport.id}:${previewAspect ?? 'auto'}`} snapshot={imageExport.snapshot} aspectRatio={previewAspect} />
+          : <GoldenglowTargetSwitchHpChartImagePreview key={`${imageExport.id}:${previewAspect ?? 'auto'}`} snapshot={imageExport.snapshot} aspectRatio={previewAspect} />}
         onClose={() => {
           if (imageSaveInProgress.current) return
           setImageExport(null); setImageFeedback(null)
@@ -534,10 +618,10 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   </section>
 }
 
-function SimulationWorkload({ input }: { input: HpComparisonInput | null }) {
+function SimulationWorkload({ input, resistanceCount = 1 }: { input: HpComparisonInput | null; resistanceCount?: number }) {
   const detailsRef = useRef<HTMLDetailsElement>(null)
   // Use the current form input, not the snapshot belonging to previous results.
-  const total = input?.builds.reduce((sum, build) => sum + build.input.enemyHps.length * build.input.trials, 0)
+  const total = input ? input.builds.reduce((sum, build) => sum + build.input.enemyHps.length * build.input.trials * resistanceCount, 0) : undefined
   const shared = input?.builds[0]?.input
   const totalLabel = total === undefined ? '—' : total >= 10000 ? `${format(total / 10000)}万回` : `${format(total)}回`
 
@@ -569,6 +653,7 @@ function SimulationWorkload({ input }: { input: HpComparisonInput | null }) {
       <strong className="gg2-workload-total">{total === undefined ? '—' : `${format(total)}回`}</strong>
       <dl>
         <dt>HPの計算点数</dt><dd>{shared ? `${format(shared.enemyHps.length)}点` : '—'}</dd>
+        <dt>術耐性の計算点数</dt><dd>{input ? `${format(resistanceCount)}点` : '—'}</dd>
         <dt>比較する装備</dt><dd>{input ? `${format(input.builds.length)}種類` : '—'}</dd>
         <dt>試行回数 / 点・装備</dt><dd>{shared ? `${format(shared.trials)}回` : '—'}</dd>
       </dl>

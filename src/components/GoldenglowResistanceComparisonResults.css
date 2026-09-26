@@ -1,0 +1,7 @@
+.gg2-output .ggr-results .gg2-table-view { border-color: var(--border); }
+.ggr-results .ggr-table-scroll { max-height: min(560px, 65vh); }
+.ggr-results-table th, .ggr-results-table td { font-variant-numeric: tabular-nums; }
+.ggr-results .ggr-results-table thead th { border-bottom-color: var(--border); }
+.ggr-results-table thead .ggr-table-resistance { width: 70px; padding: 8px 10px; }
+.ggr-results-table .ggr-table-series-name { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.ggr-results-table .ggr-table-series-swatch { display: inline-block; flex: 0 0 10px; width: 10px; height: 10px; }
