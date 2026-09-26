@@ -290,6 +290,21 @@ test('5点以下のHPは全点を残し、重複・非正数・有限でない�
   assert.deepEqual(selectHpComparisonBarHps([5, 4, 3, 2, 1], 3), [1, 2, 3, 4, 5])
 })
 
+test('HPランクのプリセットは6つの実測HPを選び、表の選択で別のHPに置き換えない', () => {
+  const hps = Object.freeze([20_000, 500, 1_000, 2_000, 4_000, 6_000, 8_000, 10_000, 30_000])
+  for (const selectedHp of [null, 500, 8_000, 30_000]) {
+    assert.deepEqual(selectHpComparisonBarHps(hps, selectedHp, 'rank-e-a'),
+      [500, 2_000, 4_000, 6_000, 10_000, 20_000])
+  }
+})
+
+test('旧結果にプリセットHPがないときは近いHPで代用せず、計算済みの一致点だけを使う', () => {
+  const hps = Array.from({ length: 30 }, (_, index) => (index + 1) * 1_000)
+  assert.deepEqual(selectHpComparisonBarHps(hps, 1_000, 'rank-e-a'), [2_000, 4_000, 6_000, 10_000, 20_000])
+  assert.deepEqual(selectHpComparisonBarHps([30_000, 40_000], 30_000, 'rank-e-a'), [])
+  assert.deepEqual(selectHpComparisonBarHps([500, 500, NaN, -1, Infinity], null, 'rank-e-a'), [500])
+})
+
 test('選択したHPは両端以外の一番近い代表点と入れ替え、等距離では小さい代表点を使う', () => {
   const hps = Array.from({ length: 20 }, (_, index) => (index + 1) * 1_000)
   assert.deepEqual(selectHpComparisonBarHps(hps, 2_000), [1_000, 2_000, 11_000, 15_000, 20_000])

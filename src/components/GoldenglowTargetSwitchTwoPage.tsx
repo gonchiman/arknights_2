@@ -9,7 +9,7 @@ import type { HpComparisonBarMode } from '../lib/goldenglowTargetSwitchHpBreakdo
 import { getHpChartValueAxis, isValidHpChartYAxisRange, type HpChartYAxisMode, type HpChartYAxisRange } from '../lib/goldenglowTargetSwitchHpAxis'
 import {
   chooseHpComparisonBaseline, createHpComparisonDisplaySeries, createHpComparisonUnequippedDifferenceSeries,
-  getHpComparisonAutoBarCount, selectHpComparisonBarHps,
+  getHpComparisonAutoBarCount, selectHpComparisonBarHps, GOLDENGLOW_HP_RANK_PRESET,
   type HpComparisonInput, type HpComparisonMessage, type HpComparisonMetric, type HpComparisonSeries,
 } from '../lib/goldenglowTargetSwitchHpComparison'
 import { getOperatorModuleId, getOperatorModuleLevels, getOperatorModules, isOperatorModuleUnlocked } from '../lib/operatorModules'
@@ -42,7 +42,7 @@ const number = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
 const format = (value: number) => number.format(value)
 const limits = GOLDENGLOW_TARGET_SWITCH_LIMITS
 type ChartDisplay = 'line' | 'bar'
-type BarCountDisplay = 'auto' | '5' | '10' | '15' | 'all'
+type BarCountDisplay = 'auto' | '5' | '10' | '15' | 'all' | 'rank-e-a'
 type YAxisDraft = { min: string; max: string; applied: HpChartYAxisRange }
 type ImageExport = { id: number; filename: string } & (
   { kind: 'hp'; snapshot: HpChartImageSnapshot } | { kind: 'resistance'; snapshot: ResistanceChartImageSnapshot }
@@ -62,13 +62,14 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const [chartKind, setChartKind] = useState<ChartDisplay>('line')
   const [compareResistances, setCompareResistances] = useState(false)
   const resistanceMode = chartKind === 'bar' && compareResistances
-  const [comparisonHps, setComparisonHps] = useState('500, 2000, 4000, 6000, 10000, 20000')
+  const [comparisonHps, setComparisonHps] = useState(() => GOLDENGLOW_HP_RANK_PRESET.join(', '))
   const [comparisonResistances, setComparisonResistances] = useState('0, 20, 40, 60, 80, 100')
   const [selectedResistance, setSelectedResistance] = useState<number | null>(null)
   const [yAxisModes, setYAxisModes] = useState<Partial<Record<HpComparisonMetric, HpChartYAxisMode>>>({})
   const yAxisMode = yAxisModes[metric] ?? 'auto'
   const [yAxisDrafts, setYAxisDrafts] = useState<Partial<Record<HpComparisonMetric, YAxisDraft>>>({})
   const [barCountDisplay, setBarCountDisplay] = useState<BarCountDisplay>('auto')
+  const rankPresetMode = chartKind === 'bar' && !resistanceMode && barCountDisplay === 'rank-e-a'
   const [showBreakdown, setShowBreakdown] = useState(true)
   const [breakdownScale, setBreakdownScale] = useState<'damage' | 'ratio'>('damage')
   const [showHpRanks, setShowHpRanks] = useState(true)
@@ -141,7 +142,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const resistanceError = validateNumber(resistance, 0, limits.maxEnemyResistance, '術耐性')
   const hpSelection = useMemo(() => parseComparisonValues(comparisonHps, '比較するHP', 1, limits.maxEnemyHp, 100), [comparisonHps])
   const resistanceSelection = useMemo(() => parseComparisonValues(comparisonResistances, '比較する術耐性', 0, limits.maxEnemyResistance, 101), [comparisonResistances])
-  const activeHps = resistanceMode ? hpSelection.values : hpRange.values
+  const activeHps = resistanceMode ? hpSelection.values : rankPresetMode ? GOLDENGLOW_HP_RANK_PRESET : hpRange.values
   const delayError = validateNumber(delay, 0, limits.maxSwitchDelay, '切り替え時間')
   const durationError = skill?.skillIndex === 2 ? validateNumber(duration, 0.1, limits.maxDuration, '計測時間') : null
   const seedError = validateNumber(seed, 0, limits.maxSeed, '抽選番号', true)
@@ -165,7 +166,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   }, [modules, moduleLevels, rows, skillLevelIndex, skill?.skillIndex, duration, delay])
   const moduleError = !builds.length ? '比較する装備を1つ以上選択してください。'
     : builds.some((item) => !item.skill) ? '選択したMODの情報を取得できませんでした。装備とレベルを確認してください。' : null
-  const fieldError = (resistanceMode ? hpSelection.error ?? resistanceSelection.error : resistanceError ?? hpRange.error)
+  const fieldError = (resistanceMode ? hpSelection.error ?? resistanceSelection.error : resistanceError ?? (rankPresetMode ? null : hpRange.error))
     ?? delayError ?? durationError ?? seedError ?? moduleError
   const input = useMemo<HpComparisonInput | null>(() => skill && !fieldError ? {
     builds: builds.map((build) => ({ id: build.id, label: build.label, moduleType: build.moduleType, potential: build.potential, input: {
@@ -185,12 +186,12 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   } : null, [skill, builds, fieldError, duration, resistance, resistanceMode, activeHps, delay, trials, seed])
   const skillLabel = skill ? `S${skill.skillIndex} ${skill.skillLevelLabel}` : ''
   const buildLabel = skill ? `${skillLabel}・${builds.map((build) => build.label).join(' / ')}` : ''
-  const activeMinHp = resistanceMode ? activeHps[0] ?? 0 : hpRange.minHp
+  const activeMinHp = resistanceMode || rankPresetMode ? activeHps[0] ?? 0 : hpRange.minHp
   const inputKey = input ? JSON.stringify({ input, minHp: activeMinHp, buildLabel,
     enemyResistances: resistanceMode ? resistanceSelection.values : undefined }) : null
   const request = calculation.request
   const stale = !!request && request.key !== inputKey
-  const rangeLabel = hpRange.values.length
+  const rangeLabel = rankPresetMode ? 'HPランク E〜A・6点' : hpRange.values.length
     ? `HP ${format(hpRange.values[0])}〜${format(hpRange.values.at(-1)!)}・${format(Number(stepHp))}刻み・${hpRange.values.length}点`
     : 'HP範囲を確認してください'
   const calculate = () => {
@@ -216,7 +217,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
   const resultCondition = request && sharedInput ? `${request.buildLabel}・${format(sharedInput.duration)}秒・術耐性 ${resistanceMode ? shownResistances.map(format).join(' / ') : format(sharedInput.enemyResistance)}・切り替え ${format(sharedInput.switchDelay)}秒` : ''
   const shownInput = sharedInput ?? input?.builds[0]?.input
   const shownHps = shownInput?.enemyHps ?? activeHps
-  const shownMinHp = request?.minHp ?? hpRange.minHp
+  const shownMinHp = request?.minHp ?? activeMinHp
   const shownSeries = useMemo(() => request ? calculation.series : builds.map((build) => ({
     id: build.id, label: build.label, moduleType: build.moduleType, potential: build.potential, points: [],
   })), [request, calculation.series, builds])
@@ -260,7 +261,8 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
     setYAxisDrafts((drafts) => ({ ...drafts, [metric]: draft }))
   }
   const autoBarCount = getHpComparisonAutoBarCount(chartPlotWidth, visibleSeries.length)
-  const barCount = barCountDisplay === 'auto' ? autoBarCount : barCountDisplay === 'all' ? 'all' : Number(barCountDisplay)
+  const barCount = barCountDisplay === 'auto' ? autoBarCount
+    : barCountDisplay === 'all' || barCountDisplay === 'rank-e-a' ? barCountDisplay : Number(barCountDisplay)
   const barHps = useMemo(() => selectHpComparisonBarHps(shownHps, selectedHp, barCount), [shownHps, selectedHp, barCount])
   const metricLabel = metric === 'total' ? 'スキル総ダメージ期待値'
     : metric === 'difference' ? hideBaseline ? `${baselineLabel}との差` : '基準との差'
@@ -415,7 +417,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
             <details className="gg2-settings">
               <summary>計算設定</summary>
               <div className="gg2-settings-fields">
-                {!resistanceMode && <><NumericField label="開始HP" value={startHp} onChange={setStartHp} min={0} max={limits.maxEnemyHp} step="1" invalid={!!hpRange.error} />
+                {!resistanceMode && !rankPresetMode && <><NumericField label="開始HP" value={startHp} onChange={setStartHp} min={0} max={limits.maxEnemyHp} step="1" invalid={!!hpRange.error} />
                 <NumericField label="終了HP" value={endHp} onChange={setEndHp} min={1} max={limits.maxEnemyHp} step="1" invalid={!!hpRange.error} />
                 <NumericField label="HPの刻み" value={stepHp} onChange={setStepHp} min={1} max={limits.maxEnemyHp} step="1" invalid={!!hpRange.error} /></>}
                 <label className="calculator-field"><span>試行回数 / 点</span><select value={trials} onChange={(event) => setTrials(Number(event.target.value))}>
@@ -440,10 +442,15 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
           {chartKind === 'bar' && <label className="gg2-difference-toggle"><input type="checkbox" checked={compareResistances} disabled={running}
             onChange={event => { setCompareResistances(event.target.checked); setSelectedHp(null); setSelectedResistance(null) }} />術耐性比較</label>}
           {chartKind === 'bar' && !resistanceMode && <label className="gg2-output-precision"><span>表示HP数</span>
-            <select aria-label="棒グラフの表示HP数" value={barCountDisplay} onChange={(event) => setBarCountDisplay(event.target.value as BarCountDisplay)}>
+            <select aria-label="棒グラフの表示HP数" value={barCountDisplay} disabled={running} onChange={(event) => {
+              const next = event.target.value as BarCountDisplay
+              if (barCountDisplay === 'rank-e-a' || next === 'rank-e-a') setSelectedHp(null)
+              setBarCountDisplay(next)
+            }}>
               <option value="auto">自動（{Math.min(autoBarCount, shownHps.length)}点）</option>
               <option value="5">5点</option><option value="10">10点</option><option value="15">15点</option>
               <option value="all">すべて</option>
+              <option value="rank-e-a">E〜A（6点）</option>
             </select>
           </label>}
           {chartKind === 'bar' && !resistanceMode && metric === 'total' && <>
@@ -579,7 +586,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
               selectedHp={selectedHp} onSelectHp={setSelectedHp} stale={stale} digits={digits} metric={metric} baselineId={baselineId}
               chartKind={chartKind} barMode={barMode} showHpRanks={showHpRanks} gridStyle={gridStyle}
               yAxisMode={yAxisMode} manualYAxisRange={manualYAxisRange} barHps={barHps} hideBaseline={hideBaseline} onPlotWidthChange={setChartPlotWidth} />}
-            {!hasChartPoints && <span className="gg2-empty">{comparisonError ?? (running ? '計算中…' : calculation.status === 'idle' ? '未計算' : hasDisplayPoints ? '表から計算済みのHPを選択してください' : metric !== 'total' && completedPoints ? '比較できる結果なし' : '計算結果なし')}</span>}
+            {!hasChartPoints && <span className="gg2-empty">{comparisonError ?? (running ? '計算中…' : calculation.status === 'idle' ? '未計算' : hasDisplayPoints ? rankPresetMode ? 'プリセットのHPで再計算してください' : '表から計算済みのHPを選択してください' : metric !== 'total' && completedPoints ? '比較できる結果なし' : '計算結果なし')}</span>}
           </div>
         </Results>
         <div className="gg2-status" role="status" aria-live="polite">
@@ -594,7 +601,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
           <p>切り替え時間0.1秒は映像からの暫定値です。撃破時に各ユニットが攻撃先を選び直し、次の攻撃時刻を「元の予定」と「撃破時刻＋切り替え時間」の遅い方にするモデルです。同時刻は本体、浮遊ユニットの順に処理します。</p>
           <p>昇進2 Lv.{skill.attackCalculation.level}・信頼100・潜在1。各MODの攻撃力・攻撃速度・素質の変化を適用します。S2は発動後の計測時間内を計算します。抽選番号を固定すると、同じ条件の結果を再現できます。</p>
           <p>ダメージ差は「比較する装備 − 基準の装備」、増加率は「ダメージ差 ÷ 基準の総ダメージ × 100」です。基準が0の増加率と未計算の値は「—」で表示します。差分は計算済みの値から求めるため、表示の切り替えに再計算は不要です。小さな差には試行ごとのばらつきも含まれます。</p>
-          <p>棒グラフの表示HP数は、横幅と表示する装備数に合わせて自動調整します。5点・10点・15点・すべての指定もできます。最小・最大HPと選択したHPを含めて表示し、点数が多いときは目盛りの文字を間引きます。表示数を変えても再計算は不要です。画像には保存画面を開いた時点のHPを使います。差分表示では基準以外の装備を表示し、数値表にはすべてのHPを表示します。</p>
+          <p>棒グラフの表示HP数は、横幅と表示する装備数に合わせて自動調整します。5点・10点・15点・すべての指定もできます。これらは最小・最大HPと選択したHPを含めて表示し、再計算は不要です。「E〜A（6点）」はHP {GOLDENGLOW_HP_RANK_PRESET.map(format).join('・')} のプリセットで、この6点を計算します。プリセットへの切り替えや解除は、再計算で結果を更新します。点数が多いときは目盛りの文字を間引きます。画像には保存画面を開いた時点のHPを使います。差分表示では基準以外の装備を表示し、数値表にはすべての計算対象HPを表示します。</p>
           <p>棒グラフの内訳は、同じ試行で集計した浮遊ユニットの通常攻撃・爆発・本体攻撃の平均です。色はMOD、模様は攻撃の種類を表し、通常攻撃は無地、爆発は斜線、本体攻撃は点模様です。本体攻撃のないS3では2項目になります。割合は各装備・各HPの平均総ダメージを100%とした構成比で、表示を切り替えても再計算しません。数値表は総ダメージを表示します。内訳は総ダメージ表示で利用できます。</p>
           <p>HPランクはサイト共通の区分を使い、上部の帯で表示します。棒グラフでは表示したHPグループごと、折れ線では実際のHP境界で区切ります。表示の切り替えに再計算は不要で、保存画像にも反映されます。</p>
         </details>

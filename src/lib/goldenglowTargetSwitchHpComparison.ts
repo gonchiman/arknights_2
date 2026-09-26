@@ -42,6 +42,9 @@ export type HpComparisonMessage =
 
 export type HpComparisonMetric = 'total' | 'difference' | 'percent'
 
+/** One exact HP sample for each rank E, D, C, B, B+, A. Shared by both bar charts. */
+export const GOLDENGLOW_HP_RANK_PRESET = Object.freeze([500, 2_000, 4_000, 6_000, 10_000, 20_000])
+
 export interface HpComparisonDisplaySeries extends HpComparisonIdentity {
   points: { enemyHp: number; value: number | null; damageBreakdown?: GoldenglowDamageBreakdown }[]
 }
@@ -129,14 +132,16 @@ export function createHpComparisonDisplaySeries(
  * Samples the complete HP range and retains a selected table row. Counts below
  * one become one; fractions round down and non-finite counts fall back to five.
  * With at least three samples, the minimum and maximum HP are always retained.
+ * The rank preset keeps only exact available matches, regardless of selection.
  */
 export function selectHpComparisonBarHps(
   enemyHps: readonly number[],
   selectedHp: number | null = null,
-  count: number | 'all' = 5,
+  count: number | 'all' | 'rank-e-a' = 5,
 ): number[] {
   const hps = [...new Set(enemyHps.filter((hp) => Number.isFinite(hp) && hp > 0))]
     .sort((left, right) => left - right)
+  if (count === 'rank-e-a') return GOLDENGLOW_HP_RANK_PRESET.filter((hp) => hps.includes(hp))
   const sampleCount = count === 'all' ? hps.length
     : Math.min(hps.length, Number.isFinite(count) ? Math.max(1, Math.floor(count)) : 5)
   if (hps.length <= sampleCount) return hps
