@@ -28,7 +28,7 @@ function enemy(id: string, value: number | null, levelType: EnemyRecord['levelTy
 }
 
 function all(id = 1): EnemyComparisonCondition {
-  return { id, colorIndex: id - 1, filters: { query: '', levelType: 'ALL' }, numericConditions: [], visible: true }
+  return { id, colorIndex: id - 1, filters: { levelType: 'ALL' }, numericConditions: [], visible: true }
 }
 
 function ranges(bins: HistogramBin[]) {
@@ -38,11 +38,11 @@ function ranges(bins: HistogramBin[]) {
 test('初期条件は通常敵とエリート敵で、別々の呼び出しに編集状態を共有しない', () => {
   const conditions = createEnemyComparisonConditions()
   assert.deepEqual(conditions.map(({ id, colorIndex, filters, visible }) => ({ id, colorIndex, filters, visible })), [
-    { id: 1, colorIndex: 0, filters: { query: '', levelType: 'NORMAL' }, visible: true },
-    { id: 2, colorIndex: 1, filters: { query: '', levelType: 'ELITE' }, visible: true },
+    { id: 1, colorIndex: 0, filters: { levelType: 'NORMAL' }, visible: true },
+    { id: 2, colorIndex: 1, filters: { levelType: 'ELITE' }, visible: true },
   ])
-  conditions[0].filters.query = '編集'
-  assert.equal(createEnemyComparisonConditions()[0].filters.query, '')
+  conditions[0].filters.levelType = 'BOSS'
+  assert.equal(createEnemyComparisonConditions()[0].filters.levelType, 'NORMAL')
 })
 
 test('共通の階級境界を使用し、空の階級と上限を超える敵を系列別に保持する', () => {
@@ -106,25 +106,25 @@ test('凡例で系列を非表示にしても、自動階級と他系列の度�
   assert.equal(hidden.unionCount, 2)
 })
 
-test('区分・名前・複数の数値条件を各系列だけに適用し、元データと条件を変更しない', () => {
+test('区分・複数の数値条件を各系列だけに適用し、元データと条件を変更しない', () => {
   const rows = [enemy('兵士A', 0), enemy('兵士B', 50), enemy('兵士C', 50, 'ELITE'), enemy('別名', 50)]
   const conditions: EnemyComparisonCondition[] = [
-    { ...all(), filters: { query: '兵士', levelType: 'NORMAL' }, numericConditions: [
+    { ...all(), filters: { levelType: 'NORMAL' }, numericConditions: [
       { id: 1, field: 'magicResistance', operator: 'eq', value: '0' },
     ] },
-    { ...all(2), filters: { query: '兵士', levelType: 'ALL' }, numericConditions: [
+    { ...all(2), filters: { levelType: 'ALL' }, numericConditions: [
       { id: 1, field: 'magicResistance', operator: 'gte', value: '50' },
       { id: 2, field: 'maxHp', operator: 'lte', value: '50' },
     ] },
   ]
   const original = structuredClone({ rows, conditions })
   const result = buildEnemyComparisonDistribution(rows, conditions, 'maxHp', options)
-  assert.deepEqual(result.series.map((series) => series.count), [1, 2])
-  assert.equal(result.unionCount, 3)
+  assert.deepEqual(result.series.map((series) => series.count), [1, 3])
+  assert.equal(result.unionCount, 4)
   assert.deepEqual({ rows, conditions }, original)
-  assert.equal(formatEnemyComparisonCondition(conditions[0]), '通常敵 · 検索「兵士」 · 術耐性＝0')
+  assert.equal(formatEnemyComparisonCondition(conditions[0]), '通常敵 · 術耐性＝0')
   assert.equal(formatEnemyComparisonCondition({ ...all(), numericConditions: [{ id: 1, field: 'maxHp', operator: 'eq', value: '' }] }), '全敵')
-  assert.equal(formatEnemyComparisonCondition({ ...all(), filters: { query: '', levelType: 'UNKNOWN' } }), '未分類')
+  assert.equal(formatEnemyComparisonCondition({ ...all(), filters: { levelType: 'UNKNOWN' } }), '未分類')
 })
 
 test('同値だけの系列・0・一致なしでも全系列は同じ区間を持つ', () => {

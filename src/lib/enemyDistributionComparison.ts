@@ -18,7 +18,7 @@ import {
 export interface EnemyComparisonCondition {
   id: number
   colorIndex: number
-  filters: EnemyFilters
+  filters: Pick<EnemyFilters, 'levelType'>
   numericConditions: readonly EnemyNumericCondition[]
   visible: boolean
 }
@@ -47,8 +47,8 @@ export type EnemyComparisonYAxis = 'COUNT' | 'PERCENT'
 
 export function createEnemyComparisonConditions(): EnemyComparisonCondition[] {
   return [
-    { id: 1, colorIndex: 0, filters: { query: '', levelType: 'NORMAL' }, numericConditions: [], visible: true },
-    { id: 2, colorIndex: 1, filters: { query: '', levelType: 'ELITE' }, numericConditions: [], visible: true },
+    { id: 1, colorIndex: 0, filters: { levelType: 'NORMAL' }, numericConditions: [], visible: true },
+    { id: 2, colorIndex: 1, filters: { levelType: 'ELITE' }, numericConditions: [], visible: true },
   ]
 }
 
@@ -61,10 +61,8 @@ const LEVEL_LABELS: Record<EnemyFilters['levelType'], string> = {
 }
 
 export function formatEnemyComparisonCondition(condition: EnemyComparisonCondition): string {
-  const query = condition.filters.query.trim()
   return [
     LEVEL_LABELS[condition.filters.levelType],
-    ...(query ? [`検索「${query}」`] : []),
     ...condition.numericConditions.map(formatEnemyNumericCondition).filter((label) => label !== null),
   ].join(' · ')
 }
@@ -93,7 +91,7 @@ export function buildEnemyComparisonDistribution(
     : options.counts?.enemies[row.id]?.[countMode === 'MAPS' ? 'mapCount' : 'spawnCount'] ?? 0
   const eligible = (row: EnemyRecord) => Number.isFinite(getWeight(row)) && getWeight(row) > 0
   const matchedRows = conditions.map((condition) => uniqueRows.filter((row) => (
-    matchesEnemyFilters(row, condition.filters)
+    matchesEnemyFilters(row, { query: '', levelType: condition.filters.levelType })
     && matchesEnemyNumericConditions(row, condition.numericConditions)
   )))
   // Hidden series still participate, so a legend toggle cannot move the shared bins.

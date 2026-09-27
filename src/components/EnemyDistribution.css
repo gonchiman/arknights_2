@@ -15,6 +15,38 @@
 .enemy-histogram-load-state { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 28px 12px; }
 .enemy-distribution-panel .enemy-distribution-body { padding: 0; }
 
+.enemy-summary-metric-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.enemy-summary-metric-control label { color: var(--text-muted); font-size: 11px; }
+.enemy-summary-metric-control select {
+  min-height: 34px;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  padding: 5px 28px 5px 8px;
+  font: inherit;
+  font-size: 12px;
+}
+.enemy-distribution-panel .enemy-chart-picker {
+  padding: 10px 10px 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.enemy-distribution-panel .enemy-chart-picker .enemy-chart-visibility { width: 100%; }
+.enemy-distribution-panel .enemy-chart-picker .enemy-chart-visibility > div {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.enemy-distribution-panel .enemy-chart-picker .enemy-chart-visibility label { min-width: 0; }
+/* Only the stable chooser should anchor graph switches, not controls or marks that move below it. */
+.enemy-chart-content { min-width: 0; overflow-anchor: none; }
+
 .enemy-distribution-panel,
 .enemy-chart-image { --enemy-ecdf-guide-color: #8556ac; }
 .enemy-ecdf-guide-line { stroke: var(--enemy-ecdf-guide-color); stroke-width: 1.8; pointer-events: none; }
@@ -213,6 +245,7 @@
 }
 
 @media (pointer: coarse) {
+  .enemy-summary-metric-control select { min-height: 44px; font-size: 16px; }
   .enemy-reference-controls label,
   .enemy-distribution-panel .enemy-chart-visibility label,
   .enemy-distribution-panel .enemy-chart-scale-switch button,

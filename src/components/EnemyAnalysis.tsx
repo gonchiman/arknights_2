@@ -11,20 +11,19 @@ import './EnemyAnalysis.css'
 
 export function EnemyAnalysis() {
   const { rows, loading, error, retry } = useEnemyRecords()
-  const [filters, setFilters] = useState<EnemyFilters>({ query: '', levelType: 'ALL' })
+  const [filters, setFilters] = useState<Pick<EnemyFilters, 'levelType'>>({ levelType: 'ALL' })
   const [numericConditions, setNumericConditions] = useState<readonly EnemyNumericCondition[]>([])
   const statisticsControls = useEnemyStatisticsControls()
   const scopedRows = useMemo(
-    () => rows.filter((enemy) => matchesEnemyFilters(enemy, filters) && matchesEnemyNumericConditions(enemy, numericConditions)),
+    () => rows.filter((enemy) => matchesEnemyFilters(enemy, { query: '', levelType: filters.levelType }) && matchesEnemyNumericConditions(enemy, numericConditions)),
     [rows, filters, numericConditions],
   )
   const scopeLabel = [
     filters.levelType === 'ALL' ? '全敵' : ENEMY_LEVEL_LABELS[filters.levelType],
-    filters.query.trim() ? `検索「${filters.query.trim()}」` : null,
     ...numericConditions.map(formatEnemyNumericCondition),
   ].filter(Boolean).join(' · ')
   const resetFilters = () => {
-    setFilters({ query: '', levelType: 'ALL' })
+    setFilters({ levelType: 'ALL' })
     setNumericConditions([])
   }
 

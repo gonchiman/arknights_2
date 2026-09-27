@@ -38,7 +38,7 @@ export function EnemyComparisonConditions({ conditions, series, onChange, rows, 
     const usedColors = new Set(conditions.map((condition) => condition.colorIndex))
     const colorIndex = Array.from({ length: MAX_CONDITIONS }, (_, index) => index).find((index) => !usedColors.has(index)) ?? 0
     setNewConditionId(id)
-    onChange([...conditions, { id, colorIndex, filters: { query: '', levelType: 'ALL' }, numericConditions: [], visible: true }])
+    onChange([...conditions, { id, colorIndex, filters: { levelType: 'ALL' }, numericConditions: [], visible: true }])
   }
 
   const removeCondition = (id: number) => {
@@ -92,10 +92,10 @@ function ComparisonConditionRow({ condition, index, series, rows, countMode, ini
   const label = series?.label ?? formatEnemyComparisonCondition(condition)
   const mode = ENEMY_HISTOGRAM_COUNT_MODES.find((item) => item.key === countMode)!
   const invalid = badInput || draft.numericConditions.some((item) => item.value.trim() !== '' && parseEnemyNumericFilterValue(item.value) === null)
-  const matchedCount = useMemo(() => rows.filter((enemy) => matchesEnemyFilters(enemy, draft.filters) && matchesEnemyNumericConditions(enemy, draft.numericConditions)).length, [rows, draft.filters, draft.numericConditions])
+  const matchedCount = useMemo(() => rows.filter((enemy) => matchesEnemyFilters(enemy, { query: '', levelType: draft.filters.levelType }) && matchesEnemyNumericConditions(enemy, draft.numericConditions)).length, [rows, draft.filters, draft.numericConditions])
 
   useEffect(() => {
-    if (editing) editorRef.current?.querySelector<HTMLInputElement>('input[type="search"]')?.focus()
+    if (editing) editorRef.current?.querySelector<HTMLButtonElement>('button[aria-pressed="true"]')?.focus()
   }, [editing])
 
   useLayoutEffect(() => {
@@ -143,7 +143,7 @@ function ComparisonConditionRow({ condition, index, series, rows, countMode, ini
         matchedCount={matchedCount}
         totalCount={rows.length}
         onReset={() => {
-          setDraft((current) => ({ ...current, filters: { query: '', levelType: 'ALL' }, numericConditions: [] }))
+          setDraft((current) => ({ ...current, filters: { levelType: 'ALL' }, numericConditions: [] }))
           setBadInput(false)
         }}
       />
@@ -161,5 +161,5 @@ function ComparisonConditionRow({ condition, index, series, rows, countMode, ini
 }
 
 function copyCondition(condition: EnemyComparisonCondition): EnemyComparisonCondition {
-  return { ...condition, filters: { ...condition.filters }, numericConditions: condition.numericConditions.map((item) => ({ ...item })) }
+  return { ...condition, filters: { levelType: condition.filters.levelType }, numericConditions: condition.numericConditions.map((item) => ({ ...item })) }
 }

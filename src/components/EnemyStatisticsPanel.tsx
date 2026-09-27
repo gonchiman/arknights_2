@@ -163,9 +163,17 @@ export function useEnemyStatisticsControls() {
 type EnemyStatisticsControls = ReturnType<typeof useEnemyStatisticsControls>
 
 function EnemyStatisticsSettings({ controls, summary = false }: { controls: EnemyStatisticsControls; summary?: boolean }) {
+  const selectorId = useId()
+  if (summary) return <div className="enemy-summary-metric-control">
+    <label htmlFor={selectorId}>統計を見るステータス</label>
+    <select id={selectorId} value={controls.selectedMetric.key}
+      onChange={(event) => controls.selectMetric(getMetric(event.target.value as AnalyzedStatKey))}>
+      {STAT_METRICS.map((metric) => <option key={metric.key} value={metric.key}>{metric.label}</option>)}
+    </select>
+  </div>
   return (
     <fieldset className="enemy-statistics-settings">
-      <legend>{summary ? '統計を見るステータス' : '分布を見るステータス'}</legend>
+      <legend>分布を見るステータス</legend>
       <div className="enemy-metric-selector" role="group" aria-label="分析するステータス">
         {STAT_METRICS.map((metric) => (
           <button
@@ -373,7 +381,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         className="enemy-statistics-panel"
         bodyClassName="enemy-statistics-body"
       >
-        {selectedChart === 'HEATMAP' && <EnemyStatisticsSettings controls={controls} summary />}
+        <EnemyStatisticsSettings controls={controls} summary />
         {countUnavailable ? <p role="status">{countData.error ? '登場データを取得できませんでした' : '登場データを読み込み中…'}</p>
           : <StatisticsSummary statistics={summaryStatistics} metric={selectedMetric} countUnit={countOption.unit} />}
       </CollapsibleCalculatorPanel>
@@ -390,9 +398,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         className="enemy-distribution-panel"
         bodyClassName="enemy-distribution-body"
       >
-        {selectedChart !== 'COMPARISON' && filterControls}
-        {selectedChart !== 'HEATMAP' && <EnemyStatisticsSettings controls={controls} />}
-        <div className="enemy-chart-toolbar">
+        <div className="enemy-chart-picker">
           <fieldset className="enemy-chart-visibility">
             <legend>表示するグラフ</legend>
             <div role="radiogroup" aria-label="グラフの選択">
@@ -410,7 +416,13 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
               ))}
             </div>
           </fieldset>
-          {selectedChart !== 'COMPARISON' && selectedChart !== 'HEATMAP' && summaryStatistics.count > 0 && (
+        </div>
+
+        <div className="enemy-chart-content">
+        {selectedChart !== 'COMPARISON' && filterControls}
+        {selectedChart !== 'HEATMAP' && <EnemyStatisticsSettings controls={controls} />}
+        {selectedChart !== 'COMPARISON' && <div className="enemy-chart-toolbar">
+          {selectedChart !== 'HEATMAP' && summaryStatistics.count > 0 && (
             <div className="enemy-chart-axis-control">
               <span>横軸</span>
               <ScaleSwitch
@@ -420,10 +432,10 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
               />
             </div>
           )}
-          {selectedChart !== 'COMPARISON' && <button type="button" className="button secondary enemy-chart-save-button"
+          <button type="button" className="button secondary enemy-chart-save-button"
             aria-haspopup="dialog" disabled={!canSaveImage || savingImage || preparingImage} aria-busy={savingImage || preparingImage}
-            onClick={() => void openImageSaveDialog()}>{savingImage ? '画像を保存中…' : preparingImage ? '画像を準備中…' : '画像を保存'}</button>}
-        </div>
+            onClick={() => void openImageSaveDialog()}>{savingImage ? '画像を保存中…' : preparingImage ? '画像を準備中…' : '画像を保存'}</button>
+        </div>}
 
         <DistributionCountControls mode={activeCountMode} onChange={setCountMode} counts={countData.data} />
         {countUnavailable && <div className="enemy-histogram-load-state" role="status">
@@ -576,6 +588,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           {imageFeedback === 'saved' ? 'PNG画像を保存しました。'
             : imageFeedback === 'downloaded' ? 'PNG画像のダウンロードを開始しました。' : ''}
         </p>
+        </div>
       </CollapsibleCalculatorPanel>
       {imageData && CHART_OPTIONS.some(({ key }) => key === imageData.kind) && <ChartImageSaveDialog
         initialFilename={imageData.filename ?? getEnemyChartImageFilename({ kind: imageData.kind, metricLabel: imageData.metric.label,
