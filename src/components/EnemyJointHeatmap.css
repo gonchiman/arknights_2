@@ -1,0 +1,103 @@
+.enemy-joint-figure {
+  --enemy-joint-blue: var(--link);
+  min-width: 0;
+  max-width: 100%;
+  color: var(--text);
+}
+
+.enemy-joint-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.enemy-joint-legend i {
+  display: inline-block;
+  width: 64px;
+  height: 9px;
+  background: linear-gradient(to right, transparent, color-mix(in srgb, var(--enemy-joint-blue) 40%, transparent)), var(--surface-soft);
+}
+.enemy-joint-legend > span:last-child { margin-left: 6px; }
+
+.enemy-joint-display-options { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.enemy-joint-color-scale { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.enemy-joint-color-scale > span { color: var(--text-muted); font-size: 11px; }
+@media (max-width: 600px) {
+  .enemy-joint-display-options { align-items: flex-start; }
+}
+
+.enemy-joint-scroll {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.enemy-joint-chart { position: relative; }
+.enemy-joint-svg {
+  --enemy-joint-blue: var(--link);
+  display: block;
+  font-family: "Yu Gothic", YuGothic, "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.enemy-joint-background { fill: var(--surface); }
+.enemy-joint-tile { fill: var(--surface-soft); }
+.enemy-joint-color { fill: var(--enemy-joint-blue); }
+.enemy-joint-frame { fill: none; stroke: var(--border); stroke-width: 1; }
+.enemy-joint-tick,
+.enemy-joint-count { fill: var(--text); font-size: 12px; }
+.enemy-joint-zero,
+.enemy-joint-total { fill: var(--text-muted); }
+.enemy-joint-total { font-size: 11px; }
+.enemy-joint-axis-title { fill: var(--text-soft); font-size: 12px; font-weight: 700; }
+
+.enemy-joint-cell-control {
+  position: absolute;
+  display: block;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.enemy-joint-cell-control.is-active { box-shadow: inset 0 0 0 2px var(--text); }
+.enemy-joint-cell-control:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+
+.enemy-joint-detail {
+  min-height: 58px;
+  padding: 8px 12px;
+  font-size: 11px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.enemy-joint-detail-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 16px; }
+.enemy-joint-detail-heading strong { font-size: inherit; font-weight: 600; }
+.enemy-joint-detail-heading > span { font-variant-numeric: tabular-nums; }
+.enemy-joint-examples { margin-top: 3px; color: var(--text-muted); }
+.enemy-joint-contributions { padding: 0 12px 10px; font-size: 11px; }
+.enemy-joint-contributions summary { width: fit-content; padding: 6px 0; cursor: pointer; color: var(--text-soft); }
+.enemy-joint-contributions summary:focus-visible { outline: 2px solid var(--text); }
+.enemy-joint-contributions .enemy-frequency-table-wrapper { max-height: 300px; overflow: auto; }
+.enemy-joint-contribution-table { border: 1px solid var(--border); }
+.enemy-joint-contribution-table caption { padding: 4px 0 8px; text-align: left; color: var(--text-muted); }
+.enemy-joint-contribution-table thead th:first-child { width: auto; }
+.enemy-joint-empty { padding: 10px 12px 0; color: var(--text-muted); font-size: 12px; }
+.enemy-joint-help { border-top: 1px solid var(--border); font-size: 11px; }
+.enemy-joint-help summary { width: fit-content; padding: 9px 12px; cursor: pointer; color: var(--text-muted); }
+.enemy-joint-help summary:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
+.enemy-joint-help p { margin: 0; padding: 0 12px 10px; color: var(--text-soft); line-height: 1.7; }
+
+.enemy-joint-svg-image {
+  --enemy-joint-blue: #245ea8;
+  --surface: #fff;
+  --surface-soft: #f7f7f7;
+  --border: #d6d6d6;
+  --text: #222;
+  --text-muted: #555;
+  --text-soft: #444;
+}
+.enemy-joint-svg-image .enemy-joint-tick,
+.enemy-joint-svg-image .enemy-joint-count { font-size: 11px; }

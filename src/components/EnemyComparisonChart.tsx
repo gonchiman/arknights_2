@@ -5,6 +5,7 @@ import type { EnemyComparisonDistribution, EnemyComparisonSeries, EnemyCompariso
 import { buildEnemyComparisonCurvePath } from '../lib/enemyComparisonCurve'
 import { ChartImageFrame } from './ChartImageFrame'
 import { getEnemyChartImageLayout } from '../lib/enemyChartImage'
+import { ENEMY_HISTOGRAM_COUNT_MODES, type EnemyHistogramCountMode, type EnemyHistogramCounts } from '../lib/enemyHistogramCounts'
 
 export interface EnemyComparisonMetric {
   key: EnemyNumericFilterField
@@ -21,6 +22,8 @@ export interface EnemyComparisonSnapshot {
   metric: EnemyComparisonMetric
   scale: HistogramScale
   yAxis: EnemyComparisonYAxis
+  countMode?: EnemyHistogramCountMode
+  coverage?: EnemyHistogramCounts['summary'] | null
 }
 
 export const comparisonColor = (index: number) => `var(--enemy-comparison-series-${index + 1})`
@@ -75,10 +78,14 @@ function EnemyComparisonSvg({ data, width, height, image = false }: {
   const pinned = useRef(false)
   useEffect(() => { pinned.current = false }, [data])
   const { distribution, metric, yAxis, scale } = data
+  const mode = ENEMY_HISTOGRAM_COUNT_MODES.find((item) => item.key === (data.countMode ?? 'TYPES'))!
   const bins = distribution.bins.filter((bin) => !bin.isOverflow)
   const allSeries = distribution.series.map((series) => ({ ...series, bins: series.bins.filter((bin) => !bin.isOverflow) }))
   const visible = allSeries.filter((series) => series.condition.visible && series.count > 0)
-  const left = 60, right = Math.max(left + 1, width - 16), top = 20, bottom = height - (image ? 28 : 52)
+  const maximumY = Math.max(0, ...allSeries.flatMap((series) => series.bins.map((bin) => amount(bin.count, series.count, yAxis))))
+  const countDigits = format(maximumY).length
+  const left = yAxis === 'COUNT' ? Math.max(60, 32 + countDigits * 7) : 60
+  const right = Math.max(left + 1, width - 16), top = 20, bottom = height - (image ? 28 : 52)
   const minimum = distribution.minimum, maximum = distribution.maximum
   const log = scale === 'LOG' && minimum >= 0
   const transform = (value: number) => log ? Math.log1p(value) : value
@@ -89,7 +96,6 @@ function EnemyComparisonSvg({ data, width, height, image = false }: {
     : bin.start + (bin.end - bin.start) / 2
   const showPoints = bins.length === 1 || bins.slice(1).every((bin, index) => x(center(bin)) - x(center(bins[index])) >= 8)
   // Legend visibility changes neither the shared bins nor the vertical scale.
-  const maximumY = Math.max(0, ...allSeries.flatMap((series) => series.bins.map((bin) => amount(bin.count, series.count, yAxis))))
   const step = niceStep(maximumY / 4, yAxis === 'COUNT' ? 1 : 0)
   const ceiling = Math.max(step, Math.ceil(maximumY / step) * step)
   const y = (value: number) => bottom - (value / ceiling) * (bottom - top - 4)
@@ -103,7 +109,7 @@ function EnemyComparisonSvg({ data, width, height, image = false }: {
   const active = activeIndex === null ? null : bins[activeIndex]
   const selectedX = active ? x(center(active)) : left
   const readout = active ? `${binLabel(active, metric.suffix)}：${visible.map((series) =>
-    `${series.label} ${format(series.bins[activeIndex!].count)}体（${format(amount(series.bins[activeIndex!].count, series.count, 'PERCENT'))}%）`).join('、')}` : ''
+    `${series.label} ${format(series.bins[activeIndex!].count)}${mode.unit}（${format(amount(series.bins[activeIndex!].count, series.count, 'PERCENT'))}%）`).join('、')}` : ''
   const chooseAt = (clientX: number, element: SVGSVGElement) => {
     if (!bins.length) return
     const bounds = element.getBoundingClientRect()
@@ -126,8 +132,8 @@ function EnemyComparisonSvg({ data, width, height, image = false }: {
       onPointerLeave={image ? undefined : () => { if (!pinned.current) setSelection(null) }}
       onPointerDown={image ? undefined : (event) => { pinned.current = !pinned.current; chooseAt(event.clientX, event.currentTarget) }}>
       <title id={titleId}>{metric.label}の分布比較</title>
-      <desc id={descriptionId}>{allSeries.map((series) => `${series.label}：有効データ${series.count}体`).join('。')}。
-        縦軸は{yAxis === 'PERCENT' ? '各条件の有効データ数に対する割合' : '敵数'}。各階級の中央の点を曲線でつないでいます。{!image && '左右矢印キーで階級ごとの値を確認できます。'}</desc>
+      <desc id={descriptionId}>{allSeries.map((series) => `${series.label}：有効データ${format(series.count)}${mode.unit}`).join('。')}。
+        集計方法は{mode.axisLabel}。縦軸は{yAxis === 'PERCENT' ? '各条件の有効データ合計に対する割合' : mode.axisLabel}。各階級の中央の点を曲線でつないでいます。{!image && '左右矢印キーで階級ごとの値を確認できます。'}</desc>
       {ticksY.map((tick) => <g key={tick}>
         <line className="enemy-chart-gridline" x1={left} x2={right} y1={y(tick)} y2={y(tick)} />
         <text className="enemy-chart-tick" x={left - 8} y={y(tick) + 4} textAnchor="end">{format(tick)}{yAxis === 'PERCENT' ? '%' : ''}</text>
@@ -148,7 +154,7 @@ function EnemyComparisonSvg({ data, width, height, image = false }: {
         textAnchor={i === 0 ? 'start' : i === ticksX.length - 1 ? 'end' : 'middle'}>{compactNumber(tick)}</text>)}
       {!visible.length && <text className="enemy-comparison-empty" x={(left + right) / 2} y={(top + bottom) / 2} textAnchor="middle">
         {allSeries.some((series) => series.count > 0) ? '表示する系列を選択' : '数値データがありません'}</text>}
-      <text className="enemy-chart-axis-title" x="14" y={(top + bottom) / 2} textAnchor="middle" transform={`rotate(-90 14 ${(top + bottom) / 2})`}>{yAxis === 'PERCENT' ? '各条件内の割合（%）' : '敵数（体）'}</text>
+      <text className="enemy-chart-axis-title" x="14" y={(top + bottom) / 2} textAnchor="middle" transform={`rotate(-90 14 ${(top + bottom) / 2})`}>{yAxis === 'PERCENT' ? '各条件内の割合（%）' : mode.axisLabel}</text>
       {!image && <text className="enemy-chart-axis-title" x={(left + right) / 2} y={height - 8} textAnchor="middle">{metric.axisLabel}（{log ? '対数' : '線形'}目盛）</text>}
     </svg>
     {!image && <div className="enemy-comparison-readout" role="status">{readout || '\u00a0'}</div>}
@@ -165,8 +171,8 @@ function compactNumber(value: number) {
   return new Intl.NumberFormat('ja-JP', { maximumSignificantDigits: 3, notation: Math.abs(value) >= 10000 ? 'compact' : 'standard' }).format(value)
 }
 
-function overflowDescription(series: EnemyComparisonSeries, yAxis: EnemyComparisonYAxis) {
-  return `${format(series.overflowCount)}体${yAxis === 'PERCENT' ? `（${new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 }).format(amount(series.overflowCount, series.count, yAxis))}%）` : ''}`
+function overflowDescription(series: EnemyComparisonSeries, yAxis: EnemyComparisonYAxis, unit: string) {
+  return `${format(series.overflowCount)}${unit}${yAxis === 'PERCENT' ? `（${new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 }).format(amount(series.overflowCount, series.count, yAxis))}%）` : ''}`
 }
 
 function EnemyComparisonOverflow({ data, onHeight }: { data: EnemyComparisonSnapshot; onHeight?: (height: number) => void }) {
@@ -180,10 +186,11 @@ function EnemyComparisonOverflow({ data, onHeight }: { data: EnemyComparisonSnap
     return () => observer.disconnect()
   }, [onHeight])
   const overflow = data.distribution.bins.find((bin) => bin.isOverflow)
+  const mode = ENEMY_HISTOGRAM_COUNT_MODES.find((item) => item.key === (data.countMode ?? 'TYPES'))!
   return <div className="enemy-comparison-overflow" ref={ref}>
     {overflow && <><strong>{format(overflow.start)}{data.metric.suffix}超</strong>
       {data.distribution.series.filter((series) => series.condition.visible).map((series) => <span key={series.condition.id}>
-        <EnemyComparisonSwatch colorIndex={series.condition.colorIndex} />{series.label}：{overflowDescription(series, data.yAxis)}
+        <EnemyComparisonSwatch colorIndex={series.condition.colorIndex} />{series.label}：{overflowDescription(series, data.yAxis, mode.unit)}
       </span>)}
     </>}
   </div>
@@ -197,7 +204,10 @@ export function EnemyComparisonImage({ data, aspectRatio, onLayout }: {
   // Shrinking after wrapping changes would leave the export host at its earlier width.
   const measureFooter = useCallback((height: number) => setFooterHeight((current) => Math.max(current, height)), [])
   const metadata = data.distribution.histogram
-  const conditions = [data.yAxis === 'PERCENT' ? '各条件内の割合' : '敵数',
+  const mode = ENEMY_HISTOGRAM_COUNT_MODES.find((item) => item.key === (data.countMode ?? 'TYPES'))!
+  const coverage = data.countMode === 'SPAWNS' ? `出現数確定 ${format(data.coverage?.spawnMapCount ?? 0)}マップ`
+    : data.countMode === 'MAPS' ? `収録 ${format(data.coverage?.mapCount ?? 0)}マップ` : null
+  const conditions = [data.yAxis === 'PERCENT' ? `${mode.label}の割合` : mode.axisLabel, coverage,
     metadata?.binWidth != null ? `階級幅 ${format(metadata.binWidth)}` : `${data.distribution.bins.length}階級`,
     metadata ? `上限 ${format(metadata.normalRangeEnd)}${data.metric.suffix}` : null].filter(Boolean).join(' · ')
   return <ChartImageFrame className="enemy-chart-image enemy-comparison-image" title={`${data.metric.label}の分布比較`}
@@ -205,7 +215,7 @@ export function EnemyComparisonImage({ data, aspectRatio, onLayout }: {
     axisTitle={`${data.metric.axisLabel}（${data.scale === 'LOG' && data.distribution.minimum >= 0 ? '対数' : '線形'}目盛）`}
     legend={<ul className="chart-image-frame-legend-list" aria-label="比較する条件">
       {data.distribution.series.filter((series) => series.condition.visible).map((series) => <li className="chart-image-frame-legend-item" key={series.condition.id}>
-        <EnemyComparisonSwatch colorIndex={series.condition.colorIndex} /><span>{series.label}（{series.count}体{series.missingCount ? `・値なし${series.missingCount}体` : ''}）</span>
+        <EnemyComparisonSwatch colorIndex={series.condition.colorIndex} /><span>{series.label}（{format(series.count)}{mode.unit}{series.missingCount ? `・値なし${format(series.missingCount)}${mode.unit}` : ''}）</span>
       </li>)}
     </ul>}>
     {({ width, height }) => <><EnemyComparisonSvg data={data} width={width} height={height - footerHeight} image /><EnemyComparisonOverflow data={data} onHeight={measureFooter} /></>}

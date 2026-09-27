@@ -2,7 +2,6 @@ import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type Reac
 import {
   MAX_CUSTOM_LINEAR_BIN_COUNT,
   calculateBoxPlotStatistics,
-  calculateEmpiricalCdf,
   calculateNumericStatisticsWithDispersion,
   getCustomLinearHistogramMaximum,
   type BoxPlotStatistics,
@@ -21,6 +20,17 @@ import { ChartImageFrame } from './ChartImageFrame'
 import { EnemyHistogramOverflowHelp } from './EnemyHistogramOverflowHelp'
 import { EnemyEcdfGuideControls } from './EnemyEcdfGuideControls'
 import { EnemyDistributionComparison } from './EnemyDistributionComparison'
+import { EnemyJointHeatmap, EnemyJointHeatmapSvg } from './EnemyJointHeatmap'
+import { buildEnemyJointDistribution, type EnemyJointDistribution } from '../lib/enemyJointDistribution'
+import { getEnemyJointImageFilename, getEnemyJointImageConditions } from '../lib/enemyJointImage'
+import type { EnemyHeatmapColorScale } from '../lib/enemyHeatmapColor'
+import { withChartImageAspect } from '../lib/chartImageFilename'
+import { calculateWeightedHistogram } from '../lib/enemyWeightedHistogram'
+import { calculateWeightedEmpiricalCdf, getWeightedEnemyEcdfImageFilename } from '../lib/enemyWeightedEcdf'
+import { useEnemyHistogramCounts } from '../lib/useEnemyHistogramCounts'
+import { buildEnemyHistogramObservations, withHistogramDispersion, getWeightedEnemyHistogramImageFilename,
+  ENEMY_HISTOGRAM_COUNT_MODES, type EnemyHistogramCountMode, type EnemyHistogramCounts } from '../lib/enemyHistogramCounts'
+import { HelpPopover } from './HelpPopover'
 import { calculateEcdfGuideReadings, parseEcdfGuideInput, type EcdfGuideValues } from '../lib/enemyEcdfGuides'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { getEnemyChartImageFilename, getEnemyChartImageLayout, getEnemyChartNaturalHeight, type EnemyChartKind as ChartKind } from '../lib/enemyChartImage'
@@ -87,6 +97,7 @@ const CHART_OPTIONS: Array<{ key: ChartKind; label: string }> = [
   { key: 'HISTOGRAM', label: 'ヒストグラム' },
   { key: 'ECDF', label: '累積分布' },
   { key: 'COMPARISON', label: '分布比較' },
+  { key: 'HEATMAP', label: 'ヒートマップ' },
 ]
 
 const LEVEL_ORDER: EnemyLevelType[] = ['NORMAL', 'ELITE', 'BOSS', 'UNKNOWN']
@@ -151,10 +162,10 @@ export function useEnemyStatisticsControls() {
 
 type EnemyStatisticsControls = ReturnType<typeof useEnemyStatisticsControls>
 
-function EnemyStatisticsSettings({ controls }: { controls: EnemyStatisticsControls }) {
+function EnemyStatisticsSettings({ controls, summary = false }: { controls: EnemyStatisticsControls; summary?: boolean }) {
   return (
     <fieldset className="enemy-statistics-settings">
-      <legend>分布を見るステータス</legend>
+      <legend>{summary ? '統計を見るステータス' : '分布を見るステータス'}</legend>
       <div className="enemy-metric-selector" role="group" aria-label="分析するステータス">
         {STAT_METRICS.map((metric) => (
           <button
@@ -185,9 +196,15 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const upperBoundHelpId = useId()
   const [chartChoice, setSelectedChart] = useState<ChartKind>('HISTOGRAM')
   const selectedChart = CHART_OPTIONS.some(({ key }) => key === chartChoice) ? chartChoice : 'HISTOGRAM'
+  const [activeCountMode, setCountMode] = useState<EnemyHistogramCountMode>('TYPES')
+  const [heatmapColorScale, setHeatmapColorScale] = useState<EnemyHeatmapColorScale>('LINEAR')
+  const countOption = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === activeCountMode)!
+  const countData = useEnemyHistogramCounts(activeCountMode !== 'TYPES')
+  const countUnavailable = activeCountMode !== 'TYPES' && !countData.data
   const [imageData, setImageData] = useState<EnemyChartImageData | null>(null)
   const [imageAspect, setImageAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [savingImage, setSavingImage] = useState(false)
+  const [preparingImage, setPreparingImage] = useState(false)
   const [imageFeedback, setImageFeedback] = useState<'saved' | 'downloaded' | 'failed' | null>(null)
   const imageSaveInProgress = useRef(false)
   const imageSavePicker = getChartImageSavePicker()
@@ -207,18 +224,24 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     () => buildMetricObservations(rows, selectedMetric.key),
     [rows, selectedMetric.key],
   )
-  const ecdfPoints = useMemo(() => calculateEmpiricalCdf(metricSource), [metricSource])
   const ecdfX = parseEcdfGuideInput(ecdfXInput, 'x')
   const ecdfY = parseEcdfGuideInput(ecdfYInput, 'y')
   const ecdfGuides: EcdfGuideValues = { x: ecdfX.value, yPercent: ecdfY.value }
+  const weightedObservations = useMemo(() => buildEnemyHistogramObservations(rows,
+    (enemy) => getEnemyMetricValue(enemy, selectedMetric.key), activeCountMode, countData.data),
+  [rows, selectedMetric.key, activeCountMode, countData.data])
+  const ecdfPoints = useMemo(() => calculateWeightedEmpiricalCdf(weightedObservations), [weightedObservations])
   const ecdfReadings = calculateEcdfGuideReadings(ecdfPoints, ecdfGuides)
+  const histogramSource = useMemo(() => activeCountMode === 'TYPES' ? metricSource
+    : weightedObservations.filter(({ weight }) => weight > 0).map(({ value }) => value),
+  [activeCountMode, metricSource, weightedObservations])
   const customHistogramMaximum = useMemo(
-    () => getCustomLinearHistogramMaximum(metricSource, selectedMetric.minimumLinearBinWidth),
-    [metricSource, selectedMetric.minimumLinearBinWidth],
+    () => getCustomLinearHistogramMaximum(histogramSource, selectedMetric.minimumLinearBinWidth),
+    [histogramSource, selectedMetric.minimumLinearBinWidth],
   )
   const automaticLinearStatistics = useMemo(
-    () => calculateNumericStatisticsWithDispersion(metricSource, selectedMetric.logBinCount, 'LINEAR', selectedMetric.minimumLinearBinWidth),
-    [metricSource, selectedMetric.logBinCount, selectedMetric.minimumLinearBinWidth],
+    () => calculateNumericStatisticsWithDispersion(histogramSource, selectedMetric.logBinCount, 'LINEAR', selectedMetric.minimumLinearBinWidth),
+    [histogramSource, selectedMetric.logBinCount, selectedMetric.minimumLinearBinWidth],
   )
   const automaticBinWidth = automaticLinearStatistics.histogram?.binWidth ?? selectedMetric.minimumLinearBinWidth
   const parsedLinearUpperBound = linearUpperBoundInput.trim() === '' ? null : Number(linearUpperBoundInput)
@@ -264,20 +287,52 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     () => selectedChart === 'SCATTER' ? buildScatterObservations(rows, selectedMetric.key, scatterMetric.key) : [],
     [rows, selectedChart, selectedMetric.key, scatterMetric.key],
   )
-  const canSaveImage = (selectedChart === 'SCATTER' ? scatterObservations.length : statistics.count) > 0
+  const jointDistribution = useMemo(() => buildEnemyJointDistribution(rows, activeCountMode, countData.data),
+    [rows, activeCountMode, countData.data])
+  const histogramStatistics = useMemo(() => activeCountMode === 'TYPES' ? statistics
+    : withHistogramDispersion(calculateWeightedHistogram(weightedObservations, {
+      preferredBinCount: selectedMetric.logBinCount, scale: axisScale,
+      minimumLinearBinWidth: selectedMetric.minimumLinearBinWidth, customLinearBinWidth, customLinearUpperBound,
+    })), [activeCountMode, statistics, weightedObservations, selectedMetric.logBinCount,
+    selectedMetric.minimumLinearBinWidth, axisScale, customLinearBinWidth, customLinearUpperBound])
+  const summaryStatistics = histogramStatistics
+  const canSaveImage = (selectedChart === 'HEATMAP' ? jointDistribution.count
+    : selectedChart === 'SCATTER' ? scatterObservations.length : summaryStatistics.count) > 0
+    && !countUnavailable
     && !(selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR' && histogramSettingsError)
     && !(selectedChart === 'ECDF' && (ecdfX.error || ecdfY.error))
   const hasFixedEmptyHistogram = selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR'
-    && customLinearUpperBound !== null && statistics.bins.length > 0
+    && customLinearUpperBound !== null && histogramStatistics.bins.length > 0
   const previewAspect = imageAspect.preset === 'auto' ? undefined : Number(imageAspect.width) / Number(imageAspect.height)
 
-  const openImageSaveDialog = () => {
+  const openImageSaveDialog = async () => {
     if (!canSaveImage || imageSaveInProgress.current || selectedChart === 'COMPARISON') return
     setImageFeedback(null)
     // Keep the preview and saved image on the same data, even if the source updates.
-    setImageData({ kind: selectedChart, metric: selectedMetric, scale: axisScale, statistics, observations,
+    const snapshot: EnemyChartImageData = { kind: selectedChart, metric: selectedMetric, scale: axisScale, statistics: summaryStatistics, observations,
       scatterObservations, scatterMetric, scatterScale, scopeLabel, customLinearUpperBound, ecdfGuides,
-      referenceVisibility: { ...referenceVisibility } })
+      countMode: activeCountMode, countCoverage: activeCountMode === 'TYPES' ? null : countData.data?.summary ?? null,
+      ecdfPoints,
+      jointDistribution, heatmapColorScale, referenceVisibility: { ...referenceVisibility } }
+    imageSaveInProgress.current = true
+    setPreparingImage(true)
+    try {
+      snapshot.filename = selectedChart === 'HEATMAP' ? await getEnemyJointImageFilename(jointDistribution, scopeLabel, snapshot.countCoverage, snapshot.heatmapColorScale)
+        : selectedChart === 'ECDF' ? await getWeightedEnemyEcdfImageFilename({ mode: snapshot.countMode,
+          metric: selectedMetric.label, scope: scopeLabel, scale: axisScale, statistics: summaryStatistics,
+          points: snapshot.ecdfPoints, guides: snapshot.ecdfGuides,
+          referenceVisibility: snapshot.referenceVisibility, coverage: snapshot.countCoverage })
+        : await getWeightedEnemyHistogramImageFilename({ mode: snapshot.countMode,
+          metric: selectedMetric.label, scope: scopeLabel, scale: axisScale, statistics: summaryStatistics,
+          customLinearUpperBound: snapshot.customLinearUpperBound,
+          referenceVisibility: snapshot.referenceVisibility, coverage: snapshot.countCoverage })
+      setImageData(snapshot)
+    } catch {
+      setImageFeedback('failed')
+    } finally {
+      imageSaveInProgress.current = false
+      setPreparingImage(false)
+    }
   }
 
   const saveChartImage = async (filename: string, aspectRatio?: number) => {
@@ -312,28 +367,31 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         id="enemy-statistics"
         number="01"
         title="統計サマリー"
-        summary={`${selectedMetric.label} · ${scopeLabel} · 値なし ${statistics.missingCount}体`}
+        summary={`${selectedMetric.label} · ${countOption.label} · ${scopeLabel}${countUnavailable ? '' : ` · 値なし ${formatNumber(summaryStatistics.missingCount, 0)}${countOption.unit}`}`}
         defaultOpen
         collapsedLabel="統計を開く"
         className="enemy-statistics-panel"
         bodyClassName="enemy-statistics-body"
       >
-        <StatisticsSummary statistics={statistics} metric={selectedMetric} />
+        {selectedChart === 'HEATMAP' && <EnemyStatisticsSettings controls={controls} summary />}
+        {countUnavailable ? <p role="status">{countData.error ? '登場データを取得できませんでした' : '登場データを読み込み中…'}</p>
+          : <StatisticsSummary statistics={summaryStatistics} metric={selectedMetric} countUnit={countOption.unit} />}
       </CollapsibleCalculatorPanel>
 
       <CollapsibleCalculatorPanel
         id="enemy-distribution"
         number="02"
         title="分布グラフ"
-        summary={selectedChart === 'COMPARISON' ? `${selectedMetric.label} · 分布比較`
-          : `${selectedMetric.label} · ${CHART_OPTIONS.find((chart) => chart.key === selectedChart)?.label} · ${scopeLabel} · 対象 ${rows.length}体`}
+        summary={selectedChart === 'HEATMAP' ? `HP × 術耐性 · ${countOption.label} · ${scopeLabel}`
+          : selectedChart === 'COMPARISON' ? `${selectedMetric.label} · 分布比較 · ${countOption.label}`
+          : `${selectedMetric.label} · ${CHART_OPTIONS.find((chart) => chart.key === selectedChart)?.label} · ${countOption.label} · ${scopeLabel} · 対象 ${rows.length}種類`}
         defaultOpen
         collapsedLabel="グラフを開く"
         className="enemy-distribution-panel"
         bodyClassName="enemy-distribution-body"
       >
         {selectedChart !== 'COMPARISON' && filterControls}
-        <EnemyStatisticsSettings controls={controls} />
+        {selectedChart !== 'HEATMAP' && <EnemyStatisticsSettings controls={controls} />}
         <div className="enemy-chart-toolbar">
           <fieldset className="enemy-chart-visibility">
             <legend>表示するグラフ</legend>
@@ -352,7 +410,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
               ))}
             </div>
           </fieldset>
-          {selectedChart !== 'COMPARISON' && statistics.count > 0 && (
+          {selectedChart !== 'COMPARISON' && selectedChart !== 'HEATMAP' && summaryStatistics.count > 0 && (
             <div className="enemy-chart-axis-control">
               <span>横軸</span>
               <ScaleSwitch
@@ -363,9 +421,15 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
             </div>
           )}
           {selectedChart !== 'COMPARISON' && <button type="button" className="button secondary enemy-chart-save-button"
-            aria-haspopup="dialog" disabled={!canSaveImage || savingImage} aria-busy={savingImage}
-            onClick={openImageSaveDialog}>{savingImage ? '画像を保存中…' : '画像を保存'}</button>}
+            aria-haspopup="dialog" disabled={!canSaveImage || savingImage || preparingImage} aria-busy={savingImage || preparingImage}
+            onClick={() => void openImageSaveDialog()}>{savingImage ? '画像を保存中…' : preparingImage ? '画像を準備中…' : '画像を保存'}</button>}
         </div>
+
+        <DistributionCountControls mode={activeCountMode} onChange={setCountMode} counts={countData.data} />
+        {countUnavailable && <div className="enemy-histogram-load-state" role="status">
+          {countData.error ? <>登場データを取得できませんでした。<button type="button" className="button secondary" onClick={countData.retry}>再読み込み</button></>
+            : '登場データを読み込み中…'}
+        </div>}
 
         {selectedChart === 'HISTOGRAM' && axisScale === 'LINEAR' && (
           <div
@@ -411,7 +475,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
               >
                 {linearBinWidthError
                   ?? (linearBinWidthValidation?.valid
-                    ? `${statistics.bins.length}階級で集計`
+                    ? `${histogramStatistics.bins.length}階級で集計`
                     : `自動：${formatHistogramSetting(automaticBinWidth, selectedMetric.suffix)}`)}
               </small>
             </div>
@@ -419,10 +483,10 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
               <div className="enemy-histogram-upper-label">
                 <label htmlFor={upperBoundInputId}>通常階級の上限{selectedMetric.suffix ? `（${selectedMetric.suffix}）` : ''}</label>
                 <EnemyHistogramOverflowHelp
-                  upperBoundLabel={histogramSettingsError || !statistics.histogram ? null
-                    : formatHistogramSetting(statistics.histogram.normalRangeEnd, selectedMetric.suffix)}
+                  upperBoundLabel={histogramSettingsError || !histogramStatistics.histogram ? null
+                    : formatHistogramSetting(histogramStatistics.histogram.normalRangeEnd, selectedMetric.suffix)}
                   isCustom={customLinearUpperBound !== null}
-                  hasOverflow={statistics.bins.some((bin) => bin.isOverflow && bin.count > 0)}
+                  hasOverflow={histogramStatistics.bins.some((bin) => bin.isOverflow && bin.count > 0)}
                 />
               </div>
               <div className="statistics-bin-width-input-row">
@@ -434,8 +498,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
                   onClick={() => setLinearUpperBoundInput('')} aria-label="通常階級の上限を自動設定に戻す">自動</button>}
               </div>
               <small id={upperBoundHelpId} className={linearUpperBoundError ? 'error' : ''} aria-live="polite">
-                {linearUpperBoundError ?? (statistics.histogram
-                  ? `${customLinearUpperBound === null ? '自動' : '固定'}：${formatHistogramSetting(statistics.histogram.normalRangeEnd, selectedMetric.suffix)}${statistics.histogram.hasOverflow ? '超をまとめる' : ''}`
+                {linearUpperBoundError ?? (histogramStatistics.histogram
+                  ? `${customLinearUpperBound === null ? '自動' : '固定'}：${formatHistogramSetting(histogramStatistics.histogram.normalRangeEnd, selectedMetric.suffix)}${histogramStatistics.histogram.hasOverflow ? '超をまとめる' : ''}`
                   : '数値データがありません')}
               </small>
             </div>
@@ -443,23 +507,29 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           </div>
         )}
 
-        {selectedChart === 'ECDF' && <EnemyEcdfGuideControls
+        {selectedChart === 'ECDF' && !countUnavailable && <EnemyEcdfGuideControls
           metricLabel={selectedMetric.label} suffix={selectedMetric.suffix}
           xInput={ecdfXInput} yInput={ecdfYInput} onXChange={setEcdfXInput} onYChange={setEcdfYInput}
-          xError={ecdfX.error} yError={ecdfY.error} readings={ecdfReadings} hasData={statistics.count > 0}
+          xError={ecdfX.error} yError={ecdfY.error} readings={ecdfReadings} hasData={summaryStatistics.count > 0}
+          countUnit={countOption.unit}
         />}
 
-        <EnemyDistributionComparison rows={allRows} metric={selectedMetric} active={selectedChart === 'COMPARISON'} />
+        <EnemyDistributionComparison rows={allRows} metric={selectedMetric} active={selectedChart === 'COMPARISON'}
+          countMode={activeCountMode} counts={countData.data} countUnavailable={countUnavailable} />
 
         <div className="enemy-chart-stack" hidden={selectedChart === 'COMPARISON'}>
-          {rows.length === 0 && !hasFixedEmptyHistogram ? <ChartEmpty message="条件に一致する敵がいません" /> : <>
+          {countUnavailable ? null : rows.length === 0 && !hasFixedEmptyHistogram ? <ChartEmpty message="条件に一致する敵がいません" /> : <>
+          {selectedChart === 'HEATMAP' && <EnemyJointHeatmap distribution={jointDistribution}
+            colorScale={heatmapColorScale} onColorScaleChange={setHeatmapColorScale} />}
           {selectedChart === 'HISTOGRAM' && (
-            <HistogramFigure statistics={statistics} metric={selectedMetric} scopeLabel={scopeLabel} scale={axisScale}
+            <HistogramFigure statistics={histogramStatistics} metric={selectedMetric} scopeLabel={scopeLabel} scale={axisScale}
+              countMode={activeCountMode}
               referenceVisibility={referenceVisibility} onReferenceVisibilityChange={setReferenceVisibility} />
           )}
           {selectedChart === 'ECDF' && (
             <EcdfFigure
-              statistics={statistics}
+              statistics={summaryStatistics}
+              countMode={activeCountMode}
               points={ecdfPoints}
               guides={ecdfGuides}
               referenceVisibility={referenceVisibility}
@@ -501,25 +571,27 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           )}
           </>}
         </div>
+        {imageFeedback === 'failed' && !imageData && <p role="alert">画像を準備できませんでした。もう一度お試しください。</p>}
         <p className="visually-hidden" role="status">
           {imageFeedback === 'saved' ? 'PNG画像を保存しました。'
             : imageFeedback === 'downloaded' ? 'PNG画像のダウンロードを開始しました。' : ''}
         </p>
       </CollapsibleCalculatorPanel>
       {imageData && CHART_OPTIONS.some(({ key }) => key === imageData.kind) && <ChartImageSaveDialog
-        initialFilename={getEnemyChartImageFilename({ kind: imageData.kind, metricLabel: imageData.metric.label,
+        initialFilename={imageData.filename ?? getEnemyChartImageFilename({ kind: imageData.kind, metricLabel: imageData.metric.label,
           secondaryMetricLabel: imageData.scatterMetric.label, scopeLabel: imageData.scopeLabel,
           ecdfGuides: imageData.kind === 'ECDF' ? imageData.ecdfGuides : undefined,
           histogramSettings: imageData.kind === 'HISTOGRAM' && imageData.scale === 'LINEAR' && imageData.statistics.histogram?.binWidth
             ? { binWidth: imageData.statistics.histogram.binWidth, upperBound: imageData.statistics.histogram.normalRangeEnd }
             : undefined })}
+        getDefaultFilename={imageData.filename ? (aspectRatio) => withChartImageAspect(imageData.filename!, aspectRatio) : undefined}
         aspect={imageAspect}
         onAspectChange={setImageAspect}
         canChooseLocation={!!imageSavePicker}
         saving={savingImage}
         error={imageFeedback === 'failed'}
         helpMode="popover"
-        preview={<EnemyChartImagePreview key={`${imageData.kind}-${previewAspect}`} data={imageData} aspectRatio={previewAspect} />}
+        preview={<EnemyChartImagePreview key={`${imageData.filename ?? imageData.kind}-${previewAspect}`} data={imageData} aspectRatio={previewAspect} />}
         onClose={() => {
           if (imageSaveInProgress.current) return
           setImageData(null)
@@ -532,6 +604,12 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
 }
 
 interface EnemyChartImageData {
+  heatmapColorScale: EnemyHeatmapColorScale
+  countMode: EnemyHistogramCountMode
+  countCoverage: EnemyHistogramCounts['summary'] | null
+  ecdfPoints: EmpiricalCdfPoint[]
+  filename?: string
+  jointDistribution: EnemyJointDistribution
   kind: ChartKind
   metric: StatMetric
   scale: HistogramScale
@@ -556,7 +634,18 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
   const { kind, metric, scale, statistics, observations, scatterObservations, scatterMetric, scatterScale, scopeLabel } = data
   const boxGroups = useMemo(() => kind === 'BOX' ? buildBoxPlotGroups(observations) : [], [kind, observations])
   const individualGroups = useMemo(() => kind === 'INDIVIDUAL' ? buildIndividualGroups(observations) : [], [kind, observations])
-  const cdfPoints = useMemo(() => kind === 'ECDF' ? calculateEmpiricalCdf(observations.map(({ value }) => value)) : [], [kind, observations])
+  const cdfPoints = data.ecdfPoints
+  const countOption = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === data.countMode)!
+  if (kind === 'HEATMAP') {
+    const distribution = data.jointDistribution
+    return <ChartImageFrame className="enemy-chart-image" title="敵HP × 術耐性の分布"
+      conditions={getEnemyJointImageConditions(distribution, scopeLabel, data.countCoverage)}
+      axisTitle="敵HP（ランク）" naturalChartHeight={getEnemyChartNaturalHeight(kind)}
+      aspectRatio={aspectRatio} onLayout={onLayout}
+      legend={<span className="chart-image-frame-legend-list">色・数字：{countOption.axisLabel}{data.heatmapColorScale === 'SQRT' ? '（濃淡は平方根）' : ''}</span>}>
+      {({ width, height }) => <EnemyJointHeatmapSvg distribution={distribution} colorScale={data.heatmapColorScale} width={width} height={height} image />}
+    </ChartImageFrame>
+  }
   const presentLevels = LEVEL_ORDER.filter((levelType) => (kind === 'SCATTER' ? scatterObservations : observations)
     .some(({ enemy }) => enemy.levelType === levelType))
   const title = kind === 'SCATTER' ? `${metric.label}と${scatterMetric.label}の散布図`
@@ -565,8 +654,12 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
   const missingCount = statistics.count + statistics.missingCount - count
   const axisMinimum = kind === 'SCATTER' ? Math.min(...scatterObservations.map(({ x }) => x)) : statistics.minimum
   const axisLabel = `${metric.axisLabel}（${getEffectiveScaleName(scale, axisMinimum)}目盛）`
-  const conditions = [scopeLabel, `有効データ ${count}体`]
-  if (missingCount > 0) conditions.push(`値なし ${missingCount}体を除外`)
+  const unit = countOption.unit
+  const conditions = [scopeLabel, `${countOption.label} ${formatNumber(count, 0)}${unit}`]
+  if (missingCount > 0) conditions.push(`値なし ${formatNumber(missingCount, 0)}${unit}を除外`)
+  if (data.countCoverage && data.countMode !== 'TYPES') conditions.push(
+    data.countMode === 'MAPS' ? `収録 ${formatNumber(data.countCoverage.mapCount, 0)}マップ`
+      : `出現数確定 ${formatNumber(data.countCoverage.spawnMapCount, 0)}マップ`)
   if (kind === 'HISTOGRAM') {
     const binWidth = statistics.histogram?.binWidth
     conditions.push(scale === 'LINEAR' && binWidth != null
@@ -592,8 +685,8 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
     {({ width, height }) => {
       const shared = { metric, statistics, scale, width, height, titleId, descriptionId, image: true }
       return <>
-        {kind === 'HISTOGRAM' && <HistogramSvg {...shared} referenceVisibility={data.referenceVisibility} description={`${scopeLabel}の${metric.label}のヒストグラム`} />}
-        {kind === 'ECDF' && <EcdfSvg {...shared} points={cdfPoints} guides={data.ecdfGuides} referenceVisibility={data.referenceVisibility} description={`${scopeLabel}の${metric.label}の累積分布`} />}
+        {kind === 'HISTOGRAM' && <HistogramSvg {...shared} countMode={data.countMode} referenceVisibility={data.referenceVisibility} description={`${scopeLabel}の${metric.label}を${countOption.label}で集計したヒストグラム`} />}
+        {kind === 'ECDF' && <EcdfSvg {...shared} countMode={data.countMode} points={cdfPoints} guides={data.ecdfGuides} referenceVisibility={data.referenceVisibility} description={`${scopeLabel}の${metric.label}を${countOption.label}で集計した累積分布`} />}
         {kind === 'BOX' && <BoxPlotSvg {...shared} groups={boxGroups} />}
         {kind === 'SCATTER' && <ScatterSvg observations={scatterObservations} xMetric={metric} xScale={scale}
           yMetric={scatterMetric} yScale={scatterScale} width={width} height={height}
@@ -634,7 +727,7 @@ function EnemyChartImagePreview({ data, aspectRatio }: { data: EnemyChartImageDa
   </div>
 }
 
-function StatisticsSummary({ statistics, metric }: { statistics: NumericStatisticsWithDispersion; metric: StatMetric }) {
+function StatisticsSummary({ statistics, metric, countUnit = '種類' }: { statistics: NumericStatisticsWithDispersion; metric: StatMetric; countUnit?: string }) {
   const formatValue = (value: number | null, digits = metric.summaryDigits) => (
     value === null ? '—' : formatNumber(value, digits, metric.suffix)
   )
@@ -671,7 +764,7 @@ function StatisticsSummary({ statistics, metric }: { statistics: NumericStatisti
         <StatisticsItem label="中央値" value={formatValue(statistics.median)} />
         <StatisticsItem label="第3四分位" value={formatValue(statistics.thirdQuartile)} />
         <StatisticsItem label="最大" value={formatValue(statistics.maximum, metric.valueDigits)} />
-        <StatisticsItem label="有効データ" value={`${statistics.count}体`} />
+        <StatisticsItem label="有効データ" value={`${formatNumber(statistics.count, 0)}${countUnit}`} />
         <StatisticsItem label="平均" value={formatValue(statistics.mean)} />
         <StatisticsItem label="標準偏差" value={formatValue(statistics.standardDeviation)} />
         <StatisticsItem label="変動係数（CV）" value={formatPercentage(statistics.coefficientOfVariation)} />
@@ -724,6 +817,41 @@ function StatisticsItem({ label, value, detail }: { label: string; value: string
   )
 }
 
+function DistributionCountControls({ mode, onChange, counts }: {
+  mode: EnemyHistogramCountMode
+  onChange: (mode: EnemyHistogramCountMode) => void
+  counts: EnemyHistogramCounts | null
+}) {
+  const id = useId()
+  return <div className="enemy-histogram-counts">
+    <fieldset className="enemy-chart-visibility">
+      <legend><HelpPopover label="集計方法の説明" triggerText="集計方法" mode="dialog">
+        <dl className="enemy-histogram-count-help">
+          <dt>種類数</dt><dd>敵1種類につき1件として集計します。</dd>
+          <dt>登場マップ数</dt><dd>敵ごとの登録マップ数を合計します。同じマップに同じ階級の敵が3種類あれば3件です。召喚・特殊条件用の敵の登録も含みます。</dd>
+          <dt>出現回数</dt><dd>どの敵が何体出るか確定できるマップの、敵の配置数を合計します。各マップを1回分ずつ数え、ランダム出現・条件付き増援などがあるマップは集計対象外です。周回数は反映しません。</dd>
+          <dt>ステータス</dt><dd>横軸のHPなどは敵の基礎値です。ステージ補正は含めません。平均・中央値・割合は選択した集計方法に合わせて計算します。</dd>
+          {counts && <><dt>収録範囲</dt><dd>登場マップ数：{formatNumber(counts.summary.mapCount, 0)}マップ。
+            出現回数：{formatNumber(counts.summary.spawnMapCount, 0)}マップ。
+            出現条件を確定できない{formatNumber(counts.summary.spawnExcludedMapCount, 0)}マップと、
+            データ未取得の{formatNumber(counts.summary.missingMapCount, 0)}マップは出現回数に含めません。
+            {counts.sourceGeneratedAt && `元データの集計日：${counts.sourceGeneratedAt.slice(0, 10)}。`}</dd></>}
+        </dl>
+      </HelpPopover></legend>
+      <div role="radiogroup" aria-label="グラフの集計方法">
+        {ENEMY_HISTOGRAM_COUNT_MODES.map((option) => <label key={option.key} className={mode === option.key ? 'active' : ''}>
+          <input type="radio" name={`${id}-count-mode`} value={option.key} checked={mode === option.key}
+            onChange={() => onChange(option.key)} /><span>{option.label}</span>
+        </label>)}
+      </div>
+    </fieldset>
+    {counts && mode !== 'TYPES' && <span className="enemy-histogram-coverage" role="status">
+      {mode === 'MAPS' ? `収録 ${formatNumber(counts.summary.mapCount, 0)}マップ`
+        : `出現数確定 ${formatNumber(counts.summary.spawnMapCount, 0)}マップ`}
+    </span>}
+  </div>
+}
+
 function HistogramFigure({
   statistics,
   metric,
@@ -731,6 +859,7 @@ function HistogramFigure({
   scale,
   referenceVisibility,
   onReferenceVisibilityChange,
+  countMode,
 }: {
   statistics: NumericStatistics
   metric: StatMetric
@@ -738,11 +867,13 @@ function HistogramFigure({
   scale: HistogramScale
   referenceVisibility: ReferenceVisibility
   onReferenceVisibilityChange: (visibility: ReferenceVisibility) => void
+  countMode: EnemyHistogramCountMode
 }) {
   const [chartContainerRef, chartWidth] = useChartWidth()
   const titleId = useId()
   const descriptionId = useId()
   const scaleName = getEffectiveScaleName(scale, statistics.minimum)
+  const countOption = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === countMode)!
   const chartDescription = statistics.count === 0
     ? `${scopeLabel}には${metric.label}の数値データがありません。`
     : `${scopeLabel}の${metric.label}を${statistics.bins.length}階級の${scaleName}目盛で集計したヒストグラムです。`
@@ -752,7 +883,7 @@ function HistogramFigure({
       <figcaption>
         <div>
           <strong>{metric.label}のヒストグラム</strong>
-          <span>横軸：{metric.axisLabel}（{scaleName}目盛） · 縦軸：敵数</span>
+          <span>横軸：{metric.axisLabel}（{scaleName}目盛） · 縦軸：{countOption.axisLabel}</span>
         </div>
         {statistics.count > 0 && <MeanMedianLegend visibility={referenceVisibility} onChange={onReferenceVisibilityChange} />}
       </figcaption>
@@ -761,6 +892,7 @@ function HistogramFigure({
           <ChartEmpty />
         ) : (
           <HistogramSvg
+            countMode={countMode}
             statistics={statistics}
             referenceVisibility={referenceVisibility}
             metric={metric}
@@ -772,16 +904,18 @@ function HistogramFigure({
           />
         )}
       </div>
-      {statistics.bins.length > 0 && <FrequencyDistributionTable statistics={statistics} metric={metric} scale={scale} />}
+      {statistics.bins.length > 0 && <FrequencyDistributionTable statistics={statistics} metric={metric} scale={scale} countMode={countMode} />}
     </figure>
   )
 }
 
-function FrequencyDistributionTable({ statistics, metric, scale }: {
+function FrequencyDistributionTable({ statistics, metric, scale, countMode }: {
   statistics: NumericStatistics
   metric: StatMetric
   scale: HistogramScale
+  countMode: EnemyHistogramCountMode
 }) {
+  const countOption = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === countMode)!
   let cumulativeCount = 0
   const rows = statistics.bins.map((bin) => {
     cumulativeCount += bin.count
@@ -836,7 +970,7 @@ function FrequencyDistributionTable({ statistics, metric, scale }: {
           <thead>
             <tr>
               <th scope="col">階級</th>
-              <th scope="col">度数</th>
+              <th scope="col">{countOption.axisLabel}</th>
               <th scope="col">割合</th>
               <th scope="col">累積割合</th>
             </tr>
@@ -845,9 +979,9 @@ function FrequencyDistributionTable({ statistics, metric, scale }: {
             {rows.map(({ bin, cumulativeCount: rowCumulativeCount, proportion, cumulativeProportion }, index) => (
               <tr key={`${bin.start}-${index}`}>
                 <th scope="row">{formatHistogramRange(bin, statistics, metric)}</th>
-                <td>{bin.count}</td>
+                <td>{formatNumber(bin.count, 0)}</td>
                 <td>{statistics.count > 0 ? formatNumber(proportion * 100, 1, '%') : '—'}</td>
-                <td title={`累積度数：${rowCumulativeCount}`}>{statistics.count > 0 ? formatNumber(cumulativeProportion * 100, 1, '%') : '—'}</td>
+                <td title={`累積：${formatNumber(rowCumulativeCount, 0)}${countOption.unit}`}>{statistics.count > 0 ? formatNumber(cumulativeProportion * 100, 1, '%') : '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -858,6 +992,7 @@ function FrequencyDistributionTable({ statistics, metric, scale }: {
 }
 
 function HistogramSvg({
+  countMode = 'TYPES',
   statistics,
   referenceVisibility,
   metric,
@@ -869,6 +1004,7 @@ function HistogramSvg({
   height = CHART_HEIGHT,
   image = false,
 }: {
+  countMode?: EnemyHistogramCountMode
   statistics: NumericStatistics
   referenceVisibility: ReferenceVisibility
   metric: StatMetric
@@ -890,11 +1026,12 @@ function HistogramSvg({
   const maximum = isAdaptiveLinear
     ? histogram.normalRangeEnd + overflowDisplayWidth
     : statistics.maximum ?? minimum
-  const plotLeft = CHART_MARGIN.left
+  const countOption = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === countMode)!
+  const maxBinCount = Math.max(1, ...statistics.bins.map((bin) => bin.count))
+  const plotLeft = Math.max(CHART_MARGIN.left, 30 + formatNumber(maxBinCount, 0).length * 7)
   const plotRight = width - CHART_MARGIN.right
   const plotBottom = height - (image ? 18 : CHART_MARGIN.bottom)
   const plotWidth = Math.max(1, plotRight - plotLeft)
-  const maxBinCount = Math.max(1, ...statistics.bins.map((bin) => bin.count))
   const countStep = Math.max(1, Math.ceil(maxBinCount / 4))
   const countMaximum = Math.ceil(maxBinCount / countStep) * countStep
   const countTicks = Array.from({ length: Math.floor(countMaximum / countStep) + 1 }, (_, index) => index * countStep)
@@ -929,7 +1066,7 @@ function HistogramSvg({
       {countTicks.map((tick) => (
         <g key={tick}>
           <line className="enemy-chart-gridline" x1={plotLeft} x2={plotRight} y1={y(tick)} y2={y(tick)} />
-          <text className="enemy-chart-tick" x={plotLeft - 8} y={y(tick) + 4} textAnchor="end">{tick}</text>
+          <text className="enemy-chart-tick" x={plotLeft - 8} y={y(tick) + 4} textAnchor="end">{formatNumber(tick, 0)}</text>
         </g>
       ))}
 
@@ -943,7 +1080,7 @@ function HistogramSvg({
         const rangeLabel = formatHistogramRange(bin, statistics, metric)
         return (
           <rect className={`enemy-chart-bar${bin.isOverflow ? ' overflow' : ''}`} x={startX + (barGap / 2)} y={barTop} width={barWidth} height={Math.max(0, plotBottom - barTop)} key={`${bin.start}-${index}`}>
-            <title>{rangeLabel}：{bin.count}体</title>
+            <title>{rangeLabel}：{formatNumber(bin.count, 0)}{countOption.unit}</title>
           </rect>
         )
       })}
@@ -962,12 +1099,13 @@ function HistogramSvg({
         chartHeight={height}
         showTitle={!image}
       />
-      <VerticalAxisTitle label="敵数" x={14} plotTop={plotTop} plotBottom={plotBottom} />
+      <VerticalAxisTitle label={countOption.axisLabel} x={14} plotTop={plotTop} plotBottom={plotBottom} />
     </svg>
   )
 }
 
 function EcdfFigure({
+  countMode,
   statistics,
   points,
   guides,
@@ -977,6 +1115,7 @@ function EcdfFigure({
   referenceVisibility,
   onReferenceVisibilityChange,
 }: {
+  countMode: EnemyHistogramCountMode
   statistics: NumericStatistics
   points: EmpiricalCdfPoint[]
   guides: EcdfGuideValues
@@ -990,13 +1129,14 @@ function EcdfFigure({
   const titleId = useId()
   const descriptionId = useId()
   const scaleName = getEffectiveScaleName(scale, statistics.minimum)
+  const countOption = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === countMode)!
 
   return (
     <figure className="enemy-analysis-figure">
       <figcaption>
         <div>
           <strong>{metric.label}の累積分布</strong>
-          <span>横軸：{metric.axisLabel}（{scaleName}目盛） · 縦軸：その値以下の敵の割合</span>
+          <span>横軸：{metric.axisLabel}（{scaleName}目盛） · 縦軸：{countOption.label}の累積割合</span>
         </div>
         {statistics.count > 0 && <MeanMedianLegend visibility={referenceVisibility} onChange={onReferenceVisibilityChange}
           showGuides={guides.x !== null || guides.yPercent !== null} />}
@@ -1006,6 +1146,7 @@ function EcdfFigure({
           <ChartEmpty />
         ) : (
           <EcdfSvg
+            countMode={countMode}
             statistics={statistics}
             referenceVisibility={referenceVisibility}
             points={points}
@@ -1015,7 +1156,7 @@ function EcdfFigure({
             scale={scale}
             titleId={titleId}
             descriptionId={descriptionId}
-            description={`${scopeLabel}の${metric.label}について、各値以下の敵の割合を示した累積分布です。`}
+            description={`${scopeLabel}の${metric.label}について、各値以下の${countOption.label}の割合を示した累積分布です。`}
           />
         )}
       </div>
@@ -1023,7 +1164,8 @@ function EcdfFigure({
   )
 }
 
-function EcdfSvg({ statistics, points, guides, referenceVisibility, metric, width, scale, titleId, descriptionId, description, height = CHART_HEIGHT, image = false }: {
+function EcdfSvg({ countMode, statistics, points, guides, referenceVisibility, metric, width, scale, titleId, descriptionId, description, height = CHART_HEIGHT, image = false }: {
+  countMode: EnemyHistogramCountMode
   statistics: NumericStatistics
   points: EmpiricalCdfPoint[]
   guides: EcdfGuideValues
@@ -1045,6 +1187,7 @@ function EcdfSvg({ statistics, points, guides, referenceVisibility, metric, widt
   const plotWidth = Math.max(1, plotRight - plotLeft)
   const valueScale = createValueScale(minimum, maximum, plotLeft, plotRight, scale)
   const readings = calculateEcdfGuideReadings(points, guides)
+  const countOption = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === countMode)!
   const hasGuides = readings.x !== null || readings.y !== null
   const referenceLabels = useImageReferenceLabels(statistics, metric, valueScale.position, plotLeft, plotRight, image || hasGuides, referenceVisibility, 4)
   const plotTop = (image ? referenceLabels.top : CHART_MARGIN.top) + (readings.x?.inRange ? 20 : 0)
@@ -1068,11 +1211,11 @@ function EcdfSvg({ statistics, points, guides, referenceVisibility, metric, widt
       <path className="enemy-chart-line ecdf" d={path} />
       {!image && points.map((point) => (
         <circle className="enemy-ecdf-point" cx={valueScale.position(point.value)} cy={y(point.proportion)} r={2.5} key={point.value}>
-          <title>{formatNumber(point.value, metric.valueDigits, metric.suffix)}以下：{point.cumulativeCount}体（{formatNumber(point.proportion * 100, 1)}%）</title>
+          <title>{formatNumber(point.value, metric.valueDigits, metric.suffix)}以下：{formatNumber(point.cumulativeCount, 0)}{countOption.unit}（{formatNumber(point.proportion * 100, 1)}%）</title>
         </circle>
       ))}
       <MeanMedianReferences statistics={statistics} visibility={referenceVisibility} metric={metric} position={valueScale.position} plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop} plotBottom={plotBottom} imageLabels={image || hasGuides ? referenceLabels : undefined} />
-      <EcdfGuideLines readings={readings} metric={metric} position={valueScale.position} y={y}
+      <EcdfGuideLines readings={readings} metric={metric} position={valueScale.position} y={y} countUnit={countOption.unit}
         plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop} plotBottom={plotBottom} />
       <BottomAxis ticks={xTicks} position={valueScale.position} metric={metric} plotLeft={plotLeft} plotRight={plotRight} plotBottom={plotBottom} axisLabel={`${metric.axisLabel}（${valueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛）`} chartHeight={height} showTitle={!image} />
       <VerticalAxisTitle label="累積割合" x={14} plotTop={plotTop} plotBottom={plotBottom} />
@@ -1080,7 +1223,8 @@ function EcdfSvg({ statistics, points, guides, referenceVisibility, metric, widt
   )
 }
 
-function EcdfGuideLines({ readings, metric, position, y, plotLeft, plotRight, plotTop, plotBottom }: {
+function EcdfGuideLines({ readings, metric, position, y, plotLeft, plotRight, plotTop, plotBottom, countUnit }: {
+  countUnit: string
   readings: ReturnType<typeof calculateEcdfGuideReadings>
   metric: StatMetric
   position: (value: number) => number
@@ -1119,7 +1263,7 @@ function EcdfGuideLines({ readings, metric, position, y, plotLeft, plotRight, pl
     {vertical && <>
       <line className="enemy-ecdf-guide-line vertical" x1={verticalX} x2={verticalX} y1={plotTop} y2={plotBottom} />
       <circle className="enemy-ecdf-guide-point vertical" cx={verticalX} cy={y(vertical.proportion)} r={3.5}>
-        <title>{formatHistogramSetting(vertical.value, metric.suffix)}以下：{formatNumber(vertical.proportion * 100, 1, '%')}（{vertical.cumulativeCount}体）</title>
+        <title>{formatHistogramSetting(vertical.value, metric.suffix)}以下：{formatNumber(vertical.proportion * 100, 1, '%')}（{formatNumber(vertical.cumulativeCount, 0)}{countUnit}）</title>
       </circle>
       <text ref={xLabelRef} className="enemy-ecdf-guide-label vertical" x={labelX} y={plotTop - 6} textAnchor="middle">{verticalText}</text>
     </>}

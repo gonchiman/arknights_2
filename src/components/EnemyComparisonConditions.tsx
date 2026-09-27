@@ -1,18 +1,20 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { matchesEnemyFilters } from '../lib/enemyData'
-import type { EnemyComparisonCondition, EnemyComparisonSeries } from '../lib/enemyDistributionComparison'
+import { formatEnemyComparisonCondition, type EnemyComparisonCondition, type EnemyComparisonSeries } from '../lib/enemyDistributionComparison'
 import { matchesEnemyNumericConditions, parseEnemyNumericFilterValue } from '../lib/enemyNumericFilters'
 import type { EnemyRecord } from '../types/enemy'
 import { EnemyAnalysisFilters } from './EnemyAnalysisFilters'
 import './EnemyComparisonConditions.css'
+import { ENEMY_HISTOGRAM_COUNT_MODES, type EnemyHistogramCountMode } from '../lib/enemyHistogramCounts'
 
 const MAX_CONDITIONS = 4
 
-export function EnemyComparisonConditions({ conditions, series, onChange, rows }: {
+export function EnemyComparisonConditions({ conditions, series, onChange, rows, countMode = 'TYPES' }: {
   conditions: readonly EnemyComparisonCondition[]
   series: readonly EnemyComparisonSeries[]
   onChange: (conditions: EnemyComparisonCondition[]) => void
   rows: readonly EnemyRecord[]
+  countMode?: EnemyHistogramCountMode
 }) {
   const headingId = useId()
   const listRef = useRef<HTMLDivElement>(null)
@@ -59,6 +61,7 @@ export function EnemyComparisonConditions({ conditions, series, onChange, rows }
         index={index}
         series={series.find((item) => item.condition.id === condition.id)}
         rows={rows}
+        countMode={countMode}
         initiallyEditing={condition.id === newConditionId}
         canRemove={conditions.length > 1}
         onApply={(updated) => onChange(conditions.map((current) => current.id === updated.id ? { ...current, filters: updated.filters, numericConditions: updated.numericConditions } : current))}
@@ -68,11 +71,12 @@ export function EnemyComparisonConditions({ conditions, series, onChange, rows }
   </section>
 }
 
-function ComparisonConditionRow({ condition, index, series, rows, initiallyEditing, canRemove, onApply, onRemove }: {
+function ComparisonConditionRow({ condition, index, series, rows, countMode, initiallyEditing, canRemove, onApply, onRemove }: {
   condition: EnemyComparisonCondition
   index: number
   series: EnemyComparisonSeries | undefined
   rows: readonly EnemyRecord[]
+  countMode: EnemyHistogramCountMode
   initiallyEditing: boolean
   canRemove: boolean
   onApply: (condition: EnemyComparisonCondition) => void
@@ -85,7 +89,8 @@ function ComparisonConditionRow({ condition, index, series, rows, initiallyEditi
   const [badInput, setBadInput] = useState(false)
   const editorRef = useRef<HTMLDivElement>(null)
   const editRef = useRef<HTMLButtonElement>(null)
-  const label = series?.label ?? `条件 ${index + 1}`
+  const label = series?.label ?? formatEnemyComparisonCondition(condition)
+  const mode = ENEMY_HISTOGRAM_COUNT_MODES.find((item) => item.key === countMode)!
   const invalid = badInput || draft.numericConditions.some((item) => item.value.trim() !== '' && parseEnemyNumericFilterValue(item.value) === null)
   const matchedCount = useMemo(() => rows.filter((enemy) => matchesEnemyFilters(enemy, draft.filters) && matchesEnemyNumericConditions(enemy, draft.numericConditions)).length, [rows, draft.filters, draft.numericConditions])
 
@@ -111,7 +116,7 @@ function ComparisonConditionRow({ condition, index, series, rows, initiallyEditi
           <circle cx="14" cy="6" r="2.5" fill="currentColor" />
         </svg>
         <span className="enemy-comparison-condition-name">{label}</span>
-        {series && <span className="enemy-comparison-condition-count">有効 {series.count.toLocaleString('ja-JP')}体 · 欠損 {series.missingCount.toLocaleString('ja-JP')}体</span>}
+        {series && <span className="enemy-comparison-condition-count">有効 {series.count.toLocaleString('ja-JP')}{mode.unit} · 欠損 {series.missingCount.toLocaleString('ja-JP')}{mode.unit}</span>}
       </div>
       <div className="enemy-comparison-condition-actions">
         <button type="button" className="enemy-comparison-edit" ref={editRef} aria-label={`比較条件${index + 1}を編集`} aria-expanded={editing} aria-controls={editing ? editorId : undefined} onClick={() => {

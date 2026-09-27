@@ -1,6 +1,6 @@
 import { getChartImageLayout, type ChartImageLayout } from './chartImageLayout.ts'
 
-export type EnemyChartKind = 'HISTOGRAM' | 'ECDF' | 'BOX' | 'SCATTER' | 'INDIVIDUAL' | 'COMPARISON'
+export type EnemyChartKind = 'HISTOGRAM' | 'ECDF' | 'BOX' | 'SCATTER' | 'INDIVIDUAL' | 'COMPARISON' | 'HEATMAP'
 
 export interface EnemyComparisonImageSettings {
   seriesLabels: readonly string[]
@@ -39,6 +39,7 @@ const chartNames: Record<EnemyChartKind, string> = {
   SCATTER: '散布図',
   INDIVIDUAL: '個別プロット',
   COMPARISON: '分布比較',
+  HEATMAP: 'ヒートマップ',
 }
 
 export function getEnemyChartImageFilename({

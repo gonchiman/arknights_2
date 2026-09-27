@@ -1,4 +1,18 @@
 /* Keep the distribution part of the output panel; shared chart styles also serve the operator page. */
+.enemy-histogram-counts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 20px;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.enemy-histogram-coverage { padding-bottom: 8px; color: var(--text-muted); font-size: 11px; }
+.enemy-histogram-count-help { margin: 0; font-size: 12px; line-height: 1.7; }
+.enemy-histogram-count-help dt { margin-top: 12px; font-weight: 700; }
+.enemy-histogram-count-help dt:first-child { margin-top: 0; }
+.enemy-histogram-count-help dd { margin: 3px 0 0; }
+.enemy-histogram-load-state { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 28px 12px; }
 .enemy-distribution-panel .enemy-distribution-body { padding: 0; }
 
 .enemy-distribution-panel,

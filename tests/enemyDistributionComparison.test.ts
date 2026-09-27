@@ -6,9 +6,11 @@ import {
   createEnemyComparisonConditions,
   formatEnemyComparisonCondition,
   getEnemyComparisonValue,
+  getEnemyComparisonImageFilename,
   type EnemyComparisonCondition,
 } from '../src/lib/enemyDistributionComparison.ts'
 import { calculateNumericStatistics, validateCustomLinearBinWidth, type HistogramBin } from '../src/lib/enemyStatistics.ts'
+import type { EnemyHistogramCounts } from '../src/lib/enemyHistogramCounts.ts'
 
 const options = { scale: 'LINEAR', preferredBinCount: 10, minimumLinearBinWidth: 1 } as const
 
@@ -224,4 +226,74 @@ test('登場ステージ数は stats 外の値を使用し、0と欠損を区別
   assert.equal(result.series[0].count, 1)
   assert.equal(result.series[0].missingCount, 1)
   assert.equal(result.series[0].bins[0].count, 1)
+})
+
+const frequencyCounts: EnemyHistogramCounts = {
+  schemaVersion: 1, generatedAt: '', sourceGeneratedAt: null,
+  summary: { mapCount: 10, missingMapCount: 1, spawnMapCount: 8, spawnExcludedMapCount: 2 },
+  enemies: {
+    a: { mapCount: 2, spawnCount: 8 }, b: { mapCount: 3, spawnCount: 2 },
+    c: { mapCount: 5, spawnCount: 30 }, missing: { mapCount: 4, spawnCount: 20 },
+    zero: { mapCount: 0, spawnCount: 0 },
+  },
+}
+
+test('登場マップ数を敵ごとに加算し、共通階級・重複条件・欠損・上限超の割合を重み付きにする', () => {
+  const rows = [enemy('a', 10), enemy('b', 10), enemy('c', 30, 'ELITE'), enemy('missing', null), enemy('a', 10)]
+  const result = buildEnemyComparisonDistribution(rows, [all(), createEnemyComparisonConditions()[1]], 'maxHp', {
+    ...options, countMode: 'MAPS', counts: frequencyCounts, customLinearBinWidth: 10, customLinearUpperBound: 20,
+  })
+  assert.deepEqual(result.series.map(({ matchedCount, count, missingCount }) => ({ matchedCount, count, missingCount })), [
+    { matchedCount: 4, count: 10, missingCount: 4 }, { matchedCount: 1, count: 5, missingCount: 0 },
+  ])
+  assert.deepEqual(result.bins.map((bin) => bin.count), [0, 5, 5])
+  assert.deepEqual(result.series.map((series) => ranges(series.bins)), [ranges(result.bins), ranges(result.bins)])
+  assert.equal(getEnemyComparisonValue(result.series[0].overflowCount, result.series[0].count, 'PERCENT'), 50)
+  assert.equal(getEnemyComparisonValue(result.series[1].overflowCount, result.series[1].count, 'PERCENT'), 100)
+})
+
+test('出現回数では未収録・0件の敵を区間から除外し、非表示系列にも同じ重みを保持する', () => {
+  const rows = [enemy('a', 10), enemy('b', 10), enemy('c', 30, 'ELITE'), enemy('zero', 1e9), enemy('unrecorded', 1e8), enemy('missing', null)]
+  const conditions = createEnemyComparisonConditions()
+  const result = buildEnemyComparisonDistribution(rows, conditions, 'maxHp', { ...options, countMode: 'SPAWNS', counts: frequencyCounts })
+  const hidden = buildEnemyComparisonDistribution(rows, conditions.map((condition) => ({ ...condition, visible: false })), 'maxHp', { ...options, countMode: 'SPAWNS', counts: frequencyCounts })
+  assert.equal(result.observedMaximum, 30)
+  assert.deepEqual(result.series.map((series) => series.count), [10, 30])
+  assert.equal(result.series[0].missingCount, 20)
+  assert.deepEqual(result.bins, hidden.bins)
+  assert.deepEqual(result.series.map((series) => series.bins), hidden.series.map((series) => series.bins))
+  assert.equal(result.bins.reduce((sum, bin) => sum + bin.count, 0), 40)
+})
+
+test('未読込の集計を種類数にフォールバックせず、巨大な出現数も展開せず集計する', () => {
+  const rows = [enemy('a', 10), enemy('b', 20)]
+  const unavailable = buildEnemyComparisonDistribution(rows, [all()], 'maxHp', { ...options, countMode: 'MAPS' })
+  assert.equal(unavailable.series[0].matchedCount, 2)
+  assert.equal(unavailable.series[0].count, 0)
+  assert.deepEqual(unavailable.bins, [])
+  const counts = { ...frequencyCounts, enemies: { ...frequencyCounts.enemies, a: { mapCount: 2, spawnCount: 1e12 } } }
+  const result = buildEnemyComparisonDistribution(rows, [all()], 'maxHp', { ...options, scale: 'LOG', countMode: 'SPAWNS', counts })
+  assert.equal(result.series[0].count, 1e12 + 2)
+  assert.equal(result.series[0].bins.reduce((sum, bin) => sum + bin.count, 0), 1e12 + 2)
+  assert.deepEqual(ranges(result.bins), ranges(calculateNumericStatistics([10, 20], 10, 'LOG', 1).bins))
+})
+
+test('比較画像名は重み・可視系列・描画範囲を識別し、内部ID・収録外の情報を含めない', async () => {
+  const rows = [enemy('a', 10), enemy('b', 20, 'ELITE')]
+  const distribution = buildEnemyComparisonDistribution(rows, createEnemyComparisonConditions(), 'maxHp', { ...options, countMode: 'MAPS', counts: frequencyCounts })
+  const snapshot = { distribution, metric: { key: 'maxHp', label: 'HP', axisLabel: 'HP', suffix: '' },
+    scale: 'LINEAR' as const, yAxis: 'PERCENT' as const, countMode: 'MAPS' as const, coverage: frequencyCounts.summary }
+  const name = await getEnemyComparisonImageFilename(snapshot)
+  assert.match(name, /-[a-f0-9]{64}\.png$/)
+  assert.equal(await getEnemyComparisonImageFilename({ ...snapshot, distribution: { ...distribution,
+    unionCount: 999, series: distribution.series.map((series) => ({ ...series, matchedCount: 999,
+      condition: { ...series.condition, id: series.condition.id + 100 } })),
+  }, coverage: { ...frequencyCounts.summary, spawnMapCount: 99 } }), name)
+  assert.notEqual(await getEnemyComparisonImageFilename({ ...snapshot, yAxis: 'COUNT' }), name)
+  assert.notEqual(await getEnemyComparisonImageFilename({ ...snapshot, countMode: 'SPAWNS' }), name)
+  assert.notEqual(await getEnemyComparisonImageFilename({ ...snapshot, coverage: { ...frequencyCounts.summary, mapCount: 99 } }), name)
+  assert.notEqual(await getEnemyComparisonImageFilename({ ...snapshot, distribution: { ...distribution, series: [...distribution.series].reverse() } }), name)
+  assert.notEqual(await getEnemyComparisonImageFilename({ ...snapshot, distribution: { ...distribution,
+    series: distribution.series.map((series) => ({ ...series, bins: series.bins.map((bin) => ({ ...bin, count: bin.count * 2 })), count: series.count * 2 })),
+  } }), name)
 })

@@ -3,6 +3,7 @@ import type { EcdfGuideReadings } from '../lib/enemyEcdfGuides'
 import './EnemyEcdfGuideControls.css'
 
 interface EnemyEcdfGuideControlsProps {
+  countUnit?: string
   metricLabel: string
   suffix: string
   xInput: string
@@ -20,7 +21,7 @@ const proportionFormatter = new Intl.NumberFormat('ja-JP', { maximumFractionDigi
 
 export function EnemyEcdfGuideControls({
   metricLabel, suffix, xInput, yInput, onXChange, onYChange,
-  xError, yError, hasData, readings,
+  xError, yError, hasData, readings, countUnit = '種類',
 }: EnemyEcdfGuideControlsProps) {
   const headingId = useId()
   const xInputId = useId()
@@ -34,7 +35,7 @@ export function EnemyEcdfGuideControls({
   const xResult = xError ?? (xInput === '' ? '' : !hasData
     ? '数値データがありません'
     : xReading
-      ? `${valueFormatter.format(xReading.value)}${suffix}以下：${proportionFormatter.format(xReading.proportion * 100)}%（${valueFormatter.format(xReading.cumulativeCount)}体）${xReading.inRange ? '' : ' · 表示範囲外'}`
+      ? `${valueFormatter.format(xReading.value)}${suffix}以下：${proportionFormatter.format(xReading.proportion * 100)}%（${valueFormatter.format(xReading.cumulativeCount)}${countUnit}）${xReading.inRange ? '' : ' · 表示範囲外'}`
       : '')
   const yResult = yError ?? (yInput === '' ? '' : !hasData
     ? '数値データがありません'

@@ -1,14 +1,31 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { getEnemyChartImageFilename, getEnemyChartImageLayout, type EnemyChartKind } from '../src/lib/enemyChartImage.ts'
+import { buildEnemyJointDistribution } from '../src/lib/enemyJointDistribution.ts'
+import { getEnemyJointImageFilename } from '../src/lib/enemyJointImage.ts'
+import { withChartImageAspect } from '../src/lib/chartImageFilename.ts'
 
-const kinds: EnemyChartKind[] = ['HISTOGRAM', 'ECDF', 'BOX', 'SCATTER', 'INDIVIDUAL', 'COMPARISON']
+const kinds: EnemyChartKind[] = ['HISTOGRAM', 'ECDF', 'BOX', 'SCATTER', 'INDIVIDUAL', 'COMPARISON', 'HEATMAP']
 
 test('自動比率ではグラフの自然な高さに見出しと余白を加える', () => {
-  for (const kind of ['HISTOGRAM', 'ECDF', 'SCATTER', 'COMPARISON'] as const) {
+  for (const kind of ['HISTOGRAM', 'ECDF', 'SCATTER', 'COMPARISON', 'HEATMAP'] as const) {
     assert.deepEqual(getEnemyChartImageLayout({ kind }), { width: 960, height: 410, chartHeight: 334 })
   }
   assert.deepEqual(getEnemyChartImageLayout({ kind: 'HISTOGRAM', chromeHeight: 143.5 }), { width: 960, height: 478, chartHeight: 334 })
+})
+
+test('ヒートマップの保存名は集計結果・対象条件を識別し、同じ出力では同じ名前になる', async () => {
+  const empty = buildEnemyJointDistribution([])
+  const base = await getEnemyJointImageFilename(empty, '全敵')
+  assert.match(base, /-[a-f0-9]{64}\.png$/)
+  assert.equal(await getEnemyJointImageFilename(buildEnemyJointDistribution([]), '全敵'), base)
+  assert.notEqual(await getEnemyJointImageFilename(empty, 'ボス'), base)
+  assert.notEqual(await getEnemyJointImageFilename({ ...empty, missingCount: 1 }, '全敵'), base)
+  const changed = { ...empty, cells: empty.cells.map((row, index) => index === 0
+    ? row.map((cell, column) => column === 0 ? { ...cell, count: 1 } : cell) : row) }
+  assert.notEqual(await getEnemyJointImageFilename(changed, '全敵'), base)
+  assert.equal(withChartImageAspect(base, 16 / 9), withChartImageAspect(base, 32 / 18))
+  assert.notEqual(withChartImageAspect(base), withChartImageAspect(base, 16 / 9))
 })
 
 test('箱ひげ図と個別プロットは表示するグループ数に必要な高さを確保する', () => {
