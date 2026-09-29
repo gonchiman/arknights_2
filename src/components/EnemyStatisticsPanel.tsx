@@ -27,6 +27,7 @@ import type { EnemyHeatmapColorScale } from '../lib/enemyHeatmapColor'
 import { withChartImageAspect } from '../lib/chartImageFilename'
 import { calculateWeightedHistogram } from '../lib/enemyWeightedHistogram'
 import { avoidHistogramReferenceLines, formatHistogramPercentage } from '../lib/histogramPercentageLabels'
+import { canFitHistogramBinRangeLabels, formatHistogramBinRangeLines } from '../lib/histogramBinRangeLabels'
 import { placeGroupedBarValueLabels } from '../lib/groupedBarValueLabels'
 import { calculateWeightedEmpiricalCdf, getWeightedEnemyEcdfImageFilename } from '../lib/enemyWeightedEcdf'
 import { useEnemyHistogramCounts } from '../lib/useEnemyHistogramCounts'
@@ -85,9 +86,9 @@ interface IndividualGroup {
 }
 
 const STAT_METRICS: StatMetric[] = [
-  { key: 'maxHp', label: 'HP', axisLabel: 'HP', suffix: '', valueDigits: 0, summaryDigits: 1, logBinCount: 12, minimumLinearBinWidth: 1, defaultScale: 'LOG' },
-  { key: 'attack', label: '攻撃力', axisLabel: '攻撃力', suffix: '', valueDigits: 0, summaryDigits: 1, logBinCount: 12, minimumLinearBinWidth: 1, defaultScale: 'LOG' },
-  { key: 'defense', label: '防御力', axisLabel: '防御力', suffix: '', valueDigits: 0, summaryDigits: 1, logBinCount: 12, minimumLinearBinWidth: 1, defaultScale: 'LOG' },
+  { key: 'maxHp', label: 'HP', axisLabel: 'HP', suffix: '', valueDigits: 0, summaryDigits: 1, logBinCount: 12, minimumLinearBinWidth: 1, defaultScale: 'LINEAR' },
+  { key: 'attack', label: '攻撃力', axisLabel: '攻撃力', suffix: '', valueDigits: 0, summaryDigits: 1, logBinCount: 12, minimumLinearBinWidth: 1, defaultScale: 'LINEAR' },
+  { key: 'defense', label: '防御力', axisLabel: '防御力', suffix: '', valueDigits: 0, summaryDigits: 1, logBinCount: 12, minimumLinearBinWidth: 1, defaultScale: 'LINEAR' },
   { key: 'magicResistance', label: '術耐性', axisLabel: '術耐性', suffix: '', valueDigits: 0, summaryDigits: 1, logBinCount: 10, minimumLinearBinWidth: 1, defaultScale: 'LINEAR' },
   { key: 'moveSpeed', label: '移動速度', axisLabel: '移動速度', suffix: '', valueDigits: 2, summaryDigits: 2, logBinCount: 10, minimumLinearBinWidth: 0.01, defaultScale: 'LINEAR' },
   { key: 'baseAttackTime', label: '攻撃間隔', axisLabel: '攻撃間隔（秒）', suffix: '秒', valueDigits: 2, summaryDigits: 2, logBinCount: 10, minimumLinearBinWidth: 0.01, defaultScale: 'LINEAR' },
@@ -121,14 +122,14 @@ interface ReferenceVisibility {
 
 export function useEnemyStatisticsControls() {
   const [selectedMetricKey, setSelectedMetricKey] = useState<AnalyzedStatKey>('maxHp')
-  const [axisScale, setAxisScale] = useState<HistogramScale>('LOG')
+  const [axisScale, setAxisScale] = useState<HistogramScale>('LINEAR')
   const [scatterMetricKey, setScatterMetricKey] = useState<AnalyzedStatKey>('defense')
-  const [scatterScale, setScatterScale] = useState<HistogramScale>('LOG')
+  const [scatterScale, setScatterScale] = useState<HistogramScale>('LINEAR')
   const [linearBinWidthInput, setLinearBinWidthInput] = useState('')
   const [linearUpperBoundInput, setLinearUpperBoundInput] = useState('')
   const [ecdfXInput, setEcdfXInput] = useState('')
   const [ecdfYInput, setEcdfYInput] = useState('')
-  const [referenceVisibility, setReferenceVisibility] = useState<ReferenceVisibility>({ mean: true, median: true })
+  const [referenceVisibility, setReferenceVisibility] = useState<ReferenceVisibility>({ mean: false, median: false })
 
   const selectedMetric = getMetric(selectedMetricKey)
   const scatterMetric = getMetric(scatterMetricKey)
@@ -208,6 +209,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const selectedChart = CHART_OPTIONS.some(({ key }) => key === chartChoice) ? chartChoice : 'HISTOGRAM'
   const [activeCountMode, setCountMode] = useState<EnemyHistogramCountMode>('TYPES')
   const [showHistogramPercentages, setShowHistogramPercentages] = useState(false)
+  const [showHistogramBinRanges, setShowHistogramBinRanges] = useState(false)
   const [heatmapColorScale, setHeatmapColorScale] = useState<EnemyHeatmapColorScale>('LINEAR')
   const countOption = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === activeCountMode)!
   const countData = useEnemyHistogramCounts(activeCountMode !== 'TYPES')
@@ -325,7 +327,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
       countMode: activeCountMode, countCoverage: activeCountMode === 'TYPES' ? null : countData.data?.summary ?? null,
       ecdfPoints,
       jointDistribution, heatmapColorScale, referenceVisibility: { ...referenceVisibility },
-      showHistogramPercentages: selectedChart === 'HISTOGRAM' && showHistogramPercentages }
+      showHistogramPercentages: selectedChart === 'HISTOGRAM' && showHistogramPercentages,
+      showHistogramBinRanges: selectedChart === 'HISTOGRAM' && showHistogramBinRanges }
     imageSaveInProgress.current = true
     setPreparingImage(true)
     try {
@@ -338,6 +341,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           metric: selectedMetric.label, scope: scopeLabel, scale: axisScale, statistics: summaryStatistics,
           customLinearUpperBound: snapshot.customLinearUpperBound,
           showPercentages: snapshot.showHistogramPercentages,
+          showBinRanges: snapshot.showHistogramBinRanges,
           referenceVisibility: snapshot.referenceVisibility, coverage: snapshot.countCoverage })
       setImageData(snapshot)
     } catch {
@@ -541,6 +545,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           {selectedChart === 'HISTOGRAM' && (
             <HistogramFigure statistics={histogramStatistics} metric={selectedMetric} scopeLabel={scopeLabel} scale={axisScale}
               showPercentages={showHistogramPercentages} onShowPercentagesChange={setShowHistogramPercentages}
+              showBinRanges={showHistogramBinRanges} onShowBinRangesChange={setShowHistogramBinRanges}
               countMode={activeCountMode}
               referenceVisibility={referenceVisibility} onReferenceVisibilityChange={setReferenceVisibility} />
           )}
@@ -624,6 +629,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
 
 interface EnemyChartImageData {
   showHistogramPercentages: boolean
+  showHistogramBinRanges: boolean
   heatmapColorScale: EnemyHeatmapColorScale
   countMode: EnemyHistogramCountMode
   countCoverage: EnemyHistogramCounts['summary'] | null
@@ -710,7 +716,8 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
       const shared = { metric, statistics, scale, width, height, titleId, descriptionId, image: true }
       return <>
         {kind === 'HISTOGRAM' && <HistogramSvg {...shared} countMode={data.countMode} referenceVisibility={data.referenceVisibility}
-          showPercentages={data.showHistogramPercentages} reservedLabelHeight={labelOverflow} onLabelOverflow={reserveLabelOverflow}
+          showPercentages={data.showHistogramPercentages} showBinRanges={data.showHistogramBinRanges}
+          reservedLabelHeight={labelOverflow} onLabelOverflow={reserveLabelOverflow}
           description={`${scopeLabel}の${metric.label}を${countOption.label}で集計したヒストグラム`} />}
         {kind === 'ECDF' && <EcdfSvg {...shared} countMode={data.countMode} points={cdfPoints} guides={data.ecdfGuides} referenceVisibility={data.referenceVisibility} description={`${scopeLabel}の${metric.label}を${countOption.label}で集計した累積分布`} />}
         {kind === 'BOX' && <BoxPlotSvg {...shared} groups={boxGroups} />}
@@ -888,6 +895,8 @@ function HistogramFigure({
   countMode,
   showPercentages,
   onShowPercentagesChange,
+  showBinRanges,
+  onShowBinRangesChange,
 }: {
   statistics: NumericStatistics
   metric: StatMetric
@@ -898,6 +907,8 @@ function HistogramFigure({
   countMode: EnemyHistogramCountMode
   showPercentages: boolean
   onShowPercentagesChange: (show: boolean) => void
+  showBinRanges: boolean
+  onShowBinRangesChange: (show: boolean) => void
 }) {
   const [chartContainerRef, chartWidth] = useChartWidth()
   const titleId = useId()
@@ -917,9 +928,13 @@ function HistogramFigure({
           {showPercentages && statistics.count > 0 && <span>割合の基準：{scopeLabel} · {formatNumber(statistics.count, 0)}{countOption.unit}（有効データ）</span>}
         </div>
         <div className="enemy-histogram-display-controls">
-          <label className="enemy-histogram-percentage-toggle">
+          <label className="enemy-histogram-display-toggle">
             <input type="checkbox" checked={showPercentages} onChange={(event) => onShowPercentagesChange(event.target.checked)} />
             割合を表示
+          </label>
+          <label className="enemy-histogram-display-toggle" title="文字が収まらない場合は通常の目盛りを表示します">
+            <input type="checkbox" checked={showBinRanges} onChange={(event) => onShowBinRangesChange(event.target.checked)} />
+            階級の範囲を表示
           </label>
           {statistics.count > 0 && <MeanMedianLegend visibility={referenceVisibility} onChange={onReferenceVisibilityChange} />}
         </div>
@@ -930,6 +945,7 @@ function HistogramFigure({
         ) : (
           <HistogramSvg
             showPercentages={showPercentages}
+            showBinRanges={showBinRanges}
             countMode={countMode}
             statistics={statistics}
             referenceVisibility={referenceVisibility}
@@ -1077,6 +1093,36 @@ function useHistogramPercentageLayout(bars: HistogramBarGeometry[], width: numbe
   return { ...avoidHistogramReferenceLines({ layout: placement, referenceXs, width, height, bars }), labelsRef }
 }
 
+function useHistogramBinRangeLayout(labels: { center: number; lines: string[] }[], plotLeft: number, plotRight: number, enabled: boolean) {
+  const measureRef = useRef<SVGTextElement>(null)
+  const [measured, setMeasured] = useState<{ key: string; widths: number[] }>({ key: '', widths: [] })
+  const textKey = JSON.stringify(labels.map((label) => label.lines))
+  useLayoutEffect(() => {
+    if (!enabled) return
+    let active = true
+    const measure = () => {
+      const text = measureRef.current
+      if (!active || !text) return
+      const context = document.createElement('canvas').getContext('2d')
+      if (!context) return
+      // Use unscaled font metrics even inside the reduced-size PNG preview.
+      const style = getComputedStyle(text)
+      context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+      const lines: string[][] = JSON.parse(textKey)
+      const widths = lines.map((parts) => Math.ceil(Math.max(0, ...parts.map((part) => context.measureText(part).width))) + 2)
+      setMeasured((current) => current.key === textKey && current.widths.every((width, index) => width === widths[index])
+        ? current : { key: textKey, widths })
+    }
+    measure()
+    void document.fonts.ready.then(measure)
+    document.fonts.addEventListener('loadingdone', measure)
+    return () => { active = false; document.fonts.removeEventListener('loadingdone', measure) }
+  }, [enabled, textKey])
+  const visible = enabled && measured.key === textKey && labels.every((label) => label.lines.length > 0)
+    && canFitHistogramBinRangeLabels(labels.map((label, index) => ({ center: label.center, width: measured.widths[index] })), plotLeft, plotRight)
+  return { measureRef, visible }
+}
+
 function HistogramSvg({
   countMode = 'TYPES',
   statistics,
@@ -1090,6 +1136,7 @@ function HistogramSvg({
   height = CHART_HEIGHT,
   image = false,
   showPercentages = false,
+  showBinRanges = false,
   reservedLabelHeight = 0,
   onLabelOverflow,
 }: {
@@ -1105,6 +1152,7 @@ function HistogramSvg({
   height?: number
   image?: boolean
   showPercentages?: boolean
+  showBinRanges?: boolean
   reservedLabelHeight?: number
   onLabelOverflow?: (height: number) => void
 }) {
@@ -1162,16 +1210,23 @@ function HistogramSvg({
     ...(referenceVisibility.median ? [referencePosition(statistics.median ?? minimum) - plotLeft] : []),
   ] : []
   const percentageLayout = useHistogramPercentageLayout(bars, plotWidth, plotHeight, showPercentages, referenceXs)
+  const binRangeLabels = bars.map((bar, index) => ({
+    center: plotLeft + bar.x + bar.width / 2,
+    lines: formatHistogramBinRangeLines(statistics.bins[index]),
+  }))
+  const binRangeLayout = useHistogramBinRangeLayout(binRangeLabels, plotLeft, plotRight, showBinRanges)
+  const extraBottom = binRangeLayout.visible && binRangeLabels.some((label) => label.lines.length > 1) ? 20 : 0
   const extraTop = Math.ceil(percentageLayout.extraTop)
-  useLayoutEffect(() => { onLabelOverflow?.(extraTop) }, [extraTop, onLabelOverflow])
-  const chartHeight = Math.max(height, baseHeight + extraTop)
+  useLayoutEffect(() => { onLabelOverflow?.(extraTop + extraBottom) }, [extraTop, extraBottom, onLabelOverflow])
+  const chartHeight = Math.max(height, baseHeight + extraTop + extraBottom)
   const plotBottom = basePlotBottom + extraTop
   const y = (value: number) => plotBottom - ((value / countMaximum) * plotHeight)
 
   return (
-    <svg className="enemy-stat-chart" viewBox={`0 0 ${width} ${chartHeight}`} width="100%" height={chartHeight} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
+    <svg className="enemy-stat-chart" data-histogram-axis={binRangeLayout.visible ? 'ranges' : 'ticks'} viewBox={`0 0 ${width} ${chartHeight}`} width="100%" height={chartHeight} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
       <title id={titleId}>{metric.label}のヒストグラム</title>
-      <desc id={descriptionId}>{description}{showPercentages && statistics.count > 0 ? ` 棒上に有効データ${formatNumber(statistics.count, 0)}${countOption.unit}に対する割合を表示します。` : ''}</desc>
+      <desc id={descriptionId}>{description}{showPercentages && statistics.count > 0 ? ` 棒上に有効データ${formatNumber(statistics.count, 0)}${countOption.unit}に対する割合を表示します。` : ''}{showBinRanges ? binRangeLayout.visible ? ' 各棒の下に階級の範囲を表示します。' : ' 階級の範囲が収まらないため、通常の横軸目盛りを表示します。' : ''}</desc>
+      {showBinRanges && <text ref={binRangeLayout.measureRef} className="enemy-chart-tick enemy-histogram-range-label" visibility="hidden" aria-hidden="true">0</text>}
 
       {countTicks.map((tick) => (
         <g key={tick}>
@@ -1203,7 +1258,20 @@ function HistogramSvg({
             x={label.x + label.width / 2} y={label.y + label.height / 2} dominantBaseline="central" textAnchor="middle">{bars[Number(label.id)].percentage}</text>
         </g>)}
       </g>
-      <BottomAxis
+      {binRangeLayout.visible ? <>
+        <g className="enemy-histogram-range-axis">
+          {binRangeLabels.map((label, index) => <g key={index}>
+            <line className="enemy-chart-axis-tick" x1={label.center} x2={label.center} y1={plotBottom} y2={plotBottom + 5} />
+            <text className="enemy-chart-tick enemy-histogram-range-label" x={label.center} y={plotBottom + 19} textAnchor="middle">
+              <title>{formatHistogramRange(statistics.bins[index], statistics, metric)}</title>
+              {label.lines.map((line, lineIndex) => <tspan key={lineIndex} x={label.center} dy={lineIndex === 0 ? 0 : 15}>{line}</tspan>)}
+            </text>
+          </g>)}
+        </g>
+        {!image && <text className="enemy-chart-axis-title" x={(plotLeft + plotRight) / 2} y={chartHeight - 8} textAnchor="middle">
+          {metric.axisLabel}（{valueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛）
+        </text>}
+      </> : <BottomAxis
         ticks={xTicks}
         position={valueScale.position}
         metric={metric}
@@ -1215,7 +1283,7 @@ function HistogramSvg({
         preciseTicks={isAdaptiveLinear}
         chartHeight={chartHeight}
         showTitle={!image}
-      />
+      />}
       <VerticalAxisTitle label={countOption.axisLabel} x={14} plotTop={plotTop} plotBottom={plotBottom} />
     </svg>
   )

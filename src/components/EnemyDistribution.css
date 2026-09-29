@@ -78,14 +78,15 @@
 }
 
 .enemy-histogram-display-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 16px; }
-.enemy-histogram-percentage-toggle { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; font-size: 11px; color: var(--text-soft); cursor: pointer; }
-.enemy-histogram-percentage-toggle input { margin: 0; accent-color: currentColor; }
+.enemy-histogram-display-toggle { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; font-size: 11px; color: var(--text-soft); cursor: pointer; }
+.enemy-histogram-display-toggle input { margin: 0; accent-color: currentColor; }
+.enemy-stat-chart .enemy-histogram-range-label { font-size: 11px; }
 .enemy-histogram-percentages { pointer-events: none; }
 .enemy-histogram-percentage-connector { stroke: var(--border-strong); stroke-width: 1; }
 .enemy-stat-chart .enemy-histogram-percentage-label { fill: var(--text); font-family: inherit; font-size: 12px; font-weight: 400; font-variant-numeric: tabular-nums; }
 
 @media (pointer: coarse) {
-  .enemy-histogram-percentage-toggle { min-height: 44px; }
+  .enemy-histogram-display-toggle { min-height: 44px; }
 }
 
 .enemy-analysis-route .enemy-distribution-panel .enemy-statistics-settings {

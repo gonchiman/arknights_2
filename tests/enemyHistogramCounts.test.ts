@@ -94,3 +94,18 @@ test('割合ラベルを有効にした保存名を区別し、無効時は省�
     assert.equal(await getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: true }), withLabels)
   }
 })
+
+test('階級範囲を有効にした保存名を区別し、無効時は省略時の名前を維持する', async () => {
+  const options = { metric: 'HP', scope: '全敵', scale: 'LINEAR',
+    statistics: calculateWeightedHistogram([{ value: 100, weight: 3 }, { value: 500, weight: 1 }]),
+    referenceVisibility: { mean: true, median: true }, coverage: source.summary }
+  for (const mode of ['TYPES', 'MAPS', 'SPAWNS'] as const) {
+    const withoutRanges = await getWeightedEnemyHistogramImageFilename({ ...options, mode })
+    assert.equal(await getWeightedEnemyHistogramImageFilename({ ...options, mode, showBinRanges: false }), withoutRanges)
+    const withRanges = await getWeightedEnemyHistogramImageFilename({ ...options, mode, showBinRanges: true })
+    assert.notEqual(withRanges, withoutRanges)
+    assert.equal(await getWeightedEnemyHistogramImageFilename({ ...options, mode, showBinRanges: true }), withRanges)
+    assert.notEqual(await getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: true }), withRanges)
+    assert.notEqual(await getWeightedEnemyHistogramImageFilename({ ...options, mode, showBinRanges: true, showPercentages: true }), withRanges)
+  }
+})

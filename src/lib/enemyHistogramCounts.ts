@@ -93,6 +93,7 @@ export function getWeightedEnemyHistogramImageFilename(options: {
   statistics: NumericStatistics
   referenceVisibility: { mean: boolean; median: boolean }
   showPercentages?: boolean
+  showBinRanges?: boolean
   coverage: EnemyHistogramCounts['summary'] | null
 }): Promise<string> {
   const { mode, metric, scope, scale, statistics, referenceVisibility, coverage } = options
@@ -105,6 +106,7 @@ export function getWeightedEnemyHistogramImageFilename(options: {
     median: referenceVisibility.median ? statistics.median : null,
     referenceVisibility,
     ...(options.showPercentages ? { showPercentages: true } : {}),
+    ...(options.showBinRanges ? { showBinRanges: true } : {}),
     coverage: mode === 'MAPS' ? { mapCount: coverage?.mapCount ?? null }
       : mode === 'SPAWNS' ? { spawnMapCount: coverage?.spawnMapCount ?? null } : null,
     customLinearUpperBound: scale === 'LINEAR' ? options.customLinearUpperBound ?? null : null,
