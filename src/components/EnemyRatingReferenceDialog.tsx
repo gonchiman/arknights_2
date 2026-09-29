@@ -2,8 +2,16 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { ENEMY_RATING_STATS, getEnemyRatingRanges, type EnemyRatingStat } from '../lib/enemyStatRatings'
 import './EnemyRatingReferenceDialog.css'
 
-export function EnemyRatingReferenceDialog({ onClose }: { onClose: () => void }) {
-  const [stat, setStat] = useState<EnemyRatingStat>('magicResistance')
+export function EnemyRatingReferenceDialog({
+  onClose,
+  initialStat = 'magicResistance',
+  context = 'database',
+}: {
+  onClose: () => void
+  initialStat?: EnemyRatingStat
+  context?: 'database' | 'histogram'
+}) {
+  const [stat, setStat] = useState<EnemyRatingStat>(initialStat)
   const dialogRef = useRef<HTMLDialogElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const backdropPointerDownRef = useRef(false)
@@ -68,8 +76,17 @@ export function EnemyRatingReferenceDialog({ onClose }: { onClose: () => void })
             </tbody>
           </table>
           <div className="enemy-rating-reference-notes">
-            <p>このサイトでは基礎ステータスの実数値から換算します。ステージ固有の補正は含みません。並べ替えも実数値が基準です。</p>
-            <p>データがない場合は「—」と表示します。</p>
+            {context === 'histogram' ? (
+              <>
+                <p>このサイトでは基礎ステータスの実数値から換算します。ステージ固有の補正は含みません。</p>
+                <p>ヒストグラムではE〜SSの評価ごとに集計します。対象項目のデータがない敵は、評価別の集計から除外します。</p>
+              </>
+            ) : (
+              <>
+                <p>このサイトでは基礎ステータスの実数値から換算します。ステージ固有の補正は含みません。並べ替えも実数値が基準です。</p>
+                <p>データがない場合は「—」と表示します。</p>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -117,3 +117,54 @@ test('階級範囲を有効にした保存名を区別し、無効時は省略�
     assert.notEqual(await getWeightedEnemyHistogramImageFilename({ ...options, mode, showBinRanges: true, showPercentages: true }), withRanges)
   }
 })
+
+test('ゲーム内評価の保存名は全集計方法で数値階級と区別し、無効時は従来名を維持する', () => {
+  const options = { metric: 'HP', scope: '全敵', scale: 'LINEAR',
+    statistics: calculateWeightedHistogram([{ value: 100, weight: 3 }, { value: 500, weight: 1 }]),
+    referenceVisibility: { mean: false, median: false }, coverage: source.summary }
+  for (const [mode, label] of [['TYPES', '種類数'], ['MAPS', '登場マップ数'], ['SPAWNS', '出現回数']] as const) {
+    const rated = getWeightedEnemyHistogramImageFilename({ ...options, mode, useRatingBins: true })
+    assert.equal(rated, `敵_HP_ヒストグラム_${label}_全敵_ゲーム内評価.png`)
+    for (const scale of ['LINEAR', 'LOG']) {
+      const numeric = getWeightedEnemyHistogramImageFilename({ ...options, mode, scale })
+      assert.equal(getWeightedEnemyHistogramImageFilename({ ...options, mode, scale, useRatingBins: false }), numeric)
+      assert.notEqual(rated, numeric)
+    }
+  }
+})
+
+test('ゲーム内評価の保存名には非有効な軸尺度・階級幅・上限・階級数を含めない', () => {
+  const statistics = calculateWeightedHistogram([{ value: 100, weight: 3 }, { value: 500, weight: 1 }])
+  assert.ok(statistics.histogram)
+  const options = { metric: 'HP', scope: '全敵', scale: 'LINEAR', statistics,
+    referenceVisibility: { mean: false, median: false }, coverage: source.summary, useRatingBins: true }
+  for (const mode of ['TYPES', 'MAPS', 'SPAWNS'] as const) {
+    const name = getWeightedEnemyHistogramImageFilename({ ...options, mode })
+    const changedHistogram = { ...statistics.histogram, binWidth: 2000, normalRangeEnd: 80000, normalBinCount: 40 }
+    for (const scale of ['LINEAR', 'LOG']) {
+      assert.equal(getWeightedEnemyHistogramImageFilename({ ...options, mode, scale,
+        customLinearUpperBound: 80000, statistics: { ...statistics, histogram: changedHistogram } }), name)
+      assert.equal(getWeightedEnemyHistogramImageFilename({ ...options, mode, scale,
+        customLinearUpperBound: null, statistics: { ...statistics, histogram: null } }), name)
+    }
+  }
+})
+
+test('ゲーム内評価の保存名も割合・階級範囲・平均・中央値の有効な表示設定を識別する', () => {
+  const options = { metric: 'HP', scope: '全敵', scale: 'LINEAR',
+    statistics: calculateWeightedHistogram([{ value: 100, weight: 3 }, { value: 500, weight: 1 }]),
+    referenceVisibility: { mean: false, median: false }, coverage: source.summary, useRatingBins: true }
+  for (const mode of ['TYPES', 'MAPS', 'SPAWNS'] as const) {
+    const name = getWeightedEnemyHistogramImageFilename({ ...options, mode })
+    assert.equal(getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: false, showBinRanges: false }), name)
+    const suffixes = [
+      [getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: true }), '割合表示'],
+      [getWeightedEnemyHistogramImageFilename({ ...options, mode, showBinRanges: true }), '階級範囲表示'],
+      [getWeightedEnemyHistogramImageFilename({ ...options, mode, referenceVisibility: { mean: true, median: false } }), '平均'],
+      [getWeightedEnemyHistogramImageFilename({ ...options, mode, referenceVisibility: { mean: false, median: true } }), '中央値'],
+      [getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: true, showBinRanges: true,
+        referenceVisibility: { mean: true, median: true } }), '割合表示_階級範囲表示_平均-中央値'],
+    ]
+    for (const [actual, suffix] of suffixes) assert.equal(actual, name.replace(/\.png$/, `_${suffix}.png`))
+  }
+})

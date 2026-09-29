@@ -94,6 +94,7 @@ export function getWeightedEnemyHistogramImageFilename(options: {
   referenceVisibility: { mean: boolean; median: boolean }
   showPercentages?: boolean
   showBinRanges?: boolean
+  useRatingBins?: boolean
   coverage: EnemyHistogramCounts['summary'] | null
 }): string {
   const { mode, metric, scope, scale, statistics, referenceVisibility } = options
@@ -101,10 +102,10 @@ export function getWeightedEnemyHistogramImageFilename(options: {
   const isLinear = scale === 'LINEAR'
   return createChartImageFilename(`敵_${metric}_ヒストグラム`, [
     ENEMY_HISTOGRAM_COUNT_MODES.find((option) => option.key === mode)!.label,
-    ...scope.split(/\s*·\s*/), isLinear ? '線形' : '対数',
-    isLinear && histogram?.binWidth != null ? `幅${histogram.binWidth}` : null,
-    isLinear && histogram ? `上限${options.customLinearUpperBound == null ? '自動' : ''}${histogram.normalRangeEnd}` : null,
-    !isLinear && histogram ? `${histogram.normalBinCount}階級` : null,
+    ...scope.split(/\s*·\s*/), options.useRatingBins ? 'ゲーム内評価' : isLinear ? '線形' : '対数',
+    !options.useRatingBins && isLinear && histogram?.binWidth != null ? `幅${histogram.binWidth}` : null,
+    !options.useRatingBins && isLinear && histogram ? `上限${options.customLinearUpperBound == null ? '自動' : ''}${histogram.normalRangeEnd}` : null,
+    !options.useRatingBins && !isLinear && histogram ? `${histogram.normalBinCount}階級` : null,
     options.showPercentages && '割合表示',
     options.showBinRanges && '階級範囲表示',
     [referenceVisibility.mean && '平均', referenceVisibility.median && '中央値'].filter(Boolean).join('-'),
