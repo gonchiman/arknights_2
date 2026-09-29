@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   MAX_CUSTOM_LINEAR_BIN_COUNT,
   calculateBoxPlotStatistics,
@@ -26,6 +26,8 @@ import { getEnemyJointImageFilename, getEnemyJointImageConditions } from '../lib
 import type { EnemyHeatmapColorScale } from '../lib/enemyHeatmapColor'
 import { withChartImageAspect } from '../lib/chartImageFilename'
 import { calculateWeightedHistogram } from '../lib/enemyWeightedHistogram'
+import { avoidHistogramReferenceLines, formatHistogramPercentage } from '../lib/histogramPercentageLabels'
+import { placeGroupedBarValueLabels } from '../lib/groupedBarValueLabels'
 import { calculateWeightedEmpiricalCdf, getWeightedEnemyEcdfImageFilename } from '../lib/enemyWeightedEcdf'
 import { useEnemyHistogramCounts } from '../lib/useEnemyHistogramCounts'
 import { buildEnemyHistogramObservations, withHistogramDispersion, getWeightedEnemyHistogramImageFilename,
@@ -205,6 +207,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const [chartChoice, setSelectedChart] = useState<ChartKind>('HISTOGRAM')
   const selectedChart = CHART_OPTIONS.some(({ key }) => key === chartChoice) ? chartChoice : 'HISTOGRAM'
   const [activeCountMode, setCountMode] = useState<EnemyHistogramCountMode>('TYPES')
+  const [showHistogramPercentages, setShowHistogramPercentages] = useState(false)
   const [heatmapColorScale, setHeatmapColorScale] = useState<EnemyHeatmapColorScale>('LINEAR')
   const countOption = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === activeCountMode)!
   const countData = useEnemyHistogramCounts(activeCountMode !== 'TYPES')
@@ -321,7 +324,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
       scatterObservations, scatterMetric, scatterScale, scopeLabel, customLinearUpperBound, ecdfGuides,
       countMode: activeCountMode, countCoverage: activeCountMode === 'TYPES' ? null : countData.data?.summary ?? null,
       ecdfPoints,
-      jointDistribution, heatmapColorScale, referenceVisibility: { ...referenceVisibility } }
+      jointDistribution, heatmapColorScale, referenceVisibility: { ...referenceVisibility },
+      showHistogramPercentages: selectedChart === 'HISTOGRAM' && showHistogramPercentages }
     imageSaveInProgress.current = true
     setPreparingImage(true)
     try {
@@ -333,6 +337,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         : await getWeightedEnemyHistogramImageFilename({ mode: snapshot.countMode,
           metric: selectedMetric.label, scope: scopeLabel, scale: axisScale, statistics: summaryStatistics,
           customLinearUpperBound: snapshot.customLinearUpperBound,
+          showPercentages: snapshot.showHistogramPercentages,
           referenceVisibility: snapshot.referenceVisibility, coverage: snapshot.countCoverage })
       setImageData(snapshot)
     } catch {
@@ -535,6 +540,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
             colorScale={heatmapColorScale} onColorScaleChange={setHeatmapColorScale} />}
           {selectedChart === 'HISTOGRAM' && (
             <HistogramFigure statistics={histogramStatistics} metric={selectedMetric} scopeLabel={scopeLabel} scale={axisScale}
+              showPercentages={showHistogramPercentages} onShowPercentagesChange={setShowHistogramPercentages}
               countMode={activeCountMode}
               referenceVisibility={referenceVisibility} onReferenceVisibilityChange={setReferenceVisibility} />
           )}
@@ -617,6 +623,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
 }
 
 interface EnemyChartImageData {
+  showHistogramPercentages: boolean
   heatmapColorScale: EnemyHeatmapColorScale
   countMode: EnemyHistogramCountMode
   countCoverage: EnemyHistogramCounts['summary'] | null
@@ -645,6 +652,10 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
   const titleId = useId()
   const descriptionId = useId()
   const { kind, metric, scale, statistics, observations, scatterObservations, scatterMetric, scatterScale, scopeLabel } = data
+  const [labelOverflow, setLabelOverflow] = useState(0)
+  const reserveLabelOverflow = useCallback((required: number) => {
+    setLabelOverflow((current) => Math.max(current, required))
+  }, [])
   const boxGroups = useMemo(() => kind === 'BOX' ? buildBoxPlotGroups(observations) : [], [kind, observations])
   const individualGroups = useMemo(() => kind === 'INDIVIDUAL' ? buildIndividualGroups(observations) : [], [kind, observations])
   const cdfPoints = data.ecdfPoints
@@ -689,7 +700,7 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
   }
 
   return <ChartImageFrame className="enemy-chart-image" title={title} conditions={conditions.join(' · ')}
-    axisTitle={axisLabel} naturalChartHeight={getEnemyChartNaturalHeight(kind, presentLevels.length)}
+    axisTitle={axisLabel} naturalChartHeight={getEnemyChartNaturalHeight(kind, presentLevels.length) + labelOverflow}
     aspectRatio={aspectRatio} onLayout={onLayout} legend={<>
       {kind === 'BOX' && <BoxPlotLegend />}
       {(kind === 'SCATTER' || kind === 'INDIVIDUAL') && <EnemyLevelLegend levelTypes={presentLevels} />}
@@ -698,7 +709,9 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
     {({ width, height }) => {
       const shared = { metric, statistics, scale, width, height, titleId, descriptionId, image: true }
       return <>
-        {kind === 'HISTOGRAM' && <HistogramSvg {...shared} countMode={data.countMode} referenceVisibility={data.referenceVisibility} description={`${scopeLabel}の${metric.label}を${countOption.label}で集計したヒストグラム`} />}
+        {kind === 'HISTOGRAM' && <HistogramSvg {...shared} countMode={data.countMode} referenceVisibility={data.referenceVisibility}
+          showPercentages={data.showHistogramPercentages} reservedLabelHeight={labelOverflow} onLabelOverflow={reserveLabelOverflow}
+          description={`${scopeLabel}の${metric.label}を${countOption.label}で集計したヒストグラム`} />}
         {kind === 'ECDF' && <EcdfSvg {...shared} countMode={data.countMode} points={cdfPoints} guides={data.ecdfGuides} referenceVisibility={data.referenceVisibility} description={`${scopeLabel}の${metric.label}を${countOption.label}で集計した累積分布`} />}
         {kind === 'BOX' && <BoxPlotSvg {...shared} groups={boxGroups} />}
         {kind === 'SCATTER' && <ScatterSvg observations={scatterObservations} xMetric={metric} xScale={scale}
@@ -873,6 +886,8 @@ function HistogramFigure({
   referenceVisibility,
   onReferenceVisibilityChange,
   countMode,
+  showPercentages,
+  onShowPercentagesChange,
 }: {
   statistics: NumericStatistics
   metric: StatMetric
@@ -881,6 +896,8 @@ function HistogramFigure({
   referenceVisibility: ReferenceVisibility
   onReferenceVisibilityChange: (visibility: ReferenceVisibility) => void
   countMode: EnemyHistogramCountMode
+  showPercentages: boolean
+  onShowPercentagesChange: (show: boolean) => void
 }) {
   const [chartContainerRef, chartWidth] = useChartWidth()
   const titleId = useId()
@@ -897,14 +914,22 @@ function HistogramFigure({
         <div>
           <strong>{metric.label}のヒストグラム</strong>
           <span>横軸：{metric.axisLabel}（{scaleName}目盛） · 縦軸：{countOption.axisLabel}</span>
+          {showPercentages && statistics.count > 0 && <span>割合の基準：{scopeLabel} · {formatNumber(statistics.count, 0)}{countOption.unit}（有効データ）</span>}
         </div>
-        {statistics.count > 0 && <MeanMedianLegend visibility={referenceVisibility} onChange={onReferenceVisibilityChange} />}
+        <div className="enemy-histogram-display-controls">
+          <label className="enemy-histogram-percentage-toggle">
+            <input type="checkbox" checked={showPercentages} onChange={(event) => onShowPercentagesChange(event.target.checked)} />
+            割合を表示
+          </label>
+          {statistics.count > 0 && <MeanMedianLegend visibility={referenceVisibility} onChange={onReferenceVisibilityChange} />}
+        </div>
       </figcaption>
       <div className="enemy-chart-container" ref={chartContainerRef}>
         {statistics.bins.length === 0 ? (
           <ChartEmpty />
         ) : (
           <HistogramSvg
+            showPercentages={showPercentages}
             countMode={countMode}
             statistics={statistics}
             referenceVisibility={referenceVisibility}
@@ -1004,6 +1029,54 @@ function FrequencyDistributionTable({ statistics, metric, scale, countMode }: {
   )
 }
 
+interface HistogramBarGeometry {
+  x: number
+  y: number
+  width: number
+  height: number
+  percentage: string | null
+}
+
+function useHistogramPercentageLayout(bars: HistogramBarGeometry[], width: number, height: number, enabled: boolean, referenceXs: number[]) {
+  const labelsRef = useRef<SVGGElement>(null)
+  const [sizes, setSizes] = useState<Record<string, { width: number; height: number }>>({})
+  const textKey = JSON.stringify(enabled ? bars.map((bar) => bar.percentage) : [])
+  useLayoutEffect(() => {
+    if (!enabled) return
+    let active = true
+    const measure = () => {
+      if (!active) return
+      const context = document.createElement('canvas').getContext('2d')
+      if (!context) return
+      const next: typeof sizes = {}
+      labelsRef.current?.querySelectorAll<SVGTextElement>('text[data-percentage-index]').forEach((text) => {
+        // The image preview is scaled; measure in the export's CSS pixels.
+        const style = getComputedStyle(text)
+        context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+        next[text.dataset.percentageIndex!] = {
+          width: Math.ceil(context.measureText(text.textContent ?? '').width) + 6,
+          height: Math.ceil(Number.parseFloat(style.fontSize) * 1.3) + 4,
+        }
+      })
+      setSizes((current) => JSON.stringify(current) === JSON.stringify(next) ? current : next)
+    }
+    measure()
+    void document.fonts.ready.then(measure)
+    document.fonts.addEventListener('loadingdone', measure)
+    return () => { active = false; document.fonts.removeEventListener('loadingdone', measure) }
+  }, [enabled, textKey])
+  const placement = placeGroupedBarValueLabels({
+    width, height, gap: 4,
+    labels: enabled ? bars.flatMap((bar, index) => bar.percentage === null ? [] : [{
+      id: String(index), anchorX: bar.x + bar.width / 2, anchorY: bar.y,
+      width: sizes[index]?.width ?? bar.percentage.length * 8 + 6,
+      height: sizes[index]?.height ?? 19, direction: 'above' as const,
+    }]) : [],
+    obstacles: bars.filter((bar) => bar.height > 0),
+  })
+  return { ...avoidHistogramReferenceLines({ layout: placement, referenceXs, width, height, bars }), labelsRef }
+}
+
 function HistogramSvg({
   countMode = 'TYPES',
   statistics,
@@ -1016,6 +1089,9 @@ function HistogramSvg({
   scale,
   height = CHART_HEIGHT,
   image = false,
+  showPercentages = false,
+  reservedLabelHeight = 0,
+  onLabelOverflow,
 }: {
   countMode?: EnemyHistogramCountMode
   statistics: NumericStatistics
@@ -1028,6 +1104,9 @@ function HistogramSvg({
   scale: HistogramScale
   height?: number
   image?: boolean
+  showPercentages?: boolean
+  reservedLabelHeight?: number
+  onLabelOverflow?: (height: number) => void
 }) {
   const histogram = statistics.histogram
   const isAdaptiveLinear = scale === 'LINEAR'
@@ -1043,7 +1122,8 @@ function HistogramSvg({
   const maxBinCount = Math.max(1, ...statistics.bins.map((bin) => bin.count))
   const plotLeft = Math.max(CHART_MARGIN.left, 30 + formatNumber(maxBinCount, 0).length * 7)
   const plotRight = width - CHART_MARGIN.right
-  const plotBottom = height - (image ? 18 : CHART_MARGIN.bottom)
+  const baseHeight = height - reservedLabelHeight
+  const basePlotBottom = baseHeight - (image ? 18 : CHART_MARGIN.bottom)
   const plotWidth = Math.max(1, plotRight - plotLeft)
   const countStep = Math.max(1, Math.ceil(maxBinCount / 4))
   const countMaximum = Math.ceil(maxBinCount / countStep) * countStep
@@ -1059,22 +1139,39 @@ function HistogramSvg({
     }
     return valueScale.position(Math.min(histogram.normalRangeEnd, Math.max(histogram.normalRangeStart, value)))
   }
-  const referenceLabels = useImageReferenceLabels(statistics, metric, referencePosition, plotLeft, plotRight, image, referenceVisibility)
+  const referenceLabels = useImageReferenceLabels(statistics, metric, referencePosition, plotLeft, plotRight, image || showPercentages, referenceVisibility)
   const plotTop = image ? referenceLabels.top : CHART_MARGIN.top
-  const plotHeight = plotBottom - plotTop
+  const plotHeight = basePlotBottom - plotTop
   const overflowTick = isAdaptiveLinear && histogram.hasOverflow
     ? {
       value: histogram.normalRangeEnd + ((histogram.binWidth ?? 0) / 2),
       label: `${formatHistogramSetting(histogram.normalRangeEnd, metric.suffix)}超`,
     }
     : undefined
-  const y = (value: number) => plotBottom - ((value / countMaximum) * plotHeight)
   const barGap = Math.min(3, Math.max(1, plotWidth / Math.max(1, statistics.bins.length) * 0.08))
+  const bars = statistics.bins.map((bin): HistogramBarGeometry => {
+    const startX = minimum === maximum ? plotLeft : valueScale.position(bin.start)
+    const endX = minimum === maximum ? plotRight : valueScale.position(bin.end)
+    const barHeight = bin.count / countMaximum * plotHeight
+    return { x: startX - plotLeft + barGap / 2, y: plotHeight - barHeight,
+      width: Math.max(1, endX - startX - barGap), height: Math.max(0, barHeight),
+      percentage: formatHistogramPercentage(bin.count, statistics.count) }
+  })
+  const referenceXs = statistics.count > 0 ? [
+    ...(referenceVisibility.mean ? [referencePosition(statistics.mean ?? minimum) - plotLeft] : []),
+    ...(referenceVisibility.median ? [referencePosition(statistics.median ?? minimum) - plotLeft] : []),
+  ] : []
+  const percentageLayout = useHistogramPercentageLayout(bars, plotWidth, plotHeight, showPercentages, referenceXs)
+  const extraTop = Math.ceil(percentageLayout.extraTop)
+  useLayoutEffect(() => { onLabelOverflow?.(extraTop) }, [extraTop, onLabelOverflow])
+  const chartHeight = Math.max(height, baseHeight + extraTop)
+  const plotBottom = basePlotBottom + extraTop
+  const y = (value: number) => plotBottom - ((value / countMaximum) * plotHeight)
 
   return (
-    <svg className="enemy-stat-chart" viewBox={`0 0 ${width} ${height}`} width="100%" height={height} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
+    <svg className="enemy-stat-chart" viewBox={`0 0 ${width} ${chartHeight}`} width="100%" height={chartHeight} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
       <title id={titleId}>{metric.label}のヒストグラム</title>
-      <desc id={descriptionId}>{description}</desc>
+      <desc id={descriptionId}>{description}{showPercentages && statistics.count > 0 ? ` 棒上に有効データ${formatNumber(statistics.count, 0)}${countOption.unit}に対する割合を表示します。` : ''}</desc>
 
       {countTicks.map((tick) => (
         <g key={tick}>
@@ -1083,22 +1180,29 @@ function HistogramSvg({
         </g>
       ))}
 
-      <rect className="enemy-chart-frame" x={plotLeft} y={plotTop} width={plotWidth} height={plotHeight} />
+      <rect className="enemy-chart-frame" x={plotLeft} y={plotTop} width={plotWidth} height={plotHeight + extraTop} />
 
       {statistics.bins.map((bin, index) => {
-        const startX = minimum === maximum ? plotLeft : valueScale.position(bin.start)
-        const endX = minimum === maximum ? plotRight : valueScale.position(bin.end)
-        const barWidth = Math.max(1, endX - startX - barGap)
-        const barTop = y(bin.count)
+        const bar = bars[index]
         const rangeLabel = formatHistogramRange(bin, statistics, metric)
         return (
-          <rect className={`enemy-chart-bar${bin.isOverflow ? ' overflow' : ''}`} x={startX + (barGap / 2)} y={barTop} width={barWidth} height={Math.max(0, plotBottom - barTop)} key={`${bin.start}-${index}`}>
-            <title>{rangeLabel}：{formatNumber(bin.count, 0)}{countOption.unit}</title>
+          <rect className={`enemy-chart-bar${bin.isOverflow ? ' overflow' : ''}`} x={plotLeft + bar.x} y={plotTop + extraTop + bar.y} width={bar.width} height={bar.height} key={`${bin.start}-${index}`}>
+            <title>{rangeLabel}：{formatNumber(bin.count, 0)}{countOption.unit}{showPercentages && bar.percentage !== null ? `（${bar.percentage}）` : ''}</title>
           </rect>
         )
       })}
 
-      {statistics.count > 0 && <MeanMedianReferences statistics={statistics} visibility={referenceVisibility} metric={metric} position={referencePosition} plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop} plotBottom={plotBottom} imageLabels={image ? referenceLabels : undefined} />}
+      {statistics.count > 0 && <MeanMedianReferences statistics={statistics} visibility={referenceVisibility} metric={metric} position={referencePosition} plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop} plotBottom={plotBottom} imageLabels={image || showPercentages ? referenceLabels : undefined} />}
+      <g ref={percentageLayout.labelsRef} className="enemy-histogram-percentages" transform={`translate(${plotLeft} ${plotTop + extraTop})`} aria-hidden="true">
+        {percentageLayout.labels.filter((label) => label.shifted).map((label) => (
+          <line key={label.id} className="enemy-histogram-percentage-connector" x1={label.anchorX} y1={label.anchorY - 2}
+            x2={label.x + label.width / 2} y2={label.y + label.height} />
+        ))}
+        {percentageLayout.labels.map((label) => <g key={label.id}>
+          <text className="enemy-histogram-percentage-label" data-percentage-index={label.id}
+            x={label.x + label.width / 2} y={label.y + label.height / 2} dominantBaseline="central" textAnchor="middle">{bars[Number(label.id)].percentage}</text>
+        </g>)}
+      </g>
       <BottomAxis
         ticks={xTicks}
         position={valueScale.position}
@@ -1109,7 +1213,7 @@ function HistogramSvg({
         axisLabel={`${metric.axisLabel}（${valueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛）`}
         extraTick={overflowTick}
         preciseTicks={isAdaptiveLinear}
-        chartHeight={height}
+        chartHeight={chartHeight}
         showTitle={!image}
       />
       <VerticalAxisTitle label={countOption.axisLabel} x={14} plotTop={plotTop} plotBottom={plotBottom} />

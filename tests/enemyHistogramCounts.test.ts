@@ -81,3 +81,16 @@ test('保存名は集計方法と表示対象を識別し、非表示の設定�
     ...hidden, statistics: { ...hidden.statistics, mean: 999, median: 999, standardDeviation: 999 },
   }))
 })
+
+test('割合ラベルを有効にした保存名を区別し、無効時は省略時の名前を維持する', async () => {
+  const options = { metric: 'HP', scope: '全敵', scale: 'LINEAR',
+    statistics: calculateWeightedHistogram([{ value: 100, weight: 3 }, { value: 500, weight: 1 }]),
+    referenceVisibility: { mean: true, median: true }, coverage: source.summary }
+  for (const mode of ['TYPES', 'MAPS', 'SPAWNS'] as const) {
+    const withoutLabels = await getWeightedEnemyHistogramImageFilename({ ...options, mode })
+    assert.equal(await getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: false }), withoutLabels)
+    const withLabels = await getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: true })
+    assert.notEqual(withLabels, withoutLabels)
+    assert.equal(await getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: true }), withLabels)
+  }
+})
