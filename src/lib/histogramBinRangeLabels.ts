@@ -40,3 +40,22 @@ export function canFitHistogramBinRangeLabels(
   }
   return true
 }
+
+/** Keep edge text inside the plot without moving the associated bars or ticks. */
+export function getHistogramBinRangeLabelCenters(
+  labels: readonly { center: number; width: number }[],
+  plotLeft: number,
+  plotRight: number,
+  gap = 4,
+): number[] | null {
+  if (!Number.isFinite(plotLeft) || !Number.isFinite(plotRight) || plotRight <= plotLeft
+    || labels.some(({ center, width }) => !Number.isFinite(center) || !Number.isFinite(width)
+      || center < plotLeft || center > plotRight || width <= 0 || width > plotRight - plotLeft)) return null
+
+  const placed = labels.map(({ center, width }) => ({
+    center: Math.max(plotLeft + width / 2, Math.min(plotRight - width / 2, center)),
+    width,
+  }))
+  return canFitHistogramBinRangeLabels(placed, plotLeft, plotRight, gap)
+    ? placed.map(({ center }) => center) : null
+}

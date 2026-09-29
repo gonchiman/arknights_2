@@ -195,3 +195,92 @@ test('フィルター後の標本だけで再集計し、入力を変更しな�
   assert.equal(complete.count, 15)
   assert.equal(source[0].weight, 3)
 })
+
+test('最低上限100の空階級を重み付きでも保持し、90の所属と統計量を正しく更新する', () => {
+  const source = [
+    { value: 0, weight: 2 },
+    { value: 80, weight: 3 },
+    { value: 90, weight: 5 },
+    { value: null, weight: 7 },
+  ]
+  const original = calculateWeightedHistogram(source, { customLinearBinWidth: 10 })
+  const result = calculateWeightedHistogram(source, { customLinearBinWidth: 10, minimumLinearUpperBound: 100 })
+  assert.equal(original.bins.at(-1)?.count, 8)
+  assert.equal(result.histogram?.normalRangeEnd, 100)
+  assert.deepEqual(result.bins.map(({ count }) => count), [2, 0, 0, 0, 0, 0, 0, 0, 3, 5])
+  assert.deepEqual(summary(result), summary(original))
+  assert.equal(result.count, 10)
+  assert.equal(result.missingCount, 7)
+  assert.equal(result.mean, 69)
+  assert.equal(result.maximum, 90)
+
+  const lowValues = calculateWeightedHistogram([{ value: 20, weight: 9 }], { minimumLinearUpperBound: 100 })
+  assert.equal(lowValues.histogram?.normalRangeEnd, 100)
+  assert.equal(lowValues.bins.length, 10)
+  assert.ok(lowValues.bins.filter(({ start }) => start >= 30).every(({ count }) => count === 0))
+})
+
+test('最低上限を指定した全階級幅で重み1の結果は通常の統計と一致する', () => {
+  const values = [0, 5, 25, null]
+  const observations = values.map((value) => ({ value, weight: 1 }))
+  for (const width of [null, 1, 3, 5, 10, 20, 25, 7, 30, 120]) {
+    assert.deepEqual(
+      calculateWeightedHistogram(observations, { minimumLinearBinWidth: 1, customLinearBinWidth: width, minimumLinearUpperBound: 100 }),
+      calculateNumericStatistics(values, 10, 'LINEAR', 1, width, null, 100),
+    )
+  }
+  const result = calculateWeightedHistogram([
+    { value: 97, weight: 2 }, { value: 98, weight: 3 }, { value: 100, weight: 5 },
+  ], { customLinearBinWidth: 7, minimumLinearUpperBound: 100 })
+  assert.equal(result.histogram?.normalRangeEnd, 100)
+  assert.deepEqual(result.bins.slice(-2), [
+    { start: 91, end: 98, count: 2, includesMaximum: false },
+    { start: 98, end: 100, count: 8, includesMaximum: true },
+  ])
+})
+
+test('最低上限100の超過階級にも出現数を全数加算し、100ちょうどは通常階級に含める', () => {
+  const source = [
+    ...Array.from({ length: 100 }, () => ({ value: 0, weight: 2 })),
+    { value: 90, weight: 3 },
+    { value: 100, weight: 5 },
+    { value: 101, weight: 7 },
+    { value: 150, weight: 11 },
+  ]
+  for (const width of [null, 7]) {
+    const result = calculateWeightedHistogram(source, { customLinearBinWidth: width, minimumLinearUpperBound: 100 })
+    assert.equal(result.histogram?.normalRangeEnd, 100)
+    assert.equal(result.bins.at(-2)?.end, 100)
+    assert.equal(result.bins.at(-2)?.count, width === null ? 8 : 5)
+    assert.equal(result.bins.at(-1)?.isOverflow, true)
+    assert.equal(result.bins.at(-1)?.count, 18)
+    assert.equal(result.bins.reduce((sum, bin) => sum + bin.count, 0), 226)
+    assert.equal(result.count, 226)
+    assert.equal(result.maximum, 150)
+  }
+})
+
+test('重み付きでも手動上限が優先し、対数・負値・無効な最低上限は従来結果を保つ', () => {
+  const source = [{ value: 0, weight: 2 }, { value: 50, weight: 3 }, { value: 90, weight: 5 }]
+  const options = { customLinearBinWidth: 10, customLinearUpperBound: 50 }
+  const manual = calculateWeightedHistogram(source, { ...options, minimumLinearUpperBound: 100 })
+  assert.deepEqual(manual, calculateWeightedHistogram(source, options))
+  assert.equal(manual.histogram?.normalRangeEnd, 50)
+  assert.equal(manual.bins.at(-1)?.count, 5)
+
+  assert.deepEqual(
+    calculateWeightedHistogram(source, { scale: 'LOG', minimumLinearUpperBound: 100 }),
+    calculateWeightedHistogram(source, { scale: 'LOG' }),
+  )
+  const negativeSource = [{ value: -10, weight: 2 }, ...source]
+  assert.deepEqual(
+    calculateWeightedHistogram(negativeSource, { minimumLinearUpperBound: 100 }),
+    calculateWeightedHistogram(negativeSource),
+  )
+  for (const minimumUpperBound of [0, -100, Number.NaN, Number.POSITIVE_INFINITY]) {
+    assert.deepEqual(
+      calculateWeightedHistogram(source, { minimumLinearUpperBound: minimumUpperBound }),
+      calculateWeightedHistogram(source),
+    )
+  }
+})

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { HistogramBin } from '../src/lib/enemyStatistics.ts'
-import { canFitHistogramBinRangeLabels, formatHistogramBinRangeLines } from '../src/lib/histogramBinRangeLabels.ts'
+import { canFitHistogramBinRangeLabels, formatHistogramBinRangeLines, getHistogramBinRangeLabelCenters } from '../src/lib/histogramBinRangeLabels.ts'
 
 const bin = (start: number, end: number, isOverflow = false): HistogramBin => ({
   start, end, count: 1, includesMaximum: true, isOverflow,
@@ -77,4 +77,61 @@ test('空または未計測のラベル、不正なグラフ寸法では範囲�
   for (const [left, right, gap] of [[0, 0, 4], [100, 0, 4], [NaN, 100, 4], [0, Infinity, 4], [0, 100, -1], [0, 100, NaN]]) {
     assert.equal(canFitHistogramBinRangeLabels([{ center: 50, width: 20 }], left, right, gap), false)
   }
+})
+
+test('幅7の末尾98–100の文字だけを右端の内側へ寄せ、全階級の範囲表示を維持する', () => {
+  const plotLeft = 52
+  const plotRight = 1_052
+  const labels = Array.from({ length: 15 }, (_, index) => {
+    const start = index * 7
+    const end = Math.min(start + 7, 100)
+    return { center: plotLeft + (start + end) / 2 * 10, width: 28 }
+  })
+  assert.equal(canFitHistogramBinRangeLabels(labels, plotLeft, plotRight), false)
+  const centers = getHistogramBinRangeLabelCenters(labels, plotLeft, plotRight)
+  assert.notEqual(centers, null)
+  assert.deepEqual(centers!.slice(0, -1), labels.slice(0, -1).map(({ center }) => center))
+  assert.equal(centers!.at(-1), plotRight - 14)
+  assert.equal(canFitHistogramBinRangeLabels(labels.map((label, index) => ({ ...label, center: centers![index] })), plotLeft, plotRight), true)
+})
+
+test('端を調整しても隣の範囲ラベルと重なる場合は表示位置を返さない', () => {
+  assert.equal(getHistogramBinRangeLabelCenters([{ center: 20, width: 20 }, { center: 39, width: 20 }], 0, 300), null)
+  assert.equal(getHistogramBinRangeLabelCenters([{ center: 80, width: 24 }, { center: 96, width: 24 }], 0, 100), null)
+  assert.equal(getHistogramBinRangeLabelCenters([{ center: 20, width: 20 }, { center: 44, width: 20 }], 0, 100, 4.01), null)
+})
+
+test('短い最終階級は右側の余白を使って隣との2pxの間隔を保つ', () => {
+  const labels = Array.from({ length: 15 }, (_, index) => ({
+    center: 72 + (index * 7 + Math.min(index * 7 + 7, 100)) / 2 / 100 * 649,
+    width: 26,
+  }))
+  assert.equal(getHistogramBinRangeLabelCenters(labels, 72, 721, 2), null)
+  const centers = getHistogramBinRangeLabelCenters(labels, 72, 737, 2)
+  assert.deepEqual(centers, labels.map(({ center }) => center))
+  assert.equal(canFitHistogramBinRangeLabels(labels, 72, 737, 2), true)
+})
+
+test('端だけを調整して内部の中心・元の入力順・入力オブジェクトを保持する', () => {
+  const labels = Object.freeze([
+    Object.freeze({ center: 98, width: 10 }),
+    Object.freeze({ center: 50, width: 20 }),
+    Object.freeze({ center: 2, width: 10 }),
+  ])
+  assert.deepEqual(getHistogramBinRangeLabelCenters(labels, 0, 100), [95, 50, 5])
+  assert.deepEqual(labels, [{ center: 98, width: 10 }, { center: 50, width: 20 }, { center: 2, width: 10 }])
+})
+
+test('空・不正値・元の中心が範囲外・文字が描画領域より広い場合は調整しない', () => {
+  assert.equal(getHistogramBinRangeLabelCenters([], 0, 100), null)
+  for (const width of [0, -1, NaN, Infinity, 101]) {
+    assert.equal(getHistogramBinRangeLabelCenters([{ center: 50, width }], 0, 100), null)
+  }
+  for (const center of [NaN, Infinity, -Infinity, -0.01, 100.01]) {
+    assert.equal(getHistogramBinRangeLabelCenters([{ center, width: 20 }], 0, 100), null)
+  }
+  for (const [left, right, gap] of [[0, 0, 4], [100, 0, 4], [NaN, 100, 4], [0, Infinity, 4], [0, 100, -1], [0, 100, NaN]]) {
+    assert.equal(getHistogramBinRangeLabelCenters([{ center: 50, width: 20 }], left, right, gap), null)
+  }
+  assert.deepEqual(getHistogramBinRangeLabelCenters([{ center: 50, width: 100 }], 0, 100), [50])
 })
