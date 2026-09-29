@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { GoldenglowTargetSwitchGridInput, GoldenglowTargetSwitchGridMessage, GoldenglowTargetSwitchGridRow, GoldenglowTargetSwitchGridSetup } from '../lib/goldenglowTargetSwitchGrid'
+import type { GoldenglowTargetSwitchImageBuild, GoldenglowTargetSwitchImageRequest } from '../lib/goldenglowTargetSwitchImageFilename'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { GoldenglowTargetSwitchChartPanel } from './GoldenglowTargetSwitchChartPanel'
 import './GoldenglowTargetSwitchGridPanel.css'
@@ -12,10 +13,11 @@ export const GOLDENGLOW_TARGET_SWITCH_HP_PRESETS = {
 }
 const RESISTANCE_STEPS = [5, 10, 20, 25, 50, 100] as const
 
-export function GoldenglowTargetSwitchGridPanels({ input: setup, error, showDecimals }: {
+export function GoldenglowTargetSwitchGridPanels({ input: setup, error, showDecimals, imageBuild }: {
   input: GoldenglowTargetSwitchGridSetup | null
   error: string | null
   showDecimals: boolean
+  imageBuild: GoldenglowTargetSwitchImageBuild
 }) {
   const [resistanceStep, setResistanceStep] = useState(20)
   const [presetKey, setPresetKey] = useState<keyof typeof GOLDENGLOW_TARGET_SWITCH_HP_PRESETS>('normal')
@@ -24,7 +26,7 @@ export function GoldenglowTargetSwitchGridPanels({ input: setup, error, showDeci
   const input = useMemo<GoldenglowTargetSwitchGridInput | null>(() => setup ? {
     ...setup, enemyHps: preset.hps, enemyResistances: resistances,
   } : null, [setup, preset, resistances])
-  const calculation = useGridSimulation(input)
+  const calculation = useGridSimulation(input, imageBuild)
   const running = calculation.status === 'running'
   const damageFormat = showDecimals ? format : integerFormat
   const rows = new Map(calculation.rows.map((row) => [row.enemyResistance, row.expectedDamages]))
@@ -73,16 +75,17 @@ export function GoldenglowTargetSwitchGridPanels({ input: setup, error, showDeci
     <GoldenglowTargetSwitchChartPanel
       enemyHps={preset.hps} enemyResistances={resistances}
       rows={calculation.rows} status={calculation.status} error={error || calculation.error}
+      imageRequest={calculation.request}
       showDecimals={showDecimals} rangeLabel={preset.label} controls={renderControls('グラフ')}
     />
   </>
 }
 
-type GridRequest = { input: GoldenglowTargetSwitchGridInput }
+type GridRequest = GoldenglowTargetSwitchImageRequest
 type GridStatus = 'idle' | 'running' | 'complete' | 'cancelled' | 'error'
 type GridState = { request: GridRequest | null; rows: GoldenglowTargetSwitchGridRow[]; status: GridStatus; error: string | null }
 
-function useGridSimulation(input: GoldenglowTargetSwitchGridInput | null) {
+function useGridSimulation(input: GoldenglowTargetSwitchGridInput | null, imageBuild: GoldenglowTargetSwitchImageBuild) {
   const [request, setRequest] = useState<GridRequest | null>(null)
   const [cancelledRequest, setCancelledRequest] = useState<GridRequest | null>(null)
   const [state, setState] = useState<GridState>({ request: null, rows: [], status: 'idle', error: null })
@@ -120,5 +123,5 @@ function useGridSimulation(input: GoldenglowTargetSwitchGridInput | null) {
     ? request === cancelledRequest ? { request, rows: [], status: 'cancelled', error: null }
       : state.request === request ? state : { request, rows: [], status: 'running', error: null }
     : { request: null, rows: [], status: 'idle', error: null }
-  return { ...visible, start: () => { if (input) setRequest({ input }) }, cancel: () => setCancelledRequest(request) }
+  return { ...visible, start: () => { if (input) setRequest({ input, build: { ...imageBuild } }) }, cancel: () => setCancelledRequest(request) }
 }

@@ -252,7 +252,8 @@ export function GoldenglowPerformancePage({ rows, loading, error, onRetry }: {
     try {
       const filename = await getGoldenglowPerformanceImageFilename({
         skillIndex: skill.skillIndex, skillLevelIndex: skill.skillLevelIndex,
-        skillLevelLabel: skill.skillLevelLabel, duration, builds,
+        skillLevelLabel: skill.skillLevelLabel, duration,
+        builds: builds.map(build => ({ ...build, moduleType: moduleChoices.find(choice => choice.id === build.moduleId)?.type })),
         baselineId: effectiveChartBaselineId, chartType, chartMetric, chartDigits,
         lineStyle, showLineEndLabels, yAxisFromZero, barMode, showGroupedBarValues,
         groupedResistanceStep, stackedBars, barOrientation, barVariant, chartResistance,

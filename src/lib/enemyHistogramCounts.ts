@@ -95,20 +95,18 @@ export function getWeightedEnemyHistogramImageFilename(options: {
   showPercentages?: boolean
   showBinRanges?: boolean
   coverage: EnemyHistogramCounts['summary'] | null
-}): Promise<string> {
-  const { mode, metric, scope, scale, statistics, referenceVisibility, coverage } = options
-  return createChartImageFilename(`敵_${metric}_ヒストグラム_${ENEMY_HISTOGRAM_COUNT_MODES.find((option) => option.key === mode)!.label}`, {
-    kind: 'HISTOGRAM', mode, metric, scope, scale,
-    minimum: statistics.minimum, maximum: statistics.maximum,
-    bins: statistics.bins, histogram: statistics.histogram,
-    count: statistics.count, missingCount: statistics.missingCount,
-    mean: referenceVisibility.mean ? statistics.mean : null,
-    median: referenceVisibility.median ? statistics.median : null,
-    referenceVisibility,
-    ...(options.showPercentages ? { showPercentages: true } : {}),
-    ...(options.showBinRanges ? { showBinRanges: true } : {}),
-    coverage: mode === 'MAPS' ? { mapCount: coverage?.mapCount ?? null }
-      : mode === 'SPAWNS' ? { spawnMapCount: coverage?.spawnMapCount ?? null } : null,
-    customLinearUpperBound: scale === 'LINEAR' ? options.customLinearUpperBound ?? null : null,
-  })
+}): string {
+  const { mode, metric, scope, scale, statistics, referenceVisibility } = options
+  const histogram = statistics.histogram
+  const isLinear = scale === 'LINEAR'
+  return createChartImageFilename(`敵_${metric}_ヒストグラム`, [
+    ENEMY_HISTOGRAM_COUNT_MODES.find((option) => option.key === mode)!.label,
+    ...scope.split(/\s*·\s*/), isLinear ? '線形' : '対数',
+    isLinear && histogram?.binWidth != null ? `幅${histogram.binWidth}` : null,
+    isLinear && histogram ? `上限${options.customLinearUpperBound == null ? '自動' : ''}${histogram.normalRangeEnd}` : null,
+    !isLinear && histogram ? `${histogram.normalBinCount}階級` : null,
+    options.showPercentages && '割合表示',
+    options.showBinRanges && '階級範囲表示',
+    [referenceVisibility.mean && '平均', referenceVisibility.median && '中央値'].filter(Boolean).join('-'),
+  ])
 }

@@ -275,7 +275,11 @@ export function GoldenglowTargetSwitchPage({ rows, loading, error, onRetry, foot
           {resultStatus && <p className="ggs-status" role="status" aria-live="polite">{resultStatus}</p>}
           {input && calculation.result && <OutputTables result={calculation.result} input={input} showDecimals={showDecimals} onOpen={setDetail} />}
         </CollapsibleCalculatorPanel>
-        <GoldenglowTargetSwitchGridPanels input={gridInput} error={commonFieldError} showDecimals={showDecimals} />
+        <GoldenglowTargetSwitchGridPanels input={gridInput} error={commonFieldError} showDecimals={showDecimals}
+          imageBuild={{ skillLevelLabel: skill.skillLevelLabel,
+            moduleType: skill.moduleApplication.moduleLevel > 0
+              ? moduleChoices.find((choice) => choice.id === skill.moduleId)?.module.typeName2 ?? skill.moduleApplication.moduleName : null,
+            moduleLevel: skill.moduleApplication.moduleLevel }} />
         <GoldenglowTargetSwitchTrialPanel input={input} result={calculation.result} status={resultStatus} showDecimals={showDecimals} onOpen={setDetail}
           onSwitchDelayChange={(delay, trialSeed) => { setSwitchDelay(String(delay)); setSeed(trialSeed) }} />
         {footerContainer && createPortal(<button type="button" className="ggs-footer-link" aria-haspopup="dialog"

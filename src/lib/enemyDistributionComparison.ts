@@ -170,27 +170,19 @@ export function getEnemyComparisonImageFilename(options: {
   yAxis: EnemyComparisonYAxis
   countMode?: EnemyHistogramCountMode
   coverage?: EnemyHistogramCounts['summary'] | null
-}): Promise<string> {
-  const { distribution, metric, yAxis, coverage } = options
+}): string {
+  const { distribution, metric, yAxis } = options
   const countMode = options.countMode ?? 'TYPES'
   const mode = ENEMY_HISTOGRAM_COUNT_MODES.find((item) => item.key === countMode)!
-  return createChartImageFilename(`敵_${metric.label}_分布比較_${mode.label}`, {
-    kind: 'COMPARISON', metric: { key: metric.key, label: metric.label, axisLabel: metric.axisLabel, suffix: metric.suffix }, yAxis, countMode,
-    scale: options.scale === 'LOG' && distribution.minimum >= 0 ? 'LOG' : 'LINEAR',
-    minimum: distribution.minimum, maximum: distribution.maximum,
-    bins: distribution.bins.map(({ count: _count, ...bin }) => bin),
-    binWidth: distribution.histogram?.binWidth ?? null,
-    upperBound: distribution.histogram?.normalRangeEnd ?? null,
-    // Hidden series still determine the unchanged vertical scale.
-    maximumY: Math.max(0, ...distribution.series.flatMap((series) => series.bins
-      .filter((bin) => !bin.isOverflow).map((bin) => getEnemyComparisonValue(bin.count, series.count, yAxis)))),
-    series: distribution.series.filter((series) => series.condition.visible).map((series) => ({
-      label: series.label, colorIndex: series.condition.colorIndex,
-      count: series.count, missingCount: series.missingCount, bins: series.bins,
-    })),
-    coverage: countMode === 'MAPS' ? { mapCount: coverage?.mapCount ?? null }
-      : countMode === 'SPAWNS' ? { spawnMapCount: coverage?.spawnMapCount ?? null } : null,
-  })
+  const isLog = options.scale === 'LOG' && distribution.minimum >= 0
+  return createChartImageFilename(`敵_${metric.label}_分布比較`, [
+    mode.label, yAxis === 'PERCENT' ? '縦軸割合' : '縦軸件数', isLog ? '対数' : '線形',
+    ...distribution.series.filter((series) => series.condition.visible)
+      .map((series, index) => `条件${index + 1}-${series.label.replace(/\s*·\s*/g, '-')}`),
+    !isLog && distribution.histogram?.binWidth != null ? `幅${distribution.histogram.binWidth}` : null,
+    !isLog && distribution.histogram ? `上限${distribution.histogram.normalRangeEnd}` : null,
+    isLog && distribution.histogram ? `${distribution.histogram.normalBinCount}階級` : null,
+  ])
 }
 
 function isFiniteValue(value: number | null | undefined): value is number {

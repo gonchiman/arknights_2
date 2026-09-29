@@ -58,23 +58,26 @@ const imageOptions = {
   guides: { x: null, yPercent: null },
 }
 
-test('画像名には集計方法・描画データ・範囲・補助線・有効な収録範囲を含む', async () => {
+test('画像名は集計方法・対象・尺度・基準線・補助線を読める形にする', async () => {
   const filename = await getWeightedEnemyEcdfImageFilename(imageOptions)
-  assert.match(filename, /-[a-f0-9]{64}\.png$/)
+  assert.equal(filename, '敵_HP_累積分布_登場マップ数_全敵_線形_平均-中央値.png')
   for (const changed of [
     { ...imageOptions, mode: 'SPAWNS' as const },
     { ...imageOptions, metric: '術耐性' },
     { ...imageOptions, scope: 'ボス' },
     { ...imageOptions, scale: 'LOG' },
-    { ...imageOptions, points: calculateWeightedEmpiricalCdf([{ value: 100, weight: 2 }, { value: 500, weight: 2 }]) },
-    { ...imageOptions, statistics: { ...imageOptions.statistics, missingCount: 10 } },
-    { ...imageOptions, statistics: { ...imageOptions.statistics, mean: 101 } },
     { ...imageOptions, referenceVisibility: { mean: false, median: true } },
     { ...imageOptions, guides: { x: 100, yPercent: null } },
     { ...imageOptions, guides: { x: null, yPercent: 50 } },
-    { ...imageOptions, coverage: { ...imageOptions.coverage, mapCount: 99 } },
   ]) assert.notEqual(await getWeightedEnemyEcdfImageFilename(changed), filename)
   assert.equal(await getWeightedEnemyEcdfImageFilename(imageOptions), filename)
+  assert.equal(await getWeightedEnemyEcdfImageFilename({ ...imageOptions, guides: { x: 0, yPercent: 50 } }),
+    '敵_HP_累積分布_登場マップ数_全敵_線形_平均-中央値_縦線0_横線50%.png')
+  for (const changed of [
+    { ...imageOptions, points: calculateWeightedEmpiricalCdf([{ value: 100, weight: 2 }, { value: 500, weight: 2 }]) },
+    { ...imageOptions, statistics: { ...imageOptions.statistics, missingCount: 10, mean: 101 } },
+    { ...imageOptions, coverage: { ...imageOptions.coverage, mapCount: 99 } },
+  ]) assert.equal(await getWeightedEnemyEcdfImageFilename(changed), filename)
 })
 
 test('ヒストグラムの階級設定や非表示の統計値は累積分布の画像名を変えない', async () => {
@@ -88,12 +91,12 @@ test('ヒストグラムの階級設定や非表示の統計値は累積分布�
   assert.equal(await getWeightedEnemyEcdfImageFilename({ ...options, guides: { x: NaN, yPercent: 101 } }), filename)
 })
 
-test('出現回数は出現数を確認できるマップ数、種類数は収録範囲によらず画像名を決める', async () => {
+test('収録マップ数の更新は有効設定の名前を変えない', async () => {
   const spawns = { ...imageOptions, mode: 'SPAWNS' as const }
   assert.equal(await getWeightedEnemyEcdfImageFilename(spawns), await getWeightedEnemyEcdfImageFilename({
     ...spawns, coverage: { ...spawns.coverage, mapCount: 999 },
   }))
-  assert.notEqual(await getWeightedEnemyEcdfImageFilename(spawns), await getWeightedEnemyEcdfImageFilename({
+  assert.equal(await getWeightedEnemyEcdfImageFilename(spawns), await getWeightedEnemyEcdfImageFilename({
     ...spawns, coverage: { ...spawns.coverage, spawnMapCount: 999 },
   }))
   const types = { ...imageOptions, mode: 'TYPES' as const }

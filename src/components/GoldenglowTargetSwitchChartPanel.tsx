@@ -3,6 +3,7 @@ import type { KeyboardEvent, ReactNode } from 'react'
 import type { GoldenglowTargetSwitchGridRow } from '../lib/goldenglowTargetSwitchGrid'
 import { createGoldenglowBarPalette, GOLDENGLOW_BAR_PALETTES, goldenglowResistanceBarColor } from '../lib/goldenglowTargetSwitchChart'
 import type { GoldenglowBarPaletteKey } from '../lib/goldenglowTargetSwitchChart'
+import { getGoldenglowTargetSwitchImageFilename, type GoldenglowTargetSwitchImageRequest } from '../lib/goldenglowTargetSwitchImageFilename'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { GoldenglowTargetSwitchGroupedBars } from './GoldenglowTargetSwitchGroupedBars'
 import { saveGoldenglowTargetSwitchChartImage } from './saveGoldenglowTargetSwitchChartImage'
@@ -17,6 +18,7 @@ interface ChartPanelProps {
   showDecimals: boolean
   controls: ReactNode
   rangeLabel: string
+  imageRequest: GoldenglowTargetSwitchImageRequest | null
 }
 
 interface SelectedPoint {
@@ -29,7 +31,7 @@ const decimalFormat = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 
 const dashPatterns = [undefined, '8 3', '3 3', '9 3 2 3'] as const
 
 export function GoldenglowTargetSwitchChartPanel({
-  enemyHps, enemyResistances, rows, status, error, showDecimals, controls, rangeLabel,
+  enemyHps, enemyResistances, rows, status, error, showDecimals, controls, rangeLabel, imageRequest,
 }: ChartPanelProps) {
   const [chartType, setChartType] = useState<'bar' | 'line'>('bar')
   const figureRef = useRef<HTMLElement>(null)
@@ -103,7 +105,7 @@ export function GoldenglowTargetSwitchChartPanel({
     Math.round(index * (enemyHps.length - 1) / Math.max(1, Math.min(tickCount, enemyHps.length) - 1))
   )))].filter((index) => Number.isFinite(enemyHps[index]))
   const hasData = orderedRows.some((row) => enemyHps.some((_, index) => isValidPoint(row, index)))
-  const canSaveImage = status === 'complete' && !error && Boolean(firstRow)
+  const canSaveImage = status === 'complete' && !error && Boolean(firstRow) && Boolean(imageRequest)
   const emptyMessage = error || (status === 'running' ? '計算中…'
     : status === 'cancelled' ? '計算を中止しました。'
       : status === 'error' ? '計算結果を表示できませんでした。'
@@ -111,7 +113,7 @@ export function GoldenglowTargetSwitchChartPanel({
           : !hasData ? '「計算する」でグラフを表示します。' : null)
 
   const saveChartImage = async () => {
-    if (!canSaveImage || imageSaveInProgress.current) return
+    if (!canSaveImage || !imageRequest || imageSaveInProgress.current) return
     imageSaveInProgress.current = true
     setSavingImage(true)
     setImageFeedback(null)
@@ -125,7 +127,10 @@ export function GoldenglowTargetSwitchChartPanel({
           color: chartType === 'bar' ? goldenglowResistanceBarColor(row.enemyResistance, barColors) : resistanceColor(row.enemyResistance),
           dash: chartType === 'line' ? resistanceDash(row.enemyResistance) : undefined,
         })),
-        filename: `goldenglow-target-switch-${chartType}-${new Date().toISOString().replace(/[:.]/g, '-')}.png`,
+        filename: getGoldenglowTargetSwitchImageFilename(imageRequest, {
+          chartType, visibleResistances: visibleRows.map((row) => row.enemyResistance),
+          showDecimals, barPalette, customColor,
+        }),
       })
       setImageFeedback('saved')
     } catch {

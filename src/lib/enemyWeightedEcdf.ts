@@ -32,20 +32,14 @@ export function getWeightedEnemyEcdfImageFilename(options: {
   referenceVisibility: { mean: boolean; median: boolean }
   coverage: EnemyHistogramCounts['summary'] | null
   guides: EcdfGuideValues
-}): Promise<string> {
-  const { mode, metric, scope, scale, points, statistics, referenceVisibility, coverage, guides } = options
-  return createChartImageFilename(`敵_${metric}_累積分布_${ENEMY_HISTOGRAM_COUNT_MODES.find((option) => option.key === mode)!.label}`, {
-    kind: 'ECDF', mode, metric, scope, scale, points,
-    count: statistics.count, missingCount: statistics.missingCount,
-    mean: referenceVisibility.mean ? statistics.mean : null,
-    median: referenceVisibility.median ? statistics.median : null,
-    referenceVisibility,
-    coverage: mode === 'MAPS' ? { mapCount: coverage?.mapCount ?? null }
-      : mode === 'SPAWNS' ? { spawnMapCount: coverage?.spawnMapCount ?? null } : null,
-    guides: {
-      x: guides.x !== null && Number.isFinite(guides.x) && guides.x >= 0 ? guides.x : null,
-      yPercent: guides.yPercent !== null && Number.isFinite(guides.yPercent) && guides.yPercent >= 0 && guides.yPercent <= 100
-        ? guides.yPercent : null,
-    },
-  })
+}): string {
+  const { mode, metric, scope, scale, referenceVisibility, guides } = options
+  return createChartImageFilename(`敵_${metric}_累積分布`, [
+    ENEMY_HISTOGRAM_COUNT_MODES.find((option) => option.key === mode)!.label,
+    ...scope.split(/\s*·\s*/), scale === 'LOG' ? '対数' : '線形',
+    [referenceVisibility.mean && '平均', referenceVisibility.median && '中央値'].filter(Boolean).join('-'),
+    guides.x !== null && Number.isFinite(guides.x) && guides.x >= 0 ? `縦線${guides.x}` : null,
+    guides.yPercent !== null && Number.isFinite(guides.yPercent) && guides.yPercent >= 0 && guides.yPercent <= 100
+      ? `横線${guides.yPercent}%` : null,
+  ])
 }

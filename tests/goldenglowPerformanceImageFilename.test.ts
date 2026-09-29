@@ -12,8 +12,8 @@ const defaults: GoldenglowPerformanceImageFilenameOptions = {
   duration: 30,
   builds: [
     { id: 'default-off', moduleId: '', moduleLevel: 3, potential: 1 },
-    { id: 'default-x', moduleId: 'module-x', moduleLevel: 3, potential: 1 },
-    { id: 'default-y', moduleId: 'module-y', moduleLevel: 3, potential: 1 },
+    { id: 'default-x', moduleId: 'module-x', moduleType: 'X', moduleLevel: 3, potential: 1 },
+    { id: 'default-y', moduleId: 'module-y', moduleType: 'Y', moduleLevel: 3, potential: 1 },
   ],
   baselineId: 'default-off',
   chartType: 'line',
@@ -42,7 +42,6 @@ async function assertDistinctOptions(base: Changes, changes: readonly Changes[])
 test('すべてのグラフで共通の計算条件・比較列・表示値・桁数を区別する', async () => {
   const changes: Changes[] = [
     { skillIndex: 2 },
-    { skillLevelIndex: 8 },
     { skillLevelLabel: '特化2' },
     { duration: 31 },
     { chartMetric: 'difference' },
@@ -53,7 +52,7 @@ test('すべてのグラフで共通の計算条件・比較列・表示値・�
     { chartDigits: 3 },
     { builds: defaults.builds.slice(0, 2) },
     { builds: [...defaults.builds].reverse() },
-    { builds: defaults.builds.map((build, index) => index === 1 ? { ...build, moduleId: 'module-z' } : build) },
+    { builds: defaults.builds.map((build, index) => index === 1 ? { ...build, moduleId: 'module-z', moduleType: 'Z' } : build) },
     { builds: defaults.builds.map((build, index) => index === 1 ? { ...build, moduleLevel: 2 } : build) },
     { builds: defaults.builds.map((build, index) => index === 1 ? { ...build, potential: 2 } : build) },
   ]
@@ -137,10 +136,18 @@ test('集計時間は表示用の小数丸めで失われず、わずかに異�
   await assertDistinctOptions({ skillIndex: 2, duration: 30.0001 }, [{ duration: 30.0002 }])
 })
 
-test('読みやすい主要条件に続く識別子で、繰り返し保存しても同じ名前になる', async () => {
+test('主要条件と有効な表示設定を読める名前にし、識別子を付けない', async () => {
   const options: Changes = { chartType: 'bar', barMode: 'grouped', showGroupedBarValues: true }
   const result = await filename(options)
-  assert.match(result, /^goldenglow-S3-特化3-30s-grouped-bar-step20-value-labels-/)
-  assert.match(result, /[a-f0-9]{64}\.png$/)
+  assert.equal(result, 'GG_S3特化3_総ダメージ_MODなし-X3-Y3_30秒_術耐性0-100刻み20_集合棒_数値あり.png')
+  assert.doesNotMatch(result, /[a-f0-9]{64}/)
   assert.equal(await filename(options), result)
+})
+
+test('練度の表示名が同じ内部インデックスは名前に出さない', async () => {
+  assert.equal(await filename({ skillLevelIndex: 8 }), await filename())
+})
+
+test('100を割り切れない術耐性刻みは実際に表示する端点も名前に残す', async () => {
+  assert.match(await filename({ chartType: 'bar', barMode: 'grouped', groupedResistanceStep: 30 }), /術耐性0-30-60-90-100/)
 })

@@ -1,5 +1,8 @@
 import { createChartImageFilename } from './chartImageFilename.ts'
 import type { GoldenglowComparisonBuild } from './goldenglowPerformanceComparison.ts'
+import { buildGoldenglowResistanceValues } from './goldenglowPerformanceComparison.ts'
+import { formatChartFilenameValues } from './chartImageFilename.ts'
+import { formatGoldenglowImageBaseline, formatGoldenglowImageBuild, goldenglowImageMetrics } from './goldenglowChartImageFilename.ts'
 
 export interface GoldenglowPerformanceImageFilenameOptions {
   skillIndex: number
@@ -7,7 +10,7 @@ export interface GoldenglowPerformanceImageFilenameOptions {
   skillLevelLabel: string
   /** The skill duration, or the selected viewing duration for a permanent skill. */
   duration: number
-  builds: readonly GoldenglowComparisonBuild[]
+  builds: readonly (GoldenglowComparisonBuild & { moduleType?: string | null })[]
   baselineId: string
   chartType: 'line' | 'bar'
   chartMetric: 'total' | 'difference' | 'ratio' | 'growth'
@@ -25,49 +28,28 @@ export interface GoldenglowPerformanceImageFilenameOptions {
 }
 
 /** Identifies the active chart settings; the save dialog adds the image aspect. */
-export function getGoldenglowPerformanceImageFilename(options: GoldenglowPerformanceImageFilenameOptions): Promise<string> {
-  const builds = options.builds.map((build) => ({
-    moduleId: build.moduleId,
-    moduleLevel: build.moduleId ? build.moduleLevel : null,
-    potential: build.potential,
-  }))
-  const baselineIndex = Math.max(0, options.builds.findIndex((build) => build.id === options.baselineId))
+export function getGoldenglowPerformanceImageFilename(options: GoldenglowPerformanceImageFilenameOptions): string {
+  const builds = options.builds.map(build => ({ ...build, moduleLevel: build.moduleId ? build.moduleLevel : undefined }))
   const relative = options.chartMetric !== 'total'
   const percentage = options.chartMetric === 'ratio' || options.chartMetric === 'growth'
   const grouped = options.chartType === 'bar' && options.barMode === 'grouped'
   const single = options.chartType === 'bar' && !grouped
-  const chartKind = grouped ? 'grouped-bar' : single && options.stackedBars ? 'stacked' : options.chartType
-  const details = grouped
-    ? `-step${options.groupedResistanceStep}${options.showGroupedBarValues ? '-value-labels' : ''}`
-    : single ? `-${options.barOrientation}-${options.barVariant}-res${options.chartResistance}`
-    : options.showLineEndLabels ? '-end-labels' : ''
-  const durationLabel = new Intl.NumberFormat('ja-JP', { useGrouping: false, maximumFractionDigits: 3 }).format(options.duration)
-  const prefix = `goldenglow-S${options.skillIndex}-${options.skillLevelLabel}-${durationLabel}s-${chartKind}${relative ? `-${options.chartMetric}` : ''}${details}`
-
-  return createChartImageFilename(prefix, {
-    skillIndex: options.skillIndex,
-    skillLevelIndex: options.skillLevelIndex,
-    skillLevelLabel: options.skillLevelLabel,
-    duration: options.duration,
-    builds,
-    chartMetric: options.chartMetric,
-    chartDigits: options.chartDigits,
-    baseline: relative && builds.length > 0 ? { index: baselineIndex, build: builds[baselineIndex] } : null,
-    chart: options.chartType === 'line' ? {
-      type: 'line',
-      lineStyle: options.lineStyle,
-      showEndLabels: options.showLineEndLabels,
-      yAxisFromZero: percentage ? options.yAxisFromZero : true,
-    } : grouped ? {
-      type: 'grouped-bar',
-      resistanceStep: options.groupedResistanceStep,
-      showValues: options.showGroupedBarValues,
-    } : {
-      type: 'bar',
-      resistance: options.chartResistance,
-      stacked: options.stackedBars,
-      orientation: options.barOrientation,
-      variant: options.barVariant,
-    },
-  })
+  const chartKind = grouped ? '集合棒' : single
+    ? `${options.stackedBars ? '積上げ' : ''}${options.barOrientation === 'horizontal' ? '横棒' : '縦棒'}` : '折れ線'
+  return createChartImageFilename('GG', [
+    `S${options.skillIndex}${options.skillLevelLabel}`,
+    goldenglowImageMetrics[options.chartMetric],
+    `MOD${builds.map(formatGoldenglowImageBuild).join('-')}`,
+    `${options.duration}秒`,
+    single ? `術耐性${options.chartResistance}` : grouped
+      ? `術耐性${formatChartFilenameValues(buildGoldenglowResistanceValues(options.groupedResistanceStep))}` : '術耐性0-100',
+    chartKind,
+    relative && formatGoldenglowImageBaseline(builds, options.baselineId),
+    options.chartDigits > 0 && `小数${options.chartDigits}桁`,
+    options.chartType === 'line' && options.lineStyle === 'dashed' && '破線',
+    options.chartType === 'line' && options.showLineEndLabels && '末尾ラベル',
+    options.chartType === 'line' && percentage && (options.yAxisFromZero ? 'Y軸0始まり' : 'Y軸自動'),
+    grouped && options.showGroupedBarValues && '数値あり',
+    single && ({ axis: '軸あり', label: 'ラベル', detail: '詳細' } as const)[options.barVariant],
+  ])
 }

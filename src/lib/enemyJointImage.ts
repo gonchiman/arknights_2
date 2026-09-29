@@ -17,23 +17,16 @@ export function getEnemyJointImageConditions(
   return conditions.join(' · ')
 }
 
-/** Only settings and values visible in the saved heatmap identify its image. */
+/** Describe the selected view without embedding the computed cell counts. */
 export function getEnemyJointImageFilename(
   distribution: EnemyJointDistribution,
   scopeLabel: string,
-  coverage: EnemyHistogramCounts['summary'] | null = null,
+  _coverage: EnemyHistogramCounts['summary'] | null = null,
   colorScale: EnemyHeatmapColorScale = 'LINEAR',
-): Promise<string> {
-  return createChartImageFilename('敵_HP_術耐性_ヒートマップ', {
-    kind: 'HEATMAP',
-    ...(colorScale === 'SQRT' ? { colorScale } : {}),
-    countMode: distribution.countMode,
-    scopeLabel,
-    hpBins: distribution.hpBins,
-    resistanceBins: distribution.resistanceBins,
-    counts: distribution.cells.map((row) => row.map((cell) => cell.count)),
-    missingCount: distribution.missingCount,
-    coverage: distribution.countMode === 'MAPS' ? { mapCount: coverage?.mapCount ?? null }
-      : distribution.countMode === 'SPAWNS' ? { spawnMapCount: coverage?.spawnMapCount ?? null } : null,
-  })
+): string {
+  return createChartImageFilename('敵_HP_術耐性_ヒートマップ', [
+    ENEMY_HISTOGRAM_COUNT_MODES.find((option) => option.key === distribution.countMode)!.label,
+    ...scopeLabel.split(/\s*·\s*/),
+    colorScale === 'SQRT' ? '色平方根' : '色線形',
+  ])
 }

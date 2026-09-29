@@ -1,6 +1,7 @@
 import type { ResistanceComparisonInput } from './goldenglowResistanceComparison.ts'
 import type { ResistanceChartImageSnapshot } from '../components/saveGoldenglowResistanceComparisonImage.tsx'
-import { createChartImageFilename } from './chartImageFilename.ts'
+import { createChartImageFilename, formatChartFilenameValues } from './chartImageFilename.ts'
+import { formatGoldenglowImageBuild, getGoldenglowImageCalculationParts, getGoldenglowImageDisplayParts, goldenglowImageMetrics } from './goldenglowChartImageFilename.ts'
 
 /** Commas, Japanese commas and whitespace are accepted; reject partial or duplicate input. */
 export function parseComparisonValues(text: string, label: string, min: number, max: number, maxCount: number): { values: number[]; error: string | null } {
@@ -15,24 +16,16 @@ export function parseComparisonValues(text: string, label: string, min: number, 
   return { values: values.sort((a, b) => a - b), error: null }
 }
 
-/** Only the effective multi-RES settings and the frozen displayed results identify the image. */
-export function getResistanceComparisonImageFilename(input: ResistanceComparisonInput, snapshot: ResistanceChartImageSnapshot): Promise<string> {
-  return createChartImageFilename(`goldenglow-${snapshot.conditions}-resistance-comparison-${snapshot.metric}`, {
-    builds: input.builds.map(build => {
-      const { enemyResistance: ignoredResistance, ...settings } = build.input
-      void ignoredResistance
-      return { moduleType: build.moduleType ?? null, potential: build.potential ?? 1, label: build.label, settings }
-    }),
-    enemyResistances: input.enemyResistances,
-    chart: {
-      title: snapshot.title, conditions: snapshot.conditions, notice: snapshot.notice,
-      metric: snapshot.metric, digits: snapshot.digits,
-      baseline: snapshot.metric === 'total' ? null : snapshot.series.findIndex(series => series.id === snapshot.baselineId),
-      hideBaseline: snapshot.metric !== 'total' && snapshot.hideBaseline,
-      enemyHps: snapshot.enemyHps, enemyResistances: snapshot.enemyResistances,
-      showHpRanks: snapshot.showHpRanks, gridStyle: snapshot.gridStyle,
-      series: snapshot.series.map(series => ({ label: series.label, moduleType: series.moduleType ?? null,
-        potential: series.potential ?? 1, points: series.points.map(({ enemyHp, enemyResistance, value }) => ({ enemyHp, enemyResistance, value })) })),
-    },
-  })
+/** Name the frozen chart's conditions, without serializing calculated result values. */
+export function getResistanceComparisonImageFilename(input: ResistanceComparisonInput, snapshot: ResistanceChartImageSnapshot): string {
+  return createChartImageFilename('GG', [
+    snapshot.conditions.replace(/\s+/g, ''),
+    goldenglowImageMetrics[snapshot.metric],
+    `MOD${snapshot.series.map(formatGoldenglowImageBuild).join('-')}`,
+    `HP${formatChartFilenameValues(snapshot.enemyHps)}`,
+    `術耐性${formatChartFilenameValues(snapshot.enemyResistances)}`,
+    '集合棒',
+    ...getGoldenglowImageDisplayParts(snapshot),
+    ...getGoldenglowImageCalculationParts(input),
+  ])
 }

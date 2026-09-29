@@ -14,16 +14,16 @@ test('自動比率ではグラフの自然な高さに見出しと余白を加�
   assert.deepEqual(getEnemyChartImageLayout({ kind: 'HISTOGRAM', chromeHeight: 143.5 }), { width: 960, height: 478, chartHeight: 334 })
 })
 
-test('ヒートマップの保存名は集計結果・対象条件を識別し、同じ出力では同じ名前になる', async () => {
+test('ヒートマップの保存名は対象条件を読み取れ、集計結果の更新で変わらない', async () => {
   const empty = buildEnemyJointDistribution([])
   const base = await getEnemyJointImageFilename(empty, '全敵')
-  assert.match(base, /-[a-f0-9]{64}\.png$/)
+  assert.equal(base, '敵_HP_術耐性_ヒートマップ_種類数_全敵_色線形.png')
   assert.equal(await getEnemyJointImageFilename(buildEnemyJointDistribution([]), '全敵'), base)
   assert.notEqual(await getEnemyJointImageFilename(empty, 'ボス'), base)
-  assert.notEqual(await getEnemyJointImageFilename({ ...empty, missingCount: 1 }, '全敵'), base)
+  assert.equal(await getEnemyJointImageFilename({ ...empty, missingCount: 1 }, '全敵'), base)
   const changed = { ...empty, cells: empty.cells.map((row, index) => index === 0
     ? row.map((cell, column) => column === 0 ? { ...cell, count: 1 } : cell) : row) }
-  assert.notEqual(await getEnemyJointImageFilename(changed, '全敵'), base)
+  assert.equal(await getEnemyJointImageFilename(changed, '全敵'), base)
   assert.equal(withChartImageAspect(base, 16 / 9), withChartImageAspect(base, 32 / 18))
   assert.notEqual(withChartImageAspect(base), withChartImageAspect(base, 16 / 9))
 })

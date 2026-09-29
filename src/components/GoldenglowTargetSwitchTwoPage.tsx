@@ -25,6 +25,7 @@ import { useGoldenglowResistanceSimulation } from './useGoldenglowResistanceSimu
 import { createResistanceComparisonDisplaySeries } from '../lib/goldenglowResistanceComparison'
 import { parseComparisonValues, getResistanceComparisonImageFilename } from '../lib/goldenglowResistanceComparisonSettings'
 import { withChartImageAspect } from '../lib/chartImageFilename'
+import { getGoldenglowHpComparisonImageFilename } from '../lib/goldenglowChartImageFilename'
 import { GoldenglowResistanceComparisonImagePreview, saveGoldenglowResistanceComparisonImage, type ResistanceChartImageSnapshot } from './saveGoldenglowResistanceComparisonImage'
 import { GoldenglowCrossoverPanel } from './GoldenglowCrossoverPanel'
 import type { CrossoverBuild } from '../lib/goldenglowCrossover'
@@ -330,17 +331,18 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
     }
     // Keep the displayed results and their own conditions together, including when
     // the form has been edited or a partial calculation has been cancelled.
+    const snapshot: HpChartImageSnapshot = {
+      series: structuredClone(displaySeries), minHp: request.minHp, maxHp: sharedInput.enemyHps.at(-1)!,
+      metric, baselineId, digits, chartKind, barMode, showHpRanks, gridStyle, yAxisMode, hideBaseline, barHps: [...barHps], title: `ゴールデングロー：${chartLabel}`,
+      manualYAxisRange: { ...manualYAxisRange },
+      conditions: `${request.skillLabel}・術耐性 ${format(sharedInput.enemyResistance)}`,
+      notice: calculation.status === 'complete' ? undefined : `途中結果：${completedPoints} / ${totalPoints}点`,
+    }
     setImageExport({
       kind: 'hp',
       id: ++imageSnapshotId.current,
-      filename: `goldenglow-target-switch-2-S${sharedInput.skillIndex}-${chartKind}-${metric}${barMode === 'total' ? '' : `-${barMode}`}-res${sharedInput.enemyResistance}.png`,
-      snapshot: {
-        series: structuredClone(displaySeries), minHp: request.minHp, maxHp: sharedInput.enemyHps.at(-1)!,
-        metric, baselineId, digits, chartKind, barMode, showHpRanks, gridStyle, yAxisMode, hideBaseline, barHps: [...barHps], title: `ゴールデングロー：${chartLabel}`,
-        manualYAxisRange: { ...manualYAxisRange },
-        conditions: `${request.skillLabel}・術耐性 ${format(sharedInput.enemyResistance)}`,
-        notice: calculation.status === 'complete' ? undefined : `途中結果：${completedPoints} / ${totalPoints}点`,
-      },
+      filename: getGoldenglowHpComparisonImageFilename(request.input, snapshot),
+      snapshot,
     })
   }
   const saveChartImage = async (filename: string, aspectRatio?: number) => {
@@ -610,7 +612,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
       <GoldenglowCrossoverPanel x={crossoverBuilds.x} y={crossoverBuilds.y} skillLabel={skillLabel}
         sharedError={delayError ?? durationError} />
       {imageExport && <ChartImageSaveDialog initialFilename={imageExport.filename}
-        getDefaultFilename={imageExport.kind === 'resistance' ? aspect => withChartImageAspect(imageExport.filename, aspect) : undefined}
+        getDefaultFilename={aspect => withChartImageAspect(imageExport.filename, aspect)}
         aspect={imageAspect} onAspectChange={setImageAspect}
         canChooseLocation={!!imageSavePicker} saving={savingImage} error={imageFeedback === 'failed'} helpMode="popover"
         preview={imageExport.kind === 'resistance'

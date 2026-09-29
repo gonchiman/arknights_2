@@ -231,7 +231,7 @@ test('登場データ未取得時は加重モードをゼロ件とし、種類�
   assert.equal(buildEnemyJointDistribution(rows).missingCount, 1)
 })
 
-test('画像の説明・名前は集計方法と表示する対象マップ数を反映し、無関係な集計値を無視する', async () => {
+test('画像名は集計方法と色尺度を表し、対象マップ数は画像説明だけに含める', async () => {
   const rows = [enemy('one', 500, 0), enemy('missing', null, null)]
   const types = buildEnemyJointDistribution(rows)
   const maps = buildEnemyJointDistribution(rows, 'MAPS', counts)
@@ -241,16 +241,18 @@ test('画像の説明・名前は集計方法と表示する対象マップ数�
   assert.equal(getEnemyJointImageConditions(maps, '全敵', coverage), '全敵 · 3件 · 値なし等 5件を除外 · 収録 100マップ')
   assert.equal(getEnemyJointImageConditions(spawns, '全敵', coverage), '全敵 · 10体 · 値なし等 50体を除外 · 出現数確定 80マップ')
   const original = await getEnemyJointImageFilename(maps, '全敵', coverage)
+  assert.equal(original, '敵_HP_術耐性_ヒートマップ_登場マップ数_全敵_色線形.png')
   assert.equal(await getEnemyJointImageFilename(maps, '全敵', coverage, 'LINEAR'), original)
   const sqrtName = await getEnemyJointImageFilename(maps, '全敵', coverage, 'SQRT')
+  assert.equal(sqrtName, '敵_HP_術耐性_ヒートマップ_登場マップ数_全敵_色平方根.png')
   assert.notEqual(sqrtName, original)
   assert.equal(await getEnemyJointImageFilename(maps, '全敵', { ...coverage, spawnMapCount: 1 }, 'SQRT'), sqrtName)
   assert.notEqual(await getEnemyJointImageFilename(maps, '通常敵', coverage, 'SQRT'), sqrtName)
   assert.equal(await getEnemyJointImageFilename(maps, '全敵', { ...coverage, spawnMapCount: 1, missingMapCount: 20 }), original)
-  assert.notEqual(await getEnemyJointImageFilename(maps, '全敵', { ...coverage, mapCount: 101 }), original)
+  assert.equal(await getEnemyJointImageFilename(maps, '全敵', { ...coverage, mapCount: 101 }), original)
   assert.notEqual(await getEnemyJointImageFilename({ ...maps, countMode: 'SPAWNS' }, '全敵', coverage), original)
   assert.equal(await getEnemyJointImageFilename(types, '全敵', coverage), await getEnemyJointImageFilename(types, '全敵'))
   const spawnName = await getEnemyJointImageFilename(spawns, '全敵', coverage)
   assert.equal(await getEnemyJointImageFilename(spawns, '全敵', { ...coverage, mapCount: 900 }), spawnName)
-  assert.notEqual(await getEnemyJointImageFilename(spawns, '全敵', { ...coverage, spawnMapCount: 81 }), spawnName)
+  assert.equal(await getEnemyJointImageFilename(spawns, '全敵', { ...coverage, spawnMapCount: 81 }), spawnName)
 })

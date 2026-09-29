@@ -68,11 +68,11 @@ test('保存名は集計方法と表示対象を識別し、非表示の設定�
     statistics: calculateWeightedHistogram([{ value: 100, weight: 3 }, { value: 500, weight: 1 }]),
     referenceVisibility: { mean: true, median: true }, coverage: source.summary }
   const name = await getWeightedEnemyHistogramImageFilename(options)
-  assert.match(name, /-[a-f0-9]{64}\.png$/)
+  assert.match(name, /^敵_HP_ヒストグラム_登場マップ数_全敵_線形_幅[\d.]+_上限自動[\d.]+_平均-中央値\.png$/)
   assert.equal(await getWeightedEnemyHistogramImageFilename({ ...options, coverage: { ...source.summary, spawnMapCount: 99 } }), name)
   assert.notEqual(await getWeightedEnemyHistogramImageFilename({ ...options, mode: 'SPAWNS' }), name)
   assert.notEqual(await getWeightedEnemyHistogramImageFilename({ ...options, scope: 'ボス' }), name)
-  assert.notEqual(await getWeightedEnemyHistogramImageFilename({ ...options, coverage: { ...source.summary, mapCount: 20 } }), name)
+  assert.equal(await getWeightedEnemyHistogramImageFilename({ ...options, coverage: { ...source.summary, mapCount: 20 } }), name)
   assert.notEqual(await getWeightedEnemyHistogramImageFilename({ ...options, customLinearUpperBound: options.statistics.histogram?.normalRangeEnd }), name)
   assert.equal(await getWeightedEnemyHistogramImageFilename({ ...options, scale: 'LOG', customLinearUpperBound: 100 }),
     await getWeightedEnemyHistogramImageFilename({ ...options, scale: 'LOG', customLinearUpperBound: null }))
@@ -80,6 +80,12 @@ test('保存名は集計方法と表示対象を識別し、非表示の設定�
   assert.equal(await getWeightedEnemyHistogramImageFilename(hidden), await getWeightedEnemyHistogramImageFilename({
     ...hidden, statistics: { ...hidden.statistics, mean: 999, median: 999, standardDeviation: 999 },
   }))
+  assert.equal(await getWeightedEnemyHistogramImageFilename({ ...options, statistics: {
+    ...options.statistics, count: 999, missingCount: 99, mean: 456, median: 123,
+    bins: options.statistics.bins.map((bin) => ({ ...bin, count: bin.count * 2 })),
+  } }), name)
+  assert.match(await getWeightedEnemyHistogramImageFilename({ ...options, scope: '全敵 · 術耐性＝50',
+    customLinearUpperBound: 500, showPercentages: true }), /_全敵_術耐性＝50_線形_幅[\d.]+_上限[\d.]+_割合表示_平均-中央値\.png$/)
 })
 
 test('割合ラベルを有効にした保存名を区別し、無効時は省略時の名前を維持する', async () => {
@@ -90,6 +96,7 @@ test('割合ラベルを有効にした保存名を区別し、無効時は省�
     const withoutLabels = await getWeightedEnemyHistogramImageFilename({ ...options, mode })
     assert.equal(await getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: false }), withoutLabels)
     const withLabels = await getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: true })
+    assert.ok(withLabels.includes('_割合表示_'))
     assert.notEqual(withLabels, withoutLabels)
     assert.equal(await getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: true }), withLabels)
   }
@@ -103,6 +110,7 @@ test('階級範囲を有効にした保存名を区別し、無効時は省略�
     const withoutRanges = await getWeightedEnemyHistogramImageFilename({ ...options, mode })
     assert.equal(await getWeightedEnemyHistogramImageFilename({ ...options, mode, showBinRanges: false }), withoutRanges)
     const withRanges = await getWeightedEnemyHistogramImageFilename({ ...options, mode, showBinRanges: true })
+    assert.ok(withRanges.includes('_階級範囲表示_'))
     assert.notEqual(withRanges, withoutRanges)
     assert.equal(await getWeightedEnemyHistogramImageFilename({ ...options, mode, showBinRanges: true }), withRanges)
     assert.notEqual(await getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: true }), withRanges)

@@ -151,21 +151,41 @@ await saveComparisonChartImage({
 
 ## 画像名
 
-既定の画像名は「読める名前＋設定の識別子＋縦横比＋`.png`」とする。同じ有効設定なら同じ名前になり、出力に使う設定が異なれば識別できるようにする。保存日時や乱数は含めない。
+グラフPNGの既定名は「対象・指標＋主要な計算条件＋有効な表示設定＋縦横比＋`.png`」とし、人が読んで内容を判断できる名前にする。設定ハッシュ、保存日時、乱数で作った識別子は付けない。
 
-- `createChartImageFilename(prefix, options)` で名前を作る。設定をキー順に整えたJSONからSHA-256を計算し、64桁すべてを使用する。配列の順序と数値の精度は維持する。読める部分の長さとファイル名に使えない文字の処理は共通関数に任せる。
-- 設定には、スキル・計算時間・順序を含む比較対象・表示値・基準列・小数桁・そのグラフで有効な表示オプションを含める。折れ線の線種と系列名、棒の向き・積み上げ・レイアウト、集合棒の刻み・数値表示なども対象とする。
-- 非表示のグラフ形式に残っている設定、プリセット名、内部の連番ID、表だけの設定、入力途中の未確定値、画面の開閉状態は含めない。比較対象はMOD・装備時のレベル・潜在などの実際の条件で表す。
-- `withChartImageAspect(filename, aspectRatio)` で、指定なしは `-auto`、指定ありは `-ratio` と実効比率を末尾に加える。16:9と32:18のような同じ比率は同じ名前になる。
-- 保存画面には `getDefaultFilename` を渡し、縦横比変更時に自動名を更新する。ユーザーがファイル名を手入力した後は自動で書き換えない。設定による識別は自動名に適用し、ユーザー指定名は優先する。
-- 名前と画像は同じ時点の設定から作る。保存先選択は保存ボタンを押した直後に呼び出し、識別子の生成待ちでブラウザーの操作権限を失わないようにする。
+- `createChartImageFilename(prefix, parts)` に、読める接頭辞と優先順の文字列配列を渡す。同期処理で、空項目を省略し、`_` で連結する。禁止文字・予約名・Unicode・長さの処理は共通関数に任せる。数値一覧には `formatChartFilenameValues(values)` を使い、全体が等差数列なら `0-50刻み10`、不規則なら `500-2000-4000` と表す。比較順序を維持する。
+- 対象・スキル・練度・指標・比較MODと潜在・HP・術耐性など、図を見分ける主要条件を先に置く。形式・差分の基準・小数桁・線種・軸設定・割合表示・補助線など、そのグラフで有効な設定を続ける。未装備のLvや無効な表示設定は入れない。
+- フィルター・比較系列・階級設定も人が理解できる名称を使う。計算結果の点配列・件数・平均値など、結果データ自体は名前に入れない。データの更新だけでは名前を変えず、計算結果の完全な同一性をファイル名で保証しない。
+- 非表示形式に残っている設定、プリセット名、内部ID、表だけの設定、入力途中の未確定値、画面の開閉状態は入れない。同じ有効条件なら同名とし、通常の長さの範囲では条件・比較順序・表示設定の違いを読める名前に反映する。
+- 長い名前は共通関数の長さ上限内に収め、主要条件を優先する。省略する場合は末尾に `ほかN項目` と明記し、隠れたハッシュを追加しない。省略された条件だけが異なる画像は同名になり得るため、保存画面の手入力名を尊重する。文字の途中でUnicodeを壊さない。
+- `withChartImageAspect(filename, aspectRatio)` で、指定なしは `_比率自動`、指定ありは `_比率16x9` などの整数比を付ける。同じ比率は既約比で統一し、16:9と32:18は同名にする。整数比で表せない値は数値をそのまま残す。比率を追加しても全体の長さ上限を守る。
+- 比率を選べる保存画面では `getDefaultFilename` を渡し、変更時に自動名も更新する。手入力後は自動で上書きしない。名前と画像は同じ時点のスナップショットから作る。保存先選択は保存ボタンを押した直後に呼び出し、描画処理の待機でブラウザーの操作権限を失わないようにする。
 
-GGのスキルダメージ比較では、[goldenglowPerformanceImageFilename.ts](../../src/lib/goldenglowPerformanceImageFilename.ts) が有効設定の選択を担当する。形式例は `goldenglow-S3-特化3-30s-grouped-bar-step20-value-labels-[64桁の識別子]-auto.png`。識別子の表記は説明用で、実際は設定から計算した16進文字列になる。
+命名処理の適用済み範囲は次のとおり。配置テンプレートの適用状況とは別に管理する。
+
+| ページ・グラフ | 名前用の条件を組み立てる処理 |
+| --- | --- |
+| GGスキルダメージ比較：折れ線・単一棒・集合棒 | [goldenglowPerformanceImageFilename.ts](../../src/lib/goldenglowPerformanceImageFilename.ts) |
+| GGターゲット切替１：集合棒・折れ線 | [goldenglowTargetSwitchImageFilename.ts](../../src/lib/goldenglowTargetSwitchImageFilename.ts) |
+| GGターゲット切替２：通常HP比較 | [goldenglowChartImageFilename.ts](../../src/lib/goldenglowChartImageFilename.ts) |
+| GGターゲット切替２：複数術耐性比較 | [goldenglowResistanceComparisonSettings.ts](../../src/lib/goldenglowResistanceComparisonSettings.ts) |
+| 敵統計：ヒストグラム | [enemyHistogramCounts.ts](../../src/lib/enemyHistogramCounts.ts) |
+| 敵統計：累積分布 | [enemyWeightedEcdf.ts](../../src/lib/enemyWeightedEcdf.ts) |
+| 敵統計：分布比較 | [enemyDistributionComparison.ts](../../src/lib/enemyDistributionComparison.ts) |
+| 敵統計：ヒートマップ | [enemyJointImage.ts](../../src/lib/enemyJointImage.ts) |
+
+表画像・スライドは対象外とし、既存の読める命名を維持する。旧 `enemyChartImage.ts` の予備経路や、現在選択できないグラフの命名はこの適用済み範囲に含めない。
+
+実装で生成する名前の例（設定は見本用であり、今後の出力に固定しない）：
+
+```text
+GG_S3特化3_総ダメージ_MODなし-X3-Y3_30秒_術耐性0-100刻み10_集合棒_数値あり_比率自動.png
+敵_HP_ヒストグラム_種類数_全敵_線形_幅10000_上限100000_割合表示_階級範囲表示_平均-中央値_比率自動.png
+```
 
 ```tsx
-// prefix と options は利用側で用意する、読める名前と有効な出力設定。
-// saveDialogProps は aspect や保存操作など、既存の保存画面のプロパティ。
-const baseFilename = await createChartImageFilename(prefix, options)
+// prefix と parts は利用側で用意する、読める名前と有効条件の文字列配列。
+const baseFilename = createChartImageFilename(prefix, parts)
 <ChartImageSaveDialog
   {...saveDialogProps}
   initialFilename={baseFilename}
@@ -173,7 +193,7 @@ const baseFilename = await createChartImageFilename(prefix, options)
 />
 ```
 
-この命名方式の適用済み範囲は、GGのスキルダメージ比較の折れ線・単一棒・集合棒。ほかの画像出力の既定名は未移行。設定項目を追加したときは、命名用の有効設定とテストも更新する。同じ設定・無関係な設定で名前が変わらないこと、有効設定・比較順序・比率の変更で名前が変わること、手入力名を保持することを確認する。共通関数の確認例は [chartImageFilename.test.ts](../../tests/chartImageFilename.test.ts)、GG固有の確認例は [goldenglowPerformanceImageFilename.test.ts](../../tests/goldenglowPerformanceImageFilename.test.ts) に置く。
+設定追加時は各ページの命名関数とテストを更新する。同じ条件・非有効な設定・結果データだけの変更では名前が変わらず、有効設定・比較順序・比率を変えると名前が変わること、手入力名が維持されることを確認する。長い条件の省略、禁止文字、日本語の保存名も検証する。共通の確認例は [chartImageFilename.test.ts](../../tests/chartImageFilename.test.ts)、GG固有の例は [goldenglowPerformanceImageFilename.test.ts](../../tests/goldenglowPerformanceImageFilename.test.ts) に置く。上の命名見本は対応テストの入力を命名関数へ渡して再生成し、仕様変更時に更新する。
 
 ## 見本画像と適用状況
 
