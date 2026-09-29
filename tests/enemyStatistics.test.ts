@@ -524,6 +524,129 @@ test('有効な数値がない場合は統計量を空として返す', () => {
   assert.equal(result.histogram, null)
 })
 
+test('線形表示の最低上限を100にすると低い値だけでも10階級を100まで表示する', () => {
+  for (const source of [[0, 0], [0, 10, 20, null]]) {
+    const result = calculateNumericStatistics(source, 10, 'LINEAR', 1, null, null, 100)
+    assert.equal(result.histogram?.binWidth, 10)
+    assert.equal(result.histogram?.normalRangeEnd, 100)
+    assert.equal(result.histogram?.normalBinCount, 10)
+    assert.equal(result.histogram?.hasOverflow, false)
+    assert.equal(result.bins.length, 10)
+    assert.ok(result.bins.filter(({ start }) => start >= 30).every(({ count }) => count === 0))
+    assert.equal(result.bins.reduce((sum, bin) => sum + bin.count, 0), result.count)
+  }
+
+  const source = [0, 10, 20, null]
+  const { bins: _originalBins, histogram: _originalHistogram, ...original } = calculateNumericStatisticsWithDispersion(source)
+  const { bins, histogram, ...extended } = calculateNumericStatisticsWithDispersion(source, 10, 'LINEAR', 1, null, null, 100)
+  assert.deepEqual(extended, original)
+  assert.equal(extended.maximum, 20)
+  assert.equal(extended.mean, 10)
+  assert.equal(extended.count, 3)
+  assert.equal(extended.missingCount, 1)
+  assert.equal(bins.length, 10)
+  assert.equal(histogram?.normalRangeEnd, 100)
+})
+
+test('指定幅でも100まで空階級を残し、割り切れない幅では最後の階級を100で区切る', () => {
+  for (const width of [1, 3, 5, 10, 20, 25, 7, 30, 120]) {
+    const result = calculateNumericStatistics([0, 5, 25], 10, 'LINEAR', 1, width, null, 100)
+    const expectedEnd = 100
+    assert.equal(result.histogram?.normalRangeEnd, expectedEnd)
+    assert.equal(result.histogram?.normalBinCount, Math.ceil(expectedEnd / width))
+    assert.equal(result.histogram?.binWidth, width)
+    assert.equal(result.histogram?.hasOverflow, false)
+    assert.equal(result.bins.at(-1)?.end, expectedEnd)
+    assert.equal(result.bins.at(-1)?.count, width > 100 ? 3 : 0)
+    assert.equal(result.bins.at(-1)?.start, (Math.ceil(expectedEnd / width) - 1) * width)
+    assert.equal(result.bins.reduce((sum, bin) => sum + bin.count, 0), 3)
+  }
+  const boundaryValues = calculateNumericStatistics([97, 98, 99, 100], 10, 'LINEAR', 1, 7, null, 100)
+  assert.deepEqual(boundaryValues.bins.slice(-2), [
+    { start: 91, end: 98, count: 1, includesMaximum: false },
+    { start: 98, end: 100, count: 3, includesMaximum: true },
+  ])
+})
+
+test('最低上限によって末尾だった90の境界が通常境界になっても値を重複・欠落させない', () => {
+  const source = [0, 80, 90]
+  const original = calculateNumericStatistics(source, 10, 'LINEAR', 1, 10)
+  const extended = calculateNumericStatistics(source, 10, 'LINEAR', 1, 10, null, 100)
+  assert.deepEqual(original.bins.at(-1), { start: 80, end: 90, count: 2, includesMaximum: true })
+  assert.deepEqual(extended.bins.slice(-2), [
+    { start: 80, end: 90, count: 1, includesMaximum: false },
+    { start: 90, end: 100, count: 1, includesMaximum: true },
+  ])
+  assert.equal(extended.bins.reduce((sum, bin) => sum + bin.count, 0), source.length)
+})
+
+test('幅の検証にも最低上限を用い、200階級を超える指定は自動幅へ戻す', () => {
+  assert.equal(getCustomLinearHistogramMaximum([0, 5, 25], 1, 100), 100)
+  assert.equal(getCustomLinearHistogramMaximum([0, 0], 1, 100), 100)
+  assert.equal(getCustomLinearHistogramMaximum([120], 1, 100), 120)
+  assert.equal(getCustomLinearHistogramMaximum([null], 1, 100), null)
+  assert.equal(getCustomLinearHistogramMaximum([-1, 25], 1, 100), null)
+  assert.equal(validateCustomLinearBinWidth(0.25, getCustomLinearHistogramMaximum([25], 0, 100)).error, 'TOO_MANY_BINS')
+  const fallback = calculateNumericStatistics([25], 10, 'LINEAR', 0, 0.25, null, 100)
+  assert.equal(fallback.histogram?.binWidth, 10)
+  assert.equal(fallback.histogram?.normalRangeEnd, 100)
+})
+
+test('手動上限50は最低上限100より優先し、50を超える値を超過階級に残す', () => {
+  const source = [0, 50, 90]
+  for (const width of [null, 10]) {
+    const result = calculateNumericStatistics(source, 10, 'LINEAR', 1, width, 50, 100)
+    assert.deepEqual(result, calculateNumericStatistics(source, 10, 'LINEAR', 1, width, 50))
+    assert.equal(result.histogram?.normalRangeEnd, 50)
+    assert.equal(result.bins.at(-1)?.isOverflow, true)
+    assert.equal(result.bins.at(-1)?.count, 1)
+  }
+})
+
+test('最低上限100は100超の値を切り捨てず、超過時には幅7でも境界100を維持する', () => {
+  const source = [...Array.from({ length: 100 }, () => 0), 90, 100, 101, 150]
+  for (const width of [null, 7]) {
+    const result = calculateNumericStatistics(source, 10, 'LINEAR', 1, width, null, 100)
+    assert.equal(result.histogram?.normalRangeEnd, 100)
+    assert.equal(result.histogram?.hasOverflow, true)
+    assert.equal(result.bins.at(-2)?.end, 100)
+    assert.equal(result.bins.at(-2)?.count, width === null ? 2 : 1)
+    assert.equal(result.bins.at(-1)?.isOverflow, true)
+    assert.equal(result.bins.at(-1)?.count, 2)
+    assert.equal(result.bins.reduce((sum, bin) => sum + bin.count, 0), source.length)
+    assert.equal(result.maximum, 150)
+    if (width === 7) assert.equal(result.bins.at(-2)?.start, 98)
+  }
+  assert.equal(getCustomLinearHistogramMaximum(source, 1, 100), 100)
+
+  for (const width of [null, 10]) {
+    const result = calculateNumericStatistics([120, 150], 10, 'LINEAR', 1, width, null, 100)
+    assert.ok((result.histogram?.normalRangeEnd ?? 0) >= 150)
+    assert.equal(result.bins.reduce((sum, bin) => sum + bin.count, 0), 2)
+    assert.equal(result.histogram?.hasOverflow, false)
+  }
+})
+
+test('最低上限の未指定・0・無効値は既存結果を保ち、対数・負値・空標本には影響しない', () => {
+  const source = [0, 5, 25]
+  for (const minimumUpperBound of [0, -100, Number.NaN, Number.POSITIVE_INFINITY]) {
+    assert.deepEqual(
+      calculateNumericStatistics(source, 10, 'LINEAR', 1, 5, null, minimumUpperBound),
+      calculateNumericStatistics(source, 10, 'LINEAR', 1, 5),
+    )
+    assert.equal(getCustomLinearHistogramMaximum(source, 1, minimumUpperBound), 25)
+  }
+  for (const values of [[0, 5, 25], [-10, 0, 25], [null, undefined]]) {
+    for (const scale of ['LINEAR', 'LOG'] as const) {
+      if (scale === 'LINEAR' && values[0] === 0) continue
+      assert.deepEqual(
+        calculateNumericStatistics(values, 3, scale, 1, 5, null, 100),
+        calculateNumericStatistics(values, 3, scale, 1, 5),
+      )
+    }
+  }
+})
+
 test('累積分布は同じ値をまとめて割合を算出する', () => {
   assert.deepEqual(calculateEmpiricalCdf([1, 1, 3, 5, null]), [
     { value: 1, count: 2, cumulativeCount: 2, proportion: 0.5 },

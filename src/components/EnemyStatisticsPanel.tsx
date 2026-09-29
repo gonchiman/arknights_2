@@ -28,7 +28,8 @@ import type { EnemyHeatmapColorScale } from '../lib/enemyHeatmapColor'
 import { withChartImageAspect } from '../lib/chartImageFilename'
 import { calculateWeightedHistogram } from '../lib/enemyWeightedHistogram'
 import { avoidHistogramReferenceLines, formatHistogramPercentage } from '../lib/histogramPercentageLabels'
-import { canFitHistogramBinRangeLabels, formatHistogramBinRangeLines } from '../lib/histogramBinRangeLabels'
+import { getHistogramBinRangeLabelCenters, formatHistogramBinRangeLines } from '../lib/histogramBinRangeLabels'
+import { createHistogramCategoryScale } from '../lib/histogramCategoryScale'
 import { buildEnemyRatingHistogramBins, formatEnemyRatingHistogramRangeLines, isEnemyRatingStat, type EnemyRatingHistogramBin } from '../lib/enemyRatingHistogram'
 import { getEnemyStatRating } from '../lib/enemyStatRatings'
 import { placeGroupedBarValueLabels } from '../lib/groupedBarValueLabels'
@@ -259,19 +260,21 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const histogramSource = useMemo(() => activeCountMode === 'TYPES' ? metricSource
     : weightedObservations.filter(({ weight }) => weight > 0).map(({ value }) => value),
   [activeCountMode, metricSource, weightedObservations])
+  const minimumLinearUpperBound = selectedMetric.key === 'magicResistance' ? 100 : 0
   const customHistogramMaximum = useMemo(
-    () => getCustomLinearHistogramMaximum(histogramSource, selectedMetric.minimumLinearBinWidth),
-    [histogramSource, selectedMetric.minimumLinearBinWidth],
+    () => getCustomLinearHistogramMaximum(histogramSource, selectedMetric.minimumLinearBinWidth, minimumLinearUpperBound),
+    [histogramSource, selectedMetric.minimumLinearBinWidth, minimumLinearUpperBound],
   )
-  const automaticLinearStatistics = useMemo(
-    () => calculateNumericStatisticsWithDispersion(histogramSource, selectedMetric.logBinCount, 'LINEAR', selectedMetric.minimumLinearBinWidth),
-    [histogramSource, selectedMetric.logBinCount, selectedMetric.minimumLinearBinWidth],
-  )
-  const automaticBinWidth = automaticLinearStatistics.histogram?.binWidth ?? selectedMetric.minimumLinearBinWidth
   const parsedLinearUpperBound = linearUpperBoundInput.trim() === '' ? null : Number(linearUpperBoundInput)
   const invalidUpperBound = parsedLinearUpperBound !== null
     && (!Number.isFinite(parsedLinearUpperBound) || parsedLinearUpperBound <= 0)
   const requestedUpperBound = invalidUpperBound ? null : parsedLinearUpperBound
+  const automaticMinimumUpperBound = requestedUpperBound === null ? minimumLinearUpperBound : 0
+  const automaticLinearStatistics = useMemo(
+    () => calculateNumericStatisticsWithDispersion(histogramSource, selectedMetric.logBinCount, 'LINEAR', selectedMetric.minimumLinearBinWidth, null, null, automaticMinimumUpperBound),
+    [histogramSource, selectedMetric.logBinCount, selectedMetric.minimumLinearBinWidth, automaticMinimumUpperBound],
+  )
+  const automaticBinWidth = automaticLinearStatistics.histogram?.binWidth ?? selectedMetric.minimumLinearBinWidth
   const parsedLinearBinWidth = linearBinWidthInput.trim() === '' ? null : Number(linearBinWidthInput)
   const linearBinWidthValidation = parsedLinearBinWidth === null
     ? null
@@ -304,8 +307,9 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
       selectedMetric.minimumLinearBinWidth,
       customLinearBinWidth,
       customLinearUpperBound,
+      minimumLinearUpperBound,
     ),
-    [metricSource, selectedMetric.logBinCount, selectedMetric.minimumLinearBinWidth, axisScale, customLinearBinWidth, customLinearUpperBound],
+    [metricSource, selectedMetric.logBinCount, selectedMetric.minimumLinearBinWidth, axisScale, customLinearBinWidth, customLinearUpperBound, minimumLinearUpperBound],
   )
   const scatterObservations = useMemo(
     () => selectedChart === 'SCATTER' ? buildScatterObservations(rows, selectedMetric.key, scatterMetric.key) : [],
@@ -317,8 +321,9 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     : withHistogramDispersion(calculateWeightedHistogram(weightedObservations, {
       preferredBinCount: selectedMetric.logBinCount, scale: axisScale,
       minimumLinearBinWidth: selectedMetric.minimumLinearBinWidth, customLinearBinWidth, customLinearUpperBound,
+      minimumLinearUpperBound,
     })), [activeCountMode, statistics, weightedObservations, selectedMetric.logBinCount,
-    selectedMetric.minimumLinearBinWidth, axisScale, customLinearBinWidth, customLinearUpperBound])
+    selectedMetric.minimumLinearBinWidth, axisScale, customLinearBinWidth, customLinearUpperBound, minimumLinearUpperBound])
   const summaryStatistics = histogramStatistics
   const canSaveImage = (selectedChart === 'HEATMAP' ? jointDistribution.count
     : selectedChart === 'SCATTER' ? scatterObservations.length : summaryStatistics.count) > 0
@@ -457,11 +462,11 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           </div>}
           {selectedChart !== 'HEATMAP' && !ratingMode && summaryStatistics.count > 0 && (
             <div className="enemy-chart-axis-control">
-              <span>横軸</span>
+              <span>{selectedChart === 'HISTOGRAM' ? '階級の区切り' : '横軸'}</span>
               <ScaleSwitch
                 scale={axisScale}
                 onChange={setAxisScale}
-                label={`${selectedMetric.label}の横軸目盛`}
+                label={`${selectedMetric.label}の${selectedChart === 'HISTOGRAM' ? '階級の区切り' : '横軸目盛'}`}
               />
             </div>
           )}
@@ -716,7 +721,8 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
   const missingCount = statistics.count + statistics.missingCount - count
   const axisMinimum = kind === 'SCATTER' ? Math.min(...scatterObservations.map(({ x }) => x)) : statistics.minimum
   const axisLabel = data.ratingBins ? `${metric.axisLabel}（ゲーム内評価）`
-    : `${metric.axisLabel}（${getEffectiveScaleName(scale, axisMinimum)}目盛）`
+    : kind === 'HISTOGRAM' ? `${metric.axisLabel}（階級）`
+      : `${metric.axisLabel}（${getEffectiveScaleName(scale, axisMinimum)}目盛）`
   const unit = countOption.unit
   const conditions = [scopeLabel, `${countOption.label} ${formatNumber(count, 0)}${unit}`]
   if (missingCount > 0) conditions.push(`値なし ${formatNumber(missingCount, 0)}${unit}を除外`)
@@ -952,14 +958,13 @@ function HistogramFigure({
   const [chartContainerRef, chartWidth] = useChartWidth()
   const titleId = useId()
   const descriptionId = useId()
-  const scaleName = getEffectiveScaleName(scale, statistics.minimum)
   const bins = ratingBins ?? statistics.bins
-  const axisLabel = ratingBins ? `${metric.axisLabel}（ゲーム内評価）` : `${metric.axisLabel}（${scaleName}目盛）`
+  const axisLabel = ratingBins ? `${metric.axisLabel}（ゲーム内評価）` : `${metric.axisLabel}（階級）`
   const countOption = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === countMode)!
   const chartDescription = statistics.count === 0
     ? `${scopeLabel}には${metric.label}の数値データがありません。`
     : ratingBins ? `${scopeLabel}の${metric.label}をゲーム内評価のE〜SSで集計した棒グラフです。`
-    : `${scopeLabel}の${metric.label}を${statistics.bins.length}階級の${scaleName}目盛で集計したヒストグラムです。`
+    : `${scopeLabel}の${metric.label}を${statistics.bins.length}階級に分け、等間隔に並べたヒストグラムです。`
 
   return (
     <figure className="enemy-analysis-figure">
@@ -1168,9 +1173,10 @@ function useHistogramBinRangeLayout(labels: { center: number; lines: string[] }[
     document.fonts.addEventListener('loadingdone', measure)
     return () => { active = false; document.fonts.removeEventListener('loadingdone', measure) }
   }, [enabled, textKey])
-  const visible = enabled && measured.key === textKey && labels.every((label) => label.lines.length > 0)
-    && canFitHistogramBinRangeLabels(labels.map((label, index) => ({ center: label.center, width: measured.widths[index] })), plotLeft, plotRight)
-  return { measureRef, visible }
+  const centers = enabled && measured.key === textKey && labels.every((label) => label.lines.length > 0)
+    ? getHistogramBinRangeLabelCenters(labels.map((label, index) => ({ center: label.center, width: measured.widths[index] })), plotLeft, plotRight, 2)
+    : null
+  return { measureRef, visible: centers !== null, centers }
 }
 
 function HistogramSvg({
@@ -1230,6 +1236,7 @@ function HistogramSvg({
   const countMaximum = Math.ceil(maxBinCount / countStep) * countStep
   const countTicks = Array.from({ length: Math.floor(countMaximum / countStep) + 1 }, (_, index) => index * countStep)
   const valueScale = createValueScale(minimum, maximum, plotLeft, plotRight, isAdaptiveLinear ? 'LINEAR' : scale)
+  const categoryScale = createHistogramCategoryScale(statistics.bins, plotLeft, plotRight, valueScale.effectiveScale)
   const xTicks = isAdaptiveLinear
     ? createAdaptiveLinearTicks(histogram.normalRangeStart, histogram.normalRangeEnd, width < 480 ? 2 : 5)
     : createScaleTicks(minimum, maximum, width < 480 ? 3 : 5, scale)
@@ -1239,11 +1246,7 @@ function HistogramSvg({
       const index = Math.max(0, ratingBins.findIndex((bin) => bin.rating === rating))
       return plotLeft + (index + 0.5) * plotWidth / ratingBins.length
     }
-    if (!isAdaptiveLinear) return valueScale.position(value)
-    if (histogram.hasOverflow && value > histogram.normalRangeEnd) {
-      return valueScale.position(histogram.normalRangeEnd + ((histogram.binWidth ?? 0) / 2))
-    }
-    return valueScale.position(Math.min(histogram.normalRangeEnd, Math.max(histogram.normalRangeStart, value)))
+    return categoryScale.position(value)
   }
   const referenceLabels = useImageReferenceLabels(statistics, metric, referencePosition, plotLeft, plotRight, image || showPercentages, referenceVisibility)
   const plotTop = image ? referenceLabels.top : CHART_MARGIN.top
@@ -1256,13 +1259,10 @@ function HistogramSvg({
     : undefined
   const barGap = Math.min(3, Math.max(1, plotWidth / Math.max(1, bins.length) * 0.08))
   const bars = bins.map((bin, index): HistogramBarGeometry => {
-    const startX = 'rating' in bin ? plotLeft + index * plotWidth / bins.length
-      : minimum === maximum ? plotLeft : valueScale.position(bin.start)
-    const endX = 'rating' in bin ? plotLeft + (index + 1) * plotWidth / bins.length
-      : minimum === maximum ? plotRight : valueScale.position(bin.end)
+    const startX = plotLeft + index * plotWidth / bins.length
     const barHeight = bin.count / countMaximum * plotHeight
     return { x: startX - plotLeft + barGap / 2, y: plotHeight - barHeight,
-      width: Math.max(1, endX - startX - barGap), height: Math.max(0, barHeight),
+      width: Math.max(1, plotWidth / bins.length - barGap), height: Math.max(0, barHeight),
       percentage: formatHistogramPercentage(bin.count, statistics.count) }
   })
   const referenceXs = statistics.count > 0 ? [
@@ -1275,11 +1275,12 @@ function HistogramSvg({
     lines: ratingBins ? [ratingBins[index].rating, ...formatEnemyRatingHistogramRangeLines(ratingBins[index])]
       : formatHistogramBinRangeLines(statistics.bins[index]),
   }))
-  const binRangeLayout = useHistogramBinRangeLayout(binRangeLabels, plotLeft, plotRight, showBinRanges)
+  // The short final class can use the SVG's right margin for its label.
+  const binRangeLayout = useHistogramBinRangeLayout(binRangeLabels, plotLeft, width - 2, showBinRanges)
   const extraBottom = binRangeLayout.visible && binRangeLabels.some((label) => label.lines.length > 1)
     ? (Math.max(...binRangeLabels.map((label) => label.lines.length)) - 1) * 15 + 5 : 0
-  const axisLabels = binRangeLayout.visible ? binRangeLabels
-    : ratingBins ? binRangeLabels.map((label, index) => ({ ...label, lines: [ratingBins[index].rating] })) : null
+  const axisLabels = binRangeLayout.centers ? binRangeLabels.map((label, index) => ({ ...label, textCenter: binRangeLayout.centers![index] }))
+    : ratingBins ? binRangeLabels.map((label, index) => ({ ...label, textCenter: label.center, lines: [ratingBins[index].rating] })) : null
   const extraTop = Math.ceil(percentageLayout.extraTop)
   useLayoutEffect(() => { onLabelOverflow?.(extraTop + extraBottom) }, [extraTop, extraBottom, onLabelOverflow])
   const chartHeight = Math.max(height, baseHeight + extraTop + extraBottom)
@@ -1326,23 +1327,23 @@ function HistogramSvg({
         <g className="enemy-histogram-range-axis">
           {axisLabels.map((label, index) => <g key={index}>
             <line className="enemy-chart-axis-tick" x1={label.center} x2={label.center} y1={plotBottom} y2={plotBottom + 5} />
-            <text className="enemy-chart-tick enemy-histogram-range-label" x={label.center} y={plotBottom + 19} textAnchor="middle">
+            <text className="enemy-chart-tick enemy-histogram-range-label" x={label.textCenter} y={plotBottom + 19} textAnchor="middle">
               <title>{formatHistogramClassLabel(bins[index], statistics, metric)}</title>
-              {label.lines.map((line, lineIndex) => <tspan key={lineIndex} fontWeight={ratingBins && lineIndex === 0 ? 600 : undefined} x={label.center} dy={lineIndex === 0 ? 0 : 15}>{line}</tspan>)}
+              {label.lines.map((line, lineIndex) => <tspan key={lineIndex} fontWeight={ratingBins && lineIndex === 0 ? 600 : undefined} x={label.textCenter} dy={lineIndex === 0 ? 0 : 15}>{line}</tspan>)}
             </text>
           </g>)}
         </g>
         {!image && <text className="enemy-chart-axis-title" x={(plotLeft + plotRight) / 2} y={chartHeight - 8} textAnchor="middle">
-          {metric.axisLabel}（{ratingBins ? 'ゲーム内評価' : `${valueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛`}）
+          {metric.axisLabel}（{ratingBins ? 'ゲーム内評価' : '階級'}）
         </text>}
       </> : <BottomAxis
         ticks={xTicks}
-        position={valueScale.position}
+        position={categoryScale.position}
         metric={metric}
         plotLeft={plotLeft}
         plotRight={plotRight}
         plotBottom={plotBottom}
-        axisLabel={`${metric.axisLabel}（${valueScale.effectiveScale === 'LOG' ? '対数' : '線形'}目盛）`}
+        axisLabel={`${metric.axisLabel}（階級）`}
         extraTick={overflowTick}
         preciseTicks={isAdaptiveLinear}
         chartHeight={chartHeight}

@@ -15,6 +15,7 @@ export interface WeightedHistogramOptions {
   minimumLinearBinWidth?: number
   customLinearBinWidth?: number | null
   customLinearUpperBound?: number | null
+  minimumLinearUpperBound?: number
 }
 
 interface FiniteObservation {
@@ -53,6 +54,7 @@ export function calculateWeightedHistogram(
     options.minimumLinearBinWidth,
     options.customLinearBinWidth,
     options.customLinearUpperBound,
+    options.minimumLinearUpperBound,
   )
 
   // The existing histogram partitions sorted observations into consecutive bins.
