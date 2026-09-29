@@ -323,7 +323,6 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
       setPreparingImage(true)
       try {
         const filename = await getResistanceComparisonImageFilename(resistanceCalculation.request.input, snapshot)
-        setImageAspect({ preset: '16:9', width: '16', height: '9' })
         setImageExport({ id: ++imageSnapshotId.current, kind: 'resistance', filename, snapshot })
       } catch { setImageFeedback('failed') }
       finally { setPreparingImage(false) }
