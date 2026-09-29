@@ -211,7 +211,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const upperBoundHelpId = useId()
   const [chartChoice, setSelectedChart] = useState<ChartKind>('HISTOGRAM')
   const selectedChart = CHART_OPTIONS.some(({ key }) => key === chartChoice) ? chartChoice : 'HISTOGRAM'
-  const [activeCountMode, setCountMode] = useState<EnemyHistogramCountMode>('TYPES')
+  const [activeCountMode, setCountMode] = useState<EnemyHistogramCountMode>('SPAWNS')
   const [showHistogramPercentages, setShowHistogramPercentages] = useState(false)
   const [showHistogramBinRanges, setShowHistogramBinRanges] = useState(false)
   const [useRatingHistogram, setUseRatingHistogram] = useState(false)
