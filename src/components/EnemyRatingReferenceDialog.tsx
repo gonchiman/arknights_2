@@ -1,5 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { ENEMY_RATING_STATS, getEnemyRatingRanges, type EnemyRatingStat } from '../lib/enemyStatRatings'
+import { ENEMY_RATING_STATS, type EnemyRatingStat } from '../lib/enemyStatRatings'
+import { lockPageScroll } from '../lib/pageScrollLock'
+import { EnemyRatingReferenceTable } from './EnemyRatingReferenceTable'
+import { EnemyRatingImageSaveDialog } from './EnemyRatingImageSaveDialog'
 import './EnemyRatingReferenceDialog.css'
 
 export function EnemyRatingReferenceDialog({
@@ -12,6 +15,9 @@ export function EnemyRatingReferenceDialog({
   context?: 'database' | 'histogram'
 }) {
   const [stat, setStat] = useState<EnemyRatingStat>(initialStat)
+  const [imageSaveOpen, setImageSaveOpen] = useState(false)
+  const [imageStats, setImageStats] = useState<EnemyRatingStat[]>([initialStat])
+  const [saveStatus, setSaveStatus] = useState('')
   const dialogRef = useRef<HTMLDialogElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const backdropPointerDownRef = useRef(false)
@@ -24,18 +30,17 @@ export function EnemyRatingReferenceDialog({
 
     if (!dialog.open) dialog.showModal()
     const focusFrame = window.requestAnimationFrame(() => closeRef.current?.focus())
-    const previousOverflow = document.documentElement.style.overflow
-    document.documentElement.style.overflow = 'hidden'
+    const unlockScroll = lockPageScroll(document.documentElement)
 
     return () => {
       window.cancelAnimationFrame(focusFrame)
-      document.documentElement.style.overflow = previousOverflow
+      unlockScroll()
       if (dialog.open) dialog.close()
     }
   }, [])
 
   return (
-    <dialog
+    <><dialog
       ref={dialogRef}
       className="enemy-rating-dialog"
       aria-labelledby={titleId}
@@ -56,25 +61,27 @@ export function EnemyRatingReferenceDialog({
       <div className="enemy-rating-reference">
         <header className="enemy-rating-reference-header">
           <h2 id={titleId}>評価基準</h2>
-          <button ref={closeRef} type="button" aria-label="評価基準を閉じる" onClick={onClose}>閉じる</button>
+          <div className="enemy-rating-reference-actions">
+            <button type="button" onClick={() => {
+              setImageStats([stat])
+              setSaveStatus('')
+              setImageSaveOpen(true)
+            }}>画像を保存</button>
+            <button ref={closeRef} type="button" aria-label="評価基準を閉じる" onClick={onClose}>閉じる</button>
+          </div>
         </header>
         <div className="enemy-rating-reference-body" tabIndex={0} role="region" aria-label="評価基準の内容">
           <div className="enemy-rating-stat-picker">
             <label htmlFor={statId}>項目</label>
-            <select id={statId} value={stat} onChange={(event) => setStat(event.target.value as EnemyRatingStat)}>
+            <select id={statId} value={stat} onChange={(event) => {
+              setStat(event.target.value as EnemyRatingStat)
+              setSaveStatus('')
+            }}>
               {ENEMY_RATING_STATS.map(({ key, label }) => <option key={key} value={key}>{label}</option>)}
             </select>
           </div>
-          <table className="enemy-rating-reference-table" aria-label={`${ENEMY_RATING_STATS.find(({ key }) => key === stat)!.label}の評価基準`}>
-            <thead>
-              <tr><th scope="col">評価</th><th scope="col">実数値の範囲</th></tr>
-            </thead>
-            <tbody>
-              {getEnemyRatingRanges(stat).map(({ rating, label }) => (
-                <tr key={rating}><th scope="row">{rating}</th><td>{label}</td></tr>
-              ))}
-            </tbody>
-          </table>
+          <span className="visually-hidden" role="status">{saveStatus}</span>
+          <EnemyRatingReferenceTable stat={stat} />
           <div className="enemy-rating-reference-notes">
             {context === 'histogram' ? (
               <>
@@ -91,5 +98,8 @@ export function EnemyRatingReferenceDialog({
         </div>
       </div>
     </dialog>
+    {imageSaveOpen && <EnemyRatingImageSaveDialog stats={imageStats} onStatsChange={setImageStats}
+      onClose={() => setImageSaveOpen(false)} onSaved={setSaveStatus} />}
+    </>
   )
 }
