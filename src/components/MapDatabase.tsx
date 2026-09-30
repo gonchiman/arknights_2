@@ -68,26 +68,40 @@ export function MapDatabase() {
     {error ? <div className="map-load-state" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={() => setRevision((value) => value + 1)}>再読み込み</button></div>
       : !data ? <div className="map-load-state" role="status">マップ一覧を読み込んでいます…</div>
         : <>
-          <CollapsibleCalculatorPanel id="map-search" number="01" title="検索・絞り込み" summary={`${formatNumber(filtered.length)}件`} collapsedLabel="条件を表示">
+          <CollapsibleCalculatorPanel id="map-search" number="01" title="マップを選ぶ" summary={`${formatNumber(filtered.length)}件`} collapsedLabel="選択欄を表示" bodyClassName="map-selection-body">
             <div className="map-search-controls">
               <label className="map-search-input"><span>マップ検索</span><input type="search" value={filters.query} placeholder="ステージ番号・マップ名・敵名" onChange={(event) => updateFilters({ query: event.target.value })} /></label>
               <label><span>章・エリア</span><select value={filters.zoneId} onChange={(event) => updateFilters({ zoneId: event.target.value })}><option value="all">すべて</option>{zones.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
               <label><span>データの状態</span><select value={filters.status} onChange={(event) => updateFilters({ status: event.target.value as MapFilters['status'] })}><option value="all">すべて</option><option value="supported">出現数を集計できる</option><option value="excluded">出現数未確定</option><option value="missing">マップデータ未取得</option></select></label>
             </div>
+            {visible.length ? <>
+              <div className="map-selection-grid" role="group" aria-label="マップ一覧">
+                {visible.map((map) => <button
+                  key={map.levelId}
+                  type="button"
+                  className="map-selection-button"
+                  aria-label={`${map.code} ${difficultyLabel(map)} ${map.name}の情報を表示`}
+                  aria-pressed={selected?.levelId === map.levelId}
+                  title={[map.code, difficultyLabel(map), map.name, map.zoneName].filter(Boolean).join(' ／ ')}
+                  onClick={() => setSelectedId(map.levelId)}
+                >
+                  <span>{map.code}</span>
+                  {difficultyLabel(map) && <small className="map-difficulty">{difficultyLabel(map)}</small>}
+                </button>)}
+              </div>
+              {selected && <div className="map-selection-summary" aria-live="polite">
+                <span className="map-selection-label">選択中</span>
+                <strong>{selected.code}</strong>
+                <span className="map-selection-name">{selected.name}</span>
+                {difficultyLabel(selected) && <span className="map-selection-difficulty">{difficultyLabel(selected)}</span>}
+                <span className="map-selection-count">出現数 {selected.status === 'supported' ? `${formatNumber(selected.spawnCount)}体` : selected.status === 'missing' ? '未取得' : '未確定'}</span>
+              </div>}
+              <div className="map-pagination"><span aria-live="polite">{currentPage * PAGE_SIZE + 1}–{Math.min(filtered.length, (currentPage + 1) * PAGE_SIZE)} / {formatNumber(filtered.length)}件</span><div><button className="button secondary" type="button" disabled={currentPage === 0} onClick={() => changePage(currentPage - 1)} aria-label="前のマップ一覧">前へ</button><button className="button secondary" type="button" disabled={currentPage + 1 >= pageCount} onClick={() => changePage(currentPage + 1)} aria-label="次のマップ一覧">次へ</button></div></div>
+            </> : <p className="map-empty" role="status">該当するマップがありません</p>}
           </CollapsibleCalculatorPanel>
-          <div className="map-database-columns">
-            <CollapsibleCalculatorPanel id="map-list" number="02" title="マップ一覧" summary={`${formatNumber(filtered.length)}件`} collapsedLabel="一覧を表示" bodyClassName="map-list-body">
-              {visible.length ? <>
-                <div className="map-table-scroll"><table className="map-list-table"><thead><tr><th scope="col">ステージ</th><th scope="col">マップ名</th><th scope="col" className="map-numeric">出現数</th></tr></thead><tbody>{visible.map((map) => <tr key={map.levelId} className={selected?.levelId === map.levelId ? 'map-selected' : ''} onClick={() => setSelectedId(map.levelId)}>
-                  <td><button type="button" className="map-row-button" aria-label={`${map.code} ${difficultyLabel(map)} ${map.name}の情報を表示`} aria-pressed={selected?.levelId === map.levelId} onClick={() => setSelectedId(map.levelId)}>{map.code}{difficultyLabel(map) && <small className="map-difficulty">{difficultyLabel(map)}</small>}</button></td><td>{map.name}</td><td className="map-numeric">{map.status === 'supported' ? `${formatNumber(map.spawnCount)}体` : map.status === 'missing' ? '未取得' : '未確定'}</td>
-                </tr>)}</tbody></table></div>
-                <div className="map-pagination"><span aria-live="polite">{currentPage * PAGE_SIZE + 1}–{Math.min(filtered.length, (currentPage + 1) * PAGE_SIZE)} / {formatNumber(filtered.length)}件</span><div><button className="button secondary" type="button" disabled={currentPage === 0} onClick={() => changePage(currentPage - 1)} aria-label="前のマップ一覧">前へ</button><button className="button secondary" type="button" disabled={currentPage + 1 >= pageCount} onClick={() => changePage(currentPage + 1)} aria-label="次のマップ一覧">次へ</button></div></div>
-              </> : <p className="map-empty" role="status">該当するマップがありません</p>}
-            </CollapsibleCalculatorPanel>
-            <CollapsibleCalculatorPanel id="map-detail" number="03" title="マップ情報" summary={selected?.code ?? ''} collapsedLabel="情報を表示" className="map-detail-panel">
-              {selected ? <MapInformation key={selected.levelId} map={selected} index={data} /> : <p className="map-empty">表示するマップがありません</p>}
-            </CollapsibleCalculatorPanel>
-          </div>
+          <CollapsibleCalculatorPanel id="map-detail" number="02" title="マップ情報" summary={selected?.code ?? ''} collapsedLabel="情報を表示" className="map-detail-panel">
+            {selected ? <MapInformation key={selected.levelId} map={selected} index={data} /> : <p className="map-empty">表示するマップがありません</p>}
+          </CollapsibleCalculatorPanel>
           <details className="map-source-notes"><summary>データの範囲</summary><p>stage_table内の戦闘ステージを、同じマップデータを共有するものごとにまとめています。ローグライクなど、別管理のマップは含みません。</p><p>取得済み {formatNumber(data.maps.filter((map) => map.status !== 'missing').length)}マップ／未取得 {formatNumber(data.maps.filter((map) => map.status === 'missing').length)}マップ。敵の能力値は基礎値で、マップ固有の補正は反映していません。</p><p>マップ情報の生成：{data.generatedAt.slice(0, 10)}{data.sourceGeneratedAt ? ` ／ 取得範囲の集計：${data.sourceGeneratedAt.slice(0, 10)}` : ''}</p></details>
         </>}
   </section>
