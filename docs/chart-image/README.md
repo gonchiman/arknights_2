@@ -10,6 +10,7 @@
 | --- | --- |
 | [ChartImageFrame.tsx](../../src/components/ChartImageFrame.tsx) / [CSS](../../src/components/ChartImageFrame.css) | タイトル・凡例・条件・横軸名の配置と、折り返し後の高さ計測 |
 | [chartImageLayout.ts](../../src/lib/chartImageLayout.ts) | 自然なグラフの高さを保った画像サイズの計算 |
+| [ChartImageStackFrame.tsx](../../src/components/ChartImageStackFrame.tsx) / [chartImageStackLayout.ts](../../src/lib/chartImageStackLayout.ts) | 複数グラフを同じ幅で上下に並べ、画像全体の比率を計算 |
 | [saveComparisonChartImage.tsx](../../src/components/saveComparisonChartImage.tsx) | 描画完了の待機、PNG生成、保存処理 |
 | [ChartImageSaveDialog.tsx](../../src/components/ChartImageSaveDialog.tsx) | ファイル名、画像全体の縦横比、保存先の操作 |
 | [chartImageFilename.ts](../../src/lib/chartImageFilename.ts) | 設定を識別する既定ファイル名と縦横比の付与 |
@@ -87,6 +88,7 @@
 | `conditions?: string` | 右側の条件。対象・件数・設定など必要な短い情報 |
 | `axisTitle?: string` | 下部の横軸名 |
 | `naturalChartHeight: number` | グラフ領域に必要な自然な高さ |
+| `informationPlacement?: 'header' \| 'top-right-box'` | 既定は上記の標準ヘッダー。明示した出力だけ右上枠内へタイトル・凡例・条件を縦に配置 |
 | `aspectRatio?: number` | 画像全体の幅÷高さ。省略時は自動 |
 | `className?: string` | グラフ固有の見た目を指定するクラス |
 | `onLayout?: ({ width, height }) => void` | 計測後の画像全体のサイズ。プレビューなどに利用 |
@@ -148,6 +150,32 @@ await saveComparisonChartImage({
 利用側のグラフは、受け取った幅と高さで描画する。横軸名をフレームに渡す場合、グラフ内の同じ軸名とそのための余白は外して二重表示を避ける。ヘッダーや横軸名を利用側で追加しない。SVG内の文字が境界からはみ出さないよう、目盛り・縦軸名・直接ラベルに必要な余白はグラフ内で確保する。
 
 保存時は画面の設定とデータをひとまとまりで保持し、プレビューと実際のPNGに同じ内容を渡す。ファイル名と縦横比は `ChartImageSaveDialog` を使い、既存の保存先選択とダウンロードの処理を再利用する。
+
+### 複数グラフの上下出力と右上の情報枠
+
+スルトS3のDPSと敵の術耐性ヒストグラムを一緒に出力する場合は、[承認済みの配置見本](examples/surtr-dps-histogram-top-right-frame.png)に合わせて `ChartImageStackFrame` を使う。見本の数値・色・条件は入力例であり、データへ固定しない。標準の単独出力の配置は変更しない。
+
+- 各パネルは同じ幅を使い、上から入力順に並べる。既定の幅は960px、パネル間は12px。各パネルの `naturalChartHeight` を保持し、縦横比を全体へ一度だけ適用する。横長の場合は必要な幅を増やす。
+- `informationPlacement: 'top-right-box'` を指定したパネルでは、グラフ内右上の白背景・薄灰枠にタイトル、凡例、条件の順にまとめる。文字や凡例の大きさは標準と同じ。内容と計算結果を隠さない位置・範囲であることを実PNGで確認する。
+- 右上枠とデータ・数値・平均／中央値の表示が重なる場合だけ、枠の高さをグラフ上部に確保して描画を下げる。自然なグラフ高は維持し、同じ保存対象の間は予約高を減らさない。描画側はデータの棒・線・直接ラベルへ `data-chart-image-ink` を付ける。枠線や補助目盛りは判定対象にせず、折れ線は外接矩形だけでなく実際の経路との交差を判定する。
+- タイトル・条件の折り返しと軸名の高さを計測する。右上枠が自然なグラフ領域に収まらない場合も必要な高さを追加する。文字量とデータを変更したときは、スナップショットと比率を含む `key` でフレームを再マウントする。
+- `render` は `{ width, height, reservedOverflow, onOverflow }` を受け取る。`height` は追加確保分を含む。数値ラベルなどが自然高を超える場合は、描画側で `height - reservedOverflow` を基準に必要な追加高を算出し、`onOverflow(追加高)` で報告する。フレームは各パネルの追加高を個別に確保する。
+- スルトには [SurtrDpsSnapshotPlot / SurtrDpsImageLegend](../../src/components/SurtrDpsChart.tsx) を使い、既存の間引き・数値ラベル配置・配色・線種を再利用する。各パネルへ別々に縦横比を渡したり、スクリーンショットを引き伸ばして結合したりしない。
+
+```tsx
+// snapshot と histogramPlot は利用側の保存対象データ・描画関数。
+<ChartImageStackFrame key={`${snapshot.id}:${aspectRatio ?? 'auto'}`} aspectRatio={aspectRatio}
+  panels={[
+    { id: 'dps', title: 'スルト S3 DPS', conditions: snapshot.conditions,
+      legend: <SurtrDpsImageLegend series={snapshot.series} kind={snapshot.kind} />,
+      axisTitle: '敵の術耐性', naturalChartHeight: 334, informationPlacement: 'top-right-box',
+      render: (size) => <SurtrDpsSnapshotPlot {...snapshot.chartProps} {...size} /> },
+    { id: 'histogram', title: '術耐性のヒストグラム', axisTitle: '術耐性（階級）',
+      naturalChartHeight: 334, informationPlacement: 'top-right-box', render: histogramPlot },
+  ]} />
+```
+
+初期の保存幅・プレビューサイズは `getChartImageStackLayout({ panels: [{ naturalChartHeight: 334 }, { naturalChartHeight: 334 }], aspectRatio })` から取得し、実測後は `onLayout` の幅・高さを使う。確認時は指定なし・16:9、長い凡例・条件、棒の数値あり、ヒストグラムの階級範囲表示を含め、各グラフの軸名やラベルの欠け、情報枠との重なりを確認する。共通枠・サイズの変更では既存の単独出力も確認する。
 
 ## 画像名
 

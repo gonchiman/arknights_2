@@ -1,9 +1,21 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { getSurtrDpsImageFilename } from '../src/lib/surtrDpsImageFilename.ts'
+import { getSurtrDpsImageFilename, getSurtrCombinedImageFilename } from '../src/lib/surtrDpsImageFilename.ts'
 import { withChartImageAspect } from '../src/lib/chartImageFilename.ts'
 
 const settings = { level: 90, trust: 100, potential: 1, skillLevelLabel: '特化3', blocking: false, modules: ['未装備', 'MOD X Lv.3', 'MOD Y Lv.3'] }
+test('combined export names preserve both graph identities and prioritize histogram scope', () => {
+  const dps = getSurtrDpsImageFilename(settings)
+  const histogram = '敵_術耐性_ヒストグラム_出現回数_全敵_線形_幅10_上限100.png'
+  const name = getSurtrCombinedImageFilename(dps, histogram)
+  assert.match(name, /^スルト_S3_DPSと術耐性分布_出現回数_全敵_/)
+  assert.match(name, /特化3/)
+  assert.notEqual(name, getSurtrCombinedImageFilename(dps, histogram.replace('出現回数', '種類数')))
+  assert.notEqual(name, getSurtrCombinedImageFilename(dps, histogram.replace('全敵', 'ボス')))
+  assert.notEqual(name, getSurtrCombinedImageFilename(getSurtrDpsImageFilename({ ...settings, potential: 5 }), histogram))
+  assert.ok(new TextEncoder().encode(withChartImageAspect(name, 16 / 9)).length <= 240)
+  assert.match(withChartImageAspect(name), /比率自動\.png$/)
+})
 test('Surtr filename records all effective DPS conditions and no synthetic identifiers', () => {
   const name = getSurtrDpsImageFilename(settings)
   for (const text of ['スルト', 'S3', 'DPS', '特化3', '昇進2Lv90', '信頼100', '潜在1', '未装備-MODXLv.3-MODYLv.3', '未ブロック', '余燼なし', '術耐性0-100']) assert.ok(name.includes(text), text)

@@ -63,3 +63,12 @@ export function getSurtrDpsImageFilename(settings: SurtrDpsImageConditions): str
 function finiteBound(value: number | undefined): number | string {
   return typeof value === 'number' && Number.isFinite(value) ? value : '自動'
 }
+
+/** Prioritize the distribution's aggregation/scope before optional drawing settings. */
+export function getSurtrCombinedImageFilename(dpsFilename: string, histogramFilename: string): string {
+  const dps = dpsFilename.replace(/\.png$/i, '').replace(/^スルト_S3_DPS_/, '').split('_')
+  const histogram = histogramFilename.replace(/\.png$/i, '').replace(/^敵_術耐性_ヒストグラム_/, '').split('_')
+  return createChartImageFilename('スルト_S3_DPSと術耐性分布', [
+    ...histogram.slice(0, 2), ...dps, ...histogram.slice(2),
+  ])
+}

@@ -37,6 +37,7 @@ import { calculateWeightedEmpiricalCdf, getWeightedEnemyEcdfImageFilename } from
 import { useEnemyHistogramCounts } from '../lib/useEnemyHistogramCounts'
 import { buildEnemyHistogramObservations, withHistogramDispersion, getWeightedEnemyHistogramImageFilename,
   ENEMY_HISTOGRAM_COUNT_MODES, type EnemyHistogramCountMode, type EnemyHistogramCounts } from '../lib/enemyHistogramCounts'
+import { createEnemyHistogramSnapshot, writeEnemyHistogramSnapshot, type EnemyHistogramSnapshot, type EnemyHistogramEditorSettings } from '../lib/enemyHistogramSnapshot'
 import { HelpPopover } from './HelpPopover'
 import { calculateEcdfGuideReadings, parseEcdfGuideInput, type EcdfGuideValues } from '../lib/enemyEcdfGuides'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
@@ -124,16 +125,20 @@ interface ReferenceVisibility {
   median: boolean
 }
 
-export function useEnemyStatisticsControls() {
-  const [selectedMetricKey, setSelectedMetricKey] = useState<AnalyzedStatKey>('maxHp')
-  const [axisScale, setAxisScale] = useState<HistogramScale>('LINEAR')
+export function useEnemyStatisticsControls(initialHistogramSnapshot?: EnemyHistogramSnapshot | null) {
+  const [selectedMetricKey, setSelectedMetricKey] = useState<AnalyzedStatKey>(initialHistogramSnapshot === undefined ? 'maxHp' : 'magicResistance')
+  const [axisScale, setAxisScale] = useState<HistogramScale>(initialHistogramSnapshot?.scale ?? 'LINEAR')
   const [scatterMetricKey, setScatterMetricKey] = useState<AnalyzedStatKey>('defense')
   const [scatterScale, setScatterScale] = useState<HistogramScale>('LINEAR')
-  const [linearBinWidthInput, setLinearBinWidthInput] = useState('')
-  const [linearUpperBoundInput, setLinearUpperBoundInput] = useState('')
+  const [linearBinWidthInput, setLinearBinWidthInput] = useState(() => initialHistogramSnapshot?.editorSettings?.linearBinWidthInput
+    ?? (initialHistogramSnapshot?.statistics.histogram?.binWidth != null ? String(initialHistogramSnapshot.statistics.histogram.binWidth) : ''))
+  const [linearUpperBoundInput, setLinearUpperBoundInput] = useState(() => initialHistogramSnapshot?.editorSettings?.linearUpperBoundInput
+    ?? (initialHistogramSnapshot?.customLinearUpperBound != null ? String(initialHistogramSnapshot.customLinearUpperBound) : ''))
   const [ecdfXInput, setEcdfXInput] = useState('')
   const [ecdfYInput, setEcdfYInput] = useState('')
-  const [referenceVisibility, setReferenceVisibility] = useState<ReferenceVisibility>({ mean: false, median: false })
+  const [referenceVisibility, setReferenceVisibility] = useState<ReferenceVisibility>(() => ({
+    mean: initialHistogramSnapshot?.referenceVisibility.mean ?? false, median: initialHistogramSnapshot?.referenceVisibility.median ?? false,
+  }))
 
   const selectedMetric = getMetric(selectedMetricKey)
   const scatterMetric = getMetric(scatterMetricKey)
@@ -198,23 +203,26 @@ function EnemyStatisticsSettings({ controls, summary = false }: { controls: Enem
   )
 }
 
-export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filterControls }: {
+export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filterControls, histogramEditor, filterSettings }: {
   rows: EnemyRecord[]
   allRows: EnemyRecord[]
   scopeLabel: string
   controls: EnemyStatisticsControls
   filterControls: ReactNode
+  histogramEditor?: { initialSnapshot: EnemyHistogramSnapshot | null; onChange: (snapshot: EnemyHistogramSnapshot | null) => void }
+  filterSettings?: Pick<EnemyHistogramEditorSettings, 'levelType' | 'numericConditions' | 'sourceEnemyIds'>
 }) {
   const binWidthInputId = useId()
   const binWidthHelpId = useId()
   const upperBoundInputId = useId()
   const upperBoundHelpId = useId()
+  const histogramSettingsHeadingId = useId()
   const [chartChoice, setSelectedChart] = useState<ChartKind>('HISTOGRAM')
-  const selectedChart = CHART_OPTIONS.some(({ key }) => key === chartChoice) ? chartChoice : 'HISTOGRAM'
-  const [activeCountMode, setCountMode] = useState<EnemyHistogramCountMode>('SPAWNS')
-  const [showHistogramPercentages, setShowHistogramPercentages] = useState(false)
-  const [showHistogramBinRanges, setShowHistogramBinRanges] = useState(false)
-  const [useRatingHistogram, setUseRatingHistogram] = useState(false)
+  const selectedChart = histogramEditor ? 'HISTOGRAM' : CHART_OPTIONS.some(({ key }) => key === chartChoice) ? chartChoice : 'HISTOGRAM'
+  const [activeCountMode, setCountMode] = useState<EnemyHistogramCountMode>(histogramEditor?.initialSnapshot?.countMode ?? 'SPAWNS')
+  const [showHistogramPercentages, setShowHistogramPercentages] = useState(histogramEditor?.initialSnapshot?.showPercentages ?? false)
+  const [showHistogramBinRanges, setShowHistogramBinRanges] = useState(histogramEditor?.initialSnapshot?.showBinRanges ?? false)
+  const [useRatingHistogram, setUseRatingHistogram] = useState(histogramEditor?.initialSnapshot?.ratingBins != null)
   const [ratingReferenceOpen, setRatingReferenceOpen] = useState(false)
   const ratingReferenceTriggerRef = useRef<HTMLButtonElement>(null)
   const [heatmapColorScale, setHeatmapColorScale] = useState<EnemyHeatmapColorScale>('LINEAR')
@@ -226,16 +234,18 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const [savingImage, setSavingImage] = useState(false)
   const [preparingImage, setPreparingImage] = useState(false)
   const [imageFeedback, setImageFeedback] = useState<'saved' | 'downloaded' | 'failed' | null>(null)
+  const [snapshotFeedback, setSnapshotFeedback] = useState<'registered' | 'failed' | null>(null)
   const imageSaveInProgress = useRef(false)
   const imageSavePicker = getChartImageSavePicker()
   const {
-    selectedMetric, axisScale, setAxisScale,
+    selectedMetric: configuredMetric, axisScale, setAxisScale,
     scatterMetric, selectScatterMetric, scatterScale, setScatterScale,
     linearBinWidthInput, setLinearBinWidthInput,
     linearUpperBoundInput, setLinearUpperBoundInput,
     ecdfXInput, setEcdfXInput, ecdfYInput, setEcdfYInput,
     referenceVisibility, setReferenceVisibility,
   } = controls
+  const selectedMetric = histogramEditor ? getMetric('magicResistance') : configuredMetric
   const ratingStat = isEnemyRatingStat(selectedMetric.key) ? selectedMetric.key : null
   const ratingMode = selectedChart === 'HISTOGRAM' && useRatingHistogram && ratingStat !== null
   const metricSource = useMemo(
@@ -333,6 +343,60 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const hasFixedEmptyHistogram = selectedChart === 'HISTOGRAM' && !ratingMode && axisScale === 'LINEAR'
     && customLinearUpperBound !== null && histogramStatistics.bins.length > 0
   const previewAspect = imageAspect.preset === 'auto' ? undefined : Number(imageAspect.width) / Number(imageAspect.height)
+  const isResistanceHistogram = selectedChart === 'HISTOGRAM' && selectedMetric.key === 'magicResistance'
+  const canRegisterHistogram = isResistanceHistogram && canSaveImage
+    && !(activeCountMode !== 'TYPES' && (countData.loading || countData.error))
+  useEffect(() => { setSnapshotFeedback(null) }, [rows, selectedMetric.key, selectedChart, activeCountMode,
+    histogramStatistics, ratingBins, scopeLabel, axisScale, showHistogramPercentages, showHistogramBinRanges,
+    referenceVisibility.mean, referenceVisibility.median, linearBinWidthInput, linearUpperBoundInput])
+
+  const currentHistogramSnapshot = useMemo(() => {
+    if (!canRegisterHistogram) return null
+    // Inactive linear drafts must not invalidate a logarithmic or rating distribution.
+    const linearSettingsInactive = ratingMode || axisScale !== 'LINEAR'
+    const snapshotBinWidthInput = linearSettingsInactive && linearBinWidthError ? '' : linearBinWidthInput
+    const snapshotBinWidth = snapshotBinWidthInput.trim() === '' ? null : Number(snapshotBinWidthInput)
+    // A bad width can also cause the upper-bound range check to fail. Recheck it
+    // after clearing the width so a valid inactive upper bound is preserved.
+    const snapshotUpperBoundInvalid = invalidUpperBound || (requestedUpperBound !== null && (
+      !Number.isFinite(requestedUpperBound + (snapshotBinWidth ?? automaticBinWidth))
+      || (snapshotBinWidth === null && !validateCustomLinearBinWidth(automaticBinWidth, requestedUpperBound).valid)
+    ))
+    const snapshotUpperBoundInput = linearSettingsInactive && linearUpperBoundError && snapshotUpperBoundInvalid
+      ? '' : linearUpperBoundInput
+    try {
+      return createEnemyHistogramSnapshot({
+        metric: 'magicResistance',
+        source: { scopeLabel, enemyIds: [...new Set(rows.map(({ id }) => id))],
+          countGeneratedAt: activeCountMode === 'TYPES' ? null : countData.data?.generatedAt ?? null },
+        countMode: activeCountMode, coverage: activeCountMode === 'TYPES' ? null : countData.data?.summary ?? null,
+        scale: axisScale, statistics: histogramStatistics, ratingBins, customLinearUpperBound,
+        showPercentages: showHistogramPercentages, showBinRanges: showHistogramBinRanges,
+        referenceVisibility,
+        ...(filterSettings ? { editorSettings: { ...filterSettings,
+          linearBinWidthInput: snapshotBinWidthInput, linearUpperBoundInput: snapshotUpperBoundInput } } : {}),
+      })
+    } catch { return null }
+  }, [canRegisterHistogram, scopeLabel, rows, activeCountMode, countData.data, axisScale, histogramStatistics,
+    ratingBins, customLinearUpperBound, showHistogramPercentages, showHistogramBinRanges,
+    referenceVisibility, filterSettings, linearBinWidthInput, linearUpperBoundInput, ratingMode,
+    linearBinWidthError, linearUpperBoundError, invalidUpperBound, requestedUpperBound, automaticBinWidth])
+  const lastEditorSnapshotId = useRef<string | null | undefined>(undefined)
+  const onHistogramChange = histogramEditor?.onChange
+  const lastEditorCallback = useRef<typeof onHistogramChange>(undefined)
+  useEffect(() => {
+    if (!onHistogramChange) return
+    const id = currentHistogramSnapshot?.id ?? null
+    if (lastEditorSnapshotId.current === id && lastEditorCallback.current === onHistogramChange) return
+    lastEditorSnapshotId.current = id
+    lastEditorCallback.current = onHistogramChange
+    onHistogramChange(currentHistogramSnapshot)
+  }, [currentHistogramSnapshot, onHistogramChange])
+
+  const registerHistogram = () => {
+    if (!currentHistogramSnapshot) return
+    setSnapshotFeedback(writeEnemyHistogramSnapshot(currentHistogramSnapshot) ? 'registered' : 'failed')
+  }
 
   const openImageSaveDialog = async () => {
     if (!canSaveImage || imageSaveInProgress.current || selectedChart === 'COMPARISON') return
@@ -396,6 +460,147 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     }
   }
 
+  const distributionControls = <>
+    {selectedChart !== 'COMPARISON' && filterControls}
+    {!histogramEditor && selectedChart !== 'HEATMAP' && <EnemyStatisticsSettings controls={controls} />}
+    {selectedChart !== 'COMPARISON' && <div className="enemy-chart-toolbar">
+      {selectedChart === 'HISTOGRAM' && <div className="enemy-histogram-rating-control">
+        <label className="enemy-histogram-display-toggle"
+          title={ratingStat ? 'E〜SSの評価ごとに集計します' : 'HP・攻撃力・防御力・術耐性に対応しています'}>
+          <input type="checkbox" checked={ratingMode} disabled={ratingStat === null}
+            onChange={(event) => setUseRatingHistogram(event.target.checked)} />
+          ゲーム内評価で区分
+        </label>
+        <button ref={ratingReferenceTriggerRef} type="button" className="button secondary enemy-histogram-rating-reference"
+          aria-haspopup="dialog" aria-label="ゲーム内評価の定義を表示"
+          onClick={() => setRatingReferenceOpen(true)}>評価基準</button>
+      </div>}
+      {selectedChart !== 'HEATMAP' && !ratingMode && (histogramEditor || summaryStatistics.count > 0) && (
+        <div className="enemy-chart-axis-control">
+          <span>{selectedChart === 'HISTOGRAM' ? '階級の区切り' : '横軸'}</span>
+          <ScaleSwitch
+            scale={axisScale}
+            onChange={setAxisScale}
+            label={`${selectedMetric.label}の${selectedChart === 'HISTOGRAM' ? '階級の区切り' : '横軸目盛'}`}
+          />
+        </div>
+      )}
+      {!histogramEditor && isResistanceHistogram && <button type="button" className="button secondary"
+        disabled={!currentHistogramSnapshot} onClick={registerHistogram}>この分布をDPS画像に使う</button>}
+      {!histogramEditor && <button type="button" className="button secondary enemy-chart-save-button"
+        aria-haspopup="dialog" disabled={!canSaveImage || savingImage || preparingImage} aria-busy={savingImage || preparingImage}
+        onClick={() => void openImageSaveDialog()}>{savingImage ? '画像を保存中…' : preparingImage ? '画像を準備中…' : '画像を保存'}</button>}
+    </div>}
+    {!histogramEditor && isResistanceHistogram && snapshotFeedback === 'registered' && <p role="status">
+      分布を登録しました。 <a href="#/analysis/surtr/s3">スルトS3へ</a>
+    </p>}
+    {!histogramEditor && isResistanceHistogram && snapshotFeedback === 'failed' && <p role="alert">分布を保存できませんでした。ブラウザーの保存設定を確認してください。</p>}
+
+    <DistributionCountControls mode={activeCountMode} onChange={setCountMode} counts={countData.data} />
+    {countUnavailable && <div className="enemy-histogram-load-state" role="status">
+      {countData.error ? <>登場データを取得できませんでした。<button type="button" className="button secondary" onClick={countData.retry}>再読み込み</button></>
+        : '登場データを読み込み中…'}
+    </div>}
+
+    {selectedChart === 'HISTOGRAM' && !ratingMode && axisScale === 'LINEAR' && (
+      <div
+        className="statistics-histogram-settings enemy-histogram-settings"
+        role="group"
+        aria-labelledby={histogramSettingsHeadingId}
+      >
+        <div className="statistics-histogram-settings-heading">
+          <strong id={histogramSettingsHeadingId}>ヒストグラム設定</strong>
+        </div>
+        <div className="enemy-histogram-fields">
+        <div className="statistics-bin-width-control">
+          <label htmlFor={binWidthInputId}>
+            階級幅{selectedMetric.suffix ? `（${selectedMetric.suffix}）` : ''}
+          </label>
+          <div className="statistics-bin-width-input-row">
+            <input
+              id={binWidthInputId}
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="any"
+              value={linearBinWidthInput}
+              placeholder="自動"
+              aria-invalid={linearBinWidthError !== null}
+              aria-describedby={binWidthHelpId}
+              onChange={(event) => setLinearBinWidthInput(event.target.value)}
+            />
+            {linearBinWidthInput !== '' && (
+              <button
+                type="button"
+                onClick={() => setLinearBinWidthInput('')}
+                aria-label="階級幅を自動設定に戻す"
+              >
+                自動
+              </button>
+            )}
+          </div>
+          <small
+            id={binWidthHelpId}
+            className={linearBinWidthError ? 'error' : ''}
+            aria-live="polite"
+          >
+            {linearBinWidthError
+              ?? (linearBinWidthValidation?.valid
+                ? `${histogramStatistics.bins.length}階級で集計`
+                : `自動：${formatHistogramSetting(automaticBinWidth, selectedMetric.suffix)}`)}
+          </small>
+        </div>
+        <div className="statistics-bin-width-control">
+          <div className="enemy-histogram-upper-label">
+            <label htmlFor={upperBoundInputId}>通常階級の上限{selectedMetric.suffix ? `（${selectedMetric.suffix}）` : ''}</label>
+            <EnemyHistogramOverflowHelp
+              upperBoundLabel={histogramSettingsError || !histogramStatistics.histogram ? null
+                : formatHistogramSetting(histogramStatistics.histogram.normalRangeEnd, selectedMetric.suffix)}
+              isCustom={customLinearUpperBound !== null}
+              hasOverflow={histogramStatistics.bins.some((bin) => bin.isOverflow && bin.count > 0)}
+            />
+          </div>
+          <div className="statistics-bin-width-input-row">
+            <input id={upperBoundInputId} type="number" inputMode="decimal" min="0" step="any"
+              value={linearUpperBoundInput} placeholder="自動"
+              aria-invalid={linearUpperBoundError !== null} aria-describedby={upperBoundHelpId}
+              onChange={(event) => setLinearUpperBoundInput(event.target.value)} />
+            {linearUpperBoundInput !== '' && <button type="button"
+              onClick={() => setLinearUpperBoundInput('')} aria-label="通常階級の上限を自動設定に戻す">自動</button>}
+          </div>
+          <small id={upperBoundHelpId} className={linearUpperBoundError ? 'error' : ''} aria-live="polite">
+            {linearUpperBoundError ?? (histogramStatistics.histogram
+              ? `${customLinearUpperBound === null ? '自動' : '固定'}：${formatHistogramSetting(histogramStatistics.histogram.normalRangeEnd, selectedMetric.suffix)}${histogramStatistics.histogram.hasOverflow ? '超をまとめる' : ''}`
+              : '数値データがありません')}
+          </small>
+        </div>
+        </div>
+      </div>
+    )}
+  </>
+  const ratingReferenceDialog = ratingReferenceOpen && <EnemyRatingReferenceDialog initialStat={ratingStat ?? 'maxHp'} context="histogram" onClose={() => {
+    setRatingReferenceOpen(false)
+    window.requestAnimationFrame(() => {
+      if (ratingReferenceTriggerRef.current?.isConnected) ratingReferenceTriggerRef.current.focus()
+    })
+  }} />
+
+  if (histogramEditor) return <>
+    <div className="enemy-histogram-editor enemy-distribution-panel">
+      <div className="enemy-chart-content">
+        {distributionControls}
+        <div className="enemy-chart-toolbar">
+          <HistogramDisplayControls ratingMode={ratingMode} hasData={summaryStatistics.count > 0}
+            showPercentages={showHistogramPercentages} onShowPercentagesChange={setShowHistogramPercentages}
+            showBinRanges={showHistogramBinRanges} onShowBinRangesChange={setShowHistogramBinRanges}
+            referenceVisibility={referenceVisibility} onReferenceVisibilityChange={setReferenceVisibility} />
+        </div>
+        {!countUnavailable && histogramStatistics.count === 0 && <ChartEmpty message="条件に一致する敵がいません" />}
+      </div>
+    </div>
+    {ratingReferenceDialog}
+  </>
+
   return (
     <>
       <CollapsibleCalculatorPanel
@@ -446,116 +651,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         </div>
 
         <div className="enemy-chart-content">
-        {selectedChart !== 'COMPARISON' && filterControls}
-        {selectedChart !== 'HEATMAP' && <EnemyStatisticsSettings controls={controls} />}
-        {selectedChart !== 'COMPARISON' && <div className="enemy-chart-toolbar">
-          {selectedChart === 'HISTOGRAM' && <div className="enemy-histogram-rating-control">
-            <label className="enemy-histogram-display-toggle"
-              title={ratingStat ? 'E〜SSの評価ごとに集計します' : 'HP・攻撃力・防御力・術耐性に対応しています'}>
-              <input type="checkbox" checked={ratingMode} disabled={ratingStat === null}
-                onChange={(event) => setUseRatingHistogram(event.target.checked)} />
-              ゲーム内評価で区分
-            </label>
-            <button ref={ratingReferenceTriggerRef} type="button" className="button secondary enemy-histogram-rating-reference"
-              aria-haspopup="dialog" aria-label="ゲーム内評価の定義を表示"
-              onClick={() => setRatingReferenceOpen(true)}>評価基準</button>
-          </div>}
-          {selectedChart !== 'HEATMAP' && !ratingMode && summaryStatistics.count > 0 && (
-            <div className="enemy-chart-axis-control">
-              <span>{selectedChart === 'HISTOGRAM' ? '階級の区切り' : '横軸'}</span>
-              <ScaleSwitch
-                scale={axisScale}
-                onChange={setAxisScale}
-                label={`${selectedMetric.label}の${selectedChart === 'HISTOGRAM' ? '階級の区切り' : '横軸目盛'}`}
-              />
-            </div>
-          )}
-          <button type="button" className="button secondary enemy-chart-save-button"
-            aria-haspopup="dialog" disabled={!canSaveImage || savingImage || preparingImage} aria-busy={savingImage || preparingImage}
-            onClick={() => void openImageSaveDialog()}>{savingImage ? '画像を保存中…' : preparingImage ? '画像を準備中…' : '画像を保存'}</button>
-        </div>}
-
-        <DistributionCountControls mode={activeCountMode} onChange={setCountMode} counts={countData.data} />
-        {countUnavailable && <div className="enemy-histogram-load-state" role="status">
-          {countData.error ? <>登場データを取得できませんでした。<button type="button" className="button secondary" onClick={countData.retry}>再読み込み</button></>
-            : '登場データを読み込み中…'}
-        </div>}
-
-        {selectedChart === 'HISTOGRAM' && !ratingMode && axisScale === 'LINEAR' && (
-          <div
-            className="statistics-histogram-settings enemy-histogram-settings"
-            role="group"
-            aria-labelledby="enemy-histogram-settings-heading"
-          >
-            <div className="statistics-histogram-settings-heading">
-              <strong id="enemy-histogram-settings-heading">ヒストグラム設定</strong>
-            </div>
-            <div className="enemy-histogram-fields">
-            <div className="statistics-bin-width-control">
-              <label htmlFor={binWidthInputId}>
-                階級幅{selectedMetric.suffix ? `（${selectedMetric.suffix}）` : ''}
-              </label>
-              <div className="statistics-bin-width-input-row">
-                <input
-                  id={binWidthInputId}
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="any"
-                  value={linearBinWidthInput}
-                  placeholder="自動"
-                  aria-invalid={linearBinWidthError !== null}
-                  aria-describedby={binWidthHelpId}
-                  onChange={(event) => setLinearBinWidthInput(event.target.value)}
-                />
-                {linearBinWidthInput !== '' && (
-                  <button
-                    type="button"
-                    onClick={() => setLinearBinWidthInput('')}
-                    aria-label="階級幅を自動設定に戻す"
-                  >
-                    自動
-                  </button>
-                )}
-              </div>
-              <small
-                id={binWidthHelpId}
-                className={linearBinWidthError ? 'error' : ''}
-                aria-live="polite"
-              >
-                {linearBinWidthError
-                  ?? (linearBinWidthValidation?.valid
-                    ? `${histogramStatistics.bins.length}階級で集計`
-                    : `自動：${formatHistogramSetting(automaticBinWidth, selectedMetric.suffix)}`)}
-              </small>
-            </div>
-            <div className="statistics-bin-width-control">
-              <div className="enemy-histogram-upper-label">
-                <label htmlFor={upperBoundInputId}>通常階級の上限{selectedMetric.suffix ? `（${selectedMetric.suffix}）` : ''}</label>
-                <EnemyHistogramOverflowHelp
-                  upperBoundLabel={histogramSettingsError || !histogramStatistics.histogram ? null
-                    : formatHistogramSetting(histogramStatistics.histogram.normalRangeEnd, selectedMetric.suffix)}
-                  isCustom={customLinearUpperBound !== null}
-                  hasOverflow={histogramStatistics.bins.some((bin) => bin.isOverflow && bin.count > 0)}
-                />
-              </div>
-              <div className="statistics-bin-width-input-row">
-                <input id={upperBoundInputId} type="number" inputMode="decimal" min="0" step="any"
-                  value={linearUpperBoundInput} placeholder="自動"
-                  aria-invalid={linearUpperBoundError !== null} aria-describedby={upperBoundHelpId}
-                  onChange={(event) => setLinearUpperBoundInput(event.target.value)} />
-                {linearUpperBoundInput !== '' && <button type="button"
-                  onClick={() => setLinearUpperBoundInput('')} aria-label="通常階級の上限を自動設定に戻す">自動</button>}
-              </div>
-              <small id={upperBoundHelpId} className={linearUpperBoundError ? 'error' : ''} aria-live="polite">
-                {linearUpperBoundError ?? (histogramStatistics.histogram
-                  ? `${customLinearUpperBound === null ? '自動' : '固定'}：${formatHistogramSetting(histogramStatistics.histogram.normalRangeEnd, selectedMetric.suffix)}${histogramStatistics.histogram.hasOverflow ? '超をまとめる' : ''}`
-                  : '数値データがありません')}
-              </small>
-            </div>
-            </div>
-          </div>
-        )}
+        {distributionControls}
 
         {selectedChart === 'ECDF' && !countUnavailable && <EnemyEcdfGuideControls
           metricLabel={selectedMetric.label} suffix={selectedMetric.suffix}
@@ -653,12 +749,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         }}
         onSave={(filename, aspectRatio) => void saveChartImage(filename, aspectRatio)}
       />}
-      {ratingReferenceOpen && <EnemyRatingReferenceDialog initialStat={ratingStat ?? 'maxHp'} context="histogram" onClose={() => {
-        setRatingReferenceOpen(false)
-        window.requestAnimationFrame(() => {
-          if (ratingReferenceTriggerRef.current?.isConnected) ratingReferenceTriggerRef.current.focus()
-        })
-      }} />}
+      {ratingReferenceDialog}
     </>
   )
 }
@@ -928,6 +1019,32 @@ function DistributionCountControls({ mode, onChange, counts }: {
   </div>
 }
 
+function HistogramDisplayControls({
+  ratingMode, hasData, showPercentages, onShowPercentagesChange, showBinRanges, onShowBinRangesChange,
+  referenceVisibility, onReferenceVisibilityChange,
+}: {
+  ratingMode: boolean
+  hasData: boolean
+  showPercentages: boolean
+  onShowPercentagesChange: (show: boolean) => void
+  showBinRanges: boolean
+  onShowBinRangesChange: (show: boolean) => void
+  referenceVisibility: ReferenceVisibility
+  onReferenceVisibilityChange: (visibility: ReferenceVisibility) => void
+}) {
+  return <div className="enemy-histogram-display-controls">
+    <label className="enemy-histogram-display-toggle">
+      <input type="checkbox" checked={showPercentages} onChange={(event) => onShowPercentagesChange(event.target.checked)} />
+      割合を表示
+    </label>
+    <label className="enemy-histogram-display-toggle" title={ratingMode ? '範囲が収まらない場合は評価のみを表示します' : '文字が収まらない場合は通常の目盛りを表示します'}>
+      <input type="checkbox" checked={showBinRanges} onChange={(event) => onShowBinRangesChange(event.target.checked)} />
+      階級の範囲を表示
+    </label>
+    {hasData && <MeanMedianLegend visibility={referenceVisibility} onChange={onReferenceVisibilityChange} />}
+  </div>
+}
+
 function HistogramFigure({
   ratingBins,
   statistics,
@@ -975,17 +1092,10 @@ function HistogramFigure({
           {ratingBins && <span>数値から評価に換算して集計します。{(referenceVisibility.mean || referenceVisibility.median) && '平均・中央値の線は、その値が属する評価の中央に表示します。'}</span>}
           {showPercentages && statistics.count > 0 && <span>割合の基準：{scopeLabel} · {formatNumber(statistics.count, 0)}{countOption.unit}（有効データ）</span>}
         </div>
-        <div className="enemy-histogram-display-controls">
-          <label className="enemy-histogram-display-toggle">
-            <input type="checkbox" checked={showPercentages} onChange={(event) => onShowPercentagesChange(event.target.checked)} />
-            割合を表示
-          </label>
-          <label className="enemy-histogram-display-toggle" title={ratingBins ? '範囲が収まらない場合は評価のみを表示します' : '文字が収まらない場合は通常の目盛りを表示します'}>
-            <input type="checkbox" checked={showBinRanges} onChange={(event) => onShowBinRangesChange(event.target.checked)} />
-            階級の範囲を表示
-          </label>
-          {statistics.count > 0 && <MeanMedianLegend visibility={referenceVisibility} onChange={onReferenceVisibilityChange} />}
-        </div>
+        <HistogramDisplayControls ratingMode={ratingBins !== null} hasData={statistics.count > 0}
+          showPercentages={showPercentages} onShowPercentagesChange={onShowPercentagesChange}
+          showBinRanges={showBinRanges} onShowBinRangesChange={onShowBinRangesChange}
+          referenceVisibility={referenceVisibility} onReferenceVisibilityChange={onReferenceVisibilityChange} />
       </figcaption>
       <div className="enemy-chart-container" ref={chartContainerRef}>
         {bins.length === 0 ? (
@@ -1179,6 +1289,23 @@ function useHistogramBinRangeLayout(labels: { center: number; lines: string[] }[
   return { measureRef, visible: centers !== null, centers }
 }
 
+/** The captured distribution uses the same plot, labels, and overflow measurements as enemy analysis. */
+export function EnemyHistogramSnapshotPlot({ snapshot, width, height, reservedLabelHeight = 0, onLabelOverflow }: {
+  snapshot: EnemyHistogramSnapshot
+  width: number
+  height: number
+  reservedLabelHeight?: number
+  onLabelOverflow?: (height: number) => void
+}) {
+  const titleId = useId()
+  const descriptionId = useId()
+  return <HistogramSvg statistics={snapshot.statistics} countMode={snapshot.countMode} ratingBins={snapshot.ratingBins}
+    referenceVisibility={snapshot.referenceVisibility} metric={STAT_METRICS.find(({ key }) => key === 'magicResistance')!}
+    width={width} height={height} titleId={titleId} descriptionId={descriptionId} description={snapshot.summary}
+    scale={snapshot.scale} image showPercentages={snapshot.showPercentages} showBinRanges={snapshot.showBinRanges}
+    reservedLabelHeight={reservedLabelHeight} onLabelOverflow={onLabelOverflow} />
+}
+
 function HistogramSvg({
   ratingBins = null,
   countMode = 'TYPES',
@@ -1306,7 +1433,7 @@ function HistogramSvg({
         const bar = bars[index]
         const rangeLabel = formatHistogramClassLabel(bin, statistics, metric)
         return (
-          <rect className={`enemy-chart-bar${'isOverflow' in bin && bin.isOverflow ? ' overflow' : ''}`} x={plotLeft + bar.x} y={plotTop + extraTop + bar.y} width={bar.width} height={bar.height} key={index}>
+          <rect data-chart-image-ink="" className={`enemy-chart-bar${'isOverflow' in bin && bin.isOverflow ? ' overflow' : ''}`} x={plotLeft + bar.x} y={plotTop + extraTop + bar.y} width={bar.width} height={bar.height} key={index}>
             <title>{rangeLabel}：{formatNumber(bin.count, 0)}{countOption.unit}{showPercentages && bar.percentage !== null ? `（${bar.percentage}）` : ''}</title>
           </rect>
         )
@@ -1315,11 +1442,11 @@ function HistogramSvg({
       {statistics.count > 0 && <MeanMedianReferences statistics={statistics} visibility={referenceVisibility} metric={metric} position={referencePosition} plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop} plotBottom={plotBottom} imageLabels={image || showPercentages ? referenceLabels : undefined} />}
       <g ref={percentageLayout.labelsRef} className="enemy-histogram-percentages" transform={`translate(${plotLeft} ${plotTop + extraTop})`} aria-hidden="true">
         {percentageLayout.labels.filter((label) => label.shifted).map((label) => (
-          <line key={label.id} className="enemy-histogram-percentage-connector" x1={label.anchorX} y1={label.anchorY - 2}
+          <line key={label.id} className="enemy-histogram-percentage-connector" data-chart-image-ink="" x1={label.anchorX} y1={label.anchorY - 2}
             x2={label.x + label.width / 2} y2={label.y + label.height} />
         ))}
         {percentageLayout.labels.map((label) => <g key={label.id}>
-          <text className="enemy-histogram-percentage-label" data-percentage-index={label.id}
+          <text className="enemy-histogram-percentage-label" data-chart-image-ink="" data-percentage-index={label.id}
             x={label.x + label.width / 2} y={label.y + label.height / 2} dominantBaseline="central" textAnchor="middle">{bars[Number(label.id)].percentage}</text>
         </g>)}
       </g>
@@ -1900,12 +2027,12 @@ function MeanMedianReferences({ statistics, visibility, metric, position, plotLe
   return (
     <>
       {visibility.mean && <>
-        <line className="enemy-chart-reference mean" x1={meanX} x2={meanX} y1={plotTop} y2={plotBottom} />
-        <text ref={imageLabels?.meanRef} className="enemy-chart-reference-label mean" x={imageLabels?.mean.x ?? clampLabelX(meanX, plotLeft, plotRight)} y={imageLabels?.mean.y ?? 14}>平均 {formatNumber(statistics.mean ?? 0, metric.summaryDigits, metric.suffix)}</text>
+        <line className="enemy-chart-reference mean" data-chart-image-ink="" x1={meanX} x2={meanX} y1={plotTop} y2={plotBottom} />
+        <text ref={imageLabels?.meanRef} className="enemy-chart-reference-label mean" data-chart-image-ink="" x={imageLabels?.mean.x ?? clampLabelX(meanX, plotLeft, plotRight)} y={imageLabels?.mean.y ?? 14}>平均 {formatNumber(statistics.mean ?? 0, metric.summaryDigits, metric.suffix)}</text>
       </>}
       {visibility.median && <>
-        <line className="enemy-chart-reference median" x1={medianX} x2={medianX} y1={plotTop} y2={plotBottom} />
-        <text ref={imageLabels?.medianRef} className="enemy-chart-reference-label median" x={imageLabels?.median.x ?? clampLabelX(medianX, plotLeft, plotRight)} y={imageLabels?.median.y ?? (labelsOverlap ? 29 : 14)}>中央値 {formatNumber(statistics.median ?? 0, metric.summaryDigits, metric.suffix)}</text>
+        <line className="enemy-chart-reference median" data-chart-image-ink="" x1={medianX} x2={medianX} y1={plotTop} y2={plotBottom} />
+        <text ref={imageLabels?.medianRef} className="enemy-chart-reference-label median" data-chart-image-ink="" x={imageLabels?.median.x ?? clampLabelX(medianX, plotLeft, plotRight)} y={imageLabels?.median.y ?? (labelsOverlap ? 29 : 14)}>中央値 {formatNumber(statistics.median ?? 0, metric.summaryDigits, metric.suffix)}</text>
       </>}
     </>
   )

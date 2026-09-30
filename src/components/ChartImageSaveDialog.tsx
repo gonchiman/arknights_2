@@ -11,7 +11,7 @@ export interface ChartImageAspectSettings {
   height: string
 }
 
-export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspect, onAspectChange, aspectError, aspectHint = 'タイトル・凡例を含む画像全体の比率です。指定なしでは内容に合わせて自動調整します。', canChooseLocation, saving, saveDisabled = false, error, onClose, onSave, helpMode = 'inline', preview }: {
+export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspect, onAspectChange, aspectError, aspectHint = 'タイトル・凡例を含む画像全体の比率です。指定なしでは内容に合わせて自動調整します。', canChooseLocation, saving, saveDisabled = false, error, onClose, onSave, helpMode = 'inline', options, preview }: {
   initialFilename: string
   getDefaultFilename?: (aspectRatio?: number) => string
   aspect?: ChartImageAspectSettings
@@ -25,6 +25,7 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
   onClose: () => void
   onSave: (filename: string, aspectRatio?: number) => void
   helpMode?: 'inline' | 'popover'
+  options?: ReactNode
   preview?: ReactNode
 }) {
   const [customFilename, setCustomFilename] = useState<string | null>(null)
@@ -116,6 +117,7 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
         {invalidAspect && <p id={aspectErrorId} className="chart-image-save-error" role="alert">{aspectValidationError}</p>}
         <p id={aspectHintId} className={popoverHelp ? 'visually-hidden' : 'chart-image-save-hint'}>{aspectHint}</p>
       </fieldset>}
+      {options}
       {hasPreview && <div className="chart-image-save-preview">{preview}</div>}
       {!popoverHelp && <p className="chart-image-save-hint">{destinationHint}</p>}
       {error && <p className="chart-image-save-error" role="alert">画像を保存できませんでした。保存先を確認して、もう一度お試しください。</p>}

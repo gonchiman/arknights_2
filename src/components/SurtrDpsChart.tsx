@@ -22,7 +22,7 @@ export interface SurtrDpsChartYAxis {
   max?: number
 }
 
-interface SurtrDpsChartProps {
+export interface SurtrDpsChartProps {
   series: SurtrDpsChartSeries[]
   kind?: SurtrDpsChartKind
   barStep?: SurtrDpsBarStep
@@ -37,7 +37,7 @@ interface SurtrDpsChartProps {
   onSelectResistance?: (value: number | null) => void
 }
 
-interface SurtrDpsChartImageProps extends Omit<SurtrDpsChartProps, 'onSelectResistance'> {
+export interface SurtrDpsChartImageProps extends Omit<SurtrDpsChartProps, 'onSelectResistance'> {
   conditions: string
   aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
@@ -241,10 +241,10 @@ function SurtrDpsSvg({ series, kind = 'line', width, height, activeX, gridStyle 
     {plot.minimum < 0 && plot.maximum >= 0 && <line className="surtr-dps-chart-zero"
       x1={plot.left} x2={plot.right} y1={plot.y(0)} y2={plot.y(0)} />}
     {series.map((item, index) => kind === 'bar'
-      ? <g key={item.id}>{item.points.map((point) => point.value === null ? null : <rect key={point.x} className="surtr-dps-chart-bar"
+      ? <g key={item.id}>{item.points.map((point) => point.value === null ? null : <rect key={point.x} className="surtr-dps-chart-bar" data-chart-image-ink=""
         x={plot.x(point.x) - plot.groupWidth / 2 + index * (plot.barWidth + plot.barGap)} y={Math.min(plot.y(point.value), plot.y(0))}
         width={plot.barWidth} height={Math.abs(plot.y(0) - plot.y(point.value))} fill={item.color} />)}</g>
-      : <path key={item.id} className="surtr-dps-chart-line"
+      : <path key={item.id} className="surtr-dps-chart-line" data-chart-image-ink=""
         d={buildLinePath(item.points, plot)}
         stroke={item.color} strokeDasharray={DASH_PATTERNS[index % DASH_PATTERNS.length]} />)}
     {kind === 'line' && activeX !== undefined && activeX !== null && <g className="surtr-dps-chart-cursor">
@@ -259,13 +259,13 @@ function SurtrDpsSvg({ series, kind = 'line', width, height, activeX, gridStyle 
     <g transform={`translate(${plot.left} ${plot.top})`} aria-hidden="true">
       {plot.placement.labels.filter((label) => label.shifted).map((label) => {
         const bar = valueById.get(label.id)!
-        return <line className="surtr-dps-chart-value-connector" key={label.id}
+        return <line className="surtr-dps-chart-value-connector" data-chart-image-ink="" key={label.id}
           x1={label.anchorX} y1={label.anchorY + (bar.value < 0 ? 2 : -2)}
           x2={label.x + label.width / 2} y2={bar.value < 0 ? label.y : label.y + label.height} />
       })}
       {plot.placement.labels.map((label) => <g className="surtr-dps-chart-value" key={label.id} data-bar-id={label.id}>
         <rect className="surtr-dps-chart-value-background" x={label.x} y={label.y} width={label.width} height={label.height} />
-        <text className="surtr-dps-chart-value-label" x={label.x + label.width / 2} y={label.y + 12} textAnchor="middle">
+        <text className="surtr-dps-chart-value-label" data-chart-image-ink="" x={label.x + label.width / 2} y={label.y + 12} textAnchor="middle">
           {valueById.get(label.id)!.text}
         </text>
       </g>)}
@@ -416,15 +416,36 @@ export function SurtrDpsChartImage({ series, kind = 'line', barStep = 20, resist
   }, [request])
   return <ChartImageFrame key={request} className="surtr-dps-chart-image" title={title} conditions={conditions}
     axisTitle="敵の術耐性" naturalChartHeight={NATURAL_CHART_HEIGHT + overflow} aspectRatio={aspectRatio} onLayout={onLayout}
-    legend={<ul className="chart-image-frame-legend-list" aria-label="比較する系列">
-      {data.map((item, index) => <li className="chart-image-frame-legend-item" key={item.id}>
-        <SeriesSwatch color={item.color} index={index} kind={kind} image /><span>{item.label}</span>
-      </li>)}
-    </ul>}>
+    legend={<SurtrDpsImageLegend series={data} kind={kind} />}>
     {({ width, height }) => <SurtrDpsImagePlot series={data} kind={kind} barStep={barStep} width={width} height={height}
       resistanceRange={range} gridStyle={gridStyle} precision={precision} metric={metric} title={title} yAxis={yAxis}
       showValues={showValues} valueWidths={valueWidths} reservedOverflow={overflow} onOverflow={reserveOverflow} />}
   </ChartImageFrame>
+}
+
+/** Reuse the export legend in a composed image without adding another image frame. */
+export function SurtrDpsImageLegend({ series, kind = 'line' }: Pick<SurtrDpsChartProps, 'series' | 'kind'>) {
+  return <ul className="chart-image-frame-legend-list" aria-label="比較する系列">
+    {series.map((item, index) => <li className="chart-image-frame-legend-item" key={item.id}>
+      <SeriesSwatch color={item.color} index={index} kind={kind} image /><span>{item.label}</span>
+    </li>)}
+  </ul>
+}
+
+const ignoreOverflow = () => undefined
+
+/** Plot-only export for ChartImageStackFrame; preserves the single-chart sampling and value-label layout. */
+export function SurtrDpsSnapshotPlot({ series, kind = 'line', barStep = 20, resistanceRange, precision = 0, metric = 'total',
+  showValues = false, selectedResistance, width, height, reservedOverflow = 0, onOverflow = ignoreOverflow, ...props
+}: Omit<SurtrDpsChartProps, 'onSelectResistance'> & {
+  width: number; height: number; reservedOverflow?: number; onOverflow?: (height: number) => void
+}) {
+  const range = useMemo(() => normalizeSurtrDpsResistanceRange(resistanceRange), [resistanceRange?.min, resistanceRange?.max])
+  const data = useMemo(() => normalizeSeries(series, kind, barStep, range, selectedResistance), [series, kind, barStep, range, selectedResistance])
+  const valueWidths = useValueWidths(data, precision, metric, kind === 'bar' && showValues)
+  return <SurtrDpsImagePlot {...props} series={data} kind={kind} barStep={barStep} resistanceRange={range}
+    precision={precision} metric={metric} showValues={showValues} width={width} height={height}
+    valueWidths={valueWidths} reservedOverflow={reservedOverflow} onOverflow={onOverflow} />
 }
 
 function SurtrDpsImagePlot({ width, height, reservedOverflow, onOverflow, valueWidths, ...props }: SurtrDpsChartProps & {

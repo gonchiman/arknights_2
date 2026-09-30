@@ -1,9 +1,11 @@
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SkillRecord } from '../types/skill'
 import { SURTR_OPERATOR_ID, deriveSurtrDpsModel, buildSurtrDpsCurve, type SurtrDpsSettings } from '../lib/surtrDps'
 import { getOperatorModuleId, getOperatorModuleLevels, getOperatorModules, isOperatorModuleUnlocked } from '../lib/operatorModules'
 import { getModuleComparisonColors } from '../lib/moduleColors'
-import { getSurtrDpsImageFilename } from '../lib/surtrDpsImageFilename'
+import { getSurtrDpsImageFilename, getSurtrCombinedImageFilename } from '../lib/surtrDpsImageFilename'
+import { readEnemyHistogramSnapshot, writeEnemyHistogramSnapshot, type EnemyHistogramSnapshot } from '../lib/enemyHistogramSnapshot'
+import { readSurtrDpsPageState, writeSurtrDpsPageState } from '../lib/surtrDpsPageState'
 import { calculateSurtrDpsCalculation } from '../lib/surtrDpsCalculation'
 import { getSurtrDpsResistanceSamples, isValidSurtrDpsResistanceRange, type SurtrDpsBarStep, type SurtrDpsResistanceRange } from '../lib/surtrDpsResistance'
 import { transformSurtrDpsSeries, getSurtrDpsOutputTsv, type SurtrDpsMetric } from '../lib/surtrDpsOutput'
@@ -19,7 +21,9 @@ import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImag
 import { SurtrDpsChart, SurtrDpsChartImage, SurtrDpsChartImagePreview, type SurtrDpsChartSeries, type SurtrDpsChartKind, type SurtrDpsChartYAxis } from './SurtrDpsChart'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import { SurtrDpsDetailModal, type SurtrDpsDetailSnapshot } from './SurtrDpsDetailModal'
+import { SurtrCombinedChartImage, SurtrCombinedChartImagePreview, getSurtrCombinedImageLayout } from './SurtrCombinedChartImage'
 import { OperatorModuleComparison } from './OperatorModuleComparison'
+import { EnemyResistanceHistogramEditor } from './EnemyResistanceHistogramEditor'
 import './DamageCalculator.css'
 import './SurtrS3Page.css'
 
@@ -29,6 +33,7 @@ interface ImageSnapshot {
   id: number; series: SurtrDpsChartSeries[]; conditions: string; filename: string
   kind: SurtrDpsChartKind; barStep: SurtrDpsBarStep; showValues: boolean; metric: SurtrDpsMetric; title: string
   resistanceRange: SurtrDpsResistanceRange
+  histogram: EnemyHistogramSnapshot | null
   gridStyle: 'none' | 'dashed' | 'solid'; precision: number; yAxis: SurtrDpsChartYAxis; selectedResistance: number | null
 }
 
@@ -39,22 +44,34 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   onRetry: () => void
 }) {
   const record = rows.find(row => row.operatorId === SURTR_OPERATOR_ID && row.skillIndex === 3)
-  const [settings, setSettings] = useState<SurtrDpsSettings>({ level: 90, trust: 100, potential: 1, skillLevelIndex: 9, blocking: false })
-  const [excluded, setExcluded] = useState<string[]>([])
-  const [moduleLevels, setModuleLevels] = useState<Record<string, number>>({})
-  const [chartKind, setChartKind] = useState<SurtrDpsChartKind>('bar')
-  const [barStep, setBarStep] = useState<SurtrDpsBarStep>(20)
-  const [resistanceRange, setResistanceRange] = useState<SurtrDpsResistanceRange>({ min: 0, max: 100 })
-  const [resistanceRangeDraft, setResistanceRangeDraft] = useState({ min: '0', max: '100' })
-  const [showValues, setShowValues] = useState(false)
-  const [gridStyle, setGridStyle] = useState<'none' | 'dashed' | 'solid'>('solid')
-  const [precision, setPrecision] = useState(0)
-  const [metric, setMetric] = useState<SurtrDpsMetric>('total')
-  const [differenceMetric, setDifferenceMetric] = useState<'difference' | 'percent'>('difference')
-  const [requestedBaselineId, setRequestedBaselineId] = useState('none')
-  const [selectedResistance, setSelectedResistance] = useState<number | null>(null)
-  const [yAxisMode, setYAxisMode] = useState<SurtrDpsChartYAxis['mode']>('zero')
-  const [yAxisDraft, setYAxisDraft] = useState({ min: '0', max: '4000' })
+  const [initialState] = useState(readSurtrDpsPageState)
+  const [settings, setSettings] = useState<SurtrDpsSettings>(initialState.settings)
+  const [excluded, setExcluded] = useState(initialState.excluded)
+  const [moduleLevels, setModuleLevels] = useState(initialState.moduleLevels)
+  const [chartKind, setChartKind] = useState<SurtrDpsChartKind>(initialState.chartKind)
+  const [barStep, setBarStep] = useState<SurtrDpsBarStep>(initialState.barStep)
+  const [resistanceRange, setResistanceRange] = useState<SurtrDpsResistanceRange>(initialState.resistanceRange)
+  const [resistanceRangeDraft, setResistanceRangeDraft] = useState({ min: String(initialState.resistanceRange.min), max: String(initialState.resistanceRange.max) })
+  const [showValues, setShowValues] = useState(initialState.showValues)
+  const [gridStyle, setGridStyle] = useState(initialState.gridStyle)
+  const [precision, setPrecision] = useState(initialState.precision)
+  const [metric, setMetric] = useState<SurtrDpsMetric>(initialState.metric)
+  const [differenceMetric, setDifferenceMetric] = useState<'difference' | 'percent'>(initialState.differenceMetric)
+  const [requestedBaselineId, setRequestedBaselineId] = useState(initialState.requestedBaselineId)
+  const [selectedResistance, setSelectedResistance] = useState<number | null>(initialState.selectedResistance)
+  const [yAxisMode, setYAxisMode] = useState<SurtrDpsChartYAxis['mode']>(initialState.yAxisMode)
+  const [yAxisDraft, setYAxisDraft] = useState(initialState.yAxisDraft)
+  const [includeHistogram, setIncludeHistogram] = useState(false)
+  const [histogramEditor, setHistogramEditor] = useState<{ initialSnapshot: EnemyHistogramSnapshot | null; wasIncluded: boolean } | null>(null)
+  const [histogramDraft, setHistogramDraft] = useState<EnemyHistogramSnapshot | null>(null)
+  const [histogramStorageError, setHistogramStorageError] = useState(false)
+  const histogramEditTrigger = useRef<HTMLButtonElement>(null)
+  const receiveHistogramDraft = useCallback((snapshot: EnemyHistogramSnapshot | null) => setHistogramDraft(snapshot), [])
+  useEffect(() => {
+    writeSurtrDpsPageState({ settings, excluded, moduleLevels, chartKind, barStep, resistanceRange, showValues,
+      gridStyle, precision, metric, differenceMetric, requestedBaselineId, selectedResistance, yAxisMode, yAxisDraft })
+  }, [settings, excluded, moduleLevels, chartKind, barStep, resistanceRange, showValues,
+    gridStyle, precision, metric, differenceMetric, requestedBaselineId, selectedResistance, yAxisMode, yAxisDraft])
   const [copyFeedback, setCopyFeedback] = useState<{ text: string; ok: boolean } | null>(null)
   const [copying, setCopying] = useState(false)
   const [image, setImage] = useState<ImageSnapshot | null>(null)
@@ -159,16 +176,19 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
     ? Number(aspect.width) / Number(aspect.height) : undefined
   const openImage = () => {
     setImageFeedback(null)
+    setHistogramEditor(null)
+    setHistogramDraft(null)
+    setHistogramStorageError(false)
     if (!chartSeries.length || invalidModels.length || yAxisError) return
     setImage({ id: ++nextSnapshot.current, series: chartSeries, kind: chartKind, barStep, resistanceRange: { ...resistanceRange }, showValues: chartKind === 'bar' && showValues,
       title: `スルト S3 ${outputTitle}`, metric: effectiveMetric, gridStyle, precision, yAxis, selectedResistance,
-      conditions: `${label}・${blockLabel}`,
+      conditions: `${label}・${blockLabel}`, histogram: readEnemyHistogramSnapshot(),
       filename: getSurtrDpsImageFilename({ ...effectiveSettings, skillLevelLabel: label, modules: series.map(item => item.label), kind: chartKind, barStep, resistanceRange, showValues,
         metric: effectiveMetric, baselineLabel: baseline?.label, gridStyle, precision, yAxis, selectedResistance }),
     })
   }
   const saveImage = async (filename: string, ratio?: number) => {
-    if (!image || saveInProgress.current) return
+    if (!image || histogramEditor || saveInProgress.current) return
     saveInProgress.current = true
     setSaving(true)
     setImageFeedback(null)
@@ -176,8 +196,11 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
       const destination = await selectChartImageDestination(filename, picker)
       if (destination.type === 'cancelled') return
       await saveComparisonChartImage({ filename,
-        width: getChartImageLayout({ naturalChartHeight: 334, aspectRatio: ratio }).width,
-        chart: <SurtrDpsChartImage {...image} aspectRatio={ratio} />,
+        width: includeHistogram && image.histogram ? getSurtrCombinedImageLayout(ratio).width
+          : getChartImageLayout({ naturalChartHeight: 334, aspectRatio: ratio }).width,
+        chart: includeHistogram && image.histogram
+          ? <SurtrCombinedChartImage {...image} histogram={image.histogram} aspectRatio={ratio} />
+          : <SurtrDpsChartImage {...image} aspectRatio={ratio} />,
         writeBlob: destination.type === 'file' ? destination.write : undefined,
       })
       setImageFeedback(destination.type === 'file' ? 'saved' : 'downloaded')
@@ -187,6 +210,18 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   }
   const status = error ? <div className="error-box" role="alert">{error}<button className="button secondary" type="button" onClick={onRetry}>再読み込み</button></div>
     : <p className="surtr-s3-status" role="status">{loading ? 'スルトのデータを読み込み中…' : 'スルトS3のデータを取得できませんでした。'}</p>
+
+  const previewHistogram = histogramEditor ? histogramDraft ?? image?.histogram : image?.histogram
+  const finishHistogramEdit = (apply: boolean) => {
+    if (!histogramEditor || (apply && !histogramDraft)) return
+    if (apply && histogramDraft) {
+      setImage(current => current ? { ...current, histogram: histogramDraft } : current)
+      setHistogramStorageError(!writeEnemyHistogramSnapshot(histogramDraft))
+    } else setIncludeHistogram(histogramEditor.wasIncluded)
+    setHistogramEditor(null)
+    setHistogramDraft(null)
+    requestAnimationFrame(() => histogramEditTrigger.current?.focus({ preventScroll: true }))
+  }
 
   return <section className="calculator-page surtr-s3-page" aria-labelledby="surtr-s3-title">
     <div className="page-heading-with-breadcrumbs">
@@ -348,9 +383,36 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
       {imageFeedback && imageFeedback !== 'failed' && <p className="surtr-s3-status" role="status">{imageFeedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
     </CollapsibleCalculatorPanel>
     {detail && <SurtrDpsDetailModal snapshot={detail} onClose={() => setDetail(null)} />}
-    {image && <ChartImageSaveDialog initialFilename={image.filename} getDefaultFilename={ratio => withChartImageAspect(image.filename, ratio)} aspect={aspect} onAspectChange={setAspect}
-      canChooseLocation={!!picker} saving={saving} error={imageFeedback === 'failed'} helpMode="popover"
-      onClose={() => { if (!saveInProgress.current) { setImage(null); setImageFeedback(null) } }} onSave={(filename, ratio) => void saveImage(filename, ratio)}
-      preview={<SurtrDpsChartImagePreview key={`${image.id}:${image.kind}:${aspectRatio ?? 'auto'}`} {...image} aspectRatio={aspectRatio} />} />}
+    {image && <ChartImageSaveDialog initialFilename={image.filename} getDefaultFilename={ratio => withChartImageAspect(
+      includeHistogram && image.histogram ? getSurtrCombinedImageFilename(image.filename, image.histogram.filename) : image.filename, ratio)} aspect={aspect} onAspectChange={setAspect}
+      canChooseLocation={!!picker} saving={saving} saveDisabled={!!histogramEditor} error={imageFeedback === 'failed'} helpMode="popover"
+      onClose={() => { if (!saveInProgress.current) {
+        if (histogramEditor) setIncludeHistogram(histogramEditor.wasIncluded)
+        setHistogramEditor(null); setHistogramDraft(null); setImage(null); setImageFeedback(null)
+      } }} onSave={(filename, ratio) => void saveImage(filename, ratio)}
+      options={<fieldset className="surtr-s3-export-distribution" disabled={saving}>
+        <label><input type="checkbox" checked={includeHistogram && !!previewHistogram} disabled={!image.histogram || saving || !!histogramEditor}
+          onChange={event => setIncludeHistogram(event.target.checked)} />術耐性分布を添える</label>
+        {previewHistogram && <span>{previewHistogram.summary}</span>}
+        <button type="button" className="surtr-histogram-edit-trigger" ref={histogramEditTrigger}
+          disabled={saving || !!histogramEditor} aria-expanded={!!histogramEditor} aria-controls="surtr-histogram-editor"
+          onClick={() => {
+            setHistogramEditor({ initialSnapshot: image.histogram, wasIncluded: includeHistogram })
+            setHistogramDraft(null)
+            setHistogramStorageError(false)
+            setIncludeHistogram(true)
+          }}>{image.histogram ? '分布を変更' : '分布を設定'}</button>
+        {histogramStorageError && <span role="alert">分布を次回用に保存できませんでした。今回の出力には反映されています。</span>}
+        {histogramEditor && <section id="surtr-histogram-editor" className="surtr-histogram-editor" aria-label="術耐性分布の設定">
+          <EnemyResistanceHistogramEditor initialSnapshot={histogramEditor.initialSnapshot} onChange={receiveHistogramDraft} />
+          <div className="surtr-histogram-editor-actions">
+            <button type="button" className="button secondary" onClick={() => finishHistogramEdit(false)}>変更を取り消す</button>
+            <button type="button" className="button" disabled={!histogramDraft} onClick={() => finishHistogramEdit(true)}>分布を適用</button>
+          </div>
+        </section>}
+      </fieldset>}
+      preview={includeHistogram && previewHistogram
+        ? <SurtrCombinedChartImagePreview key={`${image.id}:combined:${previewHistogram.id}:${aspectRatio ?? 'auto'}`} {...image} histogram={previewHistogram} aspectRatio={aspectRatio} />
+        : <SurtrDpsChartImagePreview key={`${image.id}:${image.kind}:${aspectRatio ?? 'auto'}`} {...image} aspectRatio={aspectRatio} />} />}
   </section>
 }

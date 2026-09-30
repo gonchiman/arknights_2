@@ -44,6 +44,7 @@ export function EnemyAnalysis() {
             allRows={rows}
             scopeLabel={scopeLabel}
             controls={statisticsControls}
+            filterSettings={{ ...filters, numericConditions }}
             filterControls={<EnemyAnalysisFilters
               filters={filters}
               onFiltersChange={setFilters}
