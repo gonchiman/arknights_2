@@ -2,12 +2,14 @@ export type AppRoute =
   | { view: 'skills' }
   | { view: 'skill-effects'; selection?: SkillEffectsRouteSelection }
   | { view: 'operators' }
-  | { view: 'operator-detail'; operatorId: string; source?: 'goldenglow-home' }
+  | { view: 'operator-detail'; operatorId: string; source?: 'goldenglow-home' | 'surtr-home' }
   | { view: 'skill-json'; selection?: SkillJsonRouteSelection }
   | { view: 'skill-json-overview' }
   | { view: 'code-analysis' }
   | { view: 'damage' }
   | { view: 'goldenglow-home' }
+  | { view: 'surtr-home' }
+  | { view: 'surtr-s3' }
   | { view: 'goldenglow-guide' }
   | { view: 'goldenglow-performance' }
   | { view: 'goldenglow-target-switch' }
@@ -38,9 +40,10 @@ export type SkillEffectsRouteSelection = SkillRouteSelection
 
 export function createOperatorDetailHash(
   operatorId: string,
-  options?: { source?: 'goldenglow-home' },
+  options?: { source?: 'goldenglow-home' | 'surtr-home' },
 ): string {
-  const sourceQuery = options?.source === 'goldenglow-home' ? '?from=goldenglow' : ''
+  const sourceQuery = options?.source === 'goldenglow-home' ? '?from=goldenglow'
+    : options?.source === 'surtr-home' ? '?from=surtr' : ''
   return `${OPERATOR_DETAIL_ROUTE_PREFIX}${encodeURIComponent(operatorId)}${sourceQuery}`
 }
 
@@ -86,9 +89,11 @@ export function parseHashRoute(hash: string): AppRoute {
       if (!operatorId) return { view: 'operators' }
 
       const sources = new URLSearchParams(queryIndex < 0 ? '' : detailPath.slice(queryIndex + 1)).getAll('from')
-      return sources.length === 1 && sources[0] === 'goldenglow'
-        ? { view: 'operator-detail', operatorId, source: 'goldenglow-home' }
-        : { view: 'operator-detail', operatorId }
+      if (sources.length === 1) {
+        if (sources[0] === 'goldenglow') return { view: 'operator-detail', operatorId, source: 'goldenglow-home' }
+        if (sources[0] === 'surtr') return { view: 'operator-detail', operatorId, source: 'surtr-home' }
+      }
+      return { view: 'operator-detail', operatorId }
     } catch {
       return { view: 'operators' }
     }
@@ -105,6 +110,8 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/damage') return { view: 'damage' }
   if (hash === '#/analysis/code') return { view: 'code-analysis' }
   if (hash === '#/analysis/goldenglow') return { view: 'goldenglow-home' }
+  if (hash === '#/analysis/surtr') return { view: 'surtr-home' }
+  if (hash === '#/analysis/surtr/s3') return { view: 'surtr-s3' }
   if (hash === '#/analysis/goldenglow/performance') return { view: 'goldenglow-performance' }
   if (hash === '#/analysis/goldenglow/explosion') return { view: 'goldenglow-guide' }
   if (hash === '#/analysis/goldenglow/target-switch') return { view: 'goldenglow-target-switch' }
