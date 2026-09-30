@@ -33,6 +33,8 @@
 .surtr-s3-output-control { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--text-soft); font-size: 11px; }
 .surtr-s3-output-control select, .surtr-s3-output-control input { min-height: 34px; max-width: 100%; padding: 5px 8px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); font: inherit; }
 .surtr-s3-output-control input { width: 100px; }
+.surtr-s3-values-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; color: var(--text-soft); font-size: 11px; cursor: pointer; }
+.surtr-s3-values-toggle input { width: 16px; height: 16px; margin: 0; accent-color: var(--text); }
 .surtr-s3-comparison-options { font-size: 11px; }
 .surtr-s3-comparison-options summary { display: flex; align-items: center; gap: 12px; min-height: 34px; padding: 6px 10px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); list-style: none; cursor: pointer; }
 .surtr-s3-comparison-options summary::-webkit-details-marker { display: none; }
@@ -40,6 +42,11 @@
 .surtr-s3-comparison-options[open] summary::after { content: '−'; }
 .surtr-s3-comparison-popover { position: absolute; right: 0; top: 100%; z-index: 6; display: grid; gap: 16px; width: min(280px, calc(100vw - 48px)); margin-top: 8px; padding: 16px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); }
 .surtr-s3-comparison-popover .calculator-field { min-width: 0; width: 100%; }
+.surtr-s3-resistance-range { position: relative; }
+.surtr-s3-resistance-popover { width: min(244px, calc(100vw - 64px)); gap: 10px; }
+.surtr-s3-resistance-bounds { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.surtr-s3-resistance-bounds input { width: 100%; min-width: 0; }
+.surtr-s3-resistance-bounds input[aria-invalid="true"] { border-color: var(--danger, #b42318); }
 .surtr-s3-difference-toggle { display: flex; align-items: center; gap: 10px; font-size: 12px; cursor: pointer; }
 .surtr-s3-difference-toggle input { width: 16px; height: 16px; margin: 0; accent-color: var(--text); }
 .surtr-s3-results-layout { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 24px; min-width: 0; }
@@ -71,7 +78,8 @@
 .surtr-s3-result-table tbody tr { cursor: pointer; }
 .surtr-s3-result-table tbody th { padding: 0; }
 .surtr-s3-result-table .is-selected > * { background: var(--surface-active, #e9edf0); }
-.surtr-s3-table-resistance { display: block; width: 100%; padding: 10px; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.surtr-s3-table-resistance { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 10px; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.surtr-s3-table-resistance span { color: var(--text-muted); }
 .surtr-s3-table-resistance:focus-visible { outline: 2px solid var(--text); outline-offset: -3px; }
 .surtr-s3-column-label { display: inline-flex; align-items: center; gap: 7px; }
 .surtr-s3-column-label i { display: inline-block; width: 10px; height: 10px; }
@@ -87,6 +95,9 @@
   .surtr-s3-output-panel .collapsible-panel-header > .collapsible-panel-title { flex-basis: 100%; }
   .surtr-s3-output-panel .collapsible-panel-actions { flex: 1 1 100%; justify-content: flex-start; gap: 8px 10px; padding-top: 0; }
   .surtr-s3-output-control select, .surtr-s3-comparison-options summary { min-height: 44px; }
+  .surtr-s3-values-toggle { min-height: 44px; }
+  .surtr-s3-resistance-range { position: static; }
+  .surtr-s3-resistance-bounds input { min-height: 44px; font-size: 16px; }
   .surtr-s3-output-control select, .surtr-s3-output-control input { font-size: 16px; }
   .surtr-s3-chart-area { padding: 8px; }
   .surtr-s3-readout { gap: 12px; }

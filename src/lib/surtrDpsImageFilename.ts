@@ -1,5 +1,6 @@
 import { createChartImageFilename } from './chartImageFilename.ts'
 import type { SurtrDpsMetric } from './surtrDpsOutput.ts'
+import { getSurtrDpsResistanceSamples, normalizeSurtrDpsResistanceRange, type SurtrDpsBarStep, type SurtrDpsResistanceRange } from './surtrDpsResistance.ts'
 
 export interface SurtrDpsImageConditions {
   level: number
@@ -9,7 +10,9 @@ export interface SurtrDpsImageConditions {
   blocking: boolean
   modules: readonly string[]
   kind?: 'bar' | 'line'
-  barStep?: number
+  barStep?: SurtrDpsBarStep
+  resistanceRange?: SurtrDpsResistanceRange
+  showValues?: boolean
   metric?: SurtrDpsMetric
   baselineLabel?: string
   gridStyle?: 'solid' | 'dashed' | 'none'
@@ -20,16 +23,19 @@ export interface SurtrDpsImageConditions {
 
 export function getSurtrDpsImageFilename(settings: SurtrDpsImageConditions): string {
   const kind = settings.kind ?? 'bar'
-  const barStep = Number.isInteger(settings.barStep) && settings.barStep! >= 1 && settings.barStep! <= 100
-    ? settings.barStep! : 20
+  const barStep = settings.barStep === 'ratings' ? 'ratings'
+    : typeof settings.barStep === 'number' && Number.isInteger(settings.barStep) && settings.barStep >= 1 && settings.barStep <= 100
+      ? settings.barStep : 20
   const metric = settings.metric ?? 'total'
   const precision = Number.isInteger(settings.precision) && settings.precision! >= 0 && settings.precision! <= 3
     ? settings.precision! : 0
   const gridStyle = settings.gridStyle ?? 'solid'
   const yAxis = settings.yAxis ?? { mode: 'zero' }
   const selected = settings.selectedResistance
+  const range = normalizeSurtrDpsResistanceRange(settings.resistanceRange)
+  const rangeLabel = `術耐性${range.min}-${range.max}`
   const extraBar = kind === 'bar' && typeof selected === 'number' && Number.isFinite(selected)
-    && selected >= 0 && selected <= 100 && selected % barStep !== 0
+    && selected >= range.min && selected <= range.max && !getSurtrDpsResistanceSamples(barStep, range).includes(selected)
   return createChartImageFilename('スルト_S3_DPS', [
     settings.skillLevelLabel,
     metric === 'difference' ? '基準との差分' : metric === 'percent' ? '増減率' : null,
@@ -41,8 +47,11 @@ export function getSurtrDpsImageFilename(settings: SurtrDpsImageConditions): str
     settings.blocking ? '対象を自身でブロック' : '未ブロック',
     '単体',
     '余燼なし',
-    kind === 'bar' ? `術耐性0-100刻み${barStep}` : '術耐性0-100',
+    kind === 'bar' ? barStep === 'ratings'
+      ? range.min === 0 && range.max === 100 ? '術耐性ランク代表値' : `${rangeLabel}ランク代表値`
+      : `${rangeLabel}刻み${barStep}` : rangeLabel,
     kind === 'bar' ? '集合棒' : '折れ線',
+    kind === 'bar' && settings.showValues && '数値あり',
     extraBar && `追加術耐性${selected}`,
     precision > 0 && `小数${precision}桁`,
     gridStyle !== 'solid' && (gridStyle === 'dashed' ? 'グリッド破線' : 'グリッドなし'),

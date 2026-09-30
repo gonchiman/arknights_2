@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { classifySkill } from '../src/lib/classifier.ts'
+import { calculateSurtrDpsCalculation } from '../src/lib/surtrDpsCalculation.ts'
 import {
   buildSurtrDpsCurve,
   calculateSurtrDps,
@@ -176,6 +177,126 @@ test('不足した元データを未装備やゼロ補正に置き換えず未�
     mutate(record)
     assert.equal(deriveSurtrDpsModel(record, defaults, xId), null)
   }
+})
+
+test('計算詳細: MOD X・術耐性50の各段階とDPSを未丸めのまま返す', () => {
+  const value = model(xId)
+  const detail = calculateSurtrDpsCalculation(value, 50)!
+  assert.deepEqual(detail.baseAttack, {
+    levelAttack: 672, trustAttack: 100, potentialAttack: 0, moduleAttack: 60,
+    beforeRounding: 832, result: 832,
+  })
+  close(detail.attackPipeline.afterDirectMultiplier, 3577.6)
+  assert.equal(detail.attackPipeline.finalAttack, 3577)
+  assert.equal(detail.mitigation.inputResistance, 50)
+  assert.equal(detail.mitigation.resistanceIgnoreFixed, 26)
+  assert.equal(detail.mitigation.appliedResistance, 24)
+  close(detail.mitigation.afterResistance, 2718.52)
+  assert.equal(detail.mitigation.minimumApplied, false)
+  assert.equal(detail.artsFragilityMultiplier, 1)
+  close(detail.perHit, 2718.52)
+  assert.equal(detail.baseAttackTime, 1.25)
+  assert.equal(detail.baseAttackSpeed, 100)
+  assert.equal(detail.attackSpeedBonus, 8)
+  assert.equal(detail.attackSpeed, 108)
+  assert.equal(detail.appliedAttackSpeed, 108)
+  assert.equal(detail.attackInterval, 1.25 * 100 / 108)
+  close(detail.dps, 2348.80128)
+  assert.equal(detail.dps, calculateSurtrDps(value, 50))
+})
+
+test('計算詳細: 基礎ATKの加算後に四捨五入し、S3倍率適用後に切り捨てる', () => {
+  const detail = calculateSurtrDpsCalculation(model('', { level: 45, trust: 50.3 }), 0)!
+  close(detail.baseAttack.levelAttack, 544 + 128 * 44 / 89)
+  close(detail.baseAttack.trustAttack, 50.3)
+  close(detail.baseAttack.beforeRounding, 657.5808988764045)
+  assert.equal(detail.baseAttack.result, 658)
+  assert.equal(detail.attackPipeline.baseAttack, 658)
+  close(detail.attackPipeline.afterDirectMultiplier, 2829.4)
+  assert.equal(detail.attackPipeline.finalAttack, 2829)
+  assert.equal(detail.mitigation.attack, 2829)
+  close(detail.dps, 2263.2)
+})
+
+test('計算詳細: MOD Yの対術脆弱は軽減後に適用し、余燼の攻速を含めない', () => {
+  const free = calculateSurtrDpsCalculation(model(yId), 50)!
+  const blocked = calculateSurtrDpsCalculation(model(yId, { blocking: true }), 50)!
+  assert.equal(blocked.attackSpeedBonus, 0)
+  assert.equal(blocked.attackSpeed, 100)
+  assert.equal(blocked.attackInterval, 1.25)
+  assert.equal(free.artsFragilityMultiplier, 1)
+  close(blocked.artsFragilityMultiplier, 1.1)
+  assert.equal(free.mitigation.result, blocked.mitigation.result)
+  close(blocked.perHit, 2754.29)
+  close(blocked.dps, 2203.432)
+})
+
+test('計算詳細: 潜在・MOD段階・ブロック状態・各術耐性で既存DPSと一致する', () => {
+  for (const moduleId of ['', xId, yId]) {
+    for (const moduleLevel of moduleId ? [1, 2, 3] : [0]) {
+      for (const potential of [1, 4, 5, 6]) {
+        for (const blocking of [false, true]) {
+          const value = model(moduleId, { potential, blocking }, moduleLevel)
+          for (const resistance of [0, 20, 26, 28, 50, 95, 100]) {
+            const detail = calculateSurtrDpsCalculation(value, resistance)!
+            assert.equal(detail.dps, calculateSurtrDps(value, resistance))
+            assert.equal(detail.perHit / detail.attackInterval, detail.dps)
+            assert.equal(detail.attackPipeline.finalAttack, value.effectiveAttack)
+            assert.equal(detail.baseAttack.potentialAttack, potential >= 4 ? 28 : 0)
+            assert.equal(detail.baseAttack.moduleAttack, value.operatorStats.baseAttackBreakdown.moduleAttack)
+            assert.equal(detail.mitigation.resistanceIgnoreFixed, value.resistanceIgnore)
+          }
+        }
+      }
+    }
+  }
+})
+
+test('計算詳細: 最低保証の後に対術脆弱を掛け、攻速下限20を示す', () => {
+  const record = createRecord()
+  for (const candidate of record.operatorProfile.talents![0].candidates!) {
+    candidate.blackboard = [{ key: 'magic_resist_penetrate_fixed', value: 0 }]
+  }
+  for (const frame of record.operatorProfile.phases[2].attributesKeyFrames!) {
+    frame.data!.attackSpeed = 10
+  }
+  const value = deriveSurtrDpsModel(record, { ...defaults, blocking: true }, yId)!
+  const detail = calculateSurtrDpsCalculation(value, 100)!
+  assert.equal(detail.mitigation.appliedResistance, 100)
+  assert.equal(detail.mitigation.afterResistance, 0)
+  assert.equal(detail.mitigation.minimumApplied, true)
+  close(detail.mitigation.minimumDamage, 178.85)
+  close(detail.mitigation.result, 178.85)
+  close(detail.perHit, 196.735)
+  assert.equal(detail.attackSpeed, 10)
+  assert.equal(detail.appliedAttackSpeed, 20)
+  assert.equal(detail.attackInterval, 6.25)
+  close(detail.dps, 31.4776)
+})
+
+test('計算詳細: 不正な術耐性・計算モデルを数値に置き換えない', () => {
+  for (const resistance of [-1, 101, NaN, Infinity]) {
+    assert.equal(calculateSurtrDpsCalculation(model(), resistance), null)
+  }
+  for (const patch of [
+    { effectiveAttack: 0 }, { effectiveAttack: NaN }, { effectiveAttack: Infinity },
+    { attackInterval: 0 }, { attackInterval: -1 }, { attackInterval: Infinity },
+    { resistanceIgnore: -1 }, { resistanceIgnore: NaN },
+    { artsFragility: -1 }, { artsFragility: Infinity },
+    { effectiveAttack: Number.MAX_VALUE, artsFragility: Number.MAX_VALUE },
+  ]) assert.equal(calculateSurtrDpsCalculation({ ...model(), ...patch }, 50), null)
+})
+
+test('計算詳細: 入力モデルを変更せず、返した基礎ATK内訳も共有しない', () => {
+  const value = model(xId, { potential: 5 })
+  const before = structuredClone(value)
+  const detail = calculateSurtrDpsCalculation(value, 50)!
+  assert.deepEqual(value, before)
+  assert.notEqual(detail.baseAttack, value.operatorStats.baseAttackBreakdown)
+  detail.baseAttack.moduleAttack = 999
+  detail.attackPipeline.finalAttack = 999
+  detail.mitigation.resistanceIgnoreFixed = 999
+  assert.deepEqual(value, before)
 })
 
 // Compact fixture from the same JP source used at runtime, checked 2026-09-30:
