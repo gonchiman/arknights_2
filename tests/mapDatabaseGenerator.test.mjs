@@ -20,7 +20,7 @@ const stage = (stageId, levelId, overrides = {}) => ({
   difficulty: 'NORMAL', ...overrides,
 })
 const options = (levels, stages = {}) => ({
-  stageTable: { stages }, zoneTable: { zones: { main_10: { zoneNameFirst: '第十章', zoneNameSecond: '光冠残蝕' } } },
+  stageTable: { stages }, zoneTable: { zones: { main_10: { zoneNameFirst: '第十章', zoneNameSecond: '光冠残蝕', type: 'MAINLINE' } } },
   handbook: { enemyData: { enemy_a: { name: '兵士' }, enemy_b: { name: '猟犬', hideInHandbook: true } } },
   database: {}, levels, generatedAt: '2026-09-30T00:00:00Z', sourceGeneratedAt: '2026-08-31T00:00:00Z',
 })
@@ -34,7 +34,7 @@ test('stage display codes come from the stage table; normal and challenge share 
   assert.equal(output.index.maps.length, 1)
   assert.deepEqual(output.index.maps[0], {
     levelId: 'obt/main/level_main_10-04', stageId: 'main_10-04', code: '10-5', name: '都市の呼吸',
-    zoneId: 'main_10', zoneName: '第十章 光冠残蝕', difficulty: 'NORMAL', status: 'supported', spawnCount: 9,
+    zoneId: 'main_10', zoneName: '第十章 光冠残蝕', zoneType: 'MAINLINE', difficulty: 'NORMAL', status: 'supported', spawnCount: 9,
     enemyIds: ['enemy_a', 'enemy_b'], reasons: [], detailFile: mapDetailFile('obt/main/level_main_10-04'),
   })
   const detail = output.details[output.index.maps[0].detailFile].maps['obt/main/level_main_10-04']
@@ -64,6 +64,44 @@ test('missing target levels remain searchable rather than disappearing or showin
   assert.equal(summary.detailFile, null)
   assert.deepEqual(summary.reasons, ['missing-level'])
   assert.equal(Object.values(output.details).flatMap((shard) => Object.keys(shard.maps)).length, 0)
+})
+
+test('zone classification uses the upstream type independently of IDs, names, and level availability', () => {
+  const input = options([], {
+    event: stage('event', 'obt/event', { zoneId: 'main_10', name: 'メインテーマ' }),
+    main: stage('main', 'obt/main', { zoneId: 'act_main', diffGroup: 'TOUGH' }),
+    weekly: stage('weekly', 'obt/weekly', { zoneId: 'weekly_soc', code: 'PR-A-1' }),
+  })
+  input.zoneTable = { zones: {
+    main_10: { type: 'ACTIVITY', zoneNameFirst: '第十章', zoneNameSecond: '光冠残蝕' },
+    act_main: { type: 'MAINLINE_ACTIVITY', zoneNameFirst: '解離結合' },
+    weekly_soc: { type: 'WEEKLY', zoneNameFirst: '重装/医療' },
+  } }
+  const output = buildMapDatabase(input)
+  assert.deepEqual(output.index.maps.map((map) => [map.stageId, map.zoneType]), [
+    ['event', 'ACTIVITY'], ['main', 'MAINLINE_ACTIVITY'], ['weekly', 'WEEKLY'],
+  ])
+  assert.deepEqual(output.index.maps[1], {
+    levelId: 'obt/main', stageId: 'main', code: '10-5', name: '都市の呼吸',
+    zoneId: 'act_main', zoneName: '解離結合', zoneType: 'MAINLINE_ACTIVITY',
+    difficulty: 'NORMAL', diffGroup: 'TOUGH', status: 'missing', spawnCount: null,
+    enemyIds: [], reasons: ['missing-level'], detailFile: null,
+  })
+  assert.equal(output.index.generatedAt, input.generatedAt)
+  assert.equal(output.index.sourceGeneratedAt, input.sourceGeneratedAt)
+})
+
+test('missing zone records or types remain explicit UNKNOWN without inferring a category', () => {
+  for (const zone of [undefined, null, {}, { type: null }, { type: '' }, { type: 2 }]) {
+    const input = options([], { missing: stage('missing', 'obt/missing') })
+    input.zoneTable = { zones: { main_10: zone } }
+    const output = buildMapDatabase(input)
+    assert.deepEqual(output.index.maps[0], {
+      levelId: 'obt/missing', stageId: 'missing', code: '10-5', name: '都市の呼吸',
+      zoneId: 'main_10', zoneName: 'main_10', zoneType: 'UNKNOWN', difficulty: 'NORMAL',
+      status: 'missing', spawnCount: null, enemyIds: [], reasons: ['missing-level'], detailFile: null,
+    })
+  }
 })
 
 test('same display code keeps distinct environment levels and their difficulty metadata', () => {

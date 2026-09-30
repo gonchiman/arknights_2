@@ -111,7 +111,7 @@ export function buildMapDatabase({
     const zoneName = [text(zone?.zoneNameFirst), text(zone?.zoneNameSecond)].filter(Boolean).join(' ') || zoneId || 'その他'
     const base = {
       levelId, stageId, code: text(stage?.code) ?? stageId, name: text(stage?.name) ?? '',
-      zoneId, zoneName,
+      zoneId, zoneName, zoneType: text(zone?.type) ?? 'UNKNOWN',
       ...(text(stage?.difficulty) ? { difficulty: text(stage.difficulty) } : {}),
       ...(text(stage?.diffGroup) ? { diffGroup: text(stage.diffGroup) } : {}),
     }

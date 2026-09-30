@@ -1,4 +1,6 @@
 export type MapDataStatus = 'supported' | 'excluded' | 'missing'
+export type MapCategory = 'main' | 'event' | 'supply' | 'other'
+export type MapEnvironment = 'none' | 'EASY' | 'NORMAL' | 'TOUGH' | 'ALL' | 'other'
 
 export interface MapEnemyBase {
   name: string
@@ -13,6 +15,7 @@ export interface MapSummary {
   name: string
   zoneId: string
   zoneName: string
+  zoneType?: string
   difficulty?: string
   diffGroup?: string
   status: MapDataStatus
@@ -56,6 +59,8 @@ export interface MapDetailShard {
 
 export interface MapFilters {
   query: string
+  category: MapCategory | 'all'
+  environment: MapEnvironment | 'all'
   zoneId: string
   status: MapDataStatus | 'all'
 }

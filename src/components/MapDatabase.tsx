@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useState } from 'react'
-import { loadMapDatabase, loadMapDetail, matchesMapFilters } from '../lib/mapDatabase'
+import { getMapCategory, getMapEnvironment, loadMapDatabase, loadMapDetail, matchesMapFilters } from '../lib/mapDatabase'
 import { DATA_SOURCE_URLS } from '../lib/dataSources'
 import type { MapDataStatus, MapDetail, MapFilters, MapIndex, MapSummary, MapTile } from '../types/map'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
@@ -7,7 +7,17 @@ import './DamageCalculator.css'
 import './MapDatabase.css'
 
 const PAGE_SIZE = 12
-const DEFAULT_FILTERS: MapFilters = { query: '', zoneId: 'all', status: 'all' }
+const DEFAULT_FILTERS: MapFilters = { query: '', category: 'all', zoneId: 'all', environment: 'all', status: 'all' }
+const CATEGORY_OPTIONS: { value: MapFilters['category']; label: string }[] = [
+  { value: 'all', label: 'すべて' }, { value: 'main', label: 'メインテーマ' },
+  { value: 'event', label: 'イベント' }, { value: 'supply', label: '物資調達・SoC' },
+  { value: 'other', label: 'その他' },
+]
+const ENVIRONMENT_OPTIONS: { value: MapFilters['environment']; label: string }[] = [
+  { value: 'none', label: '環境指定なし' }, { value: 'EASY', label: '物語' },
+  { value: 'NORMAL', label: '標準' }, { value: 'TOUGH', label: '厄難' },
+  { value: 'ALL', label: '共通' }, { value: 'other', label: 'その他' },
+]
 const STATUS_LABELS: Record<MapDataStatus, string> = { supported: '集計対象', excluded: '出現数未確定', missing: 'マップデータ未取得' }
 const formatNumber = (value: number | null | undefined) => value == null ? '—' : value.toLocaleString('ja-JP')
 const difficultyLabel = (map: MapSummary) => {
@@ -49,7 +59,9 @@ export function MapDatabase() {
   }, [revision])
 
   const allMaps = useMemo(() => [...(data?.maps ?? [])].sort(compareMaps), [data])
-  const zones = useMemo(() => [...new Map(allMaps.map((map) => [map.zoneId, map.zoneName])).entries()], [allMaps])
+  const categoryMaps = useMemo(() => allMaps.filter((map) => filters.category === 'all' || getMapCategory(map) === filters.category), [allMaps, filters.category])
+  const zones = useMemo(() => [...new Map(categoryMaps.map((map) => [map.zoneId, map.zoneName])).entries()], [categoryMaps])
+  const environments = useMemo(() => new Set(categoryMaps.map(getMapEnvironment)), [categoryMaps])
   const filtered = useMemo(() => data ? allMaps.filter((map) => matchesMapFilters(map, data.enemies, filters)) : [], [allMaps, data, filters])
   const pageCount = Math.ceil(filtered.length / PAGE_SIZE)
   const currentPage = Math.min(page, Math.max(0, pageCount - 1))
@@ -69,9 +81,16 @@ export function MapDatabase() {
       : !data ? <div className="map-load-state" role="status">マップ一覧を読み込んでいます…</div>
         : <>
           <CollapsibleCalculatorPanel id="map-search" number="01" title="マップを選ぶ" summary={`${formatNumber(filtered.length)}件`} collapsedLabel="選択欄を表示" bodyClassName="map-selection-body">
+            <div className="map-category-buttons" role="group" aria-label="コンテンツ">
+              {CATEGORY_OPTIONS.map(({ value, label }) => <button
+                key={value} type="button" aria-pressed={filters.category === value}
+                onClick={() => updateFilters({ category: value, zoneId: 'all', environment: 'all' })}
+              >{label}</button>)}
+            </div>
             <div className="map-search-controls">
               <label className="map-search-input"><span>マップ検索</span><input type="search" value={filters.query} placeholder="ステージ番号・マップ名・敵名" onChange={(event) => updateFilters({ query: event.target.value })} /></label>
               <label><span>章・エリア</span><select value={filters.zoneId} onChange={(event) => updateFilters({ zoneId: event.target.value })}><option value="all">すべて</option>{zones.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
+              <label><span>作戦環境</span><select value={filters.environment} onChange={(event) => updateFilters({ environment: event.target.value as MapFilters['environment'] })}><option value="all">すべて</option>{ENVIRONMENT_OPTIONS.filter(({ value }) => value !== 'all' && environments.has(value)).map(({ value, label }) => <option key={value} value={value}>{label}</option>)}</select></label>
               <label><span>データの状態</span><select value={filters.status} onChange={(event) => updateFilters({ status: event.target.value as MapFilters['status'] })}><option value="all">すべて</option><option value="supported">出現数を集計できる</option><option value="excluded">出現数未確定</option><option value="missing">マップデータ未取得</option></select></label>
             </div>
             {visible.length ? <>

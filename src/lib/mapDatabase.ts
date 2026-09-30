@@ -1,4 +1,4 @@
-import type { MapDetail, MapDetailShard, MapEnemyBase, MapFilters, MapIndex, MapSummary, MapTile } from '../types/map.ts'
+import type { MapCategory, MapEnvironment, MapDetail, MapDetailShard, MapEnemyBase, MapFilters, MapIndex, MapSummary, MapTile } from '../types/map.ts'
 
 const APP_BASE = import.meta.env?.BASE_URL ?? '/'
 const DATA_BASE = `${APP_BASE.endsWith('/') ? APP_BASE : `${APP_BASE}/`}data/maps/`
@@ -32,6 +32,7 @@ export function parseMapIndex(source: unknown): MapIndex {
     const map = record(raw)
     if (!map || !['levelId', 'stageId', 'code', 'name', 'zoneId', 'zoneName'].every((key) => isText(map[key]))
       || !map.levelId || seen.has(map.levelId as string)
+      || (map.zoneType !== undefined && !isText(map.zoneType))
       || (map.difficulty !== undefined && !isText(map.difficulty))
       || (map.diffGroup !== undefined && !isText(map.diffGroup))
       || !['supported', 'excluded', 'missing'].includes(String(map.status))
@@ -48,6 +49,7 @@ export function parseMapIndex(source: unknown): MapIndex {
     return {
       levelId: map.levelId as string, stageId: map.stageId as string, code: map.code as string,
       name: map.name as string, zoneId: map.zoneId as string, zoneName: map.zoneName as string,
+      zoneType: isText(map.zoneType) ? map.zoneType : 'UNKNOWN',
       ...(isText(map.difficulty) ? { difficulty: map.difficulty } : {}),
       ...(isText(map.diffGroup) ? { diffGroup: map.diffGroup } : {}),
       status: map.status as MapSummary['status'], spawnCount: map.spawnCount,
@@ -157,6 +159,24 @@ export async function loadMapDetail(summary: MapSummary): Promise<MapDetail> {
   return getMapDetail(await request, summary)
 }
 
+export function getMapCategory(map: MapSummary): MapCategory {
+  switch (map.zoneType) {
+    case 'MAINLINE':
+    case 'MAINLINE_ACTIVITY': return 'main'
+    case 'ACTIVITY': return 'event'
+    case 'WEEKLY': return 'supply'
+    default: return 'other'
+  }
+}
+
+export function getMapEnvironment(map: MapSummary): MapEnvironment {
+  switch (map.diffGroup) {
+    case 'EASY': case 'NORMAL': case 'TOUGH': case 'ALL': return map.diffGroup
+    case undefined: case '': case 'NONE': return 'none'
+    default: return 'other'
+  }
+}
+
 const normalize = (value: string) => value.normalize('NFKC').trim().toLocaleLowerCase('ja')
 
 export function matchesMapFilters(
@@ -164,6 +184,8 @@ export function matchesMapFilters(
   enemies: Record<string, MapEnemyBase>,
   filters: MapFilters,
 ): boolean {
+  if (filters.category !== 'all' && filters.category !== getMapCategory(map)) return false
+  if (filters.environment !== 'all' && filters.environment !== getMapEnvironment(map)) return false
   if (filters.zoneId !== 'all' && filters.zoneId !== map.zoneId) return false
   if (filters.status !== 'all' && filters.status !== map.status) return false
   const terms = normalize(filters.query).split(/\s+/).filter(Boolean)

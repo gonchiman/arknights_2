@@ -1,12 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { getMapDetail, loadMapDatabase, loadMapDetail, matchesMapFilters, parseMapDetailShard, parseMapIndex } from '../src/lib/mapDatabase.ts'
-import type { MapDetailShard, MapIndex, MapSummary } from '../src/types/map.ts'
+import { getMapCategory, getMapEnvironment, getMapDetail, loadMapDatabase, loadMapDetail, matchesMapFilters, parseMapDetailShard, parseMapIndex } from '../src/lib/mapDatabase.ts'
+import type { MapDetailShard, MapFilters, MapIndex, MapSummary } from '../src/types/map.ts'
 
 const summary: MapSummary = {
   levelId: 'obt/main/level_main_01-07', stageId: 'main_01-07', code: '1-7', name: '暴君', zoneId: 'main_1',
-  zoneName: '第一章 暗黒時代・下', status: 'supported', spawnCount: 3, enemyIds: ['enemy_a'], reasons: [], detailFile: 'details-0.json',
+  zoneName: '第一章 暗黒時代・下', zoneType: 'MAINLINE', status: 'supported', spawnCount: 3, enemyIds: ['enemy_a'], reasons: [], detailFile: 'details-0.json',
 }
 const index: MapIndex = {
   schemaVersion: 1, generatedAt: '2026-09-30T00:00:00Z', sourceGeneratedAt: null,
@@ -25,7 +25,7 @@ const shard: MapDetailShard = {
 
 test('search combines normalized stage, chapter, enemy names and all specified filters', () => {
   const matches = (query: string, zoneId = 'all', status: 'all' | 'supported' | 'missing' = 'all') =>
-    matchesMapFilters(summary, index.enemies, { query, zoneId, status })
+    matchesMapFilters(summary, index.enemies, { query, zoneId, status, category: 'all', environment: 'all' })
   assert.equal(matches('１－７ 術師'), true)
   assert.equal(matches('第一章　暴君'), true)
   assert.equal(matches('MAIN_01-07'), true)
@@ -33,6 +33,37 @@ test('search combines normalized stage, chapter, enemy names and all specified f
   assert.equal(matches('暴君', 'main_2'), false)
   assert.equal(matches('暴君', 'main_1', 'missing'), false)
   assert.equal(matches('暴君', 'main_1', 'supported'), true)
+})
+
+test('content and environment filters combine with search, zone and data status', () => {
+  const filters: MapFilters = { query: '暴君', category: 'main', environment: 'NORMAL', zoneId: 'main_1', status: 'supported' }
+  const map = { ...summary, diffGroup: 'NORMAL' }
+  assert.equal(matchesMapFilters(map, index.enemies, filters), true)
+  for (const patch of [
+    { category: 'event' }, { environment: 'TOUGH' }, { zoneId: 'main_2' },
+    { status: 'missing' }, { query: '猟犬' },
+  ] as Partial<MapFilters>[]) {
+    assert.equal(matchesMapFilters(map, index.enemies, { ...filters, ...patch }), false)
+  }
+  assert.equal(matchesMapFilters(summary, index.enemies, { ...filters, environment: 'none' }), true)
+  assert.equal(matchesMapFilters(map, index.enemies, { ...filters, environment: 'none' }), false)
+})
+
+test('content classification uses source type, and unknown content remains accessible', () => {
+  for (const [zoneType, category] of [
+    ['MAINLINE', 'main'], ['ACTIVITY', 'event'], ['MAINLINE_ACTIVITY', 'main'], ['WEEKLY', 'supply'],
+    ['CAMPAIGN', 'other'], ['CLIMB_TOWER', 'other'], ['GUIDE', 'other'], ['FUTURE_TYPE', 'other'],
+  ]) assert.equal(getMapCategory({ ...summary, zoneType }), category)
+  assert.equal(getMapCategory({ ...summary, zoneType: undefined }), 'other')
+  assert.equal(getMapCategory({ ...summary, zoneId: 'main_1', zoneType: 'ACTIVITY' }), 'event')
+  for (const diffGroup of ['EASY', 'NORMAL', 'TOUGH', 'ALL']) {
+    assert.equal(getMapEnvironment({ ...summary, diffGroup }), diffGroup)
+  }
+  assert.equal(getMapEnvironment({ ...summary, diffGroup: 'NONE' }), 'none')
+  assert.equal(getMapEnvironment(summary), 'none')
+  assert.equal(getMapEnvironment({ ...summary, diffGroup: 'FUTURE' }), 'other')
+  assert.equal(parseMapIndex({ ...index, maps: [{ ...summary, zoneType: undefined }] }).maps[0].zoneType, 'UNKNOWN')
+  assert.throws(() => parseMapIndex({ ...index, maps: [{ ...summary, zoneType: 42 }] }))
 })
 
 test('malformed and duplicate map summaries or escaping detail paths are rejected', () => {
@@ -63,6 +94,7 @@ test('bundled map index and every lazy shard agree; missing and conditional maps
   const source = new URL('../public/data/maps/', import.meta.url)
   const generated = parseMapIndex(JSON.parse(await readFile(new URL('index.json', source), 'utf8')))
   assert.equal(generated.maps.length, 2298)
+  assert.deepEqual(['main', 'event', 'supply', 'other'].map((category) => generated.maps.filter((map) => getMapCategory(map) === category).length), [584, 1416, 35, 263])
   assert.equal(generated.maps.filter((map) => map.status === 'supported').length, 1474)
   assert.equal(generated.maps.filter((map) => map.status === 'excluded').length, 524)
   assert.equal(generated.maps.filter((map) => map.status === 'missing').length, 300)
