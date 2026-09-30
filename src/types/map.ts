@@ -40,6 +40,51 @@ export interface MapTile {
   passableMask: string
 }
 
+export interface MapPosition {
+  row: number
+  col: number
+}
+
+export interface MapRoute {
+  /** Original route tile coordinates, which may be outside the map bounds. */
+  startPosition: MapPosition | null
+}
+
+/** Source settings for one action; array position is its original record order. */
+export interface MapWaveAction {
+  actionType: string
+  key: string | null
+  count: number | null
+  preDelay: number | null
+  interval: number | null
+  routeIndex: number | null
+  hiddenGroup: string | null
+  randomSpawnGroupKey: string | null
+  randomSpawnGroupPackKey: string | null
+  randomType: string | null
+  refreshType: string | null
+  managedByScheduler: boolean | null
+  blockFragment: boolean | null
+  dontBlockWave: boolean | null
+  /** Null for events that do not spawn enemies. Fixed does not assert absolute timing. */
+  spawnKind: 'fixed' | 'conditional' | 'unknown' | null
+  reasons: string[]
+}
+
+export interface MapWaveFragment {
+  preDelay: number | null
+  actions: MapWaveAction[]
+}
+
+export interface MapWave {
+  preDelay: number | null
+  postDelay: number | null
+  /** Preserves the upstream -1 sentinel as well as nonnegative settings. */
+  maxTimeWaitingForNextWave: number | null
+  advancedWaveTag: string | null
+  fragments: MapWaveFragment[]
+}
+
 export interface MapDetail {
   levelId: string
   /** Original mapData.map row and column order, with palette indices remapped. */
@@ -49,6 +94,10 @@ export interface MapDetail {
   initialCost: number | null
   deployLimit: number | null
   enemies: { id: string; count: number | null }[]
+  /** Original route indices; unavailable entries are retained as null. */
+  routes?: (MapRoute | null)[] | null
+  /** Undefined in legacy data, null for unavailable structure, [] for no waves. */
+  waves?: MapWave[] | null
 }
 
 export interface MapDetailShard {

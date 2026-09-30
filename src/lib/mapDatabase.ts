@@ -1,4 +1,4 @@
-import type { MapCategory, MapEnvironment, MapDetail, MapDetailShard, MapEnemyBase, MapFilters, MapIndex, MapSummary, MapTile } from '../types/map.ts'
+import type { MapCategory, MapEnvironment, MapDetail, MapDetailShard, MapEnemyBase, MapFilters, MapIndex, MapRoute, MapSummary, MapTile, MapWave, MapWaveAction, MapWaveFragment } from '../types/map.ts'
 
 const APP_BASE = import.meta.env?.BASE_URL ?? '/'
 const DATA_BASE = `${APP_BASE.endsWith('/') ? APP_BASE : `${APP_BASE}/`}data/maps/`
@@ -59,6 +59,73 @@ export function parseMapIndex(source: unknown): MapIndex {
   return { schemaVersion: 1, generatedAt: root.generatedAt, sourceGeneratedAt: root.sourceGeneratedAt, maps, enemies: registry }
 }
 
+const isTextOrNull = (value: unknown): value is string | null => value === null || isText(value)
+const isBooleanOrNull = (value: unknown): value is boolean | null => value === null || typeof value === 'boolean'
+
+function parseMapRoutes(source: unknown): (MapRoute | null)[] | null {
+  if (source === null) return null
+  if (!Array.isArray(source)) throw new Error('マップの入口情報を確認できませんでした。')
+  return source.map((raw): MapRoute | null => {
+    if (raw === null) return null
+    const route = record(raw)
+    const start = record(route?.startPosition)
+    if (!route || (route.startPosition !== null
+      && (!start || !Number.isSafeInteger(start.row) || !Number.isSafeInteger(start.col)))) {
+      throw new Error('マップの入口情報に不正な値があります。')
+    }
+    return { startPosition: start ? { row: start.row as number, col: start.col as number } : null }
+  })
+}
+
+function parseMapWaves(source: unknown): MapWave[] | null {
+  if (source === null) return null
+  if (!Array.isArray(source)) throw new Error('マップのウェーブ情報を確認できませんでした。')
+  return source.map((rawWave): MapWave => {
+    const wave = record(rawWave)
+    if (!wave || !isNumberOrNull(wave.preDelay) || !isNumberOrNull(wave.postDelay)
+      || !(wave.maxTimeWaitingForNextWave === -1 || isNumberOrNull(wave.maxTimeWaitingForNextWave))
+      || !isTextOrNull(wave.advancedWaveTag) || !Array.isArray(wave.fragments)) {
+      throw new Error('マップのウェーブ情報に不正な値があります。')
+    }
+    const fragments = wave.fragments.map((rawFragment): MapWaveFragment => {
+      const fragment = record(rawFragment)
+      if (!fragment || !isNumberOrNull(fragment.preDelay) || !Array.isArray(fragment.actions)) {
+        throw new Error('マップのフラグメント情報に不正な値があります。')
+      }
+      const actions = fragment.actions.map((rawAction): MapWaveAction => {
+        const action = record(rawAction)
+        if (!action || !isText(action.actionType) || !isCountOrNull(action.count) || !isCountOrNull(action.routeIndex)
+          || !isNumberOrNull(action.preDelay) || !isNumberOrNull(action.interval)
+          || !['key', 'hiddenGroup', 'randomSpawnGroupKey', 'randomSpawnGroupPackKey', 'randomType', 'refreshType']
+            .every((key) => isTextOrNull(action[key]))
+          || !['managedByScheduler', 'blockFragment', 'dontBlockWave'].every((key) => isBooleanOrNull(action[key]))
+          || !strings(action.reasons)
+          || (action.actionType === 'SPAWN'
+            ? !isText(action.spawnKind) || !['fixed', 'conditional', 'unknown'].includes(action.spawnKind)
+            : action.spawnKind !== null)) {
+          throw new Error('マップの出現設定に不正な値があります。')
+        }
+        return {
+          actionType: action.actionType, key: action.key as string | null, count: action.count,
+          preDelay: action.preDelay, interval: action.interval, routeIndex: action.routeIndex,
+          hiddenGroup: action.hiddenGroup as string | null,
+          randomSpawnGroupKey: action.randomSpawnGroupKey as string | null,
+          randomSpawnGroupPackKey: action.randomSpawnGroupPackKey as string | null,
+          randomType: action.randomType as string | null, refreshType: action.refreshType as string | null,
+          managedByScheduler: action.managedByScheduler as boolean | null,
+          blockFragment: action.blockFragment as boolean | null, dontBlockWave: action.dontBlockWave as boolean | null,
+          spawnKind: action.spawnKind as MapWaveAction['spawnKind'], reasons: [...action.reasons],
+        }
+      })
+      return { preDelay: fragment.preDelay, actions }
+    })
+    return {
+      preDelay: wave.preDelay, postDelay: wave.postDelay, maxTimeWaitingForNextWave: wave.maxTimeWaitingForNextWave,
+      advancedWaveTag: wave.advancedWaveTag, fragments,
+    }
+  })
+}
+
 export function parseMapDetailShard(source: unknown): MapDetailShard {
   const root = record(source)
   const records = record(root?.maps)
@@ -100,6 +167,8 @@ export function parseMapDetailShard(source: unknown): MapDetailShard {
       levelId, grid: detail.grid.map((row: number[]) => [...row]), tiles,
       life: detail.life as number | null, initialCost: detail.initialCost as number | null,
       deployLimit: detail.deployLimit as number | null, enemies,
+      ...(detail.routes !== undefined ? { routes: parseMapRoutes(detail.routes) } : {}),
+      ...(detail.waves !== undefined ? { waves: parseMapWaves(detail.waves) } : {}),
     }
   }
   return { schemaVersion: 1, generatedAt: root.generatedAt, maps }
