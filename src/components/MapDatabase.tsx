@@ -1,13 +1,15 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 import { getMapCategory, getMapEnvironment, loadMapDatabase, loadMapDetail, matchesMapFilters } from '../lib/mapDatabase'
 import { DATA_SOURCE_URLS } from '../lib/dataSources'
+import { MAP_FEATURE_LABELS } from '../lib/mapFeatures'
 import type { MapDataStatus, MapDetail, MapFilters, MapIndex, MapSummary, MapTile } from '../types/map'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
+import { MapFeatureFilters } from './MapFeatureFilters'
 import './DamageCalculator.css'
 import './MapDatabase.css'
 
 const PAGE_SIZE = 12
-const DEFAULT_FILTERS: MapFilters = { query: '', category: 'all', zoneId: 'all', environment: 'all', status: 'all' }
+const DEFAULT_FILTERS: MapFilters = { query: '', category: 'all', zoneId: 'all', environment: 'all', status: 'all', features: [], featureMatch: 'any' }
 const CATEGORY_OPTIONS: { value: MapFilters['category']; label: string }[] = [
   { value: 'all', label: 'すべて' }, { value: 'main', label: 'メインテーマ' },
   { value: 'event', label: 'イベント' }, { value: 'supply', label: '物資調達・SoC' },
@@ -93,6 +95,7 @@ export function MapDatabase() {
               <label><span>作戦環境</span><select value={filters.environment} onChange={(event) => updateFilters({ environment: event.target.value as MapFilters['environment'] })}><option value="all">すべて</option>{ENVIRONMENT_OPTIONS.filter(({ value }) => value !== 'all' && environments.has(value)).map(({ value, label }) => <option key={value} value={value}>{label}</option>)}</select></label>
               <label><span>データの状態</span><select value={filters.status} onChange={(event) => updateFilters({ status: event.target.value as MapFilters['status'] })}><option value="all">すべて</option><option value="supported">出現数を集計できる</option><option value="excluded">出現数未確定</option><option value="missing">マップデータ未取得</option></select></label>
             </div>
+            <MapFeatureFilters filters={filters} onChange={updateFilters} />
             {visible.length ? <>
               <div className="map-selection-grid" role="group" aria-label="マップ一覧">
                 {visible.map((map) => <button
@@ -114,6 +117,7 @@ export function MapDatabase() {
                 <span className="map-selection-name">{selected.name}</span>
                 {difficultyLabel(selected) && <span className="map-selection-difficulty">{difficultyLabel(selected)}</span>}
                 <span className="map-selection-count">出現数 {selected.status === 'supported' ? `${formatNumber(selected.spawnCount)}体` : selected.status === 'missing' ? '未取得' : '未確定'}</span>
+                {!!selected.features?.length && <span className="map-selection-features">{selected.features.map((id) => MAP_FEATURE_LABELS[id]).join(' ／ ')}</span>}
               </div>}
               <div className="map-pagination"><span aria-live="polite">{currentPage * PAGE_SIZE + 1}–{Math.min(filtered.length, (currentPage + 1) * PAGE_SIZE)} / {formatNumber(filtered.length)}件</span><div><button className="button secondary" type="button" disabled={currentPage === 0} onClick={() => changePage(currentPage - 1)} aria-label="前のマップ一覧">前へ</button><button className="button secondary" type="button" disabled={currentPage + 1 >= pageCount} onClick={() => changePage(currentPage + 1)} aria-label="次のマップ一覧">次へ</button></div></div>
             </> : <p className="map-empty" role="status">該当するマップがありません</p>}
@@ -121,7 +125,7 @@ export function MapDatabase() {
           <CollapsibleCalculatorPanel id="map-detail" number="02" title="マップ情報" summary={selected?.code ?? ''} collapsedLabel="情報を表示" className="map-detail-panel">
             {selected ? <MapInformation key={selected.levelId} map={selected} index={data} /> : <p className="map-empty">表示するマップがありません</p>}
           </CollapsibleCalculatorPanel>
-          <details className="map-source-notes"><summary>データの範囲</summary><p>stage_table内の戦闘ステージを、同じマップデータを共有するものごとにまとめています。ローグライクなど、別管理のマップは含みません。</p><p>取得済み {formatNumber(data.maps.filter((map) => map.status !== 'missing').length)}マップ／未取得 {formatNumber(data.maps.filter((map) => map.status === 'missing').length)}マップ。敵の能力値は基礎値で、マップ固有の補正は反映していません。</p><p>マップ情報の生成：{data.generatedAt.slice(0, 10)}{data.sourceGeneratedAt ? ` ／ 取得範囲の集計：${data.sourceGeneratedAt.slice(0, 10)}` : ''}</p></details>
+          <details className="map-source-notes"><summary>データの範囲</summary><p>stage_table内の戦闘ステージを、同じマップデータを共有するものごとにまとめています。ローグライクなど、別管理のマップは含みません。</p><p>取得済み {formatNumber(data.maps.filter((map) => map.status !== 'missing').length)}マップ／未取得 {formatNumber(data.maps.filter((map) => map.status === 'missing').length)}マップ。敵の能力値は基礎値で、マップ固有の補正は反映していません。</p><p>特徴の絞り込みは、取得済みデータから判定できる16種類が対象です。強襲条件や条件付きで追加される効果は含みません。未取得のマップは特徴による絞り込みの対象外です。</p><p>マップ情報の生成：{data.generatedAt.slice(0, 10)}{data.sourceGeneratedAt ? ` ／ 取得範囲の集計：${data.sourceGeneratedAt.slice(0, 10)}` : ''}</p></details>
         </>}
   </section>
 }

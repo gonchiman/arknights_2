@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { getMapCategory, getMapEnvironment, getMapDetail, loadMapDatabase, loadMapDetail, matchesMapFilters, parseMapDetailShard, parseMapIndex } from '../src/lib/mapDatabase.ts'
-import type { MapDetailShard, MapFilters, MapIndex, MapSummary } from '../src/types/map.ts'
+import type { MapDetailShard, MapFeatureId, MapFilters, MapIndex, MapSummary } from '../src/types/map.ts'
 
 const summary: MapSummary = {
   levelId: 'obt/main/level_main_01-07', stageId: 'main_01-07', code: '1-7', name: '暴君', zoneId: 'main_1',
@@ -66,6 +66,70 @@ test('content classification uses source type, and unknown content remains acces
   assert.throws(() => parseMapIndex({ ...index, maps: [{ ...summary, zoneType: 42 }] }))
 })
 
+test('feature matching applies any or all to the complete selection across groups, even without a search query', () => {
+  const filters: MapFilters = {
+    query: '', category: 'all', environment: 'all', zoneId: 'all', status: 'all',
+    features: ['periodic_damage', 'hole', 'emp'],
+  }
+  const candidates: [string, MapFeatureId[] | null | undefined][] = [
+    ['environment', ['periodic_damage']], ['terrain', ['hole']], ['device', ['emp']],
+    ['two groups', ['hole', 'emp']], ['all groups', ['periodic_damage', 'hole', 'emp']],
+    ['unselected', ['grass']], ['none', []], ['unknown', null], ['legacy', undefined],
+  ]
+  const matched = (featureMatch: MapFilters['featureMatch']) => candidates
+    .filter(([, features]) => matchesMapFilters({ ...summary, features }, index.enemies, { ...filters, featureMatch }))
+    .map(([name]) => name)
+  assert.deepEqual(matched('any'), ['environment', 'terrain', 'device', 'two groups', 'all groups'])
+  assert.deepEqual(matched(undefined), matched('any'))
+  assert.deepEqual(matched('all'), ['all groups'])
+  for (const featureMatch of ['any', 'all'] as const) {
+    for (const [, features] of candidates) {
+      assert.equal(matchesMapFilters({ ...summary, features }, index.enemies, { ...filters, features: [], featureMatch }), true)
+      assert.equal(matchesMapFilters({ ...summary, features }, index.enemies, { ...filters, features: undefined, featureMatch }), true)
+    }
+  }
+})
+
+test('feature matching combines with search, content, environment, zone and status filters', () => {
+  const filters: MapFilters = {
+    query: '１－７ 術師', category: 'main', environment: 'NORMAL', zoneId: 'main_1', status: 'supported',
+    features: ['hole', 'emp'], featureMatch: 'all',
+  }
+  const map: MapSummary = { ...summary, diffGroup: 'NORMAL', features: ['hole', 'emp'] }
+  assert.equal(matchesMapFilters(map, index.enemies, filters), true)
+  for (const patch of [
+    { category: 'event' }, { environment: 'TOUGH' }, { zoneId: 'main_2' }, { status: 'missing' },
+    { query: '猟犬' }, { features: ['hole', 'grass'] },
+  ] as Partial<MapFilters>[]) {
+    assert.equal(matchesMapFilters(map, index.enemies, { ...filters, ...patch }), false)
+  }
+  const excluded: MapSummary = { ...map, status: 'excluded', spawnCount: null, reasons: ['conditional-spawn'] }
+  assert.equal(matchesMapFilters(excluded, index.enemies, { ...filters, status: 'all' }), true)
+})
+
+test('feature parsing distinguishes unavailable data from a checked map without supported features', () => {
+  const parse = (map: unknown) => parseMapIndex({ ...index, maps: [map] }).maps[0]
+  const features: MapFeatureId[] = ['periodic_damage', 'hole', 'emp']
+  const parsed = parse({ ...summary, features })
+  assert.deepEqual(parsed.features, features)
+  assert.notEqual(parsed.features, features)
+  assert.deepEqual(parse({ ...summary, features: [] }).features, [])
+  assert.equal(parse({ ...summary, features: null }).features, null)
+  assert.equal(parse(summary).features, null)
+  assert.deepEqual(parse({ ...summary, status: 'excluded', spawnCount: null, features }).features, features)
+  const missing = { ...summary, status: 'missing', spawnCount: null, enemyIds: [], detailFile: null }
+  assert.equal(parse(missing).features, null)
+  assert.equal(parse({ ...missing, features: null }).features, null)
+  assert.throws(() => parse({ ...missing, features: [] }))
+  assert.throws(() => parse({ ...missing, features: ['hole'] }))
+})
+
+test('feature parsing rejects unknown, duplicate or incorrectly typed feature values', () => {
+  for (const features of [
+    'hole', 1, true, {}, ['hole', 'hole'], ['future_feature'], ['__proto__'], ['constructor'], ['hole', 1], [null],
+  ]) assert.throws(() => parseMapIndex({ ...index, maps: [{ ...summary, features }] }))
+})
+
 test('malformed and duplicate map summaries or escaping detail paths are rejected', () => {
   for (const badSummary of [
     { ...summary, detailFile: '../private.json' }, { ...summary, detailFile: 'https://other.example/details-0.json' },
@@ -105,10 +169,12 @@ test('bundled map index and every lazy shard agree; missing and conditional maps
     if (map.detailFile) {
       const detailFile = shards.get(map.detailFile)!
       assert.equal(detailFile.generatedAt, generated.generatedAt)
+      assert.ok(Array.isArray(map.features), `${map.stageId}: available maps have checked feature data`)
       getMapDetail(detailFile, map)
     } else {
       assert.equal(map.status, 'missing')
       assert.equal(map.spawnCount, null)
+      assert.equal(map.features, null)
     }
   }
   const oneSeven = generated.maps.find((map) => map.stageId === 'main_01-07')!
@@ -120,6 +186,13 @@ test('bundled map index and every lazy shard agree; missing and conditional maps
   assert.equal(detail.grid[0].length, 11)
   assert.equal(detail.enemies.length, 6)
   assert.equal(generated.maps.find((map) => map.stageId === 'main_10-04')!.code, '10-5')
+  for (const [stageId, features] of [
+    ['wk_toxic_5', ['periodic_damage']], ['wk_kc_5', ['cost_none']], ['wk_melee_5', ['cost_slow', 'healing']],
+    ['main_01-07', ['emp']], ['main_04-04', ['crate', 'infection']], ['tr_08', ['crate']],
+    ['act18side_01', ['sp_slow']], ['act18d3_03', []],
+  ] as [string, MapFeatureId[]][]) {
+    assert.deepEqual(generated.maps.find((map) => map.stageId === stageId)?.features, features, stageId)
+  }
 })
 
 test('index and detail failures can retry, concurrent readers share one request, and unknown maps do not fetch', async (context) => {

@@ -1,6 +1,10 @@
 export type MapDataStatus = 'supported' | 'excluded' | 'missing'
 export type MapCategory = 'main' | 'event' | 'supply' | 'other'
 export type MapEnvironment = 'none' | 'EASY' | 'NORMAL' | 'TOUGH' | 'ALL' | 'other'
+export type MapFeatureId =
+  | 'periodic_damage' | 'sp_slow' | 'cost_none' | 'cost_slow'
+  | 'hole' | 'healing' | 'defup' | 'grass' | 'gazebo' | 'bigforce' | 'corrosion' | 'infection' | 'volcano'
+  | 'emp' | 'dsbell' | 'crate'
 
 export interface MapEnemyBase {
   name: string
@@ -19,6 +23,8 @@ export interface MapSummary {
   difficulty?: string
   diffGroup?: string
   status: MapDataStatus
+  /** [] means none of the supported feature checks matched; null or absent means unavailable. */
+  features?: MapFeatureId[] | null
   spawnCount: number | null
   enemyIds: string[]
   reasons: string[]
@@ -63,4 +69,6 @@ export interface MapFilters {
   environment: MapEnvironment | 'all'
   zoneId: string
   status: MapDataStatus | 'all'
+  features?: MapFeatureId[]
+  featureMatch?: 'any' | 'all'
 }

@@ -16,6 +16,25 @@ const text = (value) => typeof unwrap(value) === 'string' && unwrap(value).trim(
 const number = (value) => typeof unwrap(value) === 'number' && Number.isFinite(unwrap(value)) ? unwrap(value) : null
 const nonnegative = (value) => number(value) !== null && number(value) >= 0 ? number(value) : null
 const compare = (a, b) => a.localeCompare(b, 'en', { numeric: true })
+const array = (value) => Array.isArray(value) ? value : []
+const readBlackboard = (value) => Array.isArray(value)
+  ? Object.fromEntries(value.filter(record).map((entry) => [entry.key, entry.value]))
+  : record(value) ?? {}
+const TERRAIN_FEATURES = new Map([
+  'hole', 'healing', 'defup', 'grass', 'gazebo', 'bigforce', 'corrosion', 'infection', 'volcano',
+].map((id) => [`tile_${id}`, id]))
+const DEVICE_FEATURES = new Map([
+  ['trap_002_emp', 'emp'], ['trap_038_dsbell', 'dsbell'], ['trap_001_crate', 'crate'],
+])
+// The source uses these long intervals for stages without natural DP recovery.
+const DISABLED_COST_INTERVALS = new Set([999, 9999, 99999, 999999, 100000000])
+const isUnconditionalSchedule = (value) => record(value) && value.managedByScheduler !== false
+  && ['hiddenGroup', 'randomSpawnGroupKey', 'randomSpawnGroupPackKey', 'advancedWaveTag']
+    .every((key) => value[key] == null || value[key] === '')
+  && (value.weight == null || value.weight === 0)
+  && ['randomType', 'refreshType'].every((key) => value[key] == null || value[key] === '' || value[key] === 'ALWAYS')
+  && ['condition', 'conditions'].every((key) => value[key] == null || value[key] === ''
+    || value[key] === 'ALWAYS' || value[key] === true || (Array.isArray(value[key]) && value[key].length === 0))
 
 /** Include hidden and database-only enemies: maps reference more than handbook-visible enemies. */
 export function buildMapEnemyRegistry(handbookSource, databaseSource) {
@@ -90,6 +109,57 @@ export function extractMapGeometry(source) {
   return { grid: grid.map((row) => row.map((index) => translated.get(index))), tiles }
 }
 
+/** Base-level effects, used terrain, and available devices only; optional/challenge runes and conditional branches are not evaluated. */
+export function extractMapFeatures(source, geometry) {
+  const level = record(source)
+  if (!level) return null
+  const features = new Set()
+  const usedGeometry = geometry ?? extractMapGeometry(level)
+  for (const index of new Set(usedGeometry.grid.flat())) {
+    const feature = TERRAIN_FEATURES.get(usedGeometry.tiles[index]?.tileKey)
+    if (feature) features.add(feature)
+  }
+  for (const buff of array(level.globalBuffs)) {
+    if (buff?.playerSideMask != null && buff.playerSideMask !== 'ALL') continue
+    const blackboard = readBlackboard(buff?.blackboard)
+    if (buff?.prefabKey === 'periodic_damage'
+      && number(blackboard.damage) > 0 && number(blackboard.interval) > 0) features.add('periodic_damage')
+    if (buff?.prefabKey === 'character_in_magiccircuit_env'
+      && number(blackboard.sp_recover_ratio) < 0) features.add('sp_slow')
+  }
+  let costInterval = number(record(level.options)?.costIncreaseTime)
+  const costDisabled = DISABLED_COST_INTERVALS.has(costInterval)
+  for (const rune of array(level.runes)) {
+    if (rune?.key !== 'global_cost_recovery_mul' || !['ALL', 'NORMAL'].includes(rune.difficultyMask)
+      || rune.professionMask !== 1023 || rune.buildableMask !== 'ALL' || !isUnconditionalSchedule(rune)) continue
+    const scale = number(readBlackboard(rune.blackboard).scale)
+    // 12-17/13-20 adverse environments confirm that this multiplier scales the interval, not the recovery rate.
+    if (scale > 0) costInterval = (costInterval ?? 1) * scale
+  }
+  if (costDisabled || DISABLED_COST_INTERVALS.has(costInterval)) features.add('cost_none')
+  else if (costInterval > 1) features.add('cost_slow')
+
+  const activated = new Set(array(level.waves).filter(isUnconditionalSchedule)
+    .flatMap((wave) => array(wave.fragments).filter(isUnconditionalSchedule))
+    .flatMap((fragment) => array(fragment.actions)).filter(isUnconditionalSchedule)
+    .filter((action) => action?.actionType === 'ACTIVATE_PREDEFINED' && number(action.count) > 0
+      && Number.isSafeInteger(number(action.count)))
+    .map((action) => text(action.key)).filter(Boolean))
+  const predefines = record(level.predefines)
+  for (const kind of ['tokenInsts', 'tokenCards']) {
+    for (const token of array(predefines?.[kind])) {
+      const id = text(record(token?.inst)?.characterKey)
+      const feature = DEVICE_FEATURES.get(id)
+      if (!feature || (kind === 'tokenCards' && !(number(token?.initialCnt) > 0))) continue
+      // The crate filter means deployable obstacles, not obstacles already fixed on the map.
+      if (feature === 'crate' && kind !== 'tokenCards') continue
+      if (token.hidden === true && !activated.has(text(token.alias) ?? id)) continue
+      features.add(feature)
+    }
+  }
+  return [...features].sort(compare)
+}
+
 export function buildMapDatabase({
   stageTable, zoneTable, handbook, database, levels,
   generatedAt = new Date().toISOString(), sourceGeneratedAt = null,
@@ -116,7 +186,7 @@ export function buildMapDatabase({
       ...(text(stage?.diffGroup) ? { diffGroup: text(stage.diffGroup) } : {}),
     }
     if (!levelsById.has(levelId)) return {
-      ...base, status: 'missing', spawnCount: null, enemyIds: [], reasons: ['missing-level'], detailFile: null,
+      ...base, status: 'missing', spawnCount: null, enemyIds: [], features: null, reasons: ['missing-level'], detailFile: null,
     }
     const source = levelsById.get(levelId)
     const counts = buildEnemyHistogramCounts([{ levelId, data: source }])
@@ -139,7 +209,7 @@ export function buildMapDatabase({
     return {
       ...base, status: supported ? 'supported' : 'excluded',
       spawnCount: supported ? enemies.reduce((sum, enemy) => sum + enemy.count, 0) : null,
-      enemyIds, reasons, detailFile,
+      enemyIds, features: extractMapFeatures(source, geometry), reasons, detailFile,
     }
   })
   return {
