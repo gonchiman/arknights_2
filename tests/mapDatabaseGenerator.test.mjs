@@ -119,13 +119,19 @@ test('same display code keeps distinct environment levels and their difficulty m
 
 test('hidden enemies retain names, database level zero supplies base stats, and undefined values remain null', () => {
   const result = buildMapEnemyRegistry({ enemyData: { hidden: { name: '隠れた敵', hideInHandbook: true } } }, {
-    hidden: [{ level: 1, enemyData: { attributes: { maxHp: 9000 } } }, {
-      level: 0, enemyData: { attributes: { maxHp: { m_defined: true, m_value: 1500 }, magicResistance: { m_defined: false, m_value: 90 } } },
+    hidden: [{ level: 1, enemyData: { attributes: { maxHp: 9000, atk: 900, def: 800 } } }, {
+      level: 0, enemyData: { attributes: {
+        maxHp: { m_defined: true, m_value: 1500 }, atk: { m_defined: true, m_value: 300 },
+        def: { m_defined: false, m_value: 800 }, magicResistance: { m_defined: false, m_value: 90 },
+      } },
     }],
-    only_database: [{ level: 0, enemyData: { name: { m_defined: true, m_value: 'データベース敵' }, attributes: { maxHp: 2000, magicResistance: 0 } } }],
+    only_database: [{ level: 0, enemyData: {
+      name: { m_defined: true, m_value: 'データベース敵' },
+      attributes: { maxHp: 2000, atk: 0, def: { m_defined: true, m_value: 0 }, magicResistance: 0 },
+    } }],
   })
-  assert.deepEqual(result.hidden, { name: '隠れた敵', hp: 1500, resistance: null })
-  assert.deepEqual(result.only_database, { name: 'データベース敵', hp: 2000, resistance: 0 })
+  assert.deepEqual(result.hidden, { name: '隠れた敵', hp: 1500, attack: 300, defense: null, resistance: null })
+  assert.deepEqual(result.only_database, { name: 'データベース敵', hp: 2000, attack: 0, defense: 0, resistance: 0 })
 })
 
 test('matrix and nested-array sources retain asymmetric row and column order when compacting tiles', () => {
@@ -151,7 +157,7 @@ test('SPAWN-only enemies are included and registered-but-unused enemies stay zer
   const summary = output.index.maps[0]
   assert.deepEqual(summary.enemyIds, ['enemy_a', 'enemy_b', 'unregistered'])
   assert.equal(summary.spawnCount, 5)
-  assert.deepEqual(output.index.enemies.unregistered, { name: 'unregistered', hp: null, resistance: null })
+  assert.deepEqual(output.index.enemies.unregistered, { name: 'unregistered', hp: null, attack: null, defense: null, resistance: null })
   assert.deepEqual(output.details[summary.detailFile].maps[summary.levelId].enemies,
     [{ id: 'enemy_a', count: 3 }, { id: 'enemy_b', count: 0 }, { id: 'unregistered', count: 2 }])
 })

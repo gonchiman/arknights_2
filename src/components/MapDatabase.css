@@ -75,10 +75,10 @@
 .map-battle-facts dt { color: var(--text-muted); font-size: 11px; }
 .map-battle-facts dd { margin: 0; color: var(--text); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .map-enemy-heading { margin: 0 0 9px; font-size: 13px; font-weight: 500; }
-.map-enemy-table { min-width: 340px; }
+.map-enemy-table { min-width: 600px; }
 .map-enemy-table tr { cursor: default; }
 .map-enemy-table tr:hover { background: transparent; }
-.map-enemy-table th:first-child { width: 45%; }
+.map-enemy-table th:first-child { width: 32%; }
 .map-data-information { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; font-size: 11px; }
 .map-data-information summary, .map-source-notes summary { width: fit-content; color: var(--text-muted); cursor: pointer; }
 .map-data-information dl { display: grid; gap: 8px; margin: 12px 0; }

@@ -54,6 +54,8 @@ export function buildMapEnemyRegistry(handbookSource, databaseSource) {
     return [id, {
       name: text(handbookById.get(id)?.name) ?? text(base?.name) ?? id,
       hp: nonnegative(attributes?.maxHp),
+      attack: nonnegative(attributes?.atk),
+      defense: nonnegative(attributes?.def),
       resistance: nonnegative(attributes?.magicResistance),
     }]
   }))
@@ -216,7 +218,7 @@ export function buildMapDatabase({
     index: {
       schemaVersion: 1, generatedAt, sourceGeneratedAt, maps,
       enemies: Object.fromEntries([...usedEnemies].sort(compare).map((id) => [
-        id, registry[id] ?? { name: id, hp: null, resistance: null },
+        id, registry[id] ?? { name: id, hp: null, attack: null, defense: null, resistance: null },
       ])),
     },
     details,

@@ -10,7 +10,7 @@ const summary: MapSummary = {
 }
 const index: MapIndex = {
   schemaVersion: 1, generatedAt: '2026-09-30T00:00:00Z', sourceGeneratedAt: null,
-  maps: [summary], enemies: { enemy_a: { name: '術師', hp: 1000, resistance: 50 } },
+  maps: [summary], enemies: { enemy_a: { name: '術師', hp: 1000, attack: 250, defense: 0, resistance: 50 } },
 }
 const shard: MapDetailShard = {
   schemaVersion: 1, generatedAt: index.generatedAt, maps: {
@@ -141,6 +141,19 @@ test('malformed and duplicate map summaries or escaping detail paths are rejecte
   assert.equal(parseMapIndex(index).maps[0].code, '1-7')
 })
 
+test('enemy attack and defense preserve zero, normalize missing legacy values, and reject invalid stats', () => {
+  assert.deepEqual(parseMapIndex(index).enemies.enemy_a, index.enemies.enemy_a)
+  const { attack, defense, ...legacy } = index.enemies.enemy_a
+  assert.deepEqual(parseMapIndex({ ...index, enemies: { enemy_a: legacy } }).enemies.enemy_a,
+    { ...legacy, attack: null, defense: null })
+  for (const field of ['attack', 'defense']) {
+    for (const value of [-1, '250', NaN, Infinity]) {
+      assert.throws(() => parseMapIndex({ ...index, enemies: { enemy_a: { ...index.enemies.enemy_a, [field]: value } } }))
+    }
+    assert.equal(parseMapIndex({ ...index, enemies: { enemy_a: { ...index.enemies.enemy_a, [field]: null } } }).enemies.enemy_a[field as 'attack' | 'defense'], null)
+  }
+})
+
 test('shard validation prevents ragged rows, invalid palette references, wrong level ids, and unknown counts', () => {
   const detail = shard.maps[summary.levelId]
   for (const invalid of [
@@ -181,6 +194,9 @@ test('bundled map index and every lazy shard agree; missing and conditional maps
   assert.equal(oneSeven.code, '1-7')
   assert.equal(oneSeven.name, '暴君')
   assert.equal(oneSeven.spawnCount, 41)
+  assert.deepEqual(generated.enemies.enemy_1002_nsabr,
+    { name: '兵士', hp: 1650, attack: 200, defense: 100, resistance: 0 })
+  assert.equal(generated.enemies.enemy_1007_slime_2.defense, 0)
   const detail = getMapDetail(shards.get(oneSeven.detailFile!)!, oneSeven)
   assert.equal(detail.grid.length, 7)
   assert.equal(detail.grid[0].length, 11)

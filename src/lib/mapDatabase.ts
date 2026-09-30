@@ -25,10 +25,13 @@ export function parseMapIndex(source: unknown): MapIndex {
   const registry: Record<string, MapEnemyBase> = Object.create(null)
   for (const [id, raw] of Object.entries(enemies)) {
     const enemy = record(raw)
-    if (!id || !enemy || !isText(enemy.name) || !isNumberOrNull(enemy.hp) || !isNumberOrNull(enemy.resistance)) {
+    if (!id || !enemy || !isText(enemy.name) || !isNumberOrNull(enemy.hp) || !isNumberOrNull(enemy.resistance)
+      || (enemy.attack !== undefined && !isNumberOrNull(enemy.attack))
+      || (enemy.defense !== undefined && !isNumberOrNull(enemy.defense))) {
       throw new Error('マップの敵情報に不正な値があります。')
     }
-    registry[id] = { name: enemy.name, hp: enemy.hp, resistance: enemy.resistance }
+    registry[id] = { name: enemy.name, hp: enemy.hp, attack: (enemy.attack ?? null) as number | null,
+      defense: (enemy.defense ?? null) as number | null, resistance: enemy.resistance }
   }
   const seen = new Set<string>()
   const maps = root.maps.map((raw): MapSummary => {

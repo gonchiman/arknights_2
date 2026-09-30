@@ -9,6 +9,8 @@ export type MapFeatureId =
 export interface MapEnemyBase {
   name: string
   hp: number | null
+  attack: number | null
+  defense: number | null
   resistance: number | null
 }
 
