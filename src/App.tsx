@@ -9,6 +9,7 @@ import { GoldenglowHomePage } from './components/GoldenglowHomePage'
 import { SurtrHomePage } from './components/SurtrHomePage'
 import { SurtrS3Page } from './components/SurtrS3Page'
 import { SurtrDurationPage } from './components/SurtrDurationPage'
+import { SurtrRemnantAttacksPage } from './components/SurtrRemnantAttacksPage'
 import { GoldenglowPerformancePage } from './components/GoldenglowPerformancePage'
 import { GoldenglowTargetSwitchPage } from './components/GoldenglowTargetSwitchPage'
 import { GoldenglowTargetSwitchTwoPage } from './components/GoldenglowTargetSwitchTwoPage'
@@ -284,7 +285,7 @@ export default function App() {
 
         <main className="app-content">
         <PanelStateScope.Provider value={displayedRoute.view}>
-        {error && displayedRoute.view !== 'home' && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'enemy-analysis' && displayedRoute.view !== 'maps' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'surtr-home' && displayedRoute.view !== 'surtr-s3' && displayedRoute.view !== 'surtr-duration' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-target-switch-two' && displayedRoute.view !== 'goldenglow-single-trial' && displayedRoute.view !== 'goldenglow-trial-benchmark' && <section className="error-box" role="alert">{error}</section>}
+        {error && displayedRoute.view !== 'home' && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'enemy-analysis' && displayedRoute.view !== 'maps' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'surtr-home' && displayedRoute.view !== 'surtr-s3' && displayedRoute.view !== 'surtr-duration' && displayedRoute.view !== 'surtr-remnant-attacks' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-target-switch-two' && displayedRoute.view !== 'goldenglow-single-trial' && displayedRoute.view !== 'goldenglow-trial-benchmark' && <section className="error-box" role="alert">{error}</section>}
 
         {/* Keep the directory mounted while viewing a detail page so filters, sort and charts survive returning. */}
         {operatorDirectoryVisited && (displayedRoute.view === 'operators' || displayedRoute.view === 'operator-detail') && (
@@ -311,6 +312,8 @@ export default function App() {
           <SurtrS3Page rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
         ) : displayedRoute.view === 'surtr-duration' ? (
           <SurtrDurationPage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
+        ) : displayedRoute.view === 'surtr-remnant-attacks' ? (
+          <SurtrRemnantAttacksPage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
         ) : displayedRoute.view === 'goldenglow-guide' ? (
           <GoldenglowGuidePage rows={classifiedRows} loading={loading} error={error} onRetry={() => void load()} />
         ) : displayedRoute.view === 'goldenglow-performance' ? (

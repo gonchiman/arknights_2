@@ -1,4 +1,4 @@
-export type NavigationPage = 'home' | 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'enemy-analysis' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-duration' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
+export type NavigationPage = 'home' | 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'enemy-analysis' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -32,6 +32,13 @@ export const SURTR_ANALYSIS_ITEMS: readonly NavigationItem[] = [
     id: 'surtr-duration',
     href: '#/analysis/surtr/duration',
     label: 'S3 継続時間',
+    description: '',
+    section: 'operator-analysis',
+  },
+  {
+    id: 'surtr-remnant-attacks',
+    href: '#/analysis/surtr/remnant-attacks',
+    label: '余燼中の攻撃回数',
     description: '',
     section: 'operator-analysis',
   },
@@ -163,7 +170,7 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
   {
     id: 'surtr-home',
     ...SURTR_HOME_LINK,
-    description: 'S3 DPS・継続時間',
+    description: 'S3 DPS・継続時間・余燼中の攻撃回数',
     section: 'operator-analysis',
   },
   {

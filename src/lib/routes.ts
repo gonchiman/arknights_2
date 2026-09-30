@@ -12,6 +12,7 @@ export type AppRoute =
   | { view: 'surtr-home' }
   | { view: 'surtr-s3' }
   | { view: 'surtr-duration' }
+  | { view: 'surtr-remnant-attacks' }
   | { view: 'goldenglow-guide' }
   | { view: 'goldenglow-performance' }
   | { view: 'goldenglow-target-switch' }
@@ -117,6 +118,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/analysis/surtr') return { view: 'surtr-home' }
   if (hash === '#/analysis/surtr/s3') return { view: 'surtr-s3' }
   if (hash === '#/analysis/surtr/duration') return { view: 'surtr-duration' }
+  if (hash === '#/analysis/surtr/remnant-attacks') return { view: 'surtr-remnant-attacks' }
   if (hash === '#/analysis/goldenglow/performance') return { view: 'goldenglow-performance' }
   if (hash === '#/analysis/goldenglow/explosion') return { view: 'goldenglow-guide' }
   if (hash === '#/analysis/goldenglow/target-switch') return { view: 'goldenglow-target-switch' }

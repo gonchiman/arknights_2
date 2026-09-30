@@ -62,7 +62,7 @@ test('オペレーター分析は各オペレーターのトップをサイド�
       id: 'surtr-home',
       href: '#/analysis/surtr',
       label: 'スルト',
-      description: 'S3 DPS・継続時間',
+      description: 'S3 DPS・継続時間・余燼中の攻撃回数',
       section: 'operator-analysis',
     },
   ])
@@ -99,11 +99,12 @@ test('GGの既存の分析URLを引き続き開ける', () => {
   }
 })
 
-test('スルトの専用トップからS3分析を開き、詳細URLと区別する', () => {
+test('スルトの専用トップから各分析を開き、詳細URLと区別する', () => {
   assert.deepEqual(parseHashRoute(SURTR_HOME_LINK.href), { view: 'surtr-home' })
   assert.deepEqual(SURTR_ANALYSIS_ITEMS.map(({ id, href, label }) => [id, href, label, parseHashRoute(href).view]), [
     ['surtr-s3', '#/analysis/surtr/s3', 'S3 DPS分析', 'surtr-s3'],
     ['surtr-duration', '#/analysis/surtr/duration', 'S3 継続時間', 'surtr-duration'],
+    ['surtr-remnant-attacks', '#/analysis/surtr/remnant-attacks', '余燼中の攻撃回数', 'surtr-remnant-attacks'],
   ])
   assert.deepEqual(parseHashRoute('#/operators/char_350_surtr'), {
     view: 'operator-detail', operatorId: 'char_350_surtr',

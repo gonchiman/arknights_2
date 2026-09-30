@@ -1,0 +1,30 @@
+.surtr-remnant-fields { display: flex; align-items: end; flex-wrap: wrap; gap: 16px 24px; }
+.surtr-remnant-fields > .calculator-field { width: 180px; max-width: 100%; }
+.surtr-remnant-assumption-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
+.surtr-remnant-assumption-fields .calculator-field { min-width: 0; }
+.surtr-remnant-assumption-fields input, .surtr-remnant-assumption-fields select { width: 100%; min-width: 0; }
+.surtr-remnant-error { margin: 12px 0 0; color: var(--danger, #b42318); font-size: 12px; }
+.surtr-remnant-assumption-fields input[aria-invalid="true"] { border-color: var(--danger, #b42318); }
+.surtr-remnant-table { table-layout: fixed; min-width: 440px; }
+.surtr-remnant-table th:first-child { width: 31%; }
+.surtr-remnant-table td, .surtr-remnant-table thead th:not(:first-child) { text-align: center; }
+.surtr-remnant-table strong { font-weight: 600; }
+.surtr-remnant-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.surtr-remnant-pagination > span { margin-right: 8px; color: var(--text-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
+.surtr-remnant-pagination .button { min-height: 34px; font-size: 12px; }
+.surtr-remnant-estimate-help { display: inline-flex; color: var(--text-soft); font-size: 11px; }
+.surtr-remnant-estimate-help-content h4 { margin: 12px 0 4px; color: var(--text); font-size: inherit; }
+.surtr-remnant-estimate-help-content ul { margin: 4px 0 12px; padding-left: 20px; }
+.surtr-remnant-estimate-help-content li + li { margin-top: 6px; }
+.surtr-remnant-detail { width: min(860px, calc(100vw - 32px)); }
+.surtr-remnant-detail-conditions { margin: 0 0 16px; color: var(--text-soft); font-size: 12px; }
+.surtr-remnant-detail .surtr-remnant-table { min-width: 500px; }
+.surtr-remnant-hit-details .surtr-s3-table-wrap { margin-top: 12px; }
+.surtr-remnant-hit-details .surtr-s3-table tbody tr:last-child > * { border-bottom: 1px solid var(--border); }
+.surtr-remnant-hit-details .surtr-s3-table tfoot tr > * { border-bottom: 0; }
+@media (max-width: 640px) {
+  .surtr-remnant-assumption-fields { grid-template-columns: 1fr; gap: 12px; }
+  .surtr-remnant-table { font-size: 11px; }
+  .surtr-remnant-table .surtr-s3-column-label { gap: 4px; }
+  .surtr-remnant-pagination .button { min-height: 44px; }
+}
