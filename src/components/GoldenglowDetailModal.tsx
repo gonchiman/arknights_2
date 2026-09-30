@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react'
+import { lockPageScroll } from '../lib/pageScrollLock'
 import './GoldenglowDetailModal.css'
 
 export function GoldenglowDetailModal({ title, closeLabel, children, onClose, className, initialFocusRef, closeDisabled = false, closeOnContextMenu = false }: {
@@ -21,14 +22,13 @@ export function GoldenglowDetailModal({ title, closeLabel, children, onClose, cl
     if (!dialog) return
 
     const trigger = document.activeElement
-    const previousOverflow = document.documentElement.style.overflow
     if (!dialog.open) dialog.showModal()
-    document.documentElement.style.overflow = 'hidden'
+    const unlockScroll = lockPageScroll(document.documentElement)
     const focusFrame = window.requestAnimationFrame(() => (initialFocusRef?.current ?? titleRef.current)?.focus())
 
     return () => {
       window.cancelAnimationFrame(focusFrame)
-      document.documentElement.style.overflow = previousOverflow
+      unlockScroll()
       if (dialog.open) dialog.close()
       if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus({ preventScroll: true })
     }

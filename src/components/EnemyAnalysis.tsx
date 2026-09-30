@@ -6,6 +6,7 @@ import { ENEMY_LEVEL_LABELS } from './EnemyFilterPanel'
 import { EnemyAnalysisFilters } from './EnemyAnalysisFilters'
 import { EnemyDataContent, EnemyDataNotes } from './EnemyPageShared'
 import { EnemyStatisticsPanel, useEnemyStatisticsControls } from './EnemyStatisticsPanel'
+import { EnemyRatingReferencePanel } from './EnemyRatingReferencePanel'
 import './DamageCalculator.css'
 import './EnemyAnalysis.css'
 
@@ -54,6 +55,7 @@ export function EnemyAnalysis() {
             />}
           />
         </EnemyDataContent>
+        <EnemyRatingReferencePanel />
       </section>
       <EnemyDataNotes />
     </section>

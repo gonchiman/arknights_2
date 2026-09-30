@@ -31,6 +31,7 @@
 }
 
 .enemy-rating-reference-header h2 { margin: 0; font-size: 17px; font-weight: 600; }
+.enemy-rating-reference-actions { display: flex; align-items: center; gap: 8px; }
 .enemy-rating-reference-header button {
   min-height: 44px;
   flex-shrink: 0;
@@ -67,20 +68,6 @@
   font-size: 12px;
 }
 
-.enemy-rating-reference-table { table-layout: fixed; margin: 0; font-size: 12px; line-height: 1.5; }
-.enemy-rating-reference-table th,
-.enemy-rating-reference-table td {
-  position: static;
-  border: 1px solid var(--border);
-  padding: 6px 10px;
-  text-align: left;
-  overflow-wrap: anywhere;
-  font-variant-numeric: tabular-nums;
-}
-.enemy-rating-reference-table th:first-child { width: 64px; text-align: center; }
-.enemy-rating-reference-table tbody tr { cursor: default; }
-.enemy-rating-reference-table tbody tr:hover { background: transparent; }
-.enemy-rating-reference-table tbody th { background: var(--surface); color: var(--text); font-size: inherit; font-weight: 600; }
 .enemy-rating-reference-notes { margin-top: 12px; color: var(--text-muted); font-size: 11px; line-height: 1.7; }
 .enemy-rating-reference-notes p { margin: 0; }
 .enemy-rating-reference-notes p + p { margin-top: 6px; }
@@ -88,9 +75,9 @@
 @media (max-width: 400px) {
   .enemy-rating-reference-header { padding: 8px 12px; }
   .enemy-rating-reference-body { padding: 12px; }
-  .enemy-rating-reference-table th,
-  .enemy-rating-reference-table td { padding: 6px 8px; }
-  .enemy-rating-reference-table th:first-child { width: 52px; }
+  .enemy-rating-dialog .enemy-rating-reference-table th,
+  .enemy-rating-dialog .enemy-rating-reference-table td { padding: 6px 8px; }
+  .enemy-rating-dialog .enemy-rating-reference-table th:first-child { width: 52px; }
 }
 
 @media (pointer: coarse) {

@@ -22,6 +22,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
       ['enemy-analysis', 'enemy-analysis'],
+      ['maps', 'maps'],
       ['goldenglow-home', 'goldenglow-home'],
       ['surtr-home', 'surtr-home'],
       ['slide-maker', 'slide-maker'],
@@ -268,6 +269,20 @@ test('敵の各ページの不正なURLはデータベースへフォールバ�
     for (const suffix of ['/', '/extra', '?enemy=001', '-extra']) {
       assert.deepEqual(parseHashRoute(`${hash}${suffix}`), { view: 'operators' })
     }
+  }
+})
+
+test('マップデータベースは敵のページと同じカテゴリから独立したURLで開く', () => {
+  assert.deepEqual(parseHashRoute('#/maps'), { view: 'maps' })
+  assert.deepEqual(APP_NAV_ITEMS.find((item) => item.id === 'maps'), {
+    id: 'maps',
+    href: '#/maps',
+    label: 'マップデータベース',
+    description: 'マップの検索・地形・出現する敵',
+    section: 'analysis',
+  })
+  for (const suffix of ['/', '/extra', '?map=1-7', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/maps${suffix}`), { view: 'operators' })
   }
 })
 

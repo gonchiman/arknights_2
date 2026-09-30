@@ -1,4 +1,4 @@
-export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'enemy-analysis' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
+export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'enemy-analysis' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -136,6 +136,13 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     href: '#/analysis/enemies',
     label: '敵の統計分析',
     description: '敵ステータスの分布・統計量',
+    section: 'analysis',
+  },
+  {
+    id: 'maps',
+    href: '#/maps',
+    label: 'マップデータベース',
+    description: 'マップの検索・地形・出現する敵',
     section: 'analysis',
   },
   {

@@ -1,0 +1,12 @@
+.enemy-rating-image-options { display: grid; gap: 16px; min-width: 0; }
+.enemy-rating-image-stat-picker { min-width: 0; margin: 0; border: 0; padding: 0; }
+.enemy-rating-image-stat-picker legend { margin-bottom: 8px; padding: 0; font-size: 13px; font-weight: 600; }
+.enemy-rating-image-stat-options { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.enemy-rating-image-stat-options label { display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 14px; cursor: pointer; }
+.enemy-rating-image-stat-options input { width: 16px; height: 16px; margin: 0; accent-color: var(--text); }
+.enemy-rating-image-stat-options input:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+.enemy-rating-image-stat-picker:disabled { opacity: .6; }
+.enemy-rating-image-preview { overflow: auto; background: #fff; }
+.enemy-rating-image-preview-size { position: relative; margin: 0 auto; }
+.enemy-rating-image-preview-scale { position: absolute; top: 0; left: 0; transform-origin: top left; }
+.enemy-rating-image-preview:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }

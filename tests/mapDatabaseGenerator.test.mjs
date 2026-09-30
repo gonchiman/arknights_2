@@ -1,0 +1,118 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { buildMapDatabase, buildMapEnemyRegistry, extractMapGeometry, mapDetailFile } from '../scripts/generateMapDatabase.mjs'
+
+const tiles = [
+  { tileKey: 'tile_start', heightType: 'LOWLAND', buildableType: 'NONE', passableMask: 'ALL' },
+  { tileKey: 'tile_wall', heightType: 'HIGHLAND', buildableType: 'RANGED', passableMask: 'FLY_ONLY' },
+  { tileKey: 'tile_end', heightType: 'LOWLAND', buildableType: 'NONE', passableMask: 'ALL' },
+]
+const geometry = { map: [[2, 0, 1], [0, 1, 2]], tiles }
+const spawn = (id, count, extra = {}) => ({ actionType: 'SPAWN', key: id, count, ...extra })
+const level = (levelId, actions, extra = {}) => ({
+  levelId, data: {
+    mapData: geometry, enemyDbRefs: [{ id: 'enemy_a' }, { id: 'enemy_b' }],
+    waves: [{ fragments: [{ actions }] }], options: { maxLifePoint: 3, initialCost: 12, characterLimit: 7 }, ...extra,
+  },
+})
+const stage = (stageId, levelId, overrides = {}) => ({
+  stageId, levelId, code: '10-5', name: '都市の呼吸', zoneId: 'main_10', isStoryOnly: false,
+  difficulty: 'NORMAL', ...overrides,
+})
+const options = (levels, stages = {}) => ({
+  stageTable: { stages }, zoneTable: { zones: { main_10: { zoneNameFirst: '第十章', zoneNameSecond: '光冠残蝕' } } },
+  handbook: { enemyData: { enemy_a: { name: '兵士' }, enemy_b: { name: '猟犬', hideInHandbook: true } } },
+  database: {}, levels, generatedAt: '2026-09-30T00:00:00Z', sourceGeneratedAt: '2026-08-31T00:00:00Z',
+})
+
+test('stage display codes come from the stage table; normal and challenge share one level', () => {
+  const output = buildMapDatabase(options([level('obt/main/level_main_10-04', [spawn('enemy_a', 2), spawn('enemy_a', 3), spawn('enemy_b', 4)])], {
+    challenge: stage('main_10-04#f#', 'Obt/Main/level_main_10-04', { difficulty: 'FOUR_STAR' }),
+    normal: stage('main_10-04', 'obt/main/level_main_10-04'),
+    story: stage('main_10-04_story', 'obt/main/unused', { isStoryOnly: true }),
+  }))
+  assert.equal(output.index.maps.length, 1)
+  assert.deepEqual(output.index.maps[0], {
+    levelId: 'obt/main/level_main_10-04', stageId: 'main_10-04', code: '10-5', name: '都市の呼吸',
+    zoneId: 'main_10', zoneName: '第十章 光冠残蝕', difficulty: 'NORMAL', status: 'supported', spawnCount: 9,
+    enemyIds: ['enemy_a', 'enemy_b'], reasons: [], detailFile: mapDetailFile('obt/main/level_main_10-04'),
+  })
+  const detail = output.details[output.index.maps[0].detailFile].maps['obt/main/level_main_10-04']
+  assert.deepEqual(detail.enemies, [{ id: 'enemy_a', count: 5 }, { id: 'enemy_b', count: 4 }])
+  assert.equal(detail.life, 3)
+  assert.equal(detail.initialCost, 12)
+  assert.equal(detail.deployLimit, 7)
+})
+
+test('unsupported conditional spawn makes the entire map and every enemy count unknown', () => {
+  const output = buildMapDatabase(options([level('obt/conditional', [spawn('enemy_a', 9), spawn('enemy_b', 1, { hiddenGroup: 'phase2' })])], {
+    conditional: stage('conditional', 'obt/conditional'),
+  }))
+  const summary = output.index.maps[0]
+  assert.equal(summary.status, 'excluded')
+  assert.equal(summary.spawnCount, null)
+  assert.deepEqual(summary.reasons, ['hidden-spawn-group'])
+  assert.deepEqual(output.details[summary.detailFile].maps[summary.levelId].enemies,
+    [{ id: 'enemy_a', count: null }, { id: 'enemy_b', count: null }])
+})
+
+test('missing target levels remain searchable rather than disappearing or showing zero enemies', () => {
+  const output = buildMapDatabase(options([], { missing: stage('missing', 'obt/missing') }))
+  const summary = output.index.maps[0]
+  assert.equal(summary.status, 'missing')
+  assert.equal(summary.spawnCount, null)
+  assert.equal(summary.detailFile, null)
+  assert.deepEqual(summary.reasons, ['missing-level'])
+  assert.equal(Object.values(output.details).flatMap((shard) => Object.keys(shard.maps)).length, 0)
+})
+
+test('same display code keeps distinct environment levels and their difficulty metadata', () => {
+  const output = buildMapDatabase(options([], {
+    easy: stage('easy_10-04', 'obt/main/level_easy_10-04', { diffGroup: 'EASY' }),
+    normal: stage('main_10-04', 'obt/main/level_main_10-04', { diffGroup: 'NORMAL' }),
+    tough: stage('tough_10-04', 'obt/main/level_tough_10-04', { diffGroup: 'TOUGH' }),
+  }))
+  assert.equal(output.index.maps.length, 3)
+  assert.deepEqual(output.index.maps.map((map) => [map.code, map.difficulty, map.diffGroup]), [
+    ['10-5', 'NORMAL', 'EASY'], ['10-5', 'NORMAL', 'NORMAL'], ['10-5', 'NORMAL', 'TOUGH'],
+  ])
+})
+
+test('hidden enemies retain names, database level zero supplies base stats, and undefined values remain null', () => {
+  const result = buildMapEnemyRegistry({ enemyData: { hidden: { name: '隠れた敵', hideInHandbook: true } } }, {
+    hidden: [{ level: 1, enemyData: { attributes: { maxHp: 9000 } } }, {
+      level: 0, enemyData: { attributes: { maxHp: { m_defined: true, m_value: 1500 }, magicResistance: { m_defined: false, m_value: 90 } } },
+    }],
+    only_database: [{ level: 0, enemyData: { name: { m_defined: true, m_value: 'データベース敵' }, attributes: { maxHp: 2000, magicResistance: 0 } } }],
+  })
+  assert.deepEqual(result.hidden, { name: '隠れた敵', hp: 1500, resistance: null })
+  assert.deepEqual(result.only_database, { name: 'データベース敵', hp: 2000, resistance: 0 })
+})
+
+test('matrix and nested-array sources retain asymmetric row and column order when compacting tiles', () => {
+  const source = { mapData: { ...geometry, tiles: [...tiles, { ...tiles[0] }], map: [[2, 3, 1], [0, 1, 2]] } }
+  const result = extractMapGeometry(source)
+  assert.equal(result.tiles.length, 3)
+  assert.deepEqual(result.grid.map((row) => row.map((index) => result.tiles[index].tileKey)), [
+    ['tile_end', 'tile_start', 'tile_wall'], ['tile_start', 'tile_wall', 'tile_end'],
+  ])
+  const matrix = extractMapGeometry({ mapData: { tiles, map: { row_size: 2, column_size: 3, matrix_data: [2, 0, 1, 0, 1, 2] } } })
+  assert.deepEqual(matrix, result)
+  for (const badMap of [
+    [[0, 1], [2]], [[0, 99]], [[0, -1]], [[0, 1.5]],
+    { row_size: 2, column_size: 3, matrix_data: [0, 1] },
+    { row_size: 0, column_size: 3, matrix_data: [] },
+  ]) assert.throws(() => extractMapGeometry({ mapData: { tiles, map: badMap } }), /Invalid map/)
+})
+
+test('SPAWN-only enemies are included and registered-but-unused enemies stay zero on supported maps', () => {
+  const output = buildMapDatabase(options([level('obt/test', [spawn('enemy_a', 3), spawn('unregistered', 2)])], {
+    test: stage('test', 'obt/test'),
+  }))
+  const summary = output.index.maps[0]
+  assert.deepEqual(summary.enemyIds, ['enemy_a', 'enemy_b', 'unregistered'])
+  assert.equal(summary.spawnCount, 5)
+  assert.deepEqual(output.index.enemies.unregistered, { name: 'unregistered', hp: null, resistance: null })
+  assert.deepEqual(output.details[summary.detailFile].maps[summary.levelId].enemies,
+    [{ id: 'enemy_a', count: 3 }, { id: 'enemy_b', count: 0 }, { id: 'unregistered', count: 2 }])
+})

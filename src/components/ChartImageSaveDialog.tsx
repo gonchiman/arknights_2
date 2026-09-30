@@ -11,13 +11,16 @@ export interface ChartImageAspectSettings {
   height: string
 }
 
-export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspect, onAspectChange, canChooseLocation, saving, error, onClose, onSave, helpMode = 'inline', preview }: {
+export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspect, onAspectChange, aspectError, aspectHint = 'タイトル・凡例を含む画像全体の比率です。指定なしでは内容に合わせて自動調整します。', canChooseLocation, saving, saveDisabled = false, error, onClose, onSave, helpMode = 'inline', preview }: {
   initialFilename: string
   getDefaultFilename?: (aspectRatio?: number) => string
   aspect?: ChartImageAspectSettings
   onAspectChange?: (aspect: ChartImageAspectSettings) => void
+  aspectError?: string
+  aspectHint?: string
   canChooseLocation: boolean
   saving: boolean
+  saveDisabled?: boolean
   error: boolean
   onClose: () => void
   onSave: (filename: string, aspectRatio?: number) => void
@@ -34,13 +37,14 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
   const validationId = `${id}-validation`
   const aspectHintId = `${id}-aspect-hint`
   const aspectErrorId = `${id}-aspect-error`
-  const invalidAspect = aspect?.preset === 'custom'
+  const aspectValidationError = aspect?.preset === 'custom'
     && ![aspect.width, aspect.height].every((value) => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100)
+    ? '幅と高さを1〜100の整数で入力してください。' : aspectError
+  const invalidAspect = Boolean(aspectValidationError)
   const aspectRatio = !aspect || aspect.preset === 'auto' ? undefined : Number(aspect.width) / Number(aspect.height)
   const filename = customFilename ?? (getDefaultFilename?.(invalidAspect ? undefined : aspectRatio) ?? initialFilename)
   const validationError = validateFilename(filename)
   const filenameHint = '.png は省略できます。'
-  const aspectHint = 'タイトル・凡例を含む画像全体の比率です。指定なしでは内容に合わせて自動調整します。'
   const destinationHint = canChooseLocation
     ? '次の画面で保存先フォルダを選べます。'
     : 'このブラウザーでは保存先フォルダを選択できません。ブラウザーの設定に従ってダウンロードします。'
@@ -52,7 +56,7 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
     <form className="chart-image-save-form" aria-busy={saving}
       onSubmit={(event) => {
         event.preventDefault()
-        if (!saving && !composing.current && !validationError && !invalidAspect) onSave(filename.trim(), aspectRatio)
+        if (!saving && !saveDisabled && !composing.current && !validationError && !invalidAspect) onSave(filename.trim(), aspectRatio)
       }}
       onKeyDown={(event) => {
         if (event.key === 'Enter' && (composing.current || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229)) {
@@ -109,7 +113,7 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
               onChange={(event) => onAspectChange({ ...aspect, [key]: event.target.value })} />
           </label>)}
         </div>}
-        {invalidAspect && <p id={aspectErrorId} className="chart-image-save-error" role="alert">幅と高さを1〜100の整数で入力してください。</p>}
+        {invalidAspect && <p id={aspectErrorId} className="chart-image-save-error" role="alert">{aspectValidationError}</p>}
         <p id={aspectHintId} className={popoverHelp ? 'visually-hidden' : 'chart-image-save-hint'}>{aspectHint}</p>
       </fieldset>}
       {hasPreview && <div className="chart-image-save-preview">{preview}</div>}
@@ -117,7 +121,7 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
       {error && <p className="chart-image-save-error" role="alert">画像を保存できませんでした。保存先を確認して、もう一度お試しください。</p>}
       <div className="chart-image-save-actions">
         <button type="button" className="button secondary" disabled={saving} onClick={onClose}>キャンセル</button>
-        <button type="submit" className="button" disabled={saving || !!validationError || invalidAspect}>
+        <button type="submit" className="button" disabled={saving || saveDisabled || !!validationError || invalidAspect}>
           {saving ? '画像を保存中…' : canChooseLocation ? '保存先を選ぶ' : 'ダウンロード'}
         </button>
       </div>

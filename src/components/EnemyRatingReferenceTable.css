@@ -1,0 +1,23 @@
+.enemy-rating-reference-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.enemy-rating-reference-table th,
+.enemy-rating-reference-table td {
+  position: static;
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.enemy-rating-reference-table th:first-child { width: 64px; text-align: center; }
+.enemy-rating-reference-table thead th { background: var(--surface-soft); color: var(--text-soft); font-size: inherit; font-weight: 600; }
+.enemy-rating-reference-table tbody tr { cursor: default; }
+.enemy-rating-reference-table tbody tr:hover { background: transparent; }
+.enemy-rating-reference-table tbody th { background: var(--surface); color: var(--text); font-size: inherit; font-weight: 600; }
+.enemy-rating-range-bound { white-space: nowrap; }
