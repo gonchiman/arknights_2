@@ -19,6 +19,7 @@ import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImag
 import { SurtrDpsChart, SurtrDpsChartImage, SurtrDpsChartImagePreview, type SurtrDpsChartSeries, type SurtrDpsChartKind, type SurtrDpsChartYAxis } from './SurtrDpsChart'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import { SurtrDpsDetailModal, type SurtrDpsDetailSnapshot } from './SurtrDpsDetailModal'
+import { OperatorModuleComparison } from './OperatorModuleComparison'
 import './DamageCalculator.css'
 import './SurtrS3Page.css'
 
@@ -194,7 +195,10 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
     </div>
     <CollapsibleCalculatorPanel id="surtr-s3-info" number="01" title="オペレーター情報" defaultOpen={false}
       summary="スルト・昇進2" collapsedLabel="情報を表示">
-      {record && comparison.length > 0 ? <div className="surtr-s3-table-wrap"><table className="surtr-s3-table" aria-label="スキル中のステータス">
+      {record ?
+        <section aria-labelledby="surtr-s3-stats-title">
+          <h3 id="surtr-s3-stats-title" className="surtr-s3-info-title">スキル中のステータス</h3>
+          {comparison.length > 0 ? <div className="surtr-s3-table-wrap"><table className="surtr-s3-table" aria-label="スキル中のステータス">
         <thead><tr><th scope="col">スキル中のステータス</th>{comparison.map(item => <th key={item.id} scope="col">{item.label}</th>)}</tr></thead>
         <tbody>{[
           { label: '攻撃力', value: (item: typeof comparison[number]) => item.model ? format(item.model.effectiveAttack) : '—' },
@@ -203,9 +207,14 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
           { label: '術耐性無視', value: (item: typeof comparison[number]) => item.model ? format(item.model.resistanceIgnore) : '—' },
           { label: '術脆弱', value: (item: typeof comparison[number]) => item.model ? `${format(item.model.artsFragility * 100)}%` : '—' },
         ].map(row => <tr key={row.label}><th scope="row">{row.label}</th>{comparison.map(item => <td key={item.id}>{row.value(item)}</td>)}</tr>)}</tbody>
-      </table></div> : record ? <p role="status">比較するMODを選択してください。</p> : status}
+          </table></div> : <p role="status">比較するMODを選択してください。</p>}
+        </section> : status}
     </CollapsibleCalculatorPanel>
-    <CollapsibleCalculatorPanel id="surtr-s3-settings" number="02" title="比較条件"
+    <CollapsibleCalculatorPanel id="surtr-s3-modules" number="02" title="モジュール" defaultOpen={false}
+      summary="スルト" collapsedLabel="モジュールを表示">
+      {record ? <OperatorModuleComparison profile={record.operatorProfile} operatorName={record.operatorName} operatorId={record.operatorId} /> : status}
+    </CollapsibleCalculatorPanel>
+    <CollapsibleCalculatorPanel id="surtr-s3-settings" number="03" title="比較条件"
       summary={`${label}・潜在${effectiveSettings.potential}・${blockLabel}`} collapsedLabel="設定を表示">
       {record ? <>
         <div className="surtr-s3-fields">
@@ -236,7 +245,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
         </details>
       </> : status}
     </CollapsibleCalculatorPanel>
-    <CollapsibleCalculatorPanel id="surtr-s3-output" number="03" title="計算結果" summary={outputTitle} collapsedLabel="結果を表示" className="surtr-s3-output-panel"
+    <CollapsibleCalculatorPanel id="surtr-s3-output" number="04" title="計算結果" summary={outputTitle} collapsedLabel="結果を表示" className="surtr-s3-output-panel"
       headerActions={<>
         <label className="surtr-s3-output-control"><span>グラフ</span><select aria-label="グラフの表示形式" value={chartKind} onChange={event => setChartKind(event.target.value as SurtrDpsChartKind)}>
           <option value="bar">棒グラフ</option><option value="line">折れ線</option>

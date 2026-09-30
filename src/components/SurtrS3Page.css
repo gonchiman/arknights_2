@@ -27,6 +27,7 @@
 .surtr-s3-assumptions summary { cursor: pointer; }
 .surtr-s3-assumptions p { margin: 8px 0 0; }
 .surtr-s3-status { margin: 12px 0; color: var(--text-soft); font-size: 12px; }
+.surtr-s3-info-title { margin: 0 0 12px; font-size: 12px; }
 .surtr-s3-output-panel.open .collapsible-panel-heading-summary > span { display: none; }
 .surtr-s3-output-panel .collapsible-panel-header > .collapsible-panel-title { flex-basis: 210px; }
 .surtr-s3-output-panel .collapsible-panel-actions { position: relative; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 14px; min-width: 0; max-width: 100%; padding: 8px 12px; }
