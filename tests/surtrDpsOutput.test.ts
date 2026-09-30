@@ -1,10 +1,58 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { getSurtrDpsResistanceRating, getSurtrDpsResistanceSamples, isValidSurtrDpsResistanceRange, normalizeSurtrDpsResistanceRange } from '../src/lib/surtrDpsResistance.ts'
 import {
   getSurtrDpsOutputTsv,
   transformSurtrDpsSeries,
   type SurtrDpsOutputSeries,
 } from '../src/lib/surtrDpsOutput.ts'
+
+test('ゲーム内表記は各ランク内の代表値を1点ずつ使用する', () => {
+  const samples = getSurtrDpsResistanceSamples('ratings')
+  assert.deepEqual(samples, [0, 5, 15, 25, 40, 55, 65, 75, 85, 95])
+  assert.deepEqual(samples.map(value => getSurtrDpsResistanceRating(value)?.rating), ['E', 'D', 'C', 'B', 'B+', 'A', 'A+', 'S', 'S+', 'SS'])
+  samples[0] = 100
+  assert.equal(getSurtrDpsResistanceSamples('ratings')[0], 0)
+})
+
+test('ゲーム内表記は共通の術耐性ランク境界に従う', () => {
+  for (const [value, expected] of [[0, 'E'], [1, 'D'], [9, 'D'], [10, 'C'], [20, 'B'], [30, 'B+'], [50, 'A'], [60, 'A+'], [70, 'S'], [80, 'S+'], [90, 'S+'], [91, 'SS'], [100, 'SS']] as const) {
+    assert.equal(getSurtrDpsResistanceRating(value)?.rating, expected)
+  }
+  assert.equal(getSurtrDpsResistanceRating(5)?.label, '0 超 10 未満')
+  for (const value of [-1, 101, NaN, Infinity]) assert.equal(getSurtrDpsResistanceRating(value), null)
+})
+
+test('数値の刻みは従来の0〜100の比較点を維持する', () => {
+  assert.deepEqual(getSurtrDpsResistanceSamples(20), [0, 20, 40, 60, 80, 100])
+  assert.deepEqual(getSurtrDpsResistanceSamples(10), Array.from({ length: 11 }, (_, index) => index * 10))
+  for (const value of [undefined, 0, -1, 101, 0.5, NaN]) assert.deepEqual(getSurtrDpsResistanceSamples(value), getSurtrDpsResistanceSamples(20))
+})
+
+test('表示範囲の検証は整数の0〜100、開始より大きい終了を要求する', () => {
+  for (const range of [{ min: 0, max: 100 }, { min: 0, max: 50 }, { min: 99, max: 100 }]) {
+    assert.ok(isValidSurtrDpsResistanceRange(range))
+    assert.deepEqual(normalizeSurtrDpsResistanceRange(range), range)
+    assert.notEqual(normalizeSurtrDpsResistanceRange(range), range)
+  }
+  for (const range of [{ min: -1, max: 50 }, { min: 50, max: 101 }, { min: 50, max: 50 }, { min: 51, max: 50 }, { min: 0.5, max: 50 }, { min: 0, max: NaN }, { min: 0, max: Infinity }]) {
+    assert.equal(isValidSurtrDpsResistanceRange(range), false)
+    assert.deepEqual(normalizeSurtrDpsResistanceRange(range), { min: 0, max: 100 })
+  }
+})
+
+test('数値刻みは開始値を起点に終了値以下の点だけ生成する', () => {
+  assert.deepEqual(getSurtrDpsResistanceSamples(10, { min: 0, max: 50 }), [0, 10, 20, 30, 40, 50])
+  assert.deepEqual(getSurtrDpsResistanceSamples(10, { min: 15, max: 55 }), [15, 25, 35, 45, 55])
+  assert.deepEqual(getSurtrDpsResistanceSamples(20, { min: 0, max: 50 }), [0, 20, 40])
+  assert.deepEqual(getSurtrDpsResistanceSamples(10, { min: 99, max: 100 }), [99])
+})
+
+test('ランクの代表値を範囲で絞り、狭い範囲でも代表値を再計算しない', () => {
+  assert.deepEqual(getSurtrDpsResistanceSamples('ratings', { min: 0, max: 50 }), [0, 5, 15, 25, 40])
+  assert.deepEqual(getSurtrDpsResistanceSamples('ratings', { min: 10, max: 30 }), [15, 25])
+  assert.deepEqual(getSurtrDpsResistanceSamples('ratings', { min: 1, max: 4 }), [])
+})
 
 function series(): SurtrDpsOutputSeries[] {
   return [

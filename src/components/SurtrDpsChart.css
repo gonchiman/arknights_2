@@ -15,14 +15,19 @@
 .surtr-dps-chart-frame { position: relative; min-width: 0; outline-offset: 4px; }
 .surtr-dps-chart-frame:focus-visible { outline: 2px solid var(--text, #222); outline-offset: -2px; }
 .surtr-dps-chart-svg { display: block; max-width: 100%; overflow: visible; }
+.surtr-dps-chart-empty { fill: #666; font-size: 12px; }
 .surtr-dps-chart-grid { stroke: #e4e4e4; stroke-width: 1; }
 .surtr-dps-chart-grid-vertical { stroke: #f0f0f0; }
 .surtr-dps-chart-axis { fill: none; stroke: #aaa; stroke-width: 1; }
 .surtr-dps-chart-zero { stroke: #999; stroke-width: 1; }
 .surtr-dps-chart-tick { fill: #555; font-size: 11px; font-variant-numeric: tabular-nums; }
+.surtr-dps-chart-rating { font-weight: 600; }
 .surtr-dps-chart-axis-title { fill: #444; font-size: 12px; font-weight: 700; }
 .surtr-dps-chart-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .surtr-dps-chart-bar { stroke: none; }
+.surtr-dps-chart-value-label { fill: #444; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.surtr-dps-chart-value-background { fill: #fff; }
+.surtr-dps-chart-value-connector { stroke: #999; stroke-width: .75; }
 .surtr-dps-chart-active-band { fill: #f3f3f3; }
 .surtr-dps-chart-cursor > line { stroke: #777; stroke-width: 1; stroke-dasharray: 3 3; }
 .surtr-dps-chart-axis-caption { margin: 6px 0 0; color: #444; font-size: 12px; font-weight: 700; text-align: center; }

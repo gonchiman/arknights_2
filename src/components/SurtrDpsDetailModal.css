@@ -1,0 +1,17 @@
+.surtr-dps-detail-conditions { margin: 0 0 14px; color: var(--text-soft); font-size: 12px; line-height: 1.7; }
+.surtr-dps-detail-modules { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.surtr-dps-detail-modules button { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 8px 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text-soft); font: inherit; font-size: 12px; cursor: pointer; }
+.surtr-dps-detail-modules button[aria-pressed="true"] { border-color: var(--text); background: var(--surface-soft); color: var(--text); font-weight: 700; }
+.surtr-dps-detail-modules button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.surtr-dps-detail-modules i { width: 10px; height: 10px; }
+.surtr-dps-detail .gg-damage-detail-table { font-size: 12px; }
+.surtr-dps-detail .gg-damage-detail-table thead th { font-size: 11px; }
+.surtr-dps-detail .gg-damage-detail-table tr > :not(:last-child) { border-right: 1px solid var(--border); }
+.surtr-dps-detail .gg-damage-detail-table td { line-height: 1.7; }
+.surtr-dps-detail .surtr-dps-detail-result > * { background: var(--surface-soft); font-weight: 700; color: var(--text); }
+.surtr-dps-detail-notes { margin-top: 14px; color: var(--text-soft); font-size: 12px; line-height: 1.8; }
+.surtr-dps-detail-notes summary { cursor: pointer; }
+.surtr-dps-detail-notes p { margin: 8px 0 0; }
+@media (max-width: 640px) {
+  .surtr-dps-detail-modules button { min-height: 44px; }
+}

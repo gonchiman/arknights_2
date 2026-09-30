@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildMapDatabase, buildMapEnemyRegistry, extractMapGeometry, extractMapRoutes, extractMapWaves, mapDetailFile } from '../scripts/generateMapDatabase.mjs'
+import { buildMapDatabase, buildMapEnemyRegistry, extractMapFeatures, extractMapGeometry, extractMapRoutes, extractMapWaves, mapDetailFile } from '../scripts/generateMapDatabase.mjs'
 
 const tiles = [
   { tileKey: 'tile_start', heightType: 'LOWLAND', buildableType: 'NONE', passableMask: 'ALL' },
@@ -35,7 +35,7 @@ test('stage display codes come from the stage table; normal and challenge share 
   assert.deepEqual(output.index.maps[0], {
     levelId: 'obt/main/level_main_10-04', stageId: 'main_10-04', code: '10-5', name: '都市の呼吸',
     zoneId: 'main_10', zoneName: '第十章 光冠残蝕', zoneType: 'MAINLINE', difficulty: 'NORMAL', status: 'supported', spawnCount: 9,
-    enemyIds: ['enemy_a', 'enemy_b'], reasons: [], detailFile: mapDetailFile('obt/main/level_main_10-04'),
+    enemyIds: ['enemy_a', 'enemy_b'], features: [], reasons: [], detailFile: mapDetailFile('obt/main/level_main_10-04'),
   })
   const detail = output.details[output.index.maps[0].detailFile].maps['obt/main/level_main_10-04']
   assert.deepEqual(detail.enemies, [{ id: 'enemy_a', count: 5 }, { id: 'enemy_b', count: 4 }])
@@ -62,6 +62,7 @@ test('missing target levels remain searchable rather than disappearing or showin
   assert.equal(summary.status, 'missing')
   assert.equal(summary.spawnCount, null)
   assert.equal(summary.detailFile, null)
+  assert.equal(summary.features, null)
   assert.deepEqual(summary.reasons, ['missing-level'])
   assert.equal(Object.values(output.details).flatMap((shard) => Object.keys(shard.maps)).length, 0)
 })
@@ -85,7 +86,7 @@ test('zone classification uses the upstream type independently of IDs, names, an
     levelId: 'obt/main', stageId: 'main', code: '10-5', name: '都市の呼吸',
     zoneId: 'act_main', zoneName: '解離結合', zoneType: 'MAINLINE_ACTIVITY',
     difficulty: 'NORMAL', diffGroup: 'TOUGH', status: 'missing', spawnCount: null,
-    enemyIds: [], reasons: ['missing-level'], detailFile: null,
+    enemyIds: [], features: null, reasons: ['missing-level'], detailFile: null,
   })
   assert.equal(output.index.generatedAt, input.generatedAt)
   assert.equal(output.index.sourceGeneratedAt, input.sourceGeneratedAt)
@@ -99,7 +100,7 @@ test('missing zone records or types remain explicit UNKNOWN without inferring a 
     assert.deepEqual(output.index.maps[0], {
       levelId: 'obt/missing', stageId: 'missing', code: '10-5', name: '都市の呼吸',
       zoneId: 'main_10', zoneName: 'main_10', zoneType: 'UNKNOWN', difficulty: 'NORMAL',
-      status: 'missing', spawnCount: null, enemyIds: [], reasons: ['missing-level'], detailFile: null,
+      status: 'missing', spawnCount: null, enemyIds: [], features: null, reasons: ['missing-level'], detailFile: null,
     })
   }
 })
@@ -342,4 +343,175 @@ test('missing route topology and malformed starting positions remain explicit wi
     null, null, null, null, null, ...invalidStarts.map(() => ({ startPosition: null })),
     { startPosition: { row: 0, col: 0 } },
   ])
+})
+
+const featureSource = (extra = {}) => ({ mapData: geometry, ...extra })
+const buff = (prefabKey, blackboard) => ({ prefabKey, blackboard })
+const device = (characterKey, extra = {}) => ({ inst: { characterKey }, hidden: false, ...extra })
+const activate = (key, extra = {}) => ({ actionType: 'ACTIVATE_PREDEFINED', key, count: 1, ...extra })
+const featureWaves = (actions) => [{ fragments: [{ actions }] }]
+
+test('terrain features use occupied cells in either map representation, never unused palette entries', () => {
+  const ids = ['hole', 'healing', 'defup', 'grass', 'gazebo', 'bigforce', 'corrosion', 'infection', 'volcano']
+  const featureTiles = ids.map((id) => ({ tileKey: `tile_${id}` }))
+  for (const map of [
+    [ids.map((_, index) => index)],
+    { row_size: 1, column_size: ids.length, matrix_data: ids.map((_, index) => index) },
+  ]) assert.deepEqual(extractMapFeatures({ mapData: { map, tiles: featureTiles } }), [...ids].sort())
+  assert.deepEqual(extractMapFeatures({ mapData: {
+    map: [[0, 0, 1]], tiles: [...tiles, ...featureTiles],
+  } }), [])
+  assert.deepEqual(extractMapFeatures({ mapData: {
+    map: [[0, 0, 1]], tiles: [{ tileKey: 'tile_hole' }, { tileKey: 'tile_healing_fake' }, ...featureTiles],
+  } }), ['hole'])
+})
+
+test('environment features require exact buffs and active numeric parameters in array or dictionary blackboards', () => {
+  for (const asBlackboard of [
+    (values) => values,
+    (values) => Object.entries(values).map(([key, value]) => ({ key, value })),
+  ]) {
+    assert.deepEqual(extractMapFeatures(featureSource({ globalBuffs: [
+      buff('periodic_damage', asBlackboard({ damage: 25, interval: 0.5 })),
+      buff('character_in_magiccircuit_env', asBlackboard({
+        sp_recover_ratio: -0.5, 'character_in_magiccircuit[normal].sp_recover_ratio': 0.5,
+      })),
+    ] })), ['periodic_damage', 'sp_slow'])
+  }
+  for (const blackboard of [{ damage: 0, interval: 0.5 }, { damage: -25, interval: 0.5 },
+    { damage: 25, interval: 0 }, { damage: '25', interval: 0.5 }, { damage: 25 }]) {
+    assert.deepEqual(extractMapFeatures(featureSource({ globalBuffs: [buff('periodic_damage', blackboard)] })), [])
+  }
+  for (const blackboard of [{ sp_recover_ratio: 0 }, { sp_recover_ratio: 0.5 },
+    { 'character_in_magiccircuit[normal].sp_recover_ratio': -0.5 }, { sp_recover_ratio: '-0.5' }]) {
+    assert.deepEqual(extractMapFeatures(featureSource({ globalBuffs: [buff('character_in_magiccircuit_env', blackboard)] })), [])
+  }
+  assert.deepEqual(extractMapFeatures(featureSource({ globalBuffs: [
+    buff('periodic_damage_conditional', { damage: 25, interval: 0.5 }),
+    buff('unrelated', { sp_recover_ratio: -0.5 }),
+  ] })), [])
+  assert.deepEqual(extractMapFeatures(featureSource({ globalBuffs: [
+    { ...buff('periodic_damage', { damage: 25, interval: 0.5 }), playerSideMask: 'UNKNOWN' },
+  ] })), [])
+})
+
+test('cost features distinguish known disabled intervals from slower recovery and never infer from kill rewards', () => {
+  for (const costIncreaseTime of [999, 9999, 99999, 999999, 100000000]) {
+    assert.deepEqual(extractMapFeatures(featureSource({ options: { costIncreaseTime } })), ['cost_none'])
+  }
+  for (const costIncreaseTime of [2, 3]) {
+    assert.deepEqual(extractMapFeatures(featureSource({ options: { costIncreaseTime } })), ['cost_slow'])
+  }
+  for (const costIncreaseTime of [undefined, null, 0, -1, 0.85, 1, '3']) {
+    assert.deepEqual(extractMapFeatures(featureSource({
+      options: { costIncreaseTime }, globalBuffs: [buff('kill_to_add_cost', { cost: 1 })],
+    })), [])
+  }
+})
+
+test('unconditional whole-map base runes scale cost recovery intervals without applying optional or challenge variants', () => {
+  const rune = {
+    key: 'global_cost_recovery_mul', difficultyMask: 'ALL', professionMask: 1023, buildableMask: 'ALL',
+    blackboard: [{ key: 'scale', value: 3 }],
+  }
+  for (const difficultyMask of ['ALL', 'NORMAL']) {
+    assert.deepEqual(extractMapFeatures(featureSource({ options: { costIncreaseTime: 1 },
+      runes: [{ ...rune, difficultyMask }],
+    })), ['cost_slow'])
+  }
+  assert.deepEqual(extractMapFeatures(featureSource({ options: { costIncreaseTime: 1 },
+    runes: [{ ...rune, blackboard: { scale: 1.3333 } }],
+  })), ['cost_slow'])
+  assert.deepEqual(extractMapFeatures(featureSource({ options: { costIncreaseTime: 99999 }, runes: [rune] })), ['cost_none'])
+  assert.deepEqual(extractMapFeatures(featureSource({ options: { costIncreaseTime: 2 },
+    runes: [{ ...rune, blackboard: { scale: 0.5 } }],
+  })), [])
+  for (const change of [
+    { difficultyMask: 'FOUR_STAR' }, { difficultyMask: 'SIX_STAR' }, { difficultyMask: 7 },
+    { professionMask: 'MEDIC' }, { buildableMask: 'RANGED' }, { condition: 'challenge' },
+    { key: 'cbuff_char_cost' }, { blackboard: { scale: 0 } }, { blackboard: { scale: '3' } },
+  ]) {
+    assert.deepEqual(extractMapFeatures(featureSource({ options: { costIncreaseTime: 1 },
+      runes: [{ ...rune, ...change }],
+    })), [])
+  }
+  assert.deepEqual(extractMapFeatures(featureSource({ optionalRunes: [rune] })), [])
+  assert.deepEqual(extractMapFeatures(featureSource({ runes: [{
+    ...rune, key: 'env_gbuff_new', blackboard: [{ key: 'key', valueStr: 'sp_recovery_reduction' },
+      { key: 'sp_recovery_per_sec', value: 4 }],
+  }] })), [])
+})
+
+test('device features include visible instances and nonempty cards, deduplicated by their exact character IDs', () => {
+  assert.deepEqual(extractMapFeatures(featureSource({ predefines: {
+    tokenInsts: [device('trap_002_emp'), device('trap_038_dsbell'), device('trap_002_emp')],
+    tokenCards: [device('trap_001_crate', { initialCnt: 5 })],
+  } })), ['crate', 'dsbell', 'emp'])
+  assert.deepEqual(extractMapFeatures(featureSource({ predefines: {
+    tokenInsts: [device('trap_001_crate')],
+    tokenCards: [device('trap_002_emp', { initialCnt: 1 })],
+  } })), ['emp'])
+  assert.deepEqual(extractMapFeatures(featureSource({ predefines: {
+    tokenInsts: [device('trap_002_emp_extra'), device('trap_038_dsbell', { hidden: true }), device('trap_001_crate')],
+    tokenCards: [device('trap_001_crate', { initialCnt: 0 }), device('trap_001_crate', { initialCnt: -1 })],
+  } })), [])
+})
+
+test('hidden devices are included only when an unconditional scheduled action activates their ID or alias', () => {
+  assert.deepEqual(extractMapFeatures(featureSource({ predefines: {
+    tokenInsts: [device('trap_002_emp', { hidden: true, alias: 'emp#1' })],
+    tokenCards: [device('trap_001_crate', { hidden: true, initialCnt: 3 })],
+  }, waves: featureWaves([activate('emp#1'), activate('trap_001_crate')]) })), ['crate', 'emp'])
+  for (const change of [
+    { hiddenGroup: 'challenge' }, { randomSpawnGroupKey: 'choice' }, { randomSpawnGroupPackKey: 'pack' },
+    { randomType: 'RANDOM' }, { refreshType: 'RANDOM' }, { managedByScheduler: false }, { count: 0 },
+    { count: 0.5 }, { weight: 2 }, { condition: 'challenge' }, { conditions: ['challenge'] },
+    { actionType: 'PREVIEW_CURSOR' }, { key: 'trap_002_emp' },
+  ]) {
+    assert.deepEqual(extractMapFeatures(featureSource({ predefines: {
+      tokenInsts: [device('trap_002_emp', { hidden: true, alias: 'emp#1' })],
+    }, waves: featureWaves([activate('emp#1', change)]) })), [])
+  }
+  assert.deepEqual(extractMapFeatures(featureSource({ predefines: {
+    tokenCards: [device('trap_001_crate', { hidden: true, initialCnt: 0 })],
+  }, waves: featureWaves([activate('trap_001_crate')]) })), [])
+  for (const change of [{ advancedWaveTag: 'optional' }, { hiddenGroup: 'challenge' }, { conditions: ['branch'] }]) {
+    const predefines = { tokenInsts: [device('trap_002_emp', { hidden: true })] }
+    assert.deepEqual(extractMapFeatures(featureSource({ predefines,
+      waves: [{ ...featureWaves([activate('trap_002_emp')])[0], ...change }],
+    })), [])
+    assert.deepEqual(extractMapFeatures(featureSource({ predefines,
+      waves: [{ fragments: [{ actions: [activate('trap_002_emp')], ...change }] }],
+    })), [])
+  }
+})
+
+test('conditional, optional, challenge-only, and unrelated device or effect definitions do not become features', () => {
+  const effect = buff('periodic_damage', { damage: 25, interval: 0.5 })
+  const tokens = { tokenInsts: [device('trap_002_emp')] }
+  assert.deepEqual(extractMapFeatures(featureSource({
+    optionalRunes: [effect], runes: [effect], hardPredefines: tokens,
+    predefines: { tokenInsts: [device('trap_038_dsbell', { hidden: true })], characterInsts: tokens.tokenInsts },
+    branches: { branch: { phases: featureWaves([activate('trap_038_dsbell')]) } },
+  })), [])
+  for (const globalBuffs of [undefined, null, {}]) {
+    assert.deepEqual(extractMapFeatures(featureSource({ globalBuffs, predefines: { tokenInsts: {}, tokenCards: null } })), [])
+  }
+  assert.equal(extractMapFeatures(null), null)
+  assert.equal(extractMapFeatures(undefined), null)
+})
+
+test('features remain available when enemy counts are excluded, while missing source is explicitly unknown', () => {
+  const source = level('obt/conditional', [spawn('enemy_a', 2, { hiddenGroup: 'phase2' })], {
+    mapData: { map: [[0]], tiles: [{ tileKey: 'tile_hole' }] }, options: { costIncreaseTime: 3 },
+  })
+  const output = buildMapDatabase(options([source], {
+    conditional: stage('conditional', 'obt/conditional'), missing: stage('missing', 'obt/missing'),
+  }))
+  assert.equal(output.index.schemaVersion, 1)
+  const present = output.index.maps.find((map) => map.stageId === 'conditional')
+  assert.equal(present.status, 'excluded')
+  assert.equal(present.spawnCount, null)
+  assert.deepEqual(present.features, ['cost_slow', 'hole'])
+  assert.equal(output.index.maps.find((map) => map.stageId === 'missing').features, null)
 })

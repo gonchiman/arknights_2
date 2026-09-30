@@ -26,10 +26,44 @@ test('Surtr filename distinguishes chart kind and only active bar spacing', () =
   assert.notEqual(bars, getSurtrDpsImageFilename({ ...settings, kind: 'bar', barStep: 10 }))
 })
 
+test('Surtr rank sampling filenames record active rank mode and only additional points', () => {
+  const ranked = getSurtrDpsImageFilename({ ...settings, barStep: 'ratings' })
+  assert.match(ranked, /術耐性ランク代表値_集合棒/)
+  assert.notEqual(ranked, getSurtrDpsImageFilename(settings))
+  assert.equal(ranked, getSurtrDpsImageFilename({ ...settings, barStep: 'ratings', selectedResistance: 5 }))
+  assert.match(getSurtrDpsImageFilename({ ...settings, barStep: 'ratings', selectedResistance: 10 }), /追加術耐性10/)
+  assert.match(getSurtrDpsImageFilename({ ...settings, barStep: 'ratings', selectedResistance: 100 }), /追加術耐性100/)
+  assert.equal(getSurtrDpsImageFilename({ ...settings, kind: 'line', barStep: 'ratings' }), getSurtrDpsImageFilename({ ...settings, kind: 'line', barStep: 20 }))
+})
+
+test('Surtr image filenames record the range for bars, ranks and lines', () => {
+  assert.equal(getSurtrDpsImageFilename(settings), getSurtrDpsImageFilename({ ...settings, resistanceRange: { min: 0, max: 100 } }))
+  const resistanceRange = { min: 0, max: 50 }
+  assert.match(getSurtrDpsImageFilename({ ...settings, barStep: 10, resistanceRange }), /術耐性0-50刻み10/)
+  assert.match(getSurtrDpsImageFilename({ ...settings, barStep: 'ratings', resistanceRange }), /術耐性0-50ランク代表値/)
+  assert.match(getSurtrDpsImageFilename({ ...settings, kind: 'line', resistanceRange }), /術耐性0-50_折れ線/)
+  const limited = getSurtrDpsImageFilename({ ...settings, barStep: 10, resistanceRange })
+  assert.equal(limited, getSurtrDpsImageFilename({ ...settings, barStep: 10, resistanceRange, selectedResistance: 75 }))
+  assert.match(getSurtrDpsImageFilename({ ...settings, barStep: 10, resistanceRange, selectedResistance: 45 }), /追加術耐性45/)
+  const shifted = { min: 15, max: 55 }
+  assert.equal(getSurtrDpsImageFilename({ ...settings, barStep: 10, resistanceRange: shifted }),
+    getSurtrDpsImageFilename({ ...settings, barStep: 10, resistanceRange: shifted, selectedResistance: 25 }))
+  assert.match(getSurtrDpsImageFilename({ ...settings, barStep: 10, resistanceRange: shifted, selectedResistance: 20 }), /追加術耐性20/)
+})
+
 test('Surtr filename defaults match the visible initial chart settings', () => {
   assert.equal(getSurtrDpsImageFilename(settings), getSurtrDpsImageFilename({
-    ...settings, kind: 'bar', barStep: 20, metric: 'total', precision: 0, gridStyle: 'solid', yAxis: { mode: 'zero' },
+    ...settings, kind: 'bar', barStep: 20, showValues: false, metric: 'total', precision: 0, gridStyle: 'solid', yAxis: { mode: 'zero' },
   }))
+})
+
+test('Surtr filename includes value labels only for bar charts', () => {
+  const bars = getSurtrDpsImageFilename(settings)
+  const labeled = getSurtrDpsImageFilename({ ...settings, showValues: true })
+  assert.match(labeled, /集合棒_数値あり/)
+  assert.notEqual(bars, labeled)
+  assert.equal(getSurtrDpsImageFilename({ ...settings, kind: 'line' }),
+    getSurtrDpsImageFilename({ ...settings, kind: 'line', showValues: true }))
 })
 
 test('Surtr filename distinguishes output metric and active baseline only', () => {

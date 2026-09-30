@@ -1,4 +1,5 @@
-import type { MapCategory, MapEnvironment, MapDetail, MapDetailShard, MapEnemyBase, MapFilters, MapIndex, MapRoute, MapSummary, MapTile, MapWave, MapWaveAction, MapWaveFragment } from '../types/map.ts'
+import type { MapCategory, MapEnvironment, MapDetail, MapDetailShard, MapEnemyBase, MapFeatureId, MapFilters, MapIndex, MapRoute, MapSummary, MapTile, MapWave, MapWaveAction, MapWaveFragment } from '../types/map.ts'
+import { MAP_FEATURE_LABELS } from './mapFeatures.ts'
 
 const APP_BASE = import.meta.env?.BASE_URL ?? '/'
 const DATA_BASE = `${APP_BASE.endsWith('/') ? APP_BASE : `${APP_BASE}/`}data/maps/`
@@ -10,6 +11,8 @@ const isNumberOrNull = (value: unknown): value is number | null =>
   value === null || (typeof value === 'number' && Number.isFinite(value) && value >= 0)
 const isCountOrNull = (value: unknown): value is number | null => value === null || isCount(value)
 const strings = (value: unknown): value is string[] => Array.isArray(value) && value.every(isText)
+const featureIds = (value: unknown): value is MapFeatureId[] => strings(value)
+  && value.every((id) => Object.hasOwn(MAP_FEATURE_LABELS, id)) && new Set(value).size === value.length
 const detailFilename = (value: unknown): value is string => typeof value === 'string' && /^details-[0-9a-f]\.json$/.test(value)
 
 export function parseMapIndex(source: unknown): MapIndex {
@@ -37,10 +40,11 @@ export function parseMapIndex(source: unknown): MapIndex {
       || (map.diffGroup !== undefined && !isText(map.diffGroup))
       || !['supported', 'excluded', 'missing'].includes(String(map.status))
       || !isCountOrNull(map.spawnCount) || !strings(map.enemyIds) || !strings(map.reasons)
+      || !(map.features === undefined || map.features === null || featureIds(map.features))
       || new Set(map.enemyIds).size !== map.enemyIds.length
       || map.enemyIds.some((id) => !Object.hasOwn(registry, id))
       || (map.status === 'missing'
-        ? map.detailFile !== null || map.spawnCount !== null || map.enemyIds.length !== 0
+        ? map.detailFile !== null || map.spawnCount !== null || map.enemyIds.length !== 0 || Array.isArray(map.features)
         : !detailFilename(map.detailFile))
       || (map.status === 'supported' ? !isCount(map.spawnCount) || map.reasons.length !== 0 : map.spawnCount !== null)) {
       throw new Error('マップ一覧に不正な値があります。')
@@ -53,6 +57,7 @@ export function parseMapIndex(source: unknown): MapIndex {
       ...(isText(map.difficulty) ? { difficulty: map.difficulty } : {}),
       ...(isText(map.diffGroup) ? { diffGroup: map.diffGroup } : {}),
       status: map.status as MapSummary['status'], spawnCount: map.spawnCount,
+      features: featureIds(map.features) ? [...map.features] : null,
       enemyIds: [...map.enemyIds], reasons: [...map.reasons], detailFile: map.detailFile as string | null,
     }
   })
@@ -257,6 +262,12 @@ export function matchesMapFilters(
   if (filters.environment !== 'all' && filters.environment !== getMapEnvironment(map)) return false
   if (filters.zoneId !== 'all' && filters.zoneId !== map.zoneId) return false
   if (filters.status !== 'all' && filters.status !== map.status) return false
+  if (filters.features?.length) {
+    const features = map.features
+    if (!features) return false
+    const hasFeature = (feature: MapFeatureId) => features.includes(feature)
+    if (filters.featureMatch === 'all' ? !filters.features.every(hasFeature) : !filters.features.some(hasFeature)) return false
+  }
   const terms = normalize(filters.query).split(/\s+/).filter(Boolean)
   if (terms.length === 0) return true
   const searchable = normalize([
