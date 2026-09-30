@@ -2,7 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { getMapCategory, getMapEnvironment, getMapDetail, loadMapDatabase, loadMapDetail, matchesMapFilters, parseMapDetailShard, parseMapIndex } from '../src/lib/mapDatabase.ts'
-import type { MapDetailShard, MapFeatureId, MapFilters, MapIndex, MapSummary } from '../src/types/map.ts'
+import { getMapSpecifiedSpawnCount } from '../src/lib/mapWaves.ts'
+import type { MapDetailShard, MapFeatureId, MapFilters, MapIndex, MapSummary, MapWave, MapWaveAction } from '../src/types/map.ts'
 
 const summary: MapSummary = {
   levelId: 'obt/main/level_main_01-07', stageId: 'main_01-07', code: '1-7', name: '暴君', zoneId: 'main_1',
@@ -182,8 +183,9 @@ test('bundled map index and every lazy shard agree; missing and conditional maps
     if (map.detailFile) {
       const detailFile = shards.get(map.detailFile)!
       assert.equal(detailFile.generatedAt, generated.generatedAt)
+      assert.notEqual(getMapDetail(detailFile, map).waves, undefined)
+      assert.notEqual(getMapDetail(detailFile, map).routes, undefined)
       assert.ok(Array.isArray(map.features), `${map.stageId}: available maps have checked feature data`)
-      getMapDetail(detailFile, map)
     } else {
       assert.equal(map.status, 'missing')
       assert.equal(map.spawnCount, null)
@@ -201,7 +203,23 @@ test('bundled map index and every lazy shard agree; missing and conditional maps
   assert.equal(detail.grid.length, 7)
   assert.equal(detail.grid[0].length, 11)
   assert.equal(detail.enemies.length, 6)
+  assert.ok(Array.isArray(detail.waves))
+  assert.equal(getMapSpecifiedSpawnCount(detail.waves.flatMap((wave) => wave.fragments.flatMap((fragment) => fragment.actions))), 41)
   assert.equal(generated.maps.find((map) => map.stageId === 'main_10-04')!.code, '10-5')
+  const nineFive = generated.maps.find((map) => map.stageId === 'main_09-04')!
+  assert.equal(nineFive.code, '9-5')
+  const nineFiveDetail = getMapDetail(shards.get(nineFive.detailFile!)!, nineFive)
+  assert.equal(nineFiveDetail.grid.length, 8)
+  assert.equal(nineFiveDetail.grid[0].length, 11)
+  assert.equal(nineFiveDetail.routes?.length, 22)
+  assert.deepEqual(nineFiveDetail.routes?.map((route) => route?.startPosition), [
+    ...Array.from({ length: 4 }, () => ({ row: 6, col: 10 })),
+    ...Array.from({ length: 3 }, () => ({ row: 2, col: 0 })),
+    { row: 0, col: 0 }, ...Array.from({ length: 2 }, () => ({ row: 2, col: 0 })),
+    ...Array.from({ length: 4 }, () => ({ row: 6, col: 10 })),
+    ...Array.from({ length: 4 }, () => ({ row: 2, col: 0 })),
+    ...Array.from({ length: 4 }, () => ({ row: 6, col: 10 })),
+  ])
   for (const [stageId, features] of [
     ['wk_toxic_5', ['periodic_damage']], ['wk_kc_5', ['cost_none']], ['wk_melee_5', ['cost_slow', 'healing']],
     ['main_01-07', ['emp']], ['main_04-04', ['crate', 'infection']], ['tr_08', ['crate']],
@@ -234,4 +252,113 @@ test('index and detail failures can retry, concurrent readers share one request,
   assert.equal(a, b)
   assert.equal(detailCalls, 2)
   assert.deepEqual(a.grid, [[1, 0], [0, 1]])
+})
+
+const waveAction: MapWaveAction = {
+  actionType: 'SPAWN', key: 'enemy_a', count: 3, preDelay: 0.1, interval: 0.2, routeIndex: 0,
+  hiddenGroup: 'ambush', randomSpawnGroupKey: 'random-group', randomSpawnGroupPackKey: 'pack',
+  randomType: 'ALWAYS', refreshType: 'ALWAYS', managedByScheduler: true, blockFragment: false,
+  dontBlockWave: true, spawnKind: 'conditional', reasons: ['conditional-spawn'],
+}
+const wave: MapWave = {
+  preDelay: 1, postDelay: 2, maxTimeWaitingForNextWave: -1, advancedWaveTag: 'next',
+  fragments: [{ preDelay: 3, actions: [waveAction, {
+    ...waveAction, actionType: 'DISPLAY_ENEMY_INFO', count: 3, spawnKind: null, reasons: [],
+  }] }],
+}
+const parseWaves = (waves: unknown) => parseMapDetailShard({
+  ...shard, maps: { [summary.levelId]: { ...shard.maps[summary.levelId], waves } },
+}).maps[summary.levelId].waves
+
+test('wave parsing distinguishes legacy details, unavailable topology, and known empty schedules', () => {
+  const legacy = parseMapDetailShard(shard).maps[summary.levelId]
+  assert.equal(legacy.waves, undefined)
+  assert.equal(Object.hasOwn(legacy, 'waves'), false)
+  assert.equal(parseWaves(null), null)
+  assert.deepEqual(parseWaves([]), [])
+})
+
+test('wave parsing preserves local timing, raw action order, and conditional or non-SPAWN metadata', () => {
+  const parsed = parseWaves([wave])!
+  assert.deepEqual(parsed, [wave])
+  assert.notEqual(parsed[0], wave)
+  assert.notEqual(parsed[0].fragments, wave.fragments)
+  assert.notEqual(parsed[0].fragments[0].actions, wave.fragments[0].actions)
+  assert.notEqual(parsed[0].fragments[0].actions[0].reasons, waveAction.reasons)
+  assert.deepEqual(parsed[0].fragments[0].actions.map((action) => action.actionType), ['SPAWN', 'DISPLAY_ENEMY_INFO'])
+  assert.equal(parsed[0].maxTimeWaitingForNextWave, -1)
+  const unknowns: MapWave = {
+    preDelay: null, postDelay: null, maxTimeWaitingForNextWave: null, advancedWaveTag: null,
+    fragments: [{ preDelay: null, actions: [{
+      actionType: 'SPAWN', key: null, count: null, preDelay: null, interval: null, routeIndex: null,
+      hiddenGroup: null, randomSpawnGroupKey: null, randomSpawnGroupPackKey: null,
+      randomType: null, refreshType: null, managedByScheduler: null, blockFragment: null,
+      dontBlockWave: null, spawnKind: 'unknown', reasons: ['invalid-spawn-count'],
+    }] }],
+  }
+  assert.deepEqual(parseWaves([unknowns]), [unknowns])
+})
+
+test('malformed wave topology and invalid local timing are rejected instead of dropped', () => {
+  for (const waves of [
+    {}, 'waves', 1, [null], [{}], [{ ...wave, fragments: null }], [{ ...wave, fragments: {} }],
+    [{ ...wave, fragments: [null] }], [{ ...wave, fragments: [{ preDelay: 0, actions: {} }] }],
+    [{ ...wave, fragments: [{ preDelay: 0, actions: [null] }] }],
+    [{ ...wave, preDelay: -1 }], [{ ...wave, preDelay: NaN }], [{ ...wave, postDelay: Infinity }],
+    [{ ...wave, maxTimeWaitingForNextWave: -2 }], [{ ...wave, maxTimeWaitingForNextWave: Infinity }],
+    [{ ...wave, advancedWaveTag: 42 }], [{ ...wave, fragments: [{ preDelay: -1, actions: [] }] }],
+  ]) assert.throws(() => parseWaves(waves))
+  assert.deepEqual(parseWaves([{ ...wave, maxTimeWaitingForNextWave: 0.5, fragments: [] }]), [
+    { ...wave, maxTimeWaitingForNextWave: 0.5, fragments: [] },
+  ])
+})
+
+test('wave action validation requires safe integer counts and preserves unknown values only as null', () => {
+  for (const patch of [
+    { actionType: null }, { key: 0 }, { count: -1 }, { count: 1.5 }, { count: Number.MAX_SAFE_INTEGER + 1 },
+    { count: undefined }, { preDelay: undefined }, { preDelay: -0.5 }, { preDelay: NaN },
+    { interval: Infinity }, { interval: -1 }, { routeIndex: -1 }, { routeIndex: 1.5 },
+    { hiddenGroup: 1 }, { randomSpawnGroupKey: [] }, { randomSpawnGroupPackKey: false },
+    { randomType: 0 }, { refreshType: [] }, { managedByScheduler: 0 }, { blockFragment: 'false' },
+    { dontBlockWave: undefined }, { spawnKind: 'future' }, { spawnKind: ['fixed'] }, { spawnKind: null },
+    { actionType: 'DISPLAY_ENEMY_INFO', spawnKind: 'fixed' }, { reasons: null }, { reasons: [1] },
+  ]) {
+    assert.throws(() => parseWaves([{ ...wave, fragments: [{ preDelay: 0, actions: [{ ...waveAction, ...patch }] }] }]))
+  }
+})
+
+const parseRoutes = (routes: unknown) => parseMapDetailShard({
+  ...shard, maps: { [summary.levelId]: { ...shard.maps[summary.levelId], routes } },
+}).maps[summary.levelId].routes
+
+test('route parsing preserves legacy omission, unknown entries, indices and signed tile coordinates', () => {
+  const legacy = parseMapDetailShard(shard).maps[summary.levelId]
+  assert.equal(legacy.routes, undefined)
+  assert.equal(Object.hasOwn(legacy, 'routes'), false)
+  assert.equal(parseRoutes(null), null)
+  assert.deepEqual(parseRoutes([]), [])
+  const routes = [
+    { startPosition: { row: 0, col: 0 } }, null, { startPosition: null },
+    { startPosition: { row: -1, col: 10 } },
+    { startPosition: { row: Number.MAX_SAFE_INTEGER, col: Number.MIN_SAFE_INTEGER } },
+  ]
+  const parsed = parseRoutes(routes)!
+  assert.deepEqual(parsed, routes)
+  assert.notEqual(parsed, routes)
+  assert.notEqual(parsed[0], routes[0])
+  assert.notEqual(parsed[0]?.startPosition, routes[0]?.startPosition)
+  assert.equal(parsed[1], null)
+  assert.deepEqual(parsed[3]?.startPosition, { row: -1, col: 10 })
+})
+
+test('route parsing rejects malformed topology and coordinates rather than shifting route references', () => {
+  for (const routes of [{}, 1, 'routes', [undefined], [false], [1], [[]], [{}]]) {
+    assert.throws(() => parseRoutes(routes))
+  }
+  for (const startPosition of [
+    undefined, {}, [], { row: 0 }, { row: 0, col: undefined }, { row: '0', col: 0 },
+    { row: 0, col: false }, { row: 0.5, col: 0 }, { row: 0, col: -0.5 },
+    { row: NaN, col: 0 }, { row: 0, col: Infinity },
+    { row: Number.MAX_SAFE_INTEGER + 1, col: 0 }, { row: 0, col: Number.MIN_SAFE_INTEGER - 1 },
+  ]) assert.throws(() => parseRoutes([null, { startPosition }]))
 })

@@ -1,9 +1,11 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 import { getMapCategory, getMapEnvironment, loadMapDatabase, loadMapDetail, matchesMapFilters } from '../lib/mapDatabase'
+import { getMapEntrances } from '../lib/mapWaves'
 import { DATA_SOURCE_URLS } from '../lib/dataSources'
 import { MAP_FEATURE_LABELS } from '../lib/mapFeatures'
 import type { MapDataStatus, MapDetail, MapFilters, MapIndex, MapSummary, MapTile } from '../types/map'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
+import { MapWaveInformation } from './MapWaveInformation'
 import { MapFeatureFilters } from './MapFeatureFilters'
 import './DamageCalculator.css'
 import './MapDatabase.css'
@@ -125,6 +127,9 @@ export function MapDatabase() {
           <CollapsibleCalculatorPanel id="map-detail" number="02" title="マップ情報" summary={selected?.code ?? ''} collapsedLabel="情報を表示" className="map-detail-panel">
             {selected ? <MapInformation key={selected.levelId} map={selected} index={data} /> : <p className="map-empty">表示するマップがありません</p>}
           </CollapsibleCalculatorPanel>
+          <CollapsibleCalculatorPanel id="map-waves" number="03" title="ウェーブ情報" summary={selected?.code ?? ''} collapsedLabel="ウェーブを表示">
+            {selected ? <MapWaveInformation key={selected.levelId} map={selected} index={data} /> : <p className="map-empty">表示するマップがありません</p>}
+          </CollapsibleCalculatorPanel>
           <details className="map-source-notes"><summary>データの範囲</summary><p>stage_table内の戦闘ステージを、同じマップデータを共有するものごとにまとめています。ローグライクなど、別管理のマップは含みません。</p><p>取得済み {formatNumber(data.maps.filter((map) => map.status !== 'missing').length)}マップ／未取得 {formatNumber(data.maps.filter((map) => map.status === 'missing').length)}マップ。敵の能力値は基礎値で、マップ固有の補正は反映していません。</p><p>特徴の絞り込みは、取得済みデータから判定できる16種類が対象です。強襲条件や条件付きで追加される効果は含みません。未取得のマップは特徴による絞り込みの対象外です。</p><p>マップ情報の生成：{data.generatedAt.slice(0, 10)}{data.sourceGeneratedAt ? ` ／ 取得範囲の集計：${data.sourceGeneratedAt.slice(0, 10)}` : ''}</p></details>
         </>}
   </section>
@@ -199,9 +204,13 @@ function MapBoard({ detail, name }: { detail: MapDetail; name: string }) {
   if (!detail.grid.length || !detail.grid[0]?.length) return <p className="map-empty">マス配置のデータがありません</p>
   const rows = detail.grid.length
   const columns = detail.grid[0].length
+  const entrances = getMapEntrances(detail)
+  const entranceLegend = entrances.length > 4 ? `A–${entrances[entrances.length - 1].label}` : entrances.map((entrance) => entrance.label).join('・')
+  const entranceByTile = new Map(entrances.map((entrance) => [`${rows - 1 - entrance.row}-${entrance.col}`, entrance]))
   const kinds = new Set(detail.grid.flat().map((index) => tileKind(detail.tiles[index])))
   return <figure className="map-board-figure">
     <svg className="map-board" viewBox={`0 0 ${columns * 32} ${rows * 32}`} role="img" aria-label={`${name}のマップ配置、${rows}行${columns}列`}>
+      <desc>{entrances.map((entrance) => `出現口${entrance.label}：上から${rows - entrance.row}行、左から${entrance.col + 1}列`).join('。')}</desc>
       <defs>
         <pattern id={blockedPatternId} className="map-tile-blocked map-blocked-pattern" width="6.4" height="6.4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <rect width="6.4" height="6.4" />
@@ -210,10 +219,16 @@ function MapBoard({ detail, name }: { detail: MapDetail; name: string }) {
       </defs>
       {detail.grid.flatMap((row, y) => row.map((index, x) => {
         const kind = tileKind(detail.tiles[index])
-        const label = kind === 'start' ? 'IN' : kind === 'end' ? 'OUT' : kind === 'hole' ? '穴' : kind === 'special' ? '◇' : ''
-        return <g key={`${y}-${x}`} className={`map-tile map-tile-${kind}`}><rect x={x * 32 + 1} y={y * 32 + 1} width="30" height="30" style={kind === 'blocked' ? { fill: `url(#${blockedPatternId})` } : undefined} />{label && <text x={x * 32 + 16} y={y * 32 + 17} textAnchor="middle" dominantBaseline="middle">{label}</text>}</g>
+        const entrance = entranceByTile.get(`${y}-${x}`)
+        const label = entrance?.label ?? (kind === 'start' ? 'IN' : kind === 'end' ? 'BASE' : kind === 'hole' ? '穴' : kind === 'special' ? '◇' : '')
+        return <g key={`${y}-${x}`} className={`map-tile map-tile-${kind}${entrance ? ' map-tile-entrance' : ''}`}>
+          {entrance && <title>{`出現口${entrance.label}（上から${y + 1}行、左から${x + 1}列）`}</title>}
+          <rect x={x * 32 + 1} y={y * 32 + 1} width="30" height="30" style={kind === 'blocked' ? { fill: `url(#${blockedPatternId})` } : undefined} />
+          {entrance && kind !== 'start' && <circle className="map-entrance-marker" cx={x * 32 + 16} cy={y * 32 + 16} r="11" />}
+          {label && <text x={x * 32 + 16} y={y * 32 + 17} textAnchor="middle" dominantBaseline="middle">{label}</text>}
+        </g>
       }))}
     </svg>
-    <figcaption className="map-board-legend">{(Object.keys(TILE_LABELS) as TileKind[]).filter((kind) => kinds.has(kind)).map((kind) => <span key={kind}><i className={`map-tile-${kind}`} aria-hidden="true" />{TILE_LABELS[kind]}</span>)}</figcaption>
+    <figcaption className="map-board-legend">{(Object.keys(TILE_LABELS) as TileKind[]).filter((kind) => kinds.has(kind) || kind === 'start' && entrances.length > 0).map((kind) => <span key={kind}><i className={`map-tile-${kind}`} aria-hidden="true" />{TILE_LABELS[kind]}{kind === 'start' && entrances.length > 0 ? `（${entranceLegend}）` : ''}</span>)}</figcaption>
   </figure>
 }
