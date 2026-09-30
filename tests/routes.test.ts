@@ -430,9 +430,13 @@ test('参照元ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/sources'), { view: 'sources' })
 })
 
-test('ホームと不明なhashはデータベースへフォールバックする', () => {
+test('サイトを直接開くかルートhashに移動するとホームを表示する', () => {
+  assert.deepEqual(parseHashRoute(''), { view: 'home' })
+  assert.deepEqual(parseHashRoute('#'), { view: 'home' })
+  assert.deepEqual(parseHashRoute('#/'), { view: 'home' })
+})
+
+test('不明なhashはデータベースへフォールバックする', () => {
   assert.deepEqual(parseHashRoute('#/damage'), { view: 'damage' })
-  assert.deepEqual(parseHashRoute(''), { view: 'operators' })
-  assert.deepEqual(parseHashRoute('#/'), { view: 'operators' })
   assert.deepEqual(parseHashRoute('#/unknown'), { view: 'operators' })
 })

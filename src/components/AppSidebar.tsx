@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { APP_NAV_ITEMS, NAVIGATION_SECTIONS, type NavigationPage } from '../lib/navigation'
+import { APP_NAV_ITEMS, HOME_LINK, NAVIGATION_SECTIONS, type NavigationPage } from '../lib/navigation'
 
 type AppSidebarProps = {
   activePage: NavigationPage
@@ -20,7 +20,7 @@ export function AppSidebar({ activePage, open, onClose }: AppSidebarProps) {
     <>
       <aside className={`app-sidebar ${open ? 'open' : ''}`} id="app-sidebar" aria-label="メインナビゲーション">
         <div className="sidebar-header">
-          <a className="site-brand" href="#/operators" onClick={onClose} aria-label="Arknights Analyze Tool ホーム">
+          <a className="site-brand" href={HOME_LINK.href} onClick={onClose} aria-label="Arknights Analyze Tool ホーム" aria-current={activePage === 'home' ? 'page' : undefined}>
             <span className="brand-mark" aria-hidden="true">A</span>
             <span className="brand-copy">
               <span className="eyebrow">ARKNIGHTS</span>

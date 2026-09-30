@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { AppSidebar } from './components/AppSidebar'
+import { HomePage } from './components/HomePage'
 import { DamageCalculator } from './components/DamageCalculator'
 import { DataSourcesPage } from './components/DataSourcesPage'
 import { CodeAnalysisPage } from './components/CodeAnalysisPage'
@@ -29,7 +30,7 @@ import { applyManualClassification } from './lib/classifier'
 import { ARKNIGHTS_GAMEDATA_REPOSITORY } from './lib/dataSources'
 import { buildOperatorDatabaseRecords } from './lib/operatorDatabase'
 import { createOperatorDetailHash, parseHashRoute, type AppRoute } from './lib/routes'
-import { APP_NAV_ITEMS, GOLDENGLOW_ANALYSIS_ITEMS, GOLDENGLOW_HOME_LINK, SURTR_ANALYSIS_ITEMS, SURTR_HOME_LINK, type NavigationPage } from './lib/navigation'
+import { APP_NAV_ITEMS, GOLDENGLOW_ANALYSIS_ITEMS, GOLDENGLOW_HOME_LINK, HOME_LINK, SURTR_ANALYSIS_ITEMS, SURTR_HOME_LINK, type NavigationPage } from './lib/navigation'
 import { GOLDENGLOW_OPERATOR_ID } from './lib/goldenglowExplosion'
 import { PanelStateScope } from './lib/PanelStateScope'
 import {
@@ -91,7 +92,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (route.view === 'enemies' || route.view === 'enemy-analysis' || route.view === 'maps' || route.view === 'sources' || route.view === 'code-analysis' || route.view === 'slide-maker' || route.view === 'goldenglow-home' || route.view === 'surtr-home' || skillDataRequestStarted.current) return
+    if (route.view === 'home' || route.view === 'enemies' || route.view === 'enemy-analysis' || route.view === 'maps' || route.view === 'sources' || route.view === 'code-analysis' || route.view === 'slide-maker' || route.view === 'goldenglow-home' || route.view === 'surtr-home' || skillDataRequestStarted.current) return
     skillDataRequestStarted.current = true
     void load()
   }, [route.view])
@@ -167,7 +168,7 @@ export default function App() {
       if (!event.matches) return
       setSidebarOpen(false)
       window.requestAnimationFrame(() => {
-        document.querySelector<HTMLAnchorElement>('.sidebar-nav-link.active')?.focus()
+        document.querySelector<HTMLAnchorElement>('.sidebar-nav-link.active, .site-brand[aria-current="page"]')?.focus()
       })
     }
 
@@ -250,7 +251,7 @@ export default function App() {
         : isSurtrAnalysis
           ? 'surtr-home'
           : displayedRoute.view
-  const activeNavigationItem = APP_NAV_ITEMS.find((item) => item.id === activeNavigationPage)
+  const activeNavigationItem = activeNavigationPage === 'home' ? HOME_LINK : APP_NAV_ITEMS.find((item) => item.id === activeNavigationPage)
   const closeSidebar = () => {
     if (!sidebarOpen) return
     setSidebarOpen(false)
@@ -277,12 +278,12 @@ export default function App() {
             <span>Menu</span>
           </button>
           <span className="mobile-page-title">{activeNavigationItem?.label}</span>
-          <a className="mobile-brand-mark" href="#/operators" aria-label="Arknights Analyze Tool ホーム">A</a>
+          <a className="mobile-brand-mark" href={HOME_LINK.href} aria-label="Arknights Analyze Tool ホーム" aria-current={activeNavigationPage === 'home' ? 'page' : undefined}>A</a>
         </header>
 
         <main className="app-content">
         <PanelStateScope.Provider value={displayedRoute.view}>
-        {error && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'enemy-analysis' && displayedRoute.view !== 'maps' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'surtr-home' && displayedRoute.view !== 'surtr-s3' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-target-switch-two' && displayedRoute.view !== 'goldenglow-single-trial' && displayedRoute.view !== 'goldenglow-trial-benchmark' && <section className="error-box" role="alert">{error}</section>}
+        {error && displayedRoute.view !== 'home' && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'enemy-analysis' && displayedRoute.view !== 'maps' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'surtr-home' && displayedRoute.view !== 'surtr-s3' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-target-switch-two' && displayedRoute.view !== 'goldenglow-single-trial' && displayedRoute.view !== 'goldenglow-trial-benchmark' && <section className="error-box" role="alert">{error}</section>}
 
         {/* Keep the directory mounted while viewing a detail page so filters, sort and charts survive returning. */}
         {operatorDirectoryVisited && (displayedRoute.view === 'operators' || displayedRoute.view === 'operator-detail') && (
@@ -293,7 +294,9 @@ export default function App() {
           </div>
         )}
 
-        {displayedRoute.view === 'code-analysis' ? (
+        {displayedRoute.view === 'home' ? (
+          <HomePage />
+        ) : displayedRoute.view === 'code-analysis' ? (
           <CodeAnalysisPage />
         ) : displayedRoute.view === 'sources' ? (
           <DataSourcesPage />
