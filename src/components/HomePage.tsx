@@ -1,3 +1,4 @@
+import { APP_NAV_ITEMS } from '../lib/navigation'
 import './HomePage.css'
 
 const HOME_PANELS = [
@@ -17,7 +18,7 @@ const HOME_PANELS = [
   {
     id: 'operator-analysis',
     title: 'オペレーター個別分析',
-    links: [{ label: 'ゴールデングロー', href: '#/analysis/goldenglow' }],
+    links: APP_NAV_ITEMS.filter((item) => item.section === 'operator-analysis'),
   },
   {
     id: 'code-analysis',
