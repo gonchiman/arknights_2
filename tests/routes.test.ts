@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { APP_NAV_ITEMS, GOLDENGLOW_ANALYSIS_ITEMS } from '../src/lib/navigation.ts'
+import { APP_NAV_ITEMS, GOLDENGLOW_ANALYSIS_ITEMS, SURTR_ANALYSIS_ITEMS, SURTR_HOME_LINK } from '../src/lib/navigation.ts'
 import {
   createOperatorDetailHash,
   createSkillEffectsHash,
@@ -24,6 +24,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['enemy-analysis', 'enemy-analysis'],
       ['maps', 'maps'],
       ['goldenglow-home', 'goldenglow-home'],
+      ['surtr-home', 'surtr-home'],
       ['slide-maker', 'slide-maker'],
       ['sources', 'sources'],
     ],
@@ -47,7 +48,7 @@ test('スライド作成はアプリ内の独立したページとしてメニ�
   assert.deepEqual(parseHashRoute('#/slide-maker/extra'), { view: 'operators' })
 })
 
-test('GGの専用トップはサイドバーの入口を一つにまとめる', () => {
+test('オペレーター分析は各オペレーターのトップをサイドバーの入口にする', () => {
   assert.deepEqual(parseHashRoute('#/analysis/goldenglow'), { view: 'goldenglow-home' })
   assert.deepEqual(APP_NAV_ITEMS.filter((item) => item.section === 'operator-analysis'), [
     {
@@ -55,6 +56,13 @@ test('GGの専用トップはサイドバーの入口を一つにまとめる', 
       href: '#/analysis/goldenglow',
       label: 'ゴールデングロー',
       description: 'スキルダメージ・爆発・ターゲット切替',
+      section: 'operator-analysis',
+    },
+    {
+      id: 'surtr-home',
+      href: '#/analysis/surtr',
+      label: 'スルト',
+      description: 'S3 DPS分析',
       section: 'operator-analysis',
     },
   ])
@@ -88,6 +96,35 @@ test('GGの既存の分析URLを引き続き開ける', () => {
     for (const suffix of ['/', '/extra', '?skill=3']) {
       assert.deepEqual(parseHashRoute(`${hash}${suffix}`), { view: 'operators' })
     }
+  }
+})
+
+test('スルトの専用トップからS3分析を開き、詳細URLと区別する', () => {
+  assert.deepEqual(parseHashRoute(SURTR_HOME_LINK.href), { view: 'surtr-home' })
+  assert.deepEqual(SURTR_ANALYSIS_ITEMS.map(({ id, href, label }) => [id, href, label, parseHashRoute(href).view]), [
+    ['surtr-s3', '#/analysis/surtr/s3', 'S3 DPS分析', 'surtr-s3'],
+  ])
+  assert.deepEqual(parseHashRoute('#/operators/char_350_surtr'), {
+    view: 'operator-detail', operatorId: 'char_350_surtr',
+  })
+  for (const hash of [SURTR_HOME_LINK.href, ...SURTR_ANALYSIS_ITEMS.map((item) => item.href)]) {
+    for (const suffix of ['/', '/extra', '?skill=3']) {
+      assert.deepEqual(parseHashRoute(`${hash}${suffix}`), { view: 'operators' })
+    }
+  }
+  assert.deepEqual(parseHashRoute('#/analysis/surtr/s3-extra'), { view: 'operators' })
+})
+
+test('スルトのOP情報は参照元を復元し、重複指定は通常の詳細表示に戻す', () => {
+  const hash = createOperatorDetailHash('char_350_surtr', { source: 'surtr-home' })
+  assert.equal(hash, '#/operators/char_350_surtr?from=surtr')
+  assert.deepEqual(parseHashRoute(hash), {
+    view: 'operator-detail', operatorId: 'char_350_surtr', source: 'surtr-home',
+  })
+  for (const query of ['from=Surtr', 'from=surtr%20', 'from=surtr&from=surtr', 'from=surtr&from=goldenglow']) {
+    assert.deepEqual(parseHashRoute(`#/operators/char_350_surtr?${query}`), {
+      view: 'operator-detail', operatorId: 'char_350_surtr',
+    })
   }
 })
 
@@ -393,9 +430,13 @@ test('参照元ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/sources'), { view: 'sources' })
 })
 
-test('ホームと不明なhashはデータベースへフォールバックする', () => {
+test('サイトを直接開くかルートhashに移動するとホームを表示する', () => {
+  assert.deepEqual(parseHashRoute(''), { view: 'home' })
+  assert.deepEqual(parseHashRoute('#'), { view: 'home' })
+  assert.deepEqual(parseHashRoute('#/'), { view: 'home' })
+})
+
+test('不明なhashはデータベースへフォールバックする', () => {
   assert.deepEqual(parseHashRoute('#/damage'), { view: 'damage' })
-  assert.deepEqual(parseHashRoute(''), { view: 'operators' })
-  assert.deepEqual(parseHashRoute('#/'), { view: 'operators' })
   assert.deepEqual(parseHashRoute('#/unknown'), { view: 'operators' })
 })

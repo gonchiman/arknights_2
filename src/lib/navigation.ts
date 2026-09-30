@@ -1,4 +1,4 @@
-export type NavigationPage = 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'enemy-analysis' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
+export type NavigationPage = 'home' | 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'enemy-analysis' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -16,7 +16,19 @@ export const NAVIGATION_SECTIONS: ReadonlyArray<{ id: NavigationSection; label: 
   { id: 'information', label: 'INFORMATION' },
 ]
 
+export const HOME_LINK = { label: 'ホーム', href: '#/' } as const
 export const GOLDENGLOW_HOME_LINK = { label: 'ゴールデングロー', href: '#/analysis/goldenglow' } as const
+export const SURTR_HOME_LINK = { label: 'スルト', href: '#/analysis/surtr' } as const
+
+export const SURTR_ANALYSIS_ITEMS: readonly NavigationItem[] = [
+  {
+    id: 'surtr-s3',
+    href: '#/analysis/surtr/s3',
+    label: 'S3 DPS分析',
+    description: '',
+    section: 'operator-analysis',
+  },
+]
 
 export const GOLDENGLOW_ANALYSIS_ITEMS: readonly NavigationItem[] = [
   {
@@ -139,6 +151,12 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     href: '#/analysis/goldenglow',
     label: 'ゴールデングロー',
     description: 'スキルダメージ・爆発・ターゲット切替',
+    section: 'operator-analysis',
+  },
+  {
+    id: 'surtr-home',
+    ...SURTR_HOME_LINK,
+    description: 'S3 DPS分析',
     section: 'operator-analysis',
   },
   {

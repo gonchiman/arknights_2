@@ -1,0 +1,55 @@
+.surtr-dps-chart { min-width: 0; margin: 0; background: #fff; }
+.surtr-dps-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.surtr-dps-chart-legend li { display: inline-flex; align-items: center; gap: 6px; color: var(--text-soft, #444); font-size: 11px; }
+.surtr-dps-chart-swatch { flex: 0 0 18px; }
+.surtr-dps-chart-viewport { position: relative; min-width: 0; }
+.surtr-dps-chart-scroll { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+.surtr-dps-chart-frame { position: relative; min-width: 0; outline-offset: 4px; }
+.surtr-dps-chart-frame:focus-visible { outline: 2px solid var(--text, #222); outline-offset: -2px; }
+.surtr-dps-chart-svg { display: block; max-width: 100%; overflow: visible; }
+.surtr-dps-chart-grid { stroke: #e4e4e4; stroke-width: 1; }
+.surtr-dps-chart-grid-vertical { stroke: #f0f0f0; }
+.surtr-dps-chart-axis { fill: none; stroke: #aaa; stroke-width: 1; }
+.surtr-dps-chart-zero { stroke: #999; stroke-width: 1; }
+.surtr-dps-chart-tick { fill: #555; font-size: 11px; font-variant-numeric: tabular-nums; }
+.surtr-dps-chart-axis-title { fill: #444; font-size: 12px; font-weight: 700; }
+.surtr-dps-chart-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.surtr-dps-chart-bar { stroke: none; }
+.surtr-dps-chart-active-band { fill: #f3f3f3; }
+.surtr-dps-chart-cursor > line { stroke: #777; stroke-width: 1; stroke-dasharray: 3 3; }
+.surtr-dps-chart-axis-caption { margin: 6px 0 0; color: #444; font-size: 12px; font-weight: 700; text-align: center; }
+.surtr-dps-chart-tooltip {
+  position: absolute;
+  z-index: 1;
+  top: 30px;
+  right: 28px;
+  max-width: calc(100% - 80px);
+  border: 1px solid var(--border-strong, #aaa);
+  padding: 10px 12px;
+  background: rgb(255 255 255 / 96%);
+  color: #222;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
+  font-size: 11px;
+  pointer-events: none;
+}
+.surtr-dps-chart-tooltip.is-left { right: auto; left: 64px; }
+.surtr-dps-chart-tooltip strong { font-size: 11px; }
+.surtr-dps-chart-tooltip dl { display: grid; gap: 6px; margin: 8px 0 0; }
+.surtr-dps-chart-tooltip dl > div { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; }
+.surtr-dps-chart-tooltip dt { display: flex; align-items: center; gap: 5px; }
+.surtr-dps-chart-tooltip dd { margin: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.surtr-dps-chart-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.surtr-dps-chart-image { --text: #222; --text-soft: #444; --text-muted: #666; }
+.surtr-dps-chart-preview { display: grid; gap: 8px; min-width: 0; }
+.surtr-dps-chart-preview-heading { display: flex; justify-content: space-between; gap: 12px; color: var(--text-muted); font-size: 12px; }
+.surtr-dps-chart-preview-frame { position: relative; min-width: 0; overflow: hidden; background: var(--surface-soft); }
+.surtr-dps-chart-preview-position { position: absolute; top: 0; transform-origin: top left; pointer-events: none; }
+.surtr-dps-chart-preview-size { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
