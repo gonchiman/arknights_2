@@ -46,6 +46,8 @@ export function GoldenglowDetailModal({ title, closeLabel, children, onClose, cl
         if (!closeDisabled) onClose()
       } : undefined}
       onCancel={(event) => {
+        // Escape in a nested dialog should only close that dialog.
+        if (event.target !== event.currentTarget) return
         event.preventDefault()
         if (!closeDisabled) onClose()
       }}

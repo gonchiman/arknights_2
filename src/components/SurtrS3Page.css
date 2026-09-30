@@ -103,3 +103,17 @@
   .surtr-s3-chart-area { padding: 8px; }
   .surtr-s3-readout { gap: 12px; }
 }
+.surtr-s3-export-distribution { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; font-size: 13px; }
+.surtr-s3-export-distribution > label { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.surtr-s3-export-distribution > span { color: var(--text-muted); overflow-wrap: anywhere; }
+.surtr-histogram-edit-trigger { justify-self: start; padding: 3px 0; border: 0; background: transparent; color: var(--text); font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.surtr-histogram-edit-trigger:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+.surtr-histogram-editor { min-width: 0; margin-top: 4px; border: 1px solid var(--border-strong); padding: 12px; }
+.surtr-histogram-editor-content { min-width: 0; }
+.surtr-histogram-editor .enemy-chart-toolbar { flex-wrap: wrap; margin: 0; padding: 12px 0; }
+.surtr-histogram-editor .enemy-analysis-filters { padding: 0 0 12px; }
+.surtr-histogram-editor .enemy-histogram-settings { margin: 12px 0; }
+.surtr-histogram-editor-actions, .surtr-histogram-source { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.surtr-histogram-editor-actions { justify-content: flex-end; margin-top: 16px; }
+.surtr-histogram-editor .enemy-histogram-display-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.surtr-histogram-editor .enemy-chart-legend { flex-wrap: wrap; }
