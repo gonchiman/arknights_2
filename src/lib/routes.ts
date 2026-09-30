@@ -17,6 +17,7 @@ export type AppRoute =
   | { view: 'comparison' }
   | { view: 'enemies' }
   | { view: 'enemy-analysis' }
+  | { view: 'maps' }
   | { view: 'sources' }
   | { view: 'slide-maker' }
 
@@ -117,6 +118,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/comparison') return { view: 'comparison' }
   if (hash === '#/enemies') return { view: 'enemies' }
   if (hash === '#/analysis/enemies') return { view: 'enemy-analysis' }
+  if (hash === '#/maps') return { view: 'maps' }
   if (hash === '#/sources') return { view: 'sources' }
   if (hash === '#/slide-maker') return { view: 'slide-maker' }
   if (hash === '#/skills') return { view: 'skills' }

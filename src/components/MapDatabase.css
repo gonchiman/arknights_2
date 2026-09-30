@@ -1,0 +1,69 @@
+.map-database-page { container-type: inline-size; }
+.map-database-page .page-intro { margin-bottom: 0; }
+.map-search-controls { display: grid; grid-template-columns: minmax(200px, 1.5fr) minmax(160px, 1fr) minmax(160px, .8fr); gap: 12px; align-items: end; }
+.map-search-controls label { min-width: 0; display: grid; gap: 6px; font-size: 11px; color: var(--text-soft); }
+.map-search-controls input, .map-search-controls select { width: 100%; min-width: 0; min-height: 36px; border: 1px solid var(--border); border-radius: 0; background: var(--surface); color: var(--text); padding: 7px 9px; font-size: 12px; }
+.map-database-columns { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
+.map-database-columns > * { min-width: 0; }
+.map-database-page .map-list-body { padding: 0; }
+.map-table-scroll { max-width: 100%; overflow-x: auto; }
+.map-database-page table { width: 100%; border-collapse: collapse; table-layout: auto; font-size: 12px; font-variant-numeric: tabular-nums; }
+.map-database-page th, .map-database-page td { padding: 9px 10px; border: 1px solid var(--border); text-align: left; vertical-align: middle; overflow-wrap: anywhere; font-weight: 400; }
+.map-database-page th { position: static; background: var(--surface-soft); color: var(--text-soft); font-size: 11px; font-weight: 500; white-space: nowrap; }
+.map-database-page .map-numeric { text-align: right; white-space: nowrap; }
+.map-database-page .map-list-table th:first-child, .map-database-page .map-list-table td:first-child { border-left: 0; }
+.map-database-page .map-list-table th:last-child, .map-database-page .map-list-table td:last-child { border-right: 0; }
+.map-database-page .map-list-table thead th { border-top: 0; }
+.map-list-table tbody tr { cursor: pointer; }
+.map-list-table tbody tr:hover, .map-list-table tbody tr.map-selected { background: var(--surface-hover); }
+.map-list-table .map-selected td:first-child { box-shadow: inset 3px 0 var(--text); }
+.map-row-button { display: block; width: 100%; min-height: 24px; border: 0; padding: 0; background: transparent; color: inherit; font-size: 12px; text-align: left; font-weight: 500; cursor: pointer; }
+.map-difficulty { display: block; margin-top: 2px; color: var(--text-muted); font-size: 11px; font-weight: 400; }
+.map-pagination { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px; font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+.map-pagination > div { display: flex; gap: 6px; }
+.map-pagination .button { font-size: 11px; font-weight: 500; }
+.map-load-state { min-height: 180px; display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; border: 1px solid var(--border); padding: 20px; color: var(--text-soft); font-size: 12px; }
+.map-empty { margin: 0; padding: 24px 12px; color: var(--text-muted); text-align: center; font-size: 12px; }
+.map-detail-heading { margin-bottom: 14px; }
+.map-detail-heading h2 { margin: 0; display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; font-size: 17px; font-weight: 500; }
+.map-detail-heading h2 > span { font-variant-numeric: tabular-nums; }
+.map-detail-heading p { margin: 5px 0 0; color: var(--text-muted); font-size: 11px; }
+.map-board-figure { margin: 0; border: 1px solid var(--border); padding: 14px; background: var(--surface-soft); }
+.map-board { display: block; width: 100%; max-width: 550px; height: auto; margin: 0 auto; }
+.map-tile rect { fill: var(--map-tile-fill); }
+.map-tile text { fill: var(--text); font-family: inherit; font-size: 9px; font-weight: 600; }
+.map-tile-start text, .map-tile-end text { fill: #fff; }
+.map-tile-ground { --map-tile-fill: #e0e1df; }
+.map-tile-high { --map-tile-fill: #b4bab8; }
+.map-tile-blocked { --map-tile-fill: #f0f0ee; }
+.map-tile-start { --map-tile-fill: #b56861; }
+.map-tile-end { --map-tile-fill: #4d8197; }
+.map-tile-hole { --map-tile-fill: #9e9e9e; }
+.map-tile-special { --map-tile-fill: #dbd4c4; }
+.map-board-legend { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; font-size: 11px; color: var(--text-soft); }
+.map-board-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.map-board-legend i { width: 10px; height: 10px; background: var(--map-tile-fill); }
+.map-battle-facts { display: flex; flex-wrap: wrap; gap: 10px 20px; margin: 16px 0 22px; }
+.map-battle-facts > div { display: flex; align-items: baseline; gap: 8px; }
+.map-battle-facts dt { color: var(--text-muted); font-size: 11px; }
+.map-battle-facts dd { margin: 0; color: var(--text); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.map-enemy-heading { margin: 0 0 9px; font-size: 13px; font-weight: 500; }
+.map-enemy-table { min-width: 340px; }
+.map-enemy-table tr { cursor: default; }
+.map-enemy-table tr:hover { background: transparent; }
+.map-enemy-table th:first-child { width: 45%; }
+.map-data-information { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; font-size: 11px; }
+.map-data-information summary, .map-source-notes summary { width: fit-content; color: var(--text-muted); cursor: pointer; }
+.map-data-information dl { display: grid; gap: 8px; margin: 12px 0; }
+.map-data-information dl > div { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 8px; }
+.map-data-information dt { color: var(--text-muted); }
+.map-data-information dd { margin: 0; overflow-wrap: anywhere; }
+.map-source-notes { font-size: 11px; color: var(--text-muted); }
+.map-source-notes p { margin: 8px 0; line-height: 1.8; }
+@container (min-width: 800px) { .map-database-columns { grid-template-columns: minmax(285px, .8fr) minmax(0, 1.5fr); } }
+@container (max-width: 650px) { .map-search-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); } .map-search-input { grid-column: 1 / -1; } }
+@media (max-width: 760px), (pointer: coarse) {
+  .map-search-controls input, .map-search-controls select { min-height: 44px; font-size: 16px; }
+  .map-row-button, .map-pagination .button { min-height: 44px; }
+  .map-data-information summary, .map-source-notes summary { padding: 10px 0; }
+}
