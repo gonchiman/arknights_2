@@ -1,0 +1,26 @@
+.surtr-duration-chart { min-width: 0; margin: 0; background: #fff; }
+.surtr-duration-chart-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 0 0 12px; padding: 0; list-style: none; }
+.surtr-duration-chart-legend li { display: inline-flex; align-items: center; gap: 6px; color: var(--text-soft, #444); font-size: 11px; }
+.surtr-duration-chart-swatch { flex: 0 0 18px; }
+.surtr-duration-chart-viewport { min-width: 0; }
+.surtr-duration-chart-scroll { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+.surtr-duration-chart-scroll:focus-visible { outline: 2px solid var(--text, #222); outline-offset: -2px; }
+.surtr-duration-chart-svg { display: block; flex: none; overflow: visible; }
+.surtr-duration-chart-empty { fill: #666; font-size: 12px; }
+.surtr-duration-chart-grid { stroke: #e7e7e7; stroke-width: 1; }
+.surtr-duration-chart-grid-horizontal { stroke: #bbb; stroke-dasharray: 5 5; }
+.surtr-duration-chart-axis { fill: none; stroke: #aaa; stroke-width: 1; }
+.surtr-duration-chart-tick { fill: #555; font-size: 11px; font-variant-numeric: tabular-nums; }
+.surtr-duration-chart-axis-title { fill: #444; font-size: 12px; font-weight: 700; }
+.surtr-duration-chart-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.surtr-duration-chart-event-key text { fill: #666; font-size: 10px; }
+.surtr-duration-chart-selection-guide { stroke: #777; stroke-width: 1.25; stroke-dasharray: 4 4; }
+.surtr-duration-chart-selection-label-background { fill: #f2f2f2; }
+.surtr-duration-chart-selection-label { fill: #444; font-size: 10px; font-variant-numeric: tabular-nums; }
+.surtr-duration-chart-axis-caption { margin: 6px 0 0; color: #444; font-size: 12px; font-weight: 700; text-align: center; }
+.surtr-duration-chart-image { --text: #222; --text-soft: #444; --text-muted: #666; }
+.surtr-duration-chart-preview { display: grid; gap: 8px; min-width: 0; }
+.surtr-duration-chart-preview-heading { display: flex; justify-content: space-between; gap: 12px; color: var(--text-muted); font-size: 12px; }
+.surtr-duration-chart-preview-frame { position: relative; min-width: 0; overflow: hidden; background: var(--surface-soft); }
+.surtr-duration-chart-preview-position { position: absolute; top: 0; transform-origin: top left; pointer-events: none; }
+.surtr-duration-chart-preview-size { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
