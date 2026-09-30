@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { loadMapDatabase, loadMapDetail, matchesMapFilters } from '../lib/mapDatabase'
 import { DATA_SOURCE_URLS } from '../lib/dataSources'
 import type { MapDataStatus, MapDetail, MapFilters, MapIndex, MapSummary, MapTile } from '../types/map'
@@ -158,16 +158,23 @@ function tileKind(tile: MapTile | undefined): TileKind {
 }
 
 function MapBoard({ detail, name }: { detail: MapDetail; name: string }) {
+  const blockedPatternId = useId()
   if (!detail.grid.length || !detail.grid[0]?.length) return <p className="map-empty">マス配置のデータがありません</p>
   const rows = detail.grid.length
   const columns = detail.grid[0].length
   const kinds = new Set(detail.grid.flat().map((index) => tileKind(detail.tiles[index])))
   return <figure className="map-board-figure">
     <svg className="map-board" viewBox={`0 0 ${columns * 32} ${rows * 32}`} role="img" aria-label={`${name}のマップ配置、${rows}行${columns}列`}>
+      <defs>
+        <pattern id={blockedPatternId} className="map-tile-blocked map-blocked-pattern" width="6.4" height="6.4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="6.4" height="6.4" />
+          <path d="M3.2 0V6.4" strokeWidth="0.65" />
+        </pattern>
+      </defs>
       {detail.grid.flatMap((row, y) => row.map((index, x) => {
         const kind = tileKind(detail.tiles[index])
         const label = kind === 'start' ? 'IN' : kind === 'end' ? 'OUT' : kind === 'hole' ? '穴' : kind === 'special' ? '◇' : ''
-        return <g key={`${y}-${x}`} className={`map-tile map-tile-${kind}`}><rect x={x * 32 + 1} y={y * 32 + 1} width="30" height="30" />{label && <text x={x * 32 + 16} y={y * 32 + 17} textAnchor="middle" dominantBaseline="middle">{label}</text>}</g>
+        return <g key={`${y}-${x}`} className={`map-tile map-tile-${kind}`}><rect x={x * 32 + 1} y={y * 32 + 1} width="30" height="30" style={kind === 'blocked' ? { fill: `url(#${blockedPatternId})` } : undefined} />{label && <text x={x * 32 + 16} y={y * 32 + 17} textAnchor="middle" dominantBaseline="middle">{label}</text>}</g>
       }))}
     </svg>
     <figcaption className="map-board-legend">{(Object.keys(TILE_LABELS) as TileKind[]).filter((kind) => kinds.has(kind)).map((kind) => <span key={kind}><i className={`map-tile-${kind}`} aria-hidden="true" />{TILE_LABELS[kind]}</span>)}</figcaption>

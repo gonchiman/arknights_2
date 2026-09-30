@@ -28,9 +28,10 @@
 .map-detail-heading h2 { margin: 0; display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; font-size: 17px; font-weight: 500; }
 .map-detail-heading h2 > span { font-variant-numeric: tabular-nums; }
 .map-detail-heading p { margin: 5px 0 0; color: var(--text-muted); font-size: 11px; }
-.map-board-figure { margin: 0; border: 1px solid var(--border); padding: 14px; background: var(--surface-soft); }
+.map-board-figure { --map-blocked-line: #c2c6c5; margin: 0; border: 1px solid var(--border); padding: 14px; background: var(--surface-soft); }
 .map-board { display: block; width: 100%; max-width: 550px; height: auto; margin: 0 auto; }
-.map-tile rect { fill: var(--map-tile-fill); }
+.map-tile rect, .map-blocked-pattern rect { fill: var(--map-tile-fill); }
+.map-blocked-pattern path { fill: none; stroke: var(--map-blocked-line); }
 .map-tile text { fill: var(--text); font-family: inherit; font-size: 9px; font-weight: 600; }
 .map-tile-start text, .map-tile-end text { fill: #fff; }
 .map-tile-ground { --map-tile-fill: #e0e1df; }
@@ -43,6 +44,7 @@
 .map-board-legend { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; font-size: 11px; color: var(--text-soft); }
 .map-board-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .map-board-legend i { width: 10px; height: 10px; background: var(--map-tile-fill); }
+.map-board-legend i.map-tile-blocked { background: repeating-linear-gradient(135deg, var(--map-tile-fill) 0 9px, var(--map-blocked-line) 9px 10px); }
 .map-battle-facts { display: flex; flex-wrap: wrap; gap: 10px 20px; margin: 16px 0 22px; }
 .map-battle-facts > div { display: flex; align-items: baseline; gap: 8px; }
 .map-battle-facts dt { color: var(--text-muted); font-size: 11px; }
