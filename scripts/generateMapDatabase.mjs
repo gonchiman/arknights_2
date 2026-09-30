@@ -54,6 +54,8 @@ export function buildMapEnemyRegistry(handbookSource, databaseSource) {
     return [id, {
       name: text(handbookById.get(id)?.name) ?? text(base?.name) ?? id,
       hp: nonnegative(attributes?.maxHp),
+      attack: nonnegative(attributes?.atk),
+      defense: nonnegative(attributes?.def),
       resistance: nonnegative(attributes?.magicResistance),
     }]
   }))
@@ -107,6 +109,85 @@ export function extractMapGeometry(source) {
     translated.set(index, palette.get(key))
   }
   return { grid: grid.map((row) => row.map((index) => translated.get(index))), tiles }
+}
+
+/** Keep original indices, including unusable routes, so actions still refer to the same entry. */
+export function extractMapRoutes(source) {
+  const routes = record(source)?.routes
+  if (!Array.isArray(routes)) return null
+  return routes.map((raw) => {
+    const route = record(raw)
+    if (!route) return null
+    const start = record(route.startPosition)
+    return {
+      startPosition: start && Number.isSafeInteger(start.row) && Number.isSafeInteger(start.col)
+        ? { row: start.row, col: start.col } : null,
+    }
+  })
+}
+
+/** Classify each SPAWN with the same conservative rules as map totals. */
+function classifyMapSpawn(action, wave, fragment) {
+  if (action.actionType !== 'SPAWN') return { spawnKind: null, reasons: [] }
+  // Even a zero-count action retains its conditional metadata in the schedule.
+  // The classifier normally skips zero-count actions when calculating totals.
+  const classifiedAction = action.count === 0 ? { ...action, count: 1 } : action
+  const result = buildEnemyHistogramCounts([{
+    levelId: 'map/wave-action',
+    data: { enemyDbRefs: [], waves: [{ ...wave, fragments: [{ ...fragment, actions: [classifiedAction] }] }] },
+  }])
+  const reasons = result.diagnostics.excludedLevels[0]?.reasons ?? []
+  const conditionalReason = (reason) => [
+    'hidden-spawn-group', 'random-spawn-group', 'weighted-spawn',
+    'unscheduled-spawn', 'unsupported-wave-tag',
+  ].includes(reason) || reason.startsWith('conditional-spawn:')
+  return {
+    spawnKind: reasons.some((reason) => !conditionalReason(reason)) ? 'unknown'
+      : reasons.length > 0 ? 'conditional' : 'fixed',
+    reasons,
+  }
+}
+
+/**
+ * Preserve source wave / fragment / action order and raw relative settings.
+ * These values are not a simulated global timeline; branch actions are separate.
+ * Null means unavailable structure, while [] means a known empty wave schedule.
+ */
+export function extractMapWaves(source) {
+  const waves = record(source)?.waves
+  if (!Array.isArray(waves) || waves.some((wave) => !record(wave) || !Array.isArray(wave.fragments)
+    || wave.fragments.some((fragment) => !record(fragment) || !Array.isArray(fragment.actions)
+      || fragment.actions.some((action) => !record(action))))) return null
+  const integer = (value) => Number.isSafeInteger(unwrap(value)) && unwrap(value) >= 0 ? unwrap(value) : null
+  const boolean = (value) => typeof unwrap(value) === 'boolean' ? unwrap(value) : null
+  return waves.map((wave) => ({
+    preDelay: nonnegative(wave.preDelay),
+    postDelay: nonnegative(wave.postDelay),
+    // -1 is an explicit upstream sentinel, not an invalid or missing delay.
+    maxTimeWaitingForNextWave: number(wave.maxTimeWaitingForNextWave) === -1 ? -1
+      : nonnegative(wave.maxTimeWaitingForNextWave),
+    advancedWaveTag: text(wave.advancedWaveTag),
+    fragments: wave.fragments.map((fragment) => ({
+      preDelay: nonnegative(fragment.preDelay),
+      actions: fragment.actions.map((action) => ({
+        actionType: typeof action.actionType === 'string' && action.actionType.trim() ? action.actionType : 'UNKNOWN',
+        key: text(action.key),
+        count: integer(action.count),
+        preDelay: nonnegative(action.preDelay),
+        interval: nonnegative(action.interval),
+        routeIndex: integer(action.routeIndex),
+        hiddenGroup: text(action.hiddenGroup),
+        randomSpawnGroupKey: text(action.randomSpawnGroupKey),
+        randomSpawnGroupPackKey: text(action.randomSpawnGroupPackKey),
+        randomType: text(action.randomType),
+        refreshType: text(action.refreshType),
+        managedByScheduler: boolean(action.managedByScheduler),
+        blockFragment: boolean(action.blockFragment),
+        dontBlockWave: boolean(action.dontBlockWave),
+        ...classifyMapSpawn(action, wave, fragment),
+      })),
+    })),
+  }))
 }
 
 /** Base-level effects, used terrain, and available devices only; optional/challenge runes and conditional branches are not evaluated. */
@@ -192,8 +273,11 @@ export function buildMapDatabase({
     const counts = buildEnemyHistogramCounts([{ levelId, data: source }])
     const reasons = counts.diagnostics.excludedLevels[0]?.reasons ?? []
     const supported = reasons.length === 0
-    // Keep both the declared references and any actual SPAWN-only enemy IDs.
-    const enemyIds = [...new Set([...extractLevelEnemyIds(source), ...Object.keys(counts.enemies)])].sort(compare)
+    const waves = extractMapWaves(source)
+    // Keep declared references and SPAWN-only IDs, including conditional spawns.
+    const spawnIds = waves?.flatMap((wave) => wave.fragments.flatMap((fragment) => fragment.actions
+      .flatMap((action) => action.actionType === 'SPAWN' && action.key ? [action.key] : []))) ?? []
+    const enemyIds = [...new Set([...extractLevelEnemyIds(source), ...Object.keys(counts.enemies), ...spawnIds])].sort(compare)
     for (const id of enemyIds) usedEnemies.add(id)
     let geometry
     try { geometry = extractMapGeometry(source) } catch (error) {
@@ -204,7 +288,7 @@ export function buildMapDatabase({
     const enemies = enemyIds.map((id) => ({ id, count: supported ? counts.enemies[id]?.spawnCount ?? 0 : null }))
     details[detailFile].maps[levelId] = {
       levelId, ...geometry, life: nonnegative(options?.maxLifePoint), initialCost: nonnegative(options?.initialCost),
-      deployLimit: nonnegative(options?.characterLimit), enemies,
+      deployLimit: nonnegative(options?.characterLimit), enemies, routes: extractMapRoutes(source), waves,
     }
     return {
       ...base, status: supported ? 'supported' : 'excluded',
@@ -216,7 +300,7 @@ export function buildMapDatabase({
     index: {
       schemaVersion: 1, generatedAt, sourceGeneratedAt, maps,
       enemies: Object.fromEntries([...usedEnemies].sort(compare).map((id) => [
-        id, registry[id] ?? { name: id, hp: null, resistance: null },
+        id, registry[id] ?? { name: id, hp: null, attack: null, defense: null, resistance: null },
       ])),
     },
     details,

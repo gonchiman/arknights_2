@@ -59,6 +59,8 @@
 .map-blocked-pattern path { fill: none; stroke: var(--map-blocked-line); }
 .map-tile text { fill: var(--text); font-family: inherit; font-size: 9px; font-weight: 600; }
 .map-tile-start text, .map-tile-end text { fill: #fff; }
+.map-tile-entrance text { fill: #fff; font-size: 12px; }
+.map-entrance-marker { fill: #b56861; }
 .map-tile-ground { --map-tile-fill: #e0e1df; }
 .map-tile-high { --map-tile-fill: #b4bab8; }
 .map-tile-blocked { --map-tile-fill: #f0f0ee; }
@@ -75,10 +77,10 @@
 .map-battle-facts dt { color: var(--text-muted); font-size: 11px; }
 .map-battle-facts dd { margin: 0; color: var(--text); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .map-enemy-heading { margin: 0 0 9px; font-size: 13px; font-weight: 500; }
-.map-enemy-table { min-width: 340px; }
+.map-enemy-table { min-width: 600px; }
 .map-enemy-table tr { cursor: default; }
 .map-enemy-table tr:hover { background: transparent; }
-.map-enemy-table th:first-child { width: 45%; }
+.map-enemy-table th:first-child { width: 32%; }
 .map-data-information { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; font-size: 11px; }
 .map-data-information summary, .map-source-notes summary { width: fit-content; color: var(--text-muted); cursor: pointer; }
 .map-data-information dl { display: grid; gap: 8px; margin: 12px 0; }
@@ -87,6 +89,66 @@
 .map-data-information dd { margin: 0; overflow-wrap: anywhere; }
 .map-source-notes { font-size: 11px; color: var(--text-muted); }
 .map-source-notes p { margin: 8px 0; line-height: 1.8; }
+.map-wave-overview { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 14px; }
+.map-wave-overview h3 { margin: 0; font-size: 13px; font-weight: 500; }
+.map-wave-overview > span { font-size: 12px; color: var(--text-muted); }
+.map-wave-picker { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.map-wave-picker select { min-height: 36px; padding: 6px 28px 6px 10px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 0; font: inherit; }
+.map-wave-fragments { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)); gap: 7px; margin-bottom: 14px; }
+.map-wave-fragments button { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 4px 12px; min-height: 42px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 0; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
+.map-wave-fragments button small { color: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.map-wave-fragments button:hover { background: var(--surface-soft); }
+.map-wave-fragments button[aria-pressed="true"] { background: var(--surface-hover); box-shadow: inset 0 -2px var(--text); }
+.map-wave-caption { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 8px; font-size: 11px; color: var(--text-muted); }
+.map-wave-table-scroll { height: 360px; overflow: auto; scrollbar-gutter: stable; }
+.map-database-page .map-wave-table { min-width: 340px; table-layout: fixed; }
+.map-database-page .map-wave-table thead th { white-space: normal; }
+.map-wave-time-column { width: 104px; }
+.map-wave-entrance-column { width: 68px; }
+.map-wave-count-column { width: 70px; }
+.map-wave-condition-column { width: 80px; }
+.map-database-page .map-wave-table .map-wave-entrance { text-align: center; }
+.map-wave-table tbody tr { cursor: pointer; }
+.map-wave-table tbody tr:hover { background: var(--surface-soft); }
+.map-wave-table tbody tr.is-selected { background: var(--surface-hover); }
+.map-database-page .map-wave-table td.map-wave-enemies { padding: 0; }
+.map-wave-table td button { display: block; width: 100%; min-height: 38px; padding: 9px 10px; background: transparent; border: 0; border-radius: 0; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.map-wave-table td button > span { display: block; overflow-wrap: anywhere; }
+.map-wave-table td button small { font-size: inherit; color: var(--text-muted); white-space: nowrap; }
+.map-wave-table td button:focus-visible { outline: 2px solid var(--text-soft); outline-offset: -2px; }
+.map-wave-condition { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+.map-wave-incomplete { margin: 8px 0; font-size: 12px; color: var(--text-muted); }
+.map-wave-selected { min-height: 66px; border-top: 1px solid var(--border); padding: 12px 0; font-size: 12px; }
+.map-wave-selected > div { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.map-wave-selected strong { font-weight: 500; }
+.map-wave-selected span, .map-wave-selected p { color: var(--text-muted); }
+.map-wave-selected p { margin: 3px 0 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.map-wave-events, .map-wave-help { font-size: 11px; color: var(--text-muted); }
+.map-wave-events { margin: 0 0 12px; }
+.map-wave-events summary, .map-wave-help summary { width: fit-content; cursor: pointer; }
+.map-wave-events ul { margin: 10px 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.map-wave-events li { display: flex; gap: 12px; }
+.map-wave-events li > span:first-child { min-width: 48px; font-variant-numeric: tabular-nums; }
+.map-wave-help p { margin: 8px 0; line-height: 1.8; }
+.map-wave-help dl { margin: 8px 0 0; display: grid; gap: 6px; }
+.map-wave-help dl > div { display: flex; gap: 12px; }
+.map-wave-help dd { margin: 0; }
+@container (max-width: 440px) {
+  .map-wave-fragments { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .map-wave-fragments button { flex-direction: column; padding: 8px 4px; }
+  .map-database-page .map-wave-table { min-width: 290px; }
+  .map-wave-time-column { width: 70px; }
+  .map-wave-entrance-column { width: 52px; }
+  .map-wave-count-column { width: 48px; }
+  .map-wave-condition-column { width: 64px; }
+  .map-database-page .map-wave-table th, .map-database-page .map-wave-table td { padding: 8px 6px; }
+  .map-wave-table td button { padding: 8px 6px; }
+}
+@media (max-width: 760px), (pointer: coarse) {
+  .map-wave-fragments button, .map-wave-table td button, .map-wave-picker select { min-height: 44px; }
+  .map-wave-picker select { font-size: 16px; }
+  .map-wave-events summary, .map-wave-help summary { padding: 10px 0; }
+}
 @container (max-width: 650px) { .map-selection-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .map-search-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); } .map-search-controls label:nth-child(2) { grid-column: 1 / -1; } }
 @media (max-width: 760px), (pointer: coarse) {
   .map-feature-header select { min-height: 44px; font-size: 16px; }
