@@ -1,4 +1,5 @@
 export type AppRoute =
+  | { view: 'home' }
   | { view: 'skills' }
   | { view: 'skill-effects'; selection?: SkillEffectsRouteSelection }
   | { view: 'operators' }
@@ -69,6 +70,7 @@ function createSkillSelectionHash(route: string, selection: SkillRouteSelection)
 }
 
 export function parseHashRoute(hash: string): AppRoute {
+  if (hash === '' || hash === '#' || hash === '#/') return { view: 'home' }
   if (
     hash.startsWith(OPERATOR_SKILL_ROUTE_PREFIX)
     || hash.startsWith(LEGACY_CLASSIFIER_SKILL_ROUTE_PREFIX)
