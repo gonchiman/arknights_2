@@ -63,7 +63,7 @@ export function parseSurtrDpsPageState(value: unknown): SurtrDpsPageState {
     excluded: Array.isArray(source.excluded) ? [...new Set(source.excluded.filter((id): id is string => id === '' || validId(id)))] : [],
     moduleLevels,
     chartKind: option(source.chartKind, ['bar', 'line'], defaults.chartKind),
-    barStep: option(source.barStep, [10, 20, 'ratings'], defaults.barStep),
+    barStep: source.barStep === 'ratings' || integer(source.barStep, 1, 100) ? source.barStep : defaults.barStep,
     resistanceRange,
     showValues: booleanOr(source.showValues, defaults.showValues),
     gridStyle: option(source.gridStyle, ['none', 'dashed', 'solid'], defaults.gridStyle),

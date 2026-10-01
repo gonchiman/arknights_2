@@ -118,8 +118,10 @@ function getPlot(series: SurtrDpsChartSeries[], width: number, height: number, k
   const plotHeight = Math.max(1, height - 28 - baseTop)
   const xValues = [...new Set(series.flatMap((item) => item.points.map((point) => point.x)))].sort((a, b) => a - b)
   const bandWidth = (right - left) / Math.max(1, xValues.length)
-  const barGap = 3
-  const barWidth = Math.max(1, Math.min(32, (bandWidth * 0.74 - barGap * Math.max(0, series.length - 1)) / Math.max(1, series.length)))
+  const seriesCount = Math.max(1, series.length)
+  const groupBudget = bandWidth * 0.74
+  const barGap = Math.min(3, groupBudget / (seriesCount * 4))
+  const barWidth = Math.min(32, (groupBudget - barGap * Math.max(0, series.length - 1)) / seriesCount)
   const groupWidth = series.length * barWidth + Math.max(0, series.length - 1) * barGap
   const x = (value: number) => kind === 'bar'
     ? left + (xValues.indexOf(value) + 0.5) * bandWidth
