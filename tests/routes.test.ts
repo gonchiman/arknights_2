@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { APP_NAV_ITEMS, GOLDENGLOW_ANALYSIS_ITEMS, SURTR_ANALYSIS_ITEMS, SURTR_HOME_LINK } from '../src/lib/navigation.ts'
+import { APP_NAV_ITEMS, DAMAGE_VERIFICATION_ITEM, GOLDENGLOW_ANALYSIS_ITEMS, SURTR_ANALYSIS_ITEMS, SURTR_HOME_ITEMS, SURTR_HOME_LINK } from '../src/lib/navigation.ts'
 import {
   createOperatorDetailHash,
   createSkillEffectsHash,
@@ -19,6 +19,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['skill-json', 'skill-json'],
       ['code-analysis', 'code-analysis'],
       ['damage', 'damage'],
+      ['damage-verification', 'damage-verification'],
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
       ['enemy-analysis', 'enemy-analysis'],
@@ -34,6 +35,25 @@ test('サイドバーから主要ページへ遷移できる', () => {
 
 test('比較ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/comparison'), { view: 'comparison' })
+})
+
+test('ダメージ検証は共通メニューとスルトのトップから同じ独立ページを開く', () => {
+  assert.deepEqual(parseHashRoute(DAMAGE_VERIFICATION_ITEM.href), { view: 'damage-verification' })
+  assert.deepEqual(DAMAGE_VERIFICATION_ITEM, {
+    id: 'damage-verification',
+    href: '#/analysis/damage-verification',
+    label: 'ダメージ検証',
+    description: '',
+    section: 'analysis',
+  })
+  const calculatorIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'damage')
+  assert.equal(APP_NAV_ITEMS[calculatorIndex + 1], DAMAGE_VERIFICATION_ITEM)
+  assert.deepEqual(SURTR_HOME_ITEMS, [...SURTR_ANALYSIS_ITEMS, DAMAGE_VERIFICATION_ITEM])
+  assert.equal(SURTR_ANALYSIS_ITEMS.some((item) => item.id === 'damage-verification'), false)
+
+  for (const suffix of ['/', '/extra', '?from=surtr', '?operatorId=char_350_surtr', '-extra']) {
+    assert.deepEqual(parseHashRoute(`${DAMAGE_VERIFICATION_ITEM.href}${suffix}`), { view: 'operators' })
+  }
 })
 
 test('スライド作成はアプリ内の独立したページとしてメニューから開く', () => {

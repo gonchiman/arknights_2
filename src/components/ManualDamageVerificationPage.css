@@ -1,0 +1,65 @@
+.manual-damage-page {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.manual-damage-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 18px;
+  border: 1px solid var(--border-strong);
+  padding: 12px 14px;
+}
+.manual-damage-heading h1 { margin: 0; font-size: 20px; font-weight: 600; }
+.manual-damage-heading > span { color: var(--text-muted); font-size: 12px; }
+.manual-damage-layout { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 14px; }
+.manual-damage-panel { min-width: 0; border: 1px solid var(--border-strong); background: var(--surface); }
+.manual-damage-panel-heading { margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface-soft); font-size: 15px; font-weight: 600; }
+.manual-damage-input-group { margin: 0; padding: 16px 14px; min-width: 0; border: 0; border-bottom: 1px solid var(--border); }
+.manual-damage-input-group:last-child { border-bottom: 0; }
+.manual-damage-input-group legend { float: left; width: 100%; padding: 0 0 12px; font-size: 14px; font-weight: 600; }
+.manual-damage-input-group legend > span, .manual-damage-stage h3 > span { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.manual-damage-fields { clear: both; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 12px; }
+.manual-damage-field { display: grid; min-width: 0; gap: 6px; }
+.manual-damage-rounding { grid-column: 1 / -1; }
+.manual-damage-field > label { font-size: 13px; line-height: 1.5; }
+.manual-damage-control { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.manual-damage-control input, .manual-damage-control select {
+  width: 100%; min-width: 0; min-height: 36px; border: 1px solid var(--border-strong);
+  border-radius: 0; padding: 6px 8px; background: var(--surface); color: var(--text); font-size: 14px;
+}
+.manual-damage-control input { text-align: right; font-variant-numeric: tabular-nums; }
+.manual-damage-control input::placeholder { color: var(--text-muted); }
+.manual-damage-control [aria-invalid="true"] { border-color: var(--danger); }
+.manual-damage-unit { flex: 0 0 auto; color: var(--text-muted); font-size: 13px; }
+.manual-damage-error { color: var(--danger); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.manual-damage-stage { padding: 16px 18px; border-bottom: 1px solid var(--border); min-width: 0; }
+.manual-damage-stage h3 { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
+.manual-damage-steps { display: grid; gap: 12px; margin: 0; }
+.manual-damage-step { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 5px 14px; min-width: 0; }
+.manual-damage-step dt { color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+.manual-damage-step dd { margin: 0 0 0 auto; max-width: 100%; text-align: right; font-size: 14px; line-height: 1.6; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.manual-damage-step-pending dd, .manual-damage-step-invalid dd { color: var(--text-muted); }
+.manual-damage-results { display: flex; flex-wrap: wrap; gap: 16px 30px; padding: 18px; background: var(--surface-soft); }
+.manual-damage-results > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; min-width: 0; }
+.manual-damage-results span { color: var(--text-muted); font-size: 13px; }
+.manual-damage-results output { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.manual-damage-help { color: var(--text-muted); font-size: 13px; line-height: 1.8; }
+.manual-damage-help summary { width: fit-content; cursor: pointer; }
+.manual-damage-help p { max-width: 900px; margin: 8px 0 0; }
+
+@container (min-width: 850px) {
+  .manual-damage-layout { grid-template-columns: minmax(0, .9fr) minmax(0, 1.35fr); }
+}
+@container (max-width: 400px) {
+  .manual-damage-fields { grid-template-columns: minmax(0, 1fr); }
+  .manual-damage-input-group, .manual-damage-stage { padding: 14px 12px; }
+  .manual-damage-control input, .manual-damage-control select { font-size: 16px; min-height: 42px; }
+  .manual-damage-step { flex-direction: column; align-items: stretch; }
+  .manual-damage-step dd { margin-left: 0; text-align: left; }
+}

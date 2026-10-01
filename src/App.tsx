@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { AppSidebar } from './components/AppSidebar'
 import { HomePage } from './components/HomePage'
 import { DamageCalculator } from './components/DamageCalculator'
+import { ManualDamageVerificationPage } from './components/ManualDamageVerificationPage'
 import { DataSourcesPage } from './components/DataSourcesPage'
 import { CodeAnalysisPage } from './components/CodeAnalysisPage'
 import { GoldenglowGuidePage } from './components/GoldenglowGuidePage'
@@ -94,7 +95,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (route.view === 'home' || route.view === 'enemies' || route.view === 'enemy-analysis' || route.view === 'maps' || route.view === 'sources' || route.view === 'code-analysis' || route.view === 'slide-maker' || route.view === 'goldenglow-home' || route.view === 'surtr-home' || skillDataRequestStarted.current) return
+    if (route.view === 'home' || route.view === 'enemies' || route.view === 'enemy-analysis' || route.view === 'maps' || route.view === 'sources' || route.view === 'code-analysis' || route.view === 'slide-maker' || route.view === 'damage-verification' || route.view === 'goldenglow-home' || route.view === 'surtr-home' || skillDataRequestStarted.current) return
     skillDataRequestStarted.current = true
     void load()
   }, [route.view])
@@ -285,7 +286,7 @@ export default function App() {
 
         <main className="app-content">
         <PanelStateScope.Provider value={displayedRoute.view}>
-        {error && displayedRoute.view !== 'home' && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'enemy-analysis' && displayedRoute.view !== 'maps' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'surtr-home' && displayedRoute.view !== 'surtr-s3' && displayedRoute.view !== 'surtr-duration' && displayedRoute.view !== 'surtr-remnant-attacks' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-target-switch-two' && displayedRoute.view !== 'goldenglow-single-trial' && displayedRoute.view !== 'goldenglow-trial-benchmark' && <section className="error-box" role="alert">{error}</section>}
+        {error && displayedRoute.view !== 'home' && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'enemy-analysis' && displayedRoute.view !== 'maps' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'damage-verification' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'surtr-home' && displayedRoute.view !== 'surtr-s3' && displayedRoute.view !== 'surtr-duration' && displayedRoute.view !== 'surtr-remnant-attacks' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-target-switch-two' && displayedRoute.view !== 'goldenglow-single-trial' && displayedRoute.view !== 'goldenglow-trial-benchmark' && <section className="error-box" role="alert">{error}</section>}
 
         {/* Keep the directory mounted while viewing a detail page so filters, sort and charts survive returning. */}
         {operatorDirectoryVisited && (displayedRoute.view === 'operators' || displayedRoute.view === 'operator-detail') && (
@@ -304,6 +305,8 @@ export default function App() {
           <DataSourcesPage />
         ) : displayedRoute.view === 'slide-maker' ? (
           <SlideMakerPage />
+        ) : displayedRoute.view === 'damage-verification' ? (
+          <ManualDamageVerificationPage />
         ) : displayedRoute.view === 'goldenglow-home' ? (
           <GoldenglowHomePage />
         ) : displayedRoute.view === 'surtr-home' ? (

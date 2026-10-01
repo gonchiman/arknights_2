@@ -1,5 +1,5 @@
 import { createOperatorDetailHash } from '../lib/routes'
-import { SURTR_ANALYSIS_ITEMS } from '../lib/navigation'
+import { SURTR_HOME_ITEMS } from '../lib/navigation'
 import './SurtrHomePage.css'
 
 export function SurtrHomePage() {
@@ -20,7 +20,7 @@ export function SurtrHomePage() {
       </a>
       <nav aria-label="スルトの分析">
         <ul className="surtr-home-analysis-list">
-          {SURTR_ANALYSIS_ITEMS.map((item) => <li key={item.id}>
+          {SURTR_HOME_ITEMS.map((item) => <li key={item.id}>
             <a className="surtr-home-analysis-link" href={item.href} aria-labelledby={`surtr-home-${item.id}`}>
               <svg className="surtr-home-analysis-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M4 4v16h16" /><path d="m7 14 4-5 4 3 5-6" />

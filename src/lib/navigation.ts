@@ -1,4 +1,4 @@
-export type NavigationPage = 'home' | 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'comparison' | 'enemies' | 'enemy-analysis' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
+export type NavigationPage = 'home' | 'operators' | 'skills' | 'skill-effects' | 'skill-json' | 'code-analysis' | 'damage' | 'damage-verification' | 'comparison' | 'enemies' | 'enemy-analysis' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -19,6 +19,14 @@ export const NAVIGATION_SECTIONS: ReadonlyArray<{ id: NavigationSection; label: 
 export const HOME_LINK = { label: 'ホーム', href: '#/' } as const
 export const GOLDENGLOW_HOME_LINK = { label: 'ゴールデングロー', href: '#/analysis/goldenglow' } as const
 export const SURTR_HOME_LINK = { label: 'スルト', href: '#/analysis/surtr' } as const
+
+export const DAMAGE_VERIFICATION_ITEM: NavigationItem = {
+  id: 'damage-verification',
+  href: '#/analysis/damage-verification',
+  label: 'ダメージ検証',
+  description: '',
+  section: 'analysis',
+}
 
 export const SURTR_ANALYSIS_ITEMS: readonly NavigationItem[] = [
   {
@@ -42,6 +50,11 @@ export const SURTR_ANALYSIS_ITEMS: readonly NavigationItem[] = [
     description: '',
     section: 'operator-analysis',
   },
+]
+
+export const SURTR_HOME_ITEMS: readonly NavigationItem[] = [
+  ...SURTR_ANALYSIS_ITEMS,
+  DAMAGE_VERIFICATION_ITEM,
 ]
 
 export const GOLDENGLOW_ANALYSIS_ITEMS: readonly NavigationItem[] = [
@@ -132,6 +145,7 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     description: '攻撃・スキルダメージ計算',
     section: 'analysis',
   },
+  DAMAGE_VERIFICATION_ITEM,
   {
     id: 'comparison',
     href: '#/comparison',
