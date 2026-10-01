@@ -29,6 +29,16 @@ test('DPS settings survive a route remount or reload through session storage', (
   assert.equal(readSurtrDpsPageState(storage).moduleLevels.uniequip_003_surtr, 2)
 })
 
+test('custom integer spacing and existing presets survive storage without narrowing the range', () => {
+  const storage = memoryStorage()
+  for (const barStep of [1, 7, 10, 20, 30, 100, 'ratings'] as const) {
+    const state = { ...createDefaultSurtrDpsPageState(), barStep, resistanceRange: { min: 15, max: 55 } }
+    writeSurtrDpsPageState(state, storage)
+    assert.equal(JSON.parse(storage.values.get(SURTR_DPS_PAGE_STATE_KEY)!).barStep, barStep)
+    assert.deepEqual(readSurtrDpsPageState(storage), state)
+  }
+})
+
 test('valid fields in a partial or damaged record are retained independently', () => {
   const restored = parseSurtrDpsPageState({
     settings: { level: 80, trust: '50', potential: 0, skillLevelIndex: 1.5, blocking: true },
@@ -55,12 +65,14 @@ test('invalid or UI-inaccessible enum and numeric values fall back safely', () =
   for (const value of [null, undefined, [], true, 7, 'text']) assert.deepEqual(parseSurtrDpsPageState(value), defaults)
   assert.deepEqual(parseSurtrDpsPageState({
     settings: { level: Infinity, trust: -1, potential: 7, skillLevelIndex: 10, blocking: 1 },
-    chartKind: 'pie', barStep: 1, precision: 20, gridStyle: 'dots', metric: 'ratio',
+    chartKind: 'pie', barStep: 101, precision: 20, gridStyle: 'dots', metric: 'ratio',
     differenceMetric: 'total', requestedBaselineId: '\n', yAxisMode: 'custom',
     resistanceRange: { min: 90, max: 10 }, selectedResistance: NaN,
     yAxisDraft: { min: '100', max: '20' },
   }), defaults)
-  for (const barStep of ['10', 0, 30, -20, NaN]) assert.equal(parseSurtrDpsPageState({ barStep }).barStep, 20)
+  for (const barStep of ['10', '', 'custom', 0, 101, -20, 1.5, NaN, Infinity, null, true]) {
+    assert.equal(parseSurtrDpsPageState({ barStep }).barStep, 20)
+  }
   for (const precision of [-1, 4, 0.5, '2', NaN]) assert.equal(parseSurtrDpsPageState({ precision }).precision, 0)
 })
 

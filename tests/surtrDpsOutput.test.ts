@@ -29,6 +29,13 @@ test('数値の刻みは従来の0〜100の比較点を維持する', () => {
   for (const value of [undefined, 0, -1, 101, 0.5, NaN]) assert.deepEqual(getSurtrDpsResistanceSamples(value), getSurtrDpsResistanceSamples(20))
 })
 
+test('任意の整数刻みでも開始値を起点にし、刻みに一致しない終了値は追加しない', () => {
+  assert.deepEqual(getSurtrDpsResistanceSamples(7, { min: 15, max: 55 }), [15, 22, 29, 36, 43, 50])
+  assert.deepEqual(getSurtrDpsResistanceSamples(1), Array.from({ length: 101 }, (_, index) => index))
+  assert.deepEqual(getSurtrDpsResistanceSamples(100), [0, 100])
+  assert.deepEqual(getSurtrDpsResistanceSamples(100, { min: 15, max: 55 }), [15])
+})
+
 test('表示範囲の検証は整数の0〜100、開始より大きい終了を要求する', () => {
   for (const range of [{ min: 0, max: 100 }, { min: 0, max: 50 }, { min: 99, max: 100 }]) {
     assert.ok(isValidSurtrDpsResistanceRange(range))

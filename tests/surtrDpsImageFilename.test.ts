@@ -38,6 +38,17 @@ test('Surtr filename distinguishes chart kind and only active bar spacing', () =
   assert.notEqual(bars, getSurtrDpsImageFilename({ ...settings, kind: 'bar', barStep: 10 }))
 })
 
+test('custom spacing filenames match shifted samples and additional selected resistance', () => {
+  const options = { ...settings, barStep: 7, resistanceRange: { min: 15, max: 55 } }
+  const name = getSurtrDpsImageFilename(options)
+  assert.match(name, /術耐性15-55刻み7_集合棒/)
+  assert.equal(name, getSurtrDpsImageFilename({ ...options, selectedResistance: 22 }))
+  assert.match(getSurtrDpsImageFilename({ ...options, selectedResistance: 55 }), /追加術耐性55/)
+  assert.notEqual(name, getSurtrDpsImageFilename({ ...options, barStep: 20 }))
+  assert.equal(getSurtrDpsImageFilename({ ...options, kind: 'line' }),
+    getSurtrDpsImageFilename({ ...options, kind: 'line', barStep: 20 }))
+})
+
 test('Surtr rank sampling filenames record active rank mode and only additional points', () => {
   const ranked = getSurtrDpsImageFilename({ ...settings, barStep: 'ratings' })
   assert.match(ranked, /術耐性ランク代表値_集合棒/)

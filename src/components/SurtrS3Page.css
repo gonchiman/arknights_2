@@ -34,6 +34,8 @@
 .surtr-s3-output-control { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--text-soft); font-size: 11px; }
 .surtr-s3-output-control select, .surtr-s3-output-control input { min-height: 34px; max-width: 100%; padding: 5px 8px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); font: inherit; }
 .surtr-s3-output-control input { width: 100px; }
+.surtr-s3-step-control { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; max-width: 100%; }
+.surtr-s3-step-control .surtr-s3-step-input { width: 68px; }
 .surtr-s3-values-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; color: var(--text-soft); font-size: 11px; cursor: pointer; }
 .surtr-s3-values-toggle input { width: 16px; height: 16px; margin: 0; accent-color: var(--text); }
 .surtr-s3-comparison-options { font-size: 11px; }
@@ -95,7 +97,7 @@
   .surtr-s3-table-resistance { padding: 12px 8px; }
   .surtr-s3-output-panel .collapsible-panel-header > .collapsible-panel-title { flex-basis: 100%; }
   .surtr-s3-output-panel .collapsible-panel-actions { flex: 1 1 100%; justify-content: flex-start; gap: 8px 10px; padding-top: 0; }
-  .surtr-s3-output-control select, .surtr-s3-comparison-options summary { min-height: 44px; }
+  .surtr-s3-output-control select, .surtr-s3-output-control input, .surtr-s3-comparison-options summary { min-height: 44px; }
   .surtr-s3-values-toggle { min-height: 44px; }
   .surtr-s3-resistance-range { position: static; }
   .surtr-s3-resistance-bounds input { min-height: 44px; font-size: 16px; }

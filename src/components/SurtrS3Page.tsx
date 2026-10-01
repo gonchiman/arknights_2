@@ -50,6 +50,8 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   const [moduleLevels, setModuleLevels] = useState(initialState.moduleLevels)
   const [chartKind, setChartKind] = useState<SurtrDpsChartKind>(initialState.chartKind)
   const [barStep, setBarStep] = useState<SurtrDpsBarStep>(initialState.barStep)
+  const [customBarStep, setCustomBarStep] = useState(typeof initialState.barStep === 'number' && ![10, 20].includes(initialState.barStep))
+  const [barStepDraft, setBarStepDraft] = useState(String(typeof initialState.barStep === 'number' ? initialState.barStep : 20))
   const [resistanceRange, setResistanceRange] = useState<SurtrDpsResistanceRange>(initialState.resistanceRange)
   const [resistanceRangeDraft, setResistanceRangeDraft] = useState({ min: String(initialState.resistanceRange.min), max: String(initialState.resistanceRange.max) })
   const [showValues, setShowValues] = useState(initialState.showValues)
@@ -136,6 +138,22 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
     || !isValidHpChartYAxisRange({ min: yAxis.min!, max: yAxis.max! }))
     ? '最小値より大きい最大値を入力してください。' : ''
   const changeMetric = (next: SurtrDpsMetric) => { setMetric(next); setYAxisMode('zero') }
+  const barStepError = chartKind === 'bar' && customBarStep
+    && (!barStepDraft.trim() || !Number.isInteger(Number(barStepDraft)) || Number(barStepDraft) < 1 || Number(barStepDraft) > 100)
+    ? '刻みは1〜100の整数で指定してください。' : ''
+  const changeBarStep = (value: string) => {
+    setCustomBarStep(value === 'custom')
+    if (value === 'custom') {
+      const next = typeof barStep === 'number' ? barStep : 20
+      setBarStepDraft(String(next))
+      setBarStep(next)
+    } else setBarStep(value === 'ratings' ? 'ratings' : Number(value))
+  }
+  const updateBarStepDraft = (value: string) => {
+    setBarStepDraft(value)
+    const next = Number(value)
+    if (value.trim() && Number.isInteger(next) && next >= 1 && next <= 100) setBarStep(next)
+  }
   const resistanceRangeError = !resistanceRangeDraft.min.trim() || !resistanceRangeDraft.max.trim()
     || !isValidSurtrDpsResistanceRange({ min: Number(resistanceRangeDraft.min), max: Number(resistanceRangeDraft.max) })
     ? '0〜100の整数で、終了を開始より大きくしてください。' : ''
@@ -179,7 +197,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
     setHistogramEditor(null)
     setHistogramDraft(null)
     setHistogramStorageError(false)
-    if (!chartSeries.length || invalidModels.length || yAxisError) return
+    if (!chartSeries.length || invalidModels.length || yAxisError || barStepError) return
     setImage({ id: ++nextSnapshot.current, series: chartSeries, kind: chartKind, barStep, resistanceRange: { ...resistanceRange }, showValues: chartKind === 'bar' && showValues,
       title: `スルト S3 ${outputTitle}`, metric: effectiveMetric, gridStyle, precision, yAxis, selectedResistance,
       conditions: `${label}・${blockLabel}`, histogram: readEnemyHistogramSnapshot(),
@@ -285,9 +303,16 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
         <label className="surtr-s3-output-control"><span>グラフ</span><select aria-label="グラフの表示形式" value={chartKind} onChange={event => setChartKind(event.target.value as SurtrDpsChartKind)}>
           <option value="bar">棒グラフ</option><option value="line">折れ線</option>
         </select></label>
-        {chartKind === 'bar' && <label className="surtr-s3-output-control"><span>術耐性の刻み</span><select aria-label="術耐性の刻み" value={barStep} onChange={event => setBarStep(event.target.value === 'ratings' ? 'ratings' : Number(event.target.value))}>
-          <option value={10}>10</option><option value={20}>20</option><option value="ratings">ゲーム内表記</option>
-        </select></label>}
+        {chartKind === 'bar' && <div className="surtr-s3-step-control">
+          <label className="surtr-s3-output-control"><span>術耐性の刻み</span><select aria-label="術耐性の刻み" value={customBarStep ? 'custom' : barStep} onChange={event => changeBarStep(event.target.value)}>
+            <option value={10}>10</option><option value={20}>20</option><option value="ratings">ゲーム内表記</option><option value="custom">指定</option>
+          </select></label>
+          {customBarStep && <div className="surtr-s3-output-control">
+            <input className="surtr-s3-step-input" aria-label="術耐性の刻みを指定" type="number" min="1" max="100" step="1"
+              value={barStepDraft} aria-invalid={Boolean(barStepError)} aria-describedby={barStepError ? 'surtr-s3-step-error' : undefined}
+              onChange={event => updateBarStepDraft(event.target.value)} />
+          </div>}
+        </div>}
         <details className="surtr-s3-comparison-options surtr-s3-resistance-range" onToggle={event => {
           if (!event.currentTarget.open) setResistanceRangeDraft({ min: String(resistanceRange.min), max: String(resistanceRange.max) })
         }} onKeyDown={event => {
@@ -326,6 +351,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
         <label className="surtr-s3-output-control"><span>小数点以下</span><select aria-label="出力の小数点以下の桁数" value={precision} onChange={event => setPrecision(Number(event.target.value))}>
           {[0, 1, 2, 3].map(value => <option key={value} value={value}>{value}桁</option>)}
         </select></label>
+        {barStepError && <p className="surtr-s3-axis-error" id="surtr-s3-step-error" role="alert">{barStepError}</p>}
       </>}>
       {!record ? status : invalidModels.length ? <p role="alert">{invalidModels.map(item => item.label).join('・')}の計算に必要なデータを取得できませんでした。</p>
         : !series.length ? <p className="surtr-s3-status" role="status">比較するMODを選択してください。</p> : <div className="surtr-s3-results-layout">
@@ -344,7 +370,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
                     </label>)}
                   </div>}
                 </>}
-                <button className="button secondary" type="button" disabled={!chartSeries.length || !!yAxisError} onClick={openImage} aria-label="グラフをPNG画像で保存" aria-haspopup="dialog">画像を保存</button>
+                <button className="button secondary" type="button" disabled={!chartSeries.length || !!yAxisError || !!barStepError} onClick={openImage} aria-label="グラフをPNG画像で保存" aria-haspopup="dialog">画像を保存</button>
               </div>
               {yAxisError && <p className="surtr-s3-axis-error" id="surtr-s3-axis-error" role="alert">{yAxisError}</p>}
             </div>
