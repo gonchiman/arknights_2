@@ -76,7 +76,7 @@ test('Surtr image filenames record the range for bars, ranks and lines', () => {
 
 test('Surtr filename defaults match the visible initial chart settings', () => {
   assert.equal(getSurtrDpsImageFilename(settings), getSurtrDpsImageFilename({
-    ...settings, kind: 'bar', barStep: 20, showValues: false, metric: 'total', precision: 0, gridStyle: 'solid', yAxis: { mode: 'zero' },
+    ...settings, kind: 'bar', barStep: 20, showValues: false, showResistanceRanks: true, metric: 'total', precision: 0, gridStyle: 'solid', yAxis: { mode: 'zero' },
   }))
 })
 
@@ -87,6 +87,19 @@ test('Surtr filename includes value labels only for bar charts', () => {
   assert.notEqual(bars, labeled)
   assert.equal(getSurtrDpsImageFilename({ ...settings, kind: 'line' }),
     getSurtrDpsImageFilename({ ...settings, kind: 'line', showValues: true }))
+})
+
+test('Surtr filenames record enabled rank display for bars, lines and combined exports', () => {
+  const histogram = '敵_術耐性_ヒストグラム_出現回数_全敵_線形_幅10_上限100.png'
+  for (const kind of ['bar', 'line'] as const) {
+    const enabled = getSurtrDpsImageFilename({ ...settings, kind, showResistanceRanks: true })
+    const disabled = getSurtrDpsImageFilename({ ...settings, kind, showResistanceRanks: false })
+    assert.equal(enabled, getSurtrDpsImageFilename({ ...settings, kind }))
+    assert.match(enabled, /術耐性ランク表示/)
+    assert.doesNotMatch(disabled, /術耐性ランク表示/)
+    assert.notEqual(enabled, disabled)
+    assert.notEqual(getSurtrCombinedImageFilename(enabled, histogram), getSurtrCombinedImageFilename(disabled, histogram))
+  }
 })
 
 test('Surtr filename distinguishes output metric and active baseline only', () => {

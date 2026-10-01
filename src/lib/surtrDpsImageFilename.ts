@@ -13,6 +13,7 @@ export interface SurtrDpsImageConditions {
   barStep?: SurtrDpsBarStep
   resistanceRange?: SurtrDpsResistanceRange
   showValues?: boolean
+  showResistanceRanks?: boolean
   metric?: SurtrDpsMetric
   baselineLabel?: string
   gridStyle?: 'solid' | 'dashed' | 'none'
@@ -52,6 +53,7 @@ export function getSurtrDpsImageFilename(settings: SurtrDpsImageConditions): str
       : `${rangeLabel}刻み${barStep}` : rangeLabel,
     kind === 'bar' ? '集合棒' : '折れ線',
     kind === 'bar' && settings.showValues && '数値あり',
+    settings.showResistanceRanks !== false && '術耐性ランク表示',
     extraBar && `追加術耐性${selected}`,
     precision > 0 && `小数${precision}桁`,
     gridStyle !== 'solid' && (gridStyle === 'dashed' ? 'グリッド破線' : 'グリッドなし'),

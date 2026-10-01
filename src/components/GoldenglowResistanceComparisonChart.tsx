@@ -5,6 +5,7 @@ import { getHpChartValueAxis } from '../lib/goldenglowTargetSwitchHpAxis'
 import { getHpRankBands } from '../lib/hpRankBands'
 import { getModuleColorKey } from '../lib/moduleColors'
 import { getHpComparisonSeriesStyles, type HpChartGridStyle } from './GoldenglowTargetSwitchHpChart'
+import { StatRankStrip } from './StatRankStrip'
 import './GoldenglowResistanceComparisonChart.css'
 
 export interface ResistanceComparisonChartProps {
@@ -134,20 +135,8 @@ function ResistanceChartContent({ series, enemyHps, enemyResistances, metric, ba
     role={dimensions ? 'img' : 'group'} aria-labelledby={titleId}>
     <title id={titleId}>敵HP・術耐性別の{metricLabel}。同じ術耐性の棒はMODごとにずらして重ねています。</title>
     <text className="ggs-hp-chart-axis-title" x={margin.left} y={18}>{metricLabel}</text>
-    {rankBands.length > 0 && <text className="gg-resistance-chart-rank-title" x={plotRight}
-      y={margin.top - 36} textAnchor="end">HPランク</text>}
-    {rankBands.map((band, index) => {
-      const left = margin.left + band.start * plotWidth
-      const bandWidth = (band.end - band.start) * plotWidth
-      return <g key={`${band.rating}-${band.start}`} data-rank={band.rating}>
-        <title>{`HPランク ${band.rating}：${band.label}`}</title>
-        <rect className="ggs-hp-rank-fill" x={left + (index ? 1.5 : 0)} y={margin.top - 28}
-          width={Math.max(0, bandWidth - (index ? 1.5 : 0) - (index < rankBands.length - 1 ? 1.5 : 0))}
-          height={24} fillOpacity={0.06} />
-        {bandWidth > band.rating.length * 7 + 6 && <text className="ggs-hp-rank-label" x={left + bandWidth / 2}
-          y={margin.top - 12} textAnchor="middle">{band.rating}</text>}
-      </g>
-    })}
+    <StatRankStrip bands={rankBands} left={margin.left} right={plotRight} top={margin.top - 28}
+      titleY={margin.top - 36} labelFit="band" />
     {axis.yTicks.map((tick) => <g key={tick}>
       {gridStyle !== 'none' && <line className={`ggs-hp-chart-grid${gridStyle === 'dashed' ? ' ggs-hp-chart-grid--dashed' : ''}`}
         x1={margin.left} x2={plotRight} y1={y(tick)} y2={y(tick)} />}

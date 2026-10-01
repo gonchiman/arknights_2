@@ -17,7 +17,7 @@ test('DPS settings survive a route remount or reload through session storage', (
     settings: { level: 60, trust: 75, potential: 6, skillLevelIndex: 7, blocking: true },
     excluded: ['', 'uniequip_002_surtr'], moduleLevels: { uniequip_003_surtr: 2 },
     chartKind: 'line', barStep: 'ratings', resistanceRange: { min: 10, max: 90 },
-    showValues: true, gridStyle: 'dashed', precision: 3, metric: 'percent', differenceMetric: 'percent',
+    showValues: true, showResistanceRanks: false, gridStyle: 'dashed', precision: 3, metric: 'percent', differenceMetric: 'percent',
     requestedBaselineId: 'uniequip_003_surtr', selectedResistance: 37,
     yAxisMode: 'manual', yAxisDraft: { min: '-10.5', max: '120' },
   })
@@ -36,6 +36,24 @@ test('custom integer spacing and existing presets survive storage without narrow
     writeSurtrDpsPageState(state, storage)
     assert.equal(JSON.parse(storage.values.get(SURTR_DPS_PAGE_STATE_KEY)!).barStep, barStep)
     assert.deepEqual(readSurtrDpsPageState(storage), state)
+  }
+})
+
+test('rank display defaults on for previous saved state and preserves explicit on or off for both charts', () => {
+  const storage = memoryStorage()
+  const previousState = { ...createDefaultSurtrDpsPageState(), chartKind: 'line', precision: 2 }
+  Reflect.deleteProperty(previousState, 'showResistanceRanks')
+  storage.setItem(SURTR_DPS_PAGE_STATE_KEY, JSON.stringify(previousState))
+  assert.deepEqual(readSurtrDpsPageState(storage), { ...previousState, showResistanceRanks: true })
+  for (const chartKind of ['bar', 'line'] as const) {
+    for (const showResistanceRanks of [true, false]) {
+      const state = { ...createDefaultSurtrDpsPageState(), chartKind, showResistanceRanks }
+      writeSurtrDpsPageState(state, storage)
+      assert.deepEqual(readSurtrDpsPageState(storage), state)
+    }
+  }
+  for (const showResistanceRanks of [undefined, null, 'false', 0, 1, {}]) {
+    assert.equal(parseSurtrDpsPageState({ showResistanceRanks }).showResistanceRanks, true)
   }
 })
 
