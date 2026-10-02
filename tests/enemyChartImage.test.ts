@@ -5,10 +5,10 @@ import { buildEnemyJointDistribution } from '../src/lib/enemyJointDistribution.t
 import { getEnemyJointImageFilename } from '../src/lib/enemyJointImage.ts'
 import { withChartImageAspect } from '../src/lib/chartImageFilename.ts'
 
-const kinds: EnemyChartKind[] = ['HISTOGRAM', 'ECDF', 'BOX', 'SCATTER', 'INDIVIDUAL', 'COMPARISON', 'HEATMAP']
+const kinds: EnemyChartKind[] = ['HISTOGRAM', 'ECDF', 'BOX', 'SCATTER', 'INDIVIDUAL', 'COMPARISON', 'HEATMAP', 'PIE']
 
 test('自動比率ではグラフの自然な高さに見出しと余白を加える', () => {
-  for (const kind of ['HISTOGRAM', 'ECDF', 'SCATTER', 'COMPARISON', 'HEATMAP'] as const) {
+  for (const kind of ['HISTOGRAM', 'ECDF', 'SCATTER', 'COMPARISON', 'HEATMAP', 'PIE'] as const) {
     assert.deepEqual(getEnemyChartImageLayout({ kind }), { width: 960, height: 410, chartHeight: 334 })
   }
   assert.deepEqual(getEnemyChartImageLayout({ kind: 'HISTOGRAM', chromeHeight: 143.5 }), { width: 960, height: 478, chartHeight: 334 })
