@@ -10,6 +10,7 @@ import {
 } from '../lib/goldenglowTargetSwitchHpBreakdown'
 import { getModuleComparisonColors, getModuleColorKey } from '../lib/moduleColors'
 import { getHpRankBands } from '../lib/hpRankBands'
+import { StatRankStrip } from './StatRankStrip'
 import { GoldenglowDamagePatternDefs, GoldenglowDamagePatternSwatch, getGoldenglowDamagePatternFill } from './GoldenglowDamagePattern'
 import './GoldenglowTargetSwitchHpChart.css'
 
@@ -285,22 +286,7 @@ function HpChartContent({
         <GoldenglowDamagePatternDefs key={item.id} idPrefix={`${patternId}-${index}`} color={item.style.color} />
       ))}
       <text className="ggs-hp-chart-axis-title" x={margin.left} y={18}>{axisLabel}</text>
-      {rankBands.map((band, index) => {
-        const bandLeft = margin.left + band.start * plotWidth
-        const bandWidth = (band.end - band.start) * plotWidth
-        const bandTop = margin.top - rankHeaderHeight
-        const leftInset = index > 0 ? 1.5 : 0
-        const rightInset = index < rankBands.length - 1 ? 1.5 : 0
-        const tabWidth = Math.max(0, bandWidth - leftInset - rightInset)
-        return <g key={`${band.rating}-${band.start}`} className="ggs-hp-rank-band" data-rank={band.rating}>
-          <title>{`HPランク ${band.rating}：${band.label}`}</title>
-          <rect className="ggs-hp-rank-fill" x={bandLeft + leftInset} y={bandTop}
-            width={tabWidth} height={24} fillOpacity={0.06} />
-          <rect x={bandLeft} y={bandTop} width={bandWidth} height={24} fill="transparent" />
-          {tabWidth >= band.rating.length * 7 + 6 && <text className="ggs-hp-rank-label"
-            x={bandLeft + bandWidth / 2} y={bandTop + 16} textAnchor="middle">{band.rating}</text>}
-        </g>
-      })}
+      <StatRankStrip bands={rankBands} left={margin.left} right={plotRight} top={margin.top - rankHeaderHeight} />
       {yTicks.map((tick, index) => (
         <g key={index}>
           {gridStyle !== 'none' && <line className={`ggs-hp-chart-grid${gridStyle === 'dashed' ? ' ggs-hp-chart-grid--dashed' : ''}${metric !== 'total' && Math.abs(tick) < valueStep / 2 ? ' ggs-hp-chart-zero' : ''}`} x1={margin.left} x2={plotRight} y1={y(tick)} y2={y(tick)} />}

@@ -33,6 +33,7 @@ interface ImageSnapshot {
   id: number; series: SurtrDpsChartSeries[]; conditions: string; filename: string
   kind: SurtrDpsChartKind; barStep: SurtrDpsBarStep; showValues: boolean; metric: SurtrDpsMetric; title: string
   resistanceRange: SurtrDpsResistanceRange
+  showResistanceRanks: boolean
   histogram: EnemyHistogramSnapshot | null
   gridStyle: 'none' | 'dashed' | 'solid'; precision: number; yAxis: SurtrDpsChartYAxis; selectedResistance: number | null
 }
@@ -55,6 +56,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   const [resistanceRange, setResistanceRange] = useState<SurtrDpsResistanceRange>(initialState.resistanceRange)
   const [resistanceRangeDraft, setResistanceRangeDraft] = useState({ min: String(initialState.resistanceRange.min), max: String(initialState.resistanceRange.max) })
   const [showValues, setShowValues] = useState(initialState.showValues)
+  const [showResistanceRanks, setShowResistanceRanks] = useState(initialState.showResistanceRanks)
   const [gridStyle, setGridStyle] = useState(initialState.gridStyle)
   const [precision, setPrecision] = useState(initialState.precision)
   const [metric, setMetric] = useState<SurtrDpsMetric>(initialState.metric)
@@ -70,9 +72,9 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   const histogramEditTrigger = useRef<HTMLButtonElement>(null)
   const receiveHistogramDraft = useCallback((snapshot: EnemyHistogramSnapshot | null) => setHistogramDraft(snapshot), [])
   useEffect(() => {
-    writeSurtrDpsPageState({ settings, excluded, moduleLevels, chartKind, barStep, resistanceRange, showValues,
+    writeSurtrDpsPageState({ settings, excluded, moduleLevels, chartKind, barStep, resistanceRange, showValues, showResistanceRanks,
       gridStyle, precision, metric, differenceMetric, requestedBaselineId, selectedResistance, yAxisMode, yAxisDraft })
-  }, [settings, excluded, moduleLevels, chartKind, barStep, resistanceRange, showValues,
+  }, [settings, excluded, moduleLevels, chartKind, barStep, resistanceRange, showValues, showResistanceRanks,
     gridStyle, precision, metric, differenceMetric, requestedBaselineId, selectedResistance, yAxisMode, yAxisDraft])
   const [copyFeedback, setCopyFeedback] = useState<{ text: string; ok: boolean } | null>(null)
   const [copying, setCopying] = useState(false)
@@ -199,10 +201,10 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
     setHistogramStorageError(false)
     if (!chartSeries.length || invalidModels.length || yAxisError || barStepError) return
     setImage({ id: ++nextSnapshot.current, series: chartSeries, kind: chartKind, barStep, resistanceRange: { ...resistanceRange }, showValues: chartKind === 'bar' && showValues,
-      title: `スルト S3 ${outputTitle}`, metric: effectiveMetric, gridStyle, precision, yAxis, selectedResistance,
+      title: `スルト S3 ${outputTitle}`, metric: effectiveMetric, gridStyle, precision, yAxis, selectedResistance, showResistanceRanks,
       conditions: `${label}・${blockLabel}`, histogram: readEnemyHistogramSnapshot(),
       filename: getSurtrDpsImageFilename({ ...effectiveSettings, skillLevelLabel: label, modules: series.map(item => item.label), kind: chartKind, barStep, resistanceRange, showValues,
-        metric: effectiveMetric, baselineLabel: baseline?.label, gridStyle, precision, yAxis, selectedResistance }),
+        metric: effectiveMetric, baselineLabel: baseline?.label, gridStyle, precision, yAxis, selectedResistance, showResistanceRanks }),
     })
   }
   const saveImage = async (filename: string, ratio?: number) => {
@@ -331,6 +333,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
           </div>
         </details>
         {chartKind === 'bar' && <label className="surtr-s3-values-toggle"><input type="checkbox" checked={showValues} onChange={event => setShowValues(event.target.checked)} />数値を表示</label>}
+        <label className="surtr-s3-values-toggle"><input type="checkbox" checked={showResistanceRanks} onChange={event => setShowResistanceRanks(event.target.checked)} />術耐性ランク表示</label>
         <label className="surtr-s3-output-control"><span>横の目盛線</span><select aria-label="横の目盛線" value={gridStyle} onChange={event => setGridStyle(event.target.value as typeof gridStyle)}>
           <option value="none">なし</option><option value="dashed">破線</option><option value="solid">実線</option>
         </select></label>
@@ -374,7 +377,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
               </div>
               {yAxisError && <p className="surtr-s3-axis-error" id="surtr-s3-axis-error" role="alert">{yAxisError}</p>}
             </div>
-            <div className="surtr-s3-chart-area"><SurtrDpsChart series={chartSeries} kind={chartKind} barStep={barStep} resistanceRange={resistanceRange} showValues={showValues} gridStyle={gridStyle} precision={precision}
+            <div className="surtr-s3-chart-area"><SurtrDpsChart series={chartSeries} kind={chartKind} barStep={barStep} resistanceRange={resistanceRange} showValues={showValues} showResistanceRanks={showResistanceRanks} gridStyle={gridStyle} precision={precision}
               metric={effectiveMetric} yAxis={yAxis} selectedResistance={selectedResistance} onSelectResistance={setSelectedResistance} /></div>
             <div className="surtr-s3-readout">
               <label className="surtr-s3-output-control"><span>術耐性</span><select aria-label="選択する術耐性" value={selectedResistance ?? ''} onChange={event => setSelectedResistance(event.target.value === '' ? null : Number(event.target.value))}>
