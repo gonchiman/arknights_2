@@ -142,3 +142,16 @@ test('leaders belonging to different sectors do not cross or share route segment
     }
   }
 })
+// The same wrapping is used for narrow comparison exports with below-pie labels.
+test('下配置の長い基準値も列内に折り返し、短いラベルを変更しない', async () => {
+  const { wrapEnemyThresholdPieLabel } = await import('../src/lib/enemyThresholdPieLayout.ts')
+  assert.deepEqual(wrapEnemyThresholdPieLabel('60未満', 11, 65), ['60未満'])
+  const text = '60.12345678901234と同じ'
+  const lines = wrapEnemyThresholdPieLabel(text, 11, 65)
+  assert.equal(lines.join(''), text)
+  assert.ok(lines.length > 1)
+  for (const line of lines) {
+    const width = [...line].reduce((sum, char) => sum + (/^[\d\s.,%+-]$/.test(char) ? .61 : 1), 0) * 11
+    assert.ok(width <= 65)
+  }
+})

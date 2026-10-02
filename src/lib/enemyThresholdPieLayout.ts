@@ -45,7 +45,7 @@ const GAP = 10
 const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value))
 const point = (cx: number, cy: number, radius: number, angle: number): Point => ({ x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) })
 const measureText = (value: string, size: number) => [...value].reduce((sum, character) => sum + (/^[\d\s.,%+-]$/.test(character) ? 0.61 : 1), 0) * size
-function wrapLabel(value: string, size: number, width: number) {
+export function wrapEnemyThresholdPieLabel(value: string, size: number, width: number) {
   const lines: string[] = []
   let line = ''
   for (const character of value) {
@@ -126,7 +126,7 @@ export function getEnemyThresholdPieGeometry({ buckets, width, height, labelLayo
     const start = cumulative * TAU - Math.PI / 2
     const span = proportion * TAU
     cumulative += proportion
-    const labelLines = wrapLabel(bucket.label, labelSize, availableLabelWidth - 16)
+    const labelLines = wrapEnemyThresholdPieLabel(bucket.label, labelSize, availableLabelWidth - 16)
     const labelWidth = Math.max(
       ...labelLines.map((line) => measureText(line, labelSize) + 16),
       measureText(`${(proportion * 100).toFixed(1)}%`, percentageSize),

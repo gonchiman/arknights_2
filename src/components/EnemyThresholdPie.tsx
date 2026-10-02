@@ -1,7 +1,7 @@
 import { useId, useLayoutEffect, useRef, useState } from 'react'
 import type { EnemyThresholdDistribution } from '../lib/enemyThresholdDistribution'
 import { ENEMY_HISTOGRAM_COUNT_MODES, type EnemyHistogramCountMode } from '../lib/enemyHistogramCounts'
-import { getEnemyThresholdPieGeometry, type EnemyThresholdPieLabelLayout } from '../lib/enemyThresholdPieLayout'
+import { getEnemyThresholdPieGeometry, wrapEnemyThresholdPieLabel, type EnemyThresholdPieLabelLayout } from '../lib/enemyThresholdPieLayout'
 import './EnemyThresholdPie.css'
 
 type ThresholdBucket = EnemyThresholdDistribution['buckets'][number]
@@ -52,24 +52,28 @@ function PieSectors({ distribution, cx, cy, radius }: {
 }
 
 /** The chart body for ChartImageFrame; the frame supplies the visible title. */
-export function EnemyThresholdPieSvg({ distribution, countMode, labelLayout = 'BELOW', width, height = 334, image = false, includeFooter = true }: ThresholdPieProps & {
+export function EnemyThresholdPieSvg({ distribution, countMode, labelLayout = 'BELOW', width, height = 334, image = false, includeFooter = true, reserveMissingFooter = false }: ThresholdPieProps & {
   width: number
   height?: number
   image?: boolean
   includeFooter?: boolean
+  reserveMissingFooter?: boolean
 }) {
   const titleId = useId()
   const descriptionId = useId()
   const unit = countUnit(countMode)
   const hasMissing = distribution.missingCount > 0
   const narrow = width < 480
-  const footerHeight = includeFooter ? hasMissing && narrow ? 42 : 24 : 0
-  const summaryTop = height - footerHeight - 72
-  const radius = Math.max(0, Math.min((width - 32) / 2, (summaryTop - 24) / 2, 150))
-  const centerY = 8 + radius
+  const footerHeight = includeFooter ? (hasMissing || reserveMissingFooter) && narrow ? 42 : 24 : 0
   const summaryWidth = Math.max(0, Math.min(width - 32, 672))
   const summaryLeft = (width - summaryWidth) / 2
   const columnWidth = summaryWidth / 3
+  const summaryLabelSize = narrow ? 11 : 12
+  const summaryLabelLines = distribution.buckets.map((bucket) => wrapEnemyThresholdPieLabel(bucket.label, summaryLabelSize, Math.max(1, columnWidth - 24)))
+  const extraSummaryHeight = (Math.max(1, ...summaryLabelLines.map((lines) => lines.length)) - 1) * 14
+  const summaryTop = height - footerHeight - 72 - extraSummaryHeight
+  const radius = Math.max(0, Math.min((width - 32) / 2, (summaryTop - 24) / 2, 150))
+  const centerY = 8 + radius
   const footer = `${totalLabel(distribution, unit)}${hasMissing && !narrow ? `・${missingLabel(distribution, unit)}` : ''}`
   const layout = labelLayout === 'BELOW' ? null : getEnemyThresholdPieGeometry({
     buckets: distribution.buckets, width, height: height - footerHeight, labelLayout, unit,
@@ -107,13 +111,15 @@ export function EnemyThresholdPieSvg({ distribution, countMode, labelLayout = 'B
         })}
       </> : distribution.buckets.map((bucket, index) => {
         const x = summaryLeft + (index + 0.5) * columnWidth
-        const labelSize = narrow ? 11 : 12
-        const labelWidth = [...bucket.label].reduce((sum, character) => sum + (/\d|[.,-]/.test(character) ? 0.6 : 1), 0) * labelSize
+        const labelSize = summaryLabelSize
+        const labelLines = summaryLabelLines[index]
+        const labelWidth = [...labelLines[0]].reduce((sum, character) => sum + (/\d|[.,-]/.test(character) ? 0.6 : 1), 0) * labelSize
         return <g key={bucket.key} data-pie-label-key={bucket.key} data-pie-label-placement="below">
           <rect x={x - (labelWidth + 16) / 2} y={summaryTop - 9} width={9} height={9} fill={BUCKET_COLORS[bucket.key]} />
-          <text className="enemy-threshold-svg-label" data-pie-label-part="label" x={x + 8} y={summaryTop} textAnchor="middle" fontSize={labelSize}>{bucket.label}</text>
-          <text className="enemy-threshold-svg-percent" data-pie-label-part="percentage" x={x} y={summaryTop + 29} textAnchor="middle" fontSize={narrow ? 22 : 25}>{formatPercent(bucket.proportion)}</text>
-          <text className="enemy-threshold-svg-count" data-pie-label-part="count" x={x} y={summaryTop + 49} textAnchor="middle">{formatCount(bucket.count)}{unit}</text>
+          <text className="enemy-threshold-svg-label" data-pie-label-part="label" x={x + 8} y={summaryTop} textAnchor="middle" fontSize={labelSize}>{labelLines.map((line, lineIndex) => <tspan key={lineIndex}
+            x={x + 8} dy={lineIndex === 0 ? 0 : 14}>{line}</tspan>)}</text>
+          <text className="enemy-threshold-svg-percent" data-pie-label-part="percentage" x={x} y={summaryTop + extraSummaryHeight + 29} textAnchor="middle" fontSize={narrow ? 22 : 25}>{formatPercent(bucket.proportion)}</text>
+          <text className="enemy-threshold-svg-count" data-pie-label-part="count" x={x} y={summaryTop + extraSummaryHeight + 49} textAnchor="middle">{formatCount(bucket.count)}{unit}</text>
         </g>
       })}
       {includeFooter && <text className="enemy-threshold-svg-total" x={width / 2} y={height - footerHeight + 11} textAnchor="middle">{footer}</text>}
@@ -123,7 +129,7 @@ export function EnemyThresholdPieSvg({ distribution, countMode, labelLayout = 'B
   )
 }
 
-export function EnemyThresholdPie({ distribution, countMode, labelLayout = 'BELOW' }: ThresholdPieProps) {
+export function EnemyThresholdPie({ distribution, countMode, labelLayout = 'BELOW', showHeading = true }: ThresholdPieProps & { showHeading?: boolean }) {
   const titleId = useId()
   const chartTitleId = useId()
   const descriptionId = useId()
@@ -140,8 +146,9 @@ export function EnemyThresholdPie({ distribution, countMode, labelLayout = 'BELO
     return () => observer.disconnect()
   }, [labelLayout])
   return (
-    <figure className="enemy-analysis-figure enemy-threshold-figure" aria-labelledby={titleId}>
-      <figcaption><div><strong id={titleId}>術耐性の構成比</strong></div></figcaption>
+    <figure className="enemy-analysis-figure enemy-threshold-figure" aria-labelledby={showHeading ? titleId : labelLayout === 'BELOW' ? chartTitleId : undefined}
+      aria-label={!showHeading && labelLayout !== 'BELOW' ? '術耐性の構成比' : undefined}>
+      {showHeading && <figcaption><div><strong id={titleId}>術耐性の構成比</strong></div></figcaption>}
       {labelLayout === 'BELOW' ? <>
         <svg className="enemy-threshold-svg enemy-threshold-screen-pie" viewBox="0 0 256 256"
           data-pie-label-layout={labelLayout} role="img" aria-labelledby={`${chartTitleId} ${descriptionId}`}>
