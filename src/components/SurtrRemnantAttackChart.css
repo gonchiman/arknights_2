@@ -1,0 +1,34 @@
+.surtr-remnant-attack-chart { min-width: 0; color: var(--text, #222); background: #fff; }
+.surtr-remnant-attack-chart-viewport { position: relative; min-width: 0; }
+.surtr-remnant-attack-chart-scroll { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+.surtr-remnant-attack-chart-frame { outline-offset: 4px; }
+.surtr-remnant-attack-chart-frame:focus-visible { outline: 2px solid var(--text, #222); outline-offset: -2px; }
+.surtr-remnant-attack-chart-svg { display: block; max-width: 100%; font-family: "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif; }
+.surtr-remnant-attack-chart-svg text { fill: #444; font-size: 11px; font-variant-numeric: tabular-nums; }
+.surtr-remnant-attack-chart-svg .surtr-remnant-attack-chart-tick { fill: #555; }
+.surtr-remnant-attack-chart-svg .surtr-remnant-attack-chart-axis-title { fill: #444; font-size: 12px; font-weight: 700; }
+.surtr-remnant-attack-chart-svg .surtr-remnant-attack-chart-value { font-weight: 600; }
+.surtr-remnant-attack-chart-svg .surtr-remnant-attack-chart-empty { fill: #666; }
+.surtr-remnant-attack-chart-grid { stroke: #e1e1e1; stroke-width: 1; stroke-dasharray: 5 4; }
+.surtr-remnant-attack-chart-axis { fill: none; stroke: #aaa; stroke-width: 1; }
+.surtr-remnant-attack-chart-step { fill: none; stroke-linejoin: round; }
+.surtr-remnant-attack-chart-open-point { fill: #fff; }
+.surtr-remnant-attack-chart-active-band { fill: #f2f3f4; }
+.surtr-remnant-attack-chart-guide { stroke: #777; stroke-width: 1; stroke-dasharray: 3 4; }
+.surtr-remnant-attack-chart-separator { stroke: #fff; stroke-width: 2; }
+.surtr-remnant-attack-chart-hatch { fill: none; stroke: #bbb; stroke-width: 1; }
+.surtr-remnant-attack-chart-axis-caption { margin: 6px 0 0; color: #444; font-size: 12px; font-weight: 700; text-align: center; }
+.surtr-remnant-attack-chart-tooltip { position: absolute; z-index: 1; top: 30px; right: 20px; max-width: calc(100% - 80px); border: 1px solid var(--border-strong, #aaa); padding: 10px 12px; background: rgb(255 255 255 / 96%); color: #222; box-shadow: 0 2px 8px rgb(0 0 0 / 8%); font-size: 11px; pointer-events: none; }
+.surtr-remnant-attack-chart-tooltip.is-left { right: auto; left: 58px; }
+.surtr-remnant-attack-chart-tooltip strong { font-size: inherit; }
+.surtr-remnant-attack-chart-tooltip dl { display: grid; gap: 6px; margin: 8px 0 0; }
+.surtr-remnant-attack-chart-tooltip dl > div { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.surtr-remnant-attack-chart-tooltip dt { display: flex; align-items: center; gap: 5px; }
+.surtr-remnant-attack-chart-tooltip dt i { flex: 0 0 12px; width: 12px; height: 8px; }
+.surtr-remnant-attack-chart-tooltip dd { margin: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.surtr-remnant-attack-chart-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@media (max-width: 480px) {
+  .surtr-remnant-attack-chart-tooltip { max-width: calc(100% - 64px); padding: 8px; right: 10px; }
+  .surtr-remnant-attack-chart-tooltip.is-left { left: 54px; }
+  .surtr-remnant-attack-chart-tooltip dl > div { gap: 10px; }
+}
