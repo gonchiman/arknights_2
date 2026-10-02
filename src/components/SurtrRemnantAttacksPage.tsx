@@ -1,4 +1,4 @@
-import { useMemo, useState, type MouseEvent } from 'react'
+import { useMemo, useRef, useState, type MouseEvent } from 'react'
 import type { SkillRecord } from '../types/skill'
 import { SURTR_OPERATOR_ID, type SurtrDpsSettings } from '../lib/surtrDps'
 import {
@@ -9,17 +9,28 @@ import {
 } from '../lib/surtrRemnantAttacks'
 import { getOperatorModuleId, getOperatorModuleLevels, getOperatorModules } from '../lib/operatorModules'
 import { getModuleComparisonColors } from '../lib/moduleColors'
+import type { SurtrRemnantChartKind, SurtrRemnantChartSeries } from '../lib/surtrRemnantChart'
+import { getSurtrRemnantAttackImageFilename } from '../lib/surtrRemnantAttackImageFilename'
+import { withChartImageAspect } from '../lib/chartImageFilename'
+import { getChartImageLayout } from '../lib/chartImageLayout'
+import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { SURTR_HOME_LINK } from '../lib/navigation'
 import { PageBreadcrumbs } from './PageBreadcrumbs'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { HelpPopover } from './HelpPopover'
+import { SurtrRemnantAttackChart } from './SurtrRemnantAttackChart'
+import { SurtrRemnantAttackChartImage, SurtrRemnantAttackChartImagePreview, type SurtrRemnantAttackChartImageProps } from './SurtrRemnantAttackChartImage'
+import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
+import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './DamageCalculator.css'
 import './SurtrS3Page.css'
 import './SurtrRemnantAttacksPage.css'
 
 const PAGE_SIZE = 13
 const seconds = (value: number | null) => value === null ? '—' : `${value.toFixed(3)} s`
+const chartLabels: Record<SurtrRemnantChartKind, string> = { 'grouped-bar': '集合棒グラフ', step: '階段グラフ', bands: '回数の区間帯' }
+interface ImageSnapshot extends SurtrRemnantAttackChartImageProps { filename: string }
 interface Comparison {
   id: string
   label: string
@@ -90,6 +101,18 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
   const [includeRetreatHit, setIncludeRetreatHit] = useState(false)
   const [pageIndex, setPageIndex] = useState(0)
   const [selection, setSelection] = useState<DetailSelection | null>(null)
+  const [chartKind, setChartKind] = useState<SurtrRemnantChartKind>('grouped-bar')
+  const [showValues, setShowValues] = useState(true)
+  const [showBoundaries, setShowBoundaries] = useState(false)
+  const [hiddenSeries, setHiddenSeries] = useState<string[]>([])
+  const [selectedCtInput, setSelectedCtInput] = useState('0.50')
+  const [image, setImage] = useState<ImageSnapshot | null>(null)
+  const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
+  const [saving, setSaving] = useState(false)
+  const [feedback, setFeedback] = useState<'saved' | 'downloaded' | 'failed' | null>(null)
+  const saveInProgress = useRef(false)
+  const nextSnapshot = useRef(0)
+  const picker = getChartImageSavePicker()
   const settings = useMemo<SurtrDpsSettings>(() => ({
     level: record?.operatorProfile.phases[2]?.maxLevel ?? 90, trust: 100, potential, blocking,
     skillLevelIndex: Math.max(0, (record?.skillLevels.length ?? 10) - 1),
@@ -118,19 +141,63 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
   const calculations = useMemo(() => missingModel || invalidWindup ? [] : samples.map(ct => ({
     ct, results: comparison.map(item => item.model ? calculateSurtrRemnantAttacks(item.model, ct, assumptions) : null),
   })), [missingModel, invalidWindup, samples, comparison, assumptions])
+  const series = useMemo<SurtrRemnantChartSeries[]>(() => comparison.flatMap(item => item.model && !hiddenSeries.includes(item.id)
+    ? [{ ...item, model: item.model }] : []), [comparison, hiddenSeries])
   const invalidCalculation = calculations.some(row => row.results.some((result, index) =>
     !result && row.ct <= (comparison[index].model?.attackIntervalBefore ?? Infinity)))
   const pageCount = Math.max(1, Math.ceil(calculations.length / PAGE_SIZE))
   const page = Math.min(pageIndex, pageCount - 1)
   const visibleRows = calculations.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
-  const openDetail = (event: MouseEvent<HTMLTableRowElement>, row: typeof calculations[number]) => {
-    const columns = comparison.flatMap((item, index) => {
-      const result = row.results[index]
+  const selectDetail = (ct: number) => {
+    const columns = comparison.flatMap(item => {
+      const result = item.model ? calculateSurtrRemnantAttacks(item.model, ct, assumptions) : null
       return item.model ? [{ ...item, model: item.model, result }] : []
     })
     if (columns.length !== comparison.length) return
+    setSelection({ ct, potential, blocking, assumptions: { ...assumptions }, columns })
+  }
+  const openDetail = (event: MouseEvent<HTMLTableRowElement>, row: typeof calculations[number]) => {
     event.currentTarget.querySelector('button')?.focus({ preventScroll: true })
-    setSelection({ ct: row.ct, potential, blocking, assumptions: { ...assumptions }, columns })
+    selectDetail(row.ct)
+  }
+  const ctCandidate = Number(selectedCtInput)
+  const validSelectedCt = selectedCtInput.trim() !== '' && Number.isFinite(ctCandidate) && ctCandidate >= 0 && ctLimit !== null && ctCandidate <= ctLimit
+  const selectedCt = validSelectedCt ? ctCandidate : undefined
+  const selectedResults = series.map(item => selectedCt === undefined ? null : calculateSurtrRemnantAttacks(item.model, selectedCt, assumptions))
+  const selectCt = (ct: number) => setSelectedCtInput(String(ct))
+  const commitCtInput = () => {
+    if (selectedCt === undefined) return
+    const ct = chartKind === 'grouped-bar' && samples.length
+      ? samples.reduce((nearest, value) => Math.abs(value - selectedCt) < Math.abs(nearest - selectedCt) ? value : nearest)
+      : selectedCt
+    setSelectedCtInput(Number.isInteger(ct * 100) ? ct.toFixed(2) : String(ct))
+  }
+  const canOutput = !!record && !missingModel && !invalidCalculation && !invalidWindup && !!series.length
+  const aspectRatio = aspect.preset !== 'auto' && [aspect.width, aspect.height].every(value => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100)
+    ? Number(aspect.width) / Number(aspect.height) : undefined
+  const openImage = () => {
+    if (!canOutput) return
+    setFeedback(null)
+    setImage({ id: String(++nextSnapshot.current), series, assumptions: { ...assumptions }, samples: [...samples], ctLimit: ctLimit!, kind: chartKind,
+      showValues, showBoundaries, potential, blocking, step,
+      filename: getSurtrRemnantAttackImageFilename({ potential, blocking, ...assumptions, kind: chartKind, step,
+        modules: series.map(item => item.label), showValues, showBoundaries }),
+    })
+  }
+  const saveImage = async (filename: string, ratio?: number) => {
+    if (!image || saveInProgress.current) return
+    saveInProgress.current = true; setSaving(true); setFeedback(null)
+    try {
+      const destination = await selectChartImageDestination(filename, picker)
+      if (destination.type === 'cancelled') return
+      await saveComparisonChartImage({ filename,
+        width: getChartImageLayout({ naturalChartHeight: 334, aspectRatio: ratio }).width,
+        chart: <SurtrRemnantAttackChartImage {...image} aspectRatio={ratio} />,
+        writeBlob: destination.type === 'file' ? destination.write : undefined,
+      })
+      setFeedback(destination.type === 'file' ? 'saved' : 'downloaded'); setImage(null)
+    } catch { setFeedback('failed') }
+    finally { saveInProgress.current = false; setSaving(false) }
   }
   const status = error ? <div className="error-box" role="alert">{error}<button type="button" className="button secondary" onClick={onRetry}>再読み込み</button></div>
     : <p className="surtr-s3-status" role="status">{loading ? 'スルトのデータを読み込み中…' : 'スルトS3のデータを取得できませんでした。'}</p>
@@ -143,7 +210,7 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
     <CollapsibleCalculatorPanel id="surtr-remnant-settings" number="01" title="比較条件" summary={`潜在${potential}・${blocking ? 'ブロック中' : '非ブロック'}`} collapsedLabel="設定を表示">
       {!record ? status : <>
         <div className="surtr-remnant-fields">
-          <label className="calculator-field"><span>潜在</span><select value={potential} onChange={event => { setPotential(Number(event.target.value)); setPageIndex(0) }}>
+          <label className="calculator-field"><span>潜在</span><select aria-label="潜在" value={potential} onChange={event => { setPotential(Number(event.target.value)); setPageIndex(0) }}>
             {[1, 2, 3, 4, 5, 6].map(value => <option key={value} value={value}>潜在{value}</option>)}
           </select></label>
           <div className="surtr-s3-block-setting"><span id="surtr-remnant-block-label">ブロック状態</span>
@@ -155,13 +222,13 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
         </div>
         <details className="surtr-s3-assumptions"><summary>計算の前提・仮定</summary>
           <div className="surtr-remnant-assumption-fields">
-            <label className="calculator-field"><span>攻撃開始から命中まで（s・仮定）</span><input type="number" min="0" max={windupLimit ?? undefined} step="0.01" value={windupInput}
+            <label className="calculator-field"><span>攻撃開始から命中まで（s・仮定）</span><input aria-label="攻撃開始から命中まで（s・仮定）" type="number" min="0" max={windupLimit ?? undefined} step="0.01" value={windupInput}
               aria-invalid={invalidWindup} aria-describedby={invalidWindup ? 'surtr-remnant-windup-error' : undefined}
               onChange={event => setWindupInput(event.target.value)} /></label>
-            <label className="calculator-field"><span>発動時の残りCT</span><select value={ctCarry} onChange={event => setCtCarry(event.target.value as typeof ctCarry)}>
+            <label className="calculator-field"><span>発動時の残りCT</span><select aria-label="発動時の残りCT" value={ctCarry} onChange={event => setCtCarry(event.target.value as typeof ctCarry)}>
               <option value="time">時間を維持</option><option value="ratio">残りの割合を維持</option>
             </select></label>
-            <label className="calculator-field"><span>退場と同時の命中</span><select value={includeRetreatHit ? 'include' : 'exclude'} onChange={event => setIncludeRetreatHit(event.target.value === 'include')}>
+            <label className="calculator-field"><span>退場と同時の命中</span><select aria-label="退場と同時の命中" value={includeRetreatHit ? 'include' : 'exclude'} onChange={event => setIncludeRetreatHit(event.target.value === 'include')}>
               <option value="exclude">含まない</option><option value="include">含む</option>
             </select></label>
           </div>
@@ -173,7 +240,7 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
         {invalidWindup && <p className="surtr-remnant-error" id="surtr-remnant-windup-error" role="alert">命中までの時間は0{windupLimit === null ? '' : `〜${windupLimit.toFixed(2)}`}秒で入力してください。</p>}
       </>}
     </CollapsibleCalculatorPanel>
-    <CollapsibleCalculatorPanel id="surtr-remnant-output" number="02" title="攻撃回数" summary="残りCT別の命中回数" collapsedLabel="表を表示"
+    <CollapsibleCalculatorPanel id="surtr-remnant-output" number="02" title="攻撃回数" summary="残りCT別の命中回数" collapsedLabel="結果を表示"
       className="surtr-s3-output-panel" headerActions={<>
         <span className="surtr-remnant-estimate-help"><HelpPopover label="仮定の試算について" title="仮定の試算とは" triggerText="仮定の試算" mode="dialog">
           <div className="surtr-remnant-estimate-help-content">
@@ -190,12 +257,47 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
             <p>特に、残りCTの引継ぎ方はまだ未確認です。仮定は「比較条件」の「計算の前提・仮定」で変更できます。</p>
           </div>
         </HelpPopover></span>
-        <label className="surtr-s3-output-control"><span>CTの刻み</span><select value={step} onChange={event => { setStep(Number(event.target.value) as SurtrRemnantCtStep); setPageIndex(0) }}>
+        <label className="surtr-s3-output-control"><span>表示するグラフ</span><select aria-label="表示するグラフ" value={chartKind} onChange={event => setChartKind(event.target.value as SurtrRemnantChartKind)}>
+          {Object.entries(chartLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select></label>
+        <label className="surtr-s3-output-control"><span>CTの刻み</span><select aria-label="CTの刻み" value={step} onChange={event => { setStep(Number(event.target.value) as SurtrRemnantCtStep); setPageIndex(0) }}>
         {[0.1, 0.05, 0.01].map(value => <option key={value} value={value}>{value.toFixed(2)} s</option>)}
       </select></label></>}>
       {!record ? status : missingModel || invalidCalculation ? <p role="alert">計算に必要なMOD・攻撃速度・余燼のデータを取得できませんでした。</p>
         : invalidWindup ? <p className="surtr-s3-status" role="status">計算条件の入力を確認してください。</p>
           : <>
+            <section className="surtr-remnant-chart-section" aria-label={chartLabels[chartKind]}>
+              <div className="surtr-remnant-chart-toolbar">
+                <div className="surtr-remnant-chart-legend" role="group" aria-label="表示する装備">
+                  {comparison.map(item => <button type="button" key={item.id} aria-pressed={!hiddenSeries.includes(item.id)}
+                    onClick={() => setHiddenSeries(previous => previous.includes(item.id) ? previous.filter(id => id !== item.id)
+                      : previous.length < comparison.length - 1 ? [...previous, item.id] : previous)}>
+                    {chartKind === 'step' ? <svg className="surtr-remnant-line-swatch" width="18" height="12" aria-hidden="true"><line x1="0" x2="18" y1="6" y2="6" stroke={item.color}
+                      strokeWidth={item.model?.moduleType === null ? 4 : 2.5} strokeDasharray={item.model?.moduleType === null ? '2 4' : item.model?.moduleType === 'X' ? '8 5' : undefined} /></svg>
+                      : <i aria-hidden="true" style={{ backgroundColor: item.color }} />}{item.label}
+                  </button>)}
+                </div>
+                <div className="surtr-remnant-chart-actions">
+                  {chartKind !== 'step' && <label className="surtr-s3-values-toggle"><input type="checkbox" checked={showValues} onChange={event => setShowValues(event.target.checked)} /><span>{chartKind === 'bands' ? '帯の数値' : '棒の数値'}</span></label>}
+                  {chartKind !== 'grouped-bar' && <label className="surtr-s3-values-toggle"><input type="checkbox" checked={showBoundaries} onChange={event => setShowBoundaries(event.target.checked)} /><span>境界CTの数値</span></label>}
+                  <button type="button" className="button secondary" onClick={openImage} aria-haspopup="dialog">画像を保存</button>
+                </div>
+              </div>
+              <SurtrRemnantAttackChart series={series} samples={samples} ctLimit={ctLimit ?? undefined} assumptions={assumptions} kind={chartKind}
+                selectedCt={selectedCt} onSelectCt={selectCt} showValues={showValues} showBoundaries={showBoundaries} />
+              <div className="surtr-remnant-chart-selection">
+                <label className="calculator-field"><span>残りCT（s）</span><input aria-label="残りCT（s）" type="number" min="0" max={ctLimit ?? undefined} step={chartKind === 'grouped-bar' ? step : 0.01}
+                  value={selectedCtInput} aria-invalid={!validSelectedCt}
+                  onChange={event => setSelectedCtInput(event.target.value)} onBlur={commitCtInput} /></label>
+                <input type="range" aria-label="残りCTを選択" min="0" max={chartKind === 'grouped-bar' ? samples.at(-1) ?? 0 : ctLimit ?? 0}
+                  step={chartKind === 'grouped-bar' ? step : 0.01} value={selectedCt ?? 0} onChange={event => selectCt(Number(event.target.value))} />
+                <button type="button" className="button secondary" disabled={selectedCt === undefined} onClick={() => { if (selectedCt !== undefined) selectDetail(selectedCt) }} aria-haspopup="dialog">命中詳細</button>
+              </div>
+              {!validSelectedCt ? <p className="surtr-remnant-error" role="alert">残りCTは0〜{ctLimit?.toFixed(2)}秒で入力してください。</p>
+                : <div className="surtr-remnant-chart-counts" aria-live="polite">{series.map((item, index) => <span key={item.id}>
+                    <i aria-hidden="true" style={{ backgroundColor: item.color }} />{item.label} <strong>{selectedResults[index] ? `${selectedResults[index]!.hitCount} 回` : '—'}</strong>
+                  </span>)}</div>}
+            </section>
             <div className="surtr-s3-table-wrap"><table className="surtr-s3-table surtr-s3-result-table surtr-remnant-table" aria-label="発動直前の残りCTごとの命中回数">
               <thead><tr><th scope="col">発動直前の残りCT（s）</th><ColumnHeaders comparison={comparison} /></tr></thead>
               <tbody>{visibleRows.map(row => <tr key={row.ct} onClick={event => openDetail(event, row)}>
@@ -213,7 +315,12 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
               <button type="button" className="button secondary" disabled={page + 1 >= pageCount} onClick={() => setPageIndex(page + 1)}>次へ</button>
             </nav>
           </>}
+      {feedback && feedback !== 'failed' && <p className="surtr-s3-status" role="status">{feedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
     </CollapsibleCalculatorPanel>
+    {image && <ChartImageSaveDialog initialFilename={image.filename} getDefaultFilename={ratio => withChartImageAspect(image.filename, ratio)} aspect={aspect} onAspectChange={setAspect}
+      canChooseLocation={!!picker} saving={saving} error={feedback === 'failed'} helpMode="popover"
+      onClose={() => { if (!saveInProgress.current) { setImage(null); setFeedback(null) } }} onSave={(filename, ratio) => void saveImage(filename, ratio)}
+      preview={<SurtrRemnantAttackChartImagePreview key={`${image.id}:${aspectRatio ?? 'auto'}`} {...image} aspectRatio={aspectRatio} />} />}
     {selection && <RemnantAttackDetail selection={selection} onClose={() => setSelection(null)} />}
   </section>
 }

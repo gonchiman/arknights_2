@@ -1,0 +1,109 @@
+.enemy-threshold-figure {
+  min-width: 0;
+  max-width: 100%;
+  color: var(--text);
+}
+
+.enemy-threshold-svg {
+  display: block;
+  font-family: "Yu Gothic", YuGothic, "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.enemy-threshold-background { fill: var(--surface); }
+.enemy-threshold-empty-circle { fill: var(--surface-soft); }
+.enemy-threshold-svg-empty { fill: var(--text-muted); font-size: 11px; }
+.enemy-threshold-svg-label { fill: var(--text-soft); }
+.enemy-threshold-svg-percent { fill: var(--text); font-weight: 500; }
+.enemy-threshold-svg-count,
+.enemy-threshold-svg-total { fill: var(--text-muted); font-size: 11px; }
+
+.enemy-threshold-screen-pie {
+  width: min(256px, calc(100% - 32px));
+  height: auto;
+  margin: 14px auto 20px;
+}
+.enemy-threshold-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  max-width: 672px;
+  margin: 0 auto;
+  padding: 0 20px;
+  font-variant-numeric: tabular-nums;
+}
+.enemy-threshold-summary > div { min-width: 0; }
+.enemy-threshold-summary dt {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.enemy-threshold-summary dt i {
+  flex: 0 0 10px;
+  height: 10px;
+}
+.enemy-threshold-summary dd { margin: 8px 0 0; }
+.enemy-threshold-percent {
+  display: block;
+  font-size: 25px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.enemy-threshold-count {
+  display: block;
+  margin-top: 7px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.enemy-threshold-caption {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 18px 0 0;
+  padding: 0 16px 16px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.enemy-threshold-svg-image {
+  --surface: #fff;
+  --surface-soft: #f7f7f7;
+  --text: #222;
+  --text-muted: #555;
+  --text-soft: #444;
+}
+
+@media (max-width: 520px) {
+  .enemy-threshold-summary { gap: 10px; padding-inline: 12px; }
+  .enemy-threshold-summary dt { gap: 5px; font-size: 11px; }
+  .enemy-threshold-percent { font-size: 22px; }
+}
+
+.enemy-threshold-responsive-pie {
+  width: 100%;
+  min-width: 0;
+  margin: 10px auto 0;
+}
+.enemy-threshold-responsive-pie > svg {
+  max-width: 100%;
+}
+.enemy-threshold-svg-leader {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-opacity: 0.65;
+  stroke-width: 1;
+}
+.enemy-threshold-svg-inside .enemy-threshold-svg-label,
+.enemy-threshold-svg-inside .enemy-threshold-svg-percent,
+.enemy-threshold-svg-inside .enemy-threshold-svg-count {
+  fill: #162b35;
+}

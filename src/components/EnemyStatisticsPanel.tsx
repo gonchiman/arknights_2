@@ -22,6 +22,9 @@ import { EnemyRatingReferenceDialog } from './EnemyRatingReferenceDialog'
 import { EnemyEcdfGuideControls } from './EnemyEcdfGuideControls'
 import { EnemyDistributionComparison } from './EnemyDistributionComparison'
 import { EnemyJointHeatmap, EnemyJointHeatmapSvg } from './EnemyJointHeatmap'
+import { EnemyThresholdPie, EnemyThresholdPieSvg } from './EnemyThresholdPie'
+import { ENEMY_THRESHOLD_PIE_LABEL_LAYOUTS, type EnemyThresholdPieLabelLayout } from '../lib/enemyThresholdPieLayout'
+import { buildEnemyThresholdDistribution, createEnemyThresholdImageFilename, type EnemyThresholdDistribution } from '../lib/enemyThresholdDistribution'
 import { buildEnemyJointDistribution, type EnemyJointDistribution } from '../lib/enemyJointDistribution'
 import { getEnemyJointImageFilename, getEnemyJointImageConditions } from '../lib/enemyJointImage'
 import type { EnemyHeatmapColorScale } from '../lib/enemyHeatmapColor'
@@ -106,6 +109,7 @@ const CHART_OPTIONS: Array<{ key: ChartKind; label: string }> = [
   { key: 'ECDF', label: '累積分布' },
   { key: 'COMPARISON', label: '分布比較' },
   { key: 'HEATMAP', label: 'ヒートマップ' },
+  { key: 'PIE', label: '円グラフ' },
 ]
 
 const LEVEL_ORDER: EnemyLevelType[] = ['NORMAL', 'ELITE', 'BOSS', 'UNKNOWN']
@@ -212,6 +216,14 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   histogramEditor?: { initialSnapshot: EnemyHistogramSnapshot | null; onChange: (snapshot: EnemyHistogramSnapshot | null) => void }
   filterSettings?: Pick<EnemyHistogramEditorSettings, 'levelType' | 'numericConditions' | 'sourceEnemyIds'>
 }) {
+  const thresholdInputId = useId()
+  const thresholdErrorId = useId()
+  const thresholdLayoutId = useId()
+  const [thresholdLabelLayout, setThresholdLabelLayout] = useState<EnemyThresholdPieLabelLayout>('BELOW')
+  const [thresholdInput, setThresholdInput] = useState('60')
+  const threshold = Number(thresholdInput)
+  const thresholdError = thresholdInput.trim() === '' || !Number.isFinite(threshold) || threshold < 0 || threshold > 100
+    ? '0〜100の数値を入力してください' : null
   const binWidthInputId = useId()
   const binWidthHelpId = useId()
   const upperBoundInputId = useId()
@@ -334,8 +346,12 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
       minimumLinearUpperBound,
     })), [activeCountMode, statistics, weightedObservations, selectedMetric.logBinCount,
     selectedMetric.minimumLinearBinWidth, axisScale, customLinearBinWidth, customLinearUpperBound, minimumLinearUpperBound])
+  const thresholdDistribution = useMemo(() => thresholdError ? null : buildEnemyThresholdDistribution(
+    buildEnemyHistogramObservations(rows, (enemy) => getEnemyMetricValue(enemy, 'magicResistance'), activeCountMode, countData.data), threshold),
+  [rows, activeCountMode, countData.data, threshold, thresholdError])
   const summaryStatistics = histogramStatistics
-  const canSaveImage = (selectedChart === 'HEATMAP' ? jointDistribution.count
+  const canSaveImage = (selectedChart === 'PIE' ? thresholdDistribution?.count ?? 0
+    : selectedChart === 'HEATMAP' ? jointDistribution.count
     : selectedChart === 'SCATTER' ? scatterObservations.length : summaryStatistics.count) > 0
     && !countUnavailable
     && !(selectedChart === 'HISTOGRAM' && !ratingMode && axisScale === 'LINEAR' && histogramSettingsError)
@@ -406,14 +422,16 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
       scatterObservations, scatterMetric, scatterScale, scopeLabel, customLinearUpperBound, ecdfGuides,
       countMode: activeCountMode, countCoverage: activeCountMode === 'TYPES' ? null : countData.data?.summary ?? null,
       ecdfPoints,
-      jointDistribution, heatmapColorScale, referenceVisibility: { ...referenceVisibility },
+      jointDistribution, thresholdDistribution, thresholdLabelLayout, heatmapColorScale, referenceVisibility: { ...referenceVisibility },
       showHistogramPercentages: selectedChart === 'HISTOGRAM' && showHistogramPercentages,
       showHistogramBinRanges: selectedChart === 'HISTOGRAM' && showHistogramBinRanges,
       ratingBins }
     imageSaveInProgress.current = true
     setPreparingImage(true)
     try {
-      snapshot.filename = selectedChart === 'HEATMAP' ? await getEnemyJointImageFilename(jointDistribution, scopeLabel, snapshot.countCoverage, snapshot.heatmapColorScale)
+      snapshot.filename = selectedChart === 'PIE' && snapshot.thresholdDistribution
+        ? createEnemyThresholdImageFilename({ threshold: snapshot.thresholdDistribution.threshold, countMode: snapshot.countMode, scopeLabel, labelLayout: snapshot.thresholdLabelLayout })
+        : selectedChart === 'HEATMAP' ? await getEnemyJointImageFilename(jointDistribution, scopeLabel, snapshot.countCoverage, snapshot.heatmapColorScale)
         : selectedChart === 'ECDF' ? await getWeightedEnemyEcdfImageFilename({ mode: snapshot.countMode,
           metric: selectedMetric.label, scope: scopeLabel, scale: axisScale, statistics: summaryStatistics,
           points: snapshot.ecdfPoints, guides: snapshot.ecdfGuides,
@@ -462,7 +480,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
 
   const distributionControls = <>
     {selectedChart !== 'COMPARISON' && filterControls}
-    {!histogramEditor && selectedChart !== 'HEATMAP' && <EnemyStatisticsSettings controls={controls} />}
+    {!histogramEditor && selectedChart !== 'HEATMAP' && selectedChart !== 'PIE' && <EnemyStatisticsSettings controls={controls} />}
     {selectedChart !== 'COMPARISON' && <div className="enemy-chart-toolbar">
       {selectedChart === 'HISTOGRAM' && <div className="enemy-histogram-rating-control">
         <label className="enemy-histogram-display-toggle"
@@ -475,7 +493,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           aria-haspopup="dialog" aria-label="ゲーム内評価の定義を表示"
           onClick={() => setRatingReferenceOpen(true)}>評価基準</button>
       </div>}
-      {selectedChart !== 'HEATMAP' && !ratingMode && (histogramEditor || summaryStatistics.count > 0) && (
+      {selectedChart !== 'HEATMAP' && selectedChart !== 'PIE' && !ratingMode && (histogramEditor || summaryStatistics.count > 0) && (
         <div className="enemy-chart-axis-control">
           <span>{selectedChart === 'HISTOGRAM' ? '階級の区切り' : '横軸'}</span>
           <ScaleSwitch
@@ -485,6 +503,24 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           />
         </div>
       )}
+      {selectedChart === 'PIE' && <div className="statistics-bin-width-control">
+        <label htmlFor={thresholdInputId}>基準の術耐性</label>
+        <div className="statistics-bin-width-input-row">
+          <input id={thresholdInputId} type="number" inputMode="decimal" min="0" max="100" step="any"
+            value={thresholdInput} onChange={(event) => setThresholdInput(event.target.value)}
+            aria-invalid={thresholdError !== null} aria-describedby={thresholdError ? thresholdErrorId : undefined} />
+        </div>
+        {thresholdError && <small id={thresholdErrorId} className="error" role="alert">{thresholdError}</small>}
+      </div>}
+      {selectedChart === 'PIE' && <div className="statistics-bin-width-control">
+        <label htmlFor={thresholdLayoutId}>数値の配置</label>
+        <div className="enemy-chart-select-label">
+          <select id={thresholdLayoutId} value={thresholdLabelLayout}
+            onChange={(event) => setThresholdLabelLayout(event.target.value as EnemyThresholdPieLabelLayout)}>
+            {ENEMY_THRESHOLD_PIE_LABEL_LAYOUTS.map(({ key, label }) => <option value={key} key={key}>{label}</option>)}
+          </select>
+        </div>
+      </div>}
       {!histogramEditor && isResistanceHistogram && <button type="button" className="button secondary"
         disabled={!currentHistogramSnapshot} onClick={registerHistogram}>この分布をDPS画像に使う</button>}
       {!histogramEditor && <button type="button" className="button secondary enemy-chart-save-button"
@@ -622,7 +658,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         id="enemy-distribution"
         number="02"
         title="分布グラフ"
-        summary={selectedChart === 'HEATMAP' ? `HP × 術耐性 · ${countOption.label} · ${scopeLabel}`
+        summary={selectedChart === 'PIE' ? `術耐性 · 円グラフ · ${countOption.label} · ${scopeLabel}`
+          : selectedChart === 'HEATMAP' ? `HP × 術耐性 · ${countOption.label} · ${scopeLabel}`
           : selectedChart === 'COMPARISON' ? `${selectedMetric.label} · 分布比較 · ${countOption.label}`
           : `${selectedMetric.label} · ${CHART_OPTIONS.find((chart) => chart.key === selectedChart)?.label} · ${countOption.label} · ${scopeLabel} · 対象 ${rows.length}種類`}
         defaultOpen
@@ -665,6 +702,9 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
 
         <div className="enemy-chart-stack" hidden={selectedChart === 'COMPARISON'}>
           {countUnavailable ? null : rows.length === 0 && !hasFixedEmptyHistogram ? <ChartEmpty message="条件に一致する敵がいません" /> : <>
+          {selectedChart === 'PIE' && (thresholdDistribution
+            ? <EnemyThresholdPie distribution={thresholdDistribution} countMode={activeCountMode} labelLayout={thresholdLabelLayout} />
+            : <ChartEmpty message="基準の術耐性を入力してください" />)}
           {selectedChart === 'HEATMAP' && <EnemyJointHeatmap distribution={jointDistribution}
             colorScale={heatmapColorScale} onColorScaleChange={setHeatmapColorScale} />}
           {selectedChart === 'HISTOGRAM' && (
@@ -755,6 +795,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
 }
 
 interface EnemyChartImageData {
+  thresholdDistribution: EnemyThresholdDistribution | null
+  thresholdLabelLayout: EnemyThresholdPieLabelLayout
   ratingBins: EnemyRatingHistogramBin[] | null
   showHistogramPercentages: boolean
   showHistogramBinRanges: boolean
@@ -794,6 +836,14 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
   const individualGroups = useMemo(() => kind === 'INDIVIDUAL' ? buildIndividualGroups(observations) : [], [kind, observations])
   const cdfPoints = data.ecdfPoints
   const countOption = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === data.countMode)!
+  if (kind === 'PIE' && data.thresholdDistribution) {
+    return <ChartImageFrame className="enemy-chart-image" title="術耐性の構成比"
+      conditions={`${scopeLabel} · ${countOption.label}`}
+      naturalChartHeight={getEnemyChartNaturalHeight(kind)} aspectRatio={aspectRatio} onLayout={onLayout}>
+      {({ width, height }) => <EnemyThresholdPieSvg distribution={data.thresholdDistribution!}
+        countMode={data.countMode} labelLayout={data.thresholdLabelLayout} width={width} height={height} image />}
+    </ChartImageFrame>
+  }
   if (kind === 'HEATMAP') {
     const distribution = data.jointDistribution
     return <ChartImageFrame className="enemy-chart-image" title="敵HP × 術耐性の分布"
