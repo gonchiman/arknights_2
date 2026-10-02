@@ -29,6 +29,31 @@ test('Surtr image filenames use shared automatic and explicit ratio naming', () 
   assert.match(withChartImageAspect(name), /比率自動\.png$/)
   assert.match(withChartImageAspect(name, 16 / 9), /比率16x9\.png$/)
 })
+
+test('Surtr block comparison filename describes both states independently of the selected state', () => {
+  const comparison = getSurtrDpsImageFilename({ ...settings, compareBlocking: true })
+  assert.match(comparison, /ブロック状態比較/)
+  assert.doesNotMatch(comparison, /未ブロック|対象を自身でブロック/)
+  assert.equal(comparison, getSurtrDpsImageFilename({ ...settings, blocking: true, compareBlocking: true }))
+  for (const blocking of [false, true]) {
+    const single = getSurtrDpsImageFilename({ ...settings, blocking })
+    assert.equal(single, getSurtrDpsImageFilename({ ...settings, blocking, compareBlocking: false }))
+    assert.notEqual(comparison, single)
+  }
+})
+
+test('Surtr combined export filename includes block comparison while preserving histogram conditions', () => {
+  const histogram = '敵_術耐性_ヒストグラム_出現回数_全敵_線形_幅10_上限100.png'
+  const comparison = getSurtrDpsImageFilename({ ...settings, compareBlocking: true })
+  const name = getSurtrCombinedImageFilename(comparison, histogram)
+  assert.match(name, /^スルト_S3_DPSと術耐性分布_出現回数_全敵_/)
+  assert.match(name, /ブロック状態比較/)
+  assert.equal(name, getSurtrCombinedImageFilename(
+    getSurtrDpsImageFilename({ ...settings, blocking: true, compareBlocking: true }), histogram,
+  ))
+  assert.notEqual(name, getSurtrCombinedImageFilename(getSurtrDpsImageFilename(settings), histogram))
+  assert.notEqual(name, getSurtrCombinedImageFilename(comparison, histogram.replace('全敵', 'ボス')))
+})
 test('Surtr filename distinguishes chart kind and only active bar spacing', () => {
   const line = getSurtrDpsImageFilename({ ...settings, kind: 'line', barStep: 20 })
   assert.equal(line, getSurtrDpsImageFilename({ ...settings, kind: 'line', barStep: 10 }))

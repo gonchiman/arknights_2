@@ -1427,7 +1427,7 @@ function HistogramSvg({
         </g>
       ))}
 
-      <rect className="enemy-chart-frame" x={plotLeft} y={plotTop} width={plotWidth} height={plotHeight + extraTop} />
+      <rect className="enemy-chart-frame" data-chart-image-plot-area="" x={plotLeft} y={plotTop} width={plotWidth} height={plotHeight + extraTop} />
 
       {bins.map((bin, index) => {
         const bar = bars[index]

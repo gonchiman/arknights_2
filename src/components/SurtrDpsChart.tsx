@@ -251,7 +251,7 @@ function SurtrDpsSvg({ series, kind = 'line', width, height, activeX, gridStyle 
           <tspan x={plot.x(tick)} dy={RATING_TICK_LINE_HEIGHT}>{tick}</tspan></> : tick}
       </text>
     </g>})}
-    <path className="surtr-dps-chart-axis" d={`M ${plot.left} ${plot.top} V ${plot.bottom} H ${plot.right}`} />
+    <path className="surtr-dps-chart-axis" data-chart-image-plot-area="" d={`M ${plot.left} ${plot.top} V ${plot.bottom} H ${plot.right}`} />
     <g clipPath={`url(#${clipId})`}>
     {plot.minimum < 0 && plot.maximum >= 0 && <line className="surtr-dps-chart-zero"
       x1={plot.left} x2={plot.right} y1={plot.y(0)} y2={plot.y(0)} />}

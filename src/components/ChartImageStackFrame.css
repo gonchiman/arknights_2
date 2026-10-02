@@ -1,2 +1,9 @@
 .chart-image-stack-frame { display: flex; flex-direction: column; align-items: stretch; box-sizing: border-box; background: #fff; }
 .chart-image-stack-frame > .chart-image-frame { flex: none; }
+.chart-image-stack-header { display: block; padding-bottom: 0; }
+.chart-image-stack-panels { display: flex; flex-direction: column; align-items: stretch; flex: none; }
+.chart-image-stack-panels > .chart-image-frame { flex: none; }
+.chart-image-stack-frame.has-shared-header > .chart-image-stack-panels > .chart-image-frame > .chart-image-frame-heading:not(.is-top-right-box) > strong {
+  font-size: 12px;
+  line-height: 18px;
+}

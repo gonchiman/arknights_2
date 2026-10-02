@@ -8,6 +8,7 @@ export interface SurtrDpsImageConditions {
   potential: number
   skillLevelLabel: string
   blocking: boolean
+  compareBlocking?: boolean
   modules: readonly string[]
   kind?: 'bar' | 'line'
   barStep?: SurtrDpsBarStep
@@ -45,7 +46,7 @@ export function getSurtrDpsImageFilename(settings: SurtrDpsImageConditions): str
     `信頼${settings.trust}`,
     `潜在${settings.potential}`,
     settings.modules.join('-'),
-    settings.blocking ? '対象を自身でブロック' : '未ブロック',
+    settings.compareBlocking ? 'ブロック状態比較' : settings.blocking ? '対象を自身でブロック' : '未ブロック',
     '単体',
     '余燼なし',
     kind === 'bar' ? barStep === 'ratings'

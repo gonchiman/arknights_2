@@ -9,6 +9,7 @@ import { readSurtrDpsPageState, writeSurtrDpsPageState } from '../lib/surtrDpsPa
 import { calculateSurtrDpsCalculation } from '../lib/surtrDpsCalculation'
 import { getSurtrDpsResistanceSamples, isValidSurtrDpsResistanceRange, type SurtrDpsBarStep, type SurtrDpsResistanceRange } from '../lib/surtrDpsResistance'
 import { transformSurtrDpsSeries, getSurtrDpsOutputTsv, type SurtrDpsMetric } from '../lib/surtrDpsOutput'
+import { buildSurtrDpsBlockComparison } from '../lib/surtrDpsBlockComparison'
 import { writeClipboardText } from '../lib/clipboard'
 import { isValidHpChartYAxisRange } from '../lib/goldenglowTargetSwitchHpAxis'
 import { withChartImageAspect } from '../lib/chartImageFilename'
@@ -34,6 +35,9 @@ interface ImageSnapshot {
   kind: SurtrDpsChartKind; barStep: SurtrDpsBarStep; showValues: boolean; metric: SurtrDpsMetric; title: string
   resistanceRange: SurtrDpsResistanceRange
   showResistanceRanks: boolean
+  blockComparisons: { blocking: boolean; series: SurtrDpsChartSeries[]; conditions: string }[] | null
+  blockComparisonFilename: string
+  blockComparisonConditions: string
   histogram: EnemyHistogramSnapshot | null
   gridStyle: 'none' | 'dashed' | 'solid'; precision: number; yAxis: SurtrDpsChartYAxis; selectedResistance: number | null
 }
@@ -66,6 +70,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   const [yAxisMode, setYAxisMode] = useState<SurtrDpsChartYAxis['mode']>(initialState.yAxisMode)
   const [yAxisDraft, setYAxisDraft] = useState(initialState.yAxisDraft)
   const [includeHistogram, setIncludeHistogram] = useState(false)
+  const [compareBlocking, setCompareBlocking] = useState(false)
   const [histogramEditor, setHistogramEditor] = useState<{ initialSnapshot: EnemyHistogramSnapshot | null; wasIncluded: boolean } | null>(null)
   const [histogramDraft, setHistogramDraft] = useState<EnemyHistogramSnapshot | null>(null)
   const [histogramStorageError, setHistogramStorageError] = useState(false)
@@ -200,11 +205,22 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
     setHistogramDraft(null)
     setHistogramStorageError(false)
     if (!chartSeries.length || invalidModels.length || yAxisError || barStepError) return
+    const blockComparisons = record ? buildSurtrDpsBlockComparison(record, effectiveSettings,
+      comparison.map(item => ({ id: item.id, label: item.label, color: item.color,
+        level: moduleLevels[item.id] ?? item.levels.at(-1) ?? 3 })), effectiveMetric, baseline?.id ?? '') : null
+    const filenameSettings = { ...effectiveSettings, skillLevelLabel: label, modules: series.map(item => item.label), kind: chartKind,
+      barStep, resistanceRange, showValues, metric: effectiveMetric, baselineLabel: baseline?.label,
+      gridStyle, precision, yAxis, selectedResistance, showResistanceRanks }
     setImage({ id: ++nextSnapshot.current, series: chartSeries, kind: chartKind, barStep, resistanceRange: { ...resistanceRange }, showValues: chartKind === 'bar' && showValues,
       title: `スルト S3 ${outputTitle}`, metric: effectiveMetric, gridStyle, precision, yAxis, selectedResistance, showResistanceRanks,
       conditions: `${label}・${blockLabel}`, histogram: readEnemyHistogramSnapshot(),
-      filename: getSurtrDpsImageFilename({ ...effectiveSettings, skillLevelLabel: label, modules: series.map(item => item.label), kind: chartKind, barStep, resistanceRange, showValues,
-        metric: effectiveMetric, baselineLabel: baseline?.label, gridStyle, precision, yAxis, selectedResistance, showResistanceRanks }),
+      blockComparisons: blockComparisons?.map(item => ({ ...item,
+        series: effectiveMetric === 'total' ? item.series : item.series.filter(series => series.id !== baseline?.id),
+        conditions: `${label}・${item.blocking ? '対象を自身でブロック' : '未ブロック'}`,
+      })) ?? null,
+      filename: getSurtrDpsImageFilename(filenameSettings),
+      blockComparisonFilename: getSurtrDpsImageFilename({ ...filenameSettings, compareBlocking: true }),
+      blockComparisonConditions: `${label}・ブロック状態比較`,
     })
   }
   const saveImage = async (filename: string, ratio?: number) => {
@@ -215,11 +231,14 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
     try {
       const destination = await selectChartImageDestination(filename, picker)
       if (destination.type === 'cancelled') return
+      const histogram = includeHistogram ? image.histogram : null
+      const blockComparisons = compareBlocking ? image.blockComparisons ?? undefined : undefined
+      const stacked = !!blockComparisons || !!histogram
       await saveComparisonChartImage({ filename,
-        width: includeHistogram && image.histogram ? getSurtrCombinedImageLayout(ratio).width
+        width: stacked ? getSurtrCombinedImageLayout(ratio, blockComparisons?.length ?? 1, !!histogram).width
           : getChartImageLayout({ naturalChartHeight: 334, aspectRatio: ratio }).width,
-        chart: includeHistogram && image.histogram
-          ? <SurtrCombinedChartImage {...image} histogram={image.histogram} aspectRatio={ratio} />
+        chart: stacked
+          ? <SurtrCombinedChartImage {...image} blockComparisons={blockComparisons} histogram={histogram} aspectRatio={ratio} />
           : <SurtrDpsChartImage {...image} aspectRatio={ratio} />,
         writeBlob: destination.type === 'file' ? destination.write : undefined,
       })
@@ -232,6 +251,9 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
     : <p className="surtr-s3-status" role="status">{loading ? 'スルトのデータを読み込み中…' : 'スルトS3のデータを取得できませんでした。'}</p>
 
   const previewHistogram = histogramEditor ? histogramDraft ?? image?.histogram : image?.histogram
+  const previewBlockComparisons = compareBlocking ? image?.blockComparisons ?? undefined : undefined
+  const stackedPreview = !!previewBlockComparisons || (includeHistogram && !!previewHistogram)
+  const imageBaseFilename = image ? compareBlocking && image.blockComparisons ? image.blockComparisonFilename : image.filename : ''
   const finishHistogramEdit = (apply: boolean) => {
     if (!histogramEditor || (apply && !histogramDraft)) return
     if (apply && histogramDraft) {
@@ -412,14 +434,16 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
       {imageFeedback && imageFeedback !== 'failed' && <p className="surtr-s3-status" role="status">{imageFeedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
     </CollapsibleCalculatorPanel>
     {detail && <SurtrDpsDetailModal snapshot={detail} onClose={() => setDetail(null)} />}
-    {image && <ChartImageSaveDialog initialFilename={image.filename} getDefaultFilename={ratio => withChartImageAspect(
-      includeHistogram && image.histogram ? getSurtrCombinedImageFilename(image.filename, image.histogram.filename) : image.filename, ratio)} aspect={aspect} onAspectChange={setAspect}
+    {image && <ChartImageSaveDialog initialFilename={imageBaseFilename} getDefaultFilename={ratio => withChartImageAspect(
+      includeHistogram && image.histogram ? getSurtrCombinedImageFilename(imageBaseFilename, image.histogram.filename) : imageBaseFilename, ratio)} aspect={aspect} onAspectChange={setAspect}
       canChooseLocation={!!picker} saving={saving} saveDisabled={!!histogramEditor} error={imageFeedback === 'failed'} helpMode="popover"
       onClose={() => { if (!saveInProgress.current) {
         if (histogramEditor) setIncludeHistogram(histogramEditor.wasIncluded)
         setHistogramEditor(null); setHistogramDraft(null); setImage(null); setImageFeedback(null)
       } }} onSave={(filename, ratio) => void saveImage(filename, ratio)}
       options={<fieldset className="surtr-s3-export-distribution" disabled={saving}>
+        <label><input type="checkbox" checked={compareBlocking && !!image.blockComparisons} disabled={!image.blockComparisons || saving || !!histogramEditor}
+          onChange={event => setCompareBlocking(event.target.checked)} />ブロック状態を上下に比較</label>
         <label><input type="checkbox" checked={includeHistogram && !!previewHistogram} disabled={!image.histogram || saving || !!histogramEditor}
           onChange={event => setIncludeHistogram(event.target.checked)} />術耐性分布を添える</label>
         {previewHistogram && <span>{previewHistogram.summary}</span>}
@@ -440,8 +464,9 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
           </div>
         </section>}
       </fieldset>}
-      preview={includeHistogram && previewHistogram
-        ? <SurtrCombinedChartImagePreview key={`${image.id}:combined:${previewHistogram.id}:${aspectRatio ?? 'auto'}`} {...image} histogram={previewHistogram} aspectRatio={aspectRatio} />
+      preview={stackedPreview
+        ? <SurtrCombinedChartImagePreview key={`${image.id}:stack:${!!previewBlockComparisons}:${includeHistogram ? previewHistogram?.id : 'none'}:${aspectRatio ?? 'auto'}`}
+            {...image} blockComparisons={previewBlockComparisons} histogram={includeHistogram ? previewHistogram : null} aspectRatio={aspectRatio} />
         : <SurtrDpsChartImagePreview key={`${image.id}:${image.kind}:${aspectRatio ?? 'auto'}`} {...image} aspectRatio={aspectRatio} />} />}
   </section>
 }
