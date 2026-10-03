@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type MouseEvent } from 'react'
 import type { SkillRecord } from '../types/skill'
-import { SURTR_OPERATOR_ID, type SurtrDpsSettings } from '../lib/surtrDps'
+import { SURTR_OPERATOR_ID, deriveSurtrDpsModel, type SurtrDpsSettings, type SurtrDpsModel } from '../lib/surtrDps'
 import {
   deriveSurtrRemnantAttackModel, calculateSurtrRemnantAttacks,
   getSurtrRemnantCtLimit, getSurtrRemnantWindupLimit, buildSurtrRemnantCtSamples,
@@ -20,6 +20,7 @@ import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { HelpPopover } from './HelpPopover'
 import { SurtrRemnantAttackChart } from './SurtrRemnantAttackChart'
+import { SurtrRemnantDamagePanel } from './SurtrRemnantDamagePanel'
 import { SurtrRemnantAttackChartImage, SurtrRemnantAttackChartImagePreview, type SurtrRemnantAttackChartImageProps } from './SurtrRemnantAttackChartImage'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
@@ -36,6 +37,7 @@ interface Comparison {
   label: string
   color: string
   model: SurtrRemnantAttackModel | null
+  dpsModel: SurtrDpsModel | null
 }
 interface DetailSelection {
   ct: number
@@ -127,7 +129,8 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
       const id = type === null ? '' : module ? getOperatorModuleId(module, moduleIndex) : null
       const valid = type === null || (module && getOperatorModuleLevels(module).includes(3))
       return { id: type ?? 'none', label: type ? `MOD ${type} Lv.3` : '未装備', color: colors[index],
-        model: record && id !== null && valid ? deriveSurtrRemnantAttackModel(record, settings, id, 3) : null }
+        model: record && id !== null && valid ? deriveSurtrRemnantAttackModel(record, settings, id, 3) : null,
+        dpsModel: record && id !== null && valid ? deriveSurtrDpsModel(record, settings, id, 3) : null }
     })
   }, [record, settings, potential])
   const models = useMemo(() => comparison.flatMap(item => item.model ? [item.model] : []), [comparison])
@@ -317,6 +320,9 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
           </>}
       {feedback && feedback !== 'failed' && <p className="surtr-s3-status" role="status">{feedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
     </CollapsibleCalculatorPanel>
+    <SurtrRemnantDamagePanel comparison={comparison} potential={potential} blocking={blocking} assumptions={assumptions}
+      status={!record ? status : missingModel || invalidCalculation ? <p role="alert">計算に必要なMOD・攻撃速度・余燼のデータを取得できませんでした。</p>
+        : invalidWindup ? <p className="surtr-s3-status" role="status">計算条件の入力を確認してください。</p> : null} />
     {image && <ChartImageSaveDialog initialFilename={image.filename} getDefaultFilename={ratio => withChartImageAspect(image.filename, ratio)} aspect={aspect} onAspectChange={setAspect}
       canChooseLocation={!!picker} saving={saving} error={feedback === 'failed'} helpMode="popover"
       onClose={() => { if (!saveInProgress.current) { setImage(null); setFeedback(null) } }} onSave={(filename, ratio) => void saveImage(filename, ratio)}
