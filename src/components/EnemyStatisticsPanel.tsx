@@ -23,8 +23,10 @@ import { EnemyEcdfGuideControls } from './EnemyEcdfGuideControls'
 import { EnemyDistributionComparison } from './EnemyDistributionComparison'
 import { EnemyJointHeatmap, EnemyJointHeatmapSvg } from './EnemyJointHeatmap'
 import { EnemyThresholdPieComparison, EnemyThresholdPieComparisonImage, getEnemyThresholdPieComparisonNaturalHeight } from './EnemyThresholdPieComparison'
+import { EnemyThresholdBarComparison, EnemyThresholdBarComparisonImage, getEnemyThresholdBarComparisonNaturalHeight } from './EnemyThresholdBarComparison'
 import { ENEMY_THRESHOLD_PIE_LABEL_LAYOUTS, type EnemyThresholdPieLabelLayout } from '../lib/enemyThresholdPieLayout'
-import { buildEnemyThresholdComparison, createEnemyThresholdComparisonConditions, createEnemyThresholdComparisonImageFilename, type EnemyThresholdComparison } from '../lib/enemyThresholdComparison'
+import { ENEMY_THRESHOLD_BAR_LAYOUTS, type EnemyThresholdBarLayout } from '../lib/enemyThresholdBarLayout'
+import { buildEnemyThresholdComparison, createEnemyThresholdComparisonConditions, createEnemyThresholdComparisonImageFilename, createEnemyThresholdBarComparisonImageFilename, type EnemyThresholdComparison } from '../lib/enemyThresholdComparison'
 import type { EnemyComparisonCondition } from '../lib/enemyDistributionComparison'
 import { getChartImageLayout } from '../lib/chartImageLayout'
 import { buildEnemyJointDistribution, type EnemyJointDistribution } from '../lib/enemyJointDistribution'
@@ -112,6 +114,7 @@ const CHART_OPTIONS: Array<{ key: ChartKind; label: string }> = [
   { key: 'COMPARISON', label: '分布比較' },
   { key: 'HEATMAP', label: 'ヒートマップ' },
   { key: 'PIE', label: '円グラフ' },
+  { key: 'RATIO_BAR', label: '100%横棒' },
 ]
 
 const LEVEL_ORDER: EnemyLevelType[] = ['NORMAL', 'ELITE', 'BOSS', 'UNKNOWN']
@@ -222,6 +225,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const thresholdErrorId = useId()
   const thresholdLayoutId = useId()
   const [thresholdLabelLayout, setThresholdLabelLayout] = useState<EnemyThresholdPieLabelLayout>('BELOW')
+  const [thresholdBarLayout, setThresholdBarLayout] = useState<EnemyThresholdBarLayout>('AXIS')
   const [thresholdInput, setThresholdInput] = useState('60')
   const [thresholdConditions, setThresholdConditions] = useState<EnemyComparisonCondition[]>(createEnemyThresholdComparisonConditions)
   const threshold = Number(thresholdInput)
@@ -234,6 +238,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const histogramSettingsHeadingId = useId()
   const [chartChoice, setSelectedChart] = useState<ChartKind>('HISTOGRAM')
   const selectedChart = histogramEditor ? 'HISTOGRAM' : CHART_OPTIONS.some(({ key }) => key === chartChoice) ? chartChoice : 'HISTOGRAM'
+  const isThresholdChart = selectedChart === 'PIE' || selectedChart === 'RATIO_BAR'
   const [activeCountMode, setCountMode] = useState<EnemyHistogramCountMode>(histogramEditor?.initialSnapshot?.countMode ?? 'SPAWNS')
   const [showHistogramPercentages, setShowHistogramPercentages] = useState(histogramEditor?.initialSnapshot?.showPercentages ?? false)
   const [showHistogramBinRanges, setShowHistogramBinRanges] = useState(histogramEditor?.initialSnapshot?.showBinRanges ?? false)
@@ -353,7 +358,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     allRows, thresholdConditions, threshold, activeCountMode, countData.data),
   [allRows, thresholdConditions, activeCountMode, countData.data, threshold, thresholdError])
   const summaryStatistics = histogramStatistics
-  const canSaveImage = (selectedChart === 'PIE' ? thresholdComparison?.series.filter(({ condition }) => condition.visible).reduce((sum, series) => sum + series.count, 0) ?? 0
+  const canSaveImage = (isThresholdChart ? thresholdComparison?.series.filter(({ condition }) => condition.visible).reduce((sum, series) => sum + series.count, 0) ?? 0
     : selectedChart === 'HEATMAP' ? jointDistribution.count
     : selectedChart === 'SCATTER' ? scatterObservations.length : summaryStatistics.count) > 0
     && !countUnavailable
@@ -425,7 +430,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
       scatterObservations, scatterMetric, scatterScale, scopeLabel, customLinearUpperBound, ecdfGuides,
       countMode: activeCountMode, countCoverage: activeCountMode === 'TYPES' ? null : countData.data?.summary ?? null,
       ecdfPoints,
-      jointDistribution, thresholdComparison, thresholdLabelLayout, heatmapColorScale, referenceVisibility: { ...referenceVisibility },
+      jointDistribution, thresholdComparison, thresholdLabelLayout, thresholdBarLayout, heatmapColorScale, referenceVisibility: { ...referenceVisibility },
       showHistogramPercentages: selectedChart === 'HISTOGRAM' && showHistogramPercentages,
       showHistogramBinRanges: selectedChart === 'HISTOGRAM' && showHistogramBinRanges,
       ratingBins }
@@ -434,6 +439,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     try {
       snapshot.filename = selectedChart === 'PIE' && snapshot.thresholdComparison
         ? createEnemyThresholdComparisonImageFilename({ comparison: snapshot.thresholdComparison, countMode: snapshot.countMode, labelLayout: snapshot.thresholdLabelLayout })
+        : selectedChart === 'RATIO_BAR' && snapshot.thresholdComparison
+          ? createEnemyThresholdBarComparisonImageFilename({ comparison: snapshot.thresholdComparison, countMode: snapshot.countMode, labelLayout: snapshot.thresholdBarLayout })
         : selectedChart === 'HEATMAP' ? await getEnemyJointImageFilename(jointDistribution, scopeLabel, snapshot.countCoverage, snapshot.heatmapColorScale)
         : selectedChart === 'ECDF' ? await getWeightedEnemyEcdfImageFilename({ mode: snapshot.countMode,
           metric: selectedMetric.label, scope: scopeLabel, scale: axisScale, statistics: summaryStatistics,
@@ -481,8 +488,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   }
 
   const distributionControls = <>
-    {selectedChart !== 'COMPARISON' && selectedChart !== 'PIE' && filterControls}
-    {!histogramEditor && selectedChart !== 'HEATMAP' && selectedChart !== 'PIE' && <EnemyStatisticsSettings controls={controls} />}
+    {selectedChart !== 'COMPARISON' && !isThresholdChart && filterControls}
+    {!histogramEditor && selectedChart !== 'HEATMAP' && !isThresholdChart && <EnemyStatisticsSettings controls={controls} />}
     {selectedChart !== 'COMPARISON' && <div className="enemy-chart-toolbar">
       {selectedChart === 'HISTOGRAM' && <div className="enemy-histogram-rating-control">
         <label className="enemy-histogram-display-toggle"
@@ -495,7 +502,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           aria-haspopup="dialog" aria-label="ゲーム内評価の定義を表示"
           onClick={() => setRatingReferenceOpen(true)}>評価基準</button>
       </div>}
-      {selectedChart !== 'HEATMAP' && selectedChart !== 'PIE' && !ratingMode && (histogramEditor || summaryStatistics.count > 0) && (
+      {selectedChart !== 'HEATMAP' && !isThresholdChart && !ratingMode && (histogramEditor || summaryStatistics.count > 0) && (
         <div className="enemy-chart-axis-control">
           <span>{selectedChart === 'HISTOGRAM' ? '階級の区切り' : '横軸'}</span>
           <ScaleSwitch
@@ -505,7 +512,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           />
         </div>
       )}
-      {selectedChart === 'PIE' && <div className="statistics-bin-width-control">
+      {isThresholdChart && <div className="statistics-bin-width-control">
         <label htmlFor={thresholdInputId}>基準の術耐性</label>
         <div className="statistics-bin-width-input-row">
           <input id={thresholdInputId} type="number" inputMode="decimal" min="0" max="100" step="any"
@@ -520,6 +527,15 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           <select id={thresholdLayoutId} value={thresholdLabelLayout}
             onChange={(event) => setThresholdLabelLayout(event.target.value as EnemyThresholdPieLabelLayout)}>
             {ENEMY_THRESHOLD_PIE_LABEL_LAYOUTS.map(({ key, label }) => <option value={key} key={key}>{label}</option>)}
+          </select>
+        </div>
+      </div>}
+      {selectedChart === 'RATIO_BAR' && <div className="statistics-bin-width-control">
+        <label htmlFor={thresholdLayoutId}>数値の配置</label>
+        <div className="enemy-chart-select-label">
+          <select id={thresholdLayoutId} value={thresholdBarLayout}
+            onChange={(event) => setThresholdBarLayout(event.target.value as EnemyThresholdBarLayout)}>
+            {ENEMY_THRESHOLD_BAR_LAYOUTS.map(({ key, label }) => <option value={key} key={key}>{label}</option>)}
           </select>
         </div>
       </div>}
@@ -660,7 +676,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         id="enemy-distribution"
         number="02"
         title="分布グラフ"
-        summary={selectedChart === 'PIE' ? `術耐性 · 円グラフ · ${countOption.label} · ${thresholdConditions.filter(({ visible }) => visible).length}条件`
+        summary={isThresholdChart ? `術耐性 · ${CHART_OPTIONS.find(({ key }) => key === selectedChart)?.label} · ${countOption.label} · ${thresholdConditions.filter(({ visible }) => visible).length}条件`
           : selectedChart === 'HEATMAP' ? `HP × 術耐性 · ${countOption.label} · ${scopeLabel}`
           : selectedChart === 'COMPARISON' ? `${selectedMetric.label} · 分布比較 · ${countOption.label}`
           : `${selectedMetric.label} · ${CHART_OPTIONS.find((chart) => chart.key === selectedChart)?.label} · ${countOption.label} · ${scopeLabel} · 対象 ${rows.length}種類`}
@@ -703,10 +719,14 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           countMode={activeCountMode} counts={countData.data} countUnavailable={countUnavailable} />
 
         <div className="enemy-chart-stack" hidden={selectedChart === 'COMPARISON'}>
-          {countUnavailable ? null : selectedChart !== 'PIE' && rows.length === 0 && !hasFixedEmptyHistogram ? <ChartEmpty message="条件に一致する敵がいません" /> : <>
+          {countUnavailable ? null : !isThresholdChart && rows.length === 0 && !hasFixedEmptyHistogram ? <ChartEmpty message="条件に一致する敵がいません" /> : <>
           {selectedChart === 'PIE' && (thresholdComparison
             ? <EnemyThresholdPieComparison rows={allRows} comparison={thresholdComparison} countMode={activeCountMode}
                 labelLayout={thresholdLabelLayout} onConditionsChange={setThresholdConditions} />
+            : <ChartEmpty message="基準の術耐性を入力してください" />)}
+          {selectedChart === 'RATIO_BAR' && (thresholdComparison
+            ? <EnemyThresholdBarComparison rows={allRows} comparison={thresholdComparison} countMode={activeCountMode}
+                labelLayout={thresholdBarLayout} onConditionsChange={setThresholdConditions} />
             : <ChartEmpty message="基準の術耐性を入力してください" />)}
           {selectedChart === 'HEATMAP' && <EnemyJointHeatmap distribution={jointDistribution}
             colorScale={heatmapColorScale} onColorScaleChange={setHeatmapColorScale} />}
@@ -800,6 +820,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
 interface EnemyChartImageData {
   thresholdComparison: EnemyThresholdComparison | null
   thresholdLabelLayout: EnemyThresholdPieLabelLayout
+  thresholdBarLayout: EnemyThresholdBarLayout
   ratingBins: EnemyRatingHistogramBin[] | null
   showHistogramPercentages: boolean
   showHistogramBinRanges: boolean
@@ -842,6 +863,10 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
   if (kind === 'PIE' && data.thresholdComparison) {
     return <EnemyThresholdPieComparisonImage comparison={data.thresholdComparison} countMode={data.countMode}
       labelLayout={data.thresholdLabelLayout} aspectRatio={aspectRatio} onLayout={onLayout} />
+  }
+  if (kind === 'RATIO_BAR' && data.thresholdComparison) {
+    return <EnemyThresholdBarComparisonImage comparison={data.thresholdComparison} countMode={data.countMode}
+      labelLayout={data.thresholdBarLayout} aspectRatio={aspectRatio} onLayout={onLayout} />
   }
   if (kind === 'HEATMAP') {
     const distribution = data.jointDistribution
@@ -916,6 +941,9 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
 function getEnemyImageSnapshotLayout(data: EnemyChartImageData, aspectRatio?: number) {
   if (data.kind === 'PIE' && data.thresholdComparison) {
     return getChartImageLayout({ aspectRatio, naturalChartHeight: getEnemyThresholdPieComparisonNaturalHeight(data.thresholdComparison, data.thresholdLabelLayout) })
+  }
+  if (data.kind === 'RATIO_BAR' && data.thresholdComparison) {
+    return getChartImageLayout({ aspectRatio, naturalChartHeight: getEnemyThresholdBarComparisonNaturalHeight(data.thresholdComparison, data.thresholdBarLayout) })
   }
   return getEnemyChartImageLayout({ kind: data.kind, aspectRatio,
     groupCount: new Set(data.observations.map(({ enemy }) => enemy.levelType)).size })

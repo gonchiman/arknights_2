@@ -11,6 +11,7 @@ import {
 import { matchesEnemyNumericConditions } from './enemyNumericFilters.ts'
 import { buildEnemyThresholdDistribution, type EnemyThresholdDistribution } from './enemyThresholdDistribution.ts'
 import { ENEMY_THRESHOLD_PIE_LABEL_LAYOUTS, type EnemyThresholdPieLabelLayout } from './enemyThresholdPieLayout.ts'
+import { ENEMY_THRESHOLD_BAR_LAYOUTS, type EnemyThresholdBarLayout } from './enemyThresholdBarLayout.ts'
 
 export interface EnemyThresholdComparisonSeries {
   condition: EnemyComparisonCondition
@@ -80,12 +81,31 @@ export function createEnemyThresholdComparisonImageFilename(options: {
   aspectRatio?: number
 }): string {
   const { comparison, countMode, labelLayout = 'BELOW', aspectRatio } = options
-  buildEnemyThresholdDistribution([], comparison.threshold)
   return withChartImageAspect(createChartImageFilename('敵_術耐性_円グラフ比較', [
+    ...thresholdComparisonFilenameParts(comparison, countMode),
+    labelLayout === 'BELOW' ? '' : ENEMY_THRESHOLD_PIE_LABEL_LAYOUTS.find(({ key }) => key === labelLayout)!.label,
+  ]), aspectRatio)
+}
+
+export function createEnemyThresholdBarComparisonImageFilename(options: {
+  comparison: EnemyThresholdComparison
+  countMode: EnemyHistogramCountMode
+  labelLayout?: EnemyThresholdBarLayout
+  aspectRatio?: number
+}): string {
+  const { comparison, countMode, labelLayout = 'AXIS', aspectRatio } = options
+  return withChartImageAspect(createChartImageFilename('敵_術耐性_100%積み上げ横棒', [
+    ...thresholdComparisonFilenameParts(comparison, countMode),
+    ENEMY_THRESHOLD_BAR_LAYOUTS.find(({ key }) => key === labelLayout)!.label,
+  ]), aspectRatio)
+}
+
+function thresholdComparisonFilenameParts(comparison: EnemyThresholdComparison, countMode: EnemyHistogramCountMode): string[] {
+  buildEnemyThresholdDistribution([], comparison.threshold)
+  return [
     `基準値${comparison.threshold}`,
     ENEMY_HISTOGRAM_COUNT_MODES.find((option) => option.key === countMode)!.label,
     ...comparison.series.filter((series) => series.condition.visible)
       .map((series, index) => `条件${index + 1}-${series.label.replace(/\s*·\s*/g, '-')}`),
-    labelLayout === 'BELOW' ? '' : ENEMY_THRESHOLD_PIE_LABEL_LAYOUTS.find(({ key }) => key === labelLayout)!.label,
-  ]), aspectRatio)
+  ]
 }
