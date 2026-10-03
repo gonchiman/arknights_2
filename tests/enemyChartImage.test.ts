@@ -5,7 +5,7 @@ import { buildEnemyJointDistribution } from '../src/lib/enemyJointDistribution.t
 import { getEnemyJointImageFilename } from '../src/lib/enemyJointImage.ts'
 import { withChartImageAspect } from '../src/lib/chartImageFilename.ts'
 
-const kinds: EnemyChartKind[] = ['HISTOGRAM', 'ECDF', 'BOX', 'SCATTER', 'INDIVIDUAL', 'COMPARISON', 'HEATMAP', 'PIE']
+const kinds: EnemyChartKind[] = ['HISTOGRAM', 'ECDF', 'BOX', 'SCATTER', 'INDIVIDUAL', 'COMPARISON', 'HEATMAP', 'PIE', 'RATIO_BAR']
 
 test('自動比率ではグラフの自然な高さに見出しと余白を加える', () => {
   for (const kind of ['HISTOGRAM', 'ECDF', 'SCATTER', 'COMPARISON', 'HEATMAP', 'PIE'] as const) {

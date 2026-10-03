@@ -2,6 +2,7 @@ import { useId, useLayoutEffect, useRef, useState } from 'react'
 import type { EnemyThresholdDistribution } from '../lib/enemyThresholdDistribution'
 import { ENEMY_HISTOGRAM_COUNT_MODES, type EnemyHistogramCountMode } from '../lib/enemyHistogramCounts'
 import { getEnemyThresholdPieGeometry, wrapEnemyThresholdPieLabel, type EnemyThresholdPieLabelLayout } from '../lib/enemyThresholdPieLayout'
+import { ENEMY_THRESHOLD_BUCKET_COLORS as BUCKET_COLORS } from '../lib/enemyThresholdColors'
 import './EnemyThresholdPie.css'
 
 type ThresholdBucket = EnemyThresholdDistribution['buckets'][number]
@@ -11,11 +12,6 @@ interface ThresholdPieProps {
   labelLayout?: EnemyThresholdPieLabelLayout
 }
 
-const BUCKET_COLORS: Record<ThresholdBucket['key'], string> = {
-  BELOW: '#6b96a9',
-  EQUAL: '#aeb4bb',
-  ABOVE: '#9a819f',
-}
 const formatCount = (value: number) => value.toLocaleString('ja-JP')
 const formatPercent = (proportion: number) => `${(proportion * 100).toFixed(1)}%`
 const countUnit = (mode: EnemyHistogramCountMode) => ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === mode)!.unit

@@ -1,0 +1,62 @@
+.enemy-threshold-bar-comparison, .enemy-threshold-bar-figure { min-width: 0; }
+.enemy-threshold-bar-figure { color: var(--text); }
+.enemy-threshold-bar-figure > figcaption { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 20px; }
+.enemy-threshold-bar-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 0; list-style: none; color: var(--text-muted); font-size: 11px; }
+.enemy-threshold-bar-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.enemy-threshold-bar-legend i, .enemy-threshold-bar-statistics dt i, .enemy-threshold-bar-column-headings i { width: 9px; height: 9px; flex: 0 0 9px; }
+.enemy-threshold-bars {
+  container: enemy-threshold-bars / inline-size;
+  min-width: 0;
+  box-sizing: border-box;
+  font-family: "Yu Gothic", YuGothic, "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.enemy-threshold-bar-content { padding: 16px; }
+.enemy-threshold-bar-chart-heading { margin-bottom: 8px; }
+.enemy-threshold-bar-axis { display: flex; justify-content: space-between; min-width: 0; color: var(--text-muted); font-size: 11px; line-height: 18px; }
+.enemy-threshold-bar-row { min-width: 0; padding: 14px 0; }
+.enemy-threshold-bar-row + .enemy-threshold-bar-row { border-top: 1px solid var(--border); }
+.enemy-threshold-bar-main { min-width: 0; }
+.enemy-threshold-bar-row-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 8px; }
+.enemy-threshold-bar-row-heading h4 { min-width: 0; margin: 0; color: var(--text); font-size: 12px; font-weight: 600; line-height: 20px; overflow-wrap: anywhere; }
+.enemy-threshold-bar-summary { display: flex; flex-wrap: wrap; gap: 3px 12px; color: var(--text-muted); font-size: 11px; line-height: 18px; }
+.enemy-threshold-bar-summary span { overflow-wrap: anywhere; }
+.enemy-threshold-bar-track { display: flex; width: 100%; height: 32px; min-width: 0; position: relative; background: var(--surface-soft); }
+.enemy-threshold-bar-segment { flex: 0 0 auto; display: flex; justify-content: center; align-items: center; height: 100%; overflow: hidden; color: #162b35; font-size: 15px; font-weight: 600; white-space: nowrap; }
+.enemy-threshold-bar-empty-track { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; color: var(--text-muted); font-size: 11px; }
+.enemy-threshold-bar-statistics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 10px 0 0; min-width: 0; }
+.enemy-threshold-bar-statistics > div { min-width: 0; }
+.enemy-threshold-bar-statistics dt { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 11px; line-height: 16px; overflow-wrap: anywhere; }
+.enemy-threshold-bar-statistics dd { margin: 3px 0 0; }
+.enemy-threshold-bar-percent { display: block; color: var(--text); font-size: 18px; font-weight: 500; line-height: 22px; }
+.enemy-threshold-bar-count { display: block; color: var(--text-muted); font-size: 11px; line-height: 18px; overflow-wrap: anywhere; }
+.enemy-threshold-bar-column-headings { display: none; }
+.enemy-threshold-bar-empty { margin: 16px 0; color: var(--text-muted); font-size: 12px; }
+
+@container enemy-threshold-bars (min-width: 720px) {
+  .enemy-threshold-bars-right .enemy-threshold-bar-chart-heading,
+  .enemy-threshold-bars-right .enemy-threshold-bar-row { display: grid; grid-template-columns: minmax(0, 1fr) 288px; gap: 20px; }
+  .enemy-threshold-bars-right .enemy-threshold-bar-row { align-items: end; }
+  .enemy-threshold-bars-right .enemy-threshold-bar-column-headings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .enemy-threshold-bar-column-headings > span { display: flex; justify-content: flex-end; align-items: center; gap: 5px; color: var(--text-muted); font-size: 11px; line-height: 18px; overflow-wrap: anywhere; }
+  .enemy-threshold-bars-right .enemy-threshold-bar-statistics { margin: 0; text-align: right; }
+  .enemy-threshold-bars-right .enemy-threshold-bar-statistics dt { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .enemy-threshold-bars-right .enemy-threshold-bar-track { height: 26px; }
+}
+
+@container enemy-threshold-bars (max-width: 400px) {
+  .enemy-threshold-bar-content { padding-inline: 12px; }
+  .enemy-threshold-bar-statistics { gap: 8px; }
+  .enemy-threshold-bar-statistics dt { gap: 4px; }
+  .enemy-threshold-bar-percent { font-size: 17px; }
+}
+
+.enemy-threshold-bar-comparison-image .enemy-threshold-bars {
+  --text: #222;
+  --text-muted: #555;
+  --surface-soft: #f7f7f7;
+  --border: #ddd;
+  color: #222;
+}
+.enemy-threshold-bar-comparison-image .enemy-threshold-bar-content { padding: 0; }
+.enemy-threshold-bar-comparison-image .enemy-threshold-bar-row-heading h4 { font-size: 12px; }
