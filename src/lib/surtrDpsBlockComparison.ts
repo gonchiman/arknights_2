@@ -1,11 +1,13 @@
 import type { SkillRecord } from '../types/skill.ts'
 import { buildSurtrDpsCurve, deriveSurtrDpsModel, type SurtrDpsSettings } from './surtrDps.ts'
-import { transformSurtrDpsSeries, type SurtrDpsMetric, type SurtrDpsOutputSeries } from './surtrDpsOutput.ts'
+import { transformSurtrDpsSeries, type SurtrDpsLineStyle, type SurtrDpsMetric, type SurtrDpsOutputSeries } from './surtrDpsOutput.ts'
 
 export interface SurtrDpsBlockComparisonModule {
   id: string
+  moduleId?: string
   label: string
   color: string
+  lineStyle?: SurtrDpsLineStyle
   level: number
 }
 
@@ -27,12 +29,13 @@ export function buildSurtrDpsBlockComparison(
   for (const blocking of [false, true]) {
     const series: SurtrDpsOutputSeries[] = []
     for (const module of modules) {
-      const model = deriveSurtrDpsModel(record, { ...settings, blocking }, module.id, module.level)
+      const model = deriveSurtrDpsModel(record, { ...settings, blocking }, module.moduleId ?? module.id, module.level)
       if (!model) return null
       const curve = buildSurtrDpsCurve(model)
       if (!curve.length) return null
       series.push({
         id: module.id || 'none', label: module.label, color: module.color,
+        ...(module.lineStyle === undefined ? {} : { lineStyle: module.lineStyle }),
         points: curve.map(point => ({ x: point.resistance, value: point.dps })),
       })
     }

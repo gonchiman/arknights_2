@@ -111,6 +111,26 @@ test('totalは基準を無視し、全モードが入力と点オブジェクト
   assert.ok(transformSurtrDpsSeries(input, 'difference', 'absent').every(item => item.points.every(point => point.value === null)))
 })
 
+test('same-MOD stage ids and explicit line styles survive every metric, filtering and reordering', () => {
+  const input: SurtrDpsOutputSeries[] = [
+    { id: 'x:lv1', label: 'MOD X Lv.1', color: '#3f7699', lineStyle: 'dotted', points: [{ x: 20, value: 100 }] },
+    { id: 'x:lv2', label: 'MOD X Lv.2', color: '#3f7699', lineStyle: 'dashed', points: [{ x: 20, value: 120 }] },
+    { id: 'x:lv3', label: 'MOD X Lv.3', color: '#3f7699', lineStyle: 'solid', points: [{ x: 20, value: 150 }] },
+  ]
+  const before = structuredClone(input)
+  for (const metric of ['total', 'difference', 'percent'] as const) {
+    const output = transformSurtrDpsSeries(input, metric, 'x:lv2')
+    assert.deepEqual(output.map(({ id, label, color, lineStyle }) => ({ id, label, color, lineStyle })),
+      input.map(({ id, label, color, lineStyle }) => ({ id, label, color, lineStyle })))
+    const filtered = output.filter(item => item.id !== 'x:lv2').reverse()
+    assert.deepEqual(filtered.map(item => [item.id, item.lineStyle]), [['x:lv3', 'solid'], ['x:lv1', 'dotted']])
+    assert.deepEqual(input, before)
+  }
+  assert.deepEqual(transformSurtrDpsSeries(input, 'difference', 'x:lv2').map(item => item.points[0].value), [-20, 0, 30])
+  const copy = getSurtrDpsOutputTsv(transformSurtrDpsSeries(input, 'difference', 'x:lv2'), [20], 0, 'difference')
+  assert.equal(copy, '術耐性\tMOD X Lv.1\tMOD X Lv.2\tMOD X Lv.3\r\n20\t-20\t0\t30')
+})
+
 test('NaN・Infinityと演算オーバーフローを数値として出力しない', () => {
   const input = series()
   input[0].points[0].value = NaN

@@ -1,9 +1,11 @@
 export type SurtrDpsMetric = 'total' | 'difference' | 'percent'
+export type SurtrDpsLineStyle = 'solid' | 'dashed' | 'dotted'
 
 export interface SurtrDpsOutputSeries {
   id: string
   label: string
   color: string
+  lineStyle?: SurtrDpsLineStyle
   points: { x: number; value: number | null }[]
 }
 

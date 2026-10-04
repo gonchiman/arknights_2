@@ -65,6 +65,57 @@ test('both panels use the chosen level, trust, potential, skill rank and individ
   close(value(panels[1], yId), 1729.2)
 })
 
+function stageModules(): SurtrDpsBlockComparisonModule[] {
+  const styles = ['dotted', 'dashed', 'solid'] as const
+  return [
+    { id: 'none', moduleId: '', label: '未装備', color: '#737982', level: 0 },
+    ...[xId, yId].flatMap(moduleId => [1, 2, 3].map((level, index) => ({
+      id: `${moduleId}:lv${level}`, moduleId, label: `MOD ${moduleId === xId ? 'X' : 'Y'} Lv.${level}`,
+      color: moduleId === xId ? '#3f7699' : '#b4763e', level, lineStyle: styles[index],
+    }))),
+  ]
+}
+
+test('both block states calculate all levels of one MOD independently and preserve stage identities', () => {
+  const selected = stageModules()
+  const panels = buildSurtrDpsBlockComparison(createRecord(), defaults, selected, 'total', 'none')!
+  const expectedAtZero = [
+    [2655.2, 2979.072, 3046.464, 3090.528, 2810.4, 2844.8, 2861.6],
+    [2655.2, 2758.4, 2820.8, 2861.6, 3091.44, 3129.28, 3147.76],
+  ]
+  for (const [index, panel] of panels.entries()) {
+    assert.equal(new Set(panel.series.map(item => item.id)).size, 7)
+    assert.deepEqual(panel.series.map(({ id, label, color, lineStyle }) => ({ id, label, color, lineStyle })),
+      selected.map(({ id, label, color, lineStyle }) => ({ id, label, color, lineStyle })))
+    for (const [moduleIndex, module] of selected.entries()) close(value(panel, module.id), expectedAtZero[index][moduleIndex])
+    for (const [levelIndex, coefficient] of [0.6, 0.64, 0.66].entries()) {
+      close(value(panel, `${xId}:lv${levelIndex + 1}`, 60), expectedAtZero[index][levelIndex + 1] * coefficient)
+    }
+  }
+  const reversed = buildSurtrDpsBlockComparison(createRecord(), defaults, [...selected].reverse(), 'total', 'none')!
+  assert.deepEqual(reversed.map(panel => panel.series.map(item => [item.id, item.lineStyle])),
+    panels.map(panel => [...panel.series].reverse().map(item => [item.id, item.lineStyle])))
+})
+
+test('stage baseline uses the chosen level independently for both blocking states', () => {
+  const selected = stageModules()
+  const total = buildSurtrDpsBlockComparison(createRecord(), defaults, selected, 'total', 'none')!
+  const baselineId = `${xId}:lv2`
+  for (const metric of ['difference', 'percent'] as const) {
+    const panels = buildSurtrDpsBlockComparison(createRecord(), defaults, [...selected].reverse(), metric, baselineId)!
+    for (const [index, panel] of panels.entries()) {
+      close(value(panel, baselineId, 60), 0)
+      const base = value(total[index], baselineId, 60)!
+      for (const id of [`${xId}:lv1`, `${xId}:lv3`, `${yId}:lv2`]) {
+        const actual = value(total[index], id, 60)!
+        close(value(panel, id, 60), metric === 'difference' ? actual - base : (actual / base - 1) * 100)
+      }
+      assert.deepEqual(panel.series.map(item => [item.id, item.lineStyle]),
+        [...selected].reverse().map(item => [item.id, item.lineStyle]))
+    }
+  }
+})
+
 test('percent output uses the same selected baseline MOD from each panel independently', () => {
   const panels = buildSurtrDpsBlockComparison(createRecord(), defaults, modules, 'percent', xId)!
   for (const panel of panels) assert.ok(panel.series.find(item => item.id === xId)!.points.every(point => point.value === 0))
@@ -115,6 +166,7 @@ test('invalid input or an invalid curve in either state prevents a partial compa
   assert.equal(buildSurtrDpsBlockComparison(record, { ...defaults, trust: NaN }, modules, 'total', 'none'), null)
   assert.equal(buildSurtrDpsBlockComparison(record, defaults, [...modules, { ...modules[0], id: 'missing' }], 'total', 'none'), null)
   assert.equal(buildSurtrDpsBlockComparison(record, defaults, [{ ...modules[1], level: 4 }], 'total', xId), null)
+  assert.equal(buildSurtrDpsBlockComparison(record, defaults, [{ ...modules[1], moduleId: 'missing' }], 'total', xId), null)
   assert.equal(buildSurtrDpsBlockComparison({ ...record, skillIndex: 2 }, defaults, modules, 'total', 'none'), null)
   // The Y curve overflows only while blocking, after the non-blocking panel is valid.
   record.operatorProfile.modules![1].phases![2].parts![0].overrideTraitDataBundle!.candidates![0].blackboard = {

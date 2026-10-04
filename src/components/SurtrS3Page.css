@@ -11,8 +11,11 @@
 .surtr-s3-page .collapsible-panel-actions .button { min-height: 36px; font-size: 12px; }
 .surtr-s3-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .surtr-s3-mods { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; border: 0; border-bottom: 1px solid var(--border); margin: 20px 0 16px; padding: 0 0 16px; }
+.surtr-s3-mods.surtr-s3-stage-selection { display: grid; gap: 4px; }
 .surtr-s3-mods legend { margin-bottom: 10px; color: var(--text-soft); font-size: 11px; }
-.surtr-s3-mod { display: flex; align-items: center; gap: 10px; min-height: 36px; }
+.surtr-s3-mod { display: grid; grid-template-columns: 84px minmax(0, 1fr); align-items: center; gap: 10px; min-height: 36px; }
+.surtr-s3-mod-name { font-size: 12px; }
+.surtr-s3-module-levels { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; }
 .surtr-s3-mod label { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12px; }
 .surtr-s3-mod input { width: 16px; height: 16px; margin: 0; accent-color: var(--text); }
 .surtr-s3-mod select { min-height: 34px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 0; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; }
@@ -90,7 +93,9 @@
 @media (max-width: 640px) {
   .surtr-s3-page .collapsible-panel-body { padding: 14px; }
   .surtr-s3-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .surtr-s3-segments button, .surtr-s3-mod select, .surtr-s3-mod label { min-height: 44px; }
+  .surtr-s3-segments button, .surtr-s3-mod label { min-height: 44px; }
+  .surtr-s3-mod { grid-template-columns: 70px minmax(0, 1fr); }
+  .surtr-s3-module-levels { gap: 4px 14px; }
   .surtr-s3-segments button { padding: 8px; }
   .surtr-s3-table th, .surtr-s3-table td { padding: 8px; }
   .surtr-s3-result-table tbody th { padding: 0; }

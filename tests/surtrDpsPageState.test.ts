@@ -15,18 +15,81 @@ test('DPS settings survive a route remount or reload through session storage', (
   const state = createDefaultSurtrDpsPageState()
   Object.assign(state, {
     settings: { level: 60, trust: 75, potential: 6, skillLevelIndex: 7, blocking: true },
-    excluded: ['', 'uniequip_002_surtr'], moduleLevels: { uniequip_003_surtr: 2 },
+    excluded: ['', 'uniequip_002_surtr'], moduleLevels: { uniequip_002_surtr: [], uniequip_003_surtr: [1, 2, 3] },
     chartKind: 'line', barStep: 'ratings', resistanceRange: { min: 10, max: 90 },
     showValues: true, showResistanceRanks: false, gridStyle: 'dashed', precision: 3, metric: 'percent', differenceMetric: 'percent',
-    requestedBaselineId: 'uniequip_003_surtr', selectedResistance: 37,
+    requestedBaselineId: 'uniequip_003_surtr:lv2', selectedResistance: 37,
     yAxisMode: 'manual', yAxisDraft: { min: '-10.5', max: '120' },
   })
   writeSurtrDpsPageState(state, storage)
   assert.deepEqual(readSurtrDpsPageState(storage), state)
   assert.deepEqual(JSON.parse(storage.values.get(SURTR_DPS_PAGE_STATE_KEY)!), state)
   const restored = readSurtrDpsPageState(storage)
-  restored.moduleLevels.uniequip_003_surtr = 1
-  assert.equal(readSurtrDpsPageState(storage).moduleLevels.uniequip_003_surtr, 2)
+  restored.moduleLevels.uniequip_003_surtr.pop()
+  assert.deepEqual(readSurtrDpsPageState(storage).moduleLevels.uniequip_003_surtr, [1, 2, 3])
+  assert.deepEqual(readSurtrDpsPageState(storage).moduleLevels.uniequip_002_surtr, [])
+})
+
+test('legacy scalar stages and baseline migrate without restoring excluded equipment', () => {
+  const storage = memoryStorage()
+  const previous = { ...createDefaultSurtrDpsPageState(),
+    moduleLevels: { uniequip_002_surtr: 1, uniequip_003_surtr: 2 },
+    excluded: ['', 'uniequip_003_surtr'], requestedBaselineId: 'uniequip_003_surtr',
+  }
+  storage.setItem(SURTR_DPS_PAGE_STATE_KEY, JSON.stringify(previous))
+  const restored = readSurtrDpsPageState(storage)
+  assert.deepEqual(restored.moduleLevels, { uniequip_002_surtr: [1], uniequip_003_surtr: [2] })
+  assert.deepEqual(restored.excluded, previous.excluded)
+  assert.equal(restored.requestedBaselineId, 'uniequip_003_surtr:lv2')
+  writeSurtrDpsPageState(restored, storage)
+  assert.deepEqual(JSON.parse(storage.values.get(SURTR_DPS_PAGE_STATE_KEY)!), restored)
+  assert.deepEqual(readSurtrDpsPageState(storage), restored)
+})
+
+test('stage arrays normalize valid levels while explicit empty selections remain distinct from invalid data', () => {
+  const value = {
+    moduleLevels: {
+      uniequip_002_surtr: [3, 1, 3, '2', 0, 4, NaN, Infinity, false, {}, null, 2],
+      uniequip_003_surtr: [],
+      invalidArray: [0, 4, 1.5, '1', null, [2]], invalidScalar: 4, invalidObject: { level: 2 },
+      ' bad ': [1], constructor: [2], prototype: [3],
+    },
+    excluded: ['uniequip_003_surtr'],
+  }
+  const before = structuredClone(value)
+  const restored = parseSurtrDpsPageState(value)
+  assert.deepEqual(restored.moduleLevels, { uniequip_002_surtr: [1, 2, 3], uniequip_003_surtr: [] })
+  assert.deepEqual(restored.excluded, ['uniequip_003_surtr'])
+  assert.deepEqual(value, before)
+  restored.moduleLevels.uniequip_002_surtr.push(1)
+  assert.deepEqual(value, before)
+  assert.deepEqual(parseSurtrDpsPageState(JSON.parse('{"moduleLevels":{"__proto__":[1]}}')).moduleLevels, {})
+  for (const moduleLevels of [null, 2, '1', [], [1, 2, 3]]) {
+    assert.deepEqual(parseSurtrDpsPageState({ moduleLevels }).moduleLevels, {})
+  }
+})
+
+test('baseline migration selects the saved stage, preserves staged IDs and remains stable on repeated parsing', () => {
+  const id = 'uniequip_002_surtr'
+  for (const [levels, expected] of [
+    [1, 1], [2, 2], [3, 3], [[3, 1, 3], 3], [[1, 2], 2], [[], 3], [[4], 3], [undefined, 3],
+  ] as const) {
+    const restored = parseSurtrDpsPageState({ moduleLevels: { [id]: levels }, requestedBaselineId: id })
+    assert.equal(restored.requestedBaselineId, `${id}:lv${expected}`)
+    assert.deepEqual(parseSurtrDpsPageState(restored), restored)
+  }
+  for (const requestedBaselineId of ['none', `${id}:lv1`, `${id}:lv2`, `${id}:lv3`]) {
+    assert.equal(parseSurtrDpsPageState({ moduleLevels: { [id]: [1, 3] }, requestedBaselineId }).requestedBaselineId,
+      requestedBaselineId)
+  }
+  for (const requestedBaselineId of [`${id}:lv0`, `${id}:lv4`, `${id}:lv2.5`, `${id}:lv`,
+    `${id}:lv2\n`, `${id}\n:lv2`, '__proto__', ' bad ', '\n']) {
+    assert.equal(parseSurtrDpsPageState({ requestedBaselineId }).requestedBaselineId, 'none')
+  }
+  const longId = 'x'.repeat(256)
+  const restored = parseSurtrDpsPageState({ moduleLevels: { [longId]: 2 }, requestedBaselineId: longId })
+  assert.equal(restored.requestedBaselineId, `${longId}:lv2`)
+  assert.deepEqual(parseSurtrDpsPageState(restored), restored)
 })
 
 test('custom integer spacing and existing presets survive storage without narrowing the range', () => {
@@ -68,7 +131,7 @@ test('valid fields in a partial or damaged record are retained independently', (
   })
   assert.deepEqual(restored.settings, { level: 80, trust: 100, potential: 1, skillLevelIndex: 9, blocking: true })
   assert.deepEqual(restored.excluded, ['', 'uniequip_002_surtr'])
-  assert.deepEqual(restored.moduleLevels, { uniequip_002_surtr: 1 })
+  assert.deepEqual(restored.moduleLevels, { uniequip_002_surtr: [1] })
   assert.equal(restored.chartKind, 'line')
   assert.equal(restored.barStep, 10)
   assert.equal(restored.precision, 2)
@@ -132,9 +195,11 @@ test('default objects are independent and transient properties are never persist
   const changed = createDefaultSurtrDpsPageState()
   changed.settings.level = 1
   changed.excluded.push('')
+  changed.moduleLevels.uniequip_002_surtr = [1]
   changed.resistanceRange.max = 10
   assert.equal(createDefaultSurtrDpsPageState().settings.level, 90)
   assert.deepEqual(createDefaultSurtrDpsPageState().excluded, [])
+  assert.deepEqual(createDefaultSurtrDpsPageState().moduleLevels, {})
   assert.equal(createDefaultSurtrDpsPageState().resistanceRange.max, 100)
   const storage = memoryStorage()
   writeSurtrDpsPageState(Object.assign(createDefaultSurtrDpsPageState(), { image: {}, saving: true, aspect: '16:9' }), storage)

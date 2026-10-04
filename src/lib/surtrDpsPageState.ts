@@ -10,7 +10,7 @@ export const SURTR_DPS_PAGE_STATE_KEY = 'arknights-surtr-dps-page-state-v1'
 export interface SurtrDpsPageState {
   settings: SurtrDpsSettings
   excluded: string[]
-  moduleLevels: Record<string, number>
+  moduleLevels: Record<string, number[]>
   chartKind: 'bar' | 'line'
   barStep: SurtrDpsBarStep
   resistanceRange: SurtrDpsResistanceRange
@@ -50,9 +50,10 @@ export function parseSurtrDpsPageState(value: unknown): SurtrDpsPageState {
   const draft = { min: numericText(axis?.min, defaults.yAxisDraft.min), max: numericText(axis?.max, defaults.yAxisDraft.max) }
   const yAxisDraft = isValidHpChartYAxisRange({ min: Number(draft.min), max: Number(draft.max) })
     ? draft : defaults.yAxisDraft
-  const moduleLevels = Object.fromEntries(Object.entries(object(source.moduleLevels) ?? {}).filter(([id, level]) => (
-    validId(id) && integer(level, 1, 3)
-  ))) as Record<string, number>
+  const moduleLevels = Object.fromEntries(Object.entries(object(source.moduleLevels) ?? {}).flatMap(([id, value]) => {
+    const levels = selectedModuleLevels(value)
+    return validId(id) && levels ? [[id, levels] as const] : []
+  }))
   return {
     settings: {
       level: integerOr(settings?.level, 1, 90, defaults.settings.level),
@@ -72,7 +73,7 @@ export function parseSurtrDpsPageState(value: unknown): SurtrDpsPageState {
     precision: integerOr(source.precision, 0, 3, defaults.precision),
     metric: option(source.metric, ['total', 'difference', 'percent'], defaults.metric),
     differenceMetric: option(source.differenceMetric, ['difference', 'percent'], defaults.differenceMetric),
-    requestedBaselineId: validId(source.requestedBaselineId) ? source.requestedBaselineId : defaults.requestedBaselineId,
+    requestedBaselineId: baselineId(source.requestedBaselineId, moduleLevels, defaults.requestedBaselineId),
     selectedResistance: integer(source.selectedResistance, resistanceRange.min, resistanceRange.max) ? source.selectedResistance : null,
     yAxisMode: option(source.yAxisMode, ['zero', 'auto', 'manual'], defaults.yAxisMode),
     yAxisDraft,
@@ -114,6 +115,23 @@ function integer(value: unknown, min: number, max: number): value is number {
 
 function integerOr(value: unknown, min: number, max: number, fallback: number): number {
   return integer(value, min, max) ? value : fallback
+}
+
+function selectedModuleLevels(value: unknown): number[] | null {
+  if (integer(value, 1, 3)) return [value]
+  if (!Array.isArray(value)) return null
+  const levels = [...new Set(value.filter((level): level is number => integer(level, 1, 3)))].sort((a, b) => a - b)
+  // Only an explicit empty array represents an intentional deselection.
+  return levels.length || value.length === 0 ? levels : null
+}
+
+function baselineId(value: unknown, moduleLevels: Record<string, number[]>, fallback: string): string {
+  if (value === 'none') return value
+  if (typeof value !== 'string') return fallback
+  const staged = value.match(/^(.*):lv(.*)$/s)
+  if (staged) return validId(staged[1]) && ['1', '2', '3'].includes(staged[2]) ? value : fallback
+  if (!validId(value)) return fallback
+  return `${value}:lv${moduleLevels[value]?.at(-1) ?? 3}`
 }
 
 function booleanOr(value: unknown, fallback: boolean): boolean {

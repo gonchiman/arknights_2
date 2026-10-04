@@ -106,19 +106,33 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
         unlocked: isOperatorModuleUnlocked(module, 2, effectiveSettings.level) }]
     }),
   ], [record, effectiveSettings.level])
+  const getSelectedLevels = (choice: typeof choices[number]) => choice.unlocked && !excluded.includes(choice.id)
+    ? moduleLevels[choice.id] ?? [choice.levels.at(-1) ?? 3] : []
+  const toggleModuleLevel = (choice: typeof choices[number], level: number, checked: boolean) => {
+    setModuleLevels(previous => {
+      const selected = excluded.includes(choice.id) ? [] : previous[choice.id] ?? [choice.levels.at(-1) ?? 3]
+      return { ...previous, [choice.id]: choice.levels.filter(candidate => candidate === level ? checked : selected.includes(candidate)) }
+    })
+    setExcluded(previous => previous.filter(id => id !== choice.id))
+  }
   const comparison = useMemo(() => {
     if (!record) return []
-    const selected = choices.filter(choice => choice.unlocked && !excluded.includes(choice.id))
-    const colors = getModuleComparisonColors(selected.map(choice => ({ moduleType: choice.type, potential: effectiveSettings.potential })))
+    const selected = choices.filter(choice => choice.unlocked && !excluded.includes(choice.id)).flatMap(choice => {
+      const levels = choice.id ? choice.levels.filter(level => (moduleLevels[choice.id] ?? [choice.levels.at(-1) ?? 3]).includes(level)) : [0]
+      return levels.map(level => ({ ...choice, moduleId: choice.id, level,
+        id: choice.id ? `${choice.id}:lv${level}` : 'none',
+        lineStyle: (level === 1 ? 'dotted' : level === 2 ? 'dashed' : 'solid') as 'solid' | 'dashed' | 'dotted' }))
+    })
+    const colors = getModuleComparisonColors(selected.map(choice => ({ moduleType: choice.type, moduleLevel: choice.level })),
+      { shadeBy: 'moduleLevel' })
     return selected.map((choice, index) => {
-      const level = moduleLevels[choice.id] ?? choice.levels.at(-1) ?? 3
-      const model = deriveSurtrDpsModel(record, effectiveSettings, choice.id, level)
-      return { ...choice, model, label: choice.id ? `${choice.label} Lv.${level}` : choice.label,
+      const model = deriveSurtrDpsModel(record, effectiveSettings, choice.moduleId, choice.level)
+      return { ...choice, model, label: choice.moduleId ? `${choice.label} Lv.${choice.level}` : choice.label,
         color: colors[index], points: model ? buildSurtrDpsCurve(model).map(point => ({ x: point.resistance, value: point.dps })) : [] }
     })
   }, [record, choices, excluded, effectiveSettings, moduleLevels])
   const series = useMemo<SurtrDpsChartSeries[]>(() => comparison.filter(item => item.model).map(item => ({
-    id: item.id || 'none', label: item.label, color: item.color, points: item.points,
+    id: item.id, label: item.label, color: item.color, lineStyle: item.lineStyle, points: item.points,
   })), [comparison])
   const invalidModels = comparison.filter(item => !item.model)
   const baseline = series.find(item => item.id === requestedBaselineId) ?? series[0]
@@ -186,7 +200,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
       if (!item.model) return []
       const calculation = calculateSurtrDpsCalculation(item.model, resistance)
       if (!calculation) return []
-      const id = item.id || 'none'
+      const id = item.id
       return [{ id, label: item.label, color: item.color, calculation,
         value: outputSeries.find(series => series.id === id)?.points.find(point => point.x === resistance)?.value ?? null }]
     })
@@ -206,8 +220,8 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
     setHistogramStorageError(false)
     if (!chartSeries.length || invalidModels.length || yAxisError || barStepError) return
     const blockComparisons = record ? buildSurtrDpsBlockComparison(record, effectiveSettings,
-      comparison.map(item => ({ id: item.id, label: item.label, color: item.color,
-        level: moduleLevels[item.id] ?? item.levels.at(-1) ?? 3 })), effectiveMetric, baseline?.id ?? '') : null
+      comparison.map(item => ({ id: item.id, moduleId: item.moduleId, label: item.label, color: item.color,
+        level: item.level, lineStyle: item.lineStyle })), effectiveMetric, baseline?.id ?? '') : null
     const filenameSettings = { ...effectiveSettings, skillLevelLabel: label, modules: series.map(item => item.label), kind: chartKind,
       barStep, resistanceRange, showValues, metric: effectiveMetric, baselineLabel: baseline?.label,
       gridStyle, precision, yAxis, selectedResistance, showResistanceRanks }
@@ -304,13 +318,15 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
           <label className="calculator-field"><span>潜在</span><select aria-label="潜在" value={effectiveSettings.potential} onChange={event => update('potential', Number(event.target.value))}>
             {[1, 2, 3, 4, 5, 6].map(rank => <option key={rank} value={rank}>潜在{rank}</option>)}</select></label>
         </div>
-        <fieldset className="surtr-s3-mods"><legend>比較するMOD</legend>{choices.map(choice => <div key={choice.id} className="surtr-s3-mod">
-          <label><input type="checkbox" checked={choice.unlocked && !excluded.includes(choice.id)} disabled={!choice.unlocked}
-            onChange={event => setExcluded(previous => event.target.checked ? previous.filter(id => id !== choice.id) : [...previous, choice.id])} />
-            {choice.label}{!choice.unlocked && <span className="surtr-s3-locked">Lv.60で解放</span>}</label>
-          {choice.id && <select aria-label={`${choice.label}のレベル`} disabled={!choice.unlocked || excluded.includes(choice.id)} value={moduleLevels[choice.id] ?? choice.levels.at(-1) ?? 3}
-            onChange={event => setModuleLevels(previous => ({ ...previous, [choice.id]: Number(event.target.value) }))}>
-            {choice.levels.map(level => <option key={level} value={level}>Lv.{level}</option>)}</select>}
+        <fieldset className="surtr-s3-mods surtr-s3-stage-selection"><legend>比較するMOD・段階</legend>{choices.map(choice => <div key={choice.id} className="surtr-s3-mod" role="group" aria-label={`${choice.label}の比較段階`}>
+          <span className="surtr-s3-mod-name">{choice.label}</span>
+          {choice.id ? <div className="surtr-s3-module-levels">
+            {choice.levels.map(level => <label key={level}><input type="checkbox" aria-label={`${choice.label} Lv.${level}を比較`}
+              disabled={!choice.unlocked} checked={getSelectedLevels(choice).includes(level)}
+              onChange={event => toggleModuleLevel(choice, level, event.target.checked)} />Lv.{level}</label>)}
+            {!choice.unlocked && <span className="surtr-s3-locked">Lv.60で解放</span>}
+          </div> : <label><input type="checkbox" aria-label="未装備を比較に含める" checked={!excluded.includes('')}
+              onChange={event => setExcluded(previous => event.target.checked ? previous.filter(id => id !== '') : [...previous, ''])} />比較に含める</label>}
         </div>)}</fieldset>
         <div className="surtr-s3-block-setting"><span>ブロック状態</span><div className="surtr-s3-segments" role="group" aria-label="ブロック状態">
           <button type="button" aria-pressed={!effectiveSettings.blocking} onClick={() => update('blocking', false)}>未ブロック</button>

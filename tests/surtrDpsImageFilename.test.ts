@@ -4,6 +4,21 @@ import { getSurtrDpsImageFilename, getSurtrCombinedImageFilename } from '../src/
 import { withChartImageAspect } from '../src/lib/chartImageFilename.ts'
 
 const settings = { level: 90, trust: 100, potential: 1, skillLevelLabel: '特化3', blocking: false, modules: ['未装備', 'MOD X Lv.3', 'MOD Y Lv.3'] }
+test('same-MOD stage comparisons keep readable levels and distinguish selection and baseline', () => {
+  const modules = ['MOD X Lv.1', 'MOD X Lv.2', 'MOD X Lv.3']
+  const name = getSurtrDpsImageFilename({ ...settings, modules })
+  assert.match(name, /MODXLv\.1-MODXLv\.2-MODXLv\.3/)
+  assert.notEqual(name, getSurtrDpsImageFilename({ ...settings, modules: ['MOD X Lv.1', 'MOD X Lv.3'] }))
+  const difference = { ...settings, modules, metric: 'difference' as const }
+  assert.notEqual(getSurtrDpsImageFilename({ ...difference, baselineLabel: 'MOD X Lv.1' }),
+    getSurtrDpsImageFilename({ ...difference, baselineLabel: 'MOD X Lv.2' }))
+  const all = ['未装備', ...modules, 'MOD Y Lv.1', 'MOD Y Lv.2', 'MOD Y Lv.3']
+  for (const aspect of [undefined, 16 / 9]) {
+    const filename = withChartImageAspect(getSurtrDpsImageFilename({ ...settings, modules: all }), aspect)
+    assert.match(filename, /未装備-MODXLv\.1-MODXLv\.2-MODXLv\.3-MODYLv\.1-MODYLv\.2-MODYLv\.3/)
+    assert.ok(new TextEncoder().encode(filename).length <= 240)
+  }
+})
 test('combined export names preserve both graph identities and prioritize histogram scope', () => {
   const dps = getSurtrDpsImageFilename(settings)
   const histogram = '敵_術耐性_ヒストグラム_出現回数_全敵_線形_幅10_上限100.png'

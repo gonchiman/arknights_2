@@ -14,10 +14,14 @@ export type ModuleColorKey = keyof typeof MODULE_BASE_COLORS
 export interface ModuleColorSeries {
   moduleType?: string | null
   potential?: number
+  moduleLevel?: number
 }
 
 /** Positive amounts mix toward white; negative amounts mix toward black. */
 export const MODULE_POTENTIAL_SHADES = Object.freeze([0.4, 0.25, 0.1, -0.05, -0.2, -0.35] as const)
+
+/** Module stages progress from lighter shades to the module's base color. */
+export const MODULE_LEVEL_SHADES = Object.freeze([0.35, 0.17, 0] as const)
 
 function normalizeModulePotential(potential: number): number {
   return Number.isInteger(potential) && potential >= 1 && potential <= 6 ? potential : 1
@@ -45,7 +49,10 @@ export function getModuleColor(moduleType: string | null | undefined, potential?
   const base = MODULE_BASE_COLORS[getModuleColorKey(moduleType)]
   if (potential === undefined) return base
   const index = normalizeModulePotential(potential) - 1
-  const amount = MODULE_POTENTIAL_SHADES[index]
+  return mixModuleColor(base, MODULE_POTENTIAL_SHADES[index])
+}
+
+function mixModuleColor(base: string, amount: number): string {
   const target = amount >= 0 ? 255 : 0
   return `#${[1, 3, 5].map((offset) => {
     const channel = Number.parseInt(base.slice(offset, offset + 2), 16)
@@ -53,8 +60,21 @@ export function getModuleColor(moduleType: string | null | undefined, potential?
   }).join('')}`
 }
 
-/** Use potential shades only when the compared series include different known potentials. */
-export function getModuleComparisonColors(series: readonly ModuleColorSeries[]): string[] {
+/** Default to potential comparison; stage shades are fixed independently of other series. */
+export function getModuleComparisonColors(
+  series: readonly ModuleColorSeries[],
+  options?: { shadeBy?: 'potential' | 'moduleLevel' },
+): string[] {
+  if (options?.shadeBy === 'moduleLevel') {
+    return series.map(({ moduleType, moduleLevel }) => {
+      const key = getModuleColorKey(moduleType)
+      const base = MODULE_BASE_COLORS[key]
+      if (key === 'none') return base
+      const level = typeof moduleLevel === 'number' && Number.isInteger(moduleLevel)
+        && moduleLevel >= 1 && moduleLevel <= 3 ? moduleLevel : 3
+      return mixModuleColor(base, MODULE_LEVEL_SHADES[level - 1])
+    })
+  }
   const potentials = new Set<number>()
   for (const item of series) {
     if (item.potential !== undefined) potentials.add(normalizeModulePotential(item.potential))

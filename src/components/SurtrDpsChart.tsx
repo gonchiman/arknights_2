@@ -2,6 +2,7 @@ import { useCallback, useId, useLayoutEffect, useMemo, useRef, useState, type Ke
 import { getChartImageLayout } from '../lib/chartImageLayout'
 import { getHpChartValueAxis, isValidHpChartYAxisRange } from '../lib/goldenglowTargetSwitchHpAxis'
 import { placeGroupedBarValueLabels } from '../lib/groupedBarValueLabels'
+import type { SurtrDpsLineStyle } from '../lib/surtrDpsOutput'
 import { getSurtrDpsResistanceRating, getSurtrDpsResistanceSamples, normalizeSurtrDpsResistanceRange,
   type SurtrDpsBarStep, type SurtrDpsResistanceRange } from '../lib/surtrDpsResistance'
 import { ChartImageFrame } from './ChartImageFrame'
@@ -13,6 +14,7 @@ export interface SurtrDpsChartSeries {
   id: string
   label: string
   color: string
+  lineStyle?: SurtrDpsLineStyle
   points: { x: number; value: number | null }[]
 }
 
@@ -54,6 +56,11 @@ const VALUE_LABEL_HEIGHT = 16
 const VALUE_LABEL_FONT = '600 11px "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif'
 type ValueWidths = Record<string, number>
 const DASH_PATTERNS = [undefined, '7 4', '2 3', '10 3 2 3', '4 3 1 3', '12 3 4 3'] as const
+const LINE_STYLE_PATTERNS = { solid: undefined, dashed: '7 4', dotted: '2 3' } as const
+
+function getLineDasharray(lineStyle: SurtrDpsLineStyle | undefined, index: number) {
+  return lineStyle === undefined ? DASH_PATTERNS[index % DASH_PATTERNS.length] : LINE_STYLE_PATTERNS[lineStyle]
+}
 
 function normalizeSeries(series: SurtrDpsChartSeries[], kind: SurtrDpsChartKind, barStep: SurtrDpsBarStep,
   range: SurtrDpsResistanceRange, selectedResistance?: number | null): SurtrDpsChartSeries[] {
@@ -201,12 +208,14 @@ function buildLinePath(points: SurtrDpsChartSeries['points'], plot: ReturnType<t
   }).join(' ')
 }
 
-function SeriesSwatch({ color, index, kind, image = false }: { color: string; index: number; kind: SurtrDpsChartKind; image?: boolean }) {
+function SeriesSwatch({ color, lineStyle, index, kind, image = false }: {
+  color: string; lineStyle?: SurtrDpsLineStyle; index: number; kind: SurtrDpsChartKind; image?: boolean
+}) {
   return <svg className={image ? 'chart-image-frame-legend-swatch' : 'surtr-dps-chart-swatch'}
     width="18" height="12" aria-hidden="true">
     {kind === 'bar' ? <rect x="4" y="1" width="10" height="10" fill={color} />
       : <line x1="0" x2="18" y1="6" y2="6" stroke={color} strokeWidth="2"
-        strokeDasharray={DASH_PATTERNS[index % DASH_PATTERNS.length]} />}
+        strokeDasharray={getLineDasharray(lineStyle, index)} />}
   </svg>
 }
 
@@ -265,7 +274,7 @@ function SurtrDpsSvg({ series, kind = 'line', width, height, activeX, gridStyle 
         width={plot.barWidth} height={Math.abs(plot.y(0) - plot.y(point.value))} fill={item.color} />)}</g>
       : <path key={item.id} className="surtr-dps-chart-line" data-chart-image-ink=""
         d={buildLinePath(item.points, plot)}
-        stroke={item.color} strokeDasharray={DASH_PATTERNS[index % DASH_PATTERNS.length]} />)}
+        stroke={item.color} strokeDasharray={getLineDasharray(item.lineStyle, index)} />)}
     {kind === 'line' && activeX !== undefined && activeX !== null && <g className="surtr-dps-chart-cursor">
       <line x1={plot.x(activeX)} x2={plot.x(activeX)} y1={plot.top} y2={plot.bottom} />
       {series.map((item) => {
@@ -384,7 +393,7 @@ export function SurtrDpsChart({ series, kind = 'line', barStep = 20, resistanceR
     {showLegend && <figcaption>
       <ul className="surtr-dps-chart-legend" aria-label="比較する系列">
         {data.map((item, index) => <li key={item.id}>
-          <SeriesSwatch color={item.color} index={index} kind={kind} /><span>{item.label}</span>
+          <SeriesSwatch color={item.color} lineStyle={item.lineStyle} index={index} kind={kind} /><span>{item.label}</span>
         </li>)}
       </ul>
     </figcaption>}
@@ -410,7 +419,7 @@ export function SurtrDpsChart({ series, kind = 'line', barStep = 20, resistanceR
       {activeX !== null && <div className={`surtr-dps-chart-tooltip${activeX > (range.min + range.max) / 2 ? ' is-left' : ''}`} aria-hidden="true">
         <strong>{resistanceLabel(activeX)}</strong>
         <dl>{selectedPoints.map(({ item, index, point }) => <div key={item.id}>
-          <dt><SeriesSwatch color={item.color} index={index} kind={kind} /><span>{item.label}</span></dt>
+          <dt><SeriesSwatch color={item.color} lineStyle={item.lineStyle} index={index} kind={kind} /><span>{item.label}</span></dt>
           <dd>{plot.formatValue(point?.value)}</dd>
         </div>)}</dl>
       </div>}
@@ -447,7 +456,7 @@ export function SurtrDpsChartImage({ series, kind = 'line', barStep = 20, resist
 export function SurtrDpsImageLegend({ series, kind = 'line' }: Pick<SurtrDpsChartProps, 'series' | 'kind'>) {
   return <ul className="chart-image-frame-legend-list" aria-label="比較する系列">
     {series.map((item, index) => <li className="chart-image-frame-legend-item" key={item.id}>
-      <SeriesSwatch color={item.color} index={index} kind={kind} image /><span>{item.label}</span>
+      <SeriesSwatch color={item.color} lineStyle={item.lineStyle} index={index} kind={kind} image /><span>{item.label}</span>
     </li>)}
   </ul>
 }
