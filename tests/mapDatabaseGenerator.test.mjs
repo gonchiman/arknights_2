@@ -1,6 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildMapDatabase, buildMapEnemyRegistry, extractMapFeatures, extractMapGeometry, extractMapRoutes, extractMapWaves, mapDetailFile } from '../scripts/generateMapDatabase.mjs'
+import { buildMapDatabase, buildMapEnemyRegistry, extractMapEnemyRoutes, extractMapEnemySpawnCounts, extractMapFeatures, extractMapGeometry, extractMapRoutes, extractMapWaves, mapDetailFile } from '../scripts/generateMapDatabase.mjs'
+import { getMapEntrances } from '../src/lib/mapWaves.ts'
+import { MAP_ENEMY_IMMUNITY_KEYS } from '../src/types/map.ts'
+
+const unknownEnemyMetadata = {
+  moveSpeed: null, attackInterval: null, weight: null, levelType: null, motion: null,
+  attackWay: null, damageTypes: null, immunities: null,
+}
+const unknownImmunities = Object.fromEntries(MAP_ENEMY_IMMUNITY_KEYS.map((key) => [key, null]))
 
 const tiles = [
   { tileKey: 'tile_start', heightType: 'LOWLAND', buildableType: 'NONE', passableMask: 'ALL' },
@@ -35,7 +43,10 @@ test('stage display codes come from the stage table; normal and challenge share 
   assert.deepEqual(output.index.maps[0], {
     levelId: 'obt/main/level_main_10-04', stageId: 'main_10-04', code: '10-5', name: '都市の呼吸',
     zoneId: 'main_10', zoneName: '第十章 光冠残蝕', zoneType: 'MAINLINE', difficulty: 'NORMAL', status: 'supported', spawnCount: 9,
-    enemyIds: ['enemy_a', 'enemy_b'], features: [], reasons: [], detailFile: mapDetailFile('obt/main/level_main_10-04'),
+    enemyIds: ['enemy_a', 'enemy_b'], enemyRoutes: [
+      { enemyId: 'enemy_a', routeIndex: null, fixedWaits: null, spawnKind: 'fixed', spawnCount: 5, spawnIntervals: null, entrance: null },
+      { enemyId: 'enemy_b', routeIndex: null, fixedWaits: null, spawnKind: 'fixed', spawnCount: 4, spawnIntervals: null, entrance: null },
+    ], enemySpawnCounts: { enemy_a: 5, enemy_b: 4 }, features: [], reasons: [], detailFile: mapDetailFile('obt/main/level_main_10-04'),
   })
   const detail = output.details[output.index.maps[0].detailFile].maps['obt/main/level_main_10-04']
   assert.deepEqual(detail.enemies, [{ id: 'enemy_a', count: 5 }, { id: 'enemy_b', count: 4 }])
@@ -63,6 +74,7 @@ test('missing target levels remain searchable rather than disappearing or showin
   assert.equal(summary.spawnCount, null)
   assert.equal(summary.detailFile, null)
   assert.equal(summary.features, null)
+  assert.equal(summary.enemyRoutes, null)
   assert.deepEqual(summary.reasons, ['missing-level'])
   assert.equal(Object.values(output.details).flatMap((shard) => Object.keys(shard.maps)).length, 0)
 })
@@ -86,7 +98,7 @@ test('zone classification uses the upstream type independently of IDs, names, an
     levelId: 'obt/main', stageId: 'main', code: '10-5', name: '都市の呼吸',
     zoneId: 'act_main', zoneName: '解離結合', zoneType: 'MAINLINE_ACTIVITY',
     difficulty: 'NORMAL', diffGroup: 'TOUGH', status: 'missing', spawnCount: null,
-    enemyIds: [], features: null, reasons: ['missing-level'], detailFile: null,
+    enemyIds: [], enemyRoutes: null, enemySpawnCounts: null, features: null, reasons: ['missing-level'], detailFile: null,
   })
   assert.equal(output.index.generatedAt, input.generatedAt)
   assert.equal(output.index.sourceGeneratedAt, input.sourceGeneratedAt)
@@ -100,7 +112,8 @@ test('missing zone records or types remain explicit UNKNOWN without inferring a 
     assert.deepEqual(output.index.maps[0], {
       levelId: 'obt/missing', stageId: 'missing', code: '10-5', name: '都市の呼吸',
       zoneId: 'main_10', zoneName: 'main_10', zoneType: 'UNKNOWN', difficulty: 'NORMAL',
-      status: 'missing', spawnCount: null, enemyIds: [], features: null, reasons: ['missing-level'], detailFile: null,
+      status: 'missing', spawnCount: null, enemyIds: [], enemyRoutes: null, enemySpawnCounts: null,
+      features: null, reasons: ['missing-level'], detailFile: null,
     })
   }
 })
@@ -130,8 +143,10 @@ test('hidden enemies retain names, database level zero supplies base stats, and 
       attributes: { maxHp: 2000, atk: 0, def: { m_defined: true, m_value: 0 }, magicResistance: 0 },
     } }],
   })
-  assert.deepEqual(result.hidden, { name: '隠れた敵', hp: 1500, attack: 300, defense: null, resistance: null })
-  assert.deepEqual(result.only_database, { name: 'データベース敵', hp: 2000, attack: 0, defense: 0, resistance: 0 })
+  assert.deepEqual(result.hidden, { ...unknownEnemyMetadata, name: '隠れた敵', hp: 1500, attack: 300,
+    defense: null, resistance: null, immunities: unknownImmunities })
+  assert.deepEqual(result.only_database, { ...unknownEnemyMetadata, name: 'データベース敵', hp: 2000, attack: 0,
+    defense: 0, resistance: 0, immunities: unknownImmunities })
 })
 
 test('matrix and nested-array sources retain asymmetric row and column order when compacting tiles', () => {
@@ -157,7 +172,7 @@ test('SPAWN-only enemies are included and registered-but-unused enemies stay zer
   const summary = output.index.maps[0]
   assert.deepEqual(summary.enemyIds, ['enemy_a', 'enemy_b', 'unregistered'])
   assert.equal(summary.spawnCount, 5)
-  assert.deepEqual(output.index.enemies.unregistered, { name: 'unregistered', hp: null, attack: null, defense: null, resistance: null })
+  assert.deepEqual(output.index.enemies.unregistered, { ...unknownEnemyMetadata, name: 'unregistered', hp: null, attack: null, defense: null, resistance: null })
   assert.deepEqual(output.details[summary.detailFile].maps[summary.levelId].enemies,
     [{ id: 'enemy_a', count: 3 }, { id: 'enemy_b', count: 0 }, { id: 'unregistered', count: 2 }])
 })
@@ -238,7 +253,7 @@ test('conditional spawn settings are retained separately from fixed rows and unk
   assert.deepEqual(detail.enemies, [
     { id: 'enemy_a', count: null }, { id: 'enemy_b', count: null }, { id: 'unregistered', count: null },
   ])
-  assert.deepEqual(output.index.enemies.unregistered, { name: 'unregistered', hp: null, attack: null, defense: null, resistance: null })
+  assert.deepEqual(output.index.enemies.unregistered, { ...unknownEnemyMetadata, name: 'unregistered', hp: null, attack: null, defense: null, resistance: null })
 })
 
 test('known conditions, zero-count conditions, and unsupported metadata do not look fixed', () => {
@@ -520,4 +535,134 @@ test('features remain available when enemy counts are excluded, while missing so
   assert.equal(present.spawnCount, null)
   assert.deepEqual(present.features, ['cost_slow', 'hole'])
   assert.equal(output.index.maps.find((map) => map.stageId === 'missing').features, null)
+})
+
+test('enemy-route summaries join positive main-wave spawns to fixed waits without unused routes or duplicates', () => {
+  const routes = [
+    { checkpoints: [
+      { type: 'MOVE', time: 0 }, { type: 'WAIT_FOR_SECONDS', time: 171.289993 },
+      { type: 'WAIT_CURRENT_FRAGMENT_TIME', time: 190 }, { type: 'WAIT_CURRENT_WAVE_TIME', time: 60 },
+      { type: 'WAIT_BOSSRUSH_WAVE', time: 1 }, { type: 'WAIT_FOR_SECONDS', time: 0 },
+      { type: 'WAIT_FOR_SECONDS', time: 15 }, { type: 'WAIT_FOR_SECONDS', time: 15 },
+    ] },
+    { checkpoints: [{ type: 'MOVE' }] },
+    { checkpoints: [{ type: 'WAIT_FOR_SECONDS', time: 999 }] },
+  ]
+  const source = level('obt/enemy-routes', [
+    spawn('enemy_a', 2, { routeIndex: 0 }), spawn('enemy_a', 3, { routeIndex: 0 }),
+    spawn('enemy_a', 1, { routeIndex: 0, hiddenGroup: 'optional' }),
+    spawn('enemy_b', 1, { routeIndex: 1 }), spawn('enemy_b', 0, { routeIndex: 2 }),
+    { actionType: 'DISPLAY_ENEMY_INFO', key: 'enemy_b', count: 1, routeIndex: 2 },
+  ], { routes, branches: { branch: { phases: [{ actions: [spawn('enemy_b', 10, { routeIndex: 2 })] }] } } })
+  const unchanged = structuredClone(source)
+  const output = buildMapDatabase(options([source], { routes: stage('routes', source.levelId) }))
+  const expected = [
+    { enemyId: 'enemy_a', routeIndex: 0, fixedWaits: [171.289993, 15, 15], spawnKind: 'fixed', spawnCount: 5, spawnIntervals: null, entrance: null },
+    { enemyId: 'enemy_a', routeIndex: 0, fixedWaits: [171.289993, 15, 15], spawnKind: 'conditional', spawnCount: 1, spawnIntervals: [], entrance: null },
+    { enemyId: 'enemy_b', routeIndex: 1, fixedWaits: [], spawnKind: 'fixed', spawnCount: 1, spawnIntervals: [], entrance: null },
+  ]
+  assert.deepEqual(output.index.maps[0].enemyRoutes, expected)
+  assert.deepEqual(extractMapEnemyRoutes(source.data), expected)
+  assert.deepEqual(source, unchanged)
+})
+
+test('unavailable route checkpoints remain unknown while confirmed spawns retain enemy identities', () => {
+  const routes = [null, {}, { checkpoints: null }, { checkpoints: {} }, { checkpoints: [null] },
+    { checkpoints: [{ type: 'WAIT_FOR_SECONDS', time: NaN }] },
+    { checkpoints: [{ type: 'WAIT_FOR_SECONDS', time: -1 }] },
+    { checkpoints: [{ type: 'WAIT_FUTURE_MODE', time: 30 }] }]
+  const actions = routes.map((_, routeIndex) => spawn('enemy_a', 1, { routeIndex }))
+  actions.push(spawn('enemy_a', 1, { routeIndex: 99 }), spawn('enemy_b', 1, { routeIndex: -1 }),
+    spawn('enemy_b', 1, { routeIndex: 1.5 }))
+  const result = extractMapEnemyRoutes(level('test', actions, { routes }).data)
+  assert.deepEqual(result, [
+    ...[0, 1, 2, 3, 4, 5, 6, 7, 99].map((routeIndex) =>
+      ({ enemyId: 'enemy_a', routeIndex, fixedWaits: null, spawnKind: 'fixed', spawnCount: 1, spawnIntervals: [], entrance: null })),
+    { enemyId: 'enemy_b', routeIndex: null, fixedWaits: null, spawnKind: 'fixed', spawnCount: 2, spawnIntervals: [], entrance: null },
+  ])
+  assert.deepEqual(extractMapEnemyRoutes(level('test', [spawn('enemy_a', 1)]).data), [
+    { enemyId: 'enemy_a', routeIndex: null, fixedWaits: null, spawnKind: 'fixed', spawnCount: 1, spawnIntervals: [], entrance: null },
+  ])
+})
+
+test('enemy-route extraction separates unknown schedules from empty or partially confirmed schedules', () => {
+  assert.equal(extractMapEnemyRoutes({}), null)
+  assert.equal(extractMapEnemyRoutes({ waves: [{ fragments: null }] }), null)
+  assert.deepEqual(extractMapEnemyRoutes({ waves: [] }), [])
+  assert.deepEqual(extractMapEnemyRoutes(level('test', [spawn('enemy_a', 0)]).data), [])
+  assert.deepEqual(extractMapEnemyRoutes(level('test', [
+    spawn('enemy_a', -1), spawn(null, 1), spawn('enemy_a', 1, { routeIndex: 0, futureRuntimeSwitch: true }),
+  ], { routes: [{ checkpoints: [] }] }).data), [
+    { enemyId: 'enemy_a', routeIndex: 0, fixedWaits: [], spawnKind: 'unknown', spawnCount: 1, spawnIntervals: [], entrance: null },
+  ])
+})
+
+test('base enemy metadata preserves source classifications, negative weights and three-state immunities', () => {
+  const result = buildMapEnemyRegistry({ enemyData: {
+    enemy_a: { enemyLevel: 'ELITE', damageType: ['PHYSIC', 'MAGIC', 'PHYSIC'] },
+  } }, { enemy_a: [{ level: 0, enemyData: {
+    levelType: 'NORMAL', motion: { m_defined: true, m_value: 'FLY' }, applyWay: 'RANGED',
+    attributes: {
+      moveSpeed: { m_defined: true, m_value: 0 }, baseAttackTime: 2.75, massLevel: -2,
+      stunImmune: { m_defined: true, m_value: false }, silenceImmune: true,
+      sleepImmune: { m_defined: false, m_value: false }, frozenImmune: 'false',
+    },
+  } }] })
+  assert.deepEqual(result.enemy_a, {
+    name: 'enemy_a', hp: null, attack: null, defense: null, resistance: null,
+    moveSpeed: 0, attackInterval: 2.75, weight: -2, levelType: 'ELITE', motion: 'FLY', attackWay: 'RANGED',
+    damageTypes: ['PHYSIC', 'MAGIC'], immunities: { ...unknownImmunities, stunImmune: false, silenceImmune: true },
+  })
+  assert.equal(buildMapEnemyRegistry({}, { enemy_a: [{ level: 0, enemyData: {} }] }).enemy_a.immunities, null)
+  assert.deepEqual(buildMapEnemyRegistry({ enemyData: { enemy_a: { damageType: [] } } }, {}).enemy_a.damageTypes, [])
+  assert.equal(buildMapEnemyRegistry({ enemyData: { enemy_a: { damageType: ['PHYSIC', 3] } } }, {}).enemy_a.damageTypes, null)
+})
+
+test('route configured counts and multi-spawn intervals aggregate without losing entrance labels or confirmed groups', () => {
+  const source = level('test', [
+    spawn('enemy_a', 2, { routeIndex: 0, interval: 0 }), spawn('enemy_a', 3, { routeIndex: 0, interval: 1.25 }),
+    spawn('enemy_a', 1, { routeIndex: 0, hiddenGroup: 'optional' }),
+    spawn('enemy_a', 1, { routeIndex: 1, interval: Infinity }),
+    spawn('enemy_b', 2, { routeIndex: 2 }), spawn('enemy_c', 0, { routeIndex: 3 }),
+    spawn('enemy_a', 2, { routeIndex: 0, interval: 2, futureRuntimeSwitch: true }),
+    spawn('enemy_a', -1, { routeIndex: 0, futureRuntimeSwitch: true }),
+  ], {
+    mapData: { map: [[0, 2, 2], [0, 2, 2]], tiles },
+    routes: [
+      { startPosition: { row: 0, col: 0 }, checkpoints: [] },
+      { startPosition: { row: 1, col: 2 }, checkpoints: [] },
+      { startPosition: { row: 1, col: 2 }, checkpoints: [] },
+      { startPosition: { row: -1, col: 3 }, checkpoints: [] },
+    ],
+  }).data
+  const waves = extractMapWaves(source)
+  const mapGeometry = extractMapGeometry(source)
+  assert.deepEqual(getMapEntrances({ ...mapGeometry, routes: extractMapRoutes(source), waves })
+    .map(({ row, col, label }) => ({ row, col, label })), [
+    { row: 1, col: 0, label: 'A' }, { row: 1, col: 2, label: 'B' }, { row: 0, col: 0, label: 'C' },
+  ])
+  const result = extractMapEnemyRoutes(source)
+  assert.deepEqual(result.map(({ enemyId, routeIndex, spawnKind, spawnCount, spawnIntervals, entrance }) =>
+    ({ enemyId, routeIndex, spawnKind, spawnCount, spawnIntervals, entrance })), [
+    { enemyId: 'enemy_a', routeIndex: 0, spawnKind: 'fixed', spawnCount: 5, spawnIntervals: [0, 1.25], entrance: 'C' },
+    { enemyId: 'enemy_a', routeIndex: 0, spawnKind: 'conditional', spawnCount: 1, spawnIntervals: [], entrance: 'C' },
+    { enemyId: 'enemy_a', routeIndex: 1, spawnKind: 'fixed', spawnCount: 1, spawnIntervals: [], entrance: 'B' },
+    { enemyId: 'enemy_b', routeIndex: 2, spawnKind: 'fixed', spawnCount: 2, spawnIntervals: null, entrance: 'B' },
+    { enemyId: 'enemy_a', routeIndex: 0, spawnKind: 'unknown', spawnCount: null, spawnIntervals: null, entrance: 'C' },
+  ])
+  assert.deepEqual(extractMapEnemySpawnCounts(source), { enemy_a: null, enemy_b: 2, enemy_c: 0 })
+})
+
+test('enemy configured totals include conditional settings and preserve unavailable or overflowing counts', () => {
+  assert.equal(extractMapEnemySpawnCounts({}), null)
+  assert.deepEqual(extractMapEnemySpawnCounts({ waves: [] }), {})
+  const source = level('test', [
+    spawn('enemy_a', 2, { routeIndex: 0 }), spawn('enemy_a', 3, { routeIndex: 1, hiddenGroup: 'optional' }),
+    spawn('enemy_b', 1), spawn('enemy_b', 1.5), spawn('enemy_c', 0),
+    { actionType: 'DISPLAY_ENEMY_INFO', key: 'enemy_a', count: 100 },
+  ]).data
+  assert.deepEqual(extractMapEnemySpawnCounts(source), { enemy_a: 5, enemy_b: null, enemy_c: 0 })
+  const overflow = level('test', [spawn('enemy_a', Number.MAX_SAFE_INTEGER), spawn('enemy_a', 1)]).data
+  assert.deepEqual(extractMapEnemySpawnCounts(overflow), { enemy_a: null })
+  assert.equal(extractMapEnemyRoutes(overflow)[0].spawnCount, null)
 })
