@@ -2,7 +2,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { createChartImageFilename } from '../lib/chartImageFilename'
 import { getTableImageDimensions, parseTableImageAspect, type TableImageAspect } from '../lib/tableImageAspect'
 import type { SurtrRemnantAttackAssumptions } from '../lib/surtrRemnantAttacks'
-import { SurtrRemnantAttackExpectationTable, type SurtrRemnantAttackExpectationTableLayout,
+import { SurtrRemnantAttackExpectationTable, SurtrRemnantAttackExpectationConditions, type SurtrRemnantAttackExpectationTableLayout,
   type SurtrRemnantExpectationComparisonResult } from './SurtrRemnantAttackExpectationTable'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './SurtrDurationChart.css'
@@ -113,7 +113,8 @@ export function SurtrRemnantAttackExpectationTableImage({ comparison, potential,
   return <figure ref={imageRef} className="surtr-remnant-expectation-table-image" data-table-layout={layout}
     style={{ width: initialWidth }} aria-label={TITLE}>
     <div className="surtr-remnant-expectation-table-image-content">
-      <SurtrRemnantAttackExpectationTable comparison={comparison} layout={layout} />
+      <SurtrRemnantAttackExpectationTable comparison={comparison} layout={layout}
+        footer={<SurtrRemnantAttackExpectationConditions potential={potential} blocking={blocking} assumptions={assumptions} />} />
     </div>
   </figure>
 }

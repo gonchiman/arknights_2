@@ -60,6 +60,7 @@ const sections = (markup, tag) => [...markup.matchAll(new RegExp('<' + tag + '(?
 const rows = markup => [...markup.matchAll(/<tr(?: [^>]*)?>([\s\S]*?)<\/tr>/g)]
   .map(row => [...row[1].matchAll(/<(?:th|td)[^>]*>([\s\S]*?)<\/(?:th|td)>/g)].map(cell => text(cell[1])))
 const sectionRows = (markup, tag) => sections(markup, tag).flatMap(rows)
+const meanRows = markup => sectionRows(markup, 'tfoot').filter(row => row[0] === '期待値')
 const calculated = (items = comparison, selected = assumptions) => items.map(item => {
   const expectation = calculateExpectation(item.model, selected)
   assert.ok(expectation)
@@ -67,6 +68,16 @@ const calculated = (items = comparison, selected = assumptions) => items.map(ite
 })
 const renderTable = (items, layout) => renderToStaticMarkup(createElement(Table, { comparison: items, layout }))
 const compact = value => value.replace(/\s+/g, '')
+const assertConditions = (markup, expectedConditions, columnCount) => {
+  const footer = sections(markup, 'tfoot')
+  assert.equal(footer.length, 1)
+  const footerRows = rows(footer[0])
+  const conditionRows = footerRows.filter(row => row.length === 1 && row[0].startsWith('残りCT：一様分布'))
+  assert.equal(conditionRows.length, 1)
+  assert.deepEqual(footerRows.at(-1), conditionRows[0])
+  assert.ok(compact(conditionRows[0][0]).endsWith(compact(expectedConditions)), 'Unexpected conditions: ' + conditionRows[0][0])
+  assert.match(footer[0], new RegExp('<td\\b[^>]*colspan="' + columnCount + '"', 'i'))
+}
 const assertProbability = (cell, length, limit, percent) => {
   const normalized = compact(cell).replace(/s/g, '')
   assert.ok(normalized.includes(length + '÷' + limit), 'Missing length/domain calculation in ' + cell)
@@ -102,6 +113,7 @@ const defaultOutcomes = [
   [10, [null, null, { range: '[0,0.146154)', length: '0.146154', limit: '1.25', percent: '11.6923', contribution: '1.1692 回' }]],
 ]
 const defaultMeans = ['≈ 6.24 回', '≈ 6.7392 回', '≈ 9.0031 回']
+const defaultConditions = '潜在1・自身は非ブロック・命中まで 0.2 s・CT秒数維持・撤退同時の命中を含まない'
 
 test('panel 03 shows one horizontal table with all CT ranges, probability calculations and contributions', () => {
   const markup = render()
@@ -128,7 +140,8 @@ test('panel 03 shows one horizontal table with all CT ranges, probability calcul
     assert.equal(row.length, 10)
     for (const moduleIndex of [0, 1, 2]) assertOutcome(row.slice(1 + moduleIndex * 3, 4 + moduleIndex * 3), defaultOutcomes[index][1][moduleIndex])
   }
-  assert.deepEqual(sectionRows(summary, 'tfoot'), [['期待値', ...defaultMeans]])
+  assert.deepEqual(meanRows(summary), [['期待値', ...defaultMeans]])
+  assertConditions(summary, defaultConditions, 10)
   assert.doesNotMatch(summary, /<button|<select|aria-pressed/)
   assert.match(markup, /<select aria-label="期待回数の表の並び"/)
   assert.match(markup, /<option value="horizontal" selected="">装備を横に並べる<\/option>/)
@@ -169,7 +182,7 @@ test('vertical layout keeps the same analytical outcomes and means in one table 
 test('X uses its entire own CT domain and preserves all MOD columns when reordered', () => {
   const markup = render({ comparison: [comparison[1], comparison[0], comparison[2]] })
   const summary = table(markup)
-  assert.deepEqual(sectionRows(summary, 'tfoot'), [['期待値', defaultMeans[1], defaultMeans[0], defaultMeans[2]]])
+  assert.deepEqual(meanRows(summary), [['期待値', defaultMeans[1], defaultMeans[0], defaultMeans[2]]])
   const first = sectionRows(summary, 'tbody')[0]
   assertOutcome(first.slice(1, 4), defaultOutcomes[0][1][1])
   assertOutcome(first.slice(4, 7), defaultOutcomes[0][1][0])
@@ -183,9 +196,10 @@ test('carry, windup and retreat rules reach the integrated CT and probability ta
   assert.deepEqual(ratioRows.map(row => row[0]), ['9 回', '10 回'])
   assertOutcome(ratioRows[0].slice(1), { range: '[0.19,1.25]', length: '1.06', limit: '1.25', percent: '84.8', contribution: '7.632 回' })
   assertOutcome(ratioRows[1].slice(1), { range: '[0,0.19)', length: '0.19', limit: '1.25', percent: '15.2', contribution: '1.52 回' })
-  assert.deepEqual(sectionRows(ratio, 'tfoot'), [['期待値', '≈ 9.152 回']])
+  assert.deepEqual(meanRows(ratio), [['期待値', '≈ 9.152 回']])
+  assertConditions(ratio, '潜在1・自身は非ブロック・命中まで 0.2 s・CT割合維持・撤退同時の命中を含まない', 4)
   const windup = table(render({ assumptions: { ...assumptions, windup: 0.4 } }))
-  assert.equal(sectionRows(windup, 'tfoot')[0][1], '≈ 6.08 回')
+  assert.equal(meanRows(windup)[0][1], '≈ 6.08 回')
   const integerWindow = { ...baseModel, attackIntervalBefore: 1, attackIntervalAfter: 1, remnantDuration: 2 }
   for (const includeRetreatHit of [false, true]) {
     const markup = render({ comparison: [{ ...comparison[0], model: integerWindow }], potential: 6, blocking: true,
@@ -198,7 +212,9 @@ test('carry, windup and retreat rules reach the integrated CT and probability ta
       range: includeRetreatHit ? '(0,1]' : '[0,1)',
       length: '1', limit: '1', percent: '100', contribution: '2 回',
     })
-    assert.deepEqual(sectionRows(summary, 'tfoot'), [['期待値', '≈ 2 回']])
+    assert.deepEqual(meanRows(summary), [['期待値', '≈ 2 回']])
+    assertConditions(summary, '潜在6・自身でブロック中・命中まで 0 s・CT秒数維持・撤退同時の命中'
+      + (includeRetreatHit ? 'を含む' : 'を含まない'), 4)
   }
 })
 
@@ -211,7 +227,7 @@ test('valid zero counts are distinct from absent outcomes, invalid models and lo
   assertOutcome(outcomes[0].slice(4, 7), null)
   assertOutcome(outcomes[0].slice(7, 10), null)
   assert.ok(outcomes.slice(1).every(row => row[1] === '—' && row[3] === '0 回'))
-  assert.deepEqual(sectionRows(summary, 'tfoot'), [['期待値', '≈ 0 回', defaultMeans[1], defaultMeans[2]]])
+  assert.deepEqual(meanRows(summary), [['期待値', '≈ 0 回', defaultMeans[1], defaultMeans[2]]])
   const vertical = sections(table(renderTable(calculated(items), 'vertical')), 'tbody').map(rows)
   assert.equal(vertical[0].length, 1)
   assert.equal(vertical[0][0][1], '0 回')
@@ -264,7 +280,8 @@ test('saved image uses the snapshot table layout and defaults to the same horizo
   assert.equal([...horizontal.matchAll(/<table(?:\s|>)/g)].length, 1)
   assert.equal(sectionRows(horizontalTable, 'thead').length, 2)
   assert.deepEqual(sectionRows(horizontalTable, 'tbody').map(row => row[0]), ['6 回', '7 回', '8 回', '9 回', '10 回'])
-  assert.deepEqual(sectionRows(horizontalTable, 'tfoot'), [['期待値', ...defaultMeans]])
+  assert.deepEqual(meanRows(horizontalTable), [['期待値', ...defaultMeans]])
+  assertConditions(horizontalTable, defaultConditions, 10)
   const vertical = renderToStaticMarkup(createElement(Image, { ...snapshot, layout: 'vertical' }))
   const verticalTable = table(vertical)
   assert.equal([...vertical.matchAll(/<table(?:\s|>)/g)].length, 1)
@@ -272,5 +289,28 @@ test('saved image uses the snapshot table layout and defaults to the same horizo
   const groups = sections(verticalTable, 'tbody').map(rows)
   assert.deepEqual(groups.map(group => group.length), [2, 2, 3])
   assert.deepEqual(groups.map(group => group[0].at(-1)), defaultMeans)
+  assertConditions(verticalTable, defaultConditions, 6)
   assert.doesNotMatch(vertical, /<select|<button/)
+})
+
+test('changed live conditions and saved snapshot conditions appear below the table in both image layouts', () => {
+  const selected = { windup: 0.3456789, ctCarry: 'ratio', includeRetreatHit: true }
+  const items = comparison.map(item => ({ ...item, model: {
+    ...item.model,
+    remnantDuration: item.model.remnantDuration + 1,
+    ...(item.id === 'X' ? { attackIntervalBefore: 1.25, attackIntervalAfter: 1.25, attackSpeedBefore: 100, attackSpeedAfter: 100 } : {}),
+  } }))
+  const expectedConditions = '潜在6・自身でブロック中・命中まで 0.345679 s・CT割合維持・撤退同時の命中を含む'
+  const snapshot = structuredClone({ comparison: calculated(items, selected), potential: 6, blocking: true, assumptions: selected })
+  const live = table(render({ comparison: items, potential: 6, blocking: true, assumptions: selected }))
+  assertConditions(live, expectedConditions, 10)
+  // The live page may return to its defaults after an image snapshot is captured.
+  assertConditions(table(render()), defaultConditions, 10)
+  for (const layout of ['horizontal', 'vertical']) {
+    const saved = table(renderToStaticMarkup(createElement(Image, { ...snapshot, layout })))
+    assertConditions(saved, expectedConditions, layout === 'horizontal' ? 10 : 6)
+    const conditionText = text(sections(saved, 'tfoot')[0])
+    assert.doesNotMatch(conditionText, /潜在1|自身は非ブロック|CT秒数維持|命中を含まない/)
+    if (layout === 'horizontal') assert.deepEqual(meanRows(saved), meanRows(live))
+  }
 })

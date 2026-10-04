@@ -1,4 +1,7 @@
+import type { ReactNode } from 'react'
+import type { SurtrRemnantAttackAssumptions } from '../lib/surtrRemnantAttacks'
 import type { SurtrRemnantAttackExpectation, SurtrRemnantHitCountProbability } from '../lib/surtrRemnantExpectation'
+import './OperatorModuleComparison.css'
 import './SurtrS3Page.css'
 import './SurtrRemnantAttackExpectationTable.css'
 
@@ -12,6 +15,22 @@ export interface SurtrRemnantExpectationComparisonResult {
 const format = (value: number, digits: number) => value.toLocaleString('ja-JP', { maximumFractionDigits: digits })
 
 export type SurtrRemnantAttackExpectationTableLayout = 'horizontal' | 'vertical'
+
+export function SurtrRemnantAttackExpectationConditions({ potential, blocking, assumptions }: {
+  potential: number
+  blocking: boolean
+  assumptions: SurtrRemnantAttackAssumptions
+}) {
+  return <div className="operator-module-comparison-image-footer surtr-remnant-attack-expectation-conditions">
+    <span>残りCT：一様分布</span>
+    <span>潜在{potential}・{blocking ? '自身でブロック中' : '自身は非ブロック'}・命中まで {format(assumptions.windup, 6)} s・
+      {assumptions.ctCarry === 'time' ? 'CT秒数維持' : 'CT割合維持'}・撤退同時の命中{assumptions.includeRetreatHit ? 'を含む' : 'を含まない'}</span>
+  </div>
+}
+
+function ConditionsRow({ footer, columnCount }: { footer: ReactNode; columnCount: number }) {
+  return <tr><td colSpan={columnCount} className="surtr-remnant-attack-expectation-conditions-cell">{footer}</td></tr>
+}
 
 function Equipment({ item }: { item: SurtrRemnantExpectationComparisonResult }) {
   return <>
@@ -36,9 +55,10 @@ function Probability({ row, limit }: { row?: SurtrRemnantHitCountProbability; li
 }
 
 /** Use the same unrounded analytical results for the live table and saved image. */
-export function SurtrRemnantAttackExpectationTable({ comparison, layout = 'horizontal' }: {
+export function SurtrRemnantAttackExpectationTable({ comparison, layout = 'horizontal', footer }: {
   comparison: readonly SurtrRemnantExpectationComparisonResult[]
   layout?: SurtrRemnantAttackExpectationTableLayout
+  footer?: ReactNode
 }) {
   const counts = [...new Set(comparison.flatMap(item => item.expectation.probabilities.map(row => row.hitCount)))].sort((a, b) => a - b)
   if (!comparison.length || !counts.length) return null
@@ -60,6 +80,7 @@ export function SurtrRemnantAttackExpectationTable({ comparison, layout = 'horiz
         {index === 0 && <td rowSpan={item.expectation.probabilities.length} className="surtr-remnant-attack-expectation-mean">
           <strong>≈ {format(item.expectation.expectedHitCount, 4)}</strong> 回</td>}
       </tr>)}</tbody>)}
+      {footer && <tfoot><ConditionsRow footer={footer} columnCount={6} /></tfoot>}
     </table>
   </div>
 
@@ -90,7 +111,7 @@ export function SurtrRemnantAttackExpectationTable({ comparison, layout = 'horiz
       })}</tr>)}</tbody>
       <tfoot><tr><th scope="row">期待値</th>{comparison.map(item => <td key={item.id} colSpan={3}>
         <strong>≈ {format(item.expectation.expectedHitCount, 4)}</strong> 回
-      </td>)}</tr></tfoot>
+      </td>)}</tr>{footer && <ConditionsRow footer={footer} columnCount={1 + comparison.length * 3} />}</tfoot>
     </table>
   </div>
 }

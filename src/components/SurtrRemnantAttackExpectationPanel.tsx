@@ -6,7 +6,7 @@ import { withChartImageAspect } from '../lib/chartImageFilename'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { HelpPopover } from './HelpPopover'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
-import { SurtrRemnantAttackExpectationTable, type SurtrRemnantExpectationComparisonResult, type SurtrRemnantAttackExpectationTableLayout } from './SurtrRemnantAttackExpectationTable'
+import { SurtrRemnantAttackExpectationTable, SurtrRemnantAttackExpectationConditions, type SurtrRemnantExpectationComparisonResult, type SurtrRemnantAttackExpectationTableLayout } from './SurtrRemnantAttackExpectationTable'
 import { SurtrRemnantAttackExpectationTableImagePreview, saveSurtrRemnantAttackExpectationTableImage,
   getSurtrRemnantAttackExpectationTableImageFilename, type SurtrRemnantAttackExpectationTableImageSnapshot } from './SurtrRemnantAttackExpectationTableImage'
 import './SurtrRemnantAttackExpectationPanel.css'
@@ -93,7 +93,8 @@ export function SurtrRemnantAttackExpectationPanel({
         <button type="button" className="button secondary" onClick={openImage} aria-haspopup="dialog">画像を保存</button>
         </div>
       </div>
-      <SurtrRemnantAttackExpectationTable comparison={tableComparison} layout={layout} />
+      <SurtrRemnantAttackExpectationTable comparison={tableComparison} layout={layout}
+        footer={<SurtrRemnantAttackExpectationConditions potential={potential} blocking={blocking} assumptions={assumptions} />} />
     </>)}
     {feedback && feedback !== 'failed' && <p className="surtr-s3-status" role="status">{feedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
   </CollapsibleCalculatorPanel>

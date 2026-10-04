@@ -24,3 +24,11 @@
 .surtr-remnant-attack-expectation-table-vertical tbody:last-child tr:last-child > *,
 .surtr-remnant-attack-expectation-table-vertical tbody:last-child .surtr-remnant-attack-expectation-equipment,
 .surtr-remnant-attack-expectation-table-vertical tbody:last-child .surtr-remnant-attack-expectation-mean { border-bottom: 0; }
+.surtr-remnant-attack-expectation-table tfoot .surtr-remnant-attack-expectation-conditions-cell {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  white-space: normal;
+  text-align: left;
+}
+.surtr-remnant-attack-expectation-conditions { line-height: 1.8; }
+.surtr-remnant-attack-expectation-conditions > span:last-child { flex: 1 1 auto; text-align: right; }
