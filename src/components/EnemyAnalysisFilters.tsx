@@ -1,22 +1,23 @@
-import type { EnemyFilters } from '../lib/enemyData'
+import { normalizeEnemyLevelSelection, type EnemyAnalysisFiltersState } from '../lib/enemyLevelSelection'
 import type { EnemyNumericCondition } from '../lib/enemyNumericFilters'
 import { EnemyFilterPanel } from './EnemyFilterPanel'
 import { EnemyNumericFilter } from './EnemyNumericFilter'
 import './EnemyAnalysisFilters.css'
 
 export function EnemyAnalysisFilters({ filters, onFiltersChange, numericConditions, onNumericConditionsChange, matchedCount, totalCount, onReset }: {
-  filters: Pick<EnemyFilters, 'levelType'>
-  onFiltersChange: (filters: Pick<EnemyFilters, 'levelType'>) => void
+  filters: EnemyAnalysisFiltersState
+  onFiltersChange: (filters: EnemyAnalysisFiltersState) => void
   numericConditions: readonly EnemyNumericCondition[]
   onNumericConditionsChange: (conditions: readonly EnemyNumericCondition[]) => void
   matchedCount: number
   totalCount: number
   onReset: () => void
 }) {
-  const active = filters.levelType !== 'ALL' || numericConditions.length > 0
+  const active = normalizeEnemyLevelSelection(filters.levelType) !== 'ALL' || numericConditions.length > 0
 
   return <div className="enemy-analysis-filters" role="group" aria-label="分析対象の絞り込み">
     <EnemyFilterPanel
+      multiple
       levelType={filters.levelType}
       onChange={(levelType) => onFiltersChange({ ...filters, levelType })}
       showReset={false}

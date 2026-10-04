@@ -3,48 +3,73 @@
   container: enemy-stat-summary / inline-size;
 }
 
-.enemy-stat-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  margin: 0;
-  border-top: 1px solid var(--border-strong);
-  border-left: 1px solid var(--border-strong);
+.enemy-stat-summary-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
 }
 
-.enemy-stat-summary-item {
-  min-width: 0;
-  border-right: 1px solid var(--border-strong);
-  border-bottom: 1px solid var(--border-strong);
-  background: var(--surface);
-  padding: 10px;
-}
+.enemy-stat-summary-scroll:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 
-.enemy-stat-summary-item dt {
-  margin: 0 0 5px;
-  color: var(--text-soft);
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-
-.enemy-stat-summary-item dd {
-  margin: 0;
+.enemy-stat-summary-table {
+  width: 100%;
+  min-width: 700px;
+  border-collapse: separate;
+  border-spacing: 0;
   color: var(--text);
-  font-size: 17px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   line-height: 1.5;
-  overflow-wrap: anywhere;
 }
 
-.enemy-stat-summary-note {
+.enemy-stat-summary-table th,
+.enemy-stat-summary-table td {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 7px 8px;
+}
+
+.enemy-stat-summary-table tr > :last-child { border-right: 0; }
+.enemy-stat-summary-table tbody tr:last-child > * { border-bottom: 0; }
+.enemy-stat-summary-table tbody tr { cursor: default; }
+.enemy-stat-summary-table th { position: static; top: auto; }
+
+.enemy-stat-summary-table thead th {
+  background: var(--surface-soft);
+  color: var(--text-soft);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  word-break: keep-all;
+}
+
+.enemy-stat-summary-table tr > :first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 116px;
+  min-width: 116px;
+  text-align: left;
+}
+
+.enemy-stat-summary-table tbody th {
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.enemy-stat-summary-table td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.enemy-stat-summary-unit {
   display: block;
-  margin-top: 3px;
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 400;
-  line-height: 1.5;
 }
 
 .enemy-stat-summary-help { margin-top: 3px; }
@@ -67,8 +92,6 @@
 .enemy-stat-summary-help dd { margin: 0; color: var(--text-muted); overflow-wrap: anywhere; }
 
 @container enemy-stat-summary (max-width: 590px) {
-  .enemy-stat-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .enemy-stat-summary-item { padding-right: 8px; padding-left: 8px; }
   .enemy-stat-summary-help > dl > div { grid-template-columns: 1fr; }
 }
 

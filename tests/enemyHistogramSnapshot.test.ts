@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { calculateWeightedHistogram } from '../src/lib/enemyWeightedHistogram.ts'
 import { buildEnemyRatingHistogramBins } from '../src/lib/enemyRatingHistogram.ts'
+import { ENEMY_LEVEL_TYPES, type EnemyLevelType } from '../src/types/enemy.ts'
 import {
   createEnemyHistogramSnapshot, parseEnemyHistogramSnapshot, readEnemyHistogramSnapshot, writeEnemyHistogramSnapshot,
   ENEMY_HISTOGRAM_SNAPSHOT_KEY, type EnemyHistogramSnapshotInput,
@@ -154,6 +155,60 @@ test('編集設定の対象・数値条件・自動階級入力を複製して�
   assert.deepEqual(readEnemyHistogramSnapshot(storage), snapshot)
 })
 
+test('既存v1の単一対象を保存・復元してもscalarのまま維持する', () => {
+  for (const levelType of ['ALL', ...ENEMY_LEVEL_TYPES] as const) {
+    const source = input()
+    source.editorSettings = { levelType, numericConditions: [],
+      linearBinWidthInput: '', linearUpperBoundInput: '' }
+    const snapshot = createEnemyHistogramSnapshot(source)
+    const storage = memoryStorage()
+    assert.equal(snapshot.schemaVersion, 1)
+    assert.equal(snapshot.editorSettings!.levelType, levelType)
+    assert.equal(writeEnemyHistogramSnapshot(snapshot, storage), true)
+    assert.deepEqual(readEnemyHistogramSnapshot(storage), snapshot)
+    assert.equal(readEnemyHistogramSnapshot(storage)!.editorSettings!.levelType, levelType)
+  }
+})
+
+test('複数対象の配列を深く複製・凍結し、保存後も選択を復元する', () => {
+  const source = input()
+  const levels: EnemyLevelType[] = ['NORMAL', 'ELITE']
+  source.source.scopeLabel = '通常＋エリート'
+  source.editorSettings = { levelType: levels, numericConditions: [],
+    linearBinWidthInput: '10', linearUpperBoundInput: '100' }
+  const snapshot = createEnemyHistogramSnapshot(source)
+  const storage = memoryStorage()
+  levels.push('BOSS')
+  assert.deepEqual(snapshot.editorSettings!.levelType, ['NORMAL', 'ELITE'])
+  assert.notEqual(snapshot.editorSettings!.levelType, levels)
+  assert.ok(Object.isFrozen(snapshot.editorSettings!.levelType))
+  assert.throws(() => { (snapshot.editorSettings!.levelType as EnemyLevelType[]).push('BOSS') }, TypeError)
+  assert.equal(writeEnemyHistogramSnapshot(snapshot, storage), true)
+  const restored = readEnemyHistogramSnapshot(storage)!
+  assert.deepEqual(restored, snapshot)
+  assert.ok(Object.isFrozen(restored.editorSettings!.levelType))
+  assert.match(restored.conditions, /通常＋エリート/)
+  assert.match(restored.filename, /通常＋エリート/)
+})
+
+test('複数対象は単一要素から全4区分まで保存でき、選択変更を画像キーに反映する', () => {
+  const source = input()
+  source.editorSettings = { levelType: ['NORMAL'], numericConditions: [],
+    linearBinWidthInput: '', linearUpperBoundInput: '' }
+  const single = createEnemyHistogramSnapshot(source)
+  const multiple = createEnemyHistogramSnapshot({ ...source,
+    editorSettings: { ...source.editorSettings, levelType: ['NORMAL', 'ELITE'] } })
+  const all = createEnemyHistogramSnapshot({ ...source,
+    editorSettings: { ...source.editorSettings, levelType: [...ENEMY_LEVEL_TYPES] } })
+  assert.deepEqual(single.editorSettings!.levelType, ['NORMAL'])
+  assert.deepEqual(multiple.editorSettings!.levelType, ['NORMAL', 'ELITE'])
+  assert.deepEqual(all.editorSettings!.levelType, ENEMY_LEVEL_TYPES)
+  assert.notEqual(single.id, multiple.id)
+  assert.notEqual(multiple.id, all.id)
+  assert.deepEqual(single.statistics, multiple.statistics)
+  assert.equal(single.filename, multiple.filename)
+})
+
 test('旧分布の対象IDを編集中も保持でき、編集設定変更は画像キーだけに反映する', () => {
   const source = input()
   const enemyIds = ['enemy_a', 'enemy_b']
@@ -188,6 +243,9 @@ test('不正な編集条件・数値入力・旧分布IDは受け付けない', 
   const editorSettings = { levelType: 'ALL', numericConditions: [], linearBinWidthInput: '', linearUpperBoundInput: '' }
   const condition = { id: 1, field: 'maxHp', operator: 'gte', value: '1000' }
   const invalid = [null, [], {}, { ...editorSettings, levelType: 'OTHER' },
+    ...[[], ['ALL'], ['NORMAL', 'ALL'], ['NORMAL', 'OTHER'], ['NORMAL', 'NORMAL'],
+      ['NORMAL', 'ELITE', 'BOSS', 'UNKNOWN', 'NORMAL'], [1], [null], null, {}]
+      .map(levelType => ({ ...editorSettings, levelType })),
     { ...editorSettings, numericConditions: [ { ...condition, field: 'anything' } ] },
     { ...editorSettings, numericConditions: [ { ...condition, operator: 'neq' } ] },
     { ...editorSettings, numericConditions: [ { ...condition, value: 'Infinity' } ] },

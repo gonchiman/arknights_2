@@ -127,6 +127,26 @@ test('区分・複数の数値条件を各系列だけに適用し、元デー�
   assert.equal(formatEnemyComparisonCondition({ ...all(), filters: { levelType: 'UNKNOWN' } }), '未分類')
 })
 
+test('複数分類をORでまとめ、数値条件を重ねて重複IDを一度だけ数える', () => {
+  const rows = [enemy('normal', 40), enemy('elite', 60, 'ELITE'), enemy('small', 10, 'ELITE'),
+    enemy('boss', 60, 'BOSS'), enemy('unknown', 60, 'UNKNOWN'), enemy('normal', 40)]
+  const selected: EnemyRecord['levelType'][] = ['ELITE', 'NORMAL']
+  const condition: EnemyComparisonCondition = { ...all(), filters: { levelType: selected },
+    numericConditions: [{ id: 1, field: 'maxHp', operator: 'gte', value: '40' }] }
+  const result = buildEnemyComparisonDistribution(rows, [condition], 'maxHp', options)
+  const snapshot = structuredClone(result)
+  assert.equal(result.unionCount, 2)
+  assert.equal(result.series[0].matchedCount, 2)
+  assert.equal(result.series[0].count, 2)
+  assert.equal(result.series[0].label, '通常敵＋エリート敵 · HP≥40')
+  assert.equal(result.series[0].bins.reduce((sum, bin) => sum + bin.count, 0), 2)
+  assert.match(getEnemyComparisonImageFilename({ distribution: result,
+    metric: { key: 'maxHp', label: 'HP', axisLabel: 'HP', suffix: '' }, scale: 'LINEAR', yAxis: 'COUNT' }), /通常敵＋エリート敵/)
+  selected.push('BOSS')
+  condition.numericConditions[0].value = '99'
+  assert.deepEqual(result, snapshot)
+})
+
 test('同値だけの系列・0・一致なしでも全系列は同じ区間を持つ', () => {
   for (const value of [0, 30]) {
     for (const scale of ['LINEAR', 'LOG'] as const) {

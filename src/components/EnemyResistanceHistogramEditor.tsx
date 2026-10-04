@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { matchesEnemyFilters, type EnemyFilters } from '../lib/enemyData'
+import { matchesEnemyFilters } from '../lib/enemyData'
+import { copyEnemyLevelSelection, formatEnemyLevelSelection, type EnemyAnalysisFiltersState } from '../lib/enemyLevelSelection'
 import { formatEnemyNumericCondition, matchesEnemyNumericConditions, parseEnemyNumericFilterValue, type EnemyNumericCondition } from '../lib/enemyNumericFilters'
 import type { EnemyHistogramSnapshot } from '../lib/enemyHistogramSnapshot'
 import { useEnemyRecords } from '../lib/useEnemyRecords'
 import { EnemyAnalysisFilters } from './EnemyAnalysisFilters'
-import { ENEMY_LEVEL_LABELS } from './EnemyFilterPanel'
 import { EnemyDataContent } from './EnemyPageShared'
 import { EnemyStatisticsPanel, useEnemyStatisticsControls } from './EnemyStatisticsPanel'
 import './EnemyAnalysis.css'
@@ -16,9 +16,9 @@ export function EnemyResistanceHistogramEditor({ initialSnapshot, onChange }: {
 }) {
   const { rows, loading, error, retry } = useEnemyRecords()
   const controls = useEnemyStatisticsControls(initialSnapshot)
-  const [filters, setFilters] = useState<Pick<EnemyFilters, 'levelType'>>({
-    levelType: initialSnapshot?.editorSettings?.levelType ?? 'ALL',
-  })
+  const [filters, setFilters] = useState<EnemyAnalysisFiltersState>(() => ({
+    levelType: copyEnemyLevelSelection(initialSnapshot?.editorSettings?.levelType ?? 'ALL'),
+  }))
   const [numericConditions, setNumericConditions] = useState<readonly EnemyNumericCondition[]>(
     initialSnapshot?.editorSettings?.numericConditions ?? [],
   )
@@ -38,7 +38,7 @@ export function EnemyResistanceHistogramEditor({ initialSnapshot, onChange }: {
     && matchesEnemyFilters(enemy, { query: '', levelType: filters.levelType })
     && matchesEnemyNumericConditions(enemy, numericConditions)), [rows, sourceIds, filters, numericConditions])
   const scopeLabel = sourceIds ? initialSnapshot!.source.scopeLabel : [
-    filters.levelType === 'ALL' ? '全敵' : ENEMY_LEVEL_LABELS[filters.levelType],
+    formatEnemyLevelSelection(filters.levelType),
     ...numericConditions.map(formatEnemyNumericCondition),
   ].filter(Boolean).join(' · ')
   const filterSettings = useMemo(() => ({ ...filters, numericConditions,

@@ -140,6 +140,17 @@ test('名前・説明・内部IDと区分で絞り込める', () => {
   assert.equal(matchesEnemyFilters(enemy, { query: 'enemy_test', levelType: 'NORMAL' }), false)
 })
 
+test('複数の敵区分はいずれか一致で選び、検索文字列は同時に満たす必要がある', () => {
+  const enemy = buildEnemyRecords(handbook, database)[0]
+  assert.equal(matchesEnemyFilters(enemy, { query: '', levelType: ['NORMAL', 'ELITE'] }), true)
+  assert.equal(matchesEnemyFilters(enemy, { query: '灼熱', levelType: ['NORMAL', 'ELITE'] }), true)
+  assert.equal(matchesEnemyFilters(enemy, { query: '一致しない語', levelType: ['NORMAL', 'ELITE'] }), false)
+  assert.equal(matchesEnemyFilters(enemy, { query: '灼熱', levelType: ['NORMAL', 'BOSS'] }), false)
+  assert.equal(matchesEnemyFilters(enemy, { query: '', levelType: [] }), true)
+  assert.equal(matchesEnemyFilters(enemy, { query: '', levelType: ['NORMAL', 'ELITE', 'BOSS', 'UNKNOWN'] }), true)
+  assert.equal(matchesEnemyFilters({ ...enemy, levelType: 'UNKNOWN' }, { query: '', levelType: ['ELITE', 'UNKNOWN'] }), true)
+})
+
 test('ゲーム内マークアップと改行を表示用テキストから除去する', () => {
   assert.equal(cleanGameText('<@ba.kw>能力</>\\n  説明'), '能力 説明')
 })

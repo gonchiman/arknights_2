@@ -1,7 +1,7 @@
 import type { EnemyRecord } from '../types/enemy.ts'
 import { createChartImageFilename, withChartImageAspect } from './chartImageFilename.ts'
 import { matchesEnemyFilters } from './enemyData.ts'
-import { formatEnemyComparisonCondition, type EnemyComparisonCondition } from './enemyDistributionComparison.ts'
+import { copyEnemyComparisonCondition, formatEnemyComparisonCondition, type EnemyComparisonCondition } from './enemyDistributionComparison.ts'
 import {
   buildEnemyHistogramObservations,
   ENEMY_HISTOGRAM_COUNT_MODES,
@@ -49,11 +49,7 @@ export function buildEnemyThresholdComparison(
   const uniqueRows = [...new Map(rows.map((row) => [row.id, row])).values()]
   const series = conditions.map((source): EnemyThresholdComparisonSeries => {
     // The saved result must stay independent of subsequent filter edits.
-    const condition = {
-      ...source,
-      filters: { ...source.filters },
-      numericConditions: source.numericConditions.map((numericCondition) => ({ ...numericCondition })),
-    }
+    const condition = copyEnemyComparisonCondition(source)
     const matchedRows = uniqueRows.filter((row) => (
       matchesEnemyFilters(row, { query: '', levelType: condition.filters.levelType })
       && matchesEnemyNumericConditions(row, condition.numericConditions)

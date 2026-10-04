@@ -183,15 +183,7 @@ export function useEnemyStatisticsControls(initialHistogramSnapshot?: EnemyHisto
 
 type EnemyStatisticsControls = ReturnType<typeof useEnemyStatisticsControls>
 
-function EnemyStatisticsSettings({ controls, summary = false }: { controls: EnemyStatisticsControls; summary?: boolean }) {
-  const selectorId = useId()
-  if (summary) return <div className="enemy-summary-metric-control">
-    <label htmlFor={selectorId}>統計を見るステータス</label>
-    <select id={selectorId} value={controls.selectedMetric.key}
-      onChange={(event) => controls.selectMetric(getMetric(event.target.value as AnalyzedStatKey))}>
-      {STAT_METRICS.map((metric) => <option key={metric.key} value={metric.key}>{metric.label}</option>)}
-    </select>
-  </div>
+function EnemyStatisticsSettings({ controls }: { controls: EnemyStatisticsControls }) {
   return (
     <fieldset className="enemy-statistics-settings">
       <legend>分布を見るステータス</legend>
@@ -358,6 +350,14 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     allRows, thresholdConditions, threshold, activeCountMode, countData.data),
   [allRows, thresholdConditions, activeCountMode, countData.data, threshold, thresholdError])
   const summaryStatistics = histogramStatistics
+  const showSummary = !histogramEditor
+  const allMetricSummaries = useMemo(() => showSummary ? STAT_METRICS.map((metric) => ({
+    metric,
+    statistics: withHistogramDispersion(calculateWeightedHistogram(
+      buildEnemyHistogramObservations(rows, (enemy) => getEnemyMetricValue(enemy, metric.key), activeCountMode, countData.data),
+      { preferredBinCount: metric.logBinCount, minimumLinearBinWidth: metric.minimumLinearBinWidth },
+    )),
+  })) : [], [showSummary, rows, activeCountMode, countData.data])
   const canSaveImage = (isThresholdChart ? thresholdComparison?.series.filter(({ condition }) => condition.visible).reduce((sum, series) => sum + series.count, 0) ?? 0
     : selectedChart === 'HEATMAP' ? jointDistribution.count
     : selectedChart === 'SCATTER' ? scatterObservations.length : summaryStatistics.count) > 0
@@ -661,15 +661,14 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         id="enemy-statistics"
         number="01"
         title="統計サマリー"
-        summary={`${selectedMetric.label} · ${countOption.label} · ${scopeLabel}${countUnavailable ? '' : ` · 値なし ${formatNumber(summaryStatistics.missingCount, 0)}${countOption.unit}`}`}
+        summary={`${countOption.label} · ${scopeLabel}`}
         defaultOpen
         collapsedLabel="統計を開く"
         className="enemy-statistics-panel"
         bodyClassName="enemy-statistics-body"
       >
-        <EnemyStatisticsSettings controls={controls} summary />
         {countUnavailable ? <p role="status">{countData.error ? '登場データを取得できませんでした' : '登場データを読み込み中…'}</p>
-          : <StatisticsSummary statistics={summaryStatistics} metric={selectedMetric} countUnit={countOption.unit} />}
+          : <StatisticsSummary columns={allMetricSummaries} countUnit={countOption.unit} />}
       </CollapsibleCalculatorPanel>
 
       <CollapsibleCalculatorPanel
@@ -978,55 +977,66 @@ function EnemyChartImagePreview({ data, aspectRatio }: { data: EnemyChartImageDa
   </div>
 }
 
-function StatisticsSummary({ statistics, metric, countUnit = '種類' }: { statistics: NumericStatisticsWithDispersion; metric: StatMetric; countUnit?: string }) {
-  const formatValue = (value: number | null, digits = metric.summaryDigits) => (
-    value === null ? '—' : formatNumber(value, digits, metric.suffix)
-  )
-  const formatPercentage = (value: number | null) => (
-    value === null
-      ? '—'
-      : new Intl.NumberFormat('ja-JP', {
-        style: 'percent',
-        maximumFractionDigits: 1,
-      }).format(value)
-  )
-  const containsNegativeValue = statistics.minimum !== null && statistics.minimum < 0
-  const coefficientOfVariationDetail = statistics.coefficientOfVariation !== null
-    ? null
-    : statistics.count === 0
-      ? '有効データなし'
-      : containsNegativeValue
-        ? '負値を含むため算出なし'
-        : '平均が0のため算出なし'
-  const iqrValue = formatValue(statistics.interquartileRange)
-  const normalizedIqrDetail = statistics.normalizedInterquartileRange !== null
-    ? null
-    : statistics.count === 0
-      ? '有効データなし'
-      : containsNegativeValue
-        ? '負値を含むため算出なし'
-        : '中央値が0のため算出なし'
+const SUMMARY_STATISTICS = [
+  { key: 'minimum', label: '最小' },
+  { key: 'firstQuartile', label: '第1四分位' },
+  { key: 'median', label: '中央値' },
+  { key: 'thirdQuartile', label: '第3四分位' },
+  { key: 'maximum', label: '最大' },
+  { key: 'mean', label: '平均' },
+  { key: 'standardDeviation', label: '標準偏差' },
+  { key: 'coefficientOfVariation', label: '変動係数（CV）' },
+  { key: 'interquartileRange', label: 'IQR' },
+  { key: 'normalizedInterquartileRange', label: '正規化IQR' },
+  { key: 'count', label: '有効データ' },
+  { key: 'missingCount', label: '値なし' },
+] as const
+
+function StatisticsSummary({ columns, countUnit }: {
+  columns: Array<{ metric: StatMetric; statistics: NumericStatisticsWithDispersion }>
+  countUnit: string
+}) {
+  const formatStatistic = (statistics: NumericStatisticsWithDispersion, metric: StatMetric, key: typeof SUMMARY_STATISTICS[number]['key']) => {
+    const value = statistics[key]
+    if (value === null) return '—'
+    if (key === 'coefficientOfVariation' || key === 'normalizedInterquartileRange') {
+      return new Intl.NumberFormat('ja-JP', { style: 'percent', maximumFractionDigits: 1 }).format(value)
+    }
+    const digits = key === 'count' || key === 'missingCount' ? 0
+      : key === 'minimum' || key === 'maximum' ? metric.valueDigits : metric.summaryDigits
+    return formatNumber(value, digits)
+  }
 
   return (
     <div className="enemy-stat-summary">
-      <dl className="enemy-stat-summary-grid" aria-label={`${metric.label}の統計量`}>
-        <StatisticsItem label="最小" value={formatValue(statistics.minimum, metric.valueDigits)} />
-        <StatisticsItem label="第1四分位" value={formatValue(statistics.firstQuartile)} />
-        <StatisticsItem label="中央値" value={formatValue(statistics.median)} />
-        <StatisticsItem label="第3四分位" value={formatValue(statistics.thirdQuartile)} />
-        <StatisticsItem label="最大" value={formatValue(statistics.maximum, metric.valueDigits)} />
-        <StatisticsItem label="有効データ" value={`${formatNumber(statistics.count, 0)}${countUnit}`} />
-        <StatisticsItem label="平均" value={formatValue(statistics.mean)} />
-        <StatisticsItem label="標準偏差" value={formatValue(statistics.standardDeviation)} />
-        <StatisticsItem label="変動係数（CV）" value={formatPercentage(statistics.coefficientOfVariation)} />
-        <StatisticsItem label="正規化IQR" value={formatPercentage(statistics.normalizedInterquartileRange)} detail={`IQR ${iqrValue}`} />
-      </dl>
+      <div className="enemy-stat-summary-scroll" role="region" aria-label="統計サマリーの一覧" tabIndex={0}>
+        <table className="enemy-stat-summary-table" aria-label="全ステータスの統計量">
+          <thead>
+            <tr>
+              <th scope="col">統計量</th>
+              {columns.map(({ metric }) => <th scope="col" key={metric.key}>
+                {metric.key === 'stageAppearanceCount' ? <>登場<wbr />ステージ数</> : metric.label}
+                {metric.suffix && <span className="enemy-stat-summary-unit">（{metric.suffix}）</span>}
+              </th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {SUMMARY_STATISTICS.map(({ key, label }) => <tr key={key}>
+              <th scope="row">
+                {label}
+                {(key === 'count' || key === 'missingCount') && <span className="enemy-stat-summary-unit">（{countUnit}）</span>}
+              </th>
+              {columns.map(({ metric, statistics }) => <td key={metric.key}>{formatStatistic(statistics, metric, key)}</td>)}
+            </tr>)}
+          </tbody>
+        </table>
+      </div>
       <details className="enemy-stat-summary-help">
         <summary>統計量の見方</summary>
         <dl>
           <div>
             <dt>有効データ・値なし</dt>
-            <dd>数値のないデータは集計から除外します。0は有効データに含めます。</dd>
+            <dd>数値のないデータはステータスごとに集計から除外します。0は有効データに含めます。有効データがない統計量は「—」で表示します。</dd>
           </div>
           <div>
             <dt>第1・第3四分位</dt>
@@ -1036,7 +1046,6 @@ function StatisticsSummary({ statistics, metric, countUnit = '種類' }: { stati
             <dt>変動係数（CV）</dt>
             <dd>
               標準偏差 ÷ 平均を%で表示します。平均が0、または負値を含む場合は算出しません。
-              {coefficientOfVariationDetail && <span className="enemy-stat-summary-note">現在の対象：{coefficientOfVariationDetail}</span>}
             </dd>
           </div>
           <div>
@@ -1047,23 +1056,10 @@ function StatisticsSummary({ statistics, metric, countUnit = '種類' }: { stati
             <dt>正規化IQR</dt>
             <dd>
               IQR ÷ 中央値を%で表示します。中央値が0、または負値を含む場合は算出しません。
-              {normalizedIqrDetail && <span className="enemy-stat-summary-note">現在の対象：{normalizedIqrDetail}</span>}
             </dd>
           </div>
         </dl>
       </details>
-    </div>
-  )
-}
-
-function StatisticsItem({ label, value, detail }: { label: string; value: string; detail?: string }) {
-  return (
-    <div className="enemy-stat-summary-item">
-      <dt>{label}</dt>
-      <dd>
-        {value}
-        {detail && <small className="enemy-stat-summary-note">{detail}</small>}
-      </dd>
     </div>
   )
 }

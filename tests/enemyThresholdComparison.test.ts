@@ -82,6 +82,23 @@ test('敵分類と複数数値条件をANDで適用し、入力途中の条件�
   assert.deepEqual(result.distribution.buckets.map(({ count }) => count), [0, 1, 0])
 })
 
+test('複数分類の合計を円・横棒比較に使い、保存後の配列編集を切り離す', () => {
+  const selected: EnemyRecord['levelType'][] = ['NORMAL', 'ELITE']
+  const condition: EnemyComparisonCondition = { ...all(), filters: { levelType: selected },
+    numericConditions: [{ id: 1, field: 'magicResistance', operator: 'gte', value: '60' }] }
+  const rows = [enemy('a', 0), enemy('b', 60), enemy('c', 80, 'ELITE'), enemy('boss', 80, 'BOSS')]
+  const result = buildEnemyThresholdComparison(rows, [condition], 60, 'SPAWNS', counts)
+  const snapshot = structuredClone(result)
+  assert.equal(result.series[0].matchedCount, 2)
+  assert.equal(result.series[0].count, 32)
+  assert.equal(result.series[0].label, '通常敵＋エリート敵 · 術耐性≥60')
+  assert.deepEqual(result.series[0].distribution.buckets.map(({ count }) => count), [0, 2, 30])
+  assert.match(createEnemyThresholdComparisonImageFilename({ comparison: result, countMode: 'SPAWNS' }), /通常敵＋エリート敵/)
+  selected.push('BOSS')
+  condition.numericConditions[0].value = '80'
+  assert.deepEqual(result, snapshot)
+})
+
 test('種類数・登場マップ数・出現回数を重み付きで集計し、0回と未収録を除外する', () => {
   const rows = [enemy('a', 0), enemy('b', 60), enemy('c', 80, 'ELITE'), enemy('missing', null), enemy('zero', 99), enemy('unrecorded', 99)]
   for (const [mode, expectedBuckets, expectedMissing] of [
