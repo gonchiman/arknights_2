@@ -1,7 +1,7 @@
-import { useCallback, useLayoutEffect, useState, type ReactNode } from 'react'
-import { getChartImageStackLayout } from '../lib/chartImageStackLayout'
+import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { CHART_IMAGE_STACK_HEADER_HEIGHT, getChartImageStackLayout } from '../lib/chartImageStackLayout'
 import { CHART_IMAGE_DEFAULT_CHROME_HEIGHT } from '../lib/chartImageLayout'
-import { ChartImageSurface, type ChartImageFrameProps, type ChartImageSurfaceMeasurement } from './ChartImageFrame'
+import { ChartImageHeading, ChartImageSurface, type ChartImageFrameProps, type ChartImageSurfaceMeasurement } from './ChartImageFrame'
 import './ChartImageStackFrame.css'
 
 export interface ChartImageStackPanel {
@@ -18,6 +18,7 @@ export interface ChartImageStackPanel {
 
 export interface ChartImageStackFrameProps {
   panels: ChartImageStackPanel[]
+  sharedHeader?: Pick<ChartImageFrameProps, 'title' | 'legend' | 'conditions'>
   aspectRatio?: number
   gap?: number
   className?: string
@@ -27,10 +28,13 @@ export interface ChartImageStackFrameProps {
 interface PanelMeasurement extends ChartImageSurfaceMeasurement { overflow: number }
 
 /** Mount with a snapshot/aspect key so old wrap measurements never leak into another saved image. */
-export function ChartImageStackFrame({ panels, aspectRatio, gap, className, onLayout }: ChartImageStackFrameProps) {
+export function ChartImageStackFrame({ panels, sharedHeader, aspectRatio, gap, className, onLayout }: ChartImageStackFrameProps) {
   const [measurements, setMeasurements] = useState<Record<string, PanelMeasurement>>({})
+  const sharedHeadingRef = useRef<HTMLElement>(null)
+  const [headerHeight, setHeaderHeight] = useState(CHART_IMAGE_STACK_HEADER_HEIGHT)
+  const hasSharedHeader = !!sharedHeader
   const layout = getChartImageStackLayout({ panels: panels.map((panel) => ({ naturalChartHeight: panel.naturalChartHeight,
-    ...measurements[panel.id] })), aspectRatio, gap })
+    ...measurements[panel.id] })), aspectRatio, gap, headerHeight: hasSharedHeader ? headerHeight : 0 })
   const updateMeasurement = useCallback((id: string, next: Partial<PanelMeasurement>) => {
     setMeasurements((current) => {
       const previous = current[id] ?? { chromeHeight: CHART_IMAGE_DEFAULT_CHROME_HEIGHT, minimumChartHeight: 0, overflow: 0 }
@@ -42,12 +46,27 @@ export function ChartImageStackFrame({ panels, aspectRatio, gap, className, onLa
         && updated.overflow === previous.overflow ? current : { ...current, [id]: updated }
     })
   }, [])
+  useLayoutEffect(() => {
+    const heading = sharedHeadingRef.current
+    if (!hasSharedHeader || !heading) return
+    const measure = () => setHeaderHeight(current => Math.max(current, Math.ceil(heading.offsetHeight + 12)))
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(heading)
+    return () => observer.disconnect()
+  }, [hasSharedHeader])
   useLayoutEffect(() => { onLayout?.({ width: layout.width, height: layout.height }) }, [onLayout, layout.width, layout.height])
 
-  return <div className={`chart-image-stack-frame${className ? ` ${className}` : ''}`}
-    style={{ width: layout.width, height: layout.height, gap: layout.gap }}>
-    {panels.map((panel, index) => <StackPanel key={panel.id} panel={panel} width={layout.width}
-      layout={layout.panels[index]} reservedOverflow={measurements[panel.id]?.overflow ?? 0} onMeasure={updateMeasurement} />)}
+  const renderedPanels = panels.map((panel, index) => <StackPanel key={panel.id} panel={panel} width={layout.width}
+    layout={layout.panels[index]} reservedOverflow={measurements[panel.id]?.overflow ?? 0} onMeasure={updateMeasurement} />)
+  return <div className={`chart-image-stack-frame${hasSharedHeader ? ' has-shared-header' : ''}${className ? ` ${className}` : ''}`}
+    style={{ width: layout.width, height: layout.height, gap: hasSharedHeader ? undefined : layout.gap }}>
+    {sharedHeader ? <>
+      <figure className="chart-image-frame chart-image-stack-header" style={{ width: layout.width, height: headerHeight }} aria-label={sharedHeader.title}>
+        <ChartImageHeading {...sharedHeader} headingRef={sharedHeadingRef} />
+      </figure>
+      <div className="chart-image-stack-panels" style={{ gap: layout.gap }}>{renderedPanels}</div>
+    </> : renderedPanels}
   </div>
 }
 

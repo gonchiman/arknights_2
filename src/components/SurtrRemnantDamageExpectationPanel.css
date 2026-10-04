@@ -1,0 +1,10 @@
+.surtr-remnant-damage-expectation-panel { min-width: 0; }
+.surtr-remnant-damage-expectation-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 12px; }
+.surtr-remnant-damage-expectation-heading h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.surtr-remnant-damage-expectation-table thead th:not(:first-child) { text-align: right; }
+.surtr-remnant-damage-expectation-table th:first-child { width: 24%; }
+.surtr-remnant-expectation-graph { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); min-width: 0; }
+@media (max-width: 640px) {
+  .surtr-remnant-damage-expectation-table th:first-child { width: auto; }
+  .surtr-remnant-expectation-graph { margin-top: 20px; }
+}

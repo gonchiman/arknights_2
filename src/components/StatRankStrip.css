@@ -1,0 +1,4 @@
+.stat-rank-strip-fill { fill: var(--text-muted); }
+.stat-rank-strip-label { fill: var(--text-soft); font-size: 11px; font-weight: 600; }
+.stat-rank-strip-title { fill: var(--text-soft); font-size: 10px; font-weight: 700; }
+.stat-rank-strip-point-line { stroke: var(--text-muted); stroke-width: 1; stroke-opacity: .65; vector-effect: non-scaling-stroke; }

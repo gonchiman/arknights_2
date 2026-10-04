@@ -3,6 +3,8 @@ import { resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { extractLevelEnemyIds, selectStageLevels } from './generateEnemyStageAppearances.mjs'
 import { buildEnemyHistogramCounts, readCachedLevels } from './generateEnemyHistogramCounts.mjs'
+import { getMapEntrances } from '../src/lib/mapWaves.ts'
+import { MAP_ENEMY_IMMUNITY_KEYS } from '../src/types/map.ts'
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url))
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value) ? value : null
@@ -15,6 +17,7 @@ const unwrap = (value) => {
 const text = (value) => typeof unwrap(value) === 'string' && unwrap(value).trim() ? unwrap(value).trim() : null
 const number = (value) => typeof unwrap(value) === 'number' && Number.isFinite(unwrap(value)) ? unwrap(value) : null
 const nonnegative = (value) => number(value) !== null && number(value) >= 0 ? number(value) : null
+const boolean = (value) => typeof unwrap(value) === 'boolean' ? unwrap(value) : null
 const compare = (a, b) => a.localeCompare(b, 'en', { numeric: true })
 const array = (value) => Array.isArray(value) ? value : []
 const readBlackboard = (value) => Array.isArray(value)
@@ -51,12 +54,23 @@ export function buildMapEnemyRegistry(handbookSource, databaseSource) {
       .sort((a, b) => (number(a.level) ?? Infinity) - (number(b.level) ?? Infinity))
     const base = record((levels.find((level) => number(level.level) === 0) ?? levels[0])?.enemyData)
     const attributes = record(base?.attributes)
+    const rawDamageTypes = unwrap(handbookById.get(id)?.damageType)
+    const damageTypes = Array.isArray(rawDamageTypes) && rawDamageTypes.every((value) => text(value) !== null)
+      ? [...new Set(rawDamageTypes.map(text))] : null
     return [id, {
       name: text(handbookById.get(id)?.name) ?? text(base?.name) ?? id,
       hp: nonnegative(attributes?.maxHp),
       attack: nonnegative(attributes?.atk),
       defense: nonnegative(attributes?.def),
       resistance: nonnegative(attributes?.magicResistance),
+      moveSpeed: nonnegative(attributes?.moveSpeed),
+      attackInterval: nonnegative(attributes?.baseAttackTime),
+      weight: number(attributes?.massLevel),
+      levelType: text(handbookById.get(id)?.enemyLevel) ?? text(base?.levelType),
+      motion: text(base?.motion),
+      attackWay: text(base?.applyWay),
+      damageTypes,
+      immunities: attributes ? Object.fromEntries(MAP_ENEMY_IMMUNITY_KEYS.map((key) => [key, boolean(attributes[key])])) : null,
     }]
   }))
 }
@@ -190,6 +204,70 @@ export function extractMapWaves(source) {
   }))
 }
 
+/** Fixed route waits only; global or wave-relative wait targets are not durations. */
+function extractFixedRouteWaits(source, routeIndex) {
+  const routes = record(source)?.routes
+  if (routeIndex === null || !Array.isArray(routes)) return null
+  const checkpoints = record(routes[routeIndex])?.checkpoints
+  if (!Array.isArray(checkpoints)) return null
+  const waits = []
+  for (const raw of checkpoints) {
+    const checkpoint = record(raw)
+    const type = text(checkpoint?.type)
+    if (!checkpoint || !type) return null
+    if (type === 'WAIT_FOR_SECONDS') {
+      const duration = nonnegative(checkpoint.time)
+      if (duration === null) return null
+      if (duration > 0) waits.push(duration)
+    } else if (type.startsWith('WAIT') && ![
+      'WAIT_CURRENT_FRAGMENT_TIME', 'WAIT_CURRENT_WAVE_TIME', 'WAIT_BOSSRUSH_WAVE',
+    ].includes(type)) return null
+  }
+  return waits
+}
+
+const sumConfiguredCounts = (total, count) => total === null || count === null || !Number.isSafeInteger(total + count)
+  ? null : total + count
+
+/** Reuse spawn classification and entrance labels, aggregating each enemy / route / condition combination. */
+export function extractMapEnemyRoutes(source, waves = extractMapWaves(source), geometry) {
+  if (waves === null) return null
+  const routes = extractMapRoutes(source)
+  const usedGeometry = geometry ?? (record(source)?.mapData ? extractMapGeometry(source) : null)
+  const entrances = usedGeometry ? new Map(getMapEntrances({ ...usedGeometry, routes, waves })
+    .map((entrance) => [entrance.id, entrance.label])) : new Map()
+  const groups = new Map()
+  for (const wave of waves) for (const fragment of wave.fragments) for (const action of fragment.actions) {
+    if (action.actionType !== 'SPAWN' || !action.key || action.count === 0) continue
+    const key = JSON.stringify([action.key, action.routeIndex, action.spawnKind])
+    if (!groups.has(key)) {
+      const start = action.routeIndex === null ? null : routes?.[action.routeIndex]?.startPosition
+      groups.set(key, { enemyId: action.key, routeIndex: action.routeIndex,
+        fixedWaits: extractFixedRouteWaits(source, action.routeIndex), spawnKind: action.spawnKind,
+        spawnCount: 0, spawnIntervals: [], entrance: start ? entrances.get(`${start.row}:${start.col}`) ?? null : null,
+        hasPositiveSpawn: false })
+    }
+    const group = groups.get(key)
+    group.hasPositiveSpawn ||= action.count > 0
+    group.spawnCount = sumConfiguredCounts(group.spawnCount, action.count)
+    if (action.count === null || (action.count > 1 && action.interval === null)) group.spawnIntervals = null
+    else if (action.count > 1 && group.spawnIntervals !== null) group.spawnIntervals.push(action.interval)
+  }
+  return [...groups.values()].filter((group) => group.hasPositiveSpawn)
+    .map(({ hasPositiveSpawn, ...route }) => route)
+}
+
+/** Counts use all keyed main-wave SPAWN settings, so one invalid count makes only that enemy's total unknown. */
+export function extractMapEnemySpawnCounts(source, waves = extractMapWaves(source)) {
+  if (waves === null) return null
+  const totals = new Map()
+  for (const wave of waves) for (const fragment of wave.fragments) for (const action of fragment.actions) {
+    if (action.actionType !== 'SPAWN' || !action.key) continue
+    totals.set(action.key, sumConfiguredCounts(totals.has(action.key) ? totals.get(action.key) : 0, action.count))
+  }
+  return Object.fromEntries(totals)
+}
+
 /** Base-level effects, used terrain, and available devices only; optional/challenge runes and conditional branches are not evaluated. */
 export function extractMapFeatures(source, geometry) {
   const level = record(source)
@@ -267,7 +345,8 @@ export function buildMapDatabase({
       ...(text(stage?.diffGroup) ? { diffGroup: text(stage.diffGroup) } : {}),
     }
     if (!levelsById.has(levelId)) return {
-      ...base, status: 'missing', spawnCount: null, enemyIds: [], features: null, reasons: ['missing-level'], detailFile: null,
+      ...base, status: 'missing', spawnCount: null, enemyIds: [], enemyRoutes: null, enemySpawnCounts: null,
+      features: null, reasons: ['missing-level'], detailFile: null,
     }
     const source = levelsById.get(levelId)
     const counts = buildEnemyHistogramCounts([{ levelId, data: source }])
@@ -293,14 +372,17 @@ export function buildMapDatabase({
     return {
       ...base, status: supported ? 'supported' : 'excluded',
       spawnCount: supported ? enemies.reduce((sum, enemy) => sum + enemy.count, 0) : null,
-      enemyIds, features: extractMapFeatures(source, geometry), reasons, detailFile,
+      enemyIds, enemyRoutes: extractMapEnemyRoutes(source, waves, geometry), enemySpawnCounts: extractMapEnemySpawnCounts(source, waves),
+      features: extractMapFeatures(source, geometry), reasons, detailFile,
     }
   })
   return {
     index: {
       schemaVersion: 1, generatedAt, sourceGeneratedAt, maps,
       enemies: Object.fromEntries([...usedEnemies].sort(compare).map((id) => [
-        id, registry[id] ?? { name: id, hp: null, attack: null, defense: null, resistance: null },
+        id, registry[id] ?? { name: id, hp: null, attack: null, defense: null, resistance: null,
+          moveSpeed: null, attackInterval: null, weight: null, levelType: null, motion: null,
+          attackWay: null, damageTypes: null, immunities: null },
       ])),
     },
     details,

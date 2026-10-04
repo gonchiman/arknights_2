@@ -15,6 +15,7 @@ export interface SurtrDpsPageState {
   barStep: SurtrDpsBarStep
   resistanceRange: SurtrDpsResistanceRange
   showValues: boolean
+  showResistanceRanks: boolean
   gridStyle: 'none' | 'dashed' | 'solid'
   precision: number
   metric: SurtrDpsMetric
@@ -29,7 +30,7 @@ export function createDefaultSurtrDpsPageState(): SurtrDpsPageState {
   return {
     settings: { level: 90, trust: 100, potential: 1, skillLevelIndex: 9, blocking: false },
     excluded: [], moduleLevels: {}, chartKind: 'bar', barStep: 20,
-    resistanceRange: { min: 0, max: 100 }, showValues: false, gridStyle: 'solid', precision: 0,
+    resistanceRange: { min: 0, max: 100 }, showValues: false, showResistanceRanks: true, gridStyle: 'solid', precision: 0,
     metric: 'total', differenceMetric: 'difference', requestedBaselineId: 'none', selectedResistance: null,
     yAxisMode: 'zero', yAxisDraft: { min: '0', max: '4000' },
   }
@@ -66,6 +67,7 @@ export function parseSurtrDpsPageState(value: unknown): SurtrDpsPageState {
     barStep: source.barStep === 'ratings' || integer(source.barStep, 1, 100) ? source.barStep : defaults.barStep,
     resistanceRange,
     showValues: booleanOr(source.showValues, defaults.showValues),
+    showResistanceRanks: booleanOr(source.showResistanceRanks, defaults.showResistanceRanks),
     gridStyle: option(source.gridStyle, ['none', 'dashed', 'solid'], defaults.gridStyle),
     precision: integerOr(source.precision, 0, 3, defaults.precision),
     metric: option(source.metric, ['total', 'difference', 'percent'], defaults.metric),

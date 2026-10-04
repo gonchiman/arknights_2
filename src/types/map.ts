@@ -6,12 +6,39 @@ export type MapFeatureId =
   | 'hole' | 'healing' | 'defup' | 'grass' | 'gazebo' | 'bigforce' | 'corrosion' | 'infection' | 'volcano'
   | 'emp' | 'dsbell' | 'crate'
 
+export const MAP_ENEMY_IMMUNITY_KEYS = [
+  'stunImmune', 'silenceImmune', 'sleepImmune', 'frozenImmune', 'levitateImmune',
+  'disarmedCombatImmune', 'fearedImmune', 'palsyImmune', 'attractImmune',
+] as const
+
 export interface MapEnemyBase {
   name: string
   hp: number | null
   attack: number | null
   defense: number | null
   resistance: number | null
+  moveSpeed?: number | null
+  attackInterval?: number | null
+  weight?: number | null
+  levelType?: string | null
+  motion?: string | null
+  attackWay?: string | null
+  damageTypes?: string[] | null
+  immunities?: Record<string, boolean | null> | null
+}
+
+/** One enemy and route combination used by a positive-count main-wave spawn. */
+export interface MapEnemyRoute {
+  enemyId: string
+  routeIndex: number | null
+  /** Positive fixed waits in checkpoint order; null means the route settings are unavailable. */
+  fixedWaits: number[] | null
+  spawnKind: 'fixed' | 'conditional' | 'unknown'
+  /** Configured count for this enemy / route / spawn kind, including conditional spawns. */
+  spawnCount?: number | null
+  /** Intervals of multi-enemy spawn actions; null when any required interval is unknown. */
+  spawnIntervals?: number[] | null
+  entrance?: string | null
 }
 
 export interface MapSummary {
@@ -29,6 +56,10 @@ export interface MapSummary {
   features?: MapFeatureId[] | null
   spawnCount: number | null
   enemyIds: string[]
+  /** Undefined in legacy indexes, null when the spawn structure is unavailable, [] for no spawns. */
+  enemyRoutes?: MapEnemyRoute[] | null
+  /** Main-wave configured counts across all routes; null counts remain unknown. */
+  enemySpawnCounts?: Record<string, number | null> | null
   reasons: string[]
   detailFile: string | null
 }

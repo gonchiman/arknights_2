@@ -1,0 +1,326 @@
+import { useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
+import {
+  buildSurtrRemnantCountEndpoints, buildSurtrRemnantCountIntervals,
+  type SurtrRemnantChartKind, type SurtrRemnantChartSeries, type SurtrRemnantCountInterval,
+} from '../lib/surtrRemnantChart'
+import { buildSurtrRemnantCtSamples, calculateSurtrRemnantAttacks, type SurtrRemnantAttackAssumptions } from '../lib/surtrRemnantAttacks'
+import './SurtrRemnantAttackChart.css'
+
+export interface SurtrRemnantAttackChartProps {
+  series: readonly SurtrRemnantChartSeries[]
+  assumptions: SurtrRemnantAttackAssumptions
+  samples: readonly number[]
+  kind: SurtrRemnantChartKind
+  selectedCt?: number
+  onSelectCt?: (ct: number) => void
+  showValues?: boolean
+  showBoundaries?: boolean
+  ctLimit?: number
+  width?: number
+  height?: number
+  image?: boolean
+}
+
+const NATURAL_CHART_HEIGHT = 334
+const CT_EPSILON = 1e-9
+const ctFormatter = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
+const formatCt = (ct: number) => ctFormatter.format(ct)
+const exactCtFormatter = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 12 })
+const formatBoundaryCt = (ct: number) => `${Math.abs(ct - Number(ct.toFixed(3))) > Number.EPSILON * Math.max(1, Math.abs(ct)) * 2 ? '≈' : ''}${formatCt(ct)}`
+const countLabel = (count: number | null) => count === null ? '—（範囲外）' : `${count} 回`
+const chartLabels: Record<SurtrRemnantChartKind, string> = {
+  'grouped-bar': '集合棒グラフ', step: '階段グラフ', bands: '回数の区間帯',
+}
+
+function lineStyle(item: SurtrRemnantChartSeries) {
+  return item.model.moduleType === null ? { width: 4, dash: '2 4', radius: 4 }
+    : item.model.moduleType === 'X' ? { width: 2.5, dash: '8 5', radius: 3 }
+      : { width: 2.5, dash: undefined, radius: 3 }
+}
+
+function nearestCt(values: readonly number[], value: number): number {
+  return values.reduce((closest, ct) => Math.abs(ct - value) < Math.abs(closest - value) ? ct : closest, values[0] ?? 0)
+}
+
+function intervalLabel(interval: SurtrRemnantCountInterval): string {
+  return `${exactCtFormatter.format(interval.from)} s${interval.includeFrom ? '以上' : 'より大きい'}・${exactCtFormatter.format(interval.to)} s${interval.includeTo ? '以下' : '未満'}：${interval.count} 回`
+}
+
+/** Filter axis labels by their displayed width, preserving both endpoints. */
+function spacedTicks(values: readonly number[], x: (value: number) => number, gap = 12): number[] {
+  if (values.length < 2) return [...values]
+  const last = values.at(-1)!
+  const lastLeft = x(last) - formatCt(last).length * 3.5
+  let previousRight = -Infinity
+  return values.filter((value, index) => {
+    const half = formatCt(value).length * 3.5
+    const position = x(value)
+    if (index > 0 && index < values.length - 1 && (position - half < previousRight + gap || position + half + gap > lastLeft)) return false
+    previousRight = position + half
+    return true
+  })
+}
+
+function axisTicks(maximum: number, width: number): number[] {
+  const target = maximum / (width < 400 ? 3 : 5)
+  const scale = 10 ** Math.floor(Math.log10(target))
+  const step = ([1, 2, 2.5, 5, 10].find(value => value * scale >= target) ?? 10) * scale
+  const values = Array.from({ length: Math.ceil(maximum / step) }, (_, index) => index * step)
+    .filter(value => value < maximum - CT_EPSILON)
+  return [...values, maximum]
+}
+
+/** CT-specific SVG; the surrounding page owns the legend, conditions and detail dialog. */
+export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, selectedCt, onSelectCt,
+  showValues = true, showBoundaries = false, ctLimit, width: suppliedWidth, height = NATURAL_CHART_HEIGHT, image = false,
+}: SurtrRemnantAttackChartProps) {
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [availableWidth, setAvailableWidth] = useState(720)
+  const [hoveredCt, setHoveredCt] = useState<number | null>(null)
+  const [localSelection, setLocalSelection] = useState<number | null>(null)
+  const titleId = useId()
+  const descriptionId = useId()
+  const helpId = useId()
+  const uniqueId = useId().replace(/:/g, '')
+  const clipId = `surtr-remnant-clip-${uniqueId}`
+  const hatchId = `surtr-remnant-hatch-${uniqueId}`
+  const data = useMemo(() => series.map(item => ({ item,
+    intervals: buildSurtrRemnantCountIntervals(item.model, assumptions),
+    endpoints: buildSurtrRemnantCountEndpoints(item.model, assumptions),
+  })).filter(entry => entry.intervals.length > 0), [series, assumptions])
+  const maximumCt = Number.isFinite(ctLimit) && ctLimit! > 0 ? ctLimit!
+    : Math.max(0, ...data.map(({ item }) => item.model.attackIntervalBefore), ...samples.filter(ct => Number.isFinite(ct) && ct >= 0))
+  const ctDomain = maximumCt || 1
+  const values = useMemo(() => [...new Set(samples.filter(ct => Number.isFinite(ct) && ct >= 0 && ct <= ctDomain + CT_EPSILON))]
+    .sort((a, b) => a - b), [samples, ctDomain])
+  const navigationValues = useMemo(() => kind === 'grouped-bar' ? values : buildSurtrRemnantCtSamples(ctDomain, 0.01), [kind, values, ctDomain])
+  const viewportWidth = Number.isFinite(suppliedWidth) && suppliedWidth! > 0 ? suppliedWidth! : availableWidth
+  const barGroupMinimum = Math.max(48, data.length * 16 + Math.max(0, data.length - 1) * 3 + 14)
+  const width = !image && kind === 'grouped-bar' ? Math.max(viewportWidth, 72 + values.length * barGroupMinimum) : viewportWidth
+  const chartHeight = Math.max(180, height)
+  const compact = width < 480
+  const left = kind === 'bands' ? compact ? 72 : 102 : 54
+  const right = Math.max(left + 1, width - 18)
+  const top = kind === 'bands' ? 42 : 32
+  const bottom = chartHeight - 32
+  const plotWidth = right - left
+  const bandWidth = plotWidth / Math.max(1, values.length)
+  const barGap = Math.min(3, bandWidth / Math.max(1, data.length) / 6)
+  const barWidth = Math.max(0.5, Math.min(22, (bandWidth * 0.82 - barGap * Math.max(0, data.length - 1)) / Math.max(1, data.length)))
+  const groupWidth = data.length * barWidth + Math.max(0, data.length - 1) * barGap
+  const maximumCount = Math.max(0, ...data.flatMap(({ intervals, endpoints }) => [...intervals.map(interval => interval.count), ...endpoints.map(endpoint => endpoint.count)]))
+  const maximumY = Math.max(2, Math.ceil((maximumCount + 1) / 2) * 2)
+  const x = (ct: number) => kind === 'grouped-bar'
+    ? left + (values.indexOf(ct) + 0.5) * bandWidth : left + ct / ctDomain * plotWidth
+  const y = (count: number) => bottom - count / maximumY * (bottom - top)
+  const rawSelection = selectedCt === undefined ? localSelection : selectedCt
+  // A CT between sampled bars has no corresponding group. Do not highlight a different result.
+  const selection = rawSelection !== null && rawSelection !== undefined && Number.isFinite(rawSelection)
+    && rawSelection >= 0 && rawSelection <= ctDomain + CT_EPSILON
+    ? kind === 'grouped-bar' ? values.find(ct => Math.abs(ct - rawSelection) <= CT_EPSILON) ?? null : Math.min(rawSelection, ctDomain) : null
+  const validHover = hoveredCt !== null && hoveredCt >= 0 && hoveredCt <= ctDomain + CT_EPSILON
+    && (kind !== 'grouped-bar' || values.some(ct => Math.abs(ct - hoveredCt) <= CT_EPSILON)) ? hoveredCt : null
+  const activeCt = image ? null : validHover ?? selection
+  const accessibleCt = activeCt ?? navigationValues[0] ?? 0
+  const countsAt = (ct: number) => data.map(({ item }) => ({ item, result: calculateSurtrRemnantAttacks(item.model, ct, assumptions) }))
+  const selectedResults = countsAt(accessibleCt)
+  const accessibleValues = selectedResults.map(({ item, result }) => `${item.label} ${countLabel(result?.hitCount ?? null)}`).join('、')
+  const hasData = data.length > 0 && (kind !== 'grouped-bar' || values.length > 0)
+
+  useLayoutEffect(() => {
+    if (image || suppliedWidth !== undefined) return
+    const viewport = viewportRef.current
+    if (!viewport) return
+    const measure = () => setAvailableWidth(Math.max(1, viewport.clientWidth))
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(viewport)
+    return () => observer.disconnect()
+  }, [image, suppliedWidth])
+
+  function revealCt(ct: number) {
+    const scroll = scrollRef.current
+    if (!scroll || kind !== 'grouped-bar') return
+    const position = x(ct)
+    if (position - bandWidth / 2 < scroll.scrollLeft || position + bandWidth / 2 > scroll.scrollLeft + scroll.clientWidth) {
+      scroll.scrollLeft = Math.max(0, position - scroll.clientWidth / 2)
+    }
+  }
+
+  useLayoutEffect(() => {
+    if (selection !== null && !image) revealCt(selection)
+  }, [selection, image, kind, width])
+
+  function pointerCt(event: PointerEvent<HTMLDivElement>): number | null {
+    if (!hasData) return null
+    const bounds = event.currentTarget.getBoundingClientRect()
+    const point = (event.clientX - bounds.left) / bounds.width * width
+    if (kind === 'grouped-bar') {
+      const index = Math.max(0, Math.min(values.length - 1, Math.floor((point - left) / bandWidth)))
+      return values[index]
+    }
+    return Math.min(ctDomain, Math.round(Math.max(0, Math.min(ctDomain, (point - left) / plotWidth * ctDomain)) * 100) / 100)
+  }
+
+  function selectCt(ct: number) {
+    if (selectedCt === undefined) setLocalSelection(ct)
+    onSelectCt?.(ct)
+    revealCt(ct)
+  }
+
+  function selectKeyboard(event: KeyboardEvent<HTMLDivElement>) {
+    if (!navigationValues.length || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter', ' '].includes(event.key)) return
+    event.preventDefault()
+    if (event.key === 'Enter' || event.key === ' ') { selectCt(accessibleCt); return }
+    const closest = nearestCt(navigationValues, accessibleCt)
+    const index = navigationValues.indexOf(closest)
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? navigationValues.length - 1
+      : index + (event.key === 'ArrowRight' || event.key === 'ArrowUp' ? 1 : -1)
+    const ct = navigationValues[Math.max(0, Math.min(navigationValues.length - 1, next))]
+    setHoveredCt(ct)
+    selectCt(ct)
+  }
+
+  const xTicks = spacedTicks(kind === 'grouped-bar' ? values : axisTicks(ctDomain, plotWidth), x)
+  const description = `${chartLabels[kind]}。命中まで ${formatCt(assumptions.windup)} 秒、残りCTは${assumptions.ctCarry === 'time' ? '時間を維持' : '割合を維持'}、退場と同時の命中は${assumptions.includeRetreatHit ? '含む' : '含まない'}。`
+    + (image ? data.map(({ item, intervals }) => `${item.label}：${intervals.map(intervalLabel).join('、')}`).join('。')
+      : `残りCT ${formatCt(accessibleCt)} 秒：${accessibleValues}。`)
+  const endpointMarker = (ct: number, count: number, included: boolean, item: SurtrRemnantChartSeries) => <circle
+    key={`${ct}:${count}:${included}`} cx={x(ct)} cy={y(count)} r={lineStyle(item).radius}
+    className={included ? 'surtr-remnant-attack-chart-point' : 'surtr-remnant-attack-chart-open-point'}
+    fill={included ? item.color : undefined} stroke={item.color} strokeWidth="1.5" data-chart-image-ink="true">
+    <title>{`${item.label}・CT ${exactCtFormatter.format(ct)} s${included ? 'ちょうど' : 'ではこの回数を含まない'}・${count} 回`}</title>
+  </circle>
+
+  const svg = <svg className={`surtr-remnant-attack-chart-svg${image ? ' is-image' : ''}`} width={width} height={chartHeight}
+    viewBox={`0 0 ${width} ${chartHeight}`} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
+    <title id={titleId}>{`余燼中の命中回数・${chartLabels[kind]}`}</title><desc id={descriptionId}>{description}</desc>
+    {!hasData ? <text className="surtr-remnant-attack-chart-empty" x={width / 2} y={chartHeight / 2} textAnchor="middle">表示できるデータがありません</text> : <>
+      <defs>
+        <clipPath id={clipId}><rect x={left - 5} y={top - 5} width={plotWidth + 10} height={bottom - top + 10} /></clipPath>
+        <pattern id={hatchId} patternUnits="userSpaceOnUse" width="6" height="6">
+          <path className="surtr-remnant-attack-chart-hatch" d="M-1 1 L1 -1 M0 6 L6 0 M5 7 L7 5" />
+        </pattern>
+      </defs>
+      {kind !== 'bands' && <>
+        <text className="surtr-remnant-attack-chart-axis-title" x={left} y="17">命中回数（回）</text>
+        {Array.from({ length: maximumY / 2 + 1 }, (_, index) => index * 2).map(count => <g key={count}>
+          <line className="surtr-remnant-attack-chart-grid" x1={left} x2={right} y1={y(count)} y2={y(count)} />
+          <text className="surtr-remnant-attack-chart-tick" x={left - 10} y={y(count) + 4} textAnchor="end">{count}</text>
+        </g>)}
+      </>}
+      {kind === 'grouped-bar' && <>
+        {activeCt !== null && <rect className="surtr-remnant-attack-chart-active-band" x={x(activeCt) - bandWidth / 2} y={top} width={bandWidth} height={bottom - top} />}
+        {values.map(ct => <g key={ct}>{data.map(({ item }, index) => {
+          const result = calculateSurtrRemnantAttacks(item.model, ct, assumptions)
+          const center = x(ct) - groupWidth / 2 + index * (barWidth + barGap) + barWidth / 2
+          if (!result) return barWidth >= 11 ? <text key={item.id} className="surtr-remnant-attack-chart-empty" x={center} y={bottom - 7} textAnchor="middle">—</text> : null
+          const textWidth = String(result.hitCount).length * 6 + 3
+          return <g key={item.id}>
+            <rect x={center - barWidth / 2} y={y(result.hitCount)} width={barWidth} height={bottom - y(result.hitCount)} fill={item.color} data-chart-image-ink="true">
+              <title>{`${item.label}・残りCT ${formatCt(ct)} s・${result.hitCount} 回`}</title>
+            </rect>
+            {showValues && barWidth >= textWidth && <text className="surtr-remnant-attack-chart-value" x={center} y={y(result.hitCount) - 8} textAnchor="middle" data-chart-image-ink="true">{result.hitCount}</text>}
+          </g>
+        })}</g>)}
+      </>}
+      {kind === 'step' && data.map(({ item, intervals, endpoints }) => {
+        const style = lineStyle(item)
+        const path = intervals.map((interval, index) => `${index === 0 ? `M${x(interval.from)} ${y(interval.count)}` : `V${y(interval.count)}`} H${x(interval.to)}`).join(' ')
+        const boundaries = intervals.slice(0, -1).map((interval, index) => ({ ct: interval.to, before: interval.count, after: intervals[index + 1].count }))
+        const labels = spacedTicks(boundaries.map(boundary => boundary.ct), x, 30)
+        return <g key={item.id}>
+          <path className="surtr-remnant-attack-chart-step" d={path} stroke={item.color} strokeWidth={style.width} strokeDasharray={style.dash} clipPath={`url(#${clipId})`} data-chart-image-ink="true" />
+          {boundaries.map(({ ct, before, after }) => {
+            const actual = calculateSurtrRemnantAttacks(item.model, ct, assumptions)?.hitCount
+            return <g key={ct}>
+              {endpointMarker(ct, before, actual === before, item)}{endpointMarker(ct, after, actual === after, item)}
+              {showBoundaries && labels.includes(ct) && <text className="surtr-remnant-attack-chart-tick" x={Math.max(left + 21, Math.min(right - 24, x(ct)))} y={y(before) - 12} textAnchor="middle" data-chart-image-ink="true">{formatBoundaryCt(ct)}</text>}
+            </g>
+          })}
+          {endpoints.map(({ ct, count }) => {
+            const adjacent = ct === 0 ? intervals[0].count : intervals.at(-1)!.count
+            return <g key={ct}>{count !== adjacent && endpointMarker(ct, adjacent, false, item)}{endpointMarker(ct, count, true, item)}</g>
+          })}
+        </g>
+      })}
+      {kind === 'bands' && <>
+        {xTicks.map(ct => <line key={ct} className="surtr-remnant-attack-chart-grid" x1={x(ct)} x2={x(ct)} y1={top} y2={bottom} />)}
+        {data.map(({ item, intervals, endpoints }, index) => {
+          const row = top + (index + 0.5) * (bottom - top) / data.length
+          const rowHeight = Math.min(44, (bottom - top) / data.length * 0.55)
+          const rowTop = row - rowHeight / 2
+          const rowBottom = row + rowHeight / 2
+          const label = compact ? item.model.moduleType ? `MOD ${item.model.moduleType}` : '未装備' : item.label
+          const boundaryLabels = spacedTicks(intervals.slice(1).map(interval => interval.from), x, 30)
+          return <g key={item.id}>
+            <text className="surtr-remnant-attack-chart-tick" x={left - 10} y={row + 4} textAnchor="end">{label}</text>
+            {intervals.map((interval, intervalIndex) => {
+              const intervalWidth = x(interval.to) - x(interval.from)
+              const textWidth = String(interval.count).length * 7 + 15
+              return <g key={interval.from}>
+                <rect x={x(interval.from)} y={rowTop} width={intervalWidth} height={rowHeight} fill={item.color} fillOpacity={intervalIndex % 2 === 0 ? 0.28 : 0.14} data-chart-image-ink="true">
+                  <title>{`${item.label}・${intervalLabel(interval)}`}</title>
+                </rect>
+                {intervalIndex > 0 && <line className="surtr-remnant-attack-chart-separator" x1={x(interval.from)} x2={x(interval.from)} y1={rowTop} y2={rowBottom} />}
+                {showValues && intervalWidth > textWidth && <text className="surtr-remnant-attack-chart-value" x={(x(interval.from) + x(interval.to)) / 2} y={row + 4} textAnchor="middle" data-chart-image-ink="true">{interval.count}回</text>}
+                {showBoundaries && intervalIndex > 0 && boundaryLabels.includes(interval.from) && <text className="surtr-remnant-attack-chart-tick" x={Math.max(left + 21, Math.min(right - 24, x(interval.from)))} y={rowBottom + 17} textAnchor="middle" data-chart-image-ink="true">{formatBoundaryCt(interval.from)}</text>}
+              </g>
+            })}
+            {endpoints.map(({ ct, count }) => {
+              const adjacent = ct === 0 ? intervals[0].count : intervals.at(-1)!.count
+              if (count === adjacent) return null
+              const anchor = ct === 0 ? 'start' : 'end'
+              return <g key={ct}>
+                <circle cx={x(ct)} cy={rowTop} r="3" fill={item.color} data-chart-image-ink="true"><title>{`${item.label}・CT ${formatCt(ct)} sちょうど・${count} 回`}</title></circle>
+                <text className="surtr-remnant-attack-chart-tick" x={x(ct) + (ct === 0 ? 4 : -4)} y={rowTop - 9} textAnchor={anchor} data-chart-image-ink="true">{formatCt(ct)} s：{count}回</text>
+              </g>
+            })}
+            {item.model.attackIntervalBefore < ctDomain && <g>
+              <rect x={x(item.model.attackIntervalBefore)} y={rowTop} width={right - x(item.model.attackIntervalBefore)} height={rowHeight} fill={`url(#${hatchId})`} />
+              <text className="surtr-remnant-attack-chart-empty" x={(right + x(item.model.attackIntervalBefore)) / 2} y={row + 4} textAnchor="middle">{right - x(item.model.attackIntervalBefore) > 45 ? '範囲外' : '—'}</text>
+            </g>}
+          </g>
+        })}
+      </>}
+      <path className="surtr-remnant-attack-chart-axis" d={kind === 'bands' ? `M${left} ${bottom} H${right}` : `M${left} ${top} V${bottom} H${right}`} />
+      {xTicks.map((ct, index) => <text key={ct} className="surtr-remnant-attack-chart-tick" x={x(ct)} y={bottom + 21}
+        textAnchor={kind !== 'grouped-bar' && index === xTicks.length - 1 ? 'end' : 'middle'}>{formatCt(ct)}</text>)}
+      {kind !== 'grouped-bar' && activeCt !== null && <g aria-hidden="true">
+        <line className="surtr-remnant-attack-chart-guide" x1={x(activeCt)} x2={x(activeCt)} y1={top} y2={bottom} />
+        {kind === 'step' && data.map(({ item }, index) => {
+          const count = calculateSurtrRemnantAttacks(item.model, activeCt, assumptions)?.hitCount
+          return count === undefined ? null : <circle key={item.id} cx={x(activeCt)} cy={y(count)} r={4 + index * 2.5} fill="none" stroke={item.color} strokeWidth="1.75" />
+        })}
+      </g>}
+    </>}
+  </svg>
+
+  if (image) return svg
+  return <div className="surtr-remnant-attack-chart">
+    <div className="surtr-remnant-attack-chart-viewport" ref={viewportRef}>
+      <div className="surtr-remnant-attack-chart-scroll" ref={scrollRef}>
+        <div className="surtr-remnant-attack-chart-frame" style={{ width }} role="slider" tabIndex={hasData ? 0 : -1}
+          aria-label={`余燼中の命中回数・${chartLabels[kind]}・発動直前の残りCT`} aria-describedby={helpId}
+          aria-valuemin={0} aria-valuemax={kind === 'grouped-bar' ? values.at(-1) ?? 0 : ctDomain}
+          aria-valuenow={accessibleCt} aria-valuetext={`残りCT ${formatCt(accessibleCt)} 秒、${accessibleValues}`}
+          aria-disabled={!hasData || undefined}
+          onPointerMove={event => setHoveredCt(pointerCt(event))}
+          onPointerDown={event => { const ct = pointerCt(event); if (ct !== null) { setHoveredCt(ct); selectCt(ct) } }}
+          onPointerLeave={() => setHoveredCt(null)} onFocus={() => setHoveredCt(selection ?? navigationValues[0] ?? null)}
+          onBlur={() => setHoveredCt(null)} onKeyDown={selectKeyboard}>
+          {svg}
+        </div>
+      </div>
+      {validHover !== null && hasData && <div className={`surtr-remnant-attack-chart-tooltip${validHover > ctDomain / 2 ? ' is-left' : ''}`} aria-hidden="true">
+        <strong>残りCT {formatCt(validHover)} s</strong>
+        <dl>{countsAt(validHover).map(({ item, result }) => <div key={item.id}>
+          <dt><i style={{ backgroundColor: item.color }} /><span>{item.label}</span></dt><dd>{countLabel(result?.hitCount ?? null)}</dd>
+        </div>)}</dl>
+      </div>}
+    </div>
+    <p className="surtr-remnant-attack-chart-axis-caption">発動直前の残りCT（s）</p>
+    <span id={helpId} className="surtr-remnant-attack-chart-sr-only">左右の矢印キーで残りCTを選択できます。Homeキーで最初、Endキーで最後のCTを選択します。</span>
+  </div>
+}

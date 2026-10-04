@@ -155,8 +155,10 @@ await saveComparisonChartImage({
 
 スルトS3のDPSと敵の術耐性ヒストグラムを一緒に出力する場合は、[承認済みの配置見本](examples/surtr-dps-histogram-top-right-frame.png)に合わせて `ChartImageStackFrame` を使う。見本の数値・色・条件は入力例であり、データへ固定しない。標準の単独出力の配置は変更しない。
 
+未ブロック／自身でブロックを上下に比較する出力は、[共通ヘッダーの出力見本](examples/surtr-block-comparison-shared-header.png)を参照する。タイトル・凡例・詳細は画像上部の同じ行に1回だけ置き、各グラフにはブロック状態名を表示する。共通の詳細は「特化3・ブロック状態比較」の形式とし、実際のスキルレベルを使う。これは実装から生成した確認用PNGであり、数値の一致は要求しない。更新時はスルトS3の初期比較条件で棒グラフ・術耐性2刻み・範囲0〜20・数値あり・ランク表示を選び、保存画面で「ブロック状態を上下に比較」と16:9を指定して再生成する。
+
 - 各パネルは同じ幅を使い、上から入力順に並べる。既定の幅は960px、パネル間は12px。各パネルの `naturalChartHeight` を保持し、縦横比を全体へ一度だけ適用する。横長の場合は必要な幅を増やす。
-- `informationPlacement: 'top-right-box'` を指定したパネルでは、グラフ内右上の白背景・薄灰枠にタイトル、凡例、条件の順にまとめる。文字や凡例の大きさは標準と同じ。内容と計算結果を隠さない位置・範囲であることを実PNGで確認する。
+- `informationPlacement: 'top-right-box'` を指定したパネルでは、グラフ内右上の白背景・薄灰枠にタイトル、凡例、条件の順にまとめる。描画側はデータ領域の範囲を表すSVG要素（軸のパスや枠の矩形）へ `data-chart-image-plot-area` を付け、情報枠をその右上から内側8pxに置く。ランク帯や軸名より下のデータ領域を基準にし、上部へ情報用の余白を常時確保しない。文字や凡例の大きさは標準と同じ。内容と計算結果を隠さない位置・範囲であることを実PNGで確認する。
 - 右上枠とデータ・数値・平均／中央値の表示が重なる場合だけ、枠の高さをグラフ上部に確保して描画を下げる。自然なグラフ高は維持し、同じ保存対象の間は予約高を減らさない。描画側はデータの棒・線・直接ラベルへ `data-chart-image-ink` を付ける。枠線や補助目盛りは判定対象にせず、折れ線は外接矩形だけでなく実際の経路との交差を判定する。
 - タイトル・条件の折り返しと軸名の高さを計測する。右上枠が自然なグラフ領域に収まらない場合も必要な高さを追加する。文字量とデータを変更したときは、スナップショットと比率を含む `key` でフレームを再マウントする。
 - `render` は `{ width, height, reservedOverflow, onOverflow }` を受け取る。`height` は追加確保分を含む。数値ラベルなどが自然高を超える場合は、描画側で `height - reservedOverflow` を基準に必要な追加高を算出し、`onOverflow(追加高)` で報告する。フレームは各パネルの追加高を個別に確保する。
@@ -176,6 +178,23 @@ await saveComparisonChartImage({
 ```
 
 初期の保存幅・プレビューサイズは `getChartImageStackLayout({ panels: [{ naturalChartHeight: 334 }, { naturalChartHeight: 334 }], aspectRatio })` から取得し、実測後は `onLayout` の幅・高さを使う。確認時は指定なし・16:9、長い凡例・条件、棒の数値あり、ヒストグラムの階級範囲表示を含め、各グラフの軸名やラベルの欠け、情報枠との重なりを確認する。共通枠・サイズの変更では既存の単独出力も確認する。
+
+### 上下比較で共通情報を1回だけ表示する
+
+- `ChartImageStackFrame` の `sharedHeader` に `{ title, legend, conditions }` を渡す。既存の `ChartImageHeading` と標準ヘッダーのCSSを使い、凡例左・タイトル中央・詳細右の配置を維持する。左右の文字量でタイトル位置をずらさない。
+- 各パネルには状態名だけを `title` に渡し、共通のタイトル・凡例・詳細を繰り返さない。ブロック比較のDPSパネルには右上情報枠を使わない。
+- 共通ヘッダーの高さは画像全体へ1回だけ加える。初期サイズにも `headerHeight: CHART_IMAGE_STACK_HEADER_HEIGHT` を渡し、折り返し後は実測値を使う。各パネルの自然なグラフ高と追加ラベル領域は維持する。
+- 併記する術耐性ヒストグラムは、独自のタイトル・条件を既存の情報枠に表示する。`sharedHeader` を指定しない合成出力や単独出力は従来の配置を使う。
+
+```tsx
+// comparisonPanels は利用側で用意する状態名と描画関数を含むパネル配列。
+<ChartImageStackFrame
+  sharedHeader={{ title: 'スルト S3 DPS', legend: <SurtrDpsImageLegend series={series} kind={kind} />,
+    conditions: '特化3・ブロック状態比較' }}
+  panels={comparisonPanels}
+  aspectRatio={aspectRatio}
+/>
+```
 
 ## 画像名
 

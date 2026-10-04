@@ -82,17 +82,17 @@
 .chart-image-frame-heading.is-top-right-box {
   position: absolute;
   z-index: 1;
-  top: 42px;
-  right: 40px;
+  top: var(--chart-image-box-top, 42px);
+  right: var(--chart-image-box-right, 40px);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: 4px;
   width: clamp(240px, 32%, 340px);
   max-width: calc(100% - 72px);
   border: 1px solid #b7b7b7;
-  padding: 8px 10px;
+  padding: 6px 10px;
   background: #fff;
   text-align: right;
 }

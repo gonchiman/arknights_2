@@ -1,0 +1,61 @@
+.enemy-threshold-pie-comparison {
+  container: enemy-threshold-pie-comparison / inline-size;
+  min-width: 0;
+}
+
+.enemy-threshold-pie-condition-grid.enemy-comparison-conditions {
+  padding: 12px;
+  border: 0;
+}
+.enemy-threshold-pie-condition-grid .enemy-comparison-conditions-heading { margin-bottom: 12px; }
+.enemy-threshold-pie-condition-grid .enemy-comparison-condition-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.enemy-threshold-pie-condition-grid .enemy-comparison-condition,
+.enemy-threshold-pie-condition-grid .enemy-comparison-condition + .enemy-comparison-condition {
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.enemy-threshold-pie-condition-grid .enemy-comparison-condition-summary {
+  min-height: 50px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.enemy-threshold-pie-condition-grid .enemy-comparison-condition-name { font-size: 12px; font-weight: 600; }
+.enemy-threshold-pie-condition-grid .enemy-comparison-condition-editor { padding: 8px 10px 0; }
+.enemy-threshold-pie-condition-grid .enemy-threshold-summary { padding-inline: 12px; gap: 10px; }
+.enemy-threshold-pie-condition-grid .enemy-threshold-summary dt { font-size: 11px; gap: 5px; }
+.enemy-threshold-pie-condition-grid .enemy-threshold-percent { font-size: 22px; }
+.enemy-threshold-pie-condition-grid .enemy-threshold-caption { gap: 4px 10px; }
+.enemy-threshold-pie-condition-grid .enemy-threshold-responsive-pie { margin-top: 0; }
+
+@container enemy-threshold-pie-comparison (min-width: 640px) {
+  .enemy-threshold-pie-condition-grid .enemy-comparison-condition-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container enemy-threshold-pie-comparison (min-width: 1000px) {
+  .enemy-threshold-pie-condition-grid .enemy-comparison-condition-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.enemy-threshold-pie-image-grid {
+  display: grid;
+  gap: 24px 16px;
+  align-content: start;
+}
+.enemy-threshold-pie-image-card { min-width: 0; }
+.enemy-threshold-pie-image-condition {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 6px 8px 8px;
+  color: #444;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.enemy-threshold-pie-image-empty { margin: 0; color: #555; font-size: 12px; }

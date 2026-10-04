@@ -5,6 +5,8 @@ import { placeGroupedBarValueLabels } from '../lib/groupedBarValueLabels'
 import { getSurtrDpsResistanceRating, getSurtrDpsResistanceSamples, normalizeSurtrDpsResistanceRange,
   type SurtrDpsBarStep, type SurtrDpsResistanceRange } from '../lib/surtrDpsResistance'
 import { ChartImageFrame } from './ChartImageFrame'
+import { getStatRankBands } from '../lib/statRankBands'
+import { StatRankStrip } from './StatRankStrip'
 import './SurtrDpsChart.css'
 
 export interface SurtrDpsChartSeries {
@@ -30,8 +32,11 @@ export interface SurtrDpsChartProps {
   gridStyle?: 'none' | 'dashed' | 'solid'
   precision?: number
   showValues?: boolean
+  showLegend?: boolean
+  showResistanceRanks?: boolean
   metric?: SurtrDpsChartMetric
   title?: string
+  valueAxisLabel?: string
   yAxis?: SurtrDpsChartYAxis
   selectedResistance?: number | null
   onSelectResistance?: (value: number | null) => void
@@ -96,8 +101,8 @@ function useValueWidths(series: SurtrDpsChartSeries[], precision: number, metric
 }
 
 function getPlot(series: SurtrDpsChartSeries[], width: number, height: number, kind: SurtrDpsChartKind,
-  { precision = 0, metric = 'total', yAxis, barStep = 20, resistanceRange, showValues = false, valueWidths = {} }: Pick<SurtrDpsChartProps,
-    'precision' | 'metric' | 'yAxis' | 'barStep' | 'resistanceRange' | 'showValues'> & { valueWidths?: ValueWidths } = {}) {
+  { precision = 0, metric = 'total', yAxis, barStep = 20, resistanceRange, showValues = false, showResistanceRanks = true, valueWidths = {} }: Pick<SurtrDpsChartProps,
+    'precision' | 'metric' | 'yAxis' | 'barStep' | 'resistanceRange' | 'showValues' | 'showResistanceRanks'> & { valueWidths?: ValueWidths } = {}) {
   const range = normalizeSurtrDpsResistanceRange(resistanceRange)
   const values = series.flatMap((item) => item.points.flatMap((point) => point.value === null ? [] : [point.value]))
   const manualRange = { min: yAxis?.min ?? Number.NaN, max: yAxis?.max ?? Number.NaN }
@@ -117,6 +122,11 @@ function getPlot(series: SurtrDpsChartSeries[], width: number, height: number, k
   const baseTop = 26
   const plotHeight = Math.max(1, height - 28 - baseTop)
   const xValues = [...new Set(series.flatMap((item) => item.points.map((point) => point.x)))].sort((a, b) => a - b)
+  const rankBands = showResistanceRanks && xValues.length ? getStatRankBands({
+    stat: 'magicResistance', chartKind: kind, min: range.min, max: range.max, barValues: xValues,
+  }) : []
+  const rankPointHeight = rankBands.some((band) => band.pointValue !== undefined) ? 12 : 0
+  const rankHeaderHeight = rankBands.length ? 28 + rankPointHeight : 0
   const bandWidth = (right - left) / Math.max(1, xValues.length)
   const seriesCount = Math.max(1, series.length)
   const groupBudget = bandWidth * 0.74
@@ -147,9 +157,9 @@ function getPlot(series: SurtrDpsChartSeries[], width: number, height: number, k
   })
   const extraTop = Math.ceil(placement.extraTop)
   const extraBottom = Math.ceil(placement.extraBottom)
-  const top = baseTop + extraTop
+  const top = baseTop + rankHeaderHeight + extraTop
   const bottom = top + plotHeight
-  const ratingTicks = kind === 'bar' && barStep === 'ratings'
+  const ratingTicks = kind === 'bar' && barStep === 'ratings' && !showResistanceRanks
   const tickExtraHeight = ratingTicks ? RATING_TICK_LINE_HEIGHT : 0
   const tickHalfWidth = (value: number) => Math.max(String(value).length,
     ratingTicks ? getSurtrDpsResistanceRating(value)?.rating.length ?? 0 : 0) * 3.5
@@ -171,9 +181,10 @@ function getPlot(series: SurtrDpsChartSeries[], width: number, height: number, k
   })
   return {
     left, right, top, bottom, ticks, bandWidth, barWidth, barGap, groupWidth, formatValue, formatTick,
-    bars, placement, extraTop, extraBottom, ratingTicks, height: height + extraTop + extraBottom + tickExtraHeight,
+    bars, placement, extraTop, extraBottom, ratingTicks, rankBands, rankTop: baseTop + rankPointHeight,
+    height: height + rankHeaderHeight + extraTop + extraBottom + tickExtraHeight,
     minimum: axis.lowerLimit, maximum: axis.upperLimit,
-    emptyMessage: xValues.length ? null : ratingTicks ? '範囲内に代表値がありません' : '表示できるデータがありません',
+    emptyMessage: xValues.length ? null : kind === 'bar' && barStep === 'ratings' ? '範囲内に代表値がありません' : '表示できるデータがありません',
     xTicks,
     x,
     y: (value: number) => top + relativeY(value),
@@ -200,22 +211,28 @@ function SeriesSwatch({ color, index, kind, image = false }: { color: string; in
 }
 
 function SurtrDpsSvg({ series, kind = 'line', width, height, activeX, gridStyle = 'solid', precision = 0,
-  metric = 'total', title = 'スルト S3 DPS', yAxis, barStep = 20, resistanceRange, layout }: SurtrDpsChartProps & {
+  metric = 'total', title = 'スルト S3 DPS', valueAxisLabel, yAxis, barStep = 20, resistanceRange, showResistanceRanks = true, layout }: SurtrDpsChartProps & {
   width: number; height: number; activeX?: number | null; layout?: ReturnType<typeof getPlot>
 }) {
   const clipId = `surtr-dps-clip-${useId().replace(/:/g, '')}`
-  const plot = layout ?? getPlot(series, width, height, kind, { precision, metric, yAxis, barStep, resistanceRange })
+  const plot = layout ?? getPlot(series, width, height, kind, { precision, metric, yAxis, barStep, resistanceRange, showResistanceRanks })
   const svgHeight = Math.max(height, plot.height)
   const valueById = new Map(plot.bars.map((bar) => [bar.id, bar]))
-  const axisTitle = metric === 'percent' ? '増減率（%）' : metric === 'difference' ? 'DPS差分' : 'DPS'
+  const axisTitle = valueAxisLabel ?? (metric === 'percent' ? '増減率（%）' : metric === 'difference' ? 'DPS差分' : 'DPS')
   if (plot.emptyMessage) return <svg className="surtr-dps-chart-svg" width={width} height={svgHeight} viewBox={`0 0 ${width} ${svgHeight}`}
     role="img" aria-label={`${title}・${plot.emptyMessage}`}>
+    <title>{title}</title>
     <text className="surtr-dps-chart-empty" x={width / 2} y={svgHeight / 2} textAnchor="middle">{plot.emptyMessage}</text>
   </svg>
   return <svg className="surtr-dps-chart-svg" width={width} height={svgHeight} viewBox={`0 0 ${width} ${svgHeight}`}
+    data-resistance-ranks={plot.rankBands.length ? 'header' : 'none'}
     role="img" aria-label={`${title}・${kind === 'bar' ? '棒グラフ' : '折れ線グラフ'}`}>
+    <title>{title}</title>
+    {plot.rankBands.length > 0 && <desc>{`術耐性ランクは${kind === 'bar' ? '各棒のグループ' : '術耐性の数値範囲'}に対応。${plot.rankBands.map((band) => `${band.rating}: ${band.label}`).join('。')}`}</desc>}
     <defs><clipPath id={clipId}><rect x={plot.left} y={plot.top} width={plot.right - plot.left} height={plot.bottom - plot.top} /></clipPath></defs>
     <text className="surtr-dps-chart-axis-title" x={plot.left} y="16">{axisTitle}</text>
+    <StatRankStrip bands={plot.rankBands} left={plot.left} right={plot.right} top={plot.rankTop}
+      title="術耐性ランク" titleY={16} />
     {kind === 'bar' && activeX !== undefined && activeX !== null && <rect className="surtr-dps-chart-active-band"
       x={plot.x(activeX) - plot.bandWidth / 2 + 2} y={plot.top}
       width={Math.max(1, plot.bandWidth - 4)} height={plot.bottom - plot.top} />}
@@ -227,18 +244,18 @@ function SurtrDpsSvg({ series, kind = 'line', width, height, activeX, gridStyle 
       </text>
     </g>)}
     {plot.xTicks.map((tick) => {
-      const rating = plot.ratingTicks ? getSurtrDpsResistanceRating(tick) : null
+      const rating = (plot.ratingTicks || showResistanceRanks) ? getSurtrDpsResistanceRating(tick) : null
       const tickY = plot.bottom + plot.extraBottom + 20
       return <g key={`x-${tick}`}>
       {rating && <title>{`${rating.rating}（${rating.label}）・術耐性 ${tick}`}</title>}
       {kind === 'line' && <line className="surtr-dps-chart-grid surtr-dps-chart-grid-vertical" x1={plot.x(tick)} x2={plot.x(tick)}
         y1={plot.top} y2={plot.bottom} />}
       <text className="surtr-dps-chart-tick" x={plot.x(tick)} y={tickY} textAnchor="middle">
-        {rating ? <><tspan className="surtr-dps-chart-rating" x={plot.x(tick)}>{rating.rating}</tspan>
+        {plot.ratingTicks && rating ? <><tspan className="surtr-dps-chart-rating" x={plot.x(tick)}>{rating.rating}</tspan>
           <tspan x={plot.x(tick)} dy={RATING_TICK_LINE_HEIGHT}>{tick}</tspan></> : tick}
       </text>
     </g>})}
-    <path className="surtr-dps-chart-axis" d={`M ${plot.left} ${plot.top} V ${plot.bottom} H ${plot.right}`} />
+    <path className="surtr-dps-chart-axis" data-chart-image-plot-area="" d={`M ${plot.left} ${plot.top} V ${plot.bottom} H ${plot.right}`} />
     <g clipPath={`url(#${clipId})`}>
     {plot.minimum < 0 && plot.maximum >= 0 && <line className="surtr-dps-chart-zero"
       x1={plot.left} x2={plot.right} y1={plot.y(0)} y2={plot.y(0)} />}
@@ -276,7 +293,7 @@ function SurtrDpsSvg({ series, kind = 'line', width, height, activeX, gridStyle 
 }
 
 export function SurtrDpsChart({ series, kind = 'line', barStep = 20, resistanceRange, gridStyle = 'solid', precision = 0,
-  metric = 'total', title = 'スルト S3 DPS', yAxis, showValues = false, selectedResistance, onSelectResistance }: SurtrDpsChartProps) {
+  metric = 'total', title = 'スルト S3 DPS', valueAxisLabel, yAxis, showValues = false, showLegend = true, showResistanceRanks = true, selectedResistance, onSelectResistance }: SurtrDpsChartProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [availableWidth, setAvailableWidth] = useState(720)
@@ -289,7 +306,7 @@ export function SurtrDpsChart({ series, kind = 'line', barStep = 20, resistanceR
   const valueWidths = useValueWidths(data, precision, metric, kind === 'bar' && showValues)
   const xValues = useMemo(() => [...new Set(data.flatMap((item) => item.points.map((point) => point.x)))].sort((a, b) => a - b), [data])
   const height = availableWidth < 520 ? 290 : NATURAL_CHART_HEIGHT
-  const plotOptions = { precision, metric, yAxis, barStep, resistanceRange: range, showValues, valueWidths }
+  const plotOptions = { precision, metric, yAxis, barStep, resistanceRange: range, showValues, showResistanceRanks, valueWidths }
   const basePlot = getPlot(data, availableWidth, height, kind, plotOptions)
   const maximumValueWidth = showValues ? Math.max(0, ...basePlot.bars.map((bar) => (valueWidths[bar.text] ?? bar.text.length * 7) + 2)) : 0
   const minimumBarWidth = basePlot.left + 18 + Math.max(maximumValueWidth,
@@ -301,7 +318,7 @@ export function SurtrDpsChart({ series, kind = 'line', barStep = 20, resistanceR
   const selectedPoints = data.map((item, index) => ({ item, index, point: item.points.find((point) => point.x === activeX) }))
   const accessibleX = activeX ?? xValues[0] ?? range.min
   const resistanceLabel = (value: number) => {
-    const rating = plot.ratingTicks ? getSurtrDpsResistanceRating(value) : null
+    const rating = (plot.ratingTicks || showResistanceRanks) ? getSurtrDpsResistanceRating(value) : null
     return `術耐性 ${value}${rating ? `・${rating.rating}（${rating.label}）` : ''}`
   }
   const accessibleValue = data.map((item) => {
@@ -364,13 +381,13 @@ export function SurtrDpsChart({ series, kind = 'line', barStep = 20, resistanceR
   }
 
   return <figure className="surtr-dps-chart">
-    <figcaption>
+    {showLegend && <figcaption>
       <ul className="surtr-dps-chart-legend" aria-label="比較する系列">
         {data.map((item, index) => <li key={item.id}>
           <SeriesSwatch color={item.color} index={index} kind={kind} /><span>{item.label}</span>
         </li>)}
       </ul>
-    </figcaption>
+    </figcaption>}
     <div ref={viewportRef} className="surtr-dps-chart-viewport">
       <div ref={scrollRef} className="surtr-dps-chart-scroll">
         <div className="surtr-dps-chart-frame" style={{ width }} role="slider" tabIndex={xValues.length ? 0 : -1}
@@ -386,7 +403,8 @@ export function SurtrDpsChart({ series, kind = 'line', barStep = 20, resistanceR
           onFocus={() => { if (xValues.length) setHoveredX(activeX ?? xValues[0]) }}
           onBlur={() => setHoveredX(null)} onKeyDown={selectKeyboard}>
           <SurtrDpsSvg series={data} kind={kind} barStep={barStep} width={width} height={height} activeX={activeX}
-            resistanceRange={range} gridStyle={gridStyle} precision={precision} metric={metric} title={title} yAxis={yAxis} layout={plot} />
+            showResistanceRanks={showResistanceRanks}
+            resistanceRange={range} gridStyle={gridStyle} precision={precision} metric={metric} title={title} valueAxisLabel={valueAxisLabel} yAxis={yAxis} layout={plot} />
         </div>
       </div>
       {activeX !== null && <div className={`surtr-dps-chart-tooltip${activeX > (range.min + range.max) / 2 ? ' is-left' : ''}`} aria-hidden="true">
@@ -403,11 +421,11 @@ export function SurtrDpsChart({ series, kind = 'line', barStep = 20, resistanceR
 }
 
 export function SurtrDpsChartImage({ series, kind = 'line', barStep = 20, resistanceRange, gridStyle = 'solid', precision = 0,
-  metric = 'total', title = 'スルト S3 DPS', yAxis, showValues = false, selectedResistance, conditions, aspectRatio, onLayout }: SurtrDpsChartImageProps) {
+  metric = 'total', title = 'スルト S3 DPS', valueAxisLabel, yAxis, showValues = false, showResistanceRanks = true, selectedResistance, conditions, aspectRatio, onLayout }: SurtrDpsChartImageProps) {
   const range = useMemo(() => normalizeSurtrDpsResistanceRange(resistanceRange), [resistanceRange?.min, resistanceRange?.max])
   const data = useMemo(() => normalizeSeries(series, kind, barStep, range, selectedResistance), [series, kind, barStep, range, selectedResistance])
   const valueWidths = useValueWidths(data, precision, metric, kind === 'bar' && showValues)
-  const request = JSON.stringify([data, kind, barStep, range, gridStyle, precision, metric, title, yAxis, showValues, conditions, aspectRatio, valueWidths])
+  const request = JSON.stringify([data, kind, barStep, range, gridStyle, precision, metric, title, valueAxisLabel, yAxis, showValues, showResistanceRanks, conditions, aspectRatio, valueWidths])
   const [expansion, setExpansion] = useState({ request, overflow: 0 })
   const overflow = expansion.request === request ? expansion.overflow : 0
   const reserveOverflow = useCallback((required: number) => {
@@ -420,8 +438,8 @@ export function SurtrDpsChartImage({ series, kind = 'line', barStep = 20, resist
     axisTitle="敵の術耐性" naturalChartHeight={NATURAL_CHART_HEIGHT + overflow} aspectRatio={aspectRatio} onLayout={onLayout}
     legend={<SurtrDpsImageLegend series={data} kind={kind} />}>
     {({ width, height }) => <SurtrDpsImagePlot series={data} kind={kind} barStep={barStep} width={width} height={height}
-      resistanceRange={range} gridStyle={gridStyle} precision={precision} metric={metric} title={title} yAxis={yAxis}
-      showValues={showValues} valueWidths={valueWidths} reservedOverflow={overflow} onOverflow={reserveOverflow} />}
+      resistanceRange={range} gridStyle={gridStyle} precision={precision} metric={metric} title={title} valueAxisLabel={valueAxisLabel} yAxis={yAxis}
+      showValues={showValues} showResistanceRanks={showResistanceRanks} valueWidths={valueWidths} reservedOverflow={overflow} onOverflow={reserveOverflow} />}
   </ChartImageFrame>
 }
 

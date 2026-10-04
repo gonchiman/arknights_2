@@ -18,6 +18,7 @@
 .enemy-comparison-conditions-heading h3 span { margin-left: 8px; color: var(--text-muted); font-size: 10px; font-weight: 400; }
 .enemy-comparison-condition + .enemy-comparison-condition { border-top: 1px solid var(--border); }
 .enemy-comparison-condition-summary { padding: 7px 0; }
+.enemy-comparison-condition-content { min-width: 0; }
 .enemy-comparison-condition-description { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
 .enemy-comparison-condition-swatch { flex: 0 0 28px; width: 28px; height: 12px; }
 .enemy-comparison-condition-name { min-width: 0; color: var(--text); font-size: 11px; overflow-wrap: anywhere; }
@@ -56,6 +57,8 @@
   .enemy-comparison-condition-summary { align-items: flex-start; gap: 8px; }
   .enemy-comparison-condition-description { display: grid; grid-template-columns: 28px minmax(0, 1fr); padding-top: 6px; }
   .enemy-comparison-condition-count { grid-column: 2; }
+  .enemy-comparison-condition-description-no-swatch { grid-template-columns: minmax(0, 1fr); }
+  .enemy-comparison-condition-description-no-swatch .enemy-comparison-condition-count { grid-column: 1; }
   .enemy-comparison-condition-actions { gap: 4px; }
   .enemy-comparison-condition-actions > button { padding-inline: 7px; }
 }

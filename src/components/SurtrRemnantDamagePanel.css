@@ -1,0 +1,6 @@
+.surtr-remnant-damage-panel { min-width: 0; }
+.surtr-remnant-damage-conditions { color: var(--text-soft); font-size: 12px; }
+.surtr-remnant-damage-readout { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 20px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.surtr-remnant-damage-values { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; }
+.surtr-remnant-damage-values .surtr-s3-readout-value { min-width: 104px; }
+.surtr-remnant-damage-values strong { font-size: 14px; font-weight: 600; }

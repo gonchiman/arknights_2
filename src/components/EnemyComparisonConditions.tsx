@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { matchesEnemyFilters } from '../lib/enemyData'
 import { formatEnemyComparisonCondition, type EnemyComparisonCondition, type EnemyComparisonSeries } from '../lib/enemyDistributionComparison'
 import { matchesEnemyNumericConditions, parseEnemyNumericFilterValue } from '../lib/enemyNumericFilters'
@@ -8,10 +8,15 @@ import './EnemyComparisonConditions.css'
 import { ENEMY_HISTOGRAM_COUNT_MODES, type EnemyHistogramCountMode } from '../lib/enemyHistogramCounts'
 
 const MAX_CONDITIONS = 4
+type ConditionSeriesSummary = Pick<EnemyComparisonSeries, 'condition' | 'label' | 'count' | 'missingCount'>
 
-export function EnemyComparisonConditions({ conditions, series, onChange, rows, countMode = 'TYPES' }: {
+export function EnemyComparisonConditions({ conditions, series, onChange, rows, countMode = 'TYPES', renderConditionContent, className, showSeriesSwatch = true, showCountsInSummary = true }: {
   conditions: readonly EnemyComparisonCondition[]
-  series: readonly EnemyComparisonSeries[]
+  series: readonly ConditionSeriesSummary[]
+  renderConditionContent?: (condition: EnemyComparisonCondition) => ReactNode
+  className?: string
+  showSeriesSwatch?: boolean
+  showCountsInSummary?: boolean
   onChange: (conditions: EnemyComparisonCondition[]) => void
   rows: readonly EnemyRecord[]
   countMode?: EnemyHistogramCountMode
@@ -49,7 +54,7 @@ export function EnemyComparisonConditions({ conditions, series, onChange, rows, 
     onChange(remaining)
   }
 
-  return <section className="enemy-comparison-conditions" aria-labelledby={headingId}>
+  return <section className={['enemy-comparison-conditions', className].filter(Boolean).join(' ')} aria-labelledby={headingId}>
     <div className="enemy-comparison-conditions-heading">
       <h3 id={headingId}>比較する条件 <span>{conditions.length} / {MAX_CONDITIONS}</span></h3>
       <button type="button" className="enemy-comparison-add" ref={addRef} onClick={addCondition} disabled={conditions.length >= MAX_CONDITIONS}>＋ 比較条件を追加</button>
@@ -62,6 +67,9 @@ export function EnemyComparisonConditions({ conditions, series, onChange, rows, 
         series={series.find((item) => item.condition.id === condition.id)}
         rows={rows}
         countMode={countMode}
+        renderConditionContent={renderConditionContent}
+        showSeriesSwatch={showSeriesSwatch}
+        showCountsInSummary={showCountsInSummary}
         initiallyEditing={condition.id === newConditionId}
         canRemove={conditions.length > 1}
         onApply={(updated) => onChange(conditions.map((current) => current.id === updated.id ? { ...current, filters: updated.filters, numericConditions: updated.numericConditions } : current))}
@@ -71,10 +79,13 @@ export function EnemyComparisonConditions({ conditions, series, onChange, rows, 
   </section>
 }
 
-function ComparisonConditionRow({ condition, index, series, rows, countMode, initiallyEditing, canRemove, onApply, onRemove }: {
+function ComparisonConditionRow({ condition, index, series, rows, countMode, renderConditionContent, showSeriesSwatch, showCountsInSummary, initiallyEditing, canRemove, onApply, onRemove }: {
   condition: EnemyComparisonCondition
   index: number
-  series: EnemyComparisonSeries | undefined
+  series: ConditionSeriesSummary | undefined
+  renderConditionContent?: (condition: EnemyComparisonCondition) => ReactNode
+  showSeriesSwatch: boolean
+  showCountsInSummary: boolean
   rows: readonly EnemyRecord[]
   countMode: EnemyHistogramCountMode
   initiallyEditing: boolean
@@ -110,13 +121,13 @@ function ComparisonConditionRow({ condition, index, series, rows, countMode, ini
 
   return <div className="enemy-comparison-condition" data-comparison-condition-id={condition.id} data-color-index={condition.colorIndex}>
     <div className="enemy-comparison-condition-summary">
-      <div className="enemy-comparison-condition-description">
-        <svg className="enemy-comparison-condition-swatch" viewBox="0 0 28 12" aria-hidden="true" style={{ color: `var(--enemy-comparison-series-${condition.colorIndex + 1})` }}>
+      <div className={`enemy-comparison-condition-description${showSeriesSwatch ? '' : ' enemy-comparison-condition-description-no-swatch'}`}>
+        {showSeriesSwatch && <svg className="enemy-comparison-condition-swatch" viewBox="0 0 28 12" aria-hidden="true" style={{ color: `var(--enemy-comparison-series-${condition.colorIndex + 1})` }}>
           <line x1="0" x2="28" y1="6" y2="6" stroke="currentColor" strokeWidth="2" />
           <circle cx="14" cy="6" r="2.5" fill="currentColor" />
-        </svg>
+        </svg>}
         <span className="enemy-comparison-condition-name">{label}</span>
-        {series && <span className="enemy-comparison-condition-count">有効 {series.count.toLocaleString('ja-JP')}{mode.unit} · 欠損 {series.missingCount.toLocaleString('ja-JP')}{mode.unit}</span>}
+        {showCountsInSummary && series && <span className="enemy-comparison-condition-count">有効 {series.count.toLocaleString('ja-JP')}{mode.unit} · 欠損 {series.missingCount.toLocaleString('ja-JP')}{mode.unit}</span>}
       </div>
       <div className="enemy-comparison-condition-actions">
         <button type="button" className="enemy-comparison-edit" ref={editRef} aria-label={`比較条件${index + 1}を編集`} aria-expanded={editing} aria-controls={editing ? editorId : undefined} onClick={() => {
@@ -157,6 +168,7 @@ function ComparisonConditionRow({ condition, index, series, rows, countMode, ini
         {invalid && <span id={errorId} className="enemy-comparison-condition-error" role="alert">数値条件を確認してください</span>}
       </div>
     </div>}
+    {renderConditionContent && <div className="enemy-comparison-condition-content">{renderConditionContent(condition)}</div>}
   </div>
 }
 
