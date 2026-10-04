@@ -32,3 +32,25 @@
 }
 .surtr-remnant-attack-expectation-conditions { line-height: 1.8; }
 .surtr-remnant-attack-expectation-conditions > span:last-child { flex: 1 1 auto; text-align: right; }
+.surtr-remnant-attack-expectation-block-word { white-space: nowrap; }
+.surtr-remnant-attack-expectation-table-block-comparison th,
+.surtr-remnant-attack-expectation-table-block-comparison td,
+.surtr-remnant-attack-expectation-table-block-details th,
+.surtr-remnant-attack-expectation-table-block-details td { white-space: normal; text-align: center; }
+.surtr-remnant-attack-expectation-table-block-comparison .surtr-remnant-attack-expectation-equipment,
+.surtr-remnant-attack-expectation-table-block-details .surtr-remnant-attack-expectation-equipment { text-align: left; }
+.surtr-remnant-attack-expectation-table-block-comparison .surtr-s3-column-label,
+.surtr-remnant-attack-expectation-table-block-details .surtr-s3-column-label { justify-content: flex-start; gap: 7px; }
+.surtr-remnant-attack-expectation-table-block-comparison .surtr-s3-column-label i,
+.surtr-remnant-attack-expectation-table-block-details .surtr-s3-column-label i { flex-shrink: 0; }
+.surtr-remnant-attack-expectation-block-value { white-space: nowrap !important; }
+.surtr-remnant-attack-expectation-block-value strong { font-size: 14px; font-weight: 500; }
+.surtr-remnant-attack-expectation-interval { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 5px; }
+.surtr-remnant-attack-expectation-interval > span { white-space: nowrap; }
+.surtr-remnant-attack-expectation-table-block-details .surtr-remnant-attack-expectation-block-state { border-bottom: 1px solid var(--border); }
+@media (max-width: 520px) {
+  .surtr-remnant-attack-expectation-table-block-comparison th,
+  .surtr-remnant-attack-expectation-table-block-comparison td { padding: 10px 6px; }
+  .surtr-remnant-attack-expectation-table-block-comparison .surtr-s3-column-label { gap: 4px; }
+  .surtr-remnant-attack-expectation-table-block-comparison .surtr-remnant-attack-expectation-block-value strong { font-size: 12px; }
+}

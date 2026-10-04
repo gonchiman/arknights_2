@@ -10,6 +10,7 @@ let Panel
 let Table
 let Image
 let calculateExpectation
+let imageFilename
 
 before(async () => {
   server = await createServer({
@@ -23,6 +24,7 @@ before(async () => {
   ;({ SurtrRemnantAttackExpectationPanel: Panel } = await server.ssrLoadModule('/src/components/SurtrRemnantAttackExpectationPanel.tsx'))
   ;({ SurtrRemnantAttackExpectationTable: Table } = await server.ssrLoadModule('/src/components/SurtrRemnantAttackExpectationTable.tsx'))
   ;({ SurtrRemnantAttackExpectationTableImage: Image } = await server.ssrLoadModule('/src/components/SurtrRemnantAttackExpectationTableImage.tsx'))
+  ;({ getSurtrRemnantAttackExpectationTableImageFilename: imageFilename } = await server.ssrLoadModule('/src/components/SurtrRemnantAttackExpectationTableImage.tsx'))
   ;({ calculateSurtrRemnantAttackExpectation: calculateExpectation } = await server.ssrLoadModule('/src/lib/surtrRemnantExpectation.ts'))
 })
 
@@ -64,7 +66,7 @@ const meanRows = markup => sectionRows(markup, 'tfoot').filter(row => row[0] ===
 const calculated = (items = comparison, selected = assumptions) => items.map(item => {
   const expectation = calculateExpectation(item.model, selected)
   assert.ok(expectation)
-  return { id: item.id, label: item.label, color: item.color, expectation }
+  return { id: item.id, label: item.label, color: item.color, model: item.model, expectation }
 })
 const renderTable = (items, layout) => renderToStaticMarkup(createElement(Table, { comparison: items, layout }))
 const compact = value => value.replace(/\s+/g, '')
@@ -143,9 +145,11 @@ test('panel 03 shows one horizontal table with all CT ranges, probability calcul
   assert.deepEqual(meanRows(summary), [['期待値', ...defaultMeans]])
   assertConditions(summary, defaultConditions, 10)
   assert.doesNotMatch(summary, /<button|<select|aria-pressed/)
-  assert.match(markup, /<select aria-label="期待回数の表の並び"/)
-  assert.match(markup, /<option value="horizontal" selected="">装備を横に並べる<\/option>/)
-  assert.match(markup, /<option value="vertical">装備を縦に並べる<\/option>/)
+  assert.match(markup, /<select aria-label="期待回数の表示形式"/)
+  assert.match(markup, /<select aria-label="期待値の小数点以下の桁数"/)
+  assert.match(markup, /<option value="4" selected="">4桁<\/option>/)
+  assert.match(markup, /<option value="horizontal" selected="">計算内訳（横並び）<\/option>/)
+  assert.match(markup, /<option value="vertical">計算内訳（縦並び）<\/option>/)
   assert.doesNotMatch(markup, /期待回数の計算対象|期待回数の計算内訳|goldenglow-detail-modal/)
   for (const item of comparison) assert.ok(summary.includes('background-color:' + item.color))
   assert.match(markup, /<button[^>]*aria-haspopup="dialog"[^>]*>画像を保存<\/button>/)
@@ -312,5 +316,116 @@ test('changed live conditions and saved snapshot conditions appear below the tab
     const conditionText = text(sections(saved, 'tfoot')[0])
     assert.doesNotMatch(conditionText, /潜在1|自身は非ブロック|CT秒数維持|命中を含まない/)
     if (layout === 'horizontal') assert.deepEqual(meanRows(saved), meanRows(live))
+  }
+})
+
+const blockingModels = () => [false, true].map(blocking => ({ blocking, comparison: comparison.map(item => ({
+  ...item, model: blocking && item.id === 'X' ? { ...item.model,
+    attackIntervalBefore: 1.25, attackIntervalAfter: 1.25, attackSpeedBefore: 100, attackSpeedAfter: 100,
+  } : { ...item.model },
+})) }))
+const firstTable = markup => {
+  const found = markup.match(/<table[^>]*>([\s\S]*?)<\/table>/)
+  assert.ok(found, 'Missing blocking comparison table')
+  return found[1]
+}
+const blockingConditions = '潜在1・命中まで 0.2 s・CT秒数維持・撤退同時の命中を含まない'
+
+test('both blocking conditions are shown by default and remain independent of the selected live condition', () => {
+  const groups = blockingModels()
+  for (const blocking of [false, true]) {
+    const markup = render({ comparison: groups[Number(blocking)].comparison, blockingComparison: groups, blocking })
+    const summary = firstTable(markup)
+    assert.deepEqual(sectionRows(summary, 'thead'), [['装備', '自身は非ブロック', '対象を自身でブロック']])
+    assert.deepEqual(sectionRows(summary, 'tbody'), [
+      ['未装備', '≈ 6.24 回', '≈ 6.24 回'],
+      ['MOD-X Lv3', '≈ 6.7392 回', '≈ 6.24 回'],
+      ['MOD-Y Lv3', '≈ 9.0031 回', '≈ 9.0031 回'],
+    ])
+    assertConditions(summary, blockingConditions, 3)
+    assert.equal([...markup.matchAll(/<table(?:\s|>)/g)].length, 1)
+    assert.match(markup, /<option value="block-comparison" selected="">ブロック条件別<\/option>/)
+    assert.match(markup, /<option value="block-details">計算条件付き<\/option>/)
+  }
+  const missing = render({ blockingComparison: [{ ...groups[0], comparison: [groups[0].comparison[0]] },
+    { blocking: true, comparison: [{ ...groups[1].comparison[0], model: null }] }] })
+  assert.match(missing, /role="alert"/)
+  assert.doesNotMatch(missing, /<table/)
+})
+
+test('B joins each blocking condition by equipment ID, including when group order differs', () => {
+  const groups = blockingModels().map(group => ({ ...group, comparison: calculated(group.comparison) }))
+  groups[1].comparison.reverse()
+  const markup = renderToStaticMarkup(createElement(Table, {
+    comparison: groups[0].comparison, blockingComparison: [...groups].reverse(), layout: 'block-comparison',
+  }))
+  const rows = sectionRows(firstTable(markup), 'tbody')
+  assert.deepEqual(rows.map(row => row.slice(1)), [
+    ['≈ 6.24 回', '≈ 6.24 回'], ['≈ 6.7392 回', '≈ 6.24 回'], ['≈ 9.0031 回', '≈ 9.0031 回'],
+  ])
+})
+
+test('C and both saved layouts use the captured models, expectations and all-column conditions footer', () => {
+  const groups = blockingModels().map(group => ({ ...group, comparison: calculated(group.comparison) }))
+  const snapshot = structuredClone({ comparison: groups[1].comparison, blockingComparison: groups,
+    potential: 1, blocking: true, assumptions })
+  const detailed = renderToStaticMarkup(createElement(Table, { ...snapshot, layout: 'block-details' }))
+  const bodies = sections(firstTable(detailed), 'tbody').map(rows)
+  assert.equal(bodies.length, 2)
+  assert.deepEqual(bodies.map(group => group[0][0]), ['自身は非ブロック', '対象を自身でブロック'])
+  assert.match(compact(bodies[0][1].join(' ')), /8s1\.157407→1\.157407≈6\.7392回/)
+  assert.match(compact(bodies[1][1].join(' ')), /8s1\.25→1\.25≈6\.24回/)
+  assert.match(compact(bodies[0][2].join(' ')), /9s1\.25→0\.961538≈9\.0031回/)
+  assert.equal([...detailed.matchAll(/scope="rowgroup" rowspan="3"/gi)].length, 2)
+
+  for (const layout of ['block-comparison', 'block-details']) {
+    const image = renderToStaticMarkup(createElement(Image, { ...snapshot, layout }))
+    const summary = firstTable(image)
+    assertConditions(summary, blockingConditions, layout === 'block-comparison' ? 3 : 5)
+    assert.match(text(summary), /6\.7392/)
+    assert.match(text(summary), /対象を自身でブロック/)
+    assert.doesNotMatch(image, /<button|<select/)
+    const filename = imageFilename({ ...snapshot, layout })
+    assert.match(filename, /ブロック状態比較/)
+    assert.match(filename, layout === 'block-comparison' ? /ブロック条件別/ : /計算条件付き/)
+    assert.doesNotMatch(filename, /非ブロック|横並び|縦並び/)
+    assert.equal(filename, imageFilename({ ...snapshot, blocking: false, layout }))
+  }
+  assert.notEqual(imageFilename({ ...snapshot, layout: 'block-comparison' }), imageFilename({ ...snapshot, layout: 'block-details' }))
+})
+
+test('expected counts and their contributions use the selected decimal limit without rounding calculation inputs', () => {
+  const items = calculated()
+  const groups = blockingModels().map(group => ({ ...group, comparison: calculated(group.comparison) }))
+  const before = JSON.stringify({ items, groups })
+  for (const [digits, expected] of [[0, '≈ 9 回'], [2, '≈ 9 回'], [6, '≈ 9.003077 回']]) {
+    for (const layout of ['block-comparison', 'block-details', 'horizontal', 'vertical']) {
+      const summary = firstTable(renderToStaticMarkup(createElement(Table, {
+        comparison: items, blockingComparison: groups, layout, digits,
+      })))
+      assert.ok(text(summary).includes(expected), `${layout}, ${digits} digits: missing ${expected}`)
+      if (layout === 'horizontal' || layout === 'vertical') {
+        assert.ok(text(summary).includes(digits === 0 ? '7 回' : digits === 2 ? '6.92 回' : '6.923077 回'))
+        assert.match(text(summary), /0\.961538/)
+        assert.match(text(summary), /76\.9231%/)
+      }
+      if (layout === 'block-details') assert.match(text(summary), /0\.961538/)
+    }
+  }
+  assert.equal(JSON.stringify({ items, groups }), before)
+})
+
+test('saved tables and filenames retain the captured expected-count decimal limit in every layout', () => {
+  const groups = blockingModels().map(group => ({ ...group, comparison: calculated(group.comparison) }))
+  const snapshot = { comparison: groups[0].comparison, blockingComparison: groups, potential: 1, blocking: false, assumptions }
+  for (const layout of ['block-comparison', 'block-details', 'horizontal', 'vertical']) {
+    const saved = firstTable(renderToStaticMarkup(createElement(Image, { ...snapshot, layout, digits: 2 })))
+    assert.match(text(saved), /≈ 6\.74 回/)
+    assert.doesNotMatch(text(saved), /≈ 6\.7392 回|≈ 9\.0031 回/)
+    assert.match(imageFilename({ ...snapshot, layout, digits: 2 }), /小数2桁/)
+    assert.match(imageFilename({ ...snapshot, layout }), /小数4桁/)
+    assert.notEqual(imageFilename({ ...snapshot, layout, digits: 2 }), imageFilename({ ...snapshot, layout, digits: 6 }))
+    const finer = firstTable(renderToStaticMarkup(createElement(Image, { ...snapshot, layout, digits: 6 })))
+    assert.match(text(finer), /≈ 9\.003077 回/)
   }
 })
