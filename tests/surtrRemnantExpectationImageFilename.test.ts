@@ -12,7 +12,7 @@ const settings: SurtrRemnantExpectationImageConditions = {
 test('expectation filenames describe CT distribution, selected resistances and assumptions', () => {
   const name = getSurtrRemnantExpectationImageFilename(settings)
   for (const part of ['スルト_余燼総ダメージ期待値', '潜在1', '未装備-MODXLv.3-MODYLv.3', '非ブロック',
-    'CT一様', '術耐性0-100刻み20', '予備動作0秒', 'CT秒数維持', '退場時除外', '集合棒', '数値あり', '小数0桁']) {
+    'CT一様', '術耐性0-100刻み20', '予備動作0秒', 'CT秒数維持', '退場時除外', '集合棒', '数値あり', 'ランクなし', '小数0桁']) {
     assert.ok(name.includes(part), part)
   }
   assert.equal(name, getSurtrRemnantExpectationImageFilename({ ...settings }))
@@ -25,12 +25,24 @@ test('all effective expectation calculation and display conditions change the na
     { potential: 6 }, { blocking: true }, { modules: ['MOD Y Lv.2'] }, { modules: [...settings.modules].reverse() },
     { resistances: [0, 25, 50, 75, 100] }, { resistances: [...settings.resistances].reverse() },
     { windup: 0.2 }, { ctCarry: 'ratio' }, { includeRetreatHit: true }, { kind: 'line' },
-    { showValues: false }, { digits: 1 }, { digits: 2 },
+    { showValues: false }, { showResistanceRanks: true }, { digits: 1 }, { digits: 2 },
   ]
   for (const change of changes) {
     const changed = getSurtrRemnantExpectationImageFilename({ ...settings, ...change })
     assert.notEqual(name, changed)
     assert.notEqual(withChartImageAspect(name, 16 / 9), withChartImageAspect(changed, 16 / 9))
+  }
+})
+
+test('rank visibility is identified for both chart kinds and omitted flags preserve old snapshots', () => {
+  for (const kind of ['bar', 'line'] as const) {
+    const legacy = getSurtrRemnantExpectationImageFilename({ ...settings, kind })
+    const hidden = getSurtrRemnantExpectationImageFilename({ ...settings, kind, showResistanceRanks: false })
+    const shown = getSurtrRemnantExpectationImageFilename({ ...settings, kind, showResistanceRanks: true })
+    assert.equal(legacy, hidden)
+    assert.match(hidden, /ランクなし/)
+    assert.match(shown, /ランクあり/)
+    assert.notEqual(hidden, shown)
   }
 })
 

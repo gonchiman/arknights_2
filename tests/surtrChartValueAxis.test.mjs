@@ -7,6 +7,7 @@ import react from '@vitejs/plugin-react'
 
 let server
 let charts
+let remnantImages
 
 before(async () => {
   server = await createServer({
@@ -18,6 +19,7 @@ before(async () => {
     appType: 'custom',
   })
   charts = await server.ssrLoadModule('/src/components/SurtrDpsChart.tsx')
+  remnantImages = await server.ssrLoadModule('/src/components/SurtrRemnantExpectationChartImage.tsx')
 })
 after(async () => { await server?.close() })
 
@@ -103,5 +105,31 @@ test('custom title also identifies empty screen and image plots', () => {
     assert.ok(markup.includes(`<title>${customTitle}</title>`))
     assert.ok(markup.includes(`aria-label="${customTitle}・表示できるデータがありません"`))
     assert.doesNotMatch(markup, /スルト S3 DPS/)
+  }
+})
+
+test('remnant expectation PNG and preview retain the captured rank visibility for both chart kinds', () => {
+  const props = {
+    id: 'remnant-ranks', resistanceStep: 20, resistances: [0, 20, 40, 60, 80, 100],
+    potential: 1, blocking: false,
+    assumptions: { windup: 0, ctCarry: 'time', includeRetreatHit: false },
+    showValues: true, digits: 2,
+  }
+  for (const component of [remnantImages.SurtrRemnantExpectationChartImage, remnantImages.SurtrRemnantExpectationChartImagePreview]) {
+    for (const kind of ['bar', 'line']) {
+      for (const aspectRatio of [undefined, 16 / 9]) {
+        const shown = render(component, { ...props, kind, aspectRatio, showResistanceRanks: true })
+        const hidden = render(component, { ...props, kind, aspectRatio, showResistanceRanks: false })
+        const legacy = render(component, { ...props, kind, aspectRatio })
+        assert.match(shown, /data-resistance-ranks="header"/)
+        assert.match(shown, /術耐性ランクは/)
+        assert.match(hidden, /data-resistance-ranks="none"/)
+        assert.doesNotMatch(hidden, /術耐性ランクは/)
+        assert.match(legacy, /data-resistance-ranks="none"/)
+        assert.equal(axisLabel(shown), customLabel)
+        assert.equal(plotMarks(shown).length, plotMarks(hidden).length)
+        assert.ok(plotMarks(shown).length > 0)
+      }
+    }
   }
 })

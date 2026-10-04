@@ -8,6 +8,7 @@ export interface SurtrRemnantExpectationImageConditions extends SurtrRemnantAtta
   resistances: readonly number[]
   kind: 'bar' | 'line'
   showValues: boolean
+  showResistanceRanks?: boolean
   digits: number
 }
 
@@ -23,6 +24,7 @@ export function getSurtrRemnantExpectationImageFilename(settings: SurtrRemnantEx
     settings.includeRetreatHit ? '退場時含む' : '退場時除外',
     settings.kind === 'bar' ? '集合棒' : '折れ線',
     settings.kind === 'bar' && settings.showValues && '数値あり',
+    settings.showResistanceRanks ? 'ランクあり' : 'ランクなし',
     `小数${settings.digits}桁`,
   ])
 }

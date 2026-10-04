@@ -35,6 +35,7 @@ export function SurtrRemnantDamageExpectationPanel({ comparison, potential, bloc
   const [kind, setKind] = useState<'bar' | 'line'>('bar')
   const [resistanceStep, setResistanceStep] = useState(20)
   const [showValues, setShowValues] = useState(false)
+  const [showResistanceRanks, setShowResistanceRanks] = useState(true)
   const [hiddenSeries, setHiddenSeries] = useState<string[]>([])
   const [selectedResistance, setSelectedResistance] = useState<number | null>(60)
   const [image, setImage] = useState<ImageSnapshot | null>(null)
@@ -63,9 +64,9 @@ export function SurtrRemnantDamageExpectationPanel({ comparison, potential, bloc
     if (!canOutput) return
     setFeedback(null)
     setImage({ id: String(++nextSnapshot.current), series: structuredClone(series), kind, resistanceStep, resistances: [...resistances],
-      potential, blocking, assumptions: { ...assumptions }, showValues, digits: 0,
+      potential, blocking, assumptions: { ...assumptions }, showValues, showResistanceRanks, digits: 0,
       filename: getSurtrRemnantExpectationImageFilename({ potential, blocking, modules: visible.map(item => item.label),
-        resistances, ...assumptions, kind, showValues, digits: 0 }),
+        resistances, ...assumptions, kind, showValues, showResistanceRanks, digits: 0 }),
     })
   }
   const saveImage = async (filename: string, ratio?: number) => {
@@ -92,6 +93,8 @@ export function SurtrRemnantDamageExpectationPanel({ comparison, potential, bloc
         {kind === 'bar' && <><label className="surtr-s3-output-control"><span>術耐性の刻み</span><select aria-label="期待値の術耐性の刻み" value={resistanceStep}
           onChange={event => setResistanceStep(Number(event.target.value))}><option value="20">20</option><option value="50">50</option></select></label>
           <label className="surtr-s3-values-toggle"><input type="checkbox" checked={showValues} onChange={event => setShowValues(event.target.checked)} />数値を表示</label></>}
+        <label className="surtr-s3-values-toggle"><input type="checkbox" checked={showResistanceRanks}
+          onChange={event => setShowResistanceRanks(event.target.checked)} />術耐性ランク表示</label>
       </>}>
       {status || (!canOutput ? <p role="alert">期待値の計算に必要なデータを取得できませんでした。</p> : <>
         <div className="surtr-remnant-damage-expectation-heading"><h3>期待命中回数 × 1回のダメージ</h3>
@@ -119,7 +122,7 @@ export function SurtrRemnantDamageExpectationPanel({ comparison, potential, bloc
             <div className="surtr-remnant-chart-actions"><button type="button" className="button secondary" onClick={openImage} aria-haspopup="dialog">画像を保存</button></div>
           </div>
           <SurtrDpsChart series={series} kind={kind} barStep={resistanceStep} resistanceRange={{ min: 0, max: 100 }} showLegend={false}
-            gridStyle="dashed" precision={0} showValues={showValues} showResistanceRanks={false}
+            gridStyle="dashed" precision={0} showValues={showValues} showResistanceRanks={showResistanceRanks}
             title="余燼中の総ダメージ期待値" valueAxisLabel="総ダメージ期待値" yAxis={{ mode: 'zero' }}
             selectedResistance={resistance} onSelectResistance={setSelectedResistance} />
         </div>

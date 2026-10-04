@@ -14,6 +14,7 @@ export interface SurtrRemnantExpectationChartImageProps {
   blocking: boolean
   assumptions: SurtrRemnantAttackAssumptions
   showValues: boolean
+  showResistanceRanks?: boolean
   digits: number
   aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
@@ -23,13 +24,13 @@ const NATURAL_CHART_HEIGHT = 334
 const TITLE = '余燼中の総ダメージ期待値'
 
 export function SurtrRemnantExpectationChartImage({ id, series, kind, resistanceStep, resistances,
-  potential, blocking, assumptions, showValues, digits, aspectRatio, onLayout }: SurtrRemnantExpectationChartImageProps) {
+  potential, blocking, assumptions, showValues, showResistanceRanks = false, digits, aspectRatio, onLayout }: SurtrRemnantExpectationChartImageProps) {
   const range = useMemo(() => {
     const values = resistances.filter(Number.isFinite)
     return values.length ? { min: Math.min(...values), max: Math.max(...values) } : { min: 0, max: 100 }
   }, [resistances])
   const request = JSON.stringify([id, series, kind, resistanceStep, resistances, potential, blocking,
-    assumptions, showValues, digits, aspectRatio])
+    assumptions, showValues, showResistanceRanks, digits, aspectRatio])
   const [expansion, setExpansion] = useState({ request, overflow: 0 })
   const overflow = expansion.request === request ? expansion.overflow : 0
   const reserveOverflow = useCallback((required: number) => {
@@ -43,7 +44,7 @@ export function SurtrRemnantExpectationChartImage({ id, series, kind, resistance
     {({ width, height }) => <SurtrDpsSnapshotPlot series={series} kind={kind} barStep={resistanceStep}
       resistanceRange={range} gridStyle="dashed" precision={digits} metric="total" title={TITLE}
       valueAxisLabel="総ダメージ期待値" yAxis={{ mode: 'zero' }} showValues={showValues}
-      showResistanceRanks={false} width={width} height={height} reservedOverflow={overflow}
+      showResistanceRanks={showResistanceRanks} width={width} height={height} reservedOverflow={overflow}
       onOverflow={reserveOverflow} />}
   </ChartImageFrame>
 }
