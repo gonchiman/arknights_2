@@ -19,5 +19,6 @@
 .surtr-remnant-expectation-table-image-content .surtr-s3-table-wrap { overflow: visible; }
 .surtr-remnant-expectation-table-image-content table { box-sizing: border-box; width: 100%; min-width: 0 !important; }
 .surtr-remnant-expectation-table-image-content thead th { white-space: normal; overflow-wrap: anywhere; }
+.surtr-remnant-expectation-table-image-content tbody th { white-space: normal; overflow-wrap: anywhere; }
 .surtr-remnant-expectation-table-image-content td { white-space: normal; overflow-wrap: anywhere; }
 .surtr-remnant-expectation-table-image-error { margin: 0; color: var(--danger, #a02d37); font-size: 12px; }

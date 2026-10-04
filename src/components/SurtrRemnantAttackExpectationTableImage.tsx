@@ -3,7 +3,7 @@ import { createChartImageFilename } from '../lib/chartImageFilename'
 import { getTableImageDimensions, parseTableImageAspect, type TableImageAspect } from '../lib/tableImageAspect'
 import type { SurtrRemnantAttackAssumptions } from '../lib/surtrRemnantAttacks'
 import { SurtrRemnantAttackExpectationTable, SurtrRemnantAttackExpectationConditions, type SurtrRemnantAttackExpectationTableLayout,
-  type SurtrRemnantExpectationComparisonResult } from './SurtrRemnantAttackExpectationTable'
+  type SurtrRemnantExpectationComparisonResult, type SurtrRemnantExpectationBlockingComparison } from './SurtrRemnantAttackExpectationTable'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './SurtrDurationChart.css'
 import './SurtrRemnantAttackExpectationTableImage.css'
@@ -14,6 +14,8 @@ export interface SurtrRemnantAttackExpectationTableImageSnapshot {
   blocking: boolean
   assumptions: SurtrRemnantAttackAssumptions
   layout?: SurtrRemnantAttackExpectationTableLayout
+  blockingComparison?: SurtrRemnantExpectationBlockingComparison[]
+  digits?: number
 }
 
 export interface SurtrRemnantAttackExpectationTableImageProps extends SurtrRemnantAttackExpectationTableImageSnapshot {
@@ -31,9 +33,14 @@ export interface SurtrRemnantAttackExpectationTableImageSaveOptions {
 }
 
 const TITLE = '余燼中の命中回数期待値'
+const isBlockingComparisonLayout = (layout?: SurtrRemnantAttackExpectationTableLayout) =>
+  layout === 'block-comparison' || layout === 'block-details'
+const layoutLabels: Record<SurtrRemnantAttackExpectationTableLayout, string> = {
+  horizontal: '横並び', vertical: '縦並び', 'block-comparison': 'ブロック条件別', 'block-details': '計算条件付き',
+}
 const initialWidthFor = (comparison: readonly SurtrRemnantExpectationComparisonResult[],
-  layout: SurtrRemnantAttackExpectationTableLayout = 'horizontal') => layout === 'vertical'
-    ? 960 : Math.max(1060, 90 + comparison.length * 280)
+  layout: SurtrRemnantAttackExpectationTableLayout = 'horizontal') => layout === 'horizontal'
+    ? Math.max(1060, 90 + comparison.length * 280) : 960
 
 function tableAspect(aspectRatio?: number): TableImageAspect | null {
   if (aspectRatio === undefined) return null
@@ -51,11 +58,16 @@ function tableAspect(aspectRatio?: number): TableImageAspect | null {
 }
 
 export function getSurtrRemnantAttackExpectationTableImageFilename(snapshot: SurtrRemnantAttackExpectationTableImageSnapshot): string {
+  const compareBlocking = isBlockingComparisonLayout(snapshot.layout)
+  const moduleLabels = compareBlocking
+    ? [...new Set(snapshot.blockingComparison?.flatMap(group => group.comparison.map(item => item.label)) ?? [])]
+    : snapshot.comparison.map(item => item.label)
   return createChartImageFilename('スルト_余燼命中回数期待値_比較表', [
     `潜在${snapshot.potential}`,
-    snapshot.comparison.map(item => item.label).join('-'),
-    snapshot.blocking ? 'ブロック中' : '非ブロック',
-    snapshot.layout === 'vertical' ? '縦並び' : '横並び',
+    moduleLabels.join('-'),
+    compareBlocking ? 'ブロック状態比較' : snapshot.blocking ? 'ブロック中' : '非ブロック',
+    layoutLabels[snapshot.layout ?? 'horizontal'],
+    `小数${snapshot.digits ?? 4}桁`,
     'CT一様',
     `予備動作${snapshot.assumptions.windup}秒`,
     snapshot.assumptions.ctCarry === 'time' ? 'CT秒数維持' : 'CT割合維持',
@@ -63,11 +75,11 @@ export function getSurtrRemnantAttackExpectationTableImageFilename(snapshot: Sur
   ])
 }
 
-export function SurtrRemnantAttackExpectationTableImage({ comparison, potential, blocking, assumptions, layout = 'horizontal',
+export function SurtrRemnantAttackExpectationTableImage({ comparison, potential, blocking, assumptions, layout = 'horizontal', blockingComparison, digits = 4,
   aspectRatio, exporting = false, onLayout, onLayoutError }: SurtrRemnantAttackExpectationTableImageProps) {
   const imageRef = useRef<HTMLElement>(null)
   const initialWidth = initialWidthFor(comparison, layout)
-  const snapshotKey = JSON.stringify([comparison, potential, blocking, assumptions, layout])
+  const snapshotKey = JSON.stringify([comparison, potential, blocking, assumptions, layout, blockingComparison, digits])
   useLayoutEffect(() => {
     const image = imageRef.current
     const table = image?.querySelector('table')
@@ -113,8 +125,9 @@ export function SurtrRemnantAttackExpectationTableImage({ comparison, potential,
   return <figure ref={imageRef} className="surtr-remnant-expectation-table-image" data-table-layout={layout}
     style={{ width: initialWidth }} aria-label={TITLE}>
     <div className="surtr-remnant-expectation-table-image-content">
-      <SurtrRemnantAttackExpectationTable comparison={comparison} layout={layout}
-        footer={<SurtrRemnantAttackExpectationConditions potential={potential} blocking={blocking} assumptions={assumptions} />} />
+      <SurtrRemnantAttackExpectationTable comparison={comparison} layout={layout} blockingComparison={blockingComparison} digits={digits}
+        footer={<SurtrRemnantAttackExpectationConditions potential={potential}
+          blocking={isBlockingComparisonLayout(layout) ? undefined : blocking} assumptions={assumptions} />} />
     </div>
   </figure>
 }
@@ -160,12 +173,14 @@ function ImagePreview(props: Omit<SurtrRemnantAttackExpectationTableImageProps, 
 
 export function SurtrRemnantAttackExpectationTableImagePreview(props: Omit<SurtrRemnantAttackExpectationTableImageProps, 'onLayout' | 'exporting'>) {
   return <ImagePreview key={JSON.stringify([props.comparison, props.potential, props.blocking, props.assumptions,
-    props.layout ?? 'horizontal', props.aspectRatio])} {...props} />
+    props.layout ?? 'horizontal', props.blockingComparison, props.digits ?? 4, props.aspectRatio])} {...props} />
 }
 
 export async function saveSurtrRemnantAttackExpectationTableImage({ snapshot, filename, aspectRatio, writeBlob }: SurtrRemnantAttackExpectationTableImageSaveOptions): Promise<void> {
   tableAspect(aspectRatio)
-  if (!snapshot.comparison.length) throw new Error('保存する装備を選択してください。')
+  const hasComparison = isBlockingComparisonLayout(snapshot.layout)
+    ? snapshot.blockingComparison?.some(group => group.comparison.length > 0) : snapshot.comparison.length > 0
+  if (!hasComparison) throw new Error('保存する装備を選択してください。')
   let layoutError: unknown = null
   await document.fonts.ready
   try {

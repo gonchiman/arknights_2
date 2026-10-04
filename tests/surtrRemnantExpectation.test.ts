@@ -73,6 +73,78 @@ test('X固有の1.157407…秒までを含め、テーブル刻み・他MODの1.
   close(result.expectedHitCount, 6.7392)
 })
 
+test('潜在1・3の両ブロック状態を独立導出し、初期のブロック選択に依存しない', () => {
+  const record = createRecord()
+  const modules = [
+    { id: '', type: null },
+    { id: 'uniequip_002_surtr', type: 'X' },
+    { id: 'uniequip_003_surtr', type: 'Y' },
+  ] as const
+  const expectedMeans = [
+    { potential: 1, nonBlocking: [6.24, 6.7392, 9.003076923076923], blocking: [6.24, 6.24, 9.003076923076923] },
+    { potential: 3, nonBlocking: [7.04, 7.6032, 10.064615384615385], blocking: [7.04, 7.04, 10.064615384615385] },
+  ]
+  for (const entry of expectedMeans) {
+    const comparisons = [false, true].map(initialBlocking => {
+      const settings = { ...defaults, potential: entry.potential, blocking: initialBlocking }
+      const before = structuredClone({ record, settings })
+      const states = [false, true].map(blocking => modules.map(({ id, type }, index) => {
+        const attacks = deriveSurtrRemnantAttackModel(record, { ...settings, blocking }, id, 3)
+        assert.ok(attacks)
+        assert.equal(attacks.moduleType, type)
+        const intervalBefore = type === 'X' && !blocking ? 1.25 / 1.08 : 1.25
+        const intervalAfter = type === 'Y' ? 1.25 / 1.3 : intervalBefore
+        const duration = (entry.potential === 3 ? 9 : 8) + (type === 'Y' ? 1 : 0)
+        close(attacks.attackIntervalBefore, intervalBefore)
+        close(attacks.attackIntervalAfter, intervalAfter)
+        assert.equal(attacks.remnantDuration, duration)
+        const result = calculateSurtrRemnantAttackExpectation(attacks, assumptions)
+        assert.ok(result)
+        close(result.expectedHitCount, (blocking ? entry.blocking : entry.nonBlocking)[index])
+        assert.equal(result.remainingCtLimit, attacks.attackIntervalBefore)
+        close(result.probabilities.reduce((sum, value) => sum + value.probability, 0), 1)
+        return { attacks, result }
+      }))
+      assert.deepEqual({ record, settings }, before)
+      return states
+    })
+    assert.deepEqual(comparisons[0], comparisons[1])
+  }
+})
+
+test('両ブロック状態で命中準備時間・CT引継ぎを変更しても、各MOD自身の発動前CT域を平均する', () => {
+  // Independent analytical means for a 0.45 s windup. With time carry, Y's
+  // 1.25 s initial CT window spans more than one 25/26 s attack period; ratio
+  // carry instead maps that entire window to one post-activation period.
+  const expected = [
+    { potential: 1, time: [6.04, 6.5232, 8.686153846153846], ratio: [6.04, 6.5232, 8.892] },
+    { potential: 3, time: [6.84, 7.3872, 9.716923076923077], ratio: [6.84, 7.3872, 9.932] },
+  ]
+  for (const entry of expected) {
+    for (const blocking of [false, true]) {
+      for (const ctCarry of ['time', 'ratio'] as const) {
+        const selected = { ...assumptions, windup: 0.45, ctCarry }
+        for (const [index, type] of ([null, 'X', 'Y'] as const).entries()) {
+          const { attacks } = models(type, { potential: entry.potential, blocking })
+          const result = calculateSurtrRemnantAttackExpectation(attacks, selected)
+          assert.ok(result)
+          close(result.expectedHitCount, type === 'X' && blocking ? entry[ctCarry][0] : entry[ctCarry][index])
+          assert.equal(result.remainingCtLimit, attacks.attackIntervalBefore)
+          const ranges = result.probabilities.flatMap(value => value.ctRanges).sort((first, second) => first.from - second.from)
+          assert.equal(ranges[0].from, 0)
+          assert.equal(ranges.at(-1)!.to, attacks.attackIntervalBefore)
+          assert.ok(ranges.slice(1).every((range, rangeIndex) => range.from === ranges[rangeIndex].to))
+          for (const value of result.probabilities) {
+            const width = value.ctRanges.reduce((sum, range) => sum + range.to - range.from, 0)
+            close(value.probability, width / attacks.attackIntervalBefore)
+          }
+          close(result.probabilities.reduce((sum, value) => sum + value.probability, 0), 1)
+        }
+      }
+    }
+  }
+})
+
 test('平均CTでの1回計算ではなく、全CTの階段状の命中回数を平均する', () => {
   const { attacks } = models()
   const result = calculateSurtrRemnantAttackExpectation(attacks, assumptions)!

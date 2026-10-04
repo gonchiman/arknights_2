@@ -120,20 +120,21 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
     level: record?.operatorProfile.phases[2]?.maxLevel ?? 90, trust: 100, potential, blocking,
     skillLevelIndex: Math.max(0, (record?.skillLevels.length ?? 10) - 1),
   }), [record, potential, blocking])
-  const comparison = useMemo<Comparison[]>(() => {
+  const blockingComparison = useMemo<{ blocking: boolean; comparison: Comparison[] }[]>(() => {
     const modules = getOperatorModules(record?.operatorProfile ?? {})
     const types = [null, 'X', 'Y'] as const
     const colors = getModuleComparisonColors(types.map(moduleType => ({ moduleType, potential })))
-    return types.map((type, index) => {
+    return [false, true].map(blockingState => ({ blocking: blockingState, comparison: types.map((type, index) => {
       const moduleIndex = modules.findIndex(module => module.typeName2?.trim().toUpperCase() === type)
       const module = modules[moduleIndex]
       const id = type === null ? '' : module ? getOperatorModuleId(module, moduleIndex) : null
       const valid = type === null || (module && getOperatorModuleLevels(module).includes(3))
       return { id: type ?? 'none', label: type ? `MOD ${type} Lv.3` : '未装備', color: colors[index],
-        model: record && id !== null && valid ? deriveSurtrRemnantAttackModel(record, settings, id, 3) : null,
-        dpsModel: record && id !== null && valid ? deriveSurtrDpsModel(record, settings, id, 3) : null }
-    })
+        model: record && id !== null && valid ? deriveSurtrRemnantAttackModel(record, { ...settings, blocking: blockingState }, id, 3) : null,
+        dpsModel: record && id !== null && valid ? deriveSurtrDpsModel(record, { ...settings, blocking: blockingState }, id, 3) : null }
+    }) }))
   }, [record, settings, potential])
+  const comparison = blockingComparison[blocking ? 1 : 0].comparison
   const models = useMemo(() => comparison.flatMap(item => item.model ? [item.model] : []), [comparison])
   const ctLimit = getSurtrRemnantCtLimit(models)
   const windupLimit = getSurtrRemnantWindupLimit(models)
@@ -321,7 +322,7 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
           </>}
       {feedback && feedback !== 'failed' && <p className="surtr-s3-status" role="status">{feedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
     </CollapsibleCalculatorPanel>
-    <SurtrRemnantAttackExpectationPanel comparison={comparison} potential={potential} blocking={blocking} assumptions={assumptions}
+    <SurtrRemnantAttackExpectationPanel comparison={comparison} blockingComparison={blockingComparison} potential={potential} blocking={blocking} assumptions={assumptions}
       status={!record ? status : missingModel || invalidCalculation ? <p role="alert">計算に必要なMOD・攻撃速度・余燼のデータを取得できませんでした。</p>
         : invalidWindup ? <p className="surtr-s3-status" role="status">計算条件の入力を確認してください。</p> : null} />
     <SurtrRemnantDamageExpectationPanel comparison={comparison} potential={potential} blocking={blocking} assumptions={assumptions}
