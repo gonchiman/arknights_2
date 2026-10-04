@@ -1,0 +1,26 @@
+.surtr-remnant-attack-expectation-table-wrap { min-width: 0; }
+.surtr-remnant-attack-expectation-table { table-layout: fixed; }
+.surtr-remnant-attack-expectation-table th { width: auto; }
+.surtr-remnant-attack-expectation-table th:first-child { width: auto; }
+.surtr-remnant-attack-expectation-table thead th,
+.surtr-remnant-attack-expectation-table tbody th { text-align: center; }
+.surtr-remnant-attack-expectation-table thead th { white-space: normal; }
+.surtr-remnant-attack-expectation-table .surtr-s3-column-label { justify-content: center; white-space: normal; }
+.surtr-remnant-attack-expectation-ct-domain { display: block; margin-top: 5px; color: var(--text-soft); font-size: 11px; font-weight: 400; }
+.surtr-remnant-attack-expectation-table .is-zero { color: var(--text-muted); }
+.surtr-remnant-attack-expectation-table tbody tr:last-child > * { border-bottom: 1px solid var(--border); }
+.surtr-remnant-attack-expectation-table tfoot th,
+.surtr-remnant-attack-expectation-table tfoot td { background: var(--surface-soft); border-bottom: 0; text-align: center; }
+.surtr-remnant-attack-expectation-table tfoot strong { font-size: 14px; font-weight: 600; }
+.surtr-remnant-attack-expectation-range-cell { text-align: center !important; }
+.surtr-remnant-attack-expectation-ranges { display: grid; gap: 4px; }
+.surtr-remnant-attack-expectation-table-horizontal .surtr-remnant-attack-expectation-ranges > span > span { display: block; }
+.surtr-remnant-attack-expectation-probability-calculation { display: block; white-space: normal; overflow-wrap: anywhere; color: var(--text-soft); font-size: 11px; line-height: 1.65; }
+.surtr-remnant-attack-expectation-probability { display: block; margin-top: 4px; }
+.surtr-remnant-attack-expectation-table-vertical .surtr-remnant-attack-expectation-equipment,
+.surtr-remnant-attack-expectation-table-vertical .surtr-remnant-attack-expectation-mean { white-space: normal; background: var(--surface-soft); text-align: center; }
+.surtr-remnant-attack-expectation-table-vertical .surtr-remnant-attack-expectation-mean strong { font-size: 14px; font-weight: 600; }
+.surtr-remnant-attack-expectation-table-vertical tbody .surtr-remnant-attack-expectation-contribution { border-right: 1px solid var(--border); }
+.surtr-remnant-attack-expectation-table-vertical tbody:last-child tr:last-child > *,
+.surtr-remnant-attack-expectation-table-vertical tbody:last-child .surtr-remnant-attack-expectation-equipment,
+.surtr-remnant-attack-expectation-table-vertical tbody:last-child .surtr-remnant-attack-expectation-mean { border-bottom: 0; }

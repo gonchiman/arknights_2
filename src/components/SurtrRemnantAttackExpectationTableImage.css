@@ -1,0 +1,23 @@
+.surtr-remnant-expectation-table-image {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto;
+  flex: none;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  color: #222;
+  font-family: "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+  --surface: #fff;
+  --surface-soft: #f7f7f7;
+  --border: #d6d6d6;
+  --text: #222;
+  --text-soft: #444;
+  --text-muted: #666;
+}
+.surtr-remnant-expectation-table-image-content { min-width: 0; }
+.surtr-remnant-expectation-table-image-content .surtr-s3-table-wrap { overflow: visible; }
+.surtr-remnant-expectation-table-image-content table { box-sizing: border-box; width: 100%; min-width: 0 !important; }
+.surtr-remnant-expectation-table-image-content thead th { white-space: normal; overflow-wrap: anywhere; }
+.surtr-remnant-expectation-table-image-content td { white-space: normal; overflow-wrap: anywhere; }
+.surtr-remnant-expectation-table-image-error { margin: 0; color: var(--danger, #a02d37); font-size: 12px; }
