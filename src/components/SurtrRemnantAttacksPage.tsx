@@ -20,7 +20,7 @@ import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { HelpPopover } from './HelpPopover'
 import { SurtrRemnantAttackChart } from './SurtrRemnantAttackChart'
-import { SurtrRemnantDamagePanel } from './SurtrRemnantDamagePanel'
+import { SurtrRemnantExpectationPanel } from './SurtrRemnantExpectationPanel'
 import { SurtrRemnantAttackChartImage, SurtrRemnantAttackChartImagePreview, type SurtrRemnantAttackChartImageProps } from './SurtrRemnantAttackChartImage'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
@@ -235,7 +235,7 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
               <option value="exclude">含まない</option><option value="include">含む</option>
             </select></label>
           </div>
-          <p>発動直前の残りCTは、次の攻撃を開始するまでの時間です。各MODを同じ秒数で比較します。表は最も長い攻撃間隔以内を、選択した刻みで表示します。各MODの攻撃間隔を超える残りCTは「—」で表示します。</p>
+          <p>発動直前の残りCTは、次の攻撃を開始するまでの時間です。CT別の表では各MODを同じ秒数で比較します。表は最も長い攻撃間隔以内を、選択した刻みで表示します。各MODの攻撃間隔を超える残りCTは「—」で表示します。</p>
           <p>次の攻撃を待っている間に余燼が発動し、対象を攻撃し続けられる状況を試算します。最初の命中は「発動後の残りCT＋攻撃開始から命中まで」、以降は発動後の攻撃間隔ごとに数えます。</p>
           <p>余燼中の攻撃速度と持続時間はゲームデータから取得します。命中までの初期値0.20秒は仮定です。残りCTの引継ぎ、進行中の攻撃動作、フレーム単位の丸めは実機未検証です。</p>
           <p>余燼の発動を0秒とし、S3の準備時間0.6秒は加算しません。外部の攻撃速度補正は含めません。</p>
@@ -320,7 +320,7 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
           </>}
       {feedback && feedback !== 'failed' && <p className="surtr-s3-status" role="status">{feedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
     </CollapsibleCalculatorPanel>
-    <SurtrRemnantDamagePanel comparison={comparison} potential={potential} blocking={blocking} assumptions={assumptions}
+    <SurtrRemnantExpectationPanel comparison={comparison} potential={potential} blocking={blocking} assumptions={assumptions}
       status={!record ? status : missingModel || invalidCalculation ? <p role="alert">計算に必要なMOD・攻撃速度・余燼のデータを取得できませんでした。</p>
         : invalidWindup ? <p className="surtr-s3-status" role="status">計算条件の入力を確認してください。</p> : null} />
     {image && <ChartImageSaveDialog initialFilename={image.filename} getDefaultFilename={ratio => withChartImageAspect(image.filename, ratio)} aspect={aspect} onAspectChange={setAspect}
