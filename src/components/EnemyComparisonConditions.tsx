@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { matchesEnemyFilters } from '../lib/enemyData'
-import { formatEnemyComparisonCondition, type EnemyComparisonCondition, type EnemyComparisonSeries } from '../lib/enemyDistributionComparison'
+import { copyEnemyComparisonCondition, formatEnemyComparisonCondition, type EnemyComparisonCondition, type EnemyComparisonSeries } from '../lib/enemyDistributionComparison'
 import { matchesEnemyNumericConditions, parseEnemyNumericFilterValue } from '../lib/enemyNumericFilters'
 import type { EnemyRecord } from '../types/enemy'
 import { EnemyAnalysisFilters } from './EnemyAnalysisFilters'
@@ -96,7 +96,7 @@ function ComparisonConditionRow({ condition, index, series, rows, countMode, ren
   const editorId = useId()
   const errorId = useId()
   const [editing, setEditing] = useState(initiallyEditing)
-  const [draft, setDraft] = useState(() => copyCondition(condition))
+  const [draft, setDraft] = useState(() => copyEnemyComparisonCondition(condition))
   const [badInput, setBadInput] = useState(false)
   const editorRef = useRef<HTMLDivElement>(null)
   const editRef = useRef<HTMLButtonElement>(null)
@@ -133,7 +133,7 @@ function ComparisonConditionRow({ condition, index, series, rows, countMode, ren
         <button type="button" className="enemy-comparison-edit" ref={editRef} aria-label={`比較条件${index + 1}を編集`} aria-expanded={editing} aria-controls={editing ? editorId : undefined} onClick={() => {
           if (editing) closeEditor()
           else {
-            setDraft(copyCondition(condition))
+            setDraft(copyEnemyComparisonCondition(condition))
             setBadInput(false)
             setEditing(true)
           }
@@ -161,7 +161,7 @@ function ComparisonConditionRow({ condition, index, series, rows, countMode, ren
       <div className="enemy-comparison-editor-actions">
         <button type="button" className="enemy-comparison-apply" disabled={invalid} aria-describedby={invalid ? errorId : undefined} onClick={() => {
           if (invalid) return
-          onApply(copyCondition(draft))
+          onApply(copyEnemyComparisonCondition(draft))
           closeEditor()
         }}>適用</button>
         <button type="button" onClick={closeEditor}>キャンセル</button>
@@ -170,8 +170,4 @@ function ComparisonConditionRow({ condition, index, series, rows, countMode, ren
     </div>}
     {renderConditionContent && <div className="enemy-comparison-condition-content">{renderConditionContent(condition)}</div>}
   </div>
-}
-
-function copyCondition(condition: EnemyComparisonCondition): EnemyComparisonCondition {
-  return { ...condition, filters: { levelType: condition.filters.levelType }, numericConditions: condition.numericConditions.map((item) => ({ ...item })) }
 }

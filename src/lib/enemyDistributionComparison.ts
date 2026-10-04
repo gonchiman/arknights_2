@@ -1,7 +1,9 @@
 import type { EnemyRecord } from '../types/enemy.ts'
 import { createChartImageFilename } from './chartImageFilename.ts'
 import { ENEMY_HISTOGRAM_COUNT_MODES, type EnemyHistogramCountMode, type EnemyHistogramCounts } from './enemyHistogramCounts.ts'
-import { matchesEnemyFilters, type EnemyFilters } from './enemyData.ts'
+import { matchesEnemyFilters } from './enemyData.ts'
+import { copyEnemyLevelSelection, formatEnemyLevelSelection, type EnemyAnalysisFiltersState } from './enemyLevelSelection.ts'
+import type { EnemyLevelType } from '../types/enemy.ts'
 import {
   formatEnemyNumericCondition,
   matchesEnemyNumericConditions,
@@ -18,7 +20,7 @@ import {
 export interface EnemyComparisonCondition {
   id: number
   colorIndex: number
-  filters: Pick<EnemyFilters, 'levelType'>
+  filters: EnemyAnalysisFiltersState
   numericConditions: readonly EnemyNumericCondition[]
   visible: boolean
 }
@@ -52,8 +54,7 @@ export function createEnemyComparisonConditions(): EnemyComparisonCondition[] {
   ]
 }
 
-const LEVEL_LABELS: Record<EnemyFilters['levelType'], string> = {
-  ALL: '全敵',
+const LEVEL_LABELS: Record<EnemyLevelType, string> = {
   NORMAL: '通常敵',
   ELITE: 'エリート敵',
   BOSS: 'ボス',
@@ -62,7 +63,7 @@ const LEVEL_LABELS: Record<EnemyFilters['levelType'], string> = {
 
 export function formatEnemyComparisonCondition(condition: EnemyComparisonCondition): string {
   return [
-    LEVEL_LABELS[condition.filters.levelType],
+    formatEnemyLevelSelection(condition.filters.levelType, LEVEL_LABELS),
     ...condition.numericConditions.map(formatEnemyNumericCondition).filter((label) => label !== null),
   ].join(' · ')
 }
@@ -120,7 +121,8 @@ export function buildEnemyComparisonDistribution(
     }
   })
 
-  const series = conditions.map((condition, index): EnemyComparisonSeries => {
+  const series = conditions.map((original, index): EnemyComparisonSeries => {
+    const condition = copyEnemyComparisonCondition(original)
     const source = matchedRows[index]
     const bins = statistics.bins.map((bin) => ({ ...bin, count: 0 }))
     let count = 0
@@ -160,6 +162,14 @@ export function buildEnemyComparisonDistribution(
     maximum: statistics.histogram?.normalRangeEnd ?? 1,
     observedMaximum: statistics.maximum,
     unionCount: unionRows.length,
+  }
+}
+
+export function copyEnemyComparisonCondition(condition: EnemyComparisonCondition): EnemyComparisonCondition {
+  return {
+    ...condition,
+    filters: { levelType: copyEnemyLevelSelection(condition.filters.levelType) },
+    numericConditions: condition.numericConditions.map((item) => ({ ...item })),
   }
 }
 

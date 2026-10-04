@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { matchesEnemyFilters, type EnemyFilters } from '../lib/enemyData'
+import { matchesEnemyFilters } from '../lib/enemyData'
+import { formatEnemyLevelSelection, type EnemyAnalysisFiltersState } from '../lib/enemyLevelSelection'
 import { formatEnemyNumericCondition, matchesEnemyNumericConditions, type EnemyNumericCondition } from '../lib/enemyNumericFilters'
 import { useEnemyRecords } from '../lib/useEnemyRecords'
-import { ENEMY_LEVEL_LABELS } from './EnemyFilterPanel'
 import { EnemyAnalysisFilters } from './EnemyAnalysisFilters'
 import { EnemyDataContent, EnemyDataNotes } from './EnemyPageShared'
 import { EnemyStatisticsPanel, useEnemyStatisticsControls } from './EnemyStatisticsPanel'
@@ -12,7 +12,7 @@ import './EnemyAnalysis.css'
 
 export function EnemyAnalysis() {
   const { rows, loading, error, retry } = useEnemyRecords()
-  const [filters, setFilters] = useState<Pick<EnemyFilters, 'levelType'>>({ levelType: 'ALL' })
+  const [filters, setFilters] = useState<EnemyAnalysisFiltersState>({ levelType: 'ALL' })
   const [numericConditions, setNumericConditions] = useState<readonly EnemyNumericCondition[]>([])
   const statisticsControls = useEnemyStatisticsControls()
   const scopedRows = useMemo(
@@ -20,7 +20,7 @@ export function EnemyAnalysis() {
     [rows, filters, numericConditions],
   )
   const scopeLabel = [
-    filters.levelType === 'ALL' ? '全敵' : ENEMY_LEVEL_LABELS[filters.levelType],
+    formatEnemyLevelSelection(filters.levelType),
     ...numericConditions.map(formatEnemyNumericCondition),
   ].filter(Boolean).join(' · ')
   const resetFilters = () => {

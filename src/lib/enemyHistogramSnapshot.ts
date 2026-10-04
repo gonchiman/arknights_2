@@ -2,8 +2,7 @@ import { ENEMY_HISTOGRAM_COUNT_MODES, getWeightedEnemyHistogramImageFilename, ty
 import type { EnemyRatingHistogramBin } from './enemyRatingHistogram.ts'
 import { getEnemyRatingNumericRanges } from './enemyStatRatings.ts'
 import type { HistogramScale, NumericStatistics } from './enemyStatistics.ts'
-import type { EnemyFilters } from './enemyData.ts'
-import { ENEMY_LEVEL_TYPES } from '../types/enemy.ts'
+import { copyEnemyLevelSelection, isEnemyLevelSelection, type EnemyLevelSelection } from './enemyLevelSelection.ts'
 import { ENEMY_NUMERIC_FILTER_FIELDS, ENEMY_NUMERIC_FILTER_OPERATORS, parseEnemyNumericFilterValue, type EnemyNumericCondition } from './enemyNumericFilters.ts'
 
 export const ENEMY_HISTOGRAM_SNAPSHOT_KEY = 'arknights-resistance-histogram-snapshot-v1'
@@ -11,7 +10,7 @@ export const ENEMY_HISTOGRAM_SNAPSHOT_EVENT = 'enemy-histogram-snapshot-changed'
 type SnapshotStorage = Pick<Storage, 'getItem' | 'setItem'>
 
 export interface EnemyHistogramEditorSettings {
-  levelType: EnemyFilters['levelType']
+  levelType: EnemyLevelSelection
   numericConditions: readonly EnemyNumericCondition[]
   linearBinWidthInput: string
   linearUpperBoundInput: string
@@ -56,7 +55,7 @@ const nearlyEqual = (left: number, right: number) => Math.abs(left - right) <= M
 
 function validEditorSettings(value: unknown): value is EnemyHistogramEditorSettings {
   const settings = object(value)
-  if (!settings || !(['ALL', ...ENEMY_LEVEL_TYPES] as readonly unknown[]).includes(settings.levelType)
+  if (!settings || !isEnemyLevelSelection(settings.levelType)
     || !Array.isArray(settings.numericConditions) || settings.numericConditions.length > 200
     || !validHistogramInput(settings.linearBinWidthInput) || !validHistogramInput(settings.linearUpperBoundInput)) return false
   const conditionIds = new Set<number>()
@@ -87,7 +86,7 @@ function validHistogramInput(value: unknown): value is string {
 function copyEditorSettings(settings: EnemyHistogramEditorSettings | undefined): EnemyHistogramEditorSettings | undefined {
   if (!settings) return undefined
   return {
-    levelType: settings.levelType,
+    levelType: copyEnemyLevelSelection(settings.levelType),
     numericConditions: settings.numericConditions.map(({ id, field, operator, value }) => ({ id, field, operator, value })),
     linearBinWidthInput: settings.linearBinWidthInput,
     linearUpperBoundInput: settings.linearUpperBoundInput,

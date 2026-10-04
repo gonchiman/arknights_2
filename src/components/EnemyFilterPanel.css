@@ -29,6 +29,7 @@
   padding: 4px 2px;
 }
 .enemy-level-filter .enemy-level-filter-buttons button + button { border-left: 0; }
+.enemy-level-filter-check { display: inline-block; width: 12px; margin-right: 2px; }
 .enemy-level-filter-row > .button { min-height: 36px; padding: 4px 8px; font-size: 11px; }
 .enemy-level-filter button:focus-visible { position: relative; outline: 2px solid var(--text); outline-offset: 2px; }
 

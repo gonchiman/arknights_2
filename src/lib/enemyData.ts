@@ -1,6 +1,7 @@
 import type { EnemyLevelType, EnemyRatings, EnemyRecord, EnemyStats } from '../types/enemy'
 import { DATA_SOURCE_URLS } from './dataSources.ts'
 import { getEnemyStatRating } from './enemyStatRatings.ts'
+import { normalizeEnemyLevelSelection, type EnemyAnalysisFiltersState } from './enemyLevelSelection.ts'
 
 export { getEnemyStatRating } from './enemyStatRatings.ts'
 
@@ -152,8 +153,9 @@ function buildStageAppearanceMap(source: unknown): {
   return { available: true, counts }
 }
 
-export function matchesEnemyFilters(enemy: EnemyRecord, filters: EnemyFilters): boolean {
-  if (filters.levelType !== 'ALL' && enemy.levelType !== filters.levelType) return false
+export function matchesEnemyFilters(enemy: EnemyRecord, filters: Omit<EnemyFilters, 'levelType'> & EnemyAnalysisFiltersState): boolean {
+  const selectedLevels = normalizeEnemyLevelSelection(filters.levelType)
+  if (selectedLevels !== 'ALL' && !selectedLevels.includes(enemy.levelType)) return false
 
   const query = normalizeSearchText(filters.query)
   if (!query) return true
