@@ -99,7 +99,7 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
   const [potential, setPotential] = useState(1)
   const [blocking, setBlocking] = useState(false)
   const [step, setStep] = useState<SurtrRemnantCtStep>(0.1)
-  const [windupInput, setWindupInput] = useState('0.20')
+  const [windupInput, setWindupInput] = useState('0.30')
   const [ctCarry, setCtCarry] = useState<SurtrRemnantAttackAssumptions['ctCarry']>('time')
   const [includeRetreatHit, setIncludeRetreatHit] = useState(false)
   const [pageIndex, setPageIndex] = useState(0)
@@ -239,7 +239,7 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
           </div>
           <p>発動直前の残りCTは、次の攻撃を開始するまでの時間です。CT別の表では各MODを同じ秒数で比較します。表は最も長い攻撃間隔以内を、選択した刻みで表示します。各MODの攻撃間隔を超える残りCTは「—」で表示します。</p>
           <p>次の攻撃を待っている間に余燼が発動し、対象を攻撃し続けられる状況を試算します。最初の命中は「発動後の残りCT＋攻撃開始から命中まで」、以降は発動後の攻撃間隔ごとに数えます。</p>
-          <p>余燼中の攻撃速度と持続時間はゲームデータから取得します。命中までの初期値0.20秒は仮定です。残りCTの引継ぎ、進行中の攻撃動作、フレーム単位の丸めは実機未検証です。</p>
+          <p>余燼中の攻撃速度と持続時間はゲームデータから取得します。命中までの初期値0.30秒は映像確認を踏まえた暫定値です。余燼中の正確な時間、残りCTの引継ぎ、進行中の攻撃動作、フレーム単位の丸めは実機未検証です。</p>
           <p>余燼の発動を0秒とし、S3の準備時間0.6秒は加算しません。外部の攻撃速度補正は含めません。</p>
         </details>
         {invalidWindup && <p className="surtr-remnant-error" id="surtr-remnant-windup-error" role="alert">命中までの時間は0{windupLimit === null ? '' : `〜${windupLimit.toFixed(2)}`}秒で入力してください。</p>}
@@ -255,7 +255,7 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
             <h4>現在の仮定</h4>
             <ul>
               <li>余燼発動時の残りCTは、{ctCarry === 'time' ? '秒数をそのまま引き継ぎます' : '攻撃間隔に対する残りの割合を引き継ぎます'}。</li>
-              <li>攻撃開始から命中までは{invalidWindup ? '入力の確認が必要です' : `${windup.toFixed(2)}秒とします`}。この時間は実測値ではありません。</li>
+              <li>攻撃開始から命中までは{invalidWindup ? '入力の確認が必要です' : `${windup.toFixed(2)}秒とします`}。余燼中の正確な時間は未確認です。</li>
               <li>退場と同時の命中は{includeRetreatHit ? '数えます' : '数えません'}。</li>
             </ul>
             <p>表示される回数は、<strong>「この前提なら何回命中するか」</strong>を示します。実際のゲームで必ずこの回数になると確定した結果ではありません。</p>
