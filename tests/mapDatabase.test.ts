@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { getMapCategory, getMapEnvironment, getMapDetail, loadMapDatabase, loadMapDetail, matchesMapFilters, parseMapDetailShard, parseMapIndex } from '../src/lib/mapDatabase.ts'
 import { getMapSpecifiedSpawnCount } from '../src/lib/mapWaves.ts'
-import type { MapDetailShard, MapFeatureId, MapFilters, MapIndex, MapSummary, MapWave, MapWaveAction } from '../src/types/map.ts'
+import type { MapDetailShard, MapEnemyRoute, MapFeatureId, MapFilters, MapIndex, MapSummary, MapWave, MapWaveAction } from '../src/types/map.ts'
+import { MAP_ENEMY_IMMUNITY_KEYS } from '../src/types/map.ts'
 
 const summary: MapSummary = {
   levelId: 'obt/main/level_main_01-07', stageId: 'main_01-07', code: '1-7', name: '暴君', zoneId: 'main_1',
@@ -196,7 +197,8 @@ test('bundled map index and every lazy shard agree; missing and conditional maps
   assert.equal(oneSeven.code, '1-7')
   assert.equal(oneSeven.name, '暴君')
   assert.equal(oneSeven.spawnCount, 41)
-  assert.deepEqual(generated.enemies.enemy_1002_nsabr,
+  const { name, hp, attack, defense, resistance } = generated.enemies.enemy_1002_nsabr
+  assert.deepEqual({ name, hp, attack, defense, resistance },
     { name: '兵士', hp: 1650, attack: 200, defense: 100, resistance: 0 })
   assert.equal(generated.enemies.enemy_1007_slime_2.defense, 0)
   const detail = getMapDetail(shards.get(oneSeven.detailFile!)!, oneSeven)
@@ -361,4 +363,124 @@ test('route parsing rejects malformed topology and coordinates rather than shift
     { row: NaN, col: 0 }, { row: 0, col: Infinity },
     { row: Number.MAX_SAFE_INTEGER + 1, col: 0 }, { row: 0, col: Number.MIN_SAFE_INTEGER - 1 },
   ]) assert.throws(() => parseRoutes([null, { startPosition }]))
+})
+
+test('enemy-route summary parsing preserves fixed wait precision, conditions and independent cloned records', () => {
+  const enemyRoutes: MapEnemyRoute[] = [
+    { enemyId: 'enemy_a', routeIndex: 0, fixedWaits: [171.289993, 15, 15], spawnKind: 'fixed' },
+    { enemyId: 'enemy_a', routeIndex: 0, fixedWaits: [], spawnKind: 'conditional' },
+    { enemyId: 'enemy_a', routeIndex: null, fixedWaits: null, spawnKind: 'unknown' },
+  ]
+  const parsed = parseMapIndex({ ...index, maps: [{ ...summary, enemyRoutes }] }).maps[0].enemyRoutes!
+  assert.deepEqual(parsed, enemyRoutes)
+  assert.notEqual(parsed, enemyRoutes)
+  assert.notEqual(parsed[0], enemyRoutes[0])
+  assert.notEqual(parsed[0].fixedWaits, enemyRoutes[0].fixedWaits)
+  parsed[0].fixedWaits!.push(20)
+  assert.deepEqual(enemyRoutes[0].fixedWaits, [171.289993, 15, 15])
+})
+
+test('enemy-route summary parsing separates unavailable legacy or missing sources from known empty spawns', () => {
+  const parse = (map: unknown) => parseMapIndex({ ...index, maps: [map] }).maps[0].enemyRoutes
+  assert.equal(parse(summary), null)
+  assert.equal(parse({ ...summary, enemyRoutes: null }), null)
+  assert.deepEqual(parse({ ...summary, enemyRoutes: [] }), [])
+  const missing = { ...summary, status: 'missing', spawnCount: null, enemyIds: [], detailFile: null }
+  assert.equal(parse(missing), null)
+  assert.equal(parse({ ...missing, enemyRoutes: null }), null)
+  assert.throws(() => parse({ ...missing, enemyRoutes: [] }))
+})
+
+test('enemy-route summary parsing rejects malformed, unknown and duplicate enemy-route records', () => {
+  const route = { enemyId: 'enemy_a', routeIndex: 0, fixedWaits: [30], spawnKind: 'fixed' }
+  const parse = (enemyRoutes: unknown) => parseMapIndex({ ...index, maps: [{ ...summary, enemyRoutes }] })
+  for (const bad of [false, 0, 'routes', {}, [null], [undefined], [[]]]) assert.throws(() => parse(bad))
+  for (const patch of [
+    { enemyId: undefined }, { enemyId: '' }, { enemyId: ' ' }, { enemyId: 'unknown' }, { enemyId: '__proto__' },
+    { routeIndex: undefined }, { routeIndex: -1 }, { routeIndex: 1.5 }, { routeIndex: Infinity },
+    { routeIndex: Number.MAX_SAFE_INTEGER + 1 }, { routeIndex: null },
+    { fixedWaits: undefined }, { fixedWaits: {} }, { fixedWaits: '30' }, { fixedWaits: [0] },
+    { fixedWaits: [-1] }, { fixedWaits: [NaN] }, { fixedWaits: [Infinity] }, { fixedWaits: ['30'] },
+    { spawnKind: undefined }, { spawnKind: null }, { spawnKind: 'future' },
+  ]) assert.throws(() => parse([{ ...route, ...patch }]), JSON.stringify(patch))
+  assert.throws(() => parse([route, { ...route }]))
+  assert.throws(() => parse([route, { ...route, fixedWaits: [60] }]))
+  const enriched = { ...index, enemies: { ...index.enemies, unused: index.enemies.enemy_a } }
+  assert.throws(() => parseMapIndex({ ...enriched, maps: [{ ...summary, enemyRoutes: [{ ...route, enemyId: 'unused' }] }] }))
+  assert.deepEqual(parse([{ ...route, fixedWaits: null }]).maps[0].enemyRoutes, [{ ...route, fixedWaits: null }])
+})
+
+test('optional base metadata preserves legacy omission, signed weight, classifications and unknown immunities', () => {
+  const metadata = { moveSpeed: 0, attackInterval: 2.5, weight: -2, levelType: 'ELITE', motion: 'FLY',
+    attackWay: 'ALL', damageTypes: ['PHYSIC', 'MAGIC'], immunities: { stunImmune: false, silenceImmune: true } }
+  const parse = (extra: Record<string, unknown>) => parseMapIndex({ ...index,
+    enemies: { enemy_a: { ...index.enemies.enemy_a, ...extra } } }).enemies.enemy_a
+  const parsed = parse(metadata)
+  assert.deepEqual(parsed.damageTypes, metadata.damageTypes)
+  assert.notEqual(parsed.damageTypes, metadata.damageTypes)
+  assert.deepEqual(parsed.immunities, Object.fromEntries(MAP_ENEMY_IMMUNITY_KEYS.map((key) =>
+    [key, key === 'stunImmune' ? false : key === 'silenceImmune' ? true : null])))
+  assert.notEqual(parsed.immunities, metadata.immunities)
+  assert.equal(parsed.weight, -2)
+  assert.equal(parsed.moveSpeed, 0)
+  for (const key of Object.keys(metadata)) {
+    assert.equal(Object.hasOwn(parse({}), key), false)
+    assert.equal(parse({ [key]: null })[key as keyof typeof parsed], null)
+  }
+})
+
+test('base metadata validation rejects malformed numbers, classifications, damage types and immunity values', () => {
+  const parse = (extra: Record<string, unknown>) => parseMapIndex({ ...index,
+    enemies: { enemy_a: { ...index.enemies.enemy_a, ...extra } } })
+  for (const key of ['moveSpeed', 'attackInterval']) for (const value of [-1, NaN, Infinity, '1', false]) {
+    assert.throws(() => parse({ [key]: value }))
+  }
+  for (const value of [NaN, Infinity, '-2', true]) assert.throws(() => parse({ weight: value }))
+  for (const key of ['levelType', 'motion', 'attackWay']) for (const value of ['', ' ', 1, false, []]) {
+    assert.throws(() => parse({ [key]: value }))
+  }
+  for (const value of ['PHYSIC', {}, [''], ['PHYSIC', 1], ['PHYSIC', 'PHYSIC']]) {
+    assert.throws(() => parse({ damageTypes: value }))
+  }
+  for (const value of [[], false, { stunImmune: 0 }, { stunImmune: 'false' }, { stunImmune: undefined }, { futureImmune: true }]) {
+    assert.throws(() => parse({ immunities: value }))
+  }
+})
+
+test('optional route counts, intervals and entrances preserve legacy omission and cloned source precision', () => {
+  const route: MapEnemyRoute = { enemyId: 'enemy_a', routeIndex: 0, fixedWaits: [], spawnKind: 'fixed',
+    spawnCount: 5, spawnIntervals: [0, 1.25, 1.25], entrance: 'AA' }
+  const parse = (route: unknown) => parseMapIndex({ ...index, maps: [{ ...summary, enemyRoutes: [route] }] }).maps[0].enemyRoutes![0]
+  const parsed = parse(route)
+  assert.deepEqual(parsed, route)
+  assert.notEqual(parsed.spawnIntervals, route.spawnIntervals)
+  const { spawnCount, spawnIntervals, entrance, ...legacy } = route
+  assert.deepEqual(parse(legacy), legacy)
+  for (const key of ['spawnCount', 'spawnIntervals', 'entrance']) {
+    assert.equal(parse({ ...legacy, [key]: null })[key as keyof MapEnemyRoute], null)
+  }
+  for (const patch of [
+    { spawnCount: -1 }, { spawnCount: 1.5 }, { spawnCount: Infinity }, { spawnCount: '5' },
+    { spawnCount: Number.MAX_SAFE_INTEGER + 1 }, { spawnIntervals: {} }, { spawnIntervals: [-1] },
+    { spawnIntervals: [NaN] }, { spawnIntervals: [Infinity] }, { spawnIntervals: [null] }, { spawnIntervals: ['1'] },
+    { entrance: '' }, { entrance: 'a' }, { entrance: 'A1' }, { entrance: 1 },
+    { routeIndex: null, fixedWaits: null, entrance: 'A' },
+  ]) assert.throws(() => parse({ ...route, ...patch }))
+})
+
+test('enemy configured-count parsing preserves unknown totals and rejects unsupported identities or invalid counts', () => {
+  const parse = (enemySpawnCounts: unknown, map: MapSummary = summary) =>
+    parseMapIndex({ ...index, maps: [{ ...map, enemySpawnCounts }] }).maps[0].enemySpawnCounts
+  assert.equal(parse(undefined), null)
+  assert.equal(parse(null), null)
+  assert.deepEqual(parse({}), {})
+  const counts = { enemy_a: 0 }
+  assert.deepEqual(parse(counts), counts)
+  assert.notEqual(parse(counts), counts)
+  assert.deepEqual(parse({ enemy_a: null }), { enemy_a: null })
+  for (const counts of [[], 0, false, { unknown: 3 }, { enemy_a: undefined }, { enemy_a: -1 },
+    { enemy_a: 1.5 }, { enemy_a: Infinity }, { enemy_a: NaN }, { enemy_a: '3' }, { enemy_a: Number.MAX_SAFE_INTEGER + 1 }]) {
+    assert.throws(() => parse(counts))
+  }
+  assert.throws(() => parse({}, { ...summary, status: 'missing', spawnCount: null, enemyIds: [], detailFile: null }))
 })

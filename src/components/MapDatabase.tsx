@@ -3,10 +3,14 @@ import { getMapCategory, getMapEnvironment, loadMapDatabase, loadMapDetail, matc
 import { getMapEntrances } from '../lib/mapWaves'
 import { DATA_SOURCE_URLS } from '../lib/dataSources'
 import { MAP_FEATURE_LABELS } from '../lib/mapFeatures'
+import { matchesMapEnemyConditions } from '../lib/mapEnemyFilters'
+import type { MapEnemyCondition } from '../lib/mapEnemyFilters'
 import type { MapDataStatus, MapDetail, MapFilters, MapIndex, MapSummary, MapTile } from '../types/map'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { MapWaveInformation } from './MapWaveInformation'
 import { MapFeatureFilters } from './MapFeatureFilters'
+import { MapEnemyConditionFilters } from './MapEnemyConditionFilters'
+import { MapEnemySearchResults, MapMatchingEnemyInformation } from './MapEnemySearchResults'
 import './DamageCalculator.css'
 import './MapDatabase.css'
 
@@ -43,6 +47,7 @@ export function MapDatabase() {
   const [error, setError] = useState<string | null>(null)
   const [revision, setRevision] = useState(0)
   const [filters, setFilters] = useState<MapFilters>(DEFAULT_FILTERS)
+  const [enemyConditions, setEnemyConditions] = useState<MapEnemyCondition[]>([])
   const [page, setPage] = useState(0)
   const [selectedId, setSelectedId] = useState('obt/main/level_main_01-07')
 
@@ -66,7 +71,8 @@ export function MapDatabase() {
   const categoryMaps = useMemo(() => allMaps.filter((map) => filters.category === 'all' || getMapCategory(map) === filters.category), [allMaps, filters.category])
   const zones = useMemo(() => [...new Map(categoryMaps.map((map) => [map.zoneId, map.zoneName])).entries()], [categoryMaps])
   const environments = useMemo(() => new Set(categoryMaps.map(getMapEnvironment)), [categoryMaps])
-  const filtered = useMemo(() => data ? allMaps.filter((map) => matchesMapFilters(map, data.enemies, filters)) : [], [allMaps, data, filters])
+  const filtered = useMemo(() => data ? allMaps.filter((map) => matchesMapFilters(map, data.enemies, filters)
+    && matchesMapEnemyConditions(map, data.enemies, enemyConditions)) : [], [allMaps, data, filters, enemyConditions])
   const pageCount = Math.ceil(filtered.length / PAGE_SIZE)
   const currentPage = Math.min(page, Math.max(0, pageCount - 1))
   const visible = filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
@@ -78,6 +84,11 @@ export function MapDatabase() {
     setSelectedId('')
   }
   const changePage = (next: number) => { setPage(next); setSelectedId('') }
+  const updateEnemyConditions = (conditions: MapEnemyCondition[]) => {
+    setEnemyConditions(conditions)
+    setPage(0)
+    setSelectedId('')
+  }
 
   return <section className="calculator-page map-database-page">
     <header className="page-intro"><div><span className="page-kicker">MAP DATABASE</span><h1>マップデータベース</h1></div></header>
@@ -98,21 +109,10 @@ export function MapDatabase() {
               <label><span>データの状態</span><select value={filters.status} onChange={(event) => updateFilters({ status: event.target.value as MapFilters['status'] })}><option value="all">すべて</option><option value="supported">出現数を集計できる</option><option value="excluded">出現数未確定</option><option value="missing">マップデータ未取得</option></select></label>
             </div>
             <MapFeatureFilters filters={filters} onChange={updateFilters} />
+            <MapEnemyConditionFilters conditions={enemyConditions} index={data} onChange={updateEnemyConditions} />
             {visible.length ? <>
-              <div className="map-selection-grid" role="group" aria-label="マップ一覧">
-                {visible.map((map) => <button
-                  key={map.levelId}
-                  type="button"
-                  className="map-selection-button"
-                  aria-label={`${map.code} ${difficultyLabel(map)} ${map.name}の情報を表示`}
-                  aria-pressed={selected?.levelId === map.levelId}
-                  title={[map.code, difficultyLabel(map), map.name, map.zoneName].filter(Boolean).join(' ／ ')}
-                  onClick={() => setSelectedId(map.levelId)}
-                >
-                  <span>{map.code}</span>
-                  {difficultyLabel(map) && <small className="map-difficulty">{difficultyLabel(map)}</small>}
-                </button>)}
-              </div>
+              <MapEnemySearchResults maps={visible} index={data} conditions={enemyConditions}
+                selectedId={selected?.levelId ?? ''} onSelect={setSelectedId} />
               {selected && <div className="map-selection-summary" aria-live="polite">
                 <span className="map-selection-label">選択中</span>
                 <strong>{selected.code}</strong>
@@ -120,6 +120,7 @@ export function MapDatabase() {
                 {difficultyLabel(selected) && <span className="map-selection-difficulty">{difficultyLabel(selected)}</span>}
                 <span className="map-selection-count">出現数 {selected.status === 'supported' ? `${formatNumber(selected.spawnCount)}体` : selected.status === 'missing' ? '未取得' : '未確定'}</span>
                 {!!selected.features?.length && <span className="map-selection-features">{selected.features.map((id) => MAP_FEATURE_LABELS[id]).join(' ／ ')}</span>}
+                <MapMatchingEnemyInformation map={selected} index={data} conditions={enemyConditions} />
               </div>}
               <div className="map-pagination"><span aria-live="polite">{currentPage * PAGE_SIZE + 1}–{Math.min(filtered.length, (currentPage + 1) * PAGE_SIZE)} / {formatNumber(filtered.length)}件</span><div><button className="button secondary" type="button" disabled={currentPage === 0} onClick={() => changePage(currentPage - 1)} aria-label="前のマップ一覧">前へ</button><button className="button secondary" type="button" disabled={currentPage + 1 >= pageCount} onClick={() => changePage(currentPage + 1)} aria-label="次のマップ一覧">次へ</button></div></div>
             </> : <p className="map-empty" role="status">該当するマップがありません</p>}

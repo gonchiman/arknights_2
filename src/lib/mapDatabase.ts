@@ -1,5 +1,6 @@
-import type { MapCategory, MapEnvironment, MapDetail, MapDetailShard, MapEnemyBase, MapFeatureId, MapFilters, MapIndex, MapRoute, MapSummary, MapTile, MapWave, MapWaveAction, MapWaveFragment } from '../types/map.ts'
+import type { MapCategory, MapEnvironment, MapDetail, MapDetailShard, MapEnemyBase, MapEnemyRoute, MapFeatureId, MapFilters, MapIndex, MapRoute, MapSummary, MapTile, MapWave, MapWaveAction, MapWaveFragment } from '../types/map.ts'
 import { MAP_FEATURE_LABELS } from './mapFeatures.ts'
+import { MAP_ENEMY_IMMUNITY_KEYS } from '../types/map.ts'
 
 const APP_BASE = import.meta.env?.BASE_URL ?? '/'
 const DATA_BASE = `${APP_BASE.endsWith('/') ? APP_BASE : `${APP_BASE}/`}data/maps/`
@@ -10,10 +11,65 @@ const isCount = (value: unknown): value is number => typeof value === 'number' &
 const isNumberOrNull = (value: unknown): value is number | null =>
   value === null || (typeof value === 'number' && Number.isFinite(value) && value >= 0)
 const isCountOrNull = (value: unknown): value is number | null => value === null || isCount(value)
+const isFiniteOrNull = (value: unknown): value is number | null =>
+  value === null || (typeof value === 'number' && Number.isFinite(value))
 const strings = (value: unknown): value is string[] => Array.isArray(value) && value.every(isText)
 const featureIds = (value: unknown): value is MapFeatureId[] => strings(value)
   && value.every((id) => Object.hasOwn(MAP_FEATURE_LABELS, id)) && new Set(value).size === value.length
 const detailFilename = (value: unknown): value is string => typeof value === 'string' && /^details-[0-9a-f]\.json$/.test(value)
+
+function parseMapImmunities(source: unknown): Record<string, boolean | null> | null {
+  if (source === null) return null
+  const immunities = record(source)
+  if (!immunities || Object.entries(immunities).some(([key, value]) =>
+    !MAP_ENEMY_IMMUNITY_KEYS.some((known) => known === key) || !(value === null || typeof value === 'boolean'))) {
+    throw new Error('マップの敵耐性情報に不正な値があります。')
+  }
+  return Object.fromEntries(MAP_ENEMY_IMMUNITY_KEYS.map((key) =>
+    [key, Object.hasOwn(immunities, key) ? immunities[key] as boolean | null : null]))
+}
+
+function parseMapEnemySpawnCounts(source: unknown, enemyIds: string[]): Record<string, number | null> | null {
+  if (source === undefined || source === null) return null
+  const counts = record(source)
+  if (!counts || Object.entries(counts).some(([id, value]) => !enemyIds.includes(id) || !isCountOrNull(value))) {
+    throw new Error('マップの敵出現数に不正な値があります。')
+  }
+  return Object.fromEntries(Object.entries(counts)) as Record<string, number | null>
+}
+
+function parseMapEnemyRoutes(source: unknown, enemyIds: string[]): MapEnemyRoute[] | null {
+  if (source === undefined || source === null) return null
+  if (!Array.isArray(source)) throw new Error('マップの敵経路情報に不正な値があります。')
+  const seen = new Set<string>()
+  return source.map((raw): MapEnemyRoute => {
+    const route = record(raw)
+    if (!route || !isText(route.enemyId) || !route.enemyId.trim() || !enemyIds.includes(route.enemyId)
+      || !isCountOrNull(route.routeIndex)
+      || !isText(route.spawnKind) || !['fixed', 'conditional', 'unknown'].includes(route.spawnKind)
+      || !(route.fixedWaits === null || (Array.isArray(route.fixedWaits)
+        && route.fixedWaits.every((wait) => typeof wait === 'number' && Number.isFinite(wait) && wait > 0)))
+      || (route.spawnCount !== undefined && !isCountOrNull(route.spawnCount))
+      || !(route.spawnIntervals === undefined || route.spawnIntervals === null || (Array.isArray(route.spawnIntervals)
+        && route.spawnIntervals.every((interval) => typeof interval === 'number' && Number.isFinite(interval) && interval >= 0)))
+      || !(route.entrance === undefined || route.entrance === null || (isText(route.entrance) && /^[A-Z]+$/.test(route.entrance)))
+      || (route.routeIndex === null && (route.fixedWaits !== null || (route.entrance !== undefined && route.entrance !== null)))) {
+      throw new Error('マップの敵経路情報に不正な値があります。')
+    }
+    const key = JSON.stringify([route.enemyId, route.routeIndex, route.spawnKind])
+    if (seen.has(key)) throw new Error('マップの敵経路情報が重複しています。')
+    seen.add(key)
+    return { enemyId: route.enemyId, routeIndex: route.routeIndex,
+      fixedWaits: route.fixedWaits === null ? null : [...route.fixedWaits as number[]],
+      spawnKind: route.spawnKind as MapEnemyRoute['spawnKind'],
+      ...(route.spawnCount !== undefined ? { spawnCount: route.spawnCount as number | null } : {}),
+      ...(route.spawnIntervals !== undefined ? {
+        spawnIntervals: route.spawnIntervals === null ? null : [...route.spawnIntervals as number[]],
+      } : {}),
+      ...(route.entrance !== undefined ? { entrance: route.entrance as string | null } : {}),
+    }
+  })
+}
 
 export function parseMapIndex(source: unknown): MapIndex {
   const root = record(source)
@@ -27,11 +83,26 @@ export function parseMapIndex(source: unknown): MapIndex {
     const enemy = record(raw)
     if (!id || !enemy || !isText(enemy.name) || !isNumberOrNull(enemy.hp) || !isNumberOrNull(enemy.resistance)
       || (enemy.attack !== undefined && !isNumberOrNull(enemy.attack))
-      || (enemy.defense !== undefined && !isNumberOrNull(enemy.defense))) {
+      || (enemy.defense !== undefined && !isNumberOrNull(enemy.defense))
+      || ['moveSpeed', 'attackInterval'].some((key) => enemy[key] !== undefined && !isNumberOrNull(enemy[key]))
+      || (enemy.weight !== undefined && !isFiniteOrNull(enemy.weight))
+      || ['levelType', 'motion', 'attackWay'].some((key) => enemy[key] !== undefined && enemy[key] !== null
+        && (!isText(enemy[key]) || !enemy[key].trim()))
+      || !(enemy.damageTypes === undefined || enemy.damageTypes === null || (strings(enemy.damageTypes)
+        && enemy.damageTypes.every((type) => type.trim()) && new Set(enemy.damageTypes).size === enemy.damageTypes.length))) {
       throw new Error('マップの敵情報に不正な値があります。')
     }
     registry[id] = { name: enemy.name, hp: enemy.hp, attack: (enemy.attack ?? null) as number | null,
-      defense: (enemy.defense ?? null) as number | null, resistance: enemy.resistance }
+      defense: (enemy.defense ?? null) as number | null, resistance: enemy.resistance,
+      ...(enemy.moveSpeed !== undefined ? { moveSpeed: enemy.moveSpeed as number | null } : {}),
+      ...(enemy.attackInterval !== undefined ? { attackInterval: enemy.attackInterval as number | null } : {}),
+      ...(enemy.weight !== undefined ? { weight: enemy.weight as number | null } : {}),
+      ...(enemy.levelType !== undefined ? { levelType: enemy.levelType as string | null } : {}),
+      ...(enemy.motion !== undefined ? { motion: enemy.motion as string | null } : {}),
+      ...(enemy.attackWay !== undefined ? { attackWay: enemy.attackWay as string | null } : {}),
+      ...(enemy.damageTypes !== undefined ? { damageTypes: enemy.damageTypes === null ? null : [...enemy.damageTypes as string[]] } : {}),
+      ...(enemy.immunities !== undefined ? { immunities: parseMapImmunities(enemy.immunities) } : {}),
+    }
   }
   const seen = new Set<string>()
   const maps = root.maps.map((raw): MapSummary => {
@@ -48,6 +119,8 @@ export function parseMapIndex(source: unknown): MapIndex {
       || map.enemyIds.some((id) => !Object.hasOwn(registry, id))
       || (map.status === 'missing'
         ? map.detailFile !== null || map.spawnCount !== null || map.enemyIds.length !== 0 || Array.isArray(map.features)
+          || !(map.enemyRoutes === undefined || map.enemyRoutes === null)
+          || !(map.enemySpawnCounts === undefined || map.enemySpawnCounts === null)
         : !detailFilename(map.detailFile))
       || (map.status === 'supported' ? !isCount(map.spawnCount) || map.reasons.length !== 0 : map.spawnCount !== null)) {
       throw new Error('マップ一覧に不正な値があります。')
@@ -61,6 +134,8 @@ export function parseMapIndex(source: unknown): MapIndex {
       ...(isText(map.diffGroup) ? { diffGroup: map.diffGroup } : {}),
       status: map.status as MapSummary['status'], spawnCount: map.spawnCount,
       features: featureIds(map.features) ? [...map.features] : null,
+      enemyRoutes: parseMapEnemyRoutes(map.enemyRoutes, map.enemyIds),
+      enemySpawnCounts: parseMapEnemySpawnCounts(map.enemySpawnCounts, map.enemyIds),
       enemyIds: [...map.enemyIds], reasons: [...map.reasons], detailFile: map.detailFile as string | null,
     }
   })
