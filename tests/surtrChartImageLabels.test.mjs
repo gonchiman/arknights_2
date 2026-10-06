@@ -8,14 +8,16 @@ import react from '@vitejs/plugin-react'
 let server
 let attacks
 let expectations
+let dps
 before(async () => {
   server = await createServer({
     configFile: false, plugins: [react()], cacheDir: 'node_modules/.vite/chart-image-label-test',
     resolve: { preserveSymlinks: true },
-    logLevel: 'error', server: { middlewareMode: true, watch: null, preTransformRequests: false }, appType: 'custom',
+    logLevel: 'error', server: { middlewareMode: true, watch: null, preTransformRequests: false, hmr: false }, appType: 'custom',
   })
   attacks = await server.ssrLoadModule('/src/components/SurtrRemnantAttackChartImage.tsx')
   expectations = await server.ssrLoadModule('/src/components/SurtrRemnantExpectationChartImage.tsx')
+  dps = await server.ssrLoadModule('/src/components/SurtrDpsChart.tsx')
 })
 after(async () => { await server?.close() })
 
@@ -85,4 +87,25 @@ test('entered markup is displayed as text and blank edits restore defaults', () 
   assert.doesNotMatch(encoded, /<script>|<img/)
   assert.equal(render(attacks.SurtrRemnantAttackChartImage, { ...props,
     labels: { title: ' ', xAxis: '', yAxis: '\n', series: { X: '' } } }), render(attacks.SurtrRemnantAttackChartImage, props))
+})
+
+test('S3 image text editing preserves bar and line values, colors and metric defaults', () => {
+  const plotted = series.map(({ model: _, ...item }) => ({ ...item,
+    points: [0, 20, 40, 60, 80, 100].map(x => ({ x, value: 3000 - 20 * x })) }))
+  const unchanged = structuredClone(plotted)
+  for (const [metric, axis] of [['total', 'DPS'], ['difference', 'DPS差分'], ['percent', '増減率（%）']]) {
+    assert.equal(dps.getSurtrDpsImageLabelDefaults(plotted, 'S3比較', metric).yAxis, axis)
+    for (const kind of ['bar', 'line']) {
+      for (const component of [dps.SurtrDpsChartImage, dps.SurtrDpsChartImagePreview]) {
+        const props = { series: plotted, title: 'S3比較', kind, metric, barStep: 20, conditions: '特化3', showValues: true }
+        const original = render(component, props)
+        const edited = render(component, { ...props, labels })
+        for (const text of ['素質2の比較', '横の指標', '縦の指標', '装備なし', 'AFT-X', 'AFT-Y']) assert.ok(edited.includes(text))
+        assert.deepEqual(marks(edited), marks(original))
+        for (const color of plotted.map(item => item.color)) assert.ok(edited.includes(color))
+        assert.equal(render(component, { ...props, labels: { title: '', xAxis: ' ', yAxis: '\n', series: { X: '' } } }), original)
+      }
+    }
+  }
+  assert.deepEqual(plotted, unchanged)
 })

@@ -1,11 +1,13 @@
 import { useLayoutEffect, useRef, useState, type ComponentProps } from 'react'
 import type { EnemyHistogramSnapshot } from '../lib/enemyHistogramSnapshot'
+import { applyChartImageSeriesLabels, resolveChartImageLabels, type ChartImageLabelOverrides } from '../lib/chartImageLabels'
 import { CHART_IMAGE_STACK_HEADER_HEIGHT, getChartImageStackLayout } from '../lib/chartImageStackLayout'
 import { getHpChartValueAxis, isValidHpChartYAxisRange } from '../lib/goldenglowTargetSwitchHpAxis'
 import { getSurtrDpsResistanceSamples, normalizeSurtrDpsResistanceRange } from '../lib/surtrDpsResistance'
 import { ChartImageStackFrame, type ChartImageStackPanel } from './ChartImageStackFrame'
 import { EnemyHistogramSnapshotPlot } from './EnemyStatisticsPanel'
-import { SurtrDpsSnapshotPlot, SurtrDpsImageLegend, type SurtrDpsChartSeries, type SurtrDpsChartYAxis } from './SurtrDpsChart'
+import { SurtrDpsSnapshotPlot, SurtrDpsImageLegend, getSurtrDpsImageLabelDefaults,
+  type SurtrDpsChartSeries, type SurtrDpsChartYAxis } from './SurtrDpsChart'
 
 interface SurtrDpsBlockComparison {
   blocking: boolean
@@ -19,6 +21,7 @@ type Props = Omit<ComponentProps<typeof SurtrDpsSnapshotPlot>, 'width' | 'height
   histogram?: EnemyHistogramSnapshot | null
   blockComparisons?: readonly SurtrDpsBlockComparison[]
   blockComparisonConditions?: string
+  labels?: ChartImageLabelOverrides
   aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
 }
@@ -46,21 +49,24 @@ function getSharedYAxis(comparisons: readonly SurtrDpsBlockComparison[], dps: Om
 }
 
 /** Every panel renders the same frozen input in the preview and the saved PNG. */
-export function SurtrCombinedChartImage({ histogram, blockComparisons, blockComparisonConditions, aspectRatio, onLayout, ...dps }: Props) {
+export function SurtrCombinedChartImage({ histogram, blockComparisons, blockComparisonConditions, labels, aspectRatio, onLayout, ...dps }: Props) {
+  const display = resolveChartImageLabels(getSurtrDpsImageLabelDefaults(dps.series, dps.title, dps.metric, dps.valueAxisLabel), labels)
+  const displaySeries = applyChartImageSeriesLabels(dps.series, labels)
   const comparisons = blockComparisons?.length ? blockComparisons : undefined
   const sharedYAxis = comparisons ? getSharedYAxis(comparisons, dps) : undefined
   const panels: ChartImageStackPanel[] = comparisons ? comparisons.map(comparison => {
     const title = comparison.blocking ? '対象を自身でブロック' : '未ブロック'
     return {
       id: `dps-${comparison.blocking ? 'blocking' : 'nonblocking'}`, title,
-      axisTitle: '敵の術耐性', naturalChartHeight: 334,
-      render: size => <SurtrDpsSnapshotPlot {...dps} series={comparison.series} title={`${dps.title}・${title}`} yAxis={sharedYAxis} {...size} />,
+      axisTitle: display.xAxis, naturalChartHeight: 334,
+      render: size => <SurtrDpsSnapshotPlot {...dps} series={applyChartImageSeriesLabels(comparison.series, labels)}
+        title={`${display.title}・${title}`} valueAxisLabel={display.yAxis} yAxis={sharedYAxis} {...size} />,
     }
   }) : [{
-      id: 'dps', title: dps.title, conditions: dps.conditions, axisTitle: '敵の術耐性',
+      id: 'dps', title: display.title, conditions: dps.conditions, axisTitle: display.xAxis,
       naturalChartHeight: 334, informationPlacement: 'top-right-box',
-      legend: <SurtrDpsImageLegend series={dps.series} kind={dps.kind ?? 'bar'} />,
-      render: size => <SurtrDpsSnapshotPlot {...dps} {...size} />,
+      legend: <SurtrDpsImageLegend series={displaySeries} kind={dps.kind ?? 'bar'} />,
+      render: size => <SurtrDpsSnapshotPlot {...dps} series={displaySeries} title={display.title} valueAxisLabel={display.yAxis} {...size} />,
     }]
   if (histogram) panels.push({
       id: 'distribution', title: histogram.title, conditions: histogram.conditions, axisTitle: histogram.axisTitle,
@@ -69,11 +75,11 @@ export function SurtrCombinedChartImage({ histogram, blockComparisons, blockComp
         width={width} height={height} reservedLabelHeight={reservedOverflow} onLabelOverflow={onOverflow} />,
     })
   const sharedHeader = comparisons ? {
-    title: dps.title,
-    legend: <SurtrDpsImageLegend series={comparisons[0].series} kind={dps.kind ?? 'line'} />,
+    title: display.title,
+    legend: <SurtrDpsImageLegend series={applyChartImageSeriesLabels(comparisons[0].series, labels)} kind={dps.kind ?? 'line'} />,
     conditions: blockComparisonConditions ?? 'ブロック状態比較',
   } : undefined
-  const snapshotKey = JSON.stringify([dps, comparisons, blockComparisonConditions, histogram, aspectRatio])
+  const snapshotKey = JSON.stringify([dps, labels, comparisons, blockComparisonConditions, histogram, aspectRatio])
   return <ChartImageStackFrame key={snapshotKey} aspectRatio={aspectRatio} onLayout={onLayout} panels={panels} sharedHeader={sharedHeader} />
 }
 
@@ -99,7 +105,7 @@ export function SurtrCombinedChartImagePreview(props: Omit<Props, 'onLayout'>) {
     <div ref={previewRef} className="surtr-dps-chart-preview-frame" style={{ height: Math.ceil(size.height * scale) }}>
       <div className="surtr-dps-chart-preview-position" style={{ width: size.width, height: size.height,
         left: (availableWidth - size.width * scale) / 2, transform: `scale(${scale})` }}>
-        <SurtrCombinedChartImage {...props} onLayout={setSize} />
+        <SurtrCombinedChartImage key={JSON.stringify(props)} {...props} onLayout={setSize} />
       </div>
     </div>
     <span className="surtr-dps-chart-preview-size" aria-live="polite">

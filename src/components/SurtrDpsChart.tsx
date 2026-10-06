@@ -1,5 +1,7 @@
 import { useCallback, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { getChartImageLayout } from '../lib/chartImageLayout'
+import { applyChartImageSeriesLabels, resolveChartImageLabels,
+  type ChartImageLabelDefaults, type ChartImageLabelOverrides } from '../lib/chartImageLabels'
 import { getHpChartValueAxis, isValidHpChartYAxisRange } from '../lib/goldenglowTargetSwitchHpAxis'
 import { placeGroupedBarValueLabels } from '../lib/groupedBarValueLabels'
 import { wrapText } from '../lib/slideComposer'
@@ -47,6 +49,7 @@ export interface SurtrDpsChartProps {
 
 export interface SurtrDpsChartImageProps extends Omit<SurtrDpsChartProps, 'onSelectResistance'> {
   conditions: string
+  labels?: ChartImageLabelOverrides
   aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
 }
@@ -67,6 +70,11 @@ function getLineDasharray(lineStyle: SurtrDpsLineStyle | undefined, index: numbe
 
 function getValueAxisLabel(valueAxisLabel: string | undefined, metric: SurtrDpsChartMetric) {
   return valueAxisLabel ?? (metric === 'percent' ? '増減率（%）' : metric === 'difference' ? 'DPS差分' : 'DPS')
+}
+
+export function getSurtrDpsImageLabelDefaults(series: readonly { id: string; label: string }[],
+  title = 'スルト S3 DPS', metric: SurtrDpsChartMetric = 'total', valueAxisLabel?: string): ChartImageLabelDefaults {
+  return { title, xAxis: '敵の術耐性', yAxis: getValueAxisLabel(valueAxisLabel, metric), series }
 }
 
 function useAxisTitleWidths(title: string): ValueWidths {
@@ -463,11 +471,14 @@ export function SurtrDpsChart({ series, kind = 'line', barStep = 20, resistanceR
 }
 
 export function SurtrDpsChartImage({ series, kind = 'line', barStep = 20, resistanceRange, gridStyle = 'solid', precision = 0,
-  metric = 'total', title = 'スルト S3 DPS', valueAxisLabel, yAxis, showValues = false, showResistanceRanks = true, selectedResistance, conditions, aspectRatio, onLayout }: SurtrDpsChartImageProps) {
+  metric = 'total', title = 'スルト S3 DPS', valueAxisLabel, labels, yAxis, showValues = false, showResistanceRanks = true, selectedResistance, conditions, aspectRatio, onLayout }: SurtrDpsChartImageProps) {
+  const display = useMemo(() => resolveChartImageLabels(getSurtrDpsImageLabelDefaults(series, title, metric, valueAxisLabel), labels),
+    [series, title, metric, valueAxisLabel, labels])
+  const displaySeries = useMemo(() => applyChartImageSeriesLabels(series, labels), [series, labels])
   const range = useMemo(() => normalizeSurtrDpsResistanceRange(resistanceRange), [resistanceRange?.min, resistanceRange?.max])
-  const data = useMemo(() => normalizeSeries(series, kind, barStep, range, selectedResistance), [series, kind, barStep, range, selectedResistance])
+  const data = useMemo(() => normalizeSeries(displaySeries, kind, barStep, range, selectedResistance), [displaySeries, kind, barStep, range, selectedResistance])
   const valueWidths = useValueWidths(data, precision, metric, kind === 'bar' && showValues)
-  const request = JSON.stringify([data, kind, barStep, range, gridStyle, precision, metric, title, valueAxisLabel, yAxis, showValues, showResistanceRanks, conditions, aspectRatio, valueWidths])
+  const request = JSON.stringify([data, kind, barStep, range, gridStyle, precision, metric, title, valueAxisLabel, labels, yAxis, showValues, showResistanceRanks, conditions, aspectRatio, valueWidths])
   const [expansion, setExpansion] = useState({ request, overflow: 0 })
   const overflow = expansion.request === request ? expansion.overflow : 0
   const reserveOverflow = useCallback((required: number) => {
@@ -476,11 +487,11 @@ export function SurtrDpsChartImage({ series, kind = 'line', barStep = 20, resist
     setExpansion((current) => current.request === request && current.overflow >= required
       ? current : { request, overflow: Math.max(current.request === request ? current.overflow : 0, required) })
   }, [request])
-  return <ChartImageFrame key={request} className="surtr-dps-chart-image" title={title} conditions={conditions}
-    axisTitle="敵の術耐性" naturalChartHeight={NATURAL_CHART_HEIGHT + overflow} aspectRatio={aspectRatio} onLayout={onLayout}
+  return <ChartImageFrame key={request} className="surtr-dps-chart-image" title={display.title} conditions={conditions}
+    axisTitle={display.xAxis} naturalChartHeight={NATURAL_CHART_HEIGHT + overflow} aspectRatio={aspectRatio} onLayout={onLayout}
     legend={<SurtrDpsImageLegend series={data} kind={kind} />}>
     {({ width, height }) => <SurtrDpsImagePlot series={data} kind={kind} barStep={barStep} width={width} height={height}
-      resistanceRange={range} gridStyle={gridStyle} precision={precision} metric={metric} title={title} valueAxisLabel={valueAxisLabel} yAxis={yAxis}
+      resistanceRange={range} gridStyle={gridStyle} precision={precision} metric={metric} title={display.title} valueAxisLabel={display.yAxis} yAxis={yAxis}
       showValues={showValues} showResistanceRanks={showResistanceRanks} valueWidths={valueWidths} reservedOverflow={overflow} onOverflow={reserveOverflow} />}
   </ChartImageFrame>
 }
