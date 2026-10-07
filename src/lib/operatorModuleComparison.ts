@@ -57,6 +57,28 @@ export interface OperatorModuleComparison {
   rows: OperatorModuleComparisonRow[]
 }
 
+export type OperatorModuleComparisonLayout = 'columns' | 'rows'
+
+export interface OperatorModuleLevelRowCell {
+  cell: OperatorModuleComparisonCell
+  sourceColumn: OperatorModuleComparisonColumn
+  rowSpan: number
+}
+
+export interface OperatorModuleLevelRowGroup {
+  id: string
+  label: string
+  name?: string
+  kind: OperatorModuleComparisonRow['kind']
+  levels: Array<number | null>
+  cells: Array<Array<OperatorModuleLevelRowCell | null>>
+}
+
+export interface OperatorModuleLevelRows {
+  columns: OperatorModuleComparisonColumn[]
+  groups: OperatorModuleLevelRowGroup[]
+}
+
 const ATTRIBUTE_ORDER = [
   'max_hp', 'atk', 'def', 'magic_resistance', 'attack_speed', 'cost', 'respawn_time', 'block_cnt',
 ]
@@ -73,6 +95,122 @@ export function buildOperatorModuleComparison(
   const minimum = current.potentialRank === 1
     ? current
     : buildRawOperatorModuleComparison(profile, current.level, 1)
+  return highlightOperatorModuleComparison(current, minimum)
+}
+
+/** Compare any selected stages of each module at a shared operator potential. */
+export function buildOperatorModuleStageComparison(
+  profile: OperatorCombatProfile,
+  requestedLevels: Record<string, number[]> = {},
+  requestedPotentialRank = 1,
+  includeNone = true,
+): OperatorModuleComparison {
+  const current = buildRawOperatorModuleComparison(profile, null, requestedPotentialRank, requestedLevels)
+  const minimum = current.potentialRank === 1
+    ? current
+    : buildRawOperatorModuleComparison(profile, null, 1, requestedLevels)
+  // Attribution needs the unequipped operator even when its column is hidden.
+  const comparison = highlightOperatorModuleComparison(current, minimum)
+  return includeNone ? comparison : {
+    ...comparison,
+    columns: comparison.columns.slice(1),
+    rows: comparison.rows.map((row) => ({ ...row, cells: row.cells.slice(1) })),
+  }
+}
+
+/** Transpose selected stages into item groups without changing the source comparison. */
+export function buildOperatorModuleLevelRows(comparison: OperatorModuleComparison): OperatorModuleLevelRows {
+  const columnGroups = new Map<string, {
+    column: OperatorModuleComparisonColumn
+    indices: number[]
+  }>()
+  comparison.columns.forEach((column, index) => {
+    const id = column.id === 'none' ? 'none' : column.id.replace(/:lv\d+$/, '')
+    const existing = columnGroups.get(id)
+    if (existing) {
+      existing.indices.push(index)
+      existing.column.available ||= column.available
+    } else {
+      columnGroups.set(id, { column: { ...column, id, level: null }, indices: [index] })
+    }
+  })
+  const groupedColumns = [...columnGroups.values()]
+  const selectedLevels = [...new Set(comparison.columns.flatMap((column) => (
+    column.id !== 'none' && column.level !== null ? [column.level] : []
+  )))].sort((a, b) => a - b)
+  const levels: Array<number | null> = selectedLevels.length > 0 ? selectedLevels : [null]
+
+  return {
+    columns: groupedColumns.map((group) => group.column),
+    groups: comparison.rows.map((row) => {
+      const cells: Array<Array<OperatorModuleLevelRowCell | null>> = levels.map((level) => (
+        groupedColumns.map(({ column, indices }) => {
+          const sourceIndex = column.id === 'none' ? indices[0]
+            : indices.find((index) => comparison.columns[index].level === level)
+          if (sourceIndex !== undefined) {
+            return {
+              cell: row.cells[sourceIndex] ?? cell(MISSING),
+              sourceColumn: comparison.columns[sourceIndex],
+              rowSpan: 1,
+            }
+          }
+          return {
+            cell: cell('未選択'),
+            sourceColumn: {
+              ...column,
+              id: level === null ? column.id : `${column.id}:lv${level}`,
+              level,
+              available: false,
+            },
+            rowSpan: 1,
+          }
+        })
+      ))
+      const metadata = { id: row.id, label: row.label, ...(row.name !== undefined ? { name: row.name } : {}), kind: row.kind }
+      const common = selectedLevels.length > 1 && groupedColumns.every((_, columnIndex) => cells.every((entries) => (
+        sameComparisonCell(entries[columnIndex]!.cell, cells[0][columnIndex]!.cell)
+      )))
+      if (common) return { ...metadata, levels: [null], cells: [cells[0]] }
+
+      // Keep the first stage's source column so highlights retain their original build context.
+      groupedColumns.forEach((_, columnIndex) => {
+        let previous: OperatorModuleLevelRowCell | null = null
+        for (const entries of cells) {
+          const current = entries[columnIndex]!
+          if (previous && sameComparisonCell(previous.cell, current.cell)) {
+            previous.rowSpan += 1
+            entries[columnIndex] = null
+          } else {
+            previous = current
+          }
+        }
+      })
+      return { ...metadata, levels: [...levels], cells }
+    }),
+  }
+}
+
+/** Equal prose can still describe different MOD/potential changes and tooltip values. */
+function sameComparisonCell(left: OperatorModuleComparisonCell, right: OperatorModuleComparisonCell): boolean {
+  if (left.text !== right.text || left.baseline !== right.baseline) return false
+  const previous = left.highlights
+  const current = right.highlights
+  if (!previous || !current) return previous === current
+  const valueKeys = ['base', 'withoutModule', 'withoutPotential', 'current'] as const
+  if (valueKeys.some((key) => previous[key] !== current[key])
+    || previous.segments.length !== current.segments.length) return false
+  return previous.segments.every((segment, index) => {
+    const other = current.segments[index]
+    if (segment.text !== other.text || segment.source !== other.source) return false
+    if (!segment.values || !other.values) return segment.values === other.values
+    return valueKeys.every((key) => segment.values![key] === other.values![key])
+  })
+}
+
+function highlightOperatorModuleComparison(
+  current: OperatorModuleComparison,
+  minimum: OperatorModuleComparison,
+): OperatorModuleComparison {
   const minimumRows = new Map(minimum.rows.map((row) => [row.id, row]))
   const minimumColumnIndices = new Map(minimum.columns.map((column, index) => [column.id, index]))
 
@@ -118,6 +256,7 @@ function buildRawOperatorModuleComparison(
   profile: OperatorCombatProfile,
   requestedLevel: number | null,
   requestedPotentialRank: number,
+  requestedStages?: Record<string, number[]>,
 ): OperatorModuleComparison {
   const phaseIndex = Math.max(0, profile.phases.length - 1)
   const operatorLevel = Math.max(1, profile.phases[phaseIndex]?.maxLevel ?? 1)
@@ -132,16 +271,34 @@ function buildRawOperatorModuleComparison(
   const moduleLevels = modules.map((module) => getOperatorModuleLevels(module)
     .filter((level) => Number.isInteger(level) && level > 0))
   const levels = [...new Set(moduleLevels.flat())].sort((a, b) => a - b)
-  const level = requestedLevel !== null && Number.isFinite(requestedLevel)
+  const sharedLevel = requestedLevel !== null && Number.isFinite(requestedLevel)
     ? nearestLevel(levels, requestedLevel) ?? levels[0] ?? null
     : levels.at(-1) ?? null
+  const selections = modules.flatMap((module, index) => {
+    const moduleId = getOperatorModuleId(module, index)
+    const availableLevels = moduleLevels[index]
+    if (requestedStages === undefined) {
+      const actualLevel = sharedLevel === null ? null : nearestLevel(availableLevels, sharedLevel)
+      return [{ module, moduleId, id: moduleId, level: actualLevel }]
+    }
+    const requested = requestedStages[moduleId] ?? availableLevels.slice(-1)
+    return [...new Set(requested)]
+      .filter((stage) => availableLevels.includes(stage))
+      .sort((a, b) => a - b)
+      .map((stage) => ({ module, moduleId, id: `${moduleId}:lv${stage}`, level: stage }))
+  })
+  const selectedLevels = [...new Set(selections.flatMap((selection) => (
+    selection.level === null ? [] : [selection.level]
+  )))]
+  const level = requestedStages === undefined
+    ? sharedLevel
+    : selectedLevels.length === 1 ? selectedLevels[0] : null
   const columns: OperatorModuleComparisonColumn[] = [{
     id: 'none', name: 'モジュールなし', typeLabel: null, level: null, available: true,
   }]
   const applications: Array<OperatorModuleApplication | null> = []
 
-  modules.forEach((module, index) => {
-    const actualLevel = level === null ? null : nearestLevel(moduleLevels[index], level)
+  selections.forEach(({ module, id, level: actualLevel }) => {
     const application = actualLevel === null ? null : applyOperatorModule(
       indexBaseTalents(basePassives),
       separateAdditionalTalents(module, basePassives),
@@ -153,7 +310,7 @@ function buildRawOperatorModuleComparison(
       application.attributeEffects.length > 0 || application.changes.length > 0
     ))
     columns.push({
-      id: getOperatorModuleId(module, index),
+      id,
       name: cleanText(module.uniEquipName ?? '名称なし'),
       typeLabel: getOperatorModuleTypeLabel(module),
       level: actualLevel,
@@ -217,7 +374,8 @@ function buildRawOperatorModuleComparison(
   }
 
   // Token and module-only effects are independent of the operator's numbered talents.
-  applications.forEach((application, moduleIndex) => {
+  const extraRows = new Map<string, OperatorModuleComparisonRow>()
+  applications.forEach((application, selectionIndex) => {
     const extras = application?.changes.filter((change) => (
       change.kind === 'TOKEN' || (change.kind === 'TALENT' && change.talentIndex === null)
     )) ?? []
@@ -228,22 +386,24 @@ function buildRawOperatorModuleComparison(
       const identity = `${change.kind}:${change.label}`
       const occurrence = occurrences.get(identity) ?? 0
       occurrences.set(identity, occurrence + 1)
-      rows.push({
-        id: `extra:${columns[moduleIndex + 1].id}:${identity}:${occurrence}`,
-        label,
-        ...(change.label && change.label !== label ? { name: change.label } : {}),
-        kind: 'extra',
-        cells: columns.map((column, columnIndex) => {
-          if (!column.available) return cell(MISSING)
-          return columnIndex === moduleIndex + 1
-            ? cell(change.description || '追加効果あり', '')
-            : cell(EMPTY)
-        }),
-      })
+      const id = `extra:${selections[selectionIndex].moduleId}:${identity}:${occurrence}`
+      let row = extraRows.get(id)
+      if (!row) {
+        row = {
+          id,
+          label,
+          ...(change.label && change.label !== label ? { name: change.label } : {}),
+          kind: 'extra',
+          cells: columns.map((column) => cell(column.available ? EMPTY : MISSING)),
+        }
+        extraRows.set(id, row)
+        rows.push(row)
+      }
+      row.cells[selectionIndex + 1] = cell(change.description || '追加効果あり', '')
     })
   })
 
-  if (rows.length === 0 && modules.length > 0) {
+  if (rows.length === 0 && selections.length > 0) {
     rows.push({
       id: 'effect-data', label: '効果', kind: 'extra',
       cells: columns.map((column) => cell(column.available ? EMPTY : MISSING)),
