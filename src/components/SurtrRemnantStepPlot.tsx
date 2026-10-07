@@ -1,5 +1,6 @@
 import { calculateSurtrRemnantAttacks, type SurtrRemnantAttackAssumptions } from '../lib/surtrRemnantAttacks'
-import type { SurtrRemnantChartSeries, SurtrRemnantCountEndpoint, SurtrRemnantCountInterval } from '../lib/surtrRemnantChart'
+import { getSurtrRemnantLineDasharray,
+  type SurtrRemnantChartSeries, type SurtrRemnantCountEndpoint, type SurtrRemnantCountInterval } from '../lib/surtrRemnantChart'
 
 interface StepSeries {
   item: SurtrRemnantChartSeries
@@ -65,7 +66,7 @@ export function SurtrRemnantStepPlot({ data, assumptions, height, left, right, c
       const activeCount = activeCt === null ? undefined : calculateSurtrRemnantAttacks(item.model, activeCt, assumptions)?.hitCount
       return <g key={item.id} data-step-series={item.id}>
         <line x1={left} x2={left + 20} y1={offset + 14} y2={offset + 14}
-          stroke={item.color} strokeWidth="2.5" />
+          stroke={item.color} strokeWidth="2.5" strokeDasharray={getSurtrRemnantLineDasharray(item.lineStyle)} />
         <text className="surtr-remnant-step-row-name" x={left + 28} y={offset + 18}>
           {nameLines.length === 1 ? nameLines[0] : nameLines.map((line, lineIndex) =>
             <tspan key={lineIndex} x={left + 28} dy={lineIndex === 0 ? 0 : 14}>{line}</tspan>)}
@@ -79,7 +80,7 @@ export function SurtrRemnantStepPlot({ data, assumptions, height, left, right, c
         </g>)}
         <path className="surtr-remnant-attack-chart-axis" d={`M${left} ${top} V${bottom} H${right}`} />
         <path className="surtr-remnant-attack-chart-step" d={path} stroke={item.color} strokeWidth="2.5"
-          data-chart-image-ink="true" />
+          strokeDasharray={getSurtrRemnantLineDasharray(item.lineStyle)} data-chart-image-ink="true" />
         {intervals.map((interval, intervalIndex) => {
           const middle = (x(interval.from) + x(interval.to)) / 2
           const short = x(interval.to) - x(interval.from) < 42

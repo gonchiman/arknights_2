@@ -3,7 +3,8 @@ import { getChartImageLayout } from '../lib/chartImageLayout'
 import { applyChartImageSeriesLabels, resolveChartImageLabels,
   type ChartImageLabelDefaults, type ChartImageLabelOverrides } from '../lib/chartImageLabels'
 import type { SurtrRemnantAttackAssumptions } from '../lib/surtrRemnantAttacks'
-import { getSurtrRemnantAttackChartHeight, type SurtrRemnantChartKind, type SurtrRemnantChartSeries } from '../lib/surtrRemnantChart'
+import { getSurtrRemnantAttackChartHeight, getSurtrRemnantLineDasharray,
+  type SurtrRemnantChartKind, type SurtrRemnantChartSeries } from '../lib/surtrRemnantChart'
 import { ChartImageFrame } from './ChartImageFrame'
 import { SurtrRemnantAttackChart } from './SurtrRemnantAttackChart'
 import './SurtrDurationChart.css'
@@ -37,7 +38,7 @@ function ImageLegend({ series, kind }: Pick<SurtrRemnantAttackChartImageProps, '
         <svg className="chart-image-frame-legend-swatch" width="18" height="12" aria-hidden="true">
           {kind === 'step'
             ? <line x1="0" x2="18" y1="6" y2="6" stroke={item.color}
-              strokeWidth="2.5" />
+              strokeWidth="2" strokeDasharray={getSurtrRemnantLineDasharray(item.lineStyle)} />
             : <rect x="0" y="2" width="18" height="8" fill={item.color} />}
         </svg>
         <span>{item.label}</span>

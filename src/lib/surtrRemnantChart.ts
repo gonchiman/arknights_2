@@ -3,19 +3,30 @@ import {
   type SurtrRemnantAttackAssumptions,
   type SurtrRemnantAttackModel,
 } from './surtrRemnantAttacks.ts'
+import type { SurtrDpsLineStyle } from './surtrDpsOutput.ts'
 
 export type SurtrRemnantChartKind = 'grouped-bar' | 'step' | 'bands'
 
 /** Keep screen, preview and PNG on the same natural row heights. */
 export function getSurtrRemnantAttackChartHeight(kind: SurtrRemnantChartKind, seriesCount: number): number {
-  return kind === 'step' ? 26 + Math.max(1, seriesCount) * 160 + 30 : 334
+  if (kind === 'step') return 26 + Math.max(1, seriesCount) * 160 + 30
+  // Keep boundary CT and isolated endpoint labels between their own bands.
+  return kind === 'bands' ? Math.max(334, 74 + Math.max(1, seriesCount) * 82) : 334
 }
 
 export interface SurtrRemnantChartSeries {
   id: string
   label: string
   color: string
+  moduleId?: string
+  level?: number
+  lineStyle?: SurtrDpsLineStyle
   model: SurtrRemnantAttackModel
+}
+
+/** Stage line styles match the shared S3 plot; omitted styles retain solid lines. */
+export function getSurtrRemnantLineDasharray(lineStyle?: SurtrDpsLineStyle): string | undefined {
+  return lineStyle === 'dotted' ? '2 3' : lineStyle === 'dashed' ? '7 4' : undefined
 }
 
 export interface SurtrRemnantCountInterval {

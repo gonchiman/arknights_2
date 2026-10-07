@@ -11,12 +11,14 @@ let Table
 let Image
 let calculateExpectation
 let imageFilename
+let moduleComparison
 
 before(async () => {
   server = await createServer({
     configFile: false,
     plugins: [react()],
     cacheDir: 'node_modules/.vite/surtr-attack-expectation-panel-test',
+    resolve: { preserveSymlinks: true },
     logLevel: 'error',
     server: { middlewareMode: true, watch: null, preTransformRequests: false },
     appType: 'custom',
@@ -26,6 +28,7 @@ before(async () => {
   ;({ SurtrRemnantAttackExpectationTableImage: Image } = await server.ssrLoadModule('/src/components/SurtrRemnantAttackExpectationTableImage.tsx'))
   ;({ getSurtrRemnantAttackExpectationTableImageFilename: imageFilename } = await server.ssrLoadModule('/src/components/SurtrRemnantAttackExpectationTableImage.tsx'))
   ;({ calculateSurtrRemnantAttackExpectation: calculateExpectation } = await server.ssrLoadModule('/src/lib/surtrRemnantExpectation.ts'))
+  moduleComparison = await server.ssrLoadModule('/src/lib/surtrModuleComparison.ts')
 })
 
 after(async () => { await server?.close() })
@@ -238,7 +241,6 @@ test('valid zero counts are distinct from absent outcomes, invalid models and lo
   assertOutcome(vertical[0][0].slice(2, 5), { range: '[0,1.25]', length: '1.25', limit: '1.25', percent: '100', contribution: '0 回' })
   assert.equal(vertical[0][0][5], '≈ 0 回')
   for (const props of [
-    { comparison: [] },
     { comparison: [{ ...comparison[0], model: null }] },
     { comparison: [comparison[0], { ...comparison[1], model: null }] },
     { assumptions: { ...assumptions, windup: -1 } },
@@ -250,6 +252,14 @@ test('valid zero counts are distinct from absent outcomes, invalid models and lo
   const loading = render({ status: createElement('p', { role: 'status' }, 'データを取得中') })
   assert.match(loading, /role="status">データを取得中/)
   assert.doesNotMatch(loading, /<table|role="alert"/)
+})
+
+test('clearing all MOD stages shows a selection status instead of an invalid-model error', () => {
+  for (const blockingComparison of [undefined, [{ blocking: false, comparison: [] }, { blocking: true, comparison: [] }]]) {
+    const markup = render({ comparison: [], blockingComparison })
+    assert.match(markup, /role="status">比較するMOD・段階を選択してください。/)
+    assert.doesNotMatch(markup, /<table|role="alert"/)
+  }
 })
 
 test('separate CT ranges for the same count keep their combined width without filling their gap', () => {
@@ -428,4 +438,47 @@ test('saved tables and filenames retain the captured expected-count decimal limi
     const finer = firstTable(renderToStaticMarkup(createElement(Image, { ...snapshot, layout, digits: 6 })))
     assert.match(text(finer), /≈ 9\.003077 回/)
   }
+})
+
+test('all table and image layouts retain selected stage labels, colors, values and conditions', () => {
+  const all = calculated(moduleComparison.getSelectedSurtrModuleStages([
+    { id: '', type: null, label: '未装備', levels: [], unlocked: true },
+    { id: 'module-x', type: 'X', label: 'MOD X', levels: [1, 2, 3], unlocked: true },
+    { id: 'module-y', type: 'Y', label: 'MOD Y', levels: [1, 2, 3], unlocked: true },
+  ], [], { 'module-x': [1, 2, 3], 'module-y': [1, 2, 3] }).map(stage => {
+    const original = comparison[stage.type === null ? 0 : stage.type === 'X' ? 1 : 2]
+    const model = { ...original.model, moduleId: stage.moduleId, moduleLevel: stage.level }
+    if (stage.type === 'Y' && stage.level < 3) {
+      model.remnantDuration = 8
+      model.attackSpeedAfter = stage.level === 1 ? 100 : 120
+      model.attackIntervalAfter = 1.25 / (model.attackSpeedAfter / 100)
+    }
+    return { ...stage, model }
+  }))
+  const selections = [all, [all[0]], [all[1], all[3], all[5]]]
+  const names = []
+  for (const items of selections) {
+    const groups = [{ blocking: false, comparison: items }, { blocking: true, comparison: [...items].reverse() }]
+    for (const layout of ['horizontal', 'vertical', 'block-comparison', 'block-details']) {
+      const snapshot = { comparison: items, blockingComparison: groups, potential: 1, blocking: false, assumptions, layout }
+      const saved = renderToStaticMarkup(createElement(Image, snapshot))
+      const live = renderToStaticMarkup(createElement(Table, snapshot))
+      const savedTable = firstTable(saved)
+      assert.deepEqual(rows(savedTable).slice(0, -1), rows(firstTable(live)))
+      for (const item of items) {
+        assert.ok(text(savedTable).includes(item.label), `${layout}: ${item.label}`)
+        assert.ok(savedTable.includes(`background-color:${item.color}`), `${layout}: ${item.color}`)
+        assert.ok(compact(savedTable).includes(`≈${item.expectation.expectedHitCount.toLocaleString('ja-JP', { maximumFractionDigits: 4 })}`))
+      }
+      const columnCount = layout === 'horizontal' ? 1 + items.length * 3 : layout === 'vertical' ? 6
+        : layout === 'block-comparison' ? 3 : 5
+      assertConditions(savedTable, layout.startsWith('block-') ? blockingConditions : defaultConditions, columnCount)
+      const filename = imageFilename(snapshot)
+      assert.ok(filename.includes(items.map(item => item.label).join('-').replace(/\s+/g, '')))
+      assert.doesNotMatch(filename, /module-|:lv/)
+      assert.ok(new TextEncoder().encode(filename).length <= 240)
+      names.push(filename)
+    }
+  }
+  assert.equal(new Set(names).size, names.length)
 })

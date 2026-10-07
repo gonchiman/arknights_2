@@ -16,6 +16,7 @@ interface Comparison {
   id: string
   label: string
   color: string
+  lineStyle?: 'solid' | 'dashed' | 'dotted'
   model: SurtrRemnantAttackModel | null
 }
 
@@ -92,7 +93,8 @@ export function SurtrRemnantAttackExpectationPanel({
   return <><CollapsibleCalculatorPanel id="surtr-remnant-expectation" number="03" title="攻撃回数の期待値計算"
     summary="期待命中回数" collapsedLabel="結果を表示"
     className="surtr-s3-output-panel surtr-remnant-attack-expectation-panel">
-    {status || (!canCalculate ? <p role="alert">期待値の計算に必要なデータを取得できませんでした。</p> : <>
+    {status || (comparison.length === 0 ? <p className="surtr-s3-status" role="status">比較するMOD・段階を選択してください。</p>
+      : !canCalculate ? <p role="alert">期待値の計算に必要なデータを取得できませんでした。</p> : <>
       <div className="surtr-remnant-attack-expectation-heading">
         <h3>命中回数の期待値</h3>
         <div className="surtr-remnant-attack-expectation-tools">
@@ -112,7 +114,7 @@ export function SurtrRemnantAttackExpectationPanel({
           <p>潜在{potential}・{compareBlocking ? 'ブロック状態比較' : blocking ? 'ブロック中' : '非ブロック'}・予備動作{seconds(assumptions.windup)}・
             {assumptions.ctCarry === 'time' ? 'CT秒数維持' : 'CT割合維持'}・撤退同時の命中{assumptions.includeRetreatHit ? 'を含む' : 'を含まない'}</p>
         </HelpPopover>
-        <button type="button" className="button secondary" onClick={openImage} aria-haspopup="dialog">画像を保存</button>
+        <button type="button" className="button secondary" onClick={openImage} disabled={!canCalculate || saving} aria-haspopup="dialog">画像を保存</button>
         </div>
       </div>
       <SurtrRemnantAttackExpectationTable comparison={tableComparison} blockingComparison={tableBlockingComparison} layout={layout} digits={digits}

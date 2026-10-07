@@ -9,6 +9,25 @@ const settings: SurtrRemnantAttackImageConditions = {
   kind: 'grouped-bar', step: 0.05, showValues: true, showBoundaries: false,
 }
 
+test('stage selections retain every selected MOD level, including seven, none-only and asymmetric selections', () => {
+  const selections = [
+    ['未装備'],
+    ['MOD X Lv.1', 'MOD X Lv.2', 'MOD X Lv.3'],
+    ['未装備', 'MOD X Lv.1', 'MOD X Lv.3', 'MOD Y Lv.2'],
+    ['未装備', 'MOD X Lv.1', 'MOD X Lv.2', 'MOD X Lv.3', 'MOD Y Lv.1', 'MOD Y Lv.2', 'MOD Y Lv.3'],
+  ]
+  for (const kind of ['grouped-bar', 'step', 'bands'] as const) {
+    const names = selections.map(modules => getSurtrRemnantAttackImageFilename({ ...settings, kind, modules }))
+    assert.equal(new Set(names).size, selections.length)
+    for (const [index, name] of names.entries()) {
+      assert.ok(name.includes(selections[index].join('-').replace(/\s+/g, '')))
+      for (const aspect of [undefined, 16 / 9]) assert.ok(new TextEncoder().encode(withChartImageAspect(name, aspect)).length <= 240)
+    }
+    assert.notEqual(names[2], getSurtrRemnantAttackImageFilename({ ...settings, kind, modules: [...selections[2]].reverse() }))
+    assert.doesNotMatch(names[0], /MOD[XY]|Lv/)
+  }
+})
+
 test('remnant filenames describe effective calculation conditions in comparison order', () => {
   const name = getSurtrRemnantAttackImageFilename(settings)
   for (const text of ['スルト_余燼命中回数', '潜在1', '未装備-MODXLv.3-MODYLv.3', '非ブロック',

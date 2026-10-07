@@ -9,6 +9,25 @@ const settings: SurtrRemnantExpectationImageConditions = {
   kind: 'bar', showValues: true, digits: 0,
 }
 
+test('expectation names preserve actual selected stages rather than a shared MOD level', () => {
+  const selections = [
+    ['未装備'],
+    ['MOD X Lv.1', 'MOD X Lv.2', 'MOD X Lv.3'],
+    ['未装備', 'MOD X Lv.1', 'MOD X Lv.3', 'MOD Y Lv.2'],
+    ['未装備', 'MOD X Lv.1', 'MOD X Lv.2', 'MOD X Lv.3', 'MOD Y Lv.1', 'MOD Y Lv.2', 'MOD Y Lv.3'],
+  ]
+  for (const kind of ['bar', 'line'] as const) {
+    const names = selections.map(modules => getSurtrRemnantExpectationImageFilename({ ...settings, kind, modules }))
+    assert.equal(new Set(names).size, selections.length)
+    for (const [index, name] of names.entries()) {
+      assert.ok(name.includes(selections[index].join('-').replace(/\s+/g, '')))
+      for (const aspect of [undefined, 16 / 9]) assert.ok(new TextEncoder().encode(withChartImageAspect(name, aspect)).length <= 240)
+    }
+    assert.notEqual(names[2], getSurtrRemnantExpectationImageFilename({ ...settings, kind, modules: ['未装備', 'MOD X Lv.2', 'MOD X Lv.3', 'MOD Y Lv.2'] }))
+    assert.doesNotMatch(names[0], /MOD[XY]|Lv/)
+  }
+})
+
 test('expectation filenames describe CT distribution, selected resistances and assumptions', () => {
   const name = getSurtrRemnantExpectationImageFilename(settings)
   for (const part of ['スルト_余燼総ダメージ期待値', '潜在1', '未装備-MODXLv.3-MODYLv.3', '非ブロック',

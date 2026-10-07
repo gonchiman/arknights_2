@@ -133,7 +133,7 @@ export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, se
   const compact = width < 480
   const axisLabel = valueAxisLabel ?? (kind === 'bands' ? undefined : '命中回数（回）')
   const textRequest = JSON.stringify([image, width, kind, axisLabel, data.map(({ item }) => [item.id, item.label])])
-  const estimatedTextLayout = useMemo(() => image
+  const estimatedTextLayout = useMemo(() => image || kind === 'bands'
     ? imageTextLayout(width, kind, axisLabel, data.map(({ item }) => item)) : null, [textRequest])
   const textLayout = textMeasurement?.request === textRequest ? textMeasurement.layout : estimatedTextLayout
   const axisLines = textLayout?.axisLines ?? (axisLabel === undefined ? [] : [axisLabel])
@@ -143,7 +143,7 @@ export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, se
   const baseTop = kind === 'bands' ? 42 : 32
   const top = baseTop + axisOverflow
   const seriesLineCount = Math.max(1, ...Object.values(textLayout?.seriesLines ?? {}).map(lines => lines.length))
-  const bandOverflow = image && kind === 'bands'
+  const bandOverflow = kind === 'bands'
     ? Math.max(0, (seriesLineCount * SERIES_LABEL_LINE_HEIGHT + 16) * data.length - (naturalChartHeight - baseTop - 32)) : 0
   const stepOverflow = image && kind === 'step'
     ? Object.values(textLayout?.seriesLines ?? {}).reduce((sum, lines) => sum + Math.max(0, lines.length - 1) * SERIES_LABEL_LINE_HEIGHT, 0) : 0
@@ -294,10 +294,9 @@ export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, se
           const rowHeight = Math.min(44, (bottom - top) / data.length * 0.55)
           const rowTop = row - rowHeight / 2
           const rowBottom = row + rowHeight / 2
-          const label = !image && compact ? item.model.moduleType ? `MOD ${item.model.moduleType}` : '未装備' : item.label
-          const labelLines = textLayout?.seriesLines[item.id] ?? [label]
+          const labelLines = textLayout?.seriesLines[item.id] ?? [item.label]
           const boundaryLabels = spacedTicks(intervals.slice(1).map(interval => interval.from), x, 30)
-          return <g key={item.id}>
+          return <g key={item.id} data-band-series={item.id}>
             <text className="surtr-remnant-attack-chart-tick" x={left - 10}
               y={row + 4 - (labelLines.length - 1) * SERIES_LABEL_LINE_HEIGHT / 2} textAnchor="end">
               {labelLines.length === 1 ? labelLines[0] : labelLines.map((line, lineIndex) =>

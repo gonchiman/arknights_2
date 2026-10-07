@@ -10,6 +10,8 @@ let chartModule
 let imageModule
 let plotModule
 let chartData
+let moduleComparison
+let expectationImage
 
 before(async () => {
   server = await createServer({
@@ -25,6 +27,8 @@ before(async () => {
   imageModule = await server.ssrLoadModule('/src/components/SurtrRemnantAttackChartImage.tsx')
   plotModule = await server.ssrLoadModule('/src/components/SurtrRemnantStepPlot.tsx')
   chartData = await server.ssrLoadModule('/src/lib/surtrRemnantChart.ts')
+  moduleComparison = await server.ssrLoadModule('/src/lib/surtrModuleComparison.ts')
+  expectationImage = await server.ssrLoadModule('/src/components/SurtrRemnantExpectationChartImage.tsx')
 })
 after(async () => { await server?.close() })
 
@@ -48,6 +52,23 @@ const series = [
   { id: 'X', label: 'MOD X Lv.3', color: '#3f7699', model: x },
   { id: 'Y', label: 'MOD Y Lv.3', color: '#b4763e', model: y },
 ]
+
+const allStages = () => moduleComparison.getSelectedSurtrModuleStages([
+  { id: '', type: null, label: '未装備', levels: [], unlocked: true },
+  { id: x.moduleId, type: 'X', label: 'MOD X', levels: [1, 2, 3], unlocked: true },
+  { id: y.moduleId, type: 'Y', label: 'MOD Y', levels: [1, 2, 3], unlocked: true },
+], [], { [x.moduleId]: [1, 2, 3], [y.moduleId]: [1, 2, 3] }).map(stage => {
+  const model = stage.type === null ? none : stage.type === 'X' ? x : {
+    ...y, remnantDuration: stage.level === 3 ? 9 : 8,
+    attackSpeedAfter: stage.level === 1 ? 100 : stage.level === 2 ? 120 : 130,
+    attackIntervalAfter: 1.25 / (stage.level === 1 ? 1 : stage.level === 2 ? 1.2 : 1.3),
+  }
+  return { ...stage, model: { ...model, moduleLevel: stage.level } }
+})
+const stageSelections = () => {
+  const all = allStages()
+  return [all, [all[0]], [all[1], all[3], all[5]]]
+}
 
 const decode = value => value.replace(/&(?:amp|quot|lt|gt|#39|#x27);/g, entity => ({
   '&amp;': '&', '&quot;': '"', '&lt;': '<', '&gt;': '>', '&#39;': "'", '&#x27;': "'",
@@ -177,6 +198,76 @@ test('screen and PNG steps separate equipment into three rows with identical sca
     segments.forEach((parts, index) => parts.forEach((part, partIndex) => {
       close((part.to - Number(frames[index].attrs.x)) / Number(frames[index].attrs.width) * 1.25, ends[index][partIndex])
     }))
+  }
+})
+
+test('seven stages and subsets keep distinct row labels, colors and stage line styles on screen and PNG', () => {
+  for (const selected of stageSelections()) {
+    for (const image of [false, true]) {
+      const rendered = renderChart({ series: selected, image })
+      assert.deepEqual(rows(rendered).map(node => node.attrs['data-step-series']), selected.map(item => item.id))
+      for (const item of selected) {
+        const equipment = row(rendered, item.id)
+        assert.equal(text(withClass(equipment, 'surtr-remnant-step-row-name')[0]), item.label)
+        const expectedDash = item.level === 1 ? '2 3' : item.level === 2 ? '7 4' : undefined
+        const path = withClass(equipment, 'surtr-remnant-attack-chart-step')[0]
+        const swatch = elements(equipment, child => child.tag === 'line' && child.attrs.stroke === item.color)[0]
+        assert.equal(path.attrs.stroke, item.color)
+        assert.equal(path.attrs['stroke-dasharray'], expectedDash)
+        assert.equal(swatch.attrs['stroke-dasharray'], expectedDash)
+        close(Number(frame(equipment).attrs.height), Number(frame(row(renderChart({ image }), 'none')).attrs.height))
+      }
+    }
+  }
+})
+
+test('compact CT bands retain actual stage names and separate row annotations for all seven series', () => {
+  const selected = allStages()
+  for (const image of [false, true]) {
+    const rendered = renderChart({ series: selected, kind: 'bands', width: 360, image,
+      assumptions: { ...assumptions, windup: 0.5 }, showBoundaries: true })
+    const bands = elements(rendered, child => child.attrs['data-band-series'] !== undefined)
+    assert.equal(bands.length, selected.length)
+    for (const [index, band] of bands.entries()) {
+      assert.equal(band.attrs['data-band-series'], selected[index].id)
+      assert.equal(text(withClass(band, 'surtr-remnant-attack-chart-tick')[0]), selected[index].label)
+      const colored = elements(band, child => child.tag === 'rect' && child.attrs.fill === selected[index].color)
+      assert.ok(colored.length > 0)
+      if (index > 0) {
+        const previousTexts = elements(bands[index - 1], child => child.tag === 'text').map(child => Number(child.attrs.y))
+        const currentTexts = elements(band, child => child.tag === 'text').map(child => Number(child.attrs.y))
+        assert.ok(Math.min(...currentTexts) - Math.max(...previousTexts) >= 11, 'adjacent row annotations overlap')
+      }
+    }
+    const svg = withClass(rendered, 'surtr-remnant-attack-chart-svg')[0]
+    const lastRect = elements(bands.at(-1), child => child.tag === 'rect' && child.attrs.fill === selected.at(-1).color).at(-1)
+    assert.ok(Number(lastRect.attrs.y) + Number(lastRect.attrs.height) < Number(svg.attrs.height) - 20)
+  }
+})
+
+test('damage expectation PNG and preview preserve all stage colors and explicit line styles', () => {
+  for (const selected of stageSelections()) {
+    const plotted = selected.map((item, index) => ({ ...item,
+      points: [0, 20, 40].map(x => ({ x, value: 15000 + index * 100 - x * 100 })) }))
+    for (const component of [expectationImage.SurtrRemnantExpectationChartImage,
+      expectationImage.SurtrRemnantExpectationChartImagePreview]) {
+      const rendered = parseMarkup(renderToStaticMarkup(createElement(component, {
+        id: 'selected-stages', series: plotted, kind: 'line', resistanceStep: 20, resistances: [0, 20, 40],
+        potential: 1, blocking: false, assumptions, showValues: true, digits: 0,
+      })))
+      const paths = withClass(rendered, 'surtr-dps-chart-line')
+      const legend = withClass(rendered, 'chart-image-frame-legend-item')
+      assert.equal(paths.length, selected.length)
+      assert.deepEqual(legend.map(text), selected.map(item => item.label))
+      selected.forEach((item, index) => {
+        const expectedDash = item.level === 1 ? '2 3' : item.level === 2 ? '7 4' : undefined
+        const swatch = elements(legend[index], child => child.tag === 'line')[0]
+        assert.equal(paths[index].attrs.stroke, item.color)
+        assert.equal(paths[index].attrs['stroke-dasharray'], expectedDash)
+        assert.equal(swatch.attrs.stroke, item.color)
+        assert.equal(swatch.attrs['stroke-dasharray'], expectedDash)
+      })
+    }
   }
 })
 

@@ -7,9 +7,8 @@ import {
   type SurtrRemnantAttackModel, type SurtrRemnantAttackAssumptions,
   type SurtrRemnantAttackResult, type SurtrRemnantCtStep,
 } from '../lib/surtrRemnantAttacks'
-import { getOperatorModuleId, getOperatorModuleLevels, getOperatorModules } from '../lib/operatorModules'
-import { getModuleComparisonColors } from '../lib/moduleColors'
-import { getSurtrRemnantAttackChartHeight, type SurtrRemnantChartKind, type SurtrRemnantChartSeries } from '../lib/surtrRemnantChart'
+import { getSurtrModuleChoices, getSelectedSurtrModuleStages, type SurtrModuleChoice } from '../lib/surtrModuleComparison'
+import { getSurtrRemnantAttackChartHeight, getSurtrRemnantLineDasharray, type SurtrRemnantChartKind, type SurtrRemnantChartSeries } from '../lib/surtrRemnantChart'
 import { getSurtrRemnantAttackImageFilename } from '../lib/surtrRemnantAttackImageFilename'
 import { withChartImageAspect } from '../lib/chartImageFilename'
 import { withChartImageLabelFilename } from '../lib/chartImageLabels'
@@ -20,6 +19,7 @@ import { PageBreadcrumbs } from './PageBreadcrumbs'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { HelpPopover } from './HelpPopover'
+import { SurtrModuleStageSelection } from './SurtrModuleStageSelection'
 import { SurtrRemnantAttackChart } from './SurtrRemnantAttackChart'
 import { SurtrRemnantAttackExpectationPanel } from './SurtrRemnantAttackExpectationPanel'
 import { SurtrRemnantDamageExpectationPanel } from './SurtrRemnantDamageExpectationPanel'
@@ -40,6 +40,7 @@ interface Comparison {
   id: string
   label: string
   color: string
+  lineStyle: 'solid' | 'dashed' | 'dotted'
   model: SurtrRemnantAttackModel | null
   dpsModel: SurtrDpsModel | null
 }
@@ -72,14 +73,14 @@ function RemnantAttackDetail({ selection, onClose }: { selection: DetailSelectio
   return <GoldenglowDetailModal title={`残りCT ${selection.ct.toFixed(2)} s の命中詳細`} closeLabel="命中詳細を閉じる"
     className="surtr-remnant-detail" closeOnContextMenu onClose={onClose}>
     <p className="surtr-remnant-detail-conditions">潜在{selection.potential}・{selection.blocking ? 'ブロック中' : '非ブロック'}・余燼発動を0秒とする</p>
-    <div className="surtr-s3-table-wrap"><table className="surtr-s3-table surtr-remnant-table" aria-label="余燼中の命中詳細">
+    <div className="surtr-s3-table-wrap"><table className="surtr-s3-table surtr-remnant-table" style={{ minWidth: Math.max(500, 180 + columns.length * 140) }} aria-label="余燼中の命中詳細">
       <thead><tr><th scope="col">項目</th><ColumnHeaders comparison={columns} /></tr></thead>
       <tbody>{details.map(row => <tr key={row.label}><th scope="row">{row.label}</th>
         {columns.map(item => <td key={item.id}>{row.value(item)}</td>)}
       </tr>)}</tbody>
     </table></div>
     <details className="surtr-s3-assumptions surtr-remnant-hit-details"><summary>すべての命中時刻</summary>
-      <div className="surtr-s3-table-wrap"><table className="surtr-s3-table surtr-remnant-table" aria-label="余燼発動からの命中時刻">
+      <div className="surtr-s3-table-wrap"><table className="surtr-s3-table surtr-remnant-table" style={{ minWidth: Math.max(500, 180 + columns.length * 140) }} aria-label="余燼発動からの命中時刻">
         <thead><tr><th scope="col">攻撃</th><ColumnHeaders comparison={columns} /></tr></thead>
         <tbody>{Array.from({ length: hitRows }, (_, index) => <tr key={index}><th scope="row">{index + 1}回目</th>
           {columns.map(item => <td key={item.id}>{seconds(item.result?.hitTimes[index] ?? null)}</td>)}
@@ -101,6 +102,8 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
   const record = rows.find(row => row.operatorId === SURTR_OPERATOR_ID && row.skillIndex === 3)
   const [potential, setPotential] = useState(1)
   const [blocking, setBlocking] = useState(false)
+  const [excluded, setExcluded] = useState<string[]>([])
+  const [moduleLevels, setModuleLevels] = useState<Record<string, number[]>>({})
   const [step, setStep] = useState<SurtrRemnantCtStep>(0.1)
   const [windupInput, setWindupInput] = useState('0.30')
   const [ctCarry, setCtCarry] = useState<SurtrRemnantAttackAssumptions['ctCarry']>('time')
@@ -126,20 +129,28 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
     level: record?.operatorProfile.phases[2]?.maxLevel ?? 90, trust: 100, potential, blocking,
     skillLevelIndex: Math.max(0, (record?.skillLevels.length ?? 10) - 1),
   }), [record, potential, blocking])
+  const choices = useMemo(() => getSurtrModuleChoices(record?.operatorProfile, settings.level), [record, settings.level])
+  const selectedStages = useMemo(() => getSelectedSurtrModuleStages(choices, excluded, moduleLevels), [choices, excluded, moduleLevels])
+  const toggleModuleLevel = (choice: SurtrModuleChoice, level: number, checked: boolean) => {
+    setModuleLevels(previous => {
+      const selected = excluded.includes(choice.id) ? [] : previous[choice.id] ?? [choice.levels.at(-1) ?? 3]
+      return { ...previous, [choice.id]: choice.levels.filter(candidate => candidate === level ? checked : selected.includes(candidate)) }
+    })
+    setExcluded(previous => previous.filter(id => id !== choice.id))
+    setHiddenSeries([])
+    setPageIndex(0)
+  }
+  const toggleNone = (checked: boolean) => {
+    setExcluded(previous => checked ? previous.filter(id => id !== '') : [...previous, ''])
+    setHiddenSeries([])
+    setPageIndex(0)
+  }
   const blockingComparison = useMemo<{ blocking: boolean; comparison: Comparison[] }[]>(() => {
-    const modules = getOperatorModules(record?.operatorProfile ?? {})
-    const types = [null, 'X', 'Y'] as const
-    const colors = getModuleComparisonColors(types.map(moduleType => ({ moduleType, potential })))
-    return [false, true].map(blockingState => ({ blocking: blockingState, comparison: types.map((type, index) => {
-      const moduleIndex = modules.findIndex(module => module.typeName2?.trim().toUpperCase() === type)
-      const module = modules[moduleIndex]
-      const id = type === null ? '' : module ? getOperatorModuleId(module, moduleIndex) : null
-      const valid = type === null || (module && getOperatorModuleLevels(module).includes(3))
-      return { id: type ?? 'none', label: type ? `MOD ${type} Lv.3` : '未装備', color: colors[index],
-        model: record && id !== null && valid ? deriveSurtrRemnantAttackModel(record, { ...settings, blocking: blockingState }, id, 3) : null,
-        dpsModel: record && id !== null && valid ? deriveSurtrDpsModel(record, { ...settings, blocking: blockingState }, id, 3) : null }
-    }) }))
-  }, [record, settings, potential])
+    return [false, true].map(blockingState => ({ blocking: blockingState, comparison: selectedStages.map(stage => ({ ...stage,
+      model: record ? deriveSurtrRemnantAttackModel(record, { ...settings, blocking: blockingState }, stage.moduleId, stage.level) : null,
+      dpsModel: record ? deriveSurtrDpsModel(record, { ...settings, blocking: blockingState }, stage.moduleId, stage.level) : null,
+    })) }))
+  }, [record, settings, selectedStages])
   const comparison = blockingComparison[blocking ? 1 : 0].comparison
   const models = useMemo(() => comparison.flatMap(item => item.model ? [item.model] : []), [comparison])
   const ctLimit = getSurtrRemnantCtLimit(models)
@@ -212,6 +223,9 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
   }
   const status = error ? <div className="error-box" role="alert">{error}<button type="button" className="button secondary" onClick={onRetry}>再読み込み</button></div>
     : <p className="surtr-s3-status" role="status">{loading ? 'スルトのデータを読み込み中…' : 'スルトS3のデータを取得できませんでした。'}</p>
+  const outputStatus = !record ? status : !comparison.length ? <p className="surtr-s3-status" role="status">比較するMOD・段階を選択してください。</p>
+    : missingModel || invalidCalculation ? <p role="alert">計算に必要なMOD・攻撃速度・余燼のデータを取得できませんでした。</p>
+      : invalidWindup ? <p className="surtr-s3-status" role="status">計算条件の入力を確認してください。</p> : null
 
   return <section className="calculator-page surtr-s3-page surtr-remnant-page" aria-labelledby="surtr-remnant-title">
     <div className="page-heading-with-breadcrumbs">
@@ -231,6 +245,8 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
             </div>
           </div>
         </div>
+        <SurtrModuleStageSelection choices={choices} excluded={excluded} moduleLevels={moduleLevels}
+          onToggleLevel={toggleModuleLevel} onToggleNone={toggleNone} />
         <details className="surtr-s3-assumptions"><summary>計算の前提・仮定</summary>
           <div className="surtr-remnant-assumption-fields">
             <label className="calculator-field"><span>攻撃開始から命中まで（s・仮定）</span><input aria-label="攻撃開始から命中まで（s・仮定）" type="number" min="0" max={windupLimit ?? undefined} step="0.01" value={windupInput}
@@ -274,17 +290,15 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
         <label className="surtr-s3-output-control"><span>CTの刻み</span><select aria-label="CTの刻み" value={step} onChange={event => { setStep(Number(event.target.value) as SurtrRemnantCtStep); setPageIndex(0) }}>
         {[0.1, 0.05, 0.01].map(value => <option key={value} value={value}>{value.toFixed(2)} s</option>)}
       </select></label></>}>
-      {!record ? status : missingModel || invalidCalculation ? <p role="alert">計算に必要なMOD・攻撃速度・余燼のデータを取得できませんでした。</p>
-        : invalidWindup ? <p className="surtr-s3-status" role="status">計算条件の入力を確認してください。</p>
-          : <>
+      {outputStatus ?? <>
             <section className="surtr-remnant-chart-section" aria-label={chartLabels[chartKind]}>
               <div className="surtr-remnant-chart-toolbar">
                 <div className="surtr-remnant-chart-legend" role="group" aria-label="表示する装備">
                   {comparison.map(item => <button type="button" key={item.id} aria-pressed={!hiddenSeries.includes(item.id)}
                     onClick={() => setHiddenSeries(previous => previous.includes(item.id) ? previous.filter(id => id !== item.id)
-                      : previous.length < comparison.length - 1 ? [...previous, item.id] : previous)}>
+                      : comparison.filter(candidate => !previous.includes(candidate.id)).length > 1 ? [...previous, item.id] : previous)}>
                     {chartKind === 'step' ? <svg className="surtr-remnant-line-swatch" width="18" height="12" aria-hidden="true"><line x1="0" x2="18" y1="6" y2="6" stroke={item.color}
-                      strokeWidth="2.5" /></svg>
+                      strokeWidth="2.5" strokeDasharray={getSurtrRemnantLineDasharray(item.lineStyle)} /></svg>
                       : <i aria-hidden="true" style={{ backgroundColor: item.color }} />}{item.label}
                   </button>)}
                 </div>
@@ -309,7 +323,7 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
                     <i aria-hidden="true" style={{ backgroundColor: item.color }} />{item.label} <strong>{selectedResults[index] ? `${selectedResults[index]!.hitCount} 回` : '—'}</strong>
                   </span>)}</div>}
             </section>
-            <div className="surtr-s3-table-wrap"><table className="surtr-s3-table surtr-s3-result-table surtr-remnant-table" aria-label="発動直前の残りCTごとの命中回数">
+            <div className="surtr-s3-table-wrap"><table className="surtr-s3-table surtr-s3-result-table surtr-remnant-table" style={{ minWidth: Math.max(440, 180 + comparison.length * 140) }} aria-label="発動直前の残りCTごとの命中回数">
               <thead><tr><th scope="col">発動直前の残りCT（s）</th><ColumnHeaders comparison={comparison} /></tr></thead>
               <tbody>{visibleRows.map(row => <tr key={row.ct} onClick={event => openDetail(event, row)}>
                 <th scope="row"><button type="button" className="surtr-s3-table-resistance" aria-haspopup="dialog" aria-label={`残りCT ${row.ct.toFixed(2)}秒の命中詳細`}>
@@ -329,11 +343,9 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
       {feedback && feedback !== 'failed' && <p className="surtr-s3-status" role="status">{feedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
     </CollapsibleCalculatorPanel>
     <SurtrRemnantAttackExpectationPanel comparison={comparison} blockingComparison={blockingComparison} potential={potential} blocking={blocking} assumptions={assumptions}
-      status={!record ? status : missingModel || invalidCalculation ? <p role="alert">計算に必要なMOD・攻撃速度・余燼のデータを取得できませんでした。</p>
-        : invalidWindup ? <p className="surtr-s3-status" role="status">計算条件の入力を確認してください。</p> : null} />
+      status={outputStatus} />
     <SurtrRemnantDamageExpectationPanel comparison={comparison} potential={potential} blocking={blocking} assumptions={assumptions}
-      status={!record ? status : missingModel || invalidCalculation ? <p role="alert">計算に必要なMOD・攻撃速度・余燼のデータを取得できませんでした。</p>
-        : invalidWindup ? <p className="surtr-s3-status" role="status">計算条件の入力を確認してください。</p> : null} />
+      status={outputStatus} />
     {image && <ChartImageSaveDialog initialFilename={image.filename} getDefaultFilename={ratio => withChartImageAspect(
       withChartImageLabelFilename(image.filename, getSurtrRemnantAttackImageLabelDefaults(image.series, image.kind), image.labels), ratio)} aspect={aspect} onAspectChange={setAspect}
       canChooseLocation={!!picker} saving={saving} error={feedback === 'failed'} helpMode="popover"

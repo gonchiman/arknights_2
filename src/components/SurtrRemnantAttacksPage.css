@@ -6,7 +6,7 @@
 .surtr-remnant-error { margin: 12px 0 0; color: var(--danger, #b42318); font-size: 12px; }
 .surtr-remnant-assumption-fields input[aria-invalid="true"] { border-color: var(--danger, #b42318); }
 .surtr-remnant-table { table-layout: fixed; min-width: 440px; }
-.surtr-remnant-table th:first-child { width: 31%; }
+.surtr-remnant-table th:first-child { width: 180px; }
 .surtr-remnant-table td, .surtr-remnant-table thead th:not(:first-child) { text-align: center; }
 .surtr-remnant-table strong { font-weight: 600; }
 .surtr-remnant-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 14px; }

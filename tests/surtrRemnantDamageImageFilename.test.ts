@@ -9,6 +9,23 @@ const settings: SurtrRemnantDamageImageConditions = {
   ctCarry: 'time', includeRetreatHit: false,
 }
 
+test('damage names distinguish seven stages, none-only and asymmetric stage selections', () => {
+  const selections = [
+    ['未装備'],
+    ['MOD X Lv.1', 'MOD X Lv.2', 'MOD X Lv.3'],
+    ['未装備', 'MOD X Lv.1', 'MOD X Lv.3', 'MOD Y Lv.2'],
+    ['未装備', 'MOD X Lv.1', 'MOD X Lv.2', 'MOD X Lv.3', 'MOD Y Lv.1', 'MOD Y Lv.2', 'MOD Y Lv.3'],
+  ]
+  const names = selections.map(modules => getSurtrRemnantDamageImageFilename({ ...settings, modules }))
+  assert.equal(new Set(names).size, selections.length)
+  for (const [index, name] of names.entries()) {
+    assert.ok(name.includes(selections[index].join('-').replace(/\s+/g, '')))
+    for (const aspect of [undefined, 16 / 9]) assert.ok(new TextEncoder().encode(withChartImageAspect(name, aspect)).length <= 240)
+  }
+  assert.notEqual(names[2], getSurtrRemnantDamageImageFilename({ ...settings, modules: [...selections[2]].reverse() }))
+  assert.doesNotMatch(names[0], /MOD[XY]|Lv/)
+})
+
 test('remnant damage names describe selected CT and resistance values and assumptions', () => {
   const name = getSurtrRemnantDamageImageFilename(settings)
   for (const part of ['スルト_余燼総ダメージ', '潜在1', '未装備-MODXLv.3-MODYLv.3', '非ブロック',

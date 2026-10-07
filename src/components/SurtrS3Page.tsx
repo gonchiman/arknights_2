@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SkillRecord } from '../types/skill'
 import { SURTR_OPERATOR_ID, deriveSurtrDpsModel, buildSurtrDpsCurve, type SurtrDpsSettings } from '../lib/surtrDps'
-import { getOperatorModuleId, getOperatorModuleLevels, getOperatorModules, isOperatorModuleUnlocked } from '../lib/operatorModules'
-import { getModuleComparisonColors } from '../lib/moduleColors'
+import { getSurtrModuleChoices, getSelectedSurtrModuleStages, type SurtrModuleChoice } from '../lib/surtrModuleComparison'
 import { getSurtrDpsImageFilename, getSurtrCombinedImageFilename } from '../lib/surtrDpsImageFilename'
 import { readEnemyHistogramSnapshot, writeEnemyHistogramSnapshot, type EnemyHistogramSnapshot } from '../lib/enemyHistogramSnapshot'
 import { readSurtrDpsPageState, writeSurtrDpsPageState } from '../lib/surtrDpsPageState'
@@ -28,6 +27,7 @@ import { SurtrDpsDetailModal, type SurtrDpsDetailSnapshot } from './SurtrDpsDeta
 import { SurtrCombinedChartImage, SurtrCombinedChartImagePreview, getSurtrCombinedImageLayout } from './SurtrCombinedChartImage'
 import { OperatorModuleComparison } from './OperatorModuleComparison'
 import { EnemyResistanceHistogramEditor } from './EnemyResistanceHistogramEditor'
+import { SurtrModuleStageSelection } from './SurtrModuleStageSelection'
 import './DamageCalculator.css'
 import './SurtrS3Page.css'
 
@@ -100,19 +100,8 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
     level: Math.min(maximumLevel, settings.level),
     skillLevelIndex: Math.min(settings.skillLevelIndex, Math.max(0, (record?.skillLevels.length ?? 10) - 1)),
   }), [settings, maximumLevel, record])
-  const choices = useMemo(() => [
-    { id: '', type: null as string | null, label: '未装備', levels: [] as number[], unlocked: true },
-    ...getOperatorModules(record?.operatorProfile ?? {}).flatMap((module, index) => {
-      const type = module.typeName2?.trim().toUpperCase()
-      if (type !== 'X' && type !== 'Y') return []
-      return [{ id: getOperatorModuleId(module, index), type, label: `MOD ${type}`,
-        levels: getOperatorModuleLevels(module),
-        unlocked: isOperatorModuleUnlocked(module, 2, effectiveSettings.level) }]
-    }),
-  ], [record, effectiveSettings.level])
-  const getSelectedLevels = (choice: typeof choices[number]) => choice.unlocked && !excluded.includes(choice.id)
-    ? moduleLevels[choice.id] ?? [choice.levels.at(-1) ?? 3] : []
-  const toggleModuleLevel = (choice: typeof choices[number], level: number, checked: boolean) => {
+  const choices = useMemo(() => getSurtrModuleChoices(record?.operatorProfile, effectiveSettings.level), [record, effectiveSettings.level])
+  const toggleModuleLevel = (choice: SurtrModuleChoice, level: number, checked: boolean) => {
     setModuleLevels(previous => {
       const selected = excluded.includes(choice.id) ? [] : previous[choice.id] ?? [choice.levels.at(-1) ?? 3]
       return { ...previous, [choice.id]: choice.levels.filter(candidate => candidate === level ? checked : selected.includes(candidate)) }
@@ -121,18 +110,9 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   }
   const comparison = useMemo(() => {
     if (!record) return []
-    const selected = choices.filter(choice => choice.unlocked && !excluded.includes(choice.id)).flatMap(choice => {
-      const levels = choice.id ? choice.levels.filter(level => (moduleLevels[choice.id] ?? [choice.levels.at(-1) ?? 3]).includes(level)) : [0]
-      return levels.map(level => ({ ...choice, moduleId: choice.id, level,
-        id: choice.id ? `${choice.id}:lv${level}` : 'none',
-        lineStyle: (level === 1 ? 'dotted' : level === 2 ? 'dashed' : 'solid') as 'solid' | 'dashed' | 'dotted' }))
-    })
-    const colors = getModuleComparisonColors(selected.map(choice => ({ moduleType: choice.type, moduleLevel: choice.level })),
-      { shadeBy: 'moduleLevel' })
-    return selected.map((choice, index) => {
+    return getSelectedSurtrModuleStages(choices, excluded, moduleLevels).map(choice => {
       const model = deriveSurtrDpsModel(record, effectiveSettings, choice.moduleId, choice.level)
-      return { ...choice, model, label: choice.moduleId ? `${choice.label} Lv.${choice.level}` : choice.label,
-        color: colors[index], points: model ? buildSurtrDpsCurve(model).map(point => ({ x: point.resistance, value: point.dps })) : [] }
+      return { ...choice, model, points: model ? buildSurtrDpsCurve(model).map(point => ({ x: point.resistance, value: point.dps })) : [] }
     })
   }, [record, choices, excluded, effectiveSettings, moduleLevels])
   const series = useMemo<SurtrDpsChartSeries[]>(() => comparison.filter(item => item.model).map(item => ({
@@ -322,16 +302,8 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
           <label className="calculator-field"><span>潜在</span><select aria-label="潜在" value={effectiveSettings.potential} onChange={event => update('potential', Number(event.target.value))}>
             {[1, 2, 3, 4, 5, 6].map(rank => <option key={rank} value={rank}>潜在{rank}</option>)}</select></label>
         </div>
-        <fieldset className="surtr-s3-mods surtr-s3-stage-selection"><legend>比較するMOD・段階</legend>{choices.map(choice => <div key={choice.id} className="surtr-s3-mod" role="group" aria-label={`${choice.label}の比較段階`}>
-          <span className="surtr-s3-mod-name">{choice.label}</span>
-          {choice.id ? <div className="surtr-s3-module-levels">
-            {choice.levels.map(level => <label key={level}><input type="checkbox" aria-label={`${choice.label} Lv.${level}を比較`}
-              disabled={!choice.unlocked} checked={getSelectedLevels(choice).includes(level)}
-              onChange={event => toggleModuleLevel(choice, level, event.target.checked)} />Lv.{level}</label>)}
-            {!choice.unlocked && <span className="surtr-s3-locked">Lv.60で解放</span>}
-          </div> : <label><input type="checkbox" aria-label="未装備を比較に含める" checked={!excluded.includes('')}
-              onChange={event => setExcluded(previous => event.target.checked ? previous.filter(id => id !== '') : [...previous, ''])} />比較に含める</label>}
-        </div>)}</fieldset>
+        <SurtrModuleStageSelection choices={choices} excluded={excluded} moduleLevels={moduleLevels} onToggleLevel={toggleModuleLevel}
+          onToggleNone={checked => setExcluded(previous => checked ? previous.filter(id => id !== '') : [...previous, ''])} />
         <div className="surtr-s3-block-setting"><span>ブロック状態</span><div className="surtr-s3-segments" role="group" aria-label="ブロック状態">
           <button type="button" aria-pressed={!effectiveSettings.blocking} onClick={() => update('blocking', false)}>未ブロック</button>
           <button type="button" aria-pressed={effectiveSettings.blocking} onClick={() => update('blocking', true)}>対象を自身でブロック</button>

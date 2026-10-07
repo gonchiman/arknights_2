@@ -21,6 +21,7 @@ interface Comparison {
   id: string
   label: string
   color: string
+  lineStyle?: 'solid' | 'dashed' | 'dotted'
   model: SurtrRemnantAttackModel | null
   dpsModel: SurtrDpsModel | null
 }
@@ -39,7 +40,7 @@ export function SurtrRemnantDamageExpectationPanel({ comparison, potential, bloc
   const [resistanceStep, setResistanceStep] = useState(20)
   const [showValues, setShowValues] = useState(false)
   const [showResistanceRanks, setShowResistanceRanks] = useState(true)
-  const [hiddenSeries, setHiddenSeries] = useState<string[]>([])
+  const [seriesVisibility, setSeriesVisibility] = useState<{ selection: string; hidden: string[] }>({ selection: '', hidden: [] })
   const [selectedResistance, setSelectedResistance] = useState<number | null>(60)
   const [image, setImage] = useState<ImageSnapshot | null>(null)
   const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
@@ -55,12 +56,18 @@ export function SurtrRemnantDamageExpectationPanel({ comparison, potential, bloc
     if (!item.model || !item.dpsModel) return []
     return [{ ...item, points: buildSurtrRemnantExpectedDamagePoints(item.dpsModel, item.model, resistances, assumptions) }]
   }), [comparison, resistances, assumptions])
+  const selection = JSON.stringify(comparison.map(item => item.id))
+  const hiddenSeries = seriesVisibility.selection === selection ? seriesVisibility.hidden : []
   const visible = calculated.filter(item => !hiddenSeries.includes(item.id))
-  const series: SurtrDpsChartSeries[] = visible.map(item => ({ id: item.id, label: item.label, color: item.color, points: item.points }))
+  const series: SurtrDpsChartSeries[] = visible.map(item => ({ id: item.id, label: item.label, color: item.color,
+    lineStyle: item.lineStyle, points: item.points }))
   const canOutput = !status && calculated.length === comparison.length && series.length > 0
     && series.every(item => item.points.every(point => point.value !== null))
-  const toggleSeries = (id: string) => setHiddenSeries(previous => previous.includes(id)
-    ? previous.filter(value => value !== id) : comparison.filter(item => !previous.includes(item.id)).length > 1 ? [...previous, id] : previous)
+  const toggleSeries = (id: string) => setSeriesVisibility(previous => {
+    const hidden = previous.selection === selection ? previous.hidden : []
+    return { selection, hidden: hidden.includes(id) ? hidden.filter(value => value !== id)
+      : comparison.filter(item => !hidden.includes(item.id)).length > 1 ? [...hidden, id] : hidden }
+  })
   const aspectRatio = aspect.preset !== 'auto' && [aspect.width, aspect.height].every(value => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100)
     ? Number(aspect.width) / Number(aspect.height) : undefined
   const openImage = () => {
@@ -99,7 +106,8 @@ export function SurtrRemnantDamageExpectationPanel({ comparison, potential, bloc
         <label className="surtr-s3-values-toggle"><input type="checkbox" checked={showResistanceRanks}
           onChange={event => setShowResistanceRanks(event.target.checked)} />術耐性ランク表示</label>
       </>}>
-      {status || (!canOutput ? <p role="alert">期待値の計算に必要なデータを取得できませんでした。</p> : <>
+      {status || (comparison.length === 0 ? <p className="surtr-s3-status" role="status">比較するMOD・段階を選択してください。</p>
+        : !canOutput ? <p role="alert">期待値の計算に必要なデータを取得できませんでした。</p> : <>
         <div className="surtr-remnant-damage-expectation-heading"><h3>期待命中回数 × 1回のダメージ</h3>
           <label className="surtr-s3-output-control"><span>術耐性</span><select aria-label="期待総ダメージの術耐性" value={resistance ?? ''}
             onChange={event => setSelectedResistance(event.target.value === '' ? null : Number(event.target.value))}>
@@ -122,7 +130,7 @@ export function SurtrRemnantDamageExpectationPanel({ comparison, potential, bloc
                 <i aria-hidden="true" style={{ backgroundColor: item.color }} />{item.label}
               </button>)}
             </div>
-            <div className="surtr-remnant-chart-actions"><button type="button" className="button secondary" onClick={openImage} aria-haspopup="dialog">画像を保存</button></div>
+            <div className="surtr-remnant-chart-actions"><button type="button" className="button secondary" onClick={openImage} disabled={!canOutput || saving} aria-haspopup="dialog">画像を保存</button></div>
           </div>
           <SurtrDpsChart series={series} kind={kind} barStep={resistanceStep} resistanceRange={{ min: 0, max: 100 }} showLegend={false}
             gridStyle="dashed" precision={0} showValues={showValues} showResistanceRanks={showResistanceRanks}
