@@ -13,13 +13,16 @@ import { buildSurtrDpsBlockComparison } from '../lib/surtrDpsBlockComparison'
 import { writeClipboardText } from '../lib/clipboard'
 import { isValidHpChartYAxisRange } from '../lib/goldenglowTargetSwitchHpAxis'
 import { withChartImageAspect } from '../lib/chartImageFilename'
+import { withChartImageLabelFilename, type ChartImageLabelOverrides } from '../lib/chartImageLabels'
 import { getChartImageLayout } from '../lib/chartImageLayout'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { SURTR_HOME_LINK } from '../lib/navigation'
 import { PageBreadcrumbs } from './PageBreadcrumbs'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
-import { SurtrDpsChart, SurtrDpsChartImage, SurtrDpsChartImagePreview, type SurtrDpsChartSeries, type SurtrDpsChartKind, type SurtrDpsChartYAxis } from './SurtrDpsChart'
+import { ChartImageLabelEditor } from './ChartImageLabelEditor'
+import { SurtrDpsChart, SurtrDpsChartImage, SurtrDpsChartImagePreview, getSurtrDpsImageLabelDefaults,
+  type SurtrDpsChartSeries, type SurtrDpsChartKind, type SurtrDpsChartYAxis } from './SurtrDpsChart'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import { SurtrDpsDetailModal, type SurtrDpsDetailSnapshot } from './SurtrDpsDetailModal'
 import { SurtrCombinedChartImage, SurtrCombinedChartImagePreview, getSurtrCombinedImageLayout } from './SurtrCombinedChartImage'
@@ -35,6 +38,7 @@ interface ImageSnapshot {
   kind: SurtrDpsChartKind; barStep: SurtrDpsBarStep; showValues: boolean; metric: SurtrDpsMetric; title: string
   resistanceRange: SurtrDpsResistanceRange
   showResistanceRanks: boolean
+  labels?: ChartImageLabelOverrides
   blockComparisons: { blocking: boolean; series: SurtrDpsChartSeries[]; conditions: string }[] | null
   blockComparisonFilename: string
   blockComparisonConditions: string
@@ -451,13 +455,15 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
     </CollapsibleCalculatorPanel>
     {detail && <SurtrDpsDetailModal snapshot={detail} onClose={() => setDetail(null)} />}
     {image && <ChartImageSaveDialog initialFilename={imageBaseFilename} getDefaultFilename={ratio => withChartImageAspect(
-      includeHistogram && image.histogram ? getSurtrCombinedImageFilename(imageBaseFilename, image.histogram.filename) : imageBaseFilename, ratio)} aspect={aspect} onAspectChange={setAspect}
+      withChartImageLabelFilename(
+        includeHistogram && image.histogram ? getSurtrCombinedImageFilename(imageBaseFilename, image.histogram.filename) : imageBaseFilename,
+        getSurtrDpsImageLabelDefaults(image.series, image.title, image.metric), image.labels), ratio)} aspect={aspect} onAspectChange={setAspect}
       canChooseLocation={!!picker} saving={saving} saveDisabled={!!histogramEditor} error={imageFeedback === 'failed'} helpMode="popover"
       onClose={() => { if (!saveInProgress.current) {
         if (histogramEditor) setIncludeHistogram(histogramEditor.wasIncluded)
         setHistogramEditor(null); setHistogramDraft(null); setImage(null); setImageFeedback(null)
       } }} onSave={(filename, ratio) => void saveImage(filename, ratio)}
-      options={<fieldset className="surtr-s3-export-distribution" disabled={saving}>
+      options={<><fieldset className="surtr-s3-export-distribution" disabled={saving}>
         <label><input type="checkbox" checked={compareBlocking && !!image.blockComparisons} disabled={!image.blockComparisons || saving || !!histogramEditor}
           onChange={event => setCompareBlocking(event.target.checked)} />ブロック状態を上下に比較</label>
         <label><input type="checkbox" checked={includeHistogram && !!previewHistogram} disabled={!image.histogram || saving || !!histogramEditor}
@@ -479,10 +485,14 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
             <button type="button" className="button" disabled={!histogramDraft} onClick={() => finishHistogramEdit(true)}>分布を適用</button>
           </div>
         </section>}
-      </fieldset>}
+      </fieldset>
+      <ChartImageLabelEditor defaults={getSurtrDpsImageLabelDefaults(image.series, image.title, image.metric)}
+        value={image.labels ?? {}} disabled={saving || !!histogramEditor}
+        onChange={labels => setImage(current => current ? { ...current, labels } : null)} />
+      </>}
       preview={stackedPreview
-        ? <SurtrCombinedChartImagePreview key={`${image.id}:stack:${!!previewBlockComparisons}:${includeHistogram ? previewHistogram?.id : 'none'}:${aspectRatio ?? 'auto'}`}
+        ? <SurtrCombinedChartImagePreview key={`${image.id}:stack:${JSON.stringify(image.labels)}:${!!previewBlockComparisons}:${includeHistogram ? previewHistogram?.id : 'none'}:${aspectRatio ?? 'auto'}`}
             {...image} blockComparisons={previewBlockComparisons} histogram={includeHistogram ? previewHistogram : null} aspectRatio={aspectRatio} />
-        : <SurtrDpsChartImagePreview key={`${image.id}:${image.kind}:${aspectRatio ?? 'auto'}`} {...image} aspectRatio={aspectRatio} />} />}
+        : <SurtrDpsChartImagePreview key={`${image.id}:${image.kind}:${JSON.stringify(image.labels)}:${aspectRatio ?? 'auto'}`} {...image} aspectRatio={aspectRatio} />} />}
   </section>
 }

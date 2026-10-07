@@ -1,7 +1,10 @@
 import { useCallback, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { getChartImageLayout } from '../lib/chartImageLayout'
+import { applyChartImageSeriesLabels, resolveChartImageLabels,
+  type ChartImageLabelDefaults, type ChartImageLabelOverrides } from '../lib/chartImageLabels'
 import { getHpChartValueAxis, isValidHpChartYAxisRange } from '../lib/goldenglowTargetSwitchHpAxis'
 import { placeGroupedBarValueLabels } from '../lib/groupedBarValueLabels'
+import { wrapText } from '../lib/slideComposer'
 import type { SurtrDpsLineStyle } from '../lib/surtrDpsOutput'
 import { getSurtrDpsResistanceRating, getSurtrDpsResistanceSamples, normalizeSurtrDpsResistanceRange,
   type SurtrDpsBarStep, type SurtrDpsResistanceRange } from '../lib/surtrDpsResistance'
@@ -46,6 +49,7 @@ export interface SurtrDpsChartProps {
 
 export interface SurtrDpsChartImageProps extends Omit<SurtrDpsChartProps, 'onSelectResistance'> {
   conditions: string
+  labels?: ChartImageLabelOverrides
   aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
 }
@@ -54,12 +58,44 @@ const NATURAL_CHART_HEIGHT = 334
 const RATING_TICK_LINE_HEIGHT = 14
 const VALUE_LABEL_HEIGHT = 16
 const VALUE_LABEL_FONT = '600 11px "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif'
+const AXIS_TITLE_FONT = '700 12px "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif'
+const AXIS_TITLE_LINE_HEIGHT = 18
 type ValueWidths = Record<string, number>
 const DASH_PATTERNS = [undefined, '7 4', '2 3', '10 3 2 3', '4 3 1 3', '12 3 4 3'] as const
 const LINE_STYLE_PATTERNS = { solid: undefined, dashed: '7 4', dotted: '2 3' } as const
 
 function getLineDasharray(lineStyle: SurtrDpsLineStyle | undefined, index: number) {
   return lineStyle === undefined ? DASH_PATTERNS[index % DASH_PATTERNS.length] : LINE_STYLE_PATTERNS[lineStyle]
+}
+
+function getValueAxisLabel(valueAxisLabel: string | undefined, metric: SurtrDpsChartMetric) {
+  return valueAxisLabel ?? (metric === 'percent' ? '増減率（%）' : metric === 'difference' ? 'DPS差分' : 'DPS')
+}
+
+export function getSurtrDpsImageLabelDefaults(series: readonly { id: string; label: string }[],
+  title = 'スルト S3 DPS', metric: SurtrDpsChartMetric = 'total', valueAxisLabel?: string): ChartImageLabelDefaults {
+  return { title, xAxis: '敵の術耐性', yAxis: getValueAxisLabel(valueAxisLabel, metric), series }
+}
+
+function useAxisTitleWidths(title: string): ValueWidths {
+  const [widths, setWidths] = useState<ValueWidths>({})
+  useLayoutEffect(() => {
+    let active = true
+    const measure = () => {
+      if (!active) return
+      const context = document.createElement('canvas').getContext('2d')
+      if (!context) return
+      context.font = AXIS_TITLE_FONT
+      // Rounded character widths keep wrapping conservative across font fallbacks.
+      const next = Object.fromEntries([...new Set(title)].map(character => [character, Math.ceil(context.measureText(character).width)]))
+      setWidths(current => JSON.stringify(current) === JSON.stringify(next) ? current : next)
+    }
+    measure()
+    void document.fonts.ready.then(measure)
+    document.fonts.addEventListener('loadingdone', measure)
+    return () => { active = false; document.fonts.removeEventListener('loadingdone', measure) }
+  }, [title])
+  return widths
 }
 
 function normalizeSeries(series: SurtrDpsChartSeries[], kind: SurtrDpsChartKind, barStep: SurtrDpsBarStep,
@@ -108,8 +144,8 @@ function useValueWidths(series: SurtrDpsChartSeries[], precision: number, metric
 }
 
 function getPlot(series: SurtrDpsChartSeries[], width: number, height: number, kind: SurtrDpsChartKind,
-  { precision = 0, metric = 'total', yAxis, barStep = 20, resistanceRange, showValues = false, showResistanceRanks = true, valueWidths = {} }: Pick<SurtrDpsChartProps,
-    'precision' | 'metric' | 'yAxis' | 'barStep' | 'resistanceRange' | 'showValues' | 'showResistanceRanks'> & { valueWidths?: ValueWidths } = {}) {
+  { precision = 0, metric = 'total', valueAxisLabel, yAxis, barStep = 20, resistanceRange, showValues = false, showResistanceRanks = true, valueWidths = {}, axisTitleWidths = {} }: Pick<SurtrDpsChartProps,
+    'precision' | 'metric' | 'valueAxisLabel' | 'yAxis' | 'barStep' | 'resistanceRange' | 'showValues' | 'showResistanceRanks'> & { valueWidths?: ValueWidths; axisTitleWidths?: ValueWidths } = {}) {
   const range = normalizeSurtrDpsResistanceRange(resistanceRange)
   const values = series.flatMap((item) => item.points.flatMap((point) => point.value === null ? [] : [point.value]))
   const manualRange = { min: yAxis?.min ?? Number.NaN, max: yAxis?.max ?? Number.NaN }
@@ -134,6 +170,10 @@ function getPlot(series: SurtrDpsChartSeries[], width: number, height: number, k
   }) : []
   const rankPointHeight = rankBands.some((band) => band.pointValue !== undefined) ? 12 : 0
   const rankHeaderHeight = rankBands.length ? 28 + rankPointHeight : 0
+  const axisTitleLines = wrapText({ font: AXIS_TITLE_FONT,
+    measureText: text => ({ width: [...text].reduce((sum, character) => sum + (axisTitleWidths[character] ?? 14), 0) }),
+  }, getValueAxisLabel(valueAxisLabel, metric), Math.max(14, right - left - (rankBands.length ? 84 : 0)))
+  const axisTitleExtraHeight = Math.max(0, axisTitleLines.length - 1) * AXIS_TITLE_LINE_HEIGHT
   const bandWidth = (right - left) / Math.max(1, xValues.length)
   const seriesCount = Math.max(1, series.length)
   const groupBudget = bandWidth * 0.74
@@ -164,7 +204,7 @@ function getPlot(series: SurtrDpsChartSeries[], width: number, height: number, k
   })
   const extraTop = Math.ceil(placement.extraTop)
   const extraBottom = Math.ceil(placement.extraBottom)
-  const top = baseTop + rankHeaderHeight + extraTop
+  const top = baseTop + axisTitleExtraHeight + rankHeaderHeight + extraTop
   const bottom = top + plotHeight
   const ratingTicks = kind === 'bar' && barStep === 'ratings' && !showResistanceRanks
   const tickExtraHeight = ratingTicks ? RATING_TICK_LINE_HEIGHT : 0
@@ -188,8 +228,8 @@ function getPlot(series: SurtrDpsChartSeries[], width: number, height: number, k
   })
   return {
     left, right, top, bottom, ticks, bandWidth, barWidth, barGap, groupWidth, formatValue, formatTick,
-    bars, placement, extraTop, extraBottom, ratingTicks, rankBands, rankTop: baseTop + rankPointHeight,
-    height: height + rankHeaderHeight + extraTop + extraBottom + tickExtraHeight,
+    bars, placement, extraTop, extraBottom, ratingTicks, rankBands, rankTop: baseTop + axisTitleExtraHeight + rankPointHeight,
+    axisTitleLines, height: height + axisTitleExtraHeight + rankHeaderHeight + extraTop + extraBottom + tickExtraHeight,
     minimum: axis.lowerLimit, maximum: axis.upperLimit,
     emptyMessage: xValues.length ? null : kind === 'bar' && barStep === 'ratings' ? '範囲内に代表値がありません' : '表示できるデータがありません',
     xTicks,
@@ -224,10 +264,9 @@ function SurtrDpsSvg({ series, kind = 'line', width, height, activeX, gridStyle 
   width: number; height: number; activeX?: number | null; layout?: ReturnType<typeof getPlot>
 }) {
   const clipId = `surtr-dps-clip-${useId().replace(/:/g, '')}`
-  const plot = layout ?? getPlot(series, width, height, kind, { precision, metric, yAxis, barStep, resistanceRange, showResistanceRanks })
+  const plot = layout ?? getPlot(series, width, height, kind, { precision, metric, valueAxisLabel, yAxis, barStep, resistanceRange, showResistanceRanks })
   const svgHeight = Math.max(height, plot.height)
   const valueById = new Map(plot.bars.map((bar) => [bar.id, bar]))
-  const axisTitle = valueAxisLabel ?? (metric === 'percent' ? '増減率（%）' : metric === 'difference' ? 'DPS差分' : 'DPS')
   if (plot.emptyMessage) return <svg className="surtr-dps-chart-svg" width={width} height={svgHeight} viewBox={`0 0 ${width} ${svgHeight}`}
     role="img" aria-label={`${title}・${plot.emptyMessage}`}>
     <title>{title}</title>
@@ -239,7 +278,8 @@ function SurtrDpsSvg({ series, kind = 'line', width, height, activeX, gridStyle 
     <title>{title}</title>
     {plot.rankBands.length > 0 && <desc>{`術耐性ランクは${kind === 'bar' ? '各棒のグループ' : '術耐性の数値範囲'}に対応。${plot.rankBands.map((band) => `${band.rating}: ${band.label}`).join('。')}`}</desc>}
     <defs><clipPath id={clipId}><rect x={plot.left} y={plot.top} width={plot.right - plot.left} height={plot.bottom - plot.top} /></clipPath></defs>
-    <text className="surtr-dps-chart-axis-title" x={plot.left} y="16">{axisTitle}</text>
+    <text className="surtr-dps-chart-axis-title" x={plot.left} y="16">{plot.axisTitleLines.length === 1 ? plot.axisTitleLines[0]
+      : plot.axisTitleLines.map((line, index) => <tspan key={index} x={plot.left} y={16 + index * AXIS_TITLE_LINE_HEIGHT}>{line}</tspan>)}</text>
     <StatRankStrip bands={plot.rankBands} left={plot.left} right={plot.right} top={plot.rankTop}
       title="術耐性ランク" titleY={16} />
     {kind === 'bar' && activeX !== undefined && activeX !== null && <rect className="surtr-dps-chart-active-band"
@@ -313,9 +353,10 @@ export function SurtrDpsChart({ series, kind = 'line', barStep = 20, resistanceR
   const range = useMemo(() => normalizeSurtrDpsResistanceRange(resistanceRange), [resistanceRange?.min, resistanceRange?.max])
   const data = useMemo(() => normalizeSeries(series, kind, barStep, range, selection), [series, kind, barStep, range, selection])
   const valueWidths = useValueWidths(data, precision, metric, kind === 'bar' && showValues)
+  const axisTitleWidths = useAxisTitleWidths(getValueAxisLabel(valueAxisLabel, metric))
   const xValues = useMemo(() => [...new Set(data.flatMap((item) => item.points.map((point) => point.x)))].sort((a, b) => a - b), [data])
   const height = availableWidth < 520 ? 290 : NATURAL_CHART_HEIGHT
-  const plotOptions = { precision, metric, yAxis, barStep, resistanceRange: range, showValues, showResistanceRanks, valueWidths }
+  const plotOptions = { precision, metric, valueAxisLabel, yAxis, barStep, resistanceRange: range, showValues, showResistanceRanks, valueWidths, axisTitleWidths }
   const basePlot = getPlot(data, availableWidth, height, kind, plotOptions)
   const maximumValueWidth = showValues ? Math.max(0, ...basePlot.bars.map((bar) => (valueWidths[bar.text] ?? bar.text.length * 7) + 2)) : 0
   const minimumBarWidth = basePlot.left + 18 + Math.max(maximumValueWidth,
@@ -430,11 +471,14 @@ export function SurtrDpsChart({ series, kind = 'line', barStep = 20, resistanceR
 }
 
 export function SurtrDpsChartImage({ series, kind = 'line', barStep = 20, resistanceRange, gridStyle = 'solid', precision = 0,
-  metric = 'total', title = 'スルト S3 DPS', valueAxisLabel, yAxis, showValues = false, showResistanceRanks = true, selectedResistance, conditions, aspectRatio, onLayout }: SurtrDpsChartImageProps) {
+  metric = 'total', title = 'スルト S3 DPS', valueAxisLabel, labels, yAxis, showValues = false, showResistanceRanks = true, selectedResistance, conditions, aspectRatio, onLayout }: SurtrDpsChartImageProps) {
+  const display = useMemo(() => resolveChartImageLabels(getSurtrDpsImageLabelDefaults(series, title, metric, valueAxisLabel), labels),
+    [series, title, metric, valueAxisLabel, labels])
+  const displaySeries = useMemo(() => applyChartImageSeriesLabels(series, labels), [series, labels])
   const range = useMemo(() => normalizeSurtrDpsResistanceRange(resistanceRange), [resistanceRange?.min, resistanceRange?.max])
-  const data = useMemo(() => normalizeSeries(series, kind, barStep, range, selectedResistance), [series, kind, barStep, range, selectedResistance])
+  const data = useMemo(() => normalizeSeries(displaySeries, kind, barStep, range, selectedResistance), [displaySeries, kind, barStep, range, selectedResistance])
   const valueWidths = useValueWidths(data, precision, metric, kind === 'bar' && showValues)
-  const request = JSON.stringify([data, kind, barStep, range, gridStyle, precision, metric, title, valueAxisLabel, yAxis, showValues, showResistanceRanks, conditions, aspectRatio, valueWidths])
+  const request = JSON.stringify([data, kind, barStep, range, gridStyle, precision, metric, title, valueAxisLabel, labels, yAxis, showValues, showResistanceRanks, conditions, aspectRatio, valueWidths])
   const [expansion, setExpansion] = useState({ request, overflow: 0 })
   const overflow = expansion.request === request ? expansion.overflow : 0
   const reserveOverflow = useCallback((required: number) => {
@@ -443,11 +487,11 @@ export function SurtrDpsChartImage({ series, kind = 'line', barStep = 20, resist
     setExpansion((current) => current.request === request && current.overflow >= required
       ? current : { request, overflow: Math.max(current.request === request ? current.overflow : 0, required) })
   }, [request])
-  return <ChartImageFrame key={request} className="surtr-dps-chart-image" title={title} conditions={conditions}
-    axisTitle="敵の術耐性" naturalChartHeight={NATURAL_CHART_HEIGHT + overflow} aspectRatio={aspectRatio} onLayout={onLayout}
+  return <ChartImageFrame key={request} className="surtr-dps-chart-image" title={display.title} conditions={conditions}
+    axisTitle={display.xAxis} naturalChartHeight={NATURAL_CHART_HEIGHT + overflow} aspectRatio={aspectRatio} onLayout={onLayout}
     legend={<SurtrDpsImageLegend series={data} kind={kind} />}>
     {({ width, height }) => <SurtrDpsImagePlot series={data} kind={kind} barStep={barStep} width={width} height={height}
-      resistanceRange={range} gridStyle={gridStyle} precision={precision} metric={metric} title={title} valueAxisLabel={valueAxisLabel} yAxis={yAxis}
+      resistanceRange={range} gridStyle={gridStyle} precision={precision} metric={metric} title={display.title} valueAxisLabel={display.yAxis} yAxis={yAxis}
       showValues={showValues} showResistanceRanks={showResistanceRanks} valueWidths={valueWidths} reservedOverflow={overflow} onOverflow={reserveOverflow} />}
   </ChartImageFrame>
 }
@@ -481,7 +525,8 @@ function SurtrDpsImagePlot({ width, height, reservedOverflow, onOverflow, valueW
   width: number; height: number; reservedOverflow: number; valueWidths: ValueWidths; onOverflow: (height: number) => void
 }) {
   const baseHeight = Math.max(NATURAL_CHART_HEIGHT, height - reservedOverflow)
-  const plot = getPlot(props.series, width, baseHeight, props.kind ?? 'line', { ...props, valueWidths })
+  const axisTitleWidths = useAxisTitleWidths(getValueAxisLabel(props.valueAxisLabel, props.metric ?? 'total'))
+  const plot = getPlot(props.series, width, baseHeight, props.kind ?? 'line', { ...props, valueWidths, axisTitleWidths })
   const overflow = plot.height - baseHeight
   useLayoutEffect(() => { onOverflow(overflow) }, [onOverflow, overflow])
   return <SurtrDpsSvg {...props} width={width} height={height} layout={plot} />

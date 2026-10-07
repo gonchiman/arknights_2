@@ -12,6 +12,7 @@ import { getModuleComparisonColors } from '../lib/moduleColors'
 import { getSurtrRemnantAttackChartHeight, type SurtrRemnantChartKind, type SurtrRemnantChartSeries } from '../lib/surtrRemnantChart'
 import { getSurtrRemnantAttackImageFilename } from '../lib/surtrRemnantAttackImageFilename'
 import { withChartImageAspect } from '../lib/chartImageFilename'
+import { withChartImageLabelFilename } from '../lib/chartImageLabels'
 import { getChartImageLayout } from '../lib/chartImageLayout'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { SURTR_HOME_LINK } from '../lib/navigation'
@@ -22,8 +23,10 @@ import { HelpPopover } from './HelpPopover'
 import { SurtrRemnantAttackChart } from './SurtrRemnantAttackChart'
 import { SurtrRemnantAttackExpectationPanel } from './SurtrRemnantAttackExpectationPanel'
 import { SurtrRemnantDamageExpectationPanel } from './SurtrRemnantDamageExpectationPanel'
-import { SurtrRemnantAttackChartImage, SurtrRemnantAttackChartImagePreview, type SurtrRemnantAttackChartImageProps } from './SurtrRemnantAttackChartImage'
+import { SurtrRemnantAttackChartImage, SurtrRemnantAttackChartImagePreview, getSurtrRemnantAttackImageLabelDefaults,
+  type SurtrRemnantAttackChartImageProps } from './SurtrRemnantAttackChartImage'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
+import { ChartImageLabelEditor } from './ChartImageLabelEditor'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './DamageCalculator.css'
 import './SurtrS3Page.css'
@@ -331,10 +334,13 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
     <SurtrRemnantDamageExpectationPanel comparison={comparison} potential={potential} blocking={blocking} assumptions={assumptions}
       status={!record ? status : missingModel || invalidCalculation ? <p role="alert">計算に必要なMOD・攻撃速度・余燼のデータを取得できませんでした。</p>
         : invalidWindup ? <p className="surtr-s3-status" role="status">計算条件の入力を確認してください。</p> : null} />
-    {image && <ChartImageSaveDialog initialFilename={image.filename} getDefaultFilename={ratio => withChartImageAspect(image.filename, ratio)} aspect={aspect} onAspectChange={setAspect}
+    {image && <ChartImageSaveDialog initialFilename={image.filename} getDefaultFilename={ratio => withChartImageAspect(
+      withChartImageLabelFilename(image.filename, getSurtrRemnantAttackImageLabelDefaults(image.series, image.kind), image.labels), ratio)} aspect={aspect} onAspectChange={setAspect}
       canChooseLocation={!!picker} saving={saving} error={feedback === 'failed'} helpMode="popover"
       onClose={() => { if (!saveInProgress.current) { setImage(null); setFeedback(null) } }} onSave={(filename, ratio) => void saveImage(filename, ratio)}
-      preview={<SurtrRemnantAttackChartImagePreview key={`${image.id}:${aspectRatio ?? 'auto'}`} {...image} aspectRatio={aspectRatio} />} />}
+      options={<ChartImageLabelEditor defaults={getSurtrRemnantAttackImageLabelDefaults(image.series, image.kind)} value={image.labels ?? {}}
+        disabled={saving} onChange={labels => setImage(current => current ? { ...current, labels } : null)} />}
+      preview={<SurtrRemnantAttackChartImagePreview key={JSON.stringify([image.id, image.labels, aspectRatio ?? 'auto'])} {...image} aspectRatio={aspectRatio} />} />}
     {selection && <RemnantAttackDetail selection={selection} onClose={() => setSelection(null)} />}
   </section>
 }

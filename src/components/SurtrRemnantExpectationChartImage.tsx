@@ -1,5 +1,7 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { getChartImageLayout } from '../lib/chartImageLayout'
+import { applyChartImageSeriesLabels, resolveChartImageLabels,
+  type ChartImageLabelDefaults, type ChartImageLabelOverrides } from '../lib/chartImageLabels'
 import type { SurtrRemnantAttackAssumptions } from '../lib/surtrRemnantAttacks'
 import { ChartImageFrame } from './ChartImageFrame'
 import { SurtrDpsImageLegend, SurtrDpsSnapshotPlot, type SurtrDpsChartSeries } from './SurtrDpsChart'
@@ -16,6 +18,7 @@ export interface SurtrRemnantExpectationChartImageProps {
   showValues: boolean
   showResistanceRanks?: boolean
   digits: number
+  labels?: ChartImageLabelOverrides
   aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
 }
@@ -23,27 +26,33 @@ export interface SurtrRemnantExpectationChartImageProps {
 const NATURAL_CHART_HEIGHT = 334
 const TITLE = '余燼中の総ダメージ期待値'
 
+export function getSurtrRemnantExpectationChartImageLabelDefaults(series: readonly { id: string; label: string }[]): ChartImageLabelDefaults {
+  return { title: TITLE, xAxis: '敵の術耐性', yAxis: '総ダメージ期待値', series }
+}
+
 export function SurtrRemnantExpectationChartImage({ id, series, kind, resistanceStep, resistances,
-  potential, blocking, assumptions, showValues, showResistanceRanks = false, digits, aspectRatio, onLayout }: SurtrRemnantExpectationChartImageProps) {
+  potential, blocking, assumptions, showValues, showResistanceRanks = false, digits, labels, aspectRatio, onLayout }: SurtrRemnantExpectationChartImageProps) {
+  const displayLabels = useMemo(() => resolveChartImageLabels(getSurtrRemnantExpectationChartImageLabelDefaults(series), labels), [series, labels])
+  const displaySeries = useMemo(() => applyChartImageSeriesLabels(series, labels), [series, labels])
   const range = useMemo(() => {
     const values = resistances.filter(Number.isFinite)
     return values.length ? { min: Math.min(...values), max: Math.max(...values) } : { min: 0, max: 100 }
   }, [resistances])
   const request = JSON.stringify([id, series, kind, resistanceStep, resistances, potential, blocking,
-    assumptions, showValues, showResistanceRanks, digits, aspectRatio])
+    assumptions, showValues, showResistanceRanks, digits, labels, aspectRatio])
   const [expansion, setExpansion] = useState({ request, overflow: 0 })
   const overflow = expansion.request === request ? expansion.overflow : 0
   const reserveOverflow = useCallback((required: number) => {
     setExpansion(current => current.request === request && current.overflow >= required
       ? current : { request, overflow: Math.max(current.request === request ? current.overflow : 0, required) })
   }, [request])
-  return <ChartImageFrame key={request} className="surtr-dps-chart-image" title={TITLE}
+  return <ChartImageFrame key={request} className="surtr-dps-chart-image" title={displayLabels.title}
     conditions={`潜在${potential}・${blocking ? 'ブロック中' : '非ブロック'}・CT一様`}
-    legend={<SurtrDpsImageLegend series={series} kind={kind} />} axisTitle="敵の術耐性"
+    legend={<SurtrDpsImageLegend series={displaySeries} kind={kind} />} axisTitle={displayLabels.xAxis}
     naturalChartHeight={NATURAL_CHART_HEIGHT + overflow} aspectRatio={aspectRatio} onLayout={onLayout}>
-    {({ width, height }) => <SurtrDpsSnapshotPlot series={series} kind={kind} barStep={resistanceStep}
-      resistanceRange={range} gridStyle="dashed" precision={digits} metric="total" title={TITLE}
-      valueAxisLabel="総ダメージ期待値" yAxis={{ mode: 'zero' }} showValues={showValues}
+    {({ width, height }) => <SurtrDpsSnapshotPlot series={displaySeries} kind={kind} barStep={resistanceStep}
+      resistanceRange={range} gridStyle="dashed" precision={digits} metric="total" title={displayLabels.title}
+      valueAxisLabel={displayLabels.yAxis} yAxis={{ mode: 'zero' }} showValues={showValues}
       showResistanceRanks={showResistanceRanks} width={width} height={height} reservedOverflow={overflow}
       onOverflow={reserveOverflow} />}
   </ChartImageFrame>

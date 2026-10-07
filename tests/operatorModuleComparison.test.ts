@@ -1,6 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildOperatorModuleComparison, type OperatorModuleComparisonCell } from '../src/lib/operatorModuleComparison.ts'
+import {
+  buildOperatorModuleComparison,
+  buildOperatorModuleLevelRows,
+  buildOperatorModuleStageComparison,
+  type OperatorModuleComparisonCell,
+} from '../src/lib/operatorModuleComparison.ts'
 import { splitPassiveDescriptionChanges } from '../src/lib/passiveDescriptionChanges.ts'
 import type { OperatorCombatProfile, RawOperatorModule } from '../src/types/skill.ts'
 
@@ -398,6 +403,350 @@ test('MODによる素質名変更は同じ名前を基準として比べ、潜�
   const segments = entry.highlights!.segments
   assert.ok(segments.some((segment) => segment.source === 'module' && segment.text.includes('強化された素質')))
   assert.ok(segments.some((segment) => segment.source === 'both' && segment.text.includes('375')))
+})
+
+test('MODごとの複数段階をモジュール順・Lv昇順に並べ、各段階の能力値と素質を使う', () => {
+  const profile = createProfile()
+  const original = structuredClone(profile)
+  const comparison = buildOperatorModuleStageComparison(profile, {
+    'module-y': [3, 1], 'module-x': [3, 2, 1],
+  })
+  assert.equal(comparison.level, null)
+  assert.deepEqual(comparison.levels, [1, 2, 3])
+  assert.deepEqual(comparison.columns.map((column) => [column.id, column.level]), [
+    ['none', null], ['module-x:lv1', 1], ['module-x:lv2', 2], ['module-x:lv3', 3],
+    ['module-y:lv1', 1], ['module-y:lv3', 3],
+  ])
+  assert.deepEqual(comparison.rows.find((row) => row.id === 'attribute:atk')!.cells.map((entry) => entry.text), [
+    '—', '+20', '+40', '+60', '+20', '+60',
+  ])
+  assert.deepEqual(comparison.rows.find((row) => row.id === 'talent:1')!.cells.map(rawCell), [
+    { text: originalSecond, baseline: null },
+    { text: originalSecond, baseline: null },
+    { text: '攻撃範囲内のスタン状態の敵が受ける物理ダメージ+21%、敵を倒す度SP+1', baseline: originalSecond },
+    { text: '攻撃範囲内のスタン状態の敵が受ける物理ダメージ+24%、敵を倒す度SP+1', baseline: originalSecond },
+    { text: originalSecond, baseline: null },
+    { text: originalSecond, baseline: null },
+  ])
+  assert.deepEqual(profile, original)
+})
+
+test('段階選択の省略は各MODの最大Lv、空配列は非表示とし、共有Lvは一致時だけ返す', () => {
+  const profile = createProfile()
+  profile.modules![0].phases = [profile.modules![0].phases![0], profile.modules![0].phases![2]]
+  profile.modules![1].phases = [profile.modules![1].phases![1]]
+  profile.modules!.push({ type: 'ADVANCED', uniEquipId: 'missing', uniEquipName: '段階未取得' })
+  const defaults = buildOperatorModuleStageComparison(profile)
+  assert.deepEqual(defaults.columns.map((column) => column.id), ['none', 'module-x:lv3', 'module-y:lv2'])
+  assert.equal(defaults.level, null)
+  const oneModule = buildOperatorModuleStageComparison(profile, { 'module-y': [] })
+  assert.deepEqual(oneModule.columns.map((column) => column.id), ['none', 'module-x:lv3'])
+  assert.equal(oneModule.level, 3)
+  const sameLevel = buildOperatorModuleStageComparison(createProfile(), { 'module-x': [2], 'module-y': [2] })
+  assert.equal(sameLevel.level, 2)
+})
+
+test('重複や実在しない段階は取り除き、近いLvへの置き換えをしない', () => {
+  const profile = createProfile()
+  profile.modules![0].phases = [profile.modules![0].phases![0], profile.modules![0].phases![2]]
+  const comparison = buildOperatorModuleStageComparison(profile, {
+    'module-x': [3, 2, 3, 0, 1.5, Number.NaN, Number.POSITIVE_INFINITY, -1, 99],
+    'module-y': [],
+    unknown: [1, 2, 3],
+  })
+  assert.deepEqual(comparison.columns.map((column) => column.id), ['none', 'module-x:lv3'])
+  assert.equal(comparison.level, 3)
+  const noValidStages = buildOperatorModuleStageComparison(profile, { 'module-x': [2], 'module-y': [] })
+  assert.deepEqual(noValidStages.columns.map((column) => column.id), ['none'])
+  assert.equal(noValidStages.level, null)
+})
+
+test('段階番号が省略されたレコードも選べ、効果が空の実在段階は欠損として残す', () => {
+  const profile: OperatorCombatProfile = {
+    phases: [], favorKeyFrames: [], modules: [{
+      type: 'ADVANCED', uniEquipId: 'test', uniEquipName: '段階テスト',
+      phases: [{ attributeBlackboard: { atk: 10 } }, { equipLevel: 3, parts: [] }],
+    }],
+  }
+  const comparison = buildOperatorModuleStageComparison(profile, { test: [3, 1] })
+  assert.deepEqual(comparison.levels, [1, 3])
+  assert.deepEqual(comparison.columns.map((column) => [column.id, column.available]), [
+    ['none', true], ['test:lv1', true], ['test:lv3', false],
+  ])
+  assert.deepEqual(comparison.rows[0].cells.map((entry) => entry.text), ['—', '+10', 'データなし'])
+  assert.ok(comparison.rows[0].cells[2].highlights!.segments.every((segment) => segment.source === null))
+})
+
+test('未装備だけ、または表示列なしの選択でも基礎効果・潜在・段階候補を保持する', () => {
+  const profile = createProfile()
+  const selection = { 'module-x': [], 'module-y': [] }
+  const noneOnly = buildOperatorModuleStageComparison(profile, selection, 5)
+  assert.deepEqual(noneOnly.columns.map((column) => column.id), ['none'])
+  assert.equal(noneOnly.level, null)
+  assert.deepEqual(noneOnly.levels, [1, 2, 3])
+  assert.deepEqual(noneOnly.rows.map((row) => row.id), ['trait', 'talent:0', 'talent:1'])
+  assert.equal(noneOnly.rows.find((row) => row.id === 'talent:1')!.cells[0].text, '潜在強化後')
+  const noColumns = buildOperatorModuleStageComparison(profile, selection, 5, false)
+  assert.deepEqual(noColumns.columns, [])
+  assert.equal(noColumns.potentialRank, 5)
+  assert.equal(noColumns.condition, '昇進2・潜在5')
+  assert.ok(noColumns.rows.every((row) => row.cells.length === 0))
+  assert.deepEqual(buildOperatorModuleStageComparison({ phases: [], favorKeyFrames: [] }).rows, [])
+})
+
+test('未装備列を隠しても段階ごとのMOD・潜在・両方の強調と数値の基準が変わらない', () => {
+  const profile = createGoldenglowProfile()
+  profile.modules![0].phases = [1, 2, 3].map((level) => ({
+    equipLevel: level, attributeBlackboard: { atk: 20 + level * 6 }, parts: [{
+      addOrOverrideTalentDataBundle: { candidates: [
+        { talentIndex: 0, name: '爆発', upgradeDescription: `攻撃力の${300 + level * 20}%の術ダメージ（自爆後に消滅）` },
+        { talentIndex: 0, name: '爆発', upgradeDescription: `攻撃力の${315 + level * 20}%（+15%）の術ダメージ（自爆後に消滅）`, requiredPotentialRank: 2 },
+      ] },
+    }],
+  }))
+  const selection = { 'gg-x': [1, 2, 3], 'gg-y': [3] }
+  const full = buildOperatorModuleStageComparison(profile, selection, 6)
+  const hidden = buildOperatorModuleStageComparison(profile, selection, 6, false)
+  assert.deepEqual(hidden.columns, full.columns.slice(1))
+  assert.deepEqual(hidden.rows, full.rows.map((row) => ({ ...row, cells: row.cells.slice(1) })))
+  const explosion = hidden.rows.find((row) => row.id === 'talent:0')!
+  assert.deepEqual(explosion.cells.map((entry) => entry.highlights!.withoutPotential), [
+    '攻撃力の320%の術ダメージ（自爆後に消滅）',
+    '攻撃力の340%の術ダメージ（自爆後に消滅）',
+    '攻撃力の360%の術ダメージ（自爆後に消滅）',
+    '攻撃力の300%の術ダメージ（自爆後に消滅）',
+  ])
+  assert.deepEqual(explosion.cells.map((entry) => [...new Set(entry.highlights!.segments
+    .map((segment) => segment.source).filter((source) => source !== null))]), [
+    ['both'], ['both'], ['both'], ['potential'],
+  ])
+  assert.ok(hidden.rows.find((row) => row.id === 'attribute:atk')!.cells[0].highlights!.segments
+    .some((segment) => segment.source === 'module'))
+})
+
+test('段階で解放される追加効果と召喚物補正を同じ効果の行に揃え、他MODの同名効果と分ける', () => {
+  const profile = createProfile()
+  const extra = (name: string, description: string) => ({
+    addOrOverrideTalentDataBundle: { candidates: [{ name, isHideTalent: true, upgradeDescription: description }] },
+  })
+  profile.modules![0].phases!.forEach((phase, index) => {
+    phase.parts!.push(extra('既存効果', `攻撃速度+${10 + index * 5}`))
+    if (index > 0) {
+      phase.parts!.unshift(extra('Lv.2追加', `毎秒HPを${index * 100}回復`))
+      phase.tokenAttributeBlackboard = { token: { atk: index * 20 } }
+    }
+    if (index > 1) phase.parts!.unshift(extra('Lv.3追加', '撃破時SP+1'))
+  })
+  profile.modules![1].phases![2].parts!.push(extra('既存効果', '攻撃速度+30'))
+  const comparison = buildOperatorModuleStageComparison(profile, { 'module-x': [1, 2, 3], 'module-y': [3] })
+  const extras = comparison.rows.filter((row) => row.kind === 'extra')
+  assert.equal(extras.length, 5)
+  assert.equal(new Set(extras.map((row) => row.id)).size, 5)
+  assert.deepEqual(extras.filter((row) => row.name === '既存効果').map((row) => row.cells.map((entry) => entry.text)), [
+    ['—', '攻撃速度+10', '攻撃速度+15', '攻撃速度+20', '—'],
+    ['—', '—', '—', '—', '攻撃速度+30'],
+  ])
+  assert.deepEqual(extras.find((row) => row.name === 'Lv.2追加')!.cells.map((entry) => entry.text), [
+    '—', '—', '毎秒HPを100回復', '毎秒HPを200回復', '—',
+  ])
+  assert.deepEqual(extras.find((row) => row.name === 'Lv.3追加')!.cells.map((entry) => entry.text), [
+    '—', '—', '—', '撃破時SP+1', '—',
+  ])
+  assert.deepEqual(extras.find((row) => row.name === '召喚物の能力値補正')!.cells.map((entry) => entry.text), [
+    '—', '—', '攻撃力 +20', '攻撃力 +40', '—',
+  ])
+  assert.ok(extras.every((row) => row.cells.length === comparison.columns.length))
+})
+
+test('潜在で増える段階別の追加効果を既存効果の基準と取り違えない', () => {
+  const profile = createProfile()
+  profile.modules![0].phases!.forEach((phase, index) => {
+    phase.parts!.push(
+      { addOrOverrideTalentDataBundle: { candidates: [{
+        name: '潜在追加', isHideTalent: true, requiredPotentialRank: 5, upgradeDescription: '撃破時SP+1',
+      }] } },
+      { addOrOverrideTalentDataBundle: { candidates: [{
+        name: '既存追加', isHideTalent: true, upgradeDescription: `攻撃速度+${10 + index * 5}`,
+      }] } },
+    )
+  })
+  const selection = { 'module-x': [1, 3], 'module-y': [] }
+  const before = buildOperatorModuleStageComparison(profile, selection, 1)
+  const after = buildOperatorModuleStageComparison(profile, selection, 6)
+  const existing = after.rows.find((row) => row.name === '既存追加')!
+  assert.equal(existing.id, before.rows.find((row) => row.name === '既存追加')!.id)
+  assert.deepEqual(existing.cells.slice(1).map((entry) => entry.highlights!.withoutPotential), ['攻撃速度+10', '攻撃速度+20'])
+  assert.ok(existing.cells.slice(1).every((entry) => entry.highlights!.segments
+    .some((segment) => segment.source === 'module')))
+  assert.ok(after.rows.find((row) => row.name === '潜在追加')!.cells.slice(1).every((entry) => entry.highlights!.segments
+    .every((segment) => segment.source === 'both')))
+})
+
+test('縦表示はMODをIDでまとめ、非対称の段階選択を未選択セルとして揃える', () => {
+  const comparison = buildOperatorModuleStageComparison(createProfile(), {
+    'module-x': [1, 2, 3], 'module-y': [2],
+  })
+  const original = structuredClone(comparison)
+  const result = buildOperatorModuleLevelRows(comparison)
+  assert.deepEqual(result.columns.map((column) => [column.id, column.level]), [
+    ['none', null], ['module-x', null], ['module-y', null],
+  ])
+  const attack = result.groups.find((group) => group.id === 'attribute:atk')!
+  assert.deepEqual(attack.levels, [1, 2, 3])
+  assert.deepEqual(attack.cells.map((entries) => entries.map((entry) => entry?.cell.text ?? null)), [
+    ['—', '+20', '未選択'], [null, '+40', '+40'], [null, '+60', '未選択'],
+  ])
+  assert.equal(attack.cells[0][0]!.rowSpan, 3)
+  assert.deepEqual(attack.cells[0][2]!.sourceColumn, {
+    ...result.columns[2], id: 'module-y:lv1', level: 1, available: false,
+  })
+  assert.deepEqual(attack.cells[0][2]!.cell, { text: '未選択', baseline: null })
+  assert.strictEqual(attack.cells[1][2]!.sourceColumn, comparison.columns[4])
+  assert.deepEqual(comparison, original)
+})
+
+test('全Lvで変わらない項目は共通の一行にまとめ、選択されていないLvを補完しない', () => {
+  const comparison = buildOperatorModuleStageComparison(createProfile(), { 'module-x': [1, 3], 'module-y': [] })
+  const result = buildOperatorModuleLevelRows(comparison)
+  const attack = result.groups.find((group) => group.id === 'attribute:atk')!
+  assert.deepEqual(attack.levels, [1, 3])
+  const trait = result.groups.find((group) => group.id === 'trait')!
+  assert.deepEqual(trait.levels, [null])
+  assert.equal(trait.cells.length, 1)
+  assert.equal(trait.cells[0][1]!.rowSpan, 1)
+  assert.strictEqual(trait.cells[0][1]!.cell, comparison.rows.find((row) => row.id === 'trait')!.cells[1])
+  assert.strictEqual(trait.cells[0][1]!.sourceColumn, comparison.columns[1])
+})
+
+test('単一のLvだけを選んだ縦表示では共通にせず選択Lvを明示する', () => {
+  const comparison = buildOperatorModuleStageComparison(createProfile())
+  const result = buildOperatorModuleLevelRows(comparison)
+  assert.ok(result.groups.every((group) => group.levels.length === 1 && group.levels[0] === 3))
+  assert.equal(result.groups.find((group) => group.id === 'trait')!.cells[0][1]!.sourceColumn.level, 3)
+})
+
+test('一部のMODで同じセルが続くときは縦に統合し、離れた同一セルを統合しない', () => {
+  const profile = createProfile()
+  profile.modules![0].phases![1].attributeBlackboard = { atk: 20 }
+  profile.modules![0].phases![2].attributeBlackboard = { atk: 40 }
+  profile.modules![1].phases![1].attributeBlackboard = { atk: 40 }
+  profile.modules![1].phases![2].attributeBlackboard = { atk: 20 }
+  const result = buildOperatorModuleLevelRows(buildOperatorModuleStageComparison(profile, {
+    'module-x': [1, 2, 3], 'module-y': [1, 2, 3],
+  }))
+  const attack = result.groups.find((group) => group.id === 'attribute:atk')!
+  assert.deepEqual(attack.levels, [1, 2, 3])
+  assert.equal(attack.cells[0][1]!.rowSpan, 2)
+  assert.equal(attack.cells[1][1], null)
+  assert.equal(attack.cells[2][1]!.cell.text, '+40')
+  assert.deepEqual(attack.cells.map((entries) => entries[2]!.rowSpan), [1, 1, 1])
+  assert.deepEqual(attack.cells.map((entries) => entries[2]!.cell.text), ['+20', '+40', '+20'])
+})
+
+test('同じMOD名・種類ラベルを持つ別MODでも別の縦表示列を保つ', () => {
+  const profile = createProfile()
+  profile.modules![1].uniEquipName = profile.modules![0].uniEquipName
+  profile.modules![1].typeName2 = profile.modules![0].typeName2
+  const result = buildOperatorModuleLevelRows(buildOperatorModuleStageComparison(profile, {
+    'module-x': [1, 2], 'module-y': [2, 3],
+  }))
+  assert.deepEqual(result.columns.map((column) => column.id), ['none', 'module-x', 'module-y'])
+  assert.equal(result.columns[1].name, result.columns[2].name)
+  assert.equal(result.columns[1].typeLabel, result.columns[2].typeLabel)
+  assert.ok(result.groups.every((group) => group.cells.every((entries) => entries.length === 3)))
+})
+
+test('縦表示でもデータ欠損・未選択・補正なしを区別し、欠損セルの強調を保つ', () => {
+  const profile = createProfile()
+  profile.modules![0].phases![1].parts = []
+  delete profile.modules![0].phases![1].attributeBlackboard
+  const comparison = buildOperatorModuleStageComparison(profile, { 'module-x': [1, 2], 'module-y': [3] })
+  const result = buildOperatorModuleLevelRows(comparison)
+  const attack = result.groups.find((group) => group.id === 'attribute:atk')!
+  assert.deepEqual(attack.cells.map((entries) => entries.map((entry) => entry?.cell.text ?? null)), [
+    ['—', '+20', '未選択'], [null, 'データなし', null], [null, '未選択', '+60'],
+  ])
+  assert.equal(attack.cells[0][2]!.rowSpan, 2)
+  assert.equal(attack.cells[1][1]!.sourceColumn.available, false)
+  assert.deepEqual(attack.cells[1][1]!.cell.highlights, comparison.rows.find((row) => row.id === 'attribute:atk')!.cells[2].highlights)
+  assert.ok(attack.cells[1][1]!.cell.highlights!.segments.every((segment) => segment.source === null))
+  assert.equal(attack.cells[2][1]!.cell.highlights, undefined)
+  assert.equal(result.columns[1].available, true)
+})
+
+test('未装備だけ・表示列なし・効果なしでも縦表示モデルを作れる', () => {
+  const profile = createProfile()
+  profile.modules = []
+  const noneOnly = buildOperatorModuleLevelRows(buildOperatorModuleStageComparison(profile))
+  assert.deepEqual(noneOnly.columns.map((column) => column.id), ['none'])
+  assert.ok(noneOnly.groups.every((group) => group.levels.length === 1 && group.levels[0] === null
+    && group.cells[0][0]!.rowSpan === 1 && group.cells[0][0]!.sourceColumn.id === 'none'))
+  const noColumns = buildOperatorModuleLevelRows(buildOperatorModuleStageComparison(profile, {}, 1, false))
+  assert.deepEqual(noColumns.columns, [])
+  assert.ok(noColumns.groups.every((group) => group.levels[0] === null && group.cells.length === 1 && group.cells[0].length === 0))
+  assert.deepEqual(buildOperatorModuleLevelRows(buildOperatorModuleStageComparison({ phases: [], favorKeyFrames: [] })).groups, [])
+})
+
+test('同じ表示文でも差分基準・強調元・ツールチップ数値の異なるセルは統合しない', () => {
+  const comparison = buildOperatorModuleStageComparison(createProfile(), { 'module-x': [1, 2, 3], 'module-y': [] }, 1, false)
+  const template: OperatorModuleComparisonCell = {
+    text: '攻撃力+10', baseline: '攻撃力+5', highlights: {
+      base: '攻撃力+0', withoutModule: '攻撃力+3', withoutPotential: '攻撃力+8', current: '攻撃力+10',
+      segments: [{ text: '攻撃力+', source: null }, { text: '10', source: 'both', values: {
+        base: '0', withoutModule: '3', withoutPotential: '8', current: '10',
+      } }],
+    },
+  }
+  const mutations: Array<[string, (entry: OperatorModuleComparisonCell) => void]> = [
+    ['baseline', (entry) => { entry.baseline = '攻撃力+6' }],
+    ['missing highlights', (entry) => { delete entry.highlights }],
+    ...(['base', 'withoutModule', 'withoutPotential', 'current'] as const).map((key): [string, (entry: OperatorModuleComparisonCell) => void] => (
+      [key, (entry) => { entry.highlights![key] += '変更' }]
+    )),
+    ['segment source', (entry) => { entry.highlights!.segments[1].source = 'module' }],
+    ['segment text', (entry) => { entry.highlights!.segments[1].text = '+10' }],
+    ['segment count', (entry) => { entry.highlights!.segments.push({ text: '', source: null }) }],
+    ['missing values', (entry) => { delete entry.highlights!.segments[1].values }],
+    ...(['base', 'withoutModule', 'withoutPotential', 'current'] as const).map((key): [string, (entry: OperatorModuleComparisonCell) => void] => (
+      [`value ${key}`, (entry) => { entry.highlights!.segments[1].values![key] += '1' }]
+    )),
+  ]
+  for (const [label, mutate] of mutations) {
+    const changed = structuredClone(template)
+    mutate(changed)
+    const result = buildOperatorModuleLevelRows({ ...comparison, rows: [{
+      id: 'test', label: '検証', kind: 'talent', cells: [template, changed, template],
+    }] })
+    assert.deepEqual(result.groups[0].levels, [1, 2, 3], label)
+    assert.deepEqual(result.groups[0].cells.map((entries) => entries[0]!.rowSpan), [1, 1, 1], label)
+  }
+})
+
+test('縦表示の素質名変更・追加効果は項目名と元の段階・強調内容を保持する', () => {
+  const profile = createProfile()
+  profile.modules![0].phases!.slice(1).forEach((phase) => {
+    const candidate = phase.parts![1].addOrOverrideTalentDataBundle!.candidates![0]
+    candidate.name = '強化された悪巧み'
+    candidate.upgradeDescription = originalSecond
+    phase.parts!.push({ addOrOverrideTalentDataBundle: { candidates: [{
+      name: '追加回復', isHideTalent: true, upgradeDescription: '毎秒HPを100回復',
+    }] } })
+  })
+  const comparison = buildOperatorModuleStageComparison(profile, { 'module-x': [1, 2, 3], 'module-y': [] }, 1, false)
+  const result = buildOperatorModuleLevelRows(comparison)
+  const talent = result.groups.find((group) => group.id === 'talent:1')!
+  assert.equal(talent.name, '悪巧み')
+  assert.deepEqual(talent.levels, [1, 2, 3])
+  assert.equal(talent.cells[1][0]!.cell.text, `強化された悪巧み：${originalSecond}`)
+  assert.equal(talent.cells[1][0]!.rowSpan, 2)
+  assert.equal(talent.cells[2][0], null)
+  assert.strictEqual(talent.cells[1][0]!.sourceColumn, comparison.columns[1])
+  assert.strictEqual(talent.cells[1][0]!.cell.highlights, comparison.rows.find((row) => row.id === talent.id)!.cells[1].highlights)
+  const extra = result.groups.find((group) => group.name === '追加回復')!
+  assert.equal(extra.kind, 'extra')
+  assert.equal(extra.cells[0][0]!.cell.text, '—')
+  assert.equal(extra.cells[1][0]!.rowSpan, 2)
+  assert.equal(extra.cells[2][0], null)
 })
 
 function createGoldenglowProfile(): OperatorCombatProfile {

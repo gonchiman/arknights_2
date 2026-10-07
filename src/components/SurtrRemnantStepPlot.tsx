@@ -18,6 +18,8 @@ interface Props {
   hatchId: string
   activeCt: number | null
   showBoundaries: boolean
+  axisOverflow?: number
+  seriesLines?: Record<string, string[]>
 }
 
 const epsilon = 1e-9
@@ -27,21 +29,22 @@ const boundaryCt = (ct: number) => `${Math.abs(ct - Number(ct.toFixed(3))) > Num
 
 /** C3: separate equipment rows, shared scales and labels beside the actual steps. */
 export function SurtrRemnantStepPlot({ data, assumptions, height, left, right, ctDomain, xTicks,
-  hatchId, activeCt, showBoundaries }: Props) {
+  hatchId, activeCt, showBoundaries, axisOverflow = 0, seriesLines }: Props) {
   const counts = data.flatMap(({ intervals, endpoints }) => [...intervals, ...endpoints].map(value => value.count))
   const minimumY = Math.max(0, Math.min(...counts) - 1)
   const maximumY = Math.max(minimumY + 2, Math.max(...counts) + 1)
   const tickStep = maximumY - minimumY <= 4 ? 1 : Math.max(2, Math.ceil((maximumY - minimumY) / 4))
   const yTicks = Array.from({ length: Math.floor(maximumY / tickStep) + 1 }, (_, index) => index * tickStep)
     .filter(count => count >= minimumY)
-  const rowHeight = (height - 56) / data.length
+  const labelOverflows = data.map(({ item }) => Math.max(0, (seriesLines?.[item.id]?.length ?? 1) - 1) * 14)
+  const rowHeight = (height - 56 - axisOverflow - labelOverflows.reduce((sum, extra) => sum + extra, 0)) / data.length
   const x = (ct: number) => left + ct / ctDomain * (right - left)
   return <g className="surtr-remnant-step-rows">
-    <text className="surtr-remnant-attack-chart-axis-title" x={left} y="17">命中回数（回）</text>
     {data.map(({ item, intervals, endpoints }, index) => {
-      const offset = 26 + index * rowHeight
-      const top = offset + 34
-      const bottom = offset + rowHeight - 42
+      const offset = 26 + axisOverflow + index * rowHeight + labelOverflows.slice(0, index).reduce((sum, extra) => sum + extra, 0)
+      const nameLines = seriesLines?.[item.id] ?? [item.label]
+      const top = offset + 34 + labelOverflows[index]
+      const bottom = offset + rowHeight - 42 + labelOverflows[index]
       const y = (count: number) => bottom - 6 - (count - minimumY) / (maximumY - minimumY) * (bottom - top - 12)
       const limit = item.model.attackIntervalBefore
       const shorterDomain = limit < ctDomain - epsilon
@@ -63,7 +66,10 @@ export function SurtrRemnantStepPlot({ data, assumptions, height, left, right, c
       return <g key={item.id} data-step-series={item.id}>
         <line x1={left} x2={left + 20} y1={offset + 14} y2={offset + 14}
           stroke={item.color} strokeWidth="2.5" />
-        <text className="surtr-remnant-step-row-name" x={left + 28} y={offset + 18}>{item.label}</text>
+        <text className="surtr-remnant-step-row-name" x={left + 28} y={offset + 18}>
+          {nameLines.length === 1 ? nameLines[0] : nameLines.map((line, lineIndex) =>
+            <tspan key={lineIndex} x={left + 28} dy={lineIndex === 0 ? 0 : 14}>{line}</tspan>)}
+        </text>
         {shorterDomain && <rect x={x(limit)} y={top} width={right - x(limit)} height={bottom - top}
           fill={`url(#${hatchId})`}><title>{`範囲外：最大残りCT ${exactCt(limit)} s`}</title></rect>}
         <rect className="surtr-remnant-step-frame" x={left} y={top} width={right - left} height={bottom - top} />

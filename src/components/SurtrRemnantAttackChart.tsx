@@ -5,6 +5,7 @@ import {
   type SurtrRemnantChartKind, type SurtrRemnantChartSeries, type SurtrRemnantCountInterval,
 } from '../lib/surtrRemnantChart'
 import { buildSurtrRemnantCtSamples, calculateSurtrRemnantAttacks, type SurtrRemnantAttackAssumptions } from '../lib/surtrRemnantAttacks'
+import { wrapText } from '../lib/slideComposer'
 import { SurtrRemnantStepPlot } from './SurtrRemnantStepPlot'
 import './SurtrRemnantAttackChart.css'
 
@@ -21,8 +22,14 @@ export interface SurtrRemnantAttackChartProps {
   width?: number
   height?: number
   image?: boolean
+  title?: string
+  valueAxisLabel?: string
+  onOverflow?: (height: number) => void
 }
 
+const AXIS_LABEL_LINE_HEIGHT = 16
+const SERIES_LABEL_LINE_HEIGHT = 14
+const CHART_FONT = '"Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif'
 const CT_EPSILON = 1e-9
 const ctFormatter = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
 const formatCt = (ct: number) => ctFormatter.format(ct)
@@ -65,15 +72,45 @@ function axisTicks(maximum: number, width: number): number[] {
   return [...values, maximum]
 }
 
+interface ImageTextLayout {
+  left: number
+  axisLines: string[]
+  seriesLines: Record<string, string[]>
+}
+
+function imageTextLayout(width: number, kind: SurtrRemnantChartKind, axisLabel: string | undefined,
+  series: readonly { id: string; label: string }[], context?: CanvasRenderingContext2D | null): ImageTextLayout {
+  const textContext = (size: number, bold = false) => {
+    if (context) {
+      context.font = `${bold ? '700 ' : ''}${size}px ${CHART_FONT}`
+      return context
+    }
+    return { font: `${bold ? '700 ' : ''}${size}px ${CHART_FONT}`,
+      measureText: (text: string) => ({ width: Array.from(text).reduce((total, character) =>
+      total + (/^[\x00-\x7f]$/.test(character) ? size * 0.65 : size), 0) }) }
+  }
+  const seriesContext = textContext(11)
+  const defaultLeft = kind === 'bands' ? width < 480 ? 72 : 102 : 54
+  const left = kind === 'bands' ? Math.max(defaultLeft, Math.min(252, width * 0.28,
+    Math.max(0, ...series.map(item => seriesContext.measureText(item.label).width)) + 20)) : defaultLeft
+  const seriesLines = Object.fromEntries(series.map(item => [item.id,
+    kind === 'bands' ? wrapText(seriesContext, item.label, left - 20)
+      : kind === 'step' ? wrapText(textContext(11, true), item.label, Math.max(1, width - left - 46)) : [item.label]]))
+  const axisLines = axisLabel === undefined ? [] : wrapText(textContext(12, true), axisLabel, Math.max(1, width - left - 18))
+  return { left, axisLines, seriesLines }
+}
+
 /** CT-specific SVG; the surrounding page owns the legend, conditions and detail dialog. */
 export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, selectedCt, onSelectCt,
   showValues = true, showBoundaries = false, ctLimit, width: suppliedWidth, height, image = false,
+  title = '余燼中の命中回数', valueAxisLabel, onOverflow,
 }: SurtrRemnantAttackChartProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [availableWidth, setAvailableWidth] = useState(720)
   const [hoveredCt, setHoveredCt] = useState<number | null>(null)
   const [localSelection, setLocalSelection] = useState<number | null>(null)
+  const [textMeasurement, setTextMeasurement] = useState<{ request: string; layout: ImageTextLayout } | null>(null)
   const titleId = useId()
   const descriptionId = useId()
   const helpId = useId()
@@ -92,11 +129,26 @@ export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, se
   const viewportWidth = Number.isFinite(suppliedWidth) && suppliedWidth! > 0 ? suppliedWidth! : availableWidth
   const barGroupMinimum = Math.max(48, data.length * 16 + Math.max(0, data.length - 1) * 3 + 14)
   const width = !image && kind === 'grouped-bar' ? Math.max(viewportWidth, 72 + values.length * barGroupMinimum) : viewportWidth
-  const chartHeight = Math.max(getSurtrRemnantAttackChartHeight(kind, data.length), height ?? 0)
+  const naturalChartHeight = getSurtrRemnantAttackChartHeight(kind, data.length)
   const compact = width < 480
-  const left = kind === 'bands' ? compact ? 72 : 102 : 54
+  const axisLabel = valueAxisLabel ?? (kind === 'bands' ? undefined : '命中回数（回）')
+  const textRequest = JSON.stringify([image, width, kind, axisLabel, data.map(({ item }) => [item.id, item.label])])
+  const estimatedTextLayout = useMemo(() => image
+    ? imageTextLayout(width, kind, axisLabel, data.map(({ item }) => item)) : null, [textRequest])
+  const textLayout = textMeasurement?.request === textRequest ? textMeasurement.layout : estimatedTextLayout
+  const axisLines = textLayout?.axisLines ?? (axisLabel === undefined ? [] : [axisLabel])
+  const axisOverflow = image ? Math.max(0, axisLines.length - 1) * AXIS_LABEL_LINE_HEIGHT : 0
+  const left = textLayout?.left ?? (kind === 'bands' ? compact ? 72 : 102 : 54)
   const right = Math.max(left + 1, width - 18)
-  const top = kind === 'bands' ? 42 : 32
+  const baseTop = kind === 'bands' ? 42 : 32
+  const top = baseTop + axisOverflow
+  const seriesLineCount = Math.max(1, ...Object.values(textLayout?.seriesLines ?? {}).map(lines => lines.length))
+  const bandOverflow = image && kind === 'bands'
+    ? Math.max(0, (seriesLineCount * SERIES_LABEL_LINE_HEIGHT + 16) * data.length - (naturalChartHeight - baseTop - 32)) : 0
+  const stepOverflow = image && kind === 'step'
+    ? Object.values(textLayout?.seriesLines ?? {}).reduce((sum, lines) => sum + Math.max(0, lines.length - 1) * SERIES_LABEL_LINE_HEIGHT, 0) : 0
+  const requiredOverflow = axisOverflow + bandOverflow + stepOverflow
+  const chartHeight = Math.max(naturalChartHeight + requiredOverflow, height ?? 0)
   const bottom = chartHeight - 32
   const plotWidth = right - left
   const bandWidth = plotWidth / Math.max(1, values.length)
@@ -121,6 +173,23 @@ export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, se
   const selectedResults = countsAt(accessibleCt)
   const accessibleValues = selectedResults.map(({ item, result }) => `${item.label} ${countLabel(result?.hitCount ?? null)}`).join('、')
   const hasData = data.length > 0 && (kind !== 'grouped-bar' || values.length > 0)
+
+  useLayoutEffect(() => {
+    if (!image) return
+    const context = document.createElement('canvas').getContext('2d')
+    if (!context) return
+    let cancelled = false
+    const measure = () => {
+      if (!cancelled) setTextMeasurement({ request: textRequest,
+        layout: imageTextLayout(width, kind, axisLabel, data.map(({ item }) => item), context) })
+    }
+    measure()
+    void document.fonts.ready.then(measure)
+    document.fonts.addEventListener('loadingdone', measure)
+    return () => { cancelled = true; document.fonts.removeEventListener('loadingdone', measure) }
+  }, [textRequest])
+
+  useLayoutEffect(() => { if (image) onOverflow?.(requiredOverflow) }, [image, onOverflow, requiredOverflow])
 
   useLayoutEffect(() => {
     if (image || suppliedWidth !== undefined) return
@@ -182,18 +251,22 @@ export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, se
       : `残りCT ${formatCt(accessibleCt)} 秒：${accessibleValues}。`)
   const svg = <svg className={`surtr-remnant-attack-chart-svg${image ? ' is-image' : ''}`} width={width} height={chartHeight}
     viewBox={`0 0 ${width} ${chartHeight}`} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
-    <title id={titleId}>{`余燼中の命中回数・${chartLabels[kind]}`}</title><desc id={descriptionId}>{description}</desc>
+    <title id={titleId}>{`${title}・${chartLabels[kind]}`}</title><desc id={descriptionId}>{description}</desc>
     {!hasData ? <text className="surtr-remnant-attack-chart-empty" x={width / 2} y={chartHeight / 2} textAnchor="middle">表示できるデータがありません</text> : <>
       <defs>
         <pattern id={hatchId} patternUnits="userSpaceOnUse" width="6" height="6">
           <path className="surtr-remnant-attack-chart-hatch" d="M-1 1 L1 -1 M0 6 L6 0 M5 7 L7 5" />
         </pattern>
       </defs>
+      {axisLines.length > 0 && <text className="surtr-remnant-attack-chart-axis-title" x={left} y="17">
+        {axisLines.length === 1 ? axisLines[0] : axisLines.map((line, index) =>
+          <tspan key={index} x={left} dy={index === 0 ? 0 : AXIS_LABEL_LINE_HEIGHT}>{line}</tspan>)}
+      </text>}
       {kind === 'step' ? <SurtrRemnantStepPlot data={data} assumptions={assumptions} height={chartHeight}
         left={left} right={right} ctDomain={ctDomain} xTicks={xTicks} hatchId={hatchId}
+        axisOverflow={axisOverflow} seriesLines={textLayout?.seriesLines}
         activeCt={activeCt} showBoundaries={showBoundaries} /> : <>
       {kind !== 'bands' && <>
-        <text className="surtr-remnant-attack-chart-axis-title" x={left} y="17">命中回数（回）</text>
         {Array.from({ length: maximumY / 2 + 1 }, (_, index) => index * 2).map(count => <g key={count}>
           <line className="surtr-remnant-attack-chart-grid" x1={left} x2={right} y1={y(count)} y2={y(count)} />
           <text className="surtr-remnant-attack-chart-tick" x={left - 10} y={y(count) + 4} textAnchor="end">{count}</text>
@@ -221,10 +294,15 @@ export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, se
           const rowHeight = Math.min(44, (bottom - top) / data.length * 0.55)
           const rowTop = row - rowHeight / 2
           const rowBottom = row + rowHeight / 2
-          const label = compact ? item.model.moduleType ? `MOD ${item.model.moduleType}` : '未装備' : item.label
+          const label = !image && compact ? item.model.moduleType ? `MOD ${item.model.moduleType}` : '未装備' : item.label
+          const labelLines = textLayout?.seriesLines[item.id] ?? [label]
           const boundaryLabels = spacedTicks(intervals.slice(1).map(interval => interval.from), x, 30)
           return <g key={item.id}>
-            <text className="surtr-remnant-attack-chart-tick" x={left - 10} y={row + 4} textAnchor="end">{label}</text>
+            <text className="surtr-remnant-attack-chart-tick" x={left - 10}
+              y={row + 4 - (labelLines.length - 1) * SERIES_LABEL_LINE_HEIGHT / 2} textAnchor="end">
+              {labelLines.length === 1 ? labelLines[0] : labelLines.map((line, lineIndex) =>
+                <tspan key={lineIndex} x={left - 10} dy={lineIndex === 0 ? 0 : SERIES_LABEL_LINE_HEIGHT}>{line}</tspan>)}
+            </text>
             {intervals.map((interval, intervalIndex) => {
               const intervalWidth = x(interval.to) - x(interval.from)
               const textWidth = String(interval.count).length * 7 + 15

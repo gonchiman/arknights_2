@@ -1,5 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { getChartImageLayout } from '../lib/chartImageLayout'
+import { applyChartImageSeriesLabels, resolveChartImageLabels,
+  type ChartImageLabelDefaults, type ChartImageLabelOverrides } from '../lib/chartImageLabels'
 import type { SurtrRemnantAttackAssumptions } from '../lib/surtrRemnantAttacks'
 import { getSurtrRemnantAttackChartHeight, type SurtrRemnantChartKind, type SurtrRemnantChartSeries } from '../lib/surtrRemnantChart'
 import { ChartImageFrame } from './ChartImageFrame'
@@ -19,8 +21,13 @@ export interface SurtrRemnantAttackChartImageProps {
   blocking: boolean
   step: number
   filename?: string
+  labels?: ChartImageLabelOverrides
   aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
+}
+
+export function getSurtrRemnantAttackImageLabelDefaults(series: readonly { id: string; label: string }[], kind: SurtrRemnantChartKind = 'grouped-bar'): ChartImageLabelDefaults {
+  return { title: '余燼中の命中回数', xAxis: '発動直前の残りCT（s）', yAxis: kind === 'bands' ? '' : '命中回数（回）', series }
 }
 
 function ImageLegend({ series, kind }: Pick<SurtrRemnantAttackChartImageProps, 'series' | 'kind'>) {
@@ -40,16 +47,25 @@ function ImageLegend({ series, kind }: Pick<SurtrRemnantAttackChartImageProps, '
 }
 
 export function SurtrRemnantAttackChartImage({ id, series, assumptions, samples, ctLimit, kind, showValues,
-  showBoundaries, potential, blocking, step, aspectRatio, onLayout }: SurtrRemnantAttackChartImageProps) {
+  showBoundaries, potential, blocking, step, labels, aspectRatio, onLayout }: SurtrRemnantAttackChartImageProps) {
   const snapshotKey = JSON.stringify([id, series, assumptions, samples, ctLimit, kind, showValues, showBoundaries,
-    potential, blocking, step, aspectRatio])
-  return <ChartImageFrame key={snapshotKey} className="surtr-duration-chart-image" title="余燼中の命中回数"
+    potential, blocking, step, labels, aspectRatio])
+  const display = resolveChartImageLabels(getSurtrRemnantAttackImageLabelDefaults(series, kind), labels)
+  const displaySeries = applyChartImageSeriesLabels(series, labels)
+  const [expansion, setExpansion] = useState({ snapshotKey, overflow: 0 })
+  const overflow = expansion.snapshotKey === snapshotKey ? expansion.overflow : 0
+  const reserveOverflow = useCallback((required: number) => {
+    setExpansion(current => current.snapshotKey === snapshotKey && current.overflow >= required
+      ? current : { snapshotKey, overflow: Math.max(current.snapshotKey === snapshotKey ? current.overflow : 0, required) })
+  }, [snapshotKey])
+  return <ChartImageFrame key={snapshotKey} className="surtr-duration-chart-image" title={display.title}
     conditions={`潜在${potential}・${blocking ? 'ブロック中' : '非ブロック'}・仮定の試算`}
-    legend={kind === 'step' ? undefined : <ImageLegend series={series} kind={kind} />} axisTitle="発動直前の残りCT（s）"
-    naturalChartHeight={getSurtrRemnantAttackChartHeight(kind, series.length)} aspectRatio={aspectRatio} onLayout={onLayout}>
-    {({ width, height }) => <SurtrRemnantAttackChart series={series} assumptions={assumptions}
+    legend={kind === 'step' ? undefined : <ImageLegend series={displaySeries} kind={kind} />} axisTitle={display.xAxis}
+    naturalChartHeight={getSurtrRemnantAttackChartHeight(kind, displaySeries.length) + overflow} aspectRatio={aspectRatio} onLayout={onLayout}>
+    {({ width, height }) => <SurtrRemnantAttackChart series={displaySeries} assumptions={assumptions}
       samples={samples} ctLimit={ctLimit} kind={kind} showValues={showValues} showBoundaries={showBoundaries}
-      width={width} height={height} image />}
+      title={display.title} valueAxisLabel={kind === 'bands' && !labels?.yAxis?.trim() ? undefined : display.yAxis}
+      width={width} height={height} onOverflow={reserveOverflow} image />}
   </ChartImageFrame>
 }
 

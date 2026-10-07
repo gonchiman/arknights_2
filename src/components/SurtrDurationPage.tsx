@@ -7,14 +7,16 @@ import { getOperatorModuleId, getOperatorModuleLevels, getOperatorModules } from
 import { getModuleComparisonColors } from '../lib/moduleColors'
 import { getSurtrDurationImageFilename } from '../lib/surtrDurationImageFilename'
 import { withChartImageAspect } from '../lib/chartImageFilename'
+import { withChartImageLabelFilename, type ChartImageLabelOverrides } from '../lib/chartImageLabels'
 import { getChartImageLayout } from '../lib/chartImageLayout'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { SURTR_HOME_LINK } from '../lib/navigation'
 import { PageBreadcrumbs } from './PageBreadcrumbs'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
+import { ChartImageLabelEditor } from './ChartImageLabelEditor'
 import { SurtrDurationChart, SurtrDurationChartImage, SurtrDurationChartImagePreview,
-  type SurtrDurationSeries } from './SurtrDurationChart'
+  getSurtrDurationImageLabelDefaults, type SurtrDurationSeries } from './SurtrDurationChart'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import { SurtrDurationTimelineTable } from './SurtrDurationTimelineTable'
 import './DamageCalculator.css'
@@ -30,6 +32,7 @@ interface ImageSnapshot {
   title: string
   conditions: string
   filename: string
+  labels?: ChartImageLabelOverrides
 }
 
 export function SurtrDurationPage({ rows, loading, error, onRetry }: {
@@ -186,9 +189,12 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
           </div>}
       {feedback && feedback !== 'failed' && <p className="surtr-s3-status" role="status">{feedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
     </CollapsibleCalculatorPanel>
-    {image && <ChartImageSaveDialog initialFilename={image.filename} getDefaultFilename={ratio => withChartImageAspect(image.filename, ratio)} aspect={aspect} onAspectChange={setAspect}
+    {image && <ChartImageSaveDialog initialFilename={image.filename} getDefaultFilename={ratio => withChartImageAspect(
+      withChartImageLabelFilename(image.filename, getSurtrDurationImageLabelDefaults(image.series, image.title), image.labels), ratio)} aspect={aspect} onAspectChange={setAspect}
       canChooseLocation={!!picker} saving={saving} error={feedback === 'failed'} helpMode="popover"
       onClose={() => { if (!saveInProgress.current) { setImage(null); setFeedback(null) } }} onSave={(filename, ratio) => void saveImage(filename, ratio)}
-      preview={<SurtrDurationChartImagePreview key={`${image.id}:${aspectRatio ?? 'auto'}`} {...image} aspectRatio={aspectRatio} />} />}
+      options={<ChartImageLabelEditor defaults={getSurtrDurationImageLabelDefaults(image.series, image.title)} value={image.labels ?? {}}
+        disabled={saving} onChange={labels => setImage(current => current ? { ...current, labels } : null)} />}
+      preview={<SurtrDurationChartImagePreview key={JSON.stringify([image.id, image.labels, aspectRatio ?? 'auto'])} {...image} aspectRatio={aspectRatio} />} />}
   </section>
 }

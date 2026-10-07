@@ -7,6 +7,7 @@ import react from '@vitejs/plugin-react'
 
 let server
 let chartModule
+let imageModule
 let plotModule
 let chartData
 
@@ -17,10 +18,11 @@ before(async () => {
     cacheDir: 'node_modules/.vite/surtr-step-plot-test',
     resolve: { preserveSymlinks: true },
     logLevel: 'error',
-    server: { middlewareMode: true, watch: null, preTransformRequests: false },
+    server: { middlewareMode: true, watch: null, preTransformRequests: false, hmr: false },
     appType: 'custom',
   })
   chartModule = await server.ssrLoadModule('/src/components/SurtrRemnantAttackChart.tsx')
+  imageModule = await server.ssrLoadModule('/src/components/SurtrRemnantAttackChartImage.tsx')
   plotModule = await server.ssrLoadModule('/src/components/SurtrRemnantStepPlot.tsx')
   chartData = await server.ssrLoadModule('/src/lib/surtrRemnantChart.ts')
 })
@@ -275,4 +277,63 @@ test('narrow first Y interval retains its hit label with a leader instead of dro
   const label = withClass(yRow, 'surtr-remnant-attack-chart-value').find(node => text(node) === '10回')
   assert.ok(Number(label.attrs.x) >= 54 && Number(label.attrs.x) <= 342)
   assert.ok(withClass(yRow, 'surtr-remnant-step-leader').some(node => node.tag === 'path'))
+})
+
+test('long custom image labels wrap completely without shrinking the natural equipment plots', () => {
+  const labels = {
+    yAxis: '余燼発動から退場までに対象へ命中した攻撃の合計回数'.repeat(5).slice(0, 100),
+    series: Object.fromEntries(series.map((item, index) => [item.id,
+      `${['未装備', '装備種別甲', '装備種別乙'][index]}における予備動作と残り攻撃間隔を考慮した比較結果`.repeat(5).slice(0, 100)])),
+  }
+  const props = { id: 'long-step-labels', series, assumptions, samples: [0, 0.2, 1.2], ctLimit: 1.25,
+    kind: 'step', showValues: true, showBoundaries: true, potential: 1, blocking: false, step: 0.1 }
+  const render = (component, extra = {}) => parseMarkup(renderToStaticMarkup(createElement(component, { ...props, ...extra })))
+  const lineBaselines = node => {
+    let current = Number(node.attrs.y)
+    const spans = elements(node, child => child.tag === 'tspan')
+    return spans.length ? spans.map(span => { current += Number(span.attrs.dy ?? 0); return current }) : [current]
+  }
+
+  for (const component of [imageModule.SurtrRemnantAttackChartImage, imageModule.SurtrRemnantAttackChartImagePreview]) {
+    const original = render(component)
+    const edited = render(component, { labels })
+    const originalSvg = withClass(original, 'surtr-remnant-attack-chart-svg')[0]
+    const editedSvg = withClass(edited, 'surtr-remnant-attack-chart-svg')[0]
+    assert.ok(Number(editedSvg.attrs.height) > Number(originalSvg.attrs.height), `${component.name}: expanded SVG`)
+    assert.equal(Number(editedSvg.attrs.viewBox.split(' ')[3]), Number(editedSvg.attrs.height))
+    const axis = withClass(editedSvg, 'surtr-remnant-attack-chart-axis-title')
+    assert.equal(axis.length, 1, 'the custom vertical title must not be duplicated by the row plot')
+    assert.equal(text(axis[0]), labels.yAxis)
+    assert.ok(elements(axis[0], node => node.tag === 'tspan').length > 1, 'long vertical title must wrap')
+
+    let extraLabelHeight = lineBaselines(axis[0]).at(-1) - Number(axis[0].attrs.y)
+    series.forEach(item => {
+      const before = row(originalSvg, item.id)
+      const after = row(editedSvg, item.id)
+      const name = withClass(after, 'surtr-remnant-step-row-name')[0]
+      assert.equal(text(name), labels.series[item.id], `${item.id}: every series-name character survives wrapping`)
+      assert.ok(elements(name, node => node.tag === 'tspan').length > 1, `${item.id}: series name must wrap`)
+      const nameBaselines = lineBaselines(name)
+      extraLabelHeight += nameBaselines.at(-1) - Number(name.attrs.y)
+      assert.ok(nameBaselines.at(-1) < Number(frame(after).attrs.y), `${item.id}: name stays above its plot`)
+      close(Number(frame(after).attrs.height), Number(frame(before).attrs.height), `${item.id}: natural plot height`)
+      close(Number(frame(after).attrs.width), Number(frame(before).attrs.width), `${item.id}: shared CT width`)
+      assert.deepEqual(values(after), values(before))
+      const beforeSegments = horizontalSegments(before)
+      const afterSegments = horizontalSegments(after)
+      assert.equal(afterSegments.length, beforeSegments.length)
+      afterSegments.forEach((segment, index) => {
+        close(segment.from, beforeSegments[index].from)
+        close(segment.to, beforeSegments[index].to)
+        close(segment.y - Number(frame(after).attrs.y), beforeSegments[index].y - Number(frame(before).attrs.y),
+          `${item.id}: hit-count scale stays unchanged`)
+      })
+    })
+    assert.ok(lineBaselines(axis[0]).at(-1) < Number(withClass(row(editedSvg, 'none'), 'surtr-remnant-step-row-name')[0].attrs.y),
+      'wrapped vertical title must stay above the first equipment name')
+    close(Number(editedSvg.attrs.height) - Number(originalSvg.attrs.height), extraLabelHeight,
+      'SVG expansion reserves the wrapped text height instead of taking space from the plots')
+    const lastFrame = frame(row(editedSvg, 'Y'))
+    assert.ok(Number(lastFrame.attrs.y) + Number(lastFrame.attrs.height) < Number(editedSvg.attrs.height))
+  }
 })
