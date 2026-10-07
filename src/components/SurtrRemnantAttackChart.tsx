@@ -295,7 +295,14 @@ export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, se
           const rowTop = row - rowHeight / 2
           const rowBottom = row + rowHeight / 2
           const labelLines = textLayout?.seriesLines[item.id] ?? [item.label]
+          const limit = item.model.attackIntervalBefore
+          const shorterDomain = limit < ctDomain - CT_EPSILON
+          const limitLabel = formatBoundaryCt(limit)
+          const limitLabelWidth = limitLabel.length * 7
+          const limitLabelX = Math.min(right, Math.max(left + limitLabelWidth, x(limit)))
           const boundaryLabels = spacedTicks(intervals.slice(1).map(interval => interval.from), x, 30)
+            .filter(ct => !shorterDomain || Math.max(left + 21, Math.min(right - 24, x(ct)))
+              + formatBoundaryCt(ct).length * 3.5 + 8 <= limitLabelX - limitLabelWidth)
           return <g key={item.id} data-band-series={item.id}>
             <text className="surtr-remnant-attack-chart-tick" x={left - 10}
               y={row + 4 - (labelLines.length - 1) * SERIES_LABEL_LINE_HEIGHT / 2} textAnchor="end">
@@ -323,9 +330,14 @@ export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, se
                 <text className="surtr-remnant-attack-chart-tick" x={x(ct) + (ct === 0 ? 4 : -4)} y={rowTop - 9} textAnchor={anchor} data-chart-image-ink="true">{formatCt(ct)} s：{count}回</text>
               </g>
             })}
-            {item.model.attackIntervalBefore < ctDomain && <g>
-              <rect x={x(item.model.attackIntervalBefore)} y={rowTop} width={right - x(item.model.attackIntervalBefore)} height={rowHeight} fill={`url(#${hatchId})`} />
-              <text className="surtr-remnant-attack-chart-empty" x={(right + x(item.model.attackIntervalBefore)) / 2} y={row + 4} textAnchor="middle">{right - x(item.model.attackIntervalBefore) > 45 ? '範囲外' : '—'}</text>
+            {shorterDomain && <g data-band-domain-limit={limit}>
+              <rect x={x(limit)} y={rowTop} width={right - x(limit)} height={rowHeight} fill={`url(#${hatchId})`} />
+              <text className="surtr-remnant-attack-chart-empty" x={(right + x(limit)) / 2} y={row + 4} textAnchor="middle">{right - x(limit) > 45 ? '範囲外' : '—'}</text>
+              <line className="surtr-remnant-step-leader" x1={x(limit)} x2={x(limit)} y1={rowBottom + 2} y2={rowBottom + 7} />
+              <text className="surtr-remnant-attack-chart-tick" x={limitLabelX} y={rowBottom + 17}
+                textAnchor="end" data-chart-image-ink="true">{limitLabel}
+                <title>{`最大残りCT ${exactCtFormatter.format(limit)} s`}</title>
+              </text>
             </g>}
           </g>
         })}
