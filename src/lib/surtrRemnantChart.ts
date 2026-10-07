@@ -6,6 +6,11 @@ import {
 
 export type SurtrRemnantChartKind = 'grouped-bar' | 'step' | 'bands'
 
+/** Keep screen, preview and PNG on the same natural row heights. */
+export function getSurtrRemnantAttackChartHeight(kind: SurtrRemnantChartKind, seriesCount: number): number {
+  return kind === 'step' ? 26 + Math.max(1, seriesCount) * 160 + 30 : 334
+}
+
 export interface SurtrRemnantChartSeries {
   id: string
   label: string

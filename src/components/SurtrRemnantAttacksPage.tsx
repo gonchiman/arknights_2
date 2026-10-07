@@ -9,7 +9,7 @@ import {
 } from '../lib/surtrRemnantAttacks'
 import { getOperatorModuleId, getOperatorModuleLevels, getOperatorModules } from '../lib/operatorModules'
 import { getModuleComparisonColors } from '../lib/moduleColors'
-import type { SurtrRemnantChartKind, SurtrRemnantChartSeries } from '../lib/surtrRemnantChart'
+import { getSurtrRemnantAttackChartHeight, type SurtrRemnantChartKind, type SurtrRemnantChartSeries } from '../lib/surtrRemnantChart'
 import { getSurtrRemnantAttackImageFilename } from '../lib/surtrRemnantAttackImageFilename'
 import { withChartImageAspect } from '../lib/chartImageFilename'
 import { getChartImageLayout } from '../lib/chartImageLayout'
@@ -106,7 +106,10 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
   const [selection, setSelection] = useState<DetailSelection | null>(null)
   const [chartKind, setChartKind] = useState<SurtrRemnantChartKind>('grouped-bar')
   const [showValues, setShowValues] = useState(true)
-  const [showBoundaries, setShowBoundaries] = useState(false)
+  const [showBandBoundaries, setShowBandBoundaries] = useState(false)
+  const [showStepBoundaries, setShowStepBoundaries] = useState(true)
+  const showBoundaries = chartKind === 'step' ? showStepBoundaries : showBandBoundaries
+  const setShowBoundaries = chartKind === 'step' ? setShowStepBoundaries : setShowBandBoundaries
   const [hiddenSeries, setHiddenSeries] = useState<string[]>([])
   const [selectedCtInput, setSelectedCtInput] = useState('0.50')
   const [image, setImage] = useState<ImageSnapshot | null>(null)
@@ -196,7 +199,7 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
       const destination = await selectChartImageDestination(filename, picker)
       if (destination.type === 'cancelled') return
       await saveComparisonChartImage({ filename,
-        width: getChartImageLayout({ naturalChartHeight: 334, aspectRatio: ratio }).width,
+        width: getChartImageLayout({ naturalChartHeight: getSurtrRemnantAttackChartHeight(image.kind, image.series.length), aspectRatio: ratio }).width,
         chart: <SurtrRemnantAttackChartImage {...image} aspectRatio={ratio} />,
         writeBlob: destination.type === 'file' ? destination.write : undefined,
       })
@@ -278,7 +281,7 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
                     onClick={() => setHiddenSeries(previous => previous.includes(item.id) ? previous.filter(id => id !== item.id)
                       : previous.length < comparison.length - 1 ? [...previous, item.id] : previous)}>
                     {chartKind === 'step' ? <svg className="surtr-remnant-line-swatch" width="18" height="12" aria-hidden="true"><line x1="0" x2="18" y1="6" y2="6" stroke={item.color}
-                      strokeWidth={item.model?.moduleType === null ? 4 : 2.5} strokeDasharray={item.model?.moduleType === null ? '2 4' : item.model?.moduleType === 'X' ? '8 5' : undefined} /></svg>
+                      strokeWidth="2.5" /></svg>
                       : <i aria-hidden="true" style={{ backgroundColor: item.color }} />}{item.label}
                   </button>)}
                 </div>

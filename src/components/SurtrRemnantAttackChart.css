@@ -12,6 +12,10 @@
 .surtr-remnant-attack-chart-grid { stroke: #e1e1e1; stroke-width: 1; stroke-dasharray: 5 4; }
 .surtr-remnant-attack-chart-axis { fill: none; stroke: #aaa; stroke-width: 1; }
 .surtr-remnant-attack-chart-step { fill: none; stroke-linejoin: round; }
+.surtr-remnant-step-frame { fill: none; stroke: #d9dce0; stroke-width: 1; }
+.surtr-remnant-step-leader { fill: none; stroke: #888; stroke-width: 1; }
+.surtr-remnant-attack-chart-svg .surtr-remnant-step-row-name { font-weight: 700; }
+.surtr-remnant-attack-chart-svg .surtr-remnant-step-limit { fill: #555; }
 .surtr-remnant-attack-chart-open-point { fill: #fff; }
 .surtr-remnant-attack-chart-active-band { fill: #f2f3f4; }
 .surtr-remnant-attack-chart-guide { stroke: #777; stroke-width: 1; stroke-dasharray: 3 4; }

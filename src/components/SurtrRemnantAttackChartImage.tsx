@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { getChartImageLayout } from '../lib/chartImageLayout'
 import type { SurtrRemnantAttackAssumptions } from '../lib/surtrRemnantAttacks'
-import type { SurtrRemnantChartKind, SurtrRemnantChartSeries } from '../lib/surtrRemnantChart'
+import { getSurtrRemnantAttackChartHeight, type SurtrRemnantChartKind, type SurtrRemnantChartSeries } from '../lib/surtrRemnantChart'
 import { ChartImageFrame } from './ChartImageFrame'
 import { SurtrRemnantAttackChart } from './SurtrRemnantAttackChart'
 import './SurtrDurationChart.css'
@@ -23,18 +23,14 @@ export interface SurtrRemnantAttackChartImageProps {
   onLayout?: (size: { width: number; height: number }) => void
 }
 
-const NATURAL_CHART_HEIGHT = 334
-
 function ImageLegend({ series, kind }: Pick<SurtrRemnantAttackChartImageProps, 'series' | 'kind'>) {
   return <ul className="chart-image-frame-legend-list" aria-label="装備">
     {series.map(item => {
-      const moduleType = item.model.moduleType
-      const dashArray = moduleType === null ? '2 4' : moduleType === 'X' ? '8 5' : undefined
       return <li className="chart-image-frame-legend-item" key={item.id}>
         <svg className="chart-image-frame-legend-swatch" width="18" height="12" aria-hidden="true">
           {kind === 'step'
             ? <line x1="0" x2="18" y1="6" y2="6" stroke={item.color}
-              strokeWidth={moduleType === null ? 4 : 2.5} strokeDasharray={dashArray} />
+              strokeWidth="2.5" />
             : <rect x="0" y="2" width="18" height="8" fill={item.color} />}
         </svg>
         <span>{item.label}</span>
@@ -49,8 +45,8 @@ export function SurtrRemnantAttackChartImage({ id, series, assumptions, samples,
     potential, blocking, step, aspectRatio])
   return <ChartImageFrame key={snapshotKey} className="surtr-duration-chart-image" title="余燼中の命中回数"
     conditions={`潜在${potential}・${blocking ? 'ブロック中' : '非ブロック'}・仮定の試算`}
-    legend={<ImageLegend series={series} kind={kind} />} axisTitle="発動直前の残りCT（s）"
-    naturalChartHeight={NATURAL_CHART_HEIGHT} aspectRatio={aspectRatio} onLayout={onLayout}>
+    legend={kind === 'step' ? undefined : <ImageLegend series={series} kind={kind} />} axisTitle="発動直前の残りCT（s）"
+    naturalChartHeight={getSurtrRemnantAttackChartHeight(kind, series.length)} aspectRatio={aspectRatio} onLayout={onLayout}>
     {({ width, height }) => <SurtrRemnantAttackChart series={series} assumptions={assumptions}
       samples={samples} ctLimit={ctLimit} kind={kind} showValues={showValues} showBoundaries={showBoundaries}
       width={width} height={height} image />}
@@ -61,7 +57,7 @@ function ImagePreview(props: Omit<SurtrRemnantAttackChartImageProps, 'onLayout'>
   const previewRef = useRef<HTMLDivElement>(null)
   const [availableWidth, setAvailableWidth] = useState(600)
   const [size, setSize] = useState(() => getChartImageLayout({
-    naturalChartHeight: NATURAL_CHART_HEIGHT, aspectRatio: props.aspectRatio,
+    naturalChartHeight: getSurtrRemnantAttackChartHeight(props.kind, props.series.length), aspectRatio: props.aspectRatio,
   }))
   useLayoutEffect(() => {
     const element = previewRef.current

@@ -1,9 +1,11 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import {
   buildSurtrRemnantCountEndpoints, buildSurtrRemnantCountIntervals,
+  getSurtrRemnantAttackChartHeight,
   type SurtrRemnantChartKind, type SurtrRemnantChartSeries, type SurtrRemnantCountInterval,
 } from '../lib/surtrRemnantChart'
 import { buildSurtrRemnantCtSamples, calculateSurtrRemnantAttacks, type SurtrRemnantAttackAssumptions } from '../lib/surtrRemnantAttacks'
+import { SurtrRemnantStepPlot } from './SurtrRemnantStepPlot'
 import './SurtrRemnantAttackChart.css'
 
 export interface SurtrRemnantAttackChartProps {
@@ -21,7 +23,6 @@ export interface SurtrRemnantAttackChartProps {
   image?: boolean
 }
 
-const NATURAL_CHART_HEIGHT = 334
 const CT_EPSILON = 1e-9
 const ctFormatter = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
 const formatCt = (ct: number) => ctFormatter.format(ct)
@@ -30,12 +31,6 @@ const formatBoundaryCt = (ct: number) => `${Math.abs(ct - Number(ct.toFixed(3)))
 const countLabel = (count: number | null) => count === null ? '—（範囲外）' : `${count} 回`
 const chartLabels: Record<SurtrRemnantChartKind, string> = {
   'grouped-bar': '集合棒グラフ', step: '階段グラフ', bands: '回数の区間帯',
-}
-
-function lineStyle(item: SurtrRemnantChartSeries) {
-  return item.model.moduleType === null ? { width: 4, dash: '2 4', radius: 4 }
-    : item.model.moduleType === 'X' ? { width: 2.5, dash: '8 5', radius: 3 }
-      : { width: 2.5, dash: undefined, radius: 3 }
 }
 
 function nearestCt(values: readonly number[], value: number): number {
@@ -72,7 +67,7 @@ function axisTicks(maximum: number, width: number): number[] {
 
 /** CT-specific SVG; the surrounding page owns the legend, conditions and detail dialog. */
 export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, selectedCt, onSelectCt,
-  showValues = true, showBoundaries = false, ctLimit, width: suppliedWidth, height = NATURAL_CHART_HEIGHT, image = false,
+  showValues = true, showBoundaries = false, ctLimit, width: suppliedWidth, height, image = false,
 }: SurtrRemnantAttackChartProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -83,7 +78,6 @@ export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, se
   const descriptionId = useId()
   const helpId = useId()
   const uniqueId = useId().replace(/:/g, '')
-  const clipId = `surtr-remnant-clip-${uniqueId}`
   const hatchId = `surtr-remnant-hatch-${uniqueId}`
   const data = useMemo(() => series.map(item => ({ item,
     intervals: buildSurtrRemnantCountIntervals(item.model, assumptions),
@@ -98,7 +92,7 @@ export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, se
   const viewportWidth = Number.isFinite(suppliedWidth) && suppliedWidth! > 0 ? suppliedWidth! : availableWidth
   const barGroupMinimum = Math.max(48, data.length * 16 + Math.max(0, data.length - 1) * 3 + 14)
   const width = !image && kind === 'grouped-bar' ? Math.max(viewportWidth, 72 + values.length * barGroupMinimum) : viewportWidth
-  const chartHeight = Math.max(180, height)
+  const chartHeight = Math.max(getSurtrRemnantAttackChartHeight(kind, data.length), height ?? 0)
   const compact = width < 480
   const left = kind === 'bands' ? compact ? 72 : 102 : 54
   const right = Math.max(left + 1, width - 18)
@@ -186,23 +180,18 @@ export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, se
   const description = `${chartLabels[kind]}。命中まで ${formatCt(assumptions.windup)} 秒、残りCTは${assumptions.ctCarry === 'time' ? '時間を維持' : '割合を維持'}、退場と同時の命中は${assumptions.includeRetreatHit ? '含む' : '含まない'}。`
     + (image ? data.map(({ item, intervals }) => `${item.label}：${intervals.map(intervalLabel).join('、')}`).join('。')
       : `残りCT ${formatCt(accessibleCt)} 秒：${accessibleValues}。`)
-  const endpointMarker = (ct: number, count: number, included: boolean, item: SurtrRemnantChartSeries) => <circle
-    key={`${ct}:${count}:${included}`} cx={x(ct)} cy={y(count)} r={lineStyle(item).radius}
-    className={included ? 'surtr-remnant-attack-chart-point' : 'surtr-remnant-attack-chart-open-point'}
-    fill={included ? item.color : undefined} stroke={item.color} strokeWidth="1.5" data-chart-image-ink="true">
-    <title>{`${item.label}・CT ${exactCtFormatter.format(ct)} s${included ? 'ちょうど' : 'ではこの回数を含まない'}・${count} 回`}</title>
-  </circle>
-
   const svg = <svg className={`surtr-remnant-attack-chart-svg${image ? ' is-image' : ''}`} width={width} height={chartHeight}
     viewBox={`0 0 ${width} ${chartHeight}`} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
     <title id={titleId}>{`余燼中の命中回数・${chartLabels[kind]}`}</title><desc id={descriptionId}>{description}</desc>
     {!hasData ? <text className="surtr-remnant-attack-chart-empty" x={width / 2} y={chartHeight / 2} textAnchor="middle">表示できるデータがありません</text> : <>
       <defs>
-        <clipPath id={clipId}><rect x={left - 5} y={top - 5} width={plotWidth + 10} height={bottom - top + 10} /></clipPath>
         <pattern id={hatchId} patternUnits="userSpaceOnUse" width="6" height="6">
           <path className="surtr-remnant-attack-chart-hatch" d="M-1 1 L1 -1 M0 6 L6 0 M5 7 L7 5" />
         </pattern>
       </defs>
+      {kind === 'step' ? <SurtrRemnantStepPlot data={data} assumptions={assumptions} height={chartHeight}
+        left={left} right={right} ctDomain={ctDomain} xTicks={xTicks} hatchId={hatchId}
+        activeCt={activeCt} showBoundaries={showBoundaries} /> : <>
       {kind !== 'bands' && <>
         <text className="surtr-remnant-attack-chart-axis-title" x={left} y="17">命中回数（回）</text>
         {Array.from({ length: maximumY / 2 + 1 }, (_, index) => index * 2).map(count => <g key={count}>
@@ -225,26 +214,6 @@ export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, se
           </g>
         })}</g>)}
       </>}
-      {kind === 'step' && data.map(({ item, intervals, endpoints }) => {
-        const style = lineStyle(item)
-        const path = intervals.map((interval, index) => `${index === 0 ? `M${x(interval.from)} ${y(interval.count)}` : `V${y(interval.count)}`} H${x(interval.to)}`).join(' ')
-        const boundaries = intervals.slice(0, -1).map((interval, index) => ({ ct: interval.to, before: interval.count, after: intervals[index + 1].count }))
-        const labels = spacedTicks(boundaries.map(boundary => boundary.ct), x, 30)
-        return <g key={item.id}>
-          <path className="surtr-remnant-attack-chart-step" d={path} stroke={item.color} strokeWidth={style.width} strokeDasharray={style.dash} clipPath={`url(#${clipId})`} data-chart-image-ink="true" />
-          {boundaries.map(({ ct, before, after }) => {
-            const actual = calculateSurtrRemnantAttacks(item.model, ct, assumptions)?.hitCount
-            return <g key={ct}>
-              {endpointMarker(ct, before, actual === before, item)}{endpointMarker(ct, after, actual === after, item)}
-              {showBoundaries && labels.includes(ct) && <text className="surtr-remnant-attack-chart-tick" x={Math.max(left + 21, Math.min(right - 24, x(ct)))} y={y(before) - 12} textAnchor="middle" data-chart-image-ink="true">{formatBoundaryCt(ct)}</text>}
-            </g>
-          })}
-          {endpoints.map(({ ct, count }) => {
-            const adjacent = ct === 0 ? intervals[0].count : intervals.at(-1)!.count
-            return <g key={ct}>{count !== adjacent && endpointMarker(ct, adjacent, false, item)}{endpointMarker(ct, count, true, item)}</g>
-          })}
-        </g>
-      })}
       {kind === 'bands' && <>
         {xTicks.map(ct => <line key={ct} className="surtr-remnant-attack-chart-grid" x1={x(ct)} x2={x(ct)} y1={top} y2={bottom} />)}
         {data.map(({ item, intervals, endpoints }, index) => {
@@ -289,11 +258,8 @@ export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, se
         textAnchor={kind !== 'grouped-bar' && index === xTicks.length - 1 ? 'end' : 'middle'}>{formatCt(ct)}</text>)}
       {kind !== 'grouped-bar' && activeCt !== null && <g aria-hidden="true">
         <line className="surtr-remnant-attack-chart-guide" x1={x(activeCt)} x2={x(activeCt)} y1={top} y2={bottom} />
-        {kind === 'step' && data.map(({ item }, index) => {
-          const count = calculateSurtrRemnantAttacks(item.model, activeCt, assumptions)?.hitCount
-          return count === undefined ? null : <circle key={item.id} cx={x(activeCt)} cy={y(count)} r={4 + index * 2.5} fill="none" stroke={item.color} strokeWidth="1.75" />
-        })}
       </g>}
+      </>}
     </>}
   </svg>
 
