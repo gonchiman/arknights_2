@@ -333,11 +333,13 @@ export function SurtrRemnantAttackChart({ series, assumptions, samples, kind, se
             {shorterDomain && <g data-band-domain-limit={limit}>
               <rect x={x(limit)} y={rowTop} width={right - x(limit)} height={rowHeight} fill={`url(#${hatchId})`} />
               <text className="surtr-remnant-attack-chart-empty" x={(right + x(limit)) / 2} y={row + 4} textAnchor="middle">{right - x(limit) > 45 ? '範囲外' : '—'}</text>
-              <line className="surtr-remnant-step-leader" x1={x(limit)} x2={x(limit)} y1={rowBottom + 2} y2={rowBottom + 7} />
-              <text className="surtr-remnant-attack-chart-tick" x={limitLabelX} y={rowBottom + 17}
-                textAnchor="end" data-chart-image-ink="true">{limitLabel}
-                <title>{`最大残りCT ${exactCtFormatter.format(limit)} s`}</title>
-              </text>
+              {showBoundaries && <>
+                <line className="surtr-remnant-step-leader" x1={x(limit)} x2={x(limit)} y1={rowBottom + 2} y2={rowBottom + 7} />
+                <text className="surtr-remnant-attack-chart-tick" x={limitLabelX} y={rowBottom + 17}
+                  textAnchor="end" data-chart-image-ink="true">{limitLabel}
+                  <title>{`最大残りCT ${exactCtFormatter.format(limit)} s`}</title>
+                </text>
+              </>}
             </g>}
           </g>
         })}
