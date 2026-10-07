@@ -4,13 +4,16 @@ import type { SurtrRemnantAttackAssumptions, SurtrRemnantAttackModel } from '../
 import { buildSurtrRemnantExpectedDamagePoints } from '../lib/surtrRemnantExpectation'
 import { getSurtrRemnantExpectationImageFilename } from '../lib/surtrRemnantExpectationImageFilename'
 import { withChartImageAspect } from '../lib/chartImageFilename'
+import { withChartImageLabelFilename } from '../lib/chartImageLabels'
 import { getChartImageLayout } from '../lib/chartImageLayout'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { SurtrDpsChart, type SurtrDpsChartSeries } from './SurtrDpsChart'
 import { SurtrRemnantExpectationChartImage, SurtrRemnantExpectationChartImagePreview,
+  getSurtrRemnantExpectationChartImageLabelDefaults,
   type SurtrRemnantExpectationChartImageProps } from './SurtrRemnantExpectationChartImage'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
+import { ChartImageLabelEditor } from './ChartImageLabelEditor'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './SurtrRemnantDamageExpectationPanel.css'
 
@@ -64,7 +67,7 @@ export function SurtrRemnantDamageExpectationPanel({ comparison, potential, bloc
     if (!canOutput) return
     setFeedback(null)
     setImage({ id: String(++nextSnapshot.current), series: structuredClone(series), kind, resistanceStep, resistances: [...resistances],
-      potential, blocking, assumptions: { ...assumptions }, showValues, showResistanceRanks, digits: 0,
+      potential, blocking, assumptions: { ...assumptions }, showValues, showResistanceRanks, digits: 0, labels: {},
       filename: getSurtrRemnantExpectationImageFilename({ potential, blocking, modules: visible.map(item => item.label),
         resistances, ...assumptions, kind, showValues, showResistanceRanks, digits: 0 }),
     })
@@ -129,9 +132,12 @@ export function SurtrRemnantDamageExpectationPanel({ comparison, potential, bloc
       </>)}
       {feedback && feedback !== 'failed' && <p className="surtr-s3-status" role="status">{feedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
     </CollapsibleCalculatorPanel>
-    {image && <ChartImageSaveDialog initialFilename={image.filename} getDefaultFilename={ratio => withChartImageAspect(image.filename, ratio)} aspect={aspect} onAspectChange={setAspect}
+    {image && <ChartImageSaveDialog initialFilename={image.filename} getDefaultFilename={ratio => withChartImageAspect(
+      withChartImageLabelFilename(image.filename, getSurtrRemnantExpectationChartImageLabelDefaults(image.series), image.labels), ratio)} aspect={aspect} onAspectChange={setAspect}
       canChooseLocation={!!picker} saving={saving} error={feedback === 'failed'} helpMode="popover"
       onClose={() => { if (!saveInProgress.current) { setImage(null); setFeedback(null) } }} onSave={(filename, ratio) => void saveImage(filename, ratio)}
-      preview={<SurtrRemnantExpectationChartImagePreview key={`${image.id}:${aspectRatio ?? 'auto'}`} {...image} aspectRatio={aspectRatio} />} />}
+      options={<ChartImageLabelEditor defaults={getSurtrRemnantExpectationChartImageLabelDefaults(image.series)} value={image.labels ?? {}}
+        onChange={labels => setImage(current => current ? { ...current, labels } : current)} disabled={saving} />}
+      preview={<SurtrRemnantExpectationChartImagePreview key={`${image.id}:${JSON.stringify(image.labels)}:${aspectRatio ?? 'auto'}`} {...image} aspectRatio={aspectRatio} />} />}
   </>
 }

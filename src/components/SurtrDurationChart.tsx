@@ -1,5 +1,8 @@
-import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { getChartImageLayout } from '../lib/chartImageLayout'
+import { applyChartImageSeriesLabels, resolveChartImageLabels,
+  type ChartImageLabelDefaults, type ChartImageLabelOverrides } from '../lib/chartImageLabels'
+import { wrapText } from '../lib/slideComposer'
 import { ChartImageFrame } from './ChartImageFrame'
 import './SurtrDurationChart.css'
 
@@ -21,13 +24,22 @@ export interface SurtrDurationChartProps {
 
 export interface SurtrDurationChartImageProps extends Omit<SurtrDurationChartProps, 'selection'> {
   conditions: string
+  labels?: ChartImageLabelOverrides
   aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
 }
 
 const NATURAL_CHART_HEIGHT = 334
+const AXIS_TITLE_FONT = '700 12px "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif'
+const AXIS_TITLE_LINE_HEIGHT = 16
 const DASH_PATTERNS = [undefined, '8 5', '2 5', '10 4 2 4'] as const
 const seconds = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
+
+export function getSurtrDurationImageLabelDefaults(
+  series: readonly { id: string; label: string }[], title = 'HPの推移',
+): ChartImageLabelDefaults {
+  return { title, xAxis: 'S3発動からの時間（秒）', yAxis: 'HP（%）', series }
+}
 
 function normalizeSeries(series: SurtrDurationSeries[]) {
   return series.filter((item) => Number.isFinite(item.remnantStart) && item.remnantStart >= 0
@@ -57,16 +69,26 @@ function ChartLegend({ series, image = false }: { series: SurtrDurationSeries[];
   </ul>
 }
 
-function SurtrDurationSvg({ series, title, selection, width, height }: Required<Omit<SurtrDurationChartProps, 'selection'>> & {
+function SurtrDurationSvg({ series, title, selection, width, height, image = false, valueAxisLabel = 'HP（%）', onOverflow }: Required<Omit<SurtrDurationChartProps, 'selection'>> & {
   selection?: SurtrDurationChartProps['selection']
+  image?: boolean
+  valueAxisLabel?: string
+  onOverflow?: (height: number) => void
   width: number; height: number
 }) {
   const titleId = useId()
   const descriptionId = useId()
   const clipId = useId()
+  const [titleMeasurement, setTitleMeasurement] = useState<{ label: string; widths: Record<string, number> } | null>(null)
   const left = 54
   const right = width - 20
-  const top = 48
+  const axisTitleLines = image ? wrapText({ font: AXIS_TITLE_FONT,
+    measureText: text => ({ width: Array.from(text).reduce((sum, character) => sum
+      + ((titleMeasurement?.label === valueAxisLabel ? titleMeasurement.widths[character] : undefined)
+      ?? (/^[\x00-\x7f]$/.test(character) ? 8 : 14)), 0) }),
+  }, valueAxisLabel, Math.max(14, right - left - 155 - 16)) : [valueAxisLabel]
+  const titleOverflow = image ? Math.max(0, axisTitleLines.length - 1) * AXIS_TITLE_LINE_HEIGHT : 0
+  const top = 48 + titleOverflow
   const bottom = height - 32
   const largestTime = Math.max(1, ...series.map((item) => item.retreatTime))
   const tickStep = largestTime <= 50 ? 5 : largestTime <= 100 ? 10 : Math.ceil(largestTime / 50) * 10
@@ -86,6 +108,27 @@ function SurtrDurationSvg({ series, title, selection, width, height }: Required<
   const selectionLabelX = selectedTime === null ? left : Math.max(left + selectionLabelWidth / 2,
     Math.min(right - selectionLabelWidth / 2, x(selectedTime)))
 
+  useLayoutEffect(() => {
+    if (!image) return
+    let active = true
+    const measure = () => {
+      if (!active) return
+      const context = document.createElement('canvas').getContext('2d')
+      if (!context) return
+      context.font = AXIS_TITLE_FONT
+      const widths = Object.fromEntries([...new Set(valueAxisLabel)].map(character =>
+        [character, Math.ceil(context.measureText(character).width)]))
+      setTitleMeasurement(current => current?.label === valueAxisLabel && JSON.stringify(current.widths) === JSON.stringify(widths)
+        ? current : { label: valueAxisLabel, widths })
+    }
+    measure()
+    void document.fonts.ready.then(measure)
+    document.fonts.addEventListener('loadingdone', measure)
+    return () => { active = false; document.fonts.removeEventListener('loadingdone', measure) }
+  }, [image, valueAxisLabel])
+
+  useLayoutEffect(() => { if (image) onOverflow?.(titleOverflow) }, [image, onOverflow, titleOverflow])
+
   return <svg className="surtr-duration-chart-svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}
     role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
     <title id={titleId}>{title}</title><desc id={descriptionId}>{summary ? summary + selectedSummary : '装備を選択してください。'}</desc>
@@ -97,7 +140,8 @@ function SurtrDurationSvg({ series, title, selection, width, height }: Required<
         <line className="surtr-duration-chart-grid" x1={x(tick)} x2={x(tick)} y1={top} y2={bottom} />
         <text className="surtr-duration-chart-tick" x={x(tick)} y={bottom + 21} textAnchor="middle">{tick}</text>
       </g>)}
-      <text className="surtr-duration-chart-axis-title" x={left} y="18">HP（%）</text>
+      <text className="surtr-duration-chart-axis-title" x={left} y="18">{axisTitleLines.length === 1 ? axisTitleLines[0]
+        : axisTitleLines.map((line, index) => <tspan key={index} x={left} y={18 + index * AXIS_TITLE_LINE_HEIGHT}>{line}</tspan>)}</text>
       <g className="surtr-duration-chart-event-key" transform={`translate(${right - 155} 15)`} aria-hidden="true">
         <circle cx="4" cy="0" r="3.5" fill="#fff" stroke="#666" strokeWidth="1.5" />
         <text x="14" y="4">余燼発動</text>
@@ -167,14 +211,23 @@ export function SurtrDurationChart({ series, title = 'HPの推移', selection }:
   </figure>
 }
 
-export function SurtrDurationChartImage({ series, title = 'HPの推移', conditions,
+export function SurtrDurationChartImage({ series, title = 'HPの推移', conditions, labels,
   aspectRatio, onLayout }: SurtrDurationChartImageProps) {
   const data = useMemo(() => normalizeSeries(series), [series])
-  const snapshotKey = JSON.stringify([data, title, conditions, aspectRatio])
-  return <ChartImageFrame key={snapshotKey} className="surtr-duration-chart-image" title={title} conditions={conditions}
-    legend={<ChartLegend series={data} image />} axisTitle="S3発動からの時間（秒）"
-    naturalChartHeight={NATURAL_CHART_HEIGHT} aspectRatio={aspectRatio} onLayout={onLayout}>
-    {({ width, height }) => <SurtrDurationSvg series={data} title={title} width={width} height={height} />}
+  const snapshotKey = JSON.stringify([data, title, conditions, labels, aspectRatio])
+  const display = resolveChartImageLabels(getSurtrDurationImageLabelDefaults(data, title), labels)
+  const displaySeries = applyChartImageSeriesLabels(data, labels)
+  const [expansion, setExpansion] = useState({ snapshotKey, overflow: 0 })
+  const overflow = expansion.snapshotKey === snapshotKey ? expansion.overflow : 0
+  const reserveOverflow = useCallback((required: number) => {
+    setExpansion(current => current.snapshotKey === snapshotKey && current.overflow >= required
+      ? current : { snapshotKey, overflow: Math.max(current.snapshotKey === snapshotKey ? current.overflow : 0, required) })
+  }, [snapshotKey])
+  return <ChartImageFrame key={snapshotKey} className="surtr-duration-chart-image" title={display.title} conditions={conditions}
+    legend={<ChartLegend series={displaySeries} image />} axisTitle={display.xAxis}
+    naturalChartHeight={NATURAL_CHART_HEIGHT + overflow} aspectRatio={aspectRatio} onLayout={onLayout}>
+    {({ width, height }) => <SurtrDurationSvg series={displaySeries} title={display.title} width={width} height={height}
+      valueAxisLabel={display.yAxis} onOverflow={reserveOverflow} image />}
   </ChartImageFrame>
 }
 
