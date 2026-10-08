@@ -3,6 +3,7 @@ import test from 'node:test'
 import {
   SURTR_DPS_PAGE_STATE_KEY, createDefaultSurtrDpsPageState, parseSurtrDpsPageState,
   readSurtrDpsPageState, writeSurtrDpsPageState,
+  type SurtrDpsPageState,
 } from '../src/lib/surtrDpsPageState.ts'
 
 function memoryStorage() {
@@ -19,7 +20,7 @@ test('DPS settings survive a route remount or reload through session storage', (
     chartKind: 'line', barStep: 'ratings', resistanceRange: { min: 10, max: 90 },
     showValues: true, showResistanceRanks: false, gridStyle: 'dashed', precision: 3, metric: 'percent', differenceMetric: 'percent',
     requestedBaselineId: 'uniequip_003_surtr:lv2', selectedResistance: 37,
-    unequippedLayout: 'comparison', unequippedMetric: 'ratio',
+    unequippedLayout: 'comparison', unequippedMetric: 'ratio', unequippedStep: 7,
     yAxisMode: 'manual', yAxisDraft: { min: '-10.5', max: '120' },
   })
   writeSurtrDpsPageState(state, storage)
@@ -51,9 +52,11 @@ test('unequipped comparison options migrate independently of the chart compariso
   const previous = { ...createDefaultSurtrDpsPageState(), metric: 'percent' }
   Reflect.deleteProperty(previous, 'unequippedLayout')
   Reflect.deleteProperty(previous, 'unequippedMetric')
+  Reflect.deleteProperty(previous, 'unequippedStep')
   const restored = parseSurtrDpsPageState(previous)
   assert.equal(restored.unequippedLayout, 'combined')
   assert.equal(restored.unequippedMetric, 'difference')
+  assert.equal(restored.unequippedStep, 10)
   assert.equal(restored.metric, 'percent')
   for (const unequippedLayout of ['combined', 'comparison'] as const) {
     for (const unequippedMetric of ['difference', 'ratio', 'percent'] as const) {
@@ -125,6 +128,51 @@ test('custom integer spacing and existing presets survive storage without narrow
     assert.equal(JSON.parse(storage.values.get(SURTR_DPS_PAGE_STATE_KEY)!).barStep, barStep)
     assert.deepEqual(readSurtrDpsPageState(storage), state)
   }
+})
+
+test('previous v1 saved state restores table spacing to 10 while retaining the chart spacing', () => {
+  const storage = memoryStorage()
+  const defaults = createDefaultSurtrDpsPageState()
+  assert.equal(defaults.unequippedStep, 10)
+  assert.equal(defaults.barStep, 20)
+  const previous = { ...defaults, barStep: 'ratings' as const, precision: 2 }
+  Reflect.deleteProperty(previous, 'unequippedStep')
+  storage.setItem('arknights-surtr-dps-page-state-v1', JSON.stringify(previous))
+  const restored = readSurtrDpsPageState(storage)
+  assert.deepEqual(restored, { ...previous, unequippedStep: 10 })
+  writeSurtrDpsPageState(restored, storage)
+  assert.deepEqual(readSurtrDpsPageState(storage), restored)
+  assert.deepEqual([...storage.values.keys()], ['arknights-surtr-dps-page-state-v1'])
+})
+
+test('table custom integer spacing and ratings survive storage independently of chart spacing', () => {
+  const storage = memoryStorage()
+  for (const unequippedStep of [1, 7, 10, 20, 30, 100, 'ratings'] as const) {
+    const barStep = unequippedStep === 'ratings' ? 7 : 'ratings'
+    const state: SurtrDpsPageState = { ...createDefaultSurtrDpsPageState(), unequippedStep, barStep,
+      resistanceRange: { min: 15, max: 55 } }
+    writeSurtrDpsPageState(state, storage)
+    const saved = JSON.parse(storage.values.get(SURTR_DPS_PAGE_STATE_KEY)!)
+    assert.equal(saved.unequippedStep, unequippedStep)
+    assert.equal(saved.barStep, barStep)
+    assert.deepEqual(readSurtrDpsPageState(storage), state)
+    assert.equal(parseSurtrDpsPageState({ ...state, barStep: 100 }).unequippedStep, unequippedStep)
+  }
+})
+
+test('invalid table spacing defaults to 10 without changing a valid chart spacing or comparison option', () => {
+  for (const unequippedStep of [undefined, null, '10', '', 'custom', 'rating', 0, 101, -20, 1.5,
+    NaN, Infinity, -Infinity, true, {}, [], [10]]) {
+    const restored = parseSurtrDpsPageState({ unequippedStep, barStep: 7,
+      unequippedLayout: 'comparison', unequippedMetric: 'ratio' })
+    assert.equal(restored.unequippedStep, 10)
+    assert.equal(restored.barStep, 7)
+    assert.equal(restored.unequippedLayout, 'comparison')
+    assert.equal(restored.unequippedMetric, 'ratio')
+  }
+  const restored = parseSurtrDpsPageState({ unequippedStep: 7, barStep: 101 })
+  assert.equal(restored.unequippedStep, 7)
+  assert.equal(restored.barStep, 20)
 })
 
 test('rank display defaults on for previous saved state and preserves explicit on or off for both charts', () => {

@@ -130,3 +130,40 @@ test('命名は入力を変更せず、日時や乱数が変わっても設定�
   assert.equal(original, getSurtrUnequippedTableImageFilename(captured))
   assert.deepEqual(captured, before)
 })
+
+test('ブロック条件比較の画像名は通常の単一条件と区別し、現在のblocking選択に依存しない', () => {
+  const blockingComparison = [{ blocking: true }, { blocking: false }]
+  const compared = { ...options, blockingComparison }
+  const before = structuredClone(compared)
+  const name = getSurtrUnequippedTableImageFilename(compared)
+  assert.match(name, /_ブロック条件比較_/)
+  assert.doesNotMatch(name, /_未ブロック_|_ブロック中_/)
+  assert.notEqual(name, getSurtrUnequippedTableImageFilename(options))
+  assert.equal(name, getSurtrUnequippedTableImageFilename({ ...compared, metadata: { ...metadata, blocking: true } }))
+  assert.equal(name, getSurtrUnequippedTableImageFilename({ ...compared, blockingComparison: [...blockingComparison].reverse() }))
+  assert.equal(name, getSurtrUnequippedTableImageFilename({ ...compared, blockingComparison: [] }))
+  assert.equal(getSurtrUnequippedTableImageFilename({ ...options, blockingComparison: undefined }),
+    getSurtrUnequippedTableImageFilename(options))
+  assert.deepEqual(compared, before)
+})
+
+test('ブロック条件比較でも指標・形式・画像比率を記録し、長い名前は共通上限を守る', () => {
+  const blockingComparison = [{ blocking: false }, { blocking: true }]
+  const names: string[] = []
+  for (const layout of ['combined', 'comparison'] as const) {
+    for (const metric of ['difference', 'ratio', 'percent'] as const) {
+      const name = getSurtrUnequippedTableImageFilename({ ...options, blockingComparison, layout, metric }, 16 / 9)
+      assert.match(name, /_ブロック条件比較_/)
+      assert.match(name, /_比率16x9\.png$/)
+      names.push(name)
+    }
+  }
+  assert.equal(new Set(names).size, 6)
+  const long = getSurtrUnequippedTableImageFilename({
+    ...options, blockingComparison, series: [{ id: 'x:lv3', label: '長いMOD名😀'.repeat(80) }],
+  }, 9 / 16)
+  assert.match(long, /_ブロック条件比較_/)
+  assert.match(long, /ほか\d+項目_比率9x16\.png$/)
+  assert.ok(new TextEncoder().encode(long).length <= 240)
+  assert.equal(long.isWellFormed(), true)
+})

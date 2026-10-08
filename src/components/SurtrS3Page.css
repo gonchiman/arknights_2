@@ -93,6 +93,11 @@
 .surtr-s3-result-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .surtr-s3-unequipped-table tr > th:first-child { width: auto; }
 .surtr-s3-unequipped-table thead tr:first-child > th:first-child { min-width: 80px; text-align: left; }
+.surtr-s3-equal-blocking-columns { table-layout: fixed; min-width: var(--surtr-unequipped-min-width); }
+.surtr-s3-unequipped-resistance-column { width: 80px; }
+.surtr-s3-unequipped-baseline-column { width: 96px; }
+.surtr-s3-unequipped-table .surtr-s3-blocking-column { white-space: normal; }
+.surtr-s3-blocking-column span { white-space: nowrap; }
 .surtr-s3-page .error-box .button { margin-left: 12px; }
 @media (max-width: 640px) {
   .surtr-s3-page .collapsible-panel-body { padding: 14px; }

@@ -189,3 +189,164 @@ test('export rejects invalid aspect or empty tables before accessing the browser
   await assert.rejects(saveImage({ snapshot: { ...snapshot, series: [baseline] } }), /保存する比較表がありません/)
   await assert.rejects(saveImage({ snapshot: { ...snapshot, resistances: [] } }), /保存する比較表がありません/)
 })
+
+const blockedModules = [
+  { ...modules[0], points: [{ x: 60, value: 65 }, { x: 0, value: 115 }, { x: 100, value: 9 }] },
+  { ...modules[1], points: [{ x: 100, value: 0 }, { x: 0, value: 180 }, { x: 60, value: 88 }] },
+]
+// Conditions and series deliberately arrive in opposite order to the displayed columns.
+const blockingComparison = [
+  { blocking: true, series: [...blockedModules].reverse(), baseline },
+  { blocking: false, series: [...modules].reverse(), baseline },
+]
+const blockExpectedComparison = {
+  difference: [['+25.0', '+15.0', '+50.0', '+80.0'], ['-10.0', '-15.0', '0.0', '+8.0'], ['+10.0', '+9.0', '0.0', '0.0']],
+  ratio: [['125.0%', '115.0%', '150.0%', '180.0%'], ['87.5%', '81.3%', '100.0%', '110.0%'], ['—', '—', '—', '—']],
+  percent: [['+25.0%', '+15.0%', '+50.0%', '+80.0%'], ['-12.5%', '-18.8%', '0.0%', '+10.0%'], ['—', '—', '—', '—']],
+}
+const blockExpectedRaw = [['125.0', '115.0', '150.0', '180.0'], ['70.0', '65.0', '80.0', '88.0'], ['10.0', '9.0', '0.0', '0.0']]
+
+for (const metric of ['difference', 'ratio', 'percent']) {
+  for (const layout of ['combined', 'comparison']) {
+    test(`both blocking conditions keep known ${metric} values and complete ${layout} column groups`, () => {
+      const markup = render({ series: modules, blockingComparison, layout, metric })
+      const expected = props.resistances.map((resistance, index) => layout === 'combined'
+        ? [String(resistance), expectedRaw[index][0], ...blockExpectedRaw[index].flatMap((value, column) =>
+          [value, blockExpectedComparison[metric][index][column]])]
+        : [String(resistance), ...blockExpectedComparison[metric][index]])
+      assert.deepEqual(sectionRows(markup, 'tbody'), expected)
+      const headers = sectionRows(markup, 'thead')
+      assert.equal(headers.length, layout === 'combined' ? 3 : 2)
+      assert.deepEqual(headers[0], layout === 'combined'
+        ? ['術耐性', '未装備DPS・基準', 'MOD X Lv.3', 'MOD Y Lv.3']
+        : ['術耐性', 'MOD X Lv.3', 'MOD Y Lv.3'])
+      assert.deepEqual(headers[1], ['未ブロック', '対象を自身でブロック', '未ブロック', '対象を自身でブロック'])
+      if (layout === 'combined') {
+        const metricLabel = metric === 'difference' ? 'DPS差' : metric === 'ratio' ? '比率' : '増加率（%）'
+        assert.deepEqual(headers[2], ['DPS', metricLabel, 'DPS', metricLabel, 'DPS', metricLabel, 'DPS', metricLabel])
+        assert.equal(headers[0].filter(label => label === '未装備DPS・基準').length, 1)
+      }
+      assert.equal([...markup.matchAll(/<table\b/g)].length, 1)
+      assert.doesNotMatch(markup, /<button|<select|is-selected|aria-haspopup|›/)
+    })
+  }
+}
+
+test('a missing condition-specific value never falls back to the selected live blocking condition', () => {
+  const groups = structuredClone(blockingComparison)
+  groups.find(group => group.blocking).series.find(item => item.id === modules[1].id).points
+    = [{ x: 0, value: 180 }, { x: 100, value: null }]
+  const markup = render({ series: modules, blockingComparison: groups })
+  assert.deepEqual(sectionRows(markup, 'tbody')[1], ['60', '80.0', '70.0', '-10.0', '65.0', '-15.0', '80.0', '0.0', '—', '—'])
+  assert.deepEqual(sectionRows(markup, 'tbody')[2], ['100', '0.0', '10.0', '+10.0', '9.0', '+9.0', '0.0', '0.0', '—', '—'])
+})
+
+test('two-condition saved images retain all captured values and both condition labels in one table', () => {
+  const captured = structuredClone({ ...props, series: modules, blockingComparison, metadata })
+  const live = structuredClone(captured)
+  live.metadata.blocking = false
+  live.metadata.potential = 6
+  live.blockingComparison.find(group => group.blocking).series.find(item => item.id === modules[0].id).points[0].value = 999
+  for (const layout of ['combined', 'comparison']) {
+    const snapshot = { ...captured, layout }
+    const saved = renderToStaticMarkup(createElement(Image, snapshot))
+    assert.deepEqual(sectionRows(saved, 'thead'), sectionRows(render(snapshot), 'thead'))
+    assert.deepEqual(sectionRows(saved, 'tbody'), sectionRows(render(snapshot), 'tbody'))
+    assert.equal(sectionRows(saved, 'tbody')[0].length, layout === 'combined' ? 10 : 5)
+    assert.equal(sectionRows(saved, 'tbody').length, 3)
+    const footer = sections(saved, 'tfoot')
+    assert.equal(footer.length, 1)
+    assert.match(text(footer[0]), /基準：未装備/)
+    assert.match(text(footer[0]), /未ブロック/)
+    assert.match(text(footer[0]), /対象を自身でブロック/)
+    assert.match(text(footer[0]), /潜在1/)
+    assert.doesNotMatch(text(footer[0]), /潜在6/)
+    assert.match(footer[0], new RegExp(`colspan="${layout === 'combined' ? 10 : 5}"`, 'i'))
+    assert.doesNotMatch(saved, /<button|<select|is-selected|aria-haspopup|›|999/)
+    for (const item of modules) assert.ok(table(saved).includes(`background-color:${item.color}`), item.label)
+  }
+})
+
+test('both conditions preserve all six module stages, 26 combined cells and matching saved table headers', () => {
+  const stages = ['X', 'Y'].flatMap(moduleType => [1, 2, 3].map(moduleLevel => ({ moduleType, moduleLevel })))
+  const colors = moduleColors.getModuleComparisonColors(stages, { shadeBy: 'moduleLevel' })
+  const series = stages.map((stage, index) => ({
+    id: `module-${stage.moduleType.toLowerCase()}:lv${stage.moduleLevel}`,
+    label: `MOD ${stage.moduleType} Lv.${stage.moduleLevel}`, color: colors[index],
+    points: [{ x: 0, value: 110 + index * 10 }],
+  }))
+  const blocked = series.map((item, index) => ({ ...item, points: [{ x: 0, value: 210 + index * 10 }] }))
+  const groups = [{ blocking: false, series, baseline }, { blocking: true, series: [...blocked].reverse(), baseline }]
+  for (const layout of ['combined', 'comparison']) {
+    const snapshot = { ...props, series, blockingComparison: groups, resistances: [0], layout, metadata }
+    const live = render(snapshot)
+    const saved = renderToStaticMarkup(createElement(Image, snapshot))
+    assert.deepEqual(sectionRows(saved, 'thead'), sectionRows(live, 'thead'))
+    assert.deepEqual(sectionRows(saved, 'thead')[0].slice(layout === 'combined' ? 2 : 1), series.map(item => item.label))
+    assert.deepEqual(sectionRows(saved, 'tbody'), layout === 'combined' ? [[
+      '0', '100.0', '110.0', '+10.0', '210.0', '+110.0', '120.0', '+20.0', '220.0', '+120.0',
+      '130.0', '+30.0', '230.0', '+130.0', '140.0', '+40.0', '240.0', '+140.0',
+      '150.0', '+50.0', '250.0', '+150.0', '160.0', '+60.0', '260.0', '+160.0',
+    ]] : [['0', '+10.0', '+110.0', '+20.0', '+120.0', '+30.0', '+130.0', '+40.0', '+140.0', '+50.0', '+150.0', '+60.0', '+160.0']])
+    for (const item of series) assert.ok(table(saved).includes(`background-color:${item.color}`), item.label)
+    assert.match(sections(saved, 'tfoot')[0], new RegExp(`colspan="${layout === 'combined' ? 26 : 13}"`, 'i'))
+    assert.doesNotMatch(saved, /<button|is-selected/)
+  }
+})
+
+test('condition-specific cells open their own DPS or comparison flow, preserving resistance and blocking state', () => {
+  const elementNodes = (node, tag) => Array.isArray(node) ? node.flatMap(child => elementNodes(child, tag))
+    : !node || typeof node !== 'object' ? []
+      : [...(node.type === tag ? [node] : []), ...elementNodes(node.props?.children, tag)]
+  const originalElement = globalThis.Element
+  class CellElement {
+    constructor(attributes) { this.attributes = attributes }
+    closest() { return this }
+    getAttribute(name) { return this.attributes[name] ?? null }
+    hasAttribute(name) { return Object.hasOwn(this.attributes, name) }
+  }
+  globalThis.Element = CellElement
+  try {
+    for (const layout of ['combined', 'comparison']) {
+      for (const metric of ['difference', 'ratio', 'percent']) {
+        let tree
+        const calls = []
+        const focusCalls = []
+        function Probe() {
+          tree = Content({ ...props, series: modules, blockingComparison, layout, metric,
+            onOpenDetail: (...args) => calls.push(args) })
+          return tree
+        }
+        const markup = renderToStaticMarkup(createElement(Probe))
+        const resistanceRow = elementNodes(tree, 'tr').find(row => row.key === '60')
+        assert.equal(typeof resistanceRow?.props.onClick, 'function')
+        const bodyRow = [...sections(markup, 'tbody')[0].matchAll(/<tr(?:\s[^>]*)?>([\s\S]*?)<\/tr>/g)][1][1]
+        const cells = [...bodyRow.matchAll(/<td\b([^>]*)>/g)].map(cell => Object.fromEntries(
+          [...cell[1].matchAll(/(data-[\w-]+)="([^"]*)"/g)].map(attribute => [attribute[1], attribute[2]])))
+        const comparisonCell = cells.find(cell => cell['data-series-id'] === modules[1].id
+          && cell['data-blocking'] === 'false' && cell['data-metric'] !== 'total')
+        assert.ok(comparisonCell, 'Missing unblocked comparison cell')
+        const event = attributes => ({ target: new CellElement(attributes),
+          currentTarget: { querySelector: () => ({ focus: options => focusCalls.push(options) }) } })
+        resistanceRow.props.onClick(event(comparisonCell))
+        assert.deepEqual(calls.at(-1), [60, modules[1].id, metric, false])
+        if (layout === 'combined') {
+          const dpsCell = cells.find(cell => cell['data-series-id'] === modules[0].id
+            && cell['data-blocking'] === 'true' && cell['data-metric'] === 'total')
+          assert.ok(dpsCell, 'Missing blocked DPS cell')
+          resistanceRow.props.onClick(event(dpsCell))
+          assert.deepEqual(calls.at(-1), [60, modules[0].id, 'total', true])
+        } else {
+          const blockedCell = cells.find(cell => cell['data-series-id'] === modules[0].id && cell['data-blocking'] === 'true')
+          assert.ok(blockedCell, 'Missing blocked comparison cell')
+          resistanceRow.props.onClick(event(blockedCell))
+          assert.deepEqual(calls.at(-1), [60, modules[0].id, metric, true])
+        }
+        assert.deepEqual(focusCalls, [{ preventScroll: true }, { preventScroll: true }])
+      }
+    }
+  } finally {
+    if (originalElement === undefined) delete globalThis.Element
+    else globalThis.Element = originalElement
+  }
+})

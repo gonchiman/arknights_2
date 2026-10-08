@@ -3,6 +3,12 @@ import { transformSurtrDpsSeries, type SurtrDpsOutputSeries } from './surtrDpsOu
 export type SurtrUnequippedMetric = 'difference' | 'ratio' | 'percent'
 export type SurtrUnequippedLayout = 'combined' | 'comparison'
 
+export interface SurtrUnequippedBlockingComparison {
+  blocking: boolean
+  series: readonly SurtrDpsOutputSeries[]
+  baseline: SurtrDpsOutputSeries
+}
+
 /** The independent baseline stays unequipped even when its displayed series is hidden. */
 export function buildSurtrUnequippedComparisonSeries(
   series: readonly SurtrDpsOutputSeries[],
@@ -47,26 +53,41 @@ export function getSurtrUnequippedComparisonTsv(
   precision: number,
   metric: SurtrUnequippedMetric,
   layout: SurtrUnequippedLayout,
+  blockingComparison?: readonly SurtrUnequippedBlockingComparison[],
 ): string {
   const targets = series.filter(item => item.id !== 'none')
-  const comparison = buildSurtrUnequippedComparisonSeries(targets, baseline, metric)
-  const rawValues = targets.map(item => pointValues(item.points))
-  const comparisonValues = comparison.map(item => pointValues(item.points))
+  const conditions = blockingComparison === undefined
+    ? [{ label: '', series: targets, baseline }]
+    : [false, true].map(blocking => {
+      const condition = blockingComparison.find(item => item.blocking === blocking)
+      return {
+        label: blocking ? '対象を自身でブロック' : '未ブロック',
+        series: condition?.series ?? [],
+        baseline: condition?.baseline ?? null,
+      }
+    })
+  const conditionValues = conditions.map(condition => ({
+    label: condition.label,
+    raw: new Map(condition.series.map(item => [item.id, pointValues(item.points)])),
+    comparison: new Map(buildSurtrUnequippedComparisonSeries(condition.series, condition.baseline, metric)
+      .map(item => [item.id, pointValues(item.points)])),
+  }))
   const baselineValues = pointValues(baseline?.points ?? [])
   const comparisonLabel = metric === 'difference' ? '未装備とのDPS差'
     : metric === 'ratio' ? '未装備に対するDPS比（%）' : '未装備からの増加率（%）'
   const combined = layout === 'combined'
   const labels = targets.map(item => cleanLabel(item.label))
-  const header = ['術耐性', ...(combined ? ['未装備 DPS'] : []), ...labels.flatMap(label => [
-    ...(combined ? [`${label} DPS`] : []), `${label} ${comparisonLabel}`,
-  ])]
+  const header = ['術耐性', ...(combined ? ['未装備 DPS'] : []), ...labels.flatMap(label => conditionValues.flatMap(condition => {
+    const heading = condition.label ? `${label} ${condition.label}` : label
+    return [...(combined ? [`${heading} DPS`] : []), `${heading} ${comparisonLabel}`]
+  }))]
   const rows = resistances.map(resistance => [
     String(resistance),
     ...(combined ? [formatNumber(baselineValues.get(resistance), precision, false, false)] : []),
-    ...targets.flatMap((_, index) => [
-      ...(combined ? [formatNumber(rawValues[index].get(resistance), precision, false, false)] : []),
-      formatSurtrUnequippedComparisonValue(comparisonValues[index].get(resistance), metric, precision, false),
-    ]),
+    ...targets.flatMap(item => conditionValues.flatMap(condition => [
+      ...(combined ? [formatNumber(condition.raw.get(item.id)?.get(resistance), precision, false, false)] : []),
+      formatSurtrUnequippedComparisonValue(condition.comparison.get(item.id)?.get(resistance), metric, precision, false),
+    ])),
   ])
   return [header, ...rows].map(row => row.join('\t')).join('\r\n')
 }

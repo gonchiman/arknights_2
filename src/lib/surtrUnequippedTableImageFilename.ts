@@ -17,8 +17,9 @@ export function getSurtrUnequippedTableImageFilename(options: {
   metric: SurtrUnequippedMetric
   layout: SurtrUnequippedLayout
   precision: number
+  blockingComparison?: readonly { blocking: boolean }[]
 }, aspectRatio?: number): string {
-  const { metadata, series, resistances, metric, layout, precision } = options
+  const { metadata, series, resistances, metric, layout, precision, blockingComparison } = options
   const modules = series.filter(item => item.id !== 'none').map(item => item.label)
   const digits = Number.isInteger(precision) && precision >= 0 && precision <= 3 ? precision : 0
   const filename = createChartImageFilename('スルト_S3_未装備比較表', [
@@ -28,7 +29,7 @@ export function getSurtrUnequippedTableImageFilename(options: {
     `昇進2Lv${metadata.level}`,
     `信頼${metadata.trust}`,
     `潜在${metadata.potential}`,
-    metadata.blocking ? 'ブロック中' : '未ブロック',
+    blockingComparison !== undefined ? 'ブロック条件比較' : metadata.blocking ? 'ブロック中' : '未ブロック',
     modules.join('-') || 'MOD選択なし',
     resistances.length ? `術耐性${formatChartFilenameValues(resistances)}` : '術耐性なし',
     `小数${digits}桁`,

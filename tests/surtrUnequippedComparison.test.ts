@@ -5,6 +5,7 @@ import {
   buildSurtrUnequippedComparisonSeries,
   formatSurtrUnequippedComparisonValue,
   getSurtrUnequippedComparisonTsv,
+  type SurtrUnequippedBlockingComparison,
 } from '../src/lib/surtrUnequippedComparison.ts'
 
 function series(id: string, values: readonly [number, number | null][], label = id): SurtrDpsOutputSeries {
@@ -168,4 +169,115 @@ test('TSVの見出しにタブや改行を持ち込まず、値は桁区切り�
   assert.equal(getSurtrUnequippedComparisonTsv([series('x', [[0, 2]], '=1+2')], baseline, [], 0, 'percent', 'comparison'),
     "術耐性\t'=1+2 未装備からの増加率（%）")
   assert.equal(getSurtrUnequippedComparisonTsv([], null, [], 0, 'difference', 'comparison'), '術耐性')
+})
+
+test('ブロック比較のB形式はMOD段階の表示順と未ブロック→自身ブロックの列順を保つ', () => {
+  const baseline = series('none', [[0, 1000]], '未装備')
+  const input = [
+    series('none', [[0, 9999]]),
+    series('y:lv2', [[0, 9999]], 'MOD Y Lv.2'),
+    series('x:lv3', [[0, 9999]], 'MOD X Lv.3'),
+    series('x:lv1', [[0, 9999]], 'MOD X Lv.1'),
+  ]
+  const conditions: readonly SurtrUnequippedBlockingComparison[] = [
+    { blocking: true, baseline: series('none', [[0, 200]]), series: [
+      series('x:lv1', [[0, 220]]), series('y:lv2', [[0, 300]]), series('x:lv3', [[0, 240]]),
+      series('none', [[0, 9999]]), series('unselected', [[0, 9999]]),
+    ] },
+    { blocking: false, baseline: series('none', [[0, 100]]), series: [
+      series('x:lv3', [[0, 150]]), series('x:lv1', [[0, 120]]), series('y:lv2', [[0, 80]]),
+    ] },
+  ]
+  const before = structuredClone({ input, baseline, conditions })
+  const output = getSurtrUnequippedComparisonTsv(input, baseline, [0], 1, 'difference', 'combined', conditions)
+  assert.equal(output, [
+    [
+      '術耐性', '未装備 DPS',
+      'MOD Y Lv.2 未ブロック DPS', 'MOD Y Lv.2 未ブロック 未装備とのDPS差',
+      'MOD Y Lv.2 対象を自身でブロック DPS', 'MOD Y Lv.2 対象を自身でブロック 未装備とのDPS差',
+      'MOD X Lv.3 未ブロック DPS', 'MOD X Lv.3 未ブロック 未装備とのDPS差',
+      'MOD X Lv.3 対象を自身でブロック DPS', 'MOD X Lv.3 対象を自身でブロック 未装備とのDPS差',
+      'MOD X Lv.1 未ブロック DPS', 'MOD X Lv.1 未ブロック 未装備とのDPS差',
+      'MOD X Lv.1 対象を自身でブロック DPS', 'MOD X Lv.1 対象を自身でブロック 未装備とのDPS差',
+    ].join('\t'),
+    '0\t1000.0\t80.0\t-20.0\t300.0\t+100.0\t150.0\t+50.0\t240.0\t+40.0\t120.0\t+20.0\t220.0\t+20.0',
+  ].join('\r\n'))
+  assert.ok(output.split('\r\n').every(row => row.split('\t').length === 14))
+  assert.deepEqual({ input, baseline, conditions }, before)
+})
+
+test('ブロック比較のC形式は各条件の未装備からDPS差・比率・増加率を計算する', () => {
+  const input = [series('x:lv3', [[0, 9999]], 'MOD X Lv.3')]
+  const conditions: readonly SurtrUnequippedBlockingComparison[] = [
+    { blocking: true, baseline: series('none', [[0, 200]]), series: [series('x:lv3', [[0, 150]])] },
+    { blocking: false, baseline: series('none', [[0, 100]]), series: [series('x:lv3', [[0, 125]])] },
+  ]
+  for (const [metric, label, values] of [
+    ['difference', '未装備とのDPS差', '+25.00\t-50.00'],
+    ['ratio', '未装備に対するDPS比（%）', '125.00%\t75.00%'],
+    ['percent', '未装備からの増加率（%）', '+25.00%\t-25.00%'],
+  ] as const) {
+    assert.equal(getSurtrUnequippedComparisonTsv(input, null, [0], 2, metric, 'comparison', conditions), [
+      `術耐性\tMOD X Lv.3 未ブロック ${label}\tMOD X Lv.3 対象を自身でブロック ${label}`,
+      `0\t${values}`,
+    ].join('\r\n'))
+  }
+})
+
+test('ブロック比較はゼロ基準・欠損点・非有限DPSを—にし、条件ごとの利用可能な値を残す', () => {
+  const input = [series('x', [[0, 9999]], 'MOD X')]
+  const baseline = series('none', [[0, 90], [10, null], [20, 90], [30, 90]])
+  const conditions: readonly SurtrUnequippedBlockingComparison[] = [
+    { blocking: false, baseline: series('none', [[0, 0], [10, 10], [20, 10], [30, null]]), series: [
+      series('x', [[0, 25], [10, Infinity], [20, 15], [30, 15]]),
+    ] },
+    { blocking: true, baseline: series('none', [[0, 20], [10, 20], [20, 20], [30, 20]]), series: [
+      series('x', [[0, 40], [10, 30]]),
+    ] },
+  ]
+  const difference = getSurtrUnequippedComparisonTsv(input, baseline, [30, 0, 10, 20], 0, 'difference', 'combined', conditions)
+  assert.deepEqual(difference.split('\r\n').slice(1), [
+    '30\t90\t15\t—\t—\t—',
+    '0\t90\t25\t+25\t40\t+20',
+    '10\t—\t—\t—\t30\t+10',
+    '20\t90\t15\t+5\t—\t—',
+  ])
+  for (const [metric, values] of [
+    ['ratio', ['30\t—\t—', '0\t—\t200%', '10\t—\t150%', '20\t150%\t—']],
+    ['percent', ['30\t—\t—', '0\t—\t+100%', '10\t—\t+50%', '20\t+50%\t—']],
+  ] as const) {
+    const output = getSurtrUnequippedComparisonTsv(input, baseline, [30, 0, 10, 20], 0, metric, 'comparison', conditions)
+    assert.deepEqual(output.split('\r\n').slice(1), values)
+  }
+})
+
+test('条件やMOD段階が欠損していても別条件や通常系列から補わず、両条件の列を維持する', () => {
+  const baseline = series('none', [[0, 100]])
+  const input = [series('x:lv3', [[0, 150]], 'MOD X Lv.3'), series('x:lv1', [[0, 120]], 'MOD X Lv.1')]
+  const partial: readonly SurtrUnequippedBlockingComparison[] = [
+    { blocking: false, baseline, series: [input[0]] },
+  ]
+  const output = getSurtrUnequippedComparisonTsv(input, baseline, [0], 0, 'difference', 'comparison', partial)
+  assert.equal(output.split('\r\n')[1], '0\t+50\t—\t—\t—')
+  assert.equal(output.split('\r\n')[0].split('\t').length, 5)
+  assert.equal(getSurtrUnequippedComparisonTsv(input, baseline, [0], 0, 'difference', 'combined', []).split('\r\n')[1],
+    '0\t100\t—\t—\t—\t—\t—\t—\t—\t—')
+  assert.equal(getSurtrUnequippedComparisonTsv(input, baseline, [0], 0, 'difference', 'comparison', undefined),
+    getSurtrUnequippedComparisonTsv(input, baseline, [0], 0, 'difference', 'comparison'))
+})
+
+test('両条件の比較を生DPSから計算し、見出しの制御文字を既存ルールで処理する', () => {
+  const input = [series('x', [[0, 9999]], ' MOD\tX\r\nLv.3 ')]
+  const baseline = series('none', [[0, 1.004]])
+  const conditions: readonly SurtrUnequippedBlockingComparison[] = [
+    { blocking: false, baseline, series: [series('x', [[0, 1.006]])] },
+    { blocking: true, baseline: series('none', [[0, 2.004]]), series: [series('x', [[0, 2.006]])] },
+  ]
+  const difference = getSurtrUnequippedComparisonTsv(input, baseline, [0], 2, 'difference', 'combined', conditions)
+  assert.equal(difference, [
+    '術耐性\t未装備 DPS\tMOD X Lv.3 未ブロック DPS\tMOD X Lv.3 未ブロック 未装備とのDPS差\tMOD X Lv.3 対象を自身でブロック DPS\tMOD X Lv.3 対象を自身でブロック 未装備とのDPS差',
+    '0\t1.00\t1.01\t0.00\t2.01\t0.00',
+  ].join('\r\n'))
+  assert.equal(getSurtrUnequippedComparisonTsv(input, baseline, [0], 2, 'ratio', 'comparison', conditions).split('\r\n')[1],
+    '0\t100.20%\t100.10%')
 })

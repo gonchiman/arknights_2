@@ -11,10 +11,10 @@ import { SurtrUnequippedComparisonTableImagePreview, saveSurtrUnequippedComparis
 export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetail, metadata, ...data }: SurtrUnequippedComparisonTableData & {
   metadata: SurtrUnequippedTableImageMetadata
   selectedResistance: number | null
-  onOpenDetail: (resistance: number, seriesId: string | undefined, metric: SurtrUnequippedMetric | 'total') => void
+  onOpenDetail: (resistance: number, seriesId: string | undefined, metric: SurtrUnequippedMetric | 'total', blocking?: boolean) => void
 }) {
   const metricLabel = getUnequippedMetricLabel(data.metric)
-  const tableText = getSurtrUnequippedComparisonTsv(data.series, data.baseline, data.resistances, data.precision, data.metric, data.layout)
+  const tableText = getSurtrUnequippedComparisonTsv(data.series, data.baseline, data.resistances, data.precision, data.metric, data.layout, data.blockingComparison)
   const [copyFeedback, setCopyFeedback] = useState<{ text: string; ok: boolean } | null>(null)
   const [copying, setCopying] = useState(false)
   const copyState = copyFeedback?.text === tableText ? copyFeedback.ok : null

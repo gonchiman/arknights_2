@@ -20,7 +20,8 @@ interface ImageProps extends SurtrUnequippedComparisonTableImageSnapshot {
 
 const initialWidthFor = (snapshot: SurtrUnequippedComparisonTableData) => {
   const targets = snapshot.series.filter(item => item.id !== 'none').length
-  const columns = snapshot.layout === 'combined' ? 2 + targets * 2 : 1 + targets
+  const conditions = snapshot.blockingComparison === undefined ? 1 : 2
+  const columns = snapshot.layout === 'combined' ? 2 + targets * 2 * conditions : 1 + targets * conditions
   return Math.max(640, columns * 150)
 }
 
@@ -42,7 +43,7 @@ function tableAspect(aspectRatio?: number): TableImageAspect | null {
 export function SurtrUnequippedComparisonTableImage({ metadata, aspectRatio, exporting = false, onLayout, onLayoutError, ...data }: ImageProps) {
   const imageRef = useRef<HTMLElement>(null)
   const initialWidth = initialWidthFor(data)
-  const snapshotKey = JSON.stringify([data.series, data.baseline, data.resistances, data.layout, data.metric, data.precision, metadata])
+  const snapshotKey = JSON.stringify([data.series, data.baseline, data.blockingComparison, data.resistances, data.layout, data.metric, data.precision, metadata])
   useLayoutEffect(() => {
     const image = imageRef.current
     const table = image?.querySelector('table')
@@ -82,7 +83,7 @@ export function SurtrUnequippedComparisonTableImage({ metadata, aspectRatio, exp
   return <figure ref={imageRef} className="surtr-unequipped-table-image" style={{ width: initialWidth }} aria-label="スルト S3 未装備との比較表">
     <SurtrUnequippedComparisonTableContent {...data} footer={<div className="surtr-unequipped-table-image-conditions">
       <span>{getUnequippedMetricLabel(data.metric)}・基準：未装備</span>
-      <span>S3 {metadata.skillLabel}・昇進2 Lv.{metadata.level}・信頼度{metadata.trust}・潜在{metadata.potential}・{metadata.blocking ? '対象を自身でブロック' : '未ブロック'}</span>
+      <span>S3 {metadata.skillLabel}・昇進2 Lv.{metadata.level}・信頼度{metadata.trust}・潜在{metadata.potential}・{data.blockingComparison !== undefined ? '未ブロック／対象を自身でブロック' : metadata.blocking ? '対象を自身でブロック' : '未ブロック'}</span>
     </div>} />
   </figure>
 }
