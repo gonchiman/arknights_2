@@ -4,6 +4,45 @@ import { getSurtrDpsImageFilename, getSurtrCombinedImageFilename } from '../src/
 import { withChartImageAspect } from '../src/lib/chartImageFilename.ts'
 
 const settings = { level: 90, trust: 100, potential: 1, skillLevelLabel: '特化3', blocking: false, modules: ['未装備', 'MOD X Lv.3', 'MOD Y Lv.3'] }
+test('Surtr remnant state distinguishes single and combined names while retaining the legacy OFF name', () => {
+  const legacy = 'スルト_S3_DPS_特化3_昇進2Lv90_信頼100_潜在1_未装備-MODXLv.3-MODYLv.3_未ブロック_単体_余燼なし_術耐性0-100刻み20_集合棒_術耐性ランク表示.png'
+  assert.equal(getSurtrDpsImageFilename(settings), legacy)
+  assert.equal(getSurtrDpsImageFilename({ ...settings, remnantActive: false }), legacy)
+  const histogram = '敵_術耐性_ヒストグラム_出現回数_全敵_線形_幅10_上限100.png'
+  for (const kind of ['bar', 'line'] as const) {
+    for (const compareBlocking of [false, true]) {
+      const off = getSurtrDpsImageFilename({ ...settings, kind, compareBlocking, remnantActive: false })
+      const on = getSurtrDpsImageFilename({ ...settings, kind, compareBlocking, remnantActive: true })
+      assert.match(off, /_余燼なし_/)
+      assert.match(on, /_余燼中_/)
+      assert.doesNotMatch(on, /余燼なし/)
+      assert.notEqual(on, off)
+      const offCombined = getSurtrCombinedImageFilename(off, histogram)
+      const onCombined = getSurtrCombinedImageFilename(on, histogram)
+      assert.match(onCombined, /_余燼中_/)
+      assert.doesNotMatch(onCombined, /余燼なし/)
+      assert.notEqual(onCombined, offCombined)
+      if (compareBlocking) assert.match(onCombined, /ブロック状態比較/)
+      for (const aspect of [undefined, 16 / 9]) {
+        const filename = withChartImageAspect(onCombined, aspect)
+        assert.match(filename, /_余燼中_/)
+        assert.ok(new TextEncoder().encode(filename).length <= 240)
+      }
+    }
+  }
+})
+
+test('Surtr remnant naming still ignores inactive settings', () => {
+  for (const remnantActive of [false, true]) {
+    const line = { ...settings, remnantActive, kind: 'line' as const, metric: 'total' as const, yAxis: { mode: 'auto' as const } }
+    assert.equal(getSurtrDpsImageFilename(line), getSurtrDpsImageFilename({ ...line,
+      barStep: 7, showValues: true, selectedResistance: 35, baselineLabel: 'MOD X Lv.1', yAxis: { mode: 'auto', min: -20, max: 5000 },
+    }))
+    const blocking = { ...settings, remnantActive, compareBlocking: true }
+    assert.equal(getSurtrDpsImageFilename(blocking), getSurtrDpsImageFilename({ ...blocking, blocking: true }))
+  }
+})
+
 test('same-MOD stage comparisons keep readable levels and distinguish selection and baseline', () => {
   const modules = ['MOD X Lv.1', 'MOD X Lv.2', 'MOD X Lv.3']
   const name = getSurtrDpsImageFilename({ ...settings, modules })

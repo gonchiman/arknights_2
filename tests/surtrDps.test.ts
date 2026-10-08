@@ -73,6 +73,118 @@ test('Y: 自身でブロックした単体にだけ対術脆弱10%、余燼の�
   close(calculateSurtrDps(blocked, 100), 629.552)
 })
 
+test('余燼OFFは未指定と一致し、未装備・X・Y Lv1はONでもDPSを維持する', () => {
+  for (const moduleId of ['', xId, yId]) {
+    for (const level of moduleId ? [1, 2, 3] : [0]) {
+      for (const blocking of [false, true]) {
+        const before = model(moduleId, { blocking }, level)
+        assert.deepEqual(model(moduleId, { blocking, remnantActive: false }, level), before)
+        assert.equal(before.remnantActive, false)
+        assert.equal(before.remnantAttackSpeedBonus, 0)
+        if (moduleId === yId && level > 1) continue
+        const active = model(moduleId, { blocking, remnantActive: true }, level)
+        assert.deepEqual(active, { ...before, remnantActive: true })
+        assert.deepEqual(buildSurtrDpsCurve(active), buildSurtrDpsCurve(before))
+      }
+    }
+  }
+})
+
+test('余燼ONのY Lv2・3は両ブロック条件で攻速を加算し、ATK・潜在・1発ダメージを保持する', () => {
+  for (const level of [2, 3]) {
+    const bonus = level === 2 ? 20 : 30
+    for (const potential of [1, 3, 5]) {
+      for (const blocking of [false, true]) {
+        const before = model(yId, { potential, blocking }, level)
+        const active = model(yId, { potential, blocking, remnantActive: true }, level)
+        assert.equal(active.remnantActive, true)
+        assert.equal(active.remnantAttackSpeedBonus, bonus)
+        assert.equal(active.attackSpeed, 100 + bonus)
+        assert.equal(active.attackInterval, 1.25 * 100 / (100 + bonus))
+        assert.equal(active.operatorStats.attackSpeedBonus, bonus)
+        assert.equal(active.operatorStats.attackSpeed, active.attackSpeed)
+        assert.equal(active.operatorStats.attackInterval, active.attackInterval)
+        assert.deepEqual(active.operatorStats.baseAttackBreakdown, before.operatorStats.baseAttackBreakdown)
+        assert.equal(active.operatorStats.attack, before.operatorStats.attack)
+        assert.equal(active.baseAttack, before.baseAttack)
+        assert.equal(active.effectiveAttack, before.effectiveAttack)
+        assert.equal(active.resistanceIgnore, before.resistanceIgnore)
+        assert.equal(active.artsFragility, before.artsFragility)
+        for (const resistance of [0, 20, 40, 60, 80, 100]) {
+          const detail = calculateSurtrDpsCalculation(active, resistance)!
+          const priorDetail = calculateSurtrDpsCalculation(before, resistance)!
+          assert.equal(detail.perHit, priorDetail.perHit)
+          assert.equal(detail.attackSpeedBonus, bonus)
+          assert.equal(detail.remnantActive, true)
+          assert.equal(detail.remnantAttackSpeedBonus, bonus)
+          assert.equal(detail.attackSpeed, active.attackSpeed)
+          assert.equal(detail.attackInterval, active.attackInterval)
+          assert.equal(detail.dps, calculateSurtrDps(active, resistance))
+          close(detail.dps, priorDetail.dps * (1 + bonus / 100))
+        }
+      }
+    }
+  }
+  close(calculateSurtrDps(model(yId, { remnantActive: true }, 2), 60), 2048.256)
+  close(calculateSurtrDps(model(yId, { remnantActive: true, blocking: true }, 2), 60), 2253.0816)
+  close(calculateSurtrDps(model(yId, { remnantActive: true }), 60), 2232.048)
+  close(calculateSurtrDps(model(yId, { remnantActive: true, blocking: true }), 60), 2455.2528)
+})
+
+test('余燼の攻速は選択された候補値を使い、期間や別sourceの同名値を混ぜない', () => {
+  const record = createRecord()
+  const candidates = record.operatorProfile.modules![1].phases![2].parts![1]
+    .addOrOverrideTalentDataBundle!.candidates!
+  for (const candidate of candidates) {
+    const values = candidate.blackboard as Record<string, number>
+    values['surtr_t_2[withdraw].attack_speed'] = candidate.requiredPotentialRank === 0 ? 43 : 47
+    values['surtr_t_2[withdraw].interval'] = 9999
+  }
+  const trait = record.operatorProfile.modules![1].phases![2].parts![0]
+    .overrideTraitDataBundle!.candidates![0].blackboard as Record<string, number>
+  trait['surtr_t_2[withdraw].attack_speed'] = 9999
+  for (const potential of [1, 3]) {
+    const active = deriveSurtrDpsModel(record, { ...defaults, potential, remnantActive: true }, yId)!
+    assert.ok(active)
+    const bonus = potential === 1 ? 43 : 47
+    assert.equal(active.remnantAttackSpeedBonus, bonus)
+    assert.equal(active.attackSpeed, 100 + bonus)
+    close(calculateSurtrDps(active, 0), 3577 * (100 + bonus) / 125)
+  }
+})
+
+test('余燼ONのY強化段階に欠落・不正な攻速があれば未計算、OFFは従来どおり計算する', () => {
+  for (const level of [2, 3]) {
+    for (const value of [undefined, -1, NaN, Infinity]) {
+      const record = createRecord()
+      const candidates = record.operatorProfile.modules![1].phases![level - 1].parts![1]
+        .addOrOverrideTalentDataBundle!.candidates!
+      for (const candidate of candidates) {
+        const values = candidate.blackboard as Record<string, number>
+        if (value === undefined) delete values['surtr_t_2[withdraw].attack_speed']
+        else values['surtr_t_2[withdraw].attack_speed'] = value
+      }
+      assert.equal(deriveSurtrDpsModel(record, { ...defaults, remnantActive: true }, yId, level), null)
+      assert.ok(deriveSurtrDpsModel(record, defaults, yId, level))
+      assert.ok(deriveSurtrDpsModel(record, { ...defaults, remnantActive: false }, yId, level))
+    }
+  }
+})
+
+test('速度欄のないY Lv1は既知の補正なし、余燼素質そのものの欠落は推測しない', () => {
+  const record = createRecord()
+  record.operatorProfile.modules![1].phases![0].parts![1].addOrOverrideTalentDataBundle!.candidates = []
+  const active = deriveSurtrDpsModel(record, { ...defaults, remnantActive: true }, yId, 1)!
+  assert.ok(active)
+  assert.equal(active.remnantAttackSpeedBonus, 0)
+  assert.equal(active.attackSpeed, 100)
+  record.operatorProfile.talents![1].candidates = []
+  for (const moduleId of ['', xId, yId]) {
+    assert.equal(deriveSurtrDpsModel(record, { ...defaults, remnantActive: true }, moduleId, 1), null)
+    assert.ok(deriveSurtrDpsModel(record, defaults, moduleId, 1))
+  }
+})
+
 test('モジュールLv1〜3の加算ATKとXの段階別素質をゲームデータから読む', () => {
   assert.deepEqual([1, 2, 3].map(level => {
     const value = model(xId, {}, level)
@@ -198,6 +310,8 @@ test('計算詳細: MOD X・術耐性50の各段階とDPSを未丸めのまま�
   assert.equal(detail.baseAttackTime, 1.25)
   assert.equal(detail.baseAttackSpeed, 100)
   assert.equal(detail.attackSpeedBonus, 8)
+  assert.equal(detail.remnantActive, false)
+  assert.equal(detail.remnantAttackSpeedBonus, 0)
   assert.equal(detail.attackSpeed, 108)
   assert.equal(detail.appliedAttackSpeed, 108)
   assert.equal(detail.attackInterval, 1.25 * 100 / 108)

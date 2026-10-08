@@ -21,6 +21,47 @@ const options = {
   precision: 0,
 }
 
+test('余燼ONの比較表画像は状態を記録し、OFFと未指定の従来名を保つ', () => {
+  for (const comparisonBase of ['unequipped', 'previous'] as const) {
+    for (const layout of ['combined', 'comparison'] as const) {
+      for (const blockingComparison of [undefined, [{ blocking: false }, { blocking: true }]]) {
+        const snapshot = { ...options, comparisonBase, layout, blockingComparison }
+        const before = structuredClone(snapshot)
+        for (const aspectRatio of [undefined, 16 / 9]) {
+          const legacy = getSurtrUnequippedTableImageFilename(snapshot, aspectRatio)
+          const off = getSurtrUnequippedTableImageFilename({ ...snapshot, metadata: { ...metadata, remnantActive: false } }, aspectRatio)
+          const on = getSurtrUnequippedTableImageFilename({ ...snapshot, metadata: { ...metadata, remnantActive: true } }, aspectRatio)
+          assert.equal(off, legacy)
+          assert.match(on, /_余燼中_/)
+          assert.doesNotMatch(off, /余燼中|余燼なし/)
+          assert.notEqual(on, off)
+          assert.ok(new TextEncoder().encode(on).length <= 240)
+        }
+        assert.deepEqual(snapshot, before)
+      }
+    }
+  }
+})
+
+test('余燼ONでも非有効な比較表設定は画像名を変えず、長い名前には状態を残す', () => {
+  const active = { ...options, metadata: { ...metadata, remnantActive: true }, colorScale: false }
+  assert.equal(getSurtrUnequippedTableImageFilename(active), getSurtrUnequippedTableImageFilename({ ...active,
+    columnOrder: 'blocking', colorScaleMode: 'SQRT',
+  }))
+  const compared = { ...active, blockingComparison: [{ blocking: false }, { blocking: true }] }
+  assert.equal(getSurtrUnequippedTableImageFilename(compared), getSurtrUnequippedTableImageFilename({ ...compared,
+    metadata: { ...compared.metadata, blocking: true },
+  }))
+  const long = getSurtrUnequippedTableImageFilename({ ...compared,
+    series: [{ id: 'x:lv3', label: '長いMOD名😀<>:"/\\|?*'.repeat(80) }],
+  }, 9 / 16)
+  assert.match(long, /_余燼中_/)
+  assert.match(long, /ほか\d+項目_比率9x16\.png$/)
+  assert.ok(new TextEncoder().encode(long).length <= 240)
+  assert.equal(long.isWellFormed(), true)
+  assert.doesNotMatch(long, /[<>:"/\\|?*\u0000-\u001f\u007f�]/)
+})
+
 test('未装備比較表の計算条件・MOD段階・術耐性・形式・精度・自動比率を読める名前にする', () => {
   assert.equal(getSurtrUnequippedTableImageFilename(options),
     'スルト_S3_未装備比較表_特化3_DPS差_DPS＋比較値_昇進2Lv90_信頼100_潜在1_未ブロック_MODXLv.3-MODYLv.3_術耐性0-100刻み10_小数0桁_比率自動.png')

@@ -84,7 +84,7 @@ export function SurtrUnequippedComparisonTableImage({ metadata, aspectRatio, exp
   return <figure ref={imageRef} className="surtr-unequipped-table-image" style={{ width: initialWidth }} aria-label={`スルト S3 ${data.comparisonBase === 'previous' ? '前段階' : '未装備'}との比較表`}>
     <SurtrUnequippedComparisonTableContent {...data} footer={<div className="surtr-unequipped-table-image-conditions">
       <span>{getUnequippedMetricLabel(data.metric, data.comparisonBase)}・基準：{data.comparisonBase === 'previous' ? '1つ前の段階（Lv.1は未装備）' : '未装備'}</span>
-      <span>S3 {metadata.skillLabel}・昇進2 Lv.{metadata.level}・信頼度{metadata.trust}・潜在{metadata.potential}・{data.blockingComparison !== undefined ? '未ブロック／対象を自身でブロック' : metadata.blocking ? '対象を自身でブロック' : '未ブロック'}</span>
+      <span>S3 {metadata.skillLabel}・昇進2 Lv.{metadata.level}・信頼度{metadata.trust}・潜在{metadata.potential}・{data.blockingComparison !== undefined ? '未ブロック／対象を自身でブロック' : metadata.blocking ? '対象を自身でブロック' : '未ブロック'}・{metadata.remnantActive ? '余燼中' : '余燼なし'}</span>
     </div>} />
   </figure>
 }

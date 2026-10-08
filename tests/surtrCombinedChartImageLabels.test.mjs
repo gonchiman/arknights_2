@@ -51,6 +51,25 @@ const render = (component, props) => renderToStaticMarkup(createElement(componen
 const marks = markup => [...markup.matchAll(/<(?:rect|path)[^>]*class="surtr-dps-chart-(?:bar|line)"[^>]*>/g)].map(match => match[0])
 const histogramFigure = markup => markup.match(/<figure[^>]*class="[^"]*enemy-chart-image[^"]*"[^>]*>.*?<\/figure>/)?.[0]
 
+test('combined images and previews keep the frozen remnant condition in every export arrangement', () => {
+  for (const component of [images.SurtrCombinedChartImage, images.SurtrCombinedChartImagePreview]) {
+    for (const props of [{ histogram }, { blockComparisons }, { blockComparisons, histogram }]) {
+      const inactive = render(component, { ...props,
+        conditions: '特化3・未ブロック・余燼なし', blockComparisonConditions: '特化3・ブロック状態比較・余燼なし',
+      })
+      const active = render(component, { ...props,
+        conditions: '特化3・未ブロック・余燼中', blockComparisonConditions: '特化3・ブロック状態比較・余燼中',
+      })
+      assert.match(inactive, /余燼なし/)
+      assert.match(active, /余燼中/)
+      assert.doesNotMatch(active, /余燼なし/)
+      assert.equal((active.match(/余燼中/g) ?? []).length, 1, 'shared DPS condition appears once')
+      assert.deepEqual(marks(active), marks(inactive), 'condition text preserves geometry, colors, and line styles')
+      if (props.histogram) assert.equal(histogramFigure(active), histogramFigure(inactive))
+    }
+  }
+})
+
 test('combined images and previews rename DPS labels without altering marks, block headings, or the histogram', () => {
   const source = structuredClone({ series, blockComparisons })
   for (const component of [images.SurtrCombinedChartImage, images.SurtrCombinedChartImagePreview]) {

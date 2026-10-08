@@ -16,6 +16,8 @@ export interface SurtrDpsCalculationBreakdown {
   baseAttackTime: number
   baseAttackSpeed: number
   attackSpeedBonus: number
+  remnantActive: boolean
+  remnantAttackSpeedBonus: number
   attackSpeed: number
   appliedAttackSpeed: number
   attackInterval: number
@@ -48,6 +50,8 @@ export function calculateSurtrDpsCalculation(
     baseAttackTime: stats.baseAttackTime,
     baseAttackSpeed: stats.baseAttackSpeed,
     attackSpeedBonus: stats.attackSpeedBonus,
+    remnantActive: model.remnantActive,
+    remnantAttackSpeedBonus: model.remnantAttackSpeedBonus,
     attackSpeed: model.attackSpeed,
     appliedAttackSpeed: Math.max(20, model.attackSpeed),
     attackInterval: model.attackInterval,

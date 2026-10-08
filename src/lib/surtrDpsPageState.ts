@@ -38,7 +38,7 @@ export interface SurtrDpsPageState {
 
 export function createDefaultSurtrDpsPageState(): SurtrDpsPageState {
   return {
-    settings: { level: 90, trust: 100, potential: 1, skillLevelIndex: 9, blocking: false },
+    settings: { level: 90, trust: 100, potential: 1, skillLevelIndex: 9, blocking: false, remnantActive: false },
     excluded: [], moduleLevels: {}, chartKind: 'bar', barStep: 20,
     resistanceRange: { min: 0, max: 100 }, showValues: false, showResistanceRanks: true, gridStyle: 'solid', precision: 0,
     metric: 'total', differenceMetric: 'difference', requestedBaselineId: 'none', selectedResistance: null,
@@ -76,6 +76,7 @@ export function parseSurtrDpsPageState(value: unknown): SurtrDpsPageState {
       potential: integerOr(settings?.potential, 1, 6, defaults.settings.potential),
       skillLevelIndex: integerOr(settings?.skillLevelIndex, 0, 9, defaults.settings.skillLevelIndex),
       blocking: booleanOr(settings?.blocking, defaults.settings.blocking),
+      remnantActive: booleanOr(settings?.remnantActive, false),
     },
     excluded: Array.isArray(source.excluded) ? [...new Set(source.excluded.filter((id): id is string => id === '' || validId(id)))] : [],
     moduleLevels,

@@ -57,6 +57,21 @@ test('Yの段階別攻速と余燼時間、潜在3の延長を候補データか
   assert.equal(derive(yId, { blocking: true }).attackIntervalAfter, models[2].attackIntervalAfter)
 })
 
+test('S3の余燼ON設定を受けても発動前CTを維持し、Yの攻速を二重加算しない', () => {
+  for (const moduleId of ['', xId, yId]) {
+    for (const level of moduleId ? [1, 2, 3] : [0]) {
+      for (const blocking of [false, true]) {
+        const baseline = derive(moduleId, { blocking }, level)
+        const active = derive(moduleId, { blocking, remnantActive: true }, level)
+        assert.deepEqual(active, baseline)
+        assert.deepEqual(calculate(active), calculate(baseline))
+      }
+    }
+  }
+  assert.equal(derive(yId, { remnantActive: true }).attackSpeedBefore, 100)
+  assert.equal(derive(yId, { remnantActive: true }).attackSpeedAfter, 130)
+})
+
 test('攻速・期間・基礎攻撃間隔の変更を反映し、定数で代用しない', () => {
   const record = createRecord()
   for (const frame of record.operatorProfile.phases[2].attributesKeyFrames!) frame.data!.baseAttackTime = 1.6

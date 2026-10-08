@@ -15,7 +15,7 @@ test('DPS settings survive a route remount or reload through session storage', (
   const storage = memoryStorage()
   const state = createDefaultSurtrDpsPageState()
   Object.assign(state, {
-    settings: { level: 60, trust: 75, potential: 6, skillLevelIndex: 7, blocking: true },
+    settings: { level: 60, trust: 75, potential: 6, skillLevelIndex: 7, blocking: true, remnantActive: true },
     excluded: ['', 'uniequip_002_surtr'], moduleLevels: { uniequip_002_surtr: [], uniequip_003_surtr: [1, 2, 3] },
     chartKind: 'line', barStep: 'ratings', resistanceRange: { min: 10, max: 90 },
     showValues: true, showResistanceRanks: false, gridStyle: 'dashed', precision: 3, metric: 'percent', differenceMetric: 'percent',
@@ -30,6 +30,22 @@ test('DPS settings survive a route remount or reload through session storage', (
   restored.moduleLevels.uniequip_003_surtr.pop()
   assert.deepEqual(readSurtrDpsPageState(storage).moduleLevels.uniequip_003_surtr, [1, 2, 3])
   assert.deepEqual(readSurtrDpsPageState(storage).moduleLevels.uniequip_002_surtr, [])
+})
+
+test('remnant starts disabled and old saved settings keep their previous calculation state', () => {
+  assert.equal(createDefaultSurtrDpsPageState().settings.remnantActive, false)
+  const oldSettings = { level: 60, trust: 75, potential: 6, skillLevelIndex: 7, blocking: true }
+  const restored = parseSurtrDpsPageState({ settings: oldSettings })
+  assert.deepEqual(restored.settings, { ...oldSettings, remnantActive: false })
+  for (const remnantActive of [undefined, null, 'true', 1, [], {}]) {
+    assert.equal(parseSurtrDpsPageState({ settings: { ...oldSettings, remnantActive } }).settings.remnantActive, false)
+  }
+  for (const remnantActive of [false, true]) {
+    const storage = memoryStorage()
+    const state = { ...createDefaultSurtrDpsPageState(), settings: { ...oldSettings, remnantActive } }
+    writeSurtrDpsPageState(state, storage)
+    assert.deepEqual(readSurtrDpsPageState(storage), state)
+  }
 })
 
 test('legacy scalar stages and baseline migrate without restoring excluded equipment', () => {
@@ -312,7 +328,7 @@ test('valid fields in a partial or damaged record are retained independently', (
     metric: 'difference', differenceMetric: 'percent', requestedBaselineId: 'none',
     yAxisMode: 'auto', yAxisDraft: { min: ' -25 ', max: '200.5' },
   })
-  assert.deepEqual(restored.settings, { level: 80, trust: 100, potential: 1, skillLevelIndex: 9, blocking: true })
+  assert.deepEqual(restored.settings, { level: 80, trust: 100, potential: 1, skillLevelIndex: 9, blocking: true, remnantActive: false })
   assert.deepEqual(restored.excluded, ['', 'uniequip_002_surtr'])
   assert.deepEqual(restored.moduleLevels, { uniequip_002_surtr: [1] })
   assert.equal(restored.chartKind, 'line')

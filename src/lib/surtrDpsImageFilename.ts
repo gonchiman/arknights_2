@@ -8,6 +8,7 @@ export interface SurtrDpsImageConditions {
   potential: number
   skillLevelLabel: string
   blocking: boolean
+  remnantActive?: boolean
   compareBlocking?: boolean
   modules: readonly string[]
   kind?: 'bar' | 'line'
@@ -48,7 +49,7 @@ export function getSurtrDpsImageFilename(settings: SurtrDpsImageConditions): str
     settings.modules.join('-'),
     settings.compareBlocking ? 'ブロック状態比較' : settings.blocking ? '対象を自身でブロック' : '未ブロック',
     '単体',
-    '余燼なし',
+    settings.remnantActive ? '余燼中' : '余燼なし',
     kind === 'bar' ? barStep === 'ratings'
       ? range.min === 0 && range.max === 100 ? '術耐性ランク代表値' : `${rangeLabel}ランク代表値`
       : `${rangeLabel}刻み${barStep}` : rangeLabel,
