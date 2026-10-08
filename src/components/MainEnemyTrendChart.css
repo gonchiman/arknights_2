@@ -1,0 +1,17 @@
+.main-enemy-trend-chart { min-width: 0; background: #fff; }
+.main-enemy-trend-legend { margin-bottom: 10px; color: #444; font-size: 11px; line-height: 18px; }
+.main-enemy-trend-scroll { overflow-x: auto; }
+.main-enemy-trend-svg {
+  display: block;
+  overflow: visible;
+  font-family: "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+}
+.main-enemy-trend-axis { fill: none; stroke: #aaa; stroke-width: 1; }
+.main-enemy-trend-grid { stroke: #e4e4e4; stroke-width: 1; }
+.main-enemy-trend-axis-title { fill: #444; font-size: 12px; font-weight: 700; }
+.main-enemy-trend-tick { fill: #555; font-size: 11px; font-variant-numeric: tabular-nums; }
+.main-enemy-trend-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.main-enemy-trend-active-band { fill: #f3f5f7; }
+.main-enemy-trend-empty { fill: #666; font-size: 12px; }
+.main-enemy-trend-chapter-target { cursor: pointer; outline: none; }
+.main-enemy-trend-chapter-target:focus-visible > rect { stroke: #444; stroke-width: 1.5; }

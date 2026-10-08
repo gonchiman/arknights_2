@@ -9,6 +9,13 @@ import {
   type SkillEffectsRouteSelection,
 } from '../src/lib/routes.ts'
 
+test('メイン敵ステータス推移は敵分析用の独立ページとして開く', () => {
+  assert.deepEqual(parseHashRoute('#/analysis/enemies/main-trends'), { view: 'main-enemy-trends' })
+  assert.equal(APP_NAV_ITEMS.find((item) => item.id === 'main-enemy-trends')?.href, '#/analysis/enemies/main-trends')
+  assert.deepEqual(parseHashRoute('#/analysis/enemies/main-trends/extra'), { view: 'operators' })
+  assert.deepEqual(parseHashRoute('#/analysis/enemies'), { view: 'enemy-analysis' })
+})
+
 test('サイドバーから主要ページへ遷移できる', () => {
   assert.deepEqual(
     APP_NAV_ITEMS.map((item) => [item.id, parseHashRoute(item.href).view]),
@@ -23,6 +30,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
       ['enemy-analysis', 'enemy-analysis'],
+      ['main-enemy-trends', 'main-enemy-trends'],
       ['maps', 'maps'],
       ['goldenglow-home', 'goldenglow-home'],
       ['surtr-home', 'surtr-home'],

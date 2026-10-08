@@ -1,0 +1,62 @@
+.main-enemy-trends-page { container-type: inline-size; }
+.main-enemy-trends-page .collapsible-panel-header { display: flex; align-items: center; flex-wrap: wrap; background: var(--surface-soft); }
+.main-enemy-trends-page .open > .collapsible-panel-header { border-bottom: 1px solid var(--border); }
+.main-enemy-trends-page .collapsible-panel-header > .collapsible-panel-title { flex: 1 1 240px; min-width: 0; }
+.main-enemy-trends-page .collapsible-panel-header .collapsible-panel-heading { border-bottom: 0; }
+.main-enemy-trends-page .collapsible-panel-actions { margin-left: auto; padding: 6px 12px; }
+.main-enemy-trends-page .collapsible-panel-actions[hidden] { display: none; }
+.main-enemy-trends-page .collapsible-panel-actions .button { min-height: 36px; font-size: 12px; }
+.main-trend-filters { display: grid; grid-template-columns: minmax(200px, 1.3fr) repeat(2, minmax(120px, 1fr)) auto; align-items: end; gap: 12px 16px; }
+.main-trend-filters > label, .main-trend-chart-choice { display: grid; gap: 5px; color: var(--text-soft); font-size: 11px; }
+.main-trend-filters fieldset { min-width: 0; border: 0; margin: 0; padding: 0; }
+.main-trend-filters legend { margin-bottom: 5px; padding: 0; color: var(--text-soft); font-size: 11px; }
+.main-trend-filters select, .main-trend-chart-choice select { width: 100%; min-width: 0; min-height: 34px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); padding: 5px 8px; font-size: 12px; }
+.main-trend-range { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; font-size: 11px; }
+.main-trend-filters .button { font-size: 11px; min-height: 34px; }
+.main-trend-coverage { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 14px; color: var(--text-muted); font-size: 11px; }
+.main-trend-coverage strong { margin-left: 8px; color: var(--text-soft); font-weight: 500; font-variant-numeric: tabular-nums; }
+.main-trend-output-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 18px; margin-bottom: 14px; }
+.main-trend-metric-selector { flex: 1 1 320px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.main-trend-chart-choice { flex: 0 1 140px; }
+.main-trend-series { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; min-height: 34px; color: var(--text-soft); font-size: 12px; }
+.main-trend-series label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.main-trend-series input { margin: 0; accent-color: var(--text); width: 14px; height: 14px; }
+.main-trend-table-title { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 10px; margin: 16px 0 8px; }
+.main-trend-table-title h3, .main-trend-selected h3 { margin: 0; color: var(--text-soft); font-size: 13px; font-weight: 500; }
+.main-trend-table-title > span { font-size: 11px; color: var(--text-muted); }
+.main-enemy-trends-page .enemy-stat-summary-table { width: 100%; table-layout: fixed; font-size: 12px; }
+.main-trend-chapter-table { min-width: 620px; }
+.main-trend-chapter-table tr { cursor: pointer; }
+.main-trend-chapter-table tr.selected > *, .main-trend-chapter-table tr:hover > * { background: var(--surface-hover); }
+.main-trend-chapter-table th button { border: 0; padding: 3px 0; background: transparent; color: inherit; text-align: left; font-size: inherit; cursor: pointer; }
+.main-trend-chapter-table th button[aria-pressed=true] { font-weight: 700; }
+.main-trend-partial-count { display: block; margin-top: 3px; color: var(--text-muted); font-size: 9px; }
+.main-trend-pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 10px; color: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.main-trend-pagination > div { display: flex; align-items: center; gap: 12px; }
+.main-trend-pagination .button { font-size: 11px; min-height: 30px; }
+.main-trend-selected { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-bottom: 10px; }
+.main-trend-selected h3 { min-width: 180px; }
+.main-trend-selected h3 > span { display: block; margin-top: 4px; font-size: 11px; color: var(--text-muted); }
+.main-trend-selected-metrics { flex: 1 1 360px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 20px; }
+.main-trend-selected-metrics > span { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 8px; color: var(--text-muted); font-size: 11px; }
+.main-trend-selected-metrics strong { color: var(--text-soft); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.main-trend-selected-metrics small { font-size: 9px; }
+.main-trend-map-details summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 34px; color: var(--text-soft); font-size: 12px; cursor: pointer; }
+.main-trend-map-details summary::before { content: '＋'; }
+.main-trend-map-details[open] summary::before { content: '−'; }
+.main-trend-map-details summary::-webkit-details-marker { display: none; }
+.main-trend-map-details summary span { margin-left: auto; color: var(--text-muted); font-size: 11px; }
+.main-trend-map-table { min-width: 780px; }
+.main-trend-map-table .main-trend-map-status { text-align: left; white-space: normal; font-size: 11px; }
+.main-trend-map-status small { display: block; margin-top: 3px; color: var(--text-muted); font-size: 9px; overflow-wrap: anywhere; }
+@container (max-width: 720px) {
+  .main-trend-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .main-trend-filters fieldset { grid-column: 1 / -1; }
+  .main-trend-filters .button { grid-column: 1 / -1; justify-self: start; }
+  .main-trend-output-controls { gap: 10px 12px; }
+  .main-trend-metric-selector { flex-basis: 100%; }
+  .main-trend-selected-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (pointer: coarse) {
+  .main-trend-filters select, .main-trend-chart-choice select, .main-enemy-trends-page .button, .main-trend-map-details summary, .main-trend-series label, .main-trend-chapter-table th button { min-height: 44px; }
+}
