@@ -1,4 +1,5 @@
 import type { SurtrDpsSettings } from './surtrDps.ts'
+import type { EnemyHeatmapColorScale } from './enemyHeatmapColor.ts'
 import type { SurtrDpsBarStep, SurtrDpsResistanceRange } from './surtrDpsResistance.ts'
 import type { SurtrDpsMetric } from './surtrDpsOutput.ts'
 import type { SurtrUnequippedColumnOrder, SurtrUnequippedLayout, SurtrUnequippedMetric, SurtrUnequippedRankMode } from './surtrUnequippedComparison.ts'
@@ -28,6 +29,7 @@ export interface SurtrDpsPageState {
   unequippedRankMode: SurtrUnequippedRankMode
   unequippedColumnOrder: SurtrUnequippedColumnOrder
   unequippedColorScale: boolean
+  unequippedColorScaleMode: EnemyHeatmapColorScale
   selectedResistance: number | null
   yAxisMode: HpChartYAxisMode
   yAxisDraft: { min: string; max: string }
@@ -42,6 +44,7 @@ export function createDefaultSurtrDpsPageState(): SurtrDpsPageState {
     unequippedLayout: 'combined', unequippedMetric: 'difference', unequippedStep: 10, unequippedRankMode: 'none',
     unequippedColumnOrder: 'module',
     unequippedColorScale: false,
+    unequippedColorScaleMode: 'LINEAR',
     yAxisMode: 'zero', yAxisDraft: { min: '0', max: '4000' },
   }
 }
@@ -90,6 +93,7 @@ export function parseSurtrDpsPageState(value: unknown): SurtrDpsPageState {
     unequippedRankMode: option(source.unequippedRankMode, ['none', 'inline', 'merged'], defaults.unequippedRankMode),
     unequippedColumnOrder: option(source.unequippedColumnOrder, ['module', 'blocking'], defaults.unequippedColumnOrder),
     unequippedColorScale: booleanOr(source.unequippedColorScale, defaults.unequippedColorScale),
+    unequippedColorScaleMode: option(source.unequippedColorScaleMode, ['LINEAR', 'SQRT'], defaults.unequippedColorScaleMode),
     selectedResistance: integer(source.selectedResistance, resistanceRange.min, resistanceRange.max) ? source.selectedResistance : null,
     yAxisMode: option(source.yAxisMode, ['zero', 'auto', 'manual'], defaults.yAxisMode),
     yAxisDraft,

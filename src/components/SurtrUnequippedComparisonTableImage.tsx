@@ -44,7 +44,7 @@ function tableAspect(aspectRatio?: number): TableImageAspect | null {
 export function SurtrUnequippedComparisonTableImage({ metadata, aspectRatio, exporting = false, onLayout, onLayoutError, ...data }: ImageProps) {
   const imageRef = useRef<HTMLElement>(null)
   const initialWidth = initialWidthFor(data)
-  const snapshotKey = JSON.stringify([data.series, data.baseline, data.blockingComparison, data.resistances, data.layout, data.metric, data.precision, data.rankMode, data.columnOrder, data.colorScale, metadata])
+  const snapshotKey = JSON.stringify([data.series, data.baseline, data.blockingComparison, data.resistances, data.layout, data.metric, data.precision, data.rankMode, data.columnOrder, data.colorScale, data.colorScaleMode, metadata])
   useLayoutEffect(() => {
     const image = imageRef.current
     const table = image?.querySelector('table')

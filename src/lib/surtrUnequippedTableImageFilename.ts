@@ -1,4 +1,5 @@
 import { createChartImageFilename, formatChartFilenameValues, withChartImageAspect } from './chartImageFilename.ts'
+import type { EnemyHeatmapColorScale } from './enemyHeatmapColor.ts'
 import type { SurtrUnequippedColumnOrder, SurtrUnequippedLayout, SurtrUnequippedMetric, SurtrUnequippedRankMode } from './surtrUnequippedComparison.ts'
 
 export interface SurtrUnequippedTableImageMetadata {
@@ -21,6 +22,7 @@ export function getSurtrUnequippedTableImageFilename(options: {
   rankMode?: SurtrUnequippedRankMode
   columnOrder?: SurtrUnequippedColumnOrder
   colorScale?: boolean
+  colorScaleMode?: EnemyHeatmapColorScale
 }, aspectRatio?: number): string {
   const { metadata, series, resistances, metric, layout, precision, blockingComparison } = options
   const modules = series.filter(item => item.id !== 'none').map(item => item.label)
@@ -29,7 +31,7 @@ export function getSurtrUnequippedTableImageFilename(options: {
     metadata.skillLabel,
     metric === 'difference' ? 'DPS差' : metric === 'ratio' ? '比率' : '増加率',
     layout === 'combined' ? 'DPS＋比較値' : '比較値のみ',
-    ...(options.colorScale ? ['カラースケール'] : []),
+    ...(options.colorScale ? [options.colorScaleMode === 'SQRT' ? 'カラースケール平方根' : 'カラースケール'] : []),
     `昇進2Lv${metadata.level}`,
     `信頼${metadata.trust}`,
     `潜在${metadata.potential}`,

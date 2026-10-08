@@ -256,6 +256,28 @@ test('comparison color scale is optional and preserves its own boolean independe
   }
 })
 
+test('comparison color scale mode migrates to LINEAR and persists independently of its enabled state', () => {
+  assert.equal(createDefaultSurtrDpsPageState().unequippedColorScaleMode, 'LINEAR')
+  const storage = memoryStorage()
+  for (const unequippedColorScale of [true, false]) {
+    const previous = { ...createDefaultSurtrDpsPageState(), unequippedColorScale,
+      unequippedColumnOrder: 'blocking' as const, unequippedRankMode: 'merged' as const }
+    Reflect.deleteProperty(previous, 'unequippedColorScaleMode')
+    storage.setItem(SURTR_DPS_PAGE_STATE_KEY, JSON.stringify(previous))
+    assert.deepEqual(readSurtrDpsPageState(storage), { ...previous, unequippedColorScaleMode: 'LINEAR' })
+    for (const unequippedColorScaleMode of ['LINEAR', 'SQRT'] as const) {
+      const state = { ...createDefaultSurtrDpsPageState(), unequippedColorScale, unequippedColorScaleMode,
+        unequippedMetric: 'ratio' as const }
+      writeSurtrDpsPageState(state, storage)
+      assert.deepEqual(readSurtrDpsPageState(storage), state)
+    }
+    for (const unequippedColorScaleMode of [undefined, null, '', 'linear', 'sqrt', 'LOG', false, true, 0, [], {}]) {
+      assert.deepEqual(parseSurtrDpsPageState({ ...previous, unequippedColorScaleMode }),
+        { ...previous, unequippedColorScaleMode: 'LINEAR' })
+    }
+  }
+})
+
 test('valid fields in a partial or damaged record are retained independently', () => {
   const restored = parseSurtrDpsPageState({
     settings: { level: 80, trust: '50', potential: 0, skillLevelIndex: 1.5, blocking: true },

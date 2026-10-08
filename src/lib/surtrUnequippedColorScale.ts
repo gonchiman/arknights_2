@@ -1,4 +1,4 @@
-import { getEnemyHeatmapOpacity } from './enemyHeatmapColor.ts'
+import { getEnemyHeatmapOpacity, type EnemyHeatmapColorScale } from './enemyHeatmapColor.ts'
 import type { SurtrUnequippedMetric } from './surtrUnequippedComparison.ts'
 
 const neutralValue = (metric: SurtrUnequippedMetric) => metric === 'ratio' ? 100 : 0
@@ -16,11 +16,12 @@ export function getSurtrUnequippedColorScaleBackground(
   value: number | null | undefined,
   metric: SurtrUnequippedMetric,
   maximum: number,
+  mode: EnemyHeatmapColorScale = 'LINEAR',
 ): string | undefined {
   if (value == null || !Number.isFinite(value)) return undefined
   const difference = value - neutralValue(metric)
-  // Match the existing heatmap's linear scale and readable 40% upper limit.
-  const intensity = getEnemyHeatmapOpacity(Math.abs(difference), maximum)
+  // Match the existing heatmap's scale choices and readable 40% upper limit.
+  const intensity = getEnemyHeatmapOpacity(Math.abs(difference), maximum, mode)
   if (intensity === 0) return undefined
   return `color-mix(in srgb, ${difference > 0 ? '#245ea8' : '#ae733c'} ${intensity * 100}%, var(--surface))`
 }

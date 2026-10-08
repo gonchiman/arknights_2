@@ -187,6 +187,24 @@ test('カラースケール画像は保存条件で識別し、無効時は既�
   assert.deepEqual(colored, before)
 })
 
+test('平方根カラースケールは有効時だけ画像名を変え、線形と無効時の従来名を保つ', () => {
+  const colored = { ...options, colorScale: true }
+  const before = structuredClone(colored)
+  const old = getSurtrUnequippedTableImageFilename(colored, 16 / 9)
+  assert.equal(getSurtrUnequippedTableImageFilename({ ...colored, colorScaleMode: 'LINEAR' }, 16 / 9), old)
+  assert.equal(getSurtrUnequippedTableImageFilename({ ...colored, colorScaleMode: undefined }, 16 / 9), old)
+  const squareRoot = getSurtrUnequippedTableImageFilename({ ...colored, colorScaleMode: 'SQRT' }, 16 / 9)
+  assert.match(squareRoot, /カラースケール平方根/)
+  assert.notEqual(squareRoot, old)
+  assert.match(squareRoot, /比率16x9\.png$/)
+  assert.ok(new TextEncoder().encode(squareRoot).length <= 240)
+  for (const colorScale of [false, undefined]) {
+    assert.equal(getSurtrUnequippedTableImageFilename({ ...options, colorScale, colorScaleMode: 'SQRT' }),
+      getSurtrUnequippedTableImageFilename(options))
+  }
+  assert.deepEqual(colored, before)
+})
+
 test('ブロック条件比較の画像名は通常の単一条件と区別し、現在のblocking選択に依存しない', () => {
   const blockingComparison = [{ blocking: true }, { blocking: false }]
   const compared = { ...options, blockingComparison }

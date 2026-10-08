@@ -5,6 +5,7 @@ import { getSurtrModuleChoices, getSelectedSurtrModuleStages, type SurtrModuleCh
 import { getSurtrDpsImageFilename, getSurtrCombinedImageFilename } from '../lib/surtrDpsImageFilename'
 import { readEnemyHistogramSnapshot, writeEnemyHistogramSnapshot, type EnemyHistogramSnapshot } from '../lib/enemyHistogramSnapshot'
 import { readSurtrDpsPageState, writeSurtrDpsPageState } from '../lib/surtrDpsPageState'
+import type { EnemyHeatmapColorScale } from '../lib/enemyHeatmapColor'
 import { calculateSurtrDpsCalculation } from '../lib/surtrDpsCalculation'
 import { getSurtrDpsResistanceSamples, isValidSurtrDpsResistanceRange, type SurtrDpsBarStep, type SurtrDpsResistanceRange } from '../lib/surtrDpsResistance'
 import { transformSurtrDpsSeries, getSurtrDpsOutputTsv, type SurtrDpsMetric } from '../lib/surtrDpsOutput'
@@ -80,6 +81,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   const [unequippedRankMode, setUnequippedRankMode] = useState<SurtrUnequippedRankMode>(initialState.unequippedRankMode)
   const [unequippedColumnOrder, setUnequippedColumnOrder] = useState<SurtrUnequippedColumnOrder>(initialState.unequippedColumnOrder)
   const [unequippedColorScale, setUnequippedColorScale] = useState(initialState.unequippedColorScale)
+  const [unequippedColorScaleMode, setUnequippedColorScaleMode] = useState(initialState.unequippedColorScaleMode)
   const [customUnequippedStep, setCustomUnequippedStep] = useState(typeof initialState.unequippedStep === 'number' && ![10, 20].includes(initialState.unequippedStep))
   const [unequippedStepDraft, setUnequippedStepDraft] = useState(String(typeof initialState.unequippedStep === 'number' ? initialState.unequippedStep : 10))
   const [selectedResistance, setSelectedResistance] = useState<number | null>(initialState.selectedResistance)
@@ -94,9 +96,9 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   const receiveHistogramDraft = useCallback((snapshot: EnemyHistogramSnapshot | null) => setHistogramDraft(snapshot), [])
   useEffect(() => {
     writeSurtrDpsPageState({ settings, excluded, moduleLevels, chartKind, barStep, resistanceRange, showValues, showResistanceRanks,
-      gridStyle, precision, metric, differenceMetric, requestedBaselineId, unequippedLayout, unequippedMetric, unequippedStep, unequippedRankMode, unequippedColumnOrder, unequippedColorScale, selectedResistance, yAxisMode, yAxisDraft })
+      gridStyle, precision, metric, differenceMetric, requestedBaselineId, unequippedLayout, unequippedMetric, unequippedStep, unequippedRankMode, unequippedColumnOrder, unequippedColorScale, unequippedColorScaleMode, selectedResistance, yAxisMode, yAxisDraft })
   }, [settings, excluded, moduleLevels, chartKind, barStep, resistanceRange, showValues, showResistanceRanks,
-    gridStyle, precision, metric, differenceMetric, requestedBaselineId, unequippedLayout, unequippedMetric, unequippedStep, unequippedRankMode, unequippedColumnOrder, unequippedColorScale, selectedResistance, yAxisMode, yAxisDraft])
+    gridStyle, precision, metric, differenceMetric, requestedBaselineId, unequippedLayout, unequippedMetric, unequippedStep, unequippedRankMode, unequippedColumnOrder, unequippedColorScale, unequippedColorScaleMode, selectedResistance, yAxisMode, yAxisDraft])
   const [copyFeedback, setCopyFeedback] = useState<{ text: string; ok: boolean } | null>(null)
   const [copying, setCopying] = useState(false)
   const [image, setImage] = useState<ImageSnapshot | null>(null)
@@ -472,9 +474,15 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
           {[0, 1, 2, 3].map(value => <option key={value} value={value}>{value}桁</option>)}
         </select></label>
         <span className="surtr-s3-color-scale-control">
-          <label className="surtr-s3-values-toggle"><input type="checkbox" aria-label="未装備比較のカラースケール" checked={unequippedColorScale}
-            onChange={event => setUnequippedColorScale(event.target.checked)} />カラースケール</label>
-          <HelpPopover label="カラースケールの説明">比較値のセルを、未装備より高ければ青、低ければ茶色で表示します。同じ値は無色です。表示中の比較値全体で濃淡を揃え、差が大きいほど濃くします。DPS列は色付けしません。</HelpPopover>
+          <label className="surtr-s3-output-control"><span>カラースケール</span><select aria-label="未装備比較のカラースケール" value={unequippedColorScale ? unequippedColorScaleMode : 'NONE'}
+            onChange={event => {
+              const value = event.target.value
+              setUnequippedColorScale(value !== 'NONE')
+              if (value !== 'NONE') setUnequippedColorScaleMode(value as EnemyHeatmapColorScale)
+            }}>
+            <option value="NONE">なし</option><option value="LINEAR">値に比例</option><option value="SQRT">中程度を見やすく</option>
+          </select></label>
+          <HelpPopover label="カラースケールの説明">比較値のセルを、未装備より高ければ青、低ければ茶色で表示します。同じ値は無色です。表示中の比較値全体で濃淡を揃え、差が大きいほど濃くします。「中程度を見やすく」は最大差に対する比率の平方根を使い、中程度の差も見やすくします。数値やDPS列は変わりません。</HelpPopover>
         </span>
         {unequippedStepError && <p className="surtr-s3-axis-error" id="surtr-s3-unequipped-step-error" role="alert">{unequippedStepError}</p>}
       </>}>
@@ -484,7 +492,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
         : !unequippedBlockingComparison ? <p role="alert">ブロック条件ごとの計算に必要なデータを取得できませんでした。</p>
         : !unequippedResistances.length ? <p className="surtr-s3-status" role="status">指定した範囲に表示する術耐性がありません。</p>
         : <SurtrUnequippedComparisonTable series={series} baseline={unequipped} resistances={unequippedResistances} precision={precision}
-          metric={unequippedMetric} layout={unequippedLayout} rankMode={unequippedRankMode} columnOrder={unequippedColumnOrder} colorScale={unequippedColorScale} blockingComparison={unequippedBlockingComparison} selectedResistance={selectedResistance}
+          metric={unequippedMetric} layout={unequippedLayout} rankMode={unequippedRankMode} columnOrder={unequippedColumnOrder} colorScale={unequippedColorScale} colorScaleMode={unequippedColorScaleMode} blockingComparison={unequippedBlockingComparison} selectedResistance={selectedResistance}
           metadata={{ skillLabel: label, level: effectiveSettings.level, trust: effectiveSettings.trust,
             potential: effectiveSettings.potential, blocking: effectiveSettings.blocking }}
           onOpenDetail={(resistance, seriesId, detailMetric, blocking) => openDetail(resistance, seriesId, detailMetric, blocking)} />}

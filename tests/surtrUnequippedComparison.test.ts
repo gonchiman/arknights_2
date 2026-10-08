@@ -29,13 +29,26 @@ test('カラースケールは欠損・非有限値・最大値ゼロを着色�
   assert.equal(getSurtrUnequippedColorScaleMaximum([], 'difference'), 0)
   assert.equal(getSurtrUnequippedColorScaleMaximum([0, -0, null, NaN, Infinity], 'percent'), 0)
   assert.equal(getSurtrUnequippedColorScaleMaximum([100, null, NaN], 'ratio'), 0)
-  for (const value of [undefined, null, NaN, Infinity, -Infinity, 0, -0]) {
-    assert.equal(getSurtrUnequippedColorScaleBackground(value, 'difference', 50), undefined)
+  for (const mode of ['LINEAR', 'SQRT'] as const) {
+    for (const value of [undefined, null, NaN, Infinity, -Infinity, 0, -0]) {
+      assert.equal(getSurtrUnequippedColorScaleBackground(value, 'difference', 50, mode), undefined)
+    }
+    for (const maximum of [0, -1, NaN, Infinity]) {
+      assert.equal(getSurtrUnequippedColorScaleBackground(25, 'difference', maximum, mode), undefined)
+    }
+    assert.equal(getSurtrUnequippedColorScaleBackground(75, 'difference', 50, mode), 'color-mix(in srgb, #245ea8 40%, var(--surface))')
   }
-  for (const maximum of [0, -1, NaN, Infinity]) {
-    assert.equal(getSurtrUnequippedColorScaleBackground(25, 'difference', maximum), undefined)
+})
+
+test('平方根の濃淡は最大差と中立を保ち、正負とも中程度の差を見やすくする', () => {
+  for (const metric of ['difference', 'percent', 'ratio'] as const) {
+    const neutral = metric === 'ratio' ? 100 : 0
+    assert.equal(getSurtrUnequippedColorScaleBackground(neutral + 100, metric, 100, 'SQRT'), 'color-mix(in srgb, #245ea8 40%, var(--surface))')
+    assert.equal(getSurtrUnequippedColorScaleBackground(neutral + 25, metric, 100, 'SQRT'), 'color-mix(in srgb, #245ea8 20%, var(--surface))')
+    assert.equal(getSurtrUnequippedColorScaleBackground(neutral - 25, metric, 100, 'SQRT'), 'color-mix(in srgb, #ae733c 20%, var(--surface))')
+    assert.equal(getSurtrUnequippedColorScaleBackground(neutral + 25, metric, 100, 'LINEAR'), 'color-mix(in srgb, #245ea8 10%, var(--surface))')
+    assert.equal(getSurtrUnequippedColorScaleBackground(neutral, metric, 100, 'SQRT'), undefined)
   }
-  assert.equal(getSurtrUnequippedColorScaleBackground(75, 'difference', 50), 'color-mix(in srgb, #245ea8 40%, var(--surface))')
 })
 
 test('ランク表示付きTSVは境界に従うランクを独立列に出し、結合セルも全行へ展開する', () => {

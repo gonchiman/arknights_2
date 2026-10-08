@@ -599,3 +599,55 @@ test('unavailable comparison values have no color even when other visible values
   cells.forEach(row => { assert.equal(row[0].value, '—'); expectNoCellColor(row[0]) })
   expectCellColor(cells[0][1], '#245ea8', 40)
 })
+
+test('square-root table scale keeps signed comparison values and maximum intensity while making smaller differences more visible in either column order', () => {
+  const differences = {
+    module: [[25, 15, 50, 80], [-10, -15, 0, 8], [10, 9, 0, 0]],
+    blocking: [[25, 50, 15, 80], [-10, 0, -15, 8], [10, 0, 9, 0]],
+  }
+  for (const columnOrder of ['module', 'blocking']) {
+    for (const layout of ['combined', 'comparison']) {
+      const data = { ...props, series: modules, blockingComparison, columnOrder, layout, rankMode: 'merged', colorScale: true, metadata }
+      const original = render(data)
+      assert.equal(render({ ...data, colorScaleMode: 'LINEAR' }), original)
+      const snapshot = { ...data, colorScaleMode: 'SQRT' }
+      const before = structuredClone(snapshot)
+      const squareRoot = render(snapshot)
+      assert.deepEqual(sectionRows(squareRoot, 'tbody'), sectionRows(original, 'tbody'))
+      assert.deepEqual(sectionRows(squareRoot, 'thead'), sectionRows(original, 'thead'))
+      const cells = comparisonCells(squareRoot)
+      const linearCells = comparisonCells(original)
+      cells.forEach((row, rowIndex) => row.forEach((cell, column) => {
+        const difference = differences[columnOrder][rowIndex][column]
+        if (difference === 0) expectNoCellColor(cell)
+        else {
+          expectCellColor(cell, difference > 0 ? '#245ea8' : '#ae733c', 40 * Math.sqrt(Math.abs(difference) / 80))
+          const intensity = cellColor(cell).intensity
+          assert.ok(intensity >= cellColor(linearCells[rowIndex][column]).intensity)
+          if (Math.abs(difference) < 80) assert.ok(intensity > cellColor(linearCells[rowIndex][column]).intensity)
+        }
+      }))
+      bodyCells(squareRoot).flat().filter(cell => cell.tag === 'th' || /data-metric="total"/.test(cell.attributes)).forEach(expectNoCellColor)
+      const saved = renderToStaticMarkup(createElement(Image, snapshot))
+      assert.deepEqual(bodyCells(saved), bodyCells(squareRoot))
+      assert.deepEqual(sectionRows(saved, 'thead'), sectionRows(squareRoot, 'thead'))
+      assert.doesNotMatch(saved, /<button|<select|is-selected|aria-haspopup|›/)
+      assert.deepEqual(snapshot, before)
+      assert.equal(render({ ...snapshot, colorScale: false }), render({ ...data, colorScale: false }))
+    }
+  }
+})
+
+test('square-root percentage and ratio scales retain neutral cells and unavailable values', () => {
+  for (const metric of ['percent', 'ratio']) {
+    const off = render({ metric, colorScale: true })
+    const squareRoot = render({ metric, colorScale: true, colorScaleMode: 'SQRT' })
+    assert.deepEqual(sectionRows(squareRoot, 'tbody'), sectionRows(off, 'tbody'))
+    const cells = comparisonCells(squareRoot)
+    expectCellColor(cells[0][0], '#245ea8', 40 * Math.sqrt(25 / 50))
+    expectCellColor(cells[0][1], '#245ea8', 40)
+    expectCellColor(cells[1][0], '#ae733c', 40 * Math.sqrt(12.5 / 50))
+    expectNoCellColor(cells[1][1])
+    cells[2].forEach(expectNoCellColor)
+  }
+})

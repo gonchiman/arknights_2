@@ -1,6 +1,7 @@
 import { useMemo, type CSSProperties, type ReactNode } from 'react'
 import type { SurtrDpsOutputSeries } from '../lib/surtrDpsOutput'
 import { getSurtrDpsResistanceRating } from '../lib/surtrDpsResistance'
+import type { EnemyHeatmapColorScale } from '../lib/enemyHeatmapColor'
 import { getSurtrUnequippedColorScaleBackground, getSurtrUnequippedColorScaleMaximum } from '../lib/surtrUnequippedColorScale'
 import { buildSurtrUnequippedComparisonSeries, formatSurtrUnequippedComparisonValue, getSurtrUnequippedColumns,
   type SurtrUnequippedBlockingComparison, type SurtrUnequippedColumnOrder, type SurtrUnequippedLayout, type SurtrUnequippedMetric, type SurtrUnequippedRankMode } from '../lib/surtrUnequippedComparison'
@@ -15,13 +16,14 @@ export interface SurtrUnequippedComparisonTableData {
   rankMode?: SurtrUnequippedRankMode
   columnOrder?: SurtrUnequippedColumnOrder
   colorScale?: boolean
+  colorScaleMode?: EnemyHeatmapColorScale
   blockingComparison?: readonly SurtrUnequippedBlockingComparison[]
 }
 
 export const getUnequippedMetricLabel = (metric: SurtrUnequippedMetric) =>
   metric === 'difference' ? 'DPS差' : metric === 'ratio' ? '比率（未装備＝100%）' : '増加率（%）'
 
-export function SurtrUnequippedComparisonTableContent({ series, baseline, resistances, precision, metric, layout, rankMode = 'none', columnOrder = 'module', colorScale = false, blockingComparison,
+export function SurtrUnequippedComparisonTableContent({ series, baseline, resistances, precision, metric, layout, rankMode = 'none', columnOrder = 'module', colorScale = false, colorScaleMode = 'LINEAR', blockingComparison,
   selectedResistance, onOpenDetail, footer }: SurtrUnequippedComparisonTableData & {
   selectedResistance?: number | null
   onOpenDetail?: (resistance: number, seriesId: string | undefined, metric: SurtrUnequippedMetric | 'total', blocking?: boolean) => void
@@ -116,7 +118,7 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
       {combined && <td data-series-id="none" data-metric="total">{formatDps(baselineValues.get(resistance))}</td>}
       {columns.map(column => <ComparisonCells key={`${column.seriesId}:${column.blocking}`} seriesId={column.seriesId} blocking={column.blocking} combined={combined}
         dps={formatDps(column.raw?.get(resistance))}
-        background={colorScale ? getSurtrUnequippedColorScaleBackground(column.comparison?.get(resistance), metric, colorScaleMaximum) : undefined}
+        background={colorScale ? getSurtrUnequippedColorScaleBackground(column.comparison?.get(resistance), metric, colorScaleMaximum, colorScaleMode) : undefined}
         comparison={formatSurtrUnequippedComparisonValue(column.comparison?.get(resistance), metric, precision)} />)}
     </tr>)}</tbody>
     {footer && <tfoot><tr><td colSpan={columnCount}>{footer}</td></tr></tfoot>}
