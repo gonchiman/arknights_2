@@ -170,6 +170,23 @@ test('ブロック条件別の列配置は両条件比較の画像名だけを�
   }
 })
 
+test('カラースケール画像は保存条件で識別し、無効時は既存の画像名を保つ', () => {
+  const base = { ...options, rankMode: 'merged' as const, columnOrder: 'blocking' as const,
+    blockingComparison: [{ blocking: false }, { blocking: true }] }
+  const original = getSurtrUnequippedTableImageFilename(base)
+  assert.equal(getSurtrUnequippedTableImageFilename({ ...base, colorScale: false }), original)
+  assert.equal(getSurtrUnequippedTableImageFilename({ ...base, colorScale: undefined }), original)
+  const colored = { ...base, colorScale: true }
+  const before = structuredClone(colored)
+  const name = getSurtrUnequippedTableImageFilename(colored, 16 / 9)
+  assert.match(name, /カラースケール/)
+  assert.match(name, /ブロック条件別/)
+  assert.match(name, /比率16x9\.png$/)
+  assert.notEqual(name, getSurtrUnequippedTableImageFilename({ ...colored, colorScale: false }, 16 / 9))
+  assert.ok(new TextEncoder().encode(name).length <= 240)
+  assert.deepEqual(colored, before)
+})
+
 test('ブロック条件比較の画像名は通常の単一条件と区別し、現在のblocking選択に依存しない', () => {
   const blockingComparison = [{ blocking: true }, { blocking: false }]
   const compared = { ...options, blockingComparison }

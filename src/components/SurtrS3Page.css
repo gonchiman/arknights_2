@@ -104,6 +104,8 @@
 .surtr-s3-unequipped-baseline-column { width: 96px; }
 .surtr-s3-unequipped-table .surtr-s3-blocking-column { white-space: normal; }
 .surtr-s3-blocking-column span { white-space: nowrap; }
+.surtr-s3-unequipped-table tbody td.surtr-s3-color-scale-cell { background: var(--surtr-comparison-cell-background); }
+.surtr-s3-color-scale-control { display: inline-flex; align-items: center; gap: 6px; }
 .surtr-s3-page .error-box .button { margin-left: 12px; }
 @media (max-width: 640px) {
   .surtr-s3-page .collapsible-panel-body { padding: 14px; }

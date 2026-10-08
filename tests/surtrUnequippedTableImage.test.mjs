@@ -314,7 +314,7 @@ test('condition-specific cells in either column order open their own DPS or comp
         const calls = []
         const focusCalls = []
         function Probe() {
-          tree = Content({ ...props, series: modules, blockingComparison, layout, metric, columnOrder,
+          tree = Content({ ...props, series: modules, blockingComparison, layout, metric, columnOrder, colorScale: true,
             onOpenDetail: (...args) => calls.push(args) })
           return tree
         }
@@ -511,4 +511,91 @@ test('saved rank tables preserve captured rank layout, merged groups, resistance
       assert.deepEqual(snapshot, before)
     }
   }
+})
+
+const comparisonCells = markup => bodyCells(markup).map(row => row.filter(cell => cell.tag === 'td'
+  && /data-series-id="[^"]+"/.test(cell.attributes) && !/data-metric="total"/.test(cell.attributes)))
+const cellColor = cell => {
+  const style = cell.attributes.match(/style="([^"]+)"/)?.[1] ?? ''
+  const color = style.match(/--surtr-comparison-cell-background:color-mix\(in srgb,\s*(#[\da-f]+)\s+([\d.]+)%,\s*var\(--surface\)\)/i)
+  return color ? { tone: color[1].toLowerCase(), intensity: Number(color[2]) } : null
+}
+const expectCellColor = (cell, tone, intensity) => {
+  const color = cellColor(cell)
+  assert.ok(color, `Expected a comparison color on ${cell.value}: ${cell.attributes}`)
+  assert.match(cell.attributes, /surtr-s3-color-scale-cell/)
+  assert.equal(color.tone, tone)
+  assert.ok(Math.abs(color.intensity - intensity) <= 0.01, `${color.intensity}% does not match ${intensity}%`)
+  assert.ok(color.intensity > 0 && color.intensity <= 40)
+}
+const expectNoCellColor = cell => {
+  assert.equal(cellColor(cell), null)
+  assert.doesNotMatch(cell.attributes, /--surtr-comparison-cell-background/)
+}
+
+test('optional comparison color scale uses zero or 100% as neutral and a common signed magnitude scale, without coloring other table cells', () => {
+  for (const metric of ['difference', 'ratio', 'percent']) {
+    const off = render({ metric })
+    assert.equal(render({ metric, colorScale: false }), off)
+    assert.doesNotMatch(off, /surtr-s3-color-scale|--surtr-comparison-cell-background/)
+    const colored = render({ metric, colorScale: true })
+    assert.match(colored, /class="[^"]*surtr-s3-color-scale(?:\s|")/)
+    assert.deepEqual(sectionRows(colored, 'tbody'), sectionRows(off, 'tbody'))
+    assert.deepEqual(sectionRows(colored, 'thead'), sectionRows(off, 'thead'))
+    const cells = comparisonCells(colored)
+    expectCellColor(cells[0][0], '#245ea8', 20)
+    expectCellColor(cells[0][1], '#245ea8', 40)
+    expectCellColor(cells[1][0], '#ae733c', metric === 'difference' ? 8 : 10)
+    expectNoCellColor(cells[1][1])
+    if (metric === 'difference') expectCellColor(cells[2][0], '#245ea8', 8)
+    else expectNoCellColor(cells[2][0])
+    expectNoCellColor(cells[2][1])
+    const unrelated = bodyCells(colored).flat().filter(cell => cell.tag === 'th' || /data-metric="total"/.test(cell.attributes))
+    unrelated.forEach(expectNoCellColor)
+  }
+})
+
+test('color intensity uses unrounded values and only the displayed resistances, selected modules and blocking conditions', () => {
+  const limited = comparisonCells(render({ resistances: [60], colorScale: true, metric: 'difference' }))[0]
+  expectCellColor(limited[0], '#ae733c', 40)
+  expectNoCellColor(limited[1])
+  const selected = comparisonCells(render({ series: [modules[0]], colorScale: true, metric: 'difference' }))
+  expectCellColor(selected[0][0], '#245ea8', 40)
+  expectCellColor(selected[1][0], '#ae733c', 16)
+  const tinyBaseline = { ...baseline, points: [{ x: 0, value: 100 }, { x: 60, value: 100 }] }
+  const tinyModule = { ...modules[0], points: [{ x: 0, value: 100.4 }, { x: 60, value: 100.2 }] }
+  const rounded = comparisonCells(render({ baseline: tinyBaseline, series: [tinyModule], resistances: [0, 60], precision: 0, colorScale: true }))
+  assert.deepEqual(rounded.map(row => row[0].value), ['0', '0'])
+  expectCellColor(rounded[0][0], '#245ea8', 40)
+  expectCellColor(rounded[1][0], '#245ea8', 20)
+  const bothConditions = comparisonCells(render({ series: modules, blockingComparison, resistances: [0], colorScale: true }))[0]
+  expectCellColor(bothConditions[0], '#245ea8', 12.5)
+  expectCellColor(bothConditions[1], '#245ea8', 7.5)
+  expectCellColor(bothConditions[2], '#245ea8', 25)
+  expectCellColor(bothConditions[3], '#245ea8', 40)
+})
+
+test('saved color-scale tables preserve text, colors and layout across column order, table format and rank options', () => {
+  for (const columnOrder of ['module', 'blocking']) {
+    for (const layout of ['combined', 'comparison']) {
+      for (const rankMode of ['none', 'inline', 'merged']) {
+        const data = { ...props, series: modules, blockingComparison, columnOrder, layout, rankMode, colorScale: true, metadata }
+        const before = structuredClone(data)
+        const live = render(data)
+        const saved = renderToStaticMarkup(createElement(Image, data))
+        assert.deepEqual(bodyCells(saved), bodyCells(live))
+        assert.deepEqual(sectionRows(saved, 'thead'), sectionRows(live, 'thead'))
+        assert.deepEqual(sectionRows(live, 'tbody'), sectionRows(render({ ...data, colorScale: false }), 'tbody'))
+        assert.doesNotMatch(saved, /<button|<select|is-selected|aria-haspopup|›/)
+        assert.deepEqual(data, before)
+      }
+    }
+  }
+})
+
+test('unavailable comparison values have no color even when other visible values establish a scale', () => {
+  const input = [{ ...modules[0], points: [{ x: 0, value: NaN }, { x: 60, value: Infinity }, { x: 100, value: null }] }, modules[1]]
+  const cells = comparisonCells(render({ series: input, colorScale: true }))
+  cells.forEach(row => { assert.equal(row[0].value, '—'); expectNoCellColor(row[0]) })
+  expectCellColor(cells[0][1], '#245ea8', 40)
 })

@@ -27,6 +27,7 @@ export interface SurtrDpsPageState {
   unequippedStep: SurtrDpsBarStep
   unequippedRankMode: SurtrUnequippedRankMode
   unequippedColumnOrder: SurtrUnequippedColumnOrder
+  unequippedColorScale: boolean
   selectedResistance: number | null
   yAxisMode: HpChartYAxisMode
   yAxisDraft: { min: string; max: string }
@@ -40,6 +41,7 @@ export function createDefaultSurtrDpsPageState(): SurtrDpsPageState {
     metric: 'total', differenceMetric: 'difference', requestedBaselineId: 'none', selectedResistance: null,
     unequippedLayout: 'combined', unequippedMetric: 'difference', unequippedStep: 10, unequippedRankMode: 'none',
     unequippedColumnOrder: 'module',
+    unequippedColorScale: false,
     yAxisMode: 'zero', yAxisDraft: { min: '0', max: '4000' },
   }
 }
@@ -87,6 +89,7 @@ export function parseSurtrDpsPageState(value: unknown): SurtrDpsPageState {
     unequippedStep: stepOr(source.unequippedStep, defaults.unequippedStep),
     unequippedRankMode: option(source.unequippedRankMode, ['none', 'inline', 'merged'], defaults.unequippedRankMode),
     unequippedColumnOrder: option(source.unequippedColumnOrder, ['module', 'blocking'], defaults.unequippedColumnOrder),
+    unequippedColorScale: booleanOr(source.unequippedColorScale, defaults.unequippedColorScale),
     selectedResistance: integer(source.selectedResistance, resistanceRange.min, resistanceRange.max) ? source.selectedResistance : null,
     yAxisMode: option(source.yAxisMode, ['zero', 'auto', 'manual'], defaults.yAxisMode),
     yAxisDraft,

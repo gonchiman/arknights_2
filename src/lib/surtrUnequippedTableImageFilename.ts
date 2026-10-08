@@ -20,6 +20,7 @@ export function getSurtrUnequippedTableImageFilename(options: {
   blockingComparison?: readonly { blocking: boolean }[]
   rankMode?: SurtrUnequippedRankMode
   columnOrder?: SurtrUnequippedColumnOrder
+  colorScale?: boolean
 }, aspectRatio?: number): string {
   const { metadata, series, resistances, metric, layout, precision, blockingComparison } = options
   const modules = series.filter(item => item.id !== 'none').map(item => item.label)
@@ -28,6 +29,7 @@ export function getSurtrUnequippedTableImageFilename(options: {
     metadata.skillLabel,
     metric === 'difference' ? 'DPS差' : metric === 'ratio' ? '比率' : '増加率',
     layout === 'combined' ? 'DPS＋比較値' : '比較値のみ',
+    ...(options.colorScale ? ['カラースケール'] : []),
     `昇進2Lv${metadata.level}`,
     `信頼${metadata.trust}`,
     `潜在${metadata.potential}`,

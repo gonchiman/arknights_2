@@ -1,6 +1,7 @@
 import { useMemo, type CSSProperties, type ReactNode } from 'react'
 import type { SurtrDpsOutputSeries } from '../lib/surtrDpsOutput'
 import { getSurtrDpsResistanceRating } from '../lib/surtrDpsResistance'
+import { getSurtrUnequippedColorScaleBackground, getSurtrUnequippedColorScaleMaximum } from '../lib/surtrUnequippedColorScale'
 import { buildSurtrUnequippedComparisonSeries, formatSurtrUnequippedComparisonValue, getSurtrUnequippedColumns,
   type SurtrUnequippedBlockingComparison, type SurtrUnequippedColumnOrder, type SurtrUnequippedLayout, type SurtrUnequippedMetric, type SurtrUnequippedRankMode } from '../lib/surtrUnequippedComparison'
 
@@ -13,13 +14,14 @@ export interface SurtrUnequippedComparisonTableData {
   layout: SurtrUnequippedLayout
   rankMode?: SurtrUnequippedRankMode
   columnOrder?: SurtrUnequippedColumnOrder
+  colorScale?: boolean
   blockingComparison?: readonly SurtrUnequippedBlockingComparison[]
 }
 
 export const getUnequippedMetricLabel = (metric: SurtrUnequippedMetric) =>
   metric === 'difference' ? 'DPS差' : metric === 'ratio' ? '比率（未装備＝100%）' : '増加率（%）'
 
-export function SurtrUnequippedComparisonTableContent({ series, baseline, resistances, precision, metric, layout, rankMode = 'none', columnOrder = 'module', blockingComparison,
+export function SurtrUnequippedComparisonTableContent({ series, baseline, resistances, precision, metric, layout, rankMode = 'none', columnOrder = 'module', colorScale = false, blockingComparison,
   selectedResistance, onOpenDetail, footer }: SurtrUnequippedComparisonTableData & {
   selectedResistance?: number | null
   onOpenDetail?: (resistance: number, seriesId: string | undefined, metric: SurtrUnequippedMetric | 'total', blocking?: boolean) => void
@@ -42,6 +44,9 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
     return getSurtrUnequippedColumns(targets, values, columnOrder).map(({ item, condition }) => ({ item, seriesId: item.id, blocking: condition.blocking,
       raw: condition.raw.get(item.id), comparison: condition.comparison.get(item.id) }))
   }, [targets, baseline, blockingComparison, metric, columnOrder])
+  const colorScaleMaximum = useMemo(() => colorScale ? getSurtrUnequippedColorScaleMaximum(
+    columns.flatMap(column => resistances.map(resistance => column.comparison?.get(resistance))), metric,
+  ) : 0, [columns, resistances, metric, colorScale])
   const baselineValues = useMemo(() => new Map(baseline.points.map(point => [point.x, point.value])), [baseline])
   const resistanceRows = useMemo(() => {
     const rows = resistances.map(resistance => ({ resistance, rank: getSurtrDpsResistanceRating(resistance), rankRowSpan: 1 }))
@@ -73,7 +78,7 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
   const resistanceWidth = rankMode === 'inline' ? 112 : 80
   const minimumWidth = resistanceWidth + (mergedRanks ? 64 : 0) + (combined ? 96 : 0) + targets.length * moduleColumns * (combined ? precision > 1 ? 88 : 76 : 128)
   return <div className={`surtr-s3-table-wrap ${onOpenDetail ? 'surtr-s3-result-table' : ''}`}><table
-    className={`surtr-s3-table surtr-s3-unequipped-table${compareBlocking ? ' surtr-s3-equal-blocking-columns' : ''}${rankMode === 'inline' ? ' surtr-s3-rank-inline' : ''}`}
+    className={`surtr-s3-table surtr-s3-unequipped-table${compareBlocking ? ' surtr-s3-equal-blocking-columns' : ''}${rankMode === 'inline' ? ' surtr-s3-rank-inline' : ''}${colorScale ? ' surtr-s3-color-scale' : ''}`}
     style={compareBlocking ? { '--surtr-unequipped-min-width': `${minimumWidth}px`, '--surtr-unequipped-resistance-width': `${resistanceWidth}px` } as CSSProperties : undefined}
     aria-label={`術耐性ごとの未装備との比較：${combined ? 'DPS＋' : ''}${metricLabel}`}>
     {mergedRanks && <colgroup><col className="surtr-s3-unequipped-rank-column" /></colgroup>}
@@ -111,6 +116,7 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
       {combined && <td data-series-id="none" data-metric="total">{formatDps(baselineValues.get(resistance))}</td>}
       {columns.map(column => <ComparisonCells key={`${column.seriesId}:${column.blocking}`} seriesId={column.seriesId} blocking={column.blocking} combined={combined}
         dps={formatDps(column.raw?.get(resistance))}
+        background={colorScale ? getSurtrUnequippedColorScaleBackground(column.comparison?.get(resistance), metric, colorScaleMaximum) : undefined}
         comparison={formatSurtrUnequippedComparisonValue(column.comparison?.get(resistance), metric, precision)} />)}
     </tr>)}</tbody>
     {footer && <tfoot><tr><td colSpan={columnCount}>{footer}</td></tr></tfoot>}
@@ -138,6 +144,8 @@ function FragmentColumns({ metricLabel }: { metricLabel: string }) {
   return <><th scope="col">DPS</th><th scope="col">{metricLabel}</th></>
 }
 
-function ComparisonCells({ seriesId, blocking, combined, dps, comparison }: { seriesId: string; blocking?: boolean; combined: boolean; dps: string; comparison: string }) {
-  return <>{combined && <td data-series-id={seriesId} data-blocking={blocking} data-metric="total">{dps}</td>}<td data-series-id={seriesId} data-blocking={blocking}>{comparison}</td></>
+function ComparisonCells({ seriesId, blocking, combined, dps, comparison, background }: { seriesId: string; blocking?: boolean; combined: boolean; dps: string; comparison: string; background?: string }) {
+  return <>{combined && <td data-series-id={seriesId} data-blocking={blocking} data-metric="total">{dps}</td>}<td data-series-id={seriesId} data-blocking={blocking}
+    className={background ? 'surtr-s3-color-scale-cell' : undefined}
+    style={background ? { '--surtr-comparison-cell-background': background } as CSSProperties : undefined}>{comparison}</td></>
 }

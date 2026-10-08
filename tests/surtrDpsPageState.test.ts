@@ -237,6 +237,25 @@ test('comparison column order preserves the previous MOD-first default and resto
   }
 })
 
+test('comparison color scale is optional and preserves its own boolean independently of layout, order and chart settings', () => {
+  assert.equal(createDefaultSurtrDpsPageState().unequippedColorScale, false)
+  const storage = memoryStorage()
+  const previous = { ...createDefaultSurtrDpsPageState(), unequippedColumnOrder: 'blocking' as const,
+    unequippedRankMode: 'merged' as const, unequippedMetric: 'ratio' as const, showValues: true }
+  Reflect.deleteProperty(previous, 'unequippedColorScale')
+  storage.setItem(SURTR_DPS_PAGE_STATE_KEY, JSON.stringify(previous))
+  assert.deepEqual(readSurtrDpsPageState(storage), { ...previous, unequippedColorScale: false })
+  for (const unequippedColorScale of [true, false]) {
+    const state = { ...createDefaultSurtrDpsPageState(), unequippedColorScale,
+      unequippedColumnOrder: 'blocking' as const, unequippedLayout: 'comparison' as const, showValues: true }
+    writeSurtrDpsPageState(state, storage)
+    assert.deepEqual(readSurtrDpsPageState(storage), state)
+  }
+  for (const unequippedColorScale of [undefined, null, '', 'true', 'false', 0, 1, [], {}]) {
+    assert.deepEqual(parseSurtrDpsPageState({ ...previous, unequippedColorScale }), { ...previous, unequippedColorScale: false })
+  }
+})
+
 test('valid fields in a partial or damaged record are retained independently', () => {
   const restored = parseSurtrDpsPageState({
     settings: { level: 80, trust: '50', potential: 0, skillLevelIndex: 1.5, blocking: true },

@@ -31,6 +31,7 @@ import { EnemyResistanceHistogramEditor } from './EnemyResistanceHistogramEditor
 import { SurtrModuleStageSelection } from './SurtrModuleStageSelection'
 import { SurtrUnequippedComparisonTable } from './SurtrUnequippedComparisonTable'
 import { SurtrResistanceStepControl, getSurtrResistanceStepError } from './SurtrResistanceStepControl'
+import { HelpPopover } from './HelpPopover'
 import './DamageCalculator.css'
 import './SurtrS3Page.css'
 
@@ -78,6 +79,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   const [unequippedStep, setUnequippedStep] = useState<SurtrDpsBarStep>(initialState.unequippedStep)
   const [unequippedRankMode, setUnequippedRankMode] = useState<SurtrUnequippedRankMode>(initialState.unequippedRankMode)
   const [unequippedColumnOrder, setUnequippedColumnOrder] = useState<SurtrUnequippedColumnOrder>(initialState.unequippedColumnOrder)
+  const [unequippedColorScale, setUnequippedColorScale] = useState(initialState.unequippedColorScale)
   const [customUnequippedStep, setCustomUnequippedStep] = useState(typeof initialState.unequippedStep === 'number' && ![10, 20].includes(initialState.unequippedStep))
   const [unequippedStepDraft, setUnequippedStepDraft] = useState(String(typeof initialState.unequippedStep === 'number' ? initialState.unequippedStep : 10))
   const [selectedResistance, setSelectedResistance] = useState<number | null>(initialState.selectedResistance)
@@ -92,9 +94,9 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   const receiveHistogramDraft = useCallback((snapshot: EnemyHistogramSnapshot | null) => setHistogramDraft(snapshot), [])
   useEffect(() => {
     writeSurtrDpsPageState({ settings, excluded, moduleLevels, chartKind, barStep, resistanceRange, showValues, showResistanceRanks,
-      gridStyle, precision, metric, differenceMetric, requestedBaselineId, unequippedLayout, unequippedMetric, unequippedStep, unequippedRankMode, unequippedColumnOrder, selectedResistance, yAxisMode, yAxisDraft })
+      gridStyle, precision, metric, differenceMetric, requestedBaselineId, unequippedLayout, unequippedMetric, unequippedStep, unequippedRankMode, unequippedColumnOrder, unequippedColorScale, selectedResistance, yAxisMode, yAxisDraft })
   }, [settings, excluded, moduleLevels, chartKind, barStep, resistanceRange, showValues, showResistanceRanks,
-    gridStyle, precision, metric, differenceMetric, requestedBaselineId, unequippedLayout, unequippedMetric, unequippedStep, unequippedRankMode, unequippedColumnOrder, selectedResistance, yAxisMode, yAxisDraft])
+    gridStyle, precision, metric, differenceMetric, requestedBaselineId, unequippedLayout, unequippedMetric, unequippedStep, unequippedRankMode, unequippedColumnOrder, unequippedColorScale, selectedResistance, yAxisMode, yAxisDraft])
   const [copyFeedback, setCopyFeedback] = useState<{ text: string; ok: boolean } | null>(null)
   const [copying, setCopying] = useState(false)
   const [image, setImage] = useState<ImageSnapshot | null>(null)
@@ -469,6 +471,11 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
         <label className="surtr-s3-output-control"><span>小数点以下</span><select aria-label="未装備比較の小数点以下の桁数" value={precision} onChange={event => setPrecision(Number(event.target.value))}>
           {[0, 1, 2, 3].map(value => <option key={value} value={value}>{value}桁</option>)}
         </select></label>
+        <span className="surtr-s3-color-scale-control">
+          <label className="surtr-s3-values-toggle"><input type="checkbox" aria-label="未装備比較のカラースケール" checked={unequippedColorScale}
+            onChange={event => setUnequippedColorScale(event.target.checked)} />カラースケール</label>
+          <HelpPopover label="カラースケールの説明">比較値のセルを、未装備より高ければ青、低ければ茶色で表示します。同じ値は無色です。表示中の比較値全体で濃淡を揃え、差が大きいほど濃くします。DPS列は色付けしません。</HelpPopover>
+        </span>
         {unequippedStepError && <p className="surtr-s3-axis-error" id="surtr-s3-unequipped-step-error" role="alert">{unequippedStepError}</p>}
       </>}>
       {!record ? status : invalidModels.some(item => item.id !== 'none') ? <p role="alert">{invalidModels.filter(item => item.id !== 'none').map(item => item.label).join('・')}の計算に必要なデータを取得できませんでした。</p>
@@ -477,7 +484,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
         : !unequippedBlockingComparison ? <p role="alert">ブロック条件ごとの計算に必要なデータを取得できませんでした。</p>
         : !unequippedResistances.length ? <p className="surtr-s3-status" role="status">指定した範囲に表示する術耐性がありません。</p>
         : <SurtrUnequippedComparisonTable series={series} baseline={unequipped} resistances={unequippedResistances} precision={precision}
-          metric={unequippedMetric} layout={unequippedLayout} rankMode={unequippedRankMode} columnOrder={unequippedColumnOrder} blockingComparison={unequippedBlockingComparison} selectedResistance={selectedResistance}
+          metric={unequippedMetric} layout={unequippedLayout} rankMode={unequippedRankMode} columnOrder={unequippedColumnOrder} colorScale={unequippedColorScale} blockingComparison={unequippedBlockingComparison} selectedResistance={selectedResistance}
           metadata={{ skillLabel: label, level: effectiveSettings.level, trust: effectiveSettings.trust,
             potential: effectiveSettings.potential, blocking: effectiveSettings.blocking }}
           onOpenDetail={(resistance, seriesId, detailMetric, blocking) => openDetail(resistance, seriesId, detailMetric, blocking)} />}

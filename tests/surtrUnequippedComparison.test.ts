@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import type { SurtrDpsOutputSeries } from '../src/lib/surtrDpsOutput.ts'
+import { getSurtrUnequippedColorScaleBackground, getSurtrUnequippedColorScaleMaximum } from '../src/lib/surtrUnequippedColorScale.ts'
 import {
   buildSurtrUnequippedComparisonSeries,
   formatSurtrUnequippedComparisonValue,
@@ -11,6 +12,31 @@ import {
 function series(id: string, values: readonly [number, number | null][], label = id): SurtrDpsOutputSeries {
   return { id, label, color: '#3f7699', points: values.map(([x, value]) => ({ x, value })) }
 }
+
+test('カラースケールは同じ基準からの差を線形に色付けし、比率100%を中立にする', () => {
+  for (const metric of ['difference', 'percent', 'ratio'] as const) {
+    const neutral = metric === 'ratio' ? 100 : 0
+    const maximum = getSurtrUnequippedColorScaleMaximum([neutral - 25, neutral, neutral + 50, null, undefined, NaN, Infinity], metric)
+    assert.equal(maximum, 50)
+    assert.equal(getSurtrUnequippedColorScaleBackground(neutral + 50, metric, maximum), 'color-mix(in srgb, #245ea8 40%, var(--surface))')
+    assert.equal(getSurtrUnequippedColorScaleBackground(neutral + 25, metric, maximum), 'color-mix(in srgb, #245ea8 20%, var(--surface))')
+    assert.equal(getSurtrUnequippedColorScaleBackground(neutral - 25, metric, maximum), 'color-mix(in srgb, #ae733c 20%, var(--surface))')
+    assert.equal(getSurtrUnequippedColorScaleBackground(neutral, metric, maximum), undefined)
+  }
+})
+
+test('カラースケールは欠損・非有限値・最大値ゼロを着色せず濃さの上限を守る', () => {
+  assert.equal(getSurtrUnequippedColorScaleMaximum([], 'difference'), 0)
+  assert.equal(getSurtrUnequippedColorScaleMaximum([0, -0, null, NaN, Infinity], 'percent'), 0)
+  assert.equal(getSurtrUnequippedColorScaleMaximum([100, null, NaN], 'ratio'), 0)
+  for (const value of [undefined, null, NaN, Infinity, -Infinity, 0, -0]) {
+    assert.equal(getSurtrUnequippedColorScaleBackground(value, 'difference', 50), undefined)
+  }
+  for (const maximum of [0, -1, NaN, Infinity]) {
+    assert.equal(getSurtrUnequippedColorScaleBackground(25, 'difference', maximum), undefined)
+  }
+  assert.equal(getSurtrUnequippedColorScaleBackground(75, 'difference', 50), 'color-mix(in srgb, #245ea8 40%, var(--surface))')
+})
 
 test('ランク表示付きTSVは境界に従うランクを独立列に出し、結合セルも全行へ展開する', () => {
   const resistances = [0, 1, 9, 10, 19, 20, 29, 30, 49, 50, 59, 60, 69, 70, 79, 80, 90, 91, 100]
