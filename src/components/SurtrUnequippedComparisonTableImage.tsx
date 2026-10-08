@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { getTableImageDimensions, parseTableImageAspect, type TableImageAspect } from '../lib/tableImageAspect'
-import { getSurtrUnequippedTableImageFilename, type SurtrUnequippedTableImageMetadata } from '../lib/surtrUnequippedTableImageFilename'
+import { getSurtrUnequippedTableImageFilename, getSurtrUnequippedTableImagePotentials, type SurtrUnequippedTableImageMetadata } from '../lib/surtrUnequippedTableImageFilename'
+import { getSurtrComparisonTargets, getSurtrComparisonBaseLabel, getSurtrUnequippedBaselines } from '../lib/surtrUnequippedComparison'
 import { getUnequippedMetricLabel, SurtrUnequippedComparisonTableContent, type SurtrUnequippedComparisonTableData } from './SurtrUnequippedComparisonTableContent'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './SurtrS3Page.css'
@@ -22,9 +23,11 @@ interface ImageProps extends SurtrUnequippedComparisonTableImageSnapshot {
 }
 
 const initialWidthFor = (snapshot: SurtrUnequippedComparisonTableData) => {
-  const targets = snapshot.series.filter(item => item.id !== 'none').length
+  const targets = getSurtrComparisonTargets(snapshot.series, snapshot.comparisonBase).length
+  const baselines = snapshot.comparisonBase === undefined || snapshot.comparisonBase === 'unequipped'
+    ? getSurtrUnequippedBaselines(snapshot.series, snapshot.baseline, snapshot.referenceSeries).length : 0
   const conditions = snapshot.blockingComparison === undefined ? 1 : 2
-  const columns = (snapshot.layout === 'combined' ? (snapshot.comparisonBase === 'previous' ? 1 : 2) + targets * 2 * conditions : 1 + targets * conditions)
+  const columns = (snapshot.layout === 'combined' ? 1 + baselines + targets * 2 * conditions : 1 + targets * conditions)
     + (snapshot.rankMode === 'merged' ? 1 : 0)
   return Math.max(640, columns * 150)
 }
@@ -84,10 +87,10 @@ export function SurtrUnequippedComparisonTableImage({ metadata, title, aspectRat
     return () => { cancelled = true; document.fonts.removeEventListener('loadingdone', measure) }
   }, [snapshotKey, initialWidth, aspectRatio, exporting, onLayout, onLayoutError])
 
-  return <figure ref={imageRef} className="surtr-unequipped-table-image" style={{ width: initialWidth }} aria-label={`スルト ${data.quantity === 'expected-damage' ? '余燼の総ダメージ期待値' : 'S3'} ${data.comparisonBase === 'previous' ? '前段階' : '未装備'}との比較表`}>
+  return <figure ref={imageRef} className="surtr-unequipped-table-image" style={{ width: initialWidth }} aria-label={`スルト ${data.quantity === 'expected-damage' ? '余燼の総ダメージ期待値' : 'S3'} ${getSurtrComparisonBaseLabel(data.comparisonBase ?? 'unequipped')}との比較表`}>
     <SurtrUnequippedComparisonTableContent {...data} title={title?.trim() || (data.quantity === 'expected-damage' ? undefined : SURTR_S3_COMPARISON_TABLE_IMAGE_TITLE)} footer={<div className="surtr-unequipped-table-image-conditions">
-      <span>{data.quantity === 'expected-damage' ? '総ダメージ期待値・' : ''}{getUnequippedMetricLabel(data.metric, data.comparisonBase, data.quantity)}・基準：{data.comparisonBase === 'previous' ? '1つ前の段階（Lv.1は未装備）' : '未装備'}</span>
-      <span>S3 {metadata.skillLabel}・昇進2 Lv.{metadata.level}・信頼度{metadata.trust}・潜在{metadata.potential}・{data.blockingComparison !== undefined ? '未ブロック／対象を自身でブロック' : metadata.blocking ? '対象を自身でブロック' : '未ブロック'}{data.quantity !== 'expected-damage' && `・${metadata.remnantActive ? '余燼中' : '余燼なし'}`}</span>
+      <span>{data.quantity === 'expected-damage' ? '総ダメージ期待値・' : ''}{getUnequippedMetricLabel(data.metric, data.comparisonBase, data.quantity)}・基準：{data.comparisonBase === 'previous' ? '1つ前の段階（Lv.1は未装備）' : getSurtrComparisonBaseLabel(data.comparisonBase ?? 'unequipped')}{data.comparisonBase?.startsWith('potential-') && '（同じMOD・段階）'}</span>
+      <span>S3 {metadata.skillLabel}・昇進2 Lv.{metadata.level}・信頼度{metadata.trust}・潜在{getSurtrUnequippedTableImagePotentials(metadata).join('・')}・{data.blockingComparison !== undefined ? '未ブロック／対象を自身でブロック' : metadata.blocking ? '対象を自身でブロック' : '未ブロック'}{data.quantity !== 'expected-damage' && `・${metadata.remnantActive ? '余燼中' : '余燼なし'}`}</span>
       {data.quantity === 'expected-damage' && metadata.remnantAssumptions && <span>残りCT一様・命中まで{metadata.remnantAssumptions.windup}s・CT{metadata.remnantAssumptions.ctCarry === 'time' ? '時間' : '割合'}維持・退場同時の命中{metadata.remnantAssumptions.includeRetreatHit ? 'を含む' : 'を除外'}</span>}
     </div>} />
   </figure>
@@ -141,7 +144,7 @@ export async function saveSurtrUnequippedComparisonTableImage({ snapshot, filena
   writeBlob?: (blob: Blob) => Promise<void>
 }): Promise<void> {
   tableAspect(aspectRatio)
-  if (!snapshot.series.some(item => item.id !== 'none') || snapshot.resistances.length === 0) {
+  if (getSurtrComparisonTargets(snapshot.series, snapshot.comparisonBase).length === 0 || snapshot.resistances.length === 0) {
     throw new Error('保存する比較表がありません。')
   }
   let layoutError: unknown = null

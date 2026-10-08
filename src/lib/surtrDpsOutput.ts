@@ -3,6 +3,9 @@ export type SurtrDpsLineStyle = 'solid' | 'dashed' | 'dotted'
 
 export interface SurtrDpsOutputSeries {
   id: string
+  /** Original module-stage identity, independent of the selected potential. */
+  moduleStageId?: string
+  potential?: number
   label: string
   color: string
   lineStyle?: SurtrDpsLineStyle

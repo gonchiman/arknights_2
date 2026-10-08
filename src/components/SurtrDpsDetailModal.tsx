@@ -28,7 +28,8 @@ export function SurtrDpsDetailModal({ snapshot, onClose }: { snapshot: SurtrDpsD
   if (!selected) return null
   const calculation = selected.calculation
   const { baseAttack: base, attackPipeline: attack, mitigation, artsFragilityMultiplier } = calculation
-  const baseline = snapshot.comparisonBase === 'previous' ? selected.baseline : snapshot.series.find(item => item.id === snapshot.baselineId)
+  const baseline = selected.baseline ?? (snapshot.comparisonBase === 'previous' || snapshot.comparisonBase?.startsWith('potential-')
+    ? undefined : snapshot.series.find(item => item.id === snapshot.baselineId))
   const intervalFormula = `${number(calculation.baseAttackTime)} × 100 ÷ ${number(calculation.appliedAttackSpeed)}`
   const remnantAttackSpeedBonus = calculation.remnantAttackSpeedBonus ?? 0
   const attackSpeedFormula = calculation.remnantActive

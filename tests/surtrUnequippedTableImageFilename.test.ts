@@ -429,3 +429,20 @@ test('ブロック条件比較でも指標・形式・画像比率を記録し�
   assert.ok(new TextEncoder().encode(long).length <= 240)
   assert.equal(long.isWellFormed(), true)
 })
+
+test('複数潜在の比較表画像名は潜在の組と基準を保持し、MOD段階名を重複させない', () => {
+  const captured = { ...options, metadata: { ...metadata, potentials: [6, 1, 6] },
+    series: [1, 6].flatMap(potential => [{ id: `none:pot${potential}`, moduleStageId: 'none', potential, label: `未装備 潜在${potential}` },
+      { id: `x:lv3:pot${potential}`, moduleStageId: 'x:lv3', potential, label: `MOD X Lv.3 潜在${potential}` }]) }
+  const before = structuredClone(captured)
+  for (const comparisonBase of ['unequipped', 'previous', 'potential-1', 'potential-6'] as const) {
+    const name = getSurtrUnequippedTableImageFilename({ ...captured, comparisonBase })
+    assert.match(name, /_潜在1・6_/)
+    assert.match(name, /_MODXLv\.3_/)
+    assert.doesNotMatch(name, /MODXLv\.3-MODXLv\.3|未装備潜在|:pot/)
+    assert.match(name, new RegExp(`^スルト_S3_${comparisonBase === 'unequipped' ? '未装備' : comparisonBase === 'previous' ? '前段階' : `潜在${comparisonBase.slice(-1)}`}比較表_`))
+  }
+  assert.notEqual(getSurtrUnequippedTableImageFilename(captured), getSurtrUnequippedTableImageFilename({ ...captured,
+    metadata: { ...metadata, potentials: [1] } }))
+  assert.deepEqual(captured, before)
+})

@@ -5,9 +5,13 @@ import { getSurtrUnequippedColorScaleBackground, getSurtrUnequippedColorScaleMax
 import {
   buildSurtrUnequippedComparisonSeries,
   formatSurtrUnequippedComparisonValue,
+  getSurtrComparisonBaseLabel,
+  getSurtrComparisonTargets,
   getSurtrPreviousStageId,
   getSurtrStageComparisonBaseline,
   getSurtrUnequippedComparisonTsv,
+  getSurtrUnequippedBaselines,
+  isSurtrUnequippedSeries,
   type SurtrUnequippedBlockingComparison,
 } from '../src/lib/surtrUnequippedComparison.ts'
 
@@ -32,6 +36,83 @@ test('余燼のTSVは期待総ダメージの値・基準名を使い、DPS表�
 function series(id: string, values: readonly [number, number | null][], label = id): SurtrDpsOutputSeries {
   return { id, label, color: '#3f7699', points: values.map(([x, value]) => ({ x, value })) }
 }
+
+function potentialSeries(stageId: string, potential: number, value: number | null, label = stageId): SurtrDpsOutputSeries {
+  return { ...series(`${stageId}:pot${potential}`, [[0, value]], `${label} 潜在${potential}`), moduleStageId: stageId, potential }
+}
+
+test('潜在比較は同潜在の未装備・前段階と固定潜在の同段階を厳密に使う', () => {
+  const none1 = potentialSeries('none', 1, 100, '未装備')
+  const none6 = potentialSeries('none', 6, 140, '未装備')
+  const x2p1 = potentialSeries('x:lv2', 1, 120, 'MOD X Lv.2')
+  const x2p6 = potentialSeries('x:lv2', 6, 180, 'MOD X Lv.2')
+  const targets = [potentialSeries('x:lv3', 1, 150, 'MOD X Lv.3'), potentialSeries('x:lv3', 6, 210, 'MOD X Lv.3')]
+  const references = [none6, x2p6, x2p1, none1, potentialSeries('x:lv3', 4, 175, 'MOD X Lv.3')]
+  assert.equal(getSurtrStageComparisonBaseline(targets[1], none1, 'unequipped', references), none6)
+  assert.equal(getSurtrStageComparisonBaseline(targets[1], none1, 'previous', references), x2p6)
+  assert.equal(getSurtrStageComparisonBaseline(targets[0], none1, 'potential-4', references), references[4])
+  assert.equal(getSurtrStageComparisonBaseline(targets[1], none1, 'unequipped', [none1]), null)
+  assert.equal(getSurtrStageComparisonBaseline(targets[1], none1, 'previous', [x2p1]), null)
+  assert.equal(getSurtrStageComparisonBaseline(targets[1], none1, 'potential-4', [potentialSeries('y:lv3', 4, 999)]), null)
+  assert.deepEqual(buildSurtrUnequippedComparisonSeries(targets, none1, 'difference', 'unequipped', references).map(item => item.points[0].value), [50, 70])
+  assert.deepEqual(buildSurtrUnequippedComparisonSeries(targets, none1, 'difference', 'previous', references).map(item => item.points[0].value), [30, 30])
+  assert.deepEqual(buildSurtrUnequippedComparisonSeries(targets, none1, 'difference', 'potential-4', references).map(item => item.points[0].value), [-25, 35])
+  assert.deepEqual(getSurtrUnequippedBaselines(targets, none1, references), [none1, none6])
+  assert.deepEqual(getSurtrUnequippedBaselines([targets[1], targets[0]], none1, references), [none6, none1])
+  assert.deepEqual(getSurtrUnequippedBaselines([targets[1]], none1, [none1]), [])
+  assert.equal(getSurtrComparisonBaseLabel('potential-4'), '潜在4')
+  assert.equal(getSurtrComparisonBaseLabel('previous'), '前段階')
+  assert.equal(getSurtrComparisonBaseLabel('unequipped'), '未装備')
+})
+
+test('潜在の未装備は固定潜在比較に限り表示対象になり、メタデータ省略時も複合IDを使う', () => {
+  const none1 = potentialSeries('none', 1, 100, '未装備')
+  const none6 = potentialSeries('none', 6, 125, '未装備')
+  const x6 = potentialSeries('x:lv1', 6, 150)
+  const selected = [none6, x6]
+  assert.ok(isSurtrUnequippedSeries(none6))
+  assert.ok(isSurtrUnequippedSeries({ id: 'none:pot6' }))
+  assert.ok(!isSurtrUnequippedSeries(x6))
+  assert.deepEqual(getSurtrComparisonTargets(selected, 'unequipped'), [x6])
+  assert.deepEqual(getSurtrComparisonTargets(selected, 'previous'), [x6])
+  assert.deepEqual(getSurtrComparisonTargets(selected, 'potential-1'), selected)
+  const comparison = buildSurtrUnequippedComparisonSeries(selected, none6, 'ratio', 'potential-1', [none1, potentialSeries('x:lv1', 1, 120)])
+  assert.deepEqual(comparison.map(item => item.points[0].value), [125, 125])
+  assert.equal(getSurtrStageComparisonBaseline({ id: 'x:lv1:pot6' }, none1, 'previous', [none6]), none6)
+  assert.deepEqual(buildSurtrUnequippedComparisonSeries([none6], none1, 'difference', 'potential-6', [none6])[0].points[0].value, 0)
+})
+
+test('複数潜在のTSVは未装備を潜在別に一度だけ出し、両条件の独立基準で比較する', () => {
+  const none1 = potentialSeries('none', 1, 100, '未装備')
+  const none6 = potentialSeries('none', 6, 150, '未装備')
+  const selected = [potentialSeries('x:lv3', 1, 999, 'MOD X Lv.3'), potentialSeries('x:lv3', 6, 999, 'MOD X Lv.3')]
+  const conditions = [
+    { blocking: false, baseline: none1, referenceSeries: [none1, none6], series: [potentialSeries('x:lv3', 1, 125), potentialSeries('x:lv3', 6, 180)] },
+    { blocking: true, baseline: none1, referenceSeries: [none1, none6], series: [potentialSeries('x:lv3', 1, 135), potentialSeries('x:lv3', 6, 200)] },
+  ]
+  const module = getSurtrUnequippedComparisonTsv(selected, none1, [0], 0, 'difference', 'combined', conditions,
+    'none', 'module', 'unequipped', [none1, none6]).split('\r\n').map(row => row.split('\t'))
+  assert.deepEqual(module[0].slice(0, 3), ['術耐性', '未装備 潜在1 DPS', '未装備 潜在6 DPS'])
+  assert.deepEqual(module[1], ['0', '100', '150', '125', '+25', '135', '+35', '180', '+30', '200', '+50'])
+  const blocking = getSurtrUnequippedComparisonTsv(selected, none1, [0], 0, 'difference', 'combined', conditions,
+    'none', 'blocking', 'unequipped', [none1, none6]).split('\r\n').map(row => row.split('\t'))
+  assert.deepEqual(blocking[0].slice(0, 3), module[0].slice(0, 3))
+  assert.deepEqual(blocking[1], ['0', '100', '150', '125', '+25', '180', '+30', '135', '+35', '200', '+50'])
+  const missingReferences = [{ ...conditions[0], referenceSeries: [none1] }, { ...conditions[1], referenceSeries: [] }]
+  assert.deepEqual(getSurtrUnequippedComparisonTsv(selected, none1, [0], 0, 'difference', 'comparison', missingReferences,
+    'none', 'module', 'unequipped', [none1, none6]).split('\r\n')[1].split('\t'), ['0', '+25', '+35', '—', '—'])
+})
+
+test('固定潜在TSVは選択した未装備を通常の対象列へ入れ、同段階の基準名を示す', () => {
+  const none1 = potentialSeries('none', 1, 100, '未装備')
+  const none6 = potentialSeries('none', 6, 140, '未装備')
+  const x6 = potentialSeries('x:lv3', 6, 200, 'MOD X Lv.3')
+  const output = getSurtrUnequippedComparisonTsv([none6, x6], none6, [0], 0, 'difference', 'combined', undefined,
+    'none', 'module', 'potential-1', [none1, potentialSeries('x:lv3', 1, 150, 'MOD X Lv.3')]).split('\r\n').map(row => row.split('\t'))
+  assert.deepEqual(output[0], ['術耐性', '未装備 潜在6 DPS', '未装備 潜在6 潜在1とのDPS差（基準：未装備 潜在1）',
+    'MOD X Lv.3 潜在6 DPS', 'MOD X Lv.3 潜在6 潜在1とのDPS差（基準：MOD X Lv.3 潜在1）'])
+  assert.deepEqual(output[1], ['0', '140', '+40', '200', '+50'])
+})
 
 test('カラースケールは同じ基準からの差を線形に色付けし、比率100%を中立にする', () => {
   for (const metric of ['difference', 'percent', 'ratio'] as const) {

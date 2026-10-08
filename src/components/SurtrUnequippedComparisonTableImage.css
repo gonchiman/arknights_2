@@ -16,6 +16,8 @@
 .surtr-unequipped-table-image .surtr-s3-table-wrap { overflow: visible; }
 .surtr-unequipped-table-image table { box-sizing: border-box; width: 100%; min-width: 0; font-size: 14px; }
 .surtr-unequipped-table-image th, .surtr-unequipped-table-image td { white-space: normal; overflow-wrap: anywhere; padding: 12px; }
+.surtr-unequipped-table-image .surtr-s3-unequipped-table { min-width: 0; }
+.surtr-unequipped-table-image .surtr-s3-unequipped-table tbody td { white-space: nowrap; overflow-wrap: normal; }
 .surtr-unequipped-table-image .surtr-s3-unequipped-table thead tr:first-child > th:first-child { min-width: 0; }
 .surtr-unequipped-table-image .surtr-s3-unequipped-table thead .surtr-s3-table-column-headers > th:first-child:not(.surtr-s3-rank-cell) { min-width: 0; text-align: left; }
 .surtr-unequipped-table-image .surtr-s3-table-title-row { height: 44px; }

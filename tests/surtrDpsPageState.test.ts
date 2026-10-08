@@ -11,6 +11,30 @@ function memoryStorage() {
   return { values, getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value) } }
 }
 
+test('potential comparison migrates from the common setting and keeps explicit selections independent', () => {
+  assert.equal(createDefaultSurtrDpsPageState().unequippedPotentials, null)
+  assert.equal(parseSurtrDpsPageState({ settings: { potential: 6 } }).unequippedPotentials, null)
+  const storage = memoryStorage()
+  const state = { ...createDefaultSurtrDpsPageState(), unequippedPotentials: [1, 4, 6],
+    unequippedComparisonBase: 'potential-1' as const, settings: { ...createDefaultSurtrDpsPageState().settings, potential: 5 } }
+  writeSurtrDpsPageState(state, storage)
+  assert.deepEqual(readSurtrDpsPageState(storage), state)
+  assert.deepEqual(readSurtrDpsPageState(storage).unequippedPotentials, [1, 4, 6])
+  assert.equal(readSurtrDpsPageState(storage).settings.potential, 5)
+  for (const potential of [1, 2, 3, 4, 5, 6]) {
+    const restored = parseSurtrDpsPageState({ unequippedComparisonBase: `potential-${potential}` })
+    assert.equal(restored.unequippedComparisonBase, `potential-${potential}`)
+  }
+  assert.deepEqual(parseSurtrDpsPageState({ unequippedPotentials: [6, 1, 6, 4, '2', 0, 7, 1.5] }).unequippedPotentials, [1, 4, 6])
+  assert.deepEqual(parseSurtrDpsPageState({ unequippedPotentials: [] }).unequippedPotentials, [])
+  for (const invalid of [undefined, null, 1, '1', [0, 7, '1', 2.5]]) {
+    assert.equal(parseSurtrDpsPageState({ unequippedPotentials: invalid }).unequippedPotentials, null)
+  }
+  for (const base of ['potential-0', 'potential-7', 'potential-1.5', 'potential-01']) {
+    assert.equal(parseSurtrDpsPageState({ unequippedComparisonBase: base }).unequippedComparisonBase, 'unequipped')
+  }
+})
+
 test('DPS settings survive a route remount or reload through session storage', () => {
   const storage = memoryStorage()
   const state = createDefaultSurtrDpsPageState()

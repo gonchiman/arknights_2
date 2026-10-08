@@ -12,6 +12,7 @@ let Image
 let ImagePreview
 let saveImage
 let DetailModal
+let comparisonHelpers
 
 before(async () => {
   server = await createServer({
@@ -27,6 +28,7 @@ before(async () => {
   ;({ SurtrUnequippedComparisonTableImage: Image, SurtrUnequippedComparisonTableImagePreview: ImagePreview, saveSurtrUnequippedComparisonTableImage: saveImage }
     = await server.ssrLoadModule('/src/components/SurtrUnequippedComparisonTableImage.tsx'))
   moduleColors = await server.ssrLoadModule('/src/lib/moduleColors.ts')
+  comparisonHelpers = await server.ssrLoadModule('/src/lib/surtrUnequippedComparison.ts')
   ;({ SurtrDpsDetailModal: DetailModal } = await server.ssrLoadModule('/src/components/SurtrDpsDetailModal.tsx'))
 })
 
@@ -977,4 +979,138 @@ test('an active Remnant previous-stage comparison uses the preceding stage speed
   assert.deepEqual(flow.find(row => row[0] === '基準：MOD Y Lv.2'), ['基準：MOD Y Lv.2', '同じ術耐性・比較条件でのDPS', '3,840'])
   assert.deepEqual(flow.find(row => row[0] === '基準に対する比率'), ['基準に対する比率', '4,160 ÷ 3,840 × 100', '108.333333%'])
   assert.deepEqual(flow.at(-1), ['表の表示', '小数点以下2桁に丸める', '108.33%'])
+})
+
+const potentialSeries = (stage, potential, value) => ({
+  id: `${stage}:pot${potential}`, moduleStageId: stage, potential,
+  label: `${stage === 'none' ? '未装備' : stage === 'module-x:lv2' ? 'MOD X Lv.2' : stage === 'module-x:lv1' ? 'MOD X Lv.1' : stage === 'module-y:lv3' ? 'MOD Y Lv.3' : 'MOD Y Lv.2'} 潜在${potential}`,
+  color: potential === 1 ? '#aabbcc' : '#223344',
+  points: [{ x: 0, value }, { x: 60, value: value / 2 }],
+})
+const potentialNone = [potentialSeries('none', 1, 100), potentialSeries('none', 6, 120)]
+const potentialModules = [potentialSeries('module-x:lv2', 1, 150), potentialSeries('module-x:lv2', 6, 200),
+  potentialSeries('module-y:lv3', 1, 125), potentialSeries('module-y:lv3', 6, 180)]
+const potentialReferences = [...potentialNone, ...potentialModules,
+  potentialSeries('module-x:lv1', 1, 130), potentialSeries('module-x:lv1', 6, 160),
+  potentialSeries('module-y:lv2', 1, 110), potentialSeries('module-y:lv2', 6, 140)]
+const potentialBlocked = potentialReferences.map(item => ({ ...item,
+  points: item.points.map(point => ({ ...point, value: point.value + (item.moduleStageId === 'none' ? 0 : item.potential === 1 ? 11 : 23) })),
+}))
+const potentialGroups = [
+  { blocking: false, baseline: potentialNone[0], series: [...potentialNone, ...potentialModules], referenceSeries: potentialReferences },
+  { blocking: true, baseline: potentialBlocked[0], series: potentialBlocked.slice(0, 6), referenceSeries: potentialBlocked },
+]
+
+const expandHeaders = markup => {
+  const pending = new Map()
+  return sections(markup, 'thead').flatMap(header => [...header.matchAll(/<tr(?:\s[^>]*)?>([\s\S]*?)<\/tr>/g)])
+    .filter(row => !row[1].includes('surtr-s3-table-title'))
+    .map(row => {
+      const values = []
+      for (const [column, entry] of pending) {
+        values[column] = entry.value
+        if (entry.remaining === 1) pending.delete(column)
+        else entry.remaining -= 1
+      }
+      let column = 0
+      for (const cell of row[1].matchAll(/<th\b([^>]*)>([\s\S]*?)<\/th>/g)) {
+        while (values[column] !== undefined) column += 1
+        const colSpan = Number(cell[1].match(/colspan="(\d+)"/i)?.[1] ?? 1)
+        const rowSpan = Number(cell[1].match(/rowspan="(\d+)"/i)?.[1] ?? 1)
+        const value = text(cell[2])
+        for (let index = 0; index < colSpan; index += 1) {
+          values[column] = value
+          if (rowSpan > 1) pending.set(column, { value, remaining: rowSpan - 1 })
+          column += 1
+        }
+      }
+      return values
+    })
+}
+
+test('multiple potentials retain independent baselines, exact comparisons and the same complete table in TSV and images', () => {
+  const format = (value, signed, percent) => {
+    const number = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1,
+      signDisplay: signed ? 'exceptZero' : 'auto' }).format(Number(value.toFixed(1)))
+    return `${number}${percent ? '%' : ''}`
+  }
+  for (const comparisonBase of ['unequipped', 'previous', 'potential-1']) {
+    for (const metric of ['difference', 'ratio', 'percent']) {
+      for (const layout of ['combined', 'comparison']) {
+        for (const columnOrder of ['module', 'blocking']) {
+          const selected = comparisonBase === 'potential-1' ? [...potentialNone, ...potentialModules] : potentialModules
+          const data = { ...props, series: selected, baseline: potentialNone[0], referenceSeries: potentialReferences,
+            resistances: [0, 60], comparisonBase, metric, layout, columnOrder, blockingComparison: potentialGroups,
+            metadata: { ...metadata, potentials: [1, 6] } }
+          const cells = columnOrder === 'blocking'
+            ? potentialGroups.flatMap(group => selected.map(item => ({ item, group })))
+            : selected.flatMap(item => potentialGroups.map(group => ({ item, group })))
+          const expected = data.resistances.map(resistance => [String(resistance),
+            ...(comparisonBase === 'unequipped' && layout === 'combined'
+              ? potentialNone.map(item => format(item.points.find(point => point.x === resistance).value, false, false)) : []),
+            ...cells.flatMap(({ item, group }) => {
+              const raw = group.series.find(candidate => candidate.id === item.id).points.find(point => point.x === resistance).value
+              const stage = comparisonBase === 'unequipped' ? 'none' : comparisonBase === 'previous'
+                ? item.moduleStageId === 'module-x:lv2' ? 'module-x:lv1' : 'module-y:lv2' : item.moduleStageId
+              const reference = group.referenceSeries.find(candidate => candidate.moduleStageId === stage
+                && candidate.potential === (comparisonBase === 'potential-1' ? 1 : item.potential))
+                .points.find(point => point.x === resistance).value
+              const value = metric === 'difference' ? raw - reference : metric === 'ratio'
+                ? raw / reference * 100 : (raw / reference - 1) * 100
+              return [...(layout === 'combined' ? [format(raw, false, false)] : []), format(value, metric !== 'ratio', metric !== 'difference')]
+            }),
+          ])
+          const live = render(data)
+          assert.deepEqual(sectionRows(live, 'tbody'), expected)
+          const tsv = comparisonHelpers.getSurtrUnequippedComparisonTsv(data.series, data.baseline, data.resistances, data.precision,
+            metric, layout, potentialGroups, 'none', columnOrder, comparisonBase, potentialReferences)
+          assert.deepEqual(tsv.split('\r\n').slice(1).map(row => row.split('\t')), expected.map(row => row.map(value => value.replaceAll(',', ''))))
+          const saved = renderToStaticMarkup(createElement(Image, data))
+          assert.deepEqual(sectionRows(saved, 'tbody'), expected)
+          assert.deepEqual(expandHeaders(saved), expandHeaders(live))
+          assert.ok(expandHeaders(live).every(row => row.length === expected[0].length && row.every(value => value !== undefined)),
+            JSON.stringify({ comparisonBase, metric, layout, columnOrder, width: expected[0].length, headers: expandHeaders(live) }))
+          assert.match(saved, /潜在1・6/)
+          assert.match(saved, /未ブロック／対象を自身でブロック/)
+          assert.match(saved, new RegExp(`colspan="${expected[0].length}"`, 'i'))
+          for (const item of selected) assert.ok(saved.includes(`background-color:${item.color}`))
+          if (comparisonBase === 'potential-1') assert.match(saved, /基準：潜在1（同じMOD・段階）/)
+        }
+      }
+    }
+  }
+})
+
+test('multiple-potential headers group MOD stages above potentials and blocking conditions in both orders', () => {
+  const data = { series: potentialModules, baseline: potentialNone[0], referenceSeries: potentialReferences,
+    resistances: [0], blockingComparison: potentialGroups }
+  const moduleFirst = render(data)
+  assert.deepEqual(sectionRows(moduleFirst, 'thead')[0], ['術耐性', '未装備', 'MOD X Lv.2', 'MOD Y Lv.3'])
+  assert.deepEqual(sectionRows(moduleFirst, 'thead')[1], ['潜在1DPS・基準', '潜在6DPS・基準', '潜在1', '潜在6', '潜在1', '潜在6'])
+  assert.deepEqual(sectionRows(moduleFirst, 'thead')[2], Array.from({ length: 4 }, () => ['未ブロック', '対象を自身でブロック']).flat())
+  const blockingFirst = render({ ...data, columnOrder: 'blocking' })
+  assert.deepEqual(sectionRows(blockingFirst, 'thead')[0], ['術耐性', '未装備', '未ブロック', '対象を自身でブロック'])
+  assert.deepEqual(sectionRows(blockingFirst, 'thead')[1], ['潜在1DPS・基準', '潜在6DPS・基準', 'MOD X Lv.2', 'MOD Y Lv.3', 'MOD X Lv.2', 'MOD Y Lv.3'])
+  assert.deepEqual(sectionRows(blockingFirst, 'thead')[2], ['潜在1', '潜在6', '潜在1', '潜在6', '潜在1', '潜在6', '潜在1', '潜在6'])
+})
+
+test('a missing fixed-potential reference stays empty in its own blocking condition and never borrows other data', () => {
+  const groups = potentialGroups.map(group => group.blocking ? { ...group,
+    referenceSeries: group.referenceSeries.filter(item => item.id !== 'module-x:lv2:pot1') } : group)
+  const data = { series: [potentialModules[1]], baseline: potentialNone[0], referenceSeries: potentialReferences,
+    comparisonBase: 'potential-1', resistances: [0], blockingComparison: groups, metric: 'ratio' }
+  const markup = render(data)
+  assert.deepEqual(sectionRows(markup, 'tbody'), [['0', '200.0', '133.3%', '223.0', '—']])
+  assert.match(markup, /基準：MOD X Lv.2 潜在1/)
+})
+
+test('a single explicit potential uses the existing header depth with accurate captured potential labels', () => {
+  const data = { series: [potentialModules[1]], baseline: potentialNone[1], referenceSeries: potentialReferences,
+    resistances: [0], metadata: { ...metadata, potential: 1, potentials: [6] } }
+  const live = render(data)
+  assert.deepEqual(sectionRows(live, 'thead'), [['術耐性', '未装備 潜在6DPS・基準', 'MOD X Lv.2 潜在6'], ['DPS', 'DPS差']])
+  assert.deepEqual(sectionRows(live, 'tbody'), [['0', '120.0', '200.0', '+80.0']])
+  const image = renderToStaticMarkup(createElement(Image, data))
+  assert.match(image, /信頼度100・潜在6・/)
+  assert.doesNotMatch(image, /信頼度100・潜在1・/)
 })

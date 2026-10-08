@@ -1,6 +1,7 @@
 import { createChartImageFilename, formatChartFilenameValues, withChartImageAspect } from './chartImageFilename.ts'
 import type { EnemyHeatmapColorScale } from './enemyHeatmapColor.ts'
 import type { SurtrRemnantAttackAssumptions } from './surtrRemnantAttacks.ts'
+import { getSurtrComparisonBaseLabel } from './surtrUnequippedComparison.ts'
 import type { SurtrUnequippedColumnOrder, SurtrUnequippedComparisonBase, SurtrUnequippedComparisonQuantity, SurtrUnequippedLayout, SurtrUnequippedMetric, SurtrUnequippedRankMode } from './surtrUnequippedComparison.ts'
 
 export interface SurtrUnequippedTableImageMetadata {
@@ -8,6 +9,7 @@ export interface SurtrUnequippedTableImageMetadata {
   level: number
   trust: number
   potential: number
+  potentials?: readonly number[]
   blocking: boolean
   remnantAssumptions?: SurtrRemnantAttackAssumptions
   remnantActive?: boolean
@@ -16,7 +18,7 @@ export interface SurtrUnequippedTableImageMetadata {
 /** Name the captured table settings, independently of the panel 04 chart settings. */
 export function getSurtrUnequippedTableImageFilename(options: {
   metadata: SurtrUnequippedTableImageMetadata
-  series: readonly { id: string; label: string }[]
+  series: readonly { id: string; label: string; moduleStageId?: string; potential?: number }[]
   resistances: readonly number[]
   metric: SurtrUnequippedMetric
   layout: SurtrUnequippedLayout
@@ -30,10 +32,12 @@ export function getSurtrUnequippedTableImageFilename(options: {
   quantity?: SurtrUnequippedComparisonQuantity
 }, aspectRatio?: number): string {
   const { metadata, series, resistances, metric, layout, precision, blockingComparison } = options
-  const modules = series.filter(item => item.id !== 'none').map(item => item.label)
+  const modules = [...new Set(series.filter(item => (item.moduleStageId ?? item.id.replace(/:pot[1-6]$/, '')) !== 'none')
+    .map(item => item.label.replace(/\s*潜在[1-6]\s*$/, '')))]
   const digits = Number.isInteger(precision) && precision >= 0 && precision <= 3 ? precision : 0
   const expectedDamage = options.quantity === 'expected-damage'
-  const baseLabel = options.comparisonBase === 'previous' ? '前段階比較表' : '未装備比較表'
+  const baseLabel = `${getSurtrComparisonBaseLabel(options.comparisonBase ?? 'unequipped')}比較表`
+  const potentials = getSurtrUnequippedTableImagePotentials(metadata)
   const metricLabel = metric === 'difference' ? expectedDamage ? 'ダメージ差' : 'DPS差' : metric === 'ratio' ? '比率' : '増加率'
   const layoutLabel = layout === 'combined' ? expectedDamage ? '期待値＋比較値' : 'DPS＋比較値' : '比較値のみ'
   const assumptions = expectedDamage ? metadata.remnantAssumptions : undefined
@@ -50,7 +54,7 @@ export function getSurtrUnequippedTableImageFilename(options: {
     ...(options.colorScale ? [options.colorScaleMode === 'SQRT' ? 'カラースケール平方根' : 'カラースケール'] : []),
     `昇進2Lv${metadata.level}`,
     `信頼${metadata.trust}`,
-    `潜在${metadata.potential}`,
+    `潜在${potentials.join('・')}`,
     ...(!expectedDamage && metadata.remnantActive ? ['余燼中'] : []),
     blockingComparison !== undefined ? 'ブロック条件比較' : metadata.blocking ? 'ブロック中' : '未ブロック',
     ...(blockingComparison !== undefined && options.columnOrder === 'blocking' ? ['ブロック条件別'] : []),
@@ -60,4 +64,8 @@ export function getSurtrUnequippedTableImageFilename(options: {
     ...(options.rankMode === 'inline' ? ['ランク併記'] : options.rankMode === 'merged' ? ['ランク結合'] : []),
   ])
   return withChartImageAspect(filename, aspectRatio)
+}
+
+export function getSurtrUnequippedTableImagePotentials(metadata: SurtrUnequippedTableImageMetadata): readonly number[] {
+  return metadata.potentials?.length ? [...new Set(metadata.potentials)].sort((a, b) => a - b) : [metadata.potential]
 }

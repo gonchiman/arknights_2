@@ -4,6 +4,7 @@ import { getSurtrDpsResistanceRating } from '../lib/surtrDpsResistance'
 import type { EnemyHeatmapColorScale } from '../lib/enemyHeatmapColor'
 import { getSurtrUnequippedColorScaleBackground, getSurtrUnequippedColorScaleMaximum } from '../lib/surtrUnequippedColorScale'
 import { buildSurtrUnequippedComparisonSeries, formatSurtrUnequippedComparisonValue, getSurtrUnequippedColumns, getSurtrStageComparisonBaseline,
+  getSurtrComparisonTargets, getSurtrComparisonBaseLabel, getSurtrUnequippedBaselines,
   type SurtrUnequippedBlockingComparison, type SurtrUnequippedColumnOrder, type SurtrUnequippedLayout, type SurtrUnequippedMetric, type SurtrUnequippedRankMode, type SurtrUnequippedComparisonBase, type SurtrUnequippedComparisonQuantity } from '../lib/surtrUnequippedComparison'
 
 export interface SurtrUnequippedComparisonTableData {
@@ -24,7 +25,7 @@ export interface SurtrUnequippedComparisonTableData {
 }
 
 export const getUnequippedMetricLabel = (metric: SurtrUnequippedMetric, comparisonBase: SurtrUnequippedComparisonBase = 'unequipped', quantity: SurtrUnequippedComparisonQuantity = 'dps') =>
-  metric === 'difference' ? quantity === 'expected-damage' ? 'ダメージ差' : 'DPS差' : metric === 'ratio' ? `比率（${comparisonBase === 'previous' ? '前段階' : '未装備'}＝100%）` : '増加率（%）'
+  metric === 'difference' ? quantity === 'expected-damage' ? 'ダメージ差' : 'DPS差' : metric === 'ratio' ? `比率（${getSurtrComparisonBaseLabel(comparisonBase)}＝100%）` : '増加率（%）'
 
 export function SurtrUnequippedComparisonTableContent({ series, baseline, resistances, precision, metric, layout, rankMode = 'none', columnOrder = 'module', colorScale = false, colorScaleMode = 'LINEAR', comparisonBase = 'unequipped', quantity = 'dps', referenceSeries, blockingComparison,
   selectedResistance, onOpenDetail, title, footer }: SurtrUnequippedComparisonTableData & {
@@ -33,7 +34,9 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
   title?: string
   footer?: ReactNode
 }) {
-  const targets = useMemo(() => series.filter(item => item.id !== 'none'), [series])
+  const targets = useMemo(() => getSurtrComparisonTargets(series, comparisonBase), [series, comparisonBase])
+  const baselines = useMemo(() => getSurtrUnequippedBaselines(series, baseline, referenceSeries), [series, baseline, referenceSeries])
+  const comparePotentials = new Set(targets.map(seriesPotential).filter(value => value !== undefined)).size > 1
   const compareBlocking = blockingComparison !== undefined
   const blockingFirst = compareBlocking && columnOrder === 'blocking'
   const conditions = [false, true] as const
@@ -55,7 +58,7 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
   const colorScaleMaximum = useMemo(() => colorScale ? getSurtrUnequippedColorScaleMaximum(
     columns.flatMap(column => resistances.map(resistance => column.comparison?.get(resistance))), metric,
   ) : 0, [columns, resistances, metric, colorScale])
-  const baselineValues = useMemo(() => new Map(baseline.points.map(point => [point.x, point.value])), [baseline])
+  const baselineValues = useMemo(() => baselines.map(item => new Map(item.points.map(point => [point.x, point.value]))), [baselines])
   const resistanceRows = useMemo(() => {
     const rows = resistances.map(resistance => ({ resistance, rank: getSurtrDpsResistanceRating(resistance), rankRowSpan: 1 }))
     if (rankMode !== 'merged') return rows
@@ -81,19 +84,22 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
   const quantityLabel = quantity === 'expected-damage' ? '総ダメージ期待値' : 'DPS'
   const combined = layout === 'combined'
   const showBaseline = combined && comparisonBase === 'unequipped'
-  const headerRows = (combined ? 2 : 1) + (compareBlocking ? 1 : 0)
+  const headerRows = (combined ? 2 : 1) + (compareBlocking ? 1 : 0) + (comparePotentials ? 1 : 0)
   const moduleColumns = (combined ? 2 : 1) * (compareBlocking ? 2 : 1)
   const mergedRanks = rankMode === 'merged'
-  const columnCount = 1 + (mergedRanks ? 1 : 0) + (showBaseline ? 1 : 0) + targets.length * moduleColumns
+  const columnCount = 1 + (mergedRanks ? 1 : 0) + (showBaseline ? baselines.length : 0) + targets.length * moduleColumns
   const resistanceWidth = rankMode === 'inline' ? 112 : 80
-  const minimumWidth = resistanceWidth + (mergedRanks ? 64 : 0) + (showBaseline ? 96 : 0) + targets.length * moduleColumns * (combined && quantity === 'dps' ? precision > 1 ? 88 : 76 : 128)
+  const numericWidth = combined && quantity === 'dps' ? precision > 1 ? 112 : 96 : 128
+  const minimumWidth = resistanceWidth + (mergedRanks ? 64 : 0) + (showBaseline ? baselines.length * 112 : 0) + targets.length * moduleColumns * numericWidth
+  const stageHeaders = groupAdjacent(columns, column => `${blockingFirst ? `${column.blocking}:` : ''}${seriesStage(column.item)}`)
+  const potentialHeaders = groupAdjacent(columns, column => `${blockingFirst ? `${column.blocking}:` : ''}${column.seriesId}`)
   return <div className={`surtr-s3-table-wrap ${onOpenDetail ? 'surtr-s3-result-table' : ''}`}><table
-    className={`surtr-s3-table surtr-s3-unequipped-table${compareBlocking ? ' surtr-s3-equal-blocking-columns' : ''}${rankMode === 'inline' ? ' surtr-s3-rank-inline' : ''}${colorScale ? ' surtr-s3-color-scale' : ''}`}
-    style={compareBlocking ? { '--surtr-unequipped-min-width': `${minimumWidth}px`, '--surtr-unequipped-resistance-width': `${resistanceWidth}px` } as CSSProperties : undefined}
-    aria-label={`術耐性ごとの${comparisonBase === 'previous' ? '前段階' : '未装備'}との比較：${quantity === 'expected-damage' ? '総ダメージ期待値・' : ''}${combined ? `${quantityLabel}＋` : ''}${metricLabel}`}>
+    className={`surtr-s3-table surtr-s3-unequipped-table${compareBlocking ? ' surtr-s3-equal-blocking-columns' : ''}${comparePotentials ? ' surtr-s3-potential-columns' : ''}${rankMode === 'inline' ? ' surtr-s3-rank-inline' : ''}${colorScale ? ' surtr-s3-color-scale' : ''}`}
+    style={compareBlocking || comparePotentials ? { '--surtr-unequipped-min-width': `${minimumWidth}px`, '--surtr-unequipped-resistance-width': `${resistanceWidth}px`, '--surtr-unequipped-numeric-width': `${numericWidth}px` } as CSSProperties : undefined}
+    aria-label={`術耐性ごとの${getSurtrComparisonBaseLabel(comparisonBase)}との比較：${quantity === 'expected-damage' ? '総ダメージ期待値・' : ''}${combined ? `${quantityLabel}＋` : ''}${metricLabel}`}>
     {mergedRanks && <colgroup><col className="surtr-s3-unequipped-rank-column" /></colgroup>}
     {compareBlocking ? <colgroup><col className="surtr-s3-unequipped-resistance-column" /></colgroup> : <colgroup span={1} />}
-    {showBaseline && (compareBlocking ? <colgroup><col className="surtr-s3-unequipped-baseline-column" /></colgroup> : <colgroup span={1} />)}
+    {showBaseline && baselines.map(item => compareBlocking || comparePotentials ? <colgroup key={item.id}><col className="surtr-s3-unequipped-baseline-column" /></colgroup> : <colgroup key={item.id} span={1} />)}
     {blockingFirst ? conditions.map(blocking => <colgroup key={String(blocking)}>
       {Array.from({ length: targets.length * (combined ? 2 : 1) }, (_, index) => <col key={index} />)}
     </colgroup>) : targets.map(item => <colgroup key={item.id} span={compareBlocking ? undefined : moduleColumns}>
@@ -102,16 +108,24 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
     <thead>{title && <tr className="surtr-s3-table-title-row"><th className="surtr-s3-table-title" colSpan={columnCount}>{title}</th></tr>}<tr className="surtr-s3-table-column-headers">
       {mergedRanks && <th className="surtr-s3-rank-cell" scope="col" rowSpan={headerRows}>ランク</th>}
       <th scope="col" rowSpan={headerRows}>術耐性</th>
-      {showBaseline && <th scope="col" rowSpan={headerRows}><span className="surtr-s3-column-label"><i style={{ backgroundColor: baseline.color }} />未装備</span>
-        <span className="surtr-s3-baseline-label">{quantityLabel}・基準</span></th>}
+      {showBaseline && (comparePotentials ? <th scope="colgroup" colSpan={baselines.length}>未装備</th> : baselines.map(item => <th key={item.id} scope="col" rowSpan={headerRows}><span className="surtr-s3-column-label"><i style={{ backgroundColor: item.color }} />{item.label}</span>
+        <span className="surtr-s3-baseline-label">{quantityLabel}・基準</span></th>))}
       {blockingFirst ? conditions.map(blocking => <BlockingHeader key={String(blocking)} blocking={blocking} colSpan={targets.length * (combined ? 2 : 1)} />)
-        : targets.map(item => <ModuleHeader key={item.id} item={item} colSpan={moduleColumns}
-          referenceLabel={comparisonBase === 'previous' ? columns.find(column => column.seriesId === item.id)?.reference?.label ?? '前段階不明' : undefined} />)}
-    </tr>{compareBlocking && <tr>{columns.map(column => blockingFirst
+        : comparePotentials ? stageHeaders.map(group => <StageHeader key={group.key} item={group.first.item} colSpan={group.count * (combined ? 2 : 1)} />)
+          : targets.map(item => <ModuleHeader key={item.id} item={item} colSpan={moduleColumns}
+          referenceLabel={comparisonBase !== 'unequipped' ? columns.find(column => column.seriesId === item.id)?.reference?.label ?? `${getSurtrComparisonBaseLabel(comparisonBase)}不明` : undefined} />)}
+    </tr>{comparePotentials && <tr>
+      {showBaseline && baselines.map(item => <th key={item.id} scope="col" rowSpan={headerRows - 1}><span className="surtr-s3-column-label"><i style={{ backgroundColor: item.color }} />潜在{seriesPotential(item)}</span><span className="surtr-s3-baseline-label">{quantityLabel}・基準</span></th>)}
+      {blockingFirst ? stageHeaders.map(group => <StageHeader key={group.key} item={group.first.item} colSpan={group.count * (combined ? 2 : 1)} />)
+        : potentialHeaders.map(group => <PotentialHeader key={group.key} item={group.first.item} colSpan={group.count * (combined ? 2 : 1)}
+          referenceLabel={comparisonBase !== 'unequipped' ? group.first.reference?.label ?? `${getSurtrComparisonBaseLabel(comparisonBase)}不明` : undefined} />)}
+    </tr>}{comparePotentials && blockingFirst && <tr>{columns.map(column => <PotentialHeader key={`${column.seriesId}:${column.blocking}`} item={column.item} colSpan={combined ? 2 : 1}
+      referenceLabel={comparisonBase !== 'unequipped' ? column.reference?.label ?? `${getSurtrComparisonBaseLabel(comparisonBase)}不明` : undefined} />)}</tr>}
+    {compareBlocking && !(comparePotentials && blockingFirst) && <tr>{columns.map(column => blockingFirst
       ? <ModuleHeader key={`${column.seriesId}:${column.blocking}`} item={column.item} colSpan={combined ? 2 : 1}
-          referenceLabel={comparisonBase === 'previous' ? column.reference?.label ?? '前段階不明' : undefined} />
+          referenceLabel={comparisonBase !== 'unequipped' ? column.reference?.label ?? `${getSurtrComparisonBaseLabel(comparisonBase)}不明` : undefined} />
       : <BlockingHeader key={`${column.seriesId}:${column.blocking}`} blocking={column.blocking === true} colSpan={combined ? 2 : 1} />)}</tr>}
-    {combined && <tr>{columns.map(column => <FragmentColumns key={`${column.seriesId}:${column.blocking}`} quantityLabel={quantityLabel} metricLabel={compareBlocking && metric === 'ratio' ? '比率' : metricLabel} />)}</tr>}</thead>
+    {combined && <tr>{columns.map(column => <FragmentColumns key={`${column.seriesId}:${column.blocking}`} quantityLabel={quantityLabel} metricLabel={(compareBlocking || comparePotentials) && metric === 'ratio' ? '比率' : metricLabel} />)}</tr>}</thead>
     <tbody>{resistanceRows.map(({ resistance, rank, rankRowSpan }) => <tr key={resistance} className={onOpenDetail && selectedResistance === resistance ? 'is-selected' : undefined}
       onClick={onOpenDetail ? event => {
         const column = event.target instanceof Element ? event.target.closest('td[data-series-id]') : null
@@ -125,7 +139,7 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
       <th scope="row">{onOpenDetail ? <button type="button" className="surtr-s3-table-resistance" aria-label={`術耐性 ${resistance}の${quantity === 'expected-damage' ? '期待総ダメージ' : 'DPS'}計算フローを開く`} aria-haspopup="dialog">
         {resistance}{rankMode === 'inline' && <ResistanceRank rank={rank} />}<span aria-hidden="true">›</span>
       </button> : rankMode === 'inline' ? <span className="surtr-s3-resistance-rank-value">{resistance}<ResistanceRank rank={rank} /></span> : resistance}</th>
-      {showBaseline && <td data-series-id="none" data-metric="total">{formatDps(baselineValues.get(resistance))}</td>}
+      {showBaseline && baselines.map((item, index) => <td key={item.id} data-series-id={item.id} data-metric="total">{formatDps(baselineValues[index].get(resistance))}</td>)}
       {columns.map(column => <ComparisonCells key={`${column.seriesId}:${column.blocking}`} seriesId={column.seriesId} blocking={column.blocking} combined={combined}
         dps={formatDps(column.raw?.get(resistance))}
         background={colorScale ? getSurtrUnequippedColorScaleBackground(column.comparison?.get(resistance), metric, colorScaleMaximum, colorScaleMode) : undefined}
@@ -138,6 +152,36 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
 function ModuleHeader({ item, colSpan, referenceLabel }: { item: SurtrDpsOutputSeries; colSpan: number; referenceLabel?: string }) {
   return <th scope={colSpan > 1 ? 'colgroup' : 'col'} colSpan={colSpan}>
     <span className="surtr-s3-column-label"><i style={{ backgroundColor: item.color }} />{item.label}</span>
+    {referenceLabel && <span className="surtr-s3-baseline-label">基準：{referenceLabel}</span>}
+  </th>
+}
+
+function seriesPotential(item: SurtrDpsOutputSeries): number | undefined {
+  return item.potential ?? (Number(/:pot([1-6])$/.exec(item.id)?.[1]) || undefined)
+}
+
+function seriesStage(item: SurtrDpsOutputSeries): string {
+  return item.moduleStageId ?? item.id.replace(/:pot[1-6]$/, '')
+}
+
+function groupAdjacent<T>(items: readonly T[], getKey: (item: T) => string) {
+  const groups: { key: string; first: T; count: number }[] = []
+  for (const item of items) {
+    const key = getKey(item)
+    const previous = groups.at(-1)
+    if (previous?.key === key) previous.count += 1
+    else groups.push({ key, first: item, count: 1 })
+  }
+  return groups
+}
+
+function StageHeader({ item, colSpan }: { item: SurtrDpsOutputSeries; colSpan: number }) {
+  return <th scope={colSpan > 1 ? 'colgroup' : 'col'} colSpan={colSpan}>{item.label.replace(/\s*潜在[1-6]\s*$/, '')}</th>
+}
+
+function PotentialHeader({ item, colSpan, referenceLabel }: { item: SurtrDpsOutputSeries; colSpan: number; referenceLabel?: string }) {
+  return <th scope={colSpan > 1 ? 'colgroup' : 'col'} colSpan={colSpan}>
+    <span className="surtr-s3-column-label"><i style={{ backgroundColor: item.color }} />潜在{seriesPotential(item)}</span>
     {referenceLabel && <span className="surtr-s3-baseline-label">基準：{referenceLabel}</span>}
   </th>
 }

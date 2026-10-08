@@ -26,6 +26,8 @@ export interface SurtrDpsPageState {
   unequippedLayout: SurtrUnequippedLayout
   unequippedMetric: SurtrUnequippedMetric
   unequippedComparisonBase: SurtrUnequippedComparisonBase
+  /** Null follows the common potential until the comparison is edited independently. */
+  unequippedPotentials: number[] | null
   unequippedStep: SurtrDpsBarStep
   unequippedRankMode: SurtrUnequippedRankMode
   unequippedColumnOrder: SurtrUnequippedColumnOrder
@@ -44,6 +46,7 @@ export function createDefaultSurtrDpsPageState(): SurtrDpsPageState {
     metric: 'total', differenceMetric: 'difference', requestedBaselineId: 'none', selectedResistance: null,
     unequippedLayout: 'combined', unequippedMetric: 'difference', unequippedStep: 10, unequippedRankMode: 'none',
     unequippedComparisonBase: 'unequipped',
+    unequippedPotentials: null,
     unequippedColumnOrder: 'module',
     unequippedColorScale: false,
     unequippedColorScaleMode: 'LINEAR',
@@ -92,7 +95,9 @@ export function parseSurtrDpsPageState(value: unknown): SurtrDpsPageState {
     requestedBaselineId: baselineId(source.requestedBaselineId, moduleLevels, defaults.requestedBaselineId),
     unequippedLayout: option(source.unequippedLayout, ['combined', 'comparison'], defaults.unequippedLayout),
     unequippedMetric: option(source.unequippedMetric, ['difference', 'ratio', 'percent'], defaults.unequippedMetric),
-    unequippedComparisonBase: option(source.unequippedComparisonBase, ['unequipped', 'previous'], defaults.unequippedComparisonBase),
+    unequippedComparisonBase: option(source.unequippedComparisonBase, ['unequipped', 'previous',
+      'potential-1', 'potential-2', 'potential-3', 'potential-4', 'potential-5', 'potential-6'], defaults.unequippedComparisonBase),
+    unequippedPotentials: selectedPotentials(source.unequippedPotentials),
     unequippedStep: stepOr(source.unequippedStep, defaults.unequippedStep),
     unequippedRankMode: option(source.unequippedRankMode, ['none', 'inline', 'merged'], defaults.unequippedRankMode),
     unequippedColumnOrder: option(source.unequippedColumnOrder, ['module', 'blocking'], defaults.unequippedColumnOrder),
@@ -151,6 +156,12 @@ function selectedModuleLevels(value: unknown): number[] | null {
   const levels = [...new Set(value.filter((level): level is number => integer(level, 1, 3)))].sort((a, b) => a - b)
   // Only an explicit empty array represents an intentional deselection.
   return levels.length || value.length === 0 ? levels : null
+}
+
+function selectedPotentials(value: unknown): number[] | null {
+  if (!Array.isArray(value)) return null
+  const potentials = [...new Set(value.filter((potential): potential is number => integer(potential, 1, 6)))].sort((a, b) => a - b)
+  return potentials.length || value.length === 0 ? potentials : null
 }
 
 function baselineId(value: unknown, moduleLevels: Record<string, number[]>, fallback: string): string {
