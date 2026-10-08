@@ -150,6 +150,26 @@ test('ランク表示なしは既存名を保ち、併記と結合の保存画�
   assert.equal(new Set(names).size, 3)
 })
 
+test('ブロック条件別の列配置は両条件比較の画像名だけを区別し、従来のMOD別を変えない', () => {
+  const blockingComparison = [{ blocking: true }, { blocking: false }]
+  const compared = { ...options, blockingComparison }
+  assert.equal(getSurtrUnequippedTableImageFilename({ ...compared, columnOrder: 'module' }), getSurtrUnequippedTableImageFilename(compared))
+  assert.equal(getSurtrUnequippedTableImageFilename({ ...options, columnOrder: 'blocking' }), getSurtrUnequippedTableImageFilename(options))
+  for (const layout of ['combined', 'comparison'] as const) {
+    const alternative = { ...compared, layout, rankMode: 'merged' as const, columnOrder: 'blocking' as const }
+    const before = structuredClone(alternative)
+    const name = getSurtrUnequippedTableImageFilename(alternative, 16 / 9)
+    assert.match(name, /ブロック条件別/)
+    assert.match(name, /ランク結合/)
+    assert.match(name, /比率16x9\.png$/)
+    assert.notEqual(name, getSurtrUnequippedTableImageFilename({ ...alternative, columnOrder: 'module' }, 16 / 9))
+    assert.equal(name, getSurtrUnequippedTableImageFilename({ ...alternative, metadata: { ...metadata, blocking: true },
+      blockingComparison: [...blockingComparison].reverse() }, 16 / 9))
+    assert.ok(new TextEncoder().encode(name).length <= 240)
+    assert.deepEqual(alternative, before)
+  }
+})
+
 test('ブロック条件比較の画像名は通常の単一条件と区別し、現在のblocking選択に依存しない', () => {
   const blockingComparison = [{ blocking: true }, { blocking: false }]
   const compared = { ...options, blockingComparison }

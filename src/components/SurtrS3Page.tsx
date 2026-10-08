@@ -8,7 +8,7 @@ import { readSurtrDpsPageState, writeSurtrDpsPageState } from '../lib/surtrDpsPa
 import { calculateSurtrDpsCalculation } from '../lib/surtrDpsCalculation'
 import { getSurtrDpsResistanceSamples, isValidSurtrDpsResistanceRange, type SurtrDpsBarStep, type SurtrDpsResistanceRange } from '../lib/surtrDpsResistance'
 import { transformSurtrDpsSeries, getSurtrDpsOutputTsv, type SurtrDpsMetric } from '../lib/surtrDpsOutput'
-import { buildSurtrUnequippedComparisonSeries, type SurtrUnequippedLayout, type SurtrUnequippedMetric, type SurtrUnequippedRankMode } from '../lib/surtrUnequippedComparison'
+import { buildSurtrUnequippedComparisonSeries, type SurtrUnequippedColumnOrder, type SurtrUnequippedLayout, type SurtrUnequippedMetric, type SurtrUnequippedRankMode } from '../lib/surtrUnequippedComparison'
 import { buildSurtrDpsBlockComparison } from '../lib/surtrDpsBlockComparison'
 import { writeClipboardText } from '../lib/clipboard'
 import { isValidHpChartYAxisRange } from '../lib/goldenglowTargetSwitchHpAxis'
@@ -77,6 +77,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   const [unequippedMetric, setUnequippedMetric] = useState<SurtrUnequippedMetric>(initialState.unequippedMetric)
   const [unequippedStep, setUnequippedStep] = useState<SurtrDpsBarStep>(initialState.unequippedStep)
   const [unequippedRankMode, setUnequippedRankMode] = useState<SurtrUnequippedRankMode>(initialState.unequippedRankMode)
+  const [unequippedColumnOrder, setUnequippedColumnOrder] = useState<SurtrUnequippedColumnOrder>(initialState.unequippedColumnOrder)
   const [customUnequippedStep, setCustomUnequippedStep] = useState(typeof initialState.unequippedStep === 'number' && ![10, 20].includes(initialState.unequippedStep))
   const [unequippedStepDraft, setUnequippedStepDraft] = useState(String(typeof initialState.unequippedStep === 'number' ? initialState.unequippedStep : 10))
   const [selectedResistance, setSelectedResistance] = useState<number | null>(initialState.selectedResistance)
@@ -91,9 +92,9 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   const receiveHistogramDraft = useCallback((snapshot: EnemyHistogramSnapshot | null) => setHistogramDraft(snapshot), [])
   useEffect(() => {
     writeSurtrDpsPageState({ settings, excluded, moduleLevels, chartKind, barStep, resistanceRange, showValues, showResistanceRanks,
-      gridStyle, precision, metric, differenceMetric, requestedBaselineId, unequippedLayout, unequippedMetric, unequippedStep, unequippedRankMode, selectedResistance, yAxisMode, yAxisDraft })
+      gridStyle, precision, metric, differenceMetric, requestedBaselineId, unequippedLayout, unequippedMetric, unequippedStep, unequippedRankMode, unequippedColumnOrder, selectedResistance, yAxisMode, yAxisDraft })
   }, [settings, excluded, moduleLevels, chartKind, barStep, resistanceRange, showValues, showResistanceRanks,
-    gridStyle, precision, metric, differenceMetric, requestedBaselineId, unequippedLayout, unequippedMetric, unequippedStep, unequippedRankMode, selectedResistance, yAxisMode, yAxisDraft])
+    gridStyle, precision, metric, differenceMetric, requestedBaselineId, unequippedLayout, unequippedMetric, unequippedStep, unequippedRankMode, unequippedColumnOrder, selectedResistance, yAxisMode, yAxisDraft])
   const [copyFeedback, setCopyFeedback] = useState<{ text: string; ok: boolean } | null>(null)
   const [copying, setCopying] = useState(false)
   const [image, setImage] = useState<ImageSnapshot | null>(null)
@@ -453,6 +454,9 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
         <label className="surtr-s3-output-control"><span>表の形式</span><select aria-label="未装備比較の表の形式" value={unequippedLayout} onChange={event => setUnequippedLayout(event.target.value as SurtrUnequippedLayout)}>
           <option value="combined">DPS＋比較値</option><option value="comparison">比較値のみ</option>
         </select></label>
+        <label className="surtr-s3-output-control"><span>列の並び</span><select aria-label="未装備比較の列の並び" value={unequippedColumnOrder} onChange={event => setUnequippedColumnOrder(event.target.value as SurtrUnequippedColumnOrder)}>
+          <option value="module">MOD別</option><option value="blocking">ブロック条件別</option>
+        </select></label>
         <label className="surtr-s3-output-control"><span>比較値</span><select aria-label="未装備比較の指標" value={unequippedMetric} onChange={event => setUnequippedMetric(event.target.value as SurtrUnequippedMetric)}>
           <option value="difference">DPS差</option><option value="ratio">比率（未装備＝100%）</option><option value="percent">増加率（%）</option>
         </select></label>
@@ -473,7 +477,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
         : !unequippedBlockingComparison ? <p role="alert">ブロック条件ごとの計算に必要なデータを取得できませんでした。</p>
         : !unequippedResistances.length ? <p className="surtr-s3-status" role="status">指定した範囲に表示する術耐性がありません。</p>
         : <SurtrUnequippedComparisonTable series={series} baseline={unequipped} resistances={unequippedResistances} precision={precision}
-          metric={unequippedMetric} layout={unequippedLayout} rankMode={unequippedRankMode} blockingComparison={unequippedBlockingComparison} selectedResistance={selectedResistance}
+          metric={unequippedMetric} layout={unequippedLayout} rankMode={unequippedRankMode} columnOrder={unequippedColumnOrder} blockingComparison={unequippedBlockingComparison} selectedResistance={selectedResistance}
           metadata={{ skillLabel: label, level: effectiveSettings.level, trust: effectiveSettings.trust,
             potential: effectiveSettings.potential, blocking: effectiveSettings.blocking }}
           onOpenDetail={(resistance, seriesId, detailMetric, blocking) => openDetail(resistance, seriesId, detailMetric, blocking)} />}

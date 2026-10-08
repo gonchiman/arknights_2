@@ -294,7 +294,7 @@ test('both conditions preserve all six module stages, 26 combined cells and matc
   }
 })
 
-test('condition-specific cells open their own DPS or comparison flow, preserving resistance and blocking state', () => {
+test('condition-specific cells in either column order open their own DPS or comparison flow, preserving resistance and blocking state', () => {
   const elementNodes = (node, tag) => Array.isArray(node) ? node.flatMap(child => elementNodes(child, tag))
     : !node || typeof node !== 'object' ? []
       : [...(node.type === tag ? [node] : []), ...elementNodes(node.props?.children, tag)]
@@ -309,11 +309,12 @@ test('condition-specific cells open their own DPS or comparison flow, preserving
   try {
     for (const layout of ['combined', 'comparison']) {
       for (const metric of ['difference', 'ratio', 'percent']) {
+        for (const columnOrder of ['module', 'blocking']) {
         let tree
         const calls = []
         const focusCalls = []
         function Probe() {
-          tree = Content({ ...props, series: modules, blockingComparison, layout, metric,
+          tree = Content({ ...props, series: modules, blockingComparison, layout, metric, columnOrder,
             onOpenDetail: (...args) => calls.push(args) })
           return tree
         }
@@ -343,6 +344,7 @@ test('condition-specific cells open their own DPS or comparison flow, preserving
           assert.deepEqual(calls.at(-1), [60, modules[0].id, metric, true])
         }
         assert.deepEqual(focusCalls, [{ preventScroll: true }, { preventScroll: true }])
+        }
       }
     }
   } finally {
@@ -381,6 +383,50 @@ const expandBody = markup => {
 
 const boundaryResistances = [0, 1, 9, 10, 19, 20, 29, 30, 49, 50, 59, 60, 69, 70, 79, 80, 90, 91, 100]
 const boundaryRanks = ['E', 'D', 'D', 'C', 'C', 'B', 'B', 'B+', 'B+', 'A', 'A', 'A+', 'A+', 'S', 'S', 'S+', 'S+', 'SS', 'SS']
+
+test('blocking-first headers and values form two complete condition groups while preserving rank layouts and saved images', () => {
+  const comparisons = [['+25.0', '+50.0', '+15.0', '+80.0'], ['-10.0', '0.0', '-15.0', '+8.0'], ['+10.0', '0.0', '+9.0', '0.0']]
+  const raw = [['125.0', '150.0', '115.0', '180.0'], ['70.0', '80.0', '65.0', '88.0'], ['10.0', '0.0', '9.0', '0.0']]
+  for (const layout of ['combined', 'comparison']) {
+    for (const rankMode of ['none', 'inline', 'merged']) {
+      const data = { ...props, series: modules, blockingComparison, layout, rankMode, columnOrder: 'blocking', metadata }
+      const markup = render(data)
+      const leadingHeaders = [...(rankMode === 'merged' ? ['ランク'] : []), '術耐性', ...(layout === 'combined' ? ['未装備DPS・基準'] : [])]
+      const headers = sectionRows(markup, 'thead')
+      assert.deepEqual(headers[0], [...leadingHeaders, '未ブロック', '対象を自身でブロック'])
+      assert.deepEqual(headers[1], ['MOD X Lv.3', 'MOD Y Lv.3', 'MOD X Lv.3', 'MOD Y Lv.3'])
+      if (layout === 'combined') assert.deepEqual(headers[2], ['DPS', 'DPS差', 'DPS', 'DPS差', 'DPS', 'DPS差', 'DPS', 'DPS差'])
+      assert.deepEqual(expandBody(markup), props.resistances.map((resistance, index) => [
+        ...(rankMode === 'merged' ? [['E', 'A+', 'SS'][index]] : []),
+        `${resistance}${rankMode === 'inline' ? ['E', 'A+', 'SS'][index] : ''}`,
+        ...(layout === 'combined' ? [expectedRaw[index][0]] : []),
+        ...comparisons[index].flatMap((comparison, column) => layout === 'combined' ? [raw[index][column], comparison] : [comparison]),
+      ]))
+      const saved = renderToStaticMarkup(createElement(Image, data))
+      assert.deepEqual(bodyCells(saved), bodyCells(markup))
+      assert.deepEqual(sectionRows(saved, 'thead'), headers)
+      assert.match(sections(saved, 'tfoot')[0], new RegExp(`colspan="${expandBody(saved)[0].length}"`, 'i'))
+      assert.doesNotMatch(saved, /<button|<select|is-selected|aria-haspopup|›/)
+      assert.match(markup, /surtr-s3-equal-blocking-columns/)
+      const standard = render({ ...data, columnOrder: 'module' })
+      assert.equal(standard.match(/--surtr-unequipped-min-width:([^;\"]+)/)[1], markup.match(/--surtr-unequipped-min-width:([^;\"]+)/)[1])
+      assert.equal(render({ ...data, columnOrder: 'module' }), render({ ...data, columnOrder: undefined }))
+    }
+  }
+})
+
+test('alternative column order has no effect without blocking comparison, and unavailable conditions remain empty in their own group', () => {
+  for (const layout of ['combined', 'comparison']) {
+    for (const rankMode of ['none', 'inline', 'merged']) {
+      const data = { layout, rankMode }
+      assert.equal(render({ ...data, columnOrder: 'blocking' }), render(data))
+    }
+  }
+  const markup = render({ series: modules, resistances: [60], layout: 'combined', columnOrder: 'blocking',
+    blockingComparison: [blockingComparison.find(group => group.blocking)] })
+  assert.deepEqual(sectionRows(markup, 'tbody'), [['60', '80.0', '—', '—', '—', '—', '65.0', '-15.0', '88.0', '+8.0']])
+  assert.deepEqual(sectionRows(markup, 'thead')[1], ['MOD X Lv.3', 'MOD Y Lv.3', 'MOD X Lv.3', 'MOD Y Lv.3'])
+})
 
 test('inline ranks follow exact game boundaries without changing any comparison-table values or columns', () => {
   for (const layout of ['combined', 'comparison']) {

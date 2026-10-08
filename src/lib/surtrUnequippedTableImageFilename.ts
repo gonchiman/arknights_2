@@ -1,5 +1,5 @@
 import { createChartImageFilename, formatChartFilenameValues, withChartImageAspect } from './chartImageFilename.ts'
-import type { SurtrUnequippedLayout, SurtrUnequippedMetric, SurtrUnequippedRankMode } from './surtrUnequippedComparison.ts'
+import type { SurtrUnequippedColumnOrder, SurtrUnequippedLayout, SurtrUnequippedMetric, SurtrUnequippedRankMode } from './surtrUnequippedComparison.ts'
 
 export interface SurtrUnequippedTableImageMetadata {
   skillLabel: string
@@ -19,6 +19,7 @@ export function getSurtrUnequippedTableImageFilename(options: {
   precision: number
   blockingComparison?: readonly { blocking: boolean }[]
   rankMode?: SurtrUnequippedRankMode
+  columnOrder?: SurtrUnequippedColumnOrder
 }, aspectRatio?: number): string {
   const { metadata, series, resistances, metric, layout, precision, blockingComparison } = options
   const modules = series.filter(item => item.id !== 'none').map(item => item.label)
@@ -31,6 +32,7 @@ export function getSurtrUnequippedTableImageFilename(options: {
     `信頼${metadata.trust}`,
     `潜在${metadata.potential}`,
     blockingComparison !== undefined ? 'ブロック条件比較' : metadata.blocking ? 'ブロック中' : '未ブロック',
+    ...(blockingComparison !== undefined && options.columnOrder === 'blocking' ? ['ブロック条件別'] : []),
     modules.join('-') || 'MOD選択なし',
     resistances.length ? `術耐性${formatChartFilenameValues(resistances)}` : '術耐性なし',
     `小数${digits}桁`,

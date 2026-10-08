@@ -52,6 +52,52 @@ test('ランク付きコピーは部分範囲と指定順を保ち、不明な�
   }
 })
 
+test('ブロック条件別TSVは条件→指定MOD段階の列順で各指標を出し、ランク列と基準を維持する', () => {
+  const resistances = [0, 60]
+  const baseline = series('none', [[0, 100], [60, 80]], '未装備')
+  const input = [series('y:lv2', [[0, 150], [60, 80]], 'MOD Y Lv.2'),
+    series('x:lv3', [[0, 125], [60, 60]], 'MOD X Lv.3'), series('x:lv1', [[0, 130], [60, 70]], 'MOD X Lv.1')]
+  const blocked = [series('x:lv1', [[0, 140], [60, 65]], 'MOD X Lv.1'),
+    series('x:lv3', [[0, 115], [60, 55]], 'MOD X Lv.3'), series('y:lv2', [[0, 180], [60, 88]], 'MOD Y Lv.2')]
+  const blockingComparison = [{ blocking: true, series: blocked, baseline }, { blocking: false, series: [...input].reverse(), baseline }]
+  const raw = [['150.0', '125.0', '130.0', '180.0', '115.0', '140.0'], ['80.0', '60.0', '70.0', '88.0', '55.0', '65.0']]
+  const expected = {
+    difference: [['+50.0', '+25.0', '+30.0', '+80.0', '+15.0', '+40.0'], ['0.0', '-20.0', '-10.0', '+8.0', '-25.0', '-15.0']],
+    ratio: [['150.0%', '125.0%', '130.0%', '180.0%', '115.0%', '140.0%'], ['100.0%', '75.0%', '87.5%', '110.0%', '68.8%', '81.3%']],
+    percent: [['+50.0%', '+25.0%', '+30.0%', '+80.0%', '+15.0%', '+40.0%'], ['0.0%', '-25.0%', '-12.5%', '+10.0%', '-31.3%', '-18.8%']],
+  }
+  for (const layout of ['combined', 'comparison'] as const) {
+    for (const metric of ['difference', 'ratio', 'percent'] as const) {
+      for (const rankMode of ['none', 'inline', 'merged'] as const) {
+        const tsv = getSurtrUnequippedComparisonTsv(input, baseline, resistances, 1, metric, layout, blockingComparison, rankMode, 'blocking')
+        const rows = tsv.split('\r\n').map(row => row.split('\t'))
+        const leading = 1 + (rankMode === 'none' ? 0 : 1) + (layout === 'combined' ? 1 : 0)
+        const headings = ['未ブロック MOD Y Lv.2', '未ブロック MOD X Lv.3', '未ブロック MOD X Lv.1',
+          '対象を自身でブロック MOD Y Lv.2', '対象を自身でブロック MOD X Lv.3', '対象を自身でブロック MOD X Lv.1']
+        const width = layout === 'combined' ? 2 : 1
+        headings.forEach((heading, index) => assert.ok(rows[0][leading + index * width].startsWith(`${heading} `)))
+        assert.deepEqual(rows.slice(1), resistances.map((value, row) => [String(value),
+          ...(rankMode === 'none' ? [] : [row === 0 ? 'E' : 'A+']),
+          ...(layout === 'combined' ? [row === 0 ? '100.0' : '80.0'] : []),
+          ...expected[metric][row].flatMap((comparison, index) => layout === 'combined' ? [raw[row][index], comparison] : [comparison])]))
+        assert.ok(rows.every(row => row.length === rows[0].length))
+        const standard = getSurtrUnequippedComparisonTsv(input, baseline, resistances, 1, metric, layout, blockingComparison, rankMode)
+        assert.equal(getSurtrUnequippedComparisonTsv(input, baseline, resistances, 1, metric, layout, blockingComparison, rankMode, 'module'), standard)
+        assert.equal(getSurtrUnequippedComparisonTsv(input, baseline, resistances, 1, metric, layout, undefined, rankMode, 'blocking'),
+          getSurtrUnequippedComparisonTsv(input, baseline, resistances, 1, metric, layout, undefined, rankMode))
+      }
+    }
+  }
+})
+
+test('条件別コピーは欠けた条件を別条件や通常系列で補わない', () => {
+  const baseline = series('none', [[60, 80]])
+  const input = [series('x', [[60, 100]], 'MOD X Lv.3'), series('y', [[60, 150]], 'MOD Y Lv.3')]
+  const blockingComparison = [{ blocking: true, series: [series('x', [[60, 96]])], baseline }]
+  const tsv = getSurtrUnequippedComparisonTsv(input, baseline, [60], 1, 'ratio', 'combined', blockingComparison, 'merged', 'blocking')
+  assert.deepEqual(tsv.split('\r\n')[1].split('\t'), ['60', 'A+', '80.0', '—', '—', '—', '—', '96.0', '120.0%', '—', '—'])
+})
+
 test('未装備を非表示にしても独立した基準で比較し、表示順とMOD段階の識別を保つ', () => {
   const baseline = series('none', [[0, 100], [60, 50]], '未装備')
   const targets = [

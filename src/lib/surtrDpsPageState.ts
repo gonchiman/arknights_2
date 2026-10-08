@@ -1,7 +1,7 @@
 import type { SurtrDpsSettings } from './surtrDps.ts'
 import type { SurtrDpsBarStep, SurtrDpsResistanceRange } from './surtrDpsResistance.ts'
 import type { SurtrDpsMetric } from './surtrDpsOutput.ts'
-import type { SurtrUnequippedLayout, SurtrUnequippedMetric, SurtrUnequippedRankMode } from './surtrUnequippedComparison.ts'
+import type { SurtrUnequippedColumnOrder, SurtrUnequippedLayout, SurtrUnequippedMetric, SurtrUnequippedRankMode } from './surtrUnequippedComparison.ts'
 import { isValidSurtrDpsResistanceRange } from './surtrDpsResistance.ts'
 import { isValidHpChartYAxisRange, type HpChartYAxisMode } from './goldenglowTargetSwitchHpAxis.ts'
 
@@ -26,6 +26,7 @@ export interface SurtrDpsPageState {
   unequippedMetric: SurtrUnequippedMetric
   unequippedStep: SurtrDpsBarStep
   unequippedRankMode: SurtrUnequippedRankMode
+  unequippedColumnOrder: SurtrUnequippedColumnOrder
   selectedResistance: number | null
   yAxisMode: HpChartYAxisMode
   yAxisDraft: { min: string; max: string }
@@ -38,6 +39,7 @@ export function createDefaultSurtrDpsPageState(): SurtrDpsPageState {
     resistanceRange: { min: 0, max: 100 }, showValues: false, showResistanceRanks: true, gridStyle: 'solid', precision: 0,
     metric: 'total', differenceMetric: 'difference', requestedBaselineId: 'none', selectedResistance: null,
     unequippedLayout: 'combined', unequippedMetric: 'difference', unequippedStep: 10, unequippedRankMode: 'none',
+    unequippedColumnOrder: 'module',
     yAxisMode: 'zero', yAxisDraft: { min: '0', max: '4000' },
   }
 }
@@ -84,6 +86,7 @@ export function parseSurtrDpsPageState(value: unknown): SurtrDpsPageState {
     unequippedMetric: option(source.unequippedMetric, ['difference', 'ratio', 'percent'], defaults.unequippedMetric),
     unequippedStep: stepOr(source.unequippedStep, defaults.unequippedStep),
     unequippedRankMode: option(source.unequippedRankMode, ['none', 'inline', 'merged'], defaults.unequippedRankMode),
+    unequippedColumnOrder: option(source.unequippedColumnOrder, ['module', 'blocking'], defaults.unequippedColumnOrder),
     selectedResistance: integer(source.selectedResistance, resistanceRange.min, resistanceRange.max) ? source.selectedResistance : null,
     yAxisMode: option(source.yAxisMode, ['zero', 'auto', 'manual'], defaults.yAxisMode),
     yAxisDraft,

@@ -217,6 +217,26 @@ test('comparison-table rank display defaults off and does not inherit chart rank
   }
 })
 
+test('comparison column order preserves the previous MOD-first default and restores independently of rank and metric settings', () => {
+  assert.equal(createDefaultSurtrDpsPageState().unequippedColumnOrder, 'module')
+  const storage = memoryStorage()
+  const previous = { ...createDefaultSurtrDpsPageState(), unequippedRankMode: 'merged' as const,
+    unequippedMetric: 'ratio' as const, showResistanceRanks: false }
+  Reflect.deleteProperty(previous, 'unequippedColumnOrder')
+  storage.setItem(SURTR_DPS_PAGE_STATE_KEY, JSON.stringify(previous))
+  assert.deepEqual(readSurtrDpsPageState(storage), { ...previous, unequippedColumnOrder: 'module' })
+  for (const unequippedColumnOrder of ['module', 'blocking'] as const) {
+    const state = { ...createDefaultSurtrDpsPageState(), unequippedColumnOrder, unequippedRankMode: 'inline' as const,
+      unequippedLayout: 'comparison' as const, unequippedMetric: 'percent' as const, unequippedStep: 7 }
+    writeSurtrDpsPageState(state, storage)
+    assert.deepEqual(readSurtrDpsPageState(storage), state)
+  }
+  for (const unequippedColumnOrder of [undefined, null, '', 'conditions', 'BLOCKING', false, true, 0, [], {}]) {
+    const restored = parseSurtrDpsPageState({ ...previous, unequippedColumnOrder })
+    assert.deepEqual(restored, { ...previous, unequippedColumnOrder: 'module' })
+  }
+})
+
 test('valid fields in a partial or damaged record are retained independently', () => {
   const restored = parseSurtrDpsPageState({
     settings: { level: 80, trust: '50', potential: 0, skillLevelIndex: 1.5, blocking: true },
