@@ -56,6 +56,22 @@ const table = markup => {
   assert.ok(found, 'Missing comparison table')
   return found[1]
 }
+const imageHeaderRows = (markup, expectedTitle = 'スルト S3 DPS比較') => {
+  const header = sections(markup, 'thead')[0]
+  const headers = rows(header)
+  assert.deepEqual(headers[0], [expectedTitle], 'Image begins with one full-width title row')
+  assert.equal(headers.flat().filter(label => label === expectedTitle).length, 1)
+  const titleRow = header.match(/<tr(?:\s[^>]*)?>([\s\S]*?)<\/tr>/)?.[1]
+  const titleColumns = titleRow?.match(/<th\b[^>]*\bcolspan="(\d+)"/i)?.[1]
+  const footerColumns = sections(markup, 'tfoot')[0]?.match(/<td\b[^>]*\bcolspan="(\d+)"/i)?.[1]
+  assert.ok(titleColumns && footerColumns, 'Title and condition band span explicit complete columns')
+  assert.equal(titleColumns, footerColumns)
+  assert.doesNotMatch(titleRow, /\browspan=/i, 'Title does not change the existing grouped header row spans')
+  const rowSpans = [...header.matchAll(/\browspan="(\d+)"/gi)].map(match => Number(match[1]))
+  assert.ok(rowSpans.length > 0 && rowSpans.every(span => span === headers.length - 1),
+    'Original column headers span their own rows without including the title')
+  return headers.slice(1)
+}
 
 // Independent values: X/none at RES 60 is 70/80 = 87.5%, or -12.5% growth.
 const expectedComparison = {
@@ -152,6 +168,58 @@ test('the optional image conditions footer spans the complete selected layout', 
 
 const metadata = { skillLabel: '特化3', level: 90, trust: 100, potential: 1, blocking: true }
 
+test('image and preview retain a captured custom title as trimmed escaped text without changing headers, data or conditions', () => {
+  const title = ' \tスルト & <MOD X> "比較"\n '
+  const escapedTitle = 'スルト &amp; &lt;MOD X&gt; &quot;比較&quot;'
+  for (const component of [Image, ImagePreview]) {
+    for (const layout of ['combined', 'comparison']) {
+      const snapshot = structuredClone({ ...props, layout, title, metadata })
+      const captured = structuredClone(snapshot)
+      const live = structuredClone(snapshot)
+      live.title = '編集中の別タイトル'
+      live.metadata.potential = 6
+      live.series[1].points[1].value = 999
+      const saved = renderToStaticMarkup(createElement(component, snapshot))
+      const original = renderToStaticMarkup(createElement(component, { ...snapshot, title: undefined }))
+      assert.deepEqual(imageHeaderRows(saved, escapedTitle), imageHeaderRows(original))
+      assert.deepEqual(sectionRows(saved, 'tbody'), sectionRows(original, 'tbody'))
+      assert.deepEqual(sections(saved, 'tfoot'), sections(original, 'tfoot'))
+      assert.match(saved, /スルト &amp; &lt;MOD X&gt; &quot;比較&quot;/)
+      assert.doesNotMatch(saved, /<MOD X>|編集中の別タイトル|999/)
+      assert.deepEqual(snapshot, captured, 'Image rendering must not modify the frozen title or table snapshot')
+    }
+  }
+})
+
+test('an omitted, empty or whitespace title uses the existing S3 default in both the image and preview', () => {
+  for (const component of [Image, ImagePreview]) {
+    const original = renderToStaticMarkup(createElement(component, { ...props, metadata }))
+    for (const title of [undefined, '', ' \t\n　 ']) {
+      const snapshot = { ...props, title, metadata }
+      const captured = structuredClone(snapshot)
+      const saved = renderToStaticMarkup(createElement(component, snapshot))
+      imageHeaderRows(saved)
+      assert.equal(table(saved), table(original))
+      assert.deepEqual(snapshot, captured)
+    }
+  }
+})
+
+test('shared expected-damage images retain their existing headers without the S3 DPS title', () => {
+  for (const comparisonBase of ['unequipped', 'previous']) {
+    for (const layout of ['combined', 'comparison']) {
+      const snapshot = { ...props, quantity: 'expected-damage', comparisonBase, layout, rankMode: 'merged',
+        metadata: { ...metadata, remnantAssumptions: { windup: 0.3, ctCarry: 'time', includeRetreatHit: false } } }
+      const saved = renderToStaticMarkup(createElement(Image, snapshot))
+      const live = render(snapshot)
+      assert.deepEqual(sectionRows(saved, 'thead'), sectionRows(live, 'thead'))
+      assert.deepEqual(sectionRows(saved, 'tbody'), sectionRows(live, 'tbody'))
+      assert.doesNotMatch(saved, /スルト S3 DPS比較|surtr-s3-table-title-row/)
+      assert.match(text(sections(saved, 'tfoot')[0]), /総ダメージ期待値/)
+    }
+  }
+})
+
 test('comparison image and preview footers record frozen Remnant state in each comparison layout', () => {
   for (const component of [Image, ImagePreview]) {
     for (const comparisonBase of ['unequipped', 'previous']) {
@@ -170,7 +238,7 @@ test('comparison image and preview footers record frozen Remnant state in each c
           assert.doesNotMatch(footer, /余燼なし/)
           assert.equal((footer.match(/余燼中/g) ?? []).length, 1)
           assert.match(text(sections(off, 'tfoot')[0]), /余燼なし$/)
-          assert.deepEqual(sectionRows(on, 'thead'), sectionRows(off, 'thead'))
+          assert.deepEqual(imageHeaderRows(on), imageHeaderRows(off))
           assert.deepEqual(sectionRows(on, 'tbody'), sectionRows(off, 'tbody'))
           for (const module of modules) assert.ok(table(on).includes(`background-color:${module.color}`))
           assert.deepEqual(active, captured, 'image and preview do not change the captured metadata')
@@ -186,7 +254,7 @@ test('saved image uses the same table values, stage colors and full resistance l
       const snapshot = { ...props, layout, metric, series: modules, metadata }
       const saved = renderToStaticMarkup(createElement(Image, { ...snapshot, aspectRatio: 16 / 9 }))
       const live = render(snapshot)
-      assert.deepEqual(sectionRows(saved, 'thead'), sectionRows(live, 'thead'))
+      assert.deepEqual(imageHeaderRows(saved), sectionRows(live, 'thead'))
       assert.deepEqual(sectionRows(saved, 'tbody'), sectionRows(live, 'tbody'))
       assert.equal(sectionRows(saved, 'tbody').length, 3)
       assert.equal([...saved.matchAll(/<table\b/g)].length, 1)
@@ -281,7 +349,7 @@ test('two-condition saved images retain all captured values and both condition l
   for (const layout of ['combined', 'comparison']) {
     const snapshot = { ...captured, layout }
     const saved = renderToStaticMarkup(createElement(Image, snapshot))
-    assert.deepEqual(sectionRows(saved, 'thead'), sectionRows(render(snapshot), 'thead'))
+    assert.deepEqual(imageHeaderRows(saved), sectionRows(render(snapshot), 'thead'))
     assert.deepEqual(sectionRows(saved, 'tbody'), sectionRows(render(snapshot), 'tbody'))
     assert.equal(sectionRows(saved, 'tbody')[0].length, layout === 'combined' ? 10 : 5)
     assert.equal(sectionRows(saved, 'tbody').length, 3)
@@ -312,8 +380,8 @@ test('both conditions preserve all six module stages, 26 combined cells and matc
     const snapshot = { ...props, series, blockingComparison: groups, resistances: [0], layout, metadata }
     const live = render(snapshot)
     const saved = renderToStaticMarkup(createElement(Image, snapshot))
-    assert.deepEqual(sectionRows(saved, 'thead'), sectionRows(live, 'thead'))
-    assert.deepEqual(sectionRows(saved, 'thead')[0].slice(layout === 'combined' ? 2 : 1), series.map(item => item.label))
+    assert.deepEqual(imageHeaderRows(saved), sectionRows(live, 'thead'))
+    assert.deepEqual(imageHeaderRows(saved)[0].slice(layout === 'combined' ? 2 : 1), series.map(item => item.label))
     assert.deepEqual(sectionRows(saved, 'tbody'), layout === 'combined' ? [[
       '0', '100.0', '110.0', '+10.0', '210.0', '+110.0', '120.0', '+20.0', '220.0', '+120.0',
       '130.0', '+30.0', '230.0', '+130.0', '140.0', '+40.0', '240.0', '+140.0',
@@ -435,7 +503,7 @@ test('blocking-first headers and values form two complete condition groups while
       ]))
       const saved = renderToStaticMarkup(createElement(Image, data))
       assert.deepEqual(bodyCells(saved), bodyCells(markup))
-      assert.deepEqual(sectionRows(saved, 'thead'), headers)
+      assert.deepEqual(imageHeaderRows(saved), headers)
       assert.match(sections(saved, 'tfoot')[0], new RegExp(`colspan="${expandBody(saved)[0].length}"`, 'i'))
       assert.doesNotMatch(saved, /<button|<select|is-selected|aria-haspopup|›/)
       assert.match(markup, /surtr-s3-equal-blocking-columns/)
@@ -534,7 +602,7 @@ test('saved rank tables preserve captured rank layout, merged groups, resistance
       const saved = renderToStaticMarkup(createElement(Image, snapshot))
       const live = render(snapshot)
       assert.deepEqual(bodyCells(saved), bodyCells(live))
-      assert.deepEqual(sectionRows(saved, 'thead'), sectionRows(live, 'thead'))
+      assert.deepEqual(imageHeaderRows(saved), sectionRows(live, 'thead'))
       assert.equal(expandBody(saved).length, snapshot.resistances.length)
       const footerColumns = expandBody(saved)[0].length
       assert.match(sections(saved, 'tfoot')[0], new RegExp(`colspan="${footerColumns}"`, 'i'))
@@ -615,7 +683,7 @@ test('saved color-scale tables preserve text, colors and layout across column or
         const live = render(data)
         const saved = renderToStaticMarkup(createElement(Image, data))
         assert.deepEqual(bodyCells(saved), bodyCells(live))
-        assert.deepEqual(sectionRows(saved, 'thead'), sectionRows(live, 'thead'))
+        assert.deepEqual(imageHeaderRows(saved), sectionRows(live, 'thead'))
         assert.deepEqual(sectionRows(live, 'tbody'), sectionRows(render({ ...data, colorScale: false }), 'tbody'))
         assert.doesNotMatch(saved, /<button|<select|is-selected|aria-haspopup|›/)
         assert.deepEqual(data, before)
@@ -661,7 +729,7 @@ test('square-root table scale keeps signed comparison values and maximum intensi
       bodyCells(squareRoot).flat().filter(cell => cell.tag === 'th' || /data-metric="total"/.test(cell.attributes)).forEach(expectNoCellColor)
       const saved = renderToStaticMarkup(createElement(Image, snapshot))
       assert.deepEqual(bodyCells(saved), bodyCells(squareRoot))
-      assert.deepEqual(sectionRows(saved, 'thead'), sectionRows(squareRoot, 'thead'))
+      assert.deepEqual(imageHeaderRows(saved), sectionRows(squareRoot, 'thead'))
       assert.doesNotMatch(saved, /<button|<select|is-selected|aria-haspopup|›/)
       assert.deepEqual(snapshot, before)
       assert.equal(render({ ...snapshot, colorScale: false }), render({ ...data, colorScale: false }))
@@ -719,7 +787,7 @@ test('previous-stage tables compare each selected module with its own hidden pre
       assert.equal(render({ ...data, comparisonBase: 'unequipped' }), render({ ...data, comparisonBase: undefined }))
       const saved = renderToStaticMarkup(createElement(Image, { ...props, ...data, metadata }))
       assert.deepEqual(bodyCells(saved), bodyCells(markup))
-      assert.deepEqual(sectionRows(saved, 'thead'), headers)
+      assert.deepEqual(imageHeaderRows(saved), headers)
       assert.match(sections(saved, 'tfoot')[0], new RegExp(`colspan="${layout === 'combined' ? 7 : 4}"`, 'i'))
       assert.doesNotMatch(saved, /<button|<select|is-selected|aria-haspopup|›/)
     }
@@ -783,7 +851,7 @@ test('previous-stage condition groups share the correct signed color scale and r
       bodyCells(live).flat().filter(cell => cell.tag === 'th' || /data-metric="total"/.test(cell.attributes)).forEach(expectNoCellColor)
       const saved = renderToStaticMarkup(createElement(Image, data))
       assert.deepEqual(bodyCells(saved), bodyCells(live))
-      assert.deepEqual(sectionRows(saved, 'thead'), sectionRows(live, 'thead'))
+      assert.deepEqual(imageHeaderRows(saved), sectionRows(live, 'thead'))
       assert.match(sections(saved, 'tfoot')[0], new RegExp(`colspan="${layout === 'combined' ? 14 : 8}"`, 'i'))
       assert.doesNotMatch(saved, /<button|<select|is-selected|aria-haspopup|›/)
       assert.deepEqual(data, before)

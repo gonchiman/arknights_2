@@ -27,9 +27,10 @@ export const getUnequippedMetricLabel = (metric: SurtrUnequippedMetric, comparis
   metric === 'difference' ? quantity === 'expected-damage' ? 'ダメージ差' : 'DPS差' : metric === 'ratio' ? `比率（${comparisonBase === 'previous' ? '前段階' : '未装備'}＝100%）` : '増加率（%）'
 
 export function SurtrUnequippedComparisonTableContent({ series, baseline, resistances, precision, metric, layout, rankMode = 'none', columnOrder = 'module', colorScale = false, colorScaleMode = 'LINEAR', comparisonBase = 'unequipped', quantity = 'dps', referenceSeries, blockingComparison,
-  selectedResistance, onOpenDetail, footer }: SurtrUnequippedComparisonTableData & {
+  selectedResistance, onOpenDetail, title, footer }: SurtrUnequippedComparisonTableData & {
   selectedResistance?: number | null
   onOpenDetail?: (resistance: number, seriesId: string | undefined, metric: SurtrUnequippedMetric | 'total', blocking?: boolean) => void
+  title?: string
   footer?: ReactNode
 }) {
   const targets = useMemo(() => series.filter(item => item.id !== 'none'), [series])
@@ -98,7 +99,7 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
     </colgroup>) : targets.map(item => <colgroup key={item.id} span={compareBlocking ? undefined : moduleColumns}>
       {compareBlocking && Array.from({ length: moduleColumns }, (_, index) => <col key={index} />)}
     </colgroup>)}
-    <thead><tr>
+    <thead>{title && <tr className="surtr-s3-table-title-row"><th className="surtr-s3-table-title" colSpan={columnCount}>{title}</th></tr>}<tr className="surtr-s3-table-column-headers">
       {mergedRanks && <th className="surtr-s3-rank-cell" scope="col" rowSpan={headerRows}>ランク</th>}
       <th scope="col" rowSpan={headerRows}>術耐性</th>
       {showBaseline && <th scope="col" rowSpan={headerRows}><span className="surtr-s3-column-label"><i style={{ backgroundColor: baseline.color }} />未装備</span>

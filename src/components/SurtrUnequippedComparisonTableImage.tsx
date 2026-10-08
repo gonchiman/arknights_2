@@ -9,7 +9,10 @@ import './SurtrUnequippedComparisonTableImage.css'
 
 export interface SurtrUnequippedComparisonTableImageSnapshot extends SurtrUnequippedComparisonTableData {
   metadata: SurtrUnequippedTableImageMetadata
+  title?: string
 }
+
+export const SURTR_S3_COMPARISON_TABLE_IMAGE_TITLE = 'スルト S3 DPS比較'
 
 interface ImageProps extends SurtrUnequippedComparisonTableImageSnapshot {
   aspectRatio?: number
@@ -41,10 +44,10 @@ function tableAspect(aspectRatio?: number): TableImageAspect | null {
   throw new Error('画像の縦横比が正しくありません。')
 }
 
-export function SurtrUnequippedComparisonTableImage({ metadata, aspectRatio, exporting = false, onLayout, onLayoutError, ...data }: ImageProps) {
+export function SurtrUnequippedComparisonTableImage({ metadata, title, aspectRatio, exporting = false, onLayout, onLayoutError, ...data }: ImageProps) {
   const imageRef = useRef<HTMLElement>(null)
   const initialWidth = initialWidthFor(data)
-  const snapshotKey = JSON.stringify([data.series, data.baseline, data.blockingComparison, data.resistances, data.layout, data.metric, data.precision, data.rankMode, data.columnOrder, data.colorScale, data.colorScaleMode, data.comparisonBase, data.referenceSeries, data.quantity, metadata])
+  const snapshotKey = JSON.stringify([data.series, data.baseline, data.blockingComparison, data.resistances, data.layout, data.metric, data.precision, data.rankMode, data.columnOrder, data.colorScale, data.colorScaleMode, data.comparisonBase, data.referenceSeries, data.quantity, metadata, title])
   useLayoutEffect(() => {
     const image = imageRef.current
     const table = image?.querySelector('table')
@@ -82,7 +85,7 @@ export function SurtrUnequippedComparisonTableImage({ metadata, aspectRatio, exp
   }, [snapshotKey, initialWidth, aspectRatio, exporting, onLayout, onLayoutError])
 
   return <figure ref={imageRef} className="surtr-unequipped-table-image" style={{ width: initialWidth }} aria-label={`スルト ${data.quantity === 'expected-damage' ? '余燼の総ダメージ期待値' : 'S3'} ${data.comparisonBase === 'previous' ? '前段階' : '未装備'}との比較表`}>
-    <SurtrUnequippedComparisonTableContent {...data} footer={<div className="surtr-unequipped-table-image-conditions">
+    <SurtrUnequippedComparisonTableContent {...data} title={title?.trim() || (data.quantity === 'expected-damage' ? undefined : SURTR_S3_COMPARISON_TABLE_IMAGE_TITLE)} footer={<div className="surtr-unequipped-table-image-conditions">
       <span>{data.quantity === 'expected-damage' ? '総ダメージ期待値・' : ''}{getUnequippedMetricLabel(data.metric, data.comparisonBase, data.quantity)}・基準：{data.comparisonBase === 'previous' ? '1つ前の段階（Lv.1は未装備）' : '未装備'}</span>
       <span>S3 {metadata.skillLabel}・昇進2 Lv.{metadata.level}・信頼度{metadata.trust}・潜在{metadata.potential}・{data.blockingComparison !== undefined ? '未ブロック／対象を自身でブロック' : metadata.blocking ? '対象を自身でブロック' : '未ブロック'}{data.quantity !== 'expected-damage' && `・${metadata.remnantActive ? '余燼中' : '余燼なし'}`}</span>
       {data.quantity === 'expected-damage' && metadata.remnantAssumptions && <span>残りCT一様・命中まで{metadata.remnantAssumptions.windup}s・CT{metadata.remnantAssumptions.ctCarry === 'time' ? '時間' : '割合'}維持・退場同時の命中{metadata.remnantAssumptions.includeRetreatHit ? 'を含む' : 'を除外'}</span>}

@@ -3,9 +3,10 @@ import { getSurtrUnequippedComparisonTsv, type SurtrUnequippedMetric } from '../
 import { writeClipboardText } from '../lib/clipboard'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { getSurtrUnequippedTableImageFilename, type SurtrUnequippedTableImageMetadata } from '../lib/surtrUnequippedTableImageFilename'
+import { CHART_IMAGE_LABEL_MAX_LENGTH } from '../lib/chartImageLabels'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
 import { getUnequippedMetricLabel, SurtrUnequippedComparisonTableContent, type SurtrUnequippedComparisonTableData } from './SurtrUnequippedComparisonTableContent'
-import { SurtrUnequippedComparisonTableImagePreview, saveSurtrUnequippedComparisonTableImage,
+import { SURTR_S3_COMPARISON_TABLE_IMAGE_TITLE, SurtrUnequippedComparisonTableImagePreview, saveSurtrUnequippedComparisonTableImage,
   type SurtrUnequippedComparisonTableImageSnapshot } from './SurtrUnequippedComparisonTableImage'
 
 export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetail, metadata, ...data }: SurtrUnequippedComparisonTableData & {
@@ -27,6 +28,7 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
     finally { setCopying(false) }
   }
   const [image, setImage] = useState<SurtrUnequippedComparisonTableImageSnapshot | null>(null)
+  const [imageTitle, setImageTitle] = useState(SURTR_S3_COMPARISON_TABLE_IMAGE_TITLE)
   const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState<'saved' | 'downloaded' | 'failed' | null>(null)
@@ -43,7 +45,7 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
   const reportLayoutReady = useCallback(() => setLayoutError(''), [])
   const openImage = () => {
     setFeedback(null); setLayoutError('')
-    setImage(structuredClone({ ...data, metadata }))
+    setImage(structuredClone({ ...data, metadata, title: data.quantity === 'expected-damage' ? undefined : imageTitle }))
   }
   const saveImage = async (filename: string, ratio?: number) => {
     if (!image || saveInProgress.current || layoutError || aspectError) return
@@ -76,6 +78,16 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
       aspectHint="指定なしでは表の内容に合わせます。比率を指定しても表全体を保存します。"
       canChooseLocation={!!picker} saving={saving} saveDisabled={!!layoutError} error={feedback === 'failed'}
       onClose={() => { if (!saveInProgress.current) { setImage(null); setFeedback(null); setLayoutError('') } }} onSave={(filename, ratio) => void saveImage(filename, ratio)}
+      options={image.quantity !== 'expected-damage' && <label className="chart-image-save-field">
+        <span>タイトル</span>
+        <input type="text" value={image.title ?? SURTR_S3_COMPARISON_TABLE_IMAGE_TITLE} disabled={saving}
+          maxLength={CHART_IMAGE_LABEL_MAX_LENGTH} autoComplete="off"
+          onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) event.preventDefault() }}
+          onChange={event => {
+            const title = event.target.value
+            setImageTitle(title); setImage(current => current && { ...current, title })
+          }} />
+      </label>}
       preview={<SurtrUnequippedComparisonTableImagePreview key={`${aspect.preset}:${aspect.width}:${aspect.height}`} {...image}
         aspectRatio={aspectError ? undefined : aspectRatio} onLayoutError={reportLayoutError} onLayoutReady={reportLayoutReady} />} />}
   </section>
