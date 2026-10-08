@@ -1,6 +1,7 @@
 import type { SurtrDpsSettings } from './surtrDps.ts'
 import type { SurtrDpsBarStep, SurtrDpsResistanceRange } from './surtrDpsResistance.ts'
 import type { SurtrDpsMetric } from './surtrDpsOutput.ts'
+import type { SurtrUnequippedLayout, SurtrUnequippedMetric } from './surtrUnequippedComparison.ts'
 import { isValidSurtrDpsResistanceRange } from './surtrDpsResistance.ts'
 import { isValidHpChartYAxisRange, type HpChartYAxisMode } from './goldenglowTargetSwitchHpAxis.ts'
 
@@ -21,6 +22,9 @@ export interface SurtrDpsPageState {
   metric: SurtrDpsMetric
   differenceMetric: 'difference' | 'percent'
   requestedBaselineId: string
+  unequippedLayout: SurtrUnequippedLayout
+  unequippedMetric: SurtrUnequippedMetric
+  unequippedStep: SurtrDpsBarStep
   selectedResistance: number | null
   yAxisMode: HpChartYAxisMode
   yAxisDraft: { min: string; max: string }
@@ -32,6 +36,7 @@ export function createDefaultSurtrDpsPageState(): SurtrDpsPageState {
     excluded: [], moduleLevels: {}, chartKind: 'bar', barStep: 20,
     resistanceRange: { min: 0, max: 100 }, showValues: false, showResistanceRanks: true, gridStyle: 'solid', precision: 0,
     metric: 'total', differenceMetric: 'difference', requestedBaselineId: 'none', selectedResistance: null,
+    unequippedLayout: 'combined', unequippedMetric: 'difference', unequippedStep: 10,
     yAxisMode: 'zero', yAxisDraft: { min: '0', max: '4000' },
   }
 }
@@ -65,7 +70,7 @@ export function parseSurtrDpsPageState(value: unknown): SurtrDpsPageState {
     excluded: Array.isArray(source.excluded) ? [...new Set(source.excluded.filter((id): id is string => id === '' || validId(id)))] : [],
     moduleLevels,
     chartKind: option(source.chartKind, ['bar', 'line'], defaults.chartKind),
-    barStep: source.barStep === 'ratings' || integer(source.barStep, 1, 100) ? source.barStep : defaults.barStep,
+    barStep: stepOr(source.barStep, defaults.barStep),
     resistanceRange,
     showValues: booleanOr(source.showValues, defaults.showValues),
     showResistanceRanks: booleanOr(source.showResistanceRanks, defaults.showResistanceRanks),
@@ -74,6 +79,9 @@ export function parseSurtrDpsPageState(value: unknown): SurtrDpsPageState {
     metric: option(source.metric, ['total', 'difference', 'percent'], defaults.metric),
     differenceMetric: option(source.differenceMetric, ['difference', 'percent'], defaults.differenceMetric),
     requestedBaselineId: baselineId(source.requestedBaselineId, moduleLevels, defaults.requestedBaselineId),
+    unequippedLayout: option(source.unequippedLayout, ['combined', 'comparison'], defaults.unequippedLayout),
+    unequippedMetric: option(source.unequippedMetric, ['difference', 'ratio', 'percent'], defaults.unequippedMetric),
+    unequippedStep: stepOr(source.unequippedStep, defaults.unequippedStep),
     selectedResistance: integer(source.selectedResistance, resistanceRange.min, resistanceRange.max) ? source.selectedResistance : null,
     yAxisMode: option(source.yAxisMode, ['zero', 'auto', 'manual'], defaults.yAxisMode),
     yAxisDraft,
@@ -115,6 +123,10 @@ function integer(value: unknown, min: number, max: number): value is number {
 
 function integerOr(value: unknown, min: number, max: number, fallback: number): number {
   return integer(value, min, max) ? value : fallback
+}
+
+function stepOr(value: unknown, fallback: SurtrDpsBarStep): SurtrDpsBarStep {
+  return value === 'ratings' || integer(value, 1, 100) ? value : fallback
 }
 
 function selectedModuleLevels(value: unknown): number[] | null {

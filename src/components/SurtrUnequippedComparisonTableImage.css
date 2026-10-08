@@ -1,0 +1,26 @@
+.surtr-unequipped-table-image {
+  box-sizing: border-box;
+  flex: none;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  color: #222;
+  font-family: "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+  --surface: #fff;
+  --surface-soft: #f7f7f7;
+  --surface-hover: #fff;
+  --border: #d6d6d6;
+  --text: #222;
+  --text-muted: #666;
+}
+.surtr-unequipped-table-image .surtr-s3-table-wrap { overflow: visible; }
+.surtr-unequipped-table-image table { box-sizing: border-box; width: 100%; min-width: 0; font-size: 14px; }
+.surtr-unequipped-table-image th, .surtr-unequipped-table-image td { white-space: normal; overflow-wrap: anywhere; padding: 12px; }
+.surtr-unequipped-table-image .surtr-s3-unequipped-table thead tr:first-child > th:first-child { min-width: 0; }
+.surtr-unequipped-table-image tbody tr:hover > th { background: var(--surface-soft); }
+.surtr-unequipped-table-image .surtr-s3-column-label { justify-content: center; }
+.surtr-unequipped-table-image .surtr-s3-column-label i { flex: none; }
+.surtr-unequipped-table-image tbody tr:last-child > * { border-bottom: 1px solid var(--border); }
+.surtr-unequipped-table-image tfoot td { color: var(--text-muted); font-size: 12px; text-align: left; border: 0; }
+.surtr-unequipped-table-image-conditions { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 20px; }
+.surtr-unequipped-table-image-error { margin: 0; color: var(--danger, #a02d37); font-size: 12px; }

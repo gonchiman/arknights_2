@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { SurtrDpsCalculationBreakdown } from '../lib/surtrDpsCalculation'
 import type { SurtrDpsMetric } from '../lib/surtrDpsOutput'
+import { formatSurtrUnequippedComparisonValue } from '../lib/surtrUnequippedComparison'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import './GoldenglowGuidePage.css'
 import './GoldenglowExplosionDamageModal.css'
@@ -11,7 +12,8 @@ export interface SurtrDpsDetailSnapshot {
   conditions: string
   series: { id: string; label: string; color: string; calculation: SurtrDpsCalculationBreakdown; value: number | null }[]
   initialSeriesId: string
-  metric: SurtrDpsMetric
+  metric: SurtrDpsMetric | 'ratio'
+  signedComparison?: boolean
   baselineId: string
   precision: number
 }
@@ -41,15 +43,19 @@ export function SurtrDpsDetailModal({ snapshot, onClose }: { snapshot: SurtrDpsD
     { label: 'DPS（1秒あたり）', formula: `${number(calculation.perHit)} ÷ (${intervalFormula})`, result: number(calculation.dps) },
     ...(snapshot.metric !== 'total' && baseline ? [
       { label: `基準：${baseline.label}`, formula: '同じ術耐性・比較条件でのDPS', result: number(baseline.calculation.dps) },
-      { label: snapshot.metric === 'percent' ? '基準からの増加率' : '基準とのDPS差',
-        formula: snapshot.metric === 'percent'
+      { label: snapshot.metric === 'percent' ? '基準からの増加率' : snapshot.metric === 'ratio' ? '基準に対する比率' : '基準とのDPS差',
+        formula: snapshot.metric === 'ratio'
+          ? baseline.calculation.dps === 0 ? '基準のDPSが0のため算出できません' : `${number(calculation.dps)} ÷ ${number(baseline.calculation.dps)} × 100`
+          : snapshot.metric === 'percent'
           ? baseline.calculation.dps === 0 ? '基準のDPSが0のため算出できません' : `(${number(calculation.dps)} ÷ ${number(baseline.calculation.dps)} − 1) × 100`
           : `${number(calculation.dps)} − ${number(baseline.calculation.dps)}`,
-        result: selected.value === null ? '—' : `${number(selected.value)}${snapshot.metric === 'percent' ? '%' : ''}` },
+        result: selected.value === null ? '—' : `${number(selected.value)}${snapshot.metric === 'percent' || snapshot.metric === 'ratio' ? '%' : ''}` },
     ] : []),
   ]
   const rounded = selected.value === null ? null : Number(selected.value.toFixed(snapshot.precision))
-  const tableValue = rounded === null ? '—' : new Intl.NumberFormat('ja-JP', {
+  const tableValue = snapshot.metric !== 'total' && (snapshot.signedComparison || snapshot.metric === 'ratio')
+    ? formatSurtrUnequippedComparisonValue(selected.value, snapshot.metric, snapshot.precision)
+    : rounded === null ? '—' : new Intl.NumberFormat('ja-JP', {
     minimumFractionDigits: snapshot.precision, maximumFractionDigits: snapshot.precision,
   }).format(rounded === 0 ? 0 : rounded) + (snapshot.metric === 'percent' ? '%' : '')
 
