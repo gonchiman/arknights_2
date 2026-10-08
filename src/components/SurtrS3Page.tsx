@@ -5,7 +5,6 @@ import { getSurtrModuleChoices, getSelectedSurtrModuleStages, type SurtrModuleCh
 import { getSurtrDpsImageFilename, getSurtrCombinedImageFilename } from '../lib/surtrDpsImageFilename'
 import { readEnemyHistogramSnapshot, writeEnemyHistogramSnapshot, type EnemyHistogramSnapshot } from '../lib/enemyHistogramSnapshot'
 import { readSurtrDpsPageState, writeSurtrDpsPageState } from '../lib/surtrDpsPageState'
-import type { EnemyHeatmapColorScale } from '../lib/enemyHeatmapColor'
 import { calculateSurtrDpsCalculation } from '../lib/surtrDpsCalculation'
 import { getSurtrDpsResistanceSamples, isValidSurtrDpsResistanceRange, type SurtrDpsBarStep, type SurtrDpsResistanceRange } from '../lib/surtrDpsResistance'
 import { transformSurtrDpsSeries, getSurtrDpsOutputTsv, type SurtrDpsMetric } from '../lib/surtrDpsOutput'
@@ -32,7 +31,7 @@ import { EnemyResistanceHistogramEditor } from './EnemyResistanceHistogramEditor
 import { SurtrModuleStageSelection } from './SurtrModuleStageSelection'
 import { SurtrUnequippedComparisonTable } from './SurtrUnequippedComparisonTable'
 import { SurtrResistanceStepControl, getSurtrResistanceStepError } from './SurtrResistanceStepControl'
-import { HelpPopover } from './HelpPopover'
+import { SurtrModuleComparisonTableControls } from './SurtrModuleComparisonTableControls'
 import './DamageCalculator.css'
 import './SurtrS3Page.css'
 
@@ -186,7 +185,6 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
     ? '最小値より大きい最大値を入力してください。' : ''
   const changeMetric = (next: SurtrDpsMetric) => { setMetric(next); setYAxisMode('zero') }
   const barStepError = chartKind === 'bar' ? getSurtrResistanceStepError(customBarStep, barStepDraft) : ''
-  const unequippedStepError = getSurtrResistanceStepError(customUnequippedStep, unequippedStepDraft)
   const resistanceRangeError = !resistanceRangeDraft.min.trim() || !resistanceRangeDraft.max.trim()
     || !isValidSurtrDpsResistanceRange({ min: Number(resistanceRangeDraft.min), max: Number(resistanceRangeDraft.max) })
     ? '0〜100の整数で、終了を開始より大きくしてください。' : ''
@@ -476,44 +474,25 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
     <CollapsibleCalculatorPanel id="surtr-s3-unequipped-comparison" number="05" title={`${comparisonBaseLabel}との比較`}
       summary={`ブロック条件比較・${unequippedLayout === 'combined' ? 'DPS＋比較値' : '比較値のみ'}・${unequippedMetric === 'difference' ? 'DPS差' : unequippedMetric === 'ratio' ? '比率' : '増加率'}`}
       collapsedLabel="比較表を表示" className="surtr-s3-output-panel"
-      headerActions={<>
-        <span className="surtr-s3-color-scale-control">
-          <label className="surtr-s3-output-control"><span>比較基準</span><select aria-label="MOD比較の比較基準" value={unequippedComparisonBase} onChange={event => setUnequippedComparisonBase(event.target.value as SurtrUnequippedComparisonBase)}>
-            <option value="unequipped">未装備</option><option value="previous">1つ前の段階</option>
-          </select></label>
-          <HelpPopover label="MOD比較の比較基準の説明">「1つ前の段階」はLv.1を未装備、Lv.2を同じMODのLv.1、Lv.3を同じMODのLv.2と比較します。前段階が表に表示されていなくても計算します。</HelpPopover>
-        </span>
-        <label className="surtr-s3-output-control"><span>表の形式</span><select aria-label={`${comparisonBaseLabel}比較の表の形式`} value={unequippedLayout} onChange={event => setUnequippedLayout(event.target.value as SurtrUnequippedLayout)}>
-          <option value="combined">DPS＋比較値</option><option value="comparison">比較値のみ</option>
-        </select></label>
-        <label className="surtr-s3-output-control"><span>列の並び</span><select aria-label={`${comparisonBaseLabel}比較の列の並び`} value={unequippedColumnOrder} onChange={event => setUnequippedColumnOrder(event.target.value as SurtrUnequippedColumnOrder)}>
-          <option value="module">MOD別</option><option value="blocking">ブロック条件別</option>
-        </select></label>
-        <label className="surtr-s3-output-control"><span>比較値</span><select aria-label={`${comparisonBaseLabel}比較の指標`} value={unequippedMetric} onChange={event => setUnequippedMetric(event.target.value as SurtrUnequippedMetric)}>
-          <option value="difference">DPS差</option><option value="ratio">比率（{comparisonBaseLabel}＝100%）</option><option value="percent">増加率（%）</option>
-        </select></label>
-        <SurtrResistanceStepControl step={unequippedStep} custom={customUnequippedStep} draft={unequippedStepDraft}
-          onChange={setUnequippedStep} onCustomChange={setCustomUnequippedStep} onDraftChange={setUnequippedStepDraft}
-          ariaLabel={`${comparisonBaseLabel}比較の術耐性の刻み`} errorId="surtr-s3-unequipped-step-error" defaultStep={10} />
-        <label className="surtr-s3-output-control"><span>術耐性ランク</span><select aria-label={`${comparisonBaseLabel}比較の術耐性ランク表示`} value={unequippedRankMode} onChange={event => setUnequippedRankMode(event.target.value as SurtrUnequippedRankMode)}>
-          <option value="none">表示しない</option><option value="inline">数値の横に表示</option><option value="merged">同じランクをまとめる</option>
-        </select></label>
-        <label className="surtr-s3-output-control"><span>小数点以下</span><select aria-label={`${comparisonBaseLabel}比較の小数点以下の桁数`} value={precision} onChange={event => setPrecision(Number(event.target.value))}>
-          {[0, 1, 2, 3].map(value => <option key={value} value={value}>{value}桁</option>)}
-        </select></label>
-        <span className="surtr-s3-color-scale-control">
-          <label className="surtr-s3-output-control"><span>カラースケール</span><select aria-label={`${comparisonBaseLabel}比較のカラースケール`} value={unequippedColorScale ? unequippedColorScaleMode : 'NONE'}
-            onChange={event => {
-              const value = event.target.value
-              setUnequippedColorScale(value !== 'NONE')
-              if (value !== 'NONE') setUnequippedColorScaleMode(value as EnemyHeatmapColorScale)
-            }}>
-            <option value="NONE">なし</option><option value="LINEAR">値に比例</option><option value="SQRT">中程度を見やすく</option>
-          </select></label>
-          <HelpPopover label="カラースケールの説明">比較値のセルを、{comparisonBaseLabel}より高ければ青、低ければ茶色で表示します。同じ値は無色です。表示中の比較値全体で濃淡を揃え、差が大きいほど濃くします。「中程度を見やすく」は最大差に対する比率の平方根を使い、中程度の差も見やすくします。数値やDPS列は変わりません。</HelpPopover>
-        </span>
-        {unequippedStepError && <p className="surtr-s3-axis-error" id="surtr-s3-unequipped-step-error" role="alert">{unequippedStepError}</p>}
-      </>}>
+      headerActions={<SurtrModuleComparisonTableControls stepErrorId="surtr-s3-unequipped-step-error" value={{
+        comparisonBase: unequippedComparisonBase, layout: unequippedLayout, columnOrder: unequippedColumnOrder,
+        metric: unequippedMetric, step: unequippedStep, customStep: customUnequippedStep, stepDraft: unequippedStepDraft,
+        rankMode: unequippedRankMode, precision, colorScale: unequippedColorScale ? unequippedColorScaleMode : 'NONE',
+      }} onChange={changes => {
+        if (changes.comparisonBase !== undefined) setUnequippedComparisonBase(changes.comparisonBase)
+        if (changes.layout !== undefined) setUnequippedLayout(changes.layout)
+        if (changes.columnOrder !== undefined) setUnequippedColumnOrder(changes.columnOrder)
+        if (changes.metric !== undefined) setUnequippedMetric(changes.metric)
+        if (changes.step !== undefined) setUnequippedStep(changes.step)
+        if (changes.customStep !== undefined) setCustomUnequippedStep(changes.customStep)
+        if (changes.stepDraft !== undefined) setUnequippedStepDraft(changes.stepDraft)
+        if (changes.rankMode !== undefined) setUnequippedRankMode(changes.rankMode)
+        if (changes.precision !== undefined) setPrecision(changes.precision)
+        if (changes.colorScale !== undefined) {
+          setUnequippedColorScale(changes.colorScale !== 'NONE')
+          if (changes.colorScale !== 'NONE') setUnequippedColorScaleMode(changes.colorScale)
+        }
+      }} />}>
       {!record ? status : invalidModels.some(item => item.id !== 'none') ? <p role="alert">{invalidModels.filter(item => item.id !== 'none').map(item => item.label).join('・')}の計算に必要なデータを取得できませんでした。</p>
         : !unequipped?.model ? <p role="alert">未装備の計算に必要なデータを取得できませんでした。</p>
         : !series.some(item => item.id !== 'none') ? <p className="surtr-s3-status" role="status">比較するMODを選択してください。</p>

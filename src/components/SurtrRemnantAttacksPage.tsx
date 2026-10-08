@@ -23,6 +23,7 @@ import { SurtrModuleStageSelection } from './SurtrModuleStageSelection'
 import { SurtrRemnantAttackChart } from './SurtrRemnantAttackChart'
 import { SurtrRemnantAttackExpectationPanel } from './SurtrRemnantAttackExpectationPanel'
 import { SurtrRemnantDamageExpectationPanel } from './SurtrRemnantDamageExpectationPanel'
+import { SurtrRemnantDamageComparisonPanel } from './SurtrRemnantDamageComparisonPanel'
 import { SurtrRemnantAttackChartImage, SurtrRemnantAttackChartImagePreview, getSurtrRemnantAttackImageLabelDefaults,
   type SurtrRemnantAttackChartImageProps } from './SurtrRemnantAttackChartImage'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
@@ -345,6 +346,8 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
     <SurtrRemnantAttackExpectationPanel comparison={comparison} blockingComparison={blockingComparison} potential={potential} blocking={blocking} assumptions={assumptions}
       status={outputStatus} />
     <SurtrRemnantDamageExpectationPanel comparison={comparison} potential={potential} blocking={blocking} assumptions={assumptions}
+      status={outputStatus} />
+    <SurtrRemnantDamageComparisonPanel record={record} settings={settings} selectedStages={selectedStages} assumptions={assumptions}
       status={outputStatus} />
     {image && <ChartImageSaveDialog initialFilename={image.filename} getDefaultFilename={ratio => withChartImageAspect(
       withChartImageLabelFilename(image.filename, getSurtrRemnantAttackImageLabelDefaults(image.series, image.kind), image.labels), ratio)} aspect={aspect} onAspectChange={setAspect}

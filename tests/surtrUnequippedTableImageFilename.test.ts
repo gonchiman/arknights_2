@@ -20,6 +20,9 @@ const options = {
   layout: 'combined' as const,
   precision: 0,
 }
+const remnantAssumptions = { windup: 0.3, ctCarry: 'time' as const, includeRetreatHit: false }
+const remnantOptions = { ...options, quantity: 'expected-damage' as const,
+  metadata: { ...metadata, remnantAssumptions } }
 
 test('未装備比較表の計算条件・MOD段階・術耐性・形式・精度・自動比率を読める名前にする', () => {
   assert.equal(getSurtrUnequippedTableImageFilename(options),
@@ -86,6 +89,84 @@ test('前段階比較の長い名前も共通の省略・Unicode・禁止文字�
     assert.equal(name.isWellFormed(), true)
     assert.doesNotMatch(name, /[<>:"/\\|?*\u0000-\u001f\u007f�]/)
   }
+  assert.deepEqual(captured, before)
+})
+
+test('DPS表はquantity未指定・dpsで旧名を完全に保持し、余燼の非有効な仮定を名前に含めない', () => {
+  for (const comparisonBase of [undefined, 'unequipped', 'previous'] as const) {
+    const old = getSurtrUnequippedTableImageFilename({ ...options, comparisonBase }, 16 / 9)
+    for (const quantity of [undefined, 'dps'] as const) {
+      const name = getSurtrUnequippedTableImageFilename({ ...options, comparisonBase, quantity,
+        metadata: { ...metadata, remnantAssumptions } }, 16 / 9)
+      assert.equal(name, old)
+      assert.doesNotMatch(name, /余燼|CT一様|予備動作|CT秒数維持|退場時/)
+    }
+  }
+})
+
+test('余燼総ダメージ期待値表は両基準と6通りの形式・指標、計算の仮定を識別する', () => {
+  const names: string[] = []
+  for (const comparisonBase of ['unequipped', 'previous'] as const) {
+    for (const layout of ['combined', 'comparison'] as const) {
+      for (const metric of ['difference', 'ratio', 'percent'] as const) {
+        const name = getSurtrUnequippedTableImageFilename({ ...remnantOptions, comparisonBase, layout, metric })
+        assert.ok(name.startsWith(`スルト_余燼_総ダメージ期待値_${comparisonBase === 'previous' ? '前段階比較表' : '未装備比較表'}_`))
+        assert.ok(name.includes(metric === 'difference' ? '_ダメージ差_' : metric === 'ratio' ? '_比率_' : '_増加率_'))
+        assert.ok(name.includes(layout === 'combined' ? '_期待値＋比較値_' : '_比較値のみ_'))
+        assert.match(name, /_CT一様_予備動作0\.3秒_CT秒数維持_退場時除外_/)
+        assert.doesNotMatch(name, /DPS/)
+        assert.ok(new TextEncoder().encode(name).length <= 240)
+        names.push(name)
+      }
+    }
+  }
+  assert.equal(new Set(names).size, 12)
+  assert.equal(getSurtrUnequippedTableImageFilename(remnantOptions),
+    getSurtrUnequippedTableImageFilename({ ...remnantOptions, comparisonBase: 'unequipped' }))
+})
+
+test('余燼の仮定は画像名へ反映し、未指定時には具体的な仮定を捏造しない', () => {
+  const variations = [remnantAssumptions, { ...remnantAssumptions, windup: 0 },
+    { ...remnantAssumptions, windup: 0.2 }, { ...remnantAssumptions, ctCarry: 'ratio' as const },
+    { ...remnantAssumptions, includeRetreatHit: true }]
+  const names = variations.map(assumptions => getSurtrUnequippedTableImageFilename({ ...remnantOptions,
+    metadata: { ...metadata, remnantAssumptions: assumptions } }))
+  assert.equal(new Set(names).size, 5)
+  assert.match(names[1], /予備動作0秒/)
+  assert.match(names[2], /予備動作0\.2秒/)
+  assert.match(names[3], /CT割合維持/)
+  assert.match(names[4], /退場時含む/)
+  const unspecified = getSurtrUnequippedTableImageFilename({ ...remnantOptions, metadata })
+  assert.match(unspecified, /^スルト_余燼_総ダメージ期待値_未装備比較表_/)
+  assert.doesNotMatch(unspecified, /予備動作|CT秒数維持|CT割合維持|退場時/)
+})
+
+test('期待値表の長名を省略しても両基準・仮定・指標・形式と比率を保持し、Unicodeと240バイト制限を守る', () => {
+  const captured = { ...remnantOptions, metadata: { ...remnantOptions.metadata, skillLabel: '特化3 長い見出し😀'.repeat(80) },
+    series: [{ id: 'x:lv3', label: 'MOD X Lv.3 長い名前😀<>:"/\\|?*'.repeat(80) }] }
+  const before = structuredClone(captured)
+  const names: string[] = []
+  for (const comparisonBase of ['unequipped', 'previous'] as const) {
+    for (const ratio of [undefined, 16 / 9, 9 / 16]) {
+      for (const assumptions of [remnantAssumptions, { ...remnantAssumptions, windup: 0.2 },
+        { ...remnantAssumptions, ctCarry: 'ratio' as const }, { ...remnantAssumptions, includeRetreatHit: true }]) {
+        const name = getSurtrUnequippedTableImageFilename({ ...captured, comparisonBase,
+          metadata: { ...captured.metadata, remnantAssumptions: assumptions } }, ratio)
+        assert.ok(name.startsWith(`スルト_余燼_総ダメージ期待値_${comparisonBase === 'previous' ? '前段階比較表' : '未装備比較表'}_`))
+        assert.match(name, /_ダメージ差_期待値＋比較値_CT一様_/)
+        assert.ok(name.includes(`予備動作${assumptions.windup}秒`))
+        assert.ok(name.includes(assumptions.ctCarry === 'time' ? 'CT秒数維持' : 'CT割合維持'))
+        assert.ok(name.includes(assumptions.includeRetreatHit ? '退場時含む' : '退場時除外'))
+        assert.match(name, /ほか\d+項目_比率.+\.png$/)
+        assert.match(name, ratio === undefined ? /_比率自動\.png$/ : ratio === 16 / 9 ? /_比率16x9\.png$/ : /_比率9x16\.png$/)
+        assert.ok(new TextEncoder().encode(name).length <= 240)
+        assert.equal(name.isWellFormed(), true)
+        assert.doesNotMatch(name, /[<>:"/\\|?*\u0000-\u001f\u007f�]/)
+        names.push(name)
+      }
+    }
+  }
+  assert.equal(new Set(names).size, 24)
   assert.deepEqual(captured, before)
 })
 

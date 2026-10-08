@@ -14,8 +14,8 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
   onOpenDetail: (resistance: number, seriesId: string | undefined, metric: SurtrUnequippedMetric | 'total', blocking?: boolean) => void
 }) {
   const baseLabel = data.comparisonBase === 'previous' ? '前段階' : '未装備'
-  const metricLabel = getUnequippedMetricLabel(data.metric, data.comparisonBase)
-  const tableText = getSurtrUnequippedComparisonTsv(data.series, data.baseline, data.resistances, data.precision, data.metric, data.layout, data.blockingComparison, data.rankMode, data.columnOrder, data.comparisonBase, data.referenceSeries)
+  const metricLabel = getUnequippedMetricLabel(data.metric, data.comparisonBase, data.quantity)
+  const tableText = getSurtrUnequippedComparisonTsv(data.series, data.baseline, data.resistances, data.precision, data.metric, data.layout, data.blockingComparison, data.rankMode, data.columnOrder, data.comparisonBase, data.referenceSeries, data.quantity)
   const [copyFeedback, setCopyFeedback] = useState<{ text: string; ok: boolean } | null>(null)
   const [copying, setCopying] = useState(false)
   const copyState = copyFeedback?.text === tableText ? copyFeedback.ok : null

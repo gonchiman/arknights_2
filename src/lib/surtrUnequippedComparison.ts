@@ -6,6 +6,7 @@ export type SurtrUnequippedLayout = 'combined' | 'comparison'
 export type SurtrUnequippedRankMode = 'none' | 'inline' | 'merged'
 export type SurtrUnequippedColumnOrder = 'module' | 'blocking'
 export type SurtrUnequippedComparisonBase = 'unequipped' | 'previous'
+export type SurtrUnequippedComparisonQuantity = 'dps' | 'expected-damage'
 
 export interface SurtrUnequippedBlockingComparison {
   blocking: boolean
@@ -101,6 +102,7 @@ export function getSurtrUnequippedComparisonTsv(
   columnOrder: SurtrUnequippedColumnOrder = 'module',
   comparisonBase: SurtrUnequippedComparisonBase = 'unequipped',
   referenceSeries: readonly SurtrDpsOutputSeries[] = [],
+  quantity: SurtrUnequippedComparisonQuantity = 'dps',
 ): string {
   const targets = series.filter(item => item.id !== 'none')
   const conditions = blockingComparison === undefined
@@ -125,19 +127,18 @@ export function getSurtrUnequippedComparisonTsv(
       .map(item => [item.id, pointValues(item.points)])),
   }))
   const baselineValues = pointValues(baseline?.points ?? [])
-  const comparisonLabel = comparisonBase === 'previous'
-    ? metric === 'difference' ? '前段階とのDPS差'
-      : metric === 'ratio' ? '前段階に対するDPS比（%）' : '前段階からの増加率（%）'
-    : metric === 'difference' ? '未装備とのDPS差'
-      : metric === 'ratio' ? '未装備に対するDPS比（%）' : '未装備からの増加率（%）'
+  const baseLabel = comparisonBase === 'previous' ? '前段階' : '未装備'
+  const quantityLabel = quantity === 'expected-damage' ? '総ダメージ期待値' : 'DPS'
+  const comparisonLabel = metric === 'difference' ? `${baseLabel}との${quantity === 'expected-damage' ? 'ダメージ' : 'DPS'}差`
+    : metric === 'ratio' ? `${baseLabel}に対する${quantityLabel}比（%）` : `${baseLabel}からの増加率（%）`
   const combined = layout === 'combined'
   const includeUnequippedDps = combined && comparisonBase === 'unequipped'
   const columns = getSurtrUnequippedColumns(targets, conditionValues, columnOrder)
-  const header = ['術耐性', ...(rankMode !== 'none' ? ['術耐性ランク'] : []), ...(includeUnequippedDps ? ['未装備 DPS'] : []), ...columns.flatMap(({ item, condition }) => {
+  const header = ['術耐性', ...(rankMode !== 'none' ? ['術耐性ランク'] : []), ...(includeUnequippedDps ? [`未装備 ${quantityLabel}`] : []), ...columns.flatMap(({ item, condition }) => {
     const label = cleanLabel(item.label)
     const heading = condition.label ? columnOrder === 'blocking' ? `${condition.label} ${label}` : `${label} ${condition.label}` : label
     const referenceLabel = comparisonBase === 'previous' ? `（基準：${condition.baselineLabels.get(item.id)}）` : ''
-    return [...(combined ? [`${heading} DPS`] : []), `${heading} ${comparisonLabel}${referenceLabel}`]
+    return [...(combined ? [`${heading} ${quantityLabel}`] : []), `${heading} ${comparisonLabel}${referenceLabel}`]
   })]
   const rows = resistances.map(resistance => [
     String(resistance),

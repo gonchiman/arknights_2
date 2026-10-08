@@ -11,6 +11,24 @@ import {
   type SurtrUnequippedBlockingComparison,
 } from '../src/lib/surtrUnequippedComparison.ts'
 
+test('余燼のTSVは期待総ダメージの値・基準名を使い、DPS表の既定ラベルを変えない', () => {
+  const baseline = series('none', [[60, 1000]], '未装備')
+  const target = series('y:lv3', [[60, 2400]], 'MOD Y Lv.3')
+  const references = [series('y:lv2', [[60, 1600]], 'MOD Y Lv.2')]
+  const expected = getSurtrUnequippedComparisonTsv([target], baseline, [60], 1, 'difference', 'combined',
+    undefined, 'none', 'module', 'previous', references, 'expected-damage')
+  assert.equal(expected, [
+    '術耐性\tMOD Y Lv.3 総ダメージ期待値\tMOD Y Lv.3 前段階とのダメージ差（基準：MOD Y Lv.2）',
+    '60\t2400.0\t+800.0',
+  ].join('\r\n'))
+  const ratio = getSurtrUnequippedComparisonTsv([target], baseline, [60], 1, 'ratio', 'comparison',
+    undefined, 'none', 'module', 'unequipped', [], 'expected-damage')
+  assert.equal(ratio, '術耐性\tMOD Y Lv.3 未装備に対する総ダメージ期待値比（%）\r\n60\t240.0%')
+  const dps = getSurtrUnequippedComparisonTsv([target], baseline, [60], 1, 'difference', 'combined',
+    undefined, 'none', 'module', 'previous', references)
+  assert.equal(dps, expected.replaceAll('総ダメージ期待値', 'DPS').replace('とのダメージ差', 'とのDPS差'))
+})
+
 function series(id: string, values: readonly [number, number | null][], label = id): SurtrDpsOutputSeries {
   return { id, label, color: '#3f7699', points: values.map(([x, value]) => ({ x, value })) }
 }
