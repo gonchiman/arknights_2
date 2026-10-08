@@ -2,7 +2,7 @@ import type { SurtrDpsSettings } from './surtrDps.ts'
 import type { EnemyHeatmapColorScale } from './enemyHeatmapColor.ts'
 import type { SurtrDpsBarStep, SurtrDpsResistanceRange } from './surtrDpsResistance.ts'
 import type { SurtrDpsMetric } from './surtrDpsOutput.ts'
-import type { SurtrUnequippedColumnOrder, SurtrUnequippedLayout, SurtrUnequippedMetric, SurtrUnequippedRankMode } from './surtrUnequippedComparison.ts'
+import type { SurtrUnequippedColumnOrder, SurtrUnequippedComparisonBase, SurtrUnequippedLayout, SurtrUnequippedMetric, SurtrUnequippedRankMode } from './surtrUnequippedComparison.ts'
 import { isValidSurtrDpsResistanceRange } from './surtrDpsResistance.ts'
 import { isValidHpChartYAxisRange, type HpChartYAxisMode } from './goldenglowTargetSwitchHpAxis.ts'
 
@@ -25,6 +25,7 @@ export interface SurtrDpsPageState {
   requestedBaselineId: string
   unequippedLayout: SurtrUnequippedLayout
   unequippedMetric: SurtrUnequippedMetric
+  unequippedComparisonBase: SurtrUnequippedComparisonBase
   unequippedStep: SurtrDpsBarStep
   unequippedRankMode: SurtrUnequippedRankMode
   unequippedColumnOrder: SurtrUnequippedColumnOrder
@@ -42,6 +43,7 @@ export function createDefaultSurtrDpsPageState(): SurtrDpsPageState {
     resistanceRange: { min: 0, max: 100 }, showValues: false, showResistanceRanks: true, gridStyle: 'solid', precision: 0,
     metric: 'total', differenceMetric: 'difference', requestedBaselineId: 'none', selectedResistance: null,
     unequippedLayout: 'combined', unequippedMetric: 'difference', unequippedStep: 10, unequippedRankMode: 'none',
+    unequippedComparisonBase: 'unequipped',
     unequippedColumnOrder: 'module',
     unequippedColorScale: false,
     unequippedColorScaleMode: 'LINEAR',
@@ -89,6 +91,7 @@ export function parseSurtrDpsPageState(value: unknown): SurtrDpsPageState {
     requestedBaselineId: baselineId(source.requestedBaselineId, moduleLevels, defaults.requestedBaselineId),
     unequippedLayout: option(source.unequippedLayout, ['combined', 'comparison'], defaults.unequippedLayout),
     unequippedMetric: option(source.unequippedMetric, ['difference', 'ratio', 'percent'], defaults.unequippedMetric),
+    unequippedComparisonBase: option(source.unequippedComparisonBase, ['unequipped', 'previous'], defaults.unequippedComparisonBase),
     unequippedStep: stepOr(source.unequippedStep, defaults.unequippedStep),
     unequippedRankMode: option(source.unequippedRankMode, ['none', 'inline', 'merged'], defaults.unequippedRankMode),
     unequippedColumnOrder: option(source.unequippedColumnOrder, ['module', 'blocking'], defaults.unequippedColumnOrder),

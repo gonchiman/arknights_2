@@ -5,11 +5,33 @@ export type SurtrUnequippedMetric = 'difference' | 'ratio' | 'percent'
 export type SurtrUnequippedLayout = 'combined' | 'comparison'
 export type SurtrUnequippedRankMode = 'none' | 'inline' | 'merged'
 export type SurtrUnequippedColumnOrder = 'module' | 'blocking'
+export type SurtrUnequippedComparisonBase = 'unequipped' | 'previous'
 
 export interface SurtrUnequippedBlockingComparison {
   blocking: boolean
   series: readonly SurtrDpsOutputSeries[]
   baseline: SurtrDpsOutputSeries
+  referenceSeries?: readonly SurtrDpsOutputSeries[]
+}
+
+/** Return the exact previous stage within the same module; Lv.1 starts from unequipped. */
+export function getSurtrPreviousStageId(id: string): string | null {
+  const match = /^([^\s:]+):lv([123])$/.exec(id)
+  if (!match || match[1] === 'none') return null
+  return match[2] === '1' ? 'none' : `${match[1]}:lv${Number(match[2]) - 1}`
+}
+
+/** References are independent of the displayed stages, so a hidden previous stage remains usable. */
+export function getSurtrStageComparisonBaseline(
+  item: { id: string },
+  baseline: SurtrDpsOutputSeries | null,
+  comparisonBase: SurtrUnequippedComparisonBase = 'unequipped',
+  referenceSeries: readonly SurtrDpsOutputSeries[] = [],
+): SurtrDpsOutputSeries | null {
+  if (comparisonBase === 'unequipped') return baseline
+  const previousId = getSurtrPreviousStageId(item.id)
+  if (previousId === 'none') return baseline
+  return previousId === null ? null : referenceSeries.find(reference => reference.id === previousId) ?? null
 }
 
 /** Keep the live table, image and clipboard in the same module/condition order. */
@@ -23,13 +45,20 @@ export function getSurtrUnequippedColumns<T>(
     : targets.flatMap(item => conditions.map(condition => ({ item, condition })))
 }
 
-/** The independent baseline stays unequipped even when its displayed series is hidden. */
+/** Compute with an independent baseline even when its displayed series is hidden. */
 export function buildSurtrUnequippedComparisonSeries(
   series: readonly SurtrDpsOutputSeries[],
   baseline: SurtrDpsOutputSeries | null,
   metric: SurtrUnequippedMetric,
+  comparisonBase: SurtrUnequippedComparisonBase = 'unequipped',
+  referenceSeries: readonly SurtrDpsOutputSeries[] = [],
 ): SurtrDpsOutputSeries[] {
   const targets = series.filter(item => item.id !== 'none')
+  if (comparisonBase === 'previous') {
+    return targets.flatMap(item => buildSurtrUnequippedComparisonSeries(
+      [item], getSurtrStageComparisonBaseline(item, baseline, comparisonBase, referenceSeries), metric,
+    ))
+  }
   const input = baseline ? [...targets, { ...baseline, id: 'none' }] : targets
   const transformed = transformSurtrDpsSeries(input, metric === 'ratio' ? 'total' : metric, 'none')
     .filter(item => item.id !== 'none')
@@ -70,38 +99,50 @@ export function getSurtrUnequippedComparisonTsv(
   blockingComparison?: readonly SurtrUnequippedBlockingComparison[],
   rankMode: SurtrUnequippedRankMode = 'none',
   columnOrder: SurtrUnequippedColumnOrder = 'module',
+  comparisonBase: SurtrUnequippedComparisonBase = 'unequipped',
+  referenceSeries: readonly SurtrDpsOutputSeries[] = [],
 ): string {
   const targets = series.filter(item => item.id !== 'none')
   const conditions = blockingComparison === undefined
-    ? [{ label: '', series: targets, baseline }]
+    ? [{ label: '', series: targets, baseline, referenceSeries }]
     : [false, true].map(blocking => {
       const condition = blockingComparison.find(item => item.blocking === blocking)
       return {
         label: blocking ? '対象を自身でブロック' : '未ブロック',
         series: condition?.series ?? [],
         baseline: condition?.baseline ?? null,
+        referenceSeries: condition?.referenceSeries ?? [],
       }
     })
   const conditionValues = conditions.map(condition => ({
     label: condition.label,
+    baselineLabels: new Map(targets.map(item => [item.id, cleanLabel(
+      getSurtrStageComparisonBaseline(item, condition.baseline, comparisonBase, condition.referenceSeries)?.label
+      ?? (getSurtrPreviousStageId(item.id) === 'none' ? '未装備' : getSurtrPreviousStageId(item.id) ?? '—'),
+    )])),
     raw: new Map(condition.series.map(item => [item.id, pointValues(item.points)])),
-    comparison: new Map(buildSurtrUnequippedComparisonSeries(condition.series, condition.baseline, metric)
+    comparison: new Map(buildSurtrUnequippedComparisonSeries(condition.series, condition.baseline, metric, comparisonBase, condition.referenceSeries)
       .map(item => [item.id, pointValues(item.points)])),
   }))
   const baselineValues = pointValues(baseline?.points ?? [])
-  const comparisonLabel = metric === 'difference' ? '未装備とのDPS差'
-    : metric === 'ratio' ? '未装備に対するDPS比（%）' : '未装備からの増加率（%）'
+  const comparisonLabel = comparisonBase === 'previous'
+    ? metric === 'difference' ? '前段階とのDPS差'
+      : metric === 'ratio' ? '前段階に対するDPS比（%）' : '前段階からの増加率（%）'
+    : metric === 'difference' ? '未装備とのDPS差'
+      : metric === 'ratio' ? '未装備に対するDPS比（%）' : '未装備からの増加率（%）'
   const combined = layout === 'combined'
+  const includeUnequippedDps = combined && comparisonBase === 'unequipped'
   const columns = getSurtrUnequippedColumns(targets, conditionValues, columnOrder)
-  const header = ['術耐性', ...(rankMode !== 'none' ? ['術耐性ランク'] : []), ...(combined ? ['未装備 DPS'] : []), ...columns.flatMap(({ item, condition }) => {
+  const header = ['術耐性', ...(rankMode !== 'none' ? ['術耐性ランク'] : []), ...(includeUnequippedDps ? ['未装備 DPS'] : []), ...columns.flatMap(({ item, condition }) => {
     const label = cleanLabel(item.label)
     const heading = condition.label ? columnOrder === 'blocking' ? `${condition.label} ${label}` : `${label} ${condition.label}` : label
-    return [...(combined ? [`${heading} DPS`] : []), `${heading} ${comparisonLabel}`]
+    const referenceLabel = comparisonBase === 'previous' ? `（基準：${condition.baselineLabels.get(item.id)}）` : ''
+    return [...(combined ? [`${heading} DPS`] : []), `${heading} ${comparisonLabel}${referenceLabel}`]
   })]
   const rows = resistances.map(resistance => [
     String(resistance),
     ...(rankMode !== 'none' ? [getSurtrDpsResistanceRating(resistance)?.rating ?? '—'] : []),
-    ...(combined ? [formatNumber(baselineValues.get(resistance), precision, false, false)] : []),
+    ...(includeUnequippedDps ? [formatNumber(baselineValues.get(resistance), precision, false, false)] : []),
     ...columns.flatMap(({ item, condition }) => [
       ...(combined ? [formatNumber(condition.raw.get(item.id)?.get(resistance), precision, false, false)] : []),
       formatSurtrUnequippedComparisonValue(condition.comparison.get(item.id)?.get(resistance), metric, precision, false),

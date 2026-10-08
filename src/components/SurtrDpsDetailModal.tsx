@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { SurtrDpsCalculationBreakdown } from '../lib/surtrDpsCalculation'
 import type { SurtrDpsMetric } from '../lib/surtrDpsOutput'
-import { formatSurtrUnequippedComparisonValue } from '../lib/surtrUnequippedComparison'
+import { formatSurtrUnequippedComparisonValue, type SurtrUnequippedComparisonBase } from '../lib/surtrUnequippedComparison'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import './GoldenglowGuidePage.css'
 import './GoldenglowExplosionDamageModal.css'
@@ -10,10 +10,12 @@ import './SurtrDpsDetailModal.css'
 export interface SurtrDpsDetailSnapshot {
   resistance: number
   conditions: string
-  series: { id: string; label: string; color: string; calculation: SurtrDpsCalculationBreakdown; value: number | null }[]
+  series: { id: string; label: string; color: string; calculation: SurtrDpsCalculationBreakdown; value: number | null;
+    baseline?: { label: string; calculation: SurtrDpsCalculationBreakdown } }[]
   initialSeriesId: string
   metric: SurtrDpsMetric | 'ratio'
   signedComparison?: boolean
+  comparisonBase?: SurtrUnequippedComparisonBase
   baselineId: string
   precision: number
 }
@@ -26,7 +28,7 @@ export function SurtrDpsDetailModal({ snapshot, onClose }: { snapshot: SurtrDpsD
   if (!selected) return null
   const calculation = selected.calculation
   const { baseAttack: base, attackPipeline: attack, mitigation, artsFragilityMultiplier } = calculation
-  const baseline = snapshot.series.find(item => item.id === snapshot.baselineId)
+  const baseline = snapshot.comparisonBase === 'previous' ? selected.baseline : snapshot.series.find(item => item.id === snapshot.baselineId)
   const intervalFormula = `${number(calculation.baseAttackTime)} × 100 ÷ ${number(calculation.appliedAttackSpeed)}`
   const rows = [
     { label: '攻撃力を合計', formula: `${number(base.levelAttack)}（レベル）+ ${number(base.trustAttack)}（信頼）+ ${number(base.potentialAttack)}（潜在）+ ${number(base.moduleAttack)}（MOD）`, result: number(base.beforeRounding) },

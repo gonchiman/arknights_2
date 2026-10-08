@@ -21,7 +21,7 @@ interface ImageProps extends SurtrUnequippedComparisonTableImageSnapshot {
 const initialWidthFor = (snapshot: SurtrUnequippedComparisonTableData) => {
   const targets = snapshot.series.filter(item => item.id !== 'none').length
   const conditions = snapshot.blockingComparison === undefined ? 1 : 2
-  const columns = (snapshot.layout === 'combined' ? 2 + targets * 2 * conditions : 1 + targets * conditions)
+  const columns = (snapshot.layout === 'combined' ? (snapshot.comparisonBase === 'previous' ? 1 : 2) + targets * 2 * conditions : 1 + targets * conditions)
     + (snapshot.rankMode === 'merged' ? 1 : 0)
   return Math.max(640, columns * 150)
 }
@@ -44,7 +44,7 @@ function tableAspect(aspectRatio?: number): TableImageAspect | null {
 export function SurtrUnequippedComparisonTableImage({ metadata, aspectRatio, exporting = false, onLayout, onLayoutError, ...data }: ImageProps) {
   const imageRef = useRef<HTMLElement>(null)
   const initialWidth = initialWidthFor(data)
-  const snapshotKey = JSON.stringify([data.series, data.baseline, data.blockingComparison, data.resistances, data.layout, data.metric, data.precision, data.rankMode, data.columnOrder, data.colorScale, data.colorScaleMode, metadata])
+  const snapshotKey = JSON.stringify([data.series, data.baseline, data.blockingComparison, data.resistances, data.layout, data.metric, data.precision, data.rankMode, data.columnOrder, data.colorScale, data.colorScaleMode, data.comparisonBase, data.referenceSeries, metadata])
   useLayoutEffect(() => {
     const image = imageRef.current
     const table = image?.querySelector('table')
@@ -81,9 +81,9 @@ export function SurtrUnequippedComparisonTableImage({ metadata, aspectRatio, exp
     return () => { cancelled = true; document.fonts.removeEventListener('loadingdone', measure) }
   }, [snapshotKey, initialWidth, aspectRatio, exporting, onLayout, onLayoutError])
 
-  return <figure ref={imageRef} className="surtr-unequipped-table-image" style={{ width: initialWidth }} aria-label="スルト S3 未装備との比較表">
+  return <figure ref={imageRef} className="surtr-unequipped-table-image" style={{ width: initialWidth }} aria-label={`スルト S3 ${data.comparisonBase === 'previous' ? '前段階' : '未装備'}との比較表`}>
     <SurtrUnequippedComparisonTableContent {...data} footer={<div className="surtr-unequipped-table-image-conditions">
-      <span>{getUnequippedMetricLabel(data.metric)}・基準：未装備</span>
+      <span>{getUnequippedMetricLabel(data.metric, data.comparisonBase)}・基準：{data.comparisonBase === 'previous' ? '1つ前の段階（Lv.1は未装備）' : '未装備'}</span>
       <span>S3 {metadata.skillLabel}・昇進2 Lv.{metadata.level}・信頼度{metadata.trust}・潜在{metadata.potential}・{data.blockingComparison !== undefined ? '未ブロック／対象を自身でブロック' : metadata.blocking ? '対象を自身でブロック' : '未ブロック'}</span>
     </div>} />
   </figure>

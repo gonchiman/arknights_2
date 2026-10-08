@@ -9,7 +9,7 @@ import type { EnemyHeatmapColorScale } from '../lib/enemyHeatmapColor'
 import { calculateSurtrDpsCalculation } from '../lib/surtrDpsCalculation'
 import { getSurtrDpsResistanceSamples, isValidSurtrDpsResistanceRange, type SurtrDpsBarStep, type SurtrDpsResistanceRange } from '../lib/surtrDpsResistance'
 import { transformSurtrDpsSeries, getSurtrDpsOutputTsv, type SurtrDpsMetric } from '../lib/surtrDpsOutput'
-import { buildSurtrUnequippedComparisonSeries, type SurtrUnequippedColumnOrder, type SurtrUnequippedLayout, type SurtrUnequippedMetric, type SurtrUnequippedRankMode } from '../lib/surtrUnequippedComparison'
+import { buildSurtrUnequippedComparisonSeries, getSurtrPreviousStageId, type SurtrUnequippedComparisonBase, type SurtrUnequippedColumnOrder, type SurtrUnequippedLayout, type SurtrUnequippedMetric, type SurtrUnequippedRankMode } from '../lib/surtrUnequippedComparison'
 import { buildSurtrDpsBlockComparison } from '../lib/surtrDpsBlockComparison'
 import { writeClipboardText } from '../lib/clipboard'
 import { isValidHpChartYAxisRange } from '../lib/goldenglowTargetSwitchHpAxis'
@@ -76,6 +76,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   const [differenceMetric, setDifferenceMetric] = useState<'difference' | 'percent'>(initialState.differenceMetric)
   const [requestedBaselineId, setRequestedBaselineId] = useState(initialState.requestedBaselineId)
   const [unequippedLayout, setUnequippedLayout] = useState<SurtrUnequippedLayout>(initialState.unequippedLayout)
+  const [unequippedComparisonBase, setUnequippedComparisonBase] = useState<SurtrUnequippedComparisonBase>(initialState.unequippedComparisonBase)
   const [unequippedMetric, setUnequippedMetric] = useState<SurtrUnequippedMetric>(initialState.unequippedMetric)
   const [unequippedStep, setUnequippedStep] = useState<SurtrDpsBarStep>(initialState.unequippedStep)
   const [unequippedRankMode, setUnequippedRankMode] = useState<SurtrUnequippedRankMode>(initialState.unequippedRankMode)
@@ -96,9 +97,9 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   const receiveHistogramDraft = useCallback((snapshot: EnemyHistogramSnapshot | null) => setHistogramDraft(snapshot), [])
   useEffect(() => {
     writeSurtrDpsPageState({ settings, excluded, moduleLevels, chartKind, barStep, resistanceRange, showValues, showResistanceRanks,
-      gridStyle, precision, metric, differenceMetric, requestedBaselineId, unequippedLayout, unequippedMetric, unequippedStep, unequippedRankMode, unequippedColumnOrder, unequippedColorScale, unequippedColorScaleMode, selectedResistance, yAxisMode, yAxisDraft })
+      gridStyle, precision, metric, differenceMetric, requestedBaselineId, unequippedLayout, unequippedComparisonBase, unequippedMetric, unequippedStep, unequippedRankMode, unequippedColumnOrder, unequippedColorScale, unequippedColorScaleMode, selectedResistance, yAxisMode, yAxisDraft })
   }, [settings, excluded, moduleLevels, chartKind, barStep, resistanceRange, showValues, showResistanceRanks,
-    gridStyle, precision, metric, differenceMetric, requestedBaselineId, unequippedLayout, unequippedMetric, unequippedStep, unequippedRankMode, unequippedColumnOrder, unequippedColorScale, unequippedColorScaleMode, selectedResistance, yAxisMode, yAxisDraft])
+    gridStyle, precision, metric, differenceMetric, requestedBaselineId, unequippedLayout, unequippedComparisonBase, unequippedMetric, unequippedStep, unequippedRankMode, unequippedColumnOrder, unequippedColorScale, unequippedColorScaleMode, selectedResistance, yAxisMode, yAxisDraft])
   const [copyFeedback, setCopyFeedback] = useState<{ text: string; ok: boolean } | null>(null)
   const [copying, setCopying] = useState(false)
   const [image, setImage] = useState<ImageSnapshot | null>(null)
@@ -143,12 +144,21 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   }, [comparison, record, choices, effectiveSettings])
   const unequippedBlockingComparison = useMemo(() => {
     if (!record || !unequipped) return null
+    const visible = [unequipped, ...comparison.filter(item => item.id !== 'none')]
+    const references = unequippedComparisonBase === 'previous' ? comparison.flatMap(item => {
+      const previousId = getSurtrPreviousStageId(item.id)
+      if (!previousId || previousId === 'none') return []
+      return [{ ...item, id: previousId, level: item.level - 1, label: item.label.replace(/Lv\.\d+$/, `Lv.${item.level - 1}`) }]
+    }) : []
+    const modules = [...new Map([...visible, ...references].map(item => [item.id, item])).values()]
     const groups = buildSurtrDpsBlockComparison(record, effectiveSettings,
-      [unequipped, ...comparison.filter(item => item.id !== 'none')].map(item => ({
+      modules.map(item => ({
         id: item.id, moduleId: item.moduleId, label: item.label, color: item.color, level: item.level, lineStyle: item.lineStyle,
       })), 'total', 'none')
-    return groups?.map(group => ({ ...group, baseline: group.series.find(item => item.id === 'none')! })) ?? null
-  }, [record, effectiveSettings, unequipped, comparison])
+    const visibleIds = new Set(visible.map(item => item.id))
+    return groups?.map(group => ({ ...group, series: group.series.filter(item => visibleIds.has(item.id)),
+      baseline: group.series.find(item => item.id === 'none')!, referenceSeries: group.series })) ?? null
+  }, [record, effectiveSettings, unequipped, comparison, unequippedComparisonBase])
   const invalidModels = comparison.filter(item => !item.model)
   const baseline = series.find(item => item.id === requestedBaselineId) ?? series[0]
   const effectiveMetric = series.length > 1 ? metric : 'total'
@@ -197,16 +207,20 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   }
   const label = skillLabel(effectiveSettings.skillLevelIndex)
   const blockLabel = effectiveSettings.blocking ? '対象を自身でブロック' : '未ブロック'
+  const comparisonBaseLabel = unequippedComparisonBase === 'previous' ? '前段階' : '未装備'
   const openDetail = (resistance: number, requestedSeriesId?: string, unequippedDetailMetric?: SurtrUnequippedMetric | 'total', requestedBlocking?: boolean) => {
     const useUnequippedComparison = unequippedDetailMetric !== undefined
+    const usePreviousStage = useUnequippedComparison && unequippedComparisonBase === 'previous'
     const blockingGroup = requestedBlocking === undefined ? undefined : unequippedBlockingComparison?.find(group => group.blocking === requestedBlocking)
     if (requestedBlocking !== undefined && (!record || !blockingGroup)) return
-    const entries = (useUnequippedComparison && unequipped ? [unequipped, ...comparison.filter(item => item.id !== 'none')] : comparison)
+    const entries = (usePreviousStage ? comparison.filter(item => item.id !== 'none')
+      : useUnequippedComparison && unequipped ? [unequipped, ...comparison.filter(item => item.id !== 'none')] : comparison)
       .map(item => requestedBlocking === undefined || !record ? item : { ...item,
         model: deriveSurtrDpsModel(record, { ...effectiveSettings, blocking: requestedBlocking }, item.moduleId, item.level) })
     const detailBaseline = blockingGroup?.baseline ?? unequipped
     const detailValues = detailBaseline && unequippedDetailMetric && unequippedDetailMetric !== 'total'
-      ? buildSurtrUnequippedComparisonSeries(blockingGroup?.series ?? series, detailBaseline, unequippedDetailMetric) : outputSeries
+      ? buildSurtrUnequippedComparisonSeries(blockingGroup?.series ?? series, detailBaseline, unequippedDetailMetric,
+        unequippedComparisonBase, blockingGroup?.referenceSeries ?? []) : outputSeries
     const detailSeries = entries.flatMap(item => {
       if (!item.model) return []
       const calculation = calculateSurtrDpsCalculation(item.model, resistance)
@@ -217,7 +231,14 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
       else if (useUnequippedComparison && id === 'none') {
         value = unequippedDetailMetric !== 'difference' && calculation.dps === 0 ? null : unequippedDetailMetric === 'ratio' ? 100 : 0
       }
-      return [{ id, label: item.label, color: item.color, calculation, value }]
+      const previousId = usePreviousStage ? getSurtrPreviousStageId(id) : null
+      const previousModel = previousId && record ? deriveSurtrDpsModel(record,
+        { ...effectiveSettings, blocking: requestedBlocking ?? effectiveSettings.blocking },
+        previousId === 'none' ? '' : item.moduleId, previousId === 'none' ? 0 : item.level - 1) : null
+      const previousCalculation = previousModel ? calculateSurtrDpsCalculation(previousModel, resistance) : null
+      return [{ id, label: item.label, color: item.color, calculation, value,
+        ...(previousCalculation ? { baseline: { label: previousId === 'none' ? '未装備' : item.label.replace(/Lv\.\d+$/, `Lv.${item.level - 1}`),
+          calculation: previousCalculation } } : {}) }]
     })
     if (!detailSeries.length) return
     setSelectedResistance(resistance)
@@ -226,6 +247,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
     setDetail({ resistance, series: detailSeries, initialSeriesId,
       metric: unequippedDetailMetric ?? effectiveMetric, baselineId: useUnequippedComparison ? 'none' : baseline?.id ?? '', precision,
       signedComparison: useUnequippedComparison,
+      comparisonBase: useUnequippedComparison ? unequippedComparisonBase : undefined,
       conditions: `昇進2 Lv.${effectiveSettings.level}・信頼度${effectiveSettings.trust}・潜在${effectiveSettings.potential}・S3 ${label}・${(requestedBlocking ?? effectiveSettings.blocking) ? '対象を自身でブロック' : '未ブロック'}` })
   }
   const update = <K extends keyof SurtrDpsSettings>(key: K, value: SurtrDpsSettings[K]) => setSettings(previous => ({ ...previous, [key]: value }))
@@ -451,30 +473,36 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
         </div>}
       {imageFeedback && imageFeedback !== 'failed' && <p className="surtr-s3-status" role="status">{imageFeedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
     </CollapsibleCalculatorPanel>
-    <CollapsibleCalculatorPanel id="surtr-s3-unequipped-comparison" number="05" title="未装備との比較"
+    <CollapsibleCalculatorPanel id="surtr-s3-unequipped-comparison" number="05" title={`${comparisonBaseLabel}との比較`}
       summary={`ブロック条件比較・${unequippedLayout === 'combined' ? 'DPS＋比較値' : '比較値のみ'}・${unequippedMetric === 'difference' ? 'DPS差' : unequippedMetric === 'ratio' ? '比率' : '増加率'}`}
       collapsedLabel="比較表を表示" className="surtr-s3-output-panel"
       headerActions={<>
-        <label className="surtr-s3-output-control"><span>表の形式</span><select aria-label="未装備比較の表の形式" value={unequippedLayout} onChange={event => setUnequippedLayout(event.target.value as SurtrUnequippedLayout)}>
+        <span className="surtr-s3-color-scale-control">
+          <label className="surtr-s3-output-control"><span>比較基準</span><select aria-label="MOD比較の比較基準" value={unequippedComparisonBase} onChange={event => setUnequippedComparisonBase(event.target.value as SurtrUnequippedComparisonBase)}>
+            <option value="unequipped">未装備</option><option value="previous">1つ前の段階</option>
+          </select></label>
+          <HelpPopover label="MOD比較の比較基準の説明">「1つ前の段階」はLv.1を未装備、Lv.2を同じMODのLv.1、Lv.3を同じMODのLv.2と比較します。前段階が表に表示されていなくても計算します。</HelpPopover>
+        </span>
+        <label className="surtr-s3-output-control"><span>表の形式</span><select aria-label={`${comparisonBaseLabel}比較の表の形式`} value={unequippedLayout} onChange={event => setUnequippedLayout(event.target.value as SurtrUnequippedLayout)}>
           <option value="combined">DPS＋比較値</option><option value="comparison">比較値のみ</option>
         </select></label>
-        <label className="surtr-s3-output-control"><span>列の並び</span><select aria-label="未装備比較の列の並び" value={unequippedColumnOrder} onChange={event => setUnequippedColumnOrder(event.target.value as SurtrUnequippedColumnOrder)}>
+        <label className="surtr-s3-output-control"><span>列の並び</span><select aria-label={`${comparisonBaseLabel}比較の列の並び`} value={unequippedColumnOrder} onChange={event => setUnequippedColumnOrder(event.target.value as SurtrUnequippedColumnOrder)}>
           <option value="module">MOD別</option><option value="blocking">ブロック条件別</option>
         </select></label>
-        <label className="surtr-s3-output-control"><span>比較値</span><select aria-label="未装備比較の指標" value={unequippedMetric} onChange={event => setUnequippedMetric(event.target.value as SurtrUnequippedMetric)}>
-          <option value="difference">DPS差</option><option value="ratio">比率（未装備＝100%）</option><option value="percent">増加率（%）</option>
+        <label className="surtr-s3-output-control"><span>比較値</span><select aria-label={`${comparisonBaseLabel}比較の指標`} value={unequippedMetric} onChange={event => setUnequippedMetric(event.target.value as SurtrUnequippedMetric)}>
+          <option value="difference">DPS差</option><option value="ratio">比率（{comparisonBaseLabel}＝100%）</option><option value="percent">増加率（%）</option>
         </select></label>
         <SurtrResistanceStepControl step={unequippedStep} custom={customUnequippedStep} draft={unequippedStepDraft}
           onChange={setUnequippedStep} onCustomChange={setCustomUnequippedStep} onDraftChange={setUnequippedStepDraft}
-          ariaLabel="未装備比較の術耐性の刻み" errorId="surtr-s3-unequipped-step-error" defaultStep={10} />
-        <label className="surtr-s3-output-control"><span>術耐性ランク</span><select aria-label="未装備比較の術耐性ランク表示" value={unequippedRankMode} onChange={event => setUnequippedRankMode(event.target.value as SurtrUnequippedRankMode)}>
+          ariaLabel={`${comparisonBaseLabel}比較の術耐性の刻み`} errorId="surtr-s3-unequipped-step-error" defaultStep={10} />
+        <label className="surtr-s3-output-control"><span>術耐性ランク</span><select aria-label={`${comparisonBaseLabel}比較の術耐性ランク表示`} value={unequippedRankMode} onChange={event => setUnequippedRankMode(event.target.value as SurtrUnequippedRankMode)}>
           <option value="none">表示しない</option><option value="inline">数値の横に表示</option><option value="merged">同じランクをまとめる</option>
         </select></label>
-        <label className="surtr-s3-output-control"><span>小数点以下</span><select aria-label="未装備比較の小数点以下の桁数" value={precision} onChange={event => setPrecision(Number(event.target.value))}>
+        <label className="surtr-s3-output-control"><span>小数点以下</span><select aria-label={`${comparisonBaseLabel}比較の小数点以下の桁数`} value={precision} onChange={event => setPrecision(Number(event.target.value))}>
           {[0, 1, 2, 3].map(value => <option key={value} value={value}>{value}桁</option>)}
         </select></label>
         <span className="surtr-s3-color-scale-control">
-          <label className="surtr-s3-output-control"><span>カラースケール</span><select aria-label="未装備比較のカラースケール" value={unequippedColorScale ? unequippedColorScaleMode : 'NONE'}
+          <label className="surtr-s3-output-control"><span>カラースケール</span><select aria-label={`${comparisonBaseLabel}比較のカラースケール`} value={unequippedColorScale ? unequippedColorScaleMode : 'NONE'}
             onChange={event => {
               const value = event.target.value
               setUnequippedColorScale(value !== 'NONE')
@@ -482,7 +510,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
             }}>
             <option value="NONE">なし</option><option value="LINEAR">値に比例</option><option value="SQRT">中程度を見やすく</option>
           </select></label>
-          <HelpPopover label="カラースケールの説明">比較値のセルを、未装備より高ければ青、低ければ茶色で表示します。同じ値は無色です。表示中の比較値全体で濃淡を揃え、差が大きいほど濃くします。「中程度を見やすく」は最大差に対する比率の平方根を使い、中程度の差も見やすくします。数値やDPS列は変わりません。</HelpPopover>
+          <HelpPopover label="カラースケールの説明">比較値のセルを、{comparisonBaseLabel}より高ければ青、低ければ茶色で表示します。同じ値は無色です。表示中の比較値全体で濃淡を揃え、差が大きいほど濃くします。「中程度を見やすく」は最大差に対する比率の平方根を使い、中程度の差も見やすくします。数値やDPS列は変わりません。</HelpPopover>
         </span>
         {unequippedStepError && <p className="surtr-s3-axis-error" id="surtr-s3-unequipped-step-error" role="alert">{unequippedStepError}</p>}
       </>}>
@@ -492,7 +520,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
         : !unequippedBlockingComparison ? <p role="alert">ブロック条件ごとの計算に必要なデータを取得できませんでした。</p>
         : !unequippedResistances.length ? <p className="surtr-s3-status" role="status">指定した範囲に表示する術耐性がありません。</p>
         : <SurtrUnequippedComparisonTable series={series} baseline={unequipped} resistances={unequippedResistances} precision={precision}
-          metric={unequippedMetric} layout={unequippedLayout} rankMode={unequippedRankMode} columnOrder={unequippedColumnOrder} colorScale={unequippedColorScale} colorScaleMode={unequippedColorScaleMode} blockingComparison={unequippedBlockingComparison} selectedResistance={selectedResistance}
+          metric={unequippedMetric} layout={unequippedLayout} comparisonBase={unequippedComparisonBase} rankMode={unequippedRankMode} columnOrder={unequippedColumnOrder} colorScale={unequippedColorScale} colorScaleMode={unequippedColorScaleMode} blockingComparison={unequippedBlockingComparison} selectedResistance={selectedResistance}
           metadata={{ skillLabel: label, level: effectiveSettings.level, trust: effectiveSettings.trust,
             potential: effectiveSettings.potential, blocking: effectiveSettings.blocking }}
           onOpenDetail={(resistance, seriesId, detailMetric, blocking) => openDetail(resistance, seriesId, detailMetric, blocking)} />}

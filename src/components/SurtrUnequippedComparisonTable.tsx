@@ -13,8 +13,9 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
   selectedResistance: number | null
   onOpenDetail: (resistance: number, seriesId: string | undefined, metric: SurtrUnequippedMetric | 'total', blocking?: boolean) => void
 }) {
-  const metricLabel = getUnequippedMetricLabel(data.metric)
-  const tableText = getSurtrUnequippedComparisonTsv(data.series, data.baseline, data.resistances, data.precision, data.metric, data.layout, data.blockingComparison, data.rankMode, data.columnOrder)
+  const baseLabel = data.comparisonBase === 'previous' ? '前段階' : '未装備'
+  const metricLabel = getUnequippedMetricLabel(data.metric, data.comparisonBase)
+  const tableText = getSurtrUnequippedComparisonTsv(data.series, data.baseline, data.resistances, data.precision, data.metric, data.layout, data.blockingComparison, data.rankMode, data.columnOrder, data.comparisonBase, data.referenceSeries)
   const [copyFeedback, setCopyFeedback] = useState<{ text: string; ok: boolean } | null>(null)
   const [copying, setCopying] = useState(false)
   const copyState = copyFeedback?.text === tableText ? copyFeedback.ok : null
@@ -60,13 +61,13 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
   return <section className="surtr-s3-table-section" aria-labelledby="surtr-s3-unequipped-table-title">
     <div className="surtr-s3-result-heading"><h3 id="surtr-s3-unequipped-table-title">{metricLabel}</h3>
       <div className="surtr-s3-result-actions">
-        <button type="button" className="button secondary" aria-label="未装備との比較表をコピー" disabled={copying} onClick={() => void copyTable()}>
+        <button type="button" className="button secondary" aria-label={`${baseLabel}との比較表をコピー`} disabled={copying} onClick={() => void copyTable()}>
           {copying ? 'コピー中…' : copyState === true ? 'コピー済み' : copyState === false ? 'コピー失敗' : '表をコピー'}
         </button>
-        <button type="button" className="button secondary" aria-label="未装備との比較表を画像として保存" aria-haspopup="dialog" disabled={saving} onClick={openImage}>画像を保存</button>
+        <button type="button" className="button secondary" aria-label={`${baseLabel}との比較表を画像として保存`} aria-haspopup="dialog" disabled={saving} onClick={openImage}>画像を保存</button>
       </div>
     </div>
-    <span className="visually-hidden" role="status">{copyState === true ? '未装備との比較表をコピーしました。' : copyState === false ? '未装備との比較表をコピーできませんでした。' : ''}</span>
+    <span className="visually-hidden" role="status">{copyState === true ? `${baseLabel}との比較表をコピーしました。` : copyState === false ? `${baseLabel}との比較表をコピーできませんでした。` : ''}</span>
     <SurtrUnequippedComparisonTableContent {...data} selectedResistance={selectedResistance} onOpenDetail={onOpenDetail} />
     {feedback && feedback !== 'failed' && <p className="surtr-s3-status" role="status">{feedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
     {image && <ChartImageSaveDialog initialFilename={getSurtrUnequippedTableImageFilename(image)}

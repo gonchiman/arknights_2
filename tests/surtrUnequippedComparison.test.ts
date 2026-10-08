@@ -5,6 +5,8 @@ import { getSurtrUnequippedColorScaleBackground, getSurtrUnequippedColorScaleMax
 import {
   buildSurtrUnequippedComparisonSeries,
   formatSurtrUnequippedComparisonValue,
+  getSurtrPreviousStageId,
+  getSurtrStageComparisonBaseline,
   getSurtrUnequippedComparisonTsv,
   type SurtrUnequippedBlockingComparison,
 } from '../src/lib/surtrUnequippedComparison.ts'
@@ -405,4 +407,155 @@ test('両条件の比較を生DPSから計算し、見出しの制御文字を�
   ].join('\r\n'))
   assert.equal(getSurtrUnequippedComparisonTsv(input, baseline, [0], 2, 'ratio', 'comparison', conditions).split('\r\n')[1],
     '0\t100.20%\t100.10%')
+})
+
+test('前段階IDは同じMODの一段階前とLv.1の未装備を特定し、不正な段階を受け付けない', () => {
+  for (const id of ['x', 'y', 'mod-x']) {
+    assert.equal(getSurtrPreviousStageId(`${id}:lv1`), 'none')
+    assert.equal(getSurtrPreviousStageId(`${id}:lv2`), `${id}:lv1`)
+    assert.equal(getSurtrPreviousStageId(`${id}:lv3`), `${id}:lv2`)
+  }
+  for (const id of ['', 'none', 'x', ':lv1', 'none:lv1', 'x:lv0', 'x:lv4', 'x:lv01', 'x:lv2.0',
+    'x:LV2', 'x:lv2:lv3', 'x:lv3tail', 'x :lv2', ' x:lv2', 'x:lv2\n']) {
+    assert.equal(getSurtrPreviousStageId(id), null, id)
+  }
+})
+
+test('前段階基準はLv.1の独立した未装備と同MODの正確な段階を使い、他MODへ切り替えない', () => {
+  const baseline = series('none', [[0, 100]], '未装備')
+  const x1 = series('x:lv1', [[0, 125]], 'MOD X Lv.1')
+  const x2 = series('x:lv2', [[0, 160]], 'MOD X Lv.2')
+  const references = [series('none', [[0, 9999]]), series('y:lv2', [[0, 9999]]), x2, x1]
+  assert.equal(getSurtrStageComparisonBaseline({ id: 'x:lv1' }, baseline, 'previous', references), baseline)
+  assert.equal(getSurtrStageComparisonBaseline({ id: 'x:lv2' }, baseline, 'previous', references), x1)
+  assert.equal(getSurtrStageComparisonBaseline({ id: 'x:lv3' }, baseline, 'previous', references), x2)
+  assert.equal(getSurtrStageComparisonBaseline({ id: 'y:lv3' }, baseline, 'previous', references), references[1])
+  assert.equal(getSurtrStageComparisonBaseline({ id: 'y:lv2' }, baseline, 'previous', references), null)
+  assert.equal(getSurtrStageComparisonBaseline({ id: 'x:lv3' }, baseline, 'previous', [references[1]]), null)
+  assert.equal(getSurtrStageComparisonBaseline({ id: 'x:lv1' }, null, 'previous', references), null)
+  assert.equal(getSurtrStageComparisonBaseline({ id: 'x:lv3' }, null, 'previous', references), x2)
+  assert.equal(getSurtrStageComparisonBaseline({ id: 'invalid' }, baseline, 'previous', references), null)
+  assert.equal(getSurtrStageComparisonBaseline({ id: 'invalid' }, baseline), baseline)
+})
+
+test('前段階が非表示でも参照系列から差・比率・増加率を計算し、未装備モードの旧挙動を維持する', () => {
+  const baseline = series('none', [[0, 100]], '未装備')
+  const targets = [series('y:lv3', [[0, 135]], 'MOD Y Lv.3'), series('x:lv1', [[0, 125]], 'MOD X Lv.1'),
+    { ...series('x:lv3', [[0, 200]], 'MOD X Lv.3'), lineStyle: 'dashed' as const }]
+  const references = [series('x:lv2', [[0, 160]], 'MOD X Lv.2'), series('y:lv2', [[0, 90]], 'MOD Y Lv.2'),
+    series('x:lv1', [[0, 9999]], 'MOD X Lv.1')]
+  const before = structuredClone({ targets, baseline, references })
+  const expected = { difference: [45, 25, 40], ratio: [150, 125, 125], percent: [50, 25, 25] }
+  for (const metric of ['difference', 'ratio', 'percent'] as const) {
+    const output = buildSurtrUnequippedComparisonSeries(targets, baseline, metric, 'previous', references)
+    assert.deepEqual(output.map(item => item.id), ['y:lv3', 'x:lv1', 'x:lv3'])
+    assert.deepEqual(output.map(item => item.points[0].value), expected[metric])
+    assert.deepEqual(output.map(({ points: _, ...identity }) => identity), targets.map(({ points: _, ...identity }) => identity))
+    assert.deepEqual(buildSurtrUnequippedComparisonSeries(targets, baseline, metric, 'unequipped', references),
+      buildSurtrUnequippedComparisonSeries(targets, baseline, metric))
+    output[0].points[0].value = 9999
+  }
+  assert.deepEqual({ targets, baseline, references }, before)
+})
+
+test('表示系列の前段階に依存せず、独立参照のゼロ・欠損・非有限値と丸め前の値を扱う', () => {
+  const baseline = series('none', [[0, 9999], [10, 9999], [20, 9999], [30, 9999], [40, 9999], [50, 9999], [60, 9999]])
+  const targets = [series('x:lv2', [[0, 1.006], [10, 20], [20, 20], [30, 20], [40, 20], [50, Infinity], [60, 1e-20]]),
+    series('x:lv1', [[0, 9999]])]
+  const references = [series('x:lv1', [[0, 1.004], [10, 0], [20, null], [30, NaN], [50, 10], [60, 100]])]
+  const difference = buildSurtrUnequippedComparisonSeries(targets, baseline, 'difference', 'previous', references)[0]
+  assert.deepEqual(difference.points.map(point => point.value), [1.006 - 1.004, 20, null, null, null, null, -100])
+  assert.equal(formatSurtrUnequippedComparisonValue(difference.points[0].value, 'difference', 2), '0.00')
+  const ratio = buildSurtrUnequippedComparisonSeries(targets, baseline, 'ratio', 'previous', references)[0]
+  assert.deepEqual(ratio.points.map(point => point.value), [1.006 / 1.004 * 100, null, null, null, null, null, 1e-20])
+  assert.ok(ratio.points[6].value! > 0)
+  const percent = buildSurtrUnequippedComparisonSeries(targets, baseline, 'percent', 'previous', references)[0]
+  assert.deepEqual(percent.points.map(point => point.value), [(1.006 / 1.004 - 1) * 100, null, null, null, null, null, -100])
+  for (const metric of ['difference', 'ratio', 'percent'] as const) {
+    assert.equal(buildSurtrUnequippedComparisonSeries([targets[0]], baseline, metric, 'previous')[0].points[0].value, null)
+  }
+})
+
+test('前段階のTSVは両条件の独立参照で各指標を求め、B/Cと両列順の見出し・列数を保つ', () => {
+  const baseline = series('none', [[0, 9999]], '未装備')
+  const targets = [series('y:lv3', [[0, 9999]], 'MOD Y Lv.3'), series('x:lv1', [[0, 9999]], 'MOD X Lv.1')]
+  const conditions: readonly SurtrUnequippedBlockingComparison[] = [
+    { blocking: true, baseline: series('none', [[0, 200]], '未装備'), series: [
+      series('x:lv1', [[0, 150]]), series('y:lv3', [[0, 240]]),
+    ], referenceSeries: [series('y:lv2', [[0, 160]], 'MOD Y Lv.2')] },
+    { blocking: false, baseline: series('none', [[0, 100]], '未装備'), series: [
+      series('x:lv1', [[0, 125]]), series('y:lv3', [[0, 150]]),
+    ], referenceSeries: [series('y:lv2', [[0, 120]], 'MOD Y Lv.2')] },
+  ]
+  const references = [series('y:lv2', [[0, 9999]], 'wrong global reference')]
+  const labels = { difference: '前段階とのDPS差', ratio: '前段階に対するDPS比（%）', percent: '前段階からの増加率（%）' }
+  const columns = [
+    { module: 'MOD Y Lv.3', condition: '未ブロック', baseline: 'MOD Y Lv.2', raw: '150.0', difference: '+30.0', ratio: '125.0%', percent: '+25.0%' },
+    { module: 'MOD Y Lv.3', condition: '対象を自身でブロック', baseline: 'MOD Y Lv.2', raw: '240.0', difference: '+80.0', ratio: '150.0%', percent: '+50.0%' },
+    { module: 'MOD X Lv.1', condition: '未ブロック', baseline: '未装備', raw: '125.0', difference: '+25.0', ratio: '125.0%', percent: '+25.0%' },
+    { module: 'MOD X Lv.1', condition: '対象を自身でブロック', baseline: '未装備', raw: '150.0', difference: '-50.0', ratio: '75.0%', percent: '-25.0%' },
+  ]
+  const before = structuredClone({ targets, baseline, conditions, references })
+  for (const layout of ['combined', 'comparison'] as const) {
+    for (const metric of ['difference', 'ratio', 'percent'] as const) {
+      for (const order of ['module', 'blocking'] as const) {
+        for (const rankMode of ['none', 'inline', 'merged'] as const) {
+          const ordered = order === 'module' ? columns : [columns[0], columns[2], columns[1], columns[3]]
+          const output = getSurtrUnequippedComparisonTsv(targets, baseline, [0, 100], 1, metric, layout,
+            conditions, rankMode, order, 'previous', references)
+          const rows = output.split('\r\n').map(row => row.split('\t'))
+          assert.deepEqual(rows[0], ['術耐性', ...(rankMode === 'none' ? [] : ['術耐性ランク']), ...ordered.flatMap(column => {
+            const heading = order === 'module' ? `${column.module} ${column.condition}` : `${column.condition} ${column.module}`
+            return [...(layout === 'combined' ? [`${heading} DPS`] : []), `${heading} ${labels[metric]}（基準：${column.baseline}）`]
+          })])
+          assert.deepEqual(rows[1], ['0', ...(rankMode === 'none' ? [] : ['E']),
+            ...ordered.flatMap(column => [...(layout === 'combined' ? [column.raw] : []), column[metric]])])
+          assert.deepEqual(rows[2], ['100', ...(rankMode === 'none' ? [] : ['SS']),
+            ...Array(ordered.length * (layout === 'combined' ? 2 : 1)).fill('—')])
+          assert.ok(rows.every(row => row.length === 1 + (rankMode === 'none' ? 0 : 1) + 4 * (layout === 'combined' ? 2 : 1)))
+          assert.ok(!rows[0].includes('未装備 DPS'))
+        }
+      }
+    }
+  }
+  assert.deepEqual({ targets, baseline, conditions, references }, before)
+})
+
+test('条件の前段階参照が欠けても通常参照・他条件・表示中の前段階で補わない', () => {
+  const baseline = series('none', [[0, 100]], '未装備')
+  const targets = [series('x:lv2', [[0, 150]], 'MOD X Lv.2'), series('x:lv3', [[0, 200]], 'MOD X Lv.3')]
+  const references = [series('x:lv1', [[0, 125]]), series('x:lv2', [[0, 150]])]
+  const conditions: readonly SurtrUnequippedBlockingComparison[] = [
+    { blocking: false, baseline, series: targets },
+    { blocking: true, baseline, series: targets, referenceSeries: [series('x:lv2', [[0, 160]], 'MOD X Lv.2')] },
+  ]
+  for (const metric of ['difference', 'ratio', 'percent'] as const) {
+    const tsv = getSurtrUnequippedComparisonTsv(targets, baseline, [0], 0, metric, 'comparison', conditions,
+      'none', 'module', 'previous', references)
+    const available = metric === 'difference' ? '+40' : metric === 'ratio' ? '125%' : '+25%'
+    assert.deepEqual(tsv.split('\r\n')[1].split('\t'), ['0', '—', '—', '—', available])
+    assert.match(tsv.split('\r\n')[0], /MOD X Lv\.2 未ブロック 前段階.*（基準：x:lv1）/)
+  }
+  const missing = getSurtrUnequippedComparisonTsv(targets, baseline, [0], 0, 'difference', 'combined', [],
+    'none', 'blocking', 'previous', references).split('\r\n').map(row => row.split('\t'))
+  assert.deepEqual(missing[1], ['0', ...Array(8).fill('—')])
+  assert.equal(missing[0].length, 9)
+})
+
+test('通常の前段階TSVは非表示参照と基準名を使い、比較値を生DPSから求める', () => {
+  const baseline = series('none', [[0, 1.004]], ' 未\t装備\r\n ')
+  const targets = [series('x:lv1', [[0, 1.006]], 'MOD X Lv.1'), series('x:lv3', [[0, 2.006]], 'MOD X Lv.3')]
+  const references = [series('x:lv2', [[0, 2.004]], ' MOD\tX\r\nLv.2 ')]
+  const copied = getSurtrUnequippedComparisonTsv(targets, baseline, [0], 2, 'difference', 'combined', undefined,
+    'none', 'module', 'previous', references)
+  assert.equal(copied, [
+    '術耐性\tMOD X Lv.1 DPS\tMOD X Lv.1 前段階とのDPS差（基準：未 装備）\tMOD X Lv.3 DPS\tMOD X Lv.3 前段階とのDPS差（基準：MOD X Lv.2）',
+    '0\t1.01\t0.00\t2.01\t0.00',
+  ].join('\r\n'))
+  const comparison = getSurtrUnequippedComparisonTsv(targets, baseline, [0], 2, 'ratio', 'comparison', undefined,
+    'inline', 'blocking', 'previous', references).split('\r\n').map(row => row.split('\t'))
+  assert.deepEqual(comparison[1], ['0', 'E', '100.20%', '100.10%'])
+  assert.equal(comparison[0].length, 4)
+  assert.equal(getSurtrUnequippedComparisonTsv([], baseline, [], 0, 'difference', 'combined', undefined,
+    'none', 'module', 'previous', references), '術耐性')
 })

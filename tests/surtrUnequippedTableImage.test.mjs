@@ -10,6 +10,7 @@ let Content
 let moduleColors
 let Image
 let saveImage
+let DetailModal
 
 before(async () => {
   server = await createServer({
@@ -25,6 +26,7 @@ before(async () => {
   ;({ SurtrUnequippedComparisonTableImage: Image, saveSurtrUnequippedComparisonTableImage: saveImage }
     = await server.ssrLoadModule('/src/components/SurtrUnequippedComparisonTableImage.tsx'))
   moduleColors = await server.ssrLoadModule('/src/lib/moduleColors.ts')
+  ;({ SurtrDpsDetailModal: DetailModal } = await server.ssrLoadModule('/src/components/SurtrDpsDetailModal.tsx'))
 })
 
 after(async () => { await server?.close() })
@@ -650,4 +652,167 @@ test('square-root percentage and ratio scales retain neutral cells and unavailab
     expectNoCellColor(cells[1][1])
     cells[2].forEach(expectNoCellColor)
   }
+})
+
+// X Lv.2 and Y Lv.1 are deliberately hidden from the output. They still supply
+// the previous-stage reference, independently of the global unequipped series.
+const previousReferences = [
+  { ...modules[0], id: 'module-x:lv1', label: 'MOD X Lv.1', points: [{ x: 60, value: 88 }, { x: 0, value: 110 }] },
+  { ...modules[0], id: 'module-x:lv2', label: 'MOD X Lv.2', points: [{ x: 0, value: 130 }, { x: 60, value: 90 }] },
+  { ...modules[0], points: [{ x: 60, value: 95 }, { x: 0, value: 140 }] },
+  { ...modules[1], id: 'module-y:lv1', label: 'MOD Y Lv.1', points: [{ x: 60, value: 82 }, { x: 0, value: 105 }] },
+  { ...modules[1], id: 'module-y:lv2', label: 'MOD Y Lv.2', points: [{ x: 0, value: 120 }, { x: 60, value: 78 }] },
+]
+const previousTargets = [previousReferences[0], previousReferences[2], previousReferences[4]]
+const previousProps = { series: previousTargets, referenceSeries: previousReferences, comparisonBase: 'previous', resistances: [0, 60] }
+const previousRaw = [['110.0', '140.0', '120.0'], ['88.0', '95.0', '78.0']]
+const previousComparison = {
+  difference: [['+10.0', '+10.0', '+15.0'], ['+8.0', '+5.0', '-4.0']],
+  ratio: [['110.0%', '107.7%', '114.3%'], ['110.0%', '105.6%', '95.1%']],
+  percent: [['+10.0%', '+7.7%', '+14.3%'], ['+10.0%', '+5.6%', '-4.9%']],
+}
+
+test('previous-stage tables compare each selected module with its own hidden preceding stage and Lv.1 with unequipped', () => {
+  for (const metric of ['difference', 'ratio', 'percent']) {
+    for (const layout of ['combined', 'comparison']) {
+      const data = { ...previousProps, metric, layout }
+      const markup = render(data)
+      assert.deepEqual(sectionRows(markup, 'tbody'), data.resistances.map((resistance, index) => [String(resistance),
+        ...previousComparison[metric][index].flatMap((comparison, column) => layout === 'combined'
+          ? [previousRaw[index][column], comparison] : [comparison]),
+      ]))
+      const headers = sectionRows(markup, 'thead')
+      assert.deepEqual(headers[0], ['術耐性', 'MOD X Lv.1基準：未装備', 'MOD X Lv.3基準：MOD X Lv.2', 'MOD Y Lv.2基準：MOD Y Lv.1'])
+      assert.doesNotMatch(markup, /未装備DPS|DPS・基準/)
+      assert.match(markup, /aria-label="術耐性ごとの前段階との比較：/)
+      if (layout === 'combined' && metric === 'ratio') assert.ok(headers[1].includes('比率（前段階＝100%）'))
+      assert.equal(bodyCells(markup)[0].filter(cell => cell.attributes.includes('data-series-id="none"')).length, 0)
+      assert.equal(render({ ...data, comparisonBase: 'unequipped' }), render({ ...data, comparisonBase: undefined }))
+      const saved = renderToStaticMarkup(createElement(Image, { ...props, ...data, metadata }))
+      assert.deepEqual(bodyCells(saved), bodyCells(markup))
+      assert.deepEqual(sectionRows(saved, 'thead'), headers)
+      assert.match(sections(saved, 'tfoot')[0], new RegExp(`colspan="${layout === 'combined' ? 7 : 4}"`, 'i'))
+      assert.doesNotMatch(saved, /<button|<select|is-selected|aria-haspopup|›/)
+    }
+  }
+})
+
+test('missing or nonfinite previous-stage references preserve raw DPS and never fall back to unequipped or another MOD', () => {
+  for (const referenceSeries of [
+    previousReferences.filter(item => item.id !== 'module-x:lv2'),
+    previousReferences.map(item => item.id === 'module-x:lv2'
+      ? { ...item, points: [{ x: 0, value: null }, { x: 60, value: Infinity }] } : item),
+  ]) {
+    const markup = render({ ...previousProps, referenceSeries, colorScale: true })
+    assert.deepEqual(sectionRows(markup, 'tbody'), [
+      ['0', '110.0', '+10.0', '140.0', '—', '120.0', '+15.0'],
+      ['60', '88.0', '+8.0', '95.0', '—', '78.0', '-4.0'],
+    ])
+    const cells = comparisonCells(markup)
+    cells.forEach(row => expectNoCellColor(row[1]))
+    expectCellColor(cells[0][2], '#245ea8', 40)
+    assert.doesNotMatch(markup, /NaN|Infinity|undefined/)
+  }
+})
+
+const blockedPreviousReferences = previousReferences.map((item, index) => ({ ...item, points: [
+  { x: 60, value: [86, 89, 93, 84, 88][index] }, { x: 0, value: [108, 126, 139, 103, 128][index] },
+] }))
+const previousBlockingComparison = [
+  { blocking: true, baseline, series: [blockedPreviousReferences[4], blockedPreviousReferences[2], blockedPreviousReferences[0]], referenceSeries: blockedPreviousReferences },
+  { blocking: false, baseline, series: [...previousTargets].reverse(), referenceSeries: [...previousReferences].reverse() },
+]
+
+test('previous-stage condition groups share the correct signed color scale and retain rank layout and saved image columns', () => {
+  const differences = {
+    module: [[10, 8, 10, 13, 15, 25], [8, 6, 5, 4, -4, 4]],
+    blocking: [[10, 10, 15, 8, 13, 25], [8, 5, -4, 6, 4, 4]],
+  }
+  const raw = {
+    module: [['110.0', '108.0', '140.0', '139.0', '120.0', '128.0'], ['88.0', '86.0', '95.0', '93.0', '78.0', '88.0']],
+    blocking: [['110.0', '140.0', '120.0', '108.0', '139.0', '128.0'], ['88.0', '95.0', '78.0', '86.0', '93.0', '88.0']],
+  }
+  for (const columnOrder of ['module', 'blocking']) {
+    for (const layout of ['combined', 'comparison']) {
+      const data = { ...props, ...previousProps, blockingComparison: previousBlockingComparison, columnOrder,
+        layout, rankMode: 'merged', colorScale: true, metadata }
+      const before = structuredClone(data)
+      const live = render(data)
+      const comparison = differences[columnOrder]
+      assert.deepEqual(expandBody(live), data.resistances.map((resistance, index) => [['E', 'A+'][index], String(resistance),
+        ...comparison[index].flatMap((difference, column) => {
+          const value = `${difference > 0 ? '+' : ''}${difference.toFixed(1)}`
+          return layout === 'combined' ? [raw[columnOrder][index][column], value] : [value]
+        }),
+      ]))
+      assert.equal(bodyCells(live)[0].filter(cell => cell.attributes.includes('data-series-id="none"')).length, 0)
+      assert.match(live, /surtr-s3-equal-blocking-columns/)
+      assert.match(live, /基準：MOD X Lv\.2/)
+      assert.match(live, /基準：MOD Y Lv\.1/)
+      comparisonCells(live).forEach((row, index) => row.forEach((cell, column) =>
+        expectCellColor(cell, comparison[index][column] > 0 ? '#245ea8' : '#ae733c', 40 * Math.abs(comparison[index][column]) / 25)))
+      bodyCells(live).flat().filter(cell => cell.tag === 'th' || /data-metric="total"/.test(cell.attributes)).forEach(expectNoCellColor)
+      const saved = renderToStaticMarkup(createElement(Image, data))
+      assert.deepEqual(bodyCells(saved), bodyCells(live))
+      assert.deepEqual(sectionRows(saved, 'thead'), sectionRows(live, 'thead'))
+      assert.match(sections(saved, 'tfoot')[0], new RegExp(`colspan="${layout === 'combined' ? 14 : 8}"`, 'i'))
+      assert.doesNotMatch(saved, /<button|<select|is-selected|aria-haspopup|›/)
+      assert.deepEqual(data, before)
+    }
+  }
+})
+
+test('a missing blocked previous-stage reference never borrows the unblocked reference or selected live series', () => {
+  const groups = previousBlockingComparison.map(group => group.blocking
+    ? { ...group, referenceSeries: group.referenceSeries.filter(item => item.id !== 'module-x:lv2') } : group)
+  const markup = render({ ...previousProps, blockingComparison: groups, referenceSeries: previousReferences,
+    resistances: [0], layout: 'comparison', colorScale: true })
+  assert.deepEqual(sectionRows(markup, 'tbody'), [['0', '+10.0', '+8.0', '+10.0', '—', '+15.0', '+25.0']])
+  const cells = comparisonCells(markup)[0]
+  expectNoCellColor(cells[3])
+  expectCellColor(cells[2], '#245ea8', 16)
+})
+
+test('the comparison flow displays the selected MOD preceding stage and never substitutes the visible unequipped baseline', () => {
+  const calculation = dps => ({
+    baseAttack: { levelAttack: dps, trustAttack: 0, potentialAttack: 0, moduleAttack: 0, beforeRounding: dps, result: dps },
+    attackPipeline: { directMultiplierPercent: 0, afterDirectMultiplier: dps, finalAttack: dps },
+    mitigation: { inputResistance: 0, resistanceIgnoreFixed: 0, appliedResistance: 0, afterResistance: dps, result: dps },
+    artsFragilityMultiplier: 1, perHit: dps, baseAttackTime: 1, baseAttackSpeed: 100,
+    attackSpeedBonus: 0, attackSpeed: 100, appliedAttackSpeed: 100, attackInterval: 1, dps,
+  })
+  const sources = [
+    { id: 'none', label: '未装備', color: baseline.color, calculation: calculation(100) },
+    { id: 'module-x:lv3', label: 'MOD X Lv.3', color: modules[0].color, calculation: calculation(140),
+      baseline: { label: 'MOD X Lv.2', calculation: calculation(130) } },
+    { id: 'module-y:lv2', label: 'MOD Y Lv.2', color: modules[1].color, calculation: calculation(120),
+      baseline: { label: 'MOD Y Lv.1', calculation: calculation(105) } },
+  ]
+  for (const metric of ['difference', 'ratio', 'percent']) {
+    const series = sources.map(item => ({ ...item, value: item.baseline
+      ? metric === 'difference' ? item.calculation.dps - item.baseline.calculation.dps
+        : metric === 'ratio' ? item.calculation.dps / item.baseline.calculation.dps * 100
+          : (item.calculation.dps / item.baseline.calculation.dps - 1) * 100
+      : null }))
+    for (const initialSeriesId of ['module-x:lv3', 'module-y:lv2']) {
+      const selected = series.find(item => item.id === initialSeriesId)
+      const snapshot = { resistance: 0, conditions: '未ブロック', series, initialSeriesId, metric,
+        signedComparison: true, comparisonBase: 'previous', baselineId: 'none', precision: 1 }
+      const markup = renderToStaticMarkup(createElement(DetailModal, { snapshot, onClose: () => {} }))
+      const flow = sectionRows(markup, 'tbody')
+      assert.deepEqual(flow.find(row => row[0].startsWith('基準：')),
+        [`基準：${selected.baseline.label}`, '同じ術耐性・比較条件でのDPS', String(selected.baseline.calculation.dps)])
+      assert.doesNotMatch(sections(markup, 'tbody')[0], /基準：未装備/)
+      const formula = metric === 'difference' ? `${selected.calculation.dps} − ${selected.baseline.calculation.dps}`
+        : metric === 'ratio' ? `${selected.calculation.dps} ÷ ${selected.baseline.calculation.dps} × 100`
+          : `(${selected.calculation.dps} ÷ ${selected.baseline.calculation.dps} − 1) × 100`
+      assert.ok(flow.some(row => row[1] === formula), formula)
+    }
+  }
+  const series = sources.map(item => ({ ...item, value: null, baseline: undefined }))
+  const unavailable = renderToStaticMarkup(createElement(DetailModal, { snapshot: { resistance: 0,
+    conditions: '未ブロック', series, initialSeriesId: 'module-x:lv3', metric: 'difference',
+    signedComparison: true, comparisonBase: 'previous', baselineId: 'none', precision: 1 }, onClose: () => {} }))
+  assert.ok(!sectionRows(unavailable, 'tbody').some(row => row[0].startsWith('基準：')))
+  assert.deepEqual(sectionRows(unavailable, 'tbody').at(-1), ['表の表示', '小数点以下1桁に丸める', '—'])
 })

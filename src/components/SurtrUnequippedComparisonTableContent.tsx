@@ -3,8 +3,8 @@ import type { SurtrDpsOutputSeries } from '../lib/surtrDpsOutput'
 import { getSurtrDpsResistanceRating } from '../lib/surtrDpsResistance'
 import type { EnemyHeatmapColorScale } from '../lib/enemyHeatmapColor'
 import { getSurtrUnequippedColorScaleBackground, getSurtrUnequippedColorScaleMaximum } from '../lib/surtrUnequippedColorScale'
-import { buildSurtrUnequippedComparisonSeries, formatSurtrUnequippedComparisonValue, getSurtrUnequippedColumns,
-  type SurtrUnequippedBlockingComparison, type SurtrUnequippedColumnOrder, type SurtrUnequippedLayout, type SurtrUnequippedMetric, type SurtrUnequippedRankMode } from '../lib/surtrUnequippedComparison'
+import { buildSurtrUnequippedComparisonSeries, formatSurtrUnequippedComparisonValue, getSurtrUnequippedColumns, getSurtrStageComparisonBaseline,
+  type SurtrUnequippedBlockingComparison, type SurtrUnequippedColumnOrder, type SurtrUnequippedLayout, type SurtrUnequippedMetric, type SurtrUnequippedRankMode, type SurtrUnequippedComparisonBase } from '../lib/surtrUnequippedComparison'
 
 export interface SurtrUnequippedComparisonTableData {
   series: readonly SurtrDpsOutputSeries[]
@@ -17,13 +17,15 @@ export interface SurtrUnequippedComparisonTableData {
   columnOrder?: SurtrUnequippedColumnOrder
   colorScale?: boolean
   colorScaleMode?: EnemyHeatmapColorScale
+  comparisonBase?: SurtrUnequippedComparisonBase
+  referenceSeries?: readonly SurtrDpsOutputSeries[]
   blockingComparison?: readonly SurtrUnequippedBlockingComparison[]
 }
 
-export const getUnequippedMetricLabel = (metric: SurtrUnequippedMetric) =>
-  metric === 'difference' ? 'DPS差' : metric === 'ratio' ? '比率（未装備＝100%）' : '増加率（%）'
+export const getUnequippedMetricLabel = (metric: SurtrUnequippedMetric, comparisonBase: SurtrUnequippedComparisonBase = 'unequipped') =>
+  metric === 'difference' ? 'DPS差' : metric === 'ratio' ? `比率（${comparisonBase === 'previous' ? '前段階' : '未装備'}＝100%）` : '増加率（%）'
 
-export function SurtrUnequippedComparisonTableContent({ series, baseline, resistances, precision, metric, layout, rankMode = 'none', columnOrder = 'module', colorScale = false, colorScaleMode = 'LINEAR', blockingComparison,
+export function SurtrUnequippedComparisonTableContent({ series, baseline, resistances, precision, metric, layout, rankMode = 'none', columnOrder = 'module', colorScale = false, colorScaleMode = 'LINEAR', comparisonBase = 'unequipped', referenceSeries, blockingComparison,
   selectedResistance, onOpenDetail, footer }: SurtrUnequippedComparisonTableData & {
   selectedResistance?: number | null
   onOpenDetail?: (resistance: number, seriesId: string | undefined, metric: SurtrUnequippedMetric | 'total', blocking?: boolean) => void
@@ -35,17 +37,19 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
   const conditions = [false, true] as const
   const columns = useMemo(() => {
     const groups = blockingComparison === undefined
-      ? [{ blocking: undefined, series: targets, baseline }]
+      ? [{ blocking: undefined, series: targets, baseline, referenceSeries }]
       : [false, true].map(blocking => ({ blocking, ...blockingComparison.find(group => group.blocking === blocking) }))
     const values = groups.map(group => {
-      const comparison = group.baseline ? buildSurtrUnequippedComparisonSeries(group.series ?? [], group.baseline, metric) : []
+      const comparison = buildSurtrUnequippedComparisonSeries(group.series ?? [], group.baseline ?? null, metric, comparisonBase, group.referenceSeries ?? [])
       return { blocking: group.blocking,
+        baseline: group.baseline ?? null, referenceSeries: group.referenceSeries ?? [],
         raw: new Map(group.series?.map(item => [item.id, new Map(item.points.map(point => [point.x, point.value]))])),
         comparison: new Map(comparison.map(item => [item.id, new Map(item.points.map(point => [point.x, point.value]))])) }
     })
     return getSurtrUnequippedColumns(targets, values, columnOrder).map(({ item, condition }) => ({ item, seriesId: item.id, blocking: condition.blocking,
-      raw: condition.raw.get(item.id), comparison: condition.comparison.get(item.id) }))
-  }, [targets, baseline, blockingComparison, metric, columnOrder])
+      raw: condition.raw.get(item.id), comparison: condition.comparison.get(item.id),
+      reference: getSurtrStageComparisonBaseline(item, condition.baseline, comparisonBase, condition.referenceSeries) }))
+  }, [targets, baseline, blockingComparison, metric, columnOrder, comparisonBase, referenceSeries])
   const colorScaleMaximum = useMemo(() => colorScale ? getSurtrUnequippedColorScaleMaximum(
     columns.flatMap(column => resistances.map(resistance => column.comparison?.get(resistance))), metric,
   ) : 0, [columns, resistances, metric, colorScale])
@@ -71,21 +75,22 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
     const rounded = Number(value.toFixed(precision))
     return formatter.format(rounded === 0 ? 0 : rounded)
   }
-  const metricLabel = getUnequippedMetricLabel(metric)
+  const metricLabel = getUnequippedMetricLabel(metric, comparisonBase)
   const combined = layout === 'combined'
+  const showBaseline = combined && comparisonBase === 'unequipped'
   const headerRows = (combined ? 2 : 1) + (compareBlocking ? 1 : 0)
   const moduleColumns = (combined ? 2 : 1) * (compareBlocking ? 2 : 1)
   const mergedRanks = rankMode === 'merged'
-  const columnCount = 1 + (mergedRanks ? 1 : 0) + (combined ? 1 : 0) + targets.length * moduleColumns
+  const columnCount = 1 + (mergedRanks ? 1 : 0) + (showBaseline ? 1 : 0) + targets.length * moduleColumns
   const resistanceWidth = rankMode === 'inline' ? 112 : 80
-  const minimumWidth = resistanceWidth + (mergedRanks ? 64 : 0) + (combined ? 96 : 0) + targets.length * moduleColumns * (combined ? precision > 1 ? 88 : 76 : 128)
+  const minimumWidth = resistanceWidth + (mergedRanks ? 64 : 0) + (showBaseline ? 96 : 0) + targets.length * moduleColumns * (combined ? precision > 1 ? 88 : 76 : 128)
   return <div className={`surtr-s3-table-wrap ${onOpenDetail ? 'surtr-s3-result-table' : ''}`}><table
     className={`surtr-s3-table surtr-s3-unequipped-table${compareBlocking ? ' surtr-s3-equal-blocking-columns' : ''}${rankMode === 'inline' ? ' surtr-s3-rank-inline' : ''}${colorScale ? ' surtr-s3-color-scale' : ''}`}
     style={compareBlocking ? { '--surtr-unequipped-min-width': `${minimumWidth}px`, '--surtr-unequipped-resistance-width': `${resistanceWidth}px` } as CSSProperties : undefined}
-    aria-label={`術耐性ごとの未装備との比較：${combined ? 'DPS＋' : ''}${metricLabel}`}>
+    aria-label={`術耐性ごとの${comparisonBase === 'previous' ? '前段階' : '未装備'}との比較：${combined ? 'DPS＋' : ''}${metricLabel}`}>
     {mergedRanks && <colgroup><col className="surtr-s3-unequipped-rank-column" /></colgroup>}
     {compareBlocking ? <colgroup><col className="surtr-s3-unequipped-resistance-column" /></colgroup> : <colgroup span={1} />}
-    {combined && (compareBlocking ? <colgroup><col className="surtr-s3-unequipped-baseline-column" /></colgroup> : <colgroup span={1} />)}
+    {showBaseline && (compareBlocking ? <colgroup><col className="surtr-s3-unequipped-baseline-column" /></colgroup> : <colgroup span={1} />)}
     {blockingFirst ? conditions.map(blocking => <colgroup key={String(blocking)}>
       {Array.from({ length: targets.length * (combined ? 2 : 1) }, (_, index) => <col key={index} />)}
     </colgroup>) : targets.map(item => <colgroup key={item.id} span={compareBlocking ? undefined : moduleColumns}>
@@ -94,12 +99,14 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
     <thead><tr>
       {mergedRanks && <th className="surtr-s3-rank-cell" scope="col" rowSpan={headerRows}>ランク</th>}
       <th scope="col" rowSpan={headerRows}>術耐性</th>
-      {combined && <th scope="col" rowSpan={headerRows}><span className="surtr-s3-column-label"><i style={{ backgroundColor: baseline.color }} />未装備</span>
+      {showBaseline && <th scope="col" rowSpan={headerRows}><span className="surtr-s3-column-label"><i style={{ backgroundColor: baseline.color }} />未装備</span>
         <span className="surtr-s3-baseline-label">DPS・基準</span></th>}
       {blockingFirst ? conditions.map(blocking => <BlockingHeader key={String(blocking)} blocking={blocking} colSpan={targets.length * (combined ? 2 : 1)} />)
-        : targets.map(item => <ModuleHeader key={item.id} item={item} colSpan={moduleColumns} />)}
+        : targets.map(item => <ModuleHeader key={item.id} item={item} colSpan={moduleColumns}
+          referenceLabel={comparisonBase === 'previous' ? columns.find(column => column.seriesId === item.id)?.reference?.label ?? '前段階不明' : undefined} />)}
     </tr>{compareBlocking && <tr>{columns.map(column => blockingFirst
-      ? <ModuleHeader key={`${column.seriesId}:${column.blocking}`} item={column.item} colSpan={combined ? 2 : 1} />
+      ? <ModuleHeader key={`${column.seriesId}:${column.blocking}`} item={column.item} colSpan={combined ? 2 : 1}
+          referenceLabel={comparisonBase === 'previous' ? column.reference?.label ?? '前段階不明' : undefined} />
       : <BlockingHeader key={`${column.seriesId}:${column.blocking}`} blocking={column.blocking === true} colSpan={combined ? 2 : 1} />)}</tr>}
     {combined && <tr>{columns.map(column => <FragmentColumns key={`${column.seriesId}:${column.blocking}`} metricLabel={compareBlocking && metric === 'ratio' ? '比率' : metricLabel} />)}</tr>}</thead>
     <tbody>{resistanceRows.map(({ resistance, rank, rankRowSpan }) => <tr key={resistance} className={onOpenDetail && selectedResistance === resistance ? 'is-selected' : undefined}
@@ -115,7 +122,7 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
       <th scope="row">{onOpenDetail ? <button type="button" className="surtr-s3-table-resistance" aria-label={`術耐性 ${resistance}のDPS計算フローを開く`} aria-haspopup="dialog">
         {resistance}{rankMode === 'inline' && <ResistanceRank rank={rank} />}<span aria-hidden="true">›</span>
       </button> : rankMode === 'inline' ? <span className="surtr-s3-resistance-rank-value">{resistance}<ResistanceRank rank={rank} /></span> : resistance}</th>
-      {combined && <td data-series-id="none" data-metric="total">{formatDps(baselineValues.get(resistance))}</td>}
+      {showBaseline && <td data-series-id="none" data-metric="total">{formatDps(baselineValues.get(resistance))}</td>}
       {columns.map(column => <ComparisonCells key={`${column.seriesId}:${column.blocking}`} seriesId={column.seriesId} blocking={column.blocking} combined={combined}
         dps={formatDps(column.raw?.get(resistance))}
         background={colorScale ? getSurtrUnequippedColorScaleBackground(column.comparison?.get(resistance), metric, colorScaleMaximum, colorScaleMode) : undefined}
@@ -125,9 +132,10 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
   </table></div>
 }
 
-function ModuleHeader({ item, colSpan }: { item: SurtrDpsOutputSeries; colSpan: number }) {
+function ModuleHeader({ item, colSpan, referenceLabel }: { item: SurtrDpsOutputSeries; colSpan: number; referenceLabel?: string }) {
   return <th scope={colSpan > 1 ? 'colgroup' : 'col'} colSpan={colSpan}>
     <span className="surtr-s3-column-label"><i style={{ backgroundColor: item.color }} />{item.label}</span>
+    {referenceLabel && <span className="surtr-s3-baseline-label">基準：{referenceLabel}</span>}
   </th>
 }
 

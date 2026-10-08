@@ -1,6 +1,6 @@
 import { createChartImageFilename, formatChartFilenameValues, withChartImageAspect } from './chartImageFilename.ts'
 import type { EnemyHeatmapColorScale } from './enemyHeatmapColor.ts'
-import type { SurtrUnequippedColumnOrder, SurtrUnequippedLayout, SurtrUnequippedMetric, SurtrUnequippedRankMode } from './surtrUnequippedComparison.ts'
+import type { SurtrUnequippedColumnOrder, SurtrUnequippedComparisonBase, SurtrUnequippedLayout, SurtrUnequippedMetric, SurtrUnequippedRankMode } from './surtrUnequippedComparison.ts'
 
 export interface SurtrUnequippedTableImageMetadata {
   skillLabel: string
@@ -23,11 +23,12 @@ export function getSurtrUnequippedTableImageFilename(options: {
   columnOrder?: SurtrUnequippedColumnOrder
   colorScale?: boolean
   colorScaleMode?: EnemyHeatmapColorScale
+  comparisonBase?: SurtrUnequippedComparisonBase
 }, aspectRatio?: number): string {
   const { metadata, series, resistances, metric, layout, precision, blockingComparison } = options
   const modules = series.filter(item => item.id !== 'none').map(item => item.label)
   const digits = Number.isInteger(precision) && precision >= 0 && precision <= 3 ? precision : 0
-  const filename = createChartImageFilename('スルト_S3_未装備比較表', [
+  const filename = createChartImageFilename(options.comparisonBase === 'previous' ? 'スルト_S3_前段階比較表' : 'スルト_S3_未装備比較表', [
     metadata.skillLabel,
     metric === 'difference' ? 'DPS差' : metric === 'ratio' ? '比率' : '増加率',
     layout === 'combined' ? 'DPS＋比較値' : '比較値のみ',

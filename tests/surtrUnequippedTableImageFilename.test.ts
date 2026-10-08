@@ -27,6 +27,68 @@ test('未装備比較表の計算条件・MOD段階・術耐性・形式・精�
   assert.doesNotMatch(getSurtrUnequippedTableImageFilename(options), /x-lv|y-lv|:lv|none/)
 })
 
+test('未装備基準を明示しても従来の正確な画像名を変更しない', () => {
+  const expected = 'スルト_S3_未装備比較表_特化3_DPS差_DPS＋比較値_昇進2Lv90_信頼100_潜在1_未ブロック_MODXLv.3-MODYLv.3_術耐性0-100刻み10_小数0桁_比率自動.png'
+  for (const comparisonBase of [undefined, 'unequipped'] as const) {
+    assert.equal(getSurtrUnequippedTableImageFilename({ ...options, comparisonBase }), expected)
+    assert.equal(getSurtrUnequippedTableImageFilename({ ...options, comparisonBase }, 16 / 9),
+      expected.replace('比率自動', '比率16x9'))
+  }
+})
+
+test('前段階を基準にした比較表は基本名で識別し、選択したMOD段階と条件を保持する', () => {
+  const captured = { ...options, comparisonBase: 'previous' as const }
+  const before = structuredClone(captured)
+  assert.equal(getSurtrUnequippedTableImageFilename(captured),
+    'スルト_S3_前段階比較表_特化3_DPS差_DPS＋比較値_昇進2Lv90_信頼100_潜在1_未ブロック_MODXLv.3-MODYLv.3_術耐性0-100刻み10_小数0桁_比率自動.png')
+  assert.notEqual(getSurtrUnequippedTableImageFilename(captured), getSurtrUnequippedTableImageFilename(options))
+  assert.deepEqual(captured, before)
+})
+
+test('前段階比較でも指標・列配置・ランク・色・選択段階と画像比率を識別できる', () => {
+  const captured = { ...options, comparisonBase: 'previous' as const, layout: 'comparison' as const,
+    series: [{ id: 'y:lv2', label: 'MOD Y Lv.2' }], resistances: [40, 50, 60], precision: 2 }
+  const names = (['difference', 'ratio', 'percent'] as const).map(metric => {
+    const name = getSurtrUnequippedTableImageFilename({ ...captured, metric }, 16 / 9)
+    assert.match(name, /^スルト_S3_前段階比較表_/)
+    assert.match(name, /比較値のみ/)
+    assert.match(name, /MODYLv\.2_術耐性40-60刻み10_小数2桁/)
+    assert.match(name, /_比率16x9\.png$/)
+    assert.ok(new TextEncoder().encode(name).length <= 240)
+    return name
+  })
+  assert.equal(new Set(names).size, 3)
+  const cases = [
+    { blockingComparison: [{ blocking: false }, { blocking: true }], columnOrder: 'blocking' as const },
+    { rankMode: 'inline' as const },
+    { colorScale: true, colorScaleMode: 'SQRT' as const },
+  ]
+  const labels = [/ブロック条件比較_ブロック条件別/, /ランク併記/, /カラースケール平方根/]
+  for (const [index, change] of cases.entries()) {
+    const name = getSurtrUnequippedTableImageFilename({ ...captured, ...change }, 16 / 9)
+    assert.match(name, /^スルト_S3_前段階比較表_/)
+    assert.match(name, labels[index])
+    assert.match(name, /MODYLv\.2_術耐性40-60刻み10_小数2桁/)
+    assert.match(name, /_比率16x9\.png$/)
+    assert.ok(new TextEncoder().encode(name).length <= 240)
+  }
+})
+
+test('前段階比較の長い名前も共通の省略・Unicode・禁止文字・240バイト制限を守る', () => {
+  const captured = { ...options, comparisonBase: 'previous' as const,
+    series: [{ id: 'x:lv1', label: 'MOD X Lv.1 長い名前😀<>:"/\\|?*'.repeat(80) }] }
+  const before = structuredClone(captured)
+  for (const ratio of [undefined, 16 / 9, 9 / 16]) {
+    const name = getSurtrUnequippedTableImageFilename(captured, ratio)
+    assert.match(name, /^スルト_S3_前段階比較表_/)
+    assert.match(name, /ほか\d+項目_比率.+\.png$/)
+    assert.ok(new TextEncoder().encode(name).length <= 240)
+    assert.equal(name.isWellFormed(), true)
+    assert.doesNotMatch(name, /[<>:"/\\|?*\u0000-\u001f\u007f�]/)
+  }
+  assert.deepEqual(captured, before)
+})
+
 test('保存時のメタデータ各項目を名前に反映する', () => {
   const original = getSurtrUnequippedTableImageFilename(options)
   for (const change of [

@@ -20,7 +20,7 @@ test('DPS settings survive a route remount or reload through session storage', (
     chartKind: 'line', barStep: 'ratings', resistanceRange: { min: 10, max: 90 },
     showValues: true, showResistanceRanks: false, gridStyle: 'dashed', precision: 3, metric: 'percent', differenceMetric: 'percent',
     requestedBaselineId: 'uniequip_003_surtr:lv2', selectedResistance: 37,
-    unequippedLayout: 'comparison', unequippedMetric: 'ratio', unequippedStep: 7,
+    unequippedLayout: 'comparison', unequippedMetric: 'ratio', unequippedStep: 7, unequippedComparisonBase: 'previous',
     yAxisMode: 'manual', yAxisDraft: { min: '-10.5', max: '120' },
   })
   writeSurtrDpsPageState(state, storage)
@@ -72,6 +72,31 @@ test('unequipped comparison options migrate independently of the chart compariso
   const defaults = parseSurtrDpsPageState({ unequippedLayout: null, unequippedMetric: 'total' })
   assert.equal(defaults.unequippedLayout, 'combined')
   assert.equal(defaults.unequippedMetric, 'difference')
+})
+
+test('comparison reference migrates to unequipped and persists independently of chart baseline, stages and table options', () => {
+  assert.equal(createDefaultSurtrDpsPageState().unequippedComparisonBase, 'unequipped')
+  const previous = { ...createDefaultSurtrDpsPageState(),
+    requestedBaselineId: 'uniequip_003_surtr:lv2', moduleLevels: { uniequip_003_surtr: [3] },
+    unequippedLayout: 'comparison' as const, unequippedMetric: 'ratio' as const,
+    unequippedColumnOrder: 'blocking' as const, unequippedRankMode: 'merged' as const,
+    unequippedColorScale: true, unequippedColorScaleMode: 'SQRT' as const }
+  Reflect.deleteProperty(previous, 'unequippedComparisonBase')
+  const storage = memoryStorage()
+  storage.setItem(SURTR_DPS_PAGE_STATE_KEY, JSON.stringify(previous))
+  assert.deepEqual(readSurtrDpsPageState(storage), { ...previous, unequippedComparisonBase: 'unequipped' })
+  for (const unequippedComparisonBase of ['unequipped', 'previous'] as const) {
+    const state = { ...createDefaultSurtrDpsPageState(), ...previous, unequippedComparisonBase }
+    const before = structuredClone(state)
+    writeSurtrDpsPageState(state, storage)
+    assert.deepEqual(readSurtrDpsPageState(storage), state)
+    assert.deepEqual(JSON.parse(storage.values.get(SURTR_DPS_PAGE_STATE_KEY)!), state)
+    assert.deepEqual(state, before)
+  }
+  for (const unequippedComparisonBase of [undefined, null, '', 'PREVIOUS', 'none', 'module', false, 1, [], {}]) {
+    assert.deepEqual(parseSurtrDpsPageState({ ...previous, unequippedComparisonBase }),
+      { ...previous, unequippedComparisonBase: 'unequipped' })
+  }
 })
 
 test('stage arrays normalize valid levels while explicit empty selections remain distinct from invalid data', () => {
