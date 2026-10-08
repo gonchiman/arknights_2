@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { AppSidebar } from './components/AppSidebar'
 import { HomePage } from './components/HomePage'
 import { DamageCalculator } from './components/DamageCalculator'
+import { DamageCalculatorTwo } from './components/DamageCalculatorTwo'
 import { ManualDamageVerificationPage } from './components/ManualDamageVerificationPage'
 import { DataSourcesPage } from './components/DataSourcesPage'
 import { CodeAnalysisPage } from './components/CodeAnalysisPage'
@@ -338,6 +339,8 @@ export default function App() {
             loading={loading}
             onOpenOperatorDetail={openOperatorDetail}
           />
+        ) : displayedRoute.view === 'damage-two' ? (
+          <DamageCalculatorTwo rows={classifiedRows} loading={loading} />
         ) : displayedRoute.view === 'comparison' ? (
           <OperatorComparison
             rows={classifiedRows}

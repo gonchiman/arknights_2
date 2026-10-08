@@ -8,6 +8,7 @@ export type AppRoute =
   | { view: 'skill-json-overview' }
   | { view: 'code-analysis' }
   | { view: 'damage' }
+  | { view: 'damage-two' }
   | { view: 'damage-verification' }
   | { view: 'goldenglow-home' }
   | { view: 'surtr-home' }
@@ -115,6 +116,7 @@ export function parseHashRoute(hash: string): AppRoute {
     return parseSkillSelectionRoute('skill-json', hash.slice(SKILL_JSON_ROUTE.length + 1))
   }
   if (hash === '#/damage') return { view: 'damage' }
+  if (hash === '#/damage-2') return { view: 'damage-two' }
   if (hash === '#/analysis/damage-verification') return { view: 'damage-verification' }
   if (hash === '#/analysis/code') return { view: 'code-analysis' }
   if (hash === '#/analysis/goldenglow') return { view: 'goldenglow-home' }

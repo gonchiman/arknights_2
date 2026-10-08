@@ -1,0 +1,100 @@
+.damage-two-page { container-type: inline-size; }
+.damage-two-page .operator-search-summary { max-width: none; }
+.damage-two-page .condition-subheading { margin-top: 0; }
+.damage-two-page .damage-two-skill-heading { margin-top: 16px; }
+.damage-two-page .collapsible-panel-header { display: flex; align-items: center; flex-wrap: wrap; background: var(--surface-soft); }
+.damage-two-page .open > .collapsible-panel-header { border-bottom: 1px solid var(--border); }
+.damage-two-page .collapsible-panel-header > .collapsible-panel-title { flex: 1 1 170px; min-width: 0; }
+.damage-two-page .collapsible-panel-header .collapsible-panel-heading { border-bottom: 0; }
+.damage-two-page .open .collapsible-panel-header .collapsible-panel-heading-summary > span { display: none; }
+.damage-two-page .collapsible-panel-actions { display: flex; padding: 6px 12px; }
+.damage-two-page .collapsible-panel-actions[hidden] { display: none; }
+
+.damage-two-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 12px 0 0;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.damage-two-stats > div { display: flex; align-items: baseline; gap: 8px; }
+.damage-two-stats dd { margin: 0; font-weight: 600; color: var(--text); }
+.damage-two-skills { display: flex; flex-wrap: wrap; }
+.damage-two-skills button { flex: 1 1 130px; }
+.damage-two-page .damage-two-skill-summary { grid-template-columns: minmax(140px, .6fr) minmax(0, 1.4fr); }
+.damage-two-skill-summary > strong { display: flex; align-items: center; }
+
+.damage-two-help { margin-top: 12px; font-size: 11px; color: var(--text-soft); }
+.damage-two-help summary { width: fit-content; cursor: pointer; }
+.damage-two-help p { margin: 10px 0 0; line-height: 1.8; }
+.damage-two-loaded {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 12px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.damage-two-loaded > div { display: grid; gap: 4px; }
+.damage-two-loaded dd { margin: 0; font-weight: 600; color: var(--text); }
+.damage-two-context { margin: 0 0 10px; color: var(--text-soft); font-size: 11px; }
+.damage-two-precision {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-soft);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.damage-two-precision select {
+  min-height: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: #fff;
+  color: var(--text);
+  padding: 2px 6px;
+  font: inherit;
+}
+
+/* Match the gray borders and cell spacing of the single-trial history table. */
+.damage-two-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  overscroll-behavior-inline: contain;
+}
+.damage-two-table-wrap:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.damage-two-table { min-width: 480px; table-layout: fixed; font-variant-numeric: tabular-nums; }
+.damage-two-table th,
+.damage-two-table td {
+  position: static;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 9px 10px;
+  text-align: right;
+  font-weight: 400;
+}
+.damage-two-table th { background: var(--surface-soft); }
+.damage-two-table thead th { color: var(--text-soft); font-weight: 500; }
+.damage-two-table th:first-child { width: 22%; text-align: left; }
+.damage-two-table tbody th { background: #fff; }
+.damage-two-table th:last-child,
+.damage-two-table td:last-child { border-right: 0; }
+.damage-two-table tbody tr:last-child > * { border-bottom: 0; }
+.damage-two-table tbody tr { cursor: default; }
+.damage-two-table tbody tr:hover { background: transparent; }
+.damage-two-table sup { margin-left: 3px; font-size: 9px; color: var(--text-muted); }
+.damage-two-note { margin: 8px 0 0; color: var(--text-soft); font-size: 10px; line-height: 1.7; }
+.damage-two-unavailable { padding: 14px; border: 1px solid var(--border); background: var(--surface-soft); font-size: 12px; line-height: 1.8; }
+.damage-two-unavailable strong { font-weight: 500; }
+.damage-two-unavailable ul { padding-left: 20px; margin: 8px 0 0; }
+
+@container (max-width: 620px) {
+  .damage-two-page .growth-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .damage-two-stats { gap: 8px 16px; }
+  .damage-two-page .damage-two-skill-summary { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 380px) {
+  .damage-two-page .growth-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .damage-two-skills button { flex-basis: 115px; }
+}
