@@ -19,6 +19,7 @@ test('DPS settings survive a route remount or reload through session storage', (
     chartKind: 'line', barStep: 'ratings', resistanceRange: { min: 10, max: 90 },
     showValues: true, showResistanceRanks: false, gridStyle: 'dashed', precision: 3, metric: 'percent', differenceMetric: 'percent',
     requestedBaselineId: 'uniequip_003_surtr:lv2', selectedResistance: 37,
+    unequippedLayout: 'comparison', unequippedMetric: 'ratio',
     yAxisMode: 'manual', yAxisDraft: { min: '-10.5', max: '120' },
   })
   writeSurtrDpsPageState(state, storage)
@@ -44,6 +45,30 @@ test('legacy scalar stages and baseline migrate without restoring excluded equip
   writeSurtrDpsPageState(restored, storage)
   assert.deepEqual(JSON.parse(storage.values.get(SURTR_DPS_PAGE_STATE_KEY)!), restored)
   assert.deepEqual(readSurtrDpsPageState(storage), restored)
+})
+
+test('unequipped comparison options migrate independently of the chart comparison', () => {
+  const previous = { ...createDefaultSurtrDpsPageState(), metric: 'percent' }
+  Reflect.deleteProperty(previous, 'unequippedLayout')
+  Reflect.deleteProperty(previous, 'unequippedMetric')
+  const restored = parseSurtrDpsPageState(previous)
+  assert.equal(restored.unequippedLayout, 'combined')
+  assert.equal(restored.unequippedMetric, 'difference')
+  assert.equal(restored.metric, 'percent')
+  for (const unequippedLayout of ['combined', 'comparison'] as const) {
+    for (const unequippedMetric of ['difference', 'ratio', 'percent'] as const) {
+      const storage = memoryStorage()
+      const state = { ...createDefaultSurtrDpsPageState(), unequippedLayout, unequippedMetric, metric: 'total' as const }
+      writeSurtrDpsPageState(state, storage)
+      assert.deepEqual(readSurtrDpsPageState(storage), state)
+    }
+  }
+  const partial = parseSurtrDpsPageState({ unequippedLayout: 'invalid', unequippedMetric: 'ratio' })
+  assert.equal(partial.unequippedLayout, 'combined')
+  assert.equal(partial.unequippedMetric, 'ratio')
+  const defaults = parseSurtrDpsPageState({ unequippedLayout: null, unequippedMetric: 'total' })
+  assert.equal(defaults.unequippedLayout, 'combined')
+  assert.equal(defaults.unequippedMetric, 'difference')
 })
 
 test('stage arrays normalize valid levels while explicit empty selections remain distinct from invalid data', () => {
