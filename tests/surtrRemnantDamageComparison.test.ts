@@ -232,6 +232,52 @@ test('全スキルランク・潜在と育成設定を独立式で照合し、�
   }
 })
 
+test('S3の余燼中設定を渡してもYの各段階とhidden前段階の期待総ダメージを二重反映しない', () => {
+  const record = createRecord()
+  const resistances = [0, 60, 100, -1]
+  for (const levels of [[1, 2, 3], [3]]) {
+    const stages = selected(record, { [xId]: [], [yId]: levels })
+    for (const potential of [1, 3]) {
+      for (const blocking of [false, true]) {
+        const settings = { ...defaults, potential, blocking }
+        const activeSettings = Object.freeze({ ...settings, remnantActive: true })
+        for (const ctCarry of ['time', 'ratio'] as const) {
+          const options = { ...assumptions, ctCarry, windup: 0.45 }
+          for (const base of ['unequipped', 'previous'] as const) {
+            const normal = buildSurtrRemnantDamageComparison(record, settings, stages, options, base, resistances)
+            const active = buildSurtrRemnantDamageComparison(record, activeSettings, stages, options, base, resistances)
+            assert.ok(normal)
+            assert.ok(active)
+            assert.deepEqual(active, normal, `Y ${levels}, 潜在${potential}, blocking ${blocking}, ${ctCarry}, ${base}`)
+            assert.deepEqual(buildSurtrRemnantDamageComparison(record, { ...settings, remnantActive: false }, stages,
+              options, base, resistances), normal)
+            assert.equal(activeSettings.remnantActive, true)
+            for (const group of active.blockingComparison) {
+              for (const reference of group.referenceSeries!) {
+                const level = reference.id === 'none' ? 0 : Number(reference.id.split(':lv')[1])
+                const after = 1.25 / (level === 3 ? 1.3 : level === 2 ? 1.2 : 1)
+                const duration = 8 + (potential >= 3 ? 1 : 0) + (level === 3 ? 1 : 0)
+                const ctRange = ctCarry === 'ratio' ? after : 1.25
+                let count = 0
+                for (let hit = 0; hit * after < duration; hit += 1) {
+                  count += Math.min(1, Math.max(0, (duration - options.windup - hit * after) / ctRange))
+                }
+                const attack = [3319, 3513, 3556, 3577][level]
+                for (const resistance of resistances.slice(0, 3)) {
+                  const perHit = attack * Math.max(0.05, 1 - Math.max(0, resistance - 20) / 100)
+                    * (level && group.blocking ? 1.1 : 1)
+                  close(value(group.referenceSeries!, reference.id, resistance), perHit * count)
+                }
+                assert.equal(value(group.referenceSeries!, reference.id, -1), null)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+})
+
 test('無効な選択モデル・hidden前段階の欠落をnullにし、比較に不要な段階は導出しない', () => {
   const record = createRecord()
   const stages = selected(record)

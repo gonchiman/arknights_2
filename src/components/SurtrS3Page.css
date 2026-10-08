@@ -21,6 +21,7 @@
 .surtr-s3-mod select { min-height: 34px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 0; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; }
 .surtr-s3-locked { color: var(--text-muted); font-size: 11px; }
 .surtr-s3-block-setting { display: grid; justify-items: start; gap: 6px; color: var(--text-soft); font-size: 11px; }
+.surtr-s3-remnant-setting { margin-top: 12px; }
 .surtr-s3-segments { display: flex; border: 1px solid var(--border-strong); max-width: 100%; }
 .surtr-s3-segments button { min-height: 36px; border: 0; padding: 8px 12px; background: var(--surface); color: var(--text-soft); font: inherit; font-size: 12px; cursor: pointer; }
 .surtr-s3-segments button + button { border-left: 1px solid var(--border-strong); }

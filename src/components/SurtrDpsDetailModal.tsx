@@ -30,6 +30,10 @@ export function SurtrDpsDetailModal({ snapshot, onClose }: { snapshot: SurtrDpsD
   const { baseAttack: base, attackPipeline: attack, mitigation, artsFragilityMultiplier } = calculation
   const baseline = snapshot.comparisonBase === 'previous' ? selected.baseline : snapshot.series.find(item => item.id === snapshot.baselineId)
   const intervalFormula = `${number(calculation.baseAttackTime)} × 100 ÷ ${number(calculation.appliedAttackSpeed)}`
+  const remnantAttackSpeedBonus = calculation.remnantAttackSpeedBonus ?? 0
+  const attackSpeedFormula = calculation.remnantActive
+    ? `${number(calculation.baseAttackSpeed)} + ${number(calculation.attackSpeedBonus - remnantAttackSpeedBonus)} + ${number(remnantAttackSpeedBonus)}（余燼）`
+    : `${number(calculation.baseAttackSpeed)} + ${number(calculation.attackSpeedBonus)}`
   const rows = [
     { label: '攻撃力を合計', formula: `${number(base.levelAttack)}（レベル）+ ${number(base.trustAttack)}（信頼）+ ${number(base.potentialAttack)}（潜在）+ ${number(base.moduleAttack)}（MOD）`, result: number(base.beforeRounding) },
     { label: '基礎攻撃力', formula: `${number(base.beforeRounding)} を四捨五入`, result: number(base.result) },
@@ -39,7 +43,7 @@ export function SurtrDpsDetailModal({ snapshot, onClose }: { snapshot: SurtrDpsD
     { label: '術耐性による軽減', formula: `${number(attack.finalAttack)} × (1 − ${number(mitigation.appliedResistance)} ÷ 100)`, result: number(mitigation.afterResistance!) },
     { label: '最低保証を反映', formula: `${number(mitigation.afterResistance!)} と ${number(attack.finalAttack)} × 5% の大きい方`, result: number(mitigation.result) },
     ...(artsFragilityMultiplier !== 1 ? [{ label: '術脆弱を反映', formula: `${number(mitigation.result)} × ${number(artsFragilityMultiplier)}`, result: number(calculation.perHit) }] : []),
-    { label: '攻撃速度', formula: `${number(calculation.baseAttackSpeed)} + ${number(calculation.attackSpeedBonus)}`, result: number(calculation.attackSpeed) },
+    { label: '攻撃速度', formula: attackSpeedFormula, result: number(calculation.attackSpeed) },
     ...(calculation.attackSpeed !== calculation.appliedAttackSpeed ? [{ label: '攻撃速度の下限', formula: `${number(calculation.attackSpeed)} と 20 の大きい方`, result: number(calculation.appliedAttackSpeed) }] : []),
     { label: '攻撃間隔', formula: intervalFormula, result: `${number(calculation.attackInterval)} 秒` },
     { label: 'DPS（1秒あたり）', formula: `${number(calculation.perHit)} ÷ (${intervalFormula})`, result: number(calculation.dps) },
@@ -77,7 +81,9 @@ export function SurtrDpsDetailModal({ snapshot, onClose }: { snapshot: SurtrDpsD
       </table>
     </div>
     <details className="surtr-dps-detail-notes"><summary>計算・表示について</summary>
-      <p>途中の数値は小数点以下6桁まで表示しています。計算には表示用に丸める前の値を使います。攻撃間隔のフレーム単位の丸めと素質2「余燼」は含めません。</p>
+      <p>途中の数値は小数点以下6桁まで表示しています。計算には表示用に丸める前の値を使います。{calculation.remnantActive
+        ? '攻撃間隔のフレーム単位の丸めは含めません。素質2「余燼」発動中の補正を反映しています。'
+        : '攻撃間隔のフレーム単位の丸めと素質2「余燼」は含めません。'}</p>
     </details>
   </GoldenglowDetailModal>
 }

@@ -205,6 +205,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
   }
   const label = skillLabel(effectiveSettings.skillLevelIndex)
   const blockLabel = effectiveSettings.blocking ? '対象を自身でブロック' : '未ブロック'
+  const remnantLabel = effectiveSettings.remnantActive ? '余燼中' : '余燼なし'
   const comparisonBaseLabel = unequippedComparisonBase === 'previous' ? '前段階' : '未装備'
   const openDetail = (resistance: number, requestedSeriesId?: string, unequippedDetailMetric?: SurtrUnequippedMetric | 'total', requestedBlocking?: boolean) => {
     const useUnequippedComparison = unequippedDetailMetric !== undefined
@@ -246,7 +247,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
       metric: unequippedDetailMetric ?? effectiveMetric, baselineId: useUnequippedComparison ? 'none' : baseline?.id ?? '', precision,
       signedComparison: useUnequippedComparison,
       comparisonBase: useUnequippedComparison ? unequippedComparisonBase : undefined,
-      conditions: `昇進2 Lv.${effectiveSettings.level}・信頼度${effectiveSettings.trust}・潜在${effectiveSettings.potential}・S3 ${label}・${(requestedBlocking ?? effectiveSettings.blocking) ? '対象を自身でブロック' : '未ブロック'}` })
+      conditions: `昇進2 Lv.${effectiveSettings.level}・信頼度${effectiveSettings.trust}・潜在${effectiveSettings.potential}・S3 ${label}・${(requestedBlocking ?? effectiveSettings.blocking) ? '対象を自身でブロック' : '未ブロック'}・${remnantLabel}` })
   }
   const update = <K extends keyof SurtrDpsSettings>(key: K, value: SurtrDpsSettings[K]) => setSettings(previous => ({ ...previous, [key]: value }))
   const aspectRatio = aspect.preset !== 'auto' && [aspect.width, aspect.height].every(value => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100)
@@ -265,14 +266,14 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
       gridStyle, precision, yAxis, selectedResistance, showResistanceRanks }
     setImage({ id: ++nextSnapshot.current, series: chartSeries, kind: chartKind, barStep, resistanceRange: { ...resistanceRange }, showValues: chartKind === 'bar' && showValues,
       title: `スルト S3 ${outputTitle}`, metric: effectiveMetric, gridStyle, precision, yAxis, selectedResistance, showResistanceRanks,
-      conditions: `${label}・${blockLabel}`, histogram: readEnemyHistogramSnapshot(),
+      conditions: `${label}・${blockLabel}・${remnantLabel}`, histogram: readEnemyHistogramSnapshot(),
       blockComparisons: blockComparisons?.map(item => ({ ...item,
         series: effectiveMetric === 'total' ? item.series : item.series.filter(series => series.id !== baseline?.id),
-        conditions: `${label}・${item.blocking ? '対象を自身でブロック' : '未ブロック'}`,
+        conditions: `${label}・${item.blocking ? '対象を自身でブロック' : '未ブロック'}・${remnantLabel}`,
       })) ?? null,
       filename: getSurtrDpsImageFilename(filenameSettings),
       blockComparisonFilename: getSurtrDpsImageFilename({ ...filenameSettings, compareBlocking: true }),
-      blockComparisonConditions: `${label}・ブロック状態比較`,
+      blockComparisonConditions: `${label}・ブロック状態比較・${remnantLabel}`,
     })
   }
   const saveImage = async (filename: string, ratio?: number) => {
@@ -344,7 +345,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
       {record ? <OperatorModuleComparison profile={record.operatorProfile} operatorName={record.operatorName} operatorId={record.operatorId} /> : status}
     </CollapsibleCalculatorPanel>
     <CollapsibleCalculatorPanel id="surtr-s3-settings" number="03" title="比較条件"
-      summary={`${label}・潜在${effectiveSettings.potential}・${blockLabel}`} collapsedLabel="設定を表示">
+      summary={`${label}・潜在${effectiveSettings.potential}・${blockLabel}・${remnantLabel}`} collapsedLabel="設定を表示">
       {record ? <>
         <div className="surtr-s3-fields">
           <label className="calculator-field"><span>レベル（昇進2）</span><input aria-label="レベル（昇進2）" type="number" min={1} max={maximumLevel} step={1} value={effectiveSettings.level}
@@ -362,13 +363,18 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
           <button type="button" aria-pressed={!effectiveSettings.blocking} onClick={() => update('blocking', false)}>未ブロック</button>
           <button type="button" aria-pressed={effectiveSettings.blocking} onClick={() => update('blocking', true)}>対象を自身でブロック</button>
         </div></div>
+        <div className="surtr-s3-remnant-setting"><label className="surtr-s3-values-toggle">
+          <input type="checkbox" checked={!!effectiveSettings.remnantActive} onChange={event => update('remnantActive', event.target.checked)} />
+          素質2「余燼」発動中
+        </label></div>
         <details className="surtr-s3-assumptions"><summary>計算条件</summary>
-          <p>敵1体への連続攻撃を想定した理論DPSです。素質2「余燼」は含めません。通常時の素質1、MODの攻撃力・特性を反映し、外部バフとフレーム単位の攻撃間隔の丸めは含めません。</p>
+          <p>敵1体への連続攻撃を想定した理論DPSです。{effectiveSettings.remnantActive ? '素質2「余燼」発動中の攻撃速度を反映します。' : '素質2「余燼」は含めません。'}素質1、MODの攻撃力・特性を反映し、外部バフとフレーム単位の攻撃間隔の丸めは含めません。</p>
+          <p>「余燼」発動中はMOD Y Lv.2の攻撃速度＋20、Lv.3の＋30を反映します。未装備・MOD X・MOD Y Lv.1のDPSは変わりません。発動中の持続時間や攻撃回数による総ダメージは計算しません。</p>
           <p>未ブロックはスルトが誰もブロックしていない状態です。「対象を自身でブロック」は攻撃対象をスルト自身がブロックしている状態です。</p>
         </details>
       </> : status}
     </CollapsibleCalculatorPanel>
-    <CollapsibleCalculatorPanel id="surtr-s3-output" number="04" title="計算結果" summary={outputTitle} collapsedLabel="結果を表示" className="surtr-s3-output-panel"
+    <CollapsibleCalculatorPanel id="surtr-s3-output" number="04" title="計算結果" summary={`${outputTitle}・${remnantLabel}`} collapsedLabel="結果を表示" className="surtr-s3-output-panel"
       headerActions={<>
         <label className="surtr-s3-output-control"><span>グラフ</span><select aria-label="グラフの表示形式" value={chartKind} onChange={event => setChartKind(event.target.value as SurtrDpsChartKind)}>
           <option value="bar">棒グラフ</option><option value="line">折れ線</option>
@@ -420,7 +426,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
         : !series.length ? <p className="surtr-s3-status" role="status">比較するMODを選択してください。</p> : <div className="surtr-s3-results-layout">
           <section className="surtr-s3-chart-section" aria-labelledby="surtr-s3-chart-title">
             <div className="surtr-s3-result-heading">
-              <h3 id="surtr-s3-chart-title">{outputTitle}</h3>
+              <h3 id="surtr-s3-chart-title">{outputTitle}{effectiveSettings.remnantActive ? '（余燼中）' : ''}</h3>
               <div className="surtr-s3-result-actions">
                 {chartKind === 'line' && <>
                   <label className="surtr-s3-output-control"><span>縦軸</span><select aria-label="縦軸の表示範囲" value={yAxisMode} onChange={event => setYAxisMode(event.target.value as typeof yAxisMode)}>
@@ -501,7 +507,7 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
         : <SurtrUnequippedComparisonTable series={series} baseline={unequipped} resistances={unequippedResistances} precision={precision}
           metric={unequippedMetric} layout={unequippedLayout} comparisonBase={unequippedComparisonBase} rankMode={unequippedRankMode} columnOrder={unequippedColumnOrder} colorScale={unequippedColorScale} colorScaleMode={unequippedColorScaleMode} blockingComparison={unequippedBlockingComparison} selectedResistance={selectedResistance}
           metadata={{ skillLabel: label, level: effectiveSettings.level, trust: effectiveSettings.trust,
-            potential: effectiveSettings.potential, blocking: effectiveSettings.blocking }}
+            potential: effectiveSettings.potential, blocking: effectiveSettings.blocking, remnantActive: effectiveSettings.remnantActive }}
           onOpenDetail={(resistance, seriesId, detailMetric, blocking) => openDetail(resistance, seriesId, detailMetric, blocking)} />}
     </CollapsibleCalculatorPanel>
     {detail && <SurtrDpsDetailModal snapshot={detail} onClose={() => setDetail(null)} />}

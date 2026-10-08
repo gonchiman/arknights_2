@@ -57,7 +57,7 @@ export function buildSurtrRemnantDamageComparison(
   const visibleIds = new Set(visible.map(stage => stage.id))
   const blockingComparison: SurtrUnequippedBlockingComparison[] = []
   for (const blocking of [false, true]) {
-    const conditionSettings = { ...settings, blocking }
+    const conditionSettings = { ...settings, blocking, remnantActive: false }
     const referenceSeries: SurtrDpsOutputSeries[] = []
     for (const stage of modules.values()) {
       const dpsModel = deriveSurtrDpsModel(record, conditionSettings, stage.moduleId, stage.level)

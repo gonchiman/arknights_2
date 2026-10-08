@@ -15,6 +15,7 @@ import {
 import { getOperatorPassives } from './operatorProfile.ts'
 import { getOperatorPotentialApplication } from './operatorPotentials.ts'
 import { getSkillLevelLabel } from './skillJsonAnalysis.ts'
+import { getSurtrRemnantAttackSpeedBonus } from './surtrRemnantAttackSpeed.ts'
 
 export const SURTR_OPERATOR_ID = 'char_350_surtr'
 
@@ -25,6 +26,8 @@ export interface SurtrDpsSettings {
   skillLevelIndex: number
   /** False means Surtr blocks no enemies; true means she blocks the single target. */
   blocking: boolean
+  /** Apply conditional Remnant attack speed; omitted retains pre-activation DPS. */
+  remnantActive?: boolean
 }
 
 export interface SurtrDpsModel {
@@ -42,6 +45,8 @@ export interface SurtrDpsModel {
   resistanceIgnore: number
   /** Fractional increase in damage, e.g. 0.1 for 10% arts fragility. */
   artsFragility: number
+  remnantActive: boolean
+  remnantAttackSpeedBonus: number
   operatorStats: OperatorStats
 }
 
@@ -51,9 +56,9 @@ export interface SurtrDpsPoint {
 }
 
 /**
- * E2 S3 single-target sustained DPS before Remnant activates.
- * Module traits are read only from their trait source, so Y's conditional
- * Remnant attack speed and forced-retreat interval never enter this model.
+ * E2 S3 single-target sustained DPS, optionally with Remnant's attack speed.
+ * Module trait conditions remain independent of Remnant activation; its finite
+ * forced-retreat interval never enters this sustained DPS calculation.
  */
 export function deriveSurtrDpsModel(
   record: SkillRecord,
@@ -70,7 +75,8 @@ export function deriveSurtrDpsModel(
     || !isNonNegative(settings.trust) || settings.trust > 100
     || !Number.isInteger(settings.potential) || settings.potential < 1
     || !Number.isInteger(settings.skillLevelIndex) || settings.skillLevelIndex < 0
-    || typeof settings.blocking !== 'boolean') return null
+    || typeof settings.blocking !== 'boolean'
+    || (settings.remnantActive !== undefined && typeof settings.remnantActive !== 'boolean')) return null
   const frames = phase.attributesKeyFrames
   if (!frames?.length || frames.some((frame) => !isPositive(frame.level)
     || !isPositive(frame.data?.atk) || !isPositive(frame.data?.attackSpeed)
@@ -107,11 +113,16 @@ export function deriveSurtrDpsModel(
   const nonBlockingSpeed = moduleType === 'X' ? readValue(trait?.blackboard, 'attack_speed') : 0
   const blockedDamageScale = moduleType === 'Y' ? readValue(trait?.blackboard, 'damage_scale') : 1
   if (!isNonNegative(nonBlockingSpeed) || !isPositive(blockedDamageScale) || blockedDamageScale < 1) return null
+  const remnantActive = settings.remnantActive === true
+  const remnantAttackSpeedBonus = remnantActive
+    ? getSurtrRemnantAttackSpeedBonus(passives, moduleType, module ? moduleApplication.moduleLevel : 0)
+    : 0
+  if (remnantAttackSpeedBonus === null) return null
   const stats = getOperatorStats(profile, 2, settings.level, settings.trust, {
     moduleAttack: moduleApplication.moduleAttack,
     potentialAttack: potential.potentialAttack,
     attackSpeedBonus: potential.attackSpeedBonus + moduleApplication.attackSpeedBonus
-      + (settings.blocking ? 0 : nonBlockingSpeed),
+      + (settings.blocking ? 0 : nonBlockingSpeed) + remnantAttackSpeedBonus,
   })
   const attack = calculateAttackPipeline(stats.attack, { directMultiplierPercent: skillAttackBonus * 100 })
   if (!isPositive(attack.finalAttack) || !isPositive(stats.attackInterval)) return null
@@ -130,6 +141,8 @@ export function deriveSurtrDpsModel(
     attackSpeed: stats.attackSpeed,
     resistanceIgnore,
     artsFragility: settings.blocking ? blockedDamageScale - 1 : 0,
+    remnantActive,
+    remnantAttackSpeedBonus,
     operatorStats: stats,
   }
 }

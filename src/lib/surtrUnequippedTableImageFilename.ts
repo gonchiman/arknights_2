@@ -10,6 +10,7 @@ export interface SurtrUnequippedTableImageMetadata {
   potential: number
   blocking: boolean
   remnantAssumptions?: SurtrRemnantAttackAssumptions
+  remnantActive?: boolean
 }
 
 /** Name the captured table settings, independently of the panel 04 chart settings. */
@@ -50,6 +51,7 @@ export function getSurtrUnequippedTableImageFilename(options: {
     `昇進2Lv${metadata.level}`,
     `信頼${metadata.trust}`,
     `潜在${metadata.potential}`,
+    ...(!expectedDamage && metadata.remnantActive ? ['余燼中'] : []),
     blockingComparison !== undefined ? 'ブロック条件比較' : metadata.blocking ? 'ブロック中' : '未ブロック',
     ...(blockingComparison !== undefined && options.columnOrder === 'blocking' ? ['ブロック条件別'] : []),
     modules.join('-') || 'MOD選択なし',

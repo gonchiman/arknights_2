@@ -84,7 +84,7 @@ export function SurtrUnequippedComparisonTableImage({ metadata, aspectRatio, exp
   return <figure ref={imageRef} className="surtr-unequipped-table-image" style={{ width: initialWidth }} aria-label={`スルト ${data.quantity === 'expected-damage' ? '余燼の総ダメージ期待値' : 'S3'} ${data.comparisonBase === 'previous' ? '前段階' : '未装備'}との比較表`}>
     <SurtrUnequippedComparisonTableContent {...data} footer={<div className="surtr-unequipped-table-image-conditions">
       <span>{data.quantity === 'expected-damage' ? '総ダメージ期待値・' : ''}{getUnequippedMetricLabel(data.metric, data.comparisonBase, data.quantity)}・基準：{data.comparisonBase === 'previous' ? '1つ前の段階（Lv.1は未装備）' : '未装備'}</span>
-      <span>S3 {metadata.skillLabel}・昇進2 Lv.{metadata.level}・信頼度{metadata.trust}・潜在{metadata.potential}・{data.blockingComparison !== undefined ? '未ブロック／対象を自身でブロック' : metadata.blocking ? '対象を自身でブロック' : '未ブロック'}</span>
+      <span>S3 {metadata.skillLabel}・昇進2 Lv.{metadata.level}・信頼度{metadata.trust}・潜在{metadata.potential}・{data.blockingComparison !== undefined ? '未ブロック／対象を自身でブロック' : metadata.blocking ? '対象を自身でブロック' : '未ブロック'}{data.quantity !== 'expected-damage' && `・${metadata.remnantActive ? '余燼中' : '余燼なし'}`}</span>
       {data.quantity === 'expected-damage' && metadata.remnantAssumptions && <span>残りCT一様・命中まで{metadata.remnantAssumptions.windup}s・CT{metadata.remnantAssumptions.ctCarry === 'time' ? '時間' : '割合'}維持・退場同時の命中{metadata.remnantAssumptions.includeRetreatHit ? 'を含む' : 'を除外'}</span>}
     </div>} />
   </figure>

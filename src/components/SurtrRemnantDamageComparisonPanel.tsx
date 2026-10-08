@@ -121,7 +121,7 @@ export function SurtrRemnantDamageComparisonPanel({ record, settings, selectedSt
     const values = buildSurtrUnequippedComparisonSeries(group.series, group.baseline, metric === 'total' ? options.metric : metric,
       options.comparisonBase, group.referenceSeries)
     const derive = (stage: SelectedSurtrModuleStage) => {
-      const conditionSettings = { ...settings, blocking: requestedBlocking }
+      const conditionSettings = { ...settings, blocking: requestedBlocking, remnantActive: false }
       const model = deriveSurtrRemnantAttackModel(record, conditionSettings, stage.moduleId, stage.level)
       const dps = deriveSurtrDpsModel(record, conditionSettings, stage.moduleId, stage.level)
       const expectation = model ? calculateSurtrRemnantAttackExpectation(model, assumptions) : null

@@ -9,6 +9,7 @@ let server
 let Content
 let moduleColors
 let Image
+let ImagePreview
 let saveImage
 let DetailModal
 
@@ -23,7 +24,7 @@ before(async () => {
     appType: 'custom',
   })
   ;({ SurtrUnequippedComparisonTableContent: Content } = await server.ssrLoadModule('/src/components/SurtrUnequippedComparisonTableContent.tsx'))
-  ;({ SurtrUnequippedComparisonTableImage: Image, saveSurtrUnequippedComparisonTableImage: saveImage }
+  ;({ SurtrUnequippedComparisonTableImage: Image, SurtrUnequippedComparisonTableImagePreview: ImagePreview, saveSurtrUnequippedComparisonTableImage: saveImage }
     = await server.ssrLoadModule('/src/components/SurtrUnequippedComparisonTableImage.tsx'))
   moduleColors = await server.ssrLoadModule('/src/lib/moduleColors.ts')
   ;({ SurtrDpsDetailModal: DetailModal } = await server.ssrLoadModule('/src/components/SurtrDpsDetailModal.tsx'))
@@ -150,6 +151,34 @@ test('the optional image conditions footer spans the complete selected layout', 
 })
 
 const metadata = { skillLabel: '特化3', level: 90, trust: 100, potential: 1, blocking: true }
+
+test('comparison image and preview footers record frozen Remnant state in each comparison layout', () => {
+  for (const component of [Image, ImagePreview]) {
+    for (const comparisonBase of ['unequipped', 'previous']) {
+      for (const layout of ['combined', 'comparison']) {
+        for (const groups of [undefined, blockingComparison]) {
+          const data = { ...props, series: modules, comparisonBase, layout, blockingComparison: groups }
+          const active = structuredClone({ ...data, metadata: { ...metadata, remnantActive: true } })
+          const captured = structuredClone(active)
+          const live = { ...data, metadata: { ...metadata, remnantActive: false } }
+          const on = renderToStaticMarkup(createElement(component, active))
+          const off = renderToStaticMarkup(createElement(component, live))
+          const legacy = renderToStaticMarkup(createElement(component, { ...data, metadata }))
+          assert.equal(off, legacy, 'omitted state and explicit OFF share the same footer')
+          const footer = text(sections(on, 'tfoot')[0])
+          assert.match(footer, /余燼中$/)
+          assert.doesNotMatch(footer, /余燼なし/)
+          assert.equal((footer.match(/余燼中/g) ?? []).length, 1)
+          assert.match(text(sections(off, 'tfoot')[0]), /余燼なし$/)
+          assert.deepEqual(sectionRows(on, 'thead'), sectionRows(off, 'thead'))
+          assert.deepEqual(sectionRows(on, 'tbody'), sectionRows(off, 'tbody'))
+          for (const module of modules) assert.ok(table(on).includes(`background-color:${module.color}`))
+          assert.deepEqual(active, captured, 'image and preview do not change the captured metadata')
+        }
+      }
+    }
+  }
+})
 
 test('saved image uses the same table values, stage colors and full resistance list in every layout and metric', () => {
   for (const layout of ['combined', 'comparison']) {
@@ -815,4 +844,69 @@ test('the comparison flow displays the selected MOD preceding stage and never su
     signedComparison: true, comparisonBase: 'previous', baselineId: 'none', precision: 1 }, onClose: () => {} }))
   assert.ok(!sectionRows(unavailable, 'tbody').some(row => row[0].startsWith('基準：')))
   assert.deepEqual(sectionRows(unavailable, 'tbody').at(-1), ['表の表示', '小数点以下1桁に丸める', '—'])
+})
+
+function remnantCalculation({ remnantActive = false, remnantAttackSpeedBonus = 0, otherAttackSpeedBonus = 0 } = {}) {
+  const attackSpeed = 100 + otherAttackSpeedBonus + remnantAttackSpeedBonus
+  return {
+    baseAttack: { levelAttack: 1000, trustAttack: 0, potentialAttack: 0, moduleAttack: 0, beforeRounding: 1000, result: 1000 },
+    attackPipeline: { directMultiplierPercent: 300, afterDirectMultiplier: 4000, finalAttack: 4000 },
+    mitigation: { inputResistance: 0, resistanceIgnoreFixed: 20, appliedResistance: 0, afterResistance: 4000, result: 4000 },
+    artsFragilityMultiplier: 1, perHit: 4000, baseAttackTime: 1.25, baseAttackSpeed: 100,
+    attackSpeedBonus: otherAttackSpeedBonus + remnantAttackSpeedBonus, remnantActive, remnantAttackSpeedBonus,
+    attackSpeed, appliedAttackSpeed: attackSpeed, attackInterval: 125 / attackSpeed, dps: 32 * attackSpeed,
+  }
+}
+
+function renderDetail(calculation) {
+  return renderToStaticMarkup(createElement(DetailModal, { snapshot: {
+    resistance: 0, conditions: '未ブロック',
+    series: [{ id: 'module-y:lv3', label: 'MOD Y Lv.3', color: modules[1].color, calculation, value: calculation.dps }],
+    initialSeriesId: 'module-y:lv3', metric: 'total', baselineId: 'none', precision: 2,
+  }, onClose: () => {} }))
+}
+
+for (const [label, bonus] of [['未装備', 0], ['MOD Y Lv.1', 0], ['MOD Y Lv.2', 20], ['MOD Y Lv.3', 30]]) {
+  test(`the active Remnant detail includes ${label} speed once in its interval and DPS`, () => {
+    const calculation = remnantCalculation({ remnantActive: true, remnantAttackSpeedBonus: bonus, otherAttackSpeedBonus: 8 })
+    const markup = renderDetail(calculation)
+    const flow = sectionRows(markup, 'tbody')
+    const speed = 108 + bonus
+    const format = value => new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 6 }).format(value)
+    assert.deepEqual(flow.find(row => row[0] === '攻撃速度'), ['攻撃速度', `100 + 8 + ${bonus}（余燼）`, String(speed)])
+    assert.deepEqual(flow.find(row => row[0] === '攻撃間隔'), ['攻撃間隔', `1.25 × 100 ÷ ${speed}`, `${format(125 / speed)} 秒`])
+    assert.deepEqual(flow.find(row => row[0] === 'DPS（1秒あたり）'), ['DPS（1秒あたり）', `4,000 ÷ (1.25 × 100 ÷ ${speed})`, format(32 * speed)])
+    assert.match(text(markup), /素質2「余燼」発動中の補正を反映しています。/)
+    assert.doesNotMatch(text(markup), /素質2「余燼」は含めません/)
+  })
+}
+
+test('inactive Remnant retains the original detail formula and note, including legacy snapshots', () => {
+  const inactive = remnantCalculation({ otherAttackSpeedBonus: 8 })
+  const legacy = { ...inactive }
+  delete legacy.remnantActive
+  delete legacy.remnantAttackSpeedBonus
+  for (const calculation of [inactive, legacy]) {
+    const markup = renderDetail(calculation)
+    const flow = sectionRows(markup, 'tbody')
+    assert.deepEqual(flow.find(row => row[0] === '攻撃速度'), ['攻撃速度', '100 + 8', '108'])
+    assert.match(text(markup), /攻撃間隔のフレーム単位の丸めと素質2「余燼」は含めません。/)
+    assert.doesNotMatch(text(markup), /発動中の補正|（余燼）/)
+  }
+  assert.equal(renderDetail(inactive), renderDetail(legacy))
+})
+
+test('an active Remnant previous-stage comparison uses the preceding stage speed for its reference DPS', () => {
+  const calculation = remnantCalculation({ remnantActive: true, remnantAttackSpeedBonus: 30 })
+  const reference = remnantCalculation({ remnantActive: true, remnantAttackSpeedBonus: 20 })
+  const markup = renderToStaticMarkup(createElement(DetailModal, { snapshot: {
+    resistance: 0, conditions: '未ブロック・余燼発動中',
+    series: [{ id: 'module-y:lv3', label: 'MOD Y Lv.3', color: modules[1].color, calculation,
+      baseline: { label: 'MOD Y Lv.2', calculation: reference }, value: 4160 / 3840 * 100 }],
+    initialSeriesId: 'module-y:lv3', metric: 'ratio', comparisonBase: 'previous', baselineId: 'none', precision: 2,
+  }, onClose: () => {} }))
+  const flow = sectionRows(markup, 'tbody')
+  assert.deepEqual(flow.find(row => row[0] === '基準：MOD Y Lv.2'), ['基準：MOD Y Lv.2', '同じ術耐性・比較条件でのDPS', '3,840'])
+  assert.deepEqual(flow.find(row => row[0] === '基準に対する比率'), ['基準に対する比率', '4,160 ÷ 3,840 × 100', '108.333333%'])
+  assert.deepEqual(flow.at(-1), ['表の表示', '小数点以下2桁に丸める', '108.33%'])
 })

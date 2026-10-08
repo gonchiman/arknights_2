@@ -1,7 +1,4 @@
 import type { SkillRecord } from '../types/skill.ts'
-import { getOperatorStats } from './damageCalculator.ts'
-import { applyOperatorModule, getOperatorModuleId, getOperatorModules } from './operatorModules.ts'
-import { getOperatorPassives } from './operatorProfile.ts'
 import { deriveSurtrDpsModel, type SurtrDpsSettings } from './surtrDps.ts'
 import { deriveSurtrDurationModel } from './surtrDuration.ts'
 
@@ -39,7 +36,6 @@ export type SurtrRemnantCtStep = 0.01 | 0.05 | 0.1
 
 const TIME_EPSILON = 1e-9
 const MAXIMUM_ITEMS = 100_000
-const REMNANT_SPEED_KEY = 'surtr_t_2[withdraw].attack_speed'
 
 /** Reuse the existing S3 stat and duration validation, then apply Remnant's speed. */
 export function deriveSurtrRemnantAttackModel(
@@ -48,31 +44,10 @@ export function deriveSurtrRemnantAttackModel(
   moduleId = '',
   moduleLevel = 3,
 ): SurtrRemnantAttackModel | null {
-  const before = deriveSurtrDpsModel(record, settings, moduleId, moduleLevel)
+  const before = deriveSurtrDpsModel(record, { ...settings, remnantActive: false }, moduleId, moduleLevel)
+  const after = deriveSurtrDpsModel(record, { ...settings, remnantActive: true }, moduleId, moduleLevel)
   const duration = deriveSurtrDurationModel(record, settings, moduleId, moduleLevel)
-  if (!before || !duration) return null
-  const profile = record.operatorProfile
-  const module = moduleId ? getOperatorModules(profile).find((candidate, index) => (
-    getOperatorModuleId(candidate, index) === moduleId
-  )) : undefined
-  const application = applyOperatorModule(
-    getOperatorPassives(profile, 2, settings.level, settings.potential),
-    module,
-    moduleLevel,
-    settings.potential,
-  )
-  if (application.unsupportedReasons.length) return null
-  const speedEntry = application.passives.sources.find((source) => (
-    source.sourceKind === 'TALENT' && source.talentIndex === 1
-  ))?.blackboard.find((entry) => entry.key?.toLowerCase() === REMNANT_SPEED_KEY)
-  // Upgraded Y must carry this field; silently treating missing data as zero
-  // would remove the very bonus this comparison is intended to measure.
-  if (before.moduleType === 'Y' && before.moduleLevel > 1 && !speedEntry) return null
-  const speedBonus = speedEntry ? speedEntry.value : 0
-  if (!nonNegative(speedBonus)) return null
-  const after = getOperatorStats(profile, 2, settings.level, settings.trust, {
-    attackSpeedBonus: before.operatorStats.attackSpeedBonus + speedBonus,
-  })
+  if (!before || !after || !duration) return null
   const model: SurtrRemnantAttackModel = {
     moduleId: before.moduleId,
     moduleType: before.moduleType,

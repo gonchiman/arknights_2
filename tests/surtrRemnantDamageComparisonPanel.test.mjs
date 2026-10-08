@@ -169,11 +169,25 @@ test('assumption changes recalculate expected totals and are captured in the sha
   assert.match(saved, /0\.45/)
   assert.match(saved, /比率|割合/)
   assert.match(saved, /(?:撤退|退場)同時.*含む/)
+  assert.doesNotMatch(saved, /余燼なし/)
   assert.doesNotMatch(table(saved), /DPS|<button|<select/)
   const shared = renderToStaticMarkup(createElement(Content, snapshot))
   assert.deepEqual(sectionRows(table(saved), 'tbody'), sectionRows(table(shared), 'tbody'))
   assert.deepEqual(sectionRows(table(saved), 'thead'), sectionRows(table(shared), 'thead'))
   assert.deepEqual(snapshot, before)
+})
+
+test('expected damage image keeps its timing conditions independent of the S3 Remnant toggle', () => {
+  const data = capture(render())
+  const expectedImage = renderToStaticMarkup(createElement(Image, data))
+  assert.match(text(expectedImage), /総ダメージ期待値・ダメージ差・基準：未装備/)
+  assert.match(text(expectedImage), /残りCT一様・命中まで0\.3s・CT時間維持・退場同時の命中を除外/)
+  assert.doesNotMatch(text(expectedImage), /余燼なし/)
+  for (const remnantActive of [false, true]) {
+    assert.equal(renderToStaticMarkup(createElement(Image, {
+      ...data, metadata: { ...data.metadata, remnantActive },
+    })), expectedImage)
+  }
 })
 
 test('previous-stage expected damage tables and TSV compare each hidden stage using its own expected count', () => {
