@@ -1,7 +1,9 @@
 import { transformSurtrDpsSeries, type SurtrDpsOutputSeries } from './surtrDpsOutput.ts'
+import { getSurtrDpsResistanceRating } from './surtrDpsResistance.ts'
 
 export type SurtrUnequippedMetric = 'difference' | 'ratio' | 'percent'
 export type SurtrUnequippedLayout = 'combined' | 'comparison'
+export type SurtrUnequippedRankMode = 'none' | 'inline' | 'merged'
 
 export interface SurtrUnequippedBlockingComparison {
   blocking: boolean
@@ -54,6 +56,7 @@ export function getSurtrUnequippedComparisonTsv(
   metric: SurtrUnequippedMetric,
   layout: SurtrUnequippedLayout,
   blockingComparison?: readonly SurtrUnequippedBlockingComparison[],
+  rankMode: SurtrUnequippedRankMode = 'none',
 ): string {
   const targets = series.filter(item => item.id !== 'none')
   const conditions = blockingComparison === undefined
@@ -77,12 +80,13 @@ export function getSurtrUnequippedComparisonTsv(
     : metric === 'ratio' ? '未装備に対するDPS比（%）' : '未装備からの増加率（%）'
   const combined = layout === 'combined'
   const labels = targets.map(item => cleanLabel(item.label))
-  const header = ['術耐性', ...(combined ? ['未装備 DPS'] : []), ...labels.flatMap(label => conditionValues.flatMap(condition => {
+  const header = ['術耐性', ...(rankMode !== 'none' ? ['術耐性ランク'] : []), ...(combined ? ['未装備 DPS'] : []), ...labels.flatMap(label => conditionValues.flatMap(condition => {
     const heading = condition.label ? `${label} ${condition.label}` : label
     return [...(combined ? [`${heading} DPS`] : []), `${heading} ${comparisonLabel}`]
   }))]
   const rows = resistances.map(resistance => [
     String(resistance),
+    ...(rankMode !== 'none' ? [getSurtrDpsResistanceRating(resistance)?.rating ?? '—'] : []),
     ...(combined ? [formatNumber(baselineValues.get(resistance), precision, false, false)] : []),
     ...targets.flatMap(item => conditionValues.flatMap(condition => [
       ...(combined ? [formatNumber(condition.raw.get(item.id)?.get(resistance), precision, false, false)] : []),

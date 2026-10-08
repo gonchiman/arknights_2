@@ -21,7 +21,8 @@ interface ImageProps extends SurtrUnequippedComparisonTableImageSnapshot {
 const initialWidthFor = (snapshot: SurtrUnequippedComparisonTableData) => {
   const targets = snapshot.series.filter(item => item.id !== 'none').length
   const conditions = snapshot.blockingComparison === undefined ? 1 : 2
-  const columns = snapshot.layout === 'combined' ? 2 + targets * 2 * conditions : 1 + targets * conditions
+  const columns = (snapshot.layout === 'combined' ? 2 + targets * 2 * conditions : 1 + targets * conditions)
+    + (snapshot.rankMode === 'merged' ? 1 : 0)
   return Math.max(640, columns * 150)
 }
 
@@ -43,7 +44,7 @@ function tableAspect(aspectRatio?: number): TableImageAspect | null {
 export function SurtrUnequippedComparisonTableImage({ metadata, aspectRatio, exporting = false, onLayout, onLayoutError, ...data }: ImageProps) {
   const imageRef = useRef<HTMLElement>(null)
   const initialWidth = initialWidthFor(data)
-  const snapshotKey = JSON.stringify([data.series, data.baseline, data.blockingComparison, data.resistances, data.layout, data.metric, data.precision, metadata])
+  const snapshotKey = JSON.stringify([data.series, data.baseline, data.blockingComparison, data.resistances, data.layout, data.metric, data.precision, data.rankMode, metadata])
   useLayoutEffect(() => {
     const image = imageRef.current
     const table = image?.querySelector('table')

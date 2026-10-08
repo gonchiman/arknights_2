@@ -131,6 +131,25 @@ test('命名は入力を変更せず、日時や乱数が変わっても設定�
   assert.deepEqual(captured, before)
 })
 
+test('ランク表示なしは既存名を保ち、併記と結合の保存画像を区別する', () => {
+  const original = getSurtrUnequippedTableImageFilename(options)
+  assert.equal(getSurtrUnequippedTableImageFilename({ ...options, rankMode: 'none' }), original)
+  assert.equal(getSurtrUnequippedTableImageFilename({ ...options, rankMode: undefined }), original)
+  const names = [original]
+  for (const [rankMode, label] of [['inline', 'ランク併記'], ['merged', 'ランク結合']] as const) {
+    const ranked = { ...options, rankMode }
+    const before = structuredClone(ranked)
+    const name = getSurtrUnequippedTableImageFilename(ranked, 16 / 9)
+    assert.ok(name.includes(label), name)
+    assert.match(name, /術耐性0-100刻み10/)
+    assert.match(name, /比率16x9\.png$/)
+    assert.ok(new TextEncoder().encode(name).length <= 240)
+    assert.deepEqual(ranked, before)
+    names.push(getSurtrUnequippedTableImageFilename(ranked))
+  }
+  assert.equal(new Set(names).size, 3)
+})
+
 test('ブロック条件比較の画像名は通常の単一条件と区別し、現在のblocking選択に依存しない', () => {
   const blockingComparison = [{ blocking: true }, { blocking: false }]
   const compared = { ...options, blockingComparison }

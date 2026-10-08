@@ -193,6 +193,30 @@ test('rank display defaults on for previous saved state and preserves explicit o
   }
 })
 
+test('comparison-table rank display defaults off and does not inherit chart rank visibility', () => {
+  assert.equal(createDefaultSurtrDpsPageState().unequippedRankMode, 'none')
+  const storage = memoryStorage()
+  for (const showResistanceRanks of [true, false]) {
+    const previous = { ...createDefaultSurtrDpsPageState(), showResistanceRanks, unequippedMetric: 'ratio' as const }
+    Reflect.deleteProperty(previous, 'unequippedRankMode')
+    storage.setItem(SURTR_DPS_PAGE_STATE_KEY, JSON.stringify(previous))
+    assert.deepEqual(readSurtrDpsPageState(storage), { ...previous, unequippedRankMode: 'none' })
+    for (const unequippedRankMode of ['none', 'inline', 'merged'] as const) {
+      const state = { ...createDefaultSurtrDpsPageState(), showResistanceRanks, unequippedRankMode,
+        unequippedStep: 7, unequippedMetric: 'ratio' as const }
+      writeSurtrDpsPageState(state, storage)
+      assert.deepEqual(readSurtrDpsPageState(storage), state)
+      assert.equal(JSON.parse(storage.values.get(SURTR_DPS_PAGE_STATE_KEY)!).unequippedRankMode, unequippedRankMode)
+    }
+  }
+  for (const unequippedRankMode of [undefined, null, '', 'ratings', 'INLINE', false, true, 0, 1, [], {}]) {
+    const state = parseSurtrDpsPageState({ unequippedRankMode, showResistanceRanks: false, unequippedStep: 'ratings' })
+    assert.equal(state.unequippedRankMode, 'none')
+    assert.equal(state.showResistanceRanks, false)
+    assert.equal(state.unequippedStep, 'ratings')
+  }
+})
+
 test('valid fields in a partial or damaged record are retained independently', () => {
   const restored = parseSurtrDpsPageState({
     settings: { level: 80, trust: '50', potential: 0, skillLevelIndex: 1.5, blocking: true },

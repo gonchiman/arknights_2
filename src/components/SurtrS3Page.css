@@ -94,7 +94,13 @@
 .surtr-s3-unequipped-table tr > th:first-child { width: auto; }
 .surtr-s3-unequipped-table thead tr:first-child > th:first-child { min-width: 80px; text-align: left; }
 .surtr-s3-equal-blocking-columns { table-layout: fixed; min-width: var(--surtr-unequipped-min-width); }
-.surtr-s3-unequipped-resistance-column { width: 80px; }
+.surtr-s3-unequipped-resistance-column { width: var(--surtr-unequipped-resistance-width, 80px); }
+.surtr-s3-unequipped-rank-column { width: 64px; }
+.surtr-s3-unequipped-table .surtr-s3-rank-cell { min-width: 0; padding: 10px; text-align: center; vertical-align: middle; }
+.surtr-s3-unequipped-table thead tr:first-child > th.surtr-s3-rank-cell { min-width: 0; text-align: center; }
+.surtr-s3-resistance-rank { color: var(--text-muted); font-weight: 400; white-space: nowrap; }
+.surtr-s3-resistance-rank-value { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.surtr-s3-rank-inline .surtr-s3-table-resistance .surtr-s3-resistance-rank { margin-left: auto; }
 .surtr-s3-unequipped-baseline-column { width: 96px; }
 .surtr-s3-unequipped-table .surtr-s3-blocking-column { white-space: normal; }
 .surtr-s3-blocking-column span { white-space: nowrap; }

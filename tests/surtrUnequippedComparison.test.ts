@@ -12,6 +12,46 @@ function series(id: string, values: readonly [number, number | null][], label = 
   return { id, label, color: '#3f7699', points: values.map(([x, value]) => ({ x, value })) }
 }
 
+test('ランク表示付きTSVは境界に従うランクを独立列に出し、結合セルも全行へ展開する', () => {
+  const resistances = [0, 1, 9, 10, 19, 20, 29, 30, 49, 50, 59, 60, 69, 70, 79, 80, 90, 91, 100]
+  const ranks = ['E', 'D', 'D', 'C', 'C', 'B', 'B', 'B+', 'B+', 'A', 'A', 'A+', 'A+', 'S', 'S', 'S+', 'S+', 'SS', 'SS']
+  const baseline = series('none', resistances.map(value => [value, 100]), '未装備')
+  const input = [series('x:lv3', resistances.map(value => [value, 125]), 'MOD X Lv.3')]
+  const blockingComparison = [
+    { blocking: false, series: input, baseline },
+    { blocking: true, series: [series('x:lv3', resistances.map(value => [value, 150]), 'MOD X Lv.3')], baseline },
+  ]
+  for (const blocking of [undefined, blockingComparison]) {
+    for (const layout of ['combined', 'comparison'] as const) {
+      for (const metric of ['difference', 'ratio', 'percent'] as const) {
+        const old = getSurtrUnequippedComparisonTsv(input, baseline, resistances, 1, metric, layout, blocking)
+        assert.equal(getSurtrUnequippedComparisonTsv(input, baseline, resistances, 1, metric, layout, blocking, 'none'), old)
+        for (const rankMode of ['inline', 'merged'] as const) {
+          const copied = getSurtrUnequippedComparisonTsv(input, baseline, resistances, 1, metric, layout, blocking, rankMode)
+          const rows = copied.split('\r\n').map(row => row.split('\t'))
+          assert.equal(rows[0][1], '術耐性ランク')
+          assert.deepEqual(rows.slice(1).map(row => row[1]), ranks)
+          assert.ok(rows.every(row => row.length === rows[0].length), 'Each copied row must retain complete columns')
+          assert.equal(rows.map(row => [row[0], ...row.slice(2)].join('\t')).join('\r\n'), old,
+            'Rank visibility must not change resistance, baseline, blocking columns or comparison values')
+        }
+      }
+    }
+  }
+})
+
+test('ランク付きコピーは部分範囲と指定順を保ち、不明なランクを推測しない', () => {
+  const resistances = [55, 48, 41, 34, 27, 20, 13, -1, 101]
+  const baseline = series('none', resistances.map(value => [value, 100]))
+  const input = [series('x', resistances.map(value => [value, 125]))]
+  const expectedRanks = ['A', 'B+', 'B+', 'B+', 'B', 'B', 'C', '—', '—']
+  for (const rankMode of ['inline', 'merged'] as const) {
+    const copied = getSurtrUnequippedComparisonTsv(input, baseline, resistances, 0, 'difference', 'comparison', undefined, rankMode)
+    assert.deepEqual(copied.split('\r\n').slice(1).map(row => row.split('\t').slice(0, 2)),
+      resistances.map((value, index) => [String(value), expectedRanks[index]]))
+  }
+})
+
 test('未装備を非表示にしても独立した基準で比較し、表示順とMOD段階の識別を保つ', () => {
   const baseline = series('none', [[0, 100], [60, 50]], '未装備')
   const targets = [

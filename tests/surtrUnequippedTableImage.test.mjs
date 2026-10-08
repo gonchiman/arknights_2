@@ -350,3 +350,119 @@ test('condition-specific cells open their own DPS or comparison flow, preserving
     else globalThis.Element = originalElement
   }
 })
+
+const bodyCells = markup => sections(markup, 'tbody').flatMap(body => [...body.matchAll(/<tr(?:\s[^>]*)?>([\s\S]*?)<\/tr>/g)]
+  .map(row => [...row[1].matchAll(/<(th|td)\b([^>]*)>([\s\S]*?)<\/\1>/g)].map(cell => ({
+    tag: cell[1], attributes: cell[2], content: cell[3], value: text(cell[3]),
+    span: Number(cell[2].match(/rowspan="(\d+)"/i)?.[1] ?? 1),
+  }))))
+
+// Expand actual rowspan cells into a rectangular matrix so omitted rank cells
+// cannot silently shift baseline or condition-specific comparison columns.
+const expandBody = markup => {
+  const pending = new Map()
+  return bodyCells(markup).map(cells => {
+    const row = []
+    for (const [column, entry] of pending) {
+      row[column] = entry.value
+      if (entry.remaining === 1) pending.delete(column)
+      else entry.remaining -= 1
+    }
+    let column = 0
+    for (const cell of cells) {
+      while (row[column] !== undefined) column += 1
+      row[column] = cell.value
+      if (cell.span > 1) pending.set(column, { value: cell.value, remaining: cell.span - 1 })
+      column += 1
+    }
+    return row
+  })
+}
+
+const boundaryResistances = [0, 1, 9, 10, 19, 20, 29, 30, 49, 50, 59, 60, 69, 70, 79, 80, 90, 91, 100]
+const boundaryRanks = ['E', 'D', 'D', 'C', 'C', 'B', 'B', 'B+', 'B+', 'A', 'A', 'A+', 'A+', 'S', 'S', 'S+', 'S+', 'SS', 'SS']
+
+test('inline ranks follow exact game boundaries without changing any comparison-table values or columns', () => {
+  for (const layout of ['combined', 'comparison']) {
+    for (const metric of ['difference', 'ratio', 'percent']) {
+      for (const groups of [undefined, blockingComparison]) {
+        const data = { resistances: boundaryResistances, layout, metric, blockingComparison: groups }
+        const off = render(data)
+        assert.equal(render({ ...data, rankMode: 'none' }), off, 'The default must preserve the original table')
+        const inline = render({ ...data, rankMode: 'inline' })
+        const actual = sectionRows(inline, 'tbody')
+        const expected = sectionRows(off, 'tbody')
+        actual.forEach((row, index) => {
+          assert.ok(row[0].startsWith(String(boundaryResistances[index])))
+          assert.ok(row[0].endsWith(boundaryRanks[index]), row[0])
+          assert.deepEqual(row.slice(1), expected[index].slice(1))
+          assert.equal(row.length, expected[index].length)
+        })
+        assert.deepEqual(sectionRows(inline, 'thead'), sectionRows(off, 'thead'))
+        assert.doesNotMatch(inline, /<button|aria-haspopup|is-selected/)
+      }
+    }
+  }
+})
+
+test('merged ranks expand to the correct complete comparison matrix across layouts, metrics and blocking conditions', () => {
+  for (const layout of ['combined', 'comparison']) {
+    for (const metric of ['difference', 'ratio', 'percent']) {
+      for (const groups of [undefined, blockingComparison]) {
+        const data = { resistances: boundaryResistances, layout, metric, blockingComparison: groups, footer: '計算条件' }
+        const off = render(data)
+        const merged = render({ ...data, rankMode: 'merged' })
+        assert.deepEqual(expandBody(merged), sectionRows(off, 'tbody').map((row, index) => [boundaryRanks[index], ...row]))
+        const footerColumns = Number(sections(off, 'tfoot')[0].match(/colspan="(\d+)"/i)[1])
+        assert.match(sections(merged, 'tfoot')[0], new RegExp(`colspan="${footerColumns + 1}"`, 'i'))
+        assert.doesNotMatch(merged, /<button|aria-haspopup|is-selected/)
+      }
+    }
+  }
+})
+
+test('rank merging uses displayed contiguous rows in a partial custom range, never assumed full ranks or repeated nonadjacent groups', () => {
+  const resistances = [34, 41, 48, 55, 62, 69, 76, 83, 90, 97]
+  const markup = render({ resistances, rankMode: 'merged' })
+  assert.deepEqual(bodyCells(markup).flatMap(cells => cells[0].value === 'B+' || cells[0].tag === 'th' && !/^\d+$/.test(cells[0].value)
+    ? [[cells[0].value, cells[0].span]] : []), [['B+', 3], ['A', 1], ['A+', 2], ['S', 1], ['S+', 2], ['SS', 1]])
+  assert.deepEqual(expandBody(markup).map(row => row.slice(0, 2)), resistances.map((value, index) =>
+    [['B+', 'B+', 'B+', 'A', 'A+', 'A+', 'S', 'S+', 'S+', 'SS'][index], String(value)]))
+  for (const samples of [[30, 50, 40], [-1, 101]]) {
+    const fragmented = render({ resistances: samples, rankMode: 'merged' })
+    assert.equal(bodyCells(fragmented).length, samples.length)
+    assert.ok(bodyCells(fragmented).every(cells => cells[0].span === 1))
+    assert.deepEqual(expandBody(fragmented).map(row => row[0]), samples.length === 3 ? ['B+', 'A', 'B+'] : ['—', '—'])
+  }
+})
+
+test('inline and merged live tables retain the numeric flow button for every resistance row', () => {
+  const resistances = [30, 40, 50, 60, 70, 80, 90, 100]
+  for (const rankMode of ['inline', 'merged']) {
+    const markup = render({ resistances, rankMode, selectedResistance: 40, onOpenDetail: () => {} })
+    const cells = bodyCells(markup)
+    assert.equal(cells.length, resistances.length)
+    cells.forEach((row, index) => assert.ok(row.some(cell => cell.content.includes(`aria-label="術耐性 ${resistances[index]}のDPS計算フローを開く"`))))
+    assert.equal([...markup.matchAll(/aria-haspopup="dialog"/g)].length, resistances.length)
+    assert.match(markup, /class="is-selected"/)
+  }
+})
+
+test('saved rank tables preserve captured rank layout, merged groups, resistance rows and complete footer without flow controls', () => {
+  for (const rankMode of ['inline', 'merged']) {
+    for (const layout of ['combined', 'comparison']) {
+      const snapshot = structuredClone({ ...props, resistances: [30, 40, 50, 60, 80, 90, 100], series: modules,
+        rankMode, layout, metric: 'ratio', blockingComparison, precision: 3, selectedResistance: 40, metadata })
+      const before = structuredClone(snapshot)
+      const saved = renderToStaticMarkup(createElement(Image, snapshot))
+      const live = render(snapshot)
+      assert.deepEqual(bodyCells(saved), bodyCells(live))
+      assert.deepEqual(sectionRows(saved, 'thead'), sectionRows(live, 'thead'))
+      assert.equal(expandBody(saved).length, snapshot.resistances.length)
+      const footerColumns = expandBody(saved)[0].length
+      assert.match(sections(saved, 'tfoot')[0], new RegExp(`colspan="${footerColumns}"`, 'i'))
+      assert.doesNotMatch(saved, /<button|<select|aria-haspopup|is-selected|›/)
+      assert.deepEqual(snapshot, before)
+    }
+  }
+})
