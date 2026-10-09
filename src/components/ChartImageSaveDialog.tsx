@@ -11,7 +11,7 @@ export interface ChartImageAspectSettings {
   height: string
 }
 
-export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspect, onAspectChange, aspectError, aspectHint = 'タイトル・凡例を含む画像全体の比率です。指定なしでは内容に合わせて自動調整します。', canChooseLocation, saving, saveDisabled = false, error, onClose, onSave, helpMode = 'inline', options, preview }: {
+export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspect, onAspectChange, aspectError, aspectHint = 'タイトル・凡例を含む画像全体の比率です。指定なしでは内容に合わせて自動調整します。', canChooseLocation, saving, saveDisabled = false, error, onClose, onSave, additionalSaveAction, helpMode = 'inline', options, preview }: {
   initialFilename: string
   getDefaultFilename?: (aspectRatio?: number) => string
   aspect?: ChartImageAspectSettings
@@ -24,6 +24,10 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
   error: boolean
   onClose: () => void
   onSave: (filename: string, aspectRatio?: number) => void
+  additionalSaveAction?: {
+    label: string
+    onSave: (filename: string, aspectRatio?: number) => void
+  }
   helpMode?: 'inline' | 'popover'
   options?: ReactNode
   preview?: ReactNode
@@ -123,6 +127,11 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
       {error && <p className="chart-image-save-error" role="alert">画像を保存できませんでした。保存先を確認して、もう一度お試しください。</p>}
       <div className="chart-image-save-actions">
         <button type="button" className="button secondary" disabled={saving} onClick={onClose}>キャンセル</button>
+        {additionalSaveAction && <button type="button" className="button secondary"
+          disabled={saving || saveDisabled || !!validationError || invalidAspect}
+          onClick={() => { if (!composing.current) additionalSaveAction.onSave(filename.trim(), aspectRatio) }}>
+          {additionalSaveAction.label}
+        </button>}
         <button type="submit" className="button" disabled={saving || saveDisabled || !!validationError || invalidAspect}>
           {saving ? '画像を保存中…' : canChooseLocation ? '保存先を選ぶ' : 'ダウンロード'}
         </button>

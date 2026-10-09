@@ -34,16 +34,35 @@ export async function selectChartImageDestination(
   filename: string,
   picker: ChartImageSavePicker | undefined,
 ): Promise<ChartImageDestination> {
+  return selectChartFileDestination(filename, picker, 'png')
+}
+
+/** Select the archive destination before generating its PNG entries. */
+export async function selectChartArchiveDestination(
+  filename: string,
+  picker: ChartImageSavePicker | undefined,
+): Promise<ChartImageDestination> {
+  return selectChartFileDestination(filename, picker, 'zip')
+}
+
+async function selectChartFileDestination(
+  filename: string,
+  picker: ChartImageSavePicker | undefined,
+  format: 'png' | 'zip',
+): Promise<ChartImageDestination> {
   if (!picker) return { type: 'download' }
   const trimmedName = filename.trim()
+  const extension = `.${format}`
   let handle: ChartImageFileHandle
   try {
     // Invoke immediately so the native picker retains the click's user activation.
     handle = await picker({
-      id: 'goldenglow-chart-image',
-      suggestedName: /\.png$/i.test(trimmedName) ? trimmedName : `${trimmedName}.png`,
+      id: format === 'png' ? 'goldenglow-chart-image' : 'surtr-comparison-archive',
+      suggestedName: trimmedName.toLowerCase().endsWith(extension) ? trimmedName : `${trimmedName}${extension}`,
       excludeAcceptAllOption: true,
-      types: [{ description: 'PNG画像', accept: { 'image/png': ['.png'] } }],
+      types: format === 'png'
+        ? [{ description: 'PNG画像', accept: { 'image/png': ['.png'] } }]
+        : [{ description: 'PNG画像のZIP', accept: { 'application/zip': ['.zip'] } }],
     })
   } catch (error) {
     // AbortError while writing can mean a failed file check; only picker aborts cancel.

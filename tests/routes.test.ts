@@ -148,6 +148,7 @@ test('スルトの専用トップから各分析を開き、詳細URLと区別�
   assert.deepEqual(parseHashRoute(SURTR_HOME_LINK.href), { view: 'surtr-home' })
   assert.deepEqual(SURTR_ANALYSIS_ITEMS.map(({ id, href, label }) => [id, href, label, parseHashRoute(href).view]), [
     ['surtr-s3', '#/analysis/surtr/s3', 'S3 DPS分析', 'surtr-s3'],
+    ['surtr-s3-comparison', '#/analysis/surtr/s3-comparison', 'S3 MOD・潜在比較', 'surtr-s3-comparison'],
     ['surtr-duration', '#/analysis/surtr/duration', 'S3 継続時間', 'surtr-duration'],
     ['surtr-remnant-attacks', '#/analysis/surtr/remnant-attacks', '余燼中の攻撃回数', 'surtr-remnant-attacks'],
   ])

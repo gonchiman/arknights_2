@@ -2,6 +2,8 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { getTableImageDimensions, parseTableImageAspect, type TableImageAspect } from '../lib/tableImageAspect'
 import { getSurtrUnequippedTableImageFilename, getSurtrUnequippedTableImagePotentials, type SurtrUnequippedTableImageMetadata } from '../lib/surtrUnequippedTableImageFilename'
 import { getSurtrComparisonTargets, getSurtrComparisonBaseLabel, getSurtrUnequippedBaselines } from '../lib/surtrUnequippedComparison'
+import { getSurtrComparisonImageColorScaleMaximum, getSurtrComparisonImageStageLevels, getSurtrComparisonImageStageSnapshot,
+  type SurtrComparisonImageLayout } from '../lib/surtrComparisonImageLayout'
 import { getUnequippedMetricLabel, SurtrUnequippedComparisonTableContent, type SurtrUnequippedComparisonTableData } from './SurtrUnequippedComparisonTableContent'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './SurtrS3Page.css'
@@ -11,6 +13,8 @@ import './SurtrUnequippedComparisonTableImage.css'
 export interface SurtrUnequippedComparisonTableImageSnapshot extends SurtrUnequippedComparisonTableData {
   metadata: SurtrUnequippedTableImageMetadata
   title?: string
+  imageLayout?: SurtrComparisonImageLayout
+  moduleLevel?: number
 }
 
 export const SURTR_S3_COMPARISON_TABLE_IMAGE_TITLE = 'スルト S3 DPS比較'
@@ -22,14 +26,25 @@ interface ImageProps extends SurtrUnequippedComparisonTableImageSnapshot {
   onLayoutError?: (error: unknown) => void
 }
 
-const initialWidthFor = (snapshot: SurtrUnequippedComparisonTableData) => {
+const initialWidthFor = (source: SurtrUnequippedComparisonTableImageSnapshot) => {
+  const snapshot = stageSnapshot(source)
   const targets = getSurtrComparisonTargets(snapshot.series, snapshot.comparisonBase).length
   const baselines = snapshot.comparisonBase === undefined || snapshot.comparisonBase === 'unequipped'
     ? getSurtrUnequippedBaselines(snapshot.series, snapshot.baseline, snapshot.referenceSeries).length : 0
-  const conditions = snapshot.blockingComparison === undefined ? 1 : 2
+  if (snapshot.imageLayout === 'transpose') {
+    return Math.max(640, (snapshot.blockingComparison === undefined ? 220 : 380)
+      + snapshot.resistances.length * (snapshot.layout === 'combined' ? 200 : 128))
+  }
+  const conditions = snapshot.blockingComparison === undefined || snapshot.imageLayout === 'stacked' ? 1 : 2
   const columns = (snapshot.layout === 'combined' ? 1 + baselines + targets * 2 * conditions : 1 + targets * conditions)
     + (snapshot.rankMode === 'merged' ? 1 : 0)
   return Math.max(640, columns * 150)
+}
+
+function stageSnapshot(snapshot: SurtrUnequippedComparisonTableImageSnapshot): SurtrUnequippedComparisonTableImageSnapshot {
+  if (snapshot.imageLayout !== 'split') return snapshot
+  const level = snapshot.moduleLevel ?? getSurtrComparisonImageStageLevels(snapshot)[0]
+  return level === undefined ? snapshot : getSurtrComparisonImageStageSnapshot(snapshot, level)
 }
 
 function tableAspect(aspectRatio?: number): TableImageAspect | null {
@@ -47,14 +62,15 @@ function tableAspect(aspectRatio?: number): TableImageAspect | null {
   throw new Error('画像の縦横比が正しくありません。')
 }
 
-export function SurtrUnequippedComparisonTableImage({ metadata, title, aspectRatio, exporting = false, onLayout, onLayoutError, ...data }: ImageProps) {
+export function SurtrUnequippedComparisonTableImage({ aspectRatio, exporting = false, onLayout, onLayoutError, ...source }: ImageProps) {
+  const { metadata, title, imageLayout = 'current', moduleLevel, ...data } = stageSnapshot(source)
   const imageRef = useRef<HTMLElement>(null)
-  const initialWidth = initialWidthFor(data)
-  const snapshotKey = JSON.stringify([data.series, data.baseline, data.blockingComparison, data.resistances, data.layout, data.metric, data.precision, data.rankMode, data.columnOrder, data.colorScale, data.colorScaleMode, data.comparisonBase, data.referenceSeries, data.quantity, metadata, title])
+  const initialWidth = initialWidthFor(source)
+  const snapshotKey = JSON.stringify([data.series, data.baseline, data.blockingComparison, data.resistances, data.layout, data.metric, data.precision, data.rankMode, data.columnOrder, data.colorScale, data.colorScaleMode, data.colorScaleMaximum, data.comparisonBase, data.referenceSeries, data.quantity, metadata, title, imageLayout, moduleLevel])
   useLayoutEffect(() => {
     const image = imageRef.current
-    const table = image?.querySelector('table')
-    if (!image || !table) return
+    const tables = image ? Array.from(image.querySelectorAll('table')) : []
+    if (!image || !tables.length) return
     let cancelled = false
     const measure = () => {
       if (cancelled) return
@@ -63,14 +79,25 @@ export function SurtrUnequippedComparisonTableImage({ metadata, title, aspectRat
         const size = getTableImageDimensions({ initialWidth, aspect: tableAspect(aspectRatio), measureHeight: width => {
           image.style.width = `${width}px`
           image.style.height = 'auto'
-          table.style.height = 'auto'
+          tables.forEach(table => { table.style.height = 'auto' })
           return image.offsetHeight
         } })
         image.style.width = `${size.width}px`
         image.style.height = 'auto'
-        table.style.height = 'auto'
-        const chromeHeight = image.offsetHeight - table.offsetHeight
-        table.style.height = `${Math.max(table.offsetHeight, size.height - chromeHeight)}px`
+        tables.forEach(table => { table.style.height = 'auto' })
+        if (tables.length === 1) {
+          const table = tables[0]
+          const chromeHeight = image.offsetHeight - table.offsetHeight
+          table.style.height = `${Math.max(table.offsetHeight, size.height - chromeHeight)}px`
+        } else {
+          // Collapsed borders and line heights can be fractional. Rounding every
+          // table independently would let their total exceed the image by 1px.
+          const naturalHeights = tables.map(table => table.getBoundingClientRect().height)
+          const extraHeight = Math.max(0, size.height - image.getBoundingClientRect().height)
+          if (extraHeight > 0) tables.forEach((table, index) => {
+            table.style.height = `${naturalHeights[index] + extraHeight / tables.length}px`
+          })
+        }
         image.style.height = `${size.height}px`
         if (image.offsetWidth !== size.width || image.offsetHeight !== size.height || image.scrollWidth > size.width
           || image.scrollHeight > size.height) throw new Error('指定した縦横比に表を調整できませんでした。')
@@ -87,12 +114,28 @@ export function SurtrUnequippedComparisonTableImage({ metadata, title, aspectRat
     return () => { cancelled = true; document.fonts.removeEventListener('loadingdone', measure) }
   }, [snapshotKey, initialWidth, aspectRatio, exporting, onLayout, onLayoutError])
 
-  return <figure ref={imageRef} className="surtr-unequipped-table-image" style={{ width: initialWidth }} aria-label={`スルト ${data.quantity === 'expected-damage' ? '余燼の総ダメージ期待値' : 'S3'} ${getSurtrComparisonBaseLabel(data.comparisonBase ?? 'unequipped')}との比較表`}>
-    <SurtrUnequippedComparisonTableContent {...data} title={title?.trim() || (data.quantity === 'expected-damage' ? undefined : SURTR_S3_COMPARISON_TABLE_IMAGE_TITLE)} footer={<div className="surtr-unequipped-table-image-conditions">
+  const imageTitle = (title?.trim() || (data.quantity === 'expected-damage' ? undefined : SURTR_S3_COMPARISON_TABLE_IMAGE_TITLE))
+  const stageTitle = imageLayout === 'split' && moduleLevel !== undefined ? `${imageTitle ?? '比較表'}・MOD Lv.${moduleLevel}` : imageTitle
+  const footer = <div className="surtr-unequipped-table-image-conditions">
       <span>{data.quantity === 'expected-damage' ? '総ダメージ期待値・' : ''}{getUnequippedMetricLabel(data.metric, data.comparisonBase, data.quantity)}・基準：{data.comparisonBase === 'previous' ? '1つ前の段階（Lv.1は未装備）' : getSurtrComparisonBaseLabel(data.comparisonBase ?? 'unequipped')}{data.comparisonBase?.startsWith('potential-') && '（同じMOD・段階）'}</span>
       <span>S3 {metadata.skillLabel}・昇進2 Lv.{metadata.level}・信頼度{metadata.trust}・潜在{getSurtrUnequippedTableImagePotentials(metadata).join('・')}・{data.blockingComparison !== undefined ? '未ブロック／対象を自身でブロック' : metadata.blocking ? '対象を自身でブロック' : '未ブロック'}{data.quantity !== 'expected-damage' && `・${metadata.remnantActive ? '余燼中' : '余燼なし'}`}</span>
       {data.quantity === 'expected-damage' && metadata.remnantAssumptions && <span>残りCT一様・命中まで{metadata.remnantAssumptions.windup}s・CT{metadata.remnantAssumptions.ctCarry === 'time' ? '時間' : '割合'}維持・退場同時の命中{metadata.remnantAssumptions.includeRetreatHit ? 'を含む' : 'を除外'}</span>}
-    </div>} />
+    </div>
+  const stacked = imageLayout === 'stacked' && data.blockingComparison !== undefined
+  const sharedMaximum = getSurtrComparisonImageColorScaleMaximum(data)
+  return <figure ref={imageRef} className={`surtr-unequipped-table-image surtr-unequipped-table-image-${imageLayout}`} style={{ width: initialWidth }} aria-label={`スルト ${data.quantity === 'expected-damage' ? '余燼の総ダメージ期待値' : 'S3'} ${getSurtrComparisonBaseLabel(data.comparisonBase ?? 'unequipped')}との比較表`}>
+    {stacked ? <>
+      {stageTitle && <div className="surtr-unequipped-table-image-title">{stageTitle}</div>}
+      {[false, true].map(blocking => {
+        const group = data.blockingComparison?.find(condition => condition.blocking === blocking)
+        return <SurtrUnequippedComparisonTableContent key={String(blocking)} {...data}
+          series={data.series.map(item => group?.series.find(candidate => candidate.id === item.id) ?? { ...item, points: [] })}
+          baseline={group?.baseline ?? { ...data.baseline, points: [] }} referenceSeries={group?.referenceSeries ?? []}
+          blockingComparison={undefined} colorScaleMaximum={sharedMaximum}
+          title={blocking ? '対象を自身でブロック' : '未ブロック'} />
+      })}
+      <div className="surtr-unequipped-table-image-footer">{footer}</div>
+    </> : <SurtrUnequippedComparisonTableContent {...data} transpose={imageLayout === 'transpose'} title={stageTitle} footer={footer} />}
   </figure>
 }
 
@@ -144,7 +187,8 @@ export async function saveSurtrUnequippedComparisonTableImage({ snapshot, filena
   writeBlob?: (blob: Blob) => Promise<void>
 }): Promise<void> {
   tableAspect(aspectRatio)
-  if (getSurtrComparisonTargets(snapshot.series, snapshot.comparisonBase).length === 0 || snapshot.resistances.length === 0) {
+  const preparedSnapshot = stageSnapshot(snapshot)
+  if (getSurtrComparisonTargets(preparedSnapshot.series, preparedSnapshot.comparisonBase).length === 0 || snapshot.resistances.length === 0) {
     throw new Error('保存する比較表がありません。')
   }
   let layoutError: unknown = null

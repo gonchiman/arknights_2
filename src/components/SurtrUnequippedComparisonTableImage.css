@@ -29,3 +29,11 @@
 .surtr-unequipped-table-image tfoot td { color: var(--text-muted); font-size: 12px; text-align: left; border: 0; }
 .surtr-unequipped-table-image-conditions { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 20px; }
 .surtr-unequipped-table-image-error { margin: 0; color: var(--danger, #a02d37); font-size: 12px; }
+.surtr-unequipped-table-image-title { box-sizing: border-box; min-height: 44px; padding: 12px; border: 1px solid var(--border); border-bottom: 0; background: var(--surface-soft); font-size: 14px; line-height: 20px; font-weight: 700; text-align: center; }
+.surtr-unequipped-table-image-footer { border: 1px solid var(--border); border-top: 0; padding: 12px; color: var(--text-muted); font-size: 12px; }
+.surtr-unequipped-table-image-stacked .surtr-s3-table-wrap + .surtr-s3-table-wrap { border-top: 0; }
+.surtr-unequipped-table-image .surtr-s3-transposed-table { table-layout: fixed; }
+.surtr-unequipped-table-image .surtr-s3-transposed-label-column { width: 190px; }
+.surtr-unequipped-table-image .surtr-s3-transposed-table tbody .surtr-s3-column-label { justify-content: flex-start; }
+.surtr-unequipped-table-image .surtr-s3-transposed-table .surtr-s3-resistance-rank { margin-left: 6px; }
+.surtr-unequipped-table-image .surtr-s3-transposed-table .surtr-s3-table-title-row { height: 44px; }

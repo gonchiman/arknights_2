@@ -1,0 +1,10 @@
+.surtr-s3-comparison-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.surtr-s3-comparison-condition-controls, .surtr-s3-comparison-display-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 14px 24px; }
+.surtr-s3-comparison-range { display: grid; gap: 10px; max-width: 340px; margin: 20px 0 0; padding: 0; border: 0; }
+.surtr-s3-comparison-range legend { margin-bottom: 8px; color: var(--text-soft); font-size: 11px; }
+.surtr-s3-page-link { display: inline-block; margin-top: 8px; color: var(--text); font-size: 12px; text-underline-offset: 3px; }
+.surtr-s3-page-link:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+@media (max-width: 640px) {
+  .surtr-s3-comparison-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .surtr-s3-comparison-condition-controls, .surtr-s3-comparison-display-controls { gap: 12px 16px; }
+}

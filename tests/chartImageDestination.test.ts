@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { getChartImageSavePicker, selectChartImageDestination, type ChartImageSavePicker } from '../src/lib/chartImageDestination.ts'
+import { getChartImageSavePicker, selectChartArchiveDestination, selectChartImageDestination, type ChartImageSavePicker } from '../src/lib/chartImageDestination.ts'
 
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void
@@ -13,6 +13,24 @@ const unusedHandle = {
     throw new Error('保存先を選ぶだけでは書き込まない')
   },
 }
+
+test('ZIP保存もユーザー操作中にpickerを呼び、ZIP専用の種別と名前を指定する', async () => {
+  let called = false
+  const result = selectChartArchiveDestination(' 比較.ZIP ', options => {
+    called = true
+    assert.deepEqual(options, {
+      id: 'surtr-comparison-archive', suggestedName: '比較.ZIP', excludeAcceptAllOption: true,
+      types: [{ description: 'PNG画像のZIP', accept: { 'application/zip': ['.zip'] } }],
+    })
+    return Promise.resolve(unusedHandle)
+  })
+  assert.equal(called, true)
+  assert.equal((await result).type, 'file')
+  assert.deepEqual(await selectChartArchiveDestination('比較', undefined), { type: 'download' })
+  assert.deepEqual(await selectChartArchiveDestination('比較', async () => {
+    throw new DOMException('cancelled', 'AbortError')
+  }), { type: 'cancelled' })
+})
 
 test('保存先選択APIがなければ既存のダウンロード経路を返す', async () => {
   assert.deepEqual(await selectChartImageDestination('比較.png', undefined), { type: 'download' })

@@ -2,6 +2,7 @@ import { createChartImageFilename, formatChartFilenameValues, withChartImageAspe
 import type { EnemyHeatmapColorScale } from './enemyHeatmapColor.ts'
 import type { SurtrRemnantAttackAssumptions } from './surtrRemnantAttacks.ts'
 import { getSurtrComparisonBaseLabel } from './surtrUnequippedComparison.ts'
+import type { SurtrComparisonImageLayout } from './surtrComparisonImageLayout.ts'
 import type { SurtrUnequippedColumnOrder, SurtrUnequippedComparisonBase, SurtrUnequippedComparisonQuantity, SurtrUnequippedLayout, SurtrUnequippedMetric, SurtrUnequippedRankMode } from './surtrUnequippedComparison.ts'
 
 export interface SurtrUnequippedTableImageMetadata {
@@ -30,6 +31,8 @@ export function getSurtrUnequippedTableImageFilename(options: {
   colorScaleMode?: EnemyHeatmapColorScale
   comparisonBase?: SurtrUnequippedComparisonBase
   quantity?: SurtrUnequippedComparisonQuantity
+  imageLayout?: SurtrComparisonImageLayout
+  moduleLevel?: number
 }, aspectRatio?: number): string {
   const { metadata, series, resistances, metric, layout, precision, blockingComparison } = options
   const modules = [...new Set(series.filter(item => (item.moduleStageId ?? item.id.replace(/:pot[1-6]$/, '')) !== 'none')
@@ -50,6 +53,9 @@ export function getSurtrUnequippedTableImageFilename(options: {
       assumptions.includeRetreatHit ? '退場時含む' : '退場時除外',
     ] : [])] : []),
     metadata.skillLabel,
+    ...(options.imageLayout === 'transpose' ? ['術耐性を列に']
+      : options.imageLayout === 'stacked' ? ['ブロック条件を上下に']
+      : options.imageLayout === 'split' ? [`段階別${options.moduleLevel === undefined ? '' : `Lv${options.moduleLevel}`}`] : []),
     ...(!expectedDamage ? [metricLabel, layoutLabel] : []),
     ...(options.colorScale ? [options.colorScaleMode === 'SQRT' ? 'カラースケール平方根' : 'カラースケール'] : []),
     `昇進2Lv${metadata.level}`,

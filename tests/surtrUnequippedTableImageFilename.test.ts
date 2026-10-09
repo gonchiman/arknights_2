@@ -24,6 +24,26 @@ const remnantAssumptions = { windup: 0.3, ctCarry: 'time' as const, includeRetre
 const remnantOptions = { ...options, quantity: 'expected-damage' as const,
   metadata: { ...metadata, remnantAssumptions } }
 
+test('画像の配置と分割段階を区別し、現在の配置と無効な段階指定は従来名を保つ', () => {
+  const original = getSurtrUnequippedTableImageFilename(options)
+  assert.equal(getSurtrUnequippedTableImageFilename({ ...options, imageLayout: 'current', moduleLevel: 2 }), original)
+  const names = [original]
+  for (const [imageLayout, text] of [['transpose', '術耐性を列に'], ['stacked', 'ブロック条件を上下に']] as const) {
+    const name = getSurtrUnequippedTableImageFilename({ ...options, imageLayout }, 16 / 9)
+    assert.ok(name.includes(text))
+    names.push(name)
+  }
+  for (const moduleLevel of [1, 2, 3]) {
+    const name = getSurtrUnequippedTableImageFilename({ ...options, imageLayout: 'split', moduleLevel,
+      series: [{ id: 'x:lv3', label: '長いMOD名😀'.repeat(80) }] }, 16 / 9)
+    assert.ok(name.includes(`段階別Lv${moduleLevel}`))
+    assert.ok(new TextEncoder().encode(name).length <= 240)
+    names.push(name)
+  }
+  assert.equal(new Set(names).size, 6)
+  assert.match(getSurtrUnequippedTableImageFilename({ ...options, imageLayout: 'split' }), /_段階別_/)
+})
+
 test('余燼ONの比較表画像は状態を記録し、OFFと未指定の従来名を保つ', () => {
   for (const comparisonBase of ['unequipped', 'previous'] as const) {
     for (const layout of ['combined', 'comparison'] as const) {
