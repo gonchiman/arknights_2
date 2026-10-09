@@ -4,6 +4,7 @@ import { writeClipboardText } from '../lib/clipboard'
 import { getChartImageSavePicker, selectChartArchiveDestination, selectChartImageDestination } from '../lib/chartImageDestination'
 import { createStoredZipArchive } from '../lib/pngZipArchive'
 import { getSurtrComparisonImageStageLevels, getSurtrComparisonImageStageSnapshot, type SurtrComparisonImageLayout } from '../lib/surtrComparisonImageLayout'
+import type { SurtrComparisonImageNumberSize } from '../lib/surtrComparisonImageNumberSize'
 import { getSurtrUnequippedTableImageFilename, type SurtrUnequippedTableImageMetadata } from '../lib/surtrUnequippedTableImageFilename'
 import { CHART_IMAGE_LABEL_MAX_LENGTH } from '../lib/chartImageLabels'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
@@ -34,6 +35,7 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
   const [image, setImage] = useState<SurtrUnequippedComparisonTableImageSnapshot | null>(null)
   const [imageTitle, setImageTitle] = useState(SURTR_S3_COMPARISON_TABLE_IMAGE_TITLE)
   const [imageLayout, setImageLayout] = useState<SurtrComparisonImageLayout>('current')
+  const [numberSize, setNumberSize] = useState<SurtrComparisonImageNumberSize>('auto')
   const [moduleLevel, setModuleLevel] = useState(3)
   const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [saving, setSaving] = useState(false)
@@ -53,9 +55,10 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
   const stageLevels = image ? getSurtrComparisonImageStageLevels(image) : []
   const selectedLevel = stageLevels.includes(moduleLevel) ? moduleLevel : stageLevels.at(-1)
   const exportLayout = enableImageLayouts ? imageLayout : 'current'
-  const exportImage = image && (exportLayout === 'split' && selectedLevel !== undefined
-    ? getSurtrComparisonImageStageSnapshot(image, selectedLevel)
-    : { ...image, imageLayout: exportLayout, moduleLevel: undefined })
+  const exportSource = image && { ...image, numberSize: enableImageLayouts ? numberSize : undefined }
+  const exportImage = exportSource && (exportLayout === 'split' && selectedLevel !== undefined
+    ? getSurtrComparisonImageStageSnapshot(exportSource, selectedLevel)
+    : { ...exportSource, imageLayout: exportLayout, moduleLevel: undefined })
   const openImage = () => {
     setFeedback(null); setLayoutError('')
     if (imageLayout === 'split' && !getSurtrComparisonImageStageLevels(data).length) setImageLayout('current')
@@ -74,11 +77,11 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
     finally { saveInProgress.current = false; setSaving(false) }
   }
   const saveAllStages = async (filename: string, ratio?: number) => {
-    if (!image || !exportImage || !stageLevels.length || saveInProgress.current || layoutError || aspectError) return
+    if (!exportSource || !exportImage || !stageLevels.length || saveInProgress.current || layoutError || aspectError) return
     saveInProgress.current = true; setSaving(true); setFeedback(null)
     // Preserve an edited name; automatic ZIP names describe all selected stages.
     const archiveName = (filename === getSurtrUnequippedTableImageFilename(exportImage, ratio)
-      ? getSurtrUnequippedTableImageFilename({ ...image, imageLayout: 'split' }, ratio)
+      ? getSurtrUnequippedTableImageFilename({ ...exportSource, imageLayout: 'split' }, ratio)
       : filename).replace(/\.(png|zip)$/i, '') + '.zip'
     try {
       const destination = await selectChartArchiveDestination(archiveName, picker)
@@ -86,7 +89,7 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
       const files: { name: string; blob: Blob }[] = []
       for (const [index, level] of stageLevels.entries()) {
         setSaveProgress(`PNG ${index + 1}/${stageLevels.length}を作成中…`)
-        const snapshot = getSurtrComparisonImageStageSnapshot(image, level)
+        const snapshot = getSurtrComparisonImageStageSnapshot(exportSource, level)
         const name = getSurtrUnequippedTableImageFilename(snapshot, ratio)
         await saveSurtrUnequippedComparisonTableImage({ snapshot, filename: name, aspectRatio: ratio,
           writeBlob: async blob => { files.push({ name, blob }) } })
@@ -132,6 +135,17 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
             <option value="split" disabled={!stageLevels.length}>段階ごとに分割</option>
           </select>
         </label>
+        <label className="chart-image-save-field"><span>数値サイズ</span>
+          <select value={numberSize} disabled={saving} onChange={event => {
+            setLayoutError(''); setNumberSize(event.target.value as SurtrComparisonImageNumberSize)
+          }}>
+            <option value="auto">自動</option>
+            <option value="100">100%</option>
+            <option value="150">150%</option>
+            <option value="200">200%</option>
+          </select>
+        </label>
+        <p className="chart-image-save-hint">セル内に収まる範囲で数値を大きくします。自動では最大200%まで調整します。</p>
         {exportLayout === 'split' && <>
           <label className="chart-image-save-field"><span>出力する段階</span>
             <select value={selectedLevel} disabled={saving} onChange={event => {
@@ -154,7 +168,7 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
       </label>}
       {saveProgress && <p className="chart-image-save-hint" role="status">{saveProgress}</p>}
       </>}
-      preview={<SurtrUnequippedComparisonTableImagePreview key={`${exportLayout}:${selectedLevel}:${aspect.preset}:${aspect.width}:${aspect.height}`} {...exportImage}
+      preview={<SurtrUnequippedComparisonTableImagePreview key={`${exportLayout}:${selectedLevel}:${numberSize}:${aspect.preset}:${aspect.width}:${aspect.height}`} {...exportImage}
         aspectRatio={aspectError ? undefined : aspectRatio} onLayoutError={reportLayoutError} onLayoutReady={reportLayoutReady} />} />}
   </section>
 }

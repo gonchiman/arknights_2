@@ -4,6 +4,8 @@ import { getSurtrUnequippedTableImageFilename, getSurtrUnequippedTableImagePoten
 import { getSurtrComparisonTargets, getSurtrComparisonBaseLabel, getSurtrUnequippedBaselines } from '../lib/surtrUnequippedComparison'
 import { getSurtrComparisonImageColorScaleMaximum, getSurtrComparisonImageStageLevels, getSurtrComparisonImageStageSnapshot,
   type SurtrComparisonImageLayout } from '../lib/surtrComparisonImageLayout'
+import { getSurtrComparisonImageNumberFontSize, SURTR_COMPARISON_IMAGE_NUMBER_BASE_SIZE,
+  type SurtrComparisonImageNumberCell, type SurtrComparisonImageNumberSize } from '../lib/surtrComparisonImageNumberSize'
 import { getUnequippedMetricLabel, SurtrUnequippedComparisonTableContent, type SurtrUnequippedComparisonTableData } from './SurtrUnequippedComparisonTableContent'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './SurtrS3Page.css'
@@ -15,6 +17,7 @@ export interface SurtrUnequippedComparisonTableImageSnapshot extends SurtrUnequi
   title?: string
   imageLayout?: SurtrComparisonImageLayout
   moduleLevel?: number
+  numberSize?: SurtrComparisonImageNumberSize
 }
 
 export const SURTR_S3_COMPARISON_TABLE_IMAGE_TITLE = 'スルト S3 DPS比較'
@@ -63,18 +66,25 @@ function tableAspect(aspectRatio?: number): TableImageAspect | null {
 }
 
 export function SurtrUnequippedComparisonTableImage({ aspectRatio, exporting = false, onLayout, onLayoutError, ...source }: ImageProps) {
-  const { metadata, title, imageLayout = 'current', moduleLevel, ...data } = stageSnapshot(source)
+  const { metadata, title, imageLayout = 'current', moduleLevel, numberSize, ...data } = stageSnapshot(source)
   const imageRef = useRef<HTMLElement>(null)
   const initialWidth = initialWidthFor(source)
-  const snapshotKey = JSON.stringify([data.series, data.baseline, data.blockingComparison, data.resistances, data.layout, data.metric, data.precision, data.rankMode, data.columnOrder, data.colorScale, data.colorScaleMode, data.colorScaleMaximum, data.comparisonBase, data.referenceSeries, data.quantity, metadata, title, imageLayout, moduleLevel])
+  const snapshotKey = JSON.stringify([data.series, data.baseline, data.blockingComparison, data.resistances, data.layout, data.metric, data.precision, data.rankMode, data.columnOrder, data.colorScale, data.colorScaleMode, data.colorScaleMaximum, data.comparisonBase, data.referenceSeries, data.quantity, metadata, title, imageLayout, moduleLevel, numberSize])
   useLayoutEffect(() => {
     const image = imageRef.current
     const tables = image ? Array.from(image.querySelectorAll('table')) : []
     if (!image || !tables.length) return
+    const columns = Array.from(image.querySelectorAll<HTMLElement>('col, colgroup:not(:has(col))'))
+    const originalColumnWidths = columns.map(column => column.style.width)
+    const originalTableLayouts = tables.map(table => table.style.tableLayout)
     let cancelled = false
     const measure = () => {
       if (cancelled) return
       image.style.display = ''
+      // Every font-load or setting change starts from the original 14px geometry.
+      image.style.setProperty('--surtr-comparison-number-font-size', `${SURTR_COMPARISON_IMAGE_NUMBER_BASE_SIZE}px`)
+      columns.forEach((column, index) => { column.style.width = originalColumnWidths[index] })
+      tables.forEach((table, index) => { table.style.tableLayout = originalTableLayouts[index] })
       try {
         const size = getTableImageDimensions({ initialWidth, aspect: tableAspect(aspectRatio), measureHeight: width => {
           image.style.width = `${width}px`
@@ -92,13 +102,25 @@ export function SurtrUnequippedComparisonTableImage({ aspectRatio, exporting = f
         } else {
           // Collapsed borders and line heights can be fractional. Rounding every
           // table independently would let their total exceed the image by 1px.
-          const naturalHeights = tables.map(table => table.getBoundingClientRect().height)
-          const extraHeight = Math.max(0, size.height - image.getBoundingClientRect().height)
+          const scale = image.getBoundingClientRect().width / image.offsetWidth || 1
+          const naturalHeights = tables.map(table => table.getBoundingClientRect().height / scale)
+          const extraHeight = Math.max(0, size.height - image.getBoundingClientRect().height / scale)
           if (extraHeight > 0) tables.forEach((table, index) => {
             table.style.height = `${naturalHeights[index] + extraHeight / tables.length}px`
           })
         }
         image.style.height = `${size.height}px`
+        if (numberSize !== undefined && numberSize !== '100') {
+          const metrics = measureNumberCells(image)
+          const fontSize = getSurtrComparisonImageNumberFontSize(numberSize, metrics)
+          if (fontSize > SURTR_COMPARISON_IMAGE_NUMBER_BASE_SIZE) {
+            // Larger text must not redistribute auto-layout table columns.
+            const widths = columns.map(column => getComputedStyle(column).width)
+            columns.forEach((column, index) => { column.style.width = widths[index] })
+            tables.forEach(table => { table.style.tableLayout = 'fixed' })
+            image.style.setProperty('--surtr-comparison-number-font-size', `${fontSize}px`)
+          }
+        }
         if (image.offsetWidth !== size.width || image.offsetHeight !== size.height || image.scrollWidth > size.width
           || image.scrollHeight > size.height) throw new Error('指定した縦横比に表を調整できませんでした。')
         if (exporting && image.parentElement) image.parentElement.style.width = `${size.width}px`
@@ -111,7 +133,13 @@ export function SurtrUnequippedComparisonTableImage({ aspectRatio, exporting = f
     measure()
     void document.fonts.ready.then(measure)
     document.fonts.addEventListener('loadingdone', measure)
-    return () => { cancelled = true; document.fonts.removeEventListener('loadingdone', measure) }
+    return () => {
+      cancelled = true
+      document.fonts.removeEventListener('loadingdone', measure)
+      image.style.removeProperty('--surtr-comparison-number-font-size')
+      columns.forEach((column, index) => { column.style.width = originalColumnWidths[index] })
+      tables.forEach((table, index) => { table.style.tableLayout = originalTableLayouts[index] })
+    }
   }, [snapshotKey, initialWidth, aspectRatio, exporting, onLayout, onLayoutError])
 
   const imageTitle = (title?.trim() || (data.quantity === 'expected-damage' ? undefined : SURTR_S3_COMPARISON_TABLE_IMAGE_TITLE))
@@ -137,6 +165,32 @@ export function SurtrUnequippedComparisonTableImage({ aspectRatio, exporting = f
       <div className="surtr-unequipped-table-image-footer">{footer}</div>
     </> : <SurtrUnequippedComparisonTableContent {...data} transpose={imageLayout === 'transpose'} title={stageTitle} footer={footer} />}
   </figure>
+}
+
+/** Measure matching tabular-number typography outside the scaled preview. */
+function measureNumberCells(image: HTMLElement): SurtrComparisonImageNumberCell[] {
+  const probe = document.createElement('span')
+  Object.assign(probe.style, { position: 'fixed', left: '0', top: '0', visibility: 'hidden', whiteSpace: 'pre' })
+  probe.setAttribute('aria-hidden', 'true')
+  document.body.appendChild(probe)
+  const range = document.createRange()
+  try {
+    return Array.from(image.querySelectorAll<HTMLTableCellElement>('tbody td')).flatMap(cell => {
+      if (!cell.textContent?.trim()) return []
+      const style = getComputedStyle(cell)
+      Object.assign(probe.style, { fontFamily: style.fontFamily, fontSize: style.fontSize,
+        fontWeight: style.fontWeight, fontStyle: style.fontStyle, fontStretch: style.fontStretch,
+        fontVariantNumeric: style.fontVariantNumeric, fontFeatureSettings: style.fontFeatureSettings,
+        fontKerning: style.fontKerning, letterSpacing: style.letterSpacing, lineHeight: style.lineHeight })
+      probe.textContent = cell.textContent
+      range.selectNodeContents(probe)
+      const text = range.getBoundingClientRect()
+      return [{ availableWidth: cell.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+        availableHeight: cell.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom),
+        textWidth: Math.max(text.width, probe.getBoundingClientRect().width),
+        textHeight: Math.max(text.height, probe.getBoundingClientRect().height) }]
+    })
+  } finally { range.detach(); probe.remove() }
 }
 
 export function SurtrUnequippedComparisonTableImagePreview({ onLayoutReady, ...props }: Omit<ImageProps, 'onLayout' | 'exporting'> & {

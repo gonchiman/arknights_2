@@ -44,6 +44,54 @@ test('画像の配置と分割段階を区別し、現在の配置と無効な�
   assert.match(getSurtrUnequippedTableImageFilename({ ...options, imageLayout: 'split' }), /_段階別_/)
 })
 
+test('数値サイズの省略と100%はDPS・期待値と各画像配置の従来名を保つ', () => {
+  for (const source of [options, remnantOptions]) {
+    for (const imageLayout of ['current', 'transpose', 'stacked', 'split'] as const) {
+      for (const aspectRatio of [undefined, 16 / 9]) {
+        const snapshot = { ...source, imageLayout, moduleLevel: 3 }
+        const original = getSurtrUnequippedTableImageFilename(snapshot, aspectRatio)
+        assert.equal(getSurtrUnequippedTableImageFilename({ ...snapshot, numberSize: undefined }, aspectRatio), original)
+        assert.equal(getSurtrUnequippedTableImageFilename({ ...snapshot, numberSize: '100' }, aspectRatio), original)
+      }
+    }
+  }
+})
+
+test('自動・150%・200%の数値サイズを配置の直後に記録し、個別画像と段階一括名を区別する', () => {
+  for (const [imageLayout, descriptor] of [['current', '特化3'], ['transpose', '術耐性を列に'],
+    ['stacked', 'ブロック条件を上下に'], ['split', '段階別Lv2']] as const) {
+    const snapshot = { ...options, imageLayout, moduleLevel: 2 }
+    const names = [getSurtrUnequippedTableImageFilename(snapshot, 16 / 9)]
+    for (const [numberSize, label] of [['auto', '数値自動'], ['150', '数値150%'], ['200', '数値200%']] as const) {
+      const captured = { ...snapshot, numberSize }
+      const before = structuredClone(captured)
+      const name = getSurtrUnequippedTableImageFilename(captured, 16 / 9)
+      assert.ok(name.includes(`_${descriptor}_${label}_`), name)
+      assert.match(name, /_比率16x9\.png$/)
+      assert.deepEqual(captured, before)
+      names.push(name)
+    }
+    assert.equal(new Set(names).size, 4)
+  }
+  const batchName = getSurtrUnequippedTableImageFilename({ ...options, imageLayout: 'split', numberSize: 'auto' })
+  assert.match(batchName, /_段階別_数値自動_/)
+  assert.notEqual(batchName, getSurtrUnequippedTableImageFilename({ ...options,
+    imageLayout: 'split', moduleLevel: 2, numberSize: 'auto' }))
+})
+
+test('数値サイズを含む長い画像名も共通のUnicode・禁止文字・240バイト制限を守る', () => {
+  const source = { ...options, imageLayout: 'split' as const, moduleLevel: 3,
+    series: [{ id: 'x:lv3', label: '長いMOD名😀<>:"/\\|?*'.repeat(80) }] }
+  for (const [numberSize, label] of [['auto', '数値自動'], ['150', '数値150%'], ['200', '数値200%']] as const) {
+    const name = getSurtrUnequippedTableImageFilename({ ...source, numberSize }, 16 / 9)
+    assert.ok(name.includes(`_段階別Lv3_${label}_`), name)
+    assert.match(name, /ほか\d+項目_比率16x9\.png$/)
+    assert.ok(new TextEncoder().encode(name).length <= 240)
+    assert.equal(name.isWellFormed(), true)
+    assert.doesNotMatch(name, /[<>:"/\\|?*\u0000-\u001f\u007f�]/)
+  }
+})
+
 test('余燼ONの比較表画像は状態を記録し、OFFと未指定の従来名を保つ', () => {
   for (const comparisonBase of ['unequipped', 'previous'] as const) {
     for (const layout of ['combined', 'comparison'] as const) {
