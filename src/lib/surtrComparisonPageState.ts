@@ -1,5 +1,5 @@
 import {
-  createDefaultSurtrDpsPageState, parseSurtrDpsPageState, readSurtrDpsPageState,
+  SURTR_DPS_PAGE_STATE_KEY, createDefaultSurtrDpsPageState, parseSurtrDpsPageState,
   type SurtrDpsPageState,
 } from './surtrDpsPageState.ts'
 
@@ -27,13 +27,21 @@ function fromDpsState(state: SurtrDpsPageState): SurtrComparisonPageState {
   }
 }
 
+function comparisonDpsDefaults(): SurtrDpsPageState {
+  return {
+    ...createDefaultSurtrDpsPageState(),
+    unequippedLayout: 'comparison', unequippedColumnOrder: 'blocking', unequippedMetric: 'percent',
+    unequippedStep: 20, unequippedRankMode: 'merged',
+  }
+}
+
 export function createDefaultSurtrComparisonPageState(): SurtrComparisonPageState {
-  return fromDpsState(createDefaultSurtrDpsPageState())
+  return fromDpsState(comparisonDpsDefaults())
 }
 
 /** Reuse the existing validated settings and table options rather than adding a second validator. */
 export function parseSurtrComparisonPageState(value: unknown): SurtrComparisonPageState {
-  return fromDpsState(parseSurtrDpsPageState(value))
+  return fromDpsState(parseSurtrDpsPageState(value, comparisonDpsDefaults()))
 }
 
 export function readSurtrComparisonPageState(storage: Pick<Storage, 'getItem'> | undefined = sessionStorageOrUndefined()): SurtrComparisonPageState {
@@ -41,7 +49,8 @@ export function readSurtrComparisonPageState(storage: Pick<Storage, 'getItem'> |
     const saved = storage?.getItem(SURTR_COMPARISON_PAGE_STATE_KEY)
     // A present comparison key always wins, including an intentionally empty selection.
     if (saved !== null && saved !== undefined) return parseSurtrComparisonPageState(JSON.parse(saved))
-    return fromDpsState(readSurtrDpsPageState(storage))
+    const legacy = storage?.getItem(SURTR_DPS_PAGE_STATE_KEY)
+    return parseSurtrComparisonPageState(legacy ? JSON.parse(legacy) : null)
   } catch {
     return createDefaultSurtrComparisonPageState()
   }

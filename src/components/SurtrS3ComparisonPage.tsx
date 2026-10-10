@@ -3,6 +3,7 @@ import type { SkillRecord } from '../types/skill'
 import { SURTR_OPERATOR_ID, deriveSurtrDpsModel, type SurtrDpsSettings } from '../lib/surtrDps'
 import { getSurtrModuleChoices, getSelectedSurtrModuleStages, type SurtrModuleChoice } from '../lib/surtrModuleComparison'
 import { readSurtrComparisonPageState, writeSurtrComparisonPageState } from '../lib/surtrComparisonPageState'
+import { applySurtrComparisonPreset } from '../lib/surtrComparisonPresets'
 import { buildSurtrPotentialComparison } from '../lib/surtrPotentialComparison'
 import { calculateSurtrDpsCalculation } from '../lib/surtrDpsCalculation'
 import { getSurtrDpsResistanceSamples, isValidSurtrDpsResistanceRange } from '../lib/surtrDpsResistance'
@@ -13,6 +14,7 @@ import { SURTR_HOME_LINK } from '../lib/navigation'
 import { PageBreadcrumbs } from './PageBreadcrumbs'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { SurtrModuleStageSelection } from './SurtrModuleStageSelection'
+import { SurtrComparisonPresetControls } from './SurtrComparisonPresetControls'
 import { SurtrModuleComparisonTableControls, type SurtrModuleComparisonTableOptions } from './SurtrModuleComparisonTableControls'
 import { getSurtrResistanceStepError } from './SurtrResistanceStepControl'
 import { SurtrUnequippedComparisonTable } from './SurtrUnequippedComparisonTable'
@@ -155,6 +157,8 @@ export function SurtrS3ComparisonPage({ rows, loading, error, onRetry }: {
           <label className="calculator-field"><span>スキルレベル</span><select aria-label="スキルレベル" value={effectiveSettings.skillLevelIndex} onChange={event => update('skillLevelIndex', Number(event.target.value))}>
             {record.skillLevels.map((_, index) => <option key={index} value={index}>{skillLabel(index)}</option>)}</select></label>
         </div>
+        <SurtrComparisonPresetControls choices={choices} excluded={state.excluded} moduleLevels={state.moduleLevels}
+          onApply={selection => setState(previous => applySurtrComparisonPreset(previous, selection, choices))} />
         <SurtrModuleStageSelection choices={choices} excluded={state.excluded} moduleLevels={state.moduleLevels} onToggleLevel={toggleModuleLevel}
           onToggleNone={checked => setState(previous => ({ ...previous, excluded: checked ? previous.excluded.filter(id => id !== '') : [...previous.excluded, ''] }))} />
         <fieldset className="surtr-s3-potential-selection"><legend>比較する潜在</legend>

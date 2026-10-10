@@ -54,9 +54,8 @@ export function createDefaultSurtrDpsPageState(): SurtrDpsPageState {
   }
 }
 
-/** Restore each valid field independently, without accepting UI-inaccessible options. */
-export function parseSurtrDpsPageState(value: unknown): SurtrDpsPageState {
-  const defaults = createDefaultSurtrDpsPageState()
+/** Restore each valid field independently, using the caller's page defaults for invalid fields. */
+export function parseSurtrDpsPageState(value: unknown, defaults: SurtrDpsPageState = createDefaultSurtrDpsPageState()): SurtrDpsPageState {
   const source = object(value)
   if (!source) return defaults
   const settings = object(source.settings)
