@@ -11,12 +11,13 @@ export interface ChartImageAspectSettings {
   height: string
 }
 
-export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspect, onAspectChange, aspectError, aspectHint = 'タイトル・凡例を含む画像全体の比率です。指定なしでは内容に合わせて自動調整します。', canChooseLocation, saving, saveDisabled = false, error, onClose, onSave, additionalSaveAction, helpMode = 'inline', options, preview }: {
+export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspect, onAspectChange, aspectError, aspectPresets = imageAspectPresets, aspectHint = 'タイトル・凡例を含む画像全体の比率です。指定なしでは内容に合わせて自動調整します。', canChooseLocation, saving, saveDisabled = false, error, onClose, onSave, additionalSaveAction, helpMode = 'inline', options, preview }: {
   initialFilename: string
   getDefaultFilename?: (aspectRatio?: number) => string
   aspect?: ChartImageAspectSettings
   onAspectChange?: (aspect: ChartImageAspectSettings) => void
   aspectError?: string
+  aspectPresets?: readonly string[]
   aspectHint?: string
   canChooseLocation: boolean
   saving: boolean
@@ -102,7 +103,7 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
               : { preset, width, height })
           }}>
             <option value="auto">指定なし</option>
-            {imageAspectPresets.map((preset) => <option key={preset} value={preset}>{preset}</option>)}
+            {aspectPresets.map((preset) => <option key={preset} value={preset}>{preset}</option>)}
             <option value="custom">カスタム</option>
           </select>
           <button type="button" className="button secondary" onClick={() => {

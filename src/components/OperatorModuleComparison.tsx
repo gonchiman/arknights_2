@@ -1,11 +1,11 @@
 import { useId, useMemo, useRef, useState } from 'react'
 import type { OperatorCombatProfile } from '../types/skill'
-import { buildOperatorModuleStageComparison, type OperatorModuleComparisonLayout } from '../lib/operatorModuleComparison'
+import { buildOperatorModuleStageComparison, type OperatorModuleComparison as ModuleComparison, type OperatorModuleComparisonLayout } from '../lib/operatorModuleComparison'
 import { getOperatorModuleId, getOperatorModuleLevels, getOperatorModules, getOperatorModuleTypeLabel } from '../lib/operatorModules'
 import { getOperatorModuleComparisonImageFilename } from '../lib/operatorModuleComparisonImageFilename'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { parseTableImageAspect } from '../lib/tableImageAspect'
-import { ChartImageSaveDialog } from './ChartImageSaveDialog'
+import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
 import { OperatorEffectLegend, OperatorModuleComparisonTable } from './OperatorModuleComparisonTable'
 import './OperatorModuleComparison.css'
 
@@ -23,18 +23,14 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
   const [selectedPotential, setSelectedPotential] = useState(1)
   const imageSaveInProgress = useRef(false)
   const [savingImage, setSavingImage] = useState(false)
-  const [imageFilename, setImageFilename] = useState<string | null>(null)
+  const [imageSnapshot, setImageSnapshot] = useState<{
+    comparison: ModuleComparison; layout: OperatorModuleComparisonLayout; operatorName: string; operatorId: string
+  } | null>(null)
   const [imageFeedback, setImageFeedback] = useState<'saved' | 'downloaded' | 'failed' | null>(null)
   const imageSavePicker = getChartImageSavePicker()
-  const [imageAspectPreset, setImageAspectPreset] = useState('auto')
-  const [customImageAspect, setCustomImageAspect] = useState({ width: '16', height: '9' })
-  const imageAspectParts = imageAspectPreset.split(':')
-  const imageAspect = imageAspectPreset === 'auto' ? null
-    : imageAspectPreset === 'custom'
-      ? parseTableImageAspect(customImageAspect.width, customImageAspect.height)
-      : parseTableImageAspect(imageAspectParts[0], imageAspectParts[1])
-  const invalidImageAspect = imageAspectPreset !== 'auto' && imageAspect === null
-  const imageAspectErrorId = `${contentId}-image-aspect-error`
+  const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
+  const imageAspect = aspect.preset === 'auto' ? null : parseTableImageAspect(aspect.width, aspect.height)
+  const invalidImageAspect = aspect.preset !== 'auto' && imageAspect === null
   const moduleChoices = useMemo(() => getOperatorModules(profile ?? {}).map((module, index) => ({
     id: getOperatorModuleId(module, index),
     label: getOperatorModuleTypeLabel(module) ?? module.uniEquipName ?? 'MOD',
@@ -57,16 +53,13 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
   }
 
   const openImageSaveDialog = () => {
-    if (imageSaveInProgress.current || invalidImageAspect || comparison.columns.length === 0) return
+    if (imageSaveInProgress.current || comparison.columns.length === 0) return
     setImageFeedback(null)
-    setImageFilename(getOperatorModuleComparisonImageFilename({
-      operatorName, operatorId, level: comparison.level, columns: comparison.columns,
-      potentialRank: comparison.potentialRank, aspect: imageAspect, layout,
-    }))
+    setImageSnapshot(structuredClone({ comparison, layout, operatorName, operatorId }))
   }
 
   const saveImage = async (filename: string) => {
-    if (imageSaveInProgress.current || invalidImageAspect || comparison.columns.length === 0) return
+    if (imageSaveInProgress.current || invalidImageAspect || !imageSnapshot || imageSnapshot.comparison.columns.length === 0) return
     imageSaveInProgress.current = true
     setSavingImage(true)
     setImageFeedback(null)
@@ -75,11 +68,11 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
       if (destination.type === 'cancelled') return
       const { saveOperatorModuleComparisonImage } = await import('./saveOperatorModuleComparisonImage')
       await saveOperatorModuleComparisonImage({
-        comparison, operatorName, operatorId, aspect: imageAspect, filename, layout,
+        ...imageSnapshot, aspect: imageAspect, filename,
         writeBlob: destination.type === 'file' ? destination.write : undefined,
       })
       setImageFeedback(destination.type === 'file' ? 'saved' : 'downloaded')
-      setImageFilename(null)
+      setImageSnapshot(null)
     } catch {
       setImageFeedback('failed')
     } finally {
@@ -135,47 +128,14 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
             </select>
           </label>
           <OperatorEffectLegend />
-          <div className="operator-module-comparison-image-settings" role="group" aria-label="画像の保存設定">
-            <label className="operator-module-comparison-image-preset">
-              <span>画像比率</span>
-              <select aria-label="保存画像の比率（横：縦）" value={imageAspectPreset} disabled={savingImage}
-                onChange={(event) => { setImageAspectPreset(event.target.value); setImageFeedback(null) }}>
-                <option value="auto">自動</option>
-                {IMAGE_ASPECT_PRESETS.map((aspect) => <option key={aspect} value={aspect}>{aspect}</option>)}
-                <option value="custom">カスタム</option>
-              </select>
-            </label>
-            {imageAspectPreset === 'custom' && (
-              <div className="operator-module-comparison-image-custom" role="group" aria-label="画像の比率（横：縦）">
-                {(['width', 'height'] as const).map((dimension) => (
-                  <label key={dimension}>
-                    <span>{dimension === 'width' ? '横' : '縦'}</span>
-                    <input type="number" inputMode="numeric" min={1} max={100} step={1}
-                      aria-label={`保存画像の比率・${dimension === 'width' ? '横' : '縦'}`}
-                      aria-invalid={invalidImageAspect}
-                      aria-describedby={invalidImageAspect ? imageAspectErrorId : undefined}
-                      disabled={savingImage} value={customImageAspect[dimension]}
-                      onChange={(event) => {
-                        setCustomImageAspect({ ...customImageAspect, [dimension]: event.target.value })
-                        setImageFeedback(null)
-                      }}
-                    />
-                  </label>
-                ))}
-              </div>
-            )}
             <button type="button" className="button secondary operator-module-comparison-save"
               aria-label="モジュール比較テーブルをPNG画像で保存"
               aria-haspopup="dialog"
-              disabled={savingImage || invalidImageAspect || comparison.columns.length === 0} aria-busy={savingImage}
+              disabled={savingImage || comparison.columns.length === 0} aria-busy={savingImage}
               onClick={openImageSaveDialog}
             >{savingImage ? '画像を保存中…' : '画像を保存'}</button>
-          </div>
         </div>
       </div>
-      {invalidImageAspect && <p id={imageAspectErrorId} role="alert" className="operator-module-comparison-save-error">
-        横・縦は1〜100の整数で、比率が1:10〜10:1になるように入力してください。
-      </p>}
       <p role="status" className="visually-hidden">
         {imageFeedback === 'saved' ? 'PNG画像を保存しました。'
           : imageFeedback === 'downloaded' ? 'PNG画像のダウンロードを開始しました。' : ''}
@@ -188,14 +148,27 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
         {comparison.columns.length > 0 ? <OperatorModuleComparisonTable comparison={comparison} layout={layout} />
           : <p className="operator-profile-empty">比較するMOD・段階を選択してください。</p>}
       </div>
-      {imageFilename !== null && <ChartImageSaveDialog
-        initialFilename={imageFilename}
+      {imageSnapshot !== null && <ChartImageSaveDialog
+        initialFilename={getOperatorModuleComparisonImageFilename({
+          ...imageSnapshot, level: imageSnapshot.comparison.level, columns: imageSnapshot.comparison.columns,
+          potentialRank: imageSnapshot.comparison.potentialRank, aspect: imageAspect,
+        })}
+        getDefaultFilename={() => getOperatorModuleComparisonImageFilename({
+          ...imageSnapshot, level: imageSnapshot.comparison.level, columns: imageSnapshot.comparison.columns,
+          potentialRank: imageSnapshot.comparison.potentialRank, aspect: imageAspect,
+        })}
+        aspect={aspect}
+        aspectPresets={IMAGE_ASPECT_PRESETS}
+        onAspectChange={value => { setAspect(value); setImageFeedback(null) }}
+        aspectError={invalidImageAspect ? '幅・高さは1〜100の整数で、比率が1:10〜10:1になるように入力してください。' : undefined}
+        aspectHint="指定なしでは表の内容に合わせます。比率を指定しても表全体を保存します。"
+        helpMode="popover"
         canChooseLocation={!!imageSavePicker}
         saving={savingImage}
         error={imageFeedback === 'failed'}
         onClose={() => {
           if (imageSaveInProgress.current) return
-          setImageFilename(null)
+          setImageSnapshot(null)
           setImageFeedback(null)
         }}
         onSave={(filename) => void saveImage(filename)}
