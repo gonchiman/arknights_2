@@ -6,10 +6,11 @@ import './SkillEffectModal.css'
 interface Props {
   skill: SkillRecord
   skillLevelIndex?: number
+  showSkillId?: boolean
   onClose: () => void
 }
 
-export function SkillEffectModal({ skill, skillLevelIndex, onClose }: Props) {
+export function SkillEffectModal({ skill, skillLevelIndex, showSkillId = false, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const titleId = useId()
@@ -109,6 +110,12 @@ export function SkillEffectModal({ skill, skillLevelIndex, onClose }: Props) {
               <SkillEffectTags title="比較できる出力" values={details.outputs} />
             </div>
           </section>
+          {showSkillId && (
+            <details className="skill-effect-id">
+              <summary>スキルID</summary>
+              <code>{skill.skillId}</code>
+            </details>
+          )}
         </div>
       </article>
     </dialog>

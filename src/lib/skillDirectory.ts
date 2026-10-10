@@ -18,11 +18,16 @@ export interface SkillDirectoryFilters {
 
 export type SkillDirectorySortKey =
   | 'operator'
+  | 'skillIndex'
   | 'skill'
   | 'rarity'
   | 'profession'
+  | 'subProfession'
   | 'activationTrigger'
   | 'effectWindow'
+  | 'duration'
+  | 'spType'
+  | 'initSp'
   | 'spCost'
 
 export type SortDirection = 'asc' | 'desc'
@@ -43,6 +48,14 @@ export const EMPTY_SKILL_DIRECTORY_FILTERS: SkillDirectoryFilters = {
 export const DEFAULT_SKILL_DIRECTORY_SORT: SkillDirectorySort = {
   key: 'rarity',
   direction: 'desc',
+}
+
+export const SKILL_DIRECTORY_SP_TYPE_LABELS: Record<string, string> = {
+  INCREASE_WITH_TIME: '自然回復',
+  INCREASE_WHEN_ATTACK: '攻撃回復',
+  INCREASE_WHEN_TAKEN_DAMAGE: '被撃回復',
+  NO_SP: 'SPなし',
+  UNKNOWN: '要確認',
 }
 
 const JAPANESE_COLLATOR = new Intl.Collator('ja', {
@@ -125,12 +138,16 @@ function compareRows(a: SkillRecord, b: SkillRecord, sort: SkillDirectorySort): 
   switch (sort.key) {
     case 'operator':
       return JAPANESE_COLLATOR.compare(a.operatorName, b.operatorName) * direction
+    case 'skillIndex':
+      return (a.skillIndex - b.skillIndex) * direction
     case 'skill':
       return JAPANESE_COLLATOR.compare(a.skillName, b.skillName) * direction
     case 'rarity':
       return (a.rarity - b.rarity) * direction
     case 'profession':
       return JAPANESE_COLLATOR.compare(a.professionLabel, b.professionLabel) * direction
+    case 'subProfession':
+      return JAPANESE_COLLATOR.compare(a.subProfessionName, b.subProfessionName) * direction
     case 'activationTrigger':
       return JAPANESE_COLLATOR.compare(
         ACTIVATION_TRIGGER_LABELS[a.classification.activationTrigger.value],
@@ -141,9 +158,26 @@ function compareRows(a: SkillRecord, b: SkillRecord, sort: SkillDirectorySort): 
         EFFECT_WINDOW_LABELS[a.classification.effectWindow.value],
         EFFECT_WINDOW_LABELS[b.classification.effectWindow.value],
       ) * direction
+    case 'duration':
+      return compareNullableNumbers(
+        getPositiveDuration(a.duration),
+        getPositiveDuration(b.duration),
+        sort.direction,
+      )
+    case 'spType':
+      return JAPANESE_COLLATOR.compare(
+        SKILL_DIRECTORY_SP_TYPE_LABELS[a.spType] ?? a.spType,
+        SKILL_DIRECTORY_SP_TYPE_LABELS[b.spType] ?? b.spType,
+      ) * direction
+    case 'initSp':
+      return compareNullableNumbers(a.initSp, b.initSp, sort.direction)
     case 'spCost':
       return compareNullableNumbers(a.spCost, b.spCost, sort.direction)
   }
+}
+
+function getPositiveDuration(duration: number | null): number | null {
+  return duration !== null && Number.isFinite(duration) && duration > 0 ? duration : null
 }
 
 function compareNullableNumbers(

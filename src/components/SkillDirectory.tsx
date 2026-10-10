@@ -10,6 +10,7 @@ import {
 import {
   DEFAULT_SKILL_DIRECTORY_SORT,
   EMPTY_SKILL_DIRECTORY_FILTERS,
+  SKILL_DIRECTORY_SP_TYPE_LABELS,
   filterAndSortSkillDirectoryRows,
   hasActiveSkillDirectoryFilters,
   type SkillDirectoryFilters,
@@ -34,14 +35,6 @@ interface Props {
 
 const RARITIES = [6, 5, 4, 3, 2, 1] as const
 
-const SP_TYPE_LABELS: Record<string, string> = {
-  INCREASE_WITH_TIME: '自然回復',
-  INCREASE_WHEN_ATTACK: '攻撃回復',
-  INCREASE_WHEN_TAKEN_DAMAGE: '被撃回復',
-  NO_SP: 'SPなし',
-  UNKNOWN: '要確認',
-}
-
 export function SkillDirectory({ rows, loading, onOpenOperatorDetail }: Props) {
   const [filters, setFilters] = useState<SkillDirectoryFilters>({
     ...EMPTY_SKILL_DIRECTORY_FILTERS,
@@ -50,7 +43,7 @@ export function SkillDirectory({ rows, loading, onOpenOperatorDetail }: Props) {
     ...DEFAULT_SKILL_DIRECTORY_SORT,
   })
   const [detailSkill, setDetailSkill] = useState<SkillRecord | null>(null)
-  const skillDetailTriggerRef = useRef<HTMLTableRowElement | null>(null)
+  const skillDetailTriggerRef = useRef<HTMLTableRowElement | HTMLButtonElement | null>(null)
 
   const professionOptions = useMemo(() => {
     const options = new Map<string, string>()
@@ -84,7 +77,7 @@ export function SkillDirectory({ rows, loading, onOpenOperatorDetail }: Props) {
 
   const resetFilters = () => setFilters({ ...EMPTY_SKILL_DIRECTORY_FILTERS })
 
-  const openSkillEffect = (skill: SkillRecord, trigger: HTMLTableRowElement) => {
+  const openSkillEffect = (skill: SkillRecord, trigger: HTMLTableRowElement | HTMLButtonElement) => {
     skillDetailTriggerRef.current = trigger
     setDetailSkill(skill)
   }
@@ -173,7 +166,6 @@ export function SkillDirectory({ rows, loading, onOpenOperatorDetail }: Props) {
 
         <div className="result-meta" role="status" aria-live="polite">
           <span>{loading ? '読み込み中...' : `${visibleRows.length} / ${rows.length} スキル表示`}</span>
-          <span>列見出しを選択すると並び順を変更できます</span>
         </div>
 
         {!loading && visibleRows.length === 0 ? (
@@ -191,13 +183,18 @@ export function SkillDirectory({ rows, loading, onOpenOperatorDetail }: Props) {
               <thead>
                 <tr>
                   <SortableHeader label="オペレーター" sortKey="operator" sort={sort} onSort={updateSort} />
-                  <SortableHeader label="スキル" sortKey="skill" sort={sort} onSort={updateSort} />
+                  <SortableHeader label="S" sortKey="skillIndex" sort={sort} onSort={updateSort} />
+                  <SortableHeader label="スキル名" sortKey="skill" sort={sort} onSort={updateSort} />
                   <SortableHeader label="レアリティ" sortKey="rarity" sort={sort} onSort={updateSort} />
-                  <SortableHeader label="職業 / 職分" sortKey="profession" sort={sort} onSort={updateSort} />
+                  <SortableHeader label="職業" sortKey="profession" sort={sort} onSort={updateSort} />
+                  <SortableHeader label="職分" sortKey="subProfession" sort={sort} onSort={updateSort} />
                   <SortableHeader label="発動契機" sortKey="activationTrigger" sort={sort} onSort={updateSort} />
                   <SortableHeader label="終了条件" sortKey="effectWindow" sort={sort} onSort={updateSort} />
+                  <SortableHeader label="持続（秒）" sortKey="duration" sort={sort} onSort={updateSort} />
+                  <SortableHeader label="SP回復" sortKey="spType" sort={sort} onSort={updateSort} />
+                  <SortableHeader label="初期SP" sortKey="initSp" sort={sort} onSort={updateSort} />
                   <SortableHeader label="必要SP" sortKey="spCost" sort={sort} onSort={updateSort} />
-                  <th aria-label="詳細画面" />
+                  <th scope="col" className="skill-directory-detail-heading">詳細</th>
                 </tr>
               </thead>
               <tbody>
@@ -229,15 +226,11 @@ export function SkillDirectory({ rows, loading, onOpenOperatorDetail }: Props) {
                         {row.operatorName}
                       </OperatorDetailLink>
                     </td>
-                    <td>
-                      <span className="skill-directory-skill-name">{row.skillName}</span>
-                      <small>S{row.skillIndex} · {row.skillId}</small>
-                    </td>
-                    <td>★{row.rarity}</td>
-                    <td>
-                      <span>{row.professionLabel}</span>
-                      <small>{row.subProfessionName}</small>
-                    </td>
+                    <td className="skill-directory-number">{row.skillIndex}</td>
+                    <td><span className="skill-directory-skill-name">{row.skillName}</span></td>
+                    <td className="skill-directory-number">★{row.rarity}</td>
+                    <td>{row.professionLabel}</td>
+                    <td>{row.subProfessionName}</td>
                     <td>
                       <ClassificationTag
                         color={ACTIVATION_TRIGGER_COLORS[row.classification.activationTrigger.value]}
@@ -250,11 +243,21 @@ export function SkillDirectory({ rows, loading, onOpenOperatorDetail }: Props) {
                         label={EFFECT_WINDOW_LABELS[row.classification.effectWindow.value]}
                       />
                     </td>
-                    <td>
-                      <span>{row.spCost ?? '—'}</span>
-                      <small>初期 {row.initSp ?? '—'} · {SP_TYPE_LABELS[row.spType] ?? row.spType}</small>
+                    <td className="skill-directory-number">{row.duration !== null && Number.isFinite(row.duration) && row.duration > 0 ? row.duration : '—'}</td>
+                    <td>{SKILL_DIRECTORY_SP_TYPE_LABELS[row.spType] ?? row.spType}</td>
+                    <td className="skill-directory-number">{row.initSp ?? '—'}</td>
+                    <td className="skill-directory-number">{row.spCost ?? '—'}</td>
+                    <td className="detail-link-cell">
+                      <button
+                        type="button"
+                        className="skill-directory-detail-button"
+                        aria-label={`${row.operatorName}、S${row.skillIndex} ${row.skillName}の詳細を開く`}
+                        aria-haspopup="dialog"
+                        onClick={(event) => openSkillEffect(row, event.currentTarget)}
+                      >
+                        詳細を見る
+                      </button>
                     </td>
-                    <td className="detail-link-cell">詳細を見る →</td>
                   </tr>
                 ))}
               </tbody>
@@ -262,7 +265,7 @@ export function SkillDirectory({ rows, loading, onOpenOperatorDetail }: Props) {
           </div>
         )}
       </section>
-      {detailSkill && <SkillEffectModal skill={detailSkill} onClose={closeSkillEffect} />}
+      {detailSkill && <SkillEffectModal skill={detailSkill} showSkillId onClose={closeSkillEffect} />}
     </section>
   )
 }
@@ -306,7 +309,7 @@ function SortableHeader({ label, sortKey, sort, onSort }: SortableHeaderProps) {
     : 'none'
 
   return (
-    <th aria-sort={ariaSort}>
+    <th scope="col" aria-sort={ariaSort}>
       <button type="button" className="skill-sort-button" onClick={() => onSort(sortKey)}>
         <span>{label}</span>
         <span className="skill-sort-indicator" aria-hidden="true">

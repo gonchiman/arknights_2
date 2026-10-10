@@ -179,6 +179,26 @@
   font-size: 10px;
 }
 
+.skill-effect-id {
+  margin-top: 18px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  font-size: 12px;
+}
+
+.skill-effect-id summary {
+  width: fit-content;
+  color: var(--text-muted);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.skill-effect-id code {
+  display: block;
+  margin-top: 9px;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 560px) {
   .skill-effect-dialog {
     width: calc(100vw - 16px);

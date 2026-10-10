@@ -54,26 +54,73 @@
 }
 
 .skill-directory-table {
-  min-width: 1120px;
+  min-width: 1320px;
   table-layout: fixed;
 }
 
-.skill-directory-table th:nth-child(1) { width: 15%; }
-.skill-directory-table th:nth-child(2) { width: 21%; }
-.skill-directory-table th:nth-child(3) { width: 8%; }
-.skill-directory-table th:nth-child(4) { width: 13%; }
-.skill-directory-table th:nth-child(5) { width: 12%; }
-.skill-directory-table th:nth-child(6) { width: 12%; }
-.skill-directory-table th:nth-child(7) { width: 11%; }
+.skill-directory-table th:nth-child(1) { width: 12%; }
+.skill-directory-table th:nth-child(2) { width: 4%; }
+.skill-directory-table th:nth-child(3) { width: 14%; }
+.skill-directory-table th:nth-child(4) { width: 7%; }
+.skill-directory-table th:nth-child(5) { width: 6%; }
+.skill-directory-table th:nth-child(6) { width: 8%; }
+.skill-directory-table th:nth-child(7) { width: 8%; }
 .skill-directory-table th:nth-child(8) { width: 8%; }
+.skill-directory-table th:nth-child(9) { width: 7%; }
+.skill-directory-table th:nth-child(10) { width: 8%; }
+.skill-directory-table th:nth-child(11) { width: 6%; }
+.skill-directory-table th:nth-child(12) { width: 6%; }
+.skill-directory-table th:nth-child(13) { width: 6%; }
+
+.skill-directory-table th,
+.skill-directory-table td {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.skill-directory-table th:last-child,
+.skill-directory-table td:last-child {
+  border-right: 0;
+}
 
 .skill-directory-table th {
   padding: 0;
 }
 
+.skill-directory-table th:first-child,
+.skill-directory-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.skill-directory-table th:first-child { z-index: 2; }
+.skill-directory-table td:first-child { background: var(--surface); }
+.skill-directory-table tbody tr:hover td:first-child { background: var(--surface-hover); }
+
 .skill-directory-table td {
   overflow-wrap: anywhere;
 }
+
+.skill-directory-table .skill-directory-number {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.skill-directory-table .skill-directory-detail-heading { padding: 8px 10px; }
+
+.skill-directory-detail-button {
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.skill-directory-detail-button:hover { color: var(--accent); }
 
 .skill-sort-button {
   width: 100%;
@@ -145,10 +192,6 @@
 @media (max-width: 760px) {
   .skill-directory-filter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .skill-directory-table {
-    min-width: 980px;
   }
 }
 
