@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useId, useRef, useState } from 'react'
 import { getSurtrComparisonBaseLabel, getSurtrUnequippedComparisonTsv, type SurtrUnequippedMetric } from '../lib/surtrUnequippedComparison'
 import { writeClipboardText } from '../lib/clipboard'
 import { getChartImageSavePicker, selectChartArchiveDestination, selectChartImageDestination } from '../lib/chartImageDestination'
@@ -7,9 +7,10 @@ import { getSurtrComparisonImageStageLevels, getSurtrComparisonImageStageSnapsho
 import type { SurtrComparisonImageNumberSize } from '../lib/surtrComparisonImageNumberSize'
 import { getSurtrUnequippedTableImageFilename, type SurtrUnequippedTableImageMetadata } from '../lib/surtrUnequippedTableImageFilename'
 import { CHART_IMAGE_LABEL_MAX_LENGTH } from '../lib/chartImageLabels'
+import { getSurtrComparisonTableTitle } from '../lib/surtrComparisonTableTitle'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
 import { getUnequippedMetricLabel, SurtrUnequippedComparisonTableContent, type SurtrUnequippedComparisonTableData } from './SurtrUnequippedComparisonTableContent'
-import { SURTR_S3_COMPARISON_TABLE_IMAGE_TITLE, SurtrUnequippedComparisonTableImagePreview, saveSurtrUnequippedComparisonTableImage,
+import { SurtrUnequippedComparisonTableImagePreview, saveSurtrUnequippedComparisonTableImage,
   type SurtrUnequippedComparisonTableImageSnapshot } from './SurtrUnequippedComparisonTableImage'
 import './SurtrComparisonImageOptions.css'
 
@@ -33,7 +34,8 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
     finally { setCopying(false) }
   }
   const [image, setImage] = useState<SurtrUnequippedComparisonTableImageSnapshot | null>(null)
-  const [imageTitle, setImageTitle] = useState(SURTR_S3_COMPARISON_TABLE_IMAGE_TITLE)
+  const [imageTitle, setImageTitle] = useState<string | null>(null)
+  const imageTitleId = useId()
   const [imageLayout, setImageLayout] = useState<SurtrComparisonImageLayout>('current')
   const [numberSize, setNumberSize] = useState<SurtrComparisonImageNumberSize>('auto')
   const [moduleLevel, setModuleLevel] = useState(3)
@@ -62,7 +64,8 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
   const openImage = () => {
     setFeedback(null); setLayoutError('')
     if (imageLayout === 'split' && !getSurtrComparisonImageStageLevels(data).length) setImageLayout('current')
-    setImage(structuredClone({ ...data, metadata, title: data.quantity === 'expected-damage' ? undefined : imageTitle }))
+    setImage(structuredClone({ ...data, metadata, title: data.quantity === 'expected-damage'
+      ? undefined : imageTitle ?? getSurtrComparisonTableTitle(data) }))
   }
   const saveImage = async (filename: string, ratio?: number) => {
     if (!exportImage || saveInProgress.current || layoutError || aspectError) return
@@ -155,9 +158,13 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
           <p className="chart-image-save-hint">選んだ段階をPNG保存できます。複数段階を選択している場合は、すべてのPNGをZIPにまとめて保存できます。</p>
         </>}
       </div>}
-      {image.quantity !== 'expected-damage' && <label className="chart-image-save-field">
-        <span>タイトル</span>
-        <input type="text" value={image.title ?? SURTR_S3_COMPARISON_TABLE_IMAGE_TITLE} disabled={saving}
+      {image.quantity !== 'expected-damage' && <div className="chart-image-save-field">
+        <div className="surtr-comparison-image-title-heading">
+          <label htmlFor={imageTitleId}>タイトル</label>
+          <span aria-live="polite">{imageTitle === null ? '自動' : '手動'}</span>
+        </div>
+        <div className="surtr-comparison-image-title-controls">
+        <input id={imageTitleId} type="text" value={image.title ?? getSurtrComparisonTableTitle(image)} disabled={saving}
           maxLength={CHART_IMAGE_LABEL_MAX_LENGTH} autoComplete="off"
           onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) event.preventDefault() }}
           onChange={event => {
@@ -165,10 +172,16 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
             setLayoutError('')
             setImageTitle(title); setImage(current => current && { ...current, title })
           }} />
-      </label>}
+        <button type="button" className="button secondary" aria-label="タイトルを自動に戻す"
+          disabled={saving || imageTitle === null} onClick={() => {
+            setLayoutError(''); setImageTitle(null)
+            setImage(current => current && { ...current, title: getSurtrComparisonTableTitle(current) })
+          }}>自動に戻す</button>
+        </div>
+      </div>}
       {saveProgress && <p className="chart-image-save-hint" role="status">{saveProgress}</p>}
       </>}
-      preview={<SurtrUnequippedComparisonTableImagePreview key={`${exportLayout}:${selectedLevel}:${numberSize}:${aspect.preset}:${aspect.width}:${aspect.height}`} {...exportImage}
+      preview={<SurtrUnequippedComparisonTableImagePreview key={`${exportLayout}:${selectedLevel}:${numberSize}:${image.title}:${aspect.preset}:${aspect.width}:${aspect.height}`} {...exportImage}
         aspectRatio={aspectError ? undefined : aspectRatio} onLayoutError={reportLayoutError} onLayoutReady={reportLayoutReady} />} />}
   </section>
 }

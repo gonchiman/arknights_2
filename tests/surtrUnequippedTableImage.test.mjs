@@ -58,9 +58,14 @@ const table = markup => {
   assert.ok(found, 'Missing comparison table')
   return found[1]
 }
-const imageHeaderRows = (markup, expectedTitle = 'スルト S3 DPS比較') => {
+const imageHeaderRows = (markup, expectedTitle) => {
   const header = sections(markup, 'thead')[0]
   const headers = rows(header)
+  if (expectedTitle === undefined) {
+    assert.equal(headers[0].length, 1)
+    assert.match(headers[0][0], /^スルト S3 .+比較$/)
+    expectedTitle = headers[0][0]
+  }
   assert.deepEqual(headers[0], [expectedTitle], 'Image begins with one full-width title row')
   assert.equal(headers.flat().filter(label => label === expectedTitle).length, 1)
   const titleRow = header.match(/<tr(?:\s[^>]*)?>([\s\S]*?)<\/tr>/)?.[1]
@@ -193,16 +198,36 @@ test('image and preview retain a captured custom title as trimmed escaped text w
   }
 })
 
-test('an omitted, empty or whitespace title uses the existing S3 default in both the image and preview', () => {
+test('an omitted, empty or whitespace title uses the captured comparison purpose in both the image and preview', () => {
   for (const component of [Image, ImagePreview]) {
     const original = renderToStaticMarkup(createElement(component, { ...props, metadata }))
     for (const title of [undefined, '', ' \t\n　 ']) {
       const snapshot = { ...props, title, metadata }
       const captured = structuredClone(snapshot)
       const saved = renderToStaticMarkup(createElement(component, snapshot))
-      imageHeaderRows(saved)
+      imageHeaderRows(saved, 'スルト S3 MOD比較')
       assert.equal(table(saved), table(original))
       assert.deepEqual(snapshot, captured)
+    }
+  }
+})
+
+test('image and preview generate a short title from the displayed modules, stages and comparison base', () => {
+  const xStages = [1, 2, 3].map(level => ({ ...modules[0], id: `module-x:lv${level}`,
+    label: `MOD X Lv.${level}` }))
+  const potentialSeries = [1, 6].map(potential => ({ ...modules[1], id: `module-y:lv3:pot${potential}`,
+    moduleStageId: 'module-y:lv3', potential, label: `MOD Y Lv.3 潜在${potential}` }))
+  const cases = [
+    { series: modules, expectedTitle: 'スルト S3 MOD比較' },
+    { series: xStages, expectedTitle: 'スルト S3 MOD X 段階比較' },
+    { series: potentialSeries, expectedTitle: 'スルト S3 潜在比較' },
+    { series: [modules[0]], comparisonBase: 'previous', expectedTitle: 'スルト S3 MOD X 段階比較' },
+  ]
+  for (const component of [Image, ImagePreview]) {
+    for (const { expectedTitle, ...data } of cases) {
+      const markup = renderToStaticMarkup(createElement(component, { ...props, ...data, metadata }))
+      imageHeaderRows(markup, expectedTitle)
+      assert.deepEqual(sectionRows(markup, 'tbody'), sectionRows(render(data), 'tbody'))
     }
   }
 })

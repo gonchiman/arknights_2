@@ -13,6 +13,32 @@
   grid-column: 1 / -1;
 }
 
+.surtr-comparison-image-title-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.surtr-comparison-image-title-heading > span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.surtr-comparison-image-title-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.surtr-comparison-image-title-controls input { flex: 1; }
+.surtr-comparison-image-title-controls .button { flex-shrink: 0; min-height: 42px; }
+
 @media (max-width: 600px) {
   .surtr-comparison-image-options { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 400px) {
+  .surtr-comparison-image-title-controls { flex-wrap: wrap; }
+  .surtr-comparison-image-title-controls input { flex-basis: 100%; }
 }

@@ -6,6 +6,7 @@ import { getSurtrComparisonImageColorScaleMaximum, getSurtrComparisonImageStageL
   type SurtrComparisonImageLayout } from '../lib/surtrComparisonImageLayout'
 import { getSurtrComparisonImageNumberFontSize, SURTR_COMPARISON_IMAGE_NUMBER_BASE_SIZE,
   type SurtrComparisonImageNumberCell, type SurtrComparisonImageNumberSize } from '../lib/surtrComparisonImageNumberSize'
+import { getSurtrComparisonTableTitle } from '../lib/surtrComparisonTableTitle'
 import { getUnequippedMetricLabel, SurtrUnequippedComparisonTableContent, type SurtrUnequippedComparisonTableData } from './SurtrUnequippedComparisonTableContent'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './SurtrS3Page.css'
@@ -19,8 +20,6 @@ export interface SurtrUnequippedComparisonTableImageSnapshot extends SurtrUnequi
   moduleLevel?: number
   numberSize?: SurtrComparisonImageNumberSize
 }
-
-export const SURTR_S3_COMPARISON_TABLE_IMAGE_TITLE = 'スルト S3 DPS比較'
 
 interface ImageProps extends SurtrUnequippedComparisonTableImageSnapshot {
   aspectRatio?: number
@@ -142,7 +141,7 @@ export function SurtrUnequippedComparisonTableImage({ aspectRatio, exporting = f
     }
   }, [snapshotKey, initialWidth, aspectRatio, exporting, onLayout, onLayoutError])
 
-  const imageTitle = (title?.trim() || (data.quantity === 'expected-damage' ? undefined : SURTR_S3_COMPARISON_TABLE_IMAGE_TITLE))
+  const imageTitle = (title?.trim() || (data.quantity === 'expected-damage' ? undefined : getSurtrComparisonTableTitle(data)))
   const stageTitle = imageLayout === 'split' && moduleLevel !== undefined ? `${imageTitle ?? '比較表'}・MOD Lv.${moduleLevel}` : imageTitle
   const footer = <div className="surtr-unequipped-table-image-conditions">
       <span>{data.quantity === 'expected-damage' ? '総ダメージ期待値・' : ''}{getUnequippedMetricLabel(data.metric, data.comparisonBase, data.quantity)}・基準：{data.comparisonBase === 'previous' ? '1つ前の段階（Lv.1は未装備）' : getSurtrComparisonBaseLabel(data.comparisonBase ?? 'unequipped')}{data.comparisonBase?.startsWith('potential-') && '（同じMOD・段階）'}</span>
