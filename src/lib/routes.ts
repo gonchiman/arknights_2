@@ -2,6 +2,7 @@ export type AppRoute =
   | { view: 'home' }
   | { view: 'skills' }
   | { view: 'skill-effects'; selection?: SkillEffectsRouteSelection }
+  | { view: 'skill-summary'; selection?: SkillRouteSelection }
   | { view: 'operators' }
   | { view: 'operator-detail'; operatorId: string; source?: 'goldenglow-home' | 'surtr-home' }
   | { view: 'skill-json'; selection?: SkillJsonRouteSelection }
@@ -35,6 +36,7 @@ const OPERATOR_SKILL_ROUTE_PREFIX = '#/operators/skills/'
 const OPERATOR_DETAIL_ROUTE_PREFIX = '#/operators/'
 const SKILL_JSON_ROUTE = '#/skill-json'
 const SKILL_EFFECTS_ROUTE = '#/skill-effects'
+const SKILL_SUMMARY_ROUTE = '#/skill-summary'
 
 export interface SkillRouteSelection {
   operatorId: string
@@ -61,6 +63,10 @@ export function createSkillJsonHash(selection: SkillJsonRouteSelection): string 
 
 export function createSkillEffectsHash(selection: SkillEffectsRouteSelection): string {
   return createSkillSelectionHash(SKILL_EFFECTS_ROUTE, selection)
+}
+
+export function createSkillSummaryHash(selection: SkillRouteSelection): string {
+  return createSkillSelectionHash(SKILL_SUMMARY_ROUTE, selection)
 }
 
 function createSkillSelectionHash(route: string, selection: SkillRouteSelection): string {
@@ -108,6 +114,10 @@ export function parseHashRoute(hash: string): AppRoute {
     }
   }
   if (hash === '#/skill-json/overview') return { view: 'skill-json-overview' }
+  if (hash === SKILL_SUMMARY_ROUTE) return { view: 'skill-summary' }
+  if (hash.startsWith(`${SKILL_SUMMARY_ROUTE}?`)) {
+    return parseSkillSelectionRoute('skill-summary', hash.slice(SKILL_SUMMARY_ROUTE.length + 1))
+  }
   if (hash === SKILL_EFFECTS_ROUTE) return { view: 'skill-effects' }
   if (hash.startsWith(`${SKILL_EFFECTS_ROUTE}?`)) {
     return parseSkillSelectionRoute('skill-effects', hash.slice(SKILL_EFFECTS_ROUTE.length + 1))
@@ -146,7 +156,7 @@ export function parseHashRoute(hash: string): AppRoute {
   return { view: 'operators' }
 }
 
-function parseSkillSelectionRoute(view: 'skill-json' | 'skill-effects', query: string): AppRoute {
+function parseSkillSelectionRoute(view: 'skill-json' | 'skill-effects' | 'skill-summary', query: string): AppRoute {
   const params = new URLSearchParams(query)
   const operatorId = readRouteId(params, 'operatorId')
   const skillId = readRouteId(params, 'skillId')

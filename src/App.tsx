@@ -27,6 +27,7 @@ import { PageBreadcrumbs, type PageBreadcrumbsProps } from './components/PageBre
 import type { OpenOperatorDetail } from './components/OperatorDetailLink'
 import { SkillDirectory } from './components/SkillDirectory'
 import { SkillEffectsPage } from './components/SkillEffectsPage'
+import { SkillSummaryPage } from './components/SkillSummaryPage'
 import { SkillJsonPage } from './components/SkillJsonPage'
 import { SkillJsonOverviewPage } from './components/SkillJsonOverviewPage'
 import { SlideMakerPage } from './components/SlideMakerPage'
@@ -370,6 +371,12 @@ export default function App() {
           />
         ) : displayedRoute.view === 'skill-effects' ? (
           <SkillEffectsPage
+            rows={classifiedRows}
+            loading={loading}
+            initialSelection={displayedRoute.selection}
+          />
+        ) : displayedRoute.view === 'skill-summary' ? (
+          <SkillSummaryPage
             rows={classifiedRows}
             loading={loading}
             initialSelection={displayedRoute.selection}

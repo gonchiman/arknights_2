@@ -4,6 +4,7 @@ import { APP_NAV_ITEMS, DAMAGE_VERIFICATION_ITEM, GOLDENGLOW_ANALYSIS_ITEMS, SUR
 import {
   createOperatorDetailHash,
   createSkillEffectsHash,
+  createSkillSummaryHash,
   createSkillJsonHash,
   parseHashRoute,
   type SkillEffectsRouteSelection,
@@ -23,6 +24,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['operators', 'operators'],
       ['skills', 'skills'],
       ['skill-effects', 'skill-effects'],
+      ['skill-summary', 'skill-summary'],
       ['skill-json', 'skill-json'],
       ['code-analysis', 'code-analysis'],
       ['damage', 'damage'],
@@ -44,6 +46,14 @@ test('サイドバーから主要ページへ遷移できる', () => {
 
 test('比較ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/comparison'), { view: 'comparison' })
+})
+
+test('スキル効果の分解のURLはスキルとレベルを復元し、不正な選択を拒否する', () => {
+  assert.deepEqual(parseHashRoute('#/skill-summary'), { view: 'skill-summary' })
+  const selection = { operatorId: 'char_456_ash', skillId: 'skchr_ash_2', skillIndex: 2, levelIndex: 9 }
+  assert.deepEqual(parseHashRoute(createSkillSummaryHash(selection)), { view: 'skill-summary', selection })
+  assert.deepEqual(parseHashRoute('#/skill-summary?operatorId=x&skillId=x&skillIndex=2&levelIndex=-1'), { view: 'skill-summary' })
+  assert.deepEqual(parseHashRoute('#/skill-summary/extra'), { view: 'operators' })
 })
 
 test('Damage Calculator 2は既存の計算機と別のURLで開く', () => {
