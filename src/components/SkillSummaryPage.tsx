@@ -66,8 +66,9 @@ interface ContentProps {
 
 function SkillEffectBreakdownContent({ skill, levelIndex, levelLabel, corrections, storageError, onSave }: ContentProps) {
   const sourceDescription = skill.raw.description ?? skill.description
-  const result = useMemo(() => buildSkillEffectBreakdown(sourceDescription, skill.raw.blackboard ?? []),
-    [sourceDescription, skill.raw.blackboard])
+  const result = useMemo(() => buildSkillEffectBreakdown(sourceDescription, skill.raw.blackboard ?? [], {
+    metadata: skill.raw,
+  }), [sourceDescription, skill.raw])
   const context = useMemo(() => ({ operatorId: skill.operatorId, skillId: skill.skillId,
     levelIndex, sourceDescription, description: result.description }),
   [skill.operatorId, skill.skillId, levelIndex, sourceDescription, result.description])
@@ -92,11 +93,13 @@ function SkillEffectBreakdownContent({ skill, levelIndex, levelLabel, correction
     triggerRef.current?.focus({ preventScroll: true })
   }
   const json = useMemo(() => JSON.stringify({ schemaVersion: 1, operatorId: skill.operatorId,
-    skillId: skill.skillId, levelIndex, levelLabel, sourceDescription, ...result,
+    skillId: skill.skillId, levelIndex, levelLabel, sourceDescription,
+    metadata: { skillType: skill.skillType, durationType: skill.durationType, duration: skill.duration }, ...result,
     displayCorrections: displayedRows.flatMap(item => item.correction ? [{
       rowId: item.row.id, fields: item.correction.fields,
     }] : []),
-  }, null, 2), [skill.operatorId, skill.skillId, levelIndex, levelLabel, sourceDescription, result, displayedRows])
+  }, null, 2), [skill.operatorId, skill.skillId, skill.skillType, skill.durationType, skill.duration,
+    levelIndex, levelLabel, sourceDescription, result, displayedRows])
 
   return (
     <section className="skill-summary-content" aria-label="選択したスキルの効果の分解">
@@ -149,6 +152,7 @@ function SkillEffectBreakdownContent({ skill, levelIndex, levelLabel, correction
       <details className="skill-summary-data"><summary>構造化データ</summary><pre>{json}</pre></details>
       <details className="skill-summary-help"><summary>分解・修正について</summary>
         <p>効果の行を選ぶと、対応する原文と分解内容を確認できます。解析できなかった記述も一覧に残します。</p>
+        <p>原文の定型表現とスキルの発動方式・持続時間から、タイミング・条件・対象を整理します。判断できない項目は未解析として残します。</p>
         <p>修正はこのブラウザに保存します。同じスキル・レベル・原文・解析結果の組み合わせに適用します。</p>
         <p>修正は表示項目に反映します。構造化データの抽出値・単位・キーは元の解析結果を保持し、修正内容を別に記録します。</p>
       </details>

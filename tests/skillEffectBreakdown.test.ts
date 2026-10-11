@@ -268,3 +268,333 @@ test('空文は空行一覧となる', () => {
   assert.deepEqual(result.effects, [])
   assert.deepEqual(result.unresolvedPlaceholders, [])
 })
+
+test('スルトS2の基本能力列はスキル中として補完し後置の単体条件を遡及しない', () => {
+  const result = buildSkillEffectBreakdown(
+    '攻撃力+120%、攻撃範囲+1マス、攻撃対象数+1\n攻撃対象が1体のみの場合、攻撃力が160%まで上昇',
+    [], { metadata: { skillType: 'MANUAL', duration: 18 } },
+  )
+  const initial = ['attackPowerBonusRatio', 'attackRangeExtension', 'targetCountBonus']
+  for (const key of initial) {
+    const row = rowFor(result, key)
+    assert.equal(row.timing, 'スキル中')
+    assert.equal(row.condition, '—')
+    assert.equal(row.target, key === 'attackPowerBonusRatio' ? '自身' : '自身の攻撃')
+    assert.equal(row.status, 'parsed')
+    assert.doesNotMatch(row.sourceText, /1体のみ/)
+  }
+  const multiplier = rowFor(result, 'attackPowerMultiplier')
+  assert.equal(multiplier.effect?.value, 1.6)
+  assert.equal(multiplier.condition, '攻撃対象が1体のみの場合')
+  assert.equal(multiplier.sourceText, '攻撃対象が1体のみの場合、攻撃力が160%まで上昇')
+  assert.deepEqual(result.rows.filter(row => row.effect).map(row => row.effect?.key), [...initial, 'attackPowerMultiplier'])
+  assertSpans(result)
+})
+
+test('サリアS2の即時回復は対象prefixを結合し回復倍率と元変数を保持する', () => {
+  const result = buildSkillEffectBreakdown(
+    '範囲内の味方全員を治療し、対象のHPをサリアの攻撃力の{heal_scale:0%}回復',
+    [{ key: 'heal_scale', value: 1.4 }], { metadata: { skillType: 'AUTO', duration: 0 } },
+  )
+  const healing = rowFor(result, 'attackBasedHealingMultiplier')
+  assert.equal(healing.effect?.value, 1.4)
+  assert.equal(healing.effect?.unit, 'multiplier')
+  assert.equal(healing.effect?.sourceKey, 'heal_scale')
+  assert.equal(healing.timing, '発動時')
+  assert.equal(healing.condition, '—')
+  assert.equal(healing.target, '範囲内の味方全員')
+  assert.equal(healing.sourceText, result.description)
+  assert.equal(healing.status, 'parsed')
+  assertSpans(result)
+})
+
+test('HP回復と退場まで継続の文句を別の能力列にも共通適用する', () => {
+  const result = buildSkillEffectBreakdown('自身のHPを最大値まで回復\n攻撃速度+20、攻撃力+70%、最大HP+1000\n退場まで効果継続')
+  const healing = rowFor(result, 'hpRecoveryToMaximum')
+  assert.equal(healing.timing, '発動時')
+  assert.equal(healing.condition, '—')
+  assert.equal(healing.target, '自身')
+  for (const key of ['attackSpeedBonus', 'attackPowerBonusRatio', 'maxHpBonus']) {
+    const row = rowFor(result, key)
+    assert.equal(row.timing, 'スキル中')
+    assert.equal(row.condition, '—')
+    assert.equal(row.target, '自身')
+  }
+  assert.equal(rowFor(result, 'skillDurationMode').valueText, '退場まで')
+  assertSpans(result)
+})
+
+test('異なるHP漸減文でも到達秒数を減少速度の条件に保ち独立持続時間へ変えない', () => {
+  const result = buildSkillEffectBreakdown('自身のHPを最大値まで回復\n攻撃力+70%、HPが徐々に減少（減少割合は時間と共に増加し、45秒後に最大HPの15%/秒になる）\n退場まで効果継続')
+  const loss = rowFor(result, 'maxHpLossRatioPerSecond')
+  assert.equal(loss.effect?.value, 0.15)
+  assert.match(`${loss.timing} ${loss.condition}`, /45秒後/)
+  assert.equal(loss.target, '自身')
+  assert.equal(result.rows.some(row => row.effect?.key === 'durationSeconds' || row.effect?.key === 'hpLossRateRampDurationSeconds'), false)
+  assert.ok(result.rows.some(row => row.effect === null && row.status === 'partial'
+    && /HPが徐々に減少/.test(row.sourceText) && /時間と共に増加/.test(row.sourceText)))
+  assertSpans(result)
+})
+
+test('次回攻撃・パッシブ・不明な技能種別にmetadataの持続時間だけでスキル中を付けない', () => {
+  for (const [description, skillType] of [
+    ['次の通常攻撃時、攻撃力+50%', 'MANUAL'],
+    ['攻撃力+50%', 'PASSIVE'],
+    ['攻撃力+50%', 'UNKNOWN'],
+  ]) {
+    const result = buildSkillEffectBreakdown(description, [], { metadata: { skillType, duration: 30 } })
+    assert.notEqual(rowFor(result, 'attackPowerBonusRatio').timing, 'スキル中', description)
+    assertSpans(result)
+  }
+})
+
+test('モードと段階のprefixは無条件の自身強化として補完しない', () => {
+  for (const description of [
+    'モード切替後、攻撃力+50%',
+    '第1段階：攻撃力+20%；第2段階：攻撃力+40%、攻撃速度+30',
+  ]) {
+    const result = buildSkillEffectBreakdown(description, [], { metadata: { skillType: 'MANUAL', duration: 30 } })
+    const stats = result.rows.filter(row => row.effect?.key === 'attackPowerBonusRatio' || row.effect?.key === 'attackSpeedBonus')
+    assert.equal(stats.length, description.startsWith('第1段階') ? 3 : 1)
+    for (const row of stats) assert.notEqual(row.condition, '—', row.sourceText)
+    assertSpans(result)
+  }
+})
+
+test('配置後の時間を持続型metadataによるスキル中で上書きしない', () => {
+  for (const description of ['配置後10秒間、攻撃力+50%', '配置後10秒間攻撃力+50%']) {
+    const result = buildSkillEffectBreakdown(description, [], { metadata: { skillType: 'MANUAL', duration: 30 } })
+    assert.notEqual(rowFor(result, 'attackPowerBonusRatio').timing, 'スキル中')
+    assertSpans(result)
+  }
+})
+
+test('召喚物の能力値を自身にせず後続の明示した自身対象を使う', () => {
+  const result = buildSkillEffectBreakdown('召喚物の攻撃力+50%、自身の攻撃速度+20', [], { metadata: { skillType: 'MANUAL', duration: 30 } })
+  assert.notEqual(rowFor(result, 'attackPowerBonusRatio').target, '自身')
+  assert.equal(rowFor(result, 'attackSpeedBonus').target, '自身')
+  assertSpans(result)
+})
+
+test('範囲内味方の能力列を後半だけ自身へ切り替えない', () => {
+  const result = buildSkillEffectBreakdown('範囲内の味方全員の攻撃力+20%、防御力+30%', [], { metadata: { skillType: 'MANUAL', duration: 30 } })
+  for (const key of ['attackPowerBonusRatio', 'defenseBonusRatio']) {
+    const row = rowFor(result, key)
+    assert.ok(['範囲内の味方全員', '味方全員', '未解析'].includes(row.target), row.target)
+  }
+  assertSpans(result)
+})
+
+test('敵へのダメージに続く対象の防御低下を自身にしない', () => {
+  const result = buildSkillEffectBreakdown('敵に攻撃力の200%の術ダメージを与え、対象の防御力-20%', [], { metadata: { skillType: 'MANUAL', duration: 30 } })
+  assert.equal(rowFor(result, 'attackDamageMultiplier').effect?.value, 2)
+  const defense = rowFor(result, 'defenseBonusRatio')
+  assert.equal(defense.effect?.value, -0.2)
+  assert.ok(['敵', '対象', '未解析'].includes(defense.target), defense.target)
+  assertSpans(result)
+})
+
+test('同blockカンマは条件を継承するが新しい条件が現れたら旧条件を終了する', () => {
+  const result = buildSkillEffectBreakdown('HPが50%以上の時、攻撃力+20%、攻撃速度+30、HPが30%以下の時、防御力+40%', [], { metadata: { skillType: 'MANUAL', duration: 30 } })
+  assert.equal(rowFor(result, 'attackPowerBonusRatio').condition, 'HPが50%以上の時')
+  assert.equal(rowFor(result, 'attackSpeedBonus').condition, 'HPが50%以上の時')
+  const defense = rowFor(result, 'defenseBonusRatio')
+  assert.equal(defense.condition, 'HPが30%以下の時')
+  assert.doesNotMatch(defense.sourceText, /HPが50%以上/)
+  assertSpans(result)
+})
+
+test('句点・改行・括弧の境界を越えて直前のHP条件を継承しない', () => {
+  for (const description of [
+    'HPが50%以上の時、攻撃力+20%。防御力+30%',
+    'HPが50%以上の時、攻撃力+20%\n防御力+30%',
+    'HPが50%以上の時、攻撃力+20%（防御力+30%）',
+    '（HPが50%以上の時、攻撃力+20%）防御力+30%',
+  ]) {
+    const result = buildSkillEffectBreakdown(description, [], { metadata: { skillType: 'MANUAL', duration: 30 } })
+    assert.equal(rowFor(result, 'attackPowerBonusRatio').condition, 'HPが50%以上の時')
+    const defense = rowFor(result, 'defenseBonusRatio')
+    assert.doesNotMatch(defense.condition, /HPが50%以上/)
+    assert.doesNotMatch(defense.sourceText, /HPが50%以上/)
+    assertSpans(result)
+  }
+})
+
+test('未知prefixとOR条件をmetadataで無条件・自身へ昇格させず次の句点で終了する', () => {
+  for (const prefix of ['未知の状態で', 'HPが50%以上の時またはHPが30%以下の時']) {
+    const result = buildSkillEffectBreakdown(`${prefix}、攻撃力+20%、防御力+30%。攻撃速度+40`, [], { metadata: { skillType: 'MANUAL', duration: 30 } })
+    for (const key of ['attackPowerBonusRatio', 'defenseBonusRatio']) {
+      const row = rowFor(result, key)
+      assert.equal(row.condition, '未解析')
+      assert.equal(row.status, 'partial')
+      assert.notEqual(row.target, '自身')
+    }
+    assert.ok(result.rows.some(row => row.sourceText.includes(prefix)))
+    const speed = rowFor(result, 'attackSpeedBonus')
+    assert.equal(speed.condition, '—')
+    assert.equal(speed.timing, 'スキル中')
+    assert.equal(speed.target, '自身')
+    assertSpans(result)
+  }
+})
+
+test('否定した攻撃対象数は生成せず後続の独立能力値へ否定を持ち越さない', () => {
+  for (const description of ['攻撃対象数+2にはならない、攻撃力+20%', '攻撃対象数2にはならない、攻撃力+20%']) {
+    const result = buildSkillEffectBreakdown(description, [], { metadata: { skillType: 'MANUAL', duration: 30 } })
+    assert.equal(result.rows.some(row => row.effect?.key === 'targetCount' || row.effect?.key === 'targetCountBonus'), false)
+    const attack = rowFor(result, 'attackPowerBonusRatio')
+    assert.equal(attack.effect?.value, 0.2)
+    assert.equal(attack.condition, '—')
+    assert.equal(attack.target, '自身')
+    assert.doesNotMatch(attack.sourceText, /ならない/)
+    assert.ok(result.rows.some(row => row.effect === null && /にはならない/.test(row.sourceText)))
+    assertSpans(result)
+  }
+})
+
+test('metadata下でも未解決変数から数値効果を生成せず句点後の値とsourceKeyを保つ', () => {
+  const result = buildSkillEffectBreakdown('攻撃力+{missing:0%}、防御力+30%。攻撃力+{atk:0%}', [{ key: 'atk', value: 0.2 }], { metadata: { skillType: 'MANUAL', duration: 30 } })
+  assert.deepEqual(result.unresolvedPlaceholders, ['{missing:0%}'])
+  assert.ok(result.rows.some(row => row.effect === null && row.sourceText.includes('{missing:0%}')))
+  const attacks = result.rows.filter(row => row.effect?.key === 'attackPowerBonusRatio')
+  assert.equal(attacks.length, 1)
+  assert.equal(attacks[0].effect?.value, 0.2)
+  assert.equal(attacks[0].effect?.sourceKey, 'atk')
+  assert.equal(attacks[0].condition, '—')
+  assert.equal(attacks[0].target, '自身')
+  assert.equal(rowFor(result, 'defenseBonusRatio').effect?.value, 0.3)
+  assertSpans(result)
+})
+
+test('繰り返した条件能力列は各出現の原文位置と元変数を保つ', () => {
+  const clause = 'HPが50%以上の時、攻撃力+{atk:0%}、防御力+{def:0%}'
+  const result = buildSkillEffectBreakdown(`${clause}。\n${clause}。`, [{ key: 'atk', value: 0.5 }, { key: 'def', value: 0.3 }], { metadata: { skillType: 'MANUAL', duration: 30 } })
+  const rows = result.rows.filter(row => row.effect)
+  assert.deepEqual(rows.map(row => [row.effect?.key, row.effect?.sourceKey]), [
+    ['attackPowerBonusRatio', 'atk'], ['defenseBonusRatio', 'def'],
+    ['attackPowerBonusRatio', 'atk'], ['defenseBonusRatio', 'def'],
+  ])
+  assert.equal(rows.every(row => row.condition === 'HPが50%以上の時'), true)
+  assert.ok(rows[2].sourceStart > rows[0].sourceStart)
+  assert.ok(rows[3].sourceStart > rows[1].sourceStart)
+  assertSpans(result)
+})
+
+test('条件見出しだけの行は改行後の効果を無条件にせず原文に残す', () => {
+  for (const newline of ['\n', '\r\n']) {
+    const description = `HPが50%以上の時、${newline}攻撃力+50%`
+    const result = buildSkillEffectBreakdown(description, [], { metadata: { skillType: 'MANUAL', duration: 30 } })
+    const attack = rowFor(result, 'attackPowerBonusRatio')
+    assert.equal(result.description, description)
+    assert.equal(attack.effect?.value, 0.5)
+    assert.ok(['HPが50%以上の時', '未解析'].includes(attack.condition), attack.condition)
+    if (attack.condition === '未解析') {
+      assert.equal(attack.status, 'partial')
+      assert.ok(result.rows.some(row => row.effect === null && row.sourceText.includes('HPが50%以上の時')))
+    } else {
+      assert.equal(attack.sourceText, description)
+    }
+    assertSpans(result)
+  }
+})
+
+test('味方対象だけの見出しは改行後の能力列を自身にしない', () => {
+  const description = '範囲内の味方全員の\n攻撃力+20%、防御力+30%'
+  const result = buildSkillEffectBreakdown(description, [], { metadata: { skillType: 'MANUAL', duration: 30 } })
+  assert.equal(result.description, description)
+  for (const key of ['attackPowerBonusRatio', 'defenseBonusRatio']) {
+    const row = rowFor(result, key)
+    assert.ok(['範囲内の味方全員', '味方全員', '未解析'].includes(row.target), row.target)
+    if (row.target === '未解析') assert.equal(row.status, 'partial')
+  }
+  assert.ok(result.rows.some(row => row.sourceText.includes('範囲内の味方全員の')))
+  assertSpans(result)
+})
+
+test('段階見出しだけの行は後続数値を無条件にせず各見出しを保持する', () => {
+  const description = '第1段階：\n攻撃力+20%\n第2段階：\n攻撃力+40%'
+  const result = buildSkillEffectBreakdown(description, [], { metadata: { skillType: 'MANUAL', duration: 30 } })
+  assert.equal(result.description, description.replaceAll('：', ':'))
+  const attacks = result.rows.filter(row => row.effect?.key === 'attackPowerBonusRatio')
+  assert.deepEqual(attacks.map(row => row.effect?.value), [0.2, 0.4])
+  for (const [index, row] of attacks.entries()) {
+    const heading = `第${index + 1}段階`
+    assert.notEqual(row.condition, '—')
+    assert.ok(result.rows.some(source => source.sourceText.includes(heading)))
+    if (row.condition === '未解析') {
+      assert.equal(row.status, 'partial')
+      assert.ok(result.rows.some(source => source.effect === null && source.sourceText.includes(heading)))
+    }
+  }
+  assertSpans(result)
+})
+
+test('配置後時間だけの見出しを改行後にmetadataのスキル中へ置き換えない', () => {
+  const description = '配置後10秒間、\n攻撃力+50%'
+  const result = buildSkillEffectBreakdown(description, [], { metadata: { skillType: 'MANUAL', duration: 30 } })
+  const attack = rowFor(result, 'attackPowerBonusRatio')
+  assert.equal(result.description, description)
+  assert.notEqual(attack.timing, 'スキル中')
+  assert.ok(result.rows.some(row => row.sourceText.includes('配置後10秒間')))
+  if (attack.timing === '未解析') assert.equal(attack.status, 'partial')
+  assertSpans(result)
+})
+
+test('未知条件の見出しは改行後でもpartialと未解析の原文を残す', () => {
+  const description = '未知の状態では、\n攻撃力+50%'
+  const result = buildSkillEffectBreakdown(description, [], { metadata: { skillType: 'MANUAL', duration: 30 } })
+  const attack = rowFor(result, 'attackPowerBonusRatio')
+  assert.equal(result.description, description)
+  assert.equal(attack.condition, '未解析')
+  assert.equal(attack.status, 'partial')
+  assert.ok(result.rows.some(row => row.effect === null && row.sourceText.includes('未知の状態では')))
+  assertSpans(result)
+})
+
+test('直後の括弧条件を無条件の自身効果にせず条件の原文を保持する', () => {
+  for (const condition of ['HPが50%以上の時のみ', '特殊な敵が存在する場合のみ']) {
+    const description = `攻撃力+50%（${condition}）`
+    const result = buildSkillEffectBreakdown(description, [], { metadata: { skillType: 'MANUAL', duration: 30 } })
+    const attack = rowFor(result, 'attackPowerBonusRatio')
+    assert.equal(result.description, description)
+    assert.notEqual(attack.condition, '—')
+    assert.ok(result.rows.some(row => row.sourceText.includes(condition)))
+    if (attack.condition === '未解析') {
+      assert.equal(attack.status, 'partial')
+      assert.ok(result.rows.some(row => row.effect === null && row.sourceText.includes(condition)))
+    } else {
+      assert.match(attack.sourceText, /（.*）$/)
+    }
+    assertSpans(result)
+  }
+})
+
+test('後置括弧条件を結び付けた効果の後の独立行へ条件を持ち越さない', () => {
+  const description = '攻撃力+50%（HPが50%以上の時のみ）\n防御力+30%'
+  const result = buildSkillEffectBreakdown(description, [], { metadata: { skillType: 'MANUAL', duration: 30 } })
+  assert.notEqual(rowFor(result, 'attackPowerBonusRatio').condition, '—')
+  const defense = rowFor(result, 'defenseBonusRatio')
+  assert.equal(defense.condition, '—')
+  assert.equal(defense.target, '自身')
+  assert.doesNotMatch(defense.sourceText, /HPが50%以上/)
+  assertSpans(result)
+})
+
+test('サリア型の回復倍率にも後置括弧条件を保持し即時無条件回復へ補完しない', () => {
+  const result = buildSkillEffectBreakdown(
+    '範囲内の味方全員を治療し、対象のHPをサリアの攻撃力の{heal_scale:0%}回復（対象のHPが50%以下の時のみ）',
+    [{ key: 'heal_scale', value: 1.4 }], { metadata: { skillType: 'AUTO', duration: 0 } },
+  )
+  const healing = rowFor(result, 'attackBasedHealingMultiplier')
+  assert.equal(healing.effect?.value, 1.4)
+  assert.equal(healing.effect?.sourceKey, 'heal_scale')
+  assert.notEqual(healing.condition, '—')
+  assert.ok(['範囲内の味方全員', '味方全員', '未解析'].includes(healing.target), healing.target)
+  assert.ok(result.rows.some(row => row.sourceText.includes('範囲内の味方全員を治療し')))
+  assert.ok(result.rows.some(row => row.sourceText.includes('対象のHPが50%以下の時のみ')))
+  if (healing.condition === '未解析') {
+    assert.equal(healing.status, 'partial')
+    assert.ok(result.rows.some(row => row.effect === null && row.sourceText.includes('対象のHPが50%以下の時のみ')))
+  }
+  assertSpans(result)
+})
