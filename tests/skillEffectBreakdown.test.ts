@@ -598,3 +598,394 @@ test('サリア型の回復倍率にも後置括弧条件を保持し即時無�
   }
   assertSpans(result)
 })
+
+// Saria, Shu and Nearl S1 share this description in the source skill table.
+const NEXT_ATTACK_HEAL = '次の通常攻撃が周囲一定範囲内にいるHPが最大値の50%以下の味方1人に対する治療行動になり、対象のHPを治療者の攻撃力の<@ba.vup>{heal_scale:0%}</>回復\n<@ba.rem>{ct}回チャージ可能</>'
+const NEXT_ATTACK_METADATA = { skillType: 'AUTO', duration: 0, durationType: 'NONE' }
+
+function assertNextAttackHealing(
+  result: ReturnType<typeof buildSkillEffectBreakdown>, condition: string, multiplier: number,
+) {
+  for (const key of ['healingTargetCount', 'attackBasedHealingMultiplier', 'normalAttackReplacement']) {
+    const row = rowFor(result, key)
+    assert.equal(row.timing, '次の通常攻撃時', key)
+    assert.equal(row.condition, condition, key)
+    assert.equal(row.target, '周囲一定範囲内の味方', key)
+    assert.equal(row.status, 'parsed', key)
+  }
+  assert.equal(rowFor(result, 'healingTargetCount').effect?.value, 1)
+  assert.equal(rowFor(result, 'attackBasedHealingMultiplier').effect?.value, multiplier)
+  assert.equal(rowFor(result, 'normalAttackReplacement').effect?.value, '治療')
+  assertSpans(result)
+}
+
+test('サリア・シュウ・ニアールS1の共通治療文型を次回攻撃・対象HP条件・味方対象へ合成する', () => {
+  for (const name of ['サリアS1', 'シュウS1', 'ニアールS1']) {
+    const result = buildSkillEffectBreakdown(NEXT_ATTACK_HEAL, [
+      { key: 'heal_scale', value: 1.8 }, { key: 'ct', value: 3 },
+    ], { metadata: NEXT_ATTACK_METADATA })
+    assertNextAttackHealing(result, '対象のHPが最大値の50%以下', 1.8)
+    assert.equal(rowFor(result, 'attackBasedHealingMultiplier').effect?.sourceKey, 'heal_scale', name)
+    assert.equal(rowFor(result, 'healingTargetCount').effect?.sourceKey, null, name)
+    const charge = rowFor(result, 'skillChargeCount')
+    assert.equal(charge.effect?.value, 3, name)
+    assert.equal(charge.effect?.sourceKey, 'ct', name)
+    assert.equal(charge.timing, '常時', name)
+    assert.equal(charge.condition, '—', name)
+    assert.equal(charge.target, 'スキル', name)
+    assert.equal(charge.status, 'parsed', name)
+    assert.equal(charge.sourceText, '3回チャージ可能', name)
+    assert.doesNotMatch(charge.sourceText, /HPが|次の通常攻撃/, name)
+  }
+})
+
+test('グムS1は同じ範囲・味方・治療文型をHP閾値なしで合成する', () => {
+  const description = NEXT_ATTACK_HEAL.replace('HPが最大値の50%以下の', '').replace('治療者の攻撃力', 'グムの攻撃力')
+  const result = buildSkillEffectBreakdown(description, [
+    { key: 'heal_scale', value: 1.6 }, { key: 'ct', value: 3 },
+  ], { metadata: NEXT_ATTACK_METADATA })
+  assertNextAttackHealing(result, '—', 1.6)
+  assert.equal(rowFor(result, 'attackBasedHealingMultiplier').effect?.sourceKey, 'heal_scale')
+  assert.equal(rowFor(result, 'skillChargeCount').condition, '—')
+})
+
+test('治療の対象HP閾値・倍率・元変数・治療者名を変えても共通文型として合成する', () => {
+  for (const threshold of [30, 75]) {
+    const description = NEXT_ATTACK_HEAL.replace('50%', `${threshold}%`)
+      .replace('治療者の攻撃力', '臨時の治療者の攻撃力')
+      .replace('{heal_scale:0%}', '{custom_heal:0%}').replace('{ct}', '{custom_charges}')
+    const result = buildSkillEffectBreakdown(description, [
+      { key: 'custom_heal', value: 2.35 }, { key: 'custom_charges', value: 2 },
+    ], { metadata: NEXT_ATTACK_METADATA })
+    assertNextAttackHealing(result, `対象のHPが最大値の${threshold}%以下`, 2.35)
+    assert.equal(rowFor(result, 'attackBasedHealingMultiplier').effect?.sourceKey, 'custom_heal')
+    assert.equal(rowFor(result, 'skillChargeCount').effect?.sourceKey, 'custom_charges')
+    assert.equal(rowFor(result, 'skillChargeCount').effect?.value, 2)
+  }
+})
+
+test('治療文型のmarkupとCRLFを正規化された原文spanへ対応させる', () => {
+  for (const newline of ['\n', '\r\n']) {
+    const description = NEXT_ATTACK_HEAL.replace('次の通常攻撃が', '<@ba.rem>次の通常攻撃が</>')
+      .replace('50%', '<@ba.vup>５０％</>').replace('\n', newline)
+    const result = buildSkillEffectBreakdown(description, [
+      { key: 'heal_scale', value: 1.1 }, { key: 'ct', value: 1 },
+    ], { metadata: NEXT_ATTACK_METADATA })
+    assertNextAttackHealing(result, '対象のHPが最大値の50%以下', 1.1)
+    assert.doesNotMatch(result.description, /<[^>]+>|\{[^}]+\}/)
+    assert.ok(result.description.includes(`${newline}1回チャージ可能`))
+    assert.equal(rowFor(result, 'attackBasedHealingMultiplier').effect?.sourceKey, 'heal_scale')
+  }
+})
+
+test('同じ次回治療文の反復はそれぞれの元変数と原文位置を持つ', () => {
+  const clause = NEXT_ATTACK_HEAL.slice(0, NEXT_ATTACK_HEAL.indexOf('\n'))
+  const second = clause.replace('{heal_scale:0%}', '{second_heal:0%}')
+  const result = buildSkillEffectBreakdown(`${clause}。\n${second}。`, [
+    { key: 'heal_scale', value: 1.8 }, { key: 'second_heal', value: 1.8 },
+  ], { metadata: NEXT_ATTACK_METADATA })
+  for (const key of ['healingTargetCount', 'normalAttackReplacement', 'attackBasedHealingMultiplier']) {
+    const rows = result.rows.filter(row => row.effect?.key === key)
+    assert.equal(rows.length, 2, key)
+    assert.ok(rows[1].sourceStart > rows[0].sourceStart, key)
+    assert.equal(rows.every(row => row.condition === '対象のHPが最大値の50%以下' && row.status === 'parsed'), true, key)
+  }
+  assert.deepEqual(result.rows.filter(row => row.effect?.key === 'attackBasedHealingMultiplier')
+    .map(row => row.effect?.sourceKey), ['heal_scale', 'second_heal'])
+  assertSpans(result)
+})
+
+test('未解決の治療倍率は数値として生成せず範囲・対象数・次回治療行動を保つ', () => {
+  const result = buildSkillEffectBreakdown(NEXT_ATTACK_HEAL, [{ key: 'ct', value: 3 }], { metadata: NEXT_ATTACK_METADATA })
+  assert.deepEqual(result.unresolvedPlaceholders, ['{heal_scale:0%}'])
+  assert.equal(result.rows.some(row => row.effect?.key === 'attackBasedHealingMultiplier'), false)
+  assert.ok(result.rows.some(row => row.effect === null && row.sourceText.includes('{heal_scale:0%}')))
+  assert.equal(rowFor(result, 'healingTargetCount').effect?.value, 1)
+  assert.equal(rowFor(result, 'normalAttackReplacement').effect?.value, '治療')
+  assertSpans(result)
+})
+
+test('スルトS1の次回攻撃倍率は自身・無条件で補完し後続撃破条件を遡及しない', () => {
+  const result = buildSkillEffectBreakdown(
+    '次の通常攻撃時、攻撃力が<@ba.vup>{atk_scale:0%}</>まで上昇し、敵を倒すとSPを全回復する',
+    [{ key: 'atk_scale', value: 3.1 }], { metadata: NEXT_ATTACK_METADATA },
+  )
+  const attack = rowFor(result, 'attackPowerMultiplier')
+  assert.equal(attack.effect?.value, 3.1)
+  assert.equal(attack.effect?.sourceKey, 'atk_scale')
+  assert.equal(attack.timing, '次の通常攻撃時')
+  assert.equal(attack.condition, '—')
+  assert.equal(attack.target, '自身')
+  assert.equal(attack.status, 'parsed')
+  assert.doesNotMatch(attack.sourceText, /敵を倒すと/)
+  assert.ok(result.rows.some(row => row.sourceText.includes('敵を倒すと')))
+  assertSpans(result)
+})
+
+test('エクシアS1の連撃とダメージは次回攻撃を共有しヒット数とダメージ対象を区別する', () => {
+  const result = buildSkillEffectBreakdown(
+    '次の通常攻撃時、<@ba.vup>{times}</>回連続で攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与える',
+    [{ key: 'atk_scale', value: 1.45 }, { key: 'times', value: 3 }], { metadata: NEXT_ATTACK_METADATA },
+  )
+  const hits = rowFor(result, 'hitsPerAttack')
+  assert.equal(hits.effect?.value, 3)
+  assert.equal(hits.effect?.sourceKey, 'times')
+  assert.equal(hits.target, '自身の攻撃')
+  const damage = rowFor(result, 'attackDamageMultiplier')
+  assert.equal(damage.effect?.value, 1.45)
+  assert.equal(damage.effect?.sourceKey, 'atk_scale')
+  assert.equal(damage.target, '攻撃対象')
+  assert.equal(rowFor(result, 'damageType').effect?.value, 'physical')
+  for (const row of [hits, damage, rowFor(result, 'damageType')]) {
+    assert.equal(row.timing, '次の通常攻撃時')
+    assert.equal(row.condition, '—')
+    assert.equal(row.status, 'parsed')
+  }
+  assertSpans(result)
+})
+
+test('独立したチャージ行を次回攻撃やHP条件へ結び付けない', () => {
+  const result = buildSkillEffectBreakdown('次の通常攻撃時、HPが50%以上の時、攻撃力が150%まで上昇\n{charges}回チャージ可能', [
+    { key: 'charges', value: 4 },
+  ], { metadata: NEXT_ATTACK_METADATA })
+  const charge = rowFor(result, 'skillChargeCount')
+  assert.equal(charge.effect?.value, 4)
+  assert.equal(charge.effect?.sourceKey, 'charges')
+  assert.equal(charge.timing, '常時')
+  assert.equal(charge.condition, '—')
+  assert.equal(charge.target, 'スキル')
+  assert.equal(charge.sourceText, '4回チャージ可能')
+  assertSpans(result)
+})
+
+test('持続型の独立した定性攻撃範囲行は自身へ補完する', () => {
+  const result = buildSkillEffectBreakdown('攻撃範囲拡大', [], { metadata: { skillType: 'MANUAL', duration: 20 } })
+  const range = rowFor(result, 'attackRangeChange')
+  assert.equal(range.effect?.value, '拡大')
+  assert.equal(range.timing, 'スキル中')
+  assert.equal(range.condition, '—')
+  assert.equal(range.target, '自身')
+  assert.equal(range.status, 'parsed')
+  assertSpans(result)
+})
+
+test('未知条件やORを含む次回治療の前置句を無条件の解析完了にしない', () => {
+  for (const description of [
+    `特殊な条件が成立した場合、${NEXT_ATTACK_HEAL}`,
+    NEXT_ATTACK_HEAL.replace('HPが最大値の50%以下', 'HPが最大値の50%以下またはHPが最大値の20%以下'),
+  ]) {
+    const result = buildSkillEffectBreakdown(description, [
+      { key: 'heal_scale', value: 1.8 }, { key: 'ct', value: 3 },
+    ], { metadata: NEXT_ATTACK_METADATA })
+    for (const key of ['healingTargetCount', 'attackBasedHealingMultiplier']) {
+      const row = rowFor(result, key)
+      assert.equal(row.status, 'partial')
+      assert.equal(row.condition, '未解析')
+    }
+    for (const row of result.rows.filter(row => row.effect?.key === 'normalAttackReplacement')) {
+      assert.equal(row.status, 'partial')
+      assert.notEqual(row.condition, '—')
+    }
+    assert.ok(result.rows.some(row => /特殊な条件|または/.test(row.sourceText)))
+    assertSpans(result)
+  }
+})
+
+test('否定した次回治療行動と回復を肯定の治療置換にしない', () => {
+  for (const description of [
+    NEXT_ATTACK_HEAL.replace('治療行動になり', '治療行動にならず'),
+    NEXT_ATTACK_HEAL.replace('回復\n', '回復しない\n'),
+  ]) {
+    const result = buildSkillEffectBreakdown(description, [
+      { key: 'heal_scale', value: 1.8 }, { key: 'ct', value: 3 },
+    ], { metadata: NEXT_ATTACK_METADATA })
+    if (description.includes('治療行動にならず')) {
+      assert.equal(result.rows.some(row => row.effect?.key === 'normalAttackReplacement'), false)
+    }
+    for (const row of result.rows.filter(row => row.effect?.key === 'attackBasedHealingMultiplier')) {
+      assert.equal(row.status, 'partial')
+      assert.notEqual(row.condition, '—')
+    }
+    assert.ok(result.rows.some(row => /ならず|しない/.test(row.sourceText)))
+    assertSpans(result)
+  }
+})
+
+test('次回治療の括弧による追加条件を括弧境界で消して解析完了にしない', () => {
+  for (const description of [
+    NEXT_ATTACK_HEAL.replace('治療行動になり、', '治療行動になり（特殊な条件が成立した場合のみ）、'),
+    NEXT_ATTACK_HEAL.replace('回復\n', '回復（特殊な条件が成立した場合のみ）\n'),
+  ]) {
+    const result = buildSkillEffectBreakdown(description, [
+      { key: 'heal_scale', value: 1.8 }, { key: 'ct', value: 3 },
+    ], { metadata: NEXT_ATTACK_METADATA })
+    const healing = rowFor(result, 'attackBasedHealingMultiplier')
+    assert.equal(healing.status, 'partial')
+    assert.equal(healing.condition, '未解析')
+    if (description.includes('治療行動になり（')) {
+      for (const key of ['healingTargetCount', 'normalAttackReplacement']) {
+        const row = rowFor(result, key)
+        assert.equal(row.status, 'partial')
+        assert.equal(row.condition, '未解析')
+      }
+    }
+    assert.ok(result.rows.some(row => row.sourceText.includes('特殊な条件が成立した場合のみ')))
+    assertSpans(result)
+  }
+})
+
+test('コインを消費するパッシブの実治療文型を次回無条件回復へ補完しない', () => {
+  const result = buildSkillEffectBreakdown(
+    'コインを<@ba.vup>1枚</>消費し、次の通常攻撃が周囲8マス内にいるHPが最大値の70%以下の味方1人に対する治療行動になり、対象のHPを治療者の攻撃力の<@ba.vup>{attack@heal_scale:0%}</>回復する\n<@ba.rem>コインの所持上限：3</>',
+    [{ key: 'attack@heal_scale', value: 0.8 }], { metadata: { skillType: 'PASSIVE', duration: -1, durationType: 'NONE' } },
+  )
+  const healing = rowFor(result, 'attackBasedHealingMultiplier')
+  assert.equal(healing.effect?.value, 0.8)
+  assert.equal(healing.effect?.sourceKey, 'attack@heal_scale')
+  assert.equal(healing.status, 'partial')
+  assert.equal(healing.condition, '未解析')
+  assert.ok(result.rows.some(row => row.sourceText.includes('コインを1枚消費し')))
+  assertSpans(result)
+})
+
+test('次の味方治療の実文型を次の通常攻撃へ読み替えない', () => {
+  const result = buildSkillEffectBreakdown(
+    '次に味方を治療する時、対象と周囲の味方全員に1秒ごとにルーメンの攻撃力の<@ba.vup>{aura.heal_scale:0%}</>の継続回復効果を付与、<@ba.vup>{aura.projectile_life_time}</>秒継続',
+    [{ key: 'aura.heal_scale', value: 0.55 }, { key: 'aura.projectile_life_time', value: 5 }],
+    { metadata: { skillType: 'AUTO', duration: -1, durationType: 'NONE' } },
+  )
+  const healing = rowFor(result, 'attackBasedHealingMultiplier')
+  assert.equal(healing.effect?.value, 0.55)
+  assert.equal(healing.effect?.sourceKey, 'aura.heal_scale')
+  assert.equal(healing.timing, '次に味方を治療する時')
+  assert.equal(healing.condition, '未解析')
+  assert.equal(healing.target, '未解析')
+  assert.equal(healing.status, 'partial')
+  assert.match(healing.sourceText, /^次に味方を治療する時、/)
+  assertSpans(result)
+})
+
+test('次の味方治療の単純な対象HP回復は通常攻撃と異なるtimingを保って合成する', () => {
+  const result = buildSkillEffectBreakdown(
+    '次に味方を治療する時、対象のHPを攻撃力の<@ba.vup>{heal_scale:0%}</>回復\n<@ba.rem>{ct}回チャージ可能</>',
+    [{ key: 'heal_scale', value: 1.9 }, { key: 'ct', value: 2 }], { metadata: NEXT_ATTACK_METADATA },
+  )
+  const healing = rowFor(result, 'attackBasedHealingMultiplier')
+  assert.equal(healing.effect?.value, 1.9)
+  assert.equal(healing.effect?.sourceKey, 'heal_scale')
+  assert.equal(healing.timing, '次に味方を治療する時')
+  assert.equal(healing.condition, '—')
+  assert.equal(healing.target, '治療対象の味方')
+  assert.equal(healing.status, 'parsed')
+  const charge = rowFor(result, 'skillChargeCount')
+  assert.equal(charge.effect?.value, 2)
+  assert.equal(charge.effect?.sourceKey, 'ct')
+  assert.equal(charge.timing, '常時')
+  assert.equal(charge.condition, '—')
+  assert.equal(charge.target, 'スキル')
+  assertSpans(result)
+})
+
+test('グムS2の調理状態を囲む括弧から攻撃停止だけを無条件解析完了にしない', () => {
+  const result = buildSkillEffectBreakdown(
+    '<@ba.vdown>{disarm}</>秒間調理状態（攻撃停止）になり、防御力<@ba.vup>+{def:0%}</>\n調理終了後攻撃力<@ba.vup>+{atk:0%}</>、通常攻撃が周囲一定範囲内にいる味方に対する治療行動になる',
+    [{ key: 'disarm', value: 10 }, { key: 'def', value: 0.8 }, { key: 'atk', value: 0.8 }],
+    { metadata: { skillType: 'MANUAL', duration: 30, durationType: 'NONE' } },
+  )
+  const stop = rowFor(result, 'attackBehavior')
+  assert.equal(stop.effect?.value, '停止')
+  assert.equal(stop.status, 'partial')
+  assert.equal(stop.condition, '未解析')
+  assert.ok(result.rows.some(row => row.sourceText.includes('10秒間調理状態')))
+  assert.ok(result.rows.some(row => row.sourceText.includes('調理終了後')))
+  assert.equal(rowFor(result, 'defenseBonusRatio').effect?.sourceKey, 'def')
+  assert.equal(rowFor(result, 'attackPowerBonusRatio').effect?.sourceKey, 'atk')
+  assertSpans(result)
+})
+
+test('ピーコックS1の確率付き括弧が全て数値解析されても外側倍率を無条件にしない', () => {
+  const result = buildSkillEffectBreakdown(
+    '次の通常攻撃時、攻撃力が<@ba.vup>{atk_scale:0%}</>まで上昇（<@ba.vup>{peacok_s_1[crit].prob:0%}</>の確率で攻撃力が<@ba.vup>{atk_scale_fake:0%}</>まで上昇）\n<@ba.rem>3回チャージ可能</>',
+    [{ key: 'atk_scale', value: 2 }, { key: 'peacok_s_1[crit].prob', value: 0.05 }, { key: 'atk_scale_fake', value: 8 }],
+    { metadata: NEXT_ATTACK_METADATA },
+  )
+  const multipliers = result.rows.filter(row => row.effect?.key === 'attackPowerMultiplier')
+  assert.deepEqual(multipliers.map(row => [row.effect?.value, row.effect?.sourceKey]), [[2, 'atk_scale'], [8, 'atk_scale_fake']])
+  assert.equal(multipliers[0].status, 'partial')
+  assert.equal(multipliers[0].condition, '未解析')
+  assert.match(multipliers[0].sourceText, /（5%の確率で攻撃力が800%まで上昇）$/)
+  assert.equal(rowFor(result, 'effectProbability').effect?.value, 0.05)
+  assert.equal(rowFor(result, 'effectProbability').effect?.sourceKey, 'peacok_s_1[crit].prob')
+  assertSpans(result)
+})
+
+test('敵主体の通常攻撃のヒット数を自身の攻撃へ補完しない', () => {
+  const result = buildSkillEffectBreakdown('敵の通常攻撃が2連撃になる', [], { metadata: { skillType: 'MANUAL', duration: 20 } })
+  const hits = rowFor(result, 'hitsPerAttack')
+  assert.equal(hits.effect?.value, 2)
+  assert.ok(['敵', '敵の攻撃', '未解析'].includes(hits.target), hits.target)
+  assert.notEqual(hits.target, '自身')
+  assert.ok(result.rows.some(row => row.sourceText.includes('敵の')))
+  assertSpans(result)
+})
+
+test('連撃になる場合という仮定を肯定の連撃や無条件能力値へ変えない', () => {
+  const result = buildSkillEffectBreakdown('通常攻撃が2連撃になる場合、攻撃力+50%', [], { metadata: { skillType: 'MANUAL', duration: 20 } })
+  for (const row of result.rows.filter(row => row.effect?.key === 'hitsPerAttack')) {
+    assert.notEqual(row.status, 'parsed')
+    assert.notEqual(row.condition, '—')
+  }
+  const attack = rowFor(result, 'attackPowerBonusRatio')
+  assert.equal(attack.status, 'partial')
+  assert.equal(attack.condition, '未解析')
+  assert.ok(result.rows.some(row => row.sourceText.includes('通常攻撃が2連撃になる場合')))
+  assertSpans(result)
+})
+
+test('カンマで続いたチャージ可能回数も次回攻撃のtimingを継承しない', () => {
+  const result = buildSkillEffectBreakdown('次の通常攻撃時、攻撃力が150%まで上昇、{charges}回チャージ可能', [
+    { key: 'charges', value: 4 },
+  ], { metadata: NEXT_ATTACK_METADATA })
+  const charge = rowFor(result, 'skillChargeCount')
+  assert.equal(charge.effect?.value, 4)
+  assert.equal(charge.effect?.sourceKey, 'charges')
+  assert.equal(charge.timing, '常時')
+  assert.equal(charge.condition, '—')
+  assert.equal(charge.target, 'スキル')
+  assert.equal(charge.status, 'parsed')
+  assert.equal(charge.sourceText, '4回チャージ可能')
+  assertSpans(result)
+})
+
+test('括弧を囲む確率条件が数値解析されても内部の攻撃力と治療行動を無条件にしない', () => {
+  for (const [description, key, value, probability] of [
+    ['50%の確率で（攻撃力+50%）', 'attackPowerBonusRatio', 0.5, 0.5],
+    ['5%の確率で（攻撃力が800%まで上昇）', 'attackPowerMultiplier', 8, 0.05],
+  ] as const) {
+    const result = buildSkillEffectBreakdown(description, [], { metadata: { skillType: 'MANUAL', duration: 30 } })
+    const attack = rowFor(result, key)
+    assert.equal(attack.effect?.value, value)
+    assert.equal(attack.effect?.sourceKey, null)
+    assert.equal(attack.status, 'partial')
+    assert.equal(attack.condition, '未解析')
+    assert.match(attack.sourceText, /^\d+%の確率で（/)
+    assert.equal(rowFor(result, 'effectProbability').effect?.value, probability)
+    assertSpans(result)
+  }
+  const result = buildSkillEffectBreakdown(
+    '50%の確率で（次の通常攻撃が範囲内の味方1人に対する治療行動になり、対象のHPを攻撃力の180%回復）',
+    [], { metadata: NEXT_ATTACK_METADATA },
+  )
+  for (const [key, value] of [
+    ['normalAttackReplacement', '治療'], ['healingTargetCount', 1], ['attackBasedHealingMultiplier', 1.8],
+  ] as const) {
+    const row = rowFor(result, key)
+    assert.equal(row.effect?.value, value)
+    assert.equal(row.effect?.sourceKey, null)
+    assert.equal(row.status, 'partial')
+    assert.equal(row.condition, '未解析')
+    assert.match(row.sourceText, /^50%の確率で（/)
+  }
+  assert.equal(rowFor(result, 'effectProbability').effect?.value, 0.5)
+  assertSpans(result)
+})
