@@ -1,0 +1,25 @@
+.gg-switch-table-section { min-width: 0; border: 1px solid var(--border); background: var(--surface); }
+.gg-switch-table-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; min-height: 53px; padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--surface-soft); }
+.gg-switch-table-heading h3 { margin: 0; font-size: 12px; }
+.gg-switch-table-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.gg-switch-table-actions .button { min-height: 32px; padding: 6px 10px; font-size: 11px; }
+.gg-switch-table-wrap { max-width: 100%; overflow-x: auto; }
+.gg-switch-table-content { width: 100%; min-width: var(--gg-switch-table-min-width); border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.gg-switch-table-content th, .gg-switch-table-content td { padding: 7px 8px; border: 1px solid var(--border); white-space: nowrap; }
+.gg-switch-table-content th { background: var(--surface-soft); font-weight: 500; text-align: center; }
+.gg-switch-table-content td { text-align: right; }
+.gg-switch-table-rank-column { width: 50px; }
+.gg-switch-table-resistance-column { width: 76px; }
+.gg-switch-table-content tbody th:not(.gg-switch-table-rank-cell) { text-align: right; }
+.gg-switch-table-module-label { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.gg-switch-table-module-label i { width: 9px; height: 9px; flex: none; }
+.gg-switch-table-status { margin: 0; padding: 10px 12px; color: var(--text-muted); font-size: 12px; }
+.gg-switch-table-title-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.gg-switch-table-title-heading > span { color: var(--text-muted); font-size: 12px; }
+.gg-switch-table-title-controls { display: flex; align-items: center; gap: 8px; }
+.gg-switch-table-title-controls input { flex: 1; min-width: 0; }
+.gg-switch-table-title-controls .button { flex-shrink: 0; min-height: 42px; }
+@media (max-width: 400px) {
+  .gg-switch-table-title-controls { flex-wrap: wrap; }
+  .gg-switch-table-title-controls input { flex-basis: 100%; }
+}

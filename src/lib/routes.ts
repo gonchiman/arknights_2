@@ -21,6 +21,7 @@ export type AppRoute =
   | { view: 'goldenglow-performance' }
   | { view: 'goldenglow-target-switch' }
   | { view: 'goldenglow-target-switch-two' }
+  | { view: 'goldenglow-target-switch-three' }
   | { view: 'goldenglow-single-trial' }
   | { view: 'goldenglow-trial-benchmark' }
   | { view: 'comparison' }
@@ -140,6 +141,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/analysis/goldenglow/explosion') return { view: 'goldenglow-guide' }
   if (hash === '#/analysis/goldenglow/target-switch') return { view: 'goldenglow-target-switch' }
   if (hash === '#/analysis/goldenglow/target-switch-2') return { view: 'goldenglow-target-switch-two' }
+  if (hash === '#/analysis/goldenglow/target-switch-3') return { view: 'goldenglow-target-switch-three' }
   if (hash === '#/analysis/goldenglow/single-trial') return { view: 'goldenglow-single-trial' }
   if (hash === '#/analysis/goldenglow/trial-benchmark') return { view: 'goldenglow-trial-benchmark' }
   if (hash === '#/guides/goldenglow-explosion') return { view: 'goldenglow-guide' }

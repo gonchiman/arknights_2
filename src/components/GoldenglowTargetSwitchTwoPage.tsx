@@ -376,6 +376,7 @@ export function GoldenglowTargetSwitchTwoPage({ rows, loading, error, onRetry }:
     {loading ? <p className="calculator-loading" role="status">スキル情報を読み込み中…</p> : !skill ? (
       <div className="error-box" role="alert"><p>{error ?? 'ゴールデングローのスキル情報を取得できませんでした。'}</p><button type="button" className="button secondary" onClick={onRetry}>再読み込み</button></div>
     ) : <>
+      <a className="gg3-page-link" href="#/analysis/goldenglow/target-switch-3">ターゲット切替3の比較表へ</a>
       <GoldenglowOperatorInfo skill={skill} loading={loading} defaultOpen={false} />
       <CollapsibleCalculatorPanel id="gg2-common-settings" number="02" title="共通設定"
         summary={`${buildLabel}・${resistanceMode ? '術耐性比較' : `術耐性 ${resistance}`}・切り替え ${delay}秒`}

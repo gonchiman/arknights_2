@@ -1,0 +1,31 @@
+.gg3-page { min-width: 0; }
+.gg3-page-link { width: fit-content; margin: -12px 0 4px; color: var(--text); font-size: 12px; text-underline-offset: 3px; }
+.gg3-condition-fields { min-width: 0; margin: 0; padding: 0; border: 0; display: grid; gap: 20px; }
+.gg3-fields { display: flex; align-items: end; flex-wrap: wrap; gap: 12px 24px; }
+.gg3-fields > .calculator-field { flex: 0 1 180px; min-width: 120px; }
+.gg3-axis-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; border-top: 1px solid var(--border); padding-top: 18px; }
+.gg3-axis-fields > fieldset { min-width: 0; border: 0; padding: 0; margin: 0; display: grid; align-content: start; gap: 12px; }
+.gg3-axis-fields legend { margin-bottom: 12px; color: var(--text-soft); font-size: 12px; font-weight: 600; }
+.gg3-bounds { display: flex; gap: 12px; }
+.gg3-bounds .calculator-field { flex: 1 1 0; min-width: 0; }
+.gg3-samples { color: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.gg3-display-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 16px 24px; }
+.gg3-display-controls > .calculator-field { flex: 0 1 180px; min-width: 120px; }
+.gg3-color-control { display: flex; align-items: end; gap: 8px; }
+.gg3-rank-control { display: flex; align-items: center; gap: 8px; min-height: 36px; color: var(--text-soft); font-size: 12px; }
+.gg3-run-actions { display: flex; gap: 8px; }
+.gg3-run-actions .button { white-space: nowrap; }
+.gg3-calculation-status { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.gg3-calculation-status progress { width: 130px; height: 8px; accent-color: var(--text); }
+.gg3-empty { padding: 30px 12px; text-align: center; color: var(--text-muted); font-size: 12px; }
+.gg3-error { color: var(--danger); font-size: 12px; }
+.gg3-help { color: var(--text-soft); font-size: 12px; line-height: 1.8; }
+.gg3-help summary { cursor: pointer; }
+.gg3-help .gg3-fields { margin-top: 12px; }
+@media (max-width: 640px) {
+  .gg3-axis-fields { grid-template-columns: minmax(0, 1fr); }
+  .gg3-display-controls { gap: 12px; }
+  .gg3-display-controls > .calculator-field, .gg3-color-control { flex: 1 1 130px; }
+  .gg3-display-controls select { min-height: 44px; }
+  .gg3-page .collapsible-panel-heading-summary > span { display: none; }
+}

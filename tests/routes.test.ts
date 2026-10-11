@@ -133,6 +133,7 @@ test('GGの専用トップから各分析を個別のhashで開く', () => {
       ['goldenglow-guide', '#/analysis/goldenglow/explosion', '爆発分析', '爆発確率・期待値', 'operator-analysis', 'goldenglow-guide'],
       ['goldenglow-target-switch', '#/analysis/goldenglow/target-switch', 'ターゲット切替', '敵HP・切替時間', 'operator-analysis', 'goldenglow-target-switch'],
       ['goldenglow-target-switch-two', '#/analysis/goldenglow/target-switch-2', 'ターゲット切替2', '敵HP・スキル総ダメージ', 'operator-analysis', 'goldenglow-target-switch-two'],
+      ['goldenglow-target-switch-three', '#/analysis/goldenglow/target-switch-3', 'ターゲット切替3', '敵HP・術耐性別のMOD比較表', 'operator-analysis', 'goldenglow-target-switch-three'],
       ['goldenglow-single-trial', '#/analysis/goldenglow/single-trial', '単発シミュレーション', '', 'operator-analysis', 'goldenglow-single-trial'],
       ['goldenglow-trial-benchmark', '#/analysis/goldenglow/trial-benchmark', '試行回数の調査', '試行回数・計算時間', 'operator-analysis', 'goldenglow-trial-benchmark'],
     ],
