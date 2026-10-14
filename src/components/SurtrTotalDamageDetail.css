@@ -1,0 +1,35 @@
+.surtr-total-damage-detail { min-width: 0; border: 1px solid var(--border); background: var(--surface); }
+.surtr-total-damage-detail-body { display: grid; gap: 16px; min-width: 0; padding: 16px; }
+.surtr-total-damage-summary-table { min-width: 720px; }
+.surtr-total-damage-summary-table thead th { text-align: center; }
+.surtr-total-damage-summary-table th:first-child { width: auto; }
+.surtr-total-damage-summary-table thead tr:first-child > th:first-child { text-align: left; }
+.surtr-total-damage-summary-table tbody td { min-width: 80px; }
+.surtr-total-damage-summary-table tbody td:nth-child(2n) { text-align: center; }
+.surtr-total-damage-detail-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.surtr-total-damage-retreat { margin-left: auto; color: var(--text-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
+.surtr-total-damage-timeline-scroll { min-width: 0; overflow-x: auto; max-width: 100%; border: 1px solid var(--border); }
+.surtr-total-damage-timeline { display: block; width: 100%; min-width: 600px; height: auto; color: var(--text); font-family: inherit; }
+.surtr-total-damage-timeline-phase { fill: var(--surface-soft); }
+.surtr-total-damage-timeline-track { stroke: var(--border-strong); stroke-width: 1; }
+.surtr-total-damage-timeline-trigger { stroke: var(--text-soft); stroke-width: 1.5; stroke-dasharray: 6 5; }
+.surtr-total-damage-timeline-connection { stroke-width: 1; opacity: .5; }
+.surtr-total-damage-timeline-label, .surtr-total-damage-timeline-phase-label { fill: var(--text-soft); font-size: 12px; }
+.surtr-total-damage-timeline-tick { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.surtr-total-damage-timeline-trigger-label { fill: var(--text); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.surtr-total-damage-timeline-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 20px; margin-top: -8px; color: var(--text-soft); font-size: 11px; }
+.surtr-total-damage-timeline-legend > :last-child { margin-left: auto; }
+.surtr-total-damage-event-table { min-width: 660px; }
+.surtr-total-damage-event-table th:first-child { width: auto; }
+.surtr-total-damage-event-table thead th:not(:first-child), .surtr-total-damage-event-table tbody td:nth-child(4), .surtr-total-damage-event-table tbody td:nth-child(5) { text-align: center; }
+.surtr-total-damage-event-table .surtr-total-damage-carried-row > * { font-weight: 600; }
+.surtr-total-damage-all-events { margin-top: 0; }
+.surtr-total-damage-all-events > .surtr-s3-table-wrap { margin-top: 12px; }
+.surtr-total-damage-empty { padding: 0 12px; }
+@media (max-width: 640px) {
+  .surtr-total-damage-detail-body { padding: 12px; gap: 12px; }
+  .surtr-total-damage-detail-controls .surtr-s3-output-control { flex: 1 1 100%; }
+  .surtr-total-damage-detail-controls select { flex: 1; min-width: 0; }
+  .surtr-total-damage-summary-table, .surtr-total-damage-event-table { font-size: 11px; }
+  .surtr-total-damage-timeline-legend > :last-child { flex: 1 1 100%; margin-left: 0; }
+}

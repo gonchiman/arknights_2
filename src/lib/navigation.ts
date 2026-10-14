@@ -1,4 +1,4 @@
-export type NavigationPage = 'home' | 'operators' | 'skills' | 'skill-effects' | 'skill-summary' | 'skill-json' | 'code-analysis' | 'damage' | 'damage-two' | 'damage-verification' | 'comparison' | 'enemies' | 'enemy-analysis' | 'main-enemy-trends' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-s3-comparison' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-target-switch-three' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
+export type NavigationPage = 'home' | 'operators' | 'skills' | 'skill-effects' | 'skill-summary' | 'skill-json' | 'code-analysis' | 'damage' | 'damage-two' | 'damage-verification' | 'comparison' | 'enemies' | 'enemy-analysis' | 'main-enemy-trends' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-s3-comparison' | 'surtr-total-damage' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-target-switch-three' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -47,6 +47,13 @@ export const SURTR_ANALYSIS_ITEMS: readonly NavigationItem[] = [
     id: 'surtr-duration',
     href: '#/analysis/surtr/duration',
     label: 'S3 継続時間',
+    description: '',
+    section: 'operator-analysis',
+  },
+  {
+    id: 'surtr-total-damage',
+    href: '#/analysis/surtr/total-damage',
+    label: 'S3 総ダメージ',
     description: '',
     section: 'operator-analysis',
   },

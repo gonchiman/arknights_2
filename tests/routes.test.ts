@@ -161,6 +161,7 @@ test('スルトの専用トップから各分析を開き、詳細URLと区別�
     ['surtr-s3', '#/analysis/surtr/s3', 'S3 DPS分析', 'surtr-s3'],
     ['surtr-s3-comparison', '#/analysis/surtr/s3-comparison', 'S3 MOD・潜在比較', 'surtr-s3-comparison'],
     ['surtr-duration', '#/analysis/surtr/duration', 'S3 継続時間', 'surtr-duration'],
+    ['surtr-total-damage', '#/analysis/surtr/total-damage', 'S3 総ダメージ', 'surtr-total-damage'],
     ['surtr-remnant-attacks', '#/analysis/surtr/remnant-attacks', '余燼中の攻撃回数', 'surtr-remnant-attacks'],
   ])
   assert.deepEqual(parseHashRoute('#/operators/char_350_surtr'), {

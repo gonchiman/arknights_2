@@ -1,0 +1,17 @@
+.surtr-total-damage-fields { margin: 20px 0 16px; padding: 0; border: 0; min-width: 0; }
+.surtr-total-damage-fields legend { margin-bottom: 12px; color: var(--text-soft); font-size: 12px; }
+.surtr-total-damage-time-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.surtr-total-damage-target-fields { margin: 16px 0; }
+.surtr-total-damage-resistance-fields { margin-top: 0; }
+.surtr-total-damage-resistance-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 16px; }
+.surtr-total-damage-table-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.surtr-total-damage-retreat-toggle { margin-top: 12px; }
+.surtr-total-damage-page .surtr-s3-axis-error { margin-top: 8px; }
+.surtr-total-damage-page .surtr-s3-table-section { min-width: 0; }
+@media (max-width: 640px) {
+  .surtr-total-damage-time-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .surtr-total-damage-time-fields > :last-child { grid-column: 1 / -1; }
+  .surtr-total-damage-resistance-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .surtr-total-damage-resistance-controls > :last-child { grid-column: 1 / -1; }
+  .surtr-total-damage-page .surtr-s3-segments { flex-wrap: wrap; }
+}
