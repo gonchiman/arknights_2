@@ -1,0 +1,5 @@
+.operator-profile-dialog { width: min(1180px, calc(100vw - 32px)); }
+.operator-profile-modal-subtitle { margin: 0 0 12px; color: var(--text-muted); font-size: 11px; line-height: 1.5; }
+@media (max-width: 640px) {
+  .operator-profile-dialog { width: calc(100vw - 16px); }
+}

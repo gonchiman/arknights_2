@@ -7,10 +7,11 @@ interface Props {
   skill: SkillRecord
   skillLevelIndex?: number
   showSkillId?: boolean
+  descriptionOnly?: boolean
   onClose: () => void
 }
 
-export function SkillEffectModal({ skill, skillLevelIndex, showSkillId = false, onClose }: Props) {
+export function SkillEffectModal({ skill, skillLevelIndex, showSkillId = false, descriptionOnly = false, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const titleId = useId()
@@ -91,7 +92,7 @@ export function SkillEffectModal({ skill, skillLevelIndex, showSkillId = false, 
             <p>{description}</p>
           </section>
 
-          <section aria-labelledby={`${titleId}-activation`}>
+          {!descriptionOnly && <section aria-labelledby={`${titleId}-activation`}>
             <h3 id={`${titleId}-activation`}>発動情報</h3>
             <dl className="skill-effect-stat-grid">
               <div><dt>発動契機</dt><dd>{details.activation}</dd></div>
@@ -100,16 +101,16 @@ export function SkillEffectModal({ skill, skillLevelIndex, showSkillId = false, 
               <div><dt>初期SP</dt><dd>{details.initialSp}</dd></div>
               <div><dt>必要SP</dt><dd>{details.requiredSp}</dd></div>
             </dl>
-          </section>
+          </section>}
 
-          <section aria-labelledby={`${titleId}-classification`}>
+          {!descriptionOnly && <section aria-labelledby={`${titleId}-classification`}>
             <h3 id={`${titleId}-classification`}>効果の分類</h3>
             <div className="skill-effect-classification-grid">
               <SkillEffectTags title="ダメージ構成" values={details.damageComponents} />
               <SkillEffectTags title="条件・段階" values={details.conditions} />
               <SkillEffectTags title="比較できる出力" values={details.outputs} />
             </div>
-          </section>
+          </section>}
           {showSkillId && (
             <details className="skill-effect-id">
               <summary>スキルID</summary>

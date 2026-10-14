@@ -24,10 +24,12 @@ import { EnemyDatabase } from './components/EnemyDatabase'
 import { OperatorComparison } from './components/OperatorComparison'
 import { OperatorDatabase } from './components/OperatorDatabase'
 import { OperatorDetailModal } from './components/OperatorDetailModal'
+import { OperatorProfileModal } from './components/OperatorProfileModal'
 import { OperatorDetailPage } from './components/OperatorDetailPage'
 import { PageBreadcrumbs, type PageBreadcrumbsProps } from './components/PageBreadcrumbs'
 import type { OpenOperatorDetail } from './components/OperatorDetailLink'
 import { SkillDirectory } from './components/SkillDirectory'
+import { SkillCoarseClassificationPage } from './components/SkillCoarseClassificationPage'
 import { SkillEffectsPage } from './components/SkillEffectsPage'
 import { SkillSummaryPage } from './components/SkillSummaryPage'
 import { SkillJsonPage } from './components/SkillJsonPage'
@@ -131,7 +133,7 @@ export default function App() {
         const trigger = detailTriggerRef.current
         detailTriggerRef.current = null
         window.requestAnimationFrame(() => {
-          if (trigger?.isConnected) trigger.focus()
+          if (trigger?.isConnected) trigger.focus({ preventScroll: true })
         })
         return
       }
@@ -375,6 +377,8 @@ export default function App() {
             loading={loading}
             onOpenOperatorDetail={openOperatorDetail}
           />
+        ) : displayedRoute.view === 'skill-classification' ? (
+          <SkillCoarseClassificationPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
         ) : displayedRoute.view === 'skill-effects' ? (
           <SkillEffectsPage
             rows={classifiedRows}
@@ -434,7 +438,15 @@ export default function App() {
       </div>
 
       {route.view === 'operator-detail' && detailBackgroundRoute && detailOperator && (
-        <OperatorDetailModal
+        detailBackgroundRoute.view === 'skill-classification' ? <OperatorProfileModal
+          key={detailOperator.operatorId}
+          operator={detailOperator}
+          comparisonOperators={operatorRecords}
+          skills={detailOperatorSkills}
+          overrides={overrides}
+          onOverride={updateOverride}
+          onClose={closeOperatorDetail}
+        /> : <OperatorDetailModal
           operator={detailOperator}
           comparisonOperators={operatorRecords}
           skills={detailOperatorSkills}

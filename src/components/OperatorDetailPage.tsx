@@ -14,6 +14,7 @@ export interface OperatorDetailPageProps extends OperatorDetailCommonProps {
   backHref?: string
   backLabel?: string
   breadcrumbs?: PageBreadcrumbsProps
+  embedded?: boolean
 }
 
 const INTEGER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
@@ -25,7 +26,7 @@ const formatStat = (value: number | null, suffix = '') => value === null
 export function OperatorDetailPage({
   operator, comparisonOperators, skills,
   backHref = '#/operators', backLabel = 'オペレーター一覧へ戻る',
-  breadcrumbs,
+  breadcrumbs, embedded = false,
 }: OperatorDetailPageProps) {
   const titleId = useId()
   const [skillSelection, setSkillSelection] = useState<{ operatorId: string; skillId: string } | null>(null)
@@ -51,9 +52,10 @@ export function OperatorDetailPage({
   const skillEffectTitleId = `${titleId}-skill-effect-title`
 
   return (
-    <section className="operator-detail-page" aria-labelledby={titleId}>
+    <section className="operator-detail-page" aria-labelledby={embedded ? undefined : titleId}
+      aria-label={embedded ? `${operator.name}のオペレーター情報` : undefined}>
       <div className="calculator-page operator-profile-layout">
-        <div className={breadcrumbs ? 'page-heading-with-breadcrumbs' : undefined}>
+        {!embedded && <div className={breadcrumbs ? 'page-heading-with-breadcrumbs' : undefined}>
           {breadcrumbs && <PageBreadcrumbs {...breadcrumbs} />}
           <header className="page-intro operator-profile-intro">
             <div>
@@ -63,7 +65,7 @@ export function OperatorDetailPage({
             </div>
             {!breadcrumbs && <a className="operator-detail-page-back" href={backHref}>{backLabel}</a>}
           </header>
-        </div>
+        </div>}
 
         <CollapsibleCalculatorPanel
           id="operator-profile-basics" number="01" title="基本情報"
