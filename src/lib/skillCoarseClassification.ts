@@ -27,10 +27,27 @@ export const SKILL_COARSE_CATEGORY_LABELS: Record<SkillCoarseCategory, string> =
   UNKNOWN: '未分類',
 }
 
+export const SKILL_COARSE_CATEGORY_DESCRIPTIONS: Record<SkillCoarseCategory, string> = {
+  NEXT_ATTACK: '次の通常攻撃で強化・追加効果を発揮',
+  SUSTAINED: '効果時間中、能力や通常攻撃が変化',
+  BURST: '発動時・終了時などに単発または連続攻撃',
+  MODE: 'モードを切り替えて効果が変化',
+  SUMMON: '召喚物や設置物を出す',
+  PASSIVE: '常時または配置時に効果を発揮',
+  UNKNOWN: '説明文から分類を特定できない効果',
+}
+
 export const SKILL_COARSE_CATEGORY_OPTIONS = SKILL_COARSE_CATEGORIES.map((value) => ({
   value,
   label: SKILL_COARSE_CATEGORY_LABELS[value],
 }))
+
+export interface SkillCoarseCategorySummary {
+  value: SkillCoarseCategory
+  label: string
+  description: string
+  count: number
+}
 
 export interface SkillCoarseFilters {
   query: string
@@ -85,6 +102,22 @@ export function getSkillCoarseCategories(row: SkillRecord): SkillCoarseCategory[
   if (candidates.size === 0) candidates.add('UNKNOWN')
 
   return SKILL_COARSE_CATEGORIES.filter((category) => candidates.has(category))
+}
+
+export function summarizeSkillCoarseCategories(rows: SkillRecord[]): SkillCoarseCategorySummary[] {
+  const counts = new Map<SkillCoarseCategory, number>()
+  for (const row of rows) {
+    for (const category of getSkillCoarseCategories(row)) {
+      counts.set(category, (counts.get(category) ?? 0) + 1)
+    }
+  }
+
+  return SKILL_COARSE_CATEGORIES.map((value) => ({
+    value,
+    label: SKILL_COARSE_CATEGORY_LABELS[value],
+    description: SKILL_COARSE_CATEGORY_DESCRIPTIONS[value],
+    count: counts.get(value) ?? 0,
+  }))
 }
 
 export function filterSkillCoarseRows(

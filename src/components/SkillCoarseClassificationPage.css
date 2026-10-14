@@ -14,6 +14,17 @@
 .skill-coarse-link, .skill-coarse-description-trigger { color: inherit; text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
 .skill-coarse-description-trigger { border: 0; background: transparent; padding: 0; font: inherit; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
 .skill-coarse-link:hover, .skill-coarse-description-trigger:hover { color: var(--accent); }
+.skill-coarse-tabs { background: var(--surface); }
+.skill-coarse-category-table { min-width: 580px; }
+.skill-coarse-category-table th:nth-child(1) { width: 28%; }
+.skill-coarse-category-table th:nth-child(2) { width: auto; }
+.skill-coarse-category-table th:nth-child(3) { width: 120px; }
+.skill-coarse-count { text-align: right; font-variant-numeric: tabular-nums; }
+.skill-coarse-category-selected { background: var(--surface-hover); }
+.skill-coarse-overview-meta > .filter-reset-button { margin-left: auto; }
+.skill-coarse-count-help { padding: 9px 10px; color: var(--text-muted); font-size: 11px; }
+.skill-coarse-count-help summary { width: fit-content; cursor: pointer; }
+.skill-coarse-count-help p { margin: 7px 0 0; line-height: 1.7; }
 @media (max-width: 1100px) {
   .skill-coarse-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
@@ -23,4 +34,5 @@
 }
 @media (pointer: coarse) {
   .skill-coarse-description-trigger, .skill-coarse-link { display: inline-flex; align-items: center; min-height: 44px; }
+  .skill-coarse-count-help summary { min-height: 44px; padding-block: 12px; }
 }

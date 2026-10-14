@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import {
   DEFAULT_SKILL_COARSE_FILTERS,
   SKILL_COARSE_CATEGORY_LABELS,
   SKILL_COARSE_CATEGORY_OPTIONS,
   filterSkillCoarseRows,
   getSkillCoarseCategories,
+  summarizeSkillCoarseCategories,
   type SkillCoarseCategory,
   type SkillCoarseFilters,
 } from '../lib/skillCoarseClassification'
@@ -25,15 +26,29 @@ const EMPTY_FILTERS: SkillCoarseFilters = {
   query: '', profession: 'ALL', rarity: 'ALL', category: 'ALL',
 }
 
+const TABS = [['skills', 'スキル一覧'], ['categories', '大分類一覧']] as const
+type ListTab = typeof TABS[number][0]
+
 export function SkillCoarseClassificationPage({ rows, loading, onOpenOperatorDetail }: Props) {
   const [filters, setFilters] = useState<SkillCoarseFilters>({ ...DEFAULT_SKILL_COARSE_FILTERS })
+  const [activeTab, setActiveTab] = useState<ListTab>('skills')
+  const tabIdPrefix = useId()
+  const skillsTab = useRef<HTMLButtonElement>(null)
   const [detail, setDetail] = useState<{ skill: SkillRecord; trigger: HTMLButtonElement } | null>(null)
   const professionOptions = useMemo(() => {
     const labels = new Map(rows.map((row) => [row.profession, row.professionLabel]))
     return PROFESSION_ORDER.filter((profession) => labels.has(profession))
       .map((profession) => ({ value: profession, label: labels.get(profession) }))
   }, [rows])
-  const visibleRows = useMemo(() => filterSkillCoarseRows(rows, filters), [rows, filters])
+  const baseRows = useMemo(() => filterSkillCoarseRows(rows, {
+    query: filters.query, profession: filters.profession, rarity: filters.rarity, category: 'ALL',
+  }), [rows, filters.query, filters.profession, filters.rarity])
+  const visibleRows = useMemo(() => {
+    const category = filters.category
+    return category === 'ALL' ? baseRows
+      : baseRows.filter((row) => getSkillCoarseCategories(row).includes(category))
+  }, [baseRows, filters.category])
+  const categoryRows = useMemo(() => summarizeSkillCoarseCategories(baseRows), [baseRows])
   const hasFilters = filters.query.trim() !== '' || filters.profession !== 'ALL'
     || filters.rarity !== 'ALL' || filters.category !== 'ALL'
 
@@ -43,6 +58,25 @@ export function SkillCoarseClassificationPage({ rows, loading, onOpenOperatorDet
     window.requestAnimationFrame(() => {
       if (trigger?.isConnected) trigger.focus({ preventScroll: true })
     })
+  }
+
+  const selectCategory = (category: SkillCoarseCategory | 'ALL') => {
+    setFilters((current) => ({ ...current, category }))
+    setActiveTab('skills')
+    window.requestAnimationFrame(() => skillsTab.current?.focus({ preventScroll: true }))
+  }
+
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
+    let nextIndex: number | null = null
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % TABS.length
+    if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + TABS.length) % TABS.length
+    if (event.key === 'Home') nextIndex = 0
+    if (event.key === 'End') nextIndex = TABS.length - 1
+    if (nextIndex === null) return
+    event.preventDefault()
+    const [nextTab] = TABS[nextIndex]
+    setActiveTab(nextTab)
+    window.requestAnimationFrame(() => document.getElementById(`${tabIdPrefix}-tab-${nextTab}`)?.focus({ preventScroll: true }))
   }
 
   return (
@@ -89,6 +123,18 @@ export function SkillCoarseClassificationPage({ rows, loading, onOpenOperatorDet
             </label>
           </div>
         </div>
+        <div className="detail-tabs skill-coarse-tabs" role="tablist" aria-label="表示する一覧">
+          {TABS.map(([tab, label], index) => (
+            <button type="button" key={tab} id={`${tabIdPrefix}-tab-${tab}`}
+              ref={tab === 'skills' ? skillsTab : undefined}
+              className={`detail-tab ${activeTab === tab ? 'active' : ''}`}
+              role="tab" aria-selected={activeTab === tab} aria-controls={`${tabIdPrefix}-panel-${tab}`}
+              tabIndex={activeTab === tab ? 0 : -1} onClick={() => setActiveTab(tab)}
+              onKeyDown={(event) => handleTabKeyDown(event, index)}>{label}</button>
+          ))}
+        </div>
+        <div id={`${tabIdPrefix}-panel-skills`} role="tabpanel"
+          aria-labelledby={`${tabIdPrefix}-tab-skills`} hidden={activeTab !== 'skills'}>
         <div className="result-meta" role="status" aria-live="polite">
           <span>{loading ? '読み込み中…' : `${visibleRows.length} / ${rows.length} スキル表示`}</span>
           <span>最高レベル</span>
@@ -121,6 +167,37 @@ export function SkillCoarseClassificationPage({ rows, loading, onOpenOperatorDet
             </table>
           </div>
         )}
+        </div>
+        <div id={`${tabIdPrefix}-panel-categories`} role="tabpanel"
+          aria-labelledby={`${tabIdPrefix}-tab-categories`} hidden={activeTab !== 'categories'}>
+          <div className="result-meta skill-coarse-overview-meta" role="status" aria-live="polite">
+            <span>{loading ? '読み込み中…' : `対象：${baseRows.length} スキル`}</span>
+            <button type="button" className="filter-reset-button" disabled={filters.category === 'ALL'}
+              onClick={() => selectCategory('ALL')}>すべて</button>
+          </div>
+          <div className="table-wrap skill-coarse-table-wrap">
+            <table className="skill-coarse-table skill-coarse-category-table">
+              <caption className="visually-hidden">大分類の基準と該当スキル数</caption>
+              <thead><tr>
+                <th scope="col">大分類名</th>
+                <th scope="col">分類の基準</th>
+                <th scope="col" className="skill-coarse-count">該当スキル数</th>
+              </tr></thead>
+              <tbody>{categoryRows.map(({ value, label, description, count }) => (
+                <tr key={value} className={filters.category === value ? 'skill-coarse-category-selected' : undefined}>
+                  <td><button type="button" className="skill-coarse-description-trigger"
+                    aria-pressed={filters.category === value} onClick={() => selectCategory(value)}>{label}</button></td>
+                  <td>{description}</td>
+                  <td className="skill-coarse-count">{loading ? '—' : count.toLocaleString('ja-JP')}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+          <details className="skill-coarse-count-help">
+            <summary>件数の数え方</summary>
+            <p>文字検索・職業・レアリティに一致するスキルを集計します。複数の分類に該当するスキルは、それぞれに１件ずつ数えます。大分類候補の選択は件数に反映しません。</p>
+          </details>
+        </div>
       </section>
       {detail && <SkillEffectModal skill={detail.skill} descriptionOnly onClose={closeDescription} />}
     </section>

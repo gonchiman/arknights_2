@@ -5,6 +5,7 @@ import {
   DEFAULT_SKILL_COARSE_FILTERS,
   filterSkillCoarseRows,
   getSkillCoarseCategories,
+  summarizeSkillCoarseCategories,
   type SkillCoarseFilters,
 } from '../src/lib/skillCoarseClassification.ts'
 import type { RawSkillLevel, SkillRecord } from '../src/types/skill.ts'
@@ -148,6 +149,51 @@ test('初期範囲は星6前衛で、すべてを指定すれば他職業や未�
   const rows = [createSkill({ description: '' }, { profession: 'CASTER', rarity: 5 })]
   assert.equal(filterSkillCoarseRows(rows, DEFAULT_SKILL_COARSE_FILTERS).length, 0)
   assert.equal(filterSkillCoarseRows(rows, filters({ profession: 'ALL', rarity: 'ALL', category: 'UNKNOWN' })).length, 1)
+})
+
+test('カテゴリ概要は入力が空でも未分類を含む全7カテゴリを固定順で返す', () => {
+  const summary = summarizeSkillCoarseCategories([])
+  assert.deepEqual(summary.map(({ value, count }) => [value, count]), [
+    ['NEXT_ATTACK', 0],
+    ['SUSTAINED', 0],
+    ['BURST', 0],
+    ['MODE', 0],
+    ['SUMMON', 0],
+    ['PASSIVE', 0],
+    ['UNKNOWN', 0],
+  ])
+  assert.ok(summary.every(({ label, description }) => label.length > 0 && description.length > 0))
+})
+
+test('カテゴリ概要は渡された全スキルの複数カテゴリをそれぞれ1件として数える', () => {
+  const rows = [
+    createSkill({ description: '次の通常攻撃時、地雷を設置する' }, { profession: 'CASTER', rarity: 4 }),
+    createSkill({
+      description: 'スキル発動時、周囲の敵に攻撃力の200%の術ダメージを与える。攻撃力+100%',
+      duration: 20,
+    }),
+    createSkill({ description: '特殊な効果を発動する' }),
+  ]
+  const summary = summarizeSkillCoarseCategories(rows)
+  assert.deepEqual(summary.map(({ value, count }) => [value, count]), [
+    ['NEXT_ATTACK', 1],
+    ['SUSTAINED', 1],
+    ['BURST', 1],
+    ['MODE', 0],
+    ['SUMMON', 1],
+    ['PASSIVE', 0],
+    ['UNKNOWN', 1],
+  ])
+})
+
+test('カテゴリ概要の集計で入力配列やスキルデータを変更しない', () => {
+  const rows = [
+    createSkill({ description: '特殊な効果を発動する' }, { id: 'unknown' }),
+    createSkill({ description: '次の通常攻撃時、地雷を設置する' }, { id: 'next-attack' }),
+  ]
+  const before = structuredClone(rows)
+  summarizeSkillCoarseCategories(rows)
+  assert.deepEqual(rows, before)
 })
 
 function filters(overrides: Partial<SkillCoarseFilters>): SkillCoarseFilters {
