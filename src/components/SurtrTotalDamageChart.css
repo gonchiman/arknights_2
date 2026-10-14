@@ -1,0 +1,3 @@
+.surtr-total-damage-chart { min-width: 0; }
+.surtr-total-damage-chart-svg { max-width: none; }
+.surtr-total-damage-chart-image { --text: #222; --text-soft: #444; --text-muted: #666; }
