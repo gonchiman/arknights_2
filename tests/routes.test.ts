@@ -23,6 +23,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
     [
       ['operators', 'operators'],
       ['skills', 'skills'],
+      ['skill-classification', 'skill-classification'],
       ['skill-effects', 'skill-effects'],
       ['skill-summary', 'skill-summary'],
       ['skill-json', 'skill-json'],
@@ -46,6 +47,12 @@ test('サイドバーから主要ページへ遷移できる', () => {
 
 test('比較ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/comparison'), { view: 'comparison' })
+})
+
+test('スキル大分類は専用ページとして開き、既存スキル一覧を維持する', () => {
+  assert.deepEqual(parseHashRoute('#/skill-classification'), { view: 'skill-classification' })
+  assert.deepEqual(parseHashRoute('#/skills'), { view: 'skills' })
+  assert.deepEqual(parseHashRoute('#/skill-classification/extra'), { view: 'operators' })
 })
 
 test('スキル効果の分解のURLはスキルとレベルを復元し、不正な選択を拒否する', () => {

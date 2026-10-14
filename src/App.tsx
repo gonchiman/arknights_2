@@ -27,6 +27,7 @@ import { OperatorDetailPage } from './components/OperatorDetailPage'
 import { PageBreadcrumbs, type PageBreadcrumbsProps } from './components/PageBreadcrumbs'
 import type { OpenOperatorDetail } from './components/OperatorDetailLink'
 import { SkillDirectory } from './components/SkillDirectory'
+import { SkillCoarseClassificationPage } from './components/SkillCoarseClassificationPage'
 import { SkillEffectsPage } from './components/SkillEffectsPage'
 import { SkillSummaryPage } from './components/SkillSummaryPage'
 import { SkillJsonPage } from './components/SkillJsonPage'
@@ -372,6 +373,8 @@ export default function App() {
             loading={loading}
             onOpenOperatorDetail={openOperatorDetail}
           />
+        ) : displayedRoute.view === 'skill-classification' ? (
+          <SkillCoarseClassificationPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
         ) : displayedRoute.view === 'skill-effects' ? (
           <SkillEffectsPage
             rows={classifiedRows}
