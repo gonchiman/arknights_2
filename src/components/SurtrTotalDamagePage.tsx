@@ -53,7 +53,7 @@ export function SurtrTotalDamagePage({ rows, loading, error, onRetry }: {
   const [includeRetreatHit, setIncludeRetreatHit] = useState(false)
   const [layout, setLayout] = useState<SurtrTotalDamageTableLayout>('resistance')
   const [colorScale, setColorScale] = useState<'none' | 'LINEAR' | 'SQRT'>('none')
-  const [precision, setPrecision] = useState(1)
+  const [precision, setPrecision] = useState(0)
   const [selectedCell, setSelectedCell] = useState<SurtrTotalDamageTableCellSelection | null>(null)
   const [copyState, setCopyState] = useState<{ text: string; failed: boolean } | null>(null)
   const [image, setImage] = useState<ImageSnapshot | null>(null)
