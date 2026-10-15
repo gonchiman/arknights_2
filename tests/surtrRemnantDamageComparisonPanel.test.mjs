@@ -261,16 +261,17 @@ test('saved expected-damage images keep captured assumptions and a full-width fo
             colorScale: true, colorScaleMode: 'SQRT', precision: 2 }
           const saved = renderToStaticMarkup(createElement(Image, snapshot))
           const summary = table(saved)
-          const footer = summary.match(/<tfoot>([\s\S]*?)<\/tfoot>/)?.[1]
+          const footer = saved.match(/<div class="comparison-table-image-footer">([\s\S]*?)<\/figure>/)?.[1]
           assert.ok(footer)
           const footerText = text(footer)
           assert.ok(footerText.includes(`総ダメージ期待値・増加率（%）・基準：${comparisonBase === 'previous' ? '1つ前の段階（Lv.1は未装備）' : '未装備'}`))
           assert.match(footerText, /S3 特化3・昇進2 Lv\.90・信頼度100・潜在6・未ブロック／対象を自身でブロック/)
           assert.match(footerText, /残りCT一様・命中まで0\.3456789s・CT割合維持・退場同時の命中を含む/)
           assert.doesNotMatch(footerText, /潜在1|CT時間維持|命中を除外|DPS/)
-          const columns = 1 + (rankMode === 'merged' ? 1 : 0) + (layout === 'combined' && comparisonBase === 'unequipped' ? 1 : 0)
-            + 2 * 2 * (layout === 'combined' ? 2 : 1)
-          assert.match(footer, new RegExp(`colspan="${columns}"`, 'i'))
+          assert.match(saved, /data-table-image-frame="true"/)
+          assert.ok(saved.indexOf('<div class="comparison-table-image-footer">') > saved.lastIndexOf('</table>'),
+            'Captured conditions remain one full-width band after the complete table')
+          assert.equal([...saved.matchAll(/class="comparison-table-image-footer"/g)].length, 1)
           const shared = renderToStaticMarkup(createElement(Content, snapshot))
           assert.deepEqual(sectionRows(summary, 'tbody'), sectionRows(table(shared), 'tbody'))
           assert.deepEqual(sectionRows(summary, 'thead'), sectionRows(table(shared), 'thead'))

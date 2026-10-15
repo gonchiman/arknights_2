@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import type { ResistanceComparisonSeries } from '../src/lib/goldenglowResistanceComparison.ts'
-import { buildGgTableRows, formatGgTableValue, getGgTableBaselineId, getGgTableTargets, getGgTableTitle, getGgTableTsv,
+import { buildGgTableRows, buildGgTableWinnerMatrix, formatGgTableValue, getGgTableBaselineId, getGgTableTargets, getGgTableTitle, getGgTableTsv,
+  getGgTableStageData, getGgTableImageStageLevels, getGgTableColorScaleMaximum,
   type GgTableBuild, type GgTableData } from '../src/lib/goldenglowTargetSwitchTable.ts'
+import { getModuleTableWinner } from '../src/lib/moduleTableWinner.ts'
 
 const none: GgTableBuild = { id: 'none', label: '未装備', moduleId: '', moduleType: null, moduleLevel: 0 }
 const x = (level: number): GgTableBuild => ({ id: `x:lv${level}`, label: `MOD X Lv.${level}`, moduleId: 'x', moduleType: 'X', moduleLevel: level })
@@ -105,4 +107,64 @@ test('比較画像の自動タイトルで差・比率・増加率と実際の�
     'ゴールデングロー MOD段階比較（総ダメージ差・前段階基準）')
   assert.equal(getGgTableTitle(data({ builds: [y(3)], layout: 'combined', metric: 'ratio', baseline: { kind: 'selected', id: 'x:lv3' } })),
     'ゴールデングロー MOD比較（総ダメージ＋基準比・MOD X Lv.3基準）')
+})
+
+test('最大のMODは比較値ではなく生の期待値を比較し、非表示の比較元は候補にしない', () => {
+  const input = data({ builds: [x(3), y(3)], layout: 'winner', baseline: { kind: 'previous' }, series: [
+    series(x(3), [[500, 0, 200]]), series(y(3), [[500, 0, 190]]),
+    series(x(2), [[500, 0, 199]]), series(y(2), [[500, 0, 10]]), series(none, [[500, 0, 9999]]),
+  ] })
+  const before = structuredClone(input)
+  const matrix = buildGgTableWinnerMatrix(input)
+  assert.deepEqual(matrix.cells[0].candidates.map(item => item.id), ['x:lv3', 'y:lv3'])
+  assert.deepEqual(getModuleTableWinner(matrix.cells[0].candidates)?.winners.map(item => item.id), ['x:lv3'])
+  assert.equal(getModuleTableWinner(matrix.cells[0].candidates)?.absoluteDifference, 10)
+  assert.deepEqual(input, before)
+})
+
+test('最大のMODでも明示選択した基準装備を含み、同率・ゼロ同率をすべて表示する', () => {
+  const input = data({ layout: 'winner', baseline: { kind: 'selected', id: x(3).id },
+    series: [series(none, [[500, 0, 100]]), series(x(3), [[500, 0, 140]]), series(y(3), [[500, 0, 140]])] })
+  assert.deepEqual(getGgTableTargets(input).map(item => item.id), ['none', 'x:lv3', 'y:lv3'])
+  assert.deepEqual(getModuleTableWinner(buildGgTableWinnerMatrix(input).cells[0].candidates)?.winners.map(item => item.id), ['x:lv3', 'y:lv3'])
+  assert.equal(getGgTableTsv(input), '術耐性\t敵HP 500 最大のMOD\r\n0\tMOD X Lv.3＝MOD Y Lv.3')
+  const zeros = { ...input, series: input.series.map(item => ({ ...item, points: item.points.map(point => ({ ...point, expectedDamage: 0 })) })) }
+  assert.equal(getModuleTableWinner(buildGgTableWinnerMatrix(zeros).cells[0].candidates)?.winners.length, 3)
+  assert.match(getGgTableTitle(input), /最大のMOD/)
+})
+
+test('最大のMODは丸め前に判定し、欠損・非有限・未完了のセルでは確定しない', () => {
+  const input = data({ layout: 'winner', precision: 0, series: [series(none, [[500, 0, 100]]),
+    series(x(3), [[500, 0, 140.001]]), series(y(3), [[500, 0, 140]])] })
+  assert.deepEqual(getModuleTableWinner(buildGgTableWinnerMatrix(input).cells[0].candidates)?.winners.map(item => item.id), ['x:lv3'])
+  for (const invalid of [null, NaN, Infinity]) {
+    const broken = { ...input, series: input.series.map(item => item.id === y(3).id
+      ? { ...item, points: invalid === null ? [] : item.points.map(point => ({ ...point, expectedDamage: invalid })) } : item) }
+    assert.equal(getModuleTableWinner(buildGgTableWinnerMatrix(broken).cells[0].candidates), null)
+    assert.equal(getGgTableTsv(broken).split('\r\n')[1], '0\t—')
+  }
+})
+
+test('勝者マトリクスの軸はHP・術耐性の入力順とランクを保持する', () => {
+  const matrix = buildGgTableWinnerMatrix(data({ layout: 'winner', hps: [2000, 500], resistances: [60, 0] }))
+  assert.deepEqual(matrix.rowAxis.items.map(item => [item.id, item.rank]), [['60', 'A+'], ['0', 'E']])
+  assert.deepEqual(matrix.columnAxis.items.map(item => item.id), ['2000', '500'])
+  assert.deepEqual(matrix.cells.map(item => [item.rowId, item.columnId]), [['60', '2000'], ['60', '500'], ['0', '2000'], ['0', '500']])
+})
+
+test('段階分割でも独立参照と全体カラースケールを保持し、元データを変更しない', () => {
+  const input = data({ builds: [none, x(1), x(3), y(3)], baseline: { kind: 'previous' }, layout: 'comparison',
+    series: [series(none, [[500, 0, 100]]), series(x(1), [[500, 0, 105]]), series(x(2), [[500, 0, 150]]),
+      series(x(3), [[500, 0, 200]]), series(y(2), [[500, 0, 1]]), series(y(3), [[500, 0, 501]])] })
+  const before = structuredClone(input)
+  assert.deepEqual(getGgTableImageStageLevels(input), [1, 3])
+  const first = getGgTableStageData(input, 1)
+  const third = getGgTableStageData(input, 3)
+  assert.equal(first.colorScaleMaximum, 500)
+  assert.equal(getGgTableColorScaleMaximum(third), 500)
+  assert.deepEqual(third.builds.map(item => item.id), ['none', 'x:lv3', 'y:lv3'])
+  assert.equal(third.series, input.series)
+  assert.deepEqual(buildGgTableRows(third)[0].cells.map(cell => cell.comparison), [50, 500])
+  assert.deepEqual(input, before)
+  assert.throws(() => getGgTableStageData(input, 2), /この段階/)
 })

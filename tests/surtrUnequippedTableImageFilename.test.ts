@@ -24,6 +24,32 @@ const remnantAssumptions = { windup: 0.3, ctCarry: 'time' as const, includeRetre
 const remnantOptions = { ...options, quantity: 'expected-damage' as const,
   metadata: { ...metadata, remnantAssumptions } }
 
+test('最大MOD表は比較値設定に依存せず、色・有効な差濃淡・文字サイズと配置を記録する', () => {
+  const winner = { ...options, displayMode: 'winner' as const, winnerColor: 'module' as const,
+    winnerGapShading: true, titleSize: 12, detailSize: 8 }
+  const original = getSurtrUnequippedTableImageFilename(winner, 16 / 9)
+  assert.match(original, /DPS最大MOD表_MOD色_差濃淡0-30%以上/)
+  assert.match(original, /文字12-8px/)
+  assert.ok(original.includes('未装備-MODXLv.3-MODYLv.3'))
+  assert.doesNotMatch(original, /DPS差|DPS＋比較値|小数/)
+  assert.equal(getSurtrUnequippedTableImageFilename({ ...winner, comparisonBase: 'previous', metric: 'ratio', layout: 'comparison',
+    precision: 3, colorScale: true, colorScaleMode: 'SQRT', columnOrder: 'blocking' }, 16 / 9), original)
+  const noColor = { ...winner, winnerColor: 'none' as const }
+  assert.equal(getSurtrUnequippedTableImageFilename(noColor), getSurtrUnequippedTableImageFilename({ ...noColor, winnerGapShading: false }))
+  const single = { ...winner, series: [options.series[1]] }
+  assert.equal(getSurtrUnequippedTableImageFilename(single), getSurtrUnequippedTableImageFilename({ ...single, winnerGapShading: false }))
+  const hiddenNone = { ...winner, series: options.series.slice(0, 2), winnerStages: [{ id: 'x:lv3' }] }
+  const hiddenName = getSurtrUnequippedTableImageFilename(hiddenNone)
+  assert.doesNotMatch(hiddenName, /差濃淡|未装備/)
+  assert.equal(hiddenName, getSurtrUnequippedTableImageFilename({ ...single, winnerStages: [{ id: 'x:lv3' }] }))
+  const separatePotentials = { ...winner, series: [{ ...options.series[1], id: 'x:lv3:pot1', potential: 1 },
+    { ...options.series[2], id: 'y:lv3:pot6', potential: 6 }] }
+  assert.doesNotMatch(getSurtrUnequippedTableImageFilename(separatePotentials), /差濃淡/)
+  assert.notEqual(getSurtrUnequippedTableImageFilename({ ...winner, titleSize: 16 }), getSurtrUnequippedTableImageFilename(winner))
+  assert.notEqual(getSurtrUnequippedTableImageFilename({ ...winner, detailSize: 12 }), getSurtrUnequippedTableImageFilename(winner))
+  assert.notEqual(getSurtrUnequippedTableImageFilename({ ...winner, imageLayout: 'transpose' }), getSurtrUnequippedTableImageFilename(winner))
+})
+
 test('画像の配置と分割段階を区別し、現在の配置と無効な段階指定は従来名を保つ', () => {
   const original = getSurtrUnequippedTableImageFilename(options)
   assert.equal(getSurtrUnequippedTableImageFilename({ ...options, imageLayout: 'current', moduleLevel: 2 }), original)

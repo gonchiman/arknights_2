@@ -8,8 +8,11 @@ import type { SurtrComparisonImageNumberSize } from '../lib/surtrComparisonImage
 import { getSurtrUnequippedTableImageFilename, type SurtrUnequippedTableImageMetadata } from '../lib/surtrUnequippedTableImageFilename'
 import { CHART_IMAGE_LABEL_MAX_LENGTH } from '../lib/chartImageLabels'
 import { getSurtrComparisonTableTitle } from '../lib/surtrComparisonTableTitle'
+import { getSurtrComparisonWinnerTsv } from '../lib/surtrComparisonWinner'
+import { DEFAULT_COMPARISON_TABLE_IMAGE_TYPOGRAPHY } from '../lib/tableImageTypography'
+import { ComparisonTableImageOptions } from './ComparisonTableImageOptions'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
-import { getUnequippedMetricLabel, SurtrUnequippedComparisonTableContent, type SurtrUnequippedComparisonTableData } from './SurtrUnequippedComparisonTableContent'
+import { getUnequippedMetricLabel, SurtrComparisonTableSurface, type SurtrUnequippedComparisonTableData } from './SurtrUnequippedComparisonTableContent'
 import { SurtrUnequippedComparisonTableImagePreview, saveSurtrUnequippedComparisonTableImage,
   type SurtrUnequippedComparisonTableImageSnapshot } from './SurtrUnequippedComparisonTableImage'
 import './SurtrComparisonImageOptions.css'
@@ -21,8 +24,9 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
   onOpenDetail: (resistance: number, seriesId: string | undefined, metric: SurtrUnequippedMetric | 'total', blocking?: boolean) => void
 }) {
   const baseLabel = getSurtrComparisonBaseLabel(data.comparisonBase ?? 'unequipped')
-  const metricLabel = getUnequippedMetricLabel(data.metric, data.comparisonBase, data.quantity)
-  const tableText = getSurtrUnequippedComparisonTsv(data.series, data.baseline, data.resistances, data.precision, data.metric, data.layout, data.blockingComparison, data.rankMode, data.columnOrder, data.comparisonBase, data.referenceSeries, data.quantity)
+  const metricLabel = data.displayMode === 'winner' ? 'DPSが最大のMOD' : getUnequippedMetricLabel(data.metric, data.comparisonBase, data.quantity)
+  const tableText = data.displayMode === 'winner' ? getSurtrComparisonWinnerTsv(data, data.rankMode)
+    : getSurtrUnequippedComparisonTsv(data.series, data.baseline, data.resistances, data.precision, data.metric, data.layout, data.blockingComparison, data.rankMode, data.columnOrder, data.comparisonBase, data.referenceSeries, data.quantity)
   const [copyFeedback, setCopyFeedback] = useState<{ text: string; ok: boolean } | null>(null)
   const [copying, setCopying] = useState(false)
   const copyState = copyFeedback?.text === tableText ? copyFeedback.ok : null
@@ -38,6 +42,8 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
   const imageTitleId = useId()
   const [imageLayout, setImageLayout] = useState<SurtrComparisonImageLayout>('current')
   const [numberSize, setNumberSize] = useState<SurtrComparisonImageNumberSize>('auto')
+  const [titleSize, setTitleSize] = useState(DEFAULT_COMPARISON_TABLE_IMAGE_TYPOGRAPHY.titleSize)
+  const [detailSize, setDetailSize] = useState(DEFAULT_COMPARISON_TABLE_IMAGE_TYPOGRAPHY.detailSize)
   const [moduleLevel, setModuleLevel] = useState(3)
   const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [saving, setSaving] = useState(false)
@@ -57,7 +63,8 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
   const stageLevels = image ? getSurtrComparisonImageStageLevels(image) : []
   const selectedLevel = stageLevels.includes(moduleLevel) ? moduleLevel : stageLevels.at(-1)
   const exportLayout = enableImageLayouts ? imageLayout : 'current'
-  const exportSource = image && { ...image, numberSize: enableImageLayouts ? numberSize : undefined }
+  const exportSource = image && { ...image, numberSize: enableImageLayouts ? numberSize : '100' as const,
+    titleSize: enableImageLayouts ? titleSize : undefined, detailSize: enableImageLayouts ? detailSize : undefined }
   const exportImage = exportSource && (exportLayout === 'split' && selectedLevel !== undefined
     ? getSurtrComparisonImageStageSnapshot(exportSource, selectedLevel)
     : { ...exportSource, imageLayout: exportLayout, moduleLevel: undefined })
@@ -65,7 +72,7 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
     setFeedback(null); setLayoutError('')
     if (imageLayout === 'split' && !getSurtrComparisonImageStageLevels(data).length) setImageLayout('current')
     setImage(structuredClone({ ...data, metadata, title: data.quantity === 'expected-damage'
-      ? undefined : imageTitle ?? getSurtrComparisonTableTitle(data) }))
+      ? undefined : imageTitle ?? getSurtrComparisonOutputTitle(data) }))
   }
   const saveImage = async (filename: string, ratio?: number) => {
     if (!exportImage || saveInProgress.current || layoutError || aspectError) return
@@ -116,7 +123,7 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
       </div>
     </div>
     <span className="visually-hidden" role="status">{copyState === true ? `${baseLabel}との比較表をコピーしました。` : copyState === false ? `${baseLabel}との比較表をコピーできませんでした。` : ''}</span>
-    <SurtrUnequippedComparisonTableContent {...data} selectedResistance={selectedResistance} onOpenDetail={onOpenDetail} />
+    <SurtrComparisonTableSurface {...data} selectedResistance={selectedResistance} onOpenDetail={onOpenDetail} />
     {feedback && feedback !== 'failed' && <p className="surtr-s3-status" role="status">{feedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
     {image && exportImage && <ChartImageSaveDialog initialFilename={getSurtrUnequippedTableImageFilename(exportImage)}
       getDefaultFilename={ratio => getSurtrUnequippedTableImageFilename(exportImage, ratio)} aspect={aspect}
@@ -128,27 +135,13 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
         ? { label: `全${stageLevels.length}枚をZIP保存`, onSave: (filename, ratio) => void saveAllStages(filename, ratio) } : undefined}
       options={<>
       {enableImageLayouts && <div className="surtr-comparison-image-options">
-        <label className="chart-image-save-field"><span>画像の配置</span>
-          <select value={imageLayout} disabled={saving} onChange={event => {
-            setLayoutError(''); setImageLayout(event.target.value as SurtrComparisonImageLayout)
-          }}>
-            <option value="current">現在の配置</option>
-            <option value="transpose">術耐性を列に</option>
-            <option value="stacked" disabled={image.blockingComparison === undefined}>ブロック条件を上下に</option>
-            <option value="split" disabled={!stageLevels.length}>段階ごとに分割</option>
-          </select>
-        </label>
-        <label className="chart-image-save-field"><span>数値サイズ</span>
-          <select value={numberSize} disabled={saving} onChange={event => {
-            setLayoutError(''); setNumberSize(event.target.value as SurtrComparisonImageNumberSize)
-          }}>
-            <option value="auto">自動</option>
-            <option value="100">100%</option>
-            <option value="150">150%</option>
-            <option value="200">200%</option>
-          </select>
-        </label>
-        <p className="chart-image-save-hint">セル内に収まる範囲で数値を大きくします。自動では最大200%まで調整します。</p>
+        <ComparisonTableImageOptions layout={imageLayout} onLayoutChange={value => { setLayoutError(''); setImageLayout(value as SurtrComparisonImageLayout) }}
+          layouts={[{ value: 'current', label: '現在の配置' }, { value: 'transpose', label: '術耐性を列に' },
+            { value: 'stacked', label: 'ブロック条件を上下に', disabled: image.blockingComparison === undefined },
+            { value: 'split', label: '段階ごとに分割', disabled: !stageLevels.length }]}
+          numberSize={numberSize} onNumberSizeChange={value => { setLayoutError(''); setNumberSize(value) }}
+          titleSize={titleSize} onTitleSizeChange={value => { setLayoutError(''); setTitleSize(value) }}
+          detailSize={detailSize} onDetailSizeChange={value => { setLayoutError(''); setDetailSize(value) }} disabled={saving} />
         {exportLayout === 'split' && <>
           <label className="chart-image-save-field"><span>出力する段階</span>
             <select value={selectedLevel} disabled={saving} onChange={event => {
@@ -164,7 +157,7 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
           <span aria-live="polite">{imageTitle === null ? '自動' : '手動'}</span>
         </div>
         <div className="surtr-comparison-image-title-controls">
-        <input id={imageTitleId} type="text" value={image.title ?? getSurtrComparisonTableTitle(image)} disabled={saving}
+        <input id={imageTitleId} type="text" value={image.title ?? getSurtrComparisonOutputTitle(image)} disabled={saving}
           maxLength={CHART_IMAGE_LABEL_MAX_LENGTH} autoComplete="off"
           onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) event.preventDefault() }}
           onChange={event => {
@@ -175,16 +168,19 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
         <button type="button" className="button secondary" aria-label="タイトルを自動に戻す"
           disabled={saving || imageTitle === null} onClick={() => {
             setLayoutError(''); setImageTitle(null)
-            setImage(current => current && { ...current, title: getSurtrComparisonTableTitle(current) })
+            setImage(current => current && { ...current, title: getSurtrComparisonOutputTitle(current) })
           }}>自動に戻す</button>
         </div>
       </div>}
       {saveProgress && <p className="chart-image-save-hint" role="status">{saveProgress}</p>}
       </>}
-      preview={<SurtrUnequippedComparisonTableImagePreview key={`${exportLayout}:${selectedLevel}:${numberSize}:${image.title}:${aspect.preset}:${aspect.width}:${aspect.height}`} {...exportImage}
+      preview={<SurtrUnequippedComparisonTableImagePreview key={`${exportLayout}:${selectedLevel}:${numberSize}:${titleSize}:${detailSize}:${image.title}:${aspect.preset}:${aspect.width}:${aspect.height}`} {...exportImage}
         aspectRatio={aspectError ? undefined : aspectRatio} onLayoutError={reportLayoutError} onLayoutReady={reportLayoutReady} />} />}
   </section>
 }
+
+const getSurtrComparisonOutputTitle = (data: SurtrUnequippedComparisonTableData) => data.displayMode === 'winner'
+  ? 'スルト S3 DPSが最大のMOD' : getSurtrComparisonTableTitle(data)
 
 function downloadArchive(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)

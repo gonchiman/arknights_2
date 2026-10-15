@@ -168,3 +168,28 @@ test('paired numeric columns use explicit col widths so PNG cloning cannot multi
     assert.ok(groups.some(group => (group[2].match(/<col\b/g) ?? []).length === 2))
   }
 })
+
+test('winner PNG layouts retain potentials, both blocking conditions, raw winners and every resistance', () => {
+  const winnerStages = [...new Map(selected.map(item => [item.moduleStageId, {
+    id: item.moduleStageId, type: item.moduleStageId[0].toUpperCase(), level: Number(item.moduleStageId.at(-1)),
+    label: item.label.replace(/ 潜在[1-6]$/, ''), color: item.color,
+  }])).values()]
+  for (const imageLayout of ['current', 'transpose', 'stacked', 'split']) {
+    const data = { ...snapshot, displayMode: 'winner', winnerStages, winnerGapShading: true,
+      imageLayout, moduleLevel: imageLayout === 'split' ? 3 : undefined, numberSize: 'auto', titleSize: 12, detailSize: 8 }
+    const markup = render(data)
+    const cells = [...markup.matchAll(/<td\b[^>]*data-row-id="([^"]+)"[^>]*data-column-id="([^"]+)"[^>]*data-winner-ids="([^"]+)"/g)]
+    assert.equal(cells.length, 8, imageLayout)
+    assert.ok(cells.every(cell => /y:lv3:pot[16]$/.test(cell[3])))
+    assert.deepEqual([...new Set(cells.map(cell => cell[1]))], ['0', '50'])
+    assert.match(markup, /潜在1/)
+    assert.match(markup, /潜在6/)
+    assert.match(markup, /未ブロック/)
+    assert.match(markup, /対象を自身でブロック/)
+    assert.match(markup, /data-table-image-frame="true"/)
+    assert.match(markup, /--comparison-table-title-size:12px/)
+    assert.match(markup, /--comparison-table-detail-size:8px/)
+    assert.doesNotMatch(markup, /<button|<select|NaN|Infinity|undefined|基準：/)
+    assert.ok((markup.match(/次点への増加率のカラースケール/g) ?? []).length > 0)
+  }
+})

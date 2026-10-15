@@ -1,5 +1,9 @@
 import type { ResistanceComparisonSeries } from './goldenglowResistanceComparison.ts'
 import { getSurtrDpsResistanceRating } from './surtrDpsResistance.ts'
+import { getEnemyStatRating } from './enemyStatRatings.ts'
+import { getModuleComparisonColors } from './moduleColors.ts'
+import { getModuleTableWinner, type ModuleTableWinnerCandidate } from './moduleTableWinner.ts'
+import { getSurtrUnequippedColorScaleMaximum } from './surtrUnequippedColorScale.ts'
 import {
   buildSurtrUnequippedComparisonSeries,
   formatSurtrUnequippedComparisonValue,
@@ -7,8 +11,10 @@ import {
 } from './surtrUnequippedComparison.ts'
 
 export type GgTableMetric = 'difference' | 'ratio' | 'percent'
-export type GgTableLayout = 'total' | 'comparison' | 'combined'
+export type GgTableLayout = 'total' | 'comparison' | 'combined' | 'winner'
 export type GgTableColorScale = 'NONE' | 'LINEAR' | 'SQRT'
+export type GgTableRankMode = 'none' | 'inline' | 'merged'
+export type GgTableImageLayout = 'current' | 'transpose' | 'stacked' | 'split'
 export interface GgTableBaseline { kind: 'unequipped' | 'previous' | 'selected'; id?: string }
 export interface GgTableBuild {
   id: string
@@ -29,6 +35,11 @@ export interface GgTableData {
   precision: number
   showRanks: boolean
   colorScale: GgTableColorScale
+  rankMode?: GgTableRankMode
+  winnerColor?: 'module' | 'none'
+  winnerGapShading?: boolean
+  /** Keep one scale across HP or stage panels. */
+  colorScaleMaximum?: number
 }
 export interface GgTableCell {
   hp: number
@@ -110,6 +121,15 @@ export function formatGgTableValue(value: number | null | undefined, metric: GgT
 }
 
 export function getGgTableTsv(data: GgTableData): string {
+  if (data.layout === 'winner') {
+    const matrix = buildGgTableWinnerMatrix(data)
+    return [['術耐性', ...data.hps.map(hp => `敵HP ${hp} 最大のMOD`)], ...data.resistances.map(resistance => [String(resistance),
+      ...data.hps.map(hp => {
+        const candidates = matrix.cells.find(cell => cell.rowId === String(resistance) && cell.columnId === String(hp))?.candidates ?? []
+        return getModuleTableWinner(candidates)?.winners.map(build => cleanLabel(build.label)).join('＝') || '—'
+      }),
+    ])].map(row => row.join('\t')).join('\r\n')
+  }
   const builds = getGgTableTargets(data)
   const buildLabels = new Map(builds.map(build => [build.id, cleanLabel(build.label)]))
   const baseLabel = data.baseline.kind === 'previous' ? '前段階' : data.baseline.kind === 'unequipped' ? '未装備'
@@ -139,6 +159,7 @@ export function getGgTableTsv(data: GgTableData): string {
 }
 
 export function getGgTableTitle(data: GgTableData): string {
+  if (data.layout === 'winner') return 'ゴールデングロー スキル総ダメージ期待値が最大のMOD'
   if (data.layout === 'total') return 'ゴールデングロー スキル総ダメージ期待値'
   const modules = new Map<string, Set<number>>()
   for (const build of getGgTableTargets(data)) {
@@ -154,6 +175,50 @@ export function getGgTableTitle(data: GgTableData): string {
     : data.builds.find(build => build.id === data.baseline.id)?.label
       ?? data.series.find(item => item.id === data.baseline.id)?.label ?? '指定MOD'
   return `ゴールデングロー ${dimensions}（${quantity}・${baseline}基準）`
+}
+
+export function getGgTableRankMode(data: GgTableData): GgTableRankMode {
+  return data.rankMode ?? (data.showRanks ? 'inline' : 'none')
+}
+
+/** Compare selected builds only; hidden baselines remain references, never candidates. */
+export function buildGgTableWinnerMatrix(data: GgTableData) {
+  const colors = getModuleComparisonColors(data.builds, { shadeBy: 'moduleLevel' })
+  const values = new Map(data.series.map(series => [series.id,
+    new Map(series.points.map(point => [`${point.enemyHp}:${point.enemyResistance}`, finiteValue(point.expectedDamage)]))]))
+  return {
+    rowAxis: { label: '術耐性', rankLabel: '術耐性ランク', items: data.resistances.map(resistance => {
+      const rank = getSurtrDpsResistanceRating(resistance)
+      return { id: String(resistance), label: String(resistance), rank: rank?.rating, rankTitle: rank?.label }
+    }) },
+    columnAxis: { label: '敵HP', rankLabel: 'HPランク', items: data.hps.map(hp => ({
+      id: String(hp), label: hp.toLocaleString('ja-JP'), rank: getEnemyStatRating('maxHp', hp) ?? undefined,
+    })) },
+    cells: data.resistances.flatMap(resistance => data.hps.map(hp => ({
+      rowId: String(resistance), columnId: String(hp), candidates: data.builds.map((build, index): ModuleTableWinnerCandidate => ({
+        id: build.id, label: build.label,
+        shortLabel: build.id === 'none' ? '未装備' : build.moduleType ? `${build.moduleType}${build.moduleLevel}` : build.label,
+        moduleType: build.moduleType, moduleLevel: build.moduleLevel, color: colors[index],
+        value: values.get(build.id)?.get(`${hp}:${resistance}`) ?? null,
+      })),
+    }))),
+  }
+}
+
+export function getGgTableImageStageLevels(data: GgTableData): number[] {
+  return [...new Set(data.builds.filter(build => build.id !== 'none').map(build => build.moduleLevel))]
+    .filter(level => [1, 2, 3].includes(level)).sort((a, b) => a - b)
+}
+
+export function getGgTableColorScaleMaximum(data: GgTableData): number {
+  return data.colorScaleMaximum ?? getSurtrUnequippedColorScaleMaximum(buildGgTableRows(data).flatMap(row => row.cells.map(cell => cell.comparison)), data.metric)
+}
+
+/** Filter visible stages while preserving every independently calculated reference. */
+export function getGgTableStageData(data: GgTableData, level: number): GgTableData {
+  if (!getGgTableImageStageLevels(data).includes(level)) throw new Error('選択中のMODにこの段階はありません。')
+  return { ...data, colorScaleMaximum: getGgTableColorScaleMaximum(data),
+    builds: data.builds.filter(build => build.id === 'none' || build.moduleLevel === level) }
 }
 
 function finiteValue(value: number | null | undefined): number | null {

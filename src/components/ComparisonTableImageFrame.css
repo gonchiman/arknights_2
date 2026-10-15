@@ -1,0 +1,24 @@
+.comparison-table-image-frame {
+  box-sizing: border-box; flex: none; margin: 0; padding: 0; background: #fff; color: #222;
+  font-family: "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+  --surface: #fff; --surface-soft: #f7f7f7; --surface-hover: #fff;
+  --border: #d6d6d6; --text: #222; --text-muted: #666;
+  --comparison-table-number-font-size: 14px;
+}
+.comparison-table-image-title, .comparison-table-image-footer { box-sizing: border-box; border: 1px solid var(--border); padding: 6px 12px; overflow-wrap: anywhere; }
+.comparison-table-image-title { margin-bottom: -1px; background: var(--surface-soft); text-align: center; font-size: var(--comparison-table-title-size, 12px); line-height: calc(var(--comparison-table-title-size, 12px) + 6px); font-weight: 700; }
+.comparison-table-image-footer { margin-top: -1px; color: var(--text-muted); font-size: var(--comparison-table-detail-size, 8px); line-height: calc(var(--comparison-table-detail-size, 8px) + 4px); }
+.comparison-table-image-footer > div { font-size: inherit; line-height: inherit; }
+.comparison-table-image-content { min-width: 0; }
+.comparison-table-image-frame .comparison-table-image-content table { box-sizing: border-box; width: 100%; font-size: 14px; }
+.comparison-table-image-frame [data-table-image-number] { font-size: var(--comparison-table-number-font-size, 14px) !important; line-height: 1.4; }
+.comparison-table-image-frame [data-table-image-number] button, .comparison-table-image-frame [data-table-image-number] span { font-size: inherit; }
+.comparison-table-image-frame .module-winner-table-wrap { overflow: visible; }
+.comparison-table-image-frame .module-winner-gap-scale { font-size: var(--comparison-table-detail-size, 8px); }
+.comparison-table-image-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+.comparison-table-image-preview-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; color: var(--text-muted); font-size: 12px; }
+.comparison-table-image-preview-frame { position: relative; width: 100%; overflow: hidden; background: #fff; }
+.comparison-table-image-preview-position { position: absolute; top: 0; transform-origin: top left; }
+.comparison-table-image-preview-size { display: block; margin-top: 6px; color: var(--text-muted); font-size: 11px; text-align: right; }
+.comparison-table-image-error { margin: 8px 0 0; color: var(--danger, #a02d37); font-size: 12px; }
+@media (max-width: 480px) { .comparison-table-image-options { grid-template-columns: minmax(0, 1fr); } }
