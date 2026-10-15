@@ -24,3 +24,22 @@ test('duration images use the shared aspect ratio filename suffix', () => {
   assert.match(withChartImageAspect(name), /_比率自動\.png$/)
   assert.match(withChartImageAspect(name, 16 / 9), /_比率16x9\.png$/)
 })
+
+test('duration graph filenames distinguish the selected visible range', () => {
+  const remnant = getSurtrDurationImageFilename({ ...settings, chartRange: 'remnant' })
+  const retreat = getSurtrDurationImageFilename({ ...settings, chartRange: 'retreat' })
+  assert.match(remnant, /継続時間_素質2発動まで_特化3/)
+  assert.match(retreat, /継続時間_退場まで_特化3/)
+  assert.notEqual(remnant, retreat)
+  assert.equal(remnant, getSurtrDurationImageFilename({ ...settings, chartRange: 'remnant' }))
+  assert.doesNotMatch(getSurtrDurationImageFilename(settings), /素質2発動まで|退場まで/)
+})
+
+test('duration graph range remains identifiable when long conditions are shortened', () => {
+  const comparisonConditions = Array.from({ length: 16 }, (_, index) => `比較${index + 1}・アンセルS1発動0秒・サルカズ大剣士初回2秒`)
+  for (const chartRange of ['remnant', 'retreat'] as const) {
+    const name = withChartImageAspect(getSurtrDurationImageFilename({ ...settings, comparisonConditions, chartRange }), 16 / 9)
+    assert.match(name, chartRange === 'remnant' ? /継続時間_素質2発動まで_/ : /継続時間_退場まで_/)
+    assert.match(name, /ほか\d+項目_比率16x9\.png$/)
+  }
+})

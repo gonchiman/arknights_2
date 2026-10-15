@@ -27,8 +27,12 @@
 .surtr-duration-participant-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
 .surtr-duration-participant-form .calculator-field { min-width: 0; }
 .surtr-duration-participant-form .calculator-field :is(select, input) { width: 100%; min-width: 0; border-radius: 0; }
-.surtr-duration-target-select select { height: 140px; padding: 4px; }
-.surtr-duration-target-select option { padding: 5px 8px; }
+.gg-detail-dialog.surtr-duration-enemy-dialog { width: min(800px, calc(100vw - 32px)); }
+.surtr-duration-participant-dialog [hidden] { display: none !important; }
+.surtr-duration-enemy-picker-actions { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 16px; }
+.surtr-duration-selected-enemy { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; }
+.surtr-duration-selected-enemy strong { font-size: 14px; font-weight: 500; }
+.surtr-duration-selected-enemy button { min-height: 34px; font-size: 12px; }
 .surtr-duration-participant-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin: 0; border-top: 1px solid var(--border); padding-top: 14px; font-size: 12px; }
 .surtr-duration-participant-stats > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
 .surtr-duration-participant-stats dt { color: var(--text-soft); }

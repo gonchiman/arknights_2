@@ -10,6 +10,7 @@ import { loadEnemyRecords } from '../lib/enemyData'
 import { buildSurtrDurationTimeline, type SurtrDurationTableLayout } from '../lib/surtrDurationTimeline'
 import { getModuleComparisonColors } from '../lib/moduleColors'
 import { getSurtrDurationImageFilename } from '../lib/surtrDurationImageFilename'
+import type { SurtrDurationChartRange } from '../lib/surtrDurationChartView'
 import { getSurtrDurationTableImageFilename, type SurtrDurationTableImageConditions } from '../lib/surtrDurationTableImageFilename'
 import { withChartImageAspect } from '../lib/chartImageFilename'
 import { withChartImageLabelFilename, type ChartImageLabelOverrides } from '../lib/chartImageLabels'
@@ -37,6 +38,7 @@ const formatHp = (value: number) => new Intl.NumberFormat('ja-JP', { maximumFrac
 interface ImageSnapshot {
   id: number
   series: SurtrDurationSeries[]
+  range: SurtrDurationChartRange
   title: string
   conditions: string
   filename: string
@@ -63,6 +65,7 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
   const [lineFeedback, setLineFeedback] = useState('')
   const nextLine = useRef(0)
   const [timelineStep, setTimelineStep] = useState<1 | 5>(1)
+  const [chartRange, setChartRange] = useState<SurtrDurationChartRange>('remnant')
   const [tablePrecision, setTablePrecision] = useState(2)
   const [tableLayout, setTableLayout] = useState<SurtrDurationTableLayout>('vertical')
   const [timelineSelection, setTimelineSelection] = useState<{ lineId: string; condition: SurtrDurationCondition; timeLimit: number; time: number } | null>(null)
@@ -154,9 +157,9 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
   const openImage = () => {
     if (!series.length) return
     setFeedback(null)
-    setImage({ id: ++nextSnapshot.current, series,
+    setImage({ id: ++nextSnapshot.current, series, range: chartRange,
       title: `スルト S3 ${title}`, conditions: `${[...new Set(comparison.filter(item => item.visible && item.result).map(item => skillLabel(item.condition.settings.skillLevelIndex)))].join('・')}・比較${series.length}条件`,
-      filename: getSurtrDurationImageFilename({ ...settings, skillLevelLabel: label, modules: series.map(item => item.label),
+      filename: getSurtrDurationImageFilename({ ...settings, chartRange, skillLevelLabel: label, modules: series.map(item => item.label),
         comparisonConditions: record ? comparison.filter(item => item.visible && item.result).flatMap(item =>
           getSurtrDurationFilenameParts(record, item.condition, item.timeLimit, enemyRows, rows)) : [] }),
     })
@@ -233,6 +236,7 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
         {enemyLoading && <p className="surtr-s3-status" role="status">敵データを読み込み中…</p>}
         {enemyError && <div className="error-box" role="alert">{enemyError}<button type="button" className="button secondary" onClick={() => setEnemyAttempt(value => value + 1)}>再読み込み</button></div>}
         <SurtrDurationConditionEditor key={editingId ?? 'new-line'} record={record} skillRows={rows} enemyRows={enemyRows}
+          enemyLoading={enemyLoading} enemyError={enemyError} onEnemyRetry={() => setEnemyAttempt(value => value + 1)}
           value={currentDraft} onChange={setDraft} onSubmit={saveLine} submitLabel={editingId ? '線を更新' : '線を追加'}
           onCancelEdit={editingId ? resetDraft : undefined} submitDisabled={!validLimit || !editingId && lines.length >= MAX_LINES}
           footerFields={<label className="calculator-field surtr-duration-limit-field"><span>計算上限（秒）</span>
@@ -279,7 +283,11 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
           <div className="surtr-s3-result-heading"><h3 id="surtr-duration-chart-title">{title}</h3>
             <button type="button" className="button secondary" aria-label="グラフをPNG画像で保存" aria-haspopup="dialog" disabled={!series.length} onClick={openImage}>画像を保存</button>
           </div>
-          <div className="surtr-s3-chart-area"><SurtrDurationChart series={series} title={title}
+          <label className="surtr-s3-output-control surtr-duration-chart-range"><span>表示範囲</span>
+            <select aria-label="グラフの表示範囲" value={chartRange} onChange={event => setChartRange(event.target.value as SurtrDurationChartRange)}>
+              <option value="remnant">素質2発動まで</option><option value="retreat">退場まで</option>
+            </select></label>
+          <div className="surtr-s3-chart-area"><SurtrDurationChart series={series} title={title} range={chartRange}
             selection={calculation?.visible && selectedTimelineRow ? { ...selectedTimelineRow, seriesId: calculation.id } : undefined} /></div>
         </section>
       </div>}

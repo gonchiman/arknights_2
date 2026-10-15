@@ -55,6 +55,7 @@
 .surtr-duration-line-details p { margin: 6px 0 0; line-height: 1.6; overflow-wrap: anywhere; }
 .surtr-duration-table-line { display: flex; flex-wrap: wrap; margin-bottom: 16px; }
 .surtr-duration-table-line select { min-width: 0; max-width: 100%; }
+.surtr-duration-chart-range { width: fit-content; margin-bottom: 12px; }
 @media (pointer: coarse) {
   .surtr-duration-line-actions button { min-height: 44px; }
 }

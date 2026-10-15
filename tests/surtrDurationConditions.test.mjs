@@ -134,7 +134,7 @@ test('invalid participant data is visible and prevents submitting a partial or g
   assert.match(text(missing), /回復役のデータが見つかりません/)
 })
 
-test('enemy and healer limits act independently and data absence disables only the unavailable picker', () => {
+test('participant limits act independently and the enemy catalog remains accessible without selectable rows', () => {
   const value = validCondition()
   value.enemies = Array.from({ length: 8 }, (_, index) => ({ ...value.enemies[0], id: `enemy-${index}` }))
   const enemiesFull = render({ value })
@@ -145,11 +145,13 @@ test('enemy and healer limits act independently and data absence disables only t
   const bothFull = render({ value })
   assert.equal(button(bothFull, '回復役を追加').disabled, true)
   assert.equal(rows(bothFull).length, 17)
-  assert.equal(button(render({ enemyRows: [] }), '敵を追加').disabled, true)
+  assert.equal(button(render({ enemyRows: [] }), '敵を追加').disabled, false)
   assert.equal(button(render({ enemyRows: [] }), '回復役を追加').disabled, false)
+  assert.equal(button(render({ enemyRows: [], enemyLoading: true }), '敵を追加').disabled, false)
+  assert.equal(button(render({ enemyRows: [], enemyError: '取得失敗', onEnemyRetry: () => {} }), '敵を追加').disabled, false)
   assert.equal(button(render({ skillRows: [surtr] }), '回復役を追加').disabled, true)
   const unsupportedEnemy = { ...enemy, stats: { ...enemy.stats, attack: null } }
-  assert.equal(button(render({ enemyRows: [unsupportedEnemy] }), '敵を追加').disabled, true)
+  assert.equal(button(render({ enemyRows: [unsupportedEnemy] }), '敵を追加').disabled, false)
 })
 
 test('global disabled locks each mutating control while keeping the complete selected condition visible', () => {

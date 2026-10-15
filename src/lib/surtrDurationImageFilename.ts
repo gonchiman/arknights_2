@@ -1,4 +1,5 @@
 import { createChartImageFilename } from './chartImageFilename.ts'
+import type { SurtrDurationChartRange } from './surtrDurationChartView.ts'
 
 export interface SurtrDurationImageConditions {
   level: number
@@ -8,13 +9,16 @@ export interface SurtrDurationImageConditions {
   modules: readonly string[]
   /** Complete saved-line conditions, used when external actions or multiple builds are compared. */
   comparisonConditions?: readonly string[]
+  chartRange?: SurtrDurationChartRange
 }
 
 export function getSurtrDurationImageFilename(settings: SurtrDurationImageConditions): string {
+  const range = settings.chartRange ? [settings.chartRange === 'remnant' ? '素質2発動まで' : '退場まで'] : []
   if (settings.comparisonConditions?.length) return createChartImageFilename('スルト_S3_継続時間', [
-    ...settings.comparisonConditions, '0.2秒刻み推定', 'HP推移',
+    ...range, ...settings.comparisonConditions, '0.2秒刻み推定', 'HP推移',
   ])
   return createChartImageFilename('スルト_S3_継続時間', [
+    ...range,
     settings.skillLevelLabel,
     `昇進2Lv${settings.level}`,
     `信頼${settings.trust}`,
