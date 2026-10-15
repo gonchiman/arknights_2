@@ -15,6 +15,7 @@
 .surtr-duration-timeline { min-width: 0; }
 .surtr-duration-timeline-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 12px; }
 .surtr-duration-timeline-heading h3 { margin: 0; font-size: 13px; font-weight: 500; }
+.surtr-duration-timeline-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
 .surtr-duration-timeline-table { table-layout: fixed; }
 .surtr-duration-timeline-table tr { height: 40px; }
 .surtr-duration-timeline-table thead th { white-space: normal; }

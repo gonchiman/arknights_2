@@ -1,0 +1,50 @@
+.surtr-duration-table-image {
+  box-sizing: border-box;
+  flex: none;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  color: #222;
+  font-family: "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+  --surface: #fff;
+  --surface-soft: #f7f7f7;
+  --surface-hover: #fff;
+  --border: #d6d6d6;
+  --text: #222;
+  --text-soft: #444;
+  --text-muted: #666;
+}
+.surtr-duration-table-image .surtr-s3-table-wrap { overflow: visible; }
+.surtr-duration-table-image table { box-sizing: border-box; width: 100%; min-width: 0; font-size: 14px; }
+.surtr-duration-table-image th, .surtr-duration-table-image td { padding: 12px; white-space: normal; overflow-wrap: anywhere; }
+.surtr-duration-table-image tbody th { padding: 12px; }
+.surtr-duration-table-image tbody td { white-space: nowrap; overflow-wrap: normal; }
+.surtr-duration-table-image-title {
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  background: var(--surface-soft);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.surtr-duration-table-image-footer {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  min-height: 44px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-top: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.surtr-duration-table-image-error { margin: 0; color: var(--danger, #a02d37); font-size: 12px; }

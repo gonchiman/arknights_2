@@ -7,35 +7,54 @@ const statusLabels: Record<SurtrDurationTimelineRow['status'], string> = {
   'remnant-start': '余燼発動', remnant: '余燼中', retreated: '退場',
 }
 
-export function SurtrDurationTimelineTable({ rows, step, onStepChange, selectedTime, onSelect }: {
+export function SurtrDurationTimelineTableContent({ rows, precision = 2, selectedTime, onSelect, forImage = false }: {
+  rows: readonly SurtrDurationTimelineRow[]
+  precision?: number
+  selectedTime?: number
+  onSelect?: (row: SurtrDurationTimelineRow) => void
+  forImage?: boolean
+}) {
+  const digits = Number.isInteger(precision) && precision >= 0 && precision <= 3 ? precision : 2
+  const interactive = Boolean(onSelect && !forImage)
+  return <div className="surtr-s3-table-wrap">
+    <table className="surtr-s3-table surtr-duration-timeline-table" aria-label="秒数ごとの残りHP">
+      <thead><tr><th scope="col">経過時間（秒）</th><th scope="col">残りHP</th><th scope="col">残HP率</th><th scope="col">状態</th></tr></thead>
+      <tbody>{rows.map(row => <tr key={row.time} className={!forImage && row.time === selectedTime ? 'is-selected' : undefined}>
+        <th scope="row">{interactive ? <button type="button" className="surtr-duration-timeline-time"
+          aria-label={`${timeFormat.format(row.time)}秒をグラフで確認`} aria-pressed={row.time === selectedTime}
+          onClick={() => onSelect?.(row)}>{timeFormat.format(row.time)}</button> : timeFormat.format(row.time)}</th>
+        <td>{row.hp === null ? '—' : hpFormat.format(row.hp)}</td>
+        <td>{row.hpPercent === null ? '—' : `${row.hpPercent.toFixed(digits)}%`}</td>
+        <td className="surtr-duration-timeline-status">{statusLabels[row.status]}</td>
+      </tr>)}</tbody>
+    </table>
+  </div>
+}
+
+export function SurtrDurationTimelineTable({ rows, step, onStepChange, precision = 2, onPrecisionChange, selectedTime, onSelect }: {
   rows: readonly SurtrDurationTimelineRow[]
   step: 1 | 5
   onStepChange: (step: 1 | 5) => void
+  precision?: number
+  onPrecisionChange?: (precision: number) => void
   selectedTime?: number
   onSelect: (row: SurtrDurationTimelineRow) => void
 }) {
   return <section className="surtr-duration-timeline" aria-labelledby="surtr-duration-timeline-title">
     <div className="surtr-duration-timeline-heading">
       <h3 id="surtr-duration-timeline-title">秒数ごとの残りHP（推定）</h3>
-      <label className="surtr-s3-output-control"><span>表示間隔</span>
+      <div className="surtr-duration-timeline-controls"><label className="surtr-s3-output-control"><span>表示間隔</span>
         <select aria-label="残りHPの表示間隔" value={step} onChange={event => onStepChange(Number(event.target.value) as 1 | 5)}>
           <option value={1}>1秒</option><option value={5}>5秒</option>
         </select>
       </label>
+      {onPrecisionChange && <label className="surtr-s3-output-control"><span>残HP率の小数点以下</span>
+        <select aria-label="残HP率の小数点以下" value={precision} onChange={event => onPrecisionChange(Number(event.target.value))}>
+          {[0, 1, 2, 3].map(value => <option key={value} value={value}>{value}桁</option>)}
+        </select>
+      </label>}</div>
     </div>
-    <div className="surtr-s3-table-wrap">
-        <table className="surtr-s3-table surtr-duration-timeline-table" aria-label="秒数ごとの残りHP">
-          <thead><tr><th scope="col">経過時間（秒）</th><th scope="col">残りHP</th><th scope="col">残HP率</th><th scope="col">状態</th></tr></thead>
-          <tbody>{rows.map(row => <tr key={row.time} className={row.time === selectedTime ? 'is-selected' : undefined}>
-            <th scope="row"><button type="button" className="surtr-duration-timeline-time"
-              aria-label={`${timeFormat.format(row.time)}秒をグラフで確認`} aria-pressed={row.time === selectedTime}
-              onClick={() => onSelect(row)}>{timeFormat.format(row.time)}</button></th>
-            <td>{row.hp === null ? '—' : hpFormat.format(row.hp)}</td>
-            <td>{row.hpPercent === null ? '—' : `${row.hpPercent.toFixed(2)}%`}</td>
-            <td className="surtr-duration-timeline-status">{statusLabels[row.status]}</td>
-          </tr>)}</tbody>
-        </table>
-    </div>
+    <SurtrDurationTimelineTableContent rows={rows} precision={precision} selectedTime={selectedTime} onSelect={onSelect} />
     <details className="surtr-s3-assumptions"><summary>表示条件</summary>
       <p>各時刻の処理後のHPを表示します。次のHP減少までは直前の値を保ち、補間しません。全回復・余燼発動・退場の時刻も表示します。</p>
       <p>残りHPは表示時に四捨五入し、残HP率はその時点の最大HPに対する割合です。退場後のHPは「—」で表示します。</p>
