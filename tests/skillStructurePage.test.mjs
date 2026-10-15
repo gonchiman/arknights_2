@@ -7,7 +7,7 @@ import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 
 const source = JSON.parse(readFileSync(new URL('./fixtures/skillStructureFourOperators.json', import.meta.url), 'utf8'))
-let server, Page, Picker, rows, structures, classifySkill
+let server, Page, Picker, rows, structures, classifySkill, deferredCases
 const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;',
 })[character])
@@ -27,6 +27,7 @@ before(async () => {
   ;({ SkillStructurePage: Page } = await server.ssrLoadModule('/src/components/SkillStructurePage.tsx'))
   ;({ SkillDescriptionSelectionPage: Picker } = await server.ssrLoadModule('/src/components/SkillDescriptionSelectionPage.tsx'))
   ;({ SKILL_STRUCTURES: structures } = await server.ssrLoadModule('/src/lib/skillStructure.ts'))
+  ;({ SKILL_STRUCTURE_DEFERRED_CASES: deferredCases } = await server.ssrLoadModule('/src/lib/skillStructureDeferredCases.ts'))
   ;({ classifySkill } = await server.ssrLoadModule('/src/lib/classifier.ts'))
   // The picker receives source records, rather than deriving its input from the implementation's supported list.
   rows = source.flatMap(operator => operator.skills.map(entry => {
@@ -159,4 +160,42 @@ test('既存ピッカーは制約なしの全レベル選択と明示された�
     assert.doesNotMatch(markup, /skill-structure-description|skill-effects-fixed-level/)
     if (levelIndex !== 9) assert.match(markup, /下位レベルの原文<\/output>/)
   }
+})
+
+test('対象S3は登録された保留内容と参照リンクを表示し、他方の保留を混在させない', () => {
+  assert.equal(deferredCases.length, 2)
+  for (const entry of deferredCases) {
+    const markup = render(entry.selection)
+    assert.match(markup, /<summary>構造化の補足・保留事項<\/summary>/)
+    for (const field of ['title', 'unresolved', 'currentTreatment', 'reason', 'impact', 'resumeWhen']) {
+      assert.ok(markup.includes(`<td>${escapeHtml(entry[field])}</td>`), `${entry.id}/${field}`)
+    }
+    assert.match(markup, /<th scope="row">状態<\/th><td>保留<\/td>/)
+    for (const reference of entry.references) {
+      const anchor = [...markup.matchAll(/<a\b([^>]*)>([^<]*)<\/a>/g)]
+        .find(match => match[1].includes(`href="${escapeHtml(reference.href)}"`))
+      assert.ok(anchor, `${entry.id}/${reference.href}`)
+      assert.equal(anchor[2], escapeHtml(reference.label))
+      if (reference.external) {
+        assert.match(anchor[1], /target="_blank"/)
+        assert.match(anchor[1], /rel="[^"]*noopener/)
+        assert.match(anchor[1], /rel="[^"]*noreferrer/)
+      } else assert.doesNotMatch(anchor[1], /target="_blank"/)
+    }
+    for (const other of deferredCases.filter(other => other.id !== entry.id)) {
+      assert.ok(!markup.includes(`<td>${escapeHtml(other.title)}</td>`), `${entry.id} must not show ${other.id}`)
+    }
+  }
+})
+
+test('保留のない10スキルと非対応レベルには保留テーブルを表示しない', () => {
+  for (const row of rows) {
+    const selected = selection(row.operatorId, row.skillIndex)
+    const hasDeferred = deferredCases.some(entry => entry.selection.operatorId === selected.operatorId
+      && entry.selection.skillId === selected.skillId && entry.selection.skillIndex === selected.skillIndex)
+    const markup = render(hasDeferred ? { ...selected, levelIndex: 8 } : selected)
+    assert.doesNotMatch(markup, /<summary>[^<]*保留事項|の保留事項：/)
+    for (const entry of deferredCases) assert.ok(!markup.includes(`<td>${escapeHtml(entry.title)}</td>`))
+  }
+  assert.match(render(selection('char_263_skadi', 1)), /<summary>構造化の補足<\/summary>/)
 })

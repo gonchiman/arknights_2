@@ -11,6 +11,8 @@ import {
   type SkillStructure, type SkillStructureEffect,
 } from '../src/lib/skillStructure.ts'
 import { SKILL_COARSE_CATEGORY_LABELS } from '../src/lib/skillCoarseClassification.ts'
+import { SKILL_STRUCTURE_DEFERRED_CASES, getSkillStructureDeferredCases } from '../src/lib/skillStructureDeferredCases.ts'
+import { parseHashRoute } from '../src/lib/routes.ts'
 
 interface SourceSkill {
   skillIndex: number; skillId: string; levelIndex: number; name: string
@@ -332,5 +334,46 @@ test('全効果の依存・範囲参照・数値の元データ対応が解決�
   }
   for (const range of Object.values(SKILL_STRUCTURE_RANGES)) {
     assert.equal(new Set(range.grids.map(({ row, col }) => `${row}:${col}`)).size, range.grids.length)
+  }
+})
+
+test('保留レジストリは実在する2スキルへ紐付き、重複せず再開に必要な内容と参照先を保持する', () => {
+  assert.equal(SKILL_STRUCTURE_DEFERRED_CASES.length, 2)
+  assert.equal(new Set(SKILL_STRUCTURE_DEFERRED_CASES.map(entry => entry.id)).size, 2)
+  assert.deepEqual(SKILL_STRUCTURE_DEFERRED_CASES.map(entry => identity(entry.selection)).sort(), [
+    identity(skill('char_350_surtr', 3).basicInfo), identity(skill('char_293_thorns', 3).basicInfo),
+  ].sort())
+  for (const entry of SKILL_STRUCTURE_DEFERRED_CASES) {
+    assert.ok(findSkillStructure(entry.selection), entry.id)
+    assert.equal(entry.status, 'DEFERRED')
+    for (const field of ['id', 'title', 'unresolved', 'currentTreatment', 'reason', 'impact', 'resumeWhen'] as const) {
+      assert.ok(entry[field].trim(), `${entry.id}/${field}`)
+    }
+    assert.ok(entry.references.length > 0, `${entry.id} references`)
+    assert.equal(new Set(entry.references.map(reference => reference.href)).size, entry.references.length)
+    for (const reference of entry.references) {
+      assert.ok(reference.label.trim())
+      if (reference.external) assert.equal(new URL(reference.href).protocol, 'https:')
+      else {
+        assert.match(reference.href, /^#\//)
+        assert.notEqual(parseHashRoute(reference.href).view, 'operators', reference.href)
+      }
+    }
+  }
+})
+
+test('保留の検索は4つの選択キーを完全一致させ、他スキルや他レベルへ流用しない', () => {
+  for (const entry of SKILL_STRUCTURE_DEFERRED_CASES) {
+    assert.deepEqual(getSkillStructureDeferredCases({ ...entry.selection }), [entry])
+    for (const selection of [
+      { ...entry.selection, operatorId: 'char_unsupported' },
+      { ...entry.selection, skillId: 'skchr_unsupported' },
+      { ...entry.selection, skillIndex: 2 },
+      ...[0, 8, 10, -1, Number.NaN].map(levelIndex => ({ ...entry.selection, levelIndex })),
+    ]) assert.deepEqual(getSkillStructureDeferredCases(selection), [], `${entry.id}/${identity(selection)}`)
+  }
+  for (const record of SKILL_STRUCTURES) {
+    const expected = SKILL_STRUCTURE_DEFERRED_CASES.filter(entry => identity(entry.selection) === identity(record.basicInfo))
+    assert.deepEqual(getSkillStructureDeferredCases(record.basicInfo), expected)
   }
 })

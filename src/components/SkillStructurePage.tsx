@@ -10,6 +10,7 @@ import {
   type SkillStructure, type SkillStructureEffect, type SkillStructureStage,
 } from '../lib/skillStructure'
 import type { SkillRecord } from '../types/skill'
+import { getSkillStructureDeferredCases, type SkillStructureDeferredCase } from '../lib/skillStructureDeferredCases'
 import { SkillDescriptionSelectionPage } from './SkillDescriptionSelectionPage'
 import './SkillStructurePage.css'
 
@@ -67,6 +68,7 @@ function SkillStructureContent({ structure, activeTab, onTabChange }: {
   const b = structure.basicInfo
   const a = structure.activationSettings
   const caption = `${b.operatorName} S${b.skillIndex} ${b.skillLevel}`
+  const deferredCases = getSkillStructureDeferredCases(b)
 
   const changeTabWithKeyboard = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     let nextIndex: number | null = null
@@ -158,8 +160,10 @@ function SkillStructureContent({ structure, activeTab, onTabChange }: {
           <EffectDefinitionTable stage={selectedEffect.stage} effect={selectedEffect.effect} />
         </>}
       </section>
-      {structure.notes.length > 0 && <details className="skill-structure-notes"><summary>構造化の補足</summary>
+      {(structure.notes.length > 0 || deferredCases.length > 0) && <details className="skill-structure-notes">
+        <summary>{deferredCases.length > 0 ? '構造化の補足・保留事項' : '構造化の補足'}</summary>
         {structure.notes.map(note => <p key={note}>{note}</p>)}
+        {deferredCases.map(entry => <DeferredCaseTable key={entry.id} entry={entry} caption={caption} />)}
       </details>}
     </>,
   }
@@ -215,5 +219,20 @@ function EffectDefinitionTable({ stage, effect }: { stage: SkillStructureStage; 
   return <StructureTable caption={`${stage.label}の${formatSkillStructureEffectItem(effect.item)}の定義`}
     headers={['項目', '値']} className="skill-structure-definition-table">
     {rows.map(([label, value]) => <tr key={label}><th scope="row">{label}</th><td>{value}</td></tr>)}
+  </StructureTable>
+}
+
+function DeferredCaseTable({ entry, caption }: { entry: SkillStructureDeferredCase; caption: string }) {
+  const rows = [
+    ['保留項目', entry.title], ['状態', '保留'], ['未確定の内容', entry.unresolved],
+    ['現在の扱い', entry.currentTreatment], ['保留理由', entry.reason],
+    ['影響する計算', entry.impact], ['再開条件', entry.resumeWhen],
+  ] as const
+  return <StructureTable caption={`${caption}の保留事項：${entry.title}`} headers={['項目', '内容']} className="skill-structure-definition-table">
+    {rows.map(([label, value]) => <tr key={label}><th scope="row">{label}</th><td>{value}</td></tr>)}
+    {entry.references.map((reference, index) => <tr key={reference.href}>
+      <th scope="row">参照先{index + 1}</th><td><a href={reference.href}
+        {...(reference.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>{reference.label}</a></td>
+    </tr>)}
   </StructureTable>
 }

@@ -51,6 +51,7 @@
 .skill-structure-notes { color: var(--text-muted); font-size: 11px; }
 .skill-structure-notes summary { cursor: pointer; width: fit-content; }
 .skill-structure-notes p { margin: 7px 0 0; line-height: 1.8; overflow-wrap: anywhere; }
+.skill-structure-notes .skill-structure-table-wrap { margin-top: 10px; }
 @media (max-width: 600px) {
   .skill-structure-tabs .detail-tab { padding-inline: 10px; }
 }
