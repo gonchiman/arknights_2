@@ -10,7 +10,12 @@ export type SurtrComparisonPageState = Pick<SurtrDpsPageState,
   'settings' | 'excluded' | 'moduleLevels' | 'resistanceRange' | 'precision' | 'selectedResistance'
   | 'unequippedLayout' | 'unequippedMetric' | 'unequippedComparisonBase' | 'unequippedStep'
   | 'unequippedRankMode' | 'unequippedColumnOrder' | 'unequippedColorScale' | 'unequippedColorScaleMode'
-> & { unequippedPotentials: number[] }
+> & {
+  unequippedPotentials: number[]
+  displayMode: 'comparison' | 'winner'
+  winnerColor: 'module' | 'none'
+  winnerGapShading: boolean
+}
 
 function fromDpsState(state: SurtrDpsPageState): SurtrComparisonPageState {
   return {
@@ -24,6 +29,7 @@ function fromDpsState(state: SurtrDpsPageState): SurtrComparisonPageState {
     unequippedStep: state.unequippedStep, unequippedRankMode: state.unequippedRankMode,
     unequippedColumnOrder: state.unequippedColumnOrder, unequippedColorScale: state.unequippedColorScale,
     unequippedColorScaleMode: state.unequippedColorScaleMode,
+    displayMode: 'comparison', winnerColor: 'module', winnerGapShading: false,
   }
 }
 
@@ -41,7 +47,12 @@ export function createDefaultSurtrComparisonPageState(): SurtrComparisonPageStat
 
 /** Reuse the existing validated settings and table options rather than adding a second validator. */
 export function parseSurtrComparisonPageState(value: unknown): SurtrComparisonPageState {
-  return fromDpsState(parseSurtrDpsPageState(value, comparisonDpsDefaults()))
+  const state = fromDpsState(parseSurtrDpsPageState(value, comparisonDpsDefaults()))
+  if (!value || typeof value !== 'object') return state
+  const saved = value as Record<string, unknown>
+  return { ...state, displayMode: saved.displayMode === 'winner' ? 'winner' : 'comparison',
+    winnerColor: saved.winnerColor === 'none' ? 'none' : 'module',
+    winnerGapShading: saved.winnerGapShading === true }
 }
 
 export function readSurtrComparisonPageState(storage: Pick<Storage, 'getItem'> | undefined = sessionStorageOrUndefined()): SurtrComparisonPageState {

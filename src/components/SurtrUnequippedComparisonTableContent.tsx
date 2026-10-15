@@ -4,6 +4,8 @@ import { getSurtrDpsResistanceRating } from '../lib/surtrDpsResistance'
 import type { EnemyHeatmapColorScale } from '../lib/enemyHeatmapColor'
 import { getSurtrUnequippedColorScaleBackground } from '../lib/surtrUnequippedColorScale'
 import { buildSurtrComparisonImageColumns, getSurtrComparisonImageColorScaleMaximum } from '../lib/surtrComparisonImageLayout'
+import { buildSurtrComparisonWinnerData, getSurtrWinnerColumnCondition, type SurtrWinnerStage } from '../lib/surtrComparisonWinner'
+import { ModuleWinnerTable } from './ModuleWinnerTable'
 import { formatSurtrUnequippedComparisonValue,
   getSurtrComparisonTargets, getSurtrComparisonBaseLabel, getSurtrUnequippedBaselines,
   type SurtrUnequippedBlockingComparison, type SurtrUnequippedColumnOrder, type SurtrUnequippedLayout, type SurtrUnequippedMetric, type SurtrUnequippedRankMode, type SurtrUnequippedComparisonBase, type SurtrUnequippedComparisonQuantity } from '../lib/surtrUnequippedComparison'
@@ -25,10 +27,23 @@ export interface SurtrUnequippedComparisonTableData {
   blockingComparison?: readonly SurtrUnequippedBlockingComparison[]
   /** Use the complete table's scale when exporting a subset of its cells. */
   colorScaleMaximum?: number
+  displayMode?: 'comparison' | 'winner'
+  winnerColor?: 'module' | 'none'
+  winnerGapShading?: boolean
+  winnerStages?: readonly SurtrWinnerStage[]
 }
 
 export const getUnequippedMetricLabel = (metric: SurtrUnequippedMetric, comparisonBase: SurtrUnequippedComparisonBase = 'unequipped', quantity: SurtrUnequippedComparisonQuantity = 'dps') =>
   metric === 'difference' ? quantity === 'expected-damage' ? 'ダメージ差' : 'DPS差' : metric === 'ratio' ? `比率（${getSurtrComparisonBaseLabel(comparisonBase)}＝100%）` : '増加率（%）'
+
+export function SurtrComparisonTableSurface(props: Parameters<typeof SurtrUnequippedComparisonTableContent>[0] & { forImage?: boolean }) {
+  if (props.displayMode !== 'winner') return <SurtrUnequippedComparisonTableContent {...props} />
+  return <ModuleWinnerTable data={buildSurtrComparisonWinnerData(props)} transpose={props.transpose}
+    color={props.winnerColor} gapShading={props.winnerGapShading} rankMode={props.rankMode} forImage={props.forImage}
+    ariaLabel="スルト S3 DPSが最大のMOD"
+    onSelectCell={props.onOpenDetail ? selection => props.onOpenDetail?.(Number(selection.rowId), selection.winnerIds[0], 'total',
+      getSurtrWinnerColumnCondition(selection.columnId)?.blocking) : undefined} />
+}
 
 export function SurtrUnequippedComparisonTableContent({ series, baseline, resistances, precision, metric, layout, rankMode = 'none', columnOrder = 'module', colorScale = false, colorScaleMode = 'LINEAR', comparisonBase = 'unequipped', quantity = 'dps', referenceSeries, blockingComparison, colorScaleMaximum: scaleOverride,
   selectedResistance, onOpenDetail, title, footer, transpose = false }: SurtrUnequippedComparisonTableData & {
@@ -107,7 +122,7 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
         {combined && <tr>{resistances.map(resistance => <FragmentColumns key={resistance} quantityLabel={quantityLabel} metricLabel={metric === 'ratio' ? '比率' : metricLabel} />)}</tr>}
       </thead>
       <tbody>{showBaseline && baselines.map((item, index) => <tr key={`baseline:${item.id}`}>{rowLabels(item)}
-        {resistances.map(resistance => <td key={resistance} colSpan={combined ? 2 : 1} data-series-id={item.id} data-metric="total">{formatDps(baselineValues[index].get(resistance))}</td>)}</tr>)}
+        {resistances.map(resistance => <td key={resistance} colSpan={combined ? 2 : 1} data-series-id={item.id} data-metric="total" data-table-image-number>{formatDps(baselineValues[index].get(resistance))}</td>)}</tr>)}
         {columns.map(column => <tr key={`${column.seriesId}:${column.blocking}`}>{rowLabels(column.item, column.blocking, column.reference)}
           {resistances.map(resistance => <ComparisonCells key={resistance} seriesId={column.seriesId} blocking={column.blocking} combined={combined}
             dps={formatDps(column.raw?.get(resistance))}
@@ -162,7 +177,7 @@ export function SurtrUnequippedComparisonTableContent({ series, baseline, resist
       <th scope="row">{onOpenDetail ? <button type="button" className="surtr-s3-table-resistance" aria-label={`術耐性 ${resistance}の${quantity === 'expected-damage' ? '期待総ダメージ' : 'DPS'}計算フローを開く`} aria-haspopup="dialog">
         {resistance}{rankMode === 'inline' && <ResistanceRank rank={rank} />}<span aria-hidden="true">›</span>
       </button> : rankMode === 'inline' ? <span className="surtr-s3-resistance-rank-value">{resistance}<ResistanceRank rank={rank} /></span> : resistance}</th>
-      {showBaseline && baselines.map((item, index) => <td key={item.id} data-series-id={item.id} data-metric="total">{formatDps(baselineValues[index].get(resistance))}</td>)}
+      {showBaseline && baselines.map((item, index) => <td key={item.id} data-series-id={item.id} data-metric="total" data-table-image-number>{formatDps(baselineValues[index].get(resistance))}</td>)}
       {columns.map(column => <ComparisonCells key={`${column.seriesId}:${column.blocking}`} seriesId={column.seriesId} blocking={column.blocking} combined={combined}
         dps={formatDps(column.raw?.get(resistance))}
         background={colorScale ? getSurtrUnequippedColorScaleBackground(column.comparison?.get(resistance), metric, colorScaleMaximum, colorScaleMode) : undefined}
@@ -225,7 +240,7 @@ function FragmentColumns({ metricLabel, quantityLabel }: { metricLabel: string; 
 }
 
 function ComparisonCells({ seriesId, blocking, combined, dps, comparison, background }: { seriesId: string; blocking?: boolean; combined: boolean; dps: string; comparison: string; background?: string }) {
-  return <>{combined && <td data-series-id={seriesId} data-blocking={blocking} data-metric="total">{dps}</td>}<td data-series-id={seriesId} data-blocking={blocking}
+  return <>{combined && <td data-series-id={seriesId} data-blocking={blocking} data-metric="total" data-table-image-number>{dps}</td>}<td data-series-id={seriesId} data-blocking={blocking} data-table-image-number
     className={background ? 'surtr-s3-color-scale-cell' : undefined}
     style={background ? { '--surtr-comparison-cell-background': background } as CSSProperties : undefined}>{comparison}</td></>
 }

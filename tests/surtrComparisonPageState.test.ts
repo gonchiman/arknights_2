@@ -20,12 +20,30 @@ test('fresh comparison settings use the requested display defaults independently
   assert.equal(state.unequippedMetric, 'percent')
   assert.equal(state.unequippedStep, 20)
   assert.equal(state.unequippedRankMode, 'merged')
+  assert.equal(state.displayMode, 'comparison')
+  assert.equal(state.winnerColor, 'module')
+  assert.equal(state.winnerGapShading, false)
   for (const key of ['unequippedComparisonBase', 'unequippedColorScale', 'unequippedColorScaleMode', 'precision'] as const) {
     assert.equal(state[key], old[key])
   }
   assert.deepEqual(state.resistanceRange, old.resistanceRange)
   assert.deepEqual(readSurtrComparisonPageState(memoryStorage()), state)
   assert.deepEqual(parseSurtrComparisonPageState({}), state)
+})
+
+test('winning MOD is opt-in, independently persisted and validates invalid presentation settings', () => {
+  const storage = memoryStorage()
+  const defaults = createDefaultSurtrComparisonPageState()
+  const state = { ...defaults, displayMode: 'winner' as const, winnerColor: 'none' as const, winnerGapShading: true }
+  writeSurtrComparisonPageState(state, storage)
+  assert.deepEqual(readSurtrComparisonPageState(storage), state)
+  assert.equal(storage.getItem(SURTR_DPS_PAGE_STATE_KEY), null)
+  const invalid = parseSurtrComparisonPageState({ ...state, displayMode: 'invalid', winnerColor: 'invalid', winnerGapShading: 'true' })
+  assert.equal(invalid.displayMode, 'comparison')
+  assert.equal(invalid.winnerColor, 'module')
+  assert.equal(invalid.winnerGapShading, false)
+  assert.equal(invalid.unequippedComparisonBase, defaults.unequippedComparisonBase)
+  assert.equal(invalid.unequippedMetric, defaults.unequippedMetric)
 })
 
 test('first visit migrates validated panel 5 settings, resolves common potential and preserves hidden selections', () => {

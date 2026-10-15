@@ -11,7 +11,7 @@ import { getSurtrModuleChoices, getSelectedSurtrModuleStages, type SurtrModuleCh
 import { applySurtrComparisonPreset, buildSurtrComparisonPresets } from '../lib/surtrComparisonPresets'
 import { getSurtrDpsResistanceSamples, isValidSurtrDpsResistanceRange, type SurtrDpsBarStep } from '../lib/surtrDpsResistance'
 import { getGgTableBaselineId, type GgTableBaseline, type GgTableBuild, type GgTableColorScale,
-  type GgTableData, type GgTableLayout, type GgTableMetric } from '../lib/goldenglowTargetSwitchTable'
+  type GgTableData, type GgTableLayout, type GgTableMetric, type GgTableRankMode } from '../lib/goldenglowTargetSwitchTable'
 import { GoldenglowAnalysisHeader } from './GoldenglowAnalysisHeader'
 import { GoldenglowSkillControls } from './GoldenglowSkillControls'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
@@ -50,7 +50,9 @@ export function GoldenglowTargetSwitchThreePage({ rows, loading, error, onRetry 
   const [layout, setLayout] = useState<GgTableLayout>('comparison')
   const [metric, setMetric] = useState<GgTableMetric>('percent')
   const [precision, setPrecision] = useState(0)
-  const [showRanks, setShowRanks] = useState(true)
+  const [rankMode, setRankMode] = useState<GgTableRankMode>('inline')
+  const [winnerColor, setWinnerColor] = useState<'module' | 'none'>('module')
+  const [winnerGapShading, setWinnerGapShading] = useState(false)
   const [colorScale, setColorScale] = useState<GgTableColorScale>('NONE')
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
   const calculation = useGoldenglowResistanceSimulation()
@@ -130,7 +132,7 @@ export function GoldenglowTargetSwitchThreePage({ rows, loading, error, onRetry 
   const data: GgTableData = { builds: snapshot?.builds ?? visibleBuilds, series: calculation.series,
     hps: calculation.request?.input.builds[0]?.input.enemyHps ?? hpSelection.values,
     resistances: calculation.request?.input.enemyResistances ?? resistances, baseline: snapshot?.baseline ?? baseline,
-    layout, metric, precision, showRanks, colorScale }
+    layout, metric, precision, showRanks: rankMode !== 'none', rankMode, colorScale, winnerColor, winnerGapShading }
   const status = loading ? <p role="status">スキル情報を読み込み中…</p>
     : <div className="error-box" role="alert">{error ?? 'ゴールデングローのスキル情報を取得できませんでした。'}<button type="button" className="button secondary" onClick={onRetry}>再読み込み</button></div>
   const workload = prepared.input ? prepared.input.builds.length * hpSelection.values.length * resistances.length : 0
@@ -185,18 +187,26 @@ export function GoldenglowTargetSwitchThreePage({ rows, loading, error, onRetry 
       {!!prepared.error && <p className="gg3-error" role="alert">{prepared.error}</p>}
     </CollapsibleCalculatorPanel>
     <CollapsibleCalculatorPanel id="gg3-display" number="02" title="表の表示設定" collapsedLabel="表示設定を表示"
-      summary={`${layout === 'total' ? '総ダメージのみ' : layout === 'combined' ? '総ダメージ＋比較値' : '比較値のみ'}・小数${precision}桁`}>
+      summary={layout === 'winner' ? '最大のMOD' : `${layout === 'total' ? '総ダメージのみ' : layout === 'combined' ? '総ダメージ＋比較値' : '比較値のみ'}・小数${precision}桁`}>
       <div className="gg3-display-controls">
         <label className="calculator-field"><span>表の形式</span><select aria-label="表の形式" value={layout} onChange={event => setLayout(event.target.value as GgTableLayout)}>
-          <option value="total">総ダメージのみ</option><option value="comparison">比較値のみ</option><option value="combined">総ダメージ＋比較値</option></select></label>
-        <label className="calculator-field"><span>比較値</span><select aria-label="比較値" value={metric} disabled={layout === 'total'} onChange={event => setMetric(event.target.value as GgTableMetric)}>
+          <option value="total">総ダメージのみ</option><option value="comparison">比較値のみ</option><option value="combined">総ダメージ＋比較値</option><option value="winner">最大のMOD</option></select></label>
+        {layout !== 'winner' && <><label className="calculator-field"><span>比較値</span><select aria-label="比較値" value={metric} disabled={layout === 'total'} onChange={event => setMetric(event.target.value as GgTableMetric)}>
           <option value="difference">総ダメージ差</option><option value="ratio">基準比（基準＝100%）</option><option value="percent">増加率（%）</option></select></label>
         <label className="calculator-field"><span>小数点以下</span><select aria-label="小数点以下" value={precision} onChange={event => setPrecision(Number(event.target.value))}>
           {[0, 1, 2, 3].map(value => <option key={value} value={value}>{value}桁</option>)}</select></label>
         <div className="gg3-color-control"><label className="calculator-field"><span>カラースケール</span><select aria-label="カラースケール" value={colorScale} onChange={event => setColorScale(event.target.value as GgTableColorScale)}>
           <option value="NONE">なし</option><option value="LINEAR">値に比例</option><option value="SQRT">中程度を見やすく</option></select></label>
-          <HelpPopover label="カラースケールの説明">比較値を基準より高ければ青、低ければ茶色で表示します。「中程度を見やすく」は、最大差に対する比率の平方根で濃淡を付けます。</HelpPopover></div>
-        <label className="gg3-rank-control"><input type="checkbox" checked={showRanks} onChange={event => setShowRanks(event.target.checked)} />ランク表記</label>
+          <HelpPopover label="カラースケールの説明">比較値を基準より高ければ青、低ければ茶色で表示します。「中程度を見やすく」は、最大差に対する比率の平方根で濃淡を付けます。</HelpPopover></div></>}
+        <label className="calculator-field"><span>術耐性ランク</span><select aria-label="術耐性ランク表示" value={rankMode} onChange={event => setRankMode(event.target.value as GgTableRankMode)}>
+          <option value="none">表示しない</option><option value="inline">数値の横に表示</option><option value="merged">同じランクをまとめる</option></select></label>
+        {layout === 'winner' && <>
+          <label className="calculator-field"><span>セルの色</span><select aria-label="最大のMODの色" value={winnerColor} onChange={event => setWinnerColor(event.target.value as 'module' | 'none')}>
+            <option value="module">MOD別</option><option value="none">なし</option></select></label>
+          <label className="gg3-rank-control"><input type="checkbox" checked={winnerGapShading} disabled={winnerColor === 'none' || data.builds.length < 2}
+            onChange={event => setWinnerGapShading(event.target.checked)} />差に応じて濃淡を変える</label>
+          <HelpPopover label="最大のMODの説明">選択した装備の総ダメージ期待値を、丸め前の値で比較します。同じ値はすべて表示します。濃淡は次点への増加率で、30%以上を最も濃くします。試行による推定値のため、小さな差は試行回数・抽選番号で変わる場合があります。</HelpPopover>
+        </>}
       </div>
     </CollapsibleCalculatorPanel>
     <CollapsibleCalculatorPanel id="gg3-result" number="03" title="比較結果" collapsedLabel="比較結果を表示"

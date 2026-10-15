@@ -16,14 +16,19 @@ export interface SurtrModuleComparisonTableOptions {
   rankMode: SurtrUnequippedRankMode
   precision: number
   colorScale: EnemyHeatmapColorScale | 'NONE'
+  displayMode?: 'comparison' | 'winner'
+  winnerColor?: 'module' | 'none'
+  winnerGapShading?: boolean
 }
 
-export function SurtrModuleComparisonTableControls({ value, onChange, quantity = 'dps', stepErrorId, allowPotentialComparison = false, group = 'all' }: {
+export function SurtrModuleComparisonTableControls({ value, onChange, quantity = 'dps', stepErrorId, allowPotentialComparison = false, allowWinner = false, winnerCandidateCount = 0, group = 'all' }: {
   value: SurtrModuleComparisonTableOptions
   onChange: (changes: Partial<SurtrModuleComparisonTableOptions>) => void
   quantity?: SurtrUnequippedComparisonQuantity
   stepErrorId: string
   allowPotentialComparison?: boolean
+  allowWinner?: boolean
+  winnerCandidateCount?: number
   /** Split the existing controls across panels without changing other pages. */
   group?: 'all' | 'conditions' | 'display'
 }) {
@@ -40,6 +45,19 @@ export function SurtrModuleComparisonTableControls({ value, onChange, quantity =
       <HelpPopover label="MOD比較の比較基準の説明">{allowPotentialComparison && <>「未装備」と「1つ前の段階」は、比較する列と同じ潜在を基準にします。</>}「1つ前の段階」はLv.1を未装備、Lv.2を同じMODのLv.1、Lv.3を同じMODのLv.2と比較します。基準が表に表示されていなくても計算します。{allowPotentialComparison && <>「同じMOD・段階の潜在」は、MODと段階を揃えて潜在による変化を比較します。</>}</HelpPopover>
     </span>}
     {group !== 'conditions' && <>
+    {allowWinner && <label className="surtr-s3-output-control"><span>表示する表</span><select aria-label="MOD比較の表示する表" value={value.displayMode ?? 'comparison'}
+      onChange={event => onChange({ displayMode: event.target.value as 'comparison' | 'winner' })}>
+      <option value="comparison">比較値の表</option><option value="winner">最大のMOD</option>
+    </select></label>}
+    {allowWinner && value.displayMode === 'winner' ? <>
+      <label className="surtr-s3-output-control"><span>セルの色</span><select aria-label="最大MODのセルの色" value={value.winnerColor ?? 'module'}
+        onChange={event => onChange({ winnerColor: event.target.value as 'module' | 'none' })}>
+        <option value="module">MODの色</option><option value="none">なし</option>
+      </select></label>
+      <label className="surtr-s3-values-toggle"><input type="checkbox" checked={value.winnerGapShading ?? false}
+        disabled={value.winnerColor === 'none' || winnerCandidateCount < 2}
+        onChange={event => onChange({ winnerGapShading: event.target.checked })} />差に応じて濃淡を変える</label>
+    </> : <>
     <label className="surtr-s3-output-control"><span>表の形式</span><select aria-label={`${prefix}表の形式`} value={value.layout}
       onChange={event => onChange({ layout: event.target.value as SurtrUnequippedLayout })}>
       <option value="combined">{quantity === 'expected-damage' ? '期待値' : 'DPS'}＋比較値</option><option value="comparison">比較値のみ</option>
@@ -53,6 +71,7 @@ export function SurtrModuleComparisonTableControls({ value, onChange, quantity =
       <option value="difference">{quantity === 'expected-damage' ? 'ダメージ差' : 'DPS差'}</option>
       <option value="ratio">比率（{baseLabel}＝100%）</option><option value="percent">増加率（%）</option>
     </select></label>
+    </>}
     <SurtrResistanceStepControl step={value.step} custom={value.customStep} draft={value.stepDraft}
       onChange={step => onChange({ step })} onCustomChange={customStep => onChange({ customStep })} onDraftChange={stepDraft => onChange({ stepDraft })}
       ariaLabel={`${prefix}術耐性の刻み`} errorId={stepErrorId} defaultStep={10} />
@@ -64,13 +83,13 @@ export function SurtrModuleComparisonTableControls({ value, onChange, quantity =
       onChange={event => onChange({ precision: Number(event.target.value) })}>
       {[0, 1, 2, 3].map(digits => <option key={digits} value={digits}>{digits}桁</option>)}
     </select></label>
-    <span className="surtr-s3-color-scale-control">
+    {!(allowWinner && value.displayMode === 'winner') && <span className="surtr-s3-color-scale-control">
       <label className="surtr-s3-output-control"><span>カラースケール</span><select aria-label={`${prefix}カラースケール`} value={value.colorScale}
         onChange={event => onChange({ colorScale: event.target.value as SurtrModuleComparisonTableOptions['colorScale'] })}>
         <option value="NONE">なし</option><option value="LINEAR">値に比例</option><option value="SQRT">中程度を見やすく</option>
       </select></label>
       <HelpPopover label="カラースケールの説明">比較値のセルを、{baseLabel}より高ければ青、低ければ茶色で表示します。同じ値は無色です。表示中の比較値全体で濃淡を揃え、差が大きいほど濃くします。「中程度を見やすく」は最大差に対する比率の平方根を使い、中程度の差も見やすくします。数値や{quantity === 'expected-damage' ? '総ダメージ期待値' : 'DPS'}列は変わりません。</HelpPopover>
-    </span>
+    </span>}
     {stepError && <p className="surtr-s3-axis-error" id={stepErrorId} role="alert">{stepError}</p>}
     </>}
   </>
