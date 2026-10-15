@@ -5,6 +5,7 @@ import { createGoldenglowBarPalette, GOLDENGLOW_BAR_PALETTES, goldenglowResistan
 import type { GoldenglowBarPaletteKey } from '../lib/goldenglowTargetSwitchChart'
 import { getGoldenglowTargetSwitchImageFilename, type GoldenglowTargetSwitchImageRequest } from '../lib/goldenglowTargetSwitchImageFilename'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
+import { ChartColorInput } from './ChartColorInput'
 import { GoldenglowTargetSwitchGroupedBars } from './GoldenglowTargetSwitchGroupedBars'
 import { saveGoldenglowTargetSwitchChartImage } from './saveGoldenglowTargetSwitchChartImage'
 import './GoldenglowTargetSwitchChartPanel.css'
@@ -40,7 +41,6 @@ export function GoldenglowTargetSwitchChartPanel({
   const [imageFeedback, setImageFeedback] = useState<'saved' | 'failed' | null>(null)
   const [barPalette, setBarPalette] = useState<GoldenglowBarPaletteKey | 'custom'>('blue')
   const [customColor, setCustomColor] = useState('#3e80af')
-  const [customColorText, setCustomColorText] = useState('#3e80af')
   const barColors = useMemo(() => barPalette === 'custom'
     ? createGoldenglowBarPalette(customColor) : GOLDENGLOW_BAR_PALETTES[barPalette].colors, [barPalette, customColor])
   const frameRef = useRef<HTMLDivElement>(null)
@@ -183,18 +183,7 @@ export function GoldenglowTargetSwitchChartPanel({
             <option value="custom">カスタム</option>
           </select>
         </label>
-        {barPalette === 'custom' && <div className="ggs-chart-custom-color">
-          <input className="ggs-chart-color-picker" type="color" aria-label="棒のカスタム色" value={customColor}
-            onChange={(event) => { setCustomColor(event.target.value); setCustomColorText(event.target.value) }} />
-          <input className="ggs-chart-color-code" type="text" aria-label="棒の色コード" value={customColorText}
-            spellCheck={false} autoCapitalize="off" maxLength={7} aria-invalid={!/^#?[0-9a-fA-F]{6}$/.test(customColorText)}
-            onChange={(event) => {
-              const value = event.target.value
-              setCustomColorText(value)
-              const match = value.match(/^#?([0-9a-fA-F]{6})$/)
-              if (match) setCustomColor(`#${match[1].toLowerCase()}`)
-            }} onBlur={() => setCustomColorText(customColor)} />
-        </div>}
+        {barPalette === 'custom' && <ChartColorInput value={customColor} onChange={setCustomColor} label="棒のカスタム色" />}
       </div>}
       <div className="ggs-chart-type" role="group" aria-label="グラフの種類">
         <button type="button" aria-pressed={chartType === 'bar'} onClick={() => setChartType('bar')}>集合棒グラフ</button>

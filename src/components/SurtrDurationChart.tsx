@@ -1,7 +1,7 @@
 import { useCallback, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { getChartImageLayout } from '../lib/chartImageLayout'
 import { placeGroupedBarValueLabels } from '../lib/groupedBarValueLabels'
-import { prepareSurtrDurationChartSeries, type SurtrDurationChartRange } from '../lib/surtrDurationChartView'
+import { prepareSurtrDurationChartSeries, type SurtrDurationChartRange, type SurtrDurationChartViewEvent } from '../lib/surtrDurationChartView'
 import { applyChartImageSeriesLabels, resolveChartImageLabels,
   type ChartImageLabelDefaults, type ChartImageLabelOverrides } from '../lib/chartImageLabels'
 import { wrapText } from '../lib/slideComposer'
@@ -12,12 +12,12 @@ export interface SurtrDurationSeries {
   id: string
   label: string
   color: string
-  styleIndex?: number
   remnantStart: number | null
   remnantDuration: number
   retreatTime: number | null
   endTime?: number
   points: { time: number; hpPercent: number; phase?: string }[]
+  events?: readonly SurtrDurationChartViewEvent[]
 }
 
 export interface SurtrDurationChartProps {
@@ -37,7 +37,6 @@ export interface SurtrDurationChartImageProps extends Omit<SurtrDurationChartPro
 const NATURAL_CHART_HEIGHT = 334
 const AXIS_TITLE_FONT = '700 12px "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif'
 const AXIS_TITLE_LINE_HEIGHT = 16
-const DASH_PATTERNS = [undefined, '8 5', '2 5', '10 4 2 4', '14 5', '5 3 2 3', '12 3 3 3', '3 3 9 3 3 3'] as const
 const seconds = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 
 export function getSurtrDurationImageLabelDefaults(
@@ -48,11 +47,10 @@ export function getSurtrDurationImageLabelDefaults(
 
 type DisplaySeries = SurtrDurationSeries & { displayEnd: number; triggerHp: number | null }
 
-function SeriesSwatch({ item, index, image = false }: { item: SurtrDurationSeries; index: number; image?: boolean }) {
+function SeriesSwatch({ item, image = false }: { item: SurtrDurationSeries; image?: boolean }) {
   return <svg className={image ? 'chart-image-frame-legend-swatch' : 'surtr-duration-chart-swatch'}
     width="18" height="12" aria-hidden="true">
-    <line x1="0" x2="18" y1="6" y2="6" stroke={item.color} strokeWidth="2"
-      strokeDasharray={DASH_PATTERNS[(item.styleIndex ?? index) % DASH_PATTERNS.length]} />
+    <line x1="0" x2="18" y1="6" y2="6" stroke={item.color} strokeWidth="2" />
   </svg>
 }
 
@@ -60,8 +58,8 @@ function ChartLegend({ series, image = false }: { series: SurtrDurationSeries[];
   const listClass = image ? 'chart-image-frame-legend-list' : 'surtr-duration-chart-legend'
   const itemClass = image ? 'chart-image-frame-legend-item' : undefined
   return <ul className={listClass} aria-label="比較線">
-    {series.map((item, index) => <li className={itemClass} key={item.id}>
-      <SeriesSwatch item={item} index={index} image={image} /><span>{item.label}</span>
+    {series.map((item) => <li className={itemClass} key={item.id}>
+      <SeriesSwatch item={item} image={image} /><span>{item.label}</span>
     </li>)}
   </ul>
 }
@@ -188,9 +186,9 @@ function SurtrDurationSvg({ series, title, range, selection, width, height, imag
           y="24" width={selectionLabelWidth} height="18" rx="3" />
         <text className="surtr-duration-chart-selection-label" x={selectionLabelX} y="37" textAnchor="middle">{selectionLabel}</text>
       </g>}
-      <g clipPath={`url(#${clipId})`}>{series.map((item, index) => <path key={item.id} className="surtr-duration-chart-line"
+      <g clipPath={`url(#${clipId})`}>{series.map((item) => <path key={item.id} className="surtr-duration-chart-line"
         d={item.points.map((point, pointIndex) => `${pointIndex === 0 ? 'M' : 'L'} ${x(point.time)} ${y(point.hpPercent)}`).join(' ')}
-        stroke={item.color} strokeDasharray={DASH_PATTERNS[(item.styleIndex ?? index) % DASH_PATTERNS.length]} />)}</g>
+        stroke={item.color} />)}</g>
       {series.map((item, index) => {
         // Concentric markers preserve the true coordinates when several builds have the same event time.
         const radius = 4 + index * 2.5

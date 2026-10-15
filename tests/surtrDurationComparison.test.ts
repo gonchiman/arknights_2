@@ -5,11 +5,23 @@ import type { EnemyRecord } from '../src/types/enemy.ts'
 import { createSurtrDurationCondition } from '../src/lib/surtrDurationParticipants.ts'
 import { describeSurtrDurationCondition, getSurtrDurationConditionName, getSurtrDurationFilenameParts } from '../src/lib/surtrDurationComparison.ts'
 import { getSurtrDurationImageFilename } from '../src/lib/surtrDurationImageFilename.ts'
+import { getNextSurtrDurationLineColor, getSurtrDurationDefaultLineColor, SURTR_DURATION_LINE_COLORS } from '../src/lib/surtrDurationLineColors.ts'
 
 const record = { skillName: 'ラグナロク', skillLevels: Array.from({ length: 10 }, () => ({ name: 'ラグナロク' })),
   operatorProfile: { phases: [{}, {}, { maxLevel: 90 }], modules: [] } } as unknown as SkillRecord
 const skills = [{ operatorId: 'char_298_susuro', operatorName: 'ススーロ', skillId: 's2', skillIndex: 2, skillName: 'ディープヒーリング' }] as SkillRecord[]
 const enemies = [{ id: 'mage', name: '術師' }] as EnemyRecord[]
+
+test('HP condition colors have distinct defaults and remain tied to line identity', () => {
+  const ids = ['baseline', 'default-sarkaz', 'default-ansel', 'line-1', 'line-2', 'line-3', 'line-4', 'line-5']
+  const colors = ids.map(getSurtrDurationDefaultLineColor)
+  assert.equal(new Set(colors).size, 8)
+  assert.deepEqual([...ids].reverse().map(getSurtrDurationDefaultLineColor), [...colors].reverse())
+  assert.ok(colors.every(color => /^#[0-9a-f]{6}$/.test(color)))
+  assert.equal(getNextSurtrDurationLineColor(colors.slice(0, 3)), colors[3])
+  assert.equal(getNextSurtrDurationLineColor(['#737982', '#B4763E', '#123456']), colors[2])
+  assert.ok(SURTR_DURATION_LINE_COLORS.includes(getNextSurtrDurationLineColor(colors)))
+})
 
 test('automatic line names distinguish target, first hit, skill use and explicit custom labels', () => {
   const config = createSurtrDurationCondition(record)

@@ -5,10 +5,10 @@ import { SURTR_OPERATOR_ID } from '../lib/surtrDps'
 import { deriveSurtrDurationModel } from '../lib/surtrDuration'
 import { calculateSurtrDurationCombat } from '../lib/surtrDurationCombat'
 import { createSurtrDurationCondition, deriveSurtrDurationParticipants, type SurtrDurationCondition } from '../lib/surtrDurationParticipants'
-import { describeSurtrDurationCondition, getSurtrDurationConditionName, getSurtrDurationFilenameParts, type SurtrDurationComparisonLine } from '../lib/surtrDurationComparison'
+import { createSurtrDurationInitialLines, describeSurtrDurationCondition, getSurtrDurationConditionName, getSurtrDurationFilenameParts, type SurtrDurationComparisonLine } from '../lib/surtrDurationComparison'
 import { loadEnemyRecords } from '../lib/enemyData'
 import { buildSurtrDurationTimeline, type SurtrDurationTableLayout } from '../lib/surtrDurationTimeline'
-import { getModuleComparisonColors } from '../lib/moduleColors'
+import { getNextSurtrDurationLineColor, getSurtrDurationDefaultLineColor, type SurtrDurationLineAppearance } from '../lib/surtrDurationLineColors'
 import { getSurtrDurationImageFilename } from '../lib/surtrDurationImageFilename'
 import type { SurtrDurationChartRange } from '../lib/surtrDurationChartView'
 import { getSurtrDurationTableImageFilename, type SurtrDurationTableImageConditions } from '../lib/surtrDurationTableImageFilename'
@@ -25,6 +25,7 @@ import { SurtrDurationChart, SurtrDurationChartImage, SurtrDurationChartImagePre
   getSurtrDurationImageLabelDefaults, type SurtrDurationSeries } from './SurtrDurationChart'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import { SurtrDurationConditionEditor } from './SurtrDurationConditionEditor'
+import { SurtrDurationLineColorPicker } from './SurtrDurationLineColorPicker'
 import { SurtrDurationTimelineTable } from './SurtrDurationTimelineTable'
 import { SurtrDurationTableImagePreview, saveSurtrDurationTableImage, type SurtrDurationTableImageSnapshot } from './SurtrDurationTableImage'
 import './DamageCalculator.css'
@@ -56,6 +57,7 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
   const [draft, setDraft] = useState<SurtrDurationCondition | null>(null)
   const [draftLimit, setDraftLimit] = useState(120)
   const [savedLines, setSavedLines] = useState<SurtrDurationComparisonLine[] | null>(null)
+  const [lineAppearances, setLineAppearances] = useState<Record<string, SurtrDurationLineAppearance>>({})
   const [editingId, setEditingId] = useState<string | null>(null)
   const [tableLineId, setTableLineId] = useState('baseline')
   const [enemyRows, setEnemyRows] = useState<EnemyRecord[]>([])
@@ -93,28 +95,29 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
   }, [enemyAttempt])
   const initialCondition = useMemo(() => record ? createSurtrDurationCondition(record) : null, [record])
   const currentDraft = draft ?? initialCondition
-  const lines = useMemo<SurtrDurationComparisonLine[]>(() => savedLines ?? (initialCondition
-    ? [{ id: 'baseline', condition: initialCondition, timeLimit: 120, visible: true }] : []), [savedLines, initialCondition])
-  const comparison = useMemo(() => {
+  const lines = useMemo<SurtrDurationComparisonLine[]>(() => savedLines ?? (record
+    ? createSurtrDurationInitialLines(record, rows) : []), [savedLines, record, rows])
+  const calculations = useMemo(() => {
     if (!record) return []
-    const calculations = lines.map(line => {
+    return lines.map(line => {
       const model = deriveSurtrDurationModel(record, line.condition.settings, line.condition.moduleId, line.condition.moduleLevel)
       const participants = deriveSurtrDurationParticipants(record, line.condition, enemyRows, rows)
+      const waitingForEnemies = enemyLoading && line.condition.enemies.length > 0
       const result = model && !participants.unsupportedReasons.length
         ? calculateSurtrDurationCombat(model, participants.actions, line.timeLimit) : null
-      return { ...line, model, participants, result,
+      return { ...line, model, participants, result, waitingForEnemies,
         label: getSurtrDurationConditionName(record, line.condition, enemyRows, rows),
+        legendLabel: getSurtrDurationConditionName(record, line.condition, enemyRows, rows, { includeModule: false }),
         details: describeSurtrDurationCondition(record, line.condition, line.timeLimit, enemyRows, rows) }
     })
-    const colors = getModuleComparisonColors(calculations.map(line => ({
-      moduleType: line.model?.moduleType, moduleLevel: line.model?.moduleLevel,
-      potential: line.condition.settings.potential,
-    })), { shadeBy: 'moduleLevel' })
-    return calculations.map((line, index) => ({ ...line, color: colors[index], styleIndex: index }))
-  }, [record, lines, enemyRows, rows])
+  }, [record, lines, enemyRows, enemyLoading, rows])
+  const comparison = useMemo(() => calculations.map(line => {
+    const defaultColor = getSurtrDurationDefaultLineColor(line.id)
+    return { ...line, ...(lineAppearances[line.id] ?? { color: defaultColor, defaultColor }) }
+  }), [calculations, lineAppearances])
   const series = useMemo<SurtrDurationSeries[]>(() => comparison.flatMap(item => item.result && item.visible
-    ? [{ id: item.id, label: item.label, color: item.color, styleIndex: item.styleIndex, ...item.result }] : []), [comparison])
-  const calculation = comparison.find(item => item.id === tableLineId) ?? comparison[0]
+    ? [{ id: item.id, label: item.legendLabel, color: item.color, ...item.result }] : []), [comparison])
+  const calculation = calculations.find(item => item.id === tableLineId) ?? calculations[0]
   const settings = calculation?.condition.settings ?? initialCondition?.settings
     ?? { level: 90, trust: 100, potential: 1, skillLevelIndex: 9 }
   const potential = settings.potential
@@ -134,6 +137,10 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
     const model = deriveSurtrDurationModel(record, condition.settings, condition.moduleId, condition.moduleLevel)
     if (!model || participants.unsupportedReasons.length || !calculateSurtrDurationCombat(model, participants.actions, draftLimit)) return
     const id = editingId ?? `line-${++nextLine.current}`
+    if (!editingId) {
+      const color = getNextSurtrDurationLineColor(comparison.map(line => line.color))
+      setLineAppearances(previous => ({ ...previous, [id]: { color, defaultColor: color } }))
+    }
     setSavedLines(editingId ? lines.map(line => line.id === id ? { ...line, condition, timeLimit: draftLimit } : line)
       : [...lines, { id, condition, timeLimit: draftLimit, visible: true }])
     setTableLineId(id)
@@ -148,6 +155,11 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
   const removeLine = (id: string) => {
     const remaining = lines.filter(line => line.id !== id)
     setSavedLines(remaining)
+    setLineAppearances(previous => {
+      const remainingAppearances = { ...previous }
+      delete remainingAppearances[id]
+      return remainingAppearances
+    })
     if (tableLineId === id) { setTableLineId(remaining[0]?.id ?? ''); setTimelineSelection(null) }
     if (editingId === id) resetDraft()
   }
@@ -159,7 +171,7 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
     setFeedback(null)
     setImage({ id: ++nextSnapshot.current, series, range: chartRange,
       title: `スルト S3 ${title}`, conditions: `${[...new Set(comparison.filter(item => item.visible && item.result).map(item => skillLabel(item.condition.settings.skillLevelIndex)))].join('・')}・比較${series.length}条件`,
-      filename: getSurtrDurationImageFilename({ ...settings, chartRange, skillLevelLabel: label, modules: series.map(item => item.label),
+      filename: getSurtrDurationImageFilename({ ...settings, chartRange, colors: series.map(item => item.color), skillLevelLabel: label, modules: series.map(item => item.label),
         comparisonConditions: record ? comparison.filter(item => item.visible && item.result).flatMap(item =>
           getSurtrDurationFilenameParts(record, item.condition, item.timeLimit, enemyRows, rows)) : [] }),
     })
@@ -262,15 +274,19 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
           <tbody>{comparison.map(item => <tr key={item.id}>
             <td><input type="checkbox" aria-label={`${item.label}をグラフに表示`} checked={item.visible}
               onChange={event => setSavedLines(lines.map(line => line.id === item.id ? { ...line, visible: event.target.checked } : line))} /></td>
-            <th scope="row"><span className="surtr-s3-column-label"><i style={{ backgroundColor: item.color }} />{item.label}</span>
+            <th scope="row"><div className="surtr-duration-line-name">
+              <SurtrDurationLineColorPicker label={item.legendLabel} color={item.color} defaultColor={item.defaultColor}
+                onChange={color => setLineAppearances(previous => ({ ...previous, [item.id]: { color, defaultColor: item.defaultColor } }))} />
+              <span>{item.label}</span></div>
               <details className="surtr-duration-line-details"><summary>条件</summary>{item.details.map((detail, index) => <p key={index}>{detail}</p>)}</details></th>
-            <td>{item.result ? item.result.remnantStart === null ? `${item.timeLimit}秒以内に未発動` : seconds(item.result.remnantStart) : '計算不可'}</td>
+            <td>{item.waitingForEnemies ? '読み込み中…' : item.result ? item.result.remnantStart === null ? `${item.timeLimit}秒以内に未発動` : seconds(item.result.remnantStart) : '計算不可'}</td>
             <td>{item.result?.remnantStart != null ? seconds(item.result.remnantDuration) : '—'}</td>
             <td>{item.result ? item.result.outcome === 'limit' ? `${item.timeLimit}秒以内に退場せず` : <strong>{seconds(item.result.retreatTime)}</strong> : '—'}</td>
             <td><div className="surtr-duration-line-actions">
               <button type="button" aria-label={`${item.label}の線を編集`} onClick={() => editLine(item)}>編集</button>
               <button type="button" aria-label={`${item.label}の線を複製`} disabled={lines.length >= MAX_LINES} onClick={() => {
                 const id = `line-${++nextLine.current}`
+                setLineAppearances(previous => ({ ...previous, [id]: { color: item.color, defaultColor: item.color } }))
                 setSavedLines([...lines, { id, timeLimit: item.timeLimit, visible: item.visible, condition: { ...structuredClone(item.condition), name: `${item.label}（複製）` } }])
                 setTableLineId(id)
               }}>複製</button>
@@ -278,7 +294,7 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
             </div></td>
           </tr>)}</tbody>
         </table></div>
-        {comparison.filter(item => !item.result).map(item => <p key={item.id} role="alert">{item.label}：{item.participants.unsupportedReasons.join(' ') || '計算設定を確認してください。'}</p>)}
+        {comparison.filter(item => !item.result && !item.waitingForEnemies).map(item => <p key={item.id} role="alert">{item.label}：{item.participants.unsupportedReasons.join(' ') || '計算設定を確認してください。'}</p>)}
         <section className="surtr-s3-chart-section" aria-labelledby="surtr-duration-chart-title">
           <div className="surtr-s3-result-heading"><h3 id="surtr-duration-chart-title">{title}</h3>
             <button type="button" className="button secondary" aria-label="グラフをPNG画像で保存" aria-haspopup="dialog" disabled={!series.length} onClick={openImage}>画像を保存</button>
@@ -300,7 +316,8 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
         <select aria-label="テーブルの対象の線" value={calculation?.id ?? ''} onChange={event => { setTableLineId(event.target.value); setTimelineSelection(null); setTableFeedback(null) }}>
           {comparison.map(item => <option key={item.id} value={item.id}>{item.label}{item.visible ? '' : '（グラフ非表示）'}</option>)}
         </select></label>}
-      {!record ? status : invalid ? <p role="alert">計算に必要なデータを取得できませんでした。</p>
+      {!record ? status : calculation?.waitingForEnemies ? <p className="surtr-s3-status" role="status">敵データを読み込み中…</p>
+        : invalid ? <p role="alert">計算に必要なデータを取得できませんでした。</p>
         : !timelineRows.length ? <p className="surtr-s3-status" role="status">比較線を追加してください。</p>
           : <SurtrDurationTimelineTable key={calculation?.id}
             rows={timelineRows} step={timelineStep} onStepChange={value => { setTimelineStep(value); setTableFeedback(null) }}

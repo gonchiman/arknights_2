@@ -1,0 +1,24 @@
+.surtr-duration-line-color-picker { display: inline-flex; flex: 0 0 auto; vertical-align: middle; }
+.surtr-duration-line-color-picker .help-popover .help-popover-trigger.help-popover-text-trigger {
+  box-sizing: border-box; display: grid; place-items: center; width: 36px; min-width: 36px; height: 36px; min-height: 36px;
+  padding: 7px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); cursor: pointer;
+}
+.surtr-duration-line-color-picker .help-popover-text-trigger::before { content: ''; display: block; width: 18px; height: 18px; background: var(--surtr-duration-line-color); box-shadow: inset 0 0 0 1px #0002; }
+.surtr-duration-line-color-picker .help-popover .help-popover-text-trigger:hover,
+.surtr-duration-line-color-picker .help-popover .help-popover-text-trigger[aria-expanded="true"] { background: var(--surface-soft); }
+.surtr-duration-line-color-picker .help-popover-panel { width: min(248px, calc(100vw - 24px)); }
+.surtr-duration-line-color-options { display: grid; justify-items: start; gap: 12px; }
+.surtr-duration-line-color-palette { display: grid; grid-template-columns: repeat(4, 36px); gap: 8px; }
+.surtr-duration-line-color-palette button { box-sizing: border-box; display: grid; place-items: center; width: 36px; height: 36px; padding: 7px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); cursor: pointer; }
+.surtr-duration-line-color-palette button span { display: block; width: 18px; height: 18px; box-shadow: inset 0 0 0 1px #0002; }
+.surtr-duration-line-color-palette button[aria-pressed="true"] { border-color: var(--text); box-shadow: inset 0 0 0 1px var(--text); }
+.surtr-duration-line-color-reset { min-height: 36px; padding: 6px 10px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
+.surtr-duration-line-color-options button:hover:not(:disabled) { background: var(--surface-hover); }
+.surtr-duration-line-color-options button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.surtr-duration-line-color-reset:disabled { opacity: .45; cursor: default; }
+@media (max-width: 640px), (pointer: coarse) {
+  .surtr-duration-line-color-picker .help-popover .help-popover-trigger.help-popover-text-trigger { width: 44px; min-width: 44px; height: 44px; min-height: 44px; }
+  .surtr-duration-line-color-palette { grid-template-columns: repeat(4, 44px); }
+  .surtr-duration-line-color-palette button { width: 44px; height: 44px; }
+  .surtr-duration-line-color-reset { min-height: 44px; }
+}

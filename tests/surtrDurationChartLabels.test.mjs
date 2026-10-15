@@ -40,13 +40,16 @@ const labels = { title: '余燼までの生存時間', xAxis: '経過秒数', yA
 const render = (component, props) => renderToStaticMarkup(createElement(component, props))
 const lineMarks = markup => [...markup.matchAll(/<path class="surtr-duration-chart-line"[^>]*>/g)].map(match => match[0])
 
-test('hiding another comparison line does not change a supplied line style identity', () => {
-  const data = series.map((item, index) => ({ ...item, styleIndex: index + 3 }))
-  const together = lineMarks(render(chart.SurtrDurationChartImage, { series: data, title, conditions }))
-  const alone = lineMarks(render(chart.SurtrDurationChartImage, { series: [data[1]], title, conditions }))
-  const dash = value => value.match(/stroke-dasharray="([^"]+)"/)?.[1]
-  assert.equal(dash(together[1]), dash(alone[0]))
-  assert.ok(dash(alone[0]))
+test('hiding another comparison line preserves its supplied color and solid stroke', () => {
+  const data = series.map((item, index) => ({ ...item, color: ['#777777', '#235689'][index] }))
+  for (const range of ['remnant', 'retreat']) {
+    const together = lineMarks(render(chart.SurtrDurationChartImage, { series: data, title, conditions, range }))
+    const alone = lineMarks(render(chart.SurtrDurationChartImage, { series: [data[1]], title, conditions, range }))
+    const stroke = value => value.match(/ stroke="([^"]+)"/)?.[1]
+    assert.equal(stroke(together[1]), data[1].color)
+    assert.equal(stroke(alone[0]), data[1].color)
+    assert.doesNotMatch(together.join('') + alone[0], /stroke-dasharray/)
+  }
 })
 const tags = (markup, name) => [...markup.matchAll(new RegExp(`<${name}\\b[^>]*>`, 'g'))].map(match => match[0])
 const attr = (tag, name) => tag.match(new RegExp(` ${name}="([^"]*)"`))?.[1]
@@ -173,18 +176,21 @@ test('the selected point uses the selected line color rather than the first comp
   assert.match(markup, /選択時刻 10 秒、HP 50%/)
 })
 
-test('eight comparison lines have distinct line patterns with matching legends on screen and in exports', () => {
-  const many = Array.from({ length: 8 }, (_, index) => ({ ...series[0], id: `line-${index}`, label: `条件${index + 1}` }))
+test('eight comparison lines and legend samples are solid with matching supplied colors on screen and in exports', () => {
+  const colors = ['#777777', '#123456', '#335577', '#aa5533', '#aa3377', '#22aa55', '#9955aa', '#0099aa']
+  const many = Array.from({ length: 8 }, (_, index) => ({ ...series[0], id: `line-${index}`, label: `条件${index + 1}`, color: colors[index] }))
   for (const component of [chart.SurtrDurationChart, chart.SurtrDurationChartImage, chart.SurtrDurationChartImagePreview]) {
-    const markup = render(component, { series: many, title, conditions })
-    const paths = lineMarks(markup)
-    assert.equal(paths.length, 8)
-    const patterns = paths.map(path => attr(path, 'stroke-dasharray') ?? 'solid')
-    assert.equal(new Set(patterns).size, 8)
-    const swatches = tags(markup, 'line').filter(tag => attr(tag, 'x1') === '0' && attr(tag, 'x2') === '18')
-    assert.equal(swatches.length, 8)
-    assert.deepEqual(swatches.map(tag => attr(tag, 'stroke-dasharray') ?? 'solid'), patterns)
-    assert.ok(paths.every(path => attr(path, 'stroke') === series[0].color))
-    for (const item of many) assert.ok(markup.includes(item.label))
+    for (const range of ['remnant', 'retreat']) {
+      const markup = render(component, { series: many, title, conditions, range })
+      const paths = lineMarks(markup)
+      assert.equal(paths.length, 8)
+      assert.ok(paths.every(path => attr(path, 'stroke-dasharray') === undefined))
+      const swatches = tags(markup, 'line').filter(tag => attr(tag, 'x1') === '0' && attr(tag, 'x2') === '18')
+      assert.equal(swatches.length, 8)
+      assert.ok(swatches.every(tag => attr(tag, 'stroke-dasharray') === undefined))
+      assert.deepEqual(paths.map(path => attr(path, 'stroke')), colors)
+      assert.deepEqual(swatches.map(tag => attr(tag, 'stroke')), colors)
+      for (const item of many) assert.ok(markup.includes(item.label))
+    }
   }
 })

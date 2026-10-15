@@ -1,4 +1,7 @@
+import type { SurtrDurationCombatEvent } from './surtrDurationCombat.ts'
+
 export type SurtrDurationChartRange = 'remnant' | 'retreat'
+export type SurtrDurationChartViewEvent = Pick<SurtrDurationCombatEvent, 'time' | 'kind' | 'hpBefore' | 'hpAfter' | 'maxHp'>
 
 export interface SurtrDurationChartViewPoint {
   time: number
@@ -12,6 +15,7 @@ export interface SurtrDurationChartViewSeries {
   retreatTime: number | null
   endTime?: number
   points: readonly SurtrDurationChartViewPoint[]
+  events?: readonly SurtrDurationChartViewEvent[]
 }
 
 export type PreparedSurtrDurationChartSeries<T extends SurtrDurationChartViewSeries> = Omit<T, 'points'> & {
@@ -33,10 +37,11 @@ export function prepareSurtrDurationChartSeries<T extends SurtrDurationChartView
         && item.retreatTime >= (item.remnantStart ?? 0))
       || !nonNegative(endTime)) return []
 
-    const points = item.points.filter(point => nonNegative(point.time) && point.time <= endTime
+    const normalizedPoints = item.points.filter(point => nonNegative(point.time) && point.time <= endTime
       && Number.isFinite(point.hpPercent))
       .map(point => ({ ...point, hpPercent: Math.max(0, Math.min(100, point.hpPercent)) }))
       .sort((a, b) => a.time - b.time)
+    const points = connectSelfDrainSamples(normalizedPoints, item.events)
     const trigger = item.remnantStart !== null && item.remnantStart <= endTime ? item.remnantStart : null
     if (trigger === null) return [{ ...item, points, displayEnd: endTime, triggerHp: null }]
 
@@ -68,6 +73,28 @@ export function prepareSurtrDurationChartSeries<T extends SurtrDurationChartView
       : (lower ?? upper)?.hpPercent ?? null
     const endpoint = triggerHp === null ? [] : [{ time: trigger, hpPercent: triggerHp, phase: 'remnant' }]
     return [{ ...item, points: [...before, ...endpoint], displayEnd: trigger, triggerHp }]
+  })
+}
+
+/** Join post-drain samples diagonally while retaining instantaneous external changes. */
+function connectSelfDrainSamples(
+  points: SurtrDurationChartViewPoint[],
+  events: readonly SurtrDurationChartViewEvent[] | undefined,
+): SurtrDurationChartViewPoint[] {
+  if (!events?.length) return points
+  const firstEvents = new Map<number, SurtrDurationChartViewEvent>()
+  for (const event of events) if (!firstEvents.has(event.time)) firstEvents.set(event.time, event)
+  return points.filter((point, index) => {
+    if (index > 0 && points[index - 1].time === point.time) return true
+    const next = points[index + 1]
+    const event = firstEvents.get(point.time)
+    if (event?.kind !== 'drain' || !next || next.time !== point.time
+      || ![event.maxHp, event.hpBefore, event.hpAfter].every(Number.isFinite)
+      || event.maxHp <= 0 || event.hpBefore === event.hpAfter) return true
+    // Only remove the verified pre-drain sample. The following post-drain
+    // sample is also the pre-hit/pre-heal value when events share this tick.
+    return Math.abs(point.hpPercent - event.hpBefore / event.maxHp * 100) >= 1e-8
+      || Math.abs(next.hpPercent - event.hpAfter / event.maxHp * 100) >= 1e-8
   })
 }
 

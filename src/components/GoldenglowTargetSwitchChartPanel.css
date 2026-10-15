@@ -38,12 +38,9 @@
 .ggs-chart-display-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 12px; max-width: 100%; }
 .ggs-chart-save-image { min-height: 36px; white-space: nowrap; font-size: 12px; }
 .ggs-chart-color-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; max-width: 100%; }
-.ggs-chart-custom-color { display: inline-flex; align-items: center; gap: 8px; }
 .ggs-chart-palette { display: inline-flex; align-items: center; gap: 8px; color: var(--text-soft); font-size: 12px; }
-.ggs-chart-palette select, .ggs-chart-color-code { min-height: 36px; padding: 6px 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-size: 12px; }
-.ggs-chart-color-code { width: 88px; box-sizing: border-box; font-variant-numeric: tabular-nums; }
-.ggs-chart-color-picker { width: 36px; height: 36px; padding: 3px; border: 1px solid var(--border-strong); background: var(--surface); cursor: pointer; }
-.ggs-chart-color-controls input:focus-visible, .ggs-chart-palette select:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.ggs-chart-palette select { min-height: 36px; padding: 6px 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-size: 12px; }
+.ggs-chart-palette select:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 .ggs-chart-type { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 100%; border: 1px solid var(--border-strong); }
 .ggs-chart-type button { min-height: 36px; padding: 8px 14px; border: 0; background: var(--surface); color: var(--text-soft); font: inherit; font-size: 12px; cursor: pointer; }
 .ggs-chart-type button + button { border-left: 1px solid var(--border-strong); }
@@ -53,9 +50,7 @@
 @media (max-width: 640px) {
   .ggs-chart-heading { padding: 10px; }
   .ggs-chart-display-controls { justify-content: flex-start; }
-  .ggs-chart-palette select, .ggs-chart-color-code { min-height: 44px; font-size: 16px; }
-  .ggs-chart-color-code { width: 98px; }
-  .ggs-chart-color-picker { width: 44px; height: 44px; }
+  .ggs-chart-palette select { min-height: 44px; font-size: 16px; }
   .ggs-chart-type button { min-height: 44px; }
   .ggs-chart-save-image { min-height: 44px; }
 }
