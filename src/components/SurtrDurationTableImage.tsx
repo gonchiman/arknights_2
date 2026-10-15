@@ -1,6 +1,6 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { getTableImageDimensions, parseTableImageAspect, type TableImageAspect } from '../lib/tableImageAspect'
-import type { SurtrDurationTimelineRow } from '../lib/surtrDurationTimeline'
+import type { SurtrDurationTableLayout, SurtrDurationTimelineRow } from '../lib/surtrDurationTimeline'
 import { SurtrDurationTimelineTableContent } from './SurtrDurationTimelineTable'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './SurtrS3Page.css'
@@ -13,6 +13,7 @@ export interface SurtrDurationTableImageSnapshot {
   precision: number
   title: string
   conditions: readonly string[]
+  layout?: SurtrDurationTableLayout
 }
 
 interface ImageProps extends SurtrDurationTableImageSnapshot {
@@ -25,6 +26,9 @@ interface ImageProps extends SurtrDurationTableImageSnapshot {
 const INITIAL_WIDTH = 680
 const MAXIMUM_CSS_SIDE = 8000
 const MAXIMUM_CSS_PIXELS = 8_000_000
+const TABLE_WRAPPER_BORDER = 2
+const initialWidthFor = (snapshot: SurtrDurationTableImageSnapshot) => snapshot.layout === 'horizontal'
+  ? Math.max(INITIAL_WIDTH, 112 + snapshot.rows.length * 96 + TABLE_WRAPPER_BORDER) : INITIAL_WIDTH
 
 function tableAspect(aspectRatio?: number): TableImageAspect | null {
   if (aspectRatio === undefined) return null
@@ -45,6 +49,7 @@ function tableAspect(aspectRatio?: number): TableImageAspect | null {
 export function SurtrDurationTableImage({ aspectRatio, exporting = false, onLayout, onLayoutError, ...snapshot }: ImageProps) {
   const imageRef = useRef<HTMLElement>(null)
   const snapshotKey = JSON.stringify(snapshot)
+  const initialWidth = initialWidthFor(snapshot)
   useLayoutEffect(() => {
     const image = imageRef.current
     const table = image?.querySelector('table')
@@ -55,7 +60,7 @@ export function SurtrDurationTableImage({ aspectRatio, exporting = false, onLayo
       image.style.display = ''
       try {
         const size = getTableImageDimensions({
-          initialWidth: INITIAL_WIDTH,
+          initialWidth,
           aspect: tableAspect(aspectRatio),
           measureHeight: width => {
             image.style.width = `${width}px`
@@ -66,7 +71,7 @@ export function SurtrDurationTableImage({ aspectRatio, exporting = false, onLayo
         })
         if (size.width > MAXIMUM_CSS_SIDE || size.height > MAXIMUM_CSS_SIDE
           || size.width * size.height > MAXIMUM_CSS_PIXELS) {
-          throw new Error('表全体を画像に収められません。表示間隔を広げるか、縦横比を変更してください。')
+          throw new Error('表全体を画像に収められません。表示間隔・配置・縦横比を変更してください。')
         }
         image.style.width = `${size.width}px`
         image.style.height = 'auto'
@@ -93,11 +98,12 @@ export function SurtrDurationTableImage({ aspectRatio, exporting = false, onLayo
       cancelled = true
       document.fonts.removeEventListener('loadingdone', measure)
     }
-  }, [snapshotKey, aspectRatio, exporting, onLayout, onLayoutError])
+  }, [snapshotKey, initialWidth, aspectRatio, exporting, onLayout, onLayoutError])
 
-  return <figure ref={imageRef} className="surtr-duration-table-image" style={{ width: INITIAL_WIDTH }} aria-label={snapshot.title}>
+  return <figure ref={imageRef} className="surtr-duration-table-image" style={{ width: initialWidth,
+    '--surtr-duration-table-image-min-width': `${initialWidth - TABLE_WRAPPER_BORDER}px` } as CSSProperties} aria-label={snapshot.title}>
     <div className="surtr-duration-table-image-title">{snapshot.title}</div>
-    <SurtrDurationTimelineTableContent rows={snapshot.rows} precision={snapshot.precision} forImage />
+    <SurtrDurationTimelineTableContent rows={snapshot.rows} precision={snapshot.precision} layout={snapshot.layout} forImage />
     <div className="surtr-duration-table-image-footer">
       {snapshot.conditions.map((condition, index) => <span key={index}>{condition}</span>)}
     </div>
@@ -109,7 +115,7 @@ export function SurtrDurationTableImagePreview({ onLayoutReady, ...props }: Omit
 }) {
   const previewRef = useRef<HTMLDivElement>(null)
   const [availableWidth, setAvailableWidth] = useState(600)
-  const [size, setSize] = useState({ width: INITIAL_WIDTH, height: 420 })
+  const [size, setSize] = useState({ width: initialWidthFor(props), height: 420 })
   const [error, setError] = useState('')
   useLayoutEffect(() => {
     const element = previewRef.current
@@ -158,7 +164,7 @@ export async function saveSurtrDurationTableImage({ snapshot, filename, aspectRa
   try {
     await saveComparisonChartImage({
       chart: <SurtrDurationTableImage {...snapshot} aspectRatio={aspectRatio} exporting onLayoutError={error => { layoutError = error }} />,
-      filename, width: INITIAL_WIDTH, writeBlob,
+      filename, width: initialWidthFor(snapshot), writeBlob,
     })
   } catch (error) {
     throw layoutError ?? error

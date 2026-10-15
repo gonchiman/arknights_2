@@ -19,6 +19,10 @@
 .surtr-duration-table-image th, .surtr-duration-table-image td { padding: 12px; white-space: normal; overflow-wrap: anywhere; }
 .surtr-duration-table-image tbody th { padding: 12px; }
 .surtr-duration-table-image tbody td { white-space: nowrap; overflow-wrap: normal; }
+.surtr-duration-table-image .surtr-duration-timeline-table-horizontal { min-width: var(--surtr-duration-table-image-min-width); }
+.surtr-duration-table-image .surtr-duration-timeline-table-horizontal tr > :first-child { position: static; width: 112px; }
+.surtr-duration-table-image .surtr-duration-timeline-table-horizontal thead th { padding: 12px; text-align: right; }
+.surtr-duration-table-image .surtr-duration-timeline-table-horizontal tbody th { padding: 12px; }
 .surtr-duration-table-image-title {
   box-sizing: border-box;
   min-height: 44px;

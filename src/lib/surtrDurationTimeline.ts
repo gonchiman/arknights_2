@@ -1,5 +1,7 @@
 import type { SurtrDurationModel, SurtrDurationResult } from './surtrDuration.ts'
 
+export type SurtrDurationTableLayout = 'vertical' | 'horizontal'
+
 export interface SurtrDurationTimelineRow {
   time: number
   hp: number | null
