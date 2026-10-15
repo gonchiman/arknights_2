@@ -47,6 +47,14 @@ export function getSurtrDurationImageLabelDefaults(
 
 type DisplaySeries = SurtrDurationSeries & { displayEnd: number; triggerHp: number | null }
 
+function getTriggerRadius(series: readonly DisplaySeries[], index: number): number {
+  const item = series[index]
+  const coincidentCount = series.slice(0, index).filter(previous => previous.remnantStart === item.remnantStart
+    && previous.triggerHp === item.triggerHp && previous.remnantStart !== null
+    && previous.triggerHp !== null && previous.remnantStart <= previous.displayEnd).length
+  return 4 + coincidentCount * 2.5
+}
+
 function SeriesSwatch({ item, image = false }: { item: SurtrDurationSeries; image?: boolean }) {
   return <svg className={image ? 'chart-image-frame-legend-swatch' : 'surtr-duration-chart-swatch'}
     width="18" height="12" aria-hidden="true">
@@ -95,7 +103,7 @@ function SurtrDurationSvg({ series, title, range, selection, width, height, imag
   const x = (time: number) => left + time / maximumTime * (right - left)
   const triggerEvents = range === 'remnant' ? series.flatMap((item, index) => item.remnantStart !== null
     && item.triggerHp !== null && item.remnantStart <= item.displayEnd
-    ? [{ id: item.id, label: item.label, time: item.remnantStart, hp: item.triggerHp, color: item.color, radius: 4 + index * 2.5 }] : []) : []
+    ? [{ id: item.id, label: item.label, time: item.remnantStart, hp: item.triggerHp, color: item.color, radius: getTriggerRadius(series, index) }] : []) : []
   // Coincident circles share one time label; distinct nearby times keep separate labels.
   const triggerGroups = [...new Set(triggerEvents.map(item => `${item.time}:${item.hp}`))].map(key => {
     const events = triggerEvents.filter(item => `${item.time}:${item.hp}` === key)
@@ -190,15 +198,16 @@ function SurtrDurationSvg({ series, title, range, selection, width, height, imag
         d={item.points.map((point, pointIndex) => `${pointIndex === 0 ? 'M' : 'L'} ${x(point.time)} ${y(point.hpPercent)}`).join(' ')}
         stroke={item.color} />)}</g>
       {series.map((item, index) => {
-        // Concentric markers preserve the true coordinates when several builds have the same event time.
-        const radius = 4 + index * 2.5
+        // Only coincident triggers need concentric circles; independent points share one size.
+        const radius = getTriggerRadius(series, index)
+        const retreatRadius = 4 + index * 2.5
         const triggerHp = item.triggerHp ?? 0
         const retreatHp = item.points.at(-1)?.hpPercent ?? 0
         return <g key={item.id} className="surtr-duration-chart-events" fill="none" stroke={item.color} strokeWidth="1.75">
           {item.remnantStart !== null && item.triggerHp !== null && item.remnantStart <= item.displayEnd && <circle cx={x(item.remnantStart)} cy={y(triggerHp)} r={radius}>
             <title>{`${item.label}・余燼発動 ${seconds.format(item.remnantStart)} 秒`}</title>
           </circle>}
-          {range === 'retreat' && item.retreatTime !== null && item.retreatTime <= item.displayEnd && <path d={`M ${x(item.retreatTime) - radius} ${y(retreatHp) - radius} l ${radius * 2} ${radius * 2} M ${x(item.retreatTime) + radius} ${y(retreatHp) - radius} l ${-radius * 2} ${radius * 2}`}>
+          {range === 'retreat' && item.retreatTime !== null && item.retreatTime <= item.displayEnd && <path d={`M ${x(item.retreatTime) - retreatRadius} ${y(retreatHp) - retreatRadius} l ${retreatRadius * 2} ${retreatRadius * 2} M ${x(item.retreatTime) + retreatRadius} ${y(retreatHp) - retreatRadius} l ${-retreatRadius * 2} ${retreatRadius * 2}`}>
             <title>{`${item.label}・退場 ${seconds.format(item.retreatTime)} 秒`}</title>
           </path>}
         </g>

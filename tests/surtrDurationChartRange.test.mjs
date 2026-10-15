@@ -49,6 +49,64 @@ const directLabels = markup => [...markup.matchAll(/<g\b[^>]*class="surtr-durati
     return { x: Number(attr(textTag, 'x')), y: Number(attr(textTag, 'y')), value }
   })
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} ≈ ${expected}`)
+const triggerMarkers = markup => eventGroups(markup).map(group => {
+  const circle = tags(group, 'circle')[0]
+  return circle ? { x: Number(attr(circle, 'cx')), y: Number(attr(circle, 'cy')), radius: Number(attr(circle, 'r')) } : null
+})
+const atTrigger = (id, time, hp = 1) => makeSeries({ id, label: id, remnantStart: time,
+  retreatTime: time + 8, endTime: time + 8,
+  points: [{ time: 0, hpPercent: 100 }, { time, hpPercent: hp, phase: 'remnant' },
+    { time: time + 8, hpPercent: 0, phase: 'remnant' }],
+})
+
+test('distinct trigger points use the same base radius and retain their exact time and HP coordinates', () => {
+  const variants = [
+    [atTrigger('早い発動', 5), atTrigger('中間の発動', 10), atTrigger('遅い発動', 15)],
+    [atTrigger('同時刻HP1', 5, 1), atTrigger('同時刻HP2', 5, 2), atTrigger('同時刻HP10', 5, 10)],
+  ]
+  for (const component of [chart.SurtrDurationChart, chart.SurtrDurationChartImage, chart.SurtrDurationChartImagePreview]) {
+    for (const range of ['remnant', 'retreat']) {
+      for (const series of variants) {
+        const original = structuredClone(series)
+        const markup = render(component, { series, range })
+        const plot = bounds(markup)
+        const maximumTime = ticks(markup).at(-1)
+        const markers = triggerMarkers(markup)
+        assert.deepEqual(markers.map(marker => marker?.radius), [4, 4, 4], `${component.name}/${range}`)
+        markers.forEach((marker, index) => {
+          near(marker.x, plot.left + series[index].remnantStart / maximumTime * (plot.right - plot.left))
+          near(marker.y, plot.bottom - series[index].points[1].hpPercent / 100 * (plot.bottom - plot.top))
+        })
+        assert.deepEqual(series, original)
+      }
+    }
+  }
+})
+
+test('overlapping trigger groups grow independently and unrelated hidden series cannot change their radii', () => {
+  const series = [atTrigger('A1', 5), atTrigger('独立', 20), atTrigger('B1', 10),
+    atTrigger('A2', 5), atTrigger('B2', 10), atTrigger('A3', 5)]
+  for (const component of [chart.SurtrDurationChart, chart.SurtrDurationChartImage, chart.SurtrDurationChartImagePreview]) {
+    for (const range of ['remnant', 'retreat']) {
+      const original = structuredClone(series)
+      const markup = render(component, { series, range })
+      const markers = triggerMarkers(markup)
+      assert.deepEqual(markers.map(marker => marker?.radius), [4, 4, 4, 6.5, 6.5, 9], `${component.name}/${range}`)
+      for (const indices of [[0, 3, 5], [2, 4]]) {
+        for (const index of indices) {
+          near(markers[index].x, markers[indices[0]].x)
+          near(markers[index].y, markers[indices[0]].y)
+        }
+      }
+      const onlyA = series.filter(item => item.id.startsWith('A'))
+      const hidden = triggerMarkers(render(component, { series: onlyA, range }))
+      assert.deepEqual(hidden.map(marker => marker?.radius), [markers[0].radius, markers[3].radius, markers[5].radius])
+      const noIndependent = triggerMarkers(render(component, { series: series.filter(item => item.id !== '独立'), range }))
+      assert.deepEqual(noIndependent.map(marker => marker?.radius), [4, 4, 6.5, 6.5, 9])
+      assert.deepEqual(series, original)
+    }
+  }
+})
 
 test('screen, PNG and preview connect self-drain while preserving every external jump and trigger order', () => {
   const model = { moduleId: '', moduleType: null, moduleLevel: 0,
@@ -245,7 +303,15 @@ test('coincident triggers share one time label and eight adjacent labels stay se
       assert.ok(label.x - width / 2 >= plot.left && label.x + width / 2 <= plot.right)
       assert.ok(label.y - 13 >= plot.top && label.y + 5 < plot.bottom)
     }
-    const sorted = [...labels].sort((a, b) => a.y - b.y)
-    for (let index = 1; index < sorted.length; index++) assert.ok(sorted[index].y - sorted[index - 1].y >= 22)
+    const rectangles = labels.map(label => {
+      const width = Array.from(label.value).reduce((sum, character) => sum + (character === '秒' ? 12 : 7), 8)
+      return { left: label.x - width / 2, right: label.x + width / 2, top: label.y - 13, bottom: label.y + 5 }
+    })
+    for (let index = 0; index < rectangles.length; index++) {
+      const first = rectangles[index]
+      for (const second of rectangles.slice(index + 1)) assert.ok(first.right + 4 <= second.left
+        || second.right + 4 <= first.left || first.bottom + 4 <= second.top || second.bottom + 4 <= first.top,
+      'nearby trigger labels must not overlap, regardless of their chosen arrangement')
+    }
   }
 })
