@@ -32,6 +32,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['code-analysis', 'code-analysis'],
       ['damage', 'damage'],
       ['damage-two', 'damage-two'],
+      ['damage-three', 'damage-three'],
       ['damage-verification', 'damage-verification'],
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
@@ -143,6 +144,21 @@ test('Damage Calculator 2は既存の計算機と別のURLで開く', () => {
   }
 })
 
+test('Damage Calculator 3は計算機2の隣から独立したURLで開く', () => {
+  assert.deepEqual(parseHashRoute('#/damage-3'), { view: 'damage-three' })
+  const calculatorIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'damage-two')
+  assert.deepEqual(APP_NAV_ITEMS[calculatorIndex + 1], {
+    id: 'damage-three',
+    href: '#/damage-3',
+    label: 'Damage Calculator 3',
+    description: 'スキル構造からダメージ・DPSを計算',
+    section: 'analysis',
+  })
+  for (const suffix of ['/', '/extra', '?operatorId=char_350_surtr', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/damage-3${suffix}`), { view: 'operators' })
+  }
+})
+
 test('ダメージ検証は共通メニューとスルトのトップから同じ独立ページを開く', () => {
   assert.deepEqual(parseHashRoute(DAMAGE_VERIFICATION_ITEM.href), { view: 'damage-verification' })
   assert.deepEqual(DAMAGE_VERIFICATION_ITEM, {
@@ -152,7 +168,7 @@ test('ダメージ検証は共通メニューとスルトのトップから同�
     description: '',
     section: 'analysis',
   })
-  const calculatorIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'damage-two')
+  const calculatorIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'damage-three')
   assert.equal(APP_NAV_ITEMS[calculatorIndex + 1], DAMAGE_VERIFICATION_ITEM)
   assert.deepEqual(SURTR_HOME_ITEMS, [...SURTR_ANALYSIS_ITEMS, DAMAGE_VERIFICATION_ITEM])
   assert.equal(SURTR_ANALYSIS_ITEMS.some((item) => item.id === 'damage-verification'), false)

@@ -1,4 +1,4 @@
-export type NavigationPage = 'home' | 'operators' | 'skills' | 'skill-classification' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'skill-json' | 'code-analysis' | 'damage' | 'damage-two' | 'damage-verification' | 'comparison' | 'enemies' | 'enemy-analysis' | 'main-enemy-trends' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-s3-comparison' | 'surtr-total-damage' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-target-switch-three' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
+export type NavigationPage = 'home' | 'operators' | 'skills' | 'skill-classification' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'skill-json' | 'code-analysis' | 'damage' | 'damage-two' | 'damage-three' | 'damage-verification' | 'comparison' | 'enemies' | 'enemy-analysis' | 'main-enemy-trends' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-s3-comparison' | 'surtr-total-damage' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-target-switch-three' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -192,6 +192,13 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     href: '#/damage-2',
     label: 'Damage Calculator 2',
     description: 'ダメージ・DPSテーブル',
+    section: 'analysis',
+  },
+  {
+    id: 'damage-three',
+    href: '#/damage-3',
+    label: 'Damage Calculator 3',
+    description: 'スキル構造からダメージ・DPSを計算',
     section: 'analysis',
   },
   DAMAGE_VERIFICATION_ITEM,

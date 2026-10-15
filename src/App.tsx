@@ -3,6 +3,7 @@ import { AppSidebar } from './components/AppSidebar'
 import { HomePage } from './components/HomePage'
 import { DamageCalculator } from './components/DamageCalculator'
 import { DamageCalculatorTwo } from './components/DamageCalculatorTwo'
+import { DamageCalculatorThree } from './components/DamageCalculatorThree'
 import { ManualDamageVerificationPage } from './components/ManualDamageVerificationPage'
 import { DataSourcesPage } from './components/DataSourcesPage'
 import { CodeAnalysisPage } from './components/CodeAnalysisPage'
@@ -354,6 +355,8 @@ export default function App() {
           />
         ) : displayedRoute.view === 'damage-two' ? (
           <DamageCalculatorTwo rows={classifiedRows} loading={loading} />
+        ) : displayedRoute.view === 'damage-three' ? (
+          <DamageCalculatorThree rows={classifiedRows} loading={loading} />
         ) : displayedRoute.view === 'comparison' ? (
           <OperatorComparison
             rows={classifiedRows}

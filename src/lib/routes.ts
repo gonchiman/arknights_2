@@ -12,6 +12,7 @@ export type AppRoute =
   | { view: 'code-analysis' }
   | { view: 'damage' }
   | { view: 'damage-two' }
+  | { view: 'damage-three' }
   | { view: 'damage-verification' }
   | { view: 'goldenglow-home' }
   | { view: 'surtr-home' }
@@ -141,6 +142,7 @@ export function parseHashRoute(hash: string): AppRoute {
   }
   if (hash === '#/damage') return { view: 'damage' }
   if (hash === '#/damage-2') return { view: 'damage-two' }
+  if (hash === '#/damage-3') return { view: 'damage-three' }
   if (hash === '#/analysis/damage-verification') return { view: 'damage-verification' }
   if (hash === '#/analysis/code') return { view: 'code-analysis' }
   if (hash === '#/analysis/goldenglow') return { view: 'goldenglow-home' }
