@@ -5,8 +5,8 @@ import {
   findSkillStructure, formatSkillStructureActivationMethod, formatSkillStructureActivationTrigger,
   formatSkillStructureDuration, formatSkillStructureEffectItem, formatSkillStructureEffectOperation,
   formatSkillStructureEffectTarget, formatSkillStructureEffectTiming, formatSkillStructureEffectValue,
-  formatSkillStructureEndCondition, formatSkillStructurePredicate, formatSkillStructureSpRecovery,
-  getSkillStructureLevelIndices, isSkillStructureRecord,
+  formatSkillStructureEndCondition, formatSkillStructureMode, formatSkillStructurePredicate, formatSkillStructureSpRecovery,
+  getSkillStructureEffectValueRows, getSkillStructureLevelIndices, isSkillStructureRecord,
   type SkillStructure, type SkillStructureEffect, type SkillStructureStage,
 } from '../lib/skillStructure'
 import type { SkillRecord } from '../types/skill'
@@ -110,6 +110,14 @@ function SkillStructureContent({ structure, activeTab, onTabChange }: {
           <td>{formatSkillStructureEndCondition(stage.endCondition)}</td>
         </tr>)}
       </StructureTable>
+      {structure.effectStructure.modeTransitions && <>
+        <h3 className="skill-structure-subheading">状態切替</h3>
+        <StructureTable caption={`${caption}の状態切替`} headers={['契機', '切替前', '切替後']}>
+          {structure.effectStructure.modeTransitions.map(transition => <tr key={transition.from}>
+            <td>スキル発動</td><td>{formatSkillStructureMode(transition.from)}</td><td>{formatSkillStructureMode(transition.to)}</td>
+          </tr>)}
+        </StructureTable>
+      </>}
       <h3 className="skill-structure-subheading">効果一覧</h3>
       <div className="table-wrap skill-structure-table-wrap" tabIndex={0} role="region" aria-label={`${caption}の効果一覧`}>
         <table className="skill-structure-table skill-structure-effects-table">
@@ -119,6 +127,7 @@ function SkillStructureContent({ structure, activeTab, onTabChange }: {
             <col className="skill-structure-item-col" /><col className="skill-structure-operation-col" /><col /></colgroup>
           <thead><tr>{['段階', 'タイミング', '条件', '対象', '項目', '演算', '値'].map(label => <th scope="col" key={label}>{label}</th>)}</tr></thead>
           {structure.effectStructure.stages.map(stage => <tbody key={stage.id}>
+            {stage.effects.length === 0 && <tr><th scope="row">{stage.label}</th><td colSpan={6}>スキルによる変更なし</td></tr>}
             {stage.effects.map((effect, index) => <tr key={effect.id}>
               {index === 0 && <th scope="rowgroup" rowSpan={stage.effects.length}>{stage.label}</th>}
               <td>{formatSkillStructureEffectTiming(effect.timing)}</td>
@@ -198,7 +207,10 @@ function EffectDefinitionTable({ stage, effect }: { stage: SkillStructureStage; 
     ] as [string, string | number][] : [['条件', 'なし']] as [string, string][]),
     ['対象', formatSkillStructureEffectTarget(effect.target)],
     ['項目キー', effect.item], ['演算', effect.operation],
-    ['値', typeof effect.value === 'object' ? effect.value.rangeId : String(effect.value)], ['単位', effect.unit],
+    ...getSkillStructureEffectValueRows(effect), ['単位', effect.unit],
+    ['根拠キー', effect.sourceBinding],
+    ...Object.entries(effect.parameterBindings ?? {}).map(([key, binding]) => [`根拠キー（${key}）`, binding] as [string, string]),
+    ...(effect.afterEffects ?? []).map((id, index) => [`先に適用する効果${index + 1}`, id] as [string, string]),
   ]
   return <StructureTable caption={`${stage.label}の${formatSkillStructureEffectItem(effect.item)}の定義`}
     headers={['項目', '値']} className="skill-structure-definition-table">
