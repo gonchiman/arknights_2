@@ -22,6 +22,7 @@ export type AppRoute =
   | { view: 'surtr-home' }
   | { view: 'surtr-s3' }
   | { view: 'surtr-s3-comparison' }
+  | { view: 'surtr-skill-comparison' }
   | { view: 'surtr-total-damage' }
   | { view: 'surtr-duration' }
   | { view: 'surtr-remnant-attacks' }
@@ -178,6 +179,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/analysis/surtr') return { view: 'surtr-home' }
   if (hash === '#/analysis/surtr/s3') return { view: 'surtr-s3' }
   if (hash === '#/analysis/surtr/s3-comparison') return { view: 'surtr-s3-comparison' }
+  if (hash === '#/analysis/surtr/s2-s3-comparison') return { view: 'surtr-skill-comparison' }
   if (hash === '#/analysis/surtr/total-damage') return { view: 'surtr-total-damage' }
   if (hash === '#/analysis/surtr/duration') return { view: 'surtr-duration' }
   if (hash === '#/analysis/surtr/remnant-attacks') return { view: 'surtr-remnant-attacks' }

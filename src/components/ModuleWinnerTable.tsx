@@ -24,6 +24,8 @@ export interface ModuleWinnerTableData {
 
 export interface ModuleWinnerTableProps {
   data: ModuleWinnerTableData
+  /** Skill candidates supply their own stable colors rather than a module identity. */
+  candidateKind?: 'module' | 'skill'
   transpose?: boolean
   color?: 'module' | 'none'
   gapShading?: boolean
@@ -50,7 +52,7 @@ function spans(items: readonly ModuleWinnerAxisItem[], key: (item: ModuleWinnerA
 /** A module dimension collapsed into a winner cell, shared by screen and PNG. */
 export function ModuleWinnerTable({
   data, transpose = false, color = 'module', gapShading = false, rankMode = 'none', onSelectCell,
-  ariaLabel = '値が最大のMOD', forImage = false,
+  ariaLabel, forImage = false, candidateKind = 'module',
 }: ModuleWinnerTableProps) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -72,6 +74,7 @@ export function ModuleWinnerTable({
   const headerRows = 1 + Number(columnGroups) + Number(columnRanks)
   const leadingWidth = 80 + Number(rowGroups) * 96 + Number(rowRanks) * 48
   const interactive = Boolean(onSelectCell && !forImage)
+  const winnerKindLabel = candidateKind === 'skill' ? 'スキル' : 'MOD'
 
   const cells = useMemo(() => {
     const map = new Map<string, ModuleTableWinnerCandidate[] | null>()
@@ -84,6 +87,14 @@ export function ModuleWinnerTable({
   const shadeActive = color === 'module' && gapShading && data.cells.some(cell => cell.candidates.length >= 2)
   const scaleColors = useMemo(() => {
     const candidates = data.cells.flatMap(cell => cell.candidates)
+    if (candidateKind === 'skill') {
+      const result = new Map<string, { color: string; label: string }>()
+      candidates.forEach(candidate => {
+        if (candidate.color) result.set(candidate.id, { color: candidate.color,
+          label: formatModuleTableWinnerShortLabel(candidate) })
+      })
+      return [...result.values()]
+    }
     const values = getModuleComparisonColors(candidates.map(candidate => ({ moduleType: candidate.moduleType })))
     const result = new Map<string, { color: string; label: string }>()
     candidates.forEach((candidate, index) => {
@@ -92,7 +103,7 @@ export function ModuleWinnerTable({
         : `MOD ${{ X: 'X', Y: 'Y', D: 'Δ', A: 'α', B: 'β' }[key]}` })
     })
     return [...result.values()]
-  }, [data])
+  }, [data, candidateKind])
 
   useLayoutEffect(() => {
     const wrapper = wrapperRef.current
@@ -147,18 +158,20 @@ export function ModuleWinnerTable({
     const gap = result?.increasePercent
     const gapAvailable = typeof gap === 'number' && Number.isFinite(gap)
     const cellShade = shadeActive && (candidates?.length ?? 0) >= 2
-    const colors = candidates ? getModuleComparisonColors(candidates.map(candidate => ({ moduleType: candidate.moduleType,
-      moduleLevel: candidate.moduleLevel })), cellShade ? undefined : { shadeBy: 'moduleLevel' }) : []
+    const colors = candidates ? candidateKind === 'skill' ? candidates.map(candidate => candidate.color)
+      : getModuleComparisonColors(candidates.map(candidate => ({ moduleType: candidate.moduleType,
+        moduleLevel: candidate.moduleLevel })), cellShade ? undefined : { shadeBy: 'moduleLevel' }) : []
     const winnerIndex = candidates?.findIndex(candidate => candidate.id === winners[0]?.id) ?? -1
-    const hasColor = color === 'module' && winners.length === 1 && (!cellShade || gapAvailable)
+    const winnerColor = cellShade ? colors[winnerIndex] : winners[0]?.color ?? colors[winnerIndex]
+    const hasColor = color === 'module' && winners.length === 1 && Boolean(winnerColor) && (!cellShade || gapAvailable)
     const intensity = cellShade ? getEnemyHeatmapOpacity(gap ?? 0, MODULE_TABLE_WINNER_GAP_MAX_PERCENT) * 100 : 18
-    const style = hasColor ? { '--module-winner-color': cellShade ? colors[winnerIndex] : winners[0].color ?? colors[winnerIndex],
+    const style = hasColor ? { '--module-winner-color': winnerColor,
       '--module-winner-intensity': `${intensity}%` } as CSSProperties : undefined
     const gapDescription = !cellShade ? '' : gapAvailable ? `、次点への増加率${number.format(gap)}%`
       : result?.runnerUpValue === 0 ? '、次点が0のため増加率を算出できません' : '、次点への増加率を算出できません'
     const values = candidates?.map(candidate => `${candidate.label}：${candidate.value === null || !Number.isFinite(candidate.value)
       ? '—' : number.format(candidate.value)}`).join('、') ?? ''
-    const description = `${rowAxis.label} ${row.groupLabel ? `${row.groupLabel} ` : ''}${row.label}、${columnAxis.label} ${column.groupLabel ? `${column.groupLabel} ` : ''}${column.label}、最大のMOD ${fullLabel}${gapDescription}`
+    const description = `${rowAxis.label} ${row.groupLabel ? `${row.groupLabel} ` : ''}${row.label}、${columnAxis.label} ${column.groupLabel ? `${column.groupLabel} ` : ''}${column.label}、最大の${winnerKindLabel} ${fullLabel}${gapDescription}`
     return <td key={column.id} headers={`${rowHeaderId(rowIndex)} ${columnHeaderId(columnIndex)}`}
       data-row-id={rowId} data-column-id={columnId} data-winner-ids={winners.map(winner => winner.id).join('=')}
       data-gap-percent={cellShade && gapAvailable ? gap : undefined} data-table-image-number
@@ -174,8 +187,9 @@ export function ModuleWinnerTable({
   </th>
   const style = { '--module-winner-leading-width': `${leadingWidth}px`, '--module-winner-data-columns': columns.length } as CSSProperties
   return <div ref={wrapperRef} className={`module-winner-table-wrap${forImage ? ' is-image' : ''}`}
-    data-transposed={transpose} data-rank-mode={rankMode} data-winner-color={color} data-winner-gap-shading={shadeActive} style={style}>
-    <table ref={tableRef} className="module-winner-table" aria-label={ariaLabel} data-table-image-equal-cells>
+    data-transposed={transpose} data-rank-mode={rankMode} data-winner-color={color} data-winner-gap-shading={shadeActive}
+    data-winner-kind={candidateKind} style={style}>
+    <table ref={tableRef} className="module-winner-table" aria-label={ariaLabel ?? `値が最大の${winnerKindLabel}`} data-table-image-equal-cells>
       <colgroup>{rowGroups && <col className="module-winner-group-column" />}{rowRanks && <col className="module-winner-rank-column" />}
         <col className="module-winner-axis-column" />{columns.map(column => <col key={column.id} />)}</colgroup>
       <thead>

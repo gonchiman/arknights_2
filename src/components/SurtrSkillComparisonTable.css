@@ -1,0 +1,29 @@
+.surtr-skill-comparison-toolbar { display: flex; align-items: end; flex-wrap: wrap; gap: 12px 20px; padding: 12px; border-bottom: 1px solid var(--border); }
+.surtr-skill-comparison-toolbar label { display: grid; gap: 6px; color: var(--text-soft); font-size: 11px; }
+.surtr-skill-comparison-toolbar label.surtr-s3-values-toggle { display: inline-flex; }
+.surtr-skill-comparison-toolbar select { min-height: 34px; padding: 5px 8px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); font: inherit; }
+.surtr-skill-comparison-table { table-layout: fixed; min-width: var(--surtr-skill-table-min-width); }
+.surtr-skill-comparison-table th, .surtr-skill-comparison-table td { border: 1px solid var(--border); }
+.surtr-skill-comparison-table th:first-child { width: auto; text-align: center; }
+.surtr-skill-comparison-table thead th { text-align: center; }
+.surtr-skill-comparison-table .surtr-skill-resistance-column { width: 88px; }
+.surtr-skill-comparison-table .surtr-skill-rank-column { width: 64px; }
+.surtr-skill-comparison-table .surtr-skill-label-column { width: 150px; }
+.surtr-skill-comparison-table tbody th { text-align: center; }
+.surtr-skill-comparison-table .surtr-s3-column-label { max-width: 100%; justify-content: center; white-space: normal; overflow-wrap: anywhere; }
+.surtr-skill-comparison-table .surtr-s3-column-label i { flex: none; }
+.surtr-skill-comparison-value { display: block; width: 100%; min-height: 24px; padding: 0; border: 0; background: transparent; color: inherit; text-align: right; font: inherit; cursor: pointer; }
+.surtr-skill-comparison-value:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+.surtr-skill-comparison-title-controls { display: flex; gap: 8px; }
+.surtr-skill-comparison-title-controls input { flex: 1; min-width: 0; }
+.surtr-skill-comparison-conditions { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; }
+.surtr-skill-comparison-image .surtr-skill-comparison-wrap { overflow: visible; border: 0; }
+.surtr-skill-comparison-image .surtr-skill-comparison-table { min-width: 0; }
+.surtr-skill-comparison-image .surtr-skill-comparison-table thead th { white-space: normal; overflow-wrap: anywhere; }
+.surtr-skill-comparison-image .surtr-skill-comparison-table tbody td { white-space: nowrap; }
+.surtr-skill-comparison-image .surtr-skill-comparison-table tbody tr:last-child > * { border-bottom: 1px solid var(--border); }
+.surtr-skill-comparison-image .surtr-skill-comparison-table tr > :last-child { border-right: 1px solid var(--border); }
+.surtr-skill-comparison-image .surtr-skill-comparison-table tbody tr:hover > th { background: var(--surface-soft); }
+.surtr-skill-comparison-image-section + .surtr-skill-comparison-image-section { margin-top: -1px; }
+.surtr-skill-comparison-image-section h3 { margin: 0; border: 1px solid var(--border); border-bottom: 0; padding: 6px 12px; background: var(--surface-soft); text-align: center; font-size: var(--comparison-table-title-size, 12px); }
+@media (max-width: 640px) { .surtr-skill-comparison-toolbar { gap: 12px; } .surtr-skill-comparison-toolbar select { min-height: 44px; font-size: 16px; } .surtr-skill-comparison-value { min-height: 28px; } }

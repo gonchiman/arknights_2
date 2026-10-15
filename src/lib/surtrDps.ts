@@ -67,6 +67,17 @@ export function deriveSurtrDpsModel(
   moduleLevel = 3,
 ): SurtrDpsModel | null {
   if (record.operatorId !== SURTR_OPERATOR_ID || record.skillIndex !== 3) return null
+  return deriveSurtrDpsCombatModel(record, settings, moduleId, moduleLevel)
+}
+
+/** Shared E2 attack, talent and module model; skill-specific target effects are applied by its caller. */
+export function deriveSurtrDpsCombatModel(
+  record: SkillRecord,
+  settings: SurtrDpsSettings,
+  moduleId = '',
+  moduleLevel = 3,
+): SurtrDpsModel | null {
+  if (record.operatorId !== SURTR_OPERATOR_ID || (record.skillIndex !== 2 && record.skillIndex !== 3)) return null
   const profile = record.operatorProfile
   const phase = profile.phases[2]
   const maxLevel = phase?.maxLevel

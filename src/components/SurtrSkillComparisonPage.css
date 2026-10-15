@@ -1,0 +1,10 @@
+.surtr-skill-comparison-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.surtr-skill-comparison-fields input, .surtr-skill-comparison-fields select { min-width: 0; width: 100%; }
+.surtr-skill-comparison-resistance { display: flex; align-items: end; flex-wrap: wrap; gap: 12px 24px; margin-bottom: 16px; }
+.surtr-skill-comparison-resistance .surtr-s3-resistance-bounds { max-width: 320px; }
+.surtr-skill-comparison-page .surtr-s3-axis-error { margin: 8px 0; }
+@media (max-width: 680px) {
+  .surtr-skill-comparison-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .surtr-skill-comparison-fields input, .surtr-skill-comparison-fields select { min-height: 44px; font-size: 16px; }
+  .surtr-skill-comparison-resistance .surtr-s3-resistance-bounds { max-width: 100%; }
+}

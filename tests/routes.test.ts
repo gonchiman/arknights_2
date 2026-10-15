@@ -304,6 +304,7 @@ test('スルトの専用トップから各分析を開き、詳細URLと区別�
   assert.deepEqual(SURTR_ANALYSIS_ITEMS.map(({ id, href, label }) => [id, href, label, parseHashRoute(href).view]), [
     ['surtr-s3', '#/analysis/surtr/s3', 'S3 DPS', 'surtr-s3'],
     ['surtr-s3-comparison', '#/analysis/surtr/s3-comparison', 'S3 DPS比較（MOD・潜在）', 'surtr-s3-comparison'],
+    ['surtr-skill-comparison', '#/analysis/surtr/s2-s3-comparison', 'S2・S3 DPS比較', 'surtr-skill-comparison'],
     ['surtr-duration', '#/analysis/surtr/duration', 'S3 継続時間', 'surtr-duration'],
     ['surtr-total-damage', '#/analysis/surtr/total-damage', 'S3 総ダメージ', 'surtr-total-damage'],
     ['surtr-remnant-attacks', '#/analysis/surtr/remnant-attacks', '余燼中の攻撃・ダメージ', 'surtr-remnant-attacks'],
@@ -312,7 +313,7 @@ test('スルトの専用トップから各分析を開き、詳細URLと区別�
     view: 'operator-detail', operatorId: 'char_350_surtr',
   })
   for (const hash of [SURTR_HOME_LINK.href, ...SURTR_ANALYSIS_ITEMS.map((item) => item.href)]) {
-    for (const suffix of ['/', '/extra', '?skill=3']) {
+    for (const suffix of ['/', '/extra', '?skill=3', '?from=surtr', '-extra']) {
       assert.deepEqual(parseHashRoute(`${hash}${suffix}`), { view: 'operators' })
     }
   }
