@@ -7,7 +7,8 @@ import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 
 const source = JSON.parse(readFileSync(new URL('./fixtures/skillStructureFourOperators.json', import.meta.url), 'utf8'))
-let server, Page, ResultTable, EffectTable, buildOutput, rows
+const talentSource = JSON.parse(readFileSync(new URL('./fixtures/talentStructureFourOperators.json', import.meta.url), 'utf8'))
+let server, Page, ResultTable, EffectTable, TalentTable, buildOutput, rows
 
 const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;',
@@ -41,8 +42,9 @@ function profile(operatorId) {
     ] }],
     favorKeyFrames: [{ level: 0, data: { atk: 0 } }, { level: 50, data: { atk: data.trust } }],
     traitDescription: surtr ? '敵に術ダメージを与える' : ['char_172_svrash', 'char_293_thorns'].includes(operatorId) ? '80%の攻撃力で遠距離攻撃も行える' : '',
-    // Deliberately extreme optional modifiers expose accidental inclusion in the page's result.
-    talents: [{ candidates: [{ description: '攻撃力+999%', blackboard: [{ key: 'atk', value: 9.99 }] }] }],
+    talents: structuredClone(talentSource.find(operator => operator.operatorId === operatorId).operatorProfile.talents),
+    affiliationIds: { nationId: null, groupId: operatorId === 'char_263_skadi' ? 'abyssal' : null, teamId: null },
+    // Potential and module bonuses remain excluded at potential 1 / no module.
     potentialRanks: [{ buff: { attributes: { attributeModifiers: [{ attributeType: 'ATK', value: 999 }] } } }],
     modules: [{ uniEquipId: 'test_module', phases: [{ equipLevel: 3, attributeBlackboard: { atk: 999 } }] }],
   }
@@ -55,7 +57,8 @@ before(async () => {
     server: { middlewareMode: true, watch: null, preTransformRequests: false, hmr: false }, appType: 'custom',
   })
   ;({ DamageCalculatorThree: Page, DamageCalculatorThreeResultTable: ResultTable,
-    DamageCalculatorThreeEffectTable: EffectTable } = await server.ssrLoadModule('/src/components/DamageCalculatorThree.tsx'))
+    DamageCalculatorThreeEffectTable: EffectTable,
+    DamageCalculatorThreeTalentTable: TalentTable } = await server.ssrLoadModule('/src/components/DamageCalculatorThree.tsx'))
   ;({ buildDamageCalculatorThreeOutput: buildOutput } = await server.ssrLoadModule('/src/lib/damageCalculatorThree.ts'))
   const { classifySkill } = await server.ssrLoadModule('/src/lib/classifier.ts')
   rows = source.flatMap(operator => operator.skills.map(entry => {
@@ -86,15 +89,21 @@ const resultTable = markup => {
   assert.ok(table, '1体と全対象を分けた計算結果テーブル')
   return tableRows(table[1])
 }
+const talentTable = markup => {
+  const table = markup.match(/<table\b[^>]*class="[^"]*damage-three-talent-table[^"]*"[^>]*>([\s\S]*?)<\/table>/)
+  assert.ok(table, '素質の適用状態テーブル')
+  return tableRows(table[1])
+}
 
-test('初期表示はスルトS2で、選択・戦闘条件・結果の3パネルを順に表示する', () => {
+test('初期表示はスルトS2で、選択・戦闘条件・素質・結果の4パネルを順に表示する', () => {
   const markup = render()
   const headings = [...markup.matchAll(/<span class="collapsible-panel-heading-label">([^<]*)<\/span>/g)]
     .map(match => match[1])
-  assert.deepEqual(headings, ['オペレーター・スキル', '戦闘条件', '計算結果'])
+  assert.deepEqual(headings, ['オペレーター・スキル', '戦闘条件', '素質の適用', '計算結果'])
   assert.match(markup, /<span>01<\/span>/)
   assert.match(markup, /<span>02<\/span>/)
   assert.match(markup, /<span>03<\/span>/)
+  assert.match(markup, /<span>04<\/span>/)
   assert.match(markup, /スルト/)
   assert.match(markup, /災厄の巨焔/)
   assert.match(markup, /特化3/)
@@ -155,7 +164,7 @@ test('スカジS1は物理攻撃の表を表示し、対象数を選択する不
   const markup = render(selected('char_263_skadi', 1))
   const data = resultTable(markup)
   assert.match(data[0][0], /防御力/)
-  assert.deepEqual(data[1], ['0', '1,587', '1,534', '1,587', '1,534'])
+  assert.deepEqual(data[1], ['0', '1,741', '1,683', '1,741', '1,683'])
   assert.match(text(markup), /対象数.*1|1体/)
   assert.doesNotMatch(markup, /<select\b[^>]*aria-label="[^"]*対象数/)
   assert.doesNotMatch(markup, /災厄の巨焔|ラグナロク/)
@@ -184,7 +193,8 @@ test('説明文を常時表示し、計算範囲・効果の適用状態・使�
       ['適用する効果', '計算範囲', '計算に使った値'])
     assert.ok(details.every(match => !/\bopen\b/.test(match[1])))
     assert.ok(details.every(match => !match[2].includes(descriptionMatch[0])))
-    assert.match(markup, /基礎性能＋スキル効果（素質・潜在・MOD・外部バフなし）/)
+    assert.match(markup, /基礎性能＋スキル効果＋適用中の素質 · 潜在1 · MODなし · 外部バフなし/)
+    assert.doesNotMatch(markup, /素質・潜在・MOD・外部バフなし|素質・潜在・モジュール・外部バフの補正は含めません/)
   }
 })
 
@@ -197,6 +207,103 @@ test('単体条件の効果行は1体なら適用、2体なら不適用と表示
     assert.deepEqual(data.find(row => row[1] === '×1.6'), ['攻撃倍率', '×1.6', '攻撃対象数＝1', expected])
     assert.ok(data.every(row => row.length === 4))
   }
+})
+
+test('素質の適用は6列の通常テーブルで表示し、補正と計算対象外の効果を区別する', () => {
+  const markup = render()
+  const data = talentTable(markup)
+  assert.deepEqual(data[0], ['区分', '名称', '項目', '値', '条件', '状態'])
+  assert.ok(data.slice(1).every(row => row.length === 6))
+  assert.deepEqual(data.find(row => row[2] === '術耐性固定無視'), ['素質1', '劫火', '術耐性固定無視', '20', 'なし', '適用'])
+  for (const item of ['HP', '強制退場']) {
+    const row = data.find(row => row[2] === item)
+    assert.ok(row, item)
+    assert.equal(row[1], '余燼')
+    assert.equal(row[5], '対象外')
+  }
+  const table = markup.match(/<table\b[^>]*class="[^"]*damage-three-talent-table[^"]*"[^>]*>([\s\S]*?)<\/table>/)[1]
+  assert.doesNotMatch(table, /colspan|rowspan|<small|<br/)
+})
+
+test('使用数値はスキル・素質・合計の攻撃力増加と術耐性無視を分けて表示する', () => {
+  const markup = render(selected('char_263_skadi', 1))
+  const values = tableRows(markup.match(/<table\b[^>]*class="[^"]*damage-three-value-table[^"]*"[^>]*>([\s\S]*?)<\/table>/)[1])
+  assert.deepEqual(values.find(row => row[0] === '攻撃力増加（スキル）'), ['攻撃力増加（スキル）', '＋45％'])
+  assert.deepEqual(values.find(row => row[0] === '攻撃力増加（素質）'), ['攻撃力増加（素質）', '＋14％'])
+  assert.deepEqual(values.find(row => row[0] === '攻撃力増加（合計）'), ['攻撃力増加（合計）', '＋59％'])
+  const surtr = tableRows(render().match(/<table\b[^>]*class="[^"]*damage-three-value-table[^"]*"[^>]*>([\s\S]*?)<\/table>/)[1])
+  assert.deepEqual(surtr.find(row => row[0] === '術耐性固定無視'), ['術耐性固定無視', '20'])
+  const row = resultTable(render()).find(entry => entry[0] === '60')
+  assert.deepEqual(row, ['60', '1,630', '1,304', '1,630', '1,304'])
+})
+
+test('ソーンズの未対応継続ダメージを表から隠さず、結果を直接攻撃分として表示する', () => {
+  for (const skillIndex of [1, 2, 3]) {
+    const markup = render(selected('char_293_thorns', skillIndex))
+    const data = talentTable(markup)
+    const dot = data.filter(row => row[2] === '継続ダメージ')
+    assert.equal(dot.length, 2)
+    assert.deepEqual(dot.map(row => row[3]), ['125/秒', '250/秒'])
+    assert.ok(dot.every(row => row[5] === '未対応'))
+    assert.match(markup, /直接攻撃分（継続ダメージを除く）/)
+    assert.match(markup, /直接攻撃分（継続ダメージを除く） · 潜在1 · MODなし · 外部バフなし/)
+    assert.doesNotMatch(markup, /この条件では計算できません|NaN|Infinity/)
+    const headings = resultTable(markup)[0]
+    assert.equal(headings.some(cell => cell.includes('DPS')), skillIndex !== 2)
+  }
+})
+
+test('素質の未確認項目は0へ置き換えず未確認と表示する', () => {
+  const output = calculate('char_172_svrash', 3)
+  const effects = [{ ...output.talentEffects[0], effect: null, status: 'UNVERIFIED', reason: '素質の原典を確認できません。' }]
+  const markup = renderToStaticMarkup(createElement(TalentTable, { effects }))
+  const data = talentTable(markup)
+  assert.deepEqual(data[1].slice(2), ['未確認', '未確認', '未確認', '未確認'])
+  assert.ok(data[1].every(cell => cell !== '0'))
+})
+
+test('既知の対象不一致は条件不成立、所属不足は未確認として区別する', () => {
+  const skill = rows.find(row => row.operatorId === 'char_263_skadi' && row.skillIndex === 1)
+  for (const [affiliationIds, expected] of [
+    [{ nationId: null, groupId: 'other', teamId: null }, '条件不成立'],
+    [undefined, '未確認'],
+  ]) {
+    const row = { ...skill, operatorProfile: { ...skill.operatorProfile, affiliationIds } }
+    const output = buildOutput({ operator: row, skill: row, phaseIndex: 2, operatorLevel: 90, trust: 100, skillLevelIndex: 9 })
+    const markup = renderToStaticMarkup(createElement(TalentTable, { effects: output.talentEffects }))
+    const attack = talentTable(markup).find(entry => entry[2] === '攻撃力')
+    assert.ok(attack)
+    assert.match(attack[4], /アビサルハンター/)
+    assert.equal(attack[5], expected)
+    assert.equal(output.rows.length > 0, expected === '条件不成立')
+  }
+})
+
+test('対象の陣営・タグ制限も条件列に表示し、条件なしと取り違えない', () => {
+  const skadi = talentTable(render(selected('char_263_skadi', 1))).find(entry => entry[2] === '攻撃力')
+  assert.ok(skadi)
+  assert.match(skadi[4], /アビサルハンター/)
+  assert.equal(skadi[5], '適用')
+  const template = calculate('char_172_svrash', 3).talentEffects[0]
+  const effects = [{ ...template, effect: {
+    ...template.effect,
+    condition: { type: 'COMPARE', metric: 'source.hpRatio', comparison: 'LTE', value: 0.5 },
+    target: { ...template.effect.target, tagIds: ['test_tag'], filterLabels: { test_tag: '試験タグ' } },
+  } }]
+  const data = talentTable(renderToStaticMarkup(createElement(TalentTable, { effects })))
+  assert.match(data[1][4], /試験タグ/)
+  assert.match(data[1][4], /自身のHP割合/)
+  assert.match(data[1][4], /かつ/)
+  assert.equal(data[1].length, 6)
+})
+
+test('適用可能な素質の原典が欠けている場合に素質なしの結果へ代用しない', () => {
+  const skill = rows.find(row => row.operatorId === 'char_172_svrash' && row.skillIndex === 3)
+  const broken = { ...skill, operatorProfile: { ...skill.operatorProfile, talents: [] } }
+  const markup = renderToStaticMarkup(createElement(Page, { rows: [broken], loading: false, initialSelection: selected(skill.operatorId, skill.skillIndex) }))
+  assert.match(markup, /この条件では計算できません/)
+  assert.doesNotMatch(markup, /damage-three-result-table|NaN|Infinity/)
+  assert.ok(talentTable(markup).some(row => row[5] === '未確認'))
 })
 
 test('ダメージ計算に関与しない攻撃範囲と、条件不成立の単体倍率を区別して表示する', () => {
@@ -232,15 +339,15 @@ test('データ未取得時は読み込み中と取得失敗を区別し、空�
 
 test('全12技能を選択でき、同一OPのS1・S2・S3の名前付きボタンと対応する計算結果を表示する', () => {
   const expectations = [
-    ['char_263_skadi', 1, ['0', '1,587', '1,534', '1,587', '1,534']],
-    ['char_263_skadi', 2, ['0', '2,956', '1,971', '2,956', '1,971']],
-    ['char_263_skadi', 3, ['0', '2,518', '1,679', '2,518', '1,679']],
+    ['char_263_skadi', 1, ['0', '1,741', '1,683', '1,741', '1,683']],
+    ['char_263_skadi', 2, ['0', '3,109', '2,073', '3,109', '2,073']],
+    ['char_263_skadi', 3, ['0', '2,671', '1,781', '2,671', '1,781']],
     ['char_350_surtr', 1, ['0', '2,393', '2,393']],
     ['char_350_surtr', 2, ['0', '2,717', '2,173', '2,717', '2,173']],
     ['char_350_surtr', 3, ['0', '3,319', '2,655', '3,319', '2,655']],
-    ['char_172_svrash', 1, ['0', '2,213', '2,213']],
-    ['char_172_svrash', 2, ['0', '763', '587', '763', '587']],
-    ['char_172_svrash', 3, ['0', '2,289', '1,761', '2,289', '1,761']],
+    ['char_172_svrash', 1, ['0', '2,433', '2,433']],
+    ['char_172_svrash', 2, ['0', '839', '645', '839', '645']],
+    ['char_172_svrash', 3, ['0', '2,365', '1,819', '2,365', '1,819']],
     ['char_293_thorns', 1, ['0', '1,482', '1,140', '1,482', '1,140']],
     ['char_293_thorns', 2, ['0', '948', '948']],
     ['char_293_thorns', 3, ['0', '1,185', '1,139', '1,185', '1,139']],

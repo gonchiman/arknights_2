@@ -13,6 +13,13 @@ import {
   formatSkillStructurePredicate,
   type SkillStructureSelection,
 } from '../lib/skillStructure'
+import {
+  formatTalentStructureCondition,
+  formatTalentStructureEffectItem,
+  formatTalentStructureEffectValue,
+  formatTalentStructureTarget,
+  type TalentStructureEffect,
+} from '../lib/talentStructure'
 import type { SkillRecord } from '../types/skill'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
@@ -159,13 +166,19 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
           <DamageCalculatorThreeEffectTable effects={output.effects} />
         </details>
         <details className="damage-two-help"><summary>計算範囲</summary>
-          <p>基礎性能とスキル効果を計算します。素質・潜在・モジュール・外部バフの補正は含めません。</p>
+          <p>{calculationScope(output)}</p>
           <p>全対象には同じ防御力・術耐性を使います。DPSはスキル発動中に攻撃し続けた場合の値で、SP回復中の時間を含めません。</p>
           {output.scopeNotes.map(note => <p key={note}>{note}</p>)}
         </details>
       </CollapsibleCalculatorPanel>
 
-      <CollapsibleCalculatorPanel id="damage-three-results" number="03" title="計算結果"
+      <CollapsibleCalculatorPanel id="damage-three-talents" number="03" title="素質の適用"
+        summary={`${output.talentEffects.filter(entry => entry.status === 'APPLIED').length}件適用`}
+        collapsedLabel="素質を表示">
+        <DamageCalculatorThreeTalentTable effects={output.talentEffects} />
+      </CollapsibleCalculatorPanel>
+
+      <CollapsibleCalculatorPanel id="damage-three-results" number="04" title="計算結果"
         summary={output.axisLabel} collapsedLabel="結果を表示"
         headerActions={<label className="damage-two-precision">小数点以下
           <select aria-label="結果の小数点以下" value={precision} onChange={event => setPrecision(Number(event.target.value))}>
@@ -174,6 +187,7 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
         <p className="damage-two-context" role="status" aria-live="polite">
           {operator?.operatorName} · S{structure?.basicInfo.skillIndex} {structure?.basicInfo.skillLevel} · 攻撃対象{output.actualTargetCount}体
           {output.activeStageLabel && output.activeStageLabel !== '通常' && <> · {output.activeStageLabel}</>}
+          {output.hasUnsupportedTalentDamage && <> · 直接攻撃分（継続ダメージを除く）</>}
         </p>
         {output.unsupportedReasons.length > 0 ? <div className="damage-two-unavailable" role="status">
           <strong>この条件では計算できません。</strong><ul>{output.unsupportedReasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
@@ -185,7 +199,7 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
             <UsedValueTable output={output} />
           </details>
         </>}
-        <div className="damage-three-scope">基礎性能＋スキル効果（素質・潜在・MOD・外部バフなし）</div>
+        <div className="damage-three-scope">{calculationScope(output)}</div>
       </CollapsibleCalculatorPanel>
     </>}
   </section>
@@ -197,7 +211,7 @@ export function DamageCalculatorThreeResultTable({ output, precision }: { output
   const damageLabel = output.attackKind === 'NORMAL' ? '1攻撃ダメージ' : `${output.attackLabel}1回のダメージ`
   return <div className="damage-two-table-wrap" tabIndex={0} role="region" aria-label="計算機３のダメージ計算結果">
     <table className={`damage-two-table damage-three-result-table${output.canShowDps ? '' : ' damage-three-single-attack-table'}`}>
-      <caption className="visually-hidden">敵の防御性能別の1体・全対象の{output.canShowDps ? 'ダメージとDPS' : damageLabel}</caption>
+      <caption className="visually-hidden">{output.hasUnsupportedTalentDamage && '直接攻撃分（継続ダメージを除く）：'}敵の防御性能別の1体・全対象の{output.canShowDps ? 'ダメージとDPS' : damageLabel}</caption>
       <thead><tr><th scope="col">{output.axisLabel}</th><th scope="col">1体への<br />{damageLabel}</th>
         {output.canShowDps && <th scope="col">1体への<br />DPS</th>}
         <th scope="col">全対象の<br />{damageLabel}</th>{output.canShowDps && <th scope="col">全対象の<br />DPS</th>}</tr></thead>
@@ -227,11 +241,31 @@ export function DamageCalculatorThreeEffectTable({ effects }: { effects: DamageC
   </div>
 }
 
+export function DamageCalculatorThreeTalentTable({ effects }: { effects: DamageCalculatorThreeOutput['talentEffects'] }) {
+  return <div className="damage-two-table-wrap" tabIndex={0} role="region" aria-label="構造化された素質の適用状態">
+    <table className="damage-two-table damage-three-talent-table">
+      <caption className="visually-hidden">構造化された素質の適用状態</caption>
+      <thead><tr><th scope="col">区分</th><th scope="col">名称</th><th scope="col">項目</th>
+        <th scope="col">値</th><th scope="col">条件</th><th scope="col">状態</th></tr></thead>
+      <tbody>{effects.map((entry, index) => <tr key={`${entry.operatorId}/${entry.talentIndex}/${entry.effect?.id ?? index}`}>
+        <th scope="row">素質{entry.talentIndex + 1}</th><td>{entry.talentName}</td>
+        <td>{entry.effect ? formatTalentStructureEffectItem(entry.effect.item) : '未確認'}</td>
+        <td>{entry.effect ? formatTalentStructureEffectValue(entry.effect) : '未確認'}</td>
+        <td>{entry.effect ? formatTalentApplicationCondition(entry.effect) : '未確認'}</td>
+        <td>{{ APPLIED: '適用', CONDITION_FALSE: '条件不成立', NOT_RELEVANT: '対象外', UNSUPPORTED: '未対応', UNVERIFIED: '未確認' }[entry.status]}</td>
+      </tr>)}</tbody>
+    </table>
+  </div>
+}
+
 function UsedValueTable({ output }: { output: DamageCalculatorThreeOutput }) {
   const model = output.model
   const rows: [string, ReactNode][] = [
     ['基礎攻撃力', formatCompact(output.stats.attack)],
-    ['攻撃力増加', `＋${formatCompact(model?.directMultiplierPercent ?? 0)}％`],
+    ['攻撃力増加（スキル）', model ? `＋${formatCompact(model.directMultiplierPercent)}％` : '未確認'],
+    ['攻撃力増加（素質）', model ? `＋${formatCompact(output.talentAttackRatio * 100)}％` : '未確認'],
+    ['攻撃力増加（合計）', model ? `＋${formatCompact(model.directMultiplierPercent + output.talentAttackRatio * 100)}％` : '未確認'],
+    ['術耐性固定無視', model ? formatCompact(output.resistanceIgnoreFixed) : '未確認'],
     ['攻撃倍率', `×${formatCompact((model?.attackScalePercent ?? 100) / 100)}`],
     ['軽減前の攻撃ダメージ', output.effectiveAttack === null ? '—' : formatCompact(output.effectiveAttack)],
     ['特性による遠距離倍率', `×${formatCompact(output.rangePenaltyMultiplier)}`],
@@ -250,6 +284,22 @@ function UsedValueTable({ output }: { output: DamageCalculatorThreeOutput }) {
       <tbody>{rows.map(([label, value]) => <tr key={label}><th scope="row">{label}</th><td>{value}</td></tr>)}</tbody>
     </table>
   </div>
+}
+
+function calculationScope(output: DamageCalculatorThreeOutput) {
+  const scope = output.hasUnsupportedTalentDamage
+    ? '直接攻撃分（継続ダメージを除く）'
+    : '基礎性能＋スキル効果＋適用中の素質'
+  return `${scope} · 潜在1 · MODなし · 外部バフなし`
+}
+
+function formatTalentApplicationCondition(effect: TalentStructureEffect) {
+  const conditions: string[] = []
+  if (effect.target.factionIds.length > 0 || effect.target.tagIds.length > 0) {
+    conditions.push(formatTalentStructureTarget(effect.target))
+  }
+  if (effect.condition) conditions.push(formatTalentStructureCondition(effect.condition))
+  return conditions.join(' かつ ') || 'なし'
 }
 
 function sameSkill(a: Pick<SkillRecord, 'operatorId' | 'skillId' | 'skillIndex'>, b: SkillStructureSelection) {

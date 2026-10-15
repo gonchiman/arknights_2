@@ -10,10 +10,13 @@ import {
   type DamageCalculatorThreeInput,
 } from '../src/lib/damageCalculatorThree.ts'
 import { findSkillStructure, type SkillStructure } from '../src/lib/skillStructure.ts'
-import type { RawSkillLevel, SkillRecord } from '../src/types/skill.ts'
+import type { OperatorCombatProfile, RawSkillLevel, SkillRecord } from '../src/types/skill.ts'
 
 const source = JSON.parse(readFileSync(new URL('./fixtures/skillStructureFourOperators.json', import.meta.url), 'utf8')) as {
   operatorId: string; operatorName: string; skills: (RawSkillLevel & { skillId: string; skillIndex: number })[]
+}[]
+const talentSource = JSON.parse(readFileSync(new URL('./fixtures/talentStructureFourOperators.json', import.meta.url), 'utf8')) as {
+  operatorId: string; operatorProfile: OperatorCombatProfile
 }[]
 // Reviewed JP growth values. Skill effects come independently from the saved source fixture.
 const profiles: Record<string, { low: number; high: number; trust: number; interval: number; subclass: string }> = {
@@ -42,15 +45,15 @@ function sourceRecord(operatorId: string, skillIndex: number): SkillRecord {
     durationType: raw.durationType!, skillType: raw.skillType!, spType: 'INCREASE_WITH_TIME', initSp: 0, spCost: 10,
     classification: classifySkill(raw), skillLevels: Array.from({ length: 10 }, () => structuredClone(raw)), raw,
     operatorProfile: {
+      ...structuredClone(talentSource.find(candidate => candidate.operatorId === operatorId)!.operatorProfile),
+      // Raw JP affiliation IDs are separate from the translated display name.
+      affiliationIds: { nationId: null, groupId: operatorId === 'char_263_skadi' ? 'abyssal' : null, teamId: null },
       phases: [{ maxLevel: 50 }, { maxLevel: 80 }, { maxLevel: 90, attributesKeyFrames: [
         { level: 1, data: { atk: profile.low, baseAttackTime: profile.interval, attackSpeed: 100 } },
         { level: 90, data: { atk: profile.high, baseAttackTime: profile.interval, attackSpeed: 100 } },
       ] }],
       favorKeyFrames: [{ level: 0, data: { atk: 0 } }, { level: 50, data: { atk: profile.trust } }],
       traitDescription: arts ? '敵に術ダメージを与える' : profile.subclass === 'lord' ? '80%の攻撃力で遠距離攻撃も行える' : '通常攻撃',
-      talents: [{ candidates: [{ description: '攻撃力+99%、術耐性を20無視', blackboard: [
-        { key: 'atk', value: 0.99 }, { key: 'magic_resist_penetrate_fixed', value: 20 },
-      ] }] }],
       potentialRanks: [{ buff: { attributes: { attributeModifiers: [{ attributeType: 'ATK', value: 28 }] } } }],
       modules: [{ uniEquipId: 'test_module', phases: [{ equipLevel: 3, attributeBlackboard: { atk: 60, attack_speed: 30 } }] }],
     },
@@ -114,10 +117,10 @@ test('スルトS2二体時: 単体倍率を除き、対象ごとの術耐性軽�
   assert.deepEqual(result.unsupportedReasons, [])
   assert.equal(result.model?.attackScalePercent, 100)
   const row = result.rows.find(entry => entry.axisValue === 60)!
-  close(row.perAttack, 679.2)
-  close(row.dps, 543.36)
-  close(row.allTargetsPerAttack, 1358.4)
-  close(row.allTargetsDps, 1086.72)
+  close(row.perAttack, 1018.8)
+  close(row.dps, 815.04)
+  close(row.allTargetsPerAttack, 2037.6)
+  close(row.allTargetsDps, 1630.08)
   const conditional = result.effects.find(entry => entry.effect.id === 'single_target')!
   assert.equal(conditional.applied, false)
   assert.equal(conditional.status, 'CONDITION_FALSE')
@@ -131,23 +134,23 @@ test('スカジS1: 攻撃力・攻撃速度を同じ共通処理で適用し、�
   assert.equal(result.damageType, 'PHYSICAL')
   assert.equal(result.attackSpeed, 145)
   assert.equal(result.model?.attackInterval, 150 / 145)
-  assert.equal(result.effectiveAttack, 1587)
-  close(result.rows[0].dps, 1587 * 145 / 150)
+  assert.equal(result.effectiveAttack, 1741)
+  close(result.rows[0].dps, 1741 * 145 / 150)
   const armor = result.rows.find(entry => entry.axisValue === 1000)!
-  assert.equal(armor.perAttack, 587)
-  close(armor.dps, 587 * 145 / 150)
-  close(result.rows.at(-1)?.perAttack, 1587 * 0.05)
+  assert.equal(armor.perAttack, 741)
+  close(armor.dps, 741 * 145 / 150)
+  close(result.rows.at(-1)?.perAttack, 1741 * 0.05)
   assert.ok(result.rows.every(row => row.perAttack === row.allTargetsPerAttack && row.dps === row.allTargetsDps))
 })
 
-test('育成と信頼は変更でき、素質・潜在・MODの補正は計算へ混入しない', () => {
+test('育成と信頼は変更でき、原典の素質を適用しながら潜在・MODの補正を除外する', () => {
   const skill = record()
   const before = structuredClone(skill)
   const result = output(skill)
   assert.equal(result.stats.baseAttackBreakdown.potentialAttack, 0)
   assert.equal(result.stats.baseAttackBreakdown.moduleAttack, 0)
-  assert.equal(result.rows[0].breakdown.mitigation.resistanceIgnoreFixed, 0)
-  close(result.rows.find(row => row.axisValue === 20)?.perAttack, 2716.8 * 0.8)
+  assert.equal(result.rows[0].breakdown.mitigation.resistanceIgnoreFixed, 20)
+  close(result.rows.find(row => row.axisValue === 20)?.perAttack, 2716.8)
   const low = output(skill, { operatorLevel: 1, trust: 0 })
   assert.equal(low.stats.attack, 544)
   close(low.rows[0].perAttack, Math.floor(544 * 2.2) * 1.6)
@@ -254,15 +257,15 @@ test('基礎攻撃データが揃っていても、未昇進のS2と昇進1以�
 
 test('独立したJPスキルfixtureの全12技能について1回のダメージとDPSを計算する', () => {
   const cases: [string, number, number, number | null][] = [
-    ['char_263_skadi', 1, 1587, 1587 * 145 / 150],
-    ['char_263_skadi', 2, 2956, 2956 / 1.5],
-    ['char_263_skadi', 3, 2518, 2518 / 1.5],
+    ['char_263_skadi', 1, 1741, 1741 * 145 / 150],
+    ['char_263_skadi', 2, 3109, 3109 / 1.5],
+    ['char_263_skadi', 3, 2671, 2671 / 1.5],
     ['char_350_surtr', 1, 2393.2, null],
     ['char_350_surtr', 2, 2716.8, 2173.44],
     ['char_350_surtr', 3, 3319, 2655.2],
-    ['char_172_svrash', 1, 2212.7, null],
-    ['char_172_svrash', 2, 763, 763 / 1.3],
-    ['char_172_svrash', 3, 2289, 2289 / 1.3],
+    ['char_172_svrash', 1, 2433.1, null],
+    ['char_172_svrash', 2, 839, 839 / 1.3],
+    ['char_172_svrash', 3, 2365, 2365 / 1.3],
     ['char_293_thorns', 1, 1482, 1482 / 1.3],
     ['char_293_thorns', 2, 948, null],
     ['char_293_thorns', 3, 1185, 1185 * 125 / 130],
@@ -308,8 +311,8 @@ test('シルバーアッシュS2は選んだモードの効果だけを使い、
     assert.deepEqual(result.unsupportedReasons, [])
     assert.equal(result.activeStageLabel, label)
     assert.equal(result.model?.directMultiplierPercent, 0)
-    assert.equal(result.rows[0].perAttack, 763)
-    close(result.rows[0].dps, 763 / 1.3)
+    assert.equal(result.rows[0].perAttack, 839)
+    close(result.rows[0].dps, 839 / 1.3)
     const passive = result.effects.filter(entry => entry.effect.item === 'DEF_BUFF_RATIO' || entry.effect.item === 'HP_RESTORE_RATIO')
     assert.equal(passive.length, 2)
     assert.ok(passive.every(entry => entry.status === (mode === 'INITIAL' ? 'INACTIVE_STAGE' : 'NOT_RELEVANT')))
@@ -339,8 +342,8 @@ test('ソーンズS3は1回目と2回目以降の値を選び、段階の加算�
 
 test('領主の遠距離減衰を軽減前に一度だけ掛け、SAS3とソーンズS3の無効化を反映する', () => {
   for (const [operatorId, skillIndex, ranged] of [
-    ['char_172_svrash', 1, 1770.16],
-    ['char_172_svrash', 2, 610.4],
+    ['char_172_svrash', 1, 1946.48],
+    ['char_172_svrash', 2, 671.2],
     ['char_293_thorns', 1, 1185.6],
   ] as const) {
     const skill = sourceRecord(operatorId, skillIndex)
@@ -355,8 +358,8 @@ test('領主の遠距離減衰を軽減前に一度だけ掛け、SAS3とソー�
   const silverash = output(sourceRecord('char_172_svrash', 3), { conditions: { attackDistanceType: 'RANGED', actualAttackTargetCount: 6 } })
   assert.deepEqual(silverash.unsupportedReasons, [])
   assert.equal(silverash.rangePenaltyMultiplier, 1)
-  assert.equal(silverash.rows[0].perAttack, 2289)
-  assert.equal(silverash.rows[0].allTargetsPerAttack, 13734)
+  assert.equal(silverash.rows[0].perAttack, 2365)
+  assert.equal(silverash.rows[0].allTargetsPerAttack, 14190)
 })
 
 test('ソーンズS2は遠距離減衰を反映した反撃1回で、0.6秒CDや通常攻撃間隔からDPSを作らない', () => {

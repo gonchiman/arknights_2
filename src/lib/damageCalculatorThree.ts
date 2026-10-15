@@ -9,6 +9,7 @@ import {
   type SkillModelDefaults,
 } from './damageCalculator.ts'
 import { getDamageSensitivityTablePoints } from './damageSensitivity.ts'
+import { evaluateDamageCalculatorThreeTalents, type DamageCalculatorThreeTalentEvaluation } from './damageCalculatorThreeTalents.ts'
 import { getComparisonMaximumSkillLevelIndex, getComparisonMinimumPhaseIndex } from './operatorBuildComparison.ts'
 import {
   findSkillStructure,
@@ -130,6 +131,10 @@ export interface DamageCalculatorThreeOutput {
   rangePenaltyMultiplier: number
   scopeNotes: string[]
   counterCooldownSeconds: number | null
+  talentEffects: DamageCalculatorThreeTalentEvaluation[]
+  talentAttackRatio: number
+  resistanceIgnoreFixed: number
+  hasUnsupportedTalentDamage: boolean
 }
 
 export function getDamageCalculatorThreeStructures(): SkillStructure[] {
@@ -176,9 +181,9 @@ export function getDamageCalculatorThreeInputs(
 
 /**
  * Only reviewed structures are executable. No description or blackboard
- * heuristics are used to select skill values. Talents, potential, modules and
- * external modifiers are outside this scope; reviewed normal-attack traits
- * supply damage type and the Lord's conditional ranged attack scale.
+ * heuristics are used to select skill values. Verified talent effects are
+ * evaluated separately; potential, modules and external modifiers remain out
+ * of scope. Reviewed normal-attack traits supply damage type and Lord scaling.
  */
 export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInput): DamageCalculatorThreeOutput {
   const reasons = [...validateOperator(input)]
@@ -232,6 +237,9 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   const effectiveContext = { ...safeContext, attackDistanceType }
   const effects: DamageCalculatorThreeEffectEvaluation[] = []
   const scopeNotes: string[] = []
+  const talents = evaluateDamageCalculatorThreeTalents({ operator: input.operator,
+    phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel, attackKind })
+  scopeNotes.push(...talents.scopeNotes)
   let atkRatio = 0, attackSpeedBonus = 0, attackScale = 1
   if (structure && stage && attack && reasons.length === 0) {
     for (const candidate of structure.effectStructure.stages) for (const effect of candidate.effects) {
@@ -286,6 +294,11 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
     }
   }
 
+  reasons.push(...talents.blockingReasons)
+  if (!Number.isFinite(stats.attack * (1 + atkRatio + talents.attackRatio))) {
+    reasons.push('スキル・素質を加算した攻撃力を計算できません。')
+  }
+
   let dpsReason: string | null = null
   if (attackKind === 'NEXT_ATTACK') {
     dpsReason = '次の通常攻撃1回のため、連続攻撃のDPSは表示しません。'
@@ -311,14 +324,15 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
     attackInterval: attackInterval ?? 0, duration, ammoCount: 0, notes: [],
   } : null
   const attackPipeline = model ? calculateAttackPipeline(stats.attack, {
-    directMultiplierPercent: model.directMultiplierPercent,
+    directMultiplierPercent: model.directMultiplierPercent + talents.attackRatio * 100,
     attackScale: attackScale * rangePenaltyMultiplier,
   }) : null
   const effectiveAttack = attackPipeline?.finalAttack ?? null
   const rows: DamageCalculatorThreeRow[] = model && attackPipeline && damageType
     ? getDamageSensitivityTablePoints(damageType, [attackPipeline.finalAttack * 0.95]).map(axisValue => {
       const mitigation = calculateDamageBreakdown(attackPipeline.finalAttack, damageType,
-        damageType === 'PHYSICAL' ? axisValue : 0, damageType === 'ARTS' ? axisValue : 0)
+        damageType === 'PHYSICAL' ? axisValue : 0, damageType === 'ARTS' ? axisValue : 0,
+        { resistanceIgnoreFixed: talents.resistanceIgnoreFixed })
       const perHit = mitigation.result
       const perAttack = perHit * model.hitCount
       const dps = canShowDps && attackInterval ? perAttack / attackInterval : null
@@ -334,7 +348,9 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
     actualTargetCount, maxTargetCount, effects, canShowDps, dpsReason, effectiveAttack,
     attackSpeed: model ? attackSpeedValue : null,
     attackInterval: model ? attackInterval : null, activeStageLabel: stage?.label ?? null,
-    attackKind, attackLabel, attackDistanceType, rangePenaltyMultiplier, scopeNotes, counterCooldownSeconds }
+    attackKind, attackLabel, attackDistanceType, rangePenaltyMultiplier, scopeNotes, counterCooldownSeconds,
+    talentEffects: talents.effects, talentAttackRatio: talents.attackRatio,
+    resistanceIgnoreFixed: talents.resistanceIgnoreFixed, hasUnsupportedTalentDamage: talents.hasUnsupportedDamage }
 }
 
 type ConditionContext = Required<DamageCalculatorThreeConditions>

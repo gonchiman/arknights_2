@@ -25,6 +25,14 @@
 .damage-three-effect-table th,
 .damage-three-effect-table td { text-align: left; overflow-wrap: anywhere; }
 .damage-three-effect-table th:first-child { width: 22%; }
+.damage-three-talent-table { min-width: 680px; }
+.damage-three-talent-table th,
+.damage-three-talent-table td { text-align: left; overflow-wrap: anywhere; }
+.damage-three-talent-table th:first-child { width: 10%; }
+.damage-three-talent-table th:nth-child(2) { width: 17%; }
+.damage-three-talent-table th:nth-child(3) { width: 18%; }
+.damage-three-talent-table th:nth-child(4) { width: 15%; }
+.damage-three-talent-table th:nth-child(5) { width: 28%; }
 .damage-three-value-table { min-width: 300px; }
 .damage-three-value-table th:first-child { width: 48%; }
 .damage-three-scope { margin: 12px -14px -12px; border-top: 1px solid var(--border); padding: 10px 14px; color: var(--text-soft); font-size: 11px; }

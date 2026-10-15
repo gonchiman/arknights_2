@@ -10,7 +10,7 @@ import type {
 } from '../types/skill'
 import { classifySkill } from './classifier'
 import { DATA_SOURCE_URLS } from './dataSources.ts'
-import { getOperatorAffiliation, type OperatorAffiliationIds, type OperatorAffiliationTable } from './operatorAffiliation.ts'
+import { getOperatorAffiliation, getOperatorAffiliationIds, type OperatorAffiliationIds, type OperatorAffiliationTable } from './operatorAffiliation.ts'
 import { getOperatorInitial, getProfessionLabel } from './operatorFilters'
 
 export const DATA_URLS = {
@@ -83,6 +83,7 @@ export async function loadSkillRecords(): Promise<SkillRecord[]> {
 
     const operatorProfile = {
       affiliation: getOperatorAffiliation(operator, affiliations),
+      affiliationIds: getOperatorAffiliationIds(operator),
       phases: Array.isArray(operator.phases) ? operator.phases : [],
       favorKeyFrames: Array.isArray(operator.favorKeyFrames) ? operator.favorKeyFrames : [],
       trait: operator.trait ?? null,

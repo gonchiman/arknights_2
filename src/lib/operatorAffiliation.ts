@@ -1,10 +1,19 @@
-export interface OperatorAffiliationIds {
-  nationId?: string | null
-  groupId?: string | null
-  teamId?: string | null
-}
+import type { OperatorAffiliationIds } from '../types/skill.ts'
+
+export type { OperatorAffiliationIds } from '../types/skill.ts'
 
 export type OperatorAffiliationTable = Record<string, { powerName?: string | null }>
+
+export function getOperatorAffiliationIds(operator: OperatorAffiliationIds): OperatorAffiliationIds {
+  const result: OperatorAffiliationIds = {}
+  for (const key of ['nationId', 'groupId', 'teamId'] as const) {
+    const value = operator[key]
+    if (value === null) result[key] = null
+    else if (typeof value === 'string') result[key] = value.trim() || null
+    // Keep missing or malformed source data unknown, rather than asserting no affiliation.
+  }
+  return result
+}
 
 export function getOperatorAffiliation(
   operator: OperatorAffiliationIds,

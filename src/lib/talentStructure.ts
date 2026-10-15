@@ -76,15 +76,19 @@ export function findTalentStructure(selection: TalentStructureSelection, structu
   return structures.find(structure => sameSelection(structure.basicInfo, selection)) ?? null
 }
 
-/** Verified semantics bind to the current maximum-promotion, potential-1 source. No calculator is called. */
-export function buildTalentStructures(rows: readonly SkillRecord[]): TalentStructure[] {
+export interface TalentStructureGrowthSelection { readonly phaseIndex?: number; readonly operatorLevel?: number }
+
+/** Verified semantics bind to the selected growth and potential-1 source. No calculator is called. */
+export function buildTalentStructures(rows: readonly SkillRecord[], growth: TalentStructureGrowthSelection = {}): TalentStructure[] {
   const operators = new Map(rows.map(row => [row.operatorId, row]))
   return DEFINITIONS.flatMap(definition => {
     const operator = operators.get(definition.operatorId)
     if (!operator) return []
-    const phaseIndex = Math.max(0, operator.operatorProfile.phases.length - 1)
-    const operatorLevel = operator.operatorProfile.phases[phaseIndex]?.maxLevel
-    if (phaseIndex !== 2 || !Number.isInteger(operatorLevel) || !operatorLevel || operatorLevel < 1) return []
+    const phaseIndex = growth.phaseIndex ?? Math.max(0, operator.operatorProfile.phases.length - 1)
+    const maxLevel = operator.operatorProfile.phases[phaseIndex]?.maxLevel
+    const operatorLevel = growth.operatorLevel ?? maxLevel
+    if (phaseIndex !== 2 || !Number.isInteger(operatorLevel) || !operatorLevel || operatorLevel < 1
+      || !Number.isInteger(maxLevel) || !maxLevel || operatorLevel > maxLevel) return []
     const source = getOperatorPassives(operator.operatorProfile, phaseIndex, operatorLevel, 1).sources
       .find(candidate => candidate.sourceKind === 'TALENT' && candidate.talentIndex === definition.talentIndex)
     // Do not reinterpret a lower-promotion, different-slot or potential-only candidate.
@@ -153,7 +157,7 @@ export function buildTalentStructures(rows: readonly SkillRecord[]): TalentStruc
       activationSettings: { activationMethod: 'PASSIVE' as const, triggers }, effects,
       source: { description: source.description, blackboard: source.blackboard.map(entry => ({ ...entry })),
         requiredPotentialRank: source.requiredPotentialRank, unlockCondition: source.unlockCondition ? { ...source.unlockCondition } : undefined, prefabKey: source.prefabKey },
-      deferred: deferredCases(key), issues, notes: ['最大昇進・最大レベル・潜在1・モジュールなしの素質を表示する。計算機にはまだ適用しない。'] }]
+      deferred: deferredCases(key), issues, notes: ['表示中の昇進・レベル・潜在1・モジュールなしの素質を構造化する。'] }]
   })
 }
 
