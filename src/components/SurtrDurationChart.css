@@ -14,6 +14,8 @@
 .surtr-duration-chart-axis-title { fill: #444; font-size: 12px; font-weight: 700; }
 .surtr-duration-chart-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .surtr-duration-chart-event-key text { fill: #666; font-size: 10px; }
+.surtr-duration-chart-trigger-label text { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; paint-order: stroke; stroke: #fff; stroke-width: 4px; stroke-linejoin: round; }
+.surtr-duration-chart-trigger-leader { stroke-width: 1; opacity: .7; }
 .surtr-duration-chart-selection-guide { stroke: #777; stroke-width: 1.25; stroke-dasharray: 4 4; }
 .surtr-duration-chart-selection-label-background { fill: #f2f2f2; }
 .surtr-duration-chart-selection-label { fill: #444; font-size: 10px; font-variant-numeric: tabular-nums; }
