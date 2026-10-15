@@ -82,3 +82,21 @@ test('title and detail sizes identify the captured image even when long module n
     })
   }
 })
+
+test('gap shading identifies winner exports and has no effect when disabled or color is off', () => {
+  const winner = { ...options, displayMode: 'winner' as const, winnerColor: 'module' as const }
+  const plain = getSurtrTotalDamageTableImageFilename(winner)
+  const shaded = getSurtrTotalDamageTableImageFilename({ ...winner, winnerGapShading: true })
+  assert.notEqual(shaded, plain)
+  assert.match(shaded, /差濃淡0-30%以上/)
+  assert.equal(getSurtrTotalDamageTableImageFilename({ ...winner, winnerGapShading: false }), plain)
+  assert.equal(getSurtrTotalDamageTableImageFilename({ ...winner, winnerColor: 'none', winnerGapShading: true }),
+    getSurtrTotalDamageTableImageFilename({ ...winner, winnerColor: 'none' }))
+  assert.equal(getSurtrTotalDamageTableImageFilename({ ...options, winnerGapShading: true }),
+    getSurtrTotalDamageTableImageFilename(options))
+  const single = { ...winner, series: winner.series.slice(0, 1) }
+  assert.equal(getSurtrTotalDamageTableImageFilename({ ...single, winnerGapShading: true }),
+    getSurtrTotalDamageTableImageFilename(single))
+  const long = { ...winner, winnerGapShading: true, series: [{ id: 'long', label: '長いMODの名前'.repeat(80) }, ...winner.series] }
+  assert.match(getSurtrTotalDamageTableImageFilename(long), /差濃淡0-30%以上/)
+})
