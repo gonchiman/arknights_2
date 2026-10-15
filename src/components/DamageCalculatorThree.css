@@ -1,6 +1,11 @@
 .damage-three-page .collapsible-panel-body { padding: 12px 14px; }
-.damage-three-selection-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: end; }
+.damage-three-selection-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .damage-three-selection-grid .operator-search-trigger { width: 100%; }
+.damage-three-skills button { display: flex; height: auto; min-height: 42px; justify-content: center; gap: 8px; padding: 8px 10px; }
+.damage-three-skills button > span,
+.damage-three-skills button > strong { font-size: 11px; font-weight: 500; }
+.damage-three-skills button > span { margin: 0; }
+.damage-three-skills button > strong { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
 .damage-three-growth { margin-top: 14px; }
 .damage-three-fixed-value { display: flex; align-items: center; min-height: 34px; border: 1px solid var(--border); padding: 6px 9px; color: var(--text); background: var(--surface-soft); font-size: 11px; }
 .damage-three-description { margin: 14px -14px -12px; border-top: 1px solid var(--border); padding: 12px 14px; font-size: 12px; line-height: 1.9; white-space: pre-line; overflow-wrap: anywhere; }
@@ -8,6 +13,8 @@
 .damage-three-result-table { min-width: 660px; }
 .damage-three-result-table th:first-child { width: 16%; }
 .damage-three-result-table thead th { vertical-align: middle; }
+.damage-three-single-attack-table { min-width: 420px; }
+.damage-three-single-attack-table th:first-child { width: 24%; }
 .damage-three-detail-wrap { margin-top: 10px; }
 .damage-three-effect-table { min-width: 500px; }
 .damage-three-effect-table th,
@@ -19,8 +26,10 @@
 .damage-three-selection-notice { margin-top: 12px; }
 .damage-three-selection-notice button { display: block; margin-top: 10px; }
 @container (max-width: 620px) {
-  .damage-three-selection-grid { grid-template-columns: minmax(0, 1fr); }
   .damage-three-condition-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (max-width: 460px) {
+  .damage-three-skills button { flex-direction: column; text-align: center; gap: 3px; padding: 8px 5px; }
 }
 @container (max-width: 380px) {
   .damage-three-condition-grid { grid-template-columns: minmax(0, 1fr); }

@@ -19,22 +19,28 @@ const selected = (operatorId, skillIndex) => {
   return { operatorId, skillIndex, skillId: row.skillId, levelIndex: 9 }
 }
 const render = initialSelection => renderToStaticMarkup(createElement(Page, { rows, loading: false, initialSelection }))
-const calculate = (operatorId, skillIndex, actualAttackTargetCount = 1) => {
+const calculate = (operatorId, skillIndex, actualAttackTargetCount = 1, conditions = {}) => {
   const skill = rows.find(candidate => candidate.operatorId === operatorId && candidate.skillIndex === skillIndex)
   assert.ok(skill)
   return buildOutput({ operator: skill, skill, phaseIndex: 2, operatorLevel: 90, trust: 100,
-    skillLevelIndex: 9, conditions: { actualAttackTargetCount } })
+    skillLevelIndex: 9, conditions: { actualAttackTargetCount, ...conditions } })
 }
 
 function profile(operatorId) {
   const surtr = operatorId === 'char_350_surtr'
+  const data = {
+    char_350_surtr: { low: 544, high: 672, trust: 100, interval: 1.25 },
+    char_263_skadi: { low: 842, high: 1015, trust: 80, interval: 1.5 },
+    char_172_svrash: { low: 577, high: 713, trust: 50, interval: 1.3 },
+    char_293_thorns: { low: 575, high: 711, trust: 30, interval: 1.3 },
+  }[operatorId]
   return {
     phases: [{ maxLevel: 50 }, { maxLevel: 80 }, { maxLevel: 90, attributesKeyFrames: [
-      { level: 1, data: { atk: surtr ? 544 : 773, baseAttackTime: surtr ? 1.25 : 1.5, attackSpeed: 100 } },
-      { level: 90, data: { atk: surtr ? 672 : 1015, baseAttackTime: surtr ? 1.25 : 1.5, attackSpeed: 100 } },
+      { level: 1, data: { atk: data.low, baseAttackTime: data.interval, attackSpeed: 100 } },
+      { level: 90, data: { atk: data.high, baseAttackTime: data.interval, attackSpeed: 100 } },
     ] }],
-    favorKeyFrames: [{ level: 0, data: { atk: 0 } }, { level: 50, data: { atk: surtr ? 100 : 80 } }],
-    traitDescription: surtr ? '敵に術ダメージを与える' : '',
+    favorKeyFrames: [{ level: 0, data: { atk: 0 } }, { level: 50, data: { atk: data.trust } }],
+    traitDescription: surtr ? '敵に術ダメージを与える' : ['char_172_svrash', 'char_293_thorns'].includes(operatorId) ? '80%の攻撃力で遠距離攻撃も行える' : '',
     // Deliberately extreme optional modifiers expose accidental inclusion in the page's result.
     talents: [{ candidates: [{ description: '攻撃力+999%', blackboard: [{ key: 'atk', value: 9.99 }] }] }],
     potentialRanks: [{ buff: { attributes: { attributeModifiers: [{ attributeType: 'ATK', value: 999 }] } } }],
@@ -57,11 +63,12 @@ before(async () => {
       ...entry, name: `下位レベル${index + 1}`, description: '未対応レベルの説明', blackboard: [],
     })
     const surtr = operator.operatorId === 'char_350_surtr'
+    const lord = ['char_172_svrash', 'char_293_thorns'].includes(operator.operatorId)
     return {
       id: `${operator.operatorId}:${entry.skillId}`, operatorId: operator.operatorId,
       operatorName: operator.operatorName, skillId: entry.skillId, skillIndex: entry.skillIndex, skillName: entry.name,
-      profession: 'WARRIOR', professionLabel: '前衛', subProfessionId: surtr ? 'artsfghter' : 'fearless',
-      subProfessionName: surtr ? '術戦士' : '勇士', nameInitial: 'S_ROW', rarity: 6,
+      profession: 'WARRIOR', professionLabel: '前衛', subProfessionId: surtr ? 'artsfghter' : lord ? 'lord' : 'fearless',
+      subProfessionName: surtr ? '術戦士' : lord ? '領主' : '勇士', nameInitial: 'S_ROW', rarity: 6,
       description: entry.description, duration: entry.duration, durationType: entry.durationType,
       skillType: entry.skillType, spType: entry.spData.spType, initSp: entry.spData.initSp, spCost: entry.spData.spCost,
       classification: classifySkill(entry), skillLevels, operatorProfile: profile(operator.operatorId), raw: entry,
@@ -75,8 +82,7 @@ const tableRows = markup => [...markup.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)]
   .map(row => [...row[1].matchAll(/<(?:th|td)\b[^>]*>([\s\S]*?)<\/(?:th|td)>/g)]
     .map(cell => text(cell[1])))
 const resultTable = markup => {
-  const table = [...markup.matchAll(/<table\b[^>]*>([\s\S]*?)<\/table>/g)]
-    .find(match => /1体.*DPS/.test(text(match[1])) && /全対象.*DPS/.test(text(match[1])))
+  const table = markup.match(/<table\b[^>]*class="[^"]*damage-three-result-table[^"]*"[^>]*>([\s\S]*?)<\/table>/)
   assert.ok(table, '1体と全対象を分けた計算結果テーブル')
   return tableRows(table[1])
 }
@@ -98,28 +104,26 @@ test('初期表示はスルトS2で、選択・戦闘条件・結果の3パネ�
   assert.ok(data.length > 1)
   assert.ok(data.slice(1).every(row => row.length === 5))
   // The single-target condition applies ×1.6 after the ATK+120% modifier.
-  assert.deepEqual(data[1], ['0', '2,716.8', '2,173.4', '2,716.8', '2,173.4'])
+  assert.deepEqual(data[1], ['0', '2,717', '2,173', '2,717', '2,173'])
 })
 
 test('対応済みでない技能・不整合な識別子はスルトS2へ代用せず選び直しを案内する', () => {
   for (const initialSelection of [
-    selected('char_350_surtr', 3),
-    selected('char_172_svrash', 3),
     { ...selected('char_350_surtr', 2), skillId: 'skchr_missing' },
     { ...selected('char_350_surtr', 2), skillIndex: 1 },
     { ...selected('char_350_surtr', 2), operatorId: 'char_4009_irene' },
   ]) {
     const markup = render(initialSelection)
-    assert.doesNotMatch(markup, /1体[^<]*DPS/)
+    assert.doesNotMatch(markup, /damage-three-result-table/)
     assert.match(text(markup), /選び直|選択し直|対応してい|対象外|見つかりません/)
   }
 })
 
 test('特化3以外の指定に特化3の数値を流用しない', () => {
-  for (const [operatorId, skillIndex] of [['char_350_surtr', 2], ['char_263_skadi', 1]]) {
+  for (const { operatorId, skillIndex } of rows) {
     for (const levelIndex of [0, 8, 10]) {
       const markup = render({ ...selected(operatorId, skillIndex), levelIndex })
-      assert.doesNotMatch(markup, /1体[^<]*DPS/)
+      assert.doesNotMatch(markup, /damage-three-result-table/)
       assert.match(text(markup), /選び直|選択し直|対応してい|対象外|見つかりません/)
     }
   }
@@ -151,10 +155,10 @@ test('スカジS1は物理攻撃の表を表示し、対象数を選択する不
   const markup = render(selected('char_263_skadi', 1))
   const data = resultTable(markup)
   assert.match(data[0][0], /防御力/)
-  assert.deepEqual(data[1], ['0', '1,587.0', '1,534.1', '1,587.0', '1,534.1'])
+  assert.deepEqual(data[1], ['0', '1,587', '1,534', '1,587', '1,534'])
   assert.match(text(markup), /対象数.*1|1体/)
   assert.doesNotMatch(markup, /<select\b[^>]*aria-label="[^"]*対象数/)
-  assert.doesNotMatch(markup, /災厄の巨焔|ラグナロク|波濤の裂刃/)
+  assert.doesNotMatch(markup, /災厄の巨焔|ラグナロク/)
 })
 
 test('スルトS2の戦闘条件には実際の対象数1体・2体だけを選ぶ入力を表示する', () => {
@@ -224,4 +228,86 @@ test('データ未取得時は読み込み中と取得失敗を区別し、空�
   assert.match(loading, /読み込み中/)
   assert.match(failed, /取得できません/)
   for (const markup of [loading, failed]) assert.doesNotMatch(markup, /<table|NaN|Infinity/)
+})
+
+test('全12技能を選択でき、同一OPのS1・S2・S3の名前付きボタンと対応する計算結果を表示する', () => {
+  const expectations = [
+    ['char_263_skadi', 1, ['0', '1,587', '1,534', '1,587', '1,534']],
+    ['char_263_skadi', 2, ['0', '2,956', '1,971', '2,956', '1,971']],
+    ['char_263_skadi', 3, ['0', '2,518', '1,679', '2,518', '1,679']],
+    ['char_350_surtr', 1, ['0', '2,393', '2,393']],
+    ['char_350_surtr', 2, ['0', '2,717', '2,173', '2,717', '2,173']],
+    ['char_350_surtr', 3, ['0', '3,319', '2,655', '3,319', '2,655']],
+    ['char_172_svrash', 1, ['0', '2,213', '2,213']],
+    ['char_172_svrash', 2, ['0', '763', '587', '763', '587']],
+    ['char_172_svrash', 3, ['0', '2,289', '1,761', '2,289', '1,761']],
+    ['char_293_thorns', 1, ['0', '1,482', '1,140', '1,482', '1,140']],
+    ['char_293_thorns', 2, ['0', '948', '948']],
+    ['char_293_thorns', 3, ['0', '1,185', '1,139', '1,185', '1,139']],
+  ]
+  for (const [operatorId, skillIndex, expected] of expectations) {
+    const markup = render(selected(operatorId, skillIndex))
+    const data = resultTable(markup)
+    assert.deepEqual(data[1], expected, `${operatorId}/S${skillIndex}`)
+    assert.equal(data[0].length, expected.length)
+    assert.ok(data.slice(1).every(row => row.length === expected.length))
+    const choices = markup.match(/<div\b(?=[^>]*role="group")(?=[^>]*aria-label="スキル選択")[^>]*>([\s\S]*?)<\/div>/)?.[1]
+    assert.ok(choices, `${operatorId}/S${skillIndex}`)
+    const siblingSkills = rows.filter(row => row.operatorId === operatorId).sort((a, b) => a.skillIndex - b.skillIndex)
+    const buttons = [...choices.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)]
+    assert.deepEqual(buttons.map(button => button[1].match(/aria-label="([^"]+)"/)?.[1]),
+      siblingSkills.map(row => escapeHtml(`S${row.skillIndex} ${row.skillName}`)))
+    assert.deepEqual(buttons.map(button => button[1].match(/aria-pressed="([^"]+)"/)?.[1]),
+      siblingSkills.map(row => String(row.skillIndex === skillIndex)))
+    for (const [index, button] of buttons.entries()) {
+      assert.ok(text(button[2]).includes(`S${siblingSkills[index].skillIndex}`))
+      assert.ok(text(button[2]).includes(escapeHtml(siblingSkills[index].skillName)))
+    }
+    assert.doesNotMatch(markup, /<select\b[^>]*aria-label="スキル"/)
+    assert.match(markup, /damage-three-description/)
+    assert.doesNotMatch(markup, /この条件では計算できません|NaN|Infinity/)
+  }
+})
+
+const selectOptions = (markup, label) => {
+  const contents = markup.match(new RegExp('<select\\b[^>]*aria-label="' + label + '"[^>]*>([\\s\\S]*?)<\\/select>'))?.[1]
+  assert.ok(contents, label)
+  return [...contents.matchAll(/<option value="([^"]+)"[^>]*>([^<]*)<\/option>/g)].map(match => [match[1], match[2]])
+}
+
+test('モード・発動回数・近接遠距離は必要な技能の戦闘条件として表示する', () => {
+  const silverash = render(selected('char_172_svrash', 2))
+  assert.deepEqual(selectOptions(silverash, 'スキルの状態'), [['INITIAL', '初期状態'], ['ALTERNATE', '切替後']])
+  assert.deepEqual(selectOptions(silverash, '攻撃距離'), [['MELEE', '近接'], ['RANGED', '遠距離']])
+  const thorns = render(selected('char_293_thorns', 3))
+  assert.deepEqual(selectOptions(thorns, 'スキル発動回数'), [['1', '初回'], ['2', '2回目以降']])
+  assert.deepEqual(selectOptions(thorns, '攻撃距離'), [['MELEE', '近接'], ['RANGED', '遠距離']])
+  const counter = render(selected('char_293_thorns', 2))
+  assert.deepEqual(selectOptions(counter, '実際の攻撃対象数'), [['1', '1体'], ['2', '2体'], ['3', '3体'], ['4', '4体']])
+  assert.doesNotMatch(counter, /<select\b[^>]*aria-label="攻撃距離"/)
+  const fixedMelee = render(selected('char_172_svrash', 3))
+  assert.doesNotMatch(fixedMelee, /<select\b[^>]*aria-label="攻撃距離"/)
+})
+
+test('次回攻撃と反撃の出力には連続DPS列を置かず、1回の攻撃を3列で表示する', () => {
+  for (const [operatorId, skillIndex, attackLabel] of [
+    ['char_350_surtr', 1, '強化攻撃'], ['char_172_svrash', 1, '強化攻撃'], ['char_293_thorns', 2, '反撃'],
+  ]) {
+    const markup = render(selected(operatorId, skillIndex))
+    const data = resultTable(markup)
+    assert.equal(data[0].length, 3)
+    assert.ok(data[0].slice(1).every(cell => cell.includes(attackLabel)))
+    assert.ok(data[0].every(cell => !cell.includes('DPS')))
+    assert.ok(data.slice(1).every(row => row.length === 3))
+    assert.doesNotMatch(markup, /この条件では計算できません/)
+  }
+})
+
+test('反撃の全対象ダメージとソーンズS3の後続段階を選択した結果をテーブルへ反映する', () => {
+  const counter = calculate('char_293_thorns', 2, 4)
+  const counterMarkup = renderToStaticMarkup(createElement(ResultTable, { output: counter, precision: 1 }))
+  assert.deepEqual(resultTable(counterMarkup)[1], ['0', '948.0', '3,792.0'])
+  const later = calculate('char_293_thorns', 3, 1, { skillActivationCount: 2, attackDistanceType: 'RANGED' })
+  const laterMarkup = renderToStaticMarkup(createElement(ResultTable, { output: later, precision: 1 }))
+  assert.deepEqual(resultTable(laterMarkup)[1], ['0', '1,630.0', '1,880.8', '1,630.0', '1,880.8'])
 })

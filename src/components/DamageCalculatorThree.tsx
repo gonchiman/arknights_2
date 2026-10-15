@@ -4,6 +4,7 @@ import { DAMAGE_TYPE_LABELS } from '../lib/damageCalculator'
 import {
   buildDamageCalculatorThreeOutput,
   getDamageCalculatorThreeStructures,
+  type DamageCalculatorThreeConditions,
   type DamageCalculatorThreeOutput,
 } from '../lib/damageCalculatorThree'
 import {
@@ -29,8 +30,8 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
   const [selection, setSelection] = useState<SkillStructureSelection | null>(initialSelection ?? null)
   const [operatorLevel, setOperatorLevel] = useState(90)
   const [trust, setTrust] = useState(100)
-  const [conditions, setConditions] = useState<{ actualAttackTargetCount?: number }>({})
-  const [precision, setPrecision] = useState(1)
+  const [conditions, setConditions] = useState<DamageCalculatorThreeConditions>({})
+  const [precision, setPrecision] = useState(0)
   const [searchOpen, setSearchOpen] = useState(false)
   const [filters, setFilters] = useState({ ...EMPTY_OPERATOR_FILTERS })
   const available = useMemo(() => getDamageCalculatorThreeStructures().flatMap(structure => {
@@ -49,7 +50,7 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
     skillLevelIndex: structure.basicInfo.levelIndex, conditions,
   }) : null, [operator, structure, safeLevel, trust, conditions])
   const operatorSkills = available.filter(({ structure: candidate }) => candidate.basicInfo.operatorId === requested?.operatorId)
-  const skillLabel = structure ? `S${structure.basicInfo.skillIndex} ${structure.basicInfo.skillName}` : 'スキルを選択'
+    .sort((a, b) => a.structure.basicInfo.skillIndex - b.structure.basicInfo.skillIndex)
 
   function chooseSkill(next: SkillStructureSelection) {
     setSelection(next)
@@ -84,16 +85,17 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
           </button>
         </div>
         <div className="calculator-field"><span>スキル</span>
-          {operatorSkills.length > 1 ? <select aria-label="スキル" value={structure?.basicInfo.skillId ?? ''}
-            onChange={event => {
-              const next = operatorSkills.find(candidate => candidate.structure.basicInfo.skillId === event.target.value)
-              if (next) chooseSkill(next.structure.basicInfo)
-            }}>
-            {!structure && <option value="" disabled>スキルを選択</option>}
-            {operatorSkills.map(({ structure: candidate }) => <option key={candidate.basicInfo.skillId} value={candidate.basicInfo.skillId}>
-              S{candidate.basicInfo.skillIndex} {candidate.basicInfo.skillName}
-            </option>)}
-          </select> : <div className="damage-three-fixed-value">{skillLabel}</div>}
+          {operatorSkills.length > 0 ? <div className="skill-choice-group damage-three-skills" role="group" aria-label="スキル選択">
+            {operatorSkills.map(({ structure: candidate }) => {
+              const active = candidate.basicInfo.skillId === structure?.basicInfo.skillId
+              return <button type="button" key={candidate.basicInfo.skillId}
+                className={active ? 'active' : ''} aria-pressed={active}
+                aria-label={`S${candidate.basicInfo.skillIndex} ${candidate.basicInfo.skillName}`}
+                onClick={() => { if (!active) chooseSkill(candidate.basicInfo) }}>
+                <span>S{candidate.basicInfo.skillIndex}</span><strong>{candidate.basicInfo.skillName}</strong>
+              </button>
+            })}
+          </div> : <div className="damage-three-fixed-value">スキルを選択</div>}
         </div>
       </div>
       {searchOpen && <div id="damage-three-search" className="calculator-operator-search">
@@ -124,16 +126,22 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
 
     {selected && output && <>
       <CollapsibleCalculatorPanel id="damage-three-conditions" number="02" title="戦闘条件"
-        summary={`攻撃対象${output.actualTargetCount}体`} collapsedLabel="条件を表示">
+        summary={[output.activeStageLabel !== '通常' ? output.activeStageLabel : null, `攻撃対象${output.actualTargetCount}体`].filter(Boolean).join(' · ')}
+        collapsedLabel="条件を表示">
         <div className="calculator-form-grid damage-three-condition-grid">
-          {output.conditionInputs.length > 0 ? output.conditionInputs.map(input => <label className="calculator-field" key={input.metric}>
+          {output.conditionInputs.map(input => <label className="calculator-field" key={input.metric}>
             <span>{input.label}</span>
-            <select aria-label={input.label} value={output.actualTargetCount}
-              onChange={event => setConditions(previous => ({ ...previous, [input.metric]: Number(event.target.value) }))}>
-              {Array.from({ length: input.max - input.min + 1 }, (_, index) => input.min + index)
-                .map(value => <option key={value} value={value}>{value}体</option>)}
+            <select aria-label={input.label} value={conditions[input.metric] ?? input.defaultValue}
+              onChange={event => setConditions(previous => ({ ...previous,
+                [input.metric]: input.kind === 'number' ? Number(event.target.value) : event.target.value,
+              }))}>
+              {(input.kind === 'select' ? input.options : input.options
+                ?? Array.from({ length: input.max - input.min + 1 }, (_, index) => ({
+                  value: input.min + index, label: `${input.min + index}${input.metric === 'actualAttackTargetCount' ? '体' : '回'}`,
+                }))).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
-          </label>) : <div className="calculator-field"><span>実際の攻撃対象数</span>
+          </label>)}
+          {!output.conditionInputs.some(input => input.metric === 'actualAttackTargetCount') && <div className="calculator-field"><span>実際の攻撃対象数</span>
             <div className="damage-three-fixed-value">{output.actualTargetCount}体</div></div>}
           <div className="calculator-field"><span>対象数上限</span><div className="damage-three-fixed-value">{output.maxTargetCount}体</div></div>
           <div className="calculator-field"><span>ダメージ種別</span><div className="damage-three-fixed-value">
@@ -145,6 +153,7 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
         <details className="damage-two-help"><summary>計算範囲</summary>
           <p>基礎性能とスキル効果を計算します。素質・潜在・モジュール・外部バフの補正は含めません。</p>
           <p>全対象には同じ防御力・術耐性を使います。DPSはスキル発動中に攻撃し続けた場合の値で、SP回復中の時間を含めません。</p>
+          {output.scopeNotes.map(note => <p key={note}>{note}</p>)}
         </details>
       </CollapsibleCalculatorPanel>
 
@@ -156,6 +165,7 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
           </select></label>}>
         <p className="damage-two-context" role="status" aria-live="polite">
           {operator?.operatorName} · S{structure?.basicInfo.skillIndex} {structure?.basicInfo.skillLevel} · 攻撃対象{output.actualTargetCount}体
+          {output.activeStageLabel && output.activeStageLabel !== '通常' && <> · {output.activeStageLabel}</>}
         </p>
         {output.unsupportedReasons.length > 0 ? <div className="damage-two-unavailable" role="status">
           <strong>この条件では計算できません。</strong><ul>{output.unsupportedReasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
@@ -176,26 +186,31 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
 export function DamageCalculatorThreeResultTable({ output, precision }: { output: DamageCalculatorThreeOutput; precision: number }) {
   const formatter = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: precision, maximumFractionDigits: precision })
   const format = (value: number | null) => value === null ? '—' : formatter.format(value)
+  const damageLabel = output.attackKind === 'NORMAL' ? '1攻撃ダメージ' : `${output.attackLabel}1回のダメージ`
   return <div className="damage-two-table-wrap" tabIndex={0} role="region" aria-label="計算機３のダメージ計算結果">
-    <table className="damage-two-table damage-three-result-table">
-      <caption className="visually-hidden">敵の防御性能別の1体・全対象のダメージとDPS</caption>
-      <thead><tr><th scope="col">{output.axisLabel}</th><th scope="col">1体への<br />1攻撃ダメージ</th><th scope="col">1体への<br />DPS</th>
-        <th scope="col">全対象の<br />1攻撃ダメージ</th><th scope="col">全対象の<br />DPS</th></tr></thead>
+    <table className={`damage-two-table damage-three-result-table${output.canShowDps ? '' : ' damage-three-single-attack-table'}`}>
+      <caption className="visually-hidden">敵の防御性能別の1体・全対象の{output.canShowDps ? 'ダメージとDPS' : damageLabel}</caption>
+      <thead><tr><th scope="col">{output.axisLabel}</th><th scope="col">1体への<br />{damageLabel}</th>
+        {output.canShowDps && <th scope="col">1体への<br />DPS</th>}
+        <th scope="col">全対象の<br />{damageLabel}</th>{output.canShowDps && <th scope="col">全対象の<br />DPS</th>}</tr></thead>
       <tbody>{output.rows.map(row => <tr key={row.axisValue}>
         <th scope="row">{output.damageType === 'TRUE' ? '軽減なし' : formatCompact(row.axisValue)}</th>
         <td>{format(row.perAttack)}{row.breakdown.mitigation.minimumApplied && <sup aria-label="最低保証ダメージ">＊</sup>}</td>
-        <td>{format(row.dps)}</td><td>{format(row.allTargetsPerAttack)}</td><td>{format(row.allTargetsDps)}</td>
+        {output.canShowDps && <td>{format(row.dps)}</td>}<td>{format(row.allTargetsPerAttack)}</td>
+        {output.canShowDps && <td>{format(row.allTargetsDps)}</td>}
       </tr>)}</tbody>
     </table>
   </div>
 }
 
 export function DamageCalculatorThreeEffectTable({ effects }: { effects: DamageCalculatorThreeOutput['effects'] }) {
+  const hasStages = new Set(effects.map(entry => entry.stageId)).size > 1
   return <div className="damage-two-table-wrap damage-three-detail-wrap">
     <table className="damage-two-table damage-three-effect-table">
       <caption className="visually-hidden">構造化された効果の適用状態</caption>
-      <thead><tr><th scope="col">項目</th><th scope="col">値</th><th scope="col">条件</th><th scope="col">計算への適用</th></tr></thead>
+      <thead><tr>{hasStages && <th scope="col">段階</th>}<th scope="col">項目</th><th scope="col">値</th><th scope="col">条件</th><th scope="col">計算への適用</th></tr></thead>
       <tbody>{effects.map(entry => <tr key={`${entry.stageId}/${entry.effect.id}`}>
+        {hasStages && <td>{entry.stageLabel}</td>}
         <th scope="row">{formatSkillStructureEffectItem(entry.effect.item)}</th>
         <td>{formatSkillStructureEffectValue(entry.effect)}</td><td>{formatSkillStructurePredicate(entry.effect.condition)}</td>
         <td>{{ APPLIED: '適用', CONDITION_FALSE: '不適用', NOT_RELEVANT: '対象外', UNSUPPORTED: '未対応', INACTIVE_STAGE: '別の段階' }[entry.status]}</td>
@@ -211,9 +226,14 @@ function UsedValueTable({ output }: { output: DamageCalculatorThreeOutput }) {
     ['攻撃力増加', `＋${formatCompact(model?.directMultiplierPercent ?? 0)}％`],
     ['攻撃倍率', `×${formatCompact((model?.attackScalePercent ?? 100) / 100)}`],
     ['軽減前の攻撃ダメージ', output.effectiveAttack === null ? '—' : formatCompact(output.effectiveAttack)],
-    ['攻撃速度', output.attackSpeed === null ? '—' : formatCompact(output.attackSpeed)],
-    ['計算上の攻撃間隔', model ? `${formatCompact(model.attackInterval)}秒` : '—'],
-    ['1攻撃のヒット数', model?.hitCount ?? '—'],
+    ['特性による遠距離倍率', `×${formatCompact(output.rangePenaltyMultiplier)}`],
+    ...(output.attackKind === 'COUNTER' ? [
+      ['反撃の最短再発動間隔', output.counterCooldownSeconds === null ? '—' : `${formatCompact(output.counterCooldownSeconds)}秒`] as [string, ReactNode],
+    ] : [
+      ['攻撃速度', output.attackSpeed === null ? '—' : formatCompact(output.attackSpeed)] as [string, ReactNode],
+      ['計算上の攻撃間隔', model ? `${formatCompact(model.attackInterval)}秒` : '—'] as [string, ReactNode],
+    ]),
+    [output.attackKind === 'COUNTER' ? '反撃1回のヒット数' : '1攻撃のヒット数', model?.hitCount ?? '—'],
     ['実際の攻撃対象数', `${output.actualTargetCount}体`],
   ]
   return <div className="damage-two-table-wrap damage-three-detail-wrap">
