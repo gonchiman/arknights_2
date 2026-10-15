@@ -1,10 +1,16 @@
-import { useId, useMemo, type CSSProperties, type ReactNode } from 'react'
+import { useId, useLayoutEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react'
 import { getEnemyHeatmapOpacity, type EnemyHeatmapColorScale } from '../lib/enemyHeatmapColor'
 import {
+  formatSurtrTotalDamageWinnerLabel,
+  formatSurtrTotalDamageWinnerShortLabel,
   getSurtrTotalDamageTablePoint,
+  getSurtrTotalDamageTableWinners,
   type SurtrTotalDamageTable,
+  type SurtrTotalDamageTableDisplayMode,
   type SurtrTotalDamageTableLayout,
+  type SurtrTotalDamageWinnerColor,
 } from '../lib/surtrTotalDamageTable'
+import { applySurtrTotalDamageWinnerLayout, clearSurtrTotalDamageWinnerLayout } from './surtrTotalDamageWinnerLayout'
 import './SurtrS3Page.css'
 import './SurtrTotalDamageTableContent.css'
 
@@ -17,6 +23,8 @@ export interface SurtrTotalDamageTableCellSelection {
 export interface SurtrTotalDamageTableContentProps {
   matrix: SurtrTotalDamageTable
   layout?: SurtrTotalDamageTableLayout
+  displayMode?: SurtrTotalDamageTableDisplayMode
+  winnerColor?: SurtrTotalDamageWinnerColor
   precision?: number
   colorScale?: 'none' | EnemyHeatmapColorScale
   selectedCell?: SurtrTotalDamageTableCellSelection | null
@@ -34,17 +42,23 @@ const layoutLabels: Record<SurtrTotalDamageTableLayout, string> = {
 /** The same captured matrix feeds every layout and the table image. */
 export function SurtrTotalDamageTableContent({
   matrix, layout = 'time', precision = 1, colorScale = 'none', selectedCell,
-  onSelectCell, title, footer, forImage = false,
+  displayMode = 'total', winnerColor = 'module', onSelectCell, title, footer, forImage = false,
 }: SurtrTotalDamageTableContentProps) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '')
+  const tableRef = useRef<HTMLTableElement>(null)
   const digits = Number.isInteger(precision) && precision >= 0 && precision <= 3 ? precision : 0
   const format = useMemo(() => new Intl.NumberFormat('ja-JP', {
     minimumFractionDigits: digits, maximumFractionDigits: digits,
   }), [digits])
   const { times, resistances, series } = matrix
-  const isResistanceLayout = layout === 'resistance'
-  const columnCount = isResistanceLayout ? 1 + times.length * series.length : 2 + resistances.length
-  const minimumWidth = isResistanceLayout
+  const isWinner = displayMode === 'winner'
+  const effectiveLayout = isWinner && layout === 'module' ? 'resistance' : layout
+  const isResistanceLayout = effectiveLayout === 'resistance'
+  const columnCount = isWinner ? 1 + (isResistanceLayout ? times.length : resistances.length)
+    : isResistanceLayout ? 1 + times.length * series.length : 2 + resistances.length
+  const minimumWidth = isWinner
+    ? (isResistanceLayout ? 82 + times.length * 96 : 132 + resistances.length * 96)
+    : isResistanceLayout
     ? 80 + times.length * series.length * 112
     : 300 + resistances.length * 112
   const interactive = Boolean(onSelectCell && !forImage)
@@ -53,6 +67,47 @@ export function SurtrTotalDamageTableContent({
   const resistanceHeader = (resistanceIndex: number) => `${id}-resistance-${resistanceIndex}`
   const moduleHeader = (seriesIndex: number, timeIndex?: number) => `${id}-module-${seriesIndex}${timeIndex === undefined ? '' : `-${timeIndex}`}`
   const rowHeader = (groupIndex: number, rowIndex: number) => `${id}-row-${groupIndex}-${rowIndex}`
+
+  useLayoutEffect(() => {
+    const table = tableRef.current
+    if (!table || !isWinner || forImage) return
+    let cancelled = false
+    const measure = () => { if (!cancelled) applySurtrTotalDamageWinnerLayout(table) }
+    measure()
+    void document.fonts.ready.then(measure)
+    document.fonts.addEventListener('loadingdone', measure)
+    const observer = new ResizeObserver(measure)
+    if (table.parentElement) observer.observe(table.parentElement)
+    return () => {
+      cancelled = true
+      observer.disconnect()
+      document.fonts.removeEventListener('loadingdone', measure)
+      clearSurtrTotalDamageWinnerLayout(table)
+    }
+  }, [matrix, isWinner, effectiveLayout, forImage])
+
+  const winnerCell = (timeIndex: number, resistanceIndex: number) => {
+    const winners = getSurtrTotalDamageTableWinners(matrix, timeIndex, resistanceIndex)
+    const text = formatSurtrTotalDamageWinnerLabel(winners.map(item => item.series))
+    const shortText = formatSurtrTotalDamageWinnerShortLabel(winners.map(item => item.series))
+    const time = times[timeIndex]
+    const resistance = resistances[resistanceIndex]
+    const selected = !forImage && selectedCell?.time === time && selectedCell.resistance === resistance
+    const hasColor = winnerColor === 'module' && winners.length > 0
+    const cellStyle = hasColor && winners.length === 1 ? {
+      '--surtr-total-damage-winner-color': winners[0].series.color,
+    } as CSSProperties : undefined
+    const label = <span className="surtr-total-damage-winner-label">{shortText}</span>
+    return <td key={`${timeIndex}:${resistanceIndex}`} headers={`${timeHeader(timeIndex)} ${resistanceHeader(resistanceIndex)}`}
+      data-time={time} data-resistance={resistance} data-series-id={winners.map(item => item.series.id).join('=')}
+      className={`surtr-total-damage-value-cell surtr-total-damage-winner-cell${hasColor ? ' has-winner-color' : ''}${winners.length > 1 ? ' is-tied' : ''}${selected ? ' is-selected' : ''}${interactive && winners.length ? ' is-interactive' : ''}`}
+      style={cellStyle}>
+      {interactive && winners.length ? <button type="button" className="surtr-total-damage-value-button"
+        onClick={() => onSelectCell?.({ time, resistance, seriesId: winners[0].series.id })}
+        aria-label={`素質２発動まで${timeFormat.format(time)}秒、術耐性${resistance}、最大のMOD ${text}の命中内訳を表示`}
+        data-time={time} data-resistance={resistance} data-series-id={winners.map(item => item.series.id).join('=')}>{label}</button> : label}
+    </td>
+  }
 
   const valueCell = (timeIndex: number, resistanceIndex: number, seriesIndex: number, headers: string) => {
     const point = getSurtrTotalDamageTablePoint(matrix, timeIndex, resistanceIndex, seriesIndex)
@@ -85,10 +140,14 @@ export function SurtrTotalDamageTableContent({
   </span>
 
   return <div className={`surtr-s3-table-wrap surtr-total-damage-table-content${forImage ? ' is-image' : ''}`}
-    data-layout={layout} data-color-scale={colorScale} style={style}>
-    <table className={`surtr-s3-table surtr-total-damage-table surtr-total-damage-layout-${layout}`}
-      aria-label={`術耐性別のスキル総ダメージ・${layoutLabels[layout]}`}>
-      {isResistanceLayout ? <>
+    data-layout={effectiveLayout} data-display-mode={displayMode} data-winner-color={winnerColor}
+    data-color-scale={isWinner ? 'none' : colorScale} style={style}>
+    <table ref={tableRef} className={`surtr-s3-table surtr-total-damage-table surtr-total-damage-layout-${effectiveLayout}${isWinner ? ' surtr-total-damage-winner-table' : ''}`}
+      aria-label={`術耐性別のスキル総ダメージ${isWinner ? 'が最大のMOD' : ''}・${layoutLabels[effectiveLayout]}`}>
+      {isWinner ? <colgroup>
+        <col className={isResistanceLayout ? 'surtr-total-damage-resistance-column' : 'surtr-total-damage-time-column'} />
+        {(isResistanceLayout ? times : resistances).map(value => <col key={value} />)}
+      </colgroup> : isResistanceLayout ? <>
         <colgroup><col className="surtr-total-damage-resistance-column" /></colgroup>
         {times.map((time, timeIndex) => <colgroup key={`${time}:${timeIndex}`}>
           {series.map(item => <col key={item.id} />)}
@@ -100,7 +159,12 @@ export function SurtrTotalDamageTableContent({
       </colgroup>}
       <thead>
         {title && <tr className="surtr-s3-table-title-row"><th className="surtr-total-damage-table-title" colSpan={columnCount}>{title}</th></tr>}
-        {isResistanceLayout ? <>
+        {isWinner ? <tr>
+          <th scope="col">{isResistanceLayout ? '術耐性' : <>素質２発動まで<span className="surtr-total-damage-time-unit">（秒）</span></>}</th>
+          {isResistanceLayout ? times.map((time, timeIndex) => <th key={time} id={timeHeader(timeIndex)} scope="col">
+            <span className="surtr-total-damage-time-heading">素質２発動まで {timeFormat.format(time)}秒</span>
+          </th>) : resistances.map((resistance, resistanceIndex) => <th key={resistance} id={resistanceHeader(resistanceIndex)} scope="col">術耐性 {resistance}</th>)}
+        </tr> : isResistanceLayout ? <>
           <tr><th scope="col" rowSpan={2}>術耐性</th>{times.map((time, timeIndex) => <th
             key={`${time}:${timeIndex}`} id={timeHeader(timeIndex)} scope="colgroup" colSpan={series.length}>
             <span className="surtr-total-damage-time-heading">素質２発動まで {timeFormat.format(time)}秒</span>
@@ -113,7 +177,13 @@ export function SurtrTotalDamageTableContent({
           {resistances.map((resistance, resistanceIndex) => <th key={resistance} id={resistanceHeader(resistanceIndex)} scope="col">術耐性 {resistance}</th>)}
         </tr>}
       </thead>
-      <tbody>{isResistanceLayout ? resistances.map((resistance, resistanceIndex) => <tr key={resistance}>
+      <tbody>{isWinner ? isResistanceLayout ? resistances.map((resistance, resistanceIndex) => <tr key={resistance}>
+        <th id={resistanceHeader(resistanceIndex)} scope="row">{resistance}</th>
+        {times.map((_, timeIndex) => winnerCell(timeIndex, resistanceIndex))}
+      </tr>) : times.map((time, timeIndex) => <tr key={time}>
+        <th id={timeHeader(timeIndex)} scope="row">{timeFormat.format(time)}</th>
+        {resistances.map((_, resistanceIndex) => winnerCell(timeIndex, resistanceIndex))}
+      </tr>) : isResistanceLayout ? resistances.map((resistance, resistanceIndex) => <tr key={resistance}>
         <th id={resistanceHeader(resistanceIndex)} scope="row">{resistance}</th>
         {times.flatMap((_, timeIndex) => series.map((__, seriesIndex) => valueCell(timeIndex, resistanceIndex, seriesIndex,
           `${resistanceHeader(resistanceIndex)} ${timeHeader(timeIndex)} ${moduleHeader(seriesIndex, timeIndex)}`)))}
