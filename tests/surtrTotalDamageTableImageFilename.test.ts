@@ -49,3 +49,18 @@ test('aspect is readable and long combinations remain within Windows filename li
   assert.ok(new TextEncoder().encode(longName).length <= 240)
   assert.doesNotMatch(longName, /[<>:"/\\|?*]/)
 })
+
+test('winner output has its own name, identity colors and selected stages without irrelevant precision', () => {
+  const winner = { ...options, layout: 'resistance' as const, displayMode: 'winner' as const, winnerColor: 'module' as const }
+  const name = getSurtrTotalDamageTableImageFilename(winner)
+  assert.match(name, /スルト_S3最大ダメージMOD表_術耐性別/)
+  assert.match(name, /未装備-XLv3-YLv3/)
+  assert.match(name, /退場時除外_MOD色_比率自動\.png$/)
+  assert.doesNotMatch(name, /桁|線形色|平方根色/)
+  assert.equal(getSurtrTotalDamageTableImageFilename({ ...winner, precision: 3, colorScale: 'SQRT' }), name)
+  assert.notEqual(getSurtrTotalDamageTableImageFilename({ ...winner, winnerColor: 'none' }), name)
+  assert.match(getSurtrTotalDamageTableImageFilename({ ...winner, winnerColor: 'none' }), /_色なし_比率自動\.png$/)
+  assert.notEqual(getSurtrTotalDamageTableImageFilename({ ...winner, layout: 'time' }), name)
+  assert.equal(getSurtrTotalDamageTableImageFilename({ ...winner, layout: 'module' }), name)
+  assert.equal(getSurtrTotalDamageTableImageFilename({ ...options, displayMode: 'total' }), getSurtrTotalDamageTableImageFilename(options))
+})

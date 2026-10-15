@@ -10,11 +10,15 @@ import {
 } from './surtrTotalDamage.ts'
 
 export type SurtrTotalDamageTableLayout = 'time' | 'module' | 'resistance'
+export type SurtrTotalDamageTableDisplayMode = 'total' | 'winner'
+export type SurtrTotalDamageWinnerColor = 'none' | 'module'
 
 export interface SurtrTotalDamageTableComparison {
   id: string
   label: string
   color: string
+  type?: 'X' | 'Y' | null
+  level?: number
   model: SurtrTotalDamageModel
 }
 
@@ -27,7 +31,7 @@ export interface SurtrTotalDamageTablePoint extends Omit<SurtrTotalDamageResult,
 export interface SurtrTotalDamageTable {
   times: number[]
   resistances: number[]
-  series: Pick<SurtrTotalDamageTableComparison, 'id' | 'label' | 'color'>[]
+  series: Pick<SurtrTotalDamageTableComparison, 'id' | 'label' | 'color' | 'type' | 'level'>[]
   /** Fixed time → resistance → module order, independent of the displayed layout. */
   points: SurtrTotalDamageTablePoint[]
   maximumTotalDamage: number
@@ -85,7 +89,8 @@ export function buildSurtrTotalDamageTable(
     }
   }
   return { times: [...times], resistances: [...resistances],
-    series: comparisons.map(({ id, label, color }) => ({ id, label, color })), points, maximumTotalDamage }
+    series: comparisons.map(({ id, label, color, type, level }) => ({ id, label, color,
+      ...(type !== undefined ? { type } : {}), ...(level !== undefined ? { level } : {}) })), points, maximumTotalDamage }
 }
 
 export function getSurtrTotalDamageTablePoint(
@@ -99,16 +104,78 @@ export function getSurtrTotalDamageTablePoint(
   return table.points[(timeIndex * table.resistances.length + resistanceIndex) * table.series.length + seriesIndex] ?? null
 }
 
-/** One numeric value per spreadsheet cell, with the same order as the chosen layout. */
+/** Compare the raw matrix, allowing only floating-point roundoff when identifying ties. */
+export function getSurtrTotalDamageTableWinners(
+  table: SurtrTotalDamageTable,
+  timeIndex: number,
+  resistanceIndex: number,
+): Array<{ series: SurtrTotalDamageTable['series'][number]; seriesIndex: number; point: SurtrTotalDamageTablePoint }> {
+  if (!table.series.length || !validIndex(timeIndex, table.times.length)
+    || !validIndex(resistanceIndex, table.resistances.length)) return []
+
+  const candidates = []
+  let maximum = -Infinity
+  for (let seriesIndex = 0; seriesIndex < table.series.length; seriesIndex += 1) {
+    const series = table.series[seriesIndex]
+    const point = getSurtrTotalDamageTablePoint(table, timeIndex, resistanceIndex, seriesIndex)
+    // An incomplete comparison must not nominate a winner from only its valid series.
+    if (!point || !Number.isFinite(point.totalDamage) || point.totalDamage < 0
+      || point.seriesId !== series.id || point.time !== table.times[timeIndex]
+      || point.resistance !== table.resistances[resistanceIndex]) return []
+    candidates.push({ series, seriesIndex, point })
+    maximum = Math.max(maximum, point.totalDamage)
+  }
+  const tolerance = Number.EPSILON * Math.max(1, Math.abs(maximum)) * 8
+  return candidates.filter(candidate => maximum - candidate.point.totalDamage <= tolerance)
+}
+
+/** Keep module stages explicit, including when multiple stages share the maximum. */
+export function formatSurtrTotalDamageWinnerLabel(
+  series: readonly Pick<SurtrTotalDamageTableComparison, 'label'>[],
+): string {
+  return series.length ? series.map(item => item.label).join('＝') : '—'
+}
+
+/** Shorten only explicit module metadata, leaving unknown labels intact. */
+export function getSurtrTotalDamageSeriesShortLabel(
+  series: Pick<SurtrTotalDamageTableComparison, 'id' | 'label' | 'type' | 'level'>,
+): string {
+  if (series.id === 'none' || series.type === null) return '未装備'
+  if ((series.type === 'X' || series.type === 'Y') && typeof series.level === 'number'
+    && Number.isInteger(series.level) && series.level >= 1 && series.level <= 3) return `${series.type}${series.level}`
+  return series.label
+}
+
+/** Compact table labels retain stages and include every tied winner. */
+export function formatSurtrTotalDamageWinnerShortLabel(
+  series: readonly Pick<SurtrTotalDamageTableComparison, 'id' | 'label' | 'type' | 'level'>[],
+): string {
+  return series.length ? series.map(getSurtrTotalDamageSeriesShortLabel).join('＝') : '—'
+}
+
+/** One value per spreadsheet cell, with the same order as the chosen display. */
 export function buildSurtrTotalDamageTableTsv(
   table: SurtrTotalDamageTable,
   layout: SurtrTotalDamageTableLayout,
   decimalPlaces = 1,
+  displayMode: SurtrTotalDamageTableDisplayMode = 'total',
 ): string {
+  const timeHeading = '素質2発動まで（秒）'
+  if (displayMode === 'winner') {
+    const winner = (timeIndex: number, resistanceIndex: number) => cleanLabel(formatSurtrTotalDamageWinnerLabel(
+      getSurtrTotalDamageTableWinners(table, timeIndex, resistanceIndex).map(candidate => candidate.series)))
+    const rows = layout === 'time'
+      ? [[timeHeading, ...table.resistances.map(resistance => `術耐性${resistance}`)],
+        ...table.times.map((time, timeIndex) => [String(time),
+          ...table.resistances.map((_, resistanceIndex) => winner(timeIndex, resistanceIndex))])]
+      : [['術耐性', ...table.times.map(time => `${time}秒`)],
+        ...table.resistances.map((resistance, resistanceIndex) => [String(resistance),
+          ...table.times.map((_, timeIndex) => winner(timeIndex, resistanceIndex))])]
+    return rows.map(row => row.join('\t')).join('\r\n')
+  }
   const value = (time: number, resistance: number, series: number) =>
     formatSurtrTotalDamageTableValue(getSurtrTotalDamageTablePoint(table, time, resistance, series)?.totalDamage,
       decimalPlaces, false)
-  const timeHeading = '素質2発動まで（秒）'
   const moduleHeading = 'MOD'
   let rows: string[][]
   if (layout === 'resistance') {

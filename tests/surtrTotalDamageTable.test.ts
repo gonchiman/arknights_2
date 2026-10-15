@@ -12,7 +12,11 @@ import {
   buildSurtrTotalDamageTable,
   buildSurtrTotalDamageTableTsv,
   formatSurtrTotalDamageTableValue,
+  formatSurtrTotalDamageWinnerLabel,
+  formatSurtrTotalDamageWinnerShortLabel,
+  getSurtrTotalDamageSeriesShortLabel,
   getSurtrTotalDamageTablePoint,
+  getSurtrTotalDamageTableWinners,
   SURTR_TOTAL_DAMAGE_TABLE_MAXIMUM_CELLS,
   type SurtrTotalDamageTableComparison,
 } from '../src/lib/surtrTotalDamageTable.ts'
@@ -143,6 +147,154 @@ test('TSVラベルは改行とタブを除き、表計算数式として評価�
   assert.equal(formatSurtrTotalDamageTableValue(1234.56, 1, false), '1234.6')
   assert.equal(formatSurtrTotalDamageTableValue(-0, 1), '0.0')
   assert.equal(formatSurtrTotalDamageTableValue(1.5, 5), '2')
+})
+
+test('未ブロック・術耐性20以下では30秒と40秒のX3とY3が実際の総ダメージで同率最大になる', () => {
+  const all = comparisons()
+  const table = buildSurtrTotalDamageTable([all[0], all[3], all[6]], [30, 40], [0, 20, 21])!
+  for (let timeIndex = 0; timeIndex < 2; timeIndex += 1) {
+    for (let resistanceIndex = 0; resistanceIndex < 2; resistanceIndex += 1) {
+      const winners = getSurtrTotalDamageTableWinners(table, timeIndex, resistanceIndex)
+      assert.deepEqual(winners.map(winner => winner.series.id), [all[3].id, all[6].id])
+      assert.deepEqual(winners.map(winner => winner.seriesIndex), [1, 2])
+      assert.ok(winners.every(winner => winner.point.totalDamage === [118041, 146657][timeIndex]))
+      assert.ok(winners.every(winner => winner.point.totalHits === [33, 41][timeIndex]))
+    }
+    assert.deepEqual(getSurtrTotalDamageTableWinners(table, timeIndex, 2).map(winner => winner.series.id), [all[3].id])
+  }
+})
+
+test('表示上同じ値でも未丸めの大小で最大MODを決め、浮動小数点の演算誤差だけを同値にする', () => {
+  const all = comparisons()
+  const table = buildSurtrTotalDamageTable([all[3], all[6]], [30], [0])!
+  table.points[0].totalDamage = 1000.001
+  table.points[1].totalDamage = 1000.002
+  assert.equal(formatSurtrTotalDamageTableValue(table.points[0].totalDamage, 0),
+    formatSurtrTotalDamageTableValue(table.points[1].totalDamage, 0))
+  assert.deepEqual(getSurtrTotalDamageTableWinners(table, 0, 0).map(winner => winner.series.id), [all[6].id])
+
+  table.points[0].totalDamage = 0.1 + 0.2
+  table.points[1].totalDamage = 0.3
+  assert.equal(getSurtrTotalDamageTableWinners(table, 0, 0).length, 2)
+
+  table.points[0].totalDamage = 118041
+  table.points[1].totalDamage = 118041 + 1e-8
+  assert.deepEqual(getSurtrTotalDamageTableWinners(table, 0, 0).map(winner => winner.series.id), [all[6].id])
+})
+
+test('同じMODの段階を区別し、同値の段階と未装備も省略せず選択順に表記する', () => {
+  const all = comparisons()
+  const table = buildSurtrTotalDamageTable([all[3], all[2], all[0]], [0], [0],
+    { ...SURTR_TOTAL_DAMAGE_DEFAULT_ASSUMPTIONS, firstAttackStart: 20 })!
+  const before = structuredClone(table)
+  const winners = getSurtrTotalDamageTableWinners(table, 0, 0)
+  assert.deepEqual(winners.map(winner => winner.seriesIndex), [0, 1, 2])
+  assert.ok(winners.every(winner => winner.point.totalDamage === 0))
+  assert.equal(formatSurtrTotalDamageWinnerLabel(winners.map(winner => winner.series)), 'X Lv.3＝X Lv.2＝未装備')
+  assert.deepEqual(table, before)
+  const onlyUnequipped = buildSurtrTotalDamageTable([all[0]], [30], [0])!
+  assert.equal(formatSurtrTotalDamageWinnerLabel(getSurtrTotalDamageTableWinners(onlyUnequipped, 0, 0)
+    .map(winner => winner.series)), '未装備')
+  assert.equal(formatSurtrTotalDamageWinnerLabel([]), '—')
+  assert.deepEqual(getSurtrTotalDamageTableWinners({ ...table, series: [], points: [] }, 0, 0), [])
+})
+
+test('一部系列の値が欠落・不正なら有効な系列だけで最大MODを確定しない', () => {
+  const all = comparisons()
+  const table = buildSurtrTotalDamageTable([all[3], all[6]], [30], [0])!
+  for (const invalid of [NaN, Infinity, -Infinity, -1]) {
+    const invalidTable = structuredClone(table)
+    invalidTable.points[1].totalDamage = invalid
+    assert.deepEqual(getSurtrTotalDamageTableWinners(invalidTable, 0, 0), [])
+  }
+  const missing = structuredClone(table)
+  missing.points.pop()
+  assert.deepEqual(getSurtrTotalDamageTableWinners(missing, 0, 0), [])
+  for (const changes of [{ seriesId: 'different' }, { time: 40 }, { resistance: 20 }]) {
+    const invalidTable = structuredClone(table)
+    Object.assign(invalidTable.points[1], changes)
+    assert.deepEqual(getSurtrTotalDamageTableWinners(invalidTable, 0, 0), [])
+  }
+  for (const [timeIndex, resistanceIndex] of [[-1, 0], [1, 0], [0.5, 0], [0, -1], [0, 1], [0, NaN]]) {
+    assert.deepEqual(getSurtrTotalDamageTableWinners(table, timeIndex, resistanceIndex), [])
+  }
+})
+
+test('最大MODのTSVは時刻と術耐性を転置でき、MOD外側配置は術耐性行に置き換える', () => {
+  const all = comparisons()
+  const table = buildSurtrTotalDamageTable([all[0], all[3], all[6]], [10, 30], [0, 100])!
+  const before = structuredClone(table)
+  const resistanceRows = buildSurtrTotalDamageTableTsv(table, 'resistance', 0, 'winner').split('\r\n').map(row => row.split('\t'))
+  assert.deepEqual(resistanceRows, [
+    ['術耐性', '10秒', '30秒'],
+    ['0', 'Y Lv.3', 'X Lv.3＝Y Lv.3'],
+    ['100', 'X Lv.3', 'X Lv.3'],
+  ])
+  const timeRows = buildSurtrTotalDamageTableTsv(table, 'time', 3, 'winner').split('\r\n').map(row => row.split('\t'))
+  assert.deepEqual(timeRows, [
+    ['素質2発動まで（秒）', '術耐性0', '術耐性100'],
+    ['10', 'Y Lv.3', 'X Lv.3'],
+    ['30', 'X Lv.3＝Y Lv.3', 'X Lv.3'],
+  ])
+  assert.equal(buildSurtrTotalDamageTableTsv(table, 'module', 3, 'winner'),
+    buildSurtrTotalDamageTableTsv(table, 'resistance', 0, 'winner'))
+  for (const layout of ['time', 'module', 'resistance'] as const) {
+    assert.equal(buildSurtrTotalDamageTableTsv(table, layout, 2),
+      buildSurtrTotalDamageTableTsv(table, layout, 2, 'total'))
+  }
+  assert.deepEqual(table, before)
+})
+
+test('最大MODのTSVもラベルの改行・タブ・数式を処理し、不完全セルは横棒で出力する', () => {
+  const source = comparisons()[0]
+  const table = buildSurtrTotalDamageTable([{ ...source, label: '=1\t+2\n' }], [30], [0])!
+  assert.equal(buildSurtrTotalDamageTableTsv(table, 'resistance', 0, 'winner'), "術耐性\t30秒\r\n0\t'=1 +2")
+  table.points = []
+  assert.equal(buildSurtrTotalDamageTableTsv(table, 'resistance', 0, 'winner'), '術耐性\t30秒\r\n0\t—')
+})
+
+test('MOD種別と段階の明示データを行列に保持し、X1〜Y3をラベル文字列に依存せず短縮する', () => {
+  const items = comparisons().map((item, index): SurtrTotalDamageTableComparison => ({ ...item,
+    type: index === 0 ? null : index <= 3 ? 'X' : 'Y', level: index === 0 ? 0 : (index - 1) % 3 + 1,
+  }))
+  const table = buildSurtrTotalDamageTable(items, [30], [0])!
+  assert.deepEqual(table.series, items.map(({ model: _model, ...item }) => item))
+  assert.deepEqual(table.series.map(getSurtrTotalDamageSeriesShortLabel), ['未装備', 'X1', 'X2', 'X3', 'Y1', 'Y2', 'Y3'])
+  assert.equal(getSurtrTotalDamageSeriesShortLabel({ ...table.series[3], label: '別名Y Lv.1' }), 'X3')
+  assert.equal(getSurtrTotalDamageSeriesShortLabel({ id: 'none', label: 'モジュールなし' }), '未装備')
+  assert.equal(getSurtrTotalDamageSeriesShortLabel({ id: 'unequipped', label: 'MOD未装備', type: null }), '未装備')
+  const noMetadata = buildSurtrTotalDamageTable(comparisons().slice(1, 2), [30], [0])!
+  assert.deepEqual(noMetadata.series[0], { id: `${xId}:lv1`, label: 'X Lv.1', color: '#737982' })
+})
+
+test('種別・段階が不明な系列名は推測で短縮したり未装備にしたりしない', () => {
+  const unknown = { id: 'custom', label: 'MOD X Lv.3（追加条件）' }
+  assert.equal(getSurtrTotalDamageSeriesShortLabel(unknown), unknown.label)
+  assert.equal(getSurtrTotalDamageSeriesShortLabel({ ...unknown, type: 'X' }), unknown.label)
+  assert.equal(getSurtrTotalDamageSeriesShortLabel({ ...unknown, level: 3 }), unknown.label)
+  for (const level of [0, -1, 1.5, 4, NaN, Infinity]) {
+    assert.equal(getSurtrTotalDamageSeriesShortLabel({ ...unknown, type: 'X', level }), unknown.label)
+  }
+  assert.equal(getSurtrTotalDamageSeriesShortLabel({ ...unknown, type: 'Z' as 'X', level: 3 }), unknown.label)
+  assert.equal(getSurtrTotalDamageSeriesShortLabel({ id: 'unknown-1', label: '独自名1' }), '独自名1')
+  assert.equal(getSurtrTotalDamageSeriesShortLabel({ id: 'unknown-2', label: '独自名2' }), '独自名2')
+  assert.equal(formatSurtrTotalDamageWinnerShortLabel([]), '—')
+})
+
+test('最大MODを短縮表示しても同値と段階を保ち、正式ラベルとTSVは変更しない', () => {
+  const all = comparisons()
+  const items: SurtrTotalDamageTableComparison[] = [
+    { ...all[3], type: 'X', level: 3 }, { ...all[6], type: 'Y', level: 3 },
+  ]
+  const table = buildSurtrTotalDamageTable(items, [30], [0])!
+  const winners = getSurtrTotalDamageTableWinners(table, 0, 0).map(winner => winner.series)
+  assert.equal(formatSurtrTotalDamageWinnerShortLabel(winners), 'X3＝Y3')
+  assert.equal(formatSurtrTotalDamageWinnerLabel(winners), 'X Lv.3＝Y Lv.3')
+  assert.equal(buildSurtrTotalDamageTableTsv(table, 'resistance', 0, 'winner'), '術耐性\t30秒\r\n0\tX Lv.3＝Y Lv.3')
+  const stageTie = buildSurtrTotalDamageTable([{ ...all[2], type: 'X', level: 2 }, { ...all[3], type: 'X', level: 3 }], [0], [0],
+    { ...SURTR_TOTAL_DAMAGE_DEFAULT_ASSUMPTIONS, firstAttackStart: 20 })!
+  assert.equal(formatSurtrTotalDamageWinnerShortLabel(getSurtrTotalDamageTableWinners(stageTie, 0, 0)
+    .map(winner => winner.series)), 'X2＝X3')
 })
 
 // Compact fixture matching existing Surtr DPS/Remnant test source data.
