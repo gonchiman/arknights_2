@@ -1,10 +1,13 @@
 import { useId, useLayoutEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react'
 import { getEnemyHeatmapOpacity, type EnemyHeatmapColorScale } from '../lib/enemyHeatmapColor'
+import { getModuleColorKey, getModuleComparisonColors } from '../lib/moduleColors'
 import {
   formatSurtrTotalDamageWinnerLabel,
   formatSurtrTotalDamageWinnerShortLabel,
   getSurtrTotalDamageTablePoint,
+  getSurtrTotalDamageTableWinnerGap,
   getSurtrTotalDamageTableWinners,
+  SURTR_TOTAL_DAMAGE_WINNER_GAP_MAX_PERCENT,
   type SurtrTotalDamageTable,
   type SurtrTotalDamageTableDisplayMode,
   type SurtrTotalDamageTableLayout,
@@ -25,6 +28,7 @@ export interface SurtrTotalDamageTableContentProps {
   layout?: SurtrTotalDamageTableLayout
   displayMode?: SurtrTotalDamageTableDisplayMode
   winnerColor?: SurtrTotalDamageWinnerColor
+  winnerGapShading?: boolean
   precision?: number
   colorScale?: 'none' | EnemyHeatmapColorScale
   selectedCell?: SurtrTotalDamageTableCellSelection | null
@@ -35,6 +39,7 @@ export interface SurtrTotalDamageTableContentProps {
 }
 
 const timeFormat = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 6 })
+const gapFormat = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 6 })
 const layoutLabels: Record<SurtrTotalDamageTableLayout, string> = {
   time: '発動時間別', module: 'MOD別', resistance: '術耐性別',
 }
@@ -42,7 +47,7 @@ const layoutLabels: Record<SurtrTotalDamageTableLayout, string> = {
 /** The same captured matrix feeds every layout and the table image. */
 export function SurtrTotalDamageTableContent({
   matrix, layout = 'time', precision = 1, colorScale = 'none', selectedCell,
-  displayMode = 'total', winnerColor = 'module', onSelectCell, title, footer, forImage = false,
+  displayMode = 'total', winnerColor = 'module', winnerGapShading = false, onSelectCell, title, footer, forImage = false,
 }: SurtrTotalDamageTableContentProps) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   const tableRef = useRef<HTMLTableElement>(null)
@@ -52,6 +57,18 @@ export function SurtrTotalDamageTableContent({
   }), [digits])
   const { times, resistances, series } = matrix
   const isWinner = displayMode === 'winner'
+  const gapShadingActive = isWinner && winnerColor === 'module' && winnerGapShading && series.length >= 2
+  const gapColors = useMemo(() => gapShadingActive
+    ? getModuleComparisonColors(series.map(item => ({ moduleType: item.type }))) : [], [series, gapShadingActive])
+  const gapScaleColors = useMemo(() => {
+    const colors = new Map<string, { color: string; label: string }>()
+    if (gapShadingActive) series.forEach((item, index) => {
+      const key = getModuleColorKey(item.type)
+      const label = key === 'none' ? '未装備' : key === 'unknown' ? '不明' : `MOD ${key}`
+      colors.set(gapColors[index], { color: gapColors[index], label })
+    })
+    return [...colors.values()]
+  }, [series, gapColors, gapShadingActive])
   const effectiveLayout = isWinner && layout === 'module' ? 'resistance' : layout
   const isResistanceLayout = effectiveLayout === 'resistance'
   const columnCount = isWinner ? 1 + (isResistanceLayout ? times.length : resistances.length)
@@ -93,18 +110,28 @@ export function SurtrTotalDamageTableContent({
     const time = times[timeIndex]
     const resistance = resistances[resistanceIndex]
     const selected = !forImage && selectedCell?.time === time && selectedCell.resistance === resistance
+    const gap = gapShadingActive ? getSurtrTotalDamageTableWinnerGap(matrix, timeIndex, resistanceIndex) : null
+    const gapPercent = typeof gap?.increasePercent === 'number' && Number.isFinite(gap.increasePercent) ? gap.increasePercent : undefined
     const hasColor = winnerColor === 'module' && winners.length > 0
+      && (!gapShadingActive || winners.length > 1 || gapPercent !== undefined)
     const cellStyle = hasColor && winners.length === 1 ? {
-      '--surtr-total-damage-winner-color': winners[0].series.color,
+      '--surtr-total-damage-winner-color': gapShadingActive ? gapColors[winners[0].seriesIndex] : winners[0].series.color,
+      ...(gapShadingActive ? {
+        '--surtr-total-damage-winner-intensity': `${getEnemyHeatmapOpacity(gapPercent ?? 0, SURTR_TOTAL_DAMAGE_WINNER_GAP_MAX_PERCENT) * 100}%`,
+      } : {}),
     } as CSSProperties : undefined
+    const gapDescription = !gapShadingActive ? '' : gapPercent !== undefined
+      ? `、次点への増加率${gapFormat.format(gapPercent)}%`
+      : gap?.runnerUpTotalDamage === 0 ? '、次点の総ダメージが0のため増加率を算出できません' : '、次点への増加率を算出できません'
     const label = <span className="surtr-total-damage-winner-label">{shortText}</span>
     return <td key={`${timeIndex}:${resistanceIndex}`} headers={`${timeHeader(timeIndex)} ${resistanceHeader(resistanceIndex)}`}
       data-time={time} data-resistance={resistance} data-series-id={winners.map(item => item.series.id).join('=')}
+      data-gap-percent={gapPercent}
       className={`surtr-total-damage-value-cell surtr-total-damage-winner-cell${hasColor ? ' has-winner-color' : ''}${winners.length > 1 ? ' is-tied' : ''}${selected ? ' is-selected' : ''}${interactive && winners.length ? ' is-interactive' : ''}`}
       style={cellStyle}>
       {interactive && winners.length ? <button type="button" className="surtr-total-damage-value-button"
         onClick={() => onSelectCell?.({ time, resistance, seriesId: winners[0].series.id })}
-        aria-label={`素質２発動まで${timeFormat.format(time)}秒、術耐性${resistance}、最大のMOD ${text}の命中内訳を表示`}
+        aria-label={`素質２発動まで${timeFormat.format(time)}秒、術耐性${resistance}、最大のMOD ${text}${gapDescription}の命中内訳を表示`}
         data-time={time} data-resistance={resistance} data-series-id={winners.map(item => item.series.id).join('=')}>{label}</button> : label}
     </td>
   }
@@ -141,6 +168,7 @@ export function SurtrTotalDamageTableContent({
 
   return <div className={`surtr-s3-table-wrap surtr-total-damage-table-content${forImage ? ' is-image' : ''}`}
     data-layout={effectiveLayout} data-display-mode={displayMode} data-winner-color={winnerColor}
+    data-winner-gap-shading={gapShadingActive}
     data-color-scale={isWinner ? 'none' : colorScale} style={style}>
     <table ref={tableRef} className={`surtr-s3-table surtr-total-damage-table surtr-total-damage-layout-${effectiveLayout}${isWinner ? ' surtr-total-damage-winner-table' : ''}`}
       aria-label={`術耐性別のスキル総ダメージ${isWinner ? 'が最大のMOD' : ''}・${layoutLabels[effectiveLayout]}`}>
@@ -202,5 +230,11 @@ export function SurtrTotalDamageTableContent({
       </tr>))}</tbody>
       {footer && <tfoot><tr><td className="surtr-total-damage-table-footer" colSpan={columnCount}>{footer}</td></tr></tfoot>}
     </table>
+    {gapShadingActive && <div className="surtr-total-damage-winner-gap-scale" aria-label="次点への増加率のカラースケール">
+      <span>次点への増加率 0% ～ {SURTR_TOTAL_DAMAGE_WINNER_GAP_MAX_PERCENT}%以上</span>
+      <span className="surtr-total-damage-winner-gap-scale-colors">{gapScaleColors.map(item => <span key={item.color}>
+        <span>{item.label}</span><i aria-hidden="true" style={{ '--surtr-total-damage-winner-scale-color': item.color } as CSSProperties} />
+      </span>)}</span>
+    </div>}
   </div>
 }

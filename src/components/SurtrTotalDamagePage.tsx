@@ -6,7 +6,7 @@ import {
   type SurtrTotalDamageAssumptions,
 } from '../lib/surtrTotalDamage'
 import { getSurtrModuleChoices, getSelectedSurtrModuleStages, type SurtrModuleChoice } from '../lib/surtrModuleComparison'
-import { buildSurtrTotalDamageTable, buildSurtrTotalDamageTableTsv, SURTR_TOTAL_DAMAGE_TABLE_MAXIMUM_CELLS,
+import { buildSurtrTotalDamageTable, buildSurtrTotalDamageTableTsv, getSurtrTotalDamageTableWinnerGap, SURTR_TOTAL_DAMAGE_TABLE_MAXIMUM_CELLS,
   type SurtrTotalDamageTableDisplayMode, type SurtrTotalDamageTableLayout,
   type SurtrTotalDamageWinnerColor } from '../lib/surtrTotalDamageTable'
 import { getSurtrDpsResistanceSamples, type SurtrDpsBarStep } from '../lib/surtrDpsResistance'
@@ -61,6 +61,7 @@ export function SurtrTotalDamagePage({ rows, loading, error, onRetry }: {
   const [displayMode, setDisplayMode] = useState<SurtrTotalDamageTableDisplayMode>('total')
   const [winnerLayout, setWinnerLayout] = useState<'time' | 'resistance'>('resistance')
   const [winnerColor, setWinnerColor] = useState<SurtrTotalDamageWinnerColor>('module')
+  const [winnerGapShading, setWinnerGapShading] = useState(false)
   const tableLayout = displayMode === 'winner' ? winnerLayout : layout
   const [colorScale, setColorScale] = useState<'none' | 'LINEAR' | 'SQRT'>('none')
   const [precision, setPrecision] = useState(0)
@@ -126,6 +127,9 @@ export function SurtrTotalDamagePage({ rows, loading, error, onRetry }: {
   [timeError, resistanceError, timingError, tooManyCells, comparisons, times, resistances, assumptions])
   const activeCell = selectedCell && matrix?.times.includes(selectedCell.time) && matrix.resistances.includes(selectedCell.resistance)
     && matrix.series.some(item => item.id === selectedCell.seriesId) ? selectedCell : null
+  const gapShadingActive = displayMode === 'winner' && winnerColor === 'module' && winnerGapShading && (matrix?.series.length ?? 0) >= 2
+  const activeWinnerGap = gapShadingActive && matrix && activeCell
+    ? getSurtrTotalDamageTableWinnerGap(matrix, matrix.times.indexOf(activeCell.time), matrix.resistances.indexOf(activeCell.resistance)) : null
   const detailComparisons = useMemo(() => activeCell === null ? [] : comparisons.flatMap(item => {
     if (!item.model) return []
     const result = calculateSurtrTotalDamage(item.model, activeCell.time, activeCell.resistance, assumptions)
@@ -154,11 +158,11 @@ export function SurtrTotalDamagePage({ rows, loading, error, onRetry }: {
   const openImage = () => {
     if (!matrix) return
     setImage(structuredClone({ id: ++nextImageId.current, matrix, layout: tableLayout, precision, colorScale,
-      displayMode, winnerColor, titleSize, detailSize,
+      displayMode, winnerColor, winnerGapShading: gapShadingActive, titleSize, detailSize,
       title: displayMode === 'winner' ? 'スルト S3 総ダメージが最大のMOD' : 'スルト S3 総ダメージ', conditions,
       filenameOptions: { metadata: { skillLabel: label, level: effectiveSettings.level, trust: effectiveSettings.trust,
         potential: effectiveSettings.potential, blocking: effectiveSettings.blocking }, times, resistances, series: matrix.series,
-        assumptions, layout: tableLayout, precision, colorScale, displayMode, winnerColor, titleSize, detailSize } }))
+        assumptions, layout: tableLayout, precision, colorScale, displayMode, winnerColor, winnerGapShading: gapShadingActive, titleSize, detailSize } }))
     setFeedback(null); setPreviewReady(false); setPreviewError(null)
   }
   const updateImageTypography = (value: { titleSize?: SurtrTotalDamageTableTitleSize; detailSize?: SurtrTotalDamageTableDetailSize }) => {
@@ -267,9 +271,12 @@ export function SurtrTotalDamagePage({ rows, loading, error, onRetry }: {
           else setLayout(event.target.value as SurtrTotalDamageTableLayout)
         }}>
           <option value="time">時間別</option>{displayMode === 'total' && <option value="module">MOD別</option>}<option value="resistance">術耐性別</option></select></label>
-        {displayMode === 'winner' ? <label className="surtr-s3-output-control"><span>色分け</span><select value={winnerColor}
+        {displayMode === 'winner' ? <><label className="surtr-s3-output-control"><span>色分け</span><select aria-label="最大MODの色分け" value={winnerColor}
           onChange={event => setWinnerColor(event.target.value as SurtrTotalDamageWinnerColor)}>
-          <option value="module">MOD別</option><option value="none">なし</option></select></label> : <>
+          <option value="module">MOD別</option><option value="none">なし</option></select></label>
+          <label className="surtr-s3-values-toggle"><input type="checkbox" checked={winnerGapShading}
+            disabled={winnerColor !== 'module' || (matrix?.series.length ?? 0) < 2}
+            onChange={event => setWinnerGapShading(event.target.checked)} />差に応じて濃淡を変える</label></> : <>
         <label className="surtr-s3-output-control"><span>カラースケール</span><select value={colorScale} onChange={event => setColorScale(event.target.value as typeof colorScale)}>
           <option value="none">なし</option><option value="LINEAR">線形</option><option value="SQRT">平方根</option></select></label>
         <label className="surtr-s3-output-control"><span>小数点以下</span><select value={precision} onChange={event => { setPrecision(Number(event.target.value)); setCopyState(null) }}>{[0, 1, 2, 3].map(value => <option key={value} value={value}>{value}桁</option>)}</select></label>
@@ -298,11 +305,16 @@ export function SurtrTotalDamagePage({ rows, loading, error, onRetry }: {
               <button type="button" className="button secondary" disabled={!outputReady} onClick={openImage} aria-label="テーブルをPNG画像で保存" aria-haspopup="dialog">画像を保存</button>
             </div></div>
             <SurtrTotalDamageTableContent matrix={matrix} layout={tableLayout} precision={precision} colorScale={colorScale}
-              displayMode={displayMode} winnerColor={winnerColor}
+              displayMode={displayMode} winnerColor={winnerColor} winnerGapShading={gapShadingActive}
               selectedCell={activeCell} onSelectCell={setSelectedCell} />
             <span className="visually-hidden" role="status">{currentCopy ? currentCopy.failed ? '数値表をコピーできませんでした。' : '数値表をコピーしました。' : ''}</span>
           </section>
-          {activeCell && detailComparisons.length > 0 && <div id="surtr-total-damage-detail"><SurtrTotalDamageDetail key={`${activeCell.time}:${activeCell.resistance}:${activeCell.seriesId}`}
+          {activeCell && detailComparisons.length > 0 && <div id="surtr-total-damage-detail">
+            {activeWinnerGap && <p className="surtr-total-damage-gap-summary">
+              次点への増加率：{activeWinnerGap.increasePercent === null ? '—' : `${number(activeWinnerGap.increasePercent, 2)}％`}
+              <span>総ダメージ差：{number(activeWinnerGap.absoluteDifference, precision)}</span>
+            </p>}
+            <SurtrTotalDamageDetail key={`${activeCell.time}:${activeCell.resistance}:${activeCell.seriesId}`}
             time={activeCell.time} resistance={activeCell.resistance} initialSeriesId={activeCell.seriesId} comparisons={detailComparisons} precision={precision} onClose={() => setSelectedCell(null)} /></div>}
         </div>}
       {feedback && feedback !== 'failed' && <p className="surtr-s3-status" role="status">{feedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}

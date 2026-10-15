@@ -17,6 +17,7 @@ export interface SurtrTotalDamageTableImageSnapshot {
   colorScale: 'none' | 'LINEAR' | 'SQRT'
   displayMode?: SurtrTotalDamageTableDisplayMode
   winnerColor?: SurtrTotalDamageWinnerColor
+  winnerGapShading?: boolean
   titleSize?: SurtrTotalDamageTableTitleSize
   detailSize?: SurtrTotalDamageTableDetailSize
   title: string
@@ -142,7 +143,8 @@ export function SurtrTotalDamageTableImage({ aspectRatio, exporting = false, onL
   return <figure ref={imageRef} className="surtr-total-damage-table-image" style={imageStyle} aria-label={snapshot.title}>
     <div className="surtr-total-damage-table-image-title">{snapshot.title}</div>
     <SurtrTotalDamageTableContent matrix={snapshot.matrix} layout={snapshot.layout} precision={snapshot.precision}
-      colorScale={snapshot.colorScale} displayMode={snapshot.displayMode} winnerColor={snapshot.winnerColor} forImage />
+      colorScale={snapshot.colorScale} displayMode={snapshot.displayMode} winnerColor={snapshot.winnerColor}
+      winnerGapShading={snapshot.winnerGapShading} forImage />
     <div className="surtr-total-damage-table-image-footer">
       {snapshot.conditions.map((condition, index) => <span key={index}>{condition}</span>)}
     </div>

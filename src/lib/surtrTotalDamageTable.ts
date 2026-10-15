@@ -38,6 +38,7 @@ export interface SurtrTotalDamageTable {
 }
 
 export const SURTR_TOTAL_DAMAGE_TABLE_MAXIMUM_CELLS = 50_000
+export const SURTR_TOTAL_DAMAGE_WINNER_GAP_MAX_PERCENT = 30
 
 /**
  * Compute all three dimensions once. Attack timing is independent of resistance,
@@ -127,6 +128,35 @@ export function getSurtrTotalDamageTableWinners(
   }
   const tolerance = Number.EPSILON * Math.max(1, Math.abs(maximum)) * 8
   return candidates.filter(candidate => maximum - candidate.point.totalDamage <= tolerance)
+}
+
+/** Compare the maximum with the next selected series, retaining raw damage precision. */
+export function getSurtrTotalDamageTableWinnerGap(
+  table: SurtrTotalDamageTable,
+  timeIndex: number,
+  resistanceIndex: number,
+): { runnerUpTotalDamage: number; absoluteDifference: number; increasePercent: number | null } | null {
+  if (table.series.length < 2) return null
+  const winners = getSurtrTotalDamageTableWinners(table, timeIndex, resistanceIndex)
+  if (!winners.length) return null
+  // The tolerance may include a slightly lower value first in selection order.
+  // Exclude exactly one raw maximum, so a tied maximum remains the runner-up.
+  let maximum = winners[0]
+  for (const winner of winners) {
+    if (winner.point.totalDamage > maximum.point.totalDamage) maximum = winner
+  }
+  let runnerUpTotalDamage = 0
+  const offset = (timeIndex * table.resistances.length + resistanceIndex) * table.series.length
+  for (let seriesIndex = 0; seriesIndex < table.series.length; seriesIndex += 1) {
+    if (seriesIndex !== maximum.seriesIndex) {
+      runnerUpTotalDamage = Math.max(runnerUpTotalDamage, table.points[offset + seriesIndex].totalDamage)
+    }
+  }
+  const absoluteDifference = winners.length > 1 ? 0 : maximum.point.totalDamage - runnerUpTotalDamage
+  const percent = absoluteDifference === 0 ? 0 : runnerUpTotalDamage === 0 ? null
+    : absoluteDifference / runnerUpTotalDamage * 100
+  return { runnerUpTotalDamage, absoluteDifference,
+    increasePercent: percent !== null && Number.isFinite(percent) ? percent : null }
 }
 
 /** Keep module stages explicit, including when multiple stages share the maximum. */
