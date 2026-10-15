@@ -1,0 +1,62 @@
+.skill-structure-page, .skill-structure-content { min-width: 0; }
+.skill-structure-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 12px; }
+.skill-structure-content .skill-structure-tabs { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; padding-inline: 0; gap: 0; }
+.skill-structure-tabs .detail-tab { padding: 8px 14px; border: 1px solid var(--border); margin: 0 -1px -1px 0; font-weight: 400; }
+.skill-structure-tabs .detail-tab.active { border-color: var(--text); background: var(--text); color: var(--surface); position: relative; }
+.skill-structure-definition > header > button {
+  min-height: 34px; padding: 6px 10px; border: 1px solid var(--border-strong); border-radius: 0;
+  background: var(--surface); color: var(--text); font: inherit; font-size: 11px; cursor: pointer;
+}
+.skill-structure-definition > header > button:hover { background: var(--surface-hover); }
+.skill-structure-description { margin: 12px -12px -12px; border-top: 1px solid var(--border); background: var(--surface); }
+.skill-structure-description p { margin: 0; padding: 12px; font-size: 12px; white-space: pre-wrap; line-height: 1.9; overflow-wrap: anywhere; }
+/* Keep the tallest tab in the layout so switching categories preserves page position. */
+.skill-structure-tab-panels { display: grid; min-width: 0; }
+.skill-structure-tab-panel { grid-area: 1 / 1; min-width: 0; align-self: start; border: 1px solid var(--border); background: var(--surface); }
+.skill-structure-tab-panel[aria-hidden="true"] { visibility: hidden; pointer-events: none; }
+.skill-structure-tab-panel > h2 { margin: 0; padding: 8px 10px; border-bottom: 1px solid var(--border); background: var(--surface-soft); font-size: 13px; }
+.skill-structure-panel-body { padding: 10px; min-width: 0; }
+.skill-structure-subheading { margin: 0 0 7px; font-size: 12px; font-weight: 500; }
+.skill-structure-table-wrap { border: 1px solid var(--border); margin-bottom: 14px; overscroll-behavior-inline: contain; }
+.skill-structure-panel-body > .skill-structure-table-wrap:last-child { margin-bottom: 0; }
+.skill-structure-table { table-layout: fixed; border-collapse: collapse; width: 100%; font-size: 12px; }
+.skill-structure-table th, .skill-structure-table td { position: static; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 9px 10px; white-space: normal; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.skill-structure-table tr > :last-child { border-right: 0; }
+.skill-structure-table tbody:last-child tr:last-child > * { border-bottom: 0; }
+.skill-structure-table tbody th { font-weight: 400; color: var(--text); background: var(--surface); }
+.skill-structure-table tbody tr { cursor: default; }
+.skill-structure-table tbody tr:hover { background: transparent; }
+.skill-structure-table thead th { color: var(--text-soft); font-size: 11px; }
+.skill-structure-basic-table { min-width: 470px; }
+.skill-structure-activation-table { min-width: 550px; }
+.skill-structure-stage-table { min-width: 520px; }
+.skill-structure-stage-table thead th:nth-child(1) { width: 18%; }
+.skill-structure-stage-table thead th:nth-child(2) { width: 31%; }
+.skill-structure-stage-table thead th:nth-child(3) { width: 21%; }
+.skill-structure-effects-table { min-width: 790px; }
+.skill-structure-stage-col { width: 12%; }
+.skill-structure-timing-col { width: 11%; }
+.skill-structure-condition-col { width: 21%; }
+.skill-structure-target-col { width: 15%; }
+.skill-structure-item-col { width: 16%; }
+.skill-structure-operation-col { width: 13%; }
+.skill-structure-effect-link { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; text-align: left; text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; cursor: pointer; }
+.skill-structure-effect-link:hover { color: var(--accent); }
+.skill-structure-effect-link[aria-expanded="true"] { text-decoration-color: var(--text); }
+.skill-structure-definition { margin-top: 14px; }
+.skill-structure-definition > header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.skill-structure-definition h3 { margin: 0; font-size: 12px; font-weight: 500; }
+.skill-structure-definition-table { min-width: 420px; }
+.skill-structure-definition-table thead th:first-child { width: 30%; }
+.skill-structure-notes { color: var(--text-muted); font-size: 11px; }
+.skill-structure-notes summary { cursor: pointer; width: fit-content; }
+.skill-structure-notes p { margin: 7px 0 0; line-height: 1.8; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .skill-structure-tabs .detail-tab { padding-inline: 10px; }
+}
+@media (pointer: coarse) {
+  .skill-structure-definition > header > button,
+  .skill-structure-effect-link, .skill-structure-notes summary { min-height: 44px; }
+  .skill-structure-effect-link { display: inline-flex; align-items: center; }
+  .skill-structure-notes summary { padding-block: 12px; }
+}

@@ -32,6 +32,7 @@ import { SkillDirectory } from './components/SkillDirectory'
 import { SkillCoarseClassificationPage } from './components/SkillCoarseClassificationPage'
 import { SkillEffectsPage } from './components/SkillEffectsPage'
 import { SkillSummaryPage } from './components/SkillSummaryPage'
+import { SkillStructurePage } from './components/SkillStructurePage'
 import { SkillJsonPage } from './components/SkillJsonPage'
 import { SkillJsonOverviewPage } from './components/SkillJsonOverviewPage'
 import { SlideMakerPage } from './components/SlideMakerPage'
@@ -387,6 +388,12 @@ export default function App() {
           />
         ) : displayedRoute.view === 'skill-summary' ? (
           <SkillSummaryPage
+            rows={classifiedRows}
+            loading={loading}
+            initialSelection={displayedRoute.selection}
+          />
+        ) : displayedRoute.view === 'skill-structure' ? (
+          <SkillStructurePage
             rows={classifiedRows}
             loading={loading}
             initialSelection={displayedRoute.selection}

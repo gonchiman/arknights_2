@@ -5,6 +5,7 @@ import {
   createOperatorDetailHash,
   createSkillEffectsHash,
   createSkillSummaryHash,
+  createSkillStructureHash,
   createSkillJsonHash,
   parseHashRoute,
   type SkillEffectsRouteSelection,
@@ -26,6 +27,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['skill-classification', 'skill-classification'],
       ['skill-effects', 'skill-effects'],
       ['skill-summary', 'skill-summary'],
+      ['skill-structure', 'skill-structure'],
       ['skill-json', 'skill-json'],
       ['code-analysis', 'code-analysis'],
       ['damage', 'damage'],
@@ -61,6 +63,68 @@ test('スキル効果の分解のURLはスキルとレベルを復元し、不�
   assert.deepEqual(parseHashRoute(createSkillSummaryHash(selection)), { view: 'skill-summary', selection })
   assert.deepEqual(parseHashRoute('#/skill-summary?operatorId=x&skillId=x&skillIndex=2&levelIndex=-1'), { view: 'skill-summary' })
   assert.deepEqual(parseHashRoute('#/skill-summary/extra'), { view: 'operators' })
+})
+
+test('スキル構造は専用ページとして開き、スキル効果の分解の隣から移動できる', () => {
+  assert.deepEqual(parseHashRoute('#/skill-structure'), { view: 'skill-structure' })
+  const summaryIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'skill-summary')
+  assert.deepEqual(APP_NAV_ITEMS[summaryIndex + 1], {
+    id: 'skill-structure', href: '#/skill-structure', label: 'スキル構造', description: '', section: 'analysis',
+  })
+  for (const suffix of ['/', '/extra', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/skill-structure${suffix}`), { view: 'operators' })
+  }
+})
+
+test('スキル構造の共有URLは符号化されたIDを含むスキルとレベルを復元する', () => {
+  const selection = {
+    operatorId: 'char/日本', skillIndex: 2, skillId: 'skchr_test[2]&mode=1', levelIndex: 9,
+  }
+  const hash = createSkillStructureHash(selection)
+  assert.equal(hash, '#/skill-structure?operatorId=char%2F%E6%97%A5%E6%9C%AC&skillIndex=2&skillId=skchr_test%5B2%5D%26mode%3D1&levelIndex=9')
+  assert.deepEqual(parseHashRoute(hash), { view: 'skill-structure', selection })
+})
+
+test('スキル構造の不完全・不正・重複した選択指定は選択なしのページへ戻す', () => {
+  const selection = { operatorId: 'char_test', skillIndex: '1', skillId: 'skill_test', levelIndex: '0' }
+  const invalidValues = {
+    operatorId: ['', ' char_test', 'char_test ', '\u0000char', 'x'.repeat(257), '\ufffd'],
+    skillId: ['', ' skill_test', 'skill_test ', 'skill\u007f', 'x'.repeat(257), '\ufffd'],
+    skillIndex: ['0', '-1', '1.5', '01', 'NaN', '9007199254740992'],
+    levelIndex: ['-1', '0.5', '01', 'NaN', '9007199254740992'],
+  }
+  const base = { view: 'skill-structure' }
+  assert.deepEqual(parseHashRoute('#/skill-structure?'), base)
+  assert.deepEqual(parseHashRoute('#/skill-structure?unknown=value'), base)
+  assert.deepEqual(parseHashRoute('#/skill-structure?operatorId=%E0%A4%A&skillIndex=1&skillId=x&levelIndex=0'), base)
+  for (const key of Object.keys(selection) as (keyof typeof selection)[]) {
+    const missing = new URLSearchParams(selection)
+    missing.delete(key)
+    assert.deepEqual(parseHashRoute(`#/skill-structure?${missing}`), base, `missing ${key}`)
+    const duplicate = new URLSearchParams(selection)
+    duplicate.append(key, selection[key])
+    assert.deepEqual(parseHashRoute(`#/skill-structure?${duplicate}`), base, `duplicate ${key}`)
+    for (const value of invalidValues[key]) {
+      const invalid = new URLSearchParams(selection)
+      invalid.set(key, value)
+      assert.deepEqual(parseHashRoute(`#/skill-structure?${invalid}`), base, `${key}=${JSON.stringify(value)}`)
+    }
+  }
+})
+
+test('スキル構造の共有URL生成は無効なIDと選択番号を拒否する', () => {
+  const selection = { operatorId: 'char_test', skillIndex: 1, skillId: 'skill_test', levelIndex: 0 }
+  for (const key of ['operatorId', 'skillId'] as const) {
+    for (const value of ['', ' leading', 'trailing ', '\u0000', 'x'.repeat(257)]) {
+      assert.throws(() => createSkillStructureHash({ ...selection, [key]: value }), TypeError)
+    }
+  }
+  for (const value of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(() => createSkillStructureHash({ ...selection, skillIndex: value }), RangeError)
+  }
+  for (const value of [-1, 0.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(() => createSkillStructureHash({ ...selection, levelIndex: value }), RangeError)
+  }
 })
 
 test('Damage Calculator 2は既存の計算機と別のURLで開く', () => {

@@ -95,6 +95,14 @@
   font-size: 12px;
 }
 
+.skill-effects-fixed-level {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
 .skill-effects-skill-field { margin-top: 12px; }
 
 .skill-effects-skill-choices {
