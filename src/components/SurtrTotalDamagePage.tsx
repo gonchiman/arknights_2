@@ -13,6 +13,11 @@ import { getSurtrDpsResistanceSamples, type SurtrDpsBarStep } from '../lib/surtr
 import { getSkillLevelLabel } from '../lib/skillJsonAnalysis'
 import { writeClipboardText } from '../lib/clipboard'
 import { getSurtrTotalDamageTableImageFilename, type SurtrTotalDamageTableImageFilenameOptions } from '../lib/surtrTotalDamageTableImageFilename'
+import {
+  SURTR_TOTAL_DAMAGE_TABLE_TITLE_SIZES, SURTR_TOTAL_DAMAGE_TABLE_DETAIL_SIZES,
+  DEFAULT_SURTR_TOTAL_DAMAGE_TABLE_TITLE_SIZE, DEFAULT_SURTR_TOTAL_DAMAGE_TABLE_DETAIL_SIZE,
+  type SurtrTotalDamageTableTitleSize, type SurtrTotalDamageTableDetailSize,
+} from '../lib/surtrTotalDamageTableImageTypography'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { SURTR_HOME_LINK } from '../lib/navigation'
 import { PageBreadcrumbs } from './PageBreadcrumbs'
@@ -62,6 +67,8 @@ export function SurtrTotalDamagePage({ rows, loading, error, onRetry }: {
   const [selectedCell, setSelectedCell] = useState<SurtrTotalDamageTableCellSelection | null>(null)
   const [copyState, setCopyState] = useState<{ text: string; failed: boolean } | null>(null)
   const [image, setImage] = useState<ImageSnapshot | null>(null)
+  const [titleSize, setTitleSize] = useState<SurtrTotalDamageTableTitleSize>(DEFAULT_SURTR_TOTAL_DAMAGE_TABLE_TITLE_SIZE)
+  const [detailSize, setDetailSize] = useState<SurtrTotalDamageTableDetailSize>(DEFAULT_SURTR_TOTAL_DAMAGE_TABLE_DETAIL_SIZE)
   const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [saving, setSaving] = useState(false)
   const [previewReady, setPreviewReady] = useState(false)
@@ -147,12 +154,21 @@ export function SurtrTotalDamagePage({ rows, loading, error, onRetry }: {
   const openImage = () => {
     if (!matrix) return
     setImage(structuredClone({ id: ++nextImageId.current, matrix, layout: tableLayout, precision, colorScale,
-      displayMode, winnerColor,
+      displayMode, winnerColor, titleSize, detailSize,
       title: displayMode === 'winner' ? 'スルト S3 総ダメージが最大のMOD' : 'スルト S3 総ダメージ', conditions,
       filenameOptions: { metadata: { skillLabel: label, level: effectiveSettings.level, trust: effectiveSettings.trust,
         potential: effectiveSettings.potential, blocking: effectiveSettings.blocking }, times, resistances, series: matrix.series,
-        assumptions, layout: tableLayout, precision, colorScale, displayMode, winnerColor } }))
+        assumptions, layout: tableLayout, precision, colorScale, displayMode, winnerColor, titleSize, detailSize } }))
     setFeedback(null); setPreviewReady(false); setPreviewError(null)
+  }
+  const updateImageTypography = (value: { titleSize?: SurtrTotalDamageTableTitleSize; detailSize?: SurtrTotalDamageTableDetailSize }) => {
+    if (!image || ((value.titleSize === undefined || value.titleSize === image.titleSize)
+      && (value.detailSize === undefined || value.detailSize === image.detailSize))) return
+    if (value.titleSize !== undefined) setTitleSize(value.titleSize)
+    if (value.detailSize !== undefined) setDetailSize(value.detailSize)
+    setPreviewReady(false); setPreviewError(null)
+    setImage(previous => previous ? { ...previous, ...value,
+      filenameOptions: { ...previous.filenameOptions, ...value } } : null)
   }
   const picker = getChartImageSavePicker()
   const saveImage = async (filename: string, aspectRatio?: number) => {
@@ -302,8 +318,16 @@ export function SurtrTotalDamagePage({ rows, loading, error, onRetry }: {
       onSave={(filename, ratio) => void saveImage(filename, ratio)}
       options={<><label className="chart-image-save-field"><span>画像タイトル</span><input type="text" maxLength={100} value={image.title} disabled={saving}
         onChange={event => { setPreviewReady(false); setPreviewError(null); setImage(previous => previous ? { ...previous, title: event.target.value } : null) }} /></label>
+        <div className="surtr-total-damage-image-type-settings">
+          <label className="chart-image-save-field"><span>タイトルサイズ</span><select aria-label="タイトルサイズ" value={image.titleSize} disabled={saving}
+            onChange={event => updateImageTypography({ titleSize: Number(event.target.value) as SurtrTotalDamageTableTitleSize })}>
+            {SURTR_TOTAL_DAMAGE_TABLE_TITLE_SIZES.map(size => <option key={size} value={size}>{size}px</option>)}</select></label>
+          <label className="chart-image-save-field"><span>詳細サイズ</span><select aria-label="詳細サイズ" value={image.detailSize} disabled={saving}
+            onChange={event => updateImageTypography({ detailSize: Number(event.target.value) as SurtrTotalDamageTableDetailSize })}>
+            {SURTR_TOTAL_DAMAGE_TABLE_DETAIL_SIZES.map(size => <option key={size} value={size}>{size}px</option>)}</select></label>
+        </div>
         {previewError && <p role="alert" className="chart-image-save-error">{previewError}</p>}</>}
-      preview={<SurtrTotalDamageTableImagePreview key={`${image.id}:${image.title}:${JSON.stringify(aspect)}`} {...image} aspectRatio={imageRatio}
+      preview={<SurtrTotalDamageTableImagePreview key={`${image.id}:${image.title}:${image.titleSize}:${image.detailSize}:${JSON.stringify(aspect)}`} {...image} aspectRatio={imageRatio}
         onLayoutReady={imageLayoutReady} onLayoutError={imageLayoutError} />} />}
   </section>
 }

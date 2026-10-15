@@ -64,3 +64,21 @@ test('winner output has its own name, identity colors and selected stages withou
   assert.equal(getSurtrTotalDamageTableImageFilename({ ...winner, layout: 'module' }), name)
   assert.equal(getSurtrTotalDamageTableImageFilename({ ...options, displayMode: 'total' }), getSurtrTotalDamageTableImageFilename(options))
 })
+
+test('title and detail sizes identify the captured image even when long module names are shortened', () => {
+  const sizes = [
+    { titleSize: 12 as const, detailSize: 8 as const },
+    { titleSize: 16 as const, detailSize: 8 as const },
+    { titleSize: 12 as const, detailSize: 12 as const },
+  ]
+  for (const displayMode of ['total', 'winner'] as const) {
+    const base = { ...options, displayMode, series: [{ id: 'long', label: '非常に長いMODの名前😀'.repeat(40) }] }
+    const names = sizes.map(size => getSurtrTotalDamageTableImageFilename({ ...base, ...size }, 16 / 9))
+    assert.equal(new Set(names).size, sizes.length)
+    sizes.forEach((size, index) => {
+      assert.ok(names[index].includes(`文字${size.titleSize}-${size.detailSize}px`))
+      assert.match(names[index], /_比率16x9\.png$/)
+      assert.ok(new TextEncoder().encode(names[index]).length <= 240)
+    })
+  }
+})
