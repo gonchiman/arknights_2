@@ -32,14 +32,14 @@ export const SURTR_ANALYSIS_ITEMS: readonly NavigationItem[] = [
   {
     id: 'surtr-s3',
     href: '#/analysis/surtr/s3',
-    label: 'S3 DPS分析',
+    label: 'S3 DPS',
     description: '',
     section: 'operator-analysis',
   },
   {
     id: 'surtr-s3-comparison',
     href: '#/analysis/surtr/s3-comparison',
-    label: 'S3 MOD・潜在比較',
+    label: 'S3 DPS比較（MOD・潜在）',
     description: '',
     section: 'operator-analysis',
   },
@@ -60,7 +60,7 @@ export const SURTR_ANALYSIS_ITEMS: readonly NavigationItem[] = [
   {
     id: 'surtr-remnant-attacks',
     href: '#/analysis/surtr/remnant-attacks',
-    label: '余燼中の攻撃回数',
+    label: '余燼中の攻撃・ダメージ',
     description: '',
     section: 'operator-analysis',
   },
@@ -68,7 +68,6 @@ export const SURTR_ANALYSIS_ITEMS: readonly NavigationItem[] = [
 
 export const SURTR_HOME_ITEMS: readonly NavigationItem[] = [
   ...SURTR_ANALYSIS_ITEMS,
-  DAMAGE_VERIFICATION_ITEM,
 ]
 
 export const GOLDENGLOW_ANALYSIS_ITEMS: readonly NavigationItem[] = [
@@ -261,7 +260,7 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
   {
     id: 'surtr-home',
     ...SURTR_HOME_LINK,
-    description: 'S3 DPS・継続時間・余燼中の攻撃回数',
+    description: 'S3 DPS・継続時間・総ダメージ・余燼の分析',
     section: 'operator-analysis',
   },
   {

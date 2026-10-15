@@ -230,8 +230,8 @@ export function SurtrRemnantAttacksPage({ rows, loading, error, onRetry }: {
 
   return <section className="calculator-page surtr-s3-page surtr-remnant-page" aria-labelledby="surtr-remnant-title">
     <div className="page-heading-with-breadcrumbs">
-      <PageBreadcrumbs parents={[SURTR_HOME_LINK]} current="余燼中の攻撃回数" />
-      <header className="page-intro"><h1 id="surtr-remnant-title">余燼中の攻撃回数</h1></header>
+      <PageBreadcrumbs parents={[SURTR_HOME_LINK]} current="余燼中の攻撃・ダメージ" />
+      <header className="page-intro"><h1 id="surtr-remnant-title">余燼中の攻撃・ダメージ</h1></header>
     </div>
     <CollapsibleCalculatorPanel id="surtr-remnant-settings" number="01" title="比較条件" summary={`潜在${potential}・${blocking ? 'ブロック中' : '非ブロック'}`} collapsedLabel="設定を表示">
       {!record ? status : <>
