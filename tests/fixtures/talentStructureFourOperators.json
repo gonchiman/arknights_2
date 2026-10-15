@@ -1,0 +1,304 @@
+[
+  {
+    "operatorId": "char_172_svrash",
+    "operatorName": "シルバーアッシュ",
+    "profession": "WARRIOR",
+    "professionLabel": "前衛",
+    "rarity": 6,
+    "subProfessionName": "lord",
+    "operatorProfile": {
+      "phases": [
+        {
+          "maxLevel": 50
+        },
+        {
+          "maxLevel": 80
+        },
+        {
+          "maxLevel": 90
+        }
+      ],
+      "favorKeyFrames": [],
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "カリスマ",
+              "description": "攻撃力+10%。編成中、味方全員の再配置時間-10%",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "atk",
+                  "value": 0.1,
+                  "valueStr": null
+                },
+                {
+                  "key": "respawn_time",
+                  "value": -0.1,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        },
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "2",
+              "name": "ホークビジョン",
+              "description": "攻撃範囲内の敵の<$ba.invisible>ステルス</>状態を無効にする",
+              "rangeId": null,
+              "blackboard": {},
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "operatorId": "char_263_skadi",
+    "operatorName": "スカジ",
+    "profession": "WARRIOR",
+    "professionLabel": "前衛",
+    "rarity": 6,
+    "subProfessionName": "fearless",
+    "operatorProfile": {
+      "phases": [
+        {
+          "maxLevel": 50
+        },
+        {
+          "maxLevel": 80
+        },
+        {
+          "maxLevel": 90
+        }
+      ],
+      "favorKeyFrames": [],
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "深海の捕食者",
+              "description": "編成中、味方【アビサルハンター】の攻撃力+14%",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "atk",
+                  "value": 0.14,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        },
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "2",
+              "name": "高速復帰",
+              "description": "自身の再配置時間-10秒",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "respawn_time",
+                  "value": -10.0,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "operatorId": "char_350_surtr",
+    "operatorName": "スルト",
+    "profession": "WARRIOR",
+    "professionLabel": "前衛",
+    "rarity": 6,
+    "subProfessionName": "artsfghter",
+    "operatorProfile": {
+      "phases": [
+        {
+          "maxLevel": 50
+        },
+        {
+          "maxLevel": 80
+        },
+        {
+          "maxLevel": 90
+        }
+      ],
+      "favorKeyFrames": [],
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "劫火",
+              "description": "攻撃時、対象の術耐性を20無視",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "magic_resist_penetrate_fixed",
+                  "value": 20.0,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        },
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "2",
+              "name": "余燼",
+              "description": "致命的なダメージを受けてもHPが1残る\n効果発動から8秒後強制退場",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "surtr_t_2[withdraw].interval",
+                  "value": 8.0,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "operatorId": "char_293_thorns",
+    "operatorName": "ソーンズ",
+    "profession": "WARRIOR",
+    "professionLabel": "前衛",
+    "rarity": 6,
+    "subProfessionName": "lord",
+    "operatorProfile": {
+      "phases": [
+        {
+          "maxLevel": 50
+        },
+        {
+          "maxLevel": 80
+        },
+        {
+          "maxLevel": 90
+        }
+      ],
+      "favorKeyFrames": [],
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "神経猛毒",
+              "description": "攻撃時、攻撃対象に毒で3秒間毎秒125の術ダメージを与える（遠距離攻撃を行える敵に対する効果倍増）",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "damage[normal]",
+                  "value": 125.0,
+                  "valueStr": null
+                },
+                {
+                  "key": "damage[ranged]",
+                  "value": 250.0,
+                  "valueStr": null
+                },
+                {
+                  "key": "duration",
+                  "value": 3.0,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        },
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "2",
+              "name": "故郷の濤声",
+              "description": "2秒間通常攻撃せずにいると、1秒ごとにHPが最大値の3.5%回復",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "delay",
+                  "value": 2.0,
+                  "valueStr": null
+                },
+                {
+                  "key": "hp_recovery_per_sec_by_max_hp_ratio",
+                  "value": 0.035,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

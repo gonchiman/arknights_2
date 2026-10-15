@@ -5,6 +5,7 @@ export type AppRoute =
   | { view: 'skills' }
   | { view: 'skill-classification' }
   | { view: 'talent-classification' }
+  | { view: 'talent-structure'; selection?: TalentRouteSelection; invalidSelection?: boolean }
   | { view: 'skill-effects'; selection?: SkillEffectsRouteSelection }
   | { view: 'skill-summary'; selection?: SkillRouteSelection }
   | { view: 'skill-structure'; selection?: SkillRouteSelection }
@@ -46,6 +47,12 @@ const SKILL_JSON_ROUTE = '#/skill-json'
 const SKILL_EFFECTS_ROUTE = '#/skill-effects'
 const SKILL_SUMMARY_ROUTE = '#/skill-summary'
 const SKILL_STRUCTURE_ROUTE = '#/skill-structure'
+const TALENT_STRUCTURE_ROUTE = '#/talent-structure'
+
+export interface TalentRouteSelection {
+  operatorId: string
+  talentIndex: number
+}
 
 export interface SkillRouteSelection {
   operatorId: string
@@ -83,6 +90,13 @@ export function createSkillStructureHash(selection: SkillRouteSelection): string
   return createSkillSelectionHash(SKILL_STRUCTURE_ROUTE, selection)
 }
 
+export function createTalentStructureHash(selection: TalentRouteSelection): string {
+  assertRouteId(selection.operatorId, 'operatorId')
+  assertInteger(selection.talentIndex, 0, 'talentIndex')
+  const query = new URLSearchParams({ operatorId: selection.operatorId, talentIndex: String(selection.talentIndex) })
+  return `${TALENT_STRUCTURE_ROUTE}?${query.toString()}`
+}
+
 function createSkillSelectionHash(route: string, selection: SkillRouteSelection): string {
   assertRouteId(selection.operatorId, 'operatorId')
   assertRouteId(selection.skillId, 'skillId')
@@ -100,6 +114,16 @@ function createSkillSelectionHash(route: string, selection: SkillRouteSelection)
 
 export function parseHashRoute(hash: string): AppRoute {
   if (hash === '' || hash === '#' || hash === '#/') return { view: 'home' }
+  if (hash === TALENT_STRUCTURE_ROUTE) return { view: 'talent-structure' }
+  if (hash.startsWith(`${TALENT_STRUCTURE_ROUTE}?`)) {
+    const params = new URLSearchParams(hash.slice(TALENT_STRUCTURE_ROUTE.length + 1))
+    if (!params.has('operatorId') && !params.has('talentIndex')) return { view: 'talent-structure' }
+    const operatorId = readRouteId(params, 'operatorId')
+    const talentIndex = readInteger(params, 'talentIndex', 0)
+    return operatorId === null || talentIndex === null
+      ? { view: 'talent-structure', invalidSelection: true }
+      : { view: 'talent-structure', selection: { operatorId, talentIndex } }
+  }
   if (
     hash.startsWith(OPERATOR_SKILL_ROUTE_PREFIX)
     || hash.startsWith(LEGACY_CLASSIFIER_SKILL_ROUTE_PREFIX)
@@ -205,7 +229,7 @@ function readRouteId(params: URLSearchParams, key: 'operatorId' | 'skillId'): st
 
 function readInteger(
   params: URLSearchParams,
-  key: 'skillIndex' | 'levelIndex',
+  key: 'skillIndex' | 'levelIndex' | 'talentIndex',
   minimum: number,
 ): number | null {
   const values = params.getAll(key)

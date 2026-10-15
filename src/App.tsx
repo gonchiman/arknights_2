@@ -32,6 +32,7 @@ import type { OpenOperatorDetail } from './components/OperatorDetailLink'
 import { SkillDirectory } from './components/SkillDirectory'
 import { SkillCoarseClassificationPage } from './components/SkillCoarseClassificationPage'
 import { TalentCoarseClassificationPage } from './components/TalentCoarseClassificationPage'
+import { TalentStructurePage } from './components/TalentStructurePage'
 import { SkillEffectsPage } from './components/SkillEffectsPage'
 import { SkillSummaryPage } from './components/SkillSummaryPage'
 import { SkillStructurePage } from './components/SkillStructurePage'
@@ -400,6 +401,9 @@ export default function App() {
           <SkillCoarseClassificationPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
         ) : displayedRoute.view === 'talent-classification' ? (
           <TalentCoarseClassificationPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
+        ) : displayedRoute.view === 'talent-structure' ? (
+          <TalentStructurePage rows={rows} loading={loading} initialSelection={displayedRoute.selection}
+            invalidSelection={displayedRoute.invalidSelection} />
         ) : displayedRoute.view === 'skill-effects' ? (
           <SkillEffectsPage
             rows={classifiedRows}
