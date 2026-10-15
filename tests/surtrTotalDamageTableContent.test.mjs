@@ -193,3 +193,79 @@ test('compact winner cells omit the legend and retain full module names in detai
   assert.doesNotMatch(render({ matrix: winnerMatrix, displayMode: 'winner', forImage: true }), /winner-legend|aria-label="MODの略称"|＝：同値/)
   assert.doesNotMatch(render({ matrix: winnerMatrix }), /aria-label="MODの略称"/)
 })
+
+const gapMatrix = {
+  times: [25], resistances: [0, 20, 40, 60, 80, 100], series,
+  maximumTotalDamage: 200,
+  points: [[100, 103], [100, 115], [100, 140], [100, 100], [0, 100], [0, 0]]
+    .flatMap((values, index) => series.map((item, seriesIndex) => ({
+      time: 25, resistance: index * 20, seriesId: item.id, totalDamage: values[seriesIndex],
+    }))),
+}
+const gapCells = markup => [...markup.matchAll(/<td\b[^>]*data-resistance="([^"]+)"[^>]*>(.*?)<\/td>/gs)]
+  .map(match => ({ resistance: Number(match[1]), text: match[2].replace(/<[^>]*>/g, ''),
+    rate: /data-gap-percent="([^"]+)"/.exec(match[0])?.[1],
+    color: /--surtr-total-damage-winner-color:([^;"<>]+)/.exec(match[0])?.[1],
+    intensity: /--surtr-total-damage-winner-intensity:([^;"<>]+)/.exec(match[0])?.[1],
+    colored: match[0].includes('has-winner-color'), tied: match[0].includes('is-tied') }))
+
+test('winner gap shading is opt-in and inactive outside a colored multi-series winner table', () => {
+  const props = { matrix: gapMatrix, displayMode: 'winner', winnerColor: 'module' }
+  assert.equal(render(props), render({ ...props, winnerGapShading: false }))
+  const defaultCells = gapCells(render(props))
+  assert.ok(defaultCells.every(cell => cell.rate === undefined && cell.intensity === undefined))
+  assert.equal(defaultCells[0].color, '#b4763e')
+  assert.doesNotMatch(render(props), /winner-gap-scale/)
+  for (const disabled of [{ displayMode: 'total' }, { winnerColor: 'none' }, {
+    matrix: { ...gapMatrix, series: [series[0]], points: gapMatrix.points.filter(point => point.seriesId === 'X3') },
+  }]) {
+    const markup = render({ ...props, winnerGapShading: true, ...disabled })
+    assert.match(markup, /data-winner-gap-shading="false"/)
+    assert.doesNotMatch(markup, /data-gap-percent|winner-gap-scale|winner-intensity/)
+  }
+})
+
+test('winner gap shading uses raw next-best increase with the common 0–30% linear scale and neutral ties', () => {
+  const props = { matrix: gapMatrix, displayMode: 'winner', winnerGapShading: true, onSelectCell: () => {} }
+  const markup = render(props)
+  assert.match(markup, /data-winner-gap-shading="true"/)
+  const values = gapCells(markup)
+  assert.deepEqual(values.slice(0, 3).map(cell => cell.rate), ['3', '15', '40'])
+  values.slice(0, 3).forEach((cell, index) => assert.ok(Math.abs(Number.parseFloat(cell.intensity) - [4, 20, 40][index]) < 1e-12))
+  assert.equal(values[3].tied, true)
+  assert.equal(values[3].rate, '0')
+  assert.equal(values[3].color, undefined)
+  assert.equal(values[4].colored, false)
+  assert.equal(values[4].rate, undefined)
+  assert.equal(values[5].tied, true)
+  assert.equal(values[5].rate, '0')
+  assert.match(markup, /次点への増加率3%の命中内訳を表示/)
+  assert.match(markup, /次点の総ダメージが0のため増加率を算出できません/)
+  assert.match(markup, /次点への増加率 0% ～ 30%以上/)
+  assert.equal((markup.match(/--surtr-total-damage-winner-scale-color:/g) ?? []).length, 2)
+  const image = render({ ...props, forImage: true })
+  assert.deepEqual(gapCells(image), values)
+  assert.match(image, /次点への増加率 0% ～ 30%以上/)
+  assert.doesNotMatch(image, /<button /)
+})
+
+test('gap shading uses module base hues instead of stage darkness and does not infer unknown types', () => {
+  const stages = [
+    { id: 'X1', label: 'MOD X Lv.1', color: '#82a6bd', type: 'X', level: 1 },
+    { id: 'X2', label: 'MOD X Lv.2', color: '#6091ad', type: 'X', level: 2 },
+    { id: 'Y1', label: 'MOD Y Lv.1', color: '#cea683', type: 'Y', level: 1 },
+  ]
+  const stageMatrix = { times: [25], resistances: [0, 60], series: stages, maximumTotalDamage: 120,
+    points: [[100, 110, 105], [100, 105, 120]].flatMap((totals, index) => stages.map((item, seriesIndex) => ({
+      time: 25, resistance: index * 60, seriesId: item.id, totalDamage: totals[seriesIndex],
+    }))) }
+  const props = { matrix: stageMatrix, displayMode: 'winner' }
+  assert.equal(gapCells(render(props))[0].color, '#6091ad')
+  const active = render({ ...props, winnerGapShading: true })
+  assert.deepEqual(gapCells(active).map(cell => cell.color), ['#3f7699', '#b4763e'])
+  assert.equal((active.match(/--surtr-total-damage-winner-scale-color:/g) ?? []).length, 2)
+  assert.match(active, /<span>MOD X<\/span>/)
+  assert.match(active, /<span>MOD Y<\/span>/)
+  const unknown = { ...stageMatrix, series: stages.map(item => ({ ...item, type: undefined })) }
+  assert.equal(gapCells(render({ ...props, matrix: unknown, winnerGapShading: true }))[0].color, '#776d7f')
+})

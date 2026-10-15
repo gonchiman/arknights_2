@@ -16,8 +16,10 @@ import {
   formatSurtrTotalDamageWinnerShortLabel,
   getSurtrTotalDamageSeriesShortLabel,
   getSurtrTotalDamageTablePoint,
+  getSurtrTotalDamageTableWinnerGap,
   getSurtrTotalDamageTableWinners,
   SURTR_TOTAL_DAMAGE_TABLE_MAXIMUM_CELLS,
+  SURTR_TOTAL_DAMAGE_WINNER_GAP_MAX_PERCENT,
   type SurtrTotalDamageTableComparison,
 } from '../src/lib/surtrTotalDamageTable.ts'
 import type { RawOperatorModule, SkillRecord } from '../src/types/skill.ts'
@@ -295,6 +297,101 @@ test('最大MODを短縮表示しても同値と段階を保ち、正式ラベ�
     { ...SURTR_TOTAL_DAMAGE_DEFAULT_ASSUMPTIONS, firstAttackStart: 20 })!
   assert.equal(formatSurtrTotalDamageWinnerShortLabel(getSurtrTotalDamageTableWinners(stageTie, 0, 0)
     .map(winner => winner.series)), 'X2＝X3')
+})
+
+test('最大と次点の差は未丸めの総ダメージから算出し、次点同率でも1系列を除いた2位を使う', () => {
+  const all = comparisons()
+  const table = buildSurtrTotalDamageTable([all[0], all[3], all[6]], [50], [0])!
+  ;[1000.001, 1000.002, 1000.001].forEach((value, index) => { table.points[index].totalDamage = value })
+  const before = structuredClone(table)
+  const gap = getSurtrTotalDamageTableWinnerGap(table, 0, 0)!
+  assert.equal(gap.runnerUpTotalDamage, 1000.001)
+  assert.ok(Math.abs(gap.absoluteDifference - 0.001) < 1e-10)
+  assert.ok(Math.abs(gap.increasePercent! - 0.001 / 1000.001 * 100) < 1e-10)
+  assert.deepEqual(table, before)
+  ;[150, 200, 150].forEach((value, index) => { table.points[index].totalDamage = value })
+  assert.deepEqual(getSurtrTotalDamageTableWinnerGap(table, 0, 0),
+    { runnerUpTotalDamage: 150, absoluteDifference: 50, increasePercent: 50 / 150 * 100 })
+})
+
+test('実際の50秒比較は術耐性0で約2.04%、100で約32.65%になり、指標自体は30%で切り詰めない', () => {
+  const all = comparisons()
+  const table = buildSurtrTotalDamageTable([all[0], all[3], all[6]], [50], [0, 100])!
+  const before = structuredClone(table)
+  const low = getSurtrTotalDamageTableWinnerGap(table, 0, 0)!
+  const high = getSurtrTotalDamageTableWinnerGap(table, 0, 1)!
+  assert.equal(low.runnerUpTotalDamage, 175273)
+  assert.equal(low.absoluteDifference, 3577)
+  assert.ok(Math.abs(low.increasePercent! - 100 / 49) < 1e-10)
+  assert.ok(Math.abs(high.runnerUpTotalDamage - 35054.6) < 1e-8)
+  assert.ok(Math.abs(high.absoluteDifference - 11446.4) < 1e-8)
+  assert.ok(Math.abs(high.increasePercent! - 3200 / 98) < 1e-10)
+  assert.equal(SURTR_TOTAL_DAMAGE_WINNER_GAP_MAX_PERCENT, 30)
+  assert.ok(high.increasePercent! > SURTR_TOTAL_DAMAGE_WINNER_GAP_MAX_PERCENT)
+  assert.deepEqual(table, before)
+})
+
+test('最大同率は下位の異なる値ではなく同率最大を次点にし、浮動小数点誤差内も差0・率0とする', () => {
+  const all = comparisons()
+  const table = buildSurtrTotalDamageTable([all[0], all[3], all[6]], [30, 40], [0])!
+  assert.deepEqual(getSurtrTotalDamageTableWinnerGap(table, 0, 0),
+    { runnerUpTotalDamage: 118041, absoluteDifference: 0, increasePercent: 0 })
+  assert.deepEqual(getSurtrTotalDamageTableWinnerGap(table, 1, 0),
+    { runnerUpTotalDamage: 146657, absoluteDifference: 0, increasePercent: 0 })
+  ;[0.3, 0.1 + 0.2, 0.2].forEach((value, index) => { table.points[index].totalDamage = value })
+  assert.deepEqual(getSurtrTotalDamageTableWinnerGap(table, 0, 0),
+    { runnerUpTotalDamage: 0.3, absoluteDifference: 0, increasePercent: 0 })
+  ;[0.1 + 0.2, 0.3, 0.2].forEach((value, index) => { table.points[index].totalDamage = value })
+  assert.deepEqual(getSurtrTotalDamageTableWinnerGap(table, 0, 0),
+    { runnerUpTotalDamage: 0.3, absoluteDifference: 0, increasePercent: 0 })
+})
+
+test('全0なら同率0%、次点0で最大が正なら率を定義せずInfinityも返さない', () => {
+  const all = comparisons()
+  const table = buildSurtrTotalDamageTable([all[0], all[3], all[6]], [0], [0],
+    { ...SURTR_TOTAL_DAMAGE_DEFAULT_ASSUMPTIONS, firstAttackStart: 20 })!
+  assert.deepEqual(getSurtrTotalDamageTableWinnerGap(table, 0, 0),
+    { runnerUpTotalDamage: 0, absoluteDifference: 0, increasePercent: 0 })
+  table.points[1].totalDamage = 100
+  assert.deepEqual(getSurtrTotalDamageTableWinnerGap(table, 0, 0),
+    { runnerUpTotalDamage: 0, absoluteDifference: 100, increasePercent: null })
+  table.points[0].totalDamage = 1
+  table.points[1].totalDamage = Number.MAX_VALUE
+  assert.deepEqual(getSurtrTotalDamageTableWinnerGap(table, 0, 0),
+    { runnerUpTotalDamage: 1, absoluteDifference: Number.MAX_VALUE, increasePercent: null })
+})
+
+test('比較対象が不足する場合やセルが不完全・不正な場合は差を確定しない', () => {
+  const all = comparisons()
+  const single = buildSurtrTotalDamageTable([all[3]], [50], [0])!
+  assert.equal(getSurtrTotalDamageTableWinnerGap(single, 0, 0), null)
+  assert.equal(getSurtrTotalDamageTableWinnerGap({ ...single, series: [], points: [] }, 0, 0), null)
+  const table = buildSurtrTotalDamageTable([all[3], all[6]], [50], [0])!
+  for (const invalid of [NaN, Infinity, -Infinity, -1]) {
+    const invalidTable = structuredClone(table)
+    invalidTable.points[1].totalDamage = invalid
+    assert.equal(getSurtrTotalDamageTableWinnerGap(invalidTable, 0, 0), null)
+  }
+  const missing = structuredClone(table)
+  missing.points.pop()
+  assert.equal(getSurtrTotalDamageTableWinnerGap(missing, 0, 0), null)
+  const mismatched = structuredClone(table)
+  mismatched.points[1].seriesId = 'different'
+  assert.equal(getSurtrTotalDamageTableWinnerGap(mismatched, 0, 0), null)
+  assert.equal(getSurtrTotalDamageTableWinnerGap(table, 1, 0), null)
+  assert.equal(getSurtrTotalDamageTableWinnerGap(table, 0, -1), null)
+})
+
+test('全段階比較では次点も選択した系列から取り、X3の次点がX2になる場合がある', () => {
+  const all = comparisons()
+  const table = buildSurtrTotalDamageTable(all, [50], [100])!
+  const gap = getSurtrTotalDamageTableWinnerGap(table, 0, 0)!
+  assert.equal(getSurtrTotalDamageTableWinners(table, 0, 0)[0].series.id, all[3].id)
+  assert.equal(gap.runnerUpTotalDamage, getSurtrTotalDamageTablePoint(table, 0, 0, 2)!.totalDamage)
+  assert.equal(gap.runnerUpTotalDamage, 42312)
+  assert.ok(gap.increasePercent! < 10)
+  const typesOnly = buildSurtrTotalDamageTable([all[0], all[3], all[6]], [50], [100])!
+  assert.ok(gap.increasePercent! < getSurtrTotalDamageTableWinnerGap(typesOnly, 0, 0)!.increasePercent!)
 })
 
 // Compact fixture matching existing Surtr DPS/Remnant test source data.

@@ -1,6 +1,7 @@
 import { createChartImageFilename, formatChartFilenameValues, withChartImageAspect } from './chartImageFilename.ts'
 import type { SurtrTotalDamageAssumptions } from './surtrTotalDamage.ts'
 import type { SurtrTotalDamageTableDisplayMode, SurtrTotalDamageTableLayout, SurtrTotalDamageWinnerColor } from './surtrTotalDamageTable.ts'
+import { SURTR_TOTAL_DAMAGE_WINNER_GAP_MAX_PERCENT } from './surtrTotalDamageTable.ts'
 import {
   DEFAULT_SURTR_TOTAL_DAMAGE_TABLE_TITLE_SIZE, DEFAULT_SURTR_TOTAL_DAMAGE_TABLE_DETAIL_SIZE,
   type SurtrTotalDamageTableTitleSize, type SurtrTotalDamageTableDetailSize,
@@ -25,6 +26,7 @@ export interface SurtrTotalDamageTableImageFilenameOptions {
   colorScale: 'none' | 'LINEAR' | 'SQRT'
   displayMode?: SurtrTotalDamageTableDisplayMode
   winnerColor?: SurtrTotalDamageWinnerColor
+  winnerGapShading?: boolean
   titleSize?: SurtrTotalDamageTableTitleSize
   detailSize?: SurtrTotalDamageTableDetailSize
 }
@@ -45,6 +47,8 @@ export function getSurtrTotalDamageTableImageFilename(
   return withChartImageAspect(createChartImageFilename(winner ? 'スルト_S3最大ダメージMOD表' : 'スルト_S3総ダメージ表', [
     layout,
     metadata.skillLabel,
+    ...(winner && options.winnerGapShading && options.winnerColor !== 'none' && options.series.length >= 2
+      ? [`差濃淡0-${SURTR_TOTAL_DAMAGE_WINNER_GAP_MAX_PERCENT}%以上`] : []),
     ...(options.titleSize !== undefined || options.detailSize !== undefined
       ? [`文字${options.titleSize ?? DEFAULT_SURTR_TOTAL_DAMAGE_TABLE_TITLE_SIZE}-${options.detailSize ?? DEFAULT_SURTR_TOTAL_DAMAGE_TABLE_DETAIL_SIZE}px`] : []),
     `術耐性${formatChartFilenameValues(options.resistances)}`,
