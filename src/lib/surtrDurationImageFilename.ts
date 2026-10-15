@@ -10,12 +10,14 @@ export interface SurtrDurationImageConditions {
   /** Complete saved-line conditions, used when external actions or multiple builds are compared. */
   comparisonConditions?: readonly string[]
   chartRange?: SurtrDurationChartRange
+  colors?: readonly string[]
 }
 
 export function getSurtrDurationImageFilename(settings: SurtrDurationImageConditions): string {
   const range = settings.chartRange ? [settings.chartRange === 'remnant' ? '素質2発動まで' : '退場まで'] : []
+  const colors = settings.colors?.length ? [`配色${settings.colors.map(color => color.replace(/^#/, '').toLowerCase()).join('-')}`] : []
   if (settings.comparisonConditions?.length) return createChartImageFilename('スルト_S3_継続時間', [
-    ...range, ...settings.comparisonConditions, '0.2秒刻み推定', 'HP推移',
+    ...range, ...colors, ...settings.comparisonConditions, '0.2秒刻み推定', 'HP推移',
   ])
   return createChartImageFilename('スルト_S3_継続時間', [
     ...range,
@@ -27,6 +29,7 @@ export function getSurtrDurationImageFilename(settings: SurtrDurationImageCondit
     '外部回復なし',
     '被ダメージなし',
     '外部HPバフなし',
+    ...colors,
     '0.2秒刻み推定',
     'HP推移',
   ])

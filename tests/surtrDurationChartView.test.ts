@@ -166,3 +166,55 @@ test('空の系列配列には空配列を返す', () => {
   assert.deepEqual(prepareSurtrDurationChartSeries([], 'remnant'), [])
   assert.deepEqual(prepareSurtrDurationChartSeries([], 'retreat'), [])
 })
+
+test('自傷の直前の点だけを除き、同時刻や非同期の被ダメージ・回復は垂直な段差として残す', () => {
+  const result = calculateSurtrDurationCombat(model, [
+    { id: 'enemy', kind: 'damage', amount: 186, interval: 2, firstTime: 2, count: 1 },
+    { id: 'healer', kind: 'heal', amount: 407, interval: 2.85, firstTime: 2, count: 1 },
+  ])!
+  const original = structuredClone(result)
+  for (const range of ['remnant', 'retreat'] as const) {
+    const [prepared] = prepareSurtrDurationChartSeries([result], range)
+    const samples = (time: number) => prepared.points.filter(point => point.time === time)
+    assert.deepEqual(samples(0.8), result.points.filter(point => point.time === 0.8).slice(1))
+    assert.deepEqual(samples(2), result.points.filter(point => point.time === 2).slice(1))
+    assert.equal(samples(2).length, 3, 'self-drain result, enemy hit, then heal all remain')
+    assert.ok(samples(2)[1].hpPercent < samples(2)[0].hpPercent)
+    assert.ok(samples(2)[2].hpPercent > samples(2)[1].hpPercent)
+    assert.deepEqual(samples(4.85), result.points.filter(point => point.time === 4.85))
+    assert.equal(samples(4.85).length, 2, 'non-tick healing keeps its before/after pair')
+    assert.equal(prepared.remnantStart, result.remnantStart)
+    assert.equal(prepared.retreatTime, result.retreatTime)
+    assert.equal(prepared.events, result.events)
+    assert.equal(prepared.triggerHp, 1 / model.maxHp * 100)
+  }
+  assert.deepEqual(result, original, 'calculation points, events, and table inputs are untouched')
+})
+
+test('初期3条件の発動時刻と終点を維持し、灰色の既存描画データは変えない', () => {
+  const results = [calculateSurtrDurationCombat(model, [])!,
+    calculateSurtrDurationCombat(model, [{ id: 'enemy', kind: 'damage', amount: 186, interval: 2, firstTime: 2, count: 1 }])!,
+    calculateSurtrDurationCombat(model, [{ id: 'healer', kind: 'heal', amount: 407, interval: 2.85, firstTime: 2.85, count: 1 }])!]
+  const originals = structuredClone(results)
+  const prepared = prepareSurtrDurationChartSeries(results, 'remnant')
+  assert.deepEqual(prepared.map(item => item.displayEnd), [25, 22, 30.2])
+  assert.deepEqual(prepared.map(item => item.points.at(-1)?.time), [25, 22, 30.2])
+  assert.deepEqual(prepared[0].points, results[0].points.filter(point => point.time <= 25))
+  assert.deepEqual(prepareSurtrDurationChartSeries([results[0]], 'retreat')[0].points, results[0].points)
+  assert.ok(prepared[1].points.length < results[1].points.filter(point => point.time <= 22).length)
+  assert.ok(prepared[2].points.length < results[2].points.filter(point => point.time <= 30.2).length)
+  assert.deepEqual(results, originals)
+})
+
+test('イベント情報のない旧データや一致しない情報から自傷を推測して点を削らない', () => {
+  const points = [{ time: 0, hpPercent: 100 }, { time: 2, hpPercent: 100 },
+    { time: 2, hpPercent: 90 }, { time: 4, hpPercent: 90 }]
+  const base = fixture({ remnantStart: null, retreatTime: null, endTime: 4, points })
+  const event = { time: 2, kind: 'drain', hpBefore: 100, hpAfter: 90, maxHp: 100 } as const
+  for (const events of [undefined, [{ ...event, kind: 'damage' as const }],
+    [{ ...event, hpBefore: 95 }], [{ ...event, hpAfter: NaN }], [{ ...event, maxHp: 0 }],
+    [{ ...event, kind: 'heal' as const }, event]]) {
+    const [prepared] = prepareSurtrDurationChartSeries([{ ...base, events }], 'retreat')
+    assert.deepEqual(prepared.points, points)
+  }
+})

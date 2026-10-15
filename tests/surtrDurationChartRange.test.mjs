@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 
-let server, chart
+let server, chart, calculateSurtrDurationCombat
 before(async () => {
   server = await createServer({
     configFile: false, plugins: [react()], cacheDir: 'node_modules/.vite/surtr-duration-range-test',
@@ -13,6 +13,7 @@ before(async () => {
     server: { middlewareMode: true, watch: null, preTransformRequests: false, hmr: false }, appType: 'custom',
   })
   chart = await server.ssrLoadModule('/src/components/SurtrDurationChart.tsx')
+  ;({ calculateSurtrDurationCombat } = await server.ssrLoadModule('/src/lib/surtrDurationCombat.ts'))
 })
 after(async () => { await server?.close() })
 
@@ -48,6 +49,66 @@ const directLabels = markup => [...markup.matchAll(/<g\b[^>]*class="surtr-durati
     return { x: Number(attr(textTag, 'x')), y: Number(attr(textTag, 'y')), value }
   })
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} ≈ ${expected}`)
+
+test('screen, PNG and preview connect self-drain while preserving every external jump and trigger order', () => {
+  const model = { moduleId: '', moduleType: null, moduleLevel: 0,
+    skillName: 'ラグナロク', skillLevelIndex: 9, skillLevelLabel: '特化3', calculationKind: 'tick-estimate',
+    baseMaxHp: 2916, skillHpBonus: 5000, maxHp: 7916, activationDelay: .6,
+    drainInterval: .2, rampDuration: 60, maxDrainRate: .2, remnantDuration: 8 }
+  const result = calculateSurtrDurationCombat(model, [
+    { id: 'enemy', kind: 'damage', amount: 2000, interval: 1, firstTime: 1, count: 1 },
+    { id: 'healer', kind: 'heal', amount: 250, interval: 1, firstTime: 1, count: 1 },
+  ], 30)
+  assert.ok(result)
+  assert.equal(result.remnantStart, 5)
+  assert.equal(result.retreatTime, 13)
+  const series = [{ id: 'combat', label: '敵と回復あり', color: '#417b8c', ...result }]
+  const original = structuredClone(series)
+  const triggerEventIndex = result.events.findIndex(event => event.kind === 'remnant-start')
+  assert.ok(triggerEventIndex > 0)
+  assert.equal(result.events[triggerEventIndex + 1].kind, 'heal', 'the trigger shares a timestamp with later healing')
+  for (const component of [chart.SurtrDurationChart, chart.SurtrDurationChartImage, chart.SurtrDurationChartImagePreview]) {
+    for (const range of ['remnant', 'retreat']) {
+      const markup = render(component, { series, range })
+      const plot = bounds(markup)
+      const maximumTime = ticks(markup).at(-1)
+      const coordinates = pathCoordinates(markup)[0]
+      const points = Array.from({ length: coordinates.length / 2 }, (_, index) => ({ x: coordinates[index * 2], y: coordinates[index * 2 + 1] }))
+      const x = time => plot.left + time / maximumTime * (plot.right - plot.left)
+      const y = hpPercent => plot.bottom - hpPercent / 100 * (plot.bottom - plot.top)
+      const close = (left, right) => Math.abs(left - right) < 1e-8
+      const hasVerticalSegment = (time, before, after) => points.some((point, index) => index > 0
+        && close(points[index - 1].x, x(time)) && close(point.x, x(time))
+        && close(points[index - 1].y, y(before)) && close(point.y, y(after)))
+      const events = range === 'remnant' ? result.events.slice(0, triggerEventIndex + 1) : result.events
+      const external = events.filter(event => ['damage', 'heal'].includes(event.kind) && event.appliedAmount > 0)
+      assert.ok(external.length >= 9)
+      for (const event of external) {
+        assert.ok(hasVerticalSegment(event.time, event.hpBefore / event.maxHp * 100, event.hpAfter / event.maxHp * 100),
+          `${component.name}/${range}: preserve ${event.kind} at ${event.time}`)
+      }
+      const drains = events.filter(event => event.kind === 'drain' && event.appliedAmount > 0)
+      assert.ok(drains.length > 15)
+      for (const event of drains) {
+        assert.equal(hasVerticalSegment(event.time, event.hpBefore / event.maxHp * 100, event.hpAfter / event.maxHp * 100), false,
+          `${component.name}/${range}: smooth self-drain at ${event.time}`)
+      }
+      const endpointTime = range === 'remnant' ? result.remnantStart : result.endTime
+      near(points.at(-1).x, x(endpointTime))
+      const trigger = tags(eventGroups(markup)[0], 'circle')[0]
+      near(Number(attr(trigger, 'cx')), x(result.remnantStart))
+      near(Number(attr(trigger, 'cy')), y(1 / model.maxHp * 100))
+      if (range === 'remnant') {
+        near(points.at(-1).y, y(1 / model.maxHp * 100))
+        assert.deepEqual(directLabels(markup).map(label => label.value), ['5秒'])
+      } else {
+        near(points.at(-1).y, y(result.points.at(-1).hpPercent))
+        assert.match(eventGroups(markup)[0], /退場 13 秒/)
+      }
+    }
+  }
+  assert.deepEqual(series, original)
+})
 
 test('live chart, PNG and preview stop at Remnant with matching endpoint times and no retreat marks', () => {
   const series = [makeSeries()]

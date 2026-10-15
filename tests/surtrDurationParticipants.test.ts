@@ -3,6 +3,9 @@ import test from 'node:test'
 import type { EnemyRecord } from '../src/types/enemy.ts'
 import type { OperatorCombatProfile, RawSkillLevel, SkillRecord } from '../src/types/skill.ts'
 import { classifySkill } from '../src/lib/classifier.ts'
+import { createSurtrDurationInitialLines } from '../src/lib/surtrDurationComparison.ts'
+import { deriveSurtrDurationModel } from '../src/lib/surtrDuration.ts'
+import { calculateSurtrDurationCombat } from '../src/lib/surtrDurationCombat.ts'
 import {
   createSurtrDurationCondition,
   createSurtrDurationEnemyParticipant,
@@ -21,6 +24,52 @@ test('初期条件は従来の育成条件で、外部ダメージ・回復な�
   assert.deepEqual(derived.actions, [])
   assert.equal(derived.defense, 414)
   assert.equal(derived.magicResistance, 15)
+})
+
+test('初期比較は外部作用なし・サルカズ大剣士・アンセル通常回復を独立した3本で用意する', () => {
+  const record = surtr()
+  const records = healers()
+  const foe = enemy('enemy_1010_demon', 'PHYSIC', 600)
+  foe.stats.attackSpeed = 100
+  const original = structuredClone({ record, records, foe })
+  const lines = createSurtrDurationInitialLines(record, records)
+  assert.deepEqual(lines.map(line => line.id), ['baseline', 'default-sarkaz', 'default-ansel'])
+  assert.ok(lines.every(line => line.visible && line.timeLimit === 120 && !line.condition.moduleId))
+  assert.ok(lines.every(line => !/^line-\d+$/.test(line.id)))
+  assert.equal(lines[0].condition.healers.length + lines[0].condition.enemies.length, 0)
+  assert.deepEqual(lines[2].condition.healers[0], {
+    id: 'default-ansel-healer', operatorId: 'char_212_ansel', phaseIndex: 1, level: 55,
+    trust: 100, potential: 1, skillId: '', skillLevelIndex: 6, firstTime: 2.85, skillStart: 0,
+  })
+  assert.equal(lines[2].condition.enemies.length, 0)
+  assert.deepEqual(lines[1].condition.enemies[0], {
+    id: 'default-sarkaz-enemy', enemyId: 'enemy_1010_demon', count: 1, firstTime: 2,
+  })
+  assert.equal(lines[1].condition.healers.length, 0)
+  const triggers = lines.map(line => {
+    const participants = deriveSurtrDurationParticipants(record, line.condition, [foe], records)
+    assert.deepEqual(participants.unsupportedReasons, [])
+    const model = deriveSurtrDurationModel(record, line.condition.settings, line.condition.moduleId, line.condition.moduleLevel)!
+    return calculateSurtrDurationCombat(model, participants.actions, line.timeLimit)?.remnantStart
+  })
+  assert.deepEqual(triggers, [25, 22, 30.2])
+  lines[2].condition.settings.level = 60
+  assert.equal(lines[0].condition.settings.level, 90)
+  assert.equal(lines[1].condition.settings.level, 90)
+  assert.deepEqual({ record, records, foe }, original)
+})
+
+test('初期線は敵カタログを待たず固定IDを持ち、アンセル欠落時は別の回復役へ置き換えない', () => {
+  const record = surtr()
+  const unrelatedHealers = healers().filter(item => item.operatorId !== 'char_212_ansel')
+  const first = createSurtrDurationInitialLines(record, unrelatedHealers)
+  const again = createSurtrDurationInitialLines(record, unrelatedHealers)
+  assert.deepEqual(first.map(line => line.id), ['baseline', 'default-sarkaz'])
+  assert.deepEqual(first, again)
+  assert.ok(first.every(line => line.condition.healers.length === 0))
+  assert.equal(first[1].condition.enemies[0].enemyId, 'enemy_1010_demon')
+  first.splice(1, 1)
+  assert.equal(again.length, 2)
 })
 
 test('通常攻撃は物理防御・術耐性・最低保証・速度と体数を別々に反映', () => {

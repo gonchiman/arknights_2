@@ -1,13 +1,31 @@
 import type { EnemyRecord } from '../types/enemy.ts'
 import type { SkillRecord } from '../types/skill.ts'
 import { getOperatorModuleId, getOperatorModules } from './operatorModules.ts'
-import type { SurtrDurationCondition } from './surtrDurationParticipants.ts'
+import { createSurtrDurationCondition, createSurtrDurationHealerParticipant, type SurtrDurationCondition } from './surtrDurationParticipants.ts'
 
 export interface SurtrDurationComparisonLine {
   id: string
   condition: SurtrDurationCondition
   timeLimit: number
   visible: boolean
+}
+
+export function createSurtrDurationInitialLines(record: SkillRecord, skills: readonly SkillRecord[]): SurtrDurationComparisonLine[] {
+  const baseline = createSurtrDurationCondition(record)
+  const lines: SurtrDurationComparisonLine[] = [{ id: 'baseline', condition: baseline, timeLimit: 120, visible: true }]
+  const enemyCondition = createSurtrDurationCondition(record)
+  // Seed the catalog identity before enemy data resolves, so early edits cannot
+  // freeze an incomplete default set. Its actual stats still come from the catalog.
+  enemyCondition.enemies = [{ id: 'default-sarkaz-enemy', enemyId: 'enemy_1010_demon', count: 1, firstTime: 2 }]
+  lines.push({ id: 'default-sarkaz', condition: enemyCondition, timeLimit: 120, visible: true })
+  const anselRecord = skills.find(skill => skill.operatorId === 'char_212_ansel')
+  const healer = anselRecord ? createSurtrDurationHealerParticipant([anselRecord], 'char_212_ansel', 'default-ansel-healer') : null
+  if (healer) {
+    const condition = createSurtrDurationCondition(record)
+    condition.healers = [healer]
+    lines.push({ id: 'default-ansel', condition, timeLimit: 120, visible: true })
+  }
+  return lines
 }
 
 const number = (value: number) => new Intl.NumberFormat('ja-JP', { useGrouping: false, maximumFractionDigits: 3 }).format(value)
@@ -23,6 +41,7 @@ export function getSurtrDurationConditionName(
   condition: SurtrDurationCondition,
   enemies: readonly EnemyRecord[],
   skills: readonly SkillRecord[],
+  options: { includeModule?: boolean } = {},
 ): string {
   const custom = condition.name.trim()
   if (custom) return custom
@@ -34,7 +53,8 @@ export function getSurtrDurationConditionName(
       return `${healer?.operatorName ?? '回復役'} ${skill ? `S${skill.skillIndex}（発動${number(item.skillStart)}秒）` : `通常（初回${number(item.firstTime)}秒）`}`
     }),
   ]
-  return [getSurtrDurationModuleLabel(record, condition), actors.length ? actors.join('＋') : '外部作用なし'].join('・')
+  const name = actors.length ? actors.join('＋') : '外部作用なし'
+  return options.includeModule === false ? name : `${getSurtrDurationModuleLabel(record, condition)}・${name}`
 }
 
 /** Readable snapshot metadata shared by table export and graph filenames. */

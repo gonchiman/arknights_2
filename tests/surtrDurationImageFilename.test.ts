@@ -43,3 +43,18 @@ test('duration graph range remains identifiable when long conditions are shorten
     assert.match(name, /ほか\d+項目_比率16x9\.png$/)
   }
 })
+
+test('duration graph filenames follow visible colors in comparison order', () => {
+  const colors = ['#737982', '#b4763e', '#417b8c']
+  const name = getSurtrDurationImageFilename({ ...settings, colors })
+  assert.match(name, /配色737982-b4763e-417b8c/)
+  assert.equal(name, getSurtrDurationImageFilename({ ...settings, colors: colors.map(color => color.toUpperCase()) }))
+  assert.notEqual(name, getSurtrDurationImageFilename({ ...settings, colors: [...colors].reverse() }))
+  assert.notEqual(name, getSurtrDurationImageFilename({ ...settings, colors: colors.slice(0, 2) }))
+  assert.notEqual(name, getSurtrDurationImageFilename({ ...settings, colors: ['#123456', ...colors.slice(1)] }))
+  const comparisonConditions = Array.from({ length: 16 }, (_, index) => `比較${index + 1}・アンセル通常初回2.85秒・サルカズ大剣士初回2秒`)
+  const longName = getSurtrDurationImageFilename({ ...settings, chartRange: 'remnant', comparisonConditions, colors })
+  assert.match(longName, /素質2発動まで_配色737982-b4763e-417b8c_/)
+  assert.notEqual(longName, getSurtrDurationImageFilename({ ...settings, chartRange: 'remnant', comparisonConditions,
+    colors: ['#123456', ...colors.slice(1)] }))
+})
