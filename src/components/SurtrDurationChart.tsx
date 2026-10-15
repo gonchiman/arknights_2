@@ -10,16 +10,18 @@ export interface SurtrDurationSeries {
   id: string
   label: string
   color: string
-  remnantStart: number
+  styleIndex?: number
+  remnantStart: number | null
   remnantDuration: number
-  retreatTime: number
+  retreatTime: number | null
+  endTime?: number
   points: { time: number; hpPercent: number }[]
 }
 
 export interface SurtrDurationChartProps {
   series: SurtrDurationSeries[]
   title?: string
-  selection?: { time: number; hpPercent: number | null }
+  selection?: { time: number; hpPercent: number | null; seriesId?: string }
 }
 
 export interface SurtrDurationChartImageProps extends Omit<SurtrDurationChartProps, 'selection'> {
@@ -32,7 +34,7 @@ export interface SurtrDurationChartImageProps extends Omit<SurtrDurationChartPro
 const NATURAL_CHART_HEIGHT = 334
 const AXIS_TITLE_FONT = '700 12px "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif'
 const AXIS_TITLE_LINE_HEIGHT = 16
-const DASH_PATTERNS = [undefined, '8 5', '2 5', '10 4 2 4'] as const
+const DASH_PATTERNS = [undefined, '8 5', '2 5', '10 4 2 4', '14 5', '5 3 2 3', '12 3 3 3', '3 3 9 3 3 3'] as const
 const seconds = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 
 export function getSurtrDurationImageLabelDefaults(
@@ -42,11 +44,12 @@ export function getSurtrDurationImageLabelDefaults(
 }
 
 function normalizeSeries(series: SurtrDurationSeries[]) {
-  return series.filter((item) => Number.isFinite(item.remnantStart) && item.remnantStart >= 0
+  return series.filter((item) => (item.remnantStart === null || Number.isFinite(item.remnantStart) && item.remnantStart >= 0)
     && Number.isFinite(item.remnantDuration) && item.remnantDuration >= 0
-    && Number.isFinite(item.retreatTime) && item.retreatTime >= item.remnantStart)
+    && (item.retreatTime === null || Number.isFinite(item.retreatTime) && item.retreatTime >= (item.remnantStart ?? 0))
+    && Number.isFinite(item.endTime ?? item.retreatTime) && (item.endTime ?? item.retreatTime ?? -1) >= 0)
     .map((item) => ({ ...item, points: item.points.filter((point) => Number.isFinite(point.time)
-      && Number.isFinite(point.hpPercent) && point.time >= 0 && point.time <= item.retreatTime)
+      && Number.isFinite(point.hpPercent) && point.time >= 0 && point.time <= (item.endTime ?? item.retreatTime ?? 0))
       .map((point) => ({ time: point.time, hpPercent: Math.max(0, Math.min(100, point.hpPercent)) }))
       .sort((a, b) => a.time - b.time) }))
 }
@@ -55,14 +58,14 @@ function SeriesSwatch({ item, index, image = false }: { item: SurtrDurationSerie
   return <svg className={image ? 'chart-image-frame-legend-swatch' : 'surtr-duration-chart-swatch'}
     width="18" height="12" aria-hidden="true">
     <line x1="0" x2="18" y1="6" y2="6" stroke={item.color} strokeWidth="2"
-      strokeDasharray={DASH_PATTERNS[index % DASH_PATTERNS.length]} />
+      strokeDasharray={DASH_PATTERNS[(item.styleIndex ?? index) % DASH_PATTERNS.length]} />
   </svg>
 }
 
 function ChartLegend({ series, image = false }: { series: SurtrDurationSeries[]; image?: boolean }) {
   const listClass = image ? 'chart-image-frame-legend-list' : 'surtr-duration-chart-legend'
   const itemClass = image ? 'chart-image-frame-legend-item' : undefined
-  return <ul className={listClass} aria-label="装備">
+  return <ul className={listClass} aria-label="比較線">
     {series.map((item, index) => <li className={itemClass} key={item.id}>
       <SeriesSwatch item={item} index={index} image={image} /><span>{item.label}</span>
     </li>)}
@@ -90,13 +93,13 @@ function SurtrDurationSvg({ series, title, selection, width, height, image = fal
   const titleOverflow = image ? Math.max(0, axisTitleLines.length - 1) * AXIS_TITLE_LINE_HEIGHT : 0
   const top = 48 + titleOverflow
   const bottom = height - 32
-  const largestTime = Math.max(1, ...series.map((item) => item.retreatTime))
+  const largestTime = Math.max(1, ...series.map((item) => item.endTime ?? item.retreatTime ?? 0))
   const tickStep = largestTime <= 50 ? 5 : largestTime <= 100 ? 10 : Math.ceil(largestTime / 50) * 10
   const maximumTime = Math.ceil(largestTime / tickStep) * tickStep
   const ticks = Array.from({ length: Math.round(maximumTime / tickStep) + 1 }, (_, index) => index * tickStep)
   const x = (time: number) => left + time / maximumTime * (right - left)
   const y = (hp: number) => bottom - hp / 100 * (bottom - top)
-  const summary = series.map((item) => `${item.label}：余燼発動まで ${seconds.format(item.remnantStart)} 秒、余燼中 ${seconds.format(item.remnantDuration)} 秒、退場まで ${seconds.format(item.retreatTime)} 秒`).join('。')
+  const summary = series.map((item) => `${item.label}：${item.remnantStart === null ? '計算範囲内に余燼未発動' : `余燼発動まで ${seconds.format(item.remnantStart)} 秒、余燼中 ${seconds.format(item.remnantDuration)} 秒`}、${item.retreatTime === null || item.retreatTime > (item.endTime ?? item.retreatTime) ? '計算範囲内に退場せず' : `退場まで ${seconds.format(item.retreatTime)} 秒`}`).join('。')
   const selectedTime = selection && series.length > 0 && Number.isFinite(selection.time)
     && selection.time >= 0 && selection.time <= maximumTime ? selection.time : null
   const selectedHp = selectedTime !== null && selection?.hpPercent !== null && selection?.hpPercent !== undefined
@@ -131,9 +134,9 @@ function SurtrDurationSvg({ series, title, selection, width, height, image = fal
 
   return <svg className="surtr-duration-chart-svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}
     role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
-    <title id={titleId}>{title}</title><desc id={descriptionId}>{summary ? summary + selectedSummary : '装備を選択してください。'}</desc>
+    <title id={titleId}>{title}</title><desc id={descriptionId}>{summary ? summary + selectedSummary : '比較線を追加してください。'}</desc>
     {series.length === 0 ? <text className="surtr-duration-chart-empty" x={width / 2} y={height / 2} textAnchor="middle">
-      装備を選択してください
+      比較線を追加してください
     </text> : <>
       <defs><clipPath id={clipId}><rect x={left - 2} y={top - 3} width={right - left + 4} height={bottom - top + 6} /></clipPath></defs>
       {ticks.map((tick) => <g key={tick}>
@@ -161,24 +164,24 @@ function SurtrDurationSvg({ series, title, selection, width, height, image = fal
       </g>}
       <g clipPath={`url(#${clipId})`}>{series.map((item, index) => <path key={item.id} className="surtr-duration-chart-line"
         d={item.points.map((point, pointIndex) => `${pointIndex === 0 ? 'M' : 'L'} ${x(point.time)} ${y(point.hpPercent)}`).join(' ')}
-        stroke={item.color} strokeDasharray={DASH_PATTERNS[index % DASH_PATTERNS.length]} />)}</g>
+        stroke={item.color} strokeDasharray={DASH_PATTERNS[(item.styleIndex ?? index) % DASH_PATTERNS.length]} />)}</g>
       {series.map((item, index) => {
         // Concentric markers preserve the true coordinates when several builds have the same event time.
         const radius = 4 + index * 2.5
-        const lastPointBeforeTrigger = item.points.filter((point) => point.time <= item.remnantStart).at(-1)
+        const lastPointBeforeTrigger = item.points.filter((point) => point.time <= (item.remnantStart ?? -1)).at(-1)
         const triggerHp = lastPointBeforeTrigger?.hpPercent ?? 0
         const retreatHp = item.points.at(-1)?.hpPercent ?? 0
         return <g key={item.id} className="surtr-duration-chart-events" fill="none" stroke={item.color} strokeWidth="1.75">
-          <circle cx={x(item.remnantStart)} cy={y(triggerHp)} r={radius}>
+          {item.remnantStart !== null && item.remnantStart <= (item.endTime ?? item.retreatTime ?? 0) && <circle cx={x(item.remnantStart)} cy={y(triggerHp)} r={radius}>
             <title>{`${item.label}・余燼発動 ${seconds.format(item.remnantStart)} 秒`}</title>
-          </circle>
-          <path d={`M ${x(item.retreatTime) - radius} ${y(retreatHp) - radius} l ${radius * 2} ${radius * 2} M ${x(item.retreatTime) + radius} ${y(retreatHp) - radius} l ${-radius * 2} ${radius * 2}`}>
+          </circle>}
+          {item.retreatTime !== null && item.retreatTime <= (item.endTime ?? item.retreatTime) && <path d={`M ${x(item.retreatTime) - radius} ${y(retreatHp) - radius} l ${radius * 2} ${radius * 2} M ${x(item.retreatTime) + radius} ${y(retreatHp) - radius} l ${-radius * 2} ${radius * 2}`}>
             <title>{`${item.label}・退場 ${seconds.format(item.retreatTime)} 秒`}</title>
-          </path>
+          </path>}
         </g>
       })}
       {selectedTime !== null && selectedHp !== null && <circle className="surtr-duration-chart-selection-point"
-        cx={x(selectedTime)} cy={y(selectedHp)} r="4.5" fill={series[0].color} stroke="#fff" strokeWidth="2">
+        cx={x(selectedTime)} cy={y(selectedHp)} r="4.5" fill={(series.find(item => item.id === selection?.seriesId) ?? series[0]).color} stroke="#fff" strokeWidth="2">
         <title>{`${seconds.format(selectedTime)} 秒・HP ${seconds.format(selectedHp)}%`}</title>
       </circle>}
     </>}
