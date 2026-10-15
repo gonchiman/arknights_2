@@ -25,6 +25,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['operators', 'operators'],
       ['skills', 'skills'],
       ['skill-classification', 'skill-classification'],
+      ['talent-classification', 'talent-classification'],
       ['skill-effects', 'skill-effects'],
       ['skill-summary', 'skill-summary'],
       ['skill-structure', 'skill-structure'],
@@ -56,6 +57,17 @@ test('スキル大分類は専用ページとして開き、既存スキル一�
   assert.deepEqual(parseHashRoute('#/skill-classification'), { view: 'skill-classification' })
   assert.deepEqual(parseHashRoute('#/skills'), { view: 'skills' })
   assert.deepEqual(parseHashRoute('#/skill-classification/extra'), { view: 'operators' })
+})
+
+test('素質大分類はスキル大分類の隣から独立したページとして開く', () => {
+  assert.deepEqual(parseHashRoute('#/talent-classification'), { view: 'talent-classification' })
+  const skillIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'skill-classification')
+  assert.deepEqual(APP_NAV_ITEMS[skillIndex + 1], {
+    id: 'talent-classification', href: '#/talent-classification', label: '素質大分類', description: '', section: 'analysis',
+  })
+  for (const suffix of ['/', '/extra', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/talent-classification${suffix}`), { view: 'operators' })
+  }
 })
 
 test('スキル効果の分解のURLはスキルとレベルを復元し、不正な選択を拒否する', () => {

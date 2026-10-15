@@ -4,6 +4,7 @@ export type AppRoute =
   | { view: 'home' }
   | { view: 'skills' }
   | { view: 'skill-classification' }
+  | { view: 'talent-classification' }
   | { view: 'skill-effects'; selection?: SkillEffectsRouteSelection }
   | { view: 'skill-summary'; selection?: SkillRouteSelection }
   | { view: 'skill-structure'; selection?: SkillRouteSelection }
@@ -175,6 +176,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/slide-maker') return { view: 'slide-maker' }
   if (hash === '#/skills') return { view: 'skills' }
   if (hash === '#/skill-classification') return { view: 'skill-classification' }
+  if (hash === '#/talent-classification') return { view: 'talent-classification' }
   return { view: 'operators' }
 }
 

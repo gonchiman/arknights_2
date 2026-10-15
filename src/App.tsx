@@ -31,6 +31,7 @@ import { PageBreadcrumbs, type PageBreadcrumbsProps } from './components/PageBre
 import type { OpenOperatorDetail } from './components/OperatorDetailLink'
 import { SkillDirectory } from './components/SkillDirectory'
 import { SkillCoarseClassificationPage } from './components/SkillCoarseClassificationPage'
+import { TalentCoarseClassificationPage } from './components/TalentCoarseClassificationPage'
 import { SkillEffectsPage } from './components/SkillEffectsPage'
 import { SkillSummaryPage } from './components/SkillSummaryPage'
 import { SkillStructurePage } from './components/SkillStructurePage'
@@ -397,6 +398,8 @@ export default function App() {
           />
         ) : displayedRoute.view === 'skill-classification' ? (
           <SkillCoarseClassificationPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
+        ) : displayedRoute.view === 'talent-classification' ? (
+          <TalentCoarseClassificationPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
         ) : displayedRoute.view === 'skill-effects' ? (
           <SkillEffectsPage
             rows={classifiedRows}
@@ -462,7 +465,7 @@ export default function App() {
       </div>
 
       {route.view === 'operator-detail' && detailBackgroundRoute && detailOperator && (
-        detailBackgroundRoute.view === 'skill-classification' ? <OperatorProfileModal
+        (detailBackgroundRoute.view === 'skill-classification' || detailBackgroundRoute.view === 'talent-classification') ? <OperatorProfileModal
           key={detailOperator.operatorId}
           operator={detailOperator}
           comparisonOperators={operatorRecords}
