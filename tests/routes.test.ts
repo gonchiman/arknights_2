@@ -171,7 +171,7 @@ test('Damage Calculator 3は計算機2の隣から独立したURLで開く', () 
   }
 })
 
-test('ダメージ検証は共通メニューとスルトのトップから同じ独立ページを開く', () => {
+test('ダメージ検証は共通メニューから開き、スルトのトップには表示しない', () => {
   assert.deepEqual(parseHashRoute(DAMAGE_VERIFICATION_ITEM.href), { view: 'damage-verification' })
   assert.deepEqual(DAMAGE_VERIFICATION_ITEM, {
     id: 'damage-verification',
@@ -182,7 +182,7 @@ test('ダメージ検証は共通メニューとスルトのトップから同�
   })
   const calculatorIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'damage-three')
   assert.equal(APP_NAV_ITEMS[calculatorIndex + 1], DAMAGE_VERIFICATION_ITEM)
-  assert.deepEqual(SURTR_HOME_ITEMS, [...SURTR_ANALYSIS_ITEMS, DAMAGE_VERIFICATION_ITEM])
+  assert.deepEqual(SURTR_HOME_ITEMS, SURTR_ANALYSIS_ITEMS)
   assert.equal(SURTR_ANALYSIS_ITEMS.some((item) => item.id === 'damage-verification'), false)
 
   for (const suffix of ['/', '/extra', '?from=surtr', '?operatorId=char_350_surtr', '-extra']) {
@@ -216,7 +216,7 @@ test('オペレーター分析は各オペレーターのトップをサイド�
       id: 'surtr-home',
       href: '#/analysis/surtr',
       label: 'スルト',
-      description: 'S3 DPS・継続時間・余燼中の攻撃回数',
+      description: 'S3 DPS・継続時間・総ダメージ・余燼の分析',
       section: 'operator-analysis',
     },
   ])
@@ -257,11 +257,11 @@ test('GGの既存の分析URLを引き続き開ける', () => {
 test('スルトの専用トップから各分析を開き、詳細URLと区別する', () => {
   assert.deepEqual(parseHashRoute(SURTR_HOME_LINK.href), { view: 'surtr-home' })
   assert.deepEqual(SURTR_ANALYSIS_ITEMS.map(({ id, href, label }) => [id, href, label, parseHashRoute(href).view]), [
-    ['surtr-s3', '#/analysis/surtr/s3', 'S3 DPS分析', 'surtr-s3'],
-    ['surtr-s3-comparison', '#/analysis/surtr/s3-comparison', 'S3 MOD・潜在比較', 'surtr-s3-comparison'],
+    ['surtr-s3', '#/analysis/surtr/s3', 'S3 DPS', 'surtr-s3'],
+    ['surtr-s3-comparison', '#/analysis/surtr/s3-comparison', 'S3 DPS比較（MOD・潜在）', 'surtr-s3-comparison'],
     ['surtr-duration', '#/analysis/surtr/duration', 'S3 継続時間', 'surtr-duration'],
     ['surtr-total-damage', '#/analysis/surtr/total-damage', 'S3 総ダメージ', 'surtr-total-damage'],
-    ['surtr-remnant-attacks', '#/analysis/surtr/remnant-attacks', '余燼中の攻撃回数', 'surtr-remnant-attacks'],
+    ['surtr-remnant-attacks', '#/analysis/surtr/remnant-attacks', '余燼中の攻撃・ダメージ', 'surtr-remnant-attacks'],
   ])
   assert.deepEqual(parseHashRoute('#/operators/char_350_surtr'), {
     view: 'operator-detail', operatorId: 'char_350_surtr',
