@@ -1,9 +1,13 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { EnemyRecord } from '../types/enemy'
 import type { SkillRecord } from '../types/skill'
 import { SURTR_OPERATOR_ID } from '../lib/surtrDps'
-import { deriveSurtrDurationModel, calculateSurtrDuration, type SurtrDurationSettings, type SurtrDurationResult } from '../lib/surtrDuration'
+import { deriveSurtrDurationModel } from '../lib/surtrDuration'
+import { calculateSurtrDurationCombat } from '../lib/surtrDurationCombat'
+import { createSurtrDurationCondition, deriveSurtrDurationParticipants, type SurtrDurationCondition } from '../lib/surtrDurationParticipants'
+import { describeSurtrDurationCondition, getSurtrDurationConditionName, getSurtrDurationFilenameParts, type SurtrDurationComparisonLine } from '../lib/surtrDurationComparison'
+import { loadEnemyRecords } from '../lib/enemyData'
 import { buildSurtrDurationTimeline, type SurtrDurationTableLayout } from '../lib/surtrDurationTimeline'
-import { getOperatorModuleId, getOperatorModuleLevels, getOperatorModules } from '../lib/operatorModules'
 import { getModuleComparisonColors } from '../lib/moduleColors'
 import { getSurtrDurationImageFilename } from '../lib/surtrDurationImageFilename'
 import { getSurtrDurationTableImageFilename, type SurtrDurationTableImageConditions } from '../lib/surtrDurationTableImageFilename'
@@ -19,6 +23,7 @@ import { ChartImageLabelEditor } from './ChartImageLabelEditor'
 import { SurtrDurationChart, SurtrDurationChartImage, SurtrDurationChartImagePreview,
   getSurtrDurationImageLabelDefaults, type SurtrDurationSeries } from './SurtrDurationChart'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
+import { SurtrDurationConditionEditor } from './SurtrDurationConditionEditor'
 import { SurtrDurationTimelineTable } from './SurtrDurationTimelineTable'
 import { SurtrDurationTableImagePreview, saveSurtrDurationTableImage, type SurtrDurationTableImageSnapshot } from './SurtrDurationTableImage'
 import './DamageCalculator.css'
@@ -26,7 +31,8 @@ import './SurtrS3Page.css'
 import './SurtrDurationPage.css'
 
 const skillLabel = (index: number) => index < 7 ? `ランク${index + 1}` : `特化${index - 6}`
-const seconds = (value: number) => `${value.toFixed(1)} 秒`
+const seconds = (value: number | null) => value === null ? '—' : `${value.toFixed(1)} 秒`
+const MAX_LINES = 8
 const formatHp = (value: number) => new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 }).format(value)
 interface ImageSnapshot {
   id: number
@@ -45,14 +51,21 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
   rows: readonly SkillRecord[]; loading: boolean; error: string | null; onRetry: () => void
 }) {
   const record = rows.find(row => row.operatorId === SURTR_OPERATOR_ID && row.skillIndex === 3)
-  const [skillLevelIndex, setSkillLevelIndex] = useState(9)
-  const [potential, setPotential] = useState(1)
-  const [selectedModuleId, setSelectedModuleId] = useState('')
-  const [moduleLevels, setModuleLevels] = useState<Record<string, number>>({})
+  const [draft, setDraft] = useState<SurtrDurationCondition | null>(null)
+  const [draftLimit, setDraftLimit] = useState(120)
+  const [savedLines, setSavedLines] = useState<SurtrDurationComparisonLine[] | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [tableLineId, setTableLineId] = useState('baseline')
+  const [enemyRows, setEnemyRows] = useState<EnemyRecord[]>([])
+  const [enemyLoading, setEnemyLoading] = useState(true)
+  const [enemyError, setEnemyError] = useState<string | null>(null)
+  const [enemyAttempt, setEnemyAttempt] = useState(0)
+  const [lineFeedback, setLineFeedback] = useState('')
+  const nextLine = useRef(0)
   const [timelineStep, setTimelineStep] = useState<1 | 5>(1)
   const [tablePrecision, setTablePrecision] = useState(2)
   const [tableLayout, setTableLayout] = useState<SurtrDurationTableLayout>('vertical')
-  const [timelineSelection, setTimelineSelection] = useState<{ result: SurtrDurationResult; time: number } | null>(null)
+  const [timelineSelection, setTimelineSelection] = useState<{ lineId: string; condition: SurtrDurationCondition; timeLimit: number; time: number } | null>(null)
   const [image, setImage] = useState<ImageSnapshot | null>(null)
   const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [saving, setSaving] = useState(false)
@@ -67,49 +80,85 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
   const saveInProgress = useRef(false)
   const nextSnapshot = useRef(0)
   const picker = getChartImageSavePicker()
-  const settings = useMemo<SurtrDurationSettings>(() => ({
-    level: record?.operatorProfile.phases[2]?.maxLevel ?? 90, trust: 100, potential,
-    skillLevelIndex: Math.min(skillLevelIndex, Math.max(0, (record?.skillLevels.length ?? 10) - 1)),
-  }), [record, potential, skillLevelIndex])
-  const choices = useMemo(() => [
-    { id: '', label: '未装備', type: null as string | null, levels: [] as number[] },
-    ...getOperatorModules(record?.operatorProfile ?? {}).flatMap((module, index) => {
-      const type = module.typeName2?.trim().toUpperCase()
-      return type === 'X' || type === 'Y'
-        ? [{ id: getOperatorModuleId(module, index), label: `MOD ${type}`, type, levels: getOperatorModuleLevels(module) }]
-        : []
-    }),
-  ], [record])
-  const selectedChoice = choices.find(choice => choice.id === selectedModuleId) ?? choices[0]
+  useEffect(() => {
+    let active = true
+    setEnemyLoading(true); setEnemyError(null)
+    void loadEnemyRecords().then(value => { if (active) setEnemyRows(value) })
+      .catch(cause => { if (active) setEnemyError(cause instanceof Error ? cause.message : '敵データを取得できませんでした。') })
+      .finally(() => { if (active) setEnemyLoading(false) })
+    return () => { active = false }
+  }, [enemyAttempt])
+  const initialCondition = useMemo(() => record ? createSurtrDurationCondition(record) : null, [record])
+  const currentDraft = draft ?? initialCondition
+  const lines = useMemo<SurtrDurationComparisonLine[]>(() => savedLines ?? (initialCondition
+    ? [{ id: 'baseline', condition: initialCondition, timeLimit: 120, visible: true }] : []), [savedLines, initialCondition])
   const comparison = useMemo(() => {
     if (!record) return []
-    const selected = [selectedChoice]
-    const colors = getModuleComparisonColors(selected.map(choice => ({ moduleType: choice.type, potential })))
-    return selected.map((choice, index) => {
-      const level = moduleLevels[choice.id] ?? choice.levels.at(-1) ?? 3
-      const model = deriveSurtrDurationModel(record, settings, choice.id, level)
-      return { id: choice.id || 'none', label: choice.id ? `${choice.label} Lv.${level}` : choice.label,
-        model, result: model ? calculateSurtrDuration(model) : null, color: colors[index] }
+    const calculations = lines.map(line => {
+      const model = deriveSurtrDurationModel(record, line.condition.settings, line.condition.moduleId, line.condition.moduleLevel)
+      const participants = deriveSurtrDurationParticipants(record, line.condition, enemyRows, rows)
+      const result = model && !participants.unsupportedReasons.length
+        ? calculateSurtrDurationCombat(model, participants.actions, line.timeLimit) : null
+      return { ...line, model, participants, result,
+        label: getSurtrDurationConditionName(record, line.condition, enemyRows, rows),
+        details: describeSurtrDurationCondition(record, line.condition, line.timeLimit, enemyRows, rows) }
     })
-  }, [record, selectedChoice, potential, moduleLevels, settings])
-  const series = useMemo<SurtrDurationSeries[]>(() => comparison.flatMap(item => item.result
-    ? [{ id: item.id, label: item.label, color: item.color, ...item.result }] : []), [comparison])
-  const calculation = comparison[0]
+    const colors = getModuleComparisonColors(calculations.map(line => ({
+      moduleType: line.model?.moduleType, moduleLevel: line.model?.moduleLevel,
+      potential: line.condition.settings.potential,
+    })), { shadeBy: 'moduleLevel' })
+    return calculations.map((line, index) => ({ ...line, color: colors[index], styleIndex: index }))
+  }, [record, lines, enemyRows, rows])
+  const series = useMemo<SurtrDurationSeries[]>(() => comparison.flatMap(item => item.result && item.visible
+    ? [{ id: item.id, label: item.label, color: item.color, styleIndex: item.styleIndex, ...item.result }] : []), [comparison])
+  const calculation = comparison.find(item => item.id === tableLineId) ?? comparison[0]
+  const settings = calculation?.condition.settings ?? initialCondition?.settings
+    ?? { level: 90, trust: 100, potential: 1, skillLevelIndex: 9 }
+  const potential = settings.potential
+  const label = skillLabel(settings.skillLevelIndex)
   const timelineRows = useMemo(() => calculation?.model && calculation.result
     ? buildSurtrDurationTimeline(calculation.model, calculation.result, timelineStep) : [], [calculation, timelineStep])
-  const selectedTimelineRow = timelineSelection?.result === calculation?.result
+  const selectedTimelineRow = timelineSelection?.lineId === calculation?.id
+    && timelineSelection?.condition === calculation?.condition && timelineSelection?.timeLimit === calculation?.timeLimit
     ? timelineRows.find(row => row.time === timelineSelection?.time) : undefined
-  const invalid = comparison.some(item => !item.result)
-  const label = skillLabel(settings.skillLevelIndex)
+  const invalid = !!calculation && !calculation.result
+  const validLimit = Number.isInteger(draftLimit) && draftLimit >= 1 && draftLimit <= 600
+  const resetDraft = () => { setDraft(initialCondition ? structuredClone(initialCondition) : null); setDraftLimit(120); setEditingId(null) }
+  const saveLine = () => {
+    if (!record || !currentDraft || !validLimit || (!editingId && lines.length >= MAX_LINES)) return
+    const condition = structuredClone(currentDraft)
+    const participants = deriveSurtrDurationParticipants(record, condition, enemyRows, rows)
+    const model = deriveSurtrDurationModel(record, condition.settings, condition.moduleId, condition.moduleLevel)
+    if (!model || participants.unsupportedReasons.length || !calculateSurtrDurationCombat(model, participants.actions, draftLimit)) return
+    const id = editingId ?? `line-${++nextLine.current}`
+    setSavedLines(editingId ? lines.map(line => line.id === id ? { ...line, condition, timeLimit: draftLimit } : line)
+      : [...lines, { id, condition, timeLimit: draftLimit, visible: true }])
+    setTableLineId(id)
+    setTimelineSelection(null)
+    setLineFeedback(`${getSurtrDurationConditionName(record, condition, enemyRows, rows)}を${editingId ? '更新' : '追加'}しました。`)
+    setEditingId(null)
+  }
+  const editLine = (line: SurtrDurationComparisonLine) => {
+    setDraft(structuredClone(line.condition)); setDraftLimit(line.timeLimit); setEditingId(line.id); setLineFeedback('')
+    document.getElementById('surtr-duration-settings')?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }
+  const removeLine = (id: string) => {
+    const remaining = lines.filter(line => line.id !== id)
+    setSavedLines(remaining)
+    if (tableLineId === id) { setTableLineId(remaining[0]?.id ?? ''); setTimelineSelection(null) }
+    if (editingId === id) resetDraft()
+  }
   const title = 'HPの推移（推定）'
   const aspectRatio = aspect.preset !== 'auto' && [aspect.width, aspect.height].every(value => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100)
     ? Number(aspect.width) / Number(aspect.height) : undefined
   const openImage = () => {
-    if (!series.length || invalid) return
+    if (!series.length) return
     setFeedback(null)
     setImage({ id: ++nextSnapshot.current, series,
-      title: `スルト S3 ${title}`, conditions: `${label}・潜在${potential}・外部回復なし`,
-      filename: getSurtrDurationImageFilename({ ...settings, skillLevelLabel: label, modules: series.map(item => item.label) }),
+      title: `スルト S3 ${title}`, conditions: `${[...new Set(comparison.filter(item => item.visible && item.result).map(item => skillLabel(item.condition.settings.skillLevelIndex)))].join('・')}・比較${series.length}条件`,
+      filename: getSurtrDurationImageFilename({ ...settings, skillLevelLabel: label, modules: series.map(item => item.label),
+        comparisonConditions: record ? comparison.filter(item => item.visible && item.result).flatMap(item =>
+          getSurtrDurationFilenameParts(record, item.condition, item.timeLimit, enemyRows, rows)) : [] }),
     })
   }
   const saveImage = async (filename: string, ratio?: number) => {
@@ -134,11 +183,10 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
     if (!timelineRows.length || !calculation?.model || invalid) return
     setTableImage(structuredClone({ id: ++nextSnapshot.current, rows: timelineRows, precision: tablePrecision, layout: tableLayout,
       title: 'スルト S3 HPの推移（推定）',
-      conditions: [
-        `昇進2 Lv.${settings.level}・信頼${settings.trust}・潜在${potential}・${label}・${calculation.label}`,
-        `外部回復なし・被ダメージなし・外部HPバフなし・準備${calculation.model.activationDelay}秒`,
-      ],
-      filenameOptions: { ...settings, skillLevelLabel: label, modules: [calculation.label], step: timelineStep, precision: tablePrecision, layout: tableLayout },
+      conditions: [calculation.label, ...calculation.details, `準備${calculation.model.activationDelay}秒`],
+      filenameOptions: { ...settings, skillLevelLabel: label, modules: [calculation.label],
+        comparisonConditions: record ? getSurtrDurationFilenameParts(record, calculation.condition, calculation.timeLimit, enemyRows, rows) : [],
+        step: timelineStep, precision: tablePrecision, layout: tableLayout },
     }))
     setTableFeedback(null); setTablePreviewReady(false); setTablePreviewError(null)
   }
@@ -170,7 +218,7 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
       <header className="page-intro"><h1 id="surtr-duration-title">S3 継続時間<span className="surtr-s3-subtitle">発動から退場まで</span></h1></header>
     </div>
     <CollapsibleCalculatorPanel id="surtr-duration-info" number="01" title="オペレーター情報" defaultOpen={false}
-      summary={`スルト・昇進2 Lv.${settings.level}・信頼100`} collapsedLabel="情報を表示">
+      summary={`スルト・昇進2 Lv.${settings.level}・信頼${settings.trust}`} collapsedLabel="情報を表示">
       {record ? <div className="surtr-s3-table-wrap"><table className="surtr-s3-table" aria-label="スルトのHPと余燼">
         <thead><tr><th scope="col">装備</th><th scope="col">発動前の最大HP</th><th scope="col">スキル中の最大HP</th><th scope="col">余燼の持続時間</th></tr></thead>
         <tbody>{comparison.map(item => <tr key={item.id}><th scope="row">{item.label}</th>
@@ -179,69 +227,78 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
         </tr>)}</tbody>
       </table></div> : status}
     </CollapsibleCalculatorPanel>
-    <CollapsibleCalculatorPanel id="surtr-duration-settings" number="02" title="計算設定" summary={`${label}・潜在${potential}・${comparison[0]?.label ?? selectedChoice.label}`} collapsedLabel="設定を表示">
-      {record ? <>
-        <div className="surtr-duration-fields">
-          <label className="calculator-field"><span>スキルレベル</span><select aria-label="スキルレベル" value={settings.skillLevelIndex} onChange={event => setSkillLevelIndex(Number(event.target.value))}>
-            {record.skillLevels.map((_, index) => <option key={index} value={index}>{skillLabel(index)}</option>)}
-          </select></label>
-          <label className="calculator-field"><span>潜在</span><select aria-label="潜在" value={potential} onChange={event => setPotential(Number(event.target.value))}>
-            {[1, 2, 3, 4, 5, 6].map(value => <option key={value} value={value}>潜在{value}</option>)}
-          </select></label>
-        </div>
-        <fieldset className="surtr-s3-mods surtr-duration-mods"><legend>MOD選択</legend>
-          <div className="surtr-s3-segments surtr-duration-module-buttons">
-            {choices.map(choice => <button key={choice.id} type="button" aria-pressed={selectedChoice.id === choice.id}
-              onClick={() => setSelectedModuleId(choice.id)}>{choice.label}</button>)}
-          </div>
-          <label className="surtr-duration-module-level"><span>レベル</span>
-            <select aria-label="MODレベル" disabled={!selectedChoice.id}
-              value={selectedChoice.id ? moduleLevels[selectedChoice.id] ?? selectedChoice.levels.at(-1) ?? 3 : ''}
-              onChange={event => setModuleLevels(previous => ({ ...previous, [selectedChoice.id]: Number(event.target.value) }))}>
-              {selectedChoice.id
-                ? selectedChoice.levels.map(level => <option key={level} value={level}>Lv.{level}</option>)
-                : <option value="">—</option>}
-            </select>
-          </label>
-        </fieldset>
-        <dl className="surtr-duration-baseline"><div><dt>外部回復</dt><dd>なし</dd></div><div><dt>被ダメージ</dt><dd>なし</dd></div><div><dt>外部HPバフ</dt><dd>なし</dd></div></dl>
-        <details className="surtr-s3-assumptions"><summary>計算条件</summary>
-          <p>S3の発動操作を0秒とし、準備時間0.6秒の後に最大HP増加・全回復を反映します。自動退場までを対象とし、手動撤退は含めません。</p>
-          <p>スキル中の最大HPに対し、毎秒の減少率が0から60秒で20%まで増えるモデルです。効果開始から0.2秒ごとにHPを減らし、致死量に達するとHP1で余燼へ移行します。</p>
-          <p>ゲームデータと公開されている挙動に基づく推定です。初回の減少タイミング、内部の丸め、余燼の発動・退場フレームは実機未検証です。HP推移は発動直前を全快とし、その時点の最大HPに対する割合で表示します。</p>
+    <CollapsibleCalculatorPanel id="surtr-duration-settings" number="02" title="線の条件"
+      summary={editingId ? '比較線を編集中' : '比較線を追加'} collapsedLabel="設定を表示">
+      {record && currentDraft ? <>
+        {enemyLoading && <p className="surtr-s3-status" role="status">敵データを読み込み中…</p>}
+        {enemyError && <div className="error-box" role="alert">{enemyError}<button type="button" className="button secondary" onClick={() => setEnemyAttempt(value => value + 1)}>再読み込み</button></div>}
+        <SurtrDurationConditionEditor key={editingId ?? 'new-line'} record={record} skillRows={rows} enemyRows={enemyRows}
+          value={currentDraft} onChange={setDraft} onSubmit={saveLine} submitLabel={editingId ? '線を更新' : '線を追加'}
+          onCancelEdit={editingId ? resetDraft : undefined} submitDisabled={!validLimit || !editingId && lines.length >= MAX_LINES}
+          footerFields={<label className="calculator-field surtr-duration-limit-field"><span>計算上限（秒）</span>
+            <input type="number" min={1} max={600} step={1} required value={Number.isNaN(draftLimit) ? '' : draftLimit}
+              onChange={event => setDraftLimit(event.target.value === '' ? NaN : Number(event.target.value))} /></label>} />
+        {!editingId && lines.length >= MAX_LINES && <p className="surtr-s3-status" role="status">比較線は{MAX_LINES}本まで追加できます。</p>}
+        {lineFeedback && <p className="surtr-s3-status" role="status">{lineFeedback}</p>}
+        <details className="surtr-s3-assumptions"><summary>計算条件・対応範囲</summary>
+          <p>S3の発動操作を0秒とし、準備時間0.6秒の後に最大HP増加・全回復を反映します。開始時は全快とし、外部HPバフと手動撤退は含めません。</p>
+          <p>最大HPに対する毎秒の減少率が0から60秒で20%まで増え、効果開始から0.2秒ごとにHPを減らす推定です。致死量に達するとHP1で余燼へ移行します。余燼中も回復しますが、発動時に決まった退場時刻は延長しません。</p>
+          <p>敵はデータ上の通常攻撃だけを繰り返します。スルトの防御力・術耐性とMODの加算値を反映し、敵の特殊能力、ステージ補正、敵の撃破、射程・攻撃対象の競合は計算しません。同じ行の敵は指定数が同時に攻撃します。</p>
+          <p>回復役はアンセル・ハイビスカス・ススーロに対応します。選択した育成とスキルを反映し、スルトだけを回復対象とします。回復役のMOD、外部バフ、配置による対象選択は計算しません。スキルは指定時刻に1回だけ発動し、SPは計算しません。</p>
+          <p>通常時とスキル中の最初の回復時刻をそれぞれ指定し、以後は各状態の回復間隔で繰り返します。スキル終了後は通常の回復間隔を1回待って再開します。状態切替時の実際の攻撃CTを再現するものではありません。</p>
+          <p>同時刻は退場、S3の全回復、自傷、敵の攻撃、味方の回復の順に処理します。初回の減少タイミング、内部の丸め、発動・退場フレームは実機未検証です。計算上限までに退場しなければ、その範囲での結果として表示します。</p>
           <p><a href="https://prts.wiki/w/%E5%8F%B2%E5%B0%94%E7%89%B9%E5%B0%94" target="_blank" rel="noreferrer">減少間隔・準備時間の参照元</a></p>
         </details>
       </> : status}
     </CollapsibleCalculatorPanel>
     <CollapsibleCalculatorPanel id="surtr-duration-output" number="03" title="計算結果" summary={title} collapsedLabel="結果を表示" className="surtr-s3-output-panel">
-      {!record ? status : invalid ? <p role="alert">計算に必要なデータを取得できませんでした。</p>
-        : !series.length ? <p className="surtr-s3-status" role="status">装備を選択してください。</p>
-          : <div className="surtr-s3-results-layout">
-            <section className="surtr-s3-chart-section" aria-labelledby="surtr-duration-chart-title">
-              <div className="surtr-s3-result-heading"><h3 id="surtr-duration-chart-title">{title}</h3>
-                <button type="button" className="button secondary" aria-label="グラフをPNG画像で保存" aria-haspopup="dialog" onClick={openImage}>画像を保存</button>
-              </div>
-              <div className="surtr-s3-chart-area"><SurtrDurationChart series={series} title={title} selection={selectedTimelineRow} /></div>
-            </section>
-            <div className="surtr-s3-table-wrap"><table className="surtr-s3-table surtr-duration-result-table" aria-label="S3発動から退場までの推定時間">
-              <thead><tr><th scope="col">装備</th><th scope="col">余燼発動まで</th><th scope="col">余燼中</th><th scope="col">退場まで</th></tr></thead>
-              <tbody>{series.map(item => <tr key={item.id}><th scope="row"><span className="surtr-s3-column-label"><i style={{ backgroundColor: item.color }} />{item.label}</span></th>
-                <td>{seconds(item.remnantStart)}</td><td>{seconds(item.remnantDuration)}</td><td><strong>{seconds(item.retreatTime)}</strong></td>
-              </tr>)}</tbody>
-            </table></div>
-          </div>}
+      {!record ? status : <div className="surtr-s3-results-layout">
+        <div className="surtr-s3-table-wrap"><table className="surtr-s3-table surtr-duration-lines-table" aria-label="比較線の一覧">
+          <thead><tr><th scope="col">表示</th><th scope="col">線名</th><th scope="col">余燼発動まで</th><th scope="col">余燼中</th><th scope="col">退場まで</th><th scope="col">操作</th></tr></thead>
+          <tbody>{comparison.map(item => <tr key={item.id}>
+            <td><input type="checkbox" aria-label={`${item.label}をグラフに表示`} checked={item.visible}
+              onChange={event => setSavedLines(lines.map(line => line.id === item.id ? { ...line, visible: event.target.checked } : line))} /></td>
+            <th scope="row"><span className="surtr-s3-column-label"><i style={{ backgroundColor: item.color }} />{item.label}</span>
+              <details className="surtr-duration-line-details"><summary>条件</summary>{item.details.map((detail, index) => <p key={index}>{detail}</p>)}</details></th>
+            <td>{item.result ? item.result.remnantStart === null ? `${item.timeLimit}秒以内に未発動` : seconds(item.result.remnantStart) : '計算不可'}</td>
+            <td>{item.result?.remnantStart != null ? seconds(item.result.remnantDuration) : '—'}</td>
+            <td>{item.result ? item.result.outcome === 'limit' ? `${item.timeLimit}秒以内に退場せず` : <strong>{seconds(item.result.retreatTime)}</strong> : '—'}</td>
+            <td><div className="surtr-duration-line-actions">
+              <button type="button" aria-label={`${item.label}の線を編集`} onClick={() => editLine(item)}>編集</button>
+              <button type="button" aria-label={`${item.label}の線を複製`} disabled={lines.length >= MAX_LINES} onClick={() => {
+                const id = `line-${++nextLine.current}`
+                setSavedLines([...lines, { id, timeLimit: item.timeLimit, visible: item.visible, condition: { ...structuredClone(item.condition), name: `${item.label}（複製）` } }])
+                setTableLineId(id)
+              }}>複製</button>
+              <button type="button" aria-label={`${item.label}の線を削除`} onClick={() => removeLine(item.id)}>削除</button>
+            </div></td>
+          </tr>)}</tbody>
+        </table></div>
+        {comparison.filter(item => !item.result).map(item => <p key={item.id} role="alert">{item.label}：{item.participants.unsupportedReasons.join(' ') || '計算設定を確認してください。'}</p>)}
+        <section className="surtr-s3-chart-section" aria-labelledby="surtr-duration-chart-title">
+          <div className="surtr-s3-result-heading"><h3 id="surtr-duration-chart-title">{title}</h3>
+            <button type="button" className="button secondary" aria-label="グラフをPNG画像で保存" aria-haspopup="dialog" disabled={!series.length} onClick={openImage}>画像を保存</button>
+          </div>
+          <div className="surtr-s3-chart-area"><SurtrDurationChart series={series} title={title}
+            selection={calculation?.visible && selectedTimelineRow ? { ...selectedTimelineRow, seriesId: calculation.id } : undefined} /></div>
+        </section>
+      </div>}
       {feedback && feedback !== 'failed' && <p className="surtr-s3-status" role="status">{feedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
     </CollapsibleCalculatorPanel>
     <CollapsibleCalculatorPanel id="surtr-duration-table-output" number="04" title="テーブル出力" summary={title} collapsedLabel="テーブルを表示"
       className="surtr-s3-output-panel" headerActions={<button type="button" className="button secondary"
         aria-label="テーブルをPNG画像で保存" aria-haspopup="dialog" disabled={!timelineRows.length || invalid} onClick={openTableImage}>画像を保存</button>}>
+      {record && comparison.length > 0 && <label className="surtr-s3-output-control surtr-duration-table-line"><span>対象の線</span>
+        <select aria-label="テーブルの対象の線" value={calculation?.id ?? ''} onChange={event => { setTableLineId(event.target.value); setTimelineSelection(null); setTableFeedback(null) }}>
+          {comparison.map(item => <option key={item.id} value={item.id}>{item.label}{item.visible ? '' : '（グラフ非表示）'}</option>)}
+        </select></label>}
       {!record ? status : invalid ? <p role="alert">計算に必要なデータを取得できませんでした。</p>
-        : !timelineRows.length ? <p className="surtr-s3-status" role="status">装備を選択してください。</p>
-          : <SurtrDurationTimelineTable key={`${calculation?.label}:${potential}:${settings.skillLevelIndex}`}
+        : !timelineRows.length ? <p className="surtr-s3-status" role="status">比較線を追加してください。</p>
+          : <SurtrDurationTimelineTable key={calculation?.id}
             rows={timelineRows} step={timelineStep} onStepChange={value => { setTimelineStep(value); setTableFeedback(null) }}
             layout={tableLayout} onLayoutChange={value => { setTableLayout(value); setTableFeedback(null) }}
             precision={tablePrecision} onPrecisionChange={value => { setTablePrecision(value); setTableFeedback(null) }} selectedTime={selectedTimelineRow?.time}
-            onSelect={row => { if (calculation?.result) setTimelineSelection({ result: calculation.result, time: row.time }) }} />}
+            onSelect={row => { if (calculation?.result) setTimelineSelection({ lineId: calculation.id, condition: calculation.condition, timeLimit: calculation.timeLimit, time: row.time }) }} />}
       {tableFeedback && tableFeedback !== 'failed' && <p className="surtr-s3-status" role="status">{tableFeedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
     </CollapsibleCalculatorPanel>
     {image && <ChartImageSaveDialog initialFilename={image.filename} getDefaultFilename={ratio => withChartImageAspect(

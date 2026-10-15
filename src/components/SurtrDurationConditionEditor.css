@@ -1,0 +1,51 @@
+.surtr-duration-condition-editor { min-width: 0; }
+.surtr-duration-condition-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.surtr-duration-condition-toolbar .button { min-height: 34px; font-size: 12px; }
+.surtr-duration-condition-scroll { max-width: 100%; overflow-x: auto; }
+.surtr-duration-condition-table { width: 100%; min-width: 620px; border-collapse: collapse; border: 1px solid var(--border); font-size: 12px; }
+.surtr-duration-condition-table th,
+.surtr-duration-condition-table td { border: 1px solid var(--border); padding: 10px; text-align: left; vertical-align: middle; }
+.surtr-duration-condition-table thead th { background: var(--surface-soft); color: var(--text-soft); font-weight: 500; white-space: nowrap; }
+.surtr-duration-condition-table tbody th { background: var(--surface); color: var(--text); font-weight: 500; white-space: nowrap; }
+.surtr-duration-condition-table td:nth-child(1) { white-space: nowrap; }
+.surtr-duration-condition-table td:nth-child(3) { min-width: 160px; color: var(--text-soft); font-size: 11px; }
+.surtr-duration-condition-table td:nth-child(4) { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.surtr-duration-condition-table td:last-child { width: 110px; }
+.surtr-duration-condition-actions { display: flex; gap: 6px; }
+.surtr-duration-condition-actions button { min-height: 32px; border: 1px solid var(--border-strong); border-radius: 0; padding: 4px 8px; background: var(--surface); color: var(--text); font: inherit; font-size: 11px; white-space: nowrap; cursor: pointer; }
+.surtr-duration-condition-actions button:hover:not(:disabled) { background: var(--surface-hover); }
+.surtr-duration-condition-actions button:disabled { cursor: default; opacity: .45; }
+.surtr-duration-condition-editor :is(button, input, select):focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.surtr-duration-condition-footer { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; border-top: 1px solid var(--border); margin-top: 16px; padding-top: 16px; }
+.surtr-duration-condition-footer .surtr-duration-line-name { flex: 1 1 240px; min-width: 120px; }
+.surtr-duration-condition-submit { display: flex; flex-wrap: wrap; gap: 8px; }
+.surtr-duration-condition-footer .calculator-field input { width: 100%; min-width: 0; }
+.surtr-duration-condition-errors { margin: 12px 0 0; padding-left: 20px; color: var(--danger, #b42318); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.gg-detail-dialog.surtr-duration-participant-dialog { width: min(560px, calc(100vw - 32px)); background: var(--surface); }
+.surtr-duration-participant-dialog .gg-detail-header h2 { font-size: 16px; }
+.surtr-duration-participant-form { display: grid; gap: 16px; }
+.surtr-duration-participant-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+.surtr-duration-participant-form .calculator-field { min-width: 0; }
+.surtr-duration-participant-form .calculator-field :is(select, input) { width: 100%; min-width: 0; border-radius: 0; }
+.surtr-duration-target-select select { height: 140px; padding: 4px; }
+.surtr-duration-target-select option { padding: 5px 8px; }
+.surtr-duration-participant-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin: 0; border-top: 1px solid var(--border); padding-top: 14px; font-size: 12px; }
+.surtr-duration-participant-stats > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
+.surtr-duration-participant-stats dt { color: var(--text-soft); }
+.surtr-duration-participant-stats dd { margin: 0; font-variant-numeric: tabular-nums; }
+.surtr-duration-participant-dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+.surtr-duration-participant-help { color: var(--text-soft); font-size: 11px; line-height: 1.7; }
+.surtr-duration-participant-help summary { cursor: pointer; }
+.surtr-duration-participant-help p { margin: 8px 0 0; }
+@media (max-width: 520px) {
+  .gg-detail-dialog.surtr-duration-participant-dialog { width: calc(100vw - 16px); }
+  .surtr-duration-participant-fields { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .surtr-duration-participant-stats { grid-template-columns: minmax(0, 1fr); }
+  .surtr-duration-condition-footer .surtr-duration-line-name { flex-basis: 100%; }
+}
+@media (max-width: 760px), (pointer: coarse) {
+  .surtr-duration-condition-actions button,
+  .surtr-duration-condition-toolbar .button,
+  .surtr-duration-participant-dialog :is(button, select, input) { min-height: 44px; }
+  .surtr-duration-participant-form .calculator-field :is(select, input) { font-size: 16px; }
+}

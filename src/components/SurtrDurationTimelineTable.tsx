@@ -5,7 +5,7 @@ const hpFormat = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
 const timeFormat = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 2 })
 const statusLabels: Record<SurtrDurationTimelineRow['status'], string> = {
   activation: '発動', 'full-heal': '全回復', drain: '—',
-  'remnant-start': '余燼発動', remnant: '余燼中', retreated: '退場',
+  'remnant-start': '余燼発動', remnant: '余燼中', retreated: '退場', limit: '計算上限',
 }
 
 export function SurtrDurationTimelineTableContent({ rows, precision = 2, layout = 'vertical', selectedTime, onSelect, forImage = false }: {
@@ -97,7 +97,7 @@ export function SurtrDurationTimelineTable({ rows, step, onStepChange, precision
     </div>
     <SurtrDurationTimelineTableContent rows={rows} precision={precision} layout={layout} selectedTime={selectedTime} onSelect={onSelect} />
     <details className="surtr-s3-assumptions"><summary>表示条件</summary>
-      <p>各時刻の処理後のHPを表示します。次のHP減少までは直前の値を保ち、補間しません。全回復・余燼発動・退場の時刻も表示します。</p>
+      <p>各時刻の処理後のHPを表示します。次のHP変化までは直前の値を保ち、補間しません。全回復・余燼発動・退場の時刻も表示します。計算上限に達した場合は、その時点のHPを表示します。</p>
       <p>残りHPは表示時に四捨五入し、残HP率はその時点の最大HPに対する割合です。退場後のHPは「—」で表示します。</p>
     </details>
   </section>
