@@ -6,6 +6,7 @@ import {
   createSkillEffectsHash,
   createSkillSummaryHash,
   createSkillStructureHash,
+  createTalentStructureHash,
   createSkillJsonHash,
   parseHashRoute,
   type SkillEffectsRouteSelection,
@@ -26,6 +27,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['skills', 'skills'],
       ['skill-classification', 'skill-classification'],
       ['talent-classification', 'talent-classification'],
+      ['talent-structure', 'talent-structure'],
       ['skill-effects', 'skill-effects'],
       ['skill-summary', 'skill-summary'],
       ['skill-structure', 'skill-structure'],
@@ -67,6 +69,49 @@ test('素質大分類はスキル大分類の隣から独立したページと�
   })
   for (const suffix of ['/', '/extra', '-extra']) {
     assert.deepEqual(parseHashRoute(`#/talent-classification${suffix}`), { view: 'operators' })
+  }
+})
+
+test('素質構造は素質大分類の隣から開き、素質番号を共有URLで復元する', () => {
+  assert.deepEqual(parseHashRoute('#/talent-structure'), { view: 'talent-structure' })
+  const index = APP_NAV_ITEMS.findIndex(item => item.id === 'talent-classification')
+  assert.deepEqual(APP_NAV_ITEMS[index + 1], {
+    id: 'talent-structure', href: '#/talent-structure', label: '素質構造', description: '', section: 'analysis',
+  })
+  const selection = { operatorId: 'char/日本&test=1', talentIndex: 1 }
+  const hash = createTalentStructureHash(selection)
+  assert.deepEqual(parseHashRoute(hash), { view: 'talent-structure', selection })
+  assert.match(hash, /operatorId=char%2F/)
+  assert.deepEqual(parseHashRoute(createTalentStructureHash({ operatorId: 'char_350_surtr', talentIndex: 0 })), {
+    view: 'talent-structure', selection: { operatorId: 'char_350_surtr', talentIndex: 0 },
+  })
+  for (const suffix of ['/', '/extra', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/talent-structure${suffix}`), { view: 'operators' })
+  }
+})
+
+test('素質構造の不完全・不正な指定は選択エラーとして保持し、初期素質で代用しない', () => {
+  for (const query of [
+    'operatorId=char_350_surtr', 'talentIndex=0', 'operatorId=&talentIndex=0',
+    'operatorId=%E0%A4%A&talentIndex=0',
+    'operatorId=x&operatorId=y&talentIndex=0', 'operatorId=x&talentIndex=0&talentIndex=1',
+    ...['-1', '1.5', '1e0', '01', 'Infinity', '9007199254740992'].map(index => `operatorId=x&talentIndex=${index}`),
+  ]) {
+    assert.deepEqual(parseHashRoute(`#/talent-structure?${query}`), {
+      view: 'talent-structure', invalidSelection: true,
+    }, query)
+  }
+  for (const query of ['', 'unknown=1']) {
+    assert.deepEqual(parseHashRoute(`#/talent-structure?${query}`), { view: 'talent-structure' })
+  }
+})
+
+test('素質構造のURL生成は無効なIDと素質番号を拒否する', () => {
+  for (const operatorId of ['', ' x', 'x\n', '\uFFFD']) {
+    assert.throws(() => createTalentStructureHash({ operatorId, talentIndex: 0 }), TypeError)
+  }
+  for (const talentIndex of [-1, 0.5, NaN, Infinity]) {
+    assert.throws(() => createTalentStructureHash({ operatorId: 'x', talentIndex }), RangeError)
   }
 })
 

@@ -1,0 +1,12 @@
+.talent-structure-condition-field { flex: 0 1 auto; min-width: 0; }
+.talent-structure-condition-field .skill-effects-fixed-level { overflow-wrap: anywhere; }
+.talent-structure-basic-table { min-width: 700px; }
+.talent-structure-effects-table { min-width: 760px; }
+.talent-structure-effects-table thead th:nth-child(1) { width: 17%; }
+.talent-structure-effects-table thead th:nth-child(2) { width: 21%; }
+.talent-structure-effects-table thead th:nth-child(3) { width: 18%; }
+.talent-structure-effects-table thead th:nth-child(4) { width: 19%; }
+.talent-structure-effects-table thead th:nth-child(5) { width: 13%; }
+@media (max-width: 600px) {
+  .talent-structure-condition-field .skill-effects-fixed-level { min-height: 0; }
+}

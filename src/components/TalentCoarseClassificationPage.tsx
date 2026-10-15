@@ -12,6 +12,8 @@ import {
   type TalentCoarseRecord,
 } from '../lib/talentCoarseClassification'
 import { PROFESSION_ORDER } from '../lib/operatorFilters'
+import { createTalentStructureHash } from '../lib/routes'
+import { isTalentStructureSelection } from '../lib/talentStructure'
 import type { SkillRecord } from '../types/skill'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
@@ -183,6 +185,9 @@ export function TalentCoarseClassificationPage({ rows, loading, onOpenOperatorDe
     {detail && <GoldenglowDetailModal title={`${detail.operatorName} · 素質${detail.talentIndex + 1} ${detail.talentName}`}
       closeLabel="素質の説明文を閉じる" onClose={() => setDetail(null)} className="talent-coarse-description-modal">
       <p className="talent-coarse-description">{detail.description || '説明文はありません。'}</p>
+      {isTalentStructureSelection(detail) && <p className="talent-coarse-structure-link">
+        <a href={createTalentStructureHash(detail)}>素質構造を表示</a>
+      </p>}
     </GoldenglowDetailModal>}
   </section>
 }

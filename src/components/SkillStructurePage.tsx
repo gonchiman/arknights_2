@@ -12,6 +12,7 @@ import {
 import type { SkillRecord } from '../types/skill'
 import { getSkillStructureDeferredCases, type SkillStructureDeferredCase } from '../lib/skillStructureDeferredCases'
 import { SkillDescriptionSelectionPage } from './SkillDescriptionSelectionPage'
+import { StructureTable } from './StructureTable'
 import './SkillStructurePage.css'
 
 interface Props {
@@ -188,18 +189,6 @@ function SkillStructureContent({ structure, activeTab, onTabChange }: {
       </div>
     </section>
   )
-}
-
-function StructureTable({ caption, headers, className = '', children }: {
-  caption: string; headers: readonly string[]; className?: string; children: ReactNode
-}) {
-  return <div className="table-wrap skill-structure-table-wrap" tabIndex={0} role="region" aria-label={caption}>
-    <table className={`skill-structure-table ${className}`.trim()}>
-      <caption className="visually-hidden">{caption}</caption>
-      <thead><tr>{headers.map(header => <th scope="col" key={header}>{header}</th>)}</tr></thead>
-      <tbody>{children}</tbody>
-    </table>
-  </div>
 }
 
 function EffectDefinitionTable({ stage, effect }: { stage: SkillStructureStage; effect: SkillStructureEffect }) {
