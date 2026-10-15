@@ -1,11 +1,12 @@
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { SkillRecord } from '../types/skill'
 import { SURTR_OPERATOR_ID } from '../lib/surtrDps'
 import { deriveSurtrDurationModel, calculateSurtrDuration, type SurtrDurationSettings, type SurtrDurationResult } from '../lib/surtrDuration'
-import { buildSurtrDurationTimeline } from '../lib/surtrDurationTimeline'
+import { buildSurtrDurationTimeline, type SurtrDurationTableLayout } from '../lib/surtrDurationTimeline'
 import { getOperatorModuleId, getOperatorModuleLevels, getOperatorModules } from '../lib/operatorModules'
 import { getModuleComparisonColors } from '../lib/moduleColors'
 import { getSurtrDurationImageFilename } from '../lib/surtrDurationImageFilename'
+import { getSurtrDurationTableImageFilename, type SurtrDurationTableImageConditions } from '../lib/surtrDurationTableImageFilename'
 import { withChartImageAspect } from '../lib/chartImageFilename'
 import { withChartImageLabelFilename, type ChartImageLabelOverrides } from '../lib/chartImageLabels'
 import { getChartImageLayout } from '../lib/chartImageLayout'
@@ -19,6 +20,7 @@ import { SurtrDurationChart, SurtrDurationChartImage, SurtrDurationChartImagePre
   getSurtrDurationImageLabelDefaults, type SurtrDurationSeries } from './SurtrDurationChart'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import { SurtrDurationTimelineTable } from './SurtrDurationTimelineTable'
+import { SurtrDurationTableImagePreview, saveSurtrDurationTableImage, type SurtrDurationTableImageSnapshot } from './SurtrDurationTableImage'
 import './DamageCalculator.css'
 import './SurtrS3Page.css'
 import './SurtrDurationPage.css'
@@ -34,6 +36,10 @@ interface ImageSnapshot {
   filename: string
   labels?: ChartImageLabelOverrides
 }
+interface TableImageSnapshot extends SurtrDurationTableImageSnapshot {
+  id: number
+  filenameOptions: SurtrDurationTableImageConditions
+}
 
 export function SurtrDurationPage({ rows, loading, error, onRetry }: {
   rows: readonly SkillRecord[]; loading: boolean; error: string | null; onRetry: () => void
@@ -44,11 +50,20 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
   const [selectedModuleId, setSelectedModuleId] = useState('')
   const [moduleLevels, setModuleLevels] = useState<Record<string, number>>({})
   const [timelineStep, setTimelineStep] = useState<1 | 5>(1)
+  const [tablePrecision, setTablePrecision] = useState(2)
+  const [tableLayout, setTableLayout] = useState<SurtrDurationTableLayout>('vertical')
   const [timelineSelection, setTimelineSelection] = useState<{ result: SurtrDurationResult; time: number } | null>(null)
   const [image, setImage] = useState<ImageSnapshot | null>(null)
   const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState<'saved' | 'downloaded' | 'failed' | null>(null)
+  const [tableImage, setTableImage] = useState<TableImageSnapshot | null>(null)
+  const [tableAspect, setTableAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
+  const [tableSaving, setTableSaving] = useState(false)
+  const [tableFeedback, setTableFeedback] = useState<'saved' | 'downloaded' | 'failed' | null>(null)
+  const [tablePreviewReady, setTablePreviewReady] = useState(false)
+  const [tablePreviewError, setTablePreviewError] = useState<string | null>(null)
+  const tableSaveInProgress = useRef(false)
   const saveInProgress = useRef(false)
   const nextSnapshot = useRef(0)
   const picker = getChartImageSavePicker()
@@ -115,6 +130,37 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
     } catch { setFeedback('failed') }
     finally { saveInProgress.current = false; setSaving(false) }
   }
+  const openTableImage = () => {
+    if (!timelineRows.length || !calculation?.model || invalid) return
+    setTableImage(structuredClone({ id: ++nextSnapshot.current, rows: timelineRows, precision: tablePrecision, layout: tableLayout,
+      title: 'スルト S3 HPの推移（推定）',
+      conditions: [
+        `昇進2 Lv.${settings.level}・信頼${settings.trust}・潜在${potential}・${label}・${calculation.label}`,
+        `外部回復なし・被ダメージなし・外部HPバフなし・準備${calculation.model.activationDelay}秒`,
+      ],
+      filenameOptions: { ...settings, skillLevelLabel: label, modules: [calculation.label], step: timelineStep, precision: tablePrecision, layout: tableLayout },
+    }))
+    setTableFeedback(null); setTablePreviewReady(false); setTablePreviewError(null)
+  }
+  const saveTableImage = async (filename: string, ratio?: number) => {
+    if (!tableImage || !tablePreviewReady || tablePreviewError || tableSaveInProgress.current) return
+    const snapshot = tableImage
+    tableSaveInProgress.current = true; setTableSaving(true); setTableFeedback(null)
+    try {
+      const destination = await selectChartImageDestination(filename, picker)
+      if (destination.type === 'cancelled') return
+      await saveSurtrDurationTableImage({ snapshot, filename, aspectRatio: ratio,
+        writeBlob: destination.type === 'file' ? destination.write : undefined })
+      setTableImage(null); setTableFeedback(destination.type === 'file' ? 'saved' : 'downloaded')
+    } catch { setTableFeedback('failed') }
+    finally { tableSaveInProgress.current = false; setTableSaving(false) }
+  }
+  const tableAspectRatio = tableAspect.preset === 'auto' ? undefined : Number(tableAspect.width) / Number(tableAspect.height)
+  const tableLayoutReady = useCallback(() => { setTablePreviewReady(true); setTablePreviewError(null) }, [])
+  const tableLayoutError = useCallback(() => {
+    setTablePreviewReady(false)
+    setTablePreviewError('この配置・比率では表全体を画像に収められません。表示間隔・配置・画像の比率を変更してください。')
+  }, [])
   const status = error ? <div className="error-box" role="alert">{error}<button type="button" className="button secondary" onClick={onRetry}>再読み込み</button></div>
     : <p className="surtr-s3-status" role="status">{loading ? 'スルトのデータを読み込み中…' : 'スルトS3のデータを取得できませんでした。'}</p>
 
@@ -183,11 +229,20 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
                 <td>{seconds(item.remnantStart)}</td><td>{seconds(item.remnantDuration)}</td><td><strong>{seconds(item.retreatTime)}</strong></td>
               </tr>)}</tbody>
             </table></div>
-            <SurtrDurationTimelineTable key={`${calculation?.label}:${potential}:${settings.skillLevelIndex}`}
-              rows={timelineRows} step={timelineStep} onStepChange={setTimelineStep} selectedTime={selectedTimelineRow?.time}
-              onSelect={row => { if (calculation?.result) setTimelineSelection({ result: calculation.result, time: row.time }) }} />
           </div>}
       {feedback && feedback !== 'failed' && <p className="surtr-s3-status" role="status">{feedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
+    </CollapsibleCalculatorPanel>
+    <CollapsibleCalculatorPanel id="surtr-duration-table-output" number="04" title="テーブル出力" summary={title} collapsedLabel="テーブルを表示"
+      className="surtr-s3-output-panel" headerActions={<button type="button" className="button secondary"
+        aria-label="テーブルをPNG画像で保存" aria-haspopup="dialog" disabled={!timelineRows.length || invalid} onClick={openTableImage}>画像を保存</button>}>
+      {!record ? status : invalid ? <p role="alert">計算に必要なデータを取得できませんでした。</p>
+        : !timelineRows.length ? <p className="surtr-s3-status" role="status">装備を選択してください。</p>
+          : <SurtrDurationTimelineTable key={`${calculation?.label}:${potential}:${settings.skillLevelIndex}`}
+            rows={timelineRows} step={timelineStep} onStepChange={value => { setTimelineStep(value); setTableFeedback(null) }}
+            layout={tableLayout} onLayoutChange={value => { setTableLayout(value); setTableFeedback(null) }}
+            precision={tablePrecision} onPrecisionChange={value => { setTablePrecision(value); setTableFeedback(null) }} selectedTime={selectedTimelineRow?.time}
+            onSelect={row => { if (calculation?.result) setTimelineSelection({ result: calculation.result, time: row.time }) }} />}
+      {tableFeedback && tableFeedback !== 'failed' && <p className="surtr-s3-status" role="status">{tableFeedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
     </CollapsibleCalculatorPanel>
     {image && <ChartImageSaveDialog initialFilename={image.filename} getDefaultFilename={ratio => withChartImageAspect(
       withChartImageLabelFilename(image.filename, getSurtrDurationImageLabelDefaults(image.series, image.title), image.labels), ratio)} aspect={aspect} onAspectChange={setAspect}
@@ -196,5 +251,16 @@ export function SurtrDurationPage({ rows, loading, error, onRetry }: {
       options={<ChartImageLabelEditor defaults={getSurtrDurationImageLabelDefaults(image.series, image.title)} value={image.labels ?? {}}
         disabled={saving} onChange={labels => setImage(current => current ? { ...current, labels } : null)} />}
       preview={<SurtrDurationChartImagePreview key={JSON.stringify([image.id, image.labels, aspectRatio ?? 'auto'])} {...image} aspectRatio={aspectRatio} />} />}
+    {tableImage && <ChartImageSaveDialog initialFilename={getSurtrDurationTableImageFilename(tableImage.filenameOptions)}
+      getDefaultFilename={ratio => getSurtrDurationTableImageFilename(tableImage.filenameOptions, ratio)} aspect={tableAspect}
+      onAspectChange={value => { setTablePreviewReady(false); setTablePreviewError(null); setTableAspect(value) }}
+      aspectHint="タイトル・条件を含むテーブル全体の比率です。指定なしでは全行・全列が収まる大きさに自動調整します。"
+      canChooseLocation={!!picker} saving={tableSaving} saveDisabled={!tablePreviewReady || !!tablePreviewError} error={tableFeedback === 'failed'} helpMode="popover"
+      onClose={() => { if (!tableSaveInProgress.current) { setTableImage(null); setTableFeedback(null) } }} onSave={(filename, ratio) => void saveTableImage(filename, ratio)}
+      options={<><label className="chart-image-save-field"><span>画像タイトル</span><input type="text" maxLength={100} value={tableImage.title} disabled={tableSaving}
+        onChange={event => { setTablePreviewReady(false); setTablePreviewError(null); setTableImage(previous => previous ? { ...previous, title: event.target.value } : null) }} /></label>
+        {tablePreviewError && <p role="alert" className="chart-image-save-error">{tablePreviewError}</p>}</>}
+      preview={<SurtrDurationTableImagePreview key={`${tableImage.id}:${tableImage.title}:${JSON.stringify(tableAspect)}`} {...tableImage} aspectRatio={tableAspectRatio}
+        onLayoutReady={tableLayoutReady} onLayoutError={tableLayoutError} />} />}
   </section>
 }
