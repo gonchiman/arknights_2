@@ -8,10 +8,16 @@
 .surtr-total-damage-retreat-toggle { margin-top: 12px; }
 .surtr-total-damage-page .surtr-s3-axis-error { margin-top: 8px; }
 .surtr-total-damage-page .surtr-s3-table-section { min-width: 0; }
+.surtr-total-damage-image-type-settings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.surtr-total-damage-image-type-settings select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 42px; padding: 9px 10px; border: 1px solid var(--border-strong); background: #fff; color: var(--text); font: inherit; font-size: 14px; }
+.surtr-total-damage-image-type-settings select:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 @media (max-width: 640px) {
   .surtr-total-damage-time-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .surtr-total-damage-time-fields > :last-child { grid-column: 1 / -1; }
   .surtr-total-damage-resistance-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .surtr-total-damage-resistance-controls > :last-child { grid-column: 1 / -1; }
   .surtr-total-damage-page .surtr-s3-segments { flex-wrap: wrap; }
+}
+@media (max-width: 420px) {
+  .surtr-total-damage-image-type-settings { grid-template-columns: minmax(0, 1fr); }
 }
