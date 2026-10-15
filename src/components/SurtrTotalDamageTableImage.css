@@ -17,6 +17,7 @@
 .surtr-total-damage-table-image table { box-sizing: border-box; width: 100%; min-width: 0; font-size: 14px; }
 .surtr-total-damage-table-image th, .surtr-total-damage-table-image td { overflow-wrap: anywhere; padding: 12px; }
 .surtr-total-damage-table-image tbody td { white-space: nowrap; overflow-wrap: normal; font-size: 14px; }
+.surtr-total-damage-table-image td.surtr-total-damage-winner-cell { white-space: nowrap; overflow-wrap: normal; }
 .surtr-total-damage-table-image-title {
   box-sizing: border-box;
   min-height: 44px;

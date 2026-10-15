@@ -7,7 +7,8 @@ import {
 } from '../lib/surtrTotalDamage'
 import { getSurtrModuleChoices, getSelectedSurtrModuleStages, type SurtrModuleChoice } from '../lib/surtrModuleComparison'
 import { buildSurtrTotalDamageTable, buildSurtrTotalDamageTableTsv, SURTR_TOTAL_DAMAGE_TABLE_MAXIMUM_CELLS,
-  type SurtrTotalDamageTableLayout } from '../lib/surtrTotalDamageTable'
+  type SurtrTotalDamageTableDisplayMode, type SurtrTotalDamageTableLayout,
+  type SurtrTotalDamageWinnerColor } from '../lib/surtrTotalDamageTable'
 import { getSurtrDpsResistanceSamples, type SurtrDpsBarStep } from '../lib/surtrDpsResistance'
 import { getSkillLevelLabel } from '../lib/skillJsonAnalysis'
 import { writeClipboardText } from '../lib/clipboard'
@@ -52,6 +53,10 @@ export function SurtrTotalDamagePage({ rows, loading, error, onRetry }: {
   const [ctCarry, setCtCarry] = useState<SurtrTotalDamageAssumptions['ctCarry']>('time')
   const [includeRetreatHit, setIncludeRetreatHit] = useState(false)
   const [layout, setLayout] = useState<SurtrTotalDamageTableLayout>('resistance')
+  const [displayMode, setDisplayMode] = useState<SurtrTotalDamageTableDisplayMode>('total')
+  const [winnerLayout, setWinnerLayout] = useState<'time' | 'resistance'>('resistance')
+  const [winnerColor, setWinnerColor] = useState<SurtrTotalDamageWinnerColor>('module')
+  const tableLayout = displayMode === 'winner' ? winnerLayout : layout
   const [colorScale, setColorScale] = useState<'none' | 'LINEAR' | 'SQRT'>('none')
   const [precision, setPrecision] = useState(0)
   const [selectedCell, setSelectedCell] = useState<SurtrTotalDamageTableCellSelection | null>(null)
@@ -126,11 +131,14 @@ export function SurtrTotalDamagePage({ rows, loading, error, onRetry }: {
     : <p className="surtr-s3-status" role="alert">スルトS3のデータが見つかりません。</p>
   const resultError = timeError ?? resistanceError ?? timingError
   const outputReady = !!matrix
-  const tsv = useMemo(() => matrix ? buildSurtrTotalDamageTableTsv(matrix, layout, precision) : '', [matrix, layout, precision])
+  const tsv = useMemo(() => matrix ? buildSurtrTotalDamageTableTsv(matrix, tableLayout, precision, displayMode) : '',
+    [matrix, tableLayout, precision, displayMode])
   const currentCopy = copyState?.text === tsv ? copyState : null
+  const outputLabel = displayMode === 'winner' ? '最大のMOD' : '総ダメージ'
   const conditions = [
     `${label}・昇進2 Lv.${effectiveSettings.level}・信頼${effectiveSettings.trust}・潜在${effectiveSettings.potential}・${blockLabel}・単体`,
     `初撃開始 ${number(assumptions.firstAttackStart, 4)} s・命中まで ${number(assumptions.hitDelay, 4)} s・${ctCarry === 'time' ? '残りCTの時間を維持' : '残りCTの割合を維持'}・${includeRetreatHit ? '退場と同時の命中を含む' : '退場と同時の命中を含まない'}`,
+    ...(displayMode === 'winner' ? [`比較：${matrix?.series.map(item => item.label).join('・') ?? ''}`] : []),
   ]
   const copyTable = async () => {
     try { await writeClipboardText(tsv); setCopyState({ text: tsv, failed: false }) }
@@ -138,10 +146,12 @@ export function SurtrTotalDamagePage({ rows, loading, error, onRetry }: {
   }
   const openImage = () => {
     if (!matrix) return
-    setImage(structuredClone({ id: ++nextImageId.current, matrix, layout, precision, colorScale, title: 'スルト S3 総ダメージ', conditions,
+    setImage(structuredClone({ id: ++nextImageId.current, matrix, layout: tableLayout, precision, colorScale,
+      displayMode, winnerColor,
+      title: displayMode === 'winner' ? 'スルト S3 総ダメージが最大のMOD' : 'スルト S3 総ダメージ', conditions,
       filenameOptions: { metadata: { skillLabel: label, level: effectiveSettings.level, trust: effectiveSettings.trust,
         potential: effectiveSettings.potential, blocking: effectiveSettings.blocking }, times, resistances, series: matrix.series,
-        assumptions, layout, precision, colorScale } }))
+        assumptions, layout: tableLayout, precision, colorScale, displayMode, winnerColor } }))
     setFeedback(null); setPreviewReady(false); setPreviewError(null)
   }
   const picker = getChartImageSavePicker()
@@ -231,13 +241,23 @@ export function SurtrTotalDamagePage({ rows, loading, error, onRetry }: {
         </details>
       </> : status}
     </CollapsibleCalculatorPanel>
-    <CollapsibleCalculatorPanel id="surtr-total-damage-output" number="04" title="計算結果" summary="総ダメージ" collapsedLabel="結果を表示" className="surtr-s3-output-panel"
+    <CollapsibleCalculatorPanel id="surtr-total-damage-output" number="04" title="計算結果" summary={outputLabel} collapsedLabel="結果を表示" className="surtr-s3-output-panel"
       headerActions={<>
-        <label className="surtr-s3-output-control"><span>配置</span><select aria-label="テーブルの配置" value={layout} onChange={event => setLayout(event.target.value as SurtrTotalDamageTableLayout)}>
-          <option value="time">時間別</option><option value="module">MOD別</option><option value="resistance">術耐性別</option></select></label>
+        <label className="surtr-s3-output-control"><span>表示内容</span><select aria-label="テーブルの表示内容" value={displayMode}
+          onChange={event => { setDisplayMode(event.target.value as SurtrTotalDamageTableDisplayMode); setSelectedCell(null); setCopyState(null) }}>
+          <option value="total">総ダメージ</option><option value="winner">最大のMOD</option></select></label>
+        <label className="surtr-s3-output-control"><span>配置</span><select aria-label="テーブルの配置" value={tableLayout} onChange={event => {
+          if (displayMode === 'winner') setWinnerLayout(event.target.value as 'time' | 'resistance')
+          else setLayout(event.target.value as SurtrTotalDamageTableLayout)
+        }}>
+          <option value="time">時間別</option>{displayMode === 'total' && <option value="module">MOD別</option>}<option value="resistance">術耐性別</option></select></label>
+        {displayMode === 'winner' ? <label className="surtr-s3-output-control"><span>色分け</span><select value={winnerColor}
+          onChange={event => setWinnerColor(event.target.value as SurtrTotalDamageWinnerColor)}>
+          <option value="module">MOD別</option><option value="none">なし</option></select></label> : <>
         <label className="surtr-s3-output-control"><span>カラースケール</span><select value={colorScale} onChange={event => setColorScale(event.target.value as typeof colorScale)}>
           <option value="none">なし</option><option value="LINEAR">線形</option><option value="SQRT">平方根</option></select></label>
         <label className="surtr-s3-output-control"><span>小数点以下</span><select value={precision} onChange={event => { setPrecision(Number(event.target.value)); setCopyState(null) }}>{[0, 1, 2, 3].map(value => <option key={value} value={value}>{value}桁</option>)}</select></label>
+        </>}
       </>}>
       <fieldset className="surtr-total-damage-fields surtr-total-damage-resistance-fields"><legend>敵の術耐性</legend><div className="surtr-total-damage-resistance-controls">
         {(['min', 'max'] as const).map(key => <label key={key} className="calculator-field"><span>{key === 'min' ? '術耐性の開始' : '術耐性の終了'}</span>
@@ -257,11 +277,12 @@ export function SurtrTotalDamagePage({ rows, loading, error, onRetry }: {
         : !matrix ? <p role="alert">この条件では総ダメージを計算できませんでした。</p>
         : <div className="surtr-s3-results-layout">
           <section className="surtr-s3-table-section" aria-labelledby="surtr-total-table-title">
-            <div className="surtr-s3-result-heading"><h3 id="surtr-total-table-title">総ダメージ</h3><div className="surtr-total-damage-table-actions">
+            <div className="surtr-s3-result-heading"><h3 id="surtr-total-table-title">{outputLabel}</h3><div className="surtr-total-damage-table-actions">
               <button type="button" className="button secondary" disabled={!outputReady} onClick={() => void copyTable()}>{currentCopy ? currentCopy.failed ? 'コピー失敗' : 'コピー済み' : '表をコピー'}</button>
               <button type="button" className="button secondary" disabled={!outputReady} onClick={openImage} aria-label="テーブルをPNG画像で保存" aria-haspopup="dialog">画像を保存</button>
             </div></div>
-            <SurtrTotalDamageTableContent matrix={matrix} layout={layout} precision={precision} colorScale={colorScale}
+            <SurtrTotalDamageTableContent matrix={matrix} layout={tableLayout} precision={precision} colorScale={colorScale}
+              displayMode={displayMode} winnerColor={winnerColor}
               selectedCell={activeCell} onSelectCell={setSelectedCell} />
             <span className="visually-hidden" role="status">{currentCopy ? currentCopy.failed ? '数値表をコピーできませんでした。' : '数値表をコピーしました。' : ''}</span>
           </section>
@@ -272,7 +293,10 @@ export function SurtrTotalDamagePage({ rows, loading, error, onRetry }: {
     </CollapsibleCalculatorPanel>
     {image && <ChartImageSaveDialog initialFilename={getSurtrTotalDamageTableImageFilename(image.filenameOptions)}
       getDefaultFilename={ratio => getSurtrTotalDamageTableImageFilename(image.filenameOptions, ratio)} aspect={aspect}
-      onAspectChange={value => { setPreviewReady(false); setPreviewError(null); setAspect(value) }}
+      onAspectChange={value => {
+        if (value.preset === aspect.preset && value.width === aspect.width && value.height === aspect.height) return
+        setPreviewReady(false); setPreviewError(null); setAspect(value)
+      }}
       aspectHint="タイトル・条件を含むテーブル全体の比率です。指定なしでは全行・全列が収まる大きさに自動調整します。"
       canChooseLocation={!!picker} saving={saving} saveDisabled={!previewReady || !!previewError} error={feedback === 'failed'} helpMode="popover" onClose={() => { if (!savingRef.current) { setImage(null); setFeedback(null) } }}
       onSave={(filename, ratio) => void saveImage(filename, ratio)}
