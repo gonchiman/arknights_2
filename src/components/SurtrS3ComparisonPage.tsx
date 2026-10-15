@@ -144,10 +144,10 @@ export function SurtrS3ComparisonPage({ rows, loading, error, onRetry }: {
 
   return <section className="calculator-page surtr-s3-page surtr-s3-comparison-page" aria-labelledby="surtr-s3-comparison-title">
     <div className="page-heading-with-breadcrumbs">
-      <PageBreadcrumbs parents={[SURTR_HOME_LINK]} current="S3 MOD・潜在比較" />
-      <header className="page-intro"><h1 id="surtr-s3-comparison-title">S3 MOD・潜在比較<span className="surtr-s3-subtitle">ラグナロク</span></h1>
+      <PageBreadcrumbs parents={[SURTR_HOME_LINK]} current="S3 DPS比較（MOD・潜在）" />
+      <header className="page-intro"><h1 id="surtr-s3-comparison-title">S3 DPS比較（MOD・潜在）<span className="surtr-s3-subtitle">ラグナロク</span></h1>
         <p>MOD・段階・潜在を、未ブロックと対象を自身でブロックする条件で比較します。</p>
-        <a className="surtr-s3-page-link" href="#/analysis/surtr/s3">S3分析のグラフ・数値表へ</a>
+        <a className="surtr-s3-page-link" href="#/analysis/surtr/s3">S3 DPSのグラフ・数値表へ</a>
       </header>
     </div>
     <CollapsibleCalculatorPanel id="surtr-s3-comparison-conditions" number="01" title="比較条件"

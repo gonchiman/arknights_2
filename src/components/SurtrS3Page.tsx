@@ -253,9 +253,9 @@ export function SurtrS3Page({ rows, loading, error, onRetry }: {
 
   return <section className="calculator-page surtr-s3-page" aria-labelledby="surtr-s3-title">
     <div className="page-heading-with-breadcrumbs">
-      <PageBreadcrumbs parents={[SURTR_HOME_LINK]} current="S3分析" />
-      <header className="page-intro"><h1 id="surtr-s3-title">S3分析<span className="surtr-s3-subtitle">ラグナロク</span></h1>
-        <a className="surtr-s3-page-link" href="#/analysis/surtr/s3-comparison">S3 MOD・潜在比較へ</a>
+      <PageBreadcrumbs parents={[SURTR_HOME_LINK]} current="S3 DPS" />
+      <header className="page-intro"><h1 id="surtr-s3-title">S3 DPS<span className="surtr-s3-subtitle">ラグナロク</span></h1>
+        <a className="surtr-s3-page-link" href="#/analysis/surtr/s3-comparison">S3 DPS比較（MOD・潜在）へ</a>
       </header>
     </div>
     <CollapsibleCalculatorPanel id="surtr-s3-info" number="01" title="オペレーター情報" defaultOpen={false}

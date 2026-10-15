@@ -546,7 +546,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         onClick={() => void openImageSaveDialog()}>{savingImage ? '画像を保存中…' : preparingImage ? '画像を準備中…' : '画像を保存'}</button>}
     </div>}
     {!histogramEditor && isResistanceHistogram && snapshotFeedback === 'registered' && <p role="status">
-      分布を登録しました。 <a href="#/analysis/surtr/s3">スルトS3へ</a>
+      分布を登録しました。 <a href="#/analysis/surtr/s3">スルト S3 DPSへ</a>
     </p>}
     {!histogramEditor && isResistanceHistogram && snapshotFeedback === 'failed' && <p role="alert">分布を保存できませんでした。ブラウザーの保存設定を確認してください。</p>}
 
