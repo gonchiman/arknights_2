@@ -85,6 +85,7 @@ export function SurtrS3ComparisonPage({ rows, loading, error, onRetry }: {
     metric: state.unequippedMetric, step: state.unequippedStep, customStep, stepDraft,
     rankMode: state.unequippedRankMode, precision: state.precision,
     colorScale: state.unequippedColorScale ? state.unequippedColorScaleMode : 'NONE',
+    displayMode: state.displayMode, winnerColor: state.winnerColor, winnerGapShading: state.winnerGapShading,
   }
   const updateOptions = (changes: Partial<SurtrModuleComparisonTableOptions>) => {
     if (changes.customStep !== undefined) setCustomStep(changes.customStep)
@@ -99,6 +100,9 @@ export function SurtrS3ComparisonPage({ rows, loading, error, onRetry }: {
       precision: changes.precision ?? previous.precision,
       unequippedColorScale: changes.colorScale !== undefined ? changes.colorScale !== 'NONE' : previous.unequippedColorScale,
       unequippedColorScaleMode: changes.colorScale && changes.colorScale !== 'NONE' ? changes.colorScale : previous.unequippedColorScaleMode,
+      displayMode: changes.displayMode ?? previous.displayMode,
+      winnerColor: changes.winnerColor ?? previous.winnerColor,
+      winnerGapShading: changes.winnerGapShading ?? previous.winnerGapShading,
     }))
   }
   const openDetail = (resistance: number, requestedSeriesId: string | undefined,
@@ -178,9 +182,10 @@ export function SurtrS3ComparisonPage({ rows, loading, error, onRetry }: {
       </> : status}
     </CollapsibleCalculatorPanel>
     <CollapsibleCalculatorPanel id="surtr-s3-comparison-display" number="02" title="表の表示設定"
-      summary={`${state.unequippedLayout === 'combined' ? 'DPS＋比較値' : '比較値のみ'}・${state.unequippedMetric === 'difference' ? 'DPS差' : state.unequippedMetric === 'ratio' ? '比率' : '増加率'}・術耐性${state.resistanceRange.min}〜${state.resistanceRange.max}`} collapsedLabel="表示設定を表示">
+      summary={`${state.displayMode === 'winner' ? '最大のMOD' : `${state.unequippedLayout === 'combined' ? 'DPS＋比較値' : '比較値のみ'}・${state.unequippedMetric === 'difference' ? 'DPS差' : state.unequippedMetric === 'ratio' ? '比率' : '増加率'}`}・術耐性${state.resistanceRange.min}〜${state.resistanceRange.max}`} collapsedLabel="表示設定を表示">
       <div className="surtr-s3-comparison-display-controls">
-        <SurtrModuleComparisonTableControls group="display" allowPotentialComparison stepErrorId="surtr-s3-comparison-step-error" value={options} onChange={updateOptions} />
+        <SurtrModuleComparisonTableControls group="display" allowPotentialComparison allowWinner winnerCandidateCount={stages.length}
+          stepErrorId="surtr-s3-comparison-step-error" value={options} onChange={updateOptions} />
       </div>
       <fieldset className="surtr-s3-comparison-range"><legend>術耐性の範囲</legend><div className="surtr-s3-resistance-bounds">
         {(['min', 'max'] as const).map(bound => <label className="calculator-field" key={bound}><span>{bound === 'min' ? '開始' : '終了'}</span>
@@ -190,9 +195,9 @@ export function SurtrS3ComparisonPage({ rows, loading, error, onRetry }: {
       </div>{rangeError && <p className="surtr-s3-axis-error" id="surtr-s3-comparison-range-error" role="alert">{rangeError}</p>}</fieldset>
     </CollapsibleCalculatorPanel>
     <CollapsibleCalculatorPanel id="surtr-s3-comparison-result" number="03" title="比較結果"
-      summary={`${baseLabel}との比較・ブロック条件比較`} collapsedLabel="比較結果を表示" className="surtr-s3-output-panel">
+      summary={`${state.displayMode === 'winner' ? 'DPSが最大のMOD' : `${baseLabel}との比較`}・ブロック条件比較`} collapsedLabel="比較結果を表示" className="surtr-s3-output-panel">
       {!record ? status : !state.unequippedPotentials.length ? <p className="surtr-s3-status" role="status">比較する潜在を選択してください。</p>
-        : !stages.length || (!state.unequippedComparisonBase.startsWith('potential-') && !stages.some(item => item.id !== 'none'))
+        : !stages.length || (state.displayMode !== 'winner' && !state.unequippedComparisonBase.startsWith('potential-') && !stages.some(item => item.id !== 'none'))
           ? <p className="surtr-s3-status" role="status">比較するMODを選択してください。</p>
         : !tableComparison ? <p role="alert">比較条件の計算に必要なデータを取得できませんでした。</p>
         : !!rangeError || !!stepError ? <p className="surtr-s3-status" role="status">術耐性の範囲と刻みを確認してください。</p>
@@ -201,6 +206,7 @@ export function SurtrS3ComparisonPage({ rows, loading, error, onRetry }: {
           referenceSeries={tableComparison.referenceSeries} resistances={resistances} precision={state.precision}
           metric={state.unequippedMetric} layout={state.unequippedLayout} comparisonBase={state.unequippedComparisonBase}
           rankMode={state.unequippedRankMode} columnOrder={state.unequippedColumnOrder}
+          displayMode={state.displayMode} winnerStages={stages} winnerColor={state.winnerColor} winnerGapShading={state.winnerGapShading}
           colorScale={state.unequippedColorScale} colorScaleMode={state.unequippedColorScaleMode}
           blockingComparison={tableComparison.blockingComparison} selectedResistance={state.selectedResistance}
           metadata={{ skillLabel: label, level: effectiveSettings.level, trust: effectiveSettings.trust,

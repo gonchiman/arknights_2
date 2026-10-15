@@ -1,16 +1,19 @@
-import { Fragment, useCallback, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { buildGgTableRows, formatGgTableValue, getGgTableTargets, getGgTableTitle, getGgTableTsv, type GgTableData } from '../lib/goldenglowTargetSwitchTable'
-import { getEnemyStatRating } from '../lib/enemyStatRatings'
-import { getModuleComparisonColors } from '../lib/moduleColors'
-import { getSurtrUnequippedColorScaleBackground, getSurtrUnequippedColorScaleMaximum } from '../lib/surtrUnequippedColorScale'
+import { GoldenglowTargetSwitchTableContent } from './GoldenglowTargetSwitchTableContent'
+export { GoldenglowTargetSwitchTableContent } from './GoldenglowTargetSwitchTableContent'
+import { useCallback, useId, useRef, useState } from 'react'
+import { getGgTableTargets, getGgTableTitle, getGgTableTsv, getGgTableImageStageLevels, type GgTableData, type GgTableImageLayout } from '../lib/goldenglowTargetSwitchTable'
 import { writeClipboardText } from '../lib/clipboard'
-import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
+import { getChartImageSavePicker, selectChartImageDestination, selectChartArchiveDestination } from '../lib/chartImageDestination'
+import { createStoredZipArchive } from '../lib/pngZipArchive'
+import { DEFAULT_COMPARISON_TABLE_IMAGE_TYPOGRAPHY } from '../lib/tableImageTypography'
 import { CHART_IMAGE_LABEL_MAX_LENGTH } from '../lib/chartImageLabels'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
-import { GoldenglowTargetSwitchTableImagePreview, getGoldenglowTargetSwitchTableImageFilename, saveGoldenglowTargetSwitchTableImage, type GoldenglowTargetSwitchTableImageSnapshot } from './GoldenglowTargetSwitchTableImage'
+import { ComparisonTableImageOptions } from './ComparisonTableImageOptions'
+import { GoldenglowTargetSwitchTableImagePreview, getGoldenglowTargetSwitchTableImageFilename, getGoldenglowTargetSwitchTableImageStageSnapshot, saveGoldenglowTargetSwitchTableImage, type GoldenglowTargetSwitchTableImageSnapshot } from './GoldenglowTargetSwitchTableImage'
 import './GoldenglowTargetSwitchTable.css'
 
 export function getGoldenglowTargetSwitchTableComparisonLabel(data: GgTableData): string {
+  if (data.layout === 'winner') return '総ダメージ期待値が最大のMOD'
   if (data.layout === 'total') return '総ダメージ期待値'
   const baselineLabel = data.baseline.kind === 'previous' ? '1つ前の段階（Lv.1は未装備）'
     : data.baseline.kind === 'selected' ? data.builds.find(build => build.id === data.baseline.id)?.label
@@ -33,6 +36,10 @@ export function GoldenglowTargetSwitchTable({ data, conditions, disabled = false
   const copyState = copyFeedback?.text === text ? copyFeedback.ok : null
   const [image, setImage] = useState<GoldenglowTargetSwitchTableImageSnapshot | null>(null)
   const [manualTitle, setManualTitle] = useState<string | null>(null)
+  const [imageLayout, setImageLayout] = useState<GgTableImageLayout>('current')
+  const [typography, setTypography] = useState(DEFAULT_COMPARISON_TABLE_IMAGE_TYPOGRAPHY)
+  const [moduleLevel, setModuleLevel] = useState(3)
+  const [saveProgress, setSaveProgress] = useState('')
   const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [saving, setSaving] = useState(false)
   const savingRef = useRef(false)
@@ -45,6 +52,12 @@ export function GoldenglowTargetSwitchTable({ data, conditions, disabled = false
     ? '幅÷高さが0.1〜10になる縦横比を指定してください。' : undefined
   const reportLayoutError = useCallback((cause: unknown) => setLayoutError(cause instanceof Error ? cause.message : '表のプレビューを表示できませんでした。'), [])
   const reportLayoutReady = useCallback(() => setLayoutError(''), [])
+  const stageLevels = image ? getGgTableImageStageLevels(image.data) : []
+  const selectedLevel = stageLevels.includes(moduleLevel) ? moduleLevel : stageLevels.at(-1)
+  const exportLayout = imageLayout === 'split' && !stageLevels.length ? 'current' : imageLayout
+  const exportSource = image && { ...image, imageLayout: exportLayout, typography }
+  const exportImage = exportSource && (exportLayout === 'split' && selectedLevel !== undefined
+    ? getGoldenglowTargetSwitchTableImageStageSnapshot(exportSource, selectedLevel) : exportSource)
   const copyTable = async () => {
     if (copying || disabled || !hasTargets) return
     setCopying(true)
@@ -57,16 +70,45 @@ export function GoldenglowTargetSwitchTable({ data, conditions, disabled = false
     setImage(structuredClone({ data, conditions, title: manualTitle ?? getGgTableTitle(data) }))
   }
   const saveImage = async (filename: string, ratio?: number) => {
-    if (!image || savingRef.current || layoutError || aspectError) return
+    if (!exportImage || savingRef.current || layoutError || aspectError) return
     savingRef.current = true; setSaving(true); setFeedback(null)
     try {
       const destination = await selectChartImageDestination(filename, picker)
       if (destination.type === 'cancelled') return
-      await saveGoldenglowTargetSwitchTableImage({ snapshot: image, filename, aspectRatio: ratio,
+      await saveGoldenglowTargetSwitchTableImage({ snapshot: exportImage, filename, aspectRatio: ratio,
         writeBlob: destination.type === 'file' ? destination.write : undefined })
       setFeedback(destination.type === 'file' ? 'saved' : 'downloaded'); setImage(null)
     } catch { setFeedback('failed') }
     finally { savingRef.current = false; setSaving(false) }
+  }
+  const saveAllStages = async (filename: string, ratio?: number) => {
+    if (!exportSource || !exportImage || !stageLevels.length || savingRef.current || layoutError || aspectError) return
+    savingRef.current = true; setSaving(true); setFeedback(null)
+    const archiveName = (filename === getGoldenglowTargetSwitchTableImageFilename(exportImage, ratio)
+      ? getGoldenglowTargetSwitchTableImageFilename({ ...exportSource, moduleLevel: undefined }, ratio) : filename).replace(/\.(png|zip)$/i, '') + '.zip'
+    try {
+      const destination = await selectChartArchiveDestination(archiveName, picker)
+      if (destination.type === 'cancelled') return
+      const files: { name: string; blob: Blob }[] = []
+      for (const [index, level] of stageLevels.entries()) {
+        setSaveProgress(`PNG ${index + 1}/${stageLevels.length}を作成中…`)
+        const snapshot = getGoldenglowTargetSwitchTableImageStageSnapshot(exportSource, level)
+        const name = getGoldenglowTargetSwitchTableImageFilename(snapshot, ratio)
+        await saveGoldenglowTargetSwitchTableImage({ snapshot, filename: name, aspectRatio: ratio,
+          writeBlob: async blob => { files.push({ name, blob }) } })
+      }
+      setSaveProgress('ZIPを作成中…')
+      const archive = await createStoredZipArchive(files)
+      if (destination.type === 'file') await destination.write(archive)
+      else {
+        const url = URL.createObjectURL(archive)
+        const link = document.createElement('a')
+        link.href = url; link.download = archiveName; link.click()
+        setTimeout(() => URL.revokeObjectURL(url), 1000)
+      }
+      setFeedback(destination.type === 'file' ? 'saved' : 'downloaded'); setImage(null)
+    } catch { setFeedback('failed') }
+    finally { savingRef.current = false; setSaving(false); setSaveProgress('') }
   }
   return <section className="gg-switch-table-section" aria-labelledby={headingId}>
     <div className="gg-switch-table-heading"><h3 id={headingId}>{getGoldenglowTargetSwitchTableComparisonLabel(data)}</h3>
@@ -80,14 +122,25 @@ export function GoldenglowTargetSwitchTable({ data, conditions, disabled = false
     <span className="visually-hidden" role="status">{copyState === true ? '比較表をコピーしました。' : copyState === false ? '比較表をコピーできませんでした。' : ''}</span>
     {hasTargets ? <GoldenglowTargetSwitchTableContent data={data} /> : <p className="gg-switch-table-status" role="status">比較するMODを選択するか、総ダメージ表示に変更してください。</p>}
     {feedback && feedback !== 'failed' && <p className="gg-switch-table-status" role="status">{feedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
-    {image && <ChartImageSaveDialog initialFilename={getGoldenglowTargetSwitchTableImageFilename(image)}
-      getDefaultFilename={ratio => getGoldenglowTargetSwitchTableImageFilename(image, ratio)} aspect={aspect}
+    {image && exportImage && <ChartImageSaveDialog initialFilename={getGoldenglowTargetSwitchTableImageFilename(exportImage)}
+      getDefaultFilename={ratio => getGoldenglowTargetSwitchTableImageFilename(exportImage, ratio)} aspect={aspect}
       onAspectChange={value => { setLayoutError(''); setAspect(value) }} aspectError={aspectError} helpMode="popover"
       aspectHint="指定なしでは表の内容に合わせます。比率を指定しても表全体を保存します。"
       canChooseLocation={!!picker} saving={saving} saveDisabled={!!layoutError} error={feedback === 'failed'}
       onClose={() => { if (!savingRef.current) { setImage(null); setFeedback(null); setLayoutError('') } }}
       onSave={(filename, ratio) => void saveImage(filename, ratio)}
-      options={<div className="chart-image-save-field">
+      additionalSaveAction={exportLayout === 'split' && stageLevels.length > 1
+        ? { label: `全${stageLevels.length}枚をZIP保存`, onSave: (filename, ratio) => void saveAllStages(filename, ratio) } : undefined}
+      options={<><ComparisonTableImageOptions layout={imageLayout} onLayoutChange={value => { setLayoutError(''); setImageLayout(value as GgTableImageLayout) }}
+        layouts={[{ value: 'current', label: '現在の配置' }, { value: 'transpose', label: '術耐性を列に' },
+          { value: 'stacked', label: 'HPごとに上下に' }, { value: 'split', label: '段階ごとに分割', disabled: !stageLevels.length }]}
+        numberSize={typography.numberSize} onNumberSizeChange={numberSize => { setLayoutError(''); setTypography(previous => ({ ...previous, numberSize })) }}
+        titleSize={typography.titleSize} onTitleSizeChange={titleSize => { setLayoutError(''); setTypography(previous => ({ ...previous, titleSize })) }}
+        detailSize={typography.detailSize} onDetailSizeChange={detailSize => { setLayoutError(''); setTypography(previous => ({ ...previous, detailSize })) }} disabled={saving} />
+      {exportLayout === 'split' && <label className="chart-image-save-field"><span>出力する段階</span>
+        <select aria-label="出力する段階" value={selectedLevel} disabled={saving} onChange={event => { setLayoutError(''); setModuleLevel(Number(event.target.value)) }}>
+          {stageLevels.map(level => <option key={level} value={level}>Lv.{level}</option>)}</select></label>}
+      <div className="chart-image-save-field">
         <div className="gg-switch-table-title-heading"><label htmlFor={titleId}>タイトル</label><span>{manualTitle === null ? '自動' : '手動'}</span></div>
         <div className="gg-switch-table-title-controls">
           <input id={titleId} type="text" value={image.title ?? getGgTableTitle(image.data)} disabled={saving} maxLength={CHART_IMAGE_LABEL_MAX_LENGTH}
@@ -97,58 +150,8 @@ export function GoldenglowTargetSwitchTable({ data, conditions, disabled = false
             setLayoutError(''); setManualTitle(null); setImage(current => current && { ...current, title: getGgTableTitle(current.data) })
           }}>自動に戻す</button>
         </div>
-      </div>}
-      preview={<GoldenglowTargetSwitchTableImagePreview key={`${image.title}:${aspect.preset}:${aspect.width}:${aspect.height}`}
-        {...image} aspectRatio={aspectError ? undefined : aspectRatio} onLayoutError={reportLayoutError} onLayoutReady={reportLayoutReady} />} />}
+      </div>{saveProgress && <p className="chart-image-save-hint" role="status">{saveProgress}</p>}</>}
+      preview={<GoldenglowTargetSwitchTableImagePreview key={`${image.title}:${exportLayout}:${selectedLevel}:${JSON.stringify(typography)}:${aspect.preset}:${aspect.width}:${aspect.height}`}
+        {...exportImage} aspectRatio={aspectError ? undefined : aspectRatio} onLayoutError={reportLayoutError} onLayoutReady={reportLayoutReady} />} />}
   </section>
-}
-
-/** Shared content keeps the on-page table, preview and saved PNG identical. */
-export function GoldenglowTargetSwitchTableContent({ data, title, footer }: { data: GgTableData; title?: string; footer?: ReactNode }) {
-  const targets = useMemo(() => getGgTableTargets(data), [data])
-  const rows = useMemo(() => buildGgTableRows(data), [data])
-  const colors = useMemo(() => {
-    const palette = getModuleComparisonColors(data.builds, { shadeBy: 'moduleLevel' })
-    return new Map(data.builds.map((build, index) => [build.id, palette[index]]))
-  }, [data.builds])
-  const combined = data.layout === 'combined'
-  const columnsFor = (build: (typeof targets)[number]) => combined && build.id !== 'none' ? 2 : 1
-  const hpColumns = targets.reduce((count, build) => count + columnsFor(build), 0)
-  const columns = (data.showRanks ? 2 : 1) + data.hps.length * hpColumns
-  const headerRows = 2 + (data.showRanks ? 1 : 0) + (combined ? 1 : 0)
-  const maximum = useMemo(() => getSurtrUnequippedColorScaleMaximum(rows.flatMap(row => row.cells.map(cell => cell.comparison)), data.metric), [rows, data.metric])
-  const metricLabel = data.metric === 'difference' ? '総ダメージ差' : data.metric === 'ratio' ? '基準比（%）' : '増加率（%）'
-  const style = { '--gg-switch-table-min-width': `${(data.showRanks ? 126 : 76) + data.hps.length * hpColumns * 100}px` } as CSSProperties
-  return <div className="gg-switch-table-wrap"><table className="gg-switch-table-content" style={style} aria-label={getGgTableTitle(data)}>
-    <colgroup>{data.showRanks && <col className="gg-switch-table-rank-column" />}<col className="gg-switch-table-resistance-column" /></colgroup>
-    {data.hps.map(hp => <colgroup key={hp}>{targets.flatMap(build => Array.from({ length: columnsFor(build) }, (_, index) => <col key={`${build.id}:${index}`} />))}</colgroup>)}
-    <thead>
-      {title !== undefined && <tr className="gg-switch-table-image-title-row"><th colSpan={columns}>{title}</th></tr>}
-      <tr>{data.showRanks && <th scope="col" rowSpan={headerRows} className="gg-switch-table-rank-cell">術耐性<br />ランク</th>}
-        <th scope="col" rowSpan={headerRows}>術耐性</th>
-        {data.hps.map(hp => <th key={hp} scope="colgroup" colSpan={hpColumns}>{data.showRanks ? <span title={`HPランク ${getEnemyStatRating('maxHp', hp) ?? '不明'}`}>HPランク {getEnemyStatRating('maxHp', hp) ?? '—'}</span> : `敵HP ${hp.toLocaleString('ja-JP')}`}</th>)}
-      </tr>
-      {data.showRanks && <tr>{data.hps.map(hp => <th key={hp} scope="colgroup" colSpan={hpColumns}>敵HP {hp.toLocaleString('ja-JP')}</th>)}</tr>}
-      <tr>{data.hps.flatMap(hp => targets.map(build => <th key={`${hp}:${build.id}`} scope={columnsFor(build) > 1 ? 'colgroup' : 'col'} colSpan={columnsFor(build)} rowSpan={combined && build.id === 'none' ? 2 : 1}>
-        <span className="gg-switch-table-module-label"><i aria-hidden="true" style={{ backgroundColor: colors.get(build.id) }} />{build.label}</span>
-      </th>))}</tr>
-      {combined && <tr>{data.hps.flatMap(hp => targets.filter(build => build.id !== 'none').map(build => <Fragment key={`${hp}:${build.id}`}><th scope="col">総ダメージ</th><th scope="col">{metricLabel}</th></Fragment>))}</tr>}
-    </thead>
-    <tbody>{rows.map(row => <tr key={row.resistance}>
-      {data.showRanks && <th scope="row" className="gg-switch-table-rank-cell" title={row.rank?.label}>{row.rank?.rating ?? '—'}</th>}
-      <th scope="row">{row.resistance}</th>
-      {row.cells.map(cell => {
-        const build = targets.find(target => target.id === cell.buildId)
-        const rawOnly = data.layout === 'total' || combined && build?.id === 'none'
-        const background = data.colorScale !== 'NONE' && !rawOnly
-          ? getSurtrUnequippedColorScaleBackground(cell.comparison, data.metric, maximum, data.colorScale) : undefined
-        return <Fragment key={`${cell.hp}:${cell.buildId}`}>
-          {combined && !rawOnly && <td data-build-id={cell.buildId} data-hp={cell.hp} data-metric="total">{formatGgTableValue(cell.total, 'total', data.precision)}</td>}
-          <td data-build-id={cell.buildId} data-hp={cell.hp} data-metric={rawOnly ? 'total' : data.metric}
-            style={background ? { backgroundColor: background } : undefined}>{formatGgTableValue(rawOnly ? cell.total : cell.comparison, rawOnly ? 'total' : data.metric, data.precision)}</td>
-        </Fragment>
-      })}
-    </tr>)}</tbody>
-    {footer && <tfoot><tr><td colSpan={columns}>{footer}</td></tr></tfoot>}
-  </table></div>
 }

@@ -1,16 +1,8 @@
-.gg-switch-table-image { box-sizing: border-box; flex: none; margin: 0; padding: 0; background: #fff; color: #222; font-family: "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif; --surface: #fff; --surface-soft: #f7f7f7; --border: #d6d6d6; --text: #222; --text-muted: #666; }
 .gg-switch-table-image .gg-switch-table-wrap { overflow: visible; }
-.gg-switch-table-image .gg-switch-table-content { min-width: 0; width: 100%; box-sizing: border-box; font-size: 14px; }
-.gg-switch-table-image th, .gg-switch-table-image td { padding: 12px; white-space: normal; overflow-wrap: anywhere; }
-.gg-switch-table-image tbody td { white-space: nowrap; overflow-wrap: normal; }
-.gg-switch-table-image .gg-switch-table-rank-column, .gg-switch-table-image .gg-switch-table-resistance-column { width: auto; }
-.gg-switch-table-image .gg-switch-table-image-title-row { height: 44px; }
-.gg-switch-table-image .gg-switch-table-image-title-row th { font-size: 14px; line-height: 20px; font-weight: 700; }
+.gg-switch-table-image .gg-switch-table-content { min-width: 0; width: 100%; box-sizing: border-box; }
+.gg-switch-table-image .gg-switch-table-content th, .gg-switch-table-image .gg-switch-table-content td { padding: 12px; white-space: normal; overflow-wrap: anywhere; }
+.gg-switch-table-image .gg-switch-table-content tbody td { white-space: nowrap; overflow-wrap: normal; }
 .gg-switch-table-image .gg-switch-table-module-label { white-space: normal; }
-.gg-switch-table-image tfoot td { text-align: left; color: var(--text-muted); font-size: 12px; }
-.gg-switch-table-image-conditions { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 20px; line-height: 20px; }
-.gg-switch-table-image-preview-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; color: var(--text-muted); font-size: 12px; }
-.gg-switch-table-image-preview-frame { position: relative; overflow: hidden; width: 100%; background: #fff; }
-.gg-switch-table-image-preview-position { position: absolute; top: 0; transform-origin: top left; }
-.gg-switch-table-image-preview-size { display: block; margin-top: 6px; text-align: right; color: var(--text-muted); font-size: 11px; }
-.gg-switch-table-image-error { margin: 8px 0 0; color: var(--danger, #a02d37); font-size: 12px; }
+.gg-switch-table-image-conditions { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; line-height: inherit; }
+.gg-switch-table-image-hp-panel + .gg-switch-table-image-hp-panel { margin-top: 12px; }
+.gg-switch-table-image-hp-panel h3 { margin: 0; padding: 6px 12px; border: 1px solid var(--border); border-bottom: 0; background: var(--surface-soft); font-size: var(--comparison-table-title-size, 12px); line-height: 1.5; font-weight: 500; }

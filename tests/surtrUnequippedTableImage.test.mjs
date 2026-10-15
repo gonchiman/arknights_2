@@ -48,8 +48,10 @@ const props = { series: [baseline, ...modules], baseline, resistances: [0, 60, 1
   metric: 'difference', layout: 'combined' }
 const render = (overrides = {}) => renderToStaticMarkup(createElement(Content, { ...props, ...overrides }))
 const text = markup => markup.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
-const sections = (markup, tag) => [...markup.matchAll(new RegExp('<' + tag + '(?:\\s[^>]*)?>([\\s\\S]*?)<\\/' + tag + '>', 'g'))]
-  .map(section => section[1])
+const sections = (markup, tag) => {
+  const found = [...markup.matchAll(new RegExp('<' + tag + '(?:\\s[^>]*)?>([\\s\\S]*?)<\\/' + tag + '>', 'g'))].map(section => section[1])
+  return tag === 'tfoot' && !found.length ? [...markup.matchAll(/<div class="comparison-table-image-footer">([\s\S]*?)<\/div>/g)].map(section => section[1]) : found
+}
 const rows = markup => [...markup.matchAll(/<tr(?:\s[^>]*)?>([\s\S]*?)<\/tr>/g)]
   .map(row => [...row[1].matchAll(/<(?:th|td)[^>]*>([\s\S]*?)<\/(?:th|td)>/g)].map(cell => text(cell[1])))
 const sectionRows = (markup, tag) => sections(markup, tag).flatMap(rows)
@@ -61,23 +63,20 @@ const table = markup => {
 const imageHeaderRows = (markup, expectedTitle) => {
   const header = sections(markup, 'thead')[0]
   const headers = rows(header)
+  const title = markup.match(/<div class="comparison-table-image-title">([\s\S]*?)<\/div>/)?.[1]
+  assert.ok(title, 'Image has a shared external title band')
   if (expectedTitle === undefined) {
-    assert.equal(headers[0].length, 1)
-    assert.match(headers[0][0], /^スルト S3 .+比較$/)
-    expectedTitle = headers[0][0]
+    assert.match(title, /^スルト S3 .+比較$/)
+    expectedTitle = title
   }
-  assert.deepEqual(headers[0], [expectedTitle], 'Image begins with one full-width title row')
-  assert.equal(headers.flat().filter(label => label === expectedTitle).length, 1)
-  const titleRow = header.match(/<tr(?:\s[^>]*)?>([\s\S]*?)<\/tr>/)?.[1]
-  const titleColumns = titleRow?.match(/<th\b[^>]*\bcolspan="(\d+)"/i)?.[1]
-  const footerColumns = sections(markup, 'tfoot')[0]?.match(/<td\b[^>]*\bcolspan="(\d+)"/i)?.[1]
-  assert.ok(titleColumns && footerColumns, 'Title and condition band span explicit complete columns')
-  assert.equal(titleColumns, footerColumns)
-  assert.doesNotMatch(titleRow, /\browspan=/i, 'Title does not change the existing grouped header row spans')
+  assert.equal(title, expectedTitle)
+  assert.equal(headers.flat().filter(label => label === expectedTitle).length, 0, 'Title does not become a column header')
+  assert.match(markup, /class="comparison-table-image-footer"/, 'Image has a shared external condition band')
+  assert.doesNotMatch(header, /surtr-s3-table-title/, 'Title does not change grouped column headers')
   const rowSpans = [...header.matchAll(/\browspan="(\d+)"/gi)].map(match => Number(match[1]))
-  assert.ok(rowSpans.length > 0 && rowSpans.every(span => span === headers.length - 1),
+  assert.ok(rowSpans.length > 0 && rowSpans.every(span => span === headers.length),
     'Original column headers span their own rows without including the title')
-  return headers.slice(1)
+  return headers
 }
 
 // Independent values: X/none at RES 60 is 70/80 = 87.5%, or -12.5% growth.
@@ -290,7 +289,7 @@ test('saved image uses the same table values, stage colors and full resistance l
       assert.equal(footer.length, 1)
       assert.match(text(footer[0]), /基準：未装備/)
       assert.match(text(footer[0]), /S3 特化3・昇進2 Lv\.90・信頼度100・潜在1・対象を自身でブロック/)
-      assert.match(footer[0], new RegExp(`colspan="${layout === 'combined' ? 6 : 3}"`, 'i'))
+      assert.match(saved, /class="comparison-table-image-footer"/)
       assert.doesNotMatch(saved, /<button|<select|<h[1-6]|is-selected|aria-haspopup|›/)
     }
   }
@@ -387,7 +386,7 @@ test('two-condition saved images retain all captured values and both condition l
     assert.match(text(footer[0]), /対象を自身でブロック/)
     assert.match(text(footer[0]), /潜在1/)
     assert.doesNotMatch(text(footer[0]), /潜在6/)
-    assert.match(footer[0], new RegExp(`colspan="${layout === 'combined' ? 10 : 5}"`, 'i'))
+    assert.match(saved, /class="comparison-table-image-footer"/)
     assert.doesNotMatch(saved, /<button|<select|is-selected|aria-haspopup|›|999/)
     for (const item of modules) assert.ok(table(saved).includes(`background-color:${item.color}`), item.label)
   }
@@ -415,7 +414,7 @@ test('both conditions preserve all six module stages, 26 combined cells and matc
       '150.0', '+50.0', '250.0', '+150.0', '160.0', '+60.0', '260.0', '+160.0',
     ]] : [['0', '+10.0', '+110.0', '+20.0', '+120.0', '+30.0', '+130.0', '+40.0', '+140.0', '+50.0', '+150.0', '+60.0', '+160.0']])
     for (const item of series) assert.ok(table(saved).includes(`background-color:${item.color}`), item.label)
-    assert.match(sections(saved, 'tfoot')[0], new RegExp(`colspan="${layout === 'combined' ? 26 : 13}"`, 'i'))
+    assert.match(saved, /class="comparison-table-image-footer"/)
     assert.doesNotMatch(saved, /<button|is-selected/)
   }
 })
@@ -531,7 +530,7 @@ test('blocking-first headers and values form two complete condition groups while
       const saved = renderToStaticMarkup(createElement(Image, data))
       assert.deepEqual(bodyCells(saved), bodyCells(markup))
       assert.deepEqual(imageHeaderRows(saved), headers)
-      assert.match(sections(saved, 'tfoot')[0], new RegExp(`colspan="${expandBody(saved)[0].length}"`, 'i'))
+      assert.match(saved, /class="comparison-table-image-footer"/)
       assert.doesNotMatch(saved, /<button|<select|is-selected|aria-haspopup|›/)
       assert.match(markup, /surtr-s3-equal-blocking-columns/)
       const standard = render({ ...data, columnOrder: 'module' })
@@ -632,7 +631,7 @@ test('saved rank tables preserve captured rank layout, merged groups, resistance
       assert.deepEqual(imageHeaderRows(saved), sectionRows(live, 'thead'))
       assert.equal(expandBody(saved).length, snapshot.resistances.length)
       const footerColumns = expandBody(saved)[0].length
-      assert.match(sections(saved, 'tfoot')[0], new RegExp(`colspan="${footerColumns}"`, 'i'))
+      assert.match(saved, /class="comparison-table-image-footer"/)
       assert.doesNotMatch(saved, /<button|<select|aria-haspopup|is-selected|›/)
       assert.deepEqual(snapshot, before)
     }
@@ -815,7 +814,7 @@ test('previous-stage tables compare each selected module with its own hidden pre
       const saved = renderToStaticMarkup(createElement(Image, { ...props, ...data, metadata }))
       assert.deepEqual(bodyCells(saved), bodyCells(markup))
       assert.deepEqual(imageHeaderRows(saved), headers)
-      assert.match(sections(saved, 'tfoot')[0], new RegExp(`colspan="${layout === 'combined' ? 7 : 4}"`, 'i'))
+      assert.match(saved, /class="comparison-table-image-footer"/)
       assert.doesNotMatch(saved, /<button|<select|is-selected|aria-haspopup|›/)
     }
   }
@@ -879,7 +878,7 @@ test('previous-stage condition groups share the correct signed color scale and r
       const saved = renderToStaticMarkup(createElement(Image, data))
       assert.deepEqual(bodyCells(saved), bodyCells(live))
       assert.deepEqual(imageHeaderRows(saved), sectionRows(live, 'thead'))
-      assert.match(sections(saved, 'tfoot')[0], new RegExp(`colspan="${layout === 'combined' ? 14 : 8}"`, 'i'))
+      assert.match(saved, /class="comparison-table-image-footer"/)
       assert.doesNotMatch(saved, /<button|<select|is-selected|aria-haspopup|›/)
       assert.deepEqual(data, before)
     }
@@ -1097,7 +1096,7 @@ test('multiple potentials retain independent baselines, exact comparisons and th
             JSON.stringify({ comparisonBase, metric, layout, columnOrder, width: expected[0].length, headers: expandHeaders(live) }))
           assert.match(saved, /潜在1・6/)
           assert.match(saved, /未ブロック／対象を自身でブロック/)
-          assert.match(saved, new RegExp(`colspan="${expected[0].length}"`, 'i'))
+          assert.match(saved, /class="comparison-table-image-footer"/)
           for (const item of selected) assert.ok(saved.includes(`background-color:${item.color}`))
           if (comparisonBase === 'potential-1') assert.match(saved, /基準：潜在1（同じMOD・段階）/)
         }
