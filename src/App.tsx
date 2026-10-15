@@ -79,6 +79,7 @@ export default function App() {
   const [rows, setRows] = useState<SkillRecord[]>([])
   const [route, setRoute] = useState<AppRoute>(() => parseHashRoute(window.location.hash))
   const [operatorDirectoryVisited, setOperatorDirectoryVisited] = useState(route.view === 'operators')
+  const [damageThreeMounted, setDamageThreeMounted] = useState(route.view === 'damage-three')
   const currentRouteRef = useRef(route)
   const operatorDirectoryPositionRef = useRef<OperatorDirectoryPosition | null>(null)
   const [detailBackgroundRoute, setDetailBackgroundRoute] = useState<BaseAppRoute | null>(null)
@@ -115,6 +116,8 @@ export default function App() {
       const previousRoute = currentRouteRef.current
       currentRouteRef.current = nextRoute
       if (nextRoute.view === 'operators') setOperatorDirectoryVisited(true)
+      if (nextRoute.view === 'damage-three') setDamageThreeMounted(true)
+      else if (nextRoute.view !== 'operator-detail' || nextRoute.source !== 'damage-three') setDamageThreeMounted(false)
       if (previousRoute.view === 'operators' && nextRoute.view === 'operator-detail') {
         const table = document.querySelector<HTMLElement>('.operator-database-table-wrap')
         operatorDirectoryPositionRef.current = {
@@ -250,13 +253,17 @@ export default function App() {
   const isSurtrOperatorDetail = displayedRoute.view === 'operator-detail'
     && displayedRoute.operatorId === 'char_350_surtr'
     && displayedRoute.source === 'surtr-home'
+  const isDamageThreeOperatorDetail = displayedRoute.view === 'operator-detail'
+    && displayedRoute.source === 'damage-three'
   const operatorBreadcrumbs: PageBreadcrumbsProps | undefined = isGoldenglowOperatorDetail
     ? { parents: [GOLDENGLOW_HOME_LINK], current: 'オペレーター情報' }
     : isSurtrOperatorDetail
       ? { parents: [SURTR_HOME_LINK], current: 'オペレーター情報' }
-      : undefined
+      : isDamageThreeOperatorDetail
+        ? { parents: [{ label: '計算機３へ戻る', href: '#/damage-3' }], current: 'オペレーター情報' }
+        : undefined
   const activeNavigationPage: NavigationPage = displayedRoute.view === 'operator-detail'
-    ? isGoldenglowOperatorDetail ? 'goldenglow-home' : isSurtrOperatorDetail ? 'surtr-home' : 'operators'
+    ? isGoldenglowOperatorDetail ? 'goldenglow-home' : isSurtrOperatorDetail ? 'surtr-home' : isDamageThreeOperatorDetail ? 'damage-three' : 'operators'
     : displayedRoute.view === 'skill-json-overview'
       ? 'skill-json'
       : isGoldenglowAnalysis
@@ -303,6 +310,15 @@ export default function App() {
           <div hidden={displayedRoute.view !== 'operators'}>
             <PanelStateScope.Provider value="operators">
               <OperatorDatabase rows={classifiedRows} loading={loading} />
+            </PanelStateScope.Provider>
+          </div>
+        )}
+
+        {/* Preserve calculator inputs only while visiting its operator detail page. */}
+        {damageThreeMounted && (displayedRoute.view === 'damage-three' || isDamageThreeOperatorDetail) && (
+          <div hidden={displayedRoute.view !== 'damage-three'}>
+            <PanelStateScope.Provider value="damage-three">
+              <DamageCalculatorThree rows={classifiedRows} loading={loading} />
             </PanelStateScope.Provider>
           </div>
         )}
@@ -355,8 +371,6 @@ export default function App() {
           />
         ) : displayedRoute.view === 'damage-two' ? (
           <DamageCalculatorTwo rows={classifiedRows} loading={loading} />
-        ) : displayedRoute.view === 'damage-three' ? (
-          <DamageCalculatorThree rows={classifiedRows} loading={loading} />
         ) : displayedRoute.view === 'comparison' ? (
           <OperatorComparison
             rows={classifiedRows}

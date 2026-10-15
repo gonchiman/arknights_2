@@ -247,6 +247,25 @@ test('全12技能を選択でき、同一OPのS1・S2・S3の名前付きボタ�
   ]
   for (const [operatorId, skillIndex, expected] of expectations) {
     const markup = render(selected(operatorId, skillIndex))
+    const operator = rows.find(row => row.operatorId === operatorId)
+    const operatorLink = [...markup.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)]
+      .find(anchor => /class="[^"]*damage-three-operator-name(?:\s|\")/.test(anchor[1]))
+    assert.ok(operatorLink, `${operatorId}/S${skillIndex}: operator detail link`)
+    assert.ok(operatorLink[1].includes(`href="#/operators/${operatorId}?from=damage-3"`))
+    assert.ok(operatorLink[1].includes(`aria-label="${escapeHtml(operator.operatorName)}のオペレーター情報を開く"`))
+    assert.ok(text(operatorLink[2]).includes(escapeHtml(operator.operatorName)))
+    assert.match(text(operatorLink[2]), /→$/)
+    assert.match(markup, /<div\b[^>]*class="[^"]*damage-three-operator-summary[^"]*"/)
+    const changeButton = [...markup.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)]
+      .find(button => /class="[^"]*damage-three-operator-change(?:\s|\")/.test(button[1]))
+    assert.ok(changeButton, `${operatorId}/S${skillIndex}: independent operator search button`)
+    assert.match(changeButton[1], /type="button"/)
+    assert.match(changeButton[1], /aria-expanded="false"/)
+    assert.match(changeButton[1], /aria-controls="damage-three-search"/)
+    assert.equal(text(changeButton[2]), '検索して変更')
+    for (const button of markup.matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/g)) assert.doesNotMatch(button[1], /<a\b/)
+    for (const anchor of markup.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/g)) assert.doesNotMatch(anchor[1], /<button\b/)
+    assert.doesNotMatch(markup, /operator-search-trigger/)
     const data = resultTable(markup)
     assert.deepEqual(data[1], expected, `${operatorId}/S${skillIndex}`)
     assert.equal(data[0].length, expected.length)

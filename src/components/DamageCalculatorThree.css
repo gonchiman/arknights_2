@@ -1,6 +1,11 @@
 .damage-three-page .collapsible-panel-body { padding: 12px 14px; }
 .damage-three-selection-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
-.damage-three-selection-grid .operator-search-trigger { width: 100%; }
+.damage-three-operator-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; border: 1px solid var(--border); padding: 8px 10px; }
+.damage-three-operator-meta { display: grid; min-width: 0; gap: 3px; }
+.damage-three-operator-meta small { color: var(--text-soft); font-size: 10px; overflow-wrap: anywhere; }
+.damage-three-operator-name { width: fit-content; color: var(--text); font-size: 12px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.damage-three-operator-change { flex: 0 0 auto; min-height: 34px; border: 1px solid var(--border); border-radius: 0; padding: 6px 10px; background: var(--surface); color: var(--text); font-size: 11px; cursor: pointer; }
+.damage-three-operator-change:hover { background: var(--surface-hover); }
 .damage-three-skills button { display: flex; height: auto; min-height: 42px; justify-content: center; gap: 8px; padding: 8px 10px; }
 .damage-three-skills button > span,
 .damage-three-skills button > strong { font-size: 11px; font-weight: 500; }
@@ -33,4 +38,8 @@
 }
 @container (max-width: 380px) {
   .damage-three-condition-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (pointer: coarse) {
+  .damage-three-operator-name,
+  .damage-three-operator-change { min-height: 44px; display: inline-flex; align-items: center; }
 }

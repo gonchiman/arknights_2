@@ -1,5 +1,5 @@
 import type { AnchorHTMLAttributes, MouseEvent } from 'react'
-import { createOperatorDetailHash } from '../lib/routes'
+import { createOperatorDetailHash, type OperatorDetailSource } from '../lib/routes'
 
 export type OpenOperatorDetail = (
   operatorId: string,
@@ -8,11 +8,13 @@ export type OpenOperatorDetail = (
 
 interface Props extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'onClick'> {
   operatorId: string
+  source?: OperatorDetailSource
   onOpenOperatorDetail?: OpenOperatorDetail
 }
 
 export function OperatorDetailLink({
   operatorId,
+  source,
   onOpenOperatorDetail,
   children,
   ...anchorProps
@@ -38,7 +40,7 @@ export function OperatorDetailLink({
   return (
     <a
       {...anchorProps}
-      href={createOperatorDetailHash(operatorId)}
+      href={createOperatorDetailHash(operatorId, { source })}
       aria-haspopup={onOpenOperatorDetail ? 'dialog' : anchorProps['aria-haspopup']}
       onClick={handleClick}
     >

@@ -1,3 +1,5 @@
+export type OperatorDetailSource = 'goldenglow-home' | 'surtr-home' | 'damage-three'
+
 export type AppRoute =
   | { view: 'home' }
   | { view: 'skills' }
@@ -6,7 +8,7 @@ export type AppRoute =
   | { view: 'skill-summary'; selection?: SkillRouteSelection }
   | { view: 'skill-structure'; selection?: SkillRouteSelection }
   | { view: 'operators' }
-  | { view: 'operator-detail'; operatorId: string; source?: 'goldenglow-home' | 'surtr-home' }
+  | { view: 'operator-detail'; operatorId: string; source?: OperatorDetailSource }
   | { view: 'skill-json'; selection?: SkillJsonRouteSelection }
   | { view: 'skill-json-overview' }
   | { view: 'code-analysis' }
@@ -56,10 +58,11 @@ export type SkillEffectsRouteSelection = SkillRouteSelection
 
 export function createOperatorDetailHash(
   operatorId: string,
-  options?: { source?: 'goldenglow-home' | 'surtr-home' },
+  options?: { source?: OperatorDetailSource },
 ): string {
   const sourceQuery = options?.source === 'goldenglow-home' ? '?from=goldenglow'
-    : options?.source === 'surtr-home' ? '?from=surtr' : ''
+    : options?.source === 'surtr-home' ? '?from=surtr'
+      : options?.source === 'damage-three' ? '?from=damage-3' : ''
   return `${OPERATOR_DETAIL_ROUTE_PREFIX}${encodeURIComponent(operatorId)}${sourceQuery}`
 }
 
@@ -117,6 +120,7 @@ export function parseHashRoute(hash: string): AppRoute {
       if (sources.length === 1) {
         if (sources[0] === 'goldenglow') return { view: 'operator-detail', operatorId, source: 'goldenglow-home' }
         if (sources[0] === 'surtr') return { view: 'operator-detail', operatorId, source: 'surtr-home' }
+        if (sources[0] === 'damage-3') return { view: 'operator-detail', operatorId, source: 'damage-three' }
       }
       return { view: 'operator-detail', operatorId }
     } catch {

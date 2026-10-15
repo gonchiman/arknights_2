@@ -16,6 +16,7 @@ import {
 import type { SkillRecord } from '../types/skill'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
+import { OperatorDetailLink } from './OperatorDetailLink'
 import './DamageCalculator.css'
 import './DamageCalculatorTwo.css'
 import './DamageCalculatorThree.css'
@@ -77,12 +78,19 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
       <div className="damage-three-selection-grid">
         <div className="calculator-field">
           <span>オペレーター</span>
-          <button type="button" className="operator-search-trigger" aria-expanded={searchOpen}
-            aria-controls="damage-three-search" onClick={() => setSearchOpen(open => !open)}>
-            <strong>{operator?.operatorName ?? 'オペレーターを選択'}</strong>
-            {operator && <small>★{operator.rarity} · {operator.professionLabel} / {operator.subProfessionName}</small>}
-            <em>{searchOpen ? '検索を閉じる' : '検索して変更'} ↗</em>
-          </button>
+          <div className="damage-three-operator-summary">
+            <div className="damage-three-operator-meta">
+              {operator ? <OperatorDetailLink operatorId={operator.operatorId} source="damage-three"
+                className="damage-three-operator-name" aria-label={`${operator.operatorName}のオペレーター情報を開く`}>
+                {operator.operatorName} <span aria-hidden="true">→</span>
+              </OperatorDetailLink> : <strong>オペレーターを選択</strong>}
+              {operator && <small>★{operator.rarity} · {operator.professionLabel} / {operator.subProfessionName}</small>}
+            </div>
+            <button type="button" className="damage-three-operator-change" aria-expanded={searchOpen}
+              aria-controls="damage-three-search" onClick={() => setSearchOpen(open => !open)}>
+              {searchOpen ? '検索を閉じる' : '検索して変更'}
+            </button>
+          </div>
         </div>
         <div className="calculator-field"><span>スキル</span>
           {operatorSkills.length > 0 ? <div className="skill-choice-group damage-three-skills" role="group" aria-label="スキル選択">

@@ -275,6 +275,26 @@ test('スルトのOP情報は参照元を復元し、重複指定は通常の詳
   }
 })
 
+test('計算機３からのOP情報は任意のOPの参照元を復元する', () => {
+  for (const operatorId of ['char_350_surtr', 'char_263_skadi', 'char_172_svrash', 'char_293_thorns', 'char/日本?from=surtr']) {
+    const hash = createOperatorDetailHash(operatorId, { source: 'damage-three' })
+    assert.equal(hash, `#/operators/${encodeURIComponent(operatorId)}?from=damage-3`)
+    assert.deepEqual(parseHashRoute(hash), { view: 'operator-detail', operatorId, source: 'damage-three' })
+  }
+})
+
+test('計算機３の参照元は一意な正しいfrom指定だけを採用する', () => {
+  for (const query of [
+    'from=damage-three', 'from=Damage-3', 'from=damage-3%20',
+    'from=damage-3&from=damage-3', 'from=damage-3&from=surtr',
+    'from=goldenglow&from=damage-3', 'from=damage-3&%66rom=damage-3',
+  ]) {
+    assert.deepEqual(parseHashRoute(`#/operators/char_263_skadi?${query}`), {
+      view: 'operator-detail', operatorId: 'char_263_skadi',
+    }, query)
+  }
+})
+
 test('GGの不正な専用ページURLを分析ページと誤認しない', () => {
   const hashes = [
     '#/analysis/goldenglow',
