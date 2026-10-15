@@ -1,7 +1,11 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { getTableImageDimensions, parseTableImageAspect, type TableImageAspect } from '../lib/tableImageAspect'
-import type { SurtrTotalDamageTable, SurtrTotalDamageTableLayout } from '../lib/surtrTotalDamageTable'
+import type { SurtrTotalDamageTable, SurtrTotalDamageTableDisplayMode, SurtrTotalDamageTableLayout,
+  SurtrTotalDamageWinnerColor } from '../lib/surtrTotalDamageTable'
+import { DEFAULT_SURTR_TOTAL_DAMAGE_TABLE_TITLE_SIZE, DEFAULT_SURTR_TOTAL_DAMAGE_TABLE_DETAIL_SIZE,
+  type SurtrTotalDamageTableTitleSize, type SurtrTotalDamageTableDetailSize } from '../lib/surtrTotalDamageTableImageTypography'
 import { SurtrTotalDamageTableContent } from './SurtrTotalDamageTableContent'
+import { applySurtrTotalDamageWinnerLayout, clearSurtrTotalDamageWinnerLayout } from './surtrTotalDamageWinnerLayout'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './SurtrDurationChart.css'
 import './SurtrTotalDamageTableImage.css'
@@ -11,6 +15,10 @@ export interface SurtrTotalDamageTableImageSnapshot {
   layout: SurtrTotalDamageTableLayout
   precision: number
   colorScale: 'none' | 'LINEAR' | 'SQRT'
+  displayMode?: SurtrTotalDamageTableDisplayMode
+  winnerColor?: SurtrTotalDamageWinnerColor
+  titleSize?: SurtrTotalDamageTableTitleSize
+  detailSize?: SurtrTotalDamageTableDetailSize
   title: string
   conditions: string[]
 }
@@ -26,7 +34,11 @@ const MAXIMUM_CSS_SIDE = 8000
 const MAXIMUM_CSS_PIXELS = 8_000_000
 
 const initialWidthFor = (snapshot: SurtrTotalDamageTableImageSnapshot) => Math.max(640,
-  snapshot.layout === 'resistance'
+  snapshot.displayMode === 'winner'
+    ? snapshot.layout === 'time'
+      ? 132 + snapshot.matrix.resistances.length * 112
+      : 82 + snapshot.matrix.times.length * 112
+    : snapshot.layout === 'resistance'
     ? 80 + snapshot.matrix.times.length * snapshot.matrix.series.length * 128
     : 300 + snapshot.matrix.resistances.length * 128,
 )
@@ -60,13 +72,24 @@ export function SurtrTotalDamageTableImage({ aspectRatio, exporting = false, onL
       if (cancelled) return
       image.style.display = ''
       try {
+        const isWinner = snapshot.displayMode === 'winner'
+        const wrapperStyle = getComputedStyle(table.parentElement!)
+        const wrapperWidth = ['borderLeftWidth', 'borderRightWidth', 'paddingLeft', 'paddingRight']
+          .reduce((sum, property) => sum + (parseFloat(wrapperStyle[property as keyof CSSStyleDeclaration] as string) || 0), 0)
+        const minimumWidth = isWinner
+          ? applySurtrTotalDamageWinnerLayout(table).minimumWidth + Math.ceil(wrapperWidth) : initialWidth
         const size = getTableImageDimensions({
-          initialWidth,
+          initialWidth: Math.max(initialWidth, minimumWidth),
           aspect: tableAspect(aspectRatio),
           measureHeight: width => {
             image.style.width = `${width}px`
             image.style.height = 'auto'
             table.style.height = 'auto'
+            if (isWinner) {
+              applySurtrTotalDamageWinnerLayout(table)
+              // A compact one-line cell must fit horizontally at its original font size.
+              if (width < minimumWidth) return MAXIMUM_CSS_SIDE + 1
+            }
             return image.offsetHeight
           },
         })
@@ -79,8 +102,15 @@ export function SurtrTotalDamageTableImage({ aspectRatio, exporting = false, onL
         image.style.width = `${size.width}px`
         image.style.height = 'auto'
         table.style.height = 'auto'
-        const chromeHeight = image.offsetHeight - table.offsetHeight
-        table.style.height = `${Math.max(table.offsetHeight, size.height - chromeHeight)}px`
+        if (isWinner) {
+          applySurtrTotalDamageWinnerLayout(table)
+          const bodyHeight = table.tBodies[0]?.offsetHeight ?? 0
+          const extraHeight = Math.max(0, size.height - image.offsetHeight)
+          applySurtrTotalDamageWinnerLayout(table, { bodyHeight: bodyHeight + extraHeight })
+        } else {
+          const chromeHeight = image.offsetHeight - table.offsetHeight
+          table.style.height = `${Math.max(table.offsetHeight, size.height - chromeHeight)}px`
+        }
         image.style.height = `${size.height}px`
         if (image.offsetWidth !== size.width || image.offsetHeight !== size.height
           || image.scrollWidth > size.width || image.scrollHeight > size.height
@@ -100,13 +130,19 @@ export function SurtrTotalDamageTableImage({ aspectRatio, exporting = false, onL
     return () => {
       cancelled = true
       document.fonts.removeEventListener('loadingdone', measure)
+      if (snapshot.displayMode === 'winner') clearSurtrTotalDamageWinnerLayout(table)
     }
   }, [snapshotKey, initialWidth, aspectRatio, exporting, onLayout, onLayoutError])
 
-  return <figure ref={imageRef} className="surtr-total-damage-table-image" style={{ width: initialWidth }} aria-label={snapshot.title}>
+  const imageStyle = {
+    width: initialWidth,
+    '--surtr-total-damage-table-title-size': `${snapshot.titleSize ?? DEFAULT_SURTR_TOTAL_DAMAGE_TABLE_TITLE_SIZE}px`,
+    '--surtr-total-damage-table-detail-size': `${snapshot.detailSize ?? DEFAULT_SURTR_TOTAL_DAMAGE_TABLE_DETAIL_SIZE}px`,
+  } as CSSProperties
+  return <figure ref={imageRef} className="surtr-total-damage-table-image" style={imageStyle} aria-label={snapshot.title}>
     <div className="surtr-total-damage-table-image-title">{snapshot.title}</div>
     <SurtrTotalDamageTableContent matrix={snapshot.matrix} layout={snapshot.layout} precision={snapshot.precision}
-      colorScale={snapshot.colorScale} forImage />
+      colorScale={snapshot.colorScale} displayMode={snapshot.displayMode} winnerColor={snapshot.winnerColor} forImage />
     <div className="surtr-total-damage-table-image-footer">
       {snapshot.conditions.map((condition, index) => <span key={index}>{condition}</span>)}
     </div>

@@ -20,6 +20,17 @@
 .surtr-total-damage-value-button { display: block; box-sizing: border-box; width: 100%; min-height: 40px; margin: 0; padding: 10px; border: 0; background: transparent; color: inherit; font: inherit; font-variant-numeric: tabular-nums; text-align: right; cursor: pointer; }
 .surtr-total-damage-value-button:hover { background: rgba(127, 127, 127, 0.08); }
 .surtr-total-damage-value-button:focus-visible { outline: 2px solid var(--text); outline-offset: -3px; }
+.surtr-total-damage-table .surtr-total-damage-winner-cell { text-align: center; vertical-align: middle; white-space: nowrap; }
+.surtr-total-damage-winner-table tbody tr { height: 44px; }
+.surtr-total-damage-table-content .surtr-total-damage-winner-table tbody th,
+.surtr-total-damage-table-content .surtr-total-damage-winner-table tbody td { box-sizing: border-box; padding: 8px; white-space: nowrap; }
+.surtr-total-damage-table-content .surtr-total-damage-winner-table td.is-interactive { padding: 0; }
+.surtr-total-damage-winner-cell .surtr-total-damage-value-button { min-height: 43px; padding: 8px; text-align: center; }
+.surtr-total-damage-winner-label { display: inline-block; white-space: nowrap; line-height: 1.6; font-weight: 600; }
+.surtr-total-damage-table td.has-winner-color,
+.surtr-total-damage-table tbody tr:hover > td.has-winner-color { background: color-mix(in srgb, var(--surtr-total-damage-winner-color) 18%, transparent); }
+.surtr-total-damage-table td.has-winner-color.is-tied,
+.surtr-total-damage-table tbody tr:hover > td.has-winner-color.is-tied { background: var(--surface-soft); }
 .surtr-total-damage-table td.is-selected { box-shadow: inset 0 0 0 2px var(--text); }
 .surtr-total-damage-table .surtr-total-damage-table-title { padding: 12px; font-size: 14px; line-height: 20px; font-weight: 700; text-align: center; }
 .surtr-total-damage-table .surtr-total-damage-table-footer { padding: 12px; color: var(--text-muted); font-size: 12px; text-align: left; white-space: normal; }
@@ -29,6 +40,8 @@
 .surtr-total-damage-table-content.is-image .surtr-total-damage-table th,
 .surtr-total-damage-table-content.is-image .surtr-total-damage-table td { padding: 12px; }
 .surtr-total-damage-table-content.is-image .surtr-total-damage-table { font-size: 14px; }
+.surtr-total-damage-table-content.is-image .surtr-total-damage-winner-table tbody th,
+.surtr-total-damage-table-content.is-image .surtr-total-damage-winner-table tbody td { padding: 8px; }
 @media (max-width: 640px) {
   .surtr-total-damage-value-button { min-height: 44px; padding: 8px; }
 }

@@ -49,3 +49,36 @@ test('aspect is readable and long combinations remain within Windows filename li
   assert.ok(new TextEncoder().encode(longName).length <= 240)
   assert.doesNotMatch(longName, /[<>:"/\\|?*]/)
 })
+
+test('winner output has its own name, identity colors and selected stages without irrelevant precision', () => {
+  const winner = { ...options, layout: 'resistance' as const, displayMode: 'winner' as const, winnerColor: 'module' as const }
+  const name = getSurtrTotalDamageTableImageFilename(winner)
+  assert.match(name, /スルト_S3最大ダメージMOD表_術耐性別/)
+  assert.match(name, /未装備-XLv3-YLv3/)
+  assert.match(name, /退場時除外_MOD色_比率自動\.png$/)
+  assert.doesNotMatch(name, /桁|線形色|平方根色/)
+  assert.equal(getSurtrTotalDamageTableImageFilename({ ...winner, precision: 3, colorScale: 'SQRT' }), name)
+  assert.notEqual(getSurtrTotalDamageTableImageFilename({ ...winner, winnerColor: 'none' }), name)
+  assert.match(getSurtrTotalDamageTableImageFilename({ ...winner, winnerColor: 'none' }), /_色なし_比率自動\.png$/)
+  assert.notEqual(getSurtrTotalDamageTableImageFilename({ ...winner, layout: 'time' }), name)
+  assert.equal(getSurtrTotalDamageTableImageFilename({ ...winner, layout: 'module' }), name)
+  assert.equal(getSurtrTotalDamageTableImageFilename({ ...options, displayMode: 'total' }), getSurtrTotalDamageTableImageFilename(options))
+})
+
+test('title and detail sizes identify the captured image even when long module names are shortened', () => {
+  const sizes = [
+    { titleSize: 12 as const, detailSize: 8 as const },
+    { titleSize: 16 as const, detailSize: 8 as const },
+    { titleSize: 12 as const, detailSize: 12 as const },
+  ]
+  for (const displayMode of ['total', 'winner'] as const) {
+    const base = { ...options, displayMode, series: [{ id: 'long', label: '非常に長いMODの名前😀'.repeat(40) }] }
+    const names = sizes.map(size => getSurtrTotalDamageTableImageFilename({ ...base, ...size }, 16 / 9))
+    assert.equal(new Set(names).size, sizes.length)
+    sizes.forEach((size, index) => {
+      assert.ok(names[index].includes(`文字${size.titleSize}-${size.detailSize}px`))
+      assert.match(names[index], /_比率16x9\.png$/)
+      assert.ok(new TextEncoder().encode(names[index]).length <= 240)
+    })
+  }
+})

@@ -26,6 +26,9 @@ interface Props {
   title: string
   kicker: string
   intro?: ReactNode
+  getAvailableLevelIndices?: (skill: SkillRecord) => readonly number[]
+  selectionActionLabel?: string
+  renderSelectionFooter?: (context: SkillDescriptionSelectionContext) => ReactNode
   renderSelection: (context: SkillDescriptionSelectionContext) => ReactNode
 }
 
@@ -37,6 +40,9 @@ export function SkillDescriptionSelectionPage({
   title,
   kicker,
   intro,
+  getAvailableLevelIndices,
+  selectionActionLabel = '解析する',
+  renderSelectionFooter,
   renderSelection,
 }: Props) {
   const selection = initialSelection ?? null
@@ -65,9 +71,12 @@ export function SkillDescriptionSelectionPage({
   const skillLevels = selectedSkill
     ? selectedSkill.skillLevels.length > 0 ? selectedSkill.skillLevels : [selectedSkill.raw]
     : []
-  const levelIndex = selection?.levelIndex ?? Math.max(0, skillLevels.length - 1)
+  const availableLevelIndices = selectedSkill ? getAvailableLevelIndices?.(selectedSkill) : undefined
+  const selectableLevelIndices = skillLevels.map((_, index) => index)
+    .filter(index => !availableLevelIndices || availableLevelIndices.includes(index))
+  const levelIndex = selection?.levelIndex ?? selectableLevelIndices.at(-1) ?? 0
   const invalidLevel = !!selectedSkill && (
-    !Number.isInteger(levelIndex) || levelIndex < 0 || levelIndex >= skillLevels.length
+    !Number.isInteger(levelIndex) || !selectableLevelIndices.includes(levelIndex)
   )
   const missingSkill = rows.length > 0 && !selectedSkill && selection !== null
   const searchVisible = operatorSearchOpen ?? missingSkill
@@ -104,7 +113,14 @@ export function SkillDescriptionSelectionPage({
   }
 
   const chooseSkill = (skill: SkillRecord) => {
-    chooseSelection(skill, Math.max(0, skill.skillLevels.length - 1))
+    const lastLevelIndex = Math.max(0, skill.skillLevels.length - 1)
+    const available = getAvailableLevelIndices?.(skill)
+    const nextLevelIndex = available
+      ? [...available].filter(index => Number.isInteger(index) && index >= 0 && index <= lastLevelIndex)
+        .sort((a, b) => b - a)[0]
+      : lastLevelIndex
+    if (nextLevelIndex === undefined) return
+    chooseSelection(skill, nextLevelIndex)
     setOperatorSearchOpen(false)
   }
 
@@ -134,7 +150,7 @@ export function SkillDescriptionSelectionPage({
             </div>
           )}
 
-          <section className="skill-effects-picker" aria-label="解析するオペレーターとスキルの選択">
+          <section className="skill-effects-picker" aria-label={`${selectionActionLabel}オペレーターとスキルの選択`}>
             <div className="skill-effects-picker-row">
               <div className="skill-effects-field skill-effects-operator-field">
                 <span>オペレーター</span>
@@ -157,15 +173,17 @@ export function SkillDescriptionSelectionPage({
               {selectedSkill && (
                 <label className="skill-effects-field skill-effects-level-field">
                   <span>スキルレベル</span>
-                  <select
+                  {getAvailableLevelIndices && selectableLevelIndices.length === 1 && !invalidLevel
+                    ? <strong className="skill-effects-fixed-level">{levelLabel}</strong>
+                    : <select
                     value={invalidLevel ? '' : levelIndex}
                     onChange={(event) => chooseSelection(selectedSkill, Number(event.target.value))}
                   >
                     {invalidLevel && <option value="" disabled>レベルを選択してください</option>}
-                    {skillLevels.map((_, index) => (
+                    {selectableLevelIndices.map(index => (
                       <option value={index} key={index}>{getSkillLevelLabel(index, skillLevels.length)}</option>
                     ))}
-                  </select>
+                  </select>}
                 </label>
               )}
             </div>
@@ -185,8 +203,8 @@ export function SkillDescriptionSelectionPage({
                     chooseSkill(skill)
                     window.requestAnimationFrame(() => operatorTriggerRef.current?.focus())
                   }}
-                  instruction="オペレーターを選ぶと、スキルの効果を解析します"
-                  actionLabel="解析する →"
+                  instruction={selectionActionLabel === '解析する' ? 'オペレーターを選ぶと、スキルの効果を解析します' : ''}
+                  actionLabel={`${selectionActionLabel} →`}
                   className="skill-effects-search-results"
                   selectedOperatorId={selectedOperator?.operatorId}
                 />
@@ -196,7 +214,7 @@ export function SkillDescriptionSelectionPage({
             {operatorSkills.length > 0 && (
               <div className="skill-effects-field skill-effects-skill-field">
                 <span>スキル</span>
-                <div className="skill-effects-skill-choices" role="group" aria-label="解析するスキル">
+                <div className="skill-effects-skill-choices" role="group" aria-label={`${selectionActionLabel}スキル`}>
                   {operatorSkills.map((skill) => {
                     const identity = createSkillJsonSelectionKey(skill)
                     const active = selectedSkill !== null && identity === createSkillJsonSelectionKey(selectedSkill)
@@ -217,12 +235,13 @@ export function SkillDescriptionSelectionPage({
                 </div>
               </div>
             )}
+            {displaySkill && renderSelectionFooter?.({ skill: displaySkill, levelIndex, levelLabel, description })}
           </section>
 
           {invalidLevel && (
             <div className="skill-effects-notice" role="status">
               <strong>リンク先のスキルレベルが見つかりません</strong>
-              <p>現在のゲームデータには存在しないレベル指定です。上のスキルレベルから選び直してください。</p>
+              <p>{getAvailableLevelIndices ? 'このページで表示できないレベル指定です。' : '現在のゲームデータには存在しないレベル指定です。'}上のスキルレベルから選び直してください。</p>
             </div>
           )}
 
