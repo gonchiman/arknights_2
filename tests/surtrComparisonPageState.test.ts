@@ -23,6 +23,7 @@ test('fresh comparison settings use the requested display defaults independently
   assert.equal(state.displayMode, 'comparison')
   assert.equal(state.winnerColor, 'module')
   assert.equal(state.winnerGapShading, false)
+  assert.equal(state.remnantComparisonMode, 'single')
   for (const key of ['unequippedComparisonBase', 'unequippedColorScale', 'unequippedColorScaleMode', 'precision'] as const) {
     assert.equal(state[key], old[key])
   }
@@ -44,6 +45,26 @@ test('winning MOD is opt-in, independently persisted and validates invalid prese
   assert.equal(invalid.winnerGapShading, false)
   assert.equal(invalid.unequippedComparisonBase, defaults.unequippedComparisonBase)
   assert.equal(invalid.unequippedMetric, defaults.unequippedMetric)
+})
+
+test('余燼なし・中の比較配置は個別に保存し、未指定・不正値は従来の単一状態を使う', () => {
+  const storage = memoryStorage()
+  const defaults = createDefaultSurtrComparisonPageState()
+  const { remnantComparisonMode: _mode, ...legacy } = defaults
+  assert.equal(parseSurtrComparisonPageState(legacy).remnantComparisonMode, 'single')
+  for (const remnantComparisonMode of ['single', 'common', 'columns'] as const) {
+    for (const remnantActive of [false, true]) {
+      const state = { ...defaults, remnantComparisonMode, settings: { ...defaults.settings, remnantActive } }
+      writeSurtrComparisonPageState(state, storage)
+      assert.deepEqual(readSurtrComparisonPageState(storage), state)
+      assert.equal(storage.getItem(SURTR_DPS_PAGE_STATE_KEY), null)
+    }
+  }
+  for (const remnantComparisonMode of [undefined, null, 'invalid', 'COMMON', true, 1, ['columns']]) {
+    const parsed = parseSurtrComparisonPageState({ ...legacy, remnantComparisonMode })
+    assert.equal(parsed.remnantComparisonMode, 'single')
+    assert.deepEqual(parsed.settings, defaults.settings)
+  }
 })
 
 test('first visit migrates validated panel 5 settings, resolves common potential and preserves hidden selections', () => {

@@ -1,0 +1,29 @@
+.surtr-remnant-table-wrap { min-width: 0; border: 0; }
+.surtr-s3-table.surtr-remnant-table { table-layout: fixed; min-width: var(--surtr-remnant-min-width); border: 1px solid var(--border); }
+.surtr-s3-table.surtr-remnant-table th, .surtr-s3-table.surtr-remnant-table td { box-sizing: border-box; border: 1px solid var(--border); vertical-align: middle; }
+.surtr-s3-table.surtr-remnant-table thead th { white-space: normal; overflow-wrap: anywhere; text-align: center; line-height: 1.6; }
+.surtr-s3-table.surtr-remnant-table thead tr:first-child > th:first-child { text-align: center; min-width: 0; }
+.surtr-s3-table.surtr-remnant-table tbody th { text-align: left; }
+.surtr-s3-table.surtr-remnant-table tbody th.surtr-s3-rank-cell { text-align: center; }
+.surtr-s3-table.surtr-remnant-table tbody td { white-space: nowrap; text-align: right; }
+.surtr-s3-table.surtr-remnant-table .surtr-s3-column-label { justify-content: center; flex-wrap: wrap; }
+.surtr-s3-table.surtr-remnant-table .surtr-s3-column-label i { flex: none; }
+.surtr-remnant-resistance-column { width: 80px; }
+.surtr-remnant-inline-resistance-column { width: 112px; }
+.surtr-s3-table.surtr-remnant-table tbody td.surtr-remnant-interactive-cell { padding: 0; }
+.surtr-remnant-value-button { display: block; box-sizing: border-box; width: 100%; min-height: 39px; margin: 0; padding: 10px; border: 0; background: transparent; color: inherit; font: inherit; text-align: right; cursor: pointer; }
+.surtr-remnant-value-button:hover { background: rgba(127, 127, 127, 0.08); }
+.surtr-remnant-value-button:focus-visible { outline: 2px solid var(--text); outline-offset: -3px; }
+.surtr-remnant-table .is-selected > th { background: var(--surface-active, #e9edf0); }
+.surtr-s3-table.surtr-remnant-table tfoot td { white-space: normal; text-align: left; }
+.surtr-s3-table.surtr-remnant-transposed-table tbody th { white-space: normal; overflow-wrap: anywhere; }
+.surtr-s3-table.surtr-remnant-transposed-table tbody .surtr-s3-column-label { justify-content: flex-start; }
+.surtr-remnant-transposed-label-column { width: 160px; }
+.surtr-s3-table.surtr-remnant-transposed-table .surtr-s3-resistance-rank { margin-left: 6px; }
+.surtr-remnant-table-heading, .surtr-remnant-table-footer { padding: 10px; border: 1px solid var(--border); }
+.surtr-remnant-table-heading { border-bottom: 0; background: var(--surface-soft); text-align: center; font-weight: 700; }
+.surtr-remnant-table-footer { border-top: 0; color: var(--text-muted); }
+.surtr-s3-table.surtr-remnant-table.is-image { min-width: 0; }
+@media (max-width: 640px) {
+  .surtr-remnant-value-button { min-height: 44px; padding: 8px; }
+}
