@@ -9,6 +9,7 @@ import { getSurtrUnequippedTableImageFilename, type SurtrUnequippedTableImageMet
 import { CHART_IMAGE_LABEL_MAX_LENGTH } from '../lib/chartImageLabels'
 import { getSurtrComparisonTableTitle } from '../lib/surtrComparisonTableTitle'
 import { getSurtrComparisonWinnerTsv } from '../lib/surtrComparisonWinner'
+import { getSurtrRemnantComparisonTsv } from '../lib/surtrRemnantComparison'
 import { DEFAULT_COMPARISON_TABLE_IMAGE_TYPOGRAPHY } from '../lib/tableImageTypography'
 import { ComparisonTableImageOptions } from './ComparisonTableImageOptions'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
@@ -21,11 +22,12 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
   metadata: SurtrUnequippedTableImageMetadata
   selectedResistance: number | null
   enableImageLayouts?: boolean
-  onOpenDetail: (resistance: number, seriesId: string | undefined, metric: SurtrUnequippedMetric | 'total', blocking?: boolean) => void
+  onOpenDetail: (resistance: number, seriesId: string | undefined, metric: SurtrUnequippedMetric | 'total', blocking?: boolean, remnantActive?: boolean) => void
 }) {
   const baseLabel = getSurtrComparisonBaseLabel(data.comparisonBase ?? 'unequipped')
   const metricLabel = data.displayMode === 'winner' ? 'DPSが最大のMOD' : getUnequippedMetricLabel(data.metric, data.comparisonBase, data.quantity)
-  const tableText = data.displayMode === 'winner' ? getSurtrComparisonWinnerTsv(data, data.rankMode)
+  const tableText = data.remnantComparison !== undefined ? getSurtrRemnantComparisonTsv(data)
+    : data.displayMode === 'winner' ? getSurtrComparisonWinnerTsv(data, data.rankMode)
     : getSurtrUnequippedComparisonTsv(data.series, data.baseline, data.resistances, data.precision, data.metric, data.layout, data.blockingComparison, data.rankMode, data.columnOrder, data.comparisonBase, data.referenceSeries, data.quantity)
   const [copyFeedback, setCopyFeedback] = useState<{ text: string; ok: boolean } | null>(null)
   const [copying, setCopying] = useState(false)
@@ -180,7 +182,8 @@ export function SurtrUnequippedComparisonTable({ selectedResistance, onOpenDetai
 }
 
 const getSurtrComparisonOutputTitle = (data: SurtrUnequippedComparisonTableData) => data.displayMode === 'winner'
-  ? 'スルト S3 DPSが最大のMOD' : getSurtrComparisonTableTitle(data)
+  ? `スルト S3 DPSが最大のMOD${data.remnantComparison !== undefined ? '（余燼なし・余燼中）' : ''}`
+  : `${getSurtrComparisonTableTitle(data)}${data.remnantComparison !== undefined ? '（余燼なし・余燼中）' : ''}`
 
 function downloadArchive(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)

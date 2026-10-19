@@ -49,11 +49,22 @@ export function SurtrS3ComparisonPage({ rows, loading, error, onRetry }: {
   const tableComparison = useMemo(() => record ? buildSurtrPotentialComparison(record, effectiveSettings,
     stages, state.unequippedPotentials, state.unequippedComparisonBase) : null,
   [record, effectiveSettings, stages, state.unequippedPotentials, state.unequippedComparisonBase])
+  const remnantComparison = useMemo(() => {
+    if (state.remnantComparisonMode === 'single' || !record || !tableComparison) return undefined
+    const currentActive = !!effectiveSettings.remnantActive
+    const other = buildSurtrPotentialComparison(record, { ...effectiveSettings, remnantActive: !currentActive },
+      stages, state.unequippedPotentials, state.unequippedComparisonBase)
+    if (!other) return undefined
+    return [false, true].map(remnantActive => ({ remnantActive,
+      ...(remnantActive === currentActive ? tableComparison : other),
+    }))
+  }, [state.remnantComparisonMode, record, tableComparison, effectiveSettings, stages, state.unequippedPotentials, state.unequippedComparisonBase])
   const resistances = useMemo(() => getSurtrDpsResistanceSamples(state.unequippedStep, state.resistanceRange),
     [state.unequippedStep, state.resistanceRange])
   const baseLabel = getSurtrComparisonBaseLabel(state.unequippedComparisonBase)
   const label = skillLabel(effectiveSettings.skillLevelIndex)
-  const remnantLabel = effectiveSettings.remnantActive ? '余燼中' : '余燼なし'
+  const remnantLabel = state.remnantComparisonMode !== 'single' ? '余燼なし・余燼中を比較'
+    : effectiveSettings.remnantActive ? '余燼中' : '余燼なし'
   const rangeError = !rangeDraft.min.trim() || !rangeDraft.max.trim()
     || !isValidSurtrDpsResistanceRange({ min: Number(rangeDraft.min), max: Number(rangeDraft.max) })
     ? '0〜100の整数で、終了を開始より大きくしてください。' : ''
@@ -106,10 +117,12 @@ export function SurtrS3ComparisonPage({ rows, loading, error, onRetry }: {
     }))
   }
   const openDetail = (resistance: number, requestedSeriesId: string | undefined,
-    detailMetric: SurtrUnequippedMetric | 'total', requestedBlocking?: boolean) => {
+    detailMetric: SurtrUnequippedMetric | 'total', requestedBlocking?: boolean, requestedRemnantActive?: boolean) => {
     if (!record || !tableComparison) return
     const blocking = requestedBlocking ?? false
-    const group = tableComparison.blockingComparison.find(group => group.blocking === blocking)
+    const remnantActive = requestedRemnantActive ?? !!effectiveSettings.remnantActive
+    const comparison = remnantComparison?.find(state => state.remnantActive === remnantActive) ?? tableComparison
+    const group = comparison.blockingComparison.find(group => group.blocking === blocking)
     if (!group) return
     const targets = getSurtrComparisonTargets(group.series, state.unequippedComparisonBase)
     const requested = [...group.series, ...(group.referenceSeries ?? [])].find(item => item.id === requestedSeriesId)
@@ -120,7 +133,7 @@ export function SurtrS3ComparisonPage({ rows, loading, error, onRetry }: {
       const stageId = item.moduleStageId ?? item.id
       const stage = stageId === 'none' ? null : /^(.*):lv([123])$/.exec(stageId)
       if (stageId !== 'none' && !stage) return null
-      const model = deriveSurtrDpsModel(record, { ...effectiveSettings, blocking, potential: item.potential ?? effectiveSettings.potential },
+      const model = deriveSurtrDpsModel(record, { ...effectiveSettings, blocking, remnantActive, potential: item.potential ?? effectiveSettings.potential },
         stage?.[1] ?? '', Number(stage?.[2] ?? 0))
       return model ? calculateSurtrDpsCalculation(model, resistance) : null
     }
@@ -137,7 +150,7 @@ export function SurtrS3ComparisonPage({ rows, loading, error, onRetry }: {
     setState(previous => ({ ...previous, selectedResistance: resistance }))
     setDetail({ resistance, series: detailSeries, initialSeriesId: requestedSeriesId ?? detailSeries[0].id,
       metric: detailMetric, baselineId: group.baseline.id, precision: state.precision, signedComparison: true, comparisonBase: state.unequippedComparisonBase,
-      conditions: `昇進2 Lv.${effectiveSettings.level}・信頼度${effectiveSettings.trust}・潜在${state.unequippedPotentials.join('・')}・S3 ${label}・${blocking ? '対象を自身でブロック' : '未ブロック'}・${remnantLabel}` })
+      conditions: `昇進2 Lv.${effectiveSettings.level}・信頼度${effectiveSettings.trust}・潜在${state.unequippedPotentials.join('・')}・S3 ${label}・${blocking ? '対象を自身でブロック' : '未ブロック'}・${remnantActive ? '余燼中' : '余燼なし'}` })
   }
   const status = error ? <div className="error-box" role="alert">{error}<button className="button secondary" type="button" onClick={onRetry}>再読み込み</button></div>
     : <p className="surtr-s3-status" role="status">{loading ? 'スルトのデータを読み込み中…' : 'スルトS3のデータを取得できませんでした。'}</p>
@@ -171,11 +184,11 @@ export function SurtrS3ComparisonPage({ rows, loading, error, onRetry }: {
         </fieldset>
         <div className="surtr-s3-comparison-condition-controls">
           <SurtrModuleComparisonTableControls group="conditions" allowPotentialComparison stepErrorId="surtr-s3-comparison-step-error" value={options} onChange={updateOptions} />
-          <label className="surtr-s3-values-toggle"><input type="checkbox" checked={!!effectiveSettings.remnantActive}
+          <label className="surtr-s3-values-toggle"><input type="checkbox" checked={!!effectiveSettings.remnantActive} disabled={state.remnantComparisonMode !== 'single'}
             onChange={event => update('remnantActive', event.target.checked)} />素質2「余燼」発動中</label>
         </div>
         <details className="surtr-s3-assumptions"><summary>計算条件</summary>
-          <p>敵1体への連続攻撃を想定した理論DPSです。{effectiveSettings.remnantActive ? '素質2「余燼」発動中の攻撃速度を反映します。' : '素質2「余燼」は含めません。'}素質1、MODの攻撃力・特性を反映し、外部バフとフレーム単位の攻撃間隔の丸めは含めません。</p>
+          <p>敵1体への連続攻撃を想定した理論DPSです。{state.remnantComparisonMode !== 'single' ? '素質2「余燼」の発動前と発動中を、それぞれの未装備・比較元と比較します。' : effectiveSettings.remnantActive ? '素質2「余燼」発動中の攻撃速度を反映します。' : '素質2「余燼」は含めません。'}素質1、MODの攻撃力・特性を反映し、外部バフとフレーム単位の攻撃間隔の丸めは含めません。</p>
           <p>「余燼」発動中はMOD Y Lv.2の攻撃速度＋20、Lv.3の＋30を反映します。未装備・MOD X・MOD Y Lv.1のDPSは変わりません。発動中の持続時間や攻撃回数による総ダメージは計算しません。</p>
           <p>未ブロックはスルトが誰もブロックしていない状態です。「対象を自身でブロック」は攻撃対象をスルト自身がブロックしている状態です。両方の条件を表に表示します。</p>
         </details>
@@ -184,9 +197,14 @@ export function SurtrS3ComparisonPage({ rows, loading, error, onRetry }: {
     <CollapsibleCalculatorPanel id="surtr-s3-comparison-display" number="02" title="表の表示設定"
       summary={`${state.displayMode === 'winner' ? '最大のMOD' : `${state.unequippedLayout === 'combined' ? 'DPS＋比較値' : '比較値のみ'}・${state.unequippedMetric === 'difference' ? 'DPS差' : state.unequippedMetric === 'ratio' ? '比率' : '増加率'}`}・術耐性${state.resistanceRange.min}〜${state.resistanceRange.max}`} collapsedLabel="表示設定を表示">
       <div className="surtr-s3-comparison-display-controls">
+        <label className="calculator-field"><span>余燼の表示</span><select aria-label="余燼の表示" value={state.remnantComparisonMode}
+          onChange={event => setState(previous => ({ ...previous, remnantComparisonMode: event.target.value as typeof state.remnantComparisonMode }))}>
+          <option value="single">現在の状態のみ</option><option value="common">余燼なし・中（共通値をまとめる）</option>
+          <option value="columns">余燼なし・中（列に並べる）</option></select></label>
         <SurtrModuleComparisonTableControls group="display" allowPotentialComparison allowWinner winnerCandidateCount={stages.length}
           stepErrorId="surtr-s3-comparison-step-error" value={options} onChange={updateOptions} />
       </div>
+      {state.remnantComparisonMode !== 'single' && <p className="surtr-s3-status">余燼なしと発動中を同じ表に表示します。{state.remnantComparisonMode === 'common' && '同じMOD・潜在・ブロック条件で、表示範囲の計算値が両状態で一致する列だけを共通化します。'}色の濃さは両状態で共通です。</p>}
       <fieldset className="surtr-s3-comparison-range"><legend>術耐性の範囲</legend><div className="surtr-s3-resistance-bounds">
         {(['min', 'max'] as const).map(bound => <label className="calculator-field" key={bound}><span>{bound === 'min' ? '開始' : '終了'}</span>
           <input type="number" min="0" max="100" step="1" aria-label={`${bound === 'min' ? '開始' : '終了'}術耐性`} value={rangeDraft[bound]}
@@ -199,7 +217,7 @@ export function SurtrS3ComparisonPage({ rows, loading, error, onRetry }: {
       {!record ? status : !state.unequippedPotentials.length ? <p className="surtr-s3-status" role="status">比較する潜在を選択してください。</p>
         : !stages.length || (state.displayMode !== 'winner' && !state.unequippedComparisonBase.startsWith('potential-') && !stages.some(item => item.id !== 'none'))
           ? <p className="surtr-s3-status" role="status">比較するMODを選択してください。</p>
-        : !tableComparison ? <p role="alert">比較条件の計算に必要なデータを取得できませんでした。</p>
+        : !tableComparison || (state.remnantComparisonMode !== 'single' && remnantComparison?.length !== 2) ? <p role="alert">比較条件の計算に必要なデータを取得できませんでした。</p>
         : !!rangeError || !!stepError ? <p className="surtr-s3-status" role="status">術耐性の範囲と刻みを確認してください。</p>
         : !resistances.length ? <p className="surtr-s3-status" role="status">指定した範囲に表示する術耐性がありません。</p>
         : <SurtrUnequippedComparisonTable enableImageLayouts series={tableComparison.series} baseline={tableComparison.baseline}
@@ -209,6 +227,7 @@ export function SurtrS3ComparisonPage({ rows, loading, error, onRetry }: {
           displayMode={state.displayMode} winnerStages={stages} winnerColor={state.winnerColor} winnerGapShading={state.winnerGapShading}
           colorScale={state.unequippedColorScale} colorScaleMode={state.unequippedColorScaleMode}
           blockingComparison={tableComparison.blockingComparison} selectedResistance={state.selectedResistance}
+          remnantComparison={remnantComparison} remnantLayout={state.remnantComparisonMode === 'common' ? 'common' : 'columns'}
           metadata={{ skillLabel: label, level: effectiveSettings.level, trust: effectiveSettings.trust,
             potential: state.unequippedPotentials[0], potentials: state.unequippedPotentials, blocking: false, remnantActive: effectiveSettings.remnantActive }}
           onOpenDetail={openDetail} />}

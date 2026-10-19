@@ -159,6 +159,64 @@ test('余燼ONでも非有効な比較表設定は画像名を変えず、長い
   assert.doesNotMatch(long, /[<>:"/\\|?*\u0000-\u001f\u007f�]/)
 })
 
+test('余燼の両状態と配置を画像名の先頭側に記録し、単一状態の選択には依存しない', () => {
+  const remnantComparison = [{ remnantActive: false }, { remnantActive: true }]
+  const names: string[] = []
+  for (const [remnantLayout, label] of [['common', '共通値をまとめる'], ['columns', '余燼を列に']] as const) {
+    const snapshot = { ...options, remnantComparison, remnantLayout }
+    const before = structuredClone(snapshot)
+    for (const aspectRatio of [undefined, 16 / 9, 9 / 16]) {
+      const name = getSurtrUnequippedTableImageFilename(snapshot, aspectRatio)
+      assert.ok(name.startsWith(`スルト_S3_未装備比較表_余燼なし-中比較_${label}_`), name)
+      assert.doesNotMatch(name, /_余燼中_/)
+      for (const remnantActive of [false, true]) {
+        assert.equal(name, getSurtrUnequippedTableImageFilename({ ...snapshot,
+          metadata: { ...metadata, remnantActive } }, aspectRatio))
+      }
+      assert.equal(name, getSurtrUnequippedTableImageFilename({ ...snapshot,
+        remnantComparison: [...remnantComparison].reverse() }, aspectRatio))
+      assert.equal(name, getSurtrUnequippedTableImageFilename({ ...snapshot,
+        remnantComparison: [...remnantComparison, ...remnantComparison] }, aspectRatio))
+      names.push(name)
+    }
+    const long = getSurtrUnequippedTableImageFilename({ ...snapshot,
+      metadata: { ...metadata, skillLabel: '特化3長い見出し😀'.repeat(80), remnantActive: true },
+      series: [{ id: 'x:lv3', label: '長いMOD名😀<>:"/\\|?*'.repeat(80) }],
+      imageLayout: 'split', moduleLevel: 3, numberSize: '200', titleSize: 16, detailSize: 12,
+    }, 16 / 9)
+    assert.ok(long.startsWith(`スルト_S3_未装備比較表_余燼なし-中比較_${label}_`), long)
+    assert.match(long, /ほか\d+項目_比率16x9\.png$/)
+    assert.ok(new TextEncoder().encode(long).length <= 240)
+    assert.equal(long.isWellFormed(), true)
+    assert.doesNotMatch(long, /[<>:"/\\|?*\u0000-\u001f\u007f�]/)
+    assert.deepEqual(snapshot, before)
+  }
+  assert.equal(new Set(names).size, 6)
+})
+
+test('両状態がそろわない余燼比較設定は従来の単一状態の画像名を保つ', () => {
+  for (const remnantActive of [undefined, false, true]) {
+    const snapshot = { ...options, metadata: { ...metadata, remnantActive } }
+    const original = getSurtrUnequippedTableImageFilename(snapshot)
+    for (const remnantComparison of [undefined, [], [{ remnantActive: false }], [{ remnantActive: true }],
+      [{ remnantActive: true }, { remnantActive: true }]]) {
+      for (const remnantLayout of [undefined, 'common', 'columns'] as const) {
+        assert.equal(getSurtrUnequippedTableImageFilename({ ...snapshot, remnantComparison, remnantLayout }), original)
+      }
+    }
+  }
+})
+
+test('余燼比較の配置省略は描画と同じ余燼の列表示として命名する', () => {
+  const snapshot = { ...options, remnantComparison: [{ remnantActive: false }, { remnantActive: true }] }
+  for (const aspectRatio of [undefined, 16 / 9]) {
+    const name = getSurtrUnequippedTableImageFilename(snapshot, aspectRatio)
+    assert.match(name, /_余燼なし-中比較_余燼を列に_/)
+    assert.equal(name, getSurtrUnequippedTableImageFilename({ ...snapshot, remnantLayout: 'columns' }, aspectRatio))
+    assert.notEqual(name, getSurtrUnequippedTableImageFilename({ ...snapshot, remnantLayout: 'common' }, aspectRatio))
+  }
+})
+
 test('未装備比較表の計算条件・MOD段階・術耐性・形式・精度・自動比率を読める名前にする', () => {
   assert.equal(getSurtrUnequippedTableImageFilename(options),
     'スルト_S3_未装備比較表_特化3_DPS差_DPS＋比較値_昇進2Lv90_信頼100_潜在1_未ブロック_MODXLv.3-MODYLv.3_術耐性0-100刻み10_小数0桁_比率自動.png')

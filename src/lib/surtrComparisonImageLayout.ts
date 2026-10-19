@@ -3,6 +3,7 @@ import { buildSurtrUnequippedComparisonSeries, getSurtrComparisonTargets, getSur
   getSurtrUnequippedColumns, isSurtrUnequippedSeries, type SurtrUnequippedBlockingComparison,
   type SurtrUnequippedColumnOrder, type SurtrUnequippedComparisonBase, type SurtrUnequippedMetric } from './surtrUnequippedComparison.ts'
 import { getSurtrUnequippedColorScaleMaximum } from './surtrUnequippedColorScale.ts'
+import type { SurtrRemnantComparisonState } from './surtrRemnantComparison.ts'
 
 export type SurtrComparisonImageLayout = 'current' | 'transpose' | 'stacked' | 'split'
 
@@ -16,6 +17,7 @@ interface ComparisonImageData {
   referenceSeries?: readonly SurtrDpsOutputSeries[]
   blockingComparison?: readonly SurtrUnequippedBlockingComparison[]
   colorScaleMaximum?: number
+  remnantComparison?: readonly SurtrRemnantComparisonState[]
 }
 
 /** The screen and every export arrangement use the same raw values and references. */
@@ -43,6 +45,8 @@ export function getSurtrComparisonImageColorScaleMaximum(data: ComparisonImageDa
   if (data.colorScaleMaximum !== undefined && Number.isFinite(data.colorScaleMaximum) && data.colorScaleMaximum >= 0) {
     return data.colorScaleMaximum
   }
+  if (data.remnantComparison !== undefined) return Math.max(0, ...data.remnantComparison.map(state =>
+    getSurtrComparisonImageColorScaleMaximum({ ...data, ...state, remnantComparison: undefined, colorScaleMaximum: undefined })))
   return getSurtrUnequippedColorScaleMaximum(buildSurtrComparisonImageColumns(data)
     .flatMap(column => data.resistances.map(resistance => column.comparison?.get(resistance))), data.metric)
 }
@@ -64,14 +68,18 @@ export function getSurtrComparisonImageStageSnapshot<T extends ComparisonImageDa
 } {
   if (!getSurtrComparisonImageStageLevels(data).includes(level)) throw new Error('選択中のMODにこの段階はありません。')
   const selected = (item: SurtrDpsOutputSeries) => isSurtrUnequippedSeries(item) || moduleLevel(item) === level
-  return { ...data, imageLayout: 'split', moduleLevel: level,
-    colorScaleMaximum: getSurtrComparisonImageColorScaleMaximum(data),
-    series: data.series.filter(selected),
-    referenceSeries: mergeReferences(data.referenceSeries, data.series, [data.baseline]),
-    blockingComparison: data.blockingComparison?.map(group => ({ ...group,
+  const filterState = <S extends Pick<ComparisonImageData, 'series' | 'baseline' | 'referenceSeries' | 'blockingComparison'>>(state: S): S => ({
+    ...state,
+    series: state.series.filter(selected),
+    referenceSeries: mergeReferences(state.referenceSeries, state.series, [state.baseline]),
+    blockingComparison: state.blockingComparison?.map(group => ({ ...group,
       series: group.series.filter(selected),
       referenceSeries: mergeReferences(group.referenceSeries, group.series, [group.baseline]),
     })),
+  })
+  return { ...filterState(data), imageLayout: 'split', moduleLevel: level,
+    colorScaleMaximum: getSurtrComparisonImageColorScaleMaximum(data),
+    ...(data.remnantComparison !== undefined ? { remnantComparison: data.remnantComparison.map(filterState) } : {}),
   }
 }
 

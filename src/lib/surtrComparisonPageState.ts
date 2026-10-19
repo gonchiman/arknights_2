@@ -2,6 +2,7 @@ import {
   SURTR_DPS_PAGE_STATE_KEY, createDefaultSurtrDpsPageState, parseSurtrDpsPageState,
   type SurtrDpsPageState,
 } from './surtrDpsPageState.ts'
+import type { SurtrRemnantComparisonMode } from './surtrRemnantComparison.ts'
 
 export const SURTR_COMPARISON_PAGE_STATE_KEY = 'arknights-surtr-comparison-page-state-v1'
 
@@ -15,6 +16,7 @@ export type SurtrComparisonPageState = Pick<SurtrDpsPageState,
   displayMode: 'comparison' | 'winner'
   winnerColor: 'module' | 'none'
   winnerGapShading: boolean
+  remnantComparisonMode: SurtrRemnantComparisonMode
 }
 
 function fromDpsState(state: SurtrDpsPageState): SurtrComparisonPageState {
@@ -30,6 +32,7 @@ function fromDpsState(state: SurtrDpsPageState): SurtrComparisonPageState {
     unequippedColumnOrder: state.unequippedColumnOrder, unequippedColorScale: state.unequippedColorScale,
     unequippedColorScaleMode: state.unequippedColorScaleMode,
     displayMode: 'comparison', winnerColor: 'module', winnerGapShading: false,
+    remnantComparisonMode: 'single',
   }
 }
 
@@ -52,7 +55,9 @@ export function parseSurtrComparisonPageState(value: unknown): SurtrComparisonPa
   const saved = value as Record<string, unknown>
   return { ...state, displayMode: saved.displayMode === 'winner' ? 'winner' : 'comparison',
     winnerColor: saved.winnerColor === 'none' ? 'none' : 'module',
-    winnerGapShading: saved.winnerGapShading === true }
+    winnerGapShading: saved.winnerGapShading === true,
+    remnantComparisonMode: saved.remnantComparisonMode === 'common' || saved.remnantComparisonMode === 'columns'
+      ? saved.remnantComparisonMode : 'single' }
 }
 
 export function readSurtrComparisonPageState(storage: Pick<Storage, 'getItem'> | undefined = sessionStorageOrUndefined()): SurtrComparisonPageState {

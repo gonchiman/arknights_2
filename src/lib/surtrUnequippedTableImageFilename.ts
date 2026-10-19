@@ -1,6 +1,7 @@
 import { createChartImageFilename, formatChartFilenameValues, withChartImageAspect } from './chartImageFilename.ts'
 import type { EnemyHeatmapColorScale } from './enemyHeatmapColor.ts'
 import type { SurtrRemnantAttackAssumptions } from './surtrRemnantAttacks.ts'
+import type { SurtrRemnantComparisonLayout } from './surtrRemnantComparison.ts'
 import { getSurtrComparisonBaseLabel } from './surtrUnequippedComparison.ts'
 import type { SurtrComparisonImageLayout } from './surtrComparisonImageLayout.ts'
 import type { SurtrComparisonImageNumberSize } from './surtrComparisonImageNumberSize.ts'
@@ -41,12 +42,16 @@ export function getSurtrUnequippedTableImageFilename(options: {
   winnerColor?: 'module' | 'none'
   winnerGapShading?: boolean
   winnerStages?: readonly { id: string }[]
+  remnantComparison?: readonly { remnantActive: boolean }[]
+  remnantLayout?: SurtrRemnantComparisonLayout
 }, aspectRatio?: number): string {
   const { metadata, series, resistances, metric, layout, precision, blockingComparison } = options
   const modules = [...new Set(series.filter(item => (item.moduleStageId ?? item.id.replace(/:pot[1-6]$/, '')) !== 'none')
     .map(item => item.label.replace(/\s*潜在[1-6]\s*$/, '')))]
   const digits = Number.isInteger(precision) && precision >= 0 && precision <= 3 ? precision : 0
   const expectedDamage = options.quantity === 'expected-damage'
+  const remnantComparison = options.remnantComparison?.some(item => !item.remnantActive) === true
+    && options.remnantComparison.some(item => item.remnantActive)
   const winner = options.displayMode === 'winner'
   const selectedIds = options.winnerStages && new Set(options.winnerStages.map(stage => stage.id))
   const winnerSeries = winner && selectedIds ? series.filter(item => selectedIds.has(item.moduleStageId ?? item.id.replace(/:pot[1-6]$/, ''))) : series
@@ -65,6 +70,7 @@ export function getSurtrUnequippedTableImageFilename(options: {
   const layoutLabel = layout === 'combined' ? expectedDamage ? '期待値＋比較値' : 'DPS＋比較値' : '比較値のみ'
   const assumptions = expectedDamage ? metadata.remnantAssumptions : undefined
   const filename = createChartImageFilename(expectedDamage ? `スルト_余燼_総ダメージ期待値_${baseLabel}` : `スルト_S3_${baseLabel}`, [
+    ...(remnantComparison ? ['余燼なし-中比較', options.remnantLayout === 'common' ? '共通値をまとめる' : '余燼を列に'] : []),
     ...(winner ? [options.winnerColor === 'none' ? '色なし' : 'MOD色',
       ...(winnerGapActive ? ['差濃淡0-30%以上'] : [])] : []),
     // Keep the expectation's quantity, metric and assumptions readable even when
@@ -87,7 +93,7 @@ export function getSurtrUnequippedTableImageFilename(options: {
     `昇進2Lv${metadata.level}`,
     `信頼${metadata.trust}`,
     `潜在${potentials.join('・')}`,
-    ...(!expectedDamage && metadata.remnantActive ? ['余燼中'] : []),
+    ...(!expectedDamage && !remnantComparison && metadata.remnantActive ? ['余燼中'] : []),
     blockingComparison !== undefined ? 'ブロック条件比較' : metadata.blocking ? 'ブロック中' : '未ブロック',
     ...(!winner && blockingComparison !== undefined && options.columnOrder === 'blocking' ? ['ブロック条件別'] : []),
     (winner ? [...new Set(winnerSeries.map(item => item.label.replace(/\s*潜在[1-6]\s*$/, '')))] : modules).join('-') || 'MOD選択なし',

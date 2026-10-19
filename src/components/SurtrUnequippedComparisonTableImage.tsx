@@ -5,6 +5,7 @@ import { getSurtrComparisonImageColorScaleMaximum, getSurtrComparisonImageStageL
 import type { SurtrComparisonImageNumberSize } from '../lib/surtrComparisonImageNumberSize'
 import { getSurtrComparisonTableTitle } from '../lib/surtrComparisonTableTitle'
 import { buildSurtrComparisonWinnerData } from '../lib/surtrComparisonWinner'
+import { buildSurtrRemnantComparisonColumns, buildSurtrRemnantWinnerData, type SurtrRemnantComparisonState } from '../lib/surtrRemnantComparison'
 import { getUnequippedMetricLabel, SurtrComparisonTableSurface, type SurtrUnequippedComparisonTableData } from './SurtrUnequippedComparisonTableContent'
 import { ComparisonTableImageFrame, ComparisonTableImagePreview } from './ComparisonTableImageFrame'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
@@ -38,9 +39,21 @@ function stageSnapshot(snapshot: SurtrUnequippedComparisonTableImageSnapshot): S
 const initialWidthFor = (source: SurtrUnequippedComparisonTableImageSnapshot) => {
   const snapshot = stageSnapshot(source)
   if (snapshot.displayMode === 'winner') {
-    const columns = buildSurtrComparisonWinnerData(snapshot).columnAxis.items.length
+    const columns = (snapshot.remnantComparison !== undefined ? buildSurtrRemnantWinnerData(snapshot)
+      : buildSurtrComparisonWinnerData(snapshot)).columnAxis.items.length
     return snapshot.imageLayout === 'transpose' ? Math.max(640, 240 + snapshot.resistances.length * 130)
       : Math.max(640, 120 + columns * 180)
+  }
+  if (snapshot.remnantComparison !== undefined) {
+    if (snapshot.imageLayout === 'transpose') return Math.max(640, (snapshot.blockingComparison === undefined ? 320 : 480)
+      + snapshot.resistances.length * (snapshot.layout === 'combined' ? 200 : 128))
+    const columns = buildSurtrRemnantComparisonColumns(snapshot)
+    const numericWidth = (group: typeof columns) => group.reduce((width, column) =>
+      width + (snapshot.layout === 'combined' && !column.isBaseline ? 2 : 1) * 128, 0)
+    const width = snapshot.imageLayout === 'stacked' && snapshot.blockingComparison !== undefined
+      ? Math.max(...[false, true].map(blocking => numericWidth(columns.filter(column => column.blocking === blocking))))
+      : numericWidth(columns)
+    return Math.max(640, 80 + (snapshot.rankMode === 'merged' ? 64 : 0) + width)
   }
   const targets = getSurtrComparisonTargets(snapshot.series, snapshot.comparisonBase).length
   const baselines = snapshot.comparisonBase === undefined || snapshot.comparisonBase === 'unequipped'
@@ -57,12 +70,13 @@ const initialWidthFor = (source: SurtrUnequippedComparisonTableImageSnapshot) =>
 function frameProps(source: SurtrUnequippedComparisonTableImageSnapshot) {
   const { metadata, title, imageLayout = 'current', moduleLevel, numberSize, titleSize, detailSize, ...data } = stageSnapshot(source)
   const winner = data.displayMode === 'winner'
-  const imageTitle = title?.trim() || (winner ? 'スルト S3 DPSが最大のMOD'
-    : data.quantity === 'expected-damage' ? undefined : getSurtrComparisonTableTitle(data))
+  const defaultTitle = winner ? 'スルト S3 DPSが最大のMOD'
+    : data.quantity === 'expected-damage' ? undefined : getSurtrComparisonTableTitle(data)
+  const imageTitle = title?.trim() || (defaultTitle && `${defaultTitle}${data.remnantComparison !== undefined ? '（余燼なし・余燼中）' : ''}`)
   const stageTitle = imageLayout === 'split' && moduleLevel !== undefined ? `${imageTitle ?? '比較表'}・MOD Lv.${moduleLevel}` : imageTitle
   const footer = <div className="surtr-unequipped-table-image-conditions">
     {!winner && <span>{data.quantity === 'expected-damage' ? '総ダメージ期待値・' : ''}{getUnequippedMetricLabel(data.metric, data.comparisonBase, data.quantity)}・基準：{data.comparisonBase === 'previous' ? '1つ前の段階（Lv.1は未装備）' : getSurtrComparisonBaseLabel(data.comparisonBase ?? 'unequipped')}{data.comparisonBase?.startsWith('potential-') && '（同じMOD・段階）'}</span>}
-    <span>S3 {metadata.skillLabel}・昇進2 Lv.{metadata.level}・信頼度{metadata.trust}・潜在{getSurtrUnequippedTableImagePotentials(metadata).join('・')}・{data.blockingComparison !== undefined ? '未ブロック／対象を自身でブロック' : metadata.blocking ? '対象を自身でブロック' : '未ブロック'}{data.quantity !== 'expected-damage' && `・${metadata.remnantActive ? '余燼中' : '余燼なし'}`}</span>
+    <span>S3 {metadata.skillLabel}・昇進2 Lv.{metadata.level}・信頼度{metadata.trust}・潜在{getSurtrUnequippedTableImagePotentials(metadata).join('・')}・{data.blockingComparison !== undefined ? '未ブロック／対象を自身でブロック' : metadata.blocking ? '対象を自身でブロック' : '未ブロック'}{data.quantity !== 'expected-damage' && `・${data.remnantComparison !== undefined ? '余燼なし／余燼中' : metadata.remnantActive ? '余燼中' : '余燼なし'}`}</span>
     {data.quantity === 'expected-damage' && metadata.remnantAssumptions && <span>残りCT一様・命中まで{metadata.remnantAssumptions.windup}s・CT{metadata.remnantAssumptions.ctCarry === 'time' ? '時間' : '割合'}維持・退場同時の命中{metadata.remnantAssumptions.includeRetreatHit ? 'を含む' : 'を除外'}</span>}
   </div>
   const sharedMaximum = getSurtrComparisonImageColorScaleMaximum(data)
@@ -74,6 +88,7 @@ function frameProps(source: SurtrUnequippedComparisonTableImageSnapshot) {
         <SurtrComparisonTableSurface {...data}
           series={data.series.map(item => group?.series.find(candidate => candidate.id === item.id) ?? { ...item, points: [] })}
           baseline={group?.baseline ?? { ...data.baseline, points: [] }} referenceSeries={group?.referenceSeries ?? []}
+          remnantComparison={data.remnantComparison?.map(state => selectRemnantBlockingState(state, blocking))}
           blockingComparison={undefined} colorScaleMaximum={sharedMaximum} forImage />
       </section>
     }) : <SurtrComparisonTableSurface {...data} transpose={imageLayout === 'transpose'} forImage />
@@ -105,7 +120,8 @@ export async function saveSurtrUnequippedComparisonTableImage({ snapshot, filena
     throw new Error('表の縦横比は1:10〜10:1の範囲で指定してください。')
   }
   const prepared = stageSnapshot(snapshot)
-  if ((prepared.displayMode === 'winner' ? !buildSurtrComparisonWinnerData(prepared).columnAxis.items.length
+  if ((prepared.displayMode === 'winner' ? !(prepared.remnantComparison !== undefined ? buildSurtrRemnantWinnerData(prepared)
+    : buildSurtrComparisonWinnerData(prepared)).columnAxis.items.length
     : getSurtrComparisonTargets(prepared.series, prepared.comparisonBase).length === 0) || !snapshot.resistances.length) {
     throw new Error('保存する比較表がありません。')
   }
@@ -117,4 +133,14 @@ export async function saveSurtrUnequippedComparisonTableImage({ snapshot, filena
       filename: filename ?? getSurtrUnequippedTableImageFilename(snapshot, aspectRatio), width: initialWidthFor(snapshot), writeBlob,
     })
   } catch (error) { throw layoutError ?? error }
+}
+
+/** Every state keeps its own raw values and references when stacking block conditions. */
+function selectRemnantBlockingState(state: SurtrRemnantComparisonState, blocking: boolean): SurtrRemnantComparisonState {
+  const group = state.blockingComparison?.find(condition => condition.blocking === blocking)
+  return { ...state,
+    series: state.series.map(item => group?.series.find(candidate => candidate.id === item.id) ?? { ...item, points: [] }),
+    baseline: group?.baseline ?? { ...state.baseline, points: [] }, referenceSeries: group?.referenceSeries ?? [],
+    blockingComparison: undefined,
+  }
 }

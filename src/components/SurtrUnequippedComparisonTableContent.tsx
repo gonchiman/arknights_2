@@ -6,6 +6,8 @@ import { getSurtrUnequippedColorScaleBackground } from '../lib/surtrUnequippedCo
 import { buildSurtrComparisonImageColumns, getSurtrComparisonImageColorScaleMaximum } from '../lib/surtrComparisonImageLayout'
 import { buildSurtrComparisonWinnerData, getSurtrWinnerColumnCondition, type SurtrWinnerStage } from '../lib/surtrComparisonWinner'
 import { ModuleWinnerTable } from './ModuleWinnerTable'
+import { SurtrRemnantComparisonTable } from './SurtrRemnantComparisonTable'
+import type { SurtrRemnantComparisonLayout, SurtrRemnantComparisonState } from '../lib/surtrRemnantComparison'
 import { formatSurtrUnequippedComparisonValue,
   getSurtrComparisonTargets, getSurtrComparisonBaseLabel, getSurtrUnequippedBaselines,
   type SurtrUnequippedBlockingComparison, type SurtrUnequippedColumnOrder, type SurtrUnequippedLayout, type SurtrUnequippedMetric, type SurtrUnequippedRankMode, type SurtrUnequippedComparisonBase, type SurtrUnequippedComparisonQuantity } from '../lib/surtrUnequippedComparison'
@@ -31,12 +33,15 @@ export interface SurtrUnequippedComparisonTableData {
   winnerColor?: 'module' | 'none'
   winnerGapShading?: boolean
   winnerStages?: readonly SurtrWinnerStage[]
+  remnantComparison?: readonly SurtrRemnantComparisonState[]
+  remnantLayout?: SurtrRemnantComparisonLayout
 }
 
 export const getUnequippedMetricLabel = (metric: SurtrUnequippedMetric, comparisonBase: SurtrUnequippedComparisonBase = 'unequipped', quantity: SurtrUnequippedComparisonQuantity = 'dps') =>
   metric === 'difference' ? quantity === 'expected-damage' ? 'ダメージ差' : 'DPS差' : metric === 'ratio' ? `比率（${getSurtrComparisonBaseLabel(comparisonBase)}＝100%）` : '増加率（%）'
 
 export function SurtrComparisonTableSurface(props: Parameters<typeof SurtrUnequippedComparisonTableContent>[0] & { forImage?: boolean }) {
+  if (props.remnantComparison !== undefined) return <SurtrRemnantComparisonTable {...props} />
   if (props.displayMode !== 'winner') return <SurtrUnequippedComparisonTableContent {...props} />
   return <ModuleWinnerTable data={buildSurtrComparisonWinnerData(props)} transpose={props.transpose}
     color={props.winnerColor} gapShading={props.winnerGapShading} rankMode={props.rankMode} forImage={props.forImage}
@@ -48,7 +53,7 @@ export function SurtrComparisonTableSurface(props: Parameters<typeof SurtrUnequi
 export function SurtrUnequippedComparisonTableContent({ series, baseline, resistances, precision, metric, layout, rankMode = 'none', columnOrder = 'module', colorScale = false, colorScaleMode = 'LINEAR', comparisonBase = 'unequipped', quantity = 'dps', referenceSeries, blockingComparison, colorScaleMaximum: scaleOverride,
   selectedResistance, onOpenDetail, title, footer, transpose = false }: SurtrUnequippedComparisonTableData & {
   selectedResistance?: number | null
-  onOpenDetail?: (resistance: number, seriesId: string | undefined, metric: SurtrUnequippedMetric | 'total', blocking?: boolean) => void
+  onOpenDetail?: (resistance: number, seriesId: string | undefined, metric: SurtrUnequippedMetric | 'total', blocking?: boolean, remnantActive?: boolean) => void
   title?: string
   footer?: ReactNode
   transpose?: boolean
