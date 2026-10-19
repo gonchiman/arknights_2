@@ -7,7 +7,8 @@ test('S2/S3 inputs survive reload independently of the S3 graph page', () => {
   const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value) } }
   assert.equal(readSurtrSkillComparisonPageState(storage).settings.potential, 1)
   const state = parseSurtrSkillComparisonPageState({ settings: { level: 60, trust: 70, potential: 4, skillLevelIndex: 6, blocking: true, remnantActive: true },
-    s2LevelIndex: 8, enemyCount: 3, excluded: [''], moduleLevels: { uniequip_002_surtr: [1, 2] }, barStep: 7, resistanceRange: { min: 10, max: 80 } })
+    s2LevelIndex: 8, enemyCount: 3, excluded: [''], moduleLevels: { uniequip_002_surtr: [1, 2] }, barStep: 7, resistanceRange: { min: 10, max: 80 },
+    externalBuffs: { attackPercent: 150, attackAddition: 80.5, attackSpeed: 50 } })
   writeSurtrSkillComparisonPageState(state, storage)
   assert.deepEqual(readSurtrSkillComparisonPageState(storage), state)
   assert.ok(values.has(SURTR_SKILL_COMPARISON_STATE_KEY))
@@ -28,4 +29,30 @@ test('restricted or corrupt storage keeps S2/S3 calculation available', () => {
   assert.deepEqual(readSurtrSkillComparisonPageState({ getItem: () => '{broken' }), defaults)
   assert.deepEqual(readSurtrSkillComparisonPageState({ getItem: () => { throw new Error('blocked') } }), defaults)
   assert.doesNotThrow(() => writeSurtrSkillComparisonPageState(defaults, { setItem: () => { throw new Error('blocked') } }))
+})
+
+test('older saved conditions without external buffs retain their inputs and default each buff to zero', () => {
+  const old = { settings: { potential: 5 }, s2LevelIndex: 6, enemyCount: 2 }
+  const result = parseSurtrSkillComparisonPageState(old)
+  assert.equal(result.settings.potential, 5)
+  assert.equal(result.s2LevelIndex, 6)
+  assert.equal(result.enemyCount, 2)
+  assert.deepEqual(result.externalBuffs, { attackPercent: 0, attackAddition: 0, attackSpeed: 0 })
+})
+
+test('corrupt saved buff components fall back independently without discarding other valid conditions', () => {
+  for (const invalid of [null, '10', -0.01, NaN, Infinity, -Infinity]) {
+    const result = parseSurtrSkillComparisonPageState({ enemyCount: 3,
+      externalBuffs: { attackPercent: invalid, attackAddition: 12.5, attackSpeed: 70 } })
+    assert.equal(result.enemyCount, 3)
+    assert.deepEqual(result.externalBuffs, { attackPercent: 0, attackAddition: 12.5, attackSpeed: 70 })
+  }
+  for (const externalBuffs of [null, [], '150', {}]) {
+    assert.deepEqual(parseSurtrSkillComparisonPageState({ externalBuffs }).externalBuffs,
+      { attackPercent: 0, attackAddition: 0, attackSpeed: 0 })
+  }
+  const result = parseSurtrSkillComparisonPageState({
+    externalBuffs: { attackPercent: 500.5, attackAddition: Number.MAX_VALUE, attackSpeed: 75.25 },
+  })
+  assert.deepEqual(result.externalBuffs, { attackPercent: 500.5, attackAddition: Number.MAX_VALUE, attackSpeed: 75.25 })
 })

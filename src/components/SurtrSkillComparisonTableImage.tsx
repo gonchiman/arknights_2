@@ -1,4 +1,5 @@
 import type { ComparisonTableImageTypography } from '../lib/tableImageTypography'
+import { getSurtrSkillExternalBuffLabel } from '../lib/surtrSkillComparison'
 import { ComparisonTableImageFrame, ComparisonTableImagePreview } from './ComparisonTableImageFrame'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import { getSurtrSkillComparisonColorMaximum, SurtrSkillComparisonTableContent,
@@ -32,7 +33,10 @@ export function getSurtrSkillComparisonTableImageFilename(snapshot: SurtrSkillCo
     ? `${r[0]}-${r.at(-1)}刻み${step}` : `${r[0]}-${r.at(-1)}指定${r.length}点` : r.join('-')
   const appearance = mode === 'numeric' ? `${snapshot.precision}桁_${snapshot.rankMode}_${snapshot.colorScale}`
     : `${snapshot.rankMode}_${snapshot.winnerColor === 'none' ? '色なし' : mode === 'module-winner' ? 'MOD色' : 'スキル色'}_${snapshot.winnerGapShading && snapshot.winnerColor !== 'none' ? '差濃淡あり' : '差濃淡なし'}`
-  return `スルト_S2-S3_${metric}_S2${m.s2LevelLabel}_S3${m.s3LevelLabel}_術耐性${resistanceLabel}_${modules}_E2Lv${m.level}-信頼${m.trust}-潜在${m.potential}_${m.blocking ? '対象を自身でブロック' : '未ブロック'}_敵${m.enemyCount}体_${m.remnantActive ? '余燼中' : '余燼なし'}_${snapshot.imageLayout}_${appearance}_比率${aspectRatio === undefined ? '自動' : String(aspectRatio).replace('.', '_')}.png`
+  const buffs = m.externalBuffs
+  const buffLabel = buffs && getSurtrSkillExternalBuffLabel(buffs)
+  const buffFilename = buffs && buffLabel ? `_外部バフ攻撃力+${buffs.attackPercent}%-固定加算+${buffs.attackAddition}-攻撃速度+${buffs.attackSpeed}` : ''
+  return `スルト_S2-S3_${metric}_S2${m.s2LevelLabel}_S3${m.s3LevelLabel}_術耐性${resistanceLabel}_${modules}_E2Lv${m.level}-信頼${m.trust}-潜在${m.potential}_${m.blocking ? '対象を自身でブロック' : '未ブロック'}_敵${m.enemyCount}体_${m.remnantActive ? '余燼中' : '余燼なし'}${buffFilename}_${snapshot.imageLayout}_${appearance}_比率${aspectRatio === undefined ? '自動' : String(aspectRatio).replace('.', '_')}.png`
 }
 
 function initialWidth(snapshot: SurtrSkillComparisonTableImageSnapshot): number {
@@ -52,9 +56,11 @@ function frameProps(snapshot: SurtrSkillComparisonTableImageSnapshot) {
   const { metadata: m, title, imageLayout, typography, ...data } = snapshot
   const mode = snapshot.displayMode ?? 'numeric'
   const maximum = getSurtrSkillComparisonColorMaximum(snapshot)
+  const buffLabel = m.externalBuffs ? getSurtrSkillExternalBuffLabel(m.externalBuffs) : ''
   const footer = <div className="surtr-skill-comparison-conditions">
     <span>S2 {m.s2LevelLabel}・S3 {m.s3LevelLabel}・昇進2 Lv.{m.level}・信頼{m.trust}・潜在{m.potential}</span>
     <span>{m.blocking ? '対象を自身でブロック' : '未ブロック'}・敵{m.enemyCount}体・{m.remnantActive ? '余燼中' : '余燼なし'}・スキル発動中の理論DPS</span>
+    {buffLabel && <span>{buffLabel}</span>}
     <span>{mode === 'module-winner' ? 'S2・S3それぞれでDPSが最大のMOD'
       : mode === 'skill-winner' ? '各MODでDPSが最大のスキル'
       : data.metric === 'dps' ? '対象数を反映した合計DPS' : `${SURTR_SKILL_COMPARISON_METRIC_LABELS[data.metric]}・比較するスキル：S2・基準：S3`}</span>

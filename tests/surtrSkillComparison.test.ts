@@ -3,7 +3,10 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { classifySkill } from '../src/lib/classifier.ts'
 import { calculateSurtrDps, deriveSurtrDpsModel, type SurtrDpsSettings } from '../src/lib/surtrDps.ts'
-import { calculateSurtrSkillDps, deriveSurtrSkillDpsModel } from '../src/lib/surtrSkillComparison.ts'
+import {
+  calculateSurtrSkillDps, deriveSurtrSkillDpsModel, DEFAULT_SURTR_SKILL_EXTERNAL_BUFFS,
+  getSurtrSkillExternalBuffLabel, isValidSurtrSkillExternalBuffs,
+} from '../src/lib/surtrSkillComparison.ts'
 import type { OperatorCombatProfile, RawOperatorModule, RawSkillLevel, SkillRecord } from '../src/types/skill.ts'
 
 const defaults: SurtrDpsSettings = { level: 90, trust: 100, potential: 1, skillLevelIndex: 9, blocking: false }
@@ -182,6 +185,107 @@ test('不正な育成・敵条件・モデルは計算しない', () => {
     { effectiveAttack: Number.MAX_VALUE, artsFragility: Number.MAX_VALUE }]) {
     assert.equal(calculateSurtrSkillDps({ ...model(2), ...patch }, 60, 2), null)
   }
+})
+
+test('外部バフが0なら省略時と完全一致し、計算後の攻撃力・攻速を返す', () => {
+  for (const skill of [2, 3] as const) for (const moduleId of ['', xId, yId]) {
+    for (const blocking of [false, true]) for (const remnantActive of [false, true]) {
+      const value = model(skill, moduleId, { blocking, remnantActive })
+      const before = structuredClone(value)
+      for (const count of [1, 2, 4]) {
+        const without = calculateSurtrSkillDps(value, 60, count)!
+        const zero = calculateSurtrSkillDps(value, 60, count, DEFAULT_SURTR_SKILL_EXTERNAL_BUFFS)!
+        assert.deepEqual(zero, without)
+        assert.equal(zero.effectiveAttack, value.effectiveAttack)
+        assert.equal(zero.attackSpeed, value.attackSpeed)
+        assert.equal(zero.attackInterval, value.attackInterval)
+      }
+      assert.deepEqual(value, before)
+    }
+  }
+})
+
+test('攻撃力バフはスキル加算と足し合わせ、+150%と+200%では単体S2がS3を上回る', () => {
+  for (const attackPercent of [150, 200]) for (const moduleId of ['', xId, yId]) {
+    for (const blocking of [false, true]) for (const resistance of [0, 60, 100]) {
+      const buffs = { attackPercent, attackAddition: 0, attackSpeed: 0 }
+      const s2 = calculateSurtrSkillDps(model(2, moduleId, { blocking }), resistance, 1, buffs)!
+      const s3 = calculateSurtrSkillDps(model(3, moduleId, { blocking }), resistance, 1, buffs)!
+      assert.ok(s2.totalDps > s3.totalDps)
+      close(s2.attackPipeline.directMultiplierPercent, 120 + attackPercent)
+      close(s3.attackPipeline.directMultiplierPercent, 330 + attackPercent)
+      assert.equal(s2.attackPipeline.finalAttack, s2.effectiveAttack * 1.6)
+      assert.equal(s3.attackPipeline.finalAttack, s3.effectiveAttack)
+    }
+  }
+  const buffs = { attackPercent: 150, attackAddition: 0, attackSpeed: 0 }
+  const s2 = calculateSurtrSkillDps(model(2), 0, 2, buffs)!
+  const s3 = calculateSurtrSkillDps(model(3), 0, 2, buffs)!
+  assert.ok(s3.totalDps > s2.totalDps, '複数対象ではS2単体1.6倍を適用しない')
+})
+
+test('固定加算は割合加算の後、切り捨てとS2単体倍率の前に適用する', () => {
+  const buffs = { attackPercent: 0, attackAddition: 100.75, attackSpeed: 0 }
+  const before = structuredClone(buffs)
+  const result = calculateSurtrSkillDps(model(2), 0, 1, buffs)!
+  close(result.attackPipeline.afterDirectMultiplier, 1698.4)
+  close(result.attackPipeline.afterFinalAddition, 1799.15)
+  assert.equal(result.effectiveAttack, 1799)
+  close(result.damagePerAttack, 2878.4)
+  close(result.totalDps, 2302.72)
+  assert.deepEqual(buffs, before)
+  assert.notEqual(result.externalBuffs, buffs, '計算結果は入力バフを参照しない')
+  const fixed = { ...buffs, attackAddition: 1100.25 }
+  assert.ok(calculateSurtrSkillDps(model(2), 0, 1, fixed)!.totalDps
+    > calculateSurtrSkillDps(model(3), 0, 1, fixed)!.totalDps)
+})
+
+test('外部攻速はMOD・ブロック・余燼の攻速へ加算し、同じMODのスキル優位を変えない', () => {
+  const buffs = { attackPercent: 0, attackAddition: 0, attackSpeed: 75 }
+  for (const moduleId of ['', xId, yId]) for (const level of moduleId ? [1, 2, 3] : [0]) {
+    for (const blocking of [false, true]) for (const remnantActive of [false, true]) {
+      const results = ([2, 3] as const).map(skill => {
+        const value = model(skill, moduleId, { blocking, remnantActive }, level)
+        const initial = calculateSurtrSkillDps(value, 60, 1)!
+        const applied = calculateSurtrSkillDps(value, 60, 1, buffs)!
+        assert.equal(applied.attackSpeed, value.attackSpeed + 75)
+        close(applied.attackInterval, 125 / (value.attackSpeed + 75))
+        assert.equal(applied.damagePerAttack, initial.damagePerAttack)
+        close(applied.totalDps, initial.totalDps * (value.attackSpeed + 75) / value.attackSpeed)
+        return applied
+      })
+      assert.ok(results[1].totalDps > results[0].totalDps)
+    }
+  }
+  const slow = model(2)
+  slow.attackSpeed = 5
+  slow.operatorStats.baseAttackTime = 2
+  close(calculateSurtrSkillDps(slow, 0, 1, { ...buffs, attackSpeed: 10 })!.attackInterval, 10)
+})
+
+test('外部バフは有限の非負数だけを受け取り、オーバーフローも計算しない', () => {
+  assert.equal(isValidSurtrSkillExternalBuffs(DEFAULT_SURTR_SKILL_EXTERNAL_BUFFS), true)
+  for (const invalid of [null, [], {}, '150', { attackPercent: 1, attackAddition: 2 }]) {
+    assert.equal(isValidSurtrSkillExternalBuffs(invalid), false)
+    assert.equal(calculateSurtrSkillDps(model(2), 0, 1, invalid as never), null)
+  }
+  for (const field of ['attackPercent', 'attackAddition', 'attackSpeed'] as const) {
+    for (const bad of [-1, NaN, Infinity, -Infinity, '10', null]) {
+      const buffs = { ...DEFAULT_SURTR_SKILL_EXTERNAL_BUFFS, [field]: bad }
+      assert.equal(isValidSurtrSkillExternalBuffs(buffs), false)
+      assert.equal(calculateSurtrSkillDps(model(2), 0, 1, buffs as never), null)
+    }
+    assert.equal(calculateSurtrSkillDps(model(2), 0, 1,
+      { ...DEFAULT_SURTR_SKILL_EXTERNAL_BUFFS, [field]: Number.MAX_VALUE }), null)
+  }
+})
+
+test('外部バフの条件文は0を省略し、有効な3条件を共通表記にする', () => {
+  assert.equal(getSurtrSkillExternalBuffLabel(DEFAULT_SURTR_SKILL_EXTERNAL_BUFFS), '')
+  assert.equal(getSurtrSkillExternalBuffLabel({ attackPercent: 150, attackAddition: 100.5, attackSpeed: 75 }),
+    '外部バフ：攻撃力+150%・固定加算+100.5・攻撃速度+75')
+  assert.equal(getSurtrSkillExternalBuffLabel({ attackPercent: 0, attackAddition: 0, attackSpeed: 75 }),
+    '外部バフ：攻撃力+0%・固定加算+0・攻撃速度+75')
 })
 
 // Skill text/blackboards reuse the reviewed JP fixture; profile values match surtrDps.test.ts.

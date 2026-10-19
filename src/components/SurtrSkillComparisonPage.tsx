@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { SkillRecord } from '../types/skill'
 import { SURTR_OPERATOR_ID, type SurtrDpsSettings } from '../lib/surtrDps'
-import { deriveSurtrSkillDpsModel, calculateSurtrSkillDps, type SurtrSkillDpsModel } from '../lib/surtrSkillComparison'
+import { deriveSurtrSkillDpsModel, calculateSurtrSkillDps, isValidSurtrSkillExternalBuffs,
+  getSurtrSkillExternalBuffLabel, type SurtrSkillDpsModel, type SurtrSkillExternalBuffs } from '../lib/surtrSkillComparison'
 import { readSurtrSkillComparisonPageState, writeSurtrSkillComparisonPageState } from '../lib/surtrSkillComparisonPageState'
 import { getSelectedSurtrModuleStages, getSurtrModuleChoices, type SelectedSurtrModuleStage, type SurtrModuleChoice } from '../lib/surtrModuleComparison'
 import { applySurtrComparisonPreset } from '../lib/surtrComparisonPresets'
@@ -30,6 +31,8 @@ export function SurtrSkillComparisonPage({ rows, loading, error, onRetry }: {
   const [customStep, setCustomStep] = useState(typeof state.barStep === 'number' && ![10, 20].includes(state.barStep))
   const [stepDraft, setStepDraft] = useState(String(typeof state.barStep === 'number' ? state.barStep : 20))
   const [rangeDraft, setRangeDraft] = useState({ min: String(state.resistanceRange.min), max: String(state.resistanceRange.max) })
+  const [buffDraft, setBuffDraft] = useState(() => ({ attackPercent: String(state.externalBuffs.attackPercent),
+    attackAddition: String(state.externalBuffs.attackAddition), attackSpeed: String(state.externalBuffs.attackSpeed) }))
   const [detail, setDetail] = useState<SurtrSkillComparisonDetailSnapshot | null>(null)
   useEffect(() => writeSurtrSkillComparisonPageState(state), [state])
   const maximumLevel = record3?.operatorProfile.phases[2]?.maxLevel ?? 90
@@ -56,22 +59,27 @@ export function SurtrSkillComparisonPage({ rows, loading, error, onRetry }: {
     || !isValidSurtrDpsResistanceRange({ min: Number(rangeDraft.min), max: Number(rangeDraft.max) })
     ? '0〜100の整数で、終了を開始より大きくしてください。' : ''
   const stepError = getSurtrResistanceStepError(customStep, stepDraft)
+  const buffValues = { attackPercent: Number(buffDraft.attackPercent), attackAddition: Number(buffDraft.attackAddition),
+    attackSpeed: Number(buffDraft.attackSpeed) }
+  const buffError = Object.values(buffDraft).some(value => !value.trim()) || !isValidSurtrSkillExternalBuffs(buffValues)
+    ? '外部バフは0以上の数値で指定してください。' : ''
   const resistances = useMemo(() => getSurtrDpsResistanceSamples(state.barStep, state.resistanceRange), [state.barStep, state.resistanceRange])
   const series = useMemo(() => {
     if (!models) return null
     const result: SurtrSkillComparisonTableSeries[] = []
     for (const model of models) {
-      const s2 = resistances.map(resistance => calculateSurtrSkillDps(model.s2, resistance, state.enemyCount)?.totalDps ?? null)
-      const s3 = resistances.map(resistance => calculateSurtrSkillDps(model.s3, resistance, state.enemyCount)?.totalDps ?? null)
+      const s2 = resistances.map(resistance => calculateSurtrSkillDps(model.s2, resistance, state.enemyCount, state.externalBuffs)?.totalDps ?? null)
+      const s3 = resistances.map(resistance => calculateSurtrSkillDps(model.s3, resistance, state.enemyCount, state.externalBuffs)?.totalDps ?? null)
       if (s2.some(value => value === null) || s3.some(value => value === null)) return null
       result.push({ id: model.id, label: model.label, color: model.color, moduleType: model.type, moduleLevel: model.level,
         s2: s2 as number[], s3: s3 as number[] })
     }
     return result
-  }, [models, resistances, state.enemyCount])
+  }, [models, resistances, state.enemyCount, state.externalBuffs])
   const metadata: SurtrSkillComparisonTableMetadata = {
     level: settings.level, trust: settings.trust, potential: settings.potential, s2LevelLabel: label2, s3LevelLabel: label3,
     enemyCount: state.enemyCount, blocking: settings.blocking, remnantActive: settings.remnantActive === true,
+    externalBuffs: state.externalBuffs,
   }
   const blockLabel = settings.blocking ? '対象1体を自身でブロック' : '未ブロック'
   const update = <K extends keyof SurtrDpsSettings>(key: K, value: SurtrDpsSettings[K]) => setState(previous => ({ ...previous, settings: { ...previous.settings, [key]: value } }))
@@ -87,16 +95,26 @@ export function SurtrSkillComparisonPage({ rows, loading, error, onRetry }: {
     const range = { min: Number(draft.min), max: Number(draft.max) }
     if (draft.min.trim() && draft.max.trim() && isValidSurtrDpsResistanceRange(range)) setState(previous => ({ ...previous, resistanceRange: range }))
   }
+  const updateBuff = (key: keyof SurtrSkillExternalBuffs, value: string) => {
+    const draft = { ...buffDraft, [key]: value }
+    setBuffDraft(draft)
+    const buffs = { attackPercent: Number(draft.attackPercent), attackAddition: Number(draft.attackAddition),
+      attackSpeed: Number(draft.attackSpeed) }
+    if (Object.values(draft).every(entry => entry.trim()) && isValidSurtrSkillExternalBuffs(buffs)) {
+      setState(previous => ({ ...previous, externalBuffs: buffs }))
+    }
+  }
   const openDetail = (resistance: number, initialSeriesId: string, initialSkill: 2 | 3 = 2) => {
     if (!models) return
     const entries = models.flatMap(item => {
-      const s2 = calculateSurtrSkillDps(item.s2, resistance, state.enemyCount)
-      const s3 = calculateSurtrSkillDps(item.s3, resistance, state.enemyCount)
+      const s2 = calculateSurtrSkillDps(item.s2, resistance, state.enemyCount, state.externalBuffs)
+      const s3 = calculateSurtrSkillDps(item.s3, resistance, state.enemyCount, state.externalBuffs)
       return s2 && s3 ? [{ id: item.id, label: item.label, color: item.color, s2: { model: item.s2, calculation: s2 }, s3: { model: item.s3, calculation: s3 } }] : []
     })
     if (entries.length !== models.length || !entries.length) return
     setDetail({ resistance, entries, initialSeriesId, initialSkill,
-      conditions: `昇進2 Lv.${settings.level}・信頼${settings.trust}・潜在${settings.potential}・S2 ${label2}・S3 ${label3}・範囲内${state.enemyCount}${state.enemyCount === 4 ? '体以上' : '体'}・${blockLabel}・${settings.remnantActive ? '余燼中' : '余燼発動前'}` })
+      conditions: [`昇進2 Lv.${settings.level}・信頼${settings.trust}・潜在${settings.potential}・S2 ${label2}・S3 ${label3}・範囲内${state.enemyCount}${state.enemyCount === 4 ? '体以上' : '体'}・${blockLabel}・${settings.remnantActive ? '余燼中' : '余燼発動前'}`,
+        getSurtrSkillExternalBuffLabel(state.externalBuffs)].filter(Boolean).join('・') })
   }
   const status = error ? <div className="error-box" role="alert">{error}<button type="button" className="button secondary" onClick={onRetry}>再読み込み</button></div>
     : <p className="surtr-s3-status" role="status">{loading ? 'スルトのデータを読み込み中…' : 'スルトのS2・S3のデータが見つかりません。'}</p>
@@ -133,10 +151,22 @@ export function SurtrSkillComparisonPage({ rows, loading, error, onRetry }: {
           <label className="calculator-field"><span>素質2「余燼」</span><select aria-label="素質2「余燼」" value={settings.remnantActive ? 'active' : 'inactive'} onChange={event => update('remnantActive', event.target.value === 'active')}>
             <option value="inactive">発動前</option><option value="active">発動中</option></select></label>
         </div>
+        <fieldset className="surtr-skill-comparison-buffs"><legend>外部バフ</legend>
+          <div className="surtr-s3-fields surtr-skill-comparison-fields">
+            {([{ key: 'attackPercent', label: '攻撃力上昇（%）' }, { key: 'attackAddition', label: '攻撃力の固定加算' },
+              { key: 'attackSpeed', label: '攻撃速度（+）' }] as const).map(({ key, label }) =>
+              <label className="calculator-field" key={key}><span>{label}</span>
+                <input aria-label={label} type="number" min={0} step="any" value={buffDraft[key]}
+                  aria-invalid={!!buffError} aria-describedby={buffError ? 'surtr-skill-comparison-buff-error' : undefined}
+                  onChange={event => updateBuff(key, event.target.value)} /></label>)}
+          </div>
+          {!!buffError && <p className="surtr-s3-axis-error" id="surtr-skill-comparison-buff-error" role="alert">{buffError}</p>}
+        </fieldset>
         <details className="surtr-s3-assumptions"><summary>計算条件</summary>
           <p>両スキルの攻撃範囲内に、同じ術耐性の敵がいる場合のスキル発動中の合計DPSです。S2は最大2体、S3は最大3体（特化3では4体）を攻撃します。S2の単体時倍率は攻撃対象が1体の場合だけ適用します。</p>
           <p>MOD Xの攻撃速度はスルトが誰もブロックしていない場合、MOD Yの術脆弱は自身がブロックしている1体だけに適用します。余燼は両スキルの共通条件です。</p>
-          <p>素質・MOD・潜在による補正を反映します。外部バフ、攻撃間隔のフレーム単位の丸め、初撃の時刻は含めません。S2の待機時間を含む平均DPSや、退場までの総ダメージとは異なります。</p>
+          <p>外部バフは両スキル・全MODへ共通に適用し、指定したバフがすべて有効な間のDPSを比較します。攻撃力上昇率はスキルの攻撃力補正へ加算します。固定加算は割合補正の後、小数点以下の切り捨てとS2の単体時倍率の前に加えます。鼓舞などは重複ルールを反映した最終的な加算値を入力してください。</p>
+          <p>素質・MOD・潜在による補正を反映します。攻撃間隔のフレーム単位の丸め、初撃の時刻、バフの持続時間は含めません。S2の待機時間を含む平均DPSや、退場までの総ダメージとは異なります。</p>
         </details>
       </>}
     </CollapsibleCalculatorPanel>
@@ -155,9 +185,9 @@ export function SurtrSkillComparisonPage({ rows, loading, error, onRetry }: {
       {!!stepError && <p className="surtr-s3-axis-error" id="surtr-skill-comparison-step-error" role="alert">{stepError}</p>}
       {!record2 || !record3 ? status : <>
         {!stages.length ? <p className="surtr-s3-status" role="status">比較するMOD・段階を選択してください。</p>
-          : !series ? <p role="alert">比較条件の計算に必要なデータを取得できませんでした。</p>
+          : !series && !buffError ? <p role="alert">比較条件を計算できませんでした。入力値とデータを確認してください。</p>
           : !resistances.length && !rangeError && !stepError ? <p role="status">指定した範囲に表示する術耐性がありません。</p> : null}
-        <div hidden={!!rangeError || !!stepError || !series || !stages.length || !resistances.length}>
+        <div hidden={!!rangeError || !!stepError || !!buffError || !series || !stages.length || !resistances.length}>
           <SurtrSkillComparisonTableOutput series={series ?? []} resistances={resistances} metadata={metadata} onOpenDetail={openDetail} />
         </div>
       </>}
