@@ -228,6 +228,59 @@ test('stacked winner exports preserve the full comparison candidates while split
   }
 })
 
+test('external buff conditions survive every numeric and winner image layout and filename', () => {
+  const externalBuffs = { attackPercent: 150.5, attackAddition: 123.75, attackSpeed: 20.25 }
+  const label = '外部バフ：攻撃力+150.5%・固定加算+123.75・攻撃速度+20.25'
+  for (const displayMode of ['numeric', 'module-winner', 'skill-winner']) {
+    for (const imageLayout of ['current', 'transpose', 'stacked']) {
+      const captured = { ...snapshot, ...winnerSource, displayMode, imageLayout,
+        metadata: { ...metadata, externalBuffs } }
+      const before = structuredClone(captured)
+      const markup = renderToStaticMarkup(createElement(image.SurtrSkillComparisonTableImage, captured))
+      const preview = renderToStaticMarkup(createElement(image.SurtrSkillComparisonTableImagePreview, captured))
+      const filename = image.getSurtrSkillComparisonTableImageFilename(captured, 16 / 9)
+      const context = `${displayMode}/${imageLayout}`
+      assert.ok(markup.includes(`<span>${label}</span>`), context)
+      assert.ok(preview.includes(`<span>${label}</span>`), `${context} preview`)
+      assert.equal(markup.split(label).length - 1, 1, context)
+      assert.ok(filename.includes('_外部バフ攻撃力+150.5%-固定加算+123.75-攻撃速度+20.25_'), context)
+      assert.ok(filename.includes(`_${imageLayout}_`), context)
+      assert.doesNotMatch(filename, /[<>:"/\\|?*]/)
+      assert.deepEqual(captured, before, `${context} must not mutate its captured conditions`)
+    }
+  }
+})
+
+test('omitted and all-zero external buffs preserve every existing image and filename unchanged', () => {
+  const externalBuffs = { attackPercent: 0, attackAddition: 0, attackSpeed: 0 }
+  for (const displayMode of ['numeric', 'module-winner', 'skill-winner']) {
+    for (const imageLayout of ['current', 'transpose', 'stacked']) {
+      const captured = { ...snapshot, ...winnerSource, displayMode, imageLayout }
+      const zero = { ...captured, metadata: { ...metadata, externalBuffs } }
+      const renderImage = props => renderToStaticMarkup(createElement(image.SurtrSkillComparisonTableImage, props))
+      assert.equal(renderImage(zero), renderImage(captured), `${displayMode}/${imageLayout}`)
+      assert.equal(image.getSurtrSkillComparisonTableImageFilename(zero),
+        image.getSurtrSkillComparisonTableImageFilename(captured), `${displayMode}/${imageLayout}`)
+      assert.doesNotMatch(renderImage(zero), /外部バフ/)
+    }
+  }
+})
+
+test('each external buff alone is recorded without hiding the other input values', () => {
+  for (const externalBuffs of [
+    { attackPercent: 150, attackAddition: 0, attackSpeed: 0 },
+    { attackPercent: 0, attackAddition: 1000, attackSpeed: 0 },
+    { attackPercent: 0, attackAddition: 0, attackSpeed: 30 },
+  ]) {
+    const captured = { ...snapshot, metadata: { ...metadata, externalBuffs } }
+    const markup = renderToStaticMarkup(createElement(image.SurtrSkillComparisonTableImage, captured))
+    const label = `外部バフ：攻撃力+${externalBuffs.attackPercent}%・固定加算+${externalBuffs.attackAddition}・攻撃速度+${externalBuffs.attackSpeed}`
+    assert.ok(markup.includes(label), label)
+    assert.ok(image.getSurtrSkillComparisonTableImageFilename(captured).includes(
+      `_外部バフ攻撃力+${externalBuffs.attackPercent}%-固定加算+${externalBuffs.attackAddition}-攻撃速度+${externalBuffs.attackSpeed}_`), label)
+  }
+})
+
 test('shared winner renderer retains default MOD behavior and uses skill colors and wording for skill candidates', () => {
   const candidates = [
     { id: 's2', label: 'S2', shortLabel: 'S2', color: '#8b5f3b', moduleType: undefined, value: 115 },

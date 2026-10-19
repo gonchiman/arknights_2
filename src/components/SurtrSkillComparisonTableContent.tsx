@@ -3,6 +3,7 @@ import { getSurtrDpsResistanceRating } from '../lib/surtrDpsResistance'
 import { formatSurtrUnequippedComparisonValue, type SurtrUnequippedRankMode } from '../lib/surtrUnequippedComparison'
 import { getSurtrUnequippedColorScaleBackground, getSurtrUnequippedColorScaleMaximum } from '../lib/surtrUnequippedColorScale'
 import type { EnemyHeatmapColorScale } from '../lib/enemyHeatmapColor'
+import type { SurtrSkillExternalBuffs } from '../lib/surtrSkillComparison'
 import { getSurtrSkillComparisonWinnerTsv, SurtrSkillComparisonWinnerTable } from './SurtrSkillComparisonWinnerTable'
 import './SurtrS3Page.css'
 import './SurtrSkillComparisonTable.css'
@@ -26,6 +27,7 @@ export interface SurtrSkillComparisonTableMetadata {
   enemyCount: number
   blocking: boolean
   remnantActive: boolean
+  externalBuffs?: SurtrSkillExternalBuffs
 }
 
 export type SurtrSkillComparisonMetric = 'dps' | 'difference' | 'ratio' | 'percent'

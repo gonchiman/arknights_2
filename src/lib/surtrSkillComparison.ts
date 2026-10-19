@@ -20,6 +20,30 @@ export interface SurtrSkillDpsModel extends SurtrDpsModel {
   blocking: boolean
 }
 
+/** Buffs received while both compared skills are active; percentages use 150 for +150%. */
+export interface SurtrSkillExternalBuffs {
+  attackPercent: number
+  /** Final ATK addition, applied after additive ATK percentages and before flooring. */
+  attackAddition: number
+  attackSpeed: number
+}
+
+export const DEFAULT_SURTR_SKILL_EXTERNAL_BUFFS: Readonly<SurtrSkillExternalBuffs> = Object.freeze({
+  attackPercent: 0, attackAddition: 0, attackSpeed: 0,
+})
+
+export function isValidSurtrSkillExternalBuffs(value: unknown): value is SurtrSkillExternalBuffs {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const buffs = value as Partial<SurtrSkillExternalBuffs>
+  return isNonNegative(buffs.attackPercent) && isNonNegative(buffs.attackAddition) && isNonNegative(buffs.attackSpeed)
+}
+
+export function getSurtrSkillExternalBuffLabel(buffs: SurtrSkillExternalBuffs): string {
+  if (!isValidSurtrSkillExternalBuffs(buffs)
+    || (buffs.attackPercent === 0 && buffs.attackAddition === 0 && buffs.attackSpeed === 0)) return ''
+  return `外部バフ：攻撃力+${buffs.attackPercent}%・固定加算+${buffs.attackAddition}・攻撃速度+${buffs.attackSpeed}`
+}
+
 export interface SurtrSkillDpsCalculation {
   enemyCount: number
   attackTargetCount: number
@@ -31,7 +55,11 @@ export interface SurtrSkillDpsCalculation {
   blockedTargetCount: number
   unblockedTargetCount: number
   damagePerAttack: number
+  /** Floored ATK after skill and external buffs, before the S2 single-target scale. */
+  effectiveAttack: number
+  attackSpeed: number
   attackInterval: number
+  externalBuffs: SurtrSkillExternalBuffs
   totalDps: number
   attackPipeline: AttackPipelineBreakdown
   mitigation: DamageCalculationBreakdown
@@ -63,6 +91,7 @@ export function calculateSurtrSkillDps(
   model: SurtrSkillDpsModel,
   resistance: number,
   enemyCount: number,
+  externalBuffs: SurtrSkillExternalBuffs = DEFAULT_SURTR_SKILL_EXTERNAL_BUFFS,
 ): SurtrSkillDpsCalculation | null {
   if (!Number.isInteger(enemyCount) || enemyCount < 1 || enemyCount > 4
     || !isNonNegative(resistance) || resistance > 100
@@ -72,15 +101,22 @@ export function calculateSurtrSkillDps(
     || typeof model.blocking !== 'boolean'
     || !isPositive(model.baseAttack) || !isNonNegative(model.skillAttackBonusPercent)
     || !isPositive(model.effectiveAttack) || !isPositive(model.attackInterval)
+    || !isPositive(model.attackSpeed) || !isPositive(model.operatorStats?.baseAttackTime)
+    || !isValidSurtrSkillExternalBuffs(externalBuffs)
     || !isNonNegative(model.resistanceIgnore) || !isNonNegative(model.artsFragility)) return null
 
   const attackTargetCount = Math.min(enemyCount, model.maximumTargets)
   const attackScale = attackTargetCount === 1 ? model.singleTargetAttackScale : 1
   const attackPipeline = calculateAttackPipeline(model.baseAttack, {
-    directMultiplierPercent: model.skillAttackBonusPercent,
+    directMultiplierPercent: model.skillAttackBonusPercent + externalBuffs.attackPercent,
+    finalAddition: externalBuffs.attackAddition,
     attackScale,
   })
-  const mitigation = calculateDamageBreakdown(model.effectiveAttack * attackScale, 'ARTS', 0, resistance, {
+  const effectiveAttack = attackPipeline.afterFinalMultiplier
+  const attackSpeed = model.attackSpeed + externalBuffs.attackSpeed
+  // Match getOperatorStats: module, potential and Remnant speed are already in the model.
+  const attackInterval = model.operatorStats.baseAttackTime * 100 / Math.max(20, attackSpeed)
+  const mitigation = calculateDamageBreakdown(attackPipeline.finalAttack, 'ARTS', 0, resistance, {
     resistanceIgnoreFixed: model.resistanceIgnore,
   })
   const artsFragilityMultiplier = 1 + model.artsFragility
@@ -89,12 +125,14 @@ export function calculateSurtrSkillDps(
   const blockedTargetCount = model.blocking ? 1 : 0
   const unblockedTargetCount = attackTargetCount - blockedTargetCount
   const damagePerAttack = blockedTargetDamage * blockedTargetCount + unblockedTargetDamage * unblockedTargetCount
-  const totalDps = damagePerAttack / model.attackInterval
-  if (![attackPipeline.finalAttack, unblockedTargetDamage, blockedTargetDamage, damagePerAttack, totalDps]
-    .every(Number.isFinite)) return null
+  const totalDps = damagePerAttack / attackInterval
+  if (![model.skillAttackBonusPercent + externalBuffs.attackPercent, attackSpeed,
+    attackPipeline.finalAttack, unblockedTargetDamage, blockedTargetDamage, damagePerAttack, totalDps]
+    .every(Number.isFinite) || !isPositive(attackInterval)) return null
 
   return { enemyCount, attackTargetCount, attackScale, unblockedTargetDamage, blockedTargetDamage,
-    blockedTargetCount, unblockedTargetCount, damagePerAttack, attackInterval: model.attackInterval,
+    blockedTargetCount, unblockedTargetCount, damagePerAttack, effectiveAttack, attackSpeed, attackInterval,
+    externalBuffs: { ...externalBuffs },
     totalDps, attackPipeline, mitigation, artsFragilityMultiplier }
 }
 
