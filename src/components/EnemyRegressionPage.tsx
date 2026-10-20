@@ -1,4 +1,5 @@
 import { useId, useMemo, useRef, useState } from 'react'
+import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
 import { matchesEnemyFilters } from '../lib/enemyData'
 import { copyEnemyLevelSelection, ENEMY_LEVEL_LABELS, formatEnemyLevelSelection, type EnemyAnalysisFiltersState } from '../lib/enemyLevelSelection'
 import { formatEnemyNumericCondition, matchesEnemyNumericConditions, parseEnemyNumericFilterValue, type EnemyNumericCondition } from '../lib/enemyNumericFilters'
@@ -6,7 +7,6 @@ import {
   DEFAULT_ENEMY_REGRESSION_CONFIG,
   ENEMY_REGRESSION_METRICS,
   runEnemyRegression,
-  type EnemyRegressionColumn,
   type EnemyRegressionConfig,
   type EnemyRegressionMetric,
   type EnemyRegressionPredictor,
@@ -78,9 +78,12 @@ function EnemyRegressionContent({ rows }: { rows: readonly EnemyRecord[] }) {
   }))
   const [detailEnemy, setDetailEnemy] = useState<EnemyRecord | null>(null)
   const [activeTab, setActiveTab] = useState<RegressionTab>('results')
+  const [coefficientMode, setCoefficientMode] = useState<'beta' | 'raw'>('beta')
+  const [showBars, setShowBars] = useState(false)
   const detailTrigger = useRef<HTMLButtonElement | null>(null)
   const tabId = useId()
   const resultTitleId = useId()
+  const categoryTitleId = useId()
   const outcomeId = useId()
   const statusId = useId()
   const scopedRows = useMemo(() => rows.filter((enemy) => (
@@ -95,6 +98,15 @@ function EnemyRegressionContent({ rows }: { rows: readonly EnemyRecord[] }) {
   }, [submission])
   const outcome = ENEMY_REGRESSION_METRICS.find(({ key }) => key === submission.draft.config.outcome)!
   const result = calculation.result
+  const indexedColumns = result?.columns.map((column, index) => ({ ...column, index })) ?? []
+  const numericColumns = indexedColumns.filter((column) => !column.isCategory)
+  const categoryColumns = indexedColumns.filter((column) => column.isCategory)
+  const standardized = coefficientMode === 'beta'
+  const canShowBars = standardized && numericColumns.length > 0
+  const barsVisible = canShowBars && showBars
+  const barMaximum = createZeroBasedValueAxis(Math.max(0, ...numericColumns.map(({ index }) => (
+    Math.abs(result!.fit.standardizedCoefficients[index])
+  ))), 0).maximum
   const status = invalidConditions ? '数値条件を確認してください。'
     : draft.config.predictors.length === 0 ? '説明変数を1つ以上選んでください。'
     : dirty ? '未再計算'
@@ -178,7 +190,7 @@ function EnemyRegressionContent({ rows }: { rows: readonly EnemyRecord[] }) {
     <AnalysisTabPanel idPrefix={tabId} tab="results" activeTab={activeTab} title="分析結果">
       <div className="analysis-panel-body">
         {calculation.error && <p className="enemy-regression-error" role="alert">{calculation.error}</p>}
-        {result && <section className="enemy-regression-results" aria-labelledby={resultTitleId}>
+        {result && <section className="enemy-regression-results" aria-label={`${outcome.label}の分析結果`}>
           <div className="enemy-regression-result-scope">
             {dirty && <strong>前回計算した結果</strong>}
             <span>対象 {result.targetCount.toLocaleString('ja-JP')}種類</span>
@@ -186,17 +198,56 @@ function EnemyRegressionContent({ rows }: { rows: readonly EnemyRecord[] }) {
             <span>欠損除外 {result.excludedCount.toLocaleString('ja-JP')}種類</span>
             <span>パラメーター {result.fit.parameterCount}個</span>
           </div>
-          <h3 id={resultTitleId}>{outcome.label}との関係</h3>
-          <div className="enemy-stat-summary-scroll enemy-regression-coefficient-scroll">
-            <table className="enemy-stat-summary-table enemy-regression-coefficient-table" aria-labelledby={resultTitleId}>
-              <thead><tr><th scope="col">条件の変化</th><th scope="col">{outcome.label}の変化{outcome.unit ? `（${outcome.unit}）` : ''}</th></tr></thead>
-              <tbody>{result.columns.map((column, index) => <tr key={column.key}>
-                <th scope="row">{formatCoefficientCondition(column)}</th>
-                <td>{formatSigned(result.fit.coefficients[index] * column.changeStep)}</td>
-              </tr>)}</tbody>
-            </table>
+          <div className="enemy-regression-coefficient-controls">
+            <div className="enemy-chart-scale-switch" role="group" aria-label="係数の表示">
+              <button type="button" aria-pressed={standardized} className={standardized ? 'active' : ''}
+                onClick={() => setCoefficientMode('beta')}>標準化 β</button>
+              <button type="button" aria-pressed={!standardized} className={!standardized ? 'active' : ''}
+                onClick={() => setCoefficientMode('raw')}>元の単位 B</button>
+            </div>
+            <label className="enemy-regression-bar-option">
+              <input type="checkbox" checked={showBars} disabled={!canShowBars} onChange={(event) => setShowBars(event.target.checked)} />
+              <span>横棒（標準化 β）</span>
+            </label>
           </div>
-          <div className="enemy-regression-intercept">切片 {formatSigned(result.fit.intercept)}{result.referenceLevelType !== null && ` · 基準区分 ${ENEMY_LEVEL_LABELS[result.referenceLevelType]}`}</div>
+          {numericColumns.length > 0 && <>
+            <h3 id={resultTitleId}>{standardized ? '標準化回帰係数 β' : '回帰係数 B'}</h3>
+            <div className="enemy-stat-summary-scroll enemy-regression-coefficient-scroll" role="region" aria-labelledby={resultTitleId} tabIndex={0}>
+              <table className={`enemy-stat-summary-table enemy-regression-coefficient-table${barsVisible ? ' enemy-regression-with-bars' : ''}`} aria-labelledby={resultTitleId}>
+                <thead><tr>
+                  <th scope="col">{standardized ? '説明変数' : '説明変数（＋1）'}</th>
+                  <th scope="col" className="enemy-regression-coefficient-value">{standardized ? 'β' : '回帰係数 B'}</th>
+                  {barsVisible && <th scope="col" aria-label="標準化回帰係数 β の横棒">
+                    <div className="enemy-regression-bar-axis" aria-hidden="true"><span>{formatSigned(-barMaximum)}</span><span>0</span><span>{formatSigned(barMaximum)}</span></div>
+                  </th>}
+                </tr></thead>
+                <tbody>{numericColumns.map((column) => {
+                  const beta = result.fit.standardizedCoefficients[column.index]
+                  const barWidth = Math.abs(beta) / barMaximum * 50
+                  return <tr key={column.key}>
+                    <th scope="row">{column.label}{!standardized && column.unit ? `（${column.unit}）` : ''}</th>
+                    <td>{standardized ? formatSigned(beta, 3) : formatSigned(result.fit.coefficients[column.index])}</td>
+                    {barsVisible && <td><div className="enemy-regression-bar-lane" role="img" aria-label={`${column.label}の標準化回帰係数 ${formatSigned(beta, 3)}`}>
+                      <div className="enemy-regression-bar" style={{ left: `${beta < 0 ? 50 - barWidth : 50}%`, width: `${barWidth}%` }} />
+                    </div></td>}
+                  </tr>
+                })}</tbody>
+              </table>
+            </div>
+          </>}
+          {categoryColumns.length > 0 && <section className="enemy-regression-categories" aria-labelledby={categoryTitleId}>
+            <h3 id={categoryTitleId}>敵区分差（{ENEMY_LEVEL_LABELS[result.referenceLevelType!]}基準）</h3>
+            <div className="enemy-stat-summary-scroll enemy-regression-coefficient-scroll" role="region" aria-labelledby={categoryTitleId} tabIndex={0}>
+              <table className="enemy-stat-summary-table enemy-regression-coefficient-table" aria-labelledby={categoryTitleId}>
+                <thead><tr><th scope="col">敵区分</th><th scope="col">{outcome.label}の差{outcome.unit ? `（${outcome.unit}）` : ''}</th></tr></thead>
+                <tbody>{categoryColumns.map((column) => <tr key={column.key}>
+                  <th scope="row">{ENEMY_LEVEL_LABELS[column.levelType!]}</th>
+                  <td>{formatSigned(result.fit.coefficients[column.index])}</td>
+                </tr>)}</tbody>
+              </table>
+            </div>
+          </section>}
+          <div className="enemy-regression-intercept">切片（元の単位） {formatSigned(result.fit.intercept)}</div>
           <dl className="enemy-regression-fit">
             <div><dt>決定係数 R²</dt><dd>{formatNumber(result.fit.rSquared, 4)}</dd></div>
             <div><dt>調整済み R²</dt><dd>{formatNumber(result.fit.adjustedRSquared, 4)}</dd></div>
@@ -218,17 +269,15 @@ function EnemyRegressionContent({ rows }: { rows: readonly EnemyRecord[] }) {
   </div>
 }
 
-function formatCoefficientCondition(column: EnemyRegressionColumn) {
-  return column.isCategory ? `敵区分：${column.label}`
-    : `${column.label} ＋${formatNumber(column.changeStep)}${column.unit ? ` ${column.unit}` : ''}`
-}
-
 function formatNumber(value: number, digits = 2) {
   return value.toLocaleString('ja-JP', { maximumFractionDigits: digits })
 }
 
-function formatSigned(value: number) {
+function formatSigned(value: number, digits?: number) {
   const magnitude = Math.abs(value)
-  if (magnitude !== 0 && magnitude < 0.0001) return `${value < 0 ? '−' : '+'}${magnitude.toExponential(2)}`
-  return `${value < 0 ? '−' : '+'}${formatNumber(magnitude, magnitude < 0.01 ? 4 : 2)}`
+  if (magnitude === 0) return '0'
+  if (magnitude < 0.0001 || magnitude >= 1_000_000) return `${value < 0 ? '−' : '+'}${magnitude.toExponential(2)}`
+  const formatted = digits === undefined ? magnitude.toLocaleString('ja-JP', { maximumSignificantDigits: 5 })
+    : formatNumber(magnitude, magnitude < 0.01 ? Math.max(digits, 4) : digits)
+  return `${value < 0 ? '−' : '+'}${formatted}`
 }

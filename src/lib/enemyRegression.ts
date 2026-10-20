@@ -4,12 +4,12 @@ import { ENEMY_NUMERIC_FILTER_FIELDS } from './enemyNumericFilters.ts'
 import { fitMultipleLinearRegression } from './multipleLinearRegression.ts'
 
 export const ENEMY_REGRESSION_METRICS = [
-  regressionMetric('maxHp', 1_000),
-  regressionMetric('attack', 100),
-  regressionMetric('defense', 100),
-  regressionMetric('magicResistance', 10),
-  regressionMetric('moveSpeed', 0.1),
-  regressionMetric('baseAttackTime', 1),
+  regressionMetric('maxHp'),
+  regressionMetric('attack'),
+  regressionMetric('defense'),
+  regressionMetric('magicResistance'),
+  regressionMetric('moveSpeed'),
+  regressionMetric('baseAttackTime'),
 ] as const
 
 export type EnemyRegressionMetric = typeof ENEMY_REGRESSION_METRICS[number]['key']
@@ -31,7 +31,6 @@ export interface EnemyRegressionColumn {
   key: string
   label: string
   predictor: EnemyRegressionPredictor
-  changeStep: number
   unit: string
   isCategory: boolean
   levelType?: EnemyLevelType
@@ -107,14 +106,13 @@ export function runEnemyRegression(
         key: `levelType:${level}`,
         label: `${ENEMY_LEVEL_LABELS[level]}（${ENEMY_LEVEL_LABELS[referenceLevelType!]}基準）`,
         predictor,
-        changeStep: 1,
         unit: '',
         isCategory: true,
         levelType: level,
       }))
     }
     const metric = ENEMY_REGRESSION_METRICS.find(({ key }) => key === predictor)!
-    return [{ key: metric.key, label: metric.label, predictor, changeStep: metric.step, unit: metric.unit, isCategory: false }]
+    return [{ key: metric.key, label: metric.label, predictor, unit: metric.unit, isCategory: false }]
   })
   if (columns.length === 0) {
     throw new Error('敵区分が1種類のため比較できません。数値の説明変数を追加するか対象を広げてください。')
@@ -139,7 +137,7 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
 }
 
-function regressionMetric<K extends typeof ENEMY_NUMERIC_FILTER_FIELDS[number]['key']>(key: K, step: number) {
+function regressionMetric<K extends typeof ENEMY_NUMERIC_FILTER_FIELDS[number]['key']>(key: K) {
   const field = ENEMY_NUMERIC_FILTER_FIELDS.find((item) => item.key === key)!
-  return { key, label: field.label, step, unit: field.unit }
+  return { key, label: field.label, unit: field.unit }
 }

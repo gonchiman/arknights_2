@@ -2,6 +2,8 @@ export interface MultipleLinearRegressionResult {
   intercept: number
   /** Coefficients follow the input predictor columns, including after QR pivoting. */
   coefficients: readonly number[]
+  /** b * sd(X) / sd(Y), using the same observations and predictor column order. */
+  standardizedCoefficients: readonly number[]
   fittedValues: readonly number[]
   residuals: readonly number[]
   rSquared: number
@@ -131,6 +133,11 @@ export function fitMultipleLinearRegression(
   const coefficients = scaledCoefficients.map((value, column) => (
     rescaleCoefficient(value / lengths[column], responseScale, scales[column])
   ))
+  // The scaled predictor columns have centered norm 1. Dividing their
+  // coefficients by the response's centered norm gives b * sd(X) / sd(Y)
+  // without reconstructing variances in the original, potentially huge units.
+  const responseLength = Math.sqrt(responseVariation)
+  const standardizedCoefficients = scaledCoefficients.map(value => value / responseLength)
   const intercept = responseMean * responseScale - sum(coefficients.map((value, column) => value * (means[column] * scales[column])))
 
   const fittedValues: number[] = []
@@ -151,10 +158,10 @@ export function fitMultipleLinearRegression(
   const residualDegreesOfFreedom = observationCount - parameterCount
   const adjustedRSquared = 1 - (1 - rSquared) * (observationCount - 1) / residualDegreesOfFreedom
   const meanAbsoluteError = mean(normalizedResiduals.map(Math.abs)) * responseScale
-  if (![intercept, ...coefficients, ...fittedValues, ...residuals, rSquared, adjustedRSquared, meanAbsoluteError].every(Number.isFinite)) {
+  if (![intercept, ...coefficients, ...standardizedCoefficients, ...fittedValues, ...residuals, rSquared, adjustedRSquared, meanAbsoluteError].every(Number.isFinite)) {
     throw numericalRangeError()
   }
-  return { intercept, coefficients, fittedValues, residuals, rSquared, adjustedRSquared, meanAbsoluteError,
+  return { intercept, coefficients, standardizedCoefficients, fittedValues, residuals, rSquared, adjustedRSquared, meanAbsoluteError,
     observationCount, parameterCount, residualDegreesOfFreedom }
 }
 

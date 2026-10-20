@@ -19,14 +19,30 @@
 .enemy-regression-actions .button { min-height: 36px; font-size: 13px; }
 .enemy-regression-error { margin: 0; color: var(--danger); font-size: 13px; line-height: 1.7; }
 .enemy-regression-results { min-width: 0; }
-.enemy-regression-results > h3 { margin: 0 0 7px; color: var(--text); font-size: 14px; font-weight: 500; }
+.enemy-regression-results > h3,
+.enemy-regression-categories > h3 { margin: 0 0 7px; color: var(--text); font-size: 14px; font-weight: 500; }
 .enemy-regression-result-scope { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0 0 16px; color: var(--text-soft); font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
 .enemy-regression-result-scope strong { color: var(--text); font-weight: 500; }
+.enemy-regression-coefficient-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 14px; }
+.enemy-regression-coefficient-controls .enemy-chart-scale-switch button { min-height: 36px; padding: 7px 13px; font-size: 13px; background: var(--surface); }
+.enemy-regression-coefficient-controls .enemy-chart-scale-switch button.active { background: var(--text); color: var(--surface); }
+.enemy-regression-bar-option { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; font-size: 13px; cursor: pointer; }
+.enemy-regression-bar-option input { width: 15px; height: 15px; margin: 0; accent-color: var(--text); }
+.enemy-regression-bar-option:has(input:disabled) { color: var(--text-muted); cursor: default; }
 .enemy-regression-coefficient-table { min-width: 0; table-layout: fixed; }
 .enemy-regression-coefficient-table tr > :first-child { position: static; z-index: auto; width: 65%; min-width: 0; }
 .enemy-regression-coefficient-table tbody th { white-space: normal; overflow-wrap: anywhere; font-weight: 400; }
 .enemy-regression-coefficient-table thead th:last-child { text-align: right; }
 .enemy-regression-coefficient-table td { font-size: 13px; }
+.enemy-regression-coefficient-table.enemy-regression-with-bars { min-width: 280px; }
+.enemy-regression-coefficient-table.enemy-regression-with-bars tr > :first-child { width: 30%; }
+.enemy-regression-with-bars .enemy-regression-coefficient-value { width: 25%; text-align: right; }
+.enemy-regression-bar-axis { display: flex; justify-content: space-between; gap: 3px; font-size: 11px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.enemy-regression-bar-axis span { white-space: nowrap; }
+.enemy-regression-bar-lane { position: relative; height: 20px; background: var(--surface-soft); }
+.enemy-regression-bar-lane::after { content: ''; position: absolute; top: -7px; bottom: -7px; left: 50%; width: 1px; background: var(--border-strong); }
+.enemy-regression-bar { position: absolute; top: 4px; height: 12px; background: var(--link); }
+.enemy-regression-categories { margin-top: 20px; }
 .enemy-regression-intercept { margin-top: 9px; color: var(--text-soft); font-size: 14px; overflow-wrap: anywhere; }
 .enemy-regression-fit { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 18px 0 0; border-top: 1px solid var(--border); padding-top: 12px; }
 .enemy-regression-fit > div { min-width: 0; }
@@ -42,6 +58,8 @@
 @media (max-width: 760px), (pointer: coarse) {
   .enemy-regression-outcome select,
   .enemy-regression-actions .button,
+  .enemy-regression-coefficient-controls .enemy-chart-scale-switch button,
+  .enemy-regression-bar-option,
   .enemy-regression-predictors label { min-height: 44px; }
   .enemy-regression-outcome select { font-size: 16px; }
 }
