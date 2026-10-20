@@ -1,4 +1,4 @@
-export type NavigationPage = 'home' | 'operators' | 'skills' | 'skill-classification' | 'talent-classification' | 'talent-structure' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'skill-json' | 'code-analysis' | 'damage' | 'damage-two' | 'damage-three' | 'damage-verification' | 'comparison' | 'enemies' | 'enemy-analysis' | 'main-enemy-trends' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-s3-comparison' | 'surtr-skill-comparison' | 'surtr-total-damage' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-target-switch-three' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
+export type NavigationPage = 'home' | 'operators' | 'skills' | 'skill-classification' | 'talent-classification' | 'talent-structure' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'skill-json' | 'code-analysis' | 'damage' | 'damage-two' | 'damage-three' | 'damage-verification' | 'comparison' | 'enemies' | 'enemy-analysis' | 'enemy-regression' | 'main-enemy-trends' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-s3-comparison' | 'surtr-skill-comparison' | 'surtr-total-damage' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-target-switch-three' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -241,6 +241,13 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     href: '#/analysis/enemies',
     label: '敵の統計分析',
     description: '敵ステータスの分布・統計量',
+    section: 'analysis',
+  },
+  {
+    id: 'enemy-regression',
+    href: '#/analysis/enemies/regression',
+    label: '敵の重回帰分析',
+    description: '',
     section: 'analysis',
   },
   {

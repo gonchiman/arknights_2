@@ -4,7 +4,7 @@ import { EnemyFilterPanel } from './EnemyFilterPanel'
 import { EnemyNumericFilter } from './EnemyNumericFilter'
 import './EnemyAnalysisFilters.css'
 
-export function EnemyAnalysisFilters({ filters, onFiltersChange, numericConditions, onNumericConditionsChange, matchedCount, totalCount, onReset }: {
+export function EnemyAnalysisFilters({ filters, onFiltersChange, numericConditions, onNumericConditionsChange, matchedCount, totalCount, onReset, showHints = true }: {
   filters: EnemyAnalysisFiltersState
   onFiltersChange: (filters: EnemyAnalysisFiltersState) => void
   numericConditions: readonly EnemyNumericCondition[]
@@ -12,6 +12,7 @@ export function EnemyAnalysisFilters({ filters, onFiltersChange, numericConditio
   matchedCount: number
   totalCount: number
   onReset: () => void
+  showHints?: boolean
 }) {
   const active = normalizeEnemyLevelSelection(filters.levelType) !== 'ALL' || numericConditions.length > 0
 
@@ -22,7 +23,7 @@ export function EnemyAnalysisFilters({ filters, onFiltersChange, numericConditio
       onChange={(levelType) => onFiltersChange({ ...filters, levelType })}
       showReset={false}
     />
-    <EnemyNumericFilter legend="数値条件" conditions={numericConditions} onChange={onNumericConditionsChange} />
+    <EnemyNumericFilter legend="数値条件" conditions={numericConditions} onChange={onNumericConditionsChange} showHints={showHints} />
     <div className="enemy-analysis-filter-result">
       <span aria-live="polite" aria-atomic="true">対象 {matchedCount.toLocaleString('ja-JP')} / {totalCount.toLocaleString('ja-JP')}体</span>
       <button type="button" onClick={onReset} disabled={!active}>絞り込みをリセット</button>

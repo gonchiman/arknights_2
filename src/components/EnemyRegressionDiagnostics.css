@@ -1,0 +1,37 @@
+.enemy-regression-diagnostics { min-width: 0; }
+.enemy-regression-diagnostics-heading { margin-bottom: 14px; }
+.enemy-regression-diagnostics-heading h3 { margin: 0 0 7px; font-size: 14px; font-weight: 500; }
+.enemy-regression-diagnostics .enemy-level-legend { margin-top: 9px; font-size: 11px; }
+.enemy-regression-diagnostic-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); align-items: start; gap: 16px; }
+.enemy-regression-diagnostic-figure { min-width: 0; }
+.enemy-regression-diagnostic-figure figcaption { padding: 11px 14px; margin-bottom: 0; }
+.enemy-regression-diagnostic-figure figcaption strong { font-size: 13px; }
+.enemy-regression-diagnostic-plot { min-width: 0; width: 100%; }
+.enemy-regression-scatter { max-width: 100%; touch-action: pan-y; }
+.enemy-regression-scatter:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
+.enemy-regression-scatter .enemy-chart-tick { font-size: 11px; }
+.enemy-regression-scatter .enemy-chart-axis-title { font-size: 11px; font-weight: 500; }
+.enemy-regression-reference { stroke: var(--text-soft); stroke-width: 1.3; stroke-dasharray: 5 4; pointer-events: none; }
+.enemy-regression-point-hit { fill: transparent; cursor: pointer; }
+.enemy-regression-scatter .enemy-scatter-point { pointer-events: none; }
+.enemy-regression-scatter .enemy-regression-point-active { fill-opacity: 1; }
+.enemy-regression-selection-ring { fill: none; stroke: var(--text); stroke-width: 1.2; pointer-events: none; }
+.enemy-regression-point-info { min-width: 0; display: flex; align-items: start; flex-wrap: wrap; gap: 8px 12px; border-top: 1px solid var(--border); padding: 11px 14px; }
+.enemy-regression-point-info[hidden] { display: none; }
+.enemy-regression-point-info p { flex: 1 1 180px; min-width: 0; min-height: 42px; margin: 0; color: var(--text-soft); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.enemy-regression-point-info .button { flex: 0 0 auto; min-height: 34px; padding: 6px 10px; font-size: 12px; }
+.enemy-regression-outliers { min-width: 0; margin-top: 20px; }
+.enemy-regression-outliers h4 { margin: 0 0 7px; font-size: 13px; font-weight: 500; }
+.enemy-regression-diagnostics .enemy-regression-outlier-table { min-width: 520px; }
+.enemy-regression-outlier-table tr > :first-child { width: 160px; min-width: 140px; max-width: 180px; }
+.enemy-regression-outlier-table tbody th { white-space: normal; }
+.enemy-regression-outlier-table .enemy-stat-summary-unit { max-width: 160px; overflow-wrap: anywhere; white-space: normal; }
+.enemy-regression-enemy-button { max-width: 100%; border: 0; background: transparent; padding: 3px 0; color: var(--link); font-family: inherit; font-size: 12px; line-height: 1.6; text-align: left; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; cursor: pointer; }
+.enemy-regression-enemy-button:hover { color: var(--text); }
+.enemy-regression-enemy-button:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+.enemy-regression-enemy-meta { display: block; margin-top: 3px; color: var(--text-muted); font-size: 11px; overflow-wrap: anywhere; }
+.enemy-regression-empty { margin: 0; border: 1px solid var(--border); padding: 20px 16px; color: var(--text-soft); font-size: 12px; }
+@media (max-width: 760px), (pointer: coarse) {
+  .enemy-regression-point-info .button,
+  .enemy-regression-enemy-button { min-height: 44px; }
+}
