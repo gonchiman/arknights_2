@@ -4,3 +4,4 @@ dist/
 /reference-data/
 /.worktrees/
 *.tsbuildinfo
+/project-rules.sync.lock

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "repository": "https://github.com/gonchiman/project-rules.git",
+    "commit": "386351c6c223b1b27e75e8a9c7aed993c9ac311b"
+  },
+  "files": [
+    {
+      "source": "rules/agents-writing.md",
+      "target": "instructions/shared/agents-writing.md",
+      "sha256": "d6f3071f19508f4e3cf1597a1ebd936eeb8b4d44da66a01829cfc2421ec93f64"
+    },
+    {
+      "source": "rules/implementation-reuse.md",
+      "target": "instructions/shared/implementation-reuse.md",
+      "sha256": "234faa692772170fc006939824941d74a4e6bbcdcfbfaa40899f4213565d132c"
+    },
+    {
+      "source": "rules/ui-text.md",
+      "target": "instructions/shared/ui-text.md",
+      "sha256": "234186fa10719f2041b3f3b478367692114aa3f1ddc3533d53411500c7bac3fa"
+    },
+    {
+      "source": "rules/template-creation.md",
+      "target": "instructions/shared/template-creation.md",
+      "sha256": "551eee73d17e3d688b7b2108e3e8476bc57c8728aedb748e96fc767b1c37fa81"
+    },
+    {
+      "source": "rules/table-ui.md",
+      "target": "instructions/shared/table-ui.md",
+      "sha256": "f0740a344ed7fbbda79b420c26ced553c937ff23ff93516c97f5b21fa73c37ce"
+    },
+    {
+      "source": "rules/comparison-table.md",
+      "target": "instructions/shared/comparison-table.md",
+      "sha256": "6d23f735f00dce8b3a0da627a8a3fb8684001ae8061b4d418b7238a91210fc01"
+    },
+    {
+      "source": "rules/chart-image.md",
+      "target": "instructions/shared/chart-image.md",
+      "sha256": "f8cd737822019b151f15de67bfa20d3200859f6e9efbd3092c2b4b47239df16b"
+    },
+    {
+      "source": "rules/table-image.md",
+      "target": "instructions/shared/table-image.md",
+      "sha256": "980e0381f659eb1dc4dc166b88737b1b0e9daa3e06a0e9a553ec1e95c30f3bc2"
+    },
+    {
+      "source": "tools/sync-project-rules.mjs",
+      "target": "scripts/sync-project-rules.mjs",
+      "sha256": "f3974efc816c96116ac58fe32526b9ceec6363b58f9593a7ce36ed0b20d47d6e"
+    }
+  ]
+}

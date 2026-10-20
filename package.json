@@ -12,7 +12,10 @@
     "generate:enemy-stages": "node --use-system-ca scripts/generateEnemyStageAppearances.mjs",
     "generate:maps": "node scripts/generateMapDatabase.mjs",
     "generate:main-enemy-trends": "node --experimental-strip-types scripts/generate-main-enemy-trends.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "rules:check": "node scripts/sync-project-rules.mjs check",
+    "rules:diff": "node scripts/sync-project-rules.mjs diff",
+    "rules:sync": "node scripts/sync-project-rules.mjs sync"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
