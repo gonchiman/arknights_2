@@ -16,6 +16,11 @@ function close(actual: number, expected: number, tolerance = 1e-8) {
   assert.ok(Math.abs(actual - expected) < tolerance, `${actual} should be close to ${expected}`)
 }
 
+function sampleStandardDeviation(values: readonly number[]): number {
+  const mean = values.reduce((total, value) => total + value, 0) / values.length
+  return Math.sqrt(values.reduce((total, value) => total + (value - mean) ** 2, 0) / (values.length - 1))
+}
+
 function numericRows() {
   return Array.from({ length: 12 }, (_, index) => {
     const maxHp = index * 1_000
@@ -34,7 +39,7 @@ test('初期設定と係数の表示単位に、既存の敵数値項目名・�
   assert.equal(ENEMY_REGRESSION_METRICS.find(({ key }) => key === 'baseAttackTime')?.unit, '秒')
 })
 
-test('数値係数と表示ステップを対応させ、0を有効な観測として残す', () => {
+test('数値係数を元の単位で返し、0を有効な観測として残す', () => {
   const result = runEnemyRegression(numericRows(), { outcome: 'attack', predictors: ['maxHp', 'defense'] })
   assert.equal(result.fit.observationCount, 12)
   assert.equal(result.targetCount, 12)
@@ -44,14 +49,47 @@ test('数値係数と表示ステップを対応させ、0を有効な観測と�
   close(result.fit.intercept, 50)
   close(result.fit.coefficients[0], 0.02)
   close(result.fit.coefficients[1], 0.3)
-  assert.deepEqual(result.columns.map(({ key, changeStep }) => [key, changeStep]), [['maxHp', 1_000], ['defense', 100]])
-  close(result.fit.coefficients[0] * result.columns[0].changeStep, 20)
-  close(result.fit.coefficients[1] * result.columns[1].changeStep, 30)
+  assert.deepEqual(result.columns.map(({ key }) => key), ['maxHp', 'defense'])
   assert.equal(result.referenceLevelType, null)
   result.observations.forEach(({ actual, fitted, residual }) => {
     close(fitted, actual)
     close(residual, actual - fitted)
   })
+})
+
+test('標準化係数は重複と選択項目の欠損を除いた回帰と同じ敵集合を使う', () => {
+  const completeRows = numericRows()
+  const rows = [
+    ...completeRows,
+    enemy(completeRows[0].id, { maxHp: 1e9, defense: 1e8, attack: 1e7 }),
+    enemy('missing-outcome', { maxHp: 1e8, defense: 1e7 }),
+    enemy('missing-defense', { maxHp: 1e7, attack: 1e6 }),
+  ]
+  const result = runEnemyRegression(rows, { outcome: 'attack', predictors: ['maxHp', 'defense'] })
+  const responseDeviation = sampleStandardDeviation(completeRows.map(row => row.stats.attack!))
+
+  assert.equal(result.targetCount, 14)
+  assert.equal(result.excludedCount, 2)
+  assert.equal(result.fit.observationCount, completeRows.length)
+  assert.deepEqual(result.observations.map(({ enemy }) => enemy.id), completeRows.map(({ id }) => id))
+  close(result.fit.standardizedCoefficients[0], 0.02 * sampleStandardDeviation(completeRows.map(row => row.stats.maxHp!)) / responseDeviation)
+  close(result.fit.standardizedCoefficients[1], 0.3 * sampleStandardDeviation(completeRows.map(row => row.stats.defense!)) / responseDeviation)
+})
+
+test('対象を絞った標準化係数は絞り込み後の標準偏差で計算する', () => {
+  const rows = numericRows()
+  const filteredRows = rows.filter(row => row.stats.maxHp! <= 6_000)
+  const config = { outcome: 'attack', predictors: ['maxHp', 'defense'] } as const
+  const full = runEnemyRegression(rows, config)
+  const filtered = runEnemyRegression(filteredRows, config)
+  const responseDeviation = sampleStandardDeviation(filteredRows.map(row => row.stats.attack!))
+
+  assert.equal(filtered.fit.observationCount, filteredRows.length)
+  close(filtered.fit.coefficients[0], full.fit.coefficients[0])
+  close(filtered.fit.coefficients[1], full.fit.coefficients[1])
+  close(filtered.fit.standardizedCoefficients[0], 0.02 * sampleStandardDeviation(filteredRows.map(row => row.stats.maxHp!)) / responseDeviation)
+  close(filtered.fit.standardizedCoefficients[1], 0.3 * sampleStandardDeviation(filteredRows.map(row => row.stats.defense!)) / responseDeviation)
+  assert.ok(Math.abs(filtered.fit.standardizedCoefficients[0] - full.fit.standardizedCoefficients[0]) > 0.01)
 })
 
 test('選択した全変数に有限値が揃う敵だけを使い、未選択項目の欠損は除外理由にしない', () => {

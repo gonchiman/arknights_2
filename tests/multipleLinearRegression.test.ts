@@ -6,6 +6,11 @@ function close(actual: number, expected: number, tolerance = 1e-10): void {
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} != ${expected} (±${tolerance})`)
 }
 
+function sampleStandardDeviation(values: readonly number[]): number {
+  const mean = values.reduce((total, value) => total + value, 0) / values.length
+  return Math.sqrt(values.reduce((total, value) => total + (value - mean) ** 2, 0) / (values.length - 1))
+}
+
 test('切片と複数の既知係数を復元する', () => {
   const predictors = Array.from({ length: 8 }, (_, index) => [index, index % 2])
   const responses = predictors.map(([hp, category]) => 7 + 2 * hp - 3 * category)
@@ -35,6 +40,60 @@ test('異なる桁の説明変数を一定値と誤認せず、元の単位で�
   result.fittedValues.forEach((value, index) => close(value, responses[index]))
 })
 
+test('標準化回帰係数を既知の元係数と同じ観測の標準偏差から求める', () => {
+  const predictors = Array.from({ length: 12 }, (_, index) => [index * 1_000, (index % 4) * 100])
+  const coefficients = [0.02, -0.3]
+  const responses = predictors.map(([hp, defense]) => 50 + coefficients[0] * hp + coefficients[1] * defense)
+  const result = fitMultipleLinearRegression(predictors, responses)
+  const responseDeviation = sampleStandardDeviation(responses)
+
+  coefficients.forEach((coefficient, column) => {
+    const predictorDeviation = sampleStandardDeviation(predictors.map(row => row[column]))
+    close(result.standardizedCoefficients[column], coefficient * predictorDeviation / responseDeviation)
+  })
+})
+
+test('説明変数と目的変数を正の異なる単位に換算しても標準化回帰係数は変わらない', () => {
+  const predictors = Array.from({ length: 12 }, (_, index) => [index, (index * 3) % 5])
+  const responses = predictors.map(([first, second], index) => 7 + 2 * first - 3 * second + (index % 3) * 0.4)
+  const original = fitMultipleLinearRegression(predictors, responses)
+
+  for (const responseUnit of [1e100, 1e-120]) {
+    const converted = fitMultipleLinearRegression(
+      predictors.map(([first, second]) => [first * 1e120, second * 1e-100]),
+      responses.map(value => value * responseUnit),
+    )
+    converted.standardizedCoefficients.forEach((coefficient, column) => close(coefficient, original.standardizedCoefficients[column]))
+    close(converted.rSquared, original.rSquared)
+    converted.fittedValues.forEach((value, index) => close(value / responseUnit, original.fittedValues[index]))
+  }
+})
+
+test('単回帰の標準化回帰係数は符号を含めてPearson相関係数に一致する', () => {
+  const predictor = [-3, -2, -1, 0, 1, 2, 3]
+  const responses = [8, 5, 6, 1, 1, -2, -4]
+  const xMean = predictor.reduce((total, value) => total + value, 0) / predictor.length
+  const yMean = responses.reduce((total, value) => total + value, 0) / responses.length
+  const covariance = predictor.reduce((total, value, index) => total + (value - xMean) * (responses[index] - yMean), 0) / (predictor.length - 1)
+  const correlation = covariance / (sampleStandardDeviation(predictor) * sampleStandardDeviation(responses))
+  const result = fitMultipleLinearRegression(predictor.map(value => [value]), responses)
+
+  assert.ok(correlation < 0)
+  close(result.standardizedCoefficients[0], correlation)
+})
+
+test('相関する説明変数の標準化回帰係数を±1に制限しない', () => {
+  const predictors = Array.from({ length: 8 }, (_, index) => [index, index + (index % 2) * 0.01])
+  const responses = predictors.map(([first, second]) => first - second)
+  const result = fitMultipleLinearRegression(predictors, responses)
+  const responseDeviation = sampleStandardDeviation(responses)
+
+  assert.ok(result.standardizedCoefficients[0] > 1)
+  assert.ok(result.standardizedCoefficients[1] < -1)
+  close(result.standardizedCoefficients[0], sampleStandardDeviation(predictors.map(row => row[0])) / responseDeviation, 1e-8)
+  close(result.standardizedCoefficients[1], -sampleStandardDeviation(predictors.map(row => row[1])) / responseDeviation, 1e-8)
+})
+
 test('QRの列選択順序が変わっても係数を元の説明変数順に戻す', () => {
   const original = Array.from({ length: 12 }, (_, index) => [
     index,
@@ -43,11 +102,15 @@ test('QRの列選択順序が変わっても係数を元の説明変数順に戻
   ])
   const expected = [2, -3, 5]
   const responses = original.map(row => 11 + row.reduce((total, value, column) => total + value * expected[column], 0))
+  const expectedStandardized = expected.map((value, column) => (
+    value * sampleStandardDeviation(original.map(row => row[column])) / sampleStandardDeviation(responses)
+  ))
   for (const order of [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]]) {
     const predictors = original.map(row => order.map(column => row[column]))
     const result = fitMultipleLinearRegression(predictors, responses)
     close(result.intercept, 11, 1e-8)
     result.coefficients.forEach((coefficient, column) => close(coefficient, expected[order[column]], 1e-8))
+    result.standardizedCoefficients.forEach((coefficient, column) => close(coefficient, expectedStandardized[order[column]], 1e-8))
     result.fittedValues.forEach((value, index) => close(value, responses[index], 1e-8))
   }
 })
