@@ -75,3 +75,40 @@ export function avoidHistogramReferenceLines({ layout, referenceXs, width, heigh
 
   return { ...layout, labels: layout.labels.map((label) => replacements.get(label.id) ?? label), extraTop }
 }
+
+/** Keep the data line intact; move only percentage labels that its segments cross. */
+export function avoidHistogramCumulativeLine({ layout, points, bars }: {
+  layout: ReturnType<typeof placeGroupedBarValueLabels>
+  points: readonly { x: number; y: number }[]
+  bars: readonly { x: number; y: number; width: number; height: number }[]
+}): ReturnType<typeof placeGroupedBarValueLabels> {
+  if (points.length < 2 || points.some((point) => !Number.isFinite(point.x) || !Number.isFinite(point.y))) return layout
+  const gap = 4
+  const lineIntervals = (label: GroupedBarValueLabelPlacement) => points.slice(1).flatMap((end, index) => {
+    const start = points[index]
+    const left = Math.max(label.x - gap, Math.min(start.x, end.x))
+    const right = Math.min(label.x + label.width + gap, Math.max(start.x, end.x))
+    if (left > right) return []
+    const valueAt = (x: number) => start.x === end.x ? start.y : start.y + (end.y - start.y) * (x - start.x) / (end.x - start.x)
+    const first = valueAt(left), last = start.x === end.x ? end.y : valueAt(right)
+    return [{ min: Math.min(first, last) - label.height - gap, max: Math.max(first, last) + gap }]
+  })
+  const moving = layout.labels.filter((label) => lineIntervals(label).some((interval) => label.y >= interval.min && label.y <= interval.max))
+  if (moving.length === 0) return layout
+  const occupied = [...bars.filter((bar) => bar.height > 0), ...layout.labels.filter((label) => !moving.includes(label))]
+  const replacements = new Map<string, GroupedBarValueLabelPlacement>()
+  let extraTop = layout.extraTop
+  for (const label of moving) {
+    const intervals = [...lineIntervals(label), ...occupied
+      .filter((rect) => label.x < rect.x + rect.width + gap && label.x + label.width + gap > rect.x)
+      .map((rect) => ({ min: rect.y - label.height - gap, max: rect.y + rect.height + gap }))]
+      .sort((first, second) => second.min - first.min)
+    let y = label.y
+    for (const interval of intervals) if (y >= interval.min && y <= interval.max) y = interval.min - 0.01
+    const placed = { ...label, y, shifted: true }
+    replacements.set(label.id, placed)
+    occupied.push(placed)
+    extraTop = Math.max(extraTop, -y)
+  }
+  return { ...layout, labels: layout.labels.map((label) => replacements.get(label.id) ?? label), extraTop }
+}

@@ -1,0 +1,9 @@
+.enemy-histogram-cumulative { --histogram-cumulative-color: #cf6b1f; }
+.enemy-histogram-cumulative-line { fill: none; stroke: var(--histogram-cumulative-color); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.enemy-histogram-cumulative-point { fill: var(--histogram-cumulative-color); stroke: var(--surface, #fff); stroke-width: 1; pointer-events: none; }
+.enemy-histogram-cumulative .enemy-histogram-cumulative-axis-title { fill: var(--histogram-cumulative-color); }
+.enemy-histogram-cumulative-hit-area { fill: transparent; stroke: none; cursor: pointer; }
+.enemy-histogram-cumulative-points:focus { outline: none; }
+.enemy-histogram-cumulative-points:focus-visible .enemy-histogram-cumulative-point { stroke: var(--text, #222); stroke-width: 1.5; }
+.enemy-histogram-cumulative-tooltip rect { fill: var(--surface, #fff); stroke: var(--border-strong, #aaa); stroke-width: 1; }
+.enemy-histogram-cumulative-tooltip text { fill: var(--text, #222); font-family: inherit; font-size: 11px; font-variant-numeric: tabular-nums; }

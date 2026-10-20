@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { calculateNumericStatistics } from '../src/lib/enemyStatistics.ts'
 import { calculateWeightedHistogram } from '../src/lib/enemyWeightedHistogram.ts'
-import { avoidHistogramReferenceLines, formatHistogramPercentage } from '../src/lib/histogramPercentageLabels.ts'
+import { avoidHistogramCumulativeLine, avoidHistogramReferenceLines, formatHistogramPercentage } from '../src/lib/histogramPercentageLabels.ts'
 import type { GroupedBarValueLabelPlacement } from '../src/lib/groupedBarValueLabels.ts'
 
 test('割合は件数を添えず小数1桁とし、正の微小割合を0件と区別する', () => {
@@ -205,4 +205,109 @@ test('極端に狭く線を避けられない枠でも数字を隠したり切�
   })
   assert.deepEqual(result.labels, [label])
   assert.equal(result.extraTop, 0)
+})
+
+test('割合文字に交差する累積斜線を保ち、文字だけを必要な高さまで上に移す', () => {
+  const layout = percentageLayout()
+  const points = [{ x: 40, y: 22 }, { x: 60, y: 28 }]
+  const before = structuredClone({ layout, points })
+  const result = avoidHistogramCumulativeLine({ layout, points, bars: [] })
+  const moved = result.labels[0]
+  assert.ok(Math.abs(moved.y - 5.99) < 1e-10)
+  assert.equal(moved.x, percentageLabel.x)
+  assert.equal(moved.width, percentageLabel.width)
+  assert.equal(moved.height, percentageLabel.height)
+  assert.equal(moved.anchorX, percentageLabel.anchorX)
+  assert.equal(moved.anchorY, percentageLabel.anchorY)
+  assert.equal(moved.shifted, true)
+  assert.ok(moved.y + moved.height + 4 < 22)
+  assert.equal(result.extraTop, 0)
+  assert.deepEqual({ layout, points }, before)
+})
+
+test('累積の水平区間も左右の入力順によらず避け、線の4px上へ文字を配置する', () => {
+  const layout = percentageLayout()
+  const points = [{ x: 0, y: 26 }, { x: 100, y: 26 }]
+  const result = avoidHistogramCumulativeLine({ layout, points, bars: [] })
+  assert.ok(Math.abs(result.labels[0].y - 9.99) < 1e-10)
+  assert.ok(result.labels[0].y + result.labels[0].height + 4 < 26)
+  assert.deepEqual(avoidHistogramCumulativeLine({ layout, points: [...points].reverse(), bars: [] }), result)
+  assert.equal(result.extraTop, 0)
+  assert.equal(result.extraBottom, 0)
+})
+
+test('交差しない線と不完全な累積線は元の配置オブジェクトをそのまま返す', () => {
+  const layout = percentageLayout()
+  const before = structuredClone(layout)
+  const cases = [
+    [], [{ x: 50, y: 26 }],
+    [{ x: 0, y: 80 }, { x: 100, y: 80 }],
+    [{ x: 80, y: 26 }, { x: 100, y: 26 }],
+    [{ x: 0, y: Number.NaN }, { x: 100, y: 26 }],
+    [{ x: Number.POSITIVE_INFINITY, y: 26 }, { x: 100, y: 26 }],
+  ]
+  for (const points of cases) assert.strictEqual(avoidHistogramCumulativeLine({ layout, points, bars: [] }), layout)
+  // A diagonal's overall bounding box overlaps this label, but the actual
+  // segment near its x position passes far below it.
+  const highLabel = { ...percentageLabel, x: 20, y: 0 }
+  const local = percentageLayout([highLabel])
+  assert.strictEqual(avoidHistogramCumulativeLine({ layout: local,
+    points: [{ x: 0, y: 100 }, { x: 100, y: 0 }], bars: [] }), local)
+  assert.deepEqual(layout, before)
+})
+
+test('上方の棒と隣ラベルを避け、交差しない隣ラベルや棒は動かさない', () => {
+  const neighbor = { ...percentageLabel, id: 'neighbor', y: -24, height: 8, anchorY: -12, shifted: true }
+  const bar = { x: 40, y: 0, width: 20, height: 15 }
+  const layout = percentageLayout([percentageLabel, neighbor])
+  const before = structuredClone({ layout, bar })
+  const result = avoidHistogramCumulativeLine({ layout, points: [{ x: 0, y: 26 }, { x: 100, y: 26 }], bars: [bar] })
+  assert.ok(Math.abs(result.labels[0].y - -40.01) < 1e-10)
+  assert.strictEqual(result.labels[1], neighbor)
+  assertSeparated(result.labels[0], bar)
+  assertSeparated(result.labels[0], neighbor)
+  assert.equal(result.labels[0].x, percentageLabel.x)
+  assert.equal(result.extraTop, -result.labels[0].y)
+  assert.deepEqual({ layout, bar }, before)
+  const zeroHeight = avoidHistogramCumulativeLine({ layout: percentageLayout(),
+    points: [{ x: 0, y: 26 }, { x: 100, y: 26 }], bars: [{ ...bar, height: 0 }] })
+  assert.ok(Math.abs(zeroHeight.labels[0].y - 9.99) < 1e-10)
+})
+
+test('平均・中央値を先に回避した横位置を保持し、累積線は縦方向だけで回避する', () => {
+  const vertical = avoidHistogramReferenceLines({ layout: percentageLayout(), referenceXs: [45], width: 120, height: 100, bars: [] })
+  assert.equal(vertical.labels[0].x, 50)
+  const before = structuredClone(vertical)
+  const result = avoidHistogramCumulativeLine({ layout: vertical,
+    points: [{ x: 0, y: 26 }, { x: 120, y: 26 }], bars: [] })
+  assert.ok(Math.abs(result.labels[0].y - 9.99) < 1e-10)
+  assert.equal(result.labels[0].x, vertical.labels[0].x)
+  assertClearsLines(result.labels[0], [45])
+  assert.deepEqual(vertical, before)
+})
+
+test('複数の文字が同じ累積区間に交差しても移動後の文字同士を重ねない', () => {
+  const second = { ...percentageLabel, id: 'second', x: 45, y: 40, anchorX: 55, anchorY: 56 }
+  const layout = percentageLayout([percentageLabel, second])
+  const points = [{ x: 50, y: 15 }, { x: 50, y: 50 }]
+  const result = avoidHistogramCumulativeLine({ layout, points, bars: [] })
+  assert.ok(result.labels.every(label => label.shifted && label.y < -1))
+  assertSeparated(result.labels[0], result.labels[1])
+  assert.equal(result.labels[0].x, percentageLabel.x)
+  assert.equal(result.labels[1].x, second.x)
+  assert.equal(result.extraTop, -Math.min(...result.labels.map(label => label.y)))
+})
+
+test('累積回避の負Y位置をextraTopへ反映し、確保済みの余白と下余白は縮めない', () => {
+  const label = { ...percentageLabel, y: -10, anchorY: 6, shifted: true }
+  const layout = { ...percentageLayout([label]), extraBottom: 7 }
+  const options = { layout, points: [{ x: 0, y: -5 }, { x: 100, y: -5 }], bars: [] }
+  const result = avoidHistogramCumulativeLine(options)
+  assert.ok(Math.abs(result.labels[0].y - -21.01) < 1e-10)
+  assert.equal(result.extraTop, -result.labels[0].y)
+  assert.equal(result.extraBottom, 7)
+  const roomy = avoidHistogramCumulativeLine({ ...options, layout: { ...layout, extraTop: 50 } })
+  assert.deepEqual(roomy.labels, result.labels)
+  assert.equal(roomy.extraTop, 50)
+  assert.equal(roomy.extraBottom, 7)
 })
