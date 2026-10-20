@@ -1,20 +1,19 @@
-.skill-kmeans-page { min-width: 0; container: skill-kmeans / inline-size; font-size: 15px; }
+.skill-kmeans-page { min-width: 0; container: skill-kmeans / inline-size; font-size: 13px; }
 .skill-kmeans-page .page-intro { margin-bottom: 0; }
 .skill-kmeans-content { display: grid; gap: 16px; min-width: 0; }
 .skill-kmeans-page .analysis-panel-body { display: grid; gap: 24px; }
-.skill-kmeans-page .analysis-tab-panel > h2 { font-size: 16px; padding: 10px 16px; }
-.skill-kmeans-page .analysis-tabs .detail-tab { font-size: 15px; min-height: 46px; }
-.skill-kmeans-page .button { font-size: 15px; min-height: 42px; font-weight: 500; white-space: normal; }
-.skill-kmeans-page label { display: grid; gap: 6px; min-width: 0; font-size: 15px; }
+.skill-kmeans-page .analysis-tab-panel > h2 { padding: 10px 16px; }
+.skill-kmeans-page .button { font-size: 13px; min-height: 42px; font-weight: 500; white-space: normal; }
+.skill-kmeans-page label { display: grid; gap: 6px; min-width: 0; font-size: 13px; }
 .skill-kmeans-page label > span { color: var(--text-soft); }
 .skill-kmeans-page input, .skill-kmeans-page select { width: 100%; min-width: 0; max-width: 100%; min-height: 42px; padding: 7px 10px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); font: inherit; }
 .skill-kmeans-section { min-width: 0; }
-.skill-kmeans-section h3, .skill-kmeans-inspect h3 { margin: 0; font-size: 16px; font-weight: 500; }
+.skill-kmeans-section h3, .skill-kmeans-inspect h3 { margin: 0; font-size: 14px; font-weight: 500; }
 .skill-kmeans-section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 12px; }
-.skill-kmeans-data { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin: 0; padding: 12px 16px; border: 1px solid var(--border); background: var(--surface-soft); font-size: 15px; }
+.skill-kmeans-data { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin: 0; padding: 12px 16px; border: 1px solid var(--border); background: var(--surface-soft); font-size: 13px; }
 .skill-kmeans-data dd { margin: 0; overflow-wrap: anywhere; }
 .skill-kmeans-config { margin: 0; padding: 0; min-width: 0; border: 0; }
-.skill-kmeans-page .skill-kmeans-table { width: 100%; min-width: 0; border: 1px solid var(--border); border-collapse: collapse; table-layout: fixed; font-size: 15px; line-height: 1.6; }
+.skill-kmeans-page .skill-kmeans-table { width: 100%; min-width: 0; border: 1px solid var(--border); border-collapse: collapse; table-layout: fixed; font-size: 13px; line-height: 1.6; }
 .skill-kmeans-page .skill-kmeans-table th, .skill-kmeans-page .skill-kmeans-table td { position: static; z-index: auto; min-width: 0; border: 1px solid var(--border); padding: 10px 12px; color: var(--text); font-size: inherit; font-weight: 400; vertical-align: middle; white-space: normal; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .skill-kmeans-page .skill-kmeans-table th { background: var(--surface-soft); text-align: left; }
 .skill-kmeans-page .skill-kmeans-table thead th { font-weight: 500; }
@@ -24,17 +23,17 @@
 .skill-kmeans-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px; }
 .skill-kmeans-section > .skill-kmeans-actions { margin-top: 16px; }
 .skill-kmeans-section > .skill-kmeans-data { margin-top: 16px; }
-.skill-kmeans-status { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; color: var(--text-soft); font-size: 14px; }
-.skill-kmeans-error { margin: 0; color: var(--danger); font-size: 15px; line-height: 1.7; overflow-wrap: anywhere; }
+.skill-kmeans-status { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; color: var(--text-soft); font-size: 13px; }
+.skill-kmeans-error { margin: 0; color: var(--danger); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
 .skill-kmeans-result-toolbar { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
 .skill-kmeans-result-toolbar > label { width: 160px; max-width: 100%; }
-.skill-kmeans-result-state { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 20px; font-size: 15px; color: var(--text-soft); font-variant-numeric: tabular-nums; }
+.skill-kmeans-result-state { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 20px; font-size: 13px; color: var(--text-soft); font-variant-numeric: tabular-nums; }
 .skill-kmeans-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 16px 0 0; border: 1px solid var(--border); }
 .skill-kmeans-metrics > div { min-width: 0; padding: 12px 16px; }
 .skill-kmeans-metrics > div + div { border-left: 1px solid var(--border); }
-.skill-kmeans-metrics dt { font-size: 14px; color: var(--text-soft); }
-.skill-kmeans-metrics dd { margin: 6px 0 0; font-size: 23px; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.skill-kmeans-stop-state { margin-left: auto; font-size: 14px; color: var(--text-soft); }
+.skill-kmeans-metrics dt { font-size: 12px; color: var(--text-soft); }
+.skill-kmeans-metrics dd { margin: 6px 0 0; font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.skill-kmeans-stop-state { margin-left: auto; font-size: 13px; color: var(--text-soft); }
 .skill-kmeans-result-content { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); align-items: start; gap: 24px; }
 .skill-kmeans-groups { display: grid; margin-top: 12px; }
 .skill-kmeans-groups button { display: grid; grid-template-columns: 38px minmax(0, 1fr) 55px; gap: 12px; align-items: center; min-width: 0; min-height: 46px; border: 0; background: var(--surface); color: var(--text); padding: 12px 8px; text-align: left; font: inherit; cursor: pointer; }
@@ -55,19 +54,19 @@
 .skill-kmeans-terms span { overflow-wrap: anywhere; }
 .skill-kmeans-comparison-table .skill-kmeans-terms { justify-content: center; }
 .skill-kmeans-memberships { display: grid; gap: 14px; }
-.skill-kmeans-source { min-width: 0; padding-top: 12px; border-top: 1px solid var(--border); font-size: 15px; }
+.skill-kmeans-source { min-width: 0; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; }
 .skill-kmeans-source summary, .skill-kmeans-history summary { width: fit-content; min-height: 32px; cursor: pointer; }
 .skill-kmeans-source-body { padding-top: 12px; }
-.skill-kmeans-source-links { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; font-size: 15px; }
+.skill-kmeans-source-links { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; }
 .skill-kmeans-source-body > p { margin: 12px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; }
 .skill-kmeans-source-body details { margin-top: 12px; }
 .skill-kmeans-source ul { padding-left: 20px; margin-bottom: 0; line-height: 1.8; }
-.skill-kmeans-history { border-top: 1px solid var(--border); padding-top: 16px; font-size: 15px; }
+.skill-kmeans-history { border-top: 1px solid var(--border); padding-top: 16px; font-size: 13px; }
 .skill-kmeans-history summary > span { margin-left: 8px; color: var(--text-soft); }
 .skill-kmeans-history > .skill-kmeans-actions, .skill-kmeans-history-table { margin-top: 14px; }
 .skill-kmeans-history-table td:last-child { text-align: right; }
 .skill-kmeans-empty { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 16px; }
-.skill-kmeans-empty p { margin: 0; font-size: 15px; color: var(--text-soft); }
+.skill-kmeans-empty p { margin: 0; font-size: 13px; color: var(--text-soft); }
 @container skill-kmeans (max-width: 600px) {
   .skill-kmeans-result-content { grid-template-columns: 1fr; }
   .skill-kmeans-metrics { grid-template-columns: 1fr; }
@@ -78,7 +77,7 @@
 }
 @container skill-kmeans (max-width: 370px) {
   .skill-kmeans-page .analysis-panel-body { padding: 12px; }
-  .skill-kmeans-page .analysis-tabs .detail-tab { font-size: 14px; padding-inline: 2px; }
+  .skill-kmeans-page .analysis-tabs .detail-tab { padding-inline: 2px; }
   .skill-kmeans-page .skill-kmeans-table th, .skill-kmeans-page .skill-kmeans-table td { padding: 8px 6px; }
   .skill-kmeans-page .skill-kmeans-config-table input { padding-inline: 5px; }
   .skill-kmeans-page .skill-kmeans-comparison-table th:first-child, .skill-kmeans-page .skill-kmeans-config-table th:first-child { width: 34%; }
