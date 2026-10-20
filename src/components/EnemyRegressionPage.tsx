@@ -79,7 +79,7 @@ function EnemyRegressionContent({ rows }: { rows: readonly EnemyRecord[] }) {
   const [detailEnemy, setDetailEnemy] = useState<EnemyRecord | null>(null)
   const [activeTab, setActiveTab] = useState<RegressionTab>('results')
   const [coefficientMode, setCoefficientMode] = useState<'beta' | 'raw'>('beta')
-  const [showBars, setShowBars] = useState(false)
+  const [showBars, setShowBars] = useState(true)
   const detailTrigger = useRef<HTMLButtonElement | null>(null)
   const tabId = useId()
   const resultTitleId = useId()
