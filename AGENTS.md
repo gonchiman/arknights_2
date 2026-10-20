@@ -8,6 +8,7 @@
 | --- | --- |
 | AGENTS.mdまたはその参照先の指示ファイルを作成・修正・分割するとき | [指示ファイルの管理方針](instructions/agents-writing.md) |
 | このサイトの機能・UIの追加や修正について、案を提示するとき、設計するとき、または実装するとき | [既存機能・UIの調査と再利用](instructions/implementation-reuse.md) |
+| このサイトの機能・UIの追加や修正について、案を提示するとき、設計するとき、または実装するとき | [UIの補足テキスト方針](instructions/ui-text.md) |
 | このプロジェクトのUI・配色・グラフなどをテンプレ化・標準化するとき、または既存テンプレートを更新するとき | [テンプレート作成の共通手順](instructions/template-creation.md) |
 | このサイトのテーブルを新規作成・修正するとき | [テーブルの表示方針](instructions/table-ui.md) |
 | MOD比較テーブルの画像出力・最大MOD表示を新規作成・修正するとき | [MOD比較テーブルの共通出力](docs/comparison-table-output/README.md) |
