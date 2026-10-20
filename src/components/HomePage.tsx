@@ -22,6 +22,11 @@ const HOME_PANELS = [
     links: APP_NAV_ITEMS.filter((item) => item.section === 'operator-analysis'),
   },
   {
+    id: 'skill-learning',
+    title: 'スキル学習',
+    links: APP_NAV_ITEMS.filter((item) => item.id === 'skill-kmeans'),
+  },
+  {
     id: 'code-analysis',
     title: 'コード解析',
     links: [{ label: 'GGの処理を調べる', href: '#/analysis/code' }],

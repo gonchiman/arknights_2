@@ -1,4 +1,4 @@
-export type NavigationPage = 'home' | 'operators' | 'skills' | 'skill-classification' | 'talent-classification' | 'talent-structure' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'skill-json' | 'code-analysis' | 'damage' | 'damage-two' | 'damage-three' | 'damage-verification' | 'comparison' | 'enemies' | 'enemy-analysis' | 'enemy-regression' | 'main-enemy-trends' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-s3-comparison' | 'surtr-skill-comparison' | 'surtr-total-damage' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-target-switch-three' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
+export type NavigationPage = 'home' | 'operators' | 'skills' | 'skill-classification' | 'talent-classification' | 'talent-structure' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'skill-json' | 'skill-kmeans' | 'code-analysis' | 'damage' | 'damage-two' | 'damage-three' | 'damage-verification' | 'comparison' | 'enemies' | 'enemy-analysis' | 'enemy-regression' | 'main-enemy-trends' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-s3-comparison' | 'surtr-skill-comparison' | 'surtr-total-damage' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-target-switch-three' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -191,6 +191,13 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     href: '#/skill-json',
     label: 'Skill JSON',
     description: 'blackboardの個別表示・キー一覧',
+    section: 'analysis',
+  },
+  {
+    id: 'skill-kmeans',
+    href: '#/analysis/skills/kmeans',
+    label: 'K-means 学習ラボ',
+    description: 'スキル説明文の学習・グループ比較',
     section: 'analysis',
   },
   {

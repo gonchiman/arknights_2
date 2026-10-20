@@ -4,15 +4,6 @@
 .enemy-regression-page .page-intro { margin-bottom: 0; }
 .enemy-regression-model { display: grid; gap: 3px; border: 1px solid var(--border); background: var(--surface-soft); padding: 12px; color: var(--text-soft); font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
 .enemy-regression-model strong { color: var(--text); font-weight: 500; }
-.enemy-regression-tabs.detail-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border: 1px solid var(--border); padding: 0; background: var(--surface); }
-.enemy-regression-tabs .detail-tab { min-width: 0; min-height: 42px; border: 0; padding: 9px 6px; color: var(--text-soft); font-size: 13px; font-weight: 500; }
-.enemy-regression-tabs .detail-tab + .detail-tab { border-left: 1px solid var(--border); }
-.enemy-regression-tabs .detail-tab:hover { color: var(--text); background: var(--surface-hover); }
-.enemy-regression-tabs .detail-tab.active { background: var(--text); color: var(--surface); }
-.enemy-regression-tab-panel { min-width: 0; border: 1px solid var(--border); background: var(--surface); }
-.enemy-regression-tab-panel[hidden] { display: none; }
-.enemy-regression-tab-panel > h2 { margin: 0; border-bottom: 1px solid var(--border); padding: 9px 12px; background: var(--surface-soft); color: var(--text-soft); font-size: 14px; font-weight: 500; }
-.enemy-regression-panel-body { min-width: 0; padding: 16px; }
 .enemy-regression-outcome { display: grid; gap: 5px; width: min(100%, 320px); margin: 0 0 16px; font-size: 13px; }
 .enemy-regression-outcome select { width: 100%; min-width: 0; min-height: 36px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); padding: 6px 9px; font: inherit; }
 .enemy-regression-filters { margin: 0 0 16px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
@@ -51,7 +42,6 @@
 @media (max-width: 760px), (pointer: coarse) {
   .enemy-regression-outcome select,
   .enemy-regression-actions .button,
-  .enemy-regression-predictors label,
-  .enemy-regression-tabs .detail-tab { min-height: 44px; }
+  .enemy-regression-predictors label { min-height: 44px; }
   .enemy-regression-outcome select { font-size: 16px; }
 }
