@@ -103,6 +103,61 @@ test('累積割合の不正な型を拒否し、保存済みの有効な分布�
   assert.deepEqual(readEnemyHistogramSnapshot(storage), snapshot)
 })
 
+test('累積表示方式の省略は折れ線として復元し、従来のON/OFFの識別子を維持する', () => {
+  for (const showCumulative of [false, true]) {
+    const omitted = createEnemyHistogramSnapshot({ ...input(), showCumulative })
+    const line = createEnemyHistogramSnapshot({ ...input(), showCumulative, cumulativeDisplay: 'line' })
+    assert.equal(omitted.cumulativeDisplay, 'line')
+    assert.deepEqual(line, omitted)
+    assert.equal(line.id, showCumulative ? 'resistance-histogram-f4a7949b4023b524' : 'resistance-histogram-bacf1e83cafbeb64')
+    const { cumulativeDisplay: _display, ...legacy } = line
+    assert.deepEqual(parseEnemyHistogramSnapshot(legacy), line)
+    const storage = memoryStorage()
+    storage.setItem(ENEMY_HISTOGRAM_SNAPSHOT_KEY, JSON.stringify(legacy))
+    assert.deepEqual(readEnemyHistogramSnapshot(storage), line)
+  }
+})
+
+test('累積割合帯を複製・保存・復元し、有効な場合だけ画像の識別子と名前を変える', () => {
+  const source: EnemyHistogramSnapshotInput = { ...input(), showCumulative: true, cumulativeDisplay: 'strip' }
+  const strip = createEnemyHistogramSnapshot(source)
+  const line = createEnemyHistogramSnapshot({ ...source, cumulativeDisplay: 'line' })
+  source.cumulativeDisplay = 'line'
+  assert.equal(strip.cumulativeDisplay, 'strip')
+  assert.ok(Object.isFrozen(strip))
+  assert.notEqual(strip.id, line.id)
+  assert.notEqual(strip.filename, line.filename)
+  assert.match(strip.filename, /_割合表示_累積割合帯_階級範囲表示_/)
+  assert.doesNotMatch(strip.filename, /累積割合表示/)
+  assert.deepEqual(strip.statistics, line.statistics)
+  assert.deepEqual(strip.source, line.source)
+  const storage = memoryStorage()
+  assert.equal(writeEnemyHistogramSnapshot(strip, storage), true)
+  assert.deepEqual(readEnemyHistogramSnapshot(storage), strip)
+  assert.deepEqual(parseEnemyHistogramSnapshot(JSON.parse(JSON.stringify(strip))), strip)
+
+  const off = createEnemyHistogramSnapshot(input())
+  const inactiveStrip = createEnemyHistogramSnapshot({ ...input(), showCumulative: false, cumulativeDisplay: 'strip' })
+  assert.equal(inactiveStrip.cumulativeDisplay, 'strip')
+  assert.equal(inactiveStrip.id, off.id)
+  assert.equal(inactiveStrip.filename, off.filename)
+})
+
+test('累積表示方式の不正値を拒否し、非表示の場合も保存済みの分布を保つ', () => {
+  const snapshot = createEnemyHistogramSnapshot({ ...input(), showCumulative: true, cumulativeDisplay: 'strip' })
+  const storage = memoryStorage()
+  assert.equal(writeEnemyHistogramSnapshot(snapshot, storage), true)
+  for (const cumulativeDisplay of [null, '', 'LINE', 'bars', true, 0, [], {}]) {
+    for (const showCumulative of [false, true]) {
+      const invalid = { ...snapshot, showCumulative, cumulativeDisplay }
+      assert.equal(parseEnemyHistogramSnapshot(invalid), null)
+      assert.throws(() => createEnemyHistogramSnapshot(invalid as unknown as EnemyHistogramSnapshotInput))
+      assert.equal(writeEnemyHistogramSnapshot(invalid as unknown as typeof snapshot, storage), false)
+    }
+  }
+  assert.deepEqual(readEnemyHistogramSnapshot(storage), snapshot)
+})
+
 test('集計方法・対象・有効な表示設定から条件と名前を再生成する', () => {
   for (const mode of ['TYPES', 'MAPS', 'SPAWNS'] as const) {
     const source = input()

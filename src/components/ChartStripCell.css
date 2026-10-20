@@ -1,0 +1,3 @@
+.chart-strip-fill, .stat-rank-strip-fill { fill: var(--text-muted); }
+.chart-strip-label, .stat-rank-strip-label { fill: var(--text-soft); font-size: 11px; font-weight: 600; }
+.chart-strip-title, .stat-rank-strip-title { fill: var(--text-soft); font-size: 10px; font-weight: 700; }

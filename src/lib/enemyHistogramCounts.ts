@@ -95,6 +95,7 @@ export function getWeightedEnemyHistogramImageFilename(options: {
   showPercentages?: boolean
   showBinRanges?: boolean
   showCumulative?: boolean
+  cumulativeDisplay?: 'line' | 'strip'
   useRatingBins?: boolean
   coverage: EnemyHistogramCounts['summary'] | null
 }): string {
@@ -108,7 +109,7 @@ export function getWeightedEnemyHistogramImageFilename(options: {
     !options.useRatingBins && isLinear && histogram ? `上限${options.customLinearUpperBound == null ? '自動' : ''}${histogram.normalRangeEnd}` : null,
     !options.useRatingBins && !isLinear && histogram ? `${histogram.normalBinCount}階級` : null,
     options.showPercentages && '割合表示',
-    options.showCumulative && '累積割合表示',
+    options.showCumulative && (options.cumulativeDisplay === 'strip' ? '累積割合帯' : '累積割合表示'),
     options.showBinRanges && '階級範囲表示',
     [referenceVisibility.mean && '平均', referenceVisibility.median && '中央値'].filter(Boolean).join('-'),
   ])
