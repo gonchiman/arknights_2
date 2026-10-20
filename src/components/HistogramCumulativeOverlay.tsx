@@ -1,7 +1,7 @@
 import { useState, type KeyboardEvent } from 'react'
 import type { HistogramBin } from '../lib/enemyStatistics'
 import type { EnemyRatingHistogramBin } from '../lib/enemyRatingHistogram'
-import { buildHistogramCumulativeRows } from '../lib/histogramCumulative'
+import { buildHistogramCumulativeRows, getHistogramCumulativePoints } from '../lib/histogramCumulative'
 import { formatHistogramPercentage } from '../lib/histogramPercentageLabels'
 import './HistogramCumulativeOverlay.css'
 
@@ -24,20 +24,19 @@ const number = new Intl.NumberFormat('ja-JP', { maximumSignificantDigits: 12 })
 const formatCumulativePercentage = (proportion: number) => formatHistogramPercentage(proportion, 1)?.replace(/\.0%$/, '%') ?? '—'
 const ticks = [0, 0.25, 0.5, 0.75, 1] as const
 
-/** Overlay bin-end cumulative proportions on the histogram's existing equal-width slots. */
+/** Display each whole-bin cumulative proportion at its equal-width bar's center. */
 export function HistogramCumulativeOverlay({ bins, total, plotLeft, plotRight, plotTop, plotBottom,
   image = false, formatBoundary = value => number.format(value), countUnit = '体' }: HistogramCumulativeOverlayProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const [focused, setFocused] = useState(false)
   const [pinnedIndex, setPinnedIndex] = useState<number | null>(null)
   const rows = buildHistogramCumulativeRows(bins, total)
-  if (!rows.length || rows.some(row => row.cumulativeProportion === null || row.cumulativeCount === null)
-    || ![plotLeft, plotRight, plotTop, plotBottom].every(Number.isFinite)
-    || plotRight <= plotLeft || plotBottom <= plotTop) return null
+  const points = getHistogramCumulativePoints(rows, { plotLeft, plotRight, plotTop, plotBottom })
+  if (!points.length || rows.some(row => row.cumulativeCount === null)) return null
 
-  const x = (index: number) => plotLeft + (index + 1) / rows.length * (plotRight - plotLeft)
+  const x = (index: number) => points[index].x
   const y = (value: number) => plotBottom - value * (plotBottom - plotTop)
-  const path = `M ${plotLeft} ${plotBottom} ${rows.map((row, index) => `L ${x(index)} ${y(row.cumulativeProportion!)}`).join(' ')}`
+  const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')
   const boundaryLabel = (bin: CumulativeBin) => {
     if ('rating' in bin) return `評価${bin.rating}まで`
     if (bin.isOverflow) return `全階級（${formatBoundary(bin.start)}超を含む）`
@@ -82,7 +81,7 @@ export function HistogramCumulativeOverlay({ bins, total, plotLeft, plotRight, p
       <text className="enemy-chart-axis-title enemy-histogram-cumulative-axis-title" x={axisLabelX} y={axisLabelY}
         textAnchor="middle" transform={`rotate(-90 ${axisLabelX} ${axisLabelY})`}>累積割合</text>
     </g>
-    <path className="enemy-histogram-cumulative-line" data-chart-image-ink="" d={path} aria-hidden="true" />
+    {points.length > 1 && <path className="enemy-histogram-cumulative-line" data-chart-image-ink="" d={path} aria-hidden="true" />}
     <g className="enemy-histogram-cumulative-points" tabIndex={image ? undefined : 0}
       role={image ? undefined : 'slider'} aria-label={image ? undefined : '累積割合の確認。左右キーで階級を移動'}
       aria-valuemin={image ? undefined : 1} aria-valuemax={image ? undefined : rows.length}
@@ -102,8 +101,8 @@ export function HistogramCumulativeOverlay({ bins, total, plotLeft, plotRight, p
           else { setActiveIndex(index); setPinnedIndex(index) }
         }}>
         <title>{description(index)}</title>
-        {!image && <circle className="enemy-histogram-cumulative-hit-area" cx={x(index)} cy={y(row.cumulativeProportion!)} r={11} />}
-        <circle className="enemy-histogram-cumulative-point" data-chart-image-ink="" cx={x(index)} cy={y(row.cumulativeProportion!)}
+        {!image && <circle className="enemy-histogram-cumulative-hit-area" cx={x(index)} cy={points[index].y} r={11} />}
+        <circle className="enemy-histogram-cumulative-point" data-chart-image-ink="" cx={x(index)} cy={points[index].y}
           r={!image && selectedIndex === index ? 4.5 : 2.75} />
       </g>)}
     </g>

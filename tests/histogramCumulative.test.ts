@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildHistogramCumulativeRows } from '../src/lib/histogramCumulative.ts'
+import { buildHistogramCumulativeRows, getHistogramCumulativePoints } from '../src/lib/histogramCumulative.ts'
 import { calculateNumericStatistics } from '../src/lib/enemyStatistics.ts'
 import { calculateWeightedHistogram } from '../src/lib/enemyWeightedHistogram.ts'
 import { calculateWeightedEmpiricalCdf } from '../src/lib/enemyWeightedEcdf.ts'
@@ -116,4 +116,49 @@ test('小数重みの加算誤差だけを許容し、軸の100%を超えない'
 test('分母より少ない一部の階級を渡しても最後を強制的に100%へ変更しない', () => {
   const rows = buildHistogramCumulativeRows([{ count: 2 }, { count: 4 }], 10)
   assert.deepEqual(rows.map(row => row.cumulativeProportion), [0.2, 0.6])
+})
+
+const plot = { plotLeft: 50, plotRight: 350, plotTop: 20, plotBottom: 220 }
+
+test('累積割合の点は各棒の中央に置き、左下0%や右軸100%の点を追加しない', () => {
+  const rows = buildHistogramCumulativeRows([1, 2, 1].map(count => ({ count })), 4)
+  const before = structuredClone(rows)
+  assert.deepEqual(getHistogramCumulativePoints(rows, plot), [
+    { x: 100, y: 170 }, { x: 200, y: 70 }, { x: 300, y: 20 },
+  ])
+  assert.deepEqual(rows, before)
+})
+
+test('1階級は中央に1点を置き、空階級はそれぞれの中央で累積割合を維持する', () => {
+  assert.deepEqual(getHistogramCumulativePoints(buildHistogramCumulativeRows([{ count: 4 }], 4), plot), [
+    { x: 200, y: 20 },
+  ])
+  assert.deepEqual(getHistogramCumulativePoints(buildHistogramCumulativeRows([0, 2, 0].map(count => ({ count })), 4), plot), [
+    { x: 100, y: 220 }, { x: 200, y: 120 }, { x: 300, y: 120 },
+  ])
+})
+
+test('座標原点と縮尺が変わっても中央配置と累積割合を維持する', () => {
+  const rows = buildHistogramCumulativeRows([1, 3].map(count => ({ count })), 4)
+  assert.deepEqual(getHistogramCumulativePoints(rows, { plotLeft: -100, plotRight: 100, plotTop: -20, plotBottom: 60 }), [
+    { x: -50, y: 40 }, { x: 50, y: -20 },
+  ])
+})
+
+test('空・無効な累積割合では部分的な点配列を返さない', () => {
+  assert.deepEqual(getHistogramCumulativePoints([], plot), [])
+  for (const cumulativeProportion of [null, NaN, Infinity, -Infinity, -0.1, 1.1]) {
+    assert.deepEqual(getHistogramCumulativePoints([{ cumulativeProportion: 0.25 }, { cumulativeProportion }], plot), [])
+  }
+})
+
+test('有限で正の描画範囲がないと座標を返さない', () => {
+  const rows = [{ cumulativeProportion: 0.5 }]
+  for (const invalid of [
+    { plotRight: plot.plotLeft }, { plotRight: plot.plotLeft - 1 },
+    { plotBottom: plot.plotTop }, { plotBottom: plot.plotTop - 1 },
+    { plotLeft: NaN }, { plotRight: Infinity }, { plotTop: -Infinity }, { plotBottom: NaN },
+    { plotLeft: -Number.MAX_VALUE, plotRight: Number.MAX_VALUE },
+    { plotTop: -Number.MAX_VALUE, plotBottom: Number.MAX_VALUE },
+  ]) assert.deepEqual(getHistogramCumulativePoints(rows, { ...plot, ...invalid }), [])
 })

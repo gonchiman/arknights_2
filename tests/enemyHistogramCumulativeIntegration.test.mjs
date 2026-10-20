@@ -79,6 +79,16 @@ const cumulativePoints = markup => [...markup.matchAll(/<g\b([^>]*data-cumulativ
 const barTitles = markup => [...markup.matchAll(/<rect\b[^>]*class="enemy-chart-bar[^"]*"[^>]*>([\s\S]*?)<\/rect>/g)]
   .map(match => clean(match[1]))
 const overlayPath = markup => /<path\b[^>]*class="enemy-histogram-cumulative-line"[^>]*d="([^"]+)"/.exec(markup)?.[1]
+const barCenters = markup => [...markup.matchAll(/<rect\b[^>]*class="enemy-chart-bar[^"]*"([^>]*)>/g)]
+  .map(match => Number(attr(match[1], 'x')) + Number(attr(match[1], 'width')) / 2)
+const cumulativePointXs = markup => [...markup.matchAll(/<circle\b[^>]*class="enemy-histogram-cumulative-point"([^>]*)>/g)]
+  .map(match => Number(attr(match[1], 'cx')))
+const countAxisTicks = markup => {
+  const frame = /<rect\b[^>]*data-chart-image-plot-area=""([^>]*)>/.exec(markup)?.[1]
+  return [...markup.matchAll(/<text\b([^>]*class="enemy-chart-tick"[^>]*)>([\d,]+)<\/text>/g)]
+    .filter(match => Number(attr(match[1], 'x')) < Number(attr(frame, 'x')))
+    .map(match => Number(match[2].replaceAll(',', '')))
+}
 
 function PanelWrapper({ initialSnapshot, editor = false }) {
   const controls = useControls(initialSnapshot)
@@ -116,7 +126,7 @@ test('旧v1の累積設定省略はOFFの画像として描画される', () => 
   assert.doesNotMatch(renderPlot(restored), /data-histogram-cumulative/)
 })
 
-test('線形・対数・評価・上限超過の各階級は同じ生件数から累積し、最終点を100%に置く', () => {
+test('線形・対数・評価・上限超過の各階級は棒中央に累積し、最初の階級から最終100%まで結ぶ', () => {
   for (const kind of ['linear', 'log', 'rating']) {
     const source = snapshot({ kind })
     const bins = source.ratingBins ?? source.statistics.bins
@@ -129,11 +139,19 @@ test('線形・対数・評価・上限超過の各階級は同じ生件数か�
     assert.equal(source.statistics.missingCount, 84)
     assert.doesNotMatch(markup, /NaN|Infinity/)
     const path = [...overlayPath(markup).matchAll(/[ML] ([\d.eE+-]+) ([\d.eE+-]+)/g)]
-    assert.equal(path.length, bins.length + 1)
+    assert.equal(path.length, bins.length)
     const frame = /<rect\b[^>]*data-chart-image-plot-area=""([^>]*)>/.exec(markup)?.[1]
     assert.ok(frame)
-    assert.equal(Number(path[0][1]), Number(attr(frame, 'x')))
-    assert.equal(Number(path.at(-1)[1]), Number(attr(frame, 'x')) + Number(attr(frame, 'width')))
+    const centers = barCenters(markup)
+    assert.equal(centers.length, bins.length)
+    const xs = cumulativePointXs(markup)
+    assert.equal(xs.length, bins.length)
+    for (let index = 0; index < bins.length; index++) {
+      assert.ok(Math.abs(xs[index] - centers[index]) < 1e-9, `${kind}: point ${index} matches its bar center`)
+      assert.equal(Number(path[index][1]), xs[index])
+    }
+    assert.ok(Number(path[0][1]) > Number(attr(frame, 'x')))
+    assert.ok(Number(path.at(-1)[1]) < Number(attr(frame, 'x')) + Number(attr(frame, 'width')))
     if (kind === 'linear') {
       assert.match(markup, /10未満まで：累積2体（25%）/)
       assert.match(markup, /20以下：累積6体（75%）/)
@@ -144,12 +162,34 @@ test('線形・対数・評価・上限超過の各階級は同じ生件数か�
   }
 })
 
+test('最大2958件の件数軸を1000刻みに丸め、累積ON/OFFや保存幅で件数目盛りを変えない', () => {
+  const weights = [2702, 791, 2085, 1625, 759, 2958, 894, 92, 276, 31]
+  const statistics = calculateWeightedHistogram(weights.map((weight, index) => ({ value: index * 10, weight })), {
+    scale: 'LINEAR', customLinearBinWidth: 10, minimumLinearUpperBound: 100,
+  })
+  for (const showCumulative of [false, true]) {
+    const source = createEnemyHistogramSnapshot({ ...snapshot({ showCumulative }),
+      statistics, customLinearUpperBound: null,
+      editorSettings: { levelType: 'ALL', numericConditions: [], linearBinWidthInput: '10', linearUpperBoundInput: '' },
+    })
+    for (const width of [360, 960]) {
+      const markup = renderPlot(source, { width })
+      assert.deepEqual(countAxisTicks(markup), [0, 1000, 2000, 3000])
+      assert.deepEqual(barTitles(markup), weights.map((weight, index) =>
+        `${index * 10}以上、${(index + 1) * 10}${index === weights.length - 1 ? '以下' : '未満'}：${weight.toLocaleString('ja-JP')}体`))
+      if (showCumulative) assert.equal(cumulativePoints(markup).at(-1).proportion, 1)
+    }
+  }
+})
+
 test('画像モードは棒の割合・平均・中央値と累積線を同時に残し、操作用要素を出力しない', () => {
   const markup = renderPlot(snapshot({ showPercentages: true, referenceVisibility: { mean: true, median: true } }))
   assert.match(markup, /class="enemy-chart-reference mean"/)
   assert.match(markup, /class="enemy-chart-reference median"/)
   assert.equal([...markup.matchAll(/data-percentage-index=/g)].length, 3)
   assert.match(markup, /data-histogram-cumulative="true"/)
+  assert.match(markup, /各棒の中央に、その階級までの件数/)
+  assert.match(markup, /線は最初の階級の点から始まります/)
   assert.match(markup, /<svg\b[^>]*role="img"/)
   assert.doesNotMatch(markup, /role="slider"|tabindex="0"|enemy-histogram-cumulative-hit-area|enemy-histogram-cumulative-tooltip|<button\b|NaN|Infinity/)
   assert.deepEqual(cumulativePoints(markup).map(point => point.count), [2, 6, 8])

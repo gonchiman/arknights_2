@@ -6,6 +6,7 @@ import { buildEnemyComparisonCurvePath } from '../lib/enemyComparisonCurve'
 import { ChartImageFrame } from './ChartImageFrame'
 import { getEnemyChartImageLayout } from '../lib/enemyChartImage'
 import { ENEMY_HISTOGRAM_COUNT_MODES, type EnemyHistogramCountMode, type EnemyHistogramCounts } from '../lib/enemyHistogramCounts'
+import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
 
 export interface EnemyComparisonMetric {
   key: EnemyNumericFilterField
@@ -96,10 +97,8 @@ function EnemyComparisonSvg({ data, width, height, image = false }: {
     : bin.start + (bin.end - bin.start) / 2
   const showPoints = bins.length === 1 || bins.slice(1).every((bin, index) => x(center(bin)) - x(center(bins[index])) >= 8)
   // Legend visibility changes neither the shared bins nor the vertical scale.
-  const step = niceStep(maximumY / 4, yAxis === 'COUNT' ? 1 : 0)
-  const ceiling = Math.max(step, Math.ceil(maximumY / step) * step)
+  const { maximum: ceiling, ticks: ticksY } = createZeroBasedValueAxis(maximumY, yAxis === 'COUNT' ? 1 : 0)
   const y = (value: number) => bottom - (value / ceiling) * (bottom - top - 4)
-  const ticksY = Array.from({ length: Math.round(ceiling / step) + 1 }, (_, i) => i * step)
   const divisions = width < 440 ? 2 : 4
   const ticksX = minimum === maximum ? [minimum] : Array.from({ length: divisions + 1 }, (_, i) => {
     const value = transform(minimum) + span * i / divisions
@@ -161,12 +160,6 @@ function EnemyComparisonSvg({ data, width, height, image = false }: {
   </>
 }
 
-function niceStep(raw: number, minimum: number) {
-  if (raw <= 0 || !Number.isFinite(raw)) return minimum || 1
-  const magnitude = 10 ** Math.floor(Math.log10(raw))
-  const normalized = raw / magnitude
-  return Math.max(minimum, (normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10) * magnitude)
-}
 function compactNumber(value: number) {
   return new Intl.NumberFormat('ja-JP', { maximumSignificantDigits: 3, notation: Math.abs(value) >= 10000 ? 'compact' : 'standard' }).format(value)
 }

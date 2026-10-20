@@ -35,7 +35,8 @@ import type { EnemyHeatmapColorScale } from '../lib/enemyHeatmapColor'
 import { withChartImageAspect } from '../lib/chartImageFilename'
 import { calculateWeightedHistogram } from '../lib/enemyWeightedHistogram'
 import { avoidHistogramCumulativeLine, avoidHistogramReferenceLines, formatHistogramPercentage } from '../lib/histogramPercentageLabels'
-import { buildHistogramCumulativeRows } from '../lib/histogramCumulative'
+import { buildHistogramCumulativeRows, getHistogramCumulativePoints } from '../lib/histogramCumulative'
+import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
 import { HistogramCumulativeOverlay } from './HistogramCumulativeOverlay'
 import { getHistogramBinRangeLabelCenters, formatHistogramBinRangeLines } from '../lib/histogramBinRangeLabels'
 import { createHistogramCategoryScale } from '../lib/histogramCategoryScale'
@@ -1191,6 +1192,7 @@ function HistogramFigure({
           <span>横軸：{axisLabel} · 縦軸：{countOption.axisLabel}{showCumulative && ' · 右軸：累積割合'}</span>
           {ratingBins && <span>数値から評価に換算して集計します。{(referenceVisibility.mean || referenceVisibility.median) && '平均・中央値の線は、その値が属する評価の中央に表示します。'}</span>}
           {(showPercentages || showCumulative) && statistics.count > 0 && <span>割合の基準：{scopeLabel} · {formatNumber(statistics.count, 0)}{countOption.unit}（有効データ）</span>}
+          {showCumulative && statistics.count > 0 && <span>累積割合の点は、各棒の中央にその階級までの合計を表示します。</span>}
         </div>
         <HistogramDisplayControls ratingMode={ratingBins !== null} hasData={statistics.count > 0}
           showPercentages={showPercentages} onShowPercentagesChange={onShowPercentagesChange}
@@ -1451,14 +1453,12 @@ function HistogramSvg({
     : statistics.maximum ?? minimum
   const countOption = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === countMode)!
   const maxBinCount = Math.max(1, ...bins.map((bin) => bin.count))
-  const plotLeft = Math.max(CHART_MARGIN.left, 30 + formatNumber(maxBinCount, 0).length * 7)
+  const { maximum: countMaximum, ticks: countTicks } = createZeroBasedValueAxis(maxBinCount)
+  const plotLeft = Math.max(CHART_MARGIN.left, 30 + formatNumber(countMaximum, 0).length * 7)
   const plotRight = width - (showCumulative ? 68 : CHART_MARGIN.right)
   const baseHeight = height - reservedLabelHeight
   const basePlotBottom = baseHeight - (image ? 18 : CHART_MARGIN.bottom)
   const plotWidth = Math.max(1, plotRight - plotLeft)
-  const countStep = Math.max(1, Math.ceil(maxBinCount / 4))
-  const countMaximum = Math.ceil(maxBinCount / countStep) * countStep
-  const countTicks = Array.from({ length: Math.floor(countMaximum / countStep) + 1 }, (_, index) => index * countStep)
   const valueScale = createValueScale(minimum, maximum, plotLeft, plotRight, isAdaptiveLinear ? 'LINEAR' : scale)
   const categoryScale = createHistogramCategoryScale(statistics.bins, plotLeft, plotRight, valueScale.effectiveScale)
   const xTicks = isAdaptiveLinear
@@ -1494,10 +1494,9 @@ function HistogramSvg({
     ...(referenceVisibility.median ? [referencePosition(statistics.median ?? minimum) - plotLeft] : []),
   ] : []
   const cumulativeRows = showCumulative ? buildHistogramCumulativeRows<HistogramBin | EnemyRatingHistogramBin>(bins, statistics.count) : []
-  const cumulativeLine = cumulativeRows.length > 0 && cumulativeRows.every((row) => row.cumulativeProportion !== null)
-    ? [{ x: 0, y: plotHeight }, ...cumulativeRows.map((row, index) => ({
-      x: (index + 1) * plotWidth / cumulativeRows.length, y: (1 - row.cumulativeProportion!) * plotHeight,
-    }))] : []
+  const cumulativeLine = getHistogramCumulativePoints(cumulativeRows, {
+    plotLeft: 0, plotRight: plotWidth, plotTop: 0, plotBottom: plotHeight,
+  })
   const percentageLayout = useHistogramPercentageLayout(bars, plotWidth, plotHeight, showPercentages, referenceXs, cumulativeLine)
   const binRangeLabels = bars.map((bar, index) => ({
     center: plotLeft + bar.x + bar.width / 2,
@@ -1519,7 +1518,7 @@ function HistogramSvg({
   return (
     <svg className="enemy-stat-chart" data-histogram-axis={ratingBins ? binRangeLayout.visible ? 'rating-ranges' : 'ratings' : binRangeLayout.visible ? 'ranges' : 'ticks'} viewBox={`0 0 ${width} ${chartHeight}`} width="100%" height={chartHeight} role={showCumulative && !image ? 'group' : 'img'} aria-labelledby={`${titleId} ${descriptionId}`}>
       <title id={titleId}>{`${metric.label}のヒストグラム`}</title>
-      <desc id={descriptionId}>{description}{ratingBins ? ' 横軸はE〜SSのゲーム内評価です。平均・中央値の線はその値が属する評価の中央を示します。' : ''}{showPercentages && statistics.count > 0 ? ` 棒上に有効データ${formatNumber(statistics.count, 0)}${countOption.unit}に対する割合を表示します。` : ''}{showCumulative && statistics.count > 0 ? ' 右軸の折れ線は、各階級までの件数を有効データ数で割った累積割合です。' : ''}{showBinRanges ? binRangeLayout.visible ? ' 各棒の下に階級の範囲を表示します。' : ratingBins ? ' 範囲が収まらないため、評価のみを表示します。' : ' 階級の範囲が収まらないため、通常の横軸目盛りを表示します。' : ''}</desc>
+      <desc id={descriptionId}>{description}{ratingBins ? ' 横軸はE〜SSのゲーム内評価です。平均・中央値の線はその値が属する評価の中央を示します。' : ''}{showPercentages && statistics.count > 0 ? ` 棒上に有効データ${formatNumber(statistics.count, 0)}${countOption.unit}に対する割合を表示します。` : ''}{showCumulative && statistics.count > 0 ? ' 右軸の折れ線は、各棒の中央に、その階級までの件数を有効データ数で割った累積割合を示します。線は最初の階級の点から始まります。' : ''}{showBinRanges ? binRangeLayout.visible ? ' 各棒の下に階級の範囲を表示します。' : ratingBins ? ' 範囲が収まらないため、評価のみを表示します。' : ' 階級の範囲が収まらないため、通常の横軸目盛りを表示します。' : ''}</desc>
       {showBinRanges && <text ref={binRangeLayout.measureRef} className="enemy-chart-tick enemy-histogram-range-label" visibility="hidden" aria-hidden="true">0</text>}
 
       {countTicks.map((tick) => (
