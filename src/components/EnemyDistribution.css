@@ -62,6 +62,7 @@
 .enemy-histogram-display-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 16px; }
 .enemy-histogram-display-toggle { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; font-size: 11px; color: var(--text-soft); cursor: pointer; }
 .enemy-histogram-display-toggle input { margin: 0; accent-color: currentColor; }
+.enemy-histogram-display-toggle select { min-height: 28px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface); color: var(--text); font: inherit; }
 .enemy-histogram-rating-control { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .enemy-histogram-rating-reference.button { min-height: 28px; padding: 4px 8px; font-size: 11px; }
 .enemy-stat-chart .enemy-histogram-range-label { font-size: 11px; }

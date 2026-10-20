@@ -1,7 +1,8 @@
 import type { StatRankBand } from '../lib/statRankBands'
+import { ChartStripCell, CHART_STRIP_CELL_HEIGHT } from './ChartStripCell'
 import './StatRankStrip.css'
 
-export const STAT_RANK_STRIP_HEIGHT = 24
+export const STAT_RANK_STRIP_HEIGHT = CHART_STRIP_CELL_HEIGHT
 
 export interface StatRankStripProps {
   bands: readonly StatRankBand[]
@@ -35,11 +36,9 @@ export function StatRankStrip({ bands, left, right, top, title = 'HPランク', 
       const showLabel = labelFit === 'band' ? bandWidth > labelThreshold : fillWidth >= labelThreshold
       return <g key={`${band.rating}-${band.start}`} className="stat-rank-strip-band" data-rank={band.rating}>
         <title>{`${title} ${band.rating}：${band.label}`}</title>
-        <rect className="stat-rank-strip-fill" data-chart-image-ink="true" x={bandLeft + leftInset} y={top}
-          width={fillWidth} height={STAT_RANK_STRIP_HEIGHT} fillOpacity={0.06} />
-        <rect x={bandLeft} y={top} width={bandWidth} height={STAT_RANK_STRIP_HEIGHT} fill="transparent" />
-        {showLabel && <text className="stat-rank-strip-label" data-chart-image-ink="true"
-          x={bandLeft + bandWidth / 2} y={top + 16} textAnchor="middle">{band.rating}</text>}
+        <ChartStripCell left={bandLeft} width={bandWidth} top={top} label={band.rating}
+          leftInset={leftInset} rightInset={rightInset} showLabel={showLabel}
+          fillClassName="stat-rank-strip-fill" labelClassName="stat-rank-strip-label" />
       </g>
     })}
     {endpoints.map((band) => {

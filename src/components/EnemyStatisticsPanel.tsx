@@ -38,6 +38,7 @@ import { avoidHistogramCumulativeLine, avoidHistogramReferenceLines, formatHisto
 import { buildHistogramCumulativeRows, getHistogramCumulativePoints } from '../lib/histogramCumulative'
 import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
 import { HistogramCumulativeOverlay } from './HistogramCumulativeOverlay'
+import { HistogramCumulativeStrip, getHistogramCumulativeStripLayout } from './HistogramCumulativeStrip'
 import { getHistogramBinRangeLabelCenters, formatHistogramBinRangeLines } from '../lib/histogramBinRangeLabels'
 import { createHistogramCategoryScale } from '../lib/histogramCategoryScale'
 import { buildEnemyRatingHistogramBins, formatEnemyRatingHistogramRangeLines, isEnemyRatingStat, type EnemyRatingHistogramBin } from '../lib/enemyRatingHistogram'
@@ -238,6 +239,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const [showHistogramPercentages, setShowHistogramPercentages] = useState(histogramEditor?.initialSnapshot?.showPercentages ?? true)
   const [showHistogramBinRanges, setShowHistogramBinRanges] = useState(histogramEditor?.initialSnapshot?.showBinRanges ?? true)
   const [showHistogramCumulative, setShowHistogramCumulative] = useState(histogramEditor?.initialSnapshot?.showCumulative ?? false)
+  const [histogramCumulativeDisplay, setHistogramCumulativeDisplay] = useState<'line' | 'strip'>(histogramEditor?.initialSnapshot?.cumulativeDisplay ?? 'line')
   const [useRatingHistogram, setUseRatingHistogram] = useState(histogramEditor?.initialSnapshot?.ratingBins != null)
   const [ratingReferenceOpen, setRatingReferenceOpen] = useState(false)
   const ratingReferenceTriggerRef = useRef<HTMLButtonElement>(null)
@@ -396,13 +398,14 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         countMode: activeCountMode, coverage: activeCountMode === 'TYPES' ? null : countData.data?.summary ?? null,
         scale: axisScale, statistics: histogramStatistics, ratingBins, customLinearUpperBound,
         showPercentages: showHistogramPercentages, showBinRanges: showHistogramBinRanges, showCumulative: showHistogramCumulative,
+        cumulativeDisplay: histogramCumulativeDisplay,
         referenceVisibility,
         ...(filterSettings ? { editorSettings: { ...filterSettings,
           linearBinWidthInput: snapshotBinWidthInput, linearUpperBoundInput: snapshotUpperBoundInput } } : {}),
       })
     } catch { return null }
   }, [canCreateHistogramSnapshot, scopeLabel, rows, activeCountMode, countData.data, axisScale, histogramStatistics,
-    ratingBins, customLinearUpperBound, showHistogramPercentages, showHistogramBinRanges, showHistogramCumulative,
+    ratingBins, customLinearUpperBound, showHistogramPercentages, showHistogramBinRanges, showHistogramCumulative, histogramCumulativeDisplay,
     referenceVisibility, filterSettings, linearBinWidthInput, linearUpperBoundInput, ratingMode,
     linearBinWidthError, linearUpperBoundError, invalidUpperBound, requestedUpperBound, automaticBinWidth])
   const lastEditorSnapshotId = useRef<string | null | undefined>(undefined)
@@ -429,6 +432,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
       showHistogramPercentages: selectedChart === 'HISTOGRAM' && showHistogramPercentages,
       showHistogramBinRanges: selectedChart === 'HISTOGRAM' && showHistogramBinRanges,
       showHistogramCumulative: selectedChart === 'HISTOGRAM' && showHistogramCumulative,
+      histogramCumulativeDisplay,
       ratingBins }
     imageSaveInProgress.current = true
     setPreparingImage(true)
@@ -448,6 +452,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           showPercentages: snapshot.showHistogramPercentages,
           showBinRanges: snapshot.showHistogramBinRanges,
           showCumulative: snapshot.showHistogramCumulative,
+          cumulativeDisplay: snapshot.histogramCumulativeDisplay,
           useRatingBins: snapshot.ratingBins !== null,
           referenceVisibility: snapshot.referenceVisibility, coverage: snapshot.countCoverage })
       setImageData(snapshot)
@@ -638,6 +643,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
             showPercentages={showHistogramPercentages} onShowPercentagesChange={setShowHistogramPercentages}
             showBinRanges={showHistogramBinRanges} onShowBinRangesChange={setShowHistogramBinRanges}
             showCumulative={showHistogramCumulative} onShowCumulativeChange={setShowHistogramCumulative}
+            cumulativeDisplay={histogramCumulativeDisplay} onCumulativeDisplayChange={setHistogramCumulativeDisplay}
             referenceVisibility={referenceVisibility} onReferenceVisibilityChange={setReferenceVisibility} />
         </div>
         {!countUnavailable && histogramStatistics.count === 0 && <ChartEmpty message="条件に一致する敵がいません" />}
@@ -726,6 +732,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
               showPercentages={showHistogramPercentages} onShowPercentagesChange={setShowHistogramPercentages}
               showBinRanges={showHistogramBinRanges} onShowBinRangesChange={setShowHistogramBinRanges}
               showCumulative={showHistogramCumulative} onShowCumulativeChange={setShowHistogramCumulative}
+              cumulativeDisplay={histogramCumulativeDisplay} onCumulativeDisplayChange={setHistogramCumulativeDisplay}
               countMode={activeCountMode}
               referenceVisibility={referenceVisibility} onReferenceVisibilityChange={setReferenceVisibility} />
           )}
@@ -816,6 +823,7 @@ interface EnemyChartImageData {
   showHistogramPercentages: boolean
   showHistogramBinRanges: boolean
   showHistogramCumulative: boolean
+  histogramCumulativeDisplay: 'line' | 'strip'
   heatmapColorScale: EnemyHeatmapColorScale
   countMode: EnemyHistogramCountMode
   countCoverage: EnemyHistogramCounts['summary'] | null
@@ -918,6 +926,7 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
           ratingBins={data.ratingBins}
           showPercentages={data.showHistogramPercentages} showBinRanges={data.showHistogramBinRanges}
           showCumulative={data.showHistogramCumulative}
+          cumulativeDisplay={data.histogramCumulativeDisplay}
           reservedLabelHeight={labelOverflow} onLabelOverflow={reserveLabelOverflow}
           description={`${scopeLabel}の${metric.label}を${countOption.label}で集計したヒストグラム`} />}
         {kind === 'ECDF' && <EcdfSvg {...shared} countMode={data.countMode} points={cdfPoints} guides={data.ecdfGuides} referenceVisibility={data.referenceVisibility} description={`${scopeLabel}の${metric.label}を${countOption.label}で集計した累積分布`} />}
@@ -1096,6 +1105,7 @@ function DistributionCountControls({ mode, onChange, counts }: {
 function HistogramDisplayControls({
   ratingMode, hasData, showPercentages, onShowPercentagesChange, showBinRanges, onShowBinRangesChange,
   showCumulative, onShowCumulativeChange,
+  cumulativeDisplay, onCumulativeDisplayChange,
   referenceVisibility, onReferenceVisibilityChange,
 }: {
   ratingMode: boolean
@@ -1106,6 +1116,8 @@ function HistogramDisplayControls({
   onShowBinRangesChange: (show: boolean) => void
   showCumulative: boolean
   onShowCumulativeChange: (show: boolean) => void
+  cumulativeDisplay: 'line' | 'strip'
+  onCumulativeDisplayChange: (display: 'line' | 'strip') => void
   referenceVisibility: ReferenceVisibility
   onReferenceVisibilityChange: (visibility: ReferenceVisibility) => void
 }) {
@@ -1115,8 +1127,16 @@ function HistogramDisplayControls({
       割合を表示
     </label>
     <label className="enemy-histogram-display-toggle">
-      <input type="checkbox" checked={showCumulative} onChange={(event) => onShowCumulativeChange(event.target.checked)} />
-      累積割合を表示
+      累積割合
+      <select value={showCumulative ? cumulativeDisplay : 'none'} onChange={(event) => {
+        const display = event.target.value
+        onShowCumulativeChange(display !== 'none')
+        if (display === 'line' || display === 'strip') onCumulativeDisplayChange(display)
+      }}>
+        <option value="none">なし</option>
+        <option value="line">折れ線</option>
+        <option value="strip">上部の帯</option>
+      </select>
     </label>
     <label className="enemy-histogram-display-toggle" title={ratingMode ? '範囲が収まらない場合は評価のみを表示します' : '文字が収まらない場合は通常の目盛りを表示します'}>
       <input type="checkbox" checked={showBinRanges} onChange={(event) => onShowBinRangesChange(event.target.checked)} />
@@ -1141,6 +1161,8 @@ function HistogramFigure({
   onShowBinRangesChange,
   showCumulative,
   onShowCumulativeChange,
+  cumulativeDisplay,
+  onCumulativeDisplayChange,
 }: {
   ratingBins: EnemyRatingHistogramBin[] | null
   statistics: NumericStatistics
@@ -1156,6 +1178,8 @@ function HistogramFigure({
   onShowBinRangesChange: (show: boolean) => void
   showCumulative: boolean
   onShowCumulativeChange: (show: boolean) => void
+  cumulativeDisplay: 'line' | 'strip'
+  onCumulativeDisplayChange: (display: 'line' | 'strip') => void
 }) {
   const [chartContainerRef, chartWidth] = useChartWidth()
   const titleId = useId()
@@ -1173,15 +1197,15 @@ function HistogramFigure({
       <figcaption>
         <div>
           <strong>{metric.label}のヒストグラム</strong>
-          <span>横軸：{axisLabel} · 縦軸：{countOption.axisLabel}{showCumulative && ' · 右軸：累積割合'}</span>
+          <span>横軸：{axisLabel} · 縦軸：{countOption.axisLabel}{showCumulative && cumulativeDisplay === 'line' && ' · 右軸：累積割合'}</span>
           {ratingBins && <span>数値から評価に換算して集計します。{(referenceVisibility.mean || referenceVisibility.median) && '平均・中央値の線は、その値が属する評価の中央に表示します。'}</span>}
           {(showPercentages || showCumulative) && statistics.count > 0 && <span>割合の基準：{scopeLabel} · {formatNumber(statistics.count, 0)}{countOption.unit}（有効データ）</span>}
-          {showCumulative && statistics.count > 0 && <span>累積割合の点は、各棒の中央にその階級までの合計を表示します。</span>}
         </div>
         <HistogramDisplayControls ratingMode={ratingBins !== null} hasData={statistics.count > 0}
           showPercentages={showPercentages} onShowPercentagesChange={onShowPercentagesChange}
           showBinRanges={showBinRanges} onShowBinRangesChange={onShowBinRangesChange}
           showCumulative={showCumulative} onShowCumulativeChange={onShowCumulativeChange}
+          cumulativeDisplay={cumulativeDisplay} onCumulativeDisplayChange={onCumulativeDisplayChange}
           referenceVisibility={referenceVisibility} onReferenceVisibilityChange={onReferenceVisibilityChange} />
       </figcaption>
       <div className="enemy-chart-container" ref={chartContainerRef}>
@@ -1193,6 +1217,7 @@ function HistogramFigure({
             showPercentages={showPercentages}
             showBinRanges={showBinRanges}
             showCumulative={showCumulative}
+            cumulativeDisplay={cumulativeDisplay}
             countMode={countMode}
             statistics={statistics}
             referenceVisibility={referenceVisibility}
@@ -1384,6 +1409,7 @@ export function EnemyHistogramSnapshotPlot({ snapshot, width, height, reservedLa
     width={width} height={height} titleId={titleId} descriptionId={descriptionId} description={snapshot.summary}
     scale={snapshot.scale} image showPercentages={snapshot.showPercentages} showBinRanges={snapshot.showBinRanges}
     showCumulative={snapshot.showCumulative}
+    cumulativeDisplay={snapshot.cumulativeDisplay}
     reservedLabelHeight={reservedLabelHeight} onLabelOverflow={onLabelOverflow} />
 }
 
@@ -1403,6 +1429,7 @@ function HistogramSvg({
   showPercentages = false,
   showBinRanges = false,
   showCumulative = false,
+  cumulativeDisplay = 'line',
   reservedLabelHeight = 0,
   onLabelOverflow,
 }: {
@@ -1421,6 +1448,7 @@ function HistogramSvg({
   showPercentages?: boolean
   showBinRanges?: boolean
   showCumulative?: boolean
+  cumulativeDisplay?: 'line' | 'strip'
   reservedLabelHeight?: number
   onLabelOverflow?: (height: number) => void
 }) {
@@ -1438,11 +1466,15 @@ function HistogramSvg({
   const countOption = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === countMode)!
   const maxBinCount = Math.max(1, ...bins.map((bin) => bin.count))
   const { maximum: countMaximum, ticks: countTicks } = createZeroBasedValueAxis(maxBinCount)
+  const showCumulativeLine = showCumulative && cumulativeDisplay === 'line'
   const plotLeft = Math.max(CHART_MARGIN.left, 30 + formatNumber(countMaximum, 0).length * 7)
-  const plotRight = width - (showCumulative ? 68 : CHART_MARGIN.right)
+  const plotRight = width - (showCumulativeLine ? 68 : CHART_MARGIN.right)
   const baseHeight = height - reservedLabelHeight
   const basePlotBottom = baseHeight - (image ? 18 : CHART_MARGIN.bottom)
   const plotWidth = Math.max(1, plotRight - plotLeft)
+  const cumulativeStripLayout = showCumulative && cumulativeDisplay === 'strip'
+    ? getHistogramCumulativeStripLayout(bins, statistics.count, plotWidth) : null
+  const cumulativeStripHeight = cumulativeStripLayout?.height ?? 0
   const valueScale = createValueScale(minimum, maximum, plotLeft, plotRight, isAdaptiveLinear ? 'LINEAR' : scale)
   const categoryScale = createHistogramCategoryScale(statistics.bins, plotLeft, plotRight, valueScale.effectiveScale)
   const xTicks = isAdaptiveLinear
@@ -1456,9 +1488,15 @@ function HistogramSvg({
     }
     return categoryScale.position(value)
   }
-  const referenceLabels = useImageReferenceLabels(statistics, metric, referencePosition, plotLeft, plotRight, image || showPercentages, referenceVisibility)
-  const plotTop = image ? referenceLabels.top : CHART_MARGIN.top
-  const plotHeight = basePlotBottom - plotTop
+  const referenceLabels = useImageReferenceLabels(statistics, metric, referencePosition, plotLeft, plotRight,
+    image || showPercentages || cumulativeStripHeight > 0, referenceVisibility, cumulativeStripHeight)
+  const basePlotTop = image ? referenceLabels.top - cumulativeStripHeight : CHART_MARGIN.top
+  // The strip replaces the old top margin; reserve a label row only while it is visible.
+  const plotTop = cumulativeStripLayout
+    ? referenceVisibility.mean || referenceVisibility.median ? referenceLabels.top : cumulativeStripHeight
+    : basePlotTop
+  const cumulativeStripOffset = plotTop - basePlotTop
+  const plotHeight = basePlotBottom - basePlotTop
   const overflowTick = isAdaptiveLinear && histogram.hasOverflow
     ? {
       value: histogram.normalRangeEnd + ((histogram.binWidth ?? 0) / 2),
@@ -1477,7 +1515,7 @@ function HistogramSvg({
     ...(referenceVisibility.mean ? [referencePosition(statistics.mean ?? minimum) - plotLeft] : []),
     ...(referenceVisibility.median ? [referencePosition(statistics.median ?? minimum) - plotLeft] : []),
   ] : []
-  const cumulativeRows = showCumulative ? buildHistogramCumulativeRows<HistogramBin | EnemyRatingHistogramBin>(bins, statistics.count) : []
+  const cumulativeRows = showCumulativeLine ? buildHistogramCumulativeRows<HistogramBin | EnemyRatingHistogramBin>(bins, statistics.count) : []
   const cumulativeLine = getHistogramCumulativePoints(cumulativeRows, {
     plotLeft: 0, plotRight: plotWidth, plotTop: 0, plotBottom: plotHeight,
   })
@@ -1494,16 +1532,18 @@ function HistogramSvg({
   const axisLabels = binRangeLayout.centers ? binRangeLabels.map((label, index) => ({ ...label, textCenter: binRangeLayout.centers![index] }))
     : ratingBins ? binRangeLabels.map((label, index) => ({ ...label, textCenter: label.center, lines: [ratingBins[index].rating] })) : null
   const extraTop = Math.ceil(percentageLayout.extraTop)
-  useLayoutEffect(() => { onLabelOverflow?.(extraTop + extraBottom) }, [extraTop, extraBottom, onLabelOverflow])
-  const chartHeight = Math.max(height, baseHeight + extraTop + extraBottom)
-  const plotBottom = basePlotBottom + extraTop
+  useLayoutEffect(() => { onLabelOverflow?.(extraTop + extraBottom + cumulativeStripOffset) }, [extraTop, extraBottom, cumulativeStripOffset, onLabelOverflow])
+  const chartHeight = Math.max(height, baseHeight + extraTop + extraBottom + cumulativeStripOffset)
+  const plotBottom = basePlotBottom + extraTop + cumulativeStripOffset
   const y = (value: number) => plotBottom - ((value / countMaximum) * plotHeight)
 
   return (
-    <svg className="enemy-stat-chart" data-histogram-axis={ratingBins ? binRangeLayout.visible ? 'rating-ranges' : 'ratings' : binRangeLayout.visible ? 'ranges' : 'ticks'} viewBox={`0 0 ${width} ${chartHeight}`} width="100%" height={chartHeight} role={showCumulative && !image ? 'group' : 'img'} aria-labelledby={`${titleId} ${descriptionId}`}>
+    <svg className="enemy-stat-chart" data-histogram-axis={ratingBins ? binRangeLayout.visible ? 'rating-ranges' : 'ratings' : binRangeLayout.visible ? 'ranges' : 'ticks'} viewBox={`0 0 ${width} ${chartHeight}`} width="100%" height={chartHeight} role={showCumulativeLine && !image ? 'group' : 'img'} aria-labelledby={`${titleId} ${descriptionId}`}>
       <title id={titleId}>{`${metric.label}のヒストグラム`}</title>
-      <desc id={descriptionId}>{description}{ratingBins ? ' 横軸はE〜SSのゲーム内評価です。平均・中央値の線はその値が属する評価の中央を示します。' : ''}{showPercentages && statistics.count > 0 ? ` 棒上に有効データ${formatNumber(statistics.count, 0)}${countOption.unit}に対する割合を表示します。` : ''}{showCumulative && statistics.count > 0 ? ' 右軸の折れ線は、各棒の中央に、その階級までの件数を有効データ数で割った累積割合を示します。線は最初の階級の点から始まります。' : ''}{showBinRanges ? binRangeLayout.visible ? ' 各棒の下に階級の範囲を表示します。' : ratingBins ? ' 範囲が収まらないため、評価のみを表示します。' : ' 階級の範囲が収まらないため、通常の横軸目盛りを表示します。' : ''}</desc>
+      <desc id={descriptionId}>{description}{ratingBins ? ' 横軸はE〜SSのゲーム内評価です。平均・中央値の線はその値が属する評価の中央を示します。' : ''}{showPercentages && statistics.count > 0 ? ` 棒上に有効データ${formatNumber(statistics.count, 0)}${countOption.unit}に対する割合を表示します。` : ''}{showCumulative && statistics.count > 0 ? cumulativeDisplay === 'strip' ? ' 上部の帯は、それぞれの階級全体を含む累積割合です。' : ' 右軸の折れ線は、各棒の中央に、その階級までの件数を有効データ数で割った累積割合を示します。線は最初の階級の点から始まります。' : ''}{showBinRanges ? binRangeLayout.visible ? ' 各棒の下に階級の範囲を表示します。' : ratingBins ? ' 範囲が収まらないため、評価のみを表示します。' : ' 階級の範囲が収まらないため、通常の横軸目盛りを表示します。' : ''}</desc>
       {showBinRanges && <text ref={binRangeLayout.measureRef} className="enemy-chart-tick enemy-histogram-range-label" visibility="hidden" aria-hidden="true">0</text>}
+      {cumulativeStripLayout && <HistogramCumulativeStrip bins={bins} total={statistics.count}
+        plotLeft={plotLeft} plotRight={plotRight} top={0} layout={cumulativeStripLayout} />}
 
       {countTicks.map((tick) => (
         <g key={tick}>
@@ -1524,8 +1564,8 @@ function HistogramSvg({
         )
       })}
 
-      {statistics.count > 0 && <MeanMedianReferences statistics={statistics} visibility={referenceVisibility} metric={metric} position={referencePosition} plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop} plotBottom={plotBottom} imageLabels={image || showPercentages ? referenceLabels : undefined} />}
-      {showCumulative && <HistogramCumulativeOverlay bins={bins} total={statistics.count}
+      {statistics.count > 0 && <MeanMedianReferences statistics={statistics} visibility={referenceVisibility} metric={metric} position={referencePosition} plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop} plotBottom={plotBottom} imageLabels={image || showPercentages || cumulativeStripHeight > 0 ? referenceLabels : undefined} />}
+      {showCumulativeLine && <HistogramCumulativeOverlay bins={bins} total={statistics.count}
         plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop + extraTop} plotBottom={plotBottom}
         image={image} formatBoundary={(value) => formatHistogramSetting(value, metric.suffix)} countUnit={countOption.unit} />}
       <g ref={percentageLayout.labelsRef} className="enemy-histogram-percentages" transform={`translate(${plotLeft} ${plotTop + extraTop})`} aria-hidden="true">

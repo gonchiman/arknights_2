@@ -31,6 +31,8 @@ export interface EnemyHistogramSnapshotInput {
   showBinRanges: boolean
   /** Omitted in earlier v1 snapshots; treated as false. */
   showCumulative?: boolean
+  /** Omitted in earlier v1 snapshots; treated as the existing line display. */
+  cumulativeDisplay?: 'line' | 'strip'
   referenceVisibility: { mean: boolean; median: boolean }
   /** Optional so v1 snapshots captured before in-place editing remain usable. */
   editorSettings?: EnemyHistogramEditorSettings
@@ -110,6 +112,7 @@ function validInput(value: unknown): value is EnemyHistogramSnapshotInput {
     || !['LINEAR', 'LOG'].includes(String(input.scale))
     || typeof input.showPercentages !== 'boolean' || typeof input.showBinRanges !== 'boolean'
     || (input.showCumulative !== undefined && typeof input.showCumulative !== 'boolean')
+    || (input.cumulativeDisplay !== undefined && input.cumulativeDisplay !== 'line' && input.cumulativeDisplay !== 'strip')
     || typeof refs.mean !== 'boolean' || typeof refs.median !== 'boolean'
     || !(input.customLinearUpperBound === null || (finite(input.customLinearUpperBound) && input.customLinearUpperBound > 0))
     || !nonnegative(stats.totalCount) || !nonnegative(stats.missingCount) || !finite(stats.count) || stats.count <= 0
@@ -178,6 +181,7 @@ export function createEnemyHistogramSnapshot(input: EnemyHistogramSnapshotInput)
     ratingBins: input.ratingBins, customLinearUpperBound: input.customLinearUpperBound,
     showPercentages: input.showPercentages, showBinRanges: input.showBinRanges,
     showCumulative: input.showCumulative ?? false,
+    cumulativeDisplay: input.cumulativeDisplay ?? 'line',
     referenceVisibility: input.referenceVisibility,
     editorSettings: copyEditorSettings(input.editorSettings),
   }))
@@ -191,14 +195,17 @@ export function createEnemyHistogramSnapshot(input: EnemyHistogramSnapshotInput)
     copy.statistics.missingCount > 0 ? `値なし ${format(copy.statistics.missingCount)}${count.unit}を除外` : null,
   ].filter(Boolean).join(' · ')
   return freezeDeep({ ...copy, schemaVersion: 1,
-    // An inactive optional overlay keeps the identity of older v1 snapshots.
-    id: `resistance-histogram-${snapshotFingerprint(JSON.stringify({ ...copy, showCumulative: copy.showCumulative || undefined }))}`,
+    // Only an active strip changes the identity of existing v1 line/OFF snapshots.
+    id: `resistance-histogram-${snapshotFingerprint(JSON.stringify({ ...copy,
+      showCumulative: copy.showCumulative || undefined,
+      cumulativeDisplay: copy.showCumulative && copy.cumulativeDisplay === 'strip' ? 'strip' : undefined,
+    }))}`,
     title: '術耐性のヒストグラム', axisTitle: `術耐性（${copy.ratingBins ? 'ゲーム内評価' : '階級'}）`,
     conditions, summary,
     filename: getWeightedEnemyHistogramImageFilename({ mode: copy.countMode, metric: '術耐性', scope: copy.source.scopeLabel,
       scale: copy.scale, statistics: copy.statistics, customLinearUpperBound: copy.customLinearUpperBound,
       referenceVisibility: copy.referenceVisibility, showPercentages: copy.showPercentages,
-      showBinRanges: copy.showBinRanges, showCumulative: copy.showCumulative,
+      showBinRanges: copy.showBinRanges, showCumulative: copy.showCumulative, cumulativeDisplay: copy.cumulativeDisplay,
       useRatingBins: copy.ratingBins !== null, coverage: copy.coverage }),
   })
 }

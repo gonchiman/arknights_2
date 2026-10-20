@@ -51,7 +51,7 @@ before(async () => {
 after(async () => { await server?.close() })
 
 function snapshot(options = {}) {
-  const { kind = 'linear', showCumulative = true, showPercentages = false,
+  const { kind = 'linear', showCumulative = true, cumulativeDisplay = 'line', showPercentages = false,
     referenceVisibility = { mean: false, median: false } } = options
   const log = kind === 'log'
   const source = log ? observations.map((item, index) => ({ ...item, value: [1, 10, 100, 1000, null][index] })) : observations
@@ -62,7 +62,7 @@ function snapshot(options = {}) {
     statistics: calculateWeightedHistogram(source, log ? { scale: 'LOG' }
       : { customLinearBinWidth: 10, customLinearUpperBound: 20 }),
     ratingBins: kind === 'rating' ? buildEnemyRatingHistogramBins(source, 'magicResistance') : null,
-    customLinearUpperBound: log ? null : 20, showCumulative, showPercentages, showBinRanges: false,
+    customLinearUpperBound: log ? null : 20, showCumulative, cumulativeDisplay, showPercentages, showBinRanges: false,
     referenceVisibility,
     editorSettings: { levelType: 'ALL', numericConditions: [], linearBinWidthInput: log ? '' : '10', linearUpperBoundInput: log ? '' : '20' },
   })
@@ -83,6 +83,15 @@ const barCenters = markup => [...markup.matchAll(/<rect\b[^>]*class="enemy-chart
   .map(match => Number(attr(match[1], 'x')) + Number(attr(match[1], 'width')) / 2)
 const cumulativePointXs = markup => [...markup.matchAll(/<circle\b[^>]*class="enemy-histogram-cumulative-point"([^>]*)>/g)]
   .map(match => Number(attr(match[1], 'cx')))
+const cumulativeStripCells = markup => [...markup.matchAll(/<g\b([^>]*data-cumulative-index="[^"]*"[^>]*)>([\s\S]*?)<\/g>/g)]
+  .map(match => ({
+    index: Number(attr(match[1], 'data-cumulative-index')),
+    rectangle: /<rect\b([^>]*)>/.exec(match[2])?.[1],
+    label: /<text\b([^>]*)>([^<]*)<\/text>/.exec(match[2]),
+  }))
+const percentageLabels = markup => [...markup.matchAll(/<text\b([^>]*data-percentage-index="[^"]*"[^>]*)>([^<]*)<\/text>/g)]
+  .map(match => ({ index: Number(attr(match[1], 'data-percentage-index')), text: match[2],
+    x: Number(attr(match[1], 'x')), y: Number(attr(match[1], 'y')) }))
 const countAxisTicks = markup => {
   const frame = /<rect\b[^>]*data-chart-image-plot-area=""([^>]*)>/.exec(markup)?.[1]
   return [...markup.matchAll(/<text\b([^>]*class="enemy-chart-tick"[^>]*)>([\d,]+)<\/text>/g)]
@@ -96,9 +105,14 @@ function PanelWrapper({ initialSnapshot, editor = false }) {
     filterControls: null, ...(editor ? { histogramEditor: { initialSnapshot: initialSnapshot ?? null, onChange() {} } } : {}) })
 }
 const renderPanel = props => renderToStaticMarkup(createElement(PanelWrapper, props))
-const cumulativeCheckbox = markup => [...markup.matchAll(/<label\b[^>]*>([\s\S]*?)<\/label>/g)]
-  .filter(match => clean(match[1]).includes('累積割合を表示'))
-  .map(match => /<input\b([^>]*)>/.exec(match[1])?.[1])
+const cumulativeSelect = markup => [...markup.matchAll(/<label\b[^>]*>([\s\S]*?)<\/label>/g)]
+  .find(match => clean(match[1]).startsWith('累積割合'))?.[1]
+const selectedCumulativeDisplay = markup => {
+  const select = cumulativeSelect(markup)
+  assert.ok(select, '累積割合の選択欄がある')
+  return [...select.matchAll(/<option\b([^>]*)>([^<]*)<\/option>/g)]
+    .find(match => /\bselected=""/.test(match[1]))?.[2]
+}
 
 test('累積オプションONだけに右軸0〜100%と線を出し、元の階級と件数は変えない', () => {
   const on = snapshot(), off = snapshot({ showCumulative: false })
@@ -124,6 +138,18 @@ test('旧v1の累積設定省略はOFFの画像として描画される', () => 
   assert.equal(renderPlot(legacy), renderPlot(off))
   assert.equal(renderPlot(restored), renderPlot(off))
   assert.doesNotMatch(renderPlot(restored), /data-histogram-cumulative/)
+})
+
+test('旧スナップショットの累積ONは表示形式の指定がなくても折れ線のまま復元される', () => {
+  const line = snapshot()
+  const { cumulativeDisplay: _display, ...legacy } = line
+  const restored = parseEnemyHistogramSnapshot(legacy)
+  assert.ok(restored)
+  assert.equal(restored.showCumulative, true)
+  assert.equal(renderPlot(legacy), renderPlot(line))
+  assert.equal(renderPlot(restored), renderPlot(line))
+  assert.ok(overlayPath(renderPlot(restored)))
+  assert.doesNotMatch(renderPlot(restored), /data-histogram-cumulative="strip"/)
 })
 
 test('線形・対数・評価・上限超過の各階級は棒中央に累積し、最初の階級から最終100%まで結ぶ', () => {
@@ -162,13 +188,14 @@ test('線形・対数・評価・上限超過の各階級は棒中央に累積�
   }
 })
 
-test('最大2958件の件数軸を1000刻みに丸め、累積ON/OFFや保存幅で件数目盛りを変えない', () => {
+test('最大2958件の件数軸を1000刻みに丸め、累積なし・折れ線・上部の帯や保存幅で件数目盛りを変えない', () => {
   const weights = [2702, 791, 2085, 1625, 759, 2958, 894, 92, 276, 31]
   const statistics = calculateWeightedHistogram(weights.map((weight, index) => ({ value: index * 10, weight })), {
     scale: 'LINEAR', customLinearBinWidth: 10, minimumLinearUpperBound: 100,
   })
-  for (const showCumulative of [false, true]) {
-    const source = createEnemyHistogramSnapshot({ ...snapshot({ showCumulative }),
+  for (const display of ['none', 'line', 'strip']) {
+    const showCumulative = display !== 'none'
+    const source = createEnemyHistogramSnapshot({ ...snapshot({ showCumulative, cumulativeDisplay: display === 'strip' ? 'strip' : 'line' }),
       statistics, customLinearUpperBound: null,
       editorSettings: { levelType: 'ALL', numericConditions: [], linearBinWidthInput: '10', linearUpperBoundInput: '' },
     })
@@ -178,6 +205,11 @@ test('最大2958件の件数軸を1000刻みに丸め、累積ON/OFFや保存幅
       assert.deepEqual(barTitles(markup), weights.map((weight, index) =>
         `${index * 10}以上、${(index + 1) * 10}${index === weights.length - 1 ? '以下' : '未満'}：${weight.toLocaleString('ja-JP')}体`))
       if (showCumulative) assert.equal(cumulativePoints(markup).at(-1).proportion, 1)
+      if (display === 'strip' && width === 960) {
+        assert.deepEqual(cumulativeStripCells(markup).map(cell => cell.label?.[2]),
+          ['22.1', '28.6', '45.7', '59', '65.2', '89.4', '96.7', '97.5', '99.7', '100'],
+          '帯の数値は丸めた棒の割合を足さず、生の件数から計算する')
+      }
     }
   }
 })
@@ -197,19 +229,127 @@ test('画像モードは棒の割合・平均・中央値と累積線を同時�
   assert.deepEqual(cumulativePoints(small).map(point => point.proportion), [0.25, 0.75, 1])
 })
 
-test('通常画面の累積チェックは初期OFF、保存された編集設定ONはチェックへ復元する', () => {
+test('累積割合の選択は初期なしで、保存された折れ線・上部の帯・旧設定を復元する', () => {
   const normal = renderPanel({})
-  const defaults = cumulativeCheckbox(normal)
-  assert.equal(defaults.length, 1)
-  assert.doesNotMatch(defaults[0], /\bchecked=/)
+  assert.equal(selectedCumulativeDisplay(normal), 'なし')
+  assert.deepEqual([...cumulativeSelect(normal).matchAll(/<option\b[^>]*>([^<]*)<\/option>/g)].map(match => match[1]),
+    ['なし', '折れ線', '上部の帯'])
   assert.doesNotMatch(normal, /data-histogram-cumulative/)
   const editor = renderPanel({ initialSnapshot: snapshot(), editor: true })
-  const restored = cumulativeCheckbox(editor)
-  assert.equal(restored.length, 1)
-  assert.match(restored[0], /\bchecked=""/)
+  assert.equal(selectedCumulativeDisplay(editor), '折れ線')
+  assert.equal(selectedCumulativeDisplay(renderPanel({ initialSnapshot: snapshot({ cumulativeDisplay: 'strip' }), editor: true })), '上部の帯')
+  assert.equal(selectedCumulativeDisplay(renderPanel({ initialSnapshot: snapshot({ showCumulative: false, cumulativeDisplay: 'strip' }), editor: true })), 'なし')
   const legacy = JSON.parse(JSON.stringify(snapshot({ showCumulative: false })))
   delete legacy.showCumulative
-  assert.doesNotMatch(cumulativeCheckbox(renderPanel({ initialSnapshot: legacy, editor: true }))[0], /\bchecked=/)
+  delete legacy.cumulativeDisplay
+  assert.equal(selectedCumulativeDisplay(renderPanel({ initialSnapshot: legacy, editor: true })), 'なし')
+  legacy.showCumulative = true
+  assert.equal(selectedCumulativeDisplay(renderPanel({ initialSnapshot: legacy, editor: true })), '折れ線')
+})
+
+test('上部の帯は線形・対数・評価・上限超過を同じ累積件数で示し、セルと数字を棒中央に合わせる', () => {
+  for (const kind of ['linear', 'log', 'rating']) {
+    const source = snapshot({ kind, cumulativeDisplay: 'strip' })
+    const unchanged = structuredClone(source)
+    const markup = renderPlot(source)
+    const without = renderPlot(snapshot({ kind, showCumulative: false }))
+    const line = renderPlot(snapshot({ kind }))
+    const bins = source.ratingBins ?? source.statistics.bins
+    const cells = cumulativeStripCells(markup)
+    const centers = barCenters(markup)
+    const frame = /<rect\b[^>]*data-chart-image-plot-area=""([^>]*)>/.exec(markup)?.[1]
+    assert.match(markup, /data-histogram-cumulative="strip"/)
+    assert.doesNotMatch(markup, /enemy-histogram-cumulative-axis|enemy-histogram-cumulative-line|enemy-histogram-cumulative-point|<path\b|<circle\b/)
+    assert.deepEqual(cumulativePoints(markup), cumulativePoints(line), kind)
+    assert.deepEqual(barTitles(markup), barTitles(without), kind)
+    assert.equal(cells.length, bins.length)
+    assert.equal(cumulativePoints(markup).at(-1).count, 8)
+    assert.equal(cumulativePoints(markup).at(-1).proportion, 1)
+    assert.equal(source.statistics.missingCount, 84)
+    for (const [index, cell] of cells.entries()) {
+      assert.ok(cell.rectangle && cell.label, `${kind}: cell ${index} has its background and cumulative label`)
+      const left = Number(attr(cell.rectangle, 'x'))
+      const right = left + Number(attr(cell.rectangle, 'width'))
+      assert.ok(left < centers[index] && centers[index] < right, `${kind}: cell ${index} contains its bar center`)
+      assert.ok(Math.abs(Number(attr(cell.label[1], 'x')) - centers[index]) < 1e-9, `${kind}: label ${index} matches its bar center`)
+      assert.ok(Number(attr(cell.rectangle, 'y')) + Number(attr(cell.rectangle, 'height')) <= Number(attr(frame, 'y')),
+        `${kind}: cumulative cell is above the plot`)
+    }
+    assert.doesNotMatch(markup, /NaN|Infinity/)
+    assert.deepEqual(source, unchanged)
+  }
+})
+
+test('上部の帯でも通常の割合は棒の上に残し、右軸用の横幅を使わない', () => {
+  const source = snapshot({ cumulativeDisplay: 'strip', showPercentages: true })
+  const markup = renderPlot(source)
+  const without = renderPlot(snapshot({ showCumulative: false, showPercentages: true }))
+  assert.deepEqual(barCenters(markup), barCenters(without))
+  const labels = percentageLabels(markup)
+  assert.deepEqual(labels.map(({ index, text }) => ({ index, text })), [
+    { index: 0, text: '25.0%' }, { index: 1, text: '50.0%' }, { index: 2, text: '25.0%' },
+  ])
+  const transform = /<g\b[^>]*class="enemy-histogram-percentages"[^>]*transform="translate\(([^ ]+) ([^)]+)\)"/.exec(markup)
+  assert.ok(transform)
+  const bars = [...markup.matchAll(/<rect\b[^>]*class="enemy-chart-bar[^"]*"([^>]*)>/g)]
+  const stripBottom = Math.max(...cumulativeStripCells(markup).map(cell => Number(attr(cell.rectangle, 'y')) + Number(attr(cell.rectangle, 'height'))))
+  for (const label of labels) {
+    const labelY = Number(transform[2]) + label.y
+    assert.ok(labelY > stripBottom, `割合${label.index}は累積帯の外にある`)
+    assert.ok(labelY < Number(attr(bars[label.index][1], 'y')), `割合${label.index}は対応する棒より上にある`)
+  }
+  const noPercentages = renderPlot(snapshot({ cumulativeDisplay: 'strip' }))
+  assert.equal(percentageLabels(noPercentages).length, 0)
+  assert.equal(cumulativeStripCells(noPercentages).length, 3)
+})
+
+test('帯は画像の旧上余白を置き換え、基準線なしでは4pxまで詰めて棒の高さを保つ', () => {
+  for (const width of [360, 960]) {
+    for (const showPercentages of [false, true]) {
+      const source = snapshot({ cumulativeDisplay: 'strip', showPercentages })
+      const markup = renderPlot(source, { width })
+      const without = renderPlot({ ...source, showCumulative: false }, { width })
+      const frame = /<rect\b[^>]*data-chart-image-plot-area=""([^>]*)>/.exec(markup)?.[1]
+      const cells = cumulativeStripCells(markup)
+      assert.ok(frame && cells.length)
+      const stripBottom = Math.max(...cells.map(cell => Number(attr(cell.rectangle, 'y')) + Number(attr(cell.rectangle, 'height'))))
+      assert.equal(Number(attr(frame, 'y')) - stripBottom, 4)
+      const barHeights = html => [...html.matchAll(/<rect\b[^>]*class="enemy-chart-bar[^"]*"([^>]*)>/g)]
+        .map(match => Number(attr(match[1], 'height')))
+      assert.deepEqual(barHeights(markup), barHeights(without), '帯の間を詰めても棒の高さを変えない')
+    }
+  }
+})
+
+test('上部の帯と平均・中央値を保存画像へ残し、折れ線用の操作要素を出力しない', () => {
+  const markup = renderPlot(snapshot({ cumulativeDisplay: 'strip', showPercentages: true,
+    referenceVisibility: { mean: true, median: true } }))
+  assert.match(markup, /class="enemy-chart-reference mean"/)
+  assert.match(markup, /class="enemy-chart-reference median"/)
+  assert.match(markup, /data-histogram-cumulative="strip"/)
+  assert.equal(percentageLabels(markup).length, 3)
+  assert.match(markup, /<svg\b[^>]*role="img"/)
+  assert.doesNotMatch(markup, /role="slider"|tabindex="0"|enemy-histogram-cumulative-hit-area|enemy-histogram-cumulative-tooltip|<button\b|NaN|Infinity/)
+  const stripBottom = Math.max(...cumulativeStripCells(markup).map(cell => Number(attr(cell.rectangle, 'y')) + Number(attr(cell.rectangle, 'height'))))
+  const references = [...markup.matchAll(/<text\b([^>]*class="enemy-chart-reference-label (?:mean|median)"[^>]*)>/g)]
+  assert.equal(references.length, 2)
+  for (const reference of references) assert.ok(Number(attr(reference[1], 'y')) > stripBottom, '平均・中央値の直接ラベルは帯の下にある')
+})
+
+test('累積の無効化・空データ・不正な分母や件数では上部に誤った帯を表示しない', () => {
+  const source = snapshot({ cumulativeDisplay: 'strip' })
+  assert.doesNotMatch(renderPlot({ ...source, showCumulative: false }), /data-histogram-cumulative/)
+  const invalidStatistics = [
+    { ...source.statistics, count: 0 },
+    { ...source.statistics, count: -1 },
+    { ...source.statistics, bins: [] },
+    { ...source.statistics, bins: source.statistics.bins.map((bin, index) => ({ ...bin, count: index === 1 ? -1 : bin.count })) },
+    { ...source.statistics, count: 1 },
+  ]
+  for (const statistics of invalidStatistics) {
+    const markup = renderPlot({ ...source, statistics })
+    assert.doesNotMatch(markup, /data-histogram-cumulative|data-cumulative-index/)
+  }
 })
 
 test('既存度数分布表の累積件数・割合と保存画像の折れ線が一致し、欠損84体を分母へ含めない', () => {

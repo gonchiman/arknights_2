@@ -122,6 +122,32 @@ test('累積割合ONだけを画像名に記録し、OFFと省略は全対象・
   }
 })
 
+test('累積割合帯の保存名を折れ線と区別し、非表示時は方式を無視する', () => {
+  const options = { metric: '術耐性', scope: '全敵',
+    statistics: calculateWeightedHistogram([{ value: 0, weight: 3 }, { value: 50, weight: 1 }]),
+    referenceVisibility: { mean: false, median: false }, coverage: source.summary }
+  for (const mode of ['TYPES', 'MAPS', 'SPAWNS'] as const) for (const scale of ['LINEAR', 'LOG']) {
+    for (const useRatingBins of [false, true]) {
+      const snapshot = { ...options, mode, scale, useRatingBins }
+      const original = getWeightedEnemyHistogramImageFilename(snapshot)
+      const line = getWeightedEnemyHistogramImageFilename({ ...snapshot, showCumulative: true })
+      assert.equal(getWeightedEnemyHistogramImageFilename({ ...snapshot, showCumulative: true, cumulativeDisplay: 'line' }), line)
+      const strip = getWeightedEnemyHistogramImageFilename({ ...snapshot, showCumulative: true, cumulativeDisplay: 'strip' })
+      assert.equal(strip, original.replace(/\.png$/, '_累積割合帯.png'))
+      assert.notEqual(strip, line)
+      assert.doesNotMatch(strip, /累積割合表示/)
+      for (const cumulativeDisplay of ['line', 'strip'] as const) {
+        assert.equal(getWeightedEnemyHistogramImageFilename({ ...snapshot, cumulativeDisplay }), original)
+        assert.equal(getWeightedEnemyHistogramImageFilename({ ...snapshot, showCumulative: false, cumulativeDisplay }), original)
+      }
+      const combined = getWeightedEnemyHistogramImageFilename({ ...snapshot, showCumulative: true, cumulativeDisplay: 'strip',
+        showPercentages: true, showBinRanges: true, referenceVisibility: { mean: true, median: true } })
+      assert.match(combined, /_割合表示_累積割合帯_階級範囲表示_平均-中央値\.png$/)
+      assert.equal((combined.match(/累積割合帯/g) ?? []).length, 1)
+    }
+  }
+})
+
 test('階級範囲を有効にした保存名を区別し、無効時は省略時の名前を維持する', async () => {
   const options = { metric: 'HP', scope: '全敵', scale: 'LINEAR',
     statistics: calculateWeightedHistogram([{ value: 100, weight: 3 }, { value: 500, weight: 1 }]),
