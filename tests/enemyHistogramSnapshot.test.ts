@@ -57,6 +57,52 @@ test('ページ移動・再読み込み用ストレージを経由して同じ�
   assert.notEqual(createEnemyHistogramSnapshot(changed).id, snapshot.id)
 })
 
+test('累積割合を省略した旧v1はOFFとして復元し、既存の識別子と保存名を保つ', () => {
+  const omitted = createEnemyHistogramSnapshot(input())
+  const explicitOff = createEnemyHistogramSnapshot({ ...input(), showCumulative: false })
+  assert.equal(omitted.showCumulative, false)
+  assert.deepEqual(explicitOff, omitted)
+  assert.equal(omitted.id, 'resistance-histogram-bacf1e83cafbeb64')
+  assert.doesNotMatch(omitted.filename, /累積割合表示/)
+  const { showCumulative: _overlay, ...legacy } = omitted
+  const storage = memoryStorage()
+  storage.setItem(ENEMY_HISTOGRAM_SNAPSHOT_KEY, JSON.stringify(legacy))
+  assert.deepEqual(readEnemyHistogramSnapshot(storage), omitted)
+  assert.deepEqual(parseEnemyHistogramSnapshot(legacy), omitted)
+})
+
+test('累積割合ONを複製・凍結・保存・復元し、値を再集計せず識別子と画像名に反映する', () => {
+  const source = { ...input(), showCumulative: true }
+  const snapshot = createEnemyHistogramSnapshot(source)
+  const off = createEnemyHistogramSnapshot({ ...source, showCumulative: false })
+  source.showCumulative = false
+  assert.equal(snapshot.showCumulative, true)
+  assert.ok(Object.isFrozen(snapshot))
+  assert.notEqual(snapshot.id, off.id)
+  assert.notEqual(snapshot.filename, off.filename)
+  assert.match(snapshot.filename, /_割合表示_累積割合表示_階級範囲表示_/)
+  assert.deepEqual(snapshot.statistics, off.statistics)
+  assert.deepEqual(snapshot.source, off.source)
+  const storage = memoryStorage()
+  assert.equal(writeEnemyHistogramSnapshot(snapshot, storage), true)
+  assert.deepEqual(readEnemyHistogramSnapshot(storage), snapshot)
+  assert.deepEqual(parseEnemyHistogramSnapshot(JSON.parse(JSON.stringify(snapshot))), snapshot)
+  assert.equal(createEnemyHistogramSnapshot({ ...input(), showCumulative: true }).id, snapshot.id)
+})
+
+test('累積割合の不正な型を拒否し、保存済みの有効な分布を上書きしない', () => {
+  const snapshot = createEnemyHistogramSnapshot({ ...input(), showCumulative: true })
+  const storage = memoryStorage()
+  assert.equal(writeEnemyHistogramSnapshot(snapshot, storage), true)
+  for (const showCumulative of [null, 0, 1, 'true', [], {}]) {
+    const invalid = { ...snapshot, showCumulative }
+    assert.equal(parseEnemyHistogramSnapshot(invalid), null)
+    assert.throws(() => createEnemyHistogramSnapshot(invalid as unknown as EnemyHistogramSnapshotInput))
+    assert.equal(writeEnemyHistogramSnapshot(invalid as unknown as typeof snapshot, storage), false)
+  }
+  assert.deepEqual(readEnemyHistogramSnapshot(storage), snapshot)
+})
+
 test('集計方法・対象・有効な表示設定から条件と名前を再生成する', () => {
   for (const mode of ['TYPES', 'MAPS', 'SPAWNS'] as const) {
     const source = input()
