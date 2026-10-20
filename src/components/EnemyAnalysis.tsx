@@ -35,7 +35,10 @@ export function EnemyAnalysis() {
           <span className="page-kicker">ENEMY STATISTICS</span>
           <h1>敵の統計分析</h1>
         </div>
-        <a className="button secondary enemy-page-link" href="#/enemies">敵データベースへ</a>
+        <nav aria-label="敵の関連ページ">
+          <a className="button secondary enemy-page-link" href="#/enemies">敵データベースへ</a>{' '}
+          <a className="button secondary enemy-page-link" href="#/analysis/enemies/regression">敵の重回帰分析へ</a>
+        </nav>
       </header>
       <section className="enemy-directory" aria-label="敵の統計分析">
         <EnemyDataContent loading={loading} error={error} onRetry={retry}>

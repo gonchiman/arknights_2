@@ -19,6 +19,19 @@ test('メイン敵ステータス推移は敵分析用の独立ページとし�
   assert.deepEqual(parseHashRoute('#/analysis/enemies'), { view: 'enemy-analysis' })
 })
 
+test('敵の重回帰分析を統計分析の隣の導線から独立したページとして開く', () => {
+  assert.deepEqual(parseHashRoute('#/analysis/enemies/regression'), { view: 'enemy-regression' })
+  assert.deepEqual(parseHashRoute('#/analysis/enemies'), { view: 'enemy-analysis' })
+  const analysisIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'enemy-analysis')
+  assert.deepEqual(APP_NAV_ITEMS[analysisIndex + 1], {
+    id: 'enemy-regression', href: '#/analysis/enemies/regression', label: '敵の重回帰分析',
+    description: '', section: 'analysis',
+  })
+  for (const suffix of ['/', '/extra', '?enemy=001', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/analysis/enemies/regression${suffix}`), { view: 'operators' })
+  }
+})
+
 test('サイドバーから主要ページへ遷移できる', () => {
   assert.deepEqual(
     APP_NAV_ITEMS.map((item) => [item.id, parseHashRoute(item.href).view]),
@@ -40,6 +53,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
       ['enemy-analysis', 'enemy-analysis'],
+      ['enemy-regression', 'enemy-regression'],
       ['main-enemy-trends', 'main-enemy-trends'],
       ['maps', 'maps'],
       ['goldenglow-home', 'goldenglow-home'],
