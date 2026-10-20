@@ -47,7 +47,7 @@ import { calculateWeightedEmpiricalCdf, getWeightedEnemyEcdfImageFilename } from
 import { useEnemyHistogramCounts } from '../lib/useEnemyHistogramCounts'
 import { buildEnemyHistogramObservations, withHistogramDispersion, getWeightedEnemyHistogramImageFilename,
   ENEMY_HISTOGRAM_COUNT_MODES, type EnemyHistogramCountMode, type EnemyHistogramCounts } from '../lib/enemyHistogramCounts'
-import { createEnemyHistogramSnapshot, writeEnemyHistogramSnapshot, type EnemyHistogramSnapshot, type EnemyHistogramEditorSettings } from '../lib/enemyHistogramSnapshot'
+import { createEnemyHistogramSnapshot, type EnemyHistogramSnapshot, type EnemyHistogramEditorSettings } from '../lib/enemyHistogramSnapshot'
 import { HelpPopover } from './HelpPopover'
 import { calculateEcdfGuideReadings, parseEcdfGuideInput, type EcdfGuideValues } from '../lib/enemyEcdfGuides'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
@@ -250,7 +250,6 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const [savingImage, setSavingImage] = useState(false)
   const [preparingImage, setPreparingImage] = useState(false)
   const [imageFeedback, setImageFeedback] = useState<'saved' | 'downloaded' | 'failed' | null>(null)
-  const [snapshotFeedback, setSnapshotFeedback] = useState<'registered' | 'failed' | null>(null)
   const imageSaveInProgress = useRef(false)
   const imageSavePicker = getChartImageSavePicker()
   const {
@@ -371,15 +370,12 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const hasFixedEmptyHistogram = selectedChart === 'HISTOGRAM' && !ratingMode && axisScale === 'LINEAR'
     && customLinearUpperBound !== null && histogramStatistics.bins.length > 0
   const previewAspect = imageAspect.preset === 'auto' ? undefined : Number(imageAspect.width) / Number(imageAspect.height)
-  const isResistanceHistogram = selectedChart === 'HISTOGRAM' && selectedMetric.key === 'magicResistance'
-  const canRegisterHistogram = isResistanceHistogram && canSaveImage
+  const canCreateHistogramSnapshot = !!histogramEditor && selectedChart === 'HISTOGRAM'
+    && selectedMetric.key === 'magicResistance' && canSaveImage
     && !(activeCountMode !== 'TYPES' && (countData.loading || countData.error))
-  useEffect(() => { setSnapshotFeedback(null) }, [rows, selectedMetric.key, selectedChart, activeCountMode,
-    histogramStatistics, ratingBins, scopeLabel, axisScale, showHistogramPercentages, showHistogramBinRanges, showHistogramCumulative,
-    referenceVisibility.mean, referenceVisibility.median, linearBinWidthInput, linearUpperBoundInput])
 
   const currentHistogramSnapshot = useMemo(() => {
-    if (!canRegisterHistogram) return null
+    if (!canCreateHistogramSnapshot) return null
     // Inactive linear drafts must not invalidate a logarithmic or rating distribution.
     const linearSettingsInactive = ratingMode || axisScale !== 'LINEAR'
     const snapshotBinWidthInput = linearSettingsInactive && linearBinWidthError ? '' : linearBinWidthInput
@@ -405,7 +401,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           linearBinWidthInput: snapshotBinWidthInput, linearUpperBoundInput: snapshotUpperBoundInput } } : {}),
       })
     } catch { return null }
-  }, [canRegisterHistogram, scopeLabel, rows, activeCountMode, countData.data, axisScale, histogramStatistics,
+  }, [canCreateHistogramSnapshot, scopeLabel, rows, activeCountMode, countData.data, axisScale, histogramStatistics,
     ratingBins, customLinearUpperBound, showHistogramPercentages, showHistogramBinRanges, showHistogramCumulative,
     referenceVisibility, filterSettings, linearBinWidthInput, linearUpperBoundInput, ratingMode,
     linearBinWidthError, linearUpperBoundError, invalidUpperBound, requestedUpperBound, automaticBinWidth])
@@ -420,11 +416,6 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     lastEditorCallback.current = onHistogramChange
     onHistogramChange(currentHistogramSnapshot)
   }, [currentHistogramSnapshot, onHistogramChange])
-
-  const registerHistogram = () => {
-    if (!currentHistogramSnapshot) return
-    setSnapshotFeedback(writeEnemyHistogramSnapshot(currentHistogramSnapshot) ? 'registered' : 'failed')
-  }
 
   const openImageSaveDialog = async () => {
     if (!canSaveImage || imageSaveInProgress.current || selectedChart === 'COMPARISON') return
@@ -545,17 +536,10 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           </select>
         </div>
       </div>}
-      {!histogramEditor && isResistanceHistogram && <button type="button" className="button secondary"
-        disabled={!currentHistogramSnapshot} onClick={registerHistogram}>この分布をDPS画像に使う</button>}
       {!histogramEditor && <button type="button" className="button secondary enemy-chart-save-button"
         aria-haspopup="dialog" disabled={!canSaveImage || savingImage || preparingImage} aria-busy={savingImage || preparingImage}
         onClick={() => void openImageSaveDialog()}>{savingImage ? '画像を保存中…' : preparingImage ? '画像を準備中…' : '画像を保存'}</button>}
     </div>}
-    {!histogramEditor && isResistanceHistogram && snapshotFeedback === 'registered' && <p role="status">
-      分布を登録しました。 <a href="#/analysis/surtr/s3">スルト S3 DPSへ</a>
-    </p>}
-    {!histogramEditor && isResistanceHistogram && snapshotFeedback === 'failed' && <p role="alert">分布を保存できませんでした。ブラウザーの保存設定を確認してください。</p>}
-
     <DistributionCountControls mode={activeCountMode} onChange={setCountMode} counts={countData.data} />
     {countUnavailable && <div className="enemy-histogram-load-state" role="status">
       {countData.error ? <>登場データを取得できませんでした。<button type="button" className="button secondary" onClick={countData.retry}>再読み込み</button></>
