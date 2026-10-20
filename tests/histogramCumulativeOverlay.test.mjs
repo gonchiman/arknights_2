@@ -24,16 +24,30 @@ const props = { bins, total: 4, plotLeft: 50, plotRight: 350, plotTop: 20, plotB
 const render = (overrides = {}) => renderToStaticMarkup(createElement('svg', null, createElement(Overlay, { ...props, ...overrides })))
 const numericCircles = source => [...source.matchAll(/<circle\b([^>]*)class="enemy-histogram-cumulative-point"([^>]*)>/g)]
 
-test('bin-end line uses equal histogram slots and reaches cumulative 100% on the right axis', () => {
+test('line joins bar-center cumulative points without extending to zero or the right axis', () => {
   const markup = render()
-  assert.match(markup, /d="M 50 220 L 150 170 L 250 70 L 350 20"/)
+  assert.match(markup, /d="M 100 170 L 200 70 L 300 20"/)
+  assert.doesNotMatch(markup, /d="M 50 220|L 350 20/)
   assert.equal(numericCircles(markup).length, 3)
+  for (const [index, x] of [100, 200, 300].entries()) {
+    const circle = numericCircles(markup)[index].join(' ')
+    assert.match(circle, new RegExp(`cx="${x}"`))
+  }
   assert.match(markup, /data-cumulative-count="1" data-cumulative-proportion="0.25"/)
   assert.match(markup, /data-cumulative-count="3" data-cumulative-proportion="0.75"/)
   assert.match(markup, /data-cumulative-count="4" data-cumulative-proportion="1"/)
   for (const tick of ['0%', '25%', '50%', '75%', '100%']) assert.ok(markup.includes(`>${tick}</text>`))
   assert.match(markup, />累積割合<\/text>/)
   assert.equal((markup.match(/data-chart-image-ink=""/g) ?? []).length, 4)
+})
+
+test('one class shows a centered point at its cumulative value without an artificial line', () => {
+  const markup = render({ bins: [{ ...bins[0], count: 4 }] })
+  assert.equal(numericCircles(markup).length, 1)
+  assert.match(numericCircles(markup)[0].join(' '), /cx="200" cy="20"/)
+  assert.doesNotMatch(markup, /class="enemy-histogram-cumulative-line"/)
+  assert.match(markup, /10未満まで：累積4体（100%）/)
+  assert.match(markup, /aria-valuemin="1" aria-valuemax="1" aria-valuenow="1"/)
 })
 
 test('point descriptions use exclusive and closed numeric boundaries, not bar-center values', () => {
