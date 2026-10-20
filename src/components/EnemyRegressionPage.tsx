@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useId, useMemo, useRef, useState } from 'react'
 import { matchesEnemyFilters } from '../lib/enemyData'
 import { copyEnemyLevelSelection, ENEMY_LEVEL_LABELS, formatEnemyLevelSelection, type EnemyAnalysisFiltersState } from '../lib/enemyLevelSelection'
 import { formatEnemyNumericCondition, matchesEnemyNumericConditions, parseEnemyNumericFilterValue, type EnemyNumericCondition } from '../lib/enemyNumericFilters'
@@ -17,6 +17,7 @@ import { EnemyAnalysisFilters } from './EnemyAnalysisFilters'
 import { EnemyDataContent } from './EnemyPageShared'
 import { EnemyDetailModal } from './EnemyDetailModal'
 import { EnemyRegressionDiagnostics } from './EnemyRegressionDiagnostics'
+import { AnalysisTabs, AnalysisTabPanel } from './AnalysisTabs'
 import './DamageCalculator.css'
 import './EnemyAnalysis.css'
 import './EnemyStatisticsSummary.css'
@@ -99,19 +100,6 @@ function EnemyRegressionContent({ rows }: { rows: readonly EnemyRecord[] }) {
     : dirty ? '未再計算'
     : calculation.error ? '計算エラー' : '計算済み'
 
-  function changeTabWithKeyboard(event: KeyboardEvent<HTMLButtonElement>, index: number) {
-    let nextIndex: number | null = null
-    if (event.key === 'ArrowRight') nextIndex = (index + 1) % TABS.length
-    if (event.key === 'ArrowLeft') nextIndex = (index - 1 + TABS.length) % TABS.length
-    if (event.key === 'Home') nextIndex = 0
-    if (event.key === 'End') nextIndex = TABS.length - 1
-    if (nextIndex === null) return
-    event.preventDefault()
-    const [nextTab] = TABS[nextIndex]
-    setActiveTab(nextTab)
-    window.requestAnimationFrame(() => document.getElementById(`${tabId}-tab-${nextTab}`)?.focus({ preventScroll: true }))
-  }
-
   function calculate() {
     setSubmission({ draft: copyDraft(draft), sourceRows: rows, scopedRows: [...scopedRows] })
     setActiveTab('results')
@@ -149,17 +137,9 @@ function EnemyRegressionContent({ rows }: { rows: readonly EnemyRecord[] }) {
       <span>{describeScope(submission.draft)}</span>
       {dirty && <strong>未再計算</strong>}
     </div>
-    <div className="detail-tabs enemy-regression-tabs" role="tablist" aria-label="重回帰分析の表示">
-      {TABS.map(([tab, label], index) => <button type="button" key={tab} id={`${tabId}-tab-${tab}`}
-        className={`detail-tab${activeTab === tab ? ' active' : ''}`}
-        role="tab" aria-selected={activeTab === tab} aria-controls={`${tabId}-panel-${tab}`}
-        tabIndex={activeTab === tab ? 0 : -1} onClick={() => setActiveTab(tab)}
-        onKeyDown={(event) => changeTabWithKeyboard(event, index)}>{label}</button>)}
-    </div>
-    <section className="enemy-regression-tab-panel" id={`${tabId}-panel-settings`} role="tabpanel"
-      aria-labelledby={`${tabId}-tab-settings`} hidden={activeTab !== 'settings'}>
-      <h2>分析条件</h2>
-      <form className="enemy-regression-panel-body" onSubmit={(event) => { event.preventDefault(); calculate() }}>
+    <AnalysisTabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} idPrefix={tabId} label="重回帰分析の表示" />
+    <AnalysisTabPanel idPrefix={tabId} tab="settings" activeTab={activeTab} title="分析条件">
+      <form className="analysis-panel-body" onSubmit={(event) => { event.preventDefault(); calculate() }}>
         <label className="enemy-regression-outcome" htmlFor={outcomeId}>
           <span>目的変数</span>
           <select id={outcomeId} value={draft.config.outcome} onChange={(event) => selectOutcome(event.target.value as EnemyRegressionMetric)}>
@@ -194,11 +174,9 @@ function EnemyRegressionContent({ rows }: { rows: readonly EnemyRecord[] }) {
           <span id={statusId} role="status" aria-live="polite">{status}</span>
         </div>
       </form>
-    </section>
-    <section className="enemy-regression-tab-panel" id={`${tabId}-panel-results`} role="tabpanel"
-      aria-labelledby={`${tabId}-tab-results`} hidden={activeTab !== 'results'}>
-      <h2>分析結果</h2>
-      <div className="enemy-regression-panel-body">
+    </AnalysisTabPanel>
+    <AnalysisTabPanel idPrefix={tabId} tab="results" activeTab={activeTab} title="分析結果">
+      <div className="analysis-panel-body">
         {calculation.error && <p className="enemy-regression-error" role="alert">{calculation.error}</p>}
         {result && <section className="enemy-regression-results" aria-labelledby={resultTitleId}>
           <div className="enemy-regression-result-scope">
@@ -226,18 +204,16 @@ function EnemyRegressionContent({ rows }: { rows: readonly EnemyRecord[] }) {
           </dl>
         </section>}
       </div>
-    </section>
-    <section className="enemy-regression-tab-panel" id={`${tabId}-panel-diagnostics`} role="tabpanel"
-      aria-labelledby={`${tabId}-tab-diagnostics`} hidden={activeTab !== 'diagnostics'}>
-      <h2>診断</h2>
-      <div className="enemy-regression-panel-body">
+    </AnalysisTabPanel>
+    <AnalysisTabPanel idPrefix={tabId} tab="diagnostics" activeTab={activeTab} title="診断">
+      <div className="analysis-panel-body">
         {result ? <>
           <div className="enemy-regression-diagnostic-count">利用 {result.fit.observationCount.toLocaleString('ja-JP')}種類</div>
           <EnemyRegressionDiagnostics observations={result.observations} outcomeLabel={outcome.label} outcomeUnit={outcome.unit}
             onEnemySelect={(enemy, opener) => { detailTrigger.current = opener; setDetailEnemy(enemy) }} />
         </> : <p className="enemy-regression-error" role="alert">{calculation.error}</p>}
       </div>
-    </section>
+    </AnalysisTabPanel>
     {detailEnemy && <EnemyDetailModal enemy={detailEnemy} onClose={closeEnemyDetail} />}
   </div>
 }

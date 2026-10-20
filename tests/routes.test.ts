@@ -45,6 +45,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['skill-summary', 'skill-summary'],
       ['skill-structure', 'skill-structure'],
       ['skill-json', 'skill-json'],
+      ['skill-kmeans', 'skill-kmeans'],
       ['code-analysis', 'code-analysis'],
       ['damage', 'damage'],
       ['damage-two', 'damage-two'],
@@ -67,6 +68,22 @@ test('サイドバーから主要ページへ遷移できる', () => {
 
 test('比較ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/comparison'), { view: 'comparison' })
+})
+
+test('K-means 学習ラボは専用ページとしてスキル分析から開く', () => {
+  assert.deepEqual(parseHashRoute('#/analysis/skills/kmeans'), { view: 'skill-kmeans' })
+  assert.deepEqual(APP_NAV_ITEMS.find((item) => item.id === 'skill-kmeans'), {
+    id: 'skill-kmeans',
+    href: '#/analysis/skills/kmeans',
+    label: 'K-means 学習ラボ',
+    description: 'スキル説明文の学習・グループ比較',
+    section: 'analysis',
+  })
+  assert.deepEqual(parseHashRoute('#/skills'), { view: 'skills' })
+  assert.deepEqual(parseHashRoute('#/skill-classification'), { view: 'skill-classification' })
+  for (const suffix of ['/', '/extra', '?k=3', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/analysis/skills/kmeans${suffix}`), { view: 'operators' })
+  }
 })
 
 test('スキル大分類は専用ページとして開き、既存スキル一覧を維持する', () => {
