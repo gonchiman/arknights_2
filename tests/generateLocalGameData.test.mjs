@@ -77,6 +77,47 @@ test('one revision generates matching appearances, maps, details and chapter dat
   assert.deepEqual(generateLocalGameData(source, { generatedAt }), files)
 })
 
+test('other-category maps stay in the map database but never contribute to enemy statistics or missing coverage', () => {
+  const otherId = 'obt/legion/level_other'
+  for (const zoneType of ['CAMPAIGN', 'GUIDE', 'CLIMB_TOWER', 'FUTURE']) for (const available of [true, false]) {
+    const source = fixture()
+    // Deliberately keep stageType MAIN: the shared scope rule must use the zone table.
+    source.stageTable.stages.other = stage('other', otherId, { zoneId: 'other' })
+    source.zoneTable.zones.other = { type: zoneType }
+    if (available) {
+      const other = level([spawn('enemy_a', 100), spawn('enemy_other', 200)])
+      other.enemyDbRefs.push({ id: 'enemy_other', level: 0 })
+      source.levels.set(otherId, other)
+    } else source.missingLevelIds = [otherId]
+
+    const files = generateLocalGameData(source, { generatedAt })
+    const appearances = files.get('enemy-stage-appearances.json')
+    const histogram = files.get('enemy-histogram-counts.json')
+    assert.equal(appearances.status, 'complete')
+    assert.equal(appearances.enemies.enemy_a.stageCount, 2)
+    assert.equal(appearances.enemies.enemy_other, undefined)
+    assert.equal(appearances.summary.uniqueLevelCount, 2)
+    assert.equal(appearances.summary.failedLevelCount, 0)
+    assert.ok(appearances.diagnostics.excludedLevelIds.includes(otherId))
+    assert.deepEqual(histogram.enemies, { enemy_a: { mapCount: 2, spawnCount: 8 } })
+    assert.equal(histogram.summary.excludedMapCount, 2)
+    assert.equal(histogram.summary.missingMapCount, 0)
+    assert.deepEqual(histogram.diagnostics.missingLevelIds, [])
+
+    const index = files.get('maps/index.json')
+    assert.equal(index.maps.length, 4)
+    const map = index.maps.find((entry) => entry.levelId === otherId)
+    assert.equal(map.zoneType, zoneType)
+    assert.equal(map.status, available ? 'supported' : 'missing')
+    if (available) {
+      assert.equal(map.spawnCount, 300)
+      assert.deepEqual(files.get(`maps/${map.detailFile}`).maps[otherId].enemies,
+        [{ id: 'enemy_a', count: 100 }, { id: 'enemy_other', count: 200 }])
+    }
+    assert.equal(files.get('maps/main-enemy-trends.json').summary.enemyCount, 3)
+  }
+})
+
 test('all seven runtime tables retain exact upstream shape and content without generated metadata', () => {
   const source = fixture()
   const original = structuredClone(source)

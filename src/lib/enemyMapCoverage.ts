@@ -29,7 +29,7 @@ function uniqueMaps(maps: readonly MapSummary[]): MapSummary[] {
 
 /** Coverage describes the source map population, independently of enemy filters. */
 export function getMapCoverageStatus(map: MapSummary, mode: EnemyMapCoverageMode): MapCoverageStatus {
-  if (getMapEnvironment(map) === 'EASY') return 'excluded'
+  if (getMapEnvironment(map) === 'EASY' || getMapCategory(map) === 'other') return 'excluded'
   if (map.status === 'missing') return 'missing'
   return map.status === 'supported' || mode === 'MAPS' ? 'included' : 'excluded'
 }
@@ -97,6 +97,7 @@ function reasonLabel(reason: string): string {
 
 export function getMapCoverageReasons(map: MapSummary, mode: EnemyMapCoverageMode): string[] {
   if (getMapEnvironment(map) === 'EASY') return ['物語環境']
+  if (getMapCategory(map) === 'other') return ['その他のマップ']
   if (map.status === 'missing') return ['マップデータ未取得']
   if (mode === 'MAPS') return ['マップデータ取得済み']
   if (map.status === 'supported') return ['出現数確定']

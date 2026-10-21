@@ -120,7 +120,9 @@ export function generateLocalGameData(source, { generatedAt = new Date().toISOSt
     handbookTableUrl: `${base}/excel/enemy_handbook_table.json`,
     enemyDatabaseUrl: `${base}/levels/enemydata/enemy_database.json`, levelBaseUrl: `${base}/levels`,
   }
-  const selection = selectStageLevels(source.stageTable, { excludeStoryEnvironment: true })
+  const selection = selectStageLevels(source.stageTable, {
+    excludeStoryEnvironment: true, excludeOtherCategories: true, zoneTableSource: source.zoneTable,
+  })
   const appearances = buildEnemyStageAppearanceDocument({
     selection, handbookSource: source.handbook, levelsById: source.levels, failedLevelIds: [...missingIds], generatedAt,
   })

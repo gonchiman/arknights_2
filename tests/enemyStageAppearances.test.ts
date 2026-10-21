@@ -110,6 +110,41 @@ test('物語と標準が同じlevelIdを参照する場合は標準を1件とし
   assert.deepEqual(selection.excludedLevelIds, [])
 })
 
+test('敵統計はゾーン分類でその他を除外し、一覧と標準・イベント・物資調達を維持する', () => {
+  const zoneTypes = ['MAINLINE', 'MAINLINE_ACTIVITY', 'ACTIVITY', 'WEEKLY', 'CAMPAIGN', 'GUIDE', 'CLIMB_TOWER', 'FUTURE']
+  const source = { stages: Object.fromEntries([...zoneTypes, 'MISSING'].map((type) => [type, {
+    stageId: type, levelId: `obt/${type.toLowerCase()}`, zoneId: type,
+    // Classification must follow the zone table rather than this unrelated stage field.
+    stageType: 'MAIN', isStoryOnly: false,
+  }])) }
+  const zoneTableSource = { zones: Object.fromEntries(zoneTypes.map((type) => [type, { type }])) }
+  assert.equal(selectStageLevels(source).levels.length, 9)
+  assert.deepEqual(selectStageLevels(source).excludedLevelIds, [])
+  const selection = selectStageLevels(source, { excludeOtherCategories: true, zoneTableSource })
+  assert.deepEqual(selection.levels.map(({ stageId }) => stageId), ['ACTIVITY', 'MAINLINE', 'MAINLINE_ACTIVITY', 'WEEKLY'])
+  assert.deepEqual(selection.excludedLevelIds, ['obt/campaign', 'obt/climb_tower', 'obt/future', 'obt/guide', 'obt/missing'])
+  for (const cached of [false, true]) {
+    const eligible = selection.levels.map(({ levelId }) => [levelId, { enemyDbRefs: [{ id: 'enemy_a' }] }] as const)
+    const excluded = selection.excludedLevelIds.map((levelId) => [levelId, { enemyDbRefs: [{ id: 'enemy_other_only' }] }] as const)
+    const result = buildEnemyStageAppearanceDocument({
+      selection, handbookSource: handbook, levelsById: new Map([...eligible, ...(cached ? excluded : [])]),
+      failedLevelIds: selection.excludedLevelIds,
+    })
+    assert.equal(result.status, 'complete')
+    assert.equal(result.summary.uniqueLevelCount, 4)
+    assert.equal(result.summary.excludedLevelCount, 5)
+    assert.equal(result.enemies.enemy_a.stageCount, 4)
+    assert.equal(result.enemies.enemy_other_only, undefined)
+    assert.deepEqual(result.diagnostics.failedLevelIds, [])
+  }
+})
+
+test('その他の除外に必要なゾーン表が不正なら全件除外せずエラーにする', () => {
+  for (const zoneTableSource of [undefined, null, {}, { zones: null }, { zones: [] }]) {
+    assert.throws(() => selectStageLevels(stageTable, { excludeOtherCategories: true, zoneTableSource }), /valid zone table/)
+  }
+})
+
 test('同じlevelIdは1、異なるlevelIdはそれぞれ1として登場ステージ数を集計する', () => {
   const selection = selectStageLevels(stageTable)
   const levelsById = new Map([

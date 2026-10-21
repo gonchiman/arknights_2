@@ -52,18 +52,28 @@ function deferred() {
 
 function get(port, path, method = 'GET', agent = false) {
   return new Promise((resolve, reject) => {
+    let receivedHeaders = false
+    let receivedBytes = 0
+    let connected = false
     // Each fixture owns an ephemeral server; do not pool its sockets in Node's
     // process-wide agent, which can reuse a connection while idle shutdown races.
     const req = request({ hostname: '127.0.0.1', port, path, method, agent, headers: { Accept: '*/*' } }, res => {
+      receivedHeaders = true
       const chunks = []
-      res.on('data', chunk => chunks.push(chunk))
+      res.on('data', chunk => { receivedBytes += chunk.length; chunks.push(chunk) })
       res.on('end', () => resolve({ status: res.statusCode, headers: res.headers,
         text: Buffer.concat(chunks).toString(), reusedSocket: req.reusedSocket }))
-      res.on('error', reject)
+      res.on('error', error => reject(new Error(`${error.message} (${diagnostics()})`, { cause: error })))
     })
+    const diagnostics = () => `${method} http://127.0.0.1:${port}${path}; connected: ${connected}; `
+      + `response headers: ${receivedHeaders}; body bytes: ${receivedBytes}; reused socket: ${req.reusedSocket}; `
+      + `socket bytes read: ${req.socket?.bytesRead}; written: ${req.socket?.bytesWritten}`
     req.on('error', error => {
-      error.message += ` (${method} ${path}; reused socket: ${req.reusedSocket})`
-      reject(error)
+      reject(new Error(`${error.message} (${diagnostics()})`, { cause: error }))
+    })
+    req.on('socket', socket => {
+      connected = !socket.connecting
+      socket.once('connect', () => { connected = true })
     })
     req.setTimeout(10_000, () => req.destroy(new Error('Local data response timed out')))
     req.end()
