@@ -64,15 +64,16 @@ function sourceDescription(record: SourceSkill): string {
 }
 
 test('4人の全12スキル・特化3を一意に公開し、14段階40効果を持つ', () => {
-  assert.equal(SKILL_STRUCTURES.length, 12)
-  assert.equal(new Set(SKILL_STRUCTURES.map(({ basicInfo }) => identity(basicInfo))).size, 12)
-  assert.deepEqual(SKILL_STRUCTURES.map(({ basicInfo }) => identity(basicInfo)).sort(), sourceSkills.map(identity).sort())
+  const originalStructures = SKILL_STRUCTURES.filter(({ basicInfo }) => source.some(operator => operator.operatorId === basicInfo.operatorId))
+  assert.equal(SKILL_STRUCTURES.length, 13)
+  assert.equal(new Set(SKILL_STRUCTURES.map(({ basicInfo }) => identity(basicInfo))).size, 13)
+  assert.deepEqual(originalStructures.map(({ basicInfo }) => identity(basicInfo)).sort(), sourceSkills.map(identity).sort())
   for (const operator of source) assert.deepEqual(SKILL_STRUCTURES
     .filter(({ basicInfo }) => basicInfo.operatorId === operator.operatorId)
     .map(({ basicInfo }) => basicInfo.skillIndex).sort(), [1, 2, 3])
   assert.ok(SKILL_STRUCTURES.every(({ basicInfo }) => basicInfo.levelIndex === 9 && basicInfo.skillLevel === '特化3'))
-  assert.equal(SKILL_STRUCTURES.flatMap(entry => entry.effectStructure.stages).length, 14)
-  assert.equal(SKILL_STRUCTURES.flatMap(entry => entry.effectStructure.stages.flatMap(stage => stage.effects)).length, 40)
+  assert.equal(originalStructures.flatMap(entry => entry.effectStructure.stages).length, 14)
+  assert.equal(originalStructures.flatMap(entry => entry.effectStructure.stages.flatMap(stage => stage.effects)).length, 40)
 })
 
 test('12件の発動設定・原文・blackboard・範囲を元データとキーで照合する', () => {
@@ -337,11 +338,12 @@ test('全効果の依存・範囲参照・数値の元データ対応が解決�
   }
 })
 
-test('保留レジストリは実在する2スキルへ紐付き、重複せず再開に必要な内容と参照先を保持する', () => {
-  assert.equal(SKILL_STRUCTURE_DEFERRED_CASES.length, 2)
-  assert.equal(new Set(SKILL_STRUCTURE_DEFERRED_CASES.map(entry => entry.id)).size, 2)
+test('保留レジストリは実在する3スキルへ紐付き、重複せず再開に必要な内容と参照先を保持する', () => {
+  assert.equal(SKILL_STRUCTURE_DEFERRED_CASES.length, 3)
+  assert.equal(new Set(SKILL_STRUCTURE_DEFERRED_CASES.map(entry => entry.id)).size, 3)
   assert.deepEqual(SKILL_STRUCTURE_DEFERRED_CASES.map(entry => identity(entry.selection)).sort(), [
     identity(skill('char_350_surtr', 3).basicInfo), identity(skill('char_293_thorns', 3).basicInfo),
+    identity(skill('char_4009_irene', 1).basicInfo),
   ].sort())
   for (const entry of SKILL_STRUCTURE_DEFERRED_CASES) {
     assert.ok(findSkillStructure(entry.selection), entry.id)

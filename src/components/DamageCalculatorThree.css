@@ -6,14 +6,15 @@
 .damage-three-operator-name { width: fit-content; color: var(--text); font-size: 12px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
 .damage-three-operator-change { flex: 0 0 auto; min-height: 34px; border: 1px solid var(--border); border-radius: 0; padding: 6px 10px; background: var(--surface); color: var(--text); font-size: 11px; cursor: pointer; }
 .damage-three-operator-change:hover { background: var(--surface-hover); }
-.damage-three-skills button { display: flex; height: auto; min-height: 42px; justify-content: center; gap: 8px; padding: 8px 10px; }
-.damage-three-skills button > span,
-.damage-three-skills button > strong { font-size: 11px; font-weight: 500; }
-.damage-three-skills button > span { margin: 0; }
-.damage-three-skills button > strong { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+.damage-three-skills .analysis-tabs { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); border-inline: 0; }
+.damage-three-skills .detail-tab { white-space: normal; overflow-wrap: anywhere; font-size: 11px; }
 .damage-three-growth { margin-top: 14px; }
 .damage-three-fixed-value { display: flex; align-items: center; min-height: 34px; border: 1px solid var(--border); padding: 6px 9px; color: var(--text); background: var(--surface-soft); font-size: 11px; }
-.damage-three-description { margin: 14px -14px -12px; border-top: 1px solid var(--border); padding: 12px 14px; font-size: 12px; line-height: 1.9; white-space: pre-line; overflow-wrap: anywhere; }
+.damage-three-descriptions { margin: 14px -14px -12px; }
+.damage-three-description,
+.damage-three-talent-description p { margin: 0; padding: 12px 14px; font-size: 12px; line-height: 1.9; white-space: pre-line; overflow-wrap: anywhere; }
+.damage-three-description[hidden] { display: none; }
+.damage-three-talent-description h3 { margin: 0; border-block: 1px solid var(--border); padding: 7px 14px; background: var(--surface-soft); color: var(--text); font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
 .damage-three-condition-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .damage-three-result-table { min-width: 660px; }
 .damage-three-result-table th:first-child { width: 16%; }
@@ -24,6 +25,8 @@
 .damage-three-dot-table th:first-child { width: 36%; }
 .damage-three-steady-table { min-width: 660px; }
 .damage-three-steady-table th:first-child { width: 16%; }
+.damage-three-attack-component-table { min-width: 620px; }
+.damage-three-attack-component-table th:first-child { width: 18%; }
 .damage-three-single-attack-table { min-width: 420px; }
 .damage-three-single-attack-table th:first-child { width: 24%; }
 .damage-three-detail-wrap { margin-top: 10px; }
@@ -46,9 +49,6 @@
 .damage-three-selection-notice button { display: block; margin-top: 10px; }
 @container (max-width: 620px) {
   .damage-three-condition-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@container (max-width: 460px) {
-  .damage-three-skills button { flex-direction: column; text-align: center; gap: 3px; padding: 8px 5px; }
 }
 @container (max-width: 380px) {
   .damage-three-condition-grid { grid-template-columns: minmax(0, 1fr); }
