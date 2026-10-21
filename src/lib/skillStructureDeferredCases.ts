@@ -18,6 +18,38 @@ export interface SkillStructureDeferredCase {
 /** Persistent follow-up records, separate from executable effects and resolved structural differences. */
 export const SKILL_STRUCTURE_DEFERRED_CASES: readonly SkillStructureDeferredCase[] = [
   {
+    id: 'irene-s3-bombardment-levitation-timeline',
+    selection: { operatorId: 'char_4009_irene', skillId: 'skchr_irene_3', skillIndex: 3, levelIndex: 9 },
+    title: '浮遊時間と砲撃の命中時刻',
+    status: 'DEFERRED',
+    unresolved: '初撃・砲撃の正確な命中時刻、砲撃開始までの待ち時間、浮遊終了と同時刻の砲撃の処理順。',
+    currentTreatment: '初撃前に浮遊を適用する。重量ランク3以下の浮遊可能な地上対象は初撃と12発の砲撃を空中判定、浮遊無効の地上対象は全て地上判定とする。重量ランク4以上では浮遊時間を半分として保持し、浮遊中に命中する砲撃数を入力する。飛行対象は初撃・浮遊を受けず、砲撃のみ空中判定とする。',
+    reason: '砲撃間隔0.25秒はblackboardで確認できるが、命中までの待ち時間と浮遊終了の厳密な境界は説明文・blackboardのみでは確定できない。',
+    impact: '重量ランク4以上への砲撃で、防御無視の確率100％と50％を適用する回数。',
+    resumeWhen: '実機映像またはスキル処理本体で各命中時刻と浮遊終了の順序を確認し、時間進行を扱う時。',
+    references: [
+      { label: 'JPスキルデータ：skchr_irene_3', href: DATA_SOURCE_URLS.skill, external: true },
+      { label: 'Irene：追加仕様', href: 'https://arknights.wiki.gg/wiki/Irene#Additional_information', external: true },
+      { label: 'Sanity;Gone：Irene / Judgement', href: 'https://old.sanitygone.help/operators/irene', external: true },
+    ],
+  },
+  {
+    id: 'irene-s3-random-splash-target-distribution',
+    selection: { operatorId: 'char_4009_irene', skillId: 'skchr_irene_3', skillIndex: 3, levelIndex: 9 },
+    title: 'ランダム砲撃の範囲命中と対象の入れ替わり',
+    status: 'DEFERRED',
+    unresolved: '敵の位置・移動・撃破によって各砲撃の範囲命中数と主対象の候補が変化する場合の空間・時間シミュレーション。',
+    currentTreatment: '砲撃の主対象をランダム1体として保持し、範囲半径はガイドで観測された1.1マスを表示する。計算では距離判定を行わず、同じ防御性能・重量・初期状態の敵が範囲に留まる条件で、砲撃1発の平均命中対象数を入力してダメージ期待値を求める。',
+    reason: '同じ対象数でも敵の配置によって範囲ダメージの合計が異なるため、対象数だけから密集状態を仮定しない。',
+    impact: '1体あたりと全対象の砲撃ダメージ期待値。異なる防御性能・浮遊状態の敵が混在する場合や途中の撃破は対象外。',
+    resumeWhen: '敵ごとの位置・状態・撃破を追跡する計算に対応する時に、主対象の抽選と範囲判定を実機またはスキル処理本体で確認する。',
+    references: [
+      { label: 'JPスキルデータ：skchr_irene_3', href: DATA_SOURCE_URLS.skill, external: true },
+      { label: 'Sanity;Gone：Irene / Judgement', href: 'https://old.sanitygone.help/operators/irene', external: true },
+      { label: 'PRTS：艾丽妮', href: 'https://prts.wiki/w/%E8%89%BE%E4%B8%BD%E5%A6%AE', external: true },
+    ],
+  },
+  {
     id: 'irene-s1-levitation-timeline',
     selection: { operatorId: 'char_4009_irene', skillId: 'skchr_irene_1', skillIndex: 1, levelIndex: 9 },
     title: '浮遊の経過時間と打撃間の状態変化',

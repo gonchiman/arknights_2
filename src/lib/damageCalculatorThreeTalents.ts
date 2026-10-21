@@ -35,7 +35,7 @@ export interface DamageCalculatorThreeTalentOutput {
 /** Evaluate verified effects of this operator only; no descriptions or legacy formulas execute. */
 export function evaluateDamageCalculatorThreeTalents(input: {
   operator: SkillRecord; phaseIndex: number; operatorLevel: number
-  attackKind: 'NORMAL' | 'NEXT_ATTACK' | 'COUNTER'
+  attackKind: 'NORMAL' | 'NEXT_ATTACK' | 'COUNTER' | 'SKILL_ACTION'
   enemyAttackCapability?: 'MELEE_ONLY' | 'RANGED_CAPABLE'
   targetAirborne?: boolean
   seaMonsterPresent?: boolean

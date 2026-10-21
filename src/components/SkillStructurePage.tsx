@@ -112,7 +112,7 @@ function SkillStructureContent({ structure, activeTab, onTabChange }: {
           <td>{formatSkillStructurePredicate(stage.applicability, '追加条件なし')}</td>
           <td>{formatSkillStructureDuration(stage.duration)}</td>
           <td>{formatSkillStructureEndCondition(stage.endCondition)}</td>
-          {structure.effectStructure.targetSelection && <td>地上</td>}
+          {structure.effectStructure.targetSelection && <td>{structure.effectStructure.targetSelection.initialState === 'USER_DEFINED' ? '地上・飛行を選択' : '地上'}</td>}
         </tr>)}
       </StructureTable>
       {structure.effectStructure.modeTransitions && <>
@@ -198,7 +198,7 @@ function EffectDefinitionTable({ stage, effect }: { stage: SkillStructureStage; 
   const rows: [string, string | number][] = [
     ['段階', stage.label], ['タイミング', formatSkillStructureEffectTiming(effect.timing)],
     ...(condition ? [
-      ['条件の項目', condition.metric], ['条件の比較', condition.comparison], ['条件の値', condition.value],
+      ['条件の項目', condition.metric], ['条件の比較', condition.comparison], ['条件の値', String(condition.value)],
     ] as [string, string | number][] : [['条件', 'なし']] as [string, string][]),
     ['対象', formatSkillStructureEffectTarget(effect.target)],
     ['項目キー', effect.item], ['演算', effect.operation],

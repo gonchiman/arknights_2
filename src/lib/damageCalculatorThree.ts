@@ -69,21 +69,25 @@ export interface DamageCalculatorThreeConditions {
   enemyAttackCapability?: 'MELEE_ONLY' | 'RANGED_CAPABLE'
   targetCanBeLevitated?: boolean
   seaMonsterPresent?: boolean
+  targetWeight?: number
+  targetInitialState?: 'GROUND' | 'AIRBORNE'
+  splashTargetCount?: number
+  airborneHitCount?: number
 }
 
 export type DamageCalculatorThreeConditionInput = {
   kind: 'number'
-  metric: 'actualAttackTargetCount' | 'skillActivationCount' | 'enemyResistance'
+  metric: 'actualAttackTargetCount' | 'skillActivationCount' | 'enemyResistance' | 'targetWeight' | 'splashTargetCount' | 'airborneHitCount'
   label: string
   min: number
   max: number
-  defaultValue: number
+  defaultValue: number | null
   options?: readonly { value: number; label: string }[]
   control?: 'input'
   step?: number
 } | {
   kind: 'select'
-  metric: 'skillMode' | 'attackDistanceType' | 'enemyAttackCapability'
+  metric: 'skillMode' | 'attackDistanceType' | 'enemyAttackCapability' | 'targetInitialState'
   label: string
   options: readonly { value: string; label: string }[]
   defaultValue: string
@@ -125,6 +129,7 @@ export interface DamageCalculatorThreeAttackComponent {
   defenseIgnoreChance: number
   defenseIgnoreRatio: number
   expectedDamage: number
+  expectedHitCount: number
   attackPipeline: AttackPipelineBreakdown
   branches: ProbabilisticDamageBranch[]
 }
@@ -153,7 +158,7 @@ export interface DamageCalculatorThreeOutput {
   unsupportedReasons: string[]
   conditionInputs: DamageCalculatorThreeConditionInput[]
   actualTargetCount: number
-  maxTargetCount: number
+  maxTargetCount: number | null
   effects: DamageCalculatorThreeEffectEvaluation[]
   canShowDps: boolean
   dpsReason: string | null
@@ -161,8 +166,8 @@ export interface DamageCalculatorThreeOutput {
   attackSpeed: number | null
   attackInterval: number | null
   activeStageLabel: string | null
-  attackKind: 'NORMAL' | 'NEXT_ATTACK' | 'COUNTER'
-  attackLabel: '1攻撃' | '強化攻撃' | '反撃'
+  attackKind: 'NORMAL' | 'NEXT_ATTACK' | 'COUNTER' | 'SKILL_ACTION'
+  attackLabel: '1攻撃' | '強化攻撃' | '反撃' | 'スキル'
   attackDistanceType: 'MELEE' | 'RANGED'
   rangePenaltyMultiplier: number
   scopeNotes: string[]
@@ -174,7 +179,8 @@ export interface DamageCalculatorThreeOutput {
   damageOverTime: MaintainedDamageOverTime | null
   hasAttackSequence: boolean
   hasProbabilisticDamage: boolean
-  initialTargetState: 'GROUND' | null
+  initialTargetState: 'GROUND' | 'AIRBORNE' | null
+  hasRandomTargets: boolean
 }
 
 export function getDamageCalculatorThreeStructures(): SkillStructure[] {
@@ -195,14 +201,15 @@ export function getDamageCalculatorThreeInputs(
     if (stage.applicability) metrics.add(stage.applicability.metric)
     for (const effect of stage.effects) if (effect.condition) metrics.add(effect.condition.metric)
   }
-  for (const metric of metrics) if (!['actualAttackTargetCount', 'skillActivationCount', 'skillMode', 'attackDistanceType', 'targetCanBeLevitated'].includes(metric)) {
+  for (const metric of metrics) if (!['actualAttackTargetCount', 'skillActivationCount', 'skillMode', 'attackDistanceType', 'targetCanBeLevitated',
+    'targetWeight', 'targetInitialState', 'splashTargetCount', 'airborneHitCount'].includes(metric)) {
     throw new RangeError(`条件「${metric}」の入力にはまだ対応していません。`)
   }
   const base = DAMAGE_CALCULATOR_THREE_BASE_ATTACKS[structure.basicInfo.operatorId]
   if (!base) throw new RangeError('通常攻撃の基礎定義が未対応です。')
   const stage = selectStage(structure, context)
-  const attack = resolveAttack(stage, context, base)
-  if (attack.maxTargets > 1) metrics.add('actualAttackTargetCount')
+  const attack = resolveAttack(stage, context, base, structure.effectStructure.targetSelection?.maxTargets)
+  if (attack.maxTargets === null || attack.maxTargets > 1) metrics.add('actualAttackTargetCount')
   if (base.rangedAttackScale !== undefined && !attack.fixedTreatment) metrics.add('attackDistanceType')
   const inputs: DamageCalculatorThreeConditionInput[] = []
   if (metrics.has('skillActivationCount')) inputs.push({ kind: 'number', metric: 'skillActivationCount',
@@ -215,9 +222,25 @@ export function getDamageCalculatorThreeInputs(
   if (metrics.has('attackDistanceType') && attack.kind !== 'COUNTER') inputs.push({ kind: 'select', metric: 'attackDistanceType',
     label: '攻撃距離', options: [{ value: 'MELEE', label: '近接' }, { value: 'RANGED', label: '遠距離' }], defaultValue: 'MELEE' })
   if (metrics.has('actualAttackTargetCount')) inputs.push({ kind: 'number', metric: 'actualAttackTargetCount',
-    label: '実際の攻撃対象数', min: 1, max: attack.maxTargets, defaultValue: 1 })
+    label: attack.maxTargets === null ? '範囲内の敵数' : '実際の攻撃対象数', min: 1,
+    max: attack.maxTargets ?? Number.MAX_SAFE_INTEGER, defaultValue: 1,
+    ...(attack.maxTargets === null ? { control: 'input' as const, step: 1 } : {}) })
   if (metrics.has('targetCanBeLevitated')) inputs.push({ kind: 'boolean', metric: 'targetCanBeLevitated', label: '浮遊の適用',
     options: [{ value: true, label: '可能' }, { value: false, label: '無効' }], defaultValue: true })
+  if (metrics.has('targetInitialState')) inputs.push({ kind: 'select', metric: 'targetInitialState', label: '敵の初期状態',
+    options: [{ value: 'GROUND', label: '地上' }, { value: 'AIRBORNE', label: '飛行' }], defaultValue: 'GROUND' })
+  if (metrics.has('targetWeight')) inputs.push({ kind: 'number', metric: 'targetWeight', label: '敵の重量',
+    min: 0, max: Number.MAX_SAFE_INTEGER, defaultValue: 0, control: 'input', step: 1 })
+  if (metrics.has('splashTargetCount')) inputs.push({ kind: 'number', metric: 'splashTargetCount',
+    label: '砲撃1発の平均命中対象数', min: 1, max: context.actualAttackTargetCount, defaultValue: 1, control: 'input', step: 0.1 })
+  const lift = stage.effects.find(effect => effect.item === 'APPLY_STATUS')
+  if (metrics.has('airborneHitCount') && lift?.item === 'APPLY_STATUS' && lift.value.durationWeightScaling
+    && context.targetWeight > lift.value.durationWeightScaling.threshold && context.targetCanBeLevitated
+    && context.targetInitialState === 'GROUND') {
+    const bombardment = stage.effects.find(effect => effect.item === 'DIRECT_DAMAGE' && effect.value.targeting?.selection === 'RANDOM')
+    inputs.push({ kind: 'number', metric: 'airborneHitCount', label: '浮遊中に命中する砲撃数',
+      min: 0, max: bombardment?.item === 'DIRECT_DAMAGE' ? bombardment.value.count : 0, defaultValue: null, control: 'input', step: 1 })
+  }
   return inputs
 }
 
@@ -261,18 +284,18 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
     try {
       conditionInputs = getDamageCalculatorThreeInputs(structure, safeContext)
       stage = selectStage(structure, safeContext)
-      attack = resolveAttack(stage, safeContext, base)
+      attack = resolveAttack(stage, safeContext, base, structure.effectStructure.targetSelection?.maxTargets)
     } catch (error) {
       reasons.push(error instanceof Error ? error.message : '条件の入力を解決できません。')
     }
   }
-  const maxTargetCount = attack?.maxTargets ?? base?.maxTargets ?? 1
+  const maxTargetCount = attack ? attack.maxTargets : base?.maxTargets ?? 1
   const actualTargetCount = context.actualAttackTargetCount
-  if (Number.isSafeInteger(actualTargetCount) && actualTargetCount > maxTargetCount) {
+  if (maxTargetCount !== null && Number.isSafeInteger(actualTargetCount) && actualTargetCount > maxTargetCount) {
     reasons.push('実際の攻撃対象数は1〜' + maxTargetCount + '体の整数で指定してください。')
   }
   const attackKind = attack?.kind ?? 'NORMAL'
-  const attackLabel = attackKind === 'NEXT_ATTACK' ? '強化攻撃' : attackKind === 'COUNTER' ? '反撃' : '1攻撃'
+  const attackLabel = attackKind === 'NEXT_ATTACK' ? '強化攻撃' : attackKind === 'COUNTER' ? '反撃' : attackKind === 'SKILL_ACTION' ? 'スキル' : '1攻撃'
   const attackDistanceType = attack?.treatment ?? 'MELEE'
   const rangePenaltyMultiplier = attack?.rangePenaltyMultiplier ?? 1
   const counterCooldownSeconds = attackKind === 'COUNTER' ? attack?.action?.cooldownSeconds ?? null : null
@@ -280,7 +303,12 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   const effects: DamageCalculatorThreeEffectEvaluation[] = []
   const scopeNotes: string[] = []
   const hasAttackSequence = stage?.effects.some(effect => effect.item === 'DIRECT_DAMAGE') ?? false
-  const initialTargetState = hasAttackSequence && structure?.effectStructure.targetSelection?.initialState === 'GROUND' ? 'GROUND' : null
+  const initialTargetState = hasAttackSequence && structure?.effectStructure.targetSelection
+    ? structure.effectStructure.targetSelection.initialState === 'USER_DEFINED' ? context.targetInitialState : 'GROUND' : null
+  const hasRandomTargets = stage?.effects.some(effect => effect.item === 'DIRECT_DAMAGE' && effect.value.targeting?.selection === 'RANDOM') ?? false
+  if (structure?.effectStructure.targetSelection?.initialState === 'GROUND' && context.targetInitialState !== 'GROUND') {
+    reasons.push('このスキルの対象は地上の敵です。')
+  }
   const actionPlans: ResolvedDamageAction[] = []
   let talents = evaluateDamageCalculatorThreeTalents({ operator: input.operator,
     phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel, attackKind,
@@ -312,9 +340,19 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
       }
       effects.push(evaluation)
       if (!active) continue
+      if (effect.target === 'GROUND_ENEMIES_IN_ACTION_RANGE' && initialTargetState === 'AIRBORNE') {
+        evaluation.status = 'NOT_RELEVANT'
+        evaluation.reason = '地上の敵に対する効果です。'
+        continue
+      }
       if (!evaluatePredicate(effect.condition, effectiveContext)) {
         evaluation.status = 'CONDITION_FALSE'
         evaluation.reason = '条件不成立：' + formatSkillStructurePredicate(effect.condition)
+        continue
+      }
+      if (effect.item === 'APPLY_STATUS' && effect.value.maxWeight !== undefined && context.targetWeight > effect.value.maxWeight) {
+        evaluation.status = 'CONDITION_FALSE'
+        evaluation.reason = `対象の重量が${effect.value.maxWeight}を超えています。`
         continue
       }
       if (isOutsideDamageScope(effect)) {
@@ -344,12 +382,14 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
       } else if (effect.item === 'TRIGGERED_ATTACK' && effect.timing === 'ON_INCOMING_NORMAL_ATTACK'
         && effect.target === 'ENEMIES_IN_ACTION_RANGE' && attackKind === 'COUNTER') {
         // The action's count, target limit, treatment and cooldown stay together.
-      } else if (effect.item === 'DIRECT_DAMAGE' && effect.timing === 'ON_NEXT_NORMAL_ATTACK' && effect.target === 'ATTACK_TARGET'
+      } else if (effect.item === 'DIRECT_DAMAGE' && ['ON_NEXT_NORMAL_ATTACK', 'ON_STAGE_ENTER'].includes(String(effect.timing))
+        && ['ATTACK_TARGET', 'ENEMIES_IN_ACTION_RANGE', 'GROUND_ENEMIES_IN_ACTION_RANGE'].includes(effect.target)
         && Number.isFinite(effect.value.attackScale) && effect.value.attackScale >= 0
         && Number.isSafeInteger(effect.value.count) && effect.value.count > 0
         && ['PHYSICAL', 'ARTS', 'TRUE'].includes(effect.value.damageType)) {
         // Explicit actions replace the base attack's hit count, rather than multiply it.
-      } else if (effect.item === 'APPLY_STATUS' && effect.timing === 'ON_NEXT_NORMAL_ATTACK' && effect.target === 'ATTACK_TARGET'
+      } else if (effect.item === 'APPLY_STATUS' && ['ON_NEXT_NORMAL_ATTACK', 'ON_STAGE_ENTER'].includes(String(effect.timing))
+        && ['ATTACK_TARGET', 'ENEMIES_IN_ACTION_RANGE', 'GROUND_ENEMIES_IN_ACTION_RANGE'].includes(effect.target)
         && effect.value.statusId === 'LEVITATE' && Number.isFinite(effect.value.durationSeconds) && effect.value.durationSeconds > 0) {
         // The ordered action executor applies this state before dependent actions.
       } else {
@@ -365,25 +405,54 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
 
   if (hasAttackSequence && stage && reasons.length === 0) {
     try {
-      if (attackKind !== 'NEXT_ATTACK') throw new RangeError('一連の攻撃は次の通常攻撃1回に限り対応しています。')
+      if (attackKind !== 'NEXT_ATTACK' && attackKind !== 'SKILL_ACTION') throw new RangeError('この一連の攻撃の発動契機には対応していません。')
       if (initialTargetState === null) throw new RangeError('一連の攻撃の初期対象状態が未定義です。')
-      if (actualTargetCount !== 1) throw new RangeError('一連の攻撃は単一対象に限り対応しています。')
+      if (attackKind === 'NEXT_ATTACK' && actualTargetCount !== 1) throw new RangeError('次の通常攻撃の一連処理は単一対象に限り対応しています。')
       if (talents.hasDamageOverTime) throw new RangeError('一連の攻撃と継続ダメージを組み合わせる計算は未対応です。')
+      if (hasRandomTargets && (!Number.isFinite(context.splashTargetCount) || context.splashTargetCount < 1
+        || context.splashTargetCount > actualTargetCount)) throw new RangeError('砲撃1発の平均命中対象数は1以上、範囲内の敵数以下で指定してください。')
       let targetAirborne = initialTargetState !== 'GROUND'
-      for (const effect of orderStageEffects(stage.effects)) {
-        if (!evaluatePredicate(effect.condition, effectiveContext)) continue
-        if (effect.item === 'APPLY_STATUS') targetAirborne = true
-        if (effect.item !== 'DIRECT_DAMAGE') continue
+      const addDamageAction = (effect: Extract<SkillStructureEffect, { item: 'DIRECT_DAMAGE' }>, count: number,
+        airborne: boolean, label: string) => {
+        if (count === 0) return
         const actionTalents = evaluateDamageCalculatorThreeTalents({ operator: input.operator, phaseIndex: input.phaseIndex,
           operatorLevel: input.operatorLevel, attackKind, enemyAttackCapability: context.enemyAttackCapability,
-          targetAirborne, seaMonsterPresent: context.seaMonsterPresent })
+          targetAirborne: airborne, seaMonsterPresent: context.seaMonsterPresent })
         if (actionTalents.hasDamageOverTime) throw new RangeError('一連の攻撃と継続ダメージを組み合わせる計算は未対応です。')
         const pipeline = calculateAttackPipeline(stats.attack, {
           directMultiplierPercent: (atkRatio + actionTalents.attackRatio) * 100,
           attackScale: attackScale * effect.value.attackScale * rangePenaltyMultiplier,
         })
         if (!Number.isFinite(pipeline.finalAttack)) throw new RangeError('一連の攻撃の攻撃力を計算できません。')
-        actionPlans.push({ effect, targetAirborne, talents: actionTalents, pipeline })
+        actionPlans.push({ effect: { ...effect, value: { ...effect.value, count } }, targetAirborne: airborne,
+          talents: actionTalents, pipeline, label,
+          hitFactor: effect.value.targeting?.selection === 'RANDOM' ? context.splashTargetCount / actualTargetCount : 1 })
+      }
+      let lift: Extract<SkillStructureEffect, { item: 'APPLY_STATUS' }> | null = null
+      for (const effect of orderStageEffects(stage.effects)) {
+        if (!evaluatePredicate(effect.condition, effectiveContext)) continue
+        if (effect.target === 'GROUND_ENEMIES_IN_ACTION_RANGE' && initialTargetState === 'AIRBORNE') continue
+        if (effect.item === 'APPLY_STATUS') {
+          if (effect.value.maxWeight !== undefined && context.targetWeight > effect.value.maxWeight) continue
+          targetAirborne = true
+          lift = effect
+        }
+        if (effect.item !== 'DIRECT_DAMAGE') continue
+        if (effect.value.targeting?.selection !== 'RANDOM') {
+          addDamageAction(effect, effect.value.count, targetAirborne, attackKind === 'SKILL_ACTION' ? hasRandomTargets ? '初撃' : '範囲攻撃' : `第${actionPlans.length + 1}打撃`)
+          continue
+        }
+        let airborneCount = targetAirborne ? effect.value.count : 0
+        if (initialTargetState === 'GROUND' && targetAirborne && lift?.value.durationWeightScaling
+          && context.targetWeight > lift.value.durationWeightScaling.threshold) {
+          if (context.airborneHitCount === undefined || !Number.isSafeInteger(context.airborneHitCount)
+            || context.airborneHitCount < 0 || context.airborneHitCount > effect.value.count) {
+            throw new RangeError(`浮遊中に命中する砲撃数を0〜${effect.value.count}発の整数で指定してください。`)
+          }
+          airborneCount = context.airborneHitCount
+        }
+        addDamageAction(effect, airborneCount, true, '砲撃（空中）')
+        addDamageAction(effect, effect.value.count - airborneCount, false, '砲撃（地上）')
       }
       if (!actionPlans.length) throw new RangeError('一連の攻撃のダメージを解決できません。')
       if (actionPlans.some(plan => plan.effect.value.damageType !== damageType)) throw new RangeError('異なるダメージ属性を混ぜた一連の攻撃は未対応です。')
@@ -418,6 +487,11 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   } else if (attackKind === 'COUNTER') {
     dpsReason = '敵の通常攻撃を受ける頻度が未指定のため、反撃DPSは表示しません。'
     scopeNotes.push('敵の通常攻撃を受けた時の反撃1回分です。最短再発動間隔を通常攻撃の間隔としては使用しません。')
+  } else if (attackKind === 'SKILL_ACTION') {
+    dpsReason = 'スキル発動1回の総ダメージです。発動動作の時間やSP回復を含むDPSは計算しません。'
+    scopeNotes.push('1回の発動が完了するまで、対象の数・防御力・重量・浮遊可否が変わらず、途中で倒れない条件です。')
+    if (hasRandomTargets) scopeNotes.push('砲撃1発の平均命中対象数を全12発へ適用します。1体平均は全対象の総ダメージを範囲内の敵数で割った値で、特定の1体の被弾確率を示すものではありません。',
+      '重量3を超える地上の敵は、浮遊中に命中する砲撃数を入力します。砲撃間隔だけから初回命中時刻を推定しません。')
   }
   if (stage?.effects.some(effect => effect.item === 'HP_LOSS_RATE')) {
     scopeNotes.push('HP減少の詳細、継続時間、退場までの総ダメージは計算対象外です。')
@@ -429,7 +503,7 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   const canShowDps = unsupportedReasons.length === 0 && dpsReason === null
   const duration = stage?.duration.type === 'FIXED_SECONDS' ? stage.duration.seconds : 0
   // Counter frequency cannot be derived from the operator's normal interval.
-  const attackInterval = attackKind === 'COUNTER' ? null : normalInterval
+  const attackInterval = attackKind === 'COUNTER' || attackKind === 'SKILL_ACTION' ? null : normalInterval
   const model: SkillModelDefaults | null = unsupportedReasons.length === 0 && base ? {
     directMultiplierPercent: atkRatio * 100, attackScalePercent: attackScale * 100,
     hitCount: hasAttackSequence ? actionPlans.reduce((sum, plan) => sum + plan.effect.value.count, 0)
@@ -442,7 +516,7 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   }) : null
   const effectiveAttack = hasAttackSequence ? null : attackPipeline?.finalAttack ?? null
   const damageOverTime = model && talents.damageOverTimeRate ? calculateMaintainedDamageOverTime(talents.damageOverTimeRate, {
-    enemyResistance: context.enemyResistance, actualTargetCount, attackInterval, attackKind,
+    enemyResistance: context.enemyResistance, actualTargetCount, attackInterval, attackKind: attackKind === 'SKILL_ACTION' ? 'NEXT_ATTACK' : attackKind,
   }) : null
   const rows: DamageCalculatorThreeRow[] = model && attackPipeline && damageType
     ? getDamageSensitivityTablePoints(damageType, hasAttackSequence ? actionPlans.map(plan => plan.pipeline.finalAttack * 0.95) : [attackPipeline.finalAttack * 0.95]).map(axisValue => {
@@ -453,9 +527,11 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
             damageType: plan.effect.value.damageType, enemyDefense: damageType === 'PHYSICAL' ? axisValue : 0,
             enemyResistance: damageType === 'ARTS' ? axisValue : 0, chance: proc.chance, ratio: proc.ratio,
             count: plan.effect.value.count, resistanceIgnoreFixed: plan.talents.resistanceIgnoreFixed })
-          return { id: plan.effect.id, label: `第${index + 1}打撃`, order: index + 1, damageType: plan.effect.value.damageType,
+          return { id: plan.effect.value.targeting?.selection === 'RANDOM' ? `${plan.effect.id}/${plan.targetAirborne ? 'air' : 'ground'}` : plan.effect.id,
+            label: plan.label, order: index + 1, damageType: plan.effect.value.damageType,
             attackScale: plan.effect.value.attackScale, count: plan.effect.value.count, targetAirborne: plan.targetAirborne,
-            defenseIgnoreChance: proc.chance, defenseIgnoreRatio: proc.ratio, expectedDamage: weighted.expectedDamage,
+            defenseIgnoreChance: proc.chance, defenseIgnoreRatio: proc.ratio, expectedDamage: weighted.expectedDamage * plan.hitFactor,
+            expectedHitCount: plan.effect.value.count * plan.hitFactor,
             attackPipeline: plan.pipeline, branches: weighted.branches }
         })
         const perAttack = attackComponents.reduce((sum, component) => sum + component.expectedDamage, 0)
@@ -493,16 +569,16 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
     damageOverTime, hasAttackSequence, hasProbabilisticDamage: actionPlans.some(plan => {
       const chance = plan.talents.defenseIgnore?.chance ?? 0
       return chance > 0 && chance < 1
-    }), initialTargetState }
+    }) || hasRandomTargets, initialTargetState, hasRandomTargets }
 }
 
-type ConditionContext = Required<DamageCalculatorThreeConditions>
+type ConditionContext = Omit<Required<DamageCalculatorThreeConditions>, 'airborneHitCount'> & { airborneHitCount?: number }
 type BaseAttack = (typeof DAMAGE_CALCULATOR_THREE_BASE_ATTACKS)[string]
 interface ResolvedAttack {
   kind: DamageCalculatorThreeOutput['attackKind']
   treatment: 'MELEE' | 'RANGED'
   fixedTreatment: boolean
-  maxTargets: number
+  maxTargets: number | null
   rangePenaltyMultiplier: number
   action: SkillStructureAttackAction | null
 }
@@ -512,6 +588,8 @@ interface ResolvedDamageAction {
   targetAirborne: boolean
   talents: DamageCalculatorThreeTalentOutput
   pipeline: AttackPipelineBreakdown
+  hitFactor: number
+  label: string
 }
 
 /** Dependencies enforce processing order even when a preceding status fails its condition. */
@@ -559,6 +637,10 @@ function resolveConditions(conditions: DamageCalculatorThreeConditions = {}): Co
     enemyAttackCapability: conditions.enemyAttackCapability ?? 'MELEE_ONLY',
     targetCanBeLevitated: conditions.targetCanBeLevitated ?? true,
     seaMonsterPresent: conditions.seaMonsterPresent ?? false,
+    targetWeight: conditions.targetWeight ?? 0,
+    targetInitialState: conditions.targetInitialState ?? 'GROUND',
+    splashTargetCount: conditions.splashTargetCount ?? 1,
+    airborneHitCount: conditions.airborneHitCount,
   }
 }
 
@@ -572,6 +654,8 @@ function validateConditions(context: ConditionContext): string[] {
   }
   if (!['INITIAL', 'ALTERNATE'].includes(context.skillMode)) reasons.push('スキルの状態を選択してください。')
   if (!['MELEE', 'RANGED'].includes(context.attackDistanceType)) reasons.push('攻撃距離を選択してください。')
+  if (!Number.isSafeInteger(context.targetWeight) || context.targetWeight < 0) reasons.push('敵の重量は0以上の整数で指定してください。')
+  if (!['GROUND', 'AIRBORNE'].includes(context.targetInitialState)) reasons.push('敵の初期状態を選択してください。')
   return reasons
 }
 
@@ -585,8 +669,8 @@ function selectStage(structure: SkillStructure, context: ConditionContext): Skil
   return stages[0]
 }
 
-function resolveAttack(stage: SkillStructureStage, context: ConditionContext, base: BaseAttack): ResolvedAttack {
-  let normalEnabled = true, maxTargets = base.maxTargets
+function resolveAttack(stage: SkillStructureStage, context: ConditionContext, base: BaseAttack, maximum?: number | null): ResolvedAttack {
+  let normalEnabled = true, maxTargets: number | null = maximum === undefined ? base.maxTargets : maximum
   let penaltyEnabled = true
   let treatment: 'MELEE' | 'RANGED' | null = null
   let nextAttack = stage.duration.type === 'SINGLE_ATTACK'
@@ -610,7 +694,12 @@ function resolveAttack(stage: SkillStructureStage, context: ConditionContext, ba
       actions.push(action)
     }
   }
-  if (!Number.isSafeInteger(maxTargets) || maxTargets < 1) throw new RangeError('対象数上限の設定を解決できません。')
+  if (maxTargets !== null && (!Number.isSafeInteger(maxTargets) || maxTargets < 1)) throw new RangeError('対象数上限の設定を解決できません。')
+  if (stage.duration.type === 'SKILL_ACTION') {
+    if (actions.length) throw new RangeError('即時スキルと反撃を組み合わせる計算は未対応です。')
+    return { kind: 'SKILL_ACTION', treatment: treatment ?? 'MELEE', fixedTreatment: true,
+      maxTargets, action: null, rangePenaltyMultiplier: 1 }
+  }
   if (actions.length > 1 || (actions.length && normalEnabled)) {
     throw new RangeError('通常攻撃と独立した追加攻撃を組み合わせる計算にはまだ対応していません。')
   }
@@ -634,7 +723,8 @@ function resolveAttack(stage: SkillStructureStage, context: ConditionContext, ba
 
 function evaluatePredicate(predicate: SkillStructurePredicate | null, context: ConditionContext): boolean {
   if (!predicate) return true
-  if (!['actualAttackTargetCount', 'skillActivationCount', 'skillMode', 'attackDistanceType', 'targetCanBeLevitated'].includes(predicate.metric)) {
+  if (!['actualAttackTargetCount', 'skillActivationCount', 'skillMode', 'attackDistanceType', 'targetCanBeLevitated',
+    'targetWeight', 'targetInitialState', 'splashTargetCount', 'airborneHitCount'].includes(predicate.metric)) {
     throw new RangeError('条件「' + String(predicate.metric) + '」は未対応です。')
   }
   const actual = context[predicate.metric]

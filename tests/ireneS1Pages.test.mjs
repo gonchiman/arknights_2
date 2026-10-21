@@ -161,7 +161,7 @@ test('順序付き攻撃の使用値に単一倍率・単一pipeline・通常2�
   assert.deepEqual(values.find(values => values[0] === '基礎攻撃力'), ['基礎攻撃力', '701'])
 })
 
-test('未対応S2/S3や別レベルにS1特化3の出力を代用しない', () => {
+test('行データがないS2/S3や別レベルにS1特化3の出力を代用しない', () => {
   for (const initialSelection of [
     { ...selection, skillIndex: 2, skillId: 'skchr_irene_2' },
     { ...selection, skillIndex: 3, skillId: 'skchr_irene_3' },

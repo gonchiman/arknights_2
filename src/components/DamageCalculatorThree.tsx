@@ -169,9 +169,9 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
             <span>{input.label}</span>
             {input.kind === 'number' && input.control === 'input' ? <input type="number" aria-label={input.label}
               min={input.min} max={input.max} step={input.step ?? 1}
-              value={Number.isFinite(conditions[input.metric] ?? input.defaultValue) ? conditions[input.metric] ?? input.defaultValue : ''}
+              value={Number.isFinite(conditions[input.metric] ?? input.defaultValue) ? conditions[input.metric] ?? input.defaultValue ?? '' : ''}
               onChange={event => setConditions(previous => ({ ...previous, [input.metric]: event.target.valueAsNumber }))} />
-              : <select aria-label={input.label} value={input.kind === 'boolean' ? String(conditions[input.metric] ?? input.defaultValue) : conditions[input.metric] ?? input.defaultValue}
+              : <select aria-label={input.label} value={input.kind === 'boolean' ? String(conditions[input.metric] ?? input.defaultValue) : conditions[input.metric] ?? input.defaultValue ?? ''}
               onChange={event => setConditions(previous => ({ ...previous,
                 [input.metric]: input.kind === 'number' ? Number(event.target.value) : input.kind === 'boolean' ? event.target.value === 'true' : event.target.value,
               }))}>
@@ -181,11 +181,11 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
                 }))).map(option => <option key={String(option.value)} value={String(option.value)}>{option.label}</option>)}
             </select>}
           </label>)}
-          {output.initialTargetState === 'GROUND' && <div className="calculator-field"><span>敵の初期状態</span>
+            {output.initialTargetState === 'GROUND' && !output.conditionInputs.some(input => input.metric === 'targetInitialState') && <div className="calculator-field"><span>敵の初期状態</span>
             <div className="damage-three-fixed-value">地上</div></div>}
           {!output.conditionInputs.some(input => input.metric === 'actualAttackTargetCount') && <div className="calculator-field"><span>実際の攻撃対象数</span>
             <div className="damage-three-fixed-value">{output.actualTargetCount}体</div></div>}
-          <div className="calculator-field"><span>対象数上限</span><div className="damage-three-fixed-value">{output.maxTargetCount}体</div></div>
+          <div className="calculator-field"><span>対象数上限</span><div className="damage-three-fixed-value">{output.maxTargetCount === null ? '上限なし' : `${output.maxTargetCount}体`}</div></div>
           <div className="calculator-field"><span>ダメージ種別</span><div className="damage-three-fixed-value">
             {output.damageType ? DAMAGE_TYPE_LABELS[output.damageType] : '未確定'}</div></div>
         </div>
@@ -215,6 +215,7 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
           {operator?.operatorName} · S{structure?.basicInfo.skillIndex} {structure?.basicInfo.skillLevel} · 攻撃対象{output.actualTargetCount}体
           {output.activeStageLabel && output.activeStageLabel !== '通常' && <> · {output.activeStageLabel}</>}
           {output.initialTargetState === 'GROUND' && <> · 地上の敵</>}
+          {output.initialTargetState === 'AIRBORNE' && <> · 飛行の敵</>}
           {output.damageOverTime && <> · 敵の術耐性{output.damageOverTime.enemyResistance}
             {output.canShowDps && output.damageOverTime.steadyDps !== null && <> · 同一対象へ連続攻撃</>}</>}
           {output.hasUnsupportedTalentDamage && <> · 直接攻撃分（継続ダメージを除く）</>}
@@ -251,11 +252,11 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
 
 export function DamageCalculatorThreeResultTable({ output, precision }: { output: DamageCalculatorThreeOutput; precision: number }) {
   const format = resultNumberFormatter(precision)
-  const damageLabel = `${output.attackKind === 'NORMAL' ? '1攻撃ダメージ' : `${output.attackLabel}1回のダメージ`}${output.hasProbabilisticDamage ? '期待値' : ''}`
+  const damageLabel = `${output.attackKind === 'NORMAL' ? '1攻撃ダメージ' : output.attackKind === 'SKILL_ACTION' ? 'スキル1回の総ダメージ' : `${output.attackLabel}1回のダメージ`}${output.hasProbabilisticDamage ? '期待値' : ''}`
   return <div className="damage-two-table-wrap" tabIndex={0} role="region" aria-label="計算機３のダメージ計算結果">
     <table className={`damage-two-table damage-three-result-table${output.canShowDps ? '' : ' damage-three-single-attack-table'}`}>
       <caption className="visually-hidden">{output.hasUnsupportedTalentDamage && '直接攻撃分（継続ダメージを除く）：'}敵の防御性能別の1体・全対象の{output.canShowDps ? 'ダメージとDPS' : damageLabel}</caption>
-      <thead><tr><th scope="col">{output.axisLabel}</th><th scope="col">1体への<br />{damageLabel}</th>
+      <thead><tr><th scope="col">{output.axisLabel}</th><th scope="col">{output.hasRandomTargets ? '1体平均の' : '1体への'}<br />{damageLabel}</th>
         {output.canShowDps && <th scope="col">1体への<br />DPS</th>}
         <th scope="col">全対象の<br />{damageLabel}</th>{output.canShowDps && <th scope="col">全対象の<br />DPS</th>}</tr></thead>
       <tbody>{output.rows.map(row => <tr key={row.axisValue}>
@@ -271,13 +272,16 @@ export function DamageCalculatorThreeResultTable({ output, precision }: { output
 export function DamageCalculatorThreeAttackComponentTable({ output, precision }: { output: DamageCalculatorThreeOutput; precision: number }) {
   if (!output.hasAttackSequence) return null
   const format = resultNumberFormatter(precision)
+  const skillAction = output.attackKind === 'SKILL_ACTION'
   return <div className="damage-two-table-wrap" tabIndex={0} role="region" aria-label="順序付き攻撃の内訳">
-    <table className="damage-two-table damage-three-attack-component-table">
+    <table className={`damage-two-table damage-three-attack-component-table${skillAction ? ' damage-three-skill-action-components' : ''}`}>
       <caption className="visually-hidden">順序付き攻撃の内訳</caption>
-      <thead><tr><th scope="col">{output.axisLabel}</th><th scope="col">攻撃順</th><th scope="col">命中時状態</th>
-        <th scope="col">防御無視の確率</th><th scope="col">ダメージ期待値</th></tr></thead>
+      <thead><tr><th scope="col">{output.axisLabel}</th><th scope="col">{skillAction ? '区分' : '攻撃順'}</th>
+        {skillAction && <><th scope="col">打撃回数</th><th scope="col">1体平均の命中回数</th></>}<th scope="col">命中時状態</th>
+        <th scope="col">防御無視の確率</th><th scope="col">{output.hasRandomTargets ? '1体平均のダメージ期待値' : 'ダメージ期待値'}</th></tr></thead>
       <tbody>{output.rows.flatMap(row => row.attackComponents.map(component => <tr key={`${row.axisValue}/${component.id}`}>
-        <th scope="row">{formatCompact(row.axisValue)}</th><td>{component.order}</td>
+        <th scope="row">{formatCompact(row.axisValue)}</th><td>{skillAction ? component.label : component.order}</td>
+        {skillAction && <><td>{component.count}</td><td>{formatCompact(component.expectedHitCount)}</td></>}
         <td>{component.targetAirborne ? output.initialTargetState === 'GROUND' ? '浮遊' : '空中' : '地上'}</td><td>{formatProbability(component.defenseIgnoreChance)}</td>
         <td>{format(component.expectedDamage)}</td>
       </tr>))}</tbody>
@@ -363,7 +367,7 @@ function UsedValueTable({ output }: { output: DamageCalculatorThreeOutput }) {
       ['軽減前の攻撃ダメージ', output.effectiveAttack === null ? '—' : formatCompact(output.effectiveAttack)] as [string, ReactNode],
       ['特性による遠距離倍率', `×${formatCompact(output.rangePenaltyMultiplier)}`] as [string, ReactNode],
     ] : []),
-    ...(output.attackKind === 'COUNTER' ? [
+    ...(output.attackKind === 'SKILL_ACTION' ? [] : output.attackKind === 'COUNTER' ? [
       ['反撃の最短再発動間隔', output.counterCooldownSeconds === null ? '—' : `${formatCompact(output.counterCooldownSeconds)}秒`] as [string, ReactNode],
     ] : [
       ['攻撃速度', output.attackSpeed === null ? '—' : formatCompact(output.attackSpeed)] as [string, ReactNode],

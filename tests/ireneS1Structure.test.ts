@@ -28,13 +28,17 @@ function skill() {
   return value
 }
 
-test('アイリーニはS1特化3だけを登録し、別スキル・別段階へ検証済み構造を代用しない', () => {
+test('アイリーニS1特化3を登録し、別スキルの構造へすり替えず別段階へ代用しない', () => {
   const structure = skill()
   assert.equal(structure.basicInfo.operatorName, 'アイリーニ')
   assert.equal(structure.basicInfo.skillName, '舞風')
   assert.deepEqual(getSkillStructureLevelIndices(selection), [9])
   for (const levelIndex of [0, 8, 10]) assert.equal(findSkillStructure({ ...selection, levelIndex }), null)
-  for (const skillIndex of [2, 3]) assert.equal(findSkillStructure({ ...selection, skillIndex, skillId: `skchr_irene_${skillIndex}` }), null)
+  for (const skillIndex of [2, 3]) {
+    const other = findSkillStructure({ ...selection, skillIndex, skillId: `skchr_irene_${skillIndex}` })
+    assert.ok(other)
+    assert.notEqual(other.basicInfo.skillId, structure.basicInfo.skillId)
+  }
 })
 
 test('S1の説明・倍率・浮遊秒数・SP設定を保存済みJP原典と独立に照合する', () => {

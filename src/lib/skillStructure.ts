@@ -4,8 +4,9 @@ import { SKILL_DIRECTORY_SP_TYPE_LABELS } from './skillDirectory.ts'
 
 export type SkillStructureComparison = 'EQ' | 'NE' | 'GT' | 'GTE' | 'LT' | 'LTE'
 export type SkillStructureNumericMetric = 'skillActivationCount' | 'actualAttackTargetCount'
+  | 'targetWeight' | 'splashTargetCount' | 'airborneHitCount'
 export type SkillStructureMode = 'INITIAL' | 'ALTERNATE'
-export type SkillStructureInputMetric = SkillStructureNumericMetric | 'skillMode' | 'targetCanBeLevitated'
+export type SkillStructureInputMetric = SkillStructureNumericMetric | 'skillMode' | 'targetCanBeLevitated' | 'targetInitialState'
 
 /** Conditions remain machine-readable; labels are derived only when displayed. */
 export type SkillStructurePredicate =
@@ -18,6 +19,7 @@ export type SkillStructureDuration =
   | { readonly type: 'FIXED_SECONDS'; readonly seconds: number }
   | { readonly type: 'UNTIL_EXIT' }
   | { readonly type: 'SINGLE_ATTACK' }
+  | { readonly type: 'SKILL_ACTION' }
   | { readonly type: 'UNTIL_MODE_CHANGE' }
 
 export type SkillStructureEndCondition =
@@ -29,7 +31,7 @@ export type SkillStructureEndCondition =
 export type SkillStructureEffectTiming = 'WHILE_STAGE_ACTIVE' | 'ON_ATTACK' | 'ON_NEXT_NORMAL_ATTACK'
   | 'ON_STAGE_ENTER' | 'ON_ATTACK_DEFEAT' | 'ON_INCOMING_NORMAL_ATTACK'
   | { readonly type: 'PERIODIC'; readonly intervalSeconds: number }
-export type SkillStructureEffectTarget = 'SELF' | 'SELF_ATTACK' | 'ENEMIES_IN_ACTION_RANGE' | 'ATTACK_TARGET'
+export type SkillStructureEffectTarget = 'SELF' | 'SELF_ATTACK' | 'ENEMIES_IN_ACTION_RANGE' | 'GROUND_ENEMIES_IN_ACTION_RANGE' | 'ATTACK_TARGET'
 export type SkillStructureEffectOperation = 'ADD_RATIO' | 'ADD_VALUE' | 'EXTEND_FORWARD' | 'REPLACE' | 'SET' | 'MULTIPLY' | 'SET_ENABLED'
   | 'FILL_RESOURCE' | 'RESTORE' | 'INCREASE_TO_CAP' | 'EXECUTE_ATTACK' | 'DEAL_DAMAGE' | 'APPLY_STATUS'
 
@@ -77,9 +79,13 @@ export type SkillStructureEffect = SkillStructureEffectBase & (
   | { readonly item: 'TRIGGERED_ATTACK'; readonly operation: 'EXECUTE_ATTACK'; readonly value: SkillStructureAttackAction; readonly unit: 'ATTACK_ACTION' }
   | { readonly item: 'DIRECT_DAMAGE'; readonly operation: 'DEAL_DAMAGE'; readonly value: {
       readonly damageType: DamageType; readonly attackScale: number; readonly count: number
+      readonly targeting?: { readonly selection: 'ALL' | 'RANDOM'; readonly splashRadius?: number }
+      readonly intervalSeconds?: number
     }; readonly unit: 'DAMAGE_ACTION' }
   | { readonly item: 'APPLY_STATUS'; readonly operation: 'APPLY_STATUS'; readonly value: {
       readonly statusId: 'LEVITATE'; readonly durationSeconds: number
+      readonly maxWeight?: number
+      readonly durationWeightScaling?: { readonly threshold: number; readonly multiplier: number }
     }; readonly unit: 'STATUS_APPLICATION' }
 )
 
@@ -118,7 +124,7 @@ export interface SkillStructure {
     readonly activationTrigger: 'MANUAL_INPUT' | 'SP_FULL' | 'ON_DEPLOY' | 'NEXT_NORMAL_ATTACK'
   }
   readonly effectStructure: {
-    readonly targetSelection?: { readonly initialState: 'GROUND' }
+    readonly targetSelection?: { readonly initialState: 'GROUND' | 'USER_DEFINED'; readonly maxTargets?: number | null }
     readonly stages: readonly SkillStructureStage[]
     readonly relations?: readonly {
       readonly type: 'BONUS_VALUE_RELATION'
@@ -178,6 +184,9 @@ const PREDICATE_METRIC_LABELS = {
   attackDistanceType: '攻撃距離',
   skillMode: '状態',
   targetCanBeLevitated: '浮遊の適用',
+  targetWeight: '敵の重量ランク',
+  splashTargetCount: '砲撃1発の命中対象数',
+  airborneHitCount: '浮遊中の砲撃数',
 } satisfies Record<SkillStructurePredicate['metric'], string>
 
 const COMPARISON_LABELS = {
@@ -198,7 +207,7 @@ export function formatSkillStructurePredicate(
 
 export function formatSkillStructureDuration(duration: SkillStructureDuration): string {
   if (duration.type === 'FIXED_SECONDS') return `${formatNumber(duration.seconds)}秒`
-  return { UNTIL_EXIT: '時間制限なし', SINGLE_ATTACK: '通常攻撃1回', UNTIL_MODE_CHANGE: '次の状態切替まで' }[duration.type]
+  return { UNTIL_EXIT: '時間制限なし', SINGLE_ATTACK: '通常攻撃1回', SKILL_ACTION: 'スキル発動1回', UNTIL_MODE_CHANGE: '次の状態切替まで' }[duration.type]
 }
 
 export function formatSkillStructureEndCondition(condition: SkillStructureEndCondition): string {
@@ -231,7 +240,8 @@ export function formatSkillStructureEffectTiming(timing: SkillStructureEffectTim
 }
 
 export function formatSkillStructureEffectTarget(target: SkillStructureEffectTarget): string {
-  return { SELF: '自身', SELF_ATTACK: '自身の攻撃', ENEMIES_IN_ACTION_RANGE: '反撃範囲内の敵', ATTACK_TARGET: '攻撃対象の敵' }[target]
+  return { SELF: '自身', SELF_ATTACK: '自身の攻撃', ENEMIES_IN_ACTION_RANGE: '作用範囲内の敵',
+    GROUND_ENEMIES_IN_ACTION_RANGE: '作用範囲内の地上の敵', ATTACK_TARGET: '攻撃対象の敵' }[target]
 }
 
 export function formatSkillStructureEffectItem(item: SkillStructureEffect['item']): string {
@@ -291,9 +301,17 @@ export function getSkillStructureEffectValueRows(effect: SkillStructureEffect): 
   if (effect.unit === 'DAMAGE_ACTION') return [
     ['ダメージ種別', { PHYSICAL: '物理', ARTS: '術', TRUE: '確定' }[effect.value.damageType]],
     ['攻撃倍率', effect.value.attackScale], ['打撃回数', effect.value.count],
+    ...(effect.value.targeting ? [['対象の選び方', effect.value.targeting.selection === 'ALL' ? '全て' : 'ランダム'] as [string, string]] : []),
+    ...(effect.value.targeting?.splashRadius !== undefined ? [['範囲半径（マス）', effect.value.targeting.splashRadius] as [string, number]] : []),
+    ...(effect.value.intervalSeconds !== undefined ? [['打撃間隔（秒）', effect.value.intervalSeconds] as [string, number]] : []),
   ]
   if (effect.unit === 'STATUS_APPLICATION') return [
     ['状態', '浮遊'], ['持続時間（秒）', effect.value.durationSeconds],
+    ...(effect.value.maxWeight !== undefined ? [['重量ランクの上限', effect.value.maxWeight] as [string, number]] : []),
+    ...(effect.value.durationWeightScaling ? [
+      ['時間短縮の重量境界（超過時）', effect.value.durationWeightScaling.threshold] as [string, number],
+      ['境界超過時の時間倍率', effect.value.durationWeightScaling.multiplier] as [string, number],
+    ] : []),
   ]
   if (effect.unit === 'HP_LOSS_PROFILE') return [
     ['基準', '最大HP'], ['減少率の上限（毎秒）', effect.value.maxRatioPerSecond],
@@ -350,6 +368,80 @@ export const SKILL_STRUCTURES: readonly SkillStructure[] = [
       rawDescription: '次の通常攻撃時、対象に攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、<@ba.vup>{levitate}</>秒間<$ba.levitate>浮遊</>させ、さらに追加で攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与える',
       blackboard: [{ key: 'atk_scale', value: 2, valueStr: null }, { key: 'levitate', value: 1, valueStr: null }],
       rangeId: null, duration: 0,
+    }, notes: [],
+  },
+  {
+    basicInfo: { operatorId: 'char_4009_irene', operatorName: 'アイリーニ', skillId: 'skchr_irene_2',
+      skillIndex: 2, skillName: '裂潮', skillLevel: '特化3', levelIndex: 9 },
+    classificationInfo: { coarseCategories: ['BURST'] },
+    activationSettings: { spRecovery: 'INCREASE_WHEN_ATTACK', initialSp: 6, spCost: 8,
+      maxCharges: 2, activationMethod: 'MANUAL', activationTrigger: 'MANUAL_INPUT' },
+    effectStructure: { targetSelection: { initialState: 'GROUND', maxTargets: 6 },
+      inputRequirements: ['actualAttackTargetCount', 'targetCanBeLevitated', 'targetWeight'], stages: [{
+        id: 'skill-action', label: 'スキル発動', applicability: null,
+        duration: { type: 'SKILL_ACTION' }, endCondition: { type: 'ATTACK_RESOLVED' },
+        effects: [
+          { id: 'range', timing: 'WHILE_STAGE_ACTIVE', condition: null, target: 'SELF_ATTACK',
+            item: 'ATTACK_RANGE', operation: 'REPLACE', value: { rangeId: '3-12' }, unit: 'RANGE_DEFINITION', sourceBinding: 'rangeId' },
+          { id: 'targets', timing: 'WHILE_STAGE_ACTIVE', condition: null, target: 'SELF_ATTACK',
+            item: 'MAX_TARGETS', operation: 'SET', value: 6, unit: 'ENEMY', sourceBinding: 'max_target' },
+          // The actual effect order checks the airborne talent on the initial hit as well.
+          // https://arknights.wiki.gg/wiki/Irene#Additional_information
+          { id: 'lift', timing: 'ON_STAGE_ENTER', condition: { metric: 'targetCanBeLevitated', comparison: 'EQ', value: true },
+            target: 'ENEMIES_IN_ACTION_RANGE', item: 'APPLY_STATUS', operation: 'APPLY_STATUS',
+            value: { statusId: 'LEVITATE', durationSeconds: 4, maxWeight: 3 }, unit: 'STATUS_APPLICATION',
+            sourceBinding: 'levitate', parameterBindings: { maxWeight: 'value' } },
+          { id: 'initial-damage', timing: 'ON_STAGE_ENTER', condition: null, target: 'ENEMIES_IN_ACTION_RANGE',
+            item: 'DIRECT_DAMAGE', operation: 'DEAL_DAMAGE',
+            value: { damageType: 'PHYSICAL', attackScale: 4, count: 1, targeting: { selection: 'ALL' } },
+            unit: 'DAMAGE_ACTION', sourceBinding: 'atk_scale', afterEffects: ['lift'] },
+        ],
+      }] },
+    source: {
+      description: '前方一定範囲内の地面にいる敵最大6体に攻撃力の400%の物理ダメージを与え、その内重量ランクが3以下の敵を4秒間浮遊させる\n2回チャージ可能',
+      rawDescription: '前方一定範囲内の地面にいる敵最大<@ba.vup>{max_target}</>体に攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、その内重量ランクが3以下の敵を<@ba.vup>{levitate}</>秒間<$ba.levitate>浮遊</>させる\n<@ba.rem>2回チャージ可能</>',
+      blackboard: [{ key: 'atk_scale', value: 4, valueStr: null }, { key: 'levitate', value: 4, valueStr: null },
+        { key: 'max_target', value: 6, valueStr: null }, { key: 'value', value: 3, valueStr: null }],
+      rangeId: '3-12', duration: 0,
+    }, notes: [],
+  },
+  {
+    basicInfo: { operatorId: 'char_4009_irene', operatorName: 'アイリーニ', skillId: 'skchr_irene_3',
+      skillIndex: 3, skillName: '判決', skillLevel: '特化3', levelIndex: 9 },
+    classificationInfo: { coarseCategories: ['BURST'] },
+    activationSettings: { spRecovery: 'INCREASE_WHEN_ATTACK', initialSp: 16, spCost: 24,
+      maxCharges: 1, activationMethod: 'MANUAL', activationTrigger: 'MANUAL_INPUT' },
+    effectStructure: { targetSelection: { initialState: 'USER_DEFINED', maxTargets: null },
+      inputRequirements: ['actualAttackTargetCount', 'targetCanBeLevitated', 'targetWeight', 'splashTargetCount', 'airborneHitCount', 'targetInitialState'], stages: [{
+        id: 'skill-action', label: 'スキル発動', applicability: null,
+        duration: { type: 'SKILL_ACTION' }, endCondition: { type: 'ATTACK_RESOLVED' },
+        effects: [
+          { id: 'range', timing: 'WHILE_STAGE_ACTIVE', condition: null, target: 'SELF_ATTACK',
+            item: 'ATTACK_RANGE', operation: 'REPLACE', value: { rangeId: 'x-1' }, unit: 'RANGE_DEFINITION', sourceBinding: 'rangeId' },
+          // As in S1/S2, levitation is applied before the initial damage checks the talent.
+          // https://arknights.wiki.gg/wiki/Irene#Additional_information
+          { id: 'lift', timing: 'ON_STAGE_ENTER', condition: { metric: 'targetCanBeLevitated', comparison: 'EQ', value: true },
+            target: 'GROUND_ENEMIES_IN_ACTION_RANGE', item: 'APPLY_STATUS', operation: 'APPLY_STATUS',
+            value: { statusId: 'LEVITATE', durationSeconds: 4, durationWeightScaling: { threshold: 3, multiplier: 0.5 } },
+            unit: 'STATUS_APPLICATION', sourceBinding: 'levitate' },
+          { id: 'initial-damage', timing: 'ON_STAGE_ENTER', condition: null, target: 'GROUND_ENEMIES_IN_ACTION_RANGE',
+            item: 'DIRECT_DAMAGE', operation: 'DEAL_DAMAGE',
+            value: { damageType: 'PHYSICAL', attackScale: 3, count: 1, targeting: { selection: 'ALL' } },
+            unit: 'DAMAGE_ACTION', sourceBinding: 'atk_scale', afterEffects: ['lift'] },
+          { id: 'bombardment', timing: 'ON_STAGE_ENTER', condition: null, target: 'ENEMIES_IN_ACTION_RANGE',
+            item: 'DIRECT_DAMAGE', operation: 'DEAL_DAMAGE',
+            value: { damageType: 'PHYSICAL', attackScale: 2.5, count: 12, targeting: { selection: 'RANDOM', splashRadius: 1.1 }, intervalSeconds: 0.25 },
+            unit: 'DAMAGE_ACTION', sourceBinding: 'multi_atk_scale',
+            parameterBindings: { count: 'multi_times', intervalSeconds: 'multi_hit_interval' }, afterEffects: ['initial-damage'] },
+        ],
+      }] },
+    source: {
+      description: '周囲の全ての地面にいる敵に攻撃力の300%の物理ダメージを与え、4秒間浮遊させる。その後素早く12回砲撃を行い、砲撃するたびにランダムな敵に攻撃力の250%の物理範囲ダメージを与える',
+      rawDescription: '周囲の全ての地面にいる敵に攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、<@ba.vup>{levitate}</>秒間<$ba.levitate>浮遊</>させる。その後素早く<@ba.vup>{multi_times}</>回砲撃を行い、砲撃するたびにランダムな敵に攻撃力の<@ba.vup>{multi_atk_scale:0%}</>の物理範囲ダメージを与える',
+      blackboard: [{ key: 'atk_scale', value: 3, valueStr: null }, { key: 'levitate', value: 4, valueStr: null },
+        { key: 'multi_atk_scale', value: 2.5, valueStr: null }, { key: 'multi_times', value: 12, valueStr: null },
+        { key: 'multi_hit_interval', value: 0.25, valueStr: null }],
+      rangeId: 'x-1', duration: 0,
     }, notes: [],
   },
   {
@@ -1731,6 +1823,17 @@ export const SKILL_STRUCTURES: readonly SkillStructure[] = [
 ]
 
 export const SKILL_STRUCTURE_RANGES: Readonly<Record<string, SkillStructureRange>> = {
+  '3-12': {
+    id: '3-12', direction: 1,
+    grids: [{ row: 1, col: 0 }, { row: 1, col: 1 }, { row: 0, col: 0 }, { row: 0, col: 1 },
+      { row: 0, col: 2 }, { row: 0, col: 3 }, { row: -1, col: 0 }, { row: -1, col: 1 }],
+  },
+  'x-1': {
+    id: 'x-1', direction: 1,
+    grids: [{ row: 2, col: 0 }, { row: 1, col: -1 }, { row: 1, col: 0 }, { row: 1, col: 1 },
+      { row: 0, col: -2 }, { row: 0, col: -1 }, { row: 0, col: 0 }, { row: 0, col: 1 }, { row: 0, col: 2 },
+      { row: -1, col: -1 }, { row: -1, col: 0 }, { row: -1, col: 1 }, { row: -2, col: 0 }],
+  },
   "3-3": {
     "id": "3-3",
     "direction": 1,
