@@ -1,6 +1,8 @@
-import { useId, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useId, useMemo, useRef, useState } from 'react'
 import type { OperatorCombatProfile } from '../types/skill'
 import { buildOperatorModuleStageComparison, type OperatorModuleComparison as ModuleComparison, type OperatorModuleComparisonLayout } from '../lib/operatorModuleComparison'
+import { buildOperatorModulePotentialComparison, type OperatorModulePotentialComparison } from '../lib/operatorModulePotentialComparison'
+import { getOperatorModuleTalentPotentialRanks } from '../lib/operatorModuleTalentPotentials'
 import { getOperatorModuleId, getOperatorModuleLevels, getOperatorModules, getOperatorModuleTypeLabel } from '../lib/operatorModules'
 import { getOperatorModuleComparisonImageFilename } from '../lib/operatorModuleComparisonImageFilename'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
@@ -10,6 +12,8 @@ import { OperatorEffectLegend, OperatorModuleComparisonTable } from './OperatorM
 import './OperatorModuleComparison.css'
 
 const IMAGE_ASPECT_PRESETS = ['16:9', '4:3', '1:1', '2:1', '9:16'] as const
+const ModuleImagePreview = lazy(() => import('./saveOperatorModuleComparisonImage')
+  .then(module => ({ default: module.OperatorModulePotentialComparisonImagePreview })))
 
 export function OperatorModuleComparison({ profile, operatorName, operatorId }: {
   profile?: OperatorCombatProfile
@@ -20,13 +24,24 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
   const [selectedLevels, setSelectedLevels] = useState<Record<string, number[]>>({})
   const [includeNone, setIncludeNone] = useState(true)
   const [layout, setLayout] = useState<OperatorModuleComparisonLayout>('columns')
-  const [selectedPotential, setSelectedPotential] = useState(1)
+  const [selectedPotentials, setSelectedPotentials] = useState<number[]>([1])
+  const [potentialLayout, setPotentialLayout] = useState<OperatorModuleComparisonLayout>('columns')
+  const [merge, setMerge] = useState(true)
   const imageSaveInProgress = useRef(false)
   const [savingImage, setSavingImage] = useState(false)
   const [imageSnapshot, setImageSnapshot] = useState<{
-    comparison: ModuleComparison; layout: OperatorModuleComparisonLayout; operatorName: string; operatorId: string
+    comparison: ModuleComparison; potentialComparison: OperatorModulePotentialComparison
+    layout: OperatorModuleComparisonLayout; potentialLayout: OperatorModuleComparisonLayout; merge: boolean
+    operatorName: string; operatorId: string
   } | null>(null)
   const [imageFeedback, setImageFeedback] = useState<'saved' | 'downloaded' | 'failed' | null>(null)
+  const [layoutError, setLayoutError] = useState('')
+  const [layoutReady, setLayoutReady] = useState(false)
+  const reportLayoutError = useCallback((cause: unknown) => {
+    setLayoutReady(false)
+    setLayoutError(cause instanceof Error ? cause.message : '表のプレビューを表示できませんでした。')
+  }, [])
+  const reportLayoutReady = useCallback(() => { setLayoutError(''); setLayoutReady(true) }, [])
   const imageSavePicker = getChartImageSavePicker()
   const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const imageAspect = aspect.preset === 'auto' ? null : parseTableImageAspect(aspect.width, aspect.height)
@@ -36,13 +51,21 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
     label: getOperatorModuleTypeLabel(module) ?? module.uniEquipName ?? 'MOD',
     levels: getOperatorModuleLevels(module).filter(level => Number.isInteger(level) && level > 0),
   })), [profile])
-  const comparison = useMemo(() => profile
-    ? buildOperatorModuleStageComparison(profile, selectedLevels, selectedPotential, includeNone)
-    : null, [profile, selectedLevels, selectedPotential, includeNone])
+  const potentialChoices = useMemo(() => profile ? getOperatorModuleTalentPotentialRanks(profile) : [1], [profile])
+  const comparedPotentials = useMemo(() => selectedPotentials.filter(rank => potentialChoices.includes(rank)),
+    [selectedPotentials, potentialChoices])
+  const potentialComparison = useMemo(() => profile
+    ? buildOperatorModulePotentialComparison(profile, selectedLevels, comparedPotentials, includeNone)
+    : null, [profile, selectedLevels, comparedPotentials, includeNone])
+  const comparison = useMemo(() => potentialComparison?.comparisons[0] ?? (profile
+    ? buildOperatorModuleStageComparison(profile, selectedLevels, 1, includeNone) : null),
+  [potentialComparison, profile, selectedLevels, includeNone])
 
-  if (!comparison || moduleChoices.length === 0) {
+  if (!comparison || !potentialComparison || moduleChoices.length === 0) {
     return <p className="operator-profile-empty">実装済みモジュールはありません。</p>
   }
+
+  const hasSelection = potentialComparison.selectedPotentials.length > 0 && comparison.columns.length > 0
 
   const toggleModuleLevel = (choice: typeof moduleChoices[number], level: number, checked: boolean) => {
     setSelectedLevels(previous => {
@@ -53,13 +76,16 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
   }
 
   const openImageSaveDialog = () => {
-    if (imageSaveInProgress.current || comparison.columns.length === 0) return
+    if (imageSaveInProgress.current || !hasSelection) return
     setImageFeedback(null)
-    setImageSnapshot(structuredClone({ comparison, layout, operatorName, operatorId }))
+    setLayoutError('')
+    setLayoutReady(false)
+    setImageSnapshot(structuredClone({ comparison, potentialComparison, layout, potentialLayout, merge, operatorName, operatorId }))
   }
 
   const saveImage = async (filename: string) => {
-    if (imageSaveInProgress.current || invalidImageAspect || !imageSnapshot || imageSnapshot.comparison.columns.length === 0) return
+    if (imageSaveInProgress.current || invalidImageAspect || layoutError || !layoutReady
+      || !imageSnapshot || imageSnapshot.comparison.columns.length === 0) return
     imageSaveInProgress.current = true
     setSavingImage(true)
     setImageFeedback(null)
@@ -105,33 +131,47 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
             </div>)}
           </div>
           <div className="operator-module-comparison-potentials">
-            <span>潜在</span>
-            <div role="group" aria-label="潜在（全MOD共通）">
-              {comparison.potentialRanks.map((potential) => (
-                <button type="button" key={potential}
-                  aria-label={`潜在${potential}`}
-                  aria-pressed={potential === comparison.potentialRank}
-                  aria-controls={contentId}
-                  disabled={savingImage}
-                  onClick={() => { setSelectedPotential(potential); setImageFeedback(null) }}
-                >{potential}</button>
+            <span>比較する潜在</span>
+            <div className="operator-module-comparison-stage-options" role="group" aria-label="比較する潜在">
+              {potentialChoices.map((potential) => (
+                <label key={potential} className="operator-module-comparison-checkbox">
+                  <input type="checkbox" aria-label={`潜在${potential}を比較`} aria-controls={contentId}
+                    disabled={savingImage} checked={selectedPotentials.includes(potential)}
+                    onChange={event => {
+                      const checked = event.target.checked
+                      setSelectedPotentials(previous => potentialChoices.filter(rank => rank === potential
+                        ? checked : previous.includes(rank)))
+                      setImageFeedback(null)
+                    }} />潜在{potential}
+                </label>
               ))}
             </div>
           </div>
         </div>
         <div className="operator-module-comparison-actions">
           <label className="operator-module-comparison-layout">
-            <span>表示</span>
+            <span>MODレベルの配置</span>
             <select aria-label="モジュール比較表の表示" value={layout} disabled={savingImage} aria-controls={contentId}
               onChange={event => { setLayout(event.target.value as OperatorModuleComparisonLayout); setImageFeedback(null) }}>
               <option value="columns">レベルを列に</option><option value="rows">レベルを行に</option>
             </select>
           </label>
+          <label className="operator-module-comparison-layout">
+            <span>潜在の配置</span>
+            <select aria-label="潜在の配置" value={potentialLayout} disabled={savingImage} aria-controls={contentId}
+              onChange={event => { setPotentialLayout(event.target.value as OperatorModuleComparisonLayout); setImageFeedback(null) }}>
+              <option value="columns">潜在を列に</option><option value="rows">潜在を行に</option>
+            </select>
+          </label>
+          <label className="operator-module-comparison-checkbox">
+            <input type="checkbox" checked={merge} disabled={savingImage} aria-controls={contentId}
+              onChange={event => { setMerge(event.target.checked); setImageFeedback(null) }} />共通の効果をまとめる
+          </label>
           <OperatorEffectLegend />
             <button type="button" className="button secondary operator-module-comparison-save"
               aria-label="モジュール比較テーブルをPNG画像で保存"
               aria-haspopup="dialog"
-              disabled={savingImage || comparison.columns.length === 0} aria-busy={savingImage}
+              disabled={savingImage || !hasSelection} aria-busy={savingImage}
               onClick={openImageSaveDialog}
             >{savingImage ? '画像を保存中…' : '画像を保存'}</button>
         </div>
@@ -141,30 +181,34 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
           : imageFeedback === 'downloaded' ? 'PNG画像のダウンロードを開始しました。' : ''}
       </p>
       <div className="operator-module-comparison-condition" aria-live="polite">
-        <span>{comparison.condition}（全列共通）</span>
-        {comparison.potentialEffects.length > 0 && <span>{comparison.potentialEffects.join(' ／ ')}</span>}
+        <span>{potentialComparison.condition}</span>
       </div>
-      <div id={contentId} className="operator-module-comparison-scroll" aria-live="polite">
-        {comparison.columns.length > 0 ? <OperatorModuleComparisonTable comparison={comparison} layout={layout} />
-          : <p className="operator-profile-empty">比較するMOD・段階を選択してください。</p>}
+      <div id={contentId} className="operator-module-comparison-scroll" role="region" aria-label="モジュール比較表" tabIndex={0}>
+        {hasSelection ? <OperatorModuleComparisonTable comparison={comparison} potentialComparison={potentialComparison}
+          layout={layout} potentialLayout={potentialLayout} merge={merge} />
+          : <p className="operator-profile-empty" role="status">{potentialComparison.selectedPotentials.length === 0
+            ? '比較する潜在を選択してください。' : '比較するMOD・段階を選択してください。'}</p>}
       </div>
       {imageSnapshot !== null && <ChartImageSaveDialog
         initialFilename={getOperatorModuleComparisonImageFilename({
           ...imageSnapshot, level: imageSnapshot.comparison.level, columns: imageSnapshot.comparison.columns,
           potentialRank: imageSnapshot.comparison.potentialRank, aspect: imageAspect,
+          potentialRanks: imageSnapshot.potentialComparison.selectedPotentials,
         })}
         getDefaultFilename={() => getOperatorModuleComparisonImageFilename({
           ...imageSnapshot, level: imageSnapshot.comparison.level, columns: imageSnapshot.comparison.columns,
           potentialRank: imageSnapshot.comparison.potentialRank, aspect: imageAspect,
+          potentialRanks: imageSnapshot.potentialComparison.selectedPotentials,
         })}
         aspect={aspect}
         aspectPresets={IMAGE_ASPECT_PRESETS}
-        onAspectChange={value => { setAspect(value); setImageFeedback(null) }}
+        onAspectChange={value => { setAspect(value); setImageFeedback(null); setLayoutReady(false); setLayoutError('') }}
         aspectError={invalidImageAspect ? '幅・高さは1〜100の整数で、比率が1:10〜10:1になるように入力してください。' : undefined}
         aspectHint="指定なしでは表の内容に合わせます。比率を指定しても表全体を保存します。"
         helpMode="popover"
         canChooseLocation={!!imageSavePicker}
         saving={savingImage}
+        saveDisabled={Boolean(layoutError) || !layoutReady}
         error={imageFeedback === 'failed'}
         onClose={() => {
           if (imageSaveInProgress.current) return
@@ -172,6 +216,10 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
           setImageFeedback(null)
         }}
         onSave={(filename) => void saveImage(filename)}
+        preview={!invalidImageAspect && <Suspense fallback={<p role="status">プレビューを準備中…</p>}>
+          <ModuleImagePreview {...imageSnapshot} aspect={imageAspect}
+            onLayoutError={reportLayoutError} onLayoutReady={reportLayoutReady} />
+        </Suspense>}
       />}
     </div>
   )
