@@ -110,7 +110,7 @@ export function OperatorDetailPage({
 
         <CollapsibleCalculatorPanel
           id="operator-profile-modules" number="03" title="モジュール"
-          summary={`${operator.modules.length}種類`} collapsedLabel="モジュールを表示" defaultOpen={false}
+          summary={`${operator.modules.length}種類`} collapsedLabel="モジュールを表示"
         >
           <OperatorModuleComparison key={operator.operatorId}
             operatorName={operator.name} operatorId={operator.operatorId}
