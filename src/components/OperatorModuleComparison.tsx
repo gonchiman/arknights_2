@@ -27,11 +27,13 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
   const [selectedPotentials, setSelectedPotentials] = useState<number[]>([1])
   const [potentialLayout, setPotentialLayout] = useState<OperatorModuleComparisonLayout>('columns')
   const [merge, setMerge] = useState(true)
+  const [showPotentialAttributes, setShowPotentialAttributes] = useState(true)
   const imageSaveInProgress = useRef(false)
   const [savingImage, setSavingImage] = useState(false)
   const [imageSnapshot, setImageSnapshot] = useState<{
     comparison: ModuleComparison; potentialComparison: OperatorModulePotentialComparison
     layout: OperatorModuleComparisonLayout; potentialLayout: OperatorModuleComparisonLayout; merge: boolean
+    showPotentialAttributes: boolean
     operatorName: string; operatorId: string
   } | null>(null)
   const [imageFeedback, setImageFeedback] = useState<'saved' | 'downloaded' | 'failed' | null>(null)
@@ -55,8 +57,8 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
   const comparedPotentials = useMemo(() => selectedPotentials.filter(rank => potentialChoices.includes(rank)),
     [selectedPotentials, potentialChoices])
   const potentialComparison = useMemo(() => profile
-    ? buildOperatorModulePotentialComparison(profile, selectedLevels, comparedPotentials, includeNone)
-    : null, [profile, selectedLevels, comparedPotentials, includeNone])
+    ? buildOperatorModulePotentialComparison(profile, selectedLevels, comparedPotentials, includeNone, showPotentialAttributes)
+    : null, [profile, selectedLevels, comparedPotentials, includeNone, showPotentialAttributes])
   const comparison = useMemo(() => potentialComparison?.comparisons[0] ?? (profile
     ? buildOperatorModuleStageComparison(profile, selectedLevels, 1, includeNone) : null),
   [potentialComparison, profile, selectedLevels, includeNone])
@@ -80,7 +82,8 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
     setImageFeedback(null)
     setLayoutError('')
     setLayoutReady(false)
-    setImageSnapshot(structuredClone({ comparison, potentialComparison, layout, potentialLayout, merge, operatorName, operatorId }))
+    setImageSnapshot(structuredClone({ comparison, potentialComparison, layout, potentialLayout, merge,
+      showPotentialAttributes, operatorName, operatorId }))
   }
 
   const saveImage = async (filename: string) => {
@@ -166,6 +169,10 @@ export function OperatorModuleComparison({ profile, operatorName, operatorId }: 
           <label className="operator-module-comparison-checkbox">
             <input type="checkbox" checked={merge} disabled={savingImage} aria-controls={contentId}
               onChange={event => { setMerge(event.target.checked); setImageFeedback(null) }} />共通の効果をまとめる
+          </label>
+          <label className="operator-module-comparison-checkbox">
+            <input type="checkbox" checked={showPotentialAttributes} disabled={savingImage} aria-controls={contentId}
+              onChange={event => { setShowPotentialAttributes(event.target.checked); setImageFeedback(null) }} />潜在の能力値補正を表示
           </label>
           <OperatorEffectLegend />
             <button type="button" className="button secondary operator-module-comparison-save"

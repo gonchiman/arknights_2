@@ -54,6 +54,42 @@ test('4通りの行列配置で全選択候補・潜在補正・強調を欠落�
   assert.deepEqual(model, original)
 })
 
+test('潜在能力値補正は初期表示を維持し、非表示時もMOD能力値・素質・比較条件を変えない', () => {
+  const data = profile()
+  const original = structuredClone(data)
+  for (const includeNone of [false, true]) {
+    const shown = buildOperatorModulePotentialComparison(data, selections, [1, 4, 6], includeNone)
+    assert.deepEqual(buildOperatorModulePotentialComparison(data, selections, [1, 4, 6], includeNone, true), shown)
+    assert.ok(shown.comparisons.every((comparison) => comparison.rows.some((row) => row.id === 'potential-attribute:COST')))
+    assert.ok(shown.comparisons.every((comparison) => comparison.rows.some((row) => row.id === 'potential-attribute:ATK')))
+    const hidden = buildOperatorModulePotentialComparison(data, selections, [1, 4, 6], includeNone, false)
+    assert.deepEqual(hidden, {
+      ...shown,
+      comparisons: shown.comparisons.map((comparison) => ({
+        ...comparison, rows: comparison.rows.filter((row) => !row.id.startsWith('potential-attribute:')),
+      })),
+    })
+    assert.ok(hidden.comparisons.every((comparison) => comparison.rows.every((row) => !row.id.startsWith('potential-effect:'))))
+  }
+  assert.deepEqual(data, original)
+})
+
+test('潜在能力値補正の非表示は4配置の通常素質・特性・MODセルと結合結果に影響しない', () => {
+  const shown = buildOperatorModulePotentialComparison(profile(), selections, [1, 6])
+  const hidden = buildOperatorModulePotentialComparison(profile(), selections, [1, 6], true, false)
+  for (const levelLayout of layouts) for (const potentialLayout of layouts) for (const merge of [false, true]) {
+    const options = { levelLayout, potentialLayout, merge }
+    const full = buildOperatorModulePotentialTable(shown, options)
+    const table = buildOperatorModulePotentialTable(hidden, options)
+    assert.deepEqual(table, { ...full, groups: full.groups.filter((group) => !group.id.startsWith('potential-attribute:')) },
+      `${levelLayout}/${potentialLayout}, merge=${merge}`)
+    for (const id of ['attribute:atk', 'trait', 'talent:0', 'talent:1']) {
+      assert.ok(table.groups.some((group) => group.id === id), `remaining row: ${id}`)
+    }
+    validateOccupancy(table)
+  }
+})
+
 test('共通化はMOD間を結合せず、選択した潜在とレベルを結合セルの出典へ保持する', () => {
   const model = buildOperatorModulePotentialComparison(profile(), selections, [1, 6])
   for (const levelLayout of layouts) for (const potentialLayout of layouts) {

@@ -65,12 +65,13 @@ export function buildOperatorModulePotentialComparison(
   selectedLevels: Record<string, number[]> = {},
   requestedPotentials: number[] = [1],
   includeNone = true,
+  showPotentialAttributes = true,
 ): OperatorModulePotentialComparison {
   const potentialRanks = Array.from({ length: getOperatorMaxPotentialRank(profile) }, (_, index) => index + 1)
   const selectedPotentials = [...new Set(requestedPotentials)]
     .filter((rank) => potentialRanks.includes(rank)).sort((a, b) => a - b)
   const comparisons = selectedPotentials.map((rank) => buildOperatorModuleStageComparison(profile, selectedLevels, rank, includeNone))
-  const summaries = selectedPotentials.map((rank) => potentialAttributes(profile, rank))
+  const summaries = showPotentialAttributes ? selectedPotentials.map((rank) => potentialAttributes(profile, rank)) : []
   const attributes = new Map(summaries.flatMap((summary) => [...summary].map(([key, value]) => [key, value.label] as const)))
   const modules = new Map(getOperatorModules(profile).map((module, index) => [getOperatorModuleId(module, index), module]))
 

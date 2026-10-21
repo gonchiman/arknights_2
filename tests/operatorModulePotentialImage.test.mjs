@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 
-let server, Image, Preview, Table, snapshot
+let server, Image, Preview, Table, snapshot, withoutAttributesSnapshot
 
 before(async () => {
   server = await createServer({ configFile: false, plugins: [react()],
@@ -24,6 +24,7 @@ before(async () => {
     ], favorKeyFrames: [], traitDescription: '敵に術ダメージを与える',
     potentialRanks: [{ description: '配置コスト-1', buff: { attributes: { attributeModifiers: [
       { attributeType: 'COST', formulaItem: 'ADDITION', value: -1 },
+      { attributeType: 'ATK', formulaItem: 'ADDITION', value: 26 },
     ] } } }, { description: '素質強化' }],
     talents: [{ candidates: [
       { name: '術耐性無視', description: '攻撃時、対象の術耐性を20無視', requiredPotentialRank: 0 },
@@ -35,6 +36,8 @@ before(async () => {
   }
   const potentialComparison = buildOperatorModulePotentialComparison(profile, { 'test-x': [1, 3] }, [1, 3], true)
   snapshot = { comparison: potentialComparison.comparisons[0], potentialComparison }
+  const withoutAttributes = buildOperatorModulePotentialComparison(profile, { 'test-x': [1, 3] }, [1, 3], true, false)
+  withoutAttributesSnapshot = { comparison: withoutAttributes.comparisons[0], potentialComparison: withoutAttributes }
 })
 
 after(async () => { await server?.close() })
@@ -62,5 +65,26 @@ test('全4配置と共通結合の有無でプレビュー・PNGが同じ潜在�
         }
       }
     }
+  }
+})
+
+test('潜在能力値補正を非表示にした画像にもMOD能力値と潜在反映済みの素質が残る', () => {
+  const visible = render(Table, { ...snapshot, interactive: false })
+  assert.match(visible, /配置コスト補正/)
+  assert.match(visible, /攻撃力補正/)
+  for (const potentialLayout of ['columns', 'rows']) {
+    const props = { ...withoutAttributesSnapshot, layout: 'rows', potentialLayout, merge: true }
+    const table = render(Table, { ...props, interactive: false, showLegend: true })
+    const preview = render(Preview, props)
+    const output = render(Image, { ...props, exporting: true })
+    assert.equal(tableMarkup(preview), tableMarkup(table))
+    assert.equal(tableMarkup(output), tableMarkup(table))
+    assert.doesNotMatch(output, /配置コスト補正|攻撃力補正/)
+    const text = output.replace(/<[^>]*>/g, '')
+    assert.match(text, /攻撃力MOD/)
+    assert.match(text, /\+60/)
+    assert.match(text, /攻撃時、対象の術耐性を20無視/)
+    assert.match(text, /攻撃時、対象の術耐性を22無視/)
+    assert.match(text, /敵に術ダメージを与える/)
   }
 })
