@@ -32,6 +32,19 @@ test('敵の重回帰分析を統計分析の隣の導線から独立したペ�
   }
 })
 
+test('集計マップ確認は敵分析用の独立ページとして開く', () => {
+  assert.deepEqual(parseHashRoute('#/analysis/enemies/maps'), { view: 'enemy-map-coverage' })
+  assert.deepEqual(APP_NAV_ITEMS.find((item) => item.id === 'enemy-map-coverage'), {
+    id: 'enemy-map-coverage', href: '#/analysis/enemies/maps', label: '集計マップ確認',
+    description: '', section: 'analysis',
+  })
+  assert.deepEqual(parseHashRoute('#/analysis/enemies'), { view: 'enemy-analysis' })
+  assert.deepEqual(parseHashRoute('#/maps'), { view: 'maps' })
+  for (const suffix of ['/', '/extra', '?map=1-7', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/analysis/enemies/maps${suffix}`), { view: 'operators' })
+  }
+})
+
 test('サイドバーから主要ページへ遷移できる', () => {
   assert.deepEqual(
     APP_NAV_ITEMS.map((item) => [item.id, parseHashRoute(item.href).view]),
@@ -55,6 +68,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['enemies', 'enemies'],
       ['enemy-analysis', 'enemy-analysis'],
       ['enemy-regression', 'enemy-regression'],
+      ['enemy-map-coverage', 'enemy-map-coverage'],
       ['main-enemy-trends', 'main-enemy-trends'],
       ['maps', 'maps'],
       ['goldenglow-home', 'goldenglow-home'],

@@ -4,9 +4,14 @@ import {
   type OperatorModuleComparison,
   type OperatorModuleComparisonLayout,
 } from '../lib/operatorModuleComparison'
+import {
+  buildOperatorModulePotentialTable,
+  type OperatorModulePotentialComparison,
+} from '../lib/operatorModulePotentialComparison'
 import { getOperatorModuleComparisonImageFilename } from '../lib/operatorModuleComparisonImageFilename'
 import { getTableImageDimensions, parseTableImageAspect, type TableImageAspect } from '../lib/tableImageAspect'
 import { OperatorModuleComparisonTable } from './OperatorModuleComparisonTable'
+import { ComparisonTableImageFrame, ComparisonTableImagePreview } from './ComparisonTableImageFrame'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './OperatorModuleComparison.css'
 import './saveOperatorModuleComparisonImage.css'
@@ -16,6 +21,9 @@ interface OperatorModuleComparisonImageOptions {
   operatorName: string
   operatorId: string
   layout?: OperatorModuleComparisonLayout
+  potentialComparison?: OperatorModulePotentialComparison
+  potentialLayout?: 'columns' | 'rows'
+  merge?: boolean
   aspect?: TableImageAspect | null
   filename?: string
   writeBlob?: (blob: Blob) => Promise<void>
@@ -23,17 +31,21 @@ interface OperatorModuleComparisonImageOptions {
 
 export async function saveOperatorModuleComparisonImage({
   comparison, operatorName, operatorId, layout = 'columns', aspect = null, filename, writeBlob,
+  potentialComparison, potentialLayout = 'columns', merge = true,
 }: OperatorModuleComparisonImageOptions): Promise<void> {
   const ratio = aspect === null ? null : parseTableImageAspect(String(aspect.width), String(aspect.height))
   if (aspect !== null && ratio === null) throw new Error('画像の縦横比が正しくありません。')
   const imageFilename = filename ?? getOperatorModuleComparisonImageFilename({
     operatorName, operatorId, level: comparison.level, columns: comparison.columns,
     potentialRank: comparison.potentialRank, aspect: ratio, layout,
+    potentialRanks: potentialComparison?.selectedPotentials, potentialLayout, merge,
   })
   const columnCount = layout === 'rows'
     ? buildOperatorModuleLevelRows(comparison).columns.length
     : comparison.columns.length
-  const initialWidth = Math.max(960, 90 + (layout === 'rows' ? 52 : 0) + columnCount * 280)
+  const initialWidth = potentialComparison
+    ? getPotentialComparisonImageWidth(potentialComparison, layout, potentialLayout, merge)
+    : Math.max(960, 90 + (layout === 'rows' ? 52 : 0) + columnCount * 280)
   let layoutError: unknown = null
   if (ratio) await document.fonts.ready
   try {
@@ -41,12 +53,65 @@ export async function saveOperatorModuleComparisonImage({
       filename: imageFilename,
       writeBlob,
       width: initialWidth,
-      chart: <ModuleComparisonImage comparison={comparison} layout={layout} aspect={ratio} initialWidth={initialWidth}
-        onLayoutError={(error) => { layoutError = error }} />,
+      chart: potentialComparison
+        ? <OperatorModulePotentialComparisonImage comparison={comparison} potentialComparison={potentialComparison}
+            layout={layout} potentialLayout={potentialLayout} merge={merge} aspect={ratio} exporting
+            onLayoutError={(error) => { layoutError = error }} />
+        : <ModuleComparisonImage comparison={comparison} layout={layout} aspect={ratio} initialWidth={initialWidth}
+            onLayoutError={(error) => { layoutError = error }} />,
     })
   } catch (error) {
     throw layoutError ?? error
   }
+}
+
+function getPotentialComparisonImageWidth(
+  comparison: OperatorModulePotentialComparison,
+  layout: OperatorModuleComparisonLayout,
+  potentialLayout: 'columns' | 'rows',
+  merge: boolean,
+) {
+  const table = buildOperatorModulePotentialTable(comparison, { levelLayout: layout, potentialLayout, merge })
+  return Math.max(960, 90 + table.rowAxes.length * 52 + table.columns.length * 280)
+}
+
+interface OperatorModulePotentialComparisonImageProps {
+  comparison: OperatorModuleComparison
+  potentialComparison: OperatorModulePotentialComparison
+  layout?: OperatorModuleComparisonLayout
+  potentialLayout?: 'columns' | 'rows'
+  merge?: boolean
+  aspect?: TableImageAspect | null
+  exporting?: boolean
+  onLayout?: (size: { width: number; height: number }) => void
+  onLayoutError?: (cause: unknown) => void
+}
+
+/** The same saved snapshot and sizing rules are used by the preview and PNG. */
+function getPotentialComparisonImageFrameProps({
+  comparison, potentialComparison, layout = 'columns', potentialLayout = 'columns', merge = true, aspect = null,
+}: OperatorModulePotentialComparisonImageProps) {
+  const initialWidth = getPotentialComparisonImageWidth(potentialComparison, layout, potentialLayout, merge)
+  return {
+    initialWidth, aspectRatio: aspect ? aspect.width / aspect.height : undefined,
+    className: 'operator-module-comparison operator-module-comparison-image',
+    typography: { numberSize: '100' as const },
+    layoutKey: JSON.stringify({ potentialComparison, layout, potentialLayout, merge }),
+    children: <OperatorModuleComparisonTable comparison={comparison} potentialComparison={potentialComparison}
+      layout={layout} potentialLayout={potentialLayout} merge={merge} interactive={false} showLegend />,
+  }
+}
+
+export function OperatorModulePotentialComparisonImage({ exporting = false, onLayout, onLayoutError,
+  ...props }: OperatorModulePotentialComparisonImageProps) {
+  return <ComparisonTableImageFrame {...getPotentialComparisonImageFrameProps(props)}
+    exporting={exporting} onLayout={onLayout} onLayoutError={onLayoutError} />
+}
+
+export function OperatorModulePotentialComparisonImagePreview({ onLayoutReady, onLayoutError, ...props }:
+  Omit<OperatorModulePotentialComparisonImageProps, 'exporting' | 'onLayout'> & { onLayoutReady?: () => void }) {
+  return <ComparisonTableImagePreview {...getPotentialComparisonImageFrameProps(props)}
+    onLayoutReady={onLayoutReady} onLayoutError={onLayoutError} />
 }
 
 function ModuleComparisonImage({ comparison, layout, aspect, initialWidth, onLayoutError }: {

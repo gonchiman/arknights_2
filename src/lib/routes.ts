@@ -38,6 +38,7 @@ export type AppRoute =
   | { view: 'enemies' }
   | { view: 'enemy-analysis' }
   | { view: 'enemy-regression' }
+  | { view: 'enemy-map-coverage' }
   | { view: 'main-enemy-trends' }
   | { view: 'maps' }
   | { view: 'sources' }
@@ -200,6 +201,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/enemies') return { view: 'enemies' }
   if (hash === '#/analysis/enemies') return { view: 'enemy-analysis' }
   if (hash === '#/analysis/enemies/regression') return { view: 'enemy-regression' }
+  if (hash === '#/analysis/enemies/maps') return { view: 'enemy-map-coverage' }
   if (hash === '#/analysis/enemies/main-trends') return { view: 'main-enemy-trends' }
   if (hash === '#/maps') return { view: 'maps' }
   if (hash === '#/sources') return { view: 'sources' }
