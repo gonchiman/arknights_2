@@ -10,6 +10,7 @@ import type {
 } from '../types/skill'
 import { classifySkill } from './classifier'
 import { DATA_SOURCE_URLS } from './dataSources.ts'
+import { gameDataClient, type GameDataClient } from './gameDataClient.ts'
 import { getOperatorAffiliation, getOperatorAffiliationIds, type OperatorAffiliationIds, type OperatorAffiliationTable } from './operatorAffiliation.ts'
 import { getOperatorInitial, getProfessionLabel } from './operatorFilters'
 
@@ -53,25 +54,16 @@ interface UniequipTable {
 
 type BattleEquipTable = Record<string, Pick<RawOperatorModule, 'phases'>>
 
-export async function loadSkillRecords(): Promise<SkillRecord[]> {
-  const [characterResponse, skillResponse, uniequipResponse, battleEquipResponse, affiliations] = await Promise.all([
-    fetch(DATA_URLS.character),
-    fetch(DATA_URLS.skill),
-    fetch(DATA_URLS.uniequip),
-    fetch(DATA_URLS.battleEquip).catch(() => null),
-    fetch(DATA_URLS.handbookTeam)
-      .then(async (response): Promise<OperatorAffiliationTable> => response.ok ? await response.json() : {})
-      .catch((): OperatorAffiliationTable => ({})),
+export async function loadSkillRecords(client: GameDataClient = gameDataClient): Promise<SkillRecord[]> {
+  const [characters, skills, uniequip, optionalBattleEquips, optionalAffiliations] = await Promise.all([
+    client.readTable<CharacterTable>('character'),
+    client.readTable<SkillTable>('skill'),
+    client.readTable<UniequipTable>('uniequip'),
+    client.readTable<BattleEquipTable>('battleEquip', { optional: true }),
+    client.readTable<OperatorAffiliationTable>('handbookTeam', { optional: true }),
   ])
-
-  if (!characterResponse.ok || !skillResponse.ok || !uniequipResponse.ok) {
-    throw new Error('ゲームデータの取得に失敗しました。')
-  }
-
-  const characters = await characterResponse.json() as CharacterTable
-  const skills = await skillResponse.json() as SkillTable
-  const uniequip = await uniequipResponse.json() as UniequipTable
-  const battleEquips = await readOptionalBattleEquipTable(battleEquipResponse)
+  const battleEquips = optionalBattleEquips ?? {}
+  const affiliations = optionalAffiliations ?? {}
   const subProfessions = uniequip.subProfDict ?? {}
   const modulesByOperator = buildModulesByOperator(uniequip.equipDict ?? {}, battleEquips)
   const rows: SkillRecord[] = []
@@ -157,19 +149,6 @@ function buildModulesByOperator(
   )))
 
   return result
-}
-
-async function readOptionalBattleEquipTable(response: Response | null): Promise<BattleEquipTable> {
-  if (!response?.ok) return {}
-
-  try {
-    const value = await response.json() as unknown
-    return value && typeof value === 'object' && !Array.isArray(value)
-      ? value as BattleEquipTable
-      : {}
-  } catch {
-    return {}
-  }
 }
 
 function parseRarity(value: number | string | undefined): number {
