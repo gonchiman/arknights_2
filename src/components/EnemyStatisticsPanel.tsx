@@ -545,7 +545,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         aria-haspopup="dialog" disabled={!canSaveImage || savingImage || preparingImage} aria-busy={savingImage || preparingImage}
         onClick={() => void openImageSaveDialog()}>{savingImage ? '画像を保存中…' : preparingImage ? '画像を準備中…' : '画像を保存'}</button>}
     </div>}
-    <DistributionCountControls mode={activeCountMode} onChange={setCountMode} counts={countData.data} />
+    <DistributionCountControls mode={activeCountMode} onChange={setCountMode} counts={countData.data}
+      showMapCoverageLink={!histogramEditor} />
     {countUnavailable && <div className="enemy-histogram-load-state" role="status">
       {countData.error ? <>登場データを取得できませんでした。<button type="button" className="button secondary" onClick={countData.retry}>再読み込み</button></>
         : '登場データを読み込み中…'}
@@ -1067,10 +1068,11 @@ function StatisticsSummary({ columns, countUnit }: {
   )
 }
 
-function DistributionCountControls({ mode, onChange, counts }: {
+function DistributionCountControls({ mode, onChange, counts, showMapCoverageLink }: {
   mode: EnemyHistogramCountMode
   onChange: (mode: EnemyHistogramCountMode) => void
   counts: EnemyHistogramCounts | null
+  showMapCoverageLink: boolean
 }) {
   const id = useId()
   return <div className="enemy-histogram-counts">
@@ -1099,6 +1101,8 @@ function DistributionCountControls({ mode, onChange, counts }: {
       {mode === 'MAPS' ? `収録 ${formatNumber(counts.summary.mapCount, 0)}マップ`
         : `出現数確定 ${formatNumber(counts.summary.spawnMapCount, 0)}マップ`}
     </span>}
+    {showMapCoverageLink && mode !== 'TYPES' && <a className="button secondary enemy-page-link"
+      href="#/analysis/enemies/maps">集計マップを確認</a>}
   </div>
 }
 
