@@ -1,5 +1,6 @@
 import { ENEMY_HISTOGRAM_COUNT_MODES, getWeightedEnemyHistogramImageFilename, type EnemyHistogramCountMode, type EnemyHistogramCounts } from './enemyHistogramCounts.ts'
 import type { EnemyRatingHistogramBin } from './enemyRatingHistogram.ts'
+import type { HistogramCumulativeDisplay } from './histogramCumulative.ts'
 import { getEnemyRatingNumericRanges } from './enemyStatRatings.ts'
 import type { HistogramScale, NumericStatistics } from './enemyStatistics.ts'
 import { copyEnemyLevelSelection, isEnemyLevelSelection, type EnemyLevelSelection } from './enemyLevelSelection.ts'
@@ -32,7 +33,7 @@ export interface EnemyHistogramSnapshotInput {
   /** Omitted in earlier v1 snapshots; treated as false. */
   showCumulative?: boolean
   /** Omitted in earlier v1 snapshots; treated as the existing line display. */
-  cumulativeDisplay?: 'line' | 'strip'
+  cumulativeDisplay?: HistogramCumulativeDisplay
   referenceVisibility: { mean: boolean; median: boolean }
   /** Optional so v1 snapshots captured before in-place editing remain usable. */
   editorSettings?: EnemyHistogramEditorSettings
@@ -112,7 +113,8 @@ function validInput(value: unknown): value is EnemyHistogramSnapshotInput {
     || !['LINEAR', 'LOG'].includes(String(input.scale))
     || typeof input.showPercentages !== 'boolean' || typeof input.showBinRanges !== 'boolean'
     || (input.showCumulative !== undefined && typeof input.showCumulative !== 'boolean')
-    || (input.cumulativeDisplay !== undefined && input.cumulativeDisplay !== 'line' && input.cumulativeDisplay !== 'strip')
+    || (input.cumulativeDisplay !== undefined && input.cumulativeDisplay !== 'line'
+      && input.cumulativeDisplay !== 'strip' && input.cumulativeDisplay !== 'both')
     || typeof refs.mean !== 'boolean' || typeof refs.median !== 'boolean'
     || !(input.customLinearUpperBound === null || (finite(input.customLinearUpperBound) && input.customLinearUpperBound > 0))
     || !nonnegative(stats.totalCount) || !nonnegative(stats.missingCount) || !finite(stats.count) || stats.count <= 0
@@ -195,10 +197,10 @@ export function createEnemyHistogramSnapshot(input: EnemyHistogramSnapshotInput)
     copy.statistics.missingCount > 0 ? `値なし ${format(copy.statistics.missingCount)}${count.unit}を除外` : null,
   ].filter(Boolean).join(' · ')
   return freezeDeep({ ...copy, schemaVersion: 1,
-    // Only an active strip changes the identity of existing v1 line/OFF snapshots.
+    // Only an active non-line display changes the identity of existing v1 line/OFF snapshots.
     id: `resistance-histogram-${snapshotFingerprint(JSON.stringify({ ...copy,
       showCumulative: copy.showCumulative || undefined,
-      cumulativeDisplay: copy.showCumulative && copy.cumulativeDisplay === 'strip' ? 'strip' : undefined,
+      cumulativeDisplay: copy.showCumulative && copy.cumulativeDisplay !== 'line' ? copy.cumulativeDisplay : undefined,
     }))}`,
     title: '術耐性のヒストグラム', axisTitle: `術耐性（${copy.ratingBins ? 'ゲーム内評価' : '階級'}）`,
     conditions, summary,

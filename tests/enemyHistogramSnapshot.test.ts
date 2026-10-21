@@ -124,6 +124,7 @@ test('累積割合帯を複製・保存・復元し、有効な場合だけ画�
   const line = createEnemyHistogramSnapshot({ ...source, cumulativeDisplay: 'line' })
   source.cumulativeDisplay = 'line'
   assert.equal(strip.cumulativeDisplay, 'strip')
+  assert.equal(strip.id, 'resistance-histogram-c38fdf2d65d97905')
   assert.ok(Object.isFrozen(strip))
   assert.notEqual(strip.id, line.id)
   assert.notEqual(strip.filename, line.filename)
@@ -141,6 +142,36 @@ test('累積割合帯を複製・保存・復元し、有効な場合だけ画�
   assert.equal(inactiveStrip.cumulativeDisplay, 'strip')
   assert.equal(inactiveStrip.id, off.id)
   assert.equal(inactiveStrip.filename, off.filename)
+})
+
+test('折れ線と帯の併用を保存・復元し、有効時だけ単独表示と識別する', () => {
+  const source: EnemyHistogramSnapshotInput = { ...input(), showCumulative: true, cumulativeDisplay: 'both' }
+  const both = createEnemyHistogramSnapshot(source)
+  source.cumulativeDisplay = 'line'
+  assert.equal(both.cumulativeDisplay, 'both')
+  assert.ok(Object.isFrozen(both))
+  assert.match(both.filename, /_割合表示_累積割合線＋帯_階級範囲表示_/)
+  for (const cumulativeDisplay of ['line', 'strip'] as const) {
+    const single = createEnemyHistogramSnapshot({ ...input(), showCumulative: true, cumulativeDisplay })
+    assert.notEqual(both.id, single.id)
+    assert.notEqual(both.filename, single.filename)
+    assert.deepEqual(both.statistics, single.statistics)
+  }
+  const storage = memoryStorage()
+  assert.equal(writeEnemyHistogramSnapshot(both, storage), true)
+  assert.deepEqual(readEnemyHistogramSnapshot(storage), both)
+  assert.deepEqual(parseEnemyHistogramSnapshot(JSON.parse(JSON.stringify(both))), both)
+  assert.equal(createEnemyHistogramSnapshot({ ...input(), showCumulative: true, cumulativeDisplay: 'both' }).id, both.id)
+
+  const off = createEnemyHistogramSnapshot(input())
+  for (const showCumulative of [undefined, false]) {
+    const inactive = createEnemyHistogramSnapshot({ ...input(), showCumulative, cumulativeDisplay: 'both' })
+    assert.equal(inactive.cumulativeDisplay, 'both')
+    assert.equal(inactive.id, off.id)
+    assert.equal(inactive.filename, off.filename)
+    assert.equal(writeEnemyHistogramSnapshot(inactive, storage), true)
+    assert.deepEqual(readEnemyHistogramSnapshot(storage), inactive)
+  }
 })
 
 test('累積表示方式の不正値を拒否し、非表示の場合も保存済みの分布を保つ', () => {

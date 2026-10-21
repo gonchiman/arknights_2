@@ -1,3 +1,5 @@
+export type HistogramCumulativeDisplay = 'line' | 'strip' | 'both'
+
 /** Numeric and rating bins share counts while retaining their own boundary metadata. */
 export interface HistogramCumulativeRow<T> {
   bin: T
