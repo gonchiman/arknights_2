@@ -10,7 +10,7 @@ import {
 import type { TalentCoarseCategory } from './talentCoarseClassification.ts'
 import type { RawBlackboardEntry, RawUnlockCondition, SkillRecord } from '../types/skill.ts'
 
-export const TALENT_STRUCTURE_OPERATOR_IDS = ['char_172_svrash', 'char_263_skadi', 'char_350_surtr', 'char_293_thorns'] as const
+export const TALENT_STRUCTURE_OPERATOR_IDS = ['char_172_svrash', 'char_263_skadi', 'char_350_surtr', 'char_293_thorns', 'char_4009_irene'] as const
 export interface TalentStructureSelection { readonly operatorId: string; readonly talentIndex: number }
 
 export type TalentStructureCondition = CombatCondition
@@ -25,6 +25,8 @@ type TalentStructureEffectPayload = NumericValue<SkillAtkPayload | SkillHealPayl
   | { readonly item: 'REDEPLOY_TIME'; readonly operation: 'ADD_RATIO'; readonly value: CombatNumericValue; readonly unit: 'RATIO' }
   | { readonly item: 'REDEPLOY_TIME'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'SECOND' }
   | { readonly item: 'RESISTANCE_IGNORE_FIXED'; readonly operation: 'IGNORE_FIXED'; readonly value: CombatNumericValue; readonly unit: 'POINT' }
+  | { readonly item: 'DEFENSE_IGNORE_RATIO'; readonly operation: 'IGNORE_RATIO'; readonly value: CombatNumericValue; readonly unit: 'RATIO' }
+  | { readonly item: 'ATTACK_SPEED'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'POINT' }
   | { readonly item: 'STEALTH'; readonly operation: 'SET_ENABLED'; readonly value: false; readonly unit: 'BOOLEAN' }
   | { readonly item: 'HP'; readonly operation: 'SET'; readonly value: CombatNumericValue; readonly unit: 'POINT' }
   | { readonly item: 'FORCED_RETREAT'; readonly operation: 'EXECUTE'; readonly value: true; readonly unit: 'BOOLEAN' }
@@ -66,6 +68,8 @@ const DEFINITIONS = [
   { operatorId: 'char_350_surtr', talentIndex: 1, name: '余燼', categories: ['SURVIVAL'] },
   { operatorId: 'char_293_thorns', talentIndex: 0, name: '神経猛毒', categories: ['ADDITIONAL_DAMAGE'] },
   { operatorId: 'char_293_thorns', talentIndex: 1, name: '故郷の濤声', categories: ['SURVIVAL'] },
+  { operatorId: 'char_4009_irene', talentIndex: 0, name: '審判の灯火', categories: ['DAMAGE'] },
+  { operatorId: 'char_4009_irene', talentIndex: 1, name: '浄化の剣', categories: ['ABILITY'] },
 ] as const
 
 export function isTalentStructureSelection(selection: TalentStructureSelection): boolean {
@@ -155,6 +159,30 @@ export function buildTalentStructures(rows: readonly SkillRecord[], growth: Tale
         item: 'HP_RESTORE_RATIO', operation: 'RESTORE', value: read('hp_recovery_per_sec_by_max_hp_ratio'), unit: 'MAX_HP_RATIO',
         parameterBindings: { intervalSeconds: 'description:heal_interval', waitSeconds: 'delay' } },
     ]
+    if (key === 'char_4009_irene/0') {
+      const ignore = read('def_penetrate'), chance = read('prob')
+      const airbornePercent = descriptionNumber('airborne_probability', /飛行ユニットに対する発動確率が\s*(\d+(?:\.\d+)?)%に上昇/)
+      effects = [false, true].map(airborne => ({
+        ...context(airborne ? 'airborne-defense-ignore' : 'ground-defense-ignore', { type: 'EVENT', event: 'DAMAGE_DEALT' },
+          { ...recipients('SELF', 'SELF'), entity: 'ATTACK' }, 'def_penetrate'),
+        condition: { type: 'COMPARE', metric: 'target.isAirborne', comparison: 'EQ', value: airborne },
+        probability: { chance: airborne ? airbornePercent === null ? null : airbornePercent / 100 : chance, rollScope: 'APPLICATION' },
+        item: 'DEFENSE_IGNORE_RATIO', operation: 'IGNORE_RATIO', value: ignore, unit: 'RATIO',
+        parameterBindings: { 'probability.chance': airborne ? 'description:airborne_probability' : 'prob' },
+      }))
+    }
+    if (key === 'char_4009_irene/1') {
+      const speed = read('attack_speed')
+      const doubles = /効果値倍増/.test(source.description.normalize('NFKC'))
+      if (!doubles) issues.push('説明文の効果値倍増を確認できません。')
+      effects = [false, true].map(seaMonster => ({
+        ...context(seaMonster ? 'sea-monster-attack-speed' : 'base-attack-speed', { type: 'CONTINUOUS', while: 'DEPLOYED' },
+          recipients('SELF', 'SELF'), 'attack_speed'),
+        condition: { type: 'COMPARE', metric: 'battlefield.hasSeaMonster', comparison: 'EQ', value: seaMonster },
+        item: 'ATTACK_SPEED', operation: 'ADD_VALUE', value: seaMonster ? speed === null || !doubles ? null : speed * 2 : speed, unit: 'POINT',
+        ...(seaMonster ? { parameterBindings: { multiplier: 'description:double_effect' } } : {}),
+      }))
+    }
     const triggers = [...new Map(effects.map(effect => [JSON.stringify(effect.timing), effect.timing])).values()]
     return [{ basicInfo, classificationInfo: { coarseCategories: [...definition.categories] },
       activationSettings: { activationMethod: 'PASSIVE' as const, triggers }, effects,
@@ -196,13 +224,13 @@ export const formatTalentStructureCondition = formatCombatCondition
 export const formatTalentStructureTiming = formatCombatTiming
 export const formatTalentStructureTarget = formatCombatRecipient
 export function formatTalentStructureEffectItem(item: TalentStructureEffect['item']): string {
-  if (item === 'ATK_BUFF_RATIO' || item === 'HP_RESTORE_RATIO') return formatSkillStructureEffectItem(item)
+  if (item === 'ATK_BUFF_RATIO' || item === 'HP_RESTORE_RATIO' || item === 'ATTACK_SPEED') return formatSkillStructureEffectItem(item)
   return { REDEPLOY_TIME: '再配置時間', RESISTANCE_IGNORE_FIXED: '術耐性固定無視', STEALTH: 'ステルス',
-    HP: 'HP', FORCED_RETREAT: '強制退場', DAMAGE_OVER_TIME: '継続ダメージ' }[item]
+    HP: 'HP', FORCED_RETREAT: '強制退場', DAMAGE_OVER_TIME: '継続ダメージ', DEFENSE_IGNORE_RATIO: '防御力割合無視' }[item]
 }
 export function formatTalentStructureEffectOperation(effect: TalentStructureEffect): string {
   return { ADD_RATIO: '割合加算', ADD_VALUE: '数値加算', IGNORE_FIXED: '固定値無視', SET_ENABLED: '適用設定',
-    SET: '設定', EXECUTE: '実行', DEAL_DAMAGE: 'ダメージ付与', RESTORE: '回復' }[effect.operation]
+    SET: '設定', EXECUTE: '実行', DEAL_DAMAGE: 'ダメージ付与', RESTORE: '回復', IGNORE_RATIO: '割合無視' }[effect.operation]
 }
 export function formatTalentStructureEffectValue(effect: TalentStructureEffect): string {
   if (effect.item === 'DAMAGE_OVER_TIME') {
@@ -224,7 +252,7 @@ export function formatTalentStructureEffectValue(effect: TalentStructureEffect):
     return `${formatCombatNumericValue(effect.value)}${effect.unit === 'SECOND' ? '秒' : 'ポイント'}`
   }
   switch (effect.unit) {
-    case 'RATIO': return signed(effect.value * 100) + '％'
+    case 'RATIO': return (effect.operation === 'IGNORE_RATIO' ? number(effect.value * 100) : signed(effect.value * 100)) + '％'
     case 'SECOND': return signed(effect.value) + '秒'
     case 'POINT': return number(effect.value)
     case 'BOOLEAN': return effect.item === 'FORCED_RETREAT' ? '強制退場する' : '無効'

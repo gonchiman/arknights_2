@@ -17,6 +17,7 @@ export interface DamageCalculatorThreeTalentEvaluation {
   effect: TalentStructureEffect | null
   status: 'APPLIED' | 'CONDITION_FALSE' | 'NOT_RELEVANT' | 'UNSUPPORTED' | 'UNVERIFIED'
   reason: string
+  appliedAttackIds?: string[]
 }
 export interface DamageCalculatorThreeTalentOutput {
   effects: DamageCalculatorThreeTalentEvaluation[]
@@ -27,6 +28,8 @@ export interface DamageCalculatorThreeTalentOutput {
   scopeNotes: string[]
   hasDamageOverTime: boolean
   damageOverTimeRate: DamageOverTimeRate | null
+  attackSpeedBonus: number
+  defenseIgnore: { chance: number; ratio: number } | null
 }
 
 /** Evaluate verified effects of this operator only; no descriptions or legacy formulas execute. */
@@ -34,15 +37,19 @@ export function evaluateDamageCalculatorThreeTalents(input: {
   operator: SkillRecord; phaseIndex: number; operatorLevel: number
   attackKind: 'NORMAL' | 'NEXT_ATTACK' | 'COUNTER'
   enemyAttackCapability?: 'MELEE_ONLY' | 'RANGED_CAPABLE'
+  targetAirborne?: boolean
+  seaMonsterPresent?: boolean
 }): DamageCalculatorThreeTalentOutput {
   const { operator, phaseIndex, operatorLevel } = input
   const structures = buildTalentStructures([operator], { phaseIndex, operatorLevel })
   const selectedSources = getOperatorPassives(operator.operatorProfile, phaseIndex, operatorLevel, 1).sources
   const output: DamageCalculatorThreeTalentOutput = { effects: [], attackRatio: 0, resistanceIgnoreFixed: 0,
-    hasUnsupportedDamage: false, blockingReasons: [], scopeNotes: [], hasDamageOverTime: false, damageOverTimeRate: null }
+    hasUnsupportedDamage: false, blockingReasons: [], scopeNotes: [], hasDamageOverTime: false, damageOverTimeRate: null,
+    attackSpeedBonus: 0, defenseIgnore: null }
   const enemyAttackCapability = input.enemyAttackCapability ?? 'MELEE_ONLY'
   const metrics: Readonly<Record<string, CombatScalar | undefined>> = { 'source.isDeployed': true, 'source.isInSquad': true,
-    'target.canUseRangedAttack': enemyAttackCapability === 'RANGED_CAPABLE' ? true : enemyAttackCapability === 'MELEE_ONLY' ? false : undefined }
+    'target.canUseRangedAttack': enemyAttackCapability === 'RANGED_CAPABLE' ? true : enemyAttackCapability === 'MELEE_ONLY' ? false : undefined,
+    'target.isAirborne': input.targetAirborne ?? false, 'battlefield.hasSeaMonster': input.seaMonsterPresent ?? false }
   const activeDots: DamageCalculatorThreeTalentEvaluation[] = []
   for (const talentIndex of [0, 1]) {
     const selection = { operatorId: operator.operatorId, talentIndex }
@@ -102,7 +109,9 @@ export function evaluateDamageCalculatorThreeTalents(input: {
       }
       if (recipient === null || condition === null) {
         result.reason = recipient === null ? '自身が対象に含まれるかを判定する所属・対象情報を取得できません。' : '適用条件を判定する入力を取得できません。'
-      } else if (!isSupportedContext(effect)) {
+      } else if (effect.item === 'DEFENSE_IGNORE_RATIO' && resolveCombatProbability(effect.probability) === null) {
+        result.reason = '防御無視の発動確率を取得できません。'
+      } else if (!isSupportedContext(effect, effect.item === 'DEFENSE_IGNORE_RATIO')) {
         result.status = 'UNSUPPORTED'
         result.reason = 'この効果の発動方式・確率・有効期間・制約の適用にはまだ対応していません。'
       } else {
@@ -118,6 +127,22 @@ export function evaluateDamageCalculatorThreeTalents(input: {
           output.resistanceIgnoreFixed += value
           result.status = 'APPLIED'
           result.reason = '自身の攻撃時に敵の術耐性を固定値で無視します。'
+        } else if (effect.item === 'ATTACK_SPEED' && effect.operation === 'ADD_VALUE' && effect.unit === 'POINT'
+          && effect.target.entity === 'UNIT' && effect.timing.type === 'CONTINUOUS') {
+          output.attackSpeedBonus += value
+          result.status = 'APPLIED'
+          result.reason = '攻撃速度へ加算して適用します。'
+        } else if (effect.item === 'DEFENSE_IGNORE_RATIO' && effect.operation === 'IGNORE_RATIO' && effect.unit === 'RATIO'
+          && effect.target.entity === 'ATTACK' && effect.timing.type === 'EVENT' && ['ATTACK', 'DAMAGE_DEALT'].includes(effect.timing.event)
+          && value >= 0 && value <= 1) {
+          const chance = resolveCombatProbability(effect.probability)
+          if (chance === null) result.reason = '防御無視の発動確率を取得できません。'
+          else if (output.defenseIgnore !== null) { result.status = 'UNSUPPORTED'; result.reason = '複数の防御無視効果を重ねる計算は未対応です。' }
+          else {
+            output.defenseIgnore = { chance, ratio: value }
+            result.status = 'APPLIED'
+            result.reason = '防御無視あり・なしのダメージを確率で加重します。'
+          }
         } else {
           result.status = 'UNSUPPORTED'
           result.reason = 'この項目・演算・値の適用にはまだ対応していません。'
@@ -137,12 +162,13 @@ export function evaluateDamageCalculatorThreeTalents(input: {
   return output
 }
 
-function isSupportedContext(effect: TalentStructureEffect): boolean {
-  if (resolveCombatProbability(effect.probability) !== 1 || effect.probability.rollScope !== 'APPLICATION'
+function isSupportedContext(effect: TalentStructureEffect, allowProbability = false): boolean {
+  const chance = resolveCombatProbability(effect.probability)
+  if (chance === null || (!allowProbability && chance !== 1) || effect.probability.rollScope !== 'APPLICATION'
     || effect.restrictions.length || effect.afterEffects?.length) return false
   if (effect.timing.type === 'CONTINUOUS') return ['DEPLOYED', 'IN_SQUAD', 'ALWAYS'].includes(effect.timing.while)
     && effect.lifetime.type === 'WHILE_SOURCE_ACTIVE'
-  return effect.timing.type === 'EVENT' && effect.timing.event === 'ATTACK' && effect.lifetime.type === 'CURRENT_EVENT'
+  return effect.timing.type === 'EVENT' && (effect.timing.event === 'ATTACK' || (allowProbability && effect.timing.event === 'DAMAGE_DEALT')) && effect.lifetime.type === 'CURRENT_EVENT'
 }
 
 /** Three-valued membership: missing metadata cannot prove that a faction filter fails. */

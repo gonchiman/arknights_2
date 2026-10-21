@@ -22,12 +22,13 @@ before(async () => {
   server = await createServer({
     configFile: false, plugins: [react()], logLevel: 'error',
     cacheDir: 'node_modules/.vite/skill-structure-test', resolve: { preserveSymlinks: true },
-    server: { middlewareMode: true, watch: null, preTransformRequests: false }, appType: 'custom',
+    server: { middlewareMode: true, watch: null, preTransformRequests: false, hmr: false }, appType: 'custom',
   })
   ;({ SkillStructurePage: Page } = await server.ssrLoadModule('/src/components/SkillStructurePage.tsx'))
   ;({ SkillDescriptionSelectionPage: Picker } = await server.ssrLoadModule('/src/components/SkillDescriptionSelectionPage.tsx'))
   ;({ SKILL_STRUCTURES: structures } = await server.ssrLoadModule('/src/lib/skillStructure.ts'))
   ;({ SKILL_STRUCTURE_DEFERRED_CASES: deferredCases } = await server.ssrLoadModule('/src/lib/skillStructureDeferredCases.ts'))
+  deferredCases = deferredCases.filter(entry => source.some(operator => operator.operatorId === entry.selection.operatorId))
   ;({ classifySkill } = await server.ssrLoadModule('/src/lib/classifier.ts'))
   // The picker receives source records, rather than deriving its input from the implementation's supported list.
   rows = source.flatMap(operator => operator.skills.map(entry => {
@@ -133,8 +134,8 @@ test('全12件で別レベルのURLは特化3の説明・構造を代用せず�
 
 test('他オペレーターと不整合なスキル指定は、対応済みデータへフォールバックしない', () => {
   const unsupported = {
-    ...rows[0], operatorId: 'char_4009_irene', operatorName: 'アイリーニ',
-    skillIndex: 1, skillId: 'skchr_irene_1', id: 'char_4009_irene:skchr_irene_1',
+    ...rows[0], operatorId: 'char_456_ash', operatorName: 'Ash',
+    skillIndex: 1, skillId: 'skchr_ash_1', id: 'char_456_ash:skchr_ash_1',
   }
   for (const initialSelection of [
     { operatorId: unsupported.operatorId, skillIndex: 1, skillId: unsupported.skillId, levelIndex: 9 },

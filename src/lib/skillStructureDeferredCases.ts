@@ -18,6 +18,21 @@ export interface SkillStructureDeferredCase {
 /** Persistent follow-up records, separate from executable effects and resolved structural differences. */
 export const SKILL_STRUCTURE_DEFERRED_CASES: readonly SkillStructureDeferredCase[] = [
   {
+    id: 'irene-s1-levitation-timeline',
+    selection: { operatorId: 'char_4009_irene', skillId: 'skchr_irene_1', skillIndex: 1, levelIndex: 9 },
+    title: '浮遊の経過時間と打撃間の状態変化',
+    status: 'DEFERRED',
+    unresolved: '各打撃の正確な時刻、重量による浮遊時間短縮、途中で他者が状態を解除した場合の扱い。',
+    currentTreatment: '地上の対象への強化攻撃1回を評価する。ガイドの観測に基づき浮遊成立時は両打撃とも空中判定、浮遊無効時は両打撃とも地上判定とする。説明文の順序を処理順とみなさず、状態付与と各打撃を依存関係で保持する。',
+    reason: '強化攻撃1回のダメージ期待値を先に対応し、フレーム単位の状態管理は後で扱う。',
+    impact: '打撃間の外部状態変化と、浮遊中の有限時間シミュレーション。',
+    resumeWhen: '打撃時刻と浮遊の終了を含む時間進行を扱う際に、実機またはスキル処理本体で確認する。',
+    references: [
+      { label: 'JPスキルデータ：skchr_irene_1', href: DATA_SOURCE_URLS.skill, external: true },
+      { label: 'Sanity;Gone：Irene / Gust', href: 'https://old.sanitygone.help/operators/irene', external: true },
+    ],
+  },
+  {
     id: 'surtr-s3-hp-loss-timing',
     selection: { operatorId: 'char_350_surtr', skillId: 'skchr_surtr_3', skillIndex: 3, levelIndex: 9 },
     title: 'HP減少の時間変化と処理時刻',
