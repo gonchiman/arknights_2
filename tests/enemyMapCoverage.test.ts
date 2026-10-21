@@ -24,10 +24,10 @@ test('the recorded map population matches the histogram coverage in both modes',
   const histogram = JSON.parse(await readFile(new URL('../public/data/enemy-histogram-counts.json', import.meta.url), 'utf8'))
   const spawns = summarizeMapCoverage(maps, 'SPAWNS')
   const appearances = summarizeMapCoverage(maps, 'MAPS')
-  assert.deepEqual(spawns, { total: 2298, included: 1474, excluded: 524, missing: 300 })
-  assert.deepEqual(appearances, { total: 2298, included: 1998, excluded: 0, missing: 300 })
+  assert.deepEqual(spawns, { total: 2298, included: 1474, excluded: 627, missing: 197 })
+  assert.deepEqual(appearances, { total: 2298, included: 1998, excluded: 103, missing: 197 })
   assert.equal(spawns.included, histogram.summary.spawnMapCount)
-  assert.equal(spawns.excluded, histogram.summary.spawnExcludedMapCount)
+  assert.equal(spawns.excluded, histogram.summary.spawnExcludedMapCount + histogram.summary.excludedMapCount)
   assert.equal(spawns.missing, histogram.summary.missingMapCount)
   assert.equal(appearances.included, histogram.summary.mapCount)
 })
@@ -35,7 +35,7 @@ test('the recorded map population matches the histogram coverage in both modes',
 test('the four content categories preserve the complete map population', () => {
   const categories = getMapCoverageCategories(maps, 'SPAWNS')
   assert.deepEqual(categories, [
-    { key: 'main', label: 'メインテーマ', total: 584, included: 375, excluded: 87, missing: 122 },
+    { key: 'main', label: 'メインテーマ', total: 584, included: 375, excluded: 190, missing: 19 },
     { key: 'event', label: 'イベント', total: 1416, included: 863, excluded: 375, missing: 178 },
     { key: 'supply', label: '物資調達・SoC', total: 35, included: 35, excluded: 0, missing: 0 },
     { key: 'other', label: 'その他', total: 263, included: 201, excluded: 62, missing: 0 },
@@ -63,6 +63,19 @@ test('shared level data is counted once even with multiple stage records', () =>
   const duplicate = { ...base, stageId: 'main_01-07#f', difficulty: 'FOUR_STAR' }
   assert.deepEqual(summarizeMapCoverage([base, duplicate], 'SPAWNS'), { total: 1, included: 1, excluded: 0, missing: 0 })
   assert.equal(getMapCoverageCategories([base, duplicate], 'SPAWNS').reduce((total, category) => total + category.total, 0), 1)
+})
+
+test('story environments stay out of both aggregations even after their data is acquired', () => {
+  for (const status of ['supported', 'excluded', 'missing'] as const) {
+    const story: MapSummary = { ...base, levelId: 'story', diffGroup: 'EASY', status }
+    for (const mode of ['SPAWNS', 'MAPS'] as const) {
+      assert.equal(getMapCoverageStatus(story, mode), 'excluded')
+      assert.deepEqual(getMapCoverageReasons(story, mode), ['物語環境'])
+      assert.deepEqual(summarizeMapCoverage([base, story], mode), {
+        total: 2, included: 1, excluded: 1, missing: 0,
+      })
+    }
+  }
 })
 
 test('chapter ordering is numeric and other content reuses the existing category classifier', () => {

@@ -54,6 +54,16 @@ test('不正な件数と不整合な収録範囲を正常値として扱わな�
   assert.throws(() => parseEnemyHistogramCounts({ ...source, schemaVersion: 2 }))
 })
 
+test('集計対象外のマップ数は未取得と区別し、旧データも読み込める', () => {
+  const counts = parseEnemyHistogramCounts({ ...source, summary: { ...source.summary, excludedMapCount: 103 } })
+  assert.equal(counts.summary.excludedMapCount, 103)
+  assert.equal(counts.summary.missingMapCount, 1)
+  assert.equal(parseEnemyHistogramCounts(source).summary.excludedMapCount, undefined)
+  for (const excludedMapCount of [-1, 1.5, null, '103']) {
+    assert.throws(() => parseEnemyHistogramCounts({ ...source, summary: { ...source.summary, excludedMapCount } }))
+  }
+})
+
 test('統計サマリーも重み付きの平均・中央値から分散指標を出す', () => {
   const statistics = calculateWeightedHistogram([{ value: 100, weight: 3 }, { value: 500, weight: 1 }])
   const summary = withHistogramDispersion(statistics)

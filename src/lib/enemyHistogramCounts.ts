@@ -18,6 +18,7 @@ export interface EnemyHistogramCounts {
   summary: {
     mapCount: number
     missingMapCount: number
+    excludedMapCount?: number
     spawnMapCount: number
     spawnExcludedMapCount: number
   }
@@ -34,6 +35,7 @@ export function parseEnemyHistogramCounts(source: unknown): EnemyHistogramCounts
   const enemies = record(root?.enemies)
   if (root?.schemaVersion !== 1 || !summary || !enemies
     || !['mapCount', 'missingMapCount', 'spawnMapCount', 'spawnExcludedMapCount'].every((key) => isCount(summary[key]))
+    || (summary.excludedMapCount !== undefined && !isCount(summary.excludedMapCount))
     || Number(summary.spawnMapCount) + Number(summary.spawnExcludedMapCount) !== summary.mapCount) {
     throw new Error('登場データの形式を確認できませんでした。')
   }

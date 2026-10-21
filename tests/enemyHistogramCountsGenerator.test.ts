@@ -31,7 +31,7 @@ test('MAPS counts one reference per enemy and map; SPAWNS sums all repeated acti
   assert.deepEqual(result.enemies.enemy_a, { mapCount: 2, spawnCount: 12 })
   assert.deepEqual(result.enemies.enemy_b, { mapCount: 1, spawnCount: 4 })
   assert.deepEqual(Object.keys(result.enemies), ['enemy_a', 'enemy_b'])
-  assert.deepEqual(result.summary, { mapCount: 2, missingMapCount: 0, spawnMapCount: 2, spawnExcludedMapCount: 0 })
+  assert.deepEqual(result.summary, { mapCount: 2, missingMapCount: 0, excludedMapCount: 0, spawnMapCount: 2, spawnExcludedMapCount: 0 })
   // Both enemies in the same bin contribute their map frequencies independently.
   assert.equal(Object.values(result.enemies).reduce((sum, value) => sum + value.mapCount, 0), 3)
 })
@@ -189,6 +189,35 @@ test('source date and missing coverage stay explicit and recovered missing level
   assert.equal(buildEnemyHistogramCounts(levels).generatedAt, null)
 })
 
+test('物語環境の対象外IDは古いキャッシュや取得失敗一覧にあってもMAPSとSPAWNSへ加算しない', () => {
+  for (const cached of [false, true]) for (const sourceSummary of [
+    { uniqueLevelCount: 2, processedLevelCount: 1, failedLevelCount: 1, excludedLevelCount: 1 },
+    { uniqueLevelCount: 3, processedLevelCount: 1, failedLevelCount: 2 },
+  ]) {
+    const result = buildEnemyHistogramCounts([
+      level('obt/main/normal', [{ id: 'enemy_a' }], [spawn('enemy_a', 3)]),
+      ...(cached ? [level('Obt/Main/Story.json', [{ id: 'enemy_a' }, { id: 'enemy_story_only' }], [
+        spawn('enemy_a', 30), spawn('enemy_story_only', 50, { hiddenGroup: 'story' }),
+      ])] : []),
+    ], {
+      ...provenance,
+      sourceSummary,
+      failedLevelIds: ['obt/main/missing', 'obt/main/story'],
+      excludedLevelIds: ['Obt/Main/Story.json', 'obt/main/story'],
+    })
+    assert.deepEqual(result.enemies, { enemy_a: { mapCount: 1, spawnCount: 3 } })
+    assert.deepEqual(result.summary, {
+      mapCount: 1, missingMapCount: 1, excludedMapCount: 1, spawnMapCount: 1, spawnExcludedMapCount: 0,
+    })
+    assert.deepEqual(result.diagnostics.missingLevelIds, ['obt/main/missing'])
+    assert.deepEqual(result.diagnostics.excludedLevelIds, ['obt/main/story'])
+    assert.deepEqual(result.diagnostics.excludedLevels, [])
+    assert.equal(result.diagnostics.sourceCoverage.requestedMapCount, 2)
+    assert.equal(result.diagnostics.sourceCoverage.sourceMissingMapCount, 1)
+    assert.equal(result.diagnostics.sourceCoverage.recoveredMapCount, 0)
+  }
+})
+
 test('committed cache aggregate retains source coverage and all existing per-enemy map counts', async () => {
   const [result, source] = await Promise.all([
     readFile(new URL('../public/data/enemy-histogram-counts.json', import.meta.url), 'utf8').then(JSON.parse),
@@ -199,6 +228,11 @@ test('committed cache aggregate retains source coverage and all existing per-ene
   assert.equal(result.sourceGeneratedAt, source.generatedAt)
   assert.equal(result.summary.mapCount, source.summary.processedLevelCount)
   assert.equal(result.summary.missingMapCount, source.summary.failedLevelCount)
+  assert.equal(result.summary.excludedMapCount, source.summary.excludedLevelCount)
+  assert.deepEqual(result.diagnostics.excludedLevelIds, source.diagnostics.excludedLevelIds)
+  assert.deepEqual(result.summary, {
+    mapCount: 1998, missingMapCount: 197, excludedMapCount: 103, spawnMapCount: 1474, spawnExcludedMapCount: 524,
+  })
   assert.equal(result.summary.spawnMapCount + result.summary.spawnExcludedMapCount, result.summary.mapCount)
   assert.equal(result.diagnostics.excludedLevels.length, result.summary.spawnExcludedMapCount)
   assert.ok(result.summary.spawnMapCount > 0)

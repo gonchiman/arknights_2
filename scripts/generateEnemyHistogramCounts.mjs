@@ -22,6 +22,9 @@ const FRAGMENT_FIELDS = new Set(['actions', 'preDelay'])
  * Timestamps are supplied by the caller to keep this transformation pure.
  */
 export function buildEnemyHistogramCounts(levels, provenance = {}) {
+  const excludedLevelIds = [...new Set((Array.isArray(provenance.excludedLevelIds) ? provenance.excludedLevelIds : [])
+    .map(normalizeLevelId).filter(Boolean))].sort(compareIds)
+  const scopeExcluded = new Set(excludedLevelIds)
   const byLevel = new Map()
   const duplicates = new Set()
   const invalidLevelIds = []
@@ -32,6 +35,8 @@ export function buildEnemyHistogramCounts(levels, provenance = {}) {
       invalidLevelIds.push(typeof level?.levelId === 'string' ? level.levelId : null)
       continue
     }
+    // Scope exclusions apply even when an older or separately populated cache contains the level.
+    if (scopeExcluded.has(levelId)) continue
     if (byLevel.has(levelId)) duplicates.add(levelId)
     else byLevel.set(levelId, level.data)
   }
@@ -68,11 +73,19 @@ export function buildEnemyHistogramCounts(levels, provenance = {}) {
   }
 
   const sourceSummary = asRecord(provenance.sourceSummary)
-  const sourceFailedIds = new Set((Array.isArray(provenance.failedLevelIds) ? provenance.failedLevelIds : [])
+  const allSourceFailedIds = new Set((Array.isArray(provenance.failedLevelIds) ? provenance.failedLevelIds : [])
     .map(normalizeLevelId).filter(Boolean))
+  const sourceFailedIds = new Set([...allSourceFailedIds].filter((levelId) => !scopeExcluded.has(levelId)))
   const missingLevelIds = [...sourceFailedIds].filter((levelId) => !byLevel.has(levelId)).sort(compareIds)
-  const requestedMapCount = nonnegativeInteger(sourceSummary?.uniqueLevelCount)
-  const sourceMissingMapCount = nonnegativeInteger(sourceSummary?.failedLevelCount)
+  // Older provenance totals still include levels subsequently marked out of scope.
+  // New stage summaries record excludedLevelCount and already omit them from their totals.
+  const sourceScopeApplied = nonnegativeInteger(sourceSummary?.excludedLevelCount) !== null
+  const sourceRequestedMapCount = nonnegativeInteger(sourceSummary?.uniqueLevelCount)
+  const sourceFailedMapCount = nonnegativeInteger(sourceSummary?.failedLevelCount)
+  const requestedMapCount = sourceRequestedMapCount === null ? null
+    : Math.max(0, sourceRequestedMapCount - (sourceScopeApplied ? 0 : excludedLevelIds.length))
+  const sourceMissingMapCount = sourceFailedMapCount === null ? null
+    : Math.max(0, sourceFailedMapCount - (sourceScopeApplied ? 0 : allSourceFailedIds.size - sourceFailedIds.size))
   const recoveredMapCount = sourceFailedIds.size - missingLevelIds.length
   const missingMapCount = Math.max(
     missingLevelIds.length,
@@ -89,11 +102,13 @@ export function buildEnemyHistogramCounts(levels, provenance = {}) {
     summary: {
       mapCount: byLevel.size,
       missingMapCount,
+      excludedMapCount: excludedLevelIds.length,
       spawnMapCount,
       spawnExcludedMapCount: excludedLevels.length,
     },
     enemies: Object.fromEntries([...enemies].sort(([left], [right]) => compareIds(left, right))),
     diagnostics: {
+      excludedLevelIds,
       excludedLevels,
       reasonCounts: Object.fromEntries([...reasonCounts].sort(([left], [right]) => compareIds(left, right))),
       missingLevelIds,
@@ -288,6 +303,7 @@ async function generate({ cacheRoot, sourcePath, outputPath }) {
     sourceGeneratedAt: source.generatedAt,
     sourceSummary: source.summary,
     failedLevelIds: source.diagnostics?.failedLevelIds,
+    excludedLevelIds: source.diagnostics?.excludedLevelIds,
   })
   await mkdir(dirname(outputPath), { recursive: true })
   await writeFile(outputPath, `${JSON.stringify(document, null, 2)}\n`, 'utf8')

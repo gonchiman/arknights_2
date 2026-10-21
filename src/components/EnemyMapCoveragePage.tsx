@@ -13,12 +13,11 @@ import './EnemyMapCoveragePage.css'
 
 const PAGE_SIZE = 36
 const STATUS_LABELS: Record<CoverageStatus, string> = {
-  included: '集計対象', excluded: '出現数未確定', missing: 'データ未取得',
+  included: '集計対象', excluded: '集計対象外', missing: 'データ未取得',
 }
 const ENVIRONMENT_ORDER = ['標準', '強襲', '厄難', '物語', '共通', '環境指定なし', 'その他']
 const formatCount = (count: number) => count.toLocaleString('ja-JP')
-const statusKeys = (mode: CountMode): CoverageStatus[] => mode === 'SPAWNS'
-  ? ['included', 'excluded', 'missing'] : ['included', 'missing']
+const STATUS_KEYS: CoverageStatus[] = ['included', 'excluded', 'missing']
 
 function compareMaps(a: MapSummary, b: MapSummary) {
   const environmentOrder = (map: MapSummary) => {
@@ -30,9 +29,9 @@ function compareMaps(a: MapSummary, b: MapSummary) {
     || a.levelId.localeCompare(b.levelId, 'en', { numeric: true })
 }
 
-function CoverageLegend({ counts, mode }: { counts: CoverageCounts; mode: CountMode }) {
+function CoverageLegend({ counts }: { counts: CoverageCounts }) {
   return <div className="enemy-map-coverage-legend">
-    {statusKeys(mode).map((status) => <span key={status}>
+    {STATUS_KEYS.map((status) => <span key={status}>
       <i className={`coverage-${status}`} aria-hidden="true" />
       {STATUS_LABELS[status]} <strong>{formatCount(counts[status])}</strong>
     </span>)}
@@ -101,7 +100,7 @@ export function EnemyMapCoveragePage() {
       </div>
       <section className="calculator-panel" aria-labelledby="enemy-map-coverage-chart-heading">
         <header className="panel-heading"><div><span>01</span><h2 id="enemy-map-coverage-chart-heading">集計マップ</h2></div></header>
-        <CoverageLegend counts={totals} mode={mode} />
+        <CoverageLegend counts={totals} />
         <div className="enemy-map-coverage-chart" role="group" aria-label="分類ごとの集計対象割合とマップ数">
           <div className="enemy-map-coverage-chart-heading" aria-hidden="true">
             <span>分類</span><span>収録マップの内訳</span><span>集計対象 / 収録数</span>
@@ -109,10 +108,10 @@ export function EnemyMapCoveragePage() {
           {categories.map((item) => <button type="button" key={item.key}
             className="enemy-map-coverage-bar-row" aria-pressed={category === item.key}
             aria-controls="enemy-map-coverage-detail" onClick={() => selectCategory(item.key)}
-            aria-label={`${item.label}、集計対象 ${formatCount(item.included)} / 収録 ${formatCount(item.total)}マップ、${statusKeys(mode).map((status) => `${STATUS_LABELS[status]} ${formatCount(item[status])}`).join('、')}`}>
+            aria-label={`${item.label}、集計対象 ${formatCount(item.included)} / 収録 ${formatCount(item.total)}マップ、${STATUS_KEYS.map((status) => `${STATUS_LABELS[status]} ${formatCount(item[status])}`).join('、')}`}>
             <span className="enemy-map-coverage-category">{item.label}</span>
             <span className="enemy-map-coverage-bar" aria-hidden="true">
-              {statusKeys(mode).map((status) => <span key={status} className={`coverage-${status}`}
+              {STATUS_KEYS.map((status) => <span key={status} className={`coverage-${status}`}
                 style={{ width: `${item.total > 0 ? item[status] / item.total * 100 : 0}%` }} />)}
             </span>
             <span className="enemy-map-coverage-count">{formatCount(item.included)} / {formatCount(item.total)} マップ</span>
@@ -129,7 +128,7 @@ export function EnemyMapCoveragePage() {
           </label>
           <div className="enemy-map-coverage-zone-heading" aria-live="polite">
             <h3>{activeZone?.name}<span>{formatCount(zoneCounts.total)} マップ</span></h3>
-            <CoverageLegend counts={zoneCounts} mode={mode} />
+            <CoverageLegend counts={zoneCounts} />
           </div>
           <div className="enemy-map-coverage-selection" aria-live="polite">
             {selected && <>
