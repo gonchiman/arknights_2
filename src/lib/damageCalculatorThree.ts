@@ -10,6 +10,7 @@ import {
 } from './damageCalculator.ts'
 import { getDamageSensitivityTablePoints } from './damageSensitivity.ts'
 import { evaluateDamageCalculatorThreeTalents, type DamageCalculatorThreeTalentEvaluation } from './damageCalculatorThreeTalents.ts'
+import { calculateMaintainedDamageOverTime, type MaintainedDamageOverTime } from './damageOverTime.ts'
 import { getComparisonMaximumSkillLevelIndex, getComparisonMinimumPhaseIndex } from './operatorBuildComparison.ts'
 import {
   findSkillStructure,
@@ -60,19 +61,23 @@ export interface DamageCalculatorThreeConditions {
   skillActivationCount?: number
   skillMode?: 'INITIAL' | 'ALTERNATE'
   attackDistanceType?: 'MELEE' | 'RANGED'
+  enemyResistance?: number
+  enemyAttackCapability?: 'MELEE_ONLY' | 'RANGED_CAPABLE'
 }
 
 export type DamageCalculatorThreeConditionInput = {
   kind: 'number'
-  metric: 'actualAttackTargetCount' | 'skillActivationCount'
+  metric: 'actualAttackTargetCount' | 'skillActivationCount' | 'enemyResistance'
   label: string
   min: number
   max: number
   defaultValue: number
   options?: readonly { value: number; label: string }[]
+  control?: 'input'
+  step?: number
 } | {
   kind: 'select'
-  metric: 'skillMode' | 'attackDistanceType'
+  metric: 'skillMode' | 'attackDistanceType' | 'enemyAttackCapability'
   label: string
   options: readonly { value: string; label: string }[]
   defaultValue: string
@@ -105,6 +110,9 @@ export interface DamageCalculatorThreeRow {
   allTargetsPerAttack: number
   allTargetsDps: number | null
   breakdown: SkillDamageBreakdown
+  damageOverTimeDps: number | null
+  combinedDps: number | null
+  allTargetsCombinedDps: number | null
 }
 
 export interface DamageCalculatorThreeOutput {
@@ -135,6 +143,7 @@ export interface DamageCalculatorThreeOutput {
   talentAttackRatio: number
   resistanceIgnoreFixed: number
   hasUnsupportedTalentDamage: boolean
+  damageOverTime: MaintainedDamageOverTime | null
 }
 
 export function getDamageCalculatorThreeStructures(): SkillStructure[] {
@@ -238,7 +247,17 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   const effects: DamageCalculatorThreeEffectEvaluation[] = []
   const scopeNotes: string[] = []
   const talents = evaluateDamageCalculatorThreeTalents({ operator: input.operator,
-    phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel, attackKind })
+    phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel, attackKind,
+    enemyAttackCapability: context.enemyAttackCapability })
+  if (talents.hasDamageOverTime) {
+    conditionInputs.push({ kind: 'select', metric: 'enemyAttackCapability', label: '敵の遠距離攻撃能力',
+      options: [{ value: 'MELEE_ONLY', label: 'なし' }, { value: 'RANGED_CAPABLE', label: 'あり' }], defaultValue: 'MELEE_ONLY' },
+    { kind: 'number', control: 'input', metric: 'enemyResistance', label: '敵の術耐性', min: 0, max: 100, step: 1, defaultValue: 0 })
+    if (!Number.isFinite(context.enemyResistance) || context.enemyResistance < 0 || context.enemyResistance > 100) {
+      reasons.push('敵の術耐性は0〜100で指定してください。')
+    }
+    if (!['MELEE_ONLY', 'RANGED_CAPABLE'].includes(context.enemyAttackCapability)) reasons.push('敵の遠距離攻撃能力を選択してください。')
+  }
   scopeNotes.push(...talents.scopeNotes)
   let atkRatio = 0, attackSpeedBonus = 0, attackScale = 1
   if (structure && stage && attack && reasons.length === 0) {
@@ -328,6 +347,9 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
     attackScale: attackScale * rangePenaltyMultiplier,
   }) : null
   const effectiveAttack = attackPipeline?.finalAttack ?? null
+  const damageOverTime = model && talents.damageOverTimeRate ? calculateMaintainedDamageOverTime(talents.damageOverTimeRate, {
+    enemyResistance: context.enemyResistance, actualTargetCount, attackInterval, attackKind,
+  }) : null
   const rows: DamageCalculatorThreeRow[] = model && attackPipeline && damageType
     ? getDamageSensitivityTablePoints(damageType, [attackPipeline.finalAttack * 0.95]).map(axisValue => {
       const mitigation = calculateDamageBreakdown(attackPipeline.finalAttack, damageType,
@@ -336,13 +358,18 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
       const perHit = mitigation.result
       const perAttack = perHit * model.hitCount
       const dps = canShowDps && attackInterval ? perAttack / attackInterval : null
+      const damageOverTimeDps = damageOverTime?.steadyDps ?? null
+      const combinedDps = talents.hasDamageOverTime
+        ? dps === null || damageOverTimeDps === null || talents.hasUnsupportedDamage ? null : dps + damageOverTimeDps
+        : dps
       const breakdown: SkillDamageBreakdown = {
         attackPipeline, mitigation, perHit, perAttack, dps, total: null,
         hitCount: model.hitCount, attackInterval: model.attackInterval, duration, ammoCount: 0,
         canShowDps, totalMode: 'NONE',
       }
       return { axisValue, perHit, perAttack, dps, allTargetsPerAttack: perAttack * actualTargetCount,
-        allTargetsDps: dps === null ? null : dps * actualTargetCount, breakdown }
+        allTargetsDps: dps === null ? null : dps * actualTargetCount, breakdown,
+        damageOverTimeDps, combinedDps, allTargetsCombinedDps: combinedDps === null ? null : combinedDps * actualTargetCount }
     }) : []
   return { structure, stats, model, damageType, axisLabel, rows, unsupportedReasons, conditionInputs,
     actualTargetCount, maxTargetCount, effects, canShowDps, dpsReason, effectiveAttack,
@@ -350,7 +377,8 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
     attackInterval: model ? attackInterval : null, activeStageLabel: stage?.label ?? null,
     attackKind, attackLabel, attackDistanceType, rangePenaltyMultiplier, scopeNotes, counterCooldownSeconds,
     talentEffects: talents.effects, talentAttackRatio: talents.attackRatio,
-    resistanceIgnoreFixed: talents.resistanceIgnoreFixed, hasUnsupportedTalentDamage: talents.hasUnsupportedDamage }
+    resistanceIgnoreFixed: talents.resistanceIgnoreFixed, hasUnsupportedTalentDamage: talents.hasUnsupportedDamage,
+    damageOverTime }
 }
 
 type ConditionContext = Required<DamageCalculatorThreeConditions>
@@ -370,6 +398,8 @@ function resolveConditions(conditions: DamageCalculatorThreeConditions = {}): Co
     skillActivationCount: conditions.skillActivationCount ?? 1,
     skillMode: conditions.skillMode ?? 'INITIAL',
     attackDistanceType: conditions.attackDistanceType ?? 'MELEE',
+    enemyResistance: conditions.enemyResistance ?? 0,
+    enemyAttackCapability: conditions.enemyAttackCapability ?? 'MELEE_ONLY',
   }
 }
 

@@ -146,7 +146,11 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
         <div className="calculator-form-grid damage-three-condition-grid">
           {output.conditionInputs.map(input => <label className="calculator-field" key={input.metric}>
             <span>{input.label}</span>
-            <select aria-label={input.label} value={conditions[input.metric] ?? input.defaultValue}
+            {input.kind === 'number' && input.control === 'input' ? <input type="number" aria-label={input.label}
+              min={input.min} max={input.max} step={input.step ?? 1}
+              value={Number.isFinite(conditions[input.metric] ?? input.defaultValue) ? conditions[input.metric] ?? input.defaultValue : ''}
+              onChange={event => setConditions(previous => ({ ...previous, [input.metric]: event.target.valueAsNumber }))} />
+              : <select aria-label={input.label} value={conditions[input.metric] ?? input.defaultValue}
               onChange={event => setConditions(previous => ({ ...previous,
                 [input.metric]: input.kind === 'number' ? Number(event.target.value) : event.target.value,
               }))}>
@@ -154,7 +158,7 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
                 ?? Array.from({ length: input.max - input.min + 1 }, (_, index) => ({
                   value: input.min + index, label: `${input.min + index}${input.metric === 'actualAttackTargetCount' ? '体' : '回'}`,
                 }))).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
+            </select>}
           </label>)}
           {!output.conditionInputs.some(input => input.metric === 'actualAttackTargetCount') && <div className="calculator-field"><span>実際の攻撃対象数</span>
             <div className="damage-three-fixed-value">{output.actualTargetCount}体</div></div>}
@@ -187,14 +191,26 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
         <p className="damage-two-context" role="status" aria-live="polite">
           {operator?.operatorName} · S{structure?.basicInfo.skillIndex} {structure?.basicInfo.skillLevel} · 攻撃対象{output.actualTargetCount}体
           {output.activeStageLabel && output.activeStageLabel !== '通常' && <> · {output.activeStageLabel}</>}
+          {output.damageOverTime && <> · 敵の術耐性{output.damageOverTime.enemyResistance}
+            {output.canShowDps && output.damageOverTime.steadyDps !== null && <> · 同一対象へ連続攻撃</>}</>}
           {output.hasUnsupportedTalentDamage && <> · 直接攻撃分（継続ダメージを除く）</>}
         </p>
         {output.unsupportedReasons.length > 0 ? <div className="damage-two-unavailable" role="status">
           <strong>この条件では計算できません。</strong><ul>{output.unsupportedReasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
         </div> : <>
+          {output.damageOverTime && <h3 className="damage-three-result-heading">直接攻撃</h3>}
           <DamageCalculatorThreeResultTable output={output} precision={precision} />
           {output.rows.some(row => row.breakdown.mitigation.minimumApplied) && <p className="damage-two-note">＊ 最低保証ダメージ</p>}
           {output.dpsReason && <p className="damage-two-note">DPS：{output.dpsReason}</p>}
+          {!output.dpsReason && output.damageOverTime?.steadyDpsReason && <p className="damage-two-note">定常DPS：{output.damageOverTime.steadyDpsReason}</p>}
+          {output.damageOverTime && <>
+            <h3 className="damage-three-result-heading">継続ダメージ</h3>
+            <DamageCalculatorThreeDotTable output={output} precision={precision} />
+            {output.canShowDps && output.damageOverTime.steadyDps !== null && <>
+              <h3 className="damage-three-result-heading">定常DPS</h3>
+              <DamageCalculatorThreeSteadyDpsTable output={output} precision={precision} />
+            </>}
+          </>}
           <details className="damage-two-help"><summary>計算に使った値</summary>
             <UsedValueTable output={output} />
           </details>
@@ -206,8 +222,7 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
 }
 
 export function DamageCalculatorThreeResultTable({ output, precision }: { output: DamageCalculatorThreeOutput; precision: number }) {
-  const formatter = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: precision, maximumFractionDigits: precision })
-  const format = (value: number | null) => value === null ? '—' : formatter.format(value)
+  const format = resultNumberFormatter(precision)
   const damageLabel = output.attackKind === 'NORMAL' ? '1攻撃ダメージ' : `${output.attackLabel}1回のダメージ`
   return <div className="damage-two-table-wrap" tabIndex={0} role="region" aria-label="計算機３のダメージ計算結果">
     <table className={`damage-two-table damage-three-result-table${output.canShowDps ? '' : ' damage-three-single-attack-table'}`}>
@@ -220,6 +235,36 @@ export function DamageCalculatorThreeResultTable({ output, precision }: { output
         <td>{format(row.perAttack)}{row.breakdown.mitigation.minimumApplied && <sup aria-label="最低保証ダメージ">＊</sup>}</td>
         {output.canShowDps && <td>{format(row.dps)}</td>}<td>{format(row.allTargetsPerAttack)}</td>
         {output.canShowDps && <td>{format(row.allTargetsDps)}</td>}
+      </tr>)}</tbody>
+    </table>
+  </div>
+}
+
+export function DamageCalculatorThreeDotTable({ output, precision }: { output: DamageCalculatorThreeOutput; precision: number }) {
+  const damage = output.damageOverTime
+  if (!damage) return null
+  const format = resultNumberFormatter(precision)
+  return <div className="damage-two-table-wrap" tabIndex={0} role="region" aria-label="付与中の継続ダメージ">
+    <table className="damage-two-table damage-three-dot-table">
+      <caption className="visually-hidden">付与中の継続ダメージ</caption>
+      <thead><tr><th scope="col">対象</th><th scope="col">付与中のダメージ/秒</th></tr></thead>
+      <tbody><tr><th scope="row">1体</th><td>{format(damage.damagePerSecond)}</td></tr>
+        <tr><th scope="row">全対象</th><td>{format(damage.allTargetsDamagePerSecond)}</td></tr></tbody>
+    </table>
+  </div>
+}
+
+export function DamageCalculatorThreeSteadyDpsTable({ output, precision }: { output: DamageCalculatorThreeOutput; precision: number }) {
+  if (!output.damageOverTime || !output.canShowDps || output.damageOverTime.steadyDps === null) return null
+  const format = resultNumberFormatter(precision)
+  return <div className="damage-two-table-wrap" tabIndex={0} role="region" aria-label="同一対象へ連続攻撃したときの定常DPS">
+    <table className="damage-two-table damage-three-steady-table">
+      <caption className="visually-hidden">同一対象へ連続攻撃したときの定常DPS</caption>
+      <thead><tr><th scope="col">{output.axisLabel}</th><th scope="col">1体の直接DPS</th>
+        <th scope="col">1体の継続DPS</th><th scope="col">1体の合計DPS</th><th scope="col">全対象の合計DPS</th></tr></thead>
+      <tbody>{output.rows.map(row => <tr key={row.axisValue}>
+        <th scope="row">{formatCompact(row.axisValue)}</th><td>{format(row.dps)}</td>
+        <td>{format(row.damageOverTimeDps)}</td><td>{format(row.combinedDps)}</td><td>{format(row.allTargetsCombinedDps)}</td>
       </tr>)}</tbody>
     </table>
   </div>
@@ -316,4 +361,9 @@ function clampInteger(value: number, min: number, max: number) {
 
 function formatCompact(value: number) {
   return new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 4 }).format(value)
+}
+
+function resultNumberFormatter(precision: number) {
+  const formatter = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: precision, maximumFractionDigits: precision })
+  return (value: number | null) => value === null ? '—' : formatter.format(value)
 }

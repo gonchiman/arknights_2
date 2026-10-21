@@ -233,7 +233,7 @@ test('素質枠そのものが未確認なら既知の非DPS効果と仮定し�
   assert.ok(result.talentEffects.some(entry => entry.talentIndex === 1 && entry.effect === null && entry.status === 'UNVERIFIED'))
 })
 
-test('再配置・看破・回復・生存は今回の式の対象外とし、毒だけを未対応の攻撃成分として区別する', () => {
+test('再配置・看破・回復・生存は式の対象外とし、毒の毎秒量は適用する', () => {
   for (const operatorId of Object.keys(profiles) as OperatorId[]) {
     const result = output(record(operatorId, 1))
     assert.deepEqual(result.unsupportedReasons, [])
@@ -241,34 +241,40 @@ test('再配置・看破・回復・生存は今回の式の対象外とし、�
       : operatorId === 'char_263_skadi' ? ['REDEPLOY_TIME']
         : operatorId === 'char_350_surtr' ? ['HP', 'FORCED_RETREAT'] : ['HP_RESTORE_RATIO']
     for (const item of expectedItems) assert.ok(result.talentEffects.some(entry => entry.effect?.item === item && entry.status === 'NOT_RELEVANT'), `${operatorId}/${item}`)
-    assert.equal(result.hasUnsupportedTalentDamage, operatorId === 'char_293_thorns')
+    assert.equal(result.hasUnsupportedTalentDamage, false)
   }
 })
 
-test('ソーンズの毒125/250や未確定tickを加算せず、通常攻撃分を残し未対応成分を明示する', () => {
+test('ソーンズの毒は直接攻撃へ3秒分ずつ加算せず、定常DPSへ毎秒量を一度だけ加える', () => {
   const skill = record('char_293_thorns', 1)
   const before = structuredClone(skill)
   const result = output(skill)
   assert.deepEqual(result.unsupportedReasons, [])
-  assert.equal(result.hasUnsupportedTalentDamage, true)
+  assert.equal(result.hasUnsupportedTalentDamage, false)
   assert.equal(result.rows[0].perAttack, 1482)
   close(result.rows[0].dps, 1482 / 1.3)
   const poison = result.talentEffects.filter(entry => entry.effect?.item === 'DAMAGE_OVER_TIME')
   assert.equal(poison.length, 2)
-  assert.ok(poison.every(entry => entry.status === 'UNSUPPORTED'))
-  assert.ok(result.scopeNotes.some(note => /毒|継続ダメージ/.test(note)))
+  assert.deepEqual(poison.map(entry => entry.status), ['APPLIED', 'CONDITION_FALSE'])
+  assert.equal(result.damageOverTime?.damagePerSecond, 125)
+  assert.equal(result.damageOverTime?.steadyDps, 125)
+  close(result.rows[0].combinedDps, 1482 / 1.3 + 125)
   assert.deepEqual(skill, before)
 })
 
-test('ソーンズS2は毒の反撃時付与を仮定せず、毒を除いた反撃1回とDPSなしを維持する', () => {
+test('ソーンズS2は反撃1回と毒の付与中毎秒量を分離し、反撃頻度なしでDPSを作らない', () => {
   const result = output(record('char_293_thorns', 2), { conditions: { actualAttackTargetCount: 4 } })
   assert.deepEqual(result.unsupportedReasons, [])
   assert.equal(result.attackKind, 'COUNTER')
-  assert.equal(result.hasUnsupportedTalentDamage, true)
+  assert.equal(result.hasUnsupportedTalentDamage, false)
   close(result.rows[0].perAttack, 948)
   close(result.rows[0].allTargetsPerAttack, 3792)
   assert.equal(result.canShowDps, false)
   assert.ok(result.rows.every(row => row.dps === null && row.allTargetsDps === null))
+  assert.equal(result.damageOverTime?.damagePerSecond, 125)
+  assert.equal(result.damageOverTime?.allTargetsDamagePerSecond, 500)
+  assert.equal(result.damageOverTime?.steadyDps, null)
+  assert.ok(result.rows.every(row => row.combinedDps === null && row.allTargetsCombinedDps === null))
 })
 
 test('潜在強化candidate・潜在ATK・MOD補正は潜在1の素質へ混入しない', () => {

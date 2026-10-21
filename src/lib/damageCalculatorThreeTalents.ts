@@ -8,6 +8,7 @@ import {
   type TalentStructureEffect,
 } from './talentStructure.ts'
 import { getOperatorPassives } from './operatorProfile.ts'
+import { resolveSingleStackDamageOverTimeRate, type DamageOverTimeRate } from './damageOverTime.ts'
 
 export interface DamageCalculatorThreeTalentEvaluation {
   operatorId: string
@@ -24,19 +25,25 @@ export interface DamageCalculatorThreeTalentOutput {
   hasUnsupportedDamage: boolean
   blockingReasons: string[]
   scopeNotes: string[]
+  hasDamageOverTime: boolean
+  damageOverTimeRate: DamageOverTimeRate | null
 }
 
 /** Evaluate verified effects of this operator only; no descriptions or legacy formulas execute. */
 export function evaluateDamageCalculatorThreeTalents(input: {
   operator: SkillRecord; phaseIndex: number; operatorLevel: number
   attackKind: 'NORMAL' | 'NEXT_ATTACK' | 'COUNTER'
+  enemyAttackCapability?: 'MELEE_ONLY' | 'RANGED_CAPABLE'
 }): DamageCalculatorThreeTalentOutput {
   const { operator, phaseIndex, operatorLevel } = input
   const structures = buildTalentStructures([operator], { phaseIndex, operatorLevel })
   const selectedSources = getOperatorPassives(operator.operatorProfile, phaseIndex, operatorLevel, 1).sources
   const output: DamageCalculatorThreeTalentOutput = { effects: [], attackRatio: 0, resistanceIgnoreFixed: 0,
-    hasUnsupportedDamage: false, blockingReasons: [], scopeNotes: [] }
-  const metrics: Readonly<Record<string, CombatScalar>> = { 'source.isDeployed': true, 'source.isInSquad': true }
+    hasUnsupportedDamage: false, blockingReasons: [], scopeNotes: [], hasDamageOverTime: false, damageOverTimeRate: null }
+  const enemyAttackCapability = input.enemyAttackCapability ?? 'MELEE_ONLY'
+  const metrics: Readonly<Record<string, CombatScalar | undefined>> = { 'source.isDeployed': true, 'source.isInSquad': true,
+    'target.canUseRangedAttack': enemyAttackCapability === 'RANGED_CAPABLE' ? true : enemyAttackCapability === 'MELEE_ONLY' ? false : undefined }
+  const activeDots: DamageCalculatorThreeTalentEvaluation[] = []
   for (const talentIndex of [0, 1]) {
     const selection = { operatorId: operator.operatorId, talentIndex }
     if (!isTalentStructureSelection(selection)) continue
@@ -57,11 +64,33 @@ export function evaluateDamageCalculatorThreeTalents(input: {
         continue
       }
       if (effect.item === 'DAMAGE_OVER_TIME') {
-        result.status = 'UNSUPPORTED'
-        result.reason = input.attackKind === 'COUNTER'
-          ? '継続ダメージは含めません。反撃での付与可否・時間進行も未確認です。'
-          : '継続ダメージの時間進行・重複・更新にはまだ対応していません。'
-        output.hasUnsupportedDamage = true
+        output.hasDamageOverTime = true
+        const condition = evaluateCombatCondition(effect.condition, metrics)
+        if (condition === false) {
+          result.status = 'CONDITION_FALSE'
+          result.reason = '敵の攻撃能力の条件が成立していません。'
+          continue
+        }
+        const target = effect.target
+        if (condition === null) result.reason = '敵の攻撃能力を確認できません。'
+        else if (target.side !== 'ENEMY' || target.entity !== 'UNIT' || target.scope !== 'ATTACK_TARGET'
+          || target.selection.type !== 'ALL' || target.includeSelf || target.factionIds.length || target.tagIds.length
+          || !isSupportedContext(effect)) {
+          result.status = 'UNSUPPORTED'
+          result.reason = 'この継続ダメージの対象・付与条件にはまだ対応していません。'
+        } else {
+          const resolved = resolveSingleStackDamageOverTimeRate(effect.damage, metrics)
+          if (!resolved.rate) {
+            result.status = resolved.status ?? 'UNVERIFIED'
+            result.reason = resolved.reason ?? '継続ダメージを取得できません。'
+          } else {
+            result.status = 'APPLIED'
+            result.reason = '毒付与中の毎秒ダメージを適用します。'
+            activeDots.push(result)
+            output.damageOverTimeRate = resolved.rate
+          }
+        }
+        if (result.status !== 'APPLIED') output.hasUnsupportedDamage = true
         continue
       }
       const recipient = appliesToSelf(effect.target, operator)
@@ -97,6 +126,13 @@ export function evaluateDamageCalculatorThreeTalents(input: {
       if (result.status === 'UNVERIFIED' || result.status === 'UNSUPPORTED') output.blockingReasons.push(`「${talentName}」：${result.reason}`)
     }
   }
+  if (activeDots.length > 1) {
+    for (const result of activeDots) { result.status = 'UNSUPPORTED'; result.reason = '複数の継続ダメージを同時に適用する計算は未対応です。' }
+    output.hasUnsupportedDamage = true
+    output.damageOverTimeRate = null
+  }
+  // A partially resolved set cannot establish a unique supported DOT rate.
+  if (output.hasUnsupportedDamage) output.damageOverTimeRate = null
   if (output.hasUnsupportedDamage) output.scopeNotes.push('素質の継続ダメージを除く、直接ダメージのみの計算結果です。')
   return output
 }

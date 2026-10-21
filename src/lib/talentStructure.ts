@@ -142,7 +142,10 @@ export function buildTalentStructures(rows: readonly SkillRecord[], growth: Tale
         damage: { kind: { type: 'ORDINARY', damageType: 'ARTS' },
           amount: { basis: 'FIXED', value: read(ranged ? 'damage[ranged]' : 'damage[normal]'), referenceTime: 'NOT_APPLICABLE' },
           rate: 'PER_SECOND', duration: { type: 'FIXED_SECONDS', seconds: duration },
-          cadence: { intervalSeconds: null, firstTickSeconds: null }, stacking: { mode: 'UNSPECIFIED', maxStacks: null }, refresh: 'UNSPECIFIED', statusId: 'poison' },
+          // PRTS talent notes: one active poison; reapplication refreshes duration only.
+          // Tick cadence and finite-window endpoint ordering remain unverified.
+          // https://prts.wiki/w/Thorns
+          cadence: { intervalSeconds: null, firstTickSeconds: null }, stacking: { mode: 'REPLACE', maxStacks: 1 }, refresh: 'RESET_DURATION', statusId: 'poison' },
         parameterBindings: { 'damage.duration.seconds': 'duration', 'damage.kind': 'description:arts_damage' },
       }))
     }
@@ -178,9 +181,10 @@ function deferredCases(key: string): TalentStructureDeferredCase[] {
     currentTreatment: '致命ダメージ時にHPが残る値と、効果発動から強制退場までの秒数を別の効果として保持し、発動後の処理は仮定しない。',
     impact: '生存時間、強制退場の境界における命中回数・総ダメージ。', resumeWhen: '素質発動後の時間進行を計算する際に実機映像と処理の根拠を確認する。', references }]
   if (key === 'char_293_thorns/0') return [{ id: 'thorns-poison-ticks', title: '毒の重複・更新とダメージ発生時刻', status: 'DEFERRED',
-    unresolved: '再付与時の重複・持続時間の更新、初回ダメージの時刻、内部の処理間隔と丸め。',
-    currentTreatment: '敵の遠距離攻撃能力ごとの毎秒ダメージと持続秒数を保持する。毎秒量から1秒単位のtickを仮定せず、tick間隔・初回時刻・重複規則を未確定として残す。',
-    impact: '連続攻撃時の毒による総ダメージ。', resumeWhen: '継続ダメージの時間進行と再付与を計算する際に確認する。', references }]
+    unresolved: '初回ダメージの時刻、内部の処理間隔・丸め、再付与時のtick時計と効果終了時刻の前後関係。',
+    currentTreatment: '非重複・再付与時は持続時間のみ更新し、既存のダメージ値を維持する。毎秒量から1秒tickを仮定せず、tick間隔・初回時刻を未確定として残す。計算機3では同一対象に毒を切らさず付与し続ける定常DPSを毎秒量で評価し、有限時間の総ダメージは算出しない。',
+    impact: '攻撃開始直後・毒の途切れる攻撃間隔・付与終了境界での総ダメージ。', resumeWhen: '継続ダメージの有限時間の総量・tickごとの時間進行を計算する際に確認する。',
+    references: [...references, { label: 'PRTS ソーンズ・素質備考', href: 'https://prts.wiki/w/Thorns', external: true }] }]
   if (key === 'char_293_thorns/1') return [{ id: 'thorns-idle-regeneration-reset', title: '非通常攻撃時間の判定と回復開始時刻', status: 'DEFERRED',
     unresolved: '反撃などが「通常攻撃せずにいる時間」をリセットするか、2秒経過後の初回回復時刻と内部の処理単位。',
     currentTreatment: '通常攻撃をしない待ち時間と回復周期・最大HPに対する割合を分離し、反撃との関係や初回時刻は未確定として残す。',

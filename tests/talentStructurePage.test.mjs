@@ -139,7 +139,8 @@ test('神経猛毒は対象条件ごとの毎秒量を表示し、毎秒量を1�
   const markup = content(render({ operatorId: 'char_293_thorns', talentIndex: 0 }))
   for (const token of ['継続ダメージ', '125/秒', '250/秒', '遠距離攻撃が可能な敵', '遠距離攻撃を行えない敵']) assert.ok(markup.includes(token), token)
   assert.match(markup, /保留/)
-  assert.match(markup, /tick間隔・初回時刻・重複規則を未確定/)
+  assert.match(markup, /tick間隔・初回時刻を未確定/)
+  assert.match(markup, /非重複・再付与時は持続時間のみ更新/)
 })
 
 test('毒の定義は敵の属性条件と持続3秒を別項目で表示し、処理時刻を未確定とする', () => {
@@ -155,9 +156,10 @@ test('毒の定義は敵の属性条件と持続3秒を別項目で表示し、�
     assertDefinitionRow(entries, 'ダメージ種別', '術')
     assertDefinitionRow(entries, '条件の指標', 'target.canUseRangedAttack')
     assertDefinitionRow(entries, '条件の値', index === 1 ? 'はい' : 'いいえ')
-    for (const label of ['初回ダメージの時刻（秒）', '処理間隔（秒）', '最大重複数']) assertDefinitionRow(entries, label, '未確定')
-    assertDefinitionRow(entries, '重複方式', 'UNSPECIFIED')
-    assertDefinitionRow(entries, '再付与時の更新', 'UNSPECIFIED')
+    for (const label of ['初回ダメージの時刻（秒）', '処理間隔（秒）']) assertDefinitionRow(entries, label, '未確定')
+    assertDefinitionRow(entries, '最大重複数', 1)
+    assertDefinitionRow(entries, '重複方式', 'REPLACE')
+    assertDefinitionRow(entries, '再付与時の更新', 'RESET_DURATION')
     assert.doesNotMatch(JSON.stringify(entries), /attackDistanceType|1秒ごと/)
   }
 })

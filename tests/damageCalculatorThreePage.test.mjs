@@ -8,7 +8,7 @@ import react from '@vitejs/plugin-react'
 
 const source = JSON.parse(readFileSync(new URL('./fixtures/skillStructureFourOperators.json', import.meta.url), 'utf8'))
 const talentSource = JSON.parse(readFileSync(new URL('./fixtures/talentStructureFourOperators.json', import.meta.url), 'utf8'))
-let server, Page, ResultTable, EffectTable, TalentTable, buildOutput, rows
+let server, Page, ResultTable, EffectTable, TalentTable, DotTable, SteadyTable, buildOutput, rows
 
 const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;',
@@ -58,7 +58,9 @@ before(async () => {
   })
   ;({ DamageCalculatorThree: Page, DamageCalculatorThreeResultTable: ResultTable,
     DamageCalculatorThreeEffectTable: EffectTable,
-    DamageCalculatorThreeTalentTable: TalentTable } = await server.ssrLoadModule('/src/components/DamageCalculatorThree.tsx'))
+    DamageCalculatorThreeTalentTable: TalentTable,
+    DamageCalculatorThreeDotTable: DotTable,
+    DamageCalculatorThreeSteadyDpsTable: SteadyTable } = await server.ssrLoadModule('/src/components/DamageCalculatorThree.tsx'))
   ;({ buildDamageCalculatorThreeOutput: buildOutput } = await server.ssrLoadModule('/src/lib/damageCalculatorThree.ts'))
   const { classifySkill } = await server.ssrLoadModule('/src/lib/classifier.ts')
   rows = source.flatMap(operator => operator.skills.map(entry => {
@@ -92,6 +94,16 @@ const resultTable = markup => {
 const talentTable = markup => {
   const table = markup.match(/<table\b[^>]*class="[^"]*damage-three-talent-table[^"]*"[^>]*>([\s\S]*?)<\/table>/)
   assert.ok(table, '素質の適用状態テーブル')
+  return tableRows(table[1])
+}
+const dotTable = markup => {
+  const table = markup.match(/<table\b[^>]*class="[^"]*damage-three-dot-table[^"]*"[^>]*>([\s\S]*?)<\/table>/)
+  assert.ok(table, '付与中の継続ダメージ表')
+  return tableRows(table[1])
+}
+const steadyTable = markup => {
+  const table = markup.match(/<table\b[^>]*class="[^"]*damage-three-steady-table[^"]*"[^>]*>([\s\S]*?)<\/table>/)
+  assert.ok(table, '定常DPS表')
   return tableRows(table[1])
 }
 
@@ -237,20 +249,107 @@ test('使用数値はスキル・素質・合計の攻撃力増加と術耐性�
   assert.deepEqual(row, ['60', '1,630', '1,304', '1,630', '1,304'])
 })
 
-test('ソーンズの未対応継続ダメージを表から隠さず、結果を直接攻撃分として表示する', () => {
+test('ソーンズは毒の対象条件を選び、直接攻撃と付与中の継続ダメージを別表で表示する', () => {
   for (const skillIndex of [1, 2, 3]) {
     const markup = render(selected('char_293_thorns', skillIndex))
     const data = talentTable(markup)
     const dot = data.filter(row => row[2] === '継続ダメージ')
     assert.equal(dot.length, 2)
     assert.deepEqual(dot.map(row => row[3]), ['125/秒', '250/秒'])
-    assert.ok(dot.every(row => row[5] === '未対応'))
-    assert.match(markup, /直接攻撃分（継続ダメージを除く）/)
-    assert.match(markup, /直接攻撃分（継続ダメージを除く） · 潜在1 · MODなし · 外部バフなし/)
+    assert.deepEqual(dot.map(row => row[5]), ['適用', '条件不成立'])
+    assert.deepEqual(dotTable(markup), [['対象', '付与中のダメージ/秒'], ['1体', '125'], ['全対象', '125']])
+    assert.match(markup, /<h3 class="damage-three-result-heading">直接攻撃<\/h3>/)
+    assert.match(markup, /<h3 class="damage-three-result-heading">継続ダメージ<\/h3>/)
+    assert.match(markup, /敵の術耐性0/)
+    assert.doesNotMatch(markup, /直接攻撃分（継続ダメージを除く）|毒1付与分|有限時間総量/)
     assert.doesNotMatch(markup, /この条件では計算できません|NaN|Infinity/)
     const headings = resultTable(markup)[0]
     assert.equal(headings.some(cell => cell.includes('DPS')), skillIndex !== 2)
+    assert.equal(markup.includes('damage-three-steady-table'), skillIndex !== 2)
+    assert.equal(markup.includes(' · 同一対象へ連続攻撃'), skillIndex !== 2)
+    if (skillIndex === 2) assert.doesNotMatch(markup, /定常DPS：/)
   }
+})
+
+test('毒の条件には術耐性の数値入力と敵の遠距離攻撃能力の選択を表示する', () => {
+  for (const skillIndex of [1, 2, 3]) {
+    const markup = render(selected('char_293_thorns', skillIndex))
+    const resistance = [...markup.matchAll(/<input\b[^>]*>/g)].map(match => match[0])
+      .find(input => input.includes('aria-label="敵の術耐性"'))
+    assert.ok(resistance)
+    for (const attribute of ['type="number"', 'min="0"', 'max="100"', 'step="1"', 'value="0"']) assert.ok(resistance.includes(attribute), attribute)
+    const select = markup.match(/<select\b[^>]*aria-label="敵の遠距離攻撃能力"[^>]*>([\s\S]*?)<\/select>/)?.[1]
+    assert.ok(select)
+    assert.deepEqual([...select.matchAll(/<option value="([^"]+)"/g)].map(match => match[1]), ['MELEE_ONLY', 'RANGED_CAPABLE'])
+    assert.match(select, /<option value="MELEE_ONLY" selected="">/)
+  }
+  const surtr = render()
+  assert.doesNotMatch(surtr, /aria-label="敵の術耐性"|aria-label="敵の遠距離攻撃能力"|damage-three-dot-table|damage-three-steady-table/)
+})
+
+test('毒の術耐性と直接攻撃の防御力を独立させ、敵の遠距離攻撃能力で125と250を選ぶ', () => {
+  const ordinary = calculate('char_293_thorns', 1, 1, { enemyResistance: 40, enemyAttackCapability: 'MELEE_ONLY' })
+  const rangedEnemy = calculate('char_293_thorns', 1, 1, { enemyResistance: 40, enemyAttackCapability: 'RANGED_CAPABLE' })
+  const ordinaryDot = dotTable(renderToStaticMarkup(createElement(DotTable, { output: ordinary, precision: 1 })))
+  const rangedDot = dotTable(renderToStaticMarkup(createElement(DotTable, { output: rangedEnemy, precision: 1 })))
+  assert.deepEqual(ordinaryDot[1], ['1体', '75.0'])
+  assert.deepEqual(rangedDot[1], ['1体', '150.0'])
+  assert.deepEqual(resultTable(renderToStaticMarkup(createElement(ResultTable, { output: rangedEnemy, precision: 1 })))[1],
+    ['0', '1,482.0', '1,140.0', '1,482.0', '1,140.0'])
+  const steady = steadyTable(renderToStaticMarkup(createElement(SteadyTable, { output: rangedEnemy, precision: 1 })))
+  assert.deepEqual(steady[0], ['敵の防御力', '1体の直接DPS', '1体の継続DPS', '1体の合計DPS', '全対象の合計DPS'])
+  assert.deepEqual(steady[1], ['0', '1,140.0', '150.0', '1,290.0', '1,290.0'])
+  assert.ok(steady.slice(1).every(row => row[2] === '150.0'))
+  assert.ok(steady.slice(1).some(row => row[1] !== '1,140.0'))
+  const ownRanged = calculate('char_293_thorns', 1, 1, { enemyResistance: 40, enemyAttackCapability: 'RANGED_CAPABLE', attackDistanceType: 'RANGED' })
+  assert.deepEqual(dotTable(renderToStaticMarkup(createElement(DotTable, { output: ownRanged, precision: 1 })))[1], ['1体', '150.0'])
+  assert.deepEqual(resultTable(renderToStaticMarkup(createElement(ResultTable, { output: ownRanged, precision: 1 })))[1],
+    ['0', '1,185.6', '912.0', '1,185.6', '912.0'])
+})
+
+test('継続ダメージと定常DPSにも指定の小数桁数を適用する', () => {
+  const output = calculate('char_293_thorns', 1, 1, { enemyResistance: 35, enemyAttackCapability: 'RANGED_CAPABLE' })
+  for (const [precision, rate, combined] of [[0, '163', '1,303'], [3, '162.500', '1,302.500']]) {
+    assert.deepEqual(dotTable(renderToStaticMarkup(createElement(DotTable, { output, precision })))[1], ['1体', rate])
+    const data = steadyTable(renderToStaticMarkup(createElement(SteadyTable, { output, precision })))
+    assert.equal(data[1][2], rate)
+    assert.equal(data[1][3], combined)
+    assert.ok(data.slice(1).every(row => row.length === 5))
+  }
+})
+
+test('ソーンズS2は全対象の付与中毎秒量を表示しても定常合計DPSを表示しない', () => {
+  const output = calculate('char_293_thorns', 2, 4)
+  const dot = dotTable(renderToStaticMarkup(createElement(DotTable, { output, precision: 1 })))
+  assert.deepEqual(dot, [['対象', '付与中のダメージ/秒'], ['1体', '125.0'], ['全対象', '500.0']])
+  assert.equal(renderToStaticMarkup(createElement(SteadyTable, { output, precision: 1 })), '')
+  assert.deepEqual(resultTable(renderToStaticMarkup(createElement(ResultTable, { output, precision: 1 })))[1], ['0', '948.0', '3,792.0'])
+})
+
+test('通常攻撃の間隔が毒の持続時間以上なら定常DPSを表示できない理由を状態として示す', () => {
+  const skill = rows.find(row => row.operatorId === 'char_293_thorns' && row.skillIndex === 1)
+  const operatorProfile = structuredClone(skill.operatorProfile)
+  for (const frame of operatorProfile.phases[2].attributesKeyFrames) frame.data.baseAttackTime = 4
+  const slow = { ...skill, operatorProfile }
+  const markup = renderToStaticMarkup(createElement(Page, { rows: [slow], loading: false, initialSelection: selected(skill.operatorId, skill.skillIndex) }))
+  assert.ok(resultTable(markup).length > 1)
+  assert.ok(dotTable(markup).length > 1)
+  assert.doesNotMatch(markup, /damage-three-steady-table/)
+  assert.match(markup, /<p class="damage-two-note">定常DPS：攻撃間隔が持続時間以上/)
+  assert.doesNotMatch(markup, /この条件では計算できません/)
+})
+
+test('毒の参照値が欠けたときは毒を0とせず直接攻撃だけを残して範囲を明示する', () => {
+  const skill = rows.find(row => row.operatorId === 'char_293_thorns' && row.skillIndex === 1)
+  const operatorProfile = structuredClone(skill.operatorProfile)
+  operatorProfile.talents[0].candidates[0].blackboard = operatorProfile.talents[0].candidates[0].blackboard
+    .filter(entry => entry.key !== 'damage[normal]')
+  const broken = { ...skill, operatorProfile }
+  const markup = renderToStaticMarkup(createElement(Page, { rows: [broken], loading: false, initialSelection: selected(skill.operatorId, skill.skillIndex) }))
+  assert.ok(resultTable(markup).length > 1)
+  assert.match(markup, /直接攻撃分（継続ダメージを除く）/)
+  assert.doesNotMatch(markup, /damage-three-dot-table|damage-three-steady-table|NaN|Infinity/)
+  assert.ok(talentTable(markup).some(row => row[3].startsWith('未確認') && row[5] === '未確認'))
 })
 
 test('素質の未確認項目は0へ置き換えず未確認と表示する', () => {
