@@ -136,12 +136,14 @@ test('ソーンズの毒は敵属性の排他的な125/250毎秒で、持続3秒
       assert.equal(effect.damage.rate, 'PER_SECOND')
       assert.deepEqual(effect.damage.duration, { type: 'FIXED_SECONDS', seconds: 3 })
       assert.deepEqual(effect.damage.cadence, { intervalSeconds: null, firstTickSeconds: null })
-      assert.deepEqual(effect.damage.stacking, { mode: 'UNSPECIFIED', maxStacks: null })
-      assert.equal(effect.damage.refresh, 'UNSPECIFIED')
+      assert.deepEqual(effect.damage.stacking, { mode: 'REPLACE', maxStacks: 1 })
+      assert.equal(effect.damage.refresh, 'RESET_DURATION')
     }
     assert.ok(getTalentStructureEffectValueRows(effect).some(([label, value]) => label === '持続時間（秒）' && value === 3))
   }
-  assert.match(poison.deferred[0].unresolved, /重複|更新/)
+  assert.match(poison.deferred[0].unresolved, /初回|tick/)
+  assert.match(poison.deferred[0].currentTreatment, /非重複.*持続時間のみ更新/)
+  assert.ok(poison.deferred[0].references.some(reference => reference.href === 'https://prts.wiki/w/Thorns'))
   for (const canUseRangedAttack of [false, true]) {
     assert.equal(poison.effects.filter(effect => evaluateCombatCondition(effect.condition, { 'target.canUseRangedAttack': canUseRangedAttack })).length, 1)
   }
