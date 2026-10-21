@@ -151,17 +151,19 @@ export function SurtrSkillComparisonPage({ rows, loading, error, onRetry }: {
           <label className="calculator-field"><span>素質2「余燼」</span><select aria-label="素質2「余燼」" value={settings.remnantActive ? 'active' : 'inactive'} onChange={event => update('remnantActive', event.target.value === 'active')}>
             <option value="inactive">発動前</option><option value="active">発動中</option></select></label>
         </div>
-        <fieldset className="surtr-skill-comparison-buffs"><legend>外部バフ</legend>
-          <div className="surtr-s3-fields surtr-skill-comparison-fields">
-            {([{ key: 'attackPercent', label: '攻撃力上昇（%）' }, { key: 'attackAddition', label: '攻撃力の固定加算' },
-              { key: 'attackSpeed', label: '攻撃速度（+）' }] as const).map(({ key, label }) =>
-              <label className="calculator-field" key={key}><span>{label}</span>
-                <input aria-label={label} type="number" min={0} step="any" value={buffDraft[key]}
-                  aria-invalid={!!buffError} aria-describedby={buffError ? 'surtr-skill-comparison-buff-error' : undefined}
-                  onChange={event => updateBuff(key, event.target.value)} /></label>)}
-          </div>
-          {!!buffError && <p className="surtr-s3-axis-error" id="surtr-skill-comparison-buff-error" role="alert">{buffError}</p>}
-        </fieldset>
+        <div className="surtr-skill-comparison-buffs">
+          <fieldset><legend>外部バフ</legend>
+            <div className="surtr-s3-fields surtr-skill-comparison-fields">
+              {([{ key: 'attackPercent', label: '攻撃力上昇（%）' }, { key: 'attackAddition', label: '攻撃力の固定加算' },
+                { key: 'attackSpeed', label: '攻撃速度（+）' }] as const).map(({ key, label }) =>
+                <label className="calculator-field" key={key}><span>{label}</span>
+                  <input aria-label={label} type="number" min={0} step="any" value={buffDraft[key]}
+                    aria-invalid={!!buffError} aria-describedby={buffError ? 'surtr-skill-comparison-buff-error' : undefined}
+                    onChange={event => updateBuff(key, event.target.value)} /></label>)}
+            </div>
+            {!!buffError && <p className="surtr-s3-axis-error" id="surtr-skill-comparison-buff-error" role="alert">{buffError}</p>}
+          </fieldset>
+        </div>
         <details className="surtr-s3-assumptions"><summary>計算条件</summary>
           <p>両スキルの攻撃範囲内に、同じ術耐性の敵がいる場合のスキル発動中の合計DPSです。S2は最大2体、S3は最大3体（特化3では4体）を攻撃します。S2の単体時倍率は攻撃対象が1体の場合だけ適用します。</p>
           <p>MOD Xの攻撃速度はスルトが誰もブロックしていない場合、MOD Yの術脆弱は自身がブロックしている1体だけに適用します。余燼は両スキルの共通条件です。</p>
