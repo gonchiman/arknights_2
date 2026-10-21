@@ -94,3 +94,23 @@ test('比較列を指定した場合も名前の文字数制限と比率検証�
       /画像の縦横比が正しくありません/)
   }
 })
+
+test('複数潜在の選択順・段階配置・潜在配置・共通結合をファイル名へ残す', () => {
+  const columns = [none, moduleColumn('X', 1), moduleColumn('X', 3), moduleColumn('Y', 3)]
+  const shared = { ...options, columns, potentialRanks: [1, 6], aspect: { width: 9, height: 16 } }
+  const filenames = []
+  for (const layout of ['columns', 'rows'] as const) {
+    for (const potentialLayout of ['columns', 'rows'] as const) {
+      for (const merge of [false, true]) {
+        const filename = getOperatorModuleComparisonImageFilename({ ...shared, layout, potentialLayout, merge })
+        assert.match(filename, /未装備-AFT-XLv1-AFT-XLv3-AFT-YLv3_潜在1-6_9x16/)
+        assert.equal(filename.includes('_レベル行'), layout === 'rows')
+        assert.match(filename, new RegExp(`_潜在${potentialLayout === 'rows' ? '行' : '列'}_${merge ? '共通結合' : '個別表示'}\\.png$`))
+        filenames.push(filename)
+      }
+    }
+  }
+  assert.equal(new Set(filenames).size, 8)
+  assert.match(getOperatorModuleComparisonImageFilename({ ...shared, potentialRanks: [6, 1] }), /_潜在6-1_/)
+  assert.match(getOperatorModuleComparisonImageFilename({ ...shared, potentialRanks: [4] }), /_潜在4_9x16_潜在列_共通結合\.png$/)
+})

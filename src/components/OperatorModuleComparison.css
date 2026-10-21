@@ -29,7 +29,7 @@
   font-size: 11px;
 }
 
-.operator-module-comparison-potentials [role='group'] { display: flex; flex: 0 0 auto; }
+.operator-module-comparison-potentials [role='group'] { display: flex; flex-wrap: wrap; }
 .operator-module-comparison-selections button {
   flex: 0 0 44px;
   width: 44px;
@@ -198,10 +198,25 @@
 .operator-module-comparison-table--rows tbody .operator-module-comparison-item,
 .operator-module-comparison-table--rows tbody td { vertical-align: middle; }
 
+.operator-module-comparison-table--potentials th:first-child { width: auto; }
+.operator-module-comparison-table--potentials .operator-module-comparison-item { width: 84px; }
+.operator-module-comparison-table--potentials .operator-module-comparison-axis {
+  width: 48px;
+  white-space: nowrap;
+  text-align: center;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+.operator-module-comparison-table--potentials thead th { text-align: center; }
+.operator-module-comparison-table--potentials tbody th,
+.operator-module-comparison-table--potentials tbody td { vertical-align: middle; }
+.operator-module-comparison-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 @container operator-module-comparison (max-width: 500px) {
   .operator-module-comparison-stages { display: grid; gap: 4px; }
   .operator-module-comparison-table th:first-child { width: 40px; }
   .operator-module-comparison-table--rows th:first-child { width: auto; }
+  .operator-module-comparison-table--potentials th:first-child { width: auto; }
   .operator-module-comparison-table--rows .operator-module-comparison-item { width: 40px; }
   .operator-module-comparison-table--rows .operator-module-comparison-level { width: 32px; }
   .operator-module-comparison-table th,

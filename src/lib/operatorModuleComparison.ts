@@ -21,6 +21,8 @@ import {
 export interface OperatorModuleComparisonCell {
   text: string
   baseline: string | null
+  /** Unrounded cumulative attribute value; null means it could not be evaluated. */
+  comparisonValue?: number | null
   highlights?: {
     segments: EffectChangeSegment[]
     base: string
@@ -191,8 +193,9 @@ export function buildOperatorModuleLevelRows(comparison: OperatorModuleCompariso
 }
 
 /** Equal prose can still describe different MOD/potential changes and tooltip values. */
-function sameComparisonCell(left: OperatorModuleComparisonCell, right: OperatorModuleComparisonCell): boolean {
-  if (left.text !== right.text || left.baseline !== right.baseline) return false
+export function sameComparisonCell(left: OperatorModuleComparisonCell, right: OperatorModuleComparisonCell): boolean {
+  if (left.text !== right.text || left.baseline !== right.baseline
+    || left.comparisonValue !== right.comparisonValue) return false
   const previous = left.highlights
   const current = right.highlights
   if (!previous || !current) return previous === current
@@ -490,7 +493,7 @@ function nearestLevel(levels: number[], requested: number): number | null {
 }
 
 /** getOperatorPassives omits hidden slots in its display array; source indices remain stable. */
-function indexBaseTalents(passives: OperatorPassives): OperatorPassives {
+export function indexBaseTalents(passives: OperatorPassives): OperatorPassives {
   const indexed: OperatorPassives['talents'] = []
   for (const source of passives.sources) {
     if (source.sourceKind !== 'TALENT' || source.talentIndex === null) continue
@@ -500,7 +503,7 @@ function indexBaseTalents(passives: OperatorPassives): OperatorPassives {
 }
 
 /** A new numbered talent without an original source is an addition, not a base talent override. */
-function separateAdditionalTalents(module: RawOperatorModule, passives: OperatorPassives): RawOperatorModule {
+export function separateAdditionalTalents(module: RawOperatorModule, passives: OperatorPassives): RawOperatorModule {
   const baseSources = passives.sources.filter((source) => source.sourceKind === 'TALENT')
   return {
     ...module,

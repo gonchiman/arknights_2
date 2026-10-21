@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { buildOperatorModuleLevelRows, type OperatorModuleComparison as Comparison, type OperatorModuleComparisonCell,
   type OperatorModuleComparisonLayout } from '../lib/operatorModuleComparison'
+import { buildOperatorModulePotentialTable, type OperatorModulePotentialComparison } from '../lib/operatorModulePotentialComparison'
 import type { EffectChangeSegment, EffectChangeSource } from '../lib/operatorEffectHighlights'
 import { splitPassiveDescriptionChanges } from '../lib/passiveDescriptionChanges'
 import { HelpPopover } from './HelpPopover'
@@ -15,13 +16,19 @@ export function OperatorEffectLegend() {
   </div>
 }
 
-export function OperatorModuleComparisonTable({ comparison, interactive = true, showLegend = false, layout = 'columns' }: {
+export function OperatorModuleComparisonTable({ comparison, interactive = true, showLegend = false, layout = 'columns',
+  potentialComparison, potentialLayout = 'columns', merge = true }: {
   comparison: Comparison
+  potentialComparison?: OperatorModulePotentialComparison
+  potentialLayout?: OperatorModuleComparisonLayout
+  merge?: boolean
   interactive?: boolean
   showLegend?: boolean
   layout?: OperatorModuleComparisonLayout
 }) {
   const tableId = useId()
+  if (potentialComparison) return <PotentialComparisonTable tableId={tableId} comparison={potentialComparison}
+    layout={layout} potentialLayout={potentialLayout} merge={merge} interactive={interactive} showLegend={showLegend} />
   if (layout === 'rows') {
     const grouped = buildOperatorModuleLevelRows(comparison)
     const hasModules = grouped.columns.some(column => column.id !== 'none')
@@ -97,6 +104,82 @@ export function OperatorModuleComparisonTable({ comparison, interactive = true, 
   )
 }
 
+function PotentialComparisonTable({ tableId, comparison, layout, potentialLayout, merge, interactive, showLegend }: {
+  tableId: string
+  comparison: OperatorModulePotentialComparison
+  layout: OperatorModuleComparisonLayout
+  potentialLayout: OperatorModuleComparisonLayout
+  merge: boolean
+  interactive: boolean
+  showLegend: boolean
+}) {
+  const table = buildOperatorModulePotentialTable(comparison, { levelLayout: layout, potentialLayout, merge })
+  const depth = Math.max(1, ...table.columns.map(column => column.headers.length))
+  const headerIds = table.columns.map(() => [] as string[])
+  const headers = Array.from({ length: depth }, (_, level) => {
+    const cells = []
+    for (let index = 0; index < table.columns.length;) {
+      const path = table.columns[index].headers
+      const header = path[level]
+      if (!header) { index++; continue }
+      const prefix = JSON.stringify(path.slice(0, level + 1).map(entry => entry.id))
+      let span = 1
+      while (index + span < table.columns.length
+        && JSON.stringify(table.columns[index + span].headers.slice(0, level + 1).map(entry => entry.id)) === prefix) span++
+      const id = `${tableId}-col-${level}-${index}`
+      for (let offset = 0; offset < span; offset++) headerIds[index + offset].push(id)
+      cells.push(<th key={id} id={id} scope={span > 1 ? 'colgroup' : 'col'} colSpan={span}
+        rowSpan={level === path.length - 1 ? depth - level : 1}>
+        {header.label}{header.name && <span className="operator-module-comparison-type">{header.name}</span>}
+      </th>)
+      index += span
+    }
+    return cells
+  })
+  const columnCount = 1 + table.rowAxes.length + table.columns.length
+  return <table className="operator-module-comparison-table operator-module-comparison-table--potentials"
+    aria-label="モジュール比較"
+    style={{ minWidth: interactive ? Math.max(400, 84 + table.rowAxes.length * 48 + table.columns.length * 156)
+      : 84 + table.rowAxes.length * 48 + table.columns.length * 64 }}>
+    <colgroup><col className="operator-module-comparison-item" />
+      {table.rowAxes.map(axis => <col key={axis} className="operator-module-comparison-axis" />)}
+      {table.columns.map(column => <col key={column.id} />)}
+    </colgroup>
+    <thead>{headers.map((cells, index) => <tr key={index}>
+      {index === 0 && <><th scope="col" rowSpan={depth}>項目</th>
+        {table.rowAxes.map(axis => <th key={axis} scope="col" rowSpan={depth}
+          className="operator-module-comparison-axis">{axis === 'level' ? 'Lv.' : '潜在'}</th>)}</>}
+      {cells}
+    </tr>)}</thead>
+    {table.groups.map((group, groupIndex) => <tbody key={group.id}>
+      {group.rows.map((row, rowIndex) => <tr key={row.id}>
+        {rowIndex === 0 && <th scope="rowgroup" rowSpan={group.rows.length} id={`${tableId}-item-${groupIndex}`}>
+          {group.label}{group.name && <span className="operator-module-comparison-name">{group.name}</span>}
+        </th>}
+        {table.rowAxes.map(axis => <th key={axis} scope="row" className="operator-module-comparison-axis"
+          id={`${tableId}-axis-${groupIndex}-${rowIndex}-${axis}`}>
+          {axis === 'level' ? row.levelLabel : row.potentialLabel}
+        </th>)}
+        {row.cells.map((entry, columnIndex) => entry && <td key={table.columns[columnIndex].id}
+          rowSpan={entry.rowSpan} colSpan={entry.colSpan}
+          className={group.kind === 'attribute' ? 'operator-module-comparison-value' : undefined}
+          headers={[`${tableId}-item-${groupIndex}`,
+            ...new Set(headerIds.slice(columnIndex, columnIndex + entry.colSpan).flat()),
+            ...Array.from({ length: entry.rowSpan }, (_, offset) => table.rowAxes.map(axis =>
+              `${tableId}-axis-${groupIndex}-${rowIndex + offset}-${axis}`)).flat()].join(' ')}>
+          <ComparisonCell cell={entry.cell} interactive={interactive} potentialRank={entry.potentialRanks}
+            columnLabel={entry.sourceColumn.id === 'none' ? '未装備'
+              : `${entry.sourceColumn.typeLabel ?? entry.sourceColumn.name}${entry.sourceLevels.length
+                ? ` Lv.${entry.sourceLevels.join('・')}` : ''}`} />
+        </td>)}
+      </tr>)}
+    </tbody>)}
+    {showLegend && <tfoot><tr><td colSpan={columnCount}>
+      <div className="operator-module-comparison-image-footer"><OperatorEffectLegend /><span>{comparison.condition}</span></div>
+    </td></tr></tfoot>}
+  </table>
+}
+
 function ComparisonFooter({ comparison, columnCount }: { comparison: Comparison; columnCount: number }) {
   return <tfoot><tr><td colSpan={columnCount}>
     <div className="operator-module-comparison-image-footer">
@@ -108,7 +191,7 @@ function ComparisonFooter({ comparison, columnCount }: { comparison: Comparison;
 function ComparisonCell({ cell, columnLabel, potentialRank, interactive }: {
   cell: OperatorModuleComparisonCell
   columnLabel: string
-  potentialRank: number
+  potentialRank: number | number[]
   interactive: boolean
 }) {
   return <>{cell.highlights ? cell.highlights.segments.map((part, partIndex) => (
@@ -123,7 +206,7 @@ function EffectHighlight({ part, cell, columnLabel, potentialRank, interactive }
   part: EffectChangeSegment
   cell: OperatorModuleComparisonCell
   columnLabel: string
-  potentialRank: number
+  potentialRank: number | number[]
   interactive: boolean
 }) {
   if (!part.source) return part.text
@@ -137,7 +220,7 @@ function EffectHighlight({ part, cell, columnLabel, potentialRank, interactive }
     steps.push({ label: `${columnLabel}・潜在1`, text: values.withoutPotential })
   }
   if (values.current !== values.withoutPotential) {
-    steps.push({ label: `${columnLabel}・潜在${potentialRank}`, text: values.current })
+    steps.push({ label: `${columnLabel}・潜在${Array.isArray(potentialRank) ? potentialRank.join('・') : potentialRank}`, text: values.current })
   }
   return <span className="operator-module-comparison-highlight" data-source={part.source}>
     <HelpPopover label={`${part.text}：${label}による変化`} triggerText={part.text}>
