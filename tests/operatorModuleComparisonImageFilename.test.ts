@@ -113,4 +113,8 @@ test('複数潜在の選択順・段階配置・潜在配置・共通結合を�
   assert.equal(new Set(filenames).size, 8)
   assert.match(getOperatorModuleComparisonImageFilename({ ...shared, potentialRanks: [6, 1] }), /_潜在6-1_/)
   assert.match(getOperatorModuleComparisonImageFilename({ ...shared, potentialRanks: [4] }), /_潜在4_9x16_潜在列_共通結合\.png$/)
+  assert.equal(getOperatorModuleComparisonImageFilename({ ...shared, showPotentialAttributes: true }),
+    getOperatorModuleComparisonImageFilename(shared))
+  assert.equal(getOperatorModuleComparisonImageFilename({ ...shared, showPotentialAttributes: false }),
+    getOperatorModuleComparisonImageFilename(shared).replace(/\.png$/, '_潜在能力値補正なし.png'))
 })

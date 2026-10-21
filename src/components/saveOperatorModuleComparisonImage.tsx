@@ -24,6 +24,7 @@ interface OperatorModuleComparisonImageOptions {
   potentialComparison?: OperatorModulePotentialComparison
   potentialLayout?: 'columns' | 'rows'
   merge?: boolean
+  showPotentialAttributes?: boolean
   aspect?: TableImageAspect | null
   filename?: string
   writeBlob?: (blob: Blob) => Promise<void>
@@ -31,14 +32,14 @@ interface OperatorModuleComparisonImageOptions {
 
 export async function saveOperatorModuleComparisonImage({
   comparison, operatorName, operatorId, layout = 'columns', aspect = null, filename, writeBlob,
-  potentialComparison, potentialLayout = 'columns', merge = true,
+  potentialComparison, potentialLayout = 'columns', merge = true, showPotentialAttributes = true,
 }: OperatorModuleComparisonImageOptions): Promise<void> {
   const ratio = aspect === null ? null : parseTableImageAspect(String(aspect.width), String(aspect.height))
   if (aspect !== null && ratio === null) throw new Error('画像の縦横比が正しくありません。')
   const imageFilename = filename ?? getOperatorModuleComparisonImageFilename({
     operatorName, operatorId, level: comparison.level, columns: comparison.columns,
     potentialRank: comparison.potentialRank, aspect: ratio, layout,
-    potentialRanks: potentialComparison?.selectedPotentials, potentialLayout, merge,
+    potentialRanks: potentialComparison?.selectedPotentials, potentialLayout, merge, showPotentialAttributes,
   })
   const columnCount = layout === 'rows'
     ? buildOperatorModuleLevelRows(comparison).columns.length
