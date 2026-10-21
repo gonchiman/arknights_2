@@ -72,6 +72,17 @@ const renderPlot = (source, dimensions = {}) => renderToStaticMarkup(createEleme
 }))
 const clean = value => value.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
 const attr = (value, key) => new RegExp(`\\b${key}="([^"]*)"`).exec(value)?.[1]
+const cumulativeSection = (markup, display) => {
+  const start = new RegExp(`<g\\b[^>]*data-histogram-cumulative="${display}"[^>]*>`).exec(markup)
+  assert.ok(start, `${display}の累積表示がある`)
+  const content = markup.slice(start.index)
+  let depth = 0
+  for (const tag of content.matchAll(/<\/?g\b[^>]*>/g)) {
+    depth += tag[0].startsWith('</') ? -1 : 1
+    if (depth === 0) return content.slice(0, tag.index + tag[0].length)
+  }
+  assert.fail(`${display}の累積表示が閉じている`)
+}
 const cumulativePoints = markup => [...markup.matchAll(/<g\b([^>]*data-cumulative-index="[^"]*"[^>]*)>/g)]
   .map(match => ({ index: Number(attr(match[1], 'data-cumulative-index')),
     count: Number(attr(match[1], 'data-cumulative-count')),
@@ -88,7 +99,7 @@ const cumulativeStripCells = markup => [...markup.matchAll(/<g\b([^>]*data-cumul
     index: Number(attr(match[1], 'data-cumulative-index')),
     rectangle: /<rect\b([^>]*)>/.exec(match[2])?.[1],
     label: /<text\b([^>]*)>([^<]*)<\/text>/.exec(match[2]),
-  }))
+  })).filter(cell => cell.rectangle)
 const percentageLabels = markup => [...markup.matchAll(/<text\b([^>]*data-percentage-index="[^"]*"[^>]*)>([^<]*)<\/text>/g)]
   .map(match => ({ index: Number(attr(match[1], 'data-percentage-index')), text: match[2],
     x: Number(attr(match[1], 'x')), y: Number(attr(match[1], 'y')) }))
@@ -188,14 +199,14 @@ test('線形・対数・評価・上限超過の各階級は棒中央に累積�
   }
 })
 
-test('最大2958件の件数軸を1000刻みに丸め、累積なし・折れ線・上部の帯や保存幅で件数目盛りを変えない', () => {
+test('最大2958件の件数軸を1000刻みに丸め、累積の4表示形式や保存幅で件数目盛りを変えない', () => {
   const weights = [2702, 791, 2085, 1625, 759, 2958, 894, 92, 276, 31]
   const statistics = calculateWeightedHistogram(weights.map((weight, index) => ({ value: index * 10, weight })), {
     scale: 'LINEAR', customLinearBinWidth: 10, minimumLinearUpperBound: 100,
   })
-  for (const display of ['none', 'line', 'strip']) {
+  for (const display of ['none', 'line', 'strip', 'both']) {
     const showCumulative = display !== 'none'
-    const source = createEnemyHistogramSnapshot({ ...snapshot({ showCumulative, cumulativeDisplay: display === 'strip' ? 'strip' : 'line' }),
+    const source = createEnemyHistogramSnapshot({ ...snapshot({ showCumulative, cumulativeDisplay: display === 'none' ? 'line' : display }),
       statistics, customLinearUpperBound: null,
       editorSettings: { levelType: 'ALL', numericConditions: [], linearBinWidthInput: '10', linearUpperBoundInput: '' },
     })
@@ -205,7 +216,7 @@ test('最大2958件の件数軸を1000刻みに丸め、累積なし・折れ線
       assert.deepEqual(barTitles(markup), weights.map((weight, index) =>
         `${index * 10}以上、${(index + 1) * 10}${index === weights.length - 1 ? '以下' : '未満'}：${weight.toLocaleString('ja-JP')}体`))
       if (showCumulative) assert.equal(cumulativePoints(markup).at(-1).proportion, 1)
-      if (display === 'strip' && width === 960) {
+      if ((display === 'strip' || display === 'both') && width === 960) {
         assert.deepEqual(cumulativeStripCells(markup).map(cell => cell.label?.[2]),
           ['22.1', '28.6', '45.7', '59', '65.2', '89.4', '96.7', '97.5', '99.7', '100'],
           '帯の数値は丸めた棒の割合を足さず、生の件数から計算する')
@@ -229,16 +240,18 @@ test('画像モードは棒の割合・平均・中央値と累積線を同時�
   assert.deepEqual(cumulativePoints(small).map(point => point.proportion), [0.25, 0.75, 1])
 })
 
-test('累積割合の選択は初期なしで、保存された折れ線・上部の帯・旧設定を復元する', () => {
+test('累積割合の選択は初期なしで、保存された4表示形式・旧設定を復元する', () => {
   const normal = renderPanel({})
   assert.equal(selectedCumulativeDisplay(normal), 'なし')
   assert.deepEqual([...cumulativeSelect(normal).matchAll(/<option\b[^>]*>([^<]*)<\/option>/g)].map(match => match[1]),
-    ['なし', '折れ線', '上部の帯'])
+    ['なし', '折れ線', '上部の帯', '折れ線＋上部の帯'])
   assert.doesNotMatch(normal, /data-histogram-cumulative/)
   const editor = renderPanel({ initialSnapshot: snapshot(), editor: true })
   assert.equal(selectedCumulativeDisplay(editor), '折れ線')
   assert.equal(selectedCumulativeDisplay(renderPanel({ initialSnapshot: snapshot({ cumulativeDisplay: 'strip' }), editor: true })), '上部の帯')
   assert.equal(selectedCumulativeDisplay(renderPanel({ initialSnapshot: snapshot({ showCumulative: false, cumulativeDisplay: 'strip' }), editor: true })), 'なし')
+  assert.equal(selectedCumulativeDisplay(renderPanel({ initialSnapshot: snapshot({ cumulativeDisplay: 'both' }), editor: true })), '折れ線＋上部の帯')
+  assert.equal(selectedCumulativeDisplay(renderPanel({ initialSnapshot: snapshot({ showCumulative: false, cumulativeDisplay: 'both' }), editor: true })), 'なし')
   const legacy = JSON.parse(JSON.stringify(snapshot({ showCumulative: false })))
   delete legacy.showCumulative
   delete legacy.cumulativeDisplay
@@ -280,6 +293,62 @@ test('上部の帯は線形・対数・評価・上限超過を同じ累積件�
   }
 })
 
+test('折れ線と帯の併用は同じ階級の累積値を棒中央に示し、右軸を1つだけ持つ', () => {
+  for (const kind of ['linear', 'log', 'rating']) {
+    const source = snapshot({ kind, cumulativeDisplay: 'both' })
+    const unchanged = structuredClone(source)
+    const markup = renderPlot(source)
+    const lineOnly = renderPlot(snapshot({ kind }))
+    const strip = cumulativeSection(markup, 'strip')
+    const line = cumulativeSection(markup, 'true')
+    const centers = barCenters(markup)
+    const cells = cumulativeStripCells(strip)
+    const points = cumulativePointXs(line)
+    assert.equal((markup.match(/data-histogram-cumulative="strip"/g) ?? []).length, 1)
+    assert.equal((markup.match(/data-histogram-cumulative="true"/g) ?? []).length, 1)
+    assert.equal((markup.match(/class="enemy-histogram-cumulative-axis"/g) ?? []).length, 1)
+    assert.ok(overlayPath(line))
+    assert.deepEqual(cumulativePoints(strip), cumulativePoints(line), kind)
+    assert.deepEqual(cumulativePoints(line), cumulativePoints(lineOnly), kind)
+    assert.deepEqual(barTitles(markup), barTitles(lineOnly), kind)
+    assert.deepEqual(centers, barCenters(lineOnly), '併用時は折れ線と同じ右軸用の余白を使う')
+    assert.equal(cells.length, centers.length)
+    assert.equal(points.length, centers.length)
+    for (const [index, center] of centers.entries()) {
+      assert.ok(Math.abs(points[index] - center) < 1e-9, `${kind}: 点${index}は棒中央`)
+      assert.ok(Math.abs(Number(attr(cells[index].label?.[1], 'x')) - center) < 1e-9, `${kind}: 帯の数値${index}は棒中央`)
+    }
+    assert.equal(cumulativePoints(strip).at(-1).count, 8)
+    assert.equal(cumulativePoints(strip).at(-1).proportion, 1)
+    assert.doesNotMatch(markup, /NaN|Infinity/)
+    assert.deepEqual(source, unchanged)
+  }
+})
+
+test('併用時も棒上の割合を維持し、折れ線との重なり回避を引き継ぐ', () => {
+  const source = snapshot({ cumulativeDisplay: 'both', showPercentages: true })
+  const markup = renderPlot(source)
+  const lineOnly = renderPlot(snapshot({ showPercentages: true }))
+  const labels = percentageLabels(markup)
+  assert.deepEqual(labels, percentageLabels(lineOnly), '帯による全体移動以外は既存の割合配置を保つ')
+  assert.deepEqual(labels.map(({ index, text }) => ({ index, text })), [
+    { index: 0, text: '25.0%' }, { index: 1, text: '50.0%' }, { index: 2, text: '25.0%' },
+  ])
+  const transform = /<g\b[^>]*class="enemy-histogram-percentages"[^>]*transform="translate\(([^ ]+) ([^)]+)\)"/.exec(markup)
+  const stripBottom = Math.max(...cumulativeStripCells(markup).map(cell => Number(attr(cell.rectangle, 'y')) + Number(attr(cell.rectangle, 'height'))))
+  const bars = [...markup.matchAll(/<rect\b[^>]*class="enemy-chart-bar[^"]*"([^>]*)>/g)]
+  assert.ok(transform)
+  for (const label of labels) {
+    const labelY = Number(transform[2]) + label.y
+    assert.ok(labelY > stripBottom, `割合${label.index}は累積帯の外にある`)
+    assert.ok(labelY < Number(attr(bars[label.index][1], 'y')), `割合${label.index}は対応する棒より上にある`)
+  }
+  const hidden = renderPlot({ ...source, showPercentages: false })
+  assert.equal(percentageLabels(hidden).length, 0)
+  assert.equal(cumulativeStripCells(hidden).length, 3)
+  assert.equal(cumulativePointXs(hidden).length, 3)
+})
+
 test('上部の帯でも通常の割合は棒の上に残し、右軸用の横幅を使わない', () => {
   const source = snapshot({ cumulativeDisplay: 'strip', showPercentages: true })
   const markup = renderPlot(source)
@@ -304,51 +373,57 @@ test('上部の帯でも通常の割合は棒の上に残し、右軸用の横�
 })
 
 test('帯は画像の旧上余白を置き換え、基準線なしでは4pxまで詰めて棒の高さを保つ', () => {
-  for (const width of [360, 960]) {
-    for (const showPercentages of [false, true]) {
-      const source = snapshot({ cumulativeDisplay: 'strip', showPercentages })
-      const markup = renderPlot(source, { width })
-      const without = renderPlot({ ...source, showCumulative: false }, { width })
-      const frame = /<rect\b[^>]*data-chart-image-plot-area=""([^>]*)>/.exec(markup)?.[1]
-      const cells = cumulativeStripCells(markup)
-      assert.ok(frame && cells.length)
-      const stripBottom = Math.max(...cells.map(cell => Number(attr(cell.rectangle, 'y')) + Number(attr(cell.rectangle, 'height'))))
-      assert.equal(Number(attr(frame, 'y')) - stripBottom, 4)
-      const barHeights = html => [...html.matchAll(/<rect\b[^>]*class="enemy-chart-bar[^"]*"([^>]*)>/g)]
-        .map(match => Number(attr(match[1], 'height')))
-      assert.deepEqual(barHeights(markup), barHeights(without), '帯の間を詰めても棒の高さを変えない')
+  for (const cumulativeDisplay of ['strip', 'both']) {
+    for (const width of [360, 960]) {
+      for (const showPercentages of [false, true]) {
+        const source = snapshot({ cumulativeDisplay, showPercentages })
+        const markup = renderPlot(source, { width })
+        const without = renderPlot({ ...source, showCumulative: false }, { width })
+        const frame = /<rect\b[^>]*data-chart-image-plot-area=""([^>]*)>/.exec(markup)?.[1]
+        const cells = cumulativeStripCells(markup)
+        assert.ok(frame && cells.length)
+        const stripBottom = Math.max(...cells.map(cell => Number(attr(cell.rectangle, 'y')) + Number(attr(cell.rectangle, 'height'))))
+        assert.equal(Number(attr(frame, 'y')) - stripBottom, 4)
+        const barHeights = html => [...html.matchAll(/<rect\b[^>]*class="enemy-chart-bar[^"]*"([^>]*)>/g)]
+          .map(match => Number(attr(match[1], 'height')))
+        assert.deepEqual(barHeights(markup), barHeights(without), '帯の間を詰めても棒の高さを変えない')
+      }
     }
   }
 })
 
-test('上部の帯と平均・中央値を保存画像へ残し、折れ線用の操作要素を出力しない', () => {
-  const markup = renderPlot(snapshot({ cumulativeDisplay: 'strip', showPercentages: true,
-    referenceVisibility: { mean: true, median: true } }))
-  assert.match(markup, /class="enemy-chart-reference mean"/)
-  assert.match(markup, /class="enemy-chart-reference median"/)
-  assert.match(markup, /data-histogram-cumulative="strip"/)
-  assert.equal(percentageLabels(markup).length, 3)
-  assert.match(markup, /<svg\b[^>]*role="img"/)
-  assert.doesNotMatch(markup, /role="slider"|tabindex="0"|enemy-histogram-cumulative-hit-area|enemy-histogram-cumulative-tooltip|<button\b|NaN|Infinity/)
-  const stripBottom = Math.max(...cumulativeStripCells(markup).map(cell => Number(attr(cell.rectangle, 'y')) + Number(attr(cell.rectangle, 'height'))))
-  const references = [...markup.matchAll(/<text\b([^>]*class="enemy-chart-reference-label (?:mean|median)"[^>]*)>/g)]
-  assert.equal(references.length, 2)
-  for (const reference of references) assert.ok(Number(attr(reference[1], 'y')) > stripBottom, '平均・中央値の直接ラベルは帯の下にある')
+test('上部の帯と平均・中央値を保存画像へ残し、併用時も折れ線用の操作要素を出力しない', () => {
+  for (const cumulativeDisplay of ['strip', 'both']) {
+    const markup = renderPlot(snapshot({ cumulativeDisplay, showPercentages: true,
+      referenceVisibility: { mean: true, median: true } }))
+    assert.match(markup, /class="enemy-chart-reference mean"/)
+    assert.match(markup, /class="enemy-chart-reference median"/)
+    assert.match(markup, /data-histogram-cumulative="strip"/)
+    assert.equal(percentageLabels(markup).length, 3)
+    assert.match(markup, /<svg\b[^>]*role="img"/)
+    assert.doesNotMatch(markup, /role="slider"|tabindex="0"|enemy-histogram-cumulative-hit-area|enemy-histogram-cumulative-tooltip|<button\b|NaN|Infinity/)
+    const stripBottom = Math.max(...cumulativeStripCells(markup).map(cell => Number(attr(cell.rectangle, 'y')) + Number(attr(cell.rectangle, 'height'))))
+    const references = [...markup.matchAll(/<text\b([^>]*class="enemy-chart-reference-label (?:mean|median)"[^>]*)>/g)]
+    assert.equal(references.length, 2)
+    for (const reference of references) assert.ok(Number(attr(reference[1], 'y')) > stripBottom, '平均・中央値の直接ラベルは帯の下にある')
+  }
 })
 
 test('累積の無効化・空データ・不正な分母や件数では上部に誤った帯を表示しない', () => {
-  const source = snapshot({ cumulativeDisplay: 'strip' })
-  assert.doesNotMatch(renderPlot({ ...source, showCumulative: false }), /data-histogram-cumulative/)
-  const invalidStatistics = [
-    { ...source.statistics, count: 0 },
-    { ...source.statistics, count: -1 },
-    { ...source.statistics, bins: [] },
-    { ...source.statistics, bins: source.statistics.bins.map((bin, index) => ({ ...bin, count: index === 1 ? -1 : bin.count })) },
-    { ...source.statistics, count: 1 },
-  ]
-  for (const statistics of invalidStatistics) {
-    const markup = renderPlot({ ...source, statistics })
-    assert.doesNotMatch(markup, /data-histogram-cumulative|data-cumulative-index/)
+  for (const cumulativeDisplay of ['strip', 'both']) {
+    const source = snapshot({ cumulativeDisplay })
+    assert.doesNotMatch(renderPlot({ ...source, showCumulative: false }), /data-histogram-cumulative/)
+    const invalidStatistics = [
+      { ...source.statistics, count: 0 },
+      { ...source.statistics, count: -1 },
+      { ...source.statistics, bins: [] },
+      { ...source.statistics, bins: source.statistics.bins.map((bin, index) => ({ ...bin, count: index === 1 ? -1 : bin.count })) },
+      { ...source.statistics, count: 1 },
+    ]
+    for (const statistics of invalidStatistics) {
+      const markup = renderPlot({ ...source, statistics })
+      assert.doesNotMatch(markup, /data-histogram-cumulative|data-cumulative-index/)
+    }
   }
 })
 

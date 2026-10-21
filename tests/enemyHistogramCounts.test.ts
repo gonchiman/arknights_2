@@ -136,7 +136,7 @@ test('累積割合帯の保存名を折れ線と区別し、非表示時は方�
       assert.equal(strip, original.replace(/\.png$/, '_累積割合帯.png'))
       assert.notEqual(strip, line)
       assert.doesNotMatch(strip, /累積割合表示/)
-      for (const cumulativeDisplay of ['line', 'strip'] as const) {
+      for (const cumulativeDisplay of ['line', 'strip', 'both'] as const) {
         assert.equal(getWeightedEnemyHistogramImageFilename({ ...snapshot, cumulativeDisplay }), original)
         assert.equal(getWeightedEnemyHistogramImageFilename({ ...snapshot, showCumulative: false, cumulativeDisplay }), original)
       }
@@ -144,6 +144,27 @@ test('累積割合帯の保存名を折れ線と区別し、非表示時は方�
         showPercentages: true, showBinRanges: true, referenceVisibility: { mean: true, median: true } })
       assert.match(combined, /_割合表示_累積割合帯_階級範囲表示_平均-中央値\.png$/)
       assert.equal((combined.match(/累積割合帯/g) ?? []).length, 1)
+    }
+  }
+})
+
+test('折れ線と帯の併用画像名は全集計方法・尺度で単独表示と区別する', () => {
+  const options = { metric: '術耐性', scope: '全敵',
+    statistics: calculateWeightedHistogram([{ value: 0, weight: 3 }, { value: 50, weight: 1 }]),
+    referenceVisibility: { mean: false, median: false }, coverage: source.summary }
+  for (const mode of ['TYPES', 'MAPS', 'SPAWNS'] as const) for (const scale of ['LINEAR', 'LOG']) {
+    for (const useRatingBins of [false, true]) {
+      const snapshot = { ...options, mode, scale, useRatingBins }
+      const original = getWeightedEnemyHistogramImageFilename(snapshot)
+      const both = getWeightedEnemyHistogramImageFilename({ ...snapshot, showCumulative: true, cumulativeDisplay: 'both' })
+      assert.equal(both, original.replace(/\.png$/, '_累積割合線＋帯.png'))
+      for (const cumulativeDisplay of ['line', 'strip'] as const) {
+        assert.notEqual(both, getWeightedEnemyHistogramImageFilename({ ...snapshot, showCumulative: true, cumulativeDisplay }))
+      }
+      const withLabels = getWeightedEnemyHistogramImageFilename({ ...snapshot, showCumulative: true, cumulativeDisplay: 'both',
+        showPercentages: true, showBinRanges: true, referenceVisibility: { mean: true, median: true } })
+      assert.match(withLabels, /_割合表示_累積割合線＋帯_階級範囲表示_平均-中央値\.png$/)
+      assert.equal((withLabels.match(/累積割合線＋帯/g) ?? []).length, 1)
     }
   }
 })
