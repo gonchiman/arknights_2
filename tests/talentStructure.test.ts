@@ -9,6 +9,7 @@ import {
 } from '../src/lib/talentStructure.ts'
 import { evaluateCombatCondition } from '../src/lib/combatEffectStructure.ts'
 import { SKILL_STRUCTURES, formatSkillStructureEffectItem, formatSkillStructureEffectValue } from '../src/lib/skillStructure.ts'
+import { GUARD_PASSIVE_OPERATOR_IDS } from '../src/lib/guardCombatPassives.ts'
 import type { OperatorCombatProfile, SkillRecord } from '../src/types/skill.ts'
 
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/talentStructureFourOperators.json', import.meta.url), 'utf8')) as {
@@ -49,8 +50,9 @@ test('独立したJP原典8素質を潜在1・最大昇進・最大レベル・M
   }
 })
 
-test('素質の対応OP集合をスキル構造と揃え、未対応のOP・素質枠を代用しない', () => {
-  assert.deepEqual([...TALENT_STRUCTURE_OPERATOR_IDS].sort(), [...new Set(SKILL_STRUCTURES.map(structure => structure.basicInfo.operatorId))].sort())
+test('従来の素質構造の対応OP集合を従来スキルと揃え、未対応のOP・素質枠を代用しない', () => {
+  assert.deepEqual([...TALENT_STRUCTURE_OPERATOR_IDS].sort(), [...new Set(SKILL_STRUCTURES
+    .filter(structure => !structure.guardRecipe).map(structure => structure.basicInfo.operatorId))].sort())
   for (const operatorId of TALENT_STRUCTURE_OPERATOR_IDS) for (const talentIndex of [0, 1]) {
     assert.ok(isTalentStructureSelection({ operatorId, talentIndex }))
   }
@@ -64,6 +66,17 @@ test('素質の対応OP集合をスキル構造と揃え、未対応のOP・素�
     assert.equal(isTalentStructureSelection(selection), false)
     assert.equal(findTalentStructure(selection, buildTalentStructures(records())), null)
   }
+})
+
+test('従来の素質構造と新しい前衛の素質定義を合わせてスキル構造の全30人を網羅する', () => {
+  const legacy = new Set<string>(TALENT_STRUCTURE_OPERATOR_IDS)
+  assert.equal(legacy.size, 5)
+  assert.equal(GUARD_PASSIVE_OPERATOR_IDS.length, 25)
+  assert.ok(GUARD_PASSIVE_OPERATOR_IDS.every(operatorId => !legacy.has(operatorId)))
+  const covered = [...new Set([...legacy, ...GUARD_PASSIVE_OPERATOR_IDS])].sort()
+  const allSkillOperators = [...new Set(SKILL_STRUCTURES.map(structure => structure.basicInfo.operatorId))].sort()
+  assert.equal(covered.length, 30)
+  assert.deepEqual(covered, allSkillOperators)
 })
 
 test('シルバーアッシュは自身ATKと編成全員の再配置割合を別効果にし、ステルスの範囲条件も保持する', () => {

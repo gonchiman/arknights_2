@@ -23,6 +23,7 @@ import {
   type TalentStructureEffect,
 } from '../lib/talentStructure'
 import type { SkillRecord } from '../types/skill'
+import type { GuardConditions, GuardInput, GuardPassiveModifiers } from '../lib/guardCombatTypes'
 import { AnalysisTabs } from './AnalysisTabs'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
@@ -165,6 +166,11 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
         summary={[output.activeStageLabel !== '通常' ? output.activeStageLabel : null, `攻撃対象${output.actualTargetCount}体`].filter(Boolean).join(' · ')}
         collapsedLabel="条件を表示">
         <div className="calculator-form-grid damage-three-condition-grid">
+          {output.guard && <GuardConditionFields inputs={output.guard.inputs}
+            values={{ ...output.guard.conditions, ...conditions.guard }}
+            onChange={(key, value) => setConditions(previous => ({ ...previous,
+              guard: { ...previous.guard, [key]: value },
+            }))} />}
           {output.conditionInputs.map(input => <label className="calculator-field" key={input.metric}>
             <span>{input.label}</span>
             {input.kind === 'number' && input.control === 'input' ? <input type="number" aria-label={input.label}
@@ -183,15 +189,15 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
           </label>)}
             {output.initialTargetState === 'GROUND' && !output.conditionInputs.some(input => input.metric === 'targetInitialState') && <div className="calculator-field"><span>敵の初期状態</span>
             <div className="damage-three-fixed-value">地上</div></div>}
-          {!output.conditionInputs.some(input => input.metric === 'actualAttackTargetCount') && <div className="calculator-field"><span>実際の攻撃対象数</span>
+          {!output.guard && !output.conditionInputs.some(input => input.metric === 'actualAttackTargetCount') && <div className="calculator-field"><span>実際の攻撃対象数</span>
             <div className="damage-three-fixed-value">{output.actualTargetCount}体</div></div>}
           <div className="calculator-field"><span>対象数上限</span><div className="damage-three-fixed-value">{output.maxTargetCount === null ? '上限なし' : `${output.maxTargetCount}体`}</div></div>
           <div className="calculator-field"><span>ダメージ種別</span><div className="damage-three-fixed-value">
-            {output.damageType ? DAMAGE_TYPE_LABELS[output.damageType] : '未確定'}</div></div>
+            {output.damageType ? DAMAGE_TYPE_LABELS[output.damageType] : output.guard && output.unsupportedReasons.length === 0 ? '混合' : '未確定'}</div></div>
         </div>
-        <details className="damage-two-help"><summary>適用する効果</summary>
+        {output.effects.length > 0 && <details className="damage-two-help"><summary>適用する効果</summary>
           <DamageCalculatorThreeEffectTable effects={output.effects} />
-        </details>
+        </details>}
         <details className="damage-two-help"><summary>計算範囲</summary>
           <p>{calculationScope(output)}</p>
           <p>全対象には同じ防御力・術耐性を使います。DPSはスキル発動中に攻撃し続けた場合の値で、SP回復中の時間を含めません。</p>
@@ -200,9 +206,10 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
       </CollapsibleCalculatorPanel>
 
       <CollapsibleCalculatorPanel id="damage-three-talents" number="03" title="素質の適用"
-        summary={`${output.talentEffects.filter(entry => entry.status === 'APPLIED').length}件適用`}
+        summary={`${(output.guard?.evaluations ?? output.talentEffects).filter(entry => entry.status === 'APPLIED').length}件適用`}
         collapsedLabel="素質を表示">
-        <DamageCalculatorThreeTalentTable effects={output.talentEffects} />
+        {output.guard ? <GuardPassiveTable evaluations={output.guard.evaluations} />
+          : <DamageCalculatorThreeTalentTable effects={output.talentEffects} />}
       </CollapsibleCalculatorPanel>
 
       <CollapsibleCalculatorPanel id="damage-three-results" number="04" title="計算結果"
@@ -225,6 +232,10 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
         </div> : <>
           {output.damageOverTime && <h3 className="damage-three-result-heading">直接攻撃</h3>}
           <DamageCalculatorThreeResultTable output={output} precision={precision} />
+          {output.guard && output.rows.some(row => row.damageOverTimeDps !== null) && <>
+            <h3 className="damage-three-result-heading">{output.canShowDps ? '継続ダメージ・合計DPS' : '継続ダメージ'}</h3>
+            <GuardPeriodicDamageTable output={output} precision={precision} />
+          </>}
           {output.hasAttackSequence && <>
             <h3 className="damage-three-result-heading">攻撃内訳</h3>
             <DamageCalculatorThreeAttackComponentTable output={output} precision={precision} />
@@ -252,7 +263,9 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
 
 export function DamageCalculatorThreeResultTable({ output, precision }: { output: DamageCalculatorThreeOutput; precision: number }) {
   const format = resultNumberFormatter(precision)
-  const damageLabel = `${output.attackKind === 'NORMAL' ? '1攻撃ダメージ' : output.attackKind === 'SKILL_ACTION' ? 'スキル1回の総ダメージ' : `${output.attackLabel}1回のダメージ`}${output.hasProbabilisticDamage ? '期待値' : ''}`
+  const damageLabel = `${output.attackKind === 'NORMAL' ? '1攻撃ダメージ' : output.attackKind === 'SKILL_ACTION'
+    ? output.guard ? '選択段階1回のダメージ' : 'スキル1回の総ダメージ'
+    : `${output.attackLabel}1回のダメージ`}${output.hasProbabilisticDamage ? '期待値' : ''}`
   return <div className="damage-two-table-wrap" tabIndex={0} role="region" aria-label="計算機３のダメージ計算結果">
     <table className={`damage-two-table damage-three-result-table${output.canShowDps ? '' : ' damage-three-single-attack-table'}`}>
       <caption className="visually-hidden">{output.hasUnsupportedTalentDamage && '直接攻撃分（継続ダメージを除く）：'}敵の防御性能別の1体・全対象の{output.canShowDps ? 'ダメージとDPS' : damageLabel}</caption>
@@ -272,6 +285,20 @@ export function DamageCalculatorThreeResultTable({ output, precision }: { output
 export function DamageCalculatorThreeAttackComponentTable({ output, precision }: { output: DamageCalculatorThreeOutput; precision: number }) {
   if (!output.hasAttackSequence) return null
   const format = resultNumberFormatter(precision)
+  if (output.guard) return <div className="damage-two-table-wrap" tabIndex={0} role="region" aria-label="攻撃ごとのダメージ内訳">
+    <table className="damage-two-table damage-three-attack-component-table">
+      <caption className="visually-hidden">攻撃ごとのダメージ内訳</caption>
+      <thead><tr><th scope="col">{output.axisLabel}</th><th scope="col">区分</th><th scope="col">ダメージ種別</th>
+        <th scope="col">攻撃倍率</th><th scope="col">打撃回数</th><th scope="col">1体平均の命中回数</th>
+        <th scope="col">1体平均のダメージ{output.hasProbabilisticDamage ? '期待値' : ''}</th></tr></thead>
+      <tbody>{output.rows.flatMap(row => row.attackComponents.map(component => <tr key={`${row.axisValue}/${component.id}`}>
+        <th scope="row">{output.damageType === 'TRUE' ? '軽減なし' : formatCompact(row.axisValue)}</th>
+        <td>{component.label}</td><td>{DAMAGE_TYPE_LABELS[component.damageType]}</td>
+        <td>×{formatCompact(component.attackScale)}</td><td>{formatCompact(component.count)}</td>
+        <td>{formatCompact(component.expectedHitCount)}</td><td>{format(component.expectedDamage)}</td>
+      </tr>))}</tbody>
+    </table>
+  </div>
   const skillAction = output.attackKind === 'SKILL_ACTION'
   return <div className="damage-two-table-wrap" tabIndex={0} role="region" aria-label="順序付き攻撃の内訳">
     <table className={`damage-two-table damage-three-attack-component-table${skillAction ? ' damage-three-skill-action-components' : ''}`}>
@@ -285,6 +312,71 @@ export function DamageCalculatorThreeAttackComponentTable({ output, precision }:
         <td>{component.targetAirborne ? output.initialTargetState === 'GROUND' ? '浮遊' : '空中' : '地上'}</td><td>{formatProbability(component.defenseIgnoreChance)}</td>
         <td>{format(component.expectedDamage)}</td>
       </tr>))}</tbody>
+    </table>
+  </div>
+}
+
+export function GuardConditionFields({ inputs, values, onChange }: {
+  inputs: readonly GuardInput[]
+  values: GuardConditions
+  onChange: (key: string, value: number | boolean | string) => void
+}) {
+  return <>{inputs.map(input => {
+    const value = values[input.key] ?? input.defaultValue
+    const options = input.options ?? (input.kind === 'boolean'
+      ? [{ value: false, label: 'なし' }, { value: true, label: 'あり' }] : [])
+    const invalid = input.kind === 'number' && (typeof value !== 'number' || !Number.isFinite(value)
+      || (input.min !== undefined && value < input.min) || (input.max !== undefined && value > input.max))
+    return <label className="calculator-field" key={input.key}>
+      <span>{input.label}</span>
+      {input.kind === 'number' && options.length === 0 ? <input type="number" aria-label={input.label}
+        min={input.min} max={input.max} step={input.step ?? 1} aria-invalid={invalid || undefined}
+        value={typeof value === 'number' && Number.isFinite(value) ? value : ''}
+        onChange={event => onChange(input.key, event.target.valueAsNumber)} />
+        : <select aria-label={input.label} value={String(value)} onChange={event => {
+          const option = options.find(candidate => String(candidate.value) === event.target.value)
+          if (option) onChange(input.key, option.value)
+        }}>{options.map(option => <option key={String(option.value)} value={String(option.value)}>{option.label}</option>)}</select>}
+    </label>
+  })}</>
+}
+
+export function GuardPassiveTable({ evaluations }: { evaluations: GuardPassiveModifiers['evaluations'] }) {
+  return <div className="damage-two-table-wrap" tabIndex={0} role="region" aria-label="素質・特性の適用状態">
+    <table className="damage-two-table damage-three-talent-table">
+      <caption className="visually-hidden">素質・特性の適用状態</caption>
+      <thead><tr><th scope="col">区分</th><th scope="col">項目</th><th scope="col">値</th><th scope="col">状態</th></tr></thead>
+      <tbody>{evaluations.map((entry, index) => <tr key={`${entry.source}/${entry.item}/${index}`}>
+        <th scope="row">{entry.source}</th><td>{entry.item}</td><td>{entry.value}</td>
+        <td>{{ APPLIED: '適用', CONDITION_FALSE: '条件不成立', NOT_RELEVANT: '対象外', UNSUPPORTED: '未対応' }[entry.status]}</td>
+      </tr>)}</tbody>
+    </table>
+    {evaluations.some(entry => entry.reason && entry.status === 'UNSUPPORTED') && <details className="damage-two-help">
+      <summary>未対応の条件</summary>
+      {evaluations.filter(entry => entry.reason && entry.status === 'UNSUPPORTED').map((entry, index) => <p key={index}>
+        {entry.source}：{entry.reason}
+      </p>)}
+    </details>}
+  </div>
+}
+
+export function GuardPeriodicDamageTable({ output, precision }: { output: DamageCalculatorThreeOutput; precision: number }) {
+  if (!output.guard || !output.rows.some(row => row.damageOverTimeDps !== null)) return null
+  const format = resultNumberFormatter(precision)
+  return <div className="damage-two-table-wrap" tabIndex={0} role="region" aria-label="継続ダメージと合計DPS">
+    <table className="damage-two-table damage-three-steady-table">
+      <caption className="visually-hidden">継続ダメージと合計DPS</caption>
+      <thead><tr><th scope="col">{output.axisLabel}</th>
+        {output.canShowDps && <th scope="col">1体の直接DPS</th>}
+        <th scope="col">1体の継続ダメージ/秒</th>
+        {output.canShowDps ? <><th scope="col">1体の合計DPS</th><th scope="col">全対象の合計DPS</th></>
+          : <th scope="col">全対象の継続ダメージ/秒</th>}</tr></thead>
+      <tbody>{output.rows.map(row => <tr key={row.axisValue}>
+        <th scope="row">{output.damageType === 'TRUE' ? '軽減なし' : formatCompact(row.axisValue)}</th>
+        {output.canShowDps && <td>{format(row.dps)}</td>}<td>{format(row.damageOverTimeDps)}</td>
+        {output.canShowDps ? <><td>{format(row.combinedDps)}</td><td>{format(row.allTargetsCombinedDps)}</td></>
+          : <td>{format(row.damageOverTimeDps === null ? null : row.damageOverTimeDps * output.actualTargetCount)}</td>}
+      </tr>)}</tbody>
     </table>
   </div>
 }
@@ -387,6 +479,7 @@ function UsedValueTable({ output }: { output: DamageCalculatorThreeOutput }) {
 }
 
 function calculationScope(output: DamageCalculatorThreeOutput) {
+  if (output.guard && output.unsupportedReasons.length > 0) return '計算保留 · 潜在1 · MODなし · 外部バフなし'
   const scope = output.hasUnsupportedTalentDamage
     ? '直接攻撃分（継続ダメージを除く）'
     : '基礎性能＋スキル効果＋適用中の素質'

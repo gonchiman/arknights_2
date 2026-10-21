@@ -70,15 +70,17 @@ function close(actual: number | null | undefined, expected: number) {
 }
 
 test('既存4人の12技能とアイリーニ3技能の特化3に同じ構造化レコードを使う', () => {
-  const structures = getDamageCalculatorThreeStructures()
+  const allStructures = getDamageCalculatorThreeStructures()
+  const structures = allStructures.filter(value => !value.guardRecipe)
   const key = (value: { operatorId: string; skillId: string; skillIndex: number }) => `${value.operatorId}/${value.skillId}/${value.skillIndex}`
   const expected = [...source.flatMap(operator => operator.skills.map(skill => key({ ...skill, operatorId: operator.operatorId }))),
     ...[1, 2, 3].map(index => `char_4009_irene/skchr_irene_${index}/${index}`)].sort()
   assert.equal(structures.length, 15)
   assert.deepEqual(structures.map(value => key(value.basicInfo)).sort(), expected)
-  assert.deepEqual(DAMAGE_CALCULATOR_THREE_SELECTIONS.map(key).sort(), expected)
+  assert.equal(allStructures.length, 90)
+  assert.deepEqual(DAMAGE_CALCULATOR_THREE_SELECTIONS.filter(value => expected.includes(key(value))).map(key).sort(), expected)
   for (const selection of DAMAGE_CALCULATOR_THREE_SELECTIONS) {
-    assert.ok(structures.includes(findSkillStructure(selection)!))
+    assert.ok(allStructures.includes(findSkillStructure(selection)!))
     assert.equal(selection.levelIndex, 9)
   }
 })

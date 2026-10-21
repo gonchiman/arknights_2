@@ -1,4 +1,6 @@
 import type { SkillRecord } from '../types/skill.ts'
+import type { GuardConditions, GuardInput, GuardPassiveModifiers } from './guardCombatTypes.ts'
+import { buildGuardDamageOutput } from './guardDamageCalculator.ts'
 import {
   calculateAttackPipeline,
   calculateDamageBreakdown,
@@ -61,6 +63,7 @@ export const DAMAGE_CALCULATOR_THREE_BASE_ATTACKS: Readonly<Record<string, {
 }
 
 export interface DamageCalculatorThreeConditions {
+  guard?: GuardConditions
   actualAttackTargetCount?: number
   skillActivationCount?: number
   skillMode?: 'INITIAL' | 'ALTERNATE'
@@ -149,6 +152,7 @@ export interface DamageCalculatorThreeRow {
 }
 
 export interface DamageCalculatorThreeOutput {
+  guard?: { inputs: GuardInput[]; conditions: GuardConditions; evaluations: GuardPassiveModifiers['evaluations']; unresolved: string[] }
   structure: SkillStructure | null
   stats: OperatorStats
   model: SkillModelDefaults | null
@@ -251,6 +255,9 @@ export function getDamageCalculatorThreeInputs(
  * of scope. Reviewed normal-attack traits supply damage type and Lord scaling.
  */
 export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInput): DamageCalculatorThreeOutput {
+  const guardStructure = findSkillStructure({ operatorId: input.skill.operatorId, skillId: input.skill.skillId,
+    skillIndex: input.skill.skillIndex, levelIndex: input.skillLevelIndex })
+  if (guardStructure?.guardRecipe) return buildGuardDamageOutput(input, guardStructure, validateOperator(input))
   const reasons = [...validateOperator(input)]
   const context = resolveConditions(input.conditions)
   const conditionErrors = validateConditions(context)
@@ -572,7 +579,7 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
     }) || hasRandomTargets, initialTargetState, hasRandomTargets }
 }
 
-type ConditionContext = Omit<Required<DamageCalculatorThreeConditions>, 'airborneHitCount'> & { airborneHitCount?: number }
+type ConditionContext = Omit<Required<DamageCalculatorThreeConditions>, 'airborneHitCount' | 'guard'> & { airborneHitCount?: number }
 type BaseAttack = (typeof DAMAGE_CALCULATOR_THREE_BASE_ATTACKS)[string]
 interface ResolvedAttack {
   kind: DamageCalculatorThreeOutput['attackKind']
