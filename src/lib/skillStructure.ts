@@ -1,16 +1,18 @@
 import type { SkillCoarseCategory } from './skillCoarseClassification.ts'
+import type { DamageType } from './damageCalculator.ts'
 import { SKILL_DIRECTORY_SP_TYPE_LABELS } from './skillDirectory.ts'
 
 export type SkillStructureComparison = 'EQ' | 'NE' | 'GT' | 'GTE' | 'LT' | 'LTE'
 export type SkillStructureNumericMetric = 'skillActivationCount' | 'actualAttackTargetCount'
 export type SkillStructureMode = 'INITIAL' | 'ALTERNATE'
-export type SkillStructureInputMetric = SkillStructureNumericMetric | 'skillMode'
+export type SkillStructureInputMetric = SkillStructureNumericMetric | 'skillMode' | 'targetCanBeLevitated'
 
 /** Conditions remain machine-readable; labels are derived only when displayed. */
 export type SkillStructurePredicate =
   | { readonly metric: SkillStructureNumericMetric; readonly comparison: SkillStructureComparison; readonly value: number }
   | { readonly metric: 'attackDistanceType'; readonly comparison: 'EQ' | 'NE'; readonly value: 'RANGED' | 'MELEE' }
   | { readonly metric: 'skillMode'; readonly comparison: 'EQ' | 'NE'; readonly value: SkillStructureMode }
+  | { readonly metric: 'targetCanBeLevitated'; readonly comparison: 'EQ' | 'NE'; readonly value: boolean }
 
 export type SkillStructureDuration =
   | { readonly type: 'FIXED_SECONDS'; readonly seconds: number }
@@ -27,9 +29,9 @@ export type SkillStructureEndCondition =
 export type SkillStructureEffectTiming = 'WHILE_STAGE_ACTIVE' | 'ON_ATTACK' | 'ON_NEXT_NORMAL_ATTACK'
   | 'ON_STAGE_ENTER' | 'ON_ATTACK_DEFEAT' | 'ON_INCOMING_NORMAL_ATTACK'
   | { readonly type: 'PERIODIC'; readonly intervalSeconds: number }
-export type SkillStructureEffectTarget = 'SELF' | 'SELF_ATTACK' | 'ENEMIES_IN_ACTION_RANGE'
+export type SkillStructureEffectTarget = 'SELF' | 'SELF_ATTACK' | 'ENEMIES_IN_ACTION_RANGE' | 'ATTACK_TARGET'
 export type SkillStructureEffectOperation = 'ADD_RATIO' | 'ADD_VALUE' | 'EXTEND_FORWARD' | 'REPLACE' | 'SET' | 'MULTIPLY' | 'SET_ENABLED'
-  | 'FILL_RESOURCE' | 'RESTORE' | 'INCREASE_TO_CAP' | 'EXECUTE_ATTACK'
+  | 'FILL_RESOURCE' | 'RESTORE' | 'INCREASE_TO_CAP' | 'EXECUTE_ATTACK' | 'DEAL_DAMAGE' | 'APPLY_STATUS'
 
 export interface SkillStructureAttackAction {
   readonly count: number
@@ -73,6 +75,12 @@ export type SkillStructureEffect = SkillStructureEffectBase & (
   | { readonly item: 'HP_RESTORE_RATIO'; readonly operation: 'RESTORE'; readonly value: number; readonly unit: 'MAX_HP_RATIO' }
   | { readonly item: 'HP_LOSS_RATE'; readonly operation: 'INCREASE_TO_CAP'; readonly value: SkillStructureHpLossProfile; readonly unit: 'HP_LOSS_PROFILE' }
   | { readonly item: 'TRIGGERED_ATTACK'; readonly operation: 'EXECUTE_ATTACK'; readonly value: SkillStructureAttackAction; readonly unit: 'ATTACK_ACTION' }
+  | { readonly item: 'DIRECT_DAMAGE'; readonly operation: 'DEAL_DAMAGE'; readonly value: {
+      readonly damageType: DamageType; readonly attackScale: number; readonly count: number
+    }; readonly unit: 'DAMAGE_ACTION' }
+  | { readonly item: 'APPLY_STATUS'; readonly operation: 'APPLY_STATUS'; readonly value: {
+      readonly statusId: 'LEVITATE'; readonly durationSeconds: number
+    }; readonly unit: 'STATUS_APPLICATION' }
 )
 
 export interface SkillStructureStage {
@@ -110,6 +118,7 @@ export interface SkillStructure {
     readonly activationTrigger: 'MANUAL_INPUT' | 'SP_FULL' | 'ON_DEPLOY' | 'NEXT_NORMAL_ATTACK'
   }
   readonly effectStructure: {
+    readonly targetSelection?: { readonly initialState: 'GROUND' }
     readonly stages: readonly SkillStructureStage[]
     readonly relations?: readonly {
       readonly type: 'BONUS_VALUE_RELATION'
@@ -168,6 +177,7 @@ const PREDICATE_METRIC_LABELS = {
   actualAttackTargetCount: '攻撃対象数',
   attackDistanceType: '攻撃距離',
   skillMode: '状態',
+  targetCanBeLevitated: '浮遊の適用',
 } satisfies Record<SkillStructurePredicate['metric'], string>
 
 const COMPARISON_LABELS = {
@@ -181,7 +191,8 @@ export function formatSkillStructurePredicate(
   if (predicate === null) return emptyLabel
   const value = predicate.metric === 'attackDistanceType'
     ? predicate.value === 'RANGED' ? '遠距離' : '近接'
-    : predicate.metric === 'skillMode' ? formatSkillStructureMode(predicate.value) : formatNumber(predicate.value)
+    : predicate.metric === 'skillMode' ? formatSkillStructureMode(predicate.value)
+      : predicate.metric === 'targetCanBeLevitated' ? predicate.value ? '可能' : '無効' : formatNumber(predicate.value)
   return `${PREDICATE_METRIC_LABELS[predicate.metric]}${COMPARISON_LABELS[predicate.comparison]}${value}`
 }
 
@@ -220,7 +231,7 @@ export function formatSkillStructureEffectTiming(timing: SkillStructureEffectTim
 }
 
 export function formatSkillStructureEffectTarget(target: SkillStructureEffectTarget): string {
-  return { SELF: '自身', SELF_ATTACK: '自身の攻撃', ENEMIES_IN_ACTION_RANGE: '反撃範囲内の敵' }[target]
+  return { SELF: '自身', SELF_ATTACK: '自身の攻撃', ENEMIES_IN_ACTION_RANGE: '反撃範囲内の敵', ATTACK_TARGET: '攻撃対象の敵' }[target]
 }
 
 export function formatSkillStructureEffectItem(item: SkillStructureEffect['item']): string {
@@ -241,6 +252,8 @@ export function formatSkillStructureEffectItem(item: SkillStructureEffect['item'
     HP_RESTORE_RATIO: 'HP回復',
     HP_LOSS_RATE: 'HP減少率',
     TRIGGERED_ATTACK: '反撃',
+    DIRECT_DAMAGE: '直接ダメージ',
+    APPLY_STATUS: '状態付与',
   }[item]
 }
 
@@ -250,6 +263,7 @@ export function formatSkillStructureEffectOperation(effect: SkillStructureEffect
     ADD_RATIO: '割合加算', ADD_VALUE: '数値加算', EXTEND_FORWARD: '前方延長',
     REPLACE: '範囲置換', SET: '設定', MULTIPLY: '倍率適用', SET_ENABLED: '適用設定',
     FILL_RESOURCE: '最大値まで回復', RESTORE: '回復', INCREASE_TO_CAP: '徐々に増加（上限）', EXECUTE_ATTACK: '攻撃実行',
+    DEAL_DAMAGE: 'ダメージ付与', APPLY_STATUS: '状態付与',
   }[effect.operation]
 }
 
@@ -267,11 +281,20 @@ export function formatSkillStructureEffectValue(effect: SkillStructureEffect): s
     case 'MAX_HP_RATIO': return `最大HPの${formatNumber(effect.value * 100)}％`
     case 'HP_LOSS_PROFILE': return `最大HPの${formatNumber(effect.value.maxRatioPerSecond * 100)}％/秒`
     case 'ATTACK_ACTION': return `${formatNumber(effect.value.count)}回`
+    case 'DAMAGE_ACTION': return `×${formatNumber(effect.value.attackScale)}`
+    case 'STATUS_APPLICATION': return '浮遊'
   }
 }
 
 /** Compound effects expose each parameter as its own definition row. */
 export function getSkillStructureEffectValueRows(effect: SkillStructureEffect): [string, string | number][] {
+  if (effect.unit === 'DAMAGE_ACTION') return [
+    ['ダメージ種別', { PHYSICAL: '物理', ARTS: '術', TRUE: '確定' }[effect.value.damageType]],
+    ['攻撃倍率', effect.value.attackScale], ['打撃回数', effect.value.count],
+  ]
+  if (effect.unit === 'STATUS_APPLICATION') return [
+    ['状態', '浮遊'], ['持続時間（秒）', effect.value.durationSeconds],
+  ]
   if (effect.unit === 'HP_LOSS_PROFILE') return [
     ['基準', '最大HP'], ['減少率の上限（毎秒）', effect.value.maxRatioPerSecond],
     ['上限到達まで（秒）', effect.value.rampDurationSeconds], ['処理間隔（秒）', effect.value.tickIntervalSeconds],
@@ -294,11 +317,41 @@ function signedNumber(value: number): string {
 }
 
 /**
- * Reviewed examples for all three skills of the four selected operators, at 特化3 only.
+ * Reviewed skills at 特化3 only. Ordered effects use afterEffects instead of operator-specific formulas.
  * These records do not claim calculator support and do not reuse the display-only
  * description breakdown as executable effects.
  */
 export const SKILL_STRUCTURES: readonly SkillStructure[] = [
+  {
+    basicInfo: { operatorId: 'char_4009_irene', operatorName: 'アイリーニ', skillId: 'skchr_irene_1',
+      skillIndex: 1, skillName: '舞風', skillLevel: '特化3', levelIndex: 9 },
+    classificationInfo: { coarseCategories: ['NEXT_ATTACK'] },
+    activationSettings: { spRecovery: 'INCREASE_WHEN_ATTACK', initialSp: 0, spCost: 3,
+      maxCharges: 1, activationMethod: 'AUTO', activationTrigger: 'NEXT_NORMAL_ATTACK' },
+    effectStructure: { targetSelection: { initialState: 'GROUND' }, inputRequirements: ['targetCanBeLevitated'], stages: [{
+      id: 'next-attack', label: '強化攻撃', applicability: null,
+      duration: { type: 'SINGLE_ATTACK' }, endCondition: { type: 'ATTACK_RESOLVED' },
+      effects: [
+        // Sanity;Gone's Irene guide verifies that both hits check the airborne talent.
+        // https://old.sanitygone.help/operators/irene
+        { id: 'lift', timing: 'ON_NEXT_NORMAL_ATTACK', condition: { metric: 'targetCanBeLevitated', comparison: 'EQ', value: true },
+          target: 'ATTACK_TARGET', item: 'APPLY_STATUS', operation: 'APPLY_STATUS',
+          value: { statusId: 'LEVITATE', durationSeconds: 1 }, unit: 'STATUS_APPLICATION', sourceBinding: 'levitate' },
+        { id: 'damage-1', timing: 'ON_NEXT_NORMAL_ATTACK', condition: null, target: 'ATTACK_TARGET',
+          item: 'DIRECT_DAMAGE', operation: 'DEAL_DAMAGE', value: { damageType: 'PHYSICAL', attackScale: 2, count: 1 },
+          unit: 'DAMAGE_ACTION', sourceBinding: 'atk_scale', afterEffects: ['lift'] },
+        { id: 'damage-2', timing: 'ON_NEXT_NORMAL_ATTACK', condition: null, target: 'ATTACK_TARGET',
+          item: 'DIRECT_DAMAGE', operation: 'DEAL_DAMAGE', value: { damageType: 'PHYSICAL', attackScale: 2, count: 1 },
+          unit: 'DAMAGE_ACTION', sourceBinding: 'atk_scale', afterEffects: ['damage-1'] },
+      ],
+    }] },
+    source: {
+      description: '次の通常攻撃時、対象に攻撃力の200%の物理ダメージを与え、1秒間浮遊させ、さらに追加で攻撃力の200%の物理ダメージを与える',
+      rawDescription: '次の通常攻撃時、対象に攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、<@ba.vup>{levitate}</>秒間<$ba.levitate>浮遊</>させ、さらに追加で攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与える',
+      blackboard: [{ key: 'atk_scale', value: 2, valueStr: null }, { key: 'levitate', value: 1, valueStr: null }],
+      rangeId: null, duration: 0,
+    }, notes: [],
+  },
   {
     "basicInfo": {
       "operatorId": "char_263_skadi",

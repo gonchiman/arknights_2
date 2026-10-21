@@ -197,9 +197,10 @@ test('説明文を常時表示し、計算範囲・効果の適用状態・使�
     ['char_263_skadi', 1, '攻撃力+45%、攻撃速度+45'],
   ]) {
     const markup = render(selected(operatorId, skillIndex))
-    const descriptionMatch = markup.match(/<div class="damage-three-description">([\s\S]*?)<\/div>/)
+    const descriptionMatch = [...markup.matchAll(/<div\b([^>]*\bclass="damage-three-description"[^>]*)>([\s\S]*?)<\/div>/g)]
+      .find(match => !/\bhidden\b/.test(match[1]))
     assert.ok(descriptionMatch)
-    assert.equal(descriptionMatch[1], escapeHtml(description))
+    assert.equal(descriptionMatch[2], escapeHtml(description))
     const details = [...markup.matchAll(/<details\b([^>]*)>([\s\S]*?)<\/details>/g)]
     assert.deepEqual(details.map(match => text(match[2].match(/<summary>([\s\S]*?)<\/summary>/)?.[1] ?? '')),
       ['適用する効果', '計算範囲', '計算に使った値'])
@@ -476,13 +477,13 @@ test('全12技能を選択でき、同一OPのS1・S2・S3の名前付きボタ�
     assert.deepEqual(data[1], expected, `${operatorId}/S${skillIndex}`)
     assert.equal(data[0].length, expected.length)
     assert.ok(data.slice(1).every(row => row.length === expected.length))
-    const choices = markup.match(/<div\b(?=[^>]*role="group")(?=[^>]*aria-label="スキル選択")[^>]*>([\s\S]*?)<\/div>/)?.[1]
+    const choices = markup.match(/<div\b(?=[^>]*role="tablist")(?=[^>]*aria-label="スキル選択")[^>]*>([\s\S]*?)<\/div>/)?.[1]
     assert.ok(choices, `${operatorId}/S${skillIndex}`)
     const siblingSkills = rows.filter(row => row.operatorId === operatorId).sort((a, b) => a.skillIndex - b.skillIndex)
     const buttons = [...choices.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)]
-    assert.deepEqual(buttons.map(button => button[1].match(/aria-label="([^"]+)"/)?.[1]),
+    assert.deepEqual(buttons.map(button => text(button[2])),
       siblingSkills.map(row => escapeHtml(`S${row.skillIndex} ${row.skillName}`)))
-    assert.deepEqual(buttons.map(button => button[1].match(/aria-pressed="([^"]+)"/)?.[1]),
+    assert.deepEqual(buttons.map(button => button[1].match(/aria-selected="([^"]+)"/)?.[1]),
       siblingSkills.map(row => String(row.skillIndex === skillIndex)))
     for (const [index, button] of buttons.entries()) {
       assert.ok(text(button[2]).includes(`S${siblingSkills[index].skillIndex}`))

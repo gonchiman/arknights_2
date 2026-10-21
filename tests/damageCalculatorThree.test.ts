@@ -69,11 +69,12 @@ function close(actual: number | null | undefined, expected: number) {
   assert.ok(actual !== null && actual !== undefined && Math.abs(actual - expected) < 1e-8, `${actual} != ${expected}`)
 }
 
-test('4人の全12技能の特化3を対応範囲にし、同じ構造化レコードを使う', () => {
+test('既存4人の12技能とアイリーニS1の特化3に同じ構造化レコードを使う', () => {
   const structures = getDamageCalculatorThreeStructures()
   const key = (value: { operatorId: string; skillId: string; skillIndex: number }) => `${value.operatorId}/${value.skillId}/${value.skillIndex}`
-  const expected = source.flatMap(operator => operator.skills.map(skill => key({ ...skill, operatorId: operator.operatorId }))).sort()
-  assert.equal(structures.length, 12)
+  const expected = [...source.flatMap(operator => operator.skills.map(skill => key({ ...skill, operatorId: operator.operatorId }))),
+    'char_4009_irene/skchr_irene_1/1'].sort()
+  assert.equal(structures.length, 13)
   assert.deepEqual(structures.map(value => key(value.basicInfo)).sort(), expected)
   assert.deepEqual(DAMAGE_CALCULATOR_THREE_SELECTIONS.map(key).sort(), expected)
   for (const selection of DAMAGE_CALCULATOR_THREE_SELECTIONS) {

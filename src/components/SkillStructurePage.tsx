@@ -105,12 +105,14 @@ function SkillStructureContent({ structure, activeTab, onTabChange }: {
     structure: <>
       <h3 className="skill-structure-subheading">段階</h3>
       <StructureTable caption={`${caption}の段階`} className="skill-structure-stage-table"
-        headers={['段階', '段階の適用条件', '持続時間', '終了条件']}>
+        headers={['段階', '段階の適用条件', '持続時間', '終了条件',
+          ...(structure.effectStructure.targetSelection ? ['対象の初期状態'] : [])]}>
         {structure.effectStructure.stages.map(stage => <tr key={stage.id}>
           <th scope="row">{stage.label}</th>
           <td>{formatSkillStructurePredicate(stage.applicability, '追加条件なし')}</td>
           <td>{formatSkillStructureDuration(stage.duration)}</td>
           <td>{formatSkillStructureEndCondition(stage.endCondition)}</td>
+          {structure.effectStructure.targetSelection && <td>地上</td>}
         </tr>)}
       </StructureTable>
       {structure.effectStructure.modeTransitions && <>

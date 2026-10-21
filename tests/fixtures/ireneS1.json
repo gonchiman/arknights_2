@@ -1,0 +1,872 @@
+{
+  "source": {
+    "repository": "https://github.com/ArknightsAssets/ArknightsGamedata",
+    "commit": "71b6dc1bbf5d6227a58e649b1f4b4f75c9d7de50",
+    "paths": [
+      "jp/gamedata/excel/character_table.json",
+      "jp/gamedata/excel/skill_table.json",
+      "jp/gamedata/battle/buff_template_data.json"
+    ],
+    "urls": [
+      "https://github.com/ArknightsAssets/ArknightsGamedata/blob/71b6dc1bbf5d6227a58e649b1f4b4f75c9d7de50/jp/gamedata/excel/character_table.json",
+      "https://github.com/ArknightsAssets/ArknightsGamedata/blob/71b6dc1bbf5d6227a58e649b1f4b4f75c9d7de50/jp/gamedata/excel/skill_table.json",
+      "https://github.com/ArknightsAssets/ArknightsGamedata/blob/71b6dc1bbf5d6227a58e649b1f4b4f75c9d7de50/jp/gamedata/battle/buff_template_data.json"
+    ],
+    "mechanicsReferences": [
+      {
+        "url": "https://old.sanitygone.help/operators/irene",
+        "scope": "S1 cannot target aerial enemies; both skill hits treat a successfully levitated target as airborne."
+      },
+      {
+        "url": "https://prts.wiki/w/Irene",
+        "scope": "Talent1 checks per damage calculation; levitate duration is halved above weight3."
+      }
+    ]
+  },
+  "operator": {
+    "operatorId": "char_4009_irene",
+    "operatorName": "アイリーニ",
+    "profession": "WARRIOR",
+    "rarity": "TIER_6",
+    "subProfessionId": "sword",
+    "description": "通常攻撃時、1回の攻撃で<@ba.kw>2回</>ダメージを与える",
+    "affiliationIds": {
+      "nationId": "iberia",
+      "groupId": null,
+      "teamId": null
+    }
+  },
+  "operatorProfile": {
+    "phases": [
+      {
+        "characterPrefabKey": "char_4009_irene",
+        "rangeId": "1-1",
+        "maxLevel": 50,
+        "attributesKeyFrames": [
+          {
+            "level": 1,
+            "data": {
+              "maxHp": 1236,
+              "atk": 249,
+              "def": 151,
+              "magicResistance": 0,
+              "cost": 19,
+              "blockCnt": 2,
+              "moveSpeed": 1,
+              "attackSpeed": 100,
+              "baseAttackTime": 1.3,
+              "respawnTime": 70,
+              "hpRecoveryPerSec": 0,
+              "spRecoveryPerSec": 1,
+              "maxDeployCount": 1,
+              "maxDeckStackCnt": 0,
+              "tauntLevel": 0,
+              "massLevel": 0,
+              "baseForceLevel": 0,
+              "stunImmune": false,
+              "silenceImmune": false,
+              "sleepImmune": false,
+              "frozenImmune": false,
+              "levitateImmune": false,
+              "disarmedCombatImmune": false,
+              "fearedImmune": false,
+              "palsyImmune": false,
+              "attractImmune": false,
+              "teleportImmune": false,
+              "groundBoundImmune": false
+            }
+          },
+          {
+            "level": 50,
+            "data": {
+              "maxHp": 1694,
+              "atk": 367,
+              "def": 214,
+              "magicResistance": 0,
+              "cost": 19,
+              "blockCnt": 2,
+              "moveSpeed": 1,
+              "attackSpeed": 100,
+              "baseAttackTime": 1.3,
+              "respawnTime": 70,
+              "hpRecoveryPerSec": 0,
+              "spRecoveryPerSec": 1,
+              "maxDeployCount": 1,
+              "maxDeckStackCnt": 0,
+              "tauntLevel": 0,
+              "massLevel": 0,
+              "baseForceLevel": 0,
+              "stunImmune": false,
+              "silenceImmune": false,
+              "sleepImmune": false,
+              "frozenImmune": false,
+              "levitateImmune": false,
+              "disarmedCombatImmune": false,
+              "fearedImmune": false,
+              "palsyImmune": false,
+              "attractImmune": false,
+              "teleportImmune": false,
+              "groundBoundImmune": false
+            }
+          }
+        ],
+        "evolveCost": null
+      },
+      {
+        "characterPrefabKey": "char_4009_irene",
+        "rangeId": "1-1",
+        "maxLevel": 80,
+        "attributesKeyFrames": [
+          {
+            "level": 1,
+            "data": {
+              "maxHp": 1694,
+              "atk": 367,
+              "def": 214,
+              "magicResistance": 0,
+              "cost": 21,
+              "blockCnt": 2,
+              "moveSpeed": 1,
+              "attackSpeed": 100,
+              "baseAttackTime": 1.3,
+              "respawnTime": 70,
+              "hpRecoveryPerSec": 0,
+              "spRecoveryPerSec": 1,
+              "maxDeployCount": 1,
+              "maxDeckStackCnt": 0,
+              "tauntLevel": 0,
+              "massLevel": 0,
+              "baseForceLevel": 0,
+              "stunImmune": false,
+              "silenceImmune": false,
+              "sleepImmune": false,
+              "frozenImmune": false,
+              "levitateImmune": false,
+              "disarmedCombatImmune": false,
+              "fearedImmune": false,
+              "palsyImmune": false,
+              "attractImmune": false,
+              "teleportImmune": false,
+              "groundBoundImmune": false
+            }
+          },
+          {
+            "level": 80,
+            "data": {
+              "maxHp": 2201,
+              "atk": 484,
+              "def": 282,
+              "magicResistance": 0,
+              "cost": 21,
+              "blockCnt": 2,
+              "moveSpeed": 1,
+              "attackSpeed": 100,
+              "baseAttackTime": 1.3,
+              "respawnTime": 70,
+              "hpRecoveryPerSec": 0,
+              "spRecoveryPerSec": 1,
+              "maxDeployCount": 1,
+              "maxDeckStackCnt": 0,
+              "tauntLevel": 0,
+              "massLevel": 0,
+              "baseForceLevel": 0,
+              "stunImmune": false,
+              "silenceImmune": false,
+              "sleepImmune": false,
+              "frozenImmune": false,
+              "levitateImmune": false,
+              "disarmedCombatImmune": false,
+              "fearedImmune": false,
+              "palsyImmune": false,
+              "attractImmune": false,
+              "teleportImmune": false,
+              "groundBoundImmune": false
+            }
+          }
+        ],
+        "evolveCost": [
+          {
+            "id": "3221",
+            "count": 5,
+            "type": "MATERIAL"
+          },
+          {
+            "id": "30032",
+            "count": 8,
+            "type": "MATERIAL"
+          },
+          {
+            "id": "30042",
+            "count": 4,
+            "type": "MATERIAL"
+          }
+        ]
+      },
+      {
+        "characterPrefabKey": "char_4009_irene",
+        "rangeId": "1-1",
+        "maxLevel": 90,
+        "attributesKeyFrames": [
+          {
+            "level": 1,
+            "data": {
+              "maxHp": 2201,
+              "atk": 484,
+              "def": 282,
+              "magicResistance": 0,
+              "cost": 23,
+              "blockCnt": 2,
+              "moveSpeed": 1,
+              "attackSpeed": 100,
+              "baseAttackTime": 1.3,
+              "respawnTime": 70,
+              "hpRecoveryPerSec": 0,
+              "spRecoveryPerSec": 1,
+              "maxDeployCount": 1,
+              "maxDeckStackCnt": 0,
+              "tauntLevel": 0,
+              "massLevel": 0,
+              "baseForceLevel": 0,
+              "stunImmune": false,
+              "silenceImmune": false,
+              "sleepImmune": false,
+              "frozenImmune": false,
+              "levitateImmune": false,
+              "disarmedCombatImmune": false,
+              "fearedImmune": false,
+              "palsyImmune": false,
+              "attractImmune": false,
+              "teleportImmune": false,
+              "groundBoundImmune": false
+            }
+          },
+          {
+            "level": 90,
+            "data": {
+              "maxHp": 2935,
+              "atk": 621,
+              "def": 349,
+              "magicResistance": 0,
+              "cost": 23,
+              "blockCnt": 2,
+              "moveSpeed": 1,
+              "attackSpeed": 100,
+              "baseAttackTime": 1.3,
+              "respawnTime": 70,
+              "hpRecoveryPerSec": 0,
+              "spRecoveryPerSec": 1,
+              "maxDeployCount": 1,
+              "maxDeckStackCnt": 0,
+              "tauntLevel": 0,
+              "massLevel": 0,
+              "baseForceLevel": 0,
+              "stunImmune": false,
+              "silenceImmune": false,
+              "sleepImmune": false,
+              "frozenImmune": false,
+              "levitateImmune": false,
+              "disarmedCombatImmune": false,
+              "fearedImmune": false,
+              "palsyImmune": false,
+              "attractImmune": false,
+              "teleportImmune": false,
+              "groundBoundImmune": false
+            }
+          }
+        ],
+        "evolveCost": [
+          {
+            "id": "3223",
+            "count": 4,
+            "type": "MATERIAL"
+          },
+          {
+            "id": "30125",
+            "count": 4,
+            "type": "MATERIAL"
+          },
+          {
+            "id": "30104",
+            "count": 7,
+            "type": "MATERIAL"
+          }
+        ]
+      }
+    ],
+    "favorKeyFrames": [
+      {
+        "level": 0,
+        "data": {
+          "maxHp": 0,
+          "atk": 0,
+          "def": 0,
+          "magicResistance": 0,
+          "cost": 0,
+          "blockCnt": 0,
+          "moveSpeed": 0,
+          "attackSpeed": 0,
+          "baseAttackTime": 0,
+          "respawnTime": 0,
+          "hpRecoveryPerSec": 0,
+          "spRecoveryPerSec": 0,
+          "maxDeployCount": 0,
+          "maxDeckStackCnt": 0,
+          "tauntLevel": 0,
+          "massLevel": 0,
+          "baseForceLevel": 0,
+          "stunImmune": false,
+          "silenceImmune": false,
+          "sleepImmune": false,
+          "frozenImmune": false,
+          "levitateImmune": false,
+          "disarmedCombatImmune": false,
+          "fearedImmune": false,
+          "palsyImmune": false,
+          "attractImmune": false,
+          "teleportImmune": false,
+          "groundBoundImmune": false
+        }
+      },
+      {
+        "level": 50,
+        "data": {
+          "maxHp": 0,
+          "atk": 80,
+          "def": 20,
+          "magicResistance": 0,
+          "cost": 0,
+          "blockCnt": 0,
+          "moveSpeed": 0,
+          "attackSpeed": 0,
+          "baseAttackTime": 0,
+          "respawnTime": 0,
+          "hpRecoveryPerSec": 0,
+          "spRecoveryPerSec": 0,
+          "maxDeployCount": 0,
+          "maxDeckStackCnt": 0,
+          "tauntLevel": 0,
+          "massLevel": 0,
+          "baseForceLevel": 0,
+          "stunImmune": false,
+          "silenceImmune": false,
+          "sleepImmune": false,
+          "frozenImmune": false,
+          "levitateImmune": false,
+          "disarmedCombatImmune": false,
+          "fearedImmune": false,
+          "palsyImmune": false,
+          "attractImmune": false,
+          "teleportImmune": false,
+          "groundBoundImmune": false
+        }
+      }
+    ],
+    "talents": [
+      {
+        "candidates": [
+          {
+            "unlockCondition": {
+              "phase": "PHASE_1",
+              "level": 1
+            },
+            "requiredPotentialRank": 0,
+            "prefabKey": "1",
+            "name": "審判の灯火",
+            "description": "敵に物理ダメージを与える際、50%の確率で敵の防御力を30%無視、飛行ユニットに対する発動確率が100%に上昇",
+            "rangeId": null,
+            "blackboard": [
+              {
+                "key": "prob",
+                "value": 0.5,
+                "valueStr": null
+              },
+              {
+                "key": "def_penetrate",
+                "value": 0.3,
+                "valueStr": null
+              }
+            ],
+            "tokenKey": null,
+            "isHideTalent": false
+          },
+          {
+            "unlockCondition": {
+              "phase": "PHASE_2",
+              "level": 1
+            },
+            "requiredPotentialRank": 0,
+            "prefabKey": "1",
+            "name": "審判の灯火",
+            "description": "敵に物理ダメージを与える際、50%の確率で敵の防御力を50%無視、飛行ユニットに対する発動確率が100%に上昇",
+            "rangeId": null,
+            "blackboard": [
+              {
+                "key": "prob",
+                "value": 0.5,
+                "valueStr": null
+              },
+              {
+                "key": "def_penetrate",
+                "value": 0.5,
+                "valueStr": null
+              }
+            ],
+            "tokenKey": null,
+            "isHideTalent": false
+          }
+        ]
+      },
+      {
+        "candidates": [
+          {
+            "unlockCondition": {
+              "phase": "PHASE_2",
+              "level": 1
+            },
+            "requiredPotentialRank": 0,
+            "prefabKey": "2",
+            "name": "浄化の剣",
+            "description": "攻撃速度+18、戦場中に【海の怪物】がいる場合、効果値倍増",
+            "rangeId": null,
+            "blackboard": [
+              {
+                "key": "attack_speed",
+                "value": 18,
+                "valueStr": null
+              },
+              {
+                "key": "atk",
+                "value": 0,
+                "valueStr": null
+              }
+            ],
+            "tokenKey": null,
+            "isHideTalent": false
+          },
+          {
+            "unlockCondition": {
+              "phase": "PHASE_2",
+              "level": 1
+            },
+            "requiredPotentialRank": 4,
+            "prefabKey": "2",
+            "name": "浄化の剣",
+            "description": "攻撃速度+21<@ba.talpu>（+3）</>、戦場中に【海の怪物】がいる場合、効果値倍増",
+            "rangeId": null,
+            "blackboard": [
+              {
+                "key": "attack_speed",
+                "value": 21,
+                "valueStr": null
+              },
+              {
+                "key": "atk",
+                "value": 0,
+                "valueStr": null
+              }
+            ],
+            "tokenKey": null,
+            "isHideTalent": false
+          }
+        ]
+      }
+    ],
+    "trait": null,
+    "potentialRanks": [
+      {
+        "type": "BUFF",
+        "description": "配置コスト-1",
+        "buff": {
+          "attributes": {
+            "abnormalFlags": null,
+            "abnormalImmunes": null,
+            "abnormalAntis": null,
+            "abnormalCombos": null,
+            "abnormalComboImmunes": null,
+            "attributeModifiers": [
+              {
+                "attributeType": "COST",
+                "formulaItem": "ADDITION",
+                "value": -1,
+                "loadFromBlackboard": false,
+                "fetchBaseValueFromSourceEntity": false
+              }
+            ]
+          }
+        },
+        "equivalentCost": null
+      },
+      {
+        "type": "BUFF",
+        "description": "再配置時間-4秒",
+        "buff": {
+          "attributes": {
+            "abnormalFlags": null,
+            "abnormalImmunes": null,
+            "abnormalAntis": null,
+            "abnormalCombos": null,
+            "abnormalComboImmunes": null,
+            "attributeModifiers": [
+              {
+                "attributeType": "RESPAWN_TIME",
+                "formulaItem": "ADDITION",
+                "value": -4,
+                "loadFromBlackboard": false,
+                "fetchBaseValueFromSourceEntity": false
+              }
+            ]
+          }
+        },
+        "equivalentCost": null
+      },
+      {
+        "type": "BUFF",
+        "description": "攻撃力+23",
+        "buff": {
+          "attributes": {
+            "abnormalFlags": null,
+            "abnormalImmunes": null,
+            "abnormalAntis": null,
+            "abnormalCombos": null,
+            "abnormalComboImmunes": null,
+            "attributeModifiers": [
+              {
+                "attributeType": "ATK",
+                "formulaItem": "ADDITION",
+                "value": 23,
+                "loadFromBlackboard": false,
+                "fetchBaseValueFromSourceEntity": false
+              }
+            ]
+          }
+        },
+        "equivalentCost": null
+      },
+      {
+        "type": "CUSTOM",
+        "description": "第二素質強化",
+        "buff": null,
+        "equivalentCost": null
+      },
+      {
+        "type": "BUFF",
+        "description": "配置コスト-1",
+        "buff": {
+          "attributes": {
+            "abnormalFlags": null,
+            "abnormalImmunes": null,
+            "abnormalAntis": null,
+            "abnormalCombos": null,
+            "abnormalComboImmunes": null,
+            "attributeModifiers": [
+              {
+                "attributeType": "COST",
+                "formulaItem": "ADDITION",
+                "value": -1,
+                "loadFromBlackboard": false,
+                "fetchBaseValueFromSourceEntity": false
+              }
+            ]
+          }
+        },
+        "equivalentCost": null
+      }
+    ]
+  },
+  "skill": {
+    "skillId": "skchr_irene_1",
+    "skillIndex": 1,
+    "levels": [
+      {
+        "name": "舞風",
+        "rangeId": null,
+        "description": "次の通常攻撃時、対象に攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、<@ba.vup>{levitate}</>秒間<$ba.levitate>浮遊</>させ、さらに追加で攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与える",
+        "skillType": "AUTO",
+        "durationType": "NONE",
+        "spData": {
+          "spType": "INCREASE_WHEN_ATTACK",
+          "levelUpCost": null,
+          "maxChargeTime": 1,
+          "spCost": 7,
+          "initSp": 0,
+          "increment": 1
+        },
+        "prefabId": "skchr_irene_1",
+        "duration": 0,
+        "blackboard": [
+          {
+            "key": "atk_scale",
+            "value": 1,
+            "valueStr": null
+          },
+          {
+            "key": "levitate",
+            "value": 1,
+            "valueStr": null
+          }
+        ]
+      },
+      {
+        "name": "舞風",
+        "rangeId": null,
+        "description": "次の通常攻撃時、対象に攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、<@ba.vup>{levitate}</>秒間<$ba.levitate>浮遊</>させ、さらに追加で攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与える",
+        "skillType": "AUTO",
+        "durationType": "NONE",
+        "spData": {
+          "spType": "INCREASE_WHEN_ATTACK",
+          "levelUpCost": null,
+          "maxChargeTime": 1,
+          "spCost": 7,
+          "initSp": 0,
+          "increment": 1
+        },
+        "prefabId": "skchr_irene_1",
+        "duration": 0,
+        "blackboard": [
+          {
+            "key": "atk_scale",
+            "value": 1.1,
+            "valueStr": null
+          },
+          {
+            "key": "levitate",
+            "value": 1,
+            "valueStr": null
+          }
+        ]
+      },
+      {
+        "name": "舞風",
+        "rangeId": null,
+        "description": "次の通常攻撃時、対象に攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、<@ba.vup>{levitate}</>秒間<$ba.levitate>浮遊</>させ、さらに追加で攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与える",
+        "skillType": "AUTO",
+        "durationType": "NONE",
+        "spData": {
+          "spType": "INCREASE_WHEN_ATTACK",
+          "levelUpCost": null,
+          "maxChargeTime": 1,
+          "spCost": 7,
+          "initSp": 0,
+          "increment": 1
+        },
+        "prefabId": "skchr_irene_1",
+        "duration": 0,
+        "blackboard": [
+          {
+            "key": "atk_scale",
+            "value": 1.2,
+            "valueStr": null
+          },
+          {
+            "key": "levitate",
+            "value": 1,
+            "valueStr": null
+          }
+        ]
+      },
+      {
+        "name": "舞風",
+        "rangeId": null,
+        "description": "次の通常攻撃時、対象に攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、<@ba.vup>{levitate}</>秒間<$ba.levitate>浮遊</>させ、さらに追加で攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与える",
+        "skillType": "AUTO",
+        "durationType": "NONE",
+        "spData": {
+          "spType": "INCREASE_WHEN_ATTACK",
+          "levelUpCost": null,
+          "maxChargeTime": 1,
+          "spCost": 6,
+          "initSp": 0,
+          "increment": 1
+        },
+        "prefabId": "skchr_irene_1",
+        "duration": 0,
+        "blackboard": [
+          {
+            "key": "atk_scale",
+            "value": 1.3,
+            "valueStr": null
+          },
+          {
+            "key": "levitate",
+            "value": 1,
+            "valueStr": null
+          }
+        ]
+      },
+      {
+        "name": "舞風",
+        "rangeId": null,
+        "description": "次の通常攻撃時、対象に攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、<@ba.vup>{levitate}</>秒間<$ba.levitate>浮遊</>させ、さらに追加で攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与える",
+        "skillType": "AUTO",
+        "durationType": "NONE",
+        "spData": {
+          "spType": "INCREASE_WHEN_ATTACK",
+          "levelUpCost": null,
+          "maxChargeTime": 1,
+          "spCost": 6,
+          "initSp": 0,
+          "increment": 1
+        },
+        "prefabId": "skchr_irene_1",
+        "duration": 0,
+        "blackboard": [
+          {
+            "key": "atk_scale",
+            "value": 1.4,
+            "valueStr": null
+          },
+          {
+            "key": "levitate",
+            "value": 1,
+            "valueStr": null
+          }
+        ]
+      },
+      {
+        "name": "舞風",
+        "rangeId": null,
+        "description": "次の通常攻撃時、対象に攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、<@ba.vup>{levitate}</>秒間<$ba.levitate>浮遊</>させ、さらに追加で攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与える",
+        "skillType": "AUTO",
+        "durationType": "NONE",
+        "spData": {
+          "spType": "INCREASE_WHEN_ATTACK",
+          "levelUpCost": null,
+          "maxChargeTime": 1,
+          "spCost": 6,
+          "initSp": 0,
+          "increment": 1
+        },
+        "prefabId": "skchr_irene_1",
+        "duration": 0,
+        "blackboard": [
+          {
+            "key": "atk_scale",
+            "value": 1.5,
+            "valueStr": null
+          },
+          {
+            "key": "levitate",
+            "value": 1,
+            "valueStr": null
+          }
+        ]
+      },
+      {
+        "name": "舞風",
+        "rangeId": null,
+        "description": "次の通常攻撃時、対象に攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、<@ba.vup>{levitate}</>秒間<$ba.levitate>浮遊</>させ、さらに追加で攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与える",
+        "skillType": "AUTO",
+        "durationType": "NONE",
+        "spData": {
+          "spType": "INCREASE_WHEN_ATTACK",
+          "levelUpCost": null,
+          "maxChargeTime": 1,
+          "spCost": 5,
+          "initSp": 0,
+          "increment": 1
+        },
+        "prefabId": "skchr_irene_1",
+        "duration": 0,
+        "blackboard": [
+          {
+            "key": "atk_scale",
+            "value": 1.6,
+            "valueStr": null
+          },
+          {
+            "key": "levitate",
+            "value": 1,
+            "valueStr": null
+          }
+        ]
+      },
+      {
+        "name": "舞風",
+        "rangeId": null,
+        "description": "次の通常攻撃時、対象に攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、<@ba.vup>{levitate}</>秒間<$ba.levitate>浮遊</>させ、さらに追加で攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与える",
+        "skillType": "AUTO",
+        "durationType": "NONE",
+        "spData": {
+          "spType": "INCREASE_WHEN_ATTACK",
+          "levelUpCost": null,
+          "maxChargeTime": 1,
+          "spCost": 4,
+          "initSp": 0,
+          "increment": 1
+        },
+        "prefabId": "skchr_irene_1",
+        "duration": 0,
+        "blackboard": [
+          {
+            "key": "atk_scale",
+            "value": 1.7,
+            "valueStr": null
+          },
+          {
+            "key": "levitate",
+            "value": 1,
+            "valueStr": null
+          }
+        ]
+      },
+      {
+        "name": "舞風",
+        "rangeId": null,
+        "description": "次の通常攻撃時、対象に攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、<@ba.vup>{levitate}</>秒間<$ba.levitate>浮遊</>させ、さらに追加で攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与える",
+        "skillType": "AUTO",
+        "durationType": "NONE",
+        "spData": {
+          "spType": "INCREASE_WHEN_ATTACK",
+          "levelUpCost": null,
+          "maxChargeTime": 1,
+          "spCost": 4,
+          "initSp": 0,
+          "increment": 1
+        },
+        "prefabId": "skchr_irene_1",
+        "duration": 0,
+        "blackboard": [
+          {
+            "key": "atk_scale",
+            "value": 1.9,
+            "valueStr": null
+          },
+          {
+            "key": "levitate",
+            "value": 1,
+            "valueStr": null
+          }
+        ]
+      },
+      {
+        "name": "舞風",
+        "rangeId": null,
+        "description": "次の通常攻撃時、対象に攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、<@ba.vup>{levitate}</>秒間<$ba.levitate>浮遊</>させ、さらに追加で攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与える",
+        "skillType": "AUTO",
+        "durationType": "NONE",
+        "spData": {
+          "spType": "INCREASE_WHEN_ATTACK",
+          "levelUpCost": null,
+          "maxChargeTime": 1,
+          "spCost": 3,
+          "initSp": 0,
+          "increment": 1
+        },
+        "prefabId": "skchr_irene_1",
+        "duration": 0,
+        "blackboard": [
+          {
+            "key": "atk_scale",
+            "value": 2,
+            "valueStr": null
+          },
+          {
+            "key": "levitate",
+            "value": 1,
+            "valueStr": null
+          }
+        ]
+      }
+    ]
+  }
+}

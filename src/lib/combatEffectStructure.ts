@@ -109,7 +109,7 @@ export function resolveCombatProbability(probability: CombatProbability): number
 }
 
 const comparisons = { EQ: '＝', NE: '≠', GT: '＞', GTE: '≧', LT: '＜', LTE: '≦' }
-const metrics: Record<string, string> = { 'target.canUseRangedAttack': '敵の遠距離攻撃能力', 'target.inAttackRange': '対象が攻撃範囲内', 'source.secondsSinceLastNormalAttack': '通常攻撃をしない時間', 'source.blockCount': '自身のブロック数', 'source.hpRatio': '自身のHP割合', 'target.isBlocked': '対象のブロック状態' }
+const metrics: Record<string, string> = { 'target.isAirborne': '対象の空中状態', 'battlefield.hasSeaMonster': '戦場の海の怪物', 'target.canUseRangedAttack': '敵の遠距離攻撃能力', 'target.inAttackRange': '対象が攻撃範囲内', 'source.secondsSinceLastNormalAttack': '通常攻撃をしない時間', 'source.blockCount': '自身のブロック数', 'source.hpRatio': '自身のHP割合', 'target.isBlocked': '対象のブロック状態' }
 const events: Record<CombatEvent, string> = { ATTACK: '攻撃', NORMAL_ATTACK: '通常攻撃', DAMAGE_DEALT: '与ダメージ', DAMAGE_RECEIVED: '被ダメージ', LETHAL_DAMAGE: '致命ダメージ', KILL: '撃破', DEPLOY: '配置', RETREAT: '退場', SKILL_START: 'スキル開始', SKILL_END: 'スキル終了' }
 export function formatCombatNumericValue(value: CombatNumericValue): string {
   if (value === null) return '未確認'
@@ -119,6 +119,10 @@ export function formatCombatNumericValue(value: CombatNumericValue): string {
 }
 export function formatCombatCondition(condition: CombatCondition | null): string {
   if (!condition) return 'なし'
+  if (condition.type === 'COMPARE' && condition.comparison === 'EQ' && typeof condition.value === 'boolean') {
+    if (condition.metric === 'target.isAirborne') return condition.value ? '空中の敵' : '地上の敵'
+    if (condition.metric === 'battlefield.hasSeaMonster') return condition.value ? '戦場に海の怪物あり' : '戦場に海の怪物なし'
+  }
   if (condition.type === 'UNKNOWN') return `未確定：${condition.reason}`
   if (condition.type === 'ALL' || condition.type === 'ANY') return `（${condition.conditions.map(formatCombatCondition).join(condition.type === 'ALL' ? ' かつ ' : ' または ')}）`
   if (condition.metric === 'target.canUseRangedAttack' && condition.comparison === 'EQ' && typeof condition.value === 'boolean') return condition.value ? '遠距離攻撃が可能な敵' : '遠距離攻撃を行えない敵'

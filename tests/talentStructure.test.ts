@@ -49,13 +49,13 @@ test('独立したJP原典8素質を潜在1・最大昇進・最大レベル・M
   }
 })
 
-test('素質の4OP集合をスキル構造の対応OP集合に揃え、対応範囲は明示された8枠に限る', () => {
+test('素質の対応OP集合をスキル構造と揃え、未対応のOP・素質枠を代用しない', () => {
   assert.deepEqual([...TALENT_STRUCTURE_OPERATOR_IDS].sort(), [...new Set(SKILL_STRUCTURES.map(structure => structure.basicInfo.operatorId))].sort())
   for (const operatorId of TALENT_STRUCTURE_OPERATOR_IDS) for (const talentIndex of [0, 1]) {
     assert.ok(isTalentStructureSelection({ operatorId, talentIndex }))
   }
   for (const selection of [
-    { operatorId: 'char_4009_irene', talentIndex: 0 },
+    { operatorId: 'char_456_ash', talentIndex: 0 },
     { operatorId: 'char_350_surtr', talentIndex: 2 },
     { operatorId: 'char_350_surtr', talentIndex: -1 },
     { operatorId: 'char_350_surtr', talentIndex: 0.5 },

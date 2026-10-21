@@ -7,10 +7,13 @@ import {
   type OperatorStats,
   type SkillDamageBreakdown,
   type SkillModelDefaults,
+  type AttackPipelineBreakdown,
 } from './damageCalculator.ts'
 import { getDamageSensitivityTablePoints } from './damageSensitivity.ts'
-import { evaluateDamageCalculatorThreeTalents, type DamageCalculatorThreeTalentEvaluation } from './damageCalculatorThreeTalents.ts'
+import { evaluateDamageCalculatorThreeTalents, type DamageCalculatorThreeTalentEvaluation, type DamageCalculatorThreeTalentOutput } from './damageCalculatorThreeTalents.ts'
 import { calculateMaintainedDamageOverTime, type MaintainedDamageOverTime } from './damageOverTime.ts'
+import { calculateProbabilisticDefenseIgnoreDamage, type ProbabilisticDamageBranch } from './probabilisticDamage.ts'
+import type { CombatCondition } from './combatEffectStructure.ts'
 import { getComparisonMaximumSkillLevelIndex, getComparisonMinimumPhaseIndex } from './operatorBuildComparison.ts'
 import {
   findSkillStructure,
@@ -49,6 +52,7 @@ export const DAMAGE_CALCULATOR_THREE_BASE_ATTACKS: Readonly<Record<string, {
   char_350_surtr: { damageType: 'ARTS', hitCount: 1, maxTargets: 1 },
   char_263_skadi: { damageType: 'PHYSICAL', hitCount: 1, maxTargets: 1 },
   char_172_svrash: { damageType: 'PHYSICAL', hitCount: 1, maxTargets: 1, rangedAttackScale: 0.8 },
+  char_4009_irene: { damageType: 'PHYSICAL', hitCount: 2, maxTargets: 1 },
   // PRTS, Thorns / skill 2 notes: counter damage always receives the trait's
   // reduced attack scale. Local JP character data supplies the 0.8 value.
   // https://prts.wiki/w/%E8%8D%86%E6%A3%98
@@ -63,6 +67,8 @@ export interface DamageCalculatorThreeConditions {
   attackDistanceType?: 'MELEE' | 'RANGED'
   enemyResistance?: number
   enemyAttackCapability?: 'MELEE_ONLY' | 'RANGED_CAPABLE'
+  targetCanBeLevitated?: boolean
+  seaMonsterPresent?: boolean
 }
 
 export type DamageCalculatorThreeConditionInput = {
@@ -81,6 +87,12 @@ export type DamageCalculatorThreeConditionInput = {
   label: string
   options: readonly { value: string; label: string }[]
   defaultValue: string
+} | {
+  kind: 'boolean'
+  metric: 'targetCanBeLevitated' | 'seaMonsterPresent'
+  label: string
+  options: readonly { value: boolean; label: string }[]
+  defaultValue: boolean
 }
 
 export interface DamageCalculatorThreeInput {
@@ -102,17 +114,33 @@ export interface DamageCalculatorThreeEffectEvaluation {
   reason: string
 }
 
+export interface DamageCalculatorThreeAttackComponent {
+  id: string
+  label: string
+  order: number
+  damageType: DamageType
+  attackScale: number
+  count: number
+  targetAirborne: boolean
+  defenseIgnoreChance: number
+  defenseIgnoreRatio: number
+  expectedDamage: number
+  attackPipeline: AttackPipelineBreakdown
+  branches: ProbabilisticDamageBranch[]
+}
+
 export interface DamageCalculatorThreeRow {
   axisValue: number
-  perHit: number
+  perHit: number | null
   perAttack: number
   dps: number | null
   allTargetsPerAttack: number
   allTargetsDps: number | null
-  breakdown: SkillDamageBreakdown
+  breakdown: SkillDamageBreakdown | null
   damageOverTimeDps: number | null
   combinedDps: number | null
   allTargetsCombinedDps: number | null
+  attackComponents: DamageCalculatorThreeAttackComponent[]
 }
 
 export interface DamageCalculatorThreeOutput {
@@ -144,6 +172,9 @@ export interface DamageCalculatorThreeOutput {
   resistanceIgnoreFixed: number
   hasUnsupportedTalentDamage: boolean
   damageOverTime: MaintainedDamageOverTime | null
+  hasAttackSequence: boolean
+  hasProbabilisticDamage: boolean
+  initialTargetState: 'GROUND' | null
 }
 
 export function getDamageCalculatorThreeStructures(): SkillStructure[] {
@@ -164,7 +195,7 @@ export function getDamageCalculatorThreeInputs(
     if (stage.applicability) metrics.add(stage.applicability.metric)
     for (const effect of stage.effects) if (effect.condition) metrics.add(effect.condition.metric)
   }
-  for (const metric of metrics) if (!['actualAttackTargetCount', 'skillActivationCount', 'skillMode', 'attackDistanceType'].includes(metric)) {
+  for (const metric of metrics) if (!['actualAttackTargetCount', 'skillActivationCount', 'skillMode', 'attackDistanceType', 'targetCanBeLevitated'].includes(metric)) {
     throw new RangeError(`条件「${metric}」の入力にはまだ対応していません。`)
   }
   const base = DAMAGE_CALCULATOR_THREE_BASE_ATTACKS[structure.basicInfo.operatorId]
@@ -185,6 +216,8 @@ export function getDamageCalculatorThreeInputs(
     label: '攻撃距離', options: [{ value: 'MELEE', label: '近接' }, { value: 'RANGED', label: '遠距離' }], defaultValue: 'MELEE' })
   if (metrics.has('actualAttackTargetCount')) inputs.push({ kind: 'number', metric: 'actualAttackTargetCount',
     label: '実際の攻撃対象数', min: 1, max: attack.maxTargets, defaultValue: 1 })
+  if (metrics.has('targetCanBeLevitated')) inputs.push({ kind: 'boolean', metric: 'targetCanBeLevitated', label: '浮遊の適用',
+    options: [{ value: true, label: '可能' }, { value: false, label: '無効' }], defaultValue: true })
   return inputs
 }
 
@@ -246,9 +279,18 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   const effectiveContext = { ...safeContext, attackDistanceType }
   const effects: DamageCalculatorThreeEffectEvaluation[] = []
   const scopeNotes: string[] = []
-  const talents = evaluateDamageCalculatorThreeTalents({ operator: input.operator,
+  const hasAttackSequence = stage?.effects.some(effect => effect.item === 'DIRECT_DAMAGE') ?? false
+  const initialTargetState = hasAttackSequence && structure?.effectStructure.targetSelection?.initialState === 'GROUND' ? 'GROUND' : null
+  const actionPlans: ResolvedDamageAction[] = []
+  let talents = evaluateDamageCalculatorThreeTalents({ operator: input.operator,
     phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel, attackKind,
-    enemyAttackCapability: context.enemyAttackCapability })
+    enemyAttackCapability: context.enemyAttackCapability, seaMonsterPresent: context.seaMonsterPresent })
+  if (talents.effects.some(entry => entry.effect && conditionUsesMetric(entry.effect.condition, 'battlefield.hasSeaMonster'))) {
+    conditionInputs.push({ kind: 'boolean', metric: 'seaMonsterPresent', label: '戦場の海の怪物',
+      options: [{ value: false, label: 'なし' }, { value: true, label: 'あり' }], defaultValue: false })
+    if (typeof context.seaMonsterPresent !== 'boolean') reasons.push('戦場の海の怪物の有無を選択してください。')
+  }
+  if (hasAttackSequence && typeof context.targetCanBeLevitated !== 'boolean') reasons.push('浮遊の適用条件を選択してください。')
   if (talents.hasDamageOverTime) {
     conditionInputs.push({ kind: 'select', metric: 'enemyAttackCapability', label: '敵の遠距離攻撃能力',
       options: [{ value: 'MELEE_ONLY', label: 'なし' }, { value: 'RANGED_CAPABLE', label: 'あり' }], defaultValue: 'MELEE_ONLY' },
@@ -302,6 +344,14 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
       } else if (effect.item === 'TRIGGERED_ATTACK' && effect.timing === 'ON_INCOMING_NORMAL_ATTACK'
         && effect.target === 'ENEMIES_IN_ACTION_RANGE' && attackKind === 'COUNTER') {
         // The action's count, target limit, treatment and cooldown stay together.
+      } else if (effect.item === 'DIRECT_DAMAGE' && effect.timing === 'ON_NEXT_NORMAL_ATTACK' && effect.target === 'ATTACK_TARGET'
+        && Number.isFinite(effect.value.attackScale) && effect.value.attackScale >= 0
+        && Number.isSafeInteger(effect.value.count) && effect.value.count > 0
+        && ['PHYSICAL', 'ARTS', 'TRUE'].includes(effect.value.damageType)) {
+        // Explicit actions replace the base attack's hit count, rather than multiply it.
+      } else if (effect.item === 'APPLY_STATUS' && effect.timing === 'ON_NEXT_NORMAL_ATTACK' && effect.target === 'ATTACK_TARGET'
+        && effect.value.statusId === 'LEVITATE' && Number.isFinite(effect.value.durationSeconds) && effect.value.durationSeconds > 0) {
+        // The ordered action executor applies this state before dependent actions.
       } else {
         evaluation.status = 'UNSUPPORTED'
         evaluation.reason = '「' + formatSkillStructureEffectItem(effect.item) + '」の適用方法にはまだ対応していません。'
@@ -313,6 +363,49 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
     }
   }
 
+  if (hasAttackSequence && stage && reasons.length === 0) {
+    try {
+      if (attackKind !== 'NEXT_ATTACK') throw new RangeError('一連の攻撃は次の通常攻撃1回に限り対応しています。')
+      if (initialTargetState === null) throw new RangeError('一連の攻撃の初期対象状態が未定義です。')
+      if (actualTargetCount !== 1) throw new RangeError('一連の攻撃は単一対象に限り対応しています。')
+      if (talents.hasDamageOverTime) throw new RangeError('一連の攻撃と継続ダメージを組み合わせる計算は未対応です。')
+      let targetAirborne = initialTargetState !== 'GROUND'
+      for (const effect of orderStageEffects(stage.effects)) {
+        if (!evaluatePredicate(effect.condition, effectiveContext)) continue
+        if (effect.item === 'APPLY_STATUS') targetAirborne = true
+        if (effect.item !== 'DIRECT_DAMAGE') continue
+        const actionTalents = evaluateDamageCalculatorThreeTalents({ operator: input.operator, phaseIndex: input.phaseIndex,
+          operatorLevel: input.operatorLevel, attackKind, enemyAttackCapability: context.enemyAttackCapability,
+          targetAirborne, seaMonsterPresent: context.seaMonsterPresent })
+        if (actionTalents.hasDamageOverTime) throw new RangeError('一連の攻撃と継続ダメージを組み合わせる計算は未対応です。')
+        const pipeline = calculateAttackPipeline(stats.attack, {
+          directMultiplierPercent: (atkRatio + actionTalents.attackRatio) * 100,
+          attackScale: attackScale * effect.value.attackScale * rangePenaltyMultiplier,
+        })
+        if (!Number.isFinite(pipeline.finalAttack)) throw new RangeError('一連の攻撃の攻撃力を計算できません。')
+        actionPlans.push({ effect, targetAirborne, talents: actionTalents, pipeline })
+      }
+      if (!actionPlans.length) throw new RangeError('一連の攻撃のダメージを解決できません。')
+      if (actionPlans.some(plan => plan.effect.value.damageType !== damageType)) throw new RangeError('異なるダメージ属性を混ぜた一連の攻撃は未対応です。')
+      const first = actionPlans[0].talents
+      if (actionPlans.some(plan => plan.talents.attackRatio !== first.attackRatio || plan.talents.attackSpeedBonus !== first.attackSpeedBonus)) {
+        throw new RangeError('一連の攻撃中に攻撃力・攻撃速度の補正が変わる計算は未対応です。')
+      }
+      talents = { ...first, effects: mergeActionTalentEvaluations(actionPlans),
+        blockingReasons: [...new Set(actionPlans.flatMap(plan => plan.talents.blockingReasons))] }
+    } catch (error) {
+      reasons.push(error instanceof Error ? error.message : '一連の攻撃を解決できません。')
+    }
+  }
+
+  if (!hasAttackSequence && talents.defenseIgnore !== null) {
+    const reason = '通常攻撃形式への確率付き防御無視の適用は未対応です。'
+    reasons.push(reason)
+    for (const evaluation of talents.effects) if (evaluation.effect?.item === 'DEFENSE_IGNORE_RATIO' && evaluation.status === 'APPLIED') {
+      evaluation.status = 'UNSUPPORTED'
+      evaluation.reason = reason
+    }
+  }
   reasons.push(...talents.blockingReasons)
   if (!Number.isFinite(stats.attack * (1 + atkRatio + talents.attackRatio))) {
     reasons.push('スキル・素質を加算した攻撃力を計算できません。')
@@ -329,7 +422,7 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   if (stage?.effects.some(effect => effect.item === 'HP_LOSS_RATE')) {
     scopeNotes.push('HP減少の詳細、継続時間、退場までの総ダメージは計算対象外です。')
   }
-  const attackSpeedValue = stats.attackSpeed + attackSpeedBonus
+  const attackSpeedValue = stats.attackSpeed + attackSpeedBonus + talents.attackSpeedBonus
   const normalInterval = stats.baseAttackTime * 100 / Math.max(20, attackSpeedValue)
   if (!Number.isFinite(normalInterval) || normalInterval <= 0) reasons.push('攻撃間隔を計算できません。')
   const unsupportedReasons = [...new Set(reasons)]
@@ -339,19 +432,37 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   const attackInterval = attackKind === 'COUNTER' ? null : normalInterval
   const model: SkillModelDefaults | null = unsupportedReasons.length === 0 && base ? {
     directMultiplierPercent: atkRatio * 100, attackScalePercent: attackScale * 100,
-    hitCount: base.hitCount * (attackKind === 'COUNTER' ? attack?.action?.count ?? 1 : 1),
+    hitCount: hasAttackSequence ? actionPlans.reduce((sum, plan) => sum + plan.effect.value.count, 0)
+      : base.hitCount * (attackKind === 'COUNTER' ? attack?.action?.count ?? 1 : 1),
     attackInterval: attackInterval ?? 0, duration, ammoCount: 0, notes: [],
   } : null
   const attackPipeline = model ? calculateAttackPipeline(stats.attack, {
     directMultiplierPercent: model.directMultiplierPercent + talents.attackRatio * 100,
     attackScale: attackScale * rangePenaltyMultiplier,
   }) : null
-  const effectiveAttack = attackPipeline?.finalAttack ?? null
+  const effectiveAttack = hasAttackSequence ? null : attackPipeline?.finalAttack ?? null
   const damageOverTime = model && talents.damageOverTimeRate ? calculateMaintainedDamageOverTime(talents.damageOverTimeRate, {
     enemyResistance: context.enemyResistance, actualTargetCount, attackInterval, attackKind,
   }) : null
   const rows: DamageCalculatorThreeRow[] = model && attackPipeline && damageType
-    ? getDamageSensitivityTablePoints(damageType, [attackPipeline.finalAttack * 0.95]).map(axisValue => {
+    ? getDamageSensitivityTablePoints(damageType, hasAttackSequence ? actionPlans.map(plan => plan.pipeline.finalAttack * 0.95) : [attackPipeline.finalAttack * 0.95]).map(axisValue => {
+      if (hasAttackSequence) {
+        const attackComponents = actionPlans.map((plan, index): DamageCalculatorThreeAttackComponent => {
+          const proc = plan.talents.defenseIgnore ?? { chance: 0, ratio: 0 }
+          const weighted = calculateProbabilisticDefenseIgnoreDamage({ attack: plan.pipeline.finalAttack,
+            damageType: plan.effect.value.damageType, enemyDefense: damageType === 'PHYSICAL' ? axisValue : 0,
+            enemyResistance: damageType === 'ARTS' ? axisValue : 0, chance: proc.chance, ratio: proc.ratio,
+            count: plan.effect.value.count, resistanceIgnoreFixed: plan.talents.resistanceIgnoreFixed })
+          return { id: plan.effect.id, label: `第${index + 1}打撃`, order: index + 1, damageType: plan.effect.value.damageType,
+            attackScale: plan.effect.value.attackScale, count: plan.effect.value.count, targetAirborne: plan.targetAirborne,
+            defenseIgnoreChance: proc.chance, defenseIgnoreRatio: proc.ratio, expectedDamage: weighted.expectedDamage,
+            attackPipeline: plan.pipeline, branches: weighted.branches }
+        })
+        const perAttack = attackComponents.reduce((sum, component) => sum + component.expectedDamage, 0)
+        return { axisValue, perHit: null, perAttack, dps: null, allTargetsPerAttack: perAttack * actualTargetCount,
+          allTargetsDps: null, breakdown: null, damageOverTimeDps: null, combinedDps: null, allTargetsCombinedDps: null,
+          attackComponents }
+      }
       const mitigation = calculateDamageBreakdown(attackPipeline.finalAttack, damageType,
         damageType === 'PHYSICAL' ? axisValue : 0, damageType === 'ARTS' ? axisValue : 0,
         { resistanceIgnoreFixed: talents.resistanceIgnoreFixed })
@@ -369,7 +480,8 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
       }
       return { axisValue, perHit, perAttack, dps, allTargetsPerAttack: perAttack * actualTargetCount,
         allTargetsDps: dps === null ? null : dps * actualTargetCount, breakdown,
-        damageOverTimeDps, combinedDps, allTargetsCombinedDps: combinedDps === null ? null : combinedDps * actualTargetCount }
+        damageOverTimeDps, combinedDps, allTargetsCombinedDps: combinedDps === null ? null : combinedDps * actualTargetCount,
+        attackComponents: [] }
     }) : []
   return { structure, stats, model, damageType, axisLabel, rows, unsupportedReasons, conditionInputs,
     actualTargetCount, maxTargetCount, effects, canShowDps, dpsReason, effectiveAttack,
@@ -378,7 +490,10 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
     attackKind, attackLabel, attackDistanceType, rangePenaltyMultiplier, scopeNotes, counterCooldownSeconds,
     talentEffects: talents.effects, talentAttackRatio: talents.attackRatio,
     resistanceIgnoreFixed: talents.resistanceIgnoreFixed, hasUnsupportedTalentDamage: talents.hasUnsupportedDamage,
-    damageOverTime }
+    damageOverTime, hasAttackSequence, hasProbabilisticDamage: actionPlans.some(plan => {
+      const chance = plan.talents.defenseIgnore?.chance ?? 0
+      return chance > 0 && chance < 1
+    }), initialTargetState }
 }
 
 type ConditionContext = Required<DamageCalculatorThreeConditions>
@@ -392,6 +507,48 @@ interface ResolvedAttack {
   action: SkillStructureAttackAction | null
 }
 
+interface ResolvedDamageAction {
+  effect: Extract<SkillStructureEffect, { item: 'DIRECT_DAMAGE' }>
+  targetAirborne: boolean
+  talents: DamageCalculatorThreeTalentOutput
+  pipeline: AttackPipelineBreakdown
+}
+
+/** Dependencies enforce processing order even when a preceding status fails its condition. */
+function orderStageEffects(effects: readonly SkillStructureEffect[]): SkillStructureEffect[] {
+  const ids = new Set(effects.map(effect => effect.id))
+  if (ids.size !== effects.length) throw new RangeError('一連の攻撃の効果IDが重複しています。')
+  if (effects.some(effect => effect.afterEffects?.some(id => !ids.has(id)))) throw new RangeError('一連の攻撃の依存先を取得できません。')
+  const pending = [...effects], ordered: SkillStructureEffect[] = [], done = new Set<string>()
+  while (pending.length) {
+    const next = pending.findIndex(effect => effect.afterEffects?.every(id => done.has(id)) ?? true)
+    if (next < 0) throw new RangeError('一連の攻撃の処理順が循環しています。')
+    const [effect] = pending.splice(next, 1)
+    ordered.push(effect)
+    done.add(effect.id)
+  }
+  return ordered
+}
+
+function mergeActionTalentEvaluations(plans: readonly ResolvedDamageAction[]): DamageCalculatorThreeTalentEvaluation[] {
+  const merged = new Map<string, DamageCalculatorThreeTalentEvaluation>()
+  for (const plan of plans) for (const entry of plan.talents.effects) {
+    const key = `${entry.operatorId}/${entry.talentIndex}/${entry.effect?.id ?? 'missing'}`
+    const current = merged.get(key)
+    const ids = [...new Set([...(current?.appliedAttackIds ?? []), ...(entry.status === 'APPLIED' ? [plan.effect.id] : [])])]
+    const failure = [current, entry].find(value => value?.status === 'UNVERIFIED' || value?.status === 'UNSUPPORTED')
+    const applied = [current, entry].find(value => value?.status === 'APPLIED')
+    merged.set(key, { ...(failure ?? applied ?? current ?? entry)!, appliedAttackIds: ids })
+  }
+  return [...merged.values()]
+}
+
+function conditionUsesMetric(condition: CombatCondition | null, metric: string): boolean {
+  if (!condition || condition.type === 'UNKNOWN') return false
+  if (condition.type === 'COMPARE') return condition.metric === metric
+  return condition.conditions.some(child => conditionUsesMetric(child, metric))
+}
+
 function resolveConditions(conditions: DamageCalculatorThreeConditions = {}): ConditionContext {
   return {
     actualAttackTargetCount: conditions.actualAttackTargetCount ?? 1,
@@ -400,6 +557,8 @@ function resolveConditions(conditions: DamageCalculatorThreeConditions = {}): Co
     attackDistanceType: conditions.attackDistanceType ?? 'MELEE',
     enemyResistance: conditions.enemyResistance ?? 0,
     enemyAttackCapability: conditions.enemyAttackCapability ?? 'MELEE_ONLY',
+    targetCanBeLevitated: conditions.targetCanBeLevitated ?? true,
+    seaMonsterPresent: conditions.seaMonsterPresent ?? false,
   }
 }
 
@@ -475,10 +634,14 @@ function resolveAttack(stage: SkillStructureStage, context: ConditionContext, ba
 
 function evaluatePredicate(predicate: SkillStructurePredicate | null, context: ConditionContext): boolean {
   if (!predicate) return true
-  if (!['actualAttackTargetCount', 'skillActivationCount', 'skillMode', 'attackDistanceType'].includes(predicate.metric)) {
+  if (!['actualAttackTargetCount', 'skillActivationCount', 'skillMode', 'attackDistanceType', 'targetCanBeLevitated'].includes(predicate.metric)) {
     throw new RangeError('条件「' + String(predicate.metric) + '」は未対応です。')
   }
   const actual = context[predicate.metric]
+  if (predicate.metric === 'targetCanBeLevitated') {
+    if (typeof actual !== 'boolean') throw new RangeError('浮遊の適用条件を取得できません。')
+    return predicate.comparison === 'EQ' ? actual === predicate.value : actual !== predicate.value
+  }
   if (predicate.metric === 'skillMode' || predicate.metric === 'attackDistanceType') {
     if (predicate.comparison === 'EQ') return actual === predicate.value
     if (predicate.comparison === 'NE') return actual !== predicate.value
