@@ -189,28 +189,30 @@ test('source date and missing coverage stay explicit and recovered missing level
   assert.equal(buildEnemyHistogramCounts(levels).generatedAt, null)
 })
 
-test('物語環境の対象外IDは古いキャッシュや取得失敗一覧にあってもMAPSとSPAWNSへ加算しない', () => {
+test('物語環境とその他の対象外IDは古いキャッシュや取得失敗一覧にあってもMAPSとSPAWNSへ加算しない', () => {
   for (const cached of [false, true]) for (const sourceSummary of [
-    { uniqueLevelCount: 2, processedLevelCount: 1, failedLevelCount: 1, excludedLevelCount: 1 },
-    { uniqueLevelCount: 3, processedLevelCount: 1, failedLevelCount: 2 },
+    { uniqueLevelCount: 2, processedLevelCount: 1, failedLevelCount: 1, excludedLevelCount: 2 },
+    { uniqueLevelCount: 4, processedLevelCount: 1, failedLevelCount: 3 },
   ]) {
     const result = buildEnemyHistogramCounts([
       level('obt/main/normal', [{ id: 'enemy_a' }], [spawn('enemy_a', 3)]),
       ...(cached ? [level('Obt/Main/Story.json', [{ id: 'enemy_a' }, { id: 'enemy_story_only' }], [
         spawn('enemy_a', 30), spawn('enemy_story_only', 50, { hiddenGroup: 'story' }),
+      ]), level('obt/legion/other', [{ id: 'enemy_a' }, { id: 'enemy_other_only' }], [
+        spawn('enemy_a', 90), spawn('enemy_other_only', 40),
       ])] : []),
     ], {
       ...provenance,
       sourceSummary,
-      failedLevelIds: ['obt/main/missing', 'obt/main/story'],
-      excludedLevelIds: ['Obt/Main/Story.json', 'obt/main/story'],
+      failedLevelIds: ['obt/main/missing', 'obt/main/story', 'obt/legion/other'],
+      excludedLevelIds: ['Obt/Main/Story.json', 'obt/main/story', 'Obt/Legion/Other.json'],
     })
     assert.deepEqual(result.enemies, { enemy_a: { mapCount: 1, spawnCount: 3 } })
     assert.deepEqual(result.summary, {
-      mapCount: 1, missingMapCount: 1, excludedMapCount: 1, spawnMapCount: 1, spawnExcludedMapCount: 0,
+      mapCount: 1, missingMapCount: 1, excludedMapCount: 2, spawnMapCount: 1, spawnExcludedMapCount: 0,
     })
     assert.deepEqual(result.diagnostics.missingLevelIds, ['obt/main/missing'])
-    assert.deepEqual(result.diagnostics.excludedLevelIds, ['obt/main/story'])
+    assert.deepEqual(result.diagnostics.excludedLevelIds, ['obt/legion/other', 'obt/main/story'])
     assert.deepEqual(result.diagnostics.excludedLevels, [])
     assert.equal(result.diagnostics.sourceCoverage.requestedMapCount, 2)
     assert.equal(result.diagnostics.sourceCoverage.sourceMissingMapCount, 1)
@@ -231,7 +233,7 @@ test('committed cache aggregate retains source coverage and all existing per-ene
   assert.equal(result.summary.excludedMapCount, source.summary.excludedLevelCount)
   assert.deepEqual(result.diagnostics.excludedLevelIds, source.diagnostics.excludedLevelIds)
   assert.deepEqual(result.summary, {
-    mapCount: 1998, missingMapCount: 197, excludedMapCount: 103, spawnMapCount: 1474, spawnExcludedMapCount: 524,
+    mapCount: 1735, missingMapCount: 197, excludedMapCount: 366, spawnMapCount: 1273, spawnExcludedMapCount: 462,
   })
   assert.equal(result.summary.spawnMapCount + result.summary.spawnExcludedMapCount, result.summary.mapCount)
   assert.equal(result.diagnostics.excludedLevels.length, result.summary.spawnExcludedMapCount)

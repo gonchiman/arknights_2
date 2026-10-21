@@ -4,12 +4,15 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const RAW_BASE = 'https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/master/jp/gamedata'
 const STAGE_TABLE_URL = `${RAW_BASE}/excel/stage_table.json`
+const ZONE_TABLE_URL = `${RAW_BASE}/excel/zone_table.json`
 const HANDBOOK_URL = `${RAW_BASE}/excel/enemy_handbook_table.json`
 const LEVEL_BASE_URL = `${RAW_BASE}/levels`
 const DEFAULT_CONCURRENCY = 8
 const DEFAULT_RETRIES = 2
 const DEFAULT_OUTPUT_PATH = fileURLToPath(new URL('../public/data/enemy-stage-appearances.json', import.meta.url))
 const DEFAULT_CACHE_ROOT = fileURLToPath(new URL('../.cache/enemy-stage-appearances/levels', import.meta.url))
+// Match the main, event and supply categories in getMapCategory.
+const STATISTICS_ZONE_TYPES = new Set(['MAINLINE', 'MAINLINE_ACTIVITY', 'ACTIVITY', 'WEEKLY'])
 
 export function normalizeLevelId(value) {
   if (typeof value !== 'string') return null
@@ -27,7 +30,11 @@ export function normalizeLevelId(value) {
   return normalized
 }
 
-export function selectStageLevels(stageTableSource, { excludeStoryEnvironment = false } = {}) {
+export function selectStageLevels(stageTableSource, {
+  excludeStoryEnvironment = false, excludeOtherCategories = false, zoneTableSource,
+} = {}) {
+  const zones = asRecord(asRecord(zoneTableSource)?.zones)
+  if (excludeOtherCategories && !zones) throw new Error('Excluding other categories requires a valid zone table')
   const stages = asRecord(asRecord(stageTableSource)?.stages)
   if (!stages) return { stageRecordCount: 0, levels: [], excludedLevelIds: [] }
 
@@ -43,7 +50,9 @@ export function selectStageLevels(stageTableSource, { excludeStoryEnvironment = 
     const stageId = readString(stage.stageId) ?? fallbackStageId
     if (!levelId || !stageId) continue
 
-    if (excludeStoryEnvironment && readString(stage.diffGroup) === 'EASY') {
+    const zoneType = readString(asRecord(zones?.[readString(stage.zoneId)])?.type)
+    if ((excludeStoryEnvironment && readString(stage.diffGroup) === 'EASY')
+      || (excludeOtherCategories && !STATISTICS_ZONE_TYPES.has(zoneType))) {
       excludedLevelIds.add(levelId)
       continue
     }
@@ -151,6 +160,7 @@ export function buildEnemyStageAppearanceDocument({
       repository: 'ArknightsAssets/ArknightsGamedata',
       region: 'jp',
       stageTableUrl: STAGE_TABLE_URL,
+      zoneTableUrl: ZONE_TABLE_URL,
       handbookTableUrl: HANDBOOK_URL,
       levelBaseUrl: LEVEL_BASE_URL,
     },
@@ -181,11 +191,14 @@ export function buildLevelUrl(levelId) {
 }
 
 async function generate({ outputPath, cacheRoot, concurrency, refresh }) {
-  const [stageTable, handbook] = await Promise.all([
+  const [stageTable, zoneTable, handbook] = await Promise.all([
     fetchJsonWithRetry(STAGE_TABLE_URL, { retries: DEFAULT_RETRIES }),
+    fetchJsonWithRetry(ZONE_TABLE_URL, { retries: DEFAULT_RETRIES }),
     fetchJsonWithRetry(HANDBOOK_URL, { retries: DEFAULT_RETRIES }),
   ])
-  const selection = selectStageLevels(stageTable, { excludeStoryEnvironment: true })
+  const selection = selectStageLevels(stageTable, {
+    excludeStoryEnvironment: true, excludeOtherCategories: true, zoneTableSource: zoneTable,
+  })
   console.log(`${selection.stageRecordCount}件のステージから${selection.levels.length}個のLevelを集計します。`)
 
   let completed = 0

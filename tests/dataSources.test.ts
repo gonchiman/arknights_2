@@ -44,6 +44,7 @@ test('敵の登場ステージ数に必要な生成元が登録されている',
   )
 
   assert.ok(generationUrls.has(DATA_SOURCE_URLS.stageTable))
+  assert.ok(generationUrls.has(DATA_SOURCE_URLS.zoneTable))
   assert.ok(generationUrls.has(DATA_SOURCE_URLS.levelDirectory))
   assert.ok(generationUrls.has(DATA_SOURCE_URLS.enemyHandbook))
 })
@@ -57,6 +58,7 @@ test('生成スクリプトと参照元カタログのURLが一致する', () =>
   })
 
   assert.equal(document.source.stageTableUrl, DATA_SOURCE_URLS.stageTable)
+  assert.equal(document.source.zoneTableUrl, DATA_SOURCE_URLS.zoneTable)
   assert.equal(document.source.handbookTableUrl, DATA_SOURCE_URLS.enemyHandbook)
   assert.equal(document.source.levelBaseUrl, DATA_SOURCE_URLS.levelRawBase)
 })
