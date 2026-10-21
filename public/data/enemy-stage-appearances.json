@@ -11,10 +11,11 @@
     "levelBaseUrl": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/master/jp/gamedata/levels"
   },
   "summary": {
-    "stageRecordCount": 3130,
-    "uniqueLevelCount": 2298,
+    "stageRecordCount": 3027,
+    "uniqueLevelCount": 2195,
+    "excludedLevelCount": 103,
     "processedLevelCount": 1998,
-    "failedLevelCount": 300,
+    "failedLevelCount": 197,
     "handbookEnemyCount": 1498,
     "referencedEnemyCount": 1670,
     "unmatchedEnemyCount": 321
@@ -22575,7 +22576,9 @@
       "activities/act24side/level_act24side_ex07",
       "activities/act24side/level_act24side_ex08",
       "activities/act24side/level_act24side_sub-01",
-      "activities/act24side/level_act24side_tr01",
+      "activities/act24side/level_act24side_tr01"
+    ],
+    "excludedLevelIds": [
       "obt/main/level_easy_09-01",
       "obt/main/level_easy_09-02",
       "obt/main/level_easy_09-03",

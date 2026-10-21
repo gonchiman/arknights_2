@@ -27,11 +27,12 @@ export function normalizeLevelId(value) {
   return normalized
 }
 
-export function selectStageLevels(stageTableSource) {
+export function selectStageLevels(stageTableSource, { excludeStoryEnvironment = false } = {}) {
   const stages = asRecord(asRecord(stageTableSource)?.stages)
-  if (!stages) return { stageRecordCount: 0, levels: [] }
+  if (!stages) return { stageRecordCount: 0, levels: [], excludedLevelIds: [] }
 
   const candidatesByLevel = new Map()
+  const excludedLevelIds = new Set()
   let stageRecordCount = 0
 
   for (const [fallbackStageId, rawStage] of Object.entries(stages)) {
@@ -41,6 +42,11 @@ export function selectStageLevels(stageTableSource) {
     const levelId = normalizeLevelId(stage.levelId)
     const stageId = readString(stage.stageId) ?? fallbackStageId
     if (!levelId || !stageId) continue
+
+    if (excludeStoryEnvironment && readString(stage.diffGroup) === 'EASY') {
+      excludedLevelIds.add(levelId)
+      continue
+    }
 
     stageRecordCount += 1
     const candidates = candidatesByLevel.get(levelId) ?? []
@@ -59,7 +65,13 @@ export function selectStageLevels(stageTableSource) {
     })
     .sort((a, b) => a.levelId.localeCompare(b.levelId, 'en', { numeric: true }))
 
-  return { stageRecordCount, levels }
+  return {
+    stageRecordCount,
+    levels,
+    // A level shared with an eligible environment remains in scope once.
+    excludedLevelIds: [...excludedLevelIds].filter((levelId) => !candidatesByLevel.has(levelId))
+      .sort((a, b) => a.localeCompare(b, 'en', { numeric: true })),
+  }
 }
 
 export function extractLevelEnemyIds(levelSource) {
@@ -95,10 +107,14 @@ export function buildEnemyStageAppearanceDocument({
   const handbookEnemyIdSet = new Set(handbookEnemyIds)
   const appearances = new Map(handbookEnemyIds.map((enemyId) => [enemyId, new Map()]))
   const referencedEnemyIds = new Set()
-  const failures = new Set(failedLevelIds.map(normalizeLevelId).filter(Boolean))
+  const excludedLevelIds = [...new Set((selection.excludedLevelIds ?? []).map(normalizeLevelId).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))
+  const excluded = new Set(excludedLevelIds)
+  const failures = new Set(failedLevelIds.map(normalizeLevelId).filter((levelId) => levelId && !excluded.has(levelId)))
+  const includedLevels = selection.levels.filter((level) => !excluded.has(level.levelId))
   let processedLevelCount = 0
 
-  for (const level of selection.levels) {
+  for (const level of includedLevels) {
     if (!levelsById.has(level.levelId)) {
       failures.add(level.levelId)
       continue
@@ -140,7 +156,8 @@ export function buildEnemyStageAppearanceDocument({
     },
     summary: {
       stageRecordCount: selection.stageRecordCount,
-      uniqueLevelCount: selection.levels.length,
+      uniqueLevelCount: includedLevels.length,
+      excludedLevelCount: excludedLevelIds.length,
       processedLevelCount,
       failedLevelCount: failed.length,
       handbookEnemyCount: handbookEnemyIds.length,
@@ -150,6 +167,7 @@ export function buildEnemyStageAppearanceDocument({
     enemies,
     diagnostics: {
       failedLevelIds: failed,
+      excludedLevelIds,
       unmatchedEnemyIds,
     },
   }
@@ -167,7 +185,7 @@ async function generate({ outputPath, cacheRoot, concurrency, refresh }) {
     fetchJsonWithRetry(STAGE_TABLE_URL, { retries: DEFAULT_RETRIES }),
     fetchJsonWithRetry(HANDBOOK_URL, { retries: DEFAULT_RETRIES }),
   ])
-  const selection = selectStageLevels(stageTable)
+  const selection = selectStageLevels(stageTable, { excludeStoryEnvironment: true })
   console.log(`${selection.stageRecordCount}件のステージから${selection.levels.length}個のLevelを集計します。`)
 
   let completed = 0

@@ -66,6 +66,50 @@ test('Level内の同じ敵を1回にまとめる', () => {
   }), ['enemy_a', 'enemy_b'])
 })
 
+test('物語環境はマップ一覧へ残し、敵統計では取得済みでも未取得でも集計対象外にする', () => {
+  const source = { stages: {
+    ...stageTable.stages,
+    easy: { stageId: 'easy_01', levelId: 'Obt/Main/Level_Easy', diffGroup: 'EASY', isStoryOnly: false },
+  } }
+  const inventory = selectStageLevels(source)
+  assert.ok(inventory.levels.some(({ stageId }) => stageId === 'easy_01'))
+  assert.deepEqual(inventory.excludedLevelIds, [])
+
+  const selection = selectStageLevels(source, { excludeStoryEnvironment: true })
+  assert.deepEqual(selection.levels, selectStageLevels(stageTable).levels)
+  assert.equal(selection.stageRecordCount, 3)
+  assert.deepEqual(selection.excludedLevelIds, ['obt/main/level_easy'])
+  for (const cached of [false, true]) {
+    const levelsById = new Map([
+      ['activities/act/level_test_b', { enemyDbRefs: [{ id: 'enemy_a' }] }],
+      ['obt/main/level_test_a', { enemyDbRefs: [{ id: 'enemy_a' }] }],
+    ])
+    if (cached) levelsById.set('obt/main/level_easy', { enemyDbRefs: [{ id: 'enemy_easy_only' }] })
+    const result = buildEnemyStageAppearanceDocument({
+      selection, handbookSource: handbook, levelsById,
+      failedLevelIds: ['Obt/Main/Level_Easy.json'],
+    })
+    assert.equal(result.status, 'complete')
+    assert.equal(result.summary.uniqueLevelCount, 2)
+    assert.equal(result.summary.processedLevelCount, 2)
+    assert.equal(result.summary.failedLevelCount, 0)
+    assert.equal(result.summary.excludedLevelCount, 1)
+    assert.equal(result.enemies.enemy_a.stageCount, 2)
+    assert.equal(result.enemies.enemy_easy_only, undefined)
+    assert.deepEqual(result.diagnostics.failedLevelIds, [])
+    assert.deepEqual(result.diagnostics.excludedLevelIds, ['obt/main/level_easy'])
+  }
+})
+
+test('物語と標準が同じlevelIdを参照する場合は標準を1件として残す', () => {
+  const selection = selectStageLevels({ stages: {
+    easy: { stageId: 'easy_01', levelId: 'Obt/Main/Shared', diffGroup: 'EASY', isStoryOnly: false },
+    normal: { stageId: 'normal_01', levelId: 'obt/main/shared', diffGroup: 'NORMAL', isStoryOnly: false },
+  } }, { excludeStoryEnvironment: true })
+  assert.deepEqual(selection.levels, [{ levelId: 'obt/main/shared', stageId: 'normal_01' }])
+  assert.deepEqual(selection.excludedLevelIds, [])
+})
+
 test('同じlevelIdは1、異なるlevelIdはそれぞれ1として登場ステージ数を集計する', () => {
   const selection = selectStageLevels(stageTable)
   const levelsById = new Map([

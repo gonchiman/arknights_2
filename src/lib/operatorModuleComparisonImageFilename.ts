@@ -3,7 +3,7 @@ import { parseTableImageAspect, type TableImageAspect } from './tableImageAspect
 
 export function getOperatorModuleComparisonImageFilename({
   operatorName, operatorId, level, columns, potentialRank = 1, aspect = null, layout = 'columns',
-  potentialRanks, potentialLayout = 'columns', merge = true,
+  potentialRanks, potentialLayout = 'columns', merge = true, showPotentialAttributes = true,
 }: {
   operatorName: string
   operatorId: string
@@ -15,6 +15,7 @@ export function getOperatorModuleComparisonImageFilename({
   potentialRanks?: readonly number[]
   potentialLayout?: 'columns' | 'rows'
   merge?: boolean
+  showPotentialAttributes?: boolean
 }): string {
   const name = operatorName.trim() || operatorId.trim() || 'オペレーター'
   const safeName = sanitizeFilenamePart(name) || sanitizeFilenamePart(operatorId) || 'operator'
@@ -34,7 +35,8 @@ export function getOperatorModuleComparisonImageFilename({
   const layoutSuffix = layout === 'rows' ? '_レベル行' : ''
   const potentialLayoutSuffix = potentialRanks === undefined ? ''
     : `_潜在${potentialLayout === 'rows' ? '行' : '列'}_${merge ? '共通結合' : '個別表示'}`
-  return `${safeName}_モジュール比較${selectionSuffix}${potentialSuffix}${aspectSuffix}${layoutSuffix}${potentialLayoutSuffix}.png`
+  const potentialAttributesSuffix = showPotentialAttributes ? '' : '_潜在能力値補正なし'
+  return `${safeName}_モジュール比較${selectionSuffix}${potentialSuffix}${aspectSuffix}${layoutSuffix}${potentialLayoutSuffix}${potentialAttributesSuffix}.png`
 }
 
 function sanitizeFilenamePart(value: string): string {
