@@ -6,6 +6,7 @@ export interface RawBlackboardEntry {
 
 export interface RawSkillLevel {
   name?: string
+  rangeId?: string | null
   description?: string
   duration?: number
   durationType?: string
@@ -14,6 +15,7 @@ export interface RawSkillLevel {
     spType?: string
     initSp?: number
     spCost?: number
+    maxChargeTime?: number
   }
   blackboard?: RawBlackboardEntry[]
 }

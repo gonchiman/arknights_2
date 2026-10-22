@@ -122,11 +122,11 @@ test('一部集計は理由と固定敵が必須で、章・全体の一部集�
 
 test('生成済みJPデータのカバー率と欠測の監査結果を維持する', () => {
   const data = parseMainEnemyTrends(JSON.parse(readFileSync(new URL('../public/data/maps/main-enemy-trends.json', import.meta.url), 'utf8')))
-  assert.deepEqual(data.summary, { eligibleMapCount: 251, includedMapCount: 246, partialMapCount: 44, excludedMapCount: 5,
-    missingMapCount: 0, enemyCount: 10559, excludedUnitCount: 510 })
+  assert.deepEqual(data.summary, { eligibleMapCount: 251, includedMapCount: 249, partialMapCount: 44, excludedMapCount: 2,
+    missingMapCount: 0, enemyCount: 10709, excludedUnitCount: 535 })
   const complete = data.maps.filter((map) => map.status === 'included')
-  assert.equal(complete.length, 202)
-  assert.equal(complete.reduce((sum, map) => sum + map.enemyCount, 0), 9210)
+  assert.equal(complete.length, 205)
+  assert.equal(complete.reduce((sum, map) => sum + map.enemyCount, 0), 9346)
   const chapters = aggregateMainEnemyChapters(data)
   assert.equal(chapters.length, 17)
   assert.equal(chapters[11].stats.defense.missingCount, 137)

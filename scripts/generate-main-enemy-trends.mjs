@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { buildEnemyHistogramCounts } from './generateEnemyHistogramCounts.mjs'
 import { normalizeLevelId } from './generateEnemyStageAppearances.mjs'
-import { extractMapWaves } from './generateMapDatabase.mjs'
+import { extractMapEnemySpawnCounts, extractMapWaves } from './generateMapDatabase.mjs'
 import { getMainEnemyCoverage, parseMainEnemyTrends } from '../src/lib/mainEnemyTrends.ts'
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url))
@@ -99,25 +99,32 @@ function unsupportedNormalStatEffect(level) {
     && (String(rune.key).includes('enemy_attribute') || rune.key === 'ebuff_attribute'))
 }
 function countDirectSpawns(waves) {
-  const counts = new Map(), fixedCounts = new Map(), conditionalReasons = new Set()
+  const counts = new Map(Object.entries(extractMapEnemySpawnCounts(null, waves))
+    .filter(([, count]) => count === null || count > 0))
+  const fixedCounts = new Map(), conditionalReasons = new Set()
   for (const wave of waves) for (const fragment of wave.fragments) {
     for (const action of fragment.actions) {
       if (action.actionType !== 'SPAWN' || action.count === 0) continue
-      if (!Number.isSafeInteger(action.count) || action.count < 0 || typeof action.key !== 'string') {
-        throw new Error('Invalid direct SPAWN action')
+      // Keep the configured counts for index validation, but count only resolved
+      // active actions. A disabled action is zero; replacements use the new ID.
+      const resolution = action.resolution
+      if (resolution?.status === 'excluded') continue
+      if (resolution?.status === 'included') {
+        const { resolvedEnemyId: enemyId, resolvedCount: count } = resolution
+        const next = (fixedCounts.get(enemyId) ?? 0) + count
+        if (typeof enemyId !== 'string' || !Number.isSafeInteger(count) || count < 0 || !Number.isSafeInteger(next)) {
+          throw new Error('Invalid resolved SPAWN action')
+        }
+        fixedCounts.set(enemyId, next)
       }
-      const next = (counts.get(action.key) ?? 0) + action.count
-      if (!Number.isSafeInteger(next)) throw new Error('Direct SPAWN count overflow')
-      counts.set(action.key, next)
-      if (action.spawnKind === 'fixed') fixedCounts.set(action.key, (fixedCounts.get(action.key) ?? 0) + action.count)
       else if (action.spawnKind === 'conditional') for (const reason of action.reasons) conditionalReasons.add(reason)
     }
   }
   return { counts, fixedCounts, conditionalReasons }
 }
 
-/** Count fixed actions using the map database's action-level classification.
- * Conditional wave actions and branch spawns remain outside this dataset.
+/** Count confirmed active actions, including resolved groups and replacements.
+ * Unresolved conditional actions and branch spawns remain outside this dataset.
  * Unsafe metadata excludes the whole map; published counts are checked against the source.
  */
 export function buildMainEnemyTrends({ mapIndex, stageTable, handbook, database, levels,
@@ -136,7 +143,11 @@ export function buildMainEnemyTrends({ mapIndex, stageTable, handbook, database,
     }
     const level = levels.get(source.levelId)
     if (!record(level)) { map.status = 'missing'; map.reasons = ['missing-level']; return map }
-    const classified = buildEnemyHistogramCounts([{ levelId: source.levelId, data: level }])
+    const stage = stageTable.stages[source.stageId]
+    const context = { difficulty: stage.difficulty, diffGroup: stage.diffGroup }
+    const classified = buildEnemyHistogramCounts([{ levelId: source.levelId, data: level }], {
+      stageContexts: { [source.levelId]: context },
+    })
     const rejected = classified.diagnostics.excludedLevels[0]
     const reasons = rejected?.reasons ?? []
     if ((source.status === 'supported') !== (reasons.length === 0)
@@ -148,16 +159,18 @@ export function buildMainEnemyTrends({ mapIndex, stageTable, handbook, database,
       map.reasons = ['unsupported-normal-stat-rune']
       return map
     }
-    const waves = extractMapWaves(level)
+    const waves = extractMapWaves(level, context)
     if (waves === null) return map
     // Unknown metadata or invalid schedules cannot be treated as merely missing extra spawns.
     if (waves.some((wave) => wave.fragments.some((fragment) => fragment.actions
-      .some((action) => action.actionType === 'SPAWN' && action.count !== 0 && action.spawnKind === 'unknown')))) return map
+      .some((action) => action.actionType === 'SPAWN' && action.count !== 0
+        && action.resolution?.status !== 'excluded' && action.spawnKind === 'unknown')))) return map
     const { counts: direct, fixedCounts, conditionalReasons } = countDirectSpawns(waves)
     if (reasons.some((reason) => reason !== 'branch-spawn' && !conditionalReasons.has(reason))) return map
-    const saved = new Map(Object.entries(source.enemySpawnCounts ?? {}).filter(([, count]) => count > 0))
-    if (direct.size !== saved.size || [...direct].some(([id, count]) => saved.get(id) !== count)
-      || (source.status === 'supported' && source.spawnCount !== [...direct.values()].reduce((sum, count) => sum + count, 0))) {
+    const saved = source.enemySpawnCounts == null ? null
+      : new Map(Object.entries(source.enemySpawnCounts).filter(([, count]) => count === null || count > 0))
+    if (!saved || direct.size !== saved.size || [...direct].some(([id, count]) => saved.get(id) !== count)
+      || (source.status === 'supported' && source.spawnCount !== [...fixedCounts.values()].reduce((sum, count) => sum + count, 0))) {
       throw new Error(`Map index and level spawn counts disagree: ${source.code}`)
     }
     const refs = new Map(array(level.enemyDbRefs).map((ref) => [ref.id, ref]))

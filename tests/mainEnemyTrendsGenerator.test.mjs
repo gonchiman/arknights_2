@@ -140,6 +140,73 @@ test('元マップと公開indexの出現数・固定判定が不一致なら生
   assert.throws(() => buildMainEnemyTrends(input), /schedule disagree/)
 })
 
+test('明示enableとdisableを反映し、元の設定体数の照合は維持する', () => {
+  for (const enabled of [true, false]) {
+    const input = options()
+    const source = input.mapIndex.maps[0]
+    source.enemySpawnCounts.a = 7
+    source.spawnCount = enabled ? 7 : 3
+    const level = input.levels.get(source.levelId)
+    level.waves[0].fragments[0].actions.push({ actionType: 'SPAWN', key: 'a', count: 4, hiddenGroup: 'g' })
+    level.runes = [{ key: enabled ? 'level_hidden_group_enable' : 'level_hidden_group_disable', difficultyMask: 'NORMAL',
+      blackboard: [{ key: 'key', valueStr: 'g' }] }]
+    const data = buildMainEnemyTrends(input)
+    assert.equal(data.maps[0].status, 'included')
+    assert.equal(data.maps[0].enemyCount, enabled ? 7 : 3)
+    source.enemySpawnCounts.a = 8
+    assert.throws(() => buildMainEnemyTrends(input), /spawn counts disagree/)
+    source.enemySpawnCounts.a = 7
+    source.spawnCount = enabled ? 3 : 7
+    assert.throws(() => buildMainEnemyTrends(input), /spawn counts disagree/)
+  }
+})
+
+test('確定した敵置換は置換後の敵のステータスで集計する', () => {
+  const input = options()
+  const level = input.levels.get(input.mapIndex.maps[0].levelId)
+  input.database.b = [{ level: 0, enemyData: baseEnemy({ attributes: { maxHp: defined(999) } }) }]
+  level.enemyDbRefs.push({ id: 'b', level: 0, useDb: true })
+  level.runes = [{ key: 'level_enemy_replace', difficultyMask: 'NORMAL', blackboard: [
+    { key: 'key', valueStr: 'a' }, { key: 'value', valueStr: 'b' },
+  ] }]
+  const data = buildMainEnemyTrends(input)
+  assert.equal(data.maps[0].status, 'included')
+  assert.deepEqual(data.maps[0].enemies.map(({ enemyId, count, hp }) => [enemyId, count, hp]), [['b', 3, 999]])
+  assert.deepEqual(input.mapIndex.maps[0].enemySpawnCounts, { a: 3 })
+})
+
+test('明示disable済みの不正設定を除外し、利用不能な元設定体数の照合も維持する', () => {
+  const input = options()
+  const source = input.mapIndex.maps[0]
+  source.enemySpawnCounts = { a: null }
+  const level = input.levels.get(source.levelId)
+  level.waves[0].fragments[0].actions.push({ actionType: 'SPAWN', key: 'a', count: -1, hiddenGroup: 'off' })
+  level.runes = [{ key: 'level_hidden_group_disable', difficultyMask: 'NORMAL', blackboard: [{ key: 'key', valueStr: 'off' }] }]
+  const data = buildMainEnemyTrends(input)
+  assert.equal(data.maps[0].status, 'included')
+  assert.equal(data.maps[0].enemyCount, 3)
+  source.enemySpawnCounts = { a: 3 }
+  assert.throws(() => buildMainEnemyTrends(input), /spawn counts disagree/)
+})
+
+test('既知enableと未確認hiddenが混在しても解決済み出現だけを部分集計する', () => {
+  const input = options()
+  const source = input.mapIndex.maps[0]
+  source.status = 'excluded'
+  source.spawnCount = null
+  source.reasons = ['hidden-spawn-group']
+  source.enemySpawnCounts = { a: 10 }
+  const level = input.levels.get(source.levelId)
+  level.waves[0].fragments[0].actions.push(
+    { actionType: 'SPAWN', key: 'a', count: 2, hiddenGroup: 'known' },
+    { actionType: 'SPAWN', key: 'a', count: 5, hiddenGroup: 'unknown' },
+  )
+  level.runes = [{ key: 'level_hidden_group_enable', difficultyMask: 'NORMAL', blackboard: [{ key: 'key', valueStr: 'known' }] }]
+  const data = buildMainEnemyTrends(input)
+  assert.equal(data.maps[0].status, 'partial')
+  assert.equal(data.maps[0].enemyCount, 5)
+})
+
 test('非攻撃の聖杯は残し、惘核の非敵化は16-9だけに限定する', () => {
   const input = options()
   const id = 'enemy_10128_fearpj'

@@ -1,5 +1,6 @@
 import type { EnemyLevelType, EnemyRatings, EnemyRecord, EnemyStats } from '../types/enemy'
 import { DATA_SOURCE_URLS } from './dataSources.ts'
+import { gameDataClient } from './gameDataClient.ts'
 import { getEnemyStatRating } from './enemyStatRatings.ts'
 import { normalizeEnemyLevelSelection, type EnemyAnalysisFiltersState } from './enemyLevelSelection.ts'
 
@@ -49,23 +50,10 @@ export function loadEnemyRecords(): Promise<EnemyRecord[]> {
   if (enemyRecordsRequest) return enemyRecordsRequest
 
   const request = Promise.all([
-    fetch(ENEMY_DATA_URLS.handbook),
-    fetch(ENEMY_DATA_URLS.database),
-    fetch(ENEMY_DATA_URLS.stageAppearances).catch(() => null),
-  ]).then(async ([handbookResponse, databaseResponse, stageAppearancesResponse]) => {
-    if (!handbookResponse.ok || !databaseResponse.ok) {
-      throw new Error('敵データの取得に失敗しました。')
-    }
-
-    const [handbook, database, stageAppearances] = await Promise.all([
-      handbookResponse.json() as Promise<unknown>,
-      databaseResponse.json() as Promise<unknown>,
-      stageAppearancesResponse?.ok
-        ? stageAppearancesResponse.json().catch(() => null) as Promise<unknown>
-        : Promise.resolve(null),
-    ])
-    return buildEnemyRecords(handbook, database, stageAppearances)
-  })
+    gameDataClient.readTable('enemyHandbook'),
+    gameDataClient.readTable('enemyDatabase'),
+    gameDataClient.readStageAppearances({ optional: true }),
+  ]).then(([handbook, database, stageAppearances]) => buildEnemyRecords(handbook, database, stageAppearances))
 
   enemyRecordsRequest = request.catch((cause) => {
     enemyRecordsRequest = null
