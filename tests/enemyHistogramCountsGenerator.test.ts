@@ -130,6 +130,12 @@ test('invalid counts and unsafe sums exclude a whole map without producing NaN o
   ], provenance)
   assert.equal(result.enemies.enemy_a.spawnCount, 0)
   assert.deepEqual(result.diagnostics.excludedLevels[0].reasons, ['spawn-total-overflow'])
+  const acrossEnemies = buildEnemyHistogramCounts([
+    level('obt/overflow', [{ id: 'enemy_a' }, { id: 'enemy_b' }], [spawn('enemy_a', Number.MAX_SAFE_INTEGER), spawn('enemy_b', 1)]),
+  ], provenance)
+  assert.equal(acrossEnemies.summary.spawnMapCount, 0)
+  assert.equal(acrossEnemies.enemies.enemy_b.spawnCount, 0)
+  assert.deepEqual(acrossEnemies.diagnostics.excludedLevels[0].reasons, ['spawn-total-overflow'])
 })
 
 test('zero count, empty schedules and non-SPAWN actions are supported zero contributions', () => {
@@ -170,6 +176,42 @@ test('branch SPAWNs and normal enemy replacements exclude maps; non-spawn branch
   assert.deepEqual(result.enemies.enemy_a, { mapCount: 3, spawnCount: 4 })
   assert.deepEqual(result.diagnostics.reasonCounts, { 'branch-spawn': 1, 'enemy-replacement': 1 })
   assert.equal(result.summary.spawnMapCount, 1)
+})
+
+test('canonical stage contexts resolve matching hidden groups without changing MAPS registered references', () => {
+  const runes = [{ difficultyMask: 'FOUR_STAR', key: 'level_hidden_group_enable', blackboard: [{ key: 'key', valueStr: 'fstar' }] }]
+  const source = [
+    level('obt/normal', [{ id: 'enemy_a' }, { id: 'enemy_b' }], [spawn('enemy_a', 3), spawn('enemy_b', 2, { hiddenGroup: 'fstar' })], { runes }),
+    level('obt/tough', [{ id: 'enemy_a' }, { id: 'enemy_b' }], [spawn('enemy_a', 3), spawn('enemy_b', 2, { hiddenGroup: 'fstar' })], { runes }),
+  ]
+  for (const stageContexts of [
+    { 'obt/normal': { difficulty: 'NORMAL' }, 'Obt/Tough.json': { difficulty: 'NORMAL', diffGroup: 'TOUGH' } },
+    new Map([['obt/normal', { difficulty: 'NORMAL' }], ['Obt/Tough.json', { difficulty: 'NORMAL', diffGroup: 'TOUGH' }]]),
+  ]) {
+    const result = buildEnemyHistogramCounts(source, { ...provenance, stageContexts })
+    assert.deepEqual(result.enemies, { enemy_a: { mapCount: 2, spawnCount: 3 }, enemy_b: { mapCount: 2, spawnCount: 2 } })
+    assert.equal(result.summary.spawnMapCount, 1)
+    assert.deepEqual(result.diagnostics.excludedLevels, [{ levelId: 'obt/normal', reasons: ['hidden-spawn-group'] }])
+  }
+})
+
+test('resolved replacement contributes to the new enemy only, leaving registered MAPS unchanged', () => {
+  const result = buildEnemyHistogramCounts([level('obt/replace', [{ id: 'enemy_a' }, { id: 'enemy_b' }], [spawn('enemy_a', 4)], {
+    runes: [{ difficultyMask: 'NORMAL', key: 'level_enemy_replace', blackboard: [
+      { key: 'key', valueStr: 'enemy_a' }, { key: 'value', valueStr: 'enemy_b' },
+    ] }],
+  })], provenance)
+  assert.deepEqual(result.enemies, { enemy_a: { mapCount: 1, spawnCount: 0 }, enemy_b: { mapCount: 1, spawnCount: 4 } })
+  assert.equal(result.summary.spawnExcludedMapCount, 0)
+})
+
+test('missing or unknown explicit stage contexts never silently fall back to NORMAL', () => {
+  for (const stageContexts of [{}, { 'obt/a': null }, { 'obt/a': { difficulty: 'FUTURE' } }]) {
+    const result = buildEnemyHistogramCounts([level('obt/a', [{ id: 'enemy_a' }], [spawn('enemy_a', 5)])], { ...provenance, stageContexts })
+    assert.deepEqual(result.enemies.enemy_a, { mapCount: 1, spawnCount: 0 })
+    assert.equal(result.summary.spawnExcludedMapCount, 1)
+    assert.ok(result.diagnostics.excludedLevels[0].reasons.includes('unsupported-difficulty-context'))
+  }
 })
 
 test('source date and missing coverage stay explicit and recovered missing levels are accounted for', () => {
@@ -233,7 +275,7 @@ test('committed cache aggregate retains source coverage and all existing per-ene
   assert.equal(result.summary.excludedMapCount, source.summary.excludedLevelCount)
   assert.deepEqual(result.diagnostics.excludedLevelIds, source.diagnostics.excludedLevelIds)
   assert.deepEqual(result.summary, {
-    mapCount: 1735, missingMapCount: 197, excludedMapCount: 366, spawnMapCount: 1273, spawnExcludedMapCount: 462,
+    mapCount: 1735, missingMapCount: 197, excludedMapCount: 366, spawnMapCount: 1279, spawnExcludedMapCount: 456,
   })
   assert.equal(result.summary.spawnMapCount + result.summary.spawnExcludedMapCount, result.summary.mapCount)
   assert.equal(result.diagnostics.excludedLevels.length, result.summary.spawnExcludedMapCount)

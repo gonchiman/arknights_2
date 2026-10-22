@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { getMapEntrances, getMapSpawnFlow, getMapSpawnRows, getMapSpawnTimes, getMapSpecifiedSpawnCount } from '../src/lib/mapWaves.ts'
+import { getMapEntrances, getMapResolvedSpawnCount, getMapSpawnConditionLabels, getMapSpawnDecision, getMapSpawnFlow, getMapSpawnRows, getMapSpawnTimes, getMapSpecifiedSpawnCount } from '../src/lib/mapWaves.ts'
 import type { MapDetail, MapWaveAction, MapWaveFragment } from '../src/types/map.ts'
 
 const action = (patch: Partial<MapWaveAction> = {}): MapWaveAction => ({
@@ -85,6 +85,44 @@ const detail = (...fragments: MapWaveFragment[]): MapDetail => ({
   life: 3, initialCost: 10, deployLimit: 8, enemies: [],
   routes: [{ startPosition: { row: 2, col: 0 } }, { startPosition: { row: 0, col: 2 } }, { startPosition: { row: 2, col: 0 } }],
   waves: [{ preDelay: 200, postDelay: 0, maxTimeWaitingForNextWave: -1, advancedWaveTag: null, fragments }],
+})
+
+test('resolved totals exclude inactive groups, preserve raw counts and never turn unresolved counts into zero', () => {
+  const included = action({ resolution: { status: 'included', resolvedEnemyId: 'enemy_a', resolvedCount: 3,
+    reasons: [], conditions: ['通常で出現'], evidence: ['runes[0]'] } })
+  const excluded = action({ spawnKind: 'conditional', hiddenGroup: 'challenge', count: 9,
+    resolution: { status: 'excluded', resolvedEnemyId: 'enemy_a', resolvedCount: 0,
+      reasons: [], conditions: ['通常では出現しない'], evidence: ['runes[1]'] } })
+  assert.equal(getMapResolvedSpawnCount([included, excluded]), 3)
+  assert.equal(getMapSpecifiedSpawnCount([included, excluded]), 12)
+  assert.equal(getMapSpawnDecision(excluded), '出現しない')
+  assert.deepEqual(getMapSpawnConditionLabels(included), ['通常で出現'])
+  for (const status of ['conditional', 'unknown'] as const) {
+    const unresolved = action({ resolution: { status, resolvedEnemyId: 'enemy_a', resolvedCount: null,
+      reasons: ['random-spawn-group'], conditions: ['抽選'], evidence: [] } })
+    assert.equal(getMapResolvedSpawnCount([included, unresolved]), null)
+    assert.equal(getMapSpawnDecision(unresolved), '未確定')
+  }
+  assert.equal(getMapResolvedSpawnCount([action({ spawnKind: 'conditional' })]), null)
+  assert.equal(getMapResolvedSpawnCount([action()]), 3)
+  assert.equal(getMapResolvedSpawnCount([action({ count: Number.MAX_SAFE_INTEGER }), action()]), null)
+})
+
+test('flow keeps inactive and replacement decisions separate while combining ordinary resolved spawns', () => {
+  const fixed = action({ count: 1, resolution: { status: 'included', resolvedEnemyId: 'enemy_a', resolvedCount: 1,
+    reasons: [], conditions: ['固定'], evidence: [] } })
+  const inactive = action({ count: 1, resolution: { status: 'excluded', resolvedEnemyId: 'enemy_a', resolvedCount: 0,
+    reasons: [], conditions: ['通常では出現しない'], evidence: [] } })
+  const replacement = action({ count: 1, resolution: { status: 'included', resolvedEnemyId: 'enemy_b', resolvedCount: 1,
+    reasons: [], conditions: ['敵の置き換え'], evidence: ['runes[0]'] } })
+  const current = fragment(fixed, fixed, inactive, replacement)
+  const flow = getMapSpawnFlow(detail(current), current)
+  assert.equal(flow.rows.length, 3)
+  assert.equal(flow.rows[0].count, 2)
+  assert.deepEqual(flow.rows[1].actions, [inactive])
+  assert.deepEqual(flow.rows[2].enemies, [{ key: 'enemy_b', count: 1 }])
+  assert.equal(flow.rows[2].actions[0].key, 'enemy_a')
+  assert.equal(getMapResolvedSpawnCount(current.actions), 3)
 })
 
 test('entrance labels cover source tile kinds and referenced in-bounds routes in map reading order', () => {

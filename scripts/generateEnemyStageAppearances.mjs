@@ -63,6 +63,7 @@ export function selectStageLevels(stageTableSource, {
       levelId,
       stageId,
       difficulty: readString(stage.difficulty),
+      diffGroup: readString(stage.diffGroup),
     })
     candidatesByLevel.set(levelId, candidates)
   }
@@ -70,7 +71,11 @@ export function selectStageLevels(stageTableSource, {
   const levels = [...candidatesByLevel.entries()]
     .map(([levelId, candidates]) => {
       const [canonical] = [...candidates].sort(compareStageCandidates)
-      return { levelId, stageId: canonical.stageId }
+      const context = {
+        ...(canonical.difficulty ? { difficulty: canonical.difficulty } : {}),
+        ...(canonical.diffGroup ? { diffGroup: canonical.diffGroup } : {}),
+      }
+      return { levelId, stageId: canonical.stageId, ...(Object.keys(context).length ? { context } : {}) }
     })
     .sort((a, b) => a.levelId.localeCompare(b.levelId, 'en', { numeric: true }))
 

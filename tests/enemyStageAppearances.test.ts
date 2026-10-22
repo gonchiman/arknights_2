@@ -49,8 +49,8 @@ test('戦闘ステージをlevelIdで重複除去し、通常難易度のstageId
 
   assert.equal(selection.stageRecordCount, 3)
   assert.deepEqual(selection.levels, [
-    { levelId: 'activities/act/level_test_b', stageId: 'act_02' },
-    { levelId: 'obt/main/level_test_a', stageId: 'main_01' },
+    { levelId: 'activities/act/level_test_b', stageId: 'act_02', context: { difficulty: 'NORMAL' } },
+    { levelId: 'obt/main/level_test_a', stageId: 'main_01', context: { difficulty: 'NORMAL' } },
   ])
   assert.equal(normalizeLevelId('\\Obt\\Main\\Level_Test_A.json'), 'obt/main/level_test_a')
 })
@@ -106,8 +106,22 @@ test('物語と標準が同じlevelIdを参照する場合は標準を1件とし
     easy: { stageId: 'easy_01', levelId: 'Obt/Main/Shared', diffGroup: 'EASY', isStoryOnly: false },
     normal: { stageId: 'normal_01', levelId: 'obt/main/shared', diffGroup: 'NORMAL', isStoryOnly: false },
   } }, { excludeStoryEnvironment: true })
-  assert.deepEqual(selection.levels, [{ levelId: 'obt/main/shared', stageId: 'normal_01' }])
+  assert.deepEqual(selection.levels, [{ levelId: 'obt/main/shared', stageId: 'normal_01', context: { diffGroup: 'NORMAL' } }])
   assert.deepEqual(selection.excludedLevelIds, [])
+})
+
+test('難易度contextは重複除去後の代表ステージから保持し、未指定値を推測しない', () => {
+  const selection = selectStageLevels({ stages: {
+    challenge: { stageId: 'main_01#f#', levelId: 'Obt/Main/Shared', difficulty: 'FOUR_STAR', diffGroup: 'NONE', isStoryOnly: false },
+    normal: { stageId: 'main_01', levelId: 'obt/main/shared', difficulty: 'NORMAL', diffGroup: 'NORMAL', isStoryOnly: false },
+    tough: { stageId: 'tough_01', levelId: 'obt/main/tough', difficulty: 'NORMAL', diffGroup: 'TOUGH', isStoryOnly: false },
+    unspecified: { stageId: 'unspecified', levelId: 'obt/unspecified', isStoryOnly: false },
+  } })
+  assert.deepEqual(selection.levels, [
+    { levelId: 'obt/main/shared', stageId: 'main_01', context: { difficulty: 'NORMAL', diffGroup: 'NORMAL' } },
+    { levelId: 'obt/main/tough', stageId: 'tough_01', context: { difficulty: 'NORMAL', diffGroup: 'TOUGH' } },
+    { levelId: 'obt/unspecified', stageId: 'unspecified' },
+  ])
 })
 
 test('敵統計はゾーン分類でその他を除外し、一覧と標準・イベント・物資調達を維持する', () => {

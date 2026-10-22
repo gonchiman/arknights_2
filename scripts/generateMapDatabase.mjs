@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { extractLevelEnemyIds, selectStageLevels } from './generateEnemyStageAppearances.mjs'
 import { buildEnemyHistogramCounts, readCachedLevels } from './generateEnemyHistogramCounts.mjs'
+import { analyzeEnemySpawns } from './lib/enemySpawnConditions.mjs'
 import { getMapEntrances } from '../src/lib/mapWaves.ts'
 import { MAP_ENEMY_IMMUNITY_KEYS } from '../src/types/map.ts'
 
@@ -167,23 +168,27 @@ function classifyMapSpawn(action, wave, fragment) {
  * These values are not a simulated global timeline; branch actions are separate.
  * Null means unavailable structure, while [] means a known empty wave schedule.
  */
-export function extractMapWaves(source) {
+export function extractMapWaves(source, context = {}, spawnAnalysis) {
   const waves = record(source)?.waves
   if (!Array.isArray(waves) || waves.some((wave) => !record(wave) || !Array.isArray(wave.fragments)
     || wave.fragments.some((fragment) => !record(fragment) || !Array.isArray(fragment.actions)
       || fragment.actions.some((action) => !record(action))))) return null
+  const analysis = spawnAnalysis ?? analyzeEnemySpawns(source, context)
+  const resolutions = new Map(analysis.actions.map(({ waveIndex, fragmentIndex, actionIndex, ...resolution }) => [
+    `${waveIndex}/${fragmentIndex}/${actionIndex}`, resolution,
+  ]))
   const integer = (value) => Number.isSafeInteger(unwrap(value)) && unwrap(value) >= 0 ? unwrap(value) : null
   const boolean = (value) => typeof unwrap(value) === 'boolean' ? unwrap(value) : null
-  return waves.map((wave) => ({
+  return waves.map((wave, waveIndex) => ({
     preDelay: nonnegative(wave.preDelay),
     postDelay: nonnegative(wave.postDelay),
     // -1 is an explicit upstream sentinel, not an invalid or missing delay.
     maxTimeWaitingForNextWave: number(wave.maxTimeWaitingForNextWave) === -1 ? -1
       : nonnegative(wave.maxTimeWaitingForNextWave),
     advancedWaveTag: text(wave.advancedWaveTag),
-    fragments: wave.fragments.map((fragment) => ({
+    fragments: wave.fragments.map((fragment, fragmentIndex) => ({
       preDelay: nonnegative(fragment.preDelay),
-      actions: fragment.actions.map((action) => ({
+      actions: fragment.actions.map((action, actionIndex) => ({
         actionType: typeof action.actionType === 'string' && action.actionType.trim() ? action.actionType : 'UNKNOWN',
         key: text(action.key),
         count: integer(action.count),
@@ -199,6 +204,8 @@ export function extractMapWaves(source) {
         blockFragment: boolean(action.blockFragment),
         dontBlockWave: boolean(action.dontBlockWave),
         ...classifyMapSpawn(action, wave, fragment),
+        ...(resolutions.has(`${waveIndex}/${fragmentIndex}/${actionIndex}`)
+          ? { resolution: resolutions.get(`${waveIndex}/${fragmentIndex}/${actionIndex}`) } : {}),
       })),
     })),
   }))
@@ -333,7 +340,7 @@ export function buildMapDatabase({
   const details = Object.fromEntries(Array.from({ length: 16 }, (_, index) => [
     `details-${index.toString(16)}.json`, { schemaVersion: 1, generatedAt, maps: {} },
   ]))
-  const maps = selection.levels.map(({ levelId, stageId }) => {
+  const maps = selection.levels.map(({ levelId, stageId, context }) => {
     const stage = stages.get(stageId)
     const zoneId = text(stage?.zoneId) ?? ''
     const zone = zones[zoneId]
@@ -349,14 +356,15 @@ export function buildMapDatabase({
       features: null, reasons: ['missing-level'], detailFile: null,
     }
     const source = levelsById.get(levelId)
-    const counts = buildEnemyHistogramCounts([{ levelId, data: source }])
-    const reasons = counts.diagnostics.excludedLevels[0]?.reasons ?? []
+    const analysis = analyzeEnemySpawns(source, context)
+    const reasons = [...analysis.reasons].sort(compare)
     const supported = reasons.length === 0
-    const waves = extractMapWaves(source)
+    const waves = extractMapWaves(source, context, analysis)
     // Keep declared references and SPAWN-only IDs, including conditional spawns.
     const spawnIds = waves?.flatMap((wave) => wave.fragments.flatMap((fragment) => fragment.actions
       .flatMap((action) => action.actionType === 'SPAWN' && action.key ? [action.key] : []))) ?? []
-    const enemyIds = [...new Set([...extractLevelEnemyIds(source), ...Object.keys(counts.enemies), ...spawnIds])].sort(compare)
+    const resolvedIds = analysis.actions.flatMap(({ resolvedEnemyId }) => resolvedEnemyId ? [resolvedEnemyId] : [])
+    const enemyIds = [...new Set([...extractLevelEnemyIds(source), ...analysis.counts.keys(), ...spawnIds, ...resolvedIds])].sort(compare)
     for (const id of enemyIds) usedEnemies.add(id)
     let geometry
     try { geometry = extractMapGeometry(source) } catch (error) {
@@ -364,7 +372,7 @@ export function buildMapDatabase({
     }
     const options = record(record(source)?.options)
     const detailFile = mapDetailFile(levelId)
-    const enemies = enemyIds.map((id) => ({ id, count: supported ? counts.enemies[id]?.spawnCount ?? 0 : null }))
+    const enemies = enemyIds.map((id) => ({ id, count: supported ? analysis.counts.get(id) ?? 0 : null }))
     details[detailFile].maps[levelId] = {
       levelId, ...geometry, life: nonnegative(options?.maxLifePoint), initialCost: nonnegative(options?.initialCost),
       deployLimit: nonnegative(options?.characterLimit), enemies, routes: extractMapRoutes(source), waves,

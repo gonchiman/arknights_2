@@ -9,7 +9,7 @@ import {
   getMapCoverageZones,
   summarizeMapCoverage,
 } from '../src/lib/enemyMapCoverage.ts'
-import { parseMapIndex } from '../src/lib/mapDatabase.ts'
+import { getMapDetail, parseMapDetailShard, parseMapIndex } from '../src/lib/mapDatabase.ts'
 import type { MapSummary } from '../src/types/map.ts'
 
 const source = await readFile(new URL('../public/data/maps/index.json', import.meta.url), 'utf8')
@@ -24,7 +24,7 @@ test('the recorded map population matches the histogram coverage in both modes',
   const histogram = JSON.parse(await readFile(new URL('../public/data/enemy-histogram-counts.json', import.meta.url), 'utf8'))
   const spawns = summarizeMapCoverage(maps, 'SPAWNS')
   const appearances = summarizeMapCoverage(maps, 'MAPS')
-  assert.deepEqual(spawns, { total: 2298, included: 1273, excluded: 828, missing: 197 })
+  assert.deepEqual(spawns, { total: 2298, included: 1279, excluded: 822, missing: 197 })
   assert.deepEqual(appearances, { total: 2298, included: 1735, excluded: 366, missing: 197 })
   assert.equal(spawns.included, histogram.summary.spawnMapCount)
   assert.equal(spawns.excluded, histogram.summary.spawnExcludedMapCount + histogram.summary.excludedMapCount)
@@ -35,8 +35,8 @@ test('the recorded map population matches the histogram coverage in both modes',
 test('the four content categories preserve the complete map population', () => {
   const categories = getMapCoverageCategories(maps, 'SPAWNS')
   assert.deepEqual(categories, [
-    { key: 'main', label: 'メインテーマ', total: 584, included: 375, excluded: 190, missing: 19 },
-    { key: 'event', label: 'イベント', total: 1416, included: 863, excluded: 375, missing: 178 },
+    { key: 'main', label: 'メインテーマ', total: 584, included: 379, excluded: 186, missing: 19 },
+    { key: 'event', label: 'イベント', total: 1416, included: 865, excluded: 373, missing: 178 },
     { key: 'supply', label: '物資調達・SoC', total: 35, included: 35, excluded: 0, missing: 0 },
     { key: 'other', label: 'その他', total: 263, included: 0, excluded: 263, missing: 0 },
   ])
@@ -44,6 +44,24 @@ test('the four content categories preserve the complete map population', () => {
   assert.deepEqual(appearances.map(({ included }) => included), [462, 1238, 35, 0])
   for (const category of [...categories, ...appearances]) {
     assert.equal(category.included + category.excluded + category.missing, category.total)
+  }
+})
+
+test('every histogram enemy total equals the resolved map details in the same aggregation scope', async () => {
+  const histogram = JSON.parse(await readFile(new URL('../public/data/enemy-histogram-counts.json', import.meta.url), 'utf8'))
+  const included = maps.filter((map) => getMapCoverageStatus(map, 'SPAWNS') === 'included')
+  const shards = new Map(await Promise.all([...new Set(included.map((map) => map.detailFile!))].map(async (file) =>
+    [file, parseMapDetailShard(JSON.parse(await readFile(new URL(`../public/data/maps/${file}`, import.meta.url), 'utf8')))] as const)))
+  const totals = new Map<string, number>()
+  for (const map of included) {
+    const detail = getMapDetail(shards.get(map.detailFile!)!, map)
+    for (const enemy of detail.enemies) {
+      assert.notEqual(enemy.count, null)
+      totals.set(enemy.id, (totals.get(enemy.id) ?? 0) + enemy.count!)
+    }
+  }
+  for (const id of new Set([...totals.keys(), ...Object.keys(histogram.enemies)])) {
+    assert.equal(totals.get(id) ?? 0, histogram.enemies[id]?.spawnCount ?? 0, id)
   }
 })
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { loadMapDetail } from '../lib/mapDatabase'
-import { getMapSpawnFlow, getMapSpecifiedSpawnCount } from '../lib/mapWaves'
+import { getMapResolvedSpawnCount, getMapSpawnConditionLabels, getMapSpawnDecision, getMapSpawnFlow, getMapSpecifiedSpawnCount } from '../lib/mapWaves'
+import { getMapCoverageReasons, getMapCoverageStatus } from '../lib/enemyMapCoverage'
 import type { MapDetail, MapIndex, MapSummary, MapWaveAction } from '../types/map'
 
 const number = (value: number | null) => value === null ? '—' : value.toLocaleString('ja-JP', { maximumFractionDigits: 6 })
@@ -9,7 +10,6 @@ const eventLabels: Record<string, string> = {
   STORY: 'ストーリー', PREVIEW_CURSOR: '経路の予告', DISPLAY_ENEMY_INFO: '敵情報の表示',
   TUTORIAL: 'チュートリアル', PLAY_BGM: 'BGMの変更',
 }
-const kindLabel = (action: MapWaveAction) => action.spawnKind === 'conditional' ? '条件付き' : action.spawnKind === 'unknown' ? '未確認' : '固定'
 
 export function MapWaveInformation({ map, index }: { map: MapSummary; index: MapIndex }) {
   const [detail, setDetail] = useState<MapDetail | null>(null)
@@ -46,13 +46,21 @@ function MapWaveSchedule({ detail, map, index }: { detail: MapDetail; map: MapSu
   const omittedLabel = typeof flow.omittedCount === 'string' ? BigInt(flow.omittedCount).toLocaleString('ja-JP') : number(flow.omittedCount)
   const selected = rows.find((row) => row.id === selectedId) ?? rows[0]
   const events = fragment?.actions.filter((action) => action.actionType !== 'SPAWN') ?? []
-  const hasConditions = rows.some((row) => row.actions.some((action) => action.spawnKind !== 'fixed'))
-  const count = getMapSpecifiedSpawnCount(wave.fragments.flatMap((item) => item.actions))
+  const hasConditions = rows.some((row) => row.actions.some((action) => action.spawnKind !== 'fixed'
+    || action.resolution?.conditions.some((label) => label !== '固定')))
+  const hasResolution = rows.some((row) => row.actions.some((action) => action.resolution))
+  const waveActions = wave.fragments.flatMap((item) => item.actions)
+  const resolvedCount = getMapResolvedSpawnCount(waveActions)
+  const count = resolvedCount ?? getMapSpecifiedSpawnCount(waveActions)
   const name = (action: Pick<MapWaveAction, 'key'>) => index.enemies[action.key ?? '']?.name ?? action.key ?? '敵名未確認'
   const changeWave = (next: number) => { setWaveIndex(next); setFragmentIndex(0); setSelectedId(null) }
   const changeFragment = (next: number) => { setFragmentIndex(next); setSelectedId(null) }
   const nextTime = selected?.time == null ? null : rows.find((row) => row.time !== null && row.time > selected.time!)?.time ?? null
-  const configured = map.status !== 'supported'
+  const configured = resolvedCount === null
+  const coverage = getMapCoverageStatus(map, 'SPAWNS')
+  const aggregationLabel = (action: MapWaveAction) => getMapSpawnDecision(action) === '出現しない'
+    ? '対象外' : coverage === 'included' && getMapSpawnDecision(action) === '出現する'
+      ? '採用' : map.status === 'supported' && coverage === 'excluded' ? '対象外' : '保留'
 
   return <div className="map-wave-schedule">
     <div className="map-wave-overview">
@@ -65,27 +73,42 @@ function MapWaveSchedule({ detail, map, index }: { detail: MapDetail; map: MapSu
     {wave.fragments.length > 0 ? <>
       <div className="map-wave-fragments" role="group" aria-label="区間選択">
         {wave.fragments.map((item, i) => {
-          const itemCount = getMapSpecifiedSpawnCount(item.actions)
+          const itemResolved = getMapResolvedSpawnCount(item.actions)
+          const itemCount = itemResolved ?? getMapSpecifiedSpawnCount(item.actions)
           return <button type="button" key={i} aria-pressed={i === fragmentIndex} onClick={() => changeFragment(i)}>
-            <span>区間 {i + 1}</span><small>{itemCount === null ? '体数未確認' : `${number(itemCount)}体${configured ? '（設定）' : ''}`}</small>
+            <span>区間 {i + 1}</span><small>{itemCount === null ? '体数未確認' : `${number(itemCount)}体${itemResolved === null ? '（設定）' : ''}`}</small>
           </button>
         })}
       </div>
       <div className="map-wave-caption"><span>区間開始からの設定時刻</span><span>開始前の待ち {seconds(fragment.preDelay)}</span></div>
-      <div className="map-table-scroll map-wave-table-scroll" key={`${waveIndex}-${fragmentIndex}`}>
-        {rows.length ? <table className="map-wave-table" aria-label={`ウェーブ${waveIndex + 1} 区間${fragmentIndex + 1}の登場順`}>
-          <colgroup><col className="map-wave-time-column" /><col className="map-wave-entrance-column" /><col /><col className="map-wave-count-column" />{hasConditions && <col className="map-wave-condition-column" />}</colgroup>
-          <thead><tr><th scope="col" className="map-numeric">出現時刻（秒）</th><th scope="col" className="map-wave-entrance">出現口</th><th scope="col">敵名</th><th scope="col" className="map-numeric">{hasOmitted ? '体数（表示分）' : configured ? '体数（設定）' : '体数'}</th>{hasConditions && <th scope="col">出現条件</th>}</tr></thead>
+      <div className="map-table-scroll map-wave-table-scroll" role="region" aria-label="敵の登場順" tabIndex={0} key={`${waveIndex}-${fragmentIndex}`}>
+        {rows.length ? <table className={`map-wave-table${hasConditions ? ' has-conditions' : ''}`} aria-label={`ウェーブ${waveIndex + 1} 区間${fragmentIndex + 1}の登場順`}>
+          <colgroup><col className="map-wave-time-column" /><col className="map-wave-entrance-column" /><col /><col className="map-wave-count-column" />{hasConditions && <col className="map-wave-condition-column" />}{hasResolution && <col className="map-wave-decision-column" />}</colgroup>
+          <thead><tr><th scope="col" className="map-numeric">出現時刻（秒）</th><th scope="col" className="map-wave-entrance">出現口</th><th scope="col">敵名</th><th scope="col" className="map-numeric">{hasOmitted ? '体数（表示分）' : hasConditions || configured ? '設定体数' : '体数'}</th>{hasConditions && <th scope="col">出現条件</th>}{hasResolution && <th scope="col">集計</th>}</tr></thead>
           <tbody>{rows.map((row) => <tr key={row.id} className={row.id === selected?.id ? 'is-selected' : ''} onClick={() => setSelectedId(row.id)}>
             <td className="map-numeric">{number(row.time)}</td><td className="map-wave-entrance">{row.entrance?.label ?? '未確認'}</td>
             <td className="map-wave-enemies"><button type="button" aria-pressed={row.id === selected?.id} aria-label={`${seconds(row.time)}、出現口${row.entrance?.label ?? '未確認'}、${row.enemies.map(name).join('、')}の出現情報`} onClick={() => setSelectedId(row.id)}>
               {row.enemies.map((enemy, i) => <span key={`${enemy.key}-${i}`}>{name(enemy)}{row.enemies.length > 1 && <small> ×{number(enemy.count)}</small>}</span>)}
             </button></td>
             <td className="map-numeric">{number(row.count)}</td>
-            {hasConditions && <td className="map-wave-condition">{[...new Set(row.actions.map(kindLabel))].join('・')}</td>}
+            {hasConditions && <td className="map-wave-condition">{[...new Set(row.actions.flatMap(getMapSpawnConditionLabels))].join('・')}</td>}
+            {hasResolution && <td className="map-wave-decision">{[...new Set(row.actions.map(aggregationLabel))].join('・')}</td>}
           </tr>)}</tbody>
         </table> : <p className="map-empty" role="status">この区間に敵の出現指定はありません。</p>}
       </div>
+      {selected && hasResolution && <details className="map-wave-help map-wave-evidence" key={`evidence-${waveIndex}-${fragmentIndex}-${selected.id}`}>
+        <summary>選択した出現指定の判定根拠</summary>
+        {selected.actions.map((action, i) => <div key={i}>
+          <strong>{name(action)} · {getMapSpawnDecision(action)}</strong>
+          <dl>
+            <div><dt>条件</dt><dd>{getMapSpawnConditionLabels(action).join('・')}</dd></div>
+            <div><dt>指定全体の体数</dt><dd>設定 {number(action.count)}体 → 判定後 {action.resolution?.resolvedCount == null ? '未確定' : `${number(action.resolution.resolvedCount)}体`}</dd></div>
+            {action.resolution?.resolvedEnemyId && action.resolution.resolvedEnemyId !== action.key && <div><dt>置き換え後の敵</dt><dd>{name({ key: action.resolution.resolvedEnemyId })}</dd></div>}
+          </dl>
+          {!!action.resolution?.evidence.length && <ul>{action.resolution.evidence.map((value, j) => <li key={j}><code>{value}</code></li>)}</ul>}
+        </div>)}
+        <p>このマップの出現回数集計：{coverage === 'included' ? '対象' : '対象外'}（{getMapCoverageReasons(map, 'SPAWNS').join('、')}）</p>
+      </details>}
       {(hasOmitted || flow.unknownCount > 0) && <p className="map-wave-incomplete" role="status">
         {hasOmitted && <>表示上限のため {omittedLabel}体分を省略しています。</>}
         {flow.unknownCount > 0 && <>情報を確認しきれない出現設定が {number(flow.unknownCount)}件あります。</>}
@@ -104,7 +127,8 @@ function MapWaveSchedule({ detail, map, index }: { detail: MapDetail; map: MapSu
       <p>出現指定の開始時刻と間隔から、1体ずつの出現時刻を展開しています。同じ時刻・同じ出現口の固定出現を1行にまとめ、体数はその合計です。敵が複数種類いる行は、敵名に内訳を添えています。</p>
       <p>出現口のA・B・C…はマップの上から下、同じ高さでは左から右の順です。同じ開始マスを共有する経路には同じ記号を使い、ウェーブや区間を切り替えても変わりません。経路の開始マスを確認できない場合は「未確認」と表示します。</p>
       {hasConditions && <p>条件付き・未確認の出現指定は別々に表示しています。同じ時刻の行でも、同時に出現するとは限りません。</p>}
-      {configured && <p>体数は設定値です。条件やランダム選択、敵の置き換えなどを反映した実際の出現数ではありません。分岐側の出現指定はこの表に含みません。</p>}
+      <p>条件を判定できたウェーブ・区間の体数は判定後の合計です。未確定の場合は設定数を表示します。表の設定体数は元の出現指定を残し、判定根拠で条件適用後の体数を確認できます。分岐側の出現指定はこの表に含みません。</p>
+      {hasResolution && <p>集計の「採用」は出現回数の集計に含める指定、「対象外」は条件不成立または集計範囲外、「保留」はマップ全体の出現数が確定していない指定です。確定した指定だけを部分的に集計することはありません。</p>}
       <dl><div><dt>ウェーブ開始前の待ち</dt><dd>{seconds(wave.preDelay)}</dd></div><div><dt>ウェーブ終了後の待ち</dt><dd>{seconds(wave.postDelay)}</dd></div></dl>
     </details>
   </div>

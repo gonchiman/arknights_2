@@ -130,6 +130,65 @@ test('same display code keeps distinct environment levels and their difficulty m
   ])
 })
 
+test('normal and tough stage contexts resolve hidden groups while preserving original settings', () => {
+  const source = level('obt/normal', [
+    spawn('enemy_a', 2, { hiddenGroup: 'normal' }), spawn('enemy_b', 7, { hiddenGroup: 'raid' }),
+  ], { runes: [
+    { difficultyMask: 'NORMAL', key: 'level_hidden_group_enable', blackboard: [{ key: 'key', valueStr: 'normal' }] },
+    { difficultyMask: 'NORMAL', key: 'level_hidden_group_disable', blackboard: [{ key: 'key', valueStr: 'raid' }] },
+    { difficultyMask: 'FOUR_STAR', key: 'level_hidden_group_disable', blackboard: [{ key: 'key', valueStr: 'normal' }] },
+    { difficultyMask: 'FOUR_STAR', key: 'level_hidden_group_enable', blackboard: [{ key: 'key', valueStr: 'raid' }] },
+  ] })
+  const original = structuredClone(source)
+  const output = buildMapDatabase(options([source, { ...source, levelId: 'obt/tough' }], {
+    challenge: stage('normal#f#', 'obt/normal', { difficulty: 'FOUR_STAR' }),
+    normal: stage('normal', 'obt/normal', { diffGroup: 'NORMAL' }),
+    tough: stage('tough', 'obt/tough', { diffGroup: 'TOUGH' }),
+  }))
+  assert.deepEqual(source, original)
+  const [normal, tough] = output.index.maps
+  assert.equal(normal.stageId, 'normal')
+  assert.equal(normal.status, 'supported')
+  assert.equal(normal.spawnCount, 2)
+  assert.equal(tough.status, 'supported')
+  assert.equal(tough.spawnCount, 7)
+  for (const [map, expected] of [[normal, [2, 0]], [tough, [0, 7]]]) {
+    assert.deepEqual(map.enemySpawnCounts, { enemy_a: 2, enemy_b: 7 })
+    const detail = output.details[map.detailFile].maps[map.levelId]
+    assert.deepEqual(detail.enemies.map((enemy) => enemy.count), expected)
+    const actions = detail.waves[0].fragments[0].actions
+    assert.deepEqual(actions.map((action) => action.count), [2, 7])
+    assert.deepEqual(actions.map((action) => action.hiddenGroup), ['normal', 'raid'])
+    assert.deepEqual(actions.map((action) => action.resolution.resolvedCount), expected)
+    assert.deepEqual(actions.map((action) => action.resolution.status), expected.map((count) => count ? 'included' : 'excluded'))
+    assert.ok(actions.every((action) => action.resolution.evidence.length > 0))
+  }
+})
+
+test('resolved replacement counts and registry use the replacement ID without rewriting raw enemies', () => {
+  const source = level('obt/replacement', [spawn('enemy_a', 3)], {
+    runes: [{ difficultyMask: 'NORMAL', key: 'level_enemy_replace', blackboard: [
+      { key: 'key', valueStr: 'enemy_a' }, { key: 'value', valueStr: 'enemy_replacement' },
+    ] }],
+  })
+  const output = buildMapDatabase(options([source], { normal: stage('replacement', 'obt/replacement') }))
+  const summary = output.index.maps[0]
+  const detail = output.details[summary.detailFile].maps[summary.levelId]
+  assert.equal(summary.status, 'supported')
+  assert.equal(summary.spawnCount, 3)
+  assert.deepEqual(summary.enemyIds, ['enemy_a', 'enemy_b', 'enemy_replacement'])
+  assert.deepEqual(summary.enemySpawnCounts, { enemy_a: 3 })
+  assert.deepEqual(detail.enemies, [
+    { id: 'enemy_a', count: 0 }, { id: 'enemy_b', count: 0 }, { id: 'enemy_replacement', count: 3 },
+  ])
+  const action = detail.waves[0].fragments[0].actions[0]
+  assert.equal(action.key, 'enemy_a')
+  assert.equal(action.count, 3)
+  assert.equal(action.resolution.resolvedEnemyId, 'enemy_replacement')
+  assert.equal(action.resolution.resolvedCount, 3)
+  assert.equal(output.index.enemies.enemy_replacement.name, 'enemy_replacement')
+})
+
 test('hidden enemies retain names, database level zero supplies base stats, and undefined values remain null', () => {
   const result = buildMapEnemyRegistry({ enemyData: { hidden: { name: '隠れた敵', hideInHandbook: true } } }, {
     hidden: [{ level: 1, enemyData: { attributes: { maxHp: 9000, atk: 900, def: 800 } } }, {
@@ -197,12 +256,16 @@ test('AP-2-style waves preserve unequal source-time ordering and relative delay 
   assert.deepEqual(result[0].fragments.map((fragment) => fragment.preDelay), [0, 15, 17])
   assert.deepEqual(result[0].fragments[0].actions.map((action) => [action.key, action.preDelay, action.routeIndex]),
     [['enemy_a', 26, 4], ['enemy_b', 17, 5]])
-  assert.deepEqual(result[0].fragments[0].actions[0], {
+  const { resolution, ...rawAction } = result[0].fragments[0].actions[0]
+  assert.deepEqual(rawAction, {
     actionType: 'SPAWN', key: 'enemy_a', count: 2, preDelay: 26, interval: 0.8, routeIndex: 4,
     hiddenGroup: null, randomSpawnGroupKey: null, randomSpawnGroupPackKey: null,
     randomType: null, refreshType: null, managedByScheduler: true,
     blockFragment: false, dontBlockWave: false, spawnKind: 'fixed', reasons: [],
   })
+  assert.equal(resolution.status, 'included')
+  assert.equal(resolution.resolvedEnemyId, 'enemy_a')
+  assert.equal(resolution.resolvedCount, 2)
   assert.equal(result[0].fragments[2].actions[0].interval, 0)
 })
 
@@ -226,6 +289,7 @@ test('non-SPAWN events retain their positions and settings without contributing 
     ['SPAWN', 1, 'fixed'], ['DISPLAY_ENEMY_INFO', 3, null], ['SPAWN', 3, 'fixed'], ['PLAY_BGM', 40, null],
   ])
   assert.equal(detail.waves[0].fragments[0].actions[1].preDelay, 8)
+  assert.equal(detail.waves[0].fragments[0].actions[1].resolution, undefined)
 })
 
 test('conditional spawn settings are retained separately from fixed rows and unknown map totals', () => {
@@ -250,6 +314,8 @@ test('conditional spawn settings are retained separately from fixed rows and unk
   for (const key of Object.keys(conditional)) assert.equal(action[key], conditional[key])
   assert.equal(summary.spawnCount, null)
   assert.equal(summary.status, 'excluded')
+  assert.equal(action.resolution.status, 'unknown')
+  assert.equal(action.resolution.resolvedCount, null)
   assert.deepEqual(detail.enemies, [
     { id: 'enemy_a', count: null }, { id: 'enemy_b', count: null }, { id: 'unregistered', count: null },
   ])

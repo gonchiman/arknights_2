@@ -89,6 +89,15 @@ export interface MapRoute {
   startPosition: MapPosition | null
 }
 
+export interface MapSpawnResolution {
+  status: 'included' | 'excluded' | 'conditional' | 'unknown'
+  resolvedEnemyId: string | null
+  resolvedCount: number | null
+  reasons: string[]
+  conditions: string[]
+  evidence: string[]
+}
+
 /** Source settings for one action; array position is its original record order. */
 export interface MapWaveAction {
   actionType: string
@@ -108,6 +117,8 @@ export interface MapWaveAction {
   /** Null for events that do not spawn enemies. Fixed does not assert absolute timing. */
   spawnKind: 'fixed' | 'conditional' | 'unknown' | null
   reasons: string[]
+  /** Evaluated for this map's canonical environment; raw fields stay unchanged. */
+  resolution?: MapSpawnResolution
 }
 
 export interface MapWaveFragment {

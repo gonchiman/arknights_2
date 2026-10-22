@@ -43,6 +43,33 @@ export function getMapSpecifiedSpawnCount(actions: readonly MapWaveAction[]): nu
   return total
 }
 
+/** Resolved main-wave subtotal; map-wide branches can still prevent a total. */
+export function getMapResolvedSpawnCount(actions: readonly MapWaveAction[]): number | null {
+  let total = 0
+  for (const action of actions) {
+    if (action.actionType !== 'SPAWN') continue
+    const resolution = action.resolution
+    const count = resolution
+      ? (resolution.status === 'included' || resolution.status === 'excluded' ? resolution.resolvedCount : null)
+      : action.spawnKind === 'fixed' ? action.count : null
+    if (!validCount(count)) return null
+    total += count
+    if (!Number.isSafeInteger(total)) return null
+  }
+  return total
+}
+
+export function getMapSpawnConditionLabels(action: MapWaveAction): string[] {
+  if (action.resolution?.conditions.length) return action.resolution.conditions
+  return [action.spawnKind === 'conditional' ? '条件付き' : action.spawnKind === 'unknown' ? '未確認' : '固定']
+}
+
+export function getMapSpawnDecision(action: MapWaveAction): '出現する' | '出現しない' | '未確定' {
+  if (action.resolution?.status === 'excluded') return '出現しない'
+  if (action.resolution?.status === 'included' || (!action.resolution && action.spawnKind === 'fixed')) return '出現する'
+  return '未確定'
+}
+
 /**
  * Preview raw times relative to this fragment: preDelay + interval * i.
  * These are configured candidate times, including for conditional actions.
@@ -195,18 +222,22 @@ export function getMapSpawnFlow(detail: MapDetail, fragment: MapWaveFragment): {
   let unknownCount = 0
 
   const append = (action: MapWaveAction, actionIndex: number, entrance: MapEntrance | null, time: number | null, count: number | null) => {
-    const scope = action.spawnKind === 'fixed' && entrance && time !== null
+    const canCombine = action.spawnKind === 'fixed' && (!action.resolution ||
+      (action.resolution.status === 'included' && action.resolution.conditions.every((label) => label === '固定')
+        && action.resolution.resolvedEnemyId === action.key))
+    const scope = canCombine && entrance && time !== null
       ? `entrance:${entrance.id}` : `action:${actionIndex}`
     const id = `${scope}:time:${time ?? 'unknown'}`
     const existing = rowsById.get(id)
+    const enemyKey = action.resolution?.status === 'included' ? action.resolution.resolvedEnemyId : action.key
     if (!existing) {
-      rowsById.set(id, { id, time, entrance, enemies: [{ key: action.key, count }], count, actions: [action], actionIndices: [actionIndex] })
+      rowsById.set(id, { id, time, entrance, enemies: [{ key: enemyKey, count }], count, actions: [action], actionIndices: [actionIndex] })
       return
     }
     existing.count = addCounts(existing.count, count)
-    const enemy = existing.enemies.find((entry) => entry.key === action.key)
+    const enemy = existing.enemies.find((entry) => entry.key === enemyKey)
     if (enemy) enemy.count = addCounts(enemy.count, count)
-    else existing.enemies.push({ key: action.key, count })
+    else existing.enemies.push({ key: enemyKey, count })
     if (!existing.actionIndices.includes(actionIndex)) {
       existing.actions.push(action)
       existing.actionIndices.push(actionIndex)
