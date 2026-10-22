@@ -18,6 +18,7 @@ export const DATA_SOURCE_URLS = {
   enemyHandbook: `${EXCEL_BASE}/enemy_handbook_table.json`,
   enemyDatabase: `${LEVEL_BASE}/enemydata/enemy_database.json`,
   stageTable: `${EXCEL_BASE}/stage_table.json`,
+  zoneTable: `${EXCEL_BASE}/zone_table.json`,
   levelDirectory: `${ARKNIGHTS_GAMEDATA_REPOSITORY.url}/tree/master/jp/gamedata/levels`,
   levelRawBase: LEVEL_BASE,
 } as const
@@ -128,6 +129,15 @@ export const DATA_SOURCE_GROUPS = [
         usage: ['登場ステージ数の事前集計'],
         access: ['generation'],
         linkLabel: 'stage_table.json を開く',
+      },
+      {
+        id: 'zone-table',
+        file: 'zone_table.json',
+        url: DATA_SOURCE_URLS.zoneTable,
+        description: 'マップの分類から敵統計の集計対象を判定します。',
+        usage: ['登場ステージ数の事前集計'],
+        access: ['generation'],
+        linkLabel: 'zone_table.json を開く',
       },
       {
         id: 'level-files',

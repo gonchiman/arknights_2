@@ -1,6 +1,8 @@
 import type { SkillCoarseCategory } from './skillCoarseClassification.ts'
 import type { DamageType } from './damageCalculator.ts'
 import { SKILL_DIRECTORY_SP_TYPE_LABELS } from './skillDirectory.ts'
+import type { GuardSkillRecipe } from './guardCombatTypes.ts'
+import { buildGuardSkillStructures } from './guardSkillStructure.ts'
 
 export type SkillStructureComparison = 'EQ' | 'NE' | 'GT' | 'GTE' | 'LT' | 'LTE'
 export type SkillStructureNumericMetric = 'skillActivationCount' | 'actualAttackTargetCount'
@@ -106,6 +108,7 @@ export interface SkillStructureSelection {
 }
 
 export interface SkillStructure {
+  readonly guardRecipe?: GuardSkillRecipe
   readonly basicInfo: SkillStructureSelection & {
     readonly operatorName: string
     readonly skillName: string
@@ -340,6 +343,7 @@ function signedNumber(value: number): string {
  * description breakdown as executable effects.
  */
 export const SKILL_STRUCTURES: readonly SkillStructure[] = [
+  ...buildGuardSkillStructures(),
   {
     basicInfo: { operatorId: 'char_4009_irene', operatorName: 'アイリーニ', skillId: 'skchr_irene_1',
       skillIndex: 1, skillName: '舞風', skillLevel: '特化3', levelIndex: 9 },

@@ -148,7 +148,9 @@
 .map-wave-time-column { width: 104px; }
 .map-wave-entrance-column { width: 68px; }
 .map-wave-count-column { width: 70px; }
-.map-wave-condition-column { width: 80px; }
+.map-wave-condition-column { width: 150px; }
+.map-wave-decision-column { width: 62px; }
+.map-database-page .map-wave-table.has-conditions { min-width: 610px; }
 .map-database-page .map-wave-table .map-wave-entrance { text-align: center; }
 .map-wave-table tbody tr { cursor: pointer; }
 .map-wave-table tbody tr:hover { background: var(--surface-soft); }
@@ -158,7 +160,8 @@
 .map-wave-table td button > span { display: block; overflow-wrap: anywhere; }
 .map-wave-table td button small { font-size: inherit; color: var(--text-muted); white-space: nowrap; }
 .map-wave-table td button:focus-visible { outline: 2px solid var(--text-soft); outline-offset: -2px; }
-.map-wave-condition { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+.map-wave-condition { color: var(--text-muted); font-size: 11px; overflow-wrap: anywhere; }
+.map-wave-decision { font-size: 11px; white-space: nowrap; }
 .map-wave-incomplete { margin: 8px 0; font-size: 12px; color: var(--text-muted); }
 .map-wave-selected { min-height: 66px; border-top: 1px solid var(--border); padding: 12px 0; font-size: 12px; }
 .map-wave-selected > div { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
@@ -175,6 +178,11 @@
 .map-wave-help dl { margin: 8px 0 0; display: grid; gap: 6px; }
 .map-wave-help dl > div { display: flex; gap: 12px; }
 .map-wave-help dd { margin: 0; }
+.map-wave-evidence { margin: 0 0 12px; }
+.map-wave-evidence > div { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.map-wave-evidence ul { padding-left: 18px; overflow-wrap: anywhere; }
+.map-wave-evidence li { margin-top: 6px; }
+.map-wave-evidence code { white-space: pre-wrap; }
 @container (max-width: 440px) {
   .map-enemy-condition-row { grid-template-columns: minmax(0, 1fr) 80px 34px; }
   .map-enemy-condition-value { grid-column: 1 / 3; grid-row: 2; }
@@ -185,7 +193,7 @@
   .map-wave-time-column { width: 70px; }
   .map-wave-entrance-column { width: 52px; }
   .map-wave-count-column { width: 48px; }
-  .map-wave-condition-column { width: 64px; }
+  .map-wave-condition-column { width: 150px; }
   .map-database-page .map-wave-table th, .map-database-page .map-wave-table td { padding: 8px 6px; }
   .map-wave-table td button { padding: 8px 6px; }
 }

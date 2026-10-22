@@ -174,8 +174,8 @@ test('bundled map index and every lazy shard agree; missing and conditional maps
   const generated = parseMapIndex(JSON.parse(await readFile(new URL('index.json', source), 'utf8')))
   assert.equal(generated.maps.length, 2298)
   assert.deepEqual(['main', 'event', 'supply', 'other'].map((category) => generated.maps.filter((map) => getMapCategory(map) === category).length), [584, 1416, 35, 263])
-  assert.equal(generated.maps.filter((map) => map.status === 'supported').length, 1474)
-  assert.equal(generated.maps.filter((map) => map.status === 'excluded').length, 524)
+  assert.equal(generated.maps.filter((map) => map.status === 'supported').length, 1480)
+  assert.equal(generated.maps.filter((map) => map.status === 'excluded').length, 518)
   assert.equal(generated.maps.filter((map) => map.status === 'missing').length, 300)
   const shards = new Map(await Promise.all([...new Set(generated.maps.flatMap((map) => map.detailFile ? [map.detailFile] : []))]
     .map(async (file) => [file, parseMapDetailShard(JSON.parse(await readFile(new URL(file, source), 'utf8')))] as const)))
@@ -208,6 +208,13 @@ test('bundled map index and every lazy shard agree; missing and conditional maps
   assert.ok(Array.isArray(detail.waves))
   assert.equal(getMapSpecifiedSpawnCount(detail.waves.flatMap((wave) => wave.fragments.flatMap((fragment) => fragment.actions))), 41)
   assert.equal(generated.maps.find((map) => map.stageId === 'main_10-04')!.code, '10-5')
+  const toughTenFive = generated.maps.find((map) => map.stageId === 'tough_10-04')!
+  assert.equal(toughTenFive.spawnCount, 50)
+  const toughSpawns = getMapDetail(shards.get(toughTenFive.detailFile!)!, toughTenFive).waves!
+    .flatMap((wave) => wave.fragments.flatMap((fragment) => fragment.actions)).filter((action) => action.hiddenGroup === 'fstar')
+  assert.equal(toughSpawns.length, 2)
+  assert.ok(toughSpawns.every((action) => action.resolution?.status === 'included' && action.resolution.resolvedCount === 1))
+  assert.equal(generated.maps.find((map) => map.stageId === 'main_10-04')!.status, 'excluded')
   const nineFive = generated.maps.find((map) => map.stageId === 'main_09-04')!
   assert.equal(nineFive.code, '9-5')
   const nineFiveDetail = getMapDetail(shards.get(nineFive.detailFile!)!, nineFive)
@@ -271,6 +278,33 @@ const wave: MapWave = {
 const parseWaves = (waves: unknown) => parseMapDetailShard({
   ...shard, maps: { [summary.levelId]: { ...shard.maps[summary.levelId], waves } },
 }).maps[summary.levelId].waves
+
+test('spawn resolution parsing preserves source fields and independently clones condition evidence', () => {
+  const resolution = { status: 'included', resolvedEnemyId: 'enemy_b', resolvedCount: 3,
+    reasons: [], conditions: ['敵の置き換え'], evidence: ['runes[0]: enemy_a → enemy_b'] }
+  const parsed = parseWaves([{ ...wave, fragments: [{ preDelay: 0, actions: [{ ...waveAction, resolution }] }] }])![0].fragments[0].actions[0]
+  assert.equal(parsed.key, waveAction.key)
+  assert.equal(parsed.count, waveAction.count)
+  assert.deepEqual(parsed.resolution, resolution)
+  assert.notEqual(parsed.resolution, resolution)
+  assert.notEqual(parsed.resolution!.evidence, resolution.evidence)
+})
+
+test('spawn resolution parsing rejects contradictory or malformed certainty', () => {
+  const resolution = { status: 'included', resolvedEnemyId: 'enemy_a', resolvedCount: 3,
+    reasons: [], conditions: [], evidence: [] }
+  const parse = (resolution: unknown, actionType = 'SPAWN') => parseWaves([{ ...wave,
+    fragments: [{ preDelay: 0, actions: [{ ...waveAction, actionType, spawnKind: actionType === 'SPAWN' ? 'fixed' : null, resolution }] }] }])
+  for (const patch of [
+    { status: 'future' }, { status: 'excluded', resolvedCount: 3 }, { status: 'unknown', resolvedCount: 3 },
+    { resolvedCount: null }, { resolvedCount: -1 }, { resolvedCount: 1.5 }, { resolvedEnemyId: null },
+    { resolvedEnemyId: ' ' }, { conditions: 'fixed' }, { evidence: [1] }, { reasons: null },
+  ]) assert.throws(() => parse({ ...resolution, ...patch }))
+  assert.throws(() => parse(null))
+  assert.throws(() => parse(resolution, 'STORY'))
+  assert.equal(parse({ ...resolution, status: 'excluded', resolvedCount: 0 })![0].fragments[0].actions[0].resolution!.resolvedCount, 0)
+  assert.equal(parse({ ...resolution, status: 'unknown', resolvedCount: null })![0].fragments[0].actions[0].resolution!.status, 'unknown')
+})
 
 test('wave parsing distinguishes legacy details, unavailable topology, and known empty schedules', () => {
   const legacy = parseMapDetailShard(shard).maps[summary.levelId]

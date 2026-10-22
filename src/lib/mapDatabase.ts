@@ -1,4 +1,4 @@
-import type { MapCategory, MapEnvironment, MapDetail, MapDetailShard, MapEnemyBase, MapEnemyRoute, MapFeatureId, MapFilters, MapIndex, MapRoute, MapSummary, MapTile, MapWave, MapWaveAction, MapWaveFragment } from '../types/map.ts'
+import type { MapCategory, MapEnvironment, MapDetail, MapDetailShard, MapEnemyBase, MapEnemyRoute, MapFeatureId, MapFilters, MapIndex, MapRoute, MapSpawnResolution, MapSummary, MapTile, MapWave, MapWaveAction, MapWaveFragment } from '../types/map.ts'
 import { MAP_FEATURE_LABELS } from './mapFeatures.ts'
 import { MAP_ENEMY_IMMUNITY_KEYS } from '../types/map.ts'
 
@@ -160,6 +160,23 @@ function parseMapRoutes(source: unknown): (MapRoute | null)[] | null {
   })
 }
 
+function parseSpawnResolution(source: unknown): MapSpawnResolution {
+  const value = record(source)
+  if (!value || !['included', 'excluded', 'conditional', 'unknown'].includes(String(value.status))
+    || !(value.resolvedEnemyId === null || (isText(value.resolvedEnemyId) && value.resolvedEnemyId.trim()))
+    || !isCountOrNull(value.resolvedCount)
+    || !strings(value.reasons) || !strings(value.conditions) || !strings(value.evidence)
+    || (value.status === 'included' && (!value.resolvedEnemyId || value.resolvedCount === null))
+    || (value.status === 'excluded' && value.resolvedCount !== 0)
+    || (['conditional', 'unknown'].includes(String(value.status)) && value.resolvedCount !== null)) {
+    throw new Error('マップの出現条件の判定に不正な値があります。')
+  }
+  return {
+    status: value.status as MapSpawnResolution['status'], resolvedEnemyId: value.resolvedEnemyId as string | null,
+    resolvedCount: value.resolvedCount, reasons: [...value.reasons], conditions: [...value.conditions], evidence: [...value.evidence],
+  }
+}
+
 function parseMapWaves(source: unknown): MapWave[] | null {
   if (source === null) return null
   if (!Array.isArray(source)) throw new Error('マップのウェーブ情報を確認できませんでした。')
@@ -182,7 +199,7 @@ function parseMapWaves(source: unknown): MapWave[] | null {
           || !['key', 'hiddenGroup', 'randomSpawnGroupKey', 'randomSpawnGroupPackKey', 'randomType', 'refreshType']
             .every((key) => isTextOrNull(action[key]))
           || !['managedByScheduler', 'blockFragment', 'dontBlockWave'].every((key) => isBooleanOrNull(action[key]))
-          || !strings(action.reasons)
+          || !strings(action.reasons) || (action.resolution !== undefined && action.actionType !== 'SPAWN')
           || (action.actionType === 'SPAWN'
             ? !isText(action.spawnKind) || !['fixed', 'conditional', 'unknown'].includes(action.spawnKind)
             : action.spawnKind !== null)) {
@@ -198,6 +215,7 @@ function parseMapWaves(source: unknown): MapWave[] | null {
           managedByScheduler: action.managedByScheduler as boolean | null,
           blockFragment: action.blockFragment as boolean | null, dontBlockWave: action.dontBlockWave as boolean | null,
           spawnKind: action.spawnKind as MapWaveAction['spawnKind'], reasons: [...action.reasons],
+          ...(action.resolution !== undefined ? { resolution: parseSpawnResolution(action.resolution) } : {}),
         }
       })
       return { preDelay: fragment.preDelay, actions }

@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 import { getMapCategory, getMapEnvironment, loadMapDatabase, loadMapDetail, matchesMapFilters } from '../lib/mapDatabase'
 import { getMapEntrances } from '../lib/mapWaves'
+import { getMapCoverageReasons, getMapCoverageStatus } from '../lib/enemyMapCoverage'
 import { DATA_SOURCE_URLS } from '../lib/dataSources'
 import { MAP_FEATURE_LABELS } from '../lib/mapFeatures'
 import { matchesMapEnemyConditions } from '../lib/mapEnemyFilters'
@@ -170,21 +171,8 @@ function MapInformation({ map, index }: { map: MapSummary; index: MapIndex }) {
               return <tr key={enemy.id}><td>{base?.name ?? enemy.id}</td><td className="map-numeric">{enemy.count == null ? '未確定' : formatNumber(enemy.count)}</td><td className="map-numeric">{formatNumber(base?.hp)}</td><td className="map-numeric">{formatNumber(base?.attack)}</td><td className="map-numeric">{formatNumber(base?.defense)}</td><td className="map-numeric">{formatNumber(base?.resistance)}</td></tr>
             })}</tbody></table></div> : <p className="map-empty">登録された敵はありません</p>}
           </>}
-    <details className="map-data-information"><summary>データ情報</summary><dl><div><dt>出現回数の集計</dt><dd>{STATUS_LABELS[map.status]}</dd></div>{map.reasons.length > 0 && <div><dt>理由</dt><dd>{[...new Set(map.reasons.map(reasonLabel))].join('、')}</dd></div>}<div><dt>マップID</dt><dd>{map.levelId}</dd></div></dl><p>体数は通常の出現スケジュールに記載された数です。敵の召喚などは含みません。能力値は基礎値で、マップ固有の補正は反映していません。</p><a href={`${DATA_SOURCE_URLS.levelRawBase}/${map.levelId}.json`} target="_blank" rel="noopener noreferrer">元のマップJSONを開く</a></details>
+    <details className="map-data-information"><summary>データ情報</summary><dl><div><dt>出現回数の集計</dt><dd>{getMapCoverageStatus(map, 'SPAWNS') === 'included' ? '集計対象' : '集計対象外'}</dd></div><div><dt>理由</dt><dd>{getMapCoverageReasons(map, 'SPAWNS').join('、')}</dd></div><div><dt>マップID</dt><dd>{map.levelId}</dd></div></dl><p>体数は、この環境で判定できた出現条件と敵の置き換えを反映しています。分岐や抽選などで合計が確定しないマップは、出現回数の集計に含めません。能力値は基礎値で、マップ固有の補正は反映していません。</p><a href={`${DATA_SOURCE_URLS.levelRawBase}/${map.levelId}.json`} target="_blank" rel="noopener noreferrer">元のマップJSONを開く</a></details>
   </>
-}
-
-function reasonLabel(reason: string): string {
-  if (reason === 'hidden-spawn-group') return '非表示グループの出現指定'
-  if (reason === 'branch-spawn') return '分岐に応じた出現指定'
-  if (reason === 'random-spawn-group' || reason === 'weighted-spawn') return 'ランダムな出現指定'
-  if (reason === 'enemy-replacement') return '敵の置き換え'
-  if (reason === 'unscheduled-spawn') return '通常スケジュール外の出現'
-  if (reason.startsWith('conditional-spawn')) return '条件付きの出現指定'
-  if (reason.startsWith('unsupported')) return '未対応の出現設定'
-  if (reason.includes('missing') || reason === 'not-cached') return 'マップデータ未取得'
-  if (reason.startsWith('invalid')) return '必要なデータを確認できない'
-  return reason
 }
 
 const TILE_LABELS = { ground: '地上', high: '高台', blocked: '配置不可', start: '出現口', end: '防衛地点', hole: '穴', special: '特殊マス' }

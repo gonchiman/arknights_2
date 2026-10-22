@@ -1,26 +1,26 @@
 {
   "schemaVersion": 1,
   "scope": "cached-stage-levels",
-  "generatedAt": "2026-09-27T02:49:35.050Z",
+  "generatedAt": "2026-10-21T06:05:37.395Z",
   "sourceGeneratedAt": "2026-08-31T03:11:03.024Z",
   "summary": {
-    "mapCount": 1998,
+    "mapCount": 1735,
     "missingMapCount": 197,
-    "excludedMapCount": 103,
-    "spawnMapCount": 1474,
-    "spawnExcludedMapCount": 524
+    "excludedMapCount": 366,
+    "spawnMapCount": 1279,
+    "spawnExcludedMapCount": 456
   },
   "enemies": {
     "enemy_1000_gopro": {
-      "mapCount": 42,
-      "spawnCount": 409
+      "mapCount": 36,
+      "spawnCount": 311
     },
     "enemy_1000_gopro_2": {
-      "mapCount": 68,
-      "spawnCount": 611
+      "mapCount": 61,
+      "spawnCount": 433
     },
     "enemy_1000_gopro_3": {
-      "mapCount": 38,
+      "mapCount": 34,
       "spawnCount": 347
     },
     "enemy_1000_gopro_x": {
@@ -28,76 +28,68 @@
       "spawnCount": 2
     },
     "enemy_1001_bigbo": {
-      "mapCount": 11,
+      "mapCount": 10,
       "spawnCount": 3
     },
     "enemy_1001_bigbo_2": {
-      "mapCount": 7,
+      "mapCount": 6,
       "spawnCount": 4
     },
     "enemy_1002_nsabr": {
-      "mapCount": 77,
-      "spawnCount": 767
-    },
-    "enemy_1002_nsabr_s1": {
-      "mapCount": 1,
-      "spawnCount": 1
-    },
-    "enemy_1002_nsabr_s2": {
-      "mapCount": 1,
-      "spawnCount": 2
+      "mapCount": 65,
+      "spawnCount": 616
     },
     "enemy_1003_ncbow": {
-      "mapCount": 18,
-      "spawnCount": 67
+      "mapCount": 16,
+      "spawnCount": 49
     },
     "enemy_1003_ncbow_2": {
-      "mapCount": 15,
-      "spawnCount": 90
+      "mapCount": 12,
+      "spawnCount": 80
     },
     "enemy_1004_mslime": {
-      "mapCount": 18,
-      "spawnCount": 200
+      "mapCount": 14,
+      "spawnCount": 146
     },
     "enemy_1004_mslime_2": {
       "mapCount": 4,
       "spawnCount": 72
     },
     "enemy_1005_yokai": {
-      "mapCount": 55,
-      "spawnCount": 606
+      "mapCount": 45,
+      "spawnCount": 471
     },
     "enemy_1005_yokai_2": {
-      "mapCount": 44,
-      "spawnCount": 490
+      "mapCount": 36,
+      "spawnCount": 266
     },
     "enemy_1005_yokai_3": {
-      "mapCount": 9,
-      "spawnCount": 10
+      "mapCount": 7,
+      "spawnCount": 8
     },
     "enemy_1006_shield": {
-      "mapCount": 34,
-      "spawnCount": 101
+      "mapCount": 18,
+      "spawnCount": 55
     },
     "enemy_1006_shield_2": {
-      "mapCount": 23,
-      "spawnCount": 94
+      "mapCount": 14,
+      "spawnCount": 44
     },
     "enemy_1006_shield_3": {
-      "mapCount": 3,
+      "mapCount": 1,
       "spawnCount": 1
     },
     "enemy_1007_slime": {
-      "mapCount": 56,
-      "spawnCount": 922
+      "mapCount": 55,
+      "spawnCount": 860
     },
     "enemy_1007_slime_2": {
-      "mapCount": 49,
-      "spawnCount": 838
+      "mapCount": 44,
+      "spawnCount": 573
     },
     "enemy_1007_slime_3": {
-      "mapCount": 51,
-      "spawnCount": 1219
+      "mapCount": 46,
+      "spawnCount": 1063
     },
     "enemy_1007_slime_b": {
       "mapCount": 1,
@@ -108,80 +100,80 @@
       "spawnCount": 0
     },
     "enemy_1008_ghost": {
-      "mapCount": 19,
-      "spawnCount": 92
+      "mapCount": 12,
+      "spawnCount": 53
     },
     "enemy_1009_lurker": {
-      "mapCount": 27,
-      "spawnCount": 332
+      "mapCount": 19,
+      "spawnCount": 231
     },
     "enemy_1010_demon": {
-      "mapCount": 66,
-      "spawnCount": 398
+      "mapCount": 54,
+      "spawnCount": 291
     },
     "enemy_1010_demon_2": {
-      "mapCount": 15,
-      "spawnCount": 43
+      "mapCount": 12,
+      "spawnCount": 35
     },
     "enemy_1011_wizard": {
-      "mapCount": 18,
-      "spawnCount": 95
+      "mapCount": 16,
+      "spawnCount": 67
     },
     "enemy_1011_wizard_2": {
-      "mapCount": 11,
-      "spawnCount": 65
+      "mapCount": 9,
+      "spawnCount": 43
     },
     "enemy_1012_dcross": {
-      "mapCount": 31,
-      "spawnCount": 172
+      "mapCount": 30,
+      "spawnCount": 143
     },
     "enemy_1012_dcross_2": {
-      "mapCount": 4,
-      "spawnCount": 25
+      "mapCount": 3,
+      "spawnCount": 8
     },
     "enemy_1013_airdrp": {
-      "mapCount": 11,
-      "spawnCount": 101
+      "mapCount": 8,
+      "spawnCount": 55
     },
     "enemy_1013_airdrp_2": {
-      "mapCount": 5,
-      "spawnCount": 44
+      "mapCount": 4,
+      "spawnCount": 40
     },
     "enemy_1014_rogue": {
-      "mapCount": 31,
-      "spawnCount": 298
+      "mapCount": 24,
+      "spawnCount": 166
     },
     "enemy_1014_rogue_2": {
       "mapCount": 18,
       "spawnCount": 148
     },
     "enemy_1015_litamr": {
-      "mapCount": 22,
-      "spawnCount": 250
+      "mapCount": 9,
+      "spawnCount": 61
     },
     "enemy_1015_litamr_2": {
-      "mapCount": 22,
-      "spawnCount": 276
+      "mapCount": 16,
+      "spawnCount": 228
     },
     "enemy_1016_diaman": {
-      "mapCount": 32,
-      "spawnCount": 105
+      "mapCount": 18,
+      "spawnCount": 41
     },
     "enemy_1017_defdrn": {
-      "mapCount": 24,
-      "spawnCount": 108
+      "mapCount": 15,
+      "spawnCount": 46
     },
     "enemy_1018_aoemag": {
-      "mapCount": 19,
-      "spawnCount": 52
+      "mapCount": 18,
+      "spawnCount": 42
     },
     "enemy_1018_aoemag_2": {
       "mapCount": 2,
       "spawnCount": 2
     },
     "enemy_1019_jshoot": {
-      "mapCount": 16,
-      "spawnCount": 83
+      "mapCount": 10,
+      "spawnCount": 77
     },
     "enemy_1019_jshoot_2": {
       "mapCount": 3,
@@ -192,12 +184,12 @@
       "spawnCount": 2
     },
     "enemy_1021_bslime": {
-      "mapCount": 33,
-      "spawnCount": 249
+      "mapCount": 22,
+      "spawnCount": 145
     },
     "enemy_1021_bslime_2": {
-      "mapCount": 8,
-      "spawnCount": 79
+      "mapCount": 6,
+      "spawnCount": 63
     },
     "enemy_1022_dmage": {
       "mapCount": 11,
@@ -212,8 +204,8 @@
       "spawnCount": 50
     },
     "enemy_1023_jmage_2": {
-      "mapCount": 2,
-      "spawnCount": 18
+      "mapCount": 1,
+      "spawnCount": 6
     },
     "enemy_1024_mortar": {
       "mapCount": 2,
@@ -224,288 +216,284 @@
       "spawnCount": 15
     },
     "enemy_1025_reveng": {
-      "mapCount": 6,
-      "spawnCount": 30
+      "mapCount": 2,
+      "spawnCount": 0
     },
     "enemy_1025_reveng_2": {
-      "mapCount": 13,
-      "spawnCount": 14
+      "mapCount": 5,
+      "spawnCount": 5
     },
     "enemy_1025_reveng_2a": {
       "mapCount": 1,
       "spawnCount": 0
     },
     "enemy_1026_aghost": {
-      "mapCount": 17,
-      "spawnCount": 91
+      "mapCount": 12,
+      "spawnCount": 57
     },
     "enemy_1027_mob": {
-      "mapCount": 33,
-      "spawnCount": 436
+      "mapCount": 29,
+      "spawnCount": 321
     },
     "enemy_1027_mob_2": {
-      "mapCount": 24,
-      "spawnCount": 239
+      "mapCount": 19,
+      "spawnCount": 165
     },
     "enemy_1028_mocock": {
-      "mapCount": 21,
-      "spawnCount": 152
+      "mapCount": 19,
+      "spawnCount": 79
     },
     "enemy_1028_mocock_2": {
-      "mapCount": 15,
-      "spawnCount": 94
+      "mapCount": 13,
+      "spawnCount": 46
     },
     "enemy_1029_shdsbr": {
-      "mapCount": 44,
-      "spawnCount": 364
+      "mapCount": 33,
+      "spawnCount": 170
     },
     "enemy_1029_shdsbr_2": {
       "mapCount": 6,
       "spawnCount": 55
     },
     "enemy_1030_wteeth": {
-      "mapCount": 42,
-      "spawnCount": 140
+      "mapCount": 38,
+      "spawnCount": 98
     },
     "enemy_1030_wteeth_2": {
-      "mapCount": 5,
-      "spawnCount": 27
+      "mapCount": 4,
+      "spawnCount": 22
     },
     "enemy_1031_mrogue": {
-      "mapCount": 19,
-      "spawnCount": 136
+      "mapCount": 11,
+      "spawnCount": 110
     },
     "enemy_1031_mrogue_2": {
-      "mapCount": 5,
+      "mapCount": 4,
       "spawnCount": 31
     },
     "enemy_1032_katar": {
-      "mapCount": 13,
-      "spawnCount": 89
+      "mapCount": 7,
+      "spawnCount": 25
     },
     "enemy_1032_katar_2": {
       "mapCount": 2,
       "spawnCount": 12
     },
     "enemy_1033_handax": {
-      "mapCount": 36,
-      "spawnCount": 97
+      "mapCount": 28,
+      "spawnCount": 63
     },
     "enemy_1033_handax_2": {
-      "mapCount": 13,
+      "mapCount": 12,
       "spawnCount": 32
     },
     "enemy_1034_laxe": {
-      "mapCount": 26,
-      "spawnCount": 79
+      "mapCount": 21,
+      "spawnCount": 50
     },
     "enemy_1034_laxe_2": {
-      "mapCount": 8,
-      "spawnCount": 33
+      "mapCount": 5,
+      "spawnCount": 13
     },
     "enemy_1035_haxe": {
-      "mapCount": 15,
-      "spawnCount": 52
-    },
-    "enemy_1035_haxe_2": {
-      "mapCount": 5,
-      "spawnCount": 20
+      "mapCount": 6,
+      "spawnCount": 15
     },
     "enemy_1036_amraoe": {
       "mapCount": 5,
       "spawnCount": 6
     },
     "enemy_1037_lunsbr": {
-      "mapCount": 29,
-      "spawnCount": 374
+      "mapCount": 27,
+      "spawnCount": 368
     },
     "enemy_1038_lunmag": {
-      "mapCount": 17,
-      "spawnCount": 133
+      "mapCount": 16,
+      "spawnCount": 128
     },
     "enemy_1038_lunmag_2": {
-      "mapCount": 10,
-      "spawnCount": 50
+      "mapCount": 9,
+      "spawnCount": 44
     },
     "enemy_1039_breakr": {
-      "mapCount": 20,
-      "spawnCount": 207
+      "mapCount": 16,
+      "spawnCount": 149
     },
     "enemy_1039_breakr_2": {
-      "mapCount": 12,
-      "spawnCount": 94
+      "mapCount": 7,
+      "spawnCount": 54
     },
     "enemy_1040_bombd": {
-      "mapCount": 4,
-      "spawnCount": 13
+      "mapCount": 3,
+      "spawnCount": 7
     },
     "enemy_1040_bombd_2": {
       "mapCount": 7,
       "spawnCount": 22
     },
     "enemy_1041_lazerd": {
-      "mapCount": 20,
-      "spawnCount": 237
-    },
-    "enemy_1041_lazerd_2": {
-      "mapCount": 3,
-      "spawnCount": 22
-    },
-    "enemy_1042_frostd": {
-      "mapCount": 15,
-      "spawnCount": 22
-    },
-    "enemy_1043_zomsbr": {
-      "mapCount": 19,
-      "spawnCount": 357
-    },
-    "enemy_1043_zomsbr_2": {
-      "mapCount": 11,
+      "mapCount": 14,
       "spawnCount": 118
     },
-    "enemy_1044_zomstr": {
+    "enemy_1041_lazerd_2": {
+      "mapCount": 1,
+      "spawnCount": 4
+    },
+    "enemy_1042_frostd": {
+      "mapCount": 12,
+      "spawnCount": 20
+    },
+    "enemy_1043_zomsbr": {
       "mapCount": 18,
-      "spawnCount": 147
+      "spawnCount": 329
+    },
+    "enemy_1043_zomsbr_2": {
+      "mapCount": 9,
+      "spawnCount": 107
+    },
+    "enemy_1044_zomstr": {
+      "mapCount": 16,
+      "spawnCount": 129
     },
     "enemy_1044_zomstr_2": {
-      "mapCount": 11,
-      "spawnCount": 80
+      "mapCount": 8,
+      "spawnCount": 49
     },
     "enemy_1045_hammer": {
-      "mapCount": 14,
-      "spawnCount": 28
+      "mapCount": 7,
+      "spawnCount": 9
     },
     "enemy_1045_hammer_2": {
-      "mapCount": 11,
-      "spawnCount": 24
+      "mapCount": 5,
+      "spawnCount": 9
     },
     "enemy_1046_agent": {
-      "mapCount": 20,
-      "spawnCount": 330
+      "mapCount": 16,
+      "spawnCount": 245
     },
     "enemy_1046_agent_2": {
-      "mapCount": 12,
-      "spawnCount": 193
+      "mapCount": 9,
+      "spawnCount": 130
     },
     "enemy_1047_sagent": {
-      "mapCount": 10,
-      "spawnCount": 70
-    },
-    "enemy_1047_sagent_2": {
-      "mapCount": 11,
-      "spawnCount": 38
-    },
-    "enemy_1048_hirman": {
-      "mapCount": 12,
+      "mapCount": 7,
       "spawnCount": 45
     },
+    "enemy_1047_sagent_2": {
+      "mapCount": 10,
+      "spawnCount": 33
+    },
+    "enemy_1048_hirman": {
+      "mapCount": 9,
+      "spawnCount": 37
+    },
     "enemy_1048_hirman_2": {
-      "mapCount": 8,
-      "spawnCount": 44
+      "mapCount": 6,
+      "spawnCount": 26
     },
     "enemy_1049_eagent": {
-      "mapCount": 12,
-      "spawnCount": 74
-    },
-    "enemy_1049_eagent_2": {
       "mapCount": 7,
       "spawnCount": 32
+    },
+    "enemy_1049_eagent_2": {
+      "mapCount": 3,
+      "spawnCount": 23
     },
     "enemy_1050_lslime": {
       "mapCount": 11,
       "spawnCount": 4
     },
     "enemy_1051_norwiz": {
-      "mapCount": 12,
-      "spawnCount": 72
+      "mapCount": 10,
+      "spawnCount": 54
     },
     "enemy_1051_norwiz_2": {
-      "mapCount": 12,
-      "spawnCount": 75
+      "mapCount": 11,
+      "spawnCount": 67
     },
     "enemy_1052_noramr": {
-      "mapCount": 18,
-      "spawnCount": 171
+      "mapCount": 11,
+      "spawnCount": 67
     },
     "enemy_1052_noramr_2": {
-      "mapCount": 13,
-      "spawnCount": 92
+      "mapCount": 6,
+      "spawnCount": 60
     },
     "enemy_1053_norgst": {
-      "mapCount": 11,
-      "spawnCount": 106
-    },
-    "enemy_1053_norgst_2": {
-      "mapCount": 20,
-      "spawnCount": 225
-    },
-    "enemy_1054_norshd": {
-      "mapCount": 15,
+      "mapCount": 8,
       "spawnCount": 85
     },
+    "enemy_1053_norgst_2": {
+      "mapCount": 17,
+      "spawnCount": 164
+    },
+    "enemy_1054_norshd": {
+      "mapCount": 6,
+      "spawnCount": 17
+    },
     "enemy_1054_norshd_2": {
-      "mapCount": 10,
+      "mapCount": 5,
       "spawnCount": 16
     },
     "enemy_1055_ganman": {
-      "mapCount": 28,
-      "spawnCount": 529
+      "mapCount": 17,
+      "spawnCount": 251
     },
     "enemy_1055_ganman_2": {
-      "mapCount": 10,
-      "spawnCount": 175
+      "mapCount": 6,
+      "spawnCount": 105
     },
     "enemy_1056_ganwar": {
-      "mapCount": 21,
-      "spawnCount": 182
+      "mapCount": 9,
+      "spawnCount": 58
     },
     "enemy_1056_ganwar_2": {
-      "mapCount": 21,
-      "spawnCount": 195
+      "mapCount": 9,
+      "spawnCount": 58
     },
     "enemy_1057_gansho": {
-      "mapCount": 13,
-      "spawnCount": 123
+      "mapCount": 11,
+      "spawnCount": 89
     },
     "enemy_1057_gansho_2": {
-      "mapCount": 7,
-      "spawnCount": 86
+      "mapCount": 5,
+      "spawnCount": 48
     },
     "enemy_1058_traink": {
-      "mapCount": 32,
-      "spawnCount": 132
+      "mapCount": 11,
+      "spawnCount": 56
     },
     "enemy_1058_traink_2": {
-      "mapCount": 17,
-      "spawnCount": 38
+      "mapCount": 8,
+      "spawnCount": 10
     },
     "enemy_1059_buster": {
-      "mapCount": 17,
-      "spawnCount": 96
+      "mapCount": 9,
+      "spawnCount": 43
     },
     "enemy_1059_buster_2": {
-      "mapCount": 15,
-      "spawnCount": 60
+      "mapCount": 9,
+      "spawnCount": 28
     },
     "enemy_1060_emouse": {
-      "mapCount": 10,
-      "spawnCount": 25
+      "mapCount": 6,
+      "spawnCount": 13
     },
     "enemy_1060_emouse_2": {
-      "mapCount": 11,
+      "mapCount": 7,
       "spawnCount": 31
     },
     "enemy_1061_zomshd": {
-      "mapCount": 11,
+      "mapCount": 9,
       "spawnCount": 18
     },
     "enemy_1061_zomshd_2": {
-      "mapCount": 6,
+      "mapCount": 4,
       "spawnCount": 4
     },
     "enemy_1062_rager": {
-      "mapCount": 23,
-      "spawnCount": 95
+      "mapCount": 19,
+      "spawnCount": 87
     },
     "enemy_1062_rager_2": {
       "mapCount": 17,
@@ -520,72 +508,72 @@
       "spawnCount": 10
     },
     "enemy_1064_snsbr": {
-      "mapCount": 15,
-      "spawnCount": 249
+      "mapCount": 14,
+      "spawnCount": 173
     },
     "enemy_1065_snwolf": {
-      "mapCount": 17,
-      "spawnCount": 272
+      "mapCount": 10,
+      "spawnCount": 92
     },
     "enemy_1065_snwolf_2": {
       "mapCount": 4,
       "spawnCount": 70
     },
     "enemy_1066_snbow": {
-      "mapCount": 6,
-      "spawnCount": 47
+      "mapCount": 5,
+      "spawnCount": 33
     },
     "enemy_1066_snbow_2": {
-      "mapCount": 2,
-      "spawnCount": 14
+      "mapCount": 1,
+      "spawnCount": 10
     },
     "enemy_1067_snslime": {
-      "mapCount": 25,
-      "spawnCount": 255
+      "mapCount": 20,
+      "spawnCount": 170
     },
     "enemy_1067_snslime_2": {
-      "mapCount": 13,
-      "spawnCount": 130
+      "mapCount": 8,
+      "spawnCount": 78
     },
     "enemy_1068_snmage": {
-      "mapCount": 11,
-      "spawnCount": 63
+      "mapCount": 10,
+      "spawnCount": 54
     },
     "enemy_1068_snmage_2": {
-      "mapCount": 8,
-      "spawnCount": 29
+      "mapCount": 7,
+      "spawnCount": 24
     },
     "enemy_1069_icebrk": {
-      "mapCount": 14,
-      "spawnCount": 86
+      "mapCount": 11,
+      "spawnCount": 35
     },
     "enemy_1069_icebrk_2": {
-      "mapCount": 8,
-      "spawnCount": 49
+      "mapCount": 5,
+      "spawnCount": 19
     },
     "enemy_1070_iced": {
-      "mapCount": 11,
-      "spawnCount": 125
+      "mapCount": 5,
+      "spawnCount": 37
     },
     "enemy_1071_dftman": {
-      "mapCount": 52,
-      "spawnCount": 813
+      "mapCount": 37,
+      "spawnCount": 523
     },
     "enemy_1071_dftman_2": {
-      "mapCount": 37,
-      "spawnCount": 379
+      "mapCount": 24,
+      "spawnCount": 301
     },
     "enemy_1072_dlancer": {
-      "mapCount": 20,
-      "spawnCount": 94
+      "mapCount": 9,
+      "spawnCount": 62
     },
     "enemy_1072_dlancer_2": {
-      "mapCount": 19,
-      "spawnCount": 50
+      "mapCount": 10,
+      "spawnCount": 34
     },
     "enemy_1073_dscout": {
-      "mapCount": 13,
-      "spawnCount": 27
+      "mapCount": 9,
+      "spawnCount": 9
     },
     "enemy_1073_dscout_2": {
       "mapCount": 10,
@@ -600,12 +588,12 @@
       "spawnCount": 7
     },
     "enemy_1075_dmgswd": {
-      "mapCount": 11,
-      "spawnCount": 39
+      "mapCount": 8,
+      "spawnCount": 24
     },
     "enemy_1075_dmgswd_2": {
-      "mapCount": 7,
-      "spawnCount": 7
+      "mapCount": 5,
+      "spawnCount": 2
     },
     "enemy_1075_dmgswd_2a": {
       "mapCount": 1,
@@ -620,52 +608,52 @@
       "spawnCount": 0
     },
     "enemy_1076_bsthmr": {
-      "mapCount": 21,
-      "spawnCount": 42
+      "mapCount": 9,
+      "spawnCount": 10
     },
     "enemy_1076_bsthmr_2": {
-      "mapCount": 12,
-      "spawnCount": 16
+      "mapCount": 9,
+      "spawnCount": 10
     },
     "enemy_1077_sotihd": {
-      "mapCount": 18,
-      "spawnCount": 254
+      "mapCount": 17,
+      "spawnCount": 230
     },
     "enemy_1077_sotihd_2": {
-      "mapCount": 5,
+      "mapCount": 4,
       "spawnCount": 44
     },
     "enemy_1078_sotisc": {
-      "mapCount": 34,
-      "spawnCount": 508
+      "mapCount": 24,
+      "spawnCount": 319
     },
     "enemy_1078_sotisc_2": {
-      "mapCount": 16,
-      "spawnCount": 161
+      "mapCount": 9,
+      "spawnCount": 70
     },
     "enemy_1079_sotisp": {
-      "mapCount": 19,
-      "spawnCount": 102
+      "mapCount": 17,
+      "spawnCount": 94
     },
     "enemy_1079_sotisp_2": {
-      "mapCount": 7,
-      "spawnCount": 29
+      "mapCount": 6,
+      "spawnCount": 25
     },
     "enemy_1080_sotidp": {
-      "mapCount": 22,
-      "spawnCount": 84
+      "mapCount": 17,
+      "spawnCount": 68
     },
     "enemy_1080_sotidp_2": {
-      "mapCount": 11,
-      "spawnCount": 49
+      "mapCount": 4,
+      "spawnCount": 13
     },
     "enemy_1081_sotisd": {
-      "mapCount": 25,
-      "spawnCount": 55
+      "mapCount": 17,
+      "spawnCount": 36
     },
     "enemy_1081_sotisd_2": {
-      "mapCount": 21,
-      "spawnCount": 54
+      "mapCount": 13,
+      "spawnCount": 35
     },
     "enemy_1082_soticn": {
       "mapCount": 7,
@@ -676,116 +664,116 @@
       "spawnCount": 8
     },
     "enemy_1083_sotiab": {
-      "mapCount": 7,
-      "spawnCount": 54
+      "mapCount": 5,
+      "spawnCount": 43
     },
     "enemy_1083_sotiab_2": {
-      "mapCount": 3,
-      "spawnCount": 33
+      "mapCount": 2,
+      "spawnCount": 22
     },
     "enemy_1084_sotidm": {
-      "mapCount": 6,
-      "spawnCount": 33
+      "mapCount": 4,
+      "spawnCount": 21
     },
     "enemy_1084_sotidm_2": {
       "mapCount": 4,
       "spawnCount": 25
     },
     "enemy_1084_sotidm_3": {
-      "mapCount": 5,
-      "spawnCount": 26
+      "mapCount": 3,
+      "spawnCount": 18
     },
     "enemy_1085_sotiwz": {
-      "mapCount": 6,
-      "spawnCount": 8
+      "mapCount": 2,
+      "spawnCount": 6
     },
     "enemy_1085_sotiwz_2": {
       "mapCount": 3,
       "spawnCount": 14
     },
     "enemy_1085_sotiwz_3": {
-      "mapCount": 4,
-      "spawnCount": 9
+      "mapCount": 2,
+      "spawnCount": 7
     },
     "enemy_1086_ltsodr": {
-      "mapCount": 23,
-      "spawnCount": 391
+      "mapCount": 18,
+      "spawnCount": 209
     },
     "enemy_1086_ltsodr_2": {
-      "mapCount": 18,
-      "spawnCount": 350
+      "mapCount": 13,
+      "spawnCount": 217
     },
     "enemy_1087_ltwolf": {
-      "mapCount": 17,
-      "spawnCount": 169
+      "mapCount": 12,
+      "spawnCount": 52
     },
     "enemy_1087_ltwolf_2": {
-      "mapCount": 10,
-      "spawnCount": 154
+      "mapCount": 7,
+      "spawnCount": 84
     },
     "enemy_1088_ltsmer": {
-      "mapCount": 29,
-      "spawnCount": 121
+      "mapCount": 24,
+      "spawnCount": 87
     },
     "enemy_1088_ltsmer_2": {
-      "mapCount": 13,
-      "spawnCount": 63
+      "mapCount": 8,
+      "spawnCount": 31
     },
     "enemy_1089_ltlntc": {
-      "mapCount": 23,
-      "spawnCount": 35
+      "mapCount": 18,
+      "spawnCount": 24
     },
     "enemy_1089_ltlntc_2": {
-      "mapCount": 17,
-      "spawnCount": 36
+      "mapCount": 12,
+      "spawnCount": 22
     },
     "enemy_1090_mdsnpr": {
-      "mapCount": 16,
-      "spawnCount": 32
+      "mapCount": 14,
+      "spawnCount": 24
     },
     "enemy_1090_mdsnpr_2": {
-      "mapCount": 11,
-      "spawnCount": 34
+      "mapCount": 9,
+      "spawnCount": 26
     },
     "enemy_1091_mdhmmr": {
-      "mapCount": 20,
-      "spawnCount": 67
+      "mapCount": 16,
+      "spawnCount": 37
     },
     "enemy_1091_mdhmmr_2": {
-      "mapCount": 11,
+      "mapCount": 8,
       "spawnCount": 34
     },
     "enemy_1092_mdgint": {
-      "mapCount": 29,
-      "spawnCount": 43
+      "mapCount": 24,
+      "spawnCount": 30
     },
     "enemy_1092_mdgint_2": {
-      "mapCount": 16,
-      "spawnCount": 29
+      "mapCount": 12,
+      "spawnCount": 25
     },
     "enemy_1093_ccsbr": {
-      "mapCount": 20,
-      "spawnCount": 402
+      "mapCount": 15,
+      "spawnCount": 252
     },
     "enemy_1093_ccsbr_2": {
-      "mapCount": 14,
-      "spawnCount": 262
+      "mapCount": 11,
+      "spawnCount": 157
     },
     "enemy_1094_ccspm": {
-      "mapCount": 12,
-      "spawnCount": 100
+      "mapCount": 10,
+      "spawnCount": 84
     },
     "enemy_1094_ccspm_2": {
       "mapCount": 6,
       "spawnCount": 64
     },
     "enemy_1095_ccripr": {
-      "mapCount": 12,
-      "spawnCount": 148
+      "mapCount": 8,
+      "spawnCount": 74
     },
     "enemy_1095_ccripr_2": {
-      "mapCount": 12,
-      "spawnCount": 55
+      "mapCount": 8,
+      "spawnCount": 42
     },
     "enemy_1096_ccwitch": {
       "mapCount": 7,
@@ -804,164 +792,156 @@
       "spawnCount": 20
     },
     "enemy_1098_cchmpn": {
-      "mapCount": 14,
-      "spawnCount": 41
+      "mapCount": 8,
+      "spawnCount": 17
     },
     "enemy_1098_cchmpn_2": {
-      "mapCount": 10,
-      "spawnCount": 19
+      "mapCount": 8,
+      "spawnCount": 17
     },
     "enemy_1098_cchmpn_b": {
       "mapCount": 14,
       "spawnCount": 0
     },
     "enemy_1099_nbkght": {
-      "mapCount": 31,
-      "spawnCount": 508
+      "mapCount": 23,
+      "spawnCount": 373
     },
     "enemy_1099_nbkght_2": {
-      "mapCount": 29,
-      "spawnCount": 356
+      "mapCount": 22,
+      "spawnCount": 220
     },
     "enemy_1100_scorpn": {
-      "mapCount": 22,
-      "spawnCount": 175
+      "mapCount": 16,
+      "spawnCount": 122
     },
     "enemy_1100_scorpn_2": {
-      "mapCount": 14,
-      "spawnCount": 57
+      "mapCount": 8,
+      "spawnCount": 44
     },
     "enemy_1101_plkght": {
-      "mapCount": 19,
-      "spawnCount": 82
+      "mapCount": 15,
+      "spawnCount": 72
     },
     "enemy_1101_plkght_2": {
-      "mapCount": 11,
-      "spawnCount": 46
+      "mapCount": 9,
+      "spawnCount": 23
     },
     "enemy_1101_plkght_3": {
-      "mapCount": 6,
+      "mapCount": 3,
       "spawnCount": 1
     },
     "enemy_1102_sdkght": {
-      "mapCount": 20,
-      "spawnCount": 69
+      "mapCount": 12,
+      "spawnCount": 51
     },
     "enemy_1102_sdkght_2": {
-      "mapCount": 23,
-      "spawnCount": 67
+      "mapCount": 17,
+      "spawnCount": 51
     },
     "enemy_1103_wdkght": {
-      "mapCount": 14,
-      "spawnCount": 22
+      "mapCount": 8,
+      "spawnCount": 14
     },
     "enemy_1103_wdkght_2": {
-      "mapCount": 17,
-      "spawnCount": 26
+      "mapCount": 11,
+      "spawnCount": 18
     },
     "enemy_1103_wdkght_3": {
-      "mapCount": 9,
+      "mapCount": 5,
       "spawnCount": 3
     },
     "enemy_1104_lfkght": {
-      "mapCount": 9,
-      "spawnCount": 11
+      "mapCount": 5,
+      "spawnCount": 6
     },
     "enemy_1104_lfkght_2": {
-      "mapCount": 11,
-      "spawnCount": 8
+      "mapCount": 8,
+      "spawnCount": 6
     },
     "enemy_1104_lfkght_3": {
-      "mapCount": 12,
+      "mapCount": 8,
       "spawnCount": 4
     },
     "enemy_1105_tyokai": {
-      "mapCount": 23,
-      "spawnCount": 46
+      "mapCount": 18,
+      "spawnCount": 38
     },
     "enemy_1105_tyokai_2": {
-      "mapCount": 6,
+      "mapCount": 5,
       "spawnCount": 8
     },
-    "enemy_1105_tyokai_2a": {
-      "mapCount": 1,
-      "spawnCount": 5
-    },
     "enemy_1105_tyokai_a": {
-      "mapCount": 2,
-      "spawnCount": 13
-    },
-    "enemy_1105_tyokai_b": {
-      "mapCount": 3,
-      "spawnCount": 10
-    },
-    "enemy_1105_tyokai_c": {
       "mapCount": 1,
       "spawnCount": 4
+    },
+    "enemy_1105_tyokai_b": {
+      "mapCount": 2,
+      "spawnCount": 7
     },
     "enemy_1105_tyokai_d": {
       "mapCount": 1,
       "spawnCount": 2
     },
     "enemy_1106_byokai": {
-      "mapCount": 15,
-      "spawnCount": 20
+      "mapCount": 7,
+      "spawnCount": 12
     },
     "enemy_1107_uoffcr": {
-      "mapCount": 28,
-      "spawnCount": 484
+      "mapCount": 25,
+      "spawnCount": 366
     },
     "enemy_1107_uoffcr_2": {
-      "mapCount": 10,
-      "spawnCount": 85
+      "mapCount": 9,
+      "spawnCount": 46
     },
     "enemy_1108_uterer": {
-      "mapCount": 19,
-      "spawnCount": 262
+      "mapCount": 14,
+      "spawnCount": 186
     },
     "enemy_1108_uterer_2": {
-      "mapCount": 7,
-      "spawnCount": 67
+      "mapCount": 4,
+      "spawnCount": 54
     },
     "enemy_1109_uabone": {
-      "mapCount": 16,
-      "spawnCount": 138
+      "mapCount": 11,
+      "spawnCount": 39
     },
     "enemy_1109_uabone_2": {
-      "mapCount": 2,
-      "spawnCount": 16
+      "mapCount": 1,
+      "spawnCount": 0
     },
     "enemy_1110_uamord": {
-      "mapCount": 10,
-      "spawnCount": 56
+      "mapCount": 9,
+      "spawnCount": 44
     },
     "enemy_1110_uamord_2": {
-      "mapCount": 6,
-      "spawnCount": 31
+      "mapCount": 5,
+      "spawnCount": 20
     },
     "enemy_1111_ucommd": {
-      "mapCount": 18,
-      "spawnCount": 131
+      "mapCount": 11,
+      "spawnCount": 52
     },
     "enemy_1111_ucommd_2": {
-      "mapCount": 9,
-      "spawnCount": 27
+      "mapCount": 6,
+      "spawnCount": 12
     },
     "enemy_1112_emppnt": {
-      "mapCount": 12,
-      "spawnCount": 14
+      "mapCount": 9,
+      "spawnCount": 9
     },
     "enemy_1112_emppnt_2": {
       "mapCount": 13,
       "spawnCount": 10
     },
     "enemy_1113_empace": {
-      "mapCount": 18,
-      "spawnCount": 55
+      "mapCount": 13,
+      "spawnCount": 34
     },
     "enemy_1113_empace_2": {
-      "mapCount": 13,
-      "spawnCount": 37
+      "mapCount": 8,
+      "spawnCount": 19
     },
     "enemy_1114_rgrdmn": {
       "mapCount": 4,
@@ -976,52 +956,52 @@
       "spawnCount": 2
     },
     "enemy_1116_liprr": {
-      "mapCount": 20,
-      "spawnCount": 196
+      "mapCount": 17,
+      "spawnCount": 126
     },
     "enemy_1116_liprr_2": {
-      "mapCount": 12,
-      "spawnCount": 143
+      "mapCount": 9,
+      "spawnCount": 87
     },
     "enemy_1117_liiprr": {
-      "mapCount": 13,
-      "spawnCount": 107
+      "mapCount": 12,
+      "spawnCount": 71
     },
     "enemy_1117_liiprr_2": {
-      "mapCount": 12,
-      "spawnCount": 86
-    },
-    "enemy_1118_lidbox": {
-      "mapCount": 16,
-      "spawnCount": 74
-    },
-    "enemy_1118_lidbox_2": {
-      "mapCount": 11,
-      "spawnCount": 43
-    },
-    "enemy_1119_vofsd": {
-      "mapCount": 8,
-      "spawnCount": 47
-    },
-    "enemy_1119_vofsd_2": {
-      "mapCount": 6,
-      "spawnCount": 20
-    },
-    "enemy_1120_vofwiz": {
       "mapCount": 11,
       "spawnCount": 42
     },
-    "enemy_1120_vofwiz_2": {
+    "enemy_1118_lidbox": {
+      "mapCount": 11,
+      "spawnCount": 30
+    },
+    "enemy_1118_lidbox_2": {
       "mapCount": 8,
-      "spawnCount": 35
+      "spawnCount": 27
+    },
+    "enemy_1119_vofsd": {
+      "mapCount": 7,
+      "spawnCount": 11
+    },
+    "enemy_1119_vofsd_2": {
+      "mapCount": 5,
+      "spawnCount": 7
+    },
+    "enemy_1120_vofwiz": {
+      "mapCount": 8,
+      "spawnCount": 12
+    },
+    "enemy_1120_vofwiz_2": {
+      "mapCount": 7,
+      "spawnCount": 8
     },
     "enemy_1121_lifbos": {
-      "mapCount": 10,
-      "spawnCount": 24
+      "mapCount": 7,
+      "spawnCount": 6
     },
     "enemy_1121_lifbos_2": {
-      "mapCount": 11,
-      "spawnCount": 27
+      "mapCount": 8,
+      "spawnCount": 9
     },
     "enemy_1122_sphond": {
       "mapCount": 13,
@@ -1048,16 +1028,16 @@
       "spawnCount": 2
     },
     "enemy_1123_spsbr": {
-      "mapCount": 18,
-      "spawnCount": 141
+      "mapCount": 14,
+      "spawnCount": 89
     },
     "enemy_1123_spsbr_0": {
       "mapCount": 9,
       "spawnCount": 63
     },
     "enemy_1123_spsbr_2": {
-      "mapCount": 17,
-      "spawnCount": 147
+      "mapCount": 9,
+      "spawnCount": 75
     },
     "enemy_1123_spsbr_2_0": {
       "mapCount": 5,
@@ -1073,15 +1053,15 @@
     },
     "enemy_1124_spbow_2": {
       "mapCount": 5,
-      "spawnCount": 12
+      "spawnCount": 26
     },
     "enemy_1124_spbow_2_0": {
       "mapCount": 2,
       "spawnCount": 7
     },
     "enemy_1125_spshld": {
-      "mapCount": 5,
-      "spawnCount": 9
+      "mapCount": 3,
+      "spawnCount": 3
     },
     "enemy_1125_spshld_0": {
       "mapCount": 2,
@@ -1165,43 +1145,43 @@
     },
     "enemy_1129_spklr_2": {
       "mapCount": 6,
-      "spawnCount": 8
+      "spawnCount": 11
     },
     "enemy_1129_spklr_2_0": {
       "mapCount": 1,
       "spawnCount": 3
     },
     "enemy_1130_infstr": {
-      "mapCount": 16,
-      "spawnCount": 379
+      "mapCount": 13,
+      "spawnCount": 274
     },
     "enemy_1131_sbeast": {
-      "mapCount": 8,
-      "spawnCount": 97
+      "mapCount": 4,
+      "spawnCount": 49
     },
     "enemy_1131_sbeast_2": {
-      "mapCount": 7,
-      "spawnCount": 40
+      "mapCount": 4,
+      "spawnCount": 20
     },
     "enemy_1132_sarchn": {
-      "mapCount": 15,
-      "spawnCount": 170
+      "mapCount": 5,
+      "spawnCount": 48
     },
     "enemy_1132_sarchn_2": {
-      "mapCount": 12,
-      "spawnCount": 109
+      "mapCount": 9,
+      "spawnCount": 51
     },
     "enemy_1133_harchn": {
-      "mapCount": 11,
-      "spawnCount": 34
+      "mapCount": 4,
+      "spawnCount": 2
     },
     "enemy_1133_harchn_2": {
-      "mapCount": 10,
-      "spawnCount": 44
+      "mapCount": 7,
+      "spawnCount": 8
     },
     "enemy_1134_diamd": {
-      "mapCount": 8,
-      "spawnCount": 21
+      "mapCount": 5,
+      "spawnCount": 11
     },
     "enemy_1134_diamd_2": {
       "mapCount": 9,
@@ -1212,215 +1192,211 @@
       "spawnCount": 4
     },
     "enemy_1135_redman_2": {
-      "mapCount": 5,
-      "spawnCount": 11
+      "mapCount": 4,
+      "spawnCount": 4
     },
     "enemy_1136_redace": {
-      "mapCount": 4,
-      "spawnCount": 13
+      "mapCount": 2,
+      "spawnCount": 4
     },
     "enemy_1136_redace_2": {
-      "mapCount": 7,
-      "spawnCount": 35
+      "mapCount": 4,
+      "spawnCount": 8
     },
     "enemy_1137_plasm": {
-      "mapCount": 31,
-      "spawnCount": 90
+      "mapCount": 18,
+      "spawnCount": 2
     },
     "enemy_1138_tumor": {
-      "mapCount": 20,
+      "mapCount": 14,
       "spawnCount": 0
     },
-    "enemy_1138_tumor_b": {
-      "mapCount": 2,
-      "spawnCount": 16
-    },
     "enemy_1139_hologc": {
-      "mapCount": 4,
+      "mapCount": 2,
       "spawnCount": 0
     },
     "enemy_1139_hologc_2": {
-      "mapCount": 7,
+      "mapCount": 4,
       "spawnCount": 0
     },
     "enemy_1140_merhd": {
-      "mapCount": 25,
-      "spawnCount": 338
+      "mapCount": 22,
+      "spawnCount": 334
     },
     "enemy_1140_merhd_2": {
       "mapCount": 14,
       "spawnCount": 199
     },
     "enemy_1141_merbow": {
-      "mapCount": 19,
-      "spawnCount": 91
+      "mapCount": 11,
+      "spawnCount": 31
     },
     "enemy_1141_merbow_2": {
-      "mapCount": 11,
-      "spawnCount": 53
+      "mapCount": 8,
+      "spawnCount": 25
     },
     "enemy_1142_mershd": {
-      "mapCount": 11,
-      "spawnCount": 51
+      "mapCount": 5,
+      "spawnCount": 16
     },
     "enemy_1142_mershd_2": {
-      "mapCount": 7,
-      "spawnCount": 23
+      "mapCount": 6,
+      "spawnCount": 15
     },
     "enemy_1143_merrpg": {
-      "mapCount": 6,
-      "spawnCount": 20
+      "mapCount": 5,
+      "spawnCount": 11
     },
     "enemy_1143_merrpg_2": {
-      "mapCount": 2,
-      "spawnCount": 14
+      "mapCount": 1,
+      "spawnCount": 3
     },
     "enemy_1144_merlgd": {
-      "mapCount": 5,
-      "spawnCount": 10
+      "mapCount": 4,
+      "spawnCount": 3
     },
     "enemy_1144_merlgd_2": {
-      "mapCount": 5,
-      "spawnCount": 7
+      "mapCount": 4,
+      "spawnCount": 3
     },
     "enemy_1145_atkspd": {
-      "mapCount": 17,
+      "mapCount": 9,
       "spawnCount": 0
     },
     "enemy_1145_atkspd_2": {
-      "mapCount": 10,
+      "mapCount": 7,
       "spawnCount": 0
     },
     "enemy_1146_defspd": {
-      "mapCount": 14,
-      "spawnCount": 0
-    },
-    "enemy_1146_defspd_2": {
       "mapCount": 8,
       "spawnCount": 0
     },
+    "enemy_1146_defspd_2": {
+      "mapCount": 7,
+      "spawnCount": 0
+    },
     "enemy_1147_dshond": {
-      "mapCount": 27,
-      "spawnCount": 501
+      "mapCount": 20,
+      "spawnCount": 278
     },
     "enemy_1147_dshond_2": {
-      "mapCount": 20,
-      "spawnCount": 681
+      "mapCount": 17,
+      "spawnCount": 415
     },
     "enemy_1148_dssbr": {
-      "mapCount": 20,
-      "spawnCount": 384
+      "mapCount": 15,
+      "spawnCount": 267
     },
     "enemy_1148_dssbr_2": {
-      "mapCount": 21,
-      "spawnCount": 461
+      "mapCount": 20,
+      "spawnCount": 351
     },
     "enemy_1149_dsbow": {
-      "mapCount": 12,
-      "spawnCount": 66
+      "mapCount": 6,
+      "spawnCount": 22
     },
     "enemy_1149_dsbow_2": {
-      "mapCount": 7,
-      "spawnCount": 82
+      "mapCount": 5,
+      "spawnCount": 36
     },
     "enemy_1150_dsjely": {
-      "mapCount": 13,
-      "spawnCount": 211
+      "mapCount": 7,
+      "spawnCount": 88
     },
     "enemy_1150_dsjely_2": {
-      "mapCount": 4,
-      "spawnCount": 49
+      "mapCount": 3,
+      "spawnCount": 21
     },
     "enemy_1151_dslntc": {
-      "mapCount": 6,
-      "spawnCount": 13
+      "mapCount": 5,
+      "spawnCount": 7
     },
     "enemy_1151_dslntc_2": {
-      "mapCount": 9,
-      "spawnCount": 25
+      "mapCount": 8,
+      "spawnCount": 9
     },
     "enemy_1151_dslntc_b": {
       "mapCount": 1,
       "spawnCount": 0
     },
     "enemy_1152_dsurch": {
-      "mapCount": 14,
-      "spawnCount": 38
+      "mapCount": 9,
+      "spawnCount": 22
     },
     "enemy_1152_dsurch_2": {
-      "mapCount": 9,
-      "spawnCount": 27
+      "mapCount": 8,
+      "spawnCount": 16
     },
     "enemy_1153_dsexcu": {
-      "mapCount": 3,
-      "spawnCount": 13
+      "mapCount": 2,
+      "spawnCount": 9
     },
     "enemy_1153_dsexcu_2": {
-      "mapCount": 10,
-      "spawnCount": 68
+      "mapCount": 7,
+      "spawnCount": 16
     },
     "enemy_1154_dsmant": {
-      "mapCount": 8,
-      "spawnCount": 5
+      "mapCount": 7,
+      "spawnCount": 4
     },
     "enemy_1155_dsrobt": {
-      "mapCount": 10,
-      "spawnCount": 32
+      "mapCount": 9,
+      "spawnCount": 17
     },
     "enemy_1158_divman": {
-      "mapCount": 15,
-      "spawnCount": 140
+      "mapCount": 12,
+      "spawnCount": 104
     },
     "enemy_1158_divman_2": {
-      "mapCount": 19,
-      "spawnCount": 216
+      "mapCount": 16,
+      "spawnCount": 139
     },
     "enemy_1159_swfmob": {
-      "mapCount": 23,
-      "spawnCount": 392
+      "mapCount": 15,
+      "spawnCount": 330
     },
     "enemy_1159_swfmob_2": {
-      "mapCount": 26,
-      "spawnCount": 324
+      "mapCount": 18,
+      "spawnCount": 256
     },
     "enemy_1160_hvyslr": {
-      "mapCount": 21,
-      "spawnCount": 89
+      "mapCount": 13,
+      "spawnCount": 63
     },
     "enemy_1160_hvyslr_2": {
-      "mapCount": 25,
-      "spawnCount": 109
+      "mapCount": 16,
+      "spawnCount": 39
     },
     "enemy_1161_tidmag": {
-      "mapCount": 14,
+      "mapCount": 11,
       "spawnCount": 18
     },
     "enemy_1161_tidmag_2": {
-      "mapCount": 19,
+      "mapCount": 16,
       "spawnCount": 9
     },
     "enemy_1162_magmot": {
-      "mapCount": 11,
-      "spawnCount": 19
+      "mapCount": 8,
+      "spawnCount": 16
     },
     "enemy_1162_magmot_2": {
-      "mapCount": 17,
-      "spawnCount": 42
+      "mapCount": 14,
+      "spawnCount": 36
     },
     "enemy_1163_hvymot": {
-      "mapCount": 18,
-      "spawnCount": 47
+      "mapCount": 10,
+      "spawnCount": 28
     },
     "enemy_1163_hvymot_2": {
-      "mapCount": 23,
-      "spawnCount": 52
+      "mapCount": 14,
+      "spawnCount": 38
     },
     "enemy_1164_bmbmot": {
-      "mapCount": 8,
-      "spawnCount": 69
+      "mapCount": 4,
+      "spawnCount": 41
     },
     "enemy_1164_bmbmot_2": {
-      "mapCount": 12,
+      "mapCount": 10,
       "spawnCount": 102
     },
     "enemy_1164_bmbmot_3": {
@@ -1428,28 +1404,28 @@
       "spawnCount": 0
     },
     "enemy_1165_duhond": {
-      "mapCount": 18,
-      "spawnCount": 204
+      "mapCount": 15,
+      "spawnCount": 159
     },
     "enemy_1165_duhond_2": {
-      "mapCount": 5,
-      "spawnCount": 176
+      "mapCount": 4,
+      "spawnCount": 63
     },
     "enemy_1166_dusbr": {
-      "mapCount": 34,
-      "spawnCount": 490
+      "mapCount": 24,
+      "spawnCount": 274
     },
     "enemy_1166_dusbr_2": {
-      "mapCount": 19,
-      "spawnCount": 302
+      "mapCount": 11,
+      "spawnCount": 103
     },
     "enemy_1167_dubow": {
-      "mapCount": 28,
-      "spawnCount": 244
+      "mapCount": 23,
+      "spawnCount": 149
     },
     "enemy_1167_dubow_2": {
-      "mapCount": 7,
-      "spawnCount": 47
+      "mapCount": 6,
+      "spawnCount": 19
     },
     "enemy_1168_dumage": {
       "mapCount": 10,
@@ -1460,28 +1436,28 @@
       "spawnCount": 50
     },
     "enemy_1169_duphlx": {
-      "mapCount": 19,
-      "spawnCount": 225
+      "mapCount": 16,
+      "spawnCount": 183
     },
     "enemy_1169_duphlx_2": {
-      "mapCount": 9,
-      "spawnCount": 142
+      "mapCount": 8,
+      "spawnCount": 136
     },
     "enemy_1170_dushld": {
-      "mapCount": 21,
-      "spawnCount": 108
+      "mapCount": 17,
+      "spawnCount": 81
     },
     "enemy_1170_dushld_2": {
-      "mapCount": 11,
-      "spawnCount": 54
+      "mapCount": 9,
+      "spawnCount": 33
     },
     "enemy_1171_durokt": {
-      "mapCount": 14,
-      "spawnCount": 67
+      "mapCount": 8,
+      "spawnCount": 35
     },
     "enemy_1171_durokt_2": {
-      "mapCount": 13,
-      "spawnCount": 96
+      "mapCount": 9,
+      "spawnCount": 66
     },
     "enemy_1172_dugago": {
       "mapCount": 9,
@@ -1496,39 +1472,39 @@
       "spawnCount": 0
     },
     "enemy_1173_duspfr": {
-      "mapCount": 13,
-      "spawnCount": 105
+      "mapCount": 10,
+      "spawnCount": 73
     },
     "enemy_1173_duspfr_2": {
       "mapCount": 5,
       "spawnCount": 18
     },
     "enemy_1174_duholy": {
-      "mapCount": 9,
-      "spawnCount": 26
+      "mapCount": 6,
+      "spawnCount": 6
     },
     "enemy_1174_duholy_2": {
-      "mapCount": 12,
-      "spawnCount": 22
+      "mapCount": 8,
+      "spawnCount": 14
     },
     "enemy_1175_dushdo": {
-      "mapCount": 18,
-      "spawnCount": 74
+      "mapCount": 7,
+      "spawnCount": 20
     },
     "enemy_1175_dushdo_2": {
-      "mapCount": 9,
-      "spawnCount": 16
+      "mapCount": 7,
+      "spawnCount": 12
     },
     "enemy_1176_dusocr": {
-      "mapCount": 7,
-      "spawnCount": 17
+      "mapCount": 6,
+      "spawnCount": 12
     },
     "enemy_1176_dusocr_2": {
       "mapCount": 9,
       "spawnCount": 16
     },
     "enemy_1177_dufrbl": {
-      "mapCount": 9,
+      "mapCount": 8,
       "spawnCount": 0
     },
     "enemy_1177_dufrbl_2": {
@@ -1536,7 +1512,7 @@
       "spawnCount": 0
     },
     "enemy_1178_dscorp": {
-      "mapCount": 20,
+      "mapCount": 13,
       "spawnCount": 169
     },
     "enemy_1178_dscorp_2": {
@@ -1544,7 +1520,7 @@
       "spawnCount": 87
     },
     "enemy_1179_aruarw": {
-      "mapCount": 6,
+      "mapCount": 5,
       "spawnCount": 34
     },
     "enemy_1179_aruarw_2": {
@@ -1552,7 +1528,7 @@
       "spawnCount": 61
     },
     "enemy_1180_aruass": {
-      "mapCount": 12,
+      "mapCount": 7,
       "spawnCount": 94
     },
     "enemy_1180_aruass_2": {
@@ -1560,7 +1536,7 @@
       "spawnCount": 95
     },
     "enemy_1181_napkgt": {
-      "mapCount": 6,
+      "mapCount": 5,
       "spawnCount": 15
     },
     "enemy_1181_napkgt_2": {
@@ -1584,7 +1560,7 @@
       "spawnCount": 4
     },
     "enemy_1183_mlasrt_2": {
-      "mapCount": 7,
+      "mapCount": 6,
       "spawnCount": 11
     },
     "enemy_1183_mlasrt_3": {
@@ -1592,7 +1568,7 @@
       "spawnCount": 2
     },
     "enemy_1184_cadkgt": {
-      "mapCount": 9,
+      "mapCount": 8,
       "spawnCount": 26
     },
     "enemy_1184_cadkgt_2": {
@@ -1600,11 +1576,11 @@
       "spawnCount": 9
     },
     "enemy_1184_cadkgt_3": {
-      "mapCount": 6,
+      "mapCount": 5,
       "spawnCount": 2
     },
     "enemy_1185_nmekgt": {
-      "mapCount": 8,
+      "mapCount": 7,
       "spawnCount": 6
     },
     "enemy_1185_nmekgt_2": {
@@ -1612,28 +1588,28 @@
       "spawnCount": 8
     },
     "enemy_1185_nmekgt_3": {
-      "mapCount": 3,
+      "mapCount": 2,
       "spawnCount": 2
     },
     "enemy_1186_bldbld": {
-      "mapCount": 6,
+      "mapCount": 5,
       "spawnCount": 0
     },
     "enemy_1187_krghd": {
-      "mapCount": 12,
-      "spawnCount": 143
+      "mapCount": 10,
+      "spawnCount": 115
     },
     "enemy_1187_krghd_2": {
-      "mapCount": 9,
-      "spawnCount": 141
+      "mapCount": 5,
+      "spawnCount": 81
     },
     "enemy_1188_krgdrn": {
-      "mapCount": 4,
-      "spawnCount": 16
+      "mapCount": 2,
+      "spawnCount": 10
     },
     "enemy_1188_krgdrn_2": {
-      "mapCount": 4,
-      "spawnCount": 13
+      "mapCount": 2,
+      "spawnCount": 7
     },
     "enemy_1189_krgaxe": {
       "mapCount": 9,
@@ -1652,28 +1628,28 @@
       "spawnCount": 23
     },
     "enemy_1191_krgrg": {
-      "mapCount": 10,
-      "spawnCount": 59
+      "mapCount": 6,
+      "spawnCount": 29
     },
     "enemy_1191_krgrg_2": {
       "mapCount": 10,
       "spawnCount": 57
     },
     "enemy_1192_krgscr": {
-      "mapCount": 9,
-      "spawnCount": 10
+      "mapCount": 7,
+      "spawnCount": 6
     },
     "enemy_1192_krgscr_2": {
       "mapCount": 8,
       "spawnCount": 31
     },
     "enemy_1193_krgbsk": {
-      "mapCount": 7,
-      "spawnCount": 24
+      "mapCount": 3,
+      "spawnCount": 8
     },
     "enemy_1193_krgbsk_2": {
-      "mapCount": 10,
-      "spawnCount": 20
+      "mapCount": 8,
+      "spawnCount": 16
     },
     "enemy_1194_krgmtr": {
       "mapCount": 1,
@@ -1684,135 +1660,135 @@
       "spawnCount": 5
     },
     "enemy_1195_sfyin": {
-      "mapCount": 12,
-      "spawnCount": 312
+      "mapCount": 9,
+      "spawnCount": 165
     },
     "enemy_1195_sfyin_2": {
-      "mapCount": 10,
-      "spawnCount": 116
+      "mapCount": 7,
+      "spawnCount": 70
     },
     "enemy_1196_msfyin": {
-      "mapCount": 12,
+      "mapCount": 9,
       "spawnCount": 0
     },
     "enemy_1196_msfyin_2": {
-      "mapCount": 10,
+      "mapCount": 7,
       "spawnCount": 0
     },
     "enemy_1197_sfshu": {
-      "mapCount": 13,
-      "spawnCount": 194
+      "mapCount": 8,
+      "spawnCount": 84
     },
     "enemy_1197_sfshu_2": {
-      "mapCount": 15,
-      "spawnCount": 221
+      "mapCount": 8,
+      "spawnCount": 108
     },
     "enemy_1198_msfshu": {
-      "mapCount": 13,
+      "mapCount": 8,
       "spawnCount": 0
     },
     "enemy_1198_msfshu_2": {
-      "mapCount": 15,
+      "mapCount": 8,
       "spawnCount": 0
     },
     "enemy_1199_sfjin": {
-      "mapCount": 13,
-      "spawnCount": 46
+      "mapCount": 10,
+      "spawnCount": 28
     },
     "enemy_1199_sfjin_2": {
-      "mapCount": 13,
-      "spawnCount": 56
+      "mapCount": 6,
+      "spawnCount": 13
     },
     "enemy_1200_msfjin": {
-      "mapCount": 13,
+      "mapCount": 10,
       "spawnCount": 0
     },
     "enemy_1200_msfjin_2": {
-      "mapCount": 13,
+      "mapCount": 6,
       "spawnCount": 0
     },
     "enemy_1201_sfzhi": {
-      "mapCount": 9,
-      "spawnCount": 35
+      "mapCount": 6,
+      "spawnCount": 15
     },
     "enemy_1201_sfzhi_2": {
-      "mapCount": 11,
-      "spawnCount": 55
+      "mapCount": 8,
+      "spawnCount": 23
     },
     "enemy_1202_msfzhi": {
-      "mapCount": 9,
+      "mapCount": 6,
       "spawnCount": 0
     },
     "enemy_1202_msfzhi_2": {
-      "mapCount": 11,
+      "mapCount": 8,
       "spawnCount": 0
     },
     "enemy_1203_sfhu": {
-      "mapCount": 5,
-      "spawnCount": 16
+      "mapCount": 4,
+      "spawnCount": 11
     },
     "enemy_1203_sfhu_2": {
-      "mapCount": 6,
-      "spawnCount": 14
+      "mapCount": 5,
+      "spawnCount": 10
     },
     "enemy_1204_msfhu": {
-      "mapCount": 5,
+      "mapCount": 4,
       "spawnCount": 0
     },
     "enemy_1204_msfhu_2": {
-      "mapCount": 6,
+      "mapCount": 5,
       "spawnCount": 0
     },
     "enemy_1205_sfpin": {
-      "mapCount": 2,
-      "spawnCount": 5
+      "mapCount": 1,
+      "spawnCount": 2
     },
     "enemy_1205_sfpin_2": {
-      "mapCount": 5,
-      "spawnCount": 17
+      "mapCount": 4,
+      "spawnCount": 11
     },
     "enemy_1206_msfpin": {
-      "mapCount": 2,
+      "mapCount": 1,
       "spawnCount": 0
     },
     "enemy_1206_msfpin_2": {
-      "mapCount": 5,
+      "mapCount": 4,
       "spawnCount": 0
     },
     "enemy_1207_sfji": {
-      "mapCount": 8,
-      "spawnCount": 22
+      "mapCount": 5,
+      "spawnCount": 8
     },
     "enemy_1207_sfji_2": {
-      "mapCount": 8,
-      "spawnCount": 23
+      "mapCount": 5,
+      "spawnCount": 7
     },
     "enemy_1207_sfji_b": {
       "mapCount": 1,
       "spawnCount": 0
     },
     "enemy_1208_msfji": {
-      "mapCount": 8,
+      "mapCount": 5,
       "spawnCount": 0
     },
     "enemy_1208_msfji_2": {
-      "mapCount": 8,
+      "mapCount": 5,
       "spawnCount": 0
     },
     "enemy_1209_sfden": {
-      "mapCount": 4,
-      "spawnCount": 13
+      "mapCount": 1,
+      "spawnCount": 2
     },
     "enemy_1209_sfden_2": {
-      "mapCount": 11,
-      "spawnCount": 20
+      "mapCount": 6,
+      "spawnCount": 2
     },
     "enemy_1210_msfden": {
-      "mapCount": 4,
+      "mapCount": 1,
       "spawnCount": 0
     },
     "enemy_1210_msfden_2": {
-      "mapCount": 11,
+      "mapCount": 6,
       "spawnCount": 0
     },
     "enemy_1211_msfsui": {
@@ -1820,156 +1796,156 @@
       "spawnCount": 140
     },
     "enemy_1212_mtrfol": {
-      "mapCount": 20,
+      "mapCount": 18,
       "spawnCount": 258
     },
     "enemy_1212_mtrfol_2": {
-      "mapCount": 15,
+      "mapCount": 14,
       "spawnCount": 127
     },
     "enemy_1213_mtrsnp": {
-      "mapCount": 11,
+      "mapCount": 9,
       "spawnCount": 41
     },
     "enemy_1213_mtrsnp_2": {
-      "mapCount": 8,
+      "mapCount": 7,
       "spawnCount": 53
     },
     "enemy_1214_mtrmgc": {
-      "mapCount": 6,
+      "mapCount": 5,
       "spawnCount": 30
     },
     "enemy_1214_mtrmgc_2": {
-      "mapCount": 5,
+      "mapCount": 4,
       "spawnCount": 18
     },
     "enemy_1215_ptrarc": {
-      "mapCount": 5,
+      "mapCount": 4,
       "spawnCount": 15
     },
     "enemy_1215_ptrarc_2": {
-      "mapCount": 6,
+      "mapCount": 4,
       "spawnCount": 18
     },
     "enemy_1216_cansld": {
-      "mapCount": 8,
+      "mapCount": 7,
       "spawnCount": 14
     },
     "enemy_1216_cansld_2": {
-      "mapCount": 8,
+      "mapCount": 7,
       "spawnCount": 9
     },
     "enemy_1217_rescar": {
-      "mapCount": 5,
+      "mapCount": 4,
       "spawnCount": 4
     },
     "enemy_1217_rescar_2": {
-      "mapCount": 8,
+      "mapCount": 7,
       "spawnCount": 8
     },
     "enemy_1218_bomscr": {
-      "mapCount": 7,
+      "mapCount": 6,
       "spawnCount": 1
     },
     "enemy_1218_bomscr_2": {
-      "mapCount": 8,
+      "mapCount": 7,
       "spawnCount": 22
     },
     "enemy_1219_mtrbty": {
-      "mapCount": 6,
+      "mapCount": 5,
       "spawnCount": 4
     },
     "enemy_1219_mtrbty_2": {
-      "mapCount": 3,
+      "mapCount": 2,
       "spawnCount": 2
     },
     "enemy_1220_dzoms": {
-      "mapCount": 59,
-      "spawnCount": 410
+      "mapCount": 50,
+      "spawnCount": 231
     },
     "enemy_1220_dzoms_2": {
-      "mapCount": 19,
-      "spawnCount": 175
+      "mapCount": 18,
+      "spawnCount": 61
     },
     "enemy_1221_dzomg": {
-      "mapCount": 40,
+      "mapCount": 33,
       "spawnCount": 47
     },
     "enemy_1221_dzomg_2": {
-      "mapCount": 17,
-      "spawnCount": 67
+      "mapCount": 14,
+      "spawnCount": 40
     },
     "enemy_1222_dpvt": {
-      "mapCount": 36,
-      "spawnCount": 484
+      "mapCount": 29,
+      "spawnCount": 459
     },
     "enemy_1222_dpvt_2": {
-      "mapCount": 14,
-      "spawnCount": 158
+      "mapCount": 13,
+      "spawnCount": 159
     },
     "enemy_1223_dmech": {
       "mapCount": 11,
       "spawnCount": 91
     },
     "enemy_1223_dmech_2": {
-      "mapCount": 3,
-      "spawnCount": 13
+      "mapCount": 2,
+      "spawnCount": 7
     },
     "enemy_1224_dsuply": {
-      "mapCount": 19,
-      "spawnCount": 59
+      "mapCount": 16,
+      "spawnCount": 55
     },
     "enemy_1224_dsuply_2": {
-      "mapCount": 15,
-      "spawnCount": 59
+      "mapCount": 10,
+      "spawnCount": 42
     },
     "enemy_1225_dkmage": {
-      "mapCount": 12,
-      "spawnCount": 45
+      "mapCount": 9,
+      "spawnCount": 31
     },
     "enemy_1225_dkmage_2": {
       "mapCount": 5,
       "spawnCount": 17
     },
     "enemy_1226_dklord": {
-      "mapCount": 12,
-      "spawnCount": 32
+      "mapCount": 9,
+      "spawnCount": 24
     },
     "enemy_1226_dklord_2": {
-      "mapCount": 12,
-      "spawnCount": 23
+      "mapCount": 9,
+      "spawnCount": 20
     },
     "enemy_1227_dair": {
       "mapCount": 6,
       "spawnCount": 39
     },
     "enemy_1227_dair_2": {
-      "mapCount": 2,
-      "spawnCount": 8
+      "mapCount": 1,
+      "spawnCount": 4
     },
     "enemy_1228_dslime": {
-      "mapCount": 7,
-      "spawnCount": 67
+      "mapCount": 3,
+      "spawnCount": 31
     },
     "enemy_1228_dslime_2": {
-      "mapCount": 5,
-      "spawnCount": 70
+      "mapCount": 4,
+      "spawnCount": 30
     },
     "enemy_1229_darmy": {
-      "mapCount": 38,
-      "spawnCount": 379
+      "mapCount": 31,
+      "spawnCount": 265
     },
     "enemy_1229_darmy_2": {
-      "mapCount": 11,
-      "spawnCount": 62
+      "mapCount": 10,
+      "spawnCount": 27
     },
     "enemy_1230_dsbudr": {
-      "mapCount": 8,
-      "spawnCount": 60
+      "mapCount": 7,
+      "spawnCount": 39
     },
     "enemy_1230_dsbudr_2": {
-      "mapCount": 13,
-      "spawnCount": 89
+      "mapCount": 11,
+      "spawnCount": 71
     },
     "enemy_1230_dsbudr_3": {
       "mapCount": 4,
@@ -1980,12 +1956,12 @@
       "spawnCount": 4
     },
     "enemy_1231_dsrunr": {
-      "mapCount": 11,
-      "spawnCount": 121
+      "mapCount": 8,
+      "spawnCount": 73
     },
     "enemy_1231_dsrunr_2": {
-      "mapCount": 14,
-      "spawnCount": 203
+      "mapCount": 13,
+      "spawnCount": 187
     },
     "enemy_1231_dsrunr_3": {
       "mapCount": 4,
@@ -1996,12 +1972,12 @@
       "spawnCount": 7
     },
     "enemy_1232_dssalr": {
-      "mapCount": 8,
-      "spawnCount": 35
+      "mapCount": 6,
+      "spawnCount": 17
     },
     "enemy_1232_dssalr_2": {
-      "mapCount": 12,
-      "spawnCount": 42
+      "mapCount": 11,
+      "spawnCount": 39
     },
     "enemy_1232_dssalr_3": {
       "mapCount": 4,
@@ -2012,8 +1988,8 @@
       "spawnCount": 6
     },
     "enemy_1233_dsshtr": {
-      "mapCount": 12,
-      "spawnCount": 46
+      "mapCount": 9,
+      "spawnCount": 24
     },
     "enemy_1233_dsshtr_2": {
       "mapCount": 12,
@@ -2028,8 +2004,8 @@
       "spawnCount": 3
     },
     "enemy_1234_dsubrl": {
-      "mapCount": 6,
-      "spawnCount": 28
+      "mapCount": 3,
+      "spawnCount": 7
     },
     "enemy_1234_dsubrl_2": {
       "mapCount": 11,
@@ -2064,7 +2040,7 @@
       "spawnCount": 0
     },
     "enemy_1236_bouncy_2": {
-      "mapCount": 26,
+      "mapCount": 25,
       "spawnCount": 0
     },
     "enemy_1236_bouncy_3": {
@@ -2072,143 +2048,143 @@
       "spawnCount": 0
     },
     "enemy_1238_ltmob": {
-      "mapCount": 18,
-      "spawnCount": 375
+      "mapCount": 12,
+      "spawnCount": 93
     },
     "enemy_1238_ltmob_2": {
-      "mapCount": 14,
-      "spawnCount": 323
+      "mapCount": 8,
+      "spawnCount": 100
     },
     "enemy_1239_ltbow": {
-      "mapCount": 12,
-      "spawnCount": 114
+      "mapCount": 9,
+      "spawnCount": 58
     },
     "enemy_1239_ltbow_2": {
-      "mapCount": 8,
-      "spawnCount": 63
+      "mapCount": 7,
+      "spawnCount": 48
     },
     "enemy_1240_ltgint": {
-      "mapCount": 17,
-      "spawnCount": 55
+      "mapCount": 11,
+      "spawnCount": 17
     },
     "enemy_1240_ltgint_2": {
-      "mapCount": 10,
-      "spawnCount": 63
+      "mapCount": 7,
+      "spawnCount": 25
     },
     "enemy_1241_ltmage": {
-      "mapCount": 8,
-      "spawnCount": 39
+      "mapCount": 7,
+      "spawnCount": 16
     },
     "enemy_1241_ltmage_2": {
-      "mapCount": 7,
-      "spawnCount": 19
-    },
-    "enemy_1242_ltsmag": {
-      "mapCount": 3,
-      "spawnCount": 7
-    },
-    "enemy_1242_ltsmag_2": {
       "mapCount": 6,
       "spawnCount": 14
     },
-    "enemy_1243_ltswar": {
-      "mapCount": 7,
-      "spawnCount": 34
-    },
-    "enemy_1243_ltswar_2": {
-      "mapCount": 15,
-      "spawnCount": 41
-    },
-    "enemy_1244_ltssch": {
+    "enemy_1242_ltsmag": {
       "mapCount": 2,
       "spawnCount": 4
     },
+    "enemy_1242_ltsmag_2": {
+      "mapCount": 5,
+      "spawnCount": 3
+    },
+    "enemy_1243_ltswar": {
+      "mapCount": 3,
+      "spawnCount": 2
+    },
+    "enemy_1243_ltswar_2": {
+      "mapCount": 9,
+      "spawnCount": 18
+    },
+    "enemy_1244_ltssch": {
+      "mapCount": 1,
+      "spawnCount": 1
+    },
     "enemy_1244_ltssch_2": {
-      "mapCount": 2,
-      "spawnCount": 10
+      "mapCount": 1,
+      "spawnCount": 2
     },
     "enemy_1245_ltseal": {
-      "mapCount": 3,
+      "mapCount": 2,
       "spawnCount": 0
     },
     "enemy_1246_aslime": {
-      "mapCount": 6,
-      "spawnCount": 70
+      "mapCount": 5,
+      "spawnCount": 28
     },
     "enemy_1246_aslime_2": {
-      "mapCount": 12,
-      "spawnCount": 117
-    },
-    "enemy_1247_ltgtld": {
-      "mapCount": 4,
-      "spawnCount": 3
-    },
-    "enemy_1248_ltholo": {
-      "mapCount": 4,
-      "spawnCount": 0
-    },
-    "enemy_1249_lysdb": {
-      "mapCount": 18,
-      "spawnCount": 71
-    },
-    "enemy_1249_lysdb_2": {
-      "mapCount": 13,
+      "mapCount": 9,
       "spawnCount": 82
     },
-    "enemy_1250_lyengs": {
-      "mapCount": 12,
-      "spawnCount": 15
+    "enemy_1247_ltgtld": {
+      "mapCount": 3,
+      "spawnCount": 2
     },
-    "enemy_1250_lyengs_2": {
-      "mapCount": 7,
-      "spawnCount": 0
-    },
-    "enemy_1251_lysyta": {
-      "mapCount": 10,
-      "spawnCount": 33
-    },
-    "enemy_1251_lysyta_2": {
-      "mapCount": 10,
-      "spawnCount": 39
-    },
-    "enemy_1252_lysytb": {
-      "mapCount": 6,
-      "spawnCount": 12
-    },
-    "enemy_1252_lysytb_2": {
-      "mapCount": 6,
-      "spawnCount": 3
-    },
-    "enemy_1253_lysytc": {
+    "enemy_1248_ltholo": {
       "mapCount": 3,
       "spawnCount": 0
     },
+    "enemy_1249_lysdb": {
+      "mapCount": 15,
+      "spawnCount": 31
+    },
+    "enemy_1249_lysdb_2": {
+      "mapCount": 12,
+      "spawnCount": 82
+    },
+    "enemy_1250_lyengs": {
+      "mapCount": 11,
+      "spawnCount": 15
+    },
+    "enemy_1250_lyengs_2": {
+      "mapCount": 6,
+      "spawnCount": 0
+    },
+    "enemy_1251_lysyta": {
+      "mapCount": 9,
+      "spawnCount": 33
+    },
+    "enemy_1251_lysyta_2": {
+      "mapCount": 9,
+      "spawnCount": 39
+    },
+    "enemy_1252_lysytb": {
+      "mapCount": 5,
+      "spawnCount": 12
+    },
+    "enemy_1252_lysytb_2": {
+      "mapCount": 5,
+      "spawnCount": 3
+    },
+    "enemy_1253_lysytc": {
+      "mapCount": 2,
+      "spawnCount": 0
+    },
     "enemy_1253_lysytc_2": {
-      "mapCount": 8,
+      "mapCount": 7,
       "spawnCount": 2
     },
     "enemy_1254_lypa": {
-      "mapCount": 5,
-      "spawnCount": 31
+      "mapCount": 2,
+      "spawnCount": 15
     },
     "enemy_1254_lypa_2": {
-      "mapCount": 6,
+      "mapCount": 5,
       "spawnCount": 2
     },
     "enemy_1255_lybgpa": {
-      "mapCount": 10,
+      "mapCount": 9,
       "spawnCount": 3
     },
     "enemy_1255_lybgpa_2": {
-      "mapCount": 15,
+      "mapCount": 14,
       "spawnCount": 17
     },
     "enemy_1256_lyacpa": {
-      "mapCount": 10,
+      "mapCount": 9,
       "spawnCount": 0
     },
     "enemy_1256_lyacpa_2": {
-      "mapCount": 13,
+      "mapCount": 12,
       "spawnCount": 4
     },
     "enemy_1257_lydrty": {
@@ -2216,108 +2192,108 @@
       "spawnCount": 0
     },
     "enemy_1258_durman": {
-      "mapCount": 22,
-      "spawnCount": 297
+      "mapCount": 15,
+      "spawnCount": 201
     },
     "enemy_1258_durman_2": {
-      "mapCount": 22,
-      "spawnCount": 324
+      "mapCount": 15,
+      "spawnCount": 248
     },
     "enemy_1259_durwar": {
-      "mapCount": 23,
-      "spawnCount": 179
+      "mapCount": 14,
+      "spawnCount": 111
     },
     "enemy_1259_durwar_2": {
-      "mapCount": 17,
-      "spawnCount": 112
+      "mapCount": 10,
+      "spawnCount": 98
     },
     "enemy_1260_durmag": {
-      "mapCount": 13,
-      "spawnCount": 59
+      "mapCount": 10,
+      "spawnCount": 39
     },
     "enemy_1260_durmag_2": {
-      "mapCount": 10,
-      "spawnCount": 51
+      "mapCount": 9,
+      "spawnCount": 48
     },
     "enemy_1261_dursho": {
-      "mapCount": 16,
-      "spawnCount": 64
+      "mapCount": 11,
+      "spawnCount": 45
     },
     "enemy_1261_dursho_2": {
-      "mapCount": 13,
-      "spawnCount": 40
+      "mapCount": 10,
+      "spawnCount": 37
     },
     "enemy_1262_durplc": {
-      "mapCount": 12,
-      "spawnCount": 27
+      "mapCount": 7,
+      "spawnCount": 14
     },
     "enemy_1262_durplc_2": {
-      "mapCount": 14,
-      "spawnCount": 40
+      "mapCount": 9,
+      "spawnCount": 29
     },
     "enemy_1263_durbus": {
-      "mapCount": 15,
-      "spawnCount": 35
+      "mapCount": 12,
+      "spawnCount": 12
     },
     "enemy_1263_durbus_2": {
-      "mapCount": 13,
-      "spawnCount": 24
+      "mapCount": 10,
+      "spawnCount": 20
     },
     "enemy_1264_durgrd": {
-      "mapCount": 16,
-      "spawnCount": 44
+      "mapCount": 5,
+      "spawnCount": 23
     },
     "enemy_1264_durgrd_2": {
-      "mapCount": 17,
-      "spawnCount": 62
+      "mapCount": 11,
+      "spawnCount": 30
     },
     "enemy_1265_durcar": {
       "mapCount": 23,
       "spawnCount": 0
     },
     "enemy_1266_nhapos": {
-      "mapCount": 21,
+      "mapCount": 18,
       "spawnCount": 14
     },
     "enemy_1267_nhpbr": {
-      "mapCount": 36,
-      "spawnCount": 417
+      "mapCount": 29,
+      "spawnCount": 347
     },
     "enemy_1267_nhpbr_2": {
-      "mapCount": 20,
-      "spawnCount": 147
+      "mapCount": 15,
+      "spawnCount": 135
     },
     "enemy_1268_nhnrs": {
-      "mapCount": 8,
+      "mapCount": 7,
       "spawnCount": 6
     },
     "enemy_1268_nhnrs_2": {
-      "mapCount": 4,
+      "mapCount": 3,
       "spawnCount": 8
     },
     "enemy_1269_nhfly": {
-      "mapCount": 29,
-      "spawnCount": 325
+      "mapCount": 24,
+      "spawnCount": 309
     },
     "enemy_1269_nhfly_2": {
-      "mapCount": 15,
+      "mapCount": 13,
       "spawnCount": 38
     },
     "enemy_1270_nhstlk": {
-      "mapCount": 15,
-      "spawnCount": 49
+      "mapCount": 10,
+      "spawnCount": 17
     },
     "enemy_1270_nhstlk_2": {
-      "mapCount": 6,
+      "mapCount": 5,
       "spawnCount": 16
     },
     "enemy_1271_nhkodo": {
-      "mapCount": 14,
-      "spawnCount": 13
+      "mapCount": 11,
+      "spawnCount": 9
     },
     "enemy_1271_nhkodo_2": {
-      "mapCount": 11,
-      "spawnCount": 23
+      "mapCount": 8,
+      "spawnCount": 15
     },
     "enemy_1272_nhtank": {
       "mapCount": 12,
@@ -2328,24 +2304,24 @@
       "spawnCount": 3
     },
     "enemy_1273_stmgun": {
-      "mapCount": 18,
+      "mapCount": 16,
       "spawnCount": 13
     },
     "enemy_1273_stmgun_2": {
-      "mapCount": 10,
+      "mapCount": 8,
       "spawnCount": 7
     },
     "enemy_1274_stmram": {
-      "mapCount": 16,
-      "spawnCount": 39
+      "mapCount": 9,
+      "spawnCount": 29
     },
     "enemy_1274_stmram_2": {
-      "mapCount": 10,
-      "spawnCount": 23
+      "mapCount": 5,
+      "spawnCount": 11
     },
     "enemy_1275_dwlock": {
-      "mapCount": 18,
-      "spawnCount": 28
+      "mapCount": 17,
+      "spawnCount": 25
     },
     "enemy_1275_dwlock_2": {
       "mapCount": 3,
@@ -2356,11 +2332,11 @@
       "spawnCount": 1
     },
     "enemy_1277_sgman": {
-      "mapCount": 25,
-      "spawnCount": 20
+      "mapCount": 21,
+      "spawnCount": 0
     },
     "enemy_1277_sgman_2": {
-      "mapCount": 22,
+      "mapCount": 20,
       "spawnCount": 66
     },
     "enemy_1278_sgbow": {
@@ -2372,7 +2348,7 @@
       "spawnCount": 13
     },
     "enemy_1279_sgbdg": {
-      "mapCount": 16,
+      "mapCount": 14,
       "spawnCount": 0
     },
     "enemy_1279_sgbdg_2": {
@@ -2388,15 +2364,15 @@
       "spawnCount": 3
     },
     "enemy_1281_sgcar": {
-      "mapCount": 10,
-      "spawnCount": 10
+      "mapCount": 8,
+      "spawnCount": 0
     },
     "enemy_1281_sgcar_2": {
-      "mapCount": 17,
+      "mapCount": 15,
       "spawnCount": 30
     },
     "enemy_1282_sgelder": {
-      "mapCount": 12,
+      "mapCount": 10,
       "spawnCount": 0
     },
     "enemy_1282_sgelder_2": {
@@ -2420,75 +2396,75 @@
       "spawnCount": 0
     },
     "enemy_1286_dumcy": {
-      "mapCount": 12,
-      "spawnCount": 79
+      "mapCount": 10,
+      "spawnCount": 71
     },
     "enemy_1286_dumcy_2": {
       "mapCount": 6,
       "spawnCount": 17
     },
     "enemy_1287_ducrb": {
-      "mapCount": 8,
-      "spawnCount": 106
+      "mapCount": 5,
+      "spawnCount": 26
     },
     "enemy_1287_ducrb_2": {
-      "mapCount": 6,
-      "spawnCount": 34
+      "mapCount": 5,
+      "spawnCount": 20
     },
     "enemy_1288_duskls": {
-      "mapCount": 21,
-      "spawnCount": 123
+      "mapCount": 16,
+      "spawnCount": 91
     },
     "enemy_1288_duskls_2": {
-      "mapCount": 20,
-      "spawnCount": 188
+      "mapCount": 13,
+      "spawnCount": 84
     },
     "enemy_1289_dubmb": {
-      "mapCount": 11,
-      "spawnCount": 40
+      "mapCount": 8,
+      "spawnCount": 22
     },
     "enemy_1289_dubmb_2": {
-      "mapCount": 9,
-      "spawnCount": 67
+      "mapCount": 6,
+      "spawnCount": 19
     },
     "enemy_1290_duflm": {
+      "mapCount": 4,
+      "spawnCount": 5
+    },
+    "enemy_1290_duflm_2": {
+      "mapCount": 5,
+      "spawnCount": 14
+    },
+    "enemy_1291_dusrch": {
+      "mapCount": 6,
+      "spawnCount": 6
+    },
+    "enemy_1291_dusrch_2": {
+      "mapCount": 5,
+      "spawnCount": 10
+    },
+    "enemy_1292_duskld": {
+      "mapCount": 4,
+      "spawnCount": 12
+    },
+    "enemy_1292_duskld_2": {
       "mapCount": 5,
       "spawnCount": 16
     },
-    "enemy_1290_duflm_2": {
-      "mapCount": 6,
-      "spawnCount": 47
-    },
-    "enemy_1291_dusrch": {
-      "mapCount": 9,
-      "spawnCount": 19
-    },
-    "enemy_1291_dusrch_2": {
-      "mapCount": 6,
-      "spawnCount": 27
-    },
-    "enemy_1292_duskld": {
-      "mapCount": 9,
-      "spawnCount": 38
-    },
-    "enemy_1292_duskld_2": {
-      "mapCount": 10,
-      "spawnCount": 51
-    },
     "enemy_1293_duswrd": {
-      "mapCount": 9,
-      "spawnCount": 27
+      "mapCount": 4,
+      "spawnCount": 6
     },
     "enemy_1293_duswrd_2": {
-      "mapCount": 5,
-      "spawnCount": 18
+      "mapCount": 2,
+      "spawnCount": 5
     },
     "enemy_1293_duswrd_3": {
-      "mapCount": 6,
+      "mapCount": 5,
       "spawnCount": 3
     },
     "enemy_1294_duchns": {
-      "mapCount": 6,
+      "mapCount": 5,
       "spawnCount": 0
     },
     "enemy_1294_duchns_2": {
@@ -2496,100 +2472,88 @@
       "spawnCount": 0
     },
     "enemy_1295_ymph": {
-      "mapCount": 24,
-      "spawnCount": 392
+      "mapCount": 13,
+      "spawnCount": 172
     },
     "enemy_1295_ymph_2": {
-      "mapCount": 15,
-      "spawnCount": 279
+      "mapCount": 10,
+      "spawnCount": 77
     },
     "enemy_1296_ymknif": {
-      "mapCount": 15,
-      "spawnCount": 117
+      "mapCount": 10,
+      "spawnCount": 60
     },
     "enemy_1296_ymknif_2": {
-      "mapCount": 11,
-      "spawnCount": 64
+      "mapCount": 6,
+      "spawnCount": 29
     },
     "enemy_1297_ymflag": {
-      "mapCount": 9,
-      "spawnCount": 40
+      "mapCount": 8,
+      "spawnCount": 24
     },
     "enemy_1297_ymflag_2": {
-      "mapCount": 12,
-      "spawnCount": 68
+      "mapCount": 9,
+      "spawnCount": 46
     },
     "enemy_1298_ymmonk": {
-      "mapCount": 12,
-      "spawnCount": 53
+      "mapCount": 7,
+      "spawnCount": 29
     },
     "enemy_1298_ymmonk_2": {
-      "mapCount": 15,
-      "spawnCount": 96
+      "mapCount": 10,
+      "spawnCount": 31
     },
     "enemy_1299_ymkilr": {
-      "mapCount": 9,
-      "spawnCount": 20
+      "mapCount": 8,
+      "spawnCount": 11
     },
     "enemy_1299_ymkilr_2": {
-      "mapCount": 11,
-      "spawnCount": 27
+      "mapCount": 10,
+      "spawnCount": 17
     },
     "enemy_1300_ymmir": {
-      "mapCount": 4,
-      "spawnCount": 8
+      "mapCount": 3,
+      "spawnCount": 4
     },
     "enemy_1300_ymmir_2": {
-      "mapCount": 8,
-      "spawnCount": 18
+      "mapCount": 7,
+      "spawnCount": 9
     },
     "enemy_1301_ymcnon": {
-      "mapCount": 4,
-      "spawnCount": 13
+      "mapCount": 3,
+      "spawnCount": 10
     },
     "enemy_1301_ymcnon_2": {
-      "mapCount": 3,
-      "spawnCount": 19
-    },
-    "enemy_1302_ymtro": {
-      "mapCount": 4,
-      "spawnCount": 8
-    },
-    "enemy_1302_ymtro_2": {
-      "mapCount": 6,
+      "mapCount": 2,
       "spawnCount": 7
     },
-    "enemy_1303_mhshep_2": {
+    "enemy_1302_ymtro": {
       "mapCount": 3,
-      "spawnCount": 36
+      "spawnCount": 6
     },
-    "enemy_1303_mhshep_3": {
-      "mapCount": 2,
-      "spawnCount": 48
+    "enemy_1302_ymtro_2": {
+      "mapCount": 5,
+      "spawnCount": 3
     },
-    "enemy_1304_mhwolf": {
-      "mapCount": 2,
-      "spawnCount": 20
-    },
-    "enemy_1304_mhwolf_2": {
-      "mapCount": 2,
-      "spawnCount": 2
+    "enemy_1303_mhshep_2": {
+      "mapCount": 1,
+      "spawnCount": 18
     },
     "enemy_1305_mhslim": {
-      "mapCount": 5,
-      "spawnCount": 46
+      "mapCount": 3,
+      "spawnCount": 12
     },
     "enemy_1305_mhslim_2": {
       "mapCount": 3,
       "spawnCount": 14
     },
     "enemy_1306_mhtrtl": {
-      "mapCount": 5,
-      "spawnCount": 10
+      "mapCount": 3,
+      "spawnCount": 0
     },
     "enemy_1306_mhtrtl_2": {
-      "mapCount": 3,
-      "spawnCount": 26
+      "mapCount": 1,
+      "spawnCount": 6
     },
     "enemy_1307_mhrhcr": {
       "mapCount": 1,
@@ -2600,12 +2564,12 @@
       "spawnCount": 1
     },
     "enemy_1309_mhboar": {
-      "mapCount": 12,
-      "spawnCount": 25
+      "mapCount": 10,
+      "spawnCount": 0
     },
     "enemy_1309_mhboar_2": {
-      "mapCount": 5,
-      "spawnCount": 10
+      "mapCount": 3,
+      "spawnCount": 4
     },
     "enemy_1310_mhprpn": {
       "mapCount": 2,
@@ -2616,12 +2580,12 @@
       "spawnCount": 0
     },
     "enemy_1311_mhkryk": {
-      "mapCount": 5,
-      "spawnCount": 2
+      "mapCount": 3,
+      "spawnCount": 0
     },
     "enemy_1311_mhkryk_2": {
-      "mapCount": 4,
-      "spawnCount": 13
+      "mapCount": 2,
+      "spawnCount": 5
     },
     "enemy_1312_ymillu": {
       "mapCount": 3,
@@ -2684,20 +2648,20 @@
       "spawnCount": 12
     },
     "enemy_1320_wdrrl": {
-      "mapCount": 10,
-      "spawnCount": 18
+      "mapCount": 6,
+      "spawnCount": 8
     },
     "enemy_1320_wdrrl_2": {
       "mapCount": 9,
       "spawnCount": 11
     },
     "enemy_1321_wdarft": {
-      "mapCount": 11,
-      "spawnCount": 20
+      "mapCount": 8,
+      "spawnCount": 16
     },
     "enemy_1321_wdarft_2": {
-      "mapCount": 8,
-      "spawnCount": 11
+      "mapCount": 6,
+      "spawnCount": 9
     },
     "enemy_1322_wdgyht": {
       "mapCount": 8,
@@ -2720,60 +2684,60 @@
       "spawnCount": 0
     },
     "enemy_1325_cbgpro": {
-      "mapCount": 13,
-      "spawnCount": 238
+      "mapCount": 12,
+      "spawnCount": 111
     },
     "enemy_1325_cbgpro_2": {
-      "mapCount": 16,
-      "spawnCount": 297
+      "mapCount": 15,
+      "spawnCount": 169
     },
     "enemy_1326_cbagen": {
-      "mapCount": 8,
-      "spawnCount": 51
+      "mapCount": 7,
+      "spawnCount": 37
     },
     "enemy_1326_cbagen_2": {
-      "mapCount": 10,
-      "spawnCount": 79
+      "mapCount": 9,
+      "spawnCount": 68
     },
     "enemy_1327_cbrokt": {
-      "mapCount": 7,
-      "spawnCount": 54
+      "mapCount": 4,
+      "spawnCount": 35
     },
     "enemy_1327_cbrokt_2": {
-      "mapCount": 6,
-      "spawnCount": 39
+      "mapCount": 5,
+      "spawnCount": 23
     },
     "enemy_1328_cbjedi": {
-      "mapCount": 10,
-      "spawnCount": 106
+      "mapCount": 9,
+      "spawnCount": 101
     },
     "enemy_1328_cbjedi_2": {
-      "mapCount": 17,
-      "spawnCount": 89
+      "mapCount": 16,
+      "spawnCount": 71
     },
     "enemy_1329_cbshld": {
-      "mapCount": 18,
-      "spawnCount": 81
+      "mapCount": 15,
+      "spawnCount": 54
     },
     "enemy_1329_cbshld_2": {
-      "mapCount": 14,
-      "spawnCount": 93
+      "mapCount": 13,
+      "spawnCount": 72
     },
     "enemy_1330_cbrush": {
-      "mapCount": 7,
-      "spawnCount": 25
+      "mapCount": 6,
+      "spawnCount": 14
     },
     "enemy_1330_cbrush_2": {
-      "mapCount": 9,
-      "spawnCount": 59
+      "mapCount": 8,
+      "spawnCount": 53
     },
     "enemy_1331_cbsisy": {
-      "mapCount": 9,
-      "spawnCount": 10
+      "mapCount": 8,
+      "spawnCount": 8
     },
     "enemy_1331_cbsisy_2": {
-      "mapCount": 7,
-      "spawnCount": 11
+      "mapCount": 6,
+      "spawnCount": 9
     },
     "enemy_1331_cbsisy_3": {
       "mapCount": 3,
@@ -2784,24 +2748,24 @@
       "spawnCount": 4
     },
     "enemy_1332_cbterm": {
-      "mapCount": 3,
-      "spawnCount": 2
+      "mapCount": 2,
+      "spawnCount": 1
     },
     "enemy_1332_cbterm_2": {
-      "mapCount": 6,
-      "spawnCount": 6
+      "mapCount": 5,
+      "spawnCount": 4
     },
     "enemy_1333_cbbgen": {
-      "mapCount": 2,
+      "mapCount": 1,
       "spawnCount": 0
     },
     "enemy_1333_cbbgen_2": {
-      "mapCount": 6,
+      "mapCount": 5,
       "spawnCount": 0
     },
     "enemy_1334_ristar": {
-      "mapCount": 28,
-      "spawnCount": 52
+      "mapCount": 27,
+      "spawnCount": 49
     },
     "enemy_1335_bldrat": {
       "mapCount": 9,
@@ -2872,24 +2836,24 @@
       "spawnCount": 0
     },
     "enemy_1344_ddlamb": {
-      "mapCount": 20,
-      "spawnCount": 407
+      "mapCount": 19,
+      "spawnCount": 158
     },
     "enemy_1344_ddlamb_2": {
       "mapCount": 16,
       "spawnCount": 163
     },
     "enemy_1345_tplamb": {
-      "mapCount": 16,
-      "spawnCount": 136
+      "mapCount": 15,
+      "spawnCount": 67
     },
     "enemy_1345_tplamb_2": {
       "mapCount": 15,
       "spawnCount": 50
     },
     "enemy_1346_ynshp": {
-      "mapCount": 8,
-      "spawnCount": 36
+      "mapCount": 7,
+      "spawnCount": 19
     },
     "enemy_1346_ynshp_0": {
       "mapCount": 1,
@@ -2916,8 +2880,8 @@
       "spawnCount": 0
     },
     "enemy_1347_fyshp": {
-      "mapCount": 12,
-      "spawnCount": 77
+      "mapCount": 11,
+      "spawnCount": 54
     },
     "enemy_1347_fyshp_2": {
       "mapCount": 10,
@@ -2928,99 +2892,99 @@
       "spawnCount": 8
     },
     "enemy_1348_rllamb": {
-      "mapCount": 9,
-      "spawnCount": 38
+      "mapCount": 8,
+      "spawnCount": 24
     },
     "enemy_1348_rllamb_2": {
       "mapCount": 8,
       "spawnCount": 85
     },
     "enemy_1349_rckshp": {
-      "mapCount": 5,
-      "spawnCount": 16
+      "mapCount": 4,
+      "spawnCount": 4
     },
     "enemy_1349_rckshp_2": {
       "mapCount": 7,
       "spawnCount": 34
     },
     "enemy_1350_mgcshp": {
-      "mapCount": 4,
-      "spawnCount": 31
+      "mapCount": 3,
+      "spawnCount": 16
     },
     "enemy_1350_mgcshp_2": {
       "mapCount": 8,
       "spawnCount": 45
     },
     "enemy_1351_yhhshp": {
-      "mapCount": 22,
-      "spawnCount": 204
+      "mapCount": 21,
+      "spawnCount": 153
     },
     "enemy_1352_eslime": {
-      "mapCount": 6,
-      "spawnCount": 48
+      "mapCount": 5,
+      "spawnCount": 31
     },
     "enemy_1352_eslime_2": {
-      "mapCount": 4,
-      "spawnCount": 101
+      "mapCount": 3,
+      "spawnCount": 64
     },
     "enemy_1353_esabr": {
-      "mapCount": 17,
-      "spawnCount": 367
+      "mapCount": 10,
+      "spawnCount": 154
     },
     "enemy_1353_esabr_2": {
-      "mapCount": 9,
-      "spawnCount": 258
+      "mapCount": 8,
+      "spawnCount": 102
     },
     "enemy_1354_eghost": {
-      "mapCount": 6,
-      "spawnCount": 81
+      "mapCount": 3,
+      "spawnCount": 28
     },
     "enemy_1354_eghost_2": {
-      "mapCount": 5,
-      "spawnCount": 38
+      "mapCount": 4,
+      "spawnCount": 25
     },
     "enemy_1355_mrfly": {
-      "mapCount": 5,
-      "spawnCount": 14
+      "mapCount": 1,
+      "spawnCount": 2
     },
     "enemy_1355_mrfly_2": {
       "mapCount": 5,
       "spawnCount": 8
     },
     "enemy_1356_egun": {
-      "mapCount": 10,
-      "spawnCount": 48
+      "mapCount": 5,
+      "spawnCount": 14
     },
     "enemy_1356_egun_2": {
-      "mapCount": 6,
-      "spawnCount": 30
+      "mapCount": 5,
+      "spawnCount": 22
     },
     "enemy_1357_erob": {
-      "mapCount": 8,
-      "spawnCount": 34
+      "mapCount": 3,
+      "spawnCount": 6
     },
     "enemy_1357_erob_2": {
-      "mapCount": 6,
-      "spawnCount": 27
+      "mapCount": 5,
+      "spawnCount": 17
     },
     "enemy_1358_esheld": {
-      "mapCount": 12,
-      "spawnCount": 73
+      "mapCount": 7,
+      "spawnCount": 39
     },
     "enemy_1358_esheld_2": {
-      "mapCount": 6,
-      "spawnCount": 42
+      "mapCount": 5,
+      "spawnCount": 34
     },
     "enemy_1359_ekulsr": {
-      "mapCount": 7,
-      "spawnCount": 13
+      "mapCount": 6,
+      "spawnCount": 7
     },
     "enemy_1359_ekulsr_2": {
-      "mapCount": 7,
-      "spawnCount": 21
+      "mapCount": 6,
+      "spawnCount": 14
     },
     "enemy_1360_dfello": {
-      "mapCount": 45,
+      "mapCount": 41,
       "spawnCount": 72
     },
     "enemy_1361_dthrow": {
@@ -3028,19 +2992,19 @@
       "spawnCount": 21
     },
     "enemy_1361_dthrow_2": {
-      "mapCount": 5,
-      "spawnCount": 2
+      "mapCount": 4,
+      "spawnCount": 0
     },
     "enemy_1362_dfat": {
-      "mapCount": 14,
+      "mapCount": 12,
       "spawnCount": 6
     },
     "enemy_1362_dfat_2": {
-      "mapCount": 2,
-      "spawnCount": 7
+      "mapCount": 1,
+      "spawnCount": 0
     },
     "enemy_1363_spnshd": {
-      "mapCount": 24,
+      "mapCount": 22,
       "spawnCount": 12
     },
     "enemy_1363_spnshd_2": {
@@ -3072,7 +3036,7 @@
       "spawnCount": 0
     },
     "enemy_1367_dseed": {
-      "mapCount": 50,
+      "mapCount": 46,
       "spawnCount": 0
     },
     "enemy_1368_spilot": {
@@ -3080,92 +3044,92 @@
       "spawnCount": 0
     },
     "enemy_1369_bmbcar1": {
-      "mapCount": 43,
+      "mapCount": 39,
       "spawnCount": 0
     },
     "enemy_1370_bmbcar2": {
-      "mapCount": 43,
+      "mapCount": 39,
       "spawnCount": 0
     },
     "enemy_1371_ltnflu": {
-      "mapCount": 15,
-      "spawnCount": 221
+      "mapCount": 10,
+      "spawnCount": 105
     },
     "enemy_1371_ltnflu_2": {
-      "mapCount": 12,
-      "spawnCount": 201
+      "mapCount": 7,
+      "spawnCount": 116
     },
     "enemy_1372_ltntpt": {
-      "mapCount": 10,
-      "spawnCount": 125
+      "mapCount": 9,
+      "spawnCount": 98
     },
     "enemy_1372_ltntpt_2": {
-      "mapCount": 13,
-      "spawnCount": 191
+      "mapCount": 12,
+      "spawnCount": 187
     },
     "enemy_1373_ltnhor": {
-      "mapCount": 2,
-      "spawnCount": 9
+      "mapCount": 1,
+      "spawnCount": 4
     },
     "enemy_1373_ltnhor_2": {
-      "mapCount": 6,
-      "spawnCount": 42
+      "mapCount": 5,
+      "spawnCount": 40
     },
     "enemy_1374_ltnhap": {
-      "mapCount": 5,
-      "spawnCount": 23
+      "mapCount": 4,
+      "spawnCount": 15
     },
     "enemy_1374_ltnhap_2": {
-      "mapCount": 5,
-      "spawnCount": 18
+      "mapCount": 4,
+      "spawnCount": 14
     },
     "enemy_1375_ltnclr": {
-      "mapCount": 8,
-      "spawnCount": 27
-    },
-    "enemy_1375_ltnclr_2": {
-      "mapCount": 9,
-      "spawnCount": 54
-    },
-    "enemy_1376_ltndru": {
-      "mapCount": 3,
+      "mapCount": 7,
       "spawnCount": 19
     },
-    "enemy_1376_ltndru_2": {
-      "mapCount": 6,
-      "spawnCount": 33
-    },
-    "enemy_1377_ltnclo": {
-      "mapCount": 5,
-      "spawnCount": 17
-    },
-    "enemy_1377_ltnclo_2": {
-      "mapCount": 10,
+    "enemy_1375_ltnclr_2": {
+      "mapCount": 8,
       "spawnCount": 50
     },
+    "enemy_1376_ltndru": {
+      "mapCount": 2,
+      "spawnCount": 10
+    },
+    "enemy_1376_ltndru_2": {
+      "mapCount": 5,
+      "spawnCount": 30
+    },
+    "enemy_1377_ltnclo": {
+      "mapCount": 4,
+      "spawnCount": 13
+    },
+    "enemy_1377_ltnclo_2": {
+      "mapCount": 9,
+      "spawnCount": 48
+    },
     "enemy_1378_ltnmst": {
-      "mapCount": 3,
+      "mapCount": 2,
       "spawnCount": 2
     },
     "enemy_1378_ltnmst_2": {
-      "mapCount": 7,
-      "spawnCount": 14
+      "mapCount": 6,
+      "spawnCount": 12
     },
     "enemy_1378_ltnmst_2_b": {
       "mapCount": 4,
       "spawnCount": 9
     },
     "enemy_1378_ltnmst_b": {
-      "mapCount": 2,
-      "spawnCount": 6
+      "mapCount": 1,
+      "spawnCount": 4
     },
     "enemy_1379_ltncdt": {
-      "mapCount": 2,
-      "spawnCount": 1
+      "mapCount": 1,
+      "spawnCount": 0
     },
     "enemy_1379_ltncdt_2": {
-      "mapCount": 7,
-      "spawnCount": 10
+      "mapCount": 6,
+      "spawnCount": 7
     },
     "enemy_1379_ltncdt_2_b": {
       "mapCount": 2,
@@ -3180,36 +3144,36 @@
       "spawnCount": 0
     },
     "enemy_1381_winman": {
-      "mapCount": 11,
-      "spawnCount": 249
+      "mapCount": 10,
+      "spawnCount": 110
     },
     "enemy_1381_winman_2": {
-      "mapCount": 10,
-      "spawnCount": 170
+      "mapCount": 9,
+      "spawnCount": 86
     },
     "enemy_1382_winbal": {
-      "mapCount": 4,
-      "spawnCount": 28
+      "mapCount": 3,
+      "spawnCount": 9
     },
     "enemy_1382_winbal_2": {
-      "mapCount": 7,
-      "spawnCount": 19
+      "mapCount": 6,
+      "spawnCount": 17
     },
     "enemy_1383_windog": {
-      "mapCount": 11,
-      "spawnCount": 182
+      "mapCount": 6,
+      "spawnCount": 75
     },
     "enemy_1383_windog_2": {
-      "mapCount": 6,
-      "spawnCount": 139
+      "mapCount": 5,
+      "spawnCount": 69
     },
     "enemy_1384_winfrz": {
-      "mapCount": 10,
-      "spawnCount": 19
+      "mapCount": 5,
+      "spawnCount": 11
     },
     "enemy_1384_winfrz_2": {
-      "mapCount": 9,
-      "spawnCount": 9
+      "mapCount": 4,
+      "spawnCount": 2
     },
     "enemy_1384_winfrz_2_b": {
       "mapCount": 1,
@@ -3220,91 +3184,91 @@
       "spawnCount": 2
     },
     "enemy_1385_winbom": {
-      "mapCount": 8,
-      "spawnCount": 18
+      "mapCount": 7,
+      "spawnCount": 17
     },
     "enemy_1385_winbom_2": {
-      "mapCount": 8,
-      "spawnCount": 12
+      "mapCount": 7,
+      "spawnCount": 8
     },
     "enemy_1386_winmag": {
-      "mapCount": 4,
-      "spawnCount": 10
+      "mapCount": 3,
+      "spawnCount": 5
     },
     "enemy_1386_winmag_2": {
-      "mapCount": 4,
-      "spawnCount": 15
+      "mapCount": 3,
+      "spawnCount": 5
     },
     "enemy_1387_winshd": {
-      "mapCount": 4,
-      "spawnCount": 16
+      "mapCount": 3,
+      "spawnCount": 12
     },
     "enemy_1387_winshd_2": {
-      "mapCount": 6,
-      "spawnCount": 36
+      "mapCount": 5,
+      "spawnCount": 32
     },
     "enemy_1388_wingnt": {
-      "mapCount": 10,
-      "spawnCount": 29
+      "mapCount": 7,
+      "spawnCount": 17
     },
     "enemy_1388_wingnt_2": {
-      "mapCount": 9,
-      "spawnCount": 10
+      "mapCount": 8,
+      "spawnCount": 7
     },
     "enemy_1389_winbab": {
-      "mapCount": 4,
-      "spawnCount": 4
+      "mapCount": 3,
+      "spawnCount": 2
     },
     "enemy_1389_winbab_2": {
-      "mapCount": 6,
-      "spawnCount": 13
+      "mapCount": 5,
+      "spawnCount": 10
     },
     "enemy_1390_dhsbr": {
-      "mapCount": 15,
+      "mapCount": 14,
       "spawnCount": 177
     },
     "enemy_1390_dhsbr_2": {
-      "mapCount": 15,
+      "mapCount": 14,
       "spawnCount": 202
     },
     "enemy_1391_dhbow": {
-      "mapCount": 11,
+      "mapCount": 10,
       "spawnCount": 56
     },
     "enemy_1391_dhbow_2": {
-      "mapCount": 12,
+      "mapCount": 11,
       "spawnCount": 67
     },
     "enemy_1392_dhshld": {
-      "mapCount": 8,
+      "mapCount": 7,
       "spawnCount": 11
     },
     "enemy_1392_dhshld_2": {
-      "mapCount": 11,
+      "mapCount": 10,
       "spawnCount": 18
     },
     "enemy_1393_dhele": {
-      "mapCount": 6,
+      "mapCount": 5,
       "spawnCount": 8
     },
     "enemy_1393_dhele_2": {
-      "mapCount": 12,
+      "mapCount": 11,
       "spawnCount": 10
     },
     "enemy_1394_dhzts": {
-      "mapCount": 4,
+      "mapCount": 3,
       "spawnCount": 1
     },
     "enemy_1394_dhzts_2": {
-      "mapCount": 9,
+      "mapCount": 8,
       "spawnCount": 7
     },
     "enemy_1395_dhxts": {
-      "mapCount": 12,
-      "spawnCount": 114
+      "mapCount": 9,
+      "spawnCount": 72
     },
     "enemy_1395_dhxts_2": {
-      "mapCount": 10,
+      "mapCount": 9,
       "spawnCount": 308
     },
     "enemy_1395_dhxts_b": {
@@ -3320,11 +3284,11 @@
       "spawnCount": 5
     },
     "enemy_1397_dhtsxt": {
-      "mapCount": 4,
+      "mapCount": 3,
       "spawnCount": 1
     },
     "enemy_1397_dhtsxt_2": {
-      "mapCount": 3,
+      "mapCount": 2,
       "spawnCount": 2
     },
     "enemy_1397_dhtsxt_2_a": {
@@ -3332,15 +3296,15 @@
       "spawnCount": 0
     },
     "enemy_1397_dhtsxt_a": {
-      "mapCount": 2,
+      "mapCount": 1,
       "spawnCount": 3
     },
     "enemy_1398_dhdcr": {
-      "mapCount": 2,
+      "mapCount": 1,
       "spawnCount": 0
     },
     "enemy_1398_dhdcr_2": {
-      "mapCount": 7,
+      "mapCount": 6,
       "spawnCount": 0
     },
     "enemy_1398_dhdcr_b": {
@@ -3348,11 +3312,11 @@
       "spawnCount": 0
     },
     "enemy_1399_dhtb": {
-      "mapCount": 7,
+      "mapCount": 6,
       "spawnCount": 57
     },
     "enemy_1399_dhtb_2": {
-      "mapCount": 10,
+      "mapCount": 9,
       "spawnCount": 88
     },
     "enemy_1399_dhtb_b": {
@@ -3360,56 +3324,56 @@
       "spawnCount": 0
     },
     "enemy_1400_dhtbgj": {
-      "mapCount": 11,
-      "spawnCount": 0
-    },
-    "enemy_1400_dhtbgj_2": {
       "mapCount": 10,
       "spawnCount": 0
     },
+    "enemy_1400_dhtbgj_2": {
+      "mapCount": 9,
+      "spawnCount": 0
+    },
     "enemy_1401_pogpro": {
-      "mapCount": 15,
-      "spawnCount": 274
+      "mapCount": 9,
+      "spawnCount": 152
     },
     "enemy_1401_pogpro_2": {
       "mapCount": 8,
       "spawnCount": 36
     },
     "enemy_1402_tgshd": {
-      "mapCount": 7,
-      "spawnCount": 38
+      "mapCount": 5,
+      "spawnCount": 36
     },
     "enemy_1402_tgshd_2": {
       "mapCount": 8,
       "spawnCount": 21
     },
     "enemy_1403_gunsho": {
-      "mapCount": 22,
-      "spawnCount": 191
+      "mapCount": 14,
+      "spawnCount": 105
     },
     "enemy_1403_gunsho_2": {
       "mapCount": 14,
       "spawnCount": 68
     },
     "enemy_1404_msnip": {
-      "mapCount": 14,
-      "spawnCount": 33
+      "mapCount": 12,
+      "spawnCount": 31
     },
     "enemy_1404_msnip_2": {
       "mapCount": 13,
       "spawnCount": 13
     },
     "enemy_1405_boomer": {
-      "mapCount": 7,
-      "spawnCount": 41
+      "mapCount": 5,
+      "spawnCount": 27
     },
     "enemy_1405_boomer_2": {
-      "mapCount": 10,
-      "spawnCount": 35
+      "mapCount": 8,
+      "spawnCount": 25
     },
     "enemy_1406_chghmr": {
-      "mapCount": 8,
-      "spawnCount": 24
+      "mapCount": 6,
+      "spawnCount": 10
     },
     "enemy_1406_chghmr_2": {
       "mapCount": 10,
@@ -3424,16 +3388,16 @@
       "spawnCount": 3
     },
     "enemy_1408_scotcn": {
-      "mapCount": 4,
-      "spawnCount": 9
-    },
-    "enemy_1408_scotcn_2": {
-      "mapCount": 3,
+      "mapCount": 2,
       "spawnCount": 5
     },
+    "enemy_1408_scotcn_2": {
+      "mapCount": 1,
+      "spawnCount": 1
+    },
     "enemy_1409_bdguad": {
-      "mapCount": 8,
-      "spawnCount": 13
+      "mapCount": 2,
+      "spawnCount": 1
     },
     "enemy_1409_bdguad_2": {
       "mapCount": 5,
@@ -3444,52 +3408,52 @@
       "spawnCount": 3
     },
     "enemy_1410_mmelee": {
-      "mapCount": 16,
-      "spawnCount": 196
+      "mapCount": 13,
+      "spawnCount": 104
     },
     "enemy_1410_mmelee_2": {
-      "mapCount": 15,
-      "spawnCount": 245
+      "mapCount": 14,
+      "spawnCount": 219
     },
     "enemy_1411_mmrnge": {
-      "mapCount": 7,
-      "spawnCount": 51
+      "mapCount": 6,
+      "spawnCount": 39
     },
     "enemy_1411_mmrnge_2": {
-      "mapCount": 7,
-      "spawnCount": 62
+      "mapCount": 6,
+      "spawnCount": 47
     },
     "enemy_1412_mmjump": {
-      "mapCount": 7,
-      "spawnCount": 71
+      "mapCount": 6,
+      "spawnCount": 37
     },
     "enemy_1412_mmjump_2": {
-      "mapCount": 10,
-      "spawnCount": 58
+      "mapCount": 9,
+      "spawnCount": 50
     },
     "enemy_1413_mmstck": {
-      "mapCount": 6,
-      "spawnCount": 44
+      "mapCount": 5,
+      "spawnCount": 39
     },
     "enemy_1413_mmstck_2": {
-      "mapCount": 9,
-      "spawnCount": 66
+      "mapCount": 8,
+      "spawnCount": 54
     },
     "enemy_1414_mmleak": {
-      "mapCount": 3,
-      "spawnCount": 16
+      "mapCount": 2,
+      "spawnCount": 10
     },
     "enemy_1414_mmleak_2": {
-      "mapCount": 10,
-      "spawnCount": 45
+      "mapCount": 9,
+      "spawnCount": 43
     },
     "enemy_1415_mmkabi": {
-      "mapCount": 8,
-      "spawnCount": 41
+      "mapCount": 5,
+      "spawnCount": 11
     },
     "enemy_1415_mmkabi_2": {
-      "mapCount": 17,
-      "spawnCount": 28
+      "mapCount": 12,
+      "spawnCount": 14
     },
     "enemy_1416_mmfarm": {
       "mapCount": 2,
@@ -3508,12 +3472,12 @@
       "spawnCount": 14
     },
     "enemy_1418_mmkonm": {
-      "mapCount": 4,
-      "spawnCount": 11
+      "mapCount": 3,
+      "spawnCount": 4
     },
     "enemy_1418_mmkonm_2": {
-      "mapCount": 5,
-      "spawnCount": 36
+      "mapCount": 4,
+      "spawnCount": 14
     },
     "enemy_1419_mmcike": {
       "mapCount": 8,
@@ -3620,67 +3584,67 @@
       "spawnCount": 19
     },
     "enemy_1433_dsbasi": {
-      "mapCount": 11,
-      "spawnCount": 312
+      "mapCount": 10,
+      "spawnCount": 272
     },
     "enemy_1433_dsbasi_2": {
-      "mapCount": 10,
-      "spawnCount": 171
+      "mapCount": 9,
+      "spawnCount": 109
     },
     "enemy_1434_dsshel": {
-      "mapCount": 18,
-      "spawnCount": 85
+      "mapCount": 17,
+      "spawnCount": 70
     },
     "enemy_1435_dsflys": {
-      "mapCount": 5,
-      "spawnCount": 68
+      "mapCount": 4,
+      "spawnCount": 53
     },
     "enemy_1435_dsflys_2": {
-      "mapCount": 3,
-      "spawnCount": 45
+      "mapCount": 2,
+      "spawnCount": 0
     },
     "enemy_1436_dsdivi": {
-      "mapCount": 10,
-      "spawnCount": 54
+      "mapCount": 9,
+      "spawnCount": 37
     },
     "enemy_1436_dsdivi_2": {
-      "mapCount": 7,
-      "spawnCount": 47
-    },
-    "enemy_1437_dsfull": {
-      "mapCount": 4,
-      "spawnCount": 50
-    },
-    "enemy_1437_dsfull_2": {
       "mapCount": 6,
-      "spawnCount": 60
-    },
-    "enemy_1438_dspred": {
-      "mapCount": 4,
       "spawnCount": 17
     },
+    "enemy_1437_dsfull": {
+      "mapCount": 3,
+      "spawnCount": 35
+    },
+    "enemy_1437_dsfull_2": {
+      "mapCount": 5,
+      "spawnCount": 27
+    },
+    "enemy_1438_dspred": {
+      "mapCount": 3,
+      "spawnCount": 9
+    },
     "enemy_1438_dspred_2": {
-      "mapCount": 4,
-      "spawnCount": 23
+      "mapCount": 3,
+      "spawnCount": 18
     },
     "enemy_1439_dslntf": {
-      "mapCount": 4,
-      "spawnCount": 28
+      "mapCount": 3,
+      "spawnCount": 20
     },
     "enemy_1439_dslntf_2": {
-      "mapCount": 4,
-      "spawnCount": 8
+      "mapCount": 3,
+      "spawnCount": 6
     },
     "enemy_1440_dselec": {
-      "mapCount": 4,
-      "spawnCount": 9
+      "mapCount": 3,
+      "spawnCount": 6
     },
     "enemy_1440_dselec_2": {
-      "mapCount": 4,
-      "spawnCount": 9
+      "mapCount": 3,
+      "spawnCount": 6
     },
     "enemy_1441_bounc2": {
-      "mapCount": 5,
+      "mapCount": 4,
       "spawnCount": 0
     },
     "enemy_1442_dsgun": {
@@ -3700,8 +3664,8 @@
       "spawnCount": 5
     },
     "enemy_1502_crowns": {
-      "mapCount": 11,
-      "spawnCount": 6
+      "mapCount": 9,
+      "spawnCount": 5
     },
     "enemy_1503_talula": {
       "mapCount": 2,
@@ -3728,8 +3692,8 @@
       "spawnCount": 3
     },
     "enemy_1509_mousek": {
-      "mapCount": 5,
-      "spawnCount": 4
+      "mapCount": 4,
+      "spawnCount": 3
     },
     "enemy_1510_frstar2": {
       "mapCount": 2,
@@ -3748,12 +3712,12 @@
       "spawnCount": 3
     },
     "enemy_1513_dekght": {
-      "mapCount": 8,
-      "spawnCount": 4
+      "mapCount": 6,
+      "spawnCount": 3
     },
     "enemy_1513_dekght_2": {
-      "mapCount": 8,
-      "spawnCount": 4
+      "mapCount": 6,
+      "spawnCount": 3
     },
     "enemy_1514_smephi": {
       "mapCount": 2,
@@ -3764,8 +3728,8 @@
       "spawnCount": 2
     },
     "enemy_1516_jakill": {
-      "mapCount": 4,
-      "spawnCount": 2
+      "mapCount": 3,
+      "spawnCount": 1
     },
     "enemy_1517_xi": {
       "mapCount": 3,
@@ -3796,11 +3760,11 @@
       "spawnCount": 0
     },
     "enemy_1523_mandra": {
-      "mapCount": 5,
-      "spawnCount": 3
+      "mapCount": 4,
+      "spawnCount": 2
     },
     "enemy_1524_bldkgt": {
-      "mapCount": 6,
+      "mapCount": 5,
       "spawnCount": 0
     },
     "enemy_1525_blkswb": {
@@ -3844,8 +3808,8 @@
       "spawnCount": 0
     },
     "enemy_1532_minima": {
-      "mapCount": 4,
-      "spawnCount": 4
+      "mapCount": 3,
+      "spawnCount": 3
     },
     "enemy_1533_stmkgt": {
       "mapCount": 7,
@@ -3860,8 +3824,8 @@
       "spawnCount": 0
     },
     "enemy_1536_ncrmcr": {
-      "mapCount": 6,
-      "spawnCount": 3
+      "mapCount": 5,
+      "spawnCount": 2
     },
     "enemy_1538_ymmons": {
       "mapCount": 3,
@@ -3912,8 +3876,8 @@
       "spawnCount": 0
     },
     "enemy_1545_shpkg": {
-      "mapCount": 6,
-      "spawnCount": 6
+      "mapCount": 5,
+      "spawnCount": 5
     },
     "enemy_1546_cliff": {
       "mapCount": 2,
@@ -4231,18 +4195,6 @@
       "mapCount": 3,
       "spawnCount": 0
     },
-    "enemy_2043_smsbr": {
-      "mapCount": 2,
-      "spawnCount": 30
-    },
-    "enemy_2044_smwiz": {
-      "mapCount": 2,
-      "spawnCount": 8
-    },
-    "enemy_2046_smwar": {
-      "mapCount": 2,
-      "spawnCount": 26
-    },
     "enemy_2080_skzlwy": {
       "mapCount": 3,
       "spawnCount": 0
@@ -4260,8 +4212,8 @@
       "spawnCount": 0
     },
     "enemy_3001_upeopl": {
-      "mapCount": 16,
-      "spawnCount": 54
+      "mapCount": 15,
+      "spawnCount": 44
     },
     "enemy_3002_ftrtal": {
       "mapCount": 5,
@@ -4779,145 +4731,13 @@
       "mapCount": 3,
       "spawnCount": 0
     },
-    "enemy_6001_trsgst": {
-      "mapCount": 9,
-      "spawnCount": 0
-    },
-    "enemy_6002_trswlf": {
-      "mapCount": 9,
-      "spawnCount": 0
-    },
-    "enemy_6003_trsslm": {
-      "mapCount": 9,
-      "spawnCount": 0
-    },
-    "enemy_6004_pleslm": {
-      "mapCount": 1,
-      "spawnCount": 0
-    },
     "enemy_6005_llstone": {
-      "mapCount": 3,
+      "mapCount": 2,
       "spawnCount": 0
     },
     "enemy_6006_fystone": {
-      "mapCount": 3,
-      "spawnCount": 0
-    },
-    "enemy_6007_mtslm": {
-      "mapCount": 1,
-      "spawnCount": 0
-    },
-    "enemy_6008_mtslms": {
-      "mapCount": 1,
-      "spawnCount": 0
-    },
-    "enemy_6009_nlkgtbs": {
-      "mapCount": 1,
-      "spawnCount": 0
-    },
-    "enemy_6010_boxing": {
-      "mapCount": 2,
-      "spawnCount": 2
-    },
-    "enemy_6010_boxing_1": {
-      "mapCount": 2,
-      "spawnCount": 2
-    },
-    "enemy_6010_boxing_2": {
-      "mapCount": 2,
-      "spawnCount": 2
-    },
-    "enemy_6011_planty": {
-      "mapCount": 2,
-      "spawnCount": 2
-    },
-    "enemy_6012_plants": {
       "mapCount": 2,
       "spawnCount": 0
-    },
-    "enemy_6013_smith": {
-      "mapCount": 2,
-      "spawnCount": 2
-    },
-    "enemy_6014_crzgas": {
-      "mapCount": 2,
-      "spawnCount": 2
-    },
-    "enemy_6015_ictruck": {
-      "mapCount": 2,
-      "spawnCount": 2
-    },
-    "enemy_6016_splash": {
-      "mapCount": 2,
-      "spawnCount": 2
-    },
-    "enemy_6017_icdrone": {
-      "mapCount": 2,
-      "spawnCount": 0
-    },
-    "enemy_6018_carrier": {
-      "mapCount": 2,
-      "spawnCount": 2
-    },
-    "enemy_6019_escort": {
-      "mapCount": 2,
-      "spawnCount": 0
-    },
-    "enemy_6020_orang": {
-      "mapCount": 2,
-      "spawnCount": 2
-    },
-    "enemy_6021_cask": {
-      "mapCount": 2,
-      "spawnCount": 0
-    },
-    "enemy_6022_m2cnt": {
-      "mapCount": 2,
-      "spawnCount": 2
-    },
-    "enemy_6023_crane": {
-      "mapCount": 2,
-      "spawnCount": 2
-    },
-    "enemy_6024_crnbug": {
-      "mapCount": 2,
-      "spawnCount": 0
-    },
-    "enemy_6025_tinker": {
-      "mapCount": 2,
-      "spawnCount": 0
-    },
-    "enemy_6026_techn": {
-      "mapCount": 2,
-      "spawnCount": 0
-    },
-    "enemy_6027_bqthie": {
-      "mapCount": 2,
-      "spawnCount": 2
-    },
-    "enemy_6028_cosgia": {
-      "mapCount": 2,
-      "spawnCount": 0
-    },
-    "enemy_6029_solzac": {
-      "mapCount": 2,
-      "spawnCount": 2
-    },
-    "enemy_6030_frgzac": {
-      "mapCount": 2,
-      "spawnCount": 0
-    },
-    "enemy_6031_visfrg": {
-      "mapCount": 2,
-      "spawnCount": 0
-    },
-    "enemy_6032_fxdjj": {
-      "mapCount": 2,
-      "spawnCount": 2
-    },
-    "enemy_6033_skagod": {
-      "mapCount": 2,
-      "spawnCount": 2
     },
     "enemy_7022_gatgod": {
       "mapCount": 2,
@@ -5025,7 +4845,7 @@
     },
     "enemy_10001_trslim_2": {
       "mapCount": 10,
-      "spawnCount": 65
+      "spawnCount": 68
     },
     "enemy_10002_trtrsl": {
       "mapCount": 7,
@@ -5033,7 +4853,7 @@
     },
     "enemy_10002_trtrsl_2": {
       "mapCount": 8,
-      "spawnCount": 39
+      "spawnCount": 48
     },
     "enemy_10003_trwlpl": {
       "mapCount": 8,
@@ -5081,7 +4901,7 @@
     },
     "enemy_10007_trspsb_2": {
       "mapCount": 4,
-      "spawnCount": 4
+      "spawnCount": 6
     },
     "enemy_10008_trbbox": {
       "mapCount": 2,
@@ -5092,88 +4912,88 @@
       "spawnCount": 0
     },
     "enemy_10009_sggem": {
-      "mapCount": 28,
+      "mapCount": 27,
       "spawnCount": 0
     },
     "enemy_10010_sgnja": {
-      "mapCount": 14,
-      "spawnCount": 346
+      "mapCount": 13,
+      "spawnCount": 290
     },
     "enemy_10010_sgnja_2": {
-      "mapCount": 13,
-      "spawnCount": 441
+      "mapCount": 12,
+      "spawnCount": 335
     },
     "enemy_10011_sgshot": {
-      "mapCount": 7,
-      "spawnCount": 73
+      "mapCount": 6,
+      "spawnCount": 38
     },
     "enemy_10011_sgshot_2": {
-      "mapCount": 3,
-      "spawnCount": 78
+      "mapCount": 2,
+      "spawnCount": 24
     },
     "enemy_10012_sgbtle": {
-      "mapCount": 8,
-      "spawnCount": 111
+      "mapCount": 7,
+      "spawnCount": 102
     },
     "enemy_10012_sgbtle_2": {
-      "mapCount": 6,
-      "spawnCount": 124
+      "mapCount": 5,
+      "spawnCount": 97
     },
     "enemy_10013_sgrob": {
-      "mapCount": 8,
-      "spawnCount": 29
+      "mapCount": 7,
+      "spawnCount": 25
     },
     "enemy_10013_sgrob_2": {
-      "mapCount": 6,
-      "spawnCount": 51
-    },
-    "enemy_10014_sgrich": {
-      "mapCount": 4,
-      "spawnCount": 29
-    },
-    "enemy_10014_sgrich_2": {
       "mapCount": 5,
-      "spawnCount": 52
-    },
-    "enemy_10015_sgbird": {
-      "mapCount": 5,
-      "spawnCount": 31
-    },
-    "enemy_10015_sgbird_2": {
-      "mapCount": 4,
       "spawnCount": 28
     },
-    "enemy_10016_sggint": {
-      "mapCount": 8,
-      "spawnCount": 15
+    "enemy_10014_sgrich": {
+      "mapCount": 3,
+      "spawnCount": 16
     },
-    "enemy_10016_sggint_2": {
-      "mapCount": 10,
-      "spawnCount": 30
-    },
-    "enemy_10017_sgass": {
-      "mapCount": 2,
-      "spawnCount": 15
-    },
-    "enemy_10017_sgass_2": {
-      "mapCount": 10,
-      "spawnCount": 84
-    },
-    "enemy_10018_sgrobh": {
-      "mapCount": 5,
-      "spawnCount": 21
-    },
-    "enemy_10018_sgrobh_2": {
-      "mapCount": 10,
+    "enemy_10014_sgrich_2": {
+      "mapCount": 4,
       "spawnCount": 40
     },
-    "enemy_10019_sgmum": {
-      "mapCount": 3,
-      "spawnCount": 11
+    "enemy_10015_sgbird": {
+      "mapCount": 4,
+      "spawnCount": 26
     },
-    "enemy_10019_sgmum_2": {
+    "enemy_10015_sgbird_2": {
+      "mapCount": 3,
+      "spawnCount": 21
+    },
+    "enemy_10016_sggint": {
+      "mapCount": 7,
+      "spawnCount": 13
+    },
+    "enemy_10016_sggint_2": {
       "mapCount": 9,
       "spawnCount": 27
+    },
+    "enemy_10017_sgass": {
+      "mapCount": 1,
+      "spawnCount": 8
+    },
+    "enemy_10017_sgass_2": {
+      "mapCount": 9,
+      "spawnCount": 72
+    },
+    "enemy_10018_sgrobh": {
+      "mapCount": 4,
+      "spawnCount": 11
+    },
+    "enemy_10018_sgrobh_2": {
+      "mapCount": 9,
+      "spawnCount": 27
+    },
+    "enemy_10019_sgmum": {
+      "mapCount": 2,
+      "spawnCount": 5
+    },
+    "enemy_10019_sgmum_2": {
+      "mapCount": 8,
+      "spawnCount": 19
     },
     "enemy_10020_sgcat": {
       "mapCount": 4,
@@ -5356,35 +5176,35 @@
       "spawnCount": 0
     },
     "enemy_10042_prtrop": {
-      "mapCount": 7,
+      "mapCount": 6,
       "spawnCount": 8
     },
     "enemy_10042_prtrop_2": {
-      "mapCount": 9,
+      "mapCount": 8,
       "spawnCount": 2
     },
     "enemy_10043_sailor": {
-      "mapCount": 10,
+      "mapCount": 9,
       "spawnCount": 85
     },
     "enemy_10043_sailor_2": {
-      "mapCount": 12,
+      "mapCount": 11,
       "spawnCount": 68
     },
     "enemy_10044_wintun": {
-      "mapCount": 5,
+      "mapCount": 4,
       "spawnCount": 2
     },
     "enemy_10044_wintun_2": {
-      "mapCount": 5,
-      "spawnCount": 4
-    },
-    "enemy_10045_parrot": {
       "mapCount": 4,
       "spawnCount": 4
     },
+    "enemy_10045_parrot": {
+      "mapCount": 3,
+      "spawnCount": 4
+    },
     "enemy_10045_parrot_2": {
-      "mapCount": 8,
+      "mapCount": 7,
       "spawnCount": 24
     },
     "enemy_10045_parrot_3": {
@@ -5392,35 +5212,35 @@
       "spawnCount": 4
     },
     "enemy_10046_pshark": {
-      "mapCount": 4,
+      "mapCount": 3,
       "spawnCount": 1
     },
     "enemy_10046_pshark_2": {
-      "mapCount": 7,
-      "spawnCount": 0
-    },
-    "enemy_10047_shrknt": {
-      "mapCount": 3,
-      "spawnCount": 6
-    },
-    "enemy_10047_shrknt_2": {
-      "mapCount": 7,
-      "spawnCount": 0
-    },
-    "enemy_10048_prtsld": {
-      "mapCount": 5,
-      "spawnCount": 6
-    },
-    "enemy_10048_prtsld_2": {
       "mapCount": 6,
       "spawnCount": 0
     },
-    "enemy_10049_pcaptn": {
+    "enemy_10047_shrknt": {
       "mapCount": 2,
+      "spawnCount": 6
+    },
+    "enemy_10047_shrknt_2": {
+      "mapCount": 6,
+      "spawnCount": 0
+    },
+    "enemy_10048_prtsld": {
+      "mapCount": 4,
+      "spawnCount": 6
+    },
+    "enemy_10048_prtsld_2": {
+      "mapCount": 5,
+      "spawnCount": 0
+    },
+    "enemy_10049_pcaptn": {
+      "mapCount": 1,
       "spawnCount": 0
     },
     "enemy_10049_pcaptn_2": {
-      "mapCount": 5,
+      "mapCount": 4,
       "spawnCount": 0
     },
     "enemy_10050_cjmeat": {
@@ -5697,27 +5517,27 @@
     },
     "enemy_10072_mpprhd": {
       "mapCount": 19,
-      "spawnCount": 111
+      "spawnCount": 132
     },
     "enemy_10073_mpcar": {
       "mapCount": 8,
-      "spawnCount": 76
+      "spawnCount": 105
     },
     "enemy_10073_mpcar_2": {
       "mapCount": 14,
-      "spawnCount": 233
+      "spawnCount": 253
     },
     "enemy_10074_mpcata": {
       "mapCount": 8,
-      "spawnCount": 34
+      "spawnCount": 49
     },
     "enemy_10074_mpcata_2": {
       "mapCount": 11,
-      "spawnCount": 33
+      "spawnCount": 35
     },
     "enemy_10075_mpwrj": {
       "mapCount": 3,
-      "spawnCount": 0
+      "spawnCount": 12
     },
     "enemy_10075_mpwrj_2": {
       "mapCount": 2,
@@ -5725,7 +5545,7 @@
     },
     "enemy_10076_mpgrou": {
       "mapCount": 4,
-      "spawnCount": 9
+      "spawnCount": 16
     },
     "enemy_10076_mpgrou_2": {
       "mapCount": 5,
@@ -5737,7 +5557,7 @@
     },
     "enemy_10077_mpbarr_2": {
       "mapCount": 8,
-      "spawnCount": 30
+      "spawnCount": 34
     },
     "enemy_10078_mprein": {
       "mapCount": 3,
@@ -5765,15 +5585,15 @@
     },
     "enemy_10081_mpplai": {
       "mapCount": 3,
-      "spawnCount": 15
+      "spawnCount": 40
     },
     "enemy_10081_mpplai_2": {
       "mapCount": 8,
-      "spawnCount": 30
+      "spawnCount": 52
     },
     "enemy_10082_mpweak": {
       "mapCount": 13,
-      "spawnCount": 7
+      "spawnCount": 9
     },
     "enemy_10083_hlbird": {
       "mapCount": 6,
@@ -6200,8 +6020,8 @@
       "spawnCount": 25
     },
     "enemy_10144_xdelk": {
-      "mapCount": 8,
-      "spawnCount": 26
+      "mapCount": 4,
+      "spawnCount": 6
     },
     "enemy_10144_xdelk_2": {
       "mapCount": 9,
@@ -6221,7 +6041,7 @@
     },
     "enemy_10146_nscola_2": {
       "mapCount": 8,
-      "spawnCount": 85
+      "spawnCount": 110
     },
     "enemy_10147_nsbomb": {
       "mapCount": 4,
@@ -6229,7 +6049,7 @@
     },
     "enemy_10147_nsbomb_2": {
       "mapCount": 5,
-      "spawnCount": 28
+      "spawnCount": 31
     },
     "enemy_10148_nsmos": {
       "mapCount": 3,
@@ -6237,7 +6057,7 @@
     },
     "enemy_10148_nsmos_2": {
       "mapCount": 4,
-      "spawnCount": 19
+      "spawnCount": 25
     },
     "enemy_10149_nscan": {
       "mapCount": 5,
@@ -6261,7 +6081,7 @@
     },
     "enemy_10151_nspace_2": {
       "mapCount": 3,
-      "spawnCount": 8
+      "spawnCount": 18
     },
     "enemy_10152_nstree": {
       "mapCount": 3,
@@ -6277,7 +6097,7 @@
     },
     "enemy_10153_nsblon_2": {
       "mapCount": 8,
-      "spawnCount": 22
+      "spawnCount": 30
     },
     "enemy_10154_mnmblx": {
       "mapCount": 17,
@@ -6694,6 +6514,269 @@
   },
   "diagnostics": {
     "excludedLevelIds": [
+      "obt/campaign/level_camp_01",
+      "obt/campaign/level_camp_02",
+      "obt/campaign/level_camp_03",
+      "obt/campaign/level_camp_r_01",
+      "obt/campaign/level_camp_r_02",
+      "obt/campaign/level_camp_r_03",
+      "obt/campaign/level_camp_r_04",
+      "obt/campaign/level_camp_r_05",
+      "obt/campaign/level_camp_r_06",
+      "obt/campaign/level_camp_r_07",
+      "obt/campaign/level_camp_r_08",
+      "obt/campaign/level_camp_r_09",
+      "obt/campaign/level_camp_r_10",
+      "obt/campaign/level_camp_r_11",
+      "obt/campaign/level_camp_r_12",
+      "obt/campaign/level_camp_r_13",
+      "obt/campaign/level_camp_r_14",
+      "obt/campaign/level_camp_r_15",
+      "obt/campaign/level_camp_r_16",
+      "obt/campaign/level_camp_r_17",
+      "obt/campaign/level_camp_r_18",
+      "obt/campaign/level_camp_r_19",
+      "obt/campaign/level_camp_r_20",
+      "obt/campaign/level_camp_r_21",
+      "obt/campaign/level_camp_r_22",
+      "obt/campaign/level_camp_r_23",
+      "obt/campaign/level_camp_r_24",
+      "obt/campaign/level_camp_r_25",
+      "obt/campaign/level_camp_r_26",
+      "obt/campaign/level_camp_r_27",
+      "obt/campaign/level_camp_r_28",
+      "obt/campaign/level_camp_r_29",
+      "obt/campaign/level_camp_r_30",
+      "obt/campaign/level_camp_r_31",
+      "obt/guide/level_guide_01",
+      "obt/guide/level_guide_02",
+      "obt/legion/lt01/level_lt01_01",
+      "obt/legion/lt01/level_lt01_02",
+      "obt/legion/lt01/level_lt01_03",
+      "obt/legion/lt01/level_lt01_04",
+      "obt/legion/lt01/level_lt01_05",
+      "obt/legion/lt01/level_lt01_06",
+      "obt/legion/lt01/level_lt01_07",
+      "obt/legion/lt01/level_lt01_08",
+      "obt/legion/lt02/level_lt02_01",
+      "obt/legion/lt02/level_lt02_02",
+      "obt/legion/lt02/level_lt02_03",
+      "obt/legion/lt02/level_lt02_04",
+      "obt/legion/lt02/level_lt02_05",
+      "obt/legion/lt02/level_lt02_06",
+      "obt/legion/lt02/level_lt02_07",
+      "obt/legion/lt02/level_lt02_08",
+      "obt/legion/lt03/level_lt03_01",
+      "obt/legion/lt03/level_lt03_02",
+      "obt/legion/lt03/level_lt03_03",
+      "obt/legion/lt03/level_lt03_04",
+      "obt/legion/lt03/level_lt03_05",
+      "obt/legion/lt03/level_lt03_06",
+      "obt/legion/lt03/level_lt03_07",
+      "obt/legion/lt03/level_lt03_08",
+      "obt/legion/lt04/level_lt04_01",
+      "obt/legion/lt04/level_lt04_02",
+      "obt/legion/lt04/level_lt04_03",
+      "obt/legion/lt04/level_lt04_04",
+      "obt/legion/lt04/level_lt04_05",
+      "obt/legion/lt04/level_lt04_06",
+      "obt/legion/lt04/level_lt04_07",
+      "obt/legion/lt04/level_lt04_08",
+      "obt/legion/lt05/level_lt05_01",
+      "obt/legion/lt05/level_lt05_01_ex",
+      "obt/legion/lt05/level_lt05_02",
+      "obt/legion/lt05/level_lt05_02_ex",
+      "obt/legion/lt05/level_lt05_03",
+      "obt/legion/lt05/level_lt05_03_ex",
+      "obt/legion/lt05/level_lt05_04",
+      "obt/legion/lt05/level_lt05_04_ex",
+      "obt/legion/lt05/level_lt05_05",
+      "obt/legion/lt05/level_lt05_05_ex",
+      "obt/legion/lt05/level_lt05_06",
+      "obt/legion/lt05/level_lt05_06_ex",
+      "obt/legion/lt06/level_lt06_01",
+      "obt/legion/lt06/level_lt06_01_ex",
+      "obt/legion/lt06/level_lt06_02",
+      "obt/legion/lt06/level_lt06_02_ex",
+      "obt/legion/lt06/level_lt06_03",
+      "obt/legion/lt06/level_lt06_03_ex",
+      "obt/legion/lt06/level_lt06_04",
+      "obt/legion/lt06/level_lt06_04_ex",
+      "obt/legion/lt06/level_lt06_05",
+      "obt/legion/lt06/level_lt06_05_ex",
+      "obt/legion/lt06/level_lt06_06",
+      "obt/legion/lt06/level_lt06_06_ex",
+      "obt/legion/lt07/level_lt07_01",
+      "obt/legion/lt07/level_lt07_01_ex",
+      "obt/legion/lt07/level_lt07_02",
+      "obt/legion/lt07/level_lt07_02_ex",
+      "obt/legion/lt07/level_lt07_03",
+      "obt/legion/lt07/level_lt07_03_ex",
+      "obt/legion/lt07/level_lt07_04",
+      "obt/legion/lt07/level_lt07_04_ex",
+      "obt/legion/lt07/level_lt07_05",
+      "obt/legion/lt07/level_lt07_05_ex",
+      "obt/legion/lt07/level_lt07_06",
+      "obt/legion/lt07/level_lt07_06_ex",
+      "obt/legion/lt08/level_lt08_01",
+      "obt/legion/lt08/level_lt08_01_ex",
+      "obt/legion/lt08/level_lt08_02",
+      "obt/legion/lt08/level_lt08_02_ex",
+      "obt/legion/lt08/level_lt08_03",
+      "obt/legion/lt08/level_lt08_03_ex",
+      "obt/legion/lt08/level_lt08_04",
+      "obt/legion/lt08/level_lt08_04_ex",
+      "obt/legion/lt08/level_lt08_05",
+      "obt/legion/lt08/level_lt08_05_ex",
+      "obt/legion/lt08/level_lt08_06",
+      "obt/legion/lt08/level_lt08_06_ex",
+      "obt/legion/lt09/level_lt09_01",
+      "obt/legion/lt09/level_lt09_01_ex",
+      "obt/legion/lt09/level_lt09_02",
+      "obt/legion/lt09/level_lt09_02_ex",
+      "obt/legion/lt09/level_lt09_03",
+      "obt/legion/lt09/level_lt09_03_ex",
+      "obt/legion/lt09/level_lt09_04",
+      "obt/legion/lt09/level_lt09_04_ex",
+      "obt/legion/lt09/level_lt09_05",
+      "obt/legion/lt09/level_lt09_05_ex",
+      "obt/legion/lt09/level_lt09_06",
+      "obt/legion/lt09/level_lt09_06_ex",
+      "obt/legion/lt10/level_lt10_01",
+      "obt/legion/lt10/level_lt10_01_ex",
+      "obt/legion/lt10/level_lt10_02",
+      "obt/legion/lt10/level_lt10_02_ex",
+      "obt/legion/lt10/level_lt10_03",
+      "obt/legion/lt10/level_lt10_03_ex",
+      "obt/legion/lt10/level_lt10_04",
+      "obt/legion/lt10/level_lt10_04_ex",
+      "obt/legion/lt10/level_lt10_05",
+      "obt/legion/lt10/level_lt10_05_ex",
+      "obt/legion/lt10/level_lt10_06",
+      "obt/legion/lt10/level_lt10_06_ex",
+      "obt/legion/lt11/level_lt11_01",
+      "obt/legion/lt11/level_lt11_01_ex",
+      "obt/legion/lt11/level_lt11_02",
+      "obt/legion/lt11/level_lt11_02_ex",
+      "obt/legion/lt11/level_lt11_03",
+      "obt/legion/lt11/level_lt11_03_ex",
+      "obt/legion/lt11/level_lt11_04",
+      "obt/legion/lt11/level_lt11_04_ex",
+      "obt/legion/lt11/level_lt11_05",
+      "obt/legion/lt11/level_lt11_05_ex",
+      "obt/legion/lt11/level_lt11_06",
+      "obt/legion/lt11/level_lt11_06_ex",
+      "obt/legion/lt12/level_lt12_01",
+      "obt/legion/lt12/level_lt12_01_ex",
+      "obt/legion/lt12/level_lt12_02",
+      "obt/legion/lt12/level_lt12_02_ex",
+      "obt/legion/lt12/level_lt12_03",
+      "obt/legion/lt12/level_lt12_03_ex",
+      "obt/legion/lt12/level_lt12_04",
+      "obt/legion/lt12/level_lt12_04_ex",
+      "obt/legion/lt12/level_lt12_05",
+      "obt/legion/lt12/level_lt12_05_ex",
+      "obt/legion/lt12/level_lt12_06",
+      "obt/legion/lt12/level_lt12_06_ex",
+      "obt/legion/lt13/level_lt13_01",
+      "obt/legion/lt13/level_lt13_01_ex",
+      "obt/legion/lt13/level_lt13_02",
+      "obt/legion/lt13/level_lt13_02_ex",
+      "obt/legion/lt13/level_lt13_03",
+      "obt/legion/lt13/level_lt13_03_ex",
+      "obt/legion/lt13/level_lt13_04",
+      "obt/legion/lt13/level_lt13_04_ex",
+      "obt/legion/lt13/level_lt13_05",
+      "obt/legion/lt13/level_lt13_05_ex",
+      "obt/legion/lt13/level_lt13_06",
+      "obt/legion/lt13/level_lt13_06_ex",
+      "obt/legion/lt14/level_lt14_01",
+      "obt/legion/lt14/level_lt14_01_ex",
+      "obt/legion/lt14/level_lt14_02",
+      "obt/legion/lt14/level_lt14_02_ex",
+      "obt/legion/lt14/level_lt14_03",
+      "obt/legion/lt14/level_lt14_03_ex",
+      "obt/legion/lt14/level_lt14_04",
+      "obt/legion/lt14/level_lt14_04_ex",
+      "obt/legion/lt14/level_lt14_05",
+      "obt/legion/lt14/level_lt14_05_ex",
+      "obt/legion/lt14/level_lt14_06",
+      "obt/legion/lt14/level_lt14_06_ex",
+      "obt/legion/lt15/level_lt15_01",
+      "obt/legion/lt15/level_lt15_01_ex",
+      "obt/legion/lt15/level_lt15_02",
+      "obt/legion/lt15/level_lt15_02_ex",
+      "obt/legion/lt15/level_lt15_03",
+      "obt/legion/lt15/level_lt15_03_ex",
+      "obt/legion/lt15/level_lt15_04",
+      "obt/legion/lt15/level_lt15_04_ex",
+      "obt/legion/lt15/level_lt15_05",
+      "obt/legion/lt15/level_lt15_05_ex",
+      "obt/legion/lt15/level_lt15_06",
+      "obt/legion/lt15/level_lt15_06_ex",
+      "obt/legion/lt16/level_lt16_01",
+      "obt/legion/lt16/level_lt16_01_ex",
+      "obt/legion/lt16/level_lt16_02",
+      "obt/legion/lt16/level_lt16_02_ex",
+      "obt/legion/lt16/level_lt16_03",
+      "obt/legion/lt16/level_lt16_03_ex",
+      "obt/legion/lt16/level_lt16_04",
+      "obt/legion/lt16/level_lt16_04_ex",
+      "obt/legion/lt16/level_lt16_05",
+      "obt/legion/lt16/level_lt16_05_ex",
+      "obt/legion/lt16/level_lt16_06",
+      "obt/legion/lt16/level_lt16_06_ex",
+      "obt/legion/lt17/level_lt17_01",
+      "obt/legion/lt17/level_lt17_01_ex",
+      "obt/legion/lt17/level_lt17_02",
+      "obt/legion/lt17/level_lt17_02_ex",
+      "obt/legion/lt17/level_lt17_03",
+      "obt/legion/lt17/level_lt17_03_ex",
+      "obt/legion/lt17/level_lt17_04",
+      "obt/legion/lt17/level_lt17_04_ex",
+      "obt/legion/lt17/level_lt17_05",
+      "obt/legion/lt17/level_lt17_05_ex",
+      "obt/legion/lt17/level_lt17_06",
+      "obt/legion/lt17/level_lt17_06_ex",
+      "obt/legion/lt18/level_lt18_01",
+      "obt/legion/lt18/level_lt18_01_ex",
+      "obt/legion/lt18/level_lt18_02",
+      "obt/legion/lt18/level_lt18_02_ex",
+      "obt/legion/lt18/level_lt18_03",
+      "obt/legion/lt18/level_lt18_03_ex",
+      "obt/legion/lt18/level_lt18_04",
+      "obt/legion/lt18/level_lt18_04_ex",
+      "obt/legion/lt18/level_lt18_05",
+      "obt/legion/lt18/level_lt18_05_ex",
+      "obt/legion/lt18/level_lt18_06",
+      "obt/legion/lt18/level_lt18_06_ex",
+      "obt/legion/lt19/level_lt19_01",
+      "obt/legion/lt19/level_lt19_01_ex",
+      "obt/legion/lt19/level_lt19_02",
+      "obt/legion/lt19/level_lt19_02_ex",
+      "obt/legion/lt19/level_lt19_03",
+      "obt/legion/lt19/level_lt19_03_ex",
+      "obt/legion/lt19/level_lt19_04",
+      "obt/legion/lt19/level_lt19_04_ex",
+      "obt/legion/lt19/level_lt19_05",
+      "obt/legion/lt19/level_lt19_05_ex",
+      "obt/legion/lt19/level_lt19_06",
+      "obt/legion/lt19/level_lt19_06_ex",
+      "obt/legion/lt20/level_lt20_01",
+      "obt/legion/lt20/level_lt20_01_ex",
+      "obt/legion/lt20/level_lt20_02",
+      "obt/legion/lt20/level_lt20_02_ex",
+      "obt/legion/lt20/level_lt20_03",
+      "obt/legion/lt20/level_lt20_03_ex",
+      "obt/legion/lt20/level_lt20_04",
+      "obt/legion/lt20/level_lt20_04_ex",
+      "obt/legion/lt20/level_lt20_05",
+      "obt/legion/lt20/level_lt20_05_ex",
+      "obt/legion/lt20/level_lt20_06",
+      "obt/legion/lt20/level_lt20_06_ex",
+      "obt/legion/lttr/level_lt_tr01",
+      "obt/legion/lttr/level_lt_tr02",
+      "obt/legion/lttr/level_lt_tr03",
       "obt/main/level_easy_09-01",
       "obt/main/level_easy_09-02",
       "obt/main/level_easy_09-03",
@@ -6924,7 +7007,6 @@
         "reasons": [
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -6932,7 +7014,6 @@
         "levelId": "activities/act1multi/level_act1multi_02",
         "reasons": [
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -6941,7 +7022,6 @@
         "reasons": [
           "branch-spawn",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -6950,7 +7030,6 @@
         "reasons": [
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -6959,7 +7038,6 @@
         "reasons": [
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -6968,7 +7046,6 @@
         "reasons": [
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -6978,14 +7055,12 @@
           "branch-spawn",
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
       {
         "levelId": "activities/act1multi/level_act1multi_football",
         "reasons": [
-          "enemy-replacement",
           "random-spawn-group",
           "unsupported-wave-tag",
           "weighted-spawn"
@@ -6996,6 +7071,7 @@
         "reasons": [
           "enemy-replacement",
           "random-spawn-group",
+          "unsupported-rune-difficulty",
           "unsupported-wave-tag",
           "weighted-spawn"
         ]
@@ -7032,7 +7108,6 @@
         "levelId": "activities/act1multi/level_act1multi_fortress_rm01",
         "reasons": [
           "branch-spawn",
-          "hidden-spawn-group",
           "random-spawn-group",
           "unsupported-wave-tag",
           "weighted-spawn"
@@ -7041,8 +7116,7 @@
       {
         "levelId": "activities/act1multi/level_act1multi_hard-01",
         "reasons": [
-          "branch-spawn",
-          "unsupported-wave-tag"
+          "branch-spawn"
         ]
       },
       {
@@ -7050,7 +7124,6 @@
         "reasons": [
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7069,7 +7142,6 @@
           "branch-spawn",
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7079,7 +7151,6 @@
           "branch-spawn",
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7088,7 +7159,6 @@
         "reasons": [
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7098,7 +7168,6 @@
           "branch-spawn",
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7107,7 +7176,6 @@
         "reasons": [
           "branch-spawn",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7117,7 +7185,6 @@
           "branch-spawn",
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7126,7 +7193,6 @@
         "reasons": [
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7294,7 +7360,6 @@
         "reasons": [
           "invalid-branch-actions",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7302,7 +7367,6 @@
         "levelId": "activities/act2multi/level_act2multi_02",
         "reasons": [
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7310,7 +7374,6 @@
         "levelId": "activities/act2multi/level_act2multi_03",
         "reasons": [
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7319,7 +7382,6 @@
         "reasons": [
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7327,7 +7389,6 @@
         "levelId": "activities/act2multi/level_act2multi_05",
         "reasons": [
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7336,7 +7397,6 @@
         "reasons": [
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7345,7 +7405,6 @@
         "reasons": [
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7353,7 +7412,6 @@
         "levelId": "activities/act2multi/level_act2multi_08",
         "reasons": [
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7362,7 +7420,6 @@
         "reasons": [
           "branch-spawn",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7370,7 +7427,6 @@
         "levelId": "activities/act2multi/level_act2multi_10",
         "reasons": [
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7414,7 +7470,6 @@
         "reasons": [
           "branch-spawn",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7422,7 +7477,6 @@
         "levelId": "activities/act2multi/level_act2multi_hard-02",
         "reasons": [
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7430,7 +7484,6 @@
         "levelId": "activities/act2multi/level_act2multi_hard-03",
         "reasons": [
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7463,7 +7516,6 @@
         "reasons": [
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7473,7 +7525,6 @@
           "branch-spawn",
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7481,7 +7532,6 @@
         "levelId": "activities/act2multi/level_act2multi_rm03",
         "reasons": [
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7490,7 +7540,6 @@
         "reasons": [
           "hidden-spawn-group",
           "random-spawn-group",
-          "unsupported-wave-tag",
           "weighted-spawn"
         ]
       },
@@ -7590,7 +7639,6 @@
         "levelId": "activities/act2vmulti/level_act2vmulti_fortress",
         "reasons": [
           "branch-spawn",
-          "hidden-spawn-group",
           "random-spawn-group",
           "unsupported-wave-tag",
           "weighted-spawn"
@@ -8130,8 +8178,7 @@
       {
         "levelId": "activities/act21side/level_act21side_ex01",
         "reasons": [
-          "branch-spawn",
-          "hidden-spawn-group"
+          "branch-spawn"
         ]
       },
       {
@@ -8174,8 +8221,7 @@
       {
         "levelId": "activities/act21side/level_act21side_ex08",
         "reasons": [
-          "branch-spawn",
-          "hidden-spawn-group"
+          "branch-spawn"
         ]
       },
       {
@@ -8452,12 +8498,6 @@
         ]
       },
       {
-        "levelId": "activities/act36side/level_act36side_ex05",
-        "reasons": [
-          "hidden-spawn-group"
-        ]
-      },
-      {
         "levelId": "activities/act36side/level_act36side_ex08",
         "reasons": [
           "branch-spawn"
@@ -8563,8 +8603,7 @@
       {
         "levelId": "activities/act38side/level_act38side_ex06",
         "reasons": [
-          "branch-spawn",
-          "hidden-spawn-group"
+          "branch-spawn"
         ]
       },
       {
@@ -8943,7 +8982,6 @@
         "levelId": "activities/act42side/level_act42side_sub-1-5",
         "reasons": [
           "branch-spawn",
-          "hidden-spawn-group",
           "invalid-fragments"
         ]
       },
@@ -9223,12 +9261,6 @@
         ]
       },
       {
-        "levelId": "activities/act47side/level_act47side_ex05",
-        "reasons": [
-          "hidden-spawn-group"
-        ]
-      },
-      {
         "levelId": "activities/act47side/level_act47side_ex06",
         "reasons": [
           "hidden-spawn-group"
@@ -9293,42 +9325,6 @@
         "levelId": "activities/act49side/level_act49side_sub-1-3",
         "reasons": [
           "hidden-spawn-group"
-        ]
-      },
-      {
-        "levelId": "obt/campaign/level_camp_r_10",
-        "reasons": [
-          "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/campaign/level_camp_r_12",
-        "reasons": [
-          "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/campaign/level_camp_r_14",
-        "reasons": [
-          "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/campaign/level_camp_r_19",
-        "reasons": [
-          "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/campaign/level_camp_r_26",
-        "reasons": [
-          "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/campaign/level_camp_r_29",
-        "reasons": [
-          "branch-spawn"
         ]
       },
       {
@@ -9413,388 +9409,6 @@
         "levelId": "obt/hard/level_hard_16-04",
         "reasons": [
           "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt01/level_lt01_01",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt01/level_lt01_02",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt01/level_lt01_03",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt01/level_lt01_04",
-        "reasons": [
-          "invalid-actions",
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt01/level_lt01_05",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt01/level_lt01_06",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt01/level_lt01_07",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt01/level_lt01_08",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt02/level_lt02_01",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt02/level_lt02_02",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt02/level_lt02_03",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt02/level_lt02_04",
-        "reasons": [
-          "invalid-actions",
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt02/level_lt02_05",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt02/level_lt02_06",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt02/level_lt02_07",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt02/level_lt02_08",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt03/level_lt03_01",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt03/level_lt03_02",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt03/level_lt03_03",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt03/level_lt03_04",
-        "reasons": [
-          "invalid-actions",
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt03/level_lt03_05",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt03/level_lt03_06",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt03/level_lt03_07",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt03/level_lt03_08",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt04/level_lt04_01",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt04/level_lt04_02",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt04/level_lt04_03",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt04/level_lt04_04",
-        "reasons": [
-          "invalid-actions",
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt04/level_lt04_05",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt04/level_lt04_06",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt04/level_lt04_07",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt04/level_lt04_08",
-        "reasons": [
-          "branch-spawn",
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt05/level_lt05_03",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt05/level_lt05_03_ex",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt05/level_lt05_04",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt05/level_lt05_04_ex",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt05/level_lt05_05",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt05/level_lt05_05_ex",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt08/level_lt08_05",
-        "reasons": [
-          "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt08/level_lt08_05_ex",
-        "reasons": [
-          "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt10/level_lt10_03",
-        "reasons": [
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt10/level_lt10_03_ex",
-        "reasons": [
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt11/level_lt11_03",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt11/level_lt11_03_ex",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt15/level_lt15_02",
-        "reasons": [
-          "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt15/level_lt15_02_ex",
-        "reasons": [
-          "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt15/level_lt15_05",
-        "reasons": [
-          "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt15/level_lt15_05_ex",
-        "reasons": [
-          "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt15/level_lt15_06",
-        "reasons": [
-          "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt15/level_lt15_06_ex",
-        "reasons": [
-          "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt16/level_lt16_04",
-        "reasons": [
-          "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt16/level_lt16_04_ex",
-        "reasons": [
-          "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt17/level_lt17_06",
-        "reasons": [
-          "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lt17/level_lt17_06_ex",
-        "reasons": [
-          "branch-spawn"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lttr/level_lt_tr02",
-        "reasons": [
-          "invalid-actions"
-        ]
-      },
-      {
-        "levelId": "obt/legion/lttr/level_lt_tr03",
-        "reasons": [
-          "random-spawn-group",
-          "weighted-spawn"
         ]
       },
       {
@@ -9948,12 +9562,6 @@
         ]
       },
       {
-        "levelId": "obt/main/level_main_15-04",
-        "reasons": [
-          "enemy-replacement"
-        ]
-      },
-      {
         "levelId": "obt/main/level_main_15-06",
         "reasons": [
           "hidden-spawn-group"
@@ -9966,21 +9574,9 @@
         ]
       },
       {
-        "levelId": "obt/main/level_main_15-11",
-        "reasons": [
-          "enemy-replacement"
-        ]
-      },
-      {
         "levelId": "obt/main/level_main_15-12",
         "reasons": [
           "hidden-spawn-group"
-        ]
-      },
-      {
-        "levelId": "obt/main/level_main_15-14",
-        "reasons": [
-          "enemy-replacement"
         ]
       },
       {
@@ -10084,12 +9680,6 @@
       },
       {
         "levelId": "obt/main/level_main_16-16",
-        "reasons": [
-          "hidden-spawn-group"
-        ]
-      },
-      {
-        "levelId": "obt/main/level_tough_10-04",
         "reasons": [
           "hidden-spawn-group"
         ]
@@ -10246,16 +9836,17 @@
       }
     ],
     "reasonCounts": {
-      "branch-spawn": 365,
-      "enemy-replacement": 5,
-      "hidden-spawn-group": 144,
-      "invalid-actions": 6,
+      "branch-spawn": 346,
+      "enemy-replacement": 1,
+      "hidden-spawn-group": 135,
+      "invalid-actions": 1,
       "invalid-branch-actions": 3,
       "invalid-fragments": 5,
       "invalid-waves": 4,
-      "random-spawn-group": 104,
-      "unsupported-wave-tag": 78,
-      "weighted-spawn": 111
+      "random-spawn-group": 63,
+      "unsupported-rune-difficulty": 1,
+      "unsupported-wave-tag": 45,
+      "weighted-spawn": 68
     },
     "missingLevelIds": [
       "activities/act1bossrush/level_bossrush1_01",
@@ -10459,8 +10050,8 @@
     "duplicateLevelIds": [],
     "invalidLevelIds": [],
     "sourceCoverage": {
-      "requestedMapCount": 2195,
-      "sourceProcessedMapCount": 1998,
+      "requestedMapCount": 1932,
+      "sourceProcessedMapCount": 1735,
       "sourceMissingMapCount": 197,
       "recoveredMapCount": 0
     }

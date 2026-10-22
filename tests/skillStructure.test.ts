@@ -65,8 +65,8 @@ function sourceDescription(record: SourceSkill): string {
 
 test('4人の全12スキル・特化3を一意に公開し、14段階40効果を持つ', () => {
   const originalStructures = SKILL_STRUCTURES.filter(({ basicInfo }) => source.some(operator => operator.operatorId === basicInfo.operatorId))
-  assert.equal(SKILL_STRUCTURES.length, 15)
-  assert.equal(new Set(SKILL_STRUCTURES.map(({ basicInfo }) => identity(basicInfo))).size, 15)
+  assert.equal(SKILL_STRUCTURES.length, 90)
+  assert.equal(new Set(SKILL_STRUCTURES.map(({ basicInfo }) => identity(basicInfo))).size, 90)
   assert.deepEqual(originalStructures.map(({ basicInfo }) => identity(basicInfo)).sort(), sourceSkills.map(identity).sort())
   for (const operator of source) assert.deepEqual(SKILL_STRUCTURES
     .filter(({ basicInfo }) => basicInfo.operatorId === operator.operatorId)
@@ -312,7 +312,9 @@ test('ソーンズS3の初回と2回目以降は加算せず、それぞれの�
 })
 
 test('全効果の依存・範囲参照・数値の元データ対応が解決し、表示文字列を計算用値に混入させない', () => {
-  for (const record of SKILL_STRUCTURES) for (const stage of record.effectStructure.stages) {
+  // Guard recipes retain expressions rather than requiring a numeric effect to equal one raw key.
+  // Their entire expression trees and references are independently checked in guardSkillRecipes.test.ts.
+  for (const record of SKILL_STRUCTURES.filter(record => !record.guardRecipe)) for (const stage of record.effectStructure.stages) {
     assert.equal(new Set(stage.effects.map(entry => entry.id)).size, stage.effects.length)
     for (const entry of stage.effects) {
       assert.equal('display' in entry, false)

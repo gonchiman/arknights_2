@@ -29,7 +29,7 @@ function uniqueMaps(maps: readonly MapSummary[]): MapSummary[] {
 
 /** Coverage describes the source map population, independently of enemy filters. */
 export function getMapCoverageStatus(map: MapSummary, mode: EnemyMapCoverageMode): MapCoverageStatus {
-  if (getMapEnvironment(map) === 'EASY') return 'excluded'
+  if (getMapEnvironment(map) === 'EASY' || getMapCategory(map) === 'other') return 'excluded'
   if (map.status === 'missing') return 'missing'
   return map.status === 'supported' || mode === 'MAPS' ? 'included' : 'excluded'
 }
@@ -82,11 +82,14 @@ export function getMapCoverageEnvironmentLabel(map: MapSummary): string {
   }
 }
 
-function reasonLabel(reason: string): string {
+export function getMapSpawnReasonLabel(reason: string): string {
   if (reason === 'hidden-spawn-group') return '非表示グループの出現指定'
   if (reason === 'branch-spawn') return '分岐に応じた出現指定'
   if (reason === 'random-spawn-group' || reason === 'weighted-spawn') return 'ランダムな出現指定'
-  if (reason === 'enemy-replacement') return '敵の置き換え'
+  if (reason === 'enemy-replacement' || reason === 'conflicting-enemy-replacement' || reason === 'chained-enemy-replacement') return '敵の置き換え未確定'
+  if (reason === 'conflicting-hidden-group-rules') return '出現グループの設定が競合'
+  if (reason === 'optional-spawn-rule' || reason === 'unknown-selected-rune') return '追加条件の選択未確定'
+  if (reason === 'unsupported-rune-difficulty' || reason === 'unsupported-difficulty-context') return '難易度条件を判定できない'
   if (reason === 'unscheduled-spawn') return '通常スケジュール外の出現'
   if (reason.startsWith('conditional-spawn')) return '条件付きの出現指定'
   if (reason.startsWith('unsupported')) return '未対応の出現設定'
@@ -97,8 +100,9 @@ function reasonLabel(reason: string): string {
 
 export function getMapCoverageReasons(map: MapSummary, mode: EnemyMapCoverageMode): string[] {
   if (getMapEnvironment(map) === 'EASY') return ['物語環境']
+  if (getMapCategory(map) === 'other') return ['その他のマップ']
   if (map.status === 'missing') return ['マップデータ未取得']
   if (mode === 'MAPS') return ['マップデータ取得済み']
   if (map.status === 'supported') return ['出現数確定']
-  return map.reasons.length > 0 ? [...new Set(map.reasons.map(reasonLabel))] : ['出現数未確定']
+  return map.reasons.length > 0 ? [...new Set(map.reasons.map(getMapSpawnReasonLabel))] : ['出現数未確定']
 }
