@@ -14,6 +14,7 @@ export interface CategoryGroupedBar {
 export interface CategoryGroupedBarGroup {
   id: string
   label: string
+  parent?: { id: string; label: string }
   bars: readonly CategoryGroupedBar[]
 }
 
@@ -52,7 +53,8 @@ interface ChartBar {
 }
 
 interface ChartModel {
-  groups: { id: string; label: string; bars: ChartBar[] }[]
+  groups: { id: string; label: string; parent?: { id: string; label: string }; bars: ChartBar[] }[]
+  parents: { id: string; label: string; start: number; end: number }[]
   categoryAxisLabel: string
   ticks: { value: number; text: string }[]
   axisMinimum: number
@@ -72,9 +74,11 @@ export function CategoryGroupedBarChart({
   difference = false, integerTicks = false, imageOutput = false, showValues = false,
   aspectRatio, onLayout, formatValue, minHeight, valueTickCount = 4,
 }: CategoryGroupedBarChartProps) {
+  const hierarchical = inputGroups.length > 0 && inputGroups.every((group) => group.parent)
   const groups = inputGroups.map((group, groupIndex) => ({
     id: group.id,
     label: group.label,
+    parent: hierarchical ? group.parent : undefined,
     bars: group.bars.map((bar, barIndex) => {
       const value = typeof bar.value === 'number' && Number.isFinite(bar.value) && (difference || bar.value >= 0)
         ? bar.value : null
@@ -87,6 +91,13 @@ export function CategoryGroupedBarChart({
       }
     }),
   }))
+  const parents: ChartModel['parents'] = []
+  groups.forEach((group, index) => {
+    if (!group.parent) return
+    const previous = parents[parents.length - 1]
+    if (previous?.id === group.parent.id) previous.end = index
+    else parents.push({ ...group.parent, start: index, end: index })
+  })
   const values = groups.flatMap((group) => group.bars.flatMap((bar) => bar.value === null ? [] : [bar.value]))
   const reference = referenceY && Number.isFinite(referenceY.value) ? referenceY : null
   if (reference) values.push(reference.value)
@@ -105,6 +116,7 @@ export function CategoryGroupedBarChart({
     : [0]
   const model: ChartModel = {
     groups,
+    parents,
     categoryAxisLabel,
     ticks: ticks.map((value) => ({ value, text: formatValue(value) })),
     axisMinimum: firstTick * tickStep,
@@ -143,6 +155,7 @@ function useTextWidths(model: ChartModel): TextWidths {
   const textKey = JSON.stringify([
     ...model.ticks.map((tick) => ['tick', tick.text]),
     ...model.groups.map((group) => ['tick', group.label]),
+    ...model.parents.flatMap((parent) => [parent.label, ...Array.from(parent.label)].map((label) => ['parent', label])),
     ...model.groups.flatMap((group) => group.bars.map((bar) => ['value', bar.text])),
     ['reference', model.reference?.label ?? ''],
   ])
@@ -156,7 +169,7 @@ function useTextWidths(model: ChartModel): TextWidths {
       if (!context) return
       const next: TextWidths = {}
       for (const [kind, text] of entries) {
-        context.font = `${kind === 'value' ? 600 : 400} 11px ${FONT_FAMILY}`
+        context.font = `${kind === 'value' || kind === 'parent' ? 600 : 400} 11px ${FONT_FAMILY}`
         next[`${kind}:${text}`] = Math.ceil(context.measureText(text).width)
       }
       setWidths((current) => JSON.stringify(current) === JSON.stringify(next) ? current : next)
@@ -173,6 +186,25 @@ function textWidth(widths: TextWidths, kind: string, text: string): number {
   return widths[`${kind}:${text}`] ?? text.length * 7
 }
 
+function wrapParentLabel(label: string, availableWidth: number, widths: TextWidths): string[] {
+  if (textWidth(widths, 'parent', label) <= availableWidth) return [label]
+  const lines: string[] = []
+  let line = ''
+  let lineWidth = 0
+  for (const character of Array.from(label)) {
+    const characterWidth = textWidth(widths, 'parent', character)
+    if (line && lineWidth + characterWidth > availableWidth) {
+      lines.push(line)
+      line = ''
+      lineWidth = 0
+    }
+    line += character
+    lineWidth += characterWidth
+  }
+  if (line) lines.push(line)
+  return lines.length ? lines : ['']
+}
+
 function createPlotLayout(model: ChartModel, widths: TextWidths, width: number, baseHeight: number, showValues: boolean, imageOutput: boolean) {
   const margin = {
     left: Math.max(48, ...model.ticks.map((tick) => textWidth(widths, 'tick', tick.text) + 12)),
@@ -184,6 +216,12 @@ function createPlotLayout(model: ChartModel, widths: TextWidths, width: number, 
   const plotHeight = Math.max(1, baseHeight - margin.top - margin.bottom)
   const y = (value: number) => plotHeight - (value - model.axisMinimum) / model.axisSpan * plotHeight
   const groupWidth = plotWidth / Math.max(1, model.groups.length)
+  const parentLabels = model.parents.map((parent) => ({
+    ...parent,
+    x: (parent.start + parent.end + 1) / 2 * groupWidth,
+    lines: wrapParentLabel(parent.label, Math.max(1, (parent.end - parent.start + 1) * groupWidth - 12), widths),
+  }))
+  const parentAxisHeight = parentLabels.length ? 22 + (Math.max(...parentLabels.map((parent) => parent.lines.length)) - 1) * 14 : 0
   const maximumBars = Math.max(1, ...model.groups.map((group) => group.bars.length))
   const clusterWidth = groupWidth * 0.8
   const barGap = Math.min(3, clusterWidth / (maximumBars * 2))
@@ -192,7 +230,9 @@ function createPlotLayout(model: ChartModel, widths: TextWidths, width: number, 
     const clusterLeft = groupIndex * groupWidth + (groupWidth - (barWidth * group.bars.length + barGap * Math.max(0, group.bars.length - 1))) / 2
     return group.bars.map((bar, index) => ({
       ...bar,
+      groupId: group.id,
       groupLabel: group.label,
+      parent: group.parent,
       x: clusterLeft + index * (barWidth + barGap),
       y: y(bar.value ?? 0),
       width: barWidth,
@@ -225,22 +265,50 @@ function createPlotLayout(model: ChartModel, widths: TextWidths, width: number, 
   const extraBottom = Math.ceil(placement.extraBottom)
   // Keep the end conditions identifiable in dense exports while retaining
   // every bar and numerical value at its original category position.
-  const categoryTicks: { id: string; label: string; index: number }[] = []
-  const finalIndex = model.groups.length - 1
-  const finalGroup = model.groups[finalIndex]
-  const finalLeft = finalGroup
-    ? (finalIndex + 0.5) * groupWidth - textWidth(widths, 'tick', finalGroup.label) / 2 : 0
-  let previousRight = -Infinity
-  for (const [index, group] of model.groups.entries()) {
-    const halfWidth = textWidth(widths, 'tick', group.label) / 2
-    const center = (index + 0.5) * groupWidth
-    if (index === 0 || index === finalIndex || (center - halfWidth >= previousRight + 8 && center + halfWidth + 8 <= finalLeft)) {
-      categoryTicks.push({ id: group.id, label: group.label, index })
-      previousRight = center + halfWidth
+  const categoryTicks: { id: string; label: string; index: number; x: number; parentId?: string }[] = []
+  if (model.parents.length) {
+    for (const parent of model.parents) {
+      const left = parent.start * groupWidth
+      const right = (parent.end + 1) * groupWidth
+      const tick = (index: number) => {
+        const group = model.groups[index]
+        const halfWidth = textWidth(widths, 'tick', group.label) / 2
+        // Endpoints stay inside their parent band when inner cells become
+        // narrower than the three digits of a resistance value.
+        const x = Math.max(left + halfWidth + 3, Math.min(right - halfWidth - 3, (index + 0.5) * groupWidth))
+        return { id: group.id, label: group.label, index, x, parentId: parent.id, halfWidth }
+      }
+      const first = tick(parent.start)
+      const last = tick(parent.end)
+      categoryTicks.push(first)
+      let previousRight = first.x + first.halfWidth
+      for (let index = parent.start + 1; index < parent.end; index += 1) {
+        const candidate = tick(index)
+        if (candidate.x - candidate.halfWidth >= previousRight + 8
+          && candidate.x + candidate.halfWidth + 8 <= last.x - last.halfWidth) {
+          categoryTicks.push(candidate)
+          previousRight = candidate.x + candidate.halfWidth
+        }
+      }
+      if (parent.end > parent.start && last.x - last.halfWidth >= previousRight + 8) categoryTicks.push(last)
+    }
+  } else {
+    const finalIndex = model.groups.length - 1
+    const finalGroup = model.groups[finalIndex]
+    const finalLeft = finalGroup
+      ? (finalIndex + 0.5) * groupWidth - textWidth(widths, 'tick', finalGroup.label) / 2 : 0
+    let previousRight = -Infinity
+    for (const [index, group] of model.groups.entries()) {
+      const halfWidth = textWidth(widths, 'tick', group.label) / 2
+      const center = (index + 0.5) * groupWidth
+      if (index === 0 || index === finalIndex || (center - halfWidth >= previousRight + 8 && center + halfWidth + 8 <= finalLeft)) {
+        categoryTicks.push({ id: group.id, label: group.label, index, x: center })
+        previousRight = center + halfWidth
+      }
     }
   }
   return { margin, plotWidth, plotHeight, groupWidth, bars, y, referenceBox, placement, extraTop, extraBottom,
-    categoryTicks, height: baseHeight + extraTop + extraBottom }
+    categoryTicks, parentLabels, parentAxisHeight, height: baseHeight + extraTop + extraBottom + parentAxisHeight }
 }
 
 type PlotLayout = ReturnType<typeof createPlotLayout>
@@ -263,9 +331,14 @@ function GroupedBarSvg({ model, layout, width, height = layout.height, metricLab
           x1={0} x2={layout.plotWidth} y1={layout.y(tick.value)} y2={layout.y(tick.value)} />}
         <text className="gg-performance-grouped-tick" x={-10} y={layout.y(tick.value) + 4} textAnchor="end">{tick.text}</text>
       </g>)}
+      {layout.parentLabels.slice(1).map((parent) => <line key={`${parent.start}:${parent.id}`}
+        className="gg-performance-grouped-parent-divider" data-category-boundary={parent.id} aria-hidden="true"
+        x1={parent.start * layout.groupWidth} x2={parent.start * layout.groupWidth}
+        y1={0} y2={layout.plotHeight + layout.extraBottom + 24} />)}
       {layout.bars.map((bar) => <g key={bar.id} role="img"
-        aria-label={`${bar.label}・${model.categoryAxisLabel} ${bar.groupLabel}・${metricLabel} ${bar.text}`}>
-        <title>{`${bar.label}・${model.categoryAxisLabel} ${bar.groupLabel}・${metricLabel} ${bar.text}`}</title>
+        data-category-group={bar.groupId} data-category-parent={bar.parent?.id}
+        aria-label={`${bar.label}・${bar.parent ? `${bar.parent.label}・` : ''}${model.categoryAxisLabel} ${bar.groupLabel}・${metricLabel} ${bar.text}`}>
+        <title>{`${bar.label}・${bar.parent ? `${bar.parent.label}・` : ''}${model.categoryAxisLabel} ${bar.groupLabel}・${metricLabel} ${bar.text}`}</title>
         {bar.value === null
           ? <text className="gg-performance-grouped-missing" x={bar.x + bar.width / 2} y={layout.y(0) + 4} textAnchor="middle">—</text>
           : <rect className="gg-performance-grouped-bar" x={bar.x} y={Math.min(layout.y(0), bar.y) - (bar.value === 0 ? 1 : 0)}
@@ -294,7 +367,13 @@ function GroupedBarSvg({ model, layout, width, height = layout.height, metricLab
       })}
     </g>
     {layout.categoryTicks.map((group) => <text key={`${group.index}:${group.id}`} className="gg-performance-grouped-tick"
-      x={layout.margin.left + (group.index + 0.5) * layout.groupWidth} y={tickY} textAnchor="middle" aria-hidden="true">{group.label}</text>)}
+      data-category-tick={group.id} data-category-parent={group.parentId}
+      x={layout.margin.left + group.x} y={tickY} textAnchor="middle" aria-hidden="true">{group.label}</text>)}
+    {layout.parentLabels.map((parent) => <text key={`${parent.start}:${parent.id}`} className="gg-performance-grouped-parent-label"
+      data-category-parent-label={parent.id} x={layout.margin.left + parent.x} y={tickY + 22} textAnchor="middle">
+      <title>{parent.label}</title>
+      {parent.lines.map((line, index) => <tspan key={index} x={layout.margin.left + parent.x} dy={index ? 14 : 0}>{line}</tspan>)}
+    </text>)}
     {!imageOutput && <text className="gg-performance-grouped-axis-title" x={layout.margin.left + layout.plotWidth / 2}
       y={height - 6} textAnchor="middle">{model.categoryAxisLabel}</text>}
   </svg>
@@ -317,9 +396,14 @@ function ResponsiveGroupedBarPlot({ model, widths, metricLabel, showValues, base
     observer.observe(frame)
     return () => observer.disconnect()
   }, [])
-  const layout = createPlotLayout(model, widths, width, baseHeight, showValues, false)
-  return <div className="gg-performance-grouped-plot"><div className="gg-performance-grouped-svg-frame" ref={frameRef}>
-    <GroupedBarSvg model={model} layout={layout} width={width} metricLabel={metricLabel} />
+  const minimumWidth = model.parents.length
+    ? model.groups.length * 36 + Math.max(48, ...model.ticks.map((tick) => textWidth(widths, 'tick', tick.text) + 12)) + 14
+    : undefined
+  const plotWidth = Math.max(width, minimumWidth ?? 0)
+  const layout = createPlotLayout(model, widths, plotWidth, baseHeight, showValues, false)
+  return <div className="gg-performance-grouped-plot" style={minimumWidth ? { overflowX: 'auto' } : undefined}>
+    <div className="gg-performance-grouped-svg-frame" ref={frameRef} style={minimumWidth ? { minWidth: minimumWidth } : undefined}>
+    <GroupedBarSvg model={model} layout={layout} width={plotWidth} metricLabel={metricLabel} />
   </div></div>
 }
 
@@ -361,7 +445,7 @@ function ImageGroupedBarPlot({ model, widths, metricLabel, showValues, width, he
 }) {
   const baseHeight = Math.max(IMAGE_CHART_HEIGHT, height - reservedOverflow)
   const layout = createPlotLayout(model, widths, width, baseHeight, showValues, true)
-  const overflow = layout.extraTop + layout.extraBottom
+  const overflow = layout.extraTop + layout.extraBottom + layout.parentAxisHeight
   useLayoutEffect(() => { onOverflow(overflow) }, [onOverflow, overflow])
   return <GroupedBarSvg model={model} layout={layout} width={width} height={Math.max(height, layout.height)} metricLabel={metricLabel} imageOutput />
 }

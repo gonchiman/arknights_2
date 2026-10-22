@@ -48,6 +48,11 @@ export interface SurtrStageMetricBar extends SurtrStageBarMetadata {
 
 export interface SurtrStageMetricGroup extends SurtrStageGroup<SurtrStageMetricBar> {}
 
+export interface SurtrStageResistanceGroup extends Omit<SurtrStageMetricGroup, 'bars'> {
+  /** Input resistance order and duplicates are preserved inside every stage. */
+  resistanceGroups: { resistance: number; bars: SurtrStageMetricBar[] }[]
+}
+
 /**
  * Compare every available module stage at one time/RES coordinate, independently
  * of the table's stage selection. Keep null slots instead of implying zero damage
@@ -99,6 +104,40 @@ export function buildSurtrStageMetricComparison(
       })?.totalDamage ?? null : null,
     }
   })
+}
+
+/**
+ * Arrange the existing single-resistance comparisons by stage, then resistance.
+ * Repeated resistances share calculation work, but never mutable output bars.
+ * Empty input retains the four stages with no resistance groups.
+ */
+export function buildSurtrStageResistanceComparison(
+  record: SkillRecord,
+  settings: SurtrDpsSettings,
+  resistances: readonly number[],
+  assumptions: SurtrTotalDamageAssumptions,
+  metric: SurtrStageMetric | 'total-damage',
+  activationTime = 25,
+): SurtrStageResistanceGroup[] {
+  const groups: SurtrStageResistanceGroup[] = buildStageGroups(record, settings, () => ({}))
+    .map(({ id, label, moduleLevel }) => ({ id, label, moduleLevel, resistanceGroups: [] }))
+  const calculated = new Map<number, SurtrStageMetricGroup[]>()
+  for (const resistance of resistances) {
+    let comparison = calculated.get(resistance)
+    if (!comparison) {
+      comparison = metric === 'total-damage'
+        ? buildSurtrTotalDamageStageComparison(record, settings, activationTime, resistance, assumptions)
+          .map(group => ({ ...group, bars: group.bars.map(({ result, ...bar }) => ({
+            ...bar, value: result?.totalDamage ?? null,
+          })) }))
+        : buildSurtrStageMetricComparison(record, settings, resistance, assumptions, metric)
+      calculated.set(resistance, comparison)
+    }
+    comparison.forEach((group, index) => {
+      groups[index].resistanceGroups.push({ resistance, bars: group.bars.map(bar => ({ ...bar })) })
+    })
+  }
+  return groups
 }
 
 /** One stage inventory and palette for all metrics, including missing-stage slots. */

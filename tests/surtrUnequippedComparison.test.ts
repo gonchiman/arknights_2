@@ -9,11 +9,73 @@ import {
   getSurtrComparisonTargets,
   getSurtrPreviousStageId,
   getSurtrStageComparisonBaseline,
+  getSurtrUnequippedComparisonValue,
   getSurtrUnequippedComparisonTsv,
   getSurtrUnequippedBaselines,
   isSurtrUnequippedSeries,
   type SurtrUnequippedBlockingComparison,
 } from '../src/lib/surtrUnequippedComparison.ts'
+
+test('単値比較は丸め前の値から差・比率・増加率を求め、増加・減少・同値・ゼロを区別する', () => {
+  for (const [value, baseline, difference, ratio, percent] of [
+    [125, 100, 25, 125, 25],
+    [75, 100, -25, 75, -25],
+    [100, 100, 0, 100, 0],
+    [0, 100, -100, 0, -100],
+    [100, -100, 200, -100, -200],
+    [1.006, 1.004, 1.006 - 1.004, 1.006 / 1.004 * 100, (1.006 / 1.004 - 1) * 100],
+  ]) {
+    assert.equal(getSurtrUnequippedComparisonValue(value, baseline, 'difference'), difference)
+    assert.equal(getSurtrUnequippedComparisonValue(value, baseline, 'ratio'), ratio)
+    assert.equal(getSurtrUnequippedComparisonValue(value, baseline, 'percent'), percent)
+  }
+})
+
+test('単値比較は欠損・非有限入力をnullにし、基準±0は差だけを計算する', () => {
+  for (const metric of ['difference', 'ratio', 'percent'] as const) {
+    for (const invalid of [undefined, null, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      assert.equal(getSurtrUnequippedComparisonValue(invalid, 100, metric), null)
+      assert.equal(getSurtrUnequippedComparisonValue(100, invalid, metric), null)
+      assert.equal(getSurtrUnequippedComparisonValue(invalid, invalid, metric), null)
+    }
+    for (const baseline of [0, -0]) for (const value of [0, -0, 20, -20]) {
+      const actual = getSurtrUnequippedComparisonValue(value, baseline, metric)
+      assert.equal(actual, metric === 'difference' ? value === 0 ? 0 : value : null)
+      assert.equal(Object.is(actual, -0), false)
+    }
+  }
+})
+
+test('抽出した単値計算と既存系列は微小比率・負のゼロ・演算途中のオーバーフローを従来通り扱う', () => {
+  const cases = [
+    { value: 1e-20, baseline: 100, difference: -100, ratio: 1e-20, percent: -100 },
+    { value: -0, baseline: 100, difference: -100, ratio: 0, percent: -100 },
+    { value: Number.MIN_VALUE, baseline: -Number.MAX_VALUE, difference: Number.MAX_VALUE, ratio: 0, percent: -100 },
+    { value: Number.MAX_VALUE, baseline: Number.MAX_VALUE, difference: 0, ratio: 100, percent: 0 },
+    { value: Number.MAX_VALUE, baseline: -Number.MAX_VALUE, difference: null, ratio: -100, percent: -200 },
+    { value: Number.MAX_VALUE, baseline: 1, difference: Number.MAX_VALUE, ratio: null, percent: null },
+    { value: 1, baseline: Number.MIN_VALUE, difference: 1, ratio: null, percent: null },
+    { value: 20, baseline: 0, difference: 20, ratio: null, percent: null },
+    { value: 20, baseline: null, difference: null, ratio: null, percent: null },
+  ]
+  const baseline = series('none', cases.map((item, index) => [index, item.baseline]))
+  const target = { ...series('x:lv3', cases.map((item, index) => [index, item.value])), lineStyle: 'dashed' as const }
+  const original = structuredClone({ baseline, target })
+  for (const metric of ['difference', 'ratio', 'percent'] as const) {
+    const output = buildSurtrUnequippedComparisonSeries([baseline, target], baseline, metric)
+    assert.equal(output.length, 1)
+    assert.equal(output[0].id, target.id)
+    assert.equal(output[0].lineStyle, 'dashed')
+    assert.deepEqual(output[0].points.map(point => point.x), cases.map((_, index) => index))
+    cases.forEach((item, index) => {
+      const actual = getSurtrUnequippedComparisonValue(item.value, item.baseline, metric)
+      assert.equal(actual, item[metric])
+      assert.equal(output[0].points[index].value, item[metric])
+      assert.equal(Object.is(actual, -0), false)
+    })
+  }
+  assert.deepEqual({ baseline, target }, original)
+})
 
 test('余燼のTSVは期待総ダメージの値・基準名を使い、DPS表の既定ラベルを変えない', () => {
   const baseline = series('none', [[60, 1000]], '未装備')

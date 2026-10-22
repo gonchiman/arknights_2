@@ -3,9 +3,15 @@
 .surtr-total-stage-modules legend { margin-bottom: 12px; color: var(--text-soft); font-size: 12px; }
 .surtr-total-stage-modules > div { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-height: 42px; }
 .surtr-total-stage-modules label { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; }
+.surtr-total-stage-resistances { grid-column: 1 / -1; margin: 0; padding: 0; border: 0; min-width: 0; }
+.surtr-total-stage-resistances legend { margin-bottom: 12px; color: var(--text-soft); font-size: 12px; }
+.surtr-total-stage-resistance-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: end; }
+.surtr-total-stage-controls.has-resistance-range .surtr-total-stage-modules { grid-column: 1 / -1; }
 .surtr-total-stage-actions { display: flex; justify-content: flex-end; margin: 16px 0 8px; }
 .surtr-total-stage-panel .gg-performance-bar-condition { max-width: 650px; }
 @media (max-width: 760px) {
   .surtr-total-stage-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .surtr-total-stage-metric, .surtr-total-stage-modules { grid-column: 1 / -1; }
+  .surtr-total-stage-metric, .surtr-total-stage-view, .surtr-total-stage-value-mode, .surtr-total-stage-modules { grid-column: 1 / -1; }
+  .surtr-total-stage-resistance-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .surtr-total-stage-resistance-fields > .surtr-s3-step-control { grid-column: 1 / -1; }
 }

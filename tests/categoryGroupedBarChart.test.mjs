@@ -138,3 +138,113 @@ test('generic image preview renders the same bars as image output with string ca
     finiteGeometry(preview)
   }
 })
+
+const nestedGroups = (resistances = [0, 20, 40, 60, 80, 100]) => groups.flatMap((stage, stageIndex) => resistances.map(resistance => ({
+  id: `${stage.id}:res${resistance}`, label: String(resistance), parent: { id: stage.id, label: stage.label },
+  bars: stage.bars.map(bar => ({ ...bar, value: bar.value + stageIndex * 100 + resistance })),
+})))
+const parentLabels = markup => tags(markup, 'text').filter(tag => attr(tag, 'data-category-parent-label') !== undefined)
+const categoryTicks = markup => [...markup.matchAll(/<text\b([^>]*)data-category-tick="([^"]*)"([^>]*)>([^<]*)<\/text>/g)]
+  .map(match => ({ tag: `<text${match[1]}data-category-tick="${match[2]}"${match[3]}>`, text: match[4] }))
+
+test('two-level categories preserve each repeated resistance and place one centered label per contiguous parent', () => {
+  const nested = nestedGroups([0, 50, 100])
+  const snapshot = structuredClone(nested)
+  for (const imageOutput of [false, true]) {
+    for (const aspectRatio of [undefined, 16 / 9]) {
+      const markup = render(charts.CategoryGroupedBarChart, { ...props, groups: nested, showValues: false, imageOutput, aspectRatio })
+      assert.equal(bars(markup).length, 21)
+      assert.equal(new Set(bars(markup).map(tag => attr(tag, 'width'))).size, 1)
+      assert.deepEqual(parentLabels(markup).map(tag => attr(tag, 'data-category-parent-label')), groups.map(group => group.id))
+      const dividers = tags(markup, 'line').filter(tag => attr(tag, 'data-category-boundary') !== undefined)
+      assert.equal(dividers.length, 3)
+      for (const stage of groups) {
+        const ticks = categoryTicks(markup).filter(tick => attr(tick.tag, 'data-category-parent') === stage.id)
+        assert.deepEqual(ticks.map(tick => tick.text), ['0', '50', '100'])
+        const label = parentLabels(markup).find(tag => attr(tag, 'data-category-parent-label') === stage.id)
+        const center = (Number(attr(ticks[0].tag, 'x')) + Number(attr(ticks[2].tag, 'x'))) / 2
+        assert.ok(Math.abs(Number(attr(label, 'x')) - center) < 1e-8)
+        assert.ok(Number(attr(label, 'y')) > Number(attr(ticks[0].tag, 'y')))
+      }
+      const svg = tags(markup, 'svg').find(tag => attr(tag, 'class')?.includes('gg-performance-grouped-svg'))
+      assert.ok(parentLabels(markup).every(tag => Number(attr(tag, 'y')) + 4 < Number(attr(svg, 'height'))))
+      const flat = render(charts.CategoryGroupedBarChart, {
+        ...props, groups: nested.map(({ parent, ...group }) => group), showValues: false, imageOutput, aspectRatio,
+      })
+      assert.deepEqual(bars(markup).map(tag => attr(tag, 'height')), bars(flat).map(tag => attr(tag, 'height')),
+        'the second axis row adds height rather than compressing the plot')
+      finiteGeometry(markup)
+    }
+  }
+  assert.deepEqual(nested, snapshot)
+})
+
+test('dense exported categories keep all 707 bars, prioritize each parent endpoint, and thin only tick labels', () => {
+  const nested = nestedGroups(Array.from({ length: 101 }, (_, index) => index))
+  for (const aspectRatio of [undefined, 16 / 9]) {
+    const markup = render(charts.CategoryGroupedBarChart, { ...props, groups: nested, imageOutput: true, showValues: false, aspectRatio })
+    assert.equal(bars(markup).length, 707)
+    const ticks = categoryTicks(markup)
+    assert.ok(ticks.length < nested.length)
+    for (const stage of groups) {
+      const stageTicks = ticks.filter(tick => attr(tick.tag, 'data-category-parent') === stage.id)
+      assert.equal(stageTicks[0].text, '0')
+      assert.equal(stageTicks.at(-1).text, '100')
+    }
+    for (let index = 1; index < ticks.length; index += 1) {
+      const previousRight = Number(attr(ticks[index - 1].tag, 'x')) + ticks[index - 1].text.length * 7 / 2
+      const nextLeft = Number(attr(ticks[index].tag, 'x')) - ticks[index].text.length * 7 / 2
+      assert.ok(nextLeft >= previousRight, 'adjacent resistance labels do not overlap across parents')
+    }
+    finiteGeometry(markup)
+  }
+  const screen = render(charts.CategoryGroupedBarChart, { ...props, groups: nested, showValues: false })
+  assert.match(screen, /overflow-x:auto/)
+  const svg = tags(screen, 'svg').find(tag => attr(tag, 'class') === 'gg-performance-grouped-svg')
+  assert.ok(Number(attr(svg, 'width')) >= nested.length * 36)
+  assert.equal(bars(screen).length, 707)
+  const labeledImage = render(charts.CategoryGroupedBarChart, { ...props, groups: nested, imageOutput: true, showValues: true })
+  assert.equal(tags(labeledImage, 'g').filter(tag => attr(tag, 'class') === 'gg-performance-grouped-value').length, 707)
+  assert.equal(bars(labeledImage).length, 707)
+  finiteGeometry(labeledImage)
+})
+
+test('missing bars preserve category bands and mixed parent input falls back to the existing single-level axis', () => {
+  const nested = nestedGroups([0, 100])
+  nested[1].bars = []
+  nested[2].bars[0].value = null
+  const markup = render(charts.CategoryGroupedBarChart, { ...props, groups: nested, showValues: false, imageOutput: true })
+  assert.equal(parentLabels(markup).length, 4)
+  assert.equal(categoryTicks(markup).length, 8)
+  assert.equal(bars(markup).length, 12)
+  assert.match(markup, /MOD X・Lv\.1・MOD段階 0・総ダメージ —/)
+  const partial = nested.map((group, index) => index ? group : { ...group, parent: undefined })
+  const partialMarkup = render(charts.CategoryGroupedBarChart, { ...props, groups: partial, showValues: false, imageOutput: true })
+  const flatMarkup = render(charts.CategoryGroupedBarChart, {
+    ...props, groups: partial.map(({ parent, ...group }) => group), showValues: false, imageOutput: true,
+  })
+  assert.deepEqual(bars(partialMarkup), bars(flatMarkup))
+  assert.equal(parentLabels(partialMarkup).length, 0)
+  assert.doesNotMatch(partialMarkup, /data-category-boundary/)
+  finiteGeometry(markup)
+})
+
+test('long parent labels wrap within their bands and the image preview retains the same two-level plot', () => {
+  const nested = nestedGroups([0, 100]).map(group => ({ ...group,
+    parent: { ...group.parent, label: `${group.parent.label}：${'長い表示名の折り返しと下段ラベルの確認用テキスト'.repeat(3)}` },
+  }))
+  for (const aspectRatio of [undefined, 16 / 9]) {
+    const options = { ...props, groups: nested, showValues: true }
+    const image = render(charts.CategoryGroupedBarChart, { ...options, imageOutput: true, aspectRatio })
+    const preview = render(previews.CategoryGroupedBarImagePreview, { chartProps: options, aspectRatio })
+    assert.deepEqual(bars(preview), bars(image))
+    assert.deepEqual(parentLabels(preview), parentLabels(image))
+    assert.ok(tags(image, 'tspan').length > groups.length)
+    const svg = tags(image, 'svg').find(tag => attr(tag, 'class')?.includes('gg-performance-grouped-svg'))
+    for (const match of image.matchAll(/<text\b([^>]*data-category-parent-label[^>]*)>([\s\S]*?)<\/text>/g)) {
+      const lines = [...match[2].matchAll(/<tspan\b[^>]*>([^<]*)<\/tspan>/g)]
+      assert.ok(Number(attr(`<text${match[1]}>`, 'y')) + (lines.length - 1) * 14 + 4 < Number(attr(svg, 'height')))
+    }
+    finiteGeometry(image)
+  }
+})

@@ -92,6 +92,19 @@ export function getSurtrUnequippedColumns<T>(
     : targets.flatMap(item => conditions.map(condition => ({ item, condition })))
 }
 
+/** Compare raw values; only a difference is defined when the baseline is zero. */
+export function getSurtrUnequippedComparisonValue(
+  value: number | null | undefined,
+  baseline: number | null | undefined,
+  metric: SurtrUnequippedMetric,
+): number | null {
+  if (!finiteValue(value) || !finiteValue(baseline) || (metric !== 'difference' && baseline === 0)) return null
+  // Compute from raw values: adding 100 to a growth rate can erase very small ratios.
+  const result = metric === 'difference' ? value - baseline
+    : metric === 'ratio' ? value / baseline * 100 : (value / baseline - 1) * 100
+  return Number.isFinite(result) ? result === 0 ? 0 : result : null
+}
+
 /** Compute with an independent baseline even when its displayed series is hidden. */
 export function buildSurtrUnequippedComparisonSeries(
   series: readonly SurtrDpsOutputSeries[],
@@ -102,14 +115,9 @@ export function buildSurtrUnequippedComparisonSeries(
 ): SurtrDpsOutputSeries[] {
   return getSurtrComparisonTargets(series, comparisonBase).map(item => {
     const baselineValues = pointValues(getSurtrStageComparisonBaseline(item, baseline, comparisonBase, referenceSeries)?.points ?? [])
-    return { ...item, points: item.points.map(point => {
-      const base = baselineValues.get(point.x)
-      if (!finiteValue(point.value) || !finiteValue(base) || (metric !== 'difference' && base === 0)) return { ...point, value: null }
-      // Compute from raw DPS: adding 100 to a growth rate can erase very small ratios.
-      const value = metric === 'difference' ? point.value - base
-        : metric === 'ratio' ? point.value / base * 100 : (point.value / base - 1) * 100
-      return { ...point, value: Number.isFinite(value) ? value === 0 ? 0 : value : null }
-    }) }
+    return { ...item, points: item.points.map(point => ({
+      ...point, value: getSurtrUnequippedComparisonValue(point.value, baselineValues.get(point.x), metric),
+    })) }
   })
 }
 

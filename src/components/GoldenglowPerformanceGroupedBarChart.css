@@ -22,6 +22,8 @@
 .gg-performance-grouped-value-label { fill: var(--text-soft); font-size: 11px; font-weight: 600; }
 .gg-performance-grouped-value-background { fill: var(--surface); }
 .gg-performance-grouped-value-connector { stroke: #98a0a8; stroke-width: .75; }
+.gg-performance-grouped-parent-divider { stroke: var(--border-strong); stroke-width: 1; }
+.gg-performance-grouped-parent-label { fill: var(--text-soft); font-size: 11px; font-weight: 600; }
 
 .gg-performance-grouped-svg-image { overflow: hidden; }
 .gg-performance-grouped-svg-image .gg-performance-grouped-axis-title { fill: #444; }
@@ -31,3 +33,5 @@
 .gg-performance-grouped-svg-image .gg-performance-grouped-reference-background { fill: #fff; }
 .gg-performance-grouped-svg-image .gg-performance-grouped-value-label { fill: #333; }
 .gg-performance-grouped-svg-image .gg-performance-grouped-value-background { fill: #fff; }
+.gg-performance-grouped-svg-image .gg-performance-grouped-parent-divider { stroke: #d0d4d8; }
+.gg-performance-grouped-svg-image .gg-performance-grouped-parent-label { fill: #444; }

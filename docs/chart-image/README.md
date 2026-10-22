@@ -155,6 +155,16 @@ await saveComparisonChartImage({
 
 保存時は画面の設定とデータをひとまとまりで保持し、プレビューと実際のPNGに同じ内容を渡す。ファイル名と縦横比は `ChartImageSaveDialog` を使い、既存の保存先選択とダウンロードの処理を再利用する。
 
+### 二段の横軸を持つ集合棒
+
+[CategoryGroupedBarChart.tsx](../../src/components/CategoryGroupedBarChart.tsx) は、各 `groups` の `parent: { id, label }` を指定すると、内側の目盛りと外側のカテゴリ名を二段で表示する。全グループに `parent` がある場合だけ有効とし、連続する同じ `parent.id` を一つの区分にまとめる。`group.label` は内側の目盛り、`parent.label` は下段の区分名とする。親を省略した従来の集合棒は単段のまま表示する。
+
+スルト「S3総ダメージ」のパネル5では、外側を未装備・Lv.1〜3、内側を術耐性として使用する。棒は未装備のみ1本、各MOD段階ではX・Yの2本とし、色と凡例はMODの種類を示す。表示対象の段階と術耐性の並びは利用側で決め、欠測値を0へ置き換えない。
+
+画面では内側のカテゴリ数に応じた最小幅を確保し、狭い画面で横スクロールできるようにする。PNGでは共通フレームの幅を使い、下段ラベルの折り返しと数値ラベルの追加高さを計測して確保する。内側の目盛りは各区分内で間引き、凡例・タイトル・主要条件の標準配置は維持する。[CategoryGroupedBarImagePreview.tsx](../../src/components/CategoryGroupedBarImagePreview.tsx) とPNGには、親カテゴリを含む同じスナップショットを渡す。
+
+変更時は単段の既存出力に加え、未装備と装備段階の棒数が異なる入力、同じ術耐性の反復、長い区分名、数値表示あり、指定なし・16:9の実PNGを確認する。描画の確認例は [categoryGroupedBarChart.test.mjs](../../tests/categoryGroupedBarChart.test.mjs)、計算の確認例は [surtrTotalDamageStageComparison.test.ts](../../tests/surtrTotalDamageStageComparison.test.ts) に置く。
+
 ### 複数グラフの上下出力と右上の情報枠
 
 スルトS3のDPSと敵の術耐性ヒストグラムを一緒に出力する場合は、[承認済みの配置見本](examples/surtr-dps-histogram-top-right-frame.png)に合わせて `ChartImageStackFrame` を使う。見本の数値・色・条件は入力例であり、データへ固定しない。標準の単独出力の配置は変更しない。

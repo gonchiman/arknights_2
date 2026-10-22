@@ -9,7 +9,7 @@ import {
   SURTR_TOTAL_DAMAGE_DEFAULT_ASSUMPTIONS,
   type SurtrTotalDamageAssumptions,
 } from '../src/lib/surtrTotalDamage.ts'
-import { buildSurtrStageMetricComparison, buildSurtrTotalDamageStageComparison,
+import { buildSurtrStageMetricComparison, buildSurtrStageResistanceComparison, buildSurtrTotalDamageStageComparison,
   type SurtrStageMetric } from '../src/lib/surtrTotalDamageStageComparison.ts'
 import type { RawOperatorModule, SkillRecord } from '../src/types/skill.ts'
 
@@ -282,6 +282,129 @@ test('連続一様CTでは退場同時命中の設定に期待値は変わらず
     assert.notEqual(buildSurtrStageMetricComparison(record, settings, 0, assumptions, metric)[0].bars[0].value, 999)
   }
   assert.deepEqual({ record, settings, assumptions }, original)
+})
+
+const resistanceMetrics = [...metrics, 'total-damage'] as const
+
+test('段階×術耐性の3指標は全セルが既存の単一術耐性計算と一致し、段階・術耐性・X/Yの順序を保持する', () => {
+  const record = createRecord()
+  const resistances = [60, 0, 100, 20, 60] as const
+  for (const metric of resistanceMetrics) for (const blocking of [false, true]) for (const ctCarry of ['time', 'ratio'] as const) {
+    const active = { ...settings, blocking, potential: 5 }
+    const timing = { ...assumptions, hitDelay: 0.45, ctCarry }
+    const groups = buildSurtrStageResistanceComparison(record, active, resistances, timing, metric, 10.7)
+    assert.deepEqual(groups.map(({ id, label, moduleLevel }) => [id, label, moduleLevel]),
+      [['none', '未装備', 0], ['lv1', 'Lv.1', 1], ['lv2', 'Lv.2', 2], ['lv3', 'Lv.3', 3]])
+    groups.forEach(group => assert.deepEqual(group.resistanceGroups.map(item => item.resistance), resistances))
+    resistances.forEach((resistance, resistanceIndex) => {
+      const expected = metric === 'total-damage'
+        ? buildSurtrTotalDamageStageComparison(record, active, 10.7, resistance, timing)
+          .map(group => ({ ...group, bars: group.bars.map(({ result, ...bar }) => ({ ...bar, value: result?.totalDamage ?? null })) }))
+        : buildSurtrStageMetricComparison(record, active, resistance, timing, metric)
+      groups.forEach((group, stageIndex) => {
+        assert.deepEqual(group.resistanceGroups[resistanceIndex].bars, expected[stageIndex].bars)
+        assert.deepEqual(group.resistanceGroups[resistanceIndex].bars.map(bar => bar.moduleType), stageIndex === 0 ? [null] : ['X', 'Y'])
+      })
+    })
+  }
+})
+
+test('空入力・部分範囲・両端を含む101点で入力数に応じた段階別セルを返す', () => {
+  const record = createRecord()
+  for (const metric of resistanceMetrics) for (const resistances of [[], [50], [20, 40, 60], Array.from({ length: 101 }, (_, index) => index)]) {
+    const groups = buildSurtrStageResistanceComparison(record, settings, resistances, assumptions, metric)
+    assert.equal(groups.length, 4)
+    groups.forEach((group, index) => {
+      assert.equal(group.resistanceGroups.length, resistances.length)
+      assert.deepEqual(group.resistanceGroups.map(item => item.resistance), resistances)
+      assert.ok(group.resistanceGroups.every(item => item.bars.length === (index === 0 ? 1 : 2)))
+    })
+    const bars = groups.flatMap(group => group.resistanceGroups.flatMap(item => item.bars))
+    assert.equal(bars.length, 7 * resistances.length)
+    assert.ok(bars.every(bar => bar.value !== null))
+    for (const type of [null, 'X', 'Y']) {
+      assert.equal(new Set(bars.filter(bar => bar.moduleType === type).map(bar => bar.color)).size, resistances.length ? 1 : 0)
+    }
+  }
+  assert.deepEqual(buildSurtrStageResistanceComparison(record, settings, [0, 100], assumptions, 'total-damage'),
+    buildSurtrStageResistanceComparison(record, settings, [0, 100], assumptions, 'total-damage', 25))
+})
+
+test('段階×術耐性は無効術耐性と未解放・欠損段階を省略せずnullで保持する', () => {
+  for (const metric of resistanceMetrics) {
+    const record = createRecord()
+    const resistances = [0, -1, 100, 101, Number.NaN, Number.POSITIVE_INFINITY]
+    const initial = buildSurtrStageResistanceComparison(record, settings, resistances, assumptions, metric)
+    initial.forEach(group => group.resistanceGroups.forEach((item, index) => {
+      assert.ok(item.bars.every(bar => (bar.value === null) === ![0, 2].includes(index)))
+      assert.ok(item.bars.every(bar => metric === 'before-dps' || bar.hitDelayLimit !== null))
+    }))
+    const locked = buildSurtrStageResistanceComparison(record, { ...settings, level: 59 }, [0, 100], assumptions, metric)
+    assert.ok(locked[0].resistanceGroups.every(item => item.bars[0].value !== null))
+    assert.ok(locked.slice(1).flatMap(group => group.resistanceGroups.flatMap(item => item.bars))
+      .every(bar => bar.value === null && bar.hitDelayLimit === null))
+    record.operatorProfile.modules![0].phases = record.operatorProfile.modules![0].phases!.filter(phase => phase.equipLevel !== 2)
+    record.operatorProfile.modules!.pop()
+    const missing = buildSurtrStageResistanceComparison(record, settings, [0, 100], assumptions, metric)
+    missing.slice(1).forEach(group => group.resistanceGroups.forEach(item => {
+      assert.equal(item.bars[1].value, null)
+      assert.equal(item.bars[1].hitDelayLimit, null)
+      assert.equal(item.bars[0].value === null, group.moduleLevel === 2)
+    }))
+    assert.deepEqual(missing.flatMap(group => group.resistanceGroups[0].bars.map(bar => bar.color)),
+      initial.flatMap(group => group.resistanceGroups[0].bars.map(bar => bar.color)))
+  }
+})
+
+test('段階×術耐性でも無関係な時刻設定を無視し、全期間の時刻と期待値の命中遅延は反映する', () => {
+  const record = createRecord()
+  const resistances = [0, 60, 100]
+  const invalidTiming = { firstAttackStart: Number.NaN, hitDelay: -1, ctCarry: 'invalid',
+    includeRetreatHit: undefined } as unknown as SurtrTotalDamageAssumptions
+  assert.deepEqual(buildSurtrStageResistanceComparison(record, settings, resistances, invalidTiming, 'before-dps', Number.NaN),
+    buildSurtrStageResistanceComparison(record, settings, resistances, assumptions, 'before-dps'))
+  assert.deepEqual(buildSurtrStageResistanceComparison(record, settings, resistances,
+    { ...assumptions, firstAttackStart: Number.NaN }, 'remnant-expected-damage', -1),
+  buildSurtrStageResistanceComparison(record, settings, resistances, assumptions, 'remnant-expected-damage'))
+  const invalidTime = buildSurtrStageResistanceComparison(record, settings, resistances, assumptions, 'total-damage', -1)
+  assert.ok(invalidTime.flatMap(group => group.resistanceGroups.flatMap(item => item.bars)).every(bar => bar.value === null))
+  for (const metric of ['total-damage', 'remnant-expected-damage'] as const) {
+    const delayed = buildSurtrStageResistanceComparison(record, settings, resistances, { ...assumptions, hitDelay: 1.1 }, metric)
+    assert.ok(delayed[1].resistanceGroups.every(item => item.bars[1].value !== null))
+    assert.ok(delayed.slice(2).every(group => group.resistanceGroups.every(item => item.bars[1].value === null && item.bars[1].hitDelayLimit !== null)))
+  }
+})
+
+test('段階×術耐性の有効な0ダメージを欠損値へ変換しない', () => {
+  const record = createRecord()
+  const resistances = [0, 100, -1]
+  const zero = buildSurtrStageResistanceComparison(record, settings, resistances,
+    { ...assumptions, firstAttackStart: 20 }, 'total-damage', 0)
+  zero.forEach(group => group.resistanceGroups.forEach((item, index) => {
+    assert.ok(item.bars.every(bar => bar.value === (index === 2 ? null : 0)))
+  }))
+  record.operatorProfile.talents[1].candidates![0].blackboard![0].value = 0.1
+  const short = buildSurtrStageResistanceComparison(record, settings, resistances, assumptions, 'remnant-expected-damage')
+  assert.deepEqual(short[0].resistanceGroups.map(item => item.bars[0].value), [0, 0, null])
+})
+
+test('重複術耐性の出力を独立させ、元データ・条件・入力配列を変更しない', () => {
+  const record = createRecord()
+  const resistances = Object.freeze([60, 0, 60])
+  const original = structuredClone({ record, settings, assumptions, resistances })
+  for (const metric of resistanceMetrics) {
+    const first = buildSurtrStageResistanceComparison(record, settings, resistances, assumptions, metric)
+    first.forEach(group => {
+      assert.deepEqual(group.resistanceGroups[0], group.resistanceGroups[2])
+      assert.notEqual(group.resistanceGroups[0].bars, group.resistanceGroups[2].bars)
+      assert.notEqual(group.resistanceGroups[0].bars[0], group.resistanceGroups[2].bars[0])
+    })
+    const expected = first[0].resistanceGroups[2].bars[0].value
+    first[0].resistanceGroups[0].bars[0].value = 999
+    assert.equal(first[0].resistanceGroups[2].bars[0].value, expected)
+    assert.equal(buildSurtrStageResistanceComparison(record, settings, resistances, assumptions, metric)[0].resistanceGroups[0].bars[0].value, expected)
+  }
+  assert.deepEqual({ record, settings, assumptions, resistances }, original)
 })
 
 // Compact fixture matching the total-damage engine's existing source-data tests.
