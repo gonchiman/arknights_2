@@ -1,0 +1,11 @@
+.surtr-total-stage-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); align-items: end; gap: 16px; }
+.surtr-total-stage-modules { margin: 0; padding: 0; border: 0; min-width: 0; }
+.surtr-total-stage-modules legend { margin-bottom: 12px; color: var(--text-soft); font-size: 12px; }
+.surtr-total-stage-modules > div { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-height: 42px; }
+.surtr-total-stage-modules label { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; }
+.surtr-total-stage-actions { display: flex; justify-content: flex-end; margin: 16px 0 8px; }
+.surtr-total-stage-panel .gg-performance-bar-condition { max-width: 650px; }
+@media (max-width: 760px) {
+  .surtr-total-stage-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .surtr-total-stage-metric, .surtr-total-stage-modules { grid-column: 1 / -1; }
+}

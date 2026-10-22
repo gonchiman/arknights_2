@@ -29,6 +29,7 @@ import { SurtrTotalDamageTableContent, type SurtrTotalDamageTableCellSelection }
 import { SurtrTotalDamageTableImagePreview, saveSurtrTotalDamageTableImage,
   type SurtrTotalDamageTableImageSnapshot } from './SurtrTotalDamageTableImage'
 import { SurtrTotalDamageDetail } from './SurtrTotalDamageDetail'
+import { SurtrTotalDamageStagePanel } from './SurtrTotalDamageStagePanel'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
 import './DamageCalculator.css'
 import './SurtrS3Page.css'
@@ -319,6 +320,8 @@ export function SurtrTotalDamagePage({ rows, loading, error, onRetry }: {
         </div>}
       {feedback && feedback !== 'failed' && <p className="surtr-s3-status" role="status">{feedback === 'saved' ? '画像を保存しました。' : '画像をダウンロードしました。'}</p>}
     </CollapsibleCalculatorPanel>
+    <SurtrTotalDamageStagePanel record={record} settings={effectiveSettings} assumptions={assumptions}
+      firstAttackDraft={firstAttackDraft} hitDelayDraft={hitDelayDraft} status={status} />
     {image && <ChartImageSaveDialog initialFilename={getSurtrTotalDamageTableImageFilename(image.filenameOptions)}
       getDefaultFilename={ratio => getSurtrTotalDamageTableImageFilename(image.filenameOptions, ratio)} aspect={aspect}
       onAspectChange={value => {
