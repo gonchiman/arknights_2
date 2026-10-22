@@ -1,7 +1,4 @@
 .enemy-map-coverage-page {
-  --coverage-included: #417897;
-  --coverage-excluded: #ad7c49;
-  --coverage-missing: #d0d0d0;
   container-type: inline-size;
 }
 .enemy-map-coverage-page .page-intro { margin-bottom: 0; }
@@ -49,6 +46,7 @@
 .enemy-map-coverage-map[data-coverage-status="missing"] { border-bottom-color: var(--coverage-missing); }
 .enemy-map-coverage-map[aria-pressed="true"] { box-shadow: inset 0 0 0 1px var(--text); }
 .enemy-map-coverage-page .panel-heading p { font-size: 11px; }
+.enemy-map-coverage-image-feedback { margin: 12px 0 0; color: var(--text-soft); font-size: 12px; }
 @container (max-width: 680px) {
   .enemy-map-coverage-chart-heading, .enemy-map-coverage-bar-row { grid-template-columns: 120px minmax(0, 1fr) 132px; gap: 12px; }
   .enemy-map-coverage-bar-row { padding: 16px 8px; font-size: 12px; }

@@ -1,23 +1,30 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { getMapCategory, loadMapDatabase } from '../lib/mapDatabase'
 import {
   getMapCoverageCategories, getMapCoverageEnvironmentLabel, getMapCoverageReasons,
   getMapCoverageStatus, getMapCoverageZones, summarizeMapCoverage,
 } from '../lib/enemyMapCoverage'
-import type { EnemyMapCoverageMode as CountMode, MapCoverageStatus as CoverageStatus, MapCoverageSummary as CoverageCounts } from '../lib/enemyMapCoverage'
+import type { EnemyMapCoverageMode as CountMode, MapCoverageSummary as CoverageCounts } from '../lib/enemyMapCoverage'
 import type { MapCategory, MapIndex, MapSummary } from '../types/map'
+import { createEnemyMapCoverageChartSnapshot, MAP_COVERAGE_COLORS,
+  MAP_COVERAGE_STATUS_KEYS as STATUS_KEYS, MAP_COVERAGE_STATUS_LABELS as STATUS_LABELS,
+  type EnemyMapCoverageChartSnapshot } from '../lib/enemyMapCoverageChartImage'
+import { withChartImageAspect } from '../lib/chartImageFilename'
+import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
+import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
+import { EnemyMapCoverageChartImage, EnemyMapCoverageChartImagePreview,
+  getEnemyMapCoverageChartImageLayout } from './EnemyMapCoverageChartImage'
+import { saveComparisonChartImage } from './saveComparisonChartImage'
 import { PageBreadcrumbs } from './PageBreadcrumbs'
 import './DamageCalculator.css'
 import './MapDatabase.css'
 import './EnemyMapCoveragePage.css'
 
 const PAGE_SIZE = 36
-const STATUS_LABELS: Record<CoverageStatus, string> = {
-  included: '集計対象', excluded: '集計対象外', missing: 'データ未取得',
-}
 const ENVIRONMENT_ORDER = ['標準', '強襲', '厄難', '物語', '共通', '環境指定なし', 'その他']
 const formatCount = (count: number) => count.toLocaleString('ja-JP')
-const STATUS_KEYS: CoverageStatus[] = ['included', 'excluded', 'missing']
+const COVERAGE_COLORS = Object.fromEntries(Object.entries(MAP_COVERAGE_COLORS)
+  .map(([status, color]) => [`--coverage-${status}`, color])) as CSSProperties
 
 function compareMaps(a: MapSummary, b: MapSummary) {
   const environmentOrder = (map: MapSummary) => {
@@ -47,6 +54,11 @@ export function EnemyMapCoveragePage() {
   const [zoneId, setZoneId] = useState('main_9')
   const [page, setPage] = useState(0)
   const [selectedId, setSelectedId] = useState('')
+  const [imageSnapshot, setImageSnapshot] = useState<EnemyMapCoverageChartSnapshot | null>(null)
+  const [imageAspect, setImageAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
+  const [saving, setSaving] = useState(false)
+  const [imageFeedback, setImageFeedback] = useState<'saved' | 'failed' | null>(null)
+  const savingRef = useRef(false)
 
   useEffect(() => {
     let active = true
@@ -79,7 +91,34 @@ export function EnemyMapCoveragePage() {
     setSelectedId('')
   }
 
-  return <section className="calculator-page enemy-map-coverage-page">
+  const openImage = () => {
+    setImageFeedback(null)
+    setImageSnapshot(createEnemyMapCoverageChartSnapshot(maps, mode))
+  }
+  const saveImage = async (filename: string, aspectRatio?: number) => {
+    if (!imageSnapshot || savingRef.current) return
+    savingRef.current = true
+    setSaving(true)
+    setImageFeedback(null)
+    try {
+      const destination = await selectChartImageDestination(filename, getChartImageSavePicker())
+      if (destination.type === 'cancelled') return
+      await saveComparisonChartImage({
+        chart: <EnemyMapCoverageChartImage snapshot={imageSnapshot} aspectRatio={aspectRatio} />,
+        filename, width: getEnemyMapCoverageChartImageLayout(aspectRatio).width,
+        writeBlob: destination.type === 'file' ? destination.write : undefined,
+      })
+      setImageFeedback('saved')
+      setImageSnapshot(null)
+    } catch { setImageFeedback('failed') }
+    finally { savingRef.current = false; setSaving(false) }
+  }
+  const validRatio = [imageAspect.width, imageAspect.height]
+    .every((value) => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100)
+  const previewAspect = imageAspect.preset === 'auto' || !validRatio
+    ? undefined : Number(imageAspect.width) / Number(imageAspect.height)
+
+  return <section className="calculator-page enemy-map-coverage-page" style={COVERAGE_COLORS}>
     <PageBreadcrumbs parents={[{ label: '敵の統計分析', href: '#/analysis/enemies' }]} current="集計マップ確認" />
     <header className="page-intro">
       <div><span className="page-kicker">ENEMY STATISTICS</span><h1>集計マップ確認</h1></div>
@@ -99,7 +138,9 @@ export function EnemyMapCoveragePage() {
         </div>
       </div>
       <section className="calculator-panel" aria-labelledby="enemy-map-coverage-chart-heading">
-        <header className="panel-heading"><div><span>01</span><h2 id="enemy-map-coverage-chart-heading">集計マップ</h2></div></header>
+        <header className="panel-heading"><div><span>01</span><h2 id="enemy-map-coverage-chart-heading">集計マップ</h2></div>
+          <button type="button" className="button secondary" disabled={saving || totals.total === 0} onClick={openImage}>画像を保存</button>
+        </header>
         <CoverageLegend counts={totals} />
         <div className="enemy-map-coverage-chart" role="group" aria-label="分類ごとの集計対象割合とマップ数">
           <div className="enemy-map-coverage-chart-heading" aria-hidden="true">
@@ -117,6 +158,7 @@ export function EnemyMapCoveragePage() {
             <span className="enemy-map-coverage-count">{formatCount(item.included)} / {formatCount(item.total)} マップ</span>
           </button>)}
         </div>
+        {imageFeedback === 'saved' && <p className="enemy-map-coverage-image-feedback" role="status">画像を保存しました。</p>}
       </section>
       <section id="enemy-map-coverage-detail" className="calculator-panel" aria-labelledby="enemy-map-coverage-detail-heading">
         <header className="panel-heading"><div><span>02</span><h2 id="enemy-map-coverage-detail-heading">マップ内訳</h2></div><p>{categoryLabel}</p></header>
@@ -162,5 +204,13 @@ export function EnemyMapCoveragePage() {
         </div> : <p className="map-empty" role="status">収録マップがありません</p>}
       </section>
     </>}
+    {imageSnapshot && <ChartImageSaveDialog initialFilename={imageSnapshot.filename}
+      getDefaultFilename={(aspectRatio) => withChartImageAspect(imageSnapshot.filename, aspectRatio)}
+      aspect={imageAspect} onAspectChange={setImageAspect} canChooseLocation={Boolean(getChartImageSavePicker())}
+      saving={saving} error={imageFeedback === 'failed'} helpMode="popover"
+      onClose={() => { if (!savingRef.current) setImageSnapshot(null) }}
+      onSave={(filename, aspectRatio) => void saveImage(filename, aspectRatio)}
+      preview={<EnemyMapCoverageChartImagePreview key={JSON.stringify([imageSnapshot, previewAspect])}
+        snapshot={imageSnapshot} aspectRatio={previewAspect} />} />}
   </section>
 }
