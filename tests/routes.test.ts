@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { APP_NAV_ITEMS, DAMAGE_VERIFICATION_ITEM, GOLDENGLOW_ANALYSIS_ITEMS, SURTR_ANALYSIS_ITEMS, SURTR_HOME_ITEMS, SURTR_HOME_LINK } from '../src/lib/navigation.ts'
 import {
+  createDamageCalculatorThreeHash,
   createOperatorDetailHash,
   createSkillEffectsHash,
   createSkillSummaryHash,
@@ -63,6 +64,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['damage', 'damage'],
       ['damage-two', 'damage-two'],
       ['damage-three', 'damage-three'],
+      ['damage-three-coverage', 'damage-three-coverage'],
       ['damage-verification', 'damage-verification'],
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
@@ -256,8 +258,79 @@ test('Damage Calculator 3は計算機2の隣から独立したURLで開く', () 
     description: 'スキル構造からダメージ・DPSを計算',
     section: 'analysis',
   })
-  for (const suffix of ['/', '/extra', '?operatorId=char_350_surtr', '-extra']) {
+  for (const suffix of ['/', '/extra', '-extra']) {
     assert.deepEqual(parseHashRoute(`#/damage-3${suffix}`), { view: 'operators' })
+  }
+})
+
+test('DC3 実装範囲は計算機3の隣から独立したページとして開く', () => {
+  assert.deepEqual(parseHashRoute('#/damage-3/coverage'), { view: 'damage-three-coverage' })
+  const calculatorIndex = APP_NAV_ITEMS.findIndex(item => item.id === 'damage-three')
+  assert.deepEqual(APP_NAV_ITEMS[calculatorIndex + 1], {
+    id: 'damage-three-coverage', href: '#/damage-3/coverage', label: 'DC3 実装範囲',
+    description: '', section: 'analysis',
+  })
+  for (const suffix of ['/', '/extra', '?operatorId=char_350_surtr', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/damage-3/coverage${suffix}`), { view: 'operators' })
+  }
+})
+
+test('DC3の共有URLは選択なしと符号化されたスキル・レベルの指定を復元する', () => {
+  assert.equal(createDamageCalculatorThreeHash(), '#/damage-3')
+  assert.deepEqual(parseHashRoute(createDamageCalculatorThreeHash()), { view: 'damage-three' })
+  const selection = {
+    operatorId: 'char/日本', skillIndex: 2, skillId: 'skchr_test[2]&mode=1', levelIndex: 9,
+  }
+  const hash = createDamageCalculatorThreeHash(selection)
+  assert.equal(hash, '#/damage-3?operatorId=char%2F%E6%97%A5%E6%9C%AC&skillIndex=2&skillId=skchr_test%5B2%5D%26mode%3D1&levelIndex=9')
+  assert.deepEqual(parseHashRoute(hash), { view: 'damage-three', selection })
+  assert.deepEqual(parseHashRoute(`${hash}&unrelated=value`), { view: 'damage-three', selection })
+  assert.deepEqual(parseHashRoute(createDamageCalculatorThreeHash({ ...selection, levelIndex: 0 })), {
+    view: 'damage-three', selection: { ...selection, levelIndex: 0 },
+  })
+})
+
+test('DC3の不完全・不正・重複したクエリは選択なしの計算機へ戻す', () => {
+  const selection = { operatorId: 'char_test', skillIndex: '1', skillId: 'skill_test', levelIndex: '0' }
+  const invalidValues = {
+    operatorId: ['', ' char_test', 'char_test ', '\u0000char', 'x'.repeat(257), '\ufffd'],
+    skillId: ['', ' skill_test', 'skill_test ', 'skill\u007f', 'x'.repeat(257), '\ufffd'],
+    skillIndex: ['0', '-1', '1.5', '01', '1e0', 'NaN', 'Infinity', '9007199254740992'],
+    levelIndex: ['-1', '0.5', '01', '1e0', 'NaN', 'Infinity', '9007199254740992'],
+  }
+  const base = { view: 'damage-three' }
+  for (const query of ['', 'unknown=value', 'operatorId=char_350_surtr',
+    'operatorId=%E0%A4%A&skillIndex=1&skillId=x&levelIndex=0',
+    'operatorId=x&skillIndex=1&skillId=x&levelIndex=0&%6c%65velIndex=0']) {
+    assert.deepEqual(parseHashRoute(`#/damage-3?${query}`), base, query)
+  }
+  for (const key of Object.keys(selection) as (keyof typeof selection)[]) {
+    const missing = new URLSearchParams(selection)
+    missing.delete(key)
+    assert.deepEqual(parseHashRoute(`#/damage-3?${missing}`), base, `missing ${key}`)
+    const duplicate = new URLSearchParams(selection)
+    duplicate.append(key, selection[key])
+    assert.deepEqual(parseHashRoute(`#/damage-3?${duplicate}`), base, `duplicate ${key}`)
+    for (const value of invalidValues[key]) {
+      const invalid = new URLSearchParams(selection)
+      invalid.set(key, value)
+      assert.deepEqual(parseHashRoute(`#/damage-3?${invalid}`), base, `${key}=${JSON.stringify(value)}`)
+    }
+  }
+})
+
+test('DC3の共有URL生成は無効なIDと選択番号を拒否する', () => {
+  const selection = { operatorId: 'char_test', skillIndex: 1, skillId: 'skill_test', levelIndex: 0 }
+  for (const key of ['operatorId', 'skillId'] as const) {
+    for (const value of ['', ' leading', 'trailing ', '\u0000', '\ufffd', 'x'.repeat(257)]) {
+      assert.throws(() => createDamageCalculatorThreeHash({ ...selection, [key]: value }), TypeError)
+    }
+  }
+  for (const value of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(() => createDamageCalculatorThreeHash({ ...selection, skillIndex: value }), RangeError)
+  }
+  for (const value of [-1, 0.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(() => createDamageCalculatorThreeHash({ ...selection, levelIndex: value }), RangeError)
   }
 })
 
@@ -270,7 +343,7 @@ test('ダメージ検証は共通メニューから開き、スルトのトッ�
     description: '',
     section: 'analysis',
   })
-  const calculatorIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'damage-three')
+  const calculatorIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'damage-three-coverage')
   assert.equal(APP_NAV_ITEMS[calculatorIndex + 1], DAMAGE_VERIFICATION_ITEM)
   assert.deepEqual(SURTR_HOME_ITEMS, SURTR_ANALYSIS_ITEMS)
   assert.equal(SURTR_ANALYSIS_ITEMS.some((item) => item.id === 'damage-verification'), false)

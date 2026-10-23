@@ -5,6 +5,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
+import { createDamageCalculatorThreeHash, parseHashRoute } from '../src/lib/routes.ts'
 
 const source = JSON.parse(readFileSync(new URL('./fixtures/skillStructureFourOperators.json', import.meta.url), 'utf8'))
 const talentSource = JSON.parse(readFileSync(new URL('./fixtures/talentStructureFourOperators.json', import.meta.url), 'utf8'))
@@ -126,6 +127,19 @@ test('初期表示はスルトS2で、選択・戦闘条件・素質・結果の
   assert.ok(data.slice(1).every(row => row.length === 5))
   // The single-target condition applies ×1.6 after the ATK+120% modifier.
   assert.deepEqual(data[1], ['0', '2,717', '2,173', '2,717', '2,173'])
+})
+
+test('計算機の実装範囲への導線と共有URLによるスキル選択が一致する', () => {
+  const selection = selected('char_263_skadi', 3)
+  const route = parseHashRoute(createDamageCalculatorThreeHash(selection))
+  assert.equal(route.view, 'damage-three')
+  const markup = render(route.selection)
+  const coverageLink = markup.match(/<a\b[^>]*href="([^"]+)"[^>]*>実装範囲<\/a>/)
+  assert.ok(coverageLink)
+  assert.deepEqual(parseHashRoute(coverageLink[1]), { view: 'damage-three-coverage' })
+  assert.match(markup, /スカジ/)
+  assert.match(markup, /スカジ · S3 特化3/)
+  assert.doesNotMatch(markup, /災厄の巨焔|指定されたスキル・レベルは計算機３の対象外/)
 })
 
 test('対応済みでない技能・不整合な識別子はスルトS2へ代用せず選び直しを案内する', () => {

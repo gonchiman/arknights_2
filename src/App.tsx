@@ -4,6 +4,7 @@ import { HomePage } from './components/HomePage'
 import { DamageCalculator } from './components/DamageCalculator'
 import { DamageCalculatorTwo } from './components/DamageCalculatorTwo'
 import { DamageCalculatorThree } from './components/DamageCalculatorThree'
+import { DamageCalculatorThreeCoveragePage } from './components/DamageCalculatorThreeCoveragePage'
 import { ManualDamageVerificationPage } from './components/ManualDamageVerificationPage'
 import { DataSourcesPage } from './components/DataSourcesPage'
 import { CodeAnalysisPage } from './components/CodeAnalysisPage'
@@ -44,7 +45,7 @@ import { loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
 import { ARKNIGHTS_GAMEDATA_REPOSITORY } from './lib/dataSources'
 import { buildOperatorDatabaseRecords } from './lib/operatorDatabase'
-import { createOperatorDetailHash, parseHashRoute, type AppRoute } from './lib/routes'
+import { createDamageCalculatorThreeHash, createOperatorDetailHash, parseHashRoute, type AppRoute } from './lib/routes'
 import { APP_NAV_ITEMS, GOLDENGLOW_ANALYSIS_ITEMS, GOLDENGLOW_HOME_LINK, HOME_LINK, SURTR_ANALYSIS_ITEMS, SURTR_HOME_LINK, type NavigationPage } from './lib/navigation'
 import { GOLDENGLOW_OPERATOR_ID } from './lib/goldenglowExplosion'
 import { PanelStateScope } from './lib/PanelStateScope'
@@ -85,7 +86,9 @@ export default function App() {
   const [rows, setRows] = useState<SkillRecord[]>([])
   const [route, setRoute] = useState<AppRoute>(() => parseHashRoute(window.location.hash))
   const [operatorDirectoryVisited, setOperatorDirectoryVisited] = useState(route.view === 'operators')
-  const [damageThreeMounted, setDamageThreeMounted] = useState(route.view === 'damage-three')
+  const [damageThreeRoute, setDamageThreeRoute] = useState<Extract<AppRoute, { view: 'damage-three' }> | null>(
+    route.view === 'damage-three' ? route : null,
+  )
   const currentRouteRef = useRef(route)
   const operatorDirectoryPositionRef = useRef<OperatorDirectoryPosition | null>(null)
   const [detailBackgroundRoute, setDetailBackgroundRoute] = useState<BaseAppRoute | null>(null)
@@ -122,8 +125,12 @@ export default function App() {
       const previousRoute = currentRouteRef.current
       currentRouteRef.current = nextRoute
       if (nextRoute.view === 'operators') setOperatorDirectoryVisited(true)
-      if (nextRoute.view === 'damage-three') setDamageThreeMounted(true)
-      else if (nextRoute.view !== 'operator-detail' || nextRoute.source !== 'damage-three') setDamageThreeMounted(false)
+      if (nextRoute.view === 'damage-three') {
+        setDamageThreeRoute(current => previousRoute.view === 'operator-detail'
+          && previousRoute.source === 'damage-three' && !nextRoute.selection ? current ?? nextRoute : nextRoute)
+      } else if (nextRoute.view !== 'operator-detail' || nextRoute.source !== 'damage-three') {
+        setDamageThreeRoute(null)
+      }
       if (previousRoute.view === 'operators' && nextRoute.view === 'operator-detail') {
         const table = document.querySelector<HTMLElement>('.operator-database-table-wrap')
         operatorDirectoryPositionRef.current = {
@@ -321,10 +328,11 @@ export default function App() {
         )}
 
         {/* Preserve calculator inputs only while visiting its operator detail page. */}
-        {damageThreeMounted && (displayedRoute.view === 'damage-three' || isDamageThreeOperatorDetail) && (
+        {damageThreeRoute && (displayedRoute.view === 'damage-three' || isDamageThreeOperatorDetail) && (
           <div hidden={displayedRoute.view !== 'damage-three'}>
             <PanelStateScope.Provider value="damage-three">
-              <DamageCalculatorThree rows={classifiedRows} loading={loading} />
+              <DamageCalculatorThree key={createDamageCalculatorThreeHash(damageThreeRoute.selection)}
+                rows={classifiedRows} loading={loading} initialSelection={damageThreeRoute.selection} />
             </PanelStateScope.Provider>
           </div>
         )}
@@ -379,6 +387,9 @@ export default function App() {
           />
         ) : displayedRoute.view === 'damage-two' ? (
           <DamageCalculatorTwo rows={classifiedRows} loading={loading} />
+        ) : displayedRoute.view === 'damage-three-coverage' ? (
+          <DamageCalculatorThreeCoveragePage rows={classifiedRows} loading={loading}
+            onOpenOperatorDetail={openOperatorDetail} />
         ) : displayedRoute.view === 'comparison' ? (
           <OperatorComparison
             rows={classifiedRows}

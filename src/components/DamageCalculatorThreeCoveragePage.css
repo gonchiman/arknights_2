@@ -1,0 +1,22 @@
+.damage-three-coverage-page { min-width: 0; }
+
+.damage-three-coverage-meta { flex-wrap: wrap; }
+
+.damage-three-coverage-table { min-width: 660px; }
+.damage-three-coverage-table th:nth-child(1) { width: 26%; }
+.damage-three-coverage-table th:nth-child(2) { width: 72px; }
+.damage-three-coverage-table th:nth-child(3) { width: auto; }
+.damage-three-coverage-table th:nth-child(4) { width: 100px; }
+.damage-three-coverage-table th:nth-child(5) { width: 70px; }
+
+.damage-three-coverage-detail-table { min-width: 0; }
+.damage-three-coverage-detail-table th:first-child { width: 100px; }
+.damage-three-coverage-detail-table th:nth-child(2) { width: auto; }
+.damage-three-coverage-detail-table td { overflow-wrap: anywhere; }
+.damage-three-coverage-detail-table tbody th { font-size: 12px; font-weight: 400; }
+.damage-three-coverage-detail-table tbody tr:last-child th { border-bottom: 0; }
+.damage-three-coverage-actions { display: flex; margin-top: 14px; }
+
+@media (max-width: 620px) {
+  .damage-three-coverage-meta span:last-child { display: inline; }
+}

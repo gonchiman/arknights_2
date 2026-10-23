@@ -3,6 +3,50 @@ import { getOperatorPassives, type PassiveSource } from './operatorProfile.ts'
 import type { GuardConditions, GuardInput, GuardPassiveModifiers } from './guardCombatTypes.ts'
 
 type Context = { kind: 'NORMAL' | 'NEXT_ATTACK' | 'SKILL_ACTION'; skillIndex: number; stageId: string }
+
+export interface GuardPassiveCalculationConstraint {
+  readonly talentIndex: number
+  readonly reason: string
+  /** Absent when no currently implemented condition can resolve the blocker. */
+  readonly supportedCondition?: string
+  readonly allows: (conditions: GuardConditions, read: (key: string) => number) => boolean
+}
+
+/** Calculation blockers and their supported scope are shared with the coverage page.
+ * Input validation and missing/corrupt source data are deliberately not coverage states.
+ */
+export function getGuardPassiveCalculationConstraints(operatorId: string, context: Context): readonly GuardPassiveCalculationConstraint[] {
+  if (operatorId === 'char_2024_chyue' && context.skillIndex === 2) return [{
+    talentIndex: 0,
+    reason: '浮遊解除前後で止戈の適用が変わる処理順を、攻撃ごとに解決する必要があります。',
+    allows: () => false,
+  }]
+  if (operatorId === 'char_4037_demetr') return [{
+    talentIndex: 0,
+    reason: 'HP20〜100%の間の与ダメージ増加曲線が未確定です。',
+    supportedCondition: '対象のHPが100%、または20%以下',
+    allows: (conditions, read) => Number(conditions.targetHpPercent) / 100 >= read('min_hp_ratio')
+      || Number(conditions.targetHpPercent) / 100 <= read('max_hp_ratio'),
+  }, {
+    talentIndex: 0,
+    reason: '攻撃による防御力低下の新規付与と、連撃中の重複数変化を解決する必要があります。',
+    supportedCondition: `防御力低下が重複上限の${context.skillIndex === 2 ? 8 : 5}回に到達済み`,
+    allows: (conditions, read) => Number(conditions.defenseDebuffStacks)
+      >= read(context.skillIndex === 2 ? 'attack@s2_limited_stack_cnt' : 'attack@limited_stack_cnt'),
+  }]
+  if (operatorId === 'char_4116_blkkgt' && context.kind !== 'NORMAL') return [{
+    talentIndex: 0,
+    reason: '連撃中の戦慄付与と防御無視の適用順序を確定する必要があります。',
+    supportedCondition: '攻撃開始前から対象が戦慄中',
+    allows: conditions => conditions.targetTrembling === true,
+  }]
+  if (operatorId === 'char_1050_chen3') return [{
+    talentIndex: 0,
+    reason: '弱点ダメージの防御力・術耐性への適用式が未確定です。',
+    allows: () => false,
+  }]
+  return []
+}
 const numberInput = (key: string, label: string, min: number, max: number, defaultValue = min, step = 1): GuardInput =>
   ({ key, label, kind: 'number', min, max, defaultValue, step })
 const booleanInput = (key: string, label: string, defaultValue = false): GuardInput =>
@@ -187,6 +231,10 @@ export function evaluateGuardPassives(operator: SkillRecord, conditions: GuardCo
       else block(source.sourceName, '昇進2・潜在1の確認済み素質と名称・識別子・解放条件が一致しません。')
       continue
     }
+    for (const constraint of getGuardPassiveCalculationConstraints(operator.operatorId, context)) {
+      if (constraint.talentIndex === index && !constraint.allows(values, key => read(source, key)))
+        block(source.sourceName, constraint.reason)
+    }
     switch (operator.operatorId) {
       case 'char_264_f12yin':
         if (index === 0) {
@@ -201,7 +249,6 @@ export function evaluateGuardPassives(operator: SkillRecord, conditions: GuardCo
           if (yes('talentActive')) output.damageScale *= scale
           row(source.sourceName, '与ダメージ', `×${scale}`, yes('talentActive') ? 'APPLIED' : 'CONDITION_FALSE')
           output.notes.push('止戈が適用されているかを入力します。確率と効果時間から常時発動とは仮定しません。')
-          if (context.skillIndex === 2) block(source.sourceName, '浮遊解除前後で止戈の適用が変わる処理順を、攻撃ごとに解決する必要があります。')
         } else irrelevant(source)
         break
       case 'char_4037_demetr':
@@ -212,10 +259,8 @@ export function evaluateGuardPassives(operator: SkillRecord, conditions: GuardCo
           const hp = n('targetHpPercent') / 100, upper = read(source, 'min_hp_ratio'), lower = read(source, 'max_hp_ratio')
           if (hp >= upper) output.damageScale *= 1 + read(source, 'min_add_on_scale')
           else if (hp <= lower) output.damageScale *= 1 + read(source, 'max_add_on_scale')
-          else block(source.sourceName, 'HP20〜100%の間の与ダメージ増加曲線が未確定です。')
           row(source.sourceName, '防御力低下', `－${percent(output.defenseReductionRatio)}`, 'APPLIED')
           row(source.sourceName, '与ダメージ', `×${output.damageScale}`, output.blockers.length ? 'UNSUPPORTED' : 'APPLIED')
-          if (stacks < maximum) block(source.sourceName, '攻撃による防御力低下の新規付与と、連撃中の重複数変化を解決する必要があります。')
         } else irrelevant(source)
         break
       case 'char_4082_qiubai':
@@ -276,8 +321,6 @@ export function evaluateGuardPassives(operator: SkillRecord, conditions: GuardCo
             ? skillValue('prob') : read(source, 'prob')
           output.critScale = read(source, 'atk_scale')
           row(source.sourceName, '攻撃倍率・発動確率', `×${output.critScale}・${percent(output.critChance)}`, 'APPLIED')
-          if (!yes('targetTrembling') && context.kind !== 'NORMAL')
-            block(source.sourceName, '連撃中の戦慄付与と防御無視の適用順序を確定する必要があります。')
         } else {
           const ratio = read(source, 'def_penetrate')
           if (yes('targetTrembling')) output.defenseIgnoreRatio = ratio
@@ -307,7 +350,6 @@ export function evaluateGuardPassives(operator: SkillRecord, conditions: GuardCo
           applyRatio(source, read(source, 'atk'))
           output.attackSpeed += read(source, 'attack_speed')
           row(source.sourceName, '攻撃速度', `＋${output.attackSpeed}`, 'APPLIED')
-          block(source.sourceName, '弱点ダメージの防御力・術耐性への適用式が未確定です。')
         } else irrelevant(source)
         break
       case 'char_188_helage':

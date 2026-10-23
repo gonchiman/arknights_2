@@ -93,6 +93,7 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
 
   return <section className="calculator-page damage-two-page damage-three-page">
     <h1 className="visually-hidden">Damage Calculator 3</h1>
+    <div><a className="button secondary" href="#/damage-3/coverage">実装範囲</a></div>
     <CollapsibleCalculatorPanel id="damage-three-operator" number="01" title="オペレーター・スキル"
       summary={operator?.operatorName ?? '未選択'} collapsedLabel="選択を表示">
       <div className="damage-three-selection-grid">

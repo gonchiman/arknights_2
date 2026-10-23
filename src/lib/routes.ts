@@ -17,7 +17,8 @@ export type AppRoute =
   | { view: 'code-analysis' }
   | { view: 'damage' }
   | { view: 'damage-two' }
-  | { view: 'damage-three' }
+  | { view: 'damage-three'; selection?: SkillRouteSelection }
+  | { view: 'damage-three-coverage' }
   | { view: 'damage-verification' }
   | { view: 'goldenglow-home' }
   | { view: 'surtr-home' }
@@ -52,6 +53,7 @@ const SKILL_EFFECTS_ROUTE = '#/skill-effects'
 const SKILL_SUMMARY_ROUTE = '#/skill-summary'
 const SKILL_STRUCTURE_ROUTE = '#/skill-structure'
 const TALENT_STRUCTURE_ROUTE = '#/talent-structure'
+const DAMAGE_THREE_ROUTE = '#/damage-3'
 
 export interface TalentRouteSelection {
   operatorId: string
@@ -92,6 +94,10 @@ export function createSkillSummaryHash(selection: SkillRouteSelection): string {
 
 export function createSkillStructureHash(selection: SkillRouteSelection): string {
   return createSkillSelectionHash(SKILL_STRUCTURE_ROUTE, selection)
+}
+
+export function createDamageCalculatorThreeHash(selection?: SkillRouteSelection): string {
+  return selection ? createSkillSelectionHash(DAMAGE_THREE_ROUTE, selection) : DAMAGE_THREE_ROUTE
 }
 
 export function createTalentStructureHash(selection: TalentRouteSelection): string {
@@ -175,7 +181,11 @@ export function parseHashRoute(hash: string): AppRoute {
   }
   if (hash === '#/damage') return { view: 'damage' }
   if (hash === '#/damage-2') return { view: 'damage-two' }
-  if (hash === '#/damage-3') return { view: 'damage-three' }
+  if (hash === '#/damage-3/coverage') return { view: 'damage-three-coverage' }
+  if (hash === DAMAGE_THREE_ROUTE) return { view: 'damage-three' }
+  if (hash.startsWith(`${DAMAGE_THREE_ROUTE}?`)) {
+    return parseSkillSelectionRoute('damage-three', hash.slice(DAMAGE_THREE_ROUTE.length + 1))
+  }
   if (hash === '#/analysis/damage-verification') return { view: 'damage-verification' }
   if (hash === '#/analysis/code') return { view: 'code-analysis' }
   if (hash === '#/analysis/skills/kmeans') return { view: 'skill-kmeans' }
@@ -212,7 +222,7 @@ export function parseHashRoute(hash: string): AppRoute {
   return { view: 'operators' }
 }
 
-function parseSkillSelectionRoute(view: 'skill-json' | 'skill-effects' | 'skill-summary' | 'skill-structure', query: string): AppRoute {
+function parseSkillSelectionRoute(view: 'skill-json' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'damage-three', query: string): AppRoute {
   const params = new URLSearchParams(query)
   const operatorId = readRouteId(params, 'operatorId')
   const skillId = readRouteId(params, 'skillId')
