@@ -1,4 +1,4 @@
-export type NavigationPage = 'home' | 'operators' | 'skills' | 'skill-classification' | 'talent-classification' | 'talent-structure' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'skill-json' | 'skill-kmeans' | 'code-analysis' | 'damage' | 'damage-two' | 'damage-three' | 'damage-three-coverage' | 'damage-verification' | 'comparison' | 'enemies' | 'enemy-analysis' | 'enemy-regression' | 'enemy-map-coverage' | 'main-enemy-trends' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-s3-comparison' | 'surtr-skill-comparison' | 'surtr-total-damage' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-target-switch-three' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
+export type NavigationPage = 'home' | 'operators' | 'skills' | 'skill-classification' | 'talent-classification' | 'talent-structure' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'skill-json' | 'skill-kmeans' | 'skill-hierarchical' | 'code-analysis' | 'damage' | 'damage-two' | 'damage-three' | 'damage-three-coverage' | 'damage-verification' | 'comparison' | 'enemies' | 'enemy-analysis' | 'enemy-regression' | 'enemy-map-coverage' | 'main-enemy-trends' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-s3-comparison' | 'surtr-skill-comparison' | 'surtr-total-damage' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-target-switch-three' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -201,6 +201,13 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     section: 'analysis',
   },
   {
+    id: 'skill-hierarchical',
+    href: '#/analysis/skills/hierarchical',
+    label: '階層クラスタリング 学習ラボ',
+    description: '',
+    section: 'analysis',
+  },
+  {
     id: 'code-analysis',
     href: '#/analysis/code',
     label: 'GGのDAT解析',
@@ -313,3 +320,5 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     section: 'information',
   },
 ]
+
+export const SKILL_LEARNING_ITEMS = APP_NAV_ITEMS.filter((item) => item.id === 'skill-kmeans' || item.id === 'skill-hierarchical')

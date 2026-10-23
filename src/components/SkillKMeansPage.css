@@ -50,17 +50,9 @@
 .skill-kmeans-term-field { display: grid; gap: 6px; margin: 0; }
 .skill-kmeans-term-field dt { color: var(--text-soft); }
 .skill-kmeans-term-field dd { margin: 0; }
-.skill-kmeans-terms { display: flex; flex-wrap: wrap; gap: 4px 12px; }
-.skill-kmeans-terms span { overflow-wrap: anywhere; }
-.skill-kmeans-comparison-table .skill-kmeans-terms { justify-content: center; }
+.skill-kmeans-comparison-table .skill-clustering-terms { justify-content: center; }
 .skill-kmeans-memberships { display: grid; gap: 14px; }
-.skill-kmeans-source { min-width: 0; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; }
-.skill-kmeans-source summary, .skill-kmeans-history summary { width: fit-content; min-height: 32px; cursor: pointer; }
-.skill-kmeans-source-body { padding-top: 12px; }
-.skill-kmeans-source-links { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; }
-.skill-kmeans-source-body > p { margin: 12px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; }
-.skill-kmeans-source-body details { margin-top: 12px; }
-.skill-kmeans-source ul { padding-left: 20px; margin-bottom: 0; line-height: 1.8; }
+.skill-kmeans-history summary { width: fit-content; min-height: 32px; cursor: pointer; }
 .skill-kmeans-history { border-top: 1px solid var(--border); padding-top: 16px; font-size: 13px; }
 .skill-kmeans-history summary > span { margin-left: 8px; color: var(--text-soft); }
 .skill-kmeans-history > .skill-kmeans-actions, .skill-kmeans-history-table { margin-top: 14px; }
@@ -85,5 +77,4 @@
 @media (max-width: 760px), (pointer: coarse) {
   .skill-kmeans-page input, .skill-kmeans-page select { min-height: 44px; font-size: 16px; }
   .skill-kmeans-page .button, .skill-kmeans-groups button, .skill-kmeans-page summary { min-height: 44px; }
-  .skill-kmeans-source-links a { display: inline-flex; align-items: center; min-height: 44px; }
 }

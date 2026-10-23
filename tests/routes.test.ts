@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { APP_NAV_ITEMS, DAMAGE_VERIFICATION_ITEM, GOLDENGLOW_ANALYSIS_ITEMS, SURTR_ANALYSIS_ITEMS, SURTR_HOME_ITEMS, SURTR_HOME_LINK } from '../src/lib/navigation.ts'
+import { APP_NAV_ITEMS, DAMAGE_VERIFICATION_ITEM, GOLDENGLOW_ANALYSIS_ITEMS, SKILL_LEARNING_ITEMS, SURTR_ANALYSIS_ITEMS, SURTR_HOME_ITEMS, SURTR_HOME_LINK } from '../src/lib/navigation.ts'
 import {
   createDamageCalculatorThreeHash,
   createOperatorDetailHash,
@@ -60,6 +60,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['skill-structure', 'skill-structure'],
       ['skill-json', 'skill-json'],
       ['skill-kmeans', 'skill-kmeans'],
+      ['skill-hierarchical', 'skill-hierarchical'],
       ['code-analysis', 'code-analysis'],
       ['damage', 'damage'],
       ['damage-two', 'damage-two'],
@@ -99,6 +100,22 @@ test('K-means 学習ラボは専用ページとしてスキル分析から開く
   assert.deepEqual(parseHashRoute('#/skill-classification'), { view: 'skill-classification' })
   for (const suffix of ['/', '/extra', '?k=3', '-extra']) {
     assert.deepEqual(parseHashRoute(`#/analysis/skills/kmeans${suffix}`), { view: 'operators' })
+  }
+})
+
+test('階層クラスタリングはK-meansと共通のスキル学習導線から独立したページを開く', () => {
+  const hierarchy = APP_NAV_ITEMS.find((item) => item.id === 'skill-hierarchical')
+  assert.deepEqual(hierarchy, {
+    id: 'skill-hierarchical', href: '#/analysis/skills/hierarchical', label: '階層クラスタリング 学習ラボ',
+    description: '', section: 'analysis',
+  })
+  assert.deepEqual(SKILL_LEARNING_ITEMS.map(({ id, href }) => [id, parseHashRoute(href).view]), [
+    ['skill-kmeans', 'skill-kmeans'],
+    ['skill-hierarchical', 'skill-hierarchical'],
+  ])
+  assert.equal(SKILL_LEARNING_ITEMS[1], hierarchy)
+  for (const suffix of ['/', '/extra', '?k=3', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/analysis/skills/hierarchical${suffix}`), { view: 'operators' })
   }
 })
 

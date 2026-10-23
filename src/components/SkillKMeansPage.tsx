@@ -2,9 +2,9 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'rea
 import type { SkillRecord } from '../types/skill'
 import { buildSkillKMeansCorpus, type SkillKMeansConfig, type SkillKMeansDocument, type SkillKMeansResult } from '../lib/skillKMeans'
 import { EMPTY_SKILL_KMEANS_RUN, SkillKMeansRunner } from '../lib/skillKMeansRunner'
-import { createSkillSummaryHash } from '../lib/routes'
 import { AnalysisTabs, AnalysisTabPanel } from './AnalysisTabs'
-import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
+import type { OpenOperatorDetail } from './OperatorDetailLink'
+import { SkillClusteringSource, SkillClusteringTerms } from './SkillClusteringSource'
 import { SkillKMeansLearningChart } from './SkillKMeansLearningChart'
 import './DamageCalculator.css'
 import './SkillKMeansPage.css'
@@ -100,7 +100,7 @@ export function SkillKMeansPage({ rows, loading, onOpenOperatorDetail }: Props) 
   }
 
   return <section className="calculator-page skill-kmeans-page">
-    <header className="page-intro"><h1>K-means 学習ラボ</h1><a className="button secondary" href="#/skill-classification">スキル大分類へ</a></header>
+    <header className="page-intro"><h1>K-means 学習ラボ</h1><div className="skill-kmeans-actions"><a className="button secondary" href="#/analysis/skills/hierarchical">階層クラスタリングへ</a><a className="button secondary" href="#/skill-classification">スキル大分類へ</a></div></header>
     <div className="skill-kmeans-content">
       {run.error && <p className="skill-kmeans-error" role="alert">{run.error}</p>}
       <AnalysisTabs tabs={TABS} activeTab={tab} onChange={setTab} idPrefix={id} label="K-means学習の表示" />
@@ -151,9 +151,9 @@ export function SkillKMeansPage({ rows, loading, onOpenOperatorDetail }: Props) 
                 </div>
               </section>
               {selectedGroup >= 0 && <section className="skill-kmeans-inspect"><h3>G{selectedGroup + 1} · {members.length}件</h3><div className="skill-kmeans-inspect-body">
-                <dl className="skill-kmeans-term-field"><dt>代表語</dt><dd><RepresentativeTerms terms={result.representativeTerms[selectedGroup]} /></dd></dl>
+                <dl className="skill-kmeans-term-field"><dt>代表語</dt><dd><SkillClusteringTerms terms={result.representativeTerms[selectedGroup]} /></dd></dl>
                 <label><span>スキル</span><select aria-label="グループ内のスキル" value={documents[selectedIndex]?.id ?? ''} onChange={event => setSelectedId(event.target.value)}>{members.map(({ doc }) => <option key={doc.id} value={doc.id}>{documentLabel(doc)}</option>)}</select></label>
-                <DocumentSource document={documents[selectedIndex]} recordMap={recordMap} onOpenOperatorDetail={onOpenOperatorDetail} />
+                <SkillClusteringSource document={documents[selectedIndex]} recordMap={recordMap} onOpenOperatorDetail={onOpenOperatorDetail} />
               </div></section>}
             </div>
           </>}
@@ -169,11 +169,11 @@ export function SkillKMeansPage({ rows, loading, onOpenOperatorDetail }: Props) 
               <table className="skill-kmeans-table skill-kmeans-comparison-table" aria-label="スキルの所属比較"><thead><tr><th scope="col">項目</th><th scope="col">実験 A</th><th scope="col">実験 B</th></tr></thead><tbody>
                 <tr><th scope="row">所属</th>{run.results.map((item, index) => <td key={index}>G{item.assignments[comparedIndex] + 1}</td>)}</tr>
                 <tr><th scope="row">件数</th>{run.results.map((item, index) => <td key={index}>{item.counts[item.assignments[comparedIndex]]}件</td>)}</tr>
-                <tr><th scope="row">代表語</th>{run.results.map((item, index) => <td key={index}><RepresentativeTerms terms={item.representativeTerms[item.assignments[comparedIndex]]} /></td>)}</tr>
+                <tr><th scope="row">代表語</th>{run.results.map((item, index) => <td key={index}><SkillClusteringTerms terms={item.representativeTerms[item.assignments[comparedIndex]]} /></td>)}</tr>
                 <tr><th scope="row">グループ</th>{run.results.map((_, index) => <td key={index}><button type="button" className="button secondary" aria-label={`実験${index === 0 ? 'A' : 'B'}のグループを見る`}
                   onClick={() => { setExperiment(index as 0 | 1); setSelectedId(compared.id); focusResults() }}>見る</button></td>)}</tr>
               </tbody></table>
-              <DocumentSource document={compared} recordMap={recordMap} onOpenOperatorDetail={onOpenOperatorDetail} />
+              <SkillClusteringSource document={compared} recordMap={recordMap} onOpenOperatorDetail={onOpenOperatorDetail} />
             </section>}
           </>}
           <details className="skill-kmeans-history"><summary>実験の記録 <span>{history.length}件</span></summary>
@@ -194,18 +194,4 @@ function findDocumentIndex(documents: readonly SkillKMeansDocument[], result: Sk
 function EmptyResults({ busy, status, onSettings }: { busy: boolean; status: ReactNode; onSettings: () => void }) {
   return <div className="skill-kmeans-empty">{status}
     {!busy && <button type="button" className="button secondary" onClick={onSettings}>条件設定へ</button>}</div>
-}
-
-function RepresentativeTerms({ terms }: { terms: readonly string[] }) {
-  return <div className="skill-kmeans-terms">{terms.length ? terms.map(term => <span key={term}>{term}</span>) : '—'}</div>
-}
-
-function DocumentSource({ document, recordMap, onOpenOperatorDetail }: { document: SkillKMeansDocument; recordMap: ReadonlyMap<string, SkillRecord>; onOpenOperatorDetail: OpenOperatorDetail }) {
-  const sources = document.recordIds.map(id => recordMap.get(id)).filter((row): row is SkillRecord => !!row)
-  const primary = sources[0]
-  return <details className="skill-kmeans-source"><summary>スキル原文</summary><div className="skill-kmeans-source-body">
-    {primary && <div className="skill-kmeans-source-links"><OperatorDetailLink operatorId={primary.operatorId} onOpenOperatorDetail={onOpenOperatorDetail}>{primary.operatorName}</OperatorDetailLink><span>S{primary.skillIndex} · {primary.skillName}</span><a href={createSkillSummaryHash({ operatorId: primary.operatorId, skillId: primary.skillId, skillIndex: primary.skillIndex, levelIndex: Math.max(0, primary.skillLevels.length - 1) })}>効果の分解へ</a></div>}
-    <p>{document.description}</p>
-    {sources.length > 1 && <details><summary>同じ説明文の掲載先（{sources.length}件）</summary><ul>{sources.map(row => <li key={row.id}><OperatorDetailLink operatorId={row.operatorId} onOpenOperatorDetail={onOpenOperatorDetail}>{row.operatorName}</OperatorDetailLink> S{row.skillIndex} · {row.skillName}</li>)}</ul></details>}
-  </div></details>
 }
