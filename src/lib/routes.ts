@@ -5,6 +5,7 @@ export type AppRoute =
   | { view: 'skills' }
   | { view: 'skill-classification' }
   | { view: 'skill-kmeans' }
+  | { view: 'skill-hdbscan' }
   | { view: 'talent-classification' }
   | { view: 'talent-structure'; selection?: TalentRouteSelection; invalidSelection?: boolean }
   | { view: 'skill-effects'; selection?: SkillEffectsRouteSelection }
@@ -189,6 +190,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/analysis/damage-verification') return { view: 'damage-verification' }
   if (hash === '#/analysis/code') return { view: 'code-analysis' }
   if (hash === '#/analysis/skills/kmeans') return { view: 'skill-kmeans' }
+  if (hash === '#/analysis/skills/hdbscan') return { view: 'skill-hdbscan' }
   if (hash === '#/analysis/goldenglow') return { view: 'goldenglow-home' }
   if (hash === '#/analysis/surtr') return { view: 'surtr-home' }
   if (hash === '#/analysis/surtr/s3') return { view: 'surtr-s3' }

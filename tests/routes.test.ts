@@ -60,6 +60,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['skill-structure', 'skill-structure'],
       ['skill-json', 'skill-json'],
       ['skill-kmeans', 'skill-kmeans'],
+      ['skill-hdbscan', 'skill-hdbscan'],
       ['code-analysis', 'code-analysis'],
       ['damage', 'damage'],
       ['damage-two', 'damage-two'],
@@ -99,6 +100,19 @@ test('K-means 学習ラボは専用ページとしてスキル分析から開く
   assert.deepEqual(parseHashRoute('#/skill-classification'), { view: 'skill-classification' })
   for (const suffix of ['/', '/extra', '?k=3', '-extra']) {
     assert.deepEqual(parseHashRoute(`#/analysis/skills/kmeans${suffix}`), { view: 'operators' })
+  }
+})
+
+test('HDBSCAN 学習ラボはK-meansと独立したページとして開く', () => {
+  assert.deepEqual(parseHashRoute('#/analysis/skills/hdbscan'), { view: 'skill-hdbscan' })
+  const index = APP_NAV_ITEMS.findIndex(item => item.id === 'skill-kmeans')
+  assert.deepEqual(APP_NAV_ITEMS[index + 1], {
+    id: 'skill-hdbscan', href: '#/analysis/skills/hdbscan', label: 'HDBSCAN 学習ラボ',
+    description: '', section: 'analysis',
+  })
+  assert.deepEqual(parseHashRoute('#/analysis/skills/kmeans'), { view: 'skill-kmeans' })
+  for (const suffix of ['/', '/extra', '?min=10', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/analysis/skills/hdbscan${suffix}`), { view: 'operators' })
   }
 })
 
