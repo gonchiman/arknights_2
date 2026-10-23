@@ -95,6 +95,12 @@
 .map-detail-heading h2 { margin: 0; display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; font-size: 17px; font-weight: 500; }
 .map-detail-heading h2 > span { font-variant-numeric: tabular-nums; }
 .map-detail-heading p { margin: 5px 0 0; color: var(--text-muted); font-size: 11px; }
+.map-information-columns { display: grid; gap: 18px; }
+.map-information-columns > div { min-width: 0; }
+.map-information-columns .map-battle-facts { margin-bottom: 0; }
+@container (min-width: 850px) {
+  .map-information-columns { grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr); align-items: start; }
+}
 .map-board-figure { --map-blocked-line: #c2c6c5; margin: 0; border: 1px solid var(--border); padding: 14px; background: var(--surface-soft); }
 .map-board { display: block; width: 100%; max-width: 550px; height: auto; margin: 0 auto; }
 .map-tile rect, .map-blocked-pattern rect { fill: var(--map-tile-fill); }
@@ -123,6 +129,7 @@
 .map-enemy-table tr { cursor: default; }
 .map-enemy-table tr:hover { background: transparent; }
 .map-enemy-table th:first-child { width: 32%; }
+.map-database-page .map-enemy-table tbody th { background: transparent; color: var(--text); font-size: inherit; font-weight: 400; white-space: normal; }
 .map-data-information { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; font-size: 11px; }
 .map-data-information summary, .map-source-notes summary { width: fit-content; color: var(--text-muted); cursor: pointer; }
 .map-data-information dl { display: grid; gap: 8px; margin: 12px 0; }
