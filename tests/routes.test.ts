@@ -73,6 +73,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['enemy-regression', 'enemy-regression'],
       ['enemy-map-coverage', 'enemy-map-coverage'],
       ['main-enemy-trends', 'main-enemy-trends'],
+      ['roguelike', 'roguelike'],
       ['maps', 'maps'],
       ['goldenglow-home', 'goldenglow-home'],
       ['surtr-home', 'surtr-home'],
@@ -645,6 +646,14 @@ test('マップデータベースは敵のページと同じカテゴリから�
 
 test('全スキル一覧ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/skills'), { view: 'skills' })
+})
+
+test('統合戦略ページを独立したURLとナビゲーションで開く', () => {
+  assert.deepEqual(parseHashRoute('#/roguelike'), { view: 'roguelike' })
+  assert.deepEqual(APP_NAV_ITEMS.find((item) => item.id === 'roguelike'), {
+    id: 'roguelike', href: '#/roguelike', label: '統合戦略', description: '', section: 'analysis',
+  })
+  assert.deepEqual(parseHashRoute('#/roguelike/extra'), { view: 'operators' })
 })
 
 test('スキル効果解析ページは全スキル一覧とは独立したhashで開く', () => {

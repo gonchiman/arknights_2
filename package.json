@@ -11,6 +11,7 @@
     "generate:enemy-histogram-counts": "node scripts/generateEnemyHistogramCounts.mjs",
     "generate:enemy-stages": "node --use-system-ca scripts/generateEnemyStageAppearances.mjs",
     "generate:maps": "node scripts/generateMapDatabase.mjs",
+    "generate:roguelike": "node --use-system-ca scripts/generateRoguelikeDatabase.mjs",
     "generate:main-enemy-trends": "node --experimental-strip-types scripts/generate-main-enemy-trends.mjs",
     "preview": "vite preview",
     "rules:check": "node scripts/sync-project-rules.mjs check",
