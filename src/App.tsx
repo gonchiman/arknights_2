@@ -75,6 +75,7 @@ const MainEnemyTrendsPage = lazy(() => import('./components/MainEnemyTrendsPage'
 const EnemyRegressionPage = lazy(() => import('./components/EnemyRegressionPage').then((module) => ({ default: module.EnemyRegressionPage })))
 const SkillKMeansPage = lazy(() => import('./components/SkillKMeansPage').then((module) => ({ default: module.SkillKMeansPage })))
 const SkillHdbscanPage = lazy(() => import('./components/SkillHdbscanPage').then((module) => ({ default: module.SkillHdbscanPage })))
+const SkillHierarchicalPage = lazy(() => import('./components/SkillHierarchicalPage').then((module) => ({ default: module.SkillHierarchicalPage })))
 type BaseAppRoute = Exclude<AppRoute, { view: 'operator-detail' }>
 
 interface OperatorDirectoryPosition {
@@ -437,6 +438,10 @@ export default function App() {
         ) : displayedRoute.view === 'skill-hdbscan' ? (
           <Suspense fallback={<p className="calculator-loading" role="status">HDBSCAN 学習ラボを読み込み中…</p>}>
             <SkillHdbscanPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
+          </Suspense>
+        ) : displayedRoute.view === 'skill-hierarchical' ? (
+          <Suspense fallback={<p className="calculator-loading" role="status">階層クラスタリング 学習ラボを読み込み中…</p>}>
+            <SkillHierarchicalPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
           </Suspense>
         ) : displayedRoute.view === 'talent-classification' ? (
           <TalentCoarseClassificationPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />

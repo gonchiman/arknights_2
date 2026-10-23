@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node --use-system-ca node_modules/vite/bin/vite.js",
     "build": "tsc -b && vite build",
-    "test": "node --experimental-strip-types --test tests/*.test.ts tests/*.test.mjs",
+    "test": "node --experimental-strip-types --test \"tests/*.test.ts\" \"tests/*.test.mjs\"",
     "generate:module-colors": "node --experimental-strip-types scripts/generateModuleColorExample.mjs",
     "generate:enemy-histogram-counts": "node scripts/generateEnemyHistogramCounts.mjs",
     "generate:enemy-stages": "node --use-system-ca scripts/generateEnemyStageAppearances.mjs",

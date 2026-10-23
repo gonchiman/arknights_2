@@ -1,0 +1,27 @@
+.skill-hierarchy-diagram { min-width: 0; }
+.skill-hierarchy-diagram-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 8px; color: var(--text-soft); }
+.skill-hierarchy-path { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.skill-hierarchy-tree-grid { display: grid; grid-template-columns: 180px minmax(0, 1fr); min-width: 0; }
+.skill-hierarchy-tree-labels { padding-top: 20px; }
+.skill-hierarchy-tree-labels button { width: 100%; height: 56px; padding: 6px 8px; display: grid; align-content: center; gap: 2px; background: var(--surface); color: var(--text); border: 0; border-left: 3px solid transparent; text-align: left; font: inherit; cursor: pointer; }
+.skill-hierarchy-tree-labels button[aria-pressed="true"] { background: var(--surface-soft); border-left-color: var(--link); }
+.skill-hierarchy-tree-labels button:hover { background: var(--surface-hover); }
+.skill-hierarchy-tree-labels button > span { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.skill-hierarchy-tree-labels button > span + span { color: var(--text-soft); font-size: 12px; }
+.skill-hierarchy-tree-plot { min-width: 0; }
+.skill-hierarchy-tree-plot svg { display: block; max-width: 100%; overflow: visible; }
+.skill-hierarchy-tree-plot text { fill: var(--text-soft); font-size: 12px; font-family: inherit; }
+.skill-hierarchy-tree-plot .hierarchy-axis-title { fill: var(--text); }
+.hierarchy-grid { stroke: var(--border); stroke-width: 1; }
+.hierarchy-branch { fill: none; stroke: var(--border-strong); stroke-width: 1.5; }
+.hierarchy-collapsed { fill: var(--border-strong); opacity: .4; }
+.hierarchy-leaf { fill: var(--text-soft); }
+.hierarchy-collapsed.selected, .hierarchy-leaf.selected { fill: var(--link); opacity: .8; }
+.hierarchy-cut { stroke: var(--link); stroke-width: 1.5; stroke-dasharray: 5 4; }
+@container skill-hierarchy (max-width: 500px) {
+  .skill-hierarchy-tree-grid { grid-template-columns: 122px minmax(0, 1fr); }
+  .skill-hierarchy-tree-labels button { padding-inline: 5px; }
+}
+@container skill-hierarchy (max-width: 340px) {
+  .skill-hierarchy-tree-grid { grid-template-columns: 106px minmax(0, 1fr); }
+}

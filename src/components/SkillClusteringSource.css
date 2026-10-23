@@ -1,0 +1,13 @@
+.skill-clustering-terms { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.skill-clustering-terms span { overflow-wrap: anywhere; }
+.skill-clustering-source { min-width: 0; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; }
+.skill-clustering-source summary { width: fit-content; min-height: 32px; cursor: pointer; }
+.skill-clustering-source-body { padding-top: 12px; }
+.skill-clustering-source-links { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; }
+.skill-clustering-source-body > p { margin: 12px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; }
+.skill-clustering-source-body details { margin-top: 12px; }
+.skill-clustering-source ul { padding-left: 20px; margin-bottom: 0; line-height: 1.8; }
+@media (max-width: 760px), (pointer: coarse) {
+  .skill-clustering-source summary { min-height: 44px; }
+  .skill-clustering-source-links a { display: inline-flex; align-items: center; min-height: 44px; }
+}

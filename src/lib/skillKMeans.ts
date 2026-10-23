@@ -1,6 +1,18 @@
-import type { SkillClusteringFeatures as SkillKMeansFeatures, SkillClusteringSparseVector as SkillKMeansSparseVector } from './skillClusteringFeatures.ts'
-export { buildSkillClusteringCorpus as buildSkillKMeansCorpus, createSkillClusteringFeatures as createSkillKMeansFeatures } from './skillClusteringFeatures.ts'
-export type { SkillClusteringDocument as SkillKMeansDocument, SkillClusteringFeatures as SkillKMeansFeatures, SkillClusteringSparseVector as SkillKMeansSparseVector } from './skillClusteringFeatures.ts'
+import type {
+  SkillClusteringFeatures as SkillKMeansFeatures,
+  SkillClusteringSparseVector as SkillKMeansSparseVector,
+} from './skillClusteringFeatures.ts'
+
+// Retain the original public names for the existing K-means page and workers.
+export {
+  buildSkillClusteringCorpus as buildSkillKMeansCorpus,
+  createSkillClusteringFeatures as createSkillKMeansFeatures,
+} from './skillClusteringFeatures.ts'
+export type {
+  SkillClusteringDocument as SkillKMeansDocument,
+  SkillClusteringFeatures as SkillKMeansFeatures,
+  SkillClusteringSparseVector as SkillKMeansSparseVector,
+} from './skillClusteringFeatures.ts'
 
 export interface SkillKMeansConfig {
   k: number
