@@ -1,0 +1,19 @@
+.roguelike-page .roguelike-search-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.roguelike-page .roguelike-search-controls label { grid-column: auto; }
+.roguelike-page .roguelike-stage-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.roguelike-stage-grid .map-selection-button { align-items: flex-start; text-align: left; }
+.roguelike-stage-kind { color: var(--text-muted); font-size: 11px; font-weight: 400; }
+.roguelike-stage-kind:empty { display: none; }
+.roguelike-page .map-enemy-table { min-width: 520px; }
+.roguelike-page .map-enemy-table thead th { white-space: normal; }
+.roguelike-stage-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-bottom: 16px; }
+.roguelike-stage-controls > span { color: var(--text-muted); font-size: 11px; }
+.roguelike-stage-controls .map-category-buttons { margin-right: auto; }
+.roguelike-map-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--text-muted); font-size: 12px; }
+.roguelike-map-picker select { min-height: 36px; max-width: 100%; border: 1px solid var(--border); border-radius: 0; padding: 7px 10px; background: var(--surface); color: var(--text); font: inherit; }
+.roguelike-emergency-condition { margin: 0 0 16px; padding-left: 10px; border-left: 2px solid var(--border); font-size: 12px; color: var(--text-soft); overflow-wrap: anywhere; }
+@container (max-width: 600px) {
+  .roguelike-page .roguelike-stage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .roguelike-page .roguelike-search-controls { grid-template-columns: minmax(0, 1fr); }
+}
+@media (pointer: coarse) { .roguelike-map-picker select { min-height: 44px; font-size: 16px; } }

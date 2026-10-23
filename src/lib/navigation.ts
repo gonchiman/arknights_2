@@ -1,4 +1,4 @@
-export type NavigationPage = 'home' | 'operators' | 'skills' | 'skill-classification' | 'talent-classification' | 'talent-structure' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'skill-json' | 'skill-kmeans' | 'code-analysis' | 'damage' | 'damage-two' | 'damage-three' | 'damage-three-coverage' | 'damage-verification' | 'comparison' | 'enemies' | 'enemy-analysis' | 'enemy-regression' | 'enemy-map-coverage' | 'main-enemy-trends' | 'maps' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-s3-comparison' | 'surtr-skill-comparison' | 'surtr-total-damage' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-target-switch-three' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
+export type NavigationPage = 'home' | 'operators' | 'skills' | 'skill-classification' | 'talent-classification' | 'talent-structure' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'skill-json' | 'skill-kmeans' | 'code-analysis' | 'damage' | 'damage-two' | 'damage-three' | 'damage-three-coverage' | 'damage-verification' | 'comparison' | 'enemies' | 'enemy-analysis' | 'enemy-regression' | 'enemy-map-coverage' | 'main-enemy-trends' | 'maps' | 'roguelike' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-s3-comparison' | 'surtr-skill-comparison' | 'surtr-total-damage' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-target-switch-three' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -276,6 +276,13 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     href: '#/analysis/enemies/main-trends',
     label: 'メイン敵ステータス推移',
     description: '章別の敵ステータス・平均と中央値',
+    section: 'analysis',
+  },
+  {
+    id: 'roguelike',
+    href: '#/roguelike',
+    label: '統合戦略',
+    description: '',
     section: 'analysis',
   },
   {
