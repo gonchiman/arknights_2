@@ -50,26 +50,44 @@ test('an explicit matching enable resolves a hidden group and records source evi
   assert.ok(result.actions[0].evidence.some((value) => /runes\[0\].*FOUR_STAR.*fstar/.test(value)))
 })
 
-test('a group without a matching enable or disable remains unknown rather than assumed absent', () => {
+test('a named group starts disabled without an applicable matching enable', () => {
   for (const runes of [[], [enable('fstar', 'FOUR_STAR')], [disable('fstar', 'FOUR_STAR')], [enable('different')]]) {
     const result = analyzeEnemySpawns(level([spawn('enemy_a', 2, { hiddenGroup: 'fstar' })], { runes }))
-    assert.equal(result.actions[0].status, 'unknown')
-    assert.equal(result.actions[0].resolvedCount, null)
-    assert.deepEqual([...result.reasons], ['hidden-spawn-group'])
+    assert.equal(result.actions[0].status, 'excluded')
+    assert.equal(result.actions[0].resolvedCount, 0)
+    assert.deepEqual([...result.reasons], [])
+    assert.deepEqual(result.actions[0].conditions, ['通常では出現しない'])
+    assert.ok(result.actions[0].evidence.some((entry) => entry.includes('hiddenGroup="fstar"')))
     assert.equal(result.counts.size, 0)
   }
 })
 
-test('known disabled actions contribute zero even with irrelevant invalid or random fields', () => {
-  const source = level([spawn('enemy_a', 3), spawn('', -1, {
-    hiddenGroup: 'off', randomSpawnGroupKey: 'random', condition: 'runtime', repeatCount: 8,
-  })], { runes: [disable('off')] })
-  const result = analyzeEnemySpawns(source)
-  assert.equal(result.reasons.size, 0)
-  assert.deepEqual([...result.counts], [['enemy_a', 3]])
-  assert.equal(result.actions[1].status, 'excluded')
-  assert.equal(result.actions[1].resolvedCount, 0)
-  assert.match(result.actions[1].conditions[0], /出現しない/)
+test('the same group contributes only in the selected environment that enables it', () => {
+  const source = level([spawn('enemy_a', 48), spawn('enemy_b', 2, { hiddenGroup: 'fstar' })], {
+    runes: [enable('fstar', 'FOUR_STAR')],
+  })
+  const standard = analyzeEnemySpawns(source, { difficulty: 'NORMAL', diffGroup: 'NORMAL' })
+  const tough = analyzeEnemySpawns(source, { difficulty: 'NORMAL', diffGroup: 'TOUGH' })
+  assert.deepEqual([...standard.counts], [['enemy_a', 48]])
+  assert.deepEqual([...tough.counts], [['enemy_a', 48], ['enemy_b', 2]])
+  assert.equal(standard.reasons.size, 0)
+  assert.equal(tough.reasons.size, 0)
+  assert.equal(standard.actions[1].status, 'excluded')
+  assert.equal(tough.actions[1].status, 'included')
+})
+
+test('default-off and explicitly disabled actions contribute zero despite irrelevant random or invalid fields', () => {
+  for (const runes of [[], [disable('off')]]) {
+    const source = level([spawn('enemy_a', 3), spawn('', -1, {
+      hiddenGroup: 'off', randomSpawnGroupKey: 'random', condition: 'runtime', repeatCount: 8,
+    })], { runes })
+    const result = analyzeEnemySpawns(source)
+    assert.equal(result.reasons.size, 0)
+    assert.deepEqual([...result.counts], [['enemy_a', 3]])
+    assert.equal(result.actions[1].status, 'excluded')
+    assert.equal(result.actions[1].resolvedCount, 0)
+    assert.match(result.actions[1].conditions[0], /出現しない/)
+  }
 })
 
 test('inactive invalid or unsupported difficulty rules do not poison ordinary SPAWNs', () => {
@@ -128,6 +146,37 @@ test('optional rune selection must be explicit; nonselected or off-difficulty op
   assert.ok(analyzeEnemySpawns(source, { selectedRuneIds: ['missing'] }).reasons.has('unknown-selected-rune'))
 })
 
+test('optional hidden-group enables stay unresolved until their selection is known', () => {
+  const source = level([spawn('enemy_a', 2, { hiddenGroup: 'g' })], { optionalRunes: { option: [enable('g')] } })
+  const pending = analyzeEnemySpawns(source)
+  assert.equal(pending.actions[0].status, 'unknown')
+  assert.ok(pending.reasons.has('optional-spawn-rule'))
+  const selected = analyzeEnemySpawns(source, { selectedRuneIds: ['option'] })
+  assert.deepEqual([...selected.counts], [['enemy_a', 2]])
+  assert.equal(selected.reasons.size, 0)
+  const none = analyzeEnemySpawns(source, { selectedRuneIds: [] })
+  assert.equal(none.actions[0].status, 'excluded')
+  assert.equal(none.actions[0].resolvedCount, 0)
+  assert.equal(none.reasons.size, 0)
+})
+
+test('malformed or unsupported active configuration prevents default-off from hiding uncertainty', () => {
+  for (const extra of [
+    { runes: [{ key: 'level_hidden_group_enable', difficultyMask: 'NORMAL', blackboard: [] }] },
+    { runes: [{ key: 'level_hidden_group_future', difficultyMask: 'NORMAL' }] },
+    { runes: {} },
+    { optionalRunes: [] },
+  ]) {
+    const result = analyzeEnemySpawns(level([spawn('enemy_a', 2, { hiddenGroup: 'g' })], extra))
+    assert.equal(result.actions[0].status, 'unknown')
+    assert.equal(result.actions[0].resolvedCount, null)
+    assert.ok(result.reasons.size > 0)
+  }
+  const unknownContext = analyzeEnemySpawns(level([spawn('enemy_a', 2, { hiddenGroup: 'g' })]), { difficulty: 'FUTURE' })
+  assert.equal(unknownContext.actions[0].status, 'unknown')
+  assert.ok(unknownContext.reasons.has('unsupported-difficulty-context'))
+})
+
 test('simple replacements sum the resolved enemy and never alter registered references', () => {
   const source = level([spawn('enemy_a', 2), spawn('enemy_b', 3)], { runes: [replace('enemy_a', 'enemy_b')] })
   const original = structuredClone(source)
@@ -155,25 +204,33 @@ test('ambiguous replacements, chains and cycles remain unresolved', () => {
   assert.deepEqual([...repeated.counts], [['enemy_b', 2]])
 })
 
-test('random or runtime schedules are conditional while unresolved hidden groups are unknown', () => {
+test('random or runtime schedules remain conditional for ungrouped and enabled actions', () => {
   for (const extra of [{ randomSpawnGroupKey: 'g' }, { weight: 2 }, { condition: 'boss_dead' }, { managedByScheduler: false }]) {
-    const result = analyzeEnemySpawns(level([spawn('enemy_a', 2, extra)]))
-    assert.equal(result.actions[0].status, 'conditional')
-    assert.equal(result.actions[0].resolvedCount, null)
-    assert.equal(result.counts.size, 0)
+    for (const hiddenGroup of [null, 'enabled']) {
+      const result = analyzeEnemySpawns(level([spawn('enemy_a', 2, { ...extra, hiddenGroup })], { runes: [enable('enabled')] }))
+      assert.equal(result.actions[0].status, 'conditional')
+      assert.equal(result.actions[0].resolvedCount, null)
+      assert.equal(result.counts.size, 0)
+    }
   }
   const result = analyzeEnemySpawns(level([spawn('enemy_a', 0, { hiddenGroup: 'unknown', randomSpawnGroupKey: 'r' })]))
   assert.equal(result.reasons.size, 0)
   assert.equal(result.actions[0].status, 'excluded')
 })
 
-test('branch SPAWNs keep maps unresolved except actions explicitly known to be inactive', () => {
-  for (const [action, expected] of [[spawn(), true], [spawn('enemy_a', 0), false], [spawn('enemy_a', 2, { hiddenGroup: 'off' }), false]]) {
-    const result = analyzeEnemySpawns(level([spawn()], { runes: [disable('off')], branches: { summon: { phases: [{ actions: [action] }] } } }))
-    assert.equal(result.reasons.has('branch-spawn'), expected)
-    assert.equal(result.actions.length, 1)
-    assert.deepEqual([...result.counts], [['enemy_a', 2]])
+test('branch SPAWNs keep maps unresolved unless the action is inactive', () => {
+  for (const runes of [[], [disable('off')]]) {
+    for (const [action, expected] of [[spawn(), true], [spawn('enemy_a', 0), false], [spawn('enemy_a', 2, { hiddenGroup: 'off' }), false]]) {
+      const result = analyzeEnemySpawns(level([spawn()], { runes, branches: { summon: { phases: [{ actions: [action] }] } } }))
+      assert.equal(result.reasons.has('branch-spawn'), expected)
+      assert.equal(result.actions.length, 1)
+      assert.deepEqual([...result.counts], [['enemy_a', 2]])
+    }
   }
+  const enabledBranch = analyzeEnemySpawns(level([spawn()], {
+    runes: [enable('g')], branches: { summon: { phases: [{ actions: [spawn('enemy_a', 2, { hiddenGroup: 'g' })] }] } },
+  }))
+  assert.ok(enabledBranch.reasons.has('branch-spawn'))
 })
 
 test('malformed hidden group and unrecognized active rules cannot become fixed counts', () => {

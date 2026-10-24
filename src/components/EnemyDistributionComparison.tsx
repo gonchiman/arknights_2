@@ -3,6 +3,7 @@ import type { EnemyRecord } from '../types/enemy'
 import { buildEnemyComparisonDistribution, createEnemyComparisonConditions, getEnemyComparisonImageFilename, type EnemyComparisonYAxis } from '../lib/enemyDistributionComparison'
 import { ENEMY_HISTOGRAM_COUNT_MODES, type EnemyHistogramCountMode, type EnemyHistogramCounts } from '../lib/enemyHistogramCounts'
 import { withChartImageAspect } from '../lib/chartImageFilename'
+import { getEnemyAggregationFilename } from '../lib/enemyAggregationData'
 import { MAX_CUSTOM_LINEAR_BIN_COUNT, validateCustomLinearBinWidth, type HistogramScale } from '../lib/enemyStatistics'
 import { EnemyComparisonConditions } from './EnemyComparisonConditions'
 import { EnemyComparisonFigure, EnemyComparisonImage, EnemyComparisonImagePreview, type EnemyComparisonMetric, type EnemyComparisonSnapshot } from './EnemyComparisonChart'
@@ -13,9 +14,10 @@ import { getChartImageSavePicker, selectChartImageDestination } from '../lib/cha
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './EnemyDistributionComparison.css'
 
-export function EnemyDistributionComparison({ rows, metric, active, countMode = 'TYPES', counts = null, countUnavailable = false }: {
+export function EnemyDistributionComparison({ rows, metric, active, countMode = 'TYPES', counts = null, countUnavailable = false, aggregationVersionId }: {
   rows: readonly EnemyRecord[]; metric: EnemyComparisonMetric; active: boolean
   countMode?: EnemyHistogramCountMode; counts?: EnemyHistogramCounts | null; countUnavailable?: boolean
+  aggregationVersionId?: string
 }) {
   const [conditions, setConditions] = useState(createEnemyComparisonConditions)
   const [scale, setScale] = useState<HistogramScale>('LINEAR')
@@ -67,7 +69,7 @@ export function EnemyDistributionComparison({ rows, metric, active, countMode = 
     if (!canSave || savingRef.current || preparingRef.current) return
     preparingRef.current = true; setPreparingImage(true); setFeedback(null)
     try {
-      const filename = await getEnemyComparisonImageFilename(data)
+      const filename = getEnemyAggregationFilename(await getEnemyComparisonImageFilename(data), aggregationVersionId)
       setImageFilename(filename); snapshotId.current += 1; setImageData(data)
     } catch { setFeedback('failed') }
     finally { preparingRef.current = false; setPreparingImage(false) }

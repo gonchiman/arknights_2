@@ -118,7 +118,7 @@ test('other-category maps stay in the map database but never contribute to enemy
   }
 })
 
-test('startup snapshots resolve NORMAL and TOUGH spawn rules consistently across histogram and maps', () => {
+test('startup snapshots apply default-off groups consistently across histogram and maps', () => {
   const source = fixture()
   const toughId = 'obt/main/level_tough_00-01'
   source.stageTable.stages.tough = stage('tough_00-01', toughId, { diffGroup: 'TOUGH' })
@@ -126,7 +126,6 @@ test('startup snapshots resolve NORMAL and TOUGH spawn rules consistently across
   normal.enemyDbRefs.push({ id: 'enemy_b', level: 0, useDb: true })
   normal.waves[0].fragments[0].actions.push(spawn('enemy_a', 7, { hiddenGroup: 'extra' }))
   normal.runes = [
-    { key: 'level_hidden_group_disable', difficultyMask: 'NORMAL', blackboard: [{ key: 'key', valueStr: 'extra' }] },
     { key: 'level_hidden_group_enable', difficultyMask: 'FOUR_STAR', blackboard: [{ key: 'key', valueStr: 'extra' }] },
     { key: 'level_enemy_replace', difficultyMask: 'FOUR_STAR', blackboard: [
       { key: 'key', valueStr: 'enemy_a' }, { key: 'value', valueStr: 'enemy_b' },
@@ -248,7 +247,7 @@ test('missing levels, empty source tables and malformed database entries fail in
 
 test('unsupported spawn rules retain exclusion diagnostics while valid fixed chapter spawns remain usable', () => {
   const source = fixture()
-  source.levels.get(mainId).waves[0].fragments[0].actions.push(spawn('enemy_a', 20, { hiddenGroup: 'phase2' }))
+  source.levels.get(mainId).waves[0].fragments[0].actions.push(spawn('enemy_a', 20, { condition: 'phase2' }))
   source.levels.get(eventId).waves[0].fragments[0].actions[0].futureRule = true
   const files = generateLocalGameData(source, { generatedAt })
   const histogram = files.get('enemy-histogram-counts.json')

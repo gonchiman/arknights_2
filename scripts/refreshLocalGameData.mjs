@@ -160,6 +160,17 @@ export async function refreshLocalGameData({ root, signal, logger = console,
   let snapshot = await readActiveLocalDataSnapshot(root)
   let release
   const combinedSignal = signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs)
+  const archiveCurrent = async current => {
+    // Injected/custom generators must not label their data as the current spawn rules.
+    if (current.generatorVersion !== await getLocalDataGeneratorVersion()) return
+    try {
+      const { archiveEnemyAggregation } = await import('./enemyAggregationArchive.mjs')
+      const archive = await archiveEnemyAggregation({ root, snapshot: current, signal: combinedSignal })
+      if (archive.status === 'created') logger.info(`[集計版] ${archive.version.label}を保存しました。`)
+    } catch (error) {
+      logger.warn(`[集計版] 新しい版を保存できなかったため、以前の集計版を使用します。${error.message}`)
+    }
+  }
   try {
     await mkdir(cache, { recursive: true })
     release = await acquireLock(cache)
@@ -175,6 +186,7 @@ export async function refreshLocalGameData({ root, signal, logger = console,
     if (snapshot?.revision === revision && snapshot.generatorVersion === generatorVersion
       && REQUIRED_FILES.every(file => snapshot.files.includes(file))) {
       logger.info('[データ更新] 変更はありません。保存済みデータを使用します。')
+      await archiveCurrent(snapshot)
       return { status: 'unchanged', snapshot }
     }
     let progressAt = 0
@@ -190,6 +202,7 @@ export async function refreshLocalGameData({ root, signal, logger = console,
     logger.info('[データ更新] 出現数・マップ・章別統計を集計しています。')
     const documents = await generate(source, { generatedAt })
     snapshot = await publishSnapshot(cache, documents, { revision, generatorVersion, generatedAt, signal: combinedSignal })
+    await archiveCurrent(snapshot)
     logger.info(`[データ更新] 更新完了（${revision.slice(0, 7)}）。`)
     return { status: 'updated', snapshot }
   } catch (error) {

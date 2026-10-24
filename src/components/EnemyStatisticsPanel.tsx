@@ -48,7 +48,8 @@ import { calculateWeightedEmpiricalCdf, getWeightedEnemyEcdfImageFilename } from
 import { useEnemyHistogramCounts } from '../lib/useEnemyHistogramCounts'
 import { buildEnemyHistogramObservations, withHistogramDispersion, getWeightedEnemyHistogramImageFilename,
   ENEMY_HISTOGRAM_COUNT_MODES, type EnemyHistogramCountMode, type EnemyHistogramCounts } from '../lib/enemyHistogramCounts'
-import { createEnemyHistogramSnapshot, type EnemyHistogramSnapshot, type EnemyHistogramEditorSettings } from '../lib/enemyHistogramSnapshot'
+import { createEnemyHistogramSnapshot, type EnemyHistogramSnapshot, type EnemyHistogramEditorSettings, type EnemyHistogramAggregationVersion } from '../lib/enemyHistogramSnapshot'
+import { getEnemyAggregationFilename } from '../lib/enemyAggregationData'
 import { HelpPopover } from './HelpPopover'
 import { calculateEcdfGuideReadings, parseEcdfGuideInput, type EcdfGuideValues } from '../lib/enemyEcdfGuides'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
@@ -208,7 +209,7 @@ function EnemyStatisticsSettings({ controls }: { controls: EnemyStatisticsContro
   )
 }
 
-export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filterControls, histogramEditor, filterSettings }: {
+export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filterControls, histogramEditor, filterSettings, aggregationCounts, aggregationVersion }: {
   rows: EnemyRecord[]
   allRows: EnemyRecord[]
   scopeLabel: string
@@ -216,6 +217,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   filterControls: ReactNode
   histogramEditor?: { initialSnapshot: EnemyHistogramSnapshot | null; onChange: (snapshot: EnemyHistogramSnapshot | null) => void }
   filterSettings?: Pick<EnemyHistogramEditorSettings, 'levelType' | 'numericConditions' | 'sourceEnemyIds'>
+  aggregationCounts?: EnemyHistogramCounts
+  aggregationVersion?: EnemyHistogramAggregationVersion
 }) {
   const thresholdInputId = useId()
   const thresholdErrorId = useId()
@@ -245,7 +248,10 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const ratingReferenceTriggerRef = useRef<HTMLButtonElement>(null)
   const [heatmapColorScale, setHeatmapColorScale] = useState<EnemyHeatmapColorScale>('LINEAR')
   const countOption = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === activeCountMode)!
-  const countData = useEnemyHistogramCounts(activeCountMode !== 'TYPES')
+  const liveCountData = useEnemyHistogramCounts(activeCountMode !== 'TYPES' && !aggregationVersion && !aggregationCounts)
+  const countData = aggregationCounts || aggregationVersion
+    ? { data: aggregationCounts ?? null, loading: false, error: !aggregationCounts, retry: liveCountData.retry }
+    : liveCountData
   const countUnavailable = activeCountMode !== 'TYPES' && !countData.data
   const [imageData, setImageData] = useState<EnemyChartImageData | null>(null)
   const [imageAspect, setImageAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
@@ -394,7 +400,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
       return createEnemyHistogramSnapshot({
         metric: 'magicResistance',
         source: { scopeLabel, enemyIds: [...new Set(rows.map(({ id }) => id))],
-          countGeneratedAt: activeCountMode === 'TYPES' ? null : countData.data?.generatedAt ?? null },
+          countGeneratedAt: activeCountMode === 'TYPES' ? null : countData.data?.generatedAt ?? null,
+          ...(aggregationVersion ? { aggregationVersion } : {}) },
         countMode: activeCountMode, coverage: activeCountMode === 'TYPES' ? null : countData.data?.summary ?? null,
         scale: axisScale, statistics: histogramStatistics, ratingBins, customLinearUpperBound,
         showPercentages: showHistogramPercentages, showBinRanges: showHistogramBinRanges, showCumulative: showHistogramCumulative,
@@ -404,7 +411,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           linearBinWidthInput: snapshotBinWidthInput, linearUpperBoundInput: snapshotUpperBoundInput } } : {}),
       })
     } catch { return null }
-  }, [canCreateHistogramSnapshot, scopeLabel, rows, activeCountMode, countData.data, axisScale, histogramStatistics,
+  }, [canCreateHistogramSnapshot, scopeLabel, rows, activeCountMode, countData.data, aggregationVersion, axisScale, histogramStatistics,
     ratingBins, customLinearUpperBound, showHistogramPercentages, showHistogramBinRanges, showHistogramCumulative, histogramCumulativeDisplay,
     referenceVisibility, filterSettings, linearBinWidthInput, linearUpperBoundInput, ratingMode,
     linearBinWidthError, linearUpperBoundError, invalidUpperBound, requestedUpperBound, automaticBinWidth])
@@ -433,7 +440,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
       showHistogramBinRanges: selectedChart === 'HISTOGRAM' && showHistogramBinRanges,
       showHistogramCumulative: selectedChart === 'HISTOGRAM' && showHistogramCumulative,
       histogramCumulativeDisplay,
-      ratingBins }
+      ratingBins, aggregationVersionId: aggregationVersion?.id }
     imageSaveInProgress.current = true
     setPreparingImage(true)
     try {
@@ -455,6 +462,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           cumulativeDisplay: snapshot.histogramCumulativeDisplay,
           useRatingBins: snapshot.ratingBins !== null,
           referenceVisibility: snapshot.referenceVisibility, coverage: snapshot.countCoverage })
+      snapshot.filename = getEnemyAggregationFilename(snapshot.filename, snapshot.aggregationVersionId)
       setImageData(snapshot)
     } catch {
       setImageFeedback('failed')
@@ -713,7 +721,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         />}
 
         <EnemyDistributionComparison rows={allRows} metric={selectedMetric} active={selectedChart === 'COMPARISON'}
-          countMode={activeCountMode} counts={countData.data} countUnavailable={countUnavailable} />
+          countMode={activeCountMode} counts={countData.data} countUnavailable={countUnavailable}
+          aggregationVersionId={aggregationVersion?.id} />
 
         <div className="enemy-chart-stack" hidden={selectedChart === 'COMPARISON'}>
           {countUnavailable ? null : !isThresholdChart && rows.length === 0 && !hasFixedEmptyHistogram ? <ChartEmpty message="条件に一致する敵がいません" /> : <>
@@ -790,12 +799,12 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         </div>
       </CollapsibleCalculatorPanel>
       {imageData && CHART_OPTIONS.some(({ key }) => key === imageData.kind) && <ChartImageSaveDialog
-        initialFilename={imageData.filename ?? getEnemyChartImageFilename({ kind: imageData.kind, metricLabel: imageData.metric.label,
+        initialFilename={imageData.filename ?? getEnemyAggregationFilename(getEnemyChartImageFilename({ kind: imageData.kind, metricLabel: imageData.metric.label,
           secondaryMetricLabel: imageData.scatterMetric.label, scopeLabel: imageData.scopeLabel,
           ecdfGuides: imageData.kind === 'ECDF' ? imageData.ecdfGuides : undefined,
           histogramSettings: imageData.kind === 'HISTOGRAM' && imageData.scale === 'LINEAR' && imageData.statistics.histogram?.binWidth
             ? { binWidth: imageData.statistics.histogram.binWidth, upperBound: imageData.statistics.histogram.normalRangeEnd }
-            : undefined })}
+            : undefined }), imageData.aggregationVersionId)}
         getDefaultFilename={imageData.filename ? (aspectRatio) => withChartImageAspect(imageData.filename!, aspectRatio) : undefined}
         aspect={imageAspect}
         onAspectChange={setImageAspect}
@@ -830,6 +839,7 @@ interface EnemyChartImageData {
   countCoverage: EnemyHistogramCounts['summary'] | null
   ecdfPoints: EmpiricalCdfPoint[]
   filename?: string
+  aggregationVersionId?: string
   jointDistribution: EnemyJointDistribution
   kind: ChartKind
   metric: StatMetric
