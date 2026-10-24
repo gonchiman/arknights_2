@@ -25,7 +25,8 @@ const render = (Component, props) => renderToStaticMarkup(createElement(Componen
 }))
 const text = markup => markup.replace(/<[^>]*>/g, '')
 const tableRows = markup => [...(markup.match(/<tbody\b[^>]*>([\s\S]*?)<\/tbody>/)?.[1] ?? '')
-  .matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)].map(match => text(match[1]))
+  .matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)]
+  .map(match => [...match[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)].map(cell => text(cell[1])))
 const operatorLinks = markup => [...markup.matchAll(/<a\b[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/g)]
   .filter(match => match[1].startsWith('#/operators/')).map(match => [match[1], text(match[2])])
 function skill(id, operatorName, skillIndex, description = '攻撃力+{atk:0%}') {
@@ -52,14 +53,15 @@ test('統合された説明文の全元スキルを展開し、オペレータ�
     documents: [document('shared', [other, sameSecond]), document('single', [sameFirst])] })
   const rows = tableRows(markup)
   assert.equal(rows.length, 3, '2件の統合説明文から3件のスキルを表示する')
-  assert.deepEqual(rows, [sameFirst, sameSecond, other].map(row => `${row.operatorName}S${row.skillIndex} · ${row.skillName}`))
+  assert.deepEqual(rows, [sameFirst, sameSecond, other].map(row => [row.operatorName, `S${row.skillIndex}`, row.skillName]))
   const body = markup.match(/<tbody\b[^>]*>([\s\S]*?)<\/tbody>/)?.[1] ?? ''
   const skillButtons = [...body.matchAll(/<button\b[^>]*>/g)].map(match => match[0])
   assert.equal(skillButtons.length, 3)
   for (const button of skillButtons) assert.match(button, /aria-haspopup="dialog"/)
   assert.doesNotMatch(markup, /aria-pressed=|skill-clustering-source|<dialog\b/)
   assert.match(markup, /<th\b[^>]*scope="col"[^>]*>オペレーター<\/th>/)
-  assert.match(markup, /<th\b[^>]*scope="col"[^>]*>スキル<\/th>/)
+  assert.match(markup, /<th\b[^>]*scope="col"[^>]*>S番号<\/th>/)
+  assert.match(markup, /<th\b[^>]*scope="col"[^>]*>スキル名<\/th>/)
 })
 
 test('13件のグループは最初の12件だけを一覧に表示する', () => {
@@ -68,8 +70,8 @@ test('13件のグループは最初の12件だけを一覧に表示する', () =
     documents: [document('shared', [...records].reverse())] })
   const rows = tableRows(markup)
   assert.equal(rows.length, 12)
-  assert.ok(rows[0].includes('S1 · 技_member1'))
-  assert.ok(rows[11].includes('S12 · 技_member12'))
+  assert.deepEqual(rows[0], ['アーミヤ', 'S1', '技_member1'])
+  assert.deepEqual(rows[11], ['アーミヤ', 'S12', '技_member12'])
   assert.ok(rows.every(row => !row.includes('技_member13')))
   assert.match(markup, /aria-label="次のスキル一覧"/)
 })
@@ -84,7 +86,7 @@ test('同じ統合説明文の掲載先も元スキルごとの職業・レア�
   const markup = render(GroupTable, { group: 4, terms: [], recordMap: recordMap(records),
     documents: [document('shared', records, '代表スキルの原文')],
     filters: { ...emptyFilters, query: 'シールド', profession: 'SNIPER', rarity: 6 } })
-  assert.deepEqual(tableRows(markup), ['クルースS2 · 技_target'])
+  assert.deepEqual(tableRows(markup), [['クルース', 'S2', '技_target']])
   assert.match(markup, /<h3\b[^>]*>G5 · 1 \/ 5スキル<\/h3>/)
 })
 
@@ -95,7 +97,7 @@ test('文字検索は名前・スキル名・原文の表記を既存一覧と�
   for (const query of [' アーミヤ ', 'ｷﾒﾗ', ' ｈｐ＋１００％ ']) {
     const markup = render(GroupTable, { group: 0, terms: [], recordMap: recordMap(records),
       documents: [document('shared', records)], filters: { ...emptyFilters, query } })
-    assert.deepEqual(tableRows(markup), ['アーミヤS3 · キメラ'], `検索語: ${query}`)
+    assert.deepEqual(tableRows(markup), [['アーミヤ', 'S3', 'キメラ']], `検索語: ${query}`)
   }
 })
 
@@ -107,7 +109,7 @@ test('絞り込み後のスキルを名前順で12件ずつページングし、
   const records = [...matched, ...excluded].reverse()
   const markup = render(GroupTable, { group: 2, terms: [], recordMap: recordMap(records),
     documents: [document('shared', records)], filters: { ...emptyFilters, profession: 'SNIPER' } })
-  assert.deepEqual(tableRows(markup), matched.slice(0, 12).map(row => `${row.operatorName}S${row.skillIndex} · ${row.skillName}`))
+  assert.deepEqual(tableRows(markup), matched.slice(0, 12).map(row => [row.operatorName, `S${row.skillIndex}`, row.skillName]))
   assert.match(markup, /<h3\b[^>]*>G3 · 13 \/ 26スキル<\/h3>/)
   assert.match(markup, /1〜12 \/ 13スキル/)
   assert.match(markup, /aria-label="次のスキル一覧"/)
@@ -118,7 +120,8 @@ test('グループにない職業も選択を維持し、該当0件を表内に�
   const outside = { ...skill('outside', 'シャイニング', 1), profession: 'MEDIC', professionLabel: '医療', rarity: 6 }
   const markup = render(GroupTable, { group: 1, terms: [], recordMap: recordMap([member, outside]),
     documents: [document('current-group', [member])], filters: { ...emptyFilters, profession: 'MEDIC' } })
-  assert.deepEqual(tableRows(markup), ['該当するスキルなし'])
+  assert.deepEqual(tableRows(markup), [['該当するスキルなし']])
+  assert.match(markup, /<td\b[^>]*colspan="3"[^>]*>該当するスキルなし<\/td>/i)
   assert.match(markup, /<h3\b[^>]*>G2 · 0 \/ 1スキル<\/h3>/)
   assert.match(markup, /<option\b(?=[^>]*value="MEDIC")(?=[^>]*selected="")[^>]*>医療<\/option>/)
   assert.doesNotMatch(markup, /aria-label="次のスキル一覧"|<dialog\b/)

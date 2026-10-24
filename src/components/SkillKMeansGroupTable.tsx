@@ -66,13 +66,14 @@ export function SkillKMeansGroupTable({ group, documents, recordMap, terms, filt
     </div>
     <div className="skill-kmeans-member-scroll" role="region" aria-label={`G${group + 1}のスキル一覧`} tabIndex={0}>
       <table className="skill-kmeans-table skill-kmeans-member-table" aria-label="グループ内のスキル">
-        <thead><tr><th scope="col">オペレーター</th><th scope="col">スキル</th></tr></thead>
+        <thead><tr><th scope="col">オペレーター</th><th scope="col" className="skill-kmeans-member-number">S番号</th><th scope="col">スキル名</th></tr></thead>
         <tbody>{visibleMembers.map(record => <tr key={record.id}>
           <td><OperatorDetailLink operatorId={record.operatorId} onOpenOperatorDetail={onOpenOperatorDetail}>{record.operatorName}</OperatorDetailLink></td>
+          <td className="skill-kmeans-member-number">S{record.skillIndex}</td>
           <td><button type="button" className="skill-kmeans-skill-link" aria-haspopup="dialog"
-            aria-label={`${record.operatorName} S${record.skillIndex} · ${record.skillName}の原文を表示`} onClick={event => setDetail({ skill: record, trigger: event.currentTarget })}>S{record.skillIndex} · {record.skillName}</button></td>
+            aria-label={`${record.operatorName} S${record.skillIndex} · ${record.skillName}の原文を表示`} onClick={event => setDetail({ skill: record, trigger: event.currentTarget })}>{record.skillName}</button></td>
         </tr>)}
-          {filteredMembers.length === 0 && <tr><td colSpan={2} className="skill-kmeans-member-empty">該当するスキルなし</td></tr>}
+          {filteredMembers.length === 0 && <tr><td colSpan={3} className="skill-kmeans-member-empty">該当するスキルなし</td></tr>}
         </tbody>
       </table>
     </div>

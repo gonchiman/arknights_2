@@ -49,6 +49,7 @@
 .skill-kmeans-page .skill-kmeans-member-table th:first-child { width: 38%; }
 .skill-kmeans-page .skill-kmeans-table.skill-kmeans-member-table th { padding: 6px 8px; }
 .skill-kmeans-page .skill-kmeans-table.skill-kmeans-member-table td { padding: 0; text-align: left; }
+.skill-kmeans-page .skill-kmeans-table.skill-kmeans-member-table .skill-kmeans-member-number { width: 56px; padding: 6px 8px; text-align: center; white-space: nowrap; }
 .skill-kmeans-page .skill-kmeans-table.skill-kmeans-member-table td.skill-kmeans-member-empty { padding: 24px 8px; text-align: center; color: var(--text-soft); }
 .skill-kmeans-skill-link, .skill-kmeans-member-table td > a { display: flex; align-items: center; width: 100%; min-height: 34px; padding: 6px 8px; }
 .skill-kmeans-skill-link { background: none; border: 0; color: var(--link); text-align: left; text-decoration: underline; font: inherit; cursor: pointer; }
