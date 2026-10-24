@@ -4,13 +4,13 @@ import type { SkillKMeansWorkerRequest, SkillKMeansWorkerResponse } from './skil
 export interface SkillKMeansRunState {
   requestId: number
   status: 'idle' | 'preparing' | 'running' | 'pausing' | 'paused' | 'complete' | 'error'
-  results: [SkillKMeansResult, SkillKMeansResult] | null
+  result: SkillKMeansResult | null
   termsCount: number
   elapsedMs: number
   error: string | null
 }
 export const EMPTY_SKILL_KMEANS_RUN: SkillKMeansRunState = {
-  requestId: 0, status: 'idle', results: null, termsCount: 0, elapsedMs: 0, error: null,
+  requestId: 0, status: 'idle', result: null, termsCount: 0, elapsedMs: 0, error: null,
 }
 
 export interface SkillKMeansWorkerPort {
@@ -43,8 +43,9 @@ export class SkillKMeansRunner {
   }
 
   private closeWorker() {
-    this.worker?.terminate()
+    const worker = this.worker
     this.worker = null
+    worker?.terminate()
   }
 
   private fail(error: string) {
@@ -52,19 +53,22 @@ export class SkillKMeansRunner {
     this.publish({ ...this.state, status: 'error', error })
   }
 
-  start(documents: readonly SkillKMeansDocument[], configs: readonly [SkillKMeansConfig, SkillKMeansConfig], stepOnly = false) {
+  start(documents: readonly SkillKMeansDocument[], config: SkillKMeansConfig, stepOnly = false) {
     if (this.disposed) return
     this.closeWorker()
     const requestId = ++this.generation
     this.publish({ ...EMPTY_SKILL_KMEANS_RUN, requestId, status: 'preparing' })
+    if (this.disposed || requestId !== this.generation) return
     try {
       const worker = this.createWorker()
+      if (this.disposed || requestId !== this.generation) { worker.terminate(); return }
       this.worker = worker
       const current = () => !this.disposed && this.worker === worker && requestId === this.generation
       worker.onmessage = ({ data }) => {
         if (!current() || data.requestId !== requestId) return
         if (data.type === 'error') { this.fail(data.error); return }
-        this.publish({ requestId, results: data.results, termsCount: data.termsCount, elapsedMs: data.elapsedMs,
+        if (data.complete) this.closeWorker()
+        this.publish({ requestId, result: data.result, termsCount: data.termsCount, elapsedMs: data.elapsedMs,
           status: data.complete ? 'complete' : data.paused ? 'paused' : this.state.status === 'pausing' ? 'pausing' : 'running', error: null })
       }
       worker.onerror = event => {
@@ -72,18 +76,24 @@ export class SkillKMeansRunner {
         if (current()) this.fail('学習処理を実行できませんでした。もう一度学習してください。')
       }
       worker.onmessageerror = () => { if (current()) this.fail('学習結果を読み取れませんでした。もう一度学習してください。') }
-      worker.postMessage({ type: 'start', requestId, documents: structuredClone([...documents]), configs: structuredClone([...configs]) as [SkillKMeansConfig, SkillKMeansConfig], stepOnly })
+      worker.postMessage({ type: 'start', requestId, documents: structuredClone([...documents]), config: structuredClone(config), stepOnly })
     } catch (cause) {
-      this.fail(cause instanceof Error ? cause.message : '学習処理を開始できませんでした。')
+      if (!this.disposed && requestId === this.generation) {
+        this.fail(cause instanceof Error ? cause.message : '学習処理を開始できませんでした。')
+      }
     }
   }
 
   private send(type: 'step' | 'resume' | 'pause') {
     if (this.disposed || !this.worker) return
     if (type === 'pause' ? !['preparing', 'running'].includes(this.state.status) : this.state.status !== 'paused') return
+    const worker = this.worker
+    const requestId = this.generation
+    const current = () => !this.disposed && this.worker === worker && requestId === this.generation
     this.publish({ ...this.state, status: type === 'pause' ? 'pausing' : 'running' })
-    try { this.worker.postMessage({ type, requestId: this.generation }) }
-    catch { this.fail('学習操作を送信できませんでした。もう一度学習してください。') }
+    if (!current()) return
+    try { worker.postMessage({ type, requestId }) }
+    catch { if (current()) this.fail('学習操作を送信できませんでした。もう一度学習してください。') }
   }
 
   pause() { this.send('pause') }

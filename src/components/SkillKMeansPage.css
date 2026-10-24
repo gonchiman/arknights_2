@@ -21,6 +21,8 @@
 .skill-kmeans-page .skill-kmeans-comparison-table td { text-align: center; }
 .skill-kmeans-page .skill-kmeans-table tbody tr:hover td { background: var(--surface); }
 .skill-kmeans-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px; }
+.skill-kmeans-navigation, .skill-kmeans-pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 16px; }
+.skill-kmeans-pagination { margin-top: 12px; font-variant-numeric: tabular-nums; }
 .skill-kmeans-section > .skill-kmeans-actions { margin-top: 16px; }
 .skill-kmeans-section > .skill-kmeans-data { margin-top: 16px; }
 .skill-kmeans-status { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; color: var(--text-soft); font-size: 13px; }

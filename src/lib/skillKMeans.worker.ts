@@ -8,15 +8,15 @@ import {
 } from './skillKMeans.ts'
 
 export type SkillKMeansWorkerRequest =
-  | { type: 'start'; requestId: number; documents: SkillKMeansDocument[]; configs: [SkillKMeansConfig, SkillKMeansConfig]; stepOnly: boolean }
+  | { type: 'start'; requestId: number; documents: SkillKMeansDocument[]; config: SkillKMeansConfig; stepOnly: boolean }
   | { type: 'step' | 'resume' | 'pause'; requestId: number }
 
 export type SkillKMeansWorkerResponse =
-  | { type: 'result'; requestId: number; termsCount: number; results: [SkillKMeansResult, SkillKMeansResult]; complete: boolean; paused: boolean; elapsedMs: number }
+  | { type: 'result'; requestId: number; termsCount: number; result: SkillKMeansResult; complete: boolean; paused: boolean; elapsedMs: number }
   | { type: 'error'; requestId: number; error: string }
 
 let activeRequestId: number | null = null
-let engines: [SkillKMeansEngine, SkillKMeansEngine] | null = null
+let engine: SkillKMeansEngine | null = null
 let termsCount = 0
 let elapsedMs = 0
 let paused = true
@@ -30,11 +30,11 @@ function cancelScheduledStep(): void {
 }
 
 function publish(): boolean {
-  if (activeRequestId === null || !engines) return true
-  const results: [SkillKMeansResult, SkillKMeansResult] = [engines[0].snapshot(), engines[1].snapshot()]
-  const complete = results.every((result) => result.converged)
+  if (activeRequestId === null || !engine) return true
+  const result = engine.snapshot()
+  const complete = result.converged
   if (complete) paused = false
-  self.postMessage({ type: 'result', requestId: activeRequestId, termsCount, results, complete, paused, elapsedMs } satisfies SkillKMeansWorkerResponse)
+  self.postMessage({ type: 'result', requestId: activeRequestId, termsCount, result, complete, paused, elapsedMs } satisfies SkillKMeansWorkerResponse)
   return complete
 }
 
@@ -47,9 +47,9 @@ function fail(cause: unknown): void {
 }
 
 function stepOnce(): boolean {
-  if (!engines) return true
+  if (!engine) return true
   const started = performance.now()
-  engines.forEach((engine) => engine.step())
+  engine.step()
   elapsedMs += performance.now() - started
   return publish()
 }
@@ -58,7 +58,7 @@ function scheduleNextStep(): void {
   const currentGeneration = generation
   timer = setTimeout(() => {
     timer = undefined
-    if (currentGeneration !== generation || paused || !engines) return
+    if (currentGeneration !== generation || paused || !engine) return
     try {
       if (!stepOnce()) scheduleNextStep()
     } catch (cause) {
@@ -74,13 +74,13 @@ self.onmessage = (event: MessageEvent<SkillKMeansWorkerRequest>) => {
     if (request.type === 'start') {
       cancelScheduledStep()
       activeRequestId = request.requestId
-      engines = null
+      engine = null
       elapsedMs = 0
       paused = request.stepOnly
       const started = performance.now()
       const features = createSkillKMeansFeatures(request.documents)
       termsCount = features.terms.length
-      engines = [createSkillKMeansEngine(features, request.configs[0]), createSkillKMeansEngine(features, request.configs[1])]
+      engine = createSkillKMeansEngine(features, request.config)
       elapsedMs = performance.now() - started
       publish()
       if (request.stepOnly) stepOnce()

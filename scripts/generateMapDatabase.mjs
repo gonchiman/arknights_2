@@ -141,17 +141,21 @@ export function extractMapRoutes(source) {
   })
 }
 
-/** Classify each SPAWN with the same conservative rules as map totals. */
+/** Preserve raw schedule conditions independently of the environment's resolution. */
 function classifyMapSpawn(action, wave, fragment) {
   if (action.actionType !== 'SPAWN') return { spawnKind: null, reasons: [] }
   // Even a zero-count action retains its conditional metadata in the schedule.
   // The classifier normally skips zero-count actions when calculating totals.
-  const classifiedAction = action.count === 0 ? { ...action, count: 1 } : action
+  // A raw hidden group is conditional metadata even when resolution excludes it.
+  // Do not let the default-disabled state hide its other raw schedule conditions.
+  const hasHiddenGroup = action.hiddenGroup != null && action.hiddenGroup !== ''
+  const classifiedAction = { ...action, count: action.count === 0 ? 1 : action.count, hiddenGroup: null }
   const result = buildEnemyHistogramCounts([{
     levelId: 'map/wave-action',
     data: { enemyDbRefs: [], waves: [{ ...wave, fragments: [{ ...fragment, actions: [classifiedAction] }] }] },
   }])
-  const reasons = result.diagnostics.excludedLevels[0]?.reasons ?? []
+  const reasons = [...(result.diagnostics.excludedLevels[0]?.reasons ?? []),
+    ...(hasHiddenGroup ? ['hidden-spawn-group'] : [])].sort()
   const conditionalReason = (reason) => [
     'hidden-spawn-group', 'random-spawn-group', 'weighted-spawn',
     'unscheduled-spawn', 'unsupported-wave-tag',

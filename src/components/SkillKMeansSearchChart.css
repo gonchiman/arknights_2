@@ -1,0 +1,24 @@
+.skill-kmeans-search-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 24px; min-width: 0; }
+.skill-kmeans-search-chart { --skill-kmeans-search-series: var(--link); display: grid; gap: 12px; min-width: 0; margin: 0; }
+.skill-kmeans-search-chart.metric-meanSquaredDistance { --skill-kmeans-search-series: var(--accent); }
+.skill-kmeans-search-chart figcaption { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; min-height: 42px; gap: 8px 12px; }
+.skill-kmeans-search-chart figcaption h3 { margin: 0; color: var(--text); font-size: 14px; font-weight: 500; }
+.skill-kmeans-search-no-candidate { color: var(--text-soft); font-size: 13px; }
+.skill-kmeans-search-chart-frame { width: 100%; height: 280px; min-width: 0; overflow: hidden; }
+.skill-kmeans-search-chart-svg { display: block; width: 100%; max-width: 100%; height: 280px; overflow: hidden; cursor: crosshair; touch-action: pan-y; }
+.skill-kmeans-search-grid { stroke: var(--border); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.skill-kmeans-search-axis { fill: none; stroke: var(--border-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.skill-kmeans-search-tick { fill: var(--text-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
+.skill-kmeans-search-axis-title { fill: var(--text); font-size: 12px; font-weight: 500; }
+.skill-kmeans-search-line { fill: none; stroke: var(--skill-kmeans-search-series); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.skill-kmeans-search-point { fill: var(--surface); stroke: var(--skill-kmeans-search-series); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.skill-kmeans-search-point.selected { fill: var(--skill-kmeans-search-series); stroke-width: 2; }
+.skill-kmeans-search-guide { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; }
+.skill-kmeans-search-selected-value { fill: var(--skill-kmeans-search-series); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.skill-kmeans-search-empty { fill: var(--text-soft); font-size: 13px; }
+@container skill-kmeans (max-width: 760px) {
+  .skill-kmeans-search-charts { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px), (pointer: coarse) {
+  .skill-kmeans-search-chart figcaption { min-height: 44px; }
+}

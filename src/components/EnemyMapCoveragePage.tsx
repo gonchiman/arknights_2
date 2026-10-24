@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { getMapCategory, loadMapDatabase } from '../lib/mapDatabase'
+import { useMemo, useRef, useState, type CSSProperties } from 'react'
+import { getMapCategory } from '../lib/mapDatabase'
+import { useEnemyAggregation } from '../lib/useEnemyAggregation'
+import { EnemyAggregationHistoryButton, EnemyAggregationSelector, EnemyAggregationStatus } from './EnemyAggregationSelector'
 import {
   getMapCoverageCategories, getMapCoverageEnvironmentLabel, getMapCoverageReasons,
   getMapCoverageStatus, getMapCoverageZones, summarizeMapCoverage,
 } from '../lib/enemyMapCoverage'
 import type { EnemyMapCoverageMode as CountMode, MapCoverageSummary as CoverageCounts } from '../lib/enemyMapCoverage'
-import type { MapCategory, MapIndex, MapSummary } from '../types/map'
+import type { MapCategory, MapSummary } from '../types/map'
 import { createEnemyMapCoverageChartSnapshot, MAP_COVERAGE_COLORS,
   MAP_COVERAGE_STATUS_KEYS as STATUS_KEYS, MAP_COVERAGE_STATUS_LABELS as STATUS_LABELS,
   type EnemyMapCoverageChartSnapshot } from '../lib/enemyMapCoverageChartImage'
@@ -46,9 +48,8 @@ function CoverageLegend({ counts }: { counts: CoverageCounts }) {
 }
 
 export function EnemyMapCoveragePage() {
-  const [data, setData] = useState<MapIndex | null>(null)
-  const [error, setError] = useState(false)
-  const [revision, setRevision] = useState(0)
+  const aggregation = useEnemyAggregation()
+  const data = aggregation.data?.maps ?? null
   const [mode, setMode] = useState<CountMode>('SPAWNS')
   const [category, setCategory] = useState<MapCategory>('main')
   const [zoneId, setZoneId] = useState('main_9')
@@ -59,14 +60,6 @@ export function EnemyMapCoveragePage() {
   const [saving, setSaving] = useState(false)
   const [imageFeedback, setImageFeedback] = useState<'saved' | 'failed' | null>(null)
   const savingRef = useRef(false)
-
-  useEffect(() => {
-    let active = true
-    setError(false)
-    void loadMapDatabase().then((index) => { if (active) setData(index) })
-      .catch(() => { if (active) setError(true) })
-    return () => { active = false }
-  }, [revision])
 
   const maps = data?.maps ?? []
   const totals = useMemo(() => summarizeMapCoverage(maps, mode), [data, mode])
@@ -93,7 +86,7 @@ export function EnemyMapCoveragePage() {
 
   const openImage = () => {
     setImageFeedback(null)
-    setImageSnapshot(createEnemyMapCoverageChartSnapshot(maps, mode))
+    setImageSnapshot(createEnemyMapCoverageChartSnapshot(maps, mode, aggregation.version ?? undefined))
   }
   const saveImage = async (filename: string, aspectRatio?: number) => {
     if (!imageSnapshot || savingRef.current) return
@@ -122,21 +115,23 @@ export function EnemyMapCoveragePage() {
     <PageBreadcrumbs parents={[{ label: '敵の統計分析', href: '#/analysis/enemies' }]} current="集計マップ確認" />
     <header className="page-intro">
       <div><span className="page-kicker">ENEMY STATISTICS</span><h1>集計マップ確認</h1></div>
-      <a className="button secondary" href="#/analysis/enemies">敵の統計分析へ</a>
+      <div className="enemy-map-coverage-page-actions">
+        <EnemyAggregationHistoryButton state={aggregation} />
+        <a className="button secondary" href="#/analysis/enemies">敵の統計分析へ</a>
+      </div>
     </header>
-    {error ? <div className="map-load-state" role="alert">
-      <span>マップ一覧を読み込めませんでした。</span>
-      <button className="button secondary" type="button" onClick={() => setRevision((value) => value + 1)}>再読み込み</button>
-    </div> : !data ? <div className="map-load-state" role="status">マップ一覧を読み込んでいます…</div> : <>
       <div className="enemy-map-coverage-controls">
         <label><span>集計方法</span><select value={mode} onChange={(event) => setMode(event.target.value as CountMode)}>
           <option value="SPAWNS">出現回数</option><option value="MAPS">登場マップ数</option>
         </select></label>
-        <div className="enemy-map-coverage-totals" aria-live="polite">
+        <EnemyAggregationSelector state={aggregation} />
+        {data && <div className="enemy-map-coverage-totals" aria-live="polite">
           <span>収録データ全体 <strong>{formatCount(totals.total)}</strong> マップ</span>
           <span>集計対象 <strong>{formatCount(totals.included)}</strong> マップ</span>
-        </div>
+        </div>}
       </div>
+    <EnemyAggregationStatus state={aggregation} />
+    {data && <>
       <section className="calculator-panel" aria-labelledby="enemy-map-coverage-chart-heading">
         <header className="panel-heading"><div><span>01</span><h2 id="enemy-map-coverage-chart-heading">集計マップ</h2></div>
           <button type="button" className="button secondary" disabled={saving || totals.total === 0} onClick={openImage}>画像を保存</button>

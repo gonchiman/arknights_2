@@ -49,11 +49,10 @@ test('normalized duplicate level IDs are counted once and invalid IDs are diagno
   assert.equal(result.summary.mapCount, 1)
 })
 
-test('random candidates, packs, hidden groups and weights exclude the whole map from SPAWNS only', () => {
+test('random candidates, packs and weights exclude the whole map from SPAWNS only', () => {
   const cases = [
     ['random', { randomSpawnGroupKey: 'choice' }, 'random-spawn-group'],
     ['pack', { randomSpawnGroupPackKey: 'bundle' }, 'random-spawn-group'],
-    ['hidden', { hiddenGroup: 'normal' }, 'hidden-spawn-group'],
     ['weight', { weight: 5 }, 'weighted-spawn'],
   ] as const
   for (const [name, extra, reason] of cases) {
@@ -189,9 +188,9 @@ test('canonical stage contexts resolve matching hidden groups without changing M
     new Map([['obt/normal', { difficulty: 'NORMAL' }], ['Obt/Tough.json', { difficulty: 'NORMAL', diffGroup: 'TOUGH' }]]),
   ]) {
     const result = buildEnemyHistogramCounts(source, { ...provenance, stageContexts })
-    assert.deepEqual(result.enemies, { enemy_a: { mapCount: 2, spawnCount: 3 }, enemy_b: { mapCount: 2, spawnCount: 2 } })
-    assert.equal(result.summary.spawnMapCount, 1)
-    assert.deepEqual(result.diagnostics.excludedLevels, [{ levelId: 'obt/normal', reasons: ['hidden-spawn-group'] }])
+    assert.deepEqual(result.enemies, { enemy_a: { mapCount: 2, spawnCount: 6 }, enemy_b: { mapCount: 2, spawnCount: 2 } })
+    assert.equal(result.summary.spawnMapCount, 2)
+    assert.deepEqual(result.diagnostics.excludedLevels, [])
   }
 })
 

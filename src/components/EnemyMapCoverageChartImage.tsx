@@ -69,7 +69,7 @@ function CoveragePlot({ snapshot, width, height }: {
 
 export function EnemyMapCoverageChartImage({ snapshot, aspectRatio, onLayout }: ImageProps) {
   return <ChartImageFrame key={`${JSON.stringify(snapshot)}:${aspectRatio ?? 'auto'}`}
-    title="集計マップ" conditions={MAP_COVERAGE_MODE_LABELS[snapshot.mode]}
+    title="集計マップ" conditions={[MAP_COVERAGE_MODE_LABELS[snapshot.mode], snapshot.aggregationVersion?.label].filter(Boolean).join(' · ')}
     axisTitle="収録マップに占める割合" naturalChartHeight={NATURAL_CHART_HEIGHT}
     aspectRatio={aspectRatio} onLayout={onLayout}
     legend={<ul className="chart-image-frame-legend-list" aria-label="集計対象の内訳">
