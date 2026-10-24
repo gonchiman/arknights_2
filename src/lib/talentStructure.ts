@@ -84,19 +84,38 @@ export interface TalentStructureGrowthSelection { readonly phaseIndex?: number; 
 
 /** Verified semantics bind to the selected growth and potential-1 source. No calculator is called. */
 export function buildTalentStructures(rows: readonly SkillRecord[], growth: TalentStructureGrowthSelection = {}): TalentStructure[] {
+  return buildTalentStructureDefinitions(rows, growth, false)
+}
+
+/** Source identities and effect kinds only; unresolved live numeric values remain null. */
+export function describeRegisteredTalentEffects(rows: readonly SkillRecord[]): {
+  operatorId: string; talentIndex: number; talentName: string; items: readonly TalentStructureEffect['item'][]
+}[] {
+  return buildTalentStructureDefinitions(rows, { phaseIndex: 2 }, true).map(structure => ({
+    operatorId: structure.basicInfo.operatorId, talentIndex: structure.basicInfo.talentIndex,
+    talentName: structure.basicInfo.talentName, items: structure.effects.map(effect => effect.item),
+  }))
+}
+
+function buildTalentStructureDefinitions(rows: readonly SkillRecord[], growth: TalentStructureGrowthSelection,
+  registrationOnly: boolean): TalentStructure[] {
   const operators = new Map(rows.map(row => [row.operatorId, row]))
   return DEFINITIONS.flatMap(definition => {
     const operator = operators.get(definition.operatorId)
     if (!operator) return []
     const phaseIndex = growth.phaseIndex ?? Math.max(0, operator.operatorProfile.phases.length - 1)
-    const maxLevel = operator.operatorProfile.phases[phaseIndex]?.maxLevel
+    const maxLevel = operator.operatorProfile.phases[phaseIndex]?.maxLevel ?? (registrationOnly ? 90 : undefined)
     const operatorLevel = growth.operatorLevel ?? maxLevel
     if (phaseIndex !== 2 || !Number.isInteger(operatorLevel) || !operatorLevel || operatorLevel < 1
       || !Number.isInteger(maxLevel) || !maxLevel || operatorLevel > maxLevel) return []
-    const source = getOperatorPassives(operator.operatorProfile, phaseIndex, operatorLevel, 1).sources
+    let source = getOperatorPassives(operator.operatorProfile, phaseIndex, operatorLevel, 1).sources
       .find(candidate => candidate.sourceKind === 'TALENT' && candidate.talentIndex === definition.talentIndex)
+    if (registrationOnly) source = { sourceKind: 'TALENT', talentIndex: definition.talentIndex,
+      sourceName: definition.name, description: source?.description ?? '', blackboard: source?.blackboard ?? [],
+      requiredPotentialRank: 0, prefabKey: String(definition.talentIndex + 1), tokenKey: null,
+      unlockCondition: { phase: 'PHASE_2', level: 1 } }
     // Do not reinterpret a lower-promotion, different-slot or potential-only candidate.
-    if (!source || !source.description || source.requiredPotentialRank !== 0
+    if (!source || (!registrationOnly && !source.description) || source.requiredPotentialRank !== 0
       || source.unlockCondition?.phase !== 'PHASE_2' || source.sourceName !== definition.name
       || source.prefabKey !== String(definition.talentIndex + 1)) return []
     const issues: string[] = []

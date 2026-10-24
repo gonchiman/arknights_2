@@ -2,12 +2,12 @@
 
 .damage-three-coverage-meta { flex-wrap: wrap; }
 
-.damage-three-coverage-table { min-width: 660px; }
-.damage-three-coverage-table th:nth-child(1) { width: 26%; }
+.damage-three-coverage-table { min-width: 920px; }
+.damage-three-coverage-table th:nth-child(1) { width: 22%; }
 .damage-three-coverage-table th:nth-child(2) { width: 72px; }
 .damage-three-coverage-table th:nth-child(3) { width: auto; }
-.damage-three-coverage-table th:nth-child(4) { width: 100px; }
-.damage-three-coverage-table th:nth-child(5) { width: 70px; }
+.damage-three-coverage-table th:nth-child(n+4):nth-child(-n+7) { width: 90px; }
+.damage-three-coverage-table th:nth-child(8) { width: 70px; }
 
 .damage-three-coverage-detail-table { min-width: 0; }
 .damage-three-coverage-detail-table th:first-child { width: 100px; }
@@ -15,6 +15,20 @@
 .damage-three-coverage-detail-table td { overflow-wrap: anywhere; }
 .damage-three-coverage-detail-table tbody th { font-size: 12px; font-weight: 400; }
 .damage-three-coverage-detail-table tbody tr:last-child th { border-bottom: 0; }
+.damage-three-coverage-detail-wrap + .damage-three-coverage-detail-wrap { margin-top: 16px; }
+.damage-three-coverage-sections-table { min-width: 0; }
+.damage-three-coverage-sections-table th:first-child { width: 90px; }
+.damage-three-coverage-sections-table th:nth-child(2) { width: auto; }
+.damage-three-coverage-sections-table th:nth-child(3) { width: 100px; }
+.damage-three-coverage-sections-table td { overflow-wrap: anywhere; }
+.damage-three-coverage-issues-table { min-width: 510px; }
+.damage-three-coverage-issues-table th:first-child { width: 100px; }
+.damage-three-coverage-issues-table th:nth-child(2) { width: auto; }
+.damage-three-coverage-issues-table th:nth-child(3) { width: 31%; }
+.damage-three-coverage-sections-table tbody th,
+.damage-three-coverage-issues-table tbody th { font-size: 12px; font-weight: 400; }
+.damage-three-coverage-sections-table tbody tr:last-child th,
+.damage-three-coverage-issues-table tbody tr:last-child th { border-bottom: 0; }
 .damage-three-coverage-actions { display: flex; margin-top: 14px; }
 
 @media (max-width: 620px) {

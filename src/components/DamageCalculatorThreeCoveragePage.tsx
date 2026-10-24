@@ -3,6 +3,7 @@ import {
   buildDamageCalculatorThreeCoverage,
   COVERAGE_STATUS_LABELS,
   COVERAGE_STATUS_OPTIONS,
+  COVERAGE_SECTION_STATUS_LABELS,
   type DamageCalculatorThreeCoverageRow,
   type DamageCalculatorThreeCoverageStatus,
 } from '../lib/damageCalculatorThreeCoverage'
@@ -85,8 +86,8 @@ export function DamageCalculatorThreeCoveragePage({ rows, loading, onOpenOperato
               </select>
             </label>
             <label>
-              <span>対応状況</span>
-              <select aria-label="対応状況" value={filters.status} onChange={(event) => setFilters({ ...filters,
+              <span>総合の状況</span>
+              <select aria-label="総合の状況" value={filters.status} onChange={(event) => setFilters({ ...filters,
                 status: event.target.value as DamageCalculatorThreeCoverageStatus | 'ALL',
               })}>
                 <option value="ALL">すべて</option>
@@ -104,12 +105,15 @@ export function DamageCalculatorThreeCoveragePage({ rows, loading, onOpenOperato
         ) : (
           <div className="table-wrap skill-coarse-table-wrap" role="region" aria-label="DC3の対応スキル" tabIndex={0}>
             <table className="skill-coarse-table damage-three-coverage-table">
-              <caption className="visually-hidden">DC3の実装範囲と対応状況</caption>
+              <caption className="visually-hidden">DC3の区分別の実装状況</caption>
               <thead><tr>
                 <th scope="col">オペレーター</th>
                 <th scope="col">S番号</th>
                 <th scope="col">スキル名</th>
-                <th scope="col">対応状況</th>
+                <th scope="col">スキル</th>
+                <th scope="col">素質</th>
+                <th scope="col">特性</th>
+                <th scope="col">総合</th>
                 <th scope="col">詳細</th>
               </tr></thead>
               <tbody>{!loading && visibleRows.map((row) => (
@@ -118,6 +122,9 @@ export function DamageCalculatorThreeCoveragePage({ rows, loading, onOpenOperato
                     className="skill-coarse-link">{row.skill.operatorName}</OperatorDetailLink></td>
                   <td>S{row.skill.skillIndex}</td>
                   <td>{row.skill.skillName}</td>
+                  <td>{COVERAGE_SECTION_STATUS_LABELS[row.sections.skill]}</td>
+                  <td>{COVERAGE_SECTION_STATUS_LABELS[row.sections.talent]}</td>
+                  <td>{COVERAGE_SECTION_STATUS_LABELS[row.sections.trait]}</td>
                   <td>{COVERAGE_STATUS_LABELS[row.status]}</td>
                   <td><button type="button" className="skill-coarse-description-trigger" aria-haspopup="dialog"
                     aria-label={`${row.skill.operatorName} S${row.skill.skillIndex}の対応詳細`}
@@ -144,11 +151,10 @@ export function DamageCalculatorThreeCoverageDialog({ row, onClose }: {
   const { skill } = row
   const facts: [string, string][] = [
     ['スキル名', skill.skillName],
-    ['対応状況', COVERAGE_STATUS_LABELS[row.status]],
+    ['総合', COVERAGE_STATUS_LABELS[row.status]],
     ...(row.selection ? [['共通条件', '昇進2・特化3・潜在1・MODなし'] as [string, string]] : []),
     ...row.calculationScope.map((value): [string, string] => ['計算範囲', value]),
     ...row.supportedConditions.map((value): [string, string] => ['対応条件', value]),
-    ...row.deferredReasons.map((value): [string, string] => ['保留事項', value]),
     ...row.scopeNotes.map((value): [string, string] => ['対象範囲', value]),
   ]
 
@@ -181,7 +187,19 @@ export function DamageCalculatorThreeCoverageDialog({ row, onClose }: {
           <button ref={closeRef} type="button" aria-label="対応詳細を閉じる" onClick={onClose}>×</button>
         </header>
         <div className="skill-effect-modal-body" role="region" aria-label="スキルの対応詳細" tabIndex={0}>
-          <div className="table-wrap skill-coarse-table-wrap">
+          <div className="table-wrap skill-coarse-table-wrap damage-three-coverage-detail-wrap"
+            role="region" aria-label="区分別の実装状況" tabIndex={0}>
+            <table className="skill-coarse-table damage-three-coverage-sections-table">
+              <caption className="visually-hidden">{skill.operatorName} S{skill.skillIndex}の区分別の実装状況</caption>
+              <thead><tr><th scope="col">区分</th><th scope="col">項目</th><th scope="col">実装状況</th></tr></thead>
+              <tbody>{row.details.map((section) => <tr key={section.id}>
+                <th scope="row">{section.label}</th><td>{section.name}</td>
+                <td>{COVERAGE_SECTION_STATUS_LABELS[section.status]}</td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+          <div className="table-wrap skill-coarse-table-wrap damage-three-coverage-detail-wrap"
+            role="region" aria-label="計算範囲と対応条件" tabIndex={0}>
             <table className="skill-coarse-table damage-three-coverage-detail-table">
               <caption className="visually-hidden">{skill.operatorName} S{skill.skillIndex}の計算範囲</caption>
               <thead><tr><th scope="col">項目</th><th scope="col">内容</th></tr></thead>
@@ -190,6 +208,17 @@ export function DamageCalculatorThreeCoverageDialog({ row, onClose }: {
               </tr>)}</tbody>
             </table>
           </div>
+          {row.issues.length > 0 && <div className="table-wrap skill-coarse-table-wrap damage-three-coverage-detail-wrap"
+            role="region" aria-label="保留事項と関連区分" tabIndex={0}>
+            <table className="skill-coarse-table damage-three-coverage-issues-table">
+              <caption className="visually-hidden">{skill.operatorName} S{skill.skillIndex}の保留事項と関連区分</caption>
+              <thead><tr><th scope="col">関連区分</th><th scope="col">保留事項</th><th scope="col">現在の対応</th></tr></thead>
+              <tbody>{row.issues.map((issue) => <tr key={issue.id}>
+                <th scope="row">{issue.relatedSections.join('・')}</th><td>{issue.reason}</td>
+                <td>{issue.impact === 'OUTSIDE_SCOPE' ? '計算範囲外' : issue.supportedCondition ?? '保留'}</td>
+              </tr>)}</tbody>
+            </table>
+          </div>}
           {row.selection && <div className="damage-three-coverage-actions">
             <a className="button" href={createDamageCalculatorThreeHash(row.selection)}>計算機3で開く</a>
           </div>}

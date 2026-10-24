@@ -36,17 +36,24 @@ const render = (Component, props) => renderToStaticMarkup(createElement(Componen
 const text = value => value.replace(/<[^>]+>/g, '').trim()
 const table = markup => [...markup.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)]
   .map(row => [...row[1].matchAll(/<(?:td|th)\b[^>]*>([\s\S]*?)<\/(?:td|th)>/g)].map(cell => text(cell[1])))
+const namedTable = (markup, className) => table(markup.match(
+  new RegExp(`<table[^>]*class="[^"]*\\b${className}\\b[^"]*"[^>]*>([\\s\\S]*?)</table>`))?.[1] ?? '')
 
-test('初期範囲は星6前衛、1スキル1行の5列で対応件数と詳細導線を表示する', () => {
+test('初期範囲は星6前衛、1スキル1行の8列で区分別の状態と総合を分ける', () => {
   const extra = { ...records[0], id: 'other', operatorId: 'other', profession: 'CASTER', professionLabel: '術師', rarity: 5 }
   const markup = render(Page, { rows: [...records, extra], loading: false, onOpenOperatorDetail() {} })
   const rows = table(markup)
-  assert.deepEqual(rows[0], ['オペレーター', 'S番号', 'スキル名', '対応状況', '詳細'])
+  assert.deepEqual(rows[0], ['オペレーター', 'S番号', 'スキル名', 'スキル', '素質', '特性', '総合', '詳細'])
   assert.equal(rows.length, 91)
-  assert.ok(rows.every(row => row.length === 5))
+  assert.ok(rows.every(row => row.length === 8))
+  const bellone = rows.find(row => row[0] === 'ベッローネ' && row[1] === 'S2')
+  assert.deepEqual(bellone.slice(3, 7), ['対応', '条件付き', '対象外', '条件付き'])
+  const sakiko = rows.find(row => row[0] === '豊川祥子' && row[1] === 'S2')
+  assert.deepEqual(sakiko.slice(3, 7), ['保留', '対応', '対象外', '保留'])
   assert.match(markup, /90 \/ 91 スキル表示/)
   assert.match(markup, /対応 74・条件付き 7・保留 9・未対応 0/)
   assert.match(markup, /role="region" aria-label="DC3の対応スキル" tabindex="0"/)
+  assert.match(markup, /aria-label="総合の状況"/)
   assert.match(markup, /<a[^>]*href="#\/operators\/char_350_surtr"[^>]*aria-haspopup="dialog"/)
   assert.doesNotMatch(markup, /rowspan|colspan|<small|<br/)
 })
@@ -66,15 +73,24 @@ test('検索は複数語・全角S番号に対応し、職業・レアリティ�
   assert.equal(filterCoverage([unsupported], { ...empty, rarity: 6 }).length, 0)
 })
 
-test('詳細は条件と保留理由を別行にし、選択したスキルをDC3へ渡す', () => {
+test('詳細は区分・条件・関連する保留事項を分け、選択したスキルをDC3へ渡す', () => {
   const coverage = buildCoverage(records)
   for (const row of coverage.filter(row => row.status === 'CONDITIONAL' || row.status === 'PENDING')) {
     const markup = render(Dialog, { row, onClose() {} })
-    const facts = table(markup)
+    const sections = namedTable(markup, 'damage-three-coverage-sections-table')
+    assert.deepEqual(sections[0], ['区分', '項目', '実装状況'])
+    assert.ok(sections.every(cells => cells.length === 3))
+    assert.ok(sections.some(cells => cells[0] === '素質1'))
+    assert.ok(sections.some(cells => cells[0] === '素質2'))
+    const facts = namedTable(markup, 'damage-three-coverage-detail-table')
     assert.ok(facts.every(cells => cells.length === 2))
     assert.deepEqual(facts[0], ['項目', '内容'])
     assert.deepEqual(facts.filter(cells => cells[0] === '対応条件').map(cells => cells[1]), row.supportedConditions)
-    assert.deepEqual(facts.filter(cells => cells[0] === '保留事項').map(cells => cells[1]), row.deferredReasons)
+    const issues = namedTable(markup, 'damage-three-coverage-issues-table')
+    assert.deepEqual(issues[0], ['関連区分', '保留事項', '現在の対応'])
+    assert.deepEqual(issues.slice(1).map(cells => cells[1]), row.issues.map(issue => issue.reason))
+    assert.deepEqual(issues.slice(1).map(cells => cells[0]), row.issues.map(issue => issue.relatedSections.join('・')))
+    assert.ok(issues.every(cells => cells.length === 3))
     assert.match(markup, new RegExp(`href="#/damage-3\\?operatorId=${row.skill.operatorId}&amp;skillIndex=${row.skill.skillIndex}&amp;skillId=${row.skill.skillId}&amp;levelIndex=9"`))
     assert.doesNotMatch(markup, /rowspan|colspan|<small|<br/)
   }
@@ -83,8 +99,22 @@ test('詳細は条件と保留理由を別行にし、選択したスキルをDC
 test('未対応スキルの詳細には計算済みの範囲やDC3への選択リンクを捏造しない', () => {
   const row = buildCoverage([{ ...records[0], operatorId: 'unknown', skillId: 'unknown' }])[0]
   const markup = render(Dialog, { row, onClose() {} })
-  assert.deepEqual(table(markup), [['項目', '内容'], ['スキル名', row.skill.skillName], ['対応状況', '未対応']])
+  assert.deepEqual(namedTable(markup, 'damage-three-coverage-detail-table'),
+    [['項目', '内容'], ['スキル名', row.skill.skillName], ['総合', '未対応']])
+  const sections = namedTable(markup, 'damage-three-coverage-sections-table')
+  assert.ok(sections.length > 1)
+  assert.ok(sections.slice(1).every(cells => cells[2] === '未対応'))
   assert.doesNotMatch(markup, /計算機3で開く|昇進2|特化3/)
+})
+
+test('スルトS3は攻撃に使う素質と計算対象外の生存素質を別行で表示する', () => {
+  const row = buildCoverage(records).find(row => row.skill.operatorId === 'char_350_surtr' && row.skill.skillIndex === 3)
+  const markup = render(Dialog, { row, onClose() {} })
+  const sections = namedTable(markup, 'damage-three-coverage-sections-table')
+  assert.equal(sections.find(cells => cells[0] === '素質1')[2], '対応')
+  assert.equal(sections.find(cells => cells[0] === '素質2')[2], '対象外')
+  const issues = namedTable(markup, 'damage-three-coverage-issues-table')
+  assert.ok(issues.slice(1).every(cells => cells[2] === '計算範囲外'))
 })
 
 test('読み込み中と結果なしを区別する', () => {

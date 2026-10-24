@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { buildDamageCalculatorThreeCoverage, COVERAGE_STATUS_LABELS } from '../src/lib/damageCalculatorThreeCoverage.ts'
+import { buildDamageCalculatorThreeCoverage, COVERAGE_SECTION_STATUS_LABELS, COVERAGE_STATUS_LABELS } from '../src/lib/damageCalculatorThreeCoverage.ts'
 import { buildDamageCalculatorThreeOutput, getDamageCalculatorThreeStructures } from '../src/lib/damageCalculatorThree.ts'
 import { getGuardPassiveCalculationConstraints } from '../src/lib/guardCombatPassives.ts'
 import { classifySkill } from '../src/lib/classifier.ts'
@@ -199,4 +199,126 @@ test('一覧に使う共有制約の理由が計算器でも同じ停止理由�
       }
     }
   }
+})
+
+test('スキル式と素質の対応を分け、素質だけが阻む場合にスキルを保留にしない', () => {
+  for (const index of [1, 2, 3]) {
+    assert.deepEqual(covered('char_1050_chen3', index).sections,
+      { skill: 'SUPPORTED', talent: 'PENDING', trait: 'SUPPORTED' })
+    assert.deepEqual(covered('char_4037_demetr', index).sections,
+      { skill: 'SUPPORTED', talent: 'CONDITIONAL', trait: 'NOT_APPLICABLE' })
+  }
+  const near = covered('char_1014_nearl2', 3)
+  assert.deepEqual(near.sections, { skill: 'CONDITIONAL', talent: 'SUPPORTED', trait: 'NOT_APPLICABLE' })
+  assert.deepEqual(near.details.map(detail => [detail.label, detail.status]), [
+    ['スキル', 'CONDITIONAL'], ['素質1', 'NOT_APPLICABLE'], ['素質2', 'SUPPORTED'], ['特性', 'NOT_APPLICABLE'],
+  ])
+})
+
+test('素質を個別行にし、非関連の素質や特性を対象外に分類する', () => {
+  assert.equal(COVERAGE_SECTION_STATUS_LABELS.NOT_APPLICABLE, '対象外')
+  assert.deepEqual(covered('char_017_huang', 2).sections,
+    { skill: 'SUPPORTED', talent: 'NOT_APPLICABLE', trait: 'SUPPORTED' })
+  assert.deepEqual(covered('char_017_huang', 2).details.filter(detail => detail.label.startsWith('素質'))
+    .map(detail => [detail.label, detail.name, detail.status]), [
+    ['素質1', '緊急蘇生術', 'NOT_APPLICABLE'], ['素質2', 'スパルタ訓練の成果', 'NOT_APPLICABLE'],
+  ])
+  for (const id of ['char_264_f12yin', 'char_188_helage', 'char_4121_zuole', 'char_263_skadi'])
+    for (const index of [1, 2, 3]) assert.equal(covered(id, index).sections.trait, 'NOT_APPLICABLE')
+  assert.equal(covered('char_350_surtr', 3).details.find(detail => detail.id === 'talent-2')!.status, 'NOT_APPLICABLE')
+  assert.equal(covered('char_172_svrash', 1).details.find(detail => detail.id === 'talent-2')!.status, 'NOT_APPLICABLE')
+})
+
+test('条件不成立は実装済み条件分岐として対応に残し、段階固有の効果を混ぜない', () => {
+  assert.equal(covered('char_485_pallas', 3).details.find(detail => detail.id === 'talent-1')!.status, 'SUPPORTED')
+  assert.equal(covered('char_4011_lessng', 1).details.find(detail => detail.id === 'talent-2')!.status, 'SUPPORTED')
+  assert.equal(covered('char_4182_oblvns', 1).details.find(detail => detail.id === 'talent-2')!.status, 'SUPPORTED')
+  assert.equal(covered('char_1043_leizi2', 1).details.find(detail => detail.id === 'talent-2')!.status, 'SUPPORTED')
+  assert.equal(covered('char_1043_leizi2', 2).details.find(detail => detail.id === 'talent-2')!.status, 'NOT_APPLICABLE')
+  assert.equal(covered('char_4116_blkkgt', 1).sections.trait, 'SUPPORTED')
+  assert.equal(covered('char_4116_blkkgt', 3).sections.trait, 'NOT_APPLICABLE')
+  assert.equal(covered('char_010_chen', 1).sections.trait, 'NOT_APPLICABLE')
+  assert.equal(covered('char_4009_irene', 1).sections.trait, 'NOT_APPLICABLE')
+})
+
+test('cross課題を安定IDで1件へまとめ、スキルと各関連素質へ反映する', () => {
+  const chyue = covered('char_2024_chyue', 2)
+  assert.equal(chyue.issues.length, 1)
+  assert.equal(chyue.issues[0].id, 'chyue-s2-levitation-talent-order')
+  assert.deepEqual(chyue.issues[0].relatedSections, ['スキル', '素質1'])
+  assert.deepEqual(chyue.sections, { skill: 'PENDING', talent: 'PENDING', trait: 'NOT_APPLICABLE' })
+  for (const index of [1, 2, 3]) {
+    const row = covered('char_4116_blkkgt', index)
+    assert.equal(row.issues.length, 1)
+    assert.deepEqual(row.issues[0].relatedSections, ['スキル', '素質1', '素質2'])
+    assert.match(row.issues[0].supportedCondition!, /戦慄中/)
+    assert.equal(row.sections.skill, 'CONDITIONAL')
+    assert.deepEqual(row.details.filter(detail => detail.id.startsWith('talent-')).map(detail => detail.status),
+      ['CONDITIONAL', 'CONDITIONAL'])
+  }
+  for (const row of coverage) assert.equal(new Set(row.issues.map(issue => issue.id)).size, row.issues.length)
+  const chen = covered('char_1050_chen3', 2)
+  assert.equal(chen.issues.length, 1)
+  assert.deepEqual(chen.issues[0].stages, ['連続斬撃', '斬撃後の通常攻撃'])
+  assert.match(chen.issues[0].reason, /連続斬撃・斬撃後の通常攻撃/)
+})
+
+test('現計算範囲外の課題は対応を下げず、現在の扱いを持つ', () => {
+  const surtr = covered('char_350_surtr', 3)
+  assert.equal(surtr.status, 'SUPPORTED')
+  assert.equal(surtr.issues[0].impact, 'OUTSIDE_SCOPE')
+  assert.ok(surtr.issues[0].currentTreatment)
+  const irene = covered('char_4009_irene', 3)
+  const timing = irene.issues.find(issue => issue.id === 'irene-s3-bombardment-levitation-timeline')!
+  assert.deepEqual(timing.relatedSections, ['スキル', '素質1'])
+  assert.equal(timing.impact, 'OUTSIDE_SCOPE')
+  assert.equal(irene.sections.talent, 'SUPPORTED')
+})
+
+test('未登録skillに同じOPの計算条件を流用せず、素質なしだけを対象外にする', () => {
+  const unknown = { ...record('char_017_huang', 2), skillId: 'unregistered-skill' }
+  const row = buildDamageCalculatorThreeCoverage([unknown])[0]
+  assert.deepEqual(row.sections, { skill: 'UNSUPPORTED', talent: 'UNSUPPORTED', trait: 'UNSUPPORTED' })
+  assert.equal(row.details.filter(detail => detail.id.startsWith('talent-')).length, 2)
+  const noTalent = structuredClone(unknown)
+  noTalent.operatorId = 'unregistered-without-talents'
+  noTalent.operatorProfile.talents = []
+  const none = buildDamageCalculatorThreeCoverage([noTalent])[0]
+  assert.equal(none.sections.talent, 'NOT_APPLICABLE')
+  assert.deepEqual(none.details.find(detail => detail.id === 'talent-none'),
+    { id: 'talent-none', label: '素質', name: 'なし', status: 'NOT_APPLICABLE' })
+})
+
+test('登録OPのソース欠落を素質なしや機能未対応と取り違えない', () => {
+  const missing = record('char_017_huang', 2)
+  missing.operatorProfile.talents = []
+  missing.skillLevels = []
+  const row = buildDamageCalculatorThreeCoverage([missing])[0]
+  assert.equal(row.status, 'SUPPORTED')
+  assert.equal(row.details.filter(detail => detail.id.startsWith('talent-')).length, 2)
+  assert.ok(row.details.every(detail => detail.status !== 'UNSUPPORTED'))
+  assert.ok(row.details.every(detail => detail.id !== 'talent-none'))
+  assert.deepEqual(row.sections, covered('char_017_huang', 2).sections)
+  for (const skill of catalog) {
+    const missing = structuredClone(skill)
+    missing.operatorProfile.talents = []
+    missing.skillLevels = []
+    const row = buildDamageCalculatorThreeCoverage([missing])[0]
+    const original = covered(skill.operatorId, skill.skillIndex)
+    assert.deepEqual(row.sections, original.sections, skill.id)
+    assert.deepEqual(row.details, original.details, skill.id)
+  }
+})
+
+test('空の補助素質定義を表示せず、名前を持つ定義まで消さない', () => {
+  const skill = record('char_4037_demetr', 2)
+  skill.operatorProfile.talents!.push({ candidates: [{ name: '', description: '', requiredPotentialRank: 0,
+    unlockCondition: { phase: 'PHASE_2', level: 1 }, prefabKey: '3' }] })
+  const empty = buildDamageCalculatorThreeCoverage([skill])[0]
+  assert.equal(empty.details.length, 4)
+  assert.ok(empty.details.every(detail => detail.name !== '名称なし'))
+  skill.operatorProfile.talents!.at(-1)!.candidates![0].name = '新しい素質'
+  const named = buildDamageCalculatorThreeCoverage([skill])[0]
+  assert.equal(named.details.length, 5)
+  assert.equal(named.details.find(detail => detail.name === '新しい素質')!.label, `素質${skill.operatorProfile.talents!.length}`)
 })
