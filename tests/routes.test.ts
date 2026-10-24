@@ -54,6 +54,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['skills', 'skills'],
       ['skill-classification', 'skill-classification'],
       ['talent-classification', 'talent-classification'],
+      ['trait-classification', 'trait-classification'],
       ['talent-structure', 'talent-structure'],
       ['skill-effects', 'skill-effects'],
       ['skill-summary', 'skill-summary'],
@@ -152,9 +153,20 @@ test('素質大分類はスキル大分類の隣から独立したページと�
   }
 })
 
-test('素質構造は素質大分類の隣から開き、素質番号を共有URLで復元する', () => {
+test('特性大分類は素質大分類の隣から独立したページとして開く', () => {
+  assert.deepEqual(parseHashRoute('#/trait-classification'), { view: 'trait-classification' })
+  const talentIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'talent-classification')
+  assert.deepEqual(APP_NAV_ITEMS[talentIndex + 1], {
+    id: 'trait-classification', href: '#/trait-classification', label: '特性大分類', description: '', section: 'analysis',
+  })
+  for (const suffix of ['/', '/extra', '?operatorId=char_test', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/trait-classification${suffix}`), { view: 'operators' })
+  }
+})
+
+test('素質構造は大分類の後から開き、素質番号を共有URLで復元する', () => {
   assert.deepEqual(parseHashRoute('#/talent-structure'), { view: 'talent-structure' })
-  const index = APP_NAV_ITEMS.findIndex(item => item.id === 'talent-classification')
+  const index = APP_NAV_ITEMS.findIndex(item => item.id === 'trait-classification')
   assert.deepEqual(APP_NAV_ITEMS[index + 1], {
     id: 'talent-structure', href: '#/talent-structure', label: '素質構造', description: '', section: 'analysis',
   })

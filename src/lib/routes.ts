@@ -8,6 +8,7 @@ export type AppRoute =
   | { view: 'skill-hdbscan' }
   | { view: 'skill-hierarchical' }
   | { view: 'talent-classification' }
+  | { view: 'trait-classification' }
   | { view: 'talent-structure'; selection?: TalentRouteSelection; invalidSelection?: boolean }
   | { view: 'skill-effects'; selection?: SkillEffectsRouteSelection }
   | { view: 'skill-summary'; selection?: SkillRouteSelection }
@@ -225,6 +226,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/skills') return { view: 'skills' }
   if (hash === '#/skill-classification') return { view: 'skill-classification' }
   if (hash === '#/talent-classification') return { view: 'talent-classification' }
+  if (hash === '#/trait-classification') return { view: 'trait-classification' }
   return { view: 'operators' }
 }
 

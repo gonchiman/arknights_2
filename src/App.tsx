@@ -34,6 +34,7 @@ import type { OpenOperatorDetail } from './components/OperatorDetailLink'
 import { SkillDirectory } from './components/SkillDirectory'
 import { SkillCoarseClassificationPage } from './components/SkillCoarseClassificationPage'
 import { TalentCoarseClassificationPage } from './components/TalentCoarseClassificationPage'
+import { TraitCoarseClassificationPage } from './components/TraitCoarseClassificationPage'
 import { TalentStructurePage } from './components/TalentStructurePage'
 import { SkillEffectsPage } from './components/SkillEffectsPage'
 import { SkillSummaryPage } from './components/SkillSummaryPage'
@@ -445,6 +446,8 @@ export default function App() {
           </Suspense>
         ) : displayedRoute.view === 'talent-classification' ? (
           <TalentCoarseClassificationPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
+        ) : displayedRoute.view === 'trait-classification' ? (
+          <TraitCoarseClassificationPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
         ) : displayedRoute.view === 'talent-structure' ? (
           <TalentStructurePage rows={rows} loading={loading} initialSelection={displayedRoute.selection}
             invalidSelection={displayedRoute.invalidSelection} />
@@ -513,7 +516,7 @@ export default function App() {
       </div>
 
       {route.view === 'operator-detail' && detailBackgroundRoute && detailOperator && (
-        (detailBackgroundRoute.view === 'skill-classification' || detailBackgroundRoute.view === 'talent-classification') ? <OperatorProfileModal
+        (detailBackgroundRoute.view === 'skill-classification' || detailBackgroundRoute.view === 'talent-classification' || detailBackgroundRoute.view === 'trait-classification') ? <OperatorProfileModal
           key={detailOperator.operatorId}
           operator={detailOperator}
           comparisonOperators={operatorRecords}

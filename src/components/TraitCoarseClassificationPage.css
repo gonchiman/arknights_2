@@ -1,0 +1,10 @@
+.trait-coarse-table th:nth-child(1) { width: 70px; }
+.trait-coarse-table th:nth-child(2) { width: 120px; }
+.trait-coarse-table th:nth-child(3) { width: 80px; }
+.trait-coarse-table th:nth-child(5) { width: 90px; }
+.trait-coarse-table td:nth-child(-n + 3) { white-space: nowrap; }
+.trait-coarse-detail-modal { width: min(760px, calc(100vw - 32px)); }
+.trait-coarse-description { margin: 0 0 16px; font-size: 13px; line-height: 1.9; white-space: pre-line; overflow-wrap: anywhere; }
+.trait-coarse-operators-table { min-width: 240px; }
+.trait-coarse-operators-table th:nth-child(1) { width: auto; }
+.trait-coarse-operators-table th:nth-child(2) { width: 100px; }
