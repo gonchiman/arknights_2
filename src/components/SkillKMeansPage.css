@@ -41,11 +41,8 @@
 .skill-kmeans-member-panel { display: grid; gap: 14px; min-width: 0; }
 .skill-kmeans-member-panel > h3 { margin: 0; font-size: 14px; font-weight: 500; }
 .skill-kmeans-member-scroll { min-width: 0; overflow-x: auto; }
-.skill-kmeans-selected-source { min-width: 0; }
-.skill-kmeans-selected-source .skill-clustering-source { scroll-margin-block: 90px 16px; }
 .skill-kmeans-page .skill-kmeans-member-table th:first-child { width: 38%; }
 .skill-kmeans-page .skill-kmeans-member-table td { text-align: left; }
-.skill-kmeans-page .skill-kmeans-member-table tbody tr.selected td { background: var(--surface-soft); }
 .skill-kmeans-skill-link { background: none; border: 0; padding: 4px 0; min-height: 30px; color: var(--link); text-align: left; text-decoration: underline; font: inherit; cursor: pointer; }
 .skill-kmeans-member-pagination { margin-top: 0; }
 .skill-kmeans-member-pagination .button { padding-inline: 9px; }

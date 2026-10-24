@@ -5,15 +5,16 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 
-let server, GroupTable, RecordSource, DocumentSource
+let server, GroupTable, EffectModal, DocumentSource, classifySkill
 before(async () => {
   server = await createServer({ configFile: false, plugins: [react()],
     cacheDir: 'node_modules/.vite/skill-kmeans-group-table-test',
     resolve: { preserveSymlinks: true }, logLevel: 'error',
     server: { middlewareMode: true, watch: null, preTransformRequests: false, hmr: false }, appType: 'custom' })
   ;({ SkillKMeansGroupTable: GroupTable } = await server.ssrLoadModule('/src/components/SkillKMeansGroupTable.tsx'))
-  ;({ SkillClusteringRecordSource: RecordSource, SkillClusteringSource: DocumentSource } =
-    await server.ssrLoadModule('/src/components/SkillClusteringSource.tsx'))
+  ;({ SkillClusteringSource: DocumentSource } = await server.ssrLoadModule('/src/components/SkillClusteringSource.tsx'))
+  ;({ SkillEffectModal: EffectModal } = await server.ssrLoadModule('/src/components/SkillEffectModal.tsx'))
+  ;({ classifySkill } = await server.ssrLoadModule('/src/lib/classifier.ts'))
 })
 after(async () => { await server?.close() })
 
@@ -28,7 +29,11 @@ const operatorLinks = markup => [...markup.matchAll(/<a\b[^>]*href="([^"]*)"[^>]
 function skill(id, operatorName, skillIndex, description = '攻撃力+{atk:0%}') {
   const raw = { description, blackboard: [{ key: 'atk', value: 1.25 }] }
   return { id, operatorId: `char_${id}`, operatorName, skillIndex, skillId: `skchr_${id}`,
-    skillName: `技_${id}`, description, skillLevels: [{ ...raw }, { ...raw }], raw }
+    skillName: `技_${id}`, description, skillLevels: [{ ...raw }, { ...raw }], raw,
+    rarity: 3, profession: 'SNIPER', professionLabel: '狙撃', subProfessionId: 'marksman', subProfessionName: '速射手',
+    nameInitial: 'K_ROW', duration: null, durationType: 'NONE', skillType: 'MANUAL',
+    spType: 'INCREASE_WITH_TIME', initSp: 0, spCost: 10,
+    classification: classifySkill(raw), operatorProfile: { phases: [], favorKeyFrames: [] } }
 }
 function document(id, records, description = '統合した説明文') {
   return { id, description, recordIds: records.map(row => row.id),
@@ -46,7 +51,11 @@ test('統合された説明文の全元スキルを展開し、オペレータ�
   const rows = tableRows(markup)
   assert.equal(rows.length, 3, '2件の統合説明文から3件のスキルを表示する')
   assert.deepEqual(rows, [sameFirst, sameSecond, other].map(row => `${row.operatorName}S${row.skillIndex} · ${row.skillName}`))
-  assert.equal((markup.match(/aria-pressed="true"/g) ?? []).length, 1)
+  const body = markup.match(/<tbody\b[^>]*>([\s\S]*?)<\/tbody>/)?.[1] ?? ''
+  const skillButtons = [...body.matchAll(/<button\b[^>]*>/g)].map(match => match[0])
+  assert.equal(skillButtons.length, 3)
+  for (const button of skillButtons) assert.match(button, /aria-haspopup="dialog"/)
+  assert.doesNotMatch(markup, /aria-pressed=|skill-clustering-source|<dialog\b/)
   assert.match(markup, /<th\b[^>]*scope="col"[^>]*>オペレーター<\/th>/)
   assert.match(markup, /<th\b[^>]*scope="col"[^>]*>スキル<\/th>/)
 })
@@ -63,20 +72,18 @@ test('13件のグループは最初の12件だけを一覧に表示する', () =
   assert.match(markup, /aria-label="次のスキル一覧"/)
 })
 
-test('元スキルの原文は数値を展開し、選択レコードのオペレーターと効果分解へリンクする', () => {
+test('既存モーダルの原文のみ表示で元スキルの最高レベルの数値と原文を表示する', () => {
   const record = skill('selected', 'クルース', 2, '<@ba.vup>攻撃力+{atk:0%}</>\\n選択したスキルだけの原文')
-  const markup = render(RecordSource, { record, defaultOpen: true })
-  assert.match(markup, /<p>攻撃力\+125% 選択したスキルだけの原文<\/p>/)
-  assert.doesNotMatch(markup, /\{atk:0%\}|&lt;@ba\.vup&gt;|同じ説明文の掲載先/)
-  assert.ok(operatorLinks(markup).some(([href, label]) => href === '#/operators/char_selected' && label === 'クルース'))
-  const effectLink = markup.match(/<a\b[^>]*href="([^"]*)"[^>]*>効果の分解へ<\/a>/)?.[1]
-  assert.ok(effectLink)
-  const [route, query] = effectLink.replaceAll('&amp;', '&').split('?')
-  assert.equal(route, '#/skill-summary')
-  assert.deepEqual(Object.fromEntries(new URLSearchParams(query)), {
-    operatorId: 'char_selected', skillIndex: '2', skillId: 'skchr_selected', levelIndex: '1',
-  })
-  assert.match(markup, /<details\b[^>]*\bopen=""/)
+  record.skillLevels = [
+    ...Array.from({ length: 9 }, () => ({ description: '低レベルの説明文', blackboard: [] })),
+    record.raw,
+  ]
+  const markup = render(EffectModal, { skill: record, descriptionOnly: true, onClose: () => {} })
+  assert.match(markup, /<dialog\b[^>]*aria-modal="true"/)
+  assert.match(markup, /<h2\b[^>]*>クルース · S2 技_selected<\/h2>/)
+  assert.match(markup, /<p>攻撃力\+125%\n選択したスキルだけの原文<\/p>/)
+  assert.match(markup, /特化3/)
+  assert.doesNotMatch(markup, /\{atk:0%\}|&lt;@ba\.vup&gt;|低レベルの説明文|発動情報|効果の分類|同じ説明文の掲載先/)
 })
 
 test('従来の説明文単位の原文表示は代表文と同じ説明文の掲載先を維持する', () => {
