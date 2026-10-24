@@ -1,0 +1,76 @@
+.skill-hierarchy-page { min-width: 0; container: skill-hierarchy / inline-size; font-size: 13px; }
+.skill-hierarchy-page .page-intro { margin-bottom: 0; }
+.skill-hierarchy-content { display: grid; gap: 16px; min-width: 0; }
+.skill-hierarchy-page .analysis-panel-body { display: grid; gap: 20px; }
+.skill-hierarchy-page .analysis-tab-panel > h2 { padding: 10px 16px; }
+.skill-hierarchy-page .button { font-size: 13px; min-height: 42px; font-weight: 500; white-space: normal; }
+.skill-hierarchy-page h3 { margin: 0; font-size: 14px; font-weight: 500; }
+.skill-hierarchy-page label { display: grid; gap: 6px; min-width: 0; }
+.skill-hierarchy-page label > span { color: var(--text-soft); }
+.skill-hierarchy-page select { width: 100%; min-width: 0; max-width: 100%; min-height: 42px; padding: 7px 10px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); font: inherit; }
+.skill-hierarchy-data { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin: 0; padding: 12px 16px; border: 1px solid var(--border); background: var(--surface-soft); }
+.skill-hierarchy-data dt, .skill-hierarchy-fields dt { color: var(--text-soft); }
+.skill-hierarchy-data dd { margin: 0; overflow-wrap: anywhere; }
+.skill-hierarchy-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; }
+.skill-hierarchy-fields dl { margin: 0; }
+.skill-hierarchy-fields dd { margin: 6px 0 0; padding-block: 8px; min-height: 42px; border-bottom: 1px solid var(--border); }
+.skill-hierarchy-actions, .skill-hierarchy-run-state { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; }
+.skill-hierarchy-run-state { color: var(--text-soft); }
+.skill-hierarchy-cut-controls { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px; align-items: end; }
+.skill-hierarchy-distance > span { display: flex; justify-content: space-between; gap: 8px; }
+.skill-hierarchy-distance output { color: var(--text); font-variant-numeric: tabular-nums; }
+.skill-hierarchy-distance input { margin: 0; width: 100%; min-width: 0; height: 42px; accent-color: var(--link); }
+.skill-hierarchy-metrics { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px 28px; margin: 0; padding: 12px 0; border-block: 1px solid var(--border); }
+.skill-hierarchy-metrics > div { display: flex; align-items: baseline; gap: 10px; }
+.skill-hierarchy-metrics dt { color: var(--text-soft); }
+.skill-hierarchy-metrics dd { margin: 0; font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.skill-hierarchy-result-state { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; color: var(--text-soft); }
+.skill-hierarchy-selected { min-width: 0; border: 1px solid var(--border); }
+.skill-hierarchy-selected-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px 14px; padding: 10px 14px; background: var(--surface-soft); border-bottom: 1px solid var(--border); }
+.skill-hierarchy-selected-heading > span { color: var(--text-soft); font-variant-numeric: tabular-nums; }
+.skill-hierarchy-selected-body { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; padding: 14px; }
+.skill-hierarchy-terms { display: grid; gap: 6px; margin: 0; }
+.skill-hierarchy-terms dt { color: var(--text-soft); }
+.skill-hierarchy-terms dd { margin: 0; }
+.skill-hierarchy-group-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: start; }
+.skill-hierarchy-group-layout > section { min-width: 0; }
+.skill-hierarchy-group-content { display: grid; gap: 14px; }
+.skill-hierarchy-group-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.skill-hierarchy-groups { display: grid; margin-top: 12px; }
+.skill-hierarchy-groups button { display: grid; grid-template-columns: 40px minmax(0, 1fr) 55px; gap: 10px; align-items: center; min-width: 0; min-height: 46px; border: 0; background: var(--surface); color: var(--text); padding: 10px 8px; text-align: left; font: inherit; cursor: pointer; }
+.skill-hierarchy-groups button[aria-pressed="true"] { background: var(--surface-soft); box-shadow: inset 3px 0 var(--text); }
+.skill-hierarchy-groups button:hover { background: var(--surface-hover); }
+.skill-hierarchy-groups button > span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.skill-hierarchy-track { height: 11px; background: var(--surface-disabled); }
+.skill-hierarchy-track i { display: block; height: 100%; background: var(--link); }
+.skill-hierarchy-page .skill-hierarchy-table { width: 100%; border: 1px solid var(--border); border-collapse: collapse; table-layout: fixed; font-size: 13px; line-height: 1.6; }
+.skill-hierarchy-page .skill-hierarchy-table th, .skill-hierarchy-page .skill-hierarchy-table td { position: static; border: 1px solid var(--border); padding: 9px 12px; color: var(--text); font-size: inherit; font-weight: 400; text-align: left; vertical-align: middle; white-space: normal; overflow-wrap: anywhere; }
+.skill-hierarchy-page .skill-hierarchy-table th { background: var(--surface-soft); font-weight: 500; }
+.skill-hierarchy-page .skill-hierarchy-table th:first-child { width: 38%; }
+.skill-hierarchy-page .skill-hierarchy-table tr.selected td { background: var(--surface-soft); }
+.skill-hierarchy-skill-link { background: none; border: 0; padding: 4px 0; min-height: 30px; color: var(--link); text-align: left; text-decoration: underline; font: inherit; cursor: pointer; }
+.skill-hierarchy-pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 12px; font-variant-numeric: tabular-nums; }
+.skill-hierarchy-pagination .button { padding-inline: 9px; }
+.skill-hierarchy-empty { display: grid; justify-items: start; gap: 16px; }
+.skill-hierarchy-error { margin: 0; color: var(--danger); overflow-wrap: anywhere; line-height: 1.7; }
+.skill-hierarchy-progress { display: grid; gap: 8px; width: min(420px, 100%); }
+.skill-hierarchy-progress label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.skill-hierarchy-progress progress { width: 100%; accent-color: var(--text); }
+@container skill-hierarchy (max-width: 650px) {
+  .skill-hierarchy-group-layout { grid-template-columns: 1fr; }
+  .skill-hierarchy-group-layout > section:first-child { padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+}
+@container skill-hierarchy (max-width: 500px) {
+  .skill-hierarchy-cut-controls, .skill-hierarchy-fields { grid-template-columns: 1fr; gap: 16px; }
+  .skill-hierarchy-page .page-intro { flex-wrap: wrap; gap: 14px; }
+  .skill-hierarchy-metrics { gap: 10px 20px; }
+}
+@container skill-hierarchy (max-width: 370px) {
+  .skill-hierarchy-page .analysis-panel-body { padding: 12px; }
+  .skill-hierarchy-page .analysis-tabs .detail-tab { padding-inline: 2px; }
+  .skill-hierarchy-page .skill-hierarchy-table th, .skill-hierarchy-page .skill-hierarchy-table td { padding: 8px; }
+}
+@media (max-width: 760px), (pointer: coarse) {
+  .skill-hierarchy-page select { min-height: 44px; font-size: 16px; }
+  .skill-hierarchy-page .button, .skill-hierarchy-page summary, .skill-hierarchy-skill-link { min-height: 44px; }
+}

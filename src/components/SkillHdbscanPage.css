@@ -1,0 +1,17 @@
+.skill-hdbscan-fields, .skill-hdbscan-compare-fields, .skill-hdbscan-compare-sources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px; min-width: 0; }
+.skill-hdbscan-field-full { grid-column: 1 / -1; }
+.skill-hdbscan-stages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.skill-hdbscan-stages li { border-top: 3px solid var(--border); padding-top: 8px; color: var(--text-soft); }
+.skill-hdbscan-stages li[aria-current="step"] { border-color: var(--link); color: var(--text); }
+.skill-hdbscan-groups button { grid-template-columns: 50px minmax(0, 1fr) 58px; }
+.skill-hdbscan-groups .skill-hdbscan-ungrouped { margin-top: 10px; border-top: 1px solid var(--border); }
+.skill-hdbscan-ungrouped .skill-kmeans-track i { background: var(--text-soft); }
+.skill-hdbscan-page .skill-kmeans-metrics dd > span { margin-left: 6px; font-size: 13px; font-weight: 400; white-space: nowrap; }
+.skill-hdbscan-compare-sources > section { min-width: 0; }
+.skill-hdbscan-compare-sources h3 { margin-bottom: 12px; }
+.skill-hdbscan-page .skill-kmeans-history-table th:first-child { width: 22%; }
+.skill-hdbscan-page .skill-kmeans-history-table .button { width: 100%; min-width: 0; padding-inline: 4px; }
+@container skill-kmeans (max-width: 600px) {
+  .skill-hdbscan-fields, .skill-hdbscan-compare-fields, .skill-hdbscan-compare-sources { grid-template-columns: 1fr; }
+  .skill-hdbscan-stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

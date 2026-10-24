@@ -5,6 +5,8 @@ export type AppRoute =
   | { view: 'skills' }
   | { view: 'skill-classification' }
   | { view: 'skill-kmeans' }
+  | { view: 'skill-hdbscan' }
+  | { view: 'skill-hierarchical' }
   | { view: 'talent-classification' }
   | { view: 'talent-structure'; selection?: TalentRouteSelection; invalidSelection?: boolean }
   | { view: 'skill-effects'; selection?: SkillEffectsRouteSelection }
@@ -42,6 +44,7 @@ export type AppRoute =
   | { view: 'enemy-map-coverage' }
   | { view: 'main-enemy-trends' }
   | { view: 'maps' }
+  | { view: 'roguelike' }
   | { view: 'sources' }
   | { view: 'slide-maker' }
 
@@ -189,6 +192,8 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/analysis/damage-verification') return { view: 'damage-verification' }
   if (hash === '#/analysis/code') return { view: 'code-analysis' }
   if (hash === '#/analysis/skills/kmeans') return { view: 'skill-kmeans' }
+  if (hash === '#/analysis/skills/hdbscan') return { view: 'skill-hdbscan' }
+  if (hash === '#/analysis/skills/hierarchical') return { view: 'skill-hierarchical' }
   if (hash === '#/analysis/goldenglow') return { view: 'goldenglow-home' }
   if (hash === '#/analysis/surtr') return { view: 'surtr-home' }
   if (hash === '#/analysis/surtr/s3') return { view: 'surtr-s3' }
@@ -214,6 +219,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/analysis/enemies/maps') return { view: 'enemy-map-coverage' }
   if (hash === '#/analysis/enemies/main-trends') return { view: 'main-enemy-trends' }
   if (hash === '#/maps') return { view: 'maps' }
+  if (hash === '#/roguelike') return { view: 'roguelike' }
   if (hash === '#/sources') return { view: 'sources' }
   if (hash === '#/slide-maker') return { view: 'slide-maker' }
   if (hash === '#/skills') return { view: 'skills' }

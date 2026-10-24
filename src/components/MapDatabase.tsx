@@ -1,13 +1,11 @@
-import { useEffect, useId, useMemo, useState } from 'react'
-import { getMapCategory, getMapEnvironment, loadMapDatabase, loadMapDetail, matchesMapFilters } from '../lib/mapDatabase'
-import { getMapEntrances } from '../lib/mapWaves'
-import { getMapCoverageReasons, getMapCoverageStatus } from '../lib/enemyMapCoverage'
-import { DATA_SOURCE_URLS } from '../lib/dataSources'
+import { useEffect, useMemo, useState } from 'react'
+import { getMapCategory, getMapEnvironment, loadMapDatabase, matchesMapFilters } from '../lib/mapDatabase'
 import { MAP_FEATURE_LABELS } from '../lib/mapFeatures'
 import { matchesMapEnemyConditions } from '../lib/mapEnemyFilters'
 import type { MapEnemyCondition } from '../lib/mapEnemyFilters'
-import type { MapDataStatus, MapDetail, MapFilters, MapIndex, MapSummary, MapTile } from '../types/map'
+import type { MapDataStatus, MapFilters, MapIndex, MapSummary } from '../types/map'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
+import { MapInformation } from './MapInformation'
 import { MapWaveInformation } from './MapWaveInformation'
 import { MapFeatureFilters } from './MapFeatureFilters'
 import { MapEnemyConditionFilters } from './MapEnemyConditionFilters'
@@ -135,89 +133,4 @@ export function MapDatabase() {
           <details className="map-source-notes"><summary>データの範囲</summary><p>stage_table内の戦闘ステージを、同じマップデータを共有するものごとにまとめています。ローグライクなど、別管理のマップは含みません。</p><p>取得済み {formatNumber(data.maps.filter((map) => map.status !== 'missing').length)}マップ／未取得 {formatNumber(data.maps.filter((map) => map.status === 'missing').length)}マップ。敵の能力値は基礎値で、マップ固有の補正は反映していません。</p><p>特徴の絞り込みは、取得済みデータから判定できる16種類が対象です。強襲条件や条件付きで追加される効果は含みません。未取得のマップは特徴による絞り込みの対象外です。</p><p>マップ情報の生成：{data.generatedAt.slice(0, 10)}{data.sourceGeneratedAt ? ` ／ 取得範囲の集計：${data.sourceGeneratedAt.slice(0, 10)}` : ''}</p></details>
         </>}
   </section>
-}
-
-function MapInformation({ map, index }: { map: MapSummary; index: MapIndex }) {
-  const [detail, setDetail] = useState<MapDetail | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [revision, setRevision] = useState(0)
-  useEffect(() => {
-    let active = true
-    if (map.status === 'missing') return
-    setError(null)
-    void loadMapDetail(map).then((result) => { if (active) setDetail(result) }).catch((cause: unknown) => {
-      if (active) setError(cause instanceof Error ? cause.message : 'マップ情報を読み込めませんでした。')
-    })
-    return () => { active = false }
-  }, [map, revision])
-  const enemies = detail?.enemies ?? []
-  return <>
-    <header className="map-detail-heading" aria-live="polite"><h2><span>{map.code}</span>{map.name}</h2><p>{[map.zoneName, difficultyLabel(map)].filter(Boolean).join(' ／ ')}</p></header>
-    {map.status === 'missing' ? <p className="map-empty" role="status">このマップの配置・敵情報は未取得です。</p>
-      : error ? <div className="map-load-state" role="alert"><span>{error}</span><button type="button" className="button secondary" onClick={() => setRevision((value) => value + 1)}>再読み込み</button></div>
-        : !detail ? <p className="map-empty" role="status">マップ情報を読み込んでいます…</p>
-          : <>
-            <MapBoard detail={detail} name={`${map.code} ${map.name}`} />
-            <dl className="map-battle-facts">
-              <div><dt>登録敵</dt><dd>{formatNumber(enemies.length)}種類</dd></div>
-              <div><dt>出現数</dt><dd>{map.status === 'supported' ? `${formatNumber(map.spawnCount)}体` : '未確定'}</dd></div>
-              <div><dt>耐久値</dt><dd>{formatNumber(detail.life)}</dd></div>
-              <div><dt>初期コスト</dt><dd>{formatNumber(detail.initialCost)}</dd></div>
-              <div><dt>配置上限</dt><dd>{formatNumber(detail.deployLimit)}</dd></div>
-            </dl>
-            <h3 className="map-enemy-heading">マップに登録された敵</h3>
-            {enemies.length ? <div className="map-table-scroll map-enemy-scroll" tabIndex={0} role="region" aria-label="マップに登録された敵の一覧"><table className="map-enemy-table"><thead><tr><th scope="col">敵名</th><th scope="col" className="map-numeric">体数</th><th scope="col" className="map-numeric">HP</th><th scope="col" className="map-numeric">攻撃力</th><th scope="col" className="map-numeric">防御力</th><th scope="col" className="map-numeric">術耐性</th></tr></thead><tbody>{enemies.map((enemy) => {
-              const base = index.enemies[enemy.id]
-              return <tr key={enemy.id}><td>{base?.name ?? enemy.id}</td><td className="map-numeric">{enemy.count == null ? '未確定' : formatNumber(enemy.count)}</td><td className="map-numeric">{formatNumber(base?.hp)}</td><td className="map-numeric">{formatNumber(base?.attack)}</td><td className="map-numeric">{formatNumber(base?.defense)}</td><td className="map-numeric">{formatNumber(base?.resistance)}</td></tr>
-            })}</tbody></table></div> : <p className="map-empty">登録された敵はありません</p>}
-          </>}
-    <details className="map-data-information"><summary>データ情報</summary><dl><div><dt>出現回数の集計</dt><dd>{getMapCoverageStatus(map, 'SPAWNS') === 'included' ? '集計対象' : '集計対象外'}</dd></div><div><dt>理由</dt><dd>{getMapCoverageReasons(map, 'SPAWNS').join('、')}</dd></div><div><dt>マップID</dt><dd>{map.levelId}</dd></div></dl><p>体数は、この環境で判定できた出現条件と敵の置き換えを反映しています。分岐や抽選などで合計が確定しないマップは、出現回数の集計に含めません。能力値は基礎値で、マップ固有の補正は反映していません。</p><a href={`${DATA_SOURCE_URLS.levelRawBase}/${map.levelId}.json`} target="_blank" rel="noopener noreferrer">元のマップJSONを開く</a></details>
-  </>
-}
-
-const TILE_LABELS = { ground: '地上', high: '高台', blocked: '配置不可', start: '出現口', end: '防衛地点', hole: '穴', special: '特殊マス' }
-type TileKind = keyof typeof TILE_LABELS
-function tileKind(tile: MapTile | undefined): TileKind {
-  if (!tile) return 'blocked'
-  if (['tile_start', 'tile_flystart', 'tile_ftstart', 'tile_mpprts_enemy_born'].includes(tile.tileKey)) return 'start'
-  if (['tile_end', 'tile_end_cooperate'].includes(tile.tileKey)) return 'end'
-  if (tile.tileKey === 'tile_hole') return 'hole'
-  if (tile.tileKey === 'tile_forbidden') return 'blocked'
-  if (!['tile_road', 'tile_floor', 'tile_wall'].includes(tile.tileKey)) return 'special'
-  if (tile.buildableType === 'NONE') return 'blocked'
-  return tile.heightType === 'HIGHLAND' ? 'high' : 'ground'
-}
-
-function MapBoard({ detail, name }: { detail: MapDetail; name: string }) {
-  const blockedPatternId = useId()
-  if (!detail.grid.length || !detail.grid[0]?.length) return <p className="map-empty">マス配置のデータがありません</p>
-  const rows = detail.grid.length
-  const columns = detail.grid[0].length
-  const entrances = getMapEntrances(detail)
-  const entranceLegend = entrances.length > 4 ? `A–${entrances[entrances.length - 1].label}` : entrances.map((entrance) => entrance.label).join('・')
-  const entranceByTile = new Map(entrances.map((entrance) => [`${rows - 1 - entrance.row}-${entrance.col}`, entrance]))
-  const kinds = new Set(detail.grid.flat().map((index) => tileKind(detail.tiles[index])))
-  return <figure className="map-board-figure">
-    <svg className="map-board" viewBox={`0 0 ${columns * 32} ${rows * 32}`} role="img" aria-label={`${name}のマップ配置、${rows}行${columns}列`}>
-      <desc>{entrances.map((entrance) => `出現口${entrance.label}：上から${rows - entrance.row}行、左から${entrance.col + 1}列`).join('。')}</desc>
-      <defs>
-        <pattern id={blockedPatternId} className="map-tile-blocked map-blocked-pattern" width="6.4" height="6.4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <rect width="6.4" height="6.4" />
-          <path d="M3.2 0V6.4" strokeWidth="0.65" />
-        </pattern>
-      </defs>
-      {detail.grid.flatMap((row, y) => row.map((index, x) => {
-        const kind = tileKind(detail.tiles[index])
-        const entrance = entranceByTile.get(`${y}-${x}`)
-        const label = entrance?.label ?? (kind === 'start' ? 'IN' : kind === 'end' ? 'BASE' : kind === 'hole' ? '穴' : kind === 'special' ? '◇' : '')
-        return <g key={`${y}-${x}`} className={`map-tile map-tile-${kind}${entrance ? ' map-tile-entrance' : ''}`}>
-          {entrance && <title>{`出現口${entrance.label}（上から${y + 1}行、左から${x + 1}列）`}</title>}
-          <rect x={x * 32 + 1} y={y * 32 + 1} width="30" height="30" style={kind === 'blocked' ? { fill: `url(#${blockedPatternId})` } : undefined} />
-          {entrance && kind !== 'start' && <circle className="map-entrance-marker" cx={x * 32 + 16} cy={y * 32 + 16} r="11" />}
-          {label && <text x={x * 32 + 16} y={y * 32 + 17} textAnchor="middle" dominantBaseline="middle">{label}</text>}
-        </g>
-      }))}
-    </svg>
-    <figcaption className="map-board-legend">{(Object.keys(TILE_LABELS) as TileKind[]).filter((kind) => kinds.has(kind) || kind === 'start' && entrances.length > 0).map((kind) => <span key={kind}><i className={`map-tile-${kind}`} aria-hidden="true" />{TILE_LABELS[kind]}{kind === 'start' && entrances.length > 0 ? `（${entranceLegend}）` : ''}</span>)}</figcaption>
-  </figure>
 }

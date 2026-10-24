@@ -1,4 +1,4 @@
-import { APP_NAV_ITEMS } from '../lib/navigation'
+import { APP_NAV_ITEMS, SKILL_LEARNING_ITEMS } from '../lib/navigation'
 import './HomePage.css'
 
 const HOME_PANELS = [
@@ -24,7 +24,7 @@ const HOME_PANELS = [
   {
     id: 'skill-learning',
     title: 'スキル学習',
-    links: APP_NAV_ITEMS.filter((item) => item.id === 'skill-kmeans'),
+    links: SKILL_LEARNING_ITEMS,
   },
   {
     id: 'code-analysis',

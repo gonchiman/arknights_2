@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { APP_NAV_ITEMS, DAMAGE_VERIFICATION_ITEM, GOLDENGLOW_ANALYSIS_ITEMS, SURTR_ANALYSIS_ITEMS, SURTR_HOME_ITEMS, SURTR_HOME_LINK } from '../src/lib/navigation.ts'
+import { APP_NAV_ITEMS, DAMAGE_VERIFICATION_ITEM, GOLDENGLOW_ANALYSIS_ITEMS, SKILL_LEARNING_ITEMS, SURTR_ANALYSIS_ITEMS, SURTR_HOME_ITEMS, SURTR_HOME_LINK } from '../src/lib/navigation.ts'
 import {
   createDamageCalculatorThreeHash,
   createOperatorDetailHash,
@@ -60,6 +60,8 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['skill-structure', 'skill-structure'],
       ['skill-json', 'skill-json'],
       ['skill-kmeans', 'skill-kmeans'],
+      ['skill-hdbscan', 'skill-hdbscan'],
+      ['skill-hierarchical', 'skill-hierarchical'],
       ['code-analysis', 'code-analysis'],
       ['damage', 'damage'],
       ['damage-two', 'damage-two'],
@@ -72,6 +74,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['enemy-regression', 'enemy-regression'],
       ['enemy-map-coverage', 'enemy-map-coverage'],
       ['main-enemy-trends', 'main-enemy-trends'],
+      ['roguelike', 'roguelike'],
       ['maps', 'maps'],
       ['goldenglow-home', 'goldenglow-home'],
       ['surtr-home', 'surtr-home'],
@@ -99,6 +102,36 @@ test('K-means 学習ラボは専用ページとしてスキル分析から開く
   assert.deepEqual(parseHashRoute('#/skill-classification'), { view: 'skill-classification' })
   for (const suffix of ['/', '/extra', '?k=3', '-extra']) {
     assert.deepEqual(parseHashRoute(`#/analysis/skills/kmeans${suffix}`), { view: 'operators' })
+  }
+})
+
+test('階層クラスタリングはK-meansと共通のスキル学習導線から独立したページを開く', () => {
+  const hierarchy = APP_NAV_ITEMS.find((item) => item.id === 'skill-hierarchical')
+  assert.deepEqual(hierarchy, {
+    id: 'skill-hierarchical', href: '#/analysis/skills/hierarchical', label: '階層クラスタリング 学習ラボ',
+    description: '', section: 'analysis',
+  })
+  assert.deepEqual(SKILL_LEARNING_ITEMS.map(({ id, href }) => [id, parseHashRoute(href).view]), [
+    ['skill-kmeans', 'skill-kmeans'],
+    ['skill-hdbscan', 'skill-hdbscan'],
+    ['skill-hierarchical', 'skill-hierarchical'],
+  ])
+  assert.equal(SKILL_LEARNING_ITEMS[2], hierarchy)
+  for (const suffix of ['/', '/extra', '?k=3', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/analysis/skills/hierarchical${suffix}`), { view: 'operators' })
+  }
+})
+
+test('HDBSCAN 学習ラボはK-meansと独立したページとして開く', () => {
+  assert.deepEqual(parseHashRoute('#/analysis/skills/hdbscan'), { view: 'skill-hdbscan' })
+  const index = APP_NAV_ITEMS.findIndex(item => item.id === 'skill-kmeans')
+  assert.deepEqual(APP_NAV_ITEMS[index + 1], {
+    id: 'skill-hdbscan', href: '#/analysis/skills/hdbscan', label: 'HDBSCAN 学習ラボ',
+    description: '', section: 'analysis',
+  })
+  assert.deepEqual(parseHashRoute('#/analysis/skills/kmeans'), { view: 'skill-kmeans' })
+  for (const suffix of ['/', '/extra', '?min=10', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/analysis/skills/hdbscan${suffix}`), { view: 'operators' })
   }
 })
 
@@ -631,6 +664,14 @@ test('マップデータベースは敵のページと同じカテゴリから�
 
 test('全スキル一覧ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/skills'), { view: 'skills' })
+})
+
+test('統合戦略ページを独立したURLとナビゲーションで開く', () => {
+  assert.deepEqual(parseHashRoute('#/roguelike'), { view: 'roguelike' })
+  assert.deepEqual(APP_NAV_ITEMS.find((item) => item.id === 'roguelike'), {
+    id: 'roguelike', href: '#/roguelike', label: '統合戦略', description: '', section: 'analysis',
+  })
+  assert.deepEqual(parseHashRoute('#/roguelike/extra'), { view: 'operators' })
 })
 
 test('スキル効果解析ページは全スキル一覧とは独立したhashで開く', () => {
