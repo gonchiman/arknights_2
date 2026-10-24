@@ -1,4 +1,5 @@
 import type { SkillClusteringFeatures, SkillClusteringSparseVector } from './skillClusteringData.ts'
+import { calculateSkillClusteringSilhouette } from './skillClusteringSilhouette.ts'
 
 export type HierarchicalLinkage = 'average' | 'complete'
 
@@ -198,30 +199,8 @@ export function evaluateSkillHierarchyCut(tree: SkillHierarchyTree, threshold: n
   const groupNodeIds = cutSkillHierarchy(tree, threshold)
   const assignments = Array<number>(tree.documentCount).fill(-1)
   groupNodeIds.forEach((id, group) => tree.nodes[id].documentIndices.forEach((index) => { assignments[index] = group }))
-  const n = tree.documentIndices.length
-  const groupCount = groupNodeIds.length
-  const partition: SkillHierarchyPartition = { threshold, groupNodeIds, assignments, silhouette: null }
-  if (groupCount < 2 || groupCount >= n) return partition
-  const counts = groupNodeIds.map((id) => tree.nodes[id].count)
   const groups = tree.documentIndices.map((index) => assignments[index])
-  const sums = new Float64Array(groupCount)
-  let total = 0
-  for (let row = 0; row < n; row += 1) {
-    const own = groups[row]
-    // The standard silhouette of a singleton is zero, not one.
-    if (counts[own] === 1) continue
-    sums.fill(0)
-    for (let other = 0; other < n; other += 1) sums[groups[other]] += tree.distances[row * n + other]
-    const within = sums[own] / (counts[own] - 1)
-    let nearest = Infinity
-    for (let group = 0; group < groupCount; group += 1) {
-      if (group !== own) nearest = Math.min(nearest, sums[group] / counts[group])
-    }
-    const scale = Math.max(within, nearest)
-    if (scale > 0) total += (nearest - within) / scale
-  }
-  partition.silhouette = total / n
-  return partition
+  return { threshold, groupNodeIds, assignments, silhouette: calculateSkillClusteringSilhouette(tree.distances, groups) }
 }
 
 function cosineDistance(left: SkillClusteringSparseVector, right: SkillClusteringSparseVector, leftNorm: number, rightNorm: number): number {

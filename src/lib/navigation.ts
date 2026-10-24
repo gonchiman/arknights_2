@@ -197,7 +197,7 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     id: 'skill-kmeans',
     href: '#/analysis/skills/kmeans',
     label: 'K-means 学習ラボ',
-    description: 'スキル説明文の学習・グループ比較',
+    description: '',
     section: 'analysis',
   },
   {
