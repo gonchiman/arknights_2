@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'rea
 import type { SkillRecord } from '../types/skill'
 import { buildSkillKMeansCorpus, type SkillKMeansConfig, type SkillKMeansDocument, type SkillKMeansResult } from '../lib/skillKMeans'
 import { EMPTY_SKILL_KMEANS_RUN, SkillKMeansRunner } from '../lib/skillKMeansRunner'
-import { EMPTY_SKILL_DIRECTORY_FILTERS, type SkillDirectoryFilters } from '../lib/skillDirectory'
+import { EMPTY_SKILL_DIRECTORY_FILTERS, type SkillDirectoryFilters, type SkillDirectorySort } from '../lib/skillDirectory'
 import { AnalysisTabs, AnalysisTabPanel } from './AnalysisTabs'
 import type { OpenOperatorDetail } from './OperatorDetailLink'
 import { SkillKMeansGroupTable } from './SkillKMeansGroupTable'
@@ -24,6 +24,7 @@ export function SkillKMeansPage({ rows, loading, onOpenOperatorDetail }: Props) 
   const [selectedId, setSelectedId] = useState('')
   const [groupPage, setGroupPage] = useState(0)
   const [memberFilters, setMemberFilters] = useState<SkillDirectoryFilters>({ ...EMPTY_SKILL_DIRECTORY_FILTERS })
+  const [memberSort, setMemberSort] = useState<SkillDirectorySort>({ key: 'operator', direction: 'asc' })
   const [submission, setSubmission] = useState<Submission | null>(null)
   const [run, setRun] = useState(EMPTY_SKILL_KMEANS_RUN)
   const [searchBusy, setSearchBusy] = useState(false)
@@ -145,7 +146,7 @@ export function SkillKMeansPage({ rows, loading, onOpenOperatorDetail }: Props) 
               </section>
               {selectedGroup >= 0 && <SkillKMeansGroupTable key={`${run.requestId}:${selectedGroup}`} group={selectedGroup}
                 documents={members.map(({ doc }) => doc)} recordMap={recordMap} terms={result.representativeTerms[selectedGroup]}
-                filters={memberFilters} onFiltersChange={setMemberFilters} onOpenOperatorDetail={onOpenOperatorDetail} />}
+                filters={memberFilters} onFiltersChange={setMemberFilters} sort={memberSort} onSortChange={setMemberSort} onOpenOperatorDetail={onOpenOperatorDetail} />}
             </div>
             <div className="skill-kmeans-navigation">
               <button type="button" className="button secondary" onClick={() => focusTab('search')}>Kを選び直す</button>

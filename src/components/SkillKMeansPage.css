@@ -46,10 +46,19 @@
 .skill-kmeans-member-filters label { gap: 4px; }
 .skill-kmeans-member-filters input, .skill-kmeans-member-filters select { min-height: 34px; padding: 5px 8px; }
 .skill-kmeans-member-scroll { min-width: 0; overflow-x: auto; }
-.skill-kmeans-page .skill-kmeans-member-table th:first-child { width: 38%; }
-.skill-kmeans-page .skill-kmeans-table.skill-kmeans-member-table th { padding: 6px 8px; }
+.skill-kmeans-page .skill-kmeans-member-table { min-width: 480px; }
+.skill-kmeans-member-operator-col { width: 29%; }
+.skill-kmeans-member-rarity-col { width: 56px; }
+.skill-kmeans-member-profession-col { width: 64px; }
+.skill-kmeans-member-number-col { width: 72px; }
+.skill-kmeans-page .skill-kmeans-table.skill-kmeans-member-table th { padding: 0; }
 .skill-kmeans-page .skill-kmeans-table.skill-kmeans-member-table td { padding: 0; text-align: left; }
-.skill-kmeans-page .skill-kmeans-table.skill-kmeans-member-table .skill-kmeans-member-number { width: 56px; padding: 6px 8px; text-align: center; white-space: nowrap; }
+.skill-kmeans-page .skill-kmeans-table.skill-kmeans-member-table td.skill-kmeans-member-number,
+.skill-kmeans-page .skill-kmeans-table.skill-kmeans-member-table td.skill-kmeans-member-attribute { padding: 6px 8px; text-align: center; white-space: nowrap; }
+.skill-kmeans-member-table .skill-sort-button { min-height: 34px; padding: 6px 8px; gap: 4px; font-weight: 500; }
+.skill-kmeans-member-table th:nth-child(4) .skill-sort-button { white-space: nowrap; }
+.skill-kmeans-member-table .skill-sort-button:hover { background: var(--surface-hover); }
+.skill-kmeans-member-table .skill-sort-indicator { font-size: 10px; color: var(--text-soft); }
 .skill-kmeans-page .skill-kmeans-table.skill-kmeans-member-table td.skill-kmeans-member-empty { padding: 24px 8px; text-align: center; color: var(--text-soft); }
 .skill-kmeans-skill-link, .skill-kmeans-member-table td > a { display: flex; align-items: center; width: 100%; min-height: 34px; padding: 6px 8px; }
 .skill-kmeans-skill-link { background: none; border: 0; color: var(--link); text-align: left; text-decoration: underline; font: inherit; cursor: pointer; }
@@ -111,5 +120,6 @@
   .skill-kmeans-page input, .skill-kmeans-page select { min-height: 44px; font-size: 16px; }
   .skill-kmeans-page .button, .skill-kmeans-groups button, .skill-kmeans-page summary { min-height: 44px; }
   .skill-kmeans-skill-link, .skill-kmeans-member-table td > a { min-height: 44px; }
+  .skill-kmeans-member-table .skill-sort-button { min-height: 44px; }
   .skill-kmeans-member-heading .filter-reset-button { min-height: 44px; }
 }

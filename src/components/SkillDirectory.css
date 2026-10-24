@@ -122,33 +122,6 @@
 
 .skill-directory-detail-button:hover { color: var(--accent); }
 
-.skill-sort-button {
-  width: 100%;
-  min-height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  padding: 8px 10px;
-  font: inherit;
-  font-weight: 700;
-  text-align: left;
-  cursor: pointer;
-}
-
-.skill-sort-button:hover {
-  background: #ededed;
-  color: var(--text);
-}
-
-.skill-sort-indicator {
-  color: #777;
-  font-size: 8px;
-}
-
 .skill-directory-operator,
 .skill-directory-skill-name {
   display: block;
@@ -207,8 +180,7 @@
 
 @media (pointer: coarse) {
   .skill-directory-filter-grid input,
-  .skill-directory-filter-grid select,
-  .skill-sort-button {
+  .skill-directory-filter-grid select {
     min-height: 44px;
   }
 }
