@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 
-let server, GroupTable, EffectModal, DocumentSource, classifySkill
+let server, GroupTable, EffectModal, DocumentSource, classifySkill, emptyFilters
 before(async () => {
   server = await createServer({ configFile: false, plugins: [react()],
     cacheDir: 'node_modules/.vite/skill-kmeans-group-table-test',
@@ -15,10 +15,12 @@ before(async () => {
   ;({ SkillClusteringSource: DocumentSource } = await server.ssrLoadModule('/src/components/SkillClusteringSource.tsx'))
   ;({ SkillEffectModal: EffectModal } = await server.ssrLoadModule('/src/components/SkillEffectModal.tsx'))
   ;({ classifySkill } = await server.ssrLoadModule('/src/lib/classifier.ts'))
+  ;({ EMPTY_SKILL_DIRECTORY_FILTERS: emptyFilters } = await server.ssrLoadModule('/src/lib/skillDirectory.ts'))
 })
 after(async () => { await server?.close() })
 
 const render = (Component, props) => renderToStaticMarkup(createElement(Component, {
+  ...(Component === GroupTable ? { filters: { ...emptyFilters }, onFiltersChange: () => {} } : {}),
   onOpenOperatorDetail: () => {}, ...props,
 }))
 const text = markup => markup.replace(/<[^>]*>/g, '')
@@ -70,6 +72,56 @@ test('13件のグループは最初の12件だけを一覧に表示する', () =
   assert.ok(rows[11].includes('S12 · 技_member12'))
   assert.ok(rows.every(row => !row.includes('技_member13')))
   assert.match(markup, /aria-label="次のスキル一覧"/)
+})
+
+test('同じ統合説明文の掲載先も元スキルごとの職業・レアリティ・原文でAND絞り込みする', () => {
+  const representative = { ...skill('representative', 'アーミヤ', 1, '代表スキルの原文'), profession: 'CASTER', professionLabel: '術師', rarity: 5 }
+  const target = { ...skill('target', 'クルース', 2, '配置後にシールドを獲得'), rarity: 6 }
+  const wrongRarity = skill('wrong-rarity', 'ジェシカ', 1, '配置後にシールドを獲得')
+  const wrongProfession = { ...skill('wrong-profession', 'シャイニング', 1, '配置後にシールドを獲得'), profession: 'MEDIC', professionLabel: '医療', rarity: 6 }
+  const wrongText = { ...skill('wrong-text', 'エクシア', 3, '通常攻撃が連続攻撃になる'), rarity: 6 }
+  const records = [representative, target, wrongRarity, wrongProfession, wrongText]
+  const markup = render(GroupTable, { group: 4, terms: [], recordMap: recordMap(records),
+    documents: [document('shared', records, '代表スキルの原文')],
+    filters: { ...emptyFilters, query: 'シールド', profession: 'SNIPER', rarity: 6 } })
+  assert.deepEqual(tableRows(markup), ['クルースS2 · 技_target'])
+  assert.match(markup, /<h3\b[^>]*>G5 · 1 \/ 5スキル<\/h3>/)
+})
+
+test('文字検索は名前・スキル名・原文の表記を既存一覧と同じように正規化する', () => {
+  const target = { ...skill('chimera', 'アーミヤ', 3, 'HP+100%'), skillName: 'キメラ' }
+  const other = skill('other', 'クルース', 1, '通常攻撃が連続攻撃になる')
+  const records = [target, other]
+  for (const query of [' アーミヤ ', 'ｷﾒﾗ', ' ｈｐ＋１００％ ']) {
+    const markup = render(GroupTable, { group: 0, terms: [], recordMap: recordMap(records),
+      documents: [document('shared', records)], filters: { ...emptyFilters, query } })
+    assert.deepEqual(tableRows(markup), ['アーミヤS3 · キメラ'], `検索語: ${query}`)
+  }
+})
+
+test('絞り込み後のスキルを名前順で12件ずつページングし、件数は絞り込み前後を区別する', () => {
+  const excluded = Array.from({ length: 13 }, (_, index) => ({
+    ...skill(`excluded${index + 1}`, 'アーミヤ', index + 1), profession: 'CASTER', professionLabel: '術師',
+  }))
+  const matched = Array.from({ length: 13 }, (_, index) => skill(`matched${index + 1}`, 'クルース', index + 1))
+  const records = [...matched, ...excluded].reverse()
+  const markup = render(GroupTable, { group: 2, terms: [], recordMap: recordMap(records),
+    documents: [document('shared', records)], filters: { ...emptyFilters, profession: 'SNIPER' } })
+  assert.deepEqual(tableRows(markup), matched.slice(0, 12).map(row => `${row.operatorName}S${row.skillIndex} · ${row.skillName}`))
+  assert.match(markup, /<h3\b[^>]*>G3 · 13 \/ 26スキル<\/h3>/)
+  assert.match(markup, /1〜12 \/ 13スキル/)
+  assert.match(markup, /aria-label="次のスキル一覧"/)
+})
+
+test('グループにない職業も選択を維持し、該当0件を表内に表示する', () => {
+  const member = skill('member', 'クルース', 1)
+  const outside = { ...skill('outside', 'シャイニング', 1), profession: 'MEDIC', professionLabel: '医療', rarity: 6 }
+  const markup = render(GroupTable, { group: 1, terms: [], recordMap: recordMap([member, outside]),
+    documents: [document('current-group', [member])], filters: { ...emptyFilters, profession: 'MEDIC' } })
+  assert.deepEqual(tableRows(markup), ['該当するスキルなし'])
+  assert.match(markup, /<h3\b[^>]*>G2 · 0 \/ 1スキル<\/h3>/)
+  assert.match(markup, /<option\b(?=[^>]*value="MEDIC")(?=[^>]*selected="")[^>]*>医療<\/option>/)
+  assert.doesNotMatch(markup, /aria-label="次のスキル一覧"|<dialog\b/)
 })
 
 test('既存モーダルの原文のみ表示で元スキルの最高レベルの数値と原文を表示する', () => {
