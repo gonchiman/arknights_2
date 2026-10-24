@@ -4,7 +4,7 @@ import { buildSkillKMeansCorpus, type SkillKMeansConfig, type SkillKMeansDocumen
 import { EMPTY_SKILL_KMEANS_RUN, SkillKMeansRunner } from '../lib/skillKMeansRunner'
 import { AnalysisTabs, AnalysisTabPanel } from './AnalysisTabs'
 import type { OpenOperatorDetail } from './OperatorDetailLink'
-import { SkillClusteringSource, SkillClusteringTerms } from './SkillClusteringSource'
+import { SkillKMeansGroupTable } from './SkillKMeansGroupTable'
 import { SkillKMeansLearningChart } from './SkillKMeansLearningChart'
 import { SkillKMeansSearchPanel } from './SkillKMeansSearchPanel'
 import './DamageCalculator.css'
@@ -15,7 +15,6 @@ const TABS = [['search', 'K探索'], ['learning', '学習'], ['groups', 'グル�
 type Tab = typeof TABS[number][0]
 const GROUP_PAGE_SIZE = 8
 interface Submission { documents: SkillKMeansDocument[]; config: SkillKMeansConfig; sourceRows: readonly SkillRecord[] }
-const documentLabel = (doc: SkillKMeansDocument) => `${doc.operatorName} S${doc.skillIndex} · ${doc.skillName}`
 const configLabel = (config: SkillKMeansConfig) => `K=${config.k} · seed=${config.seed} · 反復上限 ${config.maxIterations}`
 
 export function SkillKMeansPage({ rows, loading, onOpenOperatorDetail }: Props) {
@@ -126,13 +125,13 @@ export function SkillKMeansPage({ rows, loading, onOpenOperatorDetail }: Props) 
         <div className="analysis-panel-body">
           {!complete ? <EmptyGroups status={runStatus} hasRun={current} onNavigate={() => focusTab(current ? 'learning' : 'search')} /> : <>
             <div className="skill-kmeans-result-state">{configLabel(result.config)}</div>
-            <div className="skill-kmeans-result-content">
+            <div className="skill-kmeans-result-content skill-kmeans-group-table-layout">
               <section className="skill-kmeans-section"><h3>{groups.length}グループ</h3>
-                <div className="skill-kmeans-groups" aria-label="確認するグループ">
+                <div className="skill-kmeans-groups skill-kmeans-document-groups" aria-label="確認するグループ">
                   {groups.slice(activeGroupPage * GROUP_PAGE_SIZE, (activeGroupPage + 1) * GROUP_PAGE_SIZE).map(({ count, group }) => {
                     return <button type="button" key={group} aria-pressed={selectedGroup === group}
-                      aria-label={`G${group + 1}、${count}件を確認`} onClick={() => chooseGroup(group)}>
-                      <span>G{group + 1}</span><span className="skill-kmeans-track"><i style={{ width: `${usableCount ? count / usableCount * 100 : 0}%` }} /></span><span>{count}件</span>
+                      aria-label={`G${group + 1}、${count}説明文を確認`} onClick={() => chooseGroup(group)}>
+                      <span>G{group + 1}</span><span className="skill-kmeans-track"><i style={{ width: `${usableCount ? count / usableCount * 100 : 0}%` }} /></span><span>{count}説明文</span>
                     </button>
                   })}
                 </div>
@@ -142,11 +141,8 @@ export function SkillKMeansPage({ rows, loading, onOpenOperatorDetail }: Props) 
                   <button type="button" className="button secondary" aria-label="次のグループ一覧" disabled={activeGroupPage + 1 === groupPages} onClick={() => changeGroupPage(activeGroupPage + 1)}>次へ</button>
                 </div>}
               </section>
-              {selectedGroup >= 0 && <section className="skill-kmeans-inspect"><h3>G{selectedGroup + 1} · {members.length}件</h3><div className="skill-kmeans-inspect-body">
-                <dl className="skill-kmeans-term-field"><dt>代表語</dt><dd><SkillClusteringTerms terms={result.representativeTerms[selectedGroup]} /></dd></dl>
-                <label><span>スキル</span><select aria-label="グループ内のスキル" value={documents[selectedIndex]?.id ?? ''} onChange={event => setSelectedId(event.target.value)}>{members.map(({ doc }) => <option key={doc.id} value={doc.id}>{documentLabel(doc)}</option>)}</select></label>
-                <SkillClusteringSource key={documents[selectedIndex].id} document={documents[selectedIndex]} recordMap={recordMap} onOpenOperatorDetail={onOpenOperatorDetail} defaultOpen />
-              </div></section>}
+              {selectedGroup >= 0 && <SkillKMeansGroupTable key={`${run.requestId}:${selectedGroup}`} group={selectedGroup}
+                documents={members.map(({ doc }) => doc)} recordMap={recordMap} terms={result.representativeTerms[selectedGroup]} onOpenOperatorDetail={onOpenOperatorDetail} />}
             </div>
             <div className="skill-kmeans-navigation">
               <button type="button" className="button secondary" onClick={() => focusTab('search')}>Kを選び直す</button>
