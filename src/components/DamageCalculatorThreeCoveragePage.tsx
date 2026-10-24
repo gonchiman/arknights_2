@@ -17,6 +17,7 @@ import { PROFESSION_ORDER } from '../lib/operatorFilters'
 import { lockPageScroll } from '../lib/pageScrollLock'
 import { createDamageCalculatorThreeHash } from '../lib/routes'
 import type { SkillRecord } from '../types/skill'
+import { DamageCalculatorThreeCoverageSummary } from './DamageCalculatorThreeCoverageSummary'
 import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
 import './SkillDirectory.css'
 import './SkillCoarseClassificationPage.css'
@@ -96,6 +97,7 @@ export function DamageCalculatorThreeCoveragePage({ rows, loading, onOpenOperato
             </label>
           </div>
         </div>
+        {!loading && <DamageCalculatorThreeCoverageSummary rows={visibleRows} />}
         <div className="result-meta damage-three-coverage-meta" role="status" aria-live="polite">
           <span>{loading ? '読み込み中…' : `${visibleRows.length} / ${coverage.length} スキル表示`}</span>
           {!loading && <span>{counts.join('・')}</span>}

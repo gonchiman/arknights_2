@@ -2,6 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { buildDamageCalculatorThreeCoverage, COVERAGE_SECTION_STATUS_LABELS, COVERAGE_STATUS_LABELS } from '../src/lib/damageCalculatorThreeCoverage.ts'
+import { DEFAULT_DAMAGE_THREE_COVERAGE_FILTERS, filterDamageCalculatorThreeCoverage } from '../src/lib/damageCalculatorThreeCoverageFilters.ts'
+import { COVERAGE_SUMMARY_CATEGORIES, summarizeDamageCalculatorThreeCoverage } from '../src/lib/damageCalculatorThreeCoverageSummary.ts'
 import { buildDamageCalculatorThreeOutput, getDamageCalculatorThreeStructures } from '../src/lib/damageCalculatorThree.ts'
 import { getGuardPassiveCalculationConstraints } from '../src/lib/guardCombatPassives.ts'
 import { classifySkill } from '../src/lib/classifier.ts'
@@ -31,6 +33,62 @@ function record(id: string, index: number): SkillRecord {
 const catalog = data.guards.flatMap(operator => operator.skills.map(skill => record(operator.id, skill.skillIndex)))
 const coverage = buildDamageCalculatorThreeCoverage(catalog)
 const covered = (id: string, index: number) => coverage.find(row => row.skill.operatorId === id && row.skill.skillIndex === index)!
+
+test('区分別集計は90スキルを共通母数とし、対象外も独立した状態で数える', () => {
+  const summary = summarizeDamageCalculatorThreeCoverage(coverage)
+  assert.equal(summary.count, 90)
+  assert.deepEqual(summary.sections.map(section => [section.key, section.label]),
+    [['overall', '総合'], ['skill', 'スキル'], ['talent', '素質'], ['trait', '特性']])
+  assert.deepEqual(COVERAGE_SUMMARY_CATEGORIES.map(category => [category.status, category.label]), [
+    ['SUPPORTED', '対応'], ['CONDITIONAL', '条件付き'], ['PENDING', '保留'], ['UNSUPPORTED', '未対応'], ['NOT_APPLICABLE', '対象外'],
+  ])
+  assert.deepEqual(summary.sections.map(section => section.buckets.map(bucket => bucket.count)),
+    [[74, 7, 9, 0, 0], [80, 4, 6, 0, 0], [76, 6, 5, 0, 3], [51, 0, 1, 0, 38]])
+  for (const section of summary.sections) {
+    assert.equal(section.buckets.reduce((sum, bucket) => sum + bucket.count, 0), 90)
+    assert.deepEqual(section.buckets.map(({ status, label }) => ({ status, label })), COVERAGE_SUMMARY_CATEGORIES)
+    for (const bucket of section.buckets) assert.equal(bucket.proportion, bucket.count / 90)
+  }
+})
+
+test('総合状況で絞り込んだ後も各区分を独立して集計し、名前とスキル番号の絞り込みにも追従する', () => {
+  const pending = filterDamageCalculatorThreeCoverage(coverage, { ...DEFAULT_DAMAGE_THREE_COVERAGE_FILTERS, status: 'PENDING' })
+  const summary = summarizeDamageCalculatorThreeCoverage(pending)
+  assert.equal(summary.count, 9)
+  assert.deepEqual(summary.sections.map(section => section.buckets.map(bucket => bucket.count)),
+    [[0, 0, 9, 0, 0], [3, 0, 6, 0, 0], [4, 0, 5, 0, 0], [5, 0, 1, 0, 3]])
+  for (const section of summary.sections)
+    for (const bucket of section.buckets) assert.equal(bucket.proportion, bucket.count / 9)
+
+  const bellone = summarizeDamageCalculatorThreeCoverage(filterDamageCalculatorThreeCoverage(coverage,
+    { ...DEFAULT_DAMAGE_THREE_COVERAGE_FILTERS, query: 'ベッローネ S2', status: 'CONDITIONAL' }))
+  assert.equal(bellone.count, 1)
+  assert.deepEqual(bellone.sections.map(section => section.buckets.find(bucket => bucket.count === 1)!.status),
+    ['CONDITIONAL', 'SUPPORTED', 'CONDITIONAL', 'NOT_APPLICABLE'])
+})
+
+test('0件でも全区分・全状態を残し、割合を有限の0にする', () => {
+  const summary = summarizeDamageCalculatorThreeCoverage([])
+  assert.equal(summary.count, 0)
+  assert.equal(summary.sections.length, 4)
+  for (const section of summary.sections) {
+    assert.equal(section.buckets.length, 5)
+    assert.ok(section.buckets.every(bucket => bucket.count === 0 && bucket.proportion === 0))
+  }
+})
+
+test('集計は未対応を含む渡された行を数え、入力や既存の状態を変更しない', () => {
+  const known = covered('char_017_huang', 2)
+  const unknown = buildDamageCalculatorThreeCoverage([{ ...known.skill, operatorId: 'unregistered' }])[0]
+  const input = Object.freeze([known, unknown, known].map(row => Object.freeze({ ...row, sections: Object.freeze({ ...row.sections }) })))
+  const original = structuredClone(input)
+  const summary = summarizeDamageCalculatorThreeCoverage(input)
+  assert.equal(summary.count, 3)
+  assert.deepEqual(summary.sections.map(section => section.buckets.map(bucket => bucket.count)),
+    [[2, 0, 0, 1, 0], [2, 0, 0, 1, 0], [0, 0, 0, 1, 2], [2, 0, 0, 1, 0]])
+  assert.deepEqual(input, original)
+})
+
 function calculate(skill: SkillRecord, guard: GuardConditions = {}) {
   return buildDamageCalculatorThreeOutput({ operator: skill, skill, phaseIndex: 2, operatorLevel: 90,
     trust: 100, skillLevelIndex: 9, conditions: { guard } })

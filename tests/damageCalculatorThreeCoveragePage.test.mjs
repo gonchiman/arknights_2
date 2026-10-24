@@ -6,13 +6,15 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 
-let server, Page, Dialog, buildCoverage, filterCoverage, defaults, empty, records
+let server, Page, Dialog, Summary, buildCoverage, filterCoverage, defaults, empty, records
 before(async () => {
   server = await createServer({ configFile: false, plugins: [react()], logLevel: 'error',
     cacheDir: 'node_modules/.vite/dc3-coverage-pages-test', resolve: { preserveSymlinks: true },
     server: { middlewareMode: true, watch: null, preTransformRequests: false, hmr: false }, appType: 'custom' })
   ;({ DamageCalculatorThreeCoveragePage: Page, DamageCalculatorThreeCoverageDialog: Dialog } =
     await server.ssrLoadModule('/src/components/DamageCalculatorThreeCoveragePage.tsx'))
+  ;({ DamageCalculatorThreeCoverageSummary: Summary } =
+    await server.ssrLoadModule('/src/components/DamageCalculatorThreeCoverageSummary.tsx'))
   ;({ buildDamageCalculatorThreeCoverage: buildCoverage } = await server.ssrLoadModule('/src/lib/damageCalculatorThreeCoverage.ts'))
   ;({ filterDamageCalculatorThreeCoverage: filterCoverage, DEFAULT_DAMAGE_THREE_COVERAGE_FILTERS: defaults,
     EMPTY_DAMAGE_THREE_COVERAGE_FILTERS: empty } = await server.ssrLoadModule('/src/lib/damageCalculatorThreeCoverageFilters.ts'))
@@ -38,6 +40,36 @@ const table = markup => [...markup.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)]
   .map(row => [...row[1].matchAll(/<(?:td|th)\b[^>]*>([\s\S]*?)<\/(?:td|th)>/g)].map(cell => text(cell[1])))
 const namedTable = (markup, className) => table(markup.match(
   new RegExp(`<table[^>]*class="[^"]*\\b${className}\\b[^"]*"[^>]*>([\\s\\S]*?)</table>`))?.[1] ?? '')
+const summaryRows = markup => [...markup.matchAll(/data-coverage-section="([^"]+)"([\s\S]*?)(?=data-coverage-section=|<\/section>)/g)]
+const summaryStatuses = ['SUPPORTED', 'CONDITIONAL', 'PENDING', 'UNSUPPORTED', 'NOT_APPLICABLE']
+const summaryLabels = ['対応', '条件付き', '保留', '未対応', '対象外']
+
+function assertSummary(markup, total, expectedCounts) {
+  const rows = summaryRows(markup)
+  assert.deepEqual(rows.map(row => row[1]), ['overall', 'skill', 'talent', 'trait'])
+  const legend = markup.match(/<ul class="damage-three-coverage-summary-legend"[^>]*>([\s\S]*?)<\/ul>/)?.[1]
+  assert.ok(legend)
+  assert.deepEqual([...legend.matchAll(/<li>([\s\S]*?)<\/li>/g)].map(match => text(match[1])), summaryLabels)
+  rows.forEach(([, key, content], index) => {
+    const counts = expectedCounts[index]
+    const label = ['総合', 'スキル', '素質', '特性'][index]
+    const expectedDescription = `${label}：${total}スキル中、${counts.map((count, statusIndex) =>
+      `${summaryLabels[statusIndex]} ${count}件（${(count / total * 100).toFixed(1)}%）`).join('、')}`
+    assert.equal(content.match(/role="img" aria-label="([^"]+)"/)?.[1], expectedDescription, key)
+    const segments = [...content.matchAll(/class="damage-three-coverage-summary-segment" data-coverage-status="([^"]+)" style="width:([^%]+)%" title="([^"]+)"/g)]
+    assert.deepEqual(segments.map(segment => segment[1]), summaryStatuses.filter((_, i) => counts[i] > 0), key)
+    for (const [, status, width, title] of segments) {
+      const statusIndex = summaryStatuses.indexOf(status)
+      const proportion = counts[statusIndex] / total * 100
+      assert.ok(Math.abs(Number(width) - proportion) < 1e-10, `${key}/${status} width`)
+      assert.equal(title, `${summaryLabels[statusIndex]} ${counts[statusIndex]}件（${proportion.toFixed(1)}%）`)
+    }
+    const values = content.match(/<ul class="damage-three-coverage-summary-counts"[^>]*>([\s\S]*?)<\/ul>/)?.[1]
+    assert.ok(values)
+    assert.deepEqual([...values.matchAll(/<li>([\s\S]*?)<\/li>/g)].map(match => text(match[1])),
+      counts.flatMap((count, i) => count > 0 ? [`${summaryLabels[i]} ${count}件 · ${(count / total * 100).toFixed(1)}%`] : []), key)
+  })
+}
 
 test('初期範囲は星6前衛、1スキル1行の8列で区分別の状態と総合を分ける', () => {
   const extra = { ...records[0], id: 'other', operatorId: 'other', profession: 'CASTER', professionLabel: '術師', rarity: 5 }
@@ -56,6 +88,23 @@ test('初期範囲は星6前衛、1スキル1行の8列で区分別の状態と�
   assert.match(markup, /aria-label="総合の状況"/)
   assert.match(markup, /<a[^>]*href="#\/operators\/char_350_surtr"[^>]*aria-haspopup="dialog"/)
   assert.doesNotMatch(markup, /rowspan|colspan|<small|<br/)
+  assert.match(markup, /絞り込み結果の対応状況<\/h2><span>90スキル<\/span>/)
+  assertSummary(markup, 90,
+    [[74, 7, 9, 0, 0], [80, 4, 6, 0, 0], [76, 6, 5, 0, 3], [51, 0, 1, 0, 38]])
+})
+
+test('保留9スキルの横棒は総合100%でもスキル・素質・特性の異なる内訳を表示する', () => {
+  const pending = filterCoverage(buildCoverage(records), { ...defaults, status: 'PENDING' })
+  const markup = render(Summary, { rows: pending })
+  assert.match(markup, /<span>9スキル<\/span>/)
+  assertSummary(markup, 9, [[0, 0, 9, 0, 0], [3, 0, 6, 0, 0], [4, 0, 5, 0, 0], [5, 0, 1, 0, 3]])
+})
+
+test('単一スキルでは対象外を対応に含めず独立した100%の棒で表示する', () => {
+  const selected = filterCoverage(buildCoverage(records), { ...defaults, query: 'ベッローネ S2' })
+  const markup = render(Summary, { rows: selected })
+  assert.match(markup, /<span>1スキル<\/span>/)
+  assertSummary(markup, 1, [[0, 1, 0, 0, 0], [1, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 0, 0, 0, 1]])
 })
 
 test('検索は複数語・全角S番号に対応し、職業・レアリティ・状況を組み合わせられる', () => {
@@ -118,9 +167,13 @@ test('スルトS3は攻撃に使う素質と計算対象外の生存素質を別
 })
 
 test('読み込み中と結果なしを区別する', () => {
-  const pending = render(Page, { rows: [], loading: true, onOpenOperatorDetail() {} })
+  const pending = render(Page, { rows: records, loading: true, onOpenOperatorDetail() {} })
   assert.match(pending, /読み込み中…/)
   assert.doesNotMatch(pending, /条件に一致するスキルがありません/)
+  assert.doesNotMatch(pending, /class="damage-three-coverage-summary"|data-coverage-section=/)
   const emptyPage = render(Page, { rows: [], loading: false, onOpenOperatorDetail() {} })
   assert.match(emptyPage, /条件に一致するスキルがありません/)
+  assert.match(emptyPage, /<span>0スキル<\/span>/)
+  assert.match(emptyPage, /集計対象のスキルがありません/)
+  assert.doesNotMatch(emptyPage, /data-coverage-section=|class="damage-three-coverage-summary-track"|NaN|Infinity/)
 })
