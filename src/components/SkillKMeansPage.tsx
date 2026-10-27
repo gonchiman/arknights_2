@@ -145,13 +145,10 @@ function SkillKMeansScopeSession({ rows, scope, scopeLabel, scopeOptions, loadin
       <AnalysisTabs tabs={TABS} activeTab={tab} onChange={setTab} idPrefix={id} label="K-means学習の表示" />
       <AnalysisTabPanel idPrefix={id} tab="search" activeTab={tab} title="K探索">
         <section className="skill-kmeans-scopes" aria-label="学習対象の大分類">
-          <div className="skill-kmeans-scope-list-heading"><h3>大分類</h3><span>スキル数</span></div>
-          <div className="skill-kmeans-scope-body">
-            {scopeOptions}
-            <div className="skill-kmeans-scope-heading">
-              <span>{scopeLabel}</span>
-              <dl><div><dt>該当スキル</dt><dd>{rows.length.toLocaleString('ja-JP')}</dd></div><div><dt>学習説明文</dt><dd>{usableDocumentCount.toLocaleString('ja-JP')}</dd></div></dl>
-            </div>
+          {scopeOptions}
+          <div className="skill-kmeans-scope-heading">
+            <span>{scopeLabel}</span>
+            <dl><div><dt>該当スキル</dt><dd>{rows.length.toLocaleString('ja-JP')}</dd></div><div><dt>学習説明文</dt><dd>{usableDocumentCount.toLocaleString('ja-JP')}</dd></div></dl>
           </div>
         </section>
         <SkillKMeansSearchPanel documents={corpus.documents} usableDocumentCount={usableDocumentCount}
