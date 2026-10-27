@@ -74,6 +74,31 @@ function bruteSilhouette(tree: SkillHierarchyTree, threshold: number): number | 
   }, 0) / indices.length
 }
 
+/** Enumerate and score cuts independently of the production tree, matrix and cutter. */
+function bruteAutoCandidates(rows: number[][], linkage: HierarchicalLinkage) {
+  const nodes = bruteHierarchy(rows, linkage)
+  const thresholds = [...new Set(nodes.slice(rows.length).map((node) => node.distance))]
+  return thresholds.flatMap((threshold) => {
+    let groups = rows.map((_, index) => [index])
+    for (const node of nodes.slice(rows.length)) {
+      if (node.distance > threshold) continue
+      groups = groups.filter((group) => !node.members.includes(group[0]))
+      groups.push(node.members)
+    }
+    if (groups.length < 2 || groups.length >= rows.length) return []
+    const silhouette = rows.reduce((total, row, index) => {
+      const own = groups.find((group) => group.includes(index))!
+      if (own.length === 1) return total
+      const a = own.filter((member) => member !== index)
+        .reduce((sum, member) => sum + distance(row, rows[member]), 0) / (own.length - 1)
+      const b = Math.min(...groups.filter((group) => group !== own)
+        .map((group) => group.reduce((sum, member) => sum + distance(row, rows[member]), 0) / group.length))
+      return total + (Math.max(a, b) === 0 ? 0 : (b - a) / Math.max(a, b))
+    }, 0) / rows.length
+    return [{ threshold, groupCount: groups.length, silhouette }]
+  })
+}
+
 const rows = [[1, 0], [4, 1], [0, 1], [1, 5]]
 
 test('共通前処理は K-means の従来公開名と同じ関数を返す', () => {
@@ -206,24 +231,37 @@ test('代表語は平均TF-IDFの上位語から一文字を除き、代表文�
   assert.equal(root.representativeIndex, 1)
 })
 
-test('自動閾値は2〜30群の実在する全切断候補のシルエット最大を選ぶ', () => {
-  const samples = Array.from({ length: 40 }, (_, index) => [1 + (index % 9) / 10, 0.3 + index / 40, 1 + ((index * 13) % 19) / 10])
-  const tree = buildSkillHierarchy(features(samples), 'average')
-  const expected = [...new Set(tree.nodes.slice(samples.length).map((node) => node.distance))]
-    .filter((threshold) => {
-      const count = cutSkillHierarchy(tree, threshold).length
-      return count >= 2 && count <= Math.min(30, samples.length - 1)
+for (const linkage of ['average', 'complete'] as const) {
+  test(`${linkage}: 自動閾値は全有効切断を独立した総当たり評価と照合して最大を選ぶ`, () => {
+    const samples = Array.from({ length: 40 }, (_, index) => [1 + (index % 9) / 10, 0.3 + index / 40, 1 + ((index * 13) % 19) / 10])
+    const tree = buildSkillHierarchy(features(samples), linkage)
+    const expected = bruteAutoCandidates(samples, linkage)
+    assert.equal(tree.autoCandidates.length, samples.length - 2)
+    assert.equal(tree.autoCandidates.length, expected.length)
+    tree.autoCandidates.forEach((candidate, index) => {
+      assert.equal(candidate.groupCount, expected[index].groupCount)
+      close(candidate.threshold, expected[index].threshold)
+      close(candidate.silhouette, expected[index].silhouette)
     })
-  assert.deepEqual(tree.autoCandidates.map((candidate) => candidate.threshold), expected)
-  assert.equal(tree.autoCandidates.length, 29)
-  for (const candidate of tree.autoCandidates) close(candidate.silhouette, bruteSilhouette(tree, candidate.threshold)!)
-  const recommended = tree.autoCandidates.find((candidate) => candidate.threshold === tree.recommendedThreshold)!
-  assert.equal(recommended.silhouette, Math.max(...tree.autoCandidates.map((candidate) => candidate.silhouette)))
-})
+    const best = expected.reduce((previous, candidate) => candidate.silhouette >= previous.silhouette ? candidate : previous)
+    close(tree.recommendedThreshold, best.threshold)
+  })
+
+  test(`${linkage}: 30群を超える最高評価候補と距離0の同時結合を自動選択する`, () => {
+    const samples = Array.from({ length: 64 }, (_, index) => Array.from({ length: 32 }, (_, column) =>
+      column === Math.floor(index / 2) ? 1 : 0))
+    const tree = buildSkillHierarchy(features(samples), linkage)
+    assert.deepEqual(tree.autoCandidates, [{ threshold: 0, groupCount: 32, silhouette: 1 }])
+    assert.equal(tree.recommendedThreshold, 0)
+    assert.equal(evaluateSkillHierarchyCut(tree, tree.recommendedThreshold).groupNodeIds.length, 32)
+    assert.deepEqual(tree.autoCandidates, bruteAutoCandidates(samples, linkage))
+  })
+}
 
 test('進行状況は距離計算・結合・候補評価の各段階で完了数を返す', () => {
   const progress: { phase: string; completed: number; total: number }[] = []
-  buildSkillHierarchy(features(rows), 'average', (value) => progress.push(value))
+  const samples = Array.from({ length: 40 }, (_, index) => [1 + (index % 9) / 10, 0.3 + index / 40, 1 + ((index * 13) % 19) / 10])
+  const tree = buildSkillHierarchy(features(samples), 'average', (value) => progress.push(value))
   assert.deepEqual([...new Set(progress.map((value) => value.phase))], ['distances', 'merging', 'evaluating'])
   for (const phase of ['distances', 'merging', 'evaluating']) {
     const values = progress.filter((value) => value.phase === phase)
@@ -231,6 +269,10 @@ test('進行状況は距離計算・結合・候補評価の各段階で完了�
     assert.equal(values.at(-1)!.completed, values.at(-1)!.total)
     values.forEach((value, index) => assert.ok(index === 0 || value.completed >= values[index - 1].completed))
   }
+  assert.equal(tree.autoCandidates.length, 38)
+  assert.deepEqual(progress.filter((value) => value.phase === 'evaluating').map((value) => value.completed),
+    Array.from({ length: tree.autoCandidates.length + 1 }, (_, index) => index))
+  assert.ok(progress.filter((value) => value.phase === 'evaluating').every((value) => value.total === tree.autoCandidates.length))
 })
 
 test('不正な特徴量・結合方法・閾値は明確に拒否する', () => {

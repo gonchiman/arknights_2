@@ -155,13 +155,13 @@ export function buildSkillHierarchy(
   tree.rootId = nodes.length - 1
   tree.recommendedThreshold = tree.rootId < 0 ? 0 : nodes[tree.rootId].distance
 
-  // A threshold cannot split merges of equal height, even if their binary order differs.
+  // Evaluate every feasible partition with 2 <= groups < n. A threshold cannot split
+  // merges of equal height, even if their binary order differs; zero-height merges count too.
   const thresholds: number[] = []
-  const maxGroups = Math.min(30, n - 1)
   for (let end = n; end < nodes.length; end += 1) {
     if (end + 1 < nodes.length && nodes[end + 1].distance === nodes[end].distance) continue
     const groups = n - (end - n + 1)
-    if (groups >= 2 && groups <= maxGroups) thresholds.push(nodes[end].distance)
+    if (groups >= 2 && groups < n) thresholds.push(nodes[end].distance)
   }
   onProgress?.({ phase: 'evaluating', completed: 0, total: thresholds.length })
   let bestSilhouette = -Infinity
