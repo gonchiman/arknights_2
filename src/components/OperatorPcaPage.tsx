@@ -6,7 +6,7 @@ import { buildSubProfessionOptions } from '../lib/operatorSearchFilters'
 import { findOperatorPcaNeighbors, OPERATOR_PCA_METRICS, runOperatorPca } from '../lib/operatorPca'
 import { AnalysisTabPanel, AnalysisTabs } from './AnalysisTabs'
 import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
-import { OperatorPcaScatter, OperatorPcaVariance } from './OperatorPcaCharts'
+import { OperatorPcaCoefficients, OperatorPcaScatter, OperatorPcaVariance } from './OperatorPcaCharts'
 import './DamageCalculator.css'
 import './OperatorPcaPage.css'
 
@@ -17,12 +17,19 @@ const percent = (value: number) => `${(value * 100).toFixed(1)}%`
 const signed = (value: number) => Math.abs(value) < 0.0005 ? '0.000' : `${value > 0 ? '+' : ''}${value.toFixed(3)}`
 const number = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 
+function featureDirection(key: typeof OPERATOR_PCA_METRICS[number]['key'], coefficient: number) {
+  if (key === 'blockCount') return coefficient > 0 ? '多い' : '少ない'
+  if (key === 'redeployTime' || key === 'attackInterval') return coefficient > 0 ? '長い' : '短い'
+  return coefficient > 0 ? '高い' : '低い'
+}
+
 export function OperatorPcaPage({ rows, loading, onOpenOperatorDetail }: Props) {
   const id = useId()
   const [tab, setTab] = useState<Tab>('distribution')
   const [profession, setProfession] = useState('ALL')
   const [subProfession, setSubProfession] = useState('ALL')
   const [selectedId, setSelectedId] = useState('char_350_surtr')
+  const [selectedComponent, setSelectedComponent] = useState(0)
   const selectedHeading = useRef<HTMLHeadingElement>(null)
   const records = useMemo(() => buildOperatorDatabaseRecords(rows), [rows])
   // Display filters never change the fitted population or the standardization.
@@ -47,6 +54,12 @@ export function OperatorPcaPage({ rows, loading, onOpenOperatorDetail }: Props) 
   const variance = result?.fit.explainedVariance ?? []
   const totalVariance = (variance[0] ?? 0) + (variance[1] ?? 0)
   const count = result?.points.length ?? 0
+  const component = Math.min(selectedComponent, Math.max(0, variance.length - 1))
+  const coefficients = result?.fit.coefficients[component] ?? []
+  const features = OPERATOR_PCA_METRICS.map((metric, index) => ({ metric, coefficient: coefficients[index] ?? 0, index }))
+    .filter(feature => Math.abs(feature.coefficient) > 1e-12)
+    .sort((left, right) => Math.abs(right.coefficient) - Math.abs(left.coefficient) || left.index - right.index)
+    .slice(0, 3)
 
   return <section className="calculator-page operator-pca-page">
     <header className="page-intro"><h1>オペレーター主成分分析</h1></header>
@@ -106,28 +119,48 @@ export function OperatorPcaPage({ rows, loading, onOpenOperatorDetail }: Props) 
           <AnalysisTabPanel idPrefix={id} tab="components" activeTab={tab} title="主成分の内訳">
             <div className="analysis-panel-body">
               <div className="operator-pca-component-grid">
-                <section aria-labelledby={`${id}-variance-title`}><h3 id={`${id}-variance-title`}>各主成分の寄与率</h3>
-                  <OperatorPcaVariance values={variance} />
-                  <div className="operator-pca-cumulative"><span>第1＋第2主成分</span><strong>{percent(totalVariance)}</strong></div>
-                </section>
-                <section aria-labelledby={`${id}-coefficients-title`}><h3 id={`${id}-coefficients-title`}>軸をつくるステータス</h3>
+                <div className="operator-pca-component-overview">
+                  <section aria-labelledby={`${id}-variance-title`}>
+                    <div className="operator-pca-component-heading"><h3 id={`${id}-variance-title`}>寄与率</h3></div>
+                    <OperatorPcaVariance values={variance} />
+                    <div className="operator-pca-cumulative"><span>第1＋第2主成分</span><strong>{percent(totalVariance)}</strong></div>
+                  </section>
+                  <section className="operator-pca-component-profile" aria-labelledby={`${id}-component-title`}>
+                    <div className="operator-pca-component-heading">
+                      <h3 id={`${id}-component-title`}>ステータス</h3>
+                      <select className="operator-pca-component-picker" aria-label="ステータスを表示する主成分"
+                        value={component} onChange={event => setSelectedComponent(Number(event.target.value))}>
+                        {result.fit.coefficients.map((_, index) => <option key={index} value={index}>第{index + 1}主成分</option>)}
+                      </select>
+                    </div>
+                    <div className="operator-pca-feature-summary" aria-live="polite" aria-atomic="true">
+                      <span>＋側</span>
+                      <ul className="operator-pca-component-features">
+                        {features.map(({ metric, coefficient }) => <li key={metric.key}>
+                          <span>{metric.label}</span><strong>{featureDirection(metric.key, coefficient)}</strong>
+                        </li>)}
+                      </ul>
+                    </div>
+                    <OperatorPcaCoefficients coefficients={coefficients} allCoefficients={result.fit.coefficients} component={component} />
+                  </section>
+                </div>
+                <section aria-labelledby={`${id}-coefficients-title`}><h3 id={`${id}-coefficients-title`}>全成分の係数</h3>
                   <div className="operator-pca-table-scroll" tabIndex={0} role="region" aria-label="主成分係数の表">
                     <table className="operator-pca-coefficients"><thead><tr><th scope="col">項目</th>
-                      {result.fit.coefficients.map((_, component) => <th key={component} scope="col">第{component + 1}主成分</th>)}
+                      {result.fit.coefficients.map((_, index) => <th key={index} scope="col" className={index === component ? 'selected-component' : undefined}>第{index + 1}主成分</th>)}
                     </tr></thead>
                       <tbody>{OPERATOR_PCA_METRICS.map((metric, index) => <tr key={metric.key}><th scope="row">{metric.label}</th>
-                        {result.fit.coefficients.map((coefficients, component) => <td key={component}>{signed(coefficients[index])}</td>)}
+                        {result.fit.coefficients.map((values, column) => <td key={column} className={column === component ? 'selected-component' : undefined}>{signed(values[index])}</td>)}
                       </tr>)}</tbody>
                     </table>
                   </div>
                 </section>
               </div>
-              <dl className="operator-pca-method">
-                <div><dt>分析対象</dt><dd>{count}名{result.excludedCount > 0 && ` · 欠損除外 ${result.excludedCount}名`}</dd></div>
-                <div><dt>前処理</dt><dd>平均0・標準偏差1</dd></div>
-                <div><dt>使用項目</dt><dd>{result.fit.activeColumns.map(index => OPERATOR_PCA_METRICS[index].label).join('・')}</dd></div>
-                {result.fit.constantColumns.length > 0 && <div><dt>定数項目</dt><dd>{result.fit.constantColumns.map(index => OPERATOR_PCA_METRICS[index].label).join('・')}</dd></div>}
-              </dl>
+              <div className="operator-pca-method">
+                <span>分析対象 {count}名</span><span>{result.fit.activeColumns.length}項目</span><span>平均0・標準偏差1</span>
+                {result.excludedCount > 0 && <span>欠損除外 {result.excludedCount}名</span>}
+                {result.fit.constantColumns.length > 0 && <span>定数項目 {result.fit.constantColumns.map(index => OPERATOR_PCA_METRICS[index].label).join('・')}</span>}
+              </div>
             </div>
           </AnalysisTabPanel>
         </>}
