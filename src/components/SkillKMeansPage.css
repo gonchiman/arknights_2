@@ -1,6 +1,24 @@
 .skill-kmeans-page { min-width: 0; container: skill-kmeans / inline-size; font-size: 13px; }
 .skill-kmeans-page .page-intro { margin-bottom: 0; }
 .skill-kmeans-content { display: grid; gap: 16px; min-width: 0; }
+.skill-kmeans-scopes { min-width: 0; margin: 16px 16px 0; border: 1px solid var(--border); }
+.skill-kmeans-scope-list-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 12px; border-bottom: 1px solid var(--border); background: var(--surface-soft); }
+.skill-kmeans-scope-list-heading h3 { margin: 0; color: var(--text-soft); font-size: 14px; font-weight: 500; }
+.skill-kmeans-scope-list-heading > span { color: var(--text-soft); }
+.skill-kmeans-scope-body { display: grid; gap: 16px; min-width: 0; padding: 16px; }
+.skill-kmeans-scope-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; border: 1px solid var(--border); background: var(--border); }
+.skill-kmeans-scope-options button { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; min-height: 46px; padding: 10px 12px; border: 0; background: var(--surface); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.skill-kmeans-scope-options button > span:first-child { overflow-wrap: anywhere; }
+.skill-kmeans-scope-options button > span:last-child { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.skill-kmeans-scope-options button[aria-pressed="true"] { background: var(--text); color: var(--surface); }
+.skill-kmeans-scope-options button:hover:not(:disabled):not([aria-pressed="true"]) { background: var(--surface-hover); }
+.skill-kmeans-scope-options button:disabled { opacity: .6; cursor: default; }
+.skill-kmeans-scope-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 10px 20px; }
+.skill-kmeans-scope-heading dl { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0; }
+.skill-kmeans-scope-heading dl > div { display: flex; align-items: baseline; gap: 8px; }
+.skill-kmeans-scope-heading dt { color: var(--text-soft); }
+.skill-kmeans-scope-heading dd { margin: 0; font-variant-numeric: tabular-nums; }
+.skill-kmeans-scope-context { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
 .skill-kmeans-page .analysis-panel-body { display: grid; gap: 24px; }
 .skill-kmeans-page .analysis-tab-panel > h2 { padding: 10px 16px; }
 .skill-kmeans-page .button { font-size: 13px; min-height: 42px; font-weight: 500; white-space: normal; }
@@ -95,6 +113,9 @@
   .skill-kmeans-member-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .skill-kmeans-member-filters > label:first-child { grid-column: 1 / -1; }
 }
+@container skill-kmeans (max-width: 760px) {
+  .skill-kmeans-scope-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @container skill-kmeans (max-width: 700px) {
   .skill-kmeans-group-table-layout { grid-template-columns: 1fr; }
   .skill-kmeans-group-table-layout > .skill-kmeans-section { border-bottom: 1px solid var(--border); padding-bottom: 20px; }
@@ -109,6 +130,9 @@
   .skill-kmeans-page .skill-kmeans-table th, .skill-kmeans-page .skill-kmeans-table td { padding: 9px 8px; }
 }
 @container skill-kmeans (max-width: 370px) {
+  .skill-kmeans-scopes { margin: 12px 12px 0; }
+  .skill-kmeans-scope-body { padding: 12px; }
+  .skill-kmeans-scope-options button { gap: 6px; padding: 8px; }
   .skill-kmeans-document-groups button { grid-template-columns: 26px minmax(0, 1fr) 65px; gap: 5px; padding-inline: 4px; }
   .skill-kmeans-page .analysis-panel-body { padding: 12px; }
   .skill-kmeans-page .analysis-tabs .detail-tab { padding-inline: 2px; }
