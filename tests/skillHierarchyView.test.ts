@@ -1,6 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { getSkillHierarchyFrontier, getSkillHierarchyParents } from '../src/lib/skillHierarchyView.ts'
+import {
+  getSkillHierarchyDisplayChildren, getSkillHierarchyFrontier, getSkillHierarchyParents, getSkillHierarchyPath,
+} from '../src/lib/skillHierarchyView.ts'
 import type { SkillHierarchyNode, SkillHierarchyTree } from '../src/lib/skillHierarchical.ts'
 
 /** Balanced tree with higher merge distances on the right, making selection priority observable. */
@@ -130,4 +132,72 @@ test('invalid focus and empty trees yield no visible frontier or parent mapping'
   const empty = { ...tree, nodes: [], rootId: -1, documentCount: 0, documentIndices: [], distances: new Float64Array() }
   assert.deepEqual(getSkillHierarchyFrontier(empty, empty.rootId, 0, null, false), [])
   assert.equal(getSkillHierarchyParents(empty).size, 0)
+})
+
+test('display children flatten whole chains of exactly tied merges in leaf order', () => {
+  const tree = makeTree()
+  for (const id of [24, 25, 28, 29]) tree.nodes[id].distance = tree.nodes[tree.rootId].distance
+  const originalNodes = structuredClone(tree.nodes)
+  const children = getSkillHierarchyDisplayChildren(tree, tree.rootId, new Set())
+  assert.deepEqual(children, [16, 17, 18, 19, 26, 27])
+  assert.deepEqual(children.flatMap(id => tree.nodes[id].documentIndices), tree.nodes[tree.rootId].documentIndices)
+  assert.equal(children.reduce((sum, id) => sum + tree.nodes[id].count, 0), tree.documentCount)
+  assertLeafCoverage(tree, tree.rootId, children)
+  assert.deepEqual(tree.nodes, originalNodes, 'display flattening must not change the learned tree')
+})
+
+test('display flattening preserves tied group boundaries and allows expansion within those groups', () => {
+  const tree = makeTree()
+  for (const id of [16, 17, 24, 25, 28, 29]) tree.nodes[id].distance = tree.nodes[tree.rootId].distance
+  const groups = new Set([24, 25, 26, 27])
+  assert.deepEqual(getSkillHierarchyDisplayChildren(tree, tree.rootId, groups), [24, 25, 26, 27])
+  const insideGroup = getSkillHierarchyDisplayChildren(tree, 24, groups)
+  assert.deepEqual(insideGroup, [0, 1, 2, 3])
+  assertLeafCoverage(tree, 24, insideGroup)
+})
+
+test('display children retain leaf nodes even when their distances equal the parent distance', () => {
+  const tree = makeTree()
+  for (const id of [16, 17, 24]) tree.nodes[id].distance = 0
+  assert.deepEqual(getSkillHierarchyDisplayChildren(tree, 24, new Set()), [0, 1, 2, 3])
+  assert.deepEqual(getSkillHierarchyDisplayChildren(tree, 24, new Set([16, 2, 3])), [16, 2, 3])
+  assert.deepEqual(getSkillHierarchyDisplayChildren(tree, 0, new Set([0])), [])
+})
+
+test('distinct merge distances stay separate even when closer than a floating-point tolerance', () => {
+  const tree = makeTree()
+  tree.nodes[28].distance = tree.nodes[tree.rootId].distance - 1e-14
+  tree.nodes[29].distance = tree.nodes[tree.rootId].distance
+  assert.deepEqual(getSkillHierarchyDisplayChildren(tree, tree.rootId, new Set()), [28, 26, 27])
+})
+
+test('paths include every ancestor from the root to internal nodes and leaves', () => {
+  const tree = makeTree()
+  const parents = getSkillHierarchyParents(tree)
+  assert.deepEqual(getSkillHierarchyPath(tree, tree.rootId), [tree.rootId])
+  assert.deepEqual(getSkillHierarchyPath(tree, 0), [30, 28, 24, 16, 0])
+  assert.deepEqual(getSkillHierarchyPath(tree, 23, parents), [30, 29, 27, 23])
+  for (const node of tree.nodes) {
+    const path = getSkillHierarchyPath(tree, node.id, parents)
+    assert.equal(path[0], tree.rootId)
+    assert.equal(path.at(-1), node.id)
+    assert.deepEqual(path, getSkillHierarchyPath(tree, node.id))
+    path.slice(1).forEach((id, index) => assert.equal(parents.get(id), path[index]))
+  }
+})
+
+test('invalid nodes, empty trees, and broken parent paths yield no display children or path', () => {
+  const tree = makeTree()
+  for (const nodeId of [-1, tree.nodes.length, 1000, Number.NaN, 0.5]) {
+    assert.deepEqual(getSkillHierarchyDisplayChildren(tree, nodeId, new Set()), [])
+    assert.deepEqual(getSkillHierarchyPath(tree, nodeId), [])
+  }
+  const empty = { ...tree, nodes: [], rootId: -1, documentCount: 0, documentIndices: [], distances: new Float64Array() }
+  assert.deepEqual(getSkillHierarchyDisplayChildren(empty, -1, new Set()), [])
+  assert.deepEqual(getSkillHierarchyPath(empty, -1), [])
+  const parents = getSkillHierarchyParents(tree)
+  parents.delete(16)
+  assert.deepEqual(getSkillHierarchyPath(tree, 0, parents), [])
+  parents.set(16, 0)
+  assert.deepEqual(getSkillHierarchyPath(tree, 0, parents), [])
 })

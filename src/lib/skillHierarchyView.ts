@@ -35,3 +35,38 @@ export function getSkillHierarchyParents(tree: SkillHierarchyTree): Map<number, 
   })
   return parents
 }
+
+/** Flatten tied merges for display, keeping the current partition's group boundaries visible. */
+export function getSkillHierarchyDisplayChildren(tree: SkillHierarchyTree, nodeId: number,
+  groupNodeIds: ReadonlySet<number>): number[] {
+  const node = tree.nodes[nodeId]
+  if (!node || node.left === null || node.right === null) return []
+  const children: number[] = []
+  const pending = [node.right, node.left]
+  while (pending.length > 0) {
+    const child = tree.nodes[pending.pop()!]
+    if (child.left !== null && child.right !== null
+      && child.distance === node.distance && !groupNodeIds.has(child.id)) {
+      pending.push(child.right, child.left)
+    } else {
+      children.push(child.id)
+    }
+  }
+  return children
+}
+
+/** The actual tree path, including its root and destination, for revealing a selected node. */
+export function getSkillHierarchyPath(tree: SkillHierarchyTree, nodeId: number,
+  parents: ReadonlyMap<number, number> = getSkillHierarchyParents(tree)): number[] {
+  if (!tree.nodes[nodeId] || !tree.nodes[tree.rootId]) return []
+  const path: number[] = []
+  const visited = new Set<number>()
+  let current: number | undefined = nodeId
+  while (current !== undefined && tree.nodes[current] && !visited.has(current)) {
+    path.push(current)
+    if (current === tree.rootId) return path.reverse()
+    visited.add(current)
+    current = parents.get(current)
+  }
+  return []
+}
