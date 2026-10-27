@@ -161,7 +161,7 @@ function euclideanDistance(left: SkillKMeansSparseVector, right: SkillKMeansSpar
 function validateConfig(features: SkillKMeansFeatures, config: SkillKMeansSearchConfig): void {
   const n = features?.vectors?.length ?? 0
   if (n < 3) throw new RangeError('K探索には学習に使える説明文が3件以上必要です。')
-  const maxK = Math.min(30, n - 1)
+  const maxK = Math.min(80, n - 1)
   if (!Number.isInteger(config.minK) || !Number.isInteger(config.maxK) || config.minK < 2
     || config.maxK < config.minK || config.maxK > maxK) {
     throw new RangeError(`Kは2〜${maxK}の整数で、下限以下にならない上限を指定してください。`)

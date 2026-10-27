@@ -14,7 +14,7 @@ interface Props {
 }
 interface Draft { minK: string; maxK: string; seed: string; restarts: string }
 interface Submission { documents: readonly SkillKMeansDocument[]; config: SkillKMeansSearchConfig }
-const INITIAL_DRAFT: Draft = { minK: '2', maxK: '30', seed: '2', restarts: '10' }
+const INITIAL_DRAFT: Draft = { minK: '2', maxK: '60', seed: '2', restarts: '10' }
 const format = (value: number | null) => value === null ? '—' : value.toLocaleString('ja-JP', { maximumFractionDigits: 4 })
 const phaseLabels = { preparing: '距離の計算', fitting: '学習', evaluating: '評価' } as const
 
@@ -38,7 +38,7 @@ export function SkillKMeansSearchPanel({ documents, loading, learningBusy, onBus
   const [selectedK, setSelectedK] = useState<number | null>(null)
   const runner = useRef<SkillKMeansSearchRunner | null>(null)
   const progressId = useId()
-  const limit = Math.min(30, documents.length - 1)
+  const limit = Math.min(80, documents.length - 1)
   const config = readConfig(draft, limit)
   const busy = run.status === 'preparing' || run.status === 'running'
   const dirty = submission !== null && (submission.documents !== documents || JSON.stringify(config) !== JSON.stringify(submission.config))
