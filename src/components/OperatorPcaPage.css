@@ -1,0 +1,66 @@
+.operator-pca-page { container: operator-pca / inline-size; font-size: 13px; --pca-first: #6989a8; --pca-second: #ad835e; }
+.operator-pca-page .page-intro { margin-bottom: 0; }
+.operator-pca-page .analysis-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.operator-pca-page h3 { margin: 0 0 12px; font-size: 14px; font-weight: 500; }
+.operator-pca-condition { color: var(--text-soft); overflow-wrap: anywhere; }
+.operator-pca-filters { display: grid; grid-template-columns: 1fr 1fr minmax(0, 1.5fr); gap: 12px; margin-bottom: 20px; }
+.operator-pca-filters label { display: grid; gap: 6px; min-width: 0; color: var(--text-soft); }
+.operator-pca-filters select { width: 100%; min-width: 0; min-height: 42px; padding: 7px 10px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); font: inherit; }
+.operator-pca-chart-heading { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 10px; color: var(--text-soft); font-variant-numeric: tabular-nums; }
+.operator-pca-scatter, .operator-pca-plot { min-width: 0; }
+.operator-pca-plot { width: 100%; }
+.operator-pca-plot svg { display: block; max-width: 100%; overflow: visible; }
+.operator-pca-plot text { fill: var(--text-soft); font: 12px "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.operator-pca-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin: 0 0 4px; }
+.operator-pca-legend > span { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; }
+.operator-pca-legend i { display: block; width: 9px; height: 9px; border-radius: 50%; }
+.operator-pca-legend i.square { border-radius: 0; }
+.operator-pca-gridline { stroke: var(--border); stroke-width: 1; }
+.operator-pca-gridline.zero { stroke: var(--border-strong); stroke-dasharray: 4 3; }
+.operator-pca-frame { fill: none; stroke: var(--border); stroke-width: 1; }
+.operator-pca-point { cursor: pointer; }
+.operator-pca-ring { fill: none; stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 2 2; pointer-events: none; }
+.operator-pca-ring.selected { stroke: var(--text); stroke-width: 1.7; stroke-dasharray: none; }
+.operator-pca-selection { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 18px; min-width: 0; }
+.operator-pca-selection-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.operator-pca-selection-heading > div { min-width: 0; overflow-wrap: anywhere; }
+.operator-pca-selection-heading h3 { margin: 0 0 4px; font-size: 16px; }
+.operator-pca-selection-heading span { color: var(--text-soft); }
+.operator-pca-page .button { min-height: 36px; font-size: 13px; font-weight: 500; white-space: normal; }
+.operator-pca-selection-heading a { display: inline-flex; align-items: center; text-decoration: none; flex-shrink: 0; }
+.operator-pca-selected-stats { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 16px 0; }
+.operator-pca-selected-stats > div { display: flex; align-items: baseline; gap: 8px; }
+.operator-pca-selected-stats dt, .operator-pca-method dt { color: var(--text-muted); }
+.operator-pca-selected-stats dd, .operator-pca-method dd { margin: 0; font-variant-numeric: tabular-nums; }
+.operator-pca-neighbors { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.operator-pca-neighbors h3 { margin: 0; font-size: 13px; }
+.operator-pca-neighbors > div { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.operator-pca-neighbors .button { overflow-wrap: anywhere; text-align: left; }
+.operator-pca-data-state { margin-top: 18px; color: var(--text-muted); font-size: 12px; }
+.operator-pca-component-grid { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 24px; }
+.operator-pca-component-grid > section { min-width: 0; }
+.operator-pca-cumulative { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; border-top: 1px solid var(--border); padding-top: 12px; font-variant-numeric: tabular-nums; }
+.operator-pca-cumulative strong { font-size: 18px; font-weight: 500; }
+.operator-pca-table-scroll { max-width: 100%; overflow-x: auto; }
+.operator-pca-page .operator-pca-coefficients { width: 100%; border-collapse: collapse; table-layout: fixed; border: 1px solid var(--border); font-size: 13px; line-height: 1.6; }
+.operator-pca-page .operator-pca-coefficients th, .operator-pca-page .operator-pca-coefficients td { position: static; border: 1px solid var(--border); padding: 9px 8px; color: var(--text); font-size: inherit; font-weight: 400; vertical-align: middle; white-space: normal; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.operator-pca-page .operator-pca-coefficients thead th { background: var(--surface-soft); font-weight: 500; text-align: right; }
+.operator-pca-page .operator-pca-coefficients th:first-child { width: 42%; text-align: left; }
+.operator-pca-page .operator-pca-coefficients td { text-align: right; }
+.operator-pca-method { display: grid; gap: 12px; border-top: 1px solid var(--border); padding-top: 16px; margin: 24px 0 0; }
+.operator-pca-method > div { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 12px; }
+.operator-pca-method dd { overflow-wrap: anywhere; }
+.operator-pca-empty, .operator-pca-error { margin: 0; padding: 32px 16px; border: 1px solid var(--border); }
+.operator-pca-error { color: var(--danger); }
+@container operator-pca (max-width: 680px) {
+  .operator-pca-component-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@container operator-pca (max-width: 480px) {
+  .operator-pca-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .operator-pca-operator-field { grid-column: 1 / -1; }
+  .operator-pca-page .analysis-panel-body { padding: 12px; }
+}
+@media (max-width: 760px), (pointer: coarse) {
+  .operator-pca-page .button, .operator-pca-filters select { min-height: 44px; }
+  .operator-pca-filters select { font-size: 16px; }
+}

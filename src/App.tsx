@@ -74,6 +74,7 @@ const MapDatabase = lazy(() => import('./components/MapDatabase').then((module) 
 const EnemyMapCoveragePage = lazy(() => import('./components/EnemyMapCoveragePage').then((module) => ({ default: module.EnemyMapCoveragePage })))
 const MainEnemyTrendsPage = lazy(() => import('./components/MainEnemyTrendsPage').then((module) => ({ default: module.MainEnemyTrendsPage })))
 const EnemyRegressionPage = lazy(() => import('./components/EnemyRegressionPage').then((module) => ({ default: module.EnemyRegressionPage })))
+const OperatorPcaPage = lazy(() => import('./components/OperatorPcaPage').then((module) => ({ default: module.OperatorPcaPage })))
 const SkillKMeansPage = lazy(() => import('./components/SkillKMeansPage').then((module) => ({ default: module.SkillKMeansPage })))
 const SkillHdbscanPage = lazy(() => import('./components/SkillHdbscanPage').then((module) => ({ default: module.SkillHdbscanPage })))
 const SkillHierarchicalPage = lazy(() => import('./components/SkillHierarchicalPage').then((module) => ({ default: module.SkillHierarchicalPage })))
@@ -343,6 +344,10 @@ export default function App() {
 
         {displayedRoute.view === 'home' ? (
           <HomePage />
+        ) : displayedRoute.view === 'operator-pca' ? (
+          <Suspense fallback={<p className="calculator-loading" role="status">オペレーター主成分分析を読み込み中…</p>}>
+            <OperatorPcaPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
+          </Suspense>
         ) : displayedRoute.view === 'code-analysis' ? (
           <CodeAnalysisPage />
         ) : displayedRoute.view === 'sources' ? (
