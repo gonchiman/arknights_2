@@ -2,12 +2,14 @@
   container-type: inline-size;
 }
 .enemy-map-coverage-page .page-intro { margin-bottom: 0; }
+.enemy-map-coverage-page-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .enemy-map-coverage-page .calculator-panel { background: var(--surface); }
 .enemy-map-coverage-page label { display: grid; gap: 6px; min-width: 0; color: var(--text-soft); font-size: 11px; }
 .enemy-map-coverage-page select { width: 100%; min-width: 0; min-height: 36px; border: 1px solid var(--border); border-radius: 0; padding: 7px 9px; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; }
-.enemy-map-coverage-controls { display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 14px 20px; padding: 6px 0; }
+.enemy-map-coverage-controls { display: flex; align-items: end; flex-wrap: wrap; gap: 14px 20px; padding: 6px 0; }
 .enemy-map-coverage-controls label { width: 180px; max-width: 100%; }
-.enemy-map-coverage-totals { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 20px; color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.enemy-map-coverage-controls .enemy-aggregation-selector { width: 160px; }
+.enemy-map-coverage-totals { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 20px; margin-left: auto; color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .enemy-map-coverage-totals strong { margin-left: 6px; color: var(--text); font-size: 18px; font-weight: 500; }
 .enemy-map-coverage-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; color: var(--text-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
 .enemy-map-coverage-legend > span, .enemy-map-coverage-selection-status { display: inline-flex; align-items: center; gap: 6px; }

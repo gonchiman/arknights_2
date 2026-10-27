@@ -2,19 +2,55 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { matchesEnemyFilters } from '../lib/enemyData'
 import { copyEnemyLevelSelection, formatEnemyLevelSelection, type EnemyAnalysisFiltersState } from '../lib/enemyLevelSelection'
 import { formatEnemyNumericCondition, matchesEnemyNumericConditions, parseEnemyNumericFilterValue, type EnemyNumericCondition } from '../lib/enemyNumericFilters'
-import type { EnemyHistogramSnapshot } from '../lib/enemyHistogramSnapshot'
+import type { EnemyHistogramAggregationVersion, EnemyHistogramSnapshot } from '../lib/enemyHistogramSnapshot'
+import type { EnemyHistogramCounts } from '../lib/enemyHistogramCounts'
+import type { EnemyRecord } from '../types/enemy'
 import { useEnemyRecords } from '../lib/useEnemyRecords'
+import { useEnemyAggregation } from '../lib/useEnemyAggregation'
 import { EnemyAnalysisFilters } from './EnemyAnalysisFilters'
 import { EnemyDataContent } from './EnemyPageShared'
 import { EnemyStatisticsPanel, useEnemyStatisticsControls } from './EnemyStatisticsPanel'
 import './EnemyAnalysis.css'
 
-/** Edits the existing histogram inside the image dialog, without changing routes. */
-export function EnemyResistanceHistogramEditor({ initialSnapshot, onChange }: {
+interface EnemyResistanceHistogramEditorProps {
   initialSnapshot: EnemyHistogramSnapshot | null
   onChange: (snapshot: EnemyHistogramSnapshot | null) => void
+}
+
+const EMPTY_ROWS: EnemyRecord[] = []
+
+/** Edits the existing histogram inside the image dialog, without changing routes. */
+export function EnemyResistanceHistogramEditor(props: EnemyResistanceHistogramEditorProps) {
+  const version = props.initialSnapshot?.source.aggregationVersion
+  return props.initialSnapshot && !version
+    ? <LiveHistogramEditor {...props} />
+    : <VersionedHistogramEditor key={version?.id ?? 'selected-version'} {...props} aggregationVersion={version} />
+}
+
+function LiveHistogramEditor(props: EnemyResistanceHistogramEditorProps) {
+  const records = useEnemyRecords()
+  return <HistogramEditorContent {...props} {...records} />
+}
+
+function VersionedHistogramEditor({ aggregationVersion, ...props }: EnemyResistanceHistogramEditorProps & {
+  aggregationVersion?: EnemyHistogramAggregationVersion
 }) {
-  const { rows, loading, error, retry } = useEnemyRecords()
+  const { data, version, loading, error, retry } = useEnemyAggregation({ versionId: aggregationVersion?.id })
+  const mismatch = version && aggregationVersion && (version.sourceRevision !== aggregationVersion.sourceRevision
+    || version.ruleVersion !== aggregationVersion.ruleVersion)
+  return <HistogramEditorContent {...props} rows={data?.rows ?? EMPTY_ROWS}
+    loading={loading} error={mismatch ? '保存済み分布の集計データと版情報が一致しません。' : error}
+    retry={retry} aggregationCounts={data?.counts} aggregationVersion={aggregationVersion ?? version ?? undefined} />
+}
+
+function HistogramEditorContent({ initialSnapshot, onChange, rows, loading, error, retry, aggregationCounts, aggregationVersion }: EnemyResistanceHistogramEditorProps & {
+  rows: EnemyRecord[]
+  loading: boolean
+  error: string | null
+  retry: () => void
+  aggregationCounts?: EnemyHistogramCounts
+  aggregationVersion?: EnemyHistogramAggregationVersion
+}) {
   const controls = useEnemyStatisticsControls(initialSnapshot)
   const [filters, setFilters] = useState<EnemyAnalysisFiltersState>(() => ({
     levelType: copyEnemyLevelSelection(initialSnapshot?.editorSettings?.levelType ?? 'ALL'),
@@ -70,6 +106,7 @@ export function EnemyResistanceHistogramEditor({ initialSnapshot, onChange }: {
   }}>
     <EnemyDataContent loading={loading} error={error} onRetry={retry}>
       <EnemyStatisticsPanel rows={scopedRows} allRows={rows} scopeLabel={scopeLabel} controls={controls}
+        aggregationCounts={aggregationCounts} aggregationVersion={aggregationVersion}
         filterSettings={filterSettings}
         histogramEditor={{ initialSnapshot, onChange: receiveSnapshot }}
         filterControls={sourceIds ? <div className="surtr-histogram-source">

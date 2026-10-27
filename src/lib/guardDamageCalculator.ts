@@ -51,7 +51,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
     stage = stages[0]
   } catch (error) { reasons.push(message(error)) }
   const kind = stage?.kind ?? 'NORMAL'
-  const passive = evaluateGuardPassives(input.operator, conditions, { kind, skillIndex: recipe.skillIndex, stageId: stage?.id ?? '' })
+  const passive = evaluateGuardPassives(input.operator, conditions, { kind, skillIndex: recipe.skillIndex, stageId: stage?.id ?? '', stage })
   reasons.push(...passive.blockers, ...(stage?.unresolved ?? []))
   for (const [label, fraction] of Object.entries({ 発動確率: passive.critChance,
     防御力無視: passive.defenseIgnoreRatio, 術耐性無視: passive.resistanceIgnoreRatio, 防御力低下: passive.defenseReductionRatio })) {

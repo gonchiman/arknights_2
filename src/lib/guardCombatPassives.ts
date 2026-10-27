@@ -1,10 +1,11 @@
 import type { SkillRecord } from '../types/skill.ts'
 import { getOperatorPassives, type PassiveSource } from './operatorProfile.ts'
-import type { GuardConditions, GuardInput, GuardPassiveModifiers } from './guardCombatTypes.ts'
+import type { GuardCalculationIssue, GuardConditions, GuardInput, GuardPassiveModifiers, GuardStage } from './guardCombatTypes.ts'
 
-type Context = { kind: 'NORMAL' | 'NEXT_ATTACK' | 'SKILL_ACTION'; skillIndex: number; stageId: string }
+type Context = { kind: 'NORMAL' | 'NEXT_ATTACK' | 'SKILL_ACTION'; skillIndex: number; stageId: string;
+  stage?: Pick<GuardStage, 'actions'> }
 
-export interface GuardPassiveCalculationConstraint {
+export interface GuardPassiveCalculationConstraint extends GuardCalculationIssue {
   readonly talentIndex: number
   readonly reason: string
   /** Absent when no currently implemented condition can resolve the blocker. */
@@ -17,17 +18,20 @@ export interface GuardPassiveCalculationConstraint {
  */
 export function getGuardPassiveCalculationConstraints(operatorId: string, context: Context): readonly GuardPassiveCalculationConstraint[] {
   if (operatorId === 'char_2024_chyue' && context.skillIndex === 2) return [{
+    id: 'chyue-s2-levitation-talent-order', relatedSections: ['スキル', '素質1'],
     talentIndex: 0,
     reason: '浮遊解除前後で止戈の適用が変わる処理順を、攻撃ごとに解決する必要があります。',
     allows: () => false,
   }]
   if (operatorId === 'char_4037_demetr') return [{
+    id: 'demetr-target-hp-damage-curve', relatedSections: ['素質1'],
     talentIndex: 0,
     reason: 'HP20〜100%の間の与ダメージ増加曲線が未確定です。',
     supportedCondition: '対象のHPが100%、または20%以下',
     allows: (conditions, read) => Number(conditions.targetHpPercent) / 100 >= read('min_hp_ratio')
       || Number(conditions.targetHpPercent) / 100 <= read('max_hp_ratio'),
   }, {
+    id: 'demetr-defense-stack-timing', relatedSections: ['素質1'],
     talentIndex: 0,
     reason: '攻撃による防御力低下の新規付与と、連撃中の重複数変化を解決する必要があります。',
     supportedCondition: `防御力低下が重複上限の${context.skillIndex === 2 ? 8 : 5}回に到達済み`,
@@ -35,12 +39,14 @@ export function getGuardPassiveCalculationConstraints(operatorId: string, contex
       >= read(context.skillIndex === 2 ? 'attack@s2_limited_stack_cnt' : 'attack@limited_stack_cnt'),
   }]
   if (operatorId === 'char_4116_blkkgt' && context.kind !== 'NORMAL') return [{
+    id: 'blkkgt-tremble-defense-ignore-order', relatedSections: ['スキル', '素質1', '素質2'],
     talentIndex: 0,
     reason: '連撃中の戦慄付与と防御無視の適用順序を確定する必要があります。',
     supportedCondition: '攻撃開始前から対象が戦慄中',
     allows: conditions => conditions.targetTrembling === true,
   }]
   if (operatorId === 'char_1050_chen3') return [{
+    id: 'chen3-weakpoint-mitigation', relatedSections: ['素質1'],
     talentIndex: 0,
     reason: '弱点ダメージの防御力・術耐性への適用式が未確定です。',
     allows: () => false,
@@ -120,12 +126,33 @@ const INPUTS: Readonly<Record<string, readonly GuardInput[]>> = {
 
 export const GUARD_PASSIVE_OPERATOR_IDS: readonly string[] = Object.freeze(Object.keys(INPUTS))
 
+/** Registered source identities remain available even if a live profile is incomplete. */
+export function getGuardRegisteredTalentNames(operatorId: string): readonly string[] {
+  return (TALENTS[operatorId] ?? []).map(([name]) => name)
+}
+
 export function getGuardPassiveInputs(operatorId: string): GuardInput[] {
   return (INPUTS[operatorId] ?? []).map(input => ({ ...input }))
 }
 
 /** Evaluate source-selected potential-1 talents. Missing sources/values fail closed. */
 export function evaluateGuardPassives(operator: SkillRecord, conditions: GuardConditions, context: Context): GuardPassiveModifiers {
+  return evaluateGuardPassiveDefinitions(operator, conditions, context, false)
+}
+
+/** Inspect the same source branches without treating live data validation as coverage.
+ * Numerical modifiers from this inspection are intentionally not exposed.
+ */
+export function describeGuardPassiveEffects(operator: SkillRecord, conditions: GuardConditions, context: Context): {
+  source: string; relevant: boolean
+}[] {
+  return evaluateGuardPassiveDefinitions(operator, conditions, context, true).evaluations.map(evaluation => ({
+    source: evaluation.source, relevant: evaluation.status !== 'NOT_RELEVANT',
+  }))
+}
+
+function evaluateGuardPassiveDefinitions(operator: SkillRecord, conditions: GuardConditions, context: Context,
+  registrationOnly: boolean): GuardPassiveModifiers {
   const output: GuardPassiveModifiers = { attackRatio: 0, attackFlat: 0, attackScale: 1, attackSpeed: 0,
     damageScale: 1, defenseIgnoreRatio: 0, defenseIgnoreFixed: 0, resistanceIgnoreFixed: 0,
     resistanceIgnoreRatio: 0, defenseReductionRatio: 0, critChance: 0, critScale: 1,
@@ -133,6 +160,7 @@ export function evaluateGuardPassives(operator: SkillRecord, conditions: GuardCo
   const row = (source: string, item: string, value: string, status: GuardPassiveModifiers['evaluations'][number]['status'], reason = '') =>
     output.evaluations.push({ source, item, value, status, reason })
   const block = (source: string, reason: string) => {
+    if (registrationOnly) return
     output.blockers.push(`${source}：${reason}`)
     row(source, '計算条件', '未確定', 'UNSUPPORTED', reason)
   }
@@ -160,8 +188,17 @@ export function evaluateGuardPassives(operator: SkillRecord, conditions: GuardCo
   const yes = (key: string) => values[key] === true
   const selected = getOperatorPassives(operator.operatorProfile, 2,
     operator.operatorProfile.phases[2]?.maxLevel ?? 90, 1).sources
-  const trait = selected.find(source => source.sourceKind === 'TRAIT')
-  const talents = selected.filter(source => source.sourceKind === 'TALENT')
+  const selectedTrait = selected.find(source => source.sourceKind === 'TRAIT')
+  const trait: PassiveSource | undefined = selectedTrait ?? (registrationOnly ? {
+    sourceKind: 'TRAIT', sourceName: '特性', talentIndex: null, description: '', blackboard: [],
+    requiredPotentialRank: 0, prefabKey: null, tokenKey: null,
+  } : undefined)
+  const talents: PassiveSource[] = registrationOnly ? (TALENTS[operator.operatorId] ?? []).map(([name, prefabKey], talentIndex) => ({
+    sourceKind: 'TALENT', talentIndex, sourceName: name, prefabKey,
+    description: selected.find(source => source.talentIndex === talentIndex)?.description ?? '',
+    blackboard: selected.find(source => source.talentIndex === talentIndex)?.blackboard ?? [],
+    requiredPotentialRank: 0, tokenKey: null, unlockCondition: { phase: 'PHASE_2', level: 1 },
+  })) : selected.filter(source => source.sourceKind === 'TALENT')
   if (!trait) block('特性', '昇進2・潜在1の特性を取得できません。')
   for (const index of [0, 1]) if (!talents.some(source => source.talentIndex === index))
     block(`素質${index + 1}`, '昇進2・潜在1の素質を取得できません。')
@@ -216,9 +253,16 @@ export function evaluateGuardPassives(operator: SkillRecord, conditions: GuardCo
     } else if (operator.subProfessionId === 'instructor') {
       const multiplier = yes('targetBlockedBySelf') ? 1 : 1.2
       applyScale(trait, multiplier)
-    } else {
+    } else if (operator.subProfessionId === 'hammer'
+      || (operator.subProfessionId === 'sword' && (context.kind === 'NORMAL'
+        || (context.kind === 'NEXT_ATTACK' && context.stage?.actions.length === 1 && context.stage.actions[0].hits === 2)))
+      || (context.kind !== 'SKILL_ACTION'
+        && ['crusher', 'centurion', 'artsfghter', 'reaper'].includes(operator.subProfessionId))) {
       row(trait.sourceName, '攻撃属性・回数・対象', '攻撃定義に反映', 'APPLIED',
         '基礎攻撃またはスキルの攻撃列で扱い、素質側で回数や対象数を再乗算しません。')
+    } else {
+      row(trait.sourceName, 'ブロック・回復・通常攻撃等', '—', 'NOT_RELEVANT',
+        '選択した攻撃のダメージ計算では、この特性による追加補正を使用しません。')
     }
   }
 

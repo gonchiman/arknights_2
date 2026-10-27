@@ -21,6 +21,8 @@
 .skill-kmeans-page .skill-kmeans-comparison-table td { text-align: center; }
 .skill-kmeans-page .skill-kmeans-table tbody tr:hover td { background: var(--surface); }
 .skill-kmeans-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px; }
+.skill-kmeans-navigation, .skill-kmeans-pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 16px; }
+.skill-kmeans-pagination { margin-top: 12px; font-variant-numeric: tabular-nums; }
 .skill-kmeans-section > .skill-kmeans-actions { margin-top: 16px; }
 .skill-kmeans-section > .skill-kmeans-data { margin-top: 16px; }
 .skill-kmeans-status { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; color: var(--text-soft); font-size: 13px; }
@@ -35,8 +37,38 @@
 .skill-kmeans-metrics dd { margin: 6px 0 0; font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .skill-kmeans-stop-state { margin-left: auto; font-size: 13px; color: var(--text-soft); }
 .skill-kmeans-result-content { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); align-items: start; gap: 24px; }
+.skill-kmeans-group-table-layout { grid-template-columns: 220px minmax(0, 1fr); }
+.skill-kmeans-member-panel { display: grid; gap: 10px; min-width: 0; container: skill-kmeans-members / inline-size; }
+.skill-kmeans-member-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.skill-kmeans-member-heading h3 { margin: 0; font-size: 14px; font-weight: 500; }
+.skill-kmeans-member-heading .filter-reset-button { min-height: 34px; font-size: 13px; }
+.skill-kmeans-member-filters { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); align-items: end; gap: 8px; }
+.skill-kmeans-member-filters label { gap: 4px; }
+.skill-kmeans-member-filters input, .skill-kmeans-member-filters select { min-height: 34px; padding: 5px 8px; }
+.skill-kmeans-member-scroll { min-width: 0; overflow-x: auto; }
+.skill-kmeans-page .skill-kmeans-member-table { min-width: 480px; }
+.skill-kmeans-member-operator-col { width: 29%; }
+.skill-kmeans-member-rarity-col { width: 56px; }
+.skill-kmeans-member-profession-col { width: 64px; }
+.skill-kmeans-member-number-col { width: 72px; }
+.skill-kmeans-page .skill-kmeans-table.skill-kmeans-member-table th { padding: 0; }
+.skill-kmeans-page .skill-kmeans-table.skill-kmeans-member-table td { padding: 0; text-align: left; }
+.skill-kmeans-page .skill-kmeans-table.skill-kmeans-member-table td.skill-kmeans-member-number,
+.skill-kmeans-page .skill-kmeans-table.skill-kmeans-member-table td.skill-kmeans-member-attribute { padding: 6px 8px; text-align: center; white-space: nowrap; }
+.skill-kmeans-member-table .skill-sort-button { min-height: 34px; padding: 6px 8px; gap: 4px; font-weight: 500; }
+.skill-kmeans-member-table th:nth-child(4) .skill-sort-button { white-space: nowrap; }
+.skill-kmeans-member-table .skill-sort-button:hover { background: var(--surface-hover); }
+.skill-kmeans-member-table .skill-sort-indicator { font-size: 10px; color: var(--text-soft); }
+.skill-kmeans-page .skill-kmeans-table.skill-kmeans-member-table td.skill-kmeans-member-empty { padding: 24px 8px; text-align: center; color: var(--text-soft); }
+.skill-kmeans-skill-link, .skill-kmeans-member-table td > a { display: flex; align-items: center; width: 100%; min-height: 34px; padding: 6px 8px; }
+.skill-kmeans-skill-link { background: none; border: 0; color: var(--link); text-align: left; text-decoration: underline; font: inherit; cursor: pointer; }
+.skill-kmeans-member-pagination { margin-top: 0; }
+.skill-kmeans-member-pagination .button { min-height: 34px; padding: 6px 9px; }
+.skill-kmeans-member-panel .skill-kmeans-term-field { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
 .skill-kmeans-groups { display: grid; margin-top: 12px; }
 .skill-kmeans-groups button { display: grid; grid-template-columns: 38px minmax(0, 1fr) 55px; gap: 12px; align-items: center; min-width: 0; min-height: 46px; border: 0; background: var(--surface); color: var(--text); padding: 12px 8px; text-align: left; font: inherit; cursor: pointer; }
+.skill-kmeans-document-groups button { grid-template-columns: 30px minmax(0, 1fr) 72px; gap: 8px; }
+.skill-kmeans-document-groups button > span:last-child { white-space: nowrap; }
 .skill-kmeans-groups button[aria-pressed="true"] { background: var(--surface-soft); box-shadow: inset 3px 0 var(--text); }
 .skill-kmeans-groups button:hover:not(:disabled) { background: var(--surface-hover); }
 .skill-kmeans-groups button:disabled { color: var(--text-muted); cursor: default; }
@@ -59,6 +91,15 @@
 .skill-kmeans-history-table td:last-child { text-align: right; }
 .skill-kmeans-empty { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 16px; }
 .skill-kmeans-empty p { margin: 0; font-size: 13px; color: var(--text-soft); }
+@container skill-kmeans-members (max-width: 480px) {
+  .skill-kmeans-member-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .skill-kmeans-member-filters > label:first-child { grid-column: 1 / -1; }
+}
+@container skill-kmeans (max-width: 700px) {
+  .skill-kmeans-group-table-layout { grid-template-columns: 1fr; }
+  .skill-kmeans-group-table-layout > .skill-kmeans-section { border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+  .skill-kmeans-document-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 8px; }
+}
 @container skill-kmeans (max-width: 600px) {
   .skill-kmeans-result-content { grid-template-columns: 1fr; }
   .skill-kmeans-metrics { grid-template-columns: 1fr; }
@@ -68,6 +109,7 @@
   .skill-kmeans-page .skill-kmeans-table th, .skill-kmeans-page .skill-kmeans-table td { padding: 9px 8px; }
 }
 @container skill-kmeans (max-width: 370px) {
+  .skill-kmeans-document-groups button { grid-template-columns: 26px minmax(0, 1fr) 65px; gap: 5px; padding-inline: 4px; }
   .skill-kmeans-page .analysis-panel-body { padding: 12px; }
   .skill-kmeans-page .analysis-tabs .detail-tab { padding-inline: 2px; }
   .skill-kmeans-page .skill-kmeans-table th, .skill-kmeans-page .skill-kmeans-table td { padding: 8px 6px; }
@@ -77,4 +119,7 @@
 @media (max-width: 760px), (pointer: coarse) {
   .skill-kmeans-page input, .skill-kmeans-page select { min-height: 44px; font-size: 16px; }
   .skill-kmeans-page .button, .skill-kmeans-groups button, .skill-kmeans-page summary { min-height: 44px; }
+  .skill-kmeans-skill-link, .skill-kmeans-member-table td > a { min-height: 44px; }
+  .skill-kmeans-member-table .skill-sort-button { min-height: 44px; }
+  .skill-kmeans-member-heading .filter-reset-button { min-height: 44px; }
 }

@@ -121,6 +121,28 @@ test('スナップショットの編集が学習状態や設定を変更しな�
   assert.equal(engine.snapshot().counts.length, 2)
 })
 
+test('軽量評価は特徴量の行順で返し、代表語なしでスナップショットと同じ目的関数を返す', () => {
+  const features = denseFeatures([[1, 0], [0.9, 0.1], [0, 1], [0.1, 0.9]])
+  features.documentIndices = [0, 2, 4, 5]
+  features.excludedIndices = [1, 3]
+  features.documentCount = 6
+  const engine = createSkillKMeansEngine(features, config)
+  while (!engine.step()) { /* train */ }
+  const evaluation = engine.evaluate()
+  const snapshot = engine.snapshot()
+  close(evaluation.meanSquaredDistance, snapshot.history.at(-1)!.meanSquaredDistance)
+  assert.deepEqual(evaluation.assignments, features.documentIndices.map((index) => snapshot.assignments[index]))
+  assert.deepEqual(evaluation.counts, snapshot.counts)
+  assert.equal(evaluation.stopReason, snapshot.stopReason)
+  assert.equal(evaluation.iteration, snapshot.iteration)
+  assert.ok(!('representativeTerms' in evaluation))
+  const before = engine.evaluate()
+  evaluation.assignments[0] = -1
+  evaluation.counts[0] = -1
+  assert.deepEqual(engine.evaluate(), before)
+  assert.equal(engine.step(), true)
+})
+
 test('K・初期値・反復上限と不正な特徴量を拒否する', () => {
   const features = denseFeatures([[1, 0], [0, 1]])
   for (const k of [0, -1, 1.5, 3, NaN, Infinity]) {
@@ -210,16 +232,19 @@ test('Workerは初回結果・1反復・一時停止・再開を返し、古いr
       '攻撃 ダメージ 物理', '攻撃 ダメージ 術', '攻撃 範囲 物理', '攻撃 範囲 術',
       '治療 回復 味方', '回復 味方 範囲', '回復 治療 攻撃', '攻撃 速度 上昇',
     ].map(document)
-    const configs: [SkillKMeansConfig, SkillKMeansConfig] = [{ ...config, k: 2 }, { ...config, k: 3 }]
-    send({ type: 'start', requestId: 1, documents, configs, stepOnly: true })
+    const settings: SkillKMeansConfig = { ...config, k: 3 }
+    send({ type: 'start', requestId: 1, documents, config: settings, stepOnly: true })
     assert.equal(messages.length, 2)
     const initial = messages[0]
     const stepped = messages[1]
     assert.equal(initial.type, 'result')
     assert.equal(stepped.type, 'result')
     if (initial.type !== 'result' || stepped.type !== 'result') assert.fail('results expected')
-    assert.deepEqual(initial.results.map((result) => result.iteration), [0, 0])
-    assert.deepEqual(stepped.results.map((result) => result.iteration), [1, 1])
+    assert.equal(initial.result.iteration, 0)
+    assert.equal(stepped.result.iteration, 1)
+    assert.deepEqual(stepped.result.config, settings)
+    assert.equal('results' in stepped, false)
+    assert.equal(scheduled.size, 0)
     assert.equal(stepped.paused, !stepped.complete)
     assert.ok(stepped.elapsedMs >= 0)
     send({ type: 'pause', requestId: 0 })
@@ -238,9 +263,10 @@ test('Workerは初回結果・1反復・一時停止・再開を返し、古いr
     if (finished.type !== 'result') assert.fail('completed result expected')
     assert.equal(finished.complete, true)
     assert.equal(finished.paused, false)
-    assert.deepEqual(finished.results, configs.map((settings) => train(createSkillKMeansFeatures(documents), settings)))
-    send({ type: 'start', requestId: 2, documents, configs, stepOnly: false })
+    assert.deepEqual(finished.result, train(createSkillKMeansFeatures(documents), settings))
+    send({ type: 'start', requestId: 2, documents, config: settings, stepOnly: false })
     assert.equal(scheduled.size, 1)
+    const oldTimer = scheduled.values().next().value!
     send({ type: 'pause', requestId: 2 })
     assert.equal(scheduled.size, 0)
     const pausedResult = messages.at(-1)!
@@ -248,10 +274,14 @@ test('Workerは初回結果・1反復・一時停止・再開を返し、古いr
     if (pausedResult.type === 'result') assert.equal(pausedResult.paused, true)
     send({ type: 'step', requestId: 2 })
     const nextResult = messages.at(-1)!
-    if (nextResult.type === 'result') assert.deepEqual(nextResult.results.map((result) => result.iteration), [1, 1])
-    send({ type: 'start', requestId: 3, documents: [], configs, stepOnly: false })
+    if (nextResult.type === 'result') assert.equal(nextResult.result.iteration, 1)
+    send({ type: 'start', requestId: 3, documents: [], config: settings, stepOnly: false })
     assert.equal(messages.at(-1)!.type, 'error')
     assert.equal(messages.at(-1)!.requestId, 3)
+    const messageCount = messages.length
+    oldTimer()
+    assert.equal(messages.length, messageCount)
+    assert.equal(scheduled.size, 0)
   } finally {
     globalThis.setTimeout = originalSetTimeout
     globalThis.clearTimeout = originalClearTimeout

@@ -146,7 +146,9 @@ function resolveAction(raw, inherited, rules, path) {
     if (problems.length || (enabled && disabled)) {
       reasons.push(...problems, ...(enabled && disabled ? ['conflicting-hidden-group-rules'] : []))
       conditions.push('追加出現の条件を判定できない')
-    } else if (disabled && rules.reasons.size === 0) {
+    } else if ((disabled || (group && !enabled)) && rules.reasons.size === 0) {
+      // Named groups start disabled. Only a matching, applicable enable can add
+      // their SPAWNs; uncertain rules above still prevent assuming them absent.
       return { ...result, status: 'excluded', resolvedCount: 0, reasons: [],
         conditions: [`${rules.label}では出現しない`], evidence: unique(evidence) }
     } else if (enabled) conditions.push(`${rules.label}で出現`)
@@ -213,7 +215,7 @@ function resolveAction(raw, inherited, rules, path) {
 }
 
 /**
- * Resolve only conditions supported by explicit stage/rune evidence. Counts are
+ * Resolve conditions from the default-disabled group state and stage/rune evidence. Counts are
  * a partial sum when reasons is nonempty; callers must not publish them as exact.
  * Raw level/action objects are never mutated, and indices refer to their source.
  */

@@ -1,5 +1,5 @@
 import type { DamageType } from './damageCalculator.ts'
-import type { GuardDamageAction, GuardInput, GuardSkillRecipe, GuardStage, GuardValue } from './guardCombatTypes.ts'
+import type { GuardCalculationSection, GuardDamageAction, GuardInput, GuardSkillRecipe, GuardStage, GuardValue } from './guardCombatTypes.ts'
 
 const k = (key: string): GuardValue => ({ key })
 const i = (input: string): GuardValue => ({ input })
@@ -24,6 +24,8 @@ const burst = (damageType: DamageType, scale: GuardValue, hits: GuardValue = 1, 
 const phase = (...values: [string, string][]): GuardInput => ({ key: 'phase', label: '計算する段階', kind: 'select',
   defaultValue: values[0][0], options: values.map(([value, label]) => ({ value, label })) })
 const at = (value: string, item: GuardStage): GuardStage => ({ ...item, id: value, when: { input: 'phase', comparison: 'EQ', value } })
+const pending = (id: string, reason: string, relatedSections: readonly GuardCalculationSection[] = ['スキル']) =>
+  ({ unresolved: [reason], calculationIssues: [{ id, reason, relatedSections }] })
 const make = (operatorId: string, skillIndex: number, stages: GuardStage[], inputs: GuardInput[] = [], notes: string[] = []): GuardSkillRecipe =>
   ({ operatorId, skillIndex, inputs, stages, notes })
 const hp = () => n('selfHpPercent', '自身のHP（%）', 100, 0, 100, 0.1)
@@ -48,7 +50,7 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
   make('char_2024_chyue', 2, [burst(PHYS, 1, 1, { maxTargets: k('max_target'), actions: [
     a(PHYS, k('atk_scale'), 1, { label: '初撃' }),
     a(PHYS, k('atk_scale_down'), 1, { label: '浮遊解除時', targets: i('levitatedTargets') }),
-  ], unresolved: ['第一素質の発動・再発動と浮遊解除ダメージの増幅順序を確認する必要があります。'] })],
+  ], ...pending('chyue-s2-levitation-talent-order', '第一素質の発動・再発動と浮遊解除ダメージの増幅順序を確認する必要があります。', ['スキル', '素質1']) })],
     [n('levitatedTargets', '浮遊解除の対象数', 0, 0, 4)]),
   make('char_2024_chyue', 3, [burst(PHYS, k('atk_scale'), choose('enhancedMode', true, 2, 1),
     { maxTargets: null, notes: ['合計5回発動による強化後の状態を選択する。5回目の発動中の切替時刻を推定しない。強化後もスキル発動1回の値で、通常攻撃・SP回復を含む周期DPSは含めない。'] })], [b('enhancedMode', '強化後の状態')]),
@@ -79,14 +81,14 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
       { label: `第${index + 1}音符` })), notes: ['8つの音符すべてが同一対象に命中する条件。'] })]),
   make('char_4182_oblvns', 2, [
     at('piano', stage(PHYS, { label: 'ピアノ', atk: k('attack@atk'), maxTargets: null,
-      actions: [a(PHYS, 1, choose('fever', true, 2, 1))], unresolved: ['音符の貫通・飛行・命中頻度を通常攻撃間隔へ換算する規則が未確定です。'] })),
+      actions: [a(PHYS, 1, choose('fever', true, 2, 1))], ...pending('oblvns-s2-piano-hit-frequency', '音符の貫通・飛行・命中頻度を通常攻撃間隔へ換算する規則が未確定です。') })),
     at('organ', stage(ARTS, { label: 'オルガン', aspd: k('attack@attack_speed'),
-      actions: [a(ARTS, 1, choose('fever', true, 2, 1))], unresolved: ['音符の飛行・命中頻度を通常攻撃間隔へ換算する規則が未確定です。'] })),
+      actions: [a(ARTS, 1, choose('fever', true, 2, 1))], ...pending('oblvns-s2-organ-hit-frequency', '音符の飛行・命中頻度を通常攻撃間隔へ換算する規則が未確定です。') })),
   ], [phase(['piano', 'ピアノ'], ['organ', 'オルガン']), b('fever', 'Fever状態')]),
   make('char_4182_oblvns', 3, [stage(ARTS, { duration: 25, actions: [
     a(PHYS, k('attack@atk_scale'), 2, { label: 'ピアノの音符', targets: 1 }),
     a(ARTS, k('attack@atk_scale'), 2, { label: 'オルガンの音符', targets: 1 }),
-  ], unresolved: ['異なる敵を追尾する音符の命中先と継続時間中の再命中頻度が未確定です。'] })]),
+  ], ...pending('oblvns-s3-note-targets', '異なる敵を追尾する音符の命中先と継続時間中の再命中頻度が未確定です。') })]),
 
   make('char_4088_hodrer', 1, [next(PHYS, k('atk_scale'), 1, { maxTargets: 2 })], [], ['攻撃後の最大HP25%回復は直接ダメージに加算しない。']),
   make('char_4088_hodrer', 2, [
@@ -124,7 +126,7 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
   make('char_1051_headb2', 3, [burst(PHYS, 1, 1, { maxTargets: null, atk: k('atk_base'),
     actions: Array.from({ length: 5 }, (_, index) => a(PHYS, k('atk_scale'), 1,
       { label: `第${index + 1}撃`, attackBonus: mul(index, k('atk_step')) })),
-    unresolved: ['連撃ごとの高台経由の追加攻撃と拡散先を確認する必要があります。'] })]),
+    ...pending('headb2-s3-terrain-splash', '連撃ごとの高台経由の追加攻撃と拡散先を確認する必要があります。', ['スキル', '素質1', '特性']) })]),
 
   make('char_010_chen', 1, [next(PHYS, k('atk_scale'))], [], ['強化攻撃は説明に記載されたダメージ1回として定義し、剣豪の通常攻撃2ヒットを追加乗算しない。スタン1.5秒を保持。']),
   make('char_010_chen', 2, [burst(PHYS, 1, 1, { maxTargets: k('max_target'), actions: [
@@ -203,7 +205,7 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
     at('normal', stage(PHYS, { atk: k('atk'), duration: 25, actions: [a(PHYS)] })),
     at('true', stage(TRUE, { label: '自身・ブレイジング・サンがブロック中', atk: k('atk'), duration: 25, actions: [a(TRUE)] })),
     at('sun', burst(TRUE, k('value'), 1, { label: '召喚時', maxTargets: null,
-      unresolved: ['召喚時ダメージとスキル攻撃力増加の適用順序を確認する必要があります。'] })),
+      ...pending('nearl2-s3-summon-attack-order', '召喚時ダメージとスキル攻撃力増加の適用順序を確認する必要があります。') })),
   ], [phase(['normal', '通常攻撃（ブロック条件なし）'], ['true', '通常攻撃（ブロック条件成立）'], ['sun', 'ブレイジング・サン召喚時'])],
     ['ブレイジング・サンの被撃による生存時間・敵の配置はシミュレーションしない。']),
 
@@ -225,7 +227,7 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
   make('char_4010_etlchi', 2, [burst(PHYS, k('atk_scale'), 1, { label: '鎌1回の接触', maxTargets: null,
     notes: ['接触1回のダメージ。0.5秒ごとの接触判定と2本の鎌の位置・重複を通常攻撃DPSと同一視しない。'] })]),
   make('char_4010_etlchi', 3, [stage(PHYS, { atk: k('atk'), aspd: k('attack_speed'), maxTargets: null, duration: 20,
-    unresolved: ['心燭の最低ダメージ35%・HP上限・敵へのHP減少転写を通常の軽減計算と分離する必要があります。'] })]),
+    ...pending('etlchi-s3-hp-transfer', '心燭の最低ダメージ35%・HP上限・敵へのHP減少転写を通常の軽減計算と分離する必要があります。') })]),
 
   make('char_4064_mlynar', 1, [stage(PHYS, { duration: 30, maxTargets: null, actions: [a(PHYS, k('attack@atk_scale'))] })]),
   make('char_4064_mlynar', 2, [stage(PHYS, { duration: 20, intervalAdd: k('base_attack_time'), maxTargets: null,
@@ -240,7 +242,7 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
     atk: mul(k('thunder_atk'), i('attackStacks')), actions: [a(PHYS, k('attack@atk_scale_s2'))] })],
     [stacks(25, 'スキル中の落雷による累積数')]),
   make('char_1043_leizi2', 3, [stage(PHYS, { duration: 24, intervalAdd: k('base_attack_time'), maxTargets: null,
-    actions: [a(PHYS, k('attack@atk_scale_s3'))], unresolved: ['電流の生成・反射・再接触による術ダメージの回数と持続を確認する必要があります。'] })]),
+    actions: [a(PHYS, k('attack@atk_scale_s3'))], ...pending('leizi2-s3-current-contacts', '電流の生成・反射・再接触による術ダメージの回数と持続を確認する必要があります。') })]),
 ]
 
 export function findGuardSkillRecipe(operatorId: string, skillIndex: number): GuardSkillRecipe | null {

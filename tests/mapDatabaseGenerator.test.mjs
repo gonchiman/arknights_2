@@ -56,13 +56,13 @@ test('stage display codes come from the stage table; normal and challenge share 
 })
 
 test('unsupported conditional spawn makes the entire map and every enemy count unknown', () => {
-  const output = buildMapDatabase(options([level('obt/conditional', [spawn('enemy_a', 9), spawn('enemy_b', 1, { hiddenGroup: 'phase2' })])], {
+  const output = buildMapDatabase(options([level('obt/conditional', [spawn('enemy_a', 9), spawn('enemy_b', 1, { condition: 'phase2' })])], {
     conditional: stage('conditional', 'obt/conditional'),
   }))
   const summary = output.index.maps[0]
   assert.equal(summary.status, 'excluded')
   assert.equal(summary.spawnCount, null)
-  assert.deepEqual(summary.reasons, ['hidden-spawn-group'])
+  assert.deepEqual(summary.reasons, ['conditional-spawn:condition'])
   assert.deepEqual(output.details[summary.detailFile].maps[summary.levelId].enemies,
     [{ id: 'enemy_a', count: null }, { id: 'enemy_b', count: null }])
 })
@@ -130,13 +130,11 @@ test('same display code keeps distinct environment levels and their difficulty m
   ])
 })
 
-test('normal and tough stage contexts resolve hidden groups while preserving original settings', () => {
+test('default-off groups are enabled per environment while raw conditional settings stay visible', () => {
   const source = level('obt/normal', [
     spawn('enemy_a', 2, { hiddenGroup: 'normal' }), spawn('enemy_b', 7, { hiddenGroup: 'raid' }),
   ], { runes: [
     { difficultyMask: 'NORMAL', key: 'level_hidden_group_enable', blackboard: [{ key: 'key', valueStr: 'normal' }] },
-    { difficultyMask: 'NORMAL', key: 'level_hidden_group_disable', blackboard: [{ key: 'key', valueStr: 'raid' }] },
-    { difficultyMask: 'FOUR_STAR', key: 'level_hidden_group_disable', blackboard: [{ key: 'key', valueStr: 'normal' }] },
     { difficultyMask: 'FOUR_STAR', key: 'level_hidden_group_enable', blackboard: [{ key: 'key', valueStr: 'raid' }] },
   ] })
   const original = structuredClone(source)
@@ -159,6 +157,8 @@ test('normal and tough stage contexts resolve hidden groups while preserving ori
     const actions = detail.waves[0].fragments[0].actions
     assert.deepEqual(actions.map((action) => action.count), [2, 7])
     assert.deepEqual(actions.map((action) => action.hiddenGroup), ['normal', 'raid'])
+    assert.deepEqual(actions.map((action) => action.spawnKind), ['conditional', 'conditional'])
+    assert.deepEqual(actions.map((action) => action.reasons), [['hidden-spawn-group'], ['hidden-spawn-group']])
     assert.deepEqual(actions.map((action) => action.resolution.resolvedCount), expected)
     assert.deepEqual(actions.map((action) => action.resolution.status), expected.map((count) => count ? 'included' : 'excluded'))
     assert.ok(actions.every((action) => action.resolution.evidence.length > 0))
@@ -299,7 +299,9 @@ test('conditional spawn settings are retained separately from fixed rows and unk
     randomType: 'RANDOM', refreshType: 'ONCE', managedByScheduler: false,
     blockFragment: true, dontBlockWave: true,
   })
-  const output = buildMapDatabase(options([level('obt/conditional-detail', [spawn('enemy_a', 2), conditional])], {
+  const output = buildMapDatabase(options([level('obt/conditional-detail', [spawn('enemy_a', 2), conditional], {
+    runes: [{ key: 'level_hidden_group_enable', difficultyMask: 'NORMAL', blackboard: [{ key: 'key', valueStr: 'phase2' }] }],
+  })], {
     conditional: stage('conditional-detail', 'obt/conditional-detail'),
   }))
   const summary = output.index.maps[0]
@@ -314,7 +316,7 @@ test('conditional spawn settings are retained separately from fixed rows and unk
   for (const key of Object.keys(conditional)) assert.equal(action[key], conditional[key])
   assert.equal(summary.spawnCount, null)
   assert.equal(summary.status, 'excluded')
-  assert.equal(action.resolution.status, 'unknown')
+  assert.equal(action.resolution.status, 'conditional')
   assert.equal(action.resolution.resolvedCount, null)
   assert.deepEqual(detail.enemies, [
     { id: 'enemy_a', count: null }, { id: 'enemy_b', count: null }, { id: 'unregistered', count: null },
@@ -589,7 +591,7 @@ test('conditional, optional, challenge-only, and unrelated device or effect defi
 })
 
 test('features remain available when enemy counts are excluded, while missing source is explicitly unknown', () => {
-  const source = level('obt/conditional', [spawn('enemy_a', 2, { hiddenGroup: 'phase2' })], {
+  const source = level('obt/conditional', [spawn('enemy_a', 2, { condition: 'phase2' })], {
     mapData: { map: [[0]], tiles: [{ tileKey: 'tile_hole' }] }, options: { costIncreaseTime: 3 },
   })
   const output = buildMapDatabase(options([source], {

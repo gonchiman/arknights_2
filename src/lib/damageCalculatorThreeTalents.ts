@@ -32,6 +32,10 @@ export interface DamageCalculatorThreeTalentOutput {
   defenseIgnore: { chance: number; ratio: number } | null
 }
 
+export function isDamageCalculatorThreeTalentItemRelevant(item: TalentStructureEffect['item']): boolean {
+  return !['REDEPLOY_TIME', 'STEALTH', 'HP', 'FORCED_RETREAT', 'HP_RESTORE_RATIO'].includes(item)
+}
+
 /** Evaluate verified effects of this operator only; no descriptions or legacy formulas execute. */
 export function evaluateDamageCalculatorThreeTalents(input: {
   operator: SkillRecord; phaseIndex: number; operatorLevel: number
@@ -65,7 +69,7 @@ export function evaluateDamageCalculatorThreeTalents(input: {
     for (const effect of structure.effects) {
       const result: DamageCalculatorThreeTalentEvaluation = { ...selection, talentName, effect, status: 'UNVERIFIED', reason: '' }
       output.effects.push(result)
-      if (['REDEPLOY_TIME', 'STEALTH', 'HP', 'FORCED_RETREAT', 'HP_RESTORE_RATIO'].includes(effect.item)) {
+      if (!isDamageCalculatorThreeTalentItemRelevant(effect.item)) {
         result.status = 'NOT_RELEVANT'
         result.reason = '1回の直接ダメージ・DPSの計算には使用しません。'
         continue
