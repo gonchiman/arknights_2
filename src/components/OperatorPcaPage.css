@@ -1,6 +1,6 @@
 .operator-pca-page { container: operator-pca / inline-size; font-size: 13px; --pca-first: #6989a8; --pca-second: #ad835e; }
 .operator-pca-page .page-intro { margin-bottom: 0; }
-.operator-pca-page .analysis-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.operator-pca-page .analysis-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .operator-pca-page h3 { margin: 0 0 12px; font-size: 14px; font-weight: 500; }
 .operator-pca-condition { color: var(--text-soft); overflow-wrap: anywhere; }
 .operator-pca-filters { display: grid; grid-template-columns: 1fr 1fr minmax(0, 1.5fr); gap: 12px; margin-bottom: 20px; }
@@ -63,6 +63,22 @@
 .operator-pca-page .operator-pca-coefficients .selected-component { background: color-mix(in srgb, var(--pca-first) 14%, var(--surface)); }
 .operator-pca-method { display: flex; flex-wrap: wrap; gap: 6px 16px; border-top: 1px solid var(--border); padding-top: 12px; margin: 20px 0 0; color: var(--text-muted); }
 .operator-pca-method > span { overflow-wrap: anywhere; }
+.operator-pca-score-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.operator-pca-score-count { margin-bottom: 10px; color: var(--text-soft); text-align: right; font-variant-numeric: tabular-nums; }
+.operator-pca-page .operator-pca-scores { min-width: 960px; }
+.operator-pca-page .operator-pca-scores th:first-child { width: 160px; }
+.operator-pca-page .operator-pca-scores tbody th:first-child { background: var(--surface); }
+.operator-pca-page .operator-pca-scores .operator-pca-score-branch { width: 96px; white-space: normal; text-align: left; }
+.operator-pca-page .operator-pca-scores thead th[aria-sort] { padding: 0; }
+.operator-pca-page .operator-pca-scores .skill-sort-button { min-height: 42px; padding: 9px 8px; gap: 4px; font-weight: 500; white-space: nowrap; }
+.operator-pca-page .operator-pca-scores .skill-sort-button:hover { background: var(--surface-soft); }
+.operator-pca-page .operator-pca-scores .skill-sort-indicator { color: var(--text-muted); }
+.operator-pca-page .operator-pca-scores th.selected-component, .operator-pca-page .operator-pca-scores tbody th.selected-component { background: color-mix(in srgb, var(--pca-first) 14%, var(--surface)); }
+.operator-pca-page .operator-pca-scores .operator-pca-score-empty { text-align: center; }
+.operator-pca-score-link { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.operator-pca-score-pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 16px; margin-top: 12px; font-variant-numeric: tabular-nums; }
+.operator-pca-score-pagination > span { color: var(--text-soft); }
+.operator-pca-score-actions { display: flex; gap: 8px; margin-left: auto; }
 .operator-pca-empty, .operator-pca-error { margin: 0; padding: 32px 16px; border: 1px solid var(--border); }
 .operator-pca-error { color: var(--danger); }
 @container operator-pca (max-width: 640px) {
@@ -77,4 +93,6 @@
 @media (max-width: 760px), (pointer: coarse) {
   .operator-pca-page .button, .operator-pca-filters select, .operator-pca-component-picker { min-height: 44px; }
   .operator-pca-filters select, .operator-pca-component-picker { font-size: 16px; }
+  .operator-pca-page .operator-pca-scores .skill-sort-button { min-height: 44px; }
+  .operator-pca-score-link { display: inline-flex; align-items: center; min-height: 44px; }
 }
