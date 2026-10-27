@@ -29,11 +29,10 @@ export function buildSkillKMeansScopes(rows: readonly SkillRecord[]): SkillKMean
   return [{ value: 'ALL', label: '全スキル', rows }, ...categories]
 }
 
-/** A small starting range for coarse scopes, not an estimate of the optimum K. */
-export function getSkillKMeansInitialMaxK(scope: SkillKMeansScope, usableCount: number): number {
+/** Use the same default search range for every scope, capped below its document count. */
+export function getSkillKMeansInitialMaxK(_scope: SkillKMeansScope, usableCount: number): number {
   // Fewer than four usable documents cannot form a comparison range; the UI disables search.
-  const limit = Math.max(3, Math.min(80, usableCount - 1))
-  return scope === 'ALL' ? Math.min(60, limit) : Math.min(10, Math.max(3, Math.floor(usableCount / 10)), limit)
+  return Math.min(60, Math.max(3, usableCount - 1))
 }
 
 /** Use exactly the training tokenizer's exclusions when deriving scope counts and K limits. */

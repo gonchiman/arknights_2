@@ -91,12 +91,11 @@ test('共通スキルIDでも別分類の代表説明文や所属スキルが漏
   assert.ok(!createSkillKMeansFeatures(scoped.documents).terms.includes('シールド'))
 })
 
-test('初期探索上限は全体の60を保ち、大分類では少数のグループから始める', () => {
-  for (const [count, expected] of [[4, 3], [9, 8], [32, 31], [61, 60], [834, 60]]) {
-    assert.equal(getSkillKMeansInitialMaxK('ALL', count), expected)
-  }
-  for (const [count, expected] of [[4, 3], [9, 3], [32, 3], [47, 4], [62, 6], [97, 9], [102, 10], [533, 10]]) {
-    for (const scope of SKILL_COARSE_CATEGORIES) assert.equal(getSkillKMeansInitialMaxK(scope, count), expected)
+test('全スキル・大分類とも初期探索上限は60と学習説明文数−1の小さい方にする', () => {
+  for (const [count, expected] of [[4, 3], [9, 8], [32, 31], [47, 46], [60, 59], [61, 60], [62, 60], [97, 60], [102, 60], [533, 60], [834, 60]]) {
+    for (const scope of ['ALL', ...SKILL_COARSE_CATEGORIES] as const) {
+      assert.equal(getSkillKMeansInitialMaxK(scope, count), expected)
+    }
   }
   for (const count of [0, 1, 2, 3]) {
     assert.equal(getSkillKMeansInitialMaxK('ALL', count), 3)
@@ -105,7 +104,7 @@ test('初期探索上限は全体の60を保ち、大分類では少数のグル
   for (let count = 4; count <= 1000; count += 1) {
     for (const scope of ['ALL', ...SKILL_COARSE_CATEGORIES] as const) {
       const maxK = getSkillKMeansInitialMaxK(scope, count)
-      assert.ok(Number.isInteger(maxK) && maxK >= 3 && maxK <= Math.min(80, count - 1))
+      assert.ok(Number.isInteger(maxK) && maxK >= 3 && maxK <= Math.min(60, count - 1))
     }
   }
 })
