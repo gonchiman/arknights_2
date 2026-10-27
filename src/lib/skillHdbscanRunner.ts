@@ -1,12 +1,12 @@
 import type { SkillClusteringDocument } from './skillClusteringFeatures.ts'
-import type { SkillHdbscanConfig, SkillHdbscanResult, SkillHdbscanStage } from './skillHdbscan.ts'
+import type { SkillHdbscanExperimentConfig, SkillHdbscanExperimentResult, SkillHdbscanStage } from './skillHdbscan.ts'
 import type { SkillHdbscanWorkerRequest, SkillHdbscanWorkerResponse } from './skillHdbscan.worker.ts'
 
 export interface SkillHdbscanRunState {
   requestId: number
   status: 'idle' | 'running' | 'complete' | 'cancelled' | 'error'
   stage: 'preparing' | SkillHdbscanStage | null
-  result: SkillHdbscanResult | null
+  result: SkillHdbscanExperimentResult | null
   termsCount: number
   elapsedMs: number
   error: string | null
@@ -60,7 +60,7 @@ export class SkillHdbscanRunner {
     this.publish({ ...this.state, status: 'error', stage: null, error })
   }
 
-  start(documents: readonly SkillClusteringDocument[], config: SkillHdbscanConfig) {
+  start(documents: readonly SkillClusteringDocument[], config: SkillHdbscanExperimentConfig) {
     if (this.disposed) return
     this.closeWorker()
     const requestId = ++this.generation
