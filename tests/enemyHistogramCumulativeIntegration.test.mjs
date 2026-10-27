@@ -110,10 +110,11 @@ const countAxisTicks = markup => {
     .map(match => Number(match[2].replaceAll(',', '')))
 }
 
-function PanelWrapper({ initialSnapshot, editor = false }) {
+function PanelWrapper({ initialSnapshot, editor = false, aggregationCounts, aggregationVersion }) {
   const controls = useControls(initialSnapshot)
   return createElement(Panel, { rows: enemies, allRows: enemies, scopeLabel: 'エリート・検証fixture', controls,
-    filterControls: null, ...(editor ? { histogramEditor: { initialSnapshot: initialSnapshot ?? null, onChange() {} } } : {}) })
+    filterControls: null, aggregationCounts, aggregationVersion,
+    ...(editor ? { histogramEditor: { initialSnapshot: initialSnapshot ?? null, onChange() {} } } : {}) })
 }
 const renderPanel = props => renderToStaticMarkup(createElement(PanelWrapper, props))
 const cumulativeSelect = markup => [...markup.matchAll(/<label\b[^>]*>([\s\S]*?)<\/label>/g)]
@@ -124,6 +125,21 @@ const selectedCumulativeDisplay = markup => {
   return [...select.matchAll(/<option\b([^>]*)>([^<]*)<\/option>/g)]
     .find(match => /\bselected=""/.test(match[1]))?.[2]
 }
+
+test('指定した集計版の出現数だけを描画し、別版のキャッシュへフォールバックしない', () => {
+  const aggregationVersion = { id: 'v2', label: '第2版', sourceRevision: 'abc123', ruleVersion: 'hidden-groups-v2' }
+  const initialSnapshot = snapshot()
+  const live = renderPanel({ initialSnapshot })
+  const aggregationCounts = { ...fixtureCounts, enemies: Object.fromEntries(
+    Object.entries(fixtureCounts.enemies).map(([id, counts]) => [id, { ...counts, spawnCount: counts.spawnCount * 10 }]),
+  ) }
+  const fixed = renderPanel({ initialSnapshot, aggregationCounts, aggregationVersion })
+  assert.notDeepEqual(barTitles(fixed), barTitles(live))
+  assert.ok(barTitles(fixed).some(title => title.includes('20体')))
+  const unavailable = renderPanel({ initialSnapshot, aggregationVersion })
+  assert.deepEqual(barTitles(unavailable), [])
+  assert.match(clean(unavailable), /登場データを取得できませんでした/)
+})
 
 test('累積オプションONだけに右軸0〜100%と線を出し、元の階級と件数は変えない', () => {
   const on = snapshot(), off = snapshot({ showCumulative: false })

@@ -34,6 +34,7 @@ import type { OpenOperatorDetail } from './components/OperatorDetailLink'
 import { SkillDirectory } from './components/SkillDirectory'
 import { SkillCoarseClassificationPage } from './components/SkillCoarseClassificationPage'
 import { TalentCoarseClassificationPage } from './components/TalentCoarseClassificationPage'
+import { TraitCoarseClassificationPage } from './components/TraitCoarseClassificationPage'
 import { TalentStructurePage } from './components/TalentStructurePage'
 import { SkillEffectsPage } from './components/SkillEffectsPage'
 import { SkillSummaryPage } from './components/SkillSummaryPage'
@@ -73,6 +74,7 @@ const MapDatabase = lazy(() => import('./components/MapDatabase').then((module) 
 const EnemyMapCoveragePage = lazy(() => import('./components/EnemyMapCoveragePage').then((module) => ({ default: module.EnemyMapCoveragePage })))
 const MainEnemyTrendsPage = lazy(() => import('./components/MainEnemyTrendsPage').then((module) => ({ default: module.MainEnemyTrendsPage })))
 const EnemyRegressionPage = lazy(() => import('./components/EnemyRegressionPage').then((module) => ({ default: module.EnemyRegressionPage })))
+const OperatorPcaPage = lazy(() => import('./components/OperatorPcaPage').then((module) => ({ default: module.OperatorPcaPage })))
 const SkillKMeansPage = lazy(() => import('./components/SkillKMeansPage').then((module) => ({ default: module.SkillKMeansPage })))
 const SkillHdbscanPage = lazy(() => import('./components/SkillHdbscanPage').then((module) => ({ default: module.SkillHdbscanPage })))
 const SkillHierarchicalPage = lazy(() => import('./components/SkillHierarchicalPage').then((module) => ({ default: module.SkillHierarchicalPage })))
@@ -342,6 +344,10 @@ export default function App() {
 
         {displayedRoute.view === 'home' ? (
           <HomePage />
+        ) : displayedRoute.view === 'operator-pca' ? (
+          <Suspense fallback={<p className="calculator-loading" role="status">オペレーター主成分分析を読み込み中…</p>}>
+            <OperatorPcaPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
+          </Suspense>
         ) : displayedRoute.view === 'code-analysis' ? (
           <CodeAnalysisPage />
         ) : displayedRoute.view === 'sources' ? (
@@ -445,6 +451,8 @@ export default function App() {
           </Suspense>
         ) : displayedRoute.view === 'talent-classification' ? (
           <TalentCoarseClassificationPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
+        ) : displayedRoute.view === 'trait-classification' ? (
+          <TraitCoarseClassificationPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
         ) : displayedRoute.view === 'talent-structure' ? (
           <TalentStructurePage rows={rows} loading={loading} initialSelection={displayedRoute.selection}
             invalidSelection={displayedRoute.invalidSelection} />
@@ -513,7 +521,7 @@ export default function App() {
       </div>
 
       {route.view === 'operator-detail' && detailBackgroundRoute && detailOperator && (
-        (detailBackgroundRoute.view === 'skill-classification' || detailBackgroundRoute.view === 'talent-classification') ? <OperatorProfileModal
+        (detailBackgroundRoute.view === 'skill-classification' || detailBackgroundRoute.view === 'talent-classification' || detailBackgroundRoute.view === 'trait-classification') ? <OperatorProfileModal
           key={detailOperator.operatorId}
           operator={detailOperator}
           comparisonOperators={operatorRecords}

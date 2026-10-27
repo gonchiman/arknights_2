@@ -1,0 +1,18 @@
+.enemy-aggregation-selector { display: grid; gap: 6px; width: 160px; max-width: 100%; min-width: 0; color: var(--text-soft); font-size: 11px; }
+.enemy-aggregation-selector select { width: 100%; min-width: 0; min-height: 36px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 0; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; }
+.enemy-aggregation-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 0; font-size: 12px; }
+.gg-detail-dialog.enemy-aggregation-history { width: min(1040px, calc(100vw - 32px)); }
+.enemy-aggregation-history summary { cursor: pointer; }
+.enemy-aggregation-history-scroll { overflow-x: auto; }
+.enemy-aggregation-history table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 12px; }
+.enemy-aggregation-history th, .enemy-aggregation-history td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; }
+.enemy-aggregation-history th { background: var(--surface-soft); font-weight: 500; }
+.enemy-aggregation-history th button { border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; white-space: nowrap; }
+.enemy-aggregation-history th button[aria-pressed="true"] { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.enemy-aggregation-metadata { display: flex; flex-wrap: wrap; gap: 8px 12px; font-size: 12px; }
+.enemy-aggregation-metadata dd { margin: 0 20px 0 0; overflow-wrap: anywhere; }
+.enemy-aggregation-changes { display: grid; gap: 8px; font-size: 12px; }
+.enemy-aggregation-changes ul { display: flex; flex-wrap: wrap; gap: 6px 24px; padding-left: 20px; }
+@media (max-width: 640px) {
+  .gg-detail-dialog.enemy-aggregation-history { width: calc(100vw - 16px); }
+}

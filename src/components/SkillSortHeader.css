@@ -1,0 +1,32 @@
+.skill-sort-button {
+  width: 100%;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 8px 10px;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.skill-sort-button:hover {
+  background: #ededed;
+  color: var(--text);
+}
+
+.skill-sort-indicator {
+  color: #777;
+  font-size: 8px;
+}
+
+@media (pointer: coarse) {
+  .skill-sort-button {
+    min-height: 44px;
+  }
+}

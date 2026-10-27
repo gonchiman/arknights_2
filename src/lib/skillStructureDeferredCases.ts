@@ -1,12 +1,14 @@
 import { DATA_SOURCE_URLS } from './dataSources.ts'
 import { createSkillJsonSelectionKey } from './skillJsonAnalysis.ts'
 import type { SkillStructureSelection } from './skillStructure.ts'
+import type { GuardCalculationSection } from './guardCombatTypes.ts'
 
 export interface SkillStructureDeferredCase {
   readonly id: string
   readonly selection: SkillStructureSelection
   readonly title: string
   readonly status: 'DEFERRED'
+  readonly relatedSections?: readonly GuardCalculationSection[]
   readonly unresolved: string
   readonly currentTreatment: string
   readonly reason: string
@@ -19,6 +21,7 @@ export interface SkillStructureDeferredCase {
 export const SKILL_STRUCTURE_DEFERRED_CASES: readonly SkillStructureDeferredCase[] = [
   {
     id: 'irene-s3-bombardment-levitation-timeline',
+    relatedSections: ['スキル', '素質1'],
     selection: { operatorId: 'char_4009_irene', skillId: 'skchr_irene_3', skillIndex: 3, levelIndex: 9 },
     title: '浮遊時間と砲撃の命中時刻',
     status: 'DEFERRED',
@@ -51,6 +54,7 @@ export const SKILL_STRUCTURE_DEFERRED_CASES: readonly SkillStructureDeferredCase
   },
   {
     id: 'irene-s1-levitation-timeline',
+    relatedSections: ['スキル', '素質1'],
     selection: { operatorId: 'char_4009_irene', skillId: 'skchr_irene_1', skillIndex: 1, levelIndex: 9 },
     title: '浮遊の経過時間と打撃間の状態変化',
     status: 'DEFERRED',

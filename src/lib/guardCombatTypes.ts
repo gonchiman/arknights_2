@@ -32,6 +32,14 @@ export interface GuardDamageAction {
   timing?: 'PER_ATTACK' | 'PER_SECOND' | 'ON_DEPLOY'
 }
 
+export type GuardCalculationSection = 'スキル' | '特性' | `素質${number}`
+
+export interface GuardCalculationIssue {
+  readonly id: string
+  readonly reason: string
+  readonly relatedSections: readonly GuardCalculationSection[]
+}
+
 export interface GuardStage {
   id: string
   label: string
@@ -49,6 +57,8 @@ export interface GuardStage {
   resistanceIgnoreFixed?: GuardValue
   /** Effects that cannot be inferred from text/data block numerical output explicitly. */
   unresolved?: readonly string[]
+  /** Stable identities link a skill-stage blocker to any affected passive effects. */
+  calculationIssues?: readonly GuardCalculationIssue[]
   notes?: readonly string[]
 }
 

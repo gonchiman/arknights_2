@@ -25,6 +25,7 @@ import type {
 } from '../types/skill'
 import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
 import { SkillEffectModal } from './SkillEffectModal'
+import { SkillSortHeader as SortableHeader } from './SkillSortHeader'
 import './SkillDirectory.css'
 
 interface Props {
@@ -292,31 +293,6 @@ function FilterSelect({ label, value, options, onChange }: FilterSelectProps) {
         ))}
       </select>
     </label>
-  )
-}
-
-interface SortableHeaderProps {
-  label: string
-  sortKey: SkillDirectorySortKey
-  sort: SkillDirectorySort
-  onSort: (key: SkillDirectorySortKey) => void
-}
-
-function SortableHeader({ label, sortKey, sort, onSort }: SortableHeaderProps) {
-  const active = sort.key === sortKey
-  const ariaSort = active
-    ? (sort.direction === 'asc' ? 'ascending' : 'descending')
-    : 'none'
-
-  return (
-    <th scope="col" aria-sort={ariaSort}>
-      <button type="button" className="skill-sort-button" onClick={() => onSort(sortKey)}>
-        <span>{label}</span>
-        <span className="skill-sort-indicator" aria-hidden="true">
-          {active ? (sort.direction === 'asc' ? '▲' : '▼') : '↕'}
-        </span>
-      </button>
-    </th>
   )
 }
 

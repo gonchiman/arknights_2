@@ -57,6 +57,44 @@ test('ページ移動・再読み込み用ストレージを経由して同じ�
   assert.notEqual(createEnemyHistogramSnapshot(changed).id, snapshot.id)
 })
 
+test('集計版と固定データの根拠を複製・凍結し、保存後も同じ版で復元する', () => {
+  const source = input()
+  source.source.aggregationVersion = { id: 'v2', label: '第2版', sourceRevision: 'abc123', ruleVersion: 'hidden-groups-v2' }
+  const snapshot = createEnemyHistogramSnapshot(source)
+  const legacy = createEnemyHistogramSnapshot(input())
+  source.source.aggregationVersion.sourceRevision = 'later-revision'
+  assert.deepEqual(snapshot.source.aggregationVersion, {
+    id: 'v2', label: '第2版', sourceRevision: 'abc123', ruleVersion: 'hidden-groups-v2',
+  })
+  assert.ok(Object.isFrozen(snapshot.source.aggregationVersion))
+  assert.notEqual(snapshot.id, legacy.id)
+  assert.match(snapshot.filename, /v2/)
+  assert.notEqual(snapshot.filename, legacy.filename)
+  assert.deepEqual(snapshot.statistics, legacy.statistics)
+  const storage = memoryStorage()
+  assert.equal(writeEnemyHistogramSnapshot(snapshot, storage), true)
+  assert.deepEqual(readEnemyHistogramSnapshot(storage), snapshot)
+  assert.deepEqual(parseEnemyHistogramSnapshot(JSON.parse(JSON.stringify(snapshot))), snapshot)
+  const next = input()
+  next.source.aggregationVersion = { ...snapshot.source.aggregationVersion!, id: 'v3' }
+  assert.notEqual(createEnemyHistogramSnapshot(next).id, snapshot.id)
+})
+
+test('不正な集計版は復元せず、版を省略した既存の分布は維持する', () => {
+  const snapshot = createEnemyHistogramSnapshot(input())
+  const version = { id: 'v2', label: '第2版', sourceRevision: 'abc123', ruleVersion: 'hidden-groups-v2' }
+  for (const aggregationVersion of [null, [], {}, 'v2', { ...version, id: '' },
+    { ...version, label: 2 }, { ...version, sourceRevision: ' ' }, { ...version, ruleVersion: null }]) {
+    assert.equal(parseEnemyHistogramSnapshot({ ...snapshot, source: { ...snapshot.source, aggregationVersion } }), null)
+  }
+  assert.deepEqual(parseEnemyHistogramSnapshot(snapshot), snapshot)
+  assert.equal(Object.hasOwn(snapshot.source, 'aggregationVersion'), false)
+  const restored = parseEnemyHistogramSnapshot({ ...snapshot, source: {
+    ...snapshot.source, aggregationVersion: { ...version, unknown: 'discarded' },
+  } })!
+  assert.deepEqual(restored.source.aggregationVersion, version)
+})
+
 test('累積割合を省略した旧v1はOFFとして復元し、既存の識別子と保存名を保つ', () => {
   const omitted = createEnemyHistogramSnapshot(input())
   const explicitOff = createEnemyHistogramSnapshot({ ...input(), showCumulative: false })

@@ -33,8 +33,19 @@ export interface SkillKMeansResult {
 }
 
 export interface SkillKMeansEngine {
-  step(): void
+  /** Advance one iteration and return whether this run has stopped. */
+  step(): boolean
+  evaluate(): SkillKMeansEvaluation
   snapshot(): SkillKMeansResult
+}
+
+/** Lightweight result in feature-row order, without representative terms or history. */
+export interface SkillKMeansEvaluation {
+  iteration: number
+  stopReason: SkillKMeansResult['stopReason']
+  meanSquaredDistance: number
+  assignments: number[]
+  counts: number[]
 }
 
 export function createSkillKMeansEngine(features: SkillKMeansFeatures, settings: SkillKMeansConfig): SkillKMeansEngine {
@@ -107,7 +118,7 @@ export function createSkillKMeansEngine(features: SkillKMeansFeatures, settings:
 
   return {
     step() {
-      if (stopReason) return
+      if (stopReason) return true
       const previousAssignments = assignments
       const counts = Array<number>(config.k).fill(0)
       const sums = centers.map(() => new Float64Array(dimensions))
@@ -131,6 +142,13 @@ export function createSkillKMeansEngine(features: SkillKMeansFeatures, settings:
       if (changes === 0) stopReason = 'stable-assignments'
       else if (previousValue - value <= 1e-10 * Math.max(1, previousValue)) stopReason = 'tolerance'
       else if (iteration >= snapshotConfig.maxIterations) stopReason = 'max-iterations'
+      return stopReason !== null
+    },
+    evaluate() {
+      const counts = Array<number>(config.k).fill(0)
+      assignments.forEach((cluster) => { counts[cluster] += 1 })
+      return { iteration, stopReason, meanSquaredDistance: history.at(-1)!.meanSquaredDistance,
+        assignments: [...assignments], counts }
     },
     snapshot() {
       const alignedAssignments = Array<number>(features.documentCount).fill(-1)

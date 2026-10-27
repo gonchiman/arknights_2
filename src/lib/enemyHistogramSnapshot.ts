@@ -5,10 +5,18 @@ import { getEnemyRatingNumericRanges } from './enemyStatRatings.ts'
 import type { HistogramScale, NumericStatistics } from './enemyStatistics.ts'
 import { copyEnemyLevelSelection, isEnemyLevelSelection, type EnemyLevelSelection } from './enemyLevelSelection.ts'
 import { ENEMY_NUMERIC_FILTER_FIELDS, ENEMY_NUMERIC_FILTER_OPERATORS, parseEnemyNumericFilterValue, type EnemyNumericCondition } from './enemyNumericFilters.ts'
+import { getEnemyAggregationFilename } from './enemyAggregationData.ts'
 
 export const ENEMY_HISTOGRAM_SNAPSHOT_KEY = 'arknights-resistance-histogram-snapshot-v1'
 export const ENEMY_HISTOGRAM_SNAPSHOT_EVENT = 'enemy-histogram-snapshot-changed'
 type SnapshotStorage = Pick<Storage, 'getItem' | 'setItem'>
+
+export interface EnemyHistogramAggregationVersion {
+  id: string
+  label: string
+  sourceRevision: string
+  ruleVersion: string
+}
 
 export interface EnemyHistogramEditorSettings {
   levelType: EnemyLevelSelection
@@ -21,7 +29,7 @@ export interface EnemyHistogramEditorSettings {
 
 export interface EnemyHistogramSnapshotInput {
   metric: 'magicResistance'
-  source: { scopeLabel: string; enemyIds: string[]; countGeneratedAt: string | null }
+  source: { scopeLabel: string; enemyIds: string[]; countGeneratedAt: string | null; aggregationVersion?: EnemyHistogramAggregationVersion }
   countMode: EnemyHistogramCountMode
   coverage: EnemyHistogramCounts['summary'] | null
   scale: HistogramScale
@@ -57,6 +65,12 @@ const nonnegative = (value: unknown): value is number => finite(value) && value 
 const nullableFinite = (value: unknown) => value === null || finite(value)
 const shortString = (value: unknown): value is string => typeof value === 'string' && value.length <= 8_000
 const nearlyEqual = (left: number, right: number) => Math.abs(left - right) <= Math.max(1, Math.abs(right)) * 1e-9
+
+function validAggregationVersion(value: unknown): value is EnemyHistogramAggregationVersion {
+  const version = object(value)
+  return !!version && ['id', 'label', 'sourceRevision', 'ruleVersion'].every(key =>
+    shortString(version[key]) && String(version[key]).trim().length > 0)
+}
 
 function validEditorSettings(value: unknown): value is EnemyHistogramEditorSettings {
   const settings = object(value)
@@ -109,6 +123,7 @@ function validInput(value: unknown): value is EnemyHistogramSnapshotInput {
     || !Array.isArray(source.enemyIds) || !source.enemyIds.length || source.enemyIds.length > 50_000
     || !source.enemyIds.every(id => shortString(id) && id.length > 0)
     || !(source.countGeneratedAt === null || shortString(source.countGeneratedAt))
+    || (source.aggregationVersion !== undefined && !validAggregationVersion(source.aggregationVersion))
     || !ENEMY_HISTOGRAM_COUNT_MODES.some(({ key }) => key === input.countMode)
     || !['LINEAR', 'LOG'].includes(String(input.scale))
     || typeof input.showPercentages !== 'boolean' || typeof input.showBinRanges !== 'boolean'
@@ -178,7 +193,13 @@ export function createEnemyHistogramSnapshot(input: EnemyHistogramSnapshotInput)
   if (!validInput(input)) throw new Error('術耐性の分布を登録できませんでした。')
   // Select only known fields. Parsing stored data cannot inject stale display text.
   const copy: EnemyHistogramSnapshotInput = JSON.parse(JSON.stringify({
-    metric: input.metric, source: input.source, countMode: input.countMode,
+    metric: input.metric, source: {
+      scopeLabel: input.source.scopeLabel, enemyIds: input.source.enemyIds, countGeneratedAt: input.source.countGeneratedAt,
+      ...(input.source.aggregationVersion ? { aggregationVersion: {
+        id: input.source.aggregationVersion.id, label: input.source.aggregationVersion.label,
+        sourceRevision: input.source.aggregationVersion.sourceRevision, ruleVersion: input.source.aggregationVersion.ruleVersion,
+      } } : {}),
+    }, countMode: input.countMode,
     coverage: input.coverage, scale: input.scale, statistics: input.statistics,
     ratingBins: input.ratingBins, customLinearUpperBound: input.customLinearUpperBound,
     showPercentages: input.showPercentages, showBinRanges: input.showBinRanges,
@@ -204,11 +225,11 @@ export function createEnemyHistogramSnapshot(input: EnemyHistogramSnapshotInput)
     }))}`,
     title: '術耐性のヒストグラム', axisTitle: `術耐性（${copy.ratingBins ? 'ゲーム内評価' : '階級'}）`,
     conditions, summary,
-    filename: getWeightedEnemyHistogramImageFilename({ mode: copy.countMode, metric: '術耐性', scope: copy.source.scopeLabel,
+    filename: getEnemyAggregationFilename(getWeightedEnemyHistogramImageFilename({ mode: copy.countMode, metric: '術耐性', scope: copy.source.scopeLabel,
       scale: copy.scale, statistics: copy.statistics, customLinearUpperBound: copy.customLinearUpperBound,
       referenceVisibility: copy.referenceVisibility, showPercentages: copy.showPercentages,
       showBinRanges: copy.showBinRanges, showCumulative: copy.showCumulative, cumulativeDisplay: copy.cumulativeDisplay,
-      useRatingBins: copy.ratingBins !== null, coverage: copy.coverage }),
+      useRatingBins: copy.ratingBins !== null, coverage: copy.coverage }), copy.source.aggregationVersion?.id),
   })
 }
 

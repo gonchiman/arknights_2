@@ -1,0 +1,74 @@
+.damage-three-coverage-summary {
+  min-width: 0;
+  margin: 0;
+  background: var(--surface);
+  font-variant-numeric: tabular-nums;
+}
+
+.damage-three-coverage-summary-heading {
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: 12px;
+}
+.damage-three-coverage-summary-heading h2 { margin: 0; color: var(--text-soft); font-size: 12px; font-weight: 700; }
+.damage-three-coverage-summary-heading > span { font-weight: 400; }
+.damage-three-coverage-summary-body { padding: 14px 10px 16px; }
+.damage-three-coverage-summary-empty { margin: 0; padding: 16px 10px; color: var(--text-muted); font-size: 12px; }
+
+.damage-three-coverage-summary-legend,
+.damage-three-coverage-summary-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 15px;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.damage-three-coverage-summary-legend { margin: 0 0 12px; }
+.damage-three-coverage-summary-counts { margin: 6px 0 0; }
+.damage-three-coverage-summary-legend li,
+.damage-three-coverage-summary-counts li { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.damage-three-coverage-summary [data-coverage-status="SUPPORTED"] { --coverage-status-color: #7cabb9; }
+.damage-three-coverage-summary [data-coverage-status="CONDITIONAL"] { --coverage-status-color: #d9bb75; }
+.damage-three-coverage-summary [data-coverage-status="PENDING"] { --coverage-status-color: #bb91a2; }
+.damage-three-coverage-summary [data-coverage-status="UNSUPPORTED"] { --coverage-status-color: #a3a9b0; }
+.damage-three-coverage-summary [data-coverage-status="NOT_APPLICABLE"] { --coverage-status-color: #e6e7e9; }
+.damage-three-coverage-summary-swatch { width: 11px; height: 11px; flex: none; background: var(--coverage-status-color); }
+.damage-three-coverage-summary-axis {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 7px 66px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.damage-three-coverage-summary-row { display: grid; grid-template-columns: 55px minmax(0, 1fr); gap: 11px; }
+.damage-three-coverage-summary-row + .damage-three-coverage-summary-row { margin-top: 16px; }
+.damage-three-coverage-summary-label { display: flex; align-items: center; height: 28px; font-size: 12px; }
+.damage-three-coverage-summary-values { min-width: 0; }
+.damage-three-coverage-summary-track { display: flex; width: 100%; height: 28px; background: var(--surface-soft); }
+.damage-three-coverage-summary-segment {
+  container: coverage-segment / inline-size;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--coverage-status-color);
+  color: #222;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.damage-three-coverage-summary-percent { display: none; }
+@container coverage-segment (min-width: 48px) {
+  .damage-three-coverage-summary-percent { display: inline; }
+}
+
+@media (max-width: 620px) {
+  .damage-three-coverage-summary-row { grid-template-columns: 44px minmax(0, 1fr); gap: 8px; }
+  .damage-three-coverage-summary-axis { margin-left: 52px; }
+  .damage-three-coverage-summary-values { display: contents; }
+  .damage-three-coverage-summary-counts { grid-column: 1 / -1; margin: 0; gap: 4px 12px; }
+}

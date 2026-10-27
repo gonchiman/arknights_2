@@ -68,20 +68,20 @@ test('固定出現だけを集計し、同じ敵の条件付き出現や分岐�
   const input = options()
   const source = input.mapIndex.maps[0]
   source.status = 'excluded'
-  source.reasons = ['branch-spawn', 'hidden-spawn-group']
+  source.reasons = ['branch-spawn', 'conditional-spawn:condition']
   source.enemySpawnCounts = { a: 10, conditional: 2 }
   source.spawnCount = null
   const level = input.levels.get(source.levelId)
   level.waves[0].fragments[0].actions.push(
-    { actionType: 'SPAWN', key: 'a', count: 7, hiddenGroup: 'runtime' },
-    { actionType: 'SPAWN', key: 'conditional', count: 2, hiddenGroup: 'runtime' },
+    { actionType: 'SPAWN', key: 'a', count: 7, condition: 'runtime' },
+    { actionType: 'SPAWN', key: 'conditional', count: 2, condition: 'runtime' },
   )
   level.branches = { anotherForm: { phases: [{ actions: [
     { actionType: 'SPAWN', key: 'a', count: 100 }, { actionType: 'SPAWN', key: 'boss_form2', count: 1 },
   ] }] } }
   const data = buildMainEnemyTrends(input)
   assert.equal(data.maps[0].status, 'partial')
-  assert.deepEqual(data.maps[0].reasons, ['branch-spawn', 'hidden-spawn-group'])
+  assert.deepEqual(data.maps[0].reasons, ['branch-spawn', 'conditional-spawn:condition'])
   assert.deepEqual(data.maps[0].enemies.map(({ enemyId, count }) => [enemyId, count]), [['a', 3]])
   assert.equal(data.summary.includedMapCount, 1)
   assert.equal(data.summary.partialMapCount, 1)
@@ -136,7 +136,7 @@ test('元マップと公開indexの出現数・固定判定が不一致なら生
   input.mapIndex.maps[0].enemySpawnCounts.a = 4
   assert.throws(() => buildMainEnemyTrends(input), /spawn counts disagree/)
   input.mapIndex.maps[0].enemySpawnCounts.a = 3
-  input.levels.get('obt/main/level_main_00-01').waves[0].fragments[0].actions[0].hiddenGroup = 'challenge'
+  input.levels.get('obt/main/level_main_00-01').waves[0].fragments[0].actions[0].condition = 'challenge'
   assert.throws(() => buildMainEnemyTrends(input), /schedule disagree/)
 })
 
@@ -189,12 +189,10 @@ test('明示disable済みの不正設定を除外し、利用不能な元設定�
   assert.throws(() => buildMainEnemyTrends(input), /spawn counts disagree/)
 })
 
-test('既知enableと未確認hiddenが混在しても解決済み出現だけを部分集計する', () => {
+test('有効化されたグループと初期無効のグループを分け、実際の出現だけを集計する', () => {
   const input = options()
   const source = input.mapIndex.maps[0]
-  source.status = 'excluded'
-  source.spawnCount = null
-  source.reasons = ['hidden-spawn-group']
+  source.spawnCount = 5
   source.enemySpawnCounts = { a: 10 }
   const level = input.levels.get(source.levelId)
   level.waves[0].fragments[0].actions.push(
@@ -203,8 +201,9 @@ test('既知enableと未確認hiddenが混在しても解決済み出現だけ�
   )
   level.runes = [{ key: 'level_hidden_group_enable', difficultyMask: 'NORMAL', blackboard: [{ key: 'key', valueStr: 'known' }] }]
   const data = buildMainEnemyTrends(input)
-  assert.equal(data.maps[0].status, 'partial')
+  assert.equal(data.maps[0].status, 'included')
   assert.equal(data.maps[0].enemyCount, 5)
+  assert.deepEqual(data.maps[0].reasons, [])
 })
 
 test('非攻撃の聖杯は残し、惘核の非敵化は16-9だけに限定する', () => {
