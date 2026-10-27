@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState } from 'react'
+import { useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { SkillRecord } from '../types/skill'
 import { buildOperatorDatabaseRecords, EMPTY_OPERATOR_DATABASE_FILTERS, filterOperatorDatabaseRecords } from '../lib/operatorDatabase'
 import { getProfessionLabel, PROFESSION_ORDER } from '../lib/operatorFilters'
@@ -7,11 +7,12 @@ import { findOperatorPcaNeighbors, OPERATOR_PCA_METRICS, runOperatorPca } from '
 import { AnalysisTabPanel, AnalysisTabs } from './AnalysisTabs'
 import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
 import { OperatorPcaCoefficients, OperatorPcaScatter, OperatorPcaVariance } from './OperatorPcaCharts'
+import { OperatorPcaScoreTable } from './OperatorPcaScoreTable'
 import './DamageCalculator.css'
 import './OperatorPcaPage.css'
 
 interface Props { rows: SkillRecord[]; loading: boolean; onOpenOperatorDetail?: OpenOperatorDetail }
-const TABS = [['distribution', '分布'], ['components', '主成分']] as const
+const TABS = [['distribution', '分布'], ['components', '主成分'], ['scores', '得点']] as const
 type Tab = typeof TABS[number][0]
 const percent = (value: number) => `${(value * 100).toFixed(1)}%`
 const signed = (value: number) => Math.abs(value) < 0.0005 ? '0.000' : `${value > 0 ? '+' : ''}${value.toFixed(3)}`
@@ -23,6 +24,28 @@ function featureDirection(key: typeof OPERATOR_PCA_METRICS[number]['key'], coeff
   return coefficient > 0 ? '高い' : '低い'
 }
 
+function OperatorPcaFilters({ profession, subProfession, professions, subProfessions, onProfessionChange, onSubProfessionChange, children }: {
+  profession: string
+  subProfession: string
+  professions: readonly string[]
+  subProfessions: readonly { value: string; label: string }[]
+  onProfessionChange: (value: string) => void
+  onSubProfessionChange: (value: string) => void
+  children?: ReactNode
+}) {
+  return <div className={`operator-pca-filters${children ? '' : ' operator-pca-score-filters'}`}>
+    <label><span>職業</span><select value={profession} onChange={event => onProfessionChange(event.target.value)}>
+      <option value="ALL">すべて</option>
+      {professions.map(value => <option key={value} value={value}>{getProfessionLabel(value)}</option>)}
+    </select></label>
+    <label><span>職分</span><select value={subProfession} onChange={event => onSubProfessionChange(event.target.value)}>
+      <option value="ALL">すべて</option>
+      {subProfessions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+    </select></label>
+    {children}
+  </div>
+}
+
 export function OperatorPcaPage({ rows, loading, onOpenOperatorDetail }: Props) {
   const id = useId()
   const [tab, setTab] = useState<Tab>('distribution')
@@ -30,6 +53,7 @@ export function OperatorPcaPage({ rows, loading, onOpenOperatorDetail }: Props) 
   const [subProfession, setSubProfession] = useState('ALL')
   const [selectedId, setSelectedId] = useState('char_350_surtr')
   const [selectedComponent, setSelectedComponent] = useState(0)
+  const [scorePage, setScorePage] = useState(0)
   const selectedHeading = useRef<HTMLHeadingElement>(null)
   const records = useMemo(() => buildOperatorDatabaseRecords(rows), [rows])
   // Display filters never change the fitted population or the standardization.
@@ -61,6 +85,20 @@ export function OperatorPcaPage({ rows, loading, onOpenOperatorDetail }: Props) 
     .sort((left, right) => Math.abs(right.coefficient) - Math.abs(left.coefficient) || left.index - right.index)
     .slice(0, 3)
 
+  function changeProfession(value: string) {
+    setProfession(value)
+    setSubProfession('ALL')
+    setScorePage(0)
+  }
+
+  function changeSubProfession(value: string) {
+    setSubProfession(value)
+    setScorePage(0)
+  }
+
+  const displayFilters = { profession, subProfession, professions, subProfessions,
+    onProfessionChange: changeProfession, onSubProfessionChange: changeSubProfession }
+
   return <section className="calculator-page operator-pca-page">
     <header className="page-intro"><h1>オペレーター主成分分析</h1></header>
     <div className="operator-pca-condition">最終昇進・最大Lv／信頼100／潜在・MOD補正なし</div>
@@ -70,21 +108,13 @@ export function OperatorPcaPage({ rows, loading, onOpenOperatorDetail }: Props) 
         : <>
           <AnalysisTabPanel idPrefix={id} tab="distribution" activeTab={tab} title="ステータスの分布">
             <div className="analysis-panel-body">
-              <div className="operator-pca-filters">
-                <label><span>職業</span><select value={profession} onChange={event => { setProfession(event.target.value); setSubProfession('ALL') }}>
-                  <option value="ALL">すべて</option>
-                  {professions.map(value => <option key={value} value={value}>{getProfessionLabel(value)}</option>)}
-                </select></label>
-                <label><span>職分</span><select value={subProfession} onChange={event => setSubProfession(event.target.value)}>
-                  <option value="ALL">すべて</option>
-                  {subProfessions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-                </select></label>
+              <OperatorPcaFilters {...displayFilters}>
                 <label className="operator-pca-operator-field"><span>オペレーター</span><select value={selected?.operator.operatorId ?? ''}
                   disabled={points.length === 0} onChange={event => setSelectedId(event.target.value)}>
                   {points.length === 0 && <option value="">該当なし</option>}
                   {points.map(({ operator }) => <option key={operator.operatorId} value={operator.operatorId}>{operator.name}</option>)}
                 </select></label>
-              </div>
+              </OperatorPcaFilters>
               <div className="operator-pca-chart-heading"><span>第1・第2主成分 · 寄与率 {percent(totalVariance)}</span>
                 <span>表示 {points.length} / {count}名</span></div>
               {selected ? <>
@@ -161,6 +191,14 @@ export function OperatorPcaPage({ rows, loading, onOpenOperatorDetail }: Props) 
                 {result.excludedCount > 0 && <span>欠損除外 {result.excludedCount}名</span>}
                 {result.fit.constantColumns.length > 0 && <span>定数項目 {result.fit.constantColumns.map(index => OPERATOR_PCA_METRICS[index].label).join('・')}</span>}
               </div>
+            </div>
+          </AnalysisTabPanel>
+          <AnalysisTabPanel idPrefix={id} tab="scores" activeTab={tab} title="主成分得点">
+            <div className="analysis-panel-body">
+              <OperatorPcaFilters {...displayFilters} />
+              <div className="operator-pca-score-count" aria-live="polite">表示 {points.length} / {count}名</div>
+              <OperatorPcaScoreTable points={points} componentCount={result.fit.coefficients.length}
+                page={scorePage} onPageChange={setScorePage} onOpenOperatorDetail={onOpenOperatorDetail} />
             </div>
           </AnalysisTabPanel>
         </>}

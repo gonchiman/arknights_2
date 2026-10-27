@@ -1,5 +1,5 @@
 import type { SkillDirectorySort, SkillDirectorySortKey } from '../lib/skillDirectory'
-import './SkillSortHeader.css'
+import { TableSortHeader } from './TableSortHeader'
 
 interface Props {
   label: string
@@ -9,20 +9,6 @@ interface Props {
   ariaLabel?: string
 }
 
-export function SkillSortHeader({ label, sortKey, sort, onSort, ariaLabel }: Props) {
-  const active = sort.key === sortKey
-  const ariaSort = active
-    ? (sort.direction === 'asc' ? 'ascending' : 'descending')
-    : 'none'
-
-  return (
-    <th scope="col" aria-sort={ariaSort}>
-      <button type="button" className="skill-sort-button" aria-label={ariaLabel} onClick={() => onSort(sortKey)}>
-        <span>{label}</span>
-        <span className="skill-sort-indicator" aria-hidden="true">
-          {active ? (sort.direction === 'asc' ? '▲' : '▼') : '↕'}
-        </span>
-      </button>
-    </th>
-  )
+export function SkillSortHeader(props: Props) {
+  return <TableSortHeader {...props} />
 }
