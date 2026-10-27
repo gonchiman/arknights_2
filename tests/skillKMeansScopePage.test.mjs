@@ -101,9 +101,9 @@ test('統合説明文が多数あっても利用可能な説明文が4件未満�
 })
 
 test('大分類用の初期K上限を使い、指定がない場合は従来の60を使う', () => {
-  const scoped = renderSearch({ documents: documents(100), usableDocumentCount: 47, initialMaxK: 4 })
+  const scoped = renderSearch({ documents: documents(100), usableDocumentCount: 47, initialMaxK: 46 })
   assert.equal(attr(inputWithLabel(scoped, 'Kの下限'), 'value'), '2')
-  assert.equal(attr(inputWithLabel(scoped, 'Kの上限'), 'value'), '4')
+  assert.equal(attr(inputWithLabel(scoped, 'Kの上限'), 'value'), '46')
   assert.ok(!disabled(buttons(scoped).find(button => attr(button.tag, 'type') === 'submit').tag))
   const all = renderSearch({ documents: documents(100), usableDocumentCount: 100 })
   assert.equal(attr(inputWithLabel(all, 'Kの上限'), 'value'), '60')
