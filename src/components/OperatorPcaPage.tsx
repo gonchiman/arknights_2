@@ -112,9 +112,11 @@ export function OperatorPcaPage({ rows, loading, onOpenOperatorDetail }: Props) 
                 </section>
                 <section aria-labelledby={`${id}-coefficients-title`}><h3 id={`${id}-coefficients-title`}>軸をつくるステータス</h3>
                   <div className="operator-pca-table-scroll" tabIndex={0} role="region" aria-label="主成分係数の表">
-                    <table className="operator-pca-coefficients"><thead><tr><th scope="col">項目</th><th scope="col">第1主成分</th><th scope="col">第2主成分</th></tr></thead>
+                    <table className="operator-pca-coefficients"><thead><tr><th scope="col">項目</th>
+                      {result.fit.coefficients.map((_, component) => <th key={component} scope="col">第{component + 1}主成分</th>)}
+                    </tr></thead>
                       <tbody>{OPERATOR_PCA_METRICS.map((metric, index) => <tr key={metric.key}><th scope="row">{metric.label}</th>
-                        {[0, 1].map(component => <td key={component}>{signed(result.fit.coefficients[component]?.[index] ?? 0)}</td>)}
+                        {result.fit.coefficients.map((coefficients, component) => <td key={component}>{signed(coefficients[index])}</td>)}
                       </tr>)}</tbody>
                     </table>
                   </div>
