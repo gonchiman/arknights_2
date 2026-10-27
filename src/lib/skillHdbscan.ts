@@ -1,10 +1,14 @@
-import type { SkillClusteringFeatures } from './skillClusteringFeatures.ts'
+import type { SkillClusteringFeatures, SkillClusteringStopWordProfile } from './skillClusteringFeatures.ts'
 
 export interface SkillHdbscanConfig {
   minClusterSize: number
   /** Includes the point itself, as in scikit-learn HDBSCAN. */
   minSamples: number
   clusterSelectionMethod: 'eom' | 'leaf'
+}
+
+export interface SkillHdbscanExperimentConfig extends SkillHdbscanConfig {
+  stopWordProfile: SkillClusteringStopWordProfile
 }
 
 export type SkillHdbscanStage = 'distances' | 'hierarchy' | 'extract'
@@ -18,6 +22,10 @@ export interface SkillHdbscanResult {
   representativeIndices: number[]
   noiseCount: number
   excludedCount: number
+}
+
+export interface SkillHdbscanExperimentResult extends SkillHdbscanResult {
+  config: SkillHdbscanExperimentConfig
 }
 
 type SparseVector = SkillClusteringFeatures['vectors'][number]

@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { SkillRecord } from '../types/skill'
-import { buildSkillClusteringCorpus, type SkillClusteringDocument } from '../lib/skillClusteringFeatures'
-import type { SkillHdbscanConfig, SkillHdbscanResult } from '../lib/skillHdbscan'
+import { buildSkillClusteringCorpus, type SkillClusteringDocument, type SkillClusteringStopWordProfile } from '../lib/skillClusteringFeatures'
+import type { SkillHdbscanExperimentConfig, SkillHdbscanExperimentResult, SkillHdbscanResult } from '../lib/skillHdbscan'
 import { EMPTY_SKILL_HDBSCAN_RUN, SkillHdbscanRunner } from '../lib/skillHdbscanRunner'
 import { AnalysisTabs, AnalysisTabPanel } from './AnalysisTabs'
 import type { OpenOperatorDetail } from './OperatorDetailLink'
@@ -14,11 +14,12 @@ interface Props { rows: SkillRecord[]; loading: boolean; onOpenOperatorDetail: O
 const TABS = [['settings', '条件設定'], ['results', '学習結果'], ['compare', '比較・診断']] as const
 const STAGES = [['preparing', '説明文処理'], ['distances', '距離計算'], ['hierarchy', '階層構築'], ['extract', 'グループ抽出']] as const
 type Tab = typeof TABS[number][0]
-type Draft = { minClusterSize: string; minSamples: string; clusterSelectionMethod: 'eom' | 'leaf' }
-const INITIAL_DRAFT: Draft = { minClusterSize: '10', minSamples: '5', clusterSelectionMethod: 'eom' }
+type Draft = { minClusterSize: string; minSamples: string; clusterSelectionMethod: 'eom' | 'leaf'; stopWordProfile: SkillClusteringStopWordProfile }
+const INITIAL_DRAFT: Draft = { minClusterSize: '10', minSamples: '5', clusterSelectionMethod: 'eom', stopWordProfile: 'basic' }
+const STOP_WORD_PROFILE_LABELS: Record<SkillClusteringStopWordProfile, string> = { basic: '基本', extended: '拡張' }
 interface Submission {
   documents: SkillClusteringDocument[]
-  config: SkillHdbscanConfig
+  config: SkillHdbscanExperimentConfig
   sourceRows: SkillRecord[]
   sourceRowsIdentity: readonly SkillRecord[]
 }
@@ -26,12 +27,12 @@ interface ExperimentRecord {
   id: number
   requestId: number
   submission: Submission
-  result: SkillHdbscanResult
+  result: SkillHdbscanExperimentResult
   termsCount: number
 }
 const documentLabel = (doc: SkillClusteringDocument) => `${doc.operatorName} S${doc.skillIndex} · ${doc.skillName}`
-const methodLabel = (method: SkillHdbscanConfig['clusterSelectionMethod']) => method === 'leaf' ? '細分化を優先' : 'まとまりを優先'
-const configLabel = (config: SkillHdbscanConfig) => `最小${config.minClusterSize}件 / 近傍${config.minSamples} / ${methodLabel(config.clusterSelectionMethod)}`
+const methodLabel = (method: SkillHdbscanExperimentConfig['clusterSelectionMethod']) => method === 'leaf' ? '細分化を優先' : 'まとまりを優先'
+const configLabel = (config: SkillHdbscanExperimentConfig) => `最小${config.minClusterSize}件 / 近傍${config.minSamples} / ${methodLabel(config.clusterSelectionMethod)} / 除外語：${STOP_WORD_PROFILE_LABELS[config.stopWordProfile]}`
 const groupLabel = (group: number) => group === -1 ? '未分類' : group === -2 ? '除外' : `G${group + 1}`
 const classifiedCount = (result: SkillHdbscanResult) => result.counts.reduce((sum, count) => sum + count, 0)
 const usableCount = (result: SkillHdbscanResult) => classifiedCount(result) + result.noiseCount
@@ -46,10 +47,11 @@ function findActiveGroup(result: SkillHdbscanResult | null, selectedGroup: numbe
   return firstGroup >= 0 ? firstGroup : result.noiseCount > 0 ? -1 : result.excludedCount > 0 ? -2 : null
 }
 
-function readConfig(draft: Draft, count: number): SkillHdbscanConfig | null {
+function readConfig(draft: Draft, count: number): SkillHdbscanExperimentConfig | null {
   const integer = (value: string, min: number) => value.trim() !== '' && Number.isInteger(Number(value)) && Number(value) >= min && Number(value) <= count
   if (!integer(draft.minClusterSize, 2) || !integer(draft.minSamples, 1)) return null
-  return { minClusterSize: Number(draft.minClusterSize), minSamples: Number(draft.minSamples), clusterSelectionMethod: draft.clusterSelectionMethod }
+  return { minClusterSize: Number(draft.minClusterSize), minSamples: Number(draft.minSamples),
+    clusterSelectionMethod: draft.clusterSelectionMethod, stopWordProfile: draft.stopWordProfile }
 }
 
 export function SkillHdbscanPage({ rows, loading, onOpenOperatorDetail }: Props) {
@@ -140,9 +142,13 @@ export function SkillHdbscanPage({ rows, loading, onOpenOperatorDetail }: Props)
                 onChange={event => setDraft(current => ({ ...current, minClusterSize: event.target.value }))} /></label>
               <label><span>密度判定の近傍数</span><input type="number" min="1" max={corpus.documents.length} step="1" required value={draft.minSamples}
                 onChange={event => setDraft(current => ({ ...current, minSamples: event.target.value }))} /></label>
-              <label className="skill-hdbscan-field-full"><span>グループの選び方</span><select value={draft.clusterSelectionMethod}
+              <label><span>グループの選び方</span><select value={draft.clusterSelectionMethod}
                 onChange={event => setDraft(current => ({ ...current, clusterSelectionMethod: event.target.value as Draft['clusterSelectionMethod'] }))}>
                 <option value="eom">まとまりを優先</option><option value="leaf">細分化を優先</option>
+              </select></label>
+              <label><span>除外語リスト</span><select value={draft.stopWordProfile}
+                onChange={event => setDraft(current => ({ ...current, stopWordProfile: event.target.value as SkillClusteringStopWordProfile }))}>
+                <option value="basic">{STOP_WORD_PROFILE_LABELS.basic}</option><option value="extended">{STOP_WORD_PROFILE_LABELS.extended}</option>
               </select></label>
             </fieldset>
           </section>
@@ -198,6 +204,7 @@ export function SkillHdbscanPage({ rows, loading, onOpenOperatorDetail }: Props)
                   <ComparisonRow label="最小グループ件数" values={[result.config.minClusterSize, comparison.result.config.minClusterSize].map(value => `${value}件`)} />
                   <ComparisonRow label="密度判定の近傍数" values={[result.config.minSamples, comparison.result.config.minSamples]} />
                   <ComparisonRow label="グループの選び方" values={[result.config, comparison.result.config].map(value => methodLabel(value.clusterSelectionMethod))} />
+                  <ComparisonRow label="除外語リスト" values={[result.config, comparison.result.config].map(value => STOP_WORD_PROFILE_LABELS[value.stopWordProfile])} />
                   <ComparisonRow label="グループ数" values={[result.counts.length, comparison.result.counts.length]} />
                   <ComparisonRow label="利用データ" values={[result, comparison.result].map(value => `${usableCount(value)}件`)} />
                   <ComparisonRow label="除外" values={[result.excludedCount, comparison.result.excludedCount].map(value => `${value}件`)} />

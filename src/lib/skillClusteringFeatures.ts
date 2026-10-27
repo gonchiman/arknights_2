@@ -24,6 +24,8 @@ export interface SkillClusteringFeatures {
   documentCount: number
 }
 
+export type SkillClusteringStopWordProfile = 'basic' | 'extended'
+
 /** Shared skill IDs and identical displayed descriptions each receive one vote. */
 export function buildSkillClusteringCorpus(rows: readonly SkillRecord[]): {
   documents: SkillClusteringDocument[]
@@ -88,14 +90,30 @@ export function buildSkillClusteringCorpus(rows: readonly SkillRecord[]): {
   }
 }
 
-const STOP_WORDS = new Set([
+const BASIC_STOP_WORDS: ReadonlySet<string> = new Set([
   'の', 'に', 'を', 'は', 'が', 'と', 'で', 'へ', 'も', 'や', 'から', 'まで', 'より', 'など', 'および', '及び',
-  'する', 'し', 'した', 'して', 'される', 'させる', 'なる', 'ある', 'いる', 'できる', 'ない', 'れる', 'られる',
+  'する', 'し', 'した', 'して', 'される', 'させる', 'なる', 'ある', 'いる', 'できる', 'れる', 'られる',
   'この', 'その', 'それ', 'ため', 'もの', 'こと', '時', '秒', '間', '回', '人', '体', '自身', '自分', 'スキル',
+  // Both profiles keep negation (ない・なく・ず), conditions and restrictions (場合・のみ),
+  // and effect relationships (さらに・同時に); frequency alone is not a stop-word rule.
+])
+
+const EXTENDED_STOP_WORDS: ReadonlySet<string> = new Set([
+  ...BASIC_STOP_WORDS,
+  'として', 'に対する', 'に対して', 'に対し', 'による', 'によって', 'により', 'また', 'そして',
+  // Intl.Segmenter also emits these grammatical fragments and inflected forms.
+  'て', 'た', 'さ', 'れ', 'な', 'なり', 'となり', 'よう', 'これ',
 ])
 
 /** Log TF × smoothed IDF, then L2 normalization; no existing categories are input. */
-export function createSkillClusteringFeatures(documents: readonly SkillClusteringDocument[]): SkillClusteringFeatures {
+export function createSkillClusteringFeatures(
+  documents: readonly SkillClusteringDocument[],
+  stopWordProfile: SkillClusteringStopWordProfile = 'basic',
+): SkillClusteringFeatures {
+  if (stopWordProfile !== 'basic' && stopWordProfile !== 'extended') {
+    throw new RangeError('除外語リストの指定が不正です。')
+  }
+  const stopWords = stopWordProfile === 'extended' ? EXTENDED_STOP_WORDS : BASIC_STOP_WORDS
   const segmenter = new Intl.Segmenter('ja', { granularity: 'word' })
   const normalize = (value: string) => value.normalize('NFKC').toLowerCase()
     .replace(/\{[^{}]*\}/gu, ' ').replace(/\d+(?:[.,]\d+)*/gu, ' ')
@@ -107,7 +125,7 @@ export function createSkillClusteringFeatures(documents: readonly SkillClusterin
     for (const part of segmenter.segment(text)) {
       const word = part.segment.trim()
       // A short operator name such as ウン must not alter ダウン or カウント.
-      if (!part.isWordLike || !/[\p{L}]/u.test(word) || STOP_WORDS.has(word) || names.has(word)) continue
+      if (!part.isWordLike || !/[\p{L}]/u.test(word) || stopWords.has(word) || names.has(word)) continue
       words.set(word, (words.get(word) ?? 0) + 1)
     }
     return words
