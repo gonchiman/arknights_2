@@ -37,24 +37,22 @@
 .operator-pca-neighbors > div { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
 .operator-pca-neighbors .button { overflow-wrap: anywhere; text-align: left; }
 .operator-pca-data-state { margin-top: 18px; color: var(--text-muted); font-size: 12px; }
-.operator-pca-component-grid { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 24px; }
+.operator-pca-component-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
 .operator-pca-component-grid > section { min-width: 0; }
 .operator-pca-cumulative { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; border-top: 1px solid var(--border); padding-top: 12px; font-variant-numeric: tabular-nums; }
 .operator-pca-cumulative strong { font-size: 18px; font-weight: 500; }
 .operator-pca-table-scroll { max-width: 100%; overflow-x: auto; }
-.operator-pca-page .operator-pca-coefficients { width: 100%; border-collapse: collapse; table-layout: fixed; border: 1px solid var(--border); font-size: 13px; line-height: 1.6; }
+.operator-pca-page .operator-pca-coefficients { width: 100%; min-width: 880px; border-collapse: collapse; table-layout: fixed; border: 1px solid var(--border); font-size: 13px; line-height: 1.6; }
 .operator-pca-page .operator-pca-coefficients th, .operator-pca-page .operator-pca-coefficients td { position: static; border: 1px solid var(--border); padding: 9px 8px; color: var(--text); font-size: inherit; font-weight: 400; vertical-align: middle; white-space: normal; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .operator-pca-page .operator-pca-coefficients thead th { background: var(--surface-soft); font-weight: 500; text-align: right; }
-.operator-pca-page .operator-pca-coefficients th:first-child { width: 42%; text-align: left; }
+.operator-pca-page .operator-pca-coefficients th:first-child { position: sticky; top: auto; left: 0; z-index: 2; width: 128px; background: var(--surface-soft); box-shadow: 1px 0 var(--border); text-align: left; }
+.operator-pca-page .operator-pca-coefficients thead th, .operator-pca-page .operator-pca-coefficients td { white-space: nowrap; }
 .operator-pca-page .operator-pca-coefficients td { text-align: right; }
 .operator-pca-method { display: grid; gap: 12px; border-top: 1px solid var(--border); padding-top: 16px; margin: 24px 0 0; }
 .operator-pca-method > div { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 12px; }
 .operator-pca-method dd { overflow-wrap: anywhere; }
 .operator-pca-empty, .operator-pca-error { margin: 0; padding: 32px 16px; border: 1px solid var(--border); }
 .operator-pca-error { color: var(--danger); }
-@container operator-pca (max-width: 680px) {
-  .operator-pca-component-grid { grid-template-columns: minmax(0, 1fr); }
-}
 @container operator-pca (max-width: 480px) {
   .operator-pca-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .operator-pca-operator-field { grid-column: 1 / -1; }
