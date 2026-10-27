@@ -23,6 +23,7 @@ export function SkillKMeansSearchChart({ candidates, metric, selectedK, candidat
   const clipId = useId()
   const frameRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(480)
+  const [hoveredPoint, setHoveredPoint] = useState<{ k: number; value: number | null } | null>(null)
   const silhouette = metric === 'silhouette'
   const heading = silhouette ? 'シルエットスコア' : 'エルボー法'
   const valueLabel = silhouette ? 'シルエットスコア' : '平均二乗距離'
@@ -117,14 +118,18 @@ export function SkillKMeansSearchChart({ candidates, metric, selectedK, candidat
     return `${command}${x(point.k)},${y(point.value)}`
   }).join(' ')
 
-  const selectFromChart = (event: MouseEvent<SVGSVGElement>) => {
-    if (!points.length) return
+  const pointFromChart = (event: MouseEvent<SVGSVGElement>) => {
+    if (!points.length) return null
     const bounds = event.currentTarget.getBoundingClientRect()
-    if (bounds.width <= 0 || bounds.height <= 0) return
+    if (bounds.width <= 0 || bounds.height <= 0) return null
     const pointerX = (event.clientX - bounds.left) / bounds.width * width
     const pointerY = (event.clientY - bounds.top) / bounds.height * height
-    if (pointerX < left || pointerX > right || pointerY < top || pointerY > bottom) return
-    onSelect(points.reduce((nearest, point) => Math.abs(x(point.k) - pointerX) < Math.abs(x(nearest.k) - pointerX) ? point : nearest).k)
+    if (pointerX < left || pointerX > right || pointerY < top || pointerY > bottom) return null
+    return points.reduce((nearest, point) => Math.abs(x(point.k) - pointerX) < Math.abs(x(nearest.k) - pointerX) ? point : nearest)
+  }
+  const selectFromChart = (event: MouseEvent<SVGSVGElement>) => {
+    const point = pointFromChart(event)
+    if (point) onSelect(point.k)
   }
 
   return <figure className={`skill-kmeans-search-chart metric-${metric}`} aria-labelledby={headingId}>
@@ -138,7 +143,9 @@ export function SkillKMeansSearchChart({ candidates, metric, selectedK, candidat
     <div ref={frameRef} className="skill-kmeans-search-chart-frame">
       <svg className="skill-kmeans-search-chart-svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}
         role="img" aria-label={`${heading}。横軸はクラスタ数 K、縦軸は${valueLabel}。`}
-        onClick={selectFromChart}>
+        onClick={selectFromChart}
+        onPointerMove={event => setHoveredPoint(event.pointerType === 'touch' ? null : pointFromChart(event))}
+        onPointerLeave={() => setHoveredPoint(null)} onPointerCancel={() => setHoveredPoint(null)}>
         <defs><clipPath id={clipId}><rect x={left - 5} y={top - 5} width={plotWidth + 10} height={bottom - top + 10} /></clipPath></defs>
         <text className="skill-kmeans-search-axis-title" x={left} y="18">{valueLabel}</text>
         {yTicks.map(tick => <g key={tick}>
@@ -155,9 +162,16 @@ export function SkillKMeansSearchChart({ candidates, metric, selectedK, candidat
         {selected && <line className="skill-kmeans-search-guide" x1={x(selected.k)} x2={x(selected.k)} y1={top} y2={bottom} />}
         <g clipPath={`url(#${clipId})`}>
           <path className="skill-kmeans-search-line" d={line} />
-          {points.map(point => point.value !== null && <circle key={point.k}
-            className={`skill-kmeans-search-point${point.k === selectedK ? ' selected' : ''}`}
-            cx={x(point.k)} cy={y(point.value)} r={point.k === selectedK ? 4.5 : 3} />)}
+          {points.map((point, index) => {
+            if (point.value === null) return null
+            const active = point.k === selectedK || point === hoveredPoint
+            // An isolated value has no line segment, so retain a tiny dot for it.
+            const isolated = !(points[index - 1]?.value != null && points[index - 1].k === point.k - 1)
+              && !(points[index + 1]?.value != null && points[index + 1].k === point.k + 1)
+            return <circle key={point.k}
+              className={`skill-kmeans-search-point${point.k === selectedK ? ' selected' : ''}${point === hoveredPoint ? ' hovered' : ''}${isolated ? ' isolated' : ''}`}
+              cx={x(point.k)} cy={y(point.value)} r={point.k === selectedK ? 3.5 : active ? 3 : 1.5} />
+          })}
         </g>
         {selectedLabel !== null && <text className="skill-kmeans-search-selected-value" x={labelX} y={labelY} textAnchor={labelAnchor}
           aria-label={`選択 K = ${selectedK}、${valueLabel} ${selectedLabel}`}>{selectedLabel}</text>}
