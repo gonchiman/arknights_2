@@ -50,9 +50,9 @@ test('独立したJP原典8素質を潜在1・最大昇進・最大レベル・M
   }
 })
 
-test('従来の素質構造の対応OP集合を従来スキルと揃え、未対応のOP・素質枠を代用しない', () => {
+test('素質構造の対応OP集合を全スキルと揃え、未対応のOP・素質枠を代用しない', () => {
   assert.deepEqual([...TALENT_STRUCTURE_OPERATOR_IDS].sort(), [...new Set(SKILL_STRUCTURES
-    .filter(structure => !structure.guardRecipe).map(structure => structure.basicInfo.operatorId))].sort())
+    .map(structure => structure.basicInfo.operatorId))].sort())
   for (const operatorId of TALENT_STRUCTURE_OPERATOR_IDS) for (const talentIndex of [0, 1]) {
     assert.ok(isTalentStructureSelection({ operatorId, talentIndex }))
   }
@@ -68,8 +68,8 @@ test('従来の素質構造の対応OP集合を従来スキルと揃え、未対
   }
 })
 
-test('従来の素質構造と新しい前衛の素質定義を合わせてスキル構造の全30人を網羅する', () => {
-  const legacy = new Set<string>(TALENT_STRUCTURE_OPERATOR_IDS)
+test('共通の素質構造が従来5人と追加25人を合わせた全30人を網羅する', () => {
+  const legacy = new Set(SKILL_STRUCTURES.filter(structure => !structure.guardRecipe).map(structure => structure.basicInfo.operatorId))
   assert.equal(legacy.size, 5)
   assert.equal(GUARD_PASSIVE_OPERATOR_IDS.length, 25)
   assert.ok(GUARD_PASSIVE_OPERATOR_IDS.every(operatorId => !legacy.has(operatorId)))
@@ -77,6 +77,7 @@ test('従来の素質構造と新しい前衛の素質定義を合わせてス�
   const allSkillOperators = [...new Set(SKILL_STRUCTURES.map(structure => structure.basicInfo.operatorId))].sort()
   assert.equal(covered.length, 30)
   assert.deepEqual(covered, allSkillOperators)
+  assert.deepEqual([...TALENT_STRUCTURE_OPERATOR_IDS].sort(), covered)
 })
 
 test('シルバーアッシュは自身ATKと編成全員の再配置割合を別効果にし、ステルスの範囲条件も保持する', () => {

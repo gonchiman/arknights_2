@@ -10,6 +10,9 @@ interface Source {
   skills: { skillIndex: number; skillId: string; supported: boolean; raw: RawSkillLevel }[]
 }
 const sources = (JSON.parse(readFileSync(new URL('./fixtures/sixStarGuardSources.json', import.meta.url), 'utf8')) as { guards: Source[] }).guards
+const profiles = JSON.parse(readFileSync(new URL('./fixtures/sixStarGuardProfiles.json', import.meta.url), 'utf8')) as {
+  operatorId: string; operatorProfile: SkillRecord['operatorProfile']
+}[]
 function record(id: string, skillIndex = 1): SkillRecord {
   const source = sources.find(source => source.id === id)!
   const skill = source.skills.find(skill => skill.skillIndex === skillIndex)!
@@ -18,6 +21,7 @@ function record(id: string, skillIndex = 1): SkillRecord {
     skillId: skill.skillId, raw: structuredClone(skill.raw),
     skillLevels: Array.from({ length: 10 }, () => structuredClone(skill.raw)),
     operatorProfile: { phases: [{}, {}, { maxLevel: 90 }], favorKeyFrames: [],
+      affiliationIds: structuredClone(profiles.find(profile => profile.operatorId === id)?.operatorProfile.affiliationIds),
       traitDescription: source.trait, talents: structuredClone(source.talents) },
     subProfessionId: source.subProfessionId,
   } as SkillRecord

@@ -11,6 +11,7 @@ import {
   formatTalentStructureCondition, formatTalentStructureTarget, type TalentStructureEffect,
 } from './talentStructure.ts'
 import { DAMAGE_TYPE_LABELS } from './damageCalculator.ts'
+import { resolveCombatProbability } from './combatEffectStructure.ts'
 
 /** Display adapters consume the same input/output pair as the result table. */
 export function buildDamageCalculatorThreeApplicationRows(
@@ -73,9 +74,13 @@ function buildTalentApplicationRows(output: DamageCalculatorThreeOutput): Effect
       ? 'NOT_RELEVANT' : entry.status,
     reason: entry.effect?.item === 'ATTACK_SPEED' && entry.status === 'APPLIED' && output.attackKind !== 'NORMAL'
       ? '1回分の攻撃ダメージには攻撃速度を使用しません。' : entry.reason,
-    ...(hasProbability ? { probability: entry.effect?.probability.chance === null || !entry.effect
-      ? '未確認' : `${number(entry.effect.probability.chance * 100)}％` } : {}),
+    ...(hasProbability ? { probability: formatTalentProbability(entry.effect) } : {}),
   }))
+}
+
+function formatTalentProbability(effect: TalentStructureEffect | null): string {
+  const chance = effect ? resolveCombatProbability(effect.probability) : null
+  return chance === null ? '未確認' : `${number(chance * 100)}％`
 }
 
 function formatTalentApplicationCondition(effect: TalentStructureEffect): string {

@@ -6,7 +6,9 @@ export type CombatScalar = number | boolean | string
 export type CombatNumericValue = number | null | {
   readonly type: 'AFFINE'; readonly base: number | null; readonly coefficient: number | null
   readonly metric: string; readonly min?: number | null; readonly max?: number | null
-}
+} | { readonly type: 'METRIC'; readonly metric: string }
+  | { readonly type: 'CALC'; readonly operation: 'ADD' | 'MULTIPLY' | 'DIVIDE' | 'MIN' | 'MAX'; readonly values: readonly CombatNumericValue[] }
+  | { readonly type: 'CONDITIONAL'; readonly condition: CombatCondition; readonly whenTrue: CombatNumericValue; readonly whenFalse: CombatNumericValue }
 export type CombatCondition =
   | { readonly type: 'COMPARE'; readonly metric: string; readonly comparison: SkillStructureComparison; readonly value: CombatScalar | null; readonly sourceBinding?: string }
   | { readonly type: 'ALL'; readonly conditions: readonly CombatCondition[] }
@@ -27,7 +29,7 @@ export type CombatRecipientSelector = CombatRecipientBase & (
   | { readonly scope: 'SELF' | 'SQUAD' | 'BATTLEFIELD' | 'ATTACK_RANGE' | 'ATTACK_TARGET' | 'DAMAGE_SOURCE' | 'ADJACENT' }
   | { readonly scope: 'CUSTOM_RANGE'; readonly rangeId: string | null }
 )
-/** Events in timing and lifetime refer to the effect source, independently of its recipients. */
+/** Events refer to the effect source unless eventActor selects a different actor. */
 export type CombatEvent = 'ATTACK' | 'NORMAL_ATTACK' | 'DAMAGE_DEALT' | 'DAMAGE_RECEIVED' | 'LETHAL_DAMAGE' | 'KILL' | 'DEPLOY' | 'RETREAT' | 'SKILL_START' | 'SKILL_END'
 export type CombatTiming =
   | { readonly type: 'CONTINUOUS'; readonly while: 'DEPLOYED' | 'IN_SQUAD' | 'ALWAYS' | 'CONDITION' }
@@ -42,7 +44,7 @@ export type CombatLifetime =
   | { readonly type: 'WHILE_SOURCE_ACTIVE' }
   | { readonly type: 'UNSPECIFIED' }
 export interface CombatProbability {
-  readonly chance: number | null
+  readonly chance: CombatNumericValue
   readonly rollScope: 'APPLICATION' | 'TICK'
   readonly sharedRollId?: string
 }
@@ -72,12 +74,29 @@ export interface CombatEffectContext {
   readonly lifetime: CombatLifetime; readonly restrictions: readonly CombatRestriction[]
   readonly sourceBinding: string; readonly parameterBindings?: Readonly<Record<string, string>>
   readonly afterEffects?: readonly string[]
+  readonly eventActor?: CombatRecipientSelector
 }
 
 export function resolveCombatNumericValue(value: CombatNumericValue, metrics: Readonly<Record<string, CombatScalar | null | undefined>>): number | null {
   if (value === null) return null
   if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  if (value.type === 'CONDITIONAL') {
+    const condition = evaluateCombatCondition(value.condition, metrics)
+    return condition === null ? null : resolveCombatNumericValue(condition ? value.whenTrue : value.whenFalse, metrics)
+  }
+  if (value.type === 'CALC') {
+    const values = value.values.map(entry => resolveCombatNumericValue(entry, metrics))
+    if (!values.length || values.some(entry => entry === null)) return null
+    const operands = values as number[]
+    if (value.operation === 'DIVIDE' && (operands.length !== 2 || operands[1] === 0)) return null
+    const result = value.operation === 'ADD' ? operands.reduce((a, b) => a + b, 0)
+      : value.operation === 'MULTIPLY' ? operands.reduce((a, b) => a * b, 1)
+        : value.operation === 'DIVIDE' ? operands[0] / operands[1]
+          : value.operation === 'MIN' ? Math.min(...operands) : Math.max(...operands)
+    return Number.isFinite(result) ? result : null
+  }
   const metric = metrics[value.metric]
+  if (value.type === 'METRIC') return typeof metric === 'number' && Number.isFinite(metric) ? metric : null
   if (typeof metric !== 'number' || !Number.isFinite(metric)
     || ![value.base, value.coefficient].every(entry => typeof entry === 'number' && Number.isFinite(entry))
     || [value.min, value.max].some(entry => entry !== undefined && (entry === null || !Number.isFinite(entry)))
@@ -104,16 +123,40 @@ export function evaluateCombatCondition(condition: CombatCondition | null, metri
   if (typeof actual !== 'number' || typeof expected !== 'number') return null
   return { GT: actual > expected, GTE: actual >= expected, LT: actual < expected, LTE: actual <= expected }[condition.comparison]
 }
-export function resolveCombatProbability(probability: CombatProbability): number | null {
-  return probability.chance !== null && Number.isFinite(probability.chance) && probability.chance >= 0 && probability.chance <= 1 ? probability.chance : null
+export function resolveCombatProbability(probability: CombatProbability, metrics: Readonly<Record<string, CombatScalar | null | undefined>> = {}): number | null {
+  const chance = resolveCombatNumericValue(probability.chance, metrics)
+  return chance !== null && chance >= 0 && chance <= 1 ? chance : null
 }
 
 const comparisons = { EQ: '＝', NE: '≠', GT: '＞', GTE: '≧', LT: '＜', LTE: '≦' }
-const metrics: Record<string, string> = { 'target.isAirborne': '対象の空中状態', 'battlefield.hasSeaMonster': '戦場の海の怪物', 'target.canUseRangedAttack': '敵の遠距離攻撃能力', 'target.inAttackRange': '対象が攻撃範囲内', 'source.secondsSinceLastNormalAttack': '通常攻撃をしない時間', 'source.blockCount': '自身のブロック数', 'source.hpRatio': '自身のHP割合', 'target.isBlocked': '対象のブロック状態' }
+const metrics: Record<string, string> = {
+  'target.isAirborne': '対象の空中状態', 'battlefield.hasSeaMonster': '戦場の海の怪物', 'target.canUseRangedAttack': '敵の遠距離攻撃能力',
+  'target.inAttackRange': '対象が攻撃範囲内', 'source.secondsSinceLastNormalAttack': '通常攻撃をしない時間', 'source.blockCount': '自身のブロック数',
+  'source.hpRatio': '自身のHP割合', 'target.isBlocked': '対象のブロック状態', skillIndex: 'スキル番号', actionKind: '計算する攻撃',
+  selfHpPercent: '自身のHP（％）', targetHpPercent: '対象のHP（％）', defenseDebuffStacks: '防御力低下の重複数', noteCount: '戦場の音符数',
+  targetSlowedOrBound: '対象が足止め・バインド中', targetStunnedOrBound: '対象がスタン・バインド中', targetTrembling: '対象が戦慄中',
+  talentActive: '素質の効果が適用中', selfInTalentRange: '自身が素質の効果範囲内', killStacks: '撃破による強化回数', terrainHitCount: '高台効果の命中回数',
+  targetBlocked: '対象をブロック中', blockedEnemyCount: 'ブロック中の敵の数', eliteInRange: '攻撃範囲内にエリート・ボスが存在',
+  nearbyAllyCount: '周囲の味方数', recentDamageTaken: '被ダメージ後の強化が有効', ammoSpent: '消費した弾薬数', dotActive: '継続ダメージを付与中', nearbyEnemyCount: '周囲の敵の数',
+  'skill.talent@prob': 'スキル中の素質発動確率', 'skill.talent_scale': 'スキルの素質効果倍率', 'skill.splash_atk_scale_bonus': 'スキルの高台効果倍率', 'skill.prob': 'スキルの発動確率',
+  'skill.killCount': 'スキル中の撃破数', 'skill.usesAmmo': '弾薬消費系スキル', 'source.dodgeDecayStacks': '回避の減衰回数', 'source.secondsSinceDeploy': '配置からの経過秒数',
+  'source.secondsSinceDamageReceived': '被ダメージからの経過秒数', 'projectile.outsideAttackRange': '音符が攻撃範囲外', 'ally.attackRangeOverlapsSource': '味方の攻撃範囲が自身と重なる',
+  'recipient.isUrsusStudent': '対象がウルサス学生自治団に所属', 'target.isEliteOrBoss': '対象がエリート・ボス', 'attack.targetCount': '攻撃対象数',
+  'deployment.previousOperatorKazimierz': '直前に配置したオペレーターがカジミエーシュに所属', 'damageSource.blockedBySelf': '攻撃元を自身でブロック中',
+  'battlefield.lateranoCount': '配置中のラテラーノ所属人数', 'source.emergencyHealActivated': '緊急回復を発動済み', 'damagedAlly.isKazimierz': '攻撃を受けた味方がカジミエーシュに所属',
+  'source.skillActive': 'スキル発動中', 'recipient.hpRatio': '対象のHP割合', 'recipient.inSourceAttackRange': '対象が自身の攻撃範囲内',
+}
 const events: Record<CombatEvent, string> = { ATTACK: '攻撃', NORMAL_ATTACK: '通常攻撃', DAMAGE_DEALT: '与ダメージ', DAMAGE_RECEIVED: '被ダメージ', LETHAL_DAMAGE: '致命ダメージ', KILL: '撃破', DEPLOY: '配置', RETREAT: '退場', SKILL_START: 'スキル開始', SKILL_END: 'スキル終了' }
 export function formatCombatNumericValue(value: CombatNumericValue): string {
   if (value === null) return '未確認'
   if (typeof value === 'number') return formatCombatNumber(value)
+  if (value.type === 'METRIC') return metrics[value.metric] ?? value.metric
+  if (value.type === 'CONDITIONAL') return `${formatCombatCondition(value.condition)}：${formatCombatNumericValue(value.whenTrue)}／それ以外：${formatCombatNumericValue(value.whenFalse)}`
+  if (value.type === 'CALC') {
+    const values = value.values.map(formatCombatNumericValue)
+    if (value.operation === 'MIN' || value.operation === 'MAX') return `${value.operation === 'MIN' ? '最小' : '最大'}（${values.join('、')}）`
+    return `（${values.join({ ADD: '＋', MULTIPLY: '×', DIVIDE: '÷' }[value.operation])}）`
+  }
   const bounds = [value.min !== undefined ? `下限${formatCombatNumericValue(value.min)}` : '', value.max !== undefined ? `上限${formatCombatNumericValue(value.max)}` : ''].filter(Boolean)
   return `${formatCombatNumericValue(value.base)}＋${formatCombatNumericValue(value.coefficient)}×${metrics[value.metric] ?? value.metric}${bounds.length ? `（${bounds.join('・')}）` : ''}`
 }
@@ -122,12 +165,15 @@ export function formatCombatCondition(condition: CombatCondition | null): string
   if (condition.type === 'COMPARE' && condition.comparison === 'EQ' && typeof condition.value === 'boolean') {
     if (condition.metric === 'target.isAirborne') return condition.value ? '空中の敵' : '地上の敵'
     if (condition.metric === 'battlefield.hasSeaMonster') return condition.value ? '戦場に海の怪物あり' : '戦場に海の怪物なし'
+    if (['targetSlowedOrBound', 'targetStunnedOrBound', 'targetTrembling', 'talentActive', 'selfInTalentRange', 'targetBlocked', 'eliteInRange', 'recentDamageTaken', 'dotActive'].includes(condition.metric)) return `${metrics[condition.metric] ?? condition.metric}：${condition.value ? 'あり' : 'なし'}`
   }
   if (condition.type === 'UNKNOWN') return `未確定：${condition.reason}`
   if (condition.type === 'ALL' || condition.type === 'ANY') return `（${condition.conditions.map(formatCombatCondition).join(condition.type === 'ALL' ? ' かつ ' : ' または ')}）`
   if (condition.metric === 'target.canUseRangedAttack' && condition.comparison === 'EQ' && typeof condition.value === 'boolean') return condition.value ? '遠距離攻撃が可能な敵' : '遠距離攻撃を行えない敵'
   if (condition.metric === 'source.secondsSinceLastNormalAttack' && condition.comparison === 'GTE') return condition.value === null ? '通常攻撃をしない待ち時間が未確認' : `通常攻撃せずに${condition.value}秒以上経過`
-  return `${metrics[condition.metric] ?? condition.metric}${comparisons[condition.comparison]}${scalar(condition.value)}`
+  const value = condition.metric === 'actionKind' && typeof condition.value === 'string'
+    ? ({ NORMAL: '通常攻撃', NEXT_ATTACK: '次の通常攻撃', SKILL_ACTION: 'スキル動作' }[condition.value] ?? condition.value) : scalar(condition.value)
+  return `${metrics[condition.metric] ?? condition.metric}${comparisons[condition.comparison]}${value}`
 }
 export function formatCombatTiming(timing: CombatTiming): string {
   if (timing.type === 'CONTINUOUS') return { DEPLOYED: '配置中', IN_SQUAD: '編成中', ALWAYS: '常時', CONDITION: '条件成立中' }[timing.while]
@@ -155,6 +201,7 @@ export function formatCombatLifetime(lifetime: CombatLifetime): string {
 
 export function getCombatContextDefinitionRows(effect: CombatEffectContext, lifetimeLabel = '効果の有効期間'): [string, string | number][] {
   const rows: [string, string | number][] = [['タイミング', formatCombatTiming(effect.timing)], ['発生方式', effect.timing.type]]
+  if (effect.eventActor) rows.push(['イベント発生者', formatCombatRecipient(effect.eventActor)])
   if (effect.timing.type === 'CONTINUOUS') rows.push(['効果元の有効状態', effect.timing.while])
   if (effect.timing.type === 'EVENT' || effect.timing.type === 'AFTER_EVENT') rows.push(['発生イベント', events[effect.timing.event]])
   if (effect.timing.type === 'AFTER_EVENT') rows.push(['待ち時間（秒）', effect.timing.delaySeconds ?? '未確認'])
@@ -164,7 +211,10 @@ export function getCombatContextDefinitionRows(effect: CombatEffectContext, life
     ['陣営ID（いずれか）', effect.target.factionIds.join('、') || '制限なし'], ['タグID（すべて）', effect.target.tagIds.join('、') || '制限なし'], ['対象の選び方', effect.target.selection.type])
   if (effect.target.selection.type !== 'ALL') rows.push(['選択数', effect.target.selection.count ?? '未確認'])
   if (effect.target.scope === 'CUSTOM_RANGE') rows.push(['範囲ID', effect.target.rangeId ?? '未確認'])
-  rows.push(['発動確率', resolveCombatProbability(effect.probability) === null ? '未確認' : `${formatCombatNumber(effect.probability.chance! * 100)}％`], ['抽選単位', effect.probability.rollScope])
+  rows.push(['発動確率', typeof effect.probability.chance === 'object' && effect.probability.chance !== null
+    ? `${formatCombatNumericValue({ type: 'CALC', operation: 'MULTIPLY', values: [effect.probability.chance, 100] })}％`
+    : resolveCombatProbability(effect.probability) === null ? '未確認' : `${formatCombatNumber((effect.probability.chance as number) * 100)}％`], ['抽選単位', effect.probability.rollScope])
+  if (typeof effect.probability.chance === 'object' && effect.probability.chance !== null) rows.push(...getCombatNumericDefinitionRows(effect.probability.chance, '確率'))
   if (effect.probability.sharedRollId) rows.push(['共有する抽選', effect.probability.sharedRollId])
   rows.push([lifetimeLabel, formatCombatLifetime(effect.lifetime)])
   if (effect.lifetime.type === 'FIXED_SECONDS') rows.push(['有効期間（秒）', effect.lifetime.seconds ?? '未確認'])
@@ -183,6 +233,9 @@ export function getCombatContextDefinitionRows(effect: CombatEffectContext, life
 }
 export function getCombatNumericDefinitionRows(value: CombatNumericValue, prefix = '値'): [string, string | number][] {
   if (value === null || typeof value === 'number') return [[prefix, value ?? '未確認']]
+  if (value.type === 'METRIC') return [[`${prefix}の形式`, '指標'], [`${prefix}の指標`, value.metric]]
+  if (value.type === 'CALC') return [[`${prefix}の演算`, value.operation], ...value.values.flatMap((entry, index) => getCombatNumericDefinitionRows(entry, `${prefix}${index + 1}`))]
+  if (value.type === 'CONDITIONAL') return [[`${prefix}の条件`, formatCombatCondition(value.condition)], ...getCombatNumericDefinitionRows(value.whenTrue, `${prefix}・成立時`), ...getCombatNumericDefinitionRows(value.whenFalse, `${prefix}・不成立時`)]
   return [[`${prefix}の形式`, '定数＋係数×指標'], [`${prefix}の定数`, value.base ?? '未確認'], [`${prefix}の係数`, value.coefficient ?? '未確認'], [`${prefix}の指標`, value.metric], [`${prefix}の下限`, value.min === undefined ? '下限なし' : value.min ?? '未確認'], [`${prefix}の上限`, value.max === undefined ? '上限なし' : value.max ?? '未確認']]
 }
 export function getCombatDotDefinitionRows(damage: CombatDamageOverTime): [string, string | number][] {
