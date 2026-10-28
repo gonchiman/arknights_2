@@ -1,7 +1,7 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { getHpChartValueAxis } from '../lib/goldenglowTargetSwitchHpAxis'
-import { getProfessionColor, getProfessionLabel, PROFESSION_ORDER } from '../lib/operatorFilters'
 import { OPERATOR_PCA_METRICS, type OperatorPcaPoint } from '../lib/operatorPca'
+import { getOperatorPcaGroupId, OPERATOR_PCA_COLOR_BY_OPTIONS, type OperatorPcaColorBy, type OperatorPcaGroup } from '../lib/operatorPcaGrouping'
 
 function usePlotWidth() {
   const ref = useRef<HTMLDivElement>(null)
@@ -22,11 +22,9 @@ function usePlotWidth() {
 }
 
 const format = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
-const square = (profession: string) => profession === 'SUPPORT' || profession === 'SPECIAL'
-const color = (profession: string) => getProfessionColor(profession)?.main ?? 'var(--text-muted)'
-
-export function OperatorPcaScatter({ points, selectedId, neighborIds, onSelect }: {
+export function OperatorPcaScatter({ points, selectedId, neighborIds, onSelect, colorBy, groups }: {
   points: readonly OperatorPcaPoint[]; selectedId: string; neighborIds: readonly string[]; onSelect: (id: string) => void
+  colorBy: OperatorPcaColorBy; groups: readonly OperatorPcaGroup[]
 }) {
   const [ref, width] = usePlotWidth()
   const id = useId()
@@ -39,7 +37,11 @@ export function OperatorPcaScatter({ points, selectedId, neighborIds, onSelect }
   const selectedIndex = points.findIndex(point => point.operator.operatorId === selectedId)
   const selected = points[selectedIndex]
   const neighbors = new Set(neighborIds)
-  const presentProfessions = PROFESSION_ORDER.filter(profession => points.some(point => point.operator.profession === profession))
+  const groupsById = useMemo(() => new Map(groups.map(group => [group.id, group])), [groups])
+  const visibleGroupIds = new Set(points.map(point => getOperatorPcaGroupId(point.operator, colorBy)))
+  const visibleGroups = groups.filter(group => visibleGroupIds.has(group.id))
+  const colorByLabel = OPERATOR_PCA_COLOR_BY_OPTIONS.find(option => option.value === colorBy)?.label ?? '職業'
+  const denseLegend = visibleGroups.length > 12
   const priority = (point: OperatorPcaPoint) => point.operator.operatorId === selectedId ? 2 : neighbors.has(point.operator.operatorId) ? 1 : 0
   const orderedPoints = [...points].sort((a, b) => priority(a) - priority(b))
   const xTicks = xAxis.yTicks.filter((_, index) => width >= 430 || index % 2 === 0)
@@ -55,16 +57,18 @@ export function OperatorPcaScatter({ points, selectedId, neighborIds, onSelect }
     if (points[index]) onSelect(points[index].operator.operatorId)
   }
 
-  return <div className="operator-pca-scatter">
-    <div className="operator-pca-legend" aria-label="職業の凡例">
-      {presentProfessions.map(profession => <span key={profession}>
-        <i className={square(profession) ? 'square' : ''} style={{ background: color(profession) }} aria-hidden="true" />{getProfessionLabel(profession)}
+  const legend = <div className={`operator-pca-legend${denseLegend ? ' operator-pca-legend-dense' : ''}`} aria-label={`${colorByLabel}の凡例`}>
+      {visibleGroups.map(group => <span key={group.id}>
+        <i className={group.shape === 'square' ? 'square' : ''} style={{ background: group.color }} aria-hidden="true" />{group.label}
       </span>)}
     </div>
+
+  return <div className="operator-pca-scatter">
+    {!denseLegend && legend}
     <div className="operator-pca-plot" ref={ref}>
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} tabIndex={0} role="group"
         aria-label="オペレーターの主成分分布" aria-describedby={`${id}-description ${id}-selection`} onKeyDown={navigate}>
-        <desc id={`${id}-description`}>横軸は第1主成分、縦軸は第2主成分。点をクリックして選択。矢印キーでオペレーターを切り替えます。</desc>
+        <desc id={`${id}-description`}>横軸は第1主成分、縦軸は第2主成分。{colorByLabel}で色分け。点をクリックして選択。矢印キーでオペレーターを切り替えます。</desc>
         <defs><clipPath id={`${id}-clip`}><rect x={left} y={top} width={Math.max(1, right - left)} height={bottom - top} /></clipPath></defs>
         {xTicks.map(tick => <g key={`x-${tick}`}><line className={`operator-pca-gridline${tick === 0 ? ' zero' : ''}`} x1={x(tick)} x2={x(tick)} y1={top} y2={bottom} />
           <text x={x(tick)} y={bottom + 21} textAnchor="middle">{format.format(tick)}</text></g>)}
@@ -76,12 +80,14 @@ export function OperatorPcaScatter({ points, selectedId, neighborIds, onSelect }
             const active = point.operator.operatorId === selectedId
             const near = neighbors.has(point.operator.operatorId)
             const radius = active || near ? 5.2 : 3.3
+            const group = groupsById.get(getOperatorPcaGroupId(point.operator, colorBy))
+            const color = group?.color ?? 'var(--text-muted)'
             return <g className="operator-pca-point" key={point.operator.operatorId} onClick={() => onSelect(point.operator.operatorId)}>
               <circle cx={x(point.x)} cy={y(point.y)} r={8} fill="transparent" />
-              {square(point.operator.profession)
+              {group?.shape === 'square'
                 ? <rect x={x(point.x) - radius} y={y(point.y) - radius} width={radius * 2} height={radius * 2}
-                  fill={color(point.operator.profession)} opacity={active || near ? 1 : 0.7} />
-                : <circle cx={x(point.x)} cy={y(point.y)} r={radius} fill={color(point.operator.profession)} opacity={active || near ? 1 : 0.7} />}
+                  fill={color} opacity={active || near ? 1 : 0.7} />
+                : <circle cx={x(point.x)} cy={y(point.y)} r={radius} fill={color} opacity={active || near ? 1 : 0.7} />}
               {(active || near) && <circle className={`operator-pca-ring${active ? ' selected' : ''}`} cx={x(point.x)} cy={y(point.y)} r={active ? 9 : 7} />}
             </g>
           })}
@@ -91,6 +97,7 @@ export function OperatorPcaScatter({ points, selectedId, neighborIds, onSelect }
       </svg>
       <span className="visually-hidden" id={`${id}-selection`} aria-live="polite">{selected && `${selected.operator.name}：第1主成分 ${format.format(selected.x)}、第2主成分 ${format.format(selected.y)}`}</span>
     </div>
+    {denseLegend && legend}
   </div>
 }
 

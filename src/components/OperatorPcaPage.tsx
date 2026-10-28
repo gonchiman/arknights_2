@@ -4,6 +4,7 @@ import { buildOperatorDatabaseRecords, EMPTY_OPERATOR_DATABASE_FILTERS, filterOp
 import { getProfessionLabel, PROFESSION_ORDER } from '../lib/operatorFilters'
 import { buildSubProfessionOptions } from '../lib/operatorSearchFilters'
 import { findOperatorPcaNeighbors, OPERATOR_PCA_METRICS, runOperatorPca } from '../lib/operatorPca'
+import { buildOperatorPcaGroups, OPERATOR_PCA_COLOR_BY_OPTIONS, type OperatorPcaColorBy } from '../lib/operatorPcaGrouping'
 import { AnalysisTabPanel, AnalysisTabs } from './AnalysisTabs'
 import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
 import { OperatorPcaCoefficients, OperatorPcaScatter, OperatorPcaVariance } from './OperatorPcaCharts'
@@ -51,6 +52,7 @@ export function OperatorPcaPage({ rows, loading, onOpenOperatorDetail }: Props) 
   const [tab, setTab] = useState<Tab>('distribution')
   const [profession, setProfession] = useState('ALL')
   const [subProfession, setSubProfession] = useState('ALL')
+  const [colorBy, setColorBy] = useState<OperatorPcaColorBy>('profession')
   const [selectedId, setSelectedId] = useState('char_350_surtr')
   const [selectedComponent, setSelectedComponent] = useState(0)
   const [scorePage, setScorePage] = useState(0)
@@ -62,6 +64,9 @@ export function OperatorPcaPage({ rows, loading, onOpenOperatorDetail }: Props) 
     catch (error) { return { result: null, error: error instanceof Error ? error.message : '主成分分析を計算できませんでした。' } }
   }, [records])
   const { result } = analysis
+  const colorGroups = useMemo(() => buildOperatorPcaGroups(
+    result?.points.map(point => point.operator) ?? [], colorBy,
+  ), [result, colorBy])
   const points = useMemo(() => {
     const visibleIds = new Set(filterOperatorDatabaseRecords(records, {
       ...EMPTY_OPERATOR_DATABASE_FILTERS, profession, subProfession,
@@ -115,11 +120,18 @@ export function OperatorPcaPage({ rows, loading, onOpenOperatorDetail }: Props) 
                   {points.map(({ operator }) => <option key={operator.operatorId} value={operator.operatorId}>{operator.name}</option>)}
                 </select></label>
               </OperatorPcaFilters>
-              <div className="operator-pca-chart-heading"><span>第1・第2主成分 · 寄与率 {percent(totalVariance)}</span>
+              <div className="operator-pca-chart-heading">
+                <label className="operator-pca-color-picker"><span>色分け</span>
+                  <select value={colorBy} onChange={event => setColorBy(event.target.value as OperatorPcaColorBy)}>
+                    {OPERATOR_PCA_COLOR_BY_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                </label>
+                <span>第1・第2主成分 · 寄与率 {percent(totalVariance)}</span>
                 <span>表示 {points.length} / {count}名</span></div>
               {selected ? <>
                 <OperatorPcaScatter points={points} selectedId={selected.operator.operatorId}
-                  neighborIds={neighbors.map(({ point }) => point.operator.operatorId)} onSelect={setSelectedId} />
+                  neighborIds={neighbors.map(({ point }) => point.operator.operatorId)} onSelect={setSelectedId}
+                  colorBy={colorBy} groups={colorGroups} />
                 <section className="operator-pca-selection" aria-label="選択したオペレーター">
                   <div className="operator-pca-selection-heading">
                     <div><h3 ref={selectedHeading} tabIndex={-1} aria-live="polite" aria-atomic="true">{selected.operator.name}</h3>

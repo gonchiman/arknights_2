@@ -5,10 +5,11 @@
 .operator-pca-condition { color: var(--text-soft); overflow-wrap: anywhere; }
 .operator-pca-filters { display: grid; grid-template-columns: 1fr 1fr minmax(0, 1.5fr); gap: 12px; margin-bottom: 20px; }
 .operator-pca-filters label { display: grid; gap: 6px; min-width: 0; color: var(--text-soft); }
-.operator-pca-filters select, .operator-pca-component-picker { min-width: 0; min-height: 42px; padding: 7px 10px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); font: inherit; }
+.operator-pca-filters select, .operator-pca-component-picker, .operator-pca-color-picker select { min-width: 0; min-height: 42px; padding: 7px 10px; border: 1px solid var(--border-strong); border-radius: 0; background: var(--surface); color: var(--text); font: inherit; }
 .operator-pca-filters select { width: 100%; }
 .operator-pca-component-picker { max-width: 100%; }
-.operator-pca-chart-heading { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 10px; color: var(--text-soft); font-variant-numeric: tabular-nums; }
+.operator-pca-chart-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 10px; color: var(--text-soft); font-variant-numeric: tabular-nums; }
+.operator-pca-color-picker { display: inline-flex; align-items: center; gap: 8px; }
 .operator-pca-scatter, .operator-pca-plot { min-width: 0; }
 .operator-pca-plot { width: 100%; }
 .operator-pca-plot svg { display: block; max-width: 100%; overflow: visible; }
@@ -17,6 +18,7 @@
 .operator-pca-legend > span { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; }
 .operator-pca-legend i { display: block; width: 9px; height: 9px; border-radius: 50%; }
 .operator-pca-legend i.square { border-radius: 0; }
+.operator-pca-legend-dense { margin: 12px 0 0; }
 .operator-pca-gridline { stroke: var(--border); stroke-width: 1; }
 .operator-pca-gridline.zero { stroke: var(--border-strong); stroke-dasharray: 4 3; }
 .operator-pca-frame { fill: none; stroke: var(--border); stroke-width: 1; }
@@ -91,8 +93,8 @@
   .operator-pca-page .analysis-panel-body { padding: 12px; }
 }
 @media (max-width: 760px), (pointer: coarse) {
-  .operator-pca-page .button, .operator-pca-filters select, .operator-pca-component-picker { min-height: 44px; }
-  .operator-pca-filters select, .operator-pca-component-picker { font-size: 16px; }
+  .operator-pca-page .button, .operator-pca-filters select, .operator-pca-component-picker, .operator-pca-color-picker select { min-height: 44px; }
+  .operator-pca-filters select, .operator-pca-component-picker, .operator-pca-color-picker select { font-size: 16px; }
   .operator-pca-page .operator-pca-scores .skill-sort-button { min-height: 44px; }
   .operator-pca-score-link { display: inline-flex; align-items: center; min-height: 44px; }
 }
