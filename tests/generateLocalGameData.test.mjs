@@ -245,23 +245,33 @@ test('missing levels, empty source tables and malformed database entries fail in
   assert.throws(() => generateLocalGameData(fixture(), { generatedAt: 'invalid' }), /timestamp/)
 })
 
-test('unsupported spawn rules retain exclusion diagnostics while valid fixed chapter spawns remain usable', () => {
+test('lower-bound generation retains fixed spawns while preserving raw uncertainty and strict legacy mode', () => {
   const source = fixture()
   source.levels.get(mainId).waves[0].fragments[0].actions.push(spawn('enemy_a', 20, { condition: 'phase2' }))
   source.levels.get(eventId).waves[0].fragments[0].actions[0].futureRule = true
   const files = generateLocalGameData(source, { generatedAt })
   const histogram = files.get('enemy-histogram-counts.json')
-  assert.deepEqual(histogram.enemies.enemy_a, { mapCount: 2, spawnCount: 0 })
-  assert.equal(histogram.summary.spawnExcludedMapCount, 2)
+  assert.deepEqual(histogram.enemies.enemy_a, { mapCount: 2, spawnCount: 3 })
+  assert.equal(histogram.summary.spawnExcludedMapCount, 1)
+  assert.equal(histogram.summary.lowerBoundMapCount, 1)
+  assert.equal(histogram.spawnAggregationMode, 'lower-bound')
   assert.equal(files.get('enemy-stage-appearances.json').status, 'complete')
   const index = files.get('maps/index.json')
   const main = index.maps.find((map) => map.levelId === mainId)
   assert.equal(main.status, 'excluded')
   assert.equal(main.spawnCount, null)
+  assert.equal(main.spawnAggregation.kind, 'lower-bound')
+  assert.equal(main.spawnAggregation.count, 3)
   assert.equal(files.get(`maps/${main.detailFile}`).maps[mainId].enemies[0].count, null)
   const trends = files.get('maps/main-enemy-trends.json')
   assert.equal(trends.maps[0].status, 'partial')
   assert.equal(trends.maps[0].enemyCount, 3)
+  const legacyFiles = generateLocalGameData(source, { generatedAt, spawnAggregationMode: 'strict' })
+  const legacyHistogram = legacyFiles.get('enemy-histogram-counts.json')
+  assert.deepEqual(legacyHistogram.enemies.enemy_a, { mapCount: 2, spawnCount: 0 })
+  assert.equal(legacyHistogram.summary.spawnExcludedMapCount, 2)
+  assert.equal(legacyHistogram.summary.lowerBoundMapCount, undefined)
+  assert.equal(legacyFiles.get('maps/index.json').maps.find((map) => map.levelId === mainId).spawnAggregation, undefined)
 })
 
 test('special levels with unavailable wave structure retain their geometry and references with unknown spawn counts', () => {

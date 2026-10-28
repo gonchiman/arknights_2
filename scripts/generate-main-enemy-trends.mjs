@@ -5,6 +5,9 @@ import { buildEnemyHistogramCounts } from './generateEnemyHistogramCounts.mjs'
 import { normalizeLevelId } from './generateEnemyStageAppearances.mjs'
 import { extractMapEnemySpawnCounts, extractMapWaves } from './generateMapDatabase.mjs'
 import { getMainEnemyCoverage, parseMainEnemyTrends } from '../src/lib/mainEnemyTrends.ts'
+import { MAIN_ENEMY_EXCLUSIONS } from './lib/enemyUnitRoles.mjs'
+import { analyzeEnemySpawns } from './lib/enemySpawnConditions.mjs'
+export { MAIN_ENEMY_EXCLUSIONS } from './lib/enemyUnitRoles.mjs'
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url))
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value) ? value : null
@@ -14,35 +17,6 @@ const unwrap = (value) => record(value) && 'm_value' in value
 const text = (value) => typeof unwrap(value) === 'string' ? unwrap(value) : null
 const numeric = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
 const METRICS = { hp: 'maxHp', attack: 'atk', defense: 'def', resistance: 'magicResistance' }
-
-// Verified roles in the JP handbook / enemy database. Visibility, attack=0 and
-// isUnharmfulAndAlwaysCountAsKilled alone are not reliable NPC classifiers.
-// In particular the two high-HP Soul Chalices are damage-sharing ELITE enemies.
-export const MAIN_ENEMY_EXCLUSIONS = {
-  enemy_3001_upeopl: 'neutral-civilian',
-  enemy_3002_ftrtal: 'allied-talulah',
-  enemy_3002_ftrtal_s: 'allied-talulah',
-  enemy_3007_lrssia: 'cinematic-theresa',
-  enemy_3008_lramiy: 'cinematic-amiya',
-  enemy_1313_wdfmr: 'neutral-civilian',
-  enemy_1540_wdncr: 'cinematic-eblana',
-  enemy_1541_wdslms: 'cinematic-shapeshifter',
-  enemy_1115_embald: 'untargetable-cinematic-emperors-blade',
-  enemy_1276_telex: 'untargetable-cinematic-theresis',
-  enemy_1369_bmbcar1: 'neutral-rail-bomb',
-  enemy_1370_bmbcar2: 'neutral-rail-bomb',
-  enemy_1367_dseed: 'revival-material',
-  enemy_1420_lrmm: 'environmental-originium-storm',
-  enemy_1421_lrchld: 'environmental-beacon',
-  enemy_1555_lrking: 'cinematic-nachzehrer-king',
-  enemy_1432_lrccon: 'noncombat-cocoon',
-  enemy_1432_lrccon_2: 'cinematic-cocoon',
-  enemy_3009_mpprss: 'hidden-cinematic-priestess',
-  enemy_10072_mpprhd: 'noncombat-call-command',
-  enemy_10082_mpweak: 'noncombat-weakening-node',
-  enemy_3010_mcreep: 'allied-miner',
-  enemy_3010_mcreep_a: 'allied-miner',
-}
 
 /** Undefined wrappers contain export placeholders; they must never overwrite inherited values. */
 function mergeDefined(target, source) {
@@ -123,12 +97,17 @@ function countDirectSpawns(waves) {
   return { counts, fixedCounts, conditionalReasons }
 }
 
+const branchEvidenceSignature = entries => JSON.stringify((entries ?? []).map(entry => JSON.stringify([
+  entry.branchId, entry.phaseIndex, entry.actionIndex, entry.enemyId, entry.count,
+  entry.ruleId, entry.condition, entry.evidence,
+])).sort())
+
 /** Count confirmed active actions, including resolved groups and replacements.
  * Unresolved conditional actions and branch spawns remain outside this dataset.
  * Unsafe metadata excludes the whole map; published counts are checked against the source.
  */
 export function buildMainEnemyTrends({ mapIndex, stageTable, handbook, database, levels,
-  generatedAt = new Date().toISOString() }) {
+  generatedAt = new Date().toISOString(), sourceRevision }) {
   const handbookEntries = record(record(handbook)?.enemyData) ?? {}
   const selected = selectMainEnemyTrendMaps(mapIndex, stageTable)
   const diagnostics = { excludedUnits: [] }
@@ -144,9 +123,9 @@ export function buildMainEnemyTrends({ mapIndex, stageTable, handbook, database,
     const level = levels.get(source.levelId)
     if (!record(level)) { map.status = 'missing'; map.reasons = ['missing-level']; return map }
     const stage = stageTable.stages[source.stageId]
-    const context = { difficulty: stage.difficulty, diffGroup: stage.diffGroup }
+    const context = { difficulty: stage.difficulty, diffGroup: stage.diffGroup, levelId: source.levelId, sourceRevision }
     const classified = buildEnemyHistogramCounts([{ levelId: source.levelId, data: level }], {
-      stageContexts: { [source.levelId]: context },
+      stageContexts: { [source.levelId]: context }, sourceRevision,
     })
     const rejected = classified.diagnostics.excludedLevels[0]
     const reasons = rejected?.reasons ?? []
@@ -154,12 +133,19 @@ export function buildMainEnemyTrends({ mapIndex, stageTable, handbook, database,
       || [...(source.reasons ?? [])].sort().join('|') !== reasons.join('|')) {
       throw new Error(`Map index and level schedule disagree: ${source.code} (${reasons.join(', ')})`)
     }
+    const analysis = analyzeEnemySpawns(level, context)
+    // The index can come from a different snapshot than these raw levels.
+    // Recheck the actual caller bindings/counts instead of trusting a saved
+    // branch count in both the validation sum and the statistical result.
+    if (branchEvidenceSignature(source.countedBranchSpawns) !== branchEvidenceSignature(analysis.countedBranchSpawns)) {
+      throw new Error(`Map index and level branch counts disagree: ${source.code}`)
+    }
     map.reasons = reasons
     if (unsupportedNormalStatEffect(level)) {
       map.reasons = ['unsupported-normal-stat-rune']
       return map
     }
-    const waves = extractMapWaves(level, context)
+    const waves = extractMapWaves(level, context, analysis)
     if (waves === null) return map
     // Unknown metadata or invalid schedules cannot be treated as merely missing extra spawns.
     if (waves.some((wave) => wave.fragments.some((fragment) => fragment.actions
@@ -170,8 +156,15 @@ export function buildMainEnemyTrends({ mapIndex, stageTable, handbook, database,
     const saved = source.enemySpawnCounts == null ? null
       : new Map(Object.entries(source.enemySpawnCounts).filter(([, count]) => count === null || count > 0))
     if (!saved || direct.size !== saved.size || [...direct].some(([id, count]) => saved.get(id) !== count)
-      || (source.status === 'supported' && source.spawnCount !== [...fixedCounts.values()].reduce((sum, count) => sum + count, 0))) {
+      || (source.status === 'supported' && source.spawnCount !== [...fixedCounts.values()].reduce((sum, count) => sum + count, 0)
+        + analysis.countedBranchSpawns.reduce((sum, entry) => sum + entry.count, 0))) {
       throw new Error(`Map index and level spawn counts disagree: ${source.code}`)
+    }
+    // Branches with verified one-shot callers contribute in addition to the
+    // direct-wave schedule. Unresolved branches still keep the map partial.
+    for (const entry of analysis.countedBranchSpawns) {
+      if (entry.count === 0) continue
+      fixedCounts.set(entry.enemyId, (fixedCounts.get(entry.enemyId) ?? 0) + entry.count)
     }
     const refs = new Map(array(level.enemyDbRefs).map((ref) => [ref.id, ref]))
     for (const [enemyId, count] of [...fixedCounts].sort(([a], [b]) => a.localeCompare(b, 'en', { numeric: true }))) {
@@ -221,7 +214,13 @@ export async function generateMainEnemyTrends({
   sourceRoot = resolve(ROOT, 'reference-data/ArknightsGamedata/jp/gamedata'),
   indexPath = resolve(ROOT, 'public/data/maps/index.json'),
   outputPath = resolve(ROOT, 'public/data/maps/main-enemy-trends.json'),
+  sourceRevision,
 } = {}) {
+  // The caller must identify its source checkout. Never infer a reviewed
+  // mechanics revision from this generator's own checkout or a default.
+  if (sourceRevision !== undefined && (typeof sourceRevision !== 'string' || !/^[a-f0-9]{40}$/.test(sourceRevision))) {
+    throw new Error('sourceRevision must be a complete lowercase Git commit SHA (40 hexadecimal characters)')
+  }
   const readJson = async (path) => JSON.parse((await readFile(path, 'utf8')).replace(/^\uFEFF/, ''))
   const [mapIndex, stageTable, handbook, database] = await Promise.all([
     readJson(indexPath), readJson(resolve(sourceRoot, 'excel/stage_table.json')),
@@ -234,7 +233,7 @@ export async function generateMainEnemyTrends({
     try { return [map.levelId, await readJson(path)] }
     catch (error) { if (error.code === 'ENOENT') return [map.levelId, null]; throw error }
   })))
-  const document = buildMainEnemyTrends({ mapIndex, stageTable, handbook, database, levels })
+  const document = buildMainEnemyTrends({ mapIndex, stageTable, handbook, database, levels, sourceRevision })
   await mkdir(dirname(outputPath), { recursive: true })
   await writeFile(outputPath, JSON.stringify(document) + '\n', 'utf8')
   console.log(JSON.stringify({ ...document.summary, outputPath }, null, 2))
@@ -242,11 +241,12 @@ export async function generateMainEnemyTrends({
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const options = {}
-  const flags = { '--source-root': 'sourceRoot', '--index': 'indexPath', '--output': 'outputPath' }
+  const flags = { '--source-root': 'sourceRoot', '--index': 'indexPath', '--output': 'outputPath',
+    '--source-revision': 'sourceRevision' }
   for (let index = 2; index < process.argv.length; index += 2) {
     const key = flags[process.argv[index]]
     if (!key || !process.argv[index + 1]) throw new Error(`Unknown or incomplete option: ${process.argv[index]}`)
-    options[key] = resolve(process.argv[index + 1])
+    options[key] = key === 'sourceRevision' ? process.argv[index + 1] : resolve(process.argv[index + 1])
   }
   await generateMainEnemyTrends(options)
 }

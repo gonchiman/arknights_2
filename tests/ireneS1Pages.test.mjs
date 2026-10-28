@@ -21,6 +21,10 @@ function table(markup, className) {
 const renderCalculator = () => renderToStaticMarkup(createElement(Calculator, { rows: [row], loading: false, initialSelection: selection }))
 const calculationInput = conditions => ({ operator: row, skill: row, phaseIndex: 2, operatorLevel: 90, trust: 100, skillLevelIndex: 9, conditions })
 const calculate = conditions => buildOutput(calculationInput(conditions))
+const applicationRecords = markup => {
+  const [headers, ...rows] = table(markup, 'damage-three-application-table')
+  return rows.map(values => Object.fromEntries(headers.map((header, index) => [header, values[index]])))
+}
 
 before(async () => {
   server = await createServer({
@@ -100,11 +104,12 @@ test('計算機3の共通boolean選択で浮遊可能・海の怪物なしを明
   assert.deepEqual(options('戦場の海の怪物'), [['false', 'なし', true], ['true', 'あり', false]])
   assert.match(markup, /地上の敵/)
   assert.doesNotMatch(markup, /aria-label="(?:飛行|初期浮遊)/)
-  const talents = table(markup, 'damage-three-application-table')
-  assert.deepEqual(talents[0], ['区分', '名称', '項目', '値', 'タイミング', '発動確率', '条件', '状態'])
-  assert.ok(talents.slice(1).every(values => values.length === 8))
-  assert.ok(talents.some(values => values[5] === '50％'))
-  assert.ok(talents.some(values => values[5] === '100％'))
+  const applications = table(markup, 'damage-three-application-table')
+  assert.deepEqual(applications[0], ['区分', '名称', '項目', '値', 'タイミング', '発動確率', '条件', '状態'])
+  assert.ok(applications.slice(1).every(values => values.length === 8))
+  const talents = applicationRecords(markup).filter(values => values.区分.startsWith('素質'))
+  assert.ok(talents.some(values => values.発動確率 === '50％'))
+  assert.ok(talents.some(values => values.発動確率 === '100％'))
 })
 
 test('浮遊成功時は両打撃を浮遊・100％無視として個別表示し、traitの2ヒットで再倍増しない', () => {
@@ -145,12 +150,12 @@ test('海の怪物条件は攻撃速度18と36を切り替え、強化攻撃ダ�
   for (const [seaMonsterPresent, expectedSpeed] of [[false, '18'], [true, '36']]) {
     const input = calculationInput({ targetCanBeLevitated: true, seaMonsterPresent })
     const output = buildOutput(input)
-    const applications = buildApplications(input, output)
-    const talents = table(renderToStaticMarkup(createElement(ApplicationTable, { rows: applications })), 'damage-three-application-table')
-    const applied = talents.find(values => values[2] === '攻撃速度' && values[3] === expectedSpeed)
-    assert.ok(applied)
-    assert.equal(applied[3], expectedSpeed)
-    assert.equal(applied.at(-1), '計算対象外', '強化攻撃1回のダメージには攻撃速度を加算しない')
+    const talents = applicationRecords(renderToStaticMarkup(createElement(ApplicationTable, { rows: buildApplications(input, output) })))
+      .filter(values => values.区分.startsWith('素質') && values.項目 === '攻撃速度')
+    const active = talents.find(values => values.状態 === '計算対象外')
+    assert.ok(active)
+    assert.equal(active.値, expectedSpeed)
+    assert.equal(talents.filter(values => values.状態 === '条件不成立').length, 1)
     const result = table(renderToStaticMarkup(createElement(ResultTable, { output, precision: 1 })), 'damage-three-result-table')
     assert.deepEqual(result.find(values => values[0] === '500'), ['500', '2,304.0', '2,304.0'])
   }

@@ -3,6 +3,7 @@ import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { extractLevelEnemyIds, normalizeLevelId, selectStageLevels } from './generateEnemyStageAppearances.mjs'
 import { analyzeEnemySpawns } from './lib/enemySpawnConditions.mjs'
+import { resolveEnemySpawnAggregation } from './lib/enemySpawnAggregation.mjs'
 
 const DEFAULT_CACHE_ROOT = fileURLToPath(new URL('../.cache/enemy-stage-appearances/levels', import.meta.url))
 const DEFAULT_SOURCE_PATH = fileURLToPath(new URL('../public/data/enemy-stage-appearances.json', import.meta.url))
@@ -11,11 +12,13 @@ const DEFAULT_STAGES_PATH = fileURLToPath(new URL('../reference-data/ArknightsGa
 
 /**
  * Counts enemy references once per cached level, and explicit SPAWN quantities
- * only on maps whose entire spawn schedule is supported. A zero spawnCount is
- * therefore zero within the fixed supported subset, never a global absence.
+ * on supported maps, with V4 optionally retaining known contributions from
+ * partial schedules. A zero spawnCount is never evidence of global absence.
  * Timestamps are supplied by the caller to keep this transformation pure.
  */
 export function buildEnemyHistogramCounts(levels, provenance = {}) {
+  const mode = provenance.spawnAggregationMode ?? 'strict'
+  if (!['strict', 'lower-bound'].includes(mode)) throw new Error('Unknown enemy spawn aggregation mode')
   const excludedLevelIds = [...new Set((Array.isArray(provenance.excludedLevelIds) ? provenance.excludedLevelIds : [])
     .map(normalizeLevelId).filter(Boolean))].sort(compareIds)
   const scopeExcluded = new Set(excludedLevelIds)
@@ -40,6 +43,8 @@ export function buildEnemyHistogramCounts(levels, provenance = {}) {
     : Object.entries(asRecord(provenance.stageContexts) ?? {})
   const stageContexts = new Map(contextEntries.map(([id, context]) => [normalizeLevelId(id), context]))
   const excludedLevels = []
+  const lowerBoundLevels = []
+  const excludedNonEnemySpawns = [], unverifiedNonEnemySpawns = []
   const reasonCounts = new Map()
   let spawnMapCount = 0
   for (const [levelId, data] of [...byLevel].sort(([left], [right]) => compareIds(left, right))) {
@@ -50,21 +55,28 @@ export function buildEnemyHistogramCounts(levels, provenance = {}) {
     }
     const context = stageContexts.has(levelId) ? stageContexts.get(levelId)
       : provenance.stageContexts === undefined ? {} : null
-    const { counts, reasons } = analyzeEnemySpawns(data, context)
+    const resolutionContext = asRecord(context) ? { ...context, levelId, sourceRevision: provenance.sourceRevision } : context
+    const analysis = analyzeEnemySpawns(data, resolutionContext)
+    const { reasons } = analysis
     // Check before applying any contribution so overflow also excludes the whole map.
-    for (const [enemyId, count] of counts) {
+    for (const [enemyId, count] of analysis.counts) {
       if (!Number.isSafeInteger((enemies.get(enemyId)?.spawnCount ?? 0) + count)) {
         reasons.add('spawn-total-overflow')
       }
     }
-    if (reasons.size > 0) {
-      const sortedReasons = [...reasons].sort()
+    const aggregation = resolveEnemySpawnAggregation(data, resolutionContext, { mode, analysis })
+    if (aggregation.kind === 'excluded') {
+      const sortedReasons = aggregation.reasons
       excludedLevels.push({ levelId, reasons: sortedReasons })
       for (const reason of sortedReasons) reasonCounts.set(reason, (reasonCounts.get(reason) ?? 0) + 1)
       continue
     }
     spawnMapCount += 1
-    for (const [enemyId, count] of counts) {
+    if (aggregation.kind === 'lower-bound') lowerBoundLevels.push({ levelId,
+      spawnCount: aggregation.count, reasons: aggregation.reasons })
+    excludedNonEnemySpawns.push(...aggregation.excludedNonEnemySpawns.map(entry => ({ levelId, ...entry })))
+    unverifiedNonEnemySpawns.push(...aggregation.unverifiedNonEnemySpawns.map(entry => ({ levelId, ...entry })))
+    for (const [enemyId, count] of aggregation.counts) {
       const entry = enemies.get(enemyId) ?? { mapCount: 0, spawnCount: 0 }
       entry.spawnCount += count
       enemies.set(enemyId, entry)
@@ -96,6 +108,7 @@ export function buildEnemyHistogramCounts(levels, provenance = {}) {
   return {
     schemaVersion: 1,
     scope: 'cached-stage-levels',
+    ...(mode === 'lower-bound' ? { spawnAggregationMode: mode } : {}),
     generatedAt: readString(provenance.generatedAt),
     sourceGeneratedAt: readString(provenance.sourceGeneratedAt),
     summary: {
@@ -104,11 +117,15 @@ export function buildEnemyHistogramCounts(levels, provenance = {}) {
       excludedMapCount: excludedLevelIds.length,
       spawnMapCount,
       spawnExcludedMapCount: excludedLevels.length,
+      ...(mode === 'lower-bound' ? { lowerBoundMapCount: lowerBoundLevels.length } : {}),
     },
     enemies: Object.fromEntries([...enemies].sort(([left], [right]) => compareIds(left, right))),
     diagnostics: {
       excludedLevelIds,
       excludedLevels,
+      ...(mode === 'lower-bound' ? { lowerBoundLevels } : {}),
+      ...(excludedNonEnemySpawns.length ? { excludedNonEnemySpawns } : {}),
+      ...(unverifiedNonEnemySpawns.length ? { unverifiedNonEnemySpawns } : {}),
       reasonCounts: Object.fromEntries([...reasonCounts].sort(([left], [right]) => compareIds(left, right))),
       missingLevelIds,
       duplicateLevelIds: [...duplicates].sort(compareIds),

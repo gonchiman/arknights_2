@@ -47,6 +47,31 @@ test('集計マップ確認は敵分析用の独立ページとして開く', ()
   }
 })
 
+test('集計版を含むURLの直接アクセスでも敵統計と集計マップ確認を開く', () => {
+  const routes = [
+    ['#/analysis/enemies', 'enemy-analysis'],
+    ['#/analysis/enemies/maps', 'enemy-map-coverage'],
+  ] as const
+  for (const [path, view] of routes) {
+    for (const query of [
+      'aggregationVersion=v4',
+      'aggregationVersion=v1',
+      'aggregationVersion=%76%34',
+      'filter=all&aggregationVersion=v4',
+      'aggregationVersion=v4&filter=all',
+      'aggregationVersion=unknown',
+      'aggregationVersion=',
+    ]) {
+      assert.deepEqual(parseHashRoute(`${path}?${query}`), { view })
+    }
+    for (const suffix of ['/', '/extra', '-extra']) {
+      assert.deepEqual(parseHashRoute(`${path}${suffix}?aggregationVersion=v4`), { view: 'operators' })
+    }
+    assert.deepEqual(parseHashRoute(`${path}?unrelated=v4`), { view: 'operators' })
+  }
+  assert.deepEqual(parseHashRoute('#/maps?aggregationVersion=v4'), { view: 'operators' })
+})
+
 test('オペレーター主成分分析は図鑑の隣から独立したページとして開く', () => {
   assert.deepEqual(parseHashRoute('#/analysis/operators/pca'), { view: 'operator-pca' })
   assert.deepEqual(parseHashRoute('#/operators'), { view: 'operators' })

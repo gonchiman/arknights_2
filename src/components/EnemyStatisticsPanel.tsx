@@ -47,7 +47,7 @@ import { placeGroupedBarValueLabels } from '../lib/groupedBarValueLabels'
 import { calculateWeightedEmpiricalCdf, getWeightedEnemyEcdfImageFilename } from '../lib/enemyWeightedEcdf'
 import { useEnemyHistogramCounts } from '../lib/useEnemyHistogramCounts'
 import { buildEnemyHistogramObservations, withHistogramDispersion, getWeightedEnemyHistogramImageFilename,
-  ENEMY_HISTOGRAM_COUNT_MODES, type EnemyHistogramCountMode, type EnemyHistogramCounts } from '../lib/enemyHistogramCounts'
+  ENEMY_HISTOGRAM_COUNT_MODES, getEnemySpawnCoverageLabel, type EnemyHistogramCountMode, type EnemyHistogramCounts } from '../lib/enemyHistogramCounts'
 import { createEnemyHistogramSnapshot, type EnemyHistogramSnapshot, type EnemyHistogramEditorSettings, type EnemyHistogramAggregationVersion } from '../lib/enemyHistogramSnapshot'
 import { getEnemyAggregationFilename } from '../lib/enemyAggregationData'
 import { HelpPopover } from './HelpPopover'
@@ -904,7 +904,7 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
   if (missingCount > 0) conditions.push(`値なし ${formatNumber(missingCount, 0)}${unit}を除外`)
   if (data.countCoverage && data.countMode !== 'TYPES') conditions.push(
     data.countMode === 'MAPS' ? `収録 ${formatNumber(data.countCoverage.mapCount, 0)}マップ`
-      : `出現数確定 ${formatNumber(data.countCoverage.spawnMapCount, 0)}マップ`)
+      : getEnemySpawnCoverageLabel(data.countCoverage))
   if (kind === 'HISTOGRAM' && data.ratingBins) {
     conditions.push('ゲーム内評価別')
     if (data.referenceVisibility.mean || data.referenceVisibility.median) conditions.push('補助線は該当評価の中央')
@@ -1091,11 +1091,13 @@ function DistributionCountControls({ mode, onChange, counts, showMapCoverageLink
         <dl className="enemy-histogram-count-help">
           <dt>種類数</dt><dd>敵1種類につき1件として集計します。</dd>
           <dt>登場マップ数</dt><dd>敵ごとの登録マップ数を合計します。同じマップに同じ階級の敵が3種類あれば3件です。召喚・特殊条件用の敵の登録も含みます。</dd>
-          <dt>出現回数</dt><dd>どの敵が何体出るか確定できるマップの、敵の配置数を合計します。各マップを1回分ずつ数え、ランダム出現・条件付き増援などがあるマップは集計対象外です。周回数は反映しません。</dd>
+          <dt>出現回数</dt><dd>{counts?.spawnAggregationMode === 'lower-bound'
+            ? '各マップで判定できた敵の出現数を合計します。下限集計では、未解析の分岐・抽選などの追加出現は含めません。各マップを1回分ずつ数え、周回数は反映しません。'
+            : 'どの敵が何体出るか確定できるマップの、敵の配置数を合計します。各マップを1回分ずつ数え、ランダム出現・条件付き増援などがあるマップは集計対象外です。周回数は反映しません。'}</dd>
           <dt>ステータス</dt><dd>横軸のHPなどは敵の基礎値です。ステージ補正は含めません。平均・中央値・割合は選択した集計方法に合わせて計算します。</dd>
           {counts && <><dt>収録範囲</dt><dd>登場マップ数：{formatNumber(counts.summary.mapCount, 0)}マップ。
-            出現回数：{formatNumber(counts.summary.spawnMapCount, 0)}マップ。
-            出現条件を確定できない{formatNumber(counts.summary.spawnExcludedMapCount, 0)}マップと、
+            出現回数：{getEnemySpawnCoverageLabel(counts.summary)}。
+            {counts.spawnAggregationMode === 'lower-bound' ? '集計対象外の' : '出現条件を確定できない'}{formatNumber(counts.summary.spawnExcludedMapCount, 0)}マップと、
             データ未取得の{formatNumber(counts.summary.missingMapCount, 0)}マップは出現回数に含めません。
             {counts.sourceGeneratedAt && `元データの集計日：${counts.sourceGeneratedAt.slice(0, 10)}。`}</dd></>}
         </dl>
@@ -1109,7 +1111,7 @@ function DistributionCountControls({ mode, onChange, counts, showMapCoverageLink
     </fieldset>
     {counts && mode !== 'TYPES' && <span className="enemy-histogram-coverage" role="status">
       {mode === 'MAPS' ? `収録 ${formatNumber(counts.summary.mapCount, 0)}マップ`
-        : `出現数確定 ${formatNumber(counts.summary.spawnMapCount, 0)}マップ`}
+        : getEnemySpawnCoverageLabel(counts.summary)}
     </span>}
     {showMapCoverageLink && mode !== 'TYPES' && <a className="button secondary enemy-page-link"
       href="#/analysis/enemies/maps">集計マップを確認</a>}

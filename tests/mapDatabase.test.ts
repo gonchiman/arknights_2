@@ -143,6 +143,47 @@ test('malformed and duplicate map summaries or escaping detail paths are rejecte
   assert.equal(parseMapIndex(index).maps[0].code, '1-7')
 })
 
+test('optional branch omissions retain their proof without changing legacy or unresolved map status', () => {
+  const omittedBranchSpawns = [{ branchId: 'optional', phaseIndex: 0, actionIndex: 1, enemyId: 'enemy_a',
+    ruleId: 'optional-device', condition: '装置を作動させずにクリア可能', evidence: ['predefines.tokenInsts[0]'] }]
+  const parse = (patch: Partial<MapSummary>) => parseMapIndex({ ...index, maps: [{ ...summary, ...patch }] }).maps[0]
+  const parsed = parse({ omittedBranchSpawns })
+  assert.deepEqual(parsed.omittedBranchSpawns, omittedBranchSpawns)
+  assert.notEqual(parsed.omittedBranchSpawns, omittedBranchSpawns)
+  assert.notEqual(parsed.omittedBranchSpawns![0], omittedBranchSpawns[0])
+  assert.notEqual(parsed.omittedBranchSpawns![0].evidence, omittedBranchSpawns[0].evidence)
+  assert.equal(parsed.status, 'supported')
+  assert.deepEqual(parsed.reasons, [])
+  assert.equal(parse({}).omittedBranchSpawns, undefined)
+  assert.deepEqual(parse({ omittedBranchSpawns: [] }).omittedBranchSpawns, [])
+  const unresolved = parse({ status: 'excluded', spawnCount: null, reasons: ['branch-spawn'], omittedBranchSpawns })
+  assert.equal(unresolved.status, 'excluded')
+  assert.deepEqual(unresolved.reasons, ['branch-spawn'])
+  assert.deepEqual(unresolved.omittedBranchSpawns, omittedBranchSpawns)
+})
+
+test('optional branch omissions reject invalid coordinates, missing proof, unknown enemies and duplicate source actions', () => {
+  const omission = { branchId: 'optional', phaseIndex: 0, actionIndex: 1, enemyId: 'enemy_a',
+    ruleId: 'optional-device', condition: '装置を作動させずにクリア可能', evidence: ['predefines.tokenInsts[0]'] }
+  const parse = (omittedBranchSpawns: unknown) => parseMapIndex({ ...index, maps: [{ ...summary, omittedBranchSpawns }] })
+  for (const invalid of [null, {}, true, 'optional', [null], [omission, omission]]) assert.throws(() => parse(invalid))
+  for (const field of ['phaseIndex', 'actionIndex']) {
+    for (const value of [undefined, null, -1, 0.5, '0', Number.MAX_SAFE_INTEGER + 1, Infinity, NaN]) {
+      assert.throws(() => parse([{ ...omission, [field]: value }]), `${field}: ${String(value)}`)
+    }
+  }
+  for (const field of ['branchId', 'enemyId', 'ruleId', 'condition']) {
+    for (const value of [undefined, null, '', '  ', 0, [], {}]) assert.throws(() => parse([{ ...omission, [field]: value }]))
+  }
+  for (const evidence of [undefined, null, '', {}, [], [''], ['  '], [1], ['proof', null]]) {
+    assert.throws(() => parse([{ ...omission, evidence }]))
+  }
+  assert.throws(() => parse([{ ...omission, enemyId: 'unknown' }]))
+  assert.throws(() => parseMapIndex({ ...index, maps: [{ ...summary, status: 'missing', spawnCount: null,
+    enemyIds: [], detailFile: null, omittedBranchSpawns: [omission] }] }))
+  assert.equal(parse([omission, { ...omission, actionIndex: 2 }]).maps[0].omittedBranchSpawns?.length, 2)
+})
+
 test('enemy attack and defense preserve zero, normalize missing legacy values, and reject invalid stats', () => {
   assert.deepEqual(parseMapIndex(index).enemies.enemy_a, index.enemies.enemy_a)
   const { attack, defense, ...legacy } = index.enemies.enemy_a
@@ -517,4 +558,20 @@ test('enemy configured-count parsing preserves unknown totals and rejects unsupp
     assert.throws(() => parse(counts))
   }
   assert.throws(() => parse({}, { ...summary, status: 'missing', spawnCount: null, enemyIds: [], detailFile: null }))
+})
+
+test('branch evidence distinguishes non-enemies and mandatory counts without changing old indexes', () => {
+  const entry = { branchId: 'b', phaseIndex: 0, actionIndex: 0, enemyId: 'enemy_a',
+    ruleId: 'reviewed-rule', condition: '条件', evidence: ['source'] }
+  const parsed = parseMapIndex({ ...index, maps: [{ ...summary,
+    omittedBranchSpawns: [{ ...entry, kind: 'non-enemy' }],
+    countedBranchSpawns: [{ ...entry, branchId: 'c', count: 2 }],
+  }] }).maps[0]
+  assert.equal(parsed.omittedBranchSpawns?.[0].kind, 'non-enemy')
+  assert.equal(parsed.countedBranchSpawns?.[0].count, 2)
+  assert.equal(parseMapIndex(index).maps[0].countedBranchSpawns, undefined)
+  for (const count of [-1, 1.5, Infinity, '1', undefined]) {
+    assert.throws(() => parseMapIndex({ ...index, maps: [{ ...summary, countedBranchSpawns: [{ ...entry, count }] }] }))
+  }
+  assert.throws(() => parseMapIndex({ ...index, maps: [{ ...summary, omittedBranchSpawns: [{ ...entry, kind: 'unknown' }] }] }))
 })

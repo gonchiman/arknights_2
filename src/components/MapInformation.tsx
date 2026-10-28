@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import { loadMapDetail } from '../lib/mapDatabase'
 import { getMapEntrances } from '../lib/mapWaves'
-import { getMapCoverageReasons, getMapCoverageStatus } from '../lib/enemyMapCoverage'
+import { getMapCoverageReasons, getMapCoverageStatus, getMapCoverageStatusLabel } from '../lib/enemyMapCoverage'
 import { DATA_SOURCE_URLS } from '../lib/dataSources'
 import type { MapDetail, MapIndex, MapSummary, MapTile } from '../types/map'
 
@@ -52,6 +52,8 @@ export function MapInformation({
             <dl className="map-battle-facts">
               <div><dt>登録敵</dt><dd>{formatNumber(enemies.length)}種類</dd></div>
               <div><dt>出現数</dt><dd>{map.status === 'supported' ? `${formatNumber(map.spawnCount)}体` : '未確定'}</dd></div>
+              {map.spawnAggregation && getMapCoverageStatus(map, 'SPAWNS') === 'included'
+                && <div><dt>下限集計</dt><dd>{formatNumber(map.spawnAggregation.count)}体</dd></div>}
               <div><dt>耐久値</dt><dd>{formatNumber(detail.life)}</dd></div>
               <div><dt>初期コスト</dt><dd>{formatNumber(detail.initialCost)}</dd></div>
               <div><dt>配置上限</dt><dd>{formatNumber(detail.deployLimit)}</dd></div>
@@ -65,7 +67,29 @@ export function MapInformation({
             })}</tbody></table></div> : <p className="map-empty">登録された敵はありません</p>}
             </div>
           </div>}
-    {showDataInfo && <details className="map-data-information"><summary>データ情報</summary><dl><div><dt>出現回数の集計</dt><dd>{getMapCoverageStatus(map, 'SPAWNS') === 'included' ? '集計対象' : '集計対象外'}</dd></div><div><dt>理由</dt><dd>{getMapCoverageReasons(map, 'SPAWNS').join('、')}</dd></div><div><dt>マップID</dt><dd>{map.levelId}</dd></div></dl><p>体数は、この環境で判定できた出現条件と敵の置き換えを反映しています。分岐や抽選などで合計が確定しないマップは、出現回数の集計に含めません。能力値は基礎値で、マップ固有の補正は反映していません。</p><a href={`${DATA_SOURCE_URLS.levelRawBase}/${map.levelId}.json`} target="_blank" rel="noopener noreferrer">元のマップJSONを開く</a></details>}
+    {showDataInfo && <details className="map-data-information"><summary>データ情報</summary>
+      <dl>
+        <div><dt>出現回数の集計</dt><dd>{getMapCoverageStatusLabel(map, 'SPAWNS')}</dd></div>
+        <div><dt>理由</dt><dd>{getMapCoverageReasons(map, 'SPAWNS').join('、')}</dd></div>
+        <div><dt>マップID</dt><dd>{map.levelId}</dd></div>
+        {!!map.omittedBranchSpawns?.length && <div><dt>除外した分岐出現</dt><dd>
+          {map.omittedBranchSpawns.map((spawn) => <div key={JSON.stringify([spawn.branchId, spawn.phaseIndex, spawn.actionIndex])}>
+            <strong>{index.enemies[spawn.enemyId]?.name ?? spawn.enemyId}</strong> · {spawn.condition}
+            <ul>{spawn.evidence.map((value, i) => <li key={i}><code>{value}</code></li>)}</ul>
+          </div>)}
+        </dd></div>}
+        {!!map.countedBranchSpawns?.length && <div><dt>加算した分岐出現</dt><dd>
+          {map.countedBranchSpawns.map((spawn) => <div key={JSON.stringify([spawn.branchId, spawn.phaseIndex, spawn.actionIndex])}>
+            <strong>{index.enemies[spawn.enemyId]?.name ?? spawn.enemyId}</strong> · {formatNumber(spawn.count)}体 · {spawn.condition}
+            <ul>{spawn.evidence.map((value, i) => <li key={i}><code>{value}</code></li>)}</ul>
+          </div>)}
+        </dd></div>}
+      </dl>
+      <p>体数は、この環境で判定できた出現条件と敵の置き換えを反映しています。分岐は必須出現を加算し、回避できる追加出現や敵以外のユニットを除外しています。{map.spawnAggregation && getMapCoverageStatus(map, 'SPAWNS') === 'included'
+        ? 'このマップは確定出現分のみ下限集計に含め、未解析の分岐や抽選などは未算入です。'
+        : '未解析の分岐や抽選などで合計が確定しないマップは、出現回数の集計に含めません。'}能力値は基礎値で、マップ固有の補正は反映していません。</p>
+      <a href={`${DATA_SOURCE_URLS.levelRawBase}/${map.levelId}.json`} target="_blank" rel="noopener noreferrer">元のマップJSONを開く</a>
+    </details>}
   </>
 }
 
