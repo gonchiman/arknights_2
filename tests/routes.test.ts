@@ -47,11 +47,25 @@ test('集計マップ確認は敵分析用の独立ページとして開く', ()
   }
 })
 
+test('オペレーター主成分分析は図鑑の隣から独立したページとして開く', () => {
+  assert.deepEqual(parseHashRoute('#/analysis/operators/pca'), { view: 'operator-pca' })
+  assert.deepEqual(parseHashRoute('#/operators'), { view: 'operators' })
+  const databaseIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'operators')
+  assert.deepEqual(APP_NAV_ITEMS[databaseIndex + 1], {
+    id: 'operator-pca', href: '#/analysis/operators/pca', label: 'オペレーター主成分分析',
+    description: '', section: 'analysis',
+  })
+  for (const suffix of ['/', '/extra', '?operator=char_test', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/analysis/operators/pca${suffix}`), { view: 'operators' })
+  }
+})
+
 test('サイドバーから主要ページへ遷移できる', () => {
   assert.deepEqual(
     APP_NAV_ITEMS.map((item) => [item.id, parseHashRoute(item.href).view]),
     [
       ['operators', 'operators'],
+      ['operator-pca', 'operator-pca'],
       ['skills', 'skills'],
       ['skill-classification', 'skill-classification'],
       ['talent-classification', 'talent-classification'],

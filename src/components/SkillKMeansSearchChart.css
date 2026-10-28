@@ -11,8 +11,8 @@
 .skill-kmeans-search-tick { fill: var(--text-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
 .skill-kmeans-search-axis-title { fill: var(--text); font-size: 12px; font-weight: 500; }
 .skill-kmeans-search-line { fill: none; stroke: var(--skill-kmeans-search-series); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-.skill-kmeans-search-point { fill: var(--surface); stroke: var(--skill-kmeans-search-series); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
-.skill-kmeans-search-point.selected { fill: var(--skill-kmeans-search-series); stroke-width: 2; }
+.skill-kmeans-search-point { visibility: hidden; fill: var(--skill-kmeans-search-series); pointer-events: none; }
+.skill-kmeans-search-point.selected, .skill-kmeans-search-point.hovered, .skill-kmeans-search-point.isolated { visibility: visible; }
 .skill-kmeans-search-guide { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; }
 .skill-kmeans-search-selected-value { fill: var(--skill-kmeans-search-series); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .skill-kmeans-search-empty { fill: var(--text-soft); font-size: 13px; }

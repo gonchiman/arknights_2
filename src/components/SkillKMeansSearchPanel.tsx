@@ -7,6 +7,8 @@ import './SkillKMeansSearchPanel.css'
 
 interface Props {
   documents: readonly SkillKMeansDocument[]
+  usableDocumentCount?: number
+  initialMaxK?: number
   loading: boolean
   learningBusy: boolean
   onBusyChange: (busy: boolean) => void
@@ -14,7 +16,7 @@ interface Props {
 }
 interface Draft { minK: string; maxK: string; seed: string; restarts: string }
 interface Submission { documents: readonly SkillKMeansDocument[]; config: SkillKMeansSearchConfig }
-const INITIAL_DRAFT: Draft = { minK: '2', maxK: '30', seed: '2', restarts: '10' }
+const INITIAL_DRAFT: Draft = { minK: '2', maxK: '60', seed: '2', restarts: '10' }
 const format = (value: number | null) => value === null ? '—' : value.toLocaleString('ja-JP', { maximumFractionDigits: 4 })
 const phaseLabels = { preparing: '距離の計算', fitting: '学習', evaluating: '評価' } as const
 
@@ -31,14 +33,14 @@ function candidateStatus(candidate: SkillKMeansSearchCandidate): string {
   return candidate.eligible ? '収束' : '評価不可'
 }
 
-export function SkillKMeansSearchPanel({ documents, loading, learningBusy, onBusyChange, onLearn }: Props) {
-  const [draft, setDraft] = useState<Draft>(INITIAL_DRAFT)
+export function SkillKMeansSearchPanel({ documents, usableDocumentCount = documents.length, initialMaxK = 60, loading, learningBusy, onBusyChange, onLearn }: Props) {
+  const [draft, setDraft] = useState<Draft>(() => ({ ...INITIAL_DRAFT, maxK: String(initialMaxK) }))
   const [submission, setSubmission] = useState<Submission | null>(null)
   const [run, setRun] = useState(EMPTY_SKILL_KMEANS_SEARCH_RUN)
   const [selectedK, setSelectedK] = useState<number | null>(null)
   const runner = useRef<SkillKMeansSearchRunner | null>(null)
   const progressId = useId()
-  const limit = Math.min(30, documents.length - 1)
+  const limit = Math.min(80, usableDocumentCount - 1)
   const config = readConfig(draft, limit)
   const busy = run.status === 'preparing' || run.status === 'running'
   const dirty = submission !== null && (submission.documents !== documents || JSON.stringify(config) !== JSON.stringify(submission.config))
@@ -96,7 +98,7 @@ export function SkillKMeansSearchPanel({ documents, loading, learningBusy, onBus
         {busy && <button type="button" className="button secondary" onClick={() => runner.current?.stop()}>探索を停止</button>}
         {!busy && learningBusy && <span>学習中</span>}
       </div>
-      <span>{(result?.documentCount ?? submission?.documents.length ?? documents.length).toLocaleString('ja-JP')}件 · 反復上限 30</span>
+      <span>{(result?.documentCount ?? usableDocumentCount).toLocaleString('ja-JP')}件 · 反復上限 30</span>
     </div>
     {busy && run.progress && <progress id={progressId} aria-label={`${phaseLabels[run.progress.phase]}の進捗`} value={run.progress.completed} max={Math.max(1, run.progress.total)} />}
     {run.error && <p className="skill-kmeans-error" role="alert">{run.error}</p>}

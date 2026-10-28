@@ -1,10 +1,12 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { SkillRecord } from '../types/skill'
 import { buildSkillKMeansCorpus, type SkillKMeansConfig, type SkillKMeansDocument, type SkillKMeansResult } from '../lib/skillKMeans'
 import { EMPTY_SKILL_KMEANS_RUN, SkillKMeansRunner } from '../lib/skillKMeansRunner'
+import { EMPTY_SKILL_DIRECTORY_FILTERS, type SkillDirectoryFilters, type SkillDirectorySort } from '../lib/skillDirectory'
+import { buildSkillKMeansScopes, getSkillKMeansInitialMaxK, getSkillKMeansUsableDocumentCount, type SkillKMeansScope } from '../lib/skillKMeansScope'
 import { AnalysisTabs, AnalysisTabPanel } from './AnalysisTabs'
 import type { OpenOperatorDetail } from './OperatorDetailLink'
-import { SkillClusteringSource, SkillClusteringTerms } from './SkillClusteringSource'
+import { SkillKMeansGroupTable } from './SkillKMeansGroupTable'
 import { SkillKMeansLearningChart } from './SkillKMeansLearningChart'
 import { SkillKMeansSearchPanel } from './SkillKMeansSearchPanel'
 import './DamageCalculator.css'
@@ -15,14 +17,55 @@ const TABS = [['search', 'K探索'], ['learning', '学習'], ['groups', 'グル�
 type Tab = typeof TABS[number][0]
 const GROUP_PAGE_SIZE = 8
 interface Submission { documents: SkillKMeansDocument[]; config: SkillKMeansConfig; sourceRows: readonly SkillRecord[] }
-const documentLabel = (doc: SkillKMeansDocument) => `${doc.operatorName} S${doc.skillIndex} · ${doc.skillName}`
 const configLabel = (config: SkillKMeansConfig) => `K=${config.k} · seed=${config.seed} · 反復上限 ${config.maxIterations}`
 
 export function SkillKMeansPage({ rows, loading, onOpenOperatorDetail }: Props) {
+  const scopes = useMemo(() => buildSkillKMeansScopes(rows), [rows])
+  const [scope, setScope] = useState<SkillKMeansScope>('ALL')
+  const scopeId = useId()
+  const selectedScope = scopes.find(item => item.value === scope)!
+  const [source, setSource] = useState({ rows, revision: 0 })
+  // A refreshed source also resets tabs, table filters, and any open skill modal.
+  if (source.rows !== rows) setSource({ rows, revision: source.revision + 1 })
+  const context = useMemo(() => ({ rows, scope }), [rows, scope])
+  const activeContext = useRef(context)
+  activeContext.current = context
+  const [activity, setActivity] = useState({ context, busy: false })
+  const onBusyChange = useCallback((busy: boolean) => {
+    if (activeContext.current === context) setActivity({ context, busy })
+  }, [context])
+  const busy = activity.context === context && activity.busy
+
+  return <section className="calculator-page skill-kmeans-page">
+    <header className="page-intro"><h1>K-means 学習ラボ</h1><div className="skill-kmeans-actions"><a className="button secondary" href="#/analysis/skills/hierarchical">階層クラスタリングへ</a><a className="button secondary" href="#/skill-classification">スキル大分類へ</a></div></header>
+    <SkillKMeansScopeSession key={`${source.revision}:${scope}`} rows={selectedScope.rows} scope={scope} scopeLabel={selectedScope.label}
+      loading={loading} onBusyChange={onBusyChange} onOpenOperatorDetail={onOpenOperatorDetail}
+      scopeOptions={<div className="skill-kmeans-scope-options">
+          {scopes.map(item => <button type="button" key={item.value} id={`${scopeId}-${item.value}`} aria-pressed={scope === item.value}
+            aria-label={`${item.label}、${item.rows.length}スキル`} disabled={loading || busy}
+            onClick={() => {
+              if (loading || busy) return
+              setScope(item.value)
+              window.requestAnimationFrame(() => document.getElementById(`${scopeId}-${item.value}`)?.focus({ preventScroll: true }))
+            }}>
+            <span>{item.label}</span><span>{item.rows.length.toLocaleString('ja-JP')}</span>
+          </button>)}
+        </div>} />
+  </section>
+}
+
+function SkillKMeansScopeSession({ rows, scope, scopeLabel, scopeOptions, loading, onBusyChange, onOpenOperatorDetail }: {
+  rows: readonly SkillRecord[]; scope: SkillKMeansScope; scopeLabel: string; loading: boolean
+  scopeOptions: ReactNode
+  onBusyChange: (busy: boolean) => void; onOpenOperatorDetail: OpenOperatorDetail
+}) {
   const corpus = useMemo(() => buildSkillKMeansCorpus(rows), [rows])
+  const usableDocumentCount = useMemo(() => getSkillKMeansUsableDocumentCount(corpus.documents), [corpus.documents])
   const [tab, setTab] = useState<Tab>('search')
   const [selectedId, setSelectedId] = useState('')
   const [groupPage, setGroupPage] = useState(0)
+  const [memberFilters, setMemberFilters] = useState<SkillDirectoryFilters>({ ...EMPTY_SKILL_DIRECTORY_FILTERS })
+  const [memberSort, setMemberSort] = useState<SkillDirectorySort>({ key: 'operator', direction: 'asc' })
   const [submission, setSubmission] = useState<Submission | null>(null)
   const [run, setRun] = useState(EMPTY_SKILL_KMEANS_RUN)
   const [searchBusy, setSearchBusy] = useState(false)
@@ -41,6 +84,8 @@ export function SkillKMeansPage({ rows, loading, onOpenOperatorDetail }: Props) 
 
   const current = submission?.sourceRows === rows
   const busy = current && ['preparing', 'running', 'pausing'].includes(run.status)
+  useEffect(() => { onBusyChange(busy || searchBusy) }, [busy, searchBusy, onBusyChange])
+  useEffect(() => () => onBusyChange(false), [onBusyChange])
   const result = current ? run.result : null
   const complete = result !== null && run.status === 'complete'
   const documents = current ? submission.documents : []
@@ -91,15 +136,28 @@ export function SkillKMeansPage({ rows, loading, onOpenOperatorDetail }: Props) 
     if (first) chooseGroup(first.group)
   }
 
-  return <section className="calculator-page skill-kmeans-page">
-    <header className="page-intro"><h1>K-means 学習ラボ</h1><div className="skill-kmeans-actions"><a className="button secondary" href="#/analysis/skills/hierarchical">階層クラスタリングへ</a><a className="button secondary" href="#/skill-classification">スキル大分類へ</a></div></header>
-    <div className="skill-kmeans-content">
+  const scopeContext = <div className="skill-kmeans-scope-context">
+    <span>{scopeLabel}</span>
+    <button type="button" className="button secondary" onClick={() => focusTab('search')}>対象を変更</button>
+  </div>
+
+  return <div className="skill-kmeans-content">
       <AnalysisTabs tabs={TABS} activeTab={tab} onChange={setTab} idPrefix={id} label="K-means学習の表示" />
       <AnalysisTabPanel idPrefix={id} tab="search" activeTab={tab} title="K探索">
-        <SkillKMeansSearchPanel documents={corpus.documents} loading={loading} learningBusy={busy} onBusyChange={setSearchBusy} onLearn={learnCandidate} />
+        <section className="skill-kmeans-scopes" aria-label="学習対象の大分類">
+          {scopeOptions}
+          <div className="skill-kmeans-scope-heading">
+            <span>{scopeLabel}</span>
+            <dl><div><dt>該当スキル</dt><dd>{rows.length.toLocaleString('ja-JP')}</dd></div><div><dt>学習説明文</dt><dd>{usableDocumentCount.toLocaleString('ja-JP')}</dd></div></dl>
+          </div>
+        </section>
+        <SkillKMeansSearchPanel documents={corpus.documents} usableDocumentCount={usableDocumentCount}
+          initialMaxK={getSkillKMeansInitialMaxK(scope, usableDocumentCount)} loading={loading}
+          learningBusy={busy} onBusyChange={setSearchBusy} onLearn={learnCandidate} />
       </AnalysisTabPanel>
       <AnalysisTabPanel idPrefix={id} tab="learning" activeTab={tab} title="学習">
         <div className="analysis-panel-body">
+          {scopeContext}
           <div className="skill-kmeans-result-toolbar">
             {current && <span className="skill-kmeans-result-state">{configLabel(submission.config)}</span>}
             <div className="skill-kmeans-status">{runStatus}</div>
@@ -124,15 +182,16 @@ export function SkillKMeansPage({ rows, loading, onOpenOperatorDetail }: Props) 
       </AnalysisTabPanel>
       <AnalysisTabPanel idPrefix={id} tab="groups" activeTab={tab} title="グループ">
         <div className="analysis-panel-body">
+          {scopeContext}
           {!complete ? <EmptyGroups status={runStatus} hasRun={current} onNavigate={() => focusTab(current ? 'learning' : 'search')} /> : <>
             <div className="skill-kmeans-result-state">{configLabel(result.config)}</div>
-            <div className="skill-kmeans-result-content">
+            <div className="skill-kmeans-result-content skill-kmeans-group-table-layout">
               <section className="skill-kmeans-section"><h3>{groups.length}グループ</h3>
-                <div className="skill-kmeans-groups" aria-label="確認するグループ">
+                <div className="skill-kmeans-groups skill-kmeans-document-groups" aria-label="確認するグループ">
                   {groups.slice(activeGroupPage * GROUP_PAGE_SIZE, (activeGroupPage + 1) * GROUP_PAGE_SIZE).map(({ count, group }) => {
                     return <button type="button" key={group} aria-pressed={selectedGroup === group}
-                      aria-label={`G${group + 1}、${count}件を確認`} onClick={() => chooseGroup(group)}>
-                      <span>G{group + 1}</span><span className="skill-kmeans-track"><i style={{ width: `${usableCount ? count / usableCount * 100 : 0}%` }} /></span><span>{count}件</span>
+                      aria-label={`G${group + 1}、${count}説明文を確認`} onClick={() => chooseGroup(group)}>
+                      <span>G{group + 1}</span><span className="skill-kmeans-track"><i style={{ width: `${usableCount ? count / usableCount * 100 : 0}%` }} /></span><span>{count}説明文</span>
                     </button>
                   })}
                 </div>
@@ -142,11 +201,9 @@ export function SkillKMeansPage({ rows, loading, onOpenOperatorDetail }: Props) 
                   <button type="button" className="button secondary" aria-label="次のグループ一覧" disabled={activeGroupPage + 1 === groupPages} onClick={() => changeGroupPage(activeGroupPage + 1)}>次へ</button>
                 </div>}
               </section>
-              {selectedGroup >= 0 && <section className="skill-kmeans-inspect"><h3>G{selectedGroup + 1} · {members.length}件</h3><div className="skill-kmeans-inspect-body">
-                <dl className="skill-kmeans-term-field"><dt>代表語</dt><dd><SkillClusteringTerms terms={result.representativeTerms[selectedGroup]} /></dd></dl>
-                <label><span>スキル</span><select aria-label="グループ内のスキル" value={documents[selectedIndex]?.id ?? ''} onChange={event => setSelectedId(event.target.value)}>{members.map(({ doc }) => <option key={doc.id} value={doc.id}>{documentLabel(doc)}</option>)}</select></label>
-                <SkillClusteringSource key={documents[selectedIndex].id} document={documents[selectedIndex]} recordMap={recordMap} onOpenOperatorDetail={onOpenOperatorDetail} defaultOpen />
-              </div></section>}
+              {selectedGroup >= 0 && <SkillKMeansGroupTable key={`${run.requestId}:${selectedGroup}`} group={selectedGroup}
+                documents={members.map(({ doc }) => doc)} recordMap={recordMap} terms={result.representativeTerms[selectedGroup]}
+                filters={memberFilters} onFiltersChange={setMemberFilters} sort={memberSort} onSortChange={setMemberSort} onOpenOperatorDetail={onOpenOperatorDetail} />}
             </div>
             <div className="skill-kmeans-navigation">
               <button type="button" className="button secondary" onClick={() => focusTab('search')}>Kを選び直す</button>
@@ -156,7 +213,6 @@ export function SkillKMeansPage({ rows, loading, onOpenOperatorDetail }: Props) 
         </div>
       </AnalysisTabPanel>
     </div>
-  </section>
 }
 
 function findDocumentIndex(documents: readonly SkillKMeansDocument[], result: SkillKMeansResult, id: string) {

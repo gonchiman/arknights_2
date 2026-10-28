@@ -15,6 +15,7 @@ export type AppRoute =
   | { view: 'skill-summary'; selection?: SkillRouteSelection }
   | { view: 'skill-structure'; selection?: SkillRouteSelection }
   | { view: 'operators' }
+  | { view: 'operator-pca' }
   | { view: 'operator-detail'; operatorId: string; source?: OperatorDetailSource }
   | { view: 'skill-json'; selection?: SkillJsonRouteSelection }
   | { view: 'skill-json-overview' }
@@ -213,6 +214,7 @@ export function parseHashRoute(hash: string): AppRoute {
   }
   if (hash === '#/analysis/damage-verification') return { view: 'damage-verification' }
   if (hash === '#/analysis/code') return { view: 'code-analysis' }
+  if (hash === '#/analysis/operators/pca') return { view: 'operator-pca' }
   if (hash === '#/analysis/skills/kmeans') return { view: 'skill-kmeans' }
   if (hash === '#/analysis/skills/hdbscan') return { view: 'skill-hdbscan' }
   if (hash === '#/analysis/skills/hierarchical') return { view: 'skill-hierarchical' }
