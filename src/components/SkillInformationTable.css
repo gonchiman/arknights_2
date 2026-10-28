@@ -1,0 +1,19 @@
+.skill-information-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.skill-information-table th,
+.skill-information-table td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: middle; line-height: 1.6; white-space: normal; overflow-wrap: anywhere; }
+.skill-information-table th { background: var(--surface-soft); color: var(--text-soft); font-size: 11px; font-weight: 500; }
+.skill-information-table td { color: var(--text); font-size: 12px; font-variant-numeric: tabular-nums; }
+.skill-information-table tbody tr { cursor: default; }
+.skill-information-table tbody tr:hover { background: transparent; }
+@container (max-width: 460px) {
+  .skill-information-table th,
+  .skill-information-table td { padding: 8px 4px; font-size: 11px; }
+}

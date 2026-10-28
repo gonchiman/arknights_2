@@ -15,10 +15,15 @@
 .damage-three-growth { margin-top: 14px; }
 .damage-three-fixed-value { display: flex; align-items: center; min-height: 34px; border: 1px solid var(--border); padding: 6px 9px; color: var(--text); background: var(--surface-soft); font-size: 11px; }
 .damage-three-descriptions { margin: 14px -14px -12px; }
+.damage-three-skill-panel { container-type: inline-size; }
+.damage-three-skill-panel[hidden] { display: none; }
+.damage-three-skill-panel > .skill-information-table { border-inline: 0; border-top: 0; }
+.damage-three-skill-panel > .skill-information-table th { border-top: 0; }
+.damage-three-skill-panel > .skill-information-table :is(th, td):first-child { border-left: 0; }
+.damage-three-skill-panel > .skill-information-table :is(th, td):last-child { border-right: 0; }
 .damage-three-description,
 .damage-three-trait-description p,
 .damage-three-talent-description p { margin: 0; padding: 12px 14px; font-size: 12px; line-height: 1.9; white-space: pre-line; overflow-wrap: anywhere; }
-.damage-three-description[hidden] { display: none; }
 .damage-three-trait-description h3,
 .damage-three-talent-description h3 { margin: 0; border-block: 1px solid var(--border); padding: 7px 14px; background: var(--surface-soft); color: var(--text); font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
 .damage-three-condition-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
