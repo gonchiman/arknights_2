@@ -16,6 +16,10 @@ const fixture = JSON.parse(readFileSync(new URL('./fixtures/talentStructureFourO
   operatorId: string; operatorName: string; profession: string; professionLabel: string; rarity: number;
   subProfessionName: string; operatorProfile: OperatorCombatProfile
 }[]
+const originalGuardSource = JSON.parse(readFileSync(new URL('./fixtures/sixStarGuardSources.json', import.meta.url), 'utf8')) as {
+  guards: { id: string }[]
+}
+const originalGuardIds = new Set(originalGuardSource.guards.map(operator => operator.id))
 
 function records(): SkillRecord[] {
   return structuredClone(fixture).map(operator => ({
@@ -53,11 +57,12 @@ test('独立したJP原典8素質を潜在1・最大昇進・最大レベル・M
 test('素質構造の対応OP集合を全スキルと揃え、未対応のOP・素質枠を代用しない', () => {
   assert.deepEqual([...TALENT_STRUCTURE_OPERATOR_IDS].sort(), [...new Set(SKILL_STRUCTURES
     .map(structure => structure.basicInfo.operatorId))].sort())
-  for (const operatorId of TALENT_STRUCTURE_OPERATOR_IDS) for (const talentIndex of [0, 1]) {
+  assert.equal(new Set(TALENT_STRUCTURE_OPERATOR_IDS).size, TALENT_STRUCTURE_OPERATOR_IDS.length)
+  for (const operatorId of originalGuardIds) for (const talentIndex of [0, 1]) {
     assert.ok(isTalentStructureSelection({ operatorId, talentIndex }))
   }
   for (const selection of [
-    { operatorId: 'char_456_ash', talentIndex: 0 },
+    { operatorId: 'char_unsupported_fixture', talentIndex: 0 },
     { operatorId: 'char_350_surtr', talentIndex: 2 },
     { operatorId: 'char_350_surtr', talentIndex: -1 },
     { operatorId: 'char_350_surtr', talentIndex: 0.5 },
@@ -74,10 +79,12 @@ test('共通の素質構造が従来5人と追加25人を合わせた全30人を
   assert.equal(GUARD_PASSIVE_OPERATOR_IDS.length, 25)
   assert.ok(GUARD_PASSIVE_OPERATOR_IDS.every(operatorId => !legacy.has(operatorId)))
   const covered = [...new Set([...legacy, ...GUARD_PASSIVE_OPERATOR_IDS])].sort()
-  const allSkillOperators = [...new Set(SKILL_STRUCTURES.map(structure => structure.basicInfo.operatorId))].sort()
+  const allSkillOperators = [...new Set(SKILL_STRUCTURES
+    .filter(structure => originalGuardIds.has(structure.basicInfo.operatorId))
+    .map(structure => structure.basicInfo.operatorId))].sort()
   assert.equal(covered.length, 30)
   assert.deepEqual(covered, allSkillOperators)
-  assert.deepEqual([...TALENT_STRUCTURE_OPERATOR_IDS].sort(), covered)
+  assert.deepEqual([...TALENT_STRUCTURE_OPERATOR_IDS].filter(operatorId => originalGuardIds.has(operatorId)).sort(), covered)
 })
 
 test('シルバーアッシュは自身ATKと編成全員の再配置割合を別効果にし、ステルスの範囲条件も保持する', () => {

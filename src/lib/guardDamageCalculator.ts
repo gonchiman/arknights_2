@@ -6,6 +6,7 @@ import { guardConditionMatches, mergeGuardInputs, resolveGuardConditions, resolv
 import { evaluateGuardPassives, getGuardPassiveInputs } from './guardCombatPassives.ts'
 import { getDamageSensitivityTablePoints } from './damageSensitivity.ts'
 import type { ProbabilisticDamageBranch } from './probabilisticDamage.ts'
+import { getExpandedDefinition, getExpandedSource, sameReviewedSkill } from './expandedCombatRegistry.ts'
 
 const TARGET_INPUT: GuardInput = { key: 'actualAttackTargetCount', label: '実際の攻撃対象数', kind: 'number',
   defaultValue: 1, min: 1, max: 10000, step: 1 }
@@ -15,6 +16,7 @@ const RESISTANCE_INPUT: GuardInput = { key: 'enemyResistance', label: '敵の術
 export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, structure: SkillStructure,
   initialErrors: string[] = []): DamageCalculatorThreeOutput {
   const recipe = structure.guardRecipe!
+  const expanded = getExpandedDefinition(recipe.operatorId)
   // Invalid values still block output; safe display statistics must not throw before that error is shown.
   const stats = getOperatorStats(input.operator.operatorProfile,
     Number.isFinite(input.phaseIndex) ? input.phaseIndex : 0,
@@ -28,9 +30,14 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
   const conditions = resolved.values
   reasons.push(...resolved.errors)
   if (input.operator.operatorId !== recipe.operatorId || input.skill.operatorId !== recipe.operatorId
-    || input.skill.skillId !== structure.basicInfo.skillId || input.skillLevelIndex !== 9) reasons.push('選択したオペレーター・スキル・特化段階が一致していません。')
-  const raw = input.skill.skillLevels[9]
-  if (!raw) reasons.push('特化3のスキルデータがありません。')
+    || input.skill.skillId !== structure.basicInfo.skillId || input.skillLevelIndex !== structure.basicInfo.levelIndex) reasons.push('選択したオペレーター・スキル・特化段階が一致していません。')
+  const raw = input.skill.skillLevels[structure.basicInfo.levelIndex]
+  if (!raw) reasons.push('選択したスキルレベルのデータがありません。')
+  if (expanded) {
+    const reviewed = getExpandedSource(recipe.operatorId)?.skills.find(skill => skill.skillId === input.skill.skillId && skill.skillIndex === recipe.skillIndex)?.raw
+    if (!sameReviewedSkill(raw, reviewed)
+      || input.phaseIndex !== expanded.phaseIndex) reasons.push('確認済みのスキル説明文・数値・昇進段階と一致しません。')
+  }
   const sourceKeys = new Set<string>()
   for (const entry of raw?.blackboard ?? []) {
     const key = entry.key?.toLowerCase()
@@ -51,7 +58,8 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
     stage = stages[0]
   } catch (error) { reasons.push(message(error)) }
   const kind = stage?.kind ?? 'NORMAL'
-  const passive = evaluateGuardPassives(input.operator, conditions, { kind, skillIndex: recipe.skillIndex, stageId: stage?.id ?? '', stage })
+  const passive = evaluateGuardPassives(input.operator, conditions, { kind, skillIndex: recipe.skillIndex, stageId: stage?.id ?? '', stage,
+    phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel })
   reasons.push(...passive.blockers, ...(stage?.unresolved ?? []))
   for (const [label, fraction] of Object.entries({ 発動確率: passive.critChance,
     防御力無視: passive.defenseIgnoreRatio, 術耐性無視: passive.resistanceIgnoreRatio, 防御力低下: passive.defenseReductionRatio })) {
@@ -79,7 +87,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
       const speed = stats.attackSpeed + aspd + passive.attackSpeed
       if (!Number.isFinite(speed) || !Number.isFinite(baseTime) || baseTime <= 0) throw new RangeError('攻撃間隔を計算できません。')
       interval = kind === 'NORMAL' ? baseTime * 100 / Math.max(20, speed) : null
-      duration = stage.duration === 'UNTIL_EXIT' ? 0 : value(stage.duration)
+      duration = stage.duration === 'UNTIL_EXIT' ? 0 : Math.max(0, value(stage.duration, raw?.duration ?? 0))
       actions = [...stage.actions, ...passive.additionalActions].filter(action => action.timing !== 'ON_DEPLOY')
     }
   } catch (error) { reasons.push(message(error)) }
@@ -182,7 +190,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
     effectiveAttack: unsupportedReasons.length ? null : pipeline().finalAttack,
     attackSpeed: unsupportedReasons.length ? null : attackSpeed, attackInterval: unsupportedReasons.length ? null : interval,
     activeStageLabel: stage?.label ?? null, attackKind: kind, attackLabel: kind === 'NORMAL' ? '1攻撃' : kind === 'NEXT_ATTACK' ? '強化攻撃' : 'スキル',
-    attackDistanceType: conditions.attackDistanceType === 'RANGED' ? 'RANGED' : 'MELEE', rangePenaltyMultiplier: 1,
+    attackDistanceType: stage?.attackTreatment ?? (conditions.attackDistanceType === 'RANGED' ? 'RANGED' : 'MELEE'), rangePenaltyMultiplier: 1,
     scopeNotes: [...scopeNotes, ...(dpsReason ? [dpsReason] : [])], counterCooldownSeconds: null,
     talentEffects: [], talentAttackRatio: passive.attackRatio, resistanceIgnoreFixed, hasUnsupportedTalentDamage: false,
     damageOverTime: null, hasAttackSequence: true,

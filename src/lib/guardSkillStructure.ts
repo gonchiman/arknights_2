@@ -11,9 +11,10 @@ export function getGuardSkillRecipe(selection: Pick<SkillStructureSelection, 'op
     && recipe.skillIndex === selection.skillIndex) ?? null : null
 }
 
-export function buildGuardSkillStructures(): SkillStructure[] {
-  return GUARD_SKILL_RECIPES.map(recipe => {
-    const source = GUARD_SKILL_SOURCES.find(operator => operator.id === recipe.operatorId) as GuardSource | undefined
+export function buildGuardSkillStructures(recipes: readonly GuardSkillRecipe[] = GUARD_SKILL_RECIPES,
+  sources: readonly GuardSource[] = GUARD_SKILL_SOURCES, levelIndex = 9): SkillStructure[] {
+  return recipes.map(recipe => {
+    const source = sources.find(operator => operator.id === recipe.operatorId)
     const skill = source?.skills.find(skill => skill.skillIndex === recipe.skillIndex)
     if (!source || !skill) throw new RangeError(`スキル説明文を取得できません：${recipe.operatorId} S${recipe.skillIndex}`)
     const raw = skill.raw
@@ -33,7 +34,7 @@ export function buildGuardSkillStructures(): SkillStructure[] {
     if (raw.skillType === 'PASSIVE') categories.push('PASSIVE')
     return {
       basicInfo: { operatorId: source.id, operatorName: source.name, skillIndex: skill.skillIndex, skillId: skill.skillId,
-        levelIndex: 9, skillLevel: '特化3', skillName: raw.name ?? skill.skillId },
+        levelIndex, skillLevel: levelIndex < 7 ? `Lv.${levelIndex + 1}` : `特化${levelIndex - 6}`, skillName: raw.name ?? skill.skillId },
       classificationInfo: { coarseCategories: categories },
       activationSettings: {
         spRecovery: (['INCREASE_WITH_TIME', 'INCREASE_WHEN_ATTACK', 'INCREASE_WHEN_TAKEN_DAMAGE', 'NO_SP'].includes(raw.spData?.spType ?? '')

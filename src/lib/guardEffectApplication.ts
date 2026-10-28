@@ -39,7 +39,7 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
   const evaluation = output.guard
   if (!recipe || !evaluation) return []
   const { conditions, inputs } = evaluation
-  const board = new Map((input.skill.skillLevels[9]?.blackboard ?? []).flatMap(entry =>
+  const board = new Map((input.skill.skillLevels[input.skillLevelIndex]?.blackboard ?? []).flatMap(entry =>
     entry.key && typeof entry.value === 'number' ? [[entry.key.toLowerCase(), entry.value] as const] : []))
   const rows: EffectApplicationRow[] = []
   let selected: GuardStage | undefined

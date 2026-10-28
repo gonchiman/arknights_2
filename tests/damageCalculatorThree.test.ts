@@ -77,11 +77,13 @@ test('既存4人の12技能とアイリーニ3技能の特化3に同じ構造化
     ...[1, 2, 3].map(index => `char_4009_irene/skchr_irene_${index}/${index}`)].sort()
   assert.equal(structures.length, 15)
   assert.deepEqual(structures.map(value => key(value.basicInfo)).sort(), expected)
-  assert.equal(allStructures.length, 90)
+  assert.equal(new Set(allStructures.map(value => key(value.basicInfo))).size, allStructures.length)
   assert.deepEqual(DAMAGE_CALCULATOR_THREE_SELECTIONS.filter(value => expected.includes(key(value))).map(key).sort(), expected)
   for (const selection of DAMAGE_CALCULATOR_THREE_SELECTIONS) {
-    assert.ok(allStructures.includes(findSkillStructure(selection)!))
-    assert.equal(selection.levelIndex, 9)
+    const structure = findSkillStructure(selection)!
+    assert.ok(allStructures.includes(structure))
+    assert.equal(selection.levelIndex, structure.basicInfo.levelIndex)
+    if (expected.includes(key(selection))) assert.equal(selection.levelIndex, 9)
   }
 })
 

@@ -2,10 +2,12 @@ import type { SkillRecord } from '../types/skill.ts'
 import { getOperatorPassives, type PassiveSource } from './operatorProfile.ts'
 import { buildGuardTalentStructures, getGuardTalentIdentity } from './guardTalentStructure.ts'
 import { applyGuardTalentStructure } from './guardTalentEvaluation.ts'
+import { getExpandedDefinition } from './expandedCombatRegistry.ts'
+import { evaluateExpandedPassives } from './expandedCombatEvaluation.ts'
 import type { GuardCalculationIssue, GuardConditions, GuardInput, GuardPassiveModifiers, GuardStage } from './guardCombatTypes.ts'
 
 type Context = { kind: 'NORMAL' | 'NEXT_ATTACK' | 'SKILL_ACTION'; skillIndex: number; stageId: string;
-  stage?: Pick<GuardStage, 'actions'> }
+  stage?: Pick<GuardStage, 'actions'>; phaseIndex?: number; operatorLevel?: number }
 
 export interface GuardPassiveCalculationConstraint extends GuardCalculationIssue {
   readonly talentIndex: number
@@ -101,11 +103,13 @@ export const GUARD_PASSIVE_OPERATOR_IDS: readonly string[] = Object.freeze(Objec
 
 /** Registered source identities remain available even if a live profile is incomplete. */
 export function getGuardRegisteredTalentNames(operatorId: string): readonly string[] {
+  const expanded = getExpandedDefinition(operatorId)
+  if (expanded) return expanded.talents.map(talent => talent.name)
   return getGuardTalentIdentity(operatorId).map(({ name }) => name)
 }
 
 export function getGuardPassiveInputs(operatorId: string): GuardInput[] {
-  return (INPUTS[operatorId] ?? []).map(input => ({ ...input }))
+  return (getExpandedDefinition(operatorId)?.inputs ?? INPUTS[operatorId] ?? []).map(input => ({ ...input }))
 }
 
 /** Evaluate source-selected potential-1 talents. Missing sources/values fail closed. */
@@ -126,6 +130,7 @@ export function describeGuardPassiveEffects(operator: SkillRecord, conditions: G
 
 function evaluateGuardPassiveDefinitions(operator: SkillRecord, conditions: GuardConditions, context: Context,
   registrationOnly: boolean): GuardPassiveModifiers {
+  if (getExpandedDefinition(operator.operatorId)) return evaluateExpandedPassives(operator, conditions, context, registrationOnly)
   const output: GuardPassiveModifiers = { attackRatio: 0, attackFlat: 0, attackScale: 1, attackSpeed: 0,
     damageScale: 1, defenseIgnoreRatio: 0, defenseIgnoreFixed: 0, resistanceIgnoreFixed: 0,
     resistanceIgnoreRatio: 0, defenseReductionRatio: 0, critChance: 0, critScale: 1,

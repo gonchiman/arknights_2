@@ -10,10 +10,15 @@ import {
 
 /** Job definitions describe traits; no calculator consumes or applies these records. */
 export const TRAIT_STRUCTURE_JOB_IDS = ['fighter', 'lord', 'crusher', 'hammer', 'sword', 'centurion',
-  'artsfghter', 'musha', 'instructor', 'fearless', 'reaper', 'librator'] as const
+  'artsfghter', 'musha', 'instructor', 'fearless', 'reaper', 'librator',
+  'pioneer', 'protector', 'shotprotector', 'artsprotector', 'unyield',
+  'fastshot', 'aoesniper', 'longrange', 'siegesniper', 'reaperrange', 'closerange',
+  'corecaster', 'splashcaster', 'blastcaster', 'slower', 'underminer', 'incantationmedic', 'phalanx'] as const
 export type TraitStructureJobId = typeof TRAIT_STRUCTURE_JOB_IDS[number]
 export interface TraitStructureSelection { readonly operatorId: string }
 export interface TraitStructureGrowthSelection { readonly phaseIndex?: number; readonly operatorLevel?: number }
+export type TraitStructureOperator = Pick<SkillRecord, 'operatorId' | 'operatorName' | 'profession' | 'professionLabel'
+  | 'subProfessionId' | 'subProfessionName' | 'operatorProfile'>
 
 export type TraitStructureEffect = CombatEffectContext & {
   /** Domain and damage-model relevance never assert support by Damage Calculator 3. */
@@ -29,8 +34,13 @@ export type TraitStructureEffect = CombatEffectContext & {
   | { readonly item: 'DAMAGE_TYPE'; readonly operation: 'SET'; readonly unit: 'DAMAGE_TYPE'; readonly value: 'ARTS' | 'PHYSICAL' }
   | { readonly item: 'RANGED_ATTACK_ENABLED' | 'NORMAL_ATTACK_ENABLED' | 'ALLY_HEALING_ENABLED'; readonly operation: 'SET_ENABLED'; readonly unit: 'BOOLEAN'; readonly value: boolean }
   | { readonly item: 'ATTACK_RANGE'; readonly operation: 'USE_BASE_ATTRIBUTE'; readonly unit: 'RANGE_DEFINITION'; readonly value: { readonly rangeId: string | null } }
+  | { readonly item: 'ATTACK_PRIORITY'; readonly operation: 'SET'; readonly unit: 'PRIORITY_RULE'; readonly value: 'AIRBORNE' | 'LOWEST_DEFENSE' | 'HIGHEST_WEIGHT' }
+  | { readonly item: 'STATUS'; readonly operation: 'SET_ENABLED'; readonly unit: 'STATUS'; readonly value: 'SLUGGISH' }
+  | { readonly item: 'DEFENSE_BUFF_RATIO'; readonly operation: 'ADD_RATIO'; readonly unit: 'RATIO'; readonly value: CombatNumericValue }
+  | { readonly item: 'MAGIC_RESISTANCE'; readonly operation: 'ADD_VALUE'; readonly unit: 'POINT'; readonly value: CombatNumericValue }
+  | { readonly item: 'DAMAGE_TO_HEAL_RATIO'; readonly operation: 'RESTORE'; readonly unit: 'DAMAGE_RATIO'; readonly value: CombatNumericValue }
   | { readonly item: 'ATTACK_TARGETING'; readonly operation: 'SET'; readonly unit: 'TARGET_SELECTION'; readonly value: {
-      readonly mode: 'AREA'; readonly maxTargets: null; readonly rangeId: null
+      readonly mode: 'AREA' | 'LINE'; readonly maxTargets: null; readonly rangeId: null
     } }
   | { readonly item: 'SPLASH_DAMAGE'; readonly operation: 'SET'; readonly unit: 'SPLASH_RULE'; readonly value: {
       readonly damageType: 'PHYSICAL'; readonly attackScale: CombatNumericValue; readonly radiusTiles: CombatNumericValue
@@ -69,6 +79,9 @@ interface JobDefinition {
   readonly descriptions: readonly string[]
   readonly keys: readonly string[]
   readonly categories: readonly TraitCoarseCategory[]
+  readonly profession?: string
+  readonly prefabKey?: string
+  readonly rangeId?: string
 }
 const BLOCK = '敵を1体までブロック'
 const MULTI = 'ブロック中の敵全員を同時に攻撃'
@@ -90,17 +103,39 @@ const DEFINITIONS: Record<TraitStructureJobId, JobDefinition> = {
   instructor: { descriptions: ['攻撃距離がやや長い、自身がブロックしていない敵を攻撃時、攻撃力が120%まで上昇'], keys: ['atk_scale'], categories: ['ATTACK_BEHAVIOR', 'DAMAGE'] },
   reaper: { descriptions: [REAPER, REAPER.replace('{value}', '50')], keys: ['value'], categories: ['HEAL_RESTRICTION', 'ATTACK_BEHAVIOR', 'DAMAGE_TYPE', 'HP_CHANGE'] },
   librator: { descriptions: [LIBRATOR, `${LIBRATOR}する`], keys: ['atk', 'max_stack_cnt', 'mid_stack_cnt', 'half_cnt_for_fx'], categories: ['ATTACK_BEHAVIOR', 'BLOCK', 'ABILITY'] },
+  pioneer: { profession: 'PIONEER', descriptions: ['敵を2体までブロック'], keys: [], categories: ['BLOCK'] },
+  protector: { profession: 'TANK', descriptions: ['敵を3体までブロック'], keys: [], categories: ['BLOCK'] },
+  shotprotector: { profession: 'TANK', descriptions: ['敵を3体までブロック、遠距離攻撃も行える'], keys: [], categories: ['BLOCK', 'ATTACK_BEHAVIOR'] },
+  artsprotector: { profession: 'TANK', descriptions: ['スキル発動中、敵に術ダメージを与える'], keys: [], categories: ['DAMAGE_TYPE'] },
+  unyield: { profession: 'TANK', descriptions: ['味方からの治療効果を受けない'], keys: [], categories: ['HEAL_RESTRICTION'] },
+  fastshot: { profession: 'SNIPER', descriptions: ['飛行ユニットを優先して攻撃'], keys: [], categories: ['ATTACK_BEHAVIOR'] },
+  aoesniper: { profession: 'SNIPER', descriptions: ['敵に範囲物理ダメージを与える'], keys: [], categories: ['ATTACK_BEHAVIOR', 'DAMAGE_TYPE'] },
+  longrange: { profession: 'SNIPER', descriptions: ['攻撃範囲内の防御力が一番低い敵を優先して攻撃'], keys: [], categories: ['ATTACK_BEHAVIOR'] },
+  siegesniper: { profession: 'SNIPER', descriptions: ['重量が最も重い敵を優先して攻撃'], keys: [], categories: ['ATTACK_BEHAVIOR'] },
+  reaperrange: { profession: 'SNIPER', descriptions: ['攻撃範囲内の敵全員を同時に攻撃し、自身の正面横3マスにいる敵を攻撃時攻撃力が150%まで上昇'],
+    keys: ['atk_scale'], prefabKey: '-1', rangeId: '1-3', categories: ['ATTACK_BEHAVIOR', 'DAMAGE'] },
+  closerange: { profession: 'SNIPER', descriptions: ['高威力の中距離射撃'], keys: [], categories: ['ATTACK_BEHAVIOR'] },
+  corecaster: { profession: 'CASTER', descriptions: ['敵に術ダメージを与える'], keys: [], categories: ['DAMAGE_TYPE'] },
+  splashcaster: { profession: 'CASTER', descriptions: ['敵に範囲術ダメージを与える'], keys: [], categories: ['ATTACK_BEHAVIOR', 'DAMAGE_TYPE'] },
+  blastcaster: { profession: 'CASTER', descriptions: ['直線上の敵に範囲術ダメージを与える'], keys: [], categories: ['ATTACK_BEHAVIOR', 'DAMAGE_TYPE'] },
+  slower: { profession: 'SUPPORT', descriptions: ['敵に術ダメージを与える 攻撃時、敵を一瞬足止め'], keys: ['sluggish'], categories: ['DAMAGE_TYPE', 'STATUS'] },
+  underminer: { profession: 'SUPPORT', descriptions: ['敵に術ダメージを与える'], keys: [], categories: ['DAMAGE_TYPE'] },
+  incantationmedic: { profession: 'MEDIC', descriptions: ['術ダメージを与え、敵を攻撃するたび攻撃範囲内の味方1人のHPを与ダメージの{scale:0%}回復'],
+    keys: ['scale'], categories: ['DAMAGE_TYPE', 'HP_CHANGE'] },
+  phalanx: { profession: 'CASTER', descriptions: ['通常時攻撃しない、防御力と術耐性大幅上昇 スキル発動中、通常攻撃が攻撃範囲内の敵全員に範囲術ダメージを与える'],
+    keys: ['def', 'magic_resistance'], categories: ['ATTACK_BEHAVIOR', 'DAMAGE_TYPE', 'ABILITY'] },
 }
 
 export function isTraitStructureOperator(row: Pick<SkillRecord, 'profession' | 'subProfessionId'>): boolean {
-  return row.profession === 'WARRIOR' && (TRAIT_STRUCTURE_JOB_IDS as readonly string[]).includes(row.subProfessionId)
+  const definition = DEFINITIONS[row.subProfessionId as TraitStructureJobId]
+  return Boolean(definition) && row.profession === (definition.profession ?? 'WARRIOR')
 }
 export function findTraitStructure(selection: TraitStructureSelection, structures: readonly TraitStructure[]): TraitStructure | null {
   return structures.find(structure => structure.basicInfo.operatorId === selection.operatorId) ?? null
 }
 
 /** Potential 1 and no module; source overrides at the chosen promotion/level take precedence. */
-export function buildTraitStructures(rows: readonly SkillRecord[], growth: TraitStructureGrowthSelection = {}): TraitStructure[] {
+export function buildTraitStructures(rows: readonly TraitStructureOperator[], growth: TraitStructureGrowthSelection = {}): TraitStructure[] {
   const operators = new Map(rows.map(row => [row.operatorId, row]))
   return [...operators.values()].filter(isTraitStructureOperator).flatMap(operator => {
     const profile = operator.operatorProfile
@@ -130,7 +165,7 @@ export function buildTraitStructures(rows: readonly SkillRecord[], growth: Trait
       verified = false
       issues.push(`未確認の特性パラメータ：${entry.key ?? 'キーなし'}`)
     }
-    if (source.requiredPotentialRank !== 0 || source.prefabKey !== null || source.rangeId !== null) {
+    if (source.requiredPotentialRank !== 0 || source.prefabKey !== (definition.prefabKey ?? null) || source.rangeId !== (definition.rangeId ?? null)) {
       verified = false
       issues.push('確認済みの潜在1・基本特性とデータの識別情報が一致しません。')
     }
@@ -152,13 +187,60 @@ export function buildTraitStructures(rows: readonly SkillRecord[], growth: Trait
     const effects: TraitStructureEffect[] = []
     if (verified) {
       const job = operator.subProfessionId
-      if (job === 'fighter' || job === 'fearless') {
+      if (['fighter', 'fearless', 'pioneer', 'protector', 'shotprotector'].includes(job)) {
+        const block = job === 'pioneer' ? 2 : ['protector', 'shotprotector'].includes(job) ? 3 : 1
         const frames = profile.phases[phaseIndex].attributesKeyFrames ?? []
-        const agrees = frames.length > 0 && frames.every(frame => frame.data?.blockCnt === 1)
+        const agrees = frames.length > 0 && frames.every(frame => frame.data?.blockCnt === block)
         if (!agrees) issues.push('特性のブロック数と基本ステータスの一致を確認できません。')
         effects.push({ ...context('base-block-count', 'CONTROL', 'BASE_ATTRIBUTE', 'description:block_count'),
-          item: 'BLOCK_COUNT', operation: 'SET', unit: 'ENEMY', value: 1, resolution: agrees ? 'RESOLVED' : 'PARTIAL',
+          item: 'BLOCK_COUNT', operation: 'SET', unit: 'ENEMY', value: block, resolution: agrees ? 'RESOLVED' : 'PARTIAL',
           parameterBindings: { baseAttribute: `phases[${phaseIndex}].attributesKeyFrames[].data.blockCnt` } })
+      }
+      if (job === 'shotprotector') effects.push({ ...context('ranged-attack', 'DAMAGE', 'ATTACK_RULE', 'description:ranged_attack'),
+        item: 'RANGED_ATTACK_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: true })
+      if (job === 'unyield') effects.push({ ...context('ally-healing-restriction', 'SURVIVAL', 'DYNAMIC_RULE', 'description:healing_restriction'),
+        item: 'ALLY_HEALING_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: false })
+      if (['fastshot', 'longrange', 'siegesniper'].includes(job)) effects.push({
+        ...context('attack-priority', 'CONTROL', 'ATTACK_RULE', 'description:priority', 'ATTACK'),
+        item: 'ATTACK_PRIORITY', operation: 'SET', unit: 'PRIORITY_RULE',
+        value: job === 'fastshot' ? 'AIRBORNE' : job === 'longrange' ? 'LOWEST_DEFENSE' : 'HIGHEST_WEIGHT',
+      })
+      if (['corecaster', 'splashcaster', 'blastcaster', 'slower', 'underminer', 'incantationmedic', 'phalanx', 'artsprotector', 'aoesniper'].includes(job)) {
+        effects.push({ ...context('normal-attack-damage-type', 'DAMAGE', 'ATTACK_RULE', 'description:damage_type', 'NORMAL_ATTACK'),
+          condition: ['phalanx', 'artsprotector'].includes(job) ? compare('source.skillActive', true) : null,
+          item: 'DAMAGE_TYPE', operation: 'SET', unit: 'DAMAGE_TYPE', value: job === 'aoesniper' ? 'PHYSICAL' : 'ARTS' })
+      }
+      if (['aoesniper', 'splashcaster', 'blastcaster', 'reaperrange', 'phalanx'].includes(job)) {
+        effects.push({ ...context('area-attack-targets', 'DAMAGE', 'ATTACK_RULE', 'description:area_damage', 'NORMAL_ATTACK'),
+          condition: job === 'phalanx' ? compare('source.skillActive', true) : null,
+          item: 'ATTACK_TARGETING', operation: 'SET', unit: 'TARGET_SELECTION',
+          value: { mode: job === 'blastcaster' ? 'LINE' : 'AREA', maxTargets: null, rangeId: null }, resolution: 'PARTIAL' })
+        notes.push('範囲や位置による命中判定は未確認。ダメージ計算では、同じ範囲攻撃を受ける敵数を入力して扱う。')
+      }
+      if (job === 'reaperrange') effects.push({
+        ...context('frontal-attack-scale', 'DAMAGE', 'ATTACK_RULE', 'atk_scale', 'ATTACK'),
+        condition: compare('target.inFrontalTiles', true), item: 'ATTACK_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: read('atk_scale', { expected: 1.5 }),
+        parameterBindings: { 'condition.rangeId': source.rangeId! },
+      })
+      if (job === 'slower') effects.push({ ...context('attack-sluggish', 'CONTROL', 'DYNAMIC_RULE', 'sluggish', 'ATTACK'),
+        target: { type: 'RECIPIENTS', side: 'ENEMY', entity: 'UNIT', scope: 'ATTACK_TARGET', includeSelf: false,
+          factionIds: [], tagIds: [], selection: { type: 'ALL' } },
+        item: 'STATUS', operation: 'SET_ENABLED', unit: 'STATUS', value: 'SLUGGISH',
+        lifetime: { type: 'FIXED_SECONDS', seconds: read('sluggish', { positive: true }) },
+      })
+      if (job === 'incantationmedic') effects.push({ ...context('damage-to-heal', 'SURVIVAL', 'DYNAMIC_RULE', 'scale', 'ATTACK'),
+        item: 'DAMAGE_TO_HEAL_RATIO', operation: 'RESTORE', unit: 'DAMAGE_RATIO', value: read('scale'),
+        target: { type: 'RECIPIENTS', side: 'ALLY', entity: 'UNIT', scope: 'ATTACK_RANGE', includeSelf: true,
+          factionIds: [], tagIds: [], selection: { type: 'COUNT', count: 1 } },
+      })
+      if (job === 'phalanx') {
+        const inactive = compare('source.skillActive', false)
+        effects.push({ ...context('inactive-normal-attack', 'DAMAGE', 'DYNAMIC_RULE', 'description:normal_attack_disabled'),
+          condition: inactive, item: 'NORMAL_ATTACK_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: false },
+        { ...context('inactive-defense', 'SURVIVAL', 'DYNAMIC_RULE', 'def'), condition: inactive,
+          item: 'DEFENSE_BUFF_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: read('def') },
+        { ...context('inactive-magic-resistance', 'SURVIVAL', 'DYNAMIC_RULE', 'magic_resistance'), condition: inactive,
+          item: 'MAGIC_RESISTANCE', operation: 'ADD_VALUE', unit: 'POINT', value: read('magic_resistance') })
       }
       if (job === 'lord') effects.push(
         { ...context('ranged-attack', 'DAMAGE', 'ATTACK_RULE', 'description:ranged_attack'), item: 'RANGED_ATTACK_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: true },
@@ -196,13 +278,13 @@ export function buildTraitStructures(rows: readonly SkillRecord[], growth: Trait
         })
         if (job === 'musha') notes.push('攻撃時回復の複数ヒットに対する発動単位は未確認。1攻撃につき1回とは仮定しない。')
       }
-      if (job === 'instructor') {
+      if (job === 'instructor' || job === 'closerange') {
         const phase = profile.phases[phaseIndex] as { rangeId?: unknown }
         const rangeId = typeof phase.rangeId === 'string' && phase.rangeId ? phase.rangeId : null
         if (!rangeId) issues.push('基本攻撃範囲の参照IDを確認できません。')
         effects.push({ ...context('base-attack-range', 'DAMAGE', 'BASE_ATTRIBUTE', `phases[${phaseIndex}].rangeId`),
-          item: 'ATTACK_RANGE', operation: 'USE_BASE_ATTRIBUTE', unit: 'RANGE_DEFINITION', value: { rangeId }, resolution: rangeId ? 'RESOLVED' : 'PARTIAL' },
-        { ...context('unblocked-by-source-scale', 'DAMAGE', 'ATTACK_RULE', 'atk_scale', 'ATTACK'),
+          item: 'ATTACK_RANGE', operation: 'USE_BASE_ATTRIBUTE', unit: 'RANGE_DEFINITION', value: { rangeId }, resolution: rangeId ? 'RESOLVED' : 'PARTIAL' })
+        if (job === 'instructor') effects.push({ ...context('unblocked-by-source-scale', 'DAMAGE', 'ATTACK_RULE', 'atk_scale', 'ATTACK'),
           condition: compare('target.blockedBySource', false), item: 'ATTACK_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: read('atk_scale', { expected: 1.2 }) })
       }
       if (job === 'reaper') {
@@ -234,7 +316,7 @@ export function buildTraitStructures(rows: readonly SkillRecord[], growth: Trait
 }
 
 const metricLabels: Record<string, string> = { 'attack.distanceType': '攻撃距離', 'target.blockedBySource': '自身が対象をブロック',
-  'source.skillActive': 'スキル発動中', 'source.blockCount': '現在のブロック数' }
+  'source.skillActive': 'スキル発動中', 'source.blockCount': '現在のブロック数', 'target.inFrontalTiles': '対象が正面横3マス内' }
 export function formatTraitStructureCondition(condition: CombatCondition | null): string {
   return localize(formatCombatCondition(condition)).replace('＝RANGED', '＝遠距離').replace('＝MELEE', '＝近接')
 }
@@ -244,16 +326,20 @@ export function formatTraitStructureEffectItem(item: TraitStructureEffect['item'
   return { BLOCK_COUNT: 'ブロック数', MAX_TARGETS: '同時攻撃対象数', HIT_COUNT: '通常攻撃のヒット数', ATTACK_SCALE: '攻撃力倍率',
     DAMAGE_TYPE: '通常攻撃のダメージ種別', RANGED_ATTACK_ENABLED: '遠距離攻撃', NORMAL_ATTACK_ENABLED: '通常攻撃',
     ALLY_HEALING_ENABLED: '味方からの治療', ATTACK_RANGE: '基本攻撃範囲', ATTACK_TARGETING: '通常攻撃の対象',
-    SPLASH_DAMAGE: '周囲へのダメージ', HP: 'HP', ATK_BUFF_RATIO: '攻撃力上昇割合' }[item]
+    SPLASH_DAMAGE: '周囲へのダメージ', HP: 'HP', ATK_BUFF_RATIO: '攻撃力上昇割合', ATTACK_PRIORITY: '攻撃の優先対象',
+    STATUS: '付与状態', DEFENSE_BUFF_RATIO: '防御力上昇割合', MAGIC_RESISTANCE: '術耐性', DAMAGE_TO_HEAL_RATIO: '与ダメージからの回復' }[item]
 }
 export function formatTraitStructureEffectOperation(effect: TraitStructureEffect): string {
   return { SET: '設定', MULTIPLY: '乗算', SET_ENABLED: '適用設定', USE_BASE_ATTRIBUTE: '基本値を参照', DEAL_DAMAGE: 'ダメージ付与',
-    RESTORE: '回復', INCREASE_TO_CAP: '上限まで上昇', RESET_SOURCE_VALUE: '特性分をリセット' }[effect.operation]
+    RESTORE: '回復', INCREASE_TO_CAP: '上限まで上昇', RESET_SOURCE_VALUE: '特性分をリセット', ADD_RATIO: '割合加算', ADD_VALUE: '加算' }[effect.operation]
 }
 export function formatTraitStructureEffectValue(effect: TraitStructureEffect): string {
   if (effect.unit === 'BOOLEAN') return effect.value ? '有効' : '無効'
   if (effect.unit === 'DAMAGE_TYPE') return effect.value === 'ARTS' ? '術' : '物理'
-  if (effect.unit === 'TARGET_SELECTION') return '範囲攻撃'
+  if (effect.unit === 'TARGET_SELECTION') return effect.value.mode === 'LINE' ? '直線上の範囲攻撃' : '範囲攻撃'
+  if (effect.unit === 'PRIORITY_RULE') return { AIRBORNE: '飛行ユニット', LOWEST_DEFENSE: '防御力が最も低い敵', HIGHEST_WEIGHT: '重量が最も重い敵' }[effect.value]
+  if (effect.unit === 'STATUS') return '足止め'
+  if (effect.unit === 'DAMAGE_RATIO') return `与ダメージ×${numeric(effect.value)}`
   if (effect.unit === 'RANGE_DEFINITION') return effect.value.rangeId ? '基本範囲を参照' : '未確認'
   if (effect.unit === 'SPLASH_RULE') return `攻撃力×${numeric(effect.value.attackScale)}`
   if (effect.unit === 'RAMP_PROFILE') return `最大${percent(effect.value.maxRatio)}`
@@ -270,7 +356,8 @@ export function getTraitStructureEffectValueRows(effect: TraitStructureEffect): 
   else if (effect.unit === 'RAMP_PROFILE') rows.push(...getCombatNumericDefinitionRows(effect.value.maxRatio, '攻撃力上昇の上限'),
     ...getCombatNumericDefinitionRows(effect.value.secondsToCap, '最大値までの秒数'), ['補間方式', '未確定'], ['蓄積条件', formatTraitStructureCondition(effect.value.accumulateWhile)], ['リセット契機', 'スキル終了'])
   else if (effect.unit === 'RANGE_DEFINITION') rows.push(['範囲ID', effect.value.rangeId ?? '未確認'])
-  else if (effect.unit === 'TARGET_SELECTION') rows.push(['対象方式', '範囲攻撃'], ['対象範囲ID', '未確認'], ['攻撃対象数の上限', '未確認'])
+  else if (effect.unit === 'TARGET_SELECTION') rows.push(['対象方式', formatTraitStructureEffectValue(effect)], ['対象範囲ID', '未確認'], ['攻撃対象数の上限', '未確認'])
+  else if (effect.unit === 'PRIORITY_RULE' || effect.unit === 'STATUS') rows.push(['値', formatTraitStructureEffectValue(effect)])
   else if (typeof effect.value === 'boolean') rows.push(['値', effect.value ? 'はい' : 'いいえ'])
   else if (typeof effect.value === 'string') rows.push(['値', effect.value])
   else rows.push(...getCombatNumericDefinitionRows(effect.value))
@@ -282,7 +369,7 @@ export function getTraitStructureEffectValueRows(effect: TraitStructureEffect): 
 export function getTraitStructureEffectDefinitionRows(effect: TraitStructureEffect): [string, string | number][] {
   const rows: [string, string | number][] = [['効果ID', effect.id], ['項目', formatTraitStructureEffectItem(effect.item)], ['項目キー', effect.item],
     ['演算', formatTraitStructureEffectOperation(effect)], ['演算コード', effect.operation],
-    ['対象領域', { DAMAGE: 'ダメージ・攻撃', SURVIVAL: '生存・回復', CONTROL: 'ブロック' }[effect.relevance]],
+    ['対象領域', { DAMAGE: 'ダメージ・攻撃', SURVIVAL: '生存・回復', CONTROL: '対象選択・状態・ブロック' }[effect.relevance]],
     ['ダメージ計算との関係', effect.calculationRelevance === 'RELEVANT' ? '計算に関わる' : '固定条件のダメージ計算には不要'],
     ['適用区分', { BASE_ATTRIBUTE: '基本ステータスを参照・加算しない', ATTACK_RULE: '基本攻撃の規則', DYNAMIC_RULE: '条件・イベントによる変更' }[effect.application]],
     ['定義状態', effect.resolution === 'RESOLVED' ? '構造化済み' : '未確定項目あり'],
@@ -301,7 +388,7 @@ function compare(metric: string, value: boolean | string): CombatCondition {
   return { type: 'COMPARE', metric, comparison: 'EQ', value, sourceBinding: `description:${metric}` }
 }
 function blockCount(): CombatNumericValue { return { type: 'AFFINE', base: 0, coefficient: 1, metric: 'source.blockCount', min: 0 } }
-function normalize(value: string): string { return value.normalize('NFKC').replace(/<@[^>]+>|<\/>/g, '').replace(/\\n/g, ' ').replace(/\s+/g, ' ').trim() }
+function normalize(value: string): string { return value.normalize('NFKC').replace(/<@[^>]+>|<\$ba\.sluggish>|<\/>/g, '').replace(/\\n/g, ' ').replace(/\s+/g, ' ').trim() }
 function localize(value: string): string { return Object.entries(metricLabels).reduce((text, [key, label]) => text.replaceAll(key, label), value) }
 function numeric(value: CombatNumericValue): string {
   if (typeof value === 'object' && value !== null && value.type === 'AFFINE' && value.base === 0 && value.coefficient === 1) return metricLabels[value.metric] ?? formatCombatNumericValue(value)

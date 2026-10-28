@@ -11,8 +11,10 @@ import type { TalentCoarseCategory } from './talentCoarseClassification.ts'
 import type { RawBlackboardEntry, RawUnlockCondition, SkillRecord } from '../types/skill.ts'
 import { buildGuardTalentStructures, GUARD_TALENT_OPERATOR_IDS } from './guardTalentStructure.ts'
 import type { GuardTalentEffectPayload } from './guardTalentStructure.ts'
+import { EXPANDED_OPERATOR_IDS, getExpandedDefinition } from './expandedCombatRegistry.ts'
+import { buildExpandedTalentStructures } from './expandedTalentStructure.ts'
 
-export const TALENT_STRUCTURE_OPERATOR_IDS = ['char_172_svrash', 'char_263_skadi', 'char_350_surtr', 'char_293_thorns', 'char_4009_irene', ...GUARD_TALENT_OPERATOR_IDS] as const
+export const TALENT_STRUCTURE_OPERATOR_IDS = ['char_172_svrash', 'char_263_skadi', 'char_350_surtr', 'char_293_thorns', 'char_4009_irene', ...GUARD_TALENT_OPERATOR_IDS, ...EXPANDED_OPERATOR_IDS] as const
 export interface TalentStructureSelection { readonly operatorId: string; readonly talentIndex: number }
 
 export type TalentStructureCondition = CombatCondition
@@ -78,6 +80,7 @@ const DEFINITIONS = [
 
 export function isTalentStructureSelection(selection: TalentStructureSelection): boolean {
   return DEFINITIONS.some(definition => sameSelection(definition, selection))
+    || Boolean(getExpandedDefinition(selection.operatorId)?.talents.some(talent => talent.talentIndex === selection.talentIndex))
     || (GUARD_TALENT_OPERATOR_IDS.includes(selection.operatorId) && (selection.talentIndex === 0 || selection.talentIndex === 1))
 }
 
@@ -89,14 +92,14 @@ export interface TalentStructureGrowthSelection { readonly phaseIndex?: number; 
 
 /** Verified semantics bind to the selected growth and potential-1 source. No calculator is called. */
 export function buildTalentStructures(rows: readonly SkillRecord[], growth: TalentStructureGrowthSelection = {}): TalentStructure[] {
-  return [...buildTalentStructureDefinitions(rows, growth, false), ...buildGuardTalentStructures(rows, growth)]
+  return [...buildTalentStructureDefinitions(rows, growth, false), ...buildGuardTalentStructures(rows, growth), ...buildExpandedTalentStructures(rows, growth)]
 }
 
 /** Source identities and effect kinds only; unresolved live numeric values remain null. */
 export function describeRegisteredTalentEffects(rows: readonly SkillRecord[]): {
   operatorId: string; talentIndex: number; talentName: string; items: readonly TalentStructureEffect['item'][]
 }[] {
-  return [...buildTalentStructureDefinitions(rows, { phaseIndex: 2 }, true), ...buildGuardTalentStructures(rows, { phaseIndex: 2 }, true)].map(structure => ({
+  return [...buildTalentStructureDefinitions(rows, { phaseIndex: 2 }, true), ...buildGuardTalentStructures(rows, { phaseIndex: 2 }, true), ...buildExpandedTalentStructures(rows, {}, true)].map(structure => ({
     operatorId: structure.basicInfo.operatorId, talentIndex: structure.basicInfo.talentIndex,
     talentName: structure.basicInfo.talentName, items: structure.effects.map(effect => effect.item),
   }))

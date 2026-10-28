@@ -1,6 +1,7 @@
 import type { SkillRecord } from '../types/skill.ts'
 import { DAMAGE_CALCULATOR_THREE_BASE_ATTACKS, getDamageCalculatorThreeStructures } from './damageCalculatorThree.ts'
 import { describeGuardPassiveEffects, getGuardPassiveCalculationConstraints, getGuardPassiveInputs, getGuardRegisteredTalentNames } from './guardCombatPassives.ts'
+import { getExpandedDefinition } from './expandedCombatRegistry.ts'
 import type { GuardCalculationIssue, GuardConditions, GuardSkillRecipe, GuardStage } from './guardCombatTypes.ts'
 import { mergeGuardInputs, resolveGuardConditions } from './guardCombatValues.ts'
 import type { SkillStructure, SkillStructureSelection, SkillStructureStage } from './skillStructure.ts'
@@ -8,6 +9,7 @@ import { getSkillStructureDeferredCases } from './skillStructureDeferredCases.ts
 import { isDamageCalculatorThreeTalentItemRelevant } from './damageCalculatorThreeTalents.ts'
 import { getOperatorPassives } from './operatorProfile.ts'
 import { describeRegisteredTalentEffects } from './talentStructure.ts'
+import { getExpandedTraitCoverage } from './traitEffectApplication.ts'
 
 export type DamageCalculatorThreeCoverageStatus = 'SUPPORTED' | 'CONDITIONAL' | 'PENDING' | 'UNSUPPORTED'
 export type DamageCalculatorThreeCoverageSectionStatus = DamageCalculatorThreeCoverageStatus | 'NOT_APPLICABLE'
@@ -122,7 +124,7 @@ export function buildDamageCalculatorThreeCoverage(rows: readonly SkillRecord[])
 
 function addSectionCoverage(row: CoverageSummary, structure: SkillStructure | undefined): DamageCalculatorThreeCoverageRow {
   const skill = row.skill
-  const phaseIndex = structure ? 2 : Math.max(0, skill.operatorProfile.phases.length - 1)
+  const phaseIndex = structure ? getExpandedDefinition(skill.operatorId)?.phaseIndex ?? 2 : Math.max(0, skill.operatorProfile.phases.length - 1)
   const sources = getOperatorPassives(skill.operatorProfile, phaseIndex,
     skill.operatorProfile.phases[phaseIndex]?.maxLevel ?? 1, 1).sources
   const registeredNames = structure?.guardRecipe ? getGuardRegisteredTalentNames(skill.operatorId) : []
@@ -169,6 +171,7 @@ function addSectionCoverage(row: CoverageSummary, structure: SkillStructure | un
           // Invalid live sources are calculator errors, not proof that a registered
           // effect is unsupported or absent. Only explicit exclusions establish N/A.
           status = results.length > 0 && results.every(value => !value.relevant) ? 'NOT_APPLICABLE' : 'SUPPORTED'
+          if (detail.id === 'trait' && getExpandedDefinition(skill.operatorId)) status = getExpandedTraitCoverage(skill.operatorId, stage)
           if (detail.id.startsWith('talent-') && !registeredNames[Number(detail.id.slice('talent-'.length)) - 1]) status = 'UNSUPPORTED'
         }
         const relevantStageIssues = stageIssues.filter(issue => issue.relatedSections.some(section => section === detail.label))

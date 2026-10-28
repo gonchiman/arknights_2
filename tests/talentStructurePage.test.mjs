@@ -270,7 +270,7 @@ test('保留事項は該当素質だけに表示し、根拠リンクを外部�
 })
 
 test('未対応OP・素質枠とmalformed URLは既定のスルトへ置き換えない', () => {
-  const unsupported = { ...rows[0], id: 'char_456_ash:fixture', operatorId: 'char_456_ash', operatorName: 'Ash' }
+  const unsupported = { ...rows[0], id: 'char_unsupported_fixture:fixture', operatorId: 'char_unsupported_fixture', operatorName: '未対応OP' }
   for (const [initialSelection, props] of [
     [{ operatorId: unsupported.operatorId, talentIndex: 0 }, { rows: [...rows, unsupported] }],
     [{ operatorId: 'char_350_surtr', talentIndex: 2 }, {}],

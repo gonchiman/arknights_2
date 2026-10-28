@@ -3,6 +3,7 @@ import type { DamageType } from './damageCalculator.ts'
 import { SKILL_DIRECTORY_SP_TYPE_LABELS } from './skillDirectory.ts'
 import type { GuardSkillRecipe } from './guardCombatTypes.ts'
 import { buildGuardSkillStructures } from './guardSkillStructure.ts'
+import { buildExpandedSkillStructures } from './expandedSkillStructure.ts'
 
 export type SkillStructureComparison = 'EQ' | 'NE' | 'GT' | 'GTE' | 'LT' | 'LTE'
 export type SkillStructureNumericMetric = 'skillActivationCount' | 'actualAttackTargetCount'
@@ -344,6 +345,7 @@ function signedNumber(value: number): string {
  */
 export const SKILL_STRUCTURES: readonly SkillStructure[] = [
   ...buildGuardSkillStructures(),
+  ...buildExpandedSkillStructures(),
   {
     basicInfo: { operatorId: 'char_4009_irene', operatorName: 'アイリーニ', skillId: 'skchr_irene_1',
       skillIndex: 1, skillName: '舞風', skillLevel: '特化3', levelIndex: 9 },

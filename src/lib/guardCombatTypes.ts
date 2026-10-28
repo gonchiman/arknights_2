@@ -45,6 +45,8 @@ export interface GuardStage {
   label: string
   when?: { input: string; comparison: 'EQ' | 'LT' | 'LTE' | 'GT' | 'GTE'; value: number | string | boolean }
   kind: 'NORMAL' | 'NEXT_ATTACK' | 'SKILL_ACTION'
+  /** Fixed skill treatment; any trait multiplier is already included in actions. */
+  attackTreatment?: 'MELEE' | 'RANGED'
   atk?: GuardValue
   aspd?: GuardValue
   intervalScale?: GuardValue

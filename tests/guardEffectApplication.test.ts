@@ -107,13 +107,13 @@ test('素質の発動確率を効果値から分離し、特性は混入させ�
   assert.ok(talents.every(row => row.category === 'TALENT'))
 })
 
-test('素質の条件不成立・計算対象外を保持し、不明な条件を常時へ補完しない', () => {
+test('素質の条件不成立・計算対象外を保持し、明示された条件なしを未確認にしない', () => {
   const { talents } = evaluate(input('char_4082_qiubai', 3, { targetSlowedOrBound: false }))
   assert.equal(talents.find(row => row.name === '虚突')?.status, 'CONDITION_FALSE')
   assert.match(talents.find(row => row.name === '虚突')!.condition, /足止め・バインド中：あり/)
   assert.equal(talents.find(row => row.name === '落英')?.status, 'NOT_RELEVANT')
-  const unknown = evaluate(input('char_010_chen', 2)).talents.find(row => row.name === '帯刀格闘術')!
-  assert.equal(unknown.condition, '未確認')
+  const unconditional = evaluate(input('char_010_chen', 2)).talents.find(row => row.name === '帯刀格闘術')!
+  assert.equal(unconditional.condition, 'なし')
   const pallas = evaluate(input('char_485_pallas', 1, { selfHpPercent: 30 })).talents.find(row => row.item === '攻撃力')!
   assert.equal(pallas.status, 'CONDITION_FALSE')
   assert.match(pallas.condition, /自身のHP ≧ 80/)
@@ -123,6 +123,7 @@ test('素質の入力不正で評価が中断しても未確認の素質行を�
   const { talents } = evaluate(input('char_188_helage', 2, { selfHpPercent: NaN }))
   assert.equal(talents.length, 2)
   assert.ok(talents.every(row => row.status === 'UNVERIFIED'))
+  assert.ok(talents.every(row => row.condition === '未確認'))
   assert.ok(talents.every(row => /入力|数値/.test(row.reason)))
 })
 

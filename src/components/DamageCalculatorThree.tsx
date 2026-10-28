@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { DAMAGE_TYPE_LABELS } from '../lib/damageCalculator'
 import { getOperatorPassives } from '../lib/operatorProfile'
+import { getExpandedDefinition } from '../lib/expandedCombatRegistry'
 import { expandSkillDescription } from '../lib/skillJsonAnalysis'
 import {
   buildDamageCalculatorThreeOutput,
@@ -47,7 +48,7 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
   const selected = available.find(({ structure }) => requested && sameSelection(structure.basicInfo, requested))
   const operator = selected?.skill
   const structure = selected?.structure
-  const phaseIndex = 2
+  const phaseIndex = operator ? getExpandedDefinition(operator.operatorId)?.phaseIndex ?? 2 : 2
   const maxLevel = operator?.operatorProfile.phases[phaseIndex]?.maxLevel ?? 90
   const safeLevel = clampInteger(operatorLevel, 1, maxLevel)
   const passiveDescriptions = useMemo(() => operator
@@ -59,11 +60,11 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
         description: expandSkillDescription(source.description, source.blackboard)
           .replace(/<[^>]+>/g, '').replace(/\\n/g, '\n').trim() || '説明文を取得できません。',
       }] : [])
-    : [], [operator, safeLevel])
+    : [], [operator, phaseIndex, safeLevel])
   const calculationInput = useMemo<DamageCalculatorThreeInput | null>(() => operator && structure ? {
     operator, skill: operator, phaseIndex, operatorLevel: safeLevel, trust,
     skillLevelIndex: structure.basicInfo.levelIndex, conditions,
-  } : null, [operator, structure, safeLevel, trust, conditions])
+  } : null, [operator, structure, phaseIndex, safeLevel, trust, conditions])
   const output = useMemo(() => calculationInput ? buildDamageCalculatorThreeOutput(calculationInput) : null, [calculationInput])
   const applicationRows = useMemo(() => calculationInput && output
     ? buildDamageCalculatorThreeApplicationRows(calculationInput, output) : [], [calculationInput, output])
@@ -80,7 +81,8 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
     const next = available.find(({ structure: candidate }) => candidate.basicInfo.operatorId === row.operatorId)
     if (next) {
       chooseSkill(next.structure.basicInfo)
-      setOperatorLevel(row.operatorProfile.phases[phaseIndex]?.maxLevel ?? 90)
+      const nextPhase = getExpandedDefinition(row.operatorId)?.phaseIndex ?? 2
+      setOperatorLevel(row.operatorProfile.phases[nextPhase]?.maxLevel ?? 90)
     }
   }
 
@@ -124,7 +126,7 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
           onClick={() => chooseSkill(available[0].structure.basicInfo)}>対応スキルを表示</button>}
       </div> : <>
         <div className="calculator-form-grid growth-form-grid damage-three-growth">
-          <div className="calculator-field"><span>昇進段階</span><div className="damage-three-fixed-value">昇進2</div></div>
+          <div className="calculator-field"><span>昇進段階</span><div className="damage-three-fixed-value">昇進{phaseIndex}</div></div>
           <label className="calculator-field"><span>オペレーターレベル</span>
             <input type="number" aria-label="オペレーターレベル" min={1} max={maxLevel} step={1} value={safeLevel}
               onChange={event => setOperatorLevel(clampInteger(Number(event.target.value), 1, maxLevel))} /></label>

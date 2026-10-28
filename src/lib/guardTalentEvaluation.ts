@@ -132,7 +132,7 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
     if (!relevant(effect, metrics)) {
       addRow(formatTalentStructureEffectItem(effect.item), formatTalentStructureEffectValue(effect), 'NOT_RELEVANT',
         `${formatCombatTiming(effect.timing)}の${formatTalentStructureEffectItem(effect.item)}は、選択した1攻撃・発動1回の直接ダメージとDPSには加算しません。`,
-        { timing: formatCombatTiming(effect.timing), ...(effect.condition ? { condition: formatCurrentRecipientCondition(effect.condition) } : {}) })
+        { timing: formatCombatTiming(effect.timing), condition: formatCurrentRecipientCondition(effect.condition) })
       continue
     }
     if (registrationOnly) {
@@ -154,7 +154,7 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
     if (active === null) { block(`効果「${effect.id}」の適用条件を確認できません。`); continue }
     const details: Partial<Pick<Evaluation, 'probability' | 'timing' | 'condition'>> = {
       timing: formatCombatTiming(effect.timing),
-      ...(effect.condition ? { condition: formatCurrentRecipientCondition(effect.condition) } : {}),
+      condition: formatCurrentRecipientCondition(effect.condition),
     }
     const numeric = (value: CombatNumericValue, name: string): number | null => {
       const resolved = resolveCombatNumericValue(value, metrics)

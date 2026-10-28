@@ -30,6 +30,7 @@ const source: SourceOperator[] = JSON.parse(readFileSync(
 const sourceSkills = source.flatMap(operator => operator.skills.map(entry => ({
   ...entry, operatorId: operator.operatorId, operatorName: operator.operatorName,
 })))
+const originalStructures = SKILL_STRUCTURES.filter(({ basicInfo }) => source.some(operator => operator.operatorId === basicInfo.operatorId))
 const identity = (entry: { operatorId: string; skillId: string; skillIndex: number; levelIndex: number }) =>
   `${entry.operatorId}:${entry.skillId}:${entry.skillIndex}:${entry.levelIndex}`
 
@@ -64,14 +65,13 @@ function sourceDescription(record: SourceSkill): string {
 }
 
 test('4人の全12スキル・特化3を一意に公開し、14段階40効果を持つ', () => {
-  const originalStructures = SKILL_STRUCTURES.filter(({ basicInfo }) => source.some(operator => operator.operatorId === basicInfo.operatorId))
-  assert.equal(SKILL_STRUCTURES.length, 90)
-  assert.equal(new Set(SKILL_STRUCTURES.map(({ basicInfo }) => identity(basicInfo))).size, 90)
+  assert.equal(originalStructures.length, 12)
+  assert.equal(new Set(SKILL_STRUCTURES.map(({ basicInfo }) => identity(basicInfo))).size, SKILL_STRUCTURES.length)
   assert.deepEqual(originalStructures.map(({ basicInfo }) => identity(basicInfo)).sort(), sourceSkills.map(identity).sort())
   for (const operator of source) assert.deepEqual(SKILL_STRUCTURES
     .filter(({ basicInfo }) => basicInfo.operatorId === operator.operatorId)
     .map(({ basicInfo }) => basicInfo.skillIndex).sort(), [1, 2, 3])
-  assert.ok(SKILL_STRUCTURES.every(({ basicInfo }) => basicInfo.levelIndex === 9 && basicInfo.skillLevel === '特化3'))
+  assert.ok(originalStructures.every(({ basicInfo }) => basicInfo.levelIndex === 9 && basicInfo.skillLevel === '特化3'))
   assert.equal(originalStructures.flatMap(entry => entry.effectStructure.stages).length, 14)
   assert.equal(originalStructures.flatMap(entry => entry.effectStructure.stages.flatMap(stage => stage.effects)).length, 40)
 })
@@ -99,7 +99,7 @@ test('12件の発動設定・原文・blackboard・範囲を元データとキ�
 })
 
 test('全12件でレベルを完全一致させ、他レベル・異なるIDの構造を代用しない', () => {
-  for (const record of SKILL_STRUCTURES) {
+  for (const record of originalStructures) {
     assert.equal(findSkillStructure(record.basicInfo), record)
     assert.equal(isSkillStructureRecord(record.basicInfo), true)
     assert.deepEqual(getSkillStructureLevelIndices(record.basicInfo), [9])

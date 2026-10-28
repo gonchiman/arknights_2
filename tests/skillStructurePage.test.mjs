@@ -134,8 +134,8 @@ test('全12件で別レベルのURLは特化3の説明・構造を代用せず�
 
 test('他オペレーターと不整合なスキル指定は、対応済みデータへフォールバックしない', () => {
   const unsupported = {
-    ...rows[0], operatorId: 'char_456_ash', operatorName: 'Ash',
-    skillIndex: 1, skillId: 'skchr_ash_1', id: 'char_456_ash:skchr_ash_1',
+    ...rows[0], operatorId: 'char_unsupported_fixture', operatorName: '未対応OP',
+    skillIndex: 1, skillId: 'skchr_unsupported_fixture_1', id: 'char_unsupported_fixture:skchr_unsupported_fixture_1',
   }
   for (const initialSelection of [
     { operatorId: unsupported.operatorId, skillIndex: 1, skillId: unsupported.skillId, levelIndex: 9 },
