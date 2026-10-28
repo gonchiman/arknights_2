@@ -1,8 +1,8 @@
 import { parseEnemyHistogramCounts } from './enemyHistogramCounts.ts'
 import { parseMapIndex } from './mapDatabase.ts'
-import { summarizeMapCoverage } from './enemyMapCoverage.ts'
+import { getMapCoverageStatus, summarizeMapCoverage } from './enemyMapCoverage.ts'
 
-export const CURRENT_ENEMY_AGGREGATION_RULE_VERSION = 'hidden-groups-default-off-v2'
+export const CURRENT_ENEMY_AGGREGATION_RULE_VERSION = 'known-spawn-lower-bound-v4'
 export const ENEMY_AGGREGATION_INDEX_FILE = 'enemy-aggregation/index.json'
 export const ENEMY_AGGREGATION_FILES = [
   'maps/index.json', 'enemy-histogram-counts.json', 'enemy-stage-appearances.json',
@@ -25,7 +25,7 @@ export interface EnemyAggregationVersion {
   contentSha256: string
   bytes: number
   payloadBytes: number
-  summary: { includedMapCount: number; excludedMapCount: number; missingMapCount: number }
+  summary: { includedMapCount: number; excludedMapCount: number; missingMapCount: number; lowerBoundMapCount?: number }
   changes: { addedMapIds: string[]; removedMapIds: string[]; changedMapIds: string[] }
   previousVersionId?: string
 }
@@ -66,6 +66,8 @@ export function parseEnemyAggregationIndex(source: unknown): EnemyAggregationInd
       || !hash(item.sha256) || !hash(item.payloadSha256) || !hash(item.contentSha256)
       || !count(item.bytes) || item.bytes === 0 || !count(item.payloadBytes) || item.payloadBytes === 0
       || !summary || !['includedMapCount', 'excludedMapCount', 'missingMapCount'].every(key => count(summary[key]))
+      || (summary.lowerBoundMapCount !== undefined && (!count(summary.lowerBoundMapCount)
+        || Number(summary.lowerBoundMapCount) > Number(summary.includedMapCount)))
       || !changes || !['addedMapIds', 'removedMapIds', 'changedMapIds'].every(key => stringList(changes[key]))
       || (item.previousVersionId !== undefined && !versionId(item.previousVersionId))) {
       throw new Error('集計版の情報に不正な値があります。')
@@ -94,6 +96,30 @@ export function parseEnemyAggregationBundle(source: unknown, expectedVersionId?:
   if (coverage.included !== histogram.summary.spawnMapCount || coverage.missing !== histogram.summary.missingMapCount
     || coverage.excluded !== (histogram.summary.excludedMapCount ?? 0) + histogram.summary.spawnExcludedMapCount) {
     throw new Error('集計版のマップ数と出現数に不整合があります。')
+  }
+  // Partial coverage must carry the same provenance in the map index and
+  // histogram. A total alone cannot detect a lower-bound map swapped for another.
+  const lowerMaps = index.maps.filter(map => map.spawnAggregation?.kind === 'lower-bound'
+    && getMapCoverageStatus(map, 'SPAWNS') === 'included')
+  const rawHistogram = record(files['enemy-histogram-counts.json'])
+  const lowerLevels = record(rawHistogram?.diagnostics)?.lowerBoundLevels
+  const lowerCount = histogram.summary.lowerBoundMapCount ?? 0
+  if (lowerMaps.length !== lowerCount || (lowerCount > 0 && rawHistogram?.spawnAggregationMode !== 'lower-bound')
+    || (lowerLevels !== undefined && (!Array.isArray(lowerLevels) || lowerLevels.length !== lowerCount))
+    || (lowerCount > 0 && !Array.isArray(lowerLevels))) {
+    throw new Error('下限集計のマップ数に不整合があります。')
+  }
+  const seenLower = new Set<string>()
+  for (const raw of Array.isArray(lowerLevels) ? lowerLevels : []) {
+    const entry = record(raw)
+    const map = lowerMaps.find(map => map.levelId === entry?.levelId)
+    const aggregation = map?.spawnAggregation
+    if (!entry || !text(entry.levelId) || seenLower.has(entry.levelId) || !aggregation
+      || entry.spawnCount !== aggregation.count || !stringList(entry.reasons)
+      || [...entry.reasons].sort().join('|') !== [...aggregation.reasons].sort().join('|')) {
+      throw new Error('下限集計のマップと根拠に不整合があります。')
+    }
+    seenLower.add(entry.levelId)
   }
   const appearances = record(files['enemy-stage-appearances.json'])
   const entries = record(appearances?.enemies)

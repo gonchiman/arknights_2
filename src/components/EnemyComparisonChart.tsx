@@ -5,7 +5,7 @@ import type { EnemyComparisonDistribution, EnemyComparisonSeries, EnemyCompariso
 import { buildEnemyComparisonCurvePath } from '../lib/enemyComparisonCurve'
 import { ChartImageFrame } from './ChartImageFrame'
 import { getEnemyChartImageLayout } from '../lib/enemyChartImage'
-import { ENEMY_HISTOGRAM_COUNT_MODES, type EnemyHistogramCountMode, type EnemyHistogramCounts } from '../lib/enemyHistogramCounts'
+import { ENEMY_HISTOGRAM_COUNT_MODES, getEnemySpawnCoverageLabel, type EnemyHistogramCountMode, type EnemyHistogramCounts } from '../lib/enemyHistogramCounts'
 import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
 
 export interface EnemyComparisonMetric {
@@ -198,7 +198,7 @@ export function EnemyComparisonImage({ data, aspectRatio, onLayout }: {
   const measureFooter = useCallback((height: number) => setFooterHeight((current) => Math.max(current, height)), [])
   const metadata = data.distribution.histogram
   const mode = ENEMY_HISTOGRAM_COUNT_MODES.find((item) => item.key === (data.countMode ?? 'TYPES'))!
-  const coverage = data.countMode === 'SPAWNS' ? `出現数確定 ${format(data.coverage?.spawnMapCount ?? 0)}マップ`
+  const coverage = data.countMode === 'SPAWNS' ? getEnemySpawnCoverageLabel(data.coverage)
     : data.countMode === 'MAPS' ? `収録 ${format(data.coverage?.mapCount ?? 0)}マップ` : null
   const conditions = [data.yAxis === 'PERCENT' ? `${mode.label}の割合` : mode.axisLabel, coverage,
     metadata?.binWidth != null ? `階級幅 ${format(metadata.binWidth)}` : `${data.distribution.bins.length}階級`,

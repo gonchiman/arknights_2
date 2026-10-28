@@ -136,14 +136,16 @@ export async function archiveEnemyAggregation({ root, snapshot, ruleVersion = CU
     const coverage = summarizeMapCoverage(parseMapIndex(files['maps/index.json']).maps, 'SPAWNS')
     const defaultDescription = ruleVersion !== CURRENT_ENEMY_AGGREGATION_RULE_VERSION ? '集計ルール更新'
       : previousEntry?.ruleVersion === ruleVersion && previousEntry.sourceRevision !== snapshot.revision
-        ? '元データ更新（出現グループ初期無効）' : '出現グループは初期無効とし、有効化設定に応じて判定'
+        ? '元データ更新（下限集計）' : '確定出現分を下限として集計（未解析の追加出現は未算入）'
     const version = {
       id, label: `集計版 ${id}`, createdAt: new Date().toISOString(), generatedAt: snapshot.generatedAt,
       sourceRevision: snapshot.revision, ruleVersion, generatorVersion: snapshot.generatorVersion,
       description: description ?? defaultDescription,
       file: `${id}.json.gz`, sha256: sha256(bytes), payloadSha256: sha256(payload), contentSha256,
       bytes: bytes.length, payloadBytes: payload.length,
-      summary: { includedMapCount: coverage.included, excludedMapCount: coverage.excluded, missingMapCount: coverage.missing },
+      summary: { includedMapCount: coverage.included, excludedMapCount: coverage.excluded, missingMapCount: coverage.missing,
+        ...(files['enemy-histogram-counts.json'].summary.lowerBoundMapCount !== undefined
+          ? { lowerBoundMapCount: files['enemy-histogram-counts.json'].summary.lowerBoundMapCount } : {}) },
       changes: changesBetween(previousBundle, bundle), ...(previousEntry ? { previousVersionId: previousEntry.id } : {}),
     }
     const next = parseEnemyAggregationIndex({ schemaVersion: 1, currentVersionId: id,

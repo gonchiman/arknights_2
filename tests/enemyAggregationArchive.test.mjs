@@ -71,6 +71,57 @@ test('publishes one coherent portable dataset, preserving all five original inpu
   assert.deepEqual(bundle.files, data)
 })
 
+function lowerBoundDocuments() {
+  const data = documents()
+  const partial = data['maps/index.json'].maps[1]
+  partial.reasons = ['branch-spawn']
+  partial.spawnAggregation = { kind: 'lower-bound', count: 2, reasons: ['branch-spawn'] }
+  const histogram = data['enemy-histogram-counts.json']
+  histogram.spawnAggregationMode = 'lower-bound'
+  histogram.summary.spawnMapCount = 2
+  histogram.summary.spawnExcludedMapCount = 0
+  histogram.summary.lowerBoundMapCount = 1
+  histogram.enemies.enemy_a.spawnCount = 5
+  histogram.diagnostics = { lowerBoundLevels: [{ levelId: 'b', spawnCount: 2, reasons: ['branch-spawn'] }] }
+  return data
+}
+
+test('V4 adds lower-bound coverage without changing any of the three historical bundles', async t => {
+  const root = await workspace(t)
+  const before = []
+  for (const ruleVersion of ['legacy-v1', 'hidden-groups-default-off-v2', 'optional-branch-mechanisms-v3']) {
+    const result = await archiveEnemyAggregation({ root, snapshot: await snapshot(root, ruleVersion), ruleVersion })
+    before.push({ entry: result.version, bytes: await bundleBytes(root, result.version.id) })
+  }
+  const data = lowerBoundDocuments()
+  const result = await archiveEnemyAggregation({ root, snapshot: await snapshot(root, 'v4-lower-bound', data) })
+  assert.equal(result.version.id, 'v4')
+  assert.equal(result.version.previousVersionId, 'v3')
+  assert.equal(result.version.ruleVersion, 'known-spawn-lower-bound-v4')
+  assert.deepEqual(result.version.summary, { includedMapCount: 2, excludedMapCount: 2, missingMapCount: 1, lowerBoundMapCount: 1 })
+  assert.deepEqual(result.version.changes.addedMapIds, ['b'])
+  assert.deepEqual(result.index.versions.slice(0, 3), before.map(item => item.entry))
+  for (const item of before) assert.deepEqual(await bundleBytes(root, item.entry.id), item.bytes)
+  const bundle = parseEnemyAggregationBundle(JSON.parse(gunzipSync(await bundleBytes(root, 'v4'))), 'v4')
+  assert.equal(bundle.files['maps/index.json'].maps[1].status, 'excluded')
+  assert.equal(bundle.files['maps/index.json'].maps[1].spawnAggregation.count, 2)
+  assert.deepEqual(bundle.files['enemy-histogram-counts.json'], data['enemy-histogram-counts.json'])
+})
+
+test('lower-bound provenance must agree by map, count and unresolved reason across the bundle', () => {
+  for (const change of [
+    data => { data['enemy-histogram-counts.json'].summary.lowerBoundMapCount = 0 },
+    data => { data['enemy-histogram-counts.json'].diagnostics.lowerBoundLevels[0].levelId = 'a' },
+    data => { data['enemy-histogram-counts.json'].diagnostics.lowerBoundLevels[0].spawnCount = 3 },
+    data => { data['enemy-histogram-counts.json'].diagnostics.lowerBoundLevels[0].reasons = ['weighted-spawn'] },
+    data => { delete data['enemy-histogram-counts.json'].diagnostics },
+  ]) {
+    const data = lowerBoundDocuments()
+    change(data)
+    assert.throws(() => parseEnemyAggregationBundle({ schemaVersion: 1, versionId: 'v4', files: data }))
+  }
+})
+
 test('regeneration timestamps and unrelated generator changes do not create another aggregation version', async t => {
   const root = await workspace(t)
   await archiveEnemyAggregation({ root, snapshot: await snapshot(root, 'first') })
@@ -81,6 +132,21 @@ test('regeneration timestamps and unrelated generator changes do not create anot
   assert.equal(result.status, 'unchanged')
   assert.deepEqual(await indexBytes(root), originalIndex)
   assert.deepEqual(await bundleBytes(root, 'v1'), originalBundle)
+})
+
+test('optional-spawn evidence is preserved in the immutable bundle and older versions remain readable', async t => {
+  const root = await workspace(t)
+  const old = await archiveEnemyAggregation({ root, snapshot: await snapshot(root, 'old'), ruleVersion: 'hidden-groups-default-off-v2' })
+  const oldBytes = await bundleBytes(root, old.version.id)
+  const data = documents()
+  const evidence = [{ branchId: 'optional', phaseIndex: 0, actionIndex: 0, enemyId: 'enemy_a',
+    ruleId: 'verified-example', condition: '出現を回避してクリア可能', evidence: ['検証済みの出現機構'] }]
+  data['maps/index.json'].maps[0].omittedBranchSpawns = evidence
+  const result = await archiveEnemyAggregation({ root, snapshot: await snapshot(root, 'new', data) })
+  const bundle = parseEnemyAggregationBundle(JSON.parse(gunzipSync(await bundleBytes(root, result.version.id))), result.version.id)
+  assert.deepEqual(bundle.files['maps/index.json'].maps[0].omittedBranchSpawns, evidence)
+  assert.deepEqual(await bundleBytes(root, old.version.id), oldBytes)
+  assert.equal(parseEnemyAggregationBundle(JSON.parse(gunzipSync(oldBytes)), old.version.id).versionId, old.version.id)
 })
 
 test('source or rule changes create versions, and old archives remain byte-for-byte unchanged', async t => {
@@ -95,7 +161,7 @@ test('source or rule changes create versions, and old archives remain byte-for-b
   assert.deepEqual(await bundleBytes(root, 'v1'), original)
   const revisionUpdate = await archiveEnemyAggregation({ root, snapshot: { ...newer, revision: 'd'.repeat(40) } })
   assert.equal(revisionUpdate.version.id, 'v3')
-  assert.equal(revisionUpdate.version.description, '元データ更新（出現グループ初期無効）')
+  assert.equal(revisionUpdate.version.description, '元データ更新（下限集計）')
   assert.deepEqual(revisionUpdate.version.changes, { addedMapIds: [], removedMapIds: [], changedMapIds: [] })
   assert.deepEqual(await bundleBytes(root, 'v1'), original)
 })

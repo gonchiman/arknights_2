@@ -52,7 +52,8 @@ export function createEnemyAggregationClient({ fetch: fetchOverride, base = '/' 
     if (counts.summary.spawnMapCount !== coverage.included
       || coverage.included !== version.summary.includedMapCount
       || coverage.excluded !== version.summary.excludedMapCount
-      || coverage.missing !== version.summary.missingMapCount) {
+      || coverage.missing !== version.summary.missingMapCount
+      || (counts.summary.lowerBoundMapCount ?? 0) !== (version.summary.lowerBoundMapCount ?? 0)) {
       throw new Error('マップ一覧と出現数の集計版が一致しません。')
     }
     const rows = buildEnemyRecords(bundle.files['runtime/enemy_handbook_table.json'],

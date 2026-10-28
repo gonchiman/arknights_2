@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { extractLevelEnemyIds, selectStageLevels } from './generateEnemyStageAppearances.mjs'
 import { buildEnemyHistogramCounts, readCachedLevels } from './generateEnemyHistogramCounts.mjs'
 import { analyzeEnemySpawns } from './lib/enemySpawnConditions.mjs'
+import { resolveEnemySpawnAggregation } from './lib/enemySpawnAggregation.mjs'
 import { getMapEntrances } from '../src/lib/mapWaves.ts'
 import { MAP_ENEMY_IMMUNITY_KEYS } from '../src/types/map.ts'
 
@@ -332,9 +333,13 @@ export function extractMapFeatures(source, geometry) {
 
 export function buildMapDatabase({
   stageTable, zoneTable, handbook, database, levels,
-  generatedAt = new Date().toISOString(), sourceGeneratedAt = null,
+  generatedAt = new Date().toISOString(), sourceGeneratedAt = null, sourceRevision, spawnAggregationMode = 'strict',
 }) {
+  if (!['strict', 'lower-bound'].includes(spawnAggregationMode)) throw new Error('Unknown enemy spawn aggregation mode')
   const selection = selectStageLevels(stageTable)
+  const statisticsExcluded = new Set(spawnAggregationMode === 'lower-bound' ? selectStageLevels(stageTable, {
+    excludeStoryEnvironment: true, excludeOtherCategories: true, zoneTableSource: zoneTable,
+  }).excludedLevelIds : [])
   const stages = new Map(Object.entries(record(record(stageTable)?.stages) ?? {})
     .map(([key, stage]) => [text(stage?.stageId) ?? key, stage]))
   const zones = record(record(zoneTable)?.zones) ?? {}
@@ -360,9 +365,12 @@ export function buildMapDatabase({
       features: null, reasons: ['missing-level'], detailFile: null,
     }
     const source = levelsById.get(levelId)
-    const analysis = analyzeEnemySpawns(source, context)
+    const resolutionContext = record(context) ? { ...context, levelId, sourceRevision } : context
+    const analysis = analyzeEnemySpawns(source, resolutionContext)
     const reasons = [...analysis.reasons].sort(compare)
     const supported = reasons.length === 0
+    const aggregation = spawnAggregationMode === 'lower-bound' && !supported && !statisticsExcluded.has(levelId)
+      ? resolveEnemySpawnAggregation(source, resolutionContext, { mode: spawnAggregationMode, analysis }) : null
     const waves = extractMapWaves(source, context, analysis)
     // Keep declared references and SPAWN-only IDs, including conditional spawns.
     const spawnIds = waves?.flatMap((wave) => wave.fragments.flatMap((fragment) => fragment.actions
@@ -386,6 +394,11 @@ export function buildMapDatabase({
       spawnCount: supported ? enemies.reduce((sum, enemy) => sum + enemy.count, 0) : null,
       enemyIds, enemyRoutes: extractMapEnemyRoutes(source, waves, geometry), enemySpawnCounts: extractMapEnemySpawnCounts(source, waves),
       features: extractMapFeatures(source, geometry), reasons, detailFile,
+      ...(aggregation?.kind === 'lower-bound' ? { spawnAggregation: {
+        kind: 'lower-bound', count: aggregation.count, reasons: aggregation.reasons,
+      } } : {}),
+      ...(analysis.omittedBranchSpawns?.length ? { omittedBranchSpawns: analysis.omittedBranchSpawns } : {}),
+      ...(analysis.countedBranchSpawns?.length ? { countedBranchSpawns: analysis.countedBranchSpawns } : {}),
     }
   })
   return {

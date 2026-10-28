@@ -214,9 +214,9 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/analysis/goldenglow-target-switch') return { view: 'goldenglow-target-switch' }
   if (hash === '#/comparison') return { view: 'comparison' }
   if (hash === '#/enemies') return { view: 'enemies' }
-  if (hash === '#/analysis/enemies') return { view: 'enemy-analysis' }
+  if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies')) return { view: 'enemy-analysis' }
   if (hash === '#/analysis/enemies/regression') return { view: 'enemy-regression' }
-  if (hash === '#/analysis/enemies/maps') return { view: 'enemy-map-coverage' }
+  if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies/maps')) return { view: 'enemy-map-coverage' }
   if (hash === '#/analysis/enemies/main-trends') return { view: 'main-enemy-trends' }
   if (hash === '#/maps') return { view: 'maps' }
   if (hash === '#/roguelike') return { view: 'roguelike' }
@@ -226,6 +226,12 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/skill-classification') return { view: 'skill-classification' }
   if (hash === '#/talent-classification') return { view: 'talent-classification' }
   return { view: 'operators' }
+}
+
+function matchesEnemyAggregationRoute(hash: string, path: string): boolean {
+  if (hash === path) return true
+  if (!hash.startsWith(`${path}?`)) return false
+  return new URLSearchParams(hash.split('?')[1] ?? '').has('aggregationVersion')
 }
 
 function parseSkillSelectionRoute(view: 'skill-json' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'damage-three', query: string): AppRoute {
