@@ -45,8 +45,26 @@ test('詳細では説明文と該当OP一覧を表示し、既存OPモーダル�
   assert.match(markup, /味方の治療対象にならない/)
   assert.match(markup, /HPを70回復/)
   assert.match(markup, /href="#\/operators\/char_first"[^>]*aria-haspopup="dialog"/)
-  assert.equal((markup.match(/<a /g) || []).length, 3)
+  assert.equal((markup.match(/href="#\/operators\//g) || []).length, 3)
+  assert.match(markup, new RegExp(`href="#/trait-structure\\?operatorId=${row.operators[0].operatorId}"`))
+  assert.match(markup, />特性構造を表示<\/a>/)
   assert.match(markup, /role="region" aria-label="この特性を持つオペレーター" tabindex="0"/)
+})
+
+test('特性構造へのリンクは表示中の該当OPを選び、対象外の職分には表示しない', () => {
+  const [row] = buildRecords(rows)
+  const filtered = { ...row, operators: [row.operators[1]] }
+  const markup = render(Detail, { row: filtered, onClose() {}, onOpenOperatorDetail() {} })
+  assert.match(markup, new RegExp(`href="#/trait-structure\\?operatorId=${filtered.operators[0].operatorId}"`))
+  assert.doesNotMatch(markup, new RegExp(`href="#/trait-structure\\?operatorId=${row.operators[0].operatorId}"`))
+  for (const unsupported of [
+    { ...row, profession: 'CASTER' },
+    { ...row, subProfessionId: 'unknown-job' },
+    { ...row, operators: [] },
+  ]) {
+    const unsupportedMarkup = render(Detail, { row: unsupported, onClose() {}, onOpenOperatorDetail() {} })
+    assert.doesNotMatch(unsupportedMarkup, /href="#\/trait-structure/)
+  }
 })
 
 test('読込中と0件を区別し、分類別件数も特性単位で表示する', () => {

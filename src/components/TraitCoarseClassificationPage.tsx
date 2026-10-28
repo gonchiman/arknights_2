@@ -6,6 +6,8 @@ import {
   type TraitCoarseRecord,
 } from '../lib/traitCoarseClassification'
 import { PROFESSION_ORDER } from '../lib/operatorFilters'
+import { createTraitStructureHash } from '../lib/routes'
+import { isTraitStructureOperator } from '../lib/traitStructure'
 import type { SkillRecord } from '../types/skill'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
@@ -157,9 +159,13 @@ export function TraitCoarseClassificationPage({ rows, loading, onOpenOperatorDet
 export function TraitCoarseDetailModal({ row, onClose, onOpenOperatorDetail }: {
   row: TraitCoarseRecord; onClose: () => void; onOpenOperatorDetail: OpenOperatorDetail
 }) {
+  const structureOperator = isTraitStructureOperator(row) ? row.operators[0] : undefined
   return <GoldenglowDetailModal title={`${row.subProfessionName} · 特性${row.variantIndex}`} closeLabel="特性の説明文を閉じる"
     onClose={onClose} className="trait-coarse-detail-modal">
     <p className="trait-coarse-description">{row.description || '説明文はありません。'}</p>
+    {structureOperator && <p className="trait-coarse-description">
+      <a className="skill-coarse-link" href={createTraitStructureHash(structureOperator)}>特性構造を表示</a>
+    </p>}
     <div className="table-wrap skill-coarse-table-wrap" role="region" aria-label="この特性を持つオペレーター" tabIndex={0}>
       <table className="skill-coarse-table trait-coarse-operators-table">
         <caption className="visually-hidden">該当オペレーター</caption>

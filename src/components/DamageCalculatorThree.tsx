@@ -7,23 +7,14 @@ import {
   buildDamageCalculatorThreeOutput,
   getDamageCalculatorThreeStructures,
   type DamageCalculatorThreeConditions,
+  type DamageCalculatorThreeInput,
   type DamageCalculatorThreeOutput,
 } from '../lib/damageCalculatorThree'
-import {
-  formatSkillStructureEffectItem,
-  formatSkillStructureEffectValue,
-  formatSkillStructurePredicate,
-  type SkillStructureSelection,
-} from '../lib/skillStructure'
-import {
-  formatTalentStructureCondition,
-  formatTalentStructureEffectItem,
-  formatTalentStructureEffectValue,
-  formatTalentStructureTarget,
-  type TalentStructureEffect,
-} from '../lib/talentStructure'
+import { buildDamageCalculatorThreeApplicationRows } from '../lib/damageCalculatorThreeApplications'
+import { EFFECT_APPLICATION_STATUS_LABELS, type EffectApplicationRow } from '../lib/effectApplication'
+import type { SkillStructureSelection } from '../lib/skillStructure'
 import type { SkillRecord } from '../types/skill'
-import type { GuardConditions, GuardInput, GuardPassiveModifiers } from '../lib/guardCombatTypes'
+import type { GuardConditions, GuardInput } from '../lib/guardCombatTypes'
 import { AnalysisTabs } from './AnalysisTabs'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
@@ -57,19 +48,23 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
   const phaseIndex = 2
   const maxLevel = operator?.operatorProfile.phases[phaseIndex]?.maxLevel ?? 90
   const safeLevel = clampInteger(operatorLevel, 1, maxLevel)
-  const talentDescriptions = useMemo(() => operator
+  const passiveDescriptions = useMemo(() => operator
     ? getOperatorPassives(operator.operatorProfile, phaseIndex, safeLevel, 1).sources.flatMap(source =>
-      source.sourceKind === 'TALENT' && source.talentIndex !== null ? [{
-        index: source.talentIndex,
-        name: source.sourceName,
+      source.sourceKind === 'TRAIT' || (source.sourceKind === 'TALENT' && source.talentIndex !== null) ? [{
+        id: source.sourceKind === 'TRAIT' ? 'damage-three-trait-description' : `damage-three-talent-description-${source.talentIndex}`,
+        className: source.sourceKind === 'TRAIT' ? 'damage-three-trait-description' : 'damage-three-talent-description',
+        heading: source.sourceKind === 'TRAIT' ? '特性' : `素質${source.talentIndex! + 1}　${source.sourceName}`,
         description: expandSkillDescription(source.description, source.blackboard)
           .replace(/<[^>]+>/g, '').replace(/\\n/g, '\n').trim() || '説明文を取得できません。',
       }] : [])
     : [], [operator, safeLevel])
-  const output = useMemo(() => operator && structure ? buildDamageCalculatorThreeOutput({
+  const calculationInput = useMemo<DamageCalculatorThreeInput | null>(() => operator && structure ? {
     operator, skill: operator, phaseIndex, operatorLevel: safeLevel, trust,
     skillLevelIndex: structure.basicInfo.levelIndex, conditions,
-  }) : null, [operator, structure, safeLevel, trust, conditions])
+  } : null, [operator, structure, safeLevel, trust, conditions])
+  const output = useMemo(() => calculationInput ? buildDamageCalculatorThreeOutput(calculationInput) : null, [calculationInput])
+  const applicationRows = useMemo(() => calculationInput && output
+    ? buildDamageCalculatorThreeApplicationRows(calculationInput, output) : [], [calculationInput, output])
   const operatorSkills = available.filter(({ structure: candidate }) => candidate.basicInfo.operatorId === requested?.operatorId)
     .sort((a, b) => a.structure.basicInfo.skillIndex - b.structure.basicInfo.skillIndex)
 
@@ -153,10 +148,10 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
             className="damage-three-description">
             {candidate.source.description}
           </div>)}
-          {talentDescriptions.map(talent => <section className="damage-three-talent-description" key={talent.index}
-            aria-labelledby={`damage-three-talent-description-${talent.index}`}>
-            <h3 id={`damage-three-talent-description-${talent.index}`}>素質{talent.index + 1}　{talent.name}</h3>
-            <p>{talent.description}</p>
+          {passiveDescriptions.map(source => <section className={source.className} key={source.id}
+            aria-labelledby={source.id}>
+            <h3 id={source.id}>{source.heading}</h3>
+            <p>{source.description}</p>
           </section>)}
         </div>
       </>}
@@ -196,9 +191,6 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
           <div className="calculator-field"><span>ダメージ種別</span><div className="damage-three-fixed-value">
             {output.damageType ? DAMAGE_TYPE_LABELS[output.damageType] : output.guard && output.unsupportedReasons.length === 0 ? '混合' : '未確定'}</div></div>
         </div>
-        {output.effects.length > 0 && <details className="damage-two-help"><summary>適用する効果</summary>
-          <DamageCalculatorThreeEffectTable effects={output.effects} />
-        </details>}
         <details className="damage-two-help"><summary>計算範囲</summary>
           <p>{calculationScope(output)}</p>
           <p>全対象には同じ防御力・術耐性を使います。DPSはスキル発動中に攻撃し続けた場合の値で、SP回復中の時間を含めません。</p>
@@ -206,11 +198,10 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
         </details>
       </CollapsibleCalculatorPanel>
 
-      <CollapsibleCalculatorPanel id="damage-three-talents" number="03" title="素質の適用"
-        summary={`${(output.guard?.evaluations ?? output.talentEffects).filter(entry => entry.status === 'APPLIED').length}件適用`}
-        collapsedLabel="素質を表示">
-        {output.guard ? <GuardPassiveTable evaluations={output.guard.evaluations} />
-          : <DamageCalculatorThreeTalentTable effects={output.talentEffects} />}
+      <CollapsibleCalculatorPanel id="damage-three-talents" number="03" title="効果の適用"
+        summary={`${applicationRows.filter(entry => entry.status === 'APPLIED').length}件適用`}
+        collapsedLabel="効果を表示" bodyClassName="damage-three-passives-body">
+        <DamageCalculatorThreeApplicationTable rows={applicationRows} />
       </CollapsibleCalculatorPanel>
 
       <CollapsibleCalculatorPanel id="damage-three-results" number="04" title="計算結果"
@@ -342,23 +333,36 @@ export function GuardConditionFields({ inputs, values, onChange }: {
   })}</>
 }
 
-export function GuardPassiveTable({ evaluations }: { evaluations: GuardPassiveModifiers['evaluations'] }) {
-  return <div className="damage-two-table-wrap" tabIndex={0} role="region" aria-label="素質・特性の適用状態">
-    <table className="damage-two-table damage-three-talent-table">
-      <caption className="visually-hidden">素質・特性の適用状態</caption>
-      <thead><tr><th scope="col">区分</th><th scope="col">項目</th><th scope="col">値</th><th scope="col">状態</th></tr></thead>
-      <tbody>{evaluations.map((entry, index) => <tr key={`${entry.source}/${entry.item}/${index}`}>
-        <th scope="row">{entry.source}</th><td>{entry.item}</td><td>{entry.value}</td>
-        <td>{{ APPLIED: '適用', CONDITION_FALSE: '条件不成立', NOT_RELEVANT: '対象外', UNSUPPORTED: '未対応' }[entry.status]}</td>
-      </tr>)}</tbody>
-    </table>
-    {evaluations.some(entry => entry.reason && entry.status === 'UNSUPPORTED') && <details className="damage-two-help">
-      <summary>未対応の条件</summary>
-      {evaluations.filter(entry => entry.reason && entry.status === 'UNSUPPORTED').map((entry, index) => <p key={index}>
-        {entry.source}：{entry.reason}
-      </p>)}
+export function DamageCalculatorThreeApplicationTable({ rows }: { rows: readonly EffectApplicationRow[] }) {
+  const hasStages = rows.some(row => row.stage !== undefined)
+  const hasProbability = rows.some(row => row.probability !== undefined)
+  const unsupported = [...new Set(rows.filter(row => row.status === 'UNSUPPORTED' && row.reason)
+    .map(row => `${row.name}：${row.reason}`))]
+  return <>
+    <div className="damage-two-table-wrap" tabIndex={0} role="region" aria-label="効果の適用状態">
+      <table className={`damage-two-table damage-three-application-table${hasStages ? ' has-stages' : ''}${hasProbability ? ' has-probability' : ''}`}>
+        <caption className="visually-hidden">スキル・特性・素質の適用状態</caption>
+        <colgroup><col className="application-category" /><col className="application-name" />
+          {hasStages && <col className="application-stage" />}<col className="application-item" />
+          <col className="application-value" /><col className="application-timing" />
+          {hasProbability && <col className="application-probability" />}<col className="application-condition" />
+          <col className="application-status" /></colgroup>
+        <thead><tr><th scope="col">区分</th><th scope="col">名称</th>{hasStages && <th scope="col">段階</th>}
+          <th scope="col">項目</th><th scope="col">値</th><th scope="col">タイミング</th>
+          {hasProbability && <th scope="col">発動確率</th>}<th scope="col">条件</th><th scope="col">状態</th></tr></thead>
+        <tbody>{rows.map(row => <tr key={row.id} data-effect-category={row.category} data-effect-status={row.status}>
+          <td>{row.categoryLabel ?? { SKILL: 'スキル', TRAIT: '特性', TALENT: '素質' }[row.category]}</td>
+          <td>{row.name}</td>{hasStages && <td>{row.stage ?? '—'}</td>}
+          <th scope="row">{row.item}</th><td>{row.value}</td><td>{row.timing}</td>
+          {hasProbability && <td>{row.probability ?? '—'}</td>}<td>{row.condition}</td>
+          <td>{EFFECT_APPLICATION_STATUS_LABELS[row.status]}</td>
+        </tr>)}</tbody>
+      </table>
+    </div>
+    {unsupported.length > 0 && <details className="damage-two-help"><summary>未対応の条件</summary>
+      {unsupported.map(reason => <p key={reason}>{reason}</p>)}
     </details>}
-  </div>
+  </>
 }
 
 export function GuardPeriodicDamageTable({ output, precision }: { output: DamageCalculatorThreeOutput; precision: number }) {
@@ -412,41 +416,6 @@ export function DamageCalculatorThreeSteadyDpsTable({ output, precision }: { out
   </div>
 }
 
-export function DamageCalculatorThreeEffectTable({ effects }: { effects: DamageCalculatorThreeOutput['effects'] }) {
-  const hasStages = new Set(effects.map(entry => entry.stageId)).size > 1
-  return <div className="damage-two-table-wrap damage-three-detail-wrap">
-    <table className="damage-two-table damage-three-effect-table">
-      <caption className="visually-hidden">構造化された効果の適用状態</caption>
-      <thead><tr>{hasStages && <th scope="col">段階</th>}<th scope="col">項目</th><th scope="col">値</th><th scope="col">条件</th><th scope="col">計算への適用</th></tr></thead>
-      <tbody>{effects.map(entry => <tr key={`${entry.stageId}/${entry.effect.id}`}>
-        {hasStages && <td>{entry.stageLabel}</td>}
-        <th scope="row">{formatSkillStructureEffectItem(entry.effect.item)}</th>
-        <td>{formatSkillStructureEffectValue(entry.effect)}</td><td>{formatSkillStructurePredicate(entry.effect.condition)}</td>
-        <td>{{ APPLIED: '適用', CONDITION_FALSE: '不適用', NOT_RELEVANT: '対象外', UNSUPPORTED: '未対応', INACTIVE_STAGE: '別の段階' }[entry.status]}</td>
-      </tr>)}</tbody>
-    </table>
-  </div>
-}
-
-export function DamageCalculatorThreeTalentTable({ effects }: { effects: DamageCalculatorThreeOutput['talentEffects'] }) {
-  const hasProbability = effects.some(entry => entry.effect && entry.effect.probability.chance !== 1)
-  return <div className="damage-two-table-wrap" tabIndex={0} role="region" aria-label="構造化された素質の適用状態">
-    <table className="damage-two-table damage-three-talent-table">
-      <caption className="visually-hidden">構造化された素質の適用状態</caption>
-      <thead><tr><th scope="col">区分</th><th scope="col">名称</th><th scope="col">項目</th>
-        <th scope="col">値</th>{hasProbability && <th scope="col">発動確率</th>}<th scope="col">条件</th><th scope="col">状態</th></tr></thead>
-      <tbody>{effects.map((entry, index) => <tr key={`${entry.operatorId}/${entry.talentIndex}/${entry.effect?.id ?? index}`}>
-        <th scope="row">素質{entry.talentIndex + 1}</th><td>{entry.talentName}</td>
-        <td>{entry.effect ? formatTalentStructureEffectItem(entry.effect.item) : '未確認'}</td>
-        <td>{entry.effect ? formatTalentStructureEffectValue(entry.effect) : '未確認'}</td>
-        {hasProbability && <td>{entry.effect ? formatProbability(entry.effect.probability.chance) : '未確認'}</td>}
-        <td>{entry.effect ? formatTalentApplicationCondition(entry.effect) : '未確認'}</td>
-        <td>{{ APPLIED: '適用', CONDITION_FALSE: '条件不成立', NOT_RELEVANT: '対象外', UNSUPPORTED: '未対応', UNVERIFIED: '未確認' }[entry.status]}</td>
-      </tr>)}</tbody>
-    </table>
-  </div>
-}
-
 function UsedValueTable({ output }: { output: DamageCalculatorThreeOutput }) {
   const model = output.model
   const rows: [string, ReactNode][] = [
@@ -485,15 +454,6 @@ function calculationScope(output: DamageCalculatorThreeOutput) {
     ? '直接攻撃分（継続ダメージを除く）'
     : '基礎性能＋スキル効果＋適用中の素質'
   return `${scope} · 潜在1 · MODなし · 外部バフなし`
-}
-
-function formatTalentApplicationCondition(effect: TalentStructureEffect) {
-  const conditions: string[] = []
-  if (effect.target.factionIds.length > 0 || effect.target.tagIds.length > 0) {
-    conditions.push(formatTalentStructureTarget(effect.target))
-  }
-  if (effect.condition) conditions.push(formatTalentStructureCondition(effect.condition))
-  return conditions.join(' かつ ') || 'なし'
 }
 
 function sameSkill(a: Pick<SkillRecord, 'operatorId' | 'skillId' | 'skillIndex'>, b: SkillStructureSelection) {

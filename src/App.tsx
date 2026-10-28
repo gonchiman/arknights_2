@@ -35,6 +35,7 @@ import { SkillDirectory } from './components/SkillDirectory'
 import { SkillCoarseClassificationPage } from './components/SkillCoarseClassificationPage'
 import { TalentCoarseClassificationPage } from './components/TalentCoarseClassificationPage'
 import { TraitCoarseClassificationPage } from './components/TraitCoarseClassificationPage'
+import { TraitStructurePage } from './components/TraitStructurePage'
 import { TalentStructurePage } from './components/TalentStructurePage'
 import { SkillEffectsPage } from './components/SkillEffectsPage'
 import { SkillSummaryPage } from './components/SkillSummaryPage'
@@ -448,6 +449,9 @@ export default function App() {
           <TalentCoarseClassificationPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
         ) : displayedRoute.view === 'trait-classification' ? (
           <TraitCoarseClassificationPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
+        ) : displayedRoute.view === 'trait-structure' ? (
+          <TraitStructurePage rows={rows} loading={loading} initialSelection={displayedRoute.selection}
+            invalidSelection={displayedRoute.invalidSelection} />
         ) : displayedRoute.view === 'talent-structure' ? (
           <TalentStructurePage rows={rows} loading={loading} initialSelection={displayedRoute.selection}
             invalidSelection={displayedRoute.invalidSelection} />
