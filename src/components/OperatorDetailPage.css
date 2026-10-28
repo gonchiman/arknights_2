@@ -129,7 +129,7 @@
 :is(.operator-profile-skill-navigation, .operator-profile-module-navigation) button > strong { white-space: normal; overflow-wrap: anywhere; }
 :is(.operator-profile-skill-navigation, .operator-profile-module-navigation) button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 :is(.operator-profile-skill-content, .operator-profile-module-content) { display: grid; gap: 16px; margin-top: 16px; min-width: 0; }
-:is(.operator-profile-skill-information, .operator-profile-module-information) {
+.operator-profile-module-information {
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
@@ -138,12 +138,12 @@
   border: 1px solid var(--border);
   background: var(--surface);
 }
-:is(.operator-profile-skill-information, .operator-profile-module-information) th,
-:is(.operator-profile-skill-information, .operator-profile-module-information) td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: middle; line-height: 1.6; white-space: normal; overflow-wrap: anywhere; }
-:is(.operator-profile-skill-information, .operator-profile-module-information) th { background: var(--surface-soft); color: var(--text-soft); font-size: 11px; font-weight: 500; }
-:is(.operator-profile-skill-information, .operator-profile-module-information) td { color: var(--text); font-size: 12px; font-variant-numeric: tabular-nums; }
-:is(.operator-profile-skill-information, .operator-profile-module-information) tbody tr { cursor: default; }
-:is(.operator-profile-skill-information, .operator-profile-module-information) tbody tr:hover { background: transparent; }
+.operator-profile-module-information th,
+.operator-profile-module-information td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: middle; line-height: 1.6; white-space: normal; overflow-wrap: anywhere; }
+.operator-profile-module-information th { background: var(--surface-soft); color: var(--text-soft); font-size: 11px; font-weight: 500; }
+.operator-profile-module-information td { color: var(--text); font-size: 12px; font-variant-numeric: tabular-nums; }
+.operator-profile-module-information tbody tr { cursor: default; }
+.operator-profile-module-information tbody tr:hover { background: transparent; }
 :is(.operator-profile-skill-effect, .operator-profile-module-effect) { display: block; min-width: 0; border: 1px solid var(--border); background: var(--surface); color: var(--text); text-decoration: none; }
 .operator-profile-skill-effect:hover { border-color: var(--border-strong); color: var(--text); }
 .operator-profile-skill-effect:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
@@ -153,8 +153,6 @@
 @container operator-profile-skills (max-width: 460px) {
   .operator-profile-skill-navigation button { flex-direction: column; justify-content: center; gap: 3px; padding: 8px 5px; text-align: center; }
   .operator-profile-skill-content { gap: 12px; margin-top: 12px; }
-  .operator-profile-skill-information th,
-  .operator-profile-skill-information td { padding: 8px 4px; font-size: 11px; }
 }
 .operator-profile-module-selection { display: grid; gap: 12px; min-width: 0; }
 .operator-profile-module-content { grid-template-columns: minmax(0, 1fr); }

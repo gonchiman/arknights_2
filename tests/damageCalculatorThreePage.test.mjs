@@ -9,7 +9,7 @@ import { createDamageCalculatorThreeHash, parseHashRoute } from '../src/lib/rout
 
 const source = JSON.parse(readFileSync(new URL('./fixtures/skillStructureFourOperators.json', import.meta.url), 'utf8'))
 const talentSource = JSON.parse(readFileSync(new URL('./fixtures/talentStructureFourOperators.json', import.meta.url), 'utf8'))
-let server, Page, ResultTable, EffectTable, TalentTable, DotTable, SteadyTable, buildOutput, rows
+let server, Page, ResultTable, ApplicationTable, DotTable, SteadyTable, buildOutput, buildApplications, rows
 
 const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;',
@@ -21,12 +21,16 @@ const selected = (operatorId, skillIndex) => {
   return { operatorId, skillIndex, skillId: row.skillId, levelIndex: 9 }
 }
 const render = initialSelection => renderToStaticMarkup(createElement(Page, { rows, loading: false, initialSelection }))
-const calculate = (operatorId, skillIndex, actualAttackTargetCount = 1, conditions = {}) => {
+const calculationInput = (operatorId, skillIndex, actualAttackTargetCount = 1, conditions = {}) => {
   const skill = rows.find(candidate => candidate.operatorId === operatorId && candidate.skillIndex === skillIndex)
   assert.ok(skill)
-  return buildOutput({ operator: skill, skill, phaseIndex: 2, operatorLevel: 90, trust: 100,
-    skillLevelIndex: 9, conditions: { actualAttackTargetCount, ...conditions } })
+  return { operator: skill, skill, phaseIndex: 2, operatorLevel: 90, trust: 100,
+    skillLevelIndex: 9, conditions: { actualAttackTargetCount, ...conditions } }
 }
+const calculate = (...args) => buildOutput(calculationInput(...args))
+const renderApplications = (input, output = buildOutput(input)) => renderToStaticMarkup(
+  createElement(ApplicationTable, { rows: buildApplications(input, output) }),
+)
 
 function profile(operatorId) {
   const surtr = operatorId === 'char_350_surtr'
@@ -58,11 +62,11 @@ before(async () => {
     server: { middlewareMode: true, watch: null, preTransformRequests: false, hmr: false }, appType: 'custom',
   })
   ;({ DamageCalculatorThree: Page, DamageCalculatorThreeResultTable: ResultTable,
-    DamageCalculatorThreeEffectTable: EffectTable,
-    DamageCalculatorThreeTalentTable: TalentTable,
+    DamageCalculatorThreeApplicationTable: ApplicationTable,
     DamageCalculatorThreeDotTable: DotTable,
     DamageCalculatorThreeSteadyDpsTable: SteadyTable } = await server.ssrLoadModule('/src/components/DamageCalculatorThree.tsx'))
   ;({ buildDamageCalculatorThreeOutput: buildOutput } = await server.ssrLoadModule('/src/lib/damageCalculatorThree.ts'))
+  ;({ buildDamageCalculatorThreeApplicationRows: buildApplications } = await server.ssrLoadModule('/src/lib/damageCalculatorThreeApplications.ts'))
   const { classifySkill } = await server.ssrLoadModule('/src/lib/classifier.ts')
   rows = source.flatMap(operator => operator.skills.map(entry => {
     const skillLevels = Array.from({ length: 10 }, (_, index) => index === 9 ? entry : {
@@ -92,11 +96,17 @@ const resultTable = markup => {
   assert.ok(table, '1体と全対象を分けた計算結果テーブル')
   return tableRows(table[1])
 }
-const talentTable = markup => {
-  const table = markup.match(/<table\b[^>]*class="[^"]*damage-three-talent-table[^"]*"[^>]*>([\s\S]*?)<\/table>/)
-  assert.ok(table, '素質の適用状態テーブル')
+const applicationTable = markup => {
+  const table = markup.match(/<table\b[^>]*class="[^"]*damage-three-application-table[^"]*"[^>]*>([\s\S]*?)<\/table>/)
+  assert.ok(table, 'スキル・特性・素質の適用状態テーブル')
   return tableRows(table[1])
 }
+const applicationRecords = markup => {
+  const [headers, ...entries] = applicationTable(markup)
+  return entries.map(entry => Object.fromEntries(headers.map((header, index) => [header, entry[index]])))
+}
+const talentRows = markup => applicationRecords(markup).filter(row => row.区分.startsWith('素質'))
+const skillRows = markup => applicationRecords(markup).filter(row => row.区分 === 'スキル')
 const dotTable = markup => {
   const table = markup.match(/<table\b[^>]*class="[^"]*damage-three-dot-table[^"]*"[^>]*>([\s\S]*?)<\/table>/)
   assert.ok(table, '付与中の継続ダメージ表')
@@ -108,11 +118,11 @@ const steadyTable = markup => {
   return tableRows(table[1])
 }
 
-test('初期表示はスルトS2で、選択・戦闘条件・素質・結果の4パネルを順に表示する', () => {
+test('初期表示はスルトS2で、選択・戦闘条件・効果の適用・結果の4パネルを順に表示する', () => {
   const markup = render()
   const headings = [...markup.matchAll(/<span class="collapsible-panel-heading-label">([^<]*)<\/span>/g)]
     .map(match => match[1])
-  assert.deepEqual(headings, ['オペレーター・スキル', '戦闘条件', '素質の適用', '計算結果'])
+  assert.deepEqual(headings, ['オペレーター・スキル', '戦闘条件', '効果の適用', '計算結果'])
   assert.match(markup, /<span>01<\/span>/)
   assert.match(markup, /<span>02<\/span>/)
   assert.match(markup, /<span>03<\/span>/)
@@ -205,50 +215,88 @@ test('スルトS2の戦闘条件には実際の対象数1体・2体だけを選�
   assert.match(select, /<option value="1" selected="">1体<\/option>/)
 })
 
-test('説明文を常時表示し、計算範囲・効果の適用状態・使用数値は初期状態で閉じる', () => {
+test('スキル情報は選択中のタブ内で説明文の直前に表示し、SPと持続をスキルごとに切り替える', () => {
+  for (const [skillIndex, values] of [
+    [1, ['攻撃回復', '自動発動', '0', '2', '通常攻撃1回']],
+    [2, ['自然回復', '手動発動', '12', '18', '18秒']],
+    [3, ['自然回復', '手動発動', '0', '5', '退場まで']],
+  ]) {
+    const markup = render(selected('char_350_surtr', skillIndex))
+    const panels = [...markup.matchAll(/<div\b([^>]*\bclass="damage-three-skill-panel"[^>]*)>([\s\S]*?)<\/div>/g)]
+    const visible = panels.filter(([, attributes]) => !/\bhidden\b/.test(attributes))
+    assert.equal(visible.length, 1)
+    assert.match(visible[0][1], new RegExp(`id="damage-three-skill-panel-skchr_surtr_${skillIndex}"`))
+    assert.match(visible[0][1], /role="tabpanel"/)
+    const info = visible[0][2].match(/^<table\b[^>]*aria-label="スキル情報"[^>]*>([\s\S]*?)<\/table><p class="damage-three-description">/)
+    assert.ok(info, 'タブパネルの先頭に情報表、その直後に説明文')
+    assert.deepEqual(tableRows(info[1]), [
+      ['SP回復方法', '発動方法', '初期SP', '必要SP', '持続'], values,
+    ])
+    assert.equal([...info[1].matchAll(/<th scope="col"/g)].length, 5)
+  }
+})
+
+test('説明文と効果の適用状態を常時表示し、計算範囲・使用数値は初期状態で閉じる', () => {
   for (const [operatorId, skillIndex, description] of [
     ['char_350_surtr', 2, '攻撃力+120%、攻撃範囲+1マス、攻撃対象数+1\n攻撃対象が1体のみの場合、攻撃力が160%まで上昇'],
     ['char_263_skadi', 1, '攻撃力+45%、攻撃速度+45'],
   ]) {
     const markup = render(selected(operatorId, skillIndex))
-    const descriptionMatch = [...markup.matchAll(/<div\b([^>]*\bclass="damage-three-description"[^>]*)>([\s\S]*?)<\/div>/g)]
+    const panelMatch = [...markup.matchAll(/<div\b([^>]*\bclass="damage-three-skill-panel"[^>]*)>([\s\S]*?)<\/div>/g)]
       .find(match => !/\bhidden\b/.test(match[1]))
+    const descriptionMatch = panelMatch?.[2].match(/<p\b[^>]*class="damage-three-description"[^>]*>([\s\S]*?)<\/p>/)
     assert.ok(descriptionMatch)
-    assert.equal(descriptionMatch[2], escapeHtml(description))
+    assert.equal(descriptionMatch[1], escapeHtml(description))
     const details = [...markup.matchAll(/<details\b([^>]*)>([\s\S]*?)<\/details>/g)]
     assert.deepEqual(details.map(match => text(match[2].match(/<summary>([\s\S]*?)<\/summary>/)?.[1] ?? '')),
-      ['適用する効果', '計算範囲', '計算に使った値'])
+      ['計算範囲', '計算に使った値'])
     assert.ok(details.every(match => !/\bopen\b/.test(match[1])))
     assert.ok(details.every(match => !match[2].includes(descriptionMatch[0])))
+    assert.ok(details.every(match => !match[2].includes('damage-three-application-table')))
+    assert.equal([...markup.matchAll(/<table\b[^>]*class="[^"]*damage-three-application-table/g)].length, 1)
+    assert.doesNotMatch(markup, /damage-three-effect-table|damage-three-talent-table|damage-three-passive-table/)
     assert.match(markup, /基礎性能＋スキル効果＋適用中の素質 · 潜在1 · MODなし · 外部バフなし/)
     assert.doesNotMatch(markup, /素質・潜在・MOD・外部バフなし|素質・潜在・モジュール・外部バフの補正は含めません/)
   }
 })
 
-test('単体条件の効果行は1体なら適用、2体なら不適用と表示する', () => {
-  for (const [count, expected] of [[1, '適用'], [2, '不適用']]) {
-    const output = calculate('char_350_surtr', 2, count)
-    const markup = renderToStaticMarkup(createElement(EffectTable, { effects: output.effects }))
-    const data = tableRows(markup)
-    assert.deepEqual(data[0], ['項目', '値', '条件', '計算への適用'])
-    assert.deepEqual(data.find(row => row[1] === '×1.6'), ['攻撃倍率', '×1.6', '攻撃対象数＝1', expected])
-    assert.ok(data.every(row => row.length === 4))
+test('単体条件の効果行は1体なら適用、2体なら条件不成立と表示する', () => {
+  for (const [count, expected] of [[1, '適用'], [2, '条件不成立']]) {
+    const markup = renderApplications(calculationInput('char_350_surtr', 2, count))
+    const data = applicationTable(markup)
+    assert.deepEqual(data[0], ['区分', '名称', '項目', '値', 'タイミング', '条件', '状態'])
+    const effect = skillRows(markup).find(row => row.値 === '×1.6')
+    assert.ok(effect)
+    assert.equal(effect.項目, '攻撃倍率')
+    assert.equal(effect.条件, '攻撃対象数＝1')
+    assert.equal(effect.状態, expected)
+    assert.ok(data.every(row => row.length === 7))
   }
 })
 
-test('素質の適用は6列の通常テーブルで表示し、補正と計算対象外の効果を区別する', () => {
+test('効果の適用は通常テーブルにスキル・特性・素質の順で表示し、補正と計算対象外を区別する', () => {
   const markup = render()
-  const data = talentTable(markup)
-  assert.deepEqual(data[0], ['区分', '名称', '項目', '値', '条件', '状態'])
-  assert.ok(data.slice(1).every(row => row.length === 6))
-  assert.deepEqual(data.find(row => row[2] === '術耐性固定無視'), ['素質1', '劫火', '術耐性固定無視', '20', 'なし', '適用'])
+  const data = applicationTable(markup)
+  assert.deepEqual(data[0], ['区分', '名称', '項目', '値', 'タイミング', '条件', '状態'])
+  assert.ok(data.slice(1).every(row => row.length === 7))
+  const records = applicationRecords(markup)
+  const categories = records.map(row => row.区分.replace(/\d+$/, ''))
+  assert.deepEqual([...new Set(categories)], ['スキル', '特性', '素質'])
+  assert.deepEqual(categories, [...categories].sort((a, b) => ['スキル', '特性', '素質'].indexOf(a) - ['スキル', '特性', '素質'].indexOf(b)))
+  const ignore = records.find(row => row.項目 === '術耐性固定無視')
+  assert.equal(ignore.区分, '素質1')
+  assert.equal(ignore.名称, '劫火')
+  assert.equal(ignore.値, '20')
+  assert.equal(ignore.条件, 'なし')
+  assert.equal(ignore.状態, '適用')
+  assert.ok(ignore.タイミング)
   for (const item of ['HP', '強制退場']) {
-    const row = data.find(row => row[2] === item)
+    const row = records.find(row => row.項目 === item && row.区分.startsWith('素質'))
     assert.ok(row, item)
-    assert.equal(row[1], '余燼')
-    assert.equal(row[5], '対象外')
+    assert.equal(row.名称, '余燼')
+    assert.equal(row.状態, '計算対象外')
   }
-  const table = markup.match(/<table\b[^>]*class="[^"]*damage-three-talent-table[^"]*"[^>]*>([\s\S]*?)<\/table>/)[1]
+  const table = markup.match(/<table\b[^>]*class="[^"]*damage-three-application-table[^"]*"[^>]*>([\s\S]*?)<\/table>/)[1]
   assert.doesNotMatch(table, /colspan|rowspan|<small|<br/)
 })
 
@@ -267,11 +315,11 @@ test('使用数値はスキル・素質・合計の攻撃力増加と術耐性�
 test('ソーンズは毒の対象条件を選び、直接攻撃と付与中の継続ダメージを別表で表示する', () => {
   for (const skillIndex of [1, 2, 3]) {
     const markup = render(selected('char_293_thorns', skillIndex))
-    const data = talentTable(markup)
-    const dot = data.filter(row => row[2] === '継続ダメージ')
+    const data = talentRows(markup)
+    const dot = data.filter(row => row.項目 === '継続ダメージ')
     assert.equal(dot.length, 2)
-    assert.deepEqual(dot.map(row => row[3]), ['125/秒', '250/秒'])
-    assert.deepEqual(dot.map(row => row[5]), ['適用', '条件不成立'])
+    assert.deepEqual(dot.map(row => row.値), ['125/秒', '250/秒'])
+    assert.deepEqual(dot.map(row => row.状態), ['適用', '条件不成立'])
     assert.deepEqual(dotTable(markup), [['対象', '付与中のダメージ/秒'], ['1体', '125'], ['全対象', '125']])
     assert.match(markup, /<h3 class="damage-three-result-heading">直接攻撃<\/h3>/)
     assert.match(markup, /<h3 class="damage-three-result-heading">継続ダメージ<\/h3>/)
@@ -364,16 +412,17 @@ test('毒の参照値が欠けたときは毒を0とせず直接攻撃だけを�
   assert.ok(resultTable(markup).length > 1)
   assert.match(markup, /直接攻撃分（継続ダメージを除く）/)
   assert.doesNotMatch(markup, /damage-three-dot-table|damage-three-steady-table|NaN|Infinity/)
-  assert.ok(talentTable(markup).some(row => row[3].startsWith('未確認') && row[5] === '未確認'))
+  assert.ok(talentRows(markup).some(row => row.値.startsWith('未確認') && row.状態 === '未確認'))
 })
 
 test('素質の未確認項目は0へ置き換えず未確認と表示する', () => {
-  const output = calculate('char_172_svrash', 3)
+  const input = calculationInput('char_172_svrash', 3)
+  const output = buildOutput(input)
   const effects = [{ ...output.talentEffects[0], effect: null, status: 'UNVERIFIED', reason: '素質の原典を確認できません。' }]
-  const markup = renderToStaticMarkup(createElement(TalentTable, { effects }))
-  const data = talentTable(markup)
-  assert.deepEqual(data[1].slice(2), ['未確認', '未確認', '未確認', '未確認'])
-  assert.ok(data[1].every(cell => cell !== '0'))
+  const markup = renderApplications(input, { ...output, talentEffects: effects })
+  const [row] = talentRows(markup)
+  assert.deepEqual([row.項目, row.値, row.タイミング, row.条件, row.状態], Array(5).fill('未確認'))
+  assert.ok(Object.values(row).every(cell => cell !== '0'))
 })
 
 test('既知の対象不一致は条件不成立、所属不足は未確認として区別する', () => {
@@ -383,32 +432,36 @@ test('既知の対象不一致は条件不成立、所属不足は未確認と�
     [undefined, '未確認'],
   ]) {
     const row = { ...skill, operatorProfile: { ...skill.operatorProfile, affiliationIds } }
-    const output = buildOutput({ operator: row, skill: row, phaseIndex: 2, operatorLevel: 90, trust: 100, skillLevelIndex: 9 })
-    const markup = renderToStaticMarkup(createElement(TalentTable, { effects: output.talentEffects }))
-    const attack = talentTable(markup).find(entry => entry[2] === '攻撃力')
+    const input = { operator: row, skill: row, phaseIndex: 2, operatorLevel: 90, trust: 100, skillLevelIndex: 9 }
+    const output = buildOutput(input)
+    const markup = renderApplications(input, output)
+    const attack = talentRows(markup).find(entry => entry.項目 === '攻撃力')
     assert.ok(attack)
-    assert.match(attack[4], /アビサルハンター/)
-    assert.equal(attack[5], expected)
+    assert.match(attack.条件, /アビサルハンター/)
+    assert.equal(attack.状態, expected)
     assert.equal(output.rows.length > 0, expected === '条件不成立')
   }
 })
 
 test('対象の陣営・タグ制限も条件列に表示し、条件なしと取り違えない', () => {
-  const skadi = talentTable(render(selected('char_263_skadi', 1))).find(entry => entry[2] === '攻撃力')
+  const skadi = talentRows(render(selected('char_263_skadi', 1))).find(entry => entry.項目 === '攻撃力')
   assert.ok(skadi)
-  assert.match(skadi[4], /アビサルハンター/)
-  assert.equal(skadi[5], '適用')
-  const template = calculate('char_172_svrash', 3).talentEffects[0]
+  assert.match(skadi.条件, /アビサルハンター/)
+  assert.equal(skadi.状態, '適用')
+  const input = calculationInput('char_172_svrash', 3)
+  const output = buildOutput(input)
+  const template = output.talentEffects[0]
   const effects = [{ ...template, effect: {
     ...template.effect,
     condition: { type: 'COMPARE', metric: 'source.hpRatio', comparison: 'LTE', value: 0.5 },
     target: { ...template.effect.target, tagIds: ['test_tag'], filterLabels: { test_tag: '試験タグ' } },
   } }]
-  const data = talentTable(renderToStaticMarkup(createElement(TalentTable, { effects })))
-  assert.match(data[1][4], /試験タグ/)
-  assert.match(data[1][4], /自身のHP割合/)
-  assert.match(data[1][4], /かつ/)
-  assert.equal(data[1].length, 6)
+  const markup = renderApplications(input, { ...output, talentEffects: effects })
+  const [row] = talentRows(markup)
+  assert.match(row.条件, /試験タグ/)
+  assert.match(row.条件, /自身のHP割合/)
+  assert.match(row.条件, /かつ/)
+  assert.equal(applicationTable(markup)[0].length, 7)
 })
 
 test('適用可能な素質の原典が欠けている場合に素質なしの結果へ代用しない', () => {
@@ -417,21 +470,76 @@ test('適用可能な素質の原典が欠けている場合に素質なしの�
   const markup = renderToStaticMarkup(createElement(Page, { rows: [broken], loading: false, initialSelection: selected(skill.operatorId, skill.skillIndex) }))
   assert.match(markup, /この条件では計算できません/)
   assert.doesNotMatch(markup, /damage-three-result-table|NaN|Infinity/)
-  assert.ok(talentTable(markup).some(row => row[5] === '未確認'))
+  assert.ok(talentRows(markup).some(row => row.状態 === '未確認'))
 })
 
 test('ダメージ計算に関与しない攻撃範囲と、条件不成立の単体倍率を区別して表示する', () => {
-  const output = calculate('char_350_surtr', 2, 2)
+  const input = calculationInput('char_350_surtr', 2, 2)
+  const output = buildOutput(input)
   const range = output.effects.find(entry => entry.effect.item === 'ATTACK_RANGE')
   const multiplier = output.effects.find(entry => entry.effect.item === 'ATTACK_SCALE')
   assert.equal(range?.status, 'NOT_RELEVANT')
   assert.equal(multiplier?.status, 'CONDITION_FALSE')
-  const markup = renderToStaticMarkup(createElement(EffectTable, { effects: output.effects }))
-  const data = tableRows(markup)
-  const rangeRow = data.find(row => row[0] === '攻撃範囲')
+  const markup = renderApplications(input, output)
+  const data = skillRows(markup)
+  const rangeRow = data.find(row => row.項目 === '攻撃範囲')
   assert.ok(rangeRow)
-  assert.equal(rangeRow[3], '対象外')
-  assert.equal(data.find(row => row[1] === '×1.6')?.[3], '不適用')
+  assert.equal(rangeRow.状態, '計算対象外')
+  assert.equal(data.find(row => row.値 === '×1.6')?.状態, '条件不成立')
+})
+
+test('段階列は複数段階のスキルだけに表示し、選択中の段階に合わせて適用状態を変える', () => {
+  assert.ok(!applicationTable(render())[0].includes('段階'))
+  for (const activationCount of [1, 2]) {
+    const input = calculationInput('char_293_thorns', 3, 1, { skillActivationCount: activationCount })
+    const output = buildOutput(input)
+    const markup = renderApplications(input, output)
+    const data = applicationTable(markup)
+    assert.deepEqual(data[0], ['区分', '名称', '段階', '項目', '値', 'タイミング', '条件', '状態'])
+    assert.ok(data.every(row => row.length === data[0].length))
+    const skill = skillRows(markup)
+    const active = output.effects.filter(effect => effect.status === 'APPLIED')
+    const inactive = output.effects.filter(effect => effect.status === 'INACTIVE_STAGE')
+    assert.ok(active.length > 0)
+    assert.ok(inactive.length > 0)
+    assert.ok(skill.some(row => row.段階 === active[0].stageLabel && row.状態 === '適用'))
+    assert.ok(skill.filter(row => row.段階 === inactive[0].stageLabel).every(row => row.状態 === '別の段階'))
+    assert.ok(applicationRecords(markup).filter(row => row.区分 !== 'スキル').every(row => row.段階 === '—'))
+  }
+})
+
+test('確率列は必要な時だけ表示し、不明な確率を0％に置き換えない', () => {
+  const input = calculationInput('char_172_svrash', 3)
+  const output = buildOutput(input)
+  assert.ok(!applicationTable(renderApplications(input, output))[0].includes('発動確率'))
+  for (const [chance, expected] of [[0.5, '50％'], [null, '未確認']]) {
+    const effect = output.talentEffects[0]
+    const talentEffects = [{ ...effect, effect: {
+      ...effect.effect, probability: { ...effect.effect.probability, chance },
+    }, status: chance === null ? 'UNVERIFIED' : 'APPLIED' }]
+    const markup = renderApplications(input, { ...output, talentEffects })
+    const data = applicationTable(markup)
+    assert.deepEqual(data[0], ['区分', '名称', '項目', '値', 'タイミング', '発動確率', '条件', '状態'])
+    assert.ok(data.every(row => row.length === data[0].length))
+    assert.equal(talentRows(markup)[0].発動確率, expected)
+    if (chance === null) assert.equal(talentRows(markup)[0].状態, '未確認')
+  }
+})
+
+test('適用表の生成は計算結果と入力を変更せず、計算できない状態を適用済みと表示しない', () => {
+  const input = calculationInput('char_350_surtr', 2)
+  const output = buildOutput(input)
+  const inputBefore = structuredClone(input)
+  const outputBefore = structuredClone(output)
+  const applicationRows = buildApplications(input, output)
+  assert.ok(applicationRows.some(row => row.status === 'APPLIED'))
+  assert.deepEqual(input, inputBefore)
+  assert.deepEqual(output, outputBefore)
+  assert.deepEqual(output.rows[0], buildOutput(input).rows[0])
+  const blocked = { ...output, rows: [], unsupportedReasons: ['確認できない入力があります。'] }
+  const blockedRows = buildApplications(input, blocked)
+  assert.ok(blockedRows.some(row => row.status === 'UNVERIFIED'))
+  assert.ok(blockedRows.every(row => row.status !== 'APPLIED'))
 })
 
 test('育成データを取得できない場合は数値表を出さず理由を表示する', () => {

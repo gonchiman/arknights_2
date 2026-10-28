@@ -8,6 +8,7 @@ import {
   createSkillSummaryHash,
   createSkillStructureHash,
   createTalentStructureHash,
+  createTraitStructureHash,
   createSkillJsonHash,
   parseHashRoute,
   type SkillEffectsRouteSelection,
@@ -71,14 +72,30 @@ test('集計版を含むURLの直接アクセスでも敵統計と集計マッ�
   assert.deepEqual(parseHashRoute('#/maps?aggregationVersion=v4'), { view: 'operators' })
 })
 
+test('オペレーター主成分分析は図鑑の隣から独立したページとして開く', () => {
+  assert.deepEqual(parseHashRoute('#/analysis/operators/pca'), { view: 'operator-pca' })
+  assert.deepEqual(parseHashRoute('#/operators'), { view: 'operators' })
+  const databaseIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'operators')
+  assert.deepEqual(APP_NAV_ITEMS[databaseIndex + 1], {
+    id: 'operator-pca', href: '#/analysis/operators/pca', label: 'オペレーター主成分分析',
+    description: '', section: 'analysis',
+  })
+  for (const suffix of ['/', '/extra', '?operator=char_test', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/analysis/operators/pca${suffix}`), { view: 'operators' })
+  }
+})
+
 test('サイドバーから主要ページへ遷移できる', () => {
   assert.deepEqual(
     APP_NAV_ITEMS.map((item) => [item.id, parseHashRoute(item.href).view]),
     [
       ['operators', 'operators'],
+      ['operator-pca', 'operator-pca'],
       ['skills', 'skills'],
       ['skill-classification', 'skill-classification'],
       ['talent-classification', 'talent-classification'],
+      ['trait-classification', 'trait-classification'],
+      ['trait-structure', 'trait-structure'],
       ['talent-structure', 'talent-structure'],
       ['skill-effects', 'skill-effects'],
       ['skill-summary', 'skill-summary'],
@@ -120,7 +137,7 @@ test('K-means 学習ラボは専用ページとしてスキル分析から開く
     id: 'skill-kmeans',
     href: '#/analysis/skills/kmeans',
     label: 'K-means 学習ラボ',
-    description: 'スキル説明文の学習・グループ比較',
+    description: '',
     section: 'analysis',
   })
   assert.deepEqual(parseHashRoute('#/skills'), { view: 'skills' })
@@ -177,9 +194,63 @@ test('素質大分類はスキル大分類の隣から独立したページと�
   }
 })
 
-test('素質構造は素質大分類の隣から開き、素質番号を共有URLで復元する', () => {
+test('特性大分類は素質大分類の隣から独立したページとして開く', () => {
+  assert.deepEqual(parseHashRoute('#/trait-classification'), { view: 'trait-classification' })
+  const talentIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'talent-classification')
+  assert.deepEqual(APP_NAV_ITEMS[talentIndex + 1], {
+    id: 'trait-classification', href: '#/trait-classification', label: '特性大分類', description: '', section: 'analysis',
+  })
+  for (const suffix of ['/', '/extra', '?operatorId=char_test', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/trait-classification${suffix}`), { view: 'operators' })
+  }
+})
+
+test('特性構造は特性大分類の隣から独立したページとして開く', () => {
+  assert.deepEqual(parseHashRoute('#/trait-structure'), { view: 'trait-structure' })
+  const index = APP_NAV_ITEMS.findIndex(item => item.id === 'trait-classification')
+  assert.deepEqual(APP_NAV_ITEMS[index + 1], {
+    id: 'trait-structure', href: '#/trait-structure', label: '特性構造', description: '', section: 'analysis',
+  })
+  for (const suffix of ['/', '/extra', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/trait-structure${suffix}`), { view: 'operators' })
+  }
+})
+
+test('特性構造の共有URLは符号化されたIDを含むオペレーターを復元する', () => {
+  for (const operatorId of ['char_350_surtr', 'char/日本&test=1', 'char?operatorId=other#%', 'x'.repeat(256)]) {
+    const selection = { operatorId }
+    const hash = createTraitStructureHash(selection)
+    assert.deepEqual(parseHashRoute(hash), { view: 'trait-structure', selection })
+    assert.equal(new URLSearchParams(hash.split('?')[1]).size, 1)
+  }
+  assert.equal(createTraitStructureHash({ operatorId: 'char/日本&test=1' }),
+    '#/trait-structure?operatorId=char%2F%E6%97%A5%E6%9C%AC%26test%3D1')
+})
+
+test('特性構造の空・不正・重複したOP指定は選択エラーとして保持する', () => {
+  for (const query of [
+    'operatorId', 'operatorId=', 'operatorId=%E0%A4%A', 'operatorId=%EF%BF%BD',
+    'operatorId=x&operatorId=y', 'operatorId=x&operatorId=x', 'operatorId=x&%6FperatorId=x',
+    ...[' x', 'x ', '\u0000x', 'x\u007f', 'x'.repeat(257)].map(operatorId => new URLSearchParams({ operatorId }).toString()),
+  ]) {
+    assert.deepEqual(parseHashRoute(`#/trait-structure?${query}`), {
+      view: 'trait-structure', invalidSelection: true,
+    }, query)
+  }
+  for (const query of ['', 'unknown=1']) {
+    assert.deepEqual(parseHashRoute(`#/trait-structure?${query}`), { view: 'trait-structure' })
+  }
+})
+
+test('特性構造のURL生成は無効なIDを拒否する', () => {
+  for (const operatorId of ['', ' x', 'x ', '\u0000', 'x\u007f', '\uFFFD', 'x'.repeat(257)]) {
+    assert.throws(() => createTraitStructureHash({ operatorId }), TypeError)
+  }
+})
+
+test('素質構造は特性構造の後から開き、素質番号を共有URLで復元する', () => {
   assert.deepEqual(parseHashRoute('#/talent-structure'), { view: 'talent-structure' })
-  const index = APP_NAV_ITEMS.findIndex(item => item.id === 'talent-classification')
+  const index = APP_NAV_ITEMS.findIndex(item => item.id === 'trait-structure')
   assert.deepEqual(APP_NAV_ITEMS[index + 1], {
     id: 'talent-structure', href: '#/talent-structure', label: '素質構造', description: '', section: 'analysis',
   })

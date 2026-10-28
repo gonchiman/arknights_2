@@ -85,8 +85,19 @@ export interface GuardPassiveModifiers {
   critChance: number
   critScale: number
   additionalActions: GuardDamageAction[]
-  /** One row per source talent/trait, including explicitly non-damage effects. */
-  evaluations: { source: string; item: string; value: string; status: 'APPLIED' | 'CONDITION_FALSE' | 'NOT_RELEVANT' | 'UNSUPPORTED'; reason: string }[]
+  /** Display metadata comes from the same branch that applies each modifier. */
+  evaluations: {
+    source: string
+    sourceKind?: 'TRAIT' | 'TALENT'
+    talentIndex?: number
+    item: string
+    value: string
+    status: 'APPLIED' | 'CONDITION_FALSE' | 'NOT_RELEVANT' | 'UNSUPPORTED'
+    reason: string
+    probability?: number
+    timing?: string
+    condition?: string
+  }[]
   blockers: string[]
   notes: string[]
 }

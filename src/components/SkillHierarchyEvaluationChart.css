@@ -1,0 +1,19 @@
+.skill-hierarchy-evaluation-chart { display: grid; gap: 12px; min-width: 0; margin: 0; font-size: 13px; }
+.skill-hierarchy-evaluation-chart figcaption { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 10px 20px; min-width: 0; }
+.skill-hierarchy-evaluation-chart figcaption > strong { color: var(--text); font-size: 14px; font-weight: 500; }
+.skill-hierarchy-evaluation-values { display: flex; flex-wrap: wrap; gap: 8px 20px; min-width: 0; }
+.skill-hierarchy-evaluation-value { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 5px; min-width: 0; color: var(--text-soft); }
+.skill-hierarchy-evaluation-value svg { display: block; flex: 0 0 16px; }
+.skill-hierarchy-evaluation-value output { color: var(--text); font-variant-numeric: tabular-nums; }
+.skill-hierarchy-evaluation-frame { width: 100%; height: 300px; min-width: 0; overflow: hidden; }
+.skill-hierarchy-evaluation-svg { display: block; width: 100%; max-width: 100%; height: 300px; overflow: hidden; cursor: crosshair; touch-action: pan-y; }
+.hierarchy-evaluation-grid { stroke: var(--border); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.hierarchy-evaluation-axis { fill: none; stroke: var(--border-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.hierarchy-evaluation-tick { fill: var(--text-soft); font-size: 13px; font-variant-numeric: tabular-nums; }
+.hierarchy-evaluation-axis-title { fill: var(--text); font-size: 13px; font-weight: 500; }
+.hierarchy-evaluation-line { fill: none; stroke: var(--link); stroke-width: 1.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.hierarchy-evaluation-point { fill: var(--link); }
+.hierarchy-evaluation-selected { fill: var(--link); stroke: var(--surface); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.hierarchy-evaluation-recommended { fill: var(--surface); stroke: var(--text); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.hierarchy-evaluation-guide { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
+.hierarchy-evaluation-empty { fill: var(--text-soft); font-size: 13px; }

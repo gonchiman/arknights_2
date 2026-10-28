@@ -1,4 +1,8 @@
 .damage-three-page .collapsible-panel-body { padding: 12px 14px; }
+.damage-three-page .collapsible-panel-body.damage-three-passives-body { padding: 0; }
+.damage-three-passives-body > .damage-two-table-wrap { border: 0; }
+.damage-three-passives-body > .damage-two-table-wrap:focus-visible { outline-offset: -2px; }
+.damage-three-passives-body .damage-two-help { margin: 0; border-top: 1px solid var(--border); padding: 12px 14px; }
 .damage-three-selection-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .damage-three-operator-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; border: 1px solid var(--border); padding: 8px 10px; }
 .damage-three-operator-meta { display: grid; min-width: 0; gap: 3px; }
@@ -11,9 +15,16 @@
 .damage-three-growth { margin-top: 14px; }
 .damage-three-fixed-value { display: flex; align-items: center; min-height: 34px; border: 1px solid var(--border); padding: 6px 9px; color: var(--text); background: var(--surface-soft); font-size: 11px; }
 .damage-three-descriptions { margin: 14px -14px -12px; }
+.damage-three-skill-panel { container-type: inline-size; }
+.damage-three-skill-panel[hidden] { display: none; }
+.damage-three-skill-panel > .skill-information-table { border-inline: 0; border-top: 0; }
+.damage-three-skill-panel > .skill-information-table th { border-top: 0; }
+.damage-three-skill-panel > .skill-information-table :is(th, td):first-child { border-left: 0; }
+.damage-three-skill-panel > .skill-information-table :is(th, td):last-child { border-right: 0; }
 .damage-three-description,
+.damage-three-trait-description p,
 .damage-three-talent-description p { margin: 0; padding: 12px 14px; font-size: 12px; line-height: 1.9; white-space: pre-line; overflow-wrap: anywhere; }
-.damage-three-description[hidden] { display: none; }
+.damage-three-trait-description h3,
 .damage-three-talent-description h3 { margin: 0; border-block: 1px solid var(--border); padding: 7px 14px; background: var(--surface-soft); color: var(--text); font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
 .damage-three-condition-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .damage-three-result-table { min-width: 660px; }
@@ -32,18 +43,21 @@
 .damage-three-single-attack-table { min-width: 420px; }
 .damage-three-single-attack-table th:first-child { width: 24%; }
 .damage-three-detail-wrap { margin-top: 10px; }
-.damage-three-effect-table { min-width: 500px; }
-.damage-three-effect-table th,
-.damage-three-effect-table td { text-align: left; overflow-wrap: anywhere; }
-.damage-three-effect-table th:first-child { width: 22%; }
-.damage-three-talent-table { min-width: 680px; }
-.damage-three-talent-table th,
-.damage-three-talent-table td { text-align: left; overflow-wrap: anywhere; }
-.damage-three-talent-table th:first-child { width: 10%; }
-.damage-three-talent-table th:nth-child(2) { width: 17%; }
-.damage-three-talent-table th:nth-child(3) { width: 18%; }
-.damage-three-talent-table th:nth-child(4) { width: 15%; }
-.damage-three-talent-table th:nth-child(5) { width: 28%; }
+.damage-three-application-table { min-width: 860px; }
+.damage-three-application-table.has-stages,
+.damage-three-application-table.has-probability { min-width: 960px; }
+.damage-three-application-table.has-stages.has-probability { min-width: 1060px; }
+.damage-three-application-table th,
+.damage-three-application-table td { text-align: left; overflow-wrap: anywhere; }
+.damage-three-application-table th:first-child { width: auto; }
+.damage-three-application-table .application-category { width: 64px; }
+.damage-three-application-table .application-name { width: 140px; }
+.damage-three-application-table .application-stage { width: 100px; }
+.damage-three-application-table .application-item { width: 150px; }
+.damage-three-application-table .application-value { width: 100px; }
+.damage-three-application-table .application-timing { width: 140px; }
+.damage-three-application-table .application-probability { width: 80px; }
+.damage-three-application-table .application-status { width: 92px; }
 .damage-three-value-table { min-width: 300px; }
 .damage-three-value-table th:first-child { width: 48%; }
 .damage-three-scope { margin: 12px -14px -12px; border-top: 1px solid var(--border); padding: 10px 14px; color: var(--text-soft); font-size: 11px; }

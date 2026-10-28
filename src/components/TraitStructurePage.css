@@ -1,0 +1,12 @@
+.trait-structure-condition-field { flex: 0 1 auto; min-width: 0; }
+.trait-structure-condition-field .skill-effects-fixed-level { overflow-wrap: anywhere; }
+.trait-structure-basic-table { min-width: 640px; }
+.trait-structure-effects-table { min-width: 760px; }
+.trait-structure-effects-table thead th:nth-child(1) { width: 15%; }
+.trait-structure-effects-table thead th:nth-child(2) { width: 23%; }
+.trait-structure-effects-table thead th:nth-child(3) { width: 18%; }
+.trait-structure-effects-table thead th:nth-child(4) { width: 18%; }
+.trait-structure-effects-table thead th:nth-child(5) { width: 12%; }
+@media (max-width: 600px) {
+  .trait-structure-condition-field .skill-effects-fixed-level { min-height: 0; }
+}

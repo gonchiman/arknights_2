@@ -63,10 +63,11 @@ test('計算機3はS1・S2・S3を同じ3タブで選べ、該当する説明文
     assert.deepEqual(buttons.map(([, , label]) => text(label)), ['S1 舞風', 'S2 裂潮', 'S3 判決'])
     assert.deepEqual(buttons.map(([, attributes]) => attributes.includes('aria-selected="true"')),
       [1, 2, 3].map(index => index === skillIndex))
-    const visibleDescription = [...markup.matchAll(/<div\b([^>]*\bclass="damage-three-description"[^>]*)>([\s\S]*?)<\/div>/g)]
+    const visiblePanel = [...markup.matchAll(/<div\b([^>]*\bclass="damage-three-skill-panel"[^>]*)>([\s\S]*?)<\/div>/g)]
       .find(([, attributes]) => !/\bhidden\b/.test(attributes))
+    const visibleDescription = visiblePanel?.[2].match(/<p\b[^>]*class="damage-three-description"[^>]*>([\s\S]*?)<\/p>/)
     assert.ok(visibleDescription)
-    assert.equal(text(visibleDescription[2]), text(rows[skillIndex - 1].description))
+    assert.equal(text(visibleDescription[1]), text(rows[skillIndex - 1].description))
     assert.equal((markup.match(/class="damage-three-talent-description"/g) ?? []).length, 2)
     assert.match(markup, /審判の灯火/)
     assert.match(markup, /浄化の剣/)

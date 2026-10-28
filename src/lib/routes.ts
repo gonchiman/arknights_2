@@ -8,11 +8,14 @@ export type AppRoute =
   | { view: 'skill-hdbscan' }
   | { view: 'skill-hierarchical' }
   | { view: 'talent-classification' }
+  | { view: 'trait-classification' }
+  | { view: 'trait-structure'; selection?: TraitRouteSelection; invalidSelection?: boolean }
   | { view: 'talent-structure'; selection?: TalentRouteSelection; invalidSelection?: boolean }
   | { view: 'skill-effects'; selection?: SkillEffectsRouteSelection }
   | { view: 'skill-summary'; selection?: SkillRouteSelection }
   | { view: 'skill-structure'; selection?: SkillRouteSelection }
   | { view: 'operators' }
+  | { view: 'operator-pca' }
   | { view: 'operator-detail'; operatorId: string; source?: OperatorDetailSource }
   | { view: 'skill-json'; selection?: SkillJsonRouteSelection }
   | { view: 'skill-json-overview' }
@@ -56,7 +59,12 @@ const SKILL_EFFECTS_ROUTE = '#/skill-effects'
 const SKILL_SUMMARY_ROUTE = '#/skill-summary'
 const SKILL_STRUCTURE_ROUTE = '#/skill-structure'
 const TALENT_STRUCTURE_ROUTE = '#/talent-structure'
+const TRAIT_STRUCTURE_ROUTE = '#/trait-structure'
 const DAMAGE_THREE_ROUTE = '#/damage-3'
+
+export interface TraitRouteSelection {
+  operatorId: string
+}
 
 export interface TalentRouteSelection {
   operatorId: string
@@ -110,6 +118,12 @@ export function createTalentStructureHash(selection: TalentRouteSelection): stri
   return `${TALENT_STRUCTURE_ROUTE}?${query.toString()}`
 }
 
+export function createTraitStructureHash(selection: TraitRouteSelection): string {
+  assertRouteId(selection.operatorId, 'operatorId')
+  const query = new URLSearchParams({ operatorId: selection.operatorId })
+  return `${TRAIT_STRUCTURE_ROUTE}?${query.toString()}`
+}
+
 function createSkillSelectionHash(route: string, selection: SkillRouteSelection): string {
   assertRouteId(selection.operatorId, 'operatorId')
   assertRouteId(selection.skillId, 'skillId')
@@ -127,6 +141,15 @@ function createSkillSelectionHash(route: string, selection: SkillRouteSelection)
 
 export function parseHashRoute(hash: string): AppRoute {
   if (hash === '' || hash === '#' || hash === '#/') return { view: 'home' }
+  if (hash === TRAIT_STRUCTURE_ROUTE) return { view: 'trait-structure' }
+  if (hash.startsWith(`${TRAIT_STRUCTURE_ROUTE}?`)) {
+    const params = new URLSearchParams(hash.slice(TRAIT_STRUCTURE_ROUTE.length + 1))
+    if (!params.has('operatorId')) return { view: 'trait-structure' }
+    const operatorId = readRouteId(params, 'operatorId')
+    return operatorId === null
+      ? { view: 'trait-structure', invalidSelection: true }
+      : { view: 'trait-structure', selection: { operatorId } }
+  }
   if (hash === TALENT_STRUCTURE_ROUTE) return { view: 'talent-structure' }
   if (hash.startsWith(`${TALENT_STRUCTURE_ROUTE}?`)) {
     const params = new URLSearchParams(hash.slice(TALENT_STRUCTURE_ROUTE.length + 1))
@@ -191,6 +214,7 @@ export function parseHashRoute(hash: string): AppRoute {
   }
   if (hash === '#/analysis/damage-verification') return { view: 'damage-verification' }
   if (hash === '#/analysis/code') return { view: 'code-analysis' }
+  if (hash === '#/analysis/operators/pca') return { view: 'operator-pca' }
   if (hash === '#/analysis/skills/kmeans') return { view: 'skill-kmeans' }
   if (hash === '#/analysis/skills/hdbscan') return { view: 'skill-hdbscan' }
   if (hash === '#/analysis/skills/hierarchical') return { view: 'skill-hierarchical' }
@@ -225,6 +249,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/skills') return { view: 'skills' }
   if (hash === '#/skill-classification') return { view: 'skill-classification' }
   if (hash === '#/talent-classification') return { view: 'talent-classification' }
+  if (hash === '#/trait-classification') return { view: 'trait-classification' }
   return { view: 'operators' }
 }
 

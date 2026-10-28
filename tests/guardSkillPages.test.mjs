@@ -6,16 +6,17 @@ import { readFileSync } from 'node:fs'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 
-let server, Fields, Passives, Components, Periodic, Result, Recipe, Page, buildOutput, classify
+let server, Fields, ApplicationTable, Components, Periodic, Result, Recipe, Page, buildOutput, buildApplications, classify
 before(async () => {
   server = await createServer({ configFile: false, plugins: [react()], logLevel: 'error',
     cacheDir: 'node_modules/.vite/guard-skill-pages-test', resolve: { preserveSymlinks: true },
     server: { middlewareMode: true, watch: null, preTransformRequests: false, hmr: false }, appType: 'custom' })
-  ;({ GuardConditionFields: Fields, GuardPassiveTable: Passives,
+  ;({ GuardConditionFields: Fields, DamageCalculatorThreeApplicationTable: ApplicationTable,
     GuardPeriodicDamageTable: Periodic, DamageCalculatorThreeResultTable: Result, DamageCalculatorThree: Page,
     DamageCalculatorThreeAttackComponentTable: Components } = await server.ssrLoadModule('/src/components/DamageCalculatorThree.tsx'))
   ;({ GuardRecipeStructure: Recipe } = await server.ssrLoadModule('/src/components/SkillStructurePage.tsx'))
   ;({ buildDamageCalculatorThreeOutput: buildOutput } = await server.ssrLoadModule('/src/lib/damageCalculatorThree.ts'))
+  ;({ buildDamageCalculatorThreeApplicationRows: buildApplications } = await server.ssrLoadModule('/src/lib/damageCalculatorThreeApplications.ts'))
   ;({ classifySkill: classify } = await server.ssrLoadModule('/src/lib/classifier.ts'))
 })
 
@@ -94,16 +95,24 @@ test('追加条件は数値・真偽・選択肢を型別に表示し、不正�
   assert.doesNotMatch(markup, /value="NaN"/)
 })
 
-test('素質と特性の適用状態を独立した4列で表示し、未対応の理由を参照できる', () => {
-  const markup = render(Passives, { evaluations: [
-    { source: '特性', item: '同時攻撃数', value: '3', status: 'APPLIED', reason: '' },
-    { source: '素質1', item: '攻撃速度', value: '—', status: 'UNSUPPORTED', reason: 'HPによる効果を特定できません。' },
-  ] })
-  assert.deepEqual(table(markup), [
-    ['区分', '項目', '値', '状態'], ['特性', '同時攻撃数', '3', '適用'], ['素質1', '攻撃速度', '—', '未対応'],
-  ])
-  assert.match(markup, /<details[^>]*><summary>未対応の条件<\/summary>/)
-  assert.match(markup, /HPによる効果を特定できません。/)
+test('追加技能もスキル・特性・素質を同じ適用テーブルへ表示し、各区分を混同しない', () => {
+  const skill = sourceRecord('char_1043_leizi2', 2)
+  const input = { operator: skill, skill, phaseIndex: 2, operatorLevel: 90, trust: 100, skillLevelIndex: 9 }
+  const output = buildOutput(input)
+  assert.ok(output.guard)
+  const rows = buildApplications(input, output)
+  const before = structuredClone(output.rows)
+  const markup = render(ApplicationTable, { rows })
+  const [headers, ...data] = table(markup)
+  assert.deepEqual(headers.slice(0, 2), ['区分', '名称'])
+  assert.ok(headers.includes('タイミング'))
+  assert.ok(data.every(row => row.length === headers.length))
+  assert.deepEqual([...new Set(rows.map(row => row.category))], ['SKILL', 'TRAIT', 'TALENT'])
+  assert.ok(rows.filter(row => row.category === 'TRAIT').length > 0)
+  assert.ok(rows.filter(row => row.category === 'TALENT').every(row => row.categoryLabel.startsWith('素質')))
+  assert.ok(rows.filter(row => row.category === 'TALENT').every(row => row.name && row.name !== '特性'))
+  assert.ok(rows.some(row => row.category === 'TALENT' && row.status === 'APPLIED'))
+  assert.deepEqual(output.rows, before)
   assert.doesNotMatch(markup, /rowspan|colspan|<small|<br/)
 })
 

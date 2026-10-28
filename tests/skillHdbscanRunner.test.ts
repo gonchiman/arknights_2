@@ -3,18 +3,18 @@ import assert from 'node:assert/strict'
 import { EMPTY_SKILL_HDBSCAN_RUN, SkillHdbscanRunner, type SkillHdbscanRunState, type SkillHdbscanWorkerPort } from '../src/lib/skillHdbscanRunner.ts'
 import type { SkillHdbscanWorkerRequest, SkillHdbscanWorkerResponse } from '../src/lib/skillHdbscan.worker.ts'
 import type { SkillClusteringDocument } from '../src/lib/skillClusteringFeatures.ts'
-import type { SkillHdbscanConfig, SkillHdbscanResult, SkillHdbscanStage } from '../src/lib/skillHdbscan.ts'
+import type { SkillHdbscanExperimentConfig, SkillHdbscanExperimentResult, SkillHdbscanStage } from '../src/lib/skillHdbscan.ts'
 
-const config: SkillHdbscanConfig = { minClusterSize: 3, minSamples: 2, clusterSelectionMethod: 'eom' }
-const result: SkillHdbscanResult = {
+const config: SkillHdbscanExperimentConfig = { minClusterSize: 3, minSamples: 2, clusterSelectionMethod: 'eom', stopWordProfile: 'basic' }
+const result: SkillHdbscanExperimentResult = {
   config, assignments: [0, 0, 0, -1, -2], counts: [3], representativeTerms: [['攻撃']],
   representativeIndices: [0], noiseCount: 1, excludedCount: 1,
 }
 const progress = (requestId: number, stage: SkillHdbscanStage = 'distances'): SkillHdbscanWorkerResponse => (
   { type: 'progress', requestId, stage, termsCount: 10, elapsedMs: 12 }
 )
-const complete = (requestId: number): SkillHdbscanWorkerResponse => (
-  { type: 'result', requestId, result, termsCount: 10, elapsedMs: 24 }
+const complete = (requestId: number, experimentResult = result): SkillHdbscanWorkerResponse => (
+  { type: 'result', requestId, result: experimentResult, termsCount: 10, elapsedMs: 24 }
 )
 
 class FakeWorker implements SkillHdbscanWorkerPort {
@@ -159,6 +159,7 @@ test('start sends a deep snapshot of documents and configuration', () => {
   documents[0].recordIds.push('c')
   documents.push({ ...documents[0], id: 'new' })
   mutableConfig.minSamples = 9
+  mutableConfig.stopWordProfile = 'extended'
   assert.equal(request.type, 'start')
   assert.equal(request.documents.length, 1)
   assert.equal(request.documents[0].description, '攻撃力上昇')
@@ -167,6 +168,23 @@ test('start sends a deep snapshot of documents and configuration', () => {
   assert.notEqual(request.config, mutableConfig)
   assert.notEqual(request.documents[0], documents[0])
   h.runner.dispose()
+})
+
+test('a restarted run retains its own stop-word profile and rejects the previous profile result', () => {
+  const h = harness()
+  h.runner.start([], config)
+  const old = h.workers[0].queuedCallbacks()
+  const extendedConfig: SkillHdbscanExperimentConfig = { ...config, stopWordProfile: 'extended' }
+  h.runner.start([], extendedConfig)
+  assert.equal(h.workers[0].sent[0].config.stopWordProfile, 'basic')
+  assert.equal(h.workers[1].sent[0].config.stopWordProfile, 'extended')
+  old.message({ data: complete(1) })
+  assert.equal(h.latest().status, 'running')
+  const extendedResult = { ...result, config: { ...extendedConfig } }
+  h.workers[1].emit(complete(2, extendedResult))
+  extendedConfig.stopWordProfile = 'basic'
+  assert.equal(h.latest().result?.config.stopWordProfile, 'extended')
+  assert.deepEqual(h.latest().result?.config, h.workers[1].sent[0].config)
 })
 
 test('an engine error clears the active stage and a fresh run can recover', () => {
