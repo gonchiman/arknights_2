@@ -11,6 +11,7 @@ import {
   type DamageCalculatorThreeOutput,
 } from '../lib/damageCalculatorThree'
 import { buildDamageCalculatorThreeApplicationRows } from '../lib/damageCalculatorThreeApplications'
+import { buildDamageCalculatorThreeSkillInformation } from '../lib/damageCalculatorThreeSkillInformation'
 import { EFFECT_APPLICATION_STATUS_LABELS, type EffectApplicationRow } from '../lib/effectApplication'
 import type { SkillStructureSelection } from '../lib/skillStructure'
 import type { SkillRecord } from '../types/skill'
@@ -19,6 +20,7 @@ import { AnalysisTabs } from './AnalysisTabs'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
 import { OperatorDetailLink } from './OperatorDetailLink'
+import { SkillInformationTable } from './SkillInformationTable'
 import './DamageCalculator.css'
 import './DamageCalculatorTwo.css'
 import './DamageCalculatorThree.css'
@@ -141,12 +143,14 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
                 if (next && skillId !== selected.structure.basicInfo.skillId) chooseSkill(next.structure.basicInfo)
               }} />
           </div>
-          {operatorSkills.map(({ structure: candidate }) => <div key={candidate.basicInfo.skillId}
+          {operatorSkills.map(({ structure: candidate, skill }) => <div key={candidate.basicInfo.skillId}
             id={`damage-three-skill-panel-${candidate.basicInfo.skillId}`} role="tabpanel"
             aria-labelledby={`damage-three-skill-tab-${candidate.basicInfo.skillId}`}
             hidden={candidate.basicInfo.skillId !== selected.structure.basicInfo.skillId}
-            className="damage-three-description">
-            {candidate.source.description}
+            className="damage-three-skill-panel">
+            <SkillInformationTable information={buildDamageCalculatorThreeSkillInformation(candidate, skill,
+              candidate.basicInfo.skillId === selected.structure.basicInfo.skillId ? output : null)} />
+            <p className="damage-three-description">{candidate.source.description}</p>
           </div>)}
           {passiveDescriptions.map(source => <section className={source.className} key={source.id}
             aria-labelledby={source.id}>

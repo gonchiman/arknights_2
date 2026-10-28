@@ -215,16 +215,38 @@ test('スルトS2の戦闘条件には実際の対象数1体・2体だけを選�
   assert.match(select, /<option value="1" selected="">1体<\/option>/)
 })
 
+test('スキル情報は選択中のタブ内で説明文の直前に表示し、SPと持続をスキルごとに切り替える', () => {
+  for (const [skillIndex, values] of [
+    [1, ['攻撃回復', '自動発動', '0', '2', '通常攻撃1回']],
+    [2, ['自然回復', '手動発動', '12', '18', '18秒']],
+    [3, ['自然回復', '手動発動', '0', '5', '退場まで']],
+  ]) {
+    const markup = render(selected('char_350_surtr', skillIndex))
+    const panels = [...markup.matchAll(/<div\b([^>]*\bclass="damage-three-skill-panel"[^>]*)>([\s\S]*?)<\/div>/g)]
+    const visible = panels.filter(([, attributes]) => !/\bhidden\b/.test(attributes))
+    assert.equal(visible.length, 1)
+    assert.match(visible[0][1], new RegExp(`id="damage-three-skill-panel-skchr_surtr_${skillIndex}"`))
+    assert.match(visible[0][1], /role="tabpanel"/)
+    const info = visible[0][2].match(/^<table\b[^>]*aria-label="スキル情報"[^>]*>([\s\S]*?)<\/table><p class="damage-three-description">/)
+    assert.ok(info, 'タブパネルの先頭に情報表、その直後に説明文')
+    assert.deepEqual(tableRows(info[1]), [
+      ['SP回復方法', '発動方法', '初期SP', '必要SP', '持続'], values,
+    ])
+    assert.equal([...info[1].matchAll(/<th scope="col"/g)].length, 5)
+  }
+})
+
 test('説明文と効果の適用状態を常時表示し、計算範囲・使用数値は初期状態で閉じる', () => {
   for (const [operatorId, skillIndex, description] of [
     ['char_350_surtr', 2, '攻撃力+120%、攻撃範囲+1マス、攻撃対象数+1\n攻撃対象が1体のみの場合、攻撃力が160%まで上昇'],
     ['char_263_skadi', 1, '攻撃力+45%、攻撃速度+45'],
   ]) {
     const markup = render(selected(operatorId, skillIndex))
-    const descriptionMatch = [...markup.matchAll(/<div\b([^>]*\bclass="damage-three-description"[^>]*)>([\s\S]*?)<\/div>/g)]
+    const panelMatch = [...markup.matchAll(/<div\b([^>]*\bclass="damage-three-skill-panel"[^>]*)>([\s\S]*?)<\/div>/g)]
       .find(match => !/\bhidden\b/.test(match[1]))
+    const descriptionMatch = panelMatch?.[2].match(/<p\b[^>]*class="damage-three-description"[^>]*>([\s\S]*?)<\/p>/)
     assert.ok(descriptionMatch)
-    assert.equal(descriptionMatch[2], escapeHtml(description))
+    assert.equal(descriptionMatch[1], escapeHtml(description))
     const details = [...markup.matchAll(/<details\b([^>]*)>([\s\S]*?)<\/details>/g)]
     assert.deepEqual(details.map(match => text(match[2].match(/<summary>([\s\S]*?)<\/summary>/)?.[1] ?? '')),
       ['計算範囲', '計算に使った値'])
