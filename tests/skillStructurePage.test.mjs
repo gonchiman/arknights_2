@@ -7,7 +7,7 @@ import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 
 const source = JSON.parse(readFileSync(new URL('./fixtures/skillStructureFourOperators.json', import.meta.url), 'utf8'))
-let server, Page, Picker, rows, structures, classifySkill, deferredCases
+let server, Page, Picker, Flow, rows, structures, classifySkill, deferredCases
 const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;',
 })[character])
@@ -25,6 +25,7 @@ before(async () => {
     server: { middlewareMode: true, watch: null, preTransformRequests: false, hmr: false }, appType: 'custom',
   })
   ;({ SkillStructurePage: Page } = await server.ssrLoadModule('/src/components/SkillStructurePage.tsx'))
+  ;({ SkillEffectFlow: Flow } = await server.ssrLoadModule('/src/components/SkillEffectFlow.tsx'))
   ;({ SkillDescriptionSelectionPage: Picker } = await server.ssrLoadModule('/src/components/SkillDescriptionSelectionPage.tsx'))
   ;({ SKILL_STRUCTURES: structures } = await server.ssrLoadModule('/src/lib/skillStructure.ts'))
   ;({ SKILL_STRUCTURE_DEFERRED_CASES: deferredCases } = await server.ssrLoadModule('/src/lib/skillStructureDeferredCases.ts'))
@@ -48,17 +49,37 @@ before(async () => {
 })
 after(async () => { await server?.close() })
 
-test('初期表示はスルトS2の効果構造で、特化3だけを表示する', () => {
+test('初期表示はスルトS2の効果フローで、既存4タブと特化3の選択を維持する', () => {
   const markup = render()
-  assert.match(markup, /role="tab" aria-selected="true"[^>]*>効果構造/)
-  assert.equal((markup.match(/role="tab" /g) ?? []).length, 4)
-  assert.equal((markup.match(/aria-hidden="true" inert=""/g) ?? []).length, 3)
+  assert.match(markup, /role="tab" aria-selected="true"[^>]*>効果フロー/)
+  assert.equal((markup.match(/role="tab" /g) ?? []).length, 5)
+  assert.equal((markup.match(/aria-hidden="true" inert=""/g) ?? []).length, 4)
   assert.match(markup, /skill-effects-fixed-level">特化3/)
   assert.doesNotMatch(markup, /<select/)
   assert.match(markup, /攻撃対象数＝1/)
   assert.match(markup, /＋120％/)
   assert.match(markup, /×1.6/)
   assert.doesNotMatch(markup, /下位レベル/)
+})
+
+test('全対応スキルのフローを独立して表示でき、構造化されていない数値を混ぜない', () => {
+  for (const structure of structures) {
+    const markup = renderToStaticMarkup(createElement(Flow, { structure }))
+    assert.ok(markup.includes(escapeHtml(`${structure.basicInfo.operatorName} S${structure.basicInfo.skillIndex} ${structure.basicInfo.skillLevel}の効果フロー`)))
+    assert.doesNotMatch(markup, /undefined|NaN|\[object Object\]/)
+    assert.match(markup, /skill-effect-flow-stage/)
+  }
+})
+
+test('アイリーニS1の条件分岐は初撃・追撃の前に閉じ、浮遊なしの経路も合流する', () => {
+  const structure = structures.find(entry => entry.basicInfo.operatorId === 'char_4009_irene' && entry.basicInfo.skillIndex === 1)
+  const markup = renderToStaticMarkup(createElement(Flow, { structure }))
+  assert.equal((markup.match(/class="skill-effect-flow-branch"/g) ?? []).length, 1)
+  const join = markup.indexOf('class="skill-effect-flow-join"')
+  assert.ok(join >= 0)
+  assert.ok(markup.indexOf('data-effect-id="damage-1"') > join)
+  assert.ok(markup.indexOf('data-effect-id="damage-2"') > markup.indexOf('data-effect-id="damage-1"'))
+  assert.equal((markup.match(/class="skill-effect-flow-arrow"/g) ?? []).length, 2)
 })
 
 test('4人それぞれの3スキルを選択でき、12件の説明文を選択パネルに常時表示する', () => {

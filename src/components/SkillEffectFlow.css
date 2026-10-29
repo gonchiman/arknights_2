@@ -1,0 +1,67 @@
+.skill-effect-flow { min-width: 0; font-size: 12px; color: var(--text); }
+.skill-effect-flow h3, .skill-effect-flow h4, .skill-effect-flow h5,
+.skill-effect-flow p, .skill-effect-flow dl, .skill-effect-flow dd { margin: 0; }
+.skill-effect-flow-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.skill-effect-flow-fields > div { min-width: 0; padding: 10px 12px; }
+.skill-effect-flow-fields dt { color: var(--text-soft); font-size: 11px; margin-bottom: 5px; }
+.skill-effect-flow-fields dd { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; line-height: 1.6; }
+.skill-effect-flow-activation { border-bottom: 1px solid var(--border); margin: -10px -10px 0 !important; }
+.skill-effect-flow-activation > div { padding: 10px; }
+.skill-effect-flow-trigger { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 14px;
+  width: fit-content; max-width: 100%; margin: 20px auto; padding: 10px 16px; border: 1px solid var(--border);
+  background: var(--surface-soft); overflow-wrap: anywhere; }
+.skill-effect-flow-trigger > span { color: var(--text-soft); }
+.skill-effect-flow-trigger strong { font-weight: 500; }
+.skill-effect-flow-stages { display: grid; gap: 24px; }
+.skill-effect-flow-stage { min-width: 0; }
+.skill-effect-flow-stage-title { padding: 8px 10px; background: var(--surface-soft); border-block: 1px solid var(--border);
+  font-size: 12px; font-weight: 500; margin-inline: -10px !important; }
+.skill-effect-flow-stage-fields { grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr)); }
+.skill-effect-flow-stage-fields > div { padding-inline: 0; padding-right: 14px; }
+.skill-effect-flow-groups { display: grid; gap: 24px; margin: 10px auto 14px; max-width: 900px; }
+.skill-effect-flow-group { min-width: 0; }
+.skill-effect-flow-group-title { font-size: 12px; font-weight: 500; text-align: center; margin-bottom: 12px !important; }
+.skill-effect-flow-layer { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.skill-effect-flow-layer.is-single { grid-template-columns: minmax(0, 1fr); max-width: 660px; margin-inline: auto; }
+.skill-effect-flow-step { min-width: 0; }
+.skill-effect-flow-card { border: 1px solid var(--border); background: var(--surface); height: 100%; min-width: 0; }
+.skill-effect-flow-card > h5 { font-size: 12px; font-weight: 500; padding: 8px 12px;
+  border-bottom: 1px solid var(--border); background: var(--surface-soft); overflow-wrap: anywhere; }
+.skill-effect-flow-arrow { position: relative; height: 30px; width: 1px; margin: auto; background: var(--border-strong); }
+.skill-effect-flow-arrow::after { content: ''; position: absolute; bottom: 2px; left: -3px; width: 6px; height: 6px;
+  border-right: 1px solid var(--text-soft); border-bottom: 1px solid var(--text-soft); transform: rotate(45deg); }
+.skill-effect-flow-branch { min-width: 0; }
+.skill-effect-flow-decision { border: 1px solid var(--border); background: var(--surface-soft); padding: 8px 14px;
+  text-align: center; width: fit-content; max-width: 100%; margin: auto; overflow-wrap: anywhere; }
+.skill-effect-flow-fork, .skill-effect-flow-join { height: 28px; position: relative; margin-inline: 25%;
+  display: grid; grid-template-columns: 1fr 1fr; }
+.skill-effect-flow-fork::before { content: ''; position: absolute; left: 50%; height: 12px; border-left: 1px solid var(--border-strong); }
+.skill-effect-flow-fork span { margin-top: 12px; border-top: 1px solid var(--border-strong); }
+.skill-effect-flow-fork span:first-child { border-left: 1px solid var(--border-strong); }
+.skill-effect-flow-fork span:last-child { border-right: 1px solid var(--border-strong); }
+.skill-effect-flow-paths { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.skill-effect-flow-path { display: flex; flex-direction: column; min-width: 0; }
+.skill-effect-flow-path > h5 { text-align: center; margin-bottom: 8px; font-size: 12px; font-weight: 400; }
+.skill-effect-flow-path .skill-effect-flow-card, .skill-effect-flow-skip { flex: 1; }
+.skill-effect-flow-path .skill-effect-flow-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.skill-effect-flow-skip { display: flex; align-items: center; justify-content: center; border: 1px solid var(--border);
+  padding: 12px; background: var(--surface); min-height: 55px; }
+.skill-effect-flow-join span { height: 16px; border-bottom: 1px solid var(--border-strong); }
+.skill-effect-flow-join span:first-child { border-left: 1px solid var(--border-strong); }
+.skill-effect-flow-join span:last-child { border-right: 1px solid var(--border-strong); }
+.skill-effect-flow-join::before { content: ''; position: absolute; top: 16px; bottom: 0; left: 50%; border-left: 1px solid var(--border-strong); }
+.skill-effect-flow-pending { padding-top: 10px; border-top: 1px solid var(--border); }
+.skill-effect-flow-pending h4 { font-size: 12px; font-weight: 500; }
+.skill-effect-flow-pending ul { margin: 8px 0 0; padding-left: 20px; color: var(--text-soft); }
+.skill-effect-flow-pending li { line-height: 1.7; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .skill-effect-flow-activation { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .skill-effect-flow-layer { grid-template-columns: minmax(0, 1fr); }
+  .skill-effect-flow-fields > div { padding: 9px 8px; }
+  .skill-effect-flow-card > h5 { padding: 8px; }
+  .skill-effect-flow-paths { gap: 12px; }
+  .skill-effect-flow-path .skill-effect-flow-fields { grid-template-columns: minmax(0, 1fr); }
+  .skill-effect-flow-stage-fields { grid-template-columns: minmax(0, 1fr); }
+  .skill-effect-flow-stage-fields > div { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 8px; padding: 8px 0; }
+  .skill-effect-flow-stage-fields dt { margin: 0; }
+}

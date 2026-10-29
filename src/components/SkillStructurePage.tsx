@@ -14,6 +14,7 @@ import type { GuardDamageAction, GuardInput, GuardSkillRecipe, GuardStage, Guard
 import { getSkillStructureDeferredCases, type SkillStructureDeferredCase } from '../lib/skillStructureDeferredCases'
 import { SkillDescriptionSelectionPage } from './SkillDescriptionSelectionPage'
 import { StructureTable } from './StructureTable'
+import { SkillEffectFlow } from './SkillEffectFlow'
 import './SkillStructurePage.css'
 
 interface Props {
@@ -24,7 +25,7 @@ interface Props {
 
 const TABS = [
   ['basic', '基本情報'], ['classification', '分類情報'],
-  ['activation', '発動設定'], ['structure', '効果構造'],
+  ['activation', '発動設定'], ['flow', '効果フロー'], ['structure', '効果構造'],
 ] as const
 type StructureTab = typeof TABS[number][0]
 
@@ -34,7 +35,7 @@ const DEFAULT_SELECTION: SkillRouteSelection = {
 
 export function SkillStructurePage({ rows, loading, initialSelection }: Props) {
   const supportedRows = useMemo(() => rows.filter(isSkillStructureRecord), [rows])
-  const [activeTab, setActiveTab] = useState<StructureTab>('structure')
+  const [activeTab, setActiveTab] = useState<StructureTab>('flow')
 
   return (
     <div className="skill-structure-page">
@@ -86,6 +87,7 @@ function SkillStructureContent({ structure, activeTab, onTabChange }: {
   }
 
   const contents: Record<StructureTab, ReactNode> = {
+    flow: <SkillEffectFlow structure={structure} />,
     basic: <StructureTable caption={`${caption}の基本情報`}
       headers={['オペレーター', 'スキル番号', 'スキル名', 'スキルレベル']}
       className="skill-structure-basic-table">
