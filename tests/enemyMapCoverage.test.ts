@@ -88,7 +88,9 @@ test('story environments stay out of both aggregations even after their data is 
     const story: MapSummary = { ...base, levelId: 'story', diffGroup: 'EASY', status }
     for (const mode of ['SPAWNS', 'MAPS'] as const) {
       assert.equal(getMapCoverageStatus(story, mode), 'excluded')
-      assert.deepEqual(getMapCoverageReasons(story, mode), ['物語環境'])
+      const dataReason = status === 'missing' ? 'マップデータ未取得'
+        : mode === 'MAPS' ? 'マップデータ取得済み' : status === 'supported' ? '出現数確定' : '出現数未確定'
+      assert.deepEqual(getMapCoverageReasons(story, mode), ['物語環境', dataReason])
       assert.deepEqual(summarizeMapCoverage([base, story], mode), {
         total: 2, included: 1, excluded: 1, missing: 0,
       })
@@ -102,7 +104,9 @@ test('other map categories remain visible but never enter either aggregation', (
       const other: MapSummary = { ...base, levelId: 'other', zoneType, status }
       for (const mode of ['SPAWNS', 'MAPS'] as const) {
         assert.equal(getMapCoverageStatus(other, mode), 'excluded')
-        assert.deepEqual(getMapCoverageReasons(other, mode), ['その他のマップ'])
+        const dataReason = status === 'missing' ? 'マップデータ未取得'
+          : mode === 'MAPS' ? 'マップデータ取得済み' : status === 'supported' ? '出現数確定' : '出現数未確定'
+        assert.deepEqual(getMapCoverageReasons(other, mode), ['その他のマップ', dataReason])
         assert.deepEqual(summarizeMapCoverage([base, other], mode), {
           total: 2, included: 1, excluded: 1, missing: 0,
         })
@@ -163,6 +167,6 @@ test('optional branch omissions explain supported spawn totals without masking u
   const unresolved: MapSummary = { ...map, status: 'excluded', spawnCount: null, reasons: ['branch-spawn'] }
   assert.equal(getMapCoverageStatus(unresolved, 'SPAWNS'), 'excluded')
   assert.deepEqual(getMapCoverageReasons(unresolved, 'SPAWNS'), ['分岐に応じた出現指定'])
-  assert.deepEqual(getMapCoverageReasons({ ...map, diffGroup: 'EASY' }, 'SPAWNS'), ['物語環境'])
-  assert.deepEqual(getMapCoverageReasons({ ...map, zoneType: 'CAMPAIGN' }, 'SPAWNS'), ['その他のマップ'])
+  assert.deepEqual(getMapCoverageReasons({ ...map, diffGroup: 'EASY' }, 'SPAWNS'), ['物語環境', '任意の追加出現を除外'])
+  assert.deepEqual(getMapCoverageReasons({ ...map, zoneType: 'CAMPAIGN' }, 'SPAWNS'), ['その他のマップ', '任意の追加出現を除外'])
 })

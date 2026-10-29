@@ -13,10 +13,13 @@
 .enemy-map-coverage-totals strong { margin-left: 6px; color: var(--text); font-size: 18px; font-weight: 500; }
 .enemy-map-coverage-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; color: var(--text-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
 .enemy-map-coverage-legend > span, .enemy-map-coverage-selection-status { display: inline-flex; align-items: center; gap: 6px; }
+.enemy-map-coverage-legend > span { max-width: 100%; }
 .enemy-map-coverage-legend strong { font-weight: 500; }
 .enemy-map-coverage-legend i, .enemy-map-coverage-selection-status i { width: 9px; height: 9px; flex: 0 0 9px; }
 .enemy-map-coverage-page .coverage-included { background: var(--coverage-included); }
 .enemy-map-coverage-page .coverage-excluded { background: var(--coverage-excluded); }
+.enemy-map-coverage-page .coverage-story { background: var(--coverage-story); }
+.enemy-map-coverage-page .coverage-pending { background: var(--coverage-pending); }
 .enemy-map-coverage-page .coverage-missing { background: var(--coverage-missing); }
 .enemy-map-coverage-chart { margin-top: 18px; }
 .enemy-map-coverage-chart-heading, .enemy-map-coverage-bar-row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 156px; align-items: center; gap: 20px; }
@@ -45,6 +48,8 @@
 .enemy-map-coverage-map { border-bottom-width: 3px; }
 .enemy-map-coverage-map[data-coverage-status="included"] { border-bottom-color: var(--coverage-included); }
 .enemy-map-coverage-map[data-coverage-status="excluded"] { border-bottom-color: var(--coverage-excluded); }
+.enemy-map-coverage-map[data-coverage-status="story"] { border-bottom-color: var(--coverage-story); }
+.enemy-map-coverage-map[data-coverage-status="pending"] { border-bottom-color: var(--coverage-pending); }
 .enemy-map-coverage-map[data-coverage-status="missing"] { border-bottom-color: var(--coverage-missing); }
 .enemy-map-coverage-map[aria-pressed="true"] { box-shadow: inset 0 0 0 1px var(--text); }
 .enemy-map-coverage-page .panel-heading p { font-size: 11px; }

@@ -3,10 +3,11 @@ import { getMapCategory } from '../lib/mapDatabase'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
 import { EnemyAggregationHistoryButton, EnemyAggregationSelector, EnemyAggregationStatus } from './EnemyAggregationSelector'
 import {
-  getMapCoverageCategories, getMapCoverageEnvironmentLabel, getMapCoverageReasons,
-  getMapCoverageStatus, getMapCoverageStatusLabel, getMapCoverageZones, summarizeMapCoverage,
+  getMapCoverageDisplayCategories, getMapCoverageEnvironmentLabel, getMapCoverageReasons,
+  getMapCoverageDisplayStatus, getMapCoverageStatusLabel, getMapCoverageZones, summarizeMapCoverageDisplay,
+  isMapLowerBoundAggregation,
 } from '../lib/enemyMapCoverage'
-import type { EnemyMapCoverageMode as CountMode, MapCoverageSummary as CoverageCounts } from '../lib/enemyMapCoverage'
+import type { EnemyMapCoverageMode as CountMode, MapCoverageDisplaySummary as CoverageCounts } from '../lib/enemyMapCoverage'
 import type { MapCategory, MapSummary } from '../types/map'
 import { createEnemyMapCoverageChartSnapshot, MAP_COVERAGE_COLORS,
   MAP_COVERAGE_STATUS_KEYS as STATUS_KEYS, MAP_COVERAGE_STATUS_LABELS as STATUS_LABELS,
@@ -63,13 +64,13 @@ export function EnemyMapCoveragePage() {
   const savingRef = useRef(false)
 
   const maps = data?.maps ?? []
-  const totals = useMemo(() => summarizeMapCoverage(maps, mode), [data, mode])
-  const categories = useMemo(() => getMapCoverageCategories(maps, mode), [data, mode])
+  const totals = useMemo(() => summarizeMapCoverageDisplay(maps, mode), [data, mode])
+  const categories = useMemo(() => getMapCoverageDisplayCategories(maps, mode), [data, mode])
   const zones = useMemo(() => getMapCoverageZones(maps, category), [data, category])
   const activeZone = zones.find((zone) => zone.id === zoneId) ?? zones[0]
   const zoneMaps = useMemo(() => maps.filter((map) => getMapCategory(map) === category && map.zoneId === activeZone?.id)
     .sort(compareMaps), [data, category, activeZone?.id])
-  const zoneCounts = useMemo(() => summarizeMapCoverage(zoneMaps, mode), [zoneMaps, mode])
+  const zoneCounts = useMemo(() => summarizeMapCoverageDisplay(zoneMaps, mode), [zoneMaps, mode])
   const pageCount = Math.ceil(zoneMaps.length / PAGE_SIZE)
   const currentPage = Math.min(page, Math.max(0, pageCount - 1))
   const visible = zoneMaps.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
@@ -172,8 +173,8 @@ export function EnemyMapCoveragePage() {
             {selected && <>
               <strong>{selected.code} {selected.name}</strong>
               <span>{getMapCoverageEnvironmentLabel(selected)}</span>
-              <span className="enemy-map-coverage-selection-status"><i className={`coverage-${getMapCoverageStatus(selected, mode)}`} aria-hidden="true" />{getMapCoverageStatusLabel(selected, mode)}</span>
-              {mode === 'SPAWNS' && getMapCoverageStatus(selected, mode) === 'included' && selected.spawnAggregation
+              <span className="enemy-map-coverage-selection-status"><i className={`coverage-${getMapCoverageDisplayStatus(selected, mode)}`} aria-hidden="true" />{getMapCoverageStatusLabel(selected, mode)}</span>
+              {mode === 'SPAWNS' && isMapLowerBoundAggregation(selected) && selected.spawnAggregation
                 && <span>確定出現分 {formatCount(selected.spawnAggregation.count)} 体</span>}
               <span>{getMapCoverageReasons(selected, mode).join(' ／ ')}</span>
             </>}
@@ -184,7 +185,7 @@ export function EnemyMapCoveragePage() {
               <div className="enemy-map-coverage-map-grid" role="group" aria-label={`${activeZone?.name} ${environment}のマップ`}>
                 {visible.filter((map) => getMapCoverageEnvironmentLabel(map) === environment).map((map) => <button
                   key={map.levelId} type="button" className="map-selection-button enemy-map-coverage-map"
-                  data-coverage-status={getMapCoverageStatus(map, mode)} aria-pressed={selected?.levelId === map.levelId}
+                  data-coverage-status={getMapCoverageDisplayStatus(map, mode)} aria-pressed={selected?.levelId === map.levelId}
                   aria-label={`${map.code} ${map.name}、${environment}、${getMapCoverageStatusLabel(map, mode)}`}
                   onClick={() => setSelectedId(map.levelId)}>{map.code}</button>)}
               </div>
