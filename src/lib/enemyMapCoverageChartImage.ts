@@ -5,12 +5,17 @@ import type { MapSummary } from '../types/map.ts'
 import type { EnemyAggregationVersion } from './enemyAggregationContract.ts'
 import { getEnemyAggregationFilename } from './enemyAggregationData.ts'
 
-export const MAP_COVERAGE_STATUS_KEYS = ['included', 'excluded', 'story', 'pending', 'missing'] as const
+export const MAP_COVERAGE_STATUS_KEYS = ['included', 'conditional', 'excluded', 'story', 'pending', 'missing'] as const
 export const MAP_COVERAGE_STATUS_LABELS: Record<MapCoverageDisplayStatus, string> = {
-  included: '集計対象', excluded: '集計可能・対象外', story: '物語環境・対象外', pending: '解析保留', missing: 'データ未取得',
+  included: '通常の集計対象', conditional: '条件付き集計対象',
+  excluded: '集計可能・対象外', story: '物語環境・対象外', pending: '解析保留', missing: 'データ未取得',
 }
 export const MAP_COVERAGE_COLORS: Record<MapCoverageDisplayStatus, string> = {
-  included: '#417897', excluded: '#719674', story: '#9278ab', pending: '#ad7c49', missing: '#d0d0d0',
+  included: '#417897', conditional: '#8fb6cc', excluded: '#719674', story: '#9278ab', pending: '#ad7c49', missing: '#d0d0d0',
+}
+/** Included is the total in summaries; its bar segment contains only regular aggregation. */
+export function getMapCoverageSegmentCount(summary: MapCoverageDisplaySummary, status: MapCoverageDisplayStatus): number {
+  return status === 'included' ? summary.regular : summary[status]
 }
 export const MAP_COVERAGE_MODE_LABELS: Record<EnemyMapCoverageMode, string> = {
   SPAWNS: '出現回数', MAPS: '登場マップ数',
