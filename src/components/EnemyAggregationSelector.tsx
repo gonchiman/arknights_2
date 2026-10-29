@@ -44,7 +44,8 @@ export function EnemyAggregationHistoryButton({ state }: Props) {
         <thead><tr><th scope="col">集計版</th><th scope="col">保存日時</th><th scope="col">変更内容</th><th scope="col">出現回数の集計対象</th><th scope="col">元データ</th></tr></thead>
         <tbody>{catalog.versions.slice().reverse().map(item => <tr key={item.id} aria-current={item.id === selectedId ? 'true' : undefined}>
           <th scope="row"><button type="button" onClick={() => setSelectedId(item.id)} aria-pressed={item.id === selectedId}>{item.label}</button></th>
-          <td>{date(item.createdAt)}</td><td>{item.description}</td><td>{item.summary.includedMapCount.toLocaleString('ja-JP')} マップ</td>
+          <td>{date(item.createdAt)}</td><td>{item.description}</td><td>{item.summary.includedMapCount.toLocaleString('ja-JP')} マップ
+            {!!item.summary.lowerBoundMapCount && `（下限 ${item.summary.lowerBoundMapCount.toLocaleString('ja-JP')}）`}</td>
           <td><a href={`https://github.com/ArknightsAssets/ArknightsGamedata/tree/${item.sourceRevision}/jp/gamedata`} target="_blank" rel="noreferrer">{item.sourceRevision.slice(0, 7)}</a></td>
         </tr>)}</tbody>
       </table></div>

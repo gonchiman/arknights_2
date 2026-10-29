@@ -151,3 +151,18 @@ test('coverage reasons describe the selected mode and deduplicate equivalent rea
   assert.deepEqual(getMapCoverageReasons({ ...map, reasons: [] }, 'SPAWNS'), ['出現数未確定'])
   assert.deepEqual(getMapCoverageReasons({ ...map, reasons: ['future-unrecognized-setting'] }, 'SPAWNS'), ['出現数未確定'])
 })
+
+test('optional branch omissions explain supported spawn totals without masking unresolved branches or scope exclusions', () => {
+  const map: MapSummary = { ...base, omittedBranchSpawns: [{ branchId: 'optional', phaseIndex: 0,
+    actionIndex: 0, enemyId: 'enemy_a', ruleId: 'optional-device', condition: '装置を作動させずにクリア可能',
+    evidence: ['predefines.tokenInsts[0]'] }] }
+  assert.equal(getMapCoverageStatus(map, 'SPAWNS'), 'included')
+  assert.deepEqual(getMapCoverageReasons(map, 'SPAWNS'), ['任意の追加出現を除外'])
+  assert.deepEqual(getMapCoverageReasons(map, 'MAPS'), ['マップデータ取得済み'])
+  assert.deepEqual(getMapCoverageReasons({ ...map, omittedBranchSpawns: [] }, 'SPAWNS'), ['出現数確定'])
+  const unresolved: MapSummary = { ...map, status: 'excluded', spawnCount: null, reasons: ['branch-spawn'] }
+  assert.equal(getMapCoverageStatus(unresolved, 'SPAWNS'), 'excluded')
+  assert.deepEqual(getMapCoverageReasons(unresolved, 'SPAWNS'), ['分岐に応じた出現指定'])
+  assert.deepEqual(getMapCoverageReasons({ ...map, diffGroup: 'EASY' }, 'SPAWNS'), ['物語環境'])
+  assert.deepEqual(getMapCoverageReasons({ ...map, zoneType: 'CAMPAIGN' }, 'SPAWNS'), ['その他のマップ'])
+})

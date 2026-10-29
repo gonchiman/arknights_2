@@ -1,6 +1,6 @@
 import { createChartImageFilename } from './chartImageFilename.ts'
 import type { EnemyJointDistribution } from './enemyJointDistribution.ts'
-import { ENEMY_HISTOGRAM_COUNT_MODES, type EnemyHistogramCounts } from './enemyHistogramCounts.ts'
+import { ENEMY_HISTOGRAM_COUNT_MODES, getEnemySpawnCoverageLabel, type EnemyHistogramCounts } from './enemyHistogramCounts.ts'
 import type { EnemyHeatmapColorScale } from './enemyHeatmapColor.ts'
 
 export function getEnemyJointImageConditions(
@@ -13,7 +13,7 @@ export function getEnemyJointImageConditions(
   if (distribution.missingCount > 0) conditions.push(`値なし等 ${distribution.missingCount.toLocaleString('ja-JP')}${mode.unit}を除外`)
   if (coverage && distribution.countMode !== 'TYPES') conditions.push(distribution.countMode === 'MAPS'
     ? `収録 ${coverage.mapCount.toLocaleString('ja-JP')}マップ`
-    : `出現数確定 ${coverage.spawnMapCount.toLocaleString('ja-JP')}マップ`)
+    : getEnemySpawnCoverageLabel(coverage))
   return conditions.join(' · ')
 }
 

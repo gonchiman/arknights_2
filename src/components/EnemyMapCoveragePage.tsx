@@ -4,7 +4,7 @@ import { useEnemyAggregation } from '../lib/useEnemyAggregation'
 import { EnemyAggregationHistoryButton, EnemyAggregationSelector, EnemyAggregationStatus } from './EnemyAggregationSelector'
 import {
   getMapCoverageCategories, getMapCoverageEnvironmentLabel, getMapCoverageReasons,
-  getMapCoverageStatus, getMapCoverageZones, summarizeMapCoverage,
+  getMapCoverageStatus, getMapCoverageStatusLabel, getMapCoverageZones, summarizeMapCoverage,
 } from '../lib/enemyMapCoverage'
 import type { EnemyMapCoverageMode as CountMode, MapCoverageSummary as CoverageCounts } from '../lib/enemyMapCoverage'
 import type { MapCategory, MapSummary } from '../types/map'
@@ -44,6 +44,7 @@ function CoverageLegend({ counts }: { counts: CoverageCounts }) {
       <i className={`coverage-${status}`} aria-hidden="true" />
       {STATUS_LABELS[status]} <strong>{formatCount(counts[status])}</strong>
     </span>)}
+    {!!counts.lowerBound && <span>集計対象のうち下限集計 <strong>{formatCount(counts.lowerBound)}</strong></span>}
   </div>
 }
 
@@ -171,7 +172,9 @@ export function EnemyMapCoveragePage() {
             {selected && <>
               <strong>{selected.code} {selected.name}</strong>
               <span>{getMapCoverageEnvironmentLabel(selected)}</span>
-              <span className="enemy-map-coverage-selection-status"><i className={`coverage-${getMapCoverageStatus(selected, mode)}`} aria-hidden="true" />{STATUS_LABELS[getMapCoverageStatus(selected, mode)]}</span>
+              <span className="enemy-map-coverage-selection-status"><i className={`coverage-${getMapCoverageStatus(selected, mode)}`} aria-hidden="true" />{getMapCoverageStatusLabel(selected, mode)}</span>
+              {mode === 'SPAWNS' && getMapCoverageStatus(selected, mode) === 'included' && selected.spawnAggregation
+                && <span>確定出現分 {formatCount(selected.spawnAggregation.count)} 体</span>}
               <span>{getMapCoverageReasons(selected, mode).join(' ／ ')}</span>
             </>}
           </div>
@@ -182,7 +185,7 @@ export function EnemyMapCoveragePage() {
                 {visible.filter((map) => getMapCoverageEnvironmentLabel(map) === environment).map((map) => <button
                   key={map.levelId} type="button" className="map-selection-button enemy-map-coverage-map"
                   data-coverage-status={getMapCoverageStatus(map, mode)} aria-pressed={selected?.levelId === map.levelId}
-                  aria-label={`${map.code} ${map.name}、${environment}、${STATUS_LABELS[getMapCoverageStatus(map, mode)]}`}
+                  aria-label={`${map.code} ${map.name}、${environment}、${getMapCoverageStatusLabel(map, mode)}`}
                   onClick={() => setSelectedId(map.levelId)}>{map.code}</button>)}
               </div>
             </div>)}

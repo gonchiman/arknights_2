@@ -1,3 +1,8 @@
+import { getOptionalBranchExclusions } from './optionalEnemyBranchPolicy.mjs'
+import { getMandatoryBranchResolutions } from './mandatoryEnemyBranchPolicy.mjs'
+import { getNonEnemyBranchExclusions } from './nonEnemyBranchPolicy.mjs'
+import { getDeploymentBranchExclusions } from './deploymentEnemyBranchPolicy.mjs'
+
 const ACTION_FIELDS = new Set([
   'actionType', 'key', 'count', 'managedByScheduler', 'preDelay', 'interval', 'routeIndex',
   'blockFragment', 'autoPreviewRoute', 'autoDisplayEnemyInfo', 'isUnharmfulAndAlwaysCountAsKilled',
@@ -221,8 +226,15 @@ function resolveAction(raw, inherited, rules, path) {
  */
 export function analyzeEnemySpawns(value, context = {}) {
   const level = record(value), counts = new Map(), reasons = new Set(), actions = []
+  const omittedBranchSpawns = [], countedBranchSpawns = []
   let totalCount = 0
-  if (!level) return { counts, reasons: new Set(['invalid-level']), actions }
+  if (!level) return { counts, reasons: new Set(['invalid-level']), actions, omittedBranchSpawns, countedBranchSpawns }
+  const optionalBranches = [
+    ...getOptionalBranchExclusions(level, context),
+    ...getDeploymentBranchExclusions(level, context),
+    ...getNonEnemyBranchExclusions(level, context).map(entry => ({ ...entry, kind: 'non-enemy' })),
+  ]
+  const mandatoryBranches = getMandatoryBranchResolutions(level, context)
   const rules = buildRules(level, context, resolveEnemySpawnDifficulty(context))
   for (const reason of rules.reasons) reasons.add(reason)
   if (!Array.isArray(level.enemyDbRefs)) reasons.add('invalid-enemy-refs')
@@ -266,11 +278,31 @@ export function analyzeEnemySpawns(value, context = {}) {
           if (!action || !text(action.actionType)) reasons.add('invalid-branch-action')
           else if (action.actionType === 'SPAWN') {
             const resolved = resolveAction(action, [], rules, `branches[${JSON.stringify(id)}].phases[${phaseIndex}].actions[${actionIndex}]`)
-            if (resolved.status !== 'excluded') reasons.add('branch-spawn')
+            if (resolved.status === 'excluded') return
+            const omission = optionalBranches.find((entry) => entry.branchId === id
+              && entry.phaseIndex === phaseIndex && entry.actionIndex === actionIndex
+              && entry.enemyId === resolved.resolvedEnemyId)
+            const addition = mandatoryBranches.find((entry) => entry.branchId === id
+              && entry.phaseIndex === phaseIndex && entry.actionIndex === actionIndex
+              && entry.enemyId === resolved.resolvedEnemyId)
+            // A mechanism decision does not bypass normal action validation.
+            // Only the classified branch is omitted, never same-ID wave spawns.
+            if (omission && !addition && resolved.status === 'included' && resolved.reasons.length === 0) {
+              omittedBranchSpawns.push(omission)
+            } else if (addition && !omission && resolved.status === 'included'
+              && resolved.reasons.length === 0 && Number.isSafeInteger(addition.count) && addition.count >= 0) {
+              totalCount += addition.count
+              const next = (counts.get(addition.enemyId) ?? 0) + addition.count
+              if (!Number.isSafeInteger(totalCount) || !Number.isSafeInteger(next)) reasons.add('spawn-total-overflow')
+              else {
+                counts.set(addition.enemyId, next)
+                countedBranchSpawns.push(addition)
+              }
+            } else reasons.add('branch-spawn')
           }
         })
       })
     }
   }
-  return { counts, reasons, actions }
+  return { counts, reasons, actions, omittedBranchSpawns, countedBranchSpawns }
 }

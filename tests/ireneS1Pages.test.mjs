@@ -9,7 +9,7 @@ import react from '@vitejs/plugin-react'
 // Independent, pinned JP character/skill candidates; no registry is used to create input rows.
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/ireneS1.json', import.meta.url), 'utf8'))
 const selection = { operatorId: fixture.operator.operatorId, skillId: fixture.skill.skillId, skillIndex: 1, levelIndex: 9 }
-let server, SkillPage, TalentPage, TalentDefinitionTable, Calculator, ResultTable, ComponentTable, TalentTable, buildOutput, buildTalents, row
+let server, SkillPage, TalentPage, TalentDefinitionTable, Calculator, ResultTable, ComponentTable, ApplicationTable, buildOutput, buildApplications, buildTalents, row
 const plainText = markup => markup.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
 const tableRows = markup => [...markup.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)].map(([, cells]) =>
   [...cells.matchAll(/<(?:th|td)\b[^>]*>([\s\S]*?)<\/(?:th|td)>/g)].map(([, value]) => plainText(value)))
@@ -19,7 +19,12 @@ function table(markup, className) {
   return tableRows(contents[1])
 }
 const renderCalculator = () => renderToStaticMarkup(createElement(Calculator, { rows: [row], loading: false, initialSelection: selection }))
-const calculate = conditions => buildOutput({ operator: row, skill: row, phaseIndex: 2, operatorLevel: 90, trust: 100, skillLevelIndex: 9, conditions })
+const calculationInput = conditions => ({ operator: row, skill: row, phaseIndex: 2, operatorLevel: 90, trust: 100, skillLevelIndex: 9, conditions })
+const calculate = conditions => buildOutput(calculationInput(conditions))
+const applicationRecords = markup => {
+  const [headers, ...rows] = table(markup, 'damage-three-application-table')
+  return rows.map(values => Object.fromEntries(headers.map((header, index) => [header, values[index]])))
+}
 
 before(async () => {
   server = await createServer({
@@ -30,9 +35,10 @@ before(async () => {
   ;({ SkillStructurePage: SkillPage } = await server.ssrLoadModule('/src/components/SkillStructurePage.tsx'))
   ;({ TalentStructurePage: TalentPage, TalentEffectDefinitionTable: TalentDefinitionTable } = await server.ssrLoadModule('/src/components/TalentStructurePage.tsx'))
   ;({ DamageCalculatorThree: Calculator, DamageCalculatorThreeResultTable: ResultTable,
-    DamageCalculatorThreeAttackComponentTable: ComponentTable, DamageCalculatorThreeTalentTable: TalentTable,
+    DamageCalculatorThreeAttackComponentTable: ComponentTable, DamageCalculatorThreeApplicationTable: ApplicationTable,
   } = await server.ssrLoadModule('/src/components/DamageCalculatorThree.tsx'))
   ;({ buildDamageCalculatorThreeOutput: buildOutput } = await server.ssrLoadModule('/src/lib/damageCalculatorThree.ts'))
+  ;({ buildDamageCalculatorThreeApplicationRows: buildApplications } = await server.ssrLoadModule('/src/lib/damageCalculatorThreeApplications.ts'))
   ;({ buildTalentStructures: buildTalents } = await server.ssrLoadModule('/src/lib/talentStructure.ts'))
   const { classifySkill } = await server.ssrLoadModule('/src/lib/classifier.ts')
   const { expandSkillDescription } = await server.ssrLoadModule('/src/lib/skillJsonAnalysis.ts')
@@ -98,11 +104,12 @@ test('計算機3の共通boolean選択で浮遊可能・海の怪物なしを明
   assert.deepEqual(options('戦場の海の怪物'), [['false', 'なし', true], ['true', 'あり', false]])
   assert.match(markup, /地上の敵/)
   assert.doesNotMatch(markup, /aria-label="(?:飛行|初期浮遊)/)
-  const talents = table(markup, 'damage-three-talent-table')
-  assert.deepEqual(talents[0], ['区分', '名称', '項目', '値', '発動確率', '条件', '状態'])
-  assert.ok(talents.slice(1).every(values => values.length === 7))
-  assert.ok(talents.some(values => values[4] === '50％'))
-  assert.ok(talents.some(values => values[4] === '100％'))
+  const applications = table(markup, 'damage-three-application-table')
+  assert.deepEqual(applications[0], ['区分', '名称', '項目', '値', 'タイミング', '発動確率', '条件', '状態'])
+  assert.ok(applications.slice(1).every(values => values.length === 8))
+  const talents = applicationRecords(markup).filter(values => values.区分.startsWith('素質'))
+  assert.ok(talents.some(values => values.発動確率 === '50％'))
+  assert.ok(talents.some(values => values.発動確率 === '100％'))
 })
 
 test('浮遊成功時は両打撃を浮遊・100％無視として個別表示し、traitの2ヒットで再倍増しない', () => {
@@ -141,11 +148,14 @@ test('浮遊無効時は両打撃の50％防御無視を期待値として表示
 
 test('海の怪物条件は攻撃速度18と36を切り替え、強化攻撃ダメージへ再乗算しない', () => {
   for (const [seaMonsterPresent, expectedSpeed] of [[false, '18'], [true, '36']]) {
-    const output = calculate({ targetCanBeLevitated: true, seaMonsterPresent })
-    const talents = table(renderToStaticMarkup(createElement(TalentTable, { effects: output.talentEffects })), 'damage-three-talent-table')
-    const applied = talents.find(values => values[2] === '攻撃速度' && values.at(-1) === '適用')
-    assert.ok(applied)
-    assert.equal(applied[3], expectedSpeed)
+    const input = calculationInput({ targetCanBeLevitated: true, seaMonsterPresent })
+    const output = buildOutput(input)
+    const talents = applicationRecords(renderToStaticMarkup(createElement(ApplicationTable, { rows: buildApplications(input, output) })))
+      .filter(values => values.区分.startsWith('素質') && values.項目 === '攻撃速度')
+    const active = talents.find(values => values.状態 === '計算対象外')
+    assert.ok(active)
+    assert.equal(active.値, expectedSpeed)
+    assert.equal(talents.filter(values => values.状態 === '条件不成立').length, 1)
     const result = table(renderToStaticMarkup(createElement(ResultTable, { output, precision: 1 })), 'damage-three-result-table')
     assert.deepEqual(result.find(values => values[0] === '500'), ['500', '2,304.0', '2,304.0'])
   }

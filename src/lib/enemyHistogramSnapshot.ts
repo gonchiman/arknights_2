@@ -162,6 +162,8 @@ function validInput(value: unknown): value is EnemyHistogramSnapshotInput {
     const coverage = object(input.coverage)
     if (!coverage || !['mapCount', 'missingMapCount', 'spawnMapCount', 'spawnExcludedMapCount'].every(key =>
       nonnegative(coverage[key]) && Number.isSafeInteger(coverage[key]))
+      || (coverage.lowerBoundMapCount !== undefined && (!nonnegative(coverage.lowerBoundMapCount)
+        || !Number.isSafeInteger(coverage.lowerBoundMapCount) || coverage.lowerBoundMapCount > Number(coverage.spawnMapCount)))
       || Number(coverage.spawnMapCount) + Number(coverage.spawnExcludedMapCount) !== coverage.mapCount) return false
   }
   if (input.countMode !== 'TYPES' && input.coverage === null) return false

@@ -3,6 +3,7 @@ import type { OperatorDetailCommonProps } from './OperatorDetailContent'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { OperatorStatRadar } from './OperatorStatRadar'
 import { OperatorModuleComparison } from './OperatorModuleComparison'
+import { SkillInformationTable } from './SkillInformationTable'
 import { PageBreadcrumbs, type PageBreadcrumbsProps } from './PageBreadcrumbs'
 import { buildSkillEffectDetails } from '../lib/skillEffectDetails'
 import { createSkillEffectsHash } from '../lib/routes'
@@ -92,14 +93,7 @@ export function OperatorDetailPage({
               ))}
             </div>
             <div id={skillContentId} className="operator-profile-skill-content" role="region" aria-label={`S${activeSkill.index} ${activeSkill.name}の詳細`} aria-live="polite">
-              <table className="operator-profile-skill-information" aria-label="スキル情報">
-                <thead><tr>{skillInformation.map(([label]) => (
-                  <th scope="col" key={label}>{label}</th>
-                ))}</tr></thead>
-                <tbody><tr>{skillInformation.map(([label, value]) => (
-                  <td key={label}>{value}</td>
-                ))}</tr></tbody>
-              </table>
+              <SkillInformationTable className="operator-profile-skill-information" information={skillInformation} />
               <a className="operator-profile-skill-effect" href={skillEffectsHref} aria-labelledby={skillEffectTitleId}>
                 <h3 id={skillEffectTitleId}>スキル効果<span aria-hidden="true">→</span></h3>
                 <p className="operator-profile-description">{activeSkill.description || '効果説明はありません。'}</p>

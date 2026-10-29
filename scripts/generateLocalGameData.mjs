@@ -110,7 +110,8 @@ function validateOutput(appearances, histogram, maps, trends, selection, missing
 }
 
 /** Build and validate a complete, immutable-revision snapshot without network or filesystem I/O. */
-export function generateLocalGameData(source, { generatedAt = new Date().toISOString() } = {}) {
+export function generateLocalGameData(source, { generatedAt = new Date().toISOString(), spawnAggregationMode = 'lower-bound' } = {}) {
+  if (!['strict', 'lower-bound'].includes(spawnAggregationMode)) throw new Error('Invalid spawn aggregation mode')
   const { database, missingIds, selection: allSelection } = validateSource(source, generatedAt)
   const revision = source.revision.toLowerCase()
   const base = `https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/${revision}/jp/gamedata`
@@ -129,18 +130,18 @@ export function generateLocalGameData(source, { generatedAt = new Date().toISOSt
   const histogram = buildEnemyHistogramCounts(selection.levels.filter(({ levelId }) => source.levels.has(levelId)).map(({ levelId }) => ({
     levelId, data: source.levels.get(levelId),
   })), {
-    generatedAt, sourceGeneratedAt: generatedAt, sourceSummary: appearances.summary,
+    generatedAt, sourceGeneratedAt: generatedAt, sourceRevision: revision, sourceSummary: appearances.summary, spawnAggregationMode,
     failedLevelIds: [...missingIds], excludedLevelIds: selection.excludedLevelIds,
     stageContexts: new Map(selection.levels.map(({ levelId, context }) => [levelId, context ?? {}])),
   })
   const maps = buildMapDatabase({
     stageTable: source.stageTable, zoneTable: source.zoneTable, handbook: source.handbook, database,
     levels: [...source.levels].map(([levelId, data]) => ({ levelId, data })),
-    generatedAt, sourceGeneratedAt: generatedAt,
+    generatedAt, sourceGeneratedAt: generatedAt, sourceRevision: revision, spawnAggregationMode,
   })
   const trends = buildMainEnemyTrends({
     mapIndex: maps.index, stageTable: source.stageTable, handbook: source.handbook, database,
-    levels: source.levels, generatedAt,
+    levels: source.levels, generatedAt, sourceRevision: revision,
   })
   validateOutput(appearances, histogram, maps, trends, allSelection, missingIds)
   const files = new Map([

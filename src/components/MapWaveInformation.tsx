@@ -93,6 +93,8 @@ function MapWaveSchedule({ detail, map, index, configuredOnly, conditionContext,
       </select></label> : <h3>ウェーブ 1</h3>}
       <span>{wave.fragments.length}区間 · {configured ? '設定数 ' : ''}{count === null ? '体数未確認' : `${number(count)}体`}</span>
       {conditionContext && <span className="map-wave-condition">{conditionContext}</span>}
+      {!!map.omittedBranchSpawns?.length && <span className="map-wave-condition">分岐の集計除外あり</span>}
+      {!!map.countedBranchSpawns?.length && <span className="map-wave-condition">必須の分岐出現は別途加算</span>}
       {map.reasons.includes('branch-spawn') && <span className="map-wave-condition">{configuredOnly ? '分岐の出現設定：表示対象外' : '分岐の出現設定は別'}</span>}
     </div>
     {wave.fragments.length > 0 ? <>

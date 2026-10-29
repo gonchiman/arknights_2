@@ -41,6 +41,30 @@ export interface MapEnemyRoute {
   entrance?: string | null
 }
 
+/** A branch omitted by an avoidable-trigger or verified non-enemy rule. */
+export interface MapOmittedBranchSpawn {
+  branchId: string
+  phaseIndex: number
+  actionIndex: number
+  enemyId: string
+  ruleId: string
+  condition: string
+  evidence: string[]
+  /** Absent in early V3 data means an avoidable trigger. */
+  kind?: 'optional' | 'non-enemy'
+}
+
+export interface MapCountedBranchSpawn extends Omit<MapOmittedBranchSpawn, 'kind'> {
+  count: number
+}
+
+/** Known hostile spawns counted while the complete map total remains unresolved. */
+export interface MapSpawnAggregation {
+  kind: 'lower-bound'
+  count: number
+  reasons: string[]
+}
+
 export interface MapSummary {
   levelId: string
   stageId: string
@@ -60,6 +84,10 @@ export interface MapSummary {
   enemyRoutes?: MapEnemyRoute[] | null
   /** Main-wave configured counts across all routes; null counts remain unknown. */
   enemySpawnCounts?: Record<string, number | null> | null
+  /** Absent in earlier aggregation versions; does not imply the enemy never appears. */
+  omittedBranchSpawns?: MapOmittedBranchSpawn[]
+  countedBranchSpawns?: MapCountedBranchSpawn[]
+  spawnAggregation?: MapSpawnAggregation
   reasons: string[]
   detailFile: string | null
 }

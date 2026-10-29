@@ -1,4 +1,4 @@
-import type { MapCategory, MapEnvironment, MapDetail, MapDetailShard, MapEnemyBase, MapEnemyRoute, MapFeatureId, MapFilters, MapIndex, MapRoute, MapSpawnResolution, MapSummary, MapTile, MapWave, MapWaveAction, MapWaveFragment } from '../types/map.ts'
+import type { MapCategory, MapEnvironment, MapDetail, MapDetailShard, MapEnemyBase, MapEnemyRoute, MapFeatureId, MapFilters, MapIndex, MapOmittedBranchSpawn, MapRoute, MapSpawnResolution, MapSummary, MapTile, MapWave, MapWaveAction, MapWaveFragment } from '../types/map.ts'
 import { MAP_FEATURE_LABELS } from './mapFeatures.ts'
 import { MAP_ENEMY_IMMUNITY_KEYS } from '../types/map.ts'
 
@@ -71,6 +71,42 @@ function parseMapEnemyRoutes(source: unknown, enemyIds: string[]): MapEnemyRoute
   })
 }
 
+function parseOmittedBranchSpawns(source: unknown, enemyIds: string[]): MapOmittedBranchSpawn[] {
+  if (!Array.isArray(source)) throw new Error('マップの任意出現の判定を確認できませんでした。')
+  const seen = new Set<string>()
+  return source.map((raw): MapOmittedBranchSpawn => {
+    const value = record(raw)
+    if (!value || !['branchId', 'enemyId', 'ruleId', 'condition'].every((key) =>
+      isText(value[key]) && value[key].trim().length > 0)
+      || !isCount(value.phaseIndex) || !isCount(value.actionIndex)
+      || !enemyIds.includes(value.enemyId as string)
+      || (value.kind !== undefined && value.kind !== 'optional' && value.kind !== 'non-enemy')
+      || !strings(value.evidence) || value.evidence.length === 0 || value.evidence.some((entry) => !entry.trim())) {
+      throw new Error('マップの任意出現の判定に不正な値があります。')
+    }
+    const key = JSON.stringify([value.branchId, value.phaseIndex, value.actionIndex])
+    if (seen.has(key)) throw new Error('マップの任意出現の判定が重複しています。')
+    seen.add(key)
+    return {
+      branchId: value.branchId as string, phaseIndex: value.phaseIndex, actionIndex: value.actionIndex,
+      enemyId: value.enemyId as string, ruleId: value.ruleId as string, condition: value.condition as string,
+      evidence: [...value.evidence],
+      ...(value.kind !== undefined ? { kind: value.kind as MapOmittedBranchSpawn['kind'] } : {}),
+    }
+  })
+}
+
+function parseMapSpawnAggregation(source: unknown, status: unknown, reasons: string[]): NonNullable<MapSummary['spawnAggregation']> {
+  const value = record(source)
+  if (!value || value.kind !== 'lower-bound' || status !== 'excluded'
+    || !isCount(value.count) || value.count === 0 || !strings(value.reasons) || value.reasons.length === 0
+    || value.reasons.some(reason => !reason.trim()) || new Set(value.reasons).size !== value.reasons.length
+    || value.reasons.length !== reasons.length || value.reasons.some(reason => !reasons.includes(reason))) {
+    throw new Error('マップの下限集計に不正な値があります。')
+  }
+  return { kind: 'lower-bound', count: value.count, reasons: [...value.reasons] }
+}
+
 export function parseMapIndex(source: unknown): MapIndex {
   const root = record(source)
   const enemies = record(root?.enemies)
@@ -133,9 +169,23 @@ export function parseMapIndex(source: unknown): MapIndex {
       ...(isText(map.difficulty) ? { difficulty: map.difficulty } : {}),
       ...(isText(map.diffGroup) ? { diffGroup: map.diffGroup } : {}),
       status: map.status as MapSummary['status'], spawnCount: map.spawnCount,
+      ...(map.spawnAggregation !== undefined ? {
+        spawnAggregation: parseMapSpawnAggregation(map.spawnAggregation, map.status, map.reasons),
+      } : {}),
       features: featureIds(map.features) ? [...map.features] : null,
       enemyRoutes: parseMapEnemyRoutes(map.enemyRoutes, map.enemyIds),
       enemySpawnCounts: parseMapEnemySpawnCounts(map.enemySpawnCounts, map.enemyIds),
+      ...(map.omittedBranchSpawns !== undefined ? {
+        omittedBranchSpawns: parseOmittedBranchSpawns(map.omittedBranchSpawns, map.enemyIds),
+      } : {}),
+      ...(map.countedBranchSpawns !== undefined ? {
+        countedBranchSpawns: parseOmittedBranchSpawns(map.countedBranchSpawns, map.enemyIds).map((entry, index) => {
+          const raw = (map.countedBranchSpawns as Record<string, unknown>[])[index]
+          if (!isCount(raw.count) || raw.kind !== undefined) throw new Error('マップの必須出現数に不正な値があります。')
+          const { kind: _kind, ...base } = entry
+          return { ...base, count: raw.count }
+        }),
+      } : {}),
       enemyIds: [...map.enemyIds], reasons: [...map.reasons], detailFile: map.detailFile as string | null,
     }
   })
