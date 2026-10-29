@@ -6,6 +6,7 @@ const i = (input: string): GuardValue => ({ input })
 const add = (...args: GuardValue[]): GuardValue => ({ op: 'add', args })
 const mul = (...args: GuardValue[]): GuardValue => ({ op: 'mul', args })
 const min = (...args: GuardValue[]): GuardValue => ({ op: 'min', args })
+const max = (...args: GuardValue[]): GuardValue => ({ op: 'max', args })
 const choose = (input: string, value: number | boolean | string, yes: GuardValue, no: GuardValue,
   comparison: 'EQ' | 'LT' | 'LTE' | 'GT' | 'GTE' = 'EQ'): GuardValue => ({ op: 'if', input, comparison, value, yes, no })
 const n = (key: string, label: string, defaultValue: number, min = 0, max = 100, step = 1): GuardInput =>
@@ -64,15 +65,15 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
       a(PHYS, k('attack@demetr_s3[bonus].prob_atk_scale'), 1, { label: '強化打撃', probability: k('attack@demetr_s3[bonus].prob') }),
     ], notes: ['同一の対象へ攻撃し続ける条件。移動・再選択・退場による攻撃中断は含めない。'] })]),
 
-  make('char_4082_qiubai', 1, [next(PHYS, 1, 1, { maxTargets: null, actions: [
+  make('char_4082_qiubai', 1, [next(PHYS, 1, 1, { traitOverrides: ['ATTACK_SCALE'], maxTargets: null, actions: [
     a(PHYS, 1, 1, { label: '通常攻撃', targets: 1 }), a(ARTS, k('aoe_scale'), 1, { label: 'バインド終了時' }),
   ], notes: ['対象がバインド終了まで生存し、同じ範囲内にいる条件。遅延ダメージを含む強化攻撃1回。'] })]),
   make('char_4082_qiubai', 2, [
     at('normal', stage(PHYS, { atk: k('atk'), duration: 5 })),
-    at('start', burst(ARTS, k('sword_begin_atk_scale'), 1, { label: '発動時', maxTargets: null })),
-    at('end', burst(PHYS, k('sword_end_atk_scale'), 1, { label: '終了時', atk: k('atk'), maxTargets: null })),
+    at('start', burst(ARTS, k('sword_begin_atk_scale'), 1, { label: '発動時', traitOverrides: ['ATTACK_SCALE'], maxTargets: null })),
+    at('end', burst(PHYS, k('sword_end_atk_scale'), 1, { label: '終了時', traitOverrides: ['ATTACK_SCALE'], atk: k('atk'), maxTargets: null })),
   ], [phase(['normal', '通常攻撃'], ['start', '発動時'], ['end', '終了時'])], ['地上の敵を対象とする。発動時・通常攻撃・終了時は別々に評価する。']),
-  make('char_4082_qiubai', 3, [stage(ARTS, { atk: k('atk'),
+  make('char_4082_qiubai', 3, [stage(ARTS, { atk: k('atk'), attackTreatment: 'MELEE', traitOverrides: ['DAMAGE_TYPE'],
     aspd: mul(k('attack_speed'), i('attackStacks')), maxTargets: 3, duration: 30,
     actions: [a(ARTS)] })], [stacks(8)], ['選択した累積数における攻撃性能。累積までの時間を積分した総ダメージではない。']),
 
@@ -90,37 +91,37 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
     a(ARTS, k('attack@atk_scale'), 2, { label: 'オルガンの音符', targets: 1 }),
   ], ...pending('oblvns-s3-note-targets', '異なる敵を追尾する音符の命中先と継続時間中の再命中頻度が未確定です。') })]),
 
-  make('char_4088_hodrer', 1, [next(PHYS, k('atk_scale'), 1, { maxTargets: 2 })], [], ['攻撃後の最大HP25%回復は直接ダメージに加算しない。']),
+  make('char_4088_hodrer', 1, [next(PHYS, k('atk_scale'))], [], ['攻撃後の最大HP25%回復は直接ダメージに加算しない。']),
   make('char_4088_hodrer', 2, [
-    at('initial', stage(PHYS, { label: '初期状態', atk: k('atk'), maxTargets: 2, duration: 'UNTIL_EXIT' })),
-    at('stance', stage(PHYS, { label: '切替後', atk: k('atk'), intervalAdd: k('base_attack_time'), maxTargets: 3, duration: 'UNTIL_EXIT' })),
+    at('initial', stage(PHYS, { label: '初期状態', atk: k('atk'), duration: 'UNTIL_EXIT' })),
+    at('stance', stage(PHYS, { label: '切替後', atk: k('atk'), intervalAdd: k('base_attack_time'), blockCountAdd: k('block_cnt'), duration: 'UNTIL_EXIT' })),
   ], [phase(['initial', '初期状態'], ['stance', '切替後'])], ['スキルのパッシブ攻撃力増加は両状態に適用。スタン成功を確定せず、素質の状態条件入力を使う。']),
   make('char_4088_hodrer', 3, [
-    at('normal', stage(PHYS, { atk: k('atk'), maxTargets: 2, duration: 70, actions: [a(PHYS),
-      a(TRUE, 0, 1, { flatDamage: k('attack@damage'), timing: 'PER_SECOND', label: '付与中の毎秒確定ダメージ' })] })),
+    at('normal', stage(PHYS, { atk: k('atk'), duration: 70, actions: [a(PHYS),
+      a(TRUE, 0, 1, { flatDamage: k('attack@damage'), timing: 'PER_SECOND', traitOverrides: ['DAMAGE_TYPE', 'HIT_COUNT', 'ATTACK_SCALE', 'SPLASH_DAMAGE'], label: '付与中の毎秒確定ダメージ' })] })),
     at('dot', burst(TRUE, 0, 1, { label: '付与中の毎秒ダメージ', maxTargets: null,
       actions: [a(TRUE, 0, 1, { flatDamage: k('attack@damage'), label: '1秒分の確定ダメージ' })] })),
   ], [phase(['normal', '通常攻撃'], ['dot', '付与中の1秒分'])], ['確定ダメージ付与済みの敵を指定する。HP減少、回復、敵の出入り、付与時間全体の積分は含めない。']),
 
   make('char_4145_ulpia', 1, [burst(PHYS, k('atk_scale'), 1, { maxTargets: k('max_target') })], [], ['引き寄せによる位置変化後の追加攻撃は含めない。']),
-  make('char_4145_ulpia', 2, [stage(PHYS, { atk: k('atk'), maxTargets: 3, duration: 'UNTIL_EXIT' })], [], ['スキルによる第一素質の回復強化は直接ダメージを変えない。']),
+  make('char_4145_ulpia', 2, [stage(PHYS, { atk: k('atk'), blockCountAdd: k('block_cnt'), duration: 'UNTIL_EXIT' })], [], ['スキルによる第一素質の回復強化は直接ダメージを変えない。']),
   make('char_4145_ulpia', 3, [
-    at('normal', stage(PHYS, { atk: k('atk'), maxTargets: 2, duration: 25 })),
+    at('normal', stage(PHYS, { atk: k('atk'), duration: 25 })),
     at('anchor', burst(PHYS, k('atk_scale'), 1, { label: '錨の着弾', atk: k('atk'), maxTargets: null })),
   ], [phase(['normal', '通常攻撃'], ['anchor', '錨の着弾'])], ['着弾攻撃と継続する通常攻撃を分けて計算。移動による攻撃中断は含めない。']),
 
-  make('char_4058_pepe', 1, [next(PHYS, k('atk_scale'), 1, { maxTargets: null })], [], ['範囲攻撃の主対象と周辺対象の倍率は特性から別々に処理する。']),
+  make('char_4058_pepe', 1, [next(PHYS, k('atk_scale'))], [], ['範囲攻撃の主対象と周辺対象の倍率は特性から別々に処理する。']),
   make('char_4058_pepe', 2, [stage(PHYS, { atk: k('atk'), aspd: add(k('attack_speed'),
-    mul(k('attack_speed_extra'), min(2, add(i('skillActivationCount'), -1)))), maxTargets: null, duration: 18 })], [activations()],
+    mul(k('attack_speed_extra'), min(2, add(i('skillActivationCount'), -1)))), duration: 18 })], [activations()],
     ['指定した命中対象数での1攻撃。ランダム主対象の変更を含む移動シミュレーションは行わない。']),
   make('char_4058_pepe', 3, [stage(PHYS, { atk: add(k('atk'), mul(k('attack@atk'), i('attackStacks'))),
-    intervalAdd: k('base_attack_time'), maxTargets: null, duration: 40 })], [stacks(4)], ['選択した累積数と命中対象数での性能。スタン・範囲拡大による敵の位置変化は含めない。']),
+    intervalAdd: k('base_attack_time'), duration: 40 })], [stacks(4)], ['選択した累積数と命中対象数での性能。スタン・範囲拡大による敵の位置変化は含めない。']),
 
-  make('char_1051_headb2', 1, [stage(PHYS, { atk: k('atk'), aspd: k('attack_speed'), maxTargets: null, duration: 30 })]),
+  make('char_1051_headb2', 1, [stage(PHYS, { atk: k('atk'), aspd: k('attack_speed'), duration: 30 })]),
   make('char_1051_headb2', 2, [
-    { ...stage(PHYS, { atk: k('atk'), maxTargets: null, duration: 16 }), id: 'first', label: '初回',
+    { ...stage(PHYS, { atk: k('atk'), duration: 16 }), id: 'first', label: '初回',
       when: { input: 'skillActivationCount', comparison: 'EQ', value: 1 } },
-    { ...stage(PHYS, { atk: k('headb2_s_2[second].atk'), maxTargets: null, duration: 'UNTIL_EXIT' }), id: 'later', label: '2回目以降',
+    { ...stage(PHYS, { atk: k('headb2_s_2[second].atk'), duration: 'UNTIL_EXIT' }), id: 'later', label: '2回目以降',
       when: { input: 'skillActivationCount', comparison: 'GTE', value: 2 } },
   ], [activations()]),
   make('char_1051_headb2', 3, [burst(PHYS, 1, 1, { maxTargets: null, atk: k('atk_base'),
@@ -128,31 +129,31 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
       { label: `第${index + 1}撃`, attackBonus: mul(index, k('atk_step')) })),
     ...pending('headb2-s3-terrain-splash', '連撃ごとの高台経由の追加攻撃と拡散先を確認する必要があります。', ['スキル', '素質1', '特性']) })]),
 
-  make('char_010_chen', 1, [next(PHYS, k('atk_scale'))], [], ['強化攻撃は説明に記載されたダメージ1回として定義し、剣豪の通常攻撃2ヒットを追加乗算しない。スタン1.5秒を保持。']),
+  make('char_010_chen', 1, [next(PHYS, k('atk_scale'), 1, { traitOverrides: ['HIT_COUNT'] })], [], ['強化攻撃は説明に記載されたダメージ1回として定義し、剣豪の通常攻撃2ヒットを追加乗算しない。スタン1.5秒を保持。']),
   make('char_010_chen', 2, [burst(PHYS, 1, 1, { maxTargets: k('max_target'), actions: [
     a(PHYS, k('atk_scale'), 1, { label: '物理斬撃' }), a(ARTS, k('atk_scale'), 1, { label: '術斬撃' }),
   ] })]),
   make('char_010_chen', 3, [burst(PHYS, k('atk_scale'), k('times'), { maxTargets: 1,
     notes: ['対象が途中で倒れない条件の1発動。途中撃破時の対象再選択は含めない。'] })]),
 
-  make('char_4116_blkkgt', 1, [next(PHYS, k('atk_scale_s1'), 2, { maxTargets: k('max_target') })]),
+  make('char_4116_blkkgt', 1, [next(PHYS, k('atk_scale_s1'), 1, { maxTargets: k('max_target') })]),
   make('char_4116_blkkgt', 2, [burst(PHYS, k('dot_scale'), choose('targetBlocked', true,
     k('blkkgt_s_2[blocked].trig_cnt'), k('blkkgt_s_2[not_blocked].trig_cnt')), { maxTargets: k('max_target') })], [blocked()]),
   make('char_4116_blkkgt', 3, [burst(PHYS, 1, 1, { maxTargets: k('max_target'), actions: [
     a(PHYS, k('d_atk_scale'), 10, { label: '連続斬撃' }), a(PHYS, k('e_atk_scale_end'), 1, { label: '終撃' }),
   ], notes: ['全ての攻撃が同じ対象に命中する条件。引き寄せによる範囲への出入りは含めない。'] })]),
 
-  make('char_017_huang', 1, [next(PHYS, k('atk_scale'), 1, { maxTargets: 3 })]),
-  make('char_017_huang', 2, [stage(PHYS, { atk: k('atk'), maxTargets: 3, duration: 'UNTIL_EXIT' })]),
+  make('char_017_huang', 1, [next(PHYS, k('atk_scale'))]),
+  make('char_017_huang', 2, [stage(PHYS, { atk: k('atk'), duration: 'UNTIL_EXIT' })]),
   make('char_017_huang', 3, [
     at('normal', stage(PHYS, { atk: i('currentAtkBonus'), maxTargets: null, duration: 10,
       notes: ['現在の攻撃力上昇割合を指定する。増加曲線を推定して期間総ダメージを出さない。'] })),
     at('end', burst(PHYS, k('damage_by_atk_scale'), 1, { label: '終了時の爆発', atk: k('atk'), maxTargets: null })),
   ], [phase(['normal', '通常攻撃'], ['end', '終了時の爆発']), n('currentAtkBonus', '現在の攻撃力上昇割合', 0.8, 0, 0.8, 0.01)]),
 
-  make('char_1026_gvial2', 1, [stage(PHYS, { atk: k('atk'), maxTargets: 3, duration: 25 })]),
-  make('char_1026_gvial2', 2, [stage(PHYS, { atk: k('atk'), maxTargets: 3, duration: 40 })], [], ['引き寄せ前後で同じ対象が射程内にいる場合の性能。']),
-  make('char_1026_gvial2', 3, [stage(PHYS, { atk: k('atk'), aspd: k('attack_speed'), maxTargets: 5, duration: 25 })], [], ['被ダメージ軽減と終了後のHP減少は、直接ダメージ・DPSへ加算しない。']),
+  make('char_1026_gvial2', 1, [stage(PHYS, { atk: k('atk'), duration: 25 })]),
+  make('char_1026_gvial2', 2, [stage(PHYS, { atk: k('atk'), duration: 40 })], [], ['引き寄せ前後で同じ対象が射程内にいる場合の性能。']),
+  make('char_1026_gvial2', 3, [stage(PHYS, { atk: k('atk'), aspd: k('attack_speed'), blockCountAdd: k('block_cnt'), duration: 25 })], [], ['被ダメージ軽減と終了後のHP減少は、直接ダメージ・DPSへ加算しない。']),
 
   make('char_4098_vvana', 1, [next(ARTS, k('atk_scale'), choose('overcharge', true, 3, 2))], [b('overcharge', 'オーバーチャージ')]),
   make('char_4098_vvana', 2, [stage(ARTS, { atk: k('atk'), aspd: i('stolenAttackSpeed'), maxTargets: 2, duration: 35, actions: [
@@ -164,10 +165,10 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
     actions: [a(ARTS, 1, choose('skillActivationCount', 2, 3, 2, 'GTE'))] })], [activations()]),
 
   make('char_1019_siege2', 1, [next(ARTS, 1, 1, { maxTargets: null, actions: [
-    a(ARTS, 1, 1, { label: '通常打撃', targets: 1 }), a(TRUE, k('atk_scale'), 1, { label: '隣接4マスへの追加攻撃' }),
+    a(ARTS, 1, 1, { label: '通常打撃', targets: 1 }), a(TRUE, k('atk_scale'), 1, { label: '隣接4マスへの追加攻撃', traitOverrides: ['DAMAGE_TYPE', 'HIT_COUNT'] }),
   ] })]),
   make('char_1019_siege2', 2, [stage(ARTS, { atk: k('atk'), maxTargets: k('attack@max_target'), duration: 'UNTIL_EXIT' })], [], ['SP回復速度は発動周期を計算しないためDPSに加算しない。']),
-  make('char_1019_siege2', 3, [stage(TRUE, { atk: k('atk'), intervalAdd: k('base_attack_time'),
+  make('char_1019_siege2', 3, [stage(TRUE, { atk: k('atk'), intervalAdd: k('base_attack_time'), traitOverrides: ['DAMAGE_TYPE'],
     maxTargets: k('attack@max_target'), duration: 25,
     notes: ['召喚物・味方によって攻撃可能な対象が成立している条件の通常攻撃。召喚物の独立ダメージは含めない。'] })]),
 
@@ -214,25 +215,26 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
   make('char_4011_lessng', 3, [stage(PHYS, { duration: 20, actions: [a(PHYS, choose('targetBlocked', true, k('lessng_s3[atk_scale].atk_scale'), 1))] })],
     [blocked()], ['発動時の600術ダメージは自身へのダメージであり、敵への攻撃に加算しない。']),
 
-  make('char_1032_excu2', 1, [stage(PHYS, { atk: k('atk'), defenseIgnoreFixed: k('def_penetrate_fixed'), maxTargets: null })], [], ['弾薬1発分の通常攻撃。再発動・途中停止を含む周期DPSは計算しない。']),
-  make('char_1032_excu2', 2, [stage(PHYS, { atk: k('atk'), maxTargets: null })], [], ['弾薬1発分の通常攻撃。回避による弾薬補充とスキル全体の継続時間は含めない。']),
+  make('char_1032_excu2', 1, [stage(PHYS, { atk: k('atk'), defenseIgnoreFixed: k('def_penetrate_fixed') })], [], ['弾薬1発分の通常攻撃。再発動・途中停止を含む周期DPSは計算しない。']),
+  make('char_1032_excu2', 2, [stage(PHYS, { atk: k('atk') })], [], ['弾薬1発分の通常攻撃。回避による弾薬補充とスキル全体の継続時間は含めない。']),
   make('char_1032_excu2', 3, [
     at('normal', stage(PHYS, { atk: add(k('atk'), mul(k('attack@atk'), min(k('attack@max_stack_cnt'), i('ammoSpent')))),
-      intervalAdd: k('base_attack_time'), maxTargets: null })),
+      intervalAdd: k('base_attack_time') })),
     at('end', burst(PHYS, k('attack@final_atk_scale'), 1, { label: '終了時', atk: add(k('atk'), mul(k('attack@atk'), min(k('attack@max_stack_cnt'), i('ammoSpent')))), maxTargets: null })),
   ], [phase(['normal', '通常攻撃'], ['end', '終了時の追加攻撃']), n('ammoSpent', '弾薬消費による累積数', 0, 0, 100)],
     ['指定した累積数の性能。終了時の攻撃対象は発動中に攻撃した敵で、実際に残存する敵数を指定する。']),
 
-  make('char_4010_etlchi', 1, [next(PHYS, k('atk_scale'), 2, { maxTargets: null })]),
+  make('char_4010_etlchi', 1, [next(PHYS, k('atk_scale'), 2)]),
   make('char_4010_etlchi', 2, [burst(PHYS, k('atk_scale'), 1, { label: '鎌1回の接触', maxTargets: null,
     notes: ['接触1回のダメージ。0.5秒ごとの接触判定と2本の鎌の位置・重複を通常攻撃DPSと同一視しない。'] })]),
-  make('char_4010_etlchi', 3, [stage(PHYS, { atk: k('atk'), aspd: k('attack_speed'), maxTargets: null, duration: 20,
+  make('char_4010_etlchi', 3, [stage(PHYS, { atk: k('atk'), aspd: k('attack_speed'), duration: 20,
     ...pending('etlchi-s3-hp-transfer', '心燭の最低ダメージ35%・HP上限・敵へのHP減少転写を通常の軽減計算と分離する必要があります。') })]),
 
   make('char_4064_mlynar', 1, [stage(PHYS, { duration: 30, maxTargets: null, actions: [a(PHYS, k('attack@atk_scale'))] })]),
   make('char_4064_mlynar', 2, [stage(PHYS, { duration: 20, intervalAdd: k('base_attack_time'), maxTargets: null,
     actions: [a(PHYS, k('attack@atk_scale'), 2)] })], [], ['指定した特性の蓄積状態での攻撃。撃破時の次回スキルへの引継ぎは含めない。']),
-  make('char_4064_mlynar', 3, [stage(PHYS, { duration: 28, maxTargets: k('attack@max_target'), actions: [
+  make('char_4064_mlynar', 3, [stage(PHYS, { duration: 28, maxTargets: k('attack@max_target'),
+    traitAttackRatioScale: max(0, add(k('trait_up'), mul(k('per_kill_reduce'), i('skillKillCount')))), actions: [
     a(PHYS, k('attack@atk_scale'), 1, { label: '通常攻撃' }),
     a(TRUE, k('atk_scale'), 1, { label: '自身の攻撃による確定ダメージ' }),
   ] })], [n('skillKillCount', '今回のスキル中の撃破数', 0, 0, 100)], ['他のカジミエーシュOPが誘発する確定ダメージは、他者の攻撃頻度が未指定のため含めない。']),

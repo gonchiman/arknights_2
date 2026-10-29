@@ -3,6 +3,7 @@ import type { EffectApplicationRow } from './effectApplication.ts'
 import type { GuardConditions, GuardInput, GuardStage, GuardValue } from './guardCombatTypes.ts'
 import { getGuardRegisteredTalentNames } from './guardCombatPassives.ts'
 import { guardConditionMatches, resolveGuardValue } from './guardCombatValues.ts'
+import { evaluateGuardTraits } from './guardTraitEvaluation.ts'
 
 const number = (value: number) => new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 6 }).format(value)
 const percent = (value: number) => `${number(value * 100)}%`
@@ -39,7 +40,7 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
   const evaluation = output.guard
   if (!recipe || !evaluation) return []
   const { conditions, inputs } = evaluation
-  const board = new Map((input.skill.skillLevels[9]?.blackboard ?? []).flatMap(entry =>
+  const board = new Map((input.skill.skillLevels[input.skillLevelIndex]?.blackboard ?? []).flatMap(entry =>
     entry.key && typeof entry.value === 'number' ? [[entry.key.toLowerCase(), entry.value] as const] : []))
   const rows: EffectApplicationRow[] = []
   let selected: GuardStage | undefined
@@ -81,19 +82,28 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
     }
     const value = (expression: GuardValue | undefined, fallback = 0) => expression === undefined
       ? fallback : resolveGuardValue(expression, board, conditions)
+    // Base-attack values belong to the trait rows; do not present recipe fallback
+    // values as skill changes when structured traits actually provide them.
+    let inherited: ReturnType<typeof evaluateGuardTraits>['evaluation'] | undefined
+    try {
+      inherited = evaluateGuardTraits(input.operator, stage, conditions, board,
+        { phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel }).evaluation
+    } catch { /* The existing calculation status carries invalid input/data errors. */ }
     const numeric = (key: string, item: string, expression: GuardValue | undefined, format: (n: number) => string,
       options: Parameters<typeof add>[4] = {}) => {
       if (expression !== undefined) add(key, item, () => format(value(expression)), [expression], options)
     }
     numeric('atk', '攻撃力', stage.atk, signedPercent)
+    numeric('block-count-add', 'ブロック数', stage.blockCountAdd, n => `${signed(n)}体`)
+    numeric('trait-attack-ratio-scale', '特性の攻撃力上昇倍率', stage.traitAttackRatioScale, n => `×${number(n)}`)
     const intervalOptions = stage.kind === 'NORMAL' || inactive ? {} : {
       status: 'NOT_RELEVANT' as const, reason: '選択した段階は1回分のダメージを計算し、攻撃間隔を使用しません。',
     }
     numeric('aspd', '攻撃速度', stage.aspd, signed, intervalOptions)
     numeric('interval-scale', '攻撃間隔倍率', stage.intervalScale, n => `×${number(n)}`, intervalOptions)
     numeric('interval-add', '攻撃間隔の加算', stage.intervalAdd, n => `${signed(n)}秒`, intervalOptions)
-    add('max-targets', '攻撃対象数上限', () => stage.maxTargets === null ? '上限なし' : `${number(value(stage.maxTargets, 1))}体`,
-      [stage.maxTargets ?? undefined])
+    if (stage.maxTargets !== undefined) add('max-targets', '攻撃対象数上限',
+      () => stage.maxTargets === null ? '上限なし' : `${number(value(stage.maxTargets))}体`, [stage.maxTargets ?? undefined])
     const mitigationOptions = (damageType: 'PHYSICAL' | 'ARTS') => inactive || !output.model
       || (damageType === 'PHYSICAL' ? output.axisLabel === '敵の防御力' : output.damageType === 'ARTS' || output.damageType === null) ? {} : {
         status: 'NOT_RELEVANT' as const, reason: damageType === 'PHYSICAL'
@@ -134,12 +144,14 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
         ...(action.basis === 'TARGET_CURRENT_HP' ? [{ input: 'targetCurrentHp' }] : [])]
       const actionRow = (key: string, item: string, read: () => string, expression?: GuardValue) =>
         add(`${prefix}:${key}`, `${action.label}：${item}`, read, [...actionExpressions, expression], options)
-      actionRow('type', 'ダメージ属性', () => TYPE_LABELS[action.damageType])
+      if (inherited?.damageType === undefined || action.traitOverrides?.includes('DAMAGE_TYPE'))
+        actionRow('type', 'ダメージ属性', () => TYPE_LABELS[action.damageType])
       if (action.basis !== undefined) actionRow('basis', '計算基準', () => action.basis === 'TARGET_CURRENT_HP' ? '対象の現在HP' : '自身の攻撃力')
       actionRow('scale', action.basis === 'TARGET_CURRENT_HP' ? '対象の現在HP倍率' : '攻撃倍率',
         () => `×${number(value(action.scale, 1))}`, action.scale)
-      actionRow('hits', action.timing === 'PER_SECOND' ? '毎秒の判定回数' : '攻撃回数',
-        () => `${number(value(action.hits, 1))}回`, action.hits)
+      if (inherited?.hitCount === undefined || action.traitOverrides?.includes('HIT_COUNT'))
+        actionRow('hits', action.timing === 'PER_SECOND' ? '毎秒の判定回数' : '攻撃回数',
+          () => `${number(value(action.hits, 1))}回`, action.hits)
       actionRow('targets', '命中対象数', () => `${number(value(action.targets, output.actualTargetCount))}体`, action.targets)
       for (const [key, item, expression, format] of [
         ['attack-bonus', '攻撃力加算', action.attackBonus, signedPercent],

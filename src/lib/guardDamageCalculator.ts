@@ -6,6 +6,9 @@ import { guardConditionMatches, mergeGuardInputs, resolveGuardConditions, resolv
 import { evaluateGuardPassives, getGuardPassiveInputs } from './guardCombatPassives.ts'
 import { getDamageSensitivityTablePoints } from './damageSensitivity.ts'
 import type { ProbabilisticDamageBranch } from './probabilisticDamage.ts'
+import { getExpandedDefinition, getExpandedSource, sameReviewedSkill } from './expandedCombatRegistry.ts'
+import { evaluateGuardTraits } from './guardTraitEvaluation.ts'
+import type { TraitCombatResult } from './traitCombatEvaluation.ts'
 
 const TARGET_INPUT: GuardInput = { key: 'actualAttackTargetCount', label: '実際の攻撃対象数', kind: 'number',
   defaultValue: 1, min: 1, max: 10000, step: 1 }
@@ -15,6 +18,7 @@ const RESISTANCE_INPUT: GuardInput = { key: 'enemyResistance', label: '敵の術
 export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, structure: SkillStructure,
   initialErrors: string[] = []): DamageCalculatorThreeOutput {
   const recipe = structure.guardRecipe!
+  const expanded = getExpandedDefinition(recipe.operatorId)
   // Invalid values still block output; safe display statistics must not throw before that error is shown.
   const stats = getOperatorStats(input.operator.operatorProfile,
     Number.isFinite(input.phaseIndex) ? input.phaseIndex : 0,
@@ -28,9 +32,14 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
   const conditions = resolved.values
   reasons.push(...resolved.errors)
   if (input.operator.operatorId !== recipe.operatorId || input.skill.operatorId !== recipe.operatorId
-    || input.skill.skillId !== structure.basicInfo.skillId || input.skillLevelIndex !== 9) reasons.push('選択したオペレーター・スキル・特化段階が一致していません。')
-  const raw = input.skill.skillLevels[9]
-  if (!raw) reasons.push('特化3のスキルデータがありません。')
+    || input.skill.skillId !== structure.basicInfo.skillId || input.skillLevelIndex !== structure.basicInfo.levelIndex) reasons.push('選択したオペレーター・スキル・特化段階が一致していません。')
+  const raw = input.skill.skillLevels[structure.basicInfo.levelIndex]
+  if (!raw) reasons.push('選択したスキルレベルのデータがありません。')
+  if (expanded) {
+    const reviewed = getExpandedSource(recipe.operatorId)?.skills.find(skill => skill.skillId === input.skill.skillId && skill.skillIndex === recipe.skillIndex)?.raw
+    if (!sameReviewedSkill(raw, reviewed)
+      || input.phaseIndex !== expanded.phaseIndex) reasons.push('確認済みのスキル説明文・数値・昇進段階と一致しません。')
+  }
   const sourceKeys = new Set<string>()
   for (const entry of raw?.blackboard ?? []) {
     const key = entry.key?.toLowerCase()
@@ -51,20 +60,29 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
     stage = stages[0]
   } catch (error) { reasons.push(message(error)) }
   const kind = stage?.kind ?? 'NORMAL'
-  const passive = evaluateGuardPassives(input.operator, conditions, { kind, skillIndex: recipe.skillIndex, stageId: stage?.id ?? '', stage })
+  const passive = evaluateGuardPassives(input.operator, conditions, { kind, skillIndex: recipe.skillIndex, stageId: stage?.id ?? '', stage,
+    phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel })
   reasons.push(...passive.blockers, ...(stage?.unresolved ?? []))
   for (const [label, fraction] of Object.entries({ 発動確率: passive.critChance,
     防御力無視: passive.defenseIgnoreRatio, 術耐性無視: passive.resistanceIgnoreRatio, 防御力低下: passive.defenseReductionRatio })) {
     if (!Number.isFinite(fraction) || fraction < 0 || fraction > 1) reasons.push(`素質の${label}が有効範囲外です。`)
   }
   const actualTargetCount = Number(conditions.actualAttackTargetCount ?? 1)
+  let traitEvaluation: TraitCombatResult | undefined
+  let splashActions = new Map<GuardDamageAction, number>()
   let maxTargets: number | null = 1, atk = 0, aspd = 0, interval: number | null = null, duration = 0
   let actions: GuardDamageAction[] = []
   let defenseIgnoreRatio = passive.defenseIgnoreRatio, defenseIgnoreFixed = passive.defenseIgnoreFixed
   let resistanceIgnoreFixed = passive.resistanceIgnoreFixed
   try {
     if (stage) {
-      maxTargets = stage.maxTargets === null ? null : value(stage.maxTargets, 1)
+      const traits = evaluateGuardTraits(input.operator, stage, conditions, board,
+        { phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel })
+      traitEvaluation = traits.evaluation
+      splashActions = traits.splashActions
+      reasons.push(...traitEvaluation.blockers)
+      passive.attackRatio += traitEvaluation.attackRatio
+      maxTargets = traits.maxTargets
       if (maxTargets !== null && (!Number.isSafeInteger(maxTargets) || maxTargets < 1)) throw new RangeError('攻撃対象数の上限が不正です。')
       if (maxTargets !== null && actualTargetCount > maxTargets) reasons.push(`実際の攻撃対象数を1〜${maxTargets}体で指定してください。`)
       if (maxTargets !== null) inputs = inputs.map(item => item.key === TARGET_INPUT.key ? { ...item, max: maxTargets! } : item)
@@ -79,8 +97,10 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
       const speed = stats.attackSpeed + aspd + passive.attackSpeed
       if (!Number.isFinite(speed) || !Number.isFinite(baseTime) || baseTime <= 0) throw new RangeError('攻撃間隔を計算できません。')
       interval = kind === 'NORMAL' ? baseTime * 100 / Math.max(20, speed) : null
-      duration = stage.duration === 'UNTIL_EXIT' ? 0 : value(stage.duration)
-      actions = [...stage.actions, ...passive.additionalActions].filter(action => action.timing !== 'ON_DEPLOY')
+      duration = stage.duration === 'UNTIL_EXIT' ? 0 : Math.max(0, value(stage.duration, raw?.duration ?? 0))
+      const talentActions = passive.additionalActions.map(action => !action.timing || action.timing === 'PER_ATTACK'
+        ? { ...action, scale: { op: 'mul' as const, args: [action.scale, traitEvaluation!.attackScale] } } : action)
+      actions = [...traits.actions, ...talentActions].filter(action => action.timing !== 'ON_DEPLOY')
     }
   } catch (error) { reasons.push(message(error)) }
   const types = new Set(actions.map(action => action.damageType))
@@ -104,7 +124,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
   const directActions = actions.filter(action => action.timing !== 'PER_SECOND')
   const periodicActions = actions.filter(action => action.timing === 'PER_SECOND')
   const hasRandomTargets = directActions.some(action => action.targets !== undefined)
-    || input.operator.subProfessionId === 'hammer'
+    || splashActions.size > 0
   const canShowDps = kind === 'NORMAL' && interval !== null
   const dpsReason = canShowDps ? null : kind === 'NEXT_ATTACK' ? '強化攻撃1回の値です。SP回復を含む周期DPSは計算しません。'
     : '選択した段階の1回分の値です。動作時間・SP回復を含むDPSは計算しません。'
@@ -124,9 +144,9 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
         ? Math.max(Number(conditions.targetCurrentHp) * scale, pipeline(value(action.minimumAttackScale)).finalAttack)
         : basePipeline.finalAttack + value(action.flatDamage)
       if (!Number.isFinite(normalAmount) || normalAmount < 0) throw new RangeError(`「${action.label}」のダメージを解決できません。`)
-      const variants = input.operator.subProfessionId === 'hammer' && action.damageType === 'PHYSICAL' && stage?.actions.includes(action)
+      const variants = splashActions.has(action)
         ? [{ label: `${action.label}（主対象）`, targets: Math.min(1, targets), factor: 1, damageScale: 1 },
-          { label: `${action.label}（周囲）`, targets: Math.max(0, targets - 1), factor: 0.5, damageScale: passive.splashDamageScale ?? 1 }]
+          { label: `${action.label}（周囲）`, targets: Math.max(0, targets - 1), factor: splashActions.get(action)!, damageScale: passive.splashDamageScale ?? 1 }]
         : [{ label: action.label, targets, factor: 1, damageScale: 1 }]
       for (const [variantIndex, variant] of variants.entries()) {
         if (variant.targets === 0 || count === 0) continue
@@ -172,6 +192,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
   } catch (error) { reasons.push(message(error)); rows = [] }
   const unsupportedReasons = [...new Set(reasons)]
   return {
+    traitEvaluation,
     structure, stats, model: unsupportedReasons.length ? null : {
       directMultiplierPercent: atk * 100, attackScalePercent: 100,
       hitCount: rows[0]?.attackComponents.reduce((sum, component) => sum + component.expectedHitCount, 0) ?? 0,
@@ -179,10 +200,10 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
     },
     damageType, axisLabel, rows, unsupportedReasons, conditionInputs: [], actualTargetCount,
     maxTargetCount: maxTargets, effects: [], canShowDps: unsupportedReasons.length === 0 && canShowDps, dpsReason,
-    effectiveAttack: unsupportedReasons.length ? null : pipeline().finalAttack,
+    effectiveAttack: unsupportedReasons.length ? null : pipeline(traitEvaluation?.attackScale ?? 1).finalAttack,
     attackSpeed: unsupportedReasons.length ? null : attackSpeed, attackInterval: unsupportedReasons.length ? null : interval,
     activeStageLabel: stage?.label ?? null, attackKind: kind, attackLabel: kind === 'NORMAL' ? '1攻撃' : kind === 'NEXT_ATTACK' ? '強化攻撃' : 'スキル',
-    attackDistanceType: conditions.attackDistanceType === 'RANGED' ? 'RANGED' : 'MELEE', rangePenaltyMultiplier: 1,
+    attackDistanceType: stage?.attackTreatment ?? (conditions.attackDistanceType === 'RANGED' ? 'RANGED' : 'MELEE'), rangePenaltyMultiplier: 1,
     scopeNotes: [...scopeNotes, ...(dpsReason ? [dpsReason] : [])], counterCooldownSeconds: null,
     talentEffects: [], talentAttackRatio: passive.attackRatio, resistanceIgnoreFixed, hasUnsupportedTalentDamage: false,
     damageOverTime: null, hasAttackSequence: true,

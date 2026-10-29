@@ -1,4 +1,11 @@
-import type { GuardConditions, GuardInput, GuardStage, GuardValue } from './guardCombatTypes.ts'
+import type { GuardConditions, GuardDamageAction, GuardInput, GuardStage, GuardValue } from './guardCombatTypes.ts'
+
+/** A recipe's neutral hit placeholder is not the resolved normal-attack hit count. */
+export function usesBaseAttackHitCount(stage: GuardStage, action: GuardDamageAction): boolean {
+  return (stage.kind === 'NORMAL' || stage.kind === 'NEXT_ATTACK')
+    && !stage.traitOverrides?.includes('HIT_COUNT') && !action.traitOverrides?.includes('HIT_COUNT')
+    && (action.hits === undefined || action.hits === 1)
+}
 
 export function guardConditionMatches(condition: NonNullable<GuardStage['when']>, values: GuardConditions): boolean {
   const actual = values[condition.input]

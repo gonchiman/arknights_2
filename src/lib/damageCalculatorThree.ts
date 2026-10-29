@@ -16,6 +16,8 @@ import { evaluateDamageCalculatorThreeTalents, type DamageCalculatorThreeTalentE
 import { calculateMaintainedDamageOverTime, type MaintainedDamageOverTime } from './damageOverTime.ts'
 import { calculateProbabilisticDefenseIgnoreDamage, type ProbabilisticDamageBranch } from './probabilisticDamage.ts'
 import type { CombatCondition } from './combatEffectStructure.ts'
+import { buildTraitStructures, type TraitStructureEffect } from './traitStructure.ts'
+import { evaluateTraitStructure, type TraitCombatResult } from './traitCombatEvaluation.ts'
 import { getComparisonMaximumSkillLevelIndex, getComparisonMinimumPhaseIndex } from './operatorBuildComparison.ts'
 import {
   findSkillStructure,
@@ -43,23 +45,18 @@ export const DAMAGE_CALCULATOR_THREE_SELECTIONS: readonly SkillStructureSelectio
   })),
 ]
 
-/** Reviewed normal attacks. These describe the base attack, not skill formulas. */
+/** Reviewed attack capabilities for the legacy selector; numerical traits come from TraitStructure. */
 export const DAMAGE_CALCULATOR_THREE_BASE_ATTACKS: Readonly<Record<string, {
   readonly damageType: DamageType
   readonly hitCount: number
   readonly maxTargets: number
-  readonly rangedAttackScale?: number
-  readonly counterRangedAttackScale?: number
+  readonly rangedAttackEnabled?: boolean
 }>> = {
-  char_350_surtr: { damageType: 'ARTS', hitCount: 1, maxTargets: 1 },
+  char_350_surtr: { damageType: 'PHYSICAL', hitCount: 1, maxTargets: 1 },
   char_263_skadi: { damageType: 'PHYSICAL', hitCount: 1, maxTargets: 1 },
-  char_172_svrash: { damageType: 'PHYSICAL', hitCount: 1, maxTargets: 1, rangedAttackScale: 0.8 },
-  char_4009_irene: { damageType: 'PHYSICAL', hitCount: 2, maxTargets: 1 },
-  // PRTS, Thorns / skill 2 notes: counter damage always receives the trait's
-  // reduced attack scale. Local JP character data supplies the 0.8 value.
-  // https://prts.wiki/w/%E8%8D%86%E6%A3%98
-  char_293_thorns: { damageType: 'PHYSICAL', hitCount: 1, maxTargets: 1,
-    rangedAttackScale: 0.8, counterRangedAttackScale: 0.8 },
+  char_172_svrash: { damageType: 'PHYSICAL', hitCount: 1, maxTargets: 1, rangedAttackEnabled: true },
+  char_4009_irene: { damageType: 'PHYSICAL', hitCount: 1, maxTargets: 1 },
+  char_293_thorns: { damageType: 'PHYSICAL', hitCount: 1, maxTargets: 1, rangedAttackEnabled: true },
 }
 
 export interface DamageCalculatorThreeConditions {
@@ -152,6 +149,7 @@ export interface DamageCalculatorThreeRow {
 }
 
 export interface DamageCalculatorThreeOutput {
+  traitEvaluation?: TraitCombatResult
   guard?: { inputs: GuardInput[]; conditions: GuardConditions; evaluations: GuardPassiveModifiers['evaluations']; unresolved: string[] }
   structure: SkillStructure | null
   stats: OperatorStats
@@ -214,7 +212,7 @@ export function getDamageCalculatorThreeInputs(
   const stage = selectStage(structure, context)
   const attack = resolveAttack(stage, context, base, structure.effectStructure.targetSelection?.maxTargets)
   if (attack.maxTargets === null || attack.maxTargets > 1) metrics.add('actualAttackTargetCount')
-  if (base.rangedAttackScale !== undefined && !attack.fixedTreatment) metrics.add('attackDistanceType')
+  if (base.rangedAttackEnabled === true && !attack.fixedTreatment) metrics.add('attackDistanceType')
   const inputs: DamageCalculatorThreeConditionInput[] = []
   if (metrics.has('skillActivationCount')) inputs.push({ kind: 'number', metric: 'skillActivationCount',
     label: 'スキル発動回数', min: 1, max: Number.MAX_SAFE_INTEGER, defaultValue: 1,
@@ -275,8 +273,6 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   const allowed = DAMAGE_CALCULATOR_THREE_SELECTIONS.some(value => sameSelection(value, selection))
   const structure = allowed ? findSkillStructure(selection) : null
   const base = DAMAGE_CALCULATOR_THREE_BASE_ATTACKS[input.operator.operatorId]
-  const damageType = base?.damageType ?? null
-  const axisLabel = damageType === 'PHYSICAL' ? '敵の防御力' : damageType === 'ARTS' ? '敵の術耐性' : '防御力・術耐性'
   if (input.skill.operatorId !== input.operator.operatorId) reasons.push('選択したオペレーターとスキルが一致していません。')
   if (!structure) reasons.push('選択したスキル・スキルレベルの構造化データは、計算機３では未対応です。')
   if (!base) reasons.push('通常攻撃の基礎定義が未対応です。')
@@ -296,20 +292,41 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
       reasons.push(error instanceof Error ? error.message : '条件の入力を解決できません。')
     }
   }
-  const maxTargetCount = attack ? attack.maxTargets : base?.maxTargets ?? 1
+  const attackKind = attack?.kind ?? 'NORMAL'
+  const attackLabel = attackKind === 'NEXT_ATTACK' ? '強化攻撃' : attackKind === 'COUNTER' ? '反撃' : attackKind === 'SKILL_ACTION' ? 'スキル' : '1攻撃'
+  const attackDistanceType = attack?.treatment ?? 'MELEE'
+  const hasAttackSequence = stage?.effects.some(effect => effect.item === 'DIRECT_DAMAGE') ?? false
+  let activeEffects: SkillStructureEffect[] = []
+  try { activeEffects = stage?.effects.filter(effect => evaluatePredicate(effect.condition, safeContext)) ?? [] }
+  catch (error) { reasons.push(error instanceof Error ? error.message : '特性を上書きするスキル条件を解決できません。') }
+  const overriddenItems: TraitStructureEffect['item'][] = hasAttackSequence
+    ? ['DAMAGE_TYPE', 'HIT_COUNT', 'MAX_TARGETS', 'ATTACK_TARGETING'] : []
+  if (structure?.effectStructure.targetSelection?.maxTargets !== undefined
+    || activeEffects.some(effect => effect.item === 'MAX_TARGETS') || attackKind === 'COUNTER') {
+    overriddenItems.push('MAX_TARGETS', 'ATTACK_TARGETING')
+  }
+  const traitStructure = buildTraitStructures([input.operator], { phaseIndex: input.phaseIndex,
+    operatorLevel: input.operatorLevel })[0] ?? null
+  const traitEvaluation = evaluateTraitStructure(traitStructure, {
+    kind: attackKind, metrics: { 'attack.distanceType': attackDistanceType, 'source.skillActive': true,
+      'attack.targetCount': context.actualAttackTargetCount },
+    overriddenItems, disabledEffectIds: attack?.rangePenaltyEnabled === false ? ['ranged-attack-scale'] : [],
+  })
+  if (base && !traitStructure) reasons.push('選択したオペレーターの特性構造を取得できません。')
+  reasons.push(...traitEvaluation.blockers)
+  const damageType = traitEvaluation.damageType ?? base?.damageType ?? null
+  const axisLabel = damageType === 'PHYSICAL' ? '敵の防御力' : damageType === 'ARTS' ? '敵の術耐性' : '防御力・術耐性'
+  const maxTargetCount = traitEvaluation.maxTargets !== undefined ? traitEvaluation.maxTargets
+    : attack ? attack.maxTargets : base?.maxTargets ?? 1
   const actualTargetCount = context.actualAttackTargetCount
   if (maxTargetCount !== null && Number.isSafeInteger(actualTargetCount) && actualTargetCount > maxTargetCount) {
     reasons.push('実際の攻撃対象数は1〜' + maxTargetCount + '体の整数で指定してください。')
   }
-  const attackKind = attack?.kind ?? 'NORMAL'
-  const attackLabel = attackKind === 'NEXT_ATTACK' ? '強化攻撃' : attackKind === 'COUNTER' ? '反撃' : attackKind === 'SKILL_ACTION' ? 'スキル' : '1攻撃'
-  const attackDistanceType = attack?.treatment ?? 'MELEE'
-  const rangePenaltyMultiplier = attack?.rangePenaltyMultiplier ?? 1
+  const rangePenaltyMultiplier = traitEvaluation.attackScale
   const counterCooldownSeconds = attackKind === 'COUNTER' ? attack?.action?.cooldownSeconds ?? null : null
   const effectiveContext = { ...safeContext, attackDistanceType }
   const effects: DamageCalculatorThreeEffectEvaluation[] = []
   const scopeNotes: string[] = []
-  const hasAttackSequence = stage?.effects.some(effect => effect.item === 'DIRECT_DAMAGE') ?? false
   const initialTargetState = hasAttackSequence && structure?.effectStructure.targetSelection
     ? structure.effectStructure.targetSelection.initialState === 'USER_DEFINED' ? context.targetInitialState : 'GROUND' : null
   const hasRandomTargets = stage?.effects.some(effect => effect.item === 'DIRECT_DAMAGE' && effect.value.targeting?.selection === 'RANDOM') ?? false
@@ -383,7 +400,7 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
       } else if (effect.item === 'ATTACK_TREATMENT' && (sustained || onAttack) && effect.target === 'SELF_ATTACK') {
         // Attack treatment and damage type are separate; only treatment changes.
       } else if (effect.item === 'TRAIT_RANGED_ATK_PENALTY' && (sustained || onAttack) && effect.target === 'SELF_ATTACK') {
-        // resolveAttack combines the enabled flag with the reviewed base trait.
+        // The shared trait evaluator applies the skill's explicit penalty override.
       } else if (effect.item === 'NORMAL_ATTACK_ENABLED' && sustained && effect.target === 'SELF') {
         // The trigger model replaces normal attacks when they are disabled.
       } else if (effect.item === 'TRIGGERED_ATTACK' && effect.timing === 'ON_INCOMING_NORMAL_ATTACK'
@@ -514,7 +531,7 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   const model: SkillModelDefaults | null = unsupportedReasons.length === 0 && base ? {
     directMultiplierPercent: atkRatio * 100, attackScalePercent: attackScale * 100,
     hitCount: hasAttackSequence ? actionPlans.reduce((sum, plan) => sum + plan.effect.value.count, 0)
-      : base.hitCount * (attackKind === 'COUNTER' ? attack?.action?.count ?? 1 : 1),
+      : (traitEvaluation.hitCount ?? base.hitCount) * (attackKind === 'COUNTER' ? attack?.action?.count ?? 1 : 1),
     attackInterval: attackInterval ?? 0, duration, ammoCount: 0, notes: [],
   } : null
   const attackPipeline = model ? calculateAttackPipeline(stats.attack, {
@@ -566,7 +583,7 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
         damageOverTimeDps, combinedDps, allTargetsCombinedDps: combinedDps === null ? null : combinedDps * actualTargetCount,
         attackComponents: [] }
     }) : []
-  return { structure, stats, model, damageType, axisLabel, rows, unsupportedReasons, conditionInputs,
+  return { structure, stats, model, damageType, axisLabel, rows, unsupportedReasons, conditionInputs, traitEvaluation,
     actualTargetCount, maxTargetCount, effects, canShowDps, dpsReason, effectiveAttack,
     attackSpeed: model ? attackSpeedValue : null,
     attackInterval: model ? attackInterval : null, activeStageLabel: stage?.label ?? null,
@@ -586,7 +603,7 @@ interface ResolvedAttack {
   treatment: 'MELEE' | 'RANGED'
   fixedTreatment: boolean
   maxTargets: number | null
-  rangePenaltyMultiplier: number
+  rangePenaltyEnabled: boolean
   action: SkillStructureAttackAction | null
 }
 
@@ -705,7 +722,7 @@ function resolveAttack(stage: SkillStructureStage, context: ConditionContext, ba
   if (stage.duration.type === 'SKILL_ACTION') {
     if (actions.length) throw new RangeError('即時スキルと反撃を組み合わせる計算は未対応です。')
     return { kind: 'SKILL_ACTION', treatment: treatment ?? 'MELEE', fixedTreatment: true,
-      maxTargets, action: null, rangePenaltyMultiplier: 1 }
+      maxTargets, action: null, rangePenaltyEnabled: false }
   }
   if (actions.length > 1 || (actions.length && normalEnabled)) {
     throw new RangeError('通常攻撃と独立した追加攻撃を組み合わせる計算にはまだ対応していません。')
@@ -713,18 +730,15 @@ function resolveAttack(stage: SkillStructureStage, context: ConditionContext, ba
   if (!normalEnabled) {
     if (actions.length !== 1) throw new RangeError('通常攻撃を行わず、計算可能な反撃がありません。')
     const action = actions[0]
-    if (action.treatment === 'RANGED' && base.counterRangedAttackScale === undefined) {
-      throw new RangeError('反撃に対する遠距離特性倍率が未確認です。')
-    }
     return { kind: 'COUNTER', treatment: action.treatment, fixedTreatment: true,
       maxTargets: action.maxTargets, action,
-      rangePenaltyMultiplier: action.treatment === 'RANGED' ? base.counterRangedAttackScale! : 1 }
+      rangePenaltyEnabled: penaltyEnabled }
   }
-  const effectiveTreatment = treatment ?? (base.rangedAttackScale !== undefined ? context.attackDistanceType : 'MELEE')
+  const effectiveTreatment = treatment ?? (base.rangedAttackEnabled === true ? context.attackDistanceType : 'MELEE')
   return {
     kind: nextAttack ? 'NEXT_ATTACK' : 'NORMAL', treatment: effectiveTreatment, fixedTreatment: treatment !== null,
     maxTargets, action: null,
-    rangePenaltyMultiplier: effectiveTreatment === 'RANGED' && penaltyEnabled ? base.rangedAttackScale ?? 1 : 1,
+    rangePenaltyEnabled: penaltyEnabled,
   }
 }
 

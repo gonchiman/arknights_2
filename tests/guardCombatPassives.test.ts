@@ -2,7 +2,10 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { evaluateGuardPassives, getGuardPassiveInputs } from '../src/lib/guardCombatPassives.ts'
-import type { SkillRecord, RawCharacterTalent, RawSkillLevel, RawBlackboardEntry } from '../src/types/skill.ts'
+import { evaluateGuardTraits } from '../src/lib/guardTraitEvaluation.ts'
+import { findGuardSkillRecipe } from '../src/lib/guardSkillRecipes.ts'
+import { mergeGuardInputs, resolveGuardConditions } from '../src/lib/guardCombatValues.ts'
+import type { SkillRecord, RawCharacterTalent, RawSkillLevel } from '../src/types/skill.ts'
 import type { GuardConditions } from '../src/lib/guardCombatTypes.ts'
 
 interface Source {
@@ -10,6 +13,9 @@ interface Source {
   skills: { skillIndex: number; skillId: string; supported: boolean; raw: RawSkillLevel }[]
 }
 const sources = (JSON.parse(readFileSync(new URL('./fixtures/sixStarGuardSources.json', import.meta.url), 'utf8')) as { guards: Source[] }).guards
+const profiles = JSON.parse(readFileSync(new URL('./fixtures/sixStarGuardProfiles.json', import.meta.url), 'utf8')) as {
+  operatorId: string; operatorProfile: SkillRecord['operatorProfile']
+}[]
 function record(id: string, skillIndex = 1): SkillRecord {
   const source = sources.find(source => source.id === id)!
   const skill = source.skills.find(skill => skill.skillIndex === skillIndex)!
@@ -18,6 +24,7 @@ function record(id: string, skillIndex = 1): SkillRecord {
     skillId: skill.skillId, raw: structuredClone(skill.raw),
     skillLevels: Array.from({ length: 10 }, () => structuredClone(skill.raw)),
     operatorProfile: { phases: [{}, {}, { maxLevel: 90 }], favorKeyFrames: [],
+      affiliationIds: structuredClone(profiles.find(profile => profile.operatorId === id)?.operatorProfile.affiliationIds),
       traitDescription: source.trait, talents: structuredClone(source.talents) },
     subProfessionId: source.subProfessionId,
   } as SkillRecord
@@ -27,13 +34,25 @@ function evaluate(id: string, conditions: GuardConditions = {}, skillIndex = 1,
   return evaluateGuardPassives(record(id, skillIndex), conditions, { kind, skillIndex, stageId: 'active' })
 }
 function close(actual: number, expected: number) { assert.ok(Math.abs(actual - expected) < 1e-10, `${actual} != ${expected}`) }
+function traitRecord(id: string, skillIndex = 1): SkillRecord {
+  return { ...record(id, skillIndex), operatorProfile: structuredClone(profiles.find(profile => profile.operatorId === id)!.operatorProfile) }
+}
+function traits(operator: SkillRecord, conditions: GuardConditions = {}, stageId?: string) {
+  const recipe = findGuardSkillRecipe(operator.operatorId, operator.skillIndex)!
+  const stage = stageId ? recipe.stages.find(stage => stage.id === stageId)! : recipe.stages[0]
+  const resolved = resolveGuardConditions(mergeGuardInputs(getGuardPassiveInputs(operator.operatorId), recipe.inputs), conditions)
+  assert.deepEqual(resolved.errors, [])
+  const board = new Map(operator.raw.blackboard!.map(entry => [entry.key!, entry.value!] as const))
+  return evaluateGuardTraits(operator, stage, resolved.values, board, { phaseIndex: 2, operatorLevel: 90 }).evaluation
+}
 
-test('追加25人の特性と両素質を必ず評価行または阻害理由に残す', () => {
+test('追加25人の両素質を必ず評価行または阻害理由に残し、特性は共通構造評価で扱う', () => {
   const unimplemented = sources.filter(source => source.skills.some(skill => !skill.supported))
   assert.equal(unimplemented.length, 25)
   for (const source of unimplemented) {
     const result = evaluate(source.id)
-    assert.ok(result.evaluations.some(row => row.source === '特性'), source.name)
+    assert.ok(result.evaluations.every(row => row.sourceKind !== 'TRAIT'), source.name)
+    assert.ok(traits(traitRecord(source.id)).evaluations.length > 0, source.name)
     const names = source.talents.flatMap(talent => talent.candidates?.filter(candidate => candidate.name && !candidate.isHideTalent
       && (candidate.requiredPotentialRank ?? 0) === 0).at(-1)?.name ?? [])
     for (const name of names) assert.ok(result.evaluations.some(row => row.source === name), `${source.name}: ${name}`)
@@ -105,13 +124,15 @@ test('ウルピアヌスの固定攻撃力とヘドリーの状態倍率を割�
   close(evaluate('char_4088_hodrer', { targetStunnedOrBound: true }).attackScale, 1.4)
 })
 
-test('レッシングの被ダメージ履歴とパラスのHP・ブロック条件を入力から評価する', () => {
+test('レッシングの被ダメージ履歴とパラスのHP素質・ブロック特性を別々に評価する', () => {
   close(evaluate('char_4011_lessng').attackRatio, 0)
   close(evaluate('char_4011_lessng', { recentDamageTaken: true }).attackRatio, 0.12)
   close(evaluate('char_485_pallas', { selfHpPercent: 79.9 }).attackRatio, 0)
   close(evaluate('char_485_pallas', { selfHpPercent: 80 }).attackRatio, 0.25)
-  close(evaluate('char_485_pallas', { targetBlockedBySelf: false }).attackScale, 1.2)
+  close(evaluate('char_485_pallas', { targetBlockedBySelf: false }).attackScale, 1)
   close(evaluate('char_485_pallas', { targetBlockedBySelf: true }).attackScale, 1)
+  close(traits(traitRecord('char_485_pallas'), { targetBlockedBySelf: false }).attackScale, 1.2)
+  close(traits(traitRecord('char_485_pallas'), { targetBlockedBySelf: true }).attackScale, 1)
 })
 
 test('耀騎士ニアールの防御無視は確率補正や配置時ダメージと区別する', () => {
@@ -127,7 +148,10 @@ test('チューバイは状態条件に対応した追加術を出し遠距離�
   assert.equal(normal.additionalActions.length, 1)
   assert.equal(normal.additionalActions[0].damageType, 'ARTS')
   assert.equal(normal.additionalActions[0].scale, 0.4)
-  close(normal.attackScale, 0.8)
+  close(normal.attackScale, 1)
+  close(traits(traitRecord('char_4082_qiubai', 2), { attackDistanceType: 'RANGED' }, 'normal').attackScale, 0.8)
+  close(traits(traitRecord('char_4082_qiubai', 2), { attackDistanceType: 'RANGED' }, 'start').attackScale, 1)
+  close(traits(traitRecord('char_4082_qiubai', 3), { attackDistanceType: 'RANGED' }).attackScale, 1)
   close(evaluate('char_4082_qiubai', { attackDistanceType: 'RANGED' }, 2, 'SKILL_ACTION').attackScale, 1)
   const s3 = evaluate('char_4082_qiubai', { targetSlowedOrBound: true, attackDistanceType: 'RANGED' }, 3)
   assert.equal(s3.additionalActions[0].scale, 0.8)
@@ -186,23 +210,23 @@ test('怒潮ズィマーは範囲対象の倍率だけを分離し主対象へ1.
 })
 
 test('libratorの特性値はruntime sourceから取得し不明な値を200%と仮定しない', () => {
-  assert.ok(evaluate('char_4064_mlynar').blockers.some(value => value.includes('atk')))
-  const op = record('char_4064_mlynar')
-  const blackboard: RawBlackboardEntry[] = [{ key: 'atk', value: 2 }]
-  op.operatorProfile.trait = { candidates: [{ unlockCondition: { phase: 'PHASE_2', level: 1 }, requiredPotentialRank: 0,
-    overrideDescription: '特性', blackboard }] }
+  const missing = traitRecord('char_4064_mlynar')
+  missing.operatorProfile.trait!.candidates![0].blackboard = missing.operatorProfile.trait!.candidates![0].blackboard!.filter(entry => entry.key !== 'atk')
+  assert.ok(traits(missing).blockers.length > 0)
+  const op = traitRecord('char_4064_mlynar')
   const result = evaluateGuardPassives(op, { traitChargePercent: 50, nearbyEnemyCount: 3 }, { kind: 'NORMAL', skillIndex: 1, stageId: 'active' })
-  close(result.attackRatio, 1)
+  close(result.attackRatio, 0)
   close(result.attackScale, 1.15)
   assert.equal(result.blockers.length, 0)
+  const trait = traits(op, { traitChargePercent: 50, nearbyEnemyCount: 3 })
+  close(trait.attackRatio, 1)
+  assert.equal(trait.blockers.length, 0)
 })
 
 test('ムリナールS3は負の撃破補正を加算し撃破数が増えると特性が減少する', () => {
-  const op = record('char_4064_mlynar', 3)
-  op.operatorProfile.trait = { candidates: [{ unlockCondition: { phase: 'PHASE_2', level: 1 }, requiredPotentialRank: 0,
-    overrideDescription: '特性', blackboard: [{ key: 'atk', value: 2 }] }] }
-  const before = evaluateGuardPassives(op, { traitChargePercent: 100, skillKillCount: 0 }, { kind: 'NORMAL', skillIndex: 3, stageId: 'active' })
-  const after = evaluateGuardPassives(op, { traitChargePercent: 100, skillKillCount: 5 }, { kind: 'NORMAL', skillIndex: 3, stageId: 'active' })
+  const op = traitRecord('char_4064_mlynar', 3)
+  const before = traits(op, { traitChargePercent: 100, skillKillCount: 0 })
+  const after = traits(op, { traitChargePercent: 100, skillKillCount: 5 })
   close(before.attackRatio, 4)
   close(after.attackRatio, 3)
   assert.ok(after.attackRatio < before.attackRatio)

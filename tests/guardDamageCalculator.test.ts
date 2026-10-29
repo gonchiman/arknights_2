@@ -40,7 +40,11 @@ function at(id: string, index: number, axis: number, conditions: GuardConditions
 }
 
 test('独立したJP fixtureの全30人90スキルを欠落・重複なく表示対象にする', () => {
-  const actual = getDamageCalculatorThreeStructures().map(s => `${s.basicInfo.operatorId}/${s.basicInfo.skillId}/${s.basicInfo.skillIndex}`).sort()
+  const all = getDamageCalculatorThreeStructures()
+  const key = (s: (typeof all)[number]) => `${s.basicInfo.operatorId}/${s.basicInfo.skillId}/${s.basicInfo.skillIndex}`
+  assert.equal(new Set(all.map(key)).size, all.length)
+  const originalIds = new Set(data.guards.map(operator => operator.id))
+  const actual = all.filter(s => originalIds.has(s.basicInfo.operatorId)).map(key).sort()
   const expected = data.guards.flatMap(operator => operator.skills.map(skill => `${operator.id}/${skill.skillId}/${skill.skillIndex}`)).sort()
   assert.equal(actual.length, 90)
   assert.deepEqual(actual, expected)

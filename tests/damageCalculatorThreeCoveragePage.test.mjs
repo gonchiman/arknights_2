@@ -81,7 +81,7 @@ test('初期範囲は星6前衛、1スキル1行の8列で区分別の状態と�
   const bellone = rows.find(row => row[0] === 'ベッローネ' && row[1] === 'S2')
   assert.deepEqual(bellone.slice(3, 7), ['対応', '条件付き', '対象外', '条件付き'])
   const sakiko = rows.find(row => row[0] === '豊川祥子' && row[1] === 'S2')
-  assert.deepEqual(sakiko.slice(3, 7), ['保留', '対応', '対象外', '保留'])
+  assert.deepEqual(sakiko.slice(3, 7), ['保留', '対応', '対応', '保留'])
   assert.match(markup, /90 \/ 91 スキル表示/)
   assert.match(markup, /対応 74・条件付き 7・保留 9・未対応 0/)
   assert.match(markup, /role="region" aria-label="DC3の対応スキル" tabindex="0"/)
@@ -97,7 +97,7 @@ test('保留9スキルの横棒は総合100%でもスキル・素質・特性の
   const pending = filterCoverage(buildCoverage(records), { ...defaults, status: 'PENDING' })
   const markup = render(Summary, { rows: pending })
   assert.match(markup, /<span>9スキル<\/span>/)
-  assertSummary(markup, 9, [[0, 0, 9, 0, 0], [3, 0, 6, 0, 0], [4, 0, 5, 0, 0], [5, 0, 1, 0, 3]])
+  assertSummary(markup, 9, [[0, 0, 9, 0, 0], [3, 0, 6, 0, 0], [4, 0, 5, 0, 0], [7, 0, 1, 0, 1]])
 })
 
 test('単一スキルでは対象外を対応に含めず独立した100%の棒で表示する', () => {

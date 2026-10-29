@@ -1,3 +1,4 @@
+import { reviewedTraitProfile } from './legacyTraitFixture.ts'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { after, before, test } from 'node:test'
@@ -33,7 +34,6 @@ const renderApplications = (input, output = buildOutput(input)) => renderToStati
 )
 
 function profile(operatorId) {
-  const surtr = operatorId === 'char_350_surtr'
   const data = {
     char_350_surtr: { low: 544, high: 672, trust: 100, interval: 1.25 },
     char_263_skadi: { low: 842, high: 1015, trust: 80, interval: 1.5 },
@@ -46,7 +46,7 @@ function profile(operatorId) {
       { level: 90, data: { atk: data.high, baseAttackTime: data.interval, attackSpeed: 100 } },
     ] }],
     favorKeyFrames: [{ level: 0, data: { atk: 0 } }, { level: 50, data: { atk: data.trust } }],
-    traitDescription: surtr ? '敵に術ダメージを与える' : ['char_172_svrash', 'char_293_thorns'].includes(operatorId) ? '80%の攻撃力で遠距離攻撃も行える' : '',
+    ...reviewedTraitProfile(operatorId),
     talents: structuredClone(talentSource.find(operator => operator.operatorId === operatorId).operatorProfile.talents),
     affiliationIds: { nationId: null, groupId: operatorId === 'char_263_skadi' ? 'abyssal' : null, teamId: null },
     // Potential and module bonuses remain excluded at potential 1 / no module.

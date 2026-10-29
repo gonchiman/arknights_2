@@ -29,10 +29,12 @@ function changed(id: string, mutate: (row: SkillRecord) => void): TraitStructure
   return find(id, buildTraitStructures([row]))
 }
 
-test('DC3登録30人の12職分を網羅し、JOBを基準に重複なく構造化する', () => {
-  const ids = new Set(SKILL_STRUCTURES.map(skill => skill.basicInfo.operatorId))
+test('既存DC3前衛30人の12職分を網羅し、JOBを基準に重複なく構造化する', () => {
+  const fixtureIds = new Set(rows.map(row => row.operatorId))
+  const ids = new Set(SKILL_STRUCTURES.filter(skill => fixtureIds.has(skill.basicInfo.operatorId)).map(skill => skill.basicInfo.operatorId))
   assert.equal(ids.size, 30)
-  assert.equal(TRAIT_STRUCTURE_JOB_IDS.length, 12)
+  assert.ok(['fighter', 'lord', 'crusher', 'hammer', 'sword', 'centurion', 'artsfghter', 'musha', 'instructor', 'fearless', 'reaper', 'librator']
+    .every(job => (TRAIT_STRUCTURE_JOB_IDS as readonly string[]).includes(job)))
   assert.equal(new Set([...ids].map(id => find(id).basicInfo.subProfessionId)).size, 12)
   for (const id of ids) {
     const structure = find(id)

@@ -9,8 +9,12 @@ import {
 } from './combatEffectStructure.ts'
 import type { TalentCoarseCategory } from './talentCoarseClassification.ts'
 import type { RawBlackboardEntry, RawUnlockCondition, SkillRecord } from '../types/skill.ts'
+import { buildGuardTalentStructures, GUARD_TALENT_OPERATOR_IDS } from './guardTalentStructure.ts'
+import type { GuardTalentEffectPayload } from './guardTalentStructure.ts'
+import { EXPANDED_OPERATOR_IDS, getExpandedDefinition } from './expandedCombatRegistry.ts'
+import { buildExpandedTalentStructures } from './expandedTalentStructure.ts'
 
-export const TALENT_STRUCTURE_OPERATOR_IDS = ['char_172_svrash', 'char_263_skadi', 'char_350_surtr', 'char_293_thorns', 'char_4009_irene'] as const
+export const TALENT_STRUCTURE_OPERATOR_IDS = ['char_172_svrash', 'char_263_skadi', 'char_350_surtr', 'char_293_thorns', 'char_4009_irene', ...GUARD_TALENT_OPERATOR_IDS, ...EXPANDED_OPERATOR_IDS] as const
 export interface TalentStructureSelection { readonly operatorId: string; readonly talentIndex: number }
 
 export type TalentStructureCondition = CombatCondition
@@ -21,7 +25,7 @@ export type TalentStructureTarget = CombatRecipientSelector
 type SkillAtkPayload = Pick<Extract<SkillStructureEffect, { operation: 'ADD_RATIO'; unit: 'RATIO' }>, 'item' | 'operation' | 'unit' | 'value'> & { item: 'ATK_BUFF_RATIO' }
 type SkillHealPayload = Pick<Extract<SkillStructureEffect, { item: 'HP_RESTORE_RATIO' }>, 'item' | 'operation' | 'unit' | 'value'>
 type NumericValue<T> = T extends { value: unknown } ? Omit<T, 'value'> & { readonly value: CombatNumericValue } : never
-type TalentStructureEffectPayload = NumericValue<SkillAtkPayload | SkillHealPayload>
+type TalentStructureEffectPayload = NumericValue<SkillAtkPayload | SkillHealPayload> | GuardTalentEffectPayload
   | { readonly item: 'REDEPLOY_TIME'; readonly operation: 'ADD_RATIO'; readonly value: CombatNumericValue; readonly unit: 'RATIO' }
   | { readonly item: 'REDEPLOY_TIME'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'SECOND' }
   | { readonly item: 'RESISTANCE_IGNORE_FIXED'; readonly operation: 'IGNORE_FIXED'; readonly value: CombatNumericValue; readonly unit: 'POINT' }
@@ -57,6 +61,8 @@ export interface TalentStructure {
   readonly deferred: readonly TalentStructureDeferredCase[]
   readonly issues: readonly string[]
   readonly notes: readonly string[]
+  /** Conditions that must hold for the registered calculation subset. */
+  readonly constraints?: readonly { readonly condition: CombatCondition; readonly reason: string }[]
 }
 
 const DEFINITIONS = [
@@ -74,6 +80,8 @@ const DEFINITIONS = [
 
 export function isTalentStructureSelection(selection: TalentStructureSelection): boolean {
   return DEFINITIONS.some(definition => sameSelection(definition, selection))
+    || Boolean(getExpandedDefinition(selection.operatorId)?.talents.some(talent => talent.talentIndex === selection.talentIndex))
+    || (GUARD_TALENT_OPERATOR_IDS.includes(selection.operatorId) && (selection.talentIndex === 0 || selection.talentIndex === 1))
 }
 
 export function findTalentStructure(selection: TalentStructureSelection, structures: readonly TalentStructure[]): TalentStructure | null {
@@ -84,14 +92,14 @@ export interface TalentStructureGrowthSelection { readonly phaseIndex?: number; 
 
 /** Verified semantics bind to the selected growth and potential-1 source. No calculator is called. */
 export function buildTalentStructures(rows: readonly SkillRecord[], growth: TalentStructureGrowthSelection = {}): TalentStructure[] {
-  return buildTalentStructureDefinitions(rows, growth, false)
+  return [...buildTalentStructureDefinitions(rows, growth, false), ...buildGuardTalentStructures(rows, growth), ...buildExpandedTalentStructures(rows, growth)]
 }
 
 /** Source identities and effect kinds only; unresolved live numeric values remain null. */
 export function describeRegisteredTalentEffects(rows: readonly SkillRecord[]): {
   operatorId: string; talentIndex: number; talentName: string; items: readonly TalentStructureEffect['item'][]
 }[] {
-  return buildTalentStructureDefinitions(rows, { phaseIndex: 2 }, true).map(structure => ({
+  return [...buildTalentStructureDefinitions(rows, { phaseIndex: 2 }, true), ...buildGuardTalentStructures(rows, { phaseIndex: 2 }, true), ...buildExpandedTalentStructures(rows, {}, true)].map(structure => ({
     operatorId: structure.basicInfo.operatorId, talentIndex: structure.basicInfo.talentIndex,
     talentName: structure.basicInfo.talentName, items: structure.effects.map(effect => effect.item),
   }))
@@ -245,13 +253,26 @@ export const formatTalentStructureTarget = formatCombatRecipient
 export function formatTalentStructureEffectItem(item: TalentStructureEffect['item']): string {
   if (item === 'ATK_BUFF_RATIO' || item === 'HP_RESTORE_RATIO' || item === 'ATTACK_SPEED') return formatSkillStructureEffectItem(item)
   return { REDEPLOY_TIME: '再配置時間', RESISTANCE_IGNORE_FIXED: '術耐性固定無視', STEALTH: 'ステルス',
-    HP: 'HP', FORCED_RETREAT: '強制退場', DAMAGE_OVER_TIME: '継続ダメージ', DEFENSE_IGNORE_RATIO: '防御力割合無視' }[item]
+    HP: 'HP', FORCED_RETREAT: '強制退場', DAMAGE_OVER_TIME: '継続ダメージ', DEFENSE_IGNORE_RATIO: '防御力割合無視',
+    ATK_FLAT: '攻撃力（固定値）', MAX_HP_FLAT: '最大HP（固定値）', HP_RESTORE_FIXED: 'HP回復', SP_RESTORE: 'SP回復',
+    AMMO_CAPACITY: '弾薬上限', FEVER: 'Fever', TAUNT: '狙われやすさ', DEFENSE_BUFF_RATIO: '防御力',
+    PHYSICAL_DODGE: '物理回避', ARTS_DODGE: '術回避', DAMAGE_RESISTANCE: '被ダメージ軽減', PHYSICAL_DAMAGE_RESISTANCE: '物理被ダメージ軽減',
+    MIN_HP_RATIO: 'HP下限', DEFENSE_REDUCTION_RATIO: '防御力低下', RESISTANCE_IGNORE_RATIO: '術耐性割合無視',
+    ATTACK_SCALE: '攻撃倍率', DAMAGE_SCALE: '与ダメージ倍率', SPLASH_DAMAGE_SCALE: '範囲対象の与ダメージ倍率', HEAL_RECEIVED_SCALE: '被治療倍率',
+    CRITICAL_ATTACK: '確率攻撃倍率', ADDITIONAL_ATTACK: '追加ダメージ', SP_RECOVERY: 'SP自然回復速度', STATUS: '状態付与', ATTACK_BEHAVIOR: '攻撃方式', HP_STEAL: '最大HP奪取', HP_RESTORE_ATK_RATIO: 'HP回復（攻撃力参照）',
+  }[item]
 }
 export function formatTalentStructureEffectOperation(effect: TalentStructureEffect): string {
   return { ADD_RATIO: '割合加算', ADD_VALUE: '数値加算', IGNORE_FIXED: '固定値無視', SET_ENABLED: '適用設定',
-    SET: '設定', EXECUTE: '実行', DEAL_DAMAGE: 'ダメージ付与', RESTORE: '回復', IGNORE_RATIO: '割合無視' }[effect.operation]
+    SET: '設定', EXECUTE: '実行', DEAL_DAMAGE: 'ダメージ付与', RESTORE: '回復', IGNORE_RATIO: '割合無視', MULTIPLY: '倍率乗算' }[effect.operation]
 }
 export function formatTalentStructureEffectValue(effect: TalentStructureEffect): string {
+  if (effect.item === 'STATUS' || effect.item === 'ATTACK_BEHAVIOR') return effect.status
+  if (effect.item === 'HP_RESTORE_ATK_RATIO') return '攻撃力参照のランダム量（抽選未確定）'
+  if (effect.item === 'ADDITIONAL_ATTACK') {
+    const amount = effect.flatDamage !== undefined ? formatCombatNumericValue(effect.flatDamage) : `攻撃力×${formatCombatNumericValue(effect.value)}`
+    return `${amount}${effect.rate === 'PER_SECOND' ? '/秒' : ''}`
+  }
   if (effect.item === 'DAMAGE_OVER_TIME') {
     const amount = effect.damage.amount
     const value = amount.basis === 'FIXED' ? formatCombatNumericValue(amount.value)
@@ -261,14 +282,14 @@ export function formatTalentStructureEffectValue(effect: TalentStructureEffect):
   if (effect.value === null) return '未確認'
   if (typeof effect.value === 'object') {
     if (effect.unit === 'RATIO' || effect.unit === 'MAX_HP_RATIO') {
-      const scaled = { ...effect.value,
+      const scaled: CombatNumericValue = effect.value.type === 'AFFINE' ? { ...effect.value,
         base: effect.value.base === null ? null : effect.value.base * 100,
         coefficient: effect.value.coefficient === null ? null : effect.value.coefficient * 100,
         ...(effect.value.min !== undefined ? { min: effect.value.min === null ? null : effect.value.min * 100 } : {}),
-        ...(effect.value.max !== undefined ? { max: effect.value.max === null ? null : effect.value.max * 100 } : {}) }
+        ...(effect.value.max !== undefined ? { max: effect.value.max === null ? null : effect.value.max * 100 } : {}) } : { type: 'CALC', operation: 'MULTIPLY', values: [effect.value, 100] }
       return `${effect.unit === 'MAX_HP_RATIO' ? '最大HPの' : ''}（${formatCombatNumericValue(scaled)}）％`
     }
-    return `${formatCombatNumericValue(effect.value)}${effect.unit === 'SECOND' ? '秒' : 'ポイント'}`
+    return `${effect.unit === 'MULTIPLIER' ? '×' : ''}${formatCombatNumericValue(effect.value)}${effect.unit === 'SECOND' ? '秒' : effect.unit === 'PER_SECOND' ? '/秒' : effect.unit === 'MULTIPLIER' ? '' : 'ポイント'}`
   }
   switch (effect.unit) {
     case 'RATIO': return (effect.operation === 'IGNORE_RATIO' ? number(effect.value * 100) : signed(effect.value * 100)) + '％'
@@ -276,6 +297,8 @@ export function formatTalentStructureEffectValue(effect: TalentStructureEffect):
     case 'POINT': return number(effect.value)
     case 'BOOLEAN': return effect.item === 'FORCED_RETREAT' ? '強制退場する' : '無効'
     case 'MAX_HP_RATIO': return `最大HPの${number(effect.value * 100)}％`
+    case 'MULTIPLIER': return `×${number(effect.value)}`
+    case 'PER_SECOND': return `${number(effect.value)}/秒`
   }
 }
 export function getTalentStructureEffectValueRows(effect: TalentStructureEffect): [string, string | number][] {
@@ -283,6 +306,7 @@ export function getTalentStructureEffectValueRows(effect: TalentStructureEffect)
   const rows: [string, string | number][] = [['表示値', formatTalentStructureEffectValue(effect)], ['単位', effect.unit]]
   if (typeof effect.value === 'boolean') rows.push(['値', effect.value ? 'はい' : 'いいえ'])
   else rows.push(...getCombatNumericDefinitionRows(effect.value))
+  rows.push(...getAdditionalTalentValueRows(effect))
   if (effect.timing.type === 'AFTER_EVENT') rows.push(['待ち時間（秒）', effect.timing.delaySeconds ?? '未確認'])
   if (effect.timing.type === 'PERIODIC') rows.push(['周期（秒）', effect.timing.intervalSeconds ?? '未確認'], ['初回時刻（秒）', effect.timing.firstTickSeconds ?? '未確定'])
   return rows
@@ -297,6 +321,22 @@ export function getTalentStructureEffectDefinitionRows(effect: TalentStructureEf
     rows.push(['単位', effect.unit])
     if (typeof effect.value === 'boolean') rows.push(['値', effect.value ? 'はい' : 'いいえ'])
     else rows.push(...getCombatNumericDefinitionRows(effect.value))
+    rows.push(...getAdditionalTalentValueRows(effect))
+  }
+  return rows
+}
+
+function getAdditionalTalentValueRows(effect: TalentStructureEffect): [string, string | number][] {
+  const rows: [string, string | number][] = []
+  if (effect.item === 'STATUS' || effect.item === 'ATTACK_BEHAVIOR') rows.push(['状態・方式', effect.status])
+  if (effect.item === 'HP_STEAL') rows.push(...getCombatNumericDefinitionRows(effect.maximum, '奪取上限'))
+  if (effect.item === 'HP_RESTORE_ATK_RATIO') rows.push(...getCombatNumericDefinitionRows(effect.range.minimum, '最小倍率'), ...getCombatNumericDefinitionRows(effect.range.maximum, '上端データ値'), ['上端を含むか', '未確認'])
+  if (effect.item === 'CRITICAL_ATTACK') rows.push(...getCombatNumericDefinitionRows(effect.probability.chance, '発動確率'))
+  if (effect.item === 'ADDITIONAL_ATTACK') {
+    rows.push(['ダメージ種別', { PHYSICAL: '物理', ARTS: '術', TRUE: '確定' }[effect.damageType]], ['量の時間単位', effect.rate])
+    for (const [label, value] of [['固定ダメージ', effect.flatDamage], ['命中回数', effect.hits], ['発動確率', effect.probability.chance]] as const) {
+      if (value !== undefined) rows.push(...getCombatNumericDefinitionRows(value, label))
+    }
   }
   return rows
 }
