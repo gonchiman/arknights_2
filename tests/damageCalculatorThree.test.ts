@@ -1,3 +1,4 @@
+import { reviewedTraitProfile } from './legacyTraitFixture.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -53,7 +54,7 @@ function sourceRecord(operatorId: string, skillIndex: number): SkillRecord {
         { level: 90, data: { atk: profile.high, baseAttackTime: profile.interval, attackSpeed: 100 } },
       ] }],
       favorKeyFrames: [{ level: 0, data: { atk: 0 } }, { level: 50, data: { atk: profile.trust } }],
-      traitDescription: arts ? '敵に術ダメージを与える' : profile.subclass === 'lord' ? '80%の攻撃力で遠距離攻撃も行える' : '通常攻撃',
+      ...reviewedTraitProfile(operatorId),
       potentialRanks: [{ buff: { attributes: { attributeModifiers: [{ attributeType: 'ATK', value: 28 }] } } }],
       modules: [{ uniEquipId: 'test_module', phases: [{ equipLevel: 3, attributeBlackboard: { atk: 60, attack_speed: 30 } }] }],
     },
@@ -413,4 +414,50 @@ test('複数対象スキルは対応する対象数上限まで計算し、上�
     close(result.rows[0].allTargetsPerAttack, result.rows[0].perAttack * maximum)
     assert.deepEqual(output(skill, { conditions: { actualAttackTargetCount: maximum + 1 } }).rows, [])
   }
+})
+
+
+test('スルトの術属性は特性構造の適用記録から計算へ反映される', () => {
+  const result = output(sourceRecord('char_350_surtr', 2))
+  assert.equal(result.damageType, 'ARTS')
+  assert.equal(result.traitEvaluation?.damageType, 'ARTS')
+  assert.equal(result.traitEvaluation?.evaluations.find(row => row.effectId === 'normal-attack-damage-type')?.status, 'APPLIED')
+})
+
+test('遠距離特性の参照値が欠落した場合は以前の0.8へフォールバックしない', () => {
+  const skill = sourceRecord('char_293_thorns', 1)
+  const candidate = skill.operatorProfile.trait?.candidates?.[0]
+  assert.ok(candidate)
+  candidate.blackboard = []
+  const result = output(skill, { conditions: { attackDistanceType: 'RANGED' } })
+  assert.equal(result.rows.length, 0)
+  assert.ok(result.unsupportedReasons.some(reason => /攻撃力倍率/.test(reason)))
+})
+
+test('特性説明文の意味が変わった場合は既存の職分倍率で計算を継続しない', () => {
+  const skill = sourceRecord('char_350_surtr', 2)
+  skill.operatorProfile.traitDescription = '敵に物理ダメージを与える'
+  const result = output(skill)
+  assert.equal(result.rows.length, 0)
+  assert.ok(result.unsupportedReasons.some(reason => /特性の説明文/.test(reason)))
+})
+
+test('ソーンズS2の遠距離反撃にも構造化された特性の倍率を一度だけ適用する', () => {
+  const result = output(sourceRecord('char_293_thorns', 2))
+  assert.deepEqual(result.unsupportedReasons, [])
+  assert.equal(result.attackKind, 'COUNTER')
+  assert.equal(result.traitEvaluation?.attackScale, 0.8)
+  assert.equal(result.rangePenaltyMultiplier, result.traitEvaluation?.attackScale)
+  assert.equal(result.traitEvaluation?.evaluations.find(row => row.effectId === 'ranged-attack-scale')?.status, 'APPLIED')
+})
+
+test('スキルが遠距離減衰を解除した場合と近接扱いに変えた場合を適用記録に区別する', () => {
+  const silver = output(sourceRecord('char_172_svrash', 3), { conditions: { attackDistanceType: 'RANGED' } })
+  const thorns = output(sourceRecord('char_293_thorns', 3), { conditions: { attackDistanceType: 'RANGED' } })
+  assert.deepEqual(silver.unsupportedReasons, [])
+  assert.deepEqual(thorns.unsupportedReasons, [])
+  assert.equal(silver.traitEvaluation?.attackScale, 1)
+  assert.equal(thorns.traitEvaluation?.attackScale, 1)
+  assert.equal(silver.traitEvaluation?.evaluations.find(row => row.effectId === 'ranged-attack-scale')?.status, 'CONDITION_FALSE')
+  assert.equal(thorns.traitEvaluation?.evaluations.find(row => row.effectId === 'ranged-attack-scale')?.status, 'NOT_RELEVANT')
 })

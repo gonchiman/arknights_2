@@ -1,3 +1,4 @@
+import { reviewedTraitProfile } from './legacyTraitFixture.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -21,7 +22,7 @@ function record(skillIndex: number): SkillRecord {
     nameInitial: 'A_ROW', skillId: source.skillId, skillIndex, skillName: raw.name!, description: raw.description!,
     duration: raw.duration!, durationType: raw.durationType!, skillType: raw.skillType!, spType: 'INCREASE_WHEN_ATTACK',
     initSp: raw.spData!.initSp, spCost: raw.spData!.spCost, classification: classifySkill(raw),
-    skillLevels: structuredClone(source.levels), raw, operatorProfile: structuredClone(original.operatorProfile) }
+    skillLevels: structuredClone(source.levels), raw, operatorProfile: { ...structuredClone(original.operatorProfile), ...reviewedTraitProfile('char_4009_irene') } }
 }
 function output(skillIndex: number, conditions: DamageCalculatorThreeConditions = {}, patch: Partial<DamageCalculatorThreeInput> = {}) {
   const skill = record(skillIndex)

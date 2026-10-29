@@ -1,3 +1,4 @@
+import { reviewedTraitProfile } from './legacyTraitFixture.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -32,7 +33,7 @@ function record(skillIndex = 1, operatorId: OperatorId = 'char_293_thorns'): Ski
     skillName: skill.name!, description: skill.description!, duration: skill.duration!, durationType: skill.durationType!,
     skillType: skill.skillType!, spType: 'INCREASE_WITH_TIME', initSp: 0, spCost: 1,
     classification: classifySkill(skill), skillLevels: Array.from({ length: 10 }, () => structuredClone(skill)), raw: skill,
-    operatorProfile: { ...profile,
+    operatorProfile: { ...profile, ...reviewedTraitProfile(operatorId),
       affiliationIds: { nationId: 'iberia', groupId: null, teamId: null },
       phases: [{ maxLevel: 50 }, { maxLevel: 80 }, { maxLevel: 90, attributesKeyFrames: [
         { level: 1, data: { atk: stats.low, baseAttackTime: stats.interval, attackSpeed: 100 } },

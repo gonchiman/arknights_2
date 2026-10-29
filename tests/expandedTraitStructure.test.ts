@@ -143,8 +143,10 @@ test('領主の固定攻撃扱いを表示・対応範囲で区別し、遠距�
   assert.equal(appliedItem(ranged, 'ranged-attack-scale').status, 'APPLIED')
   assert.equal(getExpandedTraitCoverage(arene, getExpandedDefinition(arene)!.recipes[0].stages[0]), 'SUPPORTED')
   const scale = ranged.input.skill.raw.blackboard!.find(entry => entry.key === 'attack@atk_scale')!.value!
-  assert.ok(Math.abs(ranged.output.rows[0].perAttack! - ranged.output.effectiveAttack! * scale * 0.8 * 2) < 1e-8,
+  assert.ok(Math.abs(ranged.output.rows[0].perAttack! - ranged.output.stats.attack * scale * 0.8 * 2) < 1e-8,
     '防御0でスキル倍率×特性0.8×2ヒット。特性0.8の再乗算はない')
+  assert.ok(Math.abs(ranged.output.effectiveAttack! - ranged.output.stats.attack * 0.8) < 1e-8,
+    '軽減前の値にも実際に適用した特性倍率を含める')
   for (const suffix of ['spikes', 'whitew', 'leto']) {
     const id = idFor(suffix), result = run(id, 2, { attackDistanceType: 'RANGED' })
     const stage = getExpandedDefinition(id)!.recipes.find(recipe => recipe.skillIndex === 2)!.stages[0]

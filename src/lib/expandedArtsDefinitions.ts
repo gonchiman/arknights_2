@@ -38,8 +38,8 @@ const talent = (talentIndex: number, name: string, effects: ExpandedTalentDefini
   categories: ExpandedTalentDefinition['categories'] = ['ABILITY'], prefabKey = String(talentIndex + 1)): ExpandedTalentDefinition =>
   ({ talentIndex, name, prefabKey, categories, effects })
 const normal = (options: Partial<GuardStage> = {}): GuardStage => ({ id: 'active', label: 'スキル中', kind: 'NORMAL',
-  maxTargets: 1, actions: [{ label: '術攻撃', damageType: 'ARTS', scale: 1 }], ...options })
-const next = (scale: GuardValue, maxTargets: GuardValue | null = 1): GuardStage =>
+  actions: [{ label: '術攻撃', damageType: 'ARTS', scale: 1 }], ...options })
+const next = (scale: GuardValue, maxTargets?: GuardValue | null): GuardStage =>
   normal({ label: '強化攻撃', kind: 'NEXT_ATTACK', maxTargets, actions: [{ label: '強化攻撃', damageType: 'ARTS', scale }] })
 const recipe = (operatorId: string, skillIndex: number, stages: readonly GuardStage[], inputs: readonly GuardInput[] = [], notes: readonly string[] = []): GuardSkillRecipe => {
   const raw = sources.find(source => source.operatorId === operatorId)!.skills.find(skill => skill.skillIndex === skillIndex)!.raw
@@ -56,7 +56,7 @@ const aoeNotes = ['選択した全対象が同じ攻撃に命中する条件。�
 
 /** Reviewed JP skills. Unsupported mechanisms remain explicitly deferred, never approximated by a normal attack. */
 export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = [
-  operator('char_121_lava', [[1, normal({ aspd: k('attack_speed'), maxTargets: null })]], [
+  operator('char_121_lava', [[1, normal({ aspd: k('attack_speed') })]], [
     talent(0, '高速チャージ', v => [effect('deploy-sp', 'sp', { item: 'SP_RESTORE', operation: 'ADD_VALUE', unit: 'POINT', value: v.read('sp') },
       { timing: { type: 'EVENT', event: 'DEPLOY' }, lifetime: { type: 'CURRENT_EVENT' } })], ['RESOURCE']),
   ], { phaseIndex: 1, skillLevelIndex: 6, traitNotes: aoeNotes }),
@@ -64,15 +64,15 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
     { phaseIndex: 1, skillLevelIndex: 6 }),
   operator('char_278_orchid', [[1, normal({ atk: k('atk'), aspd: k('attack_speed') })]], [talent(0, '攻撃速度上昇', v => [speed(v.read('attack_speed'))])],
     { phaseIndex: 1, skillLevelIndex: 6 }),
-  operator('char_109_fmout', [[1, normal({ aspd: k('attack_speed'), maxTargets: null })], [2, normal({ atk: k('atk'), maxTargets: null })]], [
+  operator('char_109_fmout', [[1, normal({ aspd: k('attack_speed') })], [2, normal({ atk: k('atk') })]], [
     talent(0, '占い', v => [atk(v.read('atk'), 'atk', { condition: eq('fortuneResult', 'ATK') }),
       speed(v.read('attack_speed'), { condition: eq('fortuneResult', 'ASPD') }),
       status('max-hp', `最大HP+${percent(v.read('max_hp')) ?? '未確定'}%`, { condition: eq('fortuneResult', 'HP') })]),
   ], { inputs: [select('fortuneResult', '占いの結果', [['ATK', '攻撃力'], ['ASPD', '攻撃速度'], ['HP', '最大HP']])], traitNotes: aoeNotes }),
-  operator('char_253_greyy', [[1, normal({ aspd: k('attack_speed'), maxTargets: null })], [2, normal({ aspd: k('attack_speed'), maxTargets: null })]], [
+  operator('char_253_greyy', [[1, normal({ aspd: k('attack_speed') })], [2, normal({ aspd: k('attack_speed') })]], [
     talent(0, '静電場', () => [status('sluggish', '攻撃対象を足止め')], ['STATUS']),
   ], { traitNotes: aoeNotes }),
-  operator('char_4051_akkord', [[1, next(k('atk_scale'), null)]], [
+  operator('char_4051_akkord', [[1, next(k('atk_scale'))]], [
     talent(0, '律動の共鳴', v => [atk(v.read('atk'), 'atk', { condition: eq('allyInAttackRange', true) })]),
   ], { inputs: [b('allyInAttackRange', '攻撃範囲内に自身以外の味方')], traitNotes: aoeNotes,
     deferredSkills: [{ skillIndex: 2, reason: '味方位置ごとのソニックブームと主攻撃の重複命中を扱う範囲モデルが必要。' }] }),
@@ -81,7 +81,7 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
   ], { deferredSkills: [{ skillIndex: 2, reason: '攻撃を停止して足止めを行うスキル。直接ダメージの出力対象外。' }] }),
   operator('char_002_amiya', [[1, normal({ aspd: k('attack_speed') })],
     [2, normal({ maxTargets: null, actions: [{ label: 'ランダム連続攻撃', damageType: 'ARTS', scale: k('attack@atk_scale'), hits: k('attack@times'), targets: 1 }] })],
-    [3, normal({ atk: k('atk'), actions: [{ label: '確定攻撃', damageType: 'TRUE', scale: 1 }] })]], [
+    [3, normal({ atk: k('atk'), traitOverrides: ['DAMAGE_TYPE'], actions: [{ label: '確定攻撃', damageType: 'TRUE', scale: 1 }] })]], [
     talent(0, 'アブソープション', v => [
       effect('attack-sp', 'amiya_t_1[atk].sp', { item: 'SP_RESTORE', operation: 'ADD_VALUE', unit: 'POINT', value: v.read('amiya_t_1[atk].sp') }, { timing: { type: 'EVENT', event: 'ATTACK' } }),
       effect('kill-sp', 'amiya_t_1[kill].sp', { item: 'SP_RESTORE', operation: 'ADD_VALUE', unit: 'POINT', value: v.read('amiya_t_1[kill].sp') }, { timing: { type: 'EVENT', event: 'KILL' } }),
@@ -94,29 +94,29 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
       actions: [], unresolved: ['S2はHP50%未満の敵だけを攻撃する。対象のHP条件を変更してください。'] })]]], [
     talent(0, '法の執行者', v => [damage(v.read('damage_scale'), cmp('targetHpPercent', 'LT', percent(v.read('hp_ratio'))))], ['DAMAGE']),
   ], { inputs: [{ ...hp, defaultValue: 30 }], traitNotes: ['対象のHP割合が一定の条件で計算する。ダメージによるHPの推移は含めない。'] }),
-  operator('char_411_tomimi', [[1, normal({ aspd: k('attack_speed'), actions: [{ label: '物理攻撃', damageType: 'PHYSICAL', scale: 1 }] })]], [
+  operator('char_411_tomimi', [[1, normal({ aspd: k('attack_speed'), traitOverrides: ['DAMAGE_TYPE'], actions: [{ label: '物理攻撃', damageType: 'PHYSICAL', scale: 1 }] })]], [
     talent(0, '荒野術師流戦法', v => [atk(v.read('atk')), status('physical-mode', 'スキル中は地上対象への物理攻撃・攻撃範囲縮小')], ['ABILITY', 'ATTACK_BEHAVIOR']),
   ], { traitNotes: ['スキル中の地上の敵への攻撃を計算する。'], deferredSkills: [{ skillIndex: 2, reason: '確率選択されるスタン・攻撃倍率・範囲攻撃の分岐と命中対象を扱う必要がある。' }] }),
   operator('char_466_qanik', [[1, normal({ aspd: k('attack_speed') })]], [
     talent(0, '氷原生存術', v => [damage(v.read('damage_scale'), eq('targetAirborne', true), 'damage_scale', true)], ['DAMAGE']),
   ], { inputs: [b('targetAirborne', '対象が空中にいる')], deferredSkills: [{ skillIndex: 2, reason: '浮遊の付与・終了時の追加ダメージを時系列で評価する必要がある。' }] }),
-  operator('char_166_skfire', [[1, normal({ atk: k('atk'), maxTargets: null })]], [
+  operator('char_166_skfire', [[1, normal({ atk: k('atk') })]], [
     talent(0, 'アーツバースト', v => [damage(v.read('damage_scale'), eq('targetBlocked', true), 'damage_scale', true)], ['DAMAGE']),
   ], { inputs: [b('targetBlocked', '対象がブロックされている')], traitNotes: aoeNotes,
     deferredSkills: [{ skillIndex: 2, reason: '隕石の発生・命中時間とスキル中の攻撃間隔の適用方式を確認する必要がある。' }] }),
-  operator('char_373_lionhd', [[1, normal({ atk: k('atk'), maxTargets: null })]], [
+  operator('char_373_lionhd', [[1, normal({ atk: k('atk') })]], [
     talent(0, '破片爆散', v => [atk(mul(v.read('atk'), { type: 'CALC', operation: 'MIN', values: [metric('nearbyEnemyCount'), v.read('max_valid_stack_cnt')] }), 'atk × 対象数')]),
   ], { inputs: [n('nearbyEnemyCount', '攻撃範囲内の敵数', 1, 0, 100)], traitNotes: aoeNotes,
     deferredSkills: [{ skillIndex: 2, reason: '術耐性低下の新規付与とダメージの適用順序を確認する必要がある。' }] }),
-  operator('char_341_sntlla', [[1, normal({ atk: k('atk'), aspd: k('attack_speed'), maxTargets: null })]], [
+  operator('char_341_sntlla', [[1, normal({ atk: k('atk'), aspd: k('attack_speed') })]], [
     talent(0, '寒地の民', v => [atk(v.read('atk'), 'atk', { condition: cmp('secondsSinceDeploy', 'GTE', v.read('interval')) }),
       status('status-resistance', '配置20秒後にレジスト', { condition: cmp('secondsSinceDeploy', 'GTE', v.read('interval')) })], ['ABILITY', 'STATUS']),
   ], { inputs: [n('secondsSinceDeploy', '配置からの経過時間（秒）', 20, 0, 3600)], traitNotes: aoeNotes,
     deferredSkills: [{ skillIndex: 2, reason: 'ランダムなマスへの氷柱と敵の位置に依存する命中確率のモデルが必要。' }] }),
-  operator('char_4031_liesel', [[1, next(k('atk_scale'), null)]], [
+  operator('char_4031_liesel', [[1, next(k('atk_scale'))]], [
     talent(0, '指揮者の素質', v => [damage(v.read('damage_scale'), cmp('actualAttackTargetCount', 'GTE', v.read('min_target_cnt')))], ['DAMAGE'], '0'),
   ], { traitNotes: aoeNotes, deferredSkills: [{ skillIndex: 2, reason: '複数の爆発の重複命中と継続ダメージの付与・更新を扱う必要がある。' }] }),
-  operator('char_489_serum', [[1, normal({ atk: k('atk'), maxTargets: null })], [2, normal({ atk: k('atk'), maxTargets: null })]], [
+  operator('char_489_serum', [[1, normal({ atk: k('atk') })], [2, normal({ atk: k('atk') })]], [
     talent(0, '戦術的調整', v => [effect('sp-recovery', 'sp_recovery_per_sec', { item: 'SP_RECOVERY', operation: 'ADD_VALUE', unit: 'PER_SECOND', value: v.read('sp_recovery_per_sec') },
       { condition: cmp('source.secondsSinceLastNormalAttack', 'GTE', v.read('delay')) })], ['RESOURCE']),
   ], { traitNotes: aoeNotes }),
@@ -154,8 +154,8 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
     talent(0, 'フレイムブレス', v => [atk(v.read('atk'), 'atk', { target: { ...target('ALLY', 'BATTLEFIELD'), tagIds: ['profession:CASTER'] } })]),
     talent(1, 'カオスフレイム', () => [status('initial-sp', '配置後SPが7〜15回復')], ['RESOURCE']),
   ], { inputs: [n('skillActivationCount', 'スキル発動回数', 1, 1, 100)], deferredSkills: [{ skillIndex: 2, reason: '主対象と周囲への倍率差、および術耐性低下と命中の適用順序を扱う必要がある。' }] }),
-  operator('char_213_mostma', [[1, normal({ atk: k('atk'), maxTargets: null })],
-    [3, normal({ atk: k('atk'), maxTargets: null })]], [
+  operator('char_213_mostma', [[1, normal({ atk: k('atk') })],
+    [3, normal({ atk: k('atk') })]], [
     talent(0, 'スキルブースト・術師', v => [effect('caster-sp', 'sp_recovery_per_sec', { item: 'SP_RECOVERY', operation: 'ADD_VALUE', unit: 'PER_SECOND', value: v.read('sp_recovery_per_sec') },
       { target: { ...target('ALLY', 'BATTLEFIELD'), tagIds: ['profession:CASTER'] } })], ['RESOURCE']),
     talent(1, '時間認知鈍化', () => [status('enemy-slow', '攻撃範囲内の敵の移動速度低下', { target: target('ENEMY', 'ATTACK_RANGE') })], ['STATUS']),
@@ -181,18 +181,18 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
       effect('arts-dodge', 'prob', { item: 'ARTS_DODGE', operation: 'ADD_RATIO', unit: 'RATIO', value: v.read('prob') }, { condition: eq('skillIndex', 1) })], ['ABILITY', 'SURVIVAL']),
   ], { traitNotes: ['S1の通常攻撃によるダメージを計算する。味方の回復量は含めない。'],
     deferredSkills: [{ skillIndex: 2, reason: '対象の移動距離・移動速度・効果時間に依存する確定ダメージのモデルが必要。' }] }),
-  operator('char_344_beewax', [[1, normal({ atk: k('atk'), maxTargets: null })]], [
+  operator('char_344_beewax', [[1, normal({ atk: k('atk') })]], [
     talent(0, '砂原の加護', v => [effect('self-regen', 'hp_recovery_per_sec_by_max_hp_ratio',
       { item: 'HP_RESTORE_RATIO', operation: 'RESTORE', unit: 'MAX_HP_RATIO', value: v.read('hp_recovery_per_sec_by_max_hp_ratio') },
       { timing: { type: 'PERIODIC', intervalSeconds: 1, firstTickSeconds: null }, condition: eq('source.skillActive', false) })], ['SURVIVAL']),
   ], { traitNotes: aoeNotes, deferredSkills: [{ skillIndex: 2, reason: '召喚した砂の碑の位置を中心とした発動時ダメージと、術師自身の攻撃を分ける必要がある。' }] }),
-  operator('char_388_mint', [[1, normal({ maxTargets: null, actions: [{ label: '範囲術攻撃', damageType: 'ARTS', scale: k('attack@atk_scale') }] })]], [
+  operator('char_388_mint', [[1, normal({ actions: [{ label: '範囲術攻撃', damageType: 'ARTS', scale: k('attack@atk_scale') }] })]], [
     talent(0, '地質学者', v => [effect('ally-defense', 'def', { item: 'DEFENSE_BUFF_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: v.read('def') },
       { target: { ...target('ALLY', 'ADJACENT'), includeSelf: false }, condition: eq('source.skillActive', false) }),
       status('reduced-target-priority', 'スキル中は敵に狙われにくくなる', { condition: eq('source.skillActive', true) })], ['ABILITY', 'SURVIVAL']),
   ], { traitNotes: aoeNotes, deferredSkills: [{ skillIndex: 2, reason: '通常攻撃と終了時の範囲ダメージを分け、引き寄せによる攻撃対象の変化を扱う必要がある。' }] }),
-  operator('char_426_billro', [[1, normal({ atk: k('atk'), maxTargets: null })],
-    [2, normal({ atk: choose('overcharged', true, k('atk')), intervalAdd: k('base_attack_time'), maxTargets: null })]], [
+  operator('char_426_billro', [[1, normal({ atk: k('atk') })],
+    [2, normal({ atk: choose('overcharged', true, k('atk')), intervalAdd: k('base_attack_time') })]], [
     talent(0, '血肉饗宴', v => [effect('activation-heal', 'heal_scale / billro_t_1[enhance].heal_scale',
       { item: 'HP_RESTORE_RATIO', operation: 'RESTORE', unit: 'MAX_HP_RATIO', value: { type: 'CONDITIONAL', condition: eq('overcharged', true),
         whenTrue: v.read('billro_t_1[enhance].heal_scale'), whenFalse: v.read('heal_scale') } },

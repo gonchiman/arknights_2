@@ -1,5 +1,8 @@
 import type { DamageType } from './damageCalculator.ts'
 
+/** A skill can replace individual base-attack rules without disabling unrelated traits. */
+export type GuardTraitOverride = 'DAMAGE_TYPE' | 'HIT_COUNT' | 'MAX_TARGETS' | 'ATTACK_TARGETING' | 'ATTACK_SCALE' | 'SPLASH_DAMAGE'
+
 /** Values in reviewed recipes remain executable data, rather than parsed descriptions. */
 export type GuardValue = number | { key: string } | { input: string }
   | { op: 'add' | 'mul' | 'min' | 'max'; args: readonly GuardValue[] }
@@ -30,6 +33,8 @@ export interface GuardDamageAction {
   basis?: 'ATK' | 'TARGET_CURRENT_HP'
   minimumAttackScale?: GuardValue
   timing?: 'PER_ATTACK' | 'PER_SECOND' | 'ON_DEPLOY'
+  /** Added skill damage may have its own type/count while the main attack inherits traits. */
+  traitOverrides?: readonly GuardTraitOverride[]
 }
 
 export type GuardCalculationSection = 'スキル' | '特性' | `素質${number}`
@@ -45,13 +50,18 @@ export interface GuardStage {
   label: string
   when?: { input: string; comparison: 'EQ' | 'LT' | 'LTE' | 'GT' | 'GTE'; value: number | string | boolean }
   kind: 'NORMAL' | 'NEXT_ATTACK' | 'SKILL_ACTION'
-  /** Fixed skill treatment; any trait multiplier is already included in actions. */
+  /** Fixed skill treatment, evaluated by the shared trait condition rules. */
   attackTreatment?: 'MELEE' | 'RANGED'
+  traitOverrides?: readonly GuardTraitOverride[]
+  /** Skill-specific multiplication of a structured trait's selected charge amount. */
+  traitAttackRatioScale?: GuardValue
   atk?: GuardValue
   aspd?: GuardValue
   intervalScale?: GuardValue
   intervalAdd?: GuardValue
   maxTargets?: GuardValue | null
+  /** A skill's block-count change; structured multi-target traits read the resulting count. */
+  blockCountAdd?: GuardValue
   duration?: GuardValue | 'UNTIL_EXIT'
   actions: readonly GuardDamageAction[]
   defenseIgnoreRatio?: GuardValue

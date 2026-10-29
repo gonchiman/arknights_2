@@ -8,7 +8,7 @@ import {
   type CombatEffectContext, type CombatCondition, type CombatNumericValue, type CombatTiming,
 } from './combatEffectStructure.ts'
 
-/** Job definitions describe traits; no calculator consumes or applies these records. */
+/** Job definitions are shared by the structure page and the trait combat evaluator. */
 export const TRAIT_STRUCTURE_JOB_IDS = ['fighter', 'lord', 'crusher', 'hammer', 'sword', 'centurion',
   'artsfghter', 'musha', 'instructor', 'fearless', 'reaper', 'librator',
   'pioneer', 'protector', 'shotprotector', 'artsprotector', 'unyield',

@@ -1,3 +1,4 @@
+import { reviewedTraitProfile } from './legacyTraitFixture.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -17,7 +18,7 @@ function record(): SkillRecord {
     nameInitial: 'A_ROW', skillId: fixture.skill.skillId, skillIndex: 1, skillName: raw.name!, description: raw.description!,
     duration: raw.duration!, durationType: raw.durationType!, skillType: raw.skillType!, spType: 'INCREASE_WHEN_ATTACK',
     initSp: 0, spCost: 3, classification: classifySkill(raw), skillLevels: structuredClone(fixture.skill.levels),
-    raw, operatorProfile: structuredClone(fixture.operatorProfile) }
+    raw, operatorProfile: { ...structuredClone(fixture.operatorProfile), ...reviewedTraitProfile('char_4009_irene') } }
 }
 function output(skill = record(), patch: Partial<DamageCalculatorThreeInput> = {}) {
   return buildDamageCalculatorThreeOutput({ operator: skill, skill, phaseIndex: 2, operatorLevel: 90,
@@ -290,4 +291,15 @@ test('初期対象の地上限定宣言がなければ、全ての連続攻撃�
     assert.deepEqual(result.rows, [])
     assert.ok(result.unsupportedReasons.some(reason => /初期.*対象|対象.*初期/.test(reason)))
   })
+})
+
+
+test('アイリーニS1の一連の攻撃が特性の通常2hitを明示的に上書きする', () => {
+  const result = output()
+  assert.deepEqual(result.unsupportedReasons, [])
+  assert.equal(result.model?.hitCount, 2)
+  assert.equal(result.traitEvaluation?.hitCount, undefined)
+  const trait = result.traitEvaluation?.evaluations.find(row => row.effectId === 'normal-attack-hit-count')
+  assert.equal(trait?.status, 'NOT_RELEVANT')
+  assert.match(trait?.reason ?? '', /上書き/)
 })

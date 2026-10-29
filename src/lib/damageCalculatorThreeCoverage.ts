@@ -1,5 +1,5 @@
 import type { SkillRecord } from '../types/skill.ts'
-import { DAMAGE_CALCULATOR_THREE_BASE_ATTACKS, getDamageCalculatorThreeStructures } from './damageCalculatorThree.ts'
+import { getDamageCalculatorThreeStructures } from './damageCalculatorThree.ts'
 import { describeGuardPassiveEffects, getGuardPassiveCalculationConstraints, getGuardPassiveInputs, getGuardRegisteredTalentNames } from './guardCombatPassives.ts'
 import { getExpandedDefinition } from './expandedCombatRegistry.ts'
 import type { GuardCalculationIssue, GuardConditions, GuardSkillRecipe, GuardStage } from './guardCombatTypes.ts'
@@ -10,6 +10,8 @@ import { isDamageCalculatorThreeTalentItemRelevant } from './damageCalculatorThr
 import { getOperatorPassives } from './operatorProfile.ts'
 import { describeRegisteredTalentEffects } from './talentStructure.ts'
 import { getExpandedTraitCoverage } from './traitEffectApplication.ts'
+import { buildTraitStructures } from './traitStructure.ts'
+import { evaluateGuardTraits } from './guardTraitEvaluation.ts'
 
 export type DamageCalculatorThreeCoverageStatus = 'SUPPORTED' | 'CONDITIONAL' | 'PENDING' | 'UNSUPPORTED'
 export type DamageCalculatorThreeCoverageSectionStatus = DamageCalculatorThreeCoverageStatus | 'NOT_APPLICABLE'
@@ -172,6 +174,21 @@ function addSectionCoverage(row: CoverageSummary, structure: SkillStructure | un
           // effect is unsupported or absent. Only explicit exclusions establish N/A.
           status = results.length > 0 && results.every(value => !value.relevant) ? 'NOT_APPLICABLE' : 'SUPPORTED'
           if (detail.id === 'trait' && getExpandedDefinition(skill.operatorId)) status = getExpandedTraitCoverage(skill.operatorId, stage)
+          else if (detail.id === 'trait') {
+            try {
+              // Coverage reads the registered skill, independently of live source availability.
+              const board = new Map(structure.source.blackboard.flatMap(entry =>
+                entry.key && typeof entry.value === 'number' ? [[entry.key.toLowerCase(), entry.value] as const] : []))
+              const trait = buildTraitStructures([skill])[0]
+              const evaluated = evaluateGuardTraits(skill, stage, { actualAttackTargetCount: 1, ...conditions }, board,
+                { phaseIndex: 2, operatorLevel: skill.operatorProfile.phases[2]?.maxLevel ?? 90 }).evaluation
+              const relevant = evaluated.evaluations.filter(row => trait?.effects.some(effect => effect.id === row.effectId
+                && effect.calculationRelevance !== 'NOT_RELEVANT' && !['NORMAL_ATTACK_ENABLED', 'RANGED_ATTACK_ENABLED', 'ATTACK_RANGE'].includes(effect.item)
+                && effect.operation !== 'RESET_SOURCE_VALUE'))
+              status = !trait || evaluated.blockers.length ? 'UNSUPPORTED'
+                : relevant.some(row => row.status === 'APPLIED' || row.status === 'CONDITION_FALSE') ? 'SUPPORTED' : 'NOT_APPLICABLE'
+            } catch { status = 'UNSUPPORTED' }
+          }
           if (detail.id.startsWith('talent-') && !registeredNames[Number(detail.id.slice('talent-'.length)) - 1]) status = 'UNSUPPORTED'
         }
         const relevantStageIssues = stageIssues.filter(issue => issue.relatedSections.some(section => section === detail.label))
@@ -193,9 +210,9 @@ function addSectionCoverage(row: CoverageSummary, structure: SkillStructure | un
       details[index] = { ...detail, status: !registeredTalents.some(talent => talent.talentIndex === talentIndex) ? 'UNSUPPORTED'
         : relevant.length > 0 && relevant.every(item => !isDamageCalculatorThreeTalentItemRelevant(item)) ? 'NOT_APPLICABLE' : 'SUPPORTED' }
     })
-    const base = DAMAGE_CALCULATOR_THREE_BASE_ATTACKS[skill.operatorId]
-    const traitUsed = Boolean(base && (base.rangedAttackScale !== undefined
-      || ((base.hitCount > 1 || base.damageType === 'ARTS')
+    const trait = buildTraitStructures([skill])[0]
+    const traitUsed = Boolean(trait?.effects.some(effect => effect.item === 'ATTACK_SCALE'
+      || (['HIT_COUNT', 'DAMAGE_TYPE'].includes(effect.item)
         && stages.some(({ stage }) => !stage.effects.some(effect => effect.item === 'DIRECT_DAMAGE')))))
     const traitIndex = details.findIndex(detail => detail.id === 'trait')
     details[traitIndex] = { ...details[traitIndex], status: traitUsed ? 'SUPPORTED' : 'NOT_APPLICABLE' }

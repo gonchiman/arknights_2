@@ -51,7 +51,7 @@ const talent = (talentIndex: number, name: string, categories: readonly TalentCo
 const damage = (scale: GuardValue = 1, hits: GuardValue = 1, extra: Partial<GuardDamageAction> = {}): GuardDamageAction =>
   ({ label: '攻撃', damageType: 'PHYSICAL', scale, hits, ...extra })
 const normal = (extra: Partial<GuardStage> = {}): GuardStage =>
-  ({ id: 'active', label: 'スキル中', kind: 'NORMAL', maxTargets: 1, actions: [damage()], ...extra })
+  ({ id: 'active', label: 'スキル中', kind: 'NORMAL', actions: [damage()], ...extra })
 const next = (scale: GuardValue = key('atk_scale'), hits: GuardValue = 1, extra: Partial<GuardStage> = {}): GuardStage =>
   normal({ label: '強化攻撃', kind: 'NEXT_ATTACK', actions: [damage(scale, hits)], ...extra })
 const burst = (scale: GuardValue = key('atk_scale'), extra: Partial<GuardStage> = {}): GuardStage =>
@@ -72,7 +72,6 @@ const operator = (operatorId: string, recipes: readonly GuardSkillRecipe[], tale
 const ammoNote = '攻撃中の1攻撃・DPSを計算する。弾薬数、弾薬消費の確率、スキル全体の総ダメージは含めない。'
 const sameTargets = '選択した敵全員が、同じ条件で攻撃または爆発を受けるものとして計算する。'
 const frontal = bool('targetInFrontalTiles', '対象が正面横3マスにいる')
-const frontalScale = choose('targetInFrontalTiles', true, 1.5, 1)
 
 export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] = [
   operator('char_124_kroos', [recipe('char_124_kroos', 1, next(key('atk_scale'), key('times')))], [
@@ -81,7 +80,7 @@ export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] 
   operator('char_211_adnach', [recipe('char_211_adnach', 1, normal({ atk: key('atk') }))], [
     talent(0, '戦略家', ['ABILITY', 'ATTACK_BEHAVIOR'], b => [speed(b.read('attack_speed')), behavior('ranged-priority', '遠距離攻撃する敵を優先')]),
   ]),
-  operator('char_282_catap', [recipe('char_282_catap', 1, normal({ maxTargets: null }))], [
+  operator('char_282_catap', [recipe('char_282_catap', 1, normal())], [
     talent(0, '軽量化', ['DEPLOYMENT'], () => [status('deployment-cost', '配置コスト-1')]),
   ], [], [], ['範囲内の選択対象に同じ物理ダメージを与える。爆破範囲の面積から敵数を推定しない。']),
   operator('char_235_jesica', [recipe('char_235_jesica', 1, next()), recipe('char_235_jesica', 2, normal({ atk: key('atk') }))], [
@@ -109,11 +108,11 @@ export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] 
     talent(0, '鋭い眼光', ['ABILITY', 'ATTACK_BEHAVIOR'], b => [atk(b.read('atk'), 'atk', { condition: eq('stealthedEnemyInRange', true) }),
       behavior('target-stealth', 'ステルス状態の敵を攻撃可能')]),
   ], [bool('stealthedEnemyInRange', '攻撃範囲内にステルス状態の敵')]),
-  operator('char_440_pinecn', [recipe('char_440_pinecn', 1, burst(mul(key('atk_scale'), frontalScale),
+  operator('char_440_pinecn', [recipe('char_440_pinecn', 1, burst(key('atk_scale'),
     { maxTargets: null, defenseIgnoreFixed: key('def_penetrate_fixed') })),
-    recipe('char_440_pinecn', 2, normal({ maxTargets: null, atk: choose('skillActivationCount', 1, key('pinecn_s_2[a].atk'),
+    recipe('char_440_pinecn', 2, normal({ atk: choose('skillActivationCount', 1, key('pinecn_s_2[a].atk'),
       choose('skillActivationCount', 2, key('pinecn_s_2[b].atk'), choose('skillActivationCount', 3, key('pinecn_s_2[c].atk'), key('pinecn_s_2[d].atk')))),
-      actions: [damage(frontalScale)] }), [number('skillActivationCount', 'スキル発動回数', 1, 1, 100)])], [
+      actions: [damage()] }), [number('skillActivationCount', 'スキル発動回数', 1, 1, 100)])], [
     talent(0, 'ポータブル電源', ['RESOURCE'], b => [{ ...ctx('sp-recovery', 'sp_recovery_per_sec', { condition: eq('deploymentSeconds', b.read('duration'), 'LT') }),
       item: 'SP_RECOVERY', operation: 'ADD_VALUE', unit: 'PER_SECOND', value: b.read('sp_recovery_per_sec') }]),
   ], [frontal, number('deploymentSeconds', '配置からの経過時間（秒）', 0, 0, 1000, 0.1)], [], [sameTargets]),
@@ -142,13 +141,13 @@ export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] 
           selection: { type: 'RANDOM', count: 1 }, filterLabels: { laterano: 'ラテラーノ' } } }),
       item: 'AMMO_CAPACITY', operation: 'ADD_VALUE', unit: 'POINT', value: b.read('ally_ammo') }]),
   ], [number('deploymentSeconds', '配置からの経過時間（秒）', 20, 0, 1000, 0.1)]),
-  operator('char_379_sesa', [recipe('char_379_sesa', 1, normal({ atk: key('atk'), maxTargets: null })),
-    recipe('char_379_sesa', 2, normal({ maxTargets: null, actions: [damage(key('attack@atk_scale'))] }), [],
+  operator('char_379_sesa', [recipe('char_379_sesa', 1, normal({ atk: key('atk') })),
+    recipe('char_379_sesa', 2, normal({ actions: [damage(key('attack@atk_scale'))] }), [],
       ['遅延起爆する榴弾が、同じ状態の対象へ継続して命中する場合の攻撃中DPS。'])], [
     talent(0, '弱点分析', ['DAMAGE'], b => [{ ...ctx('physical-vulnerability', 'damage_scale', { target: enemy, condition: eq('targetBlocked', true) }),
       item: 'DAMAGE_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: b.read('damage_scale') }]),
   ], [bool('targetBlocked', '対象がブロックされている')]),
-  operator('char_4078_bdhkgt', [recipe('char_4078_bdhkgt', 1, normal({ atk: key('atk'), aspd: key('attack_speed'), maxTargets: null }))], [
+  operator('char_4078_bdhkgt', [recipe('char_4078_bdhkgt', 1, normal({ atk: key('atk'), aspd: key('attack_speed') }))], [
     talent(0, '荒野を背に', ['ABILITY', 'DEPLOYMENT'], b => [atk(b.read('atk'), 'atk', { condition: eq('firstDeployment', true) }),
       status('deployment-cost', '初回配置コスト-3', { condition: eq('firstDeployment', true) })]),
   ], [bool('firstDeployment', '初回配置', true)], [
@@ -224,8 +223,8 @@ export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] 
   ], [bool('noDamageForTenSeconds', '直前10秒間被ダメージなし', true)], [
     { skillIndex: 3, reason: '射程外のスキル与ダメージ倍率を防御減算後に適用する共通操作への対応が必要。' },
   ]),
-  operator('char_300_phenxi', [recipe('char_300_phenxi', 1, normal({ atk: key('atk'), maxTargets: null })),
-    recipe('char_300_phenxi', 3, normal({ maxTargets: null, intervalAdd: key('base_attack_time'), actions: [damage(
+  operator('char_300_phenxi', [recipe('char_300_phenxi', 1, normal({ atk: key('atk') })),
+    recipe('char_300_phenxi', 3, normal({ intervalAdd: key('base_attack_time'), actions: [damage(
       choose('targetInBlastCenter', true, key('attack@atk_scale'), key('attack@atk_scale_2')))] }),
       [bool('targetInBlastCenter', '対象が爆心地の強化範囲内', true)], [sameTargets])], [
     talent(0, '苦難陳述', ['ABILITY', 'SURVIVAL'], b => [atk(conditional(eq('selfHpPercent', 80, 'GTE'), b.read('phenxi_t_1[peak_2].peak_performance.atk'),

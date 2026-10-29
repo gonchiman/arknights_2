@@ -56,7 +56,7 @@ test('総合状況で絞り込んだ後も各区分を独立して集計し、�
   const summary = summarizeDamageCalculatorThreeCoverage(pending)
   assert.equal(summary.count, 9)
   assert.deepEqual(summary.sections.map(section => section.buckets.map(bucket => bucket.count)),
-    [[0, 0, 9, 0, 0], [3, 0, 6, 0, 0], [4, 0, 5, 0, 0], [5, 0, 1, 0, 3]])
+    [[0, 0, 9, 0, 0], [3, 0, 6, 0, 0], [4, 0, 5, 0, 0], [7, 0, 1, 0, 1]])
   for (const section of summary.sections)
     for (const bucket of section.buckets) assert.equal(bucket.proportion, bucket.count / 9)
 
@@ -379,4 +379,14 @@ test('空の補助素質定義を表示せず、名前を持つ定義まで消�
   const named = buildDamageCalculatorThreeCoverage([skill])[0]
   assert.equal(named.details.length, 5)
   assert.equal(named.details.find(detail => detail.name === '新しい素質')!.label, `素質${skill.operatorProfile.talents!.length}`)
+})
+
+
+test('音符の挙動が保留でも、共有する領主特性の条件分岐自体は対応済みと区別する', () => {
+  for (const index of [2, 3]) {
+    const row = covered('char_4182_oblvns', index)
+    assert.equal(row.status, 'PENDING')
+    assert.equal(row.sections.skill, 'PENDING')
+    assert.equal(row.sections.trait, 'SUPPORTED')
+  }
 })

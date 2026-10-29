@@ -168,22 +168,14 @@ function evaluateGuardPassiveDefinitions(operator: SkillRecord, conditions: Guar
     }
   }
   if (output.blockers.length) return output
-  const n = (key: string) => Number(values[key])
-  const yes = (key: string) => values[key] === true
   const selected = getOperatorPassives(operator.operatorProfile, 2,
     operator.operatorProfile.phases[2]?.maxLevel ?? 90, 1).sources
-  const selectedTrait = selected.find(source => source.sourceKind === 'TRAIT')
-  const trait: PassiveSource | undefined = selectedTrait ?? (registrationOnly ? {
-    sourceKind: 'TRAIT', sourceName: '特性', talentIndex: null, description: '', blackboard: [],
-    requiredPotentialRank: 0, prefabKey: null, tokenKey: null,
-  } : undefined)
   const talents: PassiveSource[] = registrationOnly ? getGuardTalentIdentity(operator.operatorId).map(({ name, prefabKey }, talentIndex) => ({
     sourceKind: 'TALENT', talentIndex, sourceName: name, prefabKey,
     description: selected.find(source => source.talentIndex === talentIndex)?.description ?? '',
     blackboard: selected.find(source => source.talentIndex === talentIndex)?.blackboard ?? [],
     requiredPotentialRank: 0, tokenKey: null, unlockCondition: { phase: 'PHASE_2', level: 1 },
   })) : selected.filter(source => source.sourceKind === 'TALENT')
-  if (!trait) block({ sourceKind: 'TRAIT', sourceName: '特性', talentIndex: null }, '昇進2・潜在1の特性を取得できません。')
   for (const index of [0, 1]) if (!talents.some(source => source.talentIndex === index))
     block({ sourceKind: 'TALENT', sourceName: getGuardTalentIdentity(operator.operatorId)[index]?.name ?? `素質${index + 1}`,
       talentIndex: index }, '昇進2・潜在1の素質を取得できません。')
@@ -196,53 +188,6 @@ function evaluateGuardPassiveDefinitions(operator: SkillRecord, conditions: Guar
     return value
   }
   const skill = operator.skillLevels[9] ?? operator.raw
-  const skillValue = (key: string) => {
-    const value = skill.blackboard?.find(entry => entry.key?.toLowerCase() === key.toLowerCase())?.value
-    if (typeof value !== 'number' || !Number.isFinite(value)) {
-      block('スキル効果', `参照値「${key}」を取得できません。`)
-      return 0
-    }
-    return value
-  }
-  const percent = (value: number) => `${Math.round(value * 100_000) / 1000}％`
-  const applyRatio = (source: PassiveSource, value: number, active = true, details: RowDetails = {}) => {
-    if (active) output.attackRatio += value
-    row(source, '攻撃力', `＋${percent(value)}`, active ? 'APPLIED' : 'CONDITION_FALSE', '', details)
-  }
-  const applyScale = (source: PassiveSource, value: number, details: RowDetails = {}) => {
-    output.attackScale *= value
-    row(source, '攻撃倍率', `×${value}`, 'APPLIED', '', details)
-  }
-
-  if (trait) {
-    if (operator.subProfessionId === 'librator') {
-      let scale = 1
-      if (operator.operatorId === 'char_4064_mlynar' && context.skillIndex === 3) {
-        scale = Math.max(0, skillValue('trait_up') + skillValue('per_kill_reduce') * n('skillKillCount'))
-      }
-      const maximum = read(trait, 'atk')
-      applyRatio(trait, maximum * n('traitChargePercent') / 100 * scale)
-      output.notes.push('特性の攻撃力蓄積率とスキル中の撃破数を固定した状態を計算します。')
-    } else if (operator.subProfessionId === 'lord' && context.kind === 'NORMAL'
-      && operator.operatorId === 'char_4082_qiubai') {
-      const multiplier = values.attackDistanceType === 'RANGED' && context.skillIndex !== 3 ? 0.8 : 1
-      applyScale(trait, multiplier)
-    } else if (operator.subProfessionId === 'instructor') {
-      const multiplier = yes('targetBlockedBySelf') ? 1 : 1.2
-      applyScale(trait, multiplier)
-    } else if (operator.subProfessionId === 'hammer'
-      || (operator.subProfessionId === 'sword' && (context.kind === 'NORMAL'
-        || (context.kind === 'NEXT_ATTACK' && context.stage?.actions.length === 1 && context.stage.actions[0].hits === 2)))
-      || (context.kind !== 'SKILL_ACTION'
-        && ['crusher', 'centurion', 'artsfghter', 'reaper'].includes(operator.subProfessionId))) {
-      row(trait, '攻撃属性・回数・対象', '攻撃定義に反映', 'APPLIED',
-        '基礎攻撃またはスキルの攻撃列で扱い、素質側で回数や対象数を再乗算しません。')
-    } else {
-      row(trait, 'ブロック・回復・通常攻撃等', '—', 'NOT_RELEVANT',
-        '選択した攻撃のダメージ計算では、この特性による追加補正を使用しません。')
-    }
-  }
-
   const structures = buildGuardTalentStructures([operator], { phaseIndex: 2,
     operatorLevel: operator.operatorProfile.phases[2]?.maxLevel ?? 90 }, registrationOnly)
   const metrics: Record<string, number | boolean | string | undefined> = {

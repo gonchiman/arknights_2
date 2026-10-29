@@ -1,3 +1,4 @@
+import { reviewedTraitProfile } from './legacyTraitFixture.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -33,7 +34,7 @@ function record(operatorId: OperatorId = 'char_350_surtr', skillIndex = 2): Skil
     skillType: skill.skillType!, spType: 'INCREASE_WITH_TIME', initSp: 0, spCost: 1,
     classification: classifySkill(skill), skillLevels: Array.from({ length: 10 }, () => structuredClone(skill)), raw: skill,
     operatorProfile: {
-      ...operatorProfile, affiliation: operatorId === 'char_263_skadi' ? 'アビサルハンター' : '表示用所属',
+      ...operatorProfile, ...reviewedTraitProfile(operatorId), affiliation: operatorId === 'char_263_skadi' ? 'アビサルハンター' : '表示用所属',
       affiliationIds: { nationId: growth.nationId, groupId: growth.groupId, teamId: null },
       phases: [{ maxLevel: 50 }, { maxLevel: 80 }, { maxLevel: 90, attributesKeyFrames: [
         { level: 1, data: { atk: growth.low, baseAttackTime: growth.interval, attackSpeed: 100 } },

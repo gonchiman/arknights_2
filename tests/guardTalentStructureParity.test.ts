@@ -103,7 +103,13 @@ for (const operatorId of new Set(baseline.cases.map(item => item.operatorId))) {
       assert.equal(actual.blocked, item.expected.blocked, `${label}: output availability`)
       assert.equal(actual.rowCount, item.expected.rowCount, `${label}: row count`)
       assert.equal(actual.summary.length, item.expected.summary.length, `${label}: summary length`)
-      actual.summary.forEach((value, index) => equalValue(value, item.expected.summary[index], `${label}: ${baseline.summaryFields[index]}`))
+      actual.summary.forEach((value, index) => {
+        // The former job-wide flag also marked this all-target TRUE skill as
+        // unequal target damage. The structured rule correctly excludes splash.
+        const replacedSplash = item.operatorId === 'char_1051_headb2' && item.skillIndex === 3
+          && baseline.summaryFields[index] === 'hasRandomTargets'
+        equalValue(value, replacedSplash ? false : item.expected.summary[index], `${label}: ${baseline.summaryFields[index]}`)
+      })
       assert.equal(actual.rows.length, item.expected.rows.length, `${label}: sampled rows`)
       actual.rows.forEach((row, index) => {
         assert.equal(row.length, item.expected.rows[index].length, `${label}: row fields`)

@@ -79,6 +79,44 @@ test('攻撃列の属性・倍率・回数・対象数は独立した行で、�
   assert.equal(output.rows.find(row => row.axisValue === 1000)?.perAttack, expected)
 })
 
+test('特性から継承した群攻3体をスキルの1体上限として重複表示しない', () => {
+  const inherited = evaluate(input('char_017_huang', 2, { actualAttackTargetCount: 3 }))
+  assert.deepEqual(inherited.output.unsupportedReasons, [])
+  assert.equal(inherited.output.maxTargetCount, 3)
+  assert.ok(inherited.skills.every(row => row.item !== '攻撃対象数上限'))
+  const replacement = evaluate(input('char_017_huang', 3, { phase: 'normal', actualAttackTargetCount: 4 }))
+  assert.equal(replacement.output.maxTargetCount, null)
+  assert.equal(replacement.skills.find(row => row.stage === 'スキル中' && row.item === '攻撃対象数上限')?.value, '上限なし')
+})
+
+test('剣豪の継承2ヒットは特性側に任せ、スキルによる1ヒットへの上書きは表示する', () => {
+  const inherited = evaluate(input('char_4116_blkkgt', 1, { targetTrembling: true }))
+  assert.deepEqual(inherited.output.unsupportedReasons, [])
+  assert.equal(inherited.output.rows[0].attackComponents[0].count, 2)
+  assert.ok(inherited.skills.every(row => row.item !== '攻撃：攻撃回数'))
+  const replacement = evaluate(input('char_010_chen', 1))
+  assert.equal(replacement.skills.find(row => row.item === '攻撃：攻撃回数')?.value, '1回')
+})
+
+test('特性の術属性とスキル固有の追加確定ダメージを混同しない', () => {
+  const { output, skills } = evaluate(input('char_1019_siege2', 1))
+  assert.deepEqual(output.unsupportedReasons, [])
+  assert.deepEqual(output.rows[0].attackComponents.map(component => component.damageType), ['ARTS', 'TRUE'])
+  assert.ok(skills.every(row => row.item !== '通常打撃：ダメージ属性'))
+  assert.equal(skills.find(row => row.item === '隣接4マスへの追加攻撃：ダメージ属性')?.value, '確定')
+})
+
+test('特性へ加えるスキルのブロック数と蓄積倍率を独立した行に表示する', () => {
+  const block = evaluate(input('char_1026_gvial2', 3)).skills.find(row => row.item === 'ブロック数')!
+  assert.equal(block.value, '＋2体')
+  assert.equal(block.status, 'APPLIED')
+  const scale = evaluate(input('char_4064_mlynar', 3, { skillKillCount: 2 })).skills
+    .find(row => row.item === '特性の攻撃力上昇倍率')!
+  assert.equal(scale.value, '×1.8')
+  assert.equal(scale.status, 'APPLIED')
+  assert.match(scale.condition, /撃破数：2/)
+})
+
 test('未解決のスキル・不正入力・欠落した数値を適用扱いせず理由を維持する', () => {
   const unresolved = evaluate(input('char_4182_oblvns', 2))
   assert.ok(unresolved.skills.some(row => row.status === 'UNSUPPORTED' && /命中頻度/.test(row.reason)))
@@ -103,7 +141,8 @@ test('素質の発動確率を効果値から分離し、特性は混入させ�
   assert.equal(row.value, '×1.6')
   assert.equal(row.probability, '20%')
   assert.equal(row.categoryLabel, '素質1')
-  assert.ok(output.guard?.evaluations.some(row => row.sourceKind === 'TRAIT'))
+  assert.ok(output.traitEvaluation?.evaluations.length)
+  assert.ok(output.guard?.evaluations.every(row => row.sourceKind !== 'TRAIT'))
   assert.ok(talents.every(row => row.category === 'TALENT'))
 })
 
