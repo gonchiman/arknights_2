@@ -1,6 +1,7 @@
 import type { SkillRecord } from '../types/skill.ts'
 import type { GuardConditions, GuardInput, GuardPassiveModifiers } from './guardCombatTypes.ts'
 import { buildGuardDamageOutput } from './guardDamageCalculator.ts'
+import { validateDamageCalculatorThreeEnemy, type DamageCalculatorThreeEnemy } from './damageCalculatorThreeEnemy.ts'
 import {
   calculateAttackPipeline,
   calculateDamageBreakdown,
@@ -107,6 +108,8 @@ export interface DamageCalculatorThreeInput {
   trust: number
   skillLevelIndex: number
   conditions?: DamageCalculatorThreeConditions
+  /** Omit for the sensitivity table; supply to calculate exactly one enemy. */
+  enemy?: DamageCalculatorThreeEnemy
 }
 
 export interface DamageCalculatorThreeEffectEvaluation {
@@ -256,8 +259,10 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   const guardStructure = findSkillStructure({ operatorId: input.skill.operatorId, skillId: input.skill.skillId,
     skillIndex: input.skill.skillIndex, levelIndex: input.skillLevelIndex })
   if (guardStructure?.guardRecipe) return buildGuardDamageOutput(input, guardStructure, validateOperator(input))
-  const reasons = [...validateOperator(input)]
-  const context = resolveConditions(input.conditions)
+  const enemyErrors = validateDamageCalculatorThreeEnemy(input.enemy)
+  const enemy = enemyErrors.length ? undefined : input.enemy
+  const reasons = [...validateOperator(input), ...enemyErrors]
+  const context = resolveConditions(enemy ? { ...input.conditions, enemyResistance: enemy.resistance } : input.conditions)
   const conditionErrors = validateConditions(context)
   reasons.push(...conditionErrors)
   const safeContext = conditionErrors.length ? resolveConditions() : context
@@ -543,13 +548,15 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
     enemyResistance: context.enemyResistance, actualTargetCount, attackInterval, attackKind: attackKind === 'SKILL_ACTION' ? 'NEXT_ATTACK' : attackKind,
   }) : null
   const rows: DamageCalculatorThreeRow[] = model && attackPipeline && damageType
-    ? getDamageSensitivityTablePoints(damageType, hasAttackSequence ? actionPlans.map(plan => plan.pipeline.finalAttack * 0.95) : [attackPipeline.finalAttack * 0.95]).map(axisValue => {
+    ? (enemy ? [damageType === 'PHYSICAL' ? enemy.defense : damageType === 'ARTS' ? enemy.resistance : 0]
+      : getDamageSensitivityTablePoints(damageType, hasAttackSequence ? actionPlans.map(plan => plan.pipeline.finalAttack * 0.95) : [attackPipeline.finalAttack * 0.95])).map(axisValue => {
+      const enemyDefense = enemy?.defense ?? (damageType === 'PHYSICAL' ? axisValue : 0)
+      const enemyResistance = enemy?.resistance ?? (damageType === 'ARTS' ? axisValue : 0)
       if (hasAttackSequence) {
         const attackComponents = actionPlans.map((plan, index): DamageCalculatorThreeAttackComponent => {
           const proc = plan.talents.defenseIgnore ?? { chance: 0, ratio: 0 }
           const weighted = calculateProbabilisticDefenseIgnoreDamage({ attack: plan.pipeline.finalAttack,
-            damageType: plan.effect.value.damageType, enemyDefense: damageType === 'PHYSICAL' ? axisValue : 0,
-            enemyResistance: damageType === 'ARTS' ? axisValue : 0, chance: proc.chance, ratio: proc.ratio,
+            damageType: plan.effect.value.damageType, enemyDefense, enemyResistance, chance: proc.chance, ratio: proc.ratio,
             count: plan.effect.value.count, resistanceIgnoreFixed: plan.talents.resistanceIgnoreFixed })
           return { id: plan.effect.value.targeting?.selection === 'RANDOM' ? `${plan.effect.id}/${plan.targetAirborne ? 'air' : 'ground'}` : plan.effect.id,
             label: plan.label, order: index + 1, damageType: plan.effect.value.damageType,
@@ -564,7 +571,7 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
           attackComponents }
       }
       const mitigation = calculateDamageBreakdown(attackPipeline.finalAttack, damageType,
-        damageType === 'PHYSICAL' ? axisValue : 0, damageType === 'ARTS' ? axisValue : 0,
+        enemyDefense, enemyResistance,
         { resistanceIgnoreFixed: talents.resistanceIgnoreFixed })
       const perHit = mitigation.result
       const perAttack = perHit * model.hitCount
