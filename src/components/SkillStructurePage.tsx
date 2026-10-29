@@ -11,6 +11,7 @@ import {
 } from '../lib/skillStructure'
 import type { SkillRecord } from '../types/skill'
 import type { GuardDamageAction, GuardInput, GuardSkillRecipe, GuardStage, GuardValue } from '../lib/guardCombatTypes'
+import { usesBaseAttackHitCount } from '../lib/guardCombatValues'
 import { getSkillStructureDeferredCases, type SkillStructureDeferredCase } from '../lib/skillStructureDeferredCases'
 import { SkillDescriptionSelectionPage } from './SkillDescriptionSelectionPage'
 import { StructureTable } from './StructureTable'
@@ -275,23 +276,26 @@ function guardStageRows(stage: GuardStage): GuardDefinitionRow[] {
   add('自身', '攻撃速度', stage.aspd)
   add('自身の攻撃', '攻撃間隔の倍率', stage.intervalScale, '倍')
   add('自身の攻撃', '攻撃間隔の加算', stage.intervalAdd, '秒')
+  add('自身', 'ブロック数の加算', stage.blockCountAdd, '体')
+  add('自身', '特性の攻撃力上昇倍率', stage.traitAttackRatioScale, '倍')
   if (stage.maxTargets === null) rows.push({ group: '自身の攻撃', item: '対象数上限', text: '上限なし' })
   else add('自身の攻撃', '対象数上限', stage.maxTargets, '体')
   add('攻撃対象', '防御力の無視割合', stage.defenseIgnoreRatio, '', true)
   add('攻撃対象', '防御力の固定値無視', stage.defenseIgnoreFixed)
   add('攻撃対象', '術耐性の固定値無視', stage.resistanceIgnoreFixed)
-  for (const action of stage.actions) rows.push(...guardActionRows(action))
+  for (const action of stage.actions) rows.push(...guardActionRows(stage, action))
   return rows
 }
 
-function guardActionRows(action: GuardDamageAction): GuardDefinitionRow[] {
+function guardActionRows(stage: GuardStage, action: GuardDamageAction): GuardDefinitionRow[] {
   const group = action.label
   const rows: GuardDefinitionRow[] = [
     { group, item: 'タイミング', text: action.timing === 'PER_SECOND' ? '毎秒' : action.timing === 'ON_DEPLOY' ? '配置時' : '攻撃時' },
     { group, item: 'ダメージ種別', text: GUARD_DAMAGE_TYPES[action.damageType] },
     { group, item: 'ダメージの基準', text: action.basis === 'TARGET_CURRENT_HP' ? '対象の現在HP' : '自身の攻撃力' },
-    { group, item: '倍率', value: action.scale, unit: '倍' },
-    { group, item: '打撃回数', value: action.hits ?? 1, unit: '回' },
+    { group, item: 'スキル倍率', value: action.scale, unit: '倍' },
+    usesBaseAttackHitCount(stage, action) ? { group, item: '打撃回数', text: '通常攻撃に準拠' }
+      : { group, item: '打撃回数', value: action.hits ?? 1, unit: '回' },
   ]
   if (action.targets !== undefined) rows.push({ group, item: '合計命中対象数', value: action.targets, unit: '体' })
   if (action.attackBonus !== undefined) rows.push({ group, item: '攻撃力増加割合', value: action.attackBonus, percentage: true })

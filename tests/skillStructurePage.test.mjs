@@ -7,7 +7,7 @@ import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 
 const source = JSON.parse(readFileSync(new URL('./fixtures/skillStructureFourOperators.json', import.meta.url), 'utf8'))
-let server, Page, Picker, Flow, rows, structures, classifySkill, deferredCases
+let server, Page, Picker, Flow, GuardRecipe, rows, structures, classifySkill, deferredCases
 const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;',
 })[character])
@@ -24,7 +24,7 @@ before(async () => {
     cacheDir: 'node_modules/.vite/skill-structure-test', resolve: { preserveSymlinks: true },
     server: { middlewareMode: true, watch: null, preTransformRequests: false, hmr: false }, appType: 'custom',
   })
-  ;({ SkillStructurePage: Page } = await server.ssrLoadModule('/src/components/SkillStructurePage.tsx'))
+  ;({ SkillStructurePage: Page, GuardRecipeStructure: GuardRecipe } = await server.ssrLoadModule('/src/components/SkillStructurePage.tsx'))
   ;({ SkillEffectFlow: Flow } = await server.ssrLoadModule('/src/components/SkillEffectFlow.tsx'))
   ;({ SkillDescriptionSelectionPage: Picker } = await server.ssrLoadModule('/src/components/SkillDescriptionSelectionPage.tsx'))
   ;({ SKILL_STRUCTURES: structures } = await server.ssrLoadModule('/src/lib/skillStructure.ts'))
@@ -68,6 +68,14 @@ test('全対応スキルのフローを独立して表示でき、構造化さ�
     assert.ok(markup.includes(escapeHtml(`${structure.basicInfo.operatorName} S${structure.basicInfo.skillIndex} ${structure.basicInfo.skillLevel}の効果フロー`)))
     assert.doesNotMatch(markup, /undefined|NaN|\[object Object\]/)
     assert.match(markup, /skill-effect-flow-stage/)
+  }
+})
+
+test('レシピ表も特性から継承するヒット数を1回と断定しない', () => {
+  for (const [operatorId, text] of [['char_4116_blkkgt', '通常攻撃に準拠'], ['char_010_chen', '1回']]) {
+    const structure = structures.find(entry => entry.basicInfo.operatorId === operatorId && entry.basicInfo.skillIndex === 1)
+    const markup = renderToStaticMarkup(createElement(GuardRecipe, { recipe: structure.guardRecipe, source: structure.source, caption: '試験' }))
+    assert.ok(markup.includes(`<td>打撃回数</td><td>${text}</td>`))
   }
 })
 

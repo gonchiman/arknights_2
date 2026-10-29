@@ -7,7 +7,7 @@ import {
   type SkillStructure, type SkillStructureEffect, type SkillStructurePredicate, type SkillStructureStage,
 } from './skillStructure.ts'
 import type { GuardDamageAction, GuardInput, GuardSkillRecipe, GuardStage, GuardValue } from './guardCombatTypes.ts'
-import { resolveGuardValue } from './guardCombatValues.ts'
+import { resolveGuardValue, usesBaseAttackHitCount } from './guardCombatValues.ts'
 
 export interface FlowField { label: string; value: string }
 export interface FlowCondition { label: string; yesLabel: string; noLabel: string }
@@ -205,6 +205,7 @@ function guardStages(structure: SkillStructure, recipe: GuardSkillRecipe): FlowS
     for (const [key, label, unit, ratio] of [
       ['atk', '攻撃力増加', '', true], ['aspd', '攻撃速度', '', false],
       ['intervalScale', '攻撃間隔の倍率', '倍', false], ['intervalAdd', '攻撃間隔の加算', '秒', false],
+      ['blockCountAdd', 'ブロック数の加算', '体', false], ['traitAttackRatioScale', '特性の攻撃力上昇倍率', '倍', false],
       ['defenseIgnoreRatio', '防御力の無視割合', '', true], ['defenseIgnoreFixed', '防御力の固定値無視', '', false],
       ['resistanceIgnoreFixed', '術耐性の固定値無視', '', false],
     ] as const) if (stage[key] !== undefined) modifiers.push({ id: `${stage.id}-${key}`, title: label,
@@ -215,7 +216,7 @@ function guardStages(structure: SkillStructure, recipe: GuardSkillRecipe): FlowS
     stage.actions.forEach((action, index) => {
       const label = action.timing === 'PER_SECOND' ? '毎秒' : action.timing === 'ON_DEPLOY' ? '配置時'
         : stage.kind === 'NEXT_ATTACK' ? '次の通常攻撃時' : stage.kind === 'SKILL_ACTION' ? '選択段階1回' : '攻撃時'
-      actions.set(label, [...(actions.get(label) ?? []), guardAction(action, `${stage.id}-action-${index}`, formatted)])
+      actions.set(label, [...(actions.get(label) ?? []), guardAction(stage, action, `${stage.id}-action-${index}`, formatted)])
     })
     for (const [label, steps] of actions) groups.push({ id: `${stage.id}-actions-${steps[0].id}`, label, layers: [steps] })
     return { id: stage.id, label: stage.label, fields, groups,
@@ -224,15 +225,15 @@ function guardStages(structure: SkillStructure, recipe: GuardSkillRecipe): FlowS
   })
 }
 
-function guardAction(action: GuardDamageAction, id: string,
+function guardAction(stage: GuardStage, action: GuardDamageAction, id: string,
   format: (value: GuardValue, unit?: string, ratio?: boolean) => string): FlowStep {
   const fields: FlowField[] = [{ label: 'ダメージ', value: damageTypes[action.damageType] }]
   // Fixed damage is independent of the zero attack scale used in these recipes.
   if (!(typeof action.scale === 'number' && action.scale === 0 && action.flatDamage !== undefined)) {
     fields.push({ label: '基準', value: action.basis === 'TARGET_CURRENT_HP' ? '対象の現在HP' : '自身の攻撃力' },
-      { label: '倍率', value: format(action.scale, '', true) })
+      { label: 'スキル倍率', value: format(action.scale, '', true) })
   }
-  fields.push({ label: '打撃回数', value: format(action.hits ?? 1, '回') })
+  fields.push({ label: '打撃回数', value: usesBaseAttackHitCount(stage, action) ? '通常攻撃に準拠' : format(action.hits ?? 1, '回') })
   for (const [key, label, unit, ratio] of [
     ['targets', '合計命中対象数', '体', false], ['attackBonus', '攻撃力増加割合', '', true],
     ['probability', '発動確率', '', true], ['flatDamage', '固定ダメージ', '', false],

@@ -126,8 +126,8 @@ test('guardの毎秒固定ダメージ、敵HP基準、攻撃ごとの加算を�
   assert.ok(flow('char_1014_nearl2', 3).stages.find(s => s.id === 'sun')!.warnings?.some(w => /適用順序/.test(w)))
 })
 
-test('全90定義で各効果・攻撃を一度ずつ保持し、入力依存値を参照エラーにしない', () => {
-  assert.equal(SKILL_STRUCTURES.length, 90)
+test('全登録定義で各効果・攻撃を一度ずつ保持し、入力依存値を参照エラーにしない', () => {
+  assert.equal(SKILL_STRUCTURES.length, 315)
   for (const structure of SKILL_STRUCTURES) {
     const model = buildSkillEffectFlow(structure)
     const sourceStages = structure.guardRecipe?.stages ?? structure.effectStructure.stages
@@ -148,6 +148,22 @@ test('全90定義で各効果・攻撃を一度ずつ保持し、入力依存値
       }
     }
   }
+})
+
+test('通常攻撃のヒット数継承と、スキル固有の上書きを区別する', () => {
+  assert.equal(field(steps('char_4116_blkkgt', 1)[0], '打撃回数'), '通常攻撃に準拠')
+  assert.equal(field(steps('char_010_chen', 1)[0], '打撃回数'), '1回')
+  const blows = steps('char_4116_blkkgt', 3)
+  assert.equal(field(blows.find(step => step.title === '連続斬撃')!, '打撃回数'), '10回')
+  assert.equal(field(blows.find(step => step.title === '終撃')!, '打撃回数'), '1回')
+})
+
+test('スキルの倍率と特性を変更する効果を保持する', () => {
+  assert.equal(field(steps('char_4116_blkkgt', 1)[0], 'スキル倍率'), '220%')
+  const block = steps('char_1026_gvial2', 3).find(step => step.title === 'ブロック数の加算')
+  assert.equal(field(block!, '値'), '2体')
+  const charge = steps('char_4064_mlynar', 3).find(step => step.title === '特性の攻撃力上昇倍率')
+  assert.match(field(charge!, '値')!, /撃破/)
 })
 
 test('部分的な依存を全層間の順序へ拡大せず、依存元を各効果に表示する', () => {
