@@ -9,7 +9,7 @@ import {
 } from '../lib/enemyMapCoverage'
 import type { EnemyMapCoverageMode as CountMode, MapCoverageDisplaySummary as CoverageCounts } from '../lib/enemyMapCoverage'
 import type { MapCategory, MapSummary } from '../types/map'
-import { createEnemyMapCoverageChartSnapshot, MAP_COVERAGE_COLORS,
+import { createEnemyMapCoverageChartSnapshot, getMapCoverageSegmentCount, MAP_COVERAGE_COLORS,
   MAP_COVERAGE_STATUS_KEYS as STATUS_KEYS, MAP_COVERAGE_STATUS_LABELS as STATUS_LABELS,
   type EnemyMapCoverageChartSnapshot } from '../lib/enemyMapCoverageChartImage'
 import { withChartImageAspect } from '../lib/chartImageFilename'
@@ -40,12 +40,15 @@ function compareMaps(a: MapSummary, b: MapSummary) {
 }
 
 function CoverageLegend({ counts }: { counts: CoverageCounts }) {
-  return <div className="enemy-map-coverage-legend">
-    {STATUS_KEYS.map((status) => <span key={status}>
-      <i className={`coverage-${status}`} aria-hidden="true" />
-      {STATUS_LABELS[status]} <strong>{formatCount(counts[status])}</strong>
-    </span>)}
-    {!!counts.lowerBound && <span>集計対象のうち下限集計 <strong>{formatCount(counts.lowerBound)}</strong></span>}
+  return <div className="enemy-map-coverage-legend-groups">
+    {[{ label: '集計対象', statuses: STATUS_KEYS.slice(0, 2) },
+      { label: '対象外', statuses: STATUS_KEYS.slice(2) }].map((group) => <div key={group.label} className="enemy-map-coverage-legend">
+      <span className="enemy-map-coverage-legend-label">{group.label}</span>
+      {group.statuses.map((status) => <span key={status}>
+        <i className={`coverage-${status}`} aria-hidden="true" />
+        {STATUS_LABELS[status]} <strong>{formatCount(getMapCoverageSegmentCount(counts, status))}</strong>
+      </span>)}
+    </div>)}
   </div>
 }
 
@@ -76,7 +79,8 @@ export function EnemyMapCoveragePage() {
   const visible = zoneMaps.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
   const selected = visible.find((map) => map.levelId === selectedId) ?? visible[0]
   const environments = [...new Set(visible.map(getMapCoverageEnvironmentLabel))]
-  const categoryLabel = categories.find((item) => item.key === category)?.label ?? ''
+  const selectedCategory = categories.find((item) => item.key === category)
+  const categoryLabel = selectedCategory?.label ?? ''
 
   const selectCategory = (next: MapCategory) => {
     if (next === category) return
@@ -146,15 +150,22 @@ export function EnemyMapCoveragePage() {
           {categories.map((item) => <button type="button" key={item.key}
             className="enemy-map-coverage-bar-row" aria-pressed={category === item.key}
             aria-controls="enemy-map-coverage-detail" onClick={() => selectCategory(item.key)}
-            aria-label={`${item.label}、集計対象 ${formatCount(item.included)} / 収録 ${formatCount(item.total)}マップ、${STATUS_KEYS.map((status) => `${STATUS_LABELS[status]} ${formatCount(item[status])}`).join('、')}`}>
+            aria-label={`${item.label}、集計対象 ${formatCount(item.included)} / 収録 ${formatCount(item.total)}マップ、${STATUS_KEYS.map((status) => `${STATUS_LABELS[status]} ${formatCount(getMapCoverageSegmentCount(item, status))}`).join('、')}`}>
             <span className="enemy-map-coverage-category">{item.label}</span>
             <span className="enemy-map-coverage-bar" aria-hidden="true">
               {STATUS_KEYS.map((status) => <span key={status} className={`coverage-${status}`}
-                style={{ width: `${item.total > 0 ? item[status] / item.total * 100 : 0}%` }} />)}
+                style={{ width: `${item.total > 0 ? getMapCoverageSegmentCount(item, status) / item.total * 100 : 0}%` }} />)}
             </span>
             <span className="enemy-map-coverage-count">{formatCount(item.included)} / {formatCount(item.total)} マップ</span>
           </button>)}
         </div>
+        {selectedCategory && <div className="enemy-map-coverage-selected enemy-map-coverage-legend" aria-live="polite">
+          <strong>{categoryLabel}</strong>
+          {STATUS_KEYS.slice(0, 2).map((status) => <span key={status}>
+            <i className={`coverage-${status}`} aria-hidden="true" />
+            {STATUS_LABELS[status]} <strong>{formatCount(getMapCoverageSegmentCount(selectedCategory, status))}</strong>
+          </span>)}
+        </div>}
         {imageFeedback === 'saved' && <p className="enemy-map-coverage-image-feedback" role="status">画像を保存しました。</p>}
       </section>
       <section id="enemy-map-coverage-detail" className="calculator-panel" aria-labelledby="enemy-map-coverage-detail-heading">

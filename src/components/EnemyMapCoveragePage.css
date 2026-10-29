@@ -12,11 +12,16 @@
 .enemy-map-coverage-totals { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 20px; margin-left: auto; color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .enemy-map-coverage-totals strong { margin-left: 6px; color: var(--text); font-size: 18px; font-weight: 500; }
 .enemy-map-coverage-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; color: var(--text-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
+.enemy-map-coverage-legend-groups { display: grid; gap: 8px; }
+.enemy-map-coverage-legend-label { min-width: 52px; color: var(--text); font-weight: 500; }
+.enemy-map-coverage-selected { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.enemy-map-coverage-selected > strong { color: var(--text); }
 .enemy-map-coverage-legend > span, .enemy-map-coverage-selection-status { display: inline-flex; align-items: center; gap: 6px; }
 .enemy-map-coverage-legend > span { max-width: 100%; }
 .enemy-map-coverage-legend strong { font-weight: 500; }
 .enemy-map-coverage-legend i, .enemy-map-coverage-selection-status i { width: 9px; height: 9px; flex: 0 0 9px; }
 .enemy-map-coverage-page .coverage-included { background: var(--coverage-included); }
+.enemy-map-coverage-page .coverage-conditional { background: var(--coverage-conditional); }
 .enemy-map-coverage-page .coverage-excluded { background: var(--coverage-excluded); }
 .enemy-map-coverage-page .coverage-story { background: var(--coverage-story); }
 .enemy-map-coverage-page .coverage-pending { background: var(--coverage-pending); }
@@ -47,6 +52,7 @@
 .enemy-map-coverage-map-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; }
 .enemy-map-coverage-map { border-bottom-width: 3px; }
 .enemy-map-coverage-map[data-coverage-status="included"] { border-bottom-color: var(--coverage-included); }
+.enemy-map-coverage-map[data-coverage-status="conditional"] { border-bottom-color: var(--coverage-conditional); }
 .enemy-map-coverage-map[data-coverage-status="excluded"] { border-bottom-color: var(--coverage-excluded); }
 .enemy-map-coverage-map[data-coverage-status="story"] { border-bottom-color: var(--coverage-story); }
 .enemy-map-coverage-map[data-coverage-status="pending"] { border-bottom-color: var(--coverage-pending); }
@@ -59,6 +65,7 @@
   .enemy-map-coverage-bar-row { padding: 16px 8px; font-size: 12px; }
 }
 @container (max-width: 500px) {
+  .enemy-map-coverage-legend-label { width: 100%; }
   .enemy-map-coverage-chart-heading, .enemy-map-coverage-bar-row { grid-template-columns: 1fr auto; gap: 10px 12px; }
   .enemy-map-coverage-chart-heading > :nth-child(2) { display: none; }
   .enemy-map-coverage-bar-row { padding: 14px 8px; }
