@@ -5,6 +5,7 @@ import { DamageCalculator } from './components/DamageCalculator'
 import { DamageCalculatorTwo } from './components/DamageCalculatorTwo'
 import { DamageCalculatorThree } from './components/DamageCalculatorThree'
 import { DamageCalculatorThreeCoveragePage } from './components/DamageCalculatorThreeCoveragePage'
+import DamageCalculatorThreeComparisonPage from './components/DamageCalculatorThreeComparisonPage'
 import { ManualDamageVerificationPage } from './components/ManualDamageVerificationPage'
 import { DataSourcesPage } from './components/DataSourcesPage'
 import { CodeAnalysisPage } from './components/CodeAnalysisPage'
@@ -399,6 +400,9 @@ export default function App() {
           <DamageCalculatorTwo rows={classifiedRows} loading={loading} />
         ) : displayedRoute.view === 'damage-three-coverage' ? (
           <DamageCalculatorThreeCoveragePage rows={classifiedRows} loading={loading}
+            onOpenOperatorDetail={openOperatorDetail} />
+        ) : displayedRoute.view === 'damage-three-comparison' ? (
+          <DamageCalculatorThreeComparisonPage rows={classifiedRows} loading={loading}
             onOpenOperatorDetail={openOperatorDetail} />
         ) : displayedRoute.view === 'comparison' ? (
           <OperatorComparison

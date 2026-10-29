@@ -9,6 +9,7 @@ import type { ProbabilisticDamageBranch } from './probabilisticDamage.ts'
 import { getExpandedDefinition, getExpandedSource, sameReviewedSkill } from './expandedCombatRegistry.ts'
 import { evaluateGuardTraits } from './guardTraitEvaluation.ts'
 import type { TraitCombatResult } from './traitCombatEvaluation.ts'
+import { validateDamageCalculatorThreeEnemy } from './damageCalculatorThreeEnemy.ts'
 
 const TARGET_INPUT: GuardInput = { key: 'actualAttackTargetCount', label: '実際の攻撃対象数', kind: 'number',
   defaultValue: 1, min: 1, max: 10000, step: 1 }
@@ -24,11 +25,15 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
     Number.isFinite(input.phaseIndex) ? input.phaseIndex : 0,
     Number.isFinite(input.operatorLevel) ? input.operatorLevel : 1,
     Number.isFinite(input.trust) ? input.trust : 0)
-  const reasons = [...initialErrors]
+  const enemyErrors = validateDamageCalculatorThreeEnemy(input.enemy)
+  const enemy = enemyErrors.length ? undefined : input.enemy
+  const reasons = [...initialErrors, ...enemyErrors]
+  const suppliedConditions = enemy
+    ? { ...input.conditions?.guard, enemyResistance: enemy.resistance } : input.conditions?.guard ?? {}
   let inputs: GuardInput[] = []
   try { inputs = mergeGuardInputs([TARGET_INPUT], getGuardPassiveInputs(input.operator.operatorId), recipe.inputs) }
   catch (error) { reasons.push(message(error)) }
-  const resolved = resolveGuardConditions(inputs, input.conditions?.guard ?? {})
+  const resolved = resolveGuardConditions(inputs, suppliedConditions)
   const conditions = resolved.values
   reasons.push(...resolved.errors)
   if (input.operator.operatorId !== recipe.operatorId || input.skill.operatorId !== recipe.operatorId
@@ -108,9 +113,12 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
   const axisType: DamageType = types.has('PHYSICAL') ? 'PHYSICAL' : types.has('ARTS') ? 'ARTS' : 'TRUE'
   if (axisType === 'PHYSICAL' && types.has('ARTS')) {
     inputs.push(RESISTANCE_INPUT)
-    const resistance = resolveGuardConditions([RESISTANCE_INPUT], input.conditions?.guard ?? {})
-    Object.assign(conditions, resistance.values)
-    reasons.push(...resistance.errors)
+    if (enemy) conditions.enemyResistance = enemy.resistance
+    else {
+      const resistance = resolveGuardConditions([RESISTANCE_INPUT], suppliedConditions)
+      Object.assign(conditions, resistance.values)
+      reasons.push(...resistance.errors)
+    }
   }
   const axisLabel = axisType === 'PHYSICAL' ? '敵の防御力' as const : axisType === 'ARTS' ? '敵の術耐性' as const : '防御力・術耐性' as const
   const attackSpeed = stats.attackSpeed + aspd + passive.attackSpeed
@@ -128,9 +136,10 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
   const canShowDps = kind === 'NORMAL' && interval !== null
   const dpsReason = canShowDps ? null : kind === 'NEXT_ATTACK' ? '強化攻撃1回の値です。SP回復を含む周期DPSは計算しません。'
     : '選択した段階の1回分の値です。動作時間・SP回復を含むDPSは計算しません。'
-  const points = getDamageSensitivityTablePoints(axisType, directActions.map(action => {
-    try { return pipeline(value(action.scale, 1), value(action.attackBonus)).finalAttack * 0.95 } catch { return 0 }
-  }))
+  const points = enemy ? [axisType === 'PHYSICAL' ? enemy.defense : axisType === 'ARTS' ? enemy.resistance : 0]
+    : getDamageSensitivityTablePoints(axisType, directActions.map(action => {
+      try { return pipeline(value(action.scale, 1), value(action.attackBonus)).finalAttack * 0.95 } catch { return 0 }
+    }))
 
   function componentsAt(axis: number, list: readonly GuardDamageAction[]): DamageCalculatorThreeAttackComponent[] {
     const components: DamageCalculatorThreeAttackComponent[] = []
@@ -151,8 +160,8 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
       for (const [variantIndex, variant] of variants.entries()) {
         if (variant.targets === 0 || count === 0) continue
         const hitFactor = variant.targets / actualTargetCount
-        const defense = axisType === 'PHYSICAL' ? axis : 0
-        const resistance = axisType === 'ARTS' ? axis : Number(conditions.enemyResistance ?? 0)
+        const defense = enemy?.defense ?? (axisType === 'PHYSICAL' ? axis : 0)
+        const resistance = enemy?.resistance ?? (axisType === 'ARTS' ? axis : Number(conditions.enemyResistance ?? 0))
         const appliedDefense = defense * (1 - passive.defenseReductionRatio)
         const appliedResistance = resistance * (1 - passive.resistanceIgnoreRatio)
         const branches: ProbabilisticDamageBranch[] = [
