@@ -1,0 +1,17 @@
+.structure-coverage-page { min-width: 0; }
+.structure-coverage-heading { flex-wrap: wrap; gap: 6px 12px; }
+.structure-coverage-heading h2 { margin: 0; color: inherit; font-size: 12px; font-weight: 700; }
+.structure-coverage-heading > span { font-size: 12px; font-weight: 400; }
+.structure-coverage-page .analysis-tabs { border-width: 1px 0; margin: 0; }
+.structure-coverage-page .skill-coarse-table-wrap { border-width: 0; }
+.structure-coverage-page .skill-coarse-table th { width: auto; }
+.structure-coverage-page .skill-coarse-table tbody th { font-weight: 400; }
+.structure-coverage-summary-table { min-width: 650px; font-variant-numeric: tabular-nums; }
+.structure-coverage-summary-table th:nth-child(n+3),
+.structure-coverage-summary-table td:nth-child(n+3) { text-align: right; }
+.structure-coverage-list-table { min-width: 900px; }
+.structure-coverage-list-table td { overflow-wrap: anywhere; }
+.structure-coverage-concerns { scroll-margin-top: 16px; }
+.structure-coverage-concerns-table { min-width: 580px; }
+.structure-coverage-concerns-table td { white-space: pre-line; overflow-wrap: anywhere; }
+.structure-coverage-page .skill-coarse-table tbody tr:last-child th { border-bottom: 0; }

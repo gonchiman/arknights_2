@@ -100,6 +100,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['skill-effects', 'skill-effects'],
       ['skill-summary', 'skill-summary'],
       ['skill-structure', 'skill-structure'],
+      ['structure-coverage', 'structure-coverage'],
       ['skill-json', 'skill-json'],
       ['skill-kmeans', 'skill-kmeans'],
       ['skill-hdbscan', 'skill-hdbscan'],
@@ -129,6 +130,18 @@ test('サイドバーから主要ページへ遷移できる', () => {
 
 test('比較ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/comparison'), { view: 'comparison' })
+})
+
+test('大分類・構造化の実装範囲をDC3の実装範囲とは独立したページとして開く', () => {
+  assert.deepEqual(parseHashRoute('#/structure-coverage'), { view: 'structure-coverage' })
+  assert.deepEqual(parseHashRoute('#/damage-3/coverage'), { view: 'damage-three-coverage' })
+  assert.deepEqual(APP_NAV_ITEMS.find(item => item.id === 'structure-coverage'), {
+    id: 'structure-coverage', href: '#/structure-coverage', label: '大分類・構造化の実装範囲',
+    description: '', section: 'analysis',
+  })
+  for (const suffix of ['/', '/extra', '?kind=skill', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/structure-coverage${suffix}`), { view: 'operators' })
+  }
 })
 
 test('K-means 学習ラボは専用ページとしてスキル分析から開く', () => {

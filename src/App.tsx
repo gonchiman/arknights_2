@@ -40,6 +40,7 @@ import { TalentStructurePage } from './components/TalentStructurePage'
 import { SkillEffectsPage } from './components/SkillEffectsPage'
 import { SkillSummaryPage } from './components/SkillSummaryPage'
 import { SkillStructurePage } from './components/SkillStructurePage'
+import StructureCoveragePage from './components/StructureCoveragePage'
 import { SkillJsonPage } from './components/SkillJsonPage'
 import { SkillJsonOverviewPage } from './components/SkillJsonOverviewPage'
 import { SlideMakerPage } from './components/SlideMakerPage'
@@ -457,6 +458,8 @@ export default function App() {
         ) : displayedRoute.view === 'trait-structure' ? (
           <TraitStructurePage rows={rows} loading={loading} initialSelection={displayedRoute.selection}
             invalidSelection={displayedRoute.invalidSelection} />
+        ) : displayedRoute.view === 'structure-coverage' ? (
+          <StructureCoveragePage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
         ) : displayedRoute.view === 'talent-structure' ? (
           <TalentStructurePage rows={rows} loading={loading} initialSelection={displayedRoute.selection}
             invalidSelection={displayedRoute.invalidSelection} />

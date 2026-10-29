@@ -43,6 +43,7 @@ export function SkillStructurePage({ rows, loading, initialSelection }: Props) {
       <SkillDescriptionSelectionPage
         rows={supportedRows} loading={loading} initialSelection={initialSelection ?? DEFAULT_SELECTION}
         createHash={createSkillStructureHash} title="スキル構造" kicker="SKILL STRUCTURE"
+        intro={<a className="button secondary" href="#/structure-coverage">実装範囲</a>}
         getAvailableLevelIndices={getSkillStructureLevelIndices} selectionActionLabel="表示する"
         renderSelectionFooter={({ skill, levelIndex }) => {
           const structure = findSkillStructure({ ...skill, levelIndex })

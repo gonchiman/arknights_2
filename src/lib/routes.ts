@@ -14,6 +14,7 @@ export type AppRoute =
   | { view: 'skill-effects'; selection?: SkillEffectsRouteSelection }
   | { view: 'skill-summary'; selection?: SkillRouteSelection }
   | { view: 'skill-structure'; selection?: SkillRouteSelection }
+  | { view: 'structure-coverage' }
   | { view: 'operators' }
   | { view: 'operator-pca' }
   | { view: 'operator-detail'; operatorId: string; source?: OperatorDetailSource }
@@ -141,6 +142,7 @@ function createSkillSelectionHash(route: string, selection: SkillRouteSelection)
 
 export function parseHashRoute(hash: string): AppRoute {
   if (hash === '' || hash === '#' || hash === '#/') return { view: 'home' }
+  if (hash === '#/structure-coverage') return { view: 'structure-coverage' }
   if (hash === TRAIT_STRUCTURE_ROUTE) return { view: 'trait-structure' }
   if (hash.startsWith(`${TRAIT_STRUCTURE_ROUTE}?`)) {
     const params = new URLSearchParams(hash.slice(TRAIT_STRUCTURE_ROUTE.length + 1))
