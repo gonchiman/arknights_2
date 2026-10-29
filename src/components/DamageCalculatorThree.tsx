@@ -32,6 +32,13 @@ interface Props {
   initialSelection?: SkillStructureSelection
 }
 
+const RESULT_KIND_LABELS: Record<DamageCalculatorThreeOutput['attackKind'], string> = {
+  NORMAL: '通常攻撃型',
+  NEXT_ATTACK: '次の通常攻撃型',
+  COUNTER: '反撃型',
+  SKILL_ACTION: 'スキル動作型',
+}
+
 export function DamageCalculatorThree({ rows, loading, initialSelection }: Props) {
   const [selection, setSelection] = useState<SkillStructureSelection | null>(initialSelection ?? null)
   const [operatorLevel, setOperatorLevel] = useState(90)
@@ -211,6 +218,8 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
       </CollapsibleCalculatorPanel>
 
       <CollapsibleCalculatorPanel id="damage-three-results" number="04" title="計算結果"
+        className="damage-three-results-panel"
+        titleBadge={output.activeStageLabel ? RESULT_KIND_LABELS[output.attackKind] : undefined}
         summary={output.axisLabel} collapsedLabel="結果を表示"
         headerActions={<label className="damage-two-precision">小数点以下
           <select aria-label="結果の小数点以下" value={precision} onChange={event => setPrecision(Number(event.target.value))}>

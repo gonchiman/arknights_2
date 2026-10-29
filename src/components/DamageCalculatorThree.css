@@ -27,6 +27,7 @@
 .damage-three-trait-description h3,
 .damage-three-talent-description h3 { margin: 0; border-block: 1px solid var(--border); padding: 7px 14px; background: var(--surface-soft); color: var(--text); font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
 .damage-three-condition-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.damage-three-results-panel .collapsible-panel-heading-badge { border: 0; border-left: 1px solid var(--border); border-radius: 0; padding: 0 0 0 10px; background: transparent; color: var(--text); font-size: 12px; font-weight: 500; line-height: 1.6; }
 .damage-three-result-table { min-width: 660px; }
 .damage-three-result-table th:first-child { width: 16%; }
 .damage-three-result-table thead th { vertical-align: middle; }
