@@ -60,8 +60,6 @@ export default function StructureCoveragePage({ rows, loading, onOpenOperatorDet
       </div>
       {loading ? <div className="result-meta" role="status">読み込み中…</div>
         : <StructureCoverageSummary coverage={coverage} />}
-      <AnalysisTabs tabs={TABS} activeTab={tab} onChange={next => { setTab(next); setDetail(null) }}
-        idPrefix={id} label="一覧の区分" />
       <div className="skill-directory-filters">
         <div className="filters-heading structure-coverage-heading">
           <h2>絞り込み</h2>
@@ -98,12 +96,16 @@ export default function StructureCoveragePage({ rows, loading, onOpenOperatorDet
           </label>
         </div>
       </div>
+      <div className="result-meta structure-coverage-results-bar">
+        <div role="status" aria-live="polite">
+          {loading ? '読み込み中…' : `${visibleRows.length.toLocaleString('ja-JP')} / ${coverage[tab].length.toLocaleString('ja-JP')} ${UNITS[tab]}表示`}
+        </div>
+        <AnalysisTabs tabs={TABS} activeTab={tab} onChange={next => { setTab(next); setDetail(null) }}
+          idPrefix={id} label="一覧の区分" />
+      </div>
       {TABS.map(([kind, label]) => <section key={kind} role="tabpanel" id={`${id}-panel-${kind}`}
         aria-labelledby={`${id}-tab-${kind}`} hidden={tab !== kind}>
         {tab === kind && <>
-          <div className="result-meta" role="status" aria-live="polite">
-            {loading ? '読み込み中…' : `${visibleRows.length.toLocaleString('ja-JP')} / ${coverage[kind].length.toLocaleString('ja-JP')} ${UNITS[kind]}表示`}
-          </div>
           {!loading && (visibleRows.length === 0
             ? <div className="operator-empty-state" role="status">条件に一致する{label}がありません</div>
             : <StructureCoverageTable rows={visibleRows} kind={kind} onOpenOperatorDetail={onOpenOperatorDetail}
