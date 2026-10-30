@@ -162,6 +162,30 @@ test('optional branch omissions retain their proof without changing legacy or un
   assert.deepEqual(unresolved.omittedBranchSpawns, omittedBranchSpawns)
 })
 
+test('aggregation conditions preserve explicit assumptions without changing legacy or lower-bound status', () => {
+  const aggregationConditions = ['全WAVEクリア', '抑制ユニットによる追加出現なし']
+  const parse = (patch: Record<string, unknown>) => parseMapIndex({ ...index, maps: [{ ...summary, ...patch }] }).maps[0]
+  assert.equal(parse({}).aggregationConditions, undefined)
+  assert.deepEqual(parse({ aggregationConditions: [] }).aggregationConditions, [])
+  const parsed = parse({ aggregationConditions })
+  assert.deepEqual(parsed.aggregationConditions, aggregationConditions)
+  assert.notEqual(parsed.aggregationConditions, aggregationConditions)
+  assert.equal(parsed.status, 'supported')
+  assert.equal(parsed.spawnCount, 3)
+  const partial = parse({ aggregationConditions, status: 'excluded', spawnCount: null, reasons: ['branch-spawn'],
+    spawnAggregation: { kind: 'lower-bound', count: 2, reasons: ['branch-spawn'] } })
+  assert.deepEqual(partial.aggregationConditions, aggregationConditions)
+  assert.deepEqual(partial.spawnAggregation, { kind: 'lower-bound', count: 2, reasons: ['branch-spawn'] })
+  assert.deepEqual(partial.reasons, ['branch-spawn'])
+})
+
+test('aggregation conditions reject non-arrays, non-text, blank text, and duplicates', () => {
+  for (const aggregationConditions of [null, {}, true, 1, '全WAVEクリア', [null], [1], [''], ['  '], ['\t\n'],
+    ['全WAVEクリア', ''], ['全WAVEクリア', '全WAVEクリア']]) {
+    assert.throws(() => parseMapIndex({ ...index, maps: [{ ...summary, aggregationConditions }] }), /集計条件/)
+  }
+})
+
 test('optional branch omissions reject invalid coordinates, missing proof, unknown enemies and duplicate source actions', () => {
   const omission = { branchId: 'optional', phaseIndex: 0, actionIndex: 1, enemyId: 'enemy_a',
     ruleId: 'optional-device', condition: '装置を作動させずにクリア可能', evidence: ['predefines.tokenInsts[0]'] }

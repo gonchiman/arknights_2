@@ -88,6 +88,8 @@ export interface MapSummary {
   omittedBranchSpawns?: MapOmittedBranchSpawn[]
   countedBranchSpawns?: MapCountedBranchSpawn[]
   spawnAggregation?: MapSpawnAggregation
+  /** Assumptions required by resolved spawn counts; absent in earlier aggregation versions. */
+  aggregationConditions?: string[]
   reasons: string[]
   detailFile: string | null
 }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "currentVersionId": "v4",
+  "currentVersionId": "v5",
   "versions": [
     {
       "id": "v1",
@@ -1980,6 +1980,54 @@
         "changedMapIds": []
       },
       "previousVersionId": "v3"
+    },
+    {
+      "id": "v5",
+      "label": "集計版 v5",
+      "createdAt": "2026-10-30T10:31:59.726Z",
+      "generatedAt": "2026-10-30T10:31:52.028Z",
+      "sourceRevision": "60e3aaf434919fbca931024a59d51088e810a9d3",
+      "ruleVersion": "known-spawn-lower-bound-tn-v5",
+      "generatorVersion": "f3f3316cedb7006026837acf81f0bbcc666333090b92f1333d9babf43eabc01c",
+      "description": "TNの連戦出現を反映（全WAVEクリア・抑制ユニットによる追加出現なし）",
+      "file": "v5.json.gz",
+      "sha256": "8684ea48832f01032d6c98127e9f732e77039fd6db52addb6647f11ebfb66c78",
+      "payloadSha256": "aec418dd7b58ae8631d53c5e4a75fcb1f529365689cc7d4a5a1646a7dff68203",
+      "contentSha256": "0747712d9cd115e310a92e1c4b1d01bf1558afd6d3c1a3ba67f2c7769b3c10bc",
+      "bytes": 1253499,
+      "payloadBytes": 19383656,
+      "summary": {
+        "includedMapCount": 1745,
+        "excludedMapCount": 399,
+        "missingMapCount": 197,
+        "lowerBoundMapCount": 282
+      },
+      "changes": {
+        "addedMapIds": [
+          "activities/act5bossrush/level_bossrush5_01",
+          "activities/act5bossrush/level_bossrush5_02",
+          "activities/act5bossrush/level_bossrush5_ex01",
+          "activities/act5bossrush/level_bossrush5_ex02",
+          "activities/act6bossrush/level_bossrush6_01",
+          "activities/act6bossrush/level_bossrush6_02",
+          "activities/act6bossrush/level_bossrush6_03",
+          "activities/act6bossrush/level_bossrush6_ex01",
+          "activities/act6bossrush/level_bossrush6_ex02",
+          "activities/act6bossrush/level_bossrush6_ex03"
+        ],
+        "removedMapIds": [],
+        "changedMapIds": [
+          "activities/act5bossrush/level_bossrush5_03",
+          "activities/act5bossrush/level_bossrush5_04",
+          "activities/act5bossrush/level_bossrush5_ex03",
+          "activities/act5bossrush/level_bossrush5_ex04",
+          "activities/act5bossrush/level_bossrush5_fin04",
+          "activities/act6bossrush/level_bossrush6_04",
+          "activities/act6bossrush/level_bossrush6_ex04",
+          "activities/act6bossrush/level_bossrush6_fin04"
+        ]
+      },
+      "previousVersionId": "v4"
     }
   ]
 }

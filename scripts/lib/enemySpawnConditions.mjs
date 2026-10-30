@@ -2,6 +2,7 @@ import { getOptionalBranchExclusions } from './optionalEnemyBranchPolicy.mjs'
 import { getMandatoryBranchResolutions } from './mandatoryEnemyBranchPolicy.mjs'
 import { getNonEnemyBranchExclusions } from './nonEnemyBranchPolicy.mjs'
 import { getDeploymentBranchExclusions } from './deploymentEnemyBranchPolicy.mjs'
+import { getBossRushWaveResolution } from './bossRushSpawnPolicy.mjs'
 
 const ACTION_FIELDS = new Set([
   'actionType', 'key', 'count', 'managedByScheduler', 'preDelay', 'interval', 'routeIndex',
@@ -235,6 +236,7 @@ export function analyzeEnemySpawns(value, context = {}) {
     ...getNonEnemyBranchExclusions(level, context).map(entry => ({ ...entry, kind: 'non-enemy' })),
   ]
   const mandatoryBranches = getMandatoryBranchResolutions(level, context)
+  const bossRush = getBossRushWaveResolution(level, context)
   const rules = buildRules(level, context, resolveEnemySpawnDifficulty(context))
   for (const reason of rules.reasons) reasons.add(reason)
   if (!Array.isArray(level.enemyDbRefs)) reasons.add('invalid-enemy-refs')
@@ -243,7 +245,8 @@ export function analyzeEnemySpawns(value, context = {}) {
     const wave = record(rawWave)
     if (!wave || !Array.isArray(wave.fragments)) { reasons.add('invalid-fragments'); return }
     const waveReasons = unknownFields(wave, WAVE_FIELDS, 'wave')
-    if (wave.advancedWaveTag != null && wave.advancedWaveTag !== '') waveReasons.push('unsupported-wave-tag')
+    const bossRushWave = bossRush?.waves.get(waveIndex)
+    if (wave.advancedWaveTag != null && wave.advancedWaveTag !== '' && !bossRushWave) waveReasons.push('unsupported-wave-tag')
     wave.fragments.forEach((rawFragment, fragmentIndex) => {
       const fragment = record(rawFragment)
       if (!fragment || !Array.isArray(fragment.actions)) { reasons.add('invalid-actions'); return }
@@ -253,6 +256,10 @@ export function analyzeEnemySpawns(value, context = {}) {
         if (!action || !text(action.actionType)) { reasons.add('invalid-action'); return }
         if (action.actionType !== 'SPAWN') return
         const resolution = resolveAction(action, inherited, rules, `waves[${waveIndex}].fragments[${fragmentIndex}].actions[${actionIndex}]`)
+        if (bossRushWave) {
+          resolution.conditions = unique([...resolution.conditions.filter(condition => condition !== '固定'), ...bossRushWave.conditions])
+          resolution.evidence = unique([...resolution.evidence, ...bossRushWave.evidence])
+        }
         actions.push({ waveIndex, fragmentIndex, actionIndex, ...resolution })
         for (const reason of resolution.reasons) reasons.add(reason)
         if (resolution.status !== 'included') return
@@ -304,5 +311,6 @@ export function analyzeEnemySpawns(value, context = {}) {
       })
     }
   }
-  return { counts, reasons, actions, omittedBranchSpawns, countedBranchSpawns }
+  return { counts, reasons, actions, omittedBranchSpawns, countedBranchSpawns,
+    ...(bossRush ? { aggregationConditions: bossRush.aggregationConditions } : {}) }
 }

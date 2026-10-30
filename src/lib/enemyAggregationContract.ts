@@ -2,7 +2,7 @@ import { parseEnemyHistogramCounts } from './enemyHistogramCounts.ts'
 import { parseMapIndex } from './mapDatabase.ts'
 import { getMapCoverageStatus, summarizeMapCoverage } from './enemyMapCoverage.ts'
 
-export const CURRENT_ENEMY_AGGREGATION_RULE_VERSION = 'known-spawn-lower-bound-v4'
+export const CURRENT_ENEMY_AGGREGATION_RULE_VERSION = 'known-spawn-lower-bound-tn-v5'
 export const ENEMY_AGGREGATION_INDEX_FILE = 'enemy-aggregation/index.json'
 export const ENEMY_AGGREGATION_FILES = [
   'maps/index.json', 'enemy-histogram-counts.json', 'enemy-stage-appearances.json',
@@ -120,6 +120,26 @@ export function parseEnemyAggregationBundle(source: unknown, expectedVersionId?:
       throw new Error('下限集計のマップと根拠に不整合があります。')
     }
     seenLower.add(entry.levelId)
+  }
+  // A conditional contribution must retain the same assumptions in both outputs.
+  // Old archives omit these fields and remain valid.
+  const conditionalMaps = index.maps.filter(map => map.aggregationConditions?.length
+    && getMapCoverageStatus(map, 'SPAWNS') === 'included')
+  const conditionalLevels = record(rawHistogram?.diagnostics)?.aggregationConditions
+  if ((conditionalLevels !== undefined && !Array.isArray(conditionalLevels))
+    || (Array.isArray(conditionalLevels) ? conditionalLevels.length : 0) !== conditionalMaps.length) {
+    throw new Error('集計条件のマップ数に不整合があります。')
+  }
+  const seenConditional = new Set<string>()
+  for (const raw of Array.isArray(conditionalLevels) ? conditionalLevels : []) {
+    const entry = record(raw)
+    const map = conditionalMaps.find(map => map.levelId === entry?.levelId)
+    if (!entry || !text(entry.levelId) || seenConditional.has(entry.levelId) || !map
+      || !stringList(entry.conditions) || entry.conditions.length === 0
+      || JSON.stringify([...entry.conditions].sort()) !== JSON.stringify([...(map.aggregationConditions ?? [])].sort())) {
+      throw new Error('マップと出現集計の条件に不整合があります。')
+    }
+    seenConditional.add(entry.levelId)
   }
   const appearances = record(files['enemy-stage-appearances.json'])
   const entries = record(appearances?.enemies)
