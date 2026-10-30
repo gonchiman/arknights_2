@@ -78,3 +78,36 @@ V3で保留されていた分岐279マップのうち262マップを追加した
 共通判定は [enemySpawnAggregation.mjs](../../scripts/lib/enemySpawnAggregation.mjs)。マップ一覧には `spawnAggregation`、ヒストグラムには `summary.lowerBoundMapCount` と `diagnostics.lowerBoundLevels` を保存する。旧来の完全集計の成否を示す `status` / `spawnCount` は維持し、下限集計の対象かどうかと区別する。版の読み込み時には、マップID・採用体数・未解決理由が両データで一致することを検証する。
 
 下限集計は `generateLocalGameData` の既定値で、個別の生成関数は旧動作を保つ。個別に使う場合は `spawnAggregationMode: 'lower-bound'` を明示する。固定データと差分は [V4アーカイブ](../../public/data/enemy-aggregation/v4.json.gz) および [版一覧](../../public/data/enemy-aggregation/index.json) に保存し、実データの再読込とV3との差分を [enemyLowerBoundArchive.test.ts](../../tests/enemyLowerBoundArchive.test.ts) で確認する。
+
+## V5：引航者の試練の連戦出現
+
+第5・6回「引航者の試練」の `bosswave` / `bonuswave` を、確認済みの連続するWAVEとして解析する。判定は [bossRushSpawnPolicy.mjs](../../scripts/lib/bossRushSpawnPolicy.mjs) に共通化し、元データの版、イベント種別、WAVE制御、敵・装置の設定が確認範囲に一致するときだけ適用する。未知の設定をマップ名だけで許可しない。
+
+集計条件は「全WAVEクリア」「抑制ユニットによる追加出現なし」。マップ一覧の `aggregationConditions` と、ヒストグラムの `diagnostics.aggregationConditions` に同じ条件を保存する。集計マップ確認ページでは既存の「条件付き集計」に分類し、詳細で条件を表示する。保存版の読込時には、両データのマップIDと条件が一致することも検証する。
+
+`bonuswave` も通常スケジュールの一部として数える。第6回TN-2系の協賛ドローンも、従来の敵の役割判定を維持して数える。未解決の分岐・追加出現にはV4の下限集計を引き続き適用するため、18件のうち9件には未算入の分岐が残る。
+
+| 指標 | V4 | V5 | 差分 |
+| --- | ---: | ---: | ---: |
+| 集計対象マップ | 1,735 | 1,745 | +10 |
+| うちイベント | 1,216 | 1,226 | +10 |
+| 取得済み・集計範囲内の保留 | 43 | 33 | −10 |
+| 出現数の合計 | 70,031 | 71,152 | +1,121 |
+| 下限集計のマップ | 281 | 282 | +1 |
+
+新規対象化10件に加え、既に下限集計していた8件の採用出現数を拡張する。TN18件の採用数は232体から1,353体となる。メインテーマ・物資調達の件数、物語環境と「その他」の除外、データ未取得197件は変わらない。V1〜V4のアーカイブは変更せず、V5のルール版は `known-spawn-lower-bound-tn-v5` とする。
+
+### 解析の根拠と適用範囲
+
+元データはV4と同じ `60e3aaf434919fbca931024a59d51088e810a9d3`。同版の `activity_table.json` でTN-1が2連戦、TN-2〜4が3連戦であること、抑制ユニット「粒子トラッキング」が追加出現グループを有効化することを確認した。
+
+手元の日本版ゲームの通常のネイティブ実装を解析した。対象ファイルのSHA-256は以下。将来のゲーム更新やホットフィックスの動作まで保証するものではない。
+
+- `GameAssembly.dll`: `c673ec1964a8f2b51b8cb867b5fb697b1f3f283452aeb4b568cd749d5dfc3864`
+- `global-metadata.dat`: `e0ea8ac85a3ce4b98b2e3b868aea0079a4be8ab6395e5e4b0c2a9dda4029f849`
+
+`BossRushSchedulerPreprocessor.DoPreprocess`（RVA `0x39ac6e0`）はWAVE順を保持する。スケジューラの `_DoSchedule`（`0x6e7e10`）と `_DealWave`（`0x6e65d0`）は各WAVE・区間の出現を順に処理する。`TryHookCheckWaveNotFinish`（`0x938ea0`）と `_CheckCanMoveToBonusWave`（`0x939240`）は、次の休憩WAVEへ進む条件を確認する処理であり、そのWAVEを削除する処理ではない。
+
+`FinishCurrentWave.Execute`（`0xe0a1e0`）ではTNの次が休憩WAVEの場合にスキップ処理へ進まない。別の明示的な `SkipCurrentWave`（`0x6da720`）は出現キューを破棄するため、これを起こせる未確認の敵・設定は許可しない。今回の18件には、確認した強制スキップ設定を持つ敵 `musnake` は含まれない。
+
+全18件の期待出現数を原データから独立に照合し、[enemyBossRushArchive.test.ts](../../tests/enemyBossRushArchive.test.ts) で保存後の件数・条件・差分・TN以外の不変性を検証する。

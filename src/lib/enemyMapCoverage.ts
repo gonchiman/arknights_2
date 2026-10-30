@@ -57,6 +57,7 @@ export function getMapCoverageDisplayStatus(map: MapSummary, mode: EnemyMapCover
   if (!ready) return 'pending'
   if (getMapCategory(map) === 'other') return 'excluded'
   if (mode === 'SPAWNS' && (isMapLowerBoundAggregation(map)
+    || !!map.aggregationConditions?.length
     || (map.status === 'supported' && map.omittedBranchSpawns?.some(entry => entry.kind !== 'non-enemy')))) {
     return 'conditional'
   }
@@ -176,10 +177,11 @@ function getMapCoverageDataReasons(map: MapSummary, mode: EnemyMapCoverageMode):
   if (isMapLowerBoundAggregation(map)) {
     const status = getMapCoverageDisplayStatus(map, mode)
     return [status === 'included' || status === 'conditional' ? '確定出現分のみ集計' : '確定出現分のみ判明',
-      ...new Set(map.reasons.map(getMapSpawnReasonLabel))]
+      ...new Set([...(map.aggregationConditions ?? []), ...map.reasons.map(getMapSpawnReasonLabel)])]
   }
   if (map.status === 'supported') {
     const resolved = [
+      ...(map.aggregationConditions ?? []),
       map.omittedBranchSpawns?.some(entry => entry.kind !== 'non-enemy') && '任意の追加出現を除外',
       map.omittedBranchSpawns?.some(entry => entry.kind === 'non-enemy') && '敵以外の分岐出現を除外',
       !!map.countedBranchSpawns?.length && '必須の分岐出現を加算',

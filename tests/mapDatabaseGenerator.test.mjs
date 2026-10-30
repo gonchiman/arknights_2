@@ -1,5 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import { gunzipSync } from 'node:zlib'
 import { buildMapDatabase, buildMapEnemyRegistry, extractMapEnemyRoutes, extractMapEnemySpawnCounts, extractMapFeatures, extractMapGeometry, extractMapRoutes, extractMapWaves, mapDetailFile } from '../scripts/generateMapDatabase.mjs'
 import { getMapEntrances } from '../src/lib/mapWaves.ts'
 import { MAP_ENEMY_IMMUNITY_KEYS } from '../src/types/map.ts'
@@ -65,6 +67,37 @@ test('unsupported conditional spawn makes the entire map and every enemy count u
   assert.deepEqual(summary.reasons, ['conditional-spawn:condition'])
   assert.deepEqual(output.details[summary.detailFile].maps[summary.levelId].enemies,
     [{ id: 'enemy_a', count: null }, { id: 'enemy_b', count: null }])
+})
+
+test('bossrush counts retain clear-completion assumptions in the map summary', async () => {
+  const fixture = JSON.parse(gunzipSync(await readFile(new URL('./fixtures/enemyBranchPolicy/bossrush-levels.json.gz', import.meta.url))).toString())
+  const sources = new Map(fixture.levels)
+  const exactId = 'activities/act5bossrush/level_bossrush5_01'
+  const partialId = 'activities/act6bossrush/level_bossrush6_02'
+  assert.ok(sources.has(exactId) && sources.has(partialId))
+  const input = options([exactId, partialId].map(levelId => ({ levelId, data: sources.get(levelId) })), {
+    exact: stage('bossrush5_01', exactId, { code: 'TN-1', zoneId: 'act5bossrush', diffGroup: 'NONE' }),
+    partial: stage('bossrush6_02', partialId, { code: 'TN-2', zoneId: 'act6bossrush', diffGroup: 'NONE' }),
+  })
+  input.zoneTable = { zones: {
+    act5bossrush: { type: 'ACTIVITY', zoneNameFirst: '試験5' },
+    act6bossrush: { type: 'ACTIVITY', zoneNameFirst: '試験6' },
+  } }
+  input.sourceRevision = fixture.sourceRevision
+  const output = buildMapDatabase({ ...input, spawnAggregationMode: 'lower-bound' })
+  const map = output.index.maps.find(entry => entry.levelId === exactId)
+  assert.equal(map.status, 'supported')
+  assert.equal(map.spawnCount, 30)
+  assert.deepEqual(map.aggregationConditions, ['全WAVEクリア', '抑制ユニットによる追加出現なし'])
+  assert.deepEqual(map.reasons, [])
+  const detail = output.details[map.detailFile].maps[exactId]
+  assert.equal(detail.enemies.reduce((sum, enemy) => sum + enemy.count, 0), 30)
+  const partial = output.index.maps.find(entry => entry.levelId === partialId)
+  assert.equal(partial.status, 'excluded')
+  assert.equal(partial.spawnCount, null)
+  assert.deepEqual(partial.aggregationConditions, map.aggregationConditions)
+  assert.deepEqual(partial.spawnAggregation, { kind: 'lower-bound', count: 84, reasons: ['branch-spawn'] })
+  assert.deepEqual(partial.reasons, ['branch-spawn'])
 })
 
 test('missing target levels remain searchable rather than disappearing or showing zero enemies', () => {

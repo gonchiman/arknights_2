@@ -73,7 +73,7 @@ test('display labels group lower bounds and optional omissions as conditional in
   assert.equal(getMapCoverageStatusLabel({ ...missing, diffGroup: 'EASY' }, 'SPAWNS'), '物語環境・対象外')
 })
 
-test('only unresolved lower totals and omitted optional enemies are conditional', () => {
+test('only unresolved lower totals, explicit assumptions, and omitted optional enemies are conditional', () => {
   for (const kind of [undefined, 'optional'] as const) {
     const map = { ...optional, omittedBranchSpawns: [{ ...optionalBranch, kind }] }
     assert.equal(getMapCoverageDisplayStatus(map, 'SPAWNS'), 'conditional')
@@ -94,6 +94,31 @@ test('only unresolved lower totals and omitted optional enemies are conditional'
   })
   assert.deepEqual(summarizeMapCoverageDisplay([combined], 'MAPS'), {
     total: 1, included: 1, regular: 1, conditional: 0, excluded: 0, pending: 0, missing: 0, story: 0,
+  })
+})
+
+test('explicit spawn assumptions are conditional only after readiness and scope checks', () => {
+  const aggregationConditions = ['全WAVEクリア', '抑制ユニットによる追加出現なし']
+  const assumed: MapSummary = { ...base, levelId: 'assumed', spawnCount: 30, aggregationConditions }
+  assert.equal(getMapCoverageDisplayStatus(assumed, 'SPAWNS'), 'conditional')
+  assert.equal(getMapCoverageStatusLabel(assumed, 'SPAWNS'), '条件付き集計対象')
+  assert.equal(getMapCoverageStatus(assumed, 'SPAWNS'), 'included')
+  assert.equal(getMapCoverageDisplayStatus({ ...assumed, aggregationConditions: [] }, 'SPAWNS'), 'included')
+  assert.equal(getMapCoverageDisplayStatus({ ...pending, aggregationConditions }, 'SPAWNS'), 'pending')
+  assert.equal(getMapCoverageDisplayStatus({ ...missing, aggregationConditions }, 'SPAWNS'), 'missing')
+  assert.equal(getMapCoverageDisplayStatus({ ...assumed, zoneType: 'CAMPAIGN' }, 'SPAWNS'), 'excluded')
+  assert.equal(getMapCoverageDisplayStatus({ ...assumed, diffGroup: 'EASY' }, 'SPAWNS'), 'story')
+  assert.equal(getMapCoverageDisplayStatus(assumed, 'MAPS'), 'included')
+  assert.deepEqual(getMapCoverageReasons(assumed, 'MAPS'), ['マップデータ取得済み'])
+  assert.deepEqual(getMapCoverageReasons(assumed, 'SPAWNS'), aggregationConditions)
+  assert.deepEqual(getMapCoverageReasons({ ...optional, aggregationConditions }, 'SPAWNS'), [
+    ...aggregationConditions, '任意の追加出現を除外',
+  ])
+  assert.deepEqual(getMapCoverageReasons({ ...lower, aggregationConditions }, 'SPAWNS'), [
+    '確定出現分のみ集計', ...aggregationConditions, '分岐に応じた出現指定',
+  ])
+  assert.deepEqual(summarizeMapCoverageDisplay([base, assumed, { ...assumed, stageId: 'duplicate' }], 'SPAWNS'), {
+    total: 2, included: 2, regular: 1, conditional: 1, excluded: 0, pending: 0, missing: 0, story: 0,
   })
 })
 
@@ -132,11 +157,11 @@ test('display summaries deduplicate levels and count lower bounds only inside in
   ])
 })
 
-test('V1–V4 archives remain readable and retain histogram counts and all included map IDs', async () => {
+test('V1–V5 archives remain readable and retain histogram counts and all included map IDs', async () => {
   const archive = new URL('../public/data/enemy-aggregation/', import.meta.url)
   const indexBytes = await readFile(new URL('index.json', archive))
   const index = parseEnemyAggregationIndex(JSON.parse(indexBytes.toString()))
-  assert.deepEqual(index.versions.map(version => version.id), ['v1', 'v2', 'v3', 'v4'])
+  assert.deepEqual(index.versions.map(version => version.id), ['v1', 'v2', 'v3', 'v4', 'v5'])
   for (const version of index.versions) {
     const bytes = await readFile(new URL(version.file, archive))
     assert.equal(createHash('sha256').update(bytes).digest('hex'), version.sha256)

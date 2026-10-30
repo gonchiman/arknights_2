@@ -44,6 +44,7 @@ export function buildEnemyHistogramCounts(levels, provenance = {}) {
   const stageContexts = new Map(contextEntries.map(([id, context]) => [normalizeLevelId(id), context]))
   const excludedLevels = []
   const lowerBoundLevels = []
+  const aggregationConditions = []
   const excludedNonEnemySpawns = [], unverifiedNonEnemySpawns = []
   const reasonCounts = new Map()
   let spawnMapCount = 0
@@ -72,6 +73,8 @@ export function buildEnemyHistogramCounts(levels, provenance = {}) {
       continue
     }
     spawnMapCount += 1
+    if (analysis.aggregationConditions?.length) aggregationConditions.push({ levelId,
+      conditions: [...analysis.aggregationConditions] })
     if (aggregation.kind === 'lower-bound') lowerBoundLevels.push({ levelId,
       spawnCount: aggregation.count, reasons: aggregation.reasons })
     excludedNonEnemySpawns.push(...aggregation.excludedNonEnemySpawns.map(entry => ({ levelId, ...entry })))
@@ -124,6 +127,7 @@ export function buildEnemyHistogramCounts(levels, provenance = {}) {
       excludedLevelIds,
       excludedLevels,
       ...(mode === 'lower-bound' ? { lowerBoundLevels } : {}),
+      ...(aggregationConditions.length ? { aggregationConditions } : {}),
       ...(excludedNonEnemySpawns.length ? { excludedNonEnemySpawns } : {}),
       ...(unverifiedNonEnemySpawns.length ? { unverifiedNonEnemySpawns } : {}),
       reasonCounts: Object.fromEntries([...reasonCounts].sort(([left], [right]) => compareIds(left, right))),
