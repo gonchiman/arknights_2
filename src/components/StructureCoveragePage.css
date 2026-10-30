@@ -1,5 +1,14 @@
 .structure-coverage-page { min-width: 0; }
-.structure-coverage-heading { flex-wrap: wrap; gap: 6px 12px; }
+.structure-coverage-page .structure-coverage-heading {
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  background: var(--text-muted);
+  color: var(--surface);
+}
+.structure-coverage-page .structure-coverage-heading > span,
+.structure-coverage-heading .filter-reset-button { color: inherit; }
+.structure-coverage-heading .filter-reset-button:disabled { color: var(--border-strong); }
+.structure-coverage-heading .filter-reset-button:focus-visible { outline-color: currentColor; }
 .structure-coverage-heading h2 { margin: 0; color: inherit; font-size: 12px; font-weight: 700; }
 .structure-coverage-heading > span { font-size: 12px; font-weight: 400; }
 .structure-coverage-results-bar { flex-wrap: wrap; }
