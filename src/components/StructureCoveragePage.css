@@ -2,7 +2,12 @@
 .structure-coverage-heading { flex-wrap: wrap; gap: 6px 12px; }
 .structure-coverage-heading h2 { margin: 0; color: inherit; font-size: 12px; font-weight: 700; }
 .structure-coverage-heading > span { font-size: 12px; font-weight: 400; }
-.structure-coverage-page .analysis-tabs { border-width: 1px 0; margin: 0; }
+.structure-coverage-results-bar { flex-wrap: wrap; }
+.structure-coverage-results-bar .analysis-tabs { width: 264px; max-width: 100%; margin: 0 0 0 auto; }
+.structure-coverage-results-bar .detail-tab { min-height: 32px; padding: 6px; font-size: 12px; }
+@media (max-width: 760px), (pointer: coarse) {
+  .structure-coverage-results-bar .detail-tab { min-height: 44px; }
+}
 .structure-coverage-page .skill-coarse-table-wrap { border-width: 0; }
 .structure-coverage-page .skill-coarse-table th { width: auto; }
 .structure-coverage-page .skill-coarse-table tbody th { font-weight: 400; }
