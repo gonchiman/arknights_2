@@ -14,6 +14,22 @@ const row = (id: string, hp: number | null) => ({ id, stats: { maxHp: hp } }) as
 const rows = [row('a', 100), row('b', 100), row('c', 500)]
 const value = (enemy: EnemyRecord) => enemy.stats.maxHp
 
+test('条件付き出現の根拠を読み戻し、不正な条件や重複マップを拒否する', () => {
+  const conditions = ['全WAVEクリア', '抑制ユニットによる追加出現なし']
+  const entry = { levelId: 'tn', conditions }
+  const input = { ...source, diagnostics: { aggregationConditions: [entry] } }
+  const parsed = parseEnemyHistogramCounts(input)
+  assert.deepEqual(parsed.diagnostics?.aggregationConditions, [entry])
+  assert.notEqual(parsed.diagnostics?.aggregationConditions?.[0].conditions, conditions)
+  assert.equal(parseEnemyHistogramCounts(source).diagnostics, undefined)
+  for (const aggregationConditions of [null, {}, [null], [entry, entry],
+    [{ ...entry, levelId: '' }], [{ ...entry, conditions: [] }],
+    [{ ...entry, conditions: [' '] }], [{ ...entry, conditions: [5] }],
+    [{ ...entry, conditions: ['同じ条件', '同じ条件'] }]]) {
+    assert.throws(() => parseEnemyHistogramCounts({ ...source, diagnostics: { aggregationConditions } }))
+  }
+})
+
 test('同じ階級の敵ごとの登場マップ数を合計し、出現回数と区別する', () => {
   const counts = parseEnemyHistogramCounts(source)
   const types = calculateWeightedHistogram(buildEnemyHistogramObservations(rows, value, 'TYPES', counts))

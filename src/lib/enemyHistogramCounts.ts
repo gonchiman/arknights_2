@@ -25,7 +25,10 @@ export interface EnemyHistogramCounts {
     lowerBoundMapCount?: number
   }
   enemies: Record<string, { mapCount: number; spawnCount: number }>
-  diagnostics?: { lowerBoundLevels: { levelId: string; spawnCount: number; reasons: string[] }[] }
+  diagnostics?: {
+    lowerBoundLevels: { levelId: string; spawnCount: number; reasons: string[] }[]
+    aggregationConditions?: { levelId: string; conditions: string[] }[]
+  }
 }
 
 const record = (value: unknown): Record<string, unknown> | null =>
@@ -37,6 +40,7 @@ export function parseEnemyHistogramCounts(source: unknown): EnemyHistogramCounts
   const summary = record(root?.summary)
   const enemies = record(root?.enemies)
   const lowerBoundLevels = record(root?.diagnostics)?.lowerBoundLevels
+  const rawConditions = record(root?.diagnostics)?.aggregationConditions
   if (root?.schemaVersion !== 1 || !summary || !enemies
     || !['mapCount', 'missingMapCount', 'spawnMapCount', 'spawnExcludedMapCount'].every((key) => isCount(summary[key]))
     || (summary.excludedMapCount !== undefined && !isCount(summary.excludedMapCount))
@@ -61,6 +65,22 @@ export function parseEnemyHistogramCounts(source: unknown): EnemyHistogramCounts
     seenLevels.add(level.levelId)
     lowerBounds.push({ levelId: level.levelId, spawnCount: level.spawnCount, reasons: [...level.reasons] as string[] })
   }
+  const aggregationConditions: { levelId: string; conditions: string[] }[] = []
+  const seenConditionalLevels = new Set<string>()
+  if (rawConditions !== undefined && !Array.isArray(rawConditions)) {
+    throw new Error('登場データの集計条件に不正な値があります。')
+  }
+  for (const raw of (rawConditions as unknown[] | undefined) ?? []) {
+    const level = record(raw)
+    if (!level || typeof level.levelId !== 'string' || !level.levelId.trim() || seenConditionalLevels.has(level.levelId)
+      || !Array.isArray(level.conditions) || !level.conditions.length
+      || level.conditions.some(condition => typeof condition !== 'string' || !condition.trim())
+      || new Set(level.conditions).size !== level.conditions.length) {
+      throw new Error('登場データの集計条件に不正な値があります。')
+    }
+    seenConditionalLevels.add(level.levelId)
+    aggregationConditions.push({ levelId: level.levelId, conditions: [...level.conditions] as string[] })
+  }
   const counts: EnemyHistogramCounts['enemies'] = Object.create(null)
   for (const [id, value] of Object.entries(enemies)) {
     const entry = record(value)
@@ -73,7 +93,10 @@ export function parseEnemyHistogramCounts(source: unknown): EnemyHistogramCounts
     schemaVersion: 1,
     ...(root.spawnAggregationMode === 'lower-bound' ? {
       spawnAggregationMode: 'lower-bound' as const,
-      diagnostics: { lowerBoundLevels: lowerBounds },
+    } : {}),
+    ...(root.spawnAggregationMode === 'lower-bound' || rawConditions !== undefined ? {
+      diagnostics: { lowerBoundLevels: lowerBounds,
+        ...(rawConditions !== undefined ? { aggregationConditions } : {}) },
     } : {}),
     generatedAt: typeof root.generatedAt === 'string' ? root.generatedAt : '',
     sourceGeneratedAt: typeof root.sourceGeneratedAt === 'string' ? root.sourceGeneratedAt : null,

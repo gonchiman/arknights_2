@@ -136,7 +136,7 @@ export async function archiveEnemyAggregation({ root, snapshot, ruleVersion = CU
     const coverage = summarizeMapCoverage(parseMapIndex(files['maps/index.json']).maps, 'SPAWNS')
     const defaultDescription = ruleVersion !== CURRENT_ENEMY_AGGREGATION_RULE_VERSION ? '集計ルール更新'
       : previousEntry?.ruleVersion === ruleVersion && previousEntry.sourceRevision !== snapshot.revision
-        ? '元データ更新（下限集計）' : '確定出現分を下限として集計（未解析の追加出現は未算入）'
+        ? '元データ更新（下限集計・TN連戦対応）' : 'TNの連戦出現を反映（全WAVEクリア・抑制ユニットによる追加出現なし）'
     const version = {
       id, label: `集計版 ${id}`, createdAt: new Date().toISOString(), generatedAt: snapshot.generatedAt,
       sourceRevision: snapshot.revision, ruleVersion, generatorVersion: snapshot.generatorVersion,

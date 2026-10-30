@@ -107,6 +107,13 @@ function parseMapSpawnAggregation(source: unknown, status: unknown, reasons: str
   return { kind: 'lower-bound', count: value.count, reasons: [...value.reasons] }
 }
 
+function parseMapAggregationConditions(source: unknown): string[] {
+  if (!strings(source) || source.some(condition => !condition.trim()) || new Set(source).size !== source.length) {
+    throw new Error('マップの集計条件に不正な値があります。')
+  }
+  return [...source]
+}
+
 export function parseMapIndex(source: unknown): MapIndex {
   const root = record(source)
   const enemies = record(root?.enemies)
@@ -171,6 +178,9 @@ export function parseMapIndex(source: unknown): MapIndex {
       status: map.status as MapSummary['status'], spawnCount: map.spawnCount,
       ...(map.spawnAggregation !== undefined ? {
         spawnAggregation: parseMapSpawnAggregation(map.spawnAggregation, map.status, map.reasons),
+      } : {}),
+      ...(map.aggregationConditions !== undefined ? {
+        aggregationConditions: parseMapAggregationConditions(map.aggregationConditions),
       } : {}),
       features: featureIds(map.features) ? [...map.features] : null,
       enemyRoutes: parseMapEnemyRoutes(map.enemyRoutes, map.enemyIds),

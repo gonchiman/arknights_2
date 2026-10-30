@@ -397,6 +397,7 @@ export function buildMapDatabase({
       ...(aggregation?.kind === 'lower-bound' ? { spawnAggregation: {
         kind: 'lower-bound', count: aggregation.count, reasons: aggregation.reasons,
       } } : {}),
+      ...(analysis.aggregationConditions?.length ? { aggregationConditions: [...analysis.aggregationConditions] } : {}),
       ...(analysis.omittedBranchSpawns?.length ? { omittedBranchSpawns: analysis.omittedBranchSpawns } : {}),
       ...(analysis.countedBranchSpawns?.length ? { countedBranchSpawns: analysis.countedBranchSpawns } : {}),
     }
