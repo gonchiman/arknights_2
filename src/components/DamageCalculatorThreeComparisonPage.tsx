@@ -25,7 +25,7 @@ interface Props {
 }
 
 type OutputKind = DamageThreeComparisonEntry['kind']
-type Metric = 'actualTargetCount' | 'perAttack' | 'dps' | 'damageOverTimeDps' | 'combinedDps'
+type Metric = 'actualTargetCount' | 'perAttack' | 'dps' | 'damageOverTimeDps' | 'combinedDps' | 'durationSeconds' | 'totalDamage'
 type TargetDisplay = 'single' | 'all'
 type TableDisplay = 'auto' | 'full' | 'compact'
 type ConditionValue = number | string | boolean | undefined
@@ -34,21 +34,35 @@ const DAMAGE_TYPE_LABELS: Record<string, string> = { PHYSICAL: '物理', ARTS: '
 const ATTACK_LABELS: Record<OutputKind, string> = {
   NORMAL: '1攻撃ダメージ', NEXT_ATTACK: '強化攻撃ダメージ', COUNTER: '反撃ダメージ', SKILL_ACTION: '1動作ダメージ',
 }
-const METRIC_LABELS = { actualTargetCount: '攻撃対象数', dps: '直接DPS', damageOverTimeDps: '継続DPS', combinedDps: '合計DPS' }
-const NORMAL_METRICS: Metric[] = ['combinedDps', 'dps', 'damageOverTimeDps', 'perAttack', 'actualTargetCount']
+const METRIC_LABELS = {
+  actualTargetCount: '攻撃対象数', dps: '直接DPS', damageOverTimeDps: '継続DPS', combinedDps: '合計DPS',
+  durationSeconds: '持続時間（秒）', totalDamage: '総ダメージ（概算）',
+}
+const NORMAL_METRICS: Metric[] = ['combinedDps', 'durationSeconds', 'totalDamage', 'dps', 'damageOverTimeDps', 'perAttack', 'actualTargetCount']
+const NORMAL_RESULT_METRICS: Metric[] = ['dps', 'damageOverTimeDps', 'combinedDps', 'durationSeconds', 'totalDamage']
 const ACTION_METRICS: Metric[] = ['perAttack', 'actualTargetCount']
 function metricLabel(metric: Metric, kind: OutputKind): string {
   return metric === 'perAttack' ? ATTACK_LABELS[kind] : METRIC_LABELS[metric]
 }
 
 function metricValue(result: DamageThreeComparisonResult, metric: Metric, target: TargetDisplay): number | null {
-  if (target === 'single' || metric === 'actualTargetCount') return result[metric]
+  if (target === 'single' || metric === 'actualTargetCount' || metric === 'durationSeconds') return result[metric]
   switch (metric) {
     case 'perAttack': return result.allTargetsPerAttack
     case 'dps': return result.allTargetsDps
     case 'damageOverTimeDps': return result.allTargetsDamageOverTimeDps
     case 'combinedDps': return result.allTargetsCombinedDps
+    case 'totalDamage': return result.allTargetsTotalDamage
   }
+}
+
+function formatMetricValue(
+  result: DamageThreeComparisonResult, metric: Metric, target: TargetDisplay,
+  formatNumber: (value: number | null) => string,
+): string {
+  const value = metricValue(result, metric, target)
+  if (value === null || !Number.isFinite(value)) return '—'
+  return metric === 'actualTargetCount' || metric === 'durationSeconds' ? String(value) : formatNumber(value)
 }
 
 function numberFromInput(value: string): number {
@@ -170,7 +184,7 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading, onO
       return next
     })
   }
-  const sortableHeading = (metric: Metric, label: string) => <TableSortHeader className="dc3-comparison-numeric-heading"
+  const sortableHeading = (metric: Metric, label: string) => <TableSortHeader key={metric} className="dc3-comparison-numeric-heading"
     label={label} sortKey={metric} sort={{ key: sort.metric, direction: sort.direction }}
     onSort={(metric) => setSort((current) => ({ metric,
       direction: current.metric === metric && current.direction === 'desc' ? 'asc' : 'desc' }))} />
@@ -242,7 +256,7 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading, onO
               {!compact && <th scope="col">スキル名</th>}<th scope="col">段階</th>
               {compact ? sortableHeading(sort.metric, metricLabel(sort.metric, kind)) : <>
                 <th scope="col">属性</th>{sortableHeading('actualTargetCount', '攻撃対象数')}{sortableHeading('perAttack', ATTACK_LABELS[kind])}
-                {kind === 'NORMAL' && <>{sortableHeading('dps', '直接DPS')}{sortableHeading('damageOverTimeDps', '継続DPS')}{sortableHeading('combinedDps', '合計DPS')}</>}
+                {kind === 'NORMAL' && NORMAL_RESULT_METRICS.map((metric) => sortableHeading(metric, metricLabel(metric, kind)))}
               </>}
               <th scope="col">状態</th>{!compact && <th scope="col">個別条件</th>}
             </tr></thead>
@@ -254,12 +268,12 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading, onO
                   className="skill-coarse-link">{entry.skill.operatorName}</OperatorDetailLink></td>
                 <td>{compact ? entry.skill.skillIndex : `S${entry.skill.skillIndex}`}</td>
                 {!compact && <td>{entry.skill.skillName}</td>}<td>{entry.stageLabel}</td>
-                {compact ? <td className="dc3-comparison-number">{sort.metric === 'actualTargetCount' ? result.actualTargetCount ?? '—' : formatNumber(metricValue(result, sort.metric, target))}</td> : <>
+                {compact ? <td className="dc3-comparison-number">{formatMetricValue(result, sort.metric, target, formatNumber)}</td> : <>
                   <td>{result.damageType ? DAMAGE_TYPE_LABELS[result.damageType] ?? result.damageType : '—'}</td>
                   <td className="dc3-comparison-number">{result.actualTargetCount ?? '—'}</td>
                   <td className="dc3-comparison-number">{formatNumber(metricValue(result, 'perAttack', target))}</td>
-                  {kind === 'NORMAL' && <>{(['dps', 'damageOverTimeDps', 'combinedDps'] as const).map((metric) =>
-                    <td key={metric} className="dc3-comparison-number">{formatNumber(metricValue(result, metric, target))}</td>)}</>}
+                  {kind === 'NORMAL' && NORMAL_RESULT_METRICS.map((metric) =>
+                    <td key={metric} className="dc3-comparison-number">{formatMetricValue(result, metric, target, formatNumber)}</td>)}
                 </>}
                 <td>{compact ? <button type="button" className="skill-coarse-description-trigger dc3-comparison-status-trigger" aria-haspopup="dialog"
                   data-condition-key={entry.key} aria-label={`${entry.skill.operatorName} S${entry.skill.skillIndex} ${entry.stageLabel}：${resultStatus(result, customized, target)}の詳細と個別条件`}
@@ -313,8 +327,11 @@ function ComparisonConditionsDialog({ result, customized, target, common, format
     ['敵の防御力', formatCondition(common.defense)], ['敵の術耐性', formatCondition(common.resistance)],
     ['敵の数', Number.isFinite(common.enemyCount) ? String(common.enemyCount) : '—'],
     ['攻撃対象数', result.actualTargetCount ?? '—'], ['ダメージの表示対象', target === 'single' ? '1体' : '全対象'],
-    ...(['perAttack', ...(entry.kind === 'NORMAL' ? ['dps', 'damageOverTimeDps', 'combinedDps'] as const : [])] as Metric[])
-      .map((metric) => [metricLabel(metric, entry.kind), formatNumber(metricValue(result, metric, target))]),
+    ...(entry.kind === 'NORMAL' ? [['集計範囲', '選択段階']] : []),
+    ...(['perAttack', ...(entry.kind === 'NORMAL' ? NORMAL_RESULT_METRICS : [])] as Metric[])
+      .map((metric) => [metricLabel(metric, entry.kind), formatMetricValue(result, metric, target, formatNumber)]),
+    ...(entry.kind === 'NORMAL' && metricValue(result, 'totalDamage', target) === null && result.totalDamageReason
+      ? [['総ダメージの未算出理由', result.totalDamageReason]] : []),
     ['状態', resultStatus(result, customized, target)], ['個別条件', customized ? '変更済み' : '既定値'],
   ]
   return <dialog ref={dialogRef} className="skill-effect-dialog dc3-comparison-dialog" aria-labelledby={titleId} aria-modal="true"

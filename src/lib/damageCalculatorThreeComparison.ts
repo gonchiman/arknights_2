@@ -6,6 +6,7 @@ import {
 import { getExpandedDefinition } from './expandedCombatRegistry.ts'
 import { guardConditionMatches } from './guardCombatValues.ts'
 import type { SkillStructure } from './skillStructure.ts'
+import { calculateDamageThreePeriodTotal, type DamageThreePeriodTotal } from './damageCalculatorThreePeriodTotal.ts'
 
 export const DAMAGE_THREE_OUTPUT_KIND_LABELS: Record<DamageCalculatorThreeOutput['attackKind'], string> = {
   NORMAL: '通常攻撃型', NEXT_ATTACK: '次の通常攻撃型', COUNTER: '反撃型', SKILL_ACTION: 'スキル動作型',
@@ -34,7 +35,7 @@ export interface ComparisonConditionField {
   options?: readonly { value: number | string | boolean; label: string }[]
   locked: boolean
 }
-export interface DamageThreeComparisonResult {
+export interface DamageThreeComparisonResult extends DamageThreePeriodTotal {
   entry: DamageThreeComparisonEntry
   output: DamageCalculatorThreeOutput | null
   errors: string[]
@@ -117,7 +118,20 @@ export function evaluateDamageThreeComparisonEntry(
   const combinedDps = row?.combinedDps ?? null
   // Null means not calculable; zero only means the engine confirmed there is no periodic contribution.
   const periodic = row?.damageOverTimeDps ?? (directDps !== null && combinedDps === directDps ? 0 : null)
+  const structure = output?.structure
+  const selectedStage = structure?.guardRecipe
+    ? structure.guardRecipe.stages.find(stage => stage.id === entry.stageId)
+    : structure?.effectStructure.stages.find(stage => stage.id === entry.stageId)
+  const raw = entry.skill.skillLevels[entry.levelIndex]
+  const periodTotal = calculateDamageThreePeriodTotal({ stage: selectedStage, attackKind: entry.kind,
+    durationContext: { sourceDuration: raw?.duration, blackboard: raw?.blackboard, conditions: output?.guard?.conditions },
+    combinedDps, allTargetsCombinedDps: row?.allTargetsCombinedDps ?? null,
+    damageOverTimeDps: row?.damageOverTimeDps,
+    hasUnsupportedTalentDamage: output?.hasUnsupportedTalentDamage,
+    hasCalculationErrors: errors.length > 0 || !row,
+  })
   return {
+    ...periodTotal,
     entry, output, errors: [...new Set(errors)], fields,
     notes: [...new Set([...(output?.scopeNotes ?? []), ...(output?.talentEffects.filter(effect => effect.status === 'UNSUPPORTED').map(effect => effect.reason) ?? [])])],
     actualTargetCount: Number.isSafeInteger(output?.actualTargetCount) && output!.actualTargetCount > 0 ? output!.actualTargetCount : null,

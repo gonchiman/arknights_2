@@ -18,8 +18,11 @@ export function getExpandedTraitCoverage(operatorId: string, stage: GuardStage):
   const growth = { phaseIndex: definition.phaseIndex, operatorLevel: source.profile.phases[definition.phaseIndex].maxLevel! }
   const structure = buildTraitStructures([operator], growth)[0]
   if (!structure?.effects.length || structure.status === 'UNREVIEWED') return 'UNSUPPORTED'
+  // Period-total coverage is added when structures are built; it does not
+  // change a stage's existing attack/trait semantics or registered coverage.
+  const attackSignature = ({ periodTotal: _periodTotal, ...attack }: GuardStage) => JSON.stringify(attack)
   const recipe = definition.recipes.find(recipe => recipe.stages.some(candidate => candidate === stage
-    || JSON.stringify(candidate) === JSON.stringify(stage)))
+    || attackSignature(candidate) === attackSignature(stage)))
   const raw = source.skills.find(skill => skill.skillIndex === recipe?.skillIndex)?.raw
   const relevant = structure.effects.filter(effect => effect.calculationRelevance !== 'NOT_RELEVANT'
     && !['ATTACK_RANGE', 'RANGED_ATTACK_ENABLED', 'NORMAL_ATTACK_ENABLED'].includes(effect.item)
