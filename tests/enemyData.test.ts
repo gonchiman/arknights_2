@@ -116,6 +116,27 @@ test('Key/Value配列形式の敵データにも対応する', () => {
   assert.equal(rows[0]?.databaseLevel, 0)
 })
 
+test('基礎レベルの明示された耐性だけを読み、武装解除フラグを戦慄と表示する', () => {
+  const rows = buildEnemyRecords(handbook, {
+    enemy_test: [
+      { level: 1, enemyData: { attributes: { sleepImmune: { m_defined: true, m_value: true } } } },
+      {
+        level: 0,
+        enemyData: {
+          attributes: {
+            stunImmune: { m_defined: true, m_value: true },
+            disarmedCombatImmune: { m_defined: true, m_value: true },
+            silenceImmune: { m_defined: false, m_value: true },
+            frozenImmune: { m_defined: true, m_value: false },
+          },
+        },
+      },
+    ],
+  })
+  assert.deepEqual(rows[0]?.statusImmunities, ['スタン', '戦慄'])
+  assert.equal(matchesEnemyFilters(rows[0], { query: '戦慄', levelType: 'ALL' }), true)
+})
+
 test('生成済みデータから登場ステージ数を結合し、未登場の敵を0として扱う', () => {
   const counted = buildEnemyRecords(handbook, database, {
     schemaVersion: 1,
