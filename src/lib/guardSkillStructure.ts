@@ -5,6 +5,7 @@ import { GUARD_SKILL_RECIPES } from './guardSkillRecipes.ts'
 import { GUARD_SKILL_SOURCES } from './guardSkillSources.ts'
 import { resolveGuardValue } from './guardCombatValues.ts'
 import { expandSkillDescription } from './skillJsonAnalysis.ts'
+import { getReviewedPeriodTotalCapability } from './damagePeriodTotal.ts'
 
 export function getGuardSkillRecipe(selection: Pick<SkillStructureSelection, 'operatorId' | 'skillIndex' | 'levelIndex'>): GuardSkillRecipe | null {
   return selection.levelIndex === 9 ? GUARD_SKILL_RECIPES.find(recipe => recipe.operatorId === selection.operatorId
@@ -13,7 +14,10 @@ export function getGuardSkillRecipe(selection: Pick<SkillStructureSelection, 'op
 
 export function buildGuardSkillStructures(recipes: readonly GuardSkillRecipe[] = GUARD_SKILL_RECIPES,
   sources: readonly GuardSource[] = GUARD_SKILL_SOURCES, levelIndex = 9): SkillStructure[] {
-  return recipes.map(recipe => {
+  return recipes.map(sourceRecipe => {
+    const recipe = { ...sourceRecipe, stages: sourceRecipe.stages.map(stage => ({ ...stage,
+      periodTotal: stage.periodTotal ?? getReviewedPeriodTotalCapability(sourceRecipe.operatorId, sourceRecipe.skillIndex, stage.id),
+    })) }
     const source = sources.find(operator => operator.id === recipe.operatorId)
     const skill = source?.skills.find(skill => skill.skillIndex === recipe.skillIndex)
     if (!source || !skill) throw new RangeError(`スキル説明文を取得できません：${recipe.operatorId} S${recipe.skillIndex}`)
@@ -59,7 +63,7 @@ export function buildGuardSkillStructures(recipes: readonly GuardSkillRecipe[] =
           condition: null, target: 'ENEMIES_IN_ACTION_RANGE', sourceBinding: JSON.stringify(action.scale),
           item: 'DIRECT_DAMAGE', operation: 'DEAL_DAMAGE', unit: 'DAMAGE_ACTION',
           value: { damageType: action.damageType, attackScale: preview(action.scale), count: preview(action.hits, 1) } }))
-        return { id: stage.id, label: stage.label, applicability: null,
+        return { id: stage.id, label: stage.label, applicability: null, periodTotal: stage.periodTotal,
           duration: stage.kind === 'NEXT_ATTACK' ? { type: 'SINGLE_ATTACK' as const }
             : stage.kind === 'SKILL_ACTION' ? { type: 'SKILL_ACTION' as const }
               : duration === 'UNTIL_EXIT' || seconds < 0 ? { type: 'UNTIL_EXIT' as const }

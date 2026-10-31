@@ -4,6 +4,7 @@ import { SKILL_DIRECTORY_SP_TYPE_LABELS } from './skillDirectory.ts'
 import type { GuardSkillRecipe } from './guardCombatTypes.ts'
 import { buildGuardSkillStructures } from './guardSkillStructure.ts'
 import { buildExpandedSkillStructures } from './expandedSkillStructure.ts'
+import { getReviewedPeriodTotalCapability, type PeriodTotalCapability } from './damagePeriodTotal.ts'
 
 export type SkillStructureComparison = 'EQ' | 'NE' | 'GT' | 'GTE' | 'LT' | 'LTE'
 export type SkillStructureNumericMetric = 'skillActivationCount' | 'actualAttackTargetCount'
@@ -97,6 +98,7 @@ export interface SkillStructureStage {
   readonly label: string
   readonly applicability: SkillStructurePredicate | null
   readonly duration: SkillStructureDuration
+  readonly periodTotal?: PeriodTotalCapability
   readonly endCondition: SkillStructureEndCondition
   readonly effects: readonly SkillStructureEffect[]
 }
@@ -343,7 +345,7 @@ function signedNumber(value: number): string {
  * These records do not claim calculator support and do not reuse the display-only
  * description breakdown as executable effects.
  */
-export const SKILL_STRUCTURES: readonly SkillStructure[] = [
+const REVIEWED_SKILL_STRUCTURES: readonly SkillStructure[] = [
   ...buildGuardSkillStructures(),
   ...buildExpandedSkillStructures(),
   {
@@ -1827,6 +1829,15 @@ export const SKILL_STRUCTURES: readonly SkillStructure[] = [
     ]
   }
 ]
+
+export const SKILL_STRUCTURES: readonly SkillStructure[] = REVIEWED_SKILL_STRUCTURES.map(structure => ({
+  ...structure, effectStructure: { ...structure.effectStructure,
+    stages: structure.effectStructure.stages.map(stage => ({ ...stage,
+      periodTotal: stage.periodTotal ?? getReviewedPeriodTotalCapability(structure.basicInfo.operatorId,
+        structure.basicInfo.skillIndex, stage.id),
+    })),
+  },
+}))
 
 export const SKILL_STRUCTURE_RANGES: Readonly<Record<string, SkillStructureRange>> = {
   '3-12': {
