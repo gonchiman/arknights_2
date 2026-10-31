@@ -1,6 +1,5 @@
 .enemy-immunity-page {
   --immunity-bar: #83a8ba;
-  --immunity-selected: #356f89;
 }
 
 .enemy-immunity-filters {
@@ -20,7 +19,6 @@
 
 .enemy-immunity-scope { display: grid; gap: 4px; color: var(--text-muted); font-size: 12px; }
 .enemy-immunity-scope strong { color: var(--text); font-size: 13px; font-weight: 500; }
-.enemy-immunity-page .collapsible-panel-heading-summary > span { display: inline; font-size: 13px; }
 
 .enemy-immunity-chart { container-type: inline-size; padding: 2px 0 0; }
 .enemy-immunity-axis-title { color: var(--text-soft); font-size: 12px; }
@@ -40,18 +38,9 @@
   position: relative;
   min-width: 0;
   height: 100%;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
   color: var(--text);
-  cursor: pointer;
-  font: inherit;
+  text-align: center;
 }
-.enemy-immunity-bar:hover { background: #356f890a; }
-.enemy-immunity-bar[aria-pressed="true"] { background: #356f8910; }
-.enemy-immunity-bar:focus-visible { outline: 2px solid var(--immunity-selected); outline-offset: 2px; }
 .enemy-immunity-bar-fill {
   position: absolute;
   bottom: 0;
@@ -62,7 +51,6 @@
   height: var(--immunity-height);
   background: var(--immunity-bar);
 }
-.enemy-immunity-bar[aria-pressed="true"] .enemy-immunity-bar-fill { background: var(--immunity-selected); }
 .enemy-immunity-bar-value {
   position: absolute;
   bottom: calc(var(--immunity-height) + 6px);
@@ -84,42 +72,14 @@
   font-size: 13px;
   white-space: nowrap;
 }
-.enemy-immunity-bar[aria-pressed="true"] .enemy-immunity-bar-label { font-weight: 700; }
 .enemy-immunity-x-title { margin: 39px 0 0 42px; color: var(--text-muted); font-size: 12px; text-align: center; }
-.enemy-immunity-selection {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-  margin-top: 14px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-.enemy-immunity-selection strong { font-weight: 600; }
-
-.enemy-immunity-table-scroll { max-width: 100%; overflow-x: auto; }
-.enemy-immunity-table { width: 100%; min-width: 480px; border-collapse: collapse; border: 1px solid var(--border); font-size: 13px; }
-.enemy-immunity-table th,
-.enemy-immunity-table td { border: 1px solid var(--border); padding: 7px 8px; font-size: 13px; text-align: left; vertical-align: middle; }
-.enemy-immunity-table thead th { background: var(--surface-soft); color: var(--text-soft); font-weight: 600; }
-.enemy-immunity-table tbody th { position: static; width: 30%; background: var(--surface); font-weight: 400; }
-.enemy-immunity-table tbody tr { cursor: default; }
-.enemy-immunity-table th:nth-child(2),
-.enemy-immunity-table td:nth-child(2) { width: 80px; white-space: nowrap; }
-.enemy-immunity-enemy-name { border: 0; background: transparent; padding: 0; color: var(--link); font: inherit; text-align: left; cursor: pointer; }
-.enemy-immunity-enemy-name:hover { text-decoration: underline; }
-.enemy-immunity-page .enemy-pagination { border: 1px solid var(--border); border-top: 0; font-size: 12px; }
-.enemy-immunity-page .enemy-pagination button { font-size: 12px; }
-.enemy-immunity-table .enemy-immunity-empty { height: 64px; text-align: center; color: var(--text-muted); }
 
 @container (max-width: 480px) {
   .enemy-immunity-plot { height: 260px; margin-left: 29px; }
   .enemy-immunity-bars { gap: 1px; }
   .enemy-immunity-gridline span { right: calc(100% + 6px); font-size: 11px; }
   .enemy-immunity-bar-value strong { font-size: 11px; }
-  .enemy-immunity-bar-value > span { display: none; }
+  .enemy-immunity-bar-value > span { font-size: 10px; }
   .enemy-immunity-bar-label { writing-mode: vertical-rl; text-orientation: upright; font-size: 12px; line-height: 1.2; }
   .enemy-immunity-x-title { margin: 60px 0 0 29px; }
 }
@@ -129,7 +89,4 @@
   .enemy-immunity-page .enemy-level-filter .enemy-level-filter-buttons { grid-template-columns: 1fr 1fr 1.3fr 1fr 1fr; }
   .enemy-immunity-page .enemy-level-filter-buttons button { font-size: 12px; white-space: nowrap; }
   .enemy-immunity-page .collapsible-panel-body { padding: 12px 10px; }
-  .enemy-immunity-page .enemy-pagination { flex-wrap: wrap; }
-  .enemy-immunity-page .enemy-pagination > div { width: auto; }
-  .enemy-immunity-page .enemy-pagination button { min-height: 36px; }
 }
