@@ -1,4 +1,5 @@
 import { getMapCategory, getMapEnvironment } from './mapDatabase.ts'
+import { getSpecialActivityLabel } from './enemyAggregationScope.ts'
 import type { MapCategory, MapSummary } from '../types/map.ts'
 
 export type EnemyMapCoverageMode = 'SPAWNS' | 'MAPS'
@@ -39,9 +40,19 @@ function uniqueMaps(maps: readonly MapSummary[]): MapSummary[] {
 
 /** Coverage describes the source map population, independently of enemy filters. */
 export function getMapCoverageStatus(map: MapSummary, mode: EnemyMapCoverageMode): MapCoverageStatus {
-  if (getMapEnvironment(map) === 'EASY' || getMapCategory(map) === 'other') return 'excluded'
+  if (getMapEnvironment(map) === 'EASY' || getMapCategory(map) === 'other' || map.statisticsExclusion) return 'excluded'
   if (map.status === 'missing') return 'missing'
-  return map.status === 'supported' || mode === 'MAPS' || isMapLowerBoundAggregation(map) ? 'included' : 'excluded'
+  return map.status === 'supported' || mode === 'MAPS' || isMapPartialAggregation(map) ? 'included' : 'excluded'
+}
+
+export function isMapExpectedAggregation(map: MapSummary): boolean {
+  return map.status === 'excluded' && map.spawnCount === null && map.spawnAggregation?.kind === 'expected-lower-bound'
+    && Number.isFinite(map.spawnAggregation.count) && map.spawnAggregation.count > 0
+    && map.spawnAggregation.count <= Number.MAX_SAFE_INTEGER
+}
+
+export function isMapPartialAggregation(map: MapSummary): boolean {
+  return isMapLowerBoundAggregation(map) || isMapExpectedAggregation(map)
 }
 
 export function isMapLowerBoundAggregation(map: MapSummary): boolean {
@@ -49,14 +60,15 @@ export function isMapLowerBoundAggregation(map: MapSummary): boolean {
     && Number.isSafeInteger(map.spawnAggregation.count) && map.spawnAggregation.count > 0
 }
 
-/** Display readiness separately from scope; archived aggregation totals retain their legacy classification. */
+/** Explicit exclusions take priority; other maps still display their analysis readiness. */
 export function getMapCoverageDisplayStatus(map: MapSummary, mode: EnemyMapCoverageMode): MapCoverageDisplayStatus {
   if (getMapEnvironment(map) === 'EASY') return 'story'
+  if (map.statisticsExclusion) return 'excluded'
   if (map.status === 'missing') return 'missing'
-  const ready = map.status === 'supported' || mode === 'MAPS' || isMapLowerBoundAggregation(map)
+  const ready = map.status === 'supported' || mode === 'MAPS' || isMapPartialAggregation(map)
   if (!ready) return 'pending'
   if (getMapCategory(map) === 'other') return 'excluded'
-  if (mode === 'SPAWNS' && (isMapLowerBoundAggregation(map)
+  if (mode === 'SPAWNS' && (isMapPartialAggregation(map)
     || !!map.aggregationConditions?.length
     || (map.status === 'supported' && map.omittedBranchSpawns?.some(entry => entry.kind !== 'non-enemy')))) {
     return 'conditional'
@@ -66,7 +78,7 @@ export function getMapCoverageDisplayStatus(map: MapSummary, mode: EnemyMapCover
 
 export function getMapCoverageStatusLabel(map: MapSummary, mode: EnemyMapCoverageMode): string {
   const status = getMapCoverageDisplayStatus(map, mode)
-  return { included: '通常の集計対象', conditional: '条件付き集計対象', excluded: '集計可能・対象外',
+  return { included: '通常の集計対象', conditional: '条件付き集計対象', excluded: '集計対象外',
     pending: '解析保留', missing: 'データ未取得', story: '物語環境・対象外' }[status]
 }
 
@@ -167,6 +179,7 @@ export function getMapCoverageReasons(map: MapSummary, mode: EnemyMapCoverageMod
   const scope = [
     getMapEnvironment(map) === 'EASY' && '物語環境',
     getMapCategory(map) === 'other' && 'その他のマップ',
+    map.statisticsExclusion && `特殊モード・集計対象外（${getSpecialActivityLabel(map.statisticsExclusion.activityType)}）`,
   ].filter((value): value is string => !!value)
   return [...scope, ...getMapCoverageDataReasons(map, mode)]
 }
@@ -174,6 +187,9 @@ export function getMapCoverageReasons(map: MapSummary, mode: EnemyMapCoverageMod
 function getMapCoverageDataReasons(map: MapSummary, mode: EnemyMapCoverageMode): string[] {
   if (map.status === 'missing') return ['マップデータ未取得']
   if (mode === 'MAPS') return ['マップデータ取得済み']
+  if (isMapExpectedAggregation(map)) {
+    return ['出現数の期待値（下限）', ...new Set(map.aggregationConditions ?? [])]
+  }
   if (isMapLowerBoundAggregation(map)) {
     const status = getMapCoverageDisplayStatus(map, mode)
     return [status === 'included' || status === 'conditional' ? '確定出現分のみ集計' : '確定出現分のみ判明',

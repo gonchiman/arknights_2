@@ -18,7 +18,8 @@ const DEFAULT_STAGES_PATH = fileURLToPath(new URL('../reference-data/ArknightsGa
  */
 export function buildEnemyHistogramCounts(levels, provenance = {}) {
   const mode = provenance.spawnAggregationMode ?? 'strict'
-  if (!['strict', 'lower-bound'].includes(mode)) throw new Error('Unknown enemy spawn aggregation mode')
+  if (!['strict', 'lower-bound', 'expected-lower-bound'].includes(mode)) throw new Error('Unknown enemy spawn aggregation mode')
+  const expectedMode = mode === 'expected-lower-bound'
   const excludedLevelIds = [...new Set((Array.isArray(provenance.excludedLevelIds) ? provenance.excludedLevelIds : [])
     .map(normalizeLevelId).filter(Boolean))].sort(compareIds)
   const scopeExcluded = new Set(excludedLevelIds)
@@ -44,6 +45,7 @@ export function buildEnemyHistogramCounts(levels, provenance = {}) {
   const stageContexts = new Map(contextEntries.map(([id, context]) => [normalizeLevelId(id), context]))
   const excludedLevels = []
   const lowerBoundLevels = []
+  const expectedLevels = []
   const aggregationConditions = []
   const excludedNonEnemySpawns = [], unverifiedNonEnemySpawns = []
   const reasonCounts = new Map()
@@ -56,12 +58,14 @@ export function buildEnemyHistogramCounts(levels, provenance = {}) {
     }
     const context = stageContexts.has(levelId) ? stageContexts.get(levelId)
       : provenance.stageContexts === undefined ? {} : null
-    const resolutionContext = asRecord(context) ? { ...context, levelId, sourceRevision: provenance.sourceRevision } : context
+    const resolutionContext = asRecord(context) ? { ...context, levelId, sourceRevision: provenance.sourceRevision,
+      ...(expectedMode ? { randomSpawnMode: 'expected' } : {}) } : context
     const analysis = analyzeEnemySpawns(data, resolutionContext)
     const { reasons } = analysis
     // Check before applying any contribution so overflow also excludes the whole map.
     for (const [enemyId, count] of analysis.counts) {
-      if (!Number.isSafeInteger((enemies.get(enemyId)?.spawnCount ?? 0) + count)) {
+      const total = (enemies.get(enemyId)?.spawnCount ?? 0) + count
+      if (!(expectedMode ? Number.isFinite(total) && total >= 0 && total <= Number.MAX_SAFE_INTEGER : Number.isSafeInteger(total))) {
         reasons.add('spawn-total-overflow')
       }
     }
@@ -76,6 +80,8 @@ export function buildEnemyHistogramCounts(levels, provenance = {}) {
     if (analysis.aggregationConditions?.length) aggregationConditions.push({ levelId,
       conditions: [...analysis.aggregationConditions] })
     if (aggregation.kind === 'lower-bound') lowerBoundLevels.push({ levelId,
+      spawnCount: aggregation.count, reasons: aggregation.reasons })
+    if (aggregation.kind === 'expected-lower-bound') expectedLevels.push({ levelId,
       spawnCount: aggregation.count, reasons: aggregation.reasons })
     excludedNonEnemySpawns.push(...aggregation.excludedNonEnemySpawns.map(entry => ({ levelId, ...entry })))
     unverifiedNonEnemySpawns.push(...aggregation.unverifiedNonEnemySpawns.map(entry => ({ levelId, ...entry })))
@@ -111,7 +117,7 @@ export function buildEnemyHistogramCounts(levels, provenance = {}) {
   return {
     schemaVersion: 1,
     scope: 'cached-stage-levels',
-    ...(mode === 'lower-bound' ? { spawnAggregationMode: mode } : {}),
+    ...(mode !== 'strict' ? { spawnAggregationMode: mode } : {}),
     generatedAt: readString(provenance.generatedAt),
     sourceGeneratedAt: readString(provenance.sourceGeneratedAt),
     summary: {
@@ -120,13 +126,15 @@ export function buildEnemyHistogramCounts(levels, provenance = {}) {
       excludedMapCount: excludedLevelIds.length,
       spawnMapCount,
       spawnExcludedMapCount: excludedLevels.length,
-      ...(mode === 'lower-bound' ? { lowerBoundMapCount: lowerBoundLevels.length } : {}),
+      ...(mode !== 'strict' ? { lowerBoundMapCount: lowerBoundLevels.length } : {}),
+      ...(expectedMode ? { expectedMapCount: expectedLevels.length } : {}),
     },
     enemies: Object.fromEntries([...enemies].sort(([left], [right]) => compareIds(left, right))),
     diagnostics: {
       excludedLevelIds,
       excludedLevels,
-      ...(mode === 'lower-bound' ? { lowerBoundLevels } : {}),
+      ...(mode !== 'strict' ? { lowerBoundLevels } : {}),
+      ...(expectedMode ? { expectedLevels } : {}),
       ...(aggregationConditions.length ? { aggregationConditions } : {}),
       ...(excludedNonEnemySpawns.length ? { excludedNonEnemySpawns } : {}),
       ...(unverifiedNonEnemySpawns.length ? { unverifiedNonEnemySpawns } : {}),
@@ -196,18 +204,22 @@ export async function readCachedLevels(cacheRoot) {
 }
 
 async function generate({ cacheRoot, sourcePath, stagesPath, outputPath }) {
-  const [levels, source, stages] = await Promise.all([
+  const [levels, source, stages, zoneTableSource, activityTableSource] = await Promise.all([
     readCachedLevels(cacheRoot),
     readFile(sourcePath, 'utf8').then(JSON.parse),
     readFile(stagesPath, 'utf8').then(JSON.parse),
+    readFile(resolve(dirname(stagesPath), 'zone_table.json'), 'utf8').then(JSON.parse),
+    readFile(resolve(dirname(stagesPath), 'activity_table.json'), 'utf8').then(JSON.parse),
   ])
+  const selection = selectStageLevels(stages, { excludeStoryEnvironment: true, excludeOtherCategories: true,
+    excludeSpecialActivities: true, zoneTableSource, activityTableSource })
   const document = buildEnemyHistogramCounts(levels, {
     generatedAt: new Date().toISOString(),
     sourceGeneratedAt: source.generatedAt,
     sourceSummary: source.summary,
     failedLevelIds: source.diagnostics?.failedLevelIds,
-    excludedLevelIds: source.diagnostics?.excludedLevelIds,
-    stageContexts: new Map(selectStageLevels(stages).levels.map(({ levelId, context }) => [levelId, context ?? {}])),
+    excludedLevelIds: [...new Set([...(source.diagnostics?.excludedLevelIds ?? []), ...selection.excludedLevelIds])],
+    stageContexts: new Map(selection.levels.map(({ levelId, context }) => [levelId, context ?? {}])),
   })
   await mkdir(dirname(outputPath), { recursive: true })
   await writeFile(outputPath, `${JSON.stringify(document, null, 2)}\n`, 'utf8')

@@ -36,6 +36,10 @@ function sourceFixture({ stages, levels, revision = REVISION, overrides = {}, mu
     'excel/handbook_team_table.json': { rhodes: { powerName: 'Rhodes Island' } },
     'excel/stage_table.json': { stages: stages ?? { a: stage('a') } },
     'excel/zone_table.json': { zones: { main: { zoneNameFirst: 'Main' } } },
+    'excel/activity_table.json': {
+      basicInfo: { act_a: { id: 'act_a', type: 'SIDESTORY', name: 'Event A' } },
+      zoneToActivity: { act_a_zone1: 'act_a' },
+    },
     'excel/enemy_handbook_table.json': { enemyData: { enemy_a: { name: 'Enemy A' } } },
     'levels/enemydata/enemy_database.json': { enemies: [{ Key: 'enemy_a', Value: [{ level: 0, enemyData: { name: 'Enemy A' } }] }] },
     ...(levels ?? { 'levels/obt/main/a.json': level() }),
@@ -91,9 +95,13 @@ test('one immutable revision supplies unique battle levels including EASY maps, 
   assert.equal(result.uniequip.equipDict.equip_a.charId, 'char_a')
   assert.equal(result.battleEquip.equip_a.phases[0].equipLevel, 1)
   assert.equal(result.handbookTeam.rhodes.powerName, 'Rhodes Island')
+  assert.deepEqual(result.activityTable, JSON.parse(fixture.bodies['excel/activity_table.json']))
   const downloads = fixture.calls.filter(({ url }) => url.startsWith(RAW))
-  assert.equal(downloads.length, 11)
+  assert.equal(downloads.length, 12)
   assert.ok(downloads.every(({ url }) => url.includes(`/${REVISION}/jp/gamedata/`)))
+  assert.equal(downloads.filter(({ url }) => url.endsWith('/excel/activity_table.json')).length, 1)
+  assert.deepEqual(progress.filter(({ phase }) => phase === 'tables').map(({ completed, total }) => ({ completed, total })),
+    Array.from({ length: 11 }, (_, completed) => ({ completed, total: 10 })))
   assert.deepEqual(progress.at(-1), { phase: 'levels', completed: 2, total: 2 })
   assert.equal(fixture.calls.filter(({ url }) => url.includes('recursive=1')).length, 1)
 })
@@ -213,6 +221,45 @@ test('empty or malformed runtime tables reject the update before map loading', a
   ]) {
     const fixture = sourceFixture({ overrides: { [path]: value } })
     await assert.rejects(loadGameDataSource({ revision: REVISION, cacheRoot: await cache(t), fetchImpl: fixture.fetchImpl }), /Invalid or empty|Invalid .* structure/)
+    assert.ok(!fixture.calls.some(({ url }) => url.endsWith('/obt/main/a.json')))
+  }
+})
+
+test('activity classification data is required before any map loading', async (t) => {
+  const fixture = sourceFixture({ mutateTree: (tree) => tree.splice(tree.findIndex(({ path }) => path === 'excel/activity_table.json'), 1) })
+  const progress = []
+  await assert.rejects(loadGameDataSource({ revision: REVISION, cacheRoot: await cache(t), fetchImpl: fixture.fetchImpl,
+    onProgress: (event) => progress.push(event) }), /Missing game data file: excel\/activity_table\.json/)
+  assert.ok(progress.every(({ phase }) => phase === 'tables'))
+  assert.ok(!fixture.calls.some(({ url }) => url.endsWith('/obt/main/a.json')))
+})
+
+test('malformed activity records and unresolved zone mappings reject the update', async (t) => {
+  const valid = {
+    basicInfo: { act_a: { id: 'act_a', type: 'SIDESTORY' } },
+    zoneToActivity: { act_a_zone1: 'act_a' },
+  }
+  for (const activityTable of [
+    {},
+    { ...valid, basicInfo: null },
+    { ...valid, basicInfo: [] },
+    { ...valid, basicInfo: {} },
+    { ...valid, basicInfo: { act_a: null } },
+    { ...valid, basicInfo: { act_a: { id: 'other', type: 'SIDESTORY' } } },
+    { ...valid, basicInfo: { act_a: { id: 'act_a', type: null } } },
+    { ...valid, basicInfo: { act_a: { id: 'act_a', type: ' ' } } },
+    { ...valid, zoneToActivity: null },
+    { ...valid, zoneToActivity: [] },
+    { ...valid, zoneToActivity: {} },
+    { ...valid, zoneToActivity: { act_a_zone1: { activityId: 'act_a' } } },
+    { ...valid, zoneToActivity: { act_a_zone1: '' } },
+    { ...valid, zoneToActivity: { ' ': 'act_a' } },
+    { ...valid, zoneToActivity: { act_a_zone1: 'missing' } },
+    { ...valid, zoneToActivity: { act_a_zone1: 'toString' } },
+  ]) {
+    const fixture = sourceFixture({ overrides: { 'excel/activity_table.json': activityTable } })
+    await assert.rejects(loadGameDataSource({ revision: REVISION, cacheRoot: await cache(t), fetchImpl: fixture.fetchImpl }),
+      /Invalid or empty activity|Invalid activity .* structure/)
     assert.ok(!fixture.calls.some(({ url }) => url.endsWith('/obt/main/a.json')))
   }
 })

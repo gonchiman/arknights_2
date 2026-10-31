@@ -3,6 +3,9 @@ import { getMandatoryBranchResolutions } from './mandatoryEnemyBranchPolicy.mjs'
 import { getNonEnemyBranchExclusions } from './nonEnemyBranchPolicy.mjs'
 import { getDeploymentBranchExclusions } from './deploymentEnemyBranchPolicy.mjs'
 import { getBossRushWaveResolution } from './bossRushSpawnPolicy.mjs'
+import { getRandomSpawnPhaseResolution } from './randomSpawnPolicy.mjs'
+import { getCooperateWaveResolution } from './cooperateWavePolicy.mjs'
+import { readEnemySpawnActions } from './enemySpawnActions.mjs'
 
 const ACTION_FIELDS = new Set([
   'actionType', 'key', 'count', 'managedByScheduler', 'preDelay', 'interval', 'routeIndex',
@@ -227,7 +230,10 @@ function resolveAction(raw, inherited, rules, path) {
  */
 export function analyzeEnemySpawns(value, context = {}) {
   const level = record(value), counts = new Map(), reasons = new Set(), actions = []
-  const omittedBranchSpawns = [], countedBranchSpawns = []
+  const omittedBranchSpawns = [], countedBranchSpawns = [], countedRandomSpawns = []
+  const expectedMode = context?.randomSpawnMode === 'expected'
+  const validTotal = amount => expectedMode ? Number.isFinite(amount) && amount >= 0 && amount <= Number.MAX_SAFE_INTEGER : Number.isSafeInteger(amount)
+  let hasExpectedSpawns = false
   let totalCount = 0
   if (!level) return { counts, reasons: new Set(['invalid-level']), actions, omittedBranchSpawns, countedBranchSpawns }
   const optionalBranches = [
@@ -237,6 +243,8 @@ export function analyzeEnemySpawns(value, context = {}) {
   ]
   const mandatoryBranches = getMandatoryBranchResolutions(level, context)
   const bossRush = getBossRushWaveResolution(level, context)
+  const cooperate = getCooperateWaveResolution(level, context)
+  const aggregationConditions = new Set([...(bossRush?.aggregationConditions ?? []), ...(cooperate?.aggregationConditions ?? [])])
   const rules = buildRules(level, context, resolveEnemySpawnDifficulty(context))
   for (const reason of rules.reasons) reasons.add(reason)
   if (!Array.isArray(level.enemyDbRefs)) reasons.add('invalid-enemy-refs')
@@ -246,16 +254,40 @@ export function analyzeEnemySpawns(value, context = {}) {
     if (!wave || !Array.isArray(wave.fragments)) { reasons.add('invalid-fragments'); return }
     const waveReasons = unknownFields(wave, WAVE_FIELDS, 'wave')
     const bossRushWave = bossRush?.waves.get(waveIndex)
-    if (wave.advancedWaveTag != null && wave.advancedWaveTag !== '' && !bossRushWave) waveReasons.push('unsupported-wave-tag')
+    // Fortress can skip the rest of a wave at its deadline. Even an untagged
+    // later wave is not guaranteed; only individually proven actions below
+    // may enter its bound.
+    if (cooperate || (wave.advancedWaveTag != null && wave.advancedWaveTag !== '' && !bossRushWave)) waveReasons.push('unsupported-wave-tag')
     wave.fragments.forEach((rawFragment, fragmentIndex) => {
       const fragment = record(rawFragment)
-      if (!fragment || !Array.isArray(fragment.actions)) { reasons.add('invalid-actions'); return }
+      const fragmentActions = readEnemySpawnActions(fragment?.actions)
+      if (!fragment || fragmentActions === null) { reasons.add('invalid-actions'); return }
       const inherited = [...waveReasons, ...unknownFields(fragment, FRAGMENT_FIELDS, 'fragment')]
-      fragment.actions.forEach((rawAction, actionIndex) => {
+      // Accepting an empty representation must not erase unknown enclosing
+      // settings. They may describe a mechanism outside the action list.
+      if (!Array.isArray(fragment.actions)) for (const reason of inherited) reasons.add(reason)
+      const resolvePhaseAction = (action, actionIndex) => {
+        const proof = cooperate?.actions.get(`${waveIndex}/${fragmentIndex}/${actionIndex}`)
+        const resolution = resolveAction(action, proof ? inherited.filter(reason => reason !== 'unsupported-wave-tag') : inherited,
+          rules, `waves[${waveIndex}].fragments[${fragmentIndex}].actions[${actionIndex}]`)
+        if (proof) {
+          resolution.conditions = unique([...resolution.conditions.filter(condition => condition !== '固定'), ...proof.conditions])
+          resolution.evidence = unique([...resolution.evidence, ...proof.evidence])
+        }
+        return resolution
+      }
+      const random = getRandomSpawnPhaseResolution(fragment, context, (action, actionIndex) =>
+        resolvePhaseAction({ ...action, randomSpawnGroupKey: null, randomSpawnGroupPackKey: null, weight: 0 }, actionIndex),
+      { mode: expectedMode ? 'expected' : 'lower-bound' })
+      fragmentActions.forEach((rawAction, actionIndex) => {
         const action = record(rawAction)
         if (!action || !text(action.actionType)) { reasons.add('invalid-action'); return }
         if (action.actionType !== 'SPAWN') return
-        const resolution = resolveAction(action, inherited, rules, `waves[${waveIndex}].fragments[${fragmentIndex}].actions[${actionIndex}]`)
+        // A weight only participates in a named random group. Keep the raw
+        // schedule untouched and retain the proof alongside its resolution.
+        const fixedWeight = random?.fixedWeightIndices.has(actionIndex)
+        const resolution = resolvePhaseAction(fixedWeight ? { ...action, weight: 0 } : action, actionIndex)
+        if (fixedWeight) resolution.evidence.push('抽選グループ・パック未指定: weight は出現抽選に使用されない')
         if (bossRushWave) {
           resolution.conditions = unique([...resolution.conditions.filter(condition => condition !== '固定'), ...bossRushWave.conditions])
           resolution.evidence = unique([...resolution.evidence, ...bossRushWave.evidence])
@@ -264,11 +296,22 @@ export function analyzeEnemySpawns(value, context = {}) {
         for (const reason of resolution.reasons) reasons.add(reason)
         if (resolution.status !== 'included') return
         totalCount += resolution.resolvedCount
-        if (!Number.isSafeInteger(totalCount)) reasons.add('spawn-total-overflow')
+        if (!validTotal(totalCount)) reasons.add('spawn-total-overflow')
         const next = (counts.get(resolution.resolvedEnemyId) ?? 0) + resolution.resolvedCount
-        if (!Number.isSafeInteger(next)) reasons.add('spawn-total-overflow')
+        if (!validTotal(next)) reasons.add('spawn-total-overflow')
         else counts.set(resolution.resolvedEnemyId, next)
       })
+      for (const contribution of (expectedMode ? random?.expectedSpawns : random?.countedSpawns) ?? []) {
+        totalCount += contribution.count
+        const next = (counts.get(contribution.enemyId) ?? 0) + contribution.count
+        if (!validTotal(totalCount) || !validTotal(next)) reasons.add('spawn-total-overflow')
+        else {
+          counts.set(contribution.enemyId, next)
+          countedRandomSpawns.push({ ...contribution, waveIndex, fragmentIndex })
+          if (expectedMode) hasExpectedSpawns = true
+          aggregationConditions.add(expectedMode ? '抽選重みに基づく理論期待出現数（既知分のみ）' : '抽選候補に共通する出現数を下限集計')
+        }
+      }
     })
   })
   if (level.branches != null) {
@@ -300,7 +343,7 @@ export function analyzeEnemySpawns(value, context = {}) {
               && resolved.reasons.length === 0 && Number.isSafeInteger(addition.count) && addition.count >= 0) {
               totalCount += addition.count
               const next = (counts.get(addition.enemyId) ?? 0) + addition.count
-              if (!Number.isSafeInteger(totalCount) || !Number.isSafeInteger(next)) reasons.add('spawn-total-overflow')
+              if (!validTotal(totalCount) || !validTotal(next)) reasons.add('spawn-total-overflow')
               else {
                 counts.set(addition.enemyId, next)
                 countedBranchSpawns.push(addition)
@@ -312,5 +355,7 @@ export function analyzeEnemySpawns(value, context = {}) {
     }
   }
   return { counts, reasons, actions, omittedBranchSpawns, countedBranchSpawns,
-    ...(bossRush ? { aggregationConditions: bossRush.aggregationConditions } : {}) }
+    ...(hasExpectedSpawns ? { hasExpectedSpawns: true } : {}),
+    ...(countedRandomSpawns.length ? { countedRandomSpawns } : {}),
+    ...(aggregationConditions.size ? { aggregationConditions: [...aggregationConditions] } : {}) }
 }

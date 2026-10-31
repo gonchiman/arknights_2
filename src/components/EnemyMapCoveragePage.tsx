@@ -5,7 +5,7 @@ import { EnemyAggregationHistoryButton, EnemyAggregationSelector, EnemyAggregati
 import {
   getMapCoverageDisplayCategories, getMapCoverageEnvironmentLabel, getMapCoverageReasons,
   getMapCoverageDisplayStatus, getMapCoverageStatusLabel, getMapCoverageZones, summarizeMapCoverageDisplay,
-  isMapLowerBoundAggregation,
+  isMapPartialAggregation, isMapExpectedAggregation,
 } from '../lib/enemyMapCoverage'
 import type { EnemyMapCoverageMode as CountMode, MapCoverageDisplaySummary as CoverageCounts } from '../lib/enemyMapCoverage'
 import type { MapCategory, MapSummary } from '../types/map'
@@ -185,8 +185,8 @@ export function EnemyMapCoveragePage() {
               <strong>{selected.code} {selected.name}</strong>
               <span>{getMapCoverageEnvironmentLabel(selected)}</span>
               <span className="enemy-map-coverage-selection-status"><i className={`coverage-${getMapCoverageDisplayStatus(selected, mode)}`} aria-hidden="true" />{getMapCoverageStatusLabel(selected, mode)}</span>
-              {mode === 'SPAWNS' && isMapLowerBoundAggregation(selected) && selected.spawnAggregation
-                && <span>確定出現分 {formatCount(selected.spawnAggregation.count)} 体</span>}
+              {mode === 'SPAWNS' && isMapPartialAggregation(selected) && selected.spawnAggregation
+                && <span>{isMapExpectedAggregation(selected) ? '期待出現数（下限）' : '確定出現分'} {formatCount(selected.spawnAggregation.count)} 体</span>}
               <span>{getMapCoverageReasons(selected, mode).join(' ／ ')}</span>
             </>}
           </div>

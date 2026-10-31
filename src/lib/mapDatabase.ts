@@ -1,6 +1,7 @@
 import type { MapCategory, MapEnvironment, MapDetail, MapDetailShard, MapEnemyBase, MapEnemyRoute, MapFeatureId, MapFilters, MapIndex, MapOmittedBranchSpawn, MapRoute, MapSpawnResolution, MapSummary, MapTile, MapWave, MapWaveAction, MapWaveFragment } from '../types/map.ts'
 import { MAP_FEATURE_LABELS } from './mapFeatures.ts'
 import { MAP_ENEMY_IMMUNITY_KEYS } from '../types/map.ts'
+import { isSpecialActivityType } from './enemyAggregationScope.ts'
 
 const APP_BASE = import.meta.env?.BASE_URL ?? '/'
 const DATA_BASE = `${APP_BASE.endsWith('/') ? APP_BASE : `${APP_BASE}/`}data/maps/`
@@ -98,13 +99,15 @@ function parseOmittedBranchSpawns(source: unknown, enemyIds: string[]): MapOmitt
 
 function parseMapSpawnAggregation(source: unknown, status: unknown, reasons: string[]): NonNullable<MapSummary['spawnAggregation']> {
   const value = record(source)
-  if (!value || value.kind !== 'lower-bound' || status !== 'excluded'
-    || !isCount(value.count) || value.count === 0 || !strings(value.reasons) || value.reasons.length === 0
+  if (!value || !['lower-bound', 'expected-lower-bound'].includes(String(value.kind)) || status !== 'excluded'
+    || !(value.kind === 'expected-lower-bound'
+      ? typeof value.count === 'number' && Number.isFinite(value.count) && value.count > 0 && value.count <= Number.MAX_SAFE_INTEGER
+      : isCount(value.count) && value.count > 0) || !strings(value.reasons) || value.reasons.length === 0
     || value.reasons.some(reason => !reason.trim()) || new Set(value.reasons).size !== value.reasons.length
     || value.reasons.length !== reasons.length || value.reasons.some(reason => !reasons.includes(reason))) {
     throw new Error('マップの下限集計に不正な値があります。')
   }
-  return { kind: 'lower-bound', count: value.count, reasons: [...value.reasons] }
+  return { kind: value.kind as NonNullable<MapSummary['spawnAggregation']>['kind'], count: value.count as number, reasons: [...value.reasons] }
 }
 
 function parseMapAggregationConditions(source: unknown): string[] {
@@ -112,6 +115,16 @@ function parseMapAggregationConditions(source: unknown): string[] {
     throw new Error('マップの集計条件に不正な値があります。')
   }
   return [...source]
+}
+
+function parseMapStatisticsExclusion(source: unknown): NonNullable<MapSummary['statisticsExclusion']> {
+  const value = record(source)
+  if (!value || value.kind !== 'special-mode'
+    || !isSpecialActivityType(value.activityType)
+    || !isText(value.activityId) || !value.activityId.trim()) {
+    throw new Error('マップの集計対象外設定に不正な値があります。')
+  }
+  return { kind: 'special-mode', activityType: value.activityType, activityId: value.activityId }
 }
 
 export function parseMapIndex(source: unknown): MapIndex {
@@ -181,6 +194,9 @@ export function parseMapIndex(source: unknown): MapIndex {
       } : {}),
       ...(map.aggregationConditions !== undefined ? {
         aggregationConditions: parseMapAggregationConditions(map.aggregationConditions),
+      } : {}),
+      ...(map.statisticsExclusion !== undefined ? {
+        statisticsExclusion: parseMapStatisticsExclusion(map.statisticsExclusion),
       } : {}),
       features: featureIds(map.features) ? [...map.features] : null,
       enemyRoutes: parseMapEnemyRoutes(map.enemyRoutes, map.enemyIds),

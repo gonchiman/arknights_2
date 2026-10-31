@@ -13,7 +13,7 @@ export const ENEMY_HISTOGRAM_COUNT_MODES = [
 
 export interface EnemyHistogramCounts {
   schemaVersion: 1
-  spawnAggregationMode?: 'lower-bound'
+  spawnAggregationMode?: 'lower-bound' | 'expected-lower-bound'
   generatedAt: string
   sourceGeneratedAt: string | null
   summary: {
@@ -23,10 +23,12 @@ export interface EnemyHistogramCounts {
     spawnMapCount: number
     spawnExcludedMapCount: number
     lowerBoundMapCount?: number
+    expectedMapCount?: number
   }
   enemies: Record<string, { mapCount: number; spawnCount: number }>
   diagnostics?: {
     lowerBoundLevels: { levelId: string; spawnCount: number; reasons: string[] }[]
+    expectedLevels?: { levelId: string; spawnCount: number; reasons: string[] }[]
     aggregationConditions?: { levelId: string; conditions: string[] }[]
   }
 }
@@ -34,6 +36,8 @@ export interface EnemyHistogramCounts {
 const record = (value: unknown): Record<string, unknown> | null =>
   value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null
 const isCount = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
+const isExpectedCount = (value: unknown): value is number => typeof value === 'number'
+  && Number.isFinite(value) && value >= 0 && value <= Number.MAX_SAFE_INTEGER
 
 export function parseEnemyHistogramCounts(source: unknown): EnemyHistogramCounts {
   const root = record(source)
@@ -41,19 +45,38 @@ export function parseEnemyHistogramCounts(source: unknown): EnemyHistogramCounts
   const enemies = record(root?.enemies)
   const lowerBoundLevels = record(root?.diagnostics)?.lowerBoundLevels
   const rawConditions = record(root?.diagnostics)?.aggregationConditions
+  const expectedMode = root?.spawnAggregationMode === 'expected-lower-bound'
+  const partialMode = expectedMode || root?.spawnAggregationMode === 'lower-bound'
+  const rawExpected = record(root?.diagnostics)?.expectedLevels
   if (root?.schemaVersion !== 1 || !summary || !enemies
     || !['mapCount', 'missingMapCount', 'spawnMapCount', 'spawnExcludedMapCount'].every((key) => isCount(summary[key]))
     || (summary.excludedMapCount !== undefined && !isCount(summary.excludedMapCount))
-    || (root.spawnAggregationMode !== undefined && root.spawnAggregationMode !== 'lower-bound')
-    || (root.spawnAggregationMode === 'lower-bound'
+    || (root.spawnAggregationMode !== undefined && !partialMode)
+    || (partialMode
       ? !isCount(summary.lowerBoundMapCount) || summary.lowerBoundMapCount > Number(summary.spawnMapCount)
         || !Array.isArray(lowerBoundLevels) || lowerBoundLevels.length !== summary.lowerBoundMapCount
       : summary.lowerBoundMapCount !== undefined || lowerBoundLevels !== undefined)
+    || (expectedMode
+      ? !isCount(summary.expectedMapCount) || !Array.isArray(rawExpected) || rawExpected.length !== summary.expectedMapCount
+        || Number(summary.expectedMapCount) + Number(summary.lowerBoundMapCount) > Number(summary.spawnMapCount)
+      : summary.expectedMapCount !== undefined || rawExpected !== undefined)
     || Number(summary.spawnMapCount) + Number(summary.spawnExcludedMapCount) !== summary.mapCount) {
     throw new Error('登場データの形式を確認できませんでした。')
   }
-  const lowerBounds: NonNullable<EnemyHistogramCounts['diagnostics']>['lowerBoundLevels'] = []
   const seenLevels = new Set<string>()
+  const expectedLevels: NonNullable<EnemyHistogramCounts['diagnostics']>['expectedLevels'] = []
+  for (const raw of (rawExpected as unknown[] | undefined) ?? []) {
+    const level = record(raw)
+    if (!level || typeof level.levelId !== 'string' || !level.levelId.trim() || seenLevels.has(level.levelId)
+      || !isExpectedCount(level.spawnCount) || level.spawnCount === 0 || !Array.isArray(level.reasons) || !level.reasons.length
+      || level.reasons.some(reason => typeof reason !== 'string' || !reason.trim())
+      || new Set(level.reasons).size !== level.reasons.length) {
+      throw new Error('登場データの期待値集計に不正な値があります。')
+    }
+    seenLevels.add(level.levelId)
+    expectedLevels.push({ levelId: level.levelId, spawnCount: level.spawnCount, reasons: [...level.reasons] as string[] })
+  }
+  const lowerBounds: NonNullable<EnemyHistogramCounts['diagnostics']>['lowerBoundLevels'] = []
   for (const raw of (lowerBoundLevels as unknown[] | undefined) ?? []) {
     const level = record(raw)
     if (!level || typeof level.levelId !== 'string' || !level.levelId.trim() || seenLevels.has(level.levelId)
@@ -84,18 +107,21 @@ export function parseEnemyHistogramCounts(source: unknown): EnemyHistogramCounts
   const counts: EnemyHistogramCounts['enemies'] = Object.create(null)
   for (const [id, value] of Object.entries(enemies)) {
     const entry = record(value)
-    if (!entry || !isCount(entry.mapCount) || !isCount(entry.spawnCount) || entry.mapCount > Number(summary.mapCount)) {
+    if (!entry || !isCount(entry.mapCount)
+      || !(expectedMode && expectedLevels.length ? isExpectedCount(entry.spawnCount) : isCount(entry.spawnCount))
+      || entry.mapCount > Number(summary.mapCount)) {
       throw new Error('登場データに不正な集計値があります。')
     }
-    counts[id] = { mapCount: entry.mapCount, spawnCount: entry.spawnCount }
+    counts[id] = { mapCount: entry.mapCount, spawnCount: entry.spawnCount as number }
   }
   return {
     schemaVersion: 1,
-    ...(root.spawnAggregationMode === 'lower-bound' ? {
-      spawnAggregationMode: 'lower-bound' as const,
+    ...(partialMode ? {
+      spawnAggregationMode: root.spawnAggregationMode as 'lower-bound' | 'expected-lower-bound',
     } : {}),
-    ...(root.spawnAggregationMode === 'lower-bound' || rawConditions !== undefined ? {
+    ...(partialMode || rawConditions !== undefined ? {
       diagnostics: { lowerBoundLevels: lowerBounds,
+        ...(expectedMode ? { expectedLevels } : {}),
         ...(rawConditions !== undefined ? { aggregationConditions } : {}) },
     } : {}),
     generatedAt: typeof root.generatedAt === 'string' ? root.generatedAt : '',
@@ -107,6 +133,7 @@ export function parseEnemyHistogramCounts(source: unknown): EnemyHistogramCounts
 
 export function getEnemySpawnCoverageLabel(summary: EnemyHistogramCounts['summary'] | null | undefined): string {
   const count = (summary?.spawnMapCount ?? 0).toLocaleString('ja-JP')
+  if (summary?.expectedMapCount) return `集計対象 ${count}マップ（下限 ${(summary.lowerBoundMapCount ?? 0).toLocaleString('ja-JP')}・期待値 ${summary.expectedMapCount.toLocaleString('ja-JP')}）`
   return summary?.lowerBoundMapCount
     ? `集計対象 ${count}マップ（下限 ${summary.lowerBoundMapCount.toLocaleString('ja-JP')}）`
     : `出現数確定 ${count}マップ`

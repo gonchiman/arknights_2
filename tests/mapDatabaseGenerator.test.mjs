@@ -416,13 +416,70 @@ test('unavailable schedule structure is distinct from an empty schedule and neve
   for (const source of [
     {}, { waves: null }, { waves: {} }, { waves: [null] },
     { waves: [{ fragments: {} }] }, { waves: [{ fragments: [null] }] },
-    { waves: [{ fragments: [{ actions: {} }] }] },
+    { waves: [{ fragments: [{}] }] },
+    ...[undefined, null, true, 0, '', { future: [] }, { 0: spawn('enemy_a', 1) }, new Date(), Object.create({ future: [] })]
+      .map(actions => ({ waves: [{ fragments: [{ actions }] }] })),
     { waves: [{ fragments: [{ actions: [spawn('enemy_a', 1), null] }] }] },
   ]) assert.equal(extractMapWaves(source), null)
   assert.deepEqual(extractMapWaves({ waves: [] }), [])
   assert.deepEqual(extractMapWaves({ waves: [{ fragments: [] }] }), [{
     preDelay: null, postDelay: null, maxTimeWaitingForNextWave: null, advancedWaveTag: null, fragments: [],
   }])
+  assert.deepEqual(extractMapWaves({ waves: [{ fragments: [{ preDelay: 5, actions: {} }] }] }), [{
+    preDelay: null, postDelay: null, maxTimeWaitingForNextWave: null, advancedWaveTag: null,
+    fragments: [{ preDelay: 5, actions: [] }],
+  }])
+})
+
+test('empty object action fragments preserve local delays and the resolution indices of surrounding actions', () => {
+  const source = { waves: [{
+    preDelay: 1, postDelay: 2, maxTimeWaitingForNextWave: 45,
+    fragments: [
+      { preDelay: 3, actions: [spawn('enemy_a', 2, { preDelay: 4, interval: 5 }), spawn('enemy_b', 1, { preDelay: 7 })] },
+      { preDelay: 11, actions: {} },
+      { preDelay: 13, actions: [
+        { actionType: 'WAIT_FOR_KILLED', preDelay: 17 },
+        spawn('enemy_a', 3, { preDelay: 19, interval: 23 }),
+      ] },
+    ],
+  }, {
+    preDelay: 29, fragments: [
+      { preDelay: 31, actions: {} },
+      { preDelay: 37, actions: [spawn('enemy_b', 5, { preDelay: 41 })] },
+    ],
+  }] }
+  const unchanged = structuredClone(source)
+  const coordinates = [[0, 0, 0], [0, 0, 1], [0, 2, 1], [1, 1, 0]]
+  const resolutions = coordinates.map(([waveIndex, fragmentIndex, actionIndex]) => {
+    const action = source.waves[waveIndex].fragments[fragmentIndex].actions[actionIndex]
+    return { waveIndex, fragmentIndex, actionIndex, status: 'included', resolvedEnemyId: action.key,
+      resolvedCount: action.count, conditions: [], evidence: [`${waveIndex}/${fragmentIndex}/${actionIndex}`] }
+  })
+  const result = extractMapWaves(source, {}, { actions: resolutions })
+  assert.deepEqual(source, unchanged)
+  assert.deepEqual(result.map(wave => wave.preDelay), [1, 29])
+  assert.equal(result[0].postDelay, 2)
+  assert.equal(result[0].maxTimeWaitingForNextWave, 45)
+  assert.deepEqual(result.map(wave => wave.fragments.map(fragment => fragment.preDelay)), [[3, 11, 13], [31, 37]])
+  assert.deepEqual(result.map(wave => wave.fragments.map(fragment => fragment.actions.length)), [[2, 0, 2], [0, 1]])
+  assert.deepEqual(result[0].fragments[1], { preDelay: 11, actions: [] })
+  assert.deepEqual(result[1].fragments[0], { preDelay: 31, actions: [] })
+  for (const { waveIndex, fragmentIndex, actionIndex, ...resolution } of resolutions) {
+    const original = source.waves[waveIndex].fragments[fragmentIndex].actions[actionIndex]
+    const actual = result[waveIndex].fragments[fragmentIndex].actions[actionIndex]
+    assert.equal(actual.key, original.key)
+    assert.equal(actual.preDelay, original.preDelay)
+    assert.equal(actual.interval, original.interval ?? null)
+    assert.deepEqual(actual.resolution, resolution)
+  }
+  assert.equal(result[0].fragments[2].actions[0].actionType, 'WAIT_FOR_KILLED')
+  assert.equal(result[0].fragments[2].actions[0].preDelay, 17)
+  assert.equal(result[0].fragments[2].actions[0].resolution, undefined)
+  for (const actions of [null, undefined, { 0: spawn('enemy_a', 1) }]) {
+    const invalid = structuredClone(source)
+    invalid.waves[0].fragments[1].actions = actions
+    assert.equal(extractMapWaves(invalid), null)
+  }
 })
 
 test('route extraction keeps action indices and raw starting tiles, including off-map coordinates', () => {

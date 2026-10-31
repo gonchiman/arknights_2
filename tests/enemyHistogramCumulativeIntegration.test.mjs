@@ -464,3 +464,32 @@ test('既存度数分布表の累積件数・割合と保存画像の折れ線�
   assert.equal(source.statistics.count, 8)
   assert.equal(source.statistics.totalCount, 92)
 })
+
+test('期待出現数の小数を度数表・棒の値・分母へ残し、割合は未丸めの度数から求める', () => {
+  const weights = [0.2, 0.3, 0.1, 0.2, 0.4]
+  const aggregationCounts = { ...fixtureCounts, spawnAggregationMode: 'expected-lower-bound',
+    summary: { ...fixtureCounts.summary, lowerBoundMapCount: 0, expectedMapCount: 1 },
+    enemies: Object.fromEntries(weights.map((spawnCount, index) => [`enemy_${index}`, { mapCount: 1, spawnCount }])),
+  }
+  const source = createEnemyHistogramSnapshot({ ...snapshot(), coverage: aggregationCounts.summary,
+    statistics: calculateWeightedHistogram(observations.map((observation, index) => ({ ...observation, weight: weights[index] })),
+      { customLinearBinWidth: 10, customLinearUpperBound: 20 }),
+  })
+  const panel = renderPanel({ initialSnapshot: source, aggregationCounts })
+  const table = /<table class="enemy-frequency-table">([\s\S]*?)<\/table>/.exec(panel)?.[1]
+  assert.ok(table)
+  const body = /<tbody>([\s\S]*?)<\/tbody>/.exec(table)?.[1]
+  const rows = [...body.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map(match => {
+    const cells = [...match[1].matchAll(/<td\b([^>]*)>([\s\S]*?)<\/td>/g)]
+    return { count: clean(cells[0][2]), cumulative: attr(cells[2][1], 'title'), proportion: clean(cells[2][2]) }
+  })
+  assert.deepEqual(rows, [
+    { count: '0.2', cumulative: '累積：0.2体', proportion: '25%' },
+    { count: '0.4', cumulative: '累積：0.6体', proportion: '75%' },
+    { count: '0.2', cumulative: '累積：0.8体', proportion: '100%' },
+  ])
+  assert.ok(barTitles(panel).some(title => title.includes('0.2体')))
+  assert.match(clean(panel), /割合の基準：エリート・検証fixture · 0\.8体/)
+  assert.ok(barTitles(renderPlot(source)).some(title => title.includes('0.2体')))
+  assert.equal(source.statistics.count, 0.8)
+})

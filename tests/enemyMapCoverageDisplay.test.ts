@@ -136,6 +136,42 @@ test('scope reasons cannot hide missing data or unresolved spawn conditions', ()
   assert.deepEqual(getMapCoverageReasons(optional, 'SPAWNS'), ['任意の追加出現を除外'])
 })
 
+test('versioned special modes display as excluded regardless of readiness while retaining diagnostic reasons', () => {
+  const statisticsExclusion = { kind: 'special-mode', activityType: 'MULTIPLAY_V3', activityId: 'act1multi' } as const
+  const event = { zoneType: 'ACTIVITY', zoneId: 'act1multi_zone1', zoneName: '協心競技' }
+  const expected: MapSummary = { ...pending, levelId: 'expected',
+    spawnAggregation: { kind: 'expected-lower-bound', count: 2.5, reasons: ['branch-spawn'] } }
+  const source = [base, pending, missing, lower, expected, optional]
+  const excluded = source.map(map => ({ ...map, ...event, statisticsExclusion }))
+  for (const mode of ['SPAWNS', 'MAPS'] as const) {
+    for (const map of excluded) {
+      assert.equal(getMapCoverageStatus(map, mode), 'excluded', `${map.levelId} ${mode}`)
+      assert.equal(getMapCoverageDisplayStatus(map, mode), 'excluded')
+      assert.equal(getMapCoverageStatusLabel(map, mode), '集計対象外')
+      assert.equal(getMapCoverageReasons(map, mode)[0], '特殊モード・集計対象外（協心競技）')
+    }
+    assert.deepEqual(summarizeMapCoverage(excluded, mode), { total: 6, included: 0, excluded: 6, missing: 0 })
+    const display = summarizeMapCoverageDisplay(excluded, mode)
+    assert.equal(display.included, 0)
+    assert.equal(display.conditional, 0)
+    assert.equal(display.lowerBound, undefined)
+    assert.equal(display.excluded, 6)
+    assert.equal(display.pending, 0)
+    assert.equal(display.missing, 0)
+    const eventCategory = getMapCoverageDisplayCategories(excluded, mode).find(category => category.key === 'event')!
+    assert.equal(eventCategory.total, 6)
+    assert.equal(eventCategory.included, 0)
+    assert.equal(getMapCoverageDisplayStatus({ ...excluded[0], diffGroup: 'EASY' }, mode), 'story')
+    for (const original of source) {
+      assert.equal(getMapCoverageStatus({ ...original, ...event }, mode), getMapCoverageStatus(original, mode))
+      assert.equal(getMapCoverageDisplayStatus({ ...original, ...event }, mode), getMapCoverageDisplayStatus(original, mode))
+    }
+  }
+  assert.deepEqual(getMapCoverageReasons(excluded[1], 'SPAWNS').slice(1), ['分岐に応じた出現指定'])
+  assert.deepEqual(getMapCoverageReasons(excluded[2], 'SPAWNS').slice(1), ['マップデータ未取得'])
+  assert.deepEqual(getMapCoverageReasons(excluded[3], 'SPAWNS').slice(1), ['確定出現分のみ判明', '分岐に応じた出現指定'])
+})
+
 test('display summaries deduplicate levels and count lower bounds only inside included', () => {
   const maps = [base, { ...base, stageId: 'duplicate' }, pending, missing, lower,
     { ...lower, levelId: 'excluded-lower', zoneType: 'CAMPAIGN' },
@@ -157,12 +193,13 @@ test('display summaries deduplicate levels and count lower bounds only inside in
   ])
 })
 
-test('V1–V5 archives remain readable and retain histogram counts and all included map IDs', async () => {
+test('V1–V7 archives remain readable and retain histogram counts and all included map IDs', async () => {
   const archive = new URL('../public/data/enemy-aggregation/', import.meta.url)
   const indexBytes = await readFile(new URL('index.json', archive))
   const index = parseEnemyAggregationIndex(JSON.parse(indexBytes.toString()))
-  assert.deepEqual(index.versions.map(version => version.id), ['v1', 'v2', 'v3', 'v4', 'v5'])
-  for (const version of index.versions) {
+  const legacyVersions = index.versions.filter(version => /^v[1-7]$/.test(version.id))
+  assert.deepEqual(legacyVersions.map(version => version.id), ['v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7'])
+  for (const version of legacyVersions) {
     const bytes = await readFile(new URL(version.file, archive))
     assert.equal(createHash('sha256').update(bytes).digest('hex'), version.sha256)
     const raw = JSON.parse(gunzipSync(bytes).toString())

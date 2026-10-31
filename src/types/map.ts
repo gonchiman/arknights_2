@@ -1,3 +1,5 @@
+import type { SpecialActivityType } from '../lib/enemyAggregationScope.ts'
+
 export type MapDataStatus = 'supported' | 'excluded' | 'missing'
 export type MapCategory = 'main' | 'event' | 'supply' | 'other'
 export type MapEnvironment = 'none' | 'EASY' | 'NORMAL' | 'TOUGH' | 'ALL' | 'other'
@@ -60,9 +62,16 @@ export interface MapCountedBranchSpawn extends Omit<MapOmittedBranchSpawn, 'kind
 
 /** Known hostile spawns counted while the complete map total remains unresolved. */
 export interface MapSpawnAggregation {
-  kind: 'lower-bound'
+  kind: 'lower-bound' | 'expected-lower-bound'
   count: number
   reasons: string[]
+}
+
+/** Versioned statistical scope; absence preserves the scope of earlier archives. */
+export interface MapStatisticsExclusion {
+  kind: 'special-mode'
+  activityType: SpecialActivityType
+  activityId: string
 }
 
 export interface MapSummary {
@@ -90,6 +99,7 @@ export interface MapSummary {
   spawnAggregation?: MapSpawnAggregation
   /** Assumptions required by resolved spawn counts; absent in earlier aggregation versions. */
   aggregationConditions?: string[]
+  statisticsExclusion?: MapStatisticsExclusion
   reasons: string[]
   detailFile: string | null
 }

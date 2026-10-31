@@ -110,19 +110,21 @@ function validateOutput(appearances, histogram, maps, trends, selection, missing
 }
 
 /** Build and validate a complete, immutable-revision snapshot without network or filesystem I/O. */
-export function generateLocalGameData(source, { generatedAt = new Date().toISOString(), spawnAggregationMode = 'lower-bound' } = {}) {
-  if (!['strict', 'lower-bound'].includes(spawnAggregationMode)) throw new Error('Invalid spawn aggregation mode')
+export function generateLocalGameData(source, { generatedAt = new Date().toISOString(), spawnAggregationMode = 'expected-lower-bound', excludeSpecialActivities = true } = {}) {
+  if (!['strict', 'lower-bound', 'expected-lower-bound'].includes(spawnAggregationMode)) throw new Error('Invalid spawn aggregation mode')
   const { database, missingIds, selection: allSelection } = validateSource(source, generatedAt)
   const revision = source.revision.toLowerCase()
   const base = `https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/${revision}/jp/gamedata`
   const provenance = {
     repository: 'ArknightsAssets/ArknightsGamedata', region: 'jp', revision,
     stageTableUrl: `${base}/excel/stage_table.json`, zoneTableUrl: `${base}/excel/zone_table.json`,
+    activityTableUrl: `${base}/excel/activity_table.json`,
     handbookTableUrl: `${base}/excel/enemy_handbook_table.json`,
     enemyDatabaseUrl: `${base}/levels/enemydata/enemy_database.json`, levelBaseUrl: `${base}/levels`,
   }
   const selection = selectStageLevels(source.stageTable, {
     excludeStoryEnvironment: true, excludeOtherCategories: true, zoneTableSource: source.zoneTable,
+    excludeSpecialActivities, activityTableSource: source.activityTable,
   })
   const appearances = buildEnemyStageAppearanceDocument({
     selection, handbookSource: source.handbook, levelsById: source.levels, failedLevelIds: [...missingIds], generatedAt,
@@ -136,6 +138,7 @@ export function generateLocalGameData(source, { generatedAt = new Date().toISOSt
   })
   const maps = buildMapDatabase({
     stageTable: source.stageTable, zoneTable: source.zoneTable, handbook: source.handbook, database,
+    activityTable: source.activityTable, excludeSpecialActivities,
     levels: [...source.levels].map(([levelId, data]) => ({ levelId, data })),
     generatedAt, sourceGeneratedAt: generatedAt, sourceRevision: revision, spawnAggregationMode,
   })

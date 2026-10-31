@@ -900,8 +900,8 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
     : kind === 'HISTOGRAM' ? `${metric.axisLabel}（階級）`
       : `${metric.axisLabel}（${getEffectiveScaleName(scale, axisMinimum)}目盛）`
   const unit = countOption.unit
-  const conditions = [scopeLabel, `${countOption.label} ${formatNumber(count, 0)}${unit}`]
-  if (missingCount > 0) conditions.push(`値なし ${formatNumber(missingCount, 0)}${unit}を除外`)
+  const conditions = [scopeLabel, `${countOption.label} ${formatFrequency(count)}${unit}`]
+  if (missingCount > 0) conditions.push(`値なし ${formatFrequency(missingCount)}${unit}を除外`)
   if (data.countCoverage && data.countMode !== 'TYPES') conditions.push(
     data.countMode === 'MAPS' ? `収録 ${formatNumber(data.countCoverage.mapCount, 0)}マップ`
       : getEnemySpawnCoverageLabel(data.countCoverage))
@@ -1016,8 +1016,8 @@ function StatisticsSummary({ columns, countUnit }: {
     if (key === 'coefficientOfVariation' || key === 'normalizedInterquartileRange') {
       return new Intl.NumberFormat('ja-JP', { style: 'percent', maximumFractionDigits: 1 }).format(value)
     }
-    const digits = key === 'count' || key === 'missingCount' ? 0
-      : key === 'minimum' || key === 'maximum' ? metric.valueDigits : metric.summaryDigits
+    if (key === 'count' || key === 'missingCount') return formatFrequency(value)
+    const digits = key === 'minimum' || key === 'maximum' ? metric.valueDigits : metric.summaryDigits
     return formatNumber(value, digits)
   }
 
@@ -1091,13 +1091,15 @@ function DistributionCountControls({ mode, onChange, counts, showMapCoverageLink
         <dl className="enemy-histogram-count-help">
           <dt>種類数</dt><dd>敵1種類につき1件として集計します。</dd>
           <dt>登場マップ数</dt><dd>敵ごとの登録マップ数を合計します。同じマップに同じ階級の敵が3種類あれば3件です。召喚・特殊条件用の敵の登録も含みます。</dd>
-          <dt>出現回数</dt><dd>{counts?.spawnAggregationMode === 'lower-bound'
+          <dt>出現回数</dt><dd>{counts?.spawnAggregationMode === 'expected-lower-bound'
+            ? '各マップで判定できた出現数を合計します。抽選は重みに基づく理論期待値を使い、未解析の追加出現は含めません。各マップを1回分ずつ数え、周回数は反映しません。'
+            : counts?.spawnAggregationMode === 'lower-bound'
             ? '各マップで判定できた敵の出現数を合計します。下限集計では、未解析の分岐・抽選などの追加出現は含めません。各マップを1回分ずつ数え、周回数は反映しません。'
             : 'どの敵が何体出るか確定できるマップの、敵の配置数を合計します。各マップを1回分ずつ数え、ランダム出現・条件付き増援などがあるマップは集計対象外です。周回数は反映しません。'}</dd>
           <dt>ステータス</dt><dd>横軸のHPなどは敵の基礎値です。ステージ補正は含めません。平均・中央値・割合は選択した集計方法に合わせて計算します。</dd>
           {counts && <><dt>収録範囲</dt><dd>登場マップ数：{formatNumber(counts.summary.mapCount, 0)}マップ。
             出現回数：{getEnemySpawnCoverageLabel(counts.summary)}。
-            {counts.spawnAggregationMode === 'lower-bound' ? '集計対象外の' : '出現条件を確定できない'}{formatNumber(counts.summary.spawnExcludedMapCount, 0)}マップと、
+            {counts.spawnAggregationMode ? '集計対象外の' : '出現条件を確定できない'}{formatNumber(counts.summary.spawnExcludedMapCount, 0)}マップと、
             データ未取得の{formatNumber(counts.summary.missingMapCount, 0)}マップは出現回数に含めません。
             {counts.sourceGeneratedAt && `元データの集計日：${counts.sourceGeneratedAt.slice(0, 10)}。`}</dd></>}
         </dl>
@@ -1216,7 +1218,7 @@ function HistogramFigure({
           <strong>{metric.label}のヒストグラム</strong>
           <span>横軸：{axisLabel} · 縦軸：{countOption.axisLabel}{showCumulative && cumulativeDisplay !== 'strip' && ' · 右軸：累積割合'}</span>
           {ratingBins && <span>数値から評価に換算して集計します。{(referenceVisibility.mean || referenceVisibility.median) && '平均・中央値の線は、その値が属する評価の中央に表示します。'}</span>}
-          {(showPercentages || showCumulative) && statistics.count > 0 && <span>割合の基準：{scopeLabel} · {formatNumber(statistics.count, 0)}{countOption.unit}（有効データ）</span>}
+          {(showPercentages || showCumulative) && statistics.count > 0 && <span>割合の基準：{scopeLabel} · {formatFrequency(statistics.count)}{countOption.unit}（有効データ）</span>}
         </div>
         <HistogramDisplayControls ratingMode={ratingBins !== null} hasData={statistics.count > 0}
           showPercentages={showPercentages} onShowPercentagesChange={onShowPercentagesChange}
@@ -1319,9 +1321,9 @@ function FrequencyDistributionTable({ statistics, metric, scale, countMode, rati
             {rows.map(({ bin, cumulativeCount: rowCumulativeCount, proportion, cumulativeProportion }, index) => (
               <tr key={index}>
                 <th scope="row">{formatHistogramClassLabel(bin, statistics, metric)}</th>
-                <td>{formatNumber(bin.count, 0)}</td>
+                <td>{formatFrequency(bin.count)}</td>
                 <td>{proportion !== null ? formatNumber(proportion * 100, 1, '%') : '—'}</td>
-                <td title={rowCumulativeCount !== null ? `累積：${formatNumber(rowCumulativeCount, 0)}${countOption.unit}` : undefined}>{cumulativeProportion !== null ? formatNumber(cumulativeProportion * 100, 1, '%') : '—'}</td>
+                <td title={rowCumulativeCount !== null ? `累積：${formatFrequency(rowCumulativeCount)}${countOption.unit}` : undefined}>{cumulativeProportion !== null ? formatNumber(cumulativeProportion * 100, 1, '%') : '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -1485,7 +1487,7 @@ function HistogramSvg({
   const { maximum: countMaximum, ticks: countTicks } = createZeroBasedValueAxis(maxBinCount)
   const showCumulativeLine = showCumulative && cumulativeDisplay !== 'strip'
   const showCumulativeStrip = showCumulative && cumulativeDisplay !== 'line'
-  const plotLeft = Math.max(CHART_MARGIN.left, 30 + formatNumber(countMaximum, 0).length * 7)
+  const plotLeft = Math.max(CHART_MARGIN.left, 30 + formatFrequency(countMaximum).length * 7)
   const plotRight = width - (showCumulativeLine ? 68 : CHART_MARGIN.right)
   const baseHeight = height - reservedLabelHeight
   const basePlotBottom = baseHeight - (image ? 18 : CHART_MARGIN.bottom)
@@ -1558,7 +1560,7 @@ function HistogramSvg({
   return (
     <svg className="enemy-stat-chart" data-histogram-axis={ratingBins ? binRangeLayout.visible ? 'rating-ranges' : 'ratings' : binRangeLayout.visible ? 'ranges' : 'ticks'} viewBox={`0 0 ${width} ${chartHeight}`} width="100%" height={chartHeight} role={showCumulativeLine && !image ? 'group' : 'img'} aria-labelledby={`${titleId} ${descriptionId}`}>
       <title id={titleId}>{`${metric.label}のヒストグラム`}</title>
-      <desc id={descriptionId}>{description}{ratingBins ? ' 横軸はE〜SSのゲーム内評価です。平均・中央値の線はその値が属する評価の中央を示します。' : ''}{showPercentages && statistics.count > 0 ? ` 棒上に有効データ${formatNumber(statistics.count, 0)}${countOption.unit}に対する割合を表示します。` : ''}{showCumulativeStrip && statistics.count > 0 ? ' 上部の帯は、それぞれの階級全体を含む累積割合です。' : ''}{showCumulativeLine && statistics.count > 0 ? ' 右軸の折れ線は、各棒の中央に、その階級までの件数を有効データ数で割った累積割合を示します。線は最初の階級の点から始まります。' : ''}{showBinRanges ? binRangeLayout.visible ? ' 各棒の下に階級の範囲を表示します。' : ratingBins ? ' 範囲が収まらないため、評価のみを表示します。' : ' 階級の範囲が収まらないため、通常の横軸目盛りを表示します。' : ''}</desc>
+      <desc id={descriptionId}>{description}{ratingBins ? ' 横軸はE〜SSのゲーム内評価です。平均・中央値の線はその値が属する評価の中央を示します。' : ''}{showPercentages && statistics.count > 0 ? ` 棒上に有効データ${formatFrequency(statistics.count)}${countOption.unit}に対する割合を表示します。` : ''}{showCumulativeStrip && statistics.count > 0 ? ' 上部の帯は、それぞれの階級全体を含む累積割合です。' : ''}{showCumulativeLine && statistics.count > 0 ? ' 右軸の折れ線は、各棒の中央に、その階級までの件数を有効データ数で割った累積割合を示します。線は最初の階級の点から始まります。' : ''}{showBinRanges ? binRangeLayout.visible ? ' 各棒の下に階級の範囲を表示します。' : ratingBins ? ' 範囲が収まらないため、評価のみを表示します。' : ' 階級の範囲が収まらないため、通常の横軸目盛りを表示します。' : ''}</desc>
       {showBinRanges && <text ref={binRangeLayout.measureRef} className="enemy-chart-tick enemy-histogram-range-label" visibility="hidden" aria-hidden="true">0</text>}
       {cumulativeStripLayout && <HistogramCumulativeStrip bins={bins} total={statistics.count}
         plotLeft={plotLeft} plotRight={plotRight} top={0} layout={cumulativeStripLayout} />}
@@ -1566,7 +1568,7 @@ function HistogramSvg({
       {countTicks.map((tick) => (
         <g key={tick}>
           <line className="enemy-chart-gridline" x1={plotLeft} x2={plotRight} y1={y(tick)} y2={y(tick)} />
-          <text className="enemy-chart-tick" x={plotLeft - 8} y={y(tick) + 4} textAnchor="end">{formatNumber(tick, 0)}</text>
+          <text className="enemy-chart-tick" x={plotLeft - 8} y={y(tick) + 4} textAnchor="end">{formatFrequency(tick)}</text>
         </g>
       ))}
 
@@ -1577,7 +1579,7 @@ function HistogramSvg({
         const rangeLabel = formatHistogramClassLabel(bin, statistics, metric)
         return (
           <rect data-chart-image-ink="" className={`enemy-chart-bar${'isOverflow' in bin && bin.isOverflow ? ' overflow' : ''}`} x={plotLeft + bar.x} y={plotTop + extraTop + bar.y} width={bar.width} height={bar.height} key={index}>
-            <title>{`${rangeLabel}：${formatNumber(bin.count, 0)}${countOption.unit}${showPercentages && bar.percentage !== null ? `（${bar.percentage}）` : ''}`}</title>
+            <title>{`${rangeLabel}：${formatFrequency(bin.count)}${countOption.unit}${showPercentages && bar.percentage !== null ? `（${bar.percentage}）` : ''}`}</title>
           </rect>
         )
       })}
@@ -1734,7 +1736,7 @@ function EcdfSvg({ countMode, statistics, points, guides, referenceVisibility, m
       <path className="enemy-chart-line ecdf" d={path} />
       {!image && points.map((point) => (
         <circle className="enemy-ecdf-point" cx={valueScale.position(point.value)} cy={y(point.proportion)} r={2.5} key={point.value}>
-          <title>{formatNumber(point.value, metric.valueDigits, metric.suffix)}以下：{formatNumber(point.cumulativeCount, 0)}{countOption.unit}（{formatNumber(point.proportion * 100, 1)}%）</title>
+          <title>{formatNumber(point.value, metric.valueDigits, metric.suffix)}以下：{formatFrequency(point.cumulativeCount)}{countOption.unit}（{formatNumber(point.proportion * 100, 1)}%）</title>
         </circle>
       ))}
       <MeanMedianReferences statistics={statistics} visibility={referenceVisibility} metric={metric} position={valueScale.position} plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop} plotBottom={plotBottom} imageLabels={image || hasGuides ? referenceLabels : undefined} />
@@ -1786,7 +1788,7 @@ function EcdfGuideLines({ readings, metric, position, y, plotLeft, plotRight, pl
     {vertical && <>
       <line className="enemy-ecdf-guide-line vertical" x1={verticalX} x2={verticalX} y1={plotTop} y2={plotBottom} />
       <circle className="enemy-ecdf-guide-point vertical" cx={verticalX} cy={y(vertical.proportion)} r={3.5}>
-        <title>{formatHistogramSetting(vertical.value, metric.suffix)}以下：{formatNumber(vertical.proportion * 100, 1, '%')}（{formatNumber(vertical.cumulativeCount, 0)}{countUnit}）</title>
+        <title>{formatHistogramSetting(vertical.value, metric.suffix)}以下：{formatNumber(vertical.proportion * 100, 1, '%')}（{formatFrequency(vertical.cumulativeCount)}{countUnit}）</title>
       </circle>
       <text ref={xLabelRef} className="enemy-ecdf-guide-label vertical" x={labelX} y={plotTop - 6} textAnchor="middle">{verticalText}</text>
     </>}
@@ -2448,6 +2450,10 @@ function formatCompactRange(start: number, end: number, metric: StatMetric): str
 
 function formatHistogramSetting(value: number, suffix = ''): string {
   return `${new Intl.NumberFormat('ja-JP', { maximumSignificantDigits: 12 }).format(value)}${suffix}`
+}
+
+function formatFrequency(value: number): string {
+  return value.toLocaleString('ja-JP', { maximumFractionDigits: 3 })
 }
 
 function formatNumber(value: number, maximumFractionDigits: number, suffix = ''): string {

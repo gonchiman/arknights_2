@@ -52,7 +52,7 @@ test('exported segments separate story environments from other exclusions and da
   }
   assert.deepEqual(MAP_COVERAGE_STATUS_KEYS, ['included', 'conditional', 'excluded', 'story', 'pending', 'missing'])
   assert.deepEqual(MAP_COVERAGE_STATUS_LABELS, {
-    included: '通常の集計対象', conditional: '条件付き集計対象', excluded: '集計可能・対象外', story: '物語環境・対象外', pending: '解析保留', missing: 'データ未取得',
+    included: '通常の集計対象', conditional: '条件付き集計対象', excluded: '集計対象外', story: '物語環境・対象外', pending: '解析保留', missing: 'データ未取得',
   })
   assert.deepEqual(MAP_COVERAGE_COLORS, {
     included: '#417897', conditional: '#8fb6cc', excluded: '#719674', story: '#9278ab', pending: '#ad7c49', missing: '#d0d0d0',

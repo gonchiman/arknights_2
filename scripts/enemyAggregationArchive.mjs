@@ -136,7 +136,7 @@ export async function archiveEnemyAggregation({ root, snapshot, ruleVersion = CU
     const coverage = summarizeMapCoverage(parseMapIndex(files['maps/index.json']).maps, 'SPAWNS')
     const defaultDescription = ruleVersion !== CURRENT_ENEMY_AGGREGATION_RULE_VERSION ? '集計ルール更新'
       : previousEntry?.ruleVersion === ruleVersion && previousEntry.sourceRevision !== snapshot.revision
-        ? '元データ更新（下限集計・TN連戦対応）' : 'TNの連戦出現を反映（全WAVEクリア・抑制ユニットによる追加出現なし）'
+        ? '元データ更新（通常戦闘マップを集計）' : '空の出現区間に対応し、SS-EX-5を集計対象に追加'
     const version = {
       id, label: `集計版 ${id}`, createdAt: new Date().toISOString(), generatedAt: snapshot.generatedAt,
       sourceRevision: snapshot.revision, ruleVersion, generatorVersion: snapshot.generatorVersion,
@@ -145,7 +145,9 @@ export async function archiveEnemyAggregation({ root, snapshot, ruleVersion = CU
       bytes: bytes.length, payloadBytes: payload.length,
       summary: { includedMapCount: coverage.included, excludedMapCount: coverage.excluded, missingMapCount: coverage.missing,
         ...(files['enemy-histogram-counts.json'].summary.lowerBoundMapCount !== undefined
-          ? { lowerBoundMapCount: files['enemy-histogram-counts.json'].summary.lowerBoundMapCount } : {}) },
+          ? { lowerBoundMapCount: files['enemy-histogram-counts.json'].summary.lowerBoundMapCount } : {}),
+        ...(files['enemy-histogram-counts.json'].summary.expectedMapCount !== undefined
+          ? { expectedMapCount: files['enemy-histogram-counts.json'].summary.expectedMapCount } : {}) },
       changes: changesBetween(previousBundle, bundle), ...(previousEntry ? { previousVersionId: previousEntry.id } : {}),
     }
     const next = parseEnemyAggregationIndex({ schemaVersion: 1, currentVersionId: id,

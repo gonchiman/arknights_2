@@ -5,6 +5,7 @@ import { getMapCategory, getMapEnvironment, getMapDetail, loadMapDatabase, loadM
 import { getMapSpecifiedSpawnCount } from '../src/lib/mapWaves.ts'
 import type { MapDetailShard, MapEnemyRoute, MapFeatureId, MapFilters, MapIndex, MapSummary, MapWave, MapWaveAction } from '../src/types/map.ts'
 import { MAP_ENEMY_IMMUNITY_KEYS } from '../src/types/map.ts'
+import { SPECIAL_ACTIVITY_LABELS } from '../src/lib/enemyAggregationScope.ts'
 
 const summary: MapSummary = {
   levelId: 'obt/main/level_main_01-07', stageId: 'main_01-07', code: '1-7', name: '暴君', zoneId: 'main_1',
@@ -184,6 +185,38 @@ test('aggregation conditions reject non-arrays, non-text, blank text, and duplic
     ['全WAVEクリア', ''], ['全WAVEクリア', '全WAVEクリア']]) {
     assert.throws(() => parseMapIndex({ ...index, maps: [{ ...summary, aggregationConditions }] }), /集計条件/)
   }
+})
+
+test('statistical scope exclusions preserve source identity separately from map readiness', () => {
+  const statisticsExclusion = { kind: 'special-mode', activityType: 'MULTIPLAY_V3', activityId: 'act1multi' }
+  const parse = (patch: Record<string, unknown>) => parseMapIndex({ ...index, maps: [{ ...summary, ...patch }] }).maps[0]
+  assert.equal(parse({}).statisticsExclusion, undefined)
+  const parsed = parse({ statisticsExclusion })
+  assert.deepEqual(parsed.statisticsExclusion, statisticsExclusion)
+  assert.notEqual(parsed.statisticsExclusion, statisticsExclusion)
+  assert.equal(parsed.status, 'supported')
+  assert.equal(parsed.spawnCount, summary.spawnCount)
+  assert.deepEqual(parse({ statisticsExclusion, status: 'excluded', spawnCount: null,
+    reasons: ['branch-spawn'], spawnAggregation: { kind: 'lower-bound', count: 2, reasons: ['branch-spawn'] } }).statisticsExclusion,
+  statisticsExclusion)
+  assert.deepEqual(parse({ statisticsExclusion, status: 'missing', spawnCount: null,
+    reasons: ['missing-level'], detailFile: null, enemyIds: [] }).statisticsExclusion, statisticsExclusion)
+  for (const activityType of Object.keys(SPECIAL_ACTIVITY_LABELS)) {
+    const metadata = { ...statisticsExclusion, activityType }
+    assert.deepEqual(parse({ statisticsExclusion: metadata }).statisticsExclusion, metadata)
+  }
+})
+
+test('statistical scope exclusions reject malformed kinds and missing activity identities', () => {
+  const valid = { kind: 'special-mode', activityType: 'MULTIPLAY_V3', activityId: 'act1multi' }
+  for (const statisticsExclusion of [null, [], true, 1, 'special-mode', {},
+    { ...valid, kind: undefined }, { ...valid, kind: 'unknown' },
+    ...['FUTURE_ACTIVITY', 'MULTIPLAY', 'TYPE_ACT20SIDE', 'MINISTORY', 'toString', '__proto__', ' MULTIPLAY_V3 ']
+      .map(activityType => ({ ...valid, activityType })),
+    ...[undefined, null, 1, '', '  ', '\t\n'].flatMap(value => [
+      { ...valid, activityType: value }, { ...valid, activityId: value },
+    ]),
+  ]) assert.throws(() => parseMapIndex({ ...index, maps: [{ ...summary, statisticsExclusion }] }), /集計対象外/)
 })
 
 test('optional branch omissions reject invalid coordinates, missing proof, unknown enemies and duplicate source actions', () => {
