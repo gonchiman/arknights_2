@@ -20,6 +20,11 @@
 .enemy-immunity-scope { display: grid; gap: 4px; color: var(--text-muted); font-size: 12px; }
 .enemy-immunity-scope strong { color: var(--text); font-size: 13px; font-weight: 500; }
 
+.enemy-immunity-count-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 20px; margin-bottom: 18px; }
+.enemy-immunity-count-controls .enemy-chart-visibility legend { font-size: 13px; font-weight: 500; }
+.enemy-immunity-count-controls .enemy-chart-visibility label { min-height: 36px; font-size: 13px; }
+.enemy-immunity-coverage { padding-bottom: 8px; color: var(--text-muted); font-size: 12px; }
+
 .enemy-immunity-chart { container-type: inline-size; padding: 2px 0 0; }
 .enemy-immunity-axis-title { color: var(--text-soft); font-size: 12px; }
 .enemy-immunity-plot { position: relative; height: 300px; margin: 24px 0 0 42px; }
@@ -82,6 +87,9 @@
   .enemy-immunity-bar-value > span { font-size: 10px; }
   .enemy-immunity-bar-label { writing-mode: vertical-rl; text-orientation: upright; font-size: 12px; line-height: 1.2; }
   .enemy-immunity-x-title { margin: 60px 0 0 29px; }
+  .enemy-immunity-chart[data-count-mode="SPAWNS"] .enemy-immunity-plot,
+  .enemy-immunity-chart[data-count-mode="SPAWNS"] .enemy-immunity-x-title { margin-left: 42px; }
+  .enemy-immunity-chart[data-count-mode="SPAWNS"] .enemy-immunity-bar-value strong { font-size: 10px; }
 }
 
 @media (max-width: 600px) {
