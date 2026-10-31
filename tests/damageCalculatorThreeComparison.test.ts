@@ -50,7 +50,7 @@ function evaluate(operatorId: string, skillIndex: number, stageId?: string,
 }
 function noNumbers(value: ReturnType<typeof evaluateDamageThreeComparisonEntry>) {
   for (const key of ['perAttack', 'allTargetsPerAttack', 'dps', 'allTargetsDps', 'damageOverTimeDps',
-    'allTargetsDamageOverTimeDps', 'combinedDps', 'allTargetsCombinedDps'] as const) assert.equal(value[key], null, key)
+    'allTargetsDamageOverTimeDps', 'combinedDps', 'allTargetsCombinedDps', 'totalDamage', 'allTargetsTotalDamage'] as const) assert.equal(value[key], null, key)
 }
 function compareWithOrdinary(entry: DamageThreeComparisonEntry, conditions: DamageCalculatorThreeConditions) {
   const actual = evaluateDamageThreeComparisonEntry(entry, common)
@@ -203,4 +203,132 @@ test('継続ダメージを含む合計と直接攻撃のみの部分結果を�
   const noPeriodic = evaluate('char_017_huang', 2)
   assert.equal(noPeriodic.damageOverTimeDps, 0)
   assert.equal(noPeriodic.combinedDps, noPeriodic.dps)
+})
+
+test('通常攻撃型の有限段階は構造化した持続時間と未丸めDPSから総ダメージを概算する', () => {
+  const cases = [
+    ['char_263_skadi', 2, 30, 62180],
+    ['char_263_skadi', 3, 50, 89033.33333333333],
+    ['char_350_surtr', 2, 18, 39121.92],
+    ['char_1026_gvial2', 3, 25, 85000],
+  ] as const
+  for (const [id, index, duration, expected] of cases) {
+    const result = evaluateDamageThreeComparisonEntry(entry(id, index), { defense: 0, resistance: 0, enemyCount: 1 })
+    assert.deepEqual(result.errors, [])
+    assert.equal(result.durationSeconds, duration)
+    assert.ok(result.totalDamage !== null, `${id}/S${index}: ${result.totalDamageReason}`)
+    assert.ok(Math.abs(result.totalDamage - expected) < 1e-8, `${id}/S${index}`)
+    assert.equal(result.totalDamage, result.combinedDps! * duration)
+    assert.equal(result.allTargetsTotalDamage, result.totalDamage)
+    assert.equal(result.totalDamageReason, null)
+  }
+  // Source duration=-1 means deployment activation; its structured stage still lasts 30 seconds.
+  assert.equal(entry('char_263_skadi', 2).skill.raw.duration, -1)
+  const skadi = evaluateDamageThreeComparisonEntry(entry('char_263_skadi', 3), { defense: 0, resistance: 0, enemyCount: 1 })
+  assert.notEqual(skadi.totalDamage, Math.round(skadi.combinedDps!) * skadi.durationSeconds!)
+})
+
+test('総ダメージは敵DEF/RESと実際の対象上限を反映し、1体と全対象の結果を保持する', () => {
+  const result = evaluate('char_350_surtr', 2)
+  assert.deepEqual(result.errors, [])
+  assert.equal(result.actualTargetCount, 2)
+  assert.equal(result.durationSeconds, 18)
+  assert.equal(result.totalDamage, result.combinedDps! * 18)
+  assert.equal(result.allTargetsTotalDamage, result.allTargetsCombinedDps! * 18)
+  assert.equal(result.allTargetsTotalDamage, result.totalDamage! * 2)
+  const unmitigated = evaluateDamageThreeComparisonEntry(entry('char_350_surtr', 2), { defense: 0, resistance: 0, enemyCount: 3 })
+  assert.ok(result.totalDamage! < unmitigated.totalDamage!)
+})
+
+test('毒の定常DPSや変化途中の性能を有限総量へ変換せず、通常のDPSは保持する', () => {
+  for (const [id, skillIndex, stageId, duration] of [
+    ['char_293_thorns', 1, undefined, 30],
+    ['char_017_huang', 3, 'normal', 10],
+    ['char_4098_vvana', 2, undefined, 35],
+    ['char_4082_qiubai', 3, undefined, 30],
+  ] as const) {
+    const result = evaluate(id, skillIndex, stageId)
+    assert.deepEqual(result.errors, [])
+    assert.ok(result.dps! > 0, `${id}/S${skillIndex}`)
+    assert.equal(result.durationSeconds, duration)
+    assert.equal(result.totalDamage, null)
+    assert.equal(result.allTargetsTotalDamage, null)
+    assert.ok(result.totalDamageReason, `${id}/S${skillIndex}`)
+  }
+  const poison = evaluate('char_293_thorns', 1)
+  assert.ok(poison.damageOverTimeDps! > 0)
+  assert.ok(poison.combinedDps! > poison.dps!)
+  const stacks = evaluate('char_4082_qiubai', 3, undefined, { 'guard.attackStacks': 8 })
+  assert.equal(stacks.totalDamage, null)
+  assert.ok(stacks.dps! > evaluate('char_4082_qiubai', 3).dps!)
+})
+
+test('無期限の段階と通常攻撃型以外には期間総ダメージを作らない', () => {
+  for (const [id, skillIndex, stageId] of [
+    ['char_350_surtr', 3, undefined],
+    ['char_017_huang', 2, undefined],
+    ['char_293_thorns', 3, 'second_and_later'],
+  ] as const) {
+    const result = evaluate(id, skillIndex, stageId)
+    assert.ok(result.dps! > 0)
+    assert.equal(result.durationSeconds, null)
+    assert.equal(result.totalDamage, null)
+    assert.ok(result.totalDamageReason)
+  }
+  for (const [id, skillIndex, stageId] of [
+    ['char_350_surtr', 1, undefined],
+    ['char_293_thorns', 2, undefined],
+    ['char_017_huang', 3, 'end'],
+  ] as const) {
+    const result = evaluate(id, skillIndex, stageId)
+    assert.notEqual(result.entry.kind, 'NORMAL')
+    assert.ok(result.perAttack! > 0)
+    assert.equal(result.totalDamage, null)
+    assert.equal(result.allTargetsTotalDamage, null)
+  }
+})
+
+test('有限総ダメージは欠落した素質を0として補完しない', () => {
+  const changed = structuredClone(entry('char_293_thorns', 1))
+  for (const candidate of changed.skill.operatorProfile.talents![0].candidates!) {
+    candidate.blackboard = candidate.blackboard!.filter(item => item.key !== 'damage[normal]')
+  }
+  const result = evaluateDamageThreeComparisonEntry(changed, common)
+  assert.deepEqual(result.errors, [])
+  assert.ok(result.dps! > 0)
+  assert.equal(result.combinedDps, null)
+  assert.equal(result.totalDamage, null)
+  assert.equal(result.allTargetsTotalDamage, null)
+  assert.ok(result.totalDamageReason)
+})
+
+test('攻撃しない前半を除いた段階時間を使い、SPだけの時間条件で総量を保留しない', () => {
+  const mudrock = evaluate('char_311_mudrok', 3)
+  assert.deepEqual(mudrock.errors, [])
+  assert.equal(mudrock.entry.skill.raw.duration, 30)
+  assert.equal(mudrock.durationSeconds, 20)
+  assert.equal(mudrock.totalDamage, mudrock.combinedDps! * 20)
+  const pinecone = evaluate('char_440_pinecn', 2)
+  assert.deepEqual(pinecone.errors, [])
+  assert.ok(pinecone.totalDamage! > 0)
+  assert.equal(pinecone.totalDamageReason, null)
+})
+
+test('配置後の強化・一撃だけの強化・命中数による変化を固定DPSの期間合計にしない', () => {
+  for (const [id, skillIndex] of [
+    ['char_274_astesi', 1], ['char_155_tiger', 2], ['char_1021_kroos2', 2],
+    ['char_300_phenxi', 1], ['char_341_sntlla', 1], ['char_430_fartth', 1], ['char_358_lisa', 1],
+  ] as const) {
+    const result = evaluate(id, skillIndex)
+    assert.deepEqual(result.errors, [], `${id}/S${skillIndex}`)
+    assert.ok(result.dps! > 0)
+    assert.equal(result.totalDamage, null, `${id}/S${skillIndex}`)
+    assert.equal(result.allTargetsTotalDamage, null)
+    assert.ok(result.totalDamageReason)
+  }
+  const ammunition = evaluate('char_456_ash', 2)
+  assert.ok(ammunition.dps! > 0)
+  assert.equal(ammunition.durationSeconds, null)
+  assert.equal(ammunition.totalDamage, null)
+  assert.match(ammunition.totalDamageReason!, /弾薬/)
 })

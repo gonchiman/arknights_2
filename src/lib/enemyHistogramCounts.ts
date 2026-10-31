@@ -139,6 +139,15 @@ export function getEnemySpawnCoverageLabel(summary: EnemyHistogramCounts['summar
     : `出現数確定 ${count}マップ`
 }
 
+export function getEnemyCountWeight(
+  id: string,
+  mode: EnemyHistogramCountMode,
+  counts: EnemyHistogramCounts | null,
+): number {
+  return mode === 'TYPES' ? 1
+    : counts?.enemies[id]?.[mode === 'MAPS' ? 'mapCount' : 'spawnCount'] ?? 0
+}
+
 export function buildEnemyHistogramObservations(
   rows: readonly EnemyRecord[],
   value: (enemy: EnemyRecord) => number | null,
@@ -150,8 +159,7 @@ export function buildEnemyHistogramObservations(
   return rows.flatMap((enemy) => {
     if (seen.has(enemy.id)) return []
     seen.add(enemy.id)
-    const weight = mode === 'TYPES' ? 1
-      : counts!.enemies[enemy.id]?.[mode === 'MAPS' ? 'mapCount' : 'spawnCount'] ?? 0
+    const weight = getEnemyCountWeight(enemy.id, mode, counts)
     return [{ value: value(enemy), weight }]
   })
 }

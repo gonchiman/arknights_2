@@ -1,6 +1,7 @@
 .dc3-comparison-page { min-width: 0; }
 .dc3-comparison-filters { grid-template-columns: minmax(165px, 1.2fr) minmax(240px, 2fr) repeat(2, minmax(100px, 1fr)); }
 .dc3-comparison-conditions { grid-template-columns: repeat(5, minmax(100px, 1fr)); }
+.dc3-comparison-display { grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--border); }
 .dc3-comparison-build { padding: 8px 10px; color: var(--text-soft); font-size: 11px; line-height: 1.8; }
 .dc3-comparison-meta { flex-wrap: wrap; }
 .dc3-comparison-table-wrap { border-right: 0; border-bottom: 0; border-left: 0; }
@@ -19,11 +20,29 @@
 .dc3-comparison-table .dc3-comparison-numeric-heading { padding: 0; }
 .dc3-comparison-numeric-heading button { display: flex; width: 100%; align-items: center; justify-content: flex-end; gap: 6px; border: 0; background: transparent; padding: 10px; color: inherit; font: inherit; white-space: nowrap; cursor: pointer; }
 .dc3-comparison-numeric-heading button:hover { color: var(--accent); background: var(--surface-hover); }
-.dc3-comparison-numeric-heading button span { color: var(--text-muted); }
+.dc3-comparison-numeric-heading .skill-sort-indicator { flex: 0 0 auto; color: var(--text-muted); }
+.dc3-comparison-table.dc3-comparison-table-compact { width: 100%; min-width: 0; table-layout: fixed; }
+.dc3-comparison-table-compact th:nth-child(n), .dc3-comparison-table-compact td { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.dc3-comparison-table-compact th:nth-child(1) { width: 25%; }
+.dc3-comparison-table-compact th:nth-child(2) { width: 10%; }
+.dc3-comparison-table-compact th:nth-child(3) { width: 21%; }
+.dc3-comparison-table-compact th:nth-child(4) { width: 26%; }
+.dc3-comparison-table-compact th:nth-child(5) { width: 18%; }
+.dc3-comparison-table-compact .skill-coarse-link { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.dc3-comparison-table-compact .dc3-comparison-numeric-heading button { min-width: 0; white-space: normal; text-align: right; }
+.dc3-comparison-table-compact .dc3-comparison-numeric-heading button > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.dc3-comparison-status-trigger { width: 100%; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .dc3-comparison-errors { padding: 8px 10px; color: var(--danger); font-size: 12px; }
 .dc3-comparison-errors p { margin: 0; line-height: 1.8; }
 .dc3-comparison-page input[aria-invalid="true"] { border-color: var(--danger); }
 .dc3-comparison-dialog-body { padding: 0; }
+.dc3-comparison-detail-table { width: 100%; min-width: 0; margin: 0; table-layout: fixed; border-block: 1px solid var(--border); }
+.dc3-comparison-detail-table th, .dc3-comparison-detail-table td { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); white-space: normal; overflow-wrap: anywhere; }
+.dc3-comparison-detail-table th { position: static; width: 36%; font-size: 12px; font-weight: 400; }
+.dc3-comparison-detail-table td { border-right: 0; }
+.dc3-comparison-detail-table tr:last-child th, .dc3-comparison-detail-table tr:last-child td { border-bottom: 0; }
+.dc3-comparison-detail-table tr { cursor: default; }
+.dc3-comparison-detail-table .dc3-comparison-number { text-align: right; font-variant-numeric: tabular-nums; }
 .dc3-comparison-individual-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .dc3-comparison-individual-fields input:disabled, .dc3-comparison-individual-fields select:disabled { color: var(--text-soft); background: var(--surface-soft); opacity: 1; }
 .dc3-comparison-notes { margin: 0; padding: 10px 26px; color: var(--text-soft); font-size: 12px; line-height: 1.8; }
@@ -35,6 +54,8 @@
   .dc3-comparison-filters { grid-template-columns: minmax(0, 1fr); }
   .dc3-comparison-conditions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dc3-comparison-individual-fields { grid-template-columns: minmax(0, 1fr); }
+  .dc3-comparison-table-compact th, .dc3-comparison-table-compact td { padding: 9px 6px; }
+  .dc3-comparison-table-compact .dc3-comparison-numeric-heading button { padding: 10px 6px; gap: 4px; }
   .dc3-comparison-dialog .dc3-comparison-dialog-body { padding: 0; }
 }
 @media (pointer: coarse) {

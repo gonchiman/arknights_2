@@ -2,18 +2,10 @@ import {
   ENEMY_NUMERIC_FILTER_FIELDS, ENEMY_NUMERIC_FILTER_OPERATORS,
   type EnemyNumericFilterField, type EnemyNumericFilterOperator,
 } from './enemyNumericFilters.ts'
+import { ENEMY_IMMUNITIES } from './enemyImmunities.ts'
 
-export const MAP_ENEMY_IMMUNITY_FIELDS = [
-  { key: 'stunImmune', label: 'スタン耐性' },
-  { key: 'silenceImmune', label: '沈黙耐性' },
-  { key: 'sleepImmune', label: '睡眠耐性' },
-  { key: 'frozenImmune', label: '凍結耐性' },
-  { key: 'levitateImmune', label: '浮遊耐性' },
-  { key: 'disarmedCombatImmune', label: '武装解除耐性' },
-  { key: 'fearedImmune', label: '恐怖耐性' },
-  { key: 'palsyImmune', label: '麻痺耐性' },
-  { key: 'attractImmune', label: '誘導耐性' },
-] as const
+export const MAP_ENEMY_IMMUNITY_FIELDS = ENEMY_IMMUNITIES.map(({ key, label }) =>
+  ({ key, label: `${label}耐性` } as const))
 
 export type MapEnemyImmunityProperty = typeof MAP_ENEMY_IMMUNITY_FIELDS[number]['key']
 export type MapEnemyNumericConditionProperty =
