@@ -34,6 +34,21 @@ test('敵の重回帰分析を統計分析の隣の導線から独立したペ�
   }
 })
 
+test('敵の状態異常耐性は敵分析の導線から集計版を指定して開く', () => {
+  const path = '#/analysis/enemies/immunities'
+  assert.deepEqual(parseHashRoute(path), { view: 'enemy-immunities' })
+  assert.deepEqual(parseHashRoute(`${path}?aggregationVersion=v1`), { view: 'enemy-immunities' })
+  assert.deepEqual(parseHashRoute(`${path}?aggregationVersion=missing`), { view: 'enemy-immunities' })
+  const regressionIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'enemy-regression')
+  assert.deepEqual(APP_NAV_ITEMS[regressionIndex + 1], {
+    id: 'enemy-immunities', href: path, label: '敵の状態異常耐性',
+    description: '', section: 'analysis',
+  })
+  for (const suffix of ['/', '/extra', '-extra', '/extra?aggregationVersion=v1']) {
+    assert.deepEqual(parseHashRoute(`${path}${suffix}`), { view: 'operators' })
+  }
+})
+
 test('集計マップ確認は敵分析用の独立ページとして開く', () => {
   assert.deepEqual(parseHashRoute('#/analysis/enemies/maps'), { view: 'enemy-map-coverage' })
   assert.deepEqual(APP_NAV_ITEMS.find((item) => item.id === 'enemy-map-coverage'), {
@@ -89,6 +104,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['enemies', 'enemies'],
       ['enemy-analysis', 'enemy-analysis'],
       ['enemy-regression', 'enemy-regression'],
+      ['enemy-immunities', 'enemy-immunities'],
       ['enemy-map-coverage', 'enemy-map-coverage'],
       ['main-enemy-trends', 'main-enemy-trends'],
       ['roguelike', 'roguelike'],

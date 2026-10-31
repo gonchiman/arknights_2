@@ -2,6 +2,7 @@ import type { EnemyLevelType, EnemyRatings, EnemyRecord, EnemyStats } from '../t
 import { DATA_SOURCE_URLS } from './dataSources.ts'
 import { gameDataClient } from './gameDataClient.ts'
 import { getEnemyStatRating } from './enemyStatRatings.ts'
+import { ENEMY_IMMUNITIES } from './enemyImmunities.ts'
 import { normalizeEnemyLevelSelection, type EnemyAnalysisFiltersState } from './enemyLevelSelection.ts'
 
 export { getEnemyStatRating } from './enemyStatRatings.ts'
@@ -31,18 +32,6 @@ const EMPTY_STATS: EnemyStats = {
   baseAttackTime: null,
   massLevel: null,
 }
-
-const IMMUNITY_FIELDS: ReadonlyArray<readonly [string, string]> = [
-  ['stunImmune', 'スタン'],
-  ['silenceImmune', '沈黙'],
-  ['sleepImmune', '睡眠'],
-  ['frozenImmune', '凍結'],
-  ['levitateImmune', '浮遊'],
-  ['disarmedCombatImmune', '武装解除'],
-  ['fearedImmune', '恐怖'],
-  ['palsyImmune', '麻痺'],
-  ['attractImmune', '誘導'],
-]
 
 let enemyRecordsRequest: Promise<EnemyRecord[]> | null = null
 
@@ -225,9 +214,9 @@ function buildEnemyRatings(stats: EnemyStats): EnemyRatings {
 
 function readStatusImmunities(attributes: UnknownRecord | null): string[] {
   if (!attributes) return []
-  return IMMUNITY_FIELDS
-    .filter(([key]) => readBoolean(attributes[key]) === true)
-    .map(([, label]) => label)
+  return ENEMY_IMMUNITIES
+    .filter(({ key }) => readBoolean(attributes[key]) === true)
+    .map(({ label }) => label)
 }
 
 function readAbilities(handbook: UnknownRecord): string[] {
