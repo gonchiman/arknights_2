@@ -11,6 +11,9 @@
 .structure-coverage-heading .filter-reset-button:focus-visible { outline-color: currentColor; }
 .structure-coverage-heading h2 { margin: 0; color: inherit; font-size: 12px; font-weight: 700; }
 .structure-coverage-heading > span { font-size: 12px; font-weight: 400; }
+.structure-coverage-chart { padding: 14px 10px 16px; border-bottom: 1px solid var(--border); }
+.structure-coverage-chart .coverage-stacked-counts { color: var(--text-muted); }
+.structure-coverage-chart .coverage-stacked-counts .coverage-stacked-swatch { display: none; }
 .structure-coverage-results-bar { flex-wrap: wrap; }
 .structure-coverage-results-bar .analysis-tabs { width: 264px; max-width: 100%; margin: 0 0 0 auto; }
 .structure-coverage-results-bar .detail-tab { min-height: 32px; padding: 6px; font-size: 12px; }

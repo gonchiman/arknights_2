@@ -6,6 +6,7 @@ import {
 } from '../lib/structureCoverage'
 import type { SkillRecord } from '../types/skill'
 import { AnalysisTabs } from './AnalysisTabs'
+import { CoverageStackedBars } from './CoverageStackedBars'
 import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
 import './SkillDirectory.css'
 import './SkillCoarseClassificationPage.css'
@@ -14,6 +15,10 @@ import './StructureCoveragePage.css'
 const TABS = [['skill', 'スキル'], ['talent', '素質'], ['trait', '特性']] as const
 type CoverageKind = typeof TABS[number][0]
 const UNITS = { skill: 'スキル', talent: '素質', trait: 'OP' } as const
+const REGISTRATION_CATEGORIES = [
+  { key: 'REGISTERED', label: '登録済み', color: 'var(--coverage-bar-blue)' },
+  { key: 'UNREGISTERED', label: '未登録', color: 'var(--coverage-bar-light-gray)' },
+] as const
 
 interface Props {
   rows: SkillRecord[]
@@ -137,23 +142,35 @@ export default function StructureCoveragePage({ rows, loading, onOpenOperatorDet
 }
 
 export function StructureCoverageSummary({ coverage }: { coverage: Record<CoverageKind, StructureCoverageRecord[]> }) {
-  return <div className="table-wrap skill-coarse-table-wrap" role="region" aria-label="全体の登録状況" tabIndex={0}>
-    <table className="skill-coarse-table structure-coverage-summary-table">
-      <caption className="visually-hidden">大分類・構造化の区分別集計</caption>
-      <thead><tr>{['区分', '集計単位', '大分類の対象', '構造登録', '未登録', '登録率'].map(label =>
-        <th scope="col" key={label}>{label}</th>)}</tr></thead>
-      <tbody>{TABS.map(([kind, label]) => {
-        const summary = summarizeStructureCoverage(coverage[kind])
-        return <tr key={kind}>
-          <th scope="row">{label}</th><td>{UNITS[kind]}</td>
-          <td>{summary.total.toLocaleString('ja-JP')}</td>
-          <td>{summary.registered.toLocaleString('ja-JP')}</td>
-          <td>{summary.unregistered.toLocaleString('ja-JP')}</td>
-          <td>{summary.rate === null ? '—' : `${summary.rate.toFixed(1)}%`}</td>
-        </tr>
-      })}</tbody>
-    </table>
-  </div>
+  const summaries = TABS.map(([kind, label]) => ({ kind, label, ...summarizeStructureCoverage(coverage[kind]) }))
+  return <>
+    <div className="structure-coverage-chart">
+      <CoverageStackedBars title="構造登録率" legendLabel="構造の登録状況の凡例"
+        categories={REGISTRATION_CATEGORIES} showZeroCounts showCountPercent={false}
+        rows={summaries.map(summary => ({
+          key: summary.kind, label: summary.label, total: summary.total, unit: UNITS[summary.kind],
+          buckets: REGISTRATION_CATEGORIES.map(category => ({
+            ...category, count: category.key === 'REGISTERED' ? summary.registered : summary.unregistered,
+          })),
+        }))} />
+    </div>
+    <div className="table-wrap skill-coarse-table-wrap" role="region" aria-label="全体の登録状況" tabIndex={0}>
+      <table className="skill-coarse-table structure-coverage-summary-table">
+        <caption className="visually-hidden">大分類・構造化の区分別集計</caption>
+        <thead><tr>{['区分', '集計単位', '大分類の対象', '構造登録', '未登録', '登録率'].map(label =>
+          <th scope="col" key={label}>{label}</th>)}</tr></thead>
+        <tbody>{summaries.map(summary => (
+          <tr key={summary.kind}>
+            <th scope="row">{summary.label}</th><td>{UNITS[summary.kind]}</td>
+            <td>{summary.total.toLocaleString('ja-JP')}</td>
+            <td>{summary.registered.toLocaleString('ja-JP')}</td>
+            <td>{summary.unregistered.toLocaleString('ja-JP')}</td>
+            <td>{summary.rate === null ? '—' : `${summary.rate.toFixed(1)}%`}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
+  </>
 }
 
 export function StructureCoverageTable({ rows, kind, onOpenOperatorDetail, onOpenConcerns, detailId, selectedId }: {
