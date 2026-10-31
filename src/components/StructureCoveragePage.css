@@ -10,7 +10,7 @@
 .structure-coverage-heading .filter-reset-button:disabled { color: var(--border-strong); }
 .structure-coverage-heading .filter-reset-button:focus-visible { outline-color: currentColor; }
 .structure-coverage-heading h2 { margin: 0; color: inherit; font-size: 12px; font-weight: 700; }
-.structure-coverage-heading > span { font-size: 12px; font-weight: 400; }
+.structure-coverage-heading > span { min-width: 0; overflow-wrap: anywhere; font-size: 12px; font-weight: 400; }
 .structure-coverage-chart { padding: 14px 10px 16px; border-bottom: 1px solid var(--border); }
 .structure-coverage-chart .coverage-stacked-counts { color: var(--text-muted); }
 .structure-coverage-chart .coverage-stacked-counts .coverage-stacked-swatch { display: none; }

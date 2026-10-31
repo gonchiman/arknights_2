@@ -33,7 +33,12 @@ export default function StructureCoveragePage({ rows, loading, onOpenOperatorDet
   const [detail, setDetail] = useState<{ row: StructureCoverageRecord; trigger: HTMLButtonElement } | null>(null)
   const detailRef = useRef<HTMLElement>(null)
   const coverage = useMemo(() => buildStructureCoverage(rows), [rows])
-  const visibleRows = useMemo(() => filterStructureCoverage(coverage[tab], filters), [coverage, tab, filters])
+  const filteredCoverage = useMemo(() => ({
+    skill: filterStructureCoverage(coverage.skill, filters),
+    talent: filterStructureCoverage(coverage.talent, filters),
+    trait: filterStructureCoverage(coverage.trait, filters),
+  }), [coverage, filters])
+  const visibleRows = filteredCoverage[tab]
   const professionOptions = useMemo(() => {
     const labels = new Map(rows.map(row => [row.profession, row.professionLabel]))
     return PROFESSION_ORDER.filter(profession => labels.has(profession))
@@ -41,6 +46,12 @@ export default function StructureCoveragePage({ rows, loading, onOpenOperatorDet
   }, [rows])
   const hasFilters = filters.query.trim() !== '' || filters.profession !== 'ALL'
     || filters.rarity !== 'ALL' || filters.registration !== 'ALL'
+  const filterSummary = [
+    filters.profession === 'ALL' ? '全職業' : professionOptions.find(option => option.value === filters.profession)?.label,
+    filters.rarity === 'ALL' ? '全レアリティ' : `★${filters.rarity}`,
+    filters.registration === 'ALL' ? '' : filters.registration === 'REGISTERED' ? '登録済み' : '未登録',
+    filters.query.trim() ? `検索：${filters.query.trim()}` : '',
+  ].filter(Boolean).join('・')
 
   useEffect(() => {
     if (!detail) return
@@ -60,11 +71,6 @@ export default function StructureCoveragePage({ rows, loading, onOpenOperatorDet
   return <section className="structure-coverage-page">
     <header className="page-intro"><h1>大分類・構造化の実装範囲</h1></header>
     <section className="skill-directory-panel" aria-label="大分類・構造化の登録状況">
-      <div className="filters-heading structure-coverage-heading">
-        <h2>全体の登録状況</h2><span>全職業・全レアリティ</span>
-      </div>
-      {loading ? <div className="result-meta" role="status">読み込み中…</div>
-        : <StructureCoverageSummary coverage={coverage} />}
       <div className="skill-directory-filters">
         <div className="filters-heading structure-coverage-heading">
           <h2>絞り込み</h2>
@@ -101,6 +107,11 @@ export default function StructureCoveragePage({ rows, loading, onOpenOperatorDet
           </label>
         </div>
       </div>
+      <div className="filters-heading structure-coverage-heading">
+        <h2>絞り込み結果の登録状況</h2><span>{filterSummary}</span>
+      </div>
+      {loading ? <div className="result-meta" role="status">読み込み中…</div>
+        : <StructureCoverageSummary coverage={filteredCoverage} />}
       <div className="result-meta structure-coverage-results-bar">
         <div role="status" aria-live="polite">
           {loading ? '読み込み中…' : `${visibleRows.length.toLocaleString('ja-JP')} / ${coverage[tab].length.toLocaleString('ja-JP')} ${UNITS[tab]}表示`}
@@ -154,10 +165,10 @@ export function StructureCoverageSummary({ coverage }: { coverage: Record<Covera
           })),
         }))} />
     </div>
-    <div className="table-wrap skill-coarse-table-wrap" role="region" aria-label="全体の登録状況" tabIndex={0}>
+    <div className="table-wrap skill-coarse-table-wrap" role="region" aria-label="絞り込み結果の登録状況" tabIndex={0}>
       <table className="skill-coarse-table structure-coverage-summary-table">
         <caption className="visually-hidden">大分類・構造化の区分別集計</caption>
-        <thead><tr>{['区分', '集計単位', '大分類の対象', '構造登録', '未登録', '登録率'].map(label =>
+        <thead><tr>{['区分', '集計単位', '対象数', '構造登録', '未登録', '登録率'].map(label =>
           <th scope="col" key={label}>{label}</th>)}</tr></thead>
         <tbody>{summaries.map(summary => (
           <tr key={summary.kind}>
