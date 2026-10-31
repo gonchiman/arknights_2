@@ -52,6 +52,12 @@ function assertRegistrationChart(markup, expectedRows) {
     const unregistered = total - registered
     const unit = kind === 'skill' ? 'スキル' : kind === 'talent' ? '素質' : 'OP'
     const description = content.match(/role="img" aria-label="([^"]+)"/)?.[1]
+    if (total === 0) {
+      assert.match(content, /対象なし/, kind)
+      assert.equal(description, undefined, `${kind} empty population has no percentage image`)
+      assert.doesNotMatch(content, /class="coverage-stacked-segment"|NaN|Infinity/, kind)
+      return
+    }
     assert.ok(description, `${kind} accessible description`)
     assert.ok(description.includes(`${total}${unit}`), `${kind} denominator and unit`)
     for (const [label, count] of [['登録済み', registered], ['未登録', unregistered]]) {
@@ -81,20 +87,23 @@ function example(kind, overrides = {}) {
     structureHref: `#/${kind}-structure?operatorId=char_example`, concerns: [], ...overrides }
 }
 
-test('初期表示は全職業・全レアリティで、全体集計とスキル一覧の単位を分ける', () => {
+test('初期表示は全職業・全レアリティで、絞り込み・集計・一覧の順に表示する', () => {
   const extra = { ...records[0], id: 'unknown:skill', operatorId: 'unknown', operatorName: '未登録OP',
     skillId: 'unknown', profession: 'CASTER', professionLabel: '術師', rarity: 5 }
   const markup = render(Page, { rows: [...records, extra], loading: false, onOpenOperatorDetail() {} })
   const summary = namedTable(markup, 'structure-coverage-summary-table')
   const list = namedTable(markup, 'structure-coverage-list-table')
-  assert.deepEqual(summary[0], ['区分', '集計単位', '大分類の対象', '構造登録', '未登録', '登録率'])
+  assert.deepEqual(summary[0], ['区分', '集計単位', '対象数', '構造登録', '未登録', '登録率'])
   assert.deepEqual(summary[1], ['スキル', 'スキル', '10', '9', '1', '90.0%'])
   assert.deepEqual(summary.slice(1).map(row => row.slice(0, 2)), [['スキル', 'スキル'], ['素質', '素質'], ['特性', 'OP']])
   assertRegistrationChart(markup, summary.slice(1).map(row => [Number(row[2]), Number(row[3])]))
   assert.equal(list.length, 11)
   assert.ok(list.some(row => row[0] === '未登録OP' && row[4] === '未登録'))
-  assert.match(markup, /全体の登録状況/)
-  assert.match(markup, /全職業・全レアリティ/)
+  assert.match(markup, /<h2>絞り込み結果の登録状況<\/h2>/)
+  assert.match(markup, /role="region" aria-label="絞り込み結果の登録状況"/)
+  assert.doesNotMatch(markup, /全体の登録状況|大分類の対象/)
+  assert.ok(markup.indexOf('<h2>絞り込み</h2>') < markup.indexOf('<h2>絞り込み結果の登録状況</h2>'))
+  assert.ok(markup.indexOf('structure-coverage-summary-table') < markup.indexOf('structure-coverage-results-bar'))
   assert.match(markup, /10 \/ 10 スキル表示/)
   assert.equal((markup.match(/<option value="ALL" selected="">/g) ?? []).length, 3)
   assert.match(markup, /<button[^>]*disabled=""[^>]*>条件をリセット<\/button>/)
@@ -111,20 +120,34 @@ test('スキル・素質・特性の3タブは対応するパネルを持ち初�
   }
 })
 
-test('一覧の絞り込み用データを作っても全体集計の母数と登録率を変えない', () => {
-  const coverage = { skill: [example('skill'), example('skill', { id: 'skill:unregistered', registered: false })],
-    talent: [example('talent')], trait: [example('trait'), example('trait', { id: 'trait:second' })] }
-  const before = render(Summary, { coverage })
-  const visible = filterCoverage(coverage.skill, { ...defaults, registration: 'UNREGISTERED' })
-  const list = render(Table, { ...tableProps, rows: visible, kind: 'skill' })
-  assert.equal(table(list).length, 2)
-  assert.equal(table(list)[1][4], '未登録')
-  assert.deepEqual(table(before).slice(1), [
-    ['スキル', 'スキル', '2', '1', '1', '50.0%'],
-    ['素質', '素質', '1', '1', '0', '100.0%'],
-    ['特性', 'OP', '2', '2', '0', '100.0%'],
-  ])
-  assert.equal(render(Summary, { coverage }), before)
+test('4条件で絞り込んだ3区分の母数・登録率をグラフと集計表に使い、一覧の件数とも一致する', () => {
+  const extra = { ...records[0], id: 'unknown:skill', operatorId: 'unknown', operatorName: '未登録OP',
+    skillId: 'unknown', profession: 'CASTER', professionLabel: '術師', rarity: 5 }
+  const coverage = buildCoverage([...records, extra])
+  const cases = [
+    [{ profession: 'WARRIOR', rarity: 6 }, [[9, 9], [6, 6], [3, 3]]],
+    [{ profession: 'CASTER', rarity: 5 }, [[1, 0], [2, 0], [1, 0]]],
+    [{ query: 'スルト' }, [[3, 3], [2, 2], [1, 1]]],
+    [{ registration: 'REGISTERED' }, [[9, 9], [6, 6], [3, 3]]],
+    [{ registration: 'UNREGISTERED' }, [[1, 0], [2, 0], [1, 0]]],
+    [{ query: 'スルト Ｓ３' }, [[1, 1], [0, 0], [0, 0]]],
+  ]
+  for (const [filters, expected] of cases) {
+    const filtered = Object.fromEntries(Object.entries(coverage).map(([kind, rows]) =>
+      [kind, filterCoverage(rows, { ...defaults, ...filters })]))
+    const markup = render(Summary, { coverage: filtered })
+    assertRegistrationChart(markup, expected)
+    assert.deepEqual(namedTable(markup, 'structure-coverage-summary-table').slice(1).map(row => row.slice(2)),
+      expected.map(([total, registered]) => [String(total), String(registered), String(total - registered),
+        total ? `${(registered / total * 100).toFixed(1)}%` : '—']), JSON.stringify(filters))
+    Object.entries(filtered).forEach(([kind, rows], index) => {
+      const list = render(Table, { ...tableProps, rows, kind })
+      assert.equal(table(list).length - 1, expected[index][0], `${kind} filtered list count`)
+      const registrationColumn = kind === 'trait' ? 3 : 4
+      assert.equal(table(list).slice(1).filter(row => row[registrationColumn] === '登録済み').length,
+        expected[index][1], `${kind} filtered registered count`)
+    })
+  }
 })
 
 test('登録率の横棒は区分ごとの母数で計算し、0%と100%でも両側の件数を表示する', () => {
