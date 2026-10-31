@@ -15,6 +15,7 @@
 .structure-coverage-chart .coverage-stacked-counts { color: var(--text-muted); }
 .structure-coverage-chart .coverage-stacked-counts .coverage-stacked-swatch { display: none; }
 .structure-coverage-results-bar { flex-wrap: wrap; }
+.structure-coverage-page .skill-coarse-table-wrap + .structure-coverage-results-bar { border-top: 1px solid var(--border); }
 .structure-coverage-results-bar .analysis-tabs { width: 264px; max-width: 100%; margin: 0 0 0 auto; }
 .structure-coverage-results-bar .detail-tab { min-height: 32px; padding: 6px; font-size: 12px; }
 @media (max-width: 760px), (pointer: coarse) {
