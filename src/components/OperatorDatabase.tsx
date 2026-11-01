@@ -151,12 +151,13 @@ export function OperatorDatabase({
                       <SortableHeader label="攻撃" sortKey="attack" sort={sort} onSort={updateSort} />
                       <SortableHeader label="防御" sortKey="defense" sort={sort} onSort={updateSort} />
                       <SortableHeader label="術耐性" sortKey="magicResistance" sort={sort} onSort={updateSort} />
+                      <SortableHeader label="日本版実装日" sortKey="releaseDateJp" sort={sort} onSort={updateSort} />
                     </tr>
                   </thead>
                   <tbody>
                     {tableRecords.length === 0 && (
                       <tr>
-                        <td colSpan={8}>
+                        <td colSpan={9}>
                           条件に一致するオペレーターがいません。一覧の絞り込み条件を変更してください。
                         </td>
                       </tr>
@@ -181,6 +182,11 @@ export function OperatorDatabase({
                         <StatCell value={operator.stats.attack} />
                         <StatCell value={operator.stats.defense} />
                         <StatCell value={operator.stats.magicResistance} />
+                        <td className="operator-database-date-cell">
+                          {operator.releaseDateJp
+                            ? <time dateTime={operator.releaseDateJp}>{operator.releaseDateJp.replaceAll('-', '/')}</time>
+                            : '未確認'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

@@ -395,6 +395,7 @@ function createOperator(fixture: OperatorFixture = {}): OperatorDatabaseRecord {
   const operatorId = fixture.operatorId ?? 'operator'
   return {
     operatorId,
+    releaseDateJp: null,
     affiliation: null,
     name: operatorId,
     nameInitial: 'OTHER',

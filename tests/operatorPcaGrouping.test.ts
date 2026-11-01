@@ -6,7 +6,7 @@ import { buildOperatorPcaGroups, getOperatorPcaGroupId } from '../src/lib/operat
 
 function operator(id: string, overrides: Partial<OperatorDatabaseRecord> = {}): OperatorDatabaseRecord {
   return {
-    operatorId: id, name: id, nameInitial: 'OTHER', affiliation: null, rarity: 6,
+    operatorId: id, releaseDateJp: null, name: id, nameInitial: 'OTHER', affiliation: null, rarity: 6,
     profession: 'WARRIOR', professionLabel: '前衛', subProfessionId: 'artsfghter', subProfessionName: '術戦士',
     stats: { maxHp: 1000, attack: 300, defense: 200, magicResistance: 10, deploymentCost: 20,
       blockCount: 1, redeployTime: 70, attackSpeed: 100, attackInterval: 1.25 },

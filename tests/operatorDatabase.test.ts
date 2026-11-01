@@ -4,6 +4,7 @@ import {
   buildOperatorDatabaseRecords,
   filterOperatorDatabaseRecords,
   sortOperatorDatabaseRecords,
+  DEFAULT_OPERATOR_DATABASE_SORT,
   type OperatorDatabaseFilters,
 } from '../src/lib/operatorDatabase.ts'
 import type { OperatorCombatProfile, RawOperatorModule, SkillRecord } from '../src/types/skill.ts'
@@ -181,6 +182,29 @@ test('数値を指定方向へ並べ、欠落値は末尾で安定させる', ()
     sortOperatorDatabaseRecords(records, { key: 'operator', direction: 'asc' }).map((record) => record.name),
     ['データなし', 'テスト'],
   )
+})
+
+test('日本版実装日をオペレーターIDで結合し、不明なIDへ他人の日付を流用しない', () => {
+  const records = buildOperatorDatabaseRecords([
+    createSkill({ profile: createProfile(), operatorId: 'char_350_surtr', operatorName: 'スルト' }),
+    createSkill({ profile: createProfile(), operatorId: 'char_4009_irene', operatorName: 'アイリーニ' }),
+    createSkill({ profile: createProfile(), operatorId: 'char_unknown', operatorName: 'スルト' }),
+  ])
+  assert.deepEqual(records.map(record => record.releaseDateJp), ['2021-03-25', '2022-11-03', null])
+  assert.deepEqual(DEFAULT_OPERATOR_DATABASE_SORT, { key: 'rarity', direction: 'desc' })
+})
+
+test('実装日の昇順・降順とも未確認を末尾にし、同日の順序を名前で安定させる', () => {
+  const base = buildOperatorDatabaseRecords([createSkill({ profile: createProfile() })])[0]
+  const rows = [
+    { ...base, name: 'ウ', releaseDateJp: null },
+    { ...base, name: 'イ', releaseDateJp: '2022-11-03' },
+    { ...base, name: 'ア', releaseDateJp: '2022-11-03' },
+    { ...base, name: 'エ', releaseDateJp: '2021-03-25' },
+  ]
+  assert.deepEqual(sortOperatorDatabaseRecords(rows, { key: 'releaseDateJp', direction: 'asc' }).map(row => row.name), ['エ', 'ア', 'イ', 'ウ'])
+  assert.deepEqual(sortOperatorDatabaseRecords(rows, { key: 'releaseDateJp', direction: 'desc' }).map(row => row.name), ['ア', 'イ', 'エ', 'ウ'])
+  assert.equal(rows[0].name, 'ウ')
 })
 
 function filters(overrides: Partial<OperatorDatabaseFilters>): OperatorDatabaseFilters {

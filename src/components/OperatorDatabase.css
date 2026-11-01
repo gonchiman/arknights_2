@@ -59,19 +59,20 @@
 
 .operator-database-table {
   width: 100%;
-  min-width: 600px;
+  min-width: 720px;
   table-layout: fixed;
   font-size: 11px;
 }
 
-.operator-database-table th:nth-child(1) { width: 24%; }
-.operator-database-table th:nth-child(2) { width: 12%; }
-.operator-database-table th:nth-child(3) { width: 8%; }
-.operator-database-table th:nth-child(4) { width: 18%; }
-.operator-database-table th:nth-child(5) { width: 11%; }
+.operator-database-table th:nth-child(1) { width: 20%; }
+.operator-database-table th:nth-child(2) { width: 10%; }
+.operator-database-table th:nth-child(3) { width: 7%; }
+.operator-database-table th:nth-child(4) { width: 15%; }
+.operator-database-table th:nth-child(5) { width: 10%; }
 .operator-database-table th:nth-child(6),
 .operator-database-table th:nth-child(7),
-.operator-database-table th:nth-child(8) { width: 9%; }
+.operator-database-table th:nth-child(8) { width: 8%; }
+.operator-database-table th:nth-child(9) { width: 14%; }
 
 .operator-database-table td {
   padding: 5px 6px;
@@ -141,6 +142,7 @@
 .operator-database-name-button:hover { color: #123f78; }
 .operator-database-name-button:focus-visible { outline: 2px solid currentcolor; outline-offset: 2px; }
 .operator-database-stat-cell { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.operator-database-date-cell { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 @media (max-width: 760px) {
   .operator-database-table-wrap { max-height: 400px; }

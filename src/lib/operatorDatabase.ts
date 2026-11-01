@@ -1,4 +1,5 @@
 import { getOperatorPassives } from './operatorProfile.ts'
+import { getOperatorReleaseDateJp } from './operatorReleaseDates.ts'
 import { EMPTY_OPERATOR_FILTERS, type FilterState } from './operatorSearchFilters.ts'
 import { formatSkillEffectDescription } from './skillEffectDetails.ts'
 import type {
@@ -60,6 +61,7 @@ export interface OperatorDatabaseModuleEffect {
 
 export interface OperatorDatabaseRecord {
   operatorId: string
+  releaseDateJp: string | null
   affiliation: string | null
   name: string
   nameInitial: OperatorInitial
@@ -87,6 +89,7 @@ export type OperatorDatabaseSortKey =
   | 'attack'
   | 'defense'
   | 'magicResistance'
+  | 'releaseDateJp'
 
 export interface OperatorDatabaseSort {
   key: OperatorDatabaseSortKey
@@ -205,6 +208,7 @@ function buildOperatorRecord(operatorRows: SkillRecord[]): OperatorDatabaseRecor
 
   return {
     operatorId: representative.operatorId,
+    releaseDateJp: getOperatorReleaseDateJp(representative.operatorId),
     affiliation: profile.affiliation ?? null,
     name: representative.operatorName,
     nameInitial: representative.nameInitial,
@@ -310,6 +314,11 @@ function compareRecords(
       return (a.rarity - b.rarity) * direction
     case 'profession':
       return JAPANESE_COLLATOR.compare(a.professionLabel, b.professionLabel) * direction
+    case 'releaseDateJp':
+      if (a.releaseDateJp === null && b.releaseDateJp === null) return 0
+      if (a.releaseDateJp === null) return 1
+      if (b.releaseDateJp === null) return -1
+      return a.releaseDateJp.localeCompare(b.releaseDateJp) * direction
     case 'maxHp':
       return compareNullableNumbers(a.stats.maxHp, b.stats.maxHp, sort.direction)
     case 'attack':
