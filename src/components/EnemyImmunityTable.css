@@ -4,12 +4,16 @@
 .enemy-immunity-table-heading > span { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .enemy-immunity-table-scroll { max-height: none; }
 .enemy-table.enemy-immunity-table { min-width: 480px; font-size: 13px; }
+.enemy-table.enemy-immunity-table[data-count-mode="SPAWNS"] { min-width: 540px; }
 .enemy-immunity-table th,
 .enemy-immunity-table td { padding: 7px 8px; font-size: 13px; text-align: left; vertical-align: middle; }
 .enemy-immunity-table thead th { padding: 7px 8px; font-weight: 500; }
 .enemy-immunity-table th:nth-child(1) { width: 40%; }
+.enemy-immunity-table[data-count-mode="SPAWNS"] th:nth-child(1) { width: 35%; }
 .enemy-immunity-table th:nth-child(2) { width: 80px; }
 .enemy-immunity-table th:nth-child(3) { width: auto; }
+.enemy-immunity-table th.enemy-immunity-spawn-count { width: 120px; }
+.enemy-immunity-table .enemy-immunity-spawn-count { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .enemy-immunity-table tbody th { position: static; background: var(--surface); font-weight: 400; }
 .enemy-immunity-table td:nth-child(2) { white-space: nowrap; }
 .enemy-immunity-table .enemy-detail-button { font: inherit; }
