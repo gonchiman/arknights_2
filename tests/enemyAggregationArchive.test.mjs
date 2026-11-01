@@ -53,6 +53,29 @@ const archiveRoot = root => resolve(root, 'public/data/enemy-aggregation')
 const indexBytes = root => readFile(resolve(archiveRoot(root), 'index.json'))
 const bundleBytes = (root, id) => readFile(resolve(archiveRoot(root), `${id}.json.gz`))
 
+test('special-mode exclusions agree by identity across map inventory, histogram and appearances', () => {
+  const files = documents()
+  files['maps/index.json'].maps[1].statisticsExclusion = { kind: 'special-mode', activityType: 'BOSS_RUSH', activityId: 'trial' }
+  files['enemy-histogram-counts.json'].summary.mapCount = 1
+  files['enemy-histogram-counts.json'].summary.spawnExcludedMapCount = 0
+  files['enemy-histogram-counts.json'].summary.excludedMapCount = 3
+  files['enemy-histogram-counts.json'].enemies.enemy_a.mapCount = 1
+  files['enemy-stage-appearances.json'].enemies.enemy_a = { stageCount: 1, stageIds: ['a'] }
+  for (const name of ['enemy-histogram-counts.json', 'enemy-stage-appearances.json']) {
+    files[name].diagnostics = { excludedLevelIds: ['b', 'story', 'other'] }
+  }
+  const bundle = { schemaVersion: 1, versionId: 'v8', files }
+  assert.doesNotThrow(() => parseEnemyAggregationBundle(bundle))
+  for (const name of ['enemy-histogram-counts.json', 'enemy-stage-appearances.json']) {
+    const altered = structuredClone(bundle)
+    altered.files[name].diagnostics.excludedLevelIds[0] = 'a'
+    assert.throws(() => parseEnemyAggregationBundle(altered), /特殊モードの除外対象/)
+  }
+  const altered = structuredClone(bundle)
+  altered.files['enemy-histogram-counts.json'].summary.mapCount = 2
+  assert.throws(() => parseEnemyAggregationBundle(altered))
+})
+
 test('publishes one coherent portable dataset, preserving all five original input files', async t => {
   const root = await workspace(t), data = documents({ arrayDatabase: true })
   const result = await archiveEnemyAggregation({ root, snapshot: await snapshot(root, 'first', data) })
@@ -86,6 +109,29 @@ function lowerBoundDocuments() {
   return data
 }
 
+test('conditional contributions survive archival and reject missing or mismatched assumptions', async t => {
+  const root = await workspace(t)
+  const data = documents()
+  const conditions = ['全WAVEクリア', '抑制ユニットによる追加出現なし']
+  data['maps/index.json'].maps[0].aggregationConditions = conditions
+  data['enemy-histogram-counts.json'].diagnostics = {
+    aggregationConditions: [{ levelId: 'a', conditions }],
+  }
+  const result = await archiveEnemyAggregation({ root, snapshot: await snapshot(root, 'tn', data) })
+  const raw = JSON.parse(gunzipSync(await bundleBytes(root, result.version.id)))
+  assert.deepEqual(parseEnemyAggregationBundle(raw).files['maps/index.json'].maps[0].aggregationConditions, conditions)
+  for (const replacement of [undefined, [], [{ levelId: 'b', conditions }],
+    [{ levelId: 'a', conditions: ['全WAVEクリア'] }],
+    [{ levelId: 'a', conditions }, { levelId: 'a', conditions }]]) {
+    const invalid = structuredClone(raw)
+    invalid.files['enemy-histogram-counts.json'].diagnostics.aggregationConditions = replacement
+    assert.throws(() => parseEnemyAggregationBundle(invalid), /条件/)
+  }
+  const orphaned = structuredClone(raw)
+  delete orphaned.files['maps/index.json'].maps[0].aggregationConditions
+  assert.throws(() => parseEnemyAggregationBundle(orphaned), /条件/)
+})
+
 test('V4 adds lower-bound coverage without changing any of the three historical bundles', async t => {
   const root = await workspace(t)
   const before = []
@@ -94,7 +140,8 @@ test('V4 adds lower-bound coverage without changing any of the three historical 
     before.push({ entry: result.version, bytes: await bundleBytes(root, result.version.id) })
   }
   const data = lowerBoundDocuments()
-  const result = await archiveEnemyAggregation({ root, snapshot: await snapshot(root, 'v4-lower-bound', data) })
+  const result = await archiveEnemyAggregation({ root, snapshot: await snapshot(root, 'v4-lower-bound', data),
+    ruleVersion: 'known-spawn-lower-bound-v4' })
   assert.equal(result.version.id, 'v4')
   assert.equal(result.version.previousVersionId, 'v3')
   assert.equal(result.version.ruleVersion, 'known-spawn-lower-bound-v4')
@@ -161,7 +208,7 @@ test('source or rule changes create versions, and old archives remain byte-for-b
   assert.deepEqual(await bundleBytes(root, 'v1'), original)
   const revisionUpdate = await archiveEnemyAggregation({ root, snapshot: { ...newer, revision: 'd'.repeat(40) } })
   assert.equal(revisionUpdate.version.id, 'v3')
-  assert.equal(revisionUpdate.version.description, '元データ更新（下限集計）')
+  assert.equal(revisionUpdate.version.description, '元データ更新（通常戦闘マップを集計）')
   assert.deepEqual(revisionUpdate.version.changes, { addedMapIds: [], removedMapIds: [], changedMapIds: [] })
   assert.deepEqual(await bundleBytes(root, 'v1'), original)
 })

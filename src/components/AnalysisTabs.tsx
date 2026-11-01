@@ -29,11 +29,12 @@ export function AnalysisTabs<T extends string>({ tabs, activeTab, onChange, idPr
   </div>
 }
 
-export function AnalysisTabPanel({ idPrefix, tab, activeTab, title, children }: {
-  idPrefix: string; tab: string; activeTab: string; title: string; children: ReactNode
+export function AnalysisTabPanel({ idPrefix, tab, activeTab, title, headerActions, children }: {
+  idPrefix: string; tab: string; activeTab: string; title: string; headerActions?: ReactNode; children: ReactNode
 }) {
   return <section className="analysis-tab-panel" id={`${idPrefix}-panel-${tab}`} role="tabpanel"
     aria-labelledby={`${idPrefix}-tab-${tab}`} hidden={activeTab !== tab}>
-    <h2>{title}</h2>{children}
+    {headerActions ? <div className="analysis-tab-panel-header"><h2>{title}</h2>{headerActions}</div> : <h2>{title}</h2>}
+    {children}
   </section>
 }

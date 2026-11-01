@@ -1,0 +1,59 @@
+.coverage-stacked-bars {
+  --coverage-bar-blue: #7cabb9;
+  --coverage-bar-gold: #d9bb75;
+  --coverage-bar-rose: #bb91a2;
+  --coverage-bar-gray: #a3a9b0;
+  --coverage-bar-light-gray: #e6e7e9;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+.coverage-stacked-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 12px; }
+.coverage-stacked-heading h3 { margin: 0; font-size: 13px; font-weight: 700; color: var(--text); }
+.coverage-stacked-legend,
+.coverage-stacked-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 15px;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.coverage-stacked-legend { margin: 0; }
+.coverage-stacked-counts { margin: 6px 0 0; }
+.coverage-stacked-legend li,
+.coverage-stacked-counts li { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.coverage-stacked-swatch { width: 11px; height: 11px; flex: none; background: var(--coverage-bar-color); }
+.coverage-stacked-axis { display: flex; justify-content: space-between; margin: 0 0 7px 66px; color: var(--text-muted); font-size: 11px; }
+.coverage-stacked-row { display: grid; grid-template-columns: 55px minmax(0, 1fr); gap: 11px; }
+.coverage-stacked-row + .coverage-stacked-row { margin-top: 16px; }
+.coverage-stacked-label { display: flex; align-items: center; height: 28px; font-size: 12px; }
+.coverage-stacked-values { min-width: 0; }
+.coverage-stacked-track { display: flex; width: 100%; height: 28px; background: var(--surface-soft); }
+.coverage-stacked-segment {
+  container: coverage-segment / inline-size;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--coverage-bar-color);
+  color: #222;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.coverage-stacked-percent { display: none; }
+.coverage-stacked-empty { display: flex; align-items: center; min-height: 28px; color: var(--text-muted); font-size: 12px; }
+@container coverage-segment (min-width: 48px) {
+  .coverage-stacked-percent { display: inline; }
+}
+@media (max-width: 620px) {
+  .coverage-stacked-row { grid-template-columns: 44px minmax(0, 1fr); gap: 8px; }
+  .coverage-stacked-axis { margin-left: 52px; }
+  .coverage-stacked-axis > :nth-child(2),
+  .coverage-stacked-axis > :nth-child(4) { display: none; }
+  .coverage-stacked-values { display: contents; }
+  .coverage-stacked-counts { grid-column: 1 / -1; margin: 0; gap: 4px 12px; }
+}

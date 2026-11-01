@@ -62,7 +62,7 @@ export function TalentStructurePage({ rows, loading, initialSelection, invalidSe
   return <section className="skill-effects-page skill-structure-page talent-structure-page">
     <header className="page-intro skill-effects-page-intro"><div>
       <span className="page-kicker">TALENT STRUCTURE</span><h1>素質構造</h1>
-    </div></header>
+    </div><p><a className="button secondary" href="#/structure-coverage">実装範囲</a></p></header>
     {loading && rows.length === 0 ? <div className="operator-empty-state skill-effects-page-state" role="status">
       <strong>オペレーターデータを読み込み中…</strong>
     </div> : <>

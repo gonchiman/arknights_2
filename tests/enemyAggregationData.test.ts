@@ -14,6 +14,13 @@ const entries = catalog.versions.slice(0, 2)
 const files = new Map(await Promise.all(entries.map(async entry => [entry.file, await readFile(new URL(entry.file, folder))] as const)))
 const prefix = '/arknights_2/data/enemy-aggregation/'
 
+test('expected coverage in the catalog must match the payload even after a cached successful read', async () => {
+  const client = createEnemyAggregationClient({ fetch: async () => new Response(files.get(entries[0].file)) })
+  await client.loadVersion(entries[0])
+  await assert.rejects(client.loadVersion({ ...entries[0],
+    summary: { ...entries[0].summary, expectedMapCount: 1 } }), /一致/)
+})
+
 test('shipped old and new datasets reproduce the same-revision 75 map increase without live data', async () => {
   const calls: string[] = []
   const client = createEnemyAggregationClient({ base: '/arknights_2/', fetch: async input => {

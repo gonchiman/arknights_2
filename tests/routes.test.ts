@@ -34,6 +34,21 @@ test('敵の重回帰分析を統計分析の隣の導線から独立したペ�
   }
 })
 
+test('敵の状態異常耐性は敵分析の導線から集計版を指定して開く', () => {
+  const path = '#/analysis/enemies/immunities'
+  assert.deepEqual(parseHashRoute(path), { view: 'enemy-immunities' })
+  assert.deepEqual(parseHashRoute(`${path}?aggregationVersion=v1`), { view: 'enemy-immunities' })
+  assert.deepEqual(parseHashRoute(`${path}?aggregationVersion=missing`), { view: 'enemy-immunities' })
+  const regressionIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'enemy-regression')
+  assert.deepEqual(APP_NAV_ITEMS[regressionIndex + 1], {
+    id: 'enemy-immunities', href: path, label: '敵の状態異常耐性',
+    description: '', section: 'analysis',
+  })
+  for (const suffix of ['/', '/extra', '-extra', '/extra?aggregationVersion=v1']) {
+    assert.deepEqual(parseHashRoute(`${path}${suffix}`), { view: 'operators' })
+  }
+})
+
 test('集計マップ確認は敵分析用の独立ページとして開く', () => {
   assert.deepEqual(parseHashRoute('#/analysis/enemies/maps'), { view: 'enemy-map-coverage' })
   assert.deepEqual(APP_NAV_ITEMS.find((item) => item.id === 'enemy-map-coverage'), {
@@ -100,6 +115,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['skill-effects', 'skill-effects'],
       ['skill-summary', 'skill-summary'],
       ['skill-structure', 'skill-structure'],
+      ['structure-coverage', 'structure-coverage'],
       ['skill-json', 'skill-json'],
       ['skill-kmeans', 'skill-kmeans'],
       ['skill-hdbscan', 'skill-hdbscan'],
@@ -109,11 +125,13 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['damage-two', 'damage-two'],
       ['damage-three', 'damage-three'],
       ['damage-three-coverage', 'damage-three-coverage'],
+      ['damage-three-comparison', 'damage-three-comparison'],
       ['damage-verification', 'damage-verification'],
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
       ['enemy-analysis', 'enemy-analysis'],
       ['enemy-regression', 'enemy-regression'],
+      ['enemy-immunities', 'enemy-immunities'],
       ['enemy-map-coverage', 'enemy-map-coverage'],
       ['main-enemy-trends', 'main-enemy-trends'],
       ['roguelike', 'roguelike'],
@@ -129,6 +147,18 @@ test('サイドバーから主要ページへ遷移できる', () => {
 
 test('比較ページのhashを解析する', () => {
   assert.deepEqual(parseHashRoute('#/comparison'), { view: 'comparison' })
+})
+
+test('大分類・構造化の実装範囲をDC3の実装範囲とは独立したページとして開く', () => {
+  assert.deepEqual(parseHashRoute('#/structure-coverage'), { view: 'structure-coverage' })
+  assert.deepEqual(parseHashRoute('#/damage-3/coverage'), { view: 'damage-three-coverage' })
+  assert.deepEqual(APP_NAV_ITEMS.find(item => item.id === 'structure-coverage'), {
+    id: 'structure-coverage', href: '#/structure-coverage', label: '大分類・構造化の実装範囲',
+    description: '', section: 'analysis',
+  })
+  for (const suffix of ['/', '/extra', '?kind=skill', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/structure-coverage${suffix}`), { view: 'operators' })
+  }
 })
 
 test('K-means 学習ラボは専用ページとしてスキル分析から開く', () => {
@@ -419,6 +449,18 @@ test('DC3の共有URLは選択なしと符号化されたスキル・レベル�
   })
 })
 
+test('DC3 スキル比較は実装範囲の隣から独立したページとして開く', () => {
+  assert.deepEqual(parseHashRoute('#/damage-3/comparison'), { view: 'damage-three-comparison' })
+  const coverageIndex = APP_NAV_ITEMS.findIndex(item => item.id === 'damage-three-coverage')
+  assert.deepEqual(APP_NAV_ITEMS[coverageIndex + 1], {
+    id: 'damage-three-comparison', href: '#/damage-3/comparison', label: 'DC3 スキル比較',
+    description: '', section: 'analysis',
+  })
+  for (const suffix of ['/', '/extra', '?operatorId=char_350_surtr', '-extra']) {
+    assert.deepEqual(parseHashRoute(`#/damage-3/comparison${suffix}`), { view: 'operators' })
+  }
+})
+
 test('DC3の不完全・不正・重複したクエリは選択なしの計算機へ戻す', () => {
   const selection = { operatorId: 'char_test', skillIndex: '1', skillId: 'skill_test', levelIndex: '0' }
   const invalidValues = {
@@ -472,7 +514,7 @@ test('ダメージ検証は共通メニューから開き、スルトのトッ�
     description: '',
     section: 'analysis',
   })
-  const calculatorIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'damage-three-coverage')
+  const calculatorIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'damage-three-comparison')
   assert.equal(APP_NAV_ITEMS[calculatorIndex + 1], DAMAGE_VERIFICATION_ITEM)
   assert.deepEqual(SURTR_HOME_ITEMS, SURTR_ANALYSIS_ITEMS)
   assert.equal(SURTR_ANALYSIS_ITEMS.some((item) => item.id === 'damage-verification'), false)

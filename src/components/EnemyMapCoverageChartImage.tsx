@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { getChartImageLayout } from '../lib/chartImageLayout'
 import {
-  MAP_COVERAGE_COLORS, MAP_COVERAGE_MODE_LABELS, MAP_COVERAGE_STATUS_KEYS, MAP_COVERAGE_STATUS_LABELS,
+  getMapCoverageSegmentCount, MAP_COVERAGE_COLORS, MAP_COVERAGE_MODE_LABELS, MAP_COVERAGE_STATUS_KEYS, MAP_COVERAGE_STATUS_LABELS,
 } from '../lib/enemyMapCoverageChartImage'
 import type { EnemyMapCoverageChartSnapshot } from '../lib/enemyMapCoverageChartImage'
 import { ChartImageFrame } from './ChartImageFrame'
@@ -41,11 +41,11 @@ function CoveragePlot({ snapshot, width, height }: {
       const center = top + rowHeight * (index + 0.5)
       let offset = left
       return <g key={category.key}>
-        <title>{`${category.label}、${MAP_COVERAGE_STATUS_KEYS.map((status) => `${MAP_COVERAGE_STATUS_LABELS[status]} ${formatCount(category[status])}`).join('、')} マップ`}</title>
+        <title>{`${category.label}、${MAP_COVERAGE_STATUS_KEYS.map((status) => `${MAP_COVERAGE_STATUS_LABELS[status]} ${formatCount(getMapCoverageSegmentCount(category, status))}`).join('、')} マップ`}</title>
         <text x="0" y={center} dy="0.35em" fontSize="12" fill="#444">{category.label}</text>
         <rect x={left} y={center - barHeight / 2} width={barWidth} height={barHeight} fill="#f5f5f5" />
         {MAP_COVERAGE_STATUS_KEYS.map((status) => {
-          const segmentWidth = category.total > 0 ? barWidth * category[status] / category.total : 0
+          const segmentWidth = category.total > 0 ? barWidth * getMapCoverageSegmentCount(category, status) / category.total : 0
           const x = offset
           offset += segmentWidth
           return <rect key={status} x={x} y={center - barHeight / 2} width={segmentWidth}
@@ -69,8 +69,7 @@ function CoveragePlot({ snapshot, width, height }: {
 
 export function EnemyMapCoverageChartImage({ snapshot, aspectRatio, onLayout }: ImageProps) {
   return <ChartImageFrame key={`${JSON.stringify(snapshot)}:${aspectRatio ?? 'auto'}`}
-    title="集計マップ" conditions={[MAP_COVERAGE_MODE_LABELS[snapshot.mode], snapshot.aggregationVersion?.label,
-      snapshot.totals.lowerBound ? `下限集計 ${formatCount(snapshot.totals.lowerBound)}マップ含む` : null].filter(Boolean).join(' · ')}
+    title="集計マップ" conditions={[MAP_COVERAGE_MODE_LABELS[snapshot.mode], snapshot.aggregationVersion?.label].filter(Boolean).join(' · ')}
     axisTitle="収録マップに占める割合" naturalChartHeight={NATURAL_CHART_HEIGHT}
     aspectRatio={aspectRatio} onLayout={onLayout}
     legend={<ul className="chart-image-frame-legend-list" aria-label="集計対象の内訳">
@@ -78,7 +77,7 @@ export function EnemyMapCoverageChartImage({ snapshot, aspectRatio, onLayout }: 
         <svg className="chart-image-frame-legend-swatch" width="18" height="12" aria-hidden="true">
           <rect x="0" y="1" width="10" height="10" fill={MAP_COVERAGE_COLORS[status]} />
         </svg>
-        <span>{MAP_COVERAGE_STATUS_LABELS[status]} {formatCount(snapshot.totals[status])}</span>
+        <span>{MAP_COVERAGE_STATUS_LABELS[status]} {formatCount(getMapCoverageSegmentCount(snapshot.totals, status))}</span>
       </li>)}
     </ul>}>
     {({ width, height }) => <CoveragePlot snapshot={snapshot} width={width} height={height} />}

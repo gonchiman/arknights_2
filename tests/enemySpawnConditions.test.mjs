@@ -40,6 +40,45 @@ test('fixed SPAWNs preserve source indices, evidence and input; display actions 
   assert.match(result.actions[0].evidence[0], /waves\[0\].fragments\[0\].actions\[1\]/)
 })
 
+test('an empty object action collection contributes no enemies and preserves subsequent source coordinates', () => {
+  const source = level()
+  source.waves[0].fragments = [
+    { preDelay: 2, actions: [spawn('enemy_a', 3)] },
+    { preDelay: 7, actions: {} },
+    { preDelay: 1, actions: [{ actionType: 'DISPLAY_ENEMY_INFO', key: 'enemy_b' }, spawn('enemy_b', 4)] },
+  ]
+  const before = structuredClone(source)
+  const result = analyzeEnemySpawns(source)
+  assert.deepEqual([...result.reasons], [])
+  assert.deepEqual([...result.counts], [['enemy_a', 3], ['enemy_b', 4]])
+  assert.deepEqual(result.actions.map(action => [action.waveIndex, action.fragmentIndex, action.actionIndex]), [[0, 0, 0], [0, 2, 1]])
+  assert.deepEqual(source, before)
+})
+
+test('missing, nonempty or noncollection action values are never guessed to mean no enemies', () => {
+  for (const actions of [undefined, null, false, 0, '', { 0: spawn() }, { length: 0 }, { spawn: spawn() }, new Date()]) {
+    const source = level(actions)
+    // Explicitly preserve missing rather than using the fixture default.
+    source.waves[0].fragments[0].actions = actions
+    assert.ok(analyzeEnemySpawns(source).reasons.has('invalid-actions'))
+  }
+  assert.ok(analyzeEnemySpawns(level([null])).reasons.has('invalid-action'))
+  const missing = level([])
+  delete missing.waves[0].fragments[0].actions
+  assert.ok(analyzeEnemySpawns(missing).reasons.has('invalid-actions'))
+})
+
+test('empty collections do not erase unknown fragment or wave settings, or resolve unrelated branches', () => {
+  const fragment = level({})
+  fragment.waves[0].fragments[0].futureSpawnMechanism = true
+  assert.ok(analyzeEnemySpawns(fragment).reasons.has('unsupported-fragment-field:futureSpawnMechanism'))
+  const wave = level({})
+  wave.waves[0].advancedWaveTag = 'future'
+  assert.ok(analyzeEnemySpawns(wave).reasons.has('unsupported-wave-tag'))
+  const branches = level({}, { branches: { unknown: { phases: [{ actions: [spawn()] }] } } })
+  assert.ok(analyzeEnemySpawns(branches).reasons.has('branch-spawn'))
+})
+
 test('an explicit matching enable resolves a hidden group and records source evidence', () => {
   const source = level([spawn('enemy_a', 2, { hiddenGroup: 'fstar' })], { runes: [enable('fstar', 'FOUR_STAR')] })
   const result = analyzeEnemySpawns(source, { difficulty: 'NORMAL', diffGroup: 'TOUGH' })

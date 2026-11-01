@@ -34,7 +34,7 @@ test('lower-bound metadata is retained without asserting a complete map total', 
   assert.equal(result.spawnCount, null)
   assert.deepEqual(result.spawnAggregation, partial.spawnAggregation)
   assert.equal(getMapCoverageStatus(result, 'SPAWNS'), 'included')
-  assert.equal(getMapCoverageStatusLabel(result, 'SPAWNS'), '下限集計')
+  assert.equal(getMapCoverageStatusLabel(result, 'SPAWNS'), '条件付き集計対象')
   assert.deepEqual(getMapCoverageReasons(result, 'SPAWNS'), ['確定出現分のみ集計', '分岐に応じた出現指定'])
 })
 
@@ -56,10 +56,13 @@ test('lower-bound coverage is a subset of included maps and is not double counte
   const summary = summarizeMapCoverage([partial, partial, complete], 'SPAWNS')
   assert.deepEqual(summary, { total: 2, included: 2, excluded: 0, missing: 0, lowerBound: 1 })
   assert.deepEqual(summarizeMapCoverage([partial, complete], 'MAPS'), { total: 2, included: 2, excluded: 0, missing: 0 })
-  assert.equal(getMapCoverageStatusLabel(partial, 'MAPS'), '集計対象')
+  assert.equal(getMapCoverageStatusLabel(partial, 'MAPS'), '通常の集計対象')
   assert.deepEqual(getMapCoverageReasons(partial, 'MAPS'), ['マップデータ取得済み'])
   const snapshot = createEnemyMapCoverageChartSnapshot([partial, complete], 'SPAWNS')
   assert.equal(snapshot.totals.lowerBound, 1)
+  assert.equal(snapshot.totals.regular, 1)
+  assert.equal(snapshot.totals.conditional, 1)
+  assert.equal(snapshot.totals.included, 2)
   assert.equal(snapshot.categories.find(category => category.key === 'main')!.lowerBound, 1)
 })
 

@@ -1,10 +1,12 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { resolveStageStatisticsExclusion } from '../src/lib/enemyAggregationScope.ts'
 
 const RAW_BASE = 'https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/master/jp/gamedata'
 const STAGE_TABLE_URL = `${RAW_BASE}/excel/stage_table.json`
 const ZONE_TABLE_URL = `${RAW_BASE}/excel/zone_table.json`
+const ACTIVITY_TABLE_URL = `${RAW_BASE}/excel/activity_table.json`
 const HANDBOOK_URL = `${RAW_BASE}/excel/enemy_handbook_table.json`
 const LEVEL_BASE_URL = `${RAW_BASE}/levels`
 const DEFAULT_CONCURRENCY = 8
@@ -31,10 +33,10 @@ export function normalizeLevelId(value) {
 }
 
 export function selectStageLevels(stageTableSource, {
-  excludeStoryEnvironment = false, excludeOtherCategories = false, zoneTableSource,
+  excludeStoryEnvironment = false, excludeOtherCategories = false, excludeSpecialActivities = false, zoneTableSource, activityTableSource,
 } = {}) {
   const zones = asRecord(asRecord(zoneTableSource)?.zones)
-  if (excludeOtherCategories && !zones) throw new Error('Excluding other categories requires a valid zone table')
+  if ((excludeOtherCategories || excludeSpecialActivities) && !zones) throw new Error('Excluding categories requires a valid zone table')
   const stages = asRecord(asRecord(stageTableSource)?.stages)
   if (!stages) return { stageRecordCount: 0, levels: [], excludedLevelIds: [] }
 
@@ -50,9 +52,12 @@ export function selectStageLevels(stageTableSource, {
     const stageId = readString(stage.stageId) ?? fallbackStageId
     if (!levelId || !stageId) continue
 
-    const zoneType = readString(asRecord(zones?.[readString(stage.zoneId)])?.type)
+    const zone = asRecord(zones?.[readString(stage.zoneId)])
+    if (excludeSpecialActivities && !zone) throw new Error(`Missing activity zone: ${String(stage.zoneId)}`)
+    const zoneType = readString(zone?.type)
     if ((excludeStoryEnvironment && readString(stage.diffGroup) === 'EASY')
-      || (excludeOtherCategories && !STATISTICS_ZONE_TYPES.has(zoneType))) {
+      || (excludeOtherCategories && !STATISTICS_ZONE_TYPES.has(zoneType))
+      || (excludeSpecialActivities && resolveStageStatisticsExclusion(stage, zoneType, activityTableSource))) {
       excludedLevelIds.add(levelId)
       continue
     }
@@ -86,6 +91,26 @@ export function selectStageLevels(stageTableSource, {
     excludedLevelIds: [...excludedLevelIds].filter((levelId) => !candidatesByLevel.has(levelId))
       .sort((a, b) => a.localeCompare(b, 'en', { numeric: true })),
   }
+}
+
+/** Keep the inventory intact; mark only levels whose aliases are all special modes. */
+export function getSpecialModeExclusions(stageTableSource, zoneTableSource, activityTableSource) {
+  const zones = asRecord(asRecord(zoneTableSource)?.zones)
+  if (!zones) throw new Error('Excluding special activities requires a valid zone table')
+  const exclusions = new Map(), ordinary = new Set()
+  for (const raw of Object.values(asRecord(asRecord(stageTableSource)?.stages) ?? {})) {
+    const stage = asRecord(raw)
+    if (!stage || stage.isStoryOnly !== false) continue
+    const levelId = normalizeLevelId(stage.levelId)
+    if (!levelId) continue
+    const zone = asRecord(zones[readString(stage.zoneId)])
+    if (!zone) throw new Error(`Missing activity zone: ${String(stage.zoneId)}`)
+    const exclusion = resolveStageStatisticsExclusion(stage, readString(zone.type), activityTableSource)
+    if (exclusion) exclusions.set(levelId, exclusion)
+    else if (readString(stage.diffGroup) !== 'EASY' && STATISTICS_ZONE_TYPES.has(readString(zone.type))) ordinary.add(levelId)
+  }
+  for (const levelId of ordinary) exclusions.delete(levelId)
+  return exclusions
 }
 
 export function extractLevelEnemyIds(levelSource) {
@@ -166,6 +191,7 @@ export function buildEnemyStageAppearanceDocument({
       region: 'jp',
       stageTableUrl: STAGE_TABLE_URL,
       zoneTableUrl: ZONE_TABLE_URL,
+      activityTableUrl: ACTIVITY_TABLE_URL,
       handbookTableUrl: HANDBOOK_URL,
       levelBaseUrl: LEVEL_BASE_URL,
     },
@@ -196,13 +222,15 @@ export function buildLevelUrl(levelId) {
 }
 
 async function generate({ outputPath, cacheRoot, concurrency, refresh }) {
-  const [stageTable, zoneTable, handbook] = await Promise.all([
+  const [stageTable, zoneTable, handbook, activityTable] = await Promise.all([
     fetchJsonWithRetry(STAGE_TABLE_URL, { retries: DEFAULT_RETRIES }),
     fetchJsonWithRetry(ZONE_TABLE_URL, { retries: DEFAULT_RETRIES }),
     fetchJsonWithRetry(HANDBOOK_URL, { retries: DEFAULT_RETRIES }),
+    fetchJsonWithRetry(ACTIVITY_TABLE_URL, { retries: DEFAULT_RETRIES }),
   ])
   const selection = selectStageLevels(stageTable, {
     excludeStoryEnvironment: true, excludeOtherCategories: true, zoneTableSource: zoneTable,
+    excludeSpecialActivities: true, activityTableSource: activityTable,
   })
   console.log(`${selection.stageRecordCount}件のステージから${selection.levels.length}個のLevelを集計します。`)
 

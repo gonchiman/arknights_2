@@ -5,6 +5,9 @@
 .analysis-tabs .detail-tab.active { background: var(--text); color: var(--surface); }
 .analysis-tab-panel { min-width: 0; border: 1px solid var(--border); background: var(--surface); }
 .analysis-tab-panel[hidden] { display: none; }
-.analysis-tab-panel > h2 { margin: 0; border-bottom: 1px solid var(--border); padding: 9px 12px; background: var(--surface-soft); color: var(--text-soft); font-size: 14px; font-weight: 500; }
+.analysis-tab-panel > h2,
+.analysis-tab-panel-header { margin: 0; border-bottom: 1px solid var(--border); padding: 9px 12px; background: var(--surface-soft); color: var(--text-soft); font-size: 14px; font-weight: 500; }
+.analysis-tab-panel-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.analysis-tab-panel-header > h2 { margin: 0; font: inherit; }
 .analysis-panel-body { min-width: 0; padding: 16px; }
 @media (max-width: 760px), (pointer: coarse) { .analysis-tabs .detail-tab { min-height: 44px; } }

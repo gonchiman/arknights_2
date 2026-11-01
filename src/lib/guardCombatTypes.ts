@@ -1,4 +1,5 @@
 import type { DamageType } from './damageCalculator.ts'
+import type { PeriodTotalCapability } from './damagePeriodTotal.ts'
 
 /** A skill can replace individual base-attack rules without disabling unrelated traits. */
 export type GuardTraitOverride = 'DAMAGE_TYPE' | 'HIT_COUNT' | 'MAX_TARGETS' | 'ATTACK_TARGETING' | 'ATTACK_SCALE' | 'SPLASH_DAMAGE'
@@ -63,6 +64,8 @@ export interface GuardStage {
   /** A skill's block-count change; structured multi-target traits read the resulting count. */
   blockCountAdd?: GuardValue
   duration?: GuardValue | 'UNTIL_EXIT'
+  /** Explicit coverage of the stage and all damage-bearing passive effects. */
+  periodTotal?: PeriodTotalCapability
   actions: readonly GuardDamageAction[]
   defenseIgnoreRatio?: GuardValue
   defenseIgnoreFixed?: GuardValue

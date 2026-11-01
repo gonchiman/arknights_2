@@ -47,7 +47,7 @@ const summaryLabels = ['対応', '条件付き', '保留', '未対応', '対象�
 function assertSummary(markup, total, expectedCounts) {
   const rows = summaryRows(markup)
   assert.deepEqual(rows.map(row => row[1]), ['overall', 'skill', 'talent', 'trait'])
-  const legend = markup.match(/<ul class="damage-three-coverage-summary-legend"[^>]*>([\s\S]*?)<\/ul>/)?.[1]
+  const legend = markup.match(/<ul class="coverage-stacked-legend"[^>]*>([\s\S]*?)<\/ul>/)?.[1]
   assert.ok(legend)
   assert.deepEqual([...legend.matchAll(/<li>([\s\S]*?)<\/li>/g)].map(match => text(match[1])), summaryLabels)
   rows.forEach(([, key, content], index) => {
@@ -56,7 +56,7 @@ function assertSummary(markup, total, expectedCounts) {
     const expectedDescription = `${label}：${total}スキル中、${counts.map((count, statusIndex) =>
       `${summaryLabels[statusIndex]} ${count}件（${(count / total * 100).toFixed(1)}%）`).join('、')}`
     assert.equal(content.match(/role="img" aria-label="([^"]+)"/)?.[1], expectedDescription, key)
-    const segments = [...content.matchAll(/class="damage-three-coverage-summary-segment" data-coverage-status="([^"]+)" style="width:([^%]+)%" title="([^"]+)"/g)]
+    const segments = [...content.matchAll(/class="coverage-stacked-segment" data-coverage-status="([^"]+)" style="[^"]*width:([^%]+)%" title="([^"]+)"/g)]
     assert.deepEqual(segments.map(segment => segment[1]), summaryStatuses.filter((_, i) => counts[i] > 0), key)
     for (const [, status, width, title] of segments) {
       const statusIndex = summaryStatuses.indexOf(status)
@@ -64,7 +64,7 @@ function assertSummary(markup, total, expectedCounts) {
       assert.ok(Math.abs(Number(width) - proportion) < 1e-10, `${key}/${status} width`)
       assert.equal(title, `${summaryLabels[statusIndex]} ${counts[statusIndex]}件（${proportion.toFixed(1)}%）`)
     }
-    const values = content.match(/<ul class="damage-three-coverage-summary-counts"[^>]*>([\s\S]*?)<\/ul>/)?.[1]
+    const values = content.match(/<ul class="coverage-stacked-counts"[^>]*>([\s\S]*?)<\/ul>/)?.[1]
     assert.ok(values)
     assert.deepEqual([...values.matchAll(/<li>([\s\S]*?)<\/li>/g)].map(match => text(match[1])),
       counts.flatMap((count, i) => count > 0 ? [`${summaryLabels[i]} ${count}件 · ${(count / total * 100).toFixed(1)}%`] : []), key)
@@ -175,5 +175,5 @@ test('読み込み中と結果なしを区別する', () => {
   assert.match(emptyPage, /条件に一致するスキルがありません/)
   assert.match(emptyPage, /<span>0スキル<\/span>/)
   assert.match(emptyPage, /集計対象のスキルがありません/)
-  assert.doesNotMatch(emptyPage, /data-coverage-section=|class="damage-three-coverage-summary-track"|NaN|Infinity/)
+  assert.doesNotMatch(emptyPage, /data-coverage-section=|class="coverage-stacked-track"|NaN|Infinity/)
 })

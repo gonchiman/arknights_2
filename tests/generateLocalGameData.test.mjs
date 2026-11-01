@@ -37,6 +37,7 @@ function fixture() {
       event: stage('event', eventId, { stageType: 'ACTIVITY', zoneId: 'event' }),
     } },
     zoneTable: { zones: { main_0: { zoneNameFirst: '序章', type: 'MAINLINE' }, event: { type: 'ACTIVITY' } } },
+    activityTable: { basicInfo: { event: { id: 'event', type: 'MINISTORY' } }, zoneToActivity: { event: 'event' } },
     handbook: { enemyData: { enemy_a: { enemyId: 'enemy_a', name: '兵士', enemyLevel: 'NORMAL' } } },
     database: { enemy_a: [{ level: 0, enemyData: {
       name: { m_defined: true, m_value: '兵士' },
@@ -75,6 +76,79 @@ test('one revision generates matching appearances, maps, details and chapter dat
   }
   assert.deepEqual(source, original)
   assert.deepEqual(generateLocalGameData(source, { generatedAt }), files)
+})
+
+test('special modes are excluded from MAPS and SPAWNS while retaining all map details and readiness', () => {
+  const source = fixture()
+  source.activityTable.basicInfo.event.type = 'MULTIPLAY_V3'
+  // A conditional special map must retain its analytical lower-bound metadata.
+  source.levels.get(eventId).waves[0].fragments[0].actions.push(spawn('enemy_a', 2, { unknownCondition: true }))
+  const files = generateLocalGameData(source, { generatedAt })
+  const counts = files.get('enemy-histogram-counts.json')
+  const appearances = files.get('enemy-stage-appearances.json')
+  assert.deepEqual(counts.enemies.enemy_a, { mapCount: 1, spawnCount: 3 })
+  assert.deepEqual(appearances.enemies.enemy_a, { stageCount: 1, stageIds: ['main_00-01'] })
+  assert.ok(counts.diagnostics.excludedLevelIds.includes(eventId))
+  assert.ok(appearances.diagnostics.excludedLevelIds.includes(eventId))
+  const map = files.get('maps/index.json').maps.find(map => map.levelId === eventId)
+  assert.deepEqual(map.statisticsExclusion, { kind: 'special-mode', activityType: 'MULTIPLAY_V3', activityId: 'event' })
+  assert.ok(files.get(`maps/${map.detailFile}`).maps[eventId])
+  const legacy = generateLocalGameData(source, { generatedAt, excludeSpecialActivities: false })
+  const legacyMap = legacy.get('maps/index.json').maps.find(map => map.levelId === eventId)
+  const { statisticsExclusion, ...analysis } = map
+  assert.deepEqual(analysis, legacyMap)
+  assert.equal(legacy.get('enemy-stage-appearances.json').enemies.enemy_a.stageCount, 2)
+})
+
+test('unavailable special levels remain visible but do not inflate scoped missing counts', () => {
+  const source = fixture()
+  source.activityTable.basicInfo.event.type = 'BOSS_RUSH'
+  source.levels.delete(eventId)
+  source.missingLevelIds = [eventId]
+  const files = generateLocalGameData(source, { generatedAt })
+  assert.equal(files.get('enemy-histogram-counts.json').summary.missingMapCount, 0)
+  assert.equal(files.get('enemy-stage-appearances.json').status, 'complete')
+  const map = files.get('maps/index.json').maps.find(map => map.levelId === eventId)
+  assert.equal(map.status, 'missing')
+  assert.equal(map.statisticsExclusion.activityType, 'BOSS_RUSH')
+})
+
+test('event scopes with missing or unknown activity classifications cannot silently publish', () => {
+  for (const modify of [source => { delete source.activityTable }, source => { source.activityTable.zoneToActivity = {} },
+    source => { source.activityTable.basicInfo.event.type = 'FUTURE_MODE' }]) {
+    const source = fixture()
+    modify(source)
+    assert.throws(() => generateLocalGameData(source, { generatedAt }), /activity classification/)
+  }
+})
+
+test('shared levels use the eligible ordinary environment consistently across all outputs', () => {
+  const source = fixture()
+  source.activityTable.basicInfo.event.type = 'MULTIPLAY_V3'
+  source.stageTable.stages.event.stageId = 'a_special'
+  source.stageTable.stages.normalAlias = stage('z_ordinary', eventId, { difficulty: 'NORMAL', diffGroup: 'NORMAL' })
+  const files = generateLocalGameData(source, { generatedAt })
+  const map = files.get('maps/index.json').maps.find(map => map.levelId === eventId)
+  assert.equal(map.stageId, 'z_ordinary')
+  assert.equal(map.diffGroup, 'NORMAL')
+  assert.equal(map.statisticsExclusion, undefined)
+  assert.ok(files.get('enemy-stage-appearances.json').enemies.enemy_a.stageIds.includes('z_ordinary'))
+  assert.deepEqual(files.get('enemy-histogram-counts.json').enemies.enemy_a, { mapCount: 2, spawnCount: 8 })
+})
+
+test('story or other-category aliases cannot re-enable a special-mode level', () => {
+  for (const excludedAlias of [{ diffGroup: 'EASY' }, { zoneId: 'other' }]) {
+    const source = fixture()
+    source.activityTable.basicInfo.event.type = 'MULTIPLAY_V3'
+    source.stageTable.stages.event.stageId = 'a_special'
+    source.zoneTable.zones.other = { type: 'CAMPAIGN' }
+    source.stageTable.stages.normalAlias = stage('z_alias', eventId, excludedAlias)
+    const files = generateLocalGameData(source, { generatedAt })
+    const map = files.get('maps/index.json').maps.find(map => map.levelId === eventId)
+    assert.equal(map.statisticsExclusion.activityType, 'MULTIPLAY_V3')
+    assert.ok(files.get('enemy-histogram-counts.json').diagnostics.excludedLevelIds.includes(eventId))
+    assert.deepEqual(files.get('enemy-histogram-counts.json').enemies.enemy_a, { mapCount: 1, spawnCount: 3 })
+  }
 })
 
 test('other-category maps stay in the map database but never contribute to enemy statistics or missing coverage', () => {
@@ -249,7 +323,7 @@ test('lower-bound generation retains fixed spawns while preserving raw uncertain
   const source = fixture()
   source.levels.get(mainId).waves[0].fragments[0].actions.push(spawn('enemy_a', 20, { condition: 'phase2' }))
   source.levels.get(eventId).waves[0].fragments[0].actions[0].futureRule = true
-  const files = generateLocalGameData(source, { generatedAt })
+  const files = generateLocalGameData(source, { generatedAt, spawnAggregationMode: 'lower-bound' })
   const histogram = files.get('enemy-histogram-counts.json')
   assert.deepEqual(histogram.enemies.enemy_a, { mapCount: 2, spawnCount: 3 })
   assert.equal(histogram.summary.spawnExcludedMapCount, 1)
@@ -272,6 +346,10 @@ test('lower-bound generation retains fixed spawns while preserving raw uncertain
   assert.equal(legacyHistogram.summary.spawnExcludedMapCount, 2)
   assert.equal(legacyHistogram.summary.lowerBoundMapCount, undefined)
   assert.equal(legacyFiles.get('maps/index.json').maps.find((map) => map.levelId === mainId).spawnAggregation, undefined)
+  const current = generateLocalGameData(source, { generatedAt }).get('enemy-histogram-counts.json')
+  assert.equal(current.spawnAggregationMode, 'expected-lower-bound')
+  assert.equal(current.summary.expectedMapCount, 0)
+  assert.deepEqual(current.enemies, histogram.enemies)
 })
 
 test('special levels with unavailable wave structure retain their geometry and references with unknown spawn counts', () => {

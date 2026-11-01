@@ -14,6 +14,7 @@ export type AppRoute =
   | { view: 'skill-effects'; selection?: SkillEffectsRouteSelection }
   | { view: 'skill-summary'; selection?: SkillRouteSelection }
   | { view: 'skill-structure'; selection?: SkillRouteSelection }
+  | { view: 'structure-coverage' }
   | { view: 'operators' }
   | { view: 'operator-pca' }
   | { view: 'operator-detail'; operatorId: string; source?: OperatorDetailSource }
@@ -24,6 +25,7 @@ export type AppRoute =
   | { view: 'damage-two' }
   | { view: 'damage-three'; selection?: SkillRouteSelection }
   | { view: 'damage-three-coverage' }
+  | { view: 'damage-three-comparison' }
   | { view: 'damage-verification' }
   | { view: 'goldenglow-home' }
   | { view: 'surtr-home' }
@@ -44,6 +46,7 @@ export type AppRoute =
   | { view: 'enemies' }
   | { view: 'enemy-analysis' }
   | { view: 'enemy-regression' }
+  | { view: 'enemy-immunities' }
   | { view: 'enemy-map-coverage' }
   | { view: 'main-enemy-trends' }
   | { view: 'maps' }
@@ -141,6 +144,7 @@ function createSkillSelectionHash(route: string, selection: SkillRouteSelection)
 
 export function parseHashRoute(hash: string): AppRoute {
   if (hash === '' || hash === '#' || hash === '#/') return { view: 'home' }
+  if (hash === '#/structure-coverage') return { view: 'structure-coverage' }
   if (hash === TRAIT_STRUCTURE_ROUTE) return { view: 'trait-structure' }
   if (hash.startsWith(`${TRAIT_STRUCTURE_ROUTE}?`)) {
     const params = new URLSearchParams(hash.slice(TRAIT_STRUCTURE_ROUTE.length + 1))
@@ -208,6 +212,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/damage') return { view: 'damage' }
   if (hash === '#/damage-2') return { view: 'damage-two' }
   if (hash === '#/damage-3/coverage') return { view: 'damage-three-coverage' }
+  if (hash === '#/damage-3/comparison') return { view: 'damage-three-comparison' }
   if (hash === DAMAGE_THREE_ROUTE) return { view: 'damage-three' }
   if (hash.startsWith(`${DAMAGE_THREE_ROUTE}?`)) {
     return parseSkillSelectionRoute('damage-three', hash.slice(DAMAGE_THREE_ROUTE.length + 1))
@@ -240,6 +245,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/enemies') return { view: 'enemies' }
   if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies')) return { view: 'enemy-analysis' }
   if (hash === '#/analysis/enemies/regression') return { view: 'enemy-regression' }
+  if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies/immunities')) return { view: 'enemy-immunities' }
   if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies/maps')) return { view: 'enemy-map-coverage' }
   if (hash === '#/analysis/enemies/main-trends') return { view: 'main-enemy-trends' }
   if (hash === '#/maps') return { view: 'maps' }

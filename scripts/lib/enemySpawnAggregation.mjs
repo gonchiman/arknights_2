@@ -58,17 +58,24 @@ function partialBranchesAreValid(level, context) {
  * count, rather than each deciding whether a partial map is usable.
  */
 export function resolveEnemySpawnAggregation(level, context, { mode = 'strict', analysis } = {}) {
-  if (!['strict', 'lower-bound'].includes(mode)) throw new Error('Unknown enemy spawn aggregation mode')
-  const source = analysis ?? analyzeEnemySpawns(level, context)
+  if (!['strict', 'lower-bound', 'expected-lower-bound'].includes(mode)) throw new Error('Unknown enemy spawn aggregation mode')
+  const resolutionContext = context ? { ...context, randomSpawnMode: mode === 'expected-lower-bound' ? 'expected' : 'lower-bound' } : context
+  // A caller may reuse a precomputed analysis, but expected frequencies must
+  // never be relabelled as guaranteed lower bounds by a different caller mode.
+  const source = analysis && !(analysis.hasExpectedSpawns && mode !== 'expected-lower-bound')
+    ? analysis : analyzeEnemySpawns(level, resolutionContext)
+  const expected = mode === 'expected-lower-bound' && source.hasExpectedSpawns === true
+  const validAmount = amount => expected
+    ? typeof amount === 'number' && Number.isFinite(amount) && amount >= 0 && amount <= Number.MAX_SAFE_INTEGER : count(amount)
   const reasons = [...source.reasons].sort()
   const counts = new Map(source.counts)
   const result = { kind: 'excluded', counts, reasons, count: null,
     excludedNonEnemySpawns: [], unverifiedNonEnemySpawns: [] }
   let total = 0
   for (const amount of counts.values()) {
-    if (!count(amount) || !count(total += amount)) return result
+    if (!validAmount(amount) || !validAmount(total += amount)) return result
   }
-  if (reasons.length && (mode !== 'lower-bound'
+  if (reasons.length && (mode === 'strict'
     || reasons.some(reason => !PARTIAL_REASONS.has(reason) && !emptyCollectionReason(level, reason)))) return result
   if (reasons.length && !partialBranchesAreValid(level, context)) return result
 
@@ -80,11 +87,18 @@ export function resolveEnemySpawnAggregation(level, context, { mode = 'strict', 
       if (action.status !== 'included' || !(action.resolvedCount > 0) || !getNonEnemyUnitRole(action.resolvedEnemyId)) continue
       normalCounts.set(action.resolvedEnemyId, (normalCounts.get(action.resolvedEnemyId) ?? 0) + action.resolvedCount)
     }
+    // Random alternatives contribute a per-enemy lower bound, not a selected
+    // concrete action. Apply the same reviewed civilian/non-enemy exclusions.
+    for (const entry of source.countedRandomSpawns ?? []) {
+      if (entry.count > 0 && getNonEnemyUnitRole(entry.enemyId)) {
+        normalCounts.set(entry.enemyId, (normalCounts.get(entry.enemyId) ?? 0) + entry.count)
+      }
+    }
     for (const [enemyId, amount] of normalCounts) {
       const verified = getVerifiedNonEnemyUnit(level, context, enemyId)
       if (verified) {
         const remaining = counts.get(enemyId) - amount
-        if (!count(remaining)) return { ...result, excludedNonEnemySpawns: [], unverifiedNonEnemySpawns: [] }
+        if (!validAmount(remaining)) return { ...result, excludedNonEnemySpawns: [], unverifiedNonEnemySpawns: [] }
         counts.set(enemyId, remaining)
         total -= amount
         result.excludedNonEnemySpawns.push({ ...verified, count: amount })
@@ -93,6 +107,10 @@ export function resolveEnemySpawnAggregation(level, context, { mode = 'strict', 
     }
   }
   // A partial map with no known hostile contribution must not inflate coverage.
+  // Re-sum the remaining per-enemy values: sequential subtraction of fractional
+  // civilian contributions can leave a tiny positive floating-point residue.
+  total = [...counts.values()].reduce((sum, amount) => sum + amount, 0)
+  if (!validAmount(total)) return result
   if (reasons.length && total === 0) return { ...result, excludedNonEnemySpawns: [], unverifiedNonEnemySpawns: [] }
-  return { ...result, kind: reasons.length ? 'lower-bound' : 'exact', count: total }
+  return { ...result, kind: expected ? 'expected-lower-bound' : reasons.length ? 'lower-bound' : 'exact', count: total }
 }

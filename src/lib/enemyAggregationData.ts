@@ -53,7 +53,8 @@ export function createEnemyAggregationClient({ fetch: fetchOverride, base = '/' 
       || coverage.included !== version.summary.includedMapCount
       || coverage.excluded !== version.summary.excludedMapCount
       || coverage.missing !== version.summary.missingMapCount
-      || (counts.summary.lowerBoundMapCount ?? 0) !== (version.summary.lowerBoundMapCount ?? 0)) {
+      || (counts.summary.lowerBoundMapCount ?? 0) !== (version.summary.lowerBoundMapCount ?? 0)
+      || (counts.summary.expectedMapCount ?? 0) !== (version.summary.expectedMapCount ?? 0)) {
       throw new Error('マップ一覧と出現数の集計版が一致しません。')
     }
     const rows = buildEnemyRecords(bundle.files['runtime/enemy_handbook_table.json'],
@@ -62,7 +63,7 @@ export function createEnemyAggregationClient({ fetch: fetchOverride, base = '/' 
     return { maps, counts, rows }
   }
   function loadVersion(version: EnemyAggregationVersion) {
-    const key = `${version.id}:${version.sha256}`
+    const key = JSON.stringify([version.id, version.sha256, version.payloadSha256, version.summary])
     let request = requests.get(key)
     if (!request) {
       request = readVersion(version).catch(error => { requests.delete(key); throw error })

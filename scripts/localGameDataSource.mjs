@@ -17,6 +17,7 @@ const TABLES = {
   handbookTeam: 'excel/handbook_team_table.json',
   stageTable: 'excel/stage_table.json',
   zoneTable: 'excel/zone_table.json',
+  activityTable: 'excel/activity_table.json',
   handbook: 'excel/enemy_handbook_table.json',
   database: 'levels/enemydata/enemy_database.json',
 }
@@ -200,11 +201,22 @@ export function validateGameDataRuntimeTables({ character, skill, uniequip, batt
 }
 
 function validateTables(tables) {
-  const { stageTable, zoneTable, handbook, database } = tables
+  const { stageTable, zoneTable, activityTable, handbook, database } = tables
   validateGameDataRuntimeTables(tables)
   const enemies = record(database) && Object.hasOwn(database, 'enemies') ? database.enemies : database
   dictionaryValues(stageTable?.stages, 'stage table')
   dictionaryValues(zoneTable?.zones, 'zone table')
+  dictionaryValues(activityTable?.basicInfo, 'activity basic information')
+  const nonemptyKey = (value) => typeof value === 'string' && value.length > 0 && value.trim() === value
+  if (Object.entries(activityTable.basicInfo).some(([id, activity]) => !nonemptyKey(id)
+    || activity.id !== id || !nonemptyKey(activity.type))) {
+    throw new Error('Invalid activity basic information structure')
+  }
+  if (!record(activityTable.zoneToActivity) || !Object.keys(activityTable.zoneToActivity).length
+    || Object.entries(activityTable.zoneToActivity).some(([zoneId, activityId]) => !nonemptyKey(zoneId)
+      || !nonemptyKey(activityId) || !Object.hasOwn(activityTable.basicInfo, activityId))) {
+    throw new Error('Invalid activity zone mapping structure')
+  }
   dictionaryValues(handbook?.enemyData, 'enemy handbook')
   if ((!record(enemies) && !Array.isArray(enemies)) || !Object.keys(enemies).length) {
     throw new Error('Required game data table structure is missing')
