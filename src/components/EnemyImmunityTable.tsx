@@ -1,5 +1,6 @@
-import { useId, useRef, useState } from 'react'
-import { ENEMY_IMMUNITIES, type EnemyImmunityKey } from '../lib/enemyImmunities'
+import { useId, useMemo, useRef, useState } from 'react'
+import { getEnemyCountWeight, type EnemyHistogramCounts } from '../lib/enemyHistogramCounts'
+import { ENEMY_IMMUNITIES, type EnemyImmunityCountMode, type EnemyImmunityKey } from '../lib/enemyImmunities'
 import { ENEMY_LEVEL_LABELS } from '../lib/enemyLevelSelection'
 import type { EnemyRecord } from '../types/enemy'
 import { EnemyDetailModal } from './EnemyDetailModal'
@@ -8,19 +9,25 @@ import './EnemyImmunityTable.css'
 
 const PAGE_SIZE = 5
 
-export function EnemyImmunityTable({ rows, immunityKey }: {
+export function EnemyImmunityTable({ rows, immunityKey, countMode, counts }: {
   rows: readonly EnemyRecord[]
   immunityKey: EnemyImmunityKey
+  countMode: EnemyImmunityCountMode
+  counts: EnemyHistogramCounts
 }) {
   const headingId = useId()
   const [page, setPage] = useState(0)
   const [detailEnemy, setDetailEnemy] = useState<EnemyRecord | null>(null)
   const detailTrigger = useRef<HTMLButtonElement | null>(null)
   const label = ENEMY_IMMUNITIES.find(item => item.key === immunityKey)!.label
+  const showSpawns = countMode === 'SPAWNS'
+  const orderedRows = useMemo(() => showSpawns
+    ? [...rows].sort((a, b) => getEnemyCountWeight(b.id, 'SPAWNS', counts) - getEnemyCountWeight(a.id, 'SPAWNS', counts))
+    : rows, [rows, showSpawns, counts])
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount - 1)
   const first = currentPage * PAGE_SIZE
-  const visibleRows = rows.slice(first, first + PAGE_SIZE)
+  const visibleRows = orderedRows.slice(first, first + PAGE_SIZE)
 
   function closeDetail() {
     setDetailEnemy(null)
@@ -36,11 +43,12 @@ export function EnemyImmunityTable({ rows, immunityKey }: {
     </div>
     <div className="table-wrap enemy-table-wrap enemy-immunity-table-scroll"
       role="region" aria-label={`${label}無効の敵一覧・スクロール領域`} tabIndex={0}>
-      <table className="enemy-table enemy-immunity-table" aria-labelledby={headingId}>
+      <table className="enemy-table enemy-immunity-table" data-count-mode={countMode} aria-labelledby={headingId}>
         <thead><tr>
           <th scope="col">敵名</th>
           <th scope="col">区分</th>
           <th scope="col">無効化する状態異常</th>
+          {showSpawns && <th scope="col" className="enemy-immunity-spawn-count" aria-sort="descending">出現回数（体）</th>}
         </tr></thead>
         <tbody>{visibleRows.map(enemy => {
           const immunities = [...new Set(enemy.statusImmunities.map(value => value === '武装解除' ? '戦慄' : value))]
@@ -57,9 +65,10 @@ export function EnemyImmunityTable({ rows, immunityKey }: {
               <span className={value === label ? 'enemy-immunity-selected-status' : undefined}>{value}</span>
               {index < immunities.length - 1 ? '・' : ''}
             </span>)}</td>
+            {showSpawns && <td className="enemy-immunity-spawn-count">{getEnemyCountWeight(enemy.id, 'SPAWNS', counts).toLocaleString('ja-JP')}</td>}
           </tr>
         })}
-          {rows.length === 0 && <tr><td colSpan={3} className="enemy-immunity-table-empty">該当する敵なし</td></tr>}
+          {rows.length === 0 && <tr><td colSpan={showSpawns ? 4 : 3} className="enemy-immunity-table-empty">該当する敵なし</td></tr>}
         </tbody>
       </table>
     </div>

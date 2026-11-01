@@ -65,40 +65,35 @@ function EnemyImmunityContent({ rows, counts, levelType, onLevelChange, countMod
   const immunityId = useId()
   const scopedRows = useMemo(() => rows.filter(enemy => matchesEnemyFilters(enemy, { query: '', levelType })), [rows, levelType])
   const summary = useMemo(() => summarizeEnemyImmunities(scopedRows, countMode, counts), [scopedRows, countMode, counts])
-  const totalTypes = useMemo(() => new Set(rows.map(enemy => enemy.id)).size, [rows])
-  const scopedTypes = useMemo(() => new Set(scopedRows.map(enemy => enemy.id)).size, [scopedRows])
+  const allCount = useMemo(() => summarizeEnemyImmunities(rows, countMode, counts).total, [rows, countMode, counts])
   const immunityRows = useMemo(() => filterEnemiesByImmunity(scopedRows, immunityKey), [scopedRows, immunityKey])
-  const tableKey = `${JSON.stringify(normalizeEnemyLevelSelection(levelType))}:${immunityKey}`
+  const tableKey = `${JSON.stringify(normalizeEnemyLevelSelection(levelType))}:${immunityKey}:${countMode}`
   const countOption = COUNT_OPTIONS.find(option => option.key === countMode)!
 
   return <>
     <div className="enemy-immunity-filters">
       <EnemyFilterPanel multiple levelType={levelType} onChange={onLevelChange} showReset={false} />
       <div className="enemy-immunity-scope">
-        <strong>対象 {scopedTypes.toLocaleString('ja-JP')}種類 / {totalTypes.toLocaleString('ja-JP')}種類</strong>
-        <span>敵ID単位 · 基礎レベル</span>
+        <strong>対象 {summary.total.toLocaleString('ja-JP')}{countOption.unit} / {allCount.toLocaleString('ja-JP')}{countOption.unit}</strong>
+        <span>{countMode === 'SPAWNS' ? '各マップ1回分' : '敵ID単位'} · 基礎レベル</span>
+      </div>
+      <div className="enemy-immunity-count-controls">
+        <fieldset className="enemy-chart-visibility">
+          <legend>集計方法</legend>
+          <div role="radiogroup" aria-label="敵耐性の集計方法">
+            {COUNT_OPTIONS.map(option => <label key={option.key} className={countMode === option.key ? 'active' : ''}>
+              <input type="radio" name={`${countModeId}-count-mode`} value={option.key} checked={countMode === option.key}
+                onChange={() => onCountModeChange(option.key)} />
+              <span>{option.label}</span>
+            </label>)}
+          </div>
+        </fieldset>
+        {countMode === 'SPAWNS' && <span className="enemy-immunity-coverage" role="status">{getEnemySpawnCoverageLabel(counts.summary)}</span>}
       </div>
     </div>
     <AnalysisTabs tabs={TABS} activeTab={activeTab} onChange={onTabChange} idPrefix={tabId} label="敵耐性の表示切り替え" />
     <AnalysisTabPanel idPrefix={tabId} tab="graph" activeTab={activeTab} title={countMode === 'SPAWNS' ? '耐性別の出現回数' : '耐性別の敵数'}>
       <div className="analysis-panel-body">
-        <div className="enemy-immunity-count-controls">
-          <fieldset className="enemy-chart-visibility">
-            <legend>集計方法</legend>
-            <div role="radiogroup" aria-label="耐性グラフの集計方法">
-              {COUNT_OPTIONS.map(option => <label key={option.key} className={countMode === option.key ? 'active' : ''}>
-                <input type="radio" name={`${countModeId}-count-mode`} value={option.key} checked={countMode === option.key}
-                  onChange={() => onCountModeChange(option.key)} />
-                <span>{option.label}</span>
-              </label>)}
-            </div>
-          </fieldset>
-          {countMode === 'SPAWNS' && <span className="enemy-immunity-coverage" role="status">{getEnemySpawnCoverageLabel(counts.summary)}</span>}
-          <div className="enemy-immunity-graph-scope">
-            <strong>対象 {summary.total.toLocaleString('ja-JP')}{countOption.unit}</strong>
-            {countMode === 'SPAWNS' && <span>各マップ1回分</span>}
-          </div>
-        </div>
         <EnemyImmunityChart items={summary.items} countMode={countMode} />
       </div>
     </AnalysisTabPanel>
@@ -111,7 +106,7 @@ function EnemyImmunityContent({ rows, counts, levelType, onLevelChange, countMod
       </label>
     }>
       <div className="analysis-panel-body">
-        <EnemyImmunityTable key={tableKey} rows={immunityRows} immunityKey={immunityKey} />
+        <EnemyImmunityTable key={tableKey} rows={immunityRows} immunityKey={immunityKey} countMode={countMode} counts={counts} />
       </div>
     </AnalysisTabPanel>
   </>
