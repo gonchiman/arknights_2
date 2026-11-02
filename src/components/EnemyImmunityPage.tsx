@@ -17,7 +17,7 @@ import './EnemyAnalysis.css'
 import './EnemyImmunityPage.css'
 
 const COUNT_OPTIONS = ENEMY_HISTOGRAM_COUNT_MODES.filter(option => option.key !== 'MAPS')
-const TABS = [['graph', 'グラフ'], ['list', '敵一覧']] as const
+const TABS = [['graph', '耐性比較'], ['ratios', '保有率'], ['list', '敵一覧']] as const
 type ImmunityTab = typeof TABS[number][0]
 
 export default function EnemyImmunityPage() {
@@ -70,6 +70,12 @@ function EnemyImmunityContent({ rows, counts, levelType, onLevelChange, countMod
   const immunityRows = useMemo(() => filterEnemiesByImmunity(scopedRows, immunityKey), [scopedRows, immunityKey])
   const tableKey = `${JSON.stringify(normalizeEnemyLevelSelection(levelType))}:${immunityKey}:${countMode}`
   const countOption = COUNT_OPTIONS.find(option => option.key === countMode)!
+  const immunitySelector = (tab: 'ratios' | 'list') => <label className="enemy-immunity-selector" htmlFor={`${immunityId}-${tab}`}>
+    <span>状態異常</span>
+    <select id={`${immunityId}-${tab}`} value={immunityKey} onChange={event => onImmunityChange(event.target.value as EnemyImmunityKey)}>
+      {ENEMY_IMMUNITIES.map(({ key, label }) => <option key={key} value={key}>{label}</option>)}
+    </select>
+  </label>
 
   return <>
     <div className="enemy-immunity-filters">
@@ -98,16 +104,13 @@ function EnemyImmunityContent({ rows, counts, levelType, onLevelChange, countMod
         <EnemyImmunityChart items={summary.items} countMode={countMode} />
       </div>
     </AnalysisTabPanel>
-    <AnalysisTabPanel idPrefix={tabId} tab="list" activeTab={activeTab} title="耐性を持つ敵" headerActions={
-      <label className="enemy-immunity-selector" htmlFor={immunityId}>
-        <span>状態異常</span>
-        <select id={immunityId} value={immunityKey} onChange={event => onImmunityChange(event.target.value as EnemyImmunityKey)}>
-          {ENEMY_IMMUNITIES.map(({ key, label }) => <option key={key} value={key}>{label}</option>)}
-        </select>
-      </label>
-    }>
+    <AnalysisTabPanel idPrefix={tabId} tab="ratios" activeTab={activeTab} title="耐性の保有率" headerActions={immunitySelector('ratios')}>
       <div className="analysis-panel-body">
         <EnemyImmunityRatios rows={scopedRows} immunityKey={immunityKey} countMode={countMode} counts={counts} levelType={levelType} />
+      </div>
+    </AnalysisTabPanel>
+    <AnalysisTabPanel idPrefix={tabId} tab="list" activeTab={activeTab} title="耐性を持つ敵" headerActions={immunitySelector('list')}>
+      <div className="analysis-panel-body">
         <EnemyImmunityTable key={tableKey} rows={immunityRows} immunityKey={immunityKey} countMode={countMode} counts={counts} />
       </div>
     </AnalysisTabPanel>
