@@ -8,6 +8,11 @@ import {
   type DamageThreeComparisonOverrides,
   type DamageThreeComparisonResult,
 } from '../lib/damageCalculatorThreeComparison'
+import {
+  compareDamageCalculatorThreeSkillInformation,
+  getDamageCalculatorThreeSkillInformationValues,
+  type DamageCalculatorThreeSkillInformationKey,
+} from '../lib/damageCalculatorThreeSkillInformation'
 import { PROFESSION_ORDER } from '../lib/operatorFilters'
 import { lockPageScroll } from '../lib/pageScrollLock'
 import type { SkillRecord } from '../types/skill'
@@ -25,6 +30,7 @@ interface Props {
 
 type OutputKind = DamageThreeComparisonEntry['kind']
 type Metric = 'actualTargetCount' | 'perAttack' | 'dps' | 'damageOverTimeDps' | 'combinedDps' | 'durationSeconds' | 'totalDamage'
+type SortKey = Metric | DamageCalculatorThreeSkillInformationKey
 type TargetDisplay = 'single' | 'all'
 type TableDisplay = 'auto' | 'full' | 'compact'
 type ConditionValue = number | string | boolean | undefined
@@ -35,7 +41,17 @@ const ATTACK_LABELS: Record<OutputKind, string> = {
 }
 const METRIC_LABELS = {
   actualTargetCount: '攻撃対象数', dps: '直接DPS', damageOverTimeDps: '継続DPS', combinedDps: '合計DPS',
-  durationSeconds: '持続時間（秒）', totalDamage: '総ダメージ（概算）',
+  durationSeconds: '段階時間（秒）', totalDamage: '総ダメージ（概算）',
+}
+const SKILL_INFORMATION_COLUMNS: { key: DamageCalculatorThreeSkillInformationKey; label: string; numeric: boolean }[] = [
+  { key: 'spRecovery', label: 'SP回復', numeric: false },
+  { key: 'activationMethod', label: '発動方法', numeric: false },
+  { key: 'initialSp', label: '初期SP', numeric: true },
+  { key: 'spCost', label: '必要SP', numeric: true },
+  { key: 'skillDuration', label: 'スキル持続', numeric: false },
+]
+function isSkillInformationKey(key: SortKey): key is DamageCalculatorThreeSkillInformationKey {
+  return SKILL_INFORMATION_COLUMNS.some(column => column.key === key)
 }
 const NORMAL_METRICS: Metric[] = ['combinedDps', 'durationSeconds', 'totalDamage', 'dps', 'damageOverTimeDps', 'perAttack', 'actualTargetCount']
 const NORMAL_RESULT_METRICS: Metric[] = ['dps', 'damageOverTimeDps', 'combinedDps', 'durationSeconds', 'totalDamage']
@@ -85,15 +101,17 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
   const [precision, setPrecision] = useState(0)
   const [target, setTarget] = useState<TargetDisplay>('single')
   const [tableDisplay, setTableDisplay] = useState<TableDisplay>('auto')
+  const [showSkillInformation, setShowSkillInformation] = useState(false)
+  const [displayMetric, setDisplayMetric] = useState<Metric>('combinedDps')
   const [panelWidth, setPanelWidth] = useState(0)
   const [measuredFullWidth, setMeasuredFullWidth] = useState<{
-    results: DamageThreeComparisonResult[] | null; precision: number; target: TargetDisplay; width: number
-  }>({ results: null, precision: 0, target: 'single', width: 0 })
+    results: DamageThreeComparisonResult[] | null; precision: number; target: TargetDisplay; showSkillInformation: boolean; width: number
+  }>({ results: null, precision: 0, target: 'single', showSkillInformation: false, width: 0 })
   const panelRef = useRef<HTMLElement>(null)
   const tableRef = useRef<HTMLTableElement>(null)
   const tableRegionRef = useRef<HTMLDivElement>(null)
   const [overrides, setOverrides] = useState<Record<string, DamageThreeComparisonOverrides>>({})
-  const [sort, setSort] = useState<{ metric: Metric; direction: 'asc' | 'desc' }>({ metric: 'combinedDps', direction: 'desc' })
+  const [sort, setSort] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'combinedDps', direction: 'desc' })
   const [detail, setDetail] = useState<{ entry: DamageThreeComparisonEntry; trigger: HTMLButtonElement } | null>(null)
   const [description, setDescription] = useState<{ entry: DamageThreeComparisonEntry; trigger: HTMLButtonElement } | null>(null)
   const metrics = kind === 'NORMAL' ? NORMAL_METRICS : ACTION_METRICS
@@ -130,21 +148,27 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
   }, [entries, kind, profession, query, rarity])
   const results = useMemo(() => visibleEntries.map((entry) => evaluateDamageThreeComparisonEntry(entry, common, overrides[entry.key])),
     [visibleEntries, common, overrides])
+  const skillInformation = useMemo(() => new Map(results.map(result => [result.entry.key,
+    getDamageCalculatorThreeSkillInformationValues(result.entry.structure, result.entry.skill, result.output)])), [results])
   const sortedResults = useMemo(() => [...results].sort((left, right) => {
-    const a = metricValue(left, sort.metric, target)
-    const b = metricValue(right, sort.metric, target)
+    if (isSkillInformationKey(sort.key)) return compareDamageCalculatorThreeSkillInformation(
+      skillInformation.get(left.entry.key)!, skillInformation.get(right.entry.key)!, sort.key, sort.direction,
+    )
+    const a = metricValue(left, sort.key, target)
+    const b = metricValue(right, sort.key, target)
     const aValid = a !== null && Number.isFinite(a)
     const bValid = b !== null && Number.isFinite(b)
     if (!aValid) return bValid ? 1 : 0
     if (!bValid) return -1
     return (a - b) * (sort.direction === 'asc' ? 1 : -1)
-  }), [results, sort, target])
+  }), [results, skillInformation, sort, target])
   const detailResult = useMemo(() => detail ? evaluateDamageThreeComparisonEntry(detail.entry, common, overrides[detail.entry.key]) : null,
     [detail, common, overrides])
   const formatter = useMemo(() => new Intl.NumberFormat('ja-JP', { minimumFractionDigits: precision, maximumFractionDigits: precision }), [precision])
   const formatNumber = (value: number | null) => value === null || !Number.isFinite(value) ? '—' : formatter.format(value)
-  const widthMatchesContent = measuredFullWidth.results === results && measuredFullWidth.precision === precision && measuredFullWidth.target === target
-  const fullWidth = Math.max(kind === 'NORMAL' ? 1250 : 950, widthMatchesContent ? measuredFullWidth.width : 0)
+  const widthMatchesContent = measuredFullWidth.results === results && measuredFullWidth.precision === precision
+    && measuredFullWidth.target === target && measuredFullWidth.showSkillInformation === showSkillInformation
+  const fullWidth = Math.max((kind === 'NORMAL' ? 1250 : 950) + (showSkillInformation ? 480 : 0), widthMatchesContent ? measuredFullWidth.width : 0)
   const compact = tableDisplay === 'compact' || (tableDisplay === 'auto' && panelWidth < fullWidth)
   useLayoutEffect(() => {
     // Long names and formatted numbers can require more than the stylesheet's minimum width.
@@ -152,12 +176,23 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
     if (compact || !tableRef.current) return
     const width = tableRef.current.scrollWidth
     if (width > panelWidth) setMeasuredFullWidth((current) => current.results === results && current.precision === precision
-      && current.target === target && current.width >= width ? current : { results, precision, target, width })
-  }, [compact, kind, panelWidth, results, precision, target])
+      && current.target === target && current.showSkillInformation === showSkillInformation && current.width >= width
+      ? current : { results, precision, target, showSkillInformation, width })
+  }, [compact, kind, panelWidth, results, precision, target, showSkillInformation])
   const hasFilters = query !== '' || profession !== 'ALL' || rarity !== 'ALL' || kind !== 'NORMAL'
   const updateKind = (value: OutputKind) => {
     setKind(value)
-    setSort({ metric: value === 'NORMAL' ? 'combinedDps' : 'perAttack', direction: 'desc' })
+    const metric = value === 'NORMAL' ? 'combinedDps' : 'perAttack'
+    setDisplayMetric(metric)
+    setSort({ key: metric, direction: 'desc' })
+  }
+  const updateDisplayMetric = (metric: Metric) => {
+    setDisplayMetric(metric)
+    setSort({ key: metric, direction: 'desc' })
+  }
+  const updateShowSkillInformation = (show: boolean) => {
+    setShowSkillInformation(show)
+    if (!show && isSkillInformationKey(sort.key)) setSort({ key: displayMetric, direction: 'desc' })
   }
   const resetFilters = () => { setQuery(''); setProfession('ALL'); setRarity('ALL'); updateKind('NORMAL') }
   const closeDescription = () => {
@@ -192,10 +227,14 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
       return next
     })
   }
-  const sortableHeading = (metric: Metric, label: string) => <TableSortHeader key={metric} className="dc3-comparison-numeric-heading"
-    label={label} sortKey={metric} sort={{ key: sort.metric, direction: sort.direction }}
-    onSort={(metric) => setSort((current) => ({ metric,
-      direction: current.metric === metric && current.direction === 'desc' ? 'asc' : 'desc' }))} />
+  const sortableHeading = (key: SortKey, label: string, numeric = true) => <TableSortHeader key={key}
+    className={`${numeric ? 'dc3-comparison-numeric-heading' : 'dc3-comparison-text-heading'}${isSkillInformationKey(key) ? ' dc3-comparison-skill-info-heading' : ''}${key === 'skillDuration' ? ' dc3-comparison-skill-duration-heading' : ''}`}
+    label={label} sortKey={key} sort={sort}
+    onSort={(key) => {
+      if (!isSkillInformationKey(key)) setDisplayMetric(key)
+      setSort((current) => ({ key, direction: current.key === key
+        ? (current.direction === 'desc' ? 'asc' : 'desc') : (numeric ? 'desc' : 'asc') }))
+    }} />
 
   return <section className="dc3-comparison-page">
     <header className="page-intro"><h1>DC3 スキル比較</h1></header>
@@ -246,10 +285,12 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
         <label><span>表の表示</span><select aria-label="表の表示" value={tableDisplay} onChange={(event) => setTableDisplay(event.target.value as TableDisplay)}>
           <option value="auto">自動</option><option value="full">全列</option><option value="compact">簡易</option>
         </select></label>
-        {compact && <label><span>表示指標</span><select aria-label="表示指標" value={sort.metric}
-          onChange={(event) => setSort({ metric: event.target.value as Metric, direction: 'desc' })}>
+        {compact && <label><span>表示指標</span><select aria-label="表示指標" value={displayMetric}
+          onChange={(event) => updateDisplayMetric(event.target.value as Metric)}>
           {metrics.map((metric) => <option key={metric} value={metric}>{metricLabel(metric, kind)}</option>)}
         </select></label>}
+        <label className="dc3-comparison-skill-info-toggle"><input type="checkbox" checked={showSkillInformation}
+          onChange={(event) => updateShowSkillInformation(event.target.checked)} /><span>スキル情報</span></label>
       </div>
       <div className="result-meta dc3-comparison-meta" role="status" aria-live="polite">
         <span>{loading ? '読み込み中…' : `${results.length} 行表示`}</span>
@@ -257,12 +298,13 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
       </div>
       {!loading && results.length === 0 ? <div className="operator-empty-state" role="status">条件に一致するスキルがありません</div>
         : <div ref={tableRegionRef} className="table-wrap skill-coarse-table-wrap dc3-comparison-table-wrap" role="region" aria-label="スキル比較の計算結果" tabIndex={0}>
-          <table ref={tableRef} className={`skill-coarse-table dc3-comparison-table${kind === 'NORMAL' ? ' dc3-comparison-table-normal' : ''}${compact ? ' dc3-comparison-table-compact' : ''}`}>
+          <table ref={tableRef} className={`skill-coarse-table dc3-comparison-table${kind === 'NORMAL' ? ' dc3-comparison-table-normal' : ''}${compact ? ' dc3-comparison-table-compact' : ''}${showSkillInformation ? ' dc3-comparison-table-skill-info' : ''}`}>
             <caption className="visually-hidden">{DAMAGE_THREE_OUTPUT_KIND_LABELS[kind]}のスキル比較</caption>
             <thead><tr>
               <th scope="col">{compact ? 'OP' : 'オペレーター'}</th><th scope="col">{compact ? 'S' : 'S番号'}</th>
               {!compact && <th scope="col">スキル名</th>}<th scope="col">段階</th>
-              {compact ? sortableHeading(sort.metric, metricLabel(sort.metric, kind)) : <>
+              {showSkillInformation && SKILL_INFORMATION_COLUMNS.map(column => sortableHeading(column.key, column.label, column.numeric))}
+              {compact ? sortableHeading(displayMetric, metricLabel(displayMetric, kind)) : <>
                 <th scope="col">属性</th>{sortableHeading('actualTargetCount', '攻撃対象数')}{sortableHeading('perAttack', ATTACK_LABELS[kind])}
                 {kind === 'NORMAL' && NORMAL_RESULT_METRICS.map((metric) => sortableHeading(metric, metricLabel(metric, kind)))}
               </>}
@@ -271,13 +313,16 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
             <tbody>{!loading && sortedResults.map((result) => {
               const { entry } = result
               const customized = Object.keys(overrides[entry.key] ?? {}).length > 0
+              const information = skillInformation.get(entry.key)!
               return <tr key={entry.key}>
                 <td><button type="button" className="skill-coarse-description-trigger skill-coarse-link" aria-haspopup="dialog"
                   aria-label={`${entry.skill.operatorName} S${entry.skill.skillIndex} ${entry.stageLabel}のスキル説明を表示`}
                   onClick={(event) => setDescription({ entry, trigger: event.currentTarget })}>{entry.skill.operatorName}</button></td>
                 <td>{compact ? entry.skill.skillIndex : `S${entry.skill.skillIndex}`}</td>
                 {!compact && <td>{entry.skill.skillName}</td>}<td>{entry.stageLabel}</td>
-                {compact ? <td className="dc3-comparison-number">{formatMetricValue(result, sort.metric, target, formatNumber)}</td> : <>
+                {showSkillInformation && SKILL_INFORMATION_COLUMNS.map(column => <td key={column.key}
+                  className={column.numeric ? 'dc3-comparison-number' : 'dc3-comparison-skill-info-value'}>{information[column.key] ?? '—'}</td>)}
+                {compact ? <td className="dc3-comparison-number">{formatMetricValue(result, displayMetric, target, formatNumber)}</td> : <>
                   <td>{result.damageType ? DAMAGE_TYPE_LABELS[result.damageType] ?? result.damageType : '—'}</td>
                   <td className="dc3-comparison-number">{result.actualTargetCount ?? '—'}</td>
                   <td className="dc3-comparison-number">{formatNumber(metricValue(result, 'perAttack', target))}</td>

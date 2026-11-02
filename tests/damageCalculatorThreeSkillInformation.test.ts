@@ -7,7 +7,11 @@ import {
   getDamageCalculatorThreeStructures,
   type DamageCalculatorThreeConditions,
 } from '../src/lib/damageCalculatorThree.ts'
-import { buildDamageCalculatorThreeSkillInformation } from '../src/lib/damageCalculatorThreeSkillInformation.ts'
+import {
+  buildDamageCalculatorThreeSkillInformation,
+  compareDamageCalculatorThreeSkillInformation,
+  getDamageCalculatorThreeSkillInformationValues,
+} from '../src/lib/damageCalculatorThreeSkillInformation.ts'
 import type { OperatorCombatProfile, RawSkillLevel, SkillRecord } from '../src/types/skill.ts'
 
 const source = JSON.parse(readFileSync(new URL('./fixtures/sixStarGuardSources.json', import.meta.url), 'utf8')) as {
@@ -90,4 +94,56 @@ test('異なるスキル・レベルの計算結果は持続の表示に流用�
   const foreignLevel = { ...viviana.output, structure: { ...viviana.structure,
     basicInfo: { ...viviana.structure.basicInfo, levelIndex: 8 } } }
   assert.equal(Object.fromEntries(buildDamageCalculatorThreeSkillInformation(viviana.structure, viviana.skill, foreignLevel)).持続, '15秒')
+})
+
+test('比較列のSP情報はSkillRecordの最大Lv値ではなく、DC3の対応データを参照する', () => {
+  const { structure, skill, output } = example('char_350_surtr', 2)
+  const differentRecordValues = { ...skill, initSp: 999, spCost: 999, duration: 999 }
+  assert.deepEqual(getDamageCalculatorThreeSkillInformationValues(structure, differentRecordValues, output), {
+    spRecovery: '自然回復', activationMethod: '手動発動', initialSp: 12, spCost: 18, skillDuration: '18秒',
+  })
+  const skadi = example('char_263_skadi', 2)
+  assert.deepEqual(getDamageCalculatorThreeSkillInformationValues(skadi.structure, skadi.skill, skadi.output), {
+    spRecovery: 'SPなし', activationMethod: 'パッシブ', initialSp: null, spCost: null, skillDuration: '30秒',
+  })
+})
+
+test('SP列は数値で並べ替え、SPなしは昇順でも降順でも末尾に置く', () => {
+  const rows = [example('char_350_surtr', 2), example('char_263_skadi', 2), example('char_350_surtr', 1)]
+    .map(({ structure, skill, output }) => getDamageCalculatorThreeSkillInformationValues(structure, skill, output))
+  for (const key of ['initialSp', 'spCost'] as const) {
+    const expected = key === 'initialSp' ? [0, 12] : [2, 18]
+    assert.deepEqual([...rows].sort((a, b) => compareDamageCalculatorThreeSkillInformation(a, b, key, 'asc'))
+      .map(row => row[key]), [...expected, null])
+    assert.deepEqual([...rows].sort((a, b) => compareDamageCalculatorThreeSkillInformation(a, b, key, 'desc'))
+      .map(row => row[key]), [...expected.reverse(), null])
+  }
+})
+
+test('持続の秒数は小数も数値順に比較し、弾薬制などの種類と未確認を区別する', () => {
+  const { structure, skill, output } = example('char_350_surtr', 2)
+  const base = getDamageCalculatorThreeSkillInformationValues(structure, skill, output)
+  const rows = ['—', '退場まで', '10秒', '2.5秒', '弾薬制', '2秒', '2.12秒']
+    .map(skillDuration => ({ ...base, skillDuration }))
+  const ascending = [...rows].sort((a, b) => compareDamageCalculatorThreeSkillInformation(a, b, 'skillDuration', 'asc'))
+    .map(row => row.skillDuration)
+  const descending = [...rows].sort((a, b) => compareDamageCalculatorThreeSkillInformation(a, b, 'skillDuration', 'desc'))
+    .map(row => row.skillDuration)
+  assert.deepEqual(ascending.slice(0, 4), ['2秒', '2.12秒', '2.5秒', '10秒'])
+  assert.deepEqual(descending.slice(0, 4), ['10秒', '2.5秒', '2.12秒', '2秒'])
+  assert.deepEqual(new Set(ascending.slice(4, 6)), new Set(['退場まで', '弾薬制']))
+  assert.deepEqual(descending.slice(4, 6), ascending.slice(4, 6).reverse())
+  assert.equal(ascending.at(-1), '—')
+  assert.equal(descending.at(-1), '—')
+})
+
+test('回復方法と発動方法の文字列も方向を切り替えて安定して並べ替える', () => {
+  const rows = [example('char_350_surtr', 2), example('char_350_surtr', 1), example('char_263_skadi', 2)]
+    .map(({ structure, skill, output }) => getDamageCalculatorThreeSkillInformationValues(structure, skill, output))
+  for (const key of ['spRecovery', 'activationMethod'] as const) {
+    const ascending = [...rows].sort((a, b) => compareDamageCalculatorThreeSkillInformation(a, b, key, 'asc'))
+    const descending = [...rows].sort((a, b) => compareDamageCalculatorThreeSkillInformation(a, b, key, 'desc'))
+    assert.deepEqual(descending.map(row => row[key]), ascending.map(row => row[key]).reverse())
+    assert.equal(compareDamageCalculatorThreeSkillInformation(rows[0], rows[0], key, 'asc'), 0)
+  }
 })
