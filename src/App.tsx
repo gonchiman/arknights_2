@@ -404,8 +404,7 @@ export default function App() {
           <DamageCalculatorThreeCoveragePage rows={classifiedRows} loading={loading}
             onOpenOperatorDetail={openOperatorDetail} />
         ) : displayedRoute.view === 'damage-three-comparison' ? (
-          <DamageCalculatorThreeComparisonPage rows={classifiedRows} loading={loading}
-            onOpenOperatorDetail={openOperatorDetail} />
+          <DamageCalculatorThreeComparisonPage rows={classifiedRows} loading={loading} />
         ) : displayedRoute.view === 'comparison' ? (
           <OperatorComparison
             rows={classifiedRows}
