@@ -7,11 +7,36 @@ import {
   type SkillStructure,
 } from './skillStructure.ts'
 
+export interface DamageCalculatorThreeSkillInformationValues {
+  spRecovery: string
+  activationMethod: string
+  initialSp: number | null
+  spCost: number | null
+  skillDuration: string
+}
+
+export type DamageCalculatorThreeSkillInformationKey = keyof DamageCalculatorThreeSkillInformationValues
+
 export function buildDamageCalculatorThreeSkillInformation(
   structure: SkillStructure,
   skill: SkillRecord,
   output?: DamageCalculatorThreeOutput | null,
 ): readonly (readonly [string, string | number])[] {
+  const values = getDamageCalculatorThreeSkillInformationValues(structure, skill, output)
+  return [
+    ['SP回復方法', values.spRecovery],
+    ['発動方法', values.activationMethod],
+    ['初期SP', values.initialSp ?? '—'],
+    ['必要SP', values.spCost ?? '—'],
+    ['持続', values.skillDuration],
+  ]
+}
+
+export function getDamageCalculatorThreeSkillInformationValues(
+  structure: SkillStructure,
+  skill: SkillRecord,
+  output?: DamageCalculatorThreeOutput | null,
+): DamageCalculatorThreeSkillInformationValues {
   const activation = structure.activationSettings
   const usesSp = activation.spRecovery !== 'NO_SP'
   const matchingOutput = output?.structure
@@ -19,13 +44,47 @@ export function buildDamageCalculatorThreeSkillInformation(
       key => output.structure!.basicInfo[key] === structure.basicInfo[key],
     ) ? output : null
 
-  return [
-    ['SP回復方法', formatSkillStructureSpRecovery(activation.spRecovery)],
-    ['発動方法', formatSkillStructureActivationMethod(activation.activationMethod)],
-    ['初期SP', usesSp ? activation.initialSp : '—'],
-    ['必要SP', usesSp ? activation.spCost : '—'],
-    ['持続', formatDuration(structure, skill, matchingOutput)],
-  ]
+  return {
+    spRecovery: formatSkillStructureSpRecovery(activation.spRecovery),
+    activationMethod: formatSkillStructureActivationMethod(activation.activationMethod),
+    initialSp: usesSp ? activation.initialSp : null,
+    spCost: usesSp ? activation.spCost : null,
+    skillDuration: formatDuration(structure, skill, matchingOutput),
+  }
+}
+
+const informationCollator = new Intl.Collator('ja', { numeric: true })
+
+export function compareDamageCalculatorThreeSkillInformation(
+  left: DamageCalculatorThreeSkillInformationValues,
+  right: DamageCalculatorThreeSkillInformationValues,
+  key: DamageCalculatorThreeSkillInformationKey,
+  direction: 'asc' | 'desc',
+): number {
+  const a = left[key]
+  const b = right[key]
+  const isMissing = (value: string | number | null) => value === null || value === '—'
+    || (typeof value === 'number' && !Number.isFinite(value))
+  const aMissing = isMissing(a)
+  const bMissing = isMissing(b)
+  if (aMissing) return bMissing ? 0 : 1
+  if (bMissing) return -1
+  const sign = direction === 'asc' ? 1 : -1
+  if (typeof a === 'number' && typeof b === 'number') return (a - b) * sign
+  if (key === 'skillDuration') {
+    const aSeconds = secondsFromDuration(String(a))
+    const bSeconds = secondsFromDuration(String(b))
+    if (aSeconds !== null && bSeconds !== null) return (aSeconds - bSeconds) * sign
+    // Non-time durations stay separate from seconds instead of becoming 0 or infinity.
+    if (aSeconds !== null) return -1
+    if (bSeconds !== null) return 1
+  }
+  return informationCollator.compare(String(a), String(b)) * sign
+}
+
+function secondsFromDuration(value: string): number | null {
+  const match = /^(\d+(?:\.\d+)?)秒$/.exec(value)
+  return match ? Number(match[1]) : null
 }
 
 function formatDuration(
