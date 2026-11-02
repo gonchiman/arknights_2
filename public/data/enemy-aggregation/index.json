@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "currentVersionId": "v10",
+  "currentVersionId": "v11",
   "versions": [
     {
       "id": "v1",
@@ -2754,6 +2754,35 @@
         ]
       },
       "previousVersionId": "v9"
+    },
+    {
+      "id": "v11",
+      "label": "集計版 v11",
+      "createdAt": "2026-11-02T04:26:30.554Z",
+      "generatedAt": "2026-11-02T04:26:20.879Z",
+      "sourceRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+      "ruleVersion": "empty-wave-actions-v9",
+      "generatorVersion": "3f6d91793e175701f76b00ac8b36c2d6a0d553ce9b1fc997afadcdfbdf5e3f41",
+      "description": "元データ更新（通常戦闘マップを集計）",
+      "file": "v11.json.gz",
+      "sha256": "d526c6a1739f6c3f42bcae5302ee924251644131cb60794e2ff28a255cb6b10f",
+      "payloadSha256": "80a9a7151cb83fe5c0517349c4bdb280987570c93964edd65d1f58ffce851d23",
+      "contentSha256": "170c7ce76151b2f65a6f1044e092fefc9aef8e4d675c46b69acea1f765674887",
+      "bytes": 1232362,
+      "payloadBytes": 19022611,
+      "summary": {
+        "includedMapCount": 1563,
+        "excludedMapCount": 627,
+        "missingMapCount": 152,
+        "lowerBoundMapCount": 271,
+        "expectedMapCount": 0
+      },
+      "changes": {
+        "addedMapIds": [],
+        "removedMapIds": [],
+        "changedMapIds": []
+      },
+      "previousVersionId": "v10"
     }
   ]
 }
