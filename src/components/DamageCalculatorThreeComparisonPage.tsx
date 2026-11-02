@@ -11,7 +11,7 @@ import {
 import { PROFESSION_ORDER } from '../lib/operatorFilters'
 import { lockPageScroll } from '../lib/pageScrollLock'
 import type { SkillRecord } from '../types/skill'
-import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
+import { SkillEffectModal } from './SkillEffectModal'
 import { TableSortHeader } from './TableSortHeader'
 import './SkillDirectory.css'
 import './SkillCoarseClassificationPage.css'
@@ -21,7 +21,6 @@ import './DamageCalculatorThreeComparisonPage.css'
 interface Props {
   rows: SkillRecord[]
   loading: boolean
-  onOpenOperatorDetail?: OpenOperatorDetail
 }
 
 type OutputKind = DamageThreeComparisonEntry['kind']
@@ -77,7 +76,7 @@ function resultStatus(result: DamageThreeComparisonResult, customized: boolean, 
   return customized ? '条件変更あり' : '既定条件'
 }
 
-export default function DamageCalculatorThreeComparisonPage({ rows, loading, onOpenOperatorDetail }: Props) {
+export default function DamageCalculatorThreeComparisonPage({ rows, loading }: Props) {
   const [kind, setKind] = useState<OutputKind>('NORMAL')
   const [query, setQuery] = useState('')
   const [profession, setProfession] = useState('ALL')
@@ -96,6 +95,7 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading, onO
   const [overrides, setOverrides] = useState<Record<string, DamageThreeComparisonOverrides>>({})
   const [sort, setSort] = useState<{ metric: Metric; direction: 'asc' | 'desc' }>({ metric: 'combinedDps', direction: 'desc' })
   const [detail, setDetail] = useState<{ entry: DamageThreeComparisonEntry; trigger: HTMLButtonElement } | null>(null)
+  const [description, setDescription] = useState<{ entry: DamageThreeComparisonEntry; trigger: HTMLButtonElement } | null>(null)
   const metrics = kind === 'NORMAL' ? NORMAL_METRICS : ACTION_METRICS
   useEffect(() => {
     const panel = panelRef.current
@@ -160,6 +160,14 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading, onO
     setSort({ metric: value === 'NORMAL' ? 'combinedDps' : 'perAttack', direction: 'desc' })
   }
   const resetFilters = () => { setQuery(''); setProfession('ALL'); setRarity('ALL'); updateKind('NORMAL') }
+  const closeDescription = () => {
+    const trigger = description?.trigger
+    setDescription(null)
+    window.requestAnimationFrame(() => {
+      const focusTarget = trigger?.isConnected ? trigger : tableRegionRef.current
+      focusTarget?.focus({ preventScroll: true })
+    })
+  }
   const closeDetail = () => {
     const trigger = detail?.trigger
     const key = detail?.entry.key
@@ -264,8 +272,9 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading, onO
               const { entry } = result
               const customized = Object.keys(overrides[entry.key] ?? {}).length > 0
               return <tr key={entry.key}>
-                <td><OperatorDetailLink operatorId={entry.skill.operatorId} onOpenOperatorDetail={onOpenOperatorDetail}
-                  className="skill-coarse-link">{entry.skill.operatorName}</OperatorDetailLink></td>
+                <td><button type="button" className="skill-coarse-description-trigger skill-coarse-link" aria-haspopup="dialog"
+                  aria-label={`${entry.skill.operatorName} S${entry.skill.skillIndex} ${entry.stageLabel}のスキル説明を表示`}
+                  onClick={(event) => setDescription({ entry, trigger: event.currentTarget })}>{entry.skill.operatorName}</button></td>
                 <td>{compact ? entry.skill.skillIndex : `S${entry.skill.skillIndex}`}</td>
                 {!compact && <td>{entry.skill.skillName}</td>}<td>{entry.stageLabel}</td>
                 {compact ? <td className="dc3-comparison-number">{formatMetricValue(result, sort.metric, target, formatNumber)}</td> : <>
@@ -287,6 +296,8 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading, onO
           </table>
         </div>}
     </section>
+    {description && <SkillEffectModal skill={description.entry.skill} skillLevelIndex={description.entry.levelIndex}
+      descriptionOnly onClose={closeDescription} />}
     {detailResult && <ComparisonConditionsDialog result={detailResult} customized={Object.keys(overrides[detailResult.entry.key] ?? {}).length > 0}
       target={target} common={common} formatNumber={formatNumber} onChange={updateCondition} onReset={resetConditions} onClose={closeDetail} />}
   </section>
