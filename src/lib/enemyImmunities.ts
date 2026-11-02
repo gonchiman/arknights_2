@@ -1,4 +1,4 @@
-import type { EnemyRecord } from '../types/enemy.ts'
+import { ENEMY_LEVEL_TYPES, type EnemyLevelType, type EnemyRecord } from '../types/enemy.ts'
 import { getEnemyCountWeight, type EnemyHistogramCountMode, type EnemyHistogramCounts } from './enemyHistogramCounts.ts'
 
 export const ENEMY_IMMUNITIES = [
@@ -28,6 +28,20 @@ export interface EnemyImmunitySummary {
   items: EnemyImmunitySummaryItem[]
 }
 
+export interface EnemyImmunityLevelSummaryItem {
+  levelType: EnemyLevelType
+  total: number
+  count: number
+  ratio: number
+}
+
+export interface EnemyImmunityLevelSummary {
+  total: number
+  count: number
+  ratio: number
+  groups: EnemyImmunityLevelSummaryItem[]
+}
+
 export function summarizeEnemyImmunities(
   rows: readonly EnemyRecord[],
   mode: EnemyImmunityCountMode = 'TYPES',
@@ -45,6 +59,29 @@ export function summarizeEnemyImmunities(
   // Stable sorting keeps the definition order when counts are equal.
   items.sort((a, b) => b.count - a.count)
   return { total, items }
+}
+
+export function summarizeEnemyImmunityByLevel(
+  rows: readonly EnemyRecord[],
+  key: EnemyImmunityKey,
+  mode: EnemyImmunityCountMode = 'TYPES',
+  counts: EnemyHistogramCounts | null = null,
+): EnemyImmunityLevelSummary {
+  const groups: EnemyImmunityLevelSummaryItem[] = ENEMY_LEVEL_TYPES.map(levelType => ({
+    levelType, total: 0, count: 0, ratio: 0,
+  }))
+  const byLevel = new Map(groups.map(group => [group.levelType, group]))
+  // Deduplicate before partitioning so later records cannot enter another class.
+  for (const row of uniqueEnemies(rows)) {
+    const group = byLevel.get(row.levelType)!
+    const weight = getEnemyCountWeight(row.id, mode, counts)
+    group.total += weight
+    if (hasImmunity(row, key)) group.count += weight
+  }
+  for (const group of groups) group.ratio = group.total === 0 ? 0 : group.count / group.total
+  const total = groups.reduce((sum, group) => sum + group.total, 0)
+  const count = groups.reduce((sum, group) => sum + group.count, 0)
+  return { total, count, ratio: total === 0 ? 0 : count / total, groups }
 }
 
 export function filterEnemiesByImmunity(rows: readonly EnemyRecord[], key: EnemyImmunityKey): EnemyRecord[] {

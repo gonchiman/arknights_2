@@ -10,6 +10,7 @@ import { EnemyAggregationHistoryButton, EnemyAggregationSelector } from './Enemy
 import { EnemyDataContent } from './EnemyPageShared'
 import { EnemyFilterPanel } from './EnemyFilterPanel'
 import { EnemyImmunityChart } from './EnemyImmunityChart'
+import { EnemyImmunityRatios } from './EnemyImmunityRatios'
 import { EnemyImmunityTable } from './EnemyImmunityTable'
 import './DamageCalculator.css'
 import './EnemyAnalysis.css'
@@ -106,6 +107,7 @@ function EnemyImmunityContent({ rows, counts, levelType, onLevelChange, countMod
       </label>
     }>
       <div className="analysis-panel-body">
+        <EnemyImmunityRatios rows={scopedRows} immunityKey={immunityKey} countMode={countMode} counts={counts} levelType={levelType} />
         <EnemyImmunityTable key={tableKey} rows={immunityRows} immunityKey={immunityKey} countMode={countMode} counts={counts} />
       </div>
     </AnalysisTabPanel>

@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import './CoverageStackedBars.css'
 
 export interface CoverageBarCategory {
@@ -14,6 +14,7 @@ export interface CoverageBarRow {
   unit: string
   countUnit?: string
   buckets: Array<CoverageBarCategory & { count: number }>
+  summary?: ReactNode
 }
 
 const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`
@@ -21,20 +22,23 @@ const colorStyle = (color: string): CSSProperties => ({ '--coverage-bar-color': 
 
 /** Display only: each caller supplies its own population and status definitions. */
 export function CoverageStackedBars({ rows, categories, title, legendLabel = '実装状況の凡例',
-  showZeroCounts = false, showCountPercent = true, showSegmentTitles = false,
+  legendPrefix, showZeroCounts = false, showCountPercent = true, showSegmentTitles = false, showSegmentPercent = true,
 }: {
   rows: readonly CoverageBarRow[]
   categories: readonly CoverageBarCategory[]
   title?: string
   legendLabel?: string
+  legendPrefix?: string
   showZeroCounts?: boolean
   showCountPercent?: boolean
   showSegmentTitles?: boolean
+  showSegmentPercent?: boolean
 }) {
   return <div className="coverage-stacked-bars">
     <div className="coverage-stacked-heading">
       {title && <h3>{title}</h3>}
       <ul className="coverage-stacked-legend" aria-label={legendLabel}>
+        {legendPrefix && <li>{legendPrefix}</li>}
         {categories.map(category => <li key={category.key}>
           <span className="coverage-stacked-swatch" style={colorStyle(category.color)} aria-hidden="true" />
           {category.label}
@@ -57,19 +61,19 @@ export function CoverageStackedBars({ rows, categories, title, legendLabel = '�
                 <span className="coverage-stacked-segment" key={bucket.key} data-coverage-status={bucket.key}
                   style={{ ...colorStyle(bucket.color), width: `${bucket.count / row.total * 100}%` }}
                   title={showSegmentTitles ? `${bucket.label} ${bucket.count}${unit}（${formatPercent(bucket.count / row.total)}）` : undefined}>
-                  <span className="coverage-stacked-percent" aria-hidden="true">
+                  {showSegmentPercent && <span className="coverage-stacked-percent" aria-hidden="true">
                     {formatPercent(bucket.count / row.total)}
-                  </span>
+                  </span>}
                 </span>
               ))}
             </div>
-            <ul className="coverage-stacked-counts" aria-hidden="true">
+            {row.summary !== undefined ? row.summary : <ul className="coverage-stacked-counts" aria-hidden="true">
               {row.buckets.filter(bucket => showZeroCounts || bucket.count > 0).map(bucket => <li key={bucket.key}>
                 <span className="coverage-stacked-swatch" style={colorStyle(bucket.color)} />
                 {bucket.label} {bucket.count.toLocaleString('ja-JP')}{unit}
                 {showCountPercent && ` · ${formatPercent(bucket.count / row.total)}`}
               </li>)}
-            </ul>
+            </ul>}
           </div>}
       </div>
     })}
