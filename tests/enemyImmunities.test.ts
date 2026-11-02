@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { EnemyRecord } from '../src/types/enemy.ts'
-import { filterEnemiesByImmunity, summarizeEnemyImmunities } from '../src/lib/enemyImmunities.ts'
+import { filterEnemiesByImmunity, summarizeEnemyImmunities, summarizeEnemyImmunityByLevel } from '../src/lib/enemyImmunities.ts'
 import { parseEnemyHistogramCounts } from '../src/lib/enemyHistogramCounts.ts'
 
 function spawnCounts(enemies: Record<string, number>) {
@@ -154,5 +154,94 @@ test('絞り込み後の対象だけを分母にし、選択した集計デー�
     assert.equal(summary.total, 10)
     assert.deepEqual(summary.items[0], { key: 'silenceImmune', label: '沈黙', count: expectedCount, ratio: expectedCount / 10 })
     assert.equal(summary.items.find(({ key }) => key === 'stunImmune')?.count, 0)
+  }
+})
+
+test('区分別保有率は各区分の全敵を分母にし、全体の耐性あり件数を区分へ分割できる', () => {
+  const rows: EnemyRecord[] = [
+    enemy('normal-yes', ['沈黙']), enemy('normal-no'),
+    { ...enemy('elite-yes', ['沈黙', 'スタン']), levelType: 'ELITE' },
+    { ...enemy('elite-no'), levelType: 'ELITE' },
+    { ...enemy('elite-other', ['睡眠']), levelType: 'ELITE' },
+    { ...enemy('boss', ['沈黙']), levelType: 'BOSS' },
+    { ...enemy('unknown'), levelType: 'UNKNOWN' },
+  ]
+  const summary = summarizeEnemyImmunityByLevel(rows, 'silenceImmune')
+  assert.deepEqual(summary, {
+    total: 7, count: 3, ratio: 3 / 7,
+    groups: [
+      { levelType: 'NORMAL', total: 2, count: 1, ratio: 0.5 },
+      { levelType: 'ELITE', total: 3, count: 1, ratio: 1 / 3 },
+      { levelType: 'BOSS', total: 1, count: 1, ratio: 1 },
+      { levelType: 'UNKNOWN', total: 1, count: 0, ratio: 0 },
+    ],
+  })
+  assert.equal(summary.groups.reduce((sum, group) => sum + group.count, 0) + (summary.total - summary.count), 7)
+})
+
+test('区分の異なる重複IDも先頭だけを使い、戦慄の旧表記を共有する', () => {
+  const rows: EnemyRecord[] = [
+    enemy('same', ['武装解除', '戦慄']),
+    { ...enemy('same', ['沈黙']), levelType: 'BOSS' },
+    { ...enemy('other', ['戦慄']), levelType: 'ELITE' },
+    enemy('unknown-label', ['disarmedCombatImmune']),
+  ]
+  const original = structuredClone(rows)
+  const counts = spawnCounts({ same: 6, other: 3, 'unknown-label': 1 })
+  const summary = summarizeEnemyImmunityByLevel(rows, 'disarmedCombatImmune', 'SPAWNS', counts)
+  assert.deepEqual(summary, {
+    total: 10, count: 9, ratio: 0.9,
+    groups: [
+      { levelType: 'NORMAL', total: 7, count: 6, ratio: 6 / 7 },
+      { levelType: 'ELITE', total: 3, count: 3, ratio: 1 },
+      { levelType: 'BOSS', total: 0, count: 0, ratio: 0 },
+      { levelType: 'UNKNOWN', total: 0, count: 0, ratio: 0 },
+    ],
+  })
+  assert.equal(summarizeEnemyImmunityByLevel(rows, 'silenceImmune', 'SPAWNS', counts).count, 0)
+  assert.deepEqual(rows, original)
+})
+
+test('区分別の出現回数は選択した集計データと絞り込みに従い、未取得の敵を1へ代替しない', () => {
+  const rows: EnemyRecord[] = [
+    enemy('normal-yes', ['沈黙']), enemy('normal-no'),
+    { ...enemy('zero', ['沈黙']), levelType: 'ELITE' },
+    { ...enemy('boss-yes', ['沈黙']), levelType: 'BOSS' },
+    { ...enemy('boss-no'), levelType: 'BOSS' },
+    { ...enemy('missing', ['沈黙']), levelType: 'UNKNOWN' },
+  ]
+  const first = spawnCounts({ 'normal-yes': 2, 'normal-no': 8, zero: 0, 'boss-yes': 3, 'boss-no': 7, outside: 1000 })
+  const summary = summarizeEnemyImmunityByLevel(rows, 'silenceImmune', 'SPAWNS', first)
+  assert.deepEqual(summary, {
+    total: 20, count: 5, ratio: 0.25,
+    groups: [
+      { levelType: 'NORMAL', total: 10, count: 2, ratio: 0.2 },
+      { levelType: 'ELITE', total: 0, count: 0, ratio: 0 },
+      { levelType: 'BOSS', total: 10, count: 3, ratio: 0.3 },
+      { levelType: 'UNKNOWN', total: 0, count: 0, ratio: 0 },
+    ],
+  })
+  const bosses = rows.filter(row => row.levelType === 'BOSS')
+  const second = spawnCounts({ 'boss-yes': 1, 'boss-no': 4, outside: 2000 })
+  for (const [counts, total, count] of [[first, 10, 3], [second, 5, 1]] as const) {
+    const result = summarizeEnemyImmunityByLevel(bosses, 'silenceImmune', 'SPAWNS', counts)
+    assert.equal(result.total, total)
+    assert.equal(result.count, count)
+    assert.equal(result.ratio, count / total)
+    assert.ok(result.groups.filter(group => group.levelType !== 'BOSS').every(group => group.total === 0))
+  }
+  assert.deepEqual(summarizeEnemyImmunityByLevel(rows, 'silenceImmune', 'TYPES', first),
+    summarizeEnemyImmunityByLevel(rows, 'silenceImmune'))
+})
+
+test('区分別集計は空・未取得・全件0でも4区分と有限の割合を保持する', () => {
+  const empty = {
+    total: 0, count: 0, ratio: 0,
+    groups: ['NORMAL', 'ELITE', 'BOSS', 'UNKNOWN'].map(levelType => ({ levelType, total: 0, count: 0, ratio: 0 })),
+  }
+  assert.deepEqual(summarizeEnemyImmunityByLevel([], 'stunImmune'), empty)
+  const rows = [enemy('zero', ['スタン']), enemy('missing', ['スタン'])]
+  for (const counts of [null, spawnCounts({ zero: 0 })]) {
+    assert.deepEqual(summarizeEnemyImmunityByLevel(rows, 'stunImmune', 'SPAWNS', counts), empty)
   }
 })

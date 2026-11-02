@@ -1,0 +1,18 @@
+.enemy-immunity-ratios { margin-bottom: 24px; min-width: 0; }
+.enemy-immunity-ratio-heading { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 12px; }
+.enemy-immunity-ratio-heading h3 { margin: 0; color: var(--text); font-size: 13px; font-weight: 500; }
+.enemy-immunity-ratio-heading > span { color: var(--text-muted); font-size: 12px; }
+.enemy-immunity-ratios .coverage-stacked-legend { color: var(--text-muted); font-size: 12px; }
+.enemy-immunity-ratios .coverage-stacked-heading { margin-bottom: 14px; }
+.enemy-immunity-ratios .coverage-stacked-label { font-size: 13px; white-space: nowrap; }
+.enemy-immunity-ratios .coverage-stacked-axis { font-size: 12px; }
+.enemy-immunity-ratios .coverage-stacked-axis > :nth-child(2),
+.enemy-immunity-ratios .coverage-stacked-axis > :nth-child(4) { display: none; }
+.enemy-immunity-ratios .coverage-stacked-row[data-coverage-section="ALL"]:not(:last-child) { border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+.enemy-immunity-ratio-values { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; margin-top: 5px; color: var(--text-muted); font-size: 12px; }
+.enemy-immunity-ratio-values strong { color: var(--text); font-size: 13px; font-weight: 500; }
+@media (max-width: 620px) {
+  .enemy-immunity-ratios .coverage-stacked-row { grid-template-columns: 55px minmax(0, 1fr); gap: 7px; }
+  .enemy-immunity-ratios .coverage-stacked-axis { margin-left: 62px; }
+  .enemy-immunity-ratios .coverage-stacked-values { display: block; }
+}
