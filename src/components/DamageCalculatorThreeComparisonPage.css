@@ -19,6 +19,8 @@
 .dc3-comparison-table th:last-child { min-width: 70px; }
 .dc3-comparison-table th:nth-last-child(2) { min-width: 105px; }
 .dc3-comparison-table td { white-space: nowrap; }
+.dc3-comparison-table .dc3-comparison-result-row { cursor: pointer; }
+.dc3-comparison-table .dc3-comparison-result-row:focus-within { background: var(--surface-hover); }
 .dc3-comparison-table .dc3-comparison-number { text-align: right; font-variant-numeric: tabular-nums; }
 .dc3-comparison-table .dc3-comparison-numeric-heading, .dc3-comparison-table .dc3-comparison-text-heading { padding: 0; }
 .dc3-comparison-numeric-heading button, .dc3-comparison-text-heading button { display: flex; width: 100%; align-items: center; justify-content: flex-end; gap: 6px; border: 0; background: transparent; padding: 10px; color: inherit; font: inherit; white-space: nowrap; cursor: pointer; }
