@@ -314,8 +314,16 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
               const { entry } = result
               const customized = Object.keys(overrides[entry.key] ?? {}).length > 0
               const information = skillInformation.get(entry.key)!
-              return <tr key={entry.key}>
+              return <tr key={entry.key} className="dc3-comparison-result-row" onClick={(event) => {
+                if (event.target instanceof Element && event.target.closest('a, button, input, select, textarea')) return
+                if (window.getSelection()?.toString()) return
+                const trigger = event.currentTarget.querySelector<HTMLButtonElement>('[data-skill-description-trigger]')
+                if (!trigger) return
+                trigger.focus({ preventScroll: true })
+                setDescription({ entry, trigger })
+              }}>
                 <td><button type="button" className="skill-coarse-description-trigger skill-coarse-link" aria-haspopup="dialog"
+                  data-skill-description-trigger
                   aria-label={`${entry.skill.operatorName} S${entry.skill.skillIndex} ${entry.stageLabel}のスキル説明を表示`}
                   onClick={(event) => setDescription({ entry, trigger: event.currentTarget })}>{entry.skill.operatorName}</button></td>
                 <td>{compact ? entry.skill.skillIndex : `S${entry.skill.skillIndex}`}</td>
