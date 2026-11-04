@@ -42,6 +42,25 @@ export interface EnemyImmunityLevelSummary {
   groups: EnemyImmunityLevelSummaryItem[]
 }
 
+export interface EnemyImmunityOverlapCell {
+  key: EnemyImmunityKey
+  label: string
+  count: number
+  ratio: number | null
+}
+
+export interface EnemyImmunityOverlapRow {
+  key: EnemyImmunityKey
+  label: string
+  total: number
+  cells: EnemyImmunityOverlapCell[]
+}
+
+export interface EnemyImmunityOverlapSummary {
+  total: number
+  rows: EnemyImmunityOverlapRow[]
+}
+
 export function summarizeEnemyImmunities(
   rows: readonly EnemyRecord[],
   mode: EnemyImmunityCountMode = 'TYPES',
@@ -86,6 +105,33 @@ export function summarizeEnemyImmunityByLevel(
 
 export function filterEnemiesByImmunity(rows: readonly EnemyRecord[], key: EnemyImmunityKey): EnemyRecord[] {
   return uniqueEnemies(rows).filter((row) => hasImmunity(row, key))
+}
+
+export function summarizeEnemyImmunityOverlaps(
+  rows: readonly EnemyRecord[],
+  mode: EnemyImmunityCountMode = 'TYPES',
+  counts: EnemyHistogramCounts | null = null,
+): EnemyImmunityOverlapSummary {
+  const overlaps: EnemyImmunityOverlapRow[] = ENEMY_IMMUNITIES.map(({ key, label }) => ({
+    key, label, total: 0,
+    cells: ENEMY_IMMUNITIES.map(definition => ({ ...definition, count: 0, ratio: null })),
+  }))
+  let total = 0
+  for (const enemy of uniqueEnemies(rows)) {
+    const weight = getEnemyCountWeight(enemy.id, mode, counts)
+    total += weight
+    const present = ENEMY_IMMUNITIES.flatMap(({ key }, index) => hasImmunity(enemy, key) ? [index] : [])
+    for (const rowIndex of present) {
+      const row = overlaps[rowIndex]
+      row.total += weight
+      for (const columnIndex of present) row.cells[columnIndex].count += weight
+    }
+  }
+  for (const row of overlaps) {
+    // Pair counts are symmetric; proportions use each row's own immune population.
+    for (const cell of row.cells) cell.ratio = row.total === 0 ? null : cell.count / row.total
+  }
+  return { total, rows: overlaps }
 }
 
 function hasImmunity(row: EnemyRecord, key: EnemyImmunityKey): boolean {

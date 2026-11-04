@@ -10,6 +10,7 @@ import { EnemyAggregationHistoryButton, EnemyAggregationSelector } from './Enemy
 import { EnemyDataContent } from './EnemyPageShared'
 import { EnemyFilterPanel } from './EnemyFilterPanel'
 import { EnemyImmunityChart } from './EnemyImmunityChart'
+import { EnemyImmunityOverlap } from './EnemyImmunityOverlap'
 import { EnemyImmunityRatios } from './EnemyImmunityRatios'
 import { EnemyImmunityTable } from './EnemyImmunityTable'
 import './DamageCalculator.css'
@@ -17,7 +18,7 @@ import './EnemyAnalysis.css'
 import './EnemyImmunityPage.css'
 
 const COUNT_OPTIONS = ENEMY_HISTOGRAM_COUNT_MODES.filter(option => option.key !== 'MAPS')
-const TABS = [['graph', '耐性比較'], ['ratios', '保有率'], ['list', '敵一覧']] as const
+const TABS = [['graph', '耐性比較'], ['ratios', '保有率'], ['overlap', '重複率'], ['list', '敵一覧']] as const
 type ImmunityTab = typeof TABS[number][0]
 
 export default function EnemyImmunityPage() {
@@ -107,6 +108,11 @@ function EnemyImmunityContent({ rows, counts, levelType, onLevelChange, countMod
     <AnalysisTabPanel idPrefix={tabId} tab="ratios" activeTab={activeTab} title="耐性の保有率" headerActions={immunitySelector('ratios')}>
       <div className="analysis-panel-body">
         <EnemyImmunityRatios rows={scopedRows} immunityKey={immunityKey} countMode={countMode} counts={counts} levelType={levelType} />
+      </div>
+    </AnalysisTabPanel>
+    <AnalysisTabPanel idPrefix={tabId} tab="overlap" activeTab={activeTab} title="耐性の重複率">
+      <div className="analysis-panel-body">
+        <EnemyImmunityOverlap rows={scopedRows} countMode={countMode} counts={counts} />
       </div>
     </AnalysisTabPanel>
     <AnalysisTabPanel idPrefix={tabId} tab="list" activeTab={activeTab} title="耐性を持つ敵" headerActions={immunitySelector('list')}>

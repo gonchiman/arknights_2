@@ -1,0 +1,15 @@
+.enemy-immunity-overlap { min-width: 0; }
+.enemy-immunity-overlap-axes { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 10px; font-size: 13px; color: var(--text-soft); }
+.enemy-table-wrap.enemy-immunity-overlap-scroll { max-height: none; overscroll-behavior-y: auto; }
+.enemy-table.enemy-immunity-overlap-table { min-width: 720px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.enemy-table.enemy-immunity-overlap-table th,
+.enemy-table.enemy-immunity-overlap-table td { width: auto; height: 48px; padding: 7px 8px; text-align: center; font-size: 13px; white-space: nowrap; }
+.enemy-table.enemy-immunity-overlap-table th { font-weight: 500; }
+.enemy-table.enemy-immunity-overlap-table th:first-child { width: 92px; position: sticky; left: 0; background: var(--surface-soft); }
+.enemy-table.enemy-immunity-overlap-table tbody th:first-child { top: auto; z-index: 1; background: var(--surface); }
+.enemy-table.enemy-immunity-overlap-table td { background: color-mix(in srgb, var(--immunity-bar) var(--immunity-overlap-intensity, 0%), var(--surface)); }
+.enemy-table.enemy-immunity-overlap-table td.enemy-immunity-overlap-empty { color: var(--text-muted); background: var(--surface-soft); }
+.enemy-table.enemy-immunity-overlap-table tbody tr:hover { background: transparent; }
+.enemy-immunity-overlap-total { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--text-muted); }
+.enemy-immunity-overlap-legend { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 12px; font-size: 12px; color: var(--text-muted); }
+.enemy-immunity-overlap-legend i { width: 100px; height: 10px; background: linear-gradient(to right, var(--surface), color-mix(in srgb, var(--immunity-bar) 40%, var(--surface))); }
