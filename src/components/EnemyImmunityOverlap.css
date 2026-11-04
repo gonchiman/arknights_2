@@ -1,4 +1,6 @@
 .enemy-immunity-overlap { min-width: 0; }
+.enemy-immunity-overlap-denominator.enemy-chart-visibility legend { font-size: 13px; font-weight: 500; }
+.enemy-immunity-overlap-denominator.enemy-chart-visibility label { min-height: 36px; font-size: 13px; }
 .enemy-immunity-overlap-axes { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 10px; font-size: 13px; color: var(--text-soft); }
 .enemy-table-wrap.enemy-immunity-overlap-scroll { max-height: none; overscroll-behavior-y: auto; }
 .enemy-table.enemy-immunity-overlap-table { min-width: 720px; font-size: 13px; font-variant-numeric: tabular-nums; }

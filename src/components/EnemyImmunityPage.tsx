@@ -1,7 +1,7 @@
 import { useId, useMemo, useState } from 'react'
 import { matchesEnemyFilters } from '../lib/enemyData'
 import { ENEMY_HISTOGRAM_COUNT_MODES, getEnemySpawnCoverageLabel, type EnemyHistogramCounts } from '../lib/enemyHistogramCounts'
-import { ENEMY_IMMUNITIES, filterEnemiesByImmunity, summarizeEnemyImmunities, type EnemyImmunityCountMode, type EnemyImmunityKey } from '../lib/enemyImmunities'
+import { ENEMY_IMMUNITIES, filterEnemiesByImmunity, summarizeEnemyImmunities, type EnemyImmunityCountMode, type EnemyImmunityKey, type EnemyImmunityOverlapDenominator } from '../lib/enemyImmunities'
 import { normalizeEnemyLevelSelection, type EnemyLevelSelection } from '../lib/enemyLevelSelection'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
 import type { EnemyRecord } from '../types/enemy'
@@ -18,6 +18,7 @@ import './EnemyAnalysis.css'
 import './EnemyImmunityPage.css'
 
 const COUNT_OPTIONS = ENEMY_HISTOGRAM_COUNT_MODES.filter(option => option.key !== 'MAPS')
+const OVERLAP_DENOMINATORS = [['ROW', '行の耐性保有数'], ['ALL', '対象全体']] as const
 const TABS = [['graph', '耐性比較'], ['ratios', '保有率'], ['overlap', '重複率'], ['list', '敵一覧']] as const
 type ImmunityTab = typeof TABS[number][0]
 
@@ -27,6 +28,7 @@ export default function EnemyImmunityPage() {
   const [countMode, setCountMode] = useState<EnemyImmunityCountMode>('TYPES')
   const [activeTab, setActiveTab] = useState<ImmunityTab>('graph')
   const [immunityKey, setImmunityKey] = useState<EnemyImmunityKey>('silenceImmune')
+  const [overlapDenominator, setOverlapDenominator] = useState<EnemyImmunityOverlapDenominator>('ROW')
 
   return <section className="calculator-page enemy-analysis-route enemy-immunity-page">
     <header className="page-intro">
@@ -45,12 +47,13 @@ export default function EnemyImmunityPage() {
         countMode={countMode} onCountModeChange={setCountMode}
         activeTab={activeTab} onTabChange={setActiveTab}
         immunityKey={immunityKey} onImmunityChange={setImmunityKey}
+        overlapDenominator={overlapDenominator} onOverlapDenominatorChange={setOverlapDenominator}
       />}
     </EnemyDataContent>
   </section>
 }
 
-function EnemyImmunityContent({ rows, counts, levelType, onLevelChange, countMode, onCountModeChange, activeTab, onTabChange, immunityKey, onImmunityChange }: {
+function EnemyImmunityContent({ rows, counts, levelType, onLevelChange, countMode, onCountModeChange, activeTab, onTabChange, immunityKey, onImmunityChange, overlapDenominator, onOverlapDenominatorChange }: {
   rows: readonly EnemyRecord[]
   counts: EnemyHistogramCounts
   levelType: EnemyLevelSelection
@@ -61,10 +64,13 @@ function EnemyImmunityContent({ rows, counts, levelType, onLevelChange, countMod
   onTabChange: (tab: ImmunityTab) => void
   immunityKey: EnemyImmunityKey
   onImmunityChange: (key: EnemyImmunityKey) => void
+  overlapDenominator: EnemyImmunityOverlapDenominator
+  onOverlapDenominatorChange: (denominator: EnemyImmunityOverlapDenominator) => void
 }) {
   const countModeId = useId()
   const tabId = useId()
   const immunityId = useId()
+  const denominatorId = useId()
   const scopedRows = useMemo(() => rows.filter(enemy => matchesEnemyFilters(enemy, { query: '', levelType })), [rows, levelType])
   const summary = useMemo(() => summarizeEnemyImmunities(scopedRows, countMode, counts), [scopedRows, countMode, counts])
   const allCount = useMemo(() => summarizeEnemyImmunities(rows, countMode, counts).total, [rows, countMode, counts])
@@ -110,9 +116,20 @@ function EnemyImmunityContent({ rows, counts, levelType, onLevelChange, countMod
         <EnemyImmunityRatios rows={scopedRows} immunityKey={immunityKey} countMode={countMode} counts={counts} levelType={levelType} />
       </div>
     </AnalysisTabPanel>
-    <AnalysisTabPanel idPrefix={tabId} tab="overlap" activeTab={activeTab} title="耐性の重複率">
+    <AnalysisTabPanel idPrefix={tabId} tab="overlap" activeTab={activeTab} title="耐性の重複率" headerActions={
+      <fieldset className="enemy-chart-visibility enemy-immunity-overlap-denominator">
+        <legend>分母</legend>
+        <div role="radiogroup" aria-label="重複率の分母">
+          {OVERLAP_DENOMINATORS.map(([value, label]) => <label key={value} className={overlapDenominator === value ? 'active' : ''}>
+            <input type="radio" name={`${denominatorId}-denominator`} value={value} checked={overlapDenominator === value}
+              onChange={() => onOverlapDenominatorChange(value)} />
+            <span>{label}</span>
+          </label>)}
+        </div>
+      </fieldset>
+    }>
       <div className="analysis-panel-body">
-        <EnemyImmunityOverlap rows={scopedRows} countMode={countMode} counts={counts} />
+        <EnemyImmunityOverlap rows={scopedRows} countMode={countMode} counts={counts} denominator={overlapDenominator} />
       </div>
     </AnalysisTabPanel>
     <AnalysisTabPanel idPrefix={tabId} tab="list" activeTab={activeTab} title="耐性を持つ敵" headerActions={immunitySelector('list')}>

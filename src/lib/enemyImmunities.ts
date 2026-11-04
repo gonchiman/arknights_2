@@ -15,6 +15,7 @@ export const ENEMY_IMMUNITIES = [
 
 export type EnemyImmunityKey = typeof ENEMY_IMMUNITIES[number]['key']
 export type EnemyImmunityCountMode = Extract<EnemyHistogramCountMode, 'TYPES' | 'SPAWNS'>
+export type EnemyImmunityOverlapDenominator = 'ROW' | 'ALL'
 
 export interface EnemyImmunitySummaryItem {
   key: EnemyImmunityKey
@@ -111,6 +112,7 @@ export function summarizeEnemyImmunityOverlaps(
   rows: readonly EnemyRecord[],
   mode: EnemyImmunityCountMode = 'TYPES',
   counts: EnemyHistogramCounts | null = null,
+  denominator: EnemyImmunityOverlapDenominator = 'ROW',
 ): EnemyImmunityOverlapSummary {
   const overlaps: EnemyImmunityOverlapRow[] = ENEMY_IMMUNITIES.map(({ key, label }) => ({
     key, label, total: 0,
@@ -128,8 +130,8 @@ export function summarizeEnemyImmunityOverlaps(
     }
   }
   for (const row of overlaps) {
-    // Pair counts are symmetric; proportions use each row's own immune population.
-    for (const cell of row.cells) cell.ratio = row.total === 0 ? null : cell.count / row.total
+    const base = denominator === 'ALL' ? total : row.total
+    for (const cell of row.cells) cell.ratio = base === 0 ? null : cell.count / base
   }
   return { total, rows: overlaps }
 }
