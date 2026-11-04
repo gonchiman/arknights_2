@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { EnemyRecord } from '../src/types/enemy.ts'
-import { filterEnemiesByImmunity, summarizeEnemyImmunities, summarizeEnemyImmunityByLevel } from '../src/lib/enemyImmunities.ts'
+import { ENEMY_IMMUNITIES, filterEnemiesByImmunity, summarizeEnemyImmunities, summarizeEnemyImmunityByLevel, summarizeEnemyImmunityOverlaps } from '../src/lib/enemyImmunities.ts'
 import { parseEnemyHistogramCounts } from '../src/lib/enemyHistogramCounts.ts'
 
 function spawnCounts(enemies: Record<string, number>) {
@@ -243,5 +243,76 @@ test('区分別集計は空・未取得・全件0でも4区分と有限の割合
   const rows = [enemy('zero', ['スタン']), enemy('missing', ['スタン'])]
   for (const counts of [null, spawnCounts({ zero: 0 })]) {
     assert.deepEqual(summarizeEnemyImmunityByLevel(rows, 'stunImmune', 'SPAWNS', counts), empty)
+  }
+})
+
+test('重複率は行の耐性保有数を分母にし、3種以上の併有も各組み合わせへ含める', () => {
+  const rows = [enemy('both', ['スタン', '沈黙', '睡眠']), enemy('silence', ['沈黙']), enemy('none')]
+  const summary = summarizeEnemyImmunityOverlaps(rows)
+  assert.equal(summary.total, 3)
+  assert.deepEqual(summary.rows.map(({ key }) => key), ENEMY_IMMUNITIES.map(({ key }) => key))
+  const [stun, silence, sleep, frozen] = summary.rows
+  assert.deepEqual([stun.total, silence.total, sleep.total], [1, 2, 1])
+  assert.deepEqual(stun.cells.map(({ key }) => key), ENEMY_IMMUNITIES.map(({ key }) => key))
+  assert.deepEqual(stun.cells.slice(0, 4).map(({ count, ratio }) => [count, ratio]), [[1, 1], [1, 1], [1, 1], [0, 0]])
+  assert.deepEqual(silence.cells.slice(0, 4).map(({ count, ratio }) => [count, ratio]), [[1, 0.5], [2, 1], [1, 0.5], [0, 0]])
+  assert.equal(frozen.total, 0)
+  assert.ok(frozen.cells.every(({ count, ratio }) => count === 0 && ratio === null))
+})
+
+test('重複率も先頭の敵IDを使い、重複耐性と戦慄の別名を二重加算しない', () => {
+  const rows = [
+    enemy('a', ['スタン', 'スタン', '武装解除', '戦慄']), enemy('a', ['沈黙']),
+    enemy('b', ['戦慄']), enemy('c', ['武装解除', 'スタン']), enemy('unknown', ['stunImmune']),
+  ]
+  const counts = spawnCounts({ a: 6, b: 3, c: 1, unknown: 2 })
+  const original = structuredClone(rows)
+  for (const [mode, total, stunTotal, disarmTotal] of [['TYPES', 4, 2, 3], ['SPAWNS', 12, 7, 10]] as const) {
+    const summary = summarizeEnemyImmunityOverlaps(rows, mode, counts)
+    const [stun, silence] = summary.rows
+    const disarm = summary.rows.find(row => row.key === 'disarmedCombatImmune')!
+    assert.equal(summary.total, total)
+    assert.equal(stun.total, stunTotal)
+    assert.equal(disarm.total, disarmTotal)
+    assert.equal(disarm.label, '戦慄')
+    assert.equal(disarm.cells[0].count, stunTotal)
+    assert.equal(disarm.cells[0].ratio, stunTotal / disarmTotal)
+    assert.equal(stun.cells.find(cell => cell.key === disarm.key)?.ratio, 1)
+    assert.equal(silence.total, 0)
+  }
+  assert.deepEqual(rows, original)
+})
+
+test('重複率の出現回数は絞り込み後の重みを使い、未登録と0回を種類数に代替しない', () => {
+  const rows: EnemyRecord[] = [
+    enemy('normal', ['沈黙']),
+    { ...enemy('boss-both', ['スタン', '沈黙']), levelType: 'BOSS' },
+    { ...enemy('boss-silence', ['沈黙']), levelType: 'BOSS' },
+    { ...enemy('missing', ['スタン', '沈黙']), levelType: 'BOSS' },
+    { ...enemy('zero', ['スタン', '沈黙']), levelType: 'BOSS' },
+  ]
+  const bosses = rows.filter(row => row.levelType === 'BOSS')
+  const counts = spawnCounts({ normal: 100, 'boss-both': 2, 'boss-silence': 8, zero: 0, outside: 999 })
+  const summary = summarizeEnemyImmunityOverlaps(bosses, 'SPAWNS', counts)
+  assert.equal(summary.total, 10)
+  assert.equal(summary.rows[0].total, 2)
+  assert.equal(summary.rows[0].cells[1].ratio, 1)
+  assert.equal(summary.rows[1].total, 10)
+  assert.equal(summary.rows[1].cells[0].count, 2)
+  assert.equal(summary.rows[1].cells[0].ratio, 0.2)
+  assert.equal(summarizeEnemyImmunityOverlaps(bosses).total, 4)
+  const changed = summarizeEnemyImmunityOverlaps(bosses, 'SPAWNS', spawnCounts({ 'boss-both': 3, 'boss-silence': 1 }))
+  assert.equal(changed.rows[1].cells[0].ratio, 0.75)
+})
+
+test('空・未取得・全件0の重複率は9行9列を残し、割合を未定義として返す', () => {
+  const empty = summarizeEnemyImmunityOverlaps([])
+  assert.equal(empty.total, 0)
+  assert.equal(empty.rows.length, 9)
+  assert.ok(empty.rows.every(row => row.total === 0 && row.cells.length === 9
+    && row.cells.every(cell => cell.count === 0 && cell.ratio === null)))
+  const rows = [enemy('zero', ['スタン', '沈黙']), enemy('missing', ['睡眠'])]
+  for (const counts of [null, spawnCounts({ zero: 0 })]) {
+    assert.deepEqual(summarizeEnemyImmunityOverlaps(rows, 'SPAWNS', counts), empty)
   }
 })

@@ -19,6 +19,7 @@
 
 .enemy-immunity-scope { display: grid; gap: 4px; color: var(--text-muted); font-size: 12px; }
 .enemy-immunity-scope strong { color: var(--text); font-size: 13px; font-weight: 500; }
+.enemy-immunity-page .analysis-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .enemy-immunity-selector { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 13px; font-weight: 400; }
 .enemy-immunity-selector select { min-height: 36px; padding: 6px 28px 6px 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; }
 
