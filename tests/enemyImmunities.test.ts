@@ -279,8 +279,34 @@ test('重複率も先頭の敵IDを使い、重複耐性と戦慄の別名を二
     assert.equal(disarm.cells[0].ratio, stunTotal / disarmTotal)
     assert.equal(stun.cells.find(cell => cell.key === disarm.key)?.ratio, 1)
     assert.equal(silence.total, 0)
+    const overall = summarizeEnemyImmunityOverlaps(rows, mode, counts, 'ALL')
+    assert.equal(overall.total, total)
+    assert.equal(overall.rows[0].total, stunTotal)
+    assert.equal(overall.rows[5].total, disarmTotal)
+    assert.equal(overall.rows[0].cells[5].ratio, stunTotal / total)
+    assert.equal(overall.rows[5].cells[0].ratio, stunTotal / total)
+    assert.equal(overall.rows[5].cells[5].ratio, disarmTotal / total)
   }
   assert.deepEqual(rows, original)
+})
+
+test('全体を分母にした重複率は耐性なしも含み、対称な割合と対角の保有率を返す', () => {
+  const rows = [enemy('both', ['スタン', '沈黙', '睡眠']), enemy('silence', ['沈黙']), enemy('none')]
+  const summary = summarizeEnemyImmunityOverlaps(rows, 'TYPES', null, 'ALL')
+  assert.equal(summary.total, 3)
+  const [stun, silence, sleep, frozen] = summary.rows
+  assert.deepEqual([stun.total, silence.total, sleep.total, frozen.total], [1, 2, 1, 0])
+  assert.deepEqual(stun.cells.slice(0, 4).map(({ count, ratio }) => [count, ratio]), [[1, 1 / 3], [1, 1 / 3], [1, 1 / 3], [0, 0]])
+  assert.deepEqual(silence.cells.slice(0, 4).map(({ count, ratio }) => [count, ratio]), [[1, 1 / 3], [2, 2 / 3], [1, 1 / 3], [0, 0]])
+  for (const [rowIndex, row] of summary.rows.entries()) {
+    for (const [columnIndex, cell] of row.cells.entries()) {
+      assert.equal(cell.ratio, summary.rows[columnIndex].cells[rowIndex].ratio)
+    }
+  }
+  assert.ok(frozen.cells.every(({ count, ratio }) => count === 0 && ratio === 0))
+  const noImmunities = summarizeEnemyImmunityOverlaps([enemy('none')], 'TYPES', null, 'ALL')
+  assert.equal(noImmunities.total, 1)
+  assert.ok(noImmunities.rows.every(row => row.cells.every(cell => cell.ratio === 0)))
 })
 
 test('重複率の出現回数は絞り込み後の重みを使い、未登録と0回を種類数に代替しない', () => {
@@ -303,6 +329,10 @@ test('重複率の出現回数は絞り込み後の重みを使い、未登録�
   assert.equal(summarizeEnemyImmunityOverlaps(bosses).total, 4)
   const changed = summarizeEnemyImmunityOverlaps(bosses, 'SPAWNS', spawnCounts({ 'boss-both': 3, 'boss-silence': 1 }))
   assert.equal(changed.rows[1].cells[0].ratio, 0.75)
+  const overall = summarizeEnemyImmunityOverlaps(bosses, 'SPAWNS', counts, 'ALL')
+  assert.equal(overall.total, 10)
+  assert.equal(overall.rows[0].cells[1].ratio, 0.2)
+  assert.equal(overall.rows[1].cells[0].ratio, 0.2)
 })
 
 test('空・未取得・全件0の重複率は9行9列を残し、割合を未定義として返す', () => {
@@ -312,7 +342,10 @@ test('空・未取得・全件0の重複率は9行9列を残し、割合を未�
   assert.ok(empty.rows.every(row => row.total === 0 && row.cells.length === 9
     && row.cells.every(cell => cell.count === 0 && cell.ratio === null)))
   const rows = [enemy('zero', ['スタン', '沈黙']), enemy('missing', ['睡眠'])]
-  for (const counts of [null, spawnCounts({ zero: 0 })]) {
-    assert.deepEqual(summarizeEnemyImmunityOverlaps(rows, 'SPAWNS', counts), empty)
+  for (const denominator of ['ROW', 'ALL'] as const) {
+    assert.deepEqual(summarizeEnemyImmunityOverlaps([], 'TYPES', null, denominator), empty)
+    for (const counts of [null, spawnCounts({ zero: 0 })]) {
+      assert.deepEqual(summarizeEnemyImmunityOverlaps(rows, 'SPAWNS', counts, denominator), empty)
+    }
   }
 })
