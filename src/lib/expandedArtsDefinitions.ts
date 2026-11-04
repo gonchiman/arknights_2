@@ -202,4 +202,52 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
       { condition: eq('source.spAtLeastSkillCost', true) })], ['RESOURCE']),
   ], { inputs: [b('overcharged', 'オーバーチャージ')], traitNotes: aoeNotes,
     deferredSkills: [{ skillIndex: 3, reason: '時間経過による攻撃力上昇と、命中ごとの被ダメージ上昇の適用順序・累積を扱う必要がある。' }] }),
+  // JP runtime snapshot; mechanics references: https://prts.wiki/w/Ifrit and /Ceobe.
+  operator('char_134_ifrit', [[1, normal({ atk: k('atk'), aspd: k('attack_speed'), periodTotal: { kind: 'CONSTANT_RATE' } })],
+    [2, normal({ label: '強化攻撃', kind: 'NEXT_ATTACK', actions: [
+      { label: '強化攻撃', damageType: 'ARTS', scale: k('atk_scale') },
+      { label: 'やけど付与中', damageType: 'ARTS', scale: k('burn.atk_scale'), timing: 'PER_SECOND' },
+    ], notes: ['やけどは付与中の毎秒ダメージ。付与・更新・終了時刻や退場後の推移は含めない。'] })]], [
+    talent(0, '精神融解', v => [effect('resistance-reduction', 'magic_resistance', {
+      item: 'RESISTANCE_REDUCTION_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: mul(-1, v.read('magic_resistance')),
+    }, { target: target('ENEMY', 'ATTACK_RANGE') })], ['DAMAGE']),
+    talent(1, 'ライン回路', v => [effect('periodic-sp', 'sp', {
+      item: 'SP_RESTORE', operation: 'ADD_VALUE', unit: 'POINT', value: v.read('sp'),
+    }, { timing: { type: 'PERIODIC', intervalSeconds: v.read('interval'), firstTickSeconds: null } })], ['RESOURCE']),
+  ], { traitNotes: ['選択した全対象が直線範囲内にいる条件。S2の防御力低下は自身の術ダメージを変化させない。'],
+    deferredSkills: [{ skillIndex: 3, reason: '通常攻撃を停止する毎秒攻撃と固定術耐性低下を一体で扱う計算段階が必要。' }] }),
+  operator('char_2013_cerber', [[1, next(k('atk_scale'))],
+    [2, normal({ intervalScale: k('base_attack_time'), periodTotal: { kind: 'CONSTANT_RATE' } })],
+    [3, normal({ atk: k('atk'), traitOverrides: ['DAMAGE_TYPE'],
+      actions: [{ label: '物理攻撃', damageType: 'PHYSICAL', scale: 1 }], periodTotal: { kind: 'CONSTANT_RATE' } })]], [
+    talent(0, 'そぎおとし', v => [effect('defense-based-arts', 'atk_scale', {
+      item: 'ADDITIONAL_ATTACK', operation: 'DEAL_DAMAGE', unit: 'MULTIPLIER', value: v.read('atk_scale'),
+      damageType: 'ARTS', rate: 'PER_ATTACK', basis: 'TARGET_DEFENSE', label: 'そぎおとし',
+    }, { target: target('ENEMY', 'ATTACK_TARGET'), timing: { type: 'EVENT', event: 'ATTACK' }, lifetime: { type: 'CURRENT_EVENT' } })], ['ADDITIONAL_DAMAGE']),
+    talent(1, 'ひとりたび', v => [atk(v.read('atk'), 'atk', { condition: eq('adjacentAllyPresent', false) }),
+      speed(v.read('attack_speed'), { condition: eq('adjacentAllyPresent', false) })]),
+  ], { inputs: [b('adjacentAllyPresent', '隣接4マスに味方がいる')],
+    traitNotes: ['そぎおとしは対象の現在の防御力を参照し、物理防御無視や自身の攻撃倍率は適用しない。'] }),
+  // Chain targets share the selected conditions and form one reachable chain.
+  // Decay is multiplicative per jump: https://prts.wiki/w/Passenger#特性
+  operator('char_306_leizi', [[1, normal({ atk: k('atk'), periodTotal: { kind: 'CONSTANT_RATE' } })],
+    [2, normal({ atk: k('atk'), chainDamageRetention: 1, periodTotal: { kind: 'CONSTANT_RATE' } })]], [
+    talent(0, '雷行自在', v => [effect('unblocked-attack-scale', 'atk_scale', {
+      item: 'ATTACK_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('atk_scale'),
+    }, { condition: eq('targetBlocked', false) })], ['DAMAGE']),
+  ], { inputs: [b('targetBlocked', '対象がブロックされている')] }),
+  operator('char_4004_pudd', [[1, normal({ aspd: k('attack_speed'), periodTotal: { kind: 'CONSTANT_RATE' } })]], [
+    talent(0, '電磁波', v => [atk(v.read('atk'))]),
+  ], { deferredSkills: [{ skillIndex: 2, reason: '同じ対象への再跳躍を含む命中列と、単独対象時の跳躍終了を扱う必要がある。' }] }),
+  operator('char_472_pasngr', [[1, next(k('pasngr_s_1.atk_scale'), k('pasngr_s_1.max_target'))],
+    [2, normal({ atk: k('atk'), intervalScale: { op: 'add', args: [1, k('base_attack_time')] }, maxTargets: k('attack@max_target'),
+      periodTotal: { kind: 'UNSUPPORTED', reason: '素質の増幅の付与・更新・失効とHP推移を計算していないため、総ダメージは未計算です。' } })]], [
+    talent(0, 'メカニズムアナライズ', v => [effect('active-analysis-amplification', 'pasngr_t_1[enhance].damage_scale', {
+      item: 'DAMAGE_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('pasngr_t_1[enhance].damage_scale'),
+    }, { target: target('ENEMY', 'ATTACK_TARGET'), condition: eq('analysisAmplificationActive', true),
+      lifetime: { type: 'FIXED_SECONDS', seconds: v.read('pasngr_t_1[enhance].duration') } })], ['DAMAGE']),
+    talent(1, 'ラストソルジャー', v => [atk(v.read('atk'), 'atk', { condition: eq('adjacentEnemyPresent', false) })]),
+  ], { inputs: [b('analysisAmplificationActive', '命中時に素質1の増幅が有効'), b('adjacentEnemyPresent', '隣接4マスに敵がいる')],
+    traitNotes: ['対象全員の命中時の増幅状態を指定する。HP80%以上の対象への命中による増幅の付与・更新、3秒後の失効はシミュレートしない。'],
+    deferredSkills: [{ skillIndex: 3, reason: 'サンダーストームの初回・最終発生、複数ストームと通常攻撃の重なりを扱う必要がある。' }] }),
 ]

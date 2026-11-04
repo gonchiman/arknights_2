@@ -11,9 +11,9 @@ import {
 /** Job definitions are shared by the structure page and the trait combat evaluator. */
 export const TRAIT_STRUCTURE_JOB_IDS = ['fighter', 'lord', 'crusher', 'hammer', 'sword', 'centurion',
   'artsfghter', 'musha', 'instructor', 'fearless', 'reaper', 'librator',
-  'pioneer', 'protector', 'shotprotector', 'artsprotector', 'unyield',
+  'pioneer', 'agent', 'charger', 'stalker', 'protector', 'shotprotector', 'artsprotector', 'unyield',
   'fastshot', 'aoesniper', 'longrange', 'siegesniper', 'reaperrange', 'closerange',
-  'corecaster', 'splashcaster', 'blastcaster', 'slower', 'underminer', 'incantationmedic', 'phalanx'] as const
+  'corecaster', 'splashcaster', 'blastcaster', 'chain', 'slower', 'underminer', 'incantationmedic', 'phalanx'] as const
 export type TraitStructureJobId = typeof TRAIT_STRUCTURE_JOB_IDS[number]
 export interface TraitStructureSelection { readonly operatorId: string }
 export interface TraitStructureGrowthSelection { readonly phaseIndex?: number; readonly operatorLevel?: number }
@@ -37,6 +37,11 @@ export type TraitStructureEffect = CombatEffectContext & {
   | { readonly item: 'ATTACK_PRIORITY'; readonly operation: 'SET'; readonly unit: 'PRIORITY_RULE'; readonly value: 'AIRBORNE' | 'LOWEST_DEFENSE' | 'HIGHEST_WEIGHT' }
   | { readonly item: 'STATUS'; readonly operation: 'SET_ENABLED'; readonly unit: 'STATUS'; readonly value: 'SLUGGISH' }
   | { readonly item: 'DEFENSE_BUFF_RATIO'; readonly operation: 'ADD_RATIO'; readonly unit: 'RATIO'; readonly value: CombatNumericValue }
+  | { readonly item: 'PHYSICAL_DODGE' | 'ARTS_DODGE'; readonly operation: 'ADD_RATIO'; readonly unit: 'RATIO'; readonly value: CombatNumericValue }
+  | { readonly item: 'REDEPLOY_TIME'; readonly operation: 'USE_BASE_ATTRIBUTE'; readonly unit: 'SECOND'; readonly value: CombatNumericValue }
+  | { readonly item: 'DP_ON_KILL'; readonly operation: 'ADD_VALUE'; readonly unit: 'POINT'; readonly value: CombatNumericValue }
+  | { readonly item: 'RETREAT_COST_REFUND'; readonly operation: 'SET'; readonly unit: 'REFUND_RULE'; readonly value: 'INITIAL_DEPLOY_COST' }
+  | { readonly item: 'TARGET_PRIORITY'; readonly operation: 'SET'; readonly unit: 'TARGET_PRIORITY'; readonly value: 'LOW' }
   | { readonly item: 'MAGIC_RESISTANCE'; readonly operation: 'ADD_VALUE'; readonly unit: 'POINT'; readonly value: CombatNumericValue }
   | { readonly item: 'DAMAGE_TO_HEAL_RATIO'; readonly operation: 'RESTORE'; readonly unit: 'DAMAGE_RATIO'; readonly value: CombatNumericValue }
   | { readonly item: 'ATTACK_TARGETING'; readonly operation: 'SET'; readonly unit: 'TARGET_SELECTION'; readonly value: {
@@ -45,6 +50,9 @@ export type TraitStructureEffect = CombatEffectContext & {
   | { readonly item: 'SPLASH_DAMAGE'; readonly operation: 'SET'; readonly unit: 'SPLASH_RULE'; readonly value: {
       readonly damageType: 'PHYSICAL'; readonly attackScale: CombatNumericValue; readonly radiusTiles: CombatNumericValue
       readonly center: 'ATTACK_TARGET'; readonly includeMainTarget: false
+    } }
+  | { readonly item: 'CHAIN_ATTACK'; readonly operation: 'SET'; readonly unit: 'CHAIN_RULE'; readonly value: {
+      readonly maxTargets: CombatNumericValue; readonly retention: CombatNumericValue
     } }
   | { readonly item: 'HP'; readonly operation: 'RESTORE'; readonly unit: 'POINT'; readonly value: CombatNumericValue
       readonly applications: { readonly basis: 'ENEMIES_HIT' | 'UNSPECIFIED'; readonly perAttackLimit: CombatNumericValue } }
@@ -104,6 +112,9 @@ const DEFINITIONS: Record<TraitStructureJobId, JobDefinition> = {
   reaper: { descriptions: [REAPER, REAPER.replace('{value}', '50')], keys: ['value'], categories: ['HEAL_RESTRICTION', 'ATTACK_BEHAVIOR', 'DAMAGE_TYPE', 'HP_CHANGE'] },
   librator: { descriptions: [LIBRATOR, `${LIBRATOR}する`], keys: ['atk', 'max_stack_cnt', 'mid_stack_cnt', 'half_cnt_for_fx'], categories: ['ATTACK_BEHAVIOR', 'BLOCK', 'ABILITY'] },
   pioneer: { profession: 'PIONEER', descriptions: ['敵を2体までブロック'], keys: [], categories: ['BLOCK'] },
+  agent: { profession: 'PIONEER', descriptions: ['再配置までの時間が短い、遠距離攻撃も行える'], keys: [], categories: ['DEPLOYMENT', 'ATTACK_BEHAVIOR'] },
+  charger: { profession: 'PIONEER', descriptions: ['敵を倒す度所持コスト+1 撤退時に初期配置時のコストを返却'], keys: ['cost'], categories: ['RESOURCE', 'DEPLOYMENT'] },
+  stalker: { profession: 'SPECIAL', descriptions: ['攻撃範囲内の敵全員を同時に攻撃 物理回避、術回避が50%上昇 敵に狙われにくい'], keys: ['prob'], categories: ['ATTACK_BEHAVIOR', 'ABILITY'] },
   protector: { profession: 'TANK', descriptions: ['敵を3体までブロック'], keys: [], categories: ['BLOCK'] },
   shotprotector: { profession: 'TANK', descriptions: ['敵を3体までブロック、遠距離攻撃も行える'], keys: [], categories: ['BLOCK', 'ATTACK_BEHAVIOR'] },
   artsprotector: { profession: 'TANK', descriptions: ['スキル発動中、敵に術ダメージを与える'], keys: [], categories: ['DAMAGE_TYPE'] },
@@ -118,6 +129,8 @@ const DEFINITIONS: Record<TraitStructureJobId, JobDefinition> = {
   corecaster: { profession: 'CASTER', descriptions: ['敵に術ダメージを与える'], keys: [], categories: ['DAMAGE_TYPE'] },
   splashcaster: { profession: 'CASTER', descriptions: ['敵に範囲術ダメージを与える'], keys: [], categories: ['ATTACK_BEHAVIOR', 'DAMAGE_TYPE'] },
   blastcaster: { profession: 'CASTER', descriptions: ['直線上の敵に範囲術ダメージを与える'], keys: [], categories: ['ATTACK_BEHAVIOR', 'DAMAGE_TYPE'] },
+  chain: { profession: 'CASTER', descriptions: ['{attack@max_target}体目まで跳躍していく術ダメージを敵に与え、跳躍するたびダメージが15%減衰し、敵を一瞬足止め'],
+    keys: ['attack@max_target', 'attack@sluggish'], prefabKey: '-1', categories: ['ATTACK_BEHAVIOR', 'DAMAGE_TYPE', 'DAMAGE', 'STATUS'] },
   slower: { profession: 'SUPPORT', descriptions: ['敵に術ダメージを与える 攻撃時、敵を一瞬足止め'], keys: ['sluggish'], categories: ['DAMAGE_TYPE', 'STATUS'] },
   underminer: { profession: 'SUPPORT', descriptions: ['敵に術ダメージを与える'], keys: [], categories: ['DAMAGE_TYPE'] },
   incantationmedic: { profession: 'MEDIC', descriptions: ['術ダメージを与え、敵を攻撃するたび攻撃範囲内の味方1人のHPを与ダメージの{scale:0%}回復'],
@@ -196,8 +209,26 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
           item: 'BLOCK_COUNT', operation: 'SET', unit: 'ENEMY', value: block, resolution: agrees ? 'RESOLVED' : 'PARTIAL',
           parameterBindings: { baseAttribute: `phases[${phaseIndex}].attributesKeyFrames[].data.blockCnt` } })
       }
-      if (job === 'shotprotector') effects.push({ ...context('ranged-attack', 'DAMAGE', 'ATTACK_RULE', 'description:ranged_attack'),
+      if (job === 'shotprotector' || job === 'agent') effects.push({ ...context('ranged-attack', 'DAMAGE', 'ATTACK_RULE', 'description:ranged_attack'),
         item: 'RANGED_ATTACK_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: true })
+      if (job === 'agent') {
+        const frames = profile.phases[phaseIndex].attributesKeyFrames ?? []
+        const seconds = frames[0]?.data?.respawnTime
+        const valid = typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0
+          && frames.every(frame => frame.data?.respawnTime === seconds)
+        if (!valid) issues.push('基本ステータスの再配置時間を確認できません。')
+        effects.push({ ...context('base-redeploy-time', 'CONTROL', 'BASE_ATTRIBUTE', `phases[${phaseIndex}].attributesKeyFrames[].data.respawnTime`),
+          item: 'REDEPLOY_TIME', operation: 'USE_BASE_ATTRIBUTE', unit: 'SECOND', value: valid ? seconds : null })
+      }
+      if (job === 'charger') effects.push(
+        { ...context('kill-deployment-points', 'CONTROL', 'DYNAMIC_RULE', 'cost', 'KILL'), item: 'DP_ON_KILL', operation: 'ADD_VALUE', unit: 'POINT', value: read('cost', { expected: 1 }) },
+        { ...context('retreat-cost-refund', 'CONTROL', 'DYNAMIC_RULE', 'description:initial_cost_refund', 'RETREAT'), item: 'RETREAT_COST_REFUND', operation: 'SET', unit: 'REFUND_RULE', value: 'INITIAL_DEPLOY_COST' },
+      )
+      if (job === 'stalker') effects.push(
+        { ...context('physical-dodge', 'SURVIVAL', 'DYNAMIC_RULE', 'prob'), item: 'PHYSICAL_DODGE', operation: 'ADD_RATIO', unit: 'RATIO', value: read('prob', { expected: 0.5 }) },
+        { ...context('arts-dodge', 'SURVIVAL', 'DYNAMIC_RULE', 'prob'), item: 'ARTS_DODGE', operation: 'ADD_RATIO', unit: 'RATIO', value: read('prob', { expected: 0.5 }) },
+        { ...context('low-target-priority', 'SURVIVAL', 'DYNAMIC_RULE', 'description:target_priority'), item: 'TARGET_PRIORITY', operation: 'SET', unit: 'TARGET_PRIORITY', value: 'LOW' },
+      )
       if (job === 'unyield') effects.push({ ...context('ally-healing-restriction', 'SURVIVAL', 'DYNAMIC_RULE', 'description:healing_restriction'),
         item: 'ALLY_HEALING_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: false })
       if (['fastshot', 'longrange', 'siegesniper'].includes(job)) effects.push({
@@ -205,12 +236,12 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
         item: 'ATTACK_PRIORITY', operation: 'SET', unit: 'PRIORITY_RULE',
         value: job === 'fastshot' ? 'AIRBORNE' : job === 'longrange' ? 'LOWEST_DEFENSE' : 'HIGHEST_WEIGHT',
       })
-      if (['corecaster', 'splashcaster', 'blastcaster', 'slower', 'underminer', 'incantationmedic', 'phalanx', 'artsprotector', 'aoesniper'].includes(job)) {
+      if (['corecaster', 'splashcaster', 'blastcaster', 'chain', 'slower', 'underminer', 'incantationmedic', 'phalanx', 'artsprotector', 'aoesniper'].includes(job)) {
         effects.push({ ...context('normal-attack-damage-type', 'DAMAGE', 'ATTACK_RULE', 'description:damage_type', 'NORMAL_ATTACK'),
           condition: ['phalanx', 'artsprotector'].includes(job) ? compare('source.skillActive', true) : null,
           item: 'DAMAGE_TYPE', operation: 'SET', unit: 'DAMAGE_TYPE', value: job === 'aoesniper' ? 'PHYSICAL' : 'ARTS' })
       }
-      if (['aoesniper', 'splashcaster', 'blastcaster', 'reaperrange', 'phalanx'].includes(job)) {
+      if (['aoesniper', 'splashcaster', 'blastcaster', 'reaperrange', 'phalanx', 'stalker'].includes(job)) {
         effects.push({ ...context('area-attack-targets', 'DAMAGE', 'ATTACK_RULE', 'description:area_damage', 'NORMAL_ATTACK'),
           condition: job === 'phalanx' ? compare('source.skillActive', true) : null,
           item: 'ATTACK_TARGETING', operation: 'SET', unit: 'TARGET_SELECTION',
@@ -222,11 +253,14 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
         condition: compare('target.inFrontalTiles', true), item: 'ATTACK_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: read('atk_scale', { expected: 1.5 }),
         parameterBindings: { 'condition.rangeId': source.rangeId! },
       })
-      if (job === 'slower') effects.push({ ...context('attack-sluggish', 'CONTROL', 'DYNAMIC_RULE', 'sluggish', 'ATTACK'),
+      if (job === 'chain') effects.push({ ...context('chain-attack', 'DAMAGE', 'ATTACK_RULE', 'attack@max_target', 'NORMAL_ATTACK'),
+        item: 'CHAIN_ATTACK', operation: 'SET', unit: 'CHAIN_RULE', value: { maxTargets: read('attack@max_target', { positive: true }), retention: 0.85 },
+        parameterBindings: { 'value.retention': 'description:15_percent_decay_per_jump' } })
+      if (job === 'slower' || job === 'chain') effects.push({ ...context('attack-sluggish', 'CONTROL', 'DYNAMIC_RULE', job === 'chain' ? 'attack@sluggish' : 'sluggish', 'ATTACK'),
         target: { type: 'RECIPIENTS', side: 'ENEMY', entity: 'UNIT', scope: 'ATTACK_TARGET', includeSelf: false,
           factionIds: [], tagIds: [], selection: { type: 'ALL' } },
         item: 'STATUS', operation: 'SET_ENABLED', unit: 'STATUS', value: 'SLUGGISH',
-        lifetime: { type: 'FIXED_SECONDS', seconds: read('sluggish', { positive: true }) },
+        lifetime: { type: 'FIXED_SECONDS', seconds: read(job === 'chain' ? 'attack@sluggish' : 'sluggish', { positive: true }) },
       })
       if (job === 'incantationmedic') effects.push({ ...context('damage-to-heal', 'SURVIVAL', 'DYNAMIC_RULE', 'scale', 'ATTACK'),
         item: 'DAMAGE_TO_HEAL_RATIO', operation: 'RESTORE', unit: 'DAMAGE_RATIO', value: read('scale'),
@@ -327,7 +361,9 @@ export function formatTraitStructureEffectItem(item: TraitStructureEffect['item'
     DAMAGE_TYPE: '通常攻撃のダメージ種別', RANGED_ATTACK_ENABLED: '遠距離攻撃', NORMAL_ATTACK_ENABLED: '通常攻撃',
     ALLY_HEALING_ENABLED: '味方からの治療', ATTACK_RANGE: '基本攻撃範囲', ATTACK_TARGETING: '通常攻撃の対象',
     SPLASH_DAMAGE: '周囲へのダメージ', HP: 'HP', ATK_BUFF_RATIO: '攻撃力上昇割合', ATTACK_PRIORITY: '攻撃の優先対象',
-    STATUS: '付与状態', DEFENSE_BUFF_RATIO: '防御力上昇割合', MAGIC_RESISTANCE: '術耐性', DAMAGE_TO_HEAL_RATIO: '与ダメージからの回復' }[item]
+    STATUS: '付与状態', DEFENSE_BUFF_RATIO: '防御力上昇割合', MAGIC_RESISTANCE: '術耐性', DAMAGE_TO_HEAL_RATIO: '与ダメージからの回復',
+    PHYSICAL_DODGE: '物理回避', ARTS_DODGE: '術回避', REDEPLOY_TIME: '基本再配置時間', DP_ON_KILL: '撃破時の所持コスト',
+    RETREAT_COST_REFUND: '撤退時のコスト返却', TARGET_PRIORITY: '狙われやすさ', CHAIN_ATTACK: '跳躍攻撃' }[item]
 }
 export function formatTraitStructureEffectOperation(effect: TraitStructureEffect): string {
   return { SET: '設定', MULTIPLY: '乗算', SET_ENABLED: '適用設定', USE_BASE_ATTRIBUTE: '基本値を参照', DEAL_DAMAGE: 'ダメージ付与',
@@ -335,6 +371,9 @@ export function formatTraitStructureEffectOperation(effect: TraitStructureEffect
 }
 export function formatTraitStructureEffectValue(effect: TraitStructureEffect): string {
   if (effect.unit === 'BOOLEAN') return effect.value ? '有効' : '無効'
+  if (effect.unit === 'REFUND_RULE') return '初期配置時のコスト'
+  if (effect.unit === 'TARGET_PRIORITY') return '低い'
+  if (effect.unit === 'SECOND') return `${numeric(effect.value)}秒`
   if (effect.unit === 'DAMAGE_TYPE') return effect.value === 'ARTS' ? '術' : '物理'
   if (effect.unit === 'TARGET_SELECTION') return effect.value.mode === 'LINE' ? '直線上の範囲攻撃' : '範囲攻撃'
   if (effect.unit === 'PRIORITY_RULE') return { AIRBORNE: '飛行ユニット', LOWEST_DEFENSE: '防御力が最も低い敵', HIGHEST_WEIGHT: '重量が最も重い敵' }[effect.value]
@@ -342,6 +381,7 @@ export function formatTraitStructureEffectValue(effect: TraitStructureEffect): s
   if (effect.unit === 'DAMAGE_RATIO') return `与ダメージ×${numeric(effect.value)}`
   if (effect.unit === 'RANGE_DEFINITION') return effect.value.rangeId ? '基本範囲を参照' : '未確認'
   if (effect.unit === 'SPLASH_RULE') return `攻撃力×${numeric(effect.value.attackScale)}`
+  if (effect.unit === 'CHAIN_RULE') return `最大${numeric(effect.value.maxTargets)}体・跳躍ごとに×${numeric(effect.value.retention)}`
   if (effect.unit === 'RAMP_PROFILE') return `最大${percent(effect.value.maxRatio)}`
   if (effect.unit === 'RATIO') return percent(effect.value)
   if (effect.unit === 'MULTIPLIER') return `×${numeric(effect.value)}`
@@ -353,6 +393,8 @@ export function getTraitStructureEffectValueRows(effect: TraitStructureEffect): 
   const rows: [string, string | number][] = [['表示値', formatTraitStructureEffectValue(effect)], ['単位', effect.unit]]
   if (effect.unit === 'SPLASH_RULE') rows.push(['ダメージ種別', '物理'], ['範囲の中心', '攻撃対象'], ['主対象を含む', 'いいえ'],
     ...getCombatNumericDefinitionRows(effect.value.attackScale, '攻撃力倍率'), ...getCombatNumericDefinitionRows(effect.value.radiusTiles, '半径（マス）'))
+  else if (effect.unit === 'CHAIN_RULE') rows.push(...getCombatNumericDefinitionRows(effect.value.maxTargets, '対象数の上限'),
+    ...getCombatNumericDefinitionRows(effect.value.retention, '跳躍ごとの残存倍率'))
   else if (effect.unit === 'RAMP_PROFILE') rows.push(...getCombatNumericDefinitionRows(effect.value.maxRatio, '攻撃力上昇の上限'),
     ...getCombatNumericDefinitionRows(effect.value.secondsToCap, '最大値までの秒数'), ['補間方式', '未確定'], ['蓄積条件', formatTraitStructureCondition(effect.value.accumulateWhile)], ['リセット契機', 'スキル終了'])
   else if (effect.unit === 'RANGE_DEFINITION') rows.push(['範囲ID', effect.value.rangeId ?? '未確認'])
@@ -378,7 +420,7 @@ export function getTraitStructureEffectDefinitionRows(effect: TraitStructureEffe
 }
 
 function context(id: string, relevance: TraitStructureEffect['relevance'], application: TraitStructureEffect['application'],
-  sourceBinding: string, event?: 'ATTACK' | 'NORMAL_ATTACK' | 'SKILL_END'): CombatEffectContext & Pick<TraitStructureEffect, 'relevance' | 'calculationRelevance' | 'application' | 'resolution'> {
+  sourceBinding: string, event?: 'ATTACK' | 'NORMAL_ATTACK' | 'SKILL_END' | 'KILL' | 'RETREAT'): CombatEffectContext & Pick<TraitStructureEffect, 'relevance' | 'calculationRelevance' | 'application' | 'resolution'> {
   return { id, relevance, calculationRelevance: relevance === 'DAMAGE' ? 'RELEVANT' : 'NOT_RELEVANT', application, resolution: 'RESOLVED',
     sourceBinding, timing: event ? { type: 'EVENT', event } : { type: 'CONTINUOUS', while: 'DEPLOYED' }, condition: null,
     target: { type: 'RECIPIENTS', side: 'SELF', entity: application === 'ATTACK_RULE' ? 'ATTACK' : 'UNIT', scope: 'SELF', includeSelf: true, factionIds: [], tagIds: [], selection: { type: 'ALL' } },

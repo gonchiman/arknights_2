@@ -127,7 +127,7 @@ test('guardの毎秒固定ダメージ、敵HP基準、攻撃ごとの加算を�
 })
 
 test('全登録定義で各効果・攻撃を一度ずつ保持し、入力依存値を参照エラーにしない', () => {
-  assert.equal(SKILL_STRUCTURES.length, 315)
+  assert.equal(SKILL_STRUCTURES.length, 373)
   for (const structure of SKILL_STRUCTURES) {
     const model = buildSkillEffectFlow(structure)
     const sourceStages = structure.guardRecipe?.stages ?? structure.effectStructure.stages

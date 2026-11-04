@@ -6,16 +6,20 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 
-let server, Page, Dialog, Summary, buildCoverage, filterCoverage, defaults, empty, records
+let server, Page, Dialog, Summary, CoverageTable, HistoryDialog, changeLabel, toCoverageRecords, diffCoverageRecords,
+  coverageRecordKey, buildCoverage, filterCoverage, defaults, empty, records
 before(async () => {
   server = await createServer({ configFile: false, plugins: [react()], logLevel: 'error',
     cacheDir: 'node_modules/.vite/dc3-coverage-pages-test', resolve: { preserveSymlinks: true },
     server: { middlewareMode: true, watch: null, preTransformRequests: false, hmr: false }, appType: 'custom' })
-  ;({ DamageCalculatorThreeCoveragePage: Page, DamageCalculatorThreeCoverageDialog: Dialog } =
+  ;({ DamageCalculatorThreeCoveragePage: Page, DamageCalculatorThreeCoverageDialog: Dialog,
+    DamageCalculatorThreeCoverageTable: CoverageTable, DamageCalculatorThreeCoverageHistoryDialog: HistoryDialog,
+    getCoverageChangeLabel: changeLabel } =
     await server.ssrLoadModule('/src/components/DamageCalculatorThreeCoveragePage.tsx'))
   ;({ DamageCalculatorThreeCoverageSummary: Summary } =
     await server.ssrLoadModule('/src/components/DamageCalculatorThreeCoverageSummary.tsx'))
   ;({ buildDamageCalculatorThreeCoverage: buildCoverage } = await server.ssrLoadModule('/src/lib/damageCalculatorThreeCoverage.ts'))
+  ;({ toCoverageRecords, diffCoverageRecords, coverageRecordKey } = await server.ssrLoadModule('/src/lib/damageCalculatorThreeCoverageHistory.ts'))
   ;({ filterDamageCalculatorThreeCoverage: filterCoverage, DEFAULT_DAMAGE_THREE_COVERAGE_FILTERS: defaults,
     EMPTY_DAMAGE_THREE_COVERAGE_FILTERS: empty } = await server.ssrLoadModule('/src/lib/damageCalculatorThreeCoverageFilters.ts'))
   const { classifySkill } = await server.ssrLoadModule('/src/lib/classifier.ts')
@@ -176,4 +180,102 @@ test('読み込み中と結果なしを区別する', () => {
   assert.match(emptyPage, /<span>0スキル<\/span>/)
   assert.match(emptyPage, /集計対象のスキルがありません/)
   assert.doesNotMatch(emptyPage, /data-coverage-section=|class="coverage-stacked-track"|NaN|Infinity/)
+})
+
+test('初期表示は現在の実装・比較なしで、比較がない間は変更のみを無効にする', () => {
+  const markup = render(Page, { rows: records, loading: false, onOpenOperatorDetail() {} })
+  assert.match(markup, /aria-label="バージョン"[^>]*><option value="CURRENT" selected="">現在の実装/)
+  assert.match(markup, /aria-label="比較元"[^>]*><option value="" selected="">比較なし/)
+  assert.match(markup, /type="checkbox" disabled=""/)
+  assert.match(markup, /aria-label="職業"[^>]*>[\s\S]*?<option value="WARRIOR" selected="">前衛/)
+  assert.match(markup, /<option value="6" selected="">★6/)
+  assert.match(markup, /aria-haspopup="dialog"[^>]*>版の履歴/)
+})
+
+test('保存版の最小スキル情報だけで絞り込み・集計・詳細表示し、現在の育成条件に置き換えない', () => {
+  const archived = toCoverageRecords(buildCoverage(records)).find(row => row.skill.operatorId === 'char_350_surtr' && row.skill.skillIndex === 3)
+  archived.skill.operatorName = '保存時のスルト'
+  archived.skill.skillName = '保存時のラグナロク'
+  archived.conditionsLabel = '昇進1・Lv80・信頼0・スキルLv7・潜在2・MODなし'
+  assert.equal('operatorProfile' in archived.skill, false)
+  assert.deepEqual(filterCoverage([archived], { ...defaults, query: '保存時のスルト S3' }), [archived])
+  assert.match(render(Summary, { rows: [archived] }), /<span>1スキル<\/span>/)
+  const markup = render(Dialog, { row: archived, historical: true, onClose() {} })
+  assert.match(markup, /保存時のスルト S3/)
+  assert.match(markup, /保存時のラグナロク/)
+  assert.match(markup, /昇進1・Lv80・信頼0・スキルLv7・潜在2・MODなし/)
+  assert.doesNotMatch(markup, /昇進2・特化3/)
+  assert.match(markup, />現在の計算機3で開く<\/a>/)
+  assert.doesNotMatch(markup, />計算機3で開く<\/a>/)
+  const missingConditions = render(Dialog, { row: { ...archived, conditionsLabel: undefined }, historical: true, onClose() {} })
+  assert.match(missingConditions, /育成条件の記録なし/)
+  assert.doesNotMatch(missingConditions, /昇進2・特化3/)
+})
+
+test('同じ総合状態でも素質・条件・計算範囲の変更項目と保存した前後の内容を表示する', () => {
+  const before = toCoverageRecords(buildCoverage(records)).find(row => row.skill.operatorId === 'char_350_surtr' && row.skill.skillIndex === 3)
+  const after = structuredClone(before)
+  after.details.find(detail => detail.id === 'talent-1').name = '変更後の素質'
+  before.calculationScope = ['変更前の計算範囲']
+  after.calculationScope = ['変更後の計算範囲']
+  before.supportedConditions = ['変更前の条件']
+  after.supportedConditions = ['変更後の条件']
+  before.conditionsLabel = '昇進2・Lv70・特化2'
+  after.conditionsLabel = '昇進2・Lv90・特化3'
+  const [change] = diffCoverageRecords([before], [after])
+  assert.equal(change.kind, 'CHANGED')
+  assert.equal(changeLabel(change), '変更')
+  assert.deepEqual(change.fields, ['素質', '計算条件', '計算範囲', '対応条件'])
+  const markup = render(CoverageTable, { rows: [after], changes: new Map([[change.key, change]]), onOpenOperatorDetail() {}, onDetail() {} })
+  const cells = table(markup)
+  assert.equal(cells[0].length, 11)
+  assert.deepEqual(cells[0].slice(7), ['変更', '比較元の総合', '変更項目', '詳細'])
+  assert.equal(cells[1][6], cells[1][8])
+  assert.equal(cells[1][9], '素質・計算条件・計算範囲・対応条件')
+  assert.match(markup, /data-coverage-change="CHANGED"/)
+  const detail = render(Dialog, { row: after, change, historical: true, beforeLabel: 'v1', afterLabel: 'v2', onClose() {} })
+  const difference = namedTable(detail, 'damage-three-coverage-change-table')
+  assert.deepEqual(difference[0], ['変更項目', 'v1', 'v2'])
+  assert.deepEqual(difference.find(row => row[0] === '計算条件'), ['計算条件', before.conditionsLabel, after.conditionsLabel])
+  assert.deepEqual(difference.find(row => row[0] === '計算範囲'), ['計算範囲', '変更前の計算範囲', '変更後の計算範囲'])
+  assert.deepEqual(difference.find(row => row[0] === '対応条件'), ['対応条件', '変更前の条件', '変更後の条件'])
+  assert.match(difference.find(row => row[0] === '素質')[2], /変更後の素質/)
+  const aggregateOnly = structuredClone(before)
+  aggregateOnly.sections.talent = 'PENDING'
+  const [aggregateChange] = diffCoverageRecords([before], [aggregateOnly])
+  const aggregateDetail = render(Dialog, { row: aggregateOnly, change: aggregateChange, onClose() {} })
+  const talentChange = namedTable(aggregateDetail, 'damage-three-coverage-change-table').find(row => row[0] === '素質')
+  assert.match(talentChange[1], /素質：対応/)
+  assert.match(talentChange[2], /素質：保留/)
+})
+
+test('新規対応・カタログ追加・カタログ削除を区別し、削除された行に現在の状態を表示しない', () => {
+  const row = toCoverageRecords(buildCoverage(records))[0]
+  const old = { ...row, status: 'UNSUPPORTED', selection: undefined }
+  const supported = { ...row, status: 'SUPPORTED' }
+  assert.equal(changeLabel(diffCoverageRecords([old], [supported])[0]), '新規対応')
+  assert.equal(changeLabel(diffCoverageRecords([old], [{ ...row, status: 'PENDING' }])[0]), '登録追加')
+  assert.equal(changeLabel(diffCoverageRecords([], [supported])[0]), 'カタログ追加')
+  const [removed] = diffCoverageRecords([supported], [])
+  assert.equal(changeLabel(removed), 'カタログ削除')
+  const markup = render(CoverageTable, { rows: [supported], changes: new Map([[coverageRecordKey(supported), removed]]), onOpenOperatorDetail() {}, onDetail() {} })
+  assert.deepEqual(table(markup)[1].slice(3, 10), ['—', '—', '—', '—', 'カタログ削除', '対応', 'カタログ'])
+  const detail = render(Dialog, { row: supported, change: removed, historical: true, onClose() {} })
+  assert.deepEqual(namedTable(detail, 'damage-three-coverage-change-table')[1], ['カタログ', '対応', 'カタログに存在しない'])
+})
+
+test('版の履歴は再集計と保存時の記録を区別し、コード・ゲームデータの識別情報を表示する', () => {
+  const source = { codeRevision: 'old-revision', codeDirty: true, codeFingerprint: 'code-sha', gameDataRevision: 'game-revision', gameDataFingerprint: 'game-sha', reconstructed: true }
+  const version = { schemaVersion: 1, id: 'v1', label: 'v1 拡張前（再集計）', capturedAt: '2026-11-04T00:00:00Z', source, skillCount: 915, file: 'v1.json', sha256: 'file-sha', counts: {} }
+  const markup = render(HistoryDialog, { versions: [version, { ...version, id: 'v2', label: 'v2', source: { ...source, reconstructed: false } }], onClose() {} })
+  const rows = namedTable(markup, 'damage-three-coverage-history-table')
+  assert.deepEqual(rows[0], ['バージョン', '記録日時', '記録方法', 'スキル数', 'コード', 'ゲームデータ'])
+  assert.equal(rows[1][2], '過去コードを記録時のゲームデータで再集計')
+  assert.equal(rows[2][2], '保存時の実装を記録')
+  assert.equal(rows[1][3], '915')
+  assert.match(rows[1][4], /old-revision（未コミットの変更を含む）/)
+  assert.match(rows[1][4], /code-sha/)
+  assert.match(rows[1][5], /game-revision/)
+  assert.match(rows[1][5], /game-sha/)
+  assert.match(markup, /aria-label="実装範囲の保存履歴" tabindex="0"/)
 })

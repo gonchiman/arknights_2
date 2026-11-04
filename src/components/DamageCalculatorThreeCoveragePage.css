@@ -2,12 +2,55 @@
 
 .damage-three-coverage-meta { flex-wrap: wrap; }
 
+.skill-directory-filter-grid.damage-three-coverage-history-controls {
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto auto;
+  align-items: end;
+  margin-bottom: 16px;
+}
+.damage-three-coverage-history-controls label.damage-three-coverage-changes-only {
+  display: flex;
+  align-items: center;
+  align-self: end;
+  min-height: 34px;
+  gap: 6px;
+}
+.damage-three-coverage-changes-only input { width: auto; margin: 0; }
+.damage-three-coverage-history-controls label.damage-three-coverage-changes-only > span { font-size: 12px; }
+.damage-three-coverage-history-error { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.damage-three-coverage-history-error > span { overflow-wrap: anywhere; }
+.damage-three-coverage-history-error button { flex-shrink: 0; }
+
 .damage-three-coverage-table { min-width: 920px; }
 .damage-three-coverage-table th:nth-child(1) { width: 22%; }
 .damage-three-coverage-table th:nth-child(2) { width: 72px; }
 .damage-three-coverage-table th:nth-child(3) { width: auto; }
 .damage-three-coverage-table th:nth-child(n+4):nth-child(-n+7) { width: 90px; }
 .damage-three-coverage-table th:nth-child(8) { width: 70px; }
+.damage-three-coverage-comparison-table { min-width: 1320px; }
+.damage-three-coverage-comparison-table th:first-child { width: 150px; }
+.damage-three-coverage-comparison-table th:nth-child(8) { width: 100px; }
+.damage-three-coverage-comparison-table th:nth-child(9) { width: 100px; }
+.damage-three-coverage-comparison-table th:nth-child(10) { width: 180px; }
+.damage-three-coverage-comparison-table th:nth-child(11) { width: 70px; }
+.damage-three-coverage-change-fields { white-space: normal; overflow-wrap: anywhere; }
+
+.damage-three-coverage-change-table { min-width: 570px; }
+.damage-three-coverage-change-table th:first-child { width: 100px; }
+.damage-three-coverage-change-table th:nth-child(2),
+.damage-three-coverage-change-table th:nth-child(3) { width: calc((100% - 100px) / 2); }
+.damage-three-coverage-change-table td { white-space: pre-line; overflow-wrap: anywhere; }
+.damage-three-coverage-history-table { min-width: 1060px; }
+.damage-three-coverage-history-table th:first-child { width: 170px; }
+.damage-three-coverage-history-table th:nth-child(2) { width: 140px; }
+.damage-three-coverage-history-table th:nth-child(3) { width: 160px; }
+.damage-three-coverage-history-table th:nth-child(4) { width: 70px; }
+.damage-three-coverage-history-table th:nth-child(5),
+.damage-three-coverage-history-table th:nth-child(6) { width: 260px; }
+.damage-three-coverage-history-table td { white-space: pre-line; overflow-wrap: anywhere; }
+.damage-three-coverage-change-table tbody th,
+.damage-three-coverage-history-table tbody th { font-size: 12px; font-weight: 400; }
+.damage-three-coverage-change-table tbody tr:last-child th,
+.damage-three-coverage-history-table tbody tr:last-child th { border-bottom: 0; }
 
 .damage-three-coverage-detail-table { min-width: 0; }
 .damage-three-coverage-detail-table th:first-child { width: 100px; }
@@ -32,5 +75,6 @@
 .damage-three-coverage-actions { display: flex; margin-top: 14px; }
 
 @media (max-width: 620px) {
+  .skill-directory-filter-grid.damage-three-coverage-history-controls { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .damage-three-coverage-meta span:last-child { display: inline; }
 }

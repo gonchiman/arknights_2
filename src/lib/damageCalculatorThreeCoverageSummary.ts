@@ -33,7 +33,7 @@ export interface DamageCalculatorThreeCoverageSummary {
 
 /** The caller supplies the filtered skill rows; every section uses that same population. */
 export function summarizeDamageCalculatorThreeCoverage(
-  rows: readonly DamageCalculatorThreeCoverageRow[],
+  rows: readonly Pick<DamageCalculatorThreeCoverageRow, 'status' | 'sections'>[],
 ): DamageCalculatorThreeCoverageSummary {
   const count = rows.length
   const sections = COVERAGE_SUMMARY_SECTIONS.map(({ key, label }) => {

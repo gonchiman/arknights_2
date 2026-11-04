@@ -11,6 +11,7 @@
     "generate:enemy-histogram-counts": "node scripts/generateEnemyHistogramCounts.mjs",
     "generate:enemy-stages": "node --use-system-ca scripts/generateEnemyStageAppearances.mjs",
     "archive:enemy-aggregation": "node --experimental-strip-types scripts/enemyAggregationArchive.mjs",
+    "archive:dc3-coverage": "node --experimental-strip-types scripts/archiveDc3Coverage.mjs",
     "generate:maps": "node scripts/generateMapDatabase.mjs",
     "generate:roguelike": "node --use-system-ca scripts/generateRoguelikeDatabase.mjs",
     "generate:main-enemy-trends": "node --experimental-strip-types scripts/generate-main-enemy-trends.mjs",

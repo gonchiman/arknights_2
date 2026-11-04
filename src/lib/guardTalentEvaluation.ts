@@ -14,9 +14,12 @@ const damageItems: ReadonlySet<TalentStructureEffect['item']> = new Set([
   'ATK_BUFF_RATIO', 'ATK_FLAT', 'ATTACK_SCALE', 'ATTACK_SPEED', 'DAMAGE_SCALE',
   'SPLASH_DAMAGE_SCALE', 'DEFENSE_IGNORE_RATIO', 'RESISTANCE_IGNORE_FIXED',
   'RESISTANCE_IGNORE_RATIO', 'DEFENSE_REDUCTION_RATIO', 'CRITICAL_ATTACK', 'ADDITIONAL_ATTACK',
-  'DAMAGE_OVER_TIME',
+  'DAMAGE_OVER_TIME', 'ATTACK_INTERVAL_ADD', 'MINIMUM_DAMAGE_RATIO', 'DEFENSE_IGNORE_FIXED', 'RESISTANCE_REDUCTION_RATIO',
 ])
 const operations: Readonly<Record<string, readonly [string, string]>> = {
+  ATTACK_INTERVAL_ADD: ['ADD_VALUE', 'SECOND'], MINIMUM_DAMAGE_RATIO: ['SET', 'RATIO'],
+  DEFENSE_IGNORE_FIXED: ['IGNORE_FIXED', 'POINT'],
+  RESISTANCE_REDUCTION_RATIO: ['ADD_RATIO', 'RATIO'],
   ATK_BUFF_RATIO: ['ADD_RATIO', 'RATIO'], ATK_FLAT: ['ADD_VALUE', 'POINT'],
   ATTACK_SCALE: ['MULTIPLY', 'MULTIPLIER'], ATTACK_SPEED: ['ADD_VALUE', 'POINT'],
   DAMAGE_SCALE: ['MULTIPLY', 'MULTIPLIER'], SPLASH_DAMAGE_SCALE: ['MULTIPLY', 'MULTIPLIER'],
@@ -26,6 +29,8 @@ const operations: Readonly<Record<string, readonly [string, string]>> = {
 }
 
 function supportsContext(effect: TalentStructureEffect, metrics: Metrics): boolean {
+  if (effect.item === 'ADDITIONAL_ATTACK' && effect.basis === 'TARGET_DEFENSE'
+    && (effect.rate !== 'PER_ATTACK' || effect.flatDamage !== undefined)) return false
   const expected = operations[effect.item]
   if (effect.item === 'DAMAGE_OVER_TIME') {
     if (effect.operation !== 'DEAL_DAMAGE' || effect.damage.kind.type !== 'ORDINARY'
@@ -36,7 +41,9 @@ function supportsContext(effect: TalentStructureEffect, metrics: Metrics): boole
   if (effect.probability.rollScope !== 'APPLICATION'
     && !(effect.probability.rollScope === 'TICK' && effect.timing.type === 'PERIODIC'
       && effect.item === 'ADDITIONAL_ATTACK' && effect.rate === 'PER_SECOND')) return false
-  if (chance !== 1 && effect.item !== 'CRITICAL_ATTACK' && effect.item !== 'ADDITIONAL_ATTACK') return false
+  if (chance !== 1 && effect.item !== 'CRITICAL_ATTACK' && effect.item !== 'ADDITIONAL_ATTACK'
+    && !(effect.item === 'ATK_BUFF_RATIO' && effect.timing.type === 'EVENT' && effect.timing.event === 'ATTACK'
+      && effect.lifetime.type === 'CURRENT_EVENT')) return false
   if (effect.afterEffects?.length || effect.timing.type === 'AFTER_EVENT'
     || effect.lifetime.type === 'UNSPECIFIED' || effect.lifetime.type === 'WHILE_CONDITION') return false
   if (effect.target.selection.type !== 'ALL') return false
@@ -92,7 +99,8 @@ function matchesRecipient(effect: TalentStructureEffect, metrics: Metrics): bool
 function relevant(effect: TalentStructureEffect, metrics: Metrics): boolean {
   if (!damageItems.has(effect.item)) return false
   if (effect.target.side === 'ALLY' && !effect.target.includeSelf) return false
-  if (effect.item === 'ATK_BUFF_RATIO' || effect.item === 'ATK_FLAT' || effect.item === 'ATTACK_SPEED') {
+  if (effect.item === 'ATK_BUFF_RATIO' || effect.item === 'ATK_FLAT' || effect.item === 'ATTACK_SPEED'
+    || effect.item === 'ATTACK_INTERVAL_ADD') {
     if (effect.target.side !== 'SELF' && !(effect.target.side === 'ALLY' && effect.target.includeSelf)) return false
   }
   if (effect.timing.type === 'EVENT') {
@@ -183,8 +191,14 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
     const status = active ? 'APPLIED' : 'CONDITION_FALSE'
     switch (effect.item) {
       case 'ATK_BUFF_RATIO':
-        if (active) output.attackRatio += value
-        addRow('攻撃力', `＋${percent(value)}`, status, '', details)
+        if (value < -1) { block('攻撃力増加割合が有効範囲外です。'); break }
+        if (active && probability !== 1 && probability !== 0) {
+          if (output.critChance !== 0) { block('複数の確率攻撃補正の同時適用は未対応です。'); break }
+          output.critChance = probability!
+          output.critScale = 1
+          output.criticalAttackRatio = value
+        } else if (active && probability === 1) output.attackRatio += value
+        addRow('攻撃力', `＋${percent(value)}`, status, '', { ...details, ...(probability === 1 ? {} : { probability: probability! }) })
         break
       case 'ATK_FLAT':
         if (active) output.attackFlat += value
@@ -197,6 +211,20 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
       case 'ATTACK_SPEED':
         if (active) output.attackSpeed += value
         addRow('攻撃速度', `＋${formatCombatNumber(value)}`, status, '', details)
+        break
+      case 'ATTACK_INTERVAL_ADD':
+        if (active) output.attackIntervalAdd = (output.attackIntervalAdd ?? 0) + value
+        addRow('攻撃間隔の加算', `${value < 0 ? '' : '＋'}${formatCombatNumber(value)}秒`, status, '', details)
+        break
+      case 'MINIMUM_DAMAGE_RATIO':
+        if (value < 0 || value > 1) { block('最低ダメージの攻撃力比率が有効範囲外です。'); break }
+        if (active) output.minimumDamageRatio = Math.max(output.minimumDamageRatio ?? 0, value)
+        addRow('最低ダメージの攻撃力比率', percent(value), status, '', details)
+        break
+      case 'DEFENSE_IGNORE_FIXED':
+        if (value < 0) { block('防御力固定無視が有効範囲外です。'); break }
+        if (active) output.defenseIgnoreFixed += value
+        addRow('防御力固定無視', formatCombatNumber(value), status, '', details)
         break
       case 'DAMAGE_SCALE':
         if (active) output.damageScale *= value
@@ -222,6 +250,11 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
         if (active) output.defenseReductionRatio = 1 - (1 - output.defenseReductionRatio) * (1 - value)
         addRow('防御力低下', `－${percent(value)}`, status, '', details)
         break
+      case 'RESISTANCE_REDUCTION_RATIO':
+        if (value < 0 || value > 1) { block('術耐性低下の割合が有効範囲外です。'); break }
+        if (active) output.resistanceReductionRatio = 1 - (1 - (output.resistanceReductionRatio ?? 0)) * (1 - value)
+        addRow('術耐性低下', `－${percent(value)}`, status, '', details)
+        break
       case 'CRITICAL_ATTACK': {
         const chance = numeric(effect.probability.chance, '発動確率')
         if (chance === null) break
@@ -245,12 +278,13 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
         }
         if (active) output.additionalActions.push({ label: effect.label ?? source, damageType: effect.damageType,
           scale: value, ...(effect.hits === undefined ? {} : { hits }),
+          ...(effect.basis === undefined ? {} : { basis: effect.basis }),
           ...(flatDamage === undefined ? {} : { flatDamage }),
           ...(effect.probability.chance === 1 ? {} : { probability: chance }),
           ...(effect.rate === 'PER_SECOND' ? { timing: 'PER_SECOND' } : {}),
         })
         addRow(effect.rate === 'PER_SECOND' ? '追加ダメージ/秒' : '追加ダメージ',
-          flatDamage === undefined ? `×${formatCombatNumber(value)}` : formatCombatNumber(flatDamage), status, '',
+          flatDamage === undefined ? `${effect.basis === 'TARGET_DEFENSE' ? '対象の防御力' : ''}×${formatCombatNumber(value)}` : formatCombatNumber(flatDamage), status, '',
           { ...details, ...(chance === 1 ? {} : { probability: chance }) })
         break
       }

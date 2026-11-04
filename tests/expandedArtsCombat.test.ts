@@ -39,10 +39,10 @@ function close(actual: number | null, expected: number) {
 }
 const attack = (base: number, ratio = 0) => Math.floor(base * (1 + ratio) + 1e-9)
 
-test('術師・補助・呪癒師32名の67スキルを45対応・22保留に分け、全素質を登録する', () => {
-  assert.equal(sources.length, 32)
-  assert.equal(sources.reduce((sum, source) => sum + source.skills.length, 0), 67)
-  assert.equal(EXPANDED_ARTS_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 45)
+test('術師・補助・呪癒師37名の80スキルを55対応・25保留に分け、全素質を登録する', () => {
+  assert.equal(sources.length, 37)
+  assert.equal(sources.reduce((sum, source) => sum + source.skills.length, 0), 80)
+  assert.equal(EXPANDED_ARTS_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 55)
   for (const definition of EXPANDED_ARTS_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     const indices = [...definition.recipes.map(recipe => recipe.skillIndex), ...(definition.deferredSkills ?? []).map(skill => skill.skillIndex)]
@@ -57,7 +57,7 @@ test('術師・補助・呪癒師32名の67スキルを45対応・22保留に分
   }
 })
 
-test('対応45スキルの初期条件は有限のダメージを返し、保留22スキルは部分結果を出さない', () => {
+test('対応55スキルの初期条件は有限のダメージを返し、保留25スキルは部分結果を出さない', () => {
   for (const definition of EXPANDED_ARTS_DEFINITIONS) {
     for (const recipe of definition.recipes) {
       const result = output(definition.operatorId, recipe.skillIndex)
@@ -202,4 +202,109 @@ test('未確認のデータ変化や素質数値欠落ではsnapshot値を流用
   })
   assert.ok(missingTalent.unsupportedReasons.some(reason => reason.includes('hp_ratio')))
   assert.deepEqual(missingTalent.rows, [])
+})
+
+function against(id: string, index: number, defense: number, resistance: number, guard: GuardConditions = {}) {
+  const skill = record(id, index), source = sources.find(source => source.operatorId === id)!
+  const result = buildDamageCalculatorThreeOutput({ operator: skill, skill, phaseIndex: source.phaseIndex,
+    operatorLevel: source.profile.phases[source.phaseIndex].maxLevel!, trust: 100,
+    skillLevelIndex: source.skillLevelIndex, conditions: { guard }, enemy: { defense, resistance } })
+  assert.deepEqual(result.unsupportedReasons, [], `${id} S${index}: ${result.unsupportedReasons.join(' / ')}`)
+  assert.equal(result.rows.length, 1)
+  return { result, row: result.rows[0] }
+}
+
+test('イフリータは範囲内術耐性40%低下を先に適用し、S2の直撃と付与中のやけどを分離する', () => {
+  const first = against('char_134_ifrit', 1, 900, 50, { actualAttackTargetCount: 3 })
+  const scaled = attack(first.result.stats.attack, 0.2)
+  close(first.row.perAttack, scaled * 0.7)
+  close(first.row.allTargetsPerAttack, scaled * 0.7 * 3)
+  close(first.result.attackInterval, first.result.stats.baseAttackTime / 1.8)
+  const second = against('char_134_ifrit', 2, 900, 50)
+  close(second.row.perAttack, second.result.stats.attack * 2.5 * 0.7)
+  close(second.row.damageOverTimeDps!, second.result.stats.attack * 0.33 * 0.7)
+  assert.equal(second.row.dps, null)
+  assert.equal(second.row.combinedDps, null)
+})
+
+test('ケオベのそぎおとしは敵の防御力を独立参照し、スキル倍率やひとりたびを掛けない', () => {
+  for (const adjacent of [false, true]) {
+    const { result, row } = against('char_2013_cerber', 1, 1000, 40, { adjacentAllyPresent: adjacent })
+    const a = attack(result.stats.attack, adjacent ? 0 : 0.08)
+    close(row.perAttack, (a * 2.1 + 1000 * 0.4) * 0.6)
+    assert.equal(row.dps, null)
+  }
+  const zero = against('char_2013_cerber', 2, 0, 40)
+  const armored = against('char_2013_cerber', 2, 1000, 40)
+  close(armored.row.perAttack - zero.row.perAttack, 1000 * 0.4 * 0.6)
+  close(armored.result.attackInterval, armored.result.stats.baseAttackTime * 0.33 / 1.08)
+  close(armored.row.dps, armored.row.perAttack / armored.result.attackInterval!)
+})
+
+test('ケオベS3は通常攻撃を物理化しても、そぎおとしだけは術耐性で軽減する', () => {
+  const { result, row } = against('char_2013_cerber', 3, 1000, 60)
+  const a = attack(result.stats.attack, 2.18)
+  close(row.perAttack, Math.max(a - 1000, a * 0.05) + 1000 * 0.4 * 0.4)
+  assert.equal(result.damageType, null)
+  assert.deepEqual(new Set(row.attackComponents.map(component => component.damageType)), new Set(['PHYSICAL', 'ARTS']))
+})
+
+test('プリンS1の連鎖は各跳躍で15%ずつ乗算減衰し、全体と1体あたりの平均を区別する', () => {
+  for (const count of [1, 2, 4]) {
+    const { result, row } = against('char_4004_pudd', 1, 0, 50, { actualAttackTargetCount: count })
+    const total = attack(result.stats.attack, 0.1) * 0.5
+      * Array.from({ length: count }, (_, index) => 0.85 ** index).reduce((sum, scale) => sum + scale, 0)
+    close(row.allTargetsPerAttack, total)
+    close(row.perAttack, total / count)
+    close(result.attackInterval, result.stats.baseAttackTime / 1.75)
+    assert.equal(result.maxTargetCount, 4)
+  }
+  assert.deepEqual(output('char_4004_pudd', 1, { actualAttackTargetCount: 5 }).rows, [])
+})
+
+test('レイズS2は連鎖の減衰だけを無効にし、非ブロック素質と4体上限を維持する', () => {
+  for (const targetBlocked of [false, true]) {
+    const { result, row } = against('char_306_leizi', 2, 0, 40, { actualAttackTargetCount: 4, targetBlocked })
+    const damage = attack(result.stats.attack, 1.5) * (targetBlocked ? 1 : 1.2) * 0.6
+    close(row.perAttack, damage)
+    close(row.allTargetsPerAttack, damage * 4)
+    assert.equal(result.maxTargetCount, 4)
+  }
+  const first = against('char_306_leizi', 1, 0, 0, { actualAttackTargetCount: 2 })
+  close(first.row.allTargetsPerAttack, attack(first.result.stats.attack, 1) * 1.2 * 1.85)
+})
+
+test('パッセンジャーは命中時の増幅状態を独立指定し、S2の5体連鎖と隣接条件を適用する', () => {
+  for (const amplified of [false, true]) {
+    for (const adjacent of [false, true]) {
+      const { result, row } = against('char_472_pasngr', 2, 0, 20, {
+        actualAttackTargetCount: 5, analysisAmplificationActive: amplified, adjacentEnemyPresent: adjacent,
+      })
+      const total = attack(result.stats.attack, adjacent ? 0.3 : 0.38) * 0.8 * (amplified ? 1.2 : 1)
+        * (1 + 0.85 + 0.85 ** 2 + 0.85 ** 3 + 0.85 ** 4)
+      close(row.allTargetsPerAttack, total)
+      close(row.perAttack, total / 5)
+      close(result.attackInterval, result.stats.baseAttackTime * 0.5)
+      assert.equal(result.maxTargetCount, 5)
+    }
+  }
+  const first = against('char_472_pasngr', 1, 0, 0)
+  close(first.row.perAttack, attack(first.result.stats.attack, 0.08) * 2.5)
+  assert.equal(first.row.dps, null)
+})
+
+test('追加術師でも素質の数値欠落、スキル更新、連鎖特性の変更は計算を止める', () => {
+  const missing = output('char_2013_cerber', 2, {}, skill => {
+    for (const candidate of skill.operatorProfile.talents![0].candidates!) candidate.blackboard = []
+  })
+  assert.deepEqual(missing.rows, [])
+  assert.ok(missing.unsupportedReasons.some(reason => reason.includes('atk_scale')))
+  const changed = output('char_134_ifrit', 2, {}, skill => {
+    skill.skillLevels[9].blackboard!.find(entry => entry.key === 'burn.atk_scale')!.value = 0.4
+  })
+  assert.deepEqual(changed.rows, [])
+  const trait = output('char_4004_pudd', 1, {}, skill => {
+    skill.operatorProfile.trait!.candidates!.at(-1)!.blackboard!.find(entry => entry.key === 'attack@max_target')!.value = 6
+  })
+  assert.deepEqual(trait.rows, [])
 })

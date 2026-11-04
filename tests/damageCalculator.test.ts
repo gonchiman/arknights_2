@@ -1,5 +1,18 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+
+test('追加の最低保証は通常の5%保証と比較し、軽減前の値や確定ダメージを置換しない', () => {
+  assert.equal(calculateDamageBreakdown(1000, 'PHYSICAL', 2000, 0).result, 50)
+  const guaranteed = calculateDamageBreakdown(1000, 'PHYSICAL', 2000, 0, { minimumDamage: 400 })
+  assert.equal(guaranteed.minimumDamage, 400)
+  assert.equal(guaranteed.minimumApplied, true)
+  assert.equal(guaranteed.afterDefense, -1000)
+  assert.equal(guaranteed.result, 400)
+  assert.equal(calculateDamageBreakdown(1000, 'PHYSICAL', 100, 0, { minimumDamage: 400 }).result, 900)
+  assert.equal(calculateDamageBreakdown(1000, 'ARTS', 0, 100, { minimumDamage: 250 }).result, 250)
+  assert.equal(calculateDamageBreakdown(1000, 'PHYSICAL', 2000, 0, { minimumDamage: 10 }).result, 50)
+  assert.equal(calculateDamageBreakdown(1000, 'TRUE', 2000, 100, { minimumDamage: 2000 }).result, 1000)
+})
 import {
   calculateAttackPipeline,
   calculateDamage,

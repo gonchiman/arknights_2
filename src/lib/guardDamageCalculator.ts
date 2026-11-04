@@ -69,7 +69,8 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
     phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel })
   reasons.push(...passive.blockers, ...(stage?.unresolved ?? []))
   for (const [label, fraction] of Object.entries({ 発動確率: passive.critChance,
-    防御力無視: passive.defenseIgnoreRatio, 術耐性無視: passive.resistanceIgnoreRatio, 防御力低下: passive.defenseReductionRatio })) {
+    防御力無視: passive.defenseIgnoreRatio, 術耐性無視: passive.resistanceIgnoreRatio, 防御力低下: passive.defenseReductionRatio,
+    術耐性低下: passive.resistanceReductionRatio ?? 0, 最低ダメージ比率: passive.minimumDamageRatio ?? 0 })) {
     if (!Number.isFinite(fraction) || fraction < 0 || fraction > 1) reasons.push(`素質の${label}が有効範囲外です。`)
   }
   const actualTargetCount = Number(conditions.actualAttackTargetCount ?? 1)
@@ -98,19 +99,20 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
       defenseIgnoreRatio = 1 - (1 - passive.defenseIgnoreRatio) * (1 - combinedRatio)
       defenseIgnoreFixed += value(stage.defenseIgnoreFixed)
       resistanceIgnoreFixed += value(stage.resistanceIgnoreFixed)
-      const baseTime = stats.baseAttackTime * value(stage.intervalScale, 1) + value(stage.intervalAdd)
+      const baseTime = stats.baseAttackTime * value(stage.intervalScale, 1) + value(stage.intervalAdd) + (passive.attackIntervalAdd ?? 0)
       const speed = stats.attackSpeed + aspd + passive.attackSpeed
       if (!Number.isFinite(speed) || !Number.isFinite(baseTime) || baseTime <= 0) throw new RangeError('攻撃間隔を計算できません。')
       interval = kind === 'NORMAL' ? baseTime * 100 / Math.max(20, speed) : null
       duration = stage.duration === 'UNTIL_EXIT' ? 0 : Math.max(0, value(stage.duration, raw?.duration ?? 0))
-      const talentActions = passive.additionalActions.map(action => !action.timing || action.timing === 'PER_ATTACK'
+      const talentActions = passive.additionalActions.map(action => action.basis !== 'TARGET_DEFENSE' && (!action.timing || action.timing === 'PER_ATTACK')
         ? { ...action, scale: { op: 'mul' as const, args: [action.scale, traitEvaluation!.attackScale] } } : action)
       actions = [...traits.actions, ...talentActions].filter(action => action.timing !== 'ON_DEPLOY')
     }
   } catch (error) { reasons.push(message(error)) }
   const types = new Set(actions.map(action => action.damageType))
   const damageType: DamageType | null = types.size === 1 ? [...types][0] : null
-  const axisType: DamageType = types.has('PHYSICAL') ? 'PHYSICAL' : types.has('ARTS') ? 'ARTS' : 'TRUE'
+  const axisType: DamageType = types.has('PHYSICAL') || actions.some(action => action.basis === 'TARGET_DEFENSE')
+    ? 'PHYSICAL' : types.has('ARTS') ? 'ARTS' : 'TRUE'
   if (axisType === 'PHYSICAL' && types.has('ARTS')) {
     inputs.push(RESISTANCE_INPUT)
     if (enemy) conditions.enemyResistance = enemy.resistance
@@ -163,14 +165,19 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
         const defense = enemy?.defense ?? (axisType === 'PHYSICAL' ? axis : 0)
         const resistance = enemy?.resistance ?? (axisType === 'ARTS' ? axis : Number(conditions.enemyResistance ?? 0))
         const appliedDefense = defense * (1 - passive.defenseReductionRatio)
-        const appliedResistance = resistance * (1 - passive.resistanceIgnoreRatio)
+        const appliedResistance = resistance * (1 - (passive.resistanceReductionRatio ?? 0)) * (1 - passive.resistanceIgnoreRatio)
         const branches: ProbabilisticDamageBranch[] = [
-          { id: 'NORMAL' as const, probability: 1 - passive.critChance, scale: 1 },
-          { id: 'IGNORE' as const, probability: passive.critChance, scale: passive.critScale },
+          { id: 'NORMAL' as const, probability: action.basis === 'TARGET_DEFENSE' ? 1 : 1 - passive.critChance, scale: 1, attackBonus: 0 },
+          { id: 'IGNORE' as const, probability: action.basis === 'TARGET_DEFENSE' ? 0 : passive.critChance, scale: passive.critScale, attackBonus: passive.criticalAttackRatio ?? 0 },
         ].filter(branch => branch.probability > 0).map(branch => {
-          const amount = normalAmount * branch.scale * variant.factor
+          const branchPipeline = pipeline(scale, value(action.attackBonus) + branch.attackBonus)
+          const amount = (action.basis === 'TARGET_DEFENSE' ? appliedDefense * scale
+            : branch.attackBonus !== 0 && (!action.basis || action.basis === 'ATK')
+              ? branchPipeline.finalAttack + value(action.flatDamage) : normalAmount) * branch.scale * variant.factor
+          const minimumDamage = (!action.basis || action.basis === 'ATK') && action.timing !== 'PER_SECOND'
+            ? branchPipeline.afterFinalMultiplier * (passive.minimumDamageRatio ?? 0) : 0
           const mitigation = calculateDamageBreakdown(amount, action.damageType, appliedDefense, appliedResistance,
-            { defenseIgnoreFixed: appliedDefense * defenseIgnoreRatio + defenseIgnoreFixed, resistanceIgnoreFixed })
+            { defenseIgnoreFixed: appliedDefense * defenseIgnoreRatio + defenseIgnoreFixed, resistanceIgnoreFixed, minimumDamage })
           return { id: branch.id, probability: branch.probability,
             defenseIgnoreRatio, damage: mitigation.result * count * passive.damageScale * variant.damageScale * probability * hitFactor, mitigation }
         })

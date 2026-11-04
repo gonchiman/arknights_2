@@ -57,8 +57,8 @@ const scale = (value: N, binding = 'atk_scale', active: CombatCondition | null =
   { item: 'ATTACK_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value }, { condition: active })
 const damage = (value: N, binding = 'damage_scale', active: CombatCondition | null = null) => effect('damage-scale', binding,
   { item: 'DAMAGE_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value }, { condition: active })
-const critical = (b: B) => effect('critical', 'atk_scale', { item: 'CRITICAL_ATTACK', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: b.read('atk_scale') },
-  { timing: { type: 'EVENT', event: 'ATTACK' }, probability: { chance: b.read('prob'), rollScope: 'APPLICATION' }, lifetime: { type: 'CURRENT_EVENT' } })
+const critical = (b: B, chance: N = b.read('prob')) => effect('critical', 'atk_scale', { item: 'CRITICAL_ATTACK', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: b.read('atk_scale') },
+  { timing: { type: 'EVENT', event: 'ATTACK' }, probability: { chance, rollScope: 'APPLICATION' }, lifetime: { type: 'CURRENT_EVENT' } })
 const state = (id: string, text: string): E => effect(id, `description:${id}`,
   { item: 'STATUS', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: true, status: text })
 const berserk = (b: B): E => speed(calc('MULTIPLY', b.read('min_attack_speed'), calc('MIN', 1, calc('MAX', 0,
@@ -94,6 +94,7 @@ const RESOURCE: TalentOverride = { categories: ['RESOURCE'], effects: () => [] }
 const CONTROL: TalentOverride = { categories: ['STATUS'], effects: () => [] }
 const DEPLOY: TalentOverride = { categories: ['DEPLOYMENT'], effects: () => [] }
 const MOVE_NOTE = ['同じ対象が攻撃範囲内にいる場合の直接ダメージ。強制移動後の位置・落下撃破は計算しない。']
+const FIXED_PERIOD = { kind: 'CONSTANT_RATE' } as const
 
 export const EXPANDED_MELEE_DEFINITIONS: readonly ExpandedOperatorDefinition[] = [
   define('melan', [recipe(1, normal(P, { atk: k('atk') }))], { 0: ability(b => [atk(b.read('atk'))]) }),
@@ -208,4 +209,64 @@ export const EXPANDED_MELEE_DEFINITIONS: readonly ExpandedOperatorDefinition[] =
     [bool('targetInfectedCreature', '対象が感染生物')]),
   define('waaifu', [recipe(1, normal(P, { atk: k('waaifu_s_1[self].atk') }), [], MOVE_NOTE)],
     { 0: { categories: ['DAMAGE', 'STATUS'], effects: b => [critical(b)] } }, [], { 2: '配置時ダメージと第一素質の適用関係を確認する必要がある。' }),
+
+  define('wintim', [recipe(1, next(P, k('atk_scale'))), recipe(2, normal(P, { aspd: k('attack_speed'),
+    periodTotal: { kind: 'UNSUPPORTED', reason: '被弾によって素質の攻撃速度上昇を失う時点が未確定です。' } }))],
+    { 0: ability(b => [speed(b.read('attack_speed'), 'attack_speed', condition('hasTakenDamage', false))]) },
+    [bool('hasTakenDamage', '配置後にダメージを受けた')]),
+  define('frostl', [recipe(1, next(P, k('atk_scale'))), recipe(2, normal(P, { aspd: k('attack_speed'), periodTotal: FIXED_PERIOD }))],
+    { 0: ability(b => [effect('attack-interval', 'base_attack_time',
+      { item: 'ATTACK_INTERVAL_ADD', operation: 'ADD_VALUE', unit: 'SECOND', value: b.read('base_attack_time') })]) }, [distance]),
+  define('vigna', [recipe(1, normal(P, { atk: k('atk'), periodTotal: FIXED_PERIOD })),
+    recipe(2, normal(P, { atk: k('atk'), intervalAdd: k('base_attack_time'), periodTotal: FIXED_PERIOD }))],
+    { 0: { categories: ['ABILITY', 'DAMAGE'], effects: b => [effect('power-spear', 'atk / prob2',
+      { item: 'ATK_BUFF_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: b.read('atk') },
+      { timing: { type: 'EVENT', event: 'ATTACK' }, probability: { chance: b.read('prob2'), rollScope: 'APPLICATION' },
+        lifetime: { type: 'CURRENT_EVENT' } })] } }),
+  define('frncat', [recipe(2, normal(A, { atk: k('atk'), periodTotal: FIXED_PERIOD }))],
+    { 0: { categories: ['ATTACK_BEHAVIOR', 'DAMAGE'], effects: b => [effect('combo', 'prob',
+      { item: 'ADDITIONAL_ATTACK', operation: 'DEAL_DAMAGE', unit: 'MULTIPLIER', value: 1, damageType: A, rate: 'PER_ATTACK' },
+      { timing: { type: 'EVENT', event: 'ATTACK' }, probability: { chance: b.read('prob'), rollScope: 'APPLICATION' },
+        lifetime: { type: 'CURRENT_EVENT' }, restrictions: [{ type: 'EXCLUDE_MODIFIER', modifier: 'recursive_extra_attack' }] })] } }, [],
+    { 1: '強化攻撃と素質の2連撃が同時発動した際、2撃目への攻撃力上昇の適用を確認する必要がある。' }),
+  define('peacok', [recipe(1, next(P, 1, 1, { actions: [
+      attack(P, k('atk_scale'), 1, { label: '通常の断罪', probability: add(1, mul(-1, k('peacok_s_1[crit].prob'))) }),
+      attack(P, mul(k('atk_scale'), k('peacok_s_1[crit].atk_scale')), 1,
+        { label: '会心の断罪', probability: k('peacok_s_1[crit].prob') }),
+    ] })), recipe(2, burst(A, k('success.atk_scale'), 1, { maxTargets: null,
+      actions: [attack(A, k('success.atk_scale'), 1, { probability: add(1, mul(-1, k('prob'))) })] }))],
+    { 0: DEPLOY }, [], {}, ['行動可能な状態での発動1回を評価する。配置直後のスタン中は攻撃できない。']),
+  define('fang2', [recipe(1, next(P, k('atk_scale'), 2)), recipe(2, normal(P, {
+    atk: k('atk'), blockCountAdd: k('block_cnt'), maxTargets: add(1, k('block_cnt')), periodTotal: FIXED_PERIOD }))], { 0: DEPLOY }),
+  define('bryota', [recipe(1, next(P, k('atk_scale'))), recipe(2, normal(P, { atk: k('atk'), periodTotal: FIXED_PERIOD }))], {}, [blocked()]),
+  define('rfalcn', [recipe(2, normal(P, { atk: k('atk'), aspd: k('attack_speed'), periodTotal: FIXED_PERIOD }))],
+    { 0: { categories: ['DAMAGE'], effects: b => [critical(b, { type: 'CONDITIONAL', condition: condition('skillIndex', 2),
+      whenTrue: calc('MULTIPLY', b.read('prob'), metric('skill.talent@prob_scaler')), whenFalse: b.read('prob') })] }, 1: RESOURCE }, [],
+    { 1: 'コスト回復のみ。通常攻撃とSP回復を含む周期計算は未対応。' }),
+  define('buildr', [{ skillIndex: 2, inputs: [num('skillActivationCount', 'スキル発動回数', 1, 1, 100)], stages: [
+    normal(P, { label: '初回', atk: k('atk'), duration: k('duration'), periodTotal: FIXED_PERIOD,
+      when: { input: 'skillActivationCount', comparison: 'EQ', value: 1 } }),
+    normal(P, { id: 'permanent', label: '2回目以降', atk: k('buildr_s_2[b].atk'), duration: 'UNTIL_EXIT',
+      when: { input: 'skillActivationCount', comparison: 'GTE', value: 2 } }),
+  ] }], {}, [], { 1: 'コスト回復のみ。通常攻撃とSP回復を含む周期計算は未対応。' }),
+  define('luton', [recipe(1, next(P, k('atk_scale')))], {}, [],
+    { 2: '通常攻撃を停止して行う2秒ごとの術ダメージについて、周期攻撃としての出力と初回・最終発生時点を確認する必要がある。' }),
+  define('jaksel', [recipe(1, next(P, k('atk_scale')))],
+    { 0: ability(b => [speed(b.read('charge_atk_speed_on_evade.attack_speed'), 'charge_atk_speed_on_evade.attack_speed', condition('dodgeSpeedActive', true))]) },
+    [bool('dodgeSpeedActive', '回避後の攻撃速度上昇中')],
+    { 2: '回避を契機とした反撃と、反撃の最短間隔を含むイベント計算が必要。' }),
+  define('ethan', [recipe(1, normal(P, { duration: 'UNTIL_EXIT', actions: [attack(P),
+    attack(A, 0, 1, { label: '付与中の継続術ダメージ', timing: 'PER_SECOND', traitOverrides: ['DAMAGE_TYPE'],
+      flatDamage: choose('poisonActive', true, k('attack@poison_damage'), 0) }),
+  ] }), [bool('poisonActive', '継続ダメージ付与中', true)],
+  ['継続ダメージが付与中の毎秒値を評価する。付与直後・更新・終了までの時間推移は含めない。']),
+  recipe(2, normal(P, { atk: k('atk'), periodTotal: FIXED_PERIOD }))], { 0: CONTROL }),
+  define('flameb', [recipe(1, next(P, k('atk_scale'))),
+    recipe(2, normal(P, { atk: k('atk'), aspd: k('attack_speed'), duration: 'UNTIL_EXIT' }))]),
+  define('surfer', [recipe(1, normal(P, { atk: k('atk'), periodTotal: FIXED_PERIOD }))], { 0: RESOURCE }, [],
+    { 2: '攻撃ごとの防御力奪取とダメージの適用順序・累積を確認する必要がある。' }),
+  define('chimes', [recipe(1, normal(P, { atk: k('atk'),
+    periodTotal: { kind: 'UNSUPPORTED', reason: 'HP条件による素質の攻撃力変化を期間全体では計算できません。' } }))],
+    { 0: ability(b => [atk(b.read('atk'), 'atk', condition('selfHpPercent', 50, 'GTE'))]) }, [hp()],
+    { 2: 'スキル中に上昇する攻撃力の時系列と、手動停止時点の攻撃力を確認する必要がある。' }),
 ]

@@ -2,7 +2,7 @@ import type { DamageType } from './damageCalculator.ts'
 import type { PeriodTotalCapability } from './damagePeriodTotal.ts'
 
 /** A skill can replace individual base-attack rules without disabling unrelated traits. */
-export type GuardTraitOverride = 'DAMAGE_TYPE' | 'HIT_COUNT' | 'MAX_TARGETS' | 'ATTACK_TARGETING' | 'ATTACK_SCALE' | 'SPLASH_DAMAGE'
+export type GuardTraitOverride = 'DAMAGE_TYPE' | 'HIT_COUNT' | 'MAX_TARGETS' | 'ATTACK_TARGETING' | 'ATTACK_SCALE' | 'SPLASH_DAMAGE' | 'CHAIN_ATTACK'
 
 /** Values in reviewed recipes remain executable data, rather than parsed descriptions. */
 export type GuardValue = number | { key: string } | { input: string }
@@ -31,7 +31,7 @@ export interface GuardDamageAction {
   probability?: GuardValue
   flatDamage?: GuardValue
   /** Attack-scaled damage is the default. */
-  basis?: 'ATK' | 'TARGET_CURRENT_HP'
+  basis?: 'ATK' | 'TARGET_CURRENT_HP' | 'TARGET_DEFENSE'
   minimumAttackScale?: GuardValue
   timing?: 'PER_ATTACK' | 'PER_SECOND' | 'ON_DEPLOY'
   /** Added skill damage may have its own type/count while the main attack inherits traits. */
@@ -60,6 +60,8 @@ export interface GuardStage {
   aspd?: GuardValue
   intervalScale?: GuardValue
   intervalAdd?: GuardValue
+  /** Remaining damage on each bounce; the job trait supplies the default. */
+  chainDamageRetention?: GuardValue
   maxTargets?: GuardValue | null
   /** A skill's block-count change; structured multi-target traits read the resulting count. */
   blockCountAdd?: GuardValue
@@ -90,12 +92,18 @@ export interface GuardPassiveModifiers {
   attackFlat: number
   attackScale: number
   attackSpeed: number
+  attackIntervalAdd?: number
+  /** Additive ATK on the proc branch, before attack scales and enemy mitigation. */
+  criticalAttackRatio?: number
+  /** Guaranteed per-hit fraction of buffed ATK, before attack-scale multipliers. */
+  minimumDamageRatio?: number
   damageScale: number
   splashDamageScale?: number
   defenseIgnoreRatio: number
   defenseIgnoreFixed: number
   resistanceIgnoreFixed: number
   resistanceIgnoreRatio: number
+  resistanceReductionRatio?: number
   defenseReductionRatio: number
   critChance: number
   critScale: number

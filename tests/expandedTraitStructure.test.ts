@@ -6,6 +6,7 @@ import { buildTraitStructures, isTraitStructureOperator, formatTraitStructureEff
 import { buildTraitApplicationRows, getExpandedTraitCoverage } from '../src/lib/traitEffectApplication.ts'
 import { buildDamageCalculatorThreeOutput, type DamageCalculatorThreeInput } from '../src/lib/damageCalculatorThree.ts'
 import { evaluateCombatCondition } from '../src/lib/combatEffectStructure.ts'
+import { evaluateTraitStructure } from '../src/lib/traitCombatEvaluation.ts'
 import { classifySkill } from '../src/lib/classifier.ts'
 import type { GuardConditions } from '../src/lib/guardCombatTypes.ts'
 import type { SkillRecord } from '../src/types/skill.ts'
@@ -48,10 +49,11 @@ function appliedItem(result: ReturnType<typeof run>, suffix: string) {
   return value
 }
 
-test('追加18職分で説明・パラメータを照合し、同じ職分の定義を複数OPに再利用する', () => {
+test('追加22職分で説明・パラメータを照合し、同じ職分の定義を複数OPに再利用する', () => {
   const additions = ['pioneer', 'protector', 'shotprotector', 'artsprotector', 'unyield',
     'fastshot', 'aoesniper', 'longrange', 'siegesniper', 'reaperrange', 'closerange',
-    'corecaster', 'splashcaster', 'blastcaster', 'slower', 'underminer', 'incantationmedic', 'phalanx']
+    'corecaster', 'splashcaster', 'blastcaster', 'slower', 'underminer', 'incantationmedic', 'phalanx',
+    'agent', 'charger', 'stalker', 'chain']
   for (const job of additions) {
     const sources = EXPANDED_OPERATOR_SOURCES.filter(source => source.subProfessionId === job)
     assert.ok(sources.length, job)
@@ -67,6 +69,50 @@ test('追加18職分で説明・パラメータを照合し、同じ職分の定
   const shared = record(byJob('fastshot'))
   shared.operatorId = 'another-marksman'
   assert.ok(buildTraitStructures([shared])[0].effects.some(value => value.item === 'ATTACK_PRIORITY'))
+})
+
+test('偵察兵・突撃兵の再配置とコストを構造化し、ダメージへ追加しない', () => {
+  const agent = structure(byJob('agent'))
+  assert.equal(agent.effects.find(effect => effect.item === 'REDEPLOY_TIME')?.value, 35)
+  const charger = structure(byJob('charger'))
+  assert.equal(charger.effects.find(effect => effect.item === 'DP_ON_KILL')?.value, 1)
+  assert.equal(charger.effects.find(effect => effect.item === 'RETREAT_COST_REFUND')?.value, 'INITIAL_DEPLOY_COST')
+  for (const source of [agent, charger]) {
+    const result = evaluateTraitStructure(source, { kind: 'NORMAL', metrics: {} })
+    assert.deepEqual(result.blockers, [])
+    assert.equal(result.attackScale, 1)
+    assert.ok(result.evaluations.every(row => row.status === 'NOT_RELEVANT'))
+  }
+})
+
+test('潜伏者の全体攻撃は回避率と独立し、7対象でも対象数を切り捨てない', () => {
+  const id = byJob('stalker'), source = structure(id)
+  assert.equal(source.effects.find(effect => effect.item === 'PHYSICAL_DODGE')?.value, 0.5)
+  assert.equal(source.effects.find(effect => effect.item === 'ARTS_DODGE')?.value, 0.5)
+  const one = run(id, 2, { actualAttackTargetCount: 1 }).output
+  const many = run(id, 2, { actualAttackTargetCount: 7 }).output
+  assert.deepEqual(many.unsupportedReasons, [])
+  assert.equal(many.maxTargetCount, null)
+  assert.equal(many.rows[0].perAttack, one.rows[0].perAttack)
+  assert.equal(many.rows[0].allTargetsPerAttack, one.rows[0].perAttack * 7)
+})
+
+test('連鎖特性の減衰率と上限は検証し、スキル固有動作には通常攻撃の跳躍を追加しない', () => {
+  const source = structure(byJob('chain'))
+  const metrics = { 'attack.targetCount': 4 }
+  const normal = evaluateTraitStructure(source, { kind: 'NORMAL', metrics })
+  assert.deepEqual(normal.blockers, [])
+  assert.equal(normal.maxTargets, 4)
+  assert.equal(normal.chainRetention, 0.85)
+  for (const retention of [-0.1, 1.1, NaN]) {
+    assert.ok(evaluateTraitStructure(source, { kind: 'NORMAL', metrics, chainDamageRetention: retention }).blockers.length)
+  }
+  const invalid = { ...source, effects: source.effects.map(effect => effect.item === 'CHAIN_ATTACK'
+    ? { ...effect, value: { ...effect.value, maxTargets: 2.5 } } : effect) }
+  assert.ok(evaluateTraitStructure(invalid, { kind: 'NORMAL', metrics }).blockers.length)
+  const action = evaluateTraitStructure(source, { kind: 'SKILL_ACTION', metrics })
+  assert.equal(action.chainRetention, undefined)
+  assert.equal(action.damageType, undefined)
 })
 
 test('優先対象は飛行・最低防御・最大重量を区別し、指定対象のダメージ倍率にしない', () => {
