@@ -18,10 +18,14 @@ export const EMPTY_DAMAGE_THREE_COVERAGE_FILTERS: DamageCalculatorThreeCoverageF
   query: '', profession: 'ALL', rarity: 'ALL', status: 'ALL',
 }
 
-export function filterDamageCalculatorThreeCoverage(
-  rows: readonly DamageCalculatorThreeCoverageRow[],
+type FilterableCoverageRow = Pick<DamageCalculatorThreeCoverageRow, 'status'> & {
+  skill: Pick<DamageCalculatorThreeCoverageRow['skill'], 'operatorName' | 'skillName' | 'skillIndex' | 'profession' | 'rarity'>
+}
+
+export function filterDamageCalculatorThreeCoverage<T extends FilterableCoverageRow>(
+  rows: readonly T[],
   filters: DamageCalculatorThreeCoverageFilters,
-): DamageCalculatorThreeCoverageRow[] {
+): T[] {
   const terms = normalize(filters.query).split(/\s+/).filter(Boolean)
   return rows.filter(({ skill, status }) => {
     if (filters.profession !== 'ALL' && skill.profession !== filters.profession) return false

@@ -10,6 +10,7 @@ export interface TraitCombatContext {
   readonly disabledEffectIds?: readonly string[]
   /** Skill-specific changes to a stored charge apply after resolving the trait's cap. */
   readonly attackRatioScale?: number
+  readonly chainDamageRetention?: number
 }
 
 export interface TraitCombatEvaluation {
@@ -26,6 +27,7 @@ export interface TraitCombatResult {
   attackScale: number
   attackRatio: number
   splashScale?: number
+  chainRetention?: number
   evaluations: TraitCombatEvaluation[]
   blockers: string[]
 }
@@ -106,6 +108,15 @@ export function evaluateTraitStructure(structure: TraitStructure | null, context
       // The selected targets are assumed to be in the attack area; this is not geometry simulation.
       result.maxTargets = effect.value.maxTargets
       row(effect, 'APPLIED', `${formatCombatNumber(count)}体`, '指定した範囲内の対象数で計算します。')
+    } else if (effect.item === 'CHAIN_ATTACK') {
+      const count = numeric(effect.value.maxTargets, true)
+      const retention = context.chainDamageRetention ?? numeric(effect.value.retention)
+      if (count === null || count < 1 || retention === null || !Number.isFinite(retention) || retention < 0 || retention > 1) {
+        block(effect, '跳躍攻撃の対象数・残存倍率を解決できません。'); continue
+      }
+      result.maxTargets = count
+      result.chainRetention = retention
+      row(effect, 'APPLIED', `最大${count}体・跳躍ごとに×${formatCombatNumber(retention)}`)
     } else if (effect.item === 'SPLASH_DAMAGE') {
       const value = numeric(effect.value.attackScale)
       if (value === null || effect.value.includeMainTarget || effect.value.center !== 'ATTACK_TARGET'

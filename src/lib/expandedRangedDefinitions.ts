@@ -74,6 +74,83 @@ const sameTargets = '選択した敵全員が、同じ条件で攻撃または�
 const frontal = bool('targetInFrontalTiles', '対象が正面横3マスにいる')
 
 export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] = [
+  // Additional reviewed JP roster: ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e.
+  operator('char_366_acdrop', [
+    recipe('char_366_acdrop', 1, normal({ aspd: key('attack_speed'), periodTotal: { kind: 'CONSTANT_RATE' } })),
+    recipe('char_366_acdrop', 2, normal({ atk: key('atk'), actions: [damage(1, 2)], periodTotal: { kind: 'CONSTANT_RATE' } })),
+  ], [
+    talent(0, 'スライドショット', ['DAMAGE'], b => [{
+      ...ctx('minimum-damage', 'atk_scale', { target: attack }),
+      item: 'MINIMUM_DAMAGE_RATIO', operation: 'SET', unit: 'RATIO',
+      value: conditional(eq('targetInForwardTwoTiles', true), b.read('atk_scale_2'), b.read('atk_scale')),
+    }]),
+  ], [bool('targetInForwardTwoTiles', '対象が前方直線2マスにいる')]),
+  operator('char_279_excu', [
+    recipe('char_279_excu', 1, normal({ atk: key('atk'), traitOverrides: ['ATTACK_SCALE'],
+      actions: [damage(1.5)], periodTotal: { kind: 'CONSTANT_RATE' } })),
+    recipe('char_279_excu', 2, normal({ intervalAdd: key('base_attack_time'), actions: [damage(1, 2)],
+      periodTotal: { kind: 'CONSTANT_RATE' } })),
+  ], [
+    talent(0, 'アサルトカスタム', ['DAMAGE'], b => [{
+      ...ctx('defense-ignore', 'def_penetrate_fixed', { target: attack }),
+      item: 'DEFENSE_IGNORE_FIXED', operation: 'IGNORE_FIXED', unit: 'POINT', value: b.read('def_penetrate_fixed'),
+    }]),
+  ], [frontal], [], [sameTargets, 'S1は確認済みの特性倍率150%を、正面以外を含む全攻撃対象へ適用する。']),
+  operator('char_4014_lunacu', [
+    recipe('char_4014_lunacu', 1, normal({ atk: key('atk'), periodTotal: { kind: 'CONSTANT_RATE' } })),
+    recipe('char_4014_lunacu', 2, normal({ aspd: key('attack_speed'), periodTotal: { kind: 'CONSTANT_RATE' } })),
+  ], [
+    talent(0, '荒野の掟', ['ABILITY', 'SURVIVAL'], b => [{
+      ...ctx('active-attack-interval', 'base_attack_time', { condition: eq('source.skillActive', true) }),
+      item: 'ATTACK_INTERVAL_ADD', operation: 'ADD_VALUE', unit: 'SECOND', value: b.read('base_attack_time'),
+    }, status('inactive-camouflage', 'スキル未発動時に迷彩', { condition: eq('source.skillActive', false) })]),
+  ]),
+  operator('char_4203_kichi', [
+    recipe('char_4203_kichi', 1, normal({ atk: mul(key('atk'), input('attackBuffStacks')), intervalAdd: key('base_attack_time'),
+      periodTotal: { kind: 'UNSUPPORTED', reason: '攻撃と撃破による効果の累積推移を含む総ダメージは未計算です。' } }),
+      [number('attackBuffStacks', '攻撃力上昇の累積回数', 0, 0, 4)],
+      ['入力した累積回数が既に適用された攻撃を計算する。攻撃による累積の進行は含めない。']),
+    recipe('char_4203_kichi', 2, normal({ atk: key('atk'), intervalAdd: key('base_attack_time'),
+      periodTotal: { kind: 'UNSUPPORTED', reason: '撃破による与ダメージ上昇の推移を含む総ダメージは未計算です。' } })),
+  ], [
+    talent(0, '豪運ラッシュ！', ['DAMAGE'], b => [{
+      ...ctx('kill-type-damage', 'damage_scale'), item: 'DAMAGE_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER',
+      value: { type: 'CALC', operation: 'ADD', values: [1, { type: 'CALC', operation: 'MULTIPLY',
+        values: [b.read('damage_scale'), { type: 'METRIC', metric: 'defeatedEnemyTypes' }] }] },
+    }]),
+  ], [frontal, number('defeatedEnemyTypes', '撃破した敵の種類数（上限3）', 0, 0, 3)], [],
+  [sameTargets, '入力した撃破種類数の与ダメージ補正を固定して評価する。']),
+  operator('char_118_yuki', [
+    recipe('char_118_yuki', 1, normal({ periodTotal: { kind: 'CONSTANT_RATE' } })),
+  ], [
+    talent(0, '大型手裏剣', ['ABILITY'], b => [atk(b.read('atk')), {
+      ...ctx('attack-interval', 'base_attack_time'), item: 'ATTACK_INTERVAL_ADD', operation: 'ADD_VALUE', unit: 'SECOND',
+      value: b.read('base_attack_time'),
+    }]),
+  ], [], [{ skillIndex: 2, reason: '手裏剣の停留時間と周期命中数、術ダメージへの置換範囲を確認する必要がある。' }], [sameTargets]),
+  operator('char_219_meteo', [recipe('char_219_meteo', 1, next())], [
+    talent(0, '弾頭改造', ['ABILITY', 'DAMAGE'], b => [atk(b.read('atk'), 'atk', {
+      timing: { type: 'EVENT', event: 'ATTACK' }, lifetime: { type: 'CURRENT_EVENT' },
+      probability: { chance: b.read('prob'), rollScope: 'APPLICATION', sharedRollId: 'meteorite-attack-bonus' },
+    })]),
+  ], [], [{ skillIndex: 2, reason: '防御力低下と榴弾ダメージの適用順序、および固定防御低下の扱いを確認する必要がある。' }], [sameTargets]),
+  operator('char_1013_chen2', [
+    recipe('char_1013_chen2', 1, normal({ atk: key('atk'), traitOverrides: ['ATTACK_SCALE'], actions: [damage(1.5)],
+      periodTotal: { kind: 'UNSUPPORTED', duration: 'AMMO', reason: '確率的な弾薬消費とスキル継続時間を計算していないため、総ダメージは未計算です。' } }), [], [ammoNote]),
+  ], [
+    talent(0, '勤倹節約', ['RESOURCE'], b => [
+      status('self-ammo-preservation', '自身の弾薬を確率で消費しない', { timing: { type: 'EVENT', event: 'ATTACK' },
+        lifetime: { type: 'CURRENT_EVENT' }, probability: { chance: b.read('spareshot_chen.prob'), rollScope: 'APPLICATION' } }),
+      status('ally-ammo-preservation', '他の狙撃の弾薬を確率で消費しない', { target: { ...self, side: 'ALLY', scope: 'BATTLEFIELD',
+        includeSelf: false, tagIds: ['profession:SNIPER'] }, timing: { type: 'EVENT', event: 'ATTACK' },
+        lifetime: { type: 'CURRENT_EVENT' }, probability: { chance: b.read('prob'), rollScope: 'APPLICATION' } }),
+    ]),
+    talent(1, '海辺の遊龍', ['ABILITY'], b => [speed({ type: 'CALC', operation: 'ADD',
+      values: [b.read('chen2_t_2[common].attack_speed'), conditional(eq('mapHasWater', true), b.read('chen2_t_2[map].attack_speed'), 0)] })]),
+  ], [bool('mapHasWater', '戦場に水場がある')], [
+    { skillIndex: 2, reason: '水域の防御力低下と着弾ダメージの適用順序を確認する必要がある。' },
+    { skillIndex: 3, reason: '水域の防御力低下と2連撃それぞれの適用順序を確認する必要がある。' },
+  ], [sameTargets, 'S1は確認済みの特性倍率150%を、正面以外を含む全攻撃対象へ適用する。']),
   operator('char_124_kroos', [recipe('char_124_kroos', 1, next(key('atk_scale'), key('times')))], [
     talent(0, '精密射撃・初級', ['DAMAGE'], b => [critical(b)]),
   ]),

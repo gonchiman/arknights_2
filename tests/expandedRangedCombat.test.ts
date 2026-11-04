@@ -8,6 +8,8 @@ import { classifySkill } from '../src/lib/classifier.ts'
 import type { ExpandedOperatorSource } from '../src/lib/expandedCombatTypes.ts'
 import type { SkillRecord } from '../src/types/skill.ts'
 import type { GuardConditions } from '../src/lib/guardCombatTypes.ts'
+import { evaluateDamageThreeComparisonEntry, getDamageThreeComparisonEntries } from '../src/lib/damageCalculatorThreeComparison.ts'
+import { buildDamageCalculatorThreeCoverage } from '../src/lib/damageCalculatorThreeCoverage.ts'
 
 const sources = rawSources as unknown as ExpandedOperatorSource[]
 function record(id: string, index: number): SkillRecord {
@@ -43,7 +45,7 @@ const physical = (attack: number, defense: number) => Math.max(attack - defense,
 const buff = (attack: number, ratio: number) => Math.floor(attack * (1 + ratio) + 1e-9)
 
 test('追加狙撃の全技能を計算対応または具体的な保留理由に分け、全素質を欠落なく構造化する', () => {
-  assert.equal(EXPANDED_RANGED_DEFINITIONS.length, 27)
+  assert.equal(EXPANDED_RANGED_DEFINITIONS.length, 34)
   for (const definition of EXPANDED_RANGED_DEFINITIONS) {
     const source = sources.find(s => s.operatorId === definition.operatorId)!
     assert.deepEqual([...definition.recipes.map(r => r.skillIndex), ...(definition.deferredSkills ?? []).map(s => s.skillIndex)].sort(),
@@ -194,4 +196,121 @@ test('素質数値の欠落と説明変更は、既定値や部分的な計算�
   const changed = output('char_124_kroos', 1, {}, skill => { skill.skillLevels[6].description += '追加効果' })
   assert.ok(changed.unsupportedReasons.length)
   assert.deepEqual(changed.rows, [])
+})
+
+test('アシッドドロップの最低ダメージ25/40%を強化後の攻撃力と各連撃に適用する', () => {
+  for (const index of [1, 2]) for (const frontal of [false, true]) for (const defense of [0, 1000, 2000]) {
+    const { result, row } = at('char_366_acdrop', index, defense, { targetInForwardTwoTiles: frontal })
+    const attack = buff(result.stats.attack, index === 2 ? 0.4 : 0)
+    const expected = Math.max(attack - defense, attack * (frontal ? 0.4 : 0.25)) * (index === 2 ? 2 : 1)
+    close(row.perAttack, expected)
+    close(result.attackInterval, result.stats.baseAttackTime / (index === 1 ? 1.7 : 1))
+    close(row.dps, expected / result.attackInterval!)
+  }
+})
+
+test('イグゼキュターの防御無視160とS1全範囲倍率・S2正面倍率を一度ずつ適用する', () => {
+  for (const frontal of [false, true]) for (const index of [1, 2]) {
+    const { result, row } = at('char_279_excu', index, 1000, { targetInFrontalTiles: frontal, actualAttackTargetCount: 3 })
+    const attack = buff(result.stats.attack, index === 1 ? 0.7 : 0)
+    const scale = index === 1 || frontal ? 1.5 : 1
+    close(row.perAttack, physical(attack * scale, 840) * (index === 2 ? 2 : 1))
+    close(row.allTargetsPerAttack, row.perAttack * 3)
+    close(result.attackInterval, result.stats.baseAttackTime - (index === 2 ? 0.9 : 0))
+  }
+  const { result, row } = at('char_279_excu', 1, 0, { targetInFrontalTiles: false })
+  close(row.perAttack, buff(result.stats.attack, 0.7) * 1.5)
+})
+
+test('ルナカブの素質はスキル中の基礎間隔から0.15秒を引き、S2速度140と合成する', () => {
+  for (const index of [1, 2]) {
+    const { result, row } = at('char_4014_lunacu', index, 500)
+    close(row.perAttack, physical(buff(result.stats.attack, index === 1 ? 1 : 0), 500))
+    close(result.attackInterval, (result.stats.baseAttackTime - 0.15) / (index === 2 ? 2.4 : 1))
+    close(row.dps, row.perAttack / result.attackInterval!)
+  }
+})
+
+test('キチセイは攻撃力の累積と撃破種類による減算後倍率を分けて計算する', () => {
+  for (const stacks of [0, 4]) for (const defeated of [0, 3]) for (const frontal of [false, true]) {
+    const { result, row } = at('char_4203_kichi', 1, 1000,
+      { attackBuffStacks: stacks, defeatedEnemyTypes: defeated, targetInFrontalTiles: frontal, actualAttackTargetCount: 2 })
+    const attack = buff(result.stats.attack, stacks * 0.25) * (frontal ? 1.5 : 1)
+    close(row.perAttack, physical(attack, 1000) * (1 + defeated * 0.06))
+    close(row.allTargetsPerAttack, row.perAttack * 2)
+    close(result.attackInterval, result.stats.baseAttackTime + 0.5)
+  }
+  const { result, row } = at('char_4203_kichi', 2, 1000, { defeatedEnemyTypes: 2, targetInFrontalTiles: true })
+  close(row.perAttack, physical(buff(result.stats.attack, 0.8) * 1.5, 1000) * 1.12)
+  close(result.attackInterval, result.stats.baseAttackTime + 0.7)
+  for (const conditions of [{ attackBuffStacks: 5 }, { attackBuffStacks: -1 }, { defeatedEnemyTypes: 4 }]) {
+    const invalid = output('char_4203_kichi', 1, conditions)
+    assert.ok(invalid.unsupportedReasons.length)
+    assert.deepEqual(invalid.rows, [])
+  }
+})
+
+test('シラユキS1は大型手裏剣の攻撃力20%と間隔0.2秒を反映する', () => {
+  const { result, row } = at('char_118_yuki', 1, 1000, { actualAttackTargetCount: 4 })
+  close(row.perAttack, physical(buff(result.stats.attack, 0.2), 1000))
+  close(row.allTargetsPerAttack, row.perAttack * 4)
+  close(result.attackInterval, result.stats.baseAttackTime + 0.2)
+})
+
+test('メテオリーテS1は30%の攻撃力加算を各防御軽減後に平均する', () => {
+  for (const defense of [0, 1000, 2000]) {
+    const { result, row } = at('char_219_meteo', 1, defense, { actualAttackTargetCount: 3 })
+    const normalDamage = physical(result.stats.attack * 2.15, defense)
+    const talentDamage = physical(buff(result.stats.attack, 0.6) * 2.15, defense)
+    close(row.perAttack, normalDamage * 0.7 + talentDamage * 0.3)
+    close(row.allTargetsPerAttack, row.perAttack * 3)
+    assert.equal(row.dps, null)
+  }
+})
+
+test('遊龍チェンS1は全範囲150%と水場の攻撃速度を計算し弾薬確率をDPSへ掛けない', () => {
+  for (const water of [false, true]) {
+    const { result, row } = at('char_1013_chen2', 1, 1000, { mapHasWater: water, actualAttackTargetCount: 4 })
+    close(row.perAttack, physical(buff(result.stats.attack, 1) * 1.5, 1000))
+    close(row.allTargetsPerAttack, row.perAttack * 4)
+    close(result.attackInterval, result.stats.baseAttackTime / (water ? 1.12 : 1.08))
+    close(row.dps, row.perAttack / result.attackInterval!)
+  }
+})
+
+test('追加狙撃7名15スキルの11対応と4保留が比較ページと実装状況へ一致して反映される', () => {
+  const ids = ['char_366_acdrop', 'char_279_excu', 'char_4014_lunacu', 'char_4203_kichi', 'char_118_yuki', 'char_219_meteo', 'char_1013_chen2']
+  const records = sources.filter(source => ids.includes(source.operatorId)).flatMap(source => source.skills.map(skill => record(source.operatorId, skill.skillIndex)))
+  const coverage = buildDamageCalculatorThreeCoverage(records)
+  assert.equal(coverage.length, 15)
+  assert.equal(coverage.filter(row => row.status === 'SUPPORTED').length, 11)
+  assert.equal(coverage.filter(row => row.status === 'PENDING').length, 4)
+  const entries = getDamageThreeComparisonEntries(records)
+  assert.equal(entries.length, 15)
+  for (const entry of entries) {
+    const result = evaluateDamageThreeComparisonEntry(entry, { defense: 500, resistance: 0, enemyCount: 1 })
+    const pending = coverage.find(row => row.skill.operatorId === entry.skill.operatorId && row.skill.skillIndex === entry.skill.skillIndex)!.status === 'PENDING'
+    assert.equal(result.errors.length > 0, pending)
+    if (pending) assert.equal(result.perAttack, null)
+    else assert.ok(result.perAttack !== null && result.perAttack > 0)
+    const constant = ['char_366_acdrop', 'char_279_excu', 'char_4014_lunacu', 'char_118_yuki'].includes(entry.skill.operatorId) && !pending
+    if (constant) close(result.totalDamage, result.combinedDps! * result.durationSeconds!)
+    else assert.equal(result.totalDamage, null)
+  }
+})
+
+test('追加狙撃の素質欠落・特性変更・未知の条件で部分的な値を返さない', () => {
+  for (const id of ['char_366_acdrop', 'char_279_excu', 'char_4014_lunacu', 'char_219_meteo']) {
+    const result = output(id, 1, {}, skill => {
+      for (const candidate of skill.operatorProfile.talents[0].candidates ?? []) candidate.blackboard = []
+    })
+    assert.ok(result.unsupportedReasons.length, id)
+    assert.deepEqual(result.rows, [], id)
+  }
+  const traitChanged = output('char_279_excu', 1, {}, skill => { skill.operatorProfile.traitDescription += '追加攻撃' })
+  assert.ok(traitChanged.unsupportedReasons.length)
+  assert.deepEqual(traitChanged.rows, [])
+  const invalid = output('char_366_acdrop', 1, { targetInForwardTwoTiles: 'maybe' })
+  assert.ok(invalid.unsupportedReasons.length)
+  assert.deepEqual(invalid.rows, [])
 })

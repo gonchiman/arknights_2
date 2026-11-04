@@ -27,13 +27,14 @@ export function evaluateGuardTraits(operator: TraitStructureOperator, stage: Gua
       'target.blockedBySource': conditions.targetBlockedBySelf,
       'target.inFrontalTiles': conditions.targetInFrontalTiles },
     attackRatioScale: stage.traitAttackRatioScale === undefined ? 1 : value(stage.traitAttackRatioScale),
+    chainDamageRetention: stage.chainDamageRetention === undefined ? undefined : value(stage.chainDamageRetention),
     overriddenItems: overrides,
     disabledEffectIds: stage.attackTreatment === 'MELEE' ? ['ranged-attack-scale'] : undefined,
   }
   const evaluation = evaluateTraitStructure(structure, context)
   const actionEvaluations: TraitCombatResult[] = []
   const splashActions = new Map<GuardDamageAction, number>()
-  const actions = stage.actions.map(action => {
+  const actions = stage.actions.flatMap(action => {
     const overriddenItems: TraitStructureEffect['item'][] = [...overrides, ...(action.traitOverrides ?? [])]
     const current = action.traitOverrides?.length
       ? evaluateTraitStructure(structure, { ...context, overriddenItems }) : evaluation
@@ -44,6 +45,14 @@ export function evaluateGuardTraits(operator: TraitStructureOperator, stage: Gua
       scale: current.attackScale === 1 ? action.scale : { op: 'mul', args: [action.scale, current.attackScale] },
     }
     if (current.splashScale !== undefined && action.damageType === 'PHYSICAL') splashActions.set(transformed, current.splashScale)
+    if (current.chainRetention !== undefined) {
+      const count = Number(conditions.actualAttackTargetCount ?? 1)
+      if (!Number.isSafeInteger(count) || count < 1 || count > 10000) throw new RangeError('跳躍攻撃の対象数が不正です。')
+      return Array.from({ length: count }, (_, index) => ({ ...transformed,
+        label: index === 0 ? `${action.label}（主対象）` : `${action.label}（跳躍${index}）`,
+        scale: { op: 'mul' as const, args: [transformed.scale, current.chainRetention! ** index] }, targets: 1,
+      }))
+    }
     return transformed
   })
   // A multi-part skill may replace one component while another inherits a trait.

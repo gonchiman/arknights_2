@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import sourcesJson from '../src/data/expandedMeleeSources.json' with { type: 'json' }
 import { EXPANDED_MELEE_DEFINITIONS } from '../src/lib/expandedMeleeDefinitions.ts'
 import { buildDamageCalculatorThreeOutput } from '../src/lib/damageCalculatorThree.ts'
+import { getDamageThreeComparisonEntries, evaluateDamageThreeComparisonEntry } from '../src/lib/damageCalculatorThreeComparison.ts'
 import { classifySkill } from '../src/lib/classifier.ts'
 import type { ExpandedOperatorSource } from '../src/lib/expandedCombatTypes.ts'
 import type { GuardConditions } from '../src/lib/guardCombatTypes.ts'
@@ -42,9 +43,9 @@ function close(actual: number | null, expected: number) {
 const buffed = (attack: number, ratio: number) => Math.floor(attack * (1 + ratio) + 1e-9)
 const physical = (attack: number, defense: number) => Math.max(attack - defense, attack * 0.05)
 
-test('近接追加51人の79技能が実データから有限結果を返し、残り22技能は理由付き保留', () => {
-  assert.equal(sources.length, 51)
-  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 79)
+test('近接追加66人の102技能が実データから有限結果を返し、残り29技能は理由付き保留', () => {
+  assert.equal(sources.length, 66)
+  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 102)
   for (const definition of EXPANDED_MELEE_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     assert.equal(definition.recipes.length + (definition.deferredSkills?.length ?? 0), source.skills.length)
@@ -218,4 +219,164 @@ test('会心キー重複や条件上限を越える値は結果を出さず、�
     operatorLevel: 30, trust: 100, skillLevelIndex: 6 })
   assert.ok(result.unsupportedReasons.length > 0)
   assert.deepEqual(result.rows, [])
+})
+
+test('スネグーラチカは配置後未被弾時だけ速度10を加算し、S1の280%を1回に適用する', () => {
+  const fresh = at('wintim', 2), damaged = at('wintim', 2, 0, { hasTakenDamage: true })
+  close(fresh.result.attackInterval, fresh.result.stats.baseAttackTime / 1.5)
+  close(damaged.result.attackInterval, damaged.result.stats.baseAttackTime / 1.4)
+  const first = at('wintim', 1, 1000)
+  close(first.row.perAttack, physical(first.result.stats.attack * 2.8, 1000))
+  assert.equal(first.row.dps, null)
+})
+
+test('フロストリーフは素質の0.15秒を速度補正前に足し、遠距離80%を一度だけ適用する', () => {
+  const ranged = at('frostl', 2, 500, { attackDistanceType: 'RANGED' })
+  close(ranged.result.attackInterval, (ranged.result.stats.baseAttackTime + 0.15) / 1.5)
+  close(ranged.row.perAttack, physical(ranged.result.stats.attack * 0.8, 500))
+  const melee = at('frostl', 1, 500), first = at('frostl', 1, 500, { attackDistanceType: 'RANGED' })
+  close(melee.row.perAttack, physical(melee.result.stats.attack * 1.5, 500))
+  close(first.row.perAttack, physical(first.result.stats.attack * 1.5 * 0.8, 500))
+})
+
+test('ヴィグナの30%発動は攻撃力加算枠を分岐し、防御軽減後に期待値を求める', () => {
+  for (const [index, ratio] of [[1, 0.8], [2, 2]] as const) {
+    const { result, row } = at('vigna', index, 1000)
+    const ordinary = buffed(result.stats.attack, ratio), proc = buffed(result.stats.attack, ratio + 1)
+    close(row.perAttack, physical(ordinary, 1000) * 0.7 + physical(proc, 1000) * 0.3)
+    close(result.attackInterval, result.stats.baseAttackTime + (index === 2 ? 0.5 : 0))
+    assert.ok(result.hasProbabilisticDamage)
+  }
+})
+
+test('ムースS2の素質は20%の追加術攻撃で、未確定のS1では部分結果を出さない', () => {
+  const { result, row } = at('frncat', 2, 60)
+  close(row.perAttack, buffed(result.stats.attack, 0.75) * 0.4 * 1.2)
+  const pending = output('frncat', 1)
+  assert.deepEqual(pending.rows, [])
+  assert.ok(pending.unsupportedReasons.some(reason => reason.includes('2撃目')))
+})
+
+test('コンビクションはS1の200%と800%を別軽減し、S2は成功率50%を反映する', () => {
+  const first = at('peacok', 1, 1000)
+  close(first.row.perAttack, physical(first.result.stats.attack * 2, 1000) * 0.95
+    + physical(first.result.stats.attack * 8, 1000) * 0.05)
+  assert.equal(first.row.dps, null)
+  const second = at('peacok', 2, 60, { actualAttackTargetCount: 3 })
+  close(second.row.perAttack, second.result.stats.attack * 3.5 * 0.4 * 0.5)
+  close(second.row.allTargetsPerAttack, second.row.perAttack * 3)
+  assert.equal(second.row.dps, null)
+})
+
+test('歴陣鋭槍フェンの2連撃と2体攻撃を区別し、ブライオファイタの教官特性を適用する', () => {
+  const first = at('fang2', 1, 1000)
+  close(first.row.perAttack, physical(first.result.stats.attack * 1.8, 1000) * 2)
+  const second = at('fang2', 2, 1000, { actualAttackTargetCount: 2 })
+  close(second.row.perAttack, physical(buffed(second.result.stats.attack, 1.2), 1000))
+  close(second.row.allTargetsPerAttack, second.row.perAttack * 2)
+  assert.deepEqual(output('fang2', 2, { actualAttackTargetCount: 3 }).rows, [])
+  const free = at('bryota', 2, 1000), blocked = at('bryota', 2, 1000, { targetBlockedBySelf: true })
+  close(free.row.perAttack, physical(buffed(free.result.stats.attack, 0.8) * 1.2, 1000))
+  close(blocked.row.perAttack, physical(buffed(blocked.result.stats.attack, 0.8), 1000))
+})
+
+test('ケストレルS2は素質発動率を20%から50%へ上げ、攻撃力と速度を一度ずつ反映する', () => {
+  const { result, row } = at('rfalcn', 2, 1000)
+  const attack = buffed(result.stats.attack, 0.4)
+  close(row.perAttack, physical(attack, 1000) * 0.5 + physical(attack * 1.4, 1000) * 0.5)
+  close(result.attackInterval, result.stats.baseAttackTime / 1.4)
+})
+
+test('ポンシラスS2は初回15秒と2回目以降の永続を別段階で登録する', () => {
+  const first = at('buildr', 2), permanent = at('buildr', 2, 0, { skillActivationCount: 2 })
+  assert.equal(first.result.activeStageLabel, '初回')
+  assert.equal(first.result.model?.duration, 15)
+  assert.equal(permanent.result.activeStageLabel, '2回目以降')
+  assert.equal(permanent.result.model?.duration, 0)
+  close(first.row.perAttack, buffed(first.result.stats.attack, 0.35))
+  close(permanent.row.perAttack, first.row.perAttack)
+  assert.deepEqual(output('buildr', 2, { skillActivationCount: 0 }).rows, [])
+})
+
+test('ルトナダとジャッキーの強化攻撃倍率、回避後速度条件を保持する', () => {
+  const luton = at('luton', 1, 1000), jackie = at('jaksel', 1, 1000, { dodgeSpeedActive: true })
+  close(luton.row.perAttack, physical(luton.result.stats.attack * 2.3, 1000))
+  close(jackie.row.perAttack, physical(jackie.result.stats.attack * 2.5, 1000))
+  close(jackie.result.attackSpeed, jackie.result.stats.attackSpeed + 12)
+  assert.equal(jackie.row.dps, null)
+  assert.deepEqual(output('luton', 2).rows, [])
+  assert.deepEqual(output('jaksel', 2).rows, [])
+})
+
+test('イーサンは全対象への物理攻撃と付与中の毎秒100術ダメージを分離する', () => {
+  const { result, row } = at('ethan', 1, 500, { actualAttackTargetCount: 4, enemyResistance: 60 })
+  close(row.perAttack, physical(result.stats.attack, 500))
+  close(row.allTargetsPerAttack, row.perAttack * 4)
+  close(row.damageOverTimeDps, 40)
+  close(row.combinedDps, row.perAttack / result.attackInterval! + 40)
+  close(row.allTargetsCombinedDps, row.combinedDps! * 4)
+  const absent = at('ethan', 1, 500, { poisonActive: false, enemyResistance: 60 })
+  close(absent.row.damageOverTimeDps, 0)
+  const second = at('ethan', 2, 500, { actualAttackTargetCount: 5 })
+  close(second.row.perAttack, physical(buffed(second.result.stats.attack, 0.7), 500))
+  close(second.row.allTargetsPerAttack, second.row.perAttack * 5)
+})
+
+test('追加オペレーターの素質値欠落・未確認入力・技能データ変更でも停止する', () => {
+  const frost = record('frostl', 2)
+  for (const talent of frost.operatorProfile.talents ?? []) for (const candidate of talent.candidates ?? []) {
+    candidate.blackboard = []
+  }
+  assert.deepEqual(outputRecord(frost).rows, [])
+  for (const [suffix, index, inputs] of [
+    ['wintim', 2, { hasTakenDamage: 'false' }], ['jaksel', 1, { dodgeSpeedActive: 1 }],
+    ['ethan', 1, { poisonActive: 'true' }], ['frostl', 2, { attackDistanceType: 'UNKNOWN' }],
+  ] as const) assert.deepEqual(output(suffix, index, inputs).rows, [])
+  const altered = record('peacok', 1)
+  altered.skillLevels[9].blackboard!.find(entry => entry.key === 'peacok_s_1[crit].prob')!.value = 0.8
+  assert.deepEqual(outputRecord(altered).rows, [])
+})
+
+test('エンカクは強撃220%と永続ATK70%・速度45、サーファーは配置後ATK100%を反映する', () => {
+  const first = at('flameb', 1, 1000), permanent = at('flameb', 2, 1000), surfer = at('surfer', 1, 1000)
+  close(first.row.perAttack, physical(first.result.stats.attack * 2.2, 1000))
+  close(permanent.row.perAttack, physical(buffed(permanent.result.stats.attack, 0.7), 1000))
+  close(permanent.result.attackInterval, permanent.result.stats.baseAttackTime / 1.45)
+  assert.equal(permanent.result.model?.duration, 0)
+  close(surfer.row.perAttack, physical(buffed(surfer.result.stats.attack, 1), 1000))
+  assert.deepEqual(output('surfer', 2).rows, [])
+})
+
+test('ウィンドチャイムはHP50%以上で20%を加算し、破壊者のブロック対象数を使う', () => {
+  const low = at('chimes', 1, 1000, { selfHpPercent: 49.9, actualAttackTargetCount: 2 })
+  const half = at('chimes', 1, 1000, { selfHpPercent: 50, actualAttackTargetCount: 2 })
+  close(low.row.perAttack, physical(buffed(low.result.stats.attack, 1), 1000))
+  close(half.row.perAttack, physical(buffed(half.result.stats.attack, 1.2), 1000))
+  close(half.row.allTargetsPerAttack, half.row.perAttack * 2)
+  assert.deepEqual(output('chimes', 1, { actualAttackTargetCount: 3 }).rows, [])
+  assert.deepEqual(output('chimes', 2).rows, [])
+})
+
+test('追加の固定期間10技能のみ期間総ダメージを返し、被弾・HP変化・永続・DOTを区別する', () => {
+  const finite = [
+    ['frostl', 2, 25], ['vigna', 1, 25], ['vigna', 2, 30], ['frncat', 2, 40], ['fang2', 2, 20],
+    ['bryota', 2, 30], ['rfalcn', 2, 15], ['buildr', 2, 15], ['ethan', 2, 30], ['surfer', 1, 20],
+  ] as const
+  for (const [suffix, index, seconds] of finite) {
+    const entry = getDamageThreeComparisonEntries([record(suffix, index)])[0]
+    const result = evaluateDamageThreeComparisonEntry(entry, { defense: 500, resistance: 60, enemyCount: 1 })
+    assert.deepEqual(result.errors, [], suffix)
+    assert.equal(result.durationSeconds, seconds, suffix)
+    assert.equal(result.totalDamageReason, null, suffix)
+    close(result.totalDamage, result.combinedDps! * seconds)
+  }
+  for (const [suffix, index] of [['wintim', 2], ['ethan', 1], ['flameb', 2], ['chimes', 1]] as const) {
+    const entry = getDamageThreeComparisonEntries([record(suffix, index)])[0]
+    const result = evaluateDamageThreeComparisonEntry(entry, { defense: 0, resistance: 0, enemyCount: 1 })
+    assert.deepEqual(result.errors, [], suffix)
+    assert.equal(result.totalDamage, null, suffix)
+    assert.ok(result.totalDamageReason, suffix)
+  }
+  const permanent = getDamageThreeComparisonEntries([record('buildr', 2)]).find(entry => entry.stageId === 'permanent')!
+  assert.equal(evaluateDamageThreeComparisonEntry(permanent, { defense: 0, resistance: 0, enemyCount: 1 }).totalDamage, null)
 })

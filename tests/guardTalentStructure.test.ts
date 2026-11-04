@@ -65,6 +65,37 @@ function close(actual: number, expected: number) {
   assert.ok(Math.abs(actual - expected) <= Math.max(1, Math.abs(expected)) * 1e-10, `${actual} != ${expected}`)
 }
 
+test('確率0の攻撃力加算は、効果順序にかかわらず後続の会心へ混入しない', () => {
+  const original = structure(record('char_010_chen'), 1)
+  const template = original.effects.find(effect => effect.item === 'ATK_BUFF_RATIO')!
+  const zero: TalentStructureEffect = { ...template, item: 'ATK_BUFF_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: 0.6,
+    condition: null, timing: { type: 'EVENT', event: 'ATTACK' }, lifetime: { type: 'CURRENT_EVENT' },
+    probability: { chance: 0, rollScope: 'APPLICATION' } }
+  const critical: TalentStructureEffect = { ...zero, item: 'CRITICAL_ATTACK', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: 2,
+    probability: { chance: 0.5, rollScope: 'APPLICATION' } }
+  for (const effects of [[zero, critical], [critical, zero]]) {
+    const result = apply({ ...original, effects })
+    assert.deepEqual(result.blockers, [])
+    close(result.attackRatio, 0)
+    close(result.criticalAttackRatio ?? 0, 0)
+    close(result.critChance, 0.5)
+    close(result.critScale, 2)
+  }
+})
+
+test('相互関係が未確認の確率攻撃力と会心を暗黙に合成せず、持続する確率バフも止める', () => {
+  const original = structure(record('char_010_chen'), 1)
+  const template = original.effects.find(effect => effect.item === 'ATK_BUFF_RATIO')!
+  const bonus: TalentStructureEffect = { ...template, item: 'ATK_BUFF_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: 1,
+    condition: null, timing: { type: 'EVENT', event: 'ATTACK' }, lifetime: { type: 'CURRENT_EVENT' },
+    probability: { chance: 0.3, rollScope: 'APPLICATION' } }
+  const critical: TalentStructureEffect = { ...bonus, item: 'CRITICAL_ATTACK', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: 1.5 }
+  for (const effects of [[bonus, critical], [critical, bonus]]) {
+    assert.ok(apply({ ...original, effects }).blockers.some(reason => reason.includes('複数の確率')))
+  }
+  assert.ok(apply({ ...original, effects: [{ ...bonus, lifetime: { type: 'FIXED_SECONDS', seconds: 5 } }] }).blockers.length)
+})
+
 test('構造化済み効果の値だけを変更すると共通評価結果も変わる', () => {
   const original = structure(record('char_010_chen'), 1)
   const attack = original.effects.find(effect => effect.item === 'ATK_BUFF_RATIO')!

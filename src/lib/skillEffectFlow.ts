@@ -230,7 +230,7 @@ function guardAction(stage: GuardStage, action: GuardDamageAction, id: string,
   const fields: FlowField[] = [{ label: 'ダメージ', value: damageTypes[action.damageType] }]
   // Fixed damage is independent of the zero attack scale used in these recipes.
   if (!(typeof action.scale === 'number' && action.scale === 0 && action.flatDamage !== undefined)) {
-    fields.push({ label: '基準', value: action.basis === 'TARGET_CURRENT_HP' ? '対象の現在HP' : '自身の攻撃力' },
+    fields.push({ label: '基準', value: action.basis === 'TARGET_CURRENT_HP' ? '対象の現在HP' : action.basis === 'TARGET_DEFENSE' ? '対象の防御力' : '自身の攻撃力' },
       { label: 'スキル倍率', value: format(action.scale, '', true) })
   }
   fields.push({ label: '打撃回数', value: usesBaseAttackHitCount(stage, action) ? '通常攻撃に準拠' : format(action.hits ?? 1, '回') })

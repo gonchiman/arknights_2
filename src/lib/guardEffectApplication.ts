@@ -146,7 +146,7 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
         add(`${prefix}:${key}`, `${action.label}：${item}`, read, [...actionExpressions, expression], options)
       if (inherited?.damageType === undefined || action.traitOverrides?.includes('DAMAGE_TYPE'))
         actionRow('type', 'ダメージ属性', () => TYPE_LABELS[action.damageType])
-      if (action.basis !== undefined) actionRow('basis', '計算基準', () => action.basis === 'TARGET_CURRENT_HP' ? '対象の現在HP' : '自身の攻撃力')
+      if (action.basis !== undefined) actionRow('basis', '計算基準', () => action.basis === 'TARGET_CURRENT_HP' ? '対象の現在HP' : action.basis === 'TARGET_DEFENSE' ? '対象の防御力' : '自身の攻撃力')
       actionRow('scale', action.basis === 'TARGET_CURRENT_HP' ? '対象の現在HP倍率' : '攻撃倍率',
         () => `×${number(value(action.scale, 1))}`, action.scale)
       if (inherited?.hitCount === undefined || action.traitOverrides?.includes('HIT_COUNT'))

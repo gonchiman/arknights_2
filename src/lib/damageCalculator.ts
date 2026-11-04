@@ -97,6 +97,8 @@ export interface DamageCalculationBreakdown {
 }
 
 export interface MitigationModifiers {
+  /** Extra minimum guarantee, expressed as damage before post-mitigation multipliers. */
+  minimumDamage?: number
   defenseIgnoreFixed?: number
   resistanceIgnoreFixed?: number
 }
@@ -323,7 +325,7 @@ export function calculateDamageBreakdown(
 
   if (damageType === 'ARTS') {
     const afterResistance = attack * (1 - appliedResistance / 100)
-    const minimumDamage = attack * 0.05
+    const minimumDamage = Math.max(attack * 0.05, finiteOr(modifiers.minimumDamage, 0))
     return {
       attack,
       damageType,
@@ -344,7 +346,7 @@ export function calculateDamageBreakdown(
   }
 
   const afterDefense = attack - appliedDefense
-  const minimumDamage = attack * 0.05
+  const minimumDamage = Math.max(attack * 0.05, finiteOr(modifiers.minimumDamage, 0))
   return {
     attack,
     damageType,

@@ -1,3 +1,4 @@
 instructions/shared/*.md text eol=lf
 scripts/sync-project-rules.mjs text eol=lf
 project-rules.lock.json text eol=lf
+public/data/dc3-coverage/*.json text eol=lf

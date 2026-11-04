@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "versions": [
+    {
+      "schemaVersion": 1,
+      "id": "v1",
+      "label": "v1 拡張前（再集計）",
+      "capturedAt": "2026-11-04T09:21:13.616Z",
+      "source": {
+        "codeRevision": "7b642e2863d07fbea1719b37e5487f517733462d",
+        "codeDirty": false,
+        "codeFingerprint": "0dda87d7c33c3b2fbe14b21ec0f817bd6eec878ac56b9c533d416c381483db6a",
+        "gameDataRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+        "gameDataFingerprint": "e02f27762c44d0b083329e83375802cc2bef03f04777822f5f61220a0881a0ec",
+        "reconstructed": true
+      },
+      "file": "v1.json",
+      "sha256": "e9d8cf30d5e6b413964dd042ea48e9c12533292ac0c46fb73f21859379921610",
+      "skillCount": 915,
+      "counts": {
+        "SUPPORTED": 242,
+        "CONDITIONAL": 10,
+        "PENDING": 63,
+        "UNSUPPORTED": 600
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "v2",
+      "label": "v2 対応拡張",
+      "capturedAt": "2026-11-04T09:22:28.301Z",
+      "source": {
+        "codeRevision": "7b642e2863d07fbea1719b37e5487f517733462d",
+        "codeDirty": true,
+        "codeFingerprint": "193fc71e409869c10375bfc680d80fc0059daef8c1cf8013914c3846459c79a4",
+        "gameDataRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+        "gameDataFingerprint": "e02f27762c44d0b083329e83375802cc2bef03f04777822f5f61220a0881a0ec",
+        "reconstructed": false
+      },
+      "file": "v2.json",
+      "sha256": "e7f8bf0a8103bee31b0ab344d3dbae7c102f6f12d7cc9725895e744ff04e468f",
+      "skillCount": 915,
+      "counts": {
+        "SUPPORTED": 286,
+        "CONDITIONAL": 10,
+        "PENDING": 77,
+        "UNSUPPORTED": 542
+      }
+    }
+  ]
+}
