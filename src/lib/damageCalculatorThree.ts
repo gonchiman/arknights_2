@@ -270,7 +270,11 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   const enemyErrors = validateDamageCalculatorThreeEnemy(input.enemy)
   const enemy = enemyErrors.length ? undefined : input.enemy
   const reasons = [...validateOperator(input), ...enemyErrors]
-  if (input.virtualMainAttackType !== undefined) reasons.push('このスキルの主攻撃の属性変更には未対応です。')
+  const virtualMainAttackType = input.virtualMainAttackType === 'PHYSICAL' || input.virtualMainAttackType === 'ARTS'
+    ? input.virtualMainAttackType : undefined
+  if (input.virtualMainAttackType !== undefined && virtualMainAttackType === undefined) {
+    reasons.push('仮想攻撃属性は物理または術を指定してください。')
+  }
   const context = resolveConditions(enemy ? { ...input.conditions, enemyResistance: enemy.resistance } : input.conditions)
   const conditionErrors = validateConditions(context)
   reasons.push(...conditionErrors)
@@ -328,7 +332,8 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   })
   if (base && !traitStructure) reasons.push('選択したオペレーターの特性構造を取得できません。')
   reasons.push(...traitEvaluation.blockers)
-  const damageType = traitEvaluation.damageType ?? base?.damageType ?? null
+  const nativeDamageType = traitEvaluation.damageType ?? base?.damageType ?? null
+  const damageType = virtualMainAttackType ?? nativeDamageType
   const axisLabel = damageType === 'PHYSICAL' ? '敵の防御力' : damageType === 'ARTS' ? '敵の術耐性' : '防御力・術耐性'
   const maxTargetCount = traitEvaluation.maxTargets !== undefined ? traitEvaluation.maxTargets
     : attack ? attack.maxTargets : base?.maxTargets ?? 1
@@ -493,7 +498,8 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
         addDamageAction(effect, effect.value.count - airborneCount, false, '砲撃（地上）')
       }
       if (!actionPlans.length) throw new RangeError('一連の攻撃のダメージを解決できません。')
-      if (actionPlans.some(plan => plan.effect.value.damageType !== damageType)) throw new RangeError('異なるダメージ属性を混ぜた一連の攻撃は未対応です。')
+      // Validate the native recipe before applying the counterfactual. Conversion must not hide a native blocker.
+      if (actionPlans.some(plan => plan.effect.value.damageType !== nativeDamageType)) throw new RangeError('異なるダメージ属性を混ぜた一連の攻撃は未対応です。')
       const first = actionPlans[0].talents
       if (actionPlans.some(plan => plan.talents.attackRatio !== first.attackRatio || plan.talents.attackSpeedBonus !== first.attackSpeedBonus)) {
         throw new RangeError('一連の攻撃中に攻撃力・攻撃速度の補正が変わる計算は未対応です。')
@@ -556,6 +562,9 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   const damageOverTime = model && talents.damageOverTimeRate ? calculateMaintainedDamageOverTime(talents.damageOverTimeRate, {
     enemyResistance: context.enemyResistance, actualTargetCount, attackInterval, attackKind: attackKind === 'SKILL_ACTION' ? 'NEXT_ATTACK' : attackKind,
   }) : null
+  const nativeActionTypes = new Set(actionPlans.map(plan => plan.effect.value.damageType))
+  const mainAttackType = hasAttackSequence
+    ? nativeActionTypes.size === 1 ? [...nativeActionTypes][0] : null : nativeDamageType
   const rows: DamageCalculatorThreeRow[] = model && attackPipeline && damageType
     ? (enemy ? [damageType === 'PHYSICAL' ? enemy.defense : damageType === 'ARTS' ? enemy.resistance : 0]
       : getDamageSensitivityTablePoints(damageType, hasAttackSequence ? actionPlans.map(plan => plan.pipeline.finalAttack * 0.95) : [attackPipeline.finalAttack * 0.95])).map(axisValue => {
@@ -564,11 +573,12 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
       if (hasAttackSequence) {
         const attackComponents = actionPlans.map((plan, index): DamageCalculatorThreeAttackComponent => {
           const proc = plan.talents.defenseIgnore ?? { chance: 0, ratio: 0 }
+          const actionDamageType = virtualMainAttackType ?? plan.effect.value.damageType
           const weighted = calculateProbabilisticDefenseIgnoreDamage({ attack: plan.pipeline.finalAttack,
-            damageType: plan.effect.value.damageType, enemyDefense, enemyResistance, chance: proc.chance, ratio: proc.ratio,
+            damageType: actionDamageType, enemyDefense, enemyResistance, chance: proc.chance, ratio: proc.ratio,
             count: plan.effect.value.count, resistanceIgnoreFixed: plan.talents.resistanceIgnoreFixed })
           return { id: plan.effect.value.targeting?.selection === 'RANDOM' ? `${plan.effect.id}/${plan.targetAirborne ? 'air' : 'ground'}` : plan.effect.id,
-            label: plan.label, order: index + 1, damageType: plan.effect.value.damageType,
+            label: plan.label, role: 'MAIN', order: index + 1, damageType: actionDamageType,
             attackScale: plan.effect.value.attackScale, count: plan.effect.value.count, targetAirborne: plan.targetAirborne,
             defenseIgnoreChance: proc.chance, defenseIgnoreRatio: proc.ratio, expectedDamage: weighted.expectedDamage * plan.hitFactor,
             expectedHitCount: plan.effect.value.count * plan.hitFactor,
@@ -585,7 +595,13 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
       const perHit = mitigation.result
       const perAttack = perHit * model.hitCount
       const dps = canShowDps && attackInterval ? perAttack / attackInterval : null
-      const damageOverTimeDps = damageOverTime?.steadyDps ?? null
+      // Poison keeps its own Arts type. When the virtual main attack sweeps RES, it sees that same enemy RES.
+      const rowDamageOverTime = !enemy && virtualMainAttackType === 'ARTS' && virtualMainAttackType !== nativeDamageType
+        && model && talents.damageOverTimeRate ? calculateMaintainedDamageOverTime(talents.damageOverTimeRate, {
+          enemyResistance, actualTargetCount, attackInterval,
+          attackKind: attackKind === 'SKILL_ACTION' ? 'NEXT_ATTACK' : attackKind,
+        }) : damageOverTime
+      const damageOverTimeDps = rowDamageOverTime?.steadyDps ?? null
       const combinedDps = talents.hasDamageOverTime
         ? dps === null || damageOverTimeDps === null || talents.hasUnsupportedDamage ? null : dps + damageOverTimeDps
         : dps
@@ -599,7 +615,7 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
         damageOverTimeDps, combinedDps, allTargetsCombinedDps: combinedDps === null ? null : combinedDps * actualTargetCount,
         attackComponents: [] }
     }) : []
-  return { structure, stats, model, damageType, axisLabel, rows, unsupportedReasons, conditionInputs, traitEvaluation,
+  return { structure, stats, model, damageType, mainAttackType, axisLabel, rows, unsupportedReasons, conditionInputs, traitEvaluation,
     actualTargetCount, maxTargetCount, effects, canShowDps, dpsReason, effectiveAttack,
     attackSpeed: model ? attackSpeedValue : null,
     attackInterval: model ? attackInterval : null, activeStageLabel: stage?.label ?? null,

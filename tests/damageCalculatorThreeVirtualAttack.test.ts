@@ -52,7 +52,7 @@ function close(actual: number | null, expected: number) {
   assert.ok(actual !== null && Math.abs(actual - expected) < 1e-7, `${actual} != ${expected}`)
 }
 
-test('確認済みの通常攻撃型は同属性指定で本来の結果を完全に保ち、元の構造定義を変更しない', () => {
+test('確認済みの攻撃型は同属性指定で本来の結果を完全に保ち、元の構造定義を変更しない', () => {
   const structures = getDamageCalculatorThreeStructures()
   const snapshot = JSON.stringify(structures)
   let compared = 0
@@ -72,7 +72,7 @@ test('確認済みの通常攻撃型は同属性指定で本来の結果を完�
       compared++
     }
   }
-  assert.ok(compared > 100, `確認した通常攻撃段階: ${compared}`)
+  assert.ok(compared > 100, `確認した攻撃段階: ${compared}`)
   assert.equal(JSON.stringify(structures), snapshot)
 })
 
@@ -137,12 +137,9 @@ test('防御無視と術耐性低下を相互変換せず、それぞれ該当�
   close(ifrit.after.perAttack, Math.max(attack - 500, attack * 0.05))
 })
 
-test('主攻撃不明・確定主攻撃・非通常攻撃型・不正属性は結果を代用せず停止する', () => {
+test('主攻撃不明・不正属性は結果を代用せず停止する', () => {
   const structures = getDamageCalculatorThreeStructures()
   const find = (id: string, index: number) => structures.find(structure => structure.basicInfo.operatorId === id && structure.basicInfo.skillIndex === index)!
-  assert.equal(getDamageCalculatorThreeVirtualAttackCapability(find('char_002_amiya', 3), 'active').supported, false)
-  assert.equal(getDamageCalculatorThreeVirtualAttackCapability(find('char_210_stward', 1), 'active').supported, false)
-  assert.equal(getDamageCalculatorThreeVirtualAttackCapability(find('char_350_surtr', 3), 'active').supported, false)
   assert.equal(getGuardVirtualAttackCapability({ id: 'x', label: 'x', kind: 'NORMAL',
     actions: [{ label: '攻撃', damageType: 'ARTS', scale: 1 }] }).supported, false)
   const original = find('char_103_angel', 3)
@@ -152,9 +149,9 @@ test('主攻撃不明・確定主攻撃・非通常攻撃型・不正属性は�
   assert.deepEqual(blocked.rows, [])
   assert.match(blocked.unsupportedReasons.join(), /区分が未確認/)
   for (const value of [
-    { ...input('char_002_amiya', 3), virtualMainAttackType: 'PHYSICAL' as const },
-    { ...input('char_210_stward', 1), virtualMainAttackType: 'PHYSICAL' as const },
     { ...input('char_103_angel', 3), virtualMainAttackType: 'TRUE' as 'PHYSICAL' },
+    { ...input('char_103_angel', 3), enemy: { defense: -1, resistance: 20 }, virtualMainAttackType: 'ARTS' as const },
+    { ...input('char_103_angel', 3), operatorLevel: Number.NaN, virtualMainAttackType: 'ARTS' as const },
   ]) {
     const result = buildDamageCalculatorThreeOutput(value)
     assert.deepEqual(result.rows, [])
@@ -162,13 +159,86 @@ test('主攻撃不明・確定主攻撃・非通常攻撃型・不正属性は�
   }
 })
 
-test('属性限定効果と追加ダメージが混在する未確認の組合せは部分結果を出さない', () => {
+test('属性限定効果と追加・継続ダメージが混在しても変更対象の成分だけを再評価する', () => {
   const value = input('char_4098_vvana', 3)
   const structure = structuredClone(getDamageCalculatorThreeStructures().find(structure =>
     structure.basicInfo.operatorId === value.skill.operatorId && structure.basicInfo.skillIndex === 3)!)
   const stage = structure.guardRecipe!.stages[0]
-  stage.actions = [...stage.actions, { role: 'ADDITIONAL', label: '追加術攻撃', damageType: 'ARTS', scale: 0.1 }]
+  stage.actions = [...stage.actions,
+    { role: 'ADDITIONAL', label: '追加術攻撃', damageType: 'ARTS', scale: 0.1 },
+    { role: 'ADDITIONAL', label: '継続術ダメージ', damageType: 'ARTS', scale: 0.2, timing: 'PER_SECOND' },
+  ]
+  const native = buildGuardDamageOutput(value, structure)
   const result = buildGuardDamageOutput({ ...value, virtualMainAttackType: 'PHYSICAL' }, structure)
-  assert.deepEqual(result.rows, [])
-  assert.match(result.unsupportedReasons.join(), /属性限定効果を伴う追加・継続ダメージ/)
+  assert.deepEqual(native.unsupportedReasons, [])
+  assert.deepEqual(result.unsupportedReasons, [])
+  const before = native.rows[0], after = result.rows[0]
+  const originalMain = before.attackComponents.filter(component => component.role === 'MAIN')
+  const changedMain = after.attackComponents.filter(component => component.role === 'MAIN')
+  assert.ok(originalMain.length > 0)
+  assert.ok(changedMain.every(component => component.damageType === 'PHYSICAL'))
+  assert.ok(originalMain.every(component => component.damageType === 'ARTS'))
+  assert.deepEqual(after.attackComponents.filter(component => component.role === 'ADDITIONAL'),
+    before.attackComponents.filter(component => component.role === 'ADDITIONAL'))
+  close(after.damageOverTimeDps, before.damageOverTimeDps!)
+  close(after.combinedDps, after.dps! + before.damageOverTimeDps!)
+  assert.notEqual(after.perAttack, before.perAttack)
+})
+
+test('確定ダメージの主攻撃も物理・術へ変更し、その属性の軽減を使う', () => {
+  const value = input('char_002_amiya', 3)
+  const physical = pair(value, 'PHYSICAL')
+  const arts = pair(value, 'ARTS')
+  assert.equal(physical.native.mainAttackType, 'TRUE')
+  assert.equal(physical.changed.damageType, 'PHYSICAL')
+  assert.equal(arts.changed.damageType, 'ARTS')
+  const raw = physical.before.attackComponents[0].attackPipeline.finalAttack
+  close(physical.before.perAttack, raw)
+  close(physical.after.perAttack, Math.max(raw - 500, raw * 0.05))
+  close(arts.after.perAttack, raw * 0.7)
+  assert.equal(physical.changed.attackInterval, physical.native.attackInterval)
+})
+
+test('次の通常攻撃型は攻撃1回を比較し、周期DPSを代用しない', () => {
+  const { native, changed, before, after } = pair(input('char_210_stward', 1), 'PHYSICAL')
+  assert.equal(native.attackKind, 'NEXT_ATTACK')
+  assert.equal(changed.attackKind, 'NEXT_ATTACK')
+  assert.equal(native.mainAttackType, 'ARTS')
+  assert.ok(after.attackComponents.every(component => component.damageType === 'PHYSICAL'))
+  assert.equal(after.dps, null)
+  assert.equal(after.combinedDps, null)
+  assert.equal(changed.attackInterval, native.attackInterval)
+  close(after.perAttack, Math.max(before.attackComponents[0].attackPipeline.finalAttack - 500,
+    before.attackComponents[0].attackPipeline.finalAttack * 0.05))
+})
+
+test('1スキル内の物理・術の主攻撃を同じ仮想属性へ変更し、それぞれの攻撃倍率を保つ', () => {
+  const { native, changed, before, after } = pair(input('char_010_chen', 2), 'ARTS')
+  assert.equal(native.attackKind, 'SKILL_ACTION')
+  assert.equal(native.mainAttackType, null)
+  assert.ok(before.attackComponents.some(component => component.damageType === 'PHYSICAL'))
+  assert.ok(before.attackComponents.some(component => component.damageType === 'ARTS'))
+  assert.equal(changed.attackKind, native.attackKind)
+  assert.equal(after.dps, null)
+  assert.equal(after.attackComponents.length, before.attackComponents.length)
+  for (let i = 0; i < before.attackComponents.length; i++) {
+    assert.equal(after.attackComponents[i].role, 'MAIN')
+    assert.equal(after.attackComponents[i].damageType, 'ARTS')
+    assert.equal(after.attackComponents[i].attackScale, before.attackComponents[i].attackScale)
+    assert.equal(after.attackComponents[i].count, before.attackComponents[i].count)
+    close(after.attackComponents[i].expectedDamage,
+      before.attackComponents[i].attackPipeline.finalAttack * 0.7 * before.attackComponents[i].count)
+  }
+})
+
+test('本来の未対応条件は仮想属性でも隠さず、部分的な計算結果を返さない', () => {
+  for (const value of [input('char_4037_demetr', 2), input('char_1050_chen3', 1)]) {
+    const native = buildDamageCalculatorThreeOutput(value)
+    assert.ok(native.unsupportedReasons.length > 0)
+    for (const virtualMainAttackType of ['PHYSICAL', 'ARTS'] as const) {
+      const result = buildDamageCalculatorThreeOutput({ ...value, virtualMainAttackType })
+      assert.deepEqual(result.rows, [])
+      assert.ok(native.unsupportedReasons.every(reason => result.unsupportedReasons.includes(reason)))
+    }
+  }
 })

@@ -64,14 +64,66 @@ test('イフリータ素質の術耐性40%低下と段階の30%低下は残存�
   close(output.rows[0].perAttack, output.effectiveAttack! * (1 - (80 * 0.6 * 0.7 - 20) / 100))
 })
 
+test('仮想属性と混在しても段階の低下・与ダメージ倍率を主攻撃と追加・継続ダメージに一度ずつ適用する', () => {
+  const stage: Partial<GuardStage> = {
+    atk: 0.45, defenseReductionRatio: 0.5, defenseIgnoreRatio: 0.2, defenseIgnoreFixed: 10,
+    resistanceReductionRatio: 0.3, resistanceIgnoreFixed: 5, damageScale: 1.5,
+    actions: [
+      { label: 'main', role: 'MAIN', damageType: 'ARTS', scale: 1 },
+      { label: 'extra', role: 'ADDITIONAL', damageType: 'ARTS', scale: 0.4 },
+      { label: 'dot', role: 'ADDITIONAL', damageType: 'ARTS', scale: 0.2, basis: 'ATK_STAT', timing: 'PER_SECOND' },
+    ],
+  }
+  const options = { conditions: { guard: { reedScarActive: true } } }
+  const native = calculate('char_1020_reed2', stage, options).output
+  assert.deepEqual(native.unsupportedReasons, [])
+  const attack = Math.floor(native.stats.attack * 1.45 + 1e-9)
+  const artsRetention = 1 - (80 * 0.7 - 5) / 100
+  const arts = (scale: number) => attack * scale * artsRetention * 1.3 * 1.5
+  const physical = Math.max(attack - (300 * 0.5 * 0.8 - 10), attack * 0.05) * 1.5
+  for (const virtualMainAttackType of [undefined, 'ARTS', 'PHYSICAL'] as const) {
+    const result = calculate('char_1020_reed2', stage, { ...options, virtualMainAttackType }).output
+    assert.deepEqual(result.unsupportedReasons, [])
+    const row = result.rows[0], components = row.attackComponents!
+    assert.deepEqual(components.map(component => component.damageType), [virtualMainAttackType ?? 'ARTS', 'ARTS'])
+    close(components[0].expectedDamage, virtualMainAttackType === 'PHYSICAL' ? physical : arts(1))
+    close(components[1].expectedDamage, arts(0.4))
+    close(row.damageOverTimeDps, arts(0.2))
+    close(row.perAttack, components[0].expectedDamage + arts(0.4))
+    close(row.combinedDps, row.perAttack / result.attackInterval! + arts(0.2))
+    assert.deepEqual(components[1], native.rows[0].attackComponents![1])
+    if (virtualMainAttackType !== 'PHYSICAL') assert.deepEqual(row, native.rows[0])
+  }
+})
+
+test('素質由来のATK_STAT流血にも段階の術耐性低下・倍率を適用し、仮想主攻撃の特性倍率を混ぜない', () => {
+  const stage: Partial<GuardStage> = {
+    atk: 0.45, defenseReductionRatio: 0.5, resistanceReductionRatio: 0.3,
+    resistanceIgnoreFixed: 5, damageScale: 1.5,
+  }
+  for (const virtualMainAttackType of [undefined, 'PHYSICAL', 'ARTS'] as const) {
+    const { output } = calculate('char_346_aosta', stage, { virtualMainAttackType,
+      conditions: { guard: { targetInFrontalTiles: true, bleedingActive: true } } })
+    assert.deepEqual(output.unsupportedReasons, [])
+    const attack = Math.floor(output.stats.attack * 1.45 + 1e-9)
+    const artsRetention = 1 - (80 * 0.7 - 5) / 100
+    close(output.rows[0].damageOverTimeDps, attack * 0.18 * artsRetention * 1.5)
+    const main = virtualMainAttackType === 'ARTS' ? attack * 1.5 * artsRetention
+      : Math.max(attack * 1.5 - 300 * 0.5, attack * 1.5 * 0.05)
+    close(output.rows[0].perAttack, main * 1.5)
+  }
+})
+
 test('ATK_STAT継続ダメージは通常攻撃用の倍率や会心を継承しない', () => {
   for (const [id, guard] of [['char_271_spikes', { targetDrone: true }], ['char_283_midn', {}]] as const) {
-    const { output } = calculate(id, { attackTreatment: 'RANGED', actions: [
-      { label: 'attack', role: 'MAIN', damageType: 'PHYSICAL', scale: 1 },
-      { label: 'dot', role: 'ADDITIONAL', damageType: 'ARTS', scale: 0.2, basis: 'ATK_STAT', timing: 'PER_SECOND' },
-    ] }, { conditions: { guard } })
-    assert.deepEqual(output.unsupportedReasons, [])
-    close(output.rows[0].damageOverTimeDps, output.stats.attack * 0.2 * 0.2)
+    for (const virtualMainAttackType of [undefined, 'ARTS'] as const) {
+      const { output } = calculate(id, { attackTreatment: 'RANGED', actions: [
+        { label: 'attack', role: 'MAIN', damageType: 'PHYSICAL', scale: 1 },
+        { label: 'dot', role: 'ADDITIONAL', damageType: 'ARTS', scale: 0.2, basis: 'ATK_STAT', timing: 'PER_SECOND' },
+      ] }, { conditions: { guard }, virtualMainAttackType })
+      assert.deepEqual(output.unsupportedReasons, [])
+      close(output.rows[0].damageOverTimeDps, output.stats.attack * 0.2 * 0.2)
+    }
   }
 })
 
