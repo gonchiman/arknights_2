@@ -24,12 +24,13 @@ function record(id: string, index: number): SkillRecord {
     classification: classifySkill(raw), skillLevels: Array.from({ length: source.skillLevelIndex + 1 }, () => structuredClone(raw)),
     raw, operatorProfile: structuredClone(source.profile) }
 }
-function output(id: string, index: number, guard: GuardConditions = {}, transform?: (skill: SkillRecord) => void) {
+function output(id: string, index: number, guard: GuardConditions = {}, transform?: (skill: SkillRecord) => void,
+  virtualMainAttackType?: 'PHYSICAL' | 'ARTS') {
   const skill = record(id, index), source = sources.find(s => s.operatorId === id)!
   transform?.(skill)
   return buildDamageCalculatorThreeOutput({ operator: skill, skill, phaseIndex: source.phaseIndex,
     operatorLevel: source.profile.phases[source.phaseIndex].maxLevel!, trust: 100,
-    skillLevelIndex: source.skillLevelIndex, conditions: { guard } })
+    skillLevelIndex: source.skillLevelIndex, conditions: { guard }, virtualMainAttackType })
 }
 function at(id: string, index: number, axis = 0, guard: GuardConditions = {}) {
   const result = output(id, index, guard)
@@ -45,7 +46,7 @@ const physical = (attack: number, defense: number) => Math.max(attack - defense,
 const buff = (attack: number, ratio: number) => Math.floor(attack * (1 + ratio) + 1e-9)
 
 test('追加狙撃の全技能を計算対応または具体的な保留理由に分け、全素質を欠落なく構造化する', () => {
-  assert.equal(EXPANDED_RANGED_DEFINITIONS.length, 34)
+  assert.equal(EXPANDED_RANGED_DEFINITIONS.length, 38)
   for (const definition of EXPANDED_RANGED_DEFINITIONS) {
     const source = sources.find(s => s.operatorId === definition.operatorId)!
     assert.deepEqual([...definition.recipes.map(r => r.skillIndex), ...(definition.deferredSkills ?? []).map(s => s.skillIndex)].sort(),
@@ -185,6 +186,125 @@ test('アズリウスの毒は通常攻撃の物理ダメージと混ぜず固�
   assert.equal(row.dps, null)
   const inactive = at('char_129_bluep', 1, 1000, { poisonActive: false })
   assert.equal(inactive.row.damageOverTimeDps, null)
+})
+
+test('アルケットS2の連鎖は5から1連撃へ減り、対象ごとに軽減して合計する', () => {
+  for (const [targets, hits] of [[1, 5], [2, 9], [3, 12], [4, 14], [5, 15]]) {
+    const { result, row } = at('char_332_archet', 2, 500, { actualAttackTargetCount: targets })
+    close(row.allTargetsPerAttack, physical(result.stats.attack * 1.4, 500) * hits)
+    close(row.perAttack, row.allTargetsPerAttack! / targets)
+    assert.deepEqual(row.attackComponents!.map(component => component.count), Array.from({ length: targets }, (_, i) => 5 - i))
+    assert.equal(row.dps, null)
+  }
+  assert.ok(output('char_332_archet', 2, { actualAttackTargetCount: 6 }).unsupportedReasons.length)
+})
+
+test('アズリウスS2は主対象2回・追加対象各1回に毒を1つずつ計算する', () => {
+  for (const targets of [1, 2, 3]) {
+    const { result, row } = at('char_129_bluep', 2, 500, { actualAttackTargetCount: targets, enemyResistance: 40 })
+    const hit = physical(buff(result.stats.attack, 0.5), 500)
+    close(row.allTargetsPerAttack, hit * (targets + 1))
+    close(row.damageOverTimeDps, 75 * 0.6)
+    close(row.allTargetsCombinedDps, hit * (targets + 1) / result.attackInterval! + 75 * 0.6 * targets)
+  }
+  assert.ok(output('char_129_bluep', 2, { actualAttackTargetCount: 4 }).unsupportedReasons.length)
+})
+
+test('ファートゥースS3は射程外140%を防御軽減後に掛け、素質ATK15%はスキルと加算する', () => {
+  for (const outside of [false, true]) for (const noDamage of [false, true]) for (const defense of [0, 1000, 2000]) {
+    const { result, row } = at('char_430_fartth', 3, defense,
+      { targetOutsideBaseRange: outside, noDamageForTenSeconds: noDamage })
+    const attack = buff(result.stats.attack, 1.4 + (noDamage ? 0.15 : 0))
+    close(row.perAttack, physical(attack, defense) * (outside ? 1.4 : 1))
+    close(result.attackInterval, result.stats.baseAttackTime)
+  }
+})
+
+test('ティフォンS1は防御無視0〜5累積と対象への初回160%を区別する', () => {
+  for (const stacks of [0, 1, 5]) for (const first of [false, true]) {
+    const { result, row } = at('char_2012_typhon', 1, 1000,
+      { defenseIgnoreStacks: stacks, firstSkillHitOnTarget: first })
+    const attack = buff(result.stats.attack, 0.45) * (first ? 1.6 : 1)
+    close(row.perAttack, physical(attack, 1000 * (1 - stacks * 0.1)))
+    close(result.attackInterval, result.stats.baseAttackTime / 1.45)
+  }
+  for (const stacks of [-1, 6, 1.5]) {
+    assert.ok(output('char_2012_typhon', 1, { defenseIgnoreStacks: stacks }).unsupportedReasons.length)
+  }
+})
+
+test('レミュアンS1は配置20秒の境界、指名手配15%と2対象210%を反映する', () => {
+  for (const seconds of [19.9, 20]) for (const wanted of [false, true]) {
+    const { result, row } = at('char_4193_lemuen', 1, 1000,
+      { deploymentSeconds: seconds, targetWanted: wanted, actualAttackTargetCount: 2 })
+    const attack = buff(result.stats.attack, seconds >= 20 ? 0.1 : 0)
+    close(row.perAttack, physical(attack * 2.1, 1000) * (wanted ? 1.15 : 1))
+    close(row.allTargetsPerAttack, row.perAttack * 2)
+  }
+  assert.ok(output('char_4193_lemuen', 1, { actualAttackTargetCount: 3 }).unsupportedReasons.length)
+})
+
+test('トギフォンスS1のマークは防御30%低下、サルカズ補正は攻撃倍率145%となる', () => {
+  for (const marked of [false, true]) for (const sarkaz of [false, true]) {
+    const { result, row } = at('char_363_toddi', 1, 1000, { targetMarked: marked, targetSarkaz: sarkaz })
+    close(row.perAttack, physical(result.stats.attack * 1.8 * (sarkaz ? 1.45 : 1), marked ? 700 : 1000))
+    close(row.dps, row.perAttack / result.attackInterval!)
+  }
+})
+
+test('トギフォンスS2は主対象の竜矢240%と全対象の遅延爆発80%を個別に軽減する', () => {
+  for (const targets of [1, 3]) for (const sarkaz of [false, true]) {
+    const { result, row } = at('char_363_toddi', 2, 500, { actualAttackTargetCount: targets, targetSarkaz: sarkaz })
+    const attack = result.stats.attack * (sarkaz ? 1.45 : 1)
+    close(row.allTargetsPerAttack, physical(attack * 2.4, 500) + physical(attack * 0.8, 500) * targets)
+    close(result.attackInterval, result.stats.baseAttackTime + 0.3)
+    assert.deepEqual(row.attackComponents!.map(component => component.role), ['MAIN', 'ADDITIONAL'])
+  }
+})
+
+test('アオスタの流血は未重複のATK比率毎秒ダメージで、正面150%は直接攻撃だけに適用する', () => {
+  for (const index of [1, 2]) for (const frontal of [false, true]) {
+    const { result, row } = at('char_346_aosta', index, 500,
+      { targetInFrontalTiles: frontal, actualAttackTargetCount: 3, enemyResistance: 40 })
+    const attack = buff(result.stats.attack, index === 1 ? 0.45 : 0.7)
+    const dot = attack * 0.18 * (index === 2 ? 2 : 1) * 0.6
+    close(row.perAttack, physical(attack * (frontal ? 1.5 : 1), 500))
+    close(row.damageOverTimeDps, dot)
+    close(result.attackInterval, index === 1 ? result.stats.baseAttackTime / 1.45 : result.stats.baseAttackTime + 0.5)
+    close(row.allTargetsCombinedDps, (row.perAttack / result.attackInterval! + dot) * 3)
+  }
+  const inactive = at('char_346_aosta', 2, 500, { bleedingActive: false })
+  assert.equal(inactive.row.damageOverTimeDps, null)
+  const dot = buildExpandedTalentStructures([record('char_346_aosta', 1)])[0].effects[0]
+  assert.equal(dot.item, 'DAMAGE_OVER_TIME')
+  if (dot.item !== 'DAMAGE_OVER_TIME') return
+  assert.equal(dot.damage.amount.basis, 'ATK_RATIO')
+  assert.deepEqual(dot.damage.stacking, { mode: 'REPLACE', maxStacks: 1 })
+})
+
+test('新規狙撃の仮想攻撃属性は主攻撃のみ変更し、遅延爆発と流血の属性・倍率を保つ', () => {
+  const tod = output('char_363_toddi', 2, { actualAttackTargetCount: 2, enemyResistance: 40 }, undefined, 'ARTS')
+  assert.deepEqual(tod.unsupportedReasons, [])
+  const todRow = tod.rows.find(row => row.axisValue === 500)!
+  close(todRow.allTargetsPerAttack, tod.stats.attack * 2.4 * 0.6 + physical(tod.stats.attack * 0.8, 500) * 2)
+  assert.deepEqual(todRow.attackComponents!.map(component => [component.role, component.damageType]),
+    [['MAIN', 'ARTS'], ['ADDITIONAL', 'PHYSICAL']])
+  const aosta = output('char_346_aosta', 2, { targetInFrontalTiles: true }, undefined, 'ARTS')
+  assert.deepEqual(aosta.unsupportedReasons, [])
+  const aostaRow = aosta.rows.find(row => row.axisValue === 40)!
+  const attack = buff(aosta.stats.attack, 0.7)
+  close(aostaRow.perAttack, attack * 1.5 * 0.6)
+  close(aostaRow.damageOverTimeDps, attack * 0.18 * 2 * 0.6)
+})
+
+test('新規狙撃は未確認の素質数値や特性への変更を検出し、古い定義で計算を続けない', () => {
+  for (const id of ['char_2012_typhon', 'char_4193_lemuen', 'char_363_toddi', 'char_346_aosta']) {
+    const changed = output(id, 1, {}, skill => {
+      for (const candidate of skill.operatorProfile.talents[0].candidates ?? []) candidate.blackboard = []
+    })
+    assert.ok(changed.unsupportedReasons.length, id)
+    assert.deepEqual(changed.rows, [])
+  }
 })
 
 test('素質数値の欠落と説明変更は、既定値や部分的な計算結果へ落とさず停止する', () => {

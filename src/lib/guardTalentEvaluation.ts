@@ -34,7 +34,9 @@ function supportsContext(effect: TalentStructureEffect, metrics: Metrics): boole
   const expected = operations[effect.item]
   if (effect.item === 'DAMAGE_OVER_TIME') {
     if (effect.operation !== 'DEAL_DAMAGE' || effect.damage.kind.type !== 'ORDINARY'
-      || effect.damage.amount.basis !== 'FIXED' || effect.damage.rate !== 'PER_SECOND') return false
+      || effect.damage.rate !== 'PER_SECOND') return false
+    if (effect.damage.amount.basis === 'ATK_RATIO' && (effect.damage.amount.reference !== 'SOURCE'
+      || effect.damage.amount.referenceTime === 'UNSPECIFIED')) return false
   } else if (!expected || effect.operation !== expected[0] || effect.unit !== expected[1]) return false
   const chance = resolveCombatNumericValue(effect.probability.chance, metrics)
   if (chance === null || !Number.isFinite(chance) || chance < 0 || chance > 1) return false
@@ -175,13 +177,17 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
     if (effect.item === 'DAMAGE_OVER_TIME') {
       // This is the rate of one currently applied DOT, not a simulation of its
       // application cadence, refreshes, stacking, or finite-duration damage.
-      if (effect.damage.kind.type !== 'ORDINARY' || effect.damage.amount.basis !== 'FIXED') continue
-      const rate = numeric(effect.damage.amount.value, '毎秒ダメージ')
+      if (effect.damage.kind.type !== 'ORDINARY') continue
+      const amount = effect.damage.amount
+      const rate = numeric(amount.basis === 'FIXED' ? amount.value : amount.ratio,
+        amount.basis === 'FIXED' ? '毎秒ダメージ' : '毎秒ダメージの攻撃力比率')
       if (rate === null) continue
       if (rate < 0) { block('継続ダメージの毎秒値が有効範囲外です。'); continue }
       if (active) output.additionalActions.push({ label: source, role: 'ADDITIONAL', damageType: effect.damage.kind.damageType,
-        scale: 0, flatDamage: rate, hits: 1, timing: 'PER_SECOND' })
-      addRow('付与中のダメージ/秒', formatCombatNumber(rate), active ? 'APPLIED' : 'CONDITION_FALSE', '', details)
+        ...(amount.basis === 'FIXED' ? { scale: 0, flatDamage: rate } : { scale: rate, basis: 'ATK_STAT' }),
+        hits: 1, timing: 'PER_SECOND' })
+      addRow('付与中のダメージ/秒', amount.basis === 'FIXED' ? formatCombatNumber(rate) : `攻撃力×${formatCombatNumber(rate)}`,
+        active ? 'APPLIED' : 'CONDITION_FALSE', '', details)
       continue
     }
     if (!('value' in effect) || typeof effect.value === 'boolean' || effect.value === undefined) {

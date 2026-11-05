@@ -135,6 +135,15 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
       defenseIgnoreRatio = 1 - (1 - passive.defenseIgnoreRatio) * (1 - combinedRatio)
       defenseIgnoreFixed += value(stage.defenseIgnoreFixed)
       resistanceIgnoreFixed += value(stage.resistanceIgnoreFixed)
+      const defenseReduction = value(stage.defenseReductionRatio)
+      const resistanceReduction = value(stage.resistanceReductionRatio)
+      const damageScale = value(stage.damageScale, 1)
+      if (defenseReduction < 0 || defenseReduction > 1 || resistanceReduction < 0 || resistanceReduction > 1)
+        throw new RangeError('スキルの防御力・術耐性低下率が有効範囲外です。')
+      if (damageScale < 0) throw new RangeError('スキルの与ダメージ倍率が有効範囲外です。')
+      passive.defenseReductionRatio = 1 - (1 - passive.defenseReductionRatio) * (1 - defenseReduction)
+      passive.resistanceReductionRatio = 1 - (1 - (passive.resistanceReductionRatio ?? 0)) * (1 - resistanceReduction)
+      passive.damageScale *= damageScale
       const baseTime = stats.baseAttackTime * value(stage.intervalScale, 1) + value(stage.intervalAdd) + (passive.attackIntervalAdd ?? 0)
       const speed = stats.attackSpeed + aspd + passive.attackSpeed
       if (!Number.isFinite(speed) || !Number.isFinite(baseTime) || baseTime <= 0) throw new RangeError('攻撃間隔を計算できません。')
@@ -160,10 +169,10 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
   }
   const axisLabel = axisType === 'PHYSICAL' ? '敵の防御力' as const : axisType === 'ARTS' ? '敵の術耐性' as const : '防御力・術耐性' as const
   const attackSpeed = stats.attackSpeed + aspd + passive.attackSpeed
-  const pipeline = (scale = 1, extraBonus = 0) => calculateAttackPipeline(stats.attack, {
+  const pipeline = (scale = 1, extraBonus = 0, includeAttackScale = true) => calculateAttackPipeline(stats.attack, {
     directAddition: passive.attackFlat,
     directMultiplierPercent: (atk + passive.attackRatio + extraBonus) * 100,
-    attackScale: scale * passive.attackScale,
+    attackScale: scale * (includeAttackScale ? passive.attackScale : 1),
   })
   const scopeNotes = [...(recipe.notes ?? []), ...(stage?.notes ?? []), ...passive.notes,
     '選択したHP・状態・累積数が一定の条件で評価します。回復・移動・途中撃破による時間変化は含めません。']
@@ -186,7 +195,8 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
       const targets = value(action.targets, actualTargetCount)
       if (scale < 0 || count < 0 || (action.timing !== 'PER_SECOND' && !Number.isSafeInteger(count)) || probability < 0 || probability > 1
         || targets < 0 || targets > actualTargetCount) throw new RangeError(`「${action.label}」の倍率・回数・命中数が不正です。`)
-      const basePipeline = pipeline(scale, value(action.attackBonus))
+      const includeAttackScale = action.basis !== 'ATK_STAT'
+      const basePipeline = pipeline(scale, value(action.attackBonus), includeAttackScale)
       const normalAmount = action.basis === 'TARGET_CURRENT_HP'
         ? Math.max(Number(conditions.targetCurrentHp) * scale, pipeline(value(action.minimumAttackScale)).finalAttack)
         : basePipeline.finalAttack + value(action.flatDamage)
@@ -202,11 +212,12 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
         const resistance = enemy?.resistance ?? (axisType === 'ARTS' ? axis : Number(conditions.enemyResistance ?? 0))
         const appliedDefense = defense * (1 - passive.defenseReductionRatio)
         const appliedResistance = resistance * (1 - (passive.resistanceReductionRatio ?? 0)) * (1 - passive.resistanceIgnoreRatio)
+        const allowsCritical = action.basis !== 'TARGET_DEFENSE' && action.basis !== 'ATK_STAT'
         const branches: ProbabilisticDamageBranch[] = [
-          { id: 'NORMAL' as const, probability: action.basis === 'TARGET_DEFENSE' ? 1 : 1 - passive.critChance, scale: 1, attackBonus: 0 },
-          { id: 'IGNORE' as const, probability: action.basis === 'TARGET_DEFENSE' ? 0 : passive.critChance, scale: passive.critScale, attackBonus: passive.criticalAttackRatio ?? 0 },
+          { id: 'NORMAL' as const, probability: allowsCritical ? 1 - passive.critChance : 1, scale: 1, attackBonus: 0 },
+          { id: 'IGNORE' as const, probability: allowsCritical ? passive.critChance : 0, scale: passive.critScale, attackBonus: passive.criticalAttackRatio ?? 0 },
         ].filter(branch => branch.probability > 0).map(branch => {
-          const branchPipeline = pipeline(scale, value(action.attackBonus) + branch.attackBonus)
+          const branchPipeline = pipeline(scale, value(action.attackBonus) + branch.attackBonus, includeAttackScale)
           const amount = (action.basis === 'TARGET_DEFENSE' ? appliedDefense * scale
             : branch.attackBonus !== 0 && (!action.basis || action.basis === 'ATK')
               ? branchPipeline.finalAttack + value(action.flatDamage) : normalAmount) * branch.scale * variant.factor

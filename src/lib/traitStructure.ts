@@ -11,7 +11,7 @@ import {
 /** Job definitions are shared by the structure page and the trait combat evaluator. */
 export const TRAIT_STRUCTURE_JOB_IDS = ['fighter', 'lord', 'crusher', 'hammer', 'sword', 'centurion',
   'artsfghter', 'musha', 'instructor', 'fearless', 'reaper', 'librator',
-  'pioneer', 'agent', 'charger', 'stalker', 'protector', 'shotprotector', 'artsprotector', 'unyield',
+  'pioneer', 'agent', 'charger', 'stalker', 'protector', 'shotprotector', 'artsprotector', 'unyield', 'duelist',
   'fastshot', 'aoesniper', 'longrange', 'siegesniper', 'reaperrange', 'closerange',
   'corecaster', 'splashcaster', 'blastcaster', 'chain', 'slower', 'underminer', 'incantationmedic', 'phalanx'] as const
 export type TraitStructureJobId = typeof TRAIT_STRUCTURE_JOB_IDS[number]
@@ -32,7 +32,7 @@ export type TraitStructureEffect = CombatEffectContext & {
   | { readonly item: 'HIT_COUNT'; readonly operation: 'SET'; readonly unit: 'HIT'; readonly value: CombatNumericValue }
   | { readonly item: 'ATTACK_SCALE'; readonly operation: 'MULTIPLY'; readonly unit: 'MULTIPLIER'; readonly value: CombatNumericValue }
   | { readonly item: 'DAMAGE_TYPE'; readonly operation: 'SET'; readonly unit: 'DAMAGE_TYPE'; readonly value: 'ARTS' | 'PHYSICAL' }
-  | { readonly item: 'RANGED_ATTACK_ENABLED' | 'NORMAL_ATTACK_ENABLED' | 'ALLY_HEALING_ENABLED'; readonly operation: 'SET_ENABLED'; readonly unit: 'BOOLEAN'; readonly value: boolean }
+  | { readonly item: 'RANGED_ATTACK_ENABLED' | 'NORMAL_ATTACK_ENABLED' | 'ALLY_HEALING_ENABLED' | 'NATURAL_SP_RECOVERY_ENABLED'; readonly operation: 'SET_ENABLED'; readonly unit: 'BOOLEAN'; readonly value: boolean }
   | { readonly item: 'ATTACK_RANGE'; readonly operation: 'USE_BASE_ATTRIBUTE'; readonly unit: 'RANGE_DEFINITION'; readonly value: { readonly rangeId: string | null } }
   | { readonly item: 'ATTACK_PRIORITY'; readonly operation: 'SET'; readonly unit: 'PRIORITY_RULE'; readonly value: 'AIRBORNE' | 'LOWEST_DEFENSE' | 'HIGHEST_WEIGHT' }
   | { readonly item: 'STATUS'; readonly operation: 'SET_ENABLED'; readonly unit: 'STATUS'; readonly value: 'SLUGGISH' }
@@ -119,6 +119,7 @@ const DEFINITIONS: Record<TraitStructureJobId, JobDefinition> = {
   shotprotector: { profession: 'TANK', descriptions: ['敵を3体までブロック、遠距離攻撃も行える'], keys: [], categories: ['BLOCK', 'ATTACK_BEHAVIOR'] },
   artsprotector: { profession: 'TANK', descriptions: ['スキル発動中、敵に術ダメージを与える'], keys: [], categories: ['DAMAGE_TYPE'] },
   unyield: { profession: 'TANK', descriptions: ['味方からの治療効果を受けない'], keys: [], categories: ['HEAL_RESTRICTION'] },
+  duelist: { profession: 'TANK', descriptions: ['未ブロック時、SPが自然回復しない'], keys: [], categories: ['RESOURCE'] },
   fastshot: { profession: 'SNIPER', descriptions: ['飛行ユニットを優先して攻撃'], keys: [], categories: ['ATTACK_BEHAVIOR'] },
   aoesniper: { profession: 'SNIPER', descriptions: ['敵に範囲物理ダメージを与える'], keys: [], categories: ['ATTACK_BEHAVIOR', 'DAMAGE_TYPE'] },
   longrange: { profession: 'SNIPER', descriptions: ['攻撃範囲内の防御力が一番低い敵を優先して攻撃'], keys: [], categories: ['ATTACK_BEHAVIOR'] },
@@ -231,6 +232,9 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
       )
       if (job === 'unyield') effects.push({ ...context('ally-healing-restriction', 'SURVIVAL', 'DYNAMIC_RULE', 'description:healing_restriction'),
         item: 'ALLY_HEALING_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: false })
+      if (job === 'duelist') effects.push({ ...context('unblocked-natural-sp-restriction', 'CONTROL', 'DYNAMIC_RULE', 'description:unblocked_natural_sp'),
+        item: 'NATURAL_SP_RECOVERY_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: false,
+        condition: compare('source.isBlocking', false) })
       if (['fastshot', 'longrange', 'siegesniper'].includes(job)) effects.push({
         ...context('attack-priority', 'CONTROL', 'ATTACK_RULE', 'description:priority', 'ATTACK'),
         item: 'ATTACK_PRIORITY', operation: 'SET', unit: 'PRIORITY_RULE',
@@ -350,7 +354,7 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
 }
 
 const metricLabels: Record<string, string> = { 'attack.distanceType': '攻撃距離', 'target.blockedBySource': '自身が対象をブロック',
-  'source.skillActive': 'スキル発動中', 'source.blockCount': '現在のブロック数', 'target.inFrontalTiles': '対象が正面横3マス内' }
+  'source.skillActive': 'スキル発動中', 'source.blockCount': '現在のブロック数', 'source.isBlocking': '自身が敵をブロック中', 'target.inFrontalTiles': '対象が正面横3マス内' }
 export function formatTraitStructureCondition(condition: CombatCondition | null): string {
   return localize(formatCombatCondition(condition)).replace('＝RANGED', '＝遠距離').replace('＝MELEE', '＝近接')
 }
@@ -359,7 +363,7 @@ export const formatTraitStructureTarget = formatCombatRecipient
 export function formatTraitStructureEffectItem(item: TraitStructureEffect['item']): string {
   return { BLOCK_COUNT: 'ブロック数', MAX_TARGETS: '同時攻撃対象数', HIT_COUNT: '通常攻撃のヒット数', ATTACK_SCALE: '攻撃力倍率',
     DAMAGE_TYPE: '通常攻撃のダメージ種別', RANGED_ATTACK_ENABLED: '遠距離攻撃', NORMAL_ATTACK_ENABLED: '通常攻撃',
-    ALLY_HEALING_ENABLED: '味方からの治療', ATTACK_RANGE: '基本攻撃範囲', ATTACK_TARGETING: '通常攻撃の対象',
+    ALLY_HEALING_ENABLED: '味方からの治療', NATURAL_SP_RECOVERY_ENABLED: 'SP自然回復', ATTACK_RANGE: '基本攻撃範囲', ATTACK_TARGETING: '通常攻撃の対象',
     SPLASH_DAMAGE: '周囲へのダメージ', HP: 'HP', ATK_BUFF_RATIO: '攻撃力上昇割合', ATTACK_PRIORITY: '攻撃の優先対象',
     STATUS: '付与状態', DEFENSE_BUFF_RATIO: '防御力上昇割合', MAGIC_RESISTANCE: '術耐性', DAMAGE_TO_HEAL_RATIO: '与ダメージからの回復',
     PHYSICAL_DODGE: '物理回避', ARTS_DODGE: '術回避', REDEPLOY_TIME: '基本再配置時間', DP_ON_KILL: '撃破時の所持コスト',

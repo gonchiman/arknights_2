@@ -35,6 +35,9 @@ export function evaluateGuardTraits(operator: TraitStructureOperator, stage: Gua
   const actionEvaluations: TraitCombatResult[] = []
   const splashActions = new Map<GuardDamageAction, number>()
   const actions = stage.actions.flatMap(action => {
+    // Stat-based DOT is not a normal attack: it keeps its own type and cadence,
+    // without the job's hit count, attack scale, splash, or chain rules.
+    if (action.basis === 'ATK_STAT') return [{ ...action }]
     const overriddenItems: TraitStructureEffect['item'][] = [...overrides, ...(action.traitOverrides ?? [])]
     const current = action.traitOverrides?.length
       ? evaluateTraitStructure(structure, { ...context, overriddenItems }) : evaluation

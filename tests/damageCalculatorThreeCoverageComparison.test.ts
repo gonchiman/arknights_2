@@ -19,6 +19,25 @@ const snapshots = Object.fromEntries(versions.map((version, i) => [canonicalCove
 const totals = (summary: ReturnType<typeof summarizeCoverageVersions>[number]['summary'], section = 0) =>
   summary.sections[section].buckets.map(bucket => bucket.count)
 
+test('保存済みv3は同じ母集団で新規44・保留解除10を記録し、既存対応を後退させない', () => {
+  const info = index.versions.find(version => version.id === 'v3')!
+  assert.ok(info)
+  const v3 = parseCoverageSnapshot(JSON.parse(readFileSync(
+    new URL(`../public/data/dc3-coverage/${info.file}`, import.meta.url), 'utf8')))
+  assert.equal(v3.rows.length, 915)
+  assert.equal(v3.source.gameDataFingerprint, saved[1].source.gameDataFingerprint)
+  assert.deepEqual(countCoverageRecords(v3.rows), { SUPPORTED: 339, CONDITIONAL: 11, PENDING: 85, UNSUPPORTED: 480 })
+  const previous = new Map(saved[1].rows.map(row => [coverageRecordKey(row), row]))
+  const usable = (status: CoverageRecord['status']) => status === 'SUPPORTED' || status === 'CONDITIONAL'
+  const added = v3.rows.filter(row => usable(row.status) && !usable(previous.get(coverageRecordKey(row))!.status))
+  assert.equal(added.length, 54)
+  assert.equal(new Set(added.map(row => row.skill.operatorId)).size, 37)
+  assert.equal(added.filter(row => previous.get(coverageRecordKey(row))!.status === 'PENDING').length, 10)
+  assert.equal(added.filter(row => previous.get(coverageRecordKey(row))!.status === 'UNSUPPORTED').length, 44)
+  for (const row of v3.rows) if (usable(previous.get(coverageRecordKey(row))!.status)) assert.ok(usable(row.status))
+  assert.equal(v3.rows.find(row => row.skill.operatorId === 'char_4027_heyak' && row.skill.skillIndex === 2)?.status, 'CONDITIONAL')
+})
+
 function fixture(operatorId: string, status: CoverageRecord['status'] = 'UNSUPPORTED'): CoverageRecord {
   const source = structuredClone(saved[0].rows[0])
   return { ...source, selection: undefined, skill: { ...source.skill, operatorId, id: operatorId, skillIndex: 1,

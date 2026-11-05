@@ -43,9 +43,238 @@ function close(actual: number | null, expected: number) {
 const buffed = (attack: number, ratio: number) => Math.floor(attack * (1 + ratio) + 1e-9)
 const physical = (attack: number, defense: number) => Math.max(attack - defense, attack * 0.05)
 
-test('近接追加66人の102技能が実データから有限結果を返し、残り29技能は理由付き保留', () => {
-  assert.equal(sources.length, 66)
-  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 102)
+const bulkSuffixes = ['weedy', 'glady', 'flamtl', 'zumama', 'fuze', 'tachak', 'almond', 'varkis', 'sophia',
+  'snsant', 'cement', 'dagda', 'takila', 'mantic', 'morgan', 'laios', 'noirc2', 'red', 'wscoot']
+
+test('大幅拡張の近接19人42技能は32対応・10保留で、元資料に調査用フィールドを混入しない', () => {
+  const additions = EXPANDED_MELEE_DEFINITIONS.filter(definition => bulkSuffixes.includes(definition.operatorId.split('_').at(-1)!))
+  assert.equal(additions.length, 19)
+  assert.equal(additions.reduce((sum, definition) => sum + definition.recipes.length, 0), 32)
+  assert.equal(additions.reduce((sum, definition) => sum + definition.deferredSkills!.length, 0), 10)
+  for (const definition of additions) {
+    const source = sources.find(source => source.operatorId === definition.operatorId)!
+    assert.equal('coverage' in source || 'passives' in source, false)
+    for (const deferred of definition.deferredSkills ?? []) {
+      const result = output(definition.operatorId.split('_').at(-1)!, deferred.skillIndex)
+      assert.deepEqual(result.rows, [])
+      assert.ok(result.unsupportedReasons.length)
+    }
+  }
+})
+
+test('ウィーディはS1の2対象とS2の範囲全体・攻撃間隔2.2秒加算を区別する', () => {
+  const first = at('weedy', 1, 1000, { actualAttackTargetCount: 2 })
+  close(first.row.perAttack, physical(first.result.stats.attack * 1.5, 1000))
+  close(first.row.allTargetsPerAttack, first.row.perAttack * 2)
+  assert.ok(output('weedy', 1, { actualAttackTargetCount: 3 }).unsupportedReasons.length)
+  const second = at('weedy', 2, 1000, { actualAttackTargetCount: 7 })
+  close(second.row.perAttack, physical(buffed(second.result.stats.attack, 2), 1000))
+  close(second.row.allTargetsPerAttack, second.row.perAttack * 7)
+  close(second.result.attackInterval, second.result.stats.baseAttackTime + 2.2)
+  assert.equal(second.result.maxTargetCount, null)
+})
+
+test('グレイディーアは重量3まで130%を適用し、S2は2対象と延長間隔を維持する', () => {
+  for (const weight of [3, 4]) {
+    const first = at('glady', 1, 1000, { targetWeight: weight })
+    close(first.row.perAttack, physical(first.result.stats.attack * 2.1 * (weight === 3 ? 1.3 : 1), 1000))
+    const second = at('glady', 2, 1000, { targetWeight: weight, actualAttackTargetCount: 2 })
+    close(second.row.perAttack, physical(second.result.stats.attack * 1.8 * (weight === 3 ? 1.3 : 1), 1000))
+    close(second.row.allTargetsPerAttack, second.row.perAttack * 2)
+    close(second.result.attackInterval, second.result.stats.baseAttackTime + 0.5)
+  }
+})
+
+test('フレイムテイルS2の2連撃は回避後の通常攻撃素質を追加せず最大6対象', () => {
+  for (const ready of [false, true]) {
+    const { result, row } = at('flamtl', 2, 1000, { dodgeAttackReady: ready, actualAttackTargetCount: 6 })
+    close(row.perAttack, physical(result.stats.attack * 2.4, 1000) * 2)
+    close(row.allTargetsPerAttack, row.perAttack * 6)
+    assert.equal(row.dps, null)
+  }
+  assert.deepEqual(output('flamtl', 2, { actualAttackTargetCount: 7 }).rows, [])
+})
+
+test('ユーネクテスはHP50%超の与ダメージ115%を防御軽減後に適用しブロック増でも単体攻撃', () => {
+  for (const health of [50, 50.1]) for (const index of [1, 2, 3]) {
+    const { result, row } = at('zumama', index, 1000, { selfHpPercent: health })
+    close(row.perAttack, physical(buffed(result.stats.attack, [0, 0.25, 1.8, 2.3][index]), 1000) * (health > 50 ? 1.15 : 1))
+    close(result.attackInterval, result.stats.baseAttackTime + (index === 2 ? 0.4 : 0))
+    assert.equal(result.maxTargetCount, 1)
+  }
+  assert.deepEqual(output('zumama', 3, { actualAttackTargetCount: 2 }).rows, [])
+})
+
+test('Fuzeの弾薬中の通常攻撃と5回の範囲爆発はヒット数と同時対象数を区別する', () => {
+  const first = at('fuze', 1, 1000, { actualAttackTargetCount: 3 })
+  close(first.row.perAttack, physical(buffed(first.result.stats.attack, 0.3), 1000))
+  close(first.row.allTargetsPerAttack, first.row.perAttack * 3)
+  close(first.result.attackInterval, first.result.stats.baseAttackTime / 1.9)
+  const second = at('fuze', 2, 1000, { actualAttackTargetCount: 5 })
+  close(second.row.perAttack, physical(second.result.stats.attack * 4.8, 1000) * 5)
+  close(second.row.allTargetsPerAttack, second.row.perAttack * 5)
+  assert.equal(second.row.dps, null)
+})
+
+test('Tachankaは15%の倍率を防御軽減後に平均し、剣豪2ヒットをランダム対象へ配分する', () => {
+  for (const count of [1, 4]) {
+    const { result, row } = at('tachak', 2, 1000, { actualAttackTargetCount: count })
+    const total = 2 * (physical(result.stats.attack, 1000) * 0.85 + physical(result.stats.attack * 2, 1000) * 0.15)
+    close(row.allTargetsPerAttack, total)
+    close(row.perAttack, total / count)
+    close(result.attackInterval, result.stats.baseAttackTime - 0.85)
+  }
+})
+
+test('アーモンド・スノーズント・セメントの発動ダメージは制御効果や複数対象と分離する', () => {
+  for (const suffix of ['almond', 'snsant']) {
+    const { result, row } = at(suffix, 1, 1000)
+    close(row.perAttack, physical(result.stats.attack * 1.7, 1000))
+    assert.equal(row.dps, null)
+  }
+  const net = at('snsant', 2, 60, { actualAttackTargetCount: 5 })
+  close(net.row.allTargetsPerAttack, net.result.stats.attack * 2 * 0.4 * 5)
+  const cement = at('cement', 1, 1000, { actualAttackTargetCount: 5 })
+  close(cement.row.allTargetsPerAttack, physical(cement.result.stats.attack * 2.8, 1000) * 5)
+})
+
+test('ヴァルカリスはHP割合条件の110%と3連撃を別適用し、回復をダメージに足さない', () => {
+  for (const ready of [false, true]) for (const index of [1, 2]) {
+    const { result, row } = at('varkis', index, 1000, { targetHpNotAboveSelf: ready, actualAttackTargetCount: 3 })
+    close(row.perAttack, physical(result.stats.attack * (index === 1 ? 1.35 : 2) * (ready ? 1.1 : 1), 1000) * (index === 1 ? 3 : 1))
+    close(row.allTargetsPerAttack, row.perAttack * 3)
+  }
+})
+
+test('ウィスラッシュはS1の半素質9ASPDとS2の全素質12ASPD・3ブロックを使う', () => {
+  for (const blocked of [false, true]) for (const index of [1, 2]) {
+    const { result, row } = at('sophia', index, 1000, { targetBlockedBySelf: blocked, actualAttackTargetCount: index === 1 ? 1 : 3 })
+    close(row.perAttack, physical(buffed(result.stats.attack, index === 1 ? 0 : 0.6) * (blocked ? 1 : 1.2), 1000))
+    close(result.attackInterval, result.stats.baseAttackTime / (index === 1 ? 1.09 : 1.12))
+    assert.equal(result.maxTargetCount, index === 1 ? 1 : 3)
+  }
+})
+
+test('ダグザは素質倍率の上限240%とS1の30%・S2の60%発動を防御軽減後に平均する', () => {
+  for (const index of [1, 2]) for (const kills of [0, 18]) {
+    const { result, row } = at('dagda', index, 1000, { killStacks: kills })
+    const attack = buffed(result.stats.attack, index === 1 ? 0 : 0.35) * (index === 1 ? 2.1 : 1)
+    const chance = index === 1 ? 0.3 : 0.6
+    close(row.perAttack, ((1 - chance) * physical(attack, 1000) + chance * physical(attack * (kills === 0 ? 1.5 : 2.4), 1000)) * (index === 1 ? 1 : 2))
+  }
+  assert.deepEqual(output('dagda', 2, { killStacks: 19 }).rows, [])
+})
+
+test('解放者の蓄積を通常攻撃倍率と分離し、テキーラの過充電と追加攻撃を独立処理する', () => {
+  for (const charged of [0, 100]) {
+    const first = at('takila', 1, 1000, { traitChargePercent: charged })
+    close(first.row.perAttack, physical(buffed(first.result.stats.attack, charged === 0 ? 0 : 2) * 1.7, 1000))
+    close(first.result.attackInterval, first.result.stats.baseAttackTime / 1.5)
+    for (const overcharged of [false, true]) {
+      const second = at('takila', 2, 1000, { traitChargePercent: charged, overcharged, actualAttackTargetCount: overcharged ? 3 : 2 })
+      close(second.row.perAttack, physical(buffed(second.result.stats.attack, charged === 0 ? 0 : 2) * 2.3, 1000))
+      assert.equal(second.result.maxTargetCount, overcharged ? 3 : 2)
+      assert.equal(second.result.model!.duration, overcharged ? 30 : 15)
+    }
+    const wind = at('wscoot', 2, 1000, { traitChargePercent: charged, actualAttackTargetCount: 2 })
+    const attack = buffed(wind.result.stats.attack, charged === 0 ? 0 : 2)
+    close(wind.row.perAttack, physical(attack * 2, 1000) + (charged === 100 ? physical(attack * 0.4, 1000) : 0))
+    close(wind.row.allTargetsPerAttack, wind.row.perAttack * 2)
+  }
+})
+
+test('マンティコアのステルスとモーガンの不屈は指定した状態で評価しHP推移を捏造しない', () => {
+  for (const ready of [false, true]) {
+    const { result, row } = at('mantic', 2, 1000, { stealthAttackReady: ready, actualAttackTargetCount: 5 })
+    close(row.perAttack, physical(buffed(result.stats.attack, 0.9 + (ready ? 0.5 : 0)), 1000))
+    close(result.attackInterval, result.stats.baseAttackTime + 1.7)
+    close(row.allTargetsPerAttack, row.perAttack * 5)
+  }
+  for (const health of [100, 65, 30, 0]) {
+    const { result, row } = at('morgan', 1, 1000, { selfHpPercent: health })
+    const ratio = health === 100 ? 0 : health === 65 ? 0.25 : 0.5
+    close(row.perAttack, physical(buffed(result.stats.attack, ratio) * 1.9, 1000))
+  }
+})
+
+test('ライオスの防御40%無視・レウスSノイルホーンの発動前練気・レッドの下限30%を適用する', () => {
+  for (const defeated of [false, true]) {
+    const { result, row } = at('laios', 2, 1000, { hasDefeatedSameEnemy: defeated })
+    close(row.perAttack, physical(result.stats.attack * 4.5, defeated ? 600 : 1000))
+  }
+  for (const stacks of [0, 3]) {
+    const { result, row } = at('noirc2', 2, 1000, { spiritStacks: stacks })
+    close(row.perAttack, physical(buffed(result.stats.attack, stacks * 0.07) * 1.8, 1000) * 7)
+    assert.equal(row.dps, null)
+  }
+  const red = at('red', 1, 2000)
+  close(red.row.perAttack, buffed(red.result.stats.attack, 0.8) * 0.3)
+})
+
+test('新しい近接定義も素質・特性の欠落とスキル数値変更では部分的な計算結果を返さない', () => {
+  for (const suffix of ['glady', 'zumama', 'varkis', 'sophia', 'dagda', 'morgan', 'laios', 'noirc2', 'red', 'wscoot']) {
+    const source = sources.find(source => source.operatorId.endsWith(`_${suffix}`))!
+    const index = EXPANDED_MELEE_DEFINITIONS.find(definition => definition.operatorId === source.operatorId)!.recipes[0].skillIndex
+    const skill = record(suffix, index)
+    for (const talent of skill.operatorProfile.talents ?? []) for (const candidate of talent.candidates ?? []) candidate.blackboard = []
+    const result = outputRecord(skill)
+    assert.ok(result.unsupportedReasons.length, suffix)
+    assert.deepEqual(result.rows, [], suffix)
+  }
+  const changed = record('fuze', 2)
+  changed.skillLevels[9].blackboard![0].value! += 1
+  assert.deepEqual(outputRecord(changed).rows, [])
+  const traitChanged = record('takila', 1)
+  traitChanged.operatorProfile.trait!.candidates![0].overrideDescripton += '追加攻撃'
+  assert.deepEqual(outputRecord(traitChanged).rows, [])
+  for (const [suffix, input] of [['morgan', { selfHpPercent: 101 }], ['glady', { targetWeight: -1 }],
+    ['noirc2', { spiritStacks: 4 }], ['wscoot', { traitChargePercent: 101 }]] as const) {
+    const index = suffix === 'noirc2' ? 2 : 1
+    assert.deepEqual(output(suffix, index, input).rows, [])
+  }
+})
+
+test('新規の一定期間だけ総ダメージを返し、状態変化・弾薬・永続の期間を代用しない', () => {
+  for (const [suffix, index, seconds] of [['glady', 2, 20], ['sophia', 1, 20], ['sophia', 2, 25],
+    ['tachak', 2, 4], ['takila', 1, 20], ['takila', 2, 15], ['red', 1, 10]] as const) {
+    const entry = getDamageThreeComparisonEntries([record(suffix, index)])[0]
+    const result = evaluateDamageThreeComparisonEntry(entry, { defense: 500, resistance: 60, enemyCount: 1 })
+    assert.deepEqual(result.errors, [], `${suffix} S${index}`)
+    assert.equal(result.durationSeconds, seconds)
+    close(result.totalDamage, result.combinedDps! * seconds)
+  }
+  for (const [suffix, index] of [['fuze', 1], ['morgan', 1], ['mantic', 2], ['zumama', 2], ['varkis', 2],
+    ['dagda', 2], ['weedy', 2]] as const) {
+    const entry = getDamageThreeComparisonEntries([record(suffix, index)])[0]
+    const result = evaluateDamageThreeComparisonEntry(entry, { defense: 500, resistance: 60, enemyCount: 1 })
+    assert.deepEqual(result.errors, [], `${suffix} S${index}`)
+    assert.equal(result.totalDamage, null, `${suffix} S${index}`)
+    assert.ok(result.totalDamageReason)
+  }
+})
+
+test('属性比較は新規の主攻撃の全ヒットを術化し、ウィンドスクートの追加物理攻撃を保持する', () => {
+  for (const suffix of ['tachak', 'wscoot']) {
+    const skill = record(suffix, 2), source = sources.find(source => source.operatorId === skill.operatorId)!
+    const result = buildDamageCalculatorThreeOutput({ operator: skill, skill, phaseIndex: source.phaseIndex,
+      operatorLevel: source.profile.phases[source.phaseIndex].maxLevel!, trust: 100, skillLevelIndex: source.skillLevelIndex,
+      enemy: { defense: 1000, resistance: 60 }, virtualMainAttackType: 'ARTS', conditions: { guard: { traitChargePercent: 100 } } })
+    assert.deepEqual(result.unsupportedReasons, [])
+    const row = result.rows[0]
+    const main = row.attackComponents.filter(component => component.role === 'MAIN')
+    assert.ok(main.length > 0 && main.every(component => component.damageType === 'ARTS'))
+    if (suffix === 'tachak') close(row.perAttack, result.stats.attack * 0.4 * 2 * (0.85 + 0.15 * 2))
+    else {
+      const attack = buffed(result.stats.attack, 2)
+      close(row.perAttack, attack * 2 * 0.4 + physical(attack * 0.4, 1000))
+      assert.equal(row.attackComponents.find(component => component.role === 'ADDITIONAL')?.damageType, 'PHYSICAL')
+    }
+  }
+})
+
+test('近接追加85人の134技能が実データから有限結果を返し、残り39技能は理由付き保留', () => {
+  assert.equal(sources.length, 85)
+  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 134)
   for (const definition of EXPANDED_MELEE_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     assert.equal(definition.recipes.length + (definition.deferredSkills?.length ?? 0), source.skills.length)
