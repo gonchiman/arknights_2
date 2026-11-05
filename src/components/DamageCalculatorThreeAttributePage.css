@@ -1,19 +1,80 @@
+.damage-three-attribute-selection-row {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(0, 1.5fr);
+  align-items: end;
+  gap: 12px;
+}
+
+.damage-three-attribute-page .damage-three-operator-summary {
+  min-height: 42px;
+  padding: 5px 10px;
+}
+
 .damage-three-attribute-page .damage-three-attribute-search {
   margin-top: 12px;
 }
 
 .damage-three-attribute-page .damage-three-attribute-skills {
-  margin-top: 12px;
-  border-inline: 1px solid var(--border);
-}
-
-.damage-three-attribute-page .damage-three-skill-panel {
+  min-width: 0;
   border-inline: 1px solid var(--border);
 }
 
 .damage-three-attribute-page .damage-three-attribute-condition-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-top: 12px;
+}
+
+.damage-three-attribute-growth {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.damage-three-attribute-growth > summary {
+  padding: 10px;
+  cursor: pointer;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.damage-three-attribute-growth > summary:hover {
+  background: var(--surface-hover);
+}
+
+.damage-three-attribute-growth > summary:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: -2px;
+}
+
+.damage-three-attribute-growth > summary > strong {
+  font-weight: 600;
+}
+
+.damage-three-attribute-growth-summary {
+  display: inline-block;
+  margin-left: 12px;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.damage-three-attribute-growth-error {
+  display: inline-block;
+  margin-left: 12px;
+  font-weight: 600;
+}
+
+.damage-three-attribute-growth[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.damage-three-attribute-growth-content {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.damage-three-attribute-growth-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .damage-three-attribute-toolbar {
@@ -100,14 +161,24 @@
 }
 
 @media (max-width: 760px) {
-  .damage-three-attribute-page .damage-three-attribute-condition-grid,
+  .damage-three-attribute-selection-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .damage-three-attribute-page .damage-three-attribute-skill-conditions,
   .damage-three-attribute-toolbar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 420px) {
-  .damage-three-attribute-page .damage-three-attribute-condition-grid {
+  .damage-three-attribute-page .damage-three-attribute-skill-conditions {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .damage-three-attribute-growth-summary {
+    display: block;
+    margin-left: 16px;
   }
 }
