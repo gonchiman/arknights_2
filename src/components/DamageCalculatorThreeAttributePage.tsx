@@ -15,6 +15,7 @@ import { ComparisonChart } from './ComparisonChart'
 import { GuardConditionFields } from './DamageCalculatorThree'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
 import { OperatorDetailLink } from './OperatorDetailLink'
+import { PersistentDetails } from './PersistentDetails'
 import { SkillInformationTable } from './SkillInformationTable'
 import './DamageCalculator.css'
 import './DamageCalculatorTwo.css'
@@ -68,6 +69,8 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const operator = selected?.skill
   const operatorSkills = uniqueSkills(entries.filter(entry => entry.skill.operatorId === requested?.operatorId))
   const level = operatorLevel ?? selected?.operatorLevel ?? 1
+  const levelInvalid = !Number.isSafeInteger(level) || level < 1 || level > (selected?.operatorLevel ?? 1)
+  const trustInvalid = !Number.isFinite(trust) || trust < 0 || trust > 100
   const comparison = useMemo(() => selected ? evaluateDamageThreeAttributeComparison({
     entry: selected, common, overrides, operatorLevel: level, trust, targetType, axis,
   }) : null, [selected, common, overrides, level, trust, targetType, axis])
@@ -108,19 +111,30 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
     </nav>
     <CollapsibleCalculatorPanel id="damage-three-attribute-conditions" number="01" title="スキル・共通条件"
       summary={operator ? `${operator.operatorName} · S${operator.skillIndex}` : '未選択'} collapsedLabel="条件を表示">
-      <div className="calculator-field">
-        <span>オペレーター</span>
-        <div className="damage-three-operator-summary">
-          <div className="damage-three-operator-meta">
-            {operator ? <><OperatorDetailLink operatorId={operator.operatorId} source="damage-three"
-              className="damage-three-operator-name" aria-label={`${operator.operatorName}のオペレーター情報を開く`}>
-              {operator.operatorName}<span aria-hidden="true">→</span></OperatorDetailLink>
-              <small>★{operator.rarity} · {operator.professionLabel} / {operator.subProfessionName}</small></> : <strong>未選択</strong>}
+      <div className="damage-three-attribute-selection-row">
+        <div className="calculator-field">
+          <span>オペレーター</span>
+          <div className="damage-three-operator-summary">
+            <div className="damage-three-operator-meta">
+              {operator ? <><OperatorDetailLink operatorId={operator.operatorId} source="damage-three"
+                className="damage-three-operator-name" aria-label={`${operator.operatorName}のオペレーター情報を開く`}>
+                {operator.operatorName}<span aria-hidden="true">→</span></OperatorDetailLink>
+                <small>★{operator.rarity} · {operator.professionLabel} / {operator.subProfessionName}</small></> : <strong>未選択</strong>}
+            </div>
+            <button type="button" className="damage-three-operator-change" aria-expanded={searchOpen}
+              aria-controls="damage-three-attribute-search" onClick={() => setSearchOpen(!searchOpen)}>
+              {searchOpen ? '検索を閉じる' : '検索して変更'}</button>
           </div>
-          <button type="button" className="damage-three-operator-change" aria-expanded={searchOpen}
-            aria-controls="damage-three-attribute-search" onClick={() => setSearchOpen(!searchOpen)}>
-            {searchOpen ? '検索を閉じる' : '検索して変更'}</button>
         </div>
+        {selected && <div className="damage-three-skills damage-three-attribute-skills">
+          <AnalysisTabs tabs={operatorSkills.map(entry => [entry.skill.skillId,
+            `S${entry.skill.skillIndex} ${entry.structure.basicInfo.skillName}`] as const)}
+            activeTab={selected.skill.skillId} idPrefix={SKILL_TAB_ID} label="スキル選択"
+            onChange={id => {
+              const entry = operatorSkills.find(item => item.skill.skillId === id)
+              if (entry && id !== selected.skill.skillId) chooseSkill(entry)
+            }} />
+        </div>}
       </div>
       {searchOpen && <div id="damage-three-attribute-search" className="damage-three-attribute-search">
         <OperatorSearch rows={entries.map(entry => entry.skill)} loading={loading} filters={filters}
@@ -130,32 +144,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
       {!selected ? <div className="damage-two-unavailable" role="status">
         {entries.length ? '指定されたスキル・レベルは属性比較の対象外です。' : '属性比較の対象スキルを取得できません。'}
       </div> : <>
-        <div className="damage-three-skills damage-three-attribute-skills">
-          <AnalysisTabs tabs={operatorSkills.map(entry => [entry.skill.skillId,
-            `S${entry.skill.skillIndex} ${entry.structure.basicInfo.skillName}`] as const)}
-            activeTab={selected.skill.skillId} idPrefix={SKILL_TAB_ID} label="スキル選択"
-            onChange={id => {
-              const entry = operatorSkills.find(item => item.skill.skillId === id)
-              if (entry && id !== selected.skill.skillId) chooseSkill(entry)
-            }} />
-        </div>
-        {operatorSkills.map(entry => <div key={entry.skill.skillId} id={`${SKILL_TAB_ID}-panel-${entry.skill.skillId}`}
-          role="tabpanel" aria-labelledby={`${SKILL_TAB_ID}-tab-${entry.skill.skillId}`}
-          hidden={selected.skill.skillId !== entry.skill.skillId} className="damage-three-skill-panel">
-          <SkillInformationTable information={buildDamageCalculatorThreeSkillInformation(entry.structure, entry.skill,
-            selected.skill.skillId === entry.skill.skillId ? output ?? null : null)} />
-        </div>)}
         <div className="calculator-form-grid damage-three-attribute-condition-grid">
-          <div className="calculator-field"><span>昇進段階</span><div className="damage-three-fixed-value">昇進{selected.phaseIndex}</div></div>
-          <label className="calculator-field"><span>オペレーターレベル</span>
-            <input type="number" aria-label="オペレーターレベル" min={1} max={selected.operatorLevel} step={1}
-              value={Number.isFinite(level) ? level : ''} aria-invalid={!Number.isSafeInteger(level) || level < 1 || level > selected.operatorLevel || undefined}
-              onChange={event => setOperatorLevel(event.target.valueAsNumber)} /></label>
-          <label className="calculator-field"><span>信頼度（%）</span>
-            <input type="number" aria-label="信頼度（%）" min={0} max={100} step={1}
-              value={Number.isFinite(trust) ? trust : ''} aria-invalid={!Number.isFinite(trust) || trust < 0 || trust > 100 || undefined}
-              onChange={event => setTrust(event.target.valueAsNumber)} /></label>
-          <div className="calculator-field"><span>スキルレベル</span><div className="damage-three-fixed-value">{selected.structure.basicInfo.skillLevel}</div></div>
           <label className="calculator-field"><span>敵の防御力</span>
             <input type="number" aria-label="敵の防御力" min={0} step={100} value={Number.isFinite(common.defense) ? common.defense : ''}
               aria-invalid={!Number.isFinite(common.defense) || common.defense < 0 || undefined}
@@ -168,13 +157,39 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
             <input type="number" aria-label="敵の数" min={1} max={10000} step={1} value={Number.isFinite(common.enemyCount) ? common.enemyCount : ''}
               aria-invalid={!Number.isSafeInteger(common.enemyCount) || common.enemyCount < 1 || common.enemyCount > 10000 || undefined}
               onChange={event => setCommon(previous => ({ ...previous, enemyCount: event.target.valueAsNumber }))} /></label>
-          {stages.length > 1 && <label className="calculator-field"><span>スキルの段階</span>
-            <select aria-label="スキルの段階" value={selected.stageId} onChange={event => { setStageId(event.target.value); setOverrides({}) }}>
-              {stages.map(entry => <option key={entry.stageId} value={entry.stageId}>{entry.stageLabel}</option>)}
-            </select></label>}
-          <GuardConditionFields inputs={conditionInputs} values={{}}
-            onChange={(key, value) => setOverrides(previous => ({ ...previous, [key]: value }))} />
         </div>
+        {operatorSkills.map(entry => <div key={entry.skill.skillId} id={`${SKILL_TAB_ID}-panel-${entry.skill.skillId}`}
+          role="tabpanel" aria-labelledby={`${SKILL_TAB_ID}-tab-${entry.skill.skillId}`}
+          hidden={selected.skill.skillId !== entry.skill.skillId} className="damage-three-skill-panel">
+          {selected.skill.skillId === entry.skill.skillId && <>
+            {(stages.length > 1 || conditionInputs.length > 0) && <div className="calculator-form-grid damage-three-attribute-condition-grid damage-three-attribute-skill-conditions">
+              {stages.length > 1 && <label className="calculator-field"><span>スキルの段階</span>
+                <select aria-label="スキルの段階" value={selected.stageId} onChange={event => { setStageId(event.target.value); setOverrides({}) }}>
+                  {stages.map(stage => <option key={stage.stageId} value={stage.stageId}>{stage.stageLabel}</option>)}
+                </select></label>}
+              <GuardConditionFields inputs={conditionInputs} values={{}}
+                onChange={(key, value) => setOverrides(previous => ({ ...previous, [key]: value }))} />
+            </div>}
+            <PersistentDetails persistenceId="damage-three-attribute-growth" defaultOpen={false} className="damage-three-attribute-growth">
+              <summary><strong>育成・スキル情報</strong><span className="damage-three-attribute-growth-summary">
+                昇進{selected.phaseIndex} · Lv.{formatNumber(level)} · 信頼{formatNumber(trust)} · {selected.structure.basicInfo.skillLevel}
+              </span>{(levelInvalid || trustInvalid) && <span className="damage-three-attribute-growth-error">入力エラー</span>}</summary>
+              <div className="damage-three-attribute-growth-content">
+                <div className="calculator-form-grid damage-three-attribute-growth-grid">
+                  <label className="calculator-field"><span>オペレーターレベル</span>
+                    <input type="number" aria-label="オペレーターレベル" min={1} max={selected.operatorLevel} step={1}
+                      value={Number.isFinite(level) ? level : ''} aria-invalid={levelInvalid || undefined}
+                      onChange={event => setOperatorLevel(event.target.valueAsNumber)} /></label>
+                  <label className="calculator-field"><span>信頼度（%）</span>
+                    <input type="number" aria-label="信頼度（%）" min={0} max={100} step={1}
+                      value={Number.isFinite(trust) ? trust : ''} aria-invalid={trustInvalid || undefined}
+                      onChange={event => setTrust(event.target.valueAsNumber)} /></label>
+                </div>
+                <SkillInformationTable information={buildDamageCalculatorThreeSkillInformation(selected.structure, selected.skill, output ?? null)} />
+              </div>
+            </PersistentDetails>
+          </>}
+        </div>)}
       </>}
     </CollapsibleCalculatorPanel>
 
