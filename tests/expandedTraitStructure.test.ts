@@ -228,9 +228,10 @@ test('領主の固定攻撃扱いを表示・対応範囲で区別し、遠距�
 })
 
 test('未確認職分や説明の追加を黙って対応済みにせず、全追加技能の計算保留時にAPPLIEDを出さない', () => {
-  const pending = byJob('merchant')
-  assert.deepEqual(buildTraitStructures([record(pending)]), [])
-  assert.equal(run(pending).rows[0].status, 'UNVERIFIED')
+  const pending = run(byJob('merchant'))
+  pending.input.operator.subProfessionId = 'future-unreviewed-job'
+  assert.deepEqual(buildTraitStructures([pending.input.operator]), [])
+  assert.equal(buildTraitApplicationRows(pending.input, pending.output)[0].status, 'UNVERIFIED')
   const changed = record(byJob('fastshot'))
   changed.operatorProfile.traitDescription += '追加で2回攻撃'
   assert.equal(buildTraitStructures([changed])[0].status, 'UNREVIEWED')
@@ -248,10 +249,11 @@ test('未確認職分や説明の追加を黙って対応済みにせず、全�
 })
 
 test('登録範囲では優先対象・治療可否・ブロック・射程だけの特性を対象外にする', () => {
-  for (const job of ['fastshot', 'longrange', 'siegesniper', 'closerange', 'pioneer', 'protector', 'shotprotector', 'unyield', 'fearless', 'fighter', 'musha']) {
+  for (const job of ['fastshot', 'longrange', 'siegesniper', 'closerange', 'pioneer', 'protector', 'shotprotector', 'unyield', 'fearless', 'fighter', 'musha', 'merchant', 'loopshooter']) {
     const id = byJob(job), stage = getExpandedDefinition(id)!.recipes[0].stages[0]
     assert.equal(getExpandedTraitCoverage(id, stage), 'NOT_APPLICABLE', job)
   }
+  assert.equal(run(byJob('loopshooter'), 2).rows[0].status, 'NOT_RELEVANT')
 })
 
 test('登録範囲は攻撃属性・全対象・ブロック連動対象数・条件倍率の使用をstageから判定する', () => {
@@ -271,8 +273,6 @@ test('登録範囲は攻撃属性・全対象・ブロック連動対象数・�
 })
 
 test('未登録職分・保留技能・変更された攻撃定義をtraitログなしという理由で対応済みにしない', () => {
-  const id = byJob('merchant'), definition = getExpandedDefinition(id)!
-  assert.equal(getExpandedTraitCoverage(id, definition.recipes[0].stages[0]), 'UNSUPPORTED')
   const aoe = byJob('splashcaster'), stage = getExpandedDefinition(aoe)!.recipes[0].stages[0]
   assert.equal(getExpandedTraitCoverage(aoe, { id: 'pending', label: '保留', kind: 'SKILL_ACTION', actions: [] }), 'UNSUPPORTED')
   assert.equal(getExpandedTraitCoverage(aoe, { ...stage, actions: [{ label: '変更', damageType: 'TRUE', scale: 100 }] }), 'UNSUPPORTED')

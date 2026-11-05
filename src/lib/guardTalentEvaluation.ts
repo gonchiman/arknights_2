@@ -15,10 +15,12 @@ const damageItems: ReadonlySet<TalentStructureEffect['item']> = new Set([
   'SPLASH_DAMAGE_SCALE', 'DEFENSE_IGNORE_RATIO', 'RESISTANCE_IGNORE_FIXED',
   'RESISTANCE_IGNORE_RATIO', 'DEFENSE_REDUCTION_RATIO', 'CRITICAL_ATTACK', 'ADDITIONAL_ATTACK',
   'DAMAGE_OVER_TIME', 'ATTACK_INTERVAL_ADD', 'MINIMUM_DAMAGE_RATIO', 'DEFENSE_IGNORE_FIXED', 'RESISTANCE_REDUCTION_RATIO',
+  'DEFENSE_REDUCTION_FIXED', 'RESISTANCE_REDUCTION_FIXED',
 ])
 const operations: Readonly<Record<string, readonly [string, string]>> = {
   ATTACK_INTERVAL_ADD: ['ADD_VALUE', 'SECOND'], MINIMUM_DAMAGE_RATIO: ['SET', 'RATIO'],
   DEFENSE_IGNORE_FIXED: ['IGNORE_FIXED', 'POINT'],
+  DEFENSE_REDUCTION_FIXED: ['ADD_VALUE', 'POINT'], RESISTANCE_REDUCTION_FIXED: ['ADD_VALUE', 'POINT'],
   RESISTANCE_REDUCTION_RATIO: ['ADD_RATIO', 'RATIO'],
   ATK_BUFF_RATIO: ['ADD_RATIO', 'RATIO'], ATK_FLAT: ['ADD_VALUE', 'POINT'],
   ATTACK_SCALE: ['MULTIPLY', 'MULTIPLIER'], ATTACK_SPEED: ['ADD_VALUE', 'POINT'],
@@ -48,7 +50,8 @@ function supportsContext(effect: TalentStructureEffect, metrics: Metrics): boole
       && effect.lifetime.type === 'CURRENT_EVENT')) return false
   if (effect.afterEffects?.length || effect.timing.type === 'AFTER_EVENT'
     || effect.lifetime.type === 'UNSPECIFIED' || effect.lifetime.type === 'WHILE_CONDITION') return false
-  if (effect.target.selection.type !== 'ALL') return false
+  if (effect.target.selection.type !== 'ALL'
+    && !(effect.item === 'ADDITIONAL_ATTACK' && effect.target.selection.type === 'COUNT')) return false
   if (effect.timing.type === 'PERIODIC'
     && (effect.item !== 'ADDITIONAL_ATTACK' || effect.rate !== 'PER_SECOND'
       || effect.timing.intervalSeconds === null || effect.timing.intervalSeconds <= 0)) return false
@@ -110,7 +113,7 @@ function relevant(effect: TalentStructureEffect, metrics: Metrics): boolean {
   }
   if (effect.timing.type === 'EVENT') {
     if (effect.timing.event === 'NORMAL_ATTACK' && metrics.actionKind !== 'NORMAL') return false
-    if (effect.timing.event === 'SKILL_START' && metrics.actionKind !== 'SKILL_ACTION') return false
+    if (effect.timing.event === 'SKILL_START' && metrics.actionKind !== 'SKILL_ACTION' && metrics.includesSkillActivation !== true) return false
     if (effect.item === 'ADDITIONAL_ATTACK'
       && ['DEPLOY', 'RETREAT', 'LETHAL_DAMAGE', 'DAMAGE_RECEIVED', 'KILL', 'SKILL_END'].includes(effect.timing.event)) return false
   }
@@ -259,6 +262,14 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
         if (active) output.defenseReductionRatio = 1 - (1 - output.defenseReductionRatio) * (1 - value)
         addRow('防御力低下', `－${percent(value)}`, status, '', details)
         break
+      case 'DEFENSE_REDUCTION_FIXED':
+      case 'RESISTANCE_REDUCTION_FIXED': {
+        if (value < 0) { block('固定低下量は0以上で指定してください。'); break }
+        const key = effect.item === 'DEFENSE_REDUCTION_FIXED' ? 'defenseReductionFixed' : 'resistanceReductionFixed'
+        if (active) output[key] = (output[key] ?? 0) + value
+        addRow(effect.item === 'DEFENSE_REDUCTION_FIXED' ? '防御力固定低下' : '術耐性固定低下', `－${formatCombatNumber(value)}`, status, '', details)
+        break
+      }
       case 'RESISTANCE_REDUCTION_RATIO':
         if (value < 0 || value > 1) { block('術耐性低下の割合が有効範囲外です。'); break }
         if (active) output.resistanceReductionRatio = 1 - (1 - (output.resistanceReductionRatio ?? 0)) * (1 - value)
@@ -280,6 +291,11 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
         const chance = numeric(effect.probability.chance, '発動確率')
         const hits = numeric(effect.hits ?? 1, '攻撃回数')
         const flatDamage = effect.flatDamage === undefined ? undefined : numeric(effect.flatDamage, '固定ダメージ')
+        const targetLimit = effect.target.selection.type === 'COUNT' ? numeric(effect.target.selection.count, '対象数') : undefined
+        const actualTargets = Number(metrics.actualAttackTargetCount ?? 1)
+        if (targetLimit === null) break
+        if (targetLimit !== undefined && (!Number.isSafeInteger(targetLimit) || targetLimit < 1
+          || !Number.isSafeInteger(actualTargets) || actualTargets < 1)) { block('追加攻撃の対象数が有効範囲外です。'); break }
         if (chance === null || hits === null || flatDamage === null) break
         if (chance < 0 || chance > 1 || hits < 0 || value < 0 || (flatDamage !== undefined && flatDamage < 0)) {
           block('追加攻撃の発動確率・回数・ダメージが有効範囲外です。')
@@ -289,6 +305,7 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
           scale: value, ...(effect.hits === undefined ? {} : { hits }),
           ...(effect.basis === undefined ? {} : { basis: effect.basis }),
           ...(flatDamage === undefined ? {} : { flatDamage }),
+          ...(targetLimit === undefined ? {} : { targets: Math.min(targetLimit, actualTargets) }),
           ...(effect.probability.chance === 1 ? {} : { probability: chance }),
           ...(effect.rate === 'PER_SECOND' ? { timing: 'PER_SECOND' } : {}),
         })

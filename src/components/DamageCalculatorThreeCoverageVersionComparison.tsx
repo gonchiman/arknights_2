@@ -128,7 +128,9 @@ export function DamageCalculatorThreeCoverageVersionComparison({ versions, snaps
                 {pairs.map(pair => <div className="damage-three-version-pair" key={`${pair.before.id}-${pair.after.id}`}>
                   <span>{pair.before.id} → {pair.after.id}</span>
                   <span>新規対応 {number(pair.changes.filter(change => getCoverageChangeLabel(change) === '新規対応').length)}
-                    ・登録追加 {number(pair.changes.filter(change => getCoverageChangeLabel(change) === '登録追加').length)}</span>
+                    ・登録追加 {number(pair.changes.filter(change => getCoverageChangeLabel(change) === '登録追加').length)}
+                    {pair.changes.some(change => getCoverageChangeLabel(change) === '対象外に分類') &&
+                      <>・対象外に分類 {number(pair.changes.filter(change => getCoverageChangeLabel(change) === '対象外に分類').length)}</>}</span>
                   <button type="button" className="button secondary" aria-haspopup="dialog"
                     aria-label={`${pair.before.id}から${pair.after.id}の変更スキル ${pair.changes.length}件`}
                     onClick={() => setOpenPair({ before: pair.before.id, after: pair.after.id })}>

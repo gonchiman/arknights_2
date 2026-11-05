@@ -61,11 +61,11 @@ const catalog = sources.flatMap(source => source.skills.map(skill => record(sour
 const coverage = buildDamageCalculatorThreeCoverage(catalog)
 const structures = getDamageCalculatorThreeStructures().filter(structure => sourceMap.has(structure.basicInfo.operatorId))
 
-test('独立snapshotの164名345スキルが構造・coverage・registryに欠落や重複なく現れる', () => {
+test('独立snapshotの221名478スキルが構造・coverage・registryに欠落や重複なく現れる', () => {
   assert.deepEqual(groups.map(group => [group.length, group.reduce((sum, source) => sum + source.skills.length, 0)]),
-    [[85, 173], [38, 82], [41, 90]])
-  assert.equal(sources.length, 164)
-  assert.equal(catalog.length, 345)
+    [[123, 261], [49, 109], [49, 108]])
+  assert.equal(sources.length, 221)
+  assert.equal(catalog.length, 478)
   assert.equal(sourceMap.size, sources.length)
   const expectedIds = catalog.map(identity).sort()
   assert.deepEqual(structures.map(structure => identity(structure.basicInfo)).sort(), expectedIds)
@@ -79,13 +79,22 @@ test('独立snapshotの164名345スキルが構造・coverage・registryに欠�
   }
 })
 
-test('追加範囲は対応265・条件付き4・保留76で、保留を未対応や対応へ混ぜない', () => {
-  assert.deepEqual(Object.fromEntries(['SUPPORTED', 'CONDITIONAL', 'PENDING', 'UNSUPPORTED'].map(status =>
+test('追加範囲は対応380・条件付き13・保留77・対象外8で、保留と対象外を対応へ混ぜない', () => {
+  assert.deepEqual(Object.fromEntries(['SUPPORTED', 'CONDITIONAL', 'PENDING', 'UNSUPPORTED', 'NOT_APPLICABLE'].map(status =>
     [status, coverage.filter(row => row.status === status).length])),
-  { SUPPORTED: 265, CONDITIONAL: 4, PENDING: 76, UNSUPPORTED: 0 })
+  { SUPPORTED: 380, CONDITIONAL: 13, PENDING: 77, UNSUPPORTED: 0, NOT_APPLICABLE: 8 })
   assert.deepEqual(coverage.filter(row => row.status === 'CONDITIONAL').map(row => `${row.skill.operatorId}/${row.skill.skillIndex}`).sort(),
-    ['char_145_prove/2', 'char_218_cuttle/2', 'char_4027_heyak/2', 'char_405_absin/2'])
+    ['char_1028_texas2/2', 'char_145_prove/2', 'char_218_cuttle/2', 'char_340_shwaz/1', 'char_340_shwaz/2',
+      'char_340_shwaz/3', 'char_373_lionhd/2', 'char_4027_heyak/2', 'char_4039_horn/2', 'char_405_absin/2',
+      'char_4072_ironmn/1', 'char_433_windft/1', 'char_433_windft/2'])
   for (const row of coverage) {
+    if (row.status === 'NOT_APPLICABLE') {
+      assert.equal(row.selection, undefined)
+      assert.deepEqual(row.calculationScope, [])
+      assert.deepEqual(row.deferredReasons, [])
+      assert.ok(Object.values(row.sections).every(status => status === 'NOT_APPLICABLE'))
+      continue
+    }
     assert.equal(row.selection?.levelIndex, sourceMap.get(row.skill.operatorId)!.skillLevelIndex)
     if (row.status === 'PENDING') {
       assert.deepEqual(row.calculationScope, [])
@@ -100,13 +109,15 @@ test('coverageの特性区分は、優先対象のみ・計算に使う術属性
   assert.equal(find('char_124_kroos').sections.trait, 'NOT_APPLICABLE')
   assert.equal(find('char_180_amgoat').sections.trait, 'SUPPORTED')
   const merchant = sources.find(source => source.subProfessionId === 'merchant')!
-  assert.equal(find(merchant.operatorId).sections.trait, 'UNSUPPORTED')
+  assert.equal(find(merchant.operatorId).sections.trait, 'NOT_APPLICABLE')
+  assert.equal(find('char_4100_caper', 2).sections.trait, 'NOT_APPLICABLE')
+  assert.ok(find('char_4100_caper', 2).calculationScope.every(scope => !scope.includes('DPS')))
   assert.equal(find('char_271_spikes').sections.trait, 'SUPPORTED')
   assert.equal(find('char_271_spikes', 2).sections.trait, 'NOT_APPLICABLE')
 })
 
-test('全345スキルの全登録段階で対応状況と実計算が一致し、停止時に部分数値を残さない', () => {
-  let supportedSkills = 0, pendingSkills = 0
+test('全478スキルの全登録段階で対応状況と実計算が一致し、停止時に部分数値を残さない', () => {
+  let supportedSkills = 0, pendingSkills = 0, outsideSkills = 0
   for (const row of coverage) {
     const structure = structures.find(structure => identity(structure.basicInfo) === identity(row.skill))!
     let hasResult = false
@@ -130,20 +141,22 @@ test('全345スキルの全登録段階で対応状況と実計算が一致し�
         ].every(Number.isFinite), row.skill.id)
       }
     }
-    assert.equal(hasResult, row.status !== 'PENDING', row.skill.id)
+    assert.equal(hasResult, row.status === 'SUPPORTED' || row.status === 'CONDITIONAL', row.skill.id)
     if (hasResult) supportedSkills += 1
+    else if (row.status === 'NOT_APPLICABLE') outsideSkills += 1
     else pendingSkills += 1
   }
-  assert.deepEqual([supportedSkills, pendingSkills], [269, 76])
+  assert.deepEqual([supportedSkills, pendingSkills, outsideSkills], [393, 77, 8])
 })
 
-test('昇進1/SL7の11名と昇進2/SL10の153名でidentity・素質を混同しない', () => {
-  assert.equal(sources.filter(source => source.phaseIndex === 1 && source.skillLevelIndex === 6).length, 11)
-  assert.equal(sources.filter(source => source.phaseIndex === 2 && source.skillLevelIndex === 9).length, 153)
+test('昇進1/SL7の12名と昇進2/SL10の209名でidentity・素質を混同しない', () => {
+  assert.equal(sources.filter(source => source.phaseIndex === 1 && source.skillLevelIndex === 6).length, 12)
+  assert.equal(sources.filter(source => source.phaseIndex === 2 && source.skillLevelIndex === 9).length, 209)
   for (const source of sources) {
     const row = record(source.operatorId, 1)
     const talents = buildExpandedTalentStructures([row])
-    assert.equal(talents.length, source.profile.talents!.length, source.operatorName)
+    const describedTalents = source.profile.talents!.filter(talent => talent.candidates?.some(candidate => !candidate.isHideTalent && candidate.description?.trim()))
+    assert.equal(talents.length, describedTalents.length, source.operatorName)
     for (const talent of talents) {
       assert.equal(talent.basicInfo.phaseIndex, source.phaseIndex)
       assert.deepEqual(talent.issues, [], source.operatorName)
@@ -174,7 +187,7 @@ test('職業・レア度・状態の各絞り込み後も集計の母数は独�
       }
     }
   }
-  for (const status of ['SUPPORTED', 'CONDITIONAL', 'PENDING'] as const) {
+  for (const status of ['SUPPORTED', 'CONDITIONAL', 'PENDING', 'NOT_APPLICABLE'] as const) {
     const filtered = filterDamageCalculatorThreeCoverage(coverage, { ...EMPTY_DAMAGE_THREE_COVERAGE_FILTERS, status })
     assert.ok(filtered.every(row => row.status === status))
   }

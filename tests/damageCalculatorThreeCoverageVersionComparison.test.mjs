@@ -38,10 +38,10 @@ test('保存版の915スキルを同じ4区分で並べ、凡例1つと正しい
   assert.match(html, /v1：915スキル中、対応 242件（26.4%）/)
   assert.match(html, /v2：915スキル中、対応 286件（31.3%）/)
   assert.deepEqual(tableRows(html), [
-    ['版', '対応', '条件付き', '保留', '未対応', '合計'],
-    ['v1', '242', '10', '63', '600', '915'],
-    ['v2', '286', '10', '77', '542', '915'],
-    ['v2 − v1', '+44', '0', '+14', '−58', '0'],
+    ['版', '対応', '条件付き', '保留', '未対応', '対象外', '合計'],
+    ['v1', '242', '10', '63', '600', '0', '915'],
+    ['v2', '286', '10', '77', '542', '0', '915'],
+    ['v2 − v1', '+44', '0', '+14', '−58', '0', '0'],
   ])
   assert.match(html, /新規対応 44・登録追加 14/)
   assert.match(html, /aria-label="v1からv2の変更スキル 71件"/)
@@ -51,8 +51,24 @@ test('保存版の915スキルを同じ4区分で並べ、凡例1つと正しい
 test('1版だけなら4本と件数を表示し、差分行や変更ボタンは表示しない', () => {
   const html = render(Comparison, props({ selectedIds: ['v2'] }))
   assert.equal((html.match(/class="coverage-stacked-track"/g) ?? []).length, 4)
-  assert.deepEqual(tableRows(html).slice(1), [['v2', '286', '10', '77', '542', '915']])
+  assert.deepEqual(tableRows(html).slice(1), [['v2', '286', '10', '77', '542', '0', '915']])
   assert.doesNotMatch(html, /変更スキル|damage-three-version-delta/)
+})
+
+test('対象外への分類は新規対応に加算せず、別の件数・差分ラベルを表示する', () => {
+  const before = structuredClone(saved[0].rows[0])
+  before.status = 'UNSUPPORTED'
+  const after = { ...structuredClone(before), status: 'NOT_APPLICABLE',
+    sections: { skill: 'NOT_APPLICABLE', talent: 'NOT_APPLICABLE', trait: 'NOT_APPLICABLE' } }
+  const versions = index.versions.slice(0, 2)
+  const changedSnapshots = Object.fromEntries(versions.map((version, i) => [canonical(version),
+    { ...saved[i], rows: [i === 0 ? before : after] }]))
+  const html = render(Comparison, props({ versions, snapshots: changedSnapshots }))
+  assert.match(html, /新規対応 0・登録追加 0・対象外に分類 1/)
+  assert.deepEqual(tableRows(html).at(-1), ['v2 − v1', '0', '0', '0', '−1', '+1', '0'])
+  const changes = diff([before], [after])
+  const list = tableRows(render(ChangesTable, { changes, before: versions[0], after: versions[1], onDetail() {} }))
+  assert.deepEqual(list[1].slice(3, 6), ['未対応', '対象外', '対象外に分類'])
 })
 
 test('選択なし・保存なし・読み込み中・取得失敗を区別して部分データを表示しない', () => {

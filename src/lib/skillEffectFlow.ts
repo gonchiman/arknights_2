@@ -209,6 +209,8 @@ function guardStages(structure: SkillStructure, recipe: GuardSkillRecipe): FlowS
       ['defenseIgnoreRatio', '防御力の無視割合', '', true], ['defenseIgnoreFixed', '防御力の固定値無視', '', false],
       ['resistanceIgnoreFixed', '術耐性の固定値無視', '', false],
       ['defenseReductionRatio', '防御力の低下割合', '', true], ['resistanceReductionRatio', '術耐性の低下割合', '', true],
+      ['defenseReductionFixed', '防御力の固定値低下', '', false], ['resistanceReductionFixed', '術耐性の固定値低下', '', false],
+      ['fixedAttackInterval', '固定攻撃周期', '秒', false],
       ['damageScale', '与ダメージ倍率', '倍', false],
     ] as const) if (stage[key] !== undefined) modifiers.push({ id: `${stage.id}-${key}`, title: label,
       fields: [{ label: '値', value: formatted(stage[key]!, unit, ratio) }] })

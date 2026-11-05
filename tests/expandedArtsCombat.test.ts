@@ -3,10 +3,11 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { EXPANDED_ARTS_DEFINITIONS } from '../src/lib/expandedArtsDefinitions.ts'
 import type { ExpandedOperatorSource } from '../src/lib/expandedCombatTypes.ts'
-import { buildDamageCalculatorThreeOutput } from '../src/lib/damageCalculatorThree.ts'
+import { buildDamageCalculatorThreeOutput, type DamageCalculatorThreeInput } from '../src/lib/damageCalculatorThree.ts'
 import { calculateDamageThreePeriodTotal } from '../src/lib/damageCalculatorThreePeriodTotal.ts'
 import { buildExpandedTalentStructures } from '../src/lib/expandedTalentStructure.ts'
 import { buildDamageCalculatorThreeCoverage } from '../src/lib/damageCalculatorThreeCoverage.ts'
+import { getOperatorPassives } from '../src/lib/operatorProfile.ts'
 import { classifySkill } from '../src/lib/classifier.ts'
 import type { GuardConditions } from '../src/lib/guardCombatTypes.ts'
 import type { SkillRecord } from '../src/types/skill.ts'
@@ -24,12 +25,13 @@ function record(id: string, index: number): SkillRecord {
     skillLevels: Array.from({ length: source.skillLevelIndex + 1 }, () => structuredClone(raw)), raw,
     operatorProfile: structuredClone(source.profile) }
 }
-function output(id: string, index: number, guard: GuardConditions = {}, change?: (record: SkillRecord) => void) {
+function output(id: string, index: number, guard: GuardConditions = {}, change?: (record: SkillRecord) => void,
+  options: Partial<DamageCalculatorThreeInput> = {}) {
   const skill = record(id, index), source = sources.find(source => source.operatorId === id)!
   change?.(skill)
   return buildDamageCalculatorThreeOutput({ operator: skill, skill, phaseIndex: source.phaseIndex,
     operatorLevel: source.profile.phases[source.phaseIndex].maxLevel!, trust: 100,
-    skillLevelIndex: source.skillLevelIndex, conditions: { guard } })
+    skillLevelIndex: source.skillLevelIndex, conditions: { guard }, ...options })
 }
 function at(id: string, index: number, guard: GuardConditions = {}, resistance = 0) {
   const result = output(id, index, guard)
@@ -203,16 +205,17 @@ test('追加4名の素質数値欠落や未確認のスキル更新は計算を�
   }
 })
 
-test('術師・補助・呪癒師41名の90スキルを68対応・22保留に分け、全素質を登録する', () => {
-  assert.equal(sources.length, 41)
-  assert.equal(sources.reduce((sum, source) => sum + source.skills.length, 0), 90)
-  assert.equal(EXPANDED_ARTS_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 68)
+test('術師・補助・呪癒師49名の108スキルを86レシピ・22保留に分け、全素質を登録する', () => {
+  assert.equal(sources.length, 49)
+  assert.equal(sources.reduce((sum, source) => sum + source.skills.length, 0), 108)
+  assert.equal(EXPANDED_ARTS_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 86)
   for (const definition of EXPANDED_ARTS_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     const indices = [...definition.recipes.map(recipe => recipe.skillIndex), ...(definition.deferredSkills ?? []).map(skill => skill.skillIndex)]
     assert.deepEqual(indices.sort(), source.skills.map(skill => skill.skillIndex).sort())
     assert.equal(new Set(indices).size, indices.length)
-    assert.equal(definition.talents.length, source.profile.talents?.length)
+    assert.equal(definition.talents.length, getOperatorPassives(source.profile, source.phaseIndex,
+      source.profile.phases[source.phaseIndex].maxLevel!, 1).sources.filter(entry => entry.sourceKind === 'TALENT').length)
     const structures = buildExpandedTalentStructures([record(source.operatorId, 1)])
     for (const structure of structures) {
       assert.deepEqual(structure.issues, [], source.operatorName + structure.basicInfo.talentName)
@@ -221,15 +224,15 @@ test('術師・補助・呪癒師41名の90スキルを68対応・22保留に分
   }
 })
 
-test('対応68スキルの初期条件は有限のダメージを返し、保留22スキルは部分結果を出さない', () => {
+test('対応レシピの初期条件は有限のダメージを返し、保留スキルは部分結果を出さない', () => {
   for (const definition of EXPANDED_ARTS_DEFINITIONS) {
     for (const recipe of definition.recipes) {
       const result = output(definition.operatorId, recipe.skillIndex)
       assert.deepEqual(result.unsupportedReasons, [], `${definition.operatorId} S${recipe.skillIndex}`)
       assert.ok(result.rows.length)
       const raw = sources.find(source => source.operatorId === definition.operatorId)!.skills.find(skill => skill.skillIndex === recipe.skillIndex)!.raw
-      assert.equal(result.model!.duration, Math.max(0, raw.duration!))
-      for (const row of result.rows) assert.ok([row.perAttack, row.allTargetsPerAttack, row.dps ?? 0].every(Number.isFinite))
+      assert.equal(result.model!.duration, definition.operatorId === 'char_258_podego' && recipe.skillIndex === 2 ? 6 : Math.max(0, raw.duration!))
+      for (const row of result.rows) assert.ok([row.perAttack, row.allTargetsPerAttack, row.dps ?? 0, row.damageOverTimeDps ?? 0, row.combinedDps ?? 0].every(Number.isFinite))
     }
     for (const deferred of definition.deferredSkills ?? []) {
       const result = output(definition.operatorId, deferred.skillIndex)
@@ -471,4 +474,145 @@ test('追加術師でも素質の数値欠落、スキル更新、連鎖特性�
     skill.operatorProfile.trait!.candidates!.at(-1)!.blackboard!.find(entry => entry.key === 'attack@max_target')!.value = 6
   })
   assert.deepEqual(trait.rows, [])
+})
+
+test('アコルトS2はブームが命中するなら範囲内の他OPと素質15%を必ず反映する', () => {
+  for (const ally of [false, true]) for (const hits of [0, 1, 3]) {
+    const { result, row } = at('char_4051_akkord', 2, { allyInAttackRange: ally, sonicBoomHits: hits, actualAttackTargetCount: 2 }, 40)
+    const atk = attack(result.stats.attack, 0.6 + (ally || hits > 0 ? 0.15 : 0))
+    close(row.perAttack, atk * (1 + 0.25 * hits) * 0.6)
+    close(row.allTargetsPerAttack, row.perAttack * 2)
+    close(row.dps, row.perAttack / result.attackInterval!)
+    assert.deepEqual(row.attackComponents!.map(component => component.role), hits ? ['MAIN', 'ADDITIONAL'] : ['MAIN'])
+    assert.equal(total('char_4051_akkord', 2, result).totalDamage, null)
+  }
+  assert.ok(output('char_4051_akkord', 2, { sonicBoomHits: 1.5 }).unsupportedReasons.length)
+  for (const ally of [false, true]) {
+    const { result, row } = at('char_4051_akkord', 1, { allyInAttackRange: ally }, 40)
+    close(row.perAttack, attack(result.stats.attack, ally ? 0.15 : 0) * 2 * 0.6)
+  }
+})
+
+test('カーネリアンS3はダメージ前に今回の刻印を付与し、OC初撃1.2倍・4刻印以上は2倍にする', () => {
+  const hitMultipliers = [1.2, 1.4, 1.6, 1.8, 2, 2]
+  for (const overcharged of [false, true]) for (const progress of [0, 50, 100]) for (const stacks of [0, 1, 2, 3, 4, 5]) {
+    const { result, row } = at('char_426_billro', 3, { overcharged, currentAttackRisePercent: progress, existingMarkStacks: stacks }, 40)
+    const atk = attack(result.stats.attack, 2.8 * progress / 100)
+    close(row.perAttack, atk * 0.6 * (overcharged ? hitMultipliers[stacks] : 1))
+    close(row.dps, row.perAttack / result.attackInterval!)
+    assert.equal(total('char_426_billro', 3, result).totalDamage, null)
+  }
+  for (const guard of [{ currentAttackRisePercent: 101 }, { existingMarkStacks: 6 }]) {
+    assert.deepEqual(output('char_426_billro', 3, guard).rows, [])
+  }
+})
+
+test('シャマレS2は人形の防御半減と元の30%脆弱を適用し、S1の増幅を継承しない', () => {
+  for (const inRange of [false, true]) for (const hp of [39, 40]) for (const virtual of [undefined, 'PHYSICAL'] as const) {
+    const result = output('char_254_vodfox', 2, { targetInDollRange: inRange, targetHpPercent: hp }, undefined,
+      { enemy: { defense: 500, resistance: 40 }, virtualMainAttackType: virtual })
+    assert.deepEqual(result.unsupportedReasons, [])
+    const raw = virtual ? Math.max(result.stats.attack - (inRange ? 250 : 500), result.stats.attack * 0.05)
+      : result.stats.attack * 0.6
+    close(result.rows[0].perAttack, raw * (hp < 40 ? 1.3 : 1))
+  }
+})
+
+test('レオンハルトS2は既存の術耐性低下だけを扱い、未付与時の推測値を出さない', () => {
+  const { result, row } = at('char_373_lionhd', 2, { nearbyEnemyCount: 5, lionhardtDebuffActive: true, actualAttackTargetCount: 3 }, 80)
+  close(row.perAttack, attack(result.stats.attack, 0.2) * 2.3 * (1 - 80 * 0.85 / 100))
+  close(row.allTargetsPerAttack, row.perAttack * 3)
+  assert.equal(row.dps, null)
+  const blocked = output('char_373_lionhd', 2, { lionhardtDebuffActive: false })
+  assert.ok(blocked.unsupportedReasons.some(reason => reason.includes('処理順序')))
+  assert.deepEqual(blocked.rows, [])
+  assert.equal(buildDamageCalculatorThreeCoverage([record('char_373_lionhd', 2)])[0].status, 'CONDITIONAL')
+})
+
+test('モスティマS2・ポデンコS2は通常攻撃を混ぜず、毎秒値と全対象値を返す', () => {
+  for (const [id, scale, buff] of [['char_213_mostma', 1.4, 0], ['char_258_podego', 0.8, 0.09]] as const) {
+    const { result, row } = at(id, 2, { actualAttackTargetCount: 4 }, 40)
+    const expected = attack(result.stats.attack, buff) * scale * 0.6
+    close(row.perAttack, 0)
+    close(row.dps, 0)
+    close(row.damageOverTimeDps, expected)
+    close(row.combinedDps, expected)
+    close(row.allTargetsCombinedDps, expected * 4)
+    assert.equal(total(id, 2, result).totalDamage, null)
+    if (id === 'char_258_podego') assert.equal(result.model!.duration, 6)
+  }
+})
+
+test('炎獄ラヴァの二重範囲は指定命中数を使い、S2に通常攻撃やS1の強化を加算しない', () => {
+  for (const count of [1, 2]) {
+    const first = at('char_1011_lava2', 1, { lavaBlastHits: count, actualAttackTargetCount: 3 }, 40)
+    close(first.row.perAttack, attack(first.result.stats.attack, 0.2) * count * 0.6)
+    close(first.row.allTargetsPerAttack, first.row.perAttack * 3)
+    const second = at('char_1011_lava2', 2, { lavaRingHits: count, actualAttackTargetCount: 3 }, 40)
+    close(second.row.perAttack, 0)
+    close(second.row.combinedDps, second.result.stats.attack * 0.5 * count * 0.6)
+    close(second.row.allTargetsCombinedDps, second.row.combinedDps! * 3)
+    assert.equal(total('char_1011_lava2', 2, second.result).totalDamage, null)
+  }
+})
+
+test('工匠の防御・バリア・SPを攻撃力へ混ぜず、本体の物理攻撃を計算する', () => {
+  for (const [id, index, atkRatio] of [['char_484_robrta', 1, 0.5], ['char_4162_cathy', 1, 0.15],
+    ['char_4212_nasti', 1, 0.8], ['char_4212_nasti', 3, 1.6], ['char_4072_ironmn', 2, 0.6]] as const) {
+    const result = output(id, index, {}, undefined, { enemy: { defense: 500, resistance: 80 } })
+    assert.deepEqual(result.unsupportedReasons, [], `${id} S${index}`)
+    const atk = attack(result.stats.attack, atkRatio)
+    close(result.rows[0].perAttack, Math.max(atk - 500, atk * 0.05))
+    close(result.rows[0].dps, result.rows[0].perAttack / result.attackInterval!)
+  }
+  const buffed = output('char_4212_nasti', 1, { selfDeviceActive: true, actualAttackTargetCount: 3 })
+  assert.deepEqual(buffed.unsupportedReasons, [])
+  assert.equal(buffed.maxTargetCount, 3)
+  close(buffed.rows[0].allTargetsPerAttack, buffed.rows[0].perAttack * 3)
+  assert.deepEqual(output('char_4212_nasti', 1, { actualAttackTargetCount: 3 }).rows, [])
+  assert.deepEqual(output('char_4072_ironmn', 2, { actualAttackTargetCount: 3 }).rows, [])
+})
+
+test('アランナは自己への装置効果だけを計算し、S2の防御無視80×2.7と攻撃速度を分ける', () => {
+  for (const index of [1, 2]) for (const active of [false, true]) {
+    const result = output('char_4178_alanna', index, { selfDeviceActive: active }, undefined,
+      { enemy: { defense: 500, resistance: 40 } })
+    assert.deepEqual(result.unsupportedReasons, [])
+    const atk = attack(result.stats.attack, index === 2 ? 0.5 : 0)
+    const ignore = active ? 80 * (index === 2 ? 2.7 : 1) : 0
+    close(result.rows[0].perAttack, Math.max(atk - (500 - ignore), atk * 0.05))
+    close(result.attackInterval, result.stats.baseAttackTime / (1 + (index === 2 ? 50 : active ? 23 : 0) / 100))
+    const virtual = output('char_4178_alanna', index, { selfDeviceActive: active }, undefined,
+      { enemy: { defense: 500, resistance: 40 }, virtualMainAttackType: 'ARTS' })
+    close(virtual.rows[0].perAttack, atk * 0.6)
+  }
+})
+
+test('工匠の自己支援は1基の効果を加算し、未確認の2基重複では停止する', () => {
+  for (const id of ['char_433_windft', 'char_4072_ironmn']) for (const devices of [0, 1]) {
+    for (const index of id === 'char_433_windft' ? [1, 2] : [1]) {
+      const result = output(id, index, { selfDeviceCount: devices }, undefined, { enemy: { defense: 500, resistance: 40 } })
+      assert.deepEqual(result.unsupportedReasons, [])
+      const ratio = id === 'char_4072_ironmn' ? devices * 0.48 : index === 1 ? devices * 0.15 : 1.6 + devices * 0.3
+      const scale = id === 'char_4072_ironmn' ? 2 : index === 1 ? 2.5 : 1
+      const raw = attack(result.stats.attack, ratio) * scale
+      close(result.rows[0].perAttack, Math.max(raw - 500, raw * 0.05))
+      if (id === 'char_433_windft' && index === 2) close(result.attackInterval, result.stats.baseAttackTime + 0.5)
+      if (id === 'char_433_windft' && index === 1) assert.equal(result.rows[0].dps, null)
+      assert.deepEqual(output(id, index, { selfDeviceCount: 2 }).rows, [])
+      assert.equal(buildDamageCalculatorThreeCoverage([record(id, index)])[0].status, 'CONDITIONAL')
+    }
+  }
+})
+
+test('追加8名も未確認のスキル・特性・素質説明へ変更されたら結果を停止する', () => {
+  for (const id of ['char_1011_lava2', 'char_258_podego', 'char_484_robrta', 'char_4162_cathy',
+    'char_4212_nasti', 'char_4178_alanna', 'char_433_windft', 'char_4072_ironmn']) {
+    const index = id === 'char_258_podego' ? 2 : 1
+    for (const change of [
+      (skill: SkillRecord) => { skill.skillLevels[9].description += '未確認のダメージ' },
+      (skill: SkillRecord) => { skill.operatorProfile.traitDescription += '未確認のダメージ' },
+      (skill: SkillRecord) => { for (const candidate of skill.operatorProfile.talents[0].candidates ?? []) candidate.description += '未確認のダメージ' },
+    ]) assert.deepEqual(output(id, index, {}, change).rows, [], id)
+  }
 })

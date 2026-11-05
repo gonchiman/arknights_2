@@ -259,6 +259,7 @@ export function formatTalentStructureEffectItem(item: TalentStructureEffect['ite
     AMMO_CAPACITY: '弾薬上限', FEVER: 'Fever', TAUNT: '狙われやすさ', DEFENSE_BUFF_RATIO: '防御力',
     PHYSICAL_DODGE: '物理回避', ARTS_DODGE: '術回避', DAMAGE_RESISTANCE: '被ダメージ軽減', PHYSICAL_DAMAGE_RESISTANCE: '物理被ダメージ軽減',
     MIN_HP_RATIO: 'HP下限', DEFENSE_REDUCTION_RATIO: '防御力低下', RESISTANCE_IGNORE_RATIO: '術耐性割合無視', RESISTANCE_REDUCTION_RATIO: '術耐性低下',
+    DEFENSE_REDUCTION_FIXED: '防御力固定低下', RESISTANCE_REDUCTION_FIXED: '術耐性固定低下',
     ATTACK_SCALE: '攻撃倍率', DAMAGE_SCALE: '与ダメージ倍率', SPLASH_DAMAGE_SCALE: '範囲対象の与ダメージ倍率', HEAL_RECEIVED_SCALE: '被治療倍率',
     CRITICAL_ATTACK: '確率攻撃倍率', ADDITIONAL_ATTACK: '追加ダメージ', SP_RECOVERY: 'SP自然回復速度', STATUS: '状態付与', ATTACK_BEHAVIOR: '攻撃方式', HP_STEAL: '最大HP奪取', HP_RESTORE_ATK_RATIO: 'HP回復（攻撃力参照）',
   }[item]

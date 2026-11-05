@@ -138,19 +138,26 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
       resistanceIgnoreFixed += stageResistanceIgnoreFixed
       const defenseReduction = value(stage.defenseReductionRatio)
       const resistanceReduction = value(stage.resistanceReductionRatio)
+      const defenseReductionFixed = value(stage.defenseReductionFixed)
+      const resistanceReductionFixed = value(stage.resistanceReductionFixed)
       const damageScale = value(stage.damageScale, 1)
       if (defenseReduction < 0 || defenseReduction > 1 || resistanceReduction < 0 || resistanceReduction > 1)
         throw new RangeError('スキルの防御力・術耐性低下率が有効範囲外です。')
       if (damageScale < 0) throw new RangeError('スキルの与ダメージ倍率が有効範囲外です。')
+      if (defenseReductionFixed < 0 || resistanceReductionFixed < 0) throw new RangeError('固定の防御力・術耐性低下量が有効範囲外です。')
       for (const modifiers of new Set([passive, nativePassive])) {
         modifiers.defenseReductionRatio = 1 - (1 - modifiers.defenseReductionRatio) * (1 - defenseReduction)
         modifiers.resistanceReductionRatio = 1 - (1 - (modifiers.resistanceReductionRatio ?? 0)) * (1 - resistanceReduction)
         modifiers.damageScale *= damageScale
+        modifiers.defenseReductionFixed = (modifiers.defenseReductionFixed ?? 0) + defenseReductionFixed
+        modifiers.resistanceReductionFixed = (modifiers.resistanceReductionFixed ?? 0) + resistanceReductionFixed
       }
       const baseTime = stats.baseAttackTime * value(stage.intervalScale, 1) + value(stage.intervalAdd) + (passive.attackIntervalAdd ?? 0)
       const speed = stats.attackSpeed + aspd + passive.attackSpeed
       if (!Number.isFinite(speed) || !Number.isFinite(baseTime) || baseTime <= 0) throw new RangeError('攻撃間隔を計算できません。')
-      interval = kind === 'NORMAL' ? baseTime * 100 / Math.max(20, speed) : null
+      const fixedInterval = stage.fixedAttackInterval === undefined ? undefined : value(stage.fixedAttackInterval)
+      if (fixedInterval !== undefined && fixedInterval <= 0) throw new RangeError('固定の攻撃周期は0より大きい値で指定してください。')
+      interval = kind === 'NORMAL' ? fixedInterval ?? baseTime * 100 / Math.max(20, speed) : null
       duration = stage.duration === 'UNTIL_EXIT' ? 0 : Math.max(0, value(stage.duration, raw?.duration ?? 0))
       const talentActions = nativePassive.additionalActions.map(action => action.basis !== 'TARGET_DEFENSE' && action.basis !== 'ATK_STAT' && (!action.timing || action.timing === 'PER_ATTACK')
         ? { ...action, scale: { op: 'mul' as const, args: [action.scale, traitEvaluation!.attackScale] } } : action)
@@ -184,9 +191,9 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
   const periodicActions = actions.filter(action => action.timing === 'PER_SECOND')
   const hasRandomTargets = directActions.some(action => action.targets !== undefined)
     || splashActions.size > 0
-  const canShowDps = kind === 'NORMAL' && interval !== null
-  const dpsReason = canShowDps ? null : kind === 'NEXT_ATTACK' ? '強化攻撃1回の値です。SP回復を含む周期DPSは計算しません。'
-    : '選択した段階の1回分の値です。動作時間・SP回復を含むDPSは計算しません。'
+  const canShowDps = kind === 'NORMAL' && interval !== null && !stage?.dpsUnsupportedReason
+  const dpsReason = canShowDps ? null : stage?.dpsUnsupportedReason ?? (kind === 'NEXT_ATTACK' ? '強化攻撃1回の値です。SP回復を含む周期DPSは計算しません。'
+    : '選択した段階の1回分の値です。動作時間・SP回復を含むDPSは計算しません。')
   const points = enemy ? [axisType === 'PHYSICAL' ? enemy.defense : axisType === 'ARTS' ? enemy.resistance : 0]
     : getDamageSensitivityTablePoints(axisType, directActions.map(action => {
       try { return pipeline(value(action.scale, 1), value(action.attackBonus), actionPassives.get(action), action.basis !== 'ATK_STAT').finalAttack * 0.95 } catch { return 0 }
@@ -219,8 +226,11 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
         const hitFactor = variant.targets / actualTargetCount
         const defense = enemy?.defense ?? (axisType === 'PHYSICAL' ? axis : 0)
         const resistance = enemy?.resistance ?? (axisType === 'ARTS' ? axis : Number(conditions.enemyResistance ?? 0))
-        const appliedDefense = defense * (1 - modifiers.defenseReductionRatio)
-        const appliedResistance = resistance * (1 - (modifiers.resistanceReductionRatio ?? 0)) * (1 - modifiers.resistanceIgnoreRatio)
+        // Attribute additions precede multiplicative reductions; penetration is applied afterwards.
+        // https://prts.wiki/w/游戏数据基础#属性基本公式
+        const appliedDefense = Math.max(0, (defense - (modifiers.defenseReductionFixed ?? 0)) * (1 - modifiers.defenseReductionRatio))
+        const appliedResistance = Math.max(0, (resistance - (modifiers.resistanceReductionFixed ?? 0))
+          * (1 - (modifiers.resistanceReductionRatio ?? 0))) * (1 - modifiers.resistanceIgnoreRatio)
         const allowsCritical = action.basis !== 'TARGET_DEFENSE' && action.basis !== 'ATK_STAT'
         const branches: ProbabilisticDamageBranch[] = [
           { id: 'NORMAL' as const, probability: allowsCritical ? 1 - modifiers.critChance : 1, scale: 1, attackBonus: 0 },
@@ -274,7 +284,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
     damageType, axisLabel, rows, unsupportedReasons, conditionInputs: [], actualTargetCount,
     maxTargetCount: maxTargets, effects: [], canShowDps: unsupportedReasons.length === 0 && canShowDps, dpsReason,
     effectiveAttack: unsupportedReasons.length ? null : pipeline(traitEvaluation?.attackScale ?? 1).finalAttack,
-    attackSpeed: unsupportedReasons.length ? null : attackSpeed, attackInterval: unsupportedReasons.length ? null : interval,
+    attackSpeed: unsupportedReasons.length ? null : attackSpeed, attackInterval: unsupportedReasons.length || stage?.dpsUnsupportedReason ? null : interval,
     activeStageLabel: stage?.label ?? null, attackKind: kind, attackLabel: kind === 'NORMAL' ? '1攻撃' : kind === 'NEXT_ATTACK' ? '強化攻撃' : 'スキル',
     attackDistanceType: stage?.attackTreatment ?? (conditions.attackDistanceType === 'RANGED' ? 'RANGED' : 'MELEE'), rangePenaltyMultiplier: 1,
     scopeNotes: [...scopeNotes, ...(dpsReason ? [dpsReason] : [])], counterCooldownSeconds: null,

@@ -72,8 +72,151 @@ const operator = (operatorId: string, recipes: readonly GuardSkillRecipe[], tale
 const ammoNote = '攻撃中の1攻撃・DPSを計算する。弾薬数、弾薬消費の確率、スキル全体の総ダメージは含めない。'
 const sameTargets = '選択した敵全員が、同じ条件で攻撃または爆発を受けるものとして計算する。'
 const frontal = bool('targetInFrontalTiles', '対象が正面横3マスにいる')
+const projectileDpsReason = '投擲物の飛行・帰還・回収待ちを含む攻撃周期を計算していないため、1投擲分のダメージのみ表示します。'
+const hunterDpsReason = '装填と消費を含む攻撃周期を計算していないため、装填済みの弾による1攻撃分のダメージのみ表示します。'
 
 export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] = [
+  operator('char_113_cqbw', [
+    recipe('char_113_cqbw', 1, burst(key('atk_scale'), { label: '榴弾の爆発', maxTargets: null, duration: 0 })),
+    recipe('char_113_cqbw', 2, burst(key('atk_scale'), { label: '地雷1個の爆発', maxTargets: null }), [],
+      ['地雷1個の爆発を評価する。設置から起爆までの時間と、複数の地雷の連続起爆は計算しない。']),
+    recipe('char_113_cqbw', 3, burst(key('atk_scale'), { label: '爆弾1個の爆発', maxTargets: null }), [],
+      ['付着した爆弾1個の爆発を評価する。複数の爆弾の重複や、先行する爆発によるスタン状態の変化は計算しない。']),
+  ], [
+    talent(0, '潜伏', ['SURVIVAL'], () => [status('concealment', '配置から10秒後に物理・術回避が上昇し狙われにくくなる')]),
+    talent(1, '悪巧み', ['DAMAGE'], b => [{ ...ctx('stun-physical-vulnerability', 'damage_scale', {
+      target: enemy, condition: { type: 'ALL', conditions: [eq('targetStunnedAtDamage', true),
+        eq('targetInAttackRange', true), eq('attack.damageType', 'PHYSICAL')] },
+    }), item: 'DAMAGE_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: b.read('damage_scale') }]),
+  ], [bool('targetStunnedAtDamage', 'ダメージ発生時に対象がスタン中'),
+    bool('targetInAttackRange', '対象がWの攻撃範囲内', true)], [], [sameTargets]),
+  operator('char_340_shwaz', [1, 2, 3].map(index => {
+    const stage = index === 1 ? next() : normal({ atk: key('atk'), ...(index === 3 ? { intervalAdd: key('base_attack_time') } : {}) })
+    return recipe('char_340_shwaz', index, [
+      { ...stage, label: '防御低下付与済みの対象への攻撃', when: { input: 'lethalArrowDefenseDownActive', comparison: 'EQ', value: true },
+        periodTotal: { kind: 'UNSUPPORTED', reason: '防御低下の付与・更新・解除の時間変化を含む総量は計算しません。' } },
+      { ...stage, id: 'defense-down-unknown', label: '初回付与の順序未確認', actions: [],
+        when: { input: 'lethalArrowDefenseDownActive', comparison: 'EQ', value: false },
+        unresolved: ['リーサルアローの防御低下が付与済みの対象を指定してください。初回の付与とダメージの前後関係は未確認です。'] },
+    ], [], ['リーサルアローの防御低下が有効な状態の1攻撃を計算する。'])
+  }), [
+    talent(0, 'リーサルアロー', ['DAMAGE'], b => [
+      critical(b, { type: 'METRIC', metric: 'skill.talent@prob' }),
+      { ...ctx('lethal-arrow-defense-down', 'def', { target: enemy, condition: eq('lethalArrowDefenseDownActive', true) }),
+        item: 'DEFENSE_REDUCTION_RATIO', operation: 'ADD_RATIO', unit: 'RATIO',
+        value: { type: 'CALC', operation: 'MULTIPLY', values: [-1, b.read('def')] } },
+    ]),
+    talent(1, 'クロスファイア', ['ABILITY'], b => [atk(b.read('atk'), 'atk', { condition: eq('anotherSniperDeployed', true) }),
+      behavior('sniper-attack-buff', '条件を満たす配置中の狙撃にも攻撃力上昇', { condition: eq('anotherSniperDeployed', true),
+        target: { ...self, side: 'ALLY', scope: 'BATTLEFIELD', includeSelf: false, tagIds: ['profession:SNIPER'] } }),
+    ]),
+  ], [bool('lethalArrowDefenseDownActive', 'リーサルアローの防御低下が付与済み', true),
+    bool('anotherSniperDeployed', 'ほかの狙撃が配置中')]),
+  operator('char_4211_snhunt', [
+    recipe('char_4211_snhunt', 1, next(key('atk_scale'), 1, { includesSkillActivation: true })),
+    recipe('char_4211_snhunt', 2, burst(1, { actions: [damage(
+      choose('targetStationary', true, key('atk_scale_2'), key('atk_scale_1')), 2)] }),
+      [bool('targetStationary', '対象が移動していない')]),
+  ], [talent(0, '裂雲の一撃', ['ADDITIONAL_DAMAGE', 'STATUS'], b => [
+    { ...ctx('cloudbeast-hit', 'atk_scale', { target: enemy, timing: { type: 'EVENT', event: 'SKILL_START' }, lifetime: { type: 'CURRENT_EVENT' } }),
+      item: 'ADDITIONAL_ATTACK', operation: 'DEAL_DAMAGE', unit: 'MULTIPLIER', value: b.read('atk_scale'), basis: 'ATK_STAT',
+      damageType: 'PHYSICAL', rate: 'PER_ATTACK', label: '裂雲獣' },
+    status('cloudbeast-cold', '裂雲獣の攻撃で寒冷を付与', { target: enemy, timing: { type: 'EVENT', event: 'SKILL_START' },
+      lifetime: { type: 'FIXED_SECONDS', seconds: b.read('cold') } }),
+  ])]),
+  operator('char_4104_coldst', [
+    recipe('char_4104_coldst', 1, normal({ atk: key('atk'), dpsUnsupportedReason: hunterDpsReason })),
+    recipe('char_4104_coldst', 2, normal({ atk: key('atk'), dpsUnsupportedReason: hunterDpsReason })),
+  ], [talent(0, '負けん気', ['DAMAGE'], b => [scale(b.read('atk_scale'), {
+    condition: eq('secondsSinceNormalAttack', b.read('attack@delay'), 'GTE'),
+  })])], [number('secondsSinceNormalAttack', '前回の通常攻撃からの時間（秒）', 0, 0, 1000, 0.1)]),
+  operator('char_4117_ray', [
+    recipe('char_4117_ray', 2, normal({ atk: key('atk'), dpsUnsupportedReason: hunterDpsReason })),
+    recipe('char_4117_ray', 3, normal({ actions: [damage(key('attack@atk_scale'))], dpsUnsupportedReason: hunterDpsReason }), [],
+      ['初回の装填完了後、弾が装填されている状態の1攻撃を評価する。']),
+  ], [
+    talent(0, '巡回のおとも', ['DAMAGE', 'SUMMON'], b => [
+      { ...ctx('sandbeast-damage', 'damage_scale', { target: enemy, condition: { type: 'ALL', conditions: [
+        eq('targetInSandbeastArea', true), eq('attack.damageType', 'PHYSICAL'),
+      ] } }), item: 'DAMAGE_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER',
+      value: { type: 'CALC', operation: 'ADD', values: [1, b.read('damage_scale')] } },
+      behavior('sandbeast-targeting', 'サンドビーストの周囲8マスを追加攻撃範囲として優先攻撃'),
+    ]),
+    talent(1, '一意専心', ['ABILITY'], b => [atk({ type: 'CALC', operation: 'MULTIPLY',
+      values: [b.read('atk'), { type: 'METRIC', metric: 'sameTargetAttackStacks' }] })]),
+  ], [bool('targetInSandbeastArea', '対象がサンドビーストの周囲8マス内'),
+    number('sameTargetAttackStacks', '今回の攻撃に適用する同一対象の累積数', 0, 0, 3)], [
+    { skillIndex: 1, reason: '追加の特殊弾に装填済み通常攻撃の120%倍率が適用されるか確認する必要がある。' },
+  ]),
+  operator('char_1027_greyy2', [
+    recipe('char_1027_greyy2', 1, normal({ atk: key('atk'), aspd: key('attack_speed'), periodTotal: { kind: 'CONSTANT_RATE' } })),
+    recipe('char_1027_greyy2', 2, normal({ duration: key('projectile_delay_time'), actions: [damage(),
+      damage(mul(key('atk_scale'), 1 / 1.5), input('activeLightningBalls'), { label: 'ライトニングボール（毎秒）', role: 'ADDITIONAL',
+        damageType: 'ARTS', basis: 'ATK_STAT', timing: 'PER_SECOND', traitOverrides: ['AFTERSHOCK', 'DAMAGE_TYPE'] }),
+    ], periodTotal: { kind: 'UNSUPPORTED', reason: '球の発射・着弾・終了時点を含む総命中数は計算しません。' } }),
+      [number('activeLightningBalls', '対象に命中中のライトニングボール数', 1, 0, 2)],
+      ['通常攻撃と1.5秒ごとの球の攻撃を別々に軽減し、対象が両方の範囲内にいる現在の毎秒値を計算する。']),
+  ], [talent(0, 'ライトニングチェーン', ['STATUS'], b => [status('attack-slow', '攻撃時に確率で足止め', {
+    target: enemy, timing: { type: 'EVENT', event: 'ATTACK' }, probability: { chance: b.read('attack@prob'), rollScope: 'APPLICATION' },
+    lifetime: { type: 'FIXED_SECONDS', seconds: b.read('attack@sluggish') },
+  })])], [], [], [sameTargets]),
+  operator('char_391_rosmon', [
+    recipe('char_391_rosmon', 1, next(1, 1, { actions: [damage(),
+      damage(key('extra_atk_scale'), 1, { label: '追加術ダメージ', role: 'ADDITIONAL', damageType: 'ARTS',
+        traitOverrides: ['AFTERSHOCK', 'DAMAGE_TYPE'] }),
+    ] })),
+    recipe('char_391_rosmon', 2, normal({ atk: key('atk'), intervalAdd: key('base_attack_time'), traitOverrides: ['AFTERSHOCK'],
+      actions: [damage(), damage(0.5, add(1, key('add_times')), { label: '余震' })], periodTotal: { kind: 'CONSTANT_RATE' } })),
+    recipe('char_391_rosmon', 3, normal({ label: 'ブロック対象1体への攻撃', atk: key('atk'), intervalAdd: key('base_attack_time'),
+      maxTargets: 1, defenseReductionFixed: choose('targetBlockedByEquipment', true, 160, 0),
+      periodTotal: { kind: 'UNSUPPORTED', reason: 'ブロック状態と戦術装備の存続、2対象の爆発範囲の重複は時間積算しません。' } }),
+      [bool('targetBlockedByEquipment', '対象を戦術装備でブロック中', true)],
+      ['ブロック中の対象1体だけを攻撃し、別対象への攻撃範囲が重ならない状態を評価する。戦術装備以外の味方がブロックしている場合は、防御低下なしで計算する。']),
+  ], [
+    talent(0, '殲滅戦用装備', ['DAMAGE'], b => [{ ...ctx('equipment-defense-ignore', 'def_penetrate_fixed'),
+      item: 'DEFENSE_IGNORE_FIXED', operation: 'IGNORE_FIXED', unit: 'POINT', value: b.read('def_penetrate_fixed') }]),
+    talent(1, '思念維持', ['ABILITY'], b => [atk(b.read('atk'), 'atk', { condition: eq('thoughtMaintenanceActive', true) }),
+      behavior('caster-attack-buff', '配置時に選択した術師も攻撃力上昇', { target: { ...self, side: 'ALLY', scope: 'BATTLEFIELD',
+        includeSelf: false, tagIds: ['profession:CASTER'], selection: { type: 'RANDOM', count: 1 } } }),
+    ]),
+  ], [bool('thoughtMaintenanceActive', '思念維持の攻撃力上昇が有効', true)], [], [sameTargets]),
+  operator('char_4213_skybx', [
+    recipe('char_4213_skybx', 1, next()),
+    recipe('char_4213_skybx', 2, normal({ actions: [damage(key('attack@atk_scale'))] }), [],
+      ['通常の1発を評価する。手動停止時の残弾一斉発射と対象のランダム配分は計算しない。', ammoNote]),
+  ], [talent(0, '開けろ、管理局だ！', ['STATUS'], b => [status('first-damage-silence', '敵ごとに一度だけ特殊能力を無効化', {
+    target: enemy, timing: { type: 'EVENT', event: 'DAMAGE_DEALT' }, lifetime: { type: 'FIXED_SECONDS', seconds: b.read('silence') },
+  })])], [], [], [sameTargets]),
+  operator('char_4055_bgsnow', [
+    recipe('char_4055_bgsnow', 1, normal({ atk: key('atk'), actions: [
+      damage(1, 1, { label: '通常', probability: add(1, mul(-1, key('prob'))) }),
+      damage(key('atk_scale'), 1, { label: '強化', probability: key('prob') }),
+    ] })),
+    recipe('char_4055_bgsnow', 2, burst(key('atk_scale'), { actions: [damage(key('atk_scale'), 3)] })),
+    recipe('char_4055_bgsnow', 3, normal({ intervalAdd: key('base_attack_time'),
+      actions: [damage(choose('targetInForwardThreeTiles', true, key('bgsnow_s_3[atk_up].atk_scale'), key('atk_scale')))],
+      periodTotal: { kind: 'CONSTANT_RATE' } }), [bool('targetInForwardThreeTiles', '対象が前方直線3マス以内')]),
+  ], [
+    talent(0, 'オートタイプライター', ['SUMMON'], () => [status('typewriter', 'タイプライターを配置可能')],
+      ['タイプライターは別ユニット。パゼオンカ自身の攻撃だけを計算する。']),
+    talent(1, '弱点速記', ['DAMAGE'], () => [{ ...ctx('typewriter-defense-reduction', 'description:18% / 23%', { target: enemy }),
+      item: 'DEFENSE_REDUCTION_RATIO', operation: 'ADD_RATIO', unit: 'RATIO',
+      value: conditional(eq('typewriterDefenseReduction', 'ADJACENT'), 0.23, conditional(eq('typewriterDefenseReduction', 'NORMAL'), 0.18, 0)),
+    }], ['タイプライターが付与した防御低下の、現在の状態を指定する。付与・4秒後の解除の時間変化は計算しない。']),
+  ], [{ key: 'typewriterDefenseReduction', label: 'タイプライターの防御低下', kind: 'select', defaultValue: 'NONE',
+    options: [{ value: 'NONE', label: 'なし' }, { value: 'NORMAL', label: '18%' }, { value: 'ADJACENT', label: '隣接時23%' }] }]),
+  operator('char_4100_caper', [
+    recipe('char_4100_caper', 1, next()),
+    recipe('char_4100_caper', 2, normal({ atk: key('atk'), actions: [damage(1, key('cnt'))], dpsUnsupportedReason: projectileDpsReason })),
+  ], [talent(0, '遊び心', ['DAMAGE'], b => [critical(b)])]),
+  operator('char_4177_brigid', [
+    recipe('char_4177_brigid', 2, normal({ atk: key('atk'), dpsUnsupportedReason: projectileDpsReason, actions: [
+      damage(1, 1, { label: '投擲命中' }),
+      damage(key('attack@cut_scale'), 4, { label: '追加攻撃', role: 'ADDITIONAL' }),
+    ] })),
+  ], [talent(0, '組紐の名手', ['SURVIVAL'], () => [status('physical-dodge', 'ダメージ20回後に物理回避上昇')])], [], [
+    { skillIndex: 1, reason: '跳躍回数に初回命中を含むか、および対象の再選択条件を確認する必要がある。' },
+  ]),
   operator('char_2012_typhon', [
     recipe('char_2012_typhon', 1, normal({ atk: key('atk'), aspd: key('attack_speed') }), [],
       ['入力した防御無視の累積数と初回命中の状態で1攻撃を計算する。攻撃中の累積・8秒経過による解除・初回補正の消費は時間積算しない。']),
@@ -93,6 +236,16 @@ export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] 
   ]),
   operator('char_4193_lemuen', [
     recipe('char_4193_lemuen', 1, normal({ maxTargets: 2, actions: [damage(key('attack@atk_scale'))] }), [], [ammoNote]),
+    recipe('char_4193_lemuen', 2, normal({ atk: key('atk'), aspd: key('attack_speed'),
+      actions: [damage(choose('targetWanted', true,
+        add(key('attack@main_atk_scale'), mul(key('attack@ex_atk_scale'), input('aimSteps'))), 1))],
+      dpsUnsupportedReason: '照準時間とHP・防御力による自動発射時点を含む周期は計算せず、指定した照準段階の1発を評価します。',
+    }), [number('aimSteps', '照準段階（0〜14）', 0, 0, 14)],
+      ['指名手配中の対象は0.25秒ごとの照準段階を指定する。自動発射に至る敵HPの時間変化は推定しない。']),
+    recipe('char_4193_lemuen', 3, burst(1, { label: '爆撃1発', maxTargets: null, actions: [damage(
+      choose('targetInBlastCenter', true, key('attack@proj_atk_scale_1'), key('attack@proj_atk_scale_2')))] }),
+      [bool('targetInBlastCenter', '対象が爆心地の強化範囲内', true)],
+      ['スキル終了時の攻撃力で爆撃1発を評価する。複数の爆撃の重複・命中数・時間変化は計算しない。']),
   ], [
     talent(0, '越境追跡許可', ['DAMAGE', 'ATTACK_BEHAVIOR'], b => [
       { ...ctx('wanted-vulnerability', 'damage_scale', { target: enemy, condition: eq('targetWanted', true) }),
@@ -104,10 +257,7 @@ export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] 
       { ...ctx('extra-ammo', 'add_count', { condition: eq('deploymentSeconds', b.read('interval'), 'GTE') }),
         item: 'AMMO_CAPACITY', operation: 'ADD_VALUE', unit: 'POINT', value: b.read('add_count') },
     ]),
-  ], [bool('targetWanted', '対象が指名手配中'), number('deploymentSeconds', '配置からの経過時間（秒）', 20, 0, 1000, 0.1)], [
-    { skillIndex: 2, reason: '照準中の攻撃力増加と敵HP・防御力による途中発射判定を時間軸で扱う必要がある。' },
-    { skillIndex: 3, reason: '複数の爆撃位置・爆心地・対象ごとの命中上限を確認する必要がある。' },
-  ], [sameTargets]),
+  ], [bool('targetWanted', '対象が指名手配中'), number('deploymentSeconds', '配置からの経過時間（秒）', 20, 0, 1000, 0.1)], [], [sameTargets]),
   operator('char_363_toddi', [
     recipe('char_363_toddi', 1, normal({ defenseReductionRatio: choose('targetMarked', true, mul(-1, key('def')), 0),
       actions: [damage(key('attack@atk_scale'))], periodTotal: { kind: 'CONSTANT_RATE' } }),
@@ -231,14 +381,14 @@ export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] 
     recipe('char_133_mm', 2, normal({ atk: key('atk'), intervalAdd: key('base_attack_time') }))], [
     talent(0, 'ヴィクトリアの探偵', ['ABILITY'], b => [atk(b.read('atk')), speed(b.read('attack_speed'))]),
   ]),
-  operator('char_302_glaze', [recipe('char_302_glaze', 1, normal())], [
+  operator('char_302_glaze', [recipe('char_302_glaze', 1, normal()),
+    recipe('char_302_glaze', 2, normal({ atk: key('atk'), intervalAdd: key('base_attack_time'),
+      dpsUnsupportedReason: '通常射程外への攻撃予備動作を含む周期を計算していないため、1攻撃のダメージのみ表示します。' }))], [
     talent(0, '超長距離狙撃', ['STATUS'], b => [status('distant-stun', '通常射程外の対象をスタン', {
       target: enemy, condition: eq('targetOutsideBaseRange', true), timing: { type: 'EVENT', event: 'ATTACK' },
       probability: { chance: b.read('buff_prob'), rollScope: 'APPLICATION' }, lifetime: { type: 'FIXED_SECONDS', seconds: b.read('stun') },
     })]),
-  ], [bool('targetOutsideBaseRange', '対象が通常の攻撃範囲外')], [
-    { skillIndex: 2, reason: '射程外への攻撃予備動作と距離による実際の攻撃周期を確認する必要がある。' },
-  ]),
+  ], [bool('targetOutsideBaseRange', '対象が通常の攻撃範囲外')]),
   operator('char_4062_totter', [recipe('char_4062_totter', 1, next(key('atk_scale'), 1, { maxTargets: key('max_target') })),
     recipe('char_4062_totter', 2, normal({ aspd: key('attack_speed'), maxTargets: key('attack@s2n.max_target'),
       actions: [damage(choose('actualAttackTargetCount', 1, key('attack@s2c.atk_scale'), 1))] }))], [
@@ -281,15 +431,18 @@ export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] 
   operator('char_379_sesa', [recipe('char_379_sesa', 1, normal({ atk: key('atk') })),
     recipe('char_379_sesa', 2, normal({ actions: [damage(key('attack@atk_scale'))] }), [],
       ['遅延起爆する榴弾が、同じ状態の対象へ継続して命中する場合の攻撃中DPS。'])], [
-    talent(0, '弱点分析', ['DAMAGE'], b => [{ ...ctx('physical-vulnerability', 'damage_scale', { target: enemy, condition: eq('targetBlocked', true) }),
+    talent(0, '弱点分析', ['DAMAGE'], b => [{ ...ctx('physical-vulnerability', 'damage_scale', { target: enemy,
+      condition: { type: 'ALL', conditions: [eq('targetBlocked', true), eq('attack.damageType', 'PHYSICAL')] } }),
       item: 'DAMAGE_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: b.read('damage_scale') }]),
   ], [bool('targetBlocked', '対象がブロックされている')]),
-  operator('char_4078_bdhkgt', [recipe('char_4078_bdhkgt', 1, normal({ atk: key('atk'), aspd: key('attack_speed') }))], [
+  operator('char_4078_bdhkgt', [recipe('char_4078_bdhkgt', 1, normal({ atk: key('atk'), aspd: key('attack_speed') })),
+    recipe('char_4078_bdhkgt', 2, normal({ label: '飛輪の停留中', fixedAttackInterval: key('interval'), maxTargets: null,
+      duration: key('projectile_delay_time'), actions: [damage(key('atk_scale'))],
+      periodTotal: { kind: 'UNSUPPORTED', reason: '飛輪の移動中の命中数と停留開始・終了時点を含む総量は計算しません。' } }), [],
+      ['飛輪が停止位置に到達した後、対象が範囲内にいる1周期と毎秒値を評価する。'])], [
     talent(0, '荒野を背に', ['ABILITY', 'DEPLOYMENT'], b => [atk(b.read('atk'), 'atk', { condition: eq('firstDeployment', true) }),
       status('deployment-cost', '初回配置コスト-3', { condition: eq('firstDeployment', true) })]),
-  ], [bool('firstDeployment', '初回配置', true)], [
-    { skillIndex: 2, reason: '飛輪の移動・停止位置と接触する敵ごとの周期命中数を確認する必要がある。' },
-  ]),
+  ], [bool('firstDeployment', '初回配置', true)]),
   operator('char_158_milu', [recipe('char_158_milu', 1, normal({ atk: key('atk') })),
     recipe('char_158_milu', 2, burst(key('atk_scale'), { maxTargets: null, actions: [damage(key('atk_scale'), input('bombHits'))] }),
       [number('bombHits', '各対象に命中する爆弾数', 1, 1, 3)], ['爆弾の配置確率は推定せず、入力した命中数で計算する。', sameTargets])], [
@@ -377,14 +530,16 @@ export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] 
     { skillIndex: 2, reason: '灼痕弾と各灼熱の跡の位置・爆発命中数を確認する必要がある。' },
   ]),
   operator('char_197_poca', [recipe('char_197_poca', 1, normal({ atk: key('atk') })),
-    recipe('char_197_poca', 2, normal({ atk: key('atk'), maxTargets: key('attack@max_target') }))], [
+    recipe('char_197_poca', 2, normal({ atk: key('atk'), maxTargets: key('attack@max_target') })),
+    recipe('char_197_poca', 3, normal({ label: 'バインドランス命中中', atk: key('atk'), maxTargets: key('max_target'),
+      fixedAttackInterval: key('hit_interval'), duration: key('hit_duration'),
+      periodTotal: { kind: 'UNSUPPORTED', reason: '初回・終了時点を含む総命中数は計算しません。' } }), [],
+      ['ランス命中後の1秒ごとのダメージを計算する。'])], [
     talent(0, '大物猟', ['DAMAGE'], b => [{ ...ctx('weight-defense-ignore', 'def_penetrate', { target: attack, condition: eq('targetWeight', b.read('value'), 'GTE') }),
       item: 'DEFENSE_IGNORE_RATIO', operation: 'IGNORE_RATIO', unit: 'RATIO', value: b.read('def_penetrate') }]),
     talent(1, '学生の鑑', ['ABILITY'], b => [atk(b.read('atk'), 'atk', { timing: { type: 'CONTINUOUS', while: 'IN_SQUAD' },
       target: { ...self, side: 'ALLY', scope: 'SQUAD', factionIds: ['student'], filterLabels: { student: 'ウルサス学生自治団' } } })]),
-  ], [number('targetWeight', '対象の重量ランク', 3, 0, 10)], [
-    { skillIndex: 3, reason: '通常攻撃を停止する周期攻撃の初回命中時刻・終了境界を確認する必要がある。' },
-  ]),
+  ], [number('targetWeight', '対象の重量ランク', 3, 0, 10)]),
   operator('char_129_bluep', [recipe('char_129_bluep', 1, next(key('atk_scale'), 1, { maxTargets: 2 })),
     recipe('char_129_bluep', 2, normal({ atk: key('atk'), maxTargets: 3, actions: [
       damage(1, key('attack@times'), { label: '主対象', targets: 1 }),

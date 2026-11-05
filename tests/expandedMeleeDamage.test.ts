@@ -43,6 +43,392 @@ function close(actual: number | null, expected: number) {
 const buffed = (attack: number, ratio: number) => Math.floor(attack * (1 + ratio) + 1e-9)
 const physical = (attack: number, defense: number) => Math.max(attack - defense, attack * 0.05)
 
+test('帰溟スペクター・ヴァーダント・若葉睦は本体の属性/連撃/HP条件を保ち、身替りを合算しない', () => {
+  for (const index of [1, 2, 3]) {
+    const { result, row } = at('ghost2', index, 1000, { targetHpAtLeastSelf: true, actualAttackTargetCount: index === 3 ? 2 : 1 })
+    const power = buffed(result.stats.attack, [0, 1.5, 1.3, 2.6][index])
+    close(row.perAttack, physical(power, 1000) + (index === 3 ? physical(power * 0.7, 1000) : 0))
+    close(result.attackInterval, (result.stats.baseAttackTime + (index === 3 ? 1 : 0)) / (index === 2 ? 1.5 : 1))
+  }
+  const verdant = at('vrdant', 2, 60)
+  close(verdant.row.perAttack, verdant.result.stats.attack * 0.4)
+  close(verdant.result.attackInterval, verdant.result.stats.baseAttackTime / 1.8)
+  const mortis = at('mortis', 2, 60, { actualAttackTargetCount: 5 })
+  close(mortis.row.allTargetsPerAttack, mortis.result.stats.attack * 1.2 * 3 * 0.4)
+  close(mortis.row.perAttack, mortis.row.allTargetsPerAttack / 5)
+  close(mortis.result.attackInterval, mortis.result.stats.baseAttackTime - 0.3)
+})
+
+test('ブレミシャインの睡眠140%は物理と追加術に一度乗り、治療をダメージに含めない', () => {
+  for (const sleeping of [false, true]) for (const index of [1, 2, 3]) {
+    const { result, row } = at('blemsh', index, 1000, { targetSleeping: sleeping, enemyResistance: 60 })
+    const atk = buffed(result.stats.attack, index === 1 ? 0 : 1.1) * (sleeping ? 1.4 : 1)
+    close(row.perAttack, physical(atk * (index === 1 ? 2.6 : 1), 1000) + (index === 3 ? atk * 0.4 : 0))
+  }
+})
+
+test('クラウンスレイヤーは自身未被弾対象への物理120%を適用し、S3周期を捏造しない', () => {
+  for (const dealt of [false, true]) for (const index of [1, 2, 3]) {
+    const { result, row } = at('crosly', index, 1000, { targetHasDamagedSelf: dealt })
+    close(row.perAttack, physical(buffed(result.stats.attack, index === 1 ? 1 : 0) * (index === 2 ? 5 : index === 3 ? 2.5 : 1), 1000)
+      * (index === 3 ? 2 : 1) * (dealt ? 1 : 1.2))
+    if (index !== 1) assert.equal(row.dps, null)
+  }
+})
+
+test('斬業ホシグマは不屈35%上限と通常/反撃/盾/退場前の段階を分離する', () => {
+  for (const health of [100, 65, 30, 0]) {
+    const ratio = 0.35 * Math.min(1, (100 - health) / 70)
+    const normal = at('hsgma2', 1, 60, { selfHpPercent: health })
+    close(normal.row.perAttack, buffed(normal.result.stats.attack, 0.7 + ratio) * 0.4)
+    const counter = at('hsgma2', 1, 60, { selfHpPercent: health, damagePhase: 'counter' })
+    close(counter.row.perAttack, buffed(counter.result.stats.attack, 0.7 + ratio) * 1.75 * 0.4)
+    assert.equal(counter.row.dps, null)
+  }
+  const strike = at('hsgma2', 2, 60, { actualAttackTargetCount: 3 })
+  close(strike.row.allTargetsPerAttack, strike.result.stats.attack * 0.9 * 3 * 0.4 * 3)
+  const shield = at('hsgma2', 2, 60, { damagePhase: 'shield', actualAttackTargetCount: 5 })
+  close(shield.row.allTargetsPerAttack, shield.result.stats.attack * 1.3 * 0.4 * 5)
+  assert.equal(shield.row.dps, null)
+  for (const last of [false, true]) {
+    const { result, row } = at('hsgma2', 3, 60, { finalStand: last, actualAttackTargetCount: 3 })
+    close(row.allTargetsPerAttack, buffed(result.stats.attack, 2.3) * (last ? 4 : 2) * 0.4 * 3)
+    assert.equal(result.model?.duration, last ? 11 : 32)
+  }
+})
+
+test('血掟テキサスS1はATK加算90%と固定400毒を分け、初撃破後だけASPD8を失う', () => {
+  for (const killed of [false, true]) {
+    const { result, row } = at('texas2', 1, 1000, { firstKillDone: killed, enemyResistance: 60 })
+    close(row.perAttack, physical(buffed(result.stats.attack, 0.9), 1000))
+    close(row.damageOverTimeDps, 160)
+    close(result.attackInterval, result.stats.baseAttackTime / (killed ? 1 : 1.08))
+  }
+  close(at('texas2', 1, 0, { dotActive: false }).row.damageOverTimeDps, 0)
+})
+
+test('血掟テキサスS2は付与済みRES30%低下の2連撃だけ評価し、未確認の配置時段階を停止する', () => {
+  const { result, row } = at('texas2', 2, 60)
+  close(row.perAttack, buffed(result.stats.attack, 0.75) * 2 * (1 - 60 * 0.7 / 100))
+  const deploy = output('texas2', 2, { damagePhase: 'deploy' })
+  assert.deepEqual(deploy.rows, [])
+  assert.ok(deploy.unsupportedReasons.some(reason => reason.includes('適用順序')))
+})
+
+test('血掟テキサスS3は通常物理1体と毎秒術4体を区別し、配置時165%2連を別段階にする', () => {
+  const { result, row } = at('texas2', 3, 1000, { actualAttackTargetCount: 4, enemyResistance: 60 })
+  const atk = buffed(result.stats.attack, 0.2)
+  close(row.allTargetsPerAttack, physical(atk, 1000))
+  close(row.damageOverTimeDps, atk * 1.3 * 0.4)
+  close(row.allTargetsCombinedDps, physical(atk, 1000) / result.attackInterval! + atk * 1.3 * 0.4 * 4)
+  const deploy = at('texas2', 3, 60, { damagePhase: 'deploy', actualAttackTargetCount: 6 })
+  close(deploy.row.allTargetsPerAttack, buffed(deploy.result.stats.attack, 0.2) * 1.65 * 2 * 0.4 * 6)
+})
+
+test('キリンRヤトウは2/6/16連撃とS3接触1回の追加術を対応させ、未検証の動作DPSを出さない', () => {
+  for (const combo of [false, true]) {
+    const { result, row } = at('yato2', 1, 1000, { comboThirdAttack: combo, enemyResistance: 60 })
+    const atk = buffed(result.stats.attack, 0.13)
+    close(row.perAttack, (physical(atk, 1000) + atk * 0.2 * 0.4) * (combo ? 6 : 2))
+    assert.equal(row.dps, null)
+    assert.equal(result.attackInterval, null)
+  }
+  const second = at('yato2', 2, 1000, { actualAttackTargetCount: 3, enemyResistance: 60 })
+  const atk = buffed(second.result.stats.attack, 0.13)
+  close(second.row.allTargetsPerAttack, (physical(atk * 1.5, 1000) + atk * 0.2 * 3.75 * 0.4) * 16 * 3)
+  const third = at('yato2', 3, 1000, { enemyResistance: 60 })
+  close(third.row.perAttack, physical(atk * 3, 1000) + atk * 0.2 * 3 * 0.4)
+  assert.equal(third.row.dps, null)
+})
+
+test('Docは防御120無視と教官120%を別演算し、弾薬を固定時間に置き換えない', () => {
+  for (const blocked of [false, true]) {
+    const { result, row } = at('rdoc', 1, 1000, { targetBlockedBySelf: blocked })
+    close(row.perAttack, physical(result.stats.attack * (blocked ? 1 : 1.2), 880))
+    close(result.attackInterval, result.stats.baseAttackTime - 0.7)
+  }
+})
+
+test('ホルンは近接単体と遠距離範囲を分け、S2のみ近接でも範囲、OD時の追加術を保持する', () => {
+  const blocked = at('horn', 1, 1000, { sourceIsBlocking: true })
+  close(blocked.row.perAttack, physical(buffed(blocked.result.stats.attack, 0.2) * 2.8, 1000))
+  assert.equal(blocked.result.maxTargetCount, 1)
+  assert.ok(output('horn', 1, { sourceIsBlocking: true, actualAttackTargetCount: 2 }).unsupportedReasons.length)
+  const ranged = at('horn', 1, 1000, { sourceIsBlocking: false, actualAttackTargetCount: 4 })
+  close(ranged.row.allTargetsPerAttack, physical(buffed(ranged.result.stats.attack, 0.2) * 2.8, 1000) * 4)
+  for (const stage of ['normal', 'overdrive']) {
+    const { result, row } = at('horn', 2, 1000, { sourceIsBlocking: true, damagePhase: stage, actualAttackTargetCount: 4, enemyResistance: 60 })
+    const atk = buffed(result.stats.attack, 0.2)
+    close(row.allTargetsPerAttack, (physical(atk * 2.4, 1000) + (stage === 'overdrive' ? atk * 0.6 * 0.4 : 0)) * 4)
+  }
+  assert.deepEqual(output('horn', 2, { damagePhase: 'discharge' }).rows, [])
+  for (const overdrive of [false, true]) for (const revived of [false, true]) {
+    const { result, row } = at('horn', 3, 1000, { overdrive, revived })
+    close(row.perAttack, physical(buffed(result.stats.attack, 0.2 + (overdrive ? 1.4 : 0.7)), 1000))
+    close(result.attackInterval, (result.stats.baseAttackTime - 1.8) / (revived ? 1.18 : 1))
+  }
+})
+
+test('アッシュロックS2は65%の割合短縮とブロック不可を固定し、素質8/16%を加算する', () => {
+  for (const ground of [false, true]) for (const index of [1, 2]) {
+    const { result, row } = at('ashlok', index, 1000, { allAdjacentGround: ground, sourceIsBlocking: true, actualAttackTargetCount: index === 2 ? 3 : 1 })
+    close(row.perAttack, physical(buffed(result.stats.attack, (ground ? 0.16 : 0.08) + (index === 1 ? 1 : 0.55)), 1000))
+    close(result.attackInterval, result.stats.baseAttackTime * (index === 1 ? 1 : 0.35))
+    assert.equal(result.maxTargetCount, index === 1 ? 1 : null)
+  }
+})
+
+test('ファイヤーホイッスルの未ブロックATK12%と燃焼50/85%は強撃185%と独立する', () => {
+  for (const blocking of [false, true]) for (const index of [1, 2]) {
+    const { result, row } = at('firwhl', index, 1000, { sourceIsBlocking: blocking, enemyResistance: 60 })
+    const atk = buffed(result.stats.attack, blocking ? 0 : 0.12)
+    close(row.perAttack, physical(atk * (index === 1 ? 1.85 : 1), 1000))
+    close(row.damageOverTimeDps, atk * (index === 1 ? 0.5 : 0.85) * 0.4)
+    assert.equal(result.maxTargetCount, blocking ? 1 : null)
+  }
+  close(at('firwhl', 2, 0, { burnActive: false }).row.damageOverTimeDps, 0)
+})
+
+test('マツキリの重装・補助向け10%を自身に誤適用せず、グラベルは1動作合計を返す', () => {
+  const makiri = at('makiri', 2, 1000)
+  close(makiri.row.perAttack, physical(buffed(makiri.result.stats.attack, 0.7), 1000))
+  for (const index of [1, 2]) {
+    const { result, row } = at('gravel', index, 1000)
+    close(row.perAttack, physical(result.stats.attack, 1000))
+    assert.equal(result.model?.duration, index === 1 ? 12 : 10)
+  }
+})
+
+test('第2群の未検証段階/状態変化に期間総ダメージを付けず、属性限定素質を再評価する', () => {
+  for (const [id, index] of [['yato2', 1], ['horn', 2], ['ghost2', 3], ['texas2', 3], ['mortis', 2], ['hsgma2', 3]] as const) {
+    const [entry] = getDamageThreeComparisonEntries([record(id, index)])
+    const evaluated = evaluateDamageThreeComparisonEntry(entry, { defense: 1000, resistance: 60, enemyCount: 1 })
+    assert.equal(evaluated.totalDamage, null)
+  }
+  const skill = record('crosly', 1), source = sources.find(s => s.operatorId === skill.operatorId)!
+  const virtual = buildDamageCalculatorThreeOutput({ operator: skill, skill, phaseIndex: source.phaseIndex,
+    operatorLevel: source.profile.phases[source.phaseIndex].maxLevel!, trust: 100, skillLevelIndex: source.skillLevelIndex,
+    virtualMainAttackType: 'ARTS', enemy: { defense: 1000, resistance: 60 }, conditions: { guard: { targetHasDamagedSelf: false } } })
+  assert.deepEqual(virtual.unsupportedReasons, [])
+  close(virtual.rows[0].perAttack, buffed(virtual.stats.attack, 1) * 0.4)
+})
+
+test('アンダーフローは同時対象数と固定80/160の毎秒術ダメージを分けて計算する', () => {
+  for (const sea of [false, true]) for (const index of [1, 2]) {
+    const count = index === 2 ? 4 : 1
+    const { result, row } = at('udflow', index, 1000, { targetSeaMonster: sea, actualAttackTargetCount: count, enemyResistance: 60 })
+    close(row.perAttack, physical(buffed(result.stats.attack, 0.5), 1000))
+    close(row.damageOverTimeDps, (sea ? 160 : 80) * 0.4)
+    close(row.allTargetsCombinedDps, (row.perAttack / result.attackInterval! + row.damageOverTimeDps!) * count)
+    close(result.attackInterval, result.stats.baseAttackTime / (index === 2 ? 1.5 : 1))
+  }
+  assert.equal(at('udflow', 1, 0, { dotActive: false }).row.damageOverTimeDps, null)
+  assert.ok(output('udflow', 2, { actualAttackTargetCount: 5 }).unsupportedReasons.length)
+})
+
+test('オッダは30回到達のATK15%と主対象/周囲50%を防御軽減前に適用する', () => {
+  for (const hits of [29, 30]) for (const index of [1, 2]) {
+    const { result, row } = at('odda', index, 1000, { physicalDamageCount: hits, actualAttackTargetCount: 3 })
+    const atk = buffed(result.stats.attack, (hits >= 30 ? 0.15 : 0) + (index === 2 ? 1 : 0))
+    const power = atk * (index === 1 ? 2.4 : 1)
+    close(row.allTargetsPerAttack, physical(power, 1000) + 2 * physical(power * 0.5, 1000))
+    close(row.perAttack, row.allTargetsPerAttack / 3)
+  }
+})
+
+test('オーロラは凍結330%を選択した命中にだけ適用し、ブロック3でも単体攻撃を保つ', () => {
+  for (const frozen of [false, true]) {
+    const { result, row } = at('aurora', 2, 1000, { targetFrozen: frozen })
+    close(row.perAttack, physical(buffed(result.stats.attack, 0.75) * (frozen ? 3.3 : 1), 1000))
+    close(result.attackInterval, result.stats.baseAttackTime + 0.25)
+  }
+  assert.equal(at('aurora', 1).result.maxTargetCount, 1)
+  assert.ok(output('aurora', 1, { actualAttackTargetCount: 2 }).unsupportedReasons.length)
+})
+
+test('キララS1は主物理1回と追加術150%を区別して全対象に適用する', () => {
+  const { result, row } = at('kirara', 1, 1000, { actualAttackTargetCount: 4, enemyResistance: 60 })
+  close(row.perAttack, physical(result.stats.attack, 1000) + result.stats.attack * 1.5 * 0.4)
+  close(row.allTargetsPerAttack, row.perAttack * 4)
+  assert.deepEqual(row.attackComponents.map(component => component.role), ['MAIN', 'ADDITIONAL'])
+})
+
+test('スワイヤーの周囲味方用素質を自身に加えず、教官の非ブロック120%を一度適用する', () => {
+  for (const blocked of [false, true]) {
+    const { result, row } = at('swire', 2, 1000, { targetBlockedBySelf: blocked })
+    close(row.perAttack, physical(buffed(result.stats.attack, 0.8) * (blocked ? 1 : 1.2), 1000))
+  }
+})
+
+test('ファントムの強化は攻撃前残数で200%から0%へ変わり、虚影を二重加算しない', () => {
+  for (const stacks of [0, 1, 10]) {
+    const { result, row } = at('phatom', 2, 1000, { remainingStacks: stacks })
+    close(row.perAttack, physical(buffed(result.stats.attack, 0.2 * stacks), 1000))
+  }
+  const blast = at('phatom', 3, 1000, { actualAttackTargetCount: 4 })
+  close(blast.row.allTargetsPerAttack, physical(blast.result.stats.attack * 3, 1000) * 4)
+  assert.equal(blast.row.dps, null)
+  assert.ok(output('phatom', 2, { remainingStacks: 11 }).unsupportedReasons.length)
+})
+
+test('カフカS2の配置時400%範囲攻撃と15秒の単体通常術攻撃に素質15%を適用する', () => {
+  const normal = at('kafka', 2, 60)
+  close(normal.row.perAttack, buffed(normal.result.stats.attack, 0.15) * 0.4)
+  assert.equal(normal.result.model?.duration, 15)
+  assert.ok(output('kafka', 2, { actualAttackTargetCount: 2 }).unsupportedReasons.length)
+  const blast = at('kafka', 2, 60, { damagePhase: 'deploy', actualAttackTargetCount: 3 })
+  close(blast.row.allTargetsPerAttack, buffed(blast.result.stats.attack, 0.15) * 4 * 0.4 * 3)
+  assert.equal(blast.row.dps, null)
+})
+
+test('アスカロンは毒0..3重複を現在ATKで評価し、S1倍率と2ヒットを毒に重ねない', () => {
+  for (const stacks of [0, 1, 3]) for (const index of [1, 2, 3]) {
+    const { result, row } = at('ascln', index, 1000, { dotStacks: stacks, adjacentHighTile: true, enemyResistance: 60 })
+    const atk = buffed(result.stats.attack, index === 2 ? 1.3 : index === 3 ? 0.5 : 0)
+    close(row.perAttack, physical(atk * (index === 1 ? 2.1 : 1), 1000) * (index === 1 ? 2 : 1))
+    close(row.damageOverTimeDps, atk * 0.1 * stacks * 0.4)
+    if (index !== 1) close(result.attackInterval, (result.stats.baseAttackTime - (index === 3 ? 1.5 : 0)) / 1.14)
+  }
+  const noHigh = at('ascln', 2)
+  close(noHigh.result.attackInterval, noHigh.result.stats.baseAttackTime / 1.08)
+  assert.ok(output('ascln', 1, { dotStacks: 4 }).unsupportedReasons.length)
+})
+
+test('リーは周囲1体時だけ速度倍増し、マーク爆発300%から900%までを独立して評価する', () => {
+  for (const count of [0, 1, 2]) for (const index of [1, 2, 3]) {
+    const { result, row } = at('lmlee', index, 1000, { nearbyEnemyCount: count })
+    close(row.perAttack, physical(buffed(result.stats.attack, index === 1 ? 0.6 : index === 3 ? 0.5 : 0), 1000))
+    close(result.attackInterval, result.stats.baseAttackTime / (1 + (count === 1 ? 28 : 14) / 100 + (index === 2 ? 0.3 : 0)))
+  }
+  for (const hits of [0, 15, 30]) {
+    const { result, row } = at('lmlee', 2, 60, { damagePhase: 'explosion', markHits: hits, actualAttackTargetCount: 5 })
+    close(row.allTargetsPerAttack, result.stats.attack * (3 + 0.2 * hits) * 0.4 * 5)
+    assert.equal(row.dps, null)
+  }
+})
+
+test('ベナとカゼマルは本体の物理攻撃を計算し、身替りの術攻撃を混ぜない', () => {
+  const first = at('bena', 1, 1000)
+  close(first.row.perAttack, physical(buffed(first.result.stats.attack, 1), 650))
+  const second = at('bena', 2, 1000)
+  close(second.row.perAttack, physical(buffed(second.result.stats.attack, 0.9), 1000))
+  close(second.result.attackInterval, second.result.stats.baseAttackTime / 1.8)
+  const kazemaru = at('kazema', 1, 1000)
+  close(kazemaru.row.perAttack, physical(kazemaru.result.stats.attack * 3.5, 1000))
+  assert.deepEqual(kazemaru.row.attackComponents.map(component => component.damageType), ['PHYSICAL'])
+})
+
+test('ミヅキは範囲全員への物理攻撃と低HPの1/2/3体への術攻撃を別々に集計する', () => {
+  for (const count of [1, 2, 5]) for (const index of [1, 2, 3]) {
+    const { result, row } = at('mizuki', index, 1000, { actualAttackTargetCount: count, lowHpEnemyInRange: true, enemyResistance: 60 })
+    const atk = buffed(result.stats.attack, 0.1 + (index === 2 ? 0.3 : index === 3 ? 1.5 : 0))
+    const main = physical(atk * (index === 1 ? 3 : 1), 1000) * count
+    const additional = atk * 0.5 * (index === 1 ? 3 : 1) * 0.4 * Math.min(count, index)
+    close(row.allTargetsPerAttack, main + additional)
+    close(row.perAttack, (main + additional) / count)
+  }
+  const noLow = at('mizuki', 2)
+  close(noLow.row.perAttack, buffed(noLow.result.stats.attack, 0.3) * 1.5)
+})
+
+test('滌火ジェシカの通常射撃と防盾砲弾は倍率・対象数・時間を分離する', () => {
+  for (const index of [1, 2, 3]) {
+    const { result, row } = at('jesca2', index, 1000)
+    close(row.perAttack, physical(buffed(result.stats.attack, [0, 0.7, 0.75, 3.1][index]), 1000))
+    close(result.attackInterval, result.stats.baseAttackTime + (index === 2 ? -0.9 : index === 3 ? 0.6 : 0))
+  }
+  const shell = at('jesca2', 3, 1000, { damagePhase: 'shell', actualAttackTargetCount: 3 })
+  close(shell.row.allTargetsPerAttack, physical(buffed(shell.result.stats.attack, 3.1) * 2.5, 1000) * 3)
+  assert.equal(shell.row.dps, null)
+})
+
+test('ヴェトチキはブロック中の3体まで、ツェルニーはスキル中術変換とATK80%のみ', () => {
+  const branch = at('branch', 2, 1000, { actualAttackTargetCount: 3 })
+  close(branch.row.allTargetsPerAttack, physical(buffed(branch.result.stats.attack, 1.5), 1000) * 3)
+  assert.ok(output('branch', 2, { actualAttackTargetCount: 4 }).unsupportedReasons.length)
+  const czerny = at('pianst', 1, 60)
+  close(czerny.row.perAttack, buffed(czerny.result.stats.attack, 0.8) * 0.4)
+  assert.equal(czerny.row.attackComponents.length, 1)
+})
+
+test('ウユウは選んだランダム効果のASPD28と次の不意打ち150%を別適用する', () => {
+  for (const random of ['speed', 'enemySpeed', 'dodge', 'block']) for (const ready of [false, true]) {
+    const { result, row } = at('nothin', 2, 1000, { randomEffect: random, ambushReady: ready })
+    close(row.perAttack, physical(buffed(result.stats.attack, 0.6) * (ready ? 1.5 : 1), 1000))
+    close(result.attackInterval, result.stats.baseAttackTime / (random === 'speed' ? 1.28 : 1))
+    assert.equal(result.maxTargetCount, 1)
+  }
+})
+
+test('フィグリーノS2とペナンスS2の毎秒攻撃は通常攻撃を足さず固定1秒で評価する', () => {
+  for (const blocked of [false, true]) {
+    const { result, row } = at('talr', 2, 1000, { targetBlockedBySelf: blocked, actualAttackTargetCount: 4 })
+    close(row.perAttack, physical(result.stats.attack * 1.6, 1000) * (blocked ? 1 : 1.2))
+    close(row.allTargetsDps, row.perAttack * 4)
+    assert.equal(result.attackInterval, 1)
+  }
+  const penance = at('judge', 2, 60, { actualAttackTargetCount: 5 })
+  close(penance.row.perAttack, penance.result.stats.attack * 1.4 * 0.4)
+  close(penance.row.allTargetsDps, penance.row.perAttack * 5)
+  assert.equal(penance.result.attackInterval, 1)
+})
+
+test('ペナンスは過充電時に物理と追加術の両方を200%にし、反撃は通常攻撃に含めない', () => {
+  for (const overcharged of [false, true]) {
+    const { result, row } = at('judge', 1, 1000, { overcharged, enemyResistance: 60 })
+    const power = result.stats.attack * (overcharged ? 2 : 1)
+    close(row.perAttack, physical(power, 1000) + power * 2 * 0.4)
+    assert.equal(row.attackComponents.length, 2)
+  }
+  const third = at('judge', 3, 1000)
+  close(third.row.perAttack, physical(buffed(third.result.stats.attack, 4), 1000))
+  close(third.result.attackInterval, third.result.stats.baseAttackTime + 0.9)
+})
+
+test('防御型スキルでも継続する通常攻撃を基礎ATKで計算し、防御をATKへ誤加算しない', () => {
+  for (const [id, index] of [['blackd', 2], ['bison', 1], ['snakek', 1], ['bubble', 1], ['yak', 1], ['yak', 2], ['beagle', 1],
+    ['aurora', 1], ['phatom', 1], ['branch', 1]] as const) {
+    const { result, row } = at(id, index, 1000)
+    close(row.perAttack, physical(result.stats.attack, 1000))
+    close(row.dps, row.perAttack / result.stats.baseAttackTime)
+    assert.equal(result.maxTargetCount, 1)
+  }
+})
+
+test('追加24人の元資料は完全スキルを保持し、未確認入力・特性変更・数値欠落で閉じる', () => {
+  const ids = ['blackd', 'bison', 'snakek', 'bubble', 'yak', 'beagle', 'udflow', 'odda', 'aurora', 'kirara', 'swire',
+    'phatom', 'kafka', 'ascln', 'lmlee', 'bena', 'kazema', 'mizuki', 'jesca2', 'branch', 'pianst', 'nothin', 'talr', 'judge']
+  const additions = EXPANDED_MELEE_DEFINITIONS.filter(d => ids.includes(d.operatorId.split('_').at(-1)!))
+  assert.equal(additions.length, 24)
+  assert.equal(additions.reduce((sum, d) => sum + d.recipes.length, 0), 43)
+  for (const d of additions) {
+    const src = sources.find(s => s.operatorId === d.operatorId)!
+    assert.equal('passives' in src || 'coverage' in src, false)
+    assert.equal(d.recipes.length + d.deferredSkills!.length, src.skills.length)
+  }
+  assert.ok(output('kafka', 2, { damagePhase: 'unknown' }).unsupportedReasons.length)
+  assert.ok(output('lmlee', 2, { markHits: 31 }).unsupportedReasons.length)
+  const missing = record('mizuki', 1)
+  for (const candidate of missing.operatorProfile!.talents![0].candidates!) {
+    candidate.blackboard = candidate.blackboard!.filter(value => value.key !== 'attack@mizuki_t_1.atk_scale')
+  }
+  assert.ok(outputRecord(missing).unsupportedReasons.length)
+  const changed = record('ascln', 2)
+  changed.skillLevels!.at(-1)!.blackboard![0].value = 20
+  assert.deepEqual(outputRecord(changed).rows, [])
+})
+
+test('新技能の属性比較は主攻撃だけ変換し、ミヅキの限定対象追加術を保持する', () => {
+  const skill = record('mizuki', 1), source = sources.find(s => s.operatorId === skill.operatorId)!
+  const result = buildDamageCalculatorThreeOutput({ operator: skill, skill, phaseIndex: source.phaseIndex,
+    operatorLevel: source.profile.phases[source.phaseIndex].maxLevel!, trust: 100, skillLevelIndex: source.skillLevelIndex,
+    virtualMainAttackType: 'ARTS', enemy: { defense: 1000, resistance: 60 },
+    conditions: { guard: { actualAttackTargetCount: 4, lowHpEnemyInRange: false } } })
+  assert.deepEqual(result.unsupportedReasons, [])
+  close(result.rows[0].allTargetsPerAttack, result.stats.attack * 3 * 0.4 * 4 + result.stats.attack * 1.5 * 0.4)
+  assert.equal(result.rows[0].attackComponents.filter(c => c.role === 'ADDITIONAL').length, 1)
+})
+
 const bulkSuffixes = ['weedy', 'glady', 'flamtl', 'zumama', 'fuze', 'tachak', 'almond', 'varkis', 'sophia',
   'snsant', 'cement', 'dagda', 'takila', 'mantic', 'morgan', 'laios', 'noirc2', 'red', 'wscoot']
 
@@ -272,9 +658,9 @@ test('属性比較は新規の主攻撃の全ヒットを術化し、ウィン�
   }
 })
 
-test('近接追加85人の134技能が実データから有限結果を返し、残り39技能は理由付き保留', () => {
-  assert.equal(sources.length, 85)
-  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 134)
+test('近接追加123人の210技能が実データから有限結果を返し、残り51技能は理由付き保留', () => {
+  assert.equal(sources.length, 123)
+  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 210)
   for (const definition of EXPANDED_MELEE_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     assert.equal(definition.recipes.length + (definition.deferredSkills?.length ?? 0), source.skills.length)

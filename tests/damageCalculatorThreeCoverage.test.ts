@@ -105,7 +105,7 @@ test('登録90スキルを対応74・条件付き7・保留9に分類し、計�
   assert.equal(new Set(coverage.map(row => row.skill.id)).size, 90)
   assert.deepEqual(Object.fromEntries(Object.keys(COVERAGE_STATUS_LABELS).map(status =>
     [status, coverage.filter(row => row.status === status).length])),
-  { SUPPORTED: 74, CONDITIONAL: 7, PENDING: 9, UNSUPPORTED: 0 })
+  { SUPPORTED: 74, CONDITIONAL: 7, PENDING: 9, UNSUPPORTED: 0, NOT_APPLICABLE: 0 })
   assert.equal(coverage.filter(row => row.calculationScope.length > 0).length, 81)
   for (const row of coverage) assert.equal(row.selection?.levelIndex, 9)
   const defaults = catalog.map(skill => calculate(skill))

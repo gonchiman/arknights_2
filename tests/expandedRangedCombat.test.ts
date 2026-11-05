@@ -10,6 +10,7 @@ import type { SkillRecord } from '../src/types/skill.ts'
 import type { GuardConditions } from '../src/lib/guardCombatTypes.ts'
 import { evaluateDamageThreeComparisonEntry, getDamageThreeComparisonEntries } from '../src/lib/damageCalculatorThreeComparison.ts'
 import { buildDamageCalculatorThreeCoverage } from '../src/lib/damageCalculatorThreeCoverage.ts'
+import { getOperatorPassives } from '../src/lib/operatorProfile.ts'
 
 const sources = rawSources as unknown as ExpandedOperatorSource[]
 function record(id: string, index: number): SkillRecord {
@@ -46,13 +47,15 @@ const physical = (attack: number, defense: number) => Math.max(attack - defense,
 const buff = (attack: number, ratio: number) => Math.floor(attack * (1 + ratio) + 1e-9)
 
 test('追加狙撃の全技能を計算対応または具体的な保留理由に分け、全素質を欠落なく構造化する', () => {
-  assert.equal(EXPANDED_RANGED_DEFINITIONS.length, 38)
+  assert.equal(EXPANDED_RANGED_DEFINITIONS.length, 49)
   for (const definition of EXPANDED_RANGED_DEFINITIONS) {
     const source = sources.find(s => s.operatorId === definition.operatorId)!
     assert.deepEqual([...definition.recipes.map(r => r.skillIndex), ...(definition.deferredSkills ?? []).map(s => s.skillIndex)].sort(),
       source.skills.map(s => s.skillIndex).sort())
     const talents = buildExpandedTalentStructures([record(source.operatorId, 1)])
-    assert.equal(talents.length, source.profile.talents.length)
+    assert.equal(talents.length, getOperatorPassives(source.profile, source.phaseIndex,
+      source.profile.phases[source.phaseIndex].maxLevel!, 1).sources.filter(source => source.sourceKind === 'TALENT').length,
+    source.operatorName)
     for (const talent of talents) assert.deepEqual(talent.issues, [], `${source.operatorName} ${talent.basicInfo.talentName}`)
     for (const recipe of definition.recipes) {
       const result = output(definition.operatorId, recipe.skillIndex)
@@ -305,6 +308,209 @@ test('新規狙撃は未確認の素質数値や特性への変更を検出し�
     assert.ok(changed.unsupportedReasons.length, id)
     assert.deepEqual(changed.rows, [])
   }
+})
+
+test('パゼオンカ本体は会心の軽減後期待値、3連撃、正面倍率とタイプライター防御低下を区別する', () => {
+  for (const [state, reduction] of [['NONE', 0], ['NORMAL', 0.18], ['ADJACENT', 0.23]] as const) {
+    const { result, row } = at('char_4055_bgsnow', 1, 1000, { typewriterDefenseReduction: state })
+    const attack = buff(result.stats.attack, 0.6), defense = 1000 * (1 - reduction)
+    close(row.perAttack, physical(attack, defense) * 0.6 + physical(attack * 2.25, defense) * 0.4)
+    const s2 = at('char_4055_bgsnow', 2, 1000, { typewriterDefenseReduction: state })
+    close(s2.row.perAttack, physical(s2.result.stats.attack * 2.3, defense) * 3)
+    assert.equal(s2.row.dps, null)
+    for (const forward of [false, true]) {
+      const s3 = at('char_4055_bgsnow', 3, 1000, { typewriterDefenseReduction: state, targetInForwardThreeTiles: forward })
+      close(s3.row.perAttack, physical(s3.result.stats.attack * (forward ? 2.55 : 2), defense))
+      close(s3.result.attackInterval, s3.result.stats.baseAttackTime - 0.6)
+    }
+  }
+  assert.ok(output('char_4055_bgsnow', 1, { typewriterDefenseReduction: 'UNKNOWN' }).unsupportedReasons.length)
+})
+
+test('ケイパーの確率150%と追加投擲、ブリギッドの追加4回を各軽減し帰還周期は計算しない', () => {
+  for (const index of [1, 2]) {
+    const { result, row } = at('char_4100_caper', index, 500)
+    const attack = buff(result.stats.attack, index === 1 ? 0 : 0.6) * (index === 1 ? 2.3 : 1)
+    close(row.perAttack, (physical(attack, 500) * 0.75 + physical(attack * 1.5, 500) * 0.25) * (index === 1 ? 1 : 2))
+    assert.equal(row.dps, null)
+    assert.equal(result.attackInterval, null)
+  }
+  const { result, row } = at('char_4177_brigid', 2, 500)
+  close(row.perAttack, physical(buff(result.stats.attack, 0.5), 500) * 5)
+  assert.equal(row.dps, null)
+  assert.deepEqual(row.attackComponents!.map(component => [component.role, component.count]), [['MAIN', 1], ['ADDITIONAL', 4]])
+})
+
+test('コールドショットは装填済み120%と通常攻撃から2秒の境界130%を一度ずつ反映する', () => {
+  for (const index of [1, 2]) for (const seconds of [0, 1.9, 2, 10]) {
+    const { result, row } = at('char_4104_coldst', index, 1000, { secondsSinceNormalAttack: seconds })
+    const attack = buff(result.stats.attack, index === 1 ? 1 : 1.4) * 1.2 * (seconds >= 2 ? 1.3 : 1)
+    close(row.perAttack, physical(attack, 1000))
+    assert.equal(row.dps, null)
+    assert.equal(row.combinedDps, null)
+    assert.equal(result.attackInterval, null)
+  }
+})
+
+test('レイは同一対象の累積、装填倍率とサンドビースト範囲の物理限定倍率を合成する', () => {
+  for (const index of [2, 3]) for (const stacks of [0, 3]) for (const inArea of [false, true]) {
+    const { result, row } = at('char_4117_ray', index, 1000, { sameTargetAttackStacks: stacks, targetInSandbeastArea: inArea })
+    const attack = buff(result.stats.attack, (index === 2 ? 1.2 : 0) + stacks * 0.08) * 1.2 * (index === 3 ? 3.3 : 1)
+    close(row.perAttack, physical(attack, 1000) * (inArea ? 1.15 : 1))
+    assert.equal(row.dps, null)
+  }
+  const arts = output('char_4117_ray', 3, { targetInSandbeastArea: true, sameTargetAttackStacks: 3 }, undefined, 'ARTS')
+  assert.deepEqual(arts.unsupportedReasons, [])
+  close(arts.rows.find(row => row.axisValue === 40)!.perAttack, buff(arts.stats.attack, 0.24) * 1.2 * 3.3 * 0.6)
+  assert.ok(output('char_4117_ray', 2, { sameTargetAttackStacks: 4 }).unsupportedReasons.length)
+})
+
+test('スノーハンターのスキル開始素質は1回だけ加算し、裂雲獣には弾薬120%を乗せない', () => {
+  const s1 = at('char_4211_snhunt', 1, 500)
+  close(s1.row.perAttack, physical(s1.result.stats.attack * 2.3 * 1.2, 500) + physical(s1.result.stats.attack * 1.8, 500))
+  assert.equal(s1.row.dps, null)
+  for (const stationary of [false, true]) {
+    const { result, row } = at('char_4211_snhunt', 2, 500, { targetStationary: stationary })
+    close(row.perAttack, physical(result.stats.attack * (stationary ? 2.6 : 2.2), 500) * 2 + physical(result.stats.attack * 1.8, 500))
+    assert.deepEqual(row.attackComponents!.map(component => [component.role, component.count]), [['MAIN', 2], ['ADDITIONAL', 1]])
+  }
+  const arts = output('char_4211_snhunt', 1, { enemyResistance: 40 }, undefined, 'ARTS')
+  assert.deepEqual(arts.unsupportedReasons, [])
+  close(arts.rows.find(row => row.axisValue === 500)!.perAttack,
+    arts.stats.attack * 2.3 * 1.2 * 0.6 + physical(arts.stats.attack * 1.8, 500))
+})
+
+test('ロスモンティスは余震と追加術を別々に軽減し、S2の余震を合計3回に置換する', () => {
+  for (const active of [false, true]) {
+    const s1 = at('char_391_rosmon', 1, 500, { thoughtMaintenanceActive: active, enemyResistance: 40, actualAttackTargetCount: 3 })
+    const attack = buff(s1.result.stats.attack, active ? 0.08 : 0)
+    close(s1.row.perAttack, physical(attack, 340) + physical(attack * 0.5, 340) + attack * 1.8 * 0.6)
+    close(s1.row.allTargetsPerAttack, s1.row.perAttack * 3)
+    assert.deepEqual(s1.row.attackComponents!.map(component => component.damageType), ['PHYSICAL', 'PHYSICAL', 'ARTS'])
+    const s2 = at('char_391_rosmon', 2, 500, { thoughtMaintenanceActive: active })
+    const attack2 = buff(s2.result.stats.attack, 0.55 + (active ? 0.08 : 0))
+    close(s2.row.perAttack, physical(attack2, 340) + physical(attack2 * 0.5, 340) * 3)
+    close(s2.result.attackInterval, s2.result.stats.baseAttackTime + 0.5)
+  }
+  const arts = output('char_391_rosmon', 2, {}, undefined, 'ARTS')
+  assert.deepEqual(arts.unsupportedReasons, [])
+  close(arts.rows.find(row => row.axisValue === 40)!.perAttack, buff(arts.stats.attack, 0.63) * (1 + 0.5 * 3) * 0.6)
+})
+
+test('承曦グレイは50%余震と1.5秒周期の球を分離し、通常攻撃ASPDで球の周期を変えない', () => {
+  const s1 = at('char_1027_greyy2', 1, 500)
+  const attack = buff(s1.result.stats.attack, 0.45)
+  close(s1.row.perAttack, physical(attack, 500) + physical(attack * 0.5, 500))
+  close(s1.result.attackInterval, s1.result.stats.baseAttackTime / 1.45)
+  for (const balls of [0, 1, 2]) {
+    const { result, row } = at('char_1027_greyy2', 2, 500, { activeLightningBalls: balls, enemyResistance: 40, actualAttackTargetCount: 3 })
+    close(row.perAttack, physical(result.stats.attack, 500) + physical(result.stats.attack * 0.5, 500))
+    close(row.damageOverTimeDps, result.stats.attack * 1.3 * 0.6 / 1.5 * balls)
+    close(row.allTargetsCombinedDps, (row.perAttack / result.stats.baseAttackTime + result.stats.attack * 1.3 * 0.6 / 1.5 * balls) * 3)
+  }
+  assert.ok(output('char_1027_greyy2', 2, { activeLightningBalls: 3 }).unsupportedReasons.length)
+})
+
+test('スカイボックスの降下攻撃は選択した全対象にS1の300%・S2の240%を与える', () => {
+  for (const index of [1, 2]) {
+    const { result, row } = at('char_4213_skybx', index, 500, { actualAttackTargetCount: 4 })
+    close(row.perAttack, physical(result.stats.attack * (index === 1 ? 3 : 2.4), 500))
+    close(row.allTargetsPerAttack, row.perAttack * 4)
+  }
+})
+
+test('アンブリエルS2は攻撃力のみ正確に計算し、予備動作が未確定のDPSを出さない', () => {
+  const { result, row } = at('char_302_glaze', 2, 1000, { targetOutsideBaseRange: true })
+  close(row.perAttack, physical(buff(result.stats.attack, 1), 1000))
+  assert.equal(row.dps, null)
+  assert.equal(result.attackInterval, null)
+})
+
+test('ロサS3とジエユンS2は通常攻撃間隔に依存せず、停止後の1秒周期で評価する', () => {
+  const rosa = at('char_197_poca', 3, 1000, { targetWeight: 3, actualAttackTargetCount: 4 })
+  close(rosa.row.perAttack, physical(buff(rosa.result.stats.attack, 0.25 + 0.08), 400))
+  close(rosa.result.attackInterval, 1)
+  close(rosa.row.dps, rosa.row.perAttack)
+  close(rosa.row.allTargetsDps, rosa.row.perAttack * 4)
+  for (const first of [false, true]) {
+    const { result, row } = at('char_4078_bdhkgt', 2, 500, { firstDeployment: first, actualAttackTargetCount: 3 })
+    close(row.perAttack, physical(buff(result.stats.attack, first ? 0.13 : 0) * 1.35, 500))
+    close(result.attackInterval, 1)
+    close(row.dps, row.perAttack)
+  }
+})
+
+test('レミュアンS2は通常弾と指名手配対象への照準0/7/14段階を区別しDPSを推定しない', () => {
+  for (const wanted of [false, true]) for (const steps of [0, 7, 14]) {
+    const { result, row } = at('char_4193_lemuen', 2, 1000, { targetWanted: wanted, aimSteps: steps })
+    const attack = buff(result.stats.attack, 0.7 + 0.1) * (wanted ? 1.8 + steps * 0.175 : 1)
+    close(row.perAttack, physical(attack, 1000) * (wanted ? 1.15 : 1))
+    assert.equal(row.dps, null)
+    assert.equal(result.attackInterval, null)
+  }
+  assert.ok(output('char_4193_lemuen', 2, { aimSteps: 15 }).unsupportedReasons.length)
+})
+
+test('レミュアンS3は爆撃1発の爆心450%/外側300%を選択し、範囲内の各対象を評価する', () => {
+  for (const center of [false, true]) for (const wanted of [false, true]) {
+    const { result, row } = at('char_4193_lemuen', 3, 1000,
+      { targetInBlastCenter: center, targetWanted: wanted, actualAttackTargetCount: 4 })
+    close(row.perAttack, physical(buff(result.stats.attack, 0.1) * (center ? 4.5 : 3), 1000) * (wanted ? 1.15 : 1))
+    close(row.allTargetsPerAttack, row.perAttack * 4)
+    assert.equal(row.attackComponents![0].count, 1)
+    assert.equal(row.dps, null)
+  }
+})
+
+test('Wは各爆発1個を評価し、悪巧みの18%を範囲内でスタン中の物理ダメージだけへ適用する', () => {
+  for (const index of [1, 2, 3]) for (const stunned of [false, true]) for (const inRange of [false, true]) {
+    const { result, row } = at('char_113_cqbw', index, 1000,
+      { targetStunnedAtDamage: stunned, targetInAttackRange: inRange, actualAttackTargetCount: 4 })
+    close(row.perAttack, physical(result.stats.attack * [0, 3.5, 2.8, 3.1][index], 1000) * (stunned && inRange ? 1.18 : 1))
+    close(row.allTargetsPerAttack, row.perAttack * 4)
+    assert.equal(row.attackComponents![0].count, 1)
+    assert.equal(row.dps, null)
+  }
+  const arts = output('char_113_cqbw', 3, { targetStunnedAtDamage: true, targetInAttackRange: true }, undefined, 'ARTS')
+  assert.deepEqual(arts.unsupportedReasons, [])
+  close(arts.rows.find(row => row.axisValue === 40)!.perAttack, arts.stats.attack * 3.1 * 0.6)
+})
+
+test('シュヴァルツは付与済み防御20%低下と80/50/100%の会心を軽減後に合成する', () => {
+  for (const index of [1, 2, 3]) for (const anotherSniper of [false, true]) for (const defense of [0, 1000, 2000]) {
+    const { result, row } = at('char_340_shwaz', index, defense, { anotherSniperDeployed: anotherSniper })
+    const attack = buff(result.stats.attack, [0, 0, 1.3, 1.8][index] + (anotherSniper ? 0.08 : 0)) * (index === 1 ? 2.2 : 1)
+    const chance = [0, 0.8, 0.5, 1][index]
+    close(row.perAttack, physical(attack, defense * 0.8) * (1 - chance) + physical(attack * 1.6, defense * 0.8) * chance)
+    if (index > 1) close(result.attackInterval, result.stats.baseAttackTime + (index === 3 ? 0.4 : 0))
+  }
+  for (const index of [1, 2, 3]) {
+    const unknown = output('char_340_shwaz', index, { lethalArrowDefenseDownActive: false })
+    assert.ok(unknown.unsupportedReasons.some(reason => reason.includes('初回の付与')))
+    assert.deepEqual(unknown.rows, [])
+  }
+  const arts = output('char_340_shwaz', 3, {}, undefined, 'ARTS')
+  assert.deepEqual(arts.unsupportedReasons, [])
+  close(arts.rows.find(row => row.axisValue === 40)!.perAttack, buff(arts.stats.attack, 1.8) * 1.6 * 0.6)
+})
+
+test('ロスモンティスS3は戦術装備の固定低下160と素質の無視160を別々に適用する', () => {
+  for (const equipment of [false, true]) for (const defense of [0, 500, 1000]) {
+    const { result, row } = at('char_391_rosmon', 3, defense, { targetBlockedByEquipment: equipment })
+    const attack = buff(result.stats.attack, 0.75 + 0.08)
+    const effectiveDefense = Math.max(0, defense - 160 - (equipment ? 160 : 0))
+    close(row.perAttack, physical(attack, effectiveDefense) + physical(attack * 0.5, effectiveDefense))
+    close(result.attackInterval, result.stats.baseAttackTime - 0.5)
+    close(row.dps, row.perAttack / result.attackInterval!)
+  }
+  assert.ok(output('char_391_rosmon', 3, { actualAttackTargetCount: 2 }).unsupportedReasons.length)
+})
+
+test('シェーシャのブロック対象への物理被ダメージ増加は仮想術攻撃へ適用しない', () => {
+  const arts = output('char_379_sesa', 2, { targetBlocked: true }, undefined, 'ARTS')
+  assert.deepEqual(arts.unsupportedReasons, [])
+  const rawScale = record('char_379_sesa', 2).raw.blackboard!.find(value => value.key === 'attack@atk_scale')!.value!
+  close(arts.rows.find(row => row.axisValue === 40)!.perAttack, arts.stats.attack * rawScale * 0.6)
 })
 
 test('素質数値の欠落と説明変更は、既定値や部分的な計算結果へ落とさず停止する', () => {

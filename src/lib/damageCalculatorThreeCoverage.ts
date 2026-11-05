@@ -12,12 +12,13 @@ import { describeRegisteredTalentEffects } from './talentStructure.ts'
 import { getExpandedTraitCoverage } from './traitEffectApplication.ts'
 import { buildTraitStructures } from './traitStructure.ts'
 import { evaluateGuardTraits } from './guardTraitEvaluation.ts'
+import { getDamageCalculatorThreeNonDamageScope } from './damageCalculatorThreeNonDamageScope.ts'
 
-export type DamageCalculatorThreeCoverageStatus = 'SUPPORTED' | 'CONDITIONAL' | 'PENDING' | 'UNSUPPORTED'
+export type DamageCalculatorThreeCoverageStatus = 'SUPPORTED' | 'CONDITIONAL' | 'PENDING' | 'UNSUPPORTED' | 'NOT_APPLICABLE'
 export type DamageCalculatorThreeCoverageSectionStatus = DamageCalculatorThreeCoverageStatus | 'NOT_APPLICABLE'
 
 export const COVERAGE_STATUS_LABELS: Readonly<Record<DamageCalculatorThreeCoverageStatus, string>> = {
-  SUPPORTED: '対応', CONDITIONAL: '条件付き', PENDING: '保留', UNSUPPORTED: '未対応',
+  SUPPORTED: '対応', CONDITIONAL: '条件付き', PENDING: '保留', UNSUPPORTED: '未対応', NOT_APPLICABLE: '対象外',
 }
 
 export const COVERAGE_SECTION_STATUS_LABELS: Readonly<Record<DamageCalculatorThreeCoverageSectionStatus, string>> = {
@@ -42,7 +43,7 @@ export interface DamageCalculatorThreeCoverageIssue {
 }
 
 export const COVERAGE_STATUS_OPTIONS: readonly { value: DamageCalculatorThreeCoverageStatus; label: string }[] =
-  (['SUPPORTED', 'CONDITIONAL', 'PENDING', 'UNSUPPORTED'] as const)
+  (['SUPPORTED', 'CONDITIONAL', 'PENDING', 'UNSUPPORTED', 'NOT_APPLICABLE'] as const)
     .map(value => ({ value, label: COVERAGE_STATUS_LABELS[value] }))
 
 export interface DamageCalculatorThreeCoverageRow {
@@ -82,6 +83,9 @@ export function buildDamageCalculatorThreeCoverage(rows: readonly SkillRecord[])
     if (!previous || structure.basicInfo.levelIndex > previous.basicInfo.levelIndex) structures.set(key, structure)
   }
   return [...skills.values()].map<CoverageSummary>(skill => {
+    const nonDamageScope = getDamageCalculatorThreeNonDamageScope(skill)
+    if (nonDamageScope) return { skill, status: 'NOT_APPLICABLE', calculationScope: [], supportedConditions: [],
+      deferredReasons: [], scopeNotes: [nonDamageScope] }
     const structure = structures.get(identity(skill))
     if (!structure) return { skill, status: 'UNSUPPORTED', calculationScope: [], supportedConditions: [],
       deferredReasons: [], scopeNotes: [] }
@@ -145,6 +149,10 @@ function addSectionCoverage(row: CoverageSummary, structure: SkillStructure | un
     { id: 'trait', label: '特性', name: skill.subProfessionName || '基本特性', status: structure ? 'SUPPORTED' : 'UNSUPPORTED' },
   ]
   if (!talentNames.size) details.splice(1, 0, { id: 'talent-none', label: '素質', name: 'なし', status: 'NOT_APPLICABLE' })
+
+  if (row.status === 'NOT_APPLICABLE') return { ...row,
+    sections: { skill: 'NOT_APPLICABLE', talent: 'NOT_APPLICABLE', trait: 'NOT_APPLICABLE' },
+    details: details.map(detail => ({ ...detail, status: 'NOT_APPLICABLE' })), issues: [] }
 
   const issues: DamageCalculatorThreeCoverageIssue[] = []
   const recipe = structure?.guardRecipe
@@ -270,7 +278,7 @@ function stageLabel(recipe: GuardSkillRecipe, stage: GuardStage): string {
 
 function guardStageScope(stage: GuardStage): string {
   const scope = stage.kind === 'NEXT_ATTACK' ? '強化攻撃1回'
-    : stage.kind === 'SKILL_ACTION' ? '発動・命中1回' : '1攻撃・攻撃中DPS'
+    : stage.kind === 'SKILL_ACTION' ? '発動・命中1回' : stage.dpsUnsupportedReason ? '1攻撃' : '1攻撃・攻撃中DPS'
   return `${stage.label}：${scope}`
 }
 

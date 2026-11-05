@@ -7,7 +7,7 @@ import { evaluateExpandedPassives } from './expandedCombatEvaluation.ts'
 import type { GuardCalculationIssue, GuardConditions, GuardInput, GuardPassiveModifiers, GuardStage } from './guardCombatTypes.ts'
 
 type Context = { kind: 'NORMAL' | 'NEXT_ATTACK' | 'SKILL_ACTION'; skillIndex: number; stageId: string;
-  stage?: Pick<GuardStage, 'actions'>; phaseIndex?: number; operatorLevel?: number;
+  stage?: Pick<GuardStage, 'actions' | 'includesSkillActivation'>; phaseIndex?: number; operatorLevel?: number;
   virtualMainAttackType?: 'PHYSICAL' | 'ARTS' }
 
 export interface GuardPassiveCalculationConstraint extends GuardCalculationIssue {
@@ -192,7 +192,7 @@ function evaluateGuardPassiveDefinitions(operator: SkillRecord, conditions: Guar
   const structures = buildGuardTalentStructures([operator], { phaseIndex: 2,
     operatorLevel: operator.operatorProfile.phases[2]?.maxLevel ?? 90 }, registrationOnly)
   const metrics: Record<string, number | boolean | string | undefined> = {
-    ...values, skillIndex: context.skillIndex, actionKind: context.kind,
+    ...values, skillIndex: context.skillIndex, actionKind: context.kind, includesSkillActivation: context.stage?.includesSkillActivation ?? false,
     'recipient.hpRatio': typeof values.selfHpPercent === 'number' ? values.selfHpPercent / 100 : undefined,
     'recipient.inSourceAttackRange': values.selfInTalentRange,
     'source.skillActive': true,

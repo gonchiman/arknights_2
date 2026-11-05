@@ -2,7 +2,7 @@ import type { DamageType } from './damageCalculator.ts'
 import type { PeriodTotalCapability } from './damagePeriodTotal.ts'
 
 /** A skill can replace individual base-attack rules without disabling unrelated traits. */
-export type GuardTraitOverride = 'DAMAGE_TYPE' | 'HIT_COUNT' | 'MAX_TARGETS' | 'ATTACK_TARGETING' | 'ATTACK_SCALE' | 'SPLASH_DAMAGE' | 'CHAIN_ATTACK'
+export type GuardTraitOverride = 'DAMAGE_TYPE' | 'HIT_COUNT' | 'MAX_TARGETS' | 'ATTACK_TARGETING' | 'ATTACK_SCALE' | 'SPLASH_DAMAGE' | 'CHAIN_ATTACK' | 'AFTERSHOCK'
 
 /** Values in reviewed recipes remain executable data, rather than parsed descriptions. */
 export type GuardValue = number | { key: string } | { input: string }
@@ -62,6 +62,8 @@ export interface GuardStage {
   aspd?: GuardValue
   intervalScale?: GuardValue
   intervalAdd?: GuardValue
+  /** Explicit fixed ticks are independent of normal attack speed. */
+  fixedAttackInterval?: GuardValue
   /** Remaining damage on each bounce; the job trait supplies the default. */
   chainDamageRetention?: GuardValue
   maxTargets?: GuardValue | null
@@ -70,6 +72,10 @@ export interface GuardStage {
   duration?: GuardValue | 'UNTIL_EXIT'
   /** Explicit coverage of the stage and all damage-bearing passive effects. */
   periodTotal?: PeriodTotalCapability
+  /** A reviewed attack can be evaluated even when its reload/return cadence is unresolved. */
+  dpsUnsupportedReason?: string
+  /** A next-attack skill may include its skill-start effect in this one activation. */
+  includesSkillActivation?: boolean
   actions: readonly GuardDamageAction[]
   defenseIgnoreRatio?: GuardValue
   defenseIgnoreFixed?: GuardValue
@@ -77,6 +83,8 @@ export interface GuardStage {
   /** Enemy debuffs are applied before the attacker's defense/resistance ignore. */
   defenseReductionRatio?: GuardValue
   resistanceReductionRatio?: GuardValue
+  defenseReductionFixed?: GuardValue
+  resistanceReductionFixed?: GuardValue
   /** Post-mitigation multiplier; distinct from attack scale. */
   damageScale?: GuardValue
   /** Effects that cannot be inferred from text/data block numerical output explicitly. */
@@ -112,6 +120,8 @@ export interface GuardPassiveModifiers {
   resistanceIgnoreRatio: number
   resistanceReductionRatio?: number
   defenseReductionRatio: number
+  defenseReductionFixed?: number
+  resistanceReductionFixed?: number
   critChance: number
   critScale: number
   additionalActions: GuardDamageAction[]

@@ -17,7 +17,8 @@ export function getExpandedTraitCoverage(operatorId: string, stage: GuardStage):
     subProfessionName: source.subProfessionId, operatorProfile: source.profile }
   const growth = { phaseIndex: definition.phaseIndex, operatorLevel: source.profile.phases[definition.phaseIndex].maxLevel! }
   const structure = buildTraitStructures([operator], growth)[0]
-  if (!structure?.effects.length || structure.status === 'UNREVIEWED') return 'UNSUPPORTED'
+  if (!structure || structure.status === 'UNREVIEWED') return 'UNSUPPORTED'
+  if (!structure.effects.length) return structure.status === 'STRUCTURED' ? 'NOT_APPLICABLE' : 'UNSUPPORTED'
   // Period-total coverage is added when structures are built; it does not
   // change a stage's existing attack/trait semantics or registered coverage.
   const attackSignature = ({ periodTotal: _periodTotal, ...attack }: GuardStage) => JSON.stringify(attack)
@@ -46,6 +47,9 @@ export function getExpandedTraitCoverage(operatorId: string, stage: GuardStage):
 export function buildTraitApplicationRows(input: DamageCalculatorThreeInput, output: DamageCalculatorThreeOutput): EffectApplicationRow[] {
   const structure = buildTraitStructures([input.operator], { phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel })[0]
   const name = input.operator.subProfessionName || '特性', prefix = `trait:${input.operator.operatorId}:`
+  if (structure?.status === 'STRUCTURED' && !structure.effects.length) return [{ id: `${prefix}no-numeric-effect`,
+    category: 'TRAIT', name, item: '特性', value: '—', timing: '—', condition: '—', status: 'NOT_RELEVANT',
+    reason: structure.notes.join(' ') || '確認済みの特性には、この計算へ加算する数値効果がありません。' }]
   if (!structure?.effects.length) return [{ id: `${prefix}unverified`, category: 'TRAIT', name,
     item: '特性', value: '—', timing: '—', condition: '—', status: 'UNVERIFIED',
     reason: structure?.issues.join(' ') || '選択した育成段階の特性定義を確認できません。' }]

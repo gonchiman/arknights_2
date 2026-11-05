@@ -45,6 +45,28 @@ test('段階の与ダメージ倍率は防御軽減後に掛け、攻撃力倍�
   assert.equal(display.find(row => row.item === '与ダメージ倍率')?.value, '×1.5')
 })
 
+test('固定周期は攻撃速度と独立し、周期未確認の攻撃は1回の値だけを返す', () => {
+  for (const aspd of [0, 100, 300]) {
+    const { output } = calculate('char_208_melan', { fixedAttackInterval: 1, aspd })
+    assert.deepEqual(output.unsupportedReasons, [])
+    close(output.attackInterval, 1)
+    close(output.rows[0].dps, output.rows[0].perAttack)
+  }
+  const { output } = calculate('char_208_melan', { dpsUnsupportedReason: '帰還周期未確認' })
+  assert.deepEqual(output.unsupportedReasons, [])
+  assert.ok(output.rows[0].perAttack > 0)
+  assert.equal(output.rows[0].dps, null)
+  assert.equal(output.rows[0].combinedDps, null)
+  assert.equal(output.canShowDps, false)
+  assert.equal(output.attackInterval, null)
+  assert.equal(output.dpsReason, '帰還周期未確認')
+  for (const fixedAttackInterval of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+    const invalid = calculate('char_208_melan', { fixedAttackInterval }).output
+    assert.ok(invalid.unsupportedReasons.length)
+    assert.deepEqual(invalid.rows, [])
+  }
+})
+
 test('防御低下は防御無視の前に適用し、術属性へ変更しても術耐性低下と取り違えない', () => {
   const stage = { defenseReductionRatio: 0.5, defenseIgnoreRatio: 0.2, defenseIgnoreFixed: 10,
     resistanceReductionRatio: 0.3, resistanceIgnoreFixed: 5 }
@@ -62,6 +84,24 @@ test('イフリータ素質の術耐性40%低下と段階の30%低下は残存�
   const { output } = calculate('char_134_ifrit', { resistanceReductionRatio: 0.3, resistanceIgnoreFixed: 20 })
   assert.deepEqual(output.unsupportedReasons, [])
   close(output.rows[0].perAttack, output.effectiveAttack! * (1 - (80 * 0.6 * 0.7 - 20) / 100))
+})
+
+test('固定低下を割合低下より前に適用し、防御・術耐性の無視と区別する', () => {
+  const stage = { defenseReductionFixed: 100, defenseReductionRatio: 0.5,
+    defenseIgnoreRatio: 0.2, defenseIgnoreFixed: 10, resistanceReductionFixed: 20,
+    resistanceReductionRatio: 0.3, resistanceIgnoreFixed: 5 }
+  const native = calculate('char_208_melan', stage).output
+  const arts = calculate('char_208_melan', stage, { virtualMainAttackType: 'ARTS' }).output
+  assert.deepEqual(native.unsupportedReasons, [])
+  assert.deepEqual(arts.unsupportedReasons, [])
+  close(native.rows[0].perAttack, native.effectiveAttack! - ((300 - 100) * 0.5 * 0.8 - 10))
+  close(arts.rows[0].perAttack, arts.effectiveAttack! * (1 - ((80 - 20) * 0.7 - 5) / 100))
+  const ifrit = calculate('char_134_ifrit', { resistanceReductionFixed: 20, resistanceIgnoreFixed: 5 }).output
+  close(ifrit.rows[0].perAttack, ifrit.effectiveAttack! * (1 - ((80 - 20) * 0.6 - 5) / 100))
+  const zeroDefense = calculate('char_208_melan', { defenseReductionFixed: 1000 }).output
+  close(zeroDefense.rows[0].perAttack, zeroDefense.effectiveAttack!)
+  const zeroResistance = calculate('char_208_melan', { resistanceReductionFixed: 1000 }, { virtualMainAttackType: 'ARTS' }).output
+  close(zeroResistance.rows[0].perAttack, zeroResistance.effectiveAttack!)
 })
 
 test('仮想属性と混在しても段階の低下・与ダメージ倍率を主攻撃と追加・継続ダメージに一度ずつ適用する', () => {
@@ -128,9 +168,9 @@ test('ATK_STAT継続ダメージは通常攻撃用の倍率や会心を継承し
 })
 
 test('新しい段階倍率の欠落参照・非有限値・範囲外を拒否して部分数値を返さない', () => {
-  for (const field of ['defenseReductionRatio', 'resistanceReductionRatio', 'damageScale'] as const) {
+  for (const field of ['defenseReductionRatio', 'resistanceReductionRatio', 'defenseReductionFixed', 'resistanceReductionFixed', 'damageScale'] as const) {
     for (const value of [-0.1, Number.NaN, Number.POSITIVE_INFINITY, { key: 'missing' },
-      ...(field === 'damageScale' ? [] : [1.01])]) {
+      ...(field.endsWith('Ratio') ? [1.01] : [])]) {
       const { output } = calculate('char_208_melan', { [field]: value })
       assert.ok(output.unsupportedReasons.length, `${field}: ${String(value)}`)
       assert.deepEqual(output.rows, [])

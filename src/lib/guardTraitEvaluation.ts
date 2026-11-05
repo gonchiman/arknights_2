@@ -25,6 +25,7 @@ export function evaluateGuardTraits(operator: TraitStructureOperator, stage: Gua
       'attack.targetCount': conditions.actualAttackTargetCount ?? 1,
       'attack.distanceType': stage.attackTreatment ?? conditions.attackDistanceType ?? 'MELEE',
       'target.blockedBySource': conditions.targetBlockedBySelf,
+      'source.isBlocking': stage.attackTreatment ? stage.attackTreatment === 'MELEE' : conditions.sourceIsBlocking ?? conditions.isBlocking,
       'target.inFrontalTiles': conditions.targetInFrontalTiles },
     attackRatioScale: stage.traitAttackRatioScale === undefined ? 1 : value(stage.traitAttackRatioScale),
     chainDamageRetention: stage.chainDamageRetention === undefined ? undefined : value(stage.chainDamageRetention),
@@ -56,6 +57,8 @@ export function evaluateGuardTraits(operator: TraitStructureOperator, stage: Gua
         scale: { op: 'mul' as const, args: [transformed.scale, current.chainRetention! ** index] }, targets: 1,
       }))
     }
+    if (current.aftershockScale !== undefined) return [transformed, { ...transformed,
+      label: `${action.label}（余震）`, scale: { op: 'mul' as const, args: [transformed.scale, current.aftershockScale] } }]
     return transformed
   })
   // A multi-part skill may replace one component while another inherits a trait.

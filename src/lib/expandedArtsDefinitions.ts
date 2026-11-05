@@ -5,6 +5,9 @@ import type { TalentStructureEffect } from './talentStructure.ts'
 import type { CombatCondition, CombatEffectContext, CombatNumericValue, CombatRecipientSelector } from './combatEffectStructure.ts'
 
 const k = (key: string): GuardValue => ({ key })
+const input = (name: string): GuardValue => ({ input: name })
+const product = (...args: GuardValue[]): GuardValue => ({ op: 'mul', args })
+const sum = (...args: GuardValue[]): GuardValue => ({ op: 'add', args })
 const choose = (input: string, value: string | number | boolean, yes: GuardValue, no: GuardValue = 0,
   comparison: 'EQ' | 'LT' | 'LTE' | 'GT' | 'GTE' = 'EQ'): GuardValue => ({ op: 'if', input, comparison, value, yes, no })
 const n = (key: string, label: string, defaultValue: number, min: number, max: number): GuardInput =>
@@ -46,6 +49,19 @@ const action = (label: string, scale: GuardValue, maxTargets: GuardValue | null 
 const phase = (input: string, value: string, stage: GuardStage): GuardStage =>
   ({ ...stage, id: value.toLowerCase(), when: { input, comparison: 'EQ', value } })
 const unresolvedPeriod = (reason: string): GuardStage['periodTotal'] => ({ kind: 'UNSUPPORTED', reason })
+const periodic = (label: string, scale: GuardValue, options: Partial<GuardStage> = {}): GuardStage => normal({
+  maxTargets: null, actions: [{ label, role: 'MAIN', damageType: 'ARTS', basis: 'ATK_STAT', scale, timing: 'PER_SECOND' }],
+  periodTotal: unresolvedPeriod('付与・更新・初回と最終回の時刻を扱わず、有効な範囲内の毎秒ダメージを計算します。'), ...options,
+})
+const physical = (options: Partial<GuardStage> = {}): GuardStage => normal({
+  actions: [{ label: '物理攻撃', role: 'MAIN', damageType: 'PHYSICAL', scale: 1 }], ...options,
+})
+const singleDeviceStages = (stage: GuardStage): readonly GuardStage[] => [
+  { ...stage, when: { input: 'selfDeviceCount', comparison: 'LT', value: 2 } },
+  physical({ id: 'multiple-devices', label: '複数装置の重複', actions: [],
+    when: { input: 'selfDeviceCount', comparison: 'GTE', value: 2 },
+    unresolved: ['同じ支援装置2基から自身へ付与する攻撃力の重複方式は未確認です。0基または1基で指定してください。'] }),
+]
 const recipe = (operatorId: string, skillIndex: number, stages: readonly GuardStage[], inputs: readonly GuardInput[] = [], notes: readonly string[] = []): GuardSkillRecipe => {
   const raw = sources.find(source => source.operatorId === operatorId)!.skills.find(skill => skill.skillIndex === skillIndex)!.raw
   return { operatorId, skillIndex, inputs, notes, stages: stages.map(stage => ({ ...stage,
@@ -77,10 +93,17 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
   operator('char_253_greyy', [[1, normal({ aspd: k('attack_speed') })], [2, normal({ aspd: k('attack_speed') })]], [
     talent(0, '静電場', () => [status('sluggish', '攻撃対象を足止め')], ['STATUS']),
   ], { traitNotes: aoeNotes }),
-  operator('char_4051_akkord', [[1, next(k('atk_scale'))]], [
-    talent(0, '律動の共鳴', v => [atk(v.read('atk'), 'atk', { condition: eq('allyInAttackRange', true) })]),
-  ], { inputs: [b('allyInAttackRange', '攻撃範囲内に自身以外の味方')], traitNotes: aoeNotes,
-    deferredSkills: [{ skillIndex: 2, reason: '味方位置ごとのソニックブームと主攻撃の重複命中を扱う範囲モデルが必要。' }] }),
+  operator('char_4051_akkord', [[1, next(k('atk_scale'))],
+    [2, normal({ atk: k('atk'), maxTargets: null, actions: [
+      { label: '通常攻撃', role: 'MAIN', damageType: 'ARTS', scale: 1 },
+      { label: 'ソニックブーム', role: 'ADDITIONAL', damageType: 'ARTS', scale: k('attack@aoe_atk_scale'), hits: input('sonicBoomHits') },
+    ], periodTotal: unresolvedPeriod('オペレーターと敵の配置が一定の1攻撃を評価し、移動を含む総ダメージは計算しません。') }),
+      [n('sonicBoomHits', '対象に命中するソニックブームの数', 0, 0, 20)]]], [
+    talent(0, '律動の共鳴', v => [atk(v.read('atk'), 'atk', { condition: { type: 'ANY', conditions: [
+      eq('allyInAttackRange', true), { type: 'ALL', conditions: [eq('skillIndex', 2), cmp('sonicBoomHits', 'GT', 0)] },
+    ] } })]),
+  ], { inputs: [b('allyInAttackRange', '攻撃範囲内に自身以外の味方')],
+    traitNotes: [...aoeNotes, 'S2のソニックブームは対象ごとの実命中数を指定する。1回以上命中する場合は範囲内の他オペレーターが必要なため、素質の攻撃力上昇も適用する。選択した全敵が通常攻撃と同じ数のソニックブームを受ける固定配置を評価する。'] }),
   operator('char_183_skgoat', [[1, normal({ atk: k('atk') })]], [
     talent(0, '地質調査', () => [status('sluggish-extension', '特性の足止め時間を延長')], ['STATUS']),
   ], { deferredSkills: [{ skillIndex: 2, reason: '攻撃を停止して足止めを行うスキル。直接ダメージの出力対象外。' }] }),
@@ -109,10 +132,17 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
     talent(0, 'アーツバースト', v => [damage(v.read('damage_scale'), eq('targetBlocked', true), 'damage_scale', true)], ['DAMAGE']),
   ], { inputs: [b('targetBlocked', '対象がブロックされている')], traitNotes: aoeNotes,
     deferredSkills: [{ skillIndex: 2, reason: '隕石の発生・命中時間とスキル中の攻撃間隔の適用方式を確認する必要がある。' }] }),
-  operator('char_373_lionhd', [[1, normal({ atk: k('atk') })]], [
+  operator('char_373_lionhd', [[1, normal({ atk: k('atk') })],
+    [2, [
+      { ...action('弱点解析＆爆破', k('atk_scale')), resistanceReductionRatio: product(-1, k('magic_resistance')),
+        when: { input: 'lionhardtDebuffActive', comparison: 'EQ', value: true } },
+      { ...action('初回命中', k('atk_scale')), id: 'first-hit', actions: [],
+        when: { input: 'lionhardtDebuffActive', comparison: 'EQ', value: false },
+        unresolved: ['術耐性低下が有効でない対象は、新規付与と命中の処理順序を確認する必要があります。'] },
+    ], [b('lionhardtDebuffActive', '命中前から同スキルの術耐性低下が有効', true)]]], [
     talent(0, '破片爆散', v => [atk(mul(v.read('atk'), { type: 'CALC', operation: 'MIN', values: [metric('nearbyEnemyCount'), v.read('max_valid_stack_cnt')] }), 'atk × 対象数')]),
-  ], { inputs: [n('nearbyEnemyCount', '攻撃範囲内の敵数', 1, 0, 100)], traitNotes: aoeNotes,
-    deferredSkills: [{ skillIndex: 2, reason: '術耐性低下の新規付与とダメージの適用順序を確認する必要がある。' }] }),
+  ], { inputs: [n('nearbyEnemyCount', '攻撃範囲内の敵数', 1, 0, 100)],
+    traitNotes: [...aoeNotes, 'S2は同スキルの術耐性低下が既に有効な対象への1回分を計算する。初回命中は未対応。'] }),
   operator('char_341_sntlla', [[1, normal({ atk: k('atk'), aspd: k('attack_speed') })]], [
     talent(0, '寒地の民', v => [atk(v.read('atk'), 'atk', { condition: cmp('secondsSinceDeploy', 'GTE', v.read('interval')) }),
       status('status-resistance', '配置20秒後にレジスト', { condition: cmp('secondsSinceDeploy', 'GTE', v.read('interval')) })], ['ABILITY', 'STATUS']),
@@ -141,9 +171,14 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
     talent(0, '弱体化', v => [damage(v.read('damage_scale'), cmp('targetHpPercent', 'LT', percent(v.read('hp_ratio'))))], ['DAMAGE']),
     talent(1, 'ハーモニー', () => [status('two-targets', '攻撃対象数+1（攻撃定義に反映）')], ['ATTACK_BEHAVIOR']),
   ], { inputs: [hp] }),
-  operator('char_254_vodfox', [[1, normal({ atk: k('atk'), duration: 'UNTIL_EXIT' })]], [
-    talent(0, '潰敗への誘い', v => [damage(add(1, mul(add(v.read('damage_scale'), -1), metric('skill.scale_delta_to_one'))), cmp('targetHpPercent', 'LT', percent(v.read('hp_ratio'))), 'damage_scale / skill:scale_delta_to_one')], ['DAMAGE']),
-  ], { inputs: [hp], deferredSkills: [{ skillIndex: 2, reason: '呪いの人形の配置位置・効果範囲・存続時間のモデルが必要。' }] }),
+  operator('char_254_vodfox', [[1, normal({ atk: k('atk'), duration: 'UNTIL_EXIT' })],
+    [2, normal({ defenseReductionRatio: choose('targetInDollRange', true, product(-1, k('def'))),
+      periodTotal: unresolvedPeriod('人形の効果範囲内かを固定条件として評価し、配置・消滅時刻は計算しません。') }),
+      [b('targetInDollRange', '対象が呪いの人形の効果範囲内')]]], [
+    talent(0, '潰敗への誘い', v => [damage(add(1, mul(add(v.read('damage_scale'), -1),
+      { type: 'CONDITIONAL', condition: eq('skillIndex', 1), whenTrue: metric('skill.scale_delta_to_one'), whenFalse: 1 })),
+      cmp('targetHpPercent', 'LT', percent(v.read('hp_ratio'))), 'damage_scale / skill:scale_delta_to_one')], ['DAMAGE']),
+  ], { inputs: [hp], traitNotes: ['S2は自身の通常攻撃を評価する。人形の範囲・残存時間は入力条件とし、味方への支援量は合算しない。'] }),
   operator('char_4079_haini', [[1, next(k('atk_scale'), k('max_target'))],
     [2, normal({ atk: k('atk'), maxTargets: k('attack@max_target'),
       periodTotal: unresolvedPeriod('スキル中の撃破による脆弱倍率の変化を計算していないため、総ダメージは未計算です。') })]], [
@@ -184,11 +219,12 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
     talent(1, 'カオスフレイム', () => [status('initial-sp', '配置後SPが7〜15回復')], ['RESOURCE']),
   ], { inputs: [n('skillActivationCount', 'スキル発動回数', 1, 1, 100)], deferredSkills: [{ skillIndex: 2, reason: '主対象と周囲への倍率差、および術耐性低下と命中の適用順序を扱う必要がある。' }] }),
   operator('char_213_mostma', [[1, normal({ atk: k('atk') })],
+    [2, periodic('時荒びの黒き錠の毎秒ダメージ', k('atk_scale'))],
     [3, normal({ atk: k('atk') })]], [
     talent(0, 'スキルブースト・術師', v => [effect('caster-sp', 'sp_recovery_per_sec', { item: 'SP_RECOVERY', operation: 'ADD_VALUE', unit: 'PER_SECOND', value: v.read('sp_recovery_per_sec') },
       { target: { ...target('ALLY', 'BATTLEFIELD'), tagIds: ['profession:CASTER'] } })], ['RESOURCE']),
     talent(1, '時間認知鈍化', () => [status('enemy-slow', '攻撃範囲内の敵の移動速度低下', { target: target('ENEMY', 'ATTACK_RANGE') })], ['STATUS']),
-  ], { traitNotes: aoeNotes, deferredSkills: [{ skillIndex: 2, reason: '毎秒ダメージの初回・最終発生時点を確認し、通常攻撃を行わない継続ダメージとして出力する必要がある。' }] }),
+  ], { traitNotes: aoeNotes }),
   operator('char_291_aglina', [[1, normal({ atk: k('atk') })],
     [2, normal({ intervalScale: k('base_attack_time'), actions: [{ label: '術攻撃', role: 'MAIN', damageType: 'ARTS', scale: k('damage_scale') }],
       notes: ['攻撃間隔は基礎間隔の15%として計算する。アニメーションのイベント時刻・フレーム丸めによる実命中間隔の差は含めない。'] })],
@@ -231,7 +267,15 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
   ], { inputs: [select('mintPhase', 'S2の段階', [['NORMAL', '通常攻撃'], ['END', 'スキル終了時']])],
     traitNotes: [...aoeNotes, '通常攻撃と終了時ダメージを分けて評価する。引き寄せによる敵の位置変化は含めない。'] }),
   operator('char_426_billro', [[1, normal({ atk: k('atk') })],
-    [2, normal({ atk: choose('overcharged', true, k('atk')), intervalAdd: k('base_attack_time') })]], [
+    [2, normal({ atk: choose('overcharged', true, k('atk')), intervalAdd: k('base_attack_time') })],
+    // The current hit adds its mark before damage: https://prts.wiki/w/Carnelian#技能
+    [3, normal({ atk: product(k('atk'), input('currentAttackRisePercent'), 0.01),
+      damageScale: sum(1, choose('overcharged', true,
+        product(k('attack@damage_scale'), { op: 'min', args: [5, sum(input('existingMarkStacks'), 1)] }))),
+      notes: ['OC時は命中前の刻印数に今回の1回分を加え、最大5回としてダメージに適用する。'],
+      periodTotal: unresolvedPeriod('現在の攻撃力上昇率と今回の命中で加わる刻印を含む1攻撃を評価し、その後の時間上昇・刻印蓄積は計算しません。') }),
+      [n('currentAttackRisePercent', '現在の攻撃力上昇（上限に対する%）', 100, 0, 100),
+        n('existingMarkStacks', '命中前の刻印数', 0, 0, 5)]]], [
     talent(0, '血肉饗宴', v => [effect('activation-heal', 'heal_scale / billro_t_1[enhance].heal_scale',
       { item: 'HP_RESTORE_RATIO', operation: 'RESTORE', unit: 'MAX_HP_RATIO', value: { type: 'CONDITIONAL', condition: eq('overcharged', true),
         whenTrue: v.read('billro_t_1[enhance].heal_scale'), whenFalse: v.read('heal_scale') } },
@@ -239,8 +283,7 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
     talent(1, '狂嵐の兆し', v => [effect('charged-sp-recovery', 'sp_recovery_per_sec',
       { item: 'SP_RECOVERY', operation: 'ADD_VALUE', unit: 'PER_SECOND', value: v.read('sp_recovery_per_sec') },
       { condition: eq('source.spAtLeastSkillCost', true) })], ['RESOURCE']),
-  ], { inputs: [b('overcharged', 'オーバーチャージ')], traitNotes: aoeNotes,
-    deferredSkills: [{ skillIndex: 3, reason: '時間経過による攻撃力上昇と、命中ごとの被ダメージ上昇の適用順序・累積を扱う必要がある。' }] }),
+  ], { inputs: [b('overcharged', 'オーバーチャージ')], traitNotes: aoeNotes }),
   // JP runtime snapshot; mechanics references: https://prts.wiki/w/Ifrit and /Ceobe.
   operator('char_134_ifrit', [[1, normal({ atk: k('atk'), aspd: k('attack_speed'), periodTotal: { kind: 'CONSTANT_RATE' } })],
     [2, normal({ label: '強化攻撃', kind: 'NEXT_ATTACK', actions: [
@@ -339,4 +382,73 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
         lifetime: { type: 'FIXED_SECONDS', seconds: v.read('duration') } })], ['DAMAGE']),
   ], { inputs: [b('hazeDebuffActive', '命中時に素質の術耐性低下が有効')],
     traitNotes: ['命中時の術耐性低下の状態を指定する。付与・更新・失効と、各命中時に効果が残っているかの判定は再現しない。'] }),
+  operator('char_1011_lava2', [
+    [1, normal({ atk: k('atk'), maxTargets: null,
+      actions: [{ label: '範囲術攻撃', role: 'MAIN', damageType: 'ARTS', scale: 1, hits: input('lavaBlastHits') }],
+      periodTotal: unresolvedPeriod('2つの範囲攻撃が対象に命中する回数を固定し、対象と発生範囲の移動は計算しません。') }),
+      [n('lavaBlastHits', '対象に命中する範囲攻撃の数', 1, 1, 2)]],
+    [2, periodic('炎の輪の毎秒ダメージ', product(k('atk_scale'), input('lavaRingHits'))),
+      [n('lavaRingHits', '対象が入っている炎の輪の数', 1, 1, 2)]],
+  ], [talent(0, '呪術戦線', v => [
+    effect('first-deploy-sp', 'lava2_t_1[self].sp', { item: 'SP_RESTORE', operation: 'ADD_VALUE', unit: 'POINT', value: v.read('lava2_t_1[self].sp') },
+      { timing: { type: 'EVENT', event: 'DEPLOY' }, lifetime: { type: 'CURRENT_EVENT' } }),
+    effect('ally-deploy-sp', 'lava2_t_1[ally].sp', { item: 'SP_RESTORE', operation: 'ADD_VALUE', unit: 'POINT', value: v.read('lava2_t_1[ally].sp') },
+      { target: { ...target('ALLY', 'BATTLEFIELD'), includeSelf: false, tagIds: ['profession:CASTER'] },
+        timing: { type: 'EVENT', event: 'DEPLOY' }, lifetime: { type: 'CURRENT_EVENT' } }),
+    status('initial-sp-ally', '自身以外の味方術師のストックSPを増加', { target: { ...target('ALLY', 'BATTLEFIELD'), includeSelf: false } }),
+  ], ['RESOURCE'])], { traitNotes: ['全対象が指定数の攻撃範囲に含まれる固定配置を評価する。S2は通常攻撃を加算せず、炎の輪が有効な間の毎秒ダメージを計算する。'] }),
+  operator('char_258_podego', [
+    [2, periodic('胞子内の毎秒ダメージ', k('atk_scale'), { duration: k('projectile_delay_time') })],
+  ], [talent(0, 'ガーデナー', v => [atk(v.read('atk'), 'atk',
+    { target: { ...target('ALLY', 'BATTLEFIELD'), tagIds: ['profession:SUPPORT'] } })])], {
+    deferredSkills: [{ skillIndex: 1, reason: '味方への治療に切り替わるスキルで、直接ダメージの対象外。' }],
+    traitNotes: ['S2は胞子範囲内の毎秒ダメージを評価する。投擲前後の自身の通常攻撃や、胞子への出入りは合算しない。'],
+  }),
+  operator('char_484_robrta', [[1, physical({ atk: k('atk') })]], [
+    talent(0, 'メイクツール調達', () => [status('device-shield', '支援装置から防御力上昇とシールドを付与')], ['SURVIVAL']),
+  ], { deferredSkills: [{ skillIndex: 2, reason: '攻撃を停止して防御・ブロックを強化するため、直接ダメージの対象外。' }] }),
+  operator('char_4162_cathy', [[1, physical({ atk: k('s1_atk') })]], [
+    talent(0, '指向性支援信号', () => [status('device-barrier', '支援装置から最大HPに応じたバリアを付与・補充')], ['SURVIVAL']),
+  ], { deferredSkills: [{ skillIndex: 2, reason: '攻撃を停止して耐久とバリア付与を強化するため、直接ダメージの対象外。' }] }),
+  operator('char_4212_nasti', [
+    [1, physical({ atk: k('atk'), blockCountAdd: choose('selfDeviceActive', true, 1), maxTargets: choose('selfDeviceActive', true, 3, 2) }),
+      [b('selfDeviceActive', '自身が支援装置のブロック数増加を受けている')]],
+    [3, physical({ atk: k('atk') })],
+  ], [
+    talent(0, '前方工事中', () => [status('support-devices', '支援装置を使用可能、装備スキルにより性能が変化')], ['RESOURCE']),
+    talent(1, '注意喚起', () => [status('protection', '自身と対象の味方に加護を付与'), status('periodic-sp', '遠距離攻撃を行う敵がいる場合にSPを定期回復')], ['SURVIVAL', 'RESOURCE']),
+  ], { deferredSkills: [{ skillIndex: 2, reason: '攻撃を停止してバリアを付与し装置を起動するため、直接ダメージの対象外。' }],
+    traitNotes: ['自身の通常攻撃を評価する。S1は自身がブロックする敵を指定し、支援装置のブロック増加は最大1基分を評価する。'] }),
+  operator('char_4178_alanna', [
+    [1, physical({ aspd: choose('selfDeviceActive', true, k('attack_speed')) })],
+    [2, physical({ atk: k('atk'), aspd: k('attack_speed') })],
+  ], [talent(0, '臨時改装', v => [
+    effect('device-defense-ignore', 'def_penetrate_fixed_bb', { item: 'DEFENSE_IGNORE_FIXED', operation: 'IGNORE_FIXED', unit: 'POINT',
+      value: mul(v.read('def_penetrate_fixed_bb'), { type: 'CONDITIONAL', condition: eq('skillIndex', 2), whenTrue: metric('skill.multi'), whenFalse: 1 }) },
+      { condition: eq('selfDeviceActive', true) }),
+    status('device-support', '装置の効果は重複不可、配置後30秒持続'),
+  ], ['DAMAGE', 'RESOURCE'])], { inputs: [b('selfDeviceActive', '自身が支援装置の効果を受けている')],
+    traitNotes: ['自身が装置の効果対象かを指定する。支援先の味方のダメージや装置の配置・消滅時刻は合算しない。'] }),
+  operator('char_433_windft', [
+    [1, singleDeviceStages(physical({ kind: 'NEXT_ATTACK', maxTargets: null,
+      actions: [{ label: '周囲の地上敵への攻撃', role: 'MAIN', damageType: 'PHYSICAL', scale: k('atk_scale') }] }))],
+    [2, singleDeviceStages(physical({ atk: k('atk'), intervalAdd: k('base_attack_time'),
+      periodTotal: unresolvedPeriod('バッテリーによる効果が一定の攻撃を評価し、効果の終了や装置の獲得は計算しません。') }))],
+  ], [talent(0, '進退を共に', v => [
+    atk(mul(v.read('atk'), metric('selfDeviceCount'),
+      { type: 'CONDITIONAL', condition: eq('skillIndex', 2), whenTrue: metric('skill.talent_scale'), whenFalse: 1 }), 'atk / selfDeviceCount'),
+    status('battery-support', '高信頼性バッテリーで前方の術師・補助を支援'),
+  ], ['ABILITY', 'RESOURCE'])], { inputs: [n('selfDeviceCount', '自身に有効な高信頼性バッテリー数', 0, 0, 2)],
+    traitNotes: ['自身が支援を受ける固定配置を評価する。2基からの攻撃力重複は未確認のため停止する。'] }),
+  operator('char_4072_ironmn', [
+    [1, singleDeviceStages(physical({ atk: product(0.12, k('fake_scale'), input('selfDeviceCount')),
+      actions: [{ label: '物理攻撃', role: 'MAIN', damageType: 'PHYSICAL', scale: k('attack@atk_scale') }],
+      periodTotal: unresolvedPeriod('装置の支援が一定の攻撃を評価し、装置の配置・破壊時刻は計算しません。') })),
+      [n('selfDeviceCount', '自身を支援している装置の数', 0, 0, 2)]],
+    [2, physical({ atk: k('atk'), maxTargets: 2 })],
+  ], [
+    talent(0, '戦場のエンジニア', () => [status('support-devices', '支援装置を使用可能、装備スキルにより性能が変化')], ['RESOURCE']),
+    talent(1, '経費削減', () => [status('device-recovery', '周囲で破壊された支援装置を確率で再獲得')], ['RESOURCE']),
+  ], { deferredSkills: [{ skillIndex: 3, reason: '装置への攻撃回数と装置の砲撃ダメージを別の攻撃主体として扱う必要がある。' }],
+    traitNotes: ['自身の攻撃を評価する。S1は装置1基の基本攻撃力上昇12%を4倍にし、スキル倍率200%は別に適用する。S2は自身がブロックする敵だけを指定する。'] }),
 ]

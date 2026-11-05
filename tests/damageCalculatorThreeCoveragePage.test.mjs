@@ -111,6 +111,26 @@ test('単一スキルでは対象外を対応に含めず独立した100%の棒�
   assertSummary(markup, 1, [[0, 1, 0, 0, 0], [1, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 0, 0, 0, 1]])
 })
 
+test('純治療スキルの対象外を総合選択肢・表・凡例に表示し、計算機へのリンクを作らない', () => {
+  const source = JSON.parse(readFileSync(new URL('../src/data/dc3NonDamageSources.json', import.meta.url), 'utf8'))
+    .find(source => source.operatorId === 'char_147_shining')
+  const entry = source.skills[0]
+  const skill = { ...records[0], operatorId: source.operatorId, operatorName: source.operatorName,
+    id: `${source.operatorId}/${entry.skillIndex}`, skillId: entry.skillId, skillIndex: entry.skillIndex,
+    skillName: entry.raw.name, profession: source.profession, professionLabel: '医療', subProfessionId: source.subProfessionId,
+    subProfessionName: source.subProfessionId, raw: entry.raw,
+    skillLevels: Array.from({ length: source.skillLevelIndex + 1 }, () => entry.raw), operatorProfile: source.profile }
+  const html = render(Page, { rows: [skill], loading: false, onOpenOperatorDetail() {} })
+  assert.match(html, /<option value="NOT_APPLICABLE">対象外<\/option>/)
+  assert.match(html, /対応 0・条件付き 0・保留 0・未対応 0・対象外 1/)
+  assert.deepEqual(table(html)[1].slice(3, 7), ['対象外', '対象外', '対象外', '対象外'])
+  assertSummary(html, 1, Array.from({ length: 4 }, () => [0, 0, 0, 0, 1]))
+  const row = toCoverageRecords(buildCoverage([skill]))[0]
+  const detail = render(Dialog, { row, onClose() {} })
+  assert.doesNotMatch(detail, /計算機3で開く/)
+  assert.match(detail, /回復・味方支援の効果量はダメージ計算の対象外/)
+})
+
 test('検索は複数語・全角S番号に対応し、職業・レアリティ・状況を組み合わせられる', () => {
   const coverage = buildCoverage(records)
   const surtr = filterCoverage(coverage, { ...defaults, query: 'スルト　Ｓ３' })

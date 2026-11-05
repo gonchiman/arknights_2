@@ -69,6 +69,30 @@
         "PENDING": 85,
         "UNSUPPORTED": 480
       }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "v4",
+      "label": "v4 職分・複合攻撃の拡張と対象外区分",
+      "capturedAt": "2026-11-05T14:03:00.373Z",
+      "source": {
+        "codeRevision": "e1cd24af168387633a9c59cbe8a33f2163e81996",
+        "codeDirty": true,
+        "codeFingerprint": "2dd0bfde8049b1bc884af62fc560818b198ddfd16526dccc16214cdb5f3464b0",
+        "gameDataRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+        "gameDataFingerprint": "e02f27762c44d0b083329e83375802cc2bef03f04777822f5f61220a0881a0ec",
+        "reconstructed": false
+      },
+      "file": "v4.json",
+      "sha256": "9469ce088454968307f55c97c05a36f98675f47e589ed97058083650e7e051f3",
+      "skillCount": 915,
+      "counts": {
+        "SUPPORTED": 454,
+        "CONDITIONAL": 20,
+        "PENDING": 86,
+        "UNSUPPORTED": 273,
+        "NOT_APPLICABLE": 82
+      }
     }
   ]
 }

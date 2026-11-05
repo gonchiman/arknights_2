@@ -102,6 +102,7 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
     numeric('aspd', '攻撃速度', stage.aspd, signed, intervalOptions)
     numeric('interval-scale', '攻撃間隔倍率', stage.intervalScale, n => `×${number(n)}`, intervalOptions)
     numeric('interval-add', '攻撃間隔の加算', stage.intervalAdd, n => `${signed(n)}秒`, intervalOptions)
+    numeric('fixed-attack-interval', '固定攻撃周期', stage.fixedAttackInterval, n => `${number(n)}秒`, intervalOptions)
     if (stage.maxTargets !== undefined) add('max-targets', '攻撃対象数上限',
       () => stage.maxTargets === null ? '上限なし' : `${number(value(stage.maxTargets))}体`, [stage.maxTargets ?? undefined])
     const mitigationOptions = (damageType: 'PHYSICAL' | 'ARTS') => inactive || !output.model
@@ -114,6 +115,8 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
     numeric('resistance-ignore-fixed', '術耐性無視', stage.resistanceIgnoreFixed, number, mitigationOptions('ARTS'))
     numeric('defense-reduction-ratio', '防御力低下', stage.defenseReductionRatio, n => `−${percent(n)}`, mitigationOptions('PHYSICAL'))
     numeric('resistance-reduction-ratio', '術耐性低下', stage.resistanceReductionRatio, n => `−${percent(n)}`, mitigationOptions('ARTS'))
+    numeric('defense-reduction-fixed', '防御力固定低下', stage.defenseReductionFixed, n => `−${number(n)}`, mitigationOptions('PHYSICAL'))
+    numeric('resistance-reduction-fixed', '術耐性固定低下', stage.resistanceReductionFixed, n => `−${number(n)}`, mitigationOptions('ARTS'))
     numeric('damage-scale', '与ダメージ倍率', stage.damageScale, n => `×${number(n)}`)
     if (stage.duration !== undefined) add('duration', '持続時間', () => stage.duration === 'UNTIL_EXIT' ? '退場まで' : `${number(value(stage.duration))}秒`,
       stage.duration === 'UNTIL_EXIT' ? [] : [stage.duration], inactive ? {} : {

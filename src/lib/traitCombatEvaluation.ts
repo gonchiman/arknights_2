@@ -28,6 +28,7 @@ export interface TraitCombatResult {
   attackRatio: number
   splashScale?: number
   chainRetention?: number
+  aftershockScale?: number
   evaluations: TraitCombatEvaluation[]
   blockers: string[]
 }
@@ -117,6 +118,11 @@ export function evaluateTraitStructure(structure: TraitStructure | null, context
       result.maxTargets = count
       result.chainRetention = retention
       row(effect, 'APPLIED', `最大${count}体・跳躍ごとに×${formatCombatNumber(retention)}`)
+    } else if (effect.item === 'AFTERSHOCK') {
+      const value = numeric(effect.value.attackScale)
+      if (value === null) { block(effect, '余震の倍率を解決できません。'); continue }
+      result.aftershockScale = value
+      row(effect, 'APPLIED', `×${formatCombatNumber(value)}・1回`)
     } else if (effect.item === 'SPLASH_DAMAGE') {
       const value = numeric(effect.value.attackScale)
       if (value === null || effect.value.includeMainTarget || effect.value.center !== 'ATTACK_TARGET'
