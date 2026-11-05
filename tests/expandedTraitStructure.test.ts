@@ -49,11 +49,11 @@ function appliedItem(result: ReturnType<typeof run>, suffix: string) {
   return value
 }
 
-test('追加22職分で説明・パラメータを照合し、同じ職分の定義を複数OPに再利用する', () => {
+test('追加23職分で説明・パラメータを照合し、同じ職分の定義を複数OPに再利用する', () => {
   const additions = ['pioneer', 'protector', 'shotprotector', 'artsprotector', 'unyield',
     'fastshot', 'aoesniper', 'longrange', 'siegesniper', 'reaperrange', 'closerange',
     'corecaster', 'splashcaster', 'blastcaster', 'slower', 'underminer', 'incantationmedic', 'phalanx',
-    'agent', 'charger', 'stalker', 'chain']
+    'agent', 'charger', 'stalker', 'chain', 'duelist']
   for (const job of additions) {
     const sources = EXPANDED_OPERATOR_SOURCES.filter(source => source.subProfessionId === job)
     assert.ok(sources.length, job)
@@ -83,6 +83,29 @@ test('偵察兵・突撃兵の再配置とコストを構造化し、ダメー�
     assert.equal(result.attackScale, 1)
     assert.ok(result.evaluations.every(row => row.status === 'NOT_RELEVANT'))
   }
+})
+
+test('決闘者の未ブロック時のSP停止は保持し、発動中の直接ダメージを停止させない', () => {
+  const id = byJob('duelist'), source = structure(id)
+  const restriction = source.effects.find(entry => entry.item === 'NATURAL_SP_RECOVERY_ENABLED')!
+  assert.ok(restriction)
+  assert.equal(restriction.value, false)
+  assert.equal(restriction.calculationRelevance, 'NOT_RELEVANT')
+  assert.equal(evaluateCombatCondition(restriction.condition, { 'source.isBlocking': false }), true)
+  assert.equal(evaluateCombatCondition(restriction.condition, { 'source.isBlocking': true }), false)
+  assert.equal(evaluateCombatCondition(restriction.condition, {}), null)
+  for (const metrics of [{}, { 'source.isBlocking': false }, { 'source.isBlocking': true }]) {
+    const result = evaluateTraitStructure(source, { kind: 'NORMAL', metrics })
+    assert.deepEqual(result.blockers, [])
+    assert.equal(result.attackScale, 1)
+    assert.equal(result.attackRatio, 0)
+    assert.ok(result.evaluations.every(row => row.status === 'NOT_RELEVANT'))
+  }
+  const changed = record(id)
+  changed.operatorProfile.traitDescription += ' 攻撃力が上昇'
+  const unreviewed = buildTraitStructures([changed])[0]
+  assert.equal(unreviewed.status, 'UNREVIEWED')
+  assert.ok(evaluateTraitStructure(unreviewed, { kind: 'NORMAL', metrics: {} }).blockers.length)
 })
 
 test('潜伏者の全体攻撃は回避率と独立し、7対象でも対象数を切り捨てない', () => {

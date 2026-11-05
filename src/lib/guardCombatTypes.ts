@@ -32,8 +32,8 @@ export interface GuardDamageAction {
   attackBonus?: GuardValue
   probability?: GuardValue
   flatDamage?: GuardValue
-  /** Attack-scaled damage is the default. */
-  basis?: 'ATK' | 'TARGET_CURRENT_HP' | 'TARGET_DEFENSE'
+  /** ATK is attack-scaled damage; ATK_STAT uses buffed ATK without attack scales or criticals. */
+  basis?: 'ATK' | 'ATK_STAT' | 'TARGET_CURRENT_HP' | 'TARGET_DEFENSE'
   minimumAttackScale?: GuardValue
   timing?: 'PER_ATTACK' | 'PER_SECOND' | 'ON_DEPLOY'
   /** Added skill damage may have its own type/count while the main attack inherits traits. */
@@ -74,6 +74,11 @@ export interface GuardStage {
   defenseIgnoreRatio?: GuardValue
   defenseIgnoreFixed?: GuardValue
   resistanceIgnoreFixed?: GuardValue
+  /** Enemy debuffs are applied before the attacker's defense/resistance ignore. */
+  defenseReductionRatio?: GuardValue
+  resistanceReductionRatio?: GuardValue
+  /** Post-mitigation multiplier; distinct from attack scale. */
+  damageScale?: GuardValue
   /** Effects that cannot be inferred from text/data block numerical output explicitly. */
   unresolved?: readonly string[]
   /** Stable identities link a skill-stage blocker to any affected passive effects. */

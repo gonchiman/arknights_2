@@ -112,6 +112,9 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
     numeric('defense-ignore-ratio', '防御力無視率', stage.defenseIgnoreRatio, percent, mitigationOptions('PHYSICAL'))
     numeric('defense-ignore-fixed', '防御力無視', stage.defenseIgnoreFixed, number, mitigationOptions('PHYSICAL'))
     numeric('resistance-ignore-fixed', '術耐性無視', stage.resistanceIgnoreFixed, number, mitigationOptions('ARTS'))
+    numeric('defense-reduction-ratio', '防御力低下', stage.defenseReductionRatio, n => `−${percent(n)}`, mitigationOptions('PHYSICAL'))
+    numeric('resistance-reduction-ratio', '術耐性低下', stage.resistanceReductionRatio, n => `−${percent(n)}`, mitigationOptions('ARTS'))
+    numeric('damage-scale', '与ダメージ倍率', stage.damageScale, n => `×${number(n)}`)
     if (stage.duration !== undefined) add('duration', '持続時間', () => stage.duration === 'UNTIL_EXIT' ? '退場まで' : `${number(value(stage.duration))}秒`,
       stage.duration === 'UNTIL_EXIT' ? [] : [stage.duration], inactive ? {} : {
         status: 'NOT_RELEVANT', reason: '1攻撃のダメージと攻撃中のDPSには、持続時間を乗算しません。', timing: 'スキル中',

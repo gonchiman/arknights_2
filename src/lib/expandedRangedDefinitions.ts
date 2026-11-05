@@ -74,6 +74,66 @@ const sameTargets = '選択した敵全員が、同じ条件で攻撃または�
 const frontal = bool('targetInFrontalTiles', '対象が正面横3マスにいる')
 
 export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] = [
+  operator('char_2012_typhon', [
+    recipe('char_2012_typhon', 1, normal({ atk: key('atk'), aspd: key('attack_speed') }), [],
+      ['入力した防御無視の累積数と初回命中の状態で1攻撃を計算する。攻撃中の累積・8秒経過による解除・初回補正の消費は時間積算しない。']),
+  ], [
+    talent(0, '鋭牙の如く', ['DAMAGE'], b => [{ ...ctx('stack-defense-ignore', 'def_penetrate', { target: attack }),
+      item: 'DEFENSE_IGNORE_RATIO', operation: 'IGNORE_RATIO', unit: 'RATIO',
+      value: { type: 'CALC', operation: 'MULTIPLY', values: [b.read('def_penetrate'), { type: 'METRIC', metric: 'defenseIgnoreStacks' }] } }]),
+    talent(1, '泥沼の如く', ['DAMAGE', 'STATUS'], b => [
+      scale(b.read('atk_scale'), { condition: eq('firstSkillHitOnTarget', true) }),
+      status('first-hit-slow', 'スキル中の初回命中で足止め', { target: enemy, condition: eq('firstSkillHitOnTarget', true),
+        timing: { type: 'EVENT', event: 'ATTACK' }, lifetime: { type: 'FIXED_SECONDS', seconds: b.read('sluggish') } }),
+    ]),
+  ], [number('defenseIgnoreStacks', '今回の攻撃に適用する防御無視累積数', 5, 0, 5),
+    bool('firstSkillHitOnTarget', 'スキル中、この対象への初回命中')], [
+    { skillIndex: 2, reason: '2本の矢の対象配分と各対象への初回命中補正を個別に扱う必要がある。' },
+    { skillIndex: 3, reason: 'ランダム5連撃の対象配分と初回命中補正・防御無視の途中累積を個別に扱う必要がある。' },
+  ]),
+  operator('char_4193_lemuen', [
+    recipe('char_4193_lemuen', 1, normal({ maxTargets: 2, actions: [damage(key('attack@atk_scale'))] }), [], [ammoNote]),
+  ], [
+    talent(0, '越境追跡許可', ['DAMAGE', 'ATTACK_BEHAVIOR'], b => [
+      { ...ctx('wanted-vulnerability', 'damage_scale', { target: enemy, condition: eq('targetWanted', true) }),
+        item: 'DAMAGE_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: b.read('damage_scale') },
+      behavior('wanted-targeting', '攻撃範囲外の指名手配中の敵も攻撃可能', { condition: eq('targetWanted', true) }),
+    ]),
+    talent(1, '逃走犯引き渡し手続き', ['ABILITY', 'RESOURCE'], b => [
+      atk(b.read('atk'), 'atk', { condition: eq('deploymentSeconds', b.read('interval'), 'GTE') }),
+      { ...ctx('extra-ammo', 'add_count', { condition: eq('deploymentSeconds', b.read('interval'), 'GTE') }),
+        item: 'AMMO_CAPACITY', operation: 'ADD_VALUE', unit: 'POINT', value: b.read('add_count') },
+    ]),
+  ], [bool('targetWanted', '対象が指名手配中'), number('deploymentSeconds', '配置からの経過時間（秒）', 20, 0, 1000, 0.1)], [
+    { skillIndex: 2, reason: '照準中の攻撃力増加と敵HP・防御力による途中発射判定を時間軸で扱う必要がある。' },
+    { skillIndex: 3, reason: '複数の爆撃位置・爆心地・対象ごとの命中上限を確認する必要がある。' },
+  ], [sameTargets]),
+  operator('char_363_toddi', [
+    recipe('char_363_toddi', 1, normal({ defenseReductionRatio: choose('targetMarked', true, mul(-1, key('def')), 0),
+      actions: [damage(key('attack@atk_scale'))], periodTotal: { kind: 'CONSTANT_RATE' } }),
+      [bool('targetMarked', '対象に信号矢のマークが付いている', true)]),
+    recipe('char_363_toddi', 2, normal({ intervalAdd: key('base_attack_time'), maxTargets: null, actions: [
+      damage(key('attack@atk_scale'), 1, { label: '竜矢', targets: 1 }),
+      damage(key('attack@splash_atk_scale'), 1, { label: '遅延爆発', role: 'ADDITIONAL' }),
+    ] }), [], [ammoNote, '主対象に竜矢と爆発、周囲の選択対象には爆発が命中する。1.5秒後の爆発時も同じ状態である条件。']),
+  ], [talent(0, 'パッションスナイプ', ['DAMAGE'], b => [scale(b.read('atk_scale'), { condition: eq('targetSarkaz', true) })])],
+  [bool('targetSarkaz', '対象がサルカズ')]),
+  operator('char_346_aosta', [
+    recipe('char_346_aosta', 1, normal({ atk: key('atk'), aspd: key('attack_speed') })),
+    recipe('char_346_aosta', 2, normal({ atk: key('atk'), intervalAdd: key('base_attack_time') })),
+  ], [talent(0, '釘刺創', ['ADDITIONAL_DAMAGE'], b => [{
+    ...ctx('bleeding', 'atk_scale / duration', { target: enemy, timing: { type: 'EVENT', event: 'ATTACK' },
+      lifetime: { type: 'CURRENT_EVENT' }, condition: eq('bleedingActive', true) }),
+    item: 'DAMAGE_OVER_TIME', operation: 'DEAL_DAMAGE', lifetime: { type: 'CURRENT_EVENT' }, damage: {
+      kind: { type: 'ORDINARY', damageType: 'ARTS' }, amount: { basis: 'ATK_RATIO', reference: 'SOURCE', referenceTime: 'ON_APPLY',
+        ratio: { type: 'CALC', operation: 'MULTIPLY', values: [b.read('atk_scale'),
+          conditional(eq('skillIndex', 2), { type: 'METRIC', metric: 'skill.talent_scale' }, 1)] } },
+      rate: 'PER_SECOND', duration: { type: 'FIXED_SECONDS', seconds: b.read('duration') },
+      cadence: { intervalSeconds: 1, firstTickSeconds: null }, stacking: { mode: 'REPLACE', maxStacks: 1 },
+      refresh: 'RESET_DURATION', statusId: 'bleeding',
+    },
+  }], ['未ブロックの敵への攻撃で付与する流血の、付与中の毎秒ダメージを計算する。特性の150%倍率は流血に適用しない。付与・更新・終了の時間積算は行わない。'])],
+  [frontal, bool('bleedingActive', '対象に釘刺創の流血が付与中', true)], [], [sameTargets]),
   // Additional reviewed JP roster: ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e.
   operator('char_366_acdrop', [
     recipe('char_366_acdrop', 1, normal({ aspd: key('attack_speed'), periodTotal: { kind: 'CONSTANT_RATE' } })),
@@ -273,13 +333,17 @@ export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] 
   operator('char_332_archet', [recipe('char_332_archet', 1, next(key('atk_scale'), 1, { maxTargets: key('max_target'), actions: [
     damage(key('atk_scale'), 1, { label: '主対象', targets: 1 }),
     damage(key('atk_scale_2'), 1, { label: '周囲の対象', targets: add(input('actualAttackTargetCount'), -1) }),
-  ] })), recipe('char_332_archet', 3, normal({ atk: key('atk'), maxTargets: key('attack@max_target'), actions: [damage(1, key('attack@times'))] }))], [
+  ] })), recipe('char_332_archet', 2, burst(key('atk_scale'), { maxTargets: key('times'), actions: Array.from({ length: 5 }, (_, index) =>
+    damage(key('atk_scale'), add(key('times'), -index), { label: index === 0 ? '主対象' : `連鎖${index}`,
+      targets: choose('actualAttackTargetCount', index + 1, 1, 0, 'GTE') })) }), [],
+    ['選択対象が順に連鎖範囲に入り、主対象から5・4・3・2・1回命中する1発動の値。']),
+    recipe('char_332_archet', 3, normal({ atk: key('atk'), maxTargets: key('attack@max_target'), actions: [damage(1, key('attack@times'))] }))], [
     talent(0, 'ランデン戦術', ['RESOURCE'], b => [{ ...ctx('sniper-sp', 'sp', { timing: { type: 'PERIODIC', intervalSeconds: b.read('interval'), firstTickSeconds: null },
       condition: eq('recipientSpRecovery', 'ATTACK'), target: { ...self, side: 'ALLY', scope: 'BATTLEFIELD', tagIds: ['profession:SNIPER'], filterLabels: { 'profession:SNIPER': '狙撃' } } }),
       item: 'SP_RESTORE', operation: 'ADD_VALUE', unit: 'POINT', value: b.read('sp') }]),
     talent(1, '鉄弦', ['SURVIVAL', 'RESOURCE'], b => [status('shield', '配置後シールドを1枚形成'),
       { ...ctx('shield-sp', 'sp'), item: 'SP_RESTORE', operation: 'ADD_VALUE', unit: 'POINT', value: b.read('sp'), condition: eq('shieldConsumed', true) }]),
-  ], [], [{ skillIndex: 2, reason: '敵間の連鎖と連鎖順による攻撃回数の配分を確認する必要がある。' }]),
+  ]),
   operator('char_456_ash', [recipe('char_456_ash', 1, normal({ atk: key('atk'), actions: [damage(1, key('attack@times'))] })),
     recipe('char_456_ash', 2, normal({ intervalAdd: key('base_attack_time'), actions: [damage(choose('targetStunned', true, key('ash_s_2[atk_scale].atk_scale'), 1))] }),
       [bool('targetStunned', '対象がスタン中', true)], [ammoNote, 'スタン状態を固定して評価する。スタン終了をまたぐ銃弾全体の総量は含めない。']),
@@ -293,13 +357,14 @@ export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] 
       { ...ctx('first-deploy-sp', 'sp', { timing: { type: 'EVENT', event: 'DEPLOY' }, condition: eq('firstDeployment', true) }), item: 'SP_RESTORE', operation: 'ADD_VALUE', unit: 'POINT', value: b.read('sp') }]),
   ]),
   operator('char_430_fartth', [recipe('char_430_fartth', 1, normal({ atk: key('atk'), aspd: key('attack_speed') })),
-    recipe('char_430_fartth', 2, normal({ aspd: key('attack_speed') }))], [
+    recipe('char_430_fartth', 2, normal({ aspd: key('attack_speed') })),
+    recipe('char_430_fartth', 3, normal({ atk: key('atk'),
+      damageScale: choose('targetOutsideBaseRange', true, key('damage_scale'), 1), periodTotal: { kind: 'CONSTANT_RATE' } }),
+      [bool('targetOutsideBaseRange', '対象が通常の攻撃範囲外')])], [
     talent(0, '一心不乱', ['ABILITY'], b => [atk(b.read('atk'), 'atk', { condition: eq('noDamageForTenSeconds', true) })]),
     talent(1, '颯射ち', ['ABILITY', 'ATTACK_BEHAVIOR'], () => [status('reduced-target-priority', 'スキル中に狙われにくくなる'),
       behavior('ignore-physical-dodge', 'スキル中の攻撃は物理回避を無視')]),
-  ], [bool('noDamageForTenSeconds', '直前10秒間被ダメージなし', true)], [
-    { skillIndex: 3, reason: '射程外のスキル与ダメージ倍率を防御減算後に適用する共通操作への対応が必要。' },
-  ]),
+  ], [bool('noDamageForTenSeconds', '直前10秒間被ダメージなし', true)]),
   operator('char_300_phenxi', [recipe('char_300_phenxi', 1, normal({ atk: key('atk') })),
     recipe('char_300_phenxi', 3, normal({ intervalAdd: key('base_attack_time'), actions: [damage(
       choose('targetInBlastCenter', true, key('attack@atk_scale'), key('attack@atk_scale_2')))] }),
@@ -320,7 +385,11 @@ export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] 
   ], [number('targetWeight', '対象の重量ランク', 3, 0, 10)], [
     { skillIndex: 3, reason: '通常攻撃を停止する周期攻撃の初回命中時刻・終了境界を確認する必要がある。' },
   ]),
-  operator('char_129_bluep', [recipe('char_129_bluep', 1, next(key('atk_scale'), 1, { maxTargets: 2 }))], [
+  operator('char_129_bluep', [recipe('char_129_bluep', 1, next(key('atk_scale'), 1, { maxTargets: 2 })),
+    recipe('char_129_bluep', 2, normal({ atk: key('atk'), maxTargets: 3, actions: [
+      damage(1, key('attack@times'), { label: '主対象', targets: 1 }),
+      damage(1, 1, { label: '追加対象', targets: add(input('actualAttackTargetCount'), -1) }),
+    ] }))], [
     talent(0, '神経毒', ['ADDITIONAL_DAMAGE'], b => [{ ...ctx('poison', 'poison_damage', { target: enemy,
       timing: { type: 'EVENT', event: 'ATTACK' }, lifetime: { type: 'CURRENT_EVENT' }, condition: eq('poisonActive', true) }),
       item: 'DAMAGE_OVER_TIME', operation: 'DEAL_DAMAGE', lifetime: { type: 'CURRENT_EVENT' }, damage: {
@@ -328,7 +397,5 @@ export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] 
         rate: 'PER_SECOND', duration: { type: 'FIXED_SECONDS', seconds: b.read('duration') }, cadence: { intervalSeconds: 1, firstTickSeconds: null },
         stacking: { mode: 'REPLACE', maxStacks: 1 }, refresh: 'RESET_DURATION', statusId: 'poison',
       } }], ['付与中の毎秒ダメージを評価する。付与終了時刻・更新・有限時間の毒総量は含めない。']),
-  ], [bool('poisonActive', '対象に神経毒が付与中', true)], [
-    { skillIndex: 2, reason: '主対象2連撃と追加対象の攻撃・毒の個別配分を確認する必要がある。' },
-  ]),
+  ], [bool('poisonActive', '対象に神経毒が付与中', true)]),
 ]

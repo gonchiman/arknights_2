@@ -46,6 +46,29 @@
         "PENDING": 77,
         "UNSUPPORTED": 542
       }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "v3",
+      "label": "v3 対応一括拡張",
+      "capturedAt": "2026-11-05T10:09:22.777Z",
+      "source": {
+        "codeRevision": "3548d47440afcce243a7f7750a4a084c07f73964",
+        "codeDirty": true,
+        "codeFingerprint": "a45cf81fa6a9618f4e13b45ce7e92a0bf92904a17aee00092d4de7fa9d35c397",
+        "gameDataRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+        "gameDataFingerprint": "e02f27762c44d0b083329e83375802cc2bef03f04777822f5f61220a0881a0ec",
+        "reconstructed": false
+      },
+      "file": "v3.json",
+      "sha256": "201790fa2729ceec6dcf6ba190714fdb5324bf6c5a6a4868fd1fb64ed5d8e7cd",
+      "skillCount": 915,
+      "counts": {
+        "SUPPORTED": 339,
+        "CONDITIONAL": 11,
+        "PENDING": 85,
+        "UNSUPPORTED": 480
+      }
     }
   ]
 }

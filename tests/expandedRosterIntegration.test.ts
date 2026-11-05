@@ -61,11 +61,11 @@ const catalog = sources.flatMap(source => source.skills.map(skill => record(sour
 const coverage = buildDamageCalculatorThreeCoverage(catalog)
 const structures = getDamageCalculatorThreeStructures().filter(structure => sourceMap.has(structure.basicInfo.operatorId))
 
-test('独立snapshotの137名283スキルが構造・coverage・registryに欠落や重複なく現れる', () => {
+test('独立snapshotの164名345スキルが構造・coverage・registryに欠落や重複なく現れる', () => {
   assert.deepEqual(groups.map(group => [group.length, group.reduce((sum, source) => sum + source.skills.length, 0)]),
-    [[66, 131], [34, 72], [37, 80]])
-  assert.equal(sources.length, 137)
-  assert.equal(catalog.length, 283)
+    [[85, 173], [38, 82], [41, 90]])
+  assert.equal(sources.length, 164)
+  assert.equal(catalog.length, 345)
   assert.equal(sourceMap.size, sources.length)
   const expectedIds = catalog.map(identity).sort()
   assert.deepEqual(structures.map(structure => identity(structure.basicInfo)).sort(), expectedIds)
@@ -79,12 +79,12 @@ test('独立snapshotの137名283スキルが構造・coverage・registryに欠�
   }
 })
 
-test('追加範囲は対応212・条件付き3・保留68で、保留を未対応や対応へ混ぜない', () => {
+test('追加範囲は対応265・条件付き4・保留76で、保留を未対応や対応へ混ぜない', () => {
   assert.deepEqual(Object.fromEntries(['SUPPORTED', 'CONDITIONAL', 'PENDING', 'UNSUPPORTED'].map(status =>
     [status, coverage.filter(row => row.status === status).length])),
-  { SUPPORTED: 212, CONDITIONAL: 3, PENDING: 68, UNSUPPORTED: 0 })
+  { SUPPORTED: 265, CONDITIONAL: 4, PENDING: 76, UNSUPPORTED: 0 })
   assert.deepEqual(coverage.filter(row => row.status === 'CONDITIONAL').map(row => `${row.skill.operatorId}/${row.skill.skillIndex}`).sort(),
-    ['char_145_prove/2', 'char_218_cuttle/2', 'char_405_absin/2'])
+    ['char_145_prove/2', 'char_218_cuttle/2', 'char_4027_heyak/2', 'char_405_absin/2'])
   for (const row of coverage) {
     assert.equal(row.selection?.levelIndex, sourceMap.get(row.skill.operatorId)!.skillLevelIndex)
     if (row.status === 'PENDING') {
@@ -105,7 +105,7 @@ test('coverageの特性区分は、優先対象のみ・計算に使う術属性
   assert.equal(find('char_271_spikes', 2).sections.trait, 'NOT_APPLICABLE')
 })
 
-test('全283スキルの全登録段階で対応状況と実計算が一致し、停止時に部分数値を残さない', () => {
+test('全345スキルの全登録段階で対応状況と実計算が一致し、停止時に部分数値を残さない', () => {
   let supportedSkills = 0, pendingSkills = 0
   for (const row of coverage) {
     const structure = structures.find(structure => identity(structure.basicInfo) === identity(row.skill))!
@@ -134,12 +134,12 @@ test('全283スキルの全登録段階で対応状況と実計算が一致し�
     if (hasResult) supportedSkills += 1
     else pendingSkills += 1
   }
-  assert.deepEqual([supportedSkills, pendingSkills], [215, 68])
+  assert.deepEqual([supportedSkills, pendingSkills], [269, 76])
 })
 
-test('昇進1/SL7の11名と昇進2/SL10の126名でidentity・素質を混同しない', () => {
+test('昇進1/SL7の11名と昇進2/SL10の153名でidentity・素質を混同しない', () => {
   assert.equal(sources.filter(source => source.phaseIndex === 1 && source.skillLevelIndex === 6).length, 11)
-  assert.equal(sources.filter(source => source.phaseIndex === 2 && source.skillLevelIndex === 9).length, 126)
+  assert.equal(sources.filter(source => source.phaseIndex === 2 && source.skillLevelIndex === 9).length, 153)
   for (const source of sources) {
     const row = record(source.operatorId, 1)
     const talents = buildExpandedTalentStructures([row])

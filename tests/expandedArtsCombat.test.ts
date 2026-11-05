@@ -4,7 +4,9 @@ import { readFileSync } from 'node:fs'
 import { EXPANDED_ARTS_DEFINITIONS } from '../src/lib/expandedArtsDefinitions.ts'
 import type { ExpandedOperatorSource } from '../src/lib/expandedCombatTypes.ts'
 import { buildDamageCalculatorThreeOutput } from '../src/lib/damageCalculatorThree.ts'
+import { calculateDamageThreePeriodTotal } from '../src/lib/damageCalculatorThreePeriodTotal.ts'
 import { buildExpandedTalentStructures } from '../src/lib/expandedTalentStructure.ts'
+import { buildDamageCalculatorThreeCoverage } from '../src/lib/damageCalculatorThreeCoverage.ts'
 import { classifySkill } from '../src/lib/classifier.ts'
 import type { GuardConditions } from '../src/lib/guardCombatTypes.ts'
 import type { SkillRecord } from '../src/types/skill.ts'
@@ -38,11 +40,173 @@ function close(actual: number | null, expected: number) {
   assert.ok(actual !== null && Math.abs(actual - expected) < 1e-7, `${actual} != ${expected}`)
 }
 const attack = (base: number, ratio = 0) => Math.floor(base * (1 + ratio) + 1e-9)
+function total(id: string, index: number, result: ReturnType<typeof output>) {
+  const stage = EXPANDED_ARTS_DEFINITIONS.find(definition => definition.operatorId === id)!
+    .recipes.find(recipe => recipe.skillIndex === index)!.stages[0]
+  return calculateDamageThreePeriodTotal({ stage, attackKind: result.attackKind,
+    combinedDps: result.rows[0].combinedDps, allTargetsCombinedDps: result.rows[0].allTargetsCombinedDps })
+}
 
-test('術師・補助・呪癒師37名の80スキルを55対応・25保留に分け、全素質を登録する', () => {
-  assert.equal(sources.length, 37)
-  assert.equal(sources.reduce((sum, source) => sum + source.skills.length, 0), 80)
-  assert.equal(EXPANDED_ARTS_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 55)
+test('ホルハイヤS1は空中対象への素質倍率、S2は9命中の対象配分を反映する', () => {
+  const ground = at('char_4027_heyak', 1)
+  const airborne = at('char_4027_heyak', 1, { targetAirborne: true })
+  close(ground.row.perAttack, ground.result.stats.attack * 3)
+  close(airborne.row.perAttack, ground.row.perAttack * 1.2)
+  const three = at('char_4027_heyak', 2, { actualAttackTargetCount: 3 })
+  close(three.row.perAttack, three.result.stats.attack * 0.45 * 9 / 3)
+  close(three.row.allTargetsPerAttack, three.result.stats.attack * 0.45 * 9)
+  close(three.row.dps, three.row.perAttack / three.result.attackInterval!)
+  assert.equal(total('char_4027_heyak', 2, three.result).totalDamage, null)
+})
+
+test('ホルハイヤS2は浮遊が有効な対象を停止し、状態一定の対象だけ条件付きで計算する', () => {
+  for (const airborne of [false, true]) {
+    const fixed = at('char_4027_heyak', 2, { targetCanBeLevitated: false, targetAirborne: airborne })
+    close(fixed.row.perAttack, fixed.result.stats.attack * 0.45 * 9 * (airborne ? 1.2 : 1))
+    const dynamic = output('char_4027_heyak', 2, { targetCanBeLevitated: true, targetAirborne: airborne })
+    assert.ok(dynamic.unsupportedReasons.some(reason => reason.includes('命中途中の浮遊')))
+    assert.deepEqual(dynamic.rows, [])
+  }
+  const recipes = EXPANDED_ARTS_DEFINITIONS.find(entry => entry.operatorId === 'char_4027_heyak')!.recipes
+  assert.ok(!recipes.find(entry => entry.skillIndex === 1)!.inputs.some(input => input.key === 'targetCanBeLevitated'))
+  assert.equal(recipes.find(entry => entry.skillIndex === 2)!.inputs.find(input => input.key === 'targetCanBeLevitated')!.defaultValue, false)
+  assert.equal(buildDamageCalculatorThreeCoverage([record('char_4027_heyak', 2)])[0].status, 'CONDITIONAL')
+})
+
+test('焔影リードS1は付与確率を脆弱倍率に混ぜず、指定した灼痕状態で評価する', () => {
+  const clear = at('char_1020_reed2', 1, {}, 40)
+  const marked = at('char_1020_reed2', 1, { reedScarActive: true }, 40)
+  close(clear.row.perAttack, attack(clear.result.stats.attack, 0.45) * 0.6)
+  close(marked.row.perAttack, clear.row.perAttack * 1.3)
+  close(marked.result.attackInterval, 1.6 / 1.45)
+  assert.equal(total('char_1020_reed2', 1, marked.result).totalDamage, null)
+})
+
+test('濯塵ハイビスカスS1は対術脆弱が有効な命中だけ12%増幅する', () => {
+  const clear = at('char_1024_hbisc2', 1, {}, 40)
+  const weak = at('char_1024_hbisc2', 1, { hibiscusWeaknessActive: true }, 40)
+  close(clear.row.perAttack, attack(clear.result.stats.attack, 1) * 0.6)
+  close(weak.row.perAttack, clear.row.perAttack * 1.12)
+})
+
+test('ヘイズは術耐性低下が有効な命中で残存術耐性を80%にし、攻撃速度と分離する', () => {
+  const clear = at('char_141_nights', 2, {}, 80)
+  const debuffed = at('char_141_nights', 2, { hazeDebuffActive: true }, 80)
+  close(clear.row.perAttack, attack(clear.result.stats.attack, 0.6) * 0.2)
+  close(debuffed.row.perAttack, attack(clear.result.stats.attack, 0.6) * 0.36)
+  close(debuffed.result.attackInterval, 1.6 / 1.6)
+  close(at('char_141_nights', 1, { hazeDebuffActive: true }, 80).row.perAttack,
+    attack(clear.result.stats.attack, 0.8) * 0.36)
+})
+
+test('プラマニクスS2は術耐性30%低下、2体攻撃、低HP脆弱をそれぞれ反映する', () => {
+  const result = at('char_174_slbell', 2, { actualAttackTargetCount: 2, targetHpPercent: 30 }, 80)
+  close(result.row.perAttack, result.result.stats.attack * 0.44 * 1.3)
+  close(result.row.allTargetsPerAttack, result.row.perAttack * 2)
+  assert.equal(result.result.maxTargetCount, 2)
+})
+
+test('ルシーラS2は通常敵の撃破数で脆弱効果量だけを増幅し、3倍で頭打ちになる', () => {
+  const initial = at('char_4079_haini', 2)
+  const four = at('char_4079_haini', 2, { defeatedNormalEnemies: 4 })
+  const many = at('char_4079_haini', 2, { defeatedNormalEnemies: 100 })
+  const elite = at('char_4079_haini', 2, { defeatedNormalEnemies: 4, targetEliteOrBoss: true })
+  const base = attack(initial.result.stats.attack, 0.5)
+  close(initial.row.perAttack, base * 1.16)
+  close(four.row.perAttack, base * 1.48)
+  close(many.row.perAttack, four.row.perAttack)
+  close(elite.row.perAttack, base)
+  const s1 = at('char_4079_haini', 1, { defeatedNormalEnemies: 100 })
+  close(s1.row.perAttack, s1.result.stats.attack * 2 * 1.16)
+})
+
+test('プロヴァイゾS2は発動時の全体攻撃と高速化した通常攻撃を合算しない', () => {
+  const normal = at('char_4032_provs', 2)
+  const start = at('char_4032_provs', 2, { provisoPhase: 'ACTIVATION', actualAttackTargetCount: 3 })
+  close(normal.row.perAttack, normal.result.stats.attack)
+  close(normal.result.attackInterval, (1.9 - 1.1) / 1.1)
+  close(start.row.perAttack, start.result.stats.attack * 3.5)
+  close(start.row.allTargetsPerAttack, start.result.stats.attack * 3.5 * 3)
+  assert.equal(start.row.dps, null)
+})
+
+test('ビーズワクスS2とミントS2は範囲攻撃の異なる段階を一意に選択する', () => {
+  const beeswax = at('char_344_beewax', 2)
+  const summon = at('char_344_beewax', 2, { beeswaxPhase: 'SUMMON', actualAttackTargetCount: 3 })
+  close(beeswax.row.perAttack, beeswax.result.stats.attack)
+  close(summon.row.perAttack, summon.result.stats.attack * 3)
+  close(summon.row.allTargetsPerAttack, summon.result.stats.attack * 9)
+  assert.equal(summon.row.dps, null)
+  const mint = at('char_388_mint', 2)
+  const end = at('char_388_mint', 2, { mintPhase: 'END' })
+  close(mint.row.perAttack, mint.result.stats.attack * 1.3)
+  close(end.row.perAttack, end.result.stats.attack * 3)
+  assert.equal(end.row.dps, null)
+})
+
+test('グレインバッズS2の攻撃停止中はダメージ0、睡眠終了後は3体へ攻撃する', () => {
+  const sleeping = at('char_4122_grabds', 2, { grainbudsPhase: 'SLEEP' })
+  close(sleeping.row.perAttack, 0)
+  assert.equal(sleeping.row.dps, null)
+  const awake = at('char_4122_grabds', 2, { actualAttackTargetCount: 3 })
+  close(awake.row.perAttack, awake.result.stats.attack)
+  close(awake.result.attackInterval, 1.9 / 2.4)
+  close(awake.row.allTargetsPerAttack, awake.result.stats.attack * 3)
+})
+
+test('ヴァンデラS2の反撃は1被撃分として計算し、通常攻撃に倍率を乗せない', () => {
+  const normal = at('char_494_vendla', 2)
+  const counter = at('char_494_vendla', 2, { vendelaPhase: 'COUNTER' })
+  close(normal.row.perAttack, attack(normal.result.stats.attack, 0.8))
+  close(counter.row.perAttack, normal.row.perAttack * 0.5)
+  assert.equal(counter.row.dps, null)
+})
+
+test('新規術師の仮想物理攻撃は対術脆弱を除外し、防御・術耐性低下を交換しない', () => {
+  function physical(id: string, index: number, guard: GuardConditions = {}) {
+    const skill = record(id, index)
+    const source = sources.find(source => source.operatorId === id)!
+    const result = buildDamageCalculatorThreeOutput({ operator: skill, skill, phaseIndex: source.phaseIndex,
+      operatorLevel: source.profile.phases[source.phaseIndex].maxLevel!, trust: 100, skillLevelIndex: source.skillLevelIndex,
+      conditions: { guard }, enemy: { defense: 100, resistance: 80 }, virtualMainAttackType: 'PHYSICAL' })
+    assert.deepEqual(result.unsupportedReasons, [], `${id} S${index}`)
+    assert.ok(result.rows[0].attackComponents.every(component => component.role === 'MAIN'))
+    return { result, row: result.rows[0] }
+  }
+  for (const [id, key, ratio] of [
+    ['char_1020_reed2', 'reedScarActive', 0.45], ['char_1024_hbisc2', 'hibiscusWeaknessActive', 1],
+  ] as const) {
+    const clear = physical(id, 1), debuffed = physical(id, 1, { [key]: true })
+    close(clear.row.perAttack, attack(clear.result.stats.attack, ratio) - 100)
+    close(debuffed.row.perAttack, clear.row.perAttack)
+  }
+  const hazeClear = physical('char_141_nights', 2), hazeDebuff = physical('char_141_nights', 2, { hazeDebuffActive: true })
+  close(hazeDebuff.row.perAttack, hazeClear.row.perAttack)
+  const pramanix = physical('char_174_slbell', 2)
+  close(pramanix.row.perAttack, pramanix.result.stats.attack - 100 * 0.4)
+  const hool = physical('char_4027_heyak', 2)
+  close(hool.row.perAttack, (hool.result.stats.attack * 0.45 - 100) * 9)
+})
+
+test('追加4名の素質数値欠落や未確認のスキル更新は計算を停止する', () => {
+  for (const id of ['char_4027_heyak', 'char_1020_reed2', 'char_1024_hbisc2', 'char_141_nights']) {
+    const missing = output(id, 1, {}, skill => {
+      for (const talent of skill.operatorProfile.talents ?? []) {
+        for (const candidate of talent.candidates ?? []) candidate.blackboard = []
+      }
+    })
+    assert.ok(missing.unsupportedReasons.length, id)
+    assert.deepEqual(missing.rows, [])
+    const changed = output(id, 1, {}, skill => { skill.skillLevels[9].description += '未確認の追加攻撃' })
+    assert.ok(changed.unsupportedReasons.length, id)
+    assert.deepEqual(changed.rows, [])
+  }
+})
+
+test('術師・補助・呪癒師41名の90スキルを68対応・22保留に分け、全素質を登録する', () => {
+  assert.equal(sources.length, 41)
+  assert.equal(sources.reduce((sum, source) => sum + source.skills.length, 0), 90)
+  assert.equal(EXPANDED_ARTS_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 68)
   for (const definition of EXPANDED_ARTS_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     const indices = [...definition.recipes.map(recipe => recipe.skillIndex), ...(definition.deferredSkills ?? []).map(skill => skill.skillIndex)]
@@ -57,7 +221,7 @@ test('術師・補助・呪癒師37名の80スキルを55対応・25保留に分
   }
 })
 
-test('対応55スキルの初期条件は有限のダメージを返し、保留25スキルは部分結果を出さない', () => {
+test('対応68スキルの初期条件は有限のダメージを返し、保留22スキルは部分結果を出さない', () => {
   for (const definition of EXPANDED_ARTS_DEFINITIONS) {
     for (const recipe of definition.recipes) {
       const result = output(definition.operatorId, recipe.skillIndex)

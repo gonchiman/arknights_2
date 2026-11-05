@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { isDeepStrictEqual } from 'node:util'
 import { classifySkill } from '../src/lib/classifier.ts'
-import { getDamageCalculatorThreeStructures } from '../src/lib/damageCalculatorThree.ts'
+import { getDamageCalculatorThreeStructures, getDamageCalculatorThreeVirtualAttackCapability } from '../src/lib/damageCalculatorThree.ts'
 import {
   evaluateDamageThreeComparisonEntry, getDamageThreeComparisonEntries,
   type DamageThreeComparisonCommon, type DamageThreeComparisonEntry,
@@ -65,7 +65,7 @@ test('属性比較は通常DC3の全カタログ段階を欠落・重複なく�
   assert.deepEqual(getDamageThreeAttributeEntries([]), [])
 })
 
-test('通常DC3で計算できる全段階を複数の敵条件で物理・術へ変更でき、同属性では全結果を保持する', () => {
+test('攻撃を持つ計算可能な全段階を複数の敵条件で物理・術へ変更でき、同属性では全結果を保持する', () => {
   const failures: string[] = []
   const successfulStages = new Set<string>()
   const kinds = new Set<string>()
@@ -80,6 +80,12 @@ test('通常DC3で計算できる全段階を複数の敵条件で物理・術�
       if (original.errors.length || original.output?.rows.length !== 1) continue
       const identity = `${entry.key} DEF=${common.defense} RES=${common.resistance} N=${common.enemyCount}`
       assert.ok(original.perAttack !== null && Number.isFinite(original.perAttack), identity)
+      const stage = entry.structure.guardRecipe?.stages.find(stage => stage.id === entry.stageId)
+      if (stage?.actions.length === 0) {
+        assert.equal(original.perAttack, 0, identity)
+        assert.deepEqual(original.output.rows[0].attackComponents, [], identity)
+        continue
+      }
       successfulStages.add(entry.key)
       kinds.add(entry.kind)
       nativeDamageTypes.add(original.damageType ?? 'UNKNOWN')
@@ -146,13 +152,33 @@ test('通常・強化攻撃・反撃・発動動作・確定・複合属性を�
   }
 })
 
-test('全guardRecipeの攻撃は役割が明示され、空の主攻撃を持つ段階は未対応理由を残す', () => {
+test('全guardRecipeの攻撃は役割が明示され、主攻撃がない段階は属性変更の理由を残す', () => {
   for (const structure of getDamageCalculatorThreeStructures()) {
     for (const stage of structure.guardRecipe?.stages ?? []) {
       const identity = `${structure.basicInfo.operatorId}/S${structure.basicInfo.skillIndex}/${stage.id}`
       for (const action of stage.actions) assert.ok(action.role === 'MAIN' || action.role === 'ADDITIONAL', `${identity}/${action.label}`)
-      if (!stage.actions.some(action => action.role === 'MAIN')) assert.ok(stage.unresolved?.length, identity)
+      if (!stage.actions.some(action => action.role === 'MAIN')) {
+        assert.ok(stage.actions.length === 0 || stage.unresolved?.length, identity)
+        const capability = getDamageCalculatorThreeVirtualAttackCapability(structure, stage.id)
+        assert.equal(capability.supported, false, identity)
+        assert.ok(capability.reason, identity)
+      }
     }
+  }
+})
+
+test('グレインバッズS2の攻撃停止中はダメージ0を保ち、存在しない主攻撃の属性は変更しない', () => {
+  const entry = attributeEntries.find(entry => entry.key === findEntry('char_4122_grabds', 2, 'sleep').key)!
+  for (const targetType of targetTypes) {
+    const result = evaluateDamageThreeAttributeComparison({ entry, common: enemyConditions[1], targetType, axis: 'resistance' })
+    assert.deepEqual(result.original.errors, [])
+    assert.equal(result.original.perAttack, 0)
+    assert.equal(result.changed, null)
+    assert.match(result.errors.join(), /主攻撃がありません/)
+    assert.deepEqual(result.samples, [])
+    const direct = evaluateDamageThreeComparisonEntry(entry, enemyConditions[1], {}, { virtualMainAttackType: targetType })
+    assert.match(direct.errors.join(), /主攻撃がありません/)
+    assert.deepEqual(direct.output?.rows, [])
   }
 })
 

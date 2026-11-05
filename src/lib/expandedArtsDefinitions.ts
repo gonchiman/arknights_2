@@ -41,16 +41,21 @@ const normal = (options: Partial<GuardStage> = {}): GuardStage => ({ id: 'active
   actions: [{ label: '術攻撃', role: 'MAIN', damageType: 'ARTS', scale: 1 }], ...options })
 const next = (scale: GuardValue, maxTargets?: GuardValue | null): GuardStage =>
   normal({ label: '強化攻撃', kind: 'NEXT_ATTACK', maxTargets, actions: [{ label: '強化攻撃', role: 'MAIN', damageType: 'ARTS', scale }] })
+const action = (label: string, scale: GuardValue, maxTargets: GuardValue | null = null): GuardStage =>
+  normal({ label, kind: 'SKILL_ACTION', maxTargets, actions: [{ label, role: 'MAIN', damageType: 'ARTS', scale }] })
+const phase = (input: string, value: string, stage: GuardStage): GuardStage =>
+  ({ ...stage, id: value.toLowerCase(), when: { input, comparison: 'EQ', value } })
+const unresolvedPeriod = (reason: string): GuardStage['periodTotal'] => ({ kind: 'UNSUPPORTED', reason })
 const recipe = (operatorId: string, skillIndex: number, stages: readonly GuardStage[], inputs: readonly GuardInput[] = [], notes: readonly string[] = []): GuardSkillRecipe => {
   const raw = sources.find(source => source.operatorId === operatorId)!.skills.find(skill => skill.skillIndex === skillIndex)!.raw
   return { operatorId, skillIndex, inputs, notes, stages: stages.map(stage => ({ ...stage,
     duration: stage.duration ?? (raw.duration < 0 ? 'UNTIL_EXIT' : raw.duration),
   })) }
 }
-const operator = (operatorId: string, stages: readonly [number, GuardStage | readonly GuardStage[]][], talents: readonly ExpandedTalentDefinition[],
+const operator = (operatorId: string, stages: readonly [number, GuardStage | readonly GuardStage[], (readonly GuardInput[])?][], talents: readonly ExpandedTalentDefinition[],
   options: Partial<Omit<ExpandedOperatorDefinition, 'operatorId' | 'recipes' | 'talents'>> = {}): ExpandedOperatorDefinition =>
   ({ operatorId, phaseIndex: 2, skillLevelIndex: 9, talents,
-    recipes: stages.map(([index, value]) => recipe(operatorId, index, Array.isArray(value) ? value : [value as GuardStage])), ...options })
+    recipes: stages.map(([index, value, inputs]) => recipe(operatorId, index, Array.isArray(value) ? value : [value as GuardStage], inputs)), ...options })
 const hp = n('targetHpPercent', '対象のHP（%）', 100, 0, 100)
 const aoeNotes = ['選択した全対象が同じ攻撃に命中する条件。範囲外の敵と敵の位置変化は含めない。']
 
@@ -120,21 +125,35 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
     talent(0, '戦術的調整', v => [effect('sp-recovery', 'sp_recovery_per_sec', { item: 'SP_RECOVERY', operation: 'ADD_VALUE', unit: 'PER_SECOND', value: v.read('sp_recovery_per_sec') },
       { condition: cmp('source.secondsSinceLastNormalAttack', 'GTE', v.read('delay')) })], ['RESOURCE']),
   ], { traitNotes: aoeNotes }),
-  operator('char_494_vendla', [[1, normal({ aspd: k('attack_speed') })]], [
+  operator('char_494_vendla', [[1, normal({ aspd: k('attack_speed') })], [2, [
+    phase('vendelaPhase', 'NORMAL', normal({ atk: k('atk'),
+      notes: ['通常攻撃のみの値。反撃は「反撃1回」で別に評価し、反撃込みの時間平均DPSにはしない。'],
+      periodTotal: unresolvedPeriod('味方への被撃回数・時刻を指定していないため、反撃込みの総ダメージは未計算です。') })),
+    phase('vendelaPhase', 'COUNTER', { ...action('反撃1回', k('atk_scale'), 1), atk: k('atk') }),
+  ]]], [
     talent(0, '土壌改良', v => [effect('heal-scale', 'heal_scale', { item: 'HEAL_RECEIVED_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('heal_scale') },
       { target: { ...target('ALLY', 'ATTACK_RANGE'), selection: { type: 'COUNT', count: 1 } } })], ['SURVIVAL']),
-  ], { traitNotes: ['呪癒師の味方への回復量はダメージに含めない。'],
-    deferredSkills: [{ skillIndex: 2, reason: '付与先が受ける攻撃を契機とした反撃の回数・間隔を指定する仕組みが必要。' }] }),
-  operator('char_174_slbell', [[1, normal({ maxTargets: k('attack@max_target') })]], [
+  ], { inputs: [select('vendelaPhase', '評価する攻撃', [['NORMAL', '通常攻撃'], ['COUNTER', '反撃1回']])],
+    traitNotes: ['呪癒師の味方への回復量はダメージに含めない。反撃は指定された味方がダメージを受けた1回分。'] }),
+  operator('char_174_slbell', [[1, normal({ maxTargets: k('attack@max_target') })],
+    [2, normal({ maxTargets: 2, defenseReductionRatio: { op: 'mul', args: [-1, k('def')] },
+      resistanceReductionRatio: { op: 'mul', args: [-1, k('magic_resistance')] } })]], [
     talent(0, '弱体化', v => [damage(v.read('damage_scale'), cmp('targetHpPercent', 'LT', percent(v.read('hp_ratio'))))], ['DAMAGE']),
     talent(1, 'ハーモニー', () => [status('two-targets', '攻撃対象数+1（攻撃定義に反映）')], ['ATTACK_BEHAVIOR']),
-  ], { inputs: [hp], deferredSkills: [{ skillIndex: 2, reason: '敵の防御力・術耐性の低下を表す共通のスキル効果を追加する必要がある。' }] }),
+  ], { inputs: [hp] }),
   operator('char_254_vodfox', [[1, normal({ atk: k('atk'), duration: 'UNTIL_EXIT' })]], [
     talent(0, '潰敗への誘い', v => [damage(add(1, mul(add(v.read('damage_scale'), -1), metric('skill.scale_delta_to_one'))), cmp('targetHpPercent', 'LT', percent(v.read('hp_ratio'))), 'damage_scale / skill:scale_delta_to_one')], ['DAMAGE']),
   ], { inputs: [hp], deferredSkills: [{ skillIndex: 2, reason: '呪いの人形の配置位置・効果範囲・存続時間のモデルが必要。' }] }),
-  operator('char_4079_haini', [[1, next(k('atk_scale'), k('max_target'))]], [
-    talent(0, '測量機器の応用', v => [damage(v.read('damage_scale'), eq('targetEliteOrBoss', false))], ['DAMAGE']),
-  ], { inputs: [b('targetEliteOrBoss', '対象がエリート・ボス')], deferredSkills: [{ skillIndex: 2, reason: '撃破によって変化する脆弱倍率と適用対象の履歴を扱う必要がある。' }] }),
+  operator('char_4079_haini', [[1, next(k('atk_scale'), k('max_target'))],
+    [2, normal({ atk: k('atk'), maxTargets: k('attack@max_target'),
+      periodTotal: unresolvedPeriod('スキル中の撃破による脆弱倍率の変化を計算していないため、総ダメージは未計算です。') })]], [
+    talent(0, '測量機器の応用', v => [damage(add(1, mul(add(v.read('damage_scale'), -1),
+      { type: 'CONDITIONAL', condition: eq('skillIndex', 2), whenFalse: 1,
+        whenTrue: { type: 'CALC', operation: 'MIN', values: [metric('skill.attack@max_talent_up'),
+          add(1, mul(metric('defeatedNormalEnemies'), metric('skill.attack@talent_up')))] } })),
+      eq('targetEliteOrBoss', false), 'damage_scale / skill:attack@talent_up')], ['DAMAGE']),
+  ], { inputs: [b('targetEliteOrBoss', '対象がエリート・ボス'), n('defeatedNormalEnemies', 'S2中に範囲内で倒れた通常敵の数', 0, 0, 100)],
+    traitNotes: ['指定した撃破数と脆弱倍率が一定の時点を評価する。'] }),
   operator('char_195_glassb', [[1, normal({ intervalAdd: k('base_attack_time') })], [2, normal({ atk: k('atk'), maxTargets: k('attack@max_target') })]], [
     talent(0, '探究者', v => [speed(v.read('attack_speed')), effect('defense', 'def', { item: 'DEFENSE_BUFF_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: v.read('def') })]),
   ]),
@@ -142,13 +161,23 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
     talent(0, '対空装置', v => [effect('drone-attack-scale', 'atk_scale', { item: 'ATTACK_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('atk_scale') },
       { condition: eq('targetDrone', true) }), status('drone-priority', 'ドローンを優先して攻撃')], ['DAMAGE', 'ATTACK_BEHAVIOR']),
   ], { inputs: [b('targetDrone', '対象がドローン')], deferredSkills: [{ skillIndex: 2, reason: '対ドローン倍率と素質の通常攻撃倍率の適用範囲を確認する必要がある。' }] }),
-  operator('char_4032_provs', [[1, next(k('atk_scale'))]], [
+  operator('char_4032_provs', [[1, next(k('atk_scale'))], [2, [
+    phase('provisoPhase', 'NORMAL', normal({ intervalAdd: k('base_attack_time'),
+      periodTotal: unresolvedPeriod('発動時の範囲攻撃と通常攻撃を段階別に評価するため、合計の総ダメージは未計算です。') })),
+    phase('provisoPhase', 'ACTIVATION', action('発動時の範囲攻撃', k('atk_scale'))),
+  ]]], [
     talent(0, 'カジミエーシュの法律家', v => [speed(v.read('attack_speed')), status('ally-speed', 'ランダムな味方カジミエーシュ1名の攻撃速度を上昇',
       { target: { ...target('ALLY', 'BATTLEFIELD'), includeSelf: false, factionIds: ['kazimierz'], selection: { type: 'RANDOM', count: 1 } } })]),
-  ], { deferredSkills: [{ skillIndex: 2, reason: '発動時の全体ダメージとスキル中の通常攻撃を分けて出力する必要がある。' }] }),
-  operator('char_4122_grabds', [[1, next(k('atk_scale'), 2)]], [
+  ], { inputs: [select('provisoPhase', 'S2の段階', [['NORMAL', '通常攻撃'], ['ACTIVATION', '発動時']])],
+    traitNotes: ['発動時の範囲攻撃とスキル中の通常攻撃は、それぞれの段階を選択して評価する。'] }),
+  operator('char_4122_grabds', [[1, next(k('atk_scale'), 2)], [2, [
+    phase('grainbudsPhase', 'ATTACK', normal({ label: '睡眠終了後の通常攻撃', aspd: k('attack_speed'), maxTargets: k('max_target'),
+      periodTotal: unresolvedPeriod('初期の攻撃停止期間と睡眠終了後の攻撃をつなぐ時系列は計算していないため、総ダメージは未計算です。') })),
+    phase('grainbudsPhase', 'SLEEP', normal({ label: '攻撃停止中', kind: 'SKILL_ACTION', actions: [] })),
+  ]]], [
     talent(0, '「いい子にしてて」', v => [speed(v.read('attack_speed')), status('wildbeast-slow', '野生動物への足止め時間を延長')], ['ABILITY', 'STATUS']),
-  ], { deferredSkills: [{ skillIndex: 2, reason: '攻撃停止・睡眠付与の段階から通常攻撃へ移行する時間と対象状態を確認する必要がある。' }] }),
+  ], { inputs: [select('grainbudsPhase', 'S2の段階', [['ATTACK', '睡眠終了後'], ['SLEEP', '攻撃停止中']])],
+    traitNotes: ['睡眠終了後は攻撃可能な敵を指定する。睡眠付与・解除と攻撃再開の時刻は再現しない。'] }),
   operator('char_180_amgoat', [[1, normal({ aspd: k('amgoat_s_1[a].attack_speed'), atk: choose('skillActivationCount', 2, k('amgoat_s_1[b].atk'), 0, 'GTE') })],
     [3, normal({ atk: k('atk'), intervalAdd: k('base_attack_time'), maxTargets: k('attack@max_target') })]], [
     talent(0, 'フレイムブレス', v => [atk(v.read('atk'), 'atk', { target: { ...target('ALLY', 'BATTLEFIELD'), tagIds: ['profession:CASTER'] } })]),
@@ -181,16 +210,26 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
       effect('arts-dodge', 'prob', { item: 'ARTS_DODGE', operation: 'ADD_RATIO', unit: 'RATIO', value: v.read('prob') }, { condition: eq('skillIndex', 1) })], ['ABILITY', 'SURVIVAL']),
   ], { traitNotes: ['S1の通常攻撃によるダメージを計算する。味方の回復量は含めない。'],
     deferredSkills: [{ skillIndex: 2, reason: '対象の移動距離・移動速度・効果時間に依存する確定ダメージのモデルが必要。' }] }),
-  operator('char_344_beewax', [[1, normal({ atk: k('atk') })]], [
+  operator('char_344_beewax', [[1, normal({ atk: k('atk') })], [2, [
+    phase('beeswaxPhase', 'NORMAL', normal({
+      periodTotal: unresolvedPeriod('砂の碑の出現時ダメージと自身の通常攻撃を別に評価するため、総ダメージは未計算です。') })),
+    phase('beeswaxPhase', 'SUMMON', action('砂の碑の出現時', k('atk_scale'))),
+  ]]], [
     talent(0, '砂原の加護', v => [effect('self-regen', 'hp_recovery_per_sec_by_max_hp_ratio',
       { item: 'HP_RESTORE_RATIO', operation: 'RESTORE', unit: 'MAX_HP_RATIO', value: v.read('hp_recovery_per_sec_by_max_hp_ratio') },
       { timing: { type: 'PERIODIC', intervalSeconds: 1, firstTickSeconds: null }, condition: eq('source.skillActive', false) })], ['SURVIVAL']),
-  ], { traitNotes: aoeNotes, deferredSkills: [{ skillIndex: 2, reason: '召喚した砂の碑の位置を中心とした発動時ダメージと、術師自身の攻撃を分ける必要がある。' }] }),
-  operator('char_388_mint', [[1, normal({ actions: [{ label: '範囲術攻撃', role: 'MAIN', damageType: 'ARTS', scale: k('attack@atk_scale') }] })]], [
+  ], { inputs: [select('beeswaxPhase', 'S2の段階', [['NORMAL', '自身の通常攻撃'], ['SUMMON', '砂の碑の出現時']])],
+    traitNotes: ['出現時は砂の碑の周囲、自身の通常攻撃は自身の範囲内にいる対象を指定する。'] }),
+  operator('char_388_mint', [[1, normal({ actions: [{ label: '範囲術攻撃', role: 'MAIN', damageType: 'ARTS', scale: k('attack@atk_scale') }] })], [2, [
+    phase('mintPhase', 'NORMAL', normal({ actions: [{ label: '範囲術攻撃', role: 'MAIN', damageType: 'ARTS', scale: k('attack@atk_scale') }],
+      periodTotal: unresolvedPeriod('終了時の範囲攻撃と通常攻撃を段階別に評価するため、総ダメージは未計算です。') })),
+    phase('mintPhase', 'END', action('スキル終了時の範囲攻撃', k('atk_scale'))),
+  ]]], [
     talent(0, '地質学者', v => [effect('ally-defense', 'def', { item: 'DEFENSE_BUFF_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: v.read('def') },
       { target: { ...target('ALLY', 'ADJACENT'), includeSelf: false }, condition: eq('source.skillActive', false) }),
       status('reduced-target-priority', 'スキル中は敵に狙われにくくなる', { condition: eq('source.skillActive', true) })], ['ABILITY', 'SURVIVAL']),
-  ], { traitNotes: aoeNotes, deferredSkills: [{ skillIndex: 2, reason: '通常攻撃と終了時の範囲ダメージを分け、引き寄せによる攻撃対象の変化を扱う必要がある。' }] }),
+  ], { inputs: [select('mintPhase', 'S2の段階', [['NORMAL', '通常攻撃'], ['END', 'スキル終了時']])],
+    traitNotes: [...aoeNotes, '通常攻撃と終了時ダメージを分けて評価する。引き寄せによる敵の位置変化は含めない。'] }),
   operator('char_426_billro', [[1, normal({ atk: k('atk') })],
     [2, normal({ atk: choose('overcharged', true, k('atk')), intervalAdd: k('base_attack_time') })]], [
     talent(0, '血肉饗宴', v => [effect('activation-heal', 'heal_scale / billro_t_1[enhance].heal_scale',
@@ -250,4 +289,54 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
   ], { inputs: [b('analysisAmplificationActive', '命中時に素質1の増幅が有効'), b('adjacentEnemyPresent', '隣接4マスに敵がいる')],
     traitNotes: ['対象全員の命中時の増幅状態を指定する。HP80%以上の対象への命中による増幅の付与・更新、3秒後の失効はシミュレートしない。'],
     deferredSkills: [{ skillIndex: 3, reason: 'サンダーストームの初回・最終発生、複数ストームと通常攻撃の重なりを扱う必要がある。' }] }),
+  operator('char_4027_heyak', [[1, next(k('atk_scale'), 2)],
+    [2, [normal({ when: { input: 'targetCanBeLevitated', comparison: 'EQ', value: false },
+      maxTargets: null, actions: [{ label: 'ランダム9連続攻撃', role: 'MAIN', damageType: 'ARTS',
+      scale: k('attack@atk_scale'), hits: 9, targets: 1 }],
+      periodTotal: unresolvedPeriod('浮遊状態の付与・終了による素質倍率の変化を計算していないため、総ダメージは未計算です。') }),
+    normal({ id: 'levitation-transition', label: '浮遊による状態変化',
+      when: { input: 'targetCanBeLevitated', comparison: 'EQ', value: true }, actions: [],
+      unresolved: ['浮遊が有効な対象への9連続攻撃は、命中途中の浮遊付与と素質倍率の変化を扱う必要があるため未対応です。'] })],
+      [b('targetCanBeLevitated', '対象に浮遊が有効')]]], [
+    talent(0, '伝承の終焉', v => [effect('airborne-attack-scale', 'atk_scale',
+      { item: 'ATTACK_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('atk_scale') },
+      { condition: eq('targetAirborne', true) }), status('silence', `${v.read('silence')}秒間の特殊能力無効化`,
+        { target: target('ENEMY', 'ATTACK_TARGET'), condition: eq('targetAirborne', true) })], ['DAMAGE', 'STATUS']),
+    talent(1, '今は無き翼', v => [status('antigravity', `HP${percent(v.read('hp_ratio'))}%以上の敵に反重力を付与`,
+      { target: target('ENEMY', 'ATTACK_RANGE') })], ['STATUS']),
+  ], { inputs: [b('targetAirborne', '命中時に対象が空中にいる')],
+    traitNotes: ['S2は飛行中または浮遊無効の敵など、浮遊付与で空中状態が変化しない対象に限定する。全対象の空中状態・防御条件が同じ場合の均等な配分期待値。浮遊が有効な対象は未対応。'],
+    deferredSkills: [{ skillIndex: 3, reason: '複数の旋風の進路・距離による倍率と最初の命中対象を扱う必要がある。' }] }),
+  operator('char_1020_reed2', [[1, normal({ atk: k('atk'), aspd: k('attack_speed'),
+    periodTotal: unresolvedPeriod('灼痕の確率付与・更新・失効を計算していないため、総ダメージは未計算です。') })]], [
+    talent(0, '灼けつく炎', v => [damage(v.read('damage_scale'), eq('reedScarActive', true), 'damage_scale', true),
+      status('scar-application', `${percent(v.read('prob'))}%の確率で${v.read('duration')}秒間の灼痕を付与`,
+        { target: target('ENEMY', 'ATTACK_TARGET'), timing: { type: 'EVENT', event: 'ATTACK' } }),
+      status('scar-attack-reduction', `灼痕中の攻撃力${percent(v.read('atk'))}%`,
+        { target: target('ENEMY', 'ATTACK_TARGET'), condition: eq('reedScarActive', true) })], ['DAMAGE', 'STATUS']),
+    talent(1, '耀映', v => [status('self-heal', `自身以外への治療量の${percent(v.read('scale'))}%で自身を治療`)], ['SURVIVAL']),
+  ], { inputs: [b('reedScarActive', '命中時に灼痕が有効')],
+    traitNotes: ['灼痕が有効かを命中時の条件として指定する。30%の付与確率を脆弱倍率に乗算した平均値ではない。回復量は含めない。'],
+    deferredSkills: [
+      { skillIndex: 2, reason: '複数火球と通常攻撃の発生・接触位置・再接触間隔を扱う必要がある。' },
+      { skillIndex: 3, reason: '灼痕の継続ダメージと撃破時爆発・周囲への伝播を一体で扱う必要がある。' },
+    ] }),
+  operator('char_1024_hbisc2', [[1, normal({ atk: k('atk'),
+    periodTotal: unresolvedPeriod('対術脆弱の付与・更新・失効の時刻を計算していないため、総ダメージは未計算です。') })]], [
+    talent(0, '朝瞬の花', v => [damage(v.read('damage_scale'), eq('hibiscusWeaknessActive', true), 'damage_scale', true),
+      status('arts-weakness-application', `攻撃対象に${v.read('weak[magic][limit]')}秒間の対術脆弱を付与`,
+        { target: target('ENEMY', 'ATTACK_TARGET'), timing: { type: 'EVENT', event: 'ATTACK' } })], ['DAMAGE', 'STATUS']),
+  ], { inputs: [b('hibiscusWeaknessActive', '命中時に素質の対術脆弱が有効')],
+    traitNotes: ['命中時の対術脆弱の状態を指定する。付与・更新・失効と味方への回復量は含めない。'],
+    deferredSkills: [{ skillIndex: 2, reason: '通常攻撃を行わない毎秒攻撃と、素質の適用時点を扱う必要がある。' }] }),
+  operator('char_141_nights', [[1, normal({ atk: k('atk'),
+    periodTotal: unresolvedPeriod('術耐性低下の付与・更新・失効の時刻を計算していないため、総ダメージは未計算です。') })],
+    [2, normal({ atk: k('atk'), aspd: k('attack_speed'),
+      periodTotal: unresolvedPeriod('術耐性低下の付与・更新・失効の時刻を計算していないため、総ダメージは未計算です。') })]], [
+    talent(0, '黒い霧', v => [effect('active-resistance-reduction', 'magic_resistance',
+      { item: 'RESISTANCE_REDUCTION_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: mul(-1, v.read('magic_resistance')) },
+      { target: target('ENEMY', 'ATTACK_TARGET'), condition: eq('hazeDebuffActive', true),
+        lifetime: { type: 'FIXED_SECONDS', seconds: v.read('duration') } })], ['DAMAGE']),
+  ], { inputs: [b('hazeDebuffActive', '命中時に素質の術耐性低下が有効')],
+    traitNotes: ['命中時の術耐性低下の状態を指定する。付与・更新・失効と、各命中時に効果が残っているかの判定は再現しない。'] }),
 ]

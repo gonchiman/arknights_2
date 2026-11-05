@@ -126,8 +126,17 @@ test('guardの毎秒固定ダメージ、敵HP基準、攻撃ごとの加算を�
   assert.ok(flow('char_1014_nearl2', 3).stages.find(s => s.id === 'sun')!.warnings?.some(w => /適用順序/.test(w)))
 })
 
+test('追加した低下割合と防御後倍率も効果フローへ保持する', () => {
+  const pramanix = steps('char_174_slbell', 2)
+  assert.equal(field(pramanix.find(step => step.title === '防御力の低下割合')!, '値'), '60%')
+  assert.equal(field(pramanix.find(step => step.title === '術耐性の低下割合')!, '値'), '30%')
+  const fartooth = steps('char_430_fartth', 3).find(step => step.title === '与ダメージ倍率')!
+  assert.ok(fartooth)
+  assert.match(field(fartooth, '値')!, /対象が通常の攻撃範囲外/)
+})
+
 test('全登録定義で各効果・攻撃を一度ずつ保持し、入力依存値を参照エラーにしない', () => {
-  assert.equal(SKILL_STRUCTURES.length, 373)
+  assert.equal(SKILL_STRUCTURES.length, 435)
   for (const structure of SKILL_STRUCTURES) {
     const model = buildSkillEffectFlow(structure)
     const sourceStages = structure.guardRecipe?.stages ?? structure.effectStructure.stages
