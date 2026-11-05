@@ -14,7 +14,7 @@ const n = (key: string, label: string, defaultValue: number, min = 0, max = 100,
 const b = (key: string, label: string, defaultValue = false): GuardInput => ({ key, label, kind: 'boolean', defaultValue,
   options: [{ value: false, label: 'なし' }, { value: true, label: 'あり' }] })
 const a = (damageType: DamageType, scale: GuardValue = 1, hits: GuardValue = 1,
-  rest: Partial<GuardDamageAction> = {}): GuardDamageAction => ({ label: '攻撃', damageType, scale, hits, ...rest })
+  rest: Partial<GuardDamageAction> = {}): GuardDamageAction => ({ label: '攻撃', role: 'MAIN', damageType, scale, hits, ...rest })
 const stage = (damageType: DamageType, rest: Partial<GuardStage> = {}): GuardStage => ({
   id: 'active', label: 'スキル中', kind: 'NORMAL', actions: [a(damageType)], ...rest,
 })
@@ -66,7 +66,7 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
     ], notes: ['同一の対象へ攻撃し続ける条件。移動・再選択・退場による攻撃中断は含めない。'] })]),
 
   make('char_4082_qiubai', 1, [next(PHYS, 1, 1, { traitOverrides: ['ATTACK_SCALE'], maxTargets: null, actions: [
-    a(PHYS, 1, 1, { label: '通常攻撃', targets: 1 }), a(ARTS, k('aoe_scale'), 1, { label: 'バインド終了時' }),
+    a(PHYS, 1, 1, { label: '通常攻撃', targets: 1 }), a(ARTS, k('aoe_scale'), 1, { role: 'ADDITIONAL', label: 'バインド終了時' }),
   ], notes: ['対象がバインド終了まで生存し、同じ範囲内にいる条件。遅延ダメージを含む強化攻撃1回。'] })]),
   make('char_4082_qiubai', 2, [
     at('normal', stage(PHYS, { atk: k('atk'), duration: 5 })),
@@ -98,7 +98,7 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
   ], [phase(['initial', '初期状態'], ['stance', '切替後'])], ['スキルのパッシブ攻撃力増加は両状態に適用。スタン成功を確定せず、素質の状態条件入力を使う。']),
   make('char_4088_hodrer', 3, [
     at('normal', stage(PHYS, { atk: k('atk'), duration: 70, actions: [a(PHYS),
-      a(TRUE, 0, 1, { flatDamage: k('attack@damage'), timing: 'PER_SECOND', traitOverrides: ['DAMAGE_TYPE', 'HIT_COUNT', 'ATTACK_SCALE', 'SPLASH_DAMAGE'], label: '付与中の毎秒確定ダメージ' })] })),
+      a(TRUE, 0, 1, { role: 'ADDITIONAL', flatDamage: k('attack@damage'), timing: 'PER_SECOND', traitOverrides: ['DAMAGE_TYPE', 'HIT_COUNT', 'ATTACK_SCALE', 'SPLASH_DAMAGE'], label: '付与中の毎秒確定ダメージ' })] })),
     at('dot', burst(TRUE, 0, 1, { label: '付与中の毎秒ダメージ', maxTargets: null,
       actions: [a(TRUE, 0, 1, { flatDamage: k('attack@damage'), label: '1秒分の確定ダメージ' })] })),
   ], [phase(['normal', '通常攻撃'], ['dot', '付与中の1秒分'])], ['確定ダメージ付与済みの敵を指定する。HP減少、回復、敵の出入り、付与時間全体の積分は含めない。']),
@@ -165,7 +165,7 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
     actions: [a(ARTS, 1, choose('skillActivationCount', 2, 3, 2, 'GTE'))] })], [activations()]),
 
   make('char_1019_siege2', 1, [next(ARTS, 1, 1, { maxTargets: null, actions: [
-    a(ARTS, 1, 1, { label: '通常打撃', targets: 1 }), a(TRUE, k('atk_scale'), 1, { label: '隣接4マスへの追加攻撃', traitOverrides: ['DAMAGE_TYPE', 'HIT_COUNT'] }),
+    a(ARTS, 1, 1, { label: '通常打撃', targets: 1 }), a(TRUE, k('atk_scale'), 1, { role: 'ADDITIONAL', label: '隣接4マスへの追加攻撃', traitOverrides: ['DAMAGE_TYPE', 'HIT_COUNT'] }),
   ] })]),
   make('char_1019_siege2', 2, [stage(ARTS, { atk: k('atk'), maxTargets: k('attack@max_target'), duration: 'UNTIL_EXIT' })], [], ['SP回復速度は発動周期を計算しないためDPSに加算しない。']),
   make('char_1019_siege2', 3, [stage(TRUE, { atk: k('atk'), intervalAdd: k('base_attack_time'), traitOverrides: ['DAMAGE_TYPE'],
@@ -236,7 +236,7 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
   make('char_4064_mlynar', 3, [stage(PHYS, { duration: 28, maxTargets: k('attack@max_target'),
     traitAttackRatioScale: max(0, add(k('trait_up'), mul(k('per_kill_reduce'), i('skillKillCount')))), actions: [
     a(PHYS, k('attack@atk_scale'), 1, { label: '通常攻撃' }),
-    a(TRUE, k('atk_scale'), 1, { label: '自身の攻撃による確定ダメージ' }),
+    a(TRUE, k('atk_scale'), 1, { role: 'ADDITIONAL', label: '自身の攻撃による確定ダメージ' }),
   ] })], [n('skillKillCount', '今回のスキル中の撃破数', 0, 0, 100)], ['他のカジミエーシュOPが誘発する確定ダメージは、他者の攻撃頻度が未指定のため含めない。']),
 
   make('char_1043_leizi2', 1, [burst(PHYS, k('attack@atk_scale_s1'), 1, { maxTargets: null })], [], ['1回の発動のみ。チャージを使い切るまでの特性維持は蓄積条件で扱う。']),

@@ -26,6 +26,7 @@ export type AppRoute =
   | { view: 'damage-three'; selection?: SkillRouteSelection }
   | { view: 'damage-three-coverage' }
   | { view: 'damage-three-comparison' }
+  | { view: 'damage-three-attribute-comparison'; selection?: SkillRouteSelection }
   | { view: 'damage-verification' }
   | { view: 'goldenglow-home' }
   | { view: 'surtr-home' }
@@ -64,6 +65,7 @@ const SKILL_STRUCTURE_ROUTE = '#/skill-structure'
 const TALENT_STRUCTURE_ROUTE = '#/talent-structure'
 const TRAIT_STRUCTURE_ROUTE = '#/trait-structure'
 const DAMAGE_THREE_ROUTE = '#/damage-3'
+const DAMAGE_THREE_ATTRIBUTE_ROUTE = '#/damage-3/attribute-comparison'
 
 export interface TraitRouteSelection {
   operatorId: string
@@ -112,6 +114,10 @@ export function createSkillStructureHash(selection: SkillRouteSelection): string
 
 export function createDamageCalculatorThreeHash(selection?: SkillRouteSelection): string {
   return selection ? createSkillSelectionHash(DAMAGE_THREE_ROUTE, selection) : DAMAGE_THREE_ROUTE
+}
+
+export function createDamageCalculatorThreeAttributeHash(selection?: SkillRouteSelection): string {
+  return selection ? createSkillSelectionHash(DAMAGE_THREE_ATTRIBUTE_ROUTE, selection) : DAMAGE_THREE_ATTRIBUTE_ROUTE
 }
 
 export function createTalentStructureHash(selection: TalentRouteSelection): string {
@@ -213,6 +219,10 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/damage-2') return { view: 'damage-two' }
   if (hash === '#/damage-3/coverage') return { view: 'damage-three-coverage' }
   if (hash === '#/damage-3/comparison') return { view: 'damage-three-comparison' }
+  if (hash === DAMAGE_THREE_ATTRIBUTE_ROUTE) return { view: 'damage-three-attribute-comparison' }
+  if (hash.startsWith(`${DAMAGE_THREE_ATTRIBUTE_ROUTE}?`)) {
+    return parseSkillSelectionRoute('damage-three-attribute-comparison', hash.slice(DAMAGE_THREE_ATTRIBUTE_ROUTE.length + 1))
+  }
   if (hash === DAMAGE_THREE_ROUTE) return { view: 'damage-three' }
   if (hash.startsWith(`${DAMAGE_THREE_ROUTE}?`)) {
     return parseSkillSelectionRoute('damage-three', hash.slice(DAMAGE_THREE_ROUTE.length + 1))
@@ -265,7 +275,7 @@ function matchesEnemyAggregationRoute(hash: string, path: string): boolean {
   return new URLSearchParams(hash.split('?')[1] ?? '').has('aggregationVersion')
 }
 
-function parseSkillSelectionRoute(view: 'skill-json' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'damage-three', query: string): AppRoute {
+function parseSkillSelectionRoute(view: 'skill-json' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'damage-three' | 'damage-three-attribute-comparison', query: string): AppRoute {
   const params = new URLSearchParams(query)
   const operatorId = readRouteId(params, 'operatorId')
   const skillId = readRouteId(params, 'skillId')

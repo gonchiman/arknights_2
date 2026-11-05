@@ -38,9 +38,9 @@ const talent = (talentIndex: number, name: string, effects: ExpandedTalentDefini
   categories: ExpandedTalentDefinition['categories'] = ['ABILITY'], prefabKey = String(talentIndex + 1)): ExpandedTalentDefinition =>
   ({ talentIndex, name, prefabKey, categories, effects })
 const normal = (options: Partial<GuardStage> = {}): GuardStage => ({ id: 'active', label: 'スキル中', kind: 'NORMAL',
-  actions: [{ label: '術攻撃', damageType: 'ARTS', scale: 1 }], ...options })
+  actions: [{ label: '術攻撃', role: 'MAIN', damageType: 'ARTS', scale: 1 }], ...options })
 const next = (scale: GuardValue, maxTargets?: GuardValue | null): GuardStage =>
-  normal({ label: '強化攻撃', kind: 'NEXT_ATTACK', maxTargets, actions: [{ label: '強化攻撃', damageType: 'ARTS', scale }] })
+  normal({ label: '強化攻撃', kind: 'NEXT_ATTACK', maxTargets, actions: [{ label: '強化攻撃', role: 'MAIN', damageType: 'ARTS', scale }] })
 const recipe = (operatorId: string, skillIndex: number, stages: readonly GuardStage[], inputs: readonly GuardInput[] = [], notes: readonly string[] = []): GuardSkillRecipe => {
   const raw = sources.find(source => source.operatorId === operatorId)!.skills.find(skill => skill.skillIndex === skillIndex)!.raw
   return { operatorId, skillIndex, inputs, notes, stages: stages.map(stage => ({ ...stage,
@@ -80,8 +80,8 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
     talent(0, '地質調査', () => [status('sluggish-extension', '特性の足止め時間を延長')], ['STATUS']),
   ], { deferredSkills: [{ skillIndex: 2, reason: '攻撃を停止して足止めを行うスキル。直接ダメージの出力対象外。' }] }),
   operator('char_002_amiya', [[1, normal({ aspd: k('attack_speed') })],
-    [2, normal({ maxTargets: null, actions: [{ label: 'ランダム連続攻撃', damageType: 'ARTS', scale: k('attack@atk_scale'), hits: k('attack@times'), targets: 1 }] })],
-    [3, normal({ atk: k('atk'), traitOverrides: ['DAMAGE_TYPE'], actions: [{ label: '確定攻撃', damageType: 'TRUE', scale: 1 }] })]], [
+    [2, normal({ maxTargets: null, actions: [{ label: 'ランダム連続攻撃', role: 'MAIN', damageType: 'ARTS', scale: k('attack@atk_scale'), hits: k('attack@times'), targets: 1 }] })],
+    [3, normal({ atk: k('atk'), traitOverrides: ['DAMAGE_TYPE'], actions: [{ label: '確定攻撃', role: 'MAIN', damageType: 'TRUE', scale: 1 }] })]], [
     talent(0, 'アブソープション', v => [
       effect('attack-sp', 'amiya_t_1[atk].sp', { item: 'SP_RESTORE', operation: 'ADD_VALUE', unit: 'POINT', value: v.read('amiya_t_1[atk].sp') }, { timing: { type: 'EVENT', event: 'ATTACK' } }),
       effect('kill-sp', 'amiya_t_1[kill].sp', { item: 'SP_RESTORE', operation: 'ADD_VALUE', unit: 'POINT', value: v.read('amiya_t_1[kill].sp') }, { timing: { type: 'EVENT', event: 'KILL' } }),
@@ -89,12 +89,12 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
   ], { traitNotes: ['ランダム攻撃は同条件の対象への均等な配分期待値。SP回復とスキル後のスタン・強制退場は周期DPSに含めない。'] }),
   operator('char_405_absin', [[1, normal({ atk: k('atk'), duration: 'UNTIL_EXIT' })],
     [2, [normal({ when: { input: 'targetHpPercent', comparison: 'LT', value: 50 },
-      actions: [{ label: '4連続攻撃', damageType: 'ARTS', scale: k('attack@atk_scale'), hits: k('attack@times') }] }),
+      actions: [{ label: '4連続攻撃', role: 'MAIN', damageType: 'ARTS', scale: k('attack@atk_scale'), hits: k('attack@times') }] }),
     normal({ id: 'invalid-target', label: '攻撃対象外', when: { input: 'targetHpPercent', comparison: 'GTE', value: 50 },
       actions: [], unresolved: ['S2はHP50%未満の敵だけを攻撃する。対象のHP条件を変更してください。'] })]]], [
     talent(0, '法の執行者', v => [damage(v.read('damage_scale'), cmp('targetHpPercent', 'LT', percent(v.read('hp_ratio'))))], ['DAMAGE']),
   ], { inputs: [{ ...hp, defaultValue: 30 }], traitNotes: ['対象のHP割合が一定の条件で計算する。ダメージによるHPの推移は含めない。'] }),
-  operator('char_411_tomimi', [[1, normal({ aspd: k('attack_speed'), traitOverrides: ['DAMAGE_TYPE'], actions: [{ label: '物理攻撃', damageType: 'PHYSICAL', scale: 1 }] })]], [
+  operator('char_411_tomimi', [[1, normal({ aspd: k('attack_speed'), traitOverrides: ['DAMAGE_TYPE'], actions: [{ label: '物理攻撃', role: 'MAIN', damageType: 'PHYSICAL', scale: 1 }] })]], [
     talent(0, '荒野術師流戦法', v => [atk(v.read('atk')), status('physical-mode', 'スキル中は地上対象への物理攻撃・攻撃範囲縮小')], ['ABILITY', 'ATTACK_BEHAVIOR']),
   ], { traitNotes: ['スキル中の地上の敵への攻撃を計算する。'], deferredSkills: [{ skillIndex: 2, reason: '確率選択されるスタン・攻撃倍率・範囲攻撃の分岐と命中対象を扱う必要がある。' }] }),
   operator('char_466_qanik', [[1, normal({ aspd: k('attack_speed') })]], [
@@ -161,7 +161,7 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
     talent(1, '時間認知鈍化', () => [status('enemy-slow', '攻撃範囲内の敵の移動速度低下', { target: target('ENEMY', 'ATTACK_RANGE') })], ['STATUS']),
   ], { traitNotes: aoeNotes, deferredSkills: [{ skillIndex: 2, reason: '毎秒ダメージの初回・最終発生時点を確認し、通常攻撃を行わない継続ダメージとして出力する必要がある。' }] }),
   operator('char_291_aglina', [[1, normal({ atk: k('atk') })],
-    [2, normal({ intervalScale: k('base_attack_time'), actions: [{ label: '術攻撃', damageType: 'ARTS', scale: k('damage_scale') }],
+    [2, normal({ intervalScale: k('base_attack_time'), actions: [{ label: '術攻撃', role: 'MAIN', damageType: 'ARTS', scale: k('damage_scale') }],
       notes: ['攻撃間隔は基礎間隔の15%として計算する。アニメーションのイベント時刻・フレーム丸めによる実命中間隔の差は含めない。'] })],
     [3, normal({ atk: k('atk'), maxTargets: k('attack@max_target') })]], [
     talent(0, 'アクセルフィールド', v => [speed(v.read('attack_speed'), { target: target('ALLY', 'BATTLEFIELD') })]),
@@ -186,7 +186,7 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
       { item: 'HP_RESTORE_RATIO', operation: 'RESTORE', unit: 'MAX_HP_RATIO', value: v.read('hp_recovery_per_sec_by_max_hp_ratio') },
       { timing: { type: 'PERIODIC', intervalSeconds: 1, firstTickSeconds: null }, condition: eq('source.skillActive', false) })], ['SURVIVAL']),
   ], { traitNotes: aoeNotes, deferredSkills: [{ skillIndex: 2, reason: '召喚した砂の碑の位置を中心とした発動時ダメージと、術師自身の攻撃を分ける必要がある。' }] }),
-  operator('char_388_mint', [[1, normal({ actions: [{ label: '範囲術攻撃', damageType: 'ARTS', scale: k('attack@atk_scale') }] })]], [
+  operator('char_388_mint', [[1, normal({ actions: [{ label: '範囲術攻撃', role: 'MAIN', damageType: 'ARTS', scale: k('attack@atk_scale') }] })]], [
     talent(0, '地質学者', v => [effect('ally-defense', 'def', { item: 'DEFENSE_BUFF_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: v.read('def') },
       { target: { ...target('ALLY', 'ADJACENT'), includeSelf: false }, condition: eq('source.skillActive', false) }),
       status('reduced-target-priority', 'スキル中は敵に狙われにくくなる', { condition: eq('source.skillActive', true) })], ['ABILITY', 'SURVIVAL']),
@@ -205,8 +205,8 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
   // JP runtime snapshot; mechanics references: https://prts.wiki/w/Ifrit and /Ceobe.
   operator('char_134_ifrit', [[1, normal({ atk: k('atk'), aspd: k('attack_speed'), periodTotal: { kind: 'CONSTANT_RATE' } })],
     [2, normal({ label: '強化攻撃', kind: 'NEXT_ATTACK', actions: [
-      { label: '強化攻撃', damageType: 'ARTS', scale: k('atk_scale') },
-      { label: 'やけど付与中', damageType: 'ARTS', scale: k('burn.atk_scale'), timing: 'PER_SECOND' },
+      { label: '強化攻撃', role: 'MAIN', damageType: 'ARTS', scale: k('atk_scale') },
+      { label: 'やけど付与中', role: 'ADDITIONAL', damageType: 'ARTS', scale: k('burn.atk_scale'), timing: 'PER_SECOND' },
     ], notes: ['やけどは付与中の毎秒ダメージ。付与・更新・終了時刻や退場後の推移は含めない。'] })]], [
     talent(0, '精神融解', v => [effect('resistance-reduction', 'magic_resistance', {
       item: 'RESISTANCE_REDUCTION_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: mul(-1, v.read('magic_resistance')),
@@ -219,7 +219,7 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
   operator('char_2013_cerber', [[1, next(k('atk_scale'))],
     [2, normal({ intervalScale: k('base_attack_time'), periodTotal: { kind: 'CONSTANT_RATE' } })],
     [3, normal({ atk: k('atk'), traitOverrides: ['DAMAGE_TYPE'],
-      actions: [{ label: '物理攻撃', damageType: 'PHYSICAL', scale: 1 }], periodTotal: { kind: 'CONSTANT_RATE' } })]], [
+      actions: [{ label: '物理攻撃', role: 'MAIN', damageType: 'PHYSICAL', scale: 1 }], periodTotal: { kind: 'CONSTANT_RATE' } })]], [
     talent(0, 'そぎおとし', v => [effect('defense-based-arts', 'atk_scale', {
       item: 'ADDITIONAL_ATTACK', operation: 'DEAL_DAMAGE', unit: 'MULTIPLIER', value: v.read('atk_scale'),
       damageType: 'ARTS', rate: 'PER_ATTACK', basis: 'TARGET_DEFENSE', label: 'そぎおとし',

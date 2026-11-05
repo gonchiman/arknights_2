@@ -10,6 +10,7 @@ import { getExpandedDefinition, getExpandedSource, sameReviewedSkill } from './e
 import { evaluateGuardTraits } from './guardTraitEvaluation.ts'
 import type { TraitCombatResult } from './traitCombatEvaluation.ts'
 import { validateDamageCalculatorThreeEnemy } from './damageCalculatorThreeEnemy.ts'
+import { getGuardVirtualAttackCapability, getMainAttackType, hasChangedVirtualPassiveModifiers } from './damageCalculatorThreeVirtualAttack.ts'
 
 const TARGET_INPUT: GuardInput = { key: 'actualAttackTargetCount', label: '実際の攻撃対象数', kind: 'number',
   defaultValue: 1, min: 1, max: 10000, step: 1 }
@@ -65,7 +66,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
     stage = stages[0]
   } catch (error) { reasons.push(message(error)) }
   const kind = stage?.kind ?? 'NORMAL'
-  const passive = evaluateGuardPassives(input.operator, conditions, { kind, skillIndex: recipe.skillIndex, stageId: stage?.id ?? '', stage,
+  let passive = evaluateGuardPassives(input.operator, conditions, { kind, skillIndex: recipe.skillIndex, stageId: stage?.id ?? '', stage,
     phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel })
   reasons.push(...passive.blockers, ...(stage?.unresolved ?? []))
   for (const [label, fraction] of Object.entries({ 発動確率: passive.critChance,
@@ -78,6 +79,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
   let splashActions = new Map<GuardDamageAction, number>()
   let maxTargets: number | null = 1, atk = 0, aspd = 0, interval: number | null = null, duration = 0
   let actions: GuardDamageAction[] = []
+  let mainAttackType: DamageType | null = null
   let defenseIgnoreRatio = passive.defenseIgnoreRatio, defenseIgnoreFixed = passive.defenseIgnoreFixed
   let resistanceIgnoreFixed = passive.resistanceIgnoreFixed
   try {
@@ -87,6 +89,40 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
       traitEvaluation = traits.evaluation
       splashActions = traits.splashActions
       reasons.push(...traitEvaluation.blockers)
+      let resolvedActions = traits.actions
+      mainAttackType = getMainAttackType(resolvedActions)
+      if (input.virtualMainAttackType !== undefined) {
+        const virtualType = input.virtualMainAttackType
+        const capability = getGuardVirtualAttackCapability(stage)
+        if (virtualType !== 'PHYSICAL' && virtualType !== 'ARTS') {
+          throw new RangeError('仮想攻撃属性は物理または術を指定してください。')
+        }
+        if (!capability.supported) throw new RangeError(capability.reason!)
+        if (mainAttackType !== 'PHYSICAL' && mainAttackType !== 'ARTS') {
+          throw new RangeError('特性適用後の主攻撃を物理・術のどちらかに特定できません。')
+        }
+        // Same-type selection is exactly the native evaluation, including all existing passive semantics.
+        if (virtualType !== mainAttackType) {
+          const virtualPassive = evaluateGuardPassives(input.operator, conditions, { kind, skillIndex: recipe.skillIndex,
+            stageId: stage.id, stage, phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel,
+            virtualMainAttackType: virtualType })
+          reasons.push(...virtualPassive.blockers)
+          const hasAdditionalDamage = resolvedActions.some(action => action.role !== 'MAIN')
+            || passive.additionalActions.length > 0 || virtualPassive.additionalActions.length > 0
+          if (hasAdditionalDamage && hasChangedVirtualPassiveModifiers(passive, virtualPassive)) {
+            throw new RangeError('属性限定効果を伴う追加・継続ダメージの属性比較には未対応です。')
+          }
+          passive = virtualPassive
+          // Never exchange defense and resistance effects. Each mitigation branch reads its own values.
+          defenseIgnoreRatio = passive.defenseIgnoreRatio
+          defenseIgnoreFixed = passive.defenseIgnoreFixed
+          resistanceIgnoreFixed = passive.resistanceIgnoreFixed
+          const transformed = new Map(resolvedActions.map(action => [action,
+            action.role === 'MAIN' ? { ...action, damageType: virtualType } : action] as const))
+          resolvedActions = resolvedActions.map(action => transformed.get(action)!)
+          splashActions = new Map([...splashActions].map(([action, scale]) => [transformed.get(action)!, scale]))
+        }
+      }
       passive.attackRatio += traitEvaluation.attackRatio
       maxTargets = traits.maxTargets
       if (maxTargets !== null && (!Number.isSafeInteger(maxTargets) || maxTargets < 1)) throw new RangeError('攻撃対象数の上限が不正です。')
@@ -106,7 +142,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
       duration = stage.duration === 'UNTIL_EXIT' ? 0 : Math.max(0, value(stage.duration, raw?.duration ?? 0))
       const talentActions = passive.additionalActions.map(action => action.basis !== 'TARGET_DEFENSE' && (!action.timing || action.timing === 'PER_ATTACK')
         ? { ...action, scale: { op: 'mul' as const, args: [action.scale, traitEvaluation!.attackScale] } } : action)
-      actions = [...traits.actions, ...talentActions].filter(action => action.timing !== 'ON_DEPLOY')
+      actions = [...resolvedActions, ...talentActions].filter(action => action.timing !== 'ON_DEPLOY')
     }
   } catch (error) { reasons.push(message(error)) }
   const types = new Set(actions.map(action => action.damageType))
@@ -184,7 +220,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
         const expectedDamage = branches.reduce((sum, branch) => sum + branch.damage * branch.probability, 0)
         if (!Number.isFinite(expectedDamage)) throw new RangeError('ダメージ期待値を計算できません。')
         components.push({ id: `guard-${index}-${variantIndex}`, label: variant.label, order: components.length + 1,
-          damageType: action.damageType, attackScale: scale * variant.factor, count, targetAirborne: false,
+          role: action.role, damageType: action.damageType, attackScale: scale * variant.factor, count, targetAirborne: false,
           defenseIgnoreChance: defenseIgnoreRatio > 0 ? 1 : 0, defenseIgnoreRatio, expectedDamage,
           expectedHitCount: count * probability * hitFactor, attackPipeline: basePipeline, branches })
       }
@@ -208,7 +244,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
   } catch (error) { reasons.push(message(error)); rows = [] }
   const unsupportedReasons = [...new Set(reasons)]
   return {
-    traitEvaluation,
+    traitEvaluation, mainAttackType,
     structure, stats, model: unsupportedReasons.length ? null : {
       directMultiplierPercent: atk * 100, attackScalePercent: 100,
       hitCount: rows[0]?.attackComponents.reduce((sum, component) => sum + component.expectedHitCount, 0) ?? 0,

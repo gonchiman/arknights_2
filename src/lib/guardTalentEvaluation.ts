@@ -79,6 +79,9 @@ function formatCurrentRecipientCondition(condition: CombatCondition | null): str
 }
 
 function matchesRecipient(effect: TalentStructureEffect, metrics: Metrics): boolean | null {
+  // Counterfactual attacks must re-evaluate arts-only enemy vulnerabilities as well as self buffs.
+  if (metrics['virtual.attackTypeComparison'] === true && effect.target.tagIds.includes('arts_damage')
+    && metrics['attack.damageType'] !== 'ARTS') return false
   if (effect.target.side === 'ENEMY') return true
   if (effect.target.factionIds.length) {
     const matches = effect.target.factionIds.map(id => metrics[`source.faction.${id}`])
@@ -176,7 +179,7 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
       const rate = numeric(effect.damage.amount.value, '毎秒ダメージ')
       if (rate === null) continue
       if (rate < 0) { block('継続ダメージの毎秒値が有効範囲外です。'); continue }
-      if (active) output.additionalActions.push({ label: source, damageType: effect.damage.kind.damageType,
+      if (active) output.additionalActions.push({ label: source, role: 'ADDITIONAL', damageType: effect.damage.kind.damageType,
         scale: 0, flatDamage: rate, hits: 1, timing: 'PER_SECOND' })
       addRow('付与中のダメージ/秒', formatCombatNumber(rate), active ? 'APPLIED' : 'CONDITION_FALSE', '', details)
       continue
@@ -276,7 +279,7 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
           block('追加攻撃の発動確率・回数・ダメージが有効範囲外です。')
           break
         }
-        if (active) output.additionalActions.push({ label: effect.label ?? source, damageType: effect.damageType,
+        if (active) output.additionalActions.push({ label: effect.label ?? source, role: 'ADDITIONAL', damageType: effect.damageType,
           scale: value, ...(effect.hits === undefined ? {} : { hits }),
           ...(effect.basis === undefined ? {} : { basis: effect.basis }),
           ...(flatDamage === undefined ? {} : { flatDamage }),

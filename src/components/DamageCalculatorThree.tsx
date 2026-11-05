@@ -22,6 +22,7 @@ import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
 import { OperatorDetailLink } from './OperatorDetailLink'
 import { SkillInformationTable } from './SkillInformationTable'
+import { createDamageCalculatorThreeAttributeHash } from '../lib/routes'
 import './DamageCalculator.css'
 import './DamageCalculatorTwo.css'
 import './DamageCalculatorThree.css'
@@ -102,6 +103,7 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
     <nav className="damage-three-page-actions" aria-label="計算機3の関連ページ">
       <a className="button secondary" href="#/damage-3/coverage">実装範囲</a>
       <a className="button secondary" href="#/damage-3/comparison">スキル比較</a>
+      <a className="button secondary" href={createDamageCalculatorThreeAttributeHash(structure?.basicInfo)}>属性比較</a>
     </nav>
     <CollapsibleCalculatorPanel id="damage-three-operator" number="01" title="オペレーター・スキル"
       summary={operator?.operatorName ?? '未選択'} collapsedLabel="選択を表示">

@@ -24,6 +24,12 @@ export interface DamageThreeComparisonEntry {
 }
 export interface DamageThreeComparisonCommon { defense: number; resistance: number; enemyCount: number }
 export type DamageThreeComparisonOverrides = Record<string, number | string | boolean | undefined>
+/** Optional per-evaluation settings; normal comparison callers keep their existing defaults. */
+export interface DamageThreeComparisonEvaluationOptions {
+  operatorLevel?: number
+  trust?: number
+  virtualMainAttackType?: 'PHYSICAL' | 'ARTS'
+}
 export interface ComparisonConditionField {
   key: string
   label: string
@@ -83,6 +89,7 @@ export function getDamageThreeComparisonEntries(rows: readonly SkillRecord[]): D
 export function evaluateDamageThreeComparisonEntry(
   entry: DamageThreeComparisonEntry, common: DamageThreeComparisonCommon,
   overrides: DamageThreeComparisonOverrides = {},
+  options: DamageThreeComparisonEvaluationOptions = {},
 ): DamageThreeComparisonResult {
   const errors: string[] = []
   if (!Number.isSafeInteger(common.enemyCount) || common.enemyCount < 1 || common.enemyCount > 10000) {
@@ -95,9 +102,9 @@ export function evaluateDamageThreeComparisonEntry(
   try {
     // Discover the skill's cap with one target; then calculate the actual common enemy count.
     // Other errors from this discovery are deliberately not carried to a different final condition.
-    const initial = calculate(entry, common, values, 1)
+    const initial = calculate(entry, common, values, 1, options)
     const count = Math.min(common.enemyCount, initial.maxTargetCount ?? common.enemyCount)
-    output = count === 1 ? initial : calculate(entry, common, values, count)
+    output = count === 1 ? initial : calculate(entry, common, values, count, options)
     errors.push(...output.unsupportedReasons)
     if (output.activeStageLabel !== entry.stageLabel || output.attackKind !== entry.kind || !matchesEntryStage(entry, output, values)) {
       errors.push(`段階「${entry.stageLabel}」の条件を満たしていません。`)
@@ -169,15 +176,17 @@ function fixedStageValue(entry: DamageThreeComparisonEntry): { key: string; valu
 }
 
 function calculate(entry: DamageThreeComparisonEntry, common: DamageThreeComparisonCommon,
-  values: DamageThreeComparisonOverrides, count: number): DamageCalculatorThreeOutput {
+  values: DamageThreeComparisonOverrides, count: number,
+  options: DamageThreeComparisonEvaluationOptions = {}): DamageCalculatorThreeOutput {
   const conditions: DamageCalculatorThreeConditions = entry.structure.guardRecipe
     ? { guard: { ...Object.fromEntries(Object.entries(values).filter(([key]) => key.startsWith('guard.')).map(([key, value]) => [key.slice(6), value])),
       actualAttackTargetCount: count, enemyResistance: common.resistance } }
     : { ...Object.fromEntries(Object.entries(values).filter(([key]) => !key.startsWith('guard.'))),
       actualAttackTargetCount: count, enemyResistance: common.resistance }
   return buildDamageCalculatorThreeOutput({ operator: entry.skill, skill: entry.skill,
-    phaseIndex: entry.phaseIndex, operatorLevel: entry.operatorLevel, trust: 100,
-    skillLevelIndex: entry.levelIndex, conditions, enemy: { defense: common.defense, resistance: common.resistance } })
+    phaseIndex: entry.phaseIndex, operatorLevel: options.operatorLevel ?? entry.operatorLevel, trust: options.trust ?? 100,
+    skillLevelIndex: entry.levelIndex, conditions, enemy: { defense: common.defense, resistance: common.resistance },
+    ...(options.virtualMainAttackType === undefined ? {} : { virtualMainAttackType: options.virtualMainAttackType }) })
 }
 
 function matchesEntryStage(entry: DamageThreeComparisonEntry, output: DamageCalculatorThreeOutput,

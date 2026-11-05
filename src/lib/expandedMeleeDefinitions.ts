@@ -32,7 +32,7 @@ const distance: GuardInput = { key: 'attackDistanceType', label: '攻撃距離',
 const blocked = () => bool('targetBlockedBySelf', '対象を自身でブロック')
 const P = 'PHYSICAL', A = 'ARTS', T = 'TRUE'
 const attack = (damageType: 'PHYSICAL' | 'ARTS' | 'TRUE', scale: GuardValue = 1, hits: GuardValue = 1,
-  extra: Partial<GuardDamageAction> = {}): GuardDamageAction => ({ label: '攻撃', damageType, scale, hits, ...extra })
+  extra: Partial<GuardDamageAction> = {}): GuardDamageAction => ({ label: '攻撃', role: 'MAIN', damageType, scale, hits, ...extra })
 const normal = (damageType: 'PHYSICAL' | 'ARTS' | 'TRUE', extra: Partial<GuardStage> = {}): GuardStage => ({
   id: 'active', label: 'スキル中', kind: 'NORMAL', actions: [attack(damageType)], ...extra,
 })
@@ -170,7 +170,7 @@ export const EXPANDED_MELEE_DEFINITIONS: readonly ExpandedOperatorDefinition[] =
     recipe(3, normal(P, { intervalAdd: k('base_attack_time'), actions: [attack(P, k('attack@atk_scale'))] }))],
     { 0: ability(b => [atk(b.read('atk'))]), 1: RESOURCE }, [], { 1: 'コスト回復のみ。周期計算は未対応。' }),
   define('sddrag', [recipe(1, normal(P, { atk: k('atk'), aspd: k('attack_speed') })), recipe(2, normal(P, { atk: k('atk'),
-    actions: [attack(P), attack(A, k('attack@skill.atk_scale'), 1, { label: '追加術ダメージ' })] }))]),
+    actions: [attack(P), attack(A, k('attack@skill.atk_scale'), 1, { role: 'ADDITIONAL', label: '追加術ダメージ' })] }))]),
   define('wildmn', [recipe(1, normal(P, { aspd: k('attack_speed') })), recipe(2, normal(P, { atk: k('atk') }), [], MOVE_NOTE)], { 0: DEPLOY }),
   define('ctable', [recipe(1, normal(P, { atk: k('atk') })), recipe(2, normal(P, { atk: k('atk'), aspd: k('attack_speed'), duration: 0 }), [],
     ['弾薬が残っている状態の1攻撃・攻撃中DPS。18発の消費時間と通常攻撃を含む周期は計算しない。'])],
@@ -256,7 +256,7 @@ export const EXPANDED_MELEE_DEFINITIONS: readonly ExpandedOperatorDefinition[] =
     [bool('dodgeSpeedActive', '回避後の攻撃速度上昇中')],
     { 2: '回避を契機とした反撃と、反撃の最短間隔を含むイベント計算が必要。' }),
   define('ethan', [recipe(1, normal(P, { duration: 'UNTIL_EXIT', actions: [attack(P),
-    attack(A, 0, 1, { label: '付与中の継続術ダメージ', timing: 'PER_SECOND', traitOverrides: ['DAMAGE_TYPE'],
+    attack(A, 0, 1, { role: 'ADDITIONAL', label: '付与中の継続術ダメージ', timing: 'PER_SECOND', traitOverrides: ['DAMAGE_TYPE'],
       flatDamage: choose('poisonActive', true, k('attack@poison_damage'), 0) }),
   ] }), [bool('poisonActive', '継続ダメージ付与中', true)],
   ['継続ダメージが付与中の毎秒値を評価する。付与直後・更新・終了までの時間推移は含めない。']),

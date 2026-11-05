@@ -1,0 +1,113 @@
+.damage-three-attribute-page .damage-three-attribute-search {
+  margin-top: 12px;
+}
+
+.damage-three-attribute-page .damage-three-attribute-skills {
+  margin-top: 12px;
+  border-inline: 1px solid var(--border);
+}
+
+.damage-three-attribute-page .damage-three-skill-panel {
+  border-inline: 1px solid var(--border);
+}
+
+.damage-three-attribute-page .damage-three-attribute-condition-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.damage-three-attribute-toolbar {
+  display: grid;
+  grid-template-columns: .7fr 1fr 1fr 1.3fr;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.damage-three-attribute-segment {
+  display: flex;
+  min-height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.damage-three-attribute-segment button {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.damage-three-attribute-segment button:last-child {
+  border-right: 0;
+}
+
+.damage-three-attribute-segment button[aria-pressed="true"] {
+  background: var(--surface-soft, #f1f3f5);
+  font-weight: 600;
+  box-shadow: inset 0 -2px currentColor;
+}
+
+.damage-three-attribute-segment button:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: -3px;
+}
+
+.damage-three-attribute-result-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 14px;
+  margin: 14px 0 8px;
+}
+
+.damage-three-attribute-result-heading h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.damage-three-attribute-result-heading span {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.damage-three-attribute-page .damage-three-attribute-table th:first-child {
+  width: 31%;
+}
+
+.damage-three-attribute-page .damage-three-attribute-table th,
+.damage-three-attribute-page .damage-three-attribute-table td {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.damage-three-attribute-page .damage-three-attribute-error {
+  margin-bottom: 12px;
+}
+
+.damage-three-attribute-page .operator-empty-state > span {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .damage-three-attribute-page .damage-three-attribute-condition-grid,
+  .damage-three-attribute-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .damage-three-attribute-page .damage-three-attribute-condition-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

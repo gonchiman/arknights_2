@@ -49,7 +49,7 @@ const talent = (talentIndex: number, name: string, categories: readonly TalentCo
   effects: ExpandedTalentDefinition['effects'], notes: readonly string[] = []): ExpandedTalentDefinition =>
   ({ talentIndex, name, prefabKey: String(talentIndex + 1), categories, effects, notes })
 const damage = (scale: GuardValue = 1, hits: GuardValue = 1, extra: Partial<GuardDamageAction> = {}): GuardDamageAction =>
-  ({ label: '攻撃', damageType: 'PHYSICAL', scale, hits, ...extra })
+  ({ label: '攻撃', role: 'MAIN', damageType: 'PHYSICAL', scale, hits, ...extra })
 const normal = (extra: Partial<GuardStage> = {}): GuardStage =>
   ({ id: 'active', label: 'スキル中', kind: 'NORMAL', actions: [damage()], ...extra })
 const next = (scale: GuardValue = key('atk_scale'), hits: GuardValue = 1, extra: Partial<GuardStage> = {}): GuardStage =>

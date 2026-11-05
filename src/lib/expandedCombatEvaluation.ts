@@ -7,7 +7,8 @@ import { getOperatorPassives } from './operatorProfile.ts'
 import { resolveGuardConditions } from './guardCombatValues.ts'
 
 export function evaluateExpandedPassives(operator: SkillRecord, conditions: GuardConditions,
-  context: { kind: string; skillIndex: number; stage?: Pick<GuardStage, 'actions'>; phaseIndex?: number; operatorLevel?: number },
+  context: { kind: string; skillIndex: number; stage?: Pick<GuardStage, 'actions'>; phaseIndex?: number; operatorLevel?: number;
+    virtualMainAttackType?: 'PHYSICAL' | 'ARTS' },
   registrationOnly = false): GuardPassiveModifiers {
   const output: GuardPassiveModifiers = { attackRatio: 0, attackFlat: 0, attackScale: 1, attackSpeed: 0,
     damageScale: 1, defenseIgnoreRatio: 0, defenseIgnoreFixed: 0, resistanceIgnoreFixed: 0,
@@ -31,8 +32,9 @@ export function evaluateExpandedPassives(operator: SkillRecord, conditions: Guar
   const metrics: Record<string, number | boolean | string | undefined> = { ...conditions, ...resolved.values,
     skillIndex: context.skillIndex, actionKind: context.kind, 'source.skillActive': true,
     'source.isDeployed': true, 'source.isInSquad': true, 'source.profession': operator.profession,
-    'attack.damageType': context.stage?.actions.length && context.stage.actions.every(action => action.damageType === context.stage!.actions[0].damageType)
-      ? context.stage.actions[0].damageType : undefined,
+    'virtual.attackTypeComparison': context.virtualMainAttackType !== undefined,
+    'attack.damageType': context.virtualMainAttackType ?? (context.stage?.actions.length && context.stage.actions.every(action => action.damageType === context.stage!.actions[0].damageType)
+      ? context.stage.actions[0].damageType : undefined),
   }
   for (const entry of operator.skillLevels[definition.skillLevelIndex]?.blackboard ?? []) {
     if (entry.key && typeof entry.value === 'number') metrics[`skill.${entry.key.toLowerCase()}`] = entry.value

@@ -7,7 +7,8 @@ import { evaluateExpandedPassives } from './expandedCombatEvaluation.ts'
 import type { GuardCalculationIssue, GuardConditions, GuardInput, GuardPassiveModifiers, GuardStage } from './guardCombatTypes.ts'
 
 type Context = { kind: 'NORMAL' | 'NEXT_ATTACK' | 'SKILL_ACTION'; skillIndex: number; stageId: string;
-  stage?: Pick<GuardStage, 'actions'>; phaseIndex?: number; operatorLevel?: number }
+  stage?: Pick<GuardStage, 'actions'>; phaseIndex?: number; operatorLevel?: number;
+  virtualMainAttackType?: 'PHYSICAL' | 'ARTS' }
 
 export interface GuardPassiveCalculationConstraint extends GuardCalculationIssue {
   readonly talentIndex: number
@@ -196,9 +197,10 @@ function evaluateGuardPassiveDefinitions(operator: SkillRecord, conditions: Guar
     'recipient.inSourceAttackRange': values.selfInTalentRange,
     'source.skillActive': true,
     'source.profession': operator.profession,
-    'attack.damageType': context.stage?.actions.length
+    'virtual.attackTypeComparison': context.virtualMainAttackType !== undefined,
+    'attack.damageType': context.virtualMainAttackType ?? (context.stage?.actions.length
       && context.stage.actions.every(action => action.damageType === context.stage?.actions[0].damageType)
-      ? context.stage.actions[0].damageType : undefined,
+      ? context.stage.actions[0].damageType : undefined),
   }
   const affiliation = operator.operatorProfile.affiliationIds
   const affiliationIds = affiliation ? [affiliation.nationId, affiliation.groupId, affiliation.teamId] : undefined
