@@ -1,6 +1,9 @@
 import type { SkillRecord } from '../types/skill.ts'
 import type { GuardConditions, GuardInput, GuardPassiveModifiers } from './guardCombatTypes.ts'
 import { buildGuardDamageOutput } from './guardDamageCalculator.ts'
+import type { VirtualMainAttackType } from './damageCalculatorThreeVirtualAttack.ts'
+export { getDamageCalculatorThreeVirtualAttackCapability } from './damageCalculatorThreeVirtualAttack.ts'
+export type { VirtualMainAttackType, VirtualAttackCapability } from './damageCalculatorThreeVirtualAttack.ts'
 import { validateDamageCalculatorThreeEnemy, type DamageCalculatorThreeEnemy } from './damageCalculatorThreeEnemy.ts'
 import {
   calculateAttackPipeline,
@@ -110,6 +113,8 @@ export interface DamageCalculatorThreeInput {
   conditions?: DamageCalculatorThreeConditions
   /** Omit for the sensitivity table; supply to calculate exactly one enemy. */
   enemy?: DamageCalculatorThreeEnemy
+  /** Counterfactual only: replace reviewed main direct attacks, never source definitions. */
+  virtualMainAttackType?: VirtualMainAttackType
 }
 
 export interface DamageCalculatorThreeEffectEvaluation {
@@ -124,6 +129,7 @@ export interface DamageCalculatorThreeEffectEvaluation {
 export interface DamageCalculatorThreeAttackComponent {
   id: string
   label: string
+  role?: 'MAIN' | 'ADDITIONAL'
   order: number
   damageType: DamageType
   attackScale: number
@@ -152,6 +158,8 @@ export interface DamageCalculatorThreeRow {
 }
 
 export interface DamageCalculatorThreeOutput {
+  /** Main attack after traits, before any counterfactual override; null means not uniquely identified. */
+  mainAttackType?: DamageType | null
   traitEvaluation?: TraitCombatResult
   guard?: { inputs: GuardInput[]; conditions: GuardConditions; evaluations: GuardPassiveModifiers['evaluations']; unresolved: string[] }
   structure: SkillStructure | null
@@ -262,6 +270,7 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   const enemyErrors = validateDamageCalculatorThreeEnemy(input.enemy)
   const enemy = enemyErrors.length ? undefined : input.enemy
   const reasons = [...validateOperator(input), ...enemyErrors]
+  if (input.virtualMainAttackType !== undefined) reasons.push('このスキルの主攻撃の属性変更には未対応です。')
   const context = resolveConditions(enemy ? { ...input.conditions, enemyResistance: enemy.resistance } : input.conditions)
   const conditionErrors = validateConditions(context)
   reasons.push(...conditionErrors)

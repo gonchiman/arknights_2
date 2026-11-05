@@ -22,6 +22,8 @@ export interface GuardInput {
 
 export interface GuardDamageAction {
   label: string
+  /** Reviewed provenance; virtual comparison never guesses from a label or array order. */
+  role?: 'MAIN' | 'ADDITIONAL'
   damageType: DamageType
   scale: GuardValue
   hits?: GuardValue

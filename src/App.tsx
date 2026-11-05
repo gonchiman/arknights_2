@@ -6,6 +6,7 @@ import { DamageCalculatorTwo } from './components/DamageCalculatorTwo'
 import { DamageCalculatorThree } from './components/DamageCalculatorThree'
 import { DamageCalculatorThreeCoveragePage } from './components/DamageCalculatorThreeCoveragePage'
 import DamageCalculatorThreeComparisonPage from './components/DamageCalculatorThreeComparisonPage'
+import DamageCalculatorThreeAttributePage from './components/DamageCalculatorThreeAttributePage'
 import { ManualDamageVerificationPage } from './components/ManualDamageVerificationPage'
 import { DataSourcesPage } from './components/DataSourcesPage'
 import { CodeAnalysisPage } from './components/CodeAnalysisPage'
@@ -49,7 +50,7 @@ import { loadSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
 import { ARKNIGHTS_GAMEDATA_REPOSITORY } from './lib/dataSources'
 import { buildOperatorDatabaseRecords } from './lib/operatorDatabase'
-import { createDamageCalculatorThreeHash, createOperatorDetailHash, parseHashRoute, type AppRoute } from './lib/routes'
+import { createDamageCalculatorThreeHash, createDamageCalculatorThreeAttributeHash, createOperatorDetailHash, parseHashRoute, type AppRoute } from './lib/routes'
 import { APP_NAV_ITEMS, GOLDENGLOW_ANALYSIS_ITEMS, GOLDENGLOW_HOME_LINK, HOME_LINK, SURTR_ANALYSIS_ITEMS, SURTR_HOME_LINK, type NavigationPage } from './lib/navigation'
 import { GOLDENGLOW_OPERATOR_ID } from './lib/goldenglowExplosion'
 import { PanelStateScope } from './lib/PanelStateScope'
@@ -405,6 +406,11 @@ export default function App() {
             onOpenOperatorDetail={openOperatorDetail} />
         ) : displayedRoute.view === 'damage-three-comparison' ? (
           <DamageCalculatorThreeComparisonPage rows={classifiedRows} loading={loading} />
+        ) : displayedRoute.view === 'damage-three-attribute-comparison' ? (
+          <PanelStateScope.Provider value="damage-three-attribute-comparison">
+            <DamageCalculatorThreeAttributePage key={createDamageCalculatorThreeAttributeHash(displayedRoute.selection)}
+              rows={classifiedRows} loading={loading} initialSelection={displayedRoute.selection} />
+          </PanelStateScope.Provider>
         ) : displayedRoute.view === 'comparison' ? (
           <OperatorComparison
             rows={classifiedRows}

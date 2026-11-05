@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { APP_NAV_ITEMS, DAMAGE_VERIFICATION_ITEM, GOLDENGLOW_ANALYSIS_ITEMS, SKILL_LEARNING_ITEMS, SURTR_ANALYSIS_ITEMS, SURTR_HOME_ITEMS, SURTR_HOME_LINK } from '../src/lib/navigation.ts'
 import {
   createDamageCalculatorThreeHash,
+  createDamageCalculatorThreeAttributeHash,
   createOperatorDetailHash,
   createSkillEffectsHash,
   createSkillSummaryHash,
@@ -126,6 +127,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['damage-three', 'damage-three'],
       ['damage-three-coverage', 'damage-three-coverage'],
       ['damage-three-comparison', 'damage-three-comparison'],
+      ['damage-three-attribute-comparison', 'damage-three-attribute-comparison'],
       ['damage-verification', 'damage-verification'],
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
@@ -461,6 +463,22 @@ test('DC3 スキル比較は実装範囲の隣から独立したページとし�
   }
 })
 
+test('DC3属性比較は専用ページと選択を保持するURLを持ち、既存ページと混同しない', () => {
+  const base = '#/damage-3/attribute-comparison'
+  assert.deepEqual(parseHashRoute(base), { view: 'damage-three-attribute-comparison' })
+  assert.equal(createDamageCalculatorThreeAttributeHash(), base)
+  const selection = { operatorId: 'char_123_日本', skillIndex: 1, skillId: 'skill[1]', levelIndex: 9 }
+  const hash = createDamageCalculatorThreeAttributeHash(selection)
+  assert.deepEqual(parseHashRoute(hash), { view: 'damage-three-attribute-comparison', selection })
+  assert.deepEqual(parseHashRoute(`${hash}&skillIndex=1`), { view: 'damage-three-attribute-comparison' })
+  assert.deepEqual(parseHashRoute(`${base}?operatorId=x`), { view: 'damage-three-attribute-comparison' })
+  assert.deepEqual(parseHashRoute(`${base}/extra`), { view: 'operators' })
+  const comparisonIndex = APP_NAV_ITEMS.findIndex(item => item.id === 'damage-three-comparison')
+  assert.deepEqual(APP_NAV_ITEMS[comparisonIndex + 1], {
+    id: 'damage-three-attribute-comparison', href: base, label: 'DC3 属性比較', description: '', section: 'analysis',
+  })
+})
+
 test('DC3の不完全・不正・重複したクエリは選択なしの計算機へ戻す', () => {
   const selection = { operatorId: 'char_test', skillIndex: '1', skillId: 'skill_test', levelIndex: '0' }
   const invalidValues = {
@@ -514,7 +532,7 @@ test('ダメージ検証は共通メニューから開き、スルトのトッ�
     description: '',
     section: 'analysis',
   })
-  const calculatorIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'damage-three-comparison')
+  const calculatorIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'damage-three-attribute-comparison')
   assert.equal(APP_NAV_ITEMS[calculatorIndex + 1], DAMAGE_VERIFICATION_ITEM)
   assert.deepEqual(SURTR_HOME_ITEMS, SURTR_ANALYSIS_ITEMS)
   assert.equal(SURTR_ANALYSIS_ITEMS.some((item) => item.id === 'damage-verification'), false)
