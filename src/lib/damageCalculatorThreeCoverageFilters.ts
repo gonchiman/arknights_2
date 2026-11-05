@@ -11,7 +11,7 @@ export interface DamageCalculatorThreeCoverageFilters {
 }
 
 export const DEFAULT_DAMAGE_THREE_COVERAGE_FILTERS: DamageCalculatorThreeCoverageFilters = {
-  query: '', profession: 'WARRIOR', rarity: 6, status: 'ALL',
+  query: '', profession: 'ALL', rarity: 'ALL', status: 'ALL',
 }
 
 export const EMPTY_DAMAGE_THREE_COVERAGE_FILTERS: DamageCalculatorThreeCoverageFilters = {

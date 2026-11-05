@@ -75,26 +75,26 @@ function assertSummary(markup, total, expectedCounts) {
   })
 }
 
-test('初期範囲は星6前衛、1スキル1行の8列で区分別の状態と総合を分ける', () => {
+test('初期範囲は全職業・全レアリティ、1スキル1行の8列で区分別の状態と総合を分ける', () => {
   const extra = { ...records[0], id: 'other', operatorId: 'other', profession: 'CASTER', professionLabel: '術師', rarity: 5 }
   const markup = render(Page, { rows: [...records, extra], loading: false, onOpenOperatorDetail() {} })
   const rows = table(markup)
   assert.deepEqual(rows[0], ['オペレーター', 'S番号', 'スキル名', 'スキル', '素質', '特性', '総合', '詳細'])
-  assert.equal(rows.length, 91)
+  assert.equal(rows.length, 92)
   assert.ok(rows.every(row => row.length === 8))
   const bellone = rows.find(row => row[0] === 'ベッローネ' && row[1] === 'S2')
   assert.deepEqual(bellone.slice(3, 7), ['対応', '条件付き', '対象外', '条件付き'])
   const sakiko = rows.find(row => row[0] === '豊川祥子' && row[1] === 'S2')
   assert.deepEqual(sakiko.slice(3, 7), ['保留', '対応', '対応', '保留'])
-  assert.match(markup, /90 \/ 91 スキル表示/)
-  assert.match(markup, /対応 74・条件付き 7・保留 9・未対応 0/)
+  assert.match(markup, /91 \/ 91 スキル表示/)
+  assert.match(markup, /対応 74・条件付き 7・保留 9・未対応 1/)
   assert.match(markup, /role="region" aria-label="DC3の対応スキル" tabindex="0"/)
   assert.match(markup, /aria-label="総合の状況"/)
   assert.match(markup, /<a[^>]*href="#\/operators\/char_350_surtr"[^>]*aria-haspopup="dialog"/)
   assert.doesNotMatch(markup, /rowspan|colspan|<small|<br/)
-  assert.match(markup, /絞り込み結果の対応状況<\/h2><span>90スキル<\/span>/)
-  assertSummary(markup, 90,
-    [[74, 7, 9, 0, 0], [80, 4, 6, 0, 0], [76, 6, 5, 0, 3], [51, 0, 1, 0, 38]])
+  assert.match(markup, /絞り込み結果の対応状況<\/h2><span>91スキル<\/span>/)
+  assertSummary(markup, 91,
+    [[74, 7, 9, 1, 0], [80, 4, 6, 1, 0], [76, 6, 5, 1, 3], [51, 0, 1, 1, 38]])
 })
 
 test('保留9スキルの横棒は総合100%でもスキル・素質・特性の異なる内訳を表示する', () => {
@@ -121,7 +121,7 @@ test('検索は複数語・全角S番号に対応し、職業・レアリティ�
   assert.equal(filterCoverage(coverage, { ...defaults, status: 'CONDITIONAL' }).length, 7)
   assert.equal(filterCoverage(coverage, { ...defaults, query: 'スルト', status: 'PENDING' }).length, 0)
   const unsupported = { ...coverage[0], skill: { ...coverage[0].skill, profession: 'CASTER', rarity: 5 }, status: 'UNSUPPORTED' }
-  assert.equal(filterCoverage([unsupported], defaults).length, 0)
+  assert.equal(filterCoverage([unsupported], defaults).length, 1)
   assert.equal(filterCoverage([unsupported], { ...empty, profession: 'CASTER', rarity: 5, status: 'UNSUPPORTED' }).length, 1)
   assert.equal(filterCoverage([unsupported], { ...empty, rarity: 6 }).length, 0)
 })
@@ -187,8 +187,8 @@ test('初期表示は現在の実装・比較なしで、比較がない間は�
   assert.match(markup, /aria-label="バージョン"[^>]*><option value="CURRENT" selected="">現在の実装/)
   assert.match(markup, /aria-label="比較元"[^>]*><option value="" selected="">比較なし/)
   assert.match(markup, /type="checkbox" disabled=""/)
-  assert.match(markup, /aria-label="職業"[^>]*>[\s\S]*?<option value="WARRIOR" selected="">前衛/)
-  assert.match(markup, /<option value="6" selected="">★6/)
+  assert.match(markup, /aria-label="職業"[^>]*><option value="ALL" selected="">すべて/)
+  assert.match(markup, /aria-label="レアリティ"[^>]*><option value="ALL" selected="">すべて/)
   assert.match(markup, /aria-haspopup="dialog"[^>]*>版の履歴/)
   assert.match(markup, /id="dc3-coverage-tab-list"[^>]*aria-selected="true"/)
   assert.match(markup, /id="dc3-coverage-tab-compare"[^>]*aria-selected="false"/)
