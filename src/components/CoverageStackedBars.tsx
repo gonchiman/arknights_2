@@ -22,29 +22,30 @@ const colorStyle = (color: string): CSSProperties => ({ '--coverage-bar-color': 
 
 /** Display only: each caller supplies its own population and status definitions. */
 export function CoverageStackedBars({ rows, categories, title, legendLabel = '実装状況の凡例',
-  legendPrefix, showZeroCounts = false, showCountPercent = true, showSegmentTitles = false, showSegmentPercent = true,
+  legendPrefix, showLegend = true, showZeroCounts = false, showCountPercent = true, showSegmentTitles = false, showSegmentPercent = true,
 }: {
   rows: readonly CoverageBarRow[]
   categories: readonly CoverageBarCategory[]
   title?: string
   legendLabel?: string
   legendPrefix?: string
+  showLegend?: boolean
   showZeroCounts?: boolean
   showCountPercent?: boolean
   showSegmentTitles?: boolean
   showSegmentPercent?: boolean
 }) {
   return <div className="coverage-stacked-bars">
-    <div className="coverage-stacked-heading">
+    {(title || showLegend) && <div className="coverage-stacked-heading">
       {title && <h3>{title}</h3>}
-      <ul className="coverage-stacked-legend" aria-label={legendLabel}>
+      {showLegend && <ul className="coverage-stacked-legend" aria-label={legendLabel}>
         {legendPrefix && <li>{legendPrefix}</li>}
         {categories.map(category => <li key={category.key}>
           <span className="coverage-stacked-swatch" style={colorStyle(category.color)} aria-hidden="true" />
           {category.label}
         </li>)}
-      </ul>
-    </div>
+      </ul>}
+    </div>}
     <div className="coverage-stacked-axis" aria-hidden="true">
       {[0, 25, 50, 75, 100].map(value => <span key={value}>{value}%</span>)}
     </div>

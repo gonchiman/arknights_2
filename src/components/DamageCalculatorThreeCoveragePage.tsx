@@ -20,7 +20,10 @@ import { getProfessionLabel, PROFESSION_ORDER } from '../lib/operatorFilters'
 import { lockPageScroll } from '../lib/pageScrollLock'
 import { createDamageCalculatorThreeHash } from '../lib/routes'
 import type { SkillRecord } from '../types/skill'
+import { getCoverageChangeLabel } from '../lib/damageCalculatorThreeCoverageComparison'
+import { AnalysisTabs, AnalysisTabPanel } from './AnalysisTabs'
 import { DamageCalculatorThreeCoverageSummary } from './DamageCalculatorThreeCoverageSummary'
+import { DamageCalculatorThreeCoverageVersionComparison } from './DamageCalculatorThreeCoverageVersionComparison'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
 import './SkillDirectory.css'
@@ -34,28 +37,44 @@ interface Props {
   onOpenOperatorDetail: OpenOperatorDetail
 }
 
+export { getCoverageChangeLabel } from '../lib/damageCalculatorThreeCoverageComparison'
+const COVERAGE_TABS = [['list', '対応一覧'], ['compare', '版の比較']] as const
+type CoverageTab = typeof COVERAGE_TABS[number][0]
+
 export function DamageCalculatorThreeCoveragePage({ rows, loading, onOpenOperatorDetail }: Props) {
+  const [activeTab, setActiveTab] = useState<CoverageTab>('list')
+  const [comparisonVisited, setComparisonVisited] = useState(false)
+  const [versionSelection, setVersionSelection] = useState<string[] | null>(null)
   const [filters, setFilters] = useState<DamageCalculatorThreeCoverageFilters>({ ...DEFAULT_DAMAGE_THREE_COVERAGE_FILTERS })
-  const [detail, setDetail] = useState<{ row: CoverageRecord; change?: CoverageChange; trigger: HTMLButtonElement } | null>(null)
+  const [detail, setDetail] = useState<{ row: CoverageRecord; change?: CoverageChange; trigger: HTMLButtonElement;
+    historical?: boolean; beforeLabel?: string; afterLabel?: string } | null>(null)
   const [versionId, setVersionId] = useState('CURRENT')
   const [comparisonId, setComparisonId] = useState('')
   const [changesOnly, setChangesOnly] = useState(false)
   const [index, setIndex] = useState<CoverageIndex | null>(null)
   const [indexError, setIndexError] = useState('')
+  const [indexLoading, setIndexLoading] = useState(true)
   const [retry, setRetry] = useState(0)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [snapshots, setSnapshots] = useState<Record<string, CoverageSnapshot>>({})
   const snapshotCache = useRef<Record<string, CoverageSnapshot>>({})
   const [snapshotErrors, setSnapshotErrors] = useState<Record<string, string>>({})
   const liveCoverage = useMemo(() => toCoverageRecords(buildDamageCalculatorThreeCoverage(rows)), [rows])
+  const selectedIds = useMemo(() => versionSelection ?? index?.versions.map(version => version.id) ?? [], [versionSelection, index])
+  const requestedIdsKey = JSON.stringify([...new Set([versionId, comparisonId,
+    ...(activeTab === 'compare' ? selectedIds : [])].filter(id => id && id !== 'CURRENT'))])
 
   useEffect(() => {
     const controller = new AbortController()
     setIndexError('')
+    setIndexLoading(true)
     loadCoverageIndex(controller.signal).then(value => {
-      if (!controller.signal.aborted) setIndex(value)
+      if (!controller.signal.aborted) { setIndex(value); setIndexLoading(false) }
     }).catch(error => {
-      if (!controller.signal.aborted) setIndexError(error instanceof Error ? error.message : 'バージョン一覧を取得できませんでした。')
+      if (!controller.signal.aborted) {
+        setIndexError(error instanceof Error ? error.message : 'バージョン一覧を取得できませんでした。')
+        setIndexLoading(false)
+      }
     })
     return () => controller.abort()
   }, [retry])
@@ -63,33 +82,41 @@ export function DamageCalculatorThreeCoveragePage({ rows, loading, onOpenOperato
   useEffect(() => {
     if (!index) return
     const controller = new AbortController()
-    const ids = [...new Set([versionId, comparisonId].filter(id => id && id !== 'CURRENT'))]
+    const ids: string[] = JSON.parse(requestedIdsKey)
     for (const id of ids) {
       const version = index.versions.find(value => value.id === id)
       if (!version) continue
       const cacheKey = canonicalCoverageJson(version)
       if (snapshotCache.current[cacheKey]) continue
-      setSnapshotErrors(previous => ({ ...previous, [id]: '' }))
+      setSnapshotErrors(previous => ({ ...previous, [cacheKey]: '' }))
       loadCoverageSnapshot(version, controller.signal).then(snapshot => {
         if (controller.signal.aborted) return
         snapshotCache.current[cacheKey] = snapshot
         setSnapshots(previous => ({ ...previous, [cacheKey]: snapshot }))
       }).catch(error => {
         if (!controller.signal.aborted) setSnapshotErrors(previous => ({ ...previous,
-          [id]: error instanceof Error ? error.message : `${id}を取得できませんでした。` }))
+          [cacheKey]: error instanceof Error ? error.message : `${id}を取得できませんでした。` }))
       })
     }
     return () => controller.abort()
-  }, [versionId, comparisonId, index, retry])
+  }, [requestedIdsKey, index, retry])
 
   const selectedVersion = index?.versions.find(version => version.id === versionId)
   const comparisonVersion = index?.versions.find(version => version.id === comparisonId)
   const selectedSnapshot = selectedVersion ? snapshots[canonicalCoverageJson(selectedVersion)] : undefined
   const comparisonSnapshot = comparisonVersion ? snapshots[canonicalCoverageJson(comparisonVersion)] : undefined
   const selectedError = versionId === 'CURRENT' ? '' : indexError || (index && !selectedVersion
-    ? `バージョン「${versionId}」がありません。` : snapshotErrors[versionId] ?? '')
+    ? `バージョン「${versionId}」がありません。` : selectedVersion ? snapshotErrors[canonicalCoverageJson(selectedVersion)] ?? '' : '')
   const comparisonError = !comparisonId ? '' : indexError || (index && !comparisonVersion
-    ? `比較元「${comparisonId}」がありません。` : snapshotErrors[comparisonId] ?? '')
+    ? `比較元「${comparisonId}」がありません。` : comparisonVersion ? snapshotErrors[canonicalCoverageJson(comparisonVersion)] ?? '' : '')
+  const versionComparisonError = indexError || (index ? selectedIds.map(id => {
+    const version = index.versions.find(value => value.id === id)
+    return version ? snapshotErrors[canonicalCoverageJson(version)] ?? '' : `バージョン「${id}」がありません。`
+  }).find(Boolean) ?? '' : '')
+  const versionComparisonLoading = !versionComparisonError && (indexLoading || !index || selectedIds.some(id => {
+    const version = index.versions.find(value => value.id === id)
+    return version && !snapshots[canonicalCoverageJson(version)]
+  }))
   const error = selectedError || comparisonError
   const busy = !error && ((versionId === 'CURRENT' ? loading : !selectedSnapshot) || Boolean(comparisonId && !comparisonSnapshot))
   const coverage = useMemo(() => (versionId === 'CURRENT' ? liveCoverage : selectedSnapshot?.rows ?? [])
@@ -124,6 +151,11 @@ export function DamageCalculatorThreeCoveragePage({ rows, loading, onOpenOperato
   return (
     <section className="damage-three-coverage-page">
       <header className="page-intro"><h1>DC3 実装範囲</h1></header>
+      <AnalysisTabs tabs={COVERAGE_TABS} activeTab={activeTab} onChange={tab => {
+        setActiveTab(tab)
+        if (tab === 'compare') setComparisonVisited(true)
+      }} idPrefix="dc3-coverage" label="実装範囲の表示" />
+      <AnalysisTabPanel idPrefix="dc3-coverage" tab="list" activeTab={activeTab} title="対応一覧">
       <section className="skill-directory-panel" aria-label="DC3の対応スキル一覧">
         <div className="skill-directory-filter-grid damage-three-coverage-history-controls">
           <label><span>バージョン</span><select aria-label="バージョン" value={versionId}
@@ -196,8 +228,19 @@ export function DamageCalculatorThreeCoveragePage({ rows, loading, onOpenOperato
         ) : <DamageCalculatorThreeCoverageTable rows={visibleRows} changes={comparisonId ? changesByKey : undefined}
           onOpenOperatorDetail={onOpenOperatorDetail} onDetail={(row, trigger, change) => setDetail({ row, trigger, change })} />)}
       </section>
-      {detail && <DamageCalculatorThreeCoverageDialog row={detail.row} change={detail.change} historical={versionId !== 'CURRENT' || detail.change?.kind === 'REMOVED'}
-        beforeLabel={comparisonVersion?.label} afterLabel={selectedVersion?.label ?? '現在の実装'} onClose={closeDetail} />}
+      </AnalysisTabPanel>
+      <AnalysisTabPanel idPrefix="dc3-coverage" tab="compare" activeTab={activeTab} title="版の比較">
+        {comparisonVisited && <DamageCalculatorThreeCoverageVersionComparison versions={index?.versions ?? []}
+          snapshots={snapshots} selectedIds={selectedIds} onSelectedIdsChange={setVersionSelection}
+          loading={versionComparisonLoading} error={versionComparisonError} onRetry={() => setRetry(value => value + 1)}
+          onDetail={(change, before, after, trigger) => {
+            const row = change.after ?? change.before
+            if (row) setDetail({ row, change, trigger, historical: true, beforeLabel: before.label, afterLabel: after.label })
+          }} />}
+      </AnalysisTabPanel>
+      {detail && <DamageCalculatorThreeCoverageDialog row={detail.row} change={detail.change}
+        historical={detail.historical ?? (versionId !== 'CURRENT' || detail.change?.kind === 'REMOVED')}
+        beforeLabel={detail.beforeLabel ?? comparisonVersion?.label} afterLabel={detail.afterLabel ?? selectedVersion?.label ?? '現在の実装'} onClose={closeDetail} />}
       {historyOpen && index && <DamageCalculatorThreeCoverageHistoryDialog versions={index.versions} onClose={() => setHistoryOpen(false)} />}
     </section>
   )
@@ -223,15 +266,6 @@ export function DamageCalculatorThreeCoverageHistoryDialog({ versions, onClose }
       </table>
     </div>
   </GoldenglowDetailModal>
-}
-
-export function getCoverageChangeLabel(change: CoverageChange): string {
-  if (change.kind === 'ADDED') return 'カタログ追加'
-  if (change.kind === 'REMOVED') return 'カタログ削除'
-  const usable = (row: CoverageRecord | undefined) => row?.status === 'SUPPORTED' || row?.status === 'CONDITIONAL'
-  if (!usable(change.before) && usable(change.after)) return '新規対応'
-  if (change.before?.status === 'UNSUPPORTED' && change.after?.status === 'PENDING') return '登録追加'
-  return '変更'
 }
 
 export function DamageCalculatorThreeCoverageTable({ rows, changes, onOpenOperatorDetail, onDetail }: {

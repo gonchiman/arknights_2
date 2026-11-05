@@ -190,6 +190,9 @@ test('初期表示は現在の実装・比較なしで、比較がない間は�
   assert.match(markup, /aria-label="職業"[^>]*>[\s\S]*?<option value="WARRIOR" selected="">前衛/)
   assert.match(markup, /<option value="6" selected="">★6/)
   assert.match(markup, /aria-haspopup="dialog"[^>]*>版の履歴/)
+  assert.match(markup, /id="dc3-coverage-tab-list"[^>]*aria-selected="true"/)
+  assert.match(markup, /id="dc3-coverage-tab-compare"[^>]*aria-selected="false"/)
+  assert.match(markup, /id="dc3-coverage-panel-compare"[^>]*hidden=""/)
 })
 
 test('保存版の最小スキル情報だけで絞り込み・集計・詳細表示し、現在の育成条件に置き換えない', () => {
