@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { classifySkill } from '../src/lib/classifier.ts'
-import { evaluateDamageThreeComparisonEntry } from '../src/lib/damageCalculatorThreeComparison.ts'
+import { evaluateDamageThreeComparisonEntry, getDamageThreeComparisonEntries } from '../src/lib/damageCalculatorThreeComparison.ts'
 import { evaluateDamageThreeAttributeComparison, getDamageThreeAttributeEntries,
   getDamageThreeAttributeChangeRate, type DamageThreeAttributeComparisonInput } from '../src/lib/damageCalculatorThreeAttributeComparison.ts'
 import type { ExpandedOperatorSource } from '../src/lib/expandedCombatTypes.ts'
@@ -38,9 +38,11 @@ function valid(value: DamageThreeAttributeComparisonInput) {
   return result
 }
 
-test('通常攻撃段階だけを列挙し、正確な選択点で通常DC3と同じ基準値を表示する', () => {
+test('通常DC3と同じ全攻撃段階を列挙し、正確な選択点で同じ基準値を表示する', () => {
   assert.ok(entries.length > 100)
-  assert.ok(entries.every(entry => entry.kind === 'NORMAL'))
+  assert.deepEqual(entries.map(entry => entry.key), getDamageThreeComparisonEntries(records()).map(entry => entry.key))
+  assert.ok(entries.some(entry => entry.kind === 'NEXT_ATTACK'))
+  assert.ok(entries.some(entry => entry.kind === 'SKILL_ACTION'))
   const value = input()
   const result = valid(value)
   const ordinary = evaluateDamageThreeComparisonEntry(value.entry, value.common)
@@ -104,10 +106,10 @@ test('防御力が既定範囲より大きくても選択点まで表示しサ�
 
 test('静的対応フラグを偽装しても未確認構造の変更後数値を出さない', () => {
   const value = structuredClone(input())
-  delete value.entry.structure.guardRecipe
+  delete value.entry.structure.guardRecipe!.stages[0].actions[0].role
   value.entry.capability = { supported: true, reason: null }
   const result = evaluateDamageThreeAttributeComparison(value)
-  assert.ok(result.errors.some(error => error.includes('未対応')))
+  assert.ok(result.errors.some(error => error.includes('区分が未確認')))
   assert.equal(result.changed, null)
   assert.deepEqual(result.samples, [])
 })

@@ -79,9 +79,11 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
     .map(field => ({ ...field, defaultValue: field.value ?? (field.kind === 'number' ? Number.NaN : '') }))
   const hasPeriodicDamage = !!comparison && [comparison.original, comparison.changed]
     .some(result => result?.damageOverTimeDps !== null && result?.damageOverTimeDps !== undefined && result.damageOverTimeDps > 0)
-  const activeMetric = metric === 'combinedDps' && !hasPeriodicDamage ? 'dps' : metric
+  const hasDps = output?.canShowDps ?? selected?.kind === 'NORMAL'
+  const activeMetric = !hasDps ? 'perAttack' : metric === 'combinedDps' && !hasPeriodicDamage ? 'dps' : metric
   const mainType = output?.mainAttackType
-  const originalLabel = mainType === 'PHYSICAL' || mainType === 'ARTS' ? TYPE_LABELS[mainType] : '未確定'
+  const originalLabel = mainType === 'PHYSICAL' || mainType === 'ARTS' ? TYPE_LABELS[mainType]
+    : mainType === 'TRUE' ? '確定' : output?.rows.length ? '混合' : '未確定'
   const changedLabel = TYPE_LABELS[targetType]
 
   function chooseSkill(entry: DamageThreeAttributeEntry) {
@@ -203,8 +205,8 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
           value={axis} onChange={setAxis} />
         <label className="calculator-field"><span>指標（1体）</span>
           <select aria-label="指標（1体）" value={activeMetric} onChange={event => setMetric(event.target.value as Metric)}>
-            <option value="dps">DPS</option><option value="perAttack">1回の攻撃ダメージ</option>
-            {hasPeriodicDamage && <option value="combinedDps">合計DPS</option>}
+            {hasDps && <option value="dps">DPS</option>}<option value="perAttack">1回の攻撃ダメージ</option>
+            {hasDps && hasPeriodicDamage && <option value="combinedDps">合計DPS</option>}
           </select></label>
       </div>
       {comparison.errors.length > 0 && <div className="damage-two-unavailable damage-three-attribute-error" role="status">
@@ -245,7 +247,8 @@ export function DamageCalculatorThreeAttributeResultTable({ comparison, original
   comparison: DamageThreeAttributeComparison; originalLabel: string; changedLabel: string
 }) {
   const hasPeriodic = [comparison.original, comparison.changed].some(result => (result?.damageOverTimeDps ?? 0) > 0)
-  const metrics: Metric[] = hasPeriodic ? ['perAttack', 'dps', 'combinedDps'] : ['perAttack', 'dps']
+  const hasDps = comparison.original.output?.canShowDps ?? true
+  const metrics: Metric[] = !hasDps ? ['perAttack'] : hasPeriodic ? ['perAttack', 'dps', 'combinedDps'] : ['perAttack', 'dps']
   return <div className="damage-two-table-wrap" role="region" aria-label="攻撃属性の比較結果（1体）" tabIndex={0}>
     <table className="damage-two-table damage-three-attribute-table"><thead><tr>
       <th scope="col">指標</th><th scope="col">本来（{originalLabel}）</th><th scope="col">変更後（{changedLabel}）</th><th scope="col">増減率</th>
