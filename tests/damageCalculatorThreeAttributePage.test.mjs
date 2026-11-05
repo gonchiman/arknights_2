@@ -6,8 +6,16 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 
-const sources = ['Melee', 'Ranged', 'Arts'].flatMap(group => JSON.parse(readFileSync(
-  new URL(`../src/data/expanded${group}Sources.json`, import.meta.url), 'utf8')))
+const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'))
+const profiles = readJson('./fixtures/sixStarGuardProfiles.json')
+const sources = [
+  ...readJson('./fixtures/sixStarGuardSources.json').guards.map(source => ({
+    operatorId: source.id, operatorName: source.name, profession: 'WARRIOR', rarity: 6,
+    subProfessionId: source.subProfessionId, skillLevelIndex: 9, skills: source.skills,
+    profile: profiles.find(profile => profile.operatorId === source.id).operatorProfile,
+  })),
+  ...['Melee', 'Ranged', 'Arts'].flatMap(group => readJson(`../src/data/expanded${group}Sources.json`)),
+]
 let server, Page, ResultTable, rows, entries
 const text = markup => markup.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
 const render = initialSelection => renderToStaticMarkup(createElement(Page, { rows, loading: false, initialSelection }))
@@ -69,6 +77,32 @@ test('selecting an arts operator keeps that exact skill and displays its origina
   assert.doesNotMatch(markup, /メランサ/)
 })
 
+test('legacy Surtr and newly included one-shot skills show a usable comparison metric', () => {
+  const surtr = entries.find(item => item.skill.operatorId === 'char_350_surtr' && item.skill.skillIndex === 3)
+  assert.ok(surtr?.capability.supported)
+  const sustained = render(surtr.structure.basicInfo)
+  assert.match(sustained, /本来（術）/)
+  assert.match(sustained, /scope="row">DPS/)
+  assert.doesNotMatch(sustained, /未対応です。|未確定/)
+  const angel = entries.find(item => item.skill.operatorId === 'char_103_angel' && item.skill.skillIndex === 1)
+  assert.ok(angel?.capability.supported)
+  assert.equal(angel.kind, 'NEXT_ATTACK')
+  const once = render(angel.structure.basicInfo)
+  assert.match(once, /S1 アサルトモード/)
+  assert.match(once, /value="perAttack" selected=""/)
+  assert.match(once, /scope="row">1回の攻撃ダメージ/)
+  assert.doesNotMatch(once, /<option value="dps"|scope="row">DPS|未対応です。/)
+})
+
+test('true and mixed native main attacks have explicit labels', () => {
+  const amiya = entries.find(item => item.skill.operatorId === 'char_002_amiya' && item.skill.skillIndex === 3)
+  const chen = entries.find(item => item.skill.operatorId === 'char_010_chen' && item.skill.skillIndex === 2)
+  assert.ok(amiya?.capability.supported)
+  assert.ok(chen?.capability.supported)
+  assert.match(render(amiya.structure.basicInfo), /本来（確定）/)
+  assert.match(render(chen.structure.basicInfo), /本来（混合）/)
+})
+
 test('an invalid deep-link selection does not silently substitute a supported operator', () => {
   const entry = entries.find(item => item.skill.operatorId === 'char_208_melan')
   const markup = render({ ...entry.structure.basicInfo, levelIndex: 0 })
@@ -81,17 +115,17 @@ test('default selection uses a supported stage and conditional skills retain the
   const first = entries.find(entry => entry.capability.supported)
   assert.ok(first)
   assert.match(text(render()), new RegExp(first.skill.operatorName))
-  const entry = entries.find(item => item.capability.supported && item.structure.guardRecipe?.inputs
-    .some(input => !['actualAttackTargetCount', 'enemyResistance', 'skillActivationCount'].includes(input.key)))
+  const entry = entries.find(item => item.capability.supported
+    && item.skill.operatorId === 'char_4082_qiubai' && item.skill.skillIndex === 2)
   assert.ok(entry, 'reviewed conditional skill fixture')
   const markup = render(entry.structure.basicInfo)
   assert.match(markup, /本来（(?:物理|術)）/)
   assert.match(markup, /aria-label="敵の防御力"/)
   assert.match(markup, /aria-label="敵の術耐性"/)
   assert.match(markup, /aria-label="敵の数"/)
-  const locked = ['actualAttackTargetCount', 'enemyResistance', 'skillActivationCount']
-  const input = entry.structure.guardRecipe.inputs.find(item => !locked.includes(item.key))
-  assert.ok(markup.includes(`aria-label="${input.label}"`), input.label)
+  assert.match(markup, /aria-label="対象が足止め・バインド中"/)
+  assert.match(markup, /aria-label="攻撃距離"/)
+  assert.match(markup, /aria-label="スキルの段階"/)
 })
 
 test('result table preserves zero, unavailable values, direct DPS and periodic DPS separately', () => {

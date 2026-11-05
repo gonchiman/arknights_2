@@ -39,9 +39,9 @@ export interface DamageThreeAttributeComparison {
   axisMaximum: number
 }
 
-/** Keep unavailable normal stages visible so selecting a skill never silently selects a different one. */
+/** Share the DC3 catalog, including one-shot attacks and unavailable stages with their original errors. */
 export function getDamageThreeAttributeEntries(rows: readonly SkillRecord[]): DamageThreeAttributeEntry[] {
-  return getDamageThreeComparisonEntries(rows).filter(entry => entry.kind === 'NORMAL').map(entry => ({
+  return getDamageThreeComparisonEntries(rows).map(entry => ({
     ...entry, capability: getDamageCalculatorThreeVirtualAttackCapability(entry.structure, entry.stageId),
   }))
 }
@@ -76,7 +76,7 @@ export function evaluateDamageThreeAttributeComparison(input: DamageThreeAttribu
   if (targetType !== 'PHYSICAL' && targetType !== 'ARTS') errors.push('変更後の属性を物理・術から選択してください。')
   // Derive eligibility from the structure again; callers cannot enable an unsupported stage via a UI flag.
   const capability = getDamageCalculatorThreeVirtualAttackCapability(entry.structure, entry.stageId)
-  if (entry.kind !== 'NORMAL' || !capability.supported) errors.push(capability.reason ?? 'この段階の属性変更は未対応です。')
+  if (!capability.supported) errors.push(capability.reason ?? 'この段階の属性変更は未対応です。')
   const maximum = axis === 'resistance' ? 100 : Number.isFinite(common.defense) && common.defense >= 0
     ? Math.max(3000, common.defense) : 3000
   if (errors.length) return { original, changed: null, errors: [...new Set(errors)], samples: [], axisMaximum: maximum }
