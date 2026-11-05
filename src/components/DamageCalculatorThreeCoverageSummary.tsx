@@ -7,14 +7,14 @@ import {
 import { CoverageStackedBars } from './CoverageStackedBars'
 import './DamageCalculatorThreeCoverageSummary.css'
 
-const COLORS = {
+export const COVERAGE_COLORS = {
   SUPPORTED: 'var(--coverage-bar-blue)',
   CONDITIONAL: 'var(--coverage-bar-gold)',
   PENDING: 'var(--coverage-bar-rose)',
   UNSUPPORTED: 'var(--coverage-bar-gray)',
   NOT_APPLICABLE: 'var(--coverage-bar-light-gray)',
 } as const
-const CATEGORIES = COVERAGE_SUMMARY_CATEGORIES.map(({ status, label }) => ({ key: status, label, color: COLORS[status] }))
+export const COVERAGE_CATEGORIES = COVERAGE_SUMMARY_CATEGORIES.map(({ status, label }) => ({ key: status, label, color: COVERAGE_COLORS[status] }))
 
 export function DamageCalculatorThreeCoverageSummary({ rows, title = '絞り込み結果の対応状況' }: {
   rows: readonly Pick<DamageCalculatorThreeCoverageRow, 'status' | 'sections'>[]
@@ -33,10 +33,10 @@ export function DamageCalculatorThreeCoverageSummary({ rows, title = '絞り込�
         <p className="damage-three-coverage-summary-empty">集計対象のスキルがありません</p>
       ) : (
         <div className="damage-three-coverage-summary-body">
-          <CoverageStackedBars categories={CATEGORIES} showSegmentTitles rows={summary.sections.map(section => ({
+          <CoverageStackedBars categories={COVERAGE_CATEGORIES} showSegmentTitles rows={summary.sections.map(section => ({
             key: section.key, label: section.label, total: summary.count, unit: 'スキル', countUnit: '件',
             buckets: section.buckets.map(bucket => ({
-              key: bucket.status, label: bucket.label, count: bucket.count, color: COLORS[bucket.status],
+              key: bucket.status, label: bucket.label, count: bucket.count, color: COVERAGE_COLORS[bucket.status],
             })),
           }))} />
         </div>
