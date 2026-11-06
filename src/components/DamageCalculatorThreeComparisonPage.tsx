@@ -15,6 +15,7 @@ import {
 } from '../lib/damageCalculatorThreeSkillInformation'
 import { PROFESSION_ORDER } from '../lib/operatorFilters'
 import { lockPageScroll } from '../lib/pageScrollLock'
+import { createDamageCalculatorThreeHash } from '../lib/routes'
 import type { SkillRecord } from '../types/skill'
 import { OperatorDetailLink } from './OperatorDetailLink'
 import { SkillEffectModal } from './SkillEffectModal'
@@ -371,7 +372,10 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
         </div>}
     </section>
     {description && <SkillEffectModal skill={description.entry.skill} skillLevelIndex={description.entry.levelIndex}
-      descriptionOnly onClose={closeDescription} />}
+      descriptionOnly onClose={closeDescription}
+      action={<a className="button" href={createDamageCalculatorThreeHash(description.entry.structure.basicInfo)}>
+        計算機3で開く
+      </a>} />}
     {detailResult && <ComparisonConditionsDialog result={detailResult} customized={Object.keys(overrides[detailResult.entry.key] ?? {}).length > 0}
       target={target} common={common} formatNumber={formatNumber} onChange={updateCondition} onReset={resetConditions} onClose={closeDetail} />}
   </section>
