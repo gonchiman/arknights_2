@@ -16,6 +16,7 @@ import {
 import { PROFESSION_ORDER } from '../lib/operatorFilters'
 import { lockPageScroll } from '../lib/pageScrollLock'
 import type { SkillRecord } from '../types/skill'
+import { OperatorDetailLink } from './OperatorDetailLink'
 import { SkillEffectModal } from './SkillEffectModal'
 import { TableSortHeader } from './TableSortHeader'
 import { ElementalBuildupTable } from './ElementalBuildupTable'
@@ -338,11 +339,15 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
                 trigger.focus({ preventScroll: true })
                 setDescription({ entry, trigger })
               }}>
-                <td><button type="button" className="skill-coarse-description-trigger skill-coarse-link" aria-haspopup="dialog"
+                <td><OperatorDetailLink operatorId={entry.skill.operatorId} className="skill-coarse-link">
+                  {entry.skill.operatorName}
+                </OperatorDetailLink></td>
+                <td><button type="button" className="skill-coarse-description-trigger" aria-haspopup="dialog"
                   data-skill-description-trigger
                   aria-label={`${entry.skill.operatorName} S${entry.skill.skillIndex} ${entry.stageLabel}のスキル説明を表示`}
-                  onClick={(event) => setDescription({ entry, trigger: event.currentTarget })}>{entry.skill.operatorName}</button></td>
-                <td>{compact ? entry.skill.skillIndex : `S${entry.skill.skillIndex}`}</td>
+                  onClick={(event) => setDescription({ entry, trigger: event.currentTarget })}>
+                  {compact ? entry.skill.skillIndex : `S${entry.skill.skillIndex}`}
+                </button></td>
                 {!compact && <td>{entry.skill.skillName}</td>}<td>{entry.stageLabel}</td>
                 {showSkillInformation && SKILL_INFORMATION_COLUMNS.map(column => <td key={column.key}
                   className={column.numeric ? 'dc3-comparison-number' : 'dc3-comparison-skill-info-value'}>{information[column.key] ?? '—'}</td>)}
