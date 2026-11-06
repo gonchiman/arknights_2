@@ -5,6 +5,10 @@
   font-variant-numeric: tabular-nums;
 }
 
+.enemy-defense-resistance-view-switch {
+  justify-self: start;
+}
+
 .damage-two-table.enemy-defense-resistance-table {
   min-width: 0;
   border-collapse: separate;

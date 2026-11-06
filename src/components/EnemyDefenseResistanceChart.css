@@ -1,0 +1,106 @@
+.enemy-defense-resistance-chart-wrap {
+  min-width: 0;
+  container: enemy-defense-resistance-chart / inline-size;
+}
+
+.damage-two-table.enemy-defense-resistance-chart {
+  width: 100%;
+  min-width: 240px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.enemy-defense-resistance-chart-rank { width: 21%; }
+
+.damage-two-table.enemy-defense-resistance-chart th { text-align: left; }
+.damage-two-table.enemy-defense-resistance-chart th:first-child { width: auto; }
+.damage-two-table.enemy-defense-resistance-chart tbody th { background: var(--surface); }
+
+.enemy-defense-resistance-chart-cell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 10ch;
+  align-items: center;
+  gap: 8px;
+}
+
+.enemy-defense-resistance-chart .resistance .enemy-defense-resistance-chart-cell {
+  grid-template-columns: minmax(0, 1fr) 7ch;
+}
+
+.enemy-defense-resistance-chart-ticks,
+.enemy-defense-resistance-chart-track {
+  position: relative;
+  margin-inline: 4px;
+  height: 16px;
+}
+
+.enemy-defense-resistance-chart-ticks {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.enemy-defense-resistance-chart-ticks span {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.enemy-defense-resistance-chart-ticks span:first-child { transform: none; }
+.enemy-defense-resistance-chart-ticks span:last-child { transform: translateX(-100%); }
+
+.enemy-defense-resistance-chart-track {
+  border-inline: 1px solid var(--border);
+  color: light-dark(#387590, #78bfdd);
+}
+
+.enemy-defense-resistance-chart .resistance .enemy-defense-resistance-chart-track {
+  color: light-dark(#a85b2e, #efa377);
+}
+
+.enemy-defense-resistance-chart-guide {
+  position: absolute;
+  inset-block: 0;
+  border-left: 1px solid var(--border);
+}
+
+.enemy-defense-resistance-chart-range {
+  position: absolute;
+  top: calc(50% - 1px);
+  height: 2px;
+  background: currentColor;
+}
+
+.enemy-defense-resistance-chart-range::before,
+.enemy-defense-resistance-chart-range::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.enemy-defense-resistance-chart-range::before { left: -3px; }
+.enemy-defense-resistance-chart-range::after { right: -3px; }
+.enemy-defense-resistance-chart-range.is-point::after { display: none; }
+.enemy-defense-resistance-chart-value { white-space: nowrap; }
+
+@container enemy-defense-resistance-chart (max-width: 600px) {
+  .enemy-defense-resistance-chart-rank { width: 28%; }
+
+  .enemy-defense-resistance-chart .enemy-defense-resistance-chart-cell,
+  .enemy-defense-resistance-chart .resistance .enemy-defense-resistance-chart-cell {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .enemy-defense-resistance-chart-value { text-align: left; }
+}
+
+@container enemy-defense-resistance-chart (max-width: 400px) {
+  .damage-two-table.enemy-defense-resistance-chart :is(th, td) { padding-inline: 5px; }
+  .enemy-defense-resistance-chart-ticks span:not(:first-child, :last-child) { display: none; }
+}
