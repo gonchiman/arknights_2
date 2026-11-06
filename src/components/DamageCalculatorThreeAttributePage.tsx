@@ -83,7 +83,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const activeMetric = !hasDps ? 'perAttack' : metric === 'combinedDps' && !hasPeriodicDamage ? 'dps' : metric
   const mainType = output?.mainAttackType
   const originalLabel = mainType === 'PHYSICAL' || mainType === 'ARTS' ? TYPE_LABELS[mainType]
-    : mainType === 'TRUE' ? '確定' : output?.rows.length ? '混合' : '未確定'
+    : mainType === 'TRUE' ? '確定' : mainType === 'ELEMENTAL' ? '元素' : output?.rows.length ? '混合' : '未確定'
   const changedLabel = TYPE_LABELS[targetType]
 
   function chooseSkill(entry: DamageThreeAttributeEntry) {

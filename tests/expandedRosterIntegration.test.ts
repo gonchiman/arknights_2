@@ -16,7 +16,7 @@ import type { SkillRecord } from '../src/types/skill.ts'
 
 // The independent JP snapshots are the expected roster; do not obtain expected
 // operator/skill identities from the executable registry under test.
-const groups = ['Melee', 'Ranged', 'Arts', 'Caster', 'Support'].map(group => JSON.parse(readFileSync(
+const groups = ['Melee', 'Ranged', 'Arts', 'Caster', 'Support', 'Special', 'Elemental', 'Summon'].map(group => JSON.parse(readFileSync(
   new URL(`../src/data/expanded${group}Sources.json`, import.meta.url), 'utf8')) as ExpandedOperatorSource[])
 const sources = groups.flat()
 const sourceMap = new Map(sources.map(source => [source.operatorId, source]))
@@ -34,7 +34,7 @@ function record(operatorId: string, skillIndex: number): SkillRecord {
     durationType: raw.durationType!, skillType: raw.skillType!, spType: raw.spData!.spType!,
     initSp: raw.spData!.initSp!, spCost: raw.spData!.spCost!, classification: classifySkill(raw), raw,
     skillLevels: Array.from({ length: source.skillLevelIndex + 1 }, () => structuredClone(raw)),
-    operatorProfile: structuredClone(source.profile) }
+    operatorProfile: structuredClone(source.profile), overrideTokenKey: source.profile.summonSkillTokenKeys?.[skillIndex - 1] ?? undefined }
 }
 function input(operatorId: string, skillIndex: number, guard: GuardConditions = {}): DamageCalculatorThreeInput {
   const source = sourceMap.get(operatorId)!, skill = record(operatorId, skillIndex)
@@ -61,11 +61,11 @@ const catalog = sources.flatMap(source => source.skills.map(skill => record(sour
 const coverage = buildDamageCalculatorThreeCoverage(catalog)
 const structures = getDamageCalculatorThreeStructures().filter(structure => sourceMap.has(structure.basicInfo.operatorId))
 
-test('独立snapshotの276名614スキルが構造・coverage・registryに欠落や重複なく現れる', () => {
+test('独立snapshotの293名644スキルが構造・coverage・registryに欠落や重複なく現れる', () => {
   assert.deepEqual(groups.map(group => [group.length, group.reduce((sum, source) => sum + source.skills.length, 0)]),
-    [[146, 316], [54, 121], [63, 141], [9, 25], [4, 11]])
-  assert.equal(sources.length, 276)
-  assert.equal(catalog.length, 614)
+    [[146, 316], [54, 121], [63, 141], [9, 25], [4, 11], [5, 13], [5, 5], [7, 12]])
+  assert.equal(sources.length, 293)
+  assert.equal(catalog.length, 644)
   assert.equal(sourceMap.size, sources.length)
   const expectedIds = catalog.map(identity).sort()
   assert.deepEqual(structures.map(structure => identity(structure.basicInfo)).sort(), expectedIds)
@@ -79,30 +79,33 @@ test('独立snapshotの276名614スキルが構造・coverage・registryに欠�
   }
 })
 
-test('追加範囲は対応450・条件付き74・保留68・対象外22で、保留と対象外を対応へ混ぜない', () => {
+test('追加範囲は対応485・条件付き80・保留42・対象外37で、保留と対象外を対応へ混ぜない', () => {
   assert.deepEqual(Object.fromEntries(['SUPPORTED', 'CONDITIONAL', 'PENDING', 'UNSUPPORTED', 'NOT_APPLICABLE'].map(status =>
     [status, coverage.filter(row => row.status === status).length])),
-  { SUPPORTED: 450, CONDITIONAL: 74, PENDING: 68, UNSUPPORTED: 0, NOT_APPLICABLE: 22 })
+  { SUPPORTED: 485, CONDITIONAL: 80, PENDING: 42, UNSUPPORTED: 0, NOT_APPLICABLE: 37 })
   assert.deepEqual(coverage.filter(row => row.status === 'CONDITIONAL').map(row => `${row.skill.operatorId}/${row.skill.skillIndex}`).sort(),
-    ['char_1013_chen2/2', 'char_1013_chen2/3', 'char_1028_texas2/2', 'char_1035_wisdel/2',
-      'char_1046_sbell2/1', 'char_1046_sbell2/2', 'char_1046_sbell2/3', 'char_126_shotst/1',
-      'char_126_shotst/2', 'char_135_halo/1', 'char_135_halo/2', 'char_145_prove/2',
-      'char_2012_typhon/2', 'char_2012_typhon/3', 'char_2015_dusk/1', 'char_2015_dusk/2',
-      'char_2015_dusk/3', 'char_204_platnm/1', 'char_204_platnm/2', 'char_206_gnosis/1',
-      'char_206_gnosis/2', 'char_206_gnosis/3', 'char_218_cuttle/2', 'char_219_meteo/2',
-      'char_340_shwaz/1', 'char_340_shwaz/2', 'char_340_shwaz/3', 'char_349_chiave/2',
-      'char_362_saga/2', 'char_362_saga/3', 'char_373_lionhd/2', 'char_377_gdglow/1',
-      'char_377_gdglow/2', 'char_377_gdglow/3', 'char_4006_melnte/2', 'char_4013_kjera/2',
-      'char_4025_aprot2/1', 'char_4025_aprot2/2', 'char_4027_heyak/2', 'char_4039_horn/2',
-      'char_4043_erato/1', 'char_4046_ebnhlz/3', 'char_4048_doroth/1', 'char_4048_doroth/2',
-      'char_4048_doroth/3', 'char_4054_malist/2', 'char_405_absin/2', 'char_4067_lolxh/2',
-      'char_4072_ironmn/1', 'char_4080_lin/1', 'char_4080_lin/2', 'char_4080_lin/3',
-      'char_4087_ines/1', 'char_4087_ines/3', 'char_4133_logos/1', 'char_4133_logos/2',
-      'char_4133_logos/3', 'char_4138_narant/1', 'char_4138_narant/2', 'char_4138_narant/3',
-      'char_4141_marcil/1', 'char_4141_marcil/3', 'char_4171_wulfen/2', 'char_4177_brigid/1',
-      'char_4185_amoris/1', 'char_4185_amoris/2', 'char_4186_tmoris/1', 'char_4186_tmoris/2',
-      'char_4202_haruka/2', 'char_4202_haruka/3', 'char_433_windft/1', 'char_433_windft/2',
-      'char_446_aroma/1', 'char_457_blitz/2'])
+    [
+      'char_1013_chen2/2', 'char_1013_chen2/3', 'char_1028_texas2/2', 'char_1033_swire2/2',
+      'char_1033_swire2/3', 'char_1035_wisdel/2', 'char_1046_sbell2/1', 'char_1046_sbell2/2',
+      'char_1046_sbell2/3', 'char_126_shotst/1', 'char_126_shotst/2', 'char_134_ifrit/3',
+      'char_135_halo/1', 'char_135_halo/2', 'char_145_prove/2', 'char_2012_typhon/2',
+      'char_2012_typhon/3', 'char_2015_dusk/1', 'char_2015_dusk/2', 'char_2015_dusk/3',
+      'char_204_platnm/1', 'char_204_platnm/2', 'char_206_gnosis/1', 'char_206_gnosis/2',
+      'char_206_gnosis/3', 'char_218_cuttle/2', 'char_219_meteo/2', 'char_340_shwaz/1',
+      'char_340_shwaz/2', 'char_340_shwaz/3', 'char_349_chiave/2', 'char_362_saga/2',
+      'char_362_saga/3', 'char_373_lionhd/2', 'char_377_gdglow/1', 'char_377_gdglow/2',
+      'char_377_gdglow/3', 'char_4006_melnte/2', 'char_4013_kjera/2', 'char_4025_aprot2/1',
+      'char_4025_aprot2/2', 'char_4027_heyak/2', 'char_4039_horn/2', 'char_4043_erato/1',
+      'char_4046_ebnhlz/3', 'char_4048_doroth/1', 'char_4048_doroth/2', 'char_4048_doroth/3',
+      'char_4054_malist/2', 'char_4056_titi/1', 'char_4056_titi/3', 'char_405_absin/2',
+      'char_4067_lolxh/2', 'char_4072_ironmn/1', 'char_4080_lin/1', 'char_4080_lin/2',
+      'char_4080_lin/3', 'char_4087_ines/1', 'char_4087_ines/3', 'char_4133_logos/1',
+      'char_4133_logos/2', 'char_4133_logos/3', 'char_4138_narant/1', 'char_4138_narant/2',
+      'char_4138_narant/3', 'char_4141_marcil/1', 'char_4141_marcil/3', 'char_4171_wulfen/2',
+      'char_4177_brigid/1', 'char_4185_amoris/1', 'char_4185_amoris/2', 'char_4186_tmoris/1',
+      'char_4186_tmoris/2', 'char_4202_haruka/2', 'char_4202_haruka/3', 'char_433_windft/1',
+      'char_433_windft/2', 'char_446_aroma/1', 'char_457_blitz/2', 'char_476_blkngt/1'
+    ])
   for (const row of coverage) {
     if (row.status === 'NOT_APPLICABLE') {
       assert.equal(row.selection, undefined)
@@ -132,7 +135,7 @@ test('coverageの特性区分は、優先対象のみ・計算に使う術属性
   assert.equal(find('char_271_spikes', 2).sections.trait, 'NOT_APPLICABLE')
 })
 
-test('全614スキルの全登録段階で対応状況と実計算が一致し、停止時に部分数値を残さない', () => {
+test('全644スキルの全登録段階で対応状況と実計算が一致し、停止時に部分数値を残さない', () => {
   let supportedSkills = 0, pendingSkills = 0, outsideSkills = 0
   for (const row of coverage) {
     const structure = structures.find(structure => identity(structure.basicInfo) === identity(row.skill))!
@@ -144,6 +147,7 @@ test('全614スキルの全登録段階で対応状況と実計算が一致し�
       const conditions = stageConditions(stage, step)
       // This stage is an independently confirmed follow-up hit, after its HP trigger.
       if (row.skill.operatorId === 'char_4067_lolxh' && stage.id === 'extra') conditions.extraAttackTriggered = true
+      if (row.skill.operatorId === 'char_4081_warmy' && stage.id === 'burst-event') conditions.targetBurnState = 'BURST'
       const result = calculate(row.skill.operatorId, row.skill.skillIndex, conditions)
       if (stage.unresolved?.length) {
         assert.ok(result.unsupportedReasons.length, row.skill.id)
@@ -165,14 +169,14 @@ test('全614スキルの全登録段階で対応状況と実計算が一致し�
     else if (row.status === 'NOT_APPLICABLE') outsideSkills += 1
     else pendingSkills += 1
   }
-  assert.deepEqual([supportedSkills, pendingSkills, outsideSkills], [524, 68, 22])
+  assert.deepEqual([supportedSkills, pendingSkills, outsideSkills], [565, 42, 37])
 })
 
-test('昇進1/SL7の12名と昇進2/SL10の264名でidentity・素質を混同しない', () => {
+test('昇進1/SL7の12名と昇進2/SL10の281名でidentity・素質を混同しない', () => {
   assert.equal(sources.filter(source => source.phaseIndex === 1 && source.skillLevelIndex === 6).length, 12)
-  assert.equal(sources.filter(source => source.phaseIndex === 2 && source.skillLevelIndex === 9).length, 264)
+  assert.equal(sources.filter(source => source.phaseIndex === 2 && source.skillLevelIndex === 9).length, 281)
   for (const source of sources) {
-    const row = record(source.operatorId, 1)
+    const row = record(source.operatorId, source.skills[0].skillIndex)
     const talents = buildExpandedTalentStructures([row])
     const describedTalents = source.profile.talents!.filter(talent => talent.candidates?.some(candidate => !candidate.isHideTalent && candidate.description?.trim()))
     assert.equal(talents.length, describedTalents.length, source.operatorName)

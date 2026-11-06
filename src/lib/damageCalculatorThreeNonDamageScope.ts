@@ -9,6 +9,8 @@ import { getOperatorPassives } from './operatorProfile.ts'
  * Only the listed healing/attack-replacement states are outside damage calculation.
  */
 const REVIEWED_SKILLS: Readonly<Record<string, readonly number[]>> = {
+  // Individually reviewed: instantaneous DP/heal or attack-stopping recovery/support.
+  char_112_siege: [1], char_115_headbr: [1], char_102_texas: [1], char_198_blackd: [1], char_149_scave: [1], char_488_buildr: [1], char_4199_makiri: [1], char_4023_rfalcn: [1], char_333_sidero: [1], char_289_gyuki: [1], char_4125_rdoc: [2], char_4144_chilc: [1], char_337_utage: [1], char_455_nothin: [1],
   char_123_fang: [1], char_209_ardign: [1], char_349_chiave: [1], char_362_saga: [1],
   char_147_shining: [1, 2, 3], char_179_cgbird: [1, 2, 3], char_4042_lumen: [1, 2, 3],
   char_1016_agoat2: [1, 2, 3], char_436_whispr: [1, 2], char_4224_turdus: [1, 2],
@@ -29,7 +31,9 @@ const REVIEWED_SKILLS: Readonly<Record<string, readonly number[]>> = {
   char_343_tknogi: [1, 2], char_4019_ncdeer: [1, 2], char_1022_flwr2: [1, 2], char_4202_haruka: [1],
   char_4179_monstr: [1, 2], char_1052_kalts2: [1, 3], char_4222_taraxa: [1, 2],
   char_479_sleach: [1, 2], char_401_elysm: [1, 2], char_4119_wanqin: [1, 2], char_151_myrtle: [1, 2],
-  char_202_demkni: [1], char_2025_shu: [1, 2], char_148_nearl: [1, 2], char_196_sunbr: [1, 2], char_284_spot: [1],
+  // S2 is an instantaneous heal; S3 replaces normal attacks with healing.
+  // Reviewed: https://prts.wiki/w/塞雷娅 (skill 3 notes).
+  char_202_demkni: [1, 2, 3], char_2025_shu: [1, 2], char_148_nearl: [1, 2], char_196_sunbr: [1, 2], char_284_spot: [1],
 }
 
 const reviewedSources = new Map((sources as unknown as ExpandedOperatorSource[]).map(source => [source.operatorId, source]))

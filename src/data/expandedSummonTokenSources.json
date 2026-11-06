@@ -1,0 +1,4174 @@
+{
+  "token_10010_folivo_car": {
+    "tokenKey": "token_10010_folivo_car",
+    "name": "撮影ロボット",
+    "profession": "TOKEN",
+    "subProfessionId": "notchar1",
+    "profile": {
+      "phases": [
+        {
+          "characterPrefabKey": "token_10010_folivo_car",
+          "rangeId": "1-1",
+          "maxLevel": 50,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1003,
+                "atk": 203,
+                "def": 160,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 50,
+              "data": {
+                "maxHp": 1254,
+                "atk": 286,
+                "def": 226,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "token_10010_folivo_car",
+          "rangeId": "1-1",
+          "maxLevel": 70,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1321,
+                "atk": 295,
+                "def": 233,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 70,
+              "data": {
+                "maxHp": 1592,
+                "atk": 379,
+                "def": 299,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "token_10010_folivo_car",
+          "rangeId": "1-1",
+          "maxLevel": 80,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1676,
+                "atk": 391,
+                "def": 309,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 80,
+              "data": {
+                "maxHp": 2020,
+                "atk": 477,
+                "def": 377,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        }
+      ],
+      "favorKeyFrames": [
+        {
+          "level": 0,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        },
+        {
+          "level": 50,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        }
+      ],
+      "trait": null,
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_0",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": null,
+              "description": "-",
+              "rangeId": "x-4",
+              "blackboard": [
+                {
+                  "key": "max_deploy_count",
+                  "value": 2,
+                  "valueStr": null
+                },
+                {
+                  "key": "max_deck_stack_cnt",
+                  "value": 3,
+                  "valueStr": null
+                },
+                {
+                  "key": "move_speed",
+                  "value": 1,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": true
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": null,
+              "description": "-",
+              "rangeId": "x-4",
+              "blackboard": [
+                {
+                  "key": "max_deploy_count",
+                  "value": 3,
+                  "valueStr": null
+                },
+                {
+                  "key": "max_deck_stack_cnt",
+                  "value": 4,
+                  "valueStr": null
+                },
+                {
+                  "key": "move_speed",
+                  "value": 1,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": true
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": null,
+              "description": "-",
+              "rangeId": "x-4",
+              "blackboard": [
+                {
+                  "key": "max_deploy_count",
+                  "value": 4,
+                  "valueStr": null
+                },
+                {
+                  "key": "max_deck_stack_cnt",
+                  "value": 5,
+                  "valueStr": null
+                },
+                {
+                  "key": "move_speed",
+                  "value": 1,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": true
+            }
+          ]
+        }
+      ],
+      "potentialRanks": [],
+      "modules": [],
+      "traitDescription": "敵を1体までブロック",
+      "subProfessionTraitDescription": ""
+    },
+    "skills": [
+      {
+        "skillId": null,
+        "levels": []
+      },
+      {
+        "skillId": "sktok_folivo_2",
+        "levels": [
+          {
+            "name": "フルパノラマ撮影",
+            "rangeId": "x-2",
+            "description": "<@ba.rem>スキルの効果時間終了後撮影ロボット全員が{stun}秒間<$ba.stun>スタン</>状態になる</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_folivo_2",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "stun",
+                "value": 5,
+                "valueStr": null
+              },
+              {
+                "key": "talent_range_flag",
+                "value": 1,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "フルパノラマ撮影",
+            "rangeId": "x-2",
+            "description": "<@ba.rem>スキルの効果時間終了後撮影ロボット全員が{stun}秒間<$ba.stun>スタン</>状態になる</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_folivo_2",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "stun",
+                "value": 5,
+                "valueStr": null
+              },
+              {
+                "key": "talent_range_flag",
+                "value": 1,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "フルパノラマ撮影",
+            "rangeId": "x-2",
+            "description": "<@ba.rem>スキルの効果時間終了後撮影ロボット全員が{stun}秒間<$ba.stun>スタン</>状態になる</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_folivo_2",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "stun",
+                "value": 5,
+                "valueStr": null
+              },
+              {
+                "key": "talent_range_flag",
+                "value": 1,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "フルパノラマ撮影",
+            "rangeId": "x-2",
+            "description": "<@ba.rem>スキルの効果時間終了後撮影ロボット全員が{stun}秒間<$ba.stun>スタン</>状態になる</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_folivo_2",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "stun",
+                "value": 5,
+                "valueStr": null
+              },
+              {
+                "key": "talent_range_flag",
+                "value": 1,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "フルパノラマ撮影",
+            "rangeId": "x-2",
+            "description": "<@ba.rem>スキルの効果時間終了後撮影ロボット全員が{stun}秒間<$ba.stun>スタン</>状態になる</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_folivo_2",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "stun",
+                "value": 5,
+                "valueStr": null
+              },
+              {
+                "key": "talent_range_flag",
+                "value": 1,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "フルパノラマ撮影",
+            "rangeId": "x-2",
+            "description": "<@ba.rem>スキルの効果時間終了後撮影ロボット全員が{stun}秒間<$ba.stun>スタン</>状態になる</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_folivo_2",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "stun",
+                "value": 5,
+                "valueStr": null
+              },
+              {
+                "key": "talent_range_flag",
+                "value": 1,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "フルパノラマ撮影",
+            "rangeId": "x-2",
+            "description": "<@ba.rem>スキルの効果時間終了後撮影ロボット全員が{stun}秒間<$ba.stun>スタン</>状態になる</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_folivo_2",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "stun",
+                "value": 5,
+                "valueStr": null
+              },
+              {
+                "key": "talent_range_flag",
+                "value": 1,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "フルパノラマ撮影",
+            "rangeId": "x-2",
+            "description": "<@ba.rem>スキルの効果時間終了後撮影ロボット全員が{stun}秒間<$ba.stun>スタン</>状態になる</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_folivo_2",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "stun",
+                "value": 5,
+                "valueStr": null
+              },
+              {
+                "key": "talent_range_flag",
+                "value": 1,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "フルパノラマ撮影",
+            "rangeId": "x-2",
+            "description": "<@ba.rem>スキルの効果時間終了後撮影ロボット全員が{stun}秒間<$ba.stun>スタン</>状態になる</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_folivo_2",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "stun",
+                "value": 5,
+                "valueStr": null
+              },
+              {
+                "key": "talent_range_flag",
+                "value": 1,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "フルパノラマ撮影",
+            "rangeId": "x-2",
+            "description": "<@ba.rem>スキルの効果時間終了後撮影ロボット全員が{stun}秒間<$ba.stun>スタン</>状態になる</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_folivo_2",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "stun",
+                "value": 5,
+                "valueStr": null
+              },
+              {
+                "key": "talent_range_flag",
+                "value": 1,
+                "valueStr": null
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "token_10001_deepcl_tentac": {
+    "tokenKey": "token_10001_deepcl_tentac",
+    "name": "触手",
+    "profession": "TOKEN",
+    "subProfessionId": "notchar1",
+    "profile": {
+      "phases": [
+        {
+          "characterPrefabKey": "token_10001_deepcl_tentac",
+          "rangeId": "0-1",
+          "maxLevel": 45,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 975,
+                "atk": 218,
+                "def": 128,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 45,
+              "data": {
+                "maxHp": 1170,
+                "atk": 295,
+                "def": 220,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "token_10001_deepcl_tentac",
+          "rangeId": "0-1",
+          "maxLevel": 60,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1275,
+                "atk": 308,
+                "def": 236,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 60,
+              "data": {
+                "maxHp": 1480,
+                "atk": 348,
+                "def": 275,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "token_10001_deepcl_tentac",
+          "rangeId": "0-1",
+          "maxLevel": 70,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1605,
+                "atk": 393,
+                "def": 280,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 70,
+              "data": {
+                "maxHp": 2016,
+                "atk": 462,
+                "def": 335,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        }
+      ],
+      "favorKeyFrames": [],
+      "trait": null,
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_0",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": null,
+              "description": "token+1",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "max_deploy_count",
+                  "value": 1,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": true
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": null,
+              "description": "token+2",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "max_deploy_count",
+                  "value": 2,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": true
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": null,
+              "description": "token+3",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "max_deploy_count",
+                  "value": 3,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": true
+            }
+          ]
+        }
+      ],
+      "potentialRanks": [],
+      "modules": [],
+      "traitDescription": "敵を1体までブロック",
+      "subProfessionTraitDescription": ""
+    },
+    "skills": [
+      {
+        "skillId": null,
+        "levels": []
+      },
+      {
+        "skillId": null,
+        "levels": []
+      }
+    ]
+  },
+  "token_10036_lasher_mcbird": {
+    "tokenKey": "token_10036_lasher_mcbird",
+    "name": "カラクリ羽獣",
+    "profession": "TOKEN",
+    "subProfessionId": "notchar1",
+    "profile": {
+      "phases": [
+        {
+          "characterPrefabKey": "token_10036_lasher_mcbird",
+          "rangeId": "3-6",
+          "maxLevel": 50,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 438,
+                "atk": 153,
+                "def": 43,
+                "magicResistance": 0,
+                "cost": 8,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.6,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 5,
+                "maxDeckStackCnt": 4,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 50,
+              "data": {
+                "maxHp": 592,
+                "atk": 219,
+                "def": 62,
+                "magicResistance": 0,
+                "cost": 8,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.6,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 5,
+                "maxDeckStackCnt": 4,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "token_10036_lasher_mcbird",
+          "rangeId": "3-6",
+          "maxLevel": 70,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 592,
+                "atk": 219,
+                "def": 70,
+                "magicResistance": 0,
+                "cost": 8,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.6,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 5,
+                "maxDeckStackCnt": 4,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 70,
+              "data": {
+                "maxHp": 769,
+                "atk": 292,
+                "def": 83,
+                "magicResistance": 0,
+                "cost": 8,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.6,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 5,
+                "maxDeckStackCnt": 4,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "token_10036_lasher_mcbird",
+          "rangeId": "3-6",
+          "maxLevel": 80,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 769,
+                "atk": 292,
+                "def": 90,
+                "magicResistance": 0,
+                "cost": 8,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.6,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 5,
+                "maxDeckStackCnt": 4,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 80,
+              "data": {
+                "maxHp": 974,
+                "atk": 340,
+                "def": 100,
+                "magicResistance": 0,
+                "cost": 8,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.6,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 5,
+                "maxDeckStackCnt": 4,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        }
+      ],
+      "favorKeyFrames": [
+        {
+          "level": 0,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        },
+        {
+          "level": 50,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        }
+      ],
+      "trait": null,
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_0",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "職人の遺訓",
+              "description": "敵【機械】への与ダメージが10%上昇",
+              "rangeId": null,
+              "blackboard": {},
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "職人の遺訓",
+              "description": "敵【機械】への与ダメージが20%上昇",
+              "rangeId": null,
+              "blackboard": {},
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "職人の遺訓",
+              "description": "敵【機械】への与ダメージが20%上昇",
+              "rangeId": null,
+              "blackboard": {},
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        }
+      ],
+      "potentialRanks": [],
+      "modules": [],
+      "traitDescription": "敵に<@ba.kw>術ダメージ</>を与える",
+      "subProfessionTraitDescription": ""
+    },
+    "skills": [
+      {
+        "skillId": "sktok_lasher_mcbird_1",
+        "levels": [
+          {
+            "name": "ゼンマイ巻き",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃速度<@ba.vup>+{attack_speed}</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_1",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "attack_speed",
+                "value": 35,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ゼンマイ巻き",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃速度<@ba.vup>+{attack_speed}</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_1",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "attack_speed",
+                "value": 35,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ゼンマイ巻き",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃速度<@ba.vup>+{attack_speed}</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_1",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "attack_speed",
+                "value": 35,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ゼンマイ巻き",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃速度<@ba.vup>+{attack_speed}</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_1",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "attack_speed",
+                "value": 40,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ゼンマイ巻き",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃速度<@ba.vup>+{attack_speed}</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_1",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "attack_speed",
+                "value": 40,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ゼンマイ巻き",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃速度<@ba.vup>+{attack_speed}</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_1",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "attack_speed",
+                "value": 40,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ゼンマイ巻き",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃速度<@ba.vup>+{attack_speed}</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_1",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "attack_speed",
+                "value": 45,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ゼンマイ巻き",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃速度<@ba.vup>+{attack_speed}</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_1",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "attack_speed",
+                "value": 50,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ゼンマイ巻き",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃速度<@ba.vup>+{attack_speed}</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_1",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "attack_speed",
+                "value": 55,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ゼンマイ巻き",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃速度<@ba.vup>+{attack_speed}</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_1",
+            "duration": 10,
+            "blackboard": [
+              {
+                "key": "attack_speed",
+                "value": 60,
+                "valueStr": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "skillId": "sktok_lasher_mcbird_2",
+        "levels": [
+          {
+            "name": "天秤の持ち手",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃力<@ba.vup>+{atk:0%}</>、重量が最も重い敵を優先して攻撃し、カラクリ羽獣の攻撃が対象を1秒<$ba.sluggish>足止め</>する",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_2",
+            "duration": 15,
+            "blackboard": [
+              {
+                "key": "attack@sluggish",
+                "value": 1,
+                "valueStr": null
+              },
+              {
+                "key": "atk",
+                "value": 0.27,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "天秤の持ち手",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃力<@ba.vup>+{atk:0%}</>、重量が最も重い敵を優先して攻撃し、カラクリ羽獣の攻撃が対象を1秒<$ba.sluggish>足止め</>する",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_2",
+            "duration": 15,
+            "blackboard": [
+              {
+                "key": "attack@sluggish",
+                "value": 1,
+                "valueStr": null
+              },
+              {
+                "key": "atk",
+                "value": 0.28,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "天秤の持ち手",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃力<@ba.vup>+{atk:0%}</>、重量が最も重い敵を優先して攻撃し、カラクリ羽獣の攻撃が対象を1秒<$ba.sluggish>足止め</>する",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_2",
+            "duration": 15,
+            "blackboard": [
+              {
+                "key": "attack@sluggish",
+                "value": 1,
+                "valueStr": null
+              },
+              {
+                "key": "atk",
+                "value": 0.29,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "天秤の持ち手",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃力<@ba.vup>+{atk:0%}</>、重量が最も重い敵を優先して攻撃し、カラクリ羽獣の攻撃が対象を1秒<$ba.sluggish>足止め</>する",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_2",
+            "duration": 16,
+            "blackboard": [
+              {
+                "key": "attack@sluggish",
+                "value": 1,
+                "valueStr": null
+              },
+              {
+                "key": "atk",
+                "value": 0.31,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "天秤の持ち手",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃力<@ba.vup>+{atk:0%}</>、重量が最も重い敵を優先して攻撃し、カラクリ羽獣の攻撃が対象を1秒<$ba.sluggish>足止め</>する",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_2",
+            "duration": 16,
+            "blackboard": [
+              {
+                "key": "attack@sluggish",
+                "value": 1,
+                "valueStr": null
+              },
+              {
+                "key": "atk",
+                "value": 0.32,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "天秤の持ち手",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃力<@ba.vup>+{atk:0%}</>、重量が最も重い敵を優先して攻撃し、カラクリ羽獣の攻撃が対象を1秒<$ba.sluggish>足止め</>する",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_2",
+            "duration": 16,
+            "blackboard": [
+              {
+                "key": "attack@sluggish",
+                "value": 1,
+                "valueStr": null
+              },
+              {
+                "key": "atk",
+                "value": 0.32,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "天秤の持ち手",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃力<@ba.vup>+{atk:0%}</>、重量が最も重い敵を優先して攻撃し、カラクリ羽獣の攻撃が対象を1秒<$ba.sluggish>足止め</>する",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_2",
+            "duration": 17,
+            "blackboard": [
+              {
+                "key": "attack@sluggish",
+                "value": 1,
+                "valueStr": null
+              },
+              {
+                "key": "atk",
+                "value": 0.34,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "天秤の持ち手",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃力<@ba.vup>+{atk:0%}</>、重量が最も重い敵を優先して攻撃し、カラクリ羽獣の攻撃が対象を1秒<$ba.sluggish>足止め</>する",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_2",
+            "duration": 18,
+            "blackboard": [
+              {
+                "key": "attack@sluggish",
+                "value": 1,
+                "valueStr": null
+              },
+              {
+                "key": "atk",
+                "value": 0.36,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "天秤の持ち手",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃力<@ba.vup>+{atk:0%}</>、重量が最も重い敵を優先して攻撃し、カラクリ羽獣の攻撃が対象を1秒<$ba.sluggish>足止め</>する",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_2",
+            "duration": 19,
+            "blackboard": [
+              {
+                "key": "attack@sluggish",
+                "value": 1,
+                "valueStr": null
+              },
+              {
+                "key": "atk",
+                "value": 0.38,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "天秤の持ち手",
+            "rangeId": null,
+            "description": "カラクリ羽獣の攻撃力<@ba.vup>+{atk:0%}</>、重量が最も重い敵を優先して攻撃し、カラクリ羽獣の攻撃が対象を1秒<$ba.sluggish>足止め</>する",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_lasher_mcbird_2",
+            "duration": 20,
+            "blackboard": [
+              {
+                "key": "attack@sluggish",
+                "value": 1,
+                "valueStr": null
+              },
+              {
+                "key": "atk",
+                "value": 0.4,
+                "valueStr": null
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "token_10021_blkngt_hypnos": {
+    "tokenKey": "token_10021_blkngt_hypnos",
+    "name": "眠獣",
+    "profession": "TOKEN",
+    "subProfessionId": "notchar1",
+    "profile": {
+      "phases": [
+        {
+          "characterPrefabKey": "token_10021_blkngt_hypnos",
+          "rangeId": "x-5",
+          "maxLevel": 50,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1175,
+                "atk": 191,
+                "def": 141,
+                "magicResistance": 20,
+                "cost": 0,
+                "blockCnt": 0,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 50,
+              "data": {
+                "maxHp": 1527,
+                "atk": 273,
+                "def": 189,
+                "magicResistance": 20,
+                "cost": 0,
+                "blockCnt": 0,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "token_10021_blkngt_hypnos",
+          "rangeId": "x-5",
+          "maxLevel": 70,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1608,
+                "atk": 282,
+                "def": 195,
+                "magicResistance": 20,
+                "cost": 0,
+                "blockCnt": 0,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 70,
+              "data": {
+                "maxHp": 1961,
+                "atk": 376,
+                "def": 244,
+                "magicResistance": 20,
+                "cost": 0,
+                "blockCnt": 0,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "token_10021_blkngt_hypnos",
+          "rangeId": "x-5",
+          "maxLevel": 80,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 2065,
+                "atk": 388,
+                "def": 252,
+                "magicResistance": 20,
+                "cost": 0,
+                "blockCnt": 0,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 80,
+              "data": {
+                "maxHp": 2582,
+                "atk": 474,
+                "def": 308,
+                "magicResistance": 20,
+                "cost": 0,
+                "blockCnt": 0,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        }
+      ],
+      "favorKeyFrames": [
+        {
+          "level": 0,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        },
+        {
+          "level": 50,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        }
+      ],
+      "trait": null,
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_0",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "夜行",
+              "description": "倒された時、20秒後に再召喚される",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "block_cnt",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "interval",
+                  "value": 20,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "夜行",
+              "description": "倒された時、17秒後に再召喚される",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "block_cnt",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "interval",
+                  "value": 17,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "夜行",
+              "description": "倒された時、15秒後に再召喚される",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "block_cnt",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "interval",
+                  "value": 15,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        }
+      ],
+      "potentialRanks": [],
+      "modules": [],
+      "traitDescription": "敵を1体までブロック\n召喚者の攻撃範囲内にしか配置できない",
+      "subProfessionTraitDescription": ""
+    },
+    "skills": [
+      {
+        "skillId": "sktok_blkngt_hypnos_s_1",
+        "levels": [
+          {
+            "name": "夢喰い",
+            "rangeId": null,
+            "description": "<$ba.sleep>睡眠</>状態の敵を攻撃でき、優先して攻撃する",
+            "skillType": "PASSIVE",
+            "durationType": "NONE",
+            "spData": {
+              "spType": 8,
+              "levelUpCost": null,
+              "maxChargeTime": 0,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": null,
+            "duration": 0,
+            "blackboard": {}
+          }
+        ]
+      },
+      {
+        "skillId": "sktok_blkngt_hypnos_s_2",
+        "levels": [
+          {
+            "name": "夢喰い",
+            "rangeId": null,
+            "description": "<$ba.sleep>睡眠</>状態の敵を攻撃でき、優先して攻撃する",
+            "skillType": "PASSIVE",
+            "durationType": "NONE",
+            "spData": {
+              "spType": 8,
+              "levelUpCost": null,
+              "maxChargeTime": 0,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": null,
+            "duration": 0,
+            "blackboard": {}
+          }
+        ]
+      }
+    ]
+  },
+  "token_10037_mitm_trshrb": {
+    "tokenKey": "token_10037_mitm_trshrb",
+    "name": "チェリー3号",
+    "profession": "TOKEN",
+    "subProfessionId": "notchar1",
+    "profile": {
+      "phases": [
+        {
+          "characterPrefabKey": "token_10037_mitm_trshrb",
+          "rangeId": "0-1",
+          "maxLevel": 50,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1252,
+                "atk": 130,
+                "def": 114,
+                "magicResistance": 0,
+                "cost": 0,
+                "blockCnt": 0,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 50,
+              "data": {
+                "maxHp": 1627,
+                "atk": 186,
+                "def": 153,
+                "magicResistance": 0,
+                "cost": 0,
+                "blockCnt": 0,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "token_10037_mitm_trshrb",
+          "rangeId": "0-1",
+          "maxLevel": 70,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1713,
+                "atk": 192,
+                "def": 158,
+                "magicResistance": 0,
+                "cost": 0,
+                "blockCnt": 0,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 70,
+              "data": {
+                "maxHp": 2090,
+                "atk": 256,
+                "def": 198,
+                "magicResistance": 0,
+                "cost": 0,
+                "blockCnt": 0,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "token_10037_mitm_trshrb",
+          "rangeId": "0-1",
+          "maxLevel": 80,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 2200,
+                "atk": 264,
+                "def": 205,
+                "magicResistance": 0,
+                "cost": 0,
+                "blockCnt": 0,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 80,
+              "data": {
+                "maxHp": 2750,
+                "atk": 323,
+                "def": 250,
+                "magicResistance": 0,
+                "cost": 0,
+                "blockCnt": 0,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        }
+      ],
+      "favorKeyFrames": [
+        {
+          "level": 0,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        },
+        {
+          "level": 50,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        }
+      ],
+      "trait": null,
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_0",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "ガラクタの戦車",
+              "description": "戦車状態で撃破された時、20秒後に再召喚される。残骸状態の時、敵を1体ブロックできる",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "block_cnt",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "interval",
+                  "value": 20,
+                  "valueStr": null
+                },
+                {
+                  "key": "trshrb_t_1[trash_born].max_hp",
+                  "value": -0.5,
+                  "valueStr": null
+                },
+                {
+                  "key": "trshrb_t_1[trash_born].block_cnt",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "trshrb_t_1[trash_born].def",
+                  "value": -1,
+                  "valueStr": null
+                },
+                {
+                  "key": "trshrb_t_1[trash_born].atk",
+                  "value": -1,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "ガラクタの戦車",
+              "description": "戦車状態で撃破された時、17秒後に再召喚される。残骸状態の時、敵を1体ブロックできる",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "block_cnt",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "interval",
+                  "value": 17,
+                  "valueStr": null
+                },
+                {
+                  "key": "trshrb_t_1[trash_born].max_hp",
+                  "value": -0.5,
+                  "valueStr": null
+                },
+                {
+                  "key": "trshrb_t_1[trash_born].block_cnt",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "trshrb_t_1[trash_born].def",
+                  "value": -1,
+                  "valueStr": null
+                },
+                {
+                  "key": "trshrb_t_1[trash_born].atk",
+                  "value": -1,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "ガラクタの戦車",
+              "description": "戦車状態で撃破された時、15秒後に再召喚される。残骸状態の時、敵を1体ブロックできる",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "block_cnt",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "interval",
+                  "value": 15,
+                  "valueStr": null
+                },
+                {
+                  "key": "trshrb_t_1[trash_born].max_hp",
+                  "value": -0.5,
+                  "valueStr": null
+                },
+                {
+                  "key": "trshrb_t_1[trash_born].block_cnt",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "trshrb_t_1[trash_born].def",
+                  "value": -1,
+                  "valueStr": null
+                },
+                {
+                  "key": "trshrb_t_1[trash_born].atk",
+                  "value": -1,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        }
+      ],
+      "potentialRanks": [],
+      "modules": [],
+      "traitDescription": "敵を1体までブロック。戦車状態の時、召喚者の攻撃範囲内にしか配置できない",
+      "subProfessionTraitDescription": ""
+    },
+    "skills": [
+      {
+        "skillId": "sktok_mitm_trshrb_1",
+        "levels": [
+          {
+            "name": "ガラクタの戦車",
+            "rangeId": null,
+            "description": "戦車状態で倒されると、隣接4マスに残骸を残す",
+            "skillType": "PASSIVE",
+            "durationType": "NONE",
+            "spData": {
+              "spType": 8,
+              "levelUpCost": null,
+              "maxChargeTime": 0,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": null,
+            "duration": 0,
+            "blackboard": {}
+          }
+        ]
+      },
+      {
+        "skillId": "sktok_mitm_trshrb_2",
+        "levels": [
+          {
+            "name": "ガラクタの戦車",
+            "rangeId": null,
+            "description": "戦車状態で倒されると、隣接4マスに残骸を残す",
+            "skillType": "PASSIVE",
+            "durationType": "NONE",
+            "spData": {
+              "spType": 8,
+              "levelUpCost": null,
+              "maxChargeTime": 0,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": null,
+            "duration": 0,
+            "blackboard": {}
+          }
+        ]
+      }
+    ]
+  },
+  "token_10066_closur_ourbase": {
+    "tokenKey": "token_10066_closur_ourbase",
+    "name": "指揮センター",
+    "profession": "TOKEN",
+    "subProfessionId": "notchar1",
+    "profile": {
+      "phases": [
+        {
+          "characterPrefabKey": "token_10066_closur_ourbase",
+          "rangeId": "0-1",
+          "maxLevel": 50,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1492,
+                "atk": 0,
+                "def": 198,
+                "magicResistance": 0,
+                "cost": 0,
+                "blockCnt": 2,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 50,
+              "data": {
+                "maxHp": 1938,
+                "atk": 0,
+                "def": 265,
+                "magicResistance": 0,
+                "cost": 0,
+                "blockCnt": 2,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "token_10066_closur_ourbase",
+          "rangeId": "0-1",
+          "maxLevel": 80,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 2040,
+                "atk": 0,
+                "def": 274,
+                "magicResistance": 0,
+                "cost": 0,
+                "blockCnt": 2,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 80,
+              "data": {
+                "maxHp": 2489,
+                "atk": 0,
+                "def": 343,
+                "magicResistance": 0,
+                "cost": 0,
+                "blockCnt": 2,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "token_10066_closur_ourbase",
+          "rangeId": "0-1",
+          "maxLevel": 90,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 2620,
+                "atk": 0,
+                "def": 354,
+                "magicResistance": 0,
+                "cost": 0,
+                "blockCnt": 2,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 90,
+              "data": {
+                "maxHp": 3275,
+                "atk": 0,
+                "def": 432,
+                "magicResistance": 0,
+                "cost": 0,
+                "blockCnt": 2,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        }
+      ],
+      "favorKeyFrames": [
+        {
+          "level": 0,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        },
+        {
+          "level": 50,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        }
+      ],
+      "trait": null,
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_0",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "0",
+              "name": "広域カバー",
+              "description": "効果範囲はクロージャに装着中のスキルによって変化し、効果範囲内の味方ユニットはクロージャの援軍と見なされる",
+              "rangeId": null,
+              "blackboard": {},
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        },
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_0",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "-1",
+              "name": null,
+              "description": null,
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "interval",
+                  "value": 15,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": true
+            }
+          ]
+        }
+      ],
+      "potentialRanks": [],
+      "modules": [],
+      "traitDescription": "攻撃しない、敵を2体までブロック\n召喚者の攻撃範囲内にしか配置できない",
+      "subProfessionTraitDescription": ""
+    },
+    "skills": [
+      {
+        "skillId": "sktok_closur_ourbase1",
+        "levels": [
+          {
+            "name": "支援範囲",
+            "rangeId": "x-5",
+            "description": null,
+            "skillType": "PASSIVE",
+            "durationType": "NONE",
+            "spData": {
+              "spType": 8,
+              "levelUpCost": null,
+              "maxChargeTime": 0,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 0
+            },
+            "prefabId": "sktok_closur_ourbase1",
+            "duration": 0,
+            "blackboard": {}
+          }
+        ]
+      },
+      {
+        "skillId": "sktok_closur_ourbase2",
+        "levels": [
+          {
+            "name": "支援範囲",
+            "rangeId": "x-4",
+            "description": null,
+            "skillType": "PASSIVE",
+            "durationType": "NONE",
+            "spData": {
+              "spType": 8,
+              "levelUpCost": null,
+              "maxChargeTime": 0,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 0
+            },
+            "prefabId": "sktok_closur_ourbase2",
+            "duration": 0,
+            "blackboard": {}
+          }
+        ]
+      },
+      {
+        "skillId": "sktok_closur_ourbase3",
+        "levels": [
+          {
+            "name": "支援範囲",
+            "rangeId": "x-6",
+            "description": null,
+            "skillType": "PASSIVE",
+            "durationType": "NONE",
+            "spData": {
+              "spType": 8,
+              "levelUpCost": null,
+              "maxChargeTime": 0,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 0
+            },
+            "prefabId": "sktok_closur_ourbase3",
+            "duration": 0,
+            "blackboard": {}
+          }
+        ]
+      }
+    ]
+  },
+  "token_10004_otter_motter": {
+    "tokenKey": "token_10004_otter_motter",
+    "name": "メカ・カワウソ",
+    "profession": "TOKEN",
+    "subProfessionId": "notchar1",
+    "profile": {
+      "phases": [
+        {
+          "characterPrefabKey": "token_10004_otter_motter",
+          "rangeId": "0-1",
+          "maxLevel": 50,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 975,
+                "atk": 185,
+                "def": 175,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 50,
+              "data": {
+                "maxHp": 1150,
+                "atk": 263,
+                "def": 280,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "token_10004_otter_motter",
+          "rangeId": "0-1",
+          "maxLevel": 70,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1250,
+                "atk": 280,
+                "def": 290,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 70,
+              "data": {
+                "maxHp": 1480,
+                "atk": 350,
+                "def": 350,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "token_10004_otter_motter",
+          "rangeId": "0-1",
+          "maxLevel": 80,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1530,
+                "atk": 370,
+                "def": 360,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 80,
+              "data": {
+                "maxHp": 1950,
+                "atk": 444,
+                "def": 415,
+                "magicResistance": 0,
+                "cost": 5,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.25,
+                "respawnTime": 10,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        }
+      ],
+      "favorKeyFrames": [],
+      "trait": null,
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_0",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "メカ・カワウソ",
+              "description": "ブロック中の敵の攻撃速度-10",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack_speed",
+                  "value": -10,
+                  "valueStr": null
+                },
+                {
+                  "key": "max_deploy_count",
+                  "value": 3,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "メカ・カワウソ",
+              "description": "ブロック中の敵の攻撃速度-25",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack_speed",
+                  "value": -25,
+                  "valueStr": null
+                },
+                {
+                  "key": "max_deploy_count",
+                  "value": 4,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "メカ・カワウソ",
+              "description": "ブロック中の敵の攻撃速度-25",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack_speed",
+                  "value": -25,
+                  "valueStr": null
+                },
+                {
+                  "key": "max_deploy_count",
+                  "value": 5,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        }
+      ],
+      "potentialRanks": [],
+      "modules": [],
+      "traitDescription": "敵を1体までブロック",
+      "subProfessionTraitDescription": ""
+    },
+    "skills": [
+      {
+        "skillId": "sktok_motter_1",
+        "levels": [
+          {
+            "name": "攪乱装置",
+            "rangeId": "0-1",
+            "description": "機械川獺の<@ba.vup>物理</>・<@ba.vup>術</>回避<@ba.vup>+{prob:0%}</>",
+            "skillType": "PASSIVE",
+            "durationType": "NONE",
+            "spData": {
+              "spType": 8,
+              "levelUpCost": null,
+              "maxChargeTime": 0,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 0
+            },
+            "prefabId": "sktok_motter_1",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "prob",
+                "value": 0.1,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "攪乱装置",
+            "rangeId": "0-1",
+            "description": "機械川獺の<@ba.vup>物理</>・<@ba.vup>術</>回避<@ba.vup>+{prob:0%}</>",
+            "skillType": "PASSIVE",
+            "durationType": "NONE",
+            "spData": {
+              "spType": 8,
+              "levelUpCost": null,
+              "maxChargeTime": 0,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 0
+            },
+            "prefabId": "sktok_motter_1",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "prob",
+                "value": 0.13,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "攪乱装置",
+            "rangeId": "0-1",
+            "description": "機械川獺の<@ba.vup>物理</>・<@ba.vup>術</>回避<@ba.vup>+{prob:0%}</>",
+            "skillType": "PASSIVE",
+            "durationType": "NONE",
+            "spData": {
+              "spType": 8,
+              "levelUpCost": null,
+              "maxChargeTime": 0,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 0
+            },
+            "prefabId": "sktok_motter_1",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "prob",
+                "value": 0.15,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "攪乱装置",
+            "rangeId": "0-1",
+            "description": "機械川獺の<@ba.vup>物理</>・<@ba.vup>術</>回避<@ba.vup>+{prob:0%}</>",
+            "skillType": "PASSIVE",
+            "durationType": "NONE",
+            "spData": {
+              "spType": 8,
+              "levelUpCost": null,
+              "maxChargeTime": 0,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 0
+            },
+            "prefabId": "sktok_motter_1",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "prob",
+                "value": 0.18,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "攪乱装置",
+            "rangeId": "0-1",
+            "description": "機械川獺の<@ba.vup>物理</>・<@ba.vup>術</>回避<@ba.vup>+{prob:0%}</>",
+            "skillType": "PASSIVE",
+            "durationType": "NONE",
+            "spData": {
+              "spType": 8,
+              "levelUpCost": null,
+              "maxChargeTime": 0,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 0
+            },
+            "prefabId": "sktok_motter_1",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "prob",
+                "value": 0.2,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "攪乱装置",
+            "rangeId": "0-1",
+            "description": "機械川獺の<@ba.vup>物理</>・<@ba.vup>術</>回避<@ba.vup>+{prob:0%}</>",
+            "skillType": "PASSIVE",
+            "durationType": "NONE",
+            "spData": {
+              "spType": 8,
+              "levelUpCost": null,
+              "maxChargeTime": 0,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 0
+            },
+            "prefabId": "sktok_motter_1",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "prob",
+                "value": 0.22,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "攪乱装置",
+            "rangeId": "0-1",
+            "description": "機械川獺の<@ba.vup>物理</>・<@ba.vup>術</>回避<@ba.vup>+{prob:0%}</>",
+            "skillType": "PASSIVE",
+            "durationType": "NONE",
+            "spData": {
+              "spType": 8,
+              "levelUpCost": null,
+              "maxChargeTime": 0,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 0
+            },
+            "prefabId": "sktok_motter_1",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "prob",
+                "value": 0.25,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "攪乱装置",
+            "rangeId": "x-5",
+            "description": "機械川獺及び機械川獺の隣接4マス内にいる味方全員の<@ba.vup>物理</>・<@ba.vup>術</>回避<@ba.vup>+{prob:0%}</>",
+            "skillType": "PASSIVE",
+            "durationType": "NONE",
+            "spData": {
+              "spType": 8,
+              "levelUpCost": null,
+              "maxChargeTime": 0,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 0
+            },
+            "prefabId": "sktok_motter_1",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "prob",
+                "value": 0.25,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "攪乱装置",
+            "rangeId": "x-5",
+            "description": "機械川獺及び機械川獺の隣接4マス内にいる味方全員の<@ba.vup>物理</>・<@ba.vup>術</>回避<@ba.vup>+{prob:0%}</>",
+            "skillType": "PASSIVE",
+            "durationType": "NONE",
+            "spData": {
+              "spType": 8,
+              "levelUpCost": null,
+              "maxChargeTime": 0,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 0
+            },
+            "prefabId": "sktok_motter_1",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "prob",
+                "value": 0.3,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "攪乱装置",
+            "rangeId": "x-5",
+            "description": "機械川獺及び機械川獺の隣接4マス内にいる味方全員の<@ba.vup>物理</>・<@ba.vup>術</>回避<@ba.vup>+{prob:0%}</>",
+            "skillType": "PASSIVE",
+            "durationType": "NONE",
+            "spData": {
+              "spType": 8,
+              "levelUpCost": null,
+              "maxChargeTime": 0,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 0
+            },
+            "prefabId": "sktok_motter_1",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "prob",
+                "value": 0.35,
+                "valueStr": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "skillId": "sktok_motter_2",
+        "levels": [
+          {
+            "name": "ミーボ起爆",
+            "rangeId": "x-4",
+            "description": "スキル発動時、機械川獺が起爆され、周囲一定範囲内の敵全員にメイヤーの攻撃力の<@ba.vup>{atk_scale:0%}</>の術ダメージを与え、<@ba.vup>{stun}</>秒間<$ba.stun>スタン</>させる\n<@ba.rem>起爆後に回収される</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_motter_2",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "atk_scale",
+                "value": 3,
+                "valueStr": null
+              },
+              {
+                "key": "stun",
+                "value": 1,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ミーボ起爆",
+            "rangeId": "x-4",
+            "description": "スキル発動時、機械川獺が起爆され、周囲一定範囲内の敵全員にメイヤーの攻撃力の<@ba.vup>{atk_scale:0%}</>の術ダメージを与え、<@ba.vup>{stun}</>秒間<$ba.stun>スタン</>させる\n<@ba.rem>起爆後に回収される</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_motter_2",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "atk_scale",
+                "value": 3.2,
+                "valueStr": null
+              },
+              {
+                "key": "stun",
+                "value": 1,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ミーボ起爆",
+            "rangeId": "x-4",
+            "description": "スキル発動時、機械川獺が起爆され、周囲一定範囲内の敵全員にメイヤーの攻撃力の<@ba.vup>{atk_scale:0%}</>の術ダメージを与え、<@ba.vup>{stun}</>秒間<$ba.stun>スタン</>させる\n<@ba.rem>起爆後に回収される</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_motter_2",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "atk_scale",
+                "value": 3.5,
+                "valueStr": null
+              },
+              {
+                "key": "stun",
+                "value": 1,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ミーボ起爆",
+            "rangeId": "x-4",
+            "description": "スキル発動時、機械川獺が起爆され、周囲一定範囲内の敵全員にメイヤーの攻撃力の<@ba.vup>{atk_scale:0%}</>の術ダメージを与え、<@ba.vup>{stun}</>秒間<$ba.stun>スタン</>させる\n<@ba.rem>起爆後に回収される</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_motter_2",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "atk_scale",
+                "value": 3.8,
+                "valueStr": null
+              },
+              {
+                "key": "stun",
+                "value": 1,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ミーボ起爆",
+            "rangeId": "x-4",
+            "description": "スキル発動時、機械川獺が起爆され、周囲一定範囲内の敵全員にメイヤーの攻撃力の<@ba.vup>{atk_scale:0%}</>の術ダメージを与え、<@ba.vup>{stun}</>秒間<$ba.stun>スタン</>させる\n<@ba.rem>起爆後に回収される</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_motter_2",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "atk_scale",
+                "value": 4,
+                "valueStr": null
+              },
+              {
+                "key": "stun",
+                "value": 1,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ミーボ起爆",
+            "rangeId": "x-4",
+            "description": "スキル発動時、機械川獺が起爆され、周囲一定範囲内の敵全員にメイヤーの攻撃力の<@ba.vup>{atk_scale:0%}</>の術ダメージを与え、<@ba.vup>{stun}</>秒間<$ba.stun>スタン</>させる\n<@ba.rem>起爆後に回収される</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_motter_2",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "atk_scale",
+                "value": 4.2,
+                "valueStr": null
+              },
+              {
+                "key": "stun",
+                "value": 1,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ミーボ起爆",
+            "rangeId": "x-4",
+            "description": "スキル発動時、機械川獺が起爆され、周囲一定範囲内の敵全員にメイヤーの攻撃力の<@ba.vup>{atk_scale:0%}</>の術ダメージを与え、<@ba.vup>{stun}</>秒間<$ba.stun>スタン</>させる\n<@ba.rem>起爆後に回収される</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_motter_2",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "atk_scale",
+                "value": 4.5,
+                "valueStr": null
+              },
+              {
+                "key": "stun",
+                "value": 1,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ミーボ起爆",
+            "rangeId": "x-4",
+            "description": "スキル発動時、機械川獺が起爆され、周囲一定範囲内の敵全員にメイヤーの攻撃力の<@ba.vup>{atk_scale:0%}</>の術ダメージを与え、<@ba.vup>{stun}</>秒間<$ba.stun>スタン</>させる\n<@ba.rem>起爆後に回収される</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_motter_2",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "atk_scale",
+                "value": 5,
+                "valueStr": null
+              },
+              {
+                "key": "stun",
+                "value": 1.5,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ミーボ起爆",
+            "rangeId": "x-4",
+            "description": "スキル発動時、機械川獺が起爆され、周囲一定範囲内の敵全員にメイヤーの攻撃力の<@ba.vup>{atk_scale:0%}</>の術ダメージを与え、<@ba.vup>{stun}</>秒間<$ba.stun>スタン</>させる\n<@ba.rem>起爆後に回収される</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_motter_2",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "atk_scale",
+                "value": 5.5,
+                "valueStr": null
+              },
+              {
+                "key": "stun",
+                "value": 1.5,
+                "valueStr": null
+              }
+            ]
+          },
+          {
+            "name": "ミーボ起爆",
+            "rangeId": "x-4",
+            "description": "スキル発動時、機械川獺が起爆され、周囲一定範囲内の敵全員にメイヤーの攻撃力の<@ba.vup>{atk_scale:0%}</>の術ダメージを与え、<@ba.vup>{stun}</>秒間<$ba.stun>スタン</>させる\n<@ba.rem>起爆後に回収される</>",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "spData": {
+              "spType": "INCREASE_WITH_TIME",
+              "levelUpCost": null,
+              "maxChargeTime": 1,
+              "spCost": 0,
+              "initSp": 0,
+              "increment": 1
+            },
+            "prefabId": "sktok_motter_2",
+            "duration": 0,
+            "blackboard": [
+              {
+                "key": "atk_scale",
+                "value": 6,
+                "valueStr": null
+              },
+              {
+                "key": "stun",
+                "value": 2,
+                "valueStr": null
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

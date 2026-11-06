@@ -19,7 +19,7 @@ const json = <T>(path: string): T => JSON.parse(readFileSync(new URL(path, impor
 const guards = json<{ guards: { id: string; name: string; subProfessionId: string;
   skills: { skillId: string; skillIndex: number; raw: RawSkillLevel }[] }[] }>('./fixtures/sixStarGuardSources.json').guards
 const profiles = json<{ operatorId: string; operatorProfile: OperatorCombatProfile }[]>('./fixtures/sixStarGuardProfiles.json')
-const sources = ['Melee', 'Ranged', 'Arts', 'Caster', 'Support'].flatMap(group =>
+const sources = ['Melee', 'Ranged', 'Arts', 'Caster', 'Support', 'Special', 'Elemental', 'Summon'].flatMap(group =>
   json<ExpandedOperatorSource[]>(`../src/data/expanded${group}Sources.json`))
 
 function record(operatorId: string, skillIndex: number): SkillRecord {
@@ -29,6 +29,7 @@ function record(operatorId: string, skillIndex: number): SkillRecord {
   const raw = structuredClone(source.raw)
   return {
     id: `${operatorId}/${skillIndex}`, operatorId, operatorName: expanded?.operatorName ?? guard!.name,
+    overrideTokenKey: expanded?.profile.summonSkillTokenKeys?.[skillIndex - 1] ?? undefined,
     skillId: source.skillId, skillIndex, skillName: raw.name!, profession: expanded?.profession ?? 'WARRIOR',
     professionLabel: expanded?.profession ?? '前衛', rarity: expanded?.rarity ?? 6,
     subProfessionId: expanded?.subProfessionId ?? guard!.subProfessionId,

@@ -15,7 +15,7 @@ const guards = (JSON.parse(readFileSync(new URL('./fixtures/sixStarGuardSources.
 const profiles = JSON.parse(readFileSync(new URL('./fixtures/sixStarGuardProfiles.json', import.meta.url), 'utf8')) as {
   operatorId: string; operatorProfile: OperatorCombatProfile
 }[]
-const sources: ExpandedOperatorSource[] = ['Melee', 'Ranged', 'Arts', 'Caster', 'Support'].flatMap(group => JSON.parse(readFileSync(
+const sources: ExpandedOperatorSource[] = ['Melee', 'Ranged', 'Arts', 'Caster', 'Support', 'Special', 'Elemental', 'Summon'].flatMap(group => JSON.parse(readFileSync(
   new URL(`../src/data/expanded${group}Sources.json`, import.meta.url), 'utf8')) as ExpandedOperatorSource[])
 const common = { defense: 123, resistance: 37, enemyCount: 3 }
 
@@ -25,6 +25,7 @@ function record(operatorId: string, skillIndex: number): SkillRecord {
   const source = (expanded?.skills ?? guard!.skills).find(skill => skill.skillIndex === skillIndex)!
   const raw = structuredClone(source.raw)
   return { id: `${operatorId}/${skillIndex}`, operatorId, operatorName: expanded?.operatorName ?? guard!.name,
+    overrideTokenKey: expanded?.profile.summonSkillTokenKeys?.[skillIndex - 1] ?? undefined,
     skillId: source.skillId, skillIndex, skillName: raw.name!, profession: expanded?.profession ?? 'WARRIOR',
     professionLabel: expanded?.profession ?? '前衛', rarity: expanded?.rarity ?? 6,
     subProfessionId: expanded?.subProfessionId ?? guard!.subProfessionId,
@@ -68,7 +69,7 @@ function compareWithOrdinary(entry: DamageThreeComparisonEntry, conditions: Dama
 }
 
 test('DC3の対応スキル全段階を一意の行として列挙し、出典にない技能は作らない', () => {
-  assert.equal(catalog.length, 704)
+  assert.equal(catalog.length, 734)
   const expected = getDamageCalculatorThreeStructures().flatMap(structure => {
     const info = structure.basicInfo
     return (structure.guardRecipe?.stages ?? structure.effectStructure.stages)

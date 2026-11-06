@@ -41,6 +41,8 @@ const operations: Readonly<Record<string, readonly [string, string]>> = {
 }
 
 function supportsContext(effect: TalentStructureEffect, metrics: Metrics): boolean {
+  if (effect.timing.type === 'EVENT' && effect.timing.event === 'ELEMENTAL_BURST'
+    && (effect.item !== 'ADDITIONAL_ATTACK' || effect.condition === null || effect.rate !== 'PER_ATTACK')) return false
   if (effect.item === 'ADDITIONAL_ATTACK' && effect.basis === 'TARGET_DEFENSE'
     && (effect.rate !== 'PER_ATTACK' || effect.flatDamage !== undefined)) return false
   const expected = operations[effect.item]
@@ -370,6 +372,7 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
           break
         }
         if (active) output.additionalActions.push({ label: effect.label ?? source, role: 'ADDITIONAL', damageType: effect.damageType,
+          ...(effect.damageKind === undefined ? {} : { damageKind: effect.damageKind }),
           scale: value, ...(effect.hits === undefined ? {} : { hits }),
           ...(effect.basis === undefined ? {} : { basis: effect.basis }),
           ...(flatDamage === undefined ? {} : { flatDamage }),

@@ -1122,11 +1122,11 @@ test('新技能の属性比較は主攻撃だけ変換し、ミヅキの限定�
 const bulkSuffixes = ['weedy', 'glady', 'flamtl', 'zumama', 'fuze', 'tachak', 'almond', 'varkis', 'sophia',
   'snsant', 'cement', 'dagda', 'takila', 'mantic', 'morgan', 'laios', 'noirc2', 'red', 'wscoot']
 
-test('大幅拡張の近接19人42技能は32対応・10保留で、元資料に調査用フィールドを混入しない', () => {
+test('大幅拡張の近接19人42技能は33対応・9保留で、元資料に調査用フィールドを混入しない', () => {
   const additions = EXPANDED_MELEE_DEFINITIONS.filter(definition => bulkSuffixes.includes(definition.operatorId.split('_').at(-1)!))
   assert.equal(additions.length, 19)
-  assert.equal(additions.reduce((sum, definition) => sum + definition.recipes.length, 0), 32)
-  assert.equal(additions.reduce((sum, definition) => sum + definition.deferredSkills!.length, 0), 10)
+  assert.equal(additions.reduce((sum, definition) => sum + definition.recipes.length, 0), 33)
+  assert.equal(additions.reduce((sum, definition) => sum + definition.deferredSkills!.length, 0), 9)
   for (const definition of additions) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     assert.equal('coverage' in source || 'passives' in source, false)
@@ -1348,10 +1348,10 @@ test('属性比較は新規の主攻撃の全ヒットを術化し、ウィン�
   }
 })
 
-test('近接追加146人の260技能が実データから有限結果を返し、残り56技能は理由付き未計算', () => {
+test('近接追加146人の270技能が実データから有限結果を返し、残り46技能は理由付き未計算', () => {
   assert.equal(sources.length, 146)
-  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 260)
-  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + (definition.deferredSkills?.length ?? 0), 0), 56)
+  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 270)
+  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + (definition.deferredSkills?.length ?? 0), 0), 46)
   for (const definition of EXPANDED_MELEE_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     assert.equal(definition.recipes.length + (definition.deferredSkills?.length ?? 0), source.skills.length)
@@ -1685,4 +1685,85 @@ test('追加の固定期間10技能のみ期間総ダメージを返し、被弾
   }
   const permanent = getDamageThreeComparisonEntries([record('buildr', 2)]).find(entry => entry.stageId === 'permanent')!
   assert.equal(evaluateDamageThreeComparisonEntry(permanent, { defense: 0, resistance: 0, enemyCount: 1 }).totalDamage, null)
+})
+
+
+test('防御・回避専用の8技能でも通常攻撃を評価し、防御値や回復量を攻撃力へ加算しない', () => {
+  for (const [suffix, index] of [['mudrok', 1], ['hpsts', 1], ['grani', 1], ['moeshd', 1], ['cement', 2], ['liskam', 1]] as const) {
+    const { result, row } = fixed(suffix, index, {}, 500, 40)
+    close(row.perAttack, physical(result.stats.attack, 500))
+    close(row.dps, row.perAttack / result.stats.baseAttackTime)
+    assert.equal(result.maxTargetCount, 1)
+  }
+  const arts = fixed('asbest', 1, {}, 10000, 40)
+  assert.equal(arts.result.damageType, 'ARTS')
+  close(arts.row.perAttack, arts.result.stats.attack * 0.6)
+  const bee = fixed('brownb', 1, { sameTargetStacks: 5 }, 500, 40)
+  close(bee.row.perAttack, physical(buffed(bee.result.stats.attack, 0.25), 500))
+  assert.equal(output('liskam', 1).model!.duration, 8)
+  assert.ok(output('hpsts', 1, { actualAttackTargetCount: 2 }).unsupportedReasons.length)
+})
+
+test('ホシグマS2は通常攻撃と反撃を分離し、被ダメージ無効化25%を反撃確率へ転用しない', () => {
+  for (const defense of [0, 500, 10000]) for (const type of ['PHYSICAL', 'ARTS'] as const) {
+    for (const damagePhase of ['normal', 'counter']) {
+      const { result, row } = fixed('hsguma', 2, { damagePhase }, defense, 60, type)
+      const expected = type === 'PHYSICAL' ? physical(result.stats.attack, defense) : result.stats.attack * 0.4
+      close(row.perAttack, expected)
+      close(row.allTargetsPerAttack, expected)
+      assert.equal(row.attackComponents.length, 1)
+      assert.equal(result.maxTargetCount, 1)
+      if (damagePhase === 'counter') {
+        assert.equal(row.dps, null)
+        assert.equal(row.combinedDps, null)
+        assert.equal(result.attackInterval, null)
+        assert.equal(result.attackKind, 'SKILL_ACTION')
+      } else {
+        close(row.dps, expected / result.stats.baseAttackTime)
+        assert.equal(result.attackKind, 'NORMAL')
+      }
+    }
+  }
+  assert.deepEqual(output('hsguma', 2, { damagePhase: 'counter', actualAttackTargetCount: 2 }).rows, [])
+  assert.deepEqual(output('hsguma', 2, { damagePhase: 'unknown' }).rows, [])
+})
+
+test('ニェンS2は防御130%を攻撃力に加えず、攻撃元1体への術90%反撃だけを計算する', () => {
+  for (const resistance of [0, 60, 100]) for (const defense of [0, 500, 10000]) {
+    for (const type of ['ARTS', 'PHYSICAL'] as const) {
+      const { result, row } = fixed('nian', 2, {}, defense, resistance, type)
+      const expected = type === 'ARTS' ? result.stats.attack * 0.9 * Math.max(0.05, 1 - resistance / 100)
+        : physical(result.stats.attack * 0.9, defense)
+      close(row.perAttack, expected)
+      close(row.allTargetsPerAttack, expected)
+      assert.equal(row.attackComponents.length, 1)
+      assert.equal(result.maxTargetCount, 1)
+      assert.equal(result.attackKind, 'SKILL_ACTION')
+      assert.equal(result.attackInterval, null)
+      assert.equal(row.dps, null)
+      assert.equal(row.combinedDps, null)
+    }
+  }
+  assert.deepEqual(output('nian', 2, { actualAttackTargetCount: 4 }).rows, [])
+})
+
+test('反撃2技能は期間総量を出さず、反撃倍率や素質の未確認変更を拒否する', () => {
+  for (const suffix of ['hsguma', 'nian']) {
+    for (const entry of getDamageThreeComparisonEntries([record(suffix, 2)])) {
+      const result = evaluateDamageThreeComparisonEntry(entry, { defense: 500, resistance: 60, enemyCount: 1 })
+      assert.deepEqual(result.errors, [], `${suffix} ${entry.stageId}`)
+      assert.equal(result.totalDamage, null)
+      assert.ok(result.totalDamageReason)
+    }
+    for (const change of [
+      (skill: SkillRecord) => { skill.skillLevels.at(-1)!.blackboard!.find(value => value.key === 'atk_scale')!.value = 5 },
+      (skill: SkillRecord) => { skill.operatorProfile.talents!.forEach(talent => talent.candidates!.forEach(value => { value.description += '攻撃力上昇' })) },
+    ]) {
+      const skill = record(suffix, 2)
+      change(skill)
+      const result = outputRecord(skill, { damagePhase: 'counter' })
+      assert.ok(result.unsupportedReasons.length)
+      assert.deepEqual(result.rows, [])
+    }
+  }
 })

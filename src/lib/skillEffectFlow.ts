@@ -32,7 +32,7 @@ export interface SkillEffectFlowModel { activation: FlowField[]; trigger: string
 
 const number = (value: number) => String(Math.round(value * 1e8) / 1e8)
 const percent = (value: number) => `${number(value * 100)}%`
-const damageTypes = { PHYSICAL: '物理', ARTS: '術', TRUE: '確定' } as const
+const damageTypes = { PHYSICAL: '物理', ARTS: '術', TRUE: '確定', ELEMENTAL: '元素' } as const
 const comparisons = { EQ: '＝', LT: '＜', LTE: '≦', GT: '＞', GTE: '≧' } as const
 const branch = (label: string): FlowCondition => ({ label, yesLabel: '成立', noLabel: '不成立' })
 

@@ -445,10 +445,15 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
   ], { inputs: [select('grainbudsPhase', 'S2の段階', [['ATTACK', '睡眠終了後'], ['SLEEP', '攻撃停止中']])],
     traitNotes: ['睡眠終了後は攻撃可能な敵を指定する。睡眠付与・解除と攻撃再開の時刻は再現しない。'] }),
   operator('char_180_amgoat', [[1, normal({ aspd: k('amgoat_s_1[a].attack_speed'), atk: choose('skillActivationCount', 2, k('amgoat_s_1[b].atk'), 0, 'GTE') })],
+    // PRTS /艾雅法拉: main-target RES debuff, area half-hit, then another main-target half-hit.
+    [2, [phase('eyjaIgnitionTarget', 'MAIN', next(k('atk_scale'), 1)),
+      phase('eyjaIgnitionTarget', 'SPLASH', next(k('atk_scale'), null))],
+      [select('eyjaIgnitionTarget', '命中対象', [['MAIN', '主対象'], ['SPLASH', '周囲のみ（主対象を除く）']]),
+        b('eyjaSplashAlreadyDebuffed', '周囲の対象に術耐性低下が付与済み')]],
     [3, normal({ atk: k('atk'), intervalAdd: k('base_attack_time'), maxTargets: k('attack@max_target') })]], [
     talent(0, 'フレイムブレス', v => [atk(v.read('atk'), 'atk', { target: { ...target('ALLY', 'BATTLEFIELD'), tagIds: ['profession:CASTER'] } })]),
     talent(1, 'カオスフレイム', () => [status('initial-sp', '配置後SPが7〜15回復')], ['RESOURCE']),
-  ], { inputs: [n('skillActivationCount', 'スキル発動回数', 1, 1, 100)], deferredSkills: [{ skillIndex: 2, reason: '主対象と周囲への倍率差、および術耐性低下と命中の適用順序を扱う必要がある。' }] }),
+  ], { inputs: [n('skillActivationCount', 'スキル発動回数', 1, 1, 100)], traitNotes: ['S2は主対象と周囲を別々に評価する。主対象は耐性低下を付与してから半倍率の2命中、周囲は半倍率の1命中で、この発動による耐性低下は付与されない。'] }),
   operator('char_213_mostma', [[1, normal({ atk: k('atk') })],
     [2, periodic('時荒びの黒き錠の毎秒ダメージ', k('atk_scale'))],
     [3, normal({ atk: k('atk') })]], [
@@ -520,15 +525,20 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
     [2, normal({ label: '強化攻撃', kind: 'NEXT_ATTACK', actions: [
       { label: '強化攻撃', role: 'MAIN', damageType: 'ARTS', scale: k('atk_scale') },
       { label: 'やけど付与中', role: 'ADDITIONAL', damageType: 'ARTS', scale: k('burn.atk_scale'), timing: 'PER_SECOND' },
-    ], notes: ['やけどは付与中の毎秒ダメージ。付与・更新・終了時刻や退場後の推移は含めない。'] })]], [
+    ], notes: ['やけどは付与中の毎秒ダメージ。付与・更新・終了時刻や退場後の推移は含めない。'] })],
+    [3, [{ ...periodic('灼獄の毎秒ダメージ', k('atk_scale'), { kind: 'SKILL_ACTION', resistanceReductionFixed: product(-1, k('magic_resistance')),
+      notes: ['術耐性低下が有効な地上の敵が攻撃範囲内に留まる状態。自身のHP減少を敵へのダメージへ加算しない。'] }),
+      when: { input: 'ifritS3DebuffActive', comparison: 'EQ', value: true } },
+      { ...periodic('術耐性低下の初回付与・失効', 0), id: 'initial', when: { input: 'ifritS3DebuffActive', comparison: 'EQ', value: false },
+        unresolved: ['初回命中時の術耐性低下の付与順と、途中進入・退出による失効を含む時系列は未対応です。'] }],
+      [b('ifritS3DebuffActive', '対象に灼獄の術耐性低下が有効', true)]]], [
     talent(0, '精神融解', v => [effect('resistance-reduction', 'magic_resistance', {
       item: 'RESISTANCE_REDUCTION_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: mul(-1, v.read('magic_resistance')),
     }, { target: target('ENEMY', 'ATTACK_RANGE') })], ['DAMAGE']),
     talent(1, 'ライン回路', v => [effect('periodic-sp', 'sp', {
       item: 'SP_RESTORE', operation: 'ADD_VALUE', unit: 'POINT', value: v.read('sp'),
     }, { timing: { type: 'PERIODIC', intervalSeconds: v.read('interval'), firstTickSeconds: null } })], ['RESOURCE']),
-  ], { traitNotes: ['選択した全対象が直線範囲内にいる条件。S2の防御力低下は自身の術ダメージを変化させない。'],
-    deferredSkills: [{ skillIndex: 3, reason: '通常攻撃を停止する毎秒攻撃と固定術耐性低下を一体で扱う計算段階が必要。' }] }),
+  ], { traitNotes: ['選択した全対象が直線範囲内にいる条件。S2の防御力低下は自身の術ダメージを変化させない。S3は地上対象への毎秒ダメージで、通常攻撃を追加しない。'] }),
   operator('char_2013_cerber', [[1, next(k('atk_scale'))],
     [2, normal({ intervalScale: k('base_attack_time'), periodTotal: { kind: 'CONSTANT_RATE' } })],
     [3, normal({ atk: k('atk'), traitOverrides: ['DAMAGE_TYPE'],
@@ -683,3 +693,12 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
   ], { deferredSkills: [{ skillIndex: 3, reason: '装置への攻撃回数と装置の砲撃ダメージを別の攻撃主体として扱う必要がある。' }],
     traitNotes: ['自身の攻撃を評価する。S1は装置1基の基本攻撃力上昇12%を4倍にし、スキル倍率200%は別に適用する。S2は自身がブロックする敵だけを指定する。'] }),
 ]
+
+
+const eyjaIgnition = EXPANDED_ARTS_DEFINITIONS.find(definition => definition.operatorId === 'char_180_amgoat')!.recipes.find(recipe => recipe.skillIndex === 2)!
+eyjaIgnition.stages = eyjaIgnition.stages.map(stage => ({ ...stage,
+  resistanceReductionRatio: stage.when?.value === 'MAIN' ? product(-1, k('magic_resistance'))
+    : choose('eyjaSplashAlreadyDebuffed', true, product(-1, k('magic_resistance'))),
+  actions: [{ label: '爆発の命中', role: 'MAIN', damageType: 'ARTS', scale: k('atk_scale') },
+    ...(stage.when?.value === 'MAIN' ? [{ label: '主対象への追加命中', role: 'MAIN' as const, damageType: 'ARTS' as const, scale: k('atk_scale_2') }] : [])],
+}))

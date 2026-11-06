@@ -338,7 +338,7 @@ function getAdditionalTalentValueRows(effect: TalentStructureEffect): [string, s
   if (effect.item === 'CRITICAL_ATTACK') rows.push(...getCombatNumericDefinitionRows(effect.probability.chance, '発動確率'))
   if (effect.item === 'ADDITIONAL_ATTACK') {
     if (effect.basis) rows.push(['参照値', effect.basis === 'TARGET_DEFENSE' ? '対象の防御力' : '攻撃力'])
-    rows.push(['ダメージ種別', { PHYSICAL: '物理', ARTS: '術', TRUE: '確定' }[effect.damageType]], ['量の時間単位', effect.rate])
+    rows.push(['ダメージ種別', { PHYSICAL: '物理', ARTS: '術', TRUE: '確定', ELEMENTAL: '元素' }[effect.damageType]], ['量の時間単位', effect.rate])
     for (const [label, value] of [['固定ダメージ', effect.flatDamage], ['命中回数', effect.hits], ['発動確率', effect.probability.chance]] as const) {
       if (value !== undefined) rows.push(...getCombatNumericDefinitionRows(value, label))
     }

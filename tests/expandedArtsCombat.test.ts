@@ -283,10 +283,10 @@ test('追加4名の素質数値欠落や未確認のスキル更新は計算を�
   }
 })
 
-test('術師・補助・医療63名の141スキルを113レシピ・28保留に分け、全素質を登録する', () => {
+test('術師・補助・医療63名の141スキルを115レシピ・26保留に分け、全素質を登録する', () => {
   assert.equal(sources.length, 63)
   assert.equal(sources.reduce((sum, source) => sum + source.skills.length, 0), 141)
-  assert.equal(EXPANDED_ARTS_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 113)
+  assert.equal(EXPANDED_ARTS_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 115)
   for (const definition of EXPANDED_ARTS_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     const indices = [...definition.recipes.map(recipe => recipe.skillIndex), ...(definition.deferredSkills ?? []).map(skill => skill.skillIndex)]
@@ -693,4 +693,38 @@ test('追加8名も未確認のスキル・特性・素質説明へ変更され�
       (skill: SkillRecord) => { for (const candidate of skill.operatorProfile.talents[0].candidates ?? []) candidate.description += '未確認のダメージ' },
     ]) assert.deepEqual(output(id, index, {}, change).rows, [], id)
   }
+})
+
+
+test('イグニッションは主対象だけ先に術耐性を下げ、半倍率の2命中と周囲1命中を区別する', () => {
+  for (const resistance of [0, 40, 100]) {
+    const main = at('char_180_amgoat', 2, {}, resistance)
+    const atk = attack(main.result.stats.attack, 0.14)
+    close(main.row.perAttack, atk * 3.7 * (1 - resistance * 0.75 / 100))
+    assert.equal(main.row.attackComponents.length, 2)
+    assert.equal(main.result.maxTargetCount, 1)
+    assert.equal(main.row.dps, null)
+    for (const debuffed of [false, true]) {
+      const splash = at('char_180_amgoat', 2, { eyjaIgnitionTarget: 'SPLASH', eyjaSplashAlreadyDebuffed: debuffed, actualAttackTargetCount: 3 }, resistance)
+      close(splash.row.perAttack, atk * 1.85 * Math.max(0.05, 1 - resistance * (debuffed ? 0.75 : 1) / 100))
+      close(splash.row.allTargetsPerAttack, splash.row.perAttack * 3)
+      assert.equal(splash.row.attackComponents.length, 1)
+    }
+  }
+  const virtual = output('char_180_amgoat', 2, {}, undefined, { virtualMainAttackType: 'PHYSICAL', enemy: { defense: 1000, resistance: 40 } })
+  assert.deepEqual(virtual.unsupportedReasons, [])
+  close(virtual.rows[0].perAttack, Math.max(attack(virtual.stats.attack, 0.14) * 1.85 - 1000, attack(virtual.stats.attack, 0.14) * 1.85 * 0.05) * 2)
+})
+
+test('灼獄は付与済みの固定20低下と素質40%低下を順に適用し、通常攻撃やHP減少を混ぜない', () => {
+  for (const resistance of [0, 20, 40, 100]) for (const actualAttackTargetCount of [1, 4]) {
+    const { result, row } = at('char_134_ifrit', 3, { actualAttackTargetCount }, resistance)
+    close(row.damageOverTimeDps, result.stats.attack * 1.4 * (1 - Math.max(0, resistance - 20) * 0.6 / 100))
+    assert.equal(row.perAttack, 0)
+    assert.equal(result.attackInterval, null)
+    assert.equal(total('char_134_ifrit', 3, result).totalDamage, null)
+  }
+  const initial = output('char_134_ifrit', 3, { ifritS3DebuffActive: false })
+  assert.deepEqual(initial.rows, [])
+  assert.ok(initial.unsupportedReasons.length)
 })

@@ -1,6 +1,7 @@
 import type { SkillRecord } from '../types/skill.ts'
 import type { GuardConditions, GuardInput, GuardPassiveModifiers } from './guardCombatTypes.ts'
 import { buildGuardDamageOutput } from './guardDamageCalculator.ts'
+import { buildSummonDamageOutput } from './summonActor.ts'
 import type { VirtualMainAttackType } from './damageCalculatorThreeVirtualAttack.ts'
 export { getDamageCalculatorThreeVirtualAttackCapability } from './damageCalculatorThreeVirtualAttack.ts'
 export type { VirtualMainAttackType, VirtualAttackCapability } from './damageCalculatorThreeVirtualAttack.ts'
@@ -10,6 +11,7 @@ import {
   calculateDamageBreakdown,
   getOperatorStats,
   type DamageType,
+  type HpDamageType,
   type OperatorStats,
   type SkillDamageBreakdown,
   type SkillModelDefaults,
@@ -131,7 +133,7 @@ export interface DamageCalculatorThreeAttackComponent {
   label: string
   role?: 'MAIN' | 'ADDITIONAL'
   order: number
-  damageType: DamageType
+  damageType: HpDamageType
   attackScale: number
   count: number
   targetAirborne: boolean
@@ -158,15 +160,16 @@ export interface DamageCalculatorThreeRow {
 }
 
 export interface DamageCalculatorThreeOutput {
+  actor?: { kind: 'TOKEN'; tokenKey: string; name: string }
   /** Main attack after traits, before any counterfactual override; null means not uniquely identified. */
-  mainAttackType?: DamageType | null
+  mainAttackType?: HpDamageType | null
   traitEvaluation?: TraitCombatResult
   guard?: { inputs: GuardInput[]; conditions: GuardConditions; evaluations: GuardPassiveModifiers['evaluations']; unresolved: string[] }
   structure: SkillStructure | null
   stats: OperatorStats
   model: SkillModelDefaults | null
-  damageType: DamageType | null
-  axisLabel: '敵の防御力' | '敵の術耐性' | '防御力・術耐性'
+  damageType: HpDamageType | null
+  axisLabel: '敵の防御力' | '敵の術耐性' | '敵の元素耐性' | '防御力・術耐性'
   rows: DamageCalculatorThreeRow[]
   unsupportedReasons: string[]
   conditionInputs: DamageCalculatorThreeConditionInput[]
@@ -266,7 +269,9 @@ export function getDamageCalculatorThreeInputs(
 export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInput): DamageCalculatorThreeOutput {
   const guardStructure = findSkillStructure({ operatorId: input.skill.operatorId, skillId: input.skill.skillId,
     skillIndex: input.skill.skillIndex, levelIndex: input.skillLevelIndex })
-  if (guardStructure?.guardRecipe) return buildGuardDamageOutput(input, guardStructure, validateOperator(input))
+  if (guardStructure?.guardRecipe) return guardStructure.guardRecipe.stages.some(stage => stage.actor)
+    ? buildSummonDamageOutput(input, guardStructure, validateOperator(input))
+    : buildGuardDamageOutput(input, guardStructure, validateOperator(input))
   const enemyErrors = validateDamageCalculatorThreeEnemy(input.enemy)
   const enemy = enemyErrors.length ? undefined : input.enemy
   const reasons = [...validateOperator(input), ...enemyErrors]
@@ -574,6 +579,7 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
         const attackComponents = actionPlans.map((plan, index): DamageCalculatorThreeAttackComponent => {
           const proc = plan.talents.defenseIgnore ?? { chance: 0, ratio: 0 }
           const actionDamageType = virtualMainAttackType ?? plan.effect.value.damageType
+          if (actionDamageType === 'ELEMENTAL') throw new RangeError('元素ダメージには確認済みの元素用レシピが必要です。')
           const weighted = calculateProbabilisticDefenseIgnoreDamage({ attack: plan.pipeline.finalAttack,
             damageType: actionDamageType, enemyDefense, enemyResistance, chance: proc.chance, ratio: proc.ratio,
             count: plan.effect.value.count, resistanceIgnoreFixed: plan.talents.resistanceIgnoreFixed })

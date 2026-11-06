@@ -35,7 +35,7 @@ type TargetDisplay = 'single' | 'all'
 type TableDisplay = 'auto' | 'full' | 'compact'
 type ConditionValue = number | string | boolean | undefined
 const OUTPUT_KINDS: OutputKind[] = ['NORMAL', 'NEXT_ATTACK', 'COUNTER', 'SKILL_ACTION']
-const DAMAGE_TYPE_LABELS: Record<string, string> = { PHYSICAL: '物理', ARTS: '術', TRUE: '確定', MIXED: '混合' }
+const DAMAGE_TYPE_LABELS: Record<string, string> = { PHYSICAL: '物理', ARTS: '術', TRUE: '確定', ELEMENTAL: '元素', MIXED: '混合' }
 const ATTACK_LABELS: Record<OutputKind, string> = {
   NORMAL: '1攻撃ダメージ', NEXT_ATTACK: '強化攻撃ダメージ', COUNTER: '反撃ダメージ', SKILL_ACTION: '1動作ダメージ',
 }

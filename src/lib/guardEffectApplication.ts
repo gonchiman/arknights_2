@@ -10,7 +10,7 @@ const percent = (value: number) => `${number(value * 100)}%`
 const signed = (value: number) => `${value >= 0 ? '＋' : '−'}${number(Math.abs(value))}`
 const signedPercent = (value: number) => `${value >= 0 ? '＋' : '−'}${percent(Math.abs(value))}`
 const message = (error: unknown) => error instanceof Error ? error.message : '値を確認できません。'
-const TYPE_LABELS = { PHYSICAL: '物理', ARTS: '術', TRUE: '確定' }
+const TYPE_LABELS = { PHYSICAL: '物理', ARTS: '術', TRUE: '確定', ELEMENTAL: '元素' }
 
 function inputLabel(key: string, value: number | string | boolean | undefined, inputs: readonly GuardInput[]): string {
   const definition = inputs.find(input => input.key === key)

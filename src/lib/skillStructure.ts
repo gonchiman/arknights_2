@@ -1,5 +1,5 @@
 import type { SkillCoarseCategory } from './skillCoarseClassification.ts'
-import type { DamageType } from './damageCalculator.ts'
+import type { HpDamageType } from './damageCalculator.ts'
 import { SKILL_DIRECTORY_SP_TYPE_LABELS } from './skillDirectory.ts'
 import type { GuardSkillRecipe } from './guardCombatTypes.ts'
 import { buildGuardSkillStructures } from './guardSkillStructure.ts'
@@ -82,7 +82,7 @@ export type SkillStructureEffect = SkillStructureEffectBase & (
   | { readonly item: 'HP_LOSS_RATE'; readonly operation: 'INCREASE_TO_CAP'; readonly value: SkillStructureHpLossProfile; readonly unit: 'HP_LOSS_PROFILE' }
   | { readonly item: 'TRIGGERED_ATTACK'; readonly operation: 'EXECUTE_ATTACK'; readonly value: SkillStructureAttackAction; readonly unit: 'ATTACK_ACTION' }
   | { readonly item: 'DIRECT_DAMAGE'; readonly operation: 'DEAL_DAMAGE'; readonly value: {
-      readonly damageType: DamageType; readonly attackScale: number; readonly count: number
+      readonly damageType: HpDamageType; readonly attackScale: number; readonly count: number
       readonly targeting?: { readonly selection: 'ALL' | 'RANDOM'; readonly splashRadius?: number }
       readonly intervalSeconds?: number
     }; readonly unit: 'DAMAGE_ACTION' }
@@ -305,7 +305,7 @@ export function formatSkillStructureEffectValue(effect: SkillStructureEffect): s
 /** Compound effects expose each parameter as its own definition row. */
 export function getSkillStructureEffectValueRows(effect: SkillStructureEffect): [string, string | number][] {
   if (effect.unit === 'DAMAGE_ACTION') return [
-    ['ダメージ種別', { PHYSICAL: '物理', ARTS: '術', TRUE: '確定' }[effect.value.damageType]],
+    ['ダメージ種別', { PHYSICAL: '物理', ARTS: '術', TRUE: '確定', ELEMENTAL: '元素' }[effect.value.damageType]],
     ['攻撃倍率', effect.value.attackScale], ['打撃回数', effect.value.count],
     ...(effect.value.targeting ? [['対象の選び方', effect.value.targeting.selection === 'ALL' ? '全て' : 'ランダム'] as [string, string]] : []),
     ...(effect.value.targeting?.splashRadius !== undefined ? [['範囲半径（マス）', effect.value.targeting.splashRadius] as [string, number]] : []),

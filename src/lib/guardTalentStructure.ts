@@ -1,9 +1,9 @@
 import { getOperatorPassives, type PassiveSource } from './operatorProfile.ts'
 import type { SkillRecord } from '../types/skill.ts'
-import type { DamageType } from './damageCalculator.ts'
+import type { DamageType, HpDamageType } from './damageCalculator.ts'
 import type { TalentCoarseCategory } from './talentCoarseClassification.ts'
 import type { TalentStructure, TalentStructureEffect, TalentStructureGrowthSelection, TalentStructureDeferredCase } from './talentStructure.ts'
-import type { CombatCondition, CombatNumericValue, CombatRecipientSelector, CombatEffectContext, CombatTiming } from './combatEffectStructure.ts'
+import type { CombatCondition, CombatNumericValue, CombatRecipientSelector, CombatEffectContext, CombatTiming, CombatDamageKind } from './combatEffectStructure.ts'
 
 /** Common effect vocabulary. The evaluator dispatches on these operations, never operator IDs. */
 export type GuardTalentEffectPayload =
@@ -20,7 +20,7 @@ export type GuardTalentEffectPayload =
   | { readonly item: 'RESISTANCE_REDUCTION_RATIO'; readonly operation: 'ADD_RATIO'; readonly value: CombatNumericValue; readonly unit: 'RATIO' }
   | { readonly item: 'DRONE_MAXIMUM_MULTIPLIER' | 'STORED_CHARGE_SCALE' | 'ATTACK_SCALE' | 'DAMAGE_SCALE' | 'SPLASH_DAMAGE_SCALE' | 'HEAL_RECEIVED_SCALE'; readonly operation: 'MULTIPLY'; readonly value: CombatNumericValue; readonly unit: 'MULTIPLIER' }
   | { readonly item: 'CRITICAL_ATTACK'; readonly operation: 'MULTIPLY'; readonly value: CombatNumericValue; readonly unit: 'MULTIPLIER' }
-  | { readonly item: 'ADDITIONAL_ATTACK'; readonly operation: 'DEAL_DAMAGE'; readonly value: CombatNumericValue; readonly unit: 'MULTIPLIER'; readonly damageType: DamageType; readonly basis?: 'ATK' | 'ATK_STAT' | 'TARGET_DEFENSE'; readonly flatDamage?: CombatNumericValue; readonly hits?: CombatNumericValue; readonly rate: 'PER_ATTACK' | 'PER_SECOND'; readonly label?: string }
+  | { readonly item: 'ADDITIONAL_ATTACK'; readonly operation: 'DEAL_DAMAGE'; readonly value: CombatNumericValue; readonly unit: 'MULTIPLIER'; readonly damageType: HpDamageType; readonly damageKind?: Extract<CombatDamageKind, { type: 'ELEMENTAL_DAMAGE' }>; readonly basis?: 'ATK' | 'ATK_STAT' | 'TARGET_DEFENSE'; readonly flatDamage?: CombatNumericValue; readonly hits?: CombatNumericValue; readonly rate: 'PER_ATTACK' | 'PER_SECOND'; readonly label?: string }
   | { readonly item: 'SP_RECOVERY'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'PER_SECOND' }
   | { readonly item: 'STATUS' | 'ATTACK_BEHAVIOR'; readonly operation: 'SET_ENABLED'; readonly value: true; readonly unit: 'BOOLEAN'; readonly status: string }
   | { readonly item: 'HP_STEAL'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly maximum: CombatNumericValue; readonly unit: 'POINT' }

@@ -659,3 +659,26 @@ test('反撃の全対象ダメージとソーンズS3の後続段階を選択し
   const laterMarkup = renderToStaticMarkup(createElement(ResultTable, { output: later, precision: 1 }))
   assert.deepEqual(resultTable(laterMarkup)[1], ['0', '1,630.0', '1,880.8', '1,630.0', '1,880.8'])
 })
+
+test('召喚物の計算では本人と区別できる名前と独立した基礎攻撃力を表示する', async () => {
+  const source = JSON.parse(readFileSync(new URL('../src/data/expandedSummonSources.json', import.meta.url), 'utf8'))
+    .find(item => item.operatorId === 'char_336_folivo')
+  const skill = source.skills.find(item => item.skillIndex === 2), raw = skill.raw
+  const { classifySkill } = await server.ssrLoadModule('/src/lib/classifier.ts')
+  const row = { id: `${source.operatorId}/2`, operatorId: source.operatorId, operatorName: source.operatorName,
+    profession: source.profession, professionLabel: '補助', rarity: source.rarity,
+    subProfessionId: source.subProfessionId, subProfessionName: '召喚師', nameInitial: 'OTHER',
+    skillIndex: 2, skillId: skill.skillId, skillName: raw.name, description: raw.description,
+    duration: raw.duration, durationType: raw.durationType, skillType: raw.skillType,
+    spType: raw.spData.spType, spCost: raw.spData.spCost, initSp: raw.spData.initSp,
+    classification: classifySkill(raw), raw, skillLevels: Array.from({length:10},()=>structuredClone(raw)),
+    operatorProfile: source.profile, overrideTokenKey: source.profile.summonSkillTokenKeys[1] }
+  const markup = renderToStaticMarkup(createElement(Page, { rows:[row], loading:false,
+    initialSelection: {operatorId: row.operatorId, skillId: row.skillId, skillIndex:2, levelIndex:9} }))
+  assert.doesNotMatch(text(markup), /この条件では計算できません/)
+  const values = markup.match(/<table\b[^>]*class="[^"]*damage-three-value-table[^"]*"[^>]*>([\s\S]*?)<\/table>/)
+  assert.ok(values)
+  const cells = tableRows(values[1])
+  assert.deepEqual(cells.find(row=>row[0]==='計算主体'), ['計算主体', source.profile.summonProfiles.token_10010_folivo_car.name])
+  assert.deepEqual(cells.find(row=>row[0]==='基礎攻撃力'), ['基礎攻撃力','477'])
+})

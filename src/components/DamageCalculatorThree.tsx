@@ -439,6 +439,7 @@ export function DamageCalculatorThreeSteadyDpsTable({ output, precision }: { out
 function UsedValueTable({ output }: { output: DamageCalculatorThreeOutput }) {
   const model = output.model
   const rows: [string, ReactNode][] = [
+    ...(output.actor ? [['計算主体', output.actor.name] as [string, ReactNode]] : []),
     ['基礎攻撃力', formatCompact(output.stats.attack)],
     ['攻撃力増加（スキル）', model ? `＋${formatCompact(model.directMultiplierPercent)}％` : '未確認'],
     ['攻撃力増加（素質）', model ? `＋${formatCompact(output.talentAttackRatio * 100)}％` : '未確認'],

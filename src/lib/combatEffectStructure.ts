@@ -30,7 +30,7 @@ export type CombatRecipientSelector = CombatRecipientBase & (
   | { readonly scope: 'CUSTOM_RANGE'; readonly rangeId: string | null }
 )
 /** Events refer to the effect source unless eventActor selects a different actor. */
-export type CombatEvent = 'ATTACK' | 'NORMAL_ATTACK' | 'DAMAGE_DEALT' | 'DAMAGE_RECEIVED' | 'LETHAL_DAMAGE' | 'KILL' | 'DEPLOY' | 'RETREAT' | 'SKILL_START' | 'SKILL_END'
+export type CombatEvent = 'ATTACK' | 'NORMAL_ATTACK' | 'DAMAGE_DEALT' | 'DAMAGE_RECEIVED' | 'LETHAL_DAMAGE' | 'KILL' | 'DEPLOY' | 'RETREAT' | 'SKILL_START' | 'SKILL_END' | 'ELEMENTAL_BURST'
 export type CombatTiming =
   | { readonly type: 'CONTINUOUS'; readonly while: 'DEPLOYED' | 'IN_SQUAD' | 'ALWAYS' | 'CONDITION' }
   | { readonly type: 'EVENT'; readonly event: CombatEvent }
@@ -146,7 +146,7 @@ const metrics: Record<string, string> = {
   'battlefield.lateranoCount': '配置中のラテラーノ所属人数', 'source.emergencyHealActivated': '緊急回復を発動済み', 'damagedAlly.isKazimierz': '攻撃を受けた味方がカジミエーシュに所属',
   'source.skillActive': 'スキル発動中', 'recipient.hpRatio': '対象のHP割合', 'recipient.inSourceAttackRange': '対象が自身の攻撃範囲内',
 }
-const events: Record<CombatEvent, string> = { ATTACK: '攻撃', NORMAL_ATTACK: '通常攻撃', DAMAGE_DEALT: '与ダメージ', DAMAGE_RECEIVED: '被ダメージ', LETHAL_DAMAGE: '致命ダメージ', KILL: '撃破', DEPLOY: '配置', RETREAT: '退場', SKILL_START: 'スキル開始', SKILL_END: 'スキル終了' }
+const events: Record<CombatEvent, string> = { ATTACK: '攻撃', NORMAL_ATTACK: '通常攻撃', DAMAGE_DEALT: '与ダメージ', DAMAGE_RECEIVED: '被ダメージ', LETHAL_DAMAGE: '致命ダメージ', KILL: '撃破', DEPLOY: '配置', RETREAT: '退場', SKILL_START: 'スキル開始', SKILL_END: 'スキル終了', ELEMENTAL_BURST: '元素損傷の爆発開始' }
 export function formatCombatNumericValue(value: CombatNumericValue): string {
   if (value === null) return '未確認'
   if (typeof value === 'number') return formatCombatNumber(value)

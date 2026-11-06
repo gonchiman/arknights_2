@@ -14,7 +14,7 @@ export const TRAIT_STRUCTURE_JOB_IDS = ['fighter', 'lord', 'crusher', 'hammer', 
   'pioneer', 'agent', 'charger', 'stalker', 'protector', 'shotprotector', 'artsprotector', 'unyield', 'duelist', 'guardian', 'fortress', 'counsellor',
   'fastshot', 'aoesniper', 'longrange', 'siegesniper', 'reaperrange', 'closerange', 'hunter', 'bombarder', 'loopshooter', 'skybreaker', 'craftsman', 'merchant', 'dollkeeper',
   'corecaster', 'splashcaster', 'blastcaster', 'chain', 'slower', 'underminer', 'incantationmedic', 'phalanx',
-  'traper', 'skywalker', 'mercenary', 'physician', 'watchman', 'chainhealer', 'mystic', 'funnel', 'geek', 'bard', 'blessing'] as const
+  'traper', 'skywalker', 'mercenary', 'physician', 'watchman', 'chainhealer', 'mystic', 'funnel', 'geek', 'bard', 'blessing', 'primprotector', 'primcaster', 'primguard', 'ritualist', 'summoner', 'tactician'] as const
 export type TraitStructureJobId = typeof TRAIT_STRUCTURE_JOB_IDS[number]
 export interface TraitStructureSelection { readonly operatorId: string }
 export interface TraitStructureGrowthSelection { readonly phaseIndex?: number; readonly operatorLevel?: number }
@@ -40,7 +40,7 @@ export type TraitStructureEffect = CombatEffectContext & {
     } }
   | { readonly item: 'ATTACK_SCALE'; readonly operation: 'MULTIPLY'; readonly unit: 'MULTIPLIER'; readonly value: CombatNumericValue }
   | { readonly item: 'DAMAGE_TYPE'; readonly operation: 'SET'; readonly unit: 'DAMAGE_TYPE'; readonly value: 'ARTS' | 'PHYSICAL' }
-  | { readonly item: 'RANGED_ATTACK_ENABLED' | 'NORMAL_ATTACK_ENABLED' | 'ALLY_HEALING_ENABLED' | 'NATURAL_SP_RECOVERY_ENABLED' | 'INSPIRATION_ENABLED'; readonly operation: 'SET_ENABLED'; readonly unit: 'BOOLEAN'; readonly value: boolean }
+  | { readonly item: 'RANGED_ATTACK_ENABLED' | 'NORMAL_ATTACK_ENABLED' | 'ALLY_HEALING_ENABLED' | 'NATURAL_SP_RECOVERY_ENABLED' | 'INSPIRATION_ENABLED' | 'ELEMENTAL_DAMAGE_ENABLED' | 'ELEMENTAL_BUILDUP_ENABLED' | 'SUMMON_ENABLED'; readonly operation: 'SET_ENABLED'; readonly unit: 'BOOLEAN'; readonly value: boolean }
   | { readonly item: 'ATTACK_RANGE'; readonly operation: 'USE_BASE_ATTRIBUTE'; readonly unit: 'RANGE_DEFINITION'; readonly value: { readonly rangeId: string | null } }
   | { readonly item: 'ATTACK_PRIORITY'; readonly operation: 'SET'; readonly unit: 'PRIORITY_RULE'; readonly value: 'AIRBORNE' | 'LOWEST_DEFENSE' | 'HIGHEST_WEIGHT' }
   | { readonly item: 'STATUS'; readonly operation: 'SET_ENABLED'; readonly unit: 'STATUS'; readonly value: 'SLUGGISH' }
@@ -137,6 +137,12 @@ const DEFINITIONS: Record<TraitStructureJobId, JobDefinition> = {
   guardian: { profession: 'TANK', descriptions: ['HP回復スキルを所持'], keys: [], categories: ['HP_CHANGE'] },
   fortress: { profession: 'TANK', descriptions: ['未ブロック時、遠距離範囲物理攻撃を行う'], keys: [], categories: ['ATTACK_BEHAVIOR', 'DAMAGE_TYPE'] },
   counsellor: { profession: 'PIONEER', descriptions: ['敵を2体までブロック 配置待機エリアの味方ユニットを強化可能'], keys: [], categories: ['BLOCK', 'ABILITY'] },
+  summoner: { profession: 'SUPPORT', descriptions: ['敵に術ダメージを与える 召喚物を使用可能'], keys: [], categories: ['DAMAGE_TYPE', 'SUMMON'] },
+  tactician: { profession: 'PIONEER', descriptions: ['攻撃範囲内で戦術召集点を指定し援軍を召喚できる 自身が援軍にブロックされている敵を攻撃する際、攻撃力が150%まで上昇'], keys: ['atk_scale'], categories: ['DAMAGE', 'SUMMON'] },
+  primprotector: { profession: 'TANK', descriptions: ['敵を3体までブロック 元素損傷を与える能力を持つ'], keys: [], categories: ['BLOCK', 'ABILITY'] },
+  primcaster: { profession: 'CASTER', descriptions: ['敵に術ダメージを与える 元素ダメージを与える能力を持つ'], keys: [], categories: ['DAMAGE_TYPE', 'ABILITY'] },
+  primguard: { profession: 'WARRIOR', descriptions: ['敵を2体までブロック 元素ダメージを与える能力を持つ'], keys: [], categories: ['BLOCK', 'ABILITY'] },
+  ritualist: { profession: 'SUPPORT', descriptions: ['敵に術ダメージを与える 元素損傷を与える能力を持つ'], keys: [], categories: ['DAMAGE_TYPE', 'ABILITY'] },
   fastshot: { profession: 'SNIPER', descriptions: ['飛行ユニットを優先して攻撃'], keys: [], categories: ['ATTACK_BEHAVIOR'] },
   aoesniper: { profession: 'SNIPER', descriptions: ['敵に範囲物理ダメージを与える'], keys: [], categories: ['ATTACK_BEHAVIOR', 'DAMAGE_TYPE'] },
   longrange: { profession: 'SNIPER', descriptions: ['攻撃範囲内の防御力が一番低い敵を優先して攻撃'], keys: [], categories: ['ATTACK_BEHAVIOR'] },
@@ -265,8 +271,8 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
     const effects: TraitStructureEffect[] = []
     if (verified) {
       const job = operator.subProfessionId
-      if (['fighter', 'fearless', 'pioneer', 'protector', 'shotprotector', 'craftsman', 'counsellor'].includes(job)) {
-        const block = ['pioneer', 'craftsman', 'counsellor'].includes(job) ? 2 : ['protector', 'shotprotector'].includes(job) ? 3 : 1
+      if (['fighter', 'fearless', 'pioneer', 'protector', 'shotprotector', 'craftsman', 'counsellor', 'primprotector', 'primguard'].includes(job)) {
+        const block = ['pioneer', 'craftsman', 'counsellor', 'primguard'].includes(job) ? 2 : ['protector', 'shotprotector', 'primprotector'].includes(job) ? 3 : 1
         const frames = profile.phases[phaseIndex].attributesKeyFrames ?? []
         const agrees = frames.length > 0 && frames.every(frame => frame.data?.blockCnt === block)
         if (!agrees) issues.push('特性のブロック数と基本ステータスの一致を確認できません。')
@@ -306,7 +312,7 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
         item: 'ATTACK_PRIORITY', operation: 'SET', unit: 'PRIORITY_RULE',
         value: job === 'fastshot' ? 'AIRBORNE' : job === 'longrange' ? 'LOWEST_DEFENSE' : 'HIGHEST_WEIGHT',
       })
-      if (['corecaster', 'splashcaster', 'blastcaster', 'chain', 'slower', 'underminer', 'incantationmedic', 'phalanx', 'mystic', 'funnel', 'artsprotector', 'aoesniper'].includes(job)) {
+      if (['corecaster', 'splashcaster', 'blastcaster', 'chain', 'slower', 'underminer', 'incantationmedic', 'phalanx', 'mystic', 'funnel', 'artsprotector', 'aoesniper', 'primcaster', 'ritualist', 'summoner'].includes(job)) {
         effects.push({ ...context('normal-attack-damage-type', 'DAMAGE', 'ATTACK_RULE', 'description:damage_type', 'NORMAL_ATTACK'),
           condition: ['phalanx', 'artsprotector'].includes(job) ? compare('source.skillActive', true) : null,
           item: 'DAMAGE_TYPE', operation: 'SET', unit: 'DAMAGE_TYPE', value: job === 'aoesniper' ? 'PHYSICAL' : 'ARTS' })
@@ -322,6 +328,20 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
         ...context('frontal-attack-scale', 'DAMAGE', 'ATTACK_RULE', 'atk_scale', 'ATTACK'),
         condition: compare('target.inFrontalTiles', true), item: 'ATTACK_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: read('atk_scale', { expected: 1.5 }),
         parameterBindings: { 'condition.rangeId': source.rangeId! },
+      })
+      if (['primprotector', 'ritualist', 'primcaster', 'primguard'].includes(job)) effects.push({
+        ...context('elemental-capability', 'CONTROL', 'DYNAMIC_RULE', 'description:elemental_capability'),
+        item: ['primprotector', 'ritualist'].includes(job) ? 'ELEMENTAL_BUILDUP_ENABLED' : 'ELEMENTAL_DAMAGE_ENABLED',
+        operation: 'SET_ENABLED', unit: 'BOOLEAN', value: true,
+      })
+      if (job === 'summoner' || job === 'tactician') effects.push({
+        ...context('summon-capability', 'CONTROL', 'DYNAMIC_RULE', 'description:summon_capability'),
+        item: 'SUMMON_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: true,
+      })
+      if (job === 'tactician') effects.push({
+        ...context('reinforcement-blocked-attack', 'DAMAGE', 'ATTACK_RULE', 'atk_scale', 'ATTACK'),
+        item: 'ATTACK_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: read('atk_scale', { expected: 1.5 }),
+        condition: compare('target.blockedByOwnReinforcement', true),
       })
       if (job === 'funnel') {
         effects.push({ ...context('drone-attack', 'DAMAGE', 'ATTACK_RULE', 'init_atk_scale / delta_atk_scale / max_atk_scale / max_stack_cnt'),
@@ -414,7 +434,9 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
         effects.push({ ...context('substitute-duration', 'SURVIVAL', 'DYNAMIC_RULE', 'duration'),
           item: 'REPLACEMENT_DURATION', operation: 'SET', unit: 'SECOND',
           value: attack !== null && hp !== null && rangeFlag ? read('duration', { expected: 20 }) : null })
-        notes.push('本体の攻撃を評価する。身替りの別ステータス・攻撃と交代時刻は含めない。')
+        notes.push(operator.operatorId === 'char_4124_iana'
+          ? '選択した交代後の攻撃を評価する。交代時刻と発動中の脆弱の付与・失効は合算しない。'
+          : '本体の攻撃を評価する。身替りの別ステータス・攻撃と交代時刻は含めない。')
       }
       if (job === 'bombarder') {
         const scale = read('attack@append_atk_scale', { expected: 0.5 })
@@ -523,7 +545,7 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
   })
 }
 
-const metricLabels: Record<string, string> = { 'attack.distanceType': '攻撃距離', 'target.blockedBySource': '自身が対象をブロック',
+const metricLabels: Record<string, string> = { 'target.blockedByOwnReinforcement': '自身の援軍が対象をブロック', 'attack.distanceType': '攻撃距離', 'target.blockedBySource': '自身が対象をブロック',
   'source.skillActive': 'スキル発動中', 'source.blockCount': '現在のブロック数', 'source.isBlocking': '自身が敵をブロック中', 'target.inFrontalTiles': '対象が正面横3マス内' }
 export function formatTraitStructureCondition(condition: CombatCondition | null): string {
   return localize(formatCombatCondition(condition)).replace('＝RANGED', '＝遠距離').replace('＝MELEE', '＝近接')
@@ -533,7 +555,7 @@ export const formatTraitStructureTarget = formatCombatRecipient
 export function formatTraitStructureEffectItem(item: TraitStructureEffect['item']): string {
   return { DRONE_ATTACK: '浮遊ユニットの攻撃', INITIAL_DEPLOYMENT_RUNTIME_COST: '初回配置の内部コスト設定',
     BLOCK_COUNT: 'ブロック数', MAX_TARGETS: '同時攻撃対象数', HIT_COUNT: '通常攻撃のヒット数', STORED_CHARGES: '通常貯蔵数の上限', STORED_CHARGE_MERGE_COUNT: '転置エネルギー1個あたりの通常貯蔵数', ATTACK_SCALE: '攻撃力倍率',
-    HP_LOSS_RATIO_PER_SECOND: '毎秒の最大HP喪失割合', HP_RECOVERY_ATK_RATIO_PER_SECOND: '毎秒の攻撃力基準回復割合', INSPIRATION_ENABLED: '鼓舞の受け入れ',
+    HP_LOSS_RATIO_PER_SECOND: '毎秒の最大HP喪失割合', HP_RECOVERY_ATK_RATIO_PER_SECOND: '毎秒の攻撃力基準回復割合', INSPIRATION_ENABLED: '鼓舞の受け入れ', ELEMENTAL_DAMAGE_ENABLED: '元素ダメージの能力', ELEMENTAL_BUILDUP_ENABLED: '元素損傷の能力', SUMMON_ENABLED: '召喚物の使用',
     DAMAGE_TYPE: '通常攻撃のダメージ種別', RANGED_ATTACK_ENABLED: '遠距離攻撃', NORMAL_ATTACK_ENABLED: '通常攻撃',
     ALLY_HEALING_ENABLED: '味方からの治療', NATURAL_SP_RECOVERY_ENABLED: 'SP自然回復', ATTACK_RANGE: '基本攻撃範囲', ATTACK_TARGETING: '通常攻撃の対象',
     SPLASH_DAMAGE: '周囲へのダメージ', HP: 'HP', ATK_BUFF_RATIO: '攻撃力上昇割合', ATTACK_PRIORITY: '攻撃の優先対象',

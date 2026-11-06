@@ -7,11 +7,14 @@ import type {
 
 export const DAMAGE_TYPES = ['PHYSICAL', 'ARTS', 'TRUE'] as const
 export type DamageType = typeof DAMAGE_TYPES[number]
+/** DC3 additionally evaluates HP damage from elements; legacy selectors stay unchanged. */
+export type HpDamageType = DamageType | 'ELEMENTAL'
 
-export const DAMAGE_TYPE_LABELS: Record<DamageType, string> = {
+export const DAMAGE_TYPE_LABELS: Record<HpDamageType, string> = {
   PHYSICAL: '物理',
   ARTS: '術',
   TRUE: '確定',
+  ELEMENTAL: '元素',
 }
 
 export interface OperatorStats {

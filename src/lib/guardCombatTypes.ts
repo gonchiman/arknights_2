@@ -1,4 +1,5 @@
-import type { DamageType } from './damageCalculator.ts'
+import type { DamageType, HpDamageType } from './damageCalculator.ts'
+import type { CombatDamageKind } from './combatEffectStructure.ts'
 import type { PeriodTotalCapability } from './damagePeriodTotal.ts'
 
 /** A skill can replace individual base-attack rules without disabling unrelated traits. */
@@ -24,7 +25,9 @@ export interface GuardDamageAction {
   label: string
   /** Reviewed provenance; virtual comparison never guesses from a label or array order. */
   role?: 'MAIN' | 'ADDITIONAL'
-  damageType: DamageType
+  damageType: HpDamageType
+  /** Required for ELEMENTAL HP damage; buildup is a separate output, never HP damage. */
+  damageKind?: Extract<CombatDamageKind, { type: 'ELEMENTAL_DAMAGE' }>
   /** A separate mystic projectile; only this action receives stored-energy modifiers. */
   isStoredCharge?: boolean
   /** A reviewed drone projectile, distinct from the operator's own attack. */
@@ -64,6 +67,8 @@ export interface GuardStage {
   label: string
   when?: { input: string; comparison: 'EQ' | 'LT' | 'LTE' | 'GT' | 'GTE'; value: number | string | boolean }
   kind: 'NORMAL' | 'NEXT_ATTACK' | 'SKILL_ACTION'
+  /** A separately validated unit supplies base stats and actor-specific passives. */
+  actor?: { kind: 'TOKEN'; tokenKey: string }
   /** Fixed skill treatment, evaluated by the shared trait condition rules. */
   attackTreatment?: 'MELEE' | 'RANGED'
   traitOverrides?: readonly GuardTraitOverride[]
