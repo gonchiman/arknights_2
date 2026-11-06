@@ -70,8 +70,115 @@ const wakeScale = sum(k('min_atk_scale'), product(sum(k('max_atk_scale'), produc
 const swireNormal = (): GuardStage => normal({ periodTotal: period('コイン入手、治療・爆弾設置による攻撃中断、攻撃強化の時間推移を含みません。'),
   dpsUnsupportedReason: 'コインによる行動置換や設置中断を追跡せず、通常攻撃1回を評価します。' })
 const swirePhase = (value: string, stage: GuardStage) => phase('swirePhase', value, stage)
+const alchemyScope = '作成時から攻撃力が変わらない錬金ユニット1個（S3は1つの区域）の現在の毎秒値。通常攻撃、別のユニット、範囲への出入り、効果終了までの合計は含めません。'
+const alchemyDot = (scale: GuardValue, options: Partial<GuardStage> = {}): GuardStage => normal({
+  label: '錬金ユニット1個の毎秒ダメージ', kind: 'SKILL_ACTION', maxTargets: null,
+  actions: [{ label: '錬金ユニットの毎秒ダメージ', role: 'MAIN', damageType: 'ARTS', basis: 'ATK_STAT', timing: 'PER_SECOND', scale }],
+  periodTotal: period(alchemyScope), dpsUnsupportedReason: '錬金ユニットの現在の毎秒値のみを評価します。', notes: [alchemyScope], ...options,
+})
+const thornMature = (initial: string, maximum: string): GuardValue => choose('thornRegionMature', true, k(maximum), k(initial))
+const ownerTokenScope = '本人の攻撃のみ。召喚物の攻撃、召喚数・再召喚・撃破による途中変化は含めません。'
 
 export const EXPANDED_SPECIAL_DEFINITIONS: readonly ExpandedOperatorDefinition[] = [
+  // https://prts.wiki/w/Necrass : S1 explosions and S2 links originate from the operator.
+  operator('char_450_necras', [
+    [1, [phase('necrasPhase', 'OWNER', action('召喚・強化時の爆発1回', k('atk_scale'), {
+      periodTotal: period('召喚または強化1回の爆発のみ。再召喚の連続発生とHP閾値を跨ぐ合計は計算しません。'),
+    })), phase('necrasPhase', 'TOKEN', pending('悲嘆する下僕の攻撃', '下僕の独立ステータスとグレードによる攻撃は未対応です。', ['スキル', '素質1', '素質2']))]],
+    [2, [phase('necrasPhase', 'OWNER', action('拘束中のダメージ1回（0.5秒周期）', k('atk_scale'), {
+      maxTargets: k('max_target'), periodTotal: period('リンクが続いている対象への1回のみ。睡眠・リンク中断・HP閾値変化・撃破による追加召喚は合算しません。'),
+      dpsUnsupportedReason: '拘束中の1回分のみ。リンク中断とHPの変化を追跡しません。',
+    })), phase('necrasPhase', 'TOKEN', pending('悲嘆する下僕の攻撃', '下僕の独立ステータスとグレードによる攻撃は未対応です。', ['スキル', '素質1', '素質2']))],
+    [b('necrasLinkActive', '対象全員へのリンクが継続中', true)]],
+    [3, [phase('necrasPhase', 'OWNER', action('範囲攻撃1回（最大3回中の1回）', k('attack@atk_scale'), {
+      periodTotal: period('最大3回のうち現在の1回。下僕の消費・強化と途中のHP閾値変化を含む合計は計算しません。'),
+    })), phase('necrasPhase', 'TOKEN', pending('特殊形態の下僕の攻撃', '特殊形態の独立ステータスと累積グレードによる攻撃は未対応です。', ['スキル', '素質1', '素質2']))]],
+  ], [talent(0, '再燃', () => [status('servant-generation', '敵撃破時に下僕を生成または強化する')], ['ABILITY']),
+    talent(1, '回光暗澹', v => [effect('low-hp-attack', 'hp_ratio / damage_scale', { item: 'ATTACK_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('damage_scale') },
+      { condition: { type: 'COMPARE', metric: 'targetHpPercent', comparison: 'LT', value: percent(v.read('hp_ratio')) }, timing: { type: 'EVENT', event: 'ATTACK' }, lifetime: { type: 'CURRENT_EVENT' } })], ['DAMAGE'])],
+  { inputs: [select('necrasPhase', '計算対象', [['OWNER', '本人によるスキルダメージ1回'], ['TOKEN', '悲嘆する下僕']]),
+      { ...n('targetHpPercent', '対象全員の命中前HP（%）', 100, 0, 100), step: 0.01 }],
+    traitNotes: ['同じHP条件にある対象群への本人由来の1回。下僕の攻撃や連続する爆発・範囲攻撃の総量は別計算。'] }),
+
+  // https://prts.wiki/w/Spuria : no source confirms equal chances for the three exclusive outcomes.
+  operator('char_4015_spuria', [1, 2].map(index => [index, [
+    phase('spuriaMode', 'ACTUAL', normal({ label: '選択した素質結果での1攻撃',
+      ...(index === 1 ? { aspd: k('attack_speed') } : { atk: k('atk'), aspd: k('attack_speed') }),
+      actions: [{ label: '通常攻撃', role: 'MAIN', damageType: 'PHYSICAL', scale: 1, hits: choose('spuriaOutcome', 'DOUBLE', 2, 1) }],
+      dpsUnsupportedReason: '実際に選択した素質の結果による1攻撃。抽選込みの期待値とスタンによる中断は計算しません。',
+      periodTotal: period('素質の排他的な3効果の確率分布と、自己スタンの時間推移は未対応です。'),
+      notes: ['選択した素質結果が実現した攻撃のみ。不発・2連撃・敵スタン・防御無視を同時発動させない。'] })),
+    phase('spuriaMode', 'EXPECTED', pending('抽選込みの期待値', '排他的な3効果の内訳確率は原資料で確認できていないため、均等確率の期待値を作りません。', ['素質1'])),
+    ...(index === 2 ? [phase('spuriaMode', 'INTERRUPTED', pending('自己スタンを伴う攻撃', '初段の後に自己スタンした場合の2連撃の継続・中断は未確認です。'))] : []),
+  ], [select('spuriaMode', '計算対象', [['ACTUAL', '素質の結果を指定した1攻撃'], ['EXPECTED', '抽選込みの期待値'],
+    ...(index === 2 ? [['INTERRUPTED', '自己スタンを伴う攻撃'] as [string, string]] : [])]),
+    ...(index === 2 ? [b('spuriaSelfStunAbsent', '今回の攻撃で自己スタンが発生しない', true)] : [])]] as const),
+  [talent(0, '弾薬性能比較試験', v => {
+    if (v.read('prob') !== 0.7) v.issue('確認済みの素質全体の発動確率70%と一致しません。')
+    return [effect('exclusive-double', 'description:その攻撃のみ2回攻撃になる', { item: 'ATTACK_BEHAVIOR', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: true,
+      status: '選択された2連撃をMAIN攻撃の命中数2として適用' }, { condition: eq('spuriaOutcome', 'DOUBLE') }),
+    effect('selected-penetration', 'def_penetrate', { item: 'DEFENSE_IGNORE_RATIO', operation: 'IGNORE_RATIO', unit: 'RATIO', value: v.read('def_penetrate') },
+      { condition: eq('spuriaOutcome', 'IGNORE'), timing: { type: 'EVENT', event: 'ATTACK' }, lifetime: { type: 'CURRENT_EVENT' } }),
+    effect('selected-stun', 'stun', { item: 'STATUS', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: true, status: `対象を${v.read('stun')}秒スタン` },
+      { condition: eq('spuriaOutcome', 'STUN') })]
+  }, ['DAMAGE', 'ATTACK_BEHAVIOR', 'STATUS'])],
+  { inputs: [select('spuriaOutcome', '実際の素質結果', [['NONE', '不発'], ['DOUBLE', '2連撃'], ['STUN', '敵スタン'], ['IGNORE', '防御力80%無視']])] }),
+
+  // https://prts.wiki/w/Thorns_the_Lodestar : cached-ATK, source-less periodic damage.
+  operator('char_1039_thorn2', [
+    [2, alchemyDot(k('atk_scale'), { duration: k('projectile_delay_time') })],
+    [3, [phase('alchemyPhase', 'STABLE', alchemyDot(thornMature('atk_scale', 'max_atk_scale'), {
+      label: '錬金区域1つの毎秒ダメージ', duration: k('projectile_delay_time'),
+      defenseReductionRatio: product(-1, thornMature('def', 'max_def')),
+      resistanceReductionRatio: product(-1, thornMature('magic_resistance', 'max_magic_resistance')),
+    })), phase('alchemyPhase', 'TRANSITION', pending('区域の効果が上昇する途中', '継続ダメージと能力低下の更新順を追跡する途中状態は未対応です。'))],
+    [select('alchemyPhase', '計算対象', [['STABLE', '現在の区域効果'], ['TRANSITION', '効果上昇中の状態変化']]),
+      b('thornRegionMature', '区域の効果が最大（15秒後）', true), b('thornReductionApplied', '選択した区域の能力低下が付与済み', true)]],
+  ], [talent(0, '心相', v => [effect('alchemy-atk', 'atk', { item: 'ATK_BUFF_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: v.read('atk') }),
+    status('alchemy-duration', '投擲時に範囲内に他のオペレーターがいると錬金ユニットの持続時間を延長')], ['DAMAGE', 'ABILITY']),
+  talent(1, '視界', v => [effect('base-speed', 'attack_speed_ally', { item: 'ATTACK_SPEED', operation: 'ADD_VALUE', unit: 'POINT', value: v.read('attack_speed_ally') }),
+    effect('terrain-speed', 'attack_speed_ally_extra', { item: 'ATTACK_SPEED', operation: 'ADD_VALUE', unit: 'POINT', value: v.read('attack_speed_ally_extra') }, { condition: eq('thornLongPath', true) }),
+    status('enemy-speed', '配置中は敵の攻撃速度を低下')], ['ABILITY'])],
+  { inputs: [b('alchemyAttackUnchanged', '作成時から自身の攻撃力が不変', true), b('alchemyTargetsInArea', '対象全員が錬金効果範囲内', true),
+    b('alchemyTargetsGround', '対象全員が地上にいる', true), b('thornLongPath', '自身が6マス以上の直線経路内にいる')],
+    traitNotes: [alchemyScope], deferredSkills: [{ skillIndex: 1, reason: '治療と味方の防御力上昇のみを行う錬金ユニットのため、対象外（NOT_APPLICABLE）登録を使用する。未確認の攻撃効果はない。' }] }),
+
+  // https://prts.wiki/w/Tin_Man : the source-less BUFF damage receives the unit's own DOT vulnerability.
+  operator('char_4151_tinman', [[1, alchemyDot(k('atk_scale'), { duration: k('projectile_delay_time') })],
+    [2, alchemyDot(k('atk_scale'), { duration: k('projectile_delay_time') })]],
+  [talent(0, '「オン・ザ・ウェイ」', () => [status('recruitment', '統合戦略の希望消費と負荷臨界点を変更')], ['ABILITY']),
+    talent(1, '朽ちゆく魂', v => [effect('alchemy-dot-vulnerability', 'skill@damage_scale', {
+      item: 'DAMAGE_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('skill@damage_scale'),
+    }, { target: enemyTarget })], ['DAMAGE'])],
+  { inputs: [b('alchemyAttackUnchanged', '作成時から自身の攻撃力が不変', true), b('alchemyTargetsInArea', '対象全員が錬金効果範囲内', true),
+    b('alchemyTargetsGround', '対象全員が地上にいる', true)], traitNotes: [alchemyScope, '朽ちゆく魂は錬金ユニットの継続ダメージに1回だけ適用する。'] }),
+
+  // https://prts.wiki/w/Tecno : the operator and the puppets are distinct actors.
+  operator('char_4164_tecno', [1, 2].map(index => [index, [
+    phase('tecnoPhase', 'OWNER', normal({ label: '本人の通常攻撃', ...(index === 1 ? { atk: k('atk') } : { aspd: k('attack_speed') }),
+      periodTotal: period(ownerTokenScope), notes: [ownerTokenScope] })),
+    phase('tecnoPhase', 'TOKEN', pending('パペットダンサーの攻撃', 'パペットダンサーの独立ステータスによる攻撃は未対応です。', ['スキル', '素質1'])),
+  ]] as const), [talent(0, '即席パペット', () => [status('puppets', '地面マスの敵撃破時にパペットダンサーを召喚する')], ['ABILITY'])],
+  { inputs: [select('tecnoPhase', '計算対象', [['OWNER', '本人の通常攻撃'], ['TOKEN', 'パペットダンサー']])], traitNotes: [ownerTokenScope] }),
+
+  // https://prts.wiki/w/SilverAsh_the_Reignfrost : Tenzin's projectiles use SilverAsh's ATK.
+  operator('char_1045_svash2', [
+    [2, [phase('silverashPhase', 'OWNER', normal({ label: '本人の斬撃1回', kind: 'SKILL_ACTION', maxTargets: k('max_target'),
+      actions: [{ label: '本人の斬撃', role: 'MAIN', damageType: 'PHYSICAL', scale: k('atk_scale') }], periodTotal: period(eventScope) })),
+      phase('silverashPhase', 'ALLY', pending('味方配置時の斬撃', '配置した味方自身の攻撃力を参照する斬撃は未対応です。'))],
+      [select('silverashPhase', '計算対象', [['OWNER', '本人の斬撃1回'], ['ALLY', '味方配置時の斬撃']])]],
+    [3, [phase('silverashPhase', 'OWNER', normal({ label: '脆弱付与済みの対象への直線攻撃', maxTargets: null,
+      actions: [{ label: '本人の直線攻撃', role: 'MAIN', damageType: 'PHYSICAL', scale: k('bird_atk_scale') }],
+      damageScale: k('damage_scale'), periodTotal: period('本人からの直線攻撃のみ。脆弱の初回付与、協同攻撃との重なりや総ダメージは計算しません。'),
+      notes: ['自身のS3の脆弱が命中前から有効な同条件の対象群を評価する。協同攻撃は別起点なので合算しない。'] })),
+      phase('silverashPhase', 'FIRST', pending('脆弱を初めて付与する攻撃', '最初の命中における脆弱付与とダメージの処理順は未確認です。')),
+      phase('silverashPhase', 'ALLY', pending('協同攻撃を含む合計', '本人と協同攻撃の索敵位置・弾道の重なり・脆弱付与順を含む合計は未対応です。'))],
+      [select('silverashPhase', '計算対象', [['OWNER', '脆弱付与済みの本人の攻撃'], ['FIRST', '脆弱の初回付与'], ['ALLY', '協同攻撃を含む合計']]),
+        b('silverashFragileActive', '命中前からS3の脆弱が有効', true)]],
+  ], [talent(0, 'オープンゲーム', () => [status('deployment-order', '風雪の眼と配置待機順序を変更'), status('deployment-sp', '初期SPと再配置時間を変更')], ['RESOURCE']),
+    talent(1, '雪境の先駆け', () => [status('kjerag-survival', '味方イェラグに凍結無効、防御力上昇、HP回復を付与')], ['SURVIVAL'])],
+  { deferredSkills: [{ skillIndex: 1, reason: 'DP獲得、配置待機中の味方のコスト変更とバリアのみのため、対象外（NOT_APPLICABLE）登録を使用する。未確認の攻撃効果はない。' }] }),
+
   // https://prts.wiki/w/Titi : ordinary extra damage and sleep ticks are separate events.
   operator('char_4056_titi', [
     [1, [titiPhase('ATTACK', titiAttack()), titiPhase('DOT', titiDot()),
@@ -154,6 +261,23 @@ export const EXPANDED_SPECIAL_DEFINITIONS: readonly ExpandedOperatorDefinition[]
 ]
 
 for (const definition of EXPANDED_SPECIAL_DEFINITIONS) for (const recipe of definition.recipes) {
+  if (definition.operatorId === 'char_450_necras' && recipe.skillIndex === 2) recipe.conditionRequirements = [
+    { when: { input: 'necrasPhase', comparison: 'EQ', value: 'OWNER' }, condition: { input: 'necrasLinkActive', comparison: 'EQ', value: true }, reason: 'リンクが継続している対象への拘束ダメージを指定してください。中断後のダメージは発生しません。' },
+  ] satisfies GuardSkillRecipe['conditionRequirements']
+  if (definition.operatorId === 'char_4015_spuria' && recipe.skillIndex === 2) recipe.conditionRequirements = [
+    { when: { input: 'spuriaMode', comparison: 'EQ', value: 'ACTUAL' }, condition: { input: 'spuriaSelfStunAbsent', comparison: 'EQ', value: true }, reason: '自己スタンが発生しない今回の1攻撃を指定してください。初段後のスタンで中断されるケースは別の未対応段階です。' },
+  ] satisfies GuardSkillRecipe['conditionRequirements']
+  if (definition.operatorId === 'char_1039_thorn2' || definition.operatorId === 'char_4151_tinman') recipe.conditionRequirements = [
+    { condition: { input: 'alchemyAttackUnchanged', comparison: 'EQ', value: true }, reason: '投擲時から現在まで攻撃力が変わらない条件を指定してください。作成時の別の攻撃力は未対応です。' },
+    { condition: { input: 'alchemyTargetsInArea', comparison: 'EQ', value: true }, reason: '対象全員が同じ錬金ユニットの効果範囲内にいる条件を指定してください。' },
+    ...(definition.operatorId === 'char_4151_tinman' || recipe.skillIndex === 2
+      ? [{ condition: { input: 'alchemyTargetsGround', comparison: 'EQ' as const, value: true }, reason: 'この錬金ユニットは地上の敵のみを対象とします。' }] : []),
+    ...(definition.operatorId === 'char_1039_thorn2' && recipe.skillIndex === 3
+      ? [{ condition: { input: 'thornReductionApplied', comparison: 'EQ' as const, value: true }, reason: '現在の毎秒値は選択した効果量の能力低下が既に付与された対象で評価します。' }] : []),
+  ] satisfies GuardSkillRecipe['conditionRequirements']
+  if (definition.operatorId === 'char_1045_svash2' && recipe.skillIndex === 3) recipe.conditionRequirements = [
+    { when: { input: 'silverashPhase', comparison: 'EQ', value: 'OWNER' }, condition: { input: 'silverashFragileActive', comparison: 'EQ', value: true }, reason: 'S3の脆弱が命中前から付与されている対象を指定してください。初回付与は別の段階として未対応です。' },
+  ] satisfies GuardSkillRecipe['conditionRequirements']
   if (definition.operatorId === 'char_4056_titi') recipe.conditionRequirements = [
     { condition: { input: 'titiTargetOtherwiseInvulnerable', comparison: 'EQ', value: false }, reason: '睡眠以外の無敵・ステルス・選択不能がない対象を指定してください。' },
     { when: { input: 'titiPhase', comparison: 'EQ', value: 'ATTACK' }, condition: { input: 'titiTargetNonMoving', comparison: 'EQ', value: true }, reason: '命中前後とも非移動状態の対象を指定してください。移動中から睡眠への変化は未対応です。' },

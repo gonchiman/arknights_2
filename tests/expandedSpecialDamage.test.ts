@@ -49,9 +49,9 @@ function total(id: string, index: number, result: ReturnType<typeof output>) {
     combinedDps: result.rows[0].combinedDps, allTargetsCombinedDps: result.rows[0].allTargetsCombinedDps })
 }
 
-test('特殊イベント5人12技能は全素質を原文から評価し、既定状態で数値を出す', () => {
-  assert.equal(EXPANDED_SPECIAL_DEFINITIONS.length, 5)
-  assert.equal(EXPANDED_SPECIAL_DEFINITIONS.flatMap(value => value.recipes).length, 12)
+test('特殊イベント11人25技能は全素質を原文から評価し、既定状態で数値を出す', () => {
+  assert.equal(EXPANDED_SPECIAL_DEFINITIONS.length, 11)
+  assert.equal(EXPANDED_SPECIAL_DEFINITIONS.flatMap(value => value.recipes).length, 25)
   for (const definition of EXPANDED_SPECIAL_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     const registered = [...definition.recipes, ...(definition.deferredSkills ?? [])].map(skill => skill.skillIndex).sort()
@@ -202,9 +202,136 @@ test('未確認の状態遷移を保留に残し、全保存原文の変更を�
     (skill: SkillRecord) => { skill.skillLevels.at(-1)!.description += '未知の攻撃効果' },
     (skill: SkillRecord) => { skill.operatorProfile.talents!.forEach(talent => talent.candidates!.forEach(value => { value.description += '未知の素質効果' })) },
   ]) {
-    const result = output(source.operatorId, 1, {}, mutate)
+    const index = EXPANDED_SPECIAL_DEFINITIONS.find(definition => definition.operatorId === source.operatorId)!.recipes[0].skillIndex
+    const result = output(source.operatorId, index, {}, mutate)
     assert.ok(result.unsupportedReasons.length > 0)
     assert.deepEqual(result.rows, [])
   }
+})
+
+test('錬金ユニットは投擲時ATKの毎秒値を計算し、術耐性低下と継続ダメージ増加を1回だけ適用する', () => {
+  for (const id of ['char_1039_thorn2', 'char_4151_tinman']) for (const index of id === 'char_1039_thorn2' ? [2, 3] : [1, 2]) {
+    for (const mature of [false, true]) for (const res of [0, 40, 100]) {
+      const { result, row } = at(id, index, { actualAttackTargetCount: 3, thornRegionMature: mature }, res)
+      const isThorn = id === 'char_1039_thorn2', isRegion = isThorn && index === 3
+      const atk = attack(result.stats.attack, isThorn ? 0.1 : 0)
+      const scale = isRegion ? mature ? 3.9 : 2.1 : isThorn ? 1.8 : index === 1 ? 0.75 : 1.1
+      const reduction = isRegion ? mature ? 0.5 : 0.35 : 0
+      close(row.damageOverTimeDps, atk * scale * Math.max(0.05, 1 - res * (1 - reduction) / 100) * (isThorn ? 1 : 1.2))
+      assert.equal(row.perAttack, 0)
+      assert.equal(row.dps, null)
+      assert.equal(row.combinedDps, null)
+      assert.equal(result.attackInterval, null)
+      assert.equal(total(id, index, result).totalDamage, null)
+    }
+  }
+  const a = at('char_1039_thorn2', 2, { thornLongPath: false }).row.damageOverTimeDps
+  const b = at('char_1039_thorn2', 2, { thornLongPath: true }).row.damageOverTimeDps
+  close(a, b!) // ASPD changes do not increase an alchemy unit's tick rate.
+})
+
+test('錬金ユニットの仮想物理属性でもDEF低下を先に適用し、地上・投擲時ATK・範囲の条件を検査する', () => {
+  const virtual = output('char_1039_thorn2', 3, { thornRegionMature: true }, undefined,
+    { virtualMainAttackType: 'PHYSICAL', enemy: { defense: 500, resistance: 40 } })
+  assert.deepEqual(virtual.unsupportedReasons, [])
+  close(virtual.rows[0].damageOverTimeDps, attack(virtual.stats.attack, 0.1) * 3.9 - 250)
+  for (const id of ['char_1039_thorn2', 'char_4151_tinman']) for (const key of ['alchemyAttackUnchanged', 'alchemyTargetsInArea', 'alchemyTargetsGround']) {
+    const result = output(id, 2, { [key]: false })
+    assert.ok(result.unsupportedReasons.length > 0)
+    assert.deepEqual(result.rows, [])
+  }
+  assert.ok(at('char_1039_thorn2', 3, { alchemyTargetsGround: false }).row.damageOverTimeDps! > 0)
+  assert.deepEqual(output('char_1039_thorn2', 3, { thornReductionApplied: false }).rows, [])
+})
+
+test('テクノは本人のATK50%とASPD100を分離し、パペットのHP/DEF/ブロックを転用しない', () => {
+  for (const index of [1, 2]) {
+    const { result, row } = at('char_4164_tecno', index, {}, 40)
+    const atk = attack(result.stats.attack, index === 1 ? 0.5 : 0)
+    close(row.perAttack, atk * 0.6)
+    close(result.attackInterval, result.stats.baseAttackTime / (index === 2 ? 2 : 1))
+    close(row.dps, row.perAttack / result.attackInterval!)
+    assert.equal(result.maxTargetCount, 1)
+    assert.equal(total('char_4164_tecno', index, result).totalDamage, null)
+    assert.deepEqual(output('char_4164_tecno', index, { tecnoPhase: 'TOKEN' }).rows, [])
+  }
+  const virtual = output('char_4164_tecno', 1, {}, undefined, { virtualMainAttackType: 'PHYSICAL', enemy: { defense: 300, resistance: 40 } })
+  assert.deepEqual(virtual.unsupportedReasons, [])
+  close(virtual.rows[0].perAttack, attack(virtual.stats.attack, 0.5) - 300)
+})
+
+test('凛御シルバーアッシュは本人斬撃6対象とS3付与済み脆弱を分け、別起点の攻撃を加算しない', () => {
+  const slash = output('char_1045_svash2', 2, { actualAttackTargetCount: 6 }, undefined, { enemy: { defense: 350, resistance: 40 } })
+  assert.deepEqual(slash.unsupportedReasons, [])
+  close(slash.rows[0].perAttack, slash.stats.attack * 3.8 - 350)
+  close(slash.rows[0].allTargetsPerAttack, (slash.stats.attack * 3.8 - 350) * 6)
+  assert.equal(slash.rows[0].dps, null)
+  assert.deepEqual(output('char_1045_svash2', 2, { actualAttackTargetCount: 7 }).rows, [])
+  const line = output('char_1045_svash2', 3, { actualAttackTargetCount: 4 }, undefined, { enemy: { defense: 350, resistance: 40 } })
+  assert.deepEqual(line.unsupportedReasons, [])
+  close(line.rows[0].perAttack, (line.stats.attack * 2 - 350) * 1.3)
+  close(line.rows[0].allTargetsPerAttack, line.rows[0].perAttack * 4)
+  close(line.rows[0].dps, line.rows[0].perAttack / 1.2)
+  assert.equal(total('char_1045_svash2', 3, line).totalDamage, null)
+  assert.deepEqual(output('char_1045_svash2', 3, { silverashFragileActive: false }).rows, [])
+  for (const phase of ['FIRST', 'ALLY']) assert.deepEqual(output('char_1045_svash2', 3, { silverashPhase: phase }).rows, [])
+  const virtual = output('char_1045_svash2', 3, {}, undefined, { virtualMainAttackType: 'ARTS', enemy: { defense: 350, resistance: 40 } })
+  assert.deepEqual(virtual.unsupportedReasons, [])
+  close(virtual.rows[0].perAttack, virtual.stats.attack * 2 * 0.6 * 1.3)
+})
+
+test('V9の本人限定・付与順未対応は条件付きに残り、対象外2技能の分類を保つ', () => {
+  const rows = buildDamageCalculatorThreeCoverage(sources.flatMap(source => source.skills.map(skill => record(source.operatorId, skill.skillIndex))))
+  for (const [id, index] of [['char_4164_tecno', 1], ['char_4164_tecno', 2], ['char_1045_svash2', 2], ['char_1045_svash2', 3], ['char_1039_thorn2', 3],
+    ['char_450_necras', 1], ['char_450_necras', 2], ['char_450_necras', 3], ['char_4015_spuria', 1], ['char_4015_spuria', 2]] as const) {
+    const row = rows.find(row => row.skill.operatorId === id && row.skill.skillIndex === index)!
+    assert.equal(row.status, 'CONDITIONAL', `${id} S${index}`)
+    assert.ok(row.deferredReasons.length > 0)
+  }
+  for (const id of ['char_1039_thorn2', 'char_1045_svash2']) assert.equal(rows.find(row => row.skill.operatorId === id && row.skill.skillIndex === 1)!.status, 'NOT_APPLICABLE')
+})
+
+test('ネクラスは本人由来の爆発・拘束・範囲攻撃1回にHP50%未満の140%を適用する', () => {
+  for (const index of [1, 2, 3]) for (const hp of [0, 49.99, 50, 100]) for (const res of [0, 40, 100]) {
+    const count = index === 2 ? 2 : 4
+    const { result, row } = at('char_450_necras', index, { targetHpPercent: hp, actualAttackTargetCount: count }, res)
+    const scale = index === 1 ? 4.5 : index === 2 ? 1.6 : 8
+    close(row.perAttack, result.stats.attack * scale * (hp < 50 ? 1.4 : 1) * Math.max(0.05, 1 - res / 100))
+    close(row.allTargetsPerAttack, row.perAttack * count)
+    assert.equal(row.dps, null)
+    assert.equal(row.damageOverTimeDps, null)
+    assert.equal(row.attackComponents?.[0].count, 1)
+    assert.equal(total('char_450_necras', index, result).totalDamage, null)
+    assert.deepEqual(output('char_450_necras', index, { necrasPhase: 'TOKEN' }).rows, [])
+  }
+  assert.deepEqual(output('char_450_necras', 2, { necrasLinkActive: false }).rows, [])
+  assert.deepEqual(output('char_450_necras', 2, { actualAttackTargetCount: 3 }).rows, [])
+  const virtual = output('char_450_necras', 1, { targetHpPercent: 49.99 }, undefined, { virtualMainAttackType: 'PHYSICAL', enemy: { defense: 600, resistance: 40 } })
+  assert.deepEqual(virtual.unsupportedReasons, [])
+  close(virtual.rows[0].perAttack, virtual.stats.attack * 4.5 * 1.4 - 600)
+})
+
+test('スプリアの不発・2連撃・スタン・80%無視は排他的な実現値で、抽選期待値を仮定しない', () => {
+  for (const index of [1, 2]) for (const outcome of ['NONE', 'DOUBLE', 'STUN', 'IGNORE']) for (const defense of [0, 600, 10000]) {
+    const result = output('char_4015_spuria', index, { spuriaOutcome: outcome }, undefined, { enemy: { defense, resistance: 40 } })
+    assert.deepEqual(result.unsupportedReasons, [])
+    const atk = attack(result.stats.attack, index === 2 ? 0.3 : 0), hits = outcome === 'DOUBLE' ? 2 : 1
+    const def = defense * (outcome === 'IGNORE' ? 0.2 : 1)
+    close(result.rows[0].perAttack, Math.max(atk - def, atk * 0.05) * hits)
+    assert.equal(result.rows[0].attackComponents?.[0].count, hits)
+    assert.equal(result.rows[0].dps, null)
+    assert.equal(result.attackInterval, null)
+    assert.equal(result.hasProbabilisticDamage, false)
+    assert.equal(total('char_4015_spuria', index, result).totalDamage, null)
+  }
+  for (const index of [1, 2]) for (const outcome of ['DOUBLE', 'IGNORE']) {
+    const result = output('char_4015_spuria', index, { spuriaOutcome: outcome }, undefined,
+      { virtualMainAttackType: 'ARTS', enemy: { defense: 600, resistance: 40 } })
+    assert.deepEqual(result.unsupportedReasons, [])
+    close(result.rows[0].perAttack, attack(result.stats.attack, index === 2 ? 0.3 : 0) * 0.6 * (outcome === 'DOUBLE' ? 2 : 1))
+    assert.deepEqual(output('char_4015_spuria', index, { spuriaMode: 'EXPECTED' }).rows, [])
+  }
+  assert.deepEqual(output('char_4015_spuria', 2, { spuriaSelfStunAbsent: false }).rows, [])
+  assert.deepEqual(output('char_4015_spuria', 2, { spuriaMode: 'INTERRUPTED' }).rows, [])
 })
 

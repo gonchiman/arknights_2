@@ -29,6 +29,9 @@ const phase = (input: string, value: string, stage: GuardStage): GuardStage => (
 const pending = (label: string, reason: string, options: Partial<GuardStage> = {}): GuardStage => ({ id: 'pending', label, kind: 'SKILL_ACTION',
   actions: [], unresolved: [reason], calculationIssues: [{ id: label, reason, relatedSections: ['スキル'] }], ...options })
 const blocked = bool('target.blockedByOwnReinforcement', '対象が自身の援軍にブロックされている')
+const actorChoice = select('summonDamageActor', '計算対象', [['TOKEN', '召喚物1体'], ['OWNER', 'オペレーター本人']])
+const number = (key: string, label: string, min: number, max: number, defaultValue = min): GuardInput =>
+  ({ key, label, kind: 'number', min, max, defaultValue, step: 1 })
 const operator = (operatorId: string, recipes: readonly [number, readonly GuardStage[], (readonly GuardInput[])?][],
   talents: readonly ExpandedTalentDefinition[], inputs: readonly GuardInput[] = []): ExpandedOperatorDefinition => {
   const source = sources.find(item => item.operatorId === operatorId)!
@@ -94,4 +97,66 @@ export const EXPANDED_SUMMON_DEFINITIONS: readonly ExpandedOperatorDefinition[] 
     actions: [{ label: 'メイヤーの攻撃力を参照する爆発', role: 'MAIN', damageType: 'ARTS', scale: key('atk_scale') }],
     periodTotal: { kind: 'UNSUPPORTED', reason: '機械川獺1体の爆発1回。複数体の爆発範囲の重なり・SP周期は計算しません。' } }]]],
     [talent(0, 'メカ・カワウソ', () => [status('meebo', '機械川獺を召喚。ブロック中の敵の攻撃速度低下は与ダメージを増やさない')])]),
+
+  operator('char_248_mgllan', [
+    [2, [phase('summonDamageActor', 'TOKEN', token('token_10005_mgllan_drone2', 'DDF・L 1体・スキル中', 'ARTS', {
+      aspd: key('attack_speed'), maxTargets: null,
+      notes: ['攻撃が命中する同じ範囲内の対象を計算。終了時のドローン回収は攻撃中のDPSへ含めない。'] })),
+      phase('summonDamageActor', 'OWNER', ordinary('マゼラン本人・スキル中', 'ARTS', { aspd: key('attack_speed') }))], [actorChoice]],
+    [3, [phase('summonDamageActor', 'TOKEN', token('token_10005_mgllan_drone3', 'DDF・A 1体・スキル中', 'PHYSICAL', {
+      atk: key('atk'), maxTargets: null })),
+      phase('summonDamageActor', 'OWNER', ordinary('マゼラン本人・スキル中', 'ARTS', { atk: key('atk') }))], [actorChoice]],
+  ], [talent(0, '支援ドローン・DDF', () => [status('ddf', '装備スキルに対応したドローンを召喚。配置可能数を攻撃倍率へ加えない')]),
+    talent(1, '光学迷彩カスタム', () => [status('ddf-camouflage', '配置後のドローンをステルス状態にする')])]),
+
+  operator('char_2023_ling', [
+    [1, [phase('summonDamageActor', 'TOKEN', token('token_10020_ling_soul1', '清平1体・スキル中', 'ARTS', { atk: key('atk'), aspd: key('attack_speed') })),
+      phase('summonDamageActor', 'OWNER', ordinary('リィン本人・スキル中', 'ARTS', { atk: key('atk'), aspd: key('attack_speed') }))], [actorChoice]],
+    [2, [phase('summonDamageActor', 'TOKEN', token('token_10020_ling_soul2', '逍遥1体・スキル発動1回', 'ARTS', { kind: 'SKILL_ACTION', maxTargets: 2,
+      actions: [{ label: '逍遥のスキル攻撃', role: 'MAIN', damageType: 'ARTS', scale: key('atk_scale') }],
+      periodTotal: { kind: 'UNSUPPORTED', reason: '選択した召喚物1体の発動1回のみ。他の召喚物やリィン本人との重複・再発動周期は計算しません。' } })),
+      phase('summonDamageActor', 'OWNER', ordinary('リィン本人・スキル発動1回', 'ARTS', { kind: 'SKILL_ACTION', maxTargets: 2,
+        actions: [{ label: 'リィンのスキル攻撃', role: 'MAIN', damageType: 'ARTS', scale: key('atk_scale') }] }))], [actorChoice]],
+  ], [talent(0, '灯を挑げ夢に問い', () => [status('ling-summon', 'スキルごとに異なる召喚物を使用')]),
+    talent(1, '酔吟の興、ここに極まれり', v => [{ ...ctx('ling-refund-atk', 'atk'), item: 'ATK_BUFF_RATIO', operation: 'ADD_RATIO', unit: 'RATIO',
+      value: { type: 'CALC', operation: 'MULTIPLY', values: [v.read('atk'), { type: 'METRIC', metric: 'lingRefundStacks' }] } },
+      status('ling-refund-sp', '撃破・吸収・回収時にリィン本人のSPを回復。攻撃力上昇はリィン本人にだけ適用')])],
+    [number('lingRefundStacks', 'リィンの攻撃力上昇の重複数', 0, 5)]),
+
+  // https://prts.wiki/w/凯尔希 : the S2 ASPD belongs to Kal'tsit; Mon3tr only gains ATK.
+  operator('char_003_kalts', ([1, 2] as const).map(index => [index, [
+    phase('mon3trEvent', 'ATTACK', token('token_10002_kalts_mon3tr', 'Mon3tr 1体・スキル中', 'PHYSICAL', index === 2
+      ? { atk: key('attack@atk'), maxTargets: 3, notes: ['複数対象を指定する場合、全対象がMon3trにブロックされている状態。攻撃速度+100はケルシーの治療にだけ適用。'] }
+      : { notes: ['防御力上昇中もMon3trは通常攻撃を続ける。ケルシーの治療や物理回避は与ダメージに加えない。'] })),
+    phase('mon3trEvent', 'DEATH', { id: 'death', label: 'Mon3tr死亡時・素質の爆発1回', kind: 'SKILL_ACTION', maxTargets: null,
+      actor: { kind: 'TOKEN', tokenKey: 'token_10002_kalts_mon3tr' },
+      actions: [{ label: 'ブレークリビルド', role: 'ADDITIONAL', damageType: 'TRUE', basis: 'ATK_STAT', scale: 0, flatDamage: 1200 }],
+      periodTotal: { kind: 'UNSUPPORTED', reason: '死亡時の素質ダメージ1回。手動撤退では発生しません。死亡頻度は計算しません。' } }),
+  ], [select('mon3trEvent', '計算対象', [['ATTACK', 'Mon3trの攻撃'], ['DEATH', 'Mon3tr死亡時の爆発']])]]),
+  [talent(0, 'Mon3tr', () => [status('mon3tr', 'Mon3trを配置・治療可能。ケルシーの範囲外でMon3trの防御力が0になる')]),
+    talent(1, 'ブレークリビルド', () => [status('mon3tr-death', '死亡時の1200確定ダメージは専用の段階で評価。生存中の攻撃へ重複加算しない')])]),
+
+  operator('char_427_vigil', [[2, [token('token_10028_vigil_wolf', '狼の群れ・強化された次の1攻撃', 'PHYSICAL', { kind: 'NEXT_ATTACK',
+    actions: [{ label: '狼の隻影による連撃', role: 'MAIN', damageType: 'PHYSICAL', scale: key('vigil_wolf_s_2.atk_scale'), hits: input('wolfCount') }],
+    notes: ['指定した狼の隻影数が1攻撃中に変化しない状態。ブロック数は連撃数を決めるが、攻撃対象数は1体。'] })]]],
+    [talent(0, '群狼の統率者', () => [status('wolf-count', '狼の隻影の数に応じてブロック数と攻撃回数が増加。致命傷で減少')]),
+      talent(1, '飢えたる群狼', v => {
+        // The same penetration exists on the token's independently validated talent source.
+        if (v.read('def_penetrate_fixed') !== 175) v.issue('本人と狼の群れの確認済み防御無視175が一致しません。')
+        return [{ ...ctx('wolf-defense-ignore', 'def_penetrate_fixed'),
+          condition: { type: 'COMPARE', metric: 'target.blockedByOwnReinforcement', comparison: 'EQ', value: true },
+          item: 'DEFENSE_IGNORE_FIXED', operation: 'IGNORE_FIXED', unit: 'POINT', value: v.read('def_penetrate_fixed') }]
+      })], [number('wolfCount', '狼の隻影の数', 1, 3, 2), { ...blocked, defaultValue: true }]),
+
+  operator('char_452_bstalk', [[2, [token('token_10014_bstalk_crab', 'ハガネガニ1体・スキル中', 'PHYSICAL', {
+    notes: ['スキルで召喚したハガネガニ1体の攻撃。配置可能マス数とカニの同時命中数を攻撃倍率にしない。防御力70%を攻撃力へ加えない。'] })]]],
+    [talent(0, 'プロブリーダー', () => [status('crab', 'ハガネガニを召喚。死亡後の復活周期は攻撃中のDPSへ含めない')])]),
+
+  operator('char_249_mlyss', ([1, 2, 3] as const).map(index => [index, [
+    phase('mlyssActor', 'OWNER', ordinary('ミュルジス本人・スキル中', 'PHYSICAL', { atk: key('atk'), ...(index === 1 ? { aspd: key('attack_speed') } : {}),
+      notes: ['本人に適用される攻撃力・攻撃速度上昇を評価。コピーしたオペレーターのステータスや水影の攻撃を混ぜない。'] })),
+    phase('mlyssActor', 'TOKEN', pending('うつろう水影の攻撃', 'コピー元のステータス・近接時の奪取・遠距離時の分裂と命中先を含む評価は未対応です。')),
+  ], [select('mlyssActor', '計算対象', [['OWNER', 'ミュルジス本人'], ['TOKEN', 'うつろう水影']])]]),
+    [talent(0, '清き水、即ち命なり', () => [status('flowing-shape', 'うつろう水影によるコピーは専用段階で区別。本人のステータスを変更しない')]),
+      talent(1, '開源節流', () => [status('rhine-cost', 'ライン生命の配置コストを軽減。攻撃性能へ加算しない')])], [blocked]),
 ]

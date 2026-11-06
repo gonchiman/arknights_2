@@ -283,10 +283,10 @@ test('追加4名の素質数値欠落や未確認のスキル更新は計算を�
   }
 })
 
-test('術師・補助・医療63名の141スキルを115レシピ・26保留に分け、全素質を登録する', () => {
+test('術師・補助・医療63名の141スキルを116レシピ・25保留に分け、全素質を登録する', () => {
   assert.equal(sources.length, 63)
   assert.equal(sources.reduce((sum, source) => sum + source.skills.length, 0), 141)
-  assert.equal(EXPANDED_ARTS_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 115)
+  assert.equal(EXPANDED_ARTS_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 116)
   for (const definition of EXPANDED_ARTS_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     const indices = [...definition.recipes.map(recipe => recipe.skillIndex), ...(definition.deferredSkills ?? []).map(skill => skill.skillIndex)]
@@ -727,4 +727,19 @@ test('灼獄は付与済みの固定20低下と素質40%低下を順に適用し
   const initial = output('char_134_ifrit', 3, { ifritS3DebuffActive: false })
   assert.deepEqual(initial.rows, [])
   assert.ok(initial.unsupportedReasons.length)
+})
+
+test('グラウコスS2のドローン800%に素質150%を重ねず、地上敵400%と区別する', () => {
+  for (const targetDrone of [false, true]) for (const type of ['ARTS', 'PHYSICAL'] as const) {
+    const result = output('char_326_glacus', 2, { targetDrone, actualAttackTargetCount: 3 }, undefined,
+      { enemy: { defense: 400, resistance: 50 }, virtualMainAttackType: type })
+    assert.deepEqual(result.unsupportedReasons, [])
+    const atk = result.stats.attack * (targetDrone ? 8 : 4)
+    const expected = type === 'ARTS' ? atk * 0.5 : Math.max(atk * 0.05, atk - 400)
+    close(result.rows[0].perAttack, expected)
+    close(result.rows[0].allTargetsPerAttack, expected * 3)
+    assert.equal(result.rows[0].dps, null)
+  }
+  const first = at('char_326_glacus', 1, { targetDrone: true })
+  close(first.row.perAttack, attack(first.result.stats.attack, 0.5) * 1.5)
 })

@@ -189,6 +189,30 @@
         "UNSUPPORTED": 80,
         "NOT_APPLICABLE": 138
       }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "v9",
+      "label": "v9 元素損傷の蓄積と召喚・特殊攻撃の拡張",
+      "capturedAt": "2026-11-06T04:24:05.133Z",
+      "source": {
+        "codeRevision": "5a4e57722985cbdfd97256a662bc80b3151dd206",
+        "codeDirty": true,
+        "codeFingerprint": "4b6a68c0f167a54d050a0fe0a5d7c3dd39ba96bd5032076c0efd78d12df3adde",
+        "gameDataRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+        "gameDataFingerprint": "e02f27762c44d0b083329e83375802cc2bef03f04777822f5f61220a0881a0ec",
+        "reconstructed": false
+      },
+      "file": "v9.json",
+      "sha256": "cd8eb9a377f57fa45e4c49a358bed3d0f579aafa003c90d23de16f468077fa43",
+      "skillCount": 915,
+      "counts": {
+        "SUPPORTED": 589,
+        "CONDITIONAL": 102,
+        "PENDING": 39,
+        "UNSUPPORTED": 45,
+        "NOT_APPLICABLE": 140
+      }
     }
   ]
 }

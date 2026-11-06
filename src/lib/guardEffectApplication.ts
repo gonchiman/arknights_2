@@ -4,6 +4,7 @@ import type { GuardConditions, GuardInput, GuardStage, GuardValue } from './guar
 import { getGuardRegisteredTalentNames } from './guardCombatPassives.ts'
 import { guardConditionMatches, resolveGuardValue } from './guardCombatValues.ts'
 import { evaluateGuardTraits } from './guardTraitEvaluation.ts'
+import { ELEMENT_LABELS } from './elementalBuildup.ts'
 
 const number = (value: number) => new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 6 }).format(value)
 const percent = (value: number) => `${number(value * 100)}%`
@@ -94,6 +95,9 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
       if (expression !== undefined) add(key, item, () => format(value(expression)), [expression], options)
     }
     numeric('atk', '攻撃力', stage.atk, signedPercent)
+    for (const buildup of stage.elementalBuildups ?? []) add(`buildup-${buildup.id}`, `${ELEMENT_LABELS[buildup.damageKind.elementId]}損傷`,
+      () => `${buildup.basis.type === 'ATK_STAT' ? '攻撃力' : buildup.basis.damageType === 'ARTS' ? '術ダメージ' : '与ダメージ'}の${percent(value(buildup.scale))}`,
+      [buildup.scale], { timing: stageTiming(stage) })
     numeric('block-count-add', 'ブロック数', stage.blockCountAdd, n => `${signed(n)}体`)
     numeric('trait-attack-ratio-scale', '特性の攻撃力上昇倍率', stage.traitAttackRatioScale, n => `×${number(n)}`)
     const intervalOptions = stage.kind === 'NORMAL' || inactive ? {} : {

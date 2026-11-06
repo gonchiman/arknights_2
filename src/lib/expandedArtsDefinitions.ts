@@ -423,10 +423,12 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
   operator('char_195_glassb', [[1, normal({ intervalAdd: k('base_attack_time') })], [2, normal({ atk: k('atk'), maxTargets: k('attack@max_target') })]], [
     talent(0, '探究者', v => [speed(v.read('attack_speed')), effect('defense', 'def', { item: 'DEFENSE_BUFF_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: v.read('def') })]),
   ]),
-  operator('char_326_glacus', [[1, normal({ atk: k('atk'), maxTargets: k('attack@max_target') })]], [
+  // https://prts.wiki/w/格劳克斯 : S2 disables talent 1; the drone bonus doubles attack scale.
+  operator('char_326_glacus', [[1, normal({ atk: k('atk'), maxTargets: k('attack@max_target') })],
+    [2, action('電磁パルス1回', choose('targetDrone', true, k('atk_scale[drone]'), k('atk_scale[normal]')))]], [
     talent(0, '対空装置', v => [effect('drone-attack-scale', 'atk_scale', { item: 'ATTACK_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('atk_scale') },
-      { condition: eq('targetDrone', true) }), status('drone-priority', 'ドローンを優先して攻撃')], ['DAMAGE', 'ATTACK_BEHAVIOR']),
-  ], { inputs: [b('targetDrone', '対象がドローン')], deferredSkills: [{ skillIndex: 2, reason: '対ドローン倍率と素質の通常攻撃倍率の適用範囲を確認する必要がある。' }] }),
+      { condition: { type: 'ALL', conditions: [eq('targetDrone', true), eq('skillIndex', 1)] } }), status('drone-priority', 'ドローンを優先して攻撃')], ['DAMAGE', 'ATTACK_BEHAVIOR']),
+  ], { inputs: [b('targetDrone', '対象がドローン')], traitNotes: ['同じドローン種別の対象群への1回を評価。S2に素質150%を追加乗算しない。'] }),
   operator('char_4032_provs', [[1, next(k('atk_scale'))], [2, [
     phase('provisoPhase', 'NORMAL', normal({ intervalAdd: k('base_attack_time'),
       periodTotal: unresolvedPeriod('発動時の範囲攻撃と通常攻撃を段階別に評価するため、合計の総ダメージは未計算です。') })),

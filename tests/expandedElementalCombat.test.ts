@@ -53,10 +53,10 @@ test('元素HPダメージは元素耐性だけを使用し、元素損傷・未
   assert.throws(() => calculateElementalDamageBreakdown(100, { type: 'ELEMENTAL_DAMAGE', elementId: 'unknown' }, 0))
 })
 
-test('先行5技能だけを登録し、残りを保留へ移さない', () => {
-  assert.equal(sources.length, 5)
-  assert.equal(sources.reduce((n, source) => n + source.skills.length, 0), 5)
-  assert.equal(EXPANDED_ELEMENTAL_DEFINITIONS.reduce((n, definition) => n + definition.recipes.length, 0), 5)
+test('確認済み14技能だけを登録し、残りを保留へ移さない', () => {
+  assert.equal(sources.length, 7)
+  assert.equal(sources.reduce((n, source) => n + source.skills.length, 0), 14)
+  assert.equal(EXPANDED_ELEMENTAL_DEFINITIONS.reduce((n, definition) => n + definition.recipes.length, 0), 14)
   assert.ok(EXPANDED_ELEMENTAL_DEFINITIONS.every(definition => !definition.deferredSkills?.length))
   for (const source of sources) {
     const skill = record(source.operatorId), coverage = buildDamageCalculatorThreeCoverage([skill])[0]

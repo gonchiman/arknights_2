@@ -69,7 +69,7 @@ function compareWithOrdinary(entry: DamageThreeComparisonEntry, conditions: Dama
 }
 
 test('DC3の対応スキル全段階を一意の行として列挙し、出典にない技能は作らない', () => {
-  assert.equal(catalog.length, 734)
+  assert.equal(catalog.length, 769)
   const expected = getDamageCalculatorThreeStructures().flatMap(structure => {
     const info = structure.basicInfo
     return (structure.guardRecipe?.stages ?? structure.effectStructure.stages)

@@ -14,7 +14,7 @@ export const TRAIT_STRUCTURE_JOB_IDS = ['fighter', 'lord', 'crusher', 'hammer', 
   'pioneer', 'agent', 'charger', 'stalker', 'protector', 'shotprotector', 'artsprotector', 'unyield', 'duelist', 'guardian', 'fortress', 'counsellor',
   'fastshot', 'aoesniper', 'longrange', 'siegesniper', 'reaperrange', 'closerange', 'hunter', 'bombarder', 'loopshooter', 'skybreaker', 'craftsman', 'merchant', 'dollkeeper',
   'corecaster', 'splashcaster', 'blastcaster', 'chain', 'slower', 'underminer', 'incantationmedic', 'phalanx',
-  'traper', 'skywalker', 'mercenary', 'physician', 'watchman', 'chainhealer', 'mystic', 'funnel', 'geek', 'bard', 'blessing', 'primprotector', 'primcaster', 'primguard', 'ritualist', 'summoner', 'tactician'] as const
+  'traper', 'skywalker', 'mercenary', 'physician', 'watchman', 'chainhealer', 'mystic', 'funnel', 'geek', 'bard', 'blessing', 'primprotector', 'primcaster', 'primguard', 'ritualist', 'summoner', 'tactician', 'soulcaster', 'alchemist'] as const
 export type TraitStructureJobId = typeof TRAIT_STRUCTURE_JOB_IDS[number]
 export interface TraitStructureSelection { readonly operatorId: string }
 export interface TraitStructureGrowthSelection { readonly phaseIndex?: number; readonly operatorLevel?: number }
@@ -138,6 +138,8 @@ const DEFINITIONS: Record<TraitStructureJobId, JobDefinition> = {
   fortress: { profession: 'TANK', descriptions: ['未ブロック時、遠距離範囲物理攻撃を行う'], keys: [], categories: ['ATTACK_BEHAVIOR', 'DAMAGE_TYPE'] },
   counsellor: { profession: 'PIONEER', descriptions: ['敵を2体までブロック 配置待機エリアの味方ユニットを強化可能'], keys: [], categories: ['BLOCK', 'ABILITY'] },
   summoner: { profession: 'SUPPORT', descriptions: ['敵に術ダメージを与える 召喚物を使用可能'], keys: [], categories: ['DAMAGE_TYPE', 'SUMMON'] },
+  soulcaster: { profession: 'CASTER', descriptions: ['術攻撃を行う 敵を倒すことで召喚物を召喚可能 自身の召喚物にブロックされている敵を攻撃可能'], keys: [], categories: ['DAMAGE_TYPE', 'SUMMON'] },
+  alchemist: { profession: 'SPECIAL', descriptions: ['錬金ユニットを投擲可能'], keys: [], categories: ['SUMMON'] },
   tactician: { profession: 'PIONEER', descriptions: ['攻撃範囲内で戦術召集点を指定し援軍を召喚できる 自身が援軍にブロックされている敵を攻撃する際、攻撃力が150%まで上昇'], keys: ['atk_scale'], categories: ['DAMAGE', 'SUMMON'] },
   primprotector: { profession: 'TANK', descriptions: ['敵を3体までブロック 元素損傷を与える能力を持つ'], keys: [], categories: ['BLOCK', 'ABILITY'] },
   primcaster: { profession: 'CASTER', descriptions: ['敵に術ダメージを与える 元素ダメージを与える能力を持つ'], keys: [], categories: ['DAMAGE_TYPE', 'ABILITY'] },
@@ -244,7 +246,13 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
       && source.prefabKey === '-1' && source.unlockCondition?.phase === 'PHASE_2' && source.unlockCondition.level === 1
       && blackboard.length === 1 && blackboard[0].key === 'runtime_cost' && blackboard[0].value === -9999
       && (blackboard[0].valueStr ?? null) === null
-    for (const entry of blackboard) if (!entry.key || (!definition.keys.includes(entry.key) && !initialDeploymentMarker)) {
+    // A display link to the separate Mon3tr operator is metadata, not a damage coefficient.
+    const mon3trLink = operator.operatorId === 'char_003_kalts' && operator.subProfessionId === 'physician'
+      && source.prefabKey === null && source.rangeId === null
+      && source.unlockCondition?.phase === 'PHASE_0' && source.unlockCondition.level === 1
+      && blackboard.length === 1 && blackboard[0].key === 'char_id' && blackboard[0].value === 0
+      && blackboard[0].valueStr === 'char_4179_monstr'
+    for (const entry of blackboard) if (!entry.key || (!definition.keys.includes(entry.key) && !initialDeploymentMarker && !mon3trLink)) {
       verified = false
       issues.push(`未確認の特性パラメータ：${entry.key ?? 'キーなし'}`)
     }
@@ -312,7 +320,7 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
         item: 'ATTACK_PRIORITY', operation: 'SET', unit: 'PRIORITY_RULE',
         value: job === 'fastshot' ? 'AIRBORNE' : job === 'longrange' ? 'LOWEST_DEFENSE' : 'HIGHEST_WEIGHT',
       })
-      if (['corecaster', 'splashcaster', 'blastcaster', 'chain', 'slower', 'underminer', 'incantationmedic', 'phalanx', 'mystic', 'funnel', 'artsprotector', 'aoesniper', 'primcaster', 'ritualist', 'summoner'].includes(job)) {
+      if (['corecaster', 'splashcaster', 'blastcaster', 'chain', 'slower', 'underminer', 'incantationmedic', 'phalanx', 'mystic', 'funnel', 'artsprotector', 'aoesniper', 'primcaster', 'ritualist', 'summoner', 'soulcaster'].includes(job)) {
         effects.push({ ...context('normal-attack-damage-type', 'DAMAGE', 'ATTACK_RULE', 'description:damage_type', 'NORMAL_ATTACK'),
           condition: ['phalanx', 'artsprotector'].includes(job) ? compare('source.skillActive', true) : null,
           item: 'DAMAGE_TYPE', operation: 'SET', unit: 'DAMAGE_TYPE', value: job === 'aoesniper' ? 'PHYSICAL' : 'ARTS' })
@@ -334,7 +342,7 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
         item: ['primprotector', 'ritualist'].includes(job) ? 'ELEMENTAL_BUILDUP_ENABLED' : 'ELEMENTAL_DAMAGE_ENABLED',
         operation: 'SET_ENABLED', unit: 'BOOLEAN', value: true,
       })
-      if (job === 'summoner' || job === 'tactician') effects.push({
+      if (['summoner', 'tactician', 'soulcaster', 'alchemist'].includes(job)) effects.push({
         ...context('summon-capability', 'CONTROL', 'DYNAMIC_RULE', 'description:summon_capability'),
         item: 'SUMMON_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: true,
       })

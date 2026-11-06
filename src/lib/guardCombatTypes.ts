@@ -22,6 +22,8 @@ export interface GuardInput {
 }
 
 export interface GuardDamageAction {
+  /** Stable source identity for explicitly linked damage-derived elemental buildup. */
+  id?: string
   label: string
   /** Reviewed provenance; virtual comparison never guesses from a label or array order. */
   role?: 'MAIN' | 'ADDITIONAL'
@@ -52,6 +54,15 @@ export interface GuardDamageAction {
   timing?: 'PER_ATTACK' | 'PER_SECOND' | 'ON_DEPLOY'
   /** Added skill damage may have its own type/count while the main attack inherits traits. */
   traitOverrides?: readonly GuardTraitOverride[]
+}
+
+export interface GuardElementalBuildup {
+  id: string
+  label: string
+  damageKind: Extract<CombatDamageKind, { type: 'ELEMENTAL_BUILDUP' }>
+  scale: GuardValue
+  /** ATK_STAT never receives attack multipliers, mitigation, or critical effects. */
+  basis: { type: 'ATK_STAT' } | { type: 'DEALT_DAMAGE'; actionId: string; damageType?: HpDamageType }
 }
 
 export type GuardCalculationSection = 'スキル' | '特性' | `素質${number}`
@@ -95,6 +106,8 @@ export interface GuardStage {
   /** A next-attack skill may include its skill-start effect in this one activation. */
   includesSkillActivation?: boolean
   actions: readonly GuardDamageAction[]
+  /** Finite applications evaluated independently from HP damage. */
+  elementalBuildups?: readonly GuardElementalBuildup[]
   defenseIgnoreRatio?: GuardValue
   defenseIgnoreFixed?: GuardValue
   resistanceIgnoreFixed?: GuardValue
@@ -131,6 +144,7 @@ export interface GuardSkillRecipe {
 }
 
 export interface GuardPassiveModifiers {
+  elementalBuildups?: GuardElementalBuildup[]
   attackRatio: number
   attackFlat: number
   attackFinalFlat?: number

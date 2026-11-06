@@ -14,6 +14,7 @@ function record(id: string, index: number): SkillRecord {
   const source = sources.find(source => source.operatorId === id)!, entry = source.skills.find(skill => skill.skillIndex === index)!
   const raw = structuredClone(entry.raw)
   return { id: `${id}/${index}`, operatorId: id, operatorName: source.operatorName, skillId: entry.skillId, skillIndex: index,
+    overrideTokenKey: source.profile.summonSkillTokenKeys?.[index - 1] ?? null,
     skillName: raw.name!, profession: source.profession, professionLabel: source.profession, rarity: source.rarity,
     subProfessionId: source.subProfessionId, subProfessionName: source.subProfessionId, nameInitial: 'OTHER',
     description: raw.description!, duration: raw.duration!, durationType: raw.durationType!, skillType: raw.skillType!,
@@ -35,9 +36,9 @@ function close(actual: number | null | undefined, expected: number) {
 }
 const physical = (attack: number, defense: number) => Math.max(attack - defense, attack * 0.05)
 
-test('7名12技能を本人IDのまま評価し、tokenのATKと周期だけを独立させる', () => {
-  assert.equal(EXPANDED_SUMMON_DEFINITIONS.length, 7)
-  assert.equal(EXPANDED_SUMMON_DEFINITIONS.reduce((sum, source) => sum + source.recipes.length, 0), 12)
+test('13名23技能を本人IDのまま評価し、tokenのATKと周期だけを独立させる', () => {
+  assert.equal(EXPANDED_SUMMON_DEFINITIONS.length, 13)
+  assert.equal(EXPANDED_SUMMON_DEFINITIONS.reduce((sum, source) => sum + source.recipes.length, 0), 23)
   for (const definition of EXPANDED_SUMMON_DEFINITIONS) for (const recipe of definition.recipes) {
     const result = output(definition.operatorId, recipe.skillIndex)
     valid(result)
@@ -195,6 +196,165 @@ test('actor選択と育成段階の不正入力は例外で落ちず数値出力
   for (const guard of [{ lasherActor: 'INVALID' }, { actualAttackTargetCount: 0 }, { actualAttackTargetCount: 2 }, { targetMechanical: 'yes' }]) {
     const value = output('char_4140_lasher', 1, guard)
     assert.ok(value.unsupportedReasons.length, JSON.stringify(guard))
+    assert.deepEqual(value.rows, [])
+  }
+})
+
+test('Magallan S2/S3は異なるドローンの周期・属性・範囲を保持し、本人への効果も分離する', () => {
+  for (const resistance of [0, 40, 100]) {
+    const laser = output('char_248_mgllan', 2, { actualAttackTargetCount: 3 }, { enemy: { defense: 10000, resistance } })
+    const expected = 509 * Math.max(0.05, 1 - resistance / 100)
+    close(valid(laser).perAttack, expected)
+    close(laser.stats.attack, 509)
+    close(laser.attackInterval, 0.4)
+    close(laser.rows[0].allTargetsDps, expected / 0.4 * 3)
+    const owner = output('char_248_mgllan', 2, { summonDamageActor: 'OWNER' }, { enemy: { defense: 10000, resistance } })
+    close(valid(owner).perAttack, expected)
+    close(owner.attackInterval, 1.6 / 2.5)
+    assert.equal(owner.actor, undefined)
+  }
+  for (const defense of [0, 1000, 100000]) {
+    const assault = output('char_248_mgllan', 3, { actualAttackTargetCount: 3 }, { enemy: { defense, resistance: 0 } })
+    close(assault.stats.attack, 753)
+    close(valid(assault).perAttack, physical(1882, defense))
+    close(assault.attackInterval, 2.3)
+    close(assault.rows[0].allTargetsPerAttack, physical(1882, defense) * 3)
+  }
+  const owner = output('char_248_mgllan', 3, { summonDamageActor: 'OWNER' })
+  close(valid(owner).perAttack, 1272 * 0.6)
+  close(owner.attackInterval, 1.6)
+})
+
+test('Lingの回収素質は本人だけに加算し、S1召喚物を術化しS2は独立した450%発動を計算する', () => {
+  for (const lingRefundStacks of [0, 1, 5]) {
+    const first = output('char_2023_ling', 1, { lingRefundStacks })
+    close(valid(first).perAttack, 823 * 0.6)
+    close(first.stats.attack, 549)
+    close(first.attackInterval, 1.25 / 1.5)
+    assert.ok(first.guard!.evaluations.filter(row => row.talentIndex === 1).every(row => row.status === 'NOT_RELEVANT'))
+    const owner = output('char_2023_ling', 1, { lingRefundStacks, summonDamageActor: 'OWNER' })
+    close(valid(owner).perAttack, Math.floor(508 * (1.5 + 0.03 * lingRefundStacks) + 1e-9) * 0.6)
+    close(owner.attackInterval, 1.6 / 1.5)
+    const second = output('char_2023_ling', 2, { lingRefundStacks, actualAttackTargetCount: 2 })
+    close(second.stats.attack, 406)
+    close(valid(second).perAttack, 406 * 4.5 * 0.6)
+    close(second.rows[0].allTargetsPerAttack, 406 * 4.5 * 0.6 * 2)
+    assert.equal(second.rows[0].dps, null)
+    const ownerSecond = output('char_2023_ling', 2, { lingRefundStacks, summonDamageActor: 'OWNER' })
+    close(valid(ownerSecond).perAttack, Math.floor(508 * (1 + 0.03 * lingRefundStacks) + 1e-9) * 4.5 * 0.6)
+  }
+  for (const guard of [{ lingRefundStacks: -1 }, { lingRefundStacks: 6 }, { lingRefundStacks: 1.5 }, { actualAttackTargetCount: 3 }])
+    assert.ok(output('char_2023_ling', 2, guard).unsupportedReasons.length)
+  const virtual = output('char_2023_ling', 2, { lingRefundStacks: 5 }, { virtualMainAttackType: 'PHYSICAL', enemy: { defense: 10000, resistance: 0 } })
+  close(valid(virtual).perAttack, 406 * 4.5 * 0.05)
+})
+
+test('Kalts S2のASPD100は治療側だけでMon3trの攻撃周期は2秒、死亡爆発は別の1200固定ダメージ', () => {
+  for (const defense of [0, 1000, 100000]) {
+    const first = output('char_003_kalts', 1, {}, { enemy: { defense, resistance: 100 } })
+    close(first.stats.attack, 1402)
+    close(valid(first).perAttack, physical(1402, defense))
+    close(first.attackInterval, 2)
+    const second = output('char_003_kalts', 2, { actualAttackTargetCount: 3 }, { enemy: { defense, resistance: 100 } })
+    close(valid(second).perAttack, physical(2663, defense))
+    close(second.attackSpeed, 100)
+    close(second.attackInterval, 2)
+    close(second.rows[0].allTargetsDps, physical(2663, defense) / 2 * 3)
+    assert.equal(second.rows[0].attackComponents.length, 1)
+    const death = output('char_003_kalts', 2, { mon3trEvent: 'DEATH', actualAttackTargetCount: 5 }, { enemy: { defense, resistance: 100 } })
+    close(valid(death).perAttack, 1200)
+    close(death.rows[0].allTargetsPerAttack, 6000)
+    assert.equal(death.rows[0].dps, null)
+  }
+  assert.ok(output('char_003_kalts', 1, { actualAttackTargetCount: 2 }).unsupportedReasons.length)
+  assert.ok(output('char_003_kalts', 2, { actualAttackTargetCount: 4 }).unsupportedReasons.length)
+  const virtual = output('char_003_kalts', 2, {}, { virtualMainAttackType: 'ARTS' })
+  close(valid(virtual).perAttack, 2663 * 0.6)
+  const virtualDeath = output('char_003_kalts', 2, { mon3trEvent: 'DEATH' }, { virtualMainAttackType: 'ARTS' })
+  assert.match(virtualDeath.unsupportedReasons.join(), /主攻撃がありません/)
+})
+
+test('Vigil S2は狼数だけ連撃し、175防御無視はブロック対象だけ、150%特性は狼に適用しない', () => {
+  for (const wolfCount of [1, 2, 3]) for (const blocked of [false, true]) for (const defense of [100, 500, 10000]) {
+    const value = output('char_427_vigil', 2, { wolfCount, 'target.blockedByOwnReinforcement': blocked }, { enemy: { defense, resistance: 40 } })
+    close(value.stats.attack, 371)
+    const expected = physical(742, Math.max(0, defense - (blocked ? 175 : 0))) * wolfCount
+    close(valid(value).perAttack, expected)
+    close(value.rows[0].allTargetsPerAttack, expected)
+    assert.equal(value.rows[0].dps, null)
+    const virtual = output('char_427_vigil', 2, { wolfCount, 'target.blockedByOwnReinforcement': blocked }, { virtualMainAttackType: 'ARTS' })
+    close(valid(virtual).perAttack, 742 * 0.6 * wolfCount)
+  }
+  for (const guard of [{ wolfCount: 0 }, { wolfCount: 4 }, { wolfCount: 1.5 }, { actualAttackTargetCount: 2 }])
+    assert.ok(output('char_427_vigil', 2, guard).unsupportedReasons.length)
+  const mismatch = output('char_427_vigil', 2, {}, {}, skill => {
+    skill.operatorProfile.talents![1].candidates!.find(candidate => candidate.unlockCondition?.phase === 'PHASE_2' && candidate.requiredPotentialRank === 0)!
+      .blackboard!.find(entry => entry.key === 'def_penetrate_fixed')!.value = 200
+  })
+  assert.ok(mismatch.unsupportedReasons.length)
+  assert.deepEqual(mismatch.rows, [])
+})
+
+test('Beanstalk S2はハガネガニ1体の404ATK/1.25秒で、本人ATK・防御上昇・配置数を混ぜない', () => {
+  for (const defense of [0, 500, 10000]) {
+    const value = output('char_452_bstalk', 2, {}, { enemy: { defense, resistance: 100 } })
+    close(value.stats.attack, 404)
+    close(value.attackInterval, 1.25)
+    close(valid(value).perAttack, physical(404, defense))
+    close(value.rows[0].dps, physical(404, defense) / 1.25)
+  }
+  assert.ok(output('char_452_bstalk', 2, { actualAttackTargetCount: 2 }).unsupportedReasons.length)
+})
+
+test('Mlyssの本人ATK50%とS1だけのASPD50を評価し、未確認のコピー側を数値で置換しない', () => {
+  for (const index of [1, 2, 3]) for (const blocked of [false, true]) {
+    const value = output('char_249_mlyss', index, { 'target.blockedByOwnReinforcement': blocked })
+    close(value.stats.attack, 537)
+    close(valid(value).perAttack, physical(805 * (blocked ? 1.5 : 1), 500))
+    close(value.attackInterval, index === 1 ? 1 / 1.5 : 1)
+    assert.equal(value.actor, undefined)
+    const virtual = output('char_249_mlyss', index, { 'target.blockedByOwnReinforcement': blocked }, { virtualMainAttackType: 'ARTS' })
+    close(valid(virtual).perAttack, 805 * (blocked ? 1.5 : 1) * 0.6)
+    const copy = output('char_249_mlyss', index, { mlyssActor: 'TOKEN' })
+    assert.match(copy.unsupportedReasons.join(), /コピー元/)
+    assert.deepEqual(copy.rows, [])
+  }
+})
+
+test('追加tokenの技能override・数値・死亡素質・属性が変わると停止し、既存snapshot値で続行しない', () => {
+  const samples = [['char_248_mgllan', 2, 'token_10005_mgllan_drone2'], ['char_248_mgllan', 3, 'token_10005_mgllan_drone3'],
+    ['char_2023_ling', 1, 'token_10020_ling_soul1'], ['char_2023_ling', 2, 'token_10020_ling_soul2'],
+    ['char_003_kalts', 2, 'token_10002_kalts_mon3tr'], ['char_427_vigil', 2, 'token_10028_vigil_wolf'],
+    ['char_452_bstalk', 2, 'token_10014_bstalk_crab']] as const
+  for (const [id, index, tokenKey] of samples) for (const mutation of ['ATK', 'INTERVAL', 'DESCRIPTION', 'MISSING', 'BINDING']) {
+    const value = output(id, index, {}, {}, skill => {
+      const token = skill.operatorProfile.summonProfiles![tokenKey]
+      if (mutation === 'ATK') token.profile.phases[2].attributesKeyFrames!.at(-1)!.data!.atk! += 1
+      if (mutation === 'INTERVAL') token.profile.phases[2].attributesKeyFrames!.at(-1)!.data!.baseAttackTime! += 0.1
+      if (mutation === 'DESCRIPTION') token.profile.traitDescription += '未確認の追加効果'
+      if (mutation === 'MISSING') delete skill.operatorProfile.summonProfiles![tokenKey]
+      if (mutation === 'BINDING') skill.overrideTokenKey = 'token_10030_mlyss_wtrman'
+    })
+    assert.ok(value.unsupportedReasons.length, `${id}/${index}/${mutation}`)
+    assert.deepEqual(value.rows, [])
+  }
+  const changedDeath = output('char_003_kalts', 2, { mon3trEvent: 'DEATH' }, {}, skill => {
+    skill.operatorProfile.summonProfiles!.token_10002_kalts_mon3tr.profile.talents![1].candidates![0].blackboard!.find(entry => entry.key === 'value')!.value = 1400
+  })
+  assert.ok(changedDeath.unsupportedReasons.length)
+  assert.deepEqual(changedDeath.rows, [])
+})
+
+test('ケルシーのchar_idは確認済みmetadataだけを許可し、未知ID・数値・追加キーを拒否する', () => {
+  valid(output('char_003_kalts', 2))
+  for (const mutation of ['CHAR_ID', 'VALUE', 'NEW_KEY']) {
+    const value = output('char_003_kalts', 2, {}, {}, skill => {
+      const board = skill.operatorProfile.trait!.candidates![0].blackboard!
+      if (mutation === 'CHAR_ID') board[0].valueStr = 'char_unknown'
+      if (mutation === 'VALUE') board[0].value = 1
+      if (mutation === 'NEW_KEY') board.push({ key: 'atk_scale', value: 2 })
+    })
+    assert.ok(value.unsupportedReasons.length, mutation)
     assert.deepEqual(value.rows, [])
   }
 })

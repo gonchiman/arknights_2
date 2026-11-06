@@ -1,0 +1,4 @@
+.elemental-buildup-wrap { margin-top: 12px; }
+.elemental-buildup-table { min-width: 920px; table-layout: auto; }
+.elemental-buildup-table caption { padding: 8px 0; color: var(--text); text-align: left; font-size: 12px; font-weight: 500; }
+.elemental-buildup-table :is(th, td) { white-space: nowrap; }

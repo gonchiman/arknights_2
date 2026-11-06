@@ -5,12 +5,14 @@ import {
 import { formatTalentStructureEffectItem, formatTalentStructureEffectValue,
   type TalentStructure, type TalentStructureEffect } from './talentStructure.ts'
 import type { GuardPassiveModifiers } from './guardCombatTypes.ts'
+import { ELEMENT_LABELS } from './elementalBuildup.ts'
 
 type Metrics = Readonly<Record<string, CombatScalar | null | undefined>>
 type Evaluation = GuardPassiveModifiers['evaluations'][number]
 
 /** These are calculation operations, independent of an operator or talent identity. */
 const damageItems: ReadonlySet<TalentStructureEffect['item']> = new Set([
+  'ELEMENTAL_BUILDUP',
   'ARTS_DAMAGE_FLAT_ADDITION',
   'WEAKPOINT_DAMAGE',
   'DRONE_MAXIMUM_MULTIPLIER', 'EXTRA_DRONES',
@@ -22,6 +24,7 @@ const damageItems: ReadonlySet<TalentStructureEffect['item']> = new Set([
   'DEFENSE_REDUCTION_FIXED', 'DEFENSE_REDUCTION_FINAL_FIXED', 'RESISTANCE_REDUCTION_FIXED',
 ])
 const operations: Readonly<Record<string, readonly [string, string]>> = {
+  ELEMENTAL_BUILDUP: ['APPLY_ELEMENTAL_BUILDUP', 'MULTIPLIER'],
   ARTS_DAMAGE_FLAT_ADDITION: ['ADD_VALUE', 'POINT'],
   WEAKPOINT_DAMAGE: ['SET_ENABLED', 'BOOLEAN'],
   DRONE_MAXIMUM_MULTIPLIER: ['MULTIPLY', 'MULTIPLIER'], EXTRA_DRONES: ['ADD_VALUE', 'POINT'],
@@ -41,6 +44,10 @@ const operations: Readonly<Record<string, readonly [string, string]>> = {
 }
 
 function supportsContext(effect: TalentStructureEffect, metrics: Metrics): boolean {
+  if (effect.item === 'ELEMENTAL_BUILDUP' && (effect.basis !== 'ATK_STAT' || effect.timing.type !== 'EVENT'
+    || effect.timing.event !== 'ATTACK' || effect.lifetime.type !== 'CURRENT_EVENT'
+    || effect.target.side !== 'ENEMY' || effect.target.scope !== 'ATTACK_TARGET' || effect.target.entity !== 'UNIT'
+    || effect.target.factionIds.length > 0 || effect.target.tagIds.length > 0)) return false
   if (effect.timing.type === 'EVENT' && effect.timing.event === 'ELEMENTAL_BURST'
     && (effect.item !== 'ADDITIONAL_ATTACK' || effect.condition === null || effect.rate !== 'PER_ATTACK')) return false
   if (effect.item === 'ADDITIONAL_ATTACK' && effect.basis === 'TARGET_DEFENSE'
@@ -221,6 +228,14 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
     const percent = (amount: number) => `${Math.round(amount * 100_000) / 1000}％`
     const status = active ? 'APPLIED' : 'CONDITION_FALSE'
     switch (effect.item) {
+      case 'ELEMENTAL_BUILDUP':
+        if (value < 0 || effect.damageKind?.type !== 'ELEMENTAL_BUILDUP' || !Object.hasOwn(ELEMENT_LABELS, effect.damageKind.elementId)) {
+          block('元素損傷の種類・倍率が不正です。'); break
+        }
+        if (active) (output.elementalBuildups ??= []).push({ id: `talent-${structure.basicInfo.talentIndex}-${effect.id}`,
+          label: source, damageKind: effect.damageKind, scale: value, basis: { type: 'ATK_STAT' } })
+        addRow(`${ELEMENT_LABELS[effect.damageKind.elementId]}損傷`, `攻撃力×${formatCombatNumber(value)}`, status, '', details)
+        break
       case 'DRONE_MAXIMUM_MULTIPLIER':
         if (value < 1) { block('浮遊ユニットの上限補正が有効範囲外です。'); break }
         if (active) output.droneMaximumMultiplier = (output.droneMaximumMultiplier ?? 1) * value

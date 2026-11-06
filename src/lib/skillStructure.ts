@@ -1,5 +1,6 @@
 import type { SkillCoarseCategory } from './skillCoarseClassification.ts'
 import type { HpDamageType } from './damageCalculator.ts'
+import { ELEMENT_LABELS } from './elementalBuildup.ts'
 import { SKILL_DIRECTORY_SP_TYPE_LABELS } from './skillDirectory.ts'
 import type { GuardSkillRecipe } from './guardCombatTypes.ts'
 import { buildGuardSkillStructures } from './guardSkillStructure.ts'
@@ -37,7 +38,7 @@ export type SkillStructureEffectTiming = 'WHILE_STAGE_ACTIVE' | 'ON_ATTACK' | 'O
   | { readonly type: 'PERIODIC'; readonly intervalSeconds: number }
 export type SkillStructureEffectTarget = 'SELF' | 'SELF_ATTACK' | 'ENEMIES_IN_ACTION_RANGE' | 'GROUND_ENEMIES_IN_ACTION_RANGE' | 'ATTACK_TARGET'
 export type SkillStructureEffectOperation = 'ADD_RATIO' | 'ADD_VALUE' | 'EXTEND_FORWARD' | 'REPLACE' | 'SET' | 'MULTIPLY' | 'SET_ENABLED'
-  | 'FILL_RESOURCE' | 'RESTORE' | 'INCREASE_TO_CAP' | 'EXECUTE_ATTACK' | 'DEAL_DAMAGE' | 'APPLY_STATUS'
+  | 'FILL_RESOURCE' | 'RESTORE' | 'INCREASE_TO_CAP' | 'EXECUTE_ATTACK' | 'DEAL_DAMAGE' | 'APPLY_STATUS' | 'APPLY_ELEMENTAL_BUILDUP'
 
 export interface SkillStructureAttackAction {
   readonly count: number
@@ -86,6 +87,10 @@ export type SkillStructureEffect = SkillStructureEffectBase & (
       readonly targeting?: { readonly selection: 'ALL' | 'RANDOM'; readonly splashRadius?: number }
       readonly intervalSeconds?: number
     }; readonly unit: 'DAMAGE_ACTION' }
+  | { readonly item: 'ELEMENTAL_BUILDUP'; readonly operation: 'APPLY_ELEMENTAL_BUILDUP'; readonly value: {
+      readonly elementId: string; readonly basis: 'ATK_STAT' | 'DEALT_DAMAGE'; readonly scale: number
+      readonly actionId?: string; readonly damageType?: HpDamageType
+    }; readonly unit: 'ELEMENTAL_BUILDUP_ACTION' }
   | { readonly item: 'APPLY_STATUS'; readonly operation: 'APPLY_STATUS'; readonly value: {
       readonly statusId: 'LEVITATE'; readonly durationSeconds: number
       readonly maxWeight?: number
@@ -269,6 +274,7 @@ export function formatSkillStructureEffectItem(item: SkillStructureEffect['item'
     HP_LOSS_RATE: 'HP減少率',
     TRIGGERED_ATTACK: '反撃',
     DIRECT_DAMAGE: '直接ダメージ',
+    ELEMENTAL_BUILDUP: '元素損傷',
     APPLY_STATUS: '状態付与',
   }[item]
 }
@@ -280,6 +286,7 @@ export function formatSkillStructureEffectOperation(effect: SkillStructureEffect
     REPLACE: '範囲置換', SET: '設定', MULTIPLY: '倍率適用', SET_ENABLED: '適用設定',
     FILL_RESOURCE: '最大値まで回復', RESTORE: '回復', INCREASE_TO_CAP: '徐々に増加（上限）', EXECUTE_ATTACK: '攻撃実行',
     DEAL_DAMAGE: 'ダメージ付与', APPLY_STATUS: '状態付与',
+    APPLY_ELEMENTAL_BUILDUP: '元素損傷付与',
   }[effect.operation]
 }
 
@@ -298,12 +305,18 @@ export function formatSkillStructureEffectValue(effect: SkillStructureEffect): s
     case 'HP_LOSS_PROFILE': return `最大HPの${formatNumber(effect.value.maxRatioPerSecond * 100)}％/秒`
     case 'ATTACK_ACTION': return `${formatNumber(effect.value.count)}回`
     case 'DAMAGE_ACTION': return `×${formatNumber(effect.value.attackScale)}`
+    case 'ELEMENTAL_BUILDUP_ACTION': return `${ELEMENT_LABELS[effect.value.elementId] ?? effect.value.elementId} ${formatNumber(effect.value.scale * 100)}％`
     case 'STATUS_APPLICATION': return '浮遊'
   }
 }
 
 /** Compound effects expose each parameter as its own definition row. */
 export function getSkillStructureEffectValueRows(effect: SkillStructureEffect): [string, string | number][] {
+  if (effect.unit === 'ELEMENTAL_BUILDUP_ACTION') return [
+    ['元素損傷', ELEMENT_LABELS[effect.value.elementId] ?? effect.value.elementId],
+    ['基準', effect.value.basis === 'ATK_STAT' ? '攻撃力' : '与ダメージ'], ['比率', effect.value.scale],
+    ...(effect.value.damageType ? [['参照属性', { PHYSICAL: '物理', ARTS: '術', TRUE: '確定', ELEMENTAL: '元素' }[effect.value.damageType]]] as [string, string][] : []),
+  ]
   if (effect.unit === 'DAMAGE_ACTION') return [
     ['ダメージ種別', { PHYSICAL: '物理', ARTS: '術', TRUE: '確定', ELEMENTAL: '元素' }[effect.value.damageType]],
     ['攻撃倍率', effect.value.attackScale], ['打撃回数', effect.value.count],

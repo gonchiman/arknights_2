@@ -18,6 +18,7 @@ import { lockPageScroll } from '../lib/pageScrollLock'
 import type { SkillRecord } from '../types/skill'
 import { SkillEffectModal } from './SkillEffectModal'
 import { TableSortHeader } from './TableSortHeader'
+import { ElementalBuildupTable } from './ElementalBuildupTable'
 import './SkillDirectory.css'
 import './SkillCoarseClassificationPage.css'
 import './SkillEffectModal.css'
@@ -415,6 +416,7 @@ function ComparisonConditionsDialog({ result, customized, target, common, format
         <table className="dc3-comparison-detail-table"><caption className="visually-hidden">スキルの詳細と計算結果</caption>
           <tbody>{detailRows.map(([label, value]) => <tr key={label}><th scope="row">{label}</th><td>{value}</td></tr>)}</tbody>
         </table>
+        <ElementalBuildupTable groups={[{ label: entry.stageLabel, values: result.elementalBuildups }]} />
         <div className="filters-heading"><span>個別条件</span>
           <button type="button" className="filter-reset-button" disabled={!customized} onClick={onReset}>既定値に戻す</button></div>
         {result.fields.length ? <div className="skill-directory-filter-grid dc3-comparison-individual-fields">

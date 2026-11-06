@@ -1090,7 +1090,7 @@ test('追加24人の元資料は完全スキルを保持し、未確認入力・
     'phatom', 'kafka', 'ascln', 'lmlee', 'bena', 'kazema', 'mizuki', 'jesca2', 'branch', 'pianst', 'nothin', 'talr', 'judge']
   const additions = EXPANDED_MELEE_DEFINITIONS.filter(d => ids.includes(d.operatorId.split('_').at(-1)!))
   assert.equal(additions.length, 24)
-  assert.equal(additions.reduce((sum, d) => sum + d.recipes.length, 0), 43)
+  assert.equal(additions.reduce((sum, d) => sum + d.recipes.length, 0), 45)
   for (const d of additions) {
     const src = sources.find(s => s.operatorId === d.operatorId)!
     assert.equal('passives' in src || 'coverage' in src, false)
@@ -1122,11 +1122,11 @@ test('新技能の属性比較は主攻撃だけ変換し、ミヅキの限定�
 const bulkSuffixes = ['weedy', 'glady', 'flamtl', 'zumama', 'fuze', 'tachak', 'almond', 'varkis', 'sophia',
   'snsant', 'cement', 'dagda', 'takila', 'mantic', 'morgan', 'laios', 'noirc2', 'red', 'wscoot']
 
-test('大幅拡張の近接19人42技能は33対応・9保留で、元資料に調査用フィールドを混入しない', () => {
+test('大幅拡張の近接19人42技能は34対応・8保留で、元資料に調査用フィールドを混入しない', () => {
   const additions = EXPANDED_MELEE_DEFINITIONS.filter(definition => bulkSuffixes.includes(definition.operatorId.split('_').at(-1)!))
   assert.equal(additions.length, 19)
-  assert.equal(additions.reduce((sum, definition) => sum + definition.recipes.length, 0), 33)
-  assert.equal(additions.reduce((sum, definition) => sum + definition.deferredSkills!.length, 0), 9)
+  assert.equal(additions.reduce((sum, definition) => sum + definition.recipes.length, 0), 34)
+  assert.equal(additions.reduce((sum, definition) => sum + definition.deferredSkills!.length, 0), 8)
   for (const definition of additions) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     assert.equal('coverage' in source || 'passives' in source, false)
@@ -1348,10 +1348,10 @@ test('属性比較は新規の主攻撃の全ヒットを術化し、ウィン�
   }
 })
 
-test('近接追加146人の270技能が実データから有限結果を返し、残り46技能は理由付き未計算', () => {
+test('近接追加146人の277技能が実データから有限結果を返し、残り39技能は理由付き未計算', () => {
   assert.equal(sources.length, 146)
-  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 270)
-  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + (definition.deferredSkills?.length ?? 0), 0), 46)
+  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 277)
+  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + (definition.deferredSkills?.length ?? 0), 0), 39)
   for (const definition of EXPANDED_MELEE_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     assert.equal(definition.recipes.length + (definition.deferredSkills?.length ?? 0), source.skills.length)
@@ -1555,12 +1555,12 @@ test('ヴィグナの30%発動は攻撃力加算枠を分岐し、防御軽減�
   }
 })
 
-test('ムースS2の素質は20%の追加術攻撃で、未確定のS1では部分結果を出さない', () => {
+test('ムースS2の素質は20%の追加術攻撃で、S1の強化攻撃でも2撃目を保持する', () => {
   const { result, row } = at('frncat', 2, 60)
   close(row.perAttack, buffed(result.stats.attack, 0.75) * 0.4 * 1.2)
-  const pending = output('frncat', 1)
-  assert.deepEqual(pending.rows, [])
-  assert.ok(pending.unsupportedReasons.some(reason => reason.includes('2撃目')))
+  const first = fixed('frncat', 1, {}, 0, 60)
+  close(first.row.perAttack, buffed(first.result.stats.attack, 0.75) * 0.4 * 1.2)
+  assert.equal(first.row.dps, null)
 })
 
 test('コンビクションはS1の200%と800%を別軽減し、S2は成功率50%を反映する', () => {
@@ -1610,8 +1610,9 @@ test('ルトナダとジャッキーの強化攻撃倍率、回避後速度条�
   close(jackie.row.perAttack, physical(jackie.result.stats.attack * 2.5, 1000))
   close(jackie.result.attackSpeed, jackie.result.stats.attackSpeed + 12)
   assert.equal(jackie.row.dps, null)
-  assert.deepEqual(output('luton', 2).rows, [])
-  assert.deepEqual(output('jaksel', 2).rows, [])
+  const pulse = output('luton', 2)
+  close(pulse.rows[0].dps, pulse.rows[0].perAttack / 2)
+  assert.equal(output('jaksel', 2).rows[0].dps, null)
 })
 
 test('イーサンは全対象への物理攻撃と付与中の毎秒100術ダメージを分離する', () => {
@@ -1765,5 +1766,62 @@ test('反撃2技能は期間総量を出さず、反撃倍率や素質の未確�
       assert.ok(result.unsupportedReasons.length)
       assert.deepEqual(result.rows, [])
     }
+  }
+})
+
+test('レッドS2は配置時250%とATK30%の最低保証を分け、地上対象へ1回ずつ計算する', () => {
+  for (const type of ['PHYSICAL', 'ARTS'] as const) for (const defense of [0, 1000, 100000]) for (const resistance of [0, 100]) {
+    const { result, row } = fixed('red', 2, { actualAttackTargetCount: 3 }, defense, resistance, type)
+    const atk = 605
+    close(result.stats.attack, atk)
+    const ordinary = type === 'PHYSICAL' ? physical(atk * 2.5, defense) : atk * 2.5 * Math.max(0.05, 1 - resistance / 100)
+    close(row.perAttack, Math.max(ordinary, atk * 0.3))
+    close(row.allTargetsPerAttack, row.perAttack * 3)
+    assert.equal(row.dps, null)
+    assert.equal(row.attackComponents.length, 1)
+  }
+})
+
+test('ホシグマS3は前方全員への盾1判定のみで、防御強化・回転周期をダメージへ加えない', () => {
+  const { result, row } = fixed('hsguma', 3, { actualAttackTargetCount: 5 }, 800)
+  const atk = buffed(result.stats.attack, 1.4)
+  close(row.perAttack, physical(atk, 800))
+  close(row.allTargetsPerAttack, row.perAttack * 5)
+  assert.equal(result.maxTargetCount, null)
+  assert.equal(row.dps, null)
+  assert.equal(result.attackInterval, null)
+})
+
+test('ジャッキーS2は成立した反撃1回で、回避率や素質ASPDを攻撃倍率にしない', () => {
+  for (const dodgeSpeedActive of [false, true]) for (const defense of [0, 100000]) {
+    const { result, row } = fixed('jaksel', 2, { dodgeSpeedActive }, defense)
+    close(result.stats.attack, 589)
+    close(row.perAttack, physical(589 * 1.6, defense))
+    assert.equal(result.maxTargetCount, 1)
+    assert.equal(row.dps, null)
+    assert.equal(result.attackInterval, null)
+    assert.equal(row.attackComponents.length, 1)
+  }
+  assert.deepEqual(output('jaksel', 2, { actualAttackTargetCount: 2 }).rows, [])
+})
+
+test('キララS2は自己回復3倍を継続術の威力へ掛けず、通常攻撃との未確認合計を停止する', () => {
+  const { result, row } = fixed('kirara', 2, { actualAttackTargetCount: 4 }, 100000, 40)
+  close(result.stats.attack, 858)
+  close(row.perAttack, 0)
+  close(row.damageOverTimeDps, 858 * 0.6)
+  assert.deepEqual(row.attackComponents, [])
+  assert.equal(row.combinedDps, null)
+  assert.equal(result.attackInterval, null)
+  assert.deepEqual(output('kirara', 2, { damagePhase: 'combined' }).rows, [])
+})
+
+test('スワイヤーS1は味方の素質強化を自身に加えず、本人の通常攻撃と教官倍率を保持する', () => {
+  for (const targetBlockedBySelf of [false, true]) {
+    const { result, row } = fixed('swire', 1, { targetBlockedBySelf }, 500)
+    close(result.stats.attack, 696)
+    close(row.perAttack, physical(696 * (targetBlockedBySelf ? 1 : 1.2), 500))
+    close(row.dps, row.perAttack / 1.05)
+    close(result.talentAttackRatio, 0)
   }
 })

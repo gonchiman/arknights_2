@@ -1,5 +1,6 @@
 import { calculateAttackPipeline, calculateDamageBreakdown, getOperatorStats, type HpDamageType, type OperatorStats } from './damageCalculator.ts'
 import { calculateElementalDamageBreakdown } from './elementalDamage.ts'
+import { calculateElementalBuildup, ELEMENTAL_BUILDUP_INPUTS, type ElementalBuildupResult } from './elementalBuildup.ts'
 import type { DamageCalculatorThreeInput, DamageCalculatorThreeOutput, DamageCalculatorThreeAttackComponent } from './damageCalculatorThree.ts'
 import type { SkillStructure } from './skillStructure.ts'
 import type { GuardDamageAction, GuardInput, GuardPassiveModifiers, GuardStage } from './guardCombatTypes.ts'
@@ -42,7 +43,8 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
   const suppliedConditions = enemy
     ? { ...input.conditions?.guard, enemyResistance: enemy.resistance } : input.conditions?.guard ?? {}
   let inputs: GuardInput[] = []
-  try { inputs = mergeGuardInputs([TARGET_INPUT], getGuardPassiveInputs(input.operator.operatorId), recipe.inputs) }
+  try { inputs = mergeGuardInputs([TARGET_INPUT], getGuardPassiveInputs(input.operator.operatorId), recipe.inputs,
+    recipe.stages.some(stage => stage.elementalBuildups?.length) ? ELEMENTAL_BUILDUP_INPUTS : []) }
   catch (error) { reasons.push(message(error)) }
   const resolved = resolveGuardConditions(inputs, suppliedConditions)
   const conditions = resolved.values
@@ -234,8 +236,11 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
   const periodicActions = actions.filter(action => action.timing === 'PER_SECOND')
   const hasRandomTargets = directActions.some(action => action.targets !== undefined)
     || splashActions.size > 0
-  const canShowDps = kind === 'NORMAL' && interval !== null && !stage?.dpsUnsupportedReason && damageCapPerTarget === null
-  const dpsReason = canShowDps ? null : stage?.dpsUnsupportedReason ?? (damageCapPerTarget !== null
+  const elementalBuildupDefinitions = [...(stage?.elementalBuildups ?? []), ...(nativePassive.elementalBuildups ?? [])]
+  const hasElementalBuildup = elementalBuildupDefinitions.length > 0
+  const canShowDps = kind === 'NORMAL' && interval !== null && !stage?.dpsUnsupportedReason && damageCapPerTarget === null && !hasElementalBuildup
+  const dpsReason = canShowDps ? null : stage?.dpsUnsupportedReason ?? (hasElementalBuildup
+    ? '元素損傷を含む1回分の値です。爆発開始・終了をまたぐDPSは未対応です。' : damageCapPerTarget !== null
     ? 'ダメージ上限を適用した1回の値です。命中後のHP変化・対象変更を含むDPSは計算しません。'
     : kind === 'NEXT_ATTACK' ? '強化攻撃1回の値です。SP回復を含む周期DPSは計算しません。'
     : '選択した段階の1回分の値です。動作時間・SP回復を含むDPSは計算しません。')
@@ -336,7 +341,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
           const typedBranches = branches.filter(branch => branch.mitigation.damageType === resolvedType)
           const expectedDamage = typedBranches.reduce((sum, branch) => sum + branch.damage * branch.probability, 0)
           if (!Number.isFinite(expectedDamage)) throw new RangeError('ダメージ期待値を計算できません。')
-          components.push({ id: `guard-${index}-${variantIndex}${hasWeakpointDamage ? '-' + resolvedType : ''}`, label: variant.label, order: components.length + 1,
+          components.push({ id: `guard-${index}-${variantIndex}${hasWeakpointDamage ? '-' + resolvedType : ''}`, sourceActionId: action.id, label: variant.label, order: components.length + 1,
           role: action.role, damageType: resolvedType, attackScale: scale * variant.factor, count, targetAirborne: false,
           defenseIgnoreChance: resolvedType === 'ELEMENTAL' ? 0 : actionDefenseIgnoreRatio > 0 ? 1 : allowsCritical && (modifiers.criticalDefenseIgnoreRatio ?? 0) > 0 ? modifiers.critChance : 0,
           defenseIgnoreRatio: Math.max(...typedBranches.map(branch => branch.defenseIgnoreRatio)), expectedDamage,
@@ -348,6 +353,43 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
     return components
   }
 
+  function buildupsAt(components: DamageCalculatorThreeAttackComponent[]): ElementalBuildupResult[] {
+    const definitions = elementalBuildupDefinitions
+    if (!definitions.length) return []
+    if (periodicActions.length || hasRandomTargets || actions.some(action => action.targets !== undefined || action.drone || action.isStoredCharge))
+      throw new RangeError('元素損傷は全対象が同じ状態の有限攻撃のみ対応しています。継続・跳躍・異なる対象配分は未対応です。')
+    const ids = definitions.map(definition => definition.id)
+    if (new Set(ids).size !== ids.length || ids.some(id => !id)) throw new RangeError('元素損傷の識別子が不正です。')
+    const remainingByElement = new Map<string, number>()
+    return definitions.map(definition => {
+      const scale = value(definition.scale)
+      if (scale < 0) throw new RangeError('元素損傷の倍率が不正です。')
+      let basis: number
+      if (definition.basis.type === 'ATK_STAT') basis = pipeline(1, 0, nativePassive, false).finalAttack
+      else {
+        const actionId = definition.basis.actionId
+        if (definition.basis.damageType !== undefined && !['PHYSICAL', 'ARTS', 'TRUE', 'ELEMENTAL'].includes(definition.basis.damageType))
+          throw new RangeError('元素損傷が参照するダメージ属性が不正です。')
+        const linked = actions.filter(action => action.id === actionId)
+        if (!actionId || linked.length !== 1 || linked[0].timing === 'PER_SECOND' || value(linked[0].probability, 1) !== 1)
+          throw new RangeError('元素損傷が参照する確定ダメージ行動を一意に指定できません。')
+        const matches = components.filter(component => component.sourceActionId === actionId)
+        if (matches.some(component => component.branches.length !== 1 || component.branches[0].probability !== 1))
+          throw new RangeError('確率ダメージに連動する元素損傷と爆発判定は未対応です。')
+        basis = matches.filter(component => definition.basis.type === 'DEALT_DAMAGE'
+          && (!definition.basis.damageType || component.damageType === definition.basis.damageType))
+          .reduce((sum, component) => sum + component.expectedDamage, 0)
+      }
+      const elementId = definition.damageKind.elementId
+      const result = calculateElementalBuildup(basis * scale, definition.damageKind,
+        Number(conditions.elementalBuildupResistance), remainingByElement.get(elementId) ?? Number(conditions.elementalGaugeRemaining),
+        String(conditions.targetElementalBurst), Boolean(conditions.targetElementalImmune))
+      if (result.remaining !== null) remainingByElement.set(elementId, result.remaining)
+      return { elementId, label: definition.label, basis: definition.basis.type, perApplication: result.amount,
+        allTargetsPerApplication: result.amount * actualTargetCount, status: result.status, remainingGaugeAfter: result.remaining }
+    })
+  }
+
   let rows: DamageCalculatorThreeOutput['rows'] = []
   if (!reasons.length) try {
     rows = points.map(axisValue => {
@@ -356,10 +398,11 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
       const dot = periodicActions.length ? componentsAt(axisValue, periodicActions).reduce((sum, component) => sum + component.expectedDamage, 0) : null
       const dps = canShowDps && interval ? perAttack / interval : null
       const combined = dps === null ? null : dps + (dot ?? 0)
+      const elementalBuildups = buildupsAt(attackComponents)
       return { axisValue, perHit: null, perAttack, dps, allTargetsPerAttack: perAttack * actualTargetCount,
         allTargetsDps: dps === null ? null : dps * actualTargetCount, breakdown: null,
         damageOverTimeDps: dot, combinedDps: combined, allTargetsCombinedDps: combined === null ? null : combined * actualTargetCount,
-        attackComponents }
+        attackComponents, ...(hasElementalBuildup ? { elementalBuildups } : {}) }
     })
   } catch (error) { reasons.push(message(error)); rows = [] }
   const unsupportedReasons = [...new Set(reasons)]

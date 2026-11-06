@@ -14,6 +14,9 @@ const sources = retainedTokens as unknown as Readonly<Record<string, SummonComba
 const ACTORS: Readonly<Record<string, string>> = {
   token_10010_folivo_car: 'char_336_folivo', token_10001_deepcl_tentac: 'char_110_deepcl',
   token_10036_lasher_mcbird: 'char_4140_lasher', token_10021_blkngt_hypnos: 'char_476_blkngt',
+  token_10005_mgllan_drone2: 'char_248_mgllan', token_10005_mgllan_drone3: 'char_248_mgllan',
+  token_10020_ling_soul1: 'char_2023_ling', token_10020_ling_soul2: 'char_2023_ling',
+  token_10002_kalts_mon3tr: 'char_003_kalts', token_10028_vigil_wolf: 'char_427_vigil', token_10014_bstalk_crab: 'char_452_bstalk',
 }
 
 /** Compare all retained token fields, including hidden talents, skill sources and keyframe stats.
@@ -47,6 +50,8 @@ export function buildSummonDamageOutput(input: DamageCalculatorThreeInput, struc
   if (!sameReviewedSummon(input.operator.operatorProfile.summonSkillTokenKeys, ownerSource?.profile.summonSkillTokenKeys)
     || (input.skill.overrideTokenKey ?? null) !== (ownerSource?.profile.summonSkillTokenKeys?.[input.skill.skillIndex - 1] ?? null))
     errors.push('召喚物と選択スキルの対応関係を確認できません。')
+  const overrideToken = ownerSource?.profile.summonSkillTokenKeys?.[input.skill.skillIndex - 1]
+  if (overrideToken && overrideToken !== tokenKey) errors.push('スキルが指定する召喚物と計算する召喚物が一致しません。')
   if (!Number.isSafeInteger(input.operatorLevel) || input.operatorLevel < 1
     || input.operatorLevel > (live?.profile.phases[input.phaseIndex]?.maxLevel ?? 0))
     errors.push('召喚物の昇進段階・レベルが有効範囲外です。')
@@ -61,9 +66,12 @@ export function buildSummonDamageOutput(input: DamageCalculatorThreeInput, struc
       const owner = evaluateGuardPassives(operator, conditions, passiveContext)
       const output: GuardPassiveModifiers = { attackRatio: 0, attackFlat: 0, attackScale: 1, attackSpeed: 0,
         damageScale: tokenKey === 'token_10036_lasher_mcbird' ? owner.damageScale : 1,
-        defenseIgnoreRatio: 0, defenseIgnoreFixed: 0, resistanceIgnoreFixed: 0, resistanceIgnoreRatio: 0,
+        defenseIgnoreRatio: 0, defenseIgnoreFixed: tokenKey === 'token_10028_vigil_wolf' ? owner.defenseIgnoreFixed : 0,
+        resistanceIgnoreFixed: 0, resistanceIgnoreRatio: 0,
         defenseReductionRatio: 0, critChance: 0, critScale: 1, additionalActions: [],
-        evaluations: owner.evaluations, blockers: owner.blockers, notes: [...owner.notes,
+        evaluations: tokenKey.startsWith('token_10020_ling_') ? owner.evaluations.map(row => row.talentIndex === 1
+          ? { ...row, status: 'NOT_RELEVANT', reason: 'リィン本人への攻撃力・SP効果は召喚物に継承しません。' } : row) : owner.evaluations,
+        blockers: owner.blockers, notes: [...owner.notes,
           `${retained?.name ?? tokenKey}1体の独立ステータスを使用。本人の信頼度・潜在・MODの攻撃力を継承しない。`] }
       return output
     },

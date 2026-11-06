@@ -10,6 +10,7 @@ import type { GuardInput } from '../lib/guardCombatTypes'
 import type { SkillStructureSelection } from '../lib/skillStructure'
 import type { SkillRecord } from '../types/skill'
 import { AnalysisTabs } from './AnalysisTabs'
+import { ElementalBuildupTable } from './ElementalBuildupTable'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { ComparisonChart } from './ComparisonChart'
 import { GuardConditionFields } from './DamageCalculatorThree'
@@ -224,6 +225,10 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
         <h3>現在の条件（1体）</h3><span>防御力 {formatNumber(common.defense)} · 術耐性 {formatNumber(common.resistance)} · 攻撃対象 {formatNumber(comparison.original.actualTargetCount)}体</span>
       </div>
       <DamageCalculatorThreeAttributeResultTable comparison={comparison} originalLabel={originalLabel} changedLabel={changedLabel} />
+      <ElementalBuildupTable groups={[
+        { label: `本来（${originalLabel}）`, values: comparison.original.errors.length ? [] : comparison.original.elementalBuildups },
+        { label: `変更後（${changedLabel}）`, values: comparison.errors.length || comparison.changed?.errors.length ? [] : comparison.changed?.elementalBuildups ?? [] },
+      ]} />
     </CollapsibleCalculatorPanel>}
   </section>
 }

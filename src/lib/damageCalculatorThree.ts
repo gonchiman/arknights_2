@@ -1,5 +1,6 @@
 import type { SkillRecord } from '../types/skill.ts'
 import type { GuardConditions, GuardInput, GuardPassiveModifiers } from './guardCombatTypes.ts'
+import type { ElementalBuildupResult } from './elementalBuildup.ts'
 import { buildGuardDamageOutput } from './guardDamageCalculator.ts'
 import { buildSummonDamageOutput } from './summonActor.ts'
 import type { VirtualMainAttackType } from './damageCalculatorThreeVirtualAttack.ts'
@@ -129,6 +130,7 @@ export interface DamageCalculatorThreeEffectEvaluation {
 }
 
 export interface DamageCalculatorThreeAttackComponent {
+  sourceActionId?: string
   id: string
   label: string
   role?: 'MAIN' | 'ADDITIONAL'
@@ -146,6 +148,8 @@ export interface DamageCalculatorThreeAttackComponent {
 }
 
 export interface DamageCalculatorThreeRow {
+  /** Elemental gauge loss, never included in HP-damage totals. */
+  elementalBuildups?: ElementalBuildupResult[]
   axisValue: number
   perHit: number | null
   perAttack: number

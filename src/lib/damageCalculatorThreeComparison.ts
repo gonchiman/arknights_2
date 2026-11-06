@@ -1,4 +1,5 @@
 import type { SkillRecord } from '../types/skill.ts'
+import type { ElementalBuildupResult } from './elementalBuildup.ts'
 import {
   buildDamageCalculatorThreeOutput, getDamageCalculatorThreeStructures,
   type DamageCalculatorThreeConditions, type DamageCalculatorThreeOutput,
@@ -57,6 +58,7 @@ export interface DamageThreeComparisonResult extends DamageThreePeriodTotal {
   allTargetsDamageOverTimeDps: number | null
   combinedDps: number | null
   allTargetsCombinedDps: number | null
+  elementalBuildups: readonly ElementalBuildupResult[]
 }
 
 /** Only reviewed DC3 selections are enumerated; source descriptions are never interpreted here. */
@@ -148,6 +150,7 @@ export function evaluateDamageThreeComparisonEntry(
     damageOverTimeDps: periodic,
     allTargetsDamageOverTimeDps: periodic !== null && output ? periodic * output.actualTargetCount : null,
     combinedDps, allTargetsCombinedDps: row?.allTargetsCombinedDps ?? null,
+    elementalBuildups: row?.elementalBuildups ?? [],
   }
 }
 

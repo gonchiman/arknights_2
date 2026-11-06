@@ -8,6 +8,7 @@ import {
 } from './skillStructure.ts'
 import type { GuardDamageAction, GuardInput, GuardSkillRecipe, GuardStage, GuardValue } from './guardCombatTypes.ts'
 import { resolveGuardValue, usesBaseAttackHitCount } from './guardCombatValues.ts'
+import { ELEMENTAL_BUILDUP_INPUTS, ELEMENT_LABELS } from './elementalBuildup.ts'
 
 export interface FlowField { label: string; value: string }
 export interface FlowCondition { label: string; yesLabel: string; noLabel: string }
@@ -188,7 +189,8 @@ function nativeStep(effect: SkillStructureEffect, title: string): FlowStep {
 
 function guardStages(structure: SkillStructure, recipe: GuardSkillRecipe): FlowStage[] {
   const board = new Map(structure.source.blackboard.map(entry => [entry.key.toLowerCase(), entry.value]))
-  const inputs = new Map(recipe.inputs.map(input => [input.key, input]))
+  const inputs = new Map([...recipe.inputs, ...(recipe.stages.some(stage => stage.elementalBuildups?.length) ? ELEMENTAL_BUILDUP_INPUTS : [])]
+    .map(input => [input.key, input]))
   return recipe.stages.map(stage => {
     const warnings = [...new Set([...(stage.unresolved ?? []), ...(stage.calculationIssues?.map(issue => issue.reason) ?? [])])]
     const expression = (value: GuardValue) => guardExpression(value, board, inputs, warnings)
@@ -225,6 +227,14 @@ function guardStages(structure: SkillStructure, recipe: GuardSkillRecipe): FlowS
       actions.set(label, [...(actions.get(label) ?? []), guardAction(stage, action, `${stage.id}-action-${index}`, formatted)])
     })
     for (const [label, steps] of actions) groups.push({ id: `${stage.id}-actions-${steps[0].id}`, label, layers: [steps] })
+    if (stage.elementalBuildups?.length) groups.push({ id: `${stage.id}-buildups`, label: '元素損傷（1回）', layers: [
+      stage.elementalBuildups.map(buildup => ({ id: `${stage.id}-buildup-${buildup.id}`, title: buildup.label, fields: [
+        { label: '元素', value: ELEMENT_LABELS[buildup.damageKind.elementId] },
+        { label: '基準', value: buildup.basis.type === 'ATK_STAT' ? '自身の攻撃力'
+          : buildup.basis.damageType === 'ARTS' ? '術ダメージ' : '与ダメージ' },
+        { label: '比率', value: formatted(buildup.scale, '', true) },
+      ] })),
+    ] })
     return { id: stage.id, label: stage.label, fields, groups,
       ...(stage.when ? { condition: branch(guardWhen(stage.when, inputs)) } : {}),
       ...(warnings.length ? { warnings: [...new Set(warnings)] } : {}) }
