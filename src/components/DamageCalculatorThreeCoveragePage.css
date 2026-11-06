@@ -1,5 +1,5 @@
 .damage-three-coverage-page { min-width: 0; }
-.damage-three-coverage-page > .analysis-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 12px; }
+.damage-three-coverage-page > .analysis-tabs { margin-bottom: 12px; }
 .damage-three-coverage-page > .analysis-tab-panel > .skill-directory-panel { border: 0; }
 
 .damage-three-coverage-meta { flex-wrap: wrap; }

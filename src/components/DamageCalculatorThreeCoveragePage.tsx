@@ -24,6 +24,7 @@ import { getCoverageChangeLabel } from '../lib/damageCalculatorThreeCoverageComp
 import { AnalysisTabs, AnalysisTabPanel } from './AnalysisTabs'
 import { DamageCalculatorThreeCoverageSummary } from './DamageCalculatorThreeCoverageSummary'
 import { DamageCalculatorThreeCoverageVersionComparison } from './DamageCalculatorThreeCoverageVersionComparison'
+import { DamageCalculatorThreeModuleCoverage } from './DamageCalculatorThreeModuleCoverage'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
 import './SkillDirectory.css'
@@ -38,12 +39,13 @@ interface Props {
 }
 
 export { getCoverageChangeLabel } from '../lib/damageCalculatorThreeCoverageComparison'
-const COVERAGE_TABS = [['list', '対応一覧'], ['compare', '版の比較']] as const
+const COVERAGE_TABS = [['list', '対応一覧'], ['compare', '版の比較'], ['modules', 'MOD対応']] as const
 type CoverageTab = typeof COVERAGE_TABS[number][0]
 
 export function DamageCalculatorThreeCoveragePage({ rows, loading, onOpenOperatorDetail }: Props) {
   const [activeTab, setActiveTab] = useState<CoverageTab>('list')
   const [comparisonVisited, setComparisonVisited] = useState(false)
+  const [modulesVisited, setModulesVisited] = useState(false)
   const [versionSelection, setVersionSelection] = useState<string[] | null>(null)
   const [filters, setFilters] = useState<DamageCalculatorThreeCoverageFilters>({ ...DEFAULT_DAMAGE_THREE_COVERAGE_FILTERS })
   const [detail, setDetail] = useState<{ row: CoverageRecord; change?: CoverageChange; trigger: HTMLButtonElement;
@@ -59,7 +61,8 @@ export function DamageCalculatorThreeCoveragePage({ rows, loading, onOpenOperato
   const [snapshots, setSnapshots] = useState<Record<string, CoverageSnapshot>>({})
   const snapshotCache = useRef<Record<string, CoverageSnapshot>>({})
   const [snapshotErrors, setSnapshotErrors] = useState<Record<string, string>>({})
-  const liveCoverage = useMemo(() => toCoverageRecords(buildDamageCalculatorThreeCoverage(rows)), [rows])
+  const liveCoverageRows = useMemo(() => buildDamageCalculatorThreeCoverage(rows), [rows])
+  const liveCoverage = useMemo(() => toCoverageRecords(liveCoverageRows), [liveCoverageRows])
   const selectedIds = useMemo(() => versionSelection ?? index?.versions.map(version => version.id) ?? [], [versionSelection, index])
   const requestedIdsKey = JSON.stringify([...new Set([versionId, comparisonId,
     ...(activeTab === 'compare' ? selectedIds : [])].filter(id => id && id !== 'CURRENT'))])
@@ -154,6 +157,7 @@ export function DamageCalculatorThreeCoveragePage({ rows, loading, onOpenOperato
       <AnalysisTabs tabs={COVERAGE_TABS} activeTab={activeTab} onChange={tab => {
         setActiveTab(tab)
         if (tab === 'compare') setComparisonVisited(true)
+        if (tab === 'modules') setModulesVisited(true)
       }} idPrefix="dc3-coverage" label="実装範囲の表示" />
       <AnalysisTabPanel idPrefix="dc3-coverage" tab="list" activeTab={activeTab} title="対応一覧">
       <section className="skill-directory-panel" aria-label="DC3の対応スキル一覧">
@@ -237,6 +241,10 @@ export function DamageCalculatorThreeCoveragePage({ rows, loading, onOpenOperato
             const row = change.after ?? change.before
             if (row) setDetail({ row, change, trigger, historical: true, beforeLabel: before.label, afterLabel: after.label })
           }} />}
+      </AnalysisTabPanel>
+      <AnalysisTabPanel idPrefix="dc3-coverage" tab="modules" activeTab={activeTab} title="MOD対応">
+        {modulesVisited && (loading ? <div className="result-meta" role="status">読み込み中…</div>
+          : <DamageCalculatorThreeModuleCoverage rows={liveCoverageRows} />)}
       </AnalysisTabPanel>
       {detail && <DamageCalculatorThreeCoverageDialog row={detail.row} change={detail.change}
         historical={detail.historical ?? (versionId !== 'CURRENT' || detail.change?.kind === 'REMOVED')}
