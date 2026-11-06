@@ -237,6 +237,30 @@
         "UNSUPPORTED": 0,
         "NOT_APPLICABLE": 142
       }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "v11",
+      "label": "v11 特性の対応範囲",
+      "capturedAt": "2026-11-06T10:09:16.826Z",
+      "source": {
+        "codeRevision": "07c902c0aab0147cd3bfab90219b2f03c2150214",
+        "codeDirty": true,
+        "codeFingerprint": "d66dca13354b591a0ee8e6f96bc1337740b69301e5bd15915094826c2d85e30e",
+        "gameDataRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+        "gameDataFingerprint": "e02f27762c44d0b083329e83375802cc2bef03f04777822f5f61220a0881a0ec",
+        "reconstructed": false
+      },
+      "file": "v11.json",
+      "sha256": "618d66f36c4cf671326fb1974eb3a406c61c3145f29e7702995e897ea65808bc",
+      "skillCount": 915,
+      "counts": {
+        "SUPPORTED": 649,
+        "CONDITIONAL": 123,
+        "PENDING": 1,
+        "UNSUPPORTED": 0,
+        "NOT_APPLICABLE": 142
+      }
     }
   ]
 }

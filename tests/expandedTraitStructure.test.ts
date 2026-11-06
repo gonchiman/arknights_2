@@ -6,6 +6,7 @@ import { buildTraitStructures, isTraitStructureOperator, formatTraitStructureEff
   getTraitStructureEffectDefinitionRows, type TraitStructureEffect } from '../src/lib/traitStructure.ts'
 import { buildTraitApplicationRows, getExpandedTraitCoverage } from '../src/lib/traitEffectApplication.ts'
 import { buildDamageCalculatorThreeOutput, type DamageCalculatorThreeInput } from '../src/lib/damageCalculatorThree.ts'
+import { buildDamageCalculatorThreeCoverage } from '../src/lib/damageCalculatorThreeCoverage.ts'
 import { evaluateCombatCondition } from '../src/lib/combatEffectStructure.ts'
 import { evaluateTraitStructure } from '../src/lib/traitCombatEvaluation.ts'
 import { classifySkill } from '../src/lib/classifier.ts'
@@ -278,6 +279,18 @@ test('未登録職分・保留技能・変更された攻撃定義をtraitログ
   assert.equal(getExpandedTraitCoverage(aoe, { id: 'pending', label: '保留', kind: 'SKILL_ACTION', actions: [] }), 'UNSUPPORTED')
   assert.equal(getExpandedTraitCoverage(aoe, { ...stage, actions: [{ label: '変更', damageType: 'TRUE', scale: 100 }] }), 'UNSUPPORTED')
   assert.equal(getExpandedTraitCoverage('unknown', stage), 'UNSUPPORTED')
+})
+
+test('損傷のみ・保留段階・召喚物の攻撃を本人の特性未対応として集計しない', () => {
+  const [virtuosa, tomimi, blacknight, mitm] = buildDamageCalculatorThreeCoverage([
+    record('char_245_cello', 1), record('char_411_tomimi', 2), record('char_476_blkngt', 2), record('char_4147_mitm', 1),
+  ])
+  assert.equal(virtuosa.sections.trait, 'NOT_APPLICABLE')
+  assert.equal(tomimi.sections.trait, 'NOT_APPLICABLE')
+  assert.equal(tomimi.status, 'CONDITIONAL')
+  assert.ok(tomimi.deferredReasons.length > 0)
+  assert.equal(blacknight.sections.trait, 'NOT_APPLICABLE')
+  assert.equal(mitm.sections.trait, 'SUPPORTED', '本人が援軍のブロック対象を攻撃する段階には特性を使う')
 })
 
 

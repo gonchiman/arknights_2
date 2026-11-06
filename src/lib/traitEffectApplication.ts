@@ -29,7 +29,11 @@ export function getExpandedTraitCoverage(operatorId: string, stage: GuardStage):
     && !['ATTACK_RANGE', 'RANGED_ATTACK_ENABLED', 'NORMAL_ATTACK_ENABLED'].includes(effect.item)
     && effect.operation !== 'RESET_SOURCE_VALUE')
   if (!relevant.length) return 'NOT_APPLICABLE'
-  if (!recipe || !raw || !stage.actions.length) return 'UNSUPPORTED'
+  if (!recipe || !raw) return 'UNSUPPORTED'
+  // Pending stages keep their explicit issues in coverage. Independent events
+  // without owner attacks do not use the owner's normal attack rules.
+  if (stage.unresolved?.length || !stage.actions.length) return 'NOT_APPLICABLE'
+  if (stage.actor) return structure.status === 'STRUCTURED' ? 'NOT_APPLICABLE' : 'UNSUPPORTED'
   const board = new Map((raw.blackboard ?? []).flatMap(entry => typeof entry.value === 'number' && entry.key
     ? [[entry.key.toLowerCase(), entry.value] as const] : []))
   const conditions = { actualAttackTargetCount: 1, ...Object.fromEntries([

@@ -48,6 +48,7 @@ test('ウィーディS3は本人の350%術1発と1200/マスの移動創傷を�
     close(row.perAttack, result.stats.attack * 3.5 * .4)
     close(row.allTargetsPerAttack, row.perAttack * count)
     assert.equal(row.dps, null)
+    assert.equal(result.maxTargetCount, null)
   }
   for (const distance of [0, .1, 1, 4, 4.01, 50]) {
     const { row } = fixed('weedy', 3, { damagePhase: 'movement', movementDelta: distance })
@@ -246,13 +247,27 @@ test('ノイルコーンS1は練気上限なら150%4連撃、途中の素質付�
   assert.ok(output('noirc2', 1).rows.length > 0)
 })
 
-test('エフイーターS1は100%の通常攻撃を残し、ブロック2体への押し出しをダメージへ換算しない', () => {
-  for (const count of [1, 2]) for (const type of ['PHYSICAL', 'ARTS'] as const) {
-    const { result, row } = fixed('panda', 1, { actualAttackTargetCount: count }, 500, 60, type)
-    const expected = type === 'PHYSICAL' ? physical(result.stats.attack, 500) : result.stats.attack * .4
-    close(row.perAttack, expected)
-    close(row.allTargetsPerAttack, expected * count)
-    assert.equal(row.dps, null)
+test('推撃手のS1は次の通常攻撃の倍率と、ブロック数を参照する共通特性を適用する', () => {
+  for (const [suffix, scale] of [['panda', 1], ['weedy', 1.5], ['sqrrel', 1.5]] as const) {
+    for (const count of [1, 2]) for (const type of ['PHYSICAL', 'ARTS'] as const) {
+      const { result, row } = fixed(suffix, 1, { actualAttackTargetCount: count }, 500, 60, type)
+      const attack = result.stats.attack * scale
+      const expected = type === 'PHYSICAL' ? physical(attack, 500) : attack * .4
+      close(row.perAttack, expected)
+      close(row.allTargetsPerAttack, expected * count)
+      assert.equal(result.maxTargetCount, 2)
+      assert.equal(row.dps, null)
+      assert.equal(result.traitEvaluation?.evaluations.find(effect => effect.effectId === 'block-count-target-limit')?.status, 'APPLIED')
+    }
+    assert.deepEqual(output(suffix, 1, { actualAttackTargetCount: 3 }).rows, [])
   }
-  assert.deepEqual(output('panda', 1, { actualAttackTargetCount: 3 }).rows, [])
+})
+
+test('推撃手のS2の範囲攻撃には通常攻撃のブロック上限を重ねない', () => {
+  for (const suffix of ['panda', 'weedy', 'sqrrel']) {
+    const { result, row } = fixed(suffix, 2, { actualAttackTargetCount: 3 })
+    assert.equal(result.maxTargetCount, null)
+    assert.equal(result.traitEvaluation?.evaluations.find(effect => effect.effectId === 'block-count-target-limit')?.status, 'NOT_RELEVANT')
+    close(row.allTargetsPerAttack, row.perAttack * 3)
+  }
 })
