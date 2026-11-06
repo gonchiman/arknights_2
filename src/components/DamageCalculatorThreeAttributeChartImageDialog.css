@@ -1,0 +1,35 @@
+.dc3-attribute-chart-image-preview {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dc3-attribute-chart-image-preview-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dc3-attribute-chart-image-preview-heading,
+.dc3-attribute-chart-image-preview-size {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.dc3-attribute-chart-image-preview-frame {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--surface-soft);
+}
+
+.dc3-attribute-chart-image-preview-position {
+  position: absolute;
+  top: 0;
+  transform-origin: top left;
+  pointer-events: none;
+}
+
+.dc3-attribute-chart-image-preview-size {
+  font-variant-numeric: tabular-nums;
+}
