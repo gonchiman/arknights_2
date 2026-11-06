@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useId, useRef, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'
 import { buildSkillEffectDetails, formatSkillEffectDescription } from '../lib/skillEffectDetails'
 import type { SkillRecord } from '../types/skill'
 import './SkillEffectModal.css'
@@ -8,10 +8,11 @@ interface Props {
   skillLevelIndex?: number
   showSkillId?: boolean
   descriptionOnly?: boolean
+  action?: ReactNode
   onClose: () => void
 }
 
-export function SkillEffectModal({ skill, skillLevelIndex, showSkillId = false, descriptionOnly = false, onClose }: Props) {
+export function SkillEffectModal({ skill, skillLevelIndex, showSkillId = false, descriptionOnly = false, action, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const titleId = useId()
@@ -117,6 +118,7 @@ export function SkillEffectModal({ skill, skillLevelIndex, showSkillId = false, 
               <code>{skill.skillId}</code>
             </details>
           )}
+          {action && <div className="skill-effect-modal-action">{action}</div>}
         </div>
       </article>
     </dialog>
