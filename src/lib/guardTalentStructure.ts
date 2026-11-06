@@ -1,22 +1,27 @@
 import { getOperatorPassives, type PassiveSource } from './operatorProfile.ts'
 import type { SkillRecord } from '../types/skill.ts'
-import type { DamageType } from './damageCalculator.ts'
+import type { DamageType, HpDamageType } from './damageCalculator.ts'
 import type { TalentCoarseCategory } from './talentCoarseClassification.ts'
 import type { TalentStructure, TalentStructureEffect, TalentStructureGrowthSelection, TalentStructureDeferredCase } from './talentStructure.ts'
-import type { CombatCondition, CombatNumericValue, CombatRecipientSelector, CombatEffectContext, CombatTiming } from './combatEffectStructure.ts'
+import type { CombatCondition, CombatNumericValue, CombatRecipientSelector, CombatEffectContext, CombatTiming, CombatDamageKind } from './combatEffectStructure.ts'
 
 /** Common effect vocabulary. The evaluator dispatches on these operations, never operator IDs. */
 export type GuardTalentEffectPayload =
+  | { readonly item: 'ELEMENTAL_BUILDUP'; readonly operation: 'APPLY_ELEMENTAL_BUILDUP'; readonly value: CombatNumericValue; readonly unit: 'MULTIPLIER'; readonly damageKind: Extract<CombatDamageKind, { type: 'ELEMENTAL_BUILDUP' }>; readonly basis: 'ATK_STAT' }
+  | { readonly item: 'ARTS_DAMAGE_FLAT_ADDITION'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'POINT' }
+  | { readonly item: 'WEAKPOINT_DAMAGE'; readonly operation: 'SET_ENABLED'; readonly value: true; readonly unit: 'BOOLEAN' }
+  | { readonly item: 'DAMAGE_CAP_PER_TARGET'; readonly operation: 'SET'; readonly value: CombatNumericValue; readonly unit: 'POINT' }
   | { readonly item: 'ATTACK_INTERVAL_ADD'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'SECOND' }
   | { readonly item: 'MINIMUM_DAMAGE_RATIO'; readonly operation: 'SET'; readonly value: CombatNumericValue; readonly unit: 'RATIO' }
   | { readonly item: 'DEFENSE_IGNORE_FIXED'; readonly operation: 'IGNORE_FIXED'; readonly value: CombatNumericValue; readonly unit: 'POINT' }
-  | { readonly item: 'ATK_FLAT' | 'MAX_HP_FLAT' | 'HP_RESTORE_FIXED' | 'SP_RESTORE' | 'AMMO_CAPACITY' | 'FEVER' | 'TAUNT'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'POINT' }
+  | { readonly item: 'DEFENSE_REDUCTION_FIXED' | 'DEFENSE_REDUCTION_FINAL_FIXED' | 'RESISTANCE_REDUCTION_FIXED'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'POINT' }
+  | { readonly item: 'EXTRA_DRONES' | 'EXTRA_STORED_CHARGES' | 'ATK_FLAT' | 'ATK_FINAL_FLAT' | 'MAX_HP_FLAT' | 'HP_RESTORE_FIXED' | 'SP_RESTORE' | 'AMMO_CAPACITY' | 'FEVER' | 'TAUNT'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'POINT' }
   | { readonly item: 'DEFENSE_BUFF_RATIO' | 'PHYSICAL_DODGE' | 'ARTS_DODGE' | 'DAMAGE_RESISTANCE' | 'PHYSICAL_DAMAGE_RESISTANCE' | 'MIN_HP_RATIO' | 'DEFENSE_REDUCTION_RATIO'; readonly operation: 'ADD_RATIO'; readonly value: CombatNumericValue; readonly unit: 'RATIO' }
   | { readonly item: 'RESISTANCE_IGNORE_RATIO'; readonly operation: 'IGNORE_RATIO'; readonly value: CombatNumericValue; readonly unit: 'RATIO' }
   | { readonly item: 'RESISTANCE_REDUCTION_RATIO'; readonly operation: 'ADD_RATIO'; readonly value: CombatNumericValue; readonly unit: 'RATIO' }
-  | { readonly item: 'ATTACK_SCALE' | 'DAMAGE_SCALE' | 'SPLASH_DAMAGE_SCALE' | 'HEAL_RECEIVED_SCALE'; readonly operation: 'MULTIPLY'; readonly value: CombatNumericValue; readonly unit: 'MULTIPLIER' }
+  | { readonly item: 'DRONE_MAXIMUM_MULTIPLIER' | 'STORED_CHARGE_SCALE' | 'ATTACK_SCALE' | 'DAMAGE_SCALE' | 'SPLASH_DAMAGE_SCALE' | 'HEAL_RECEIVED_SCALE'; readonly operation: 'MULTIPLY'; readonly value: CombatNumericValue; readonly unit: 'MULTIPLIER' }
   | { readonly item: 'CRITICAL_ATTACK'; readonly operation: 'MULTIPLY'; readonly value: CombatNumericValue; readonly unit: 'MULTIPLIER' }
-  | { readonly item: 'ADDITIONAL_ATTACK'; readonly operation: 'DEAL_DAMAGE'; readonly value: CombatNumericValue; readonly unit: 'MULTIPLIER'; readonly damageType: DamageType; readonly basis?: 'ATK' | 'TARGET_DEFENSE'; readonly flatDamage?: CombatNumericValue; readonly hits?: CombatNumericValue; readonly rate: 'PER_ATTACK' | 'PER_SECOND'; readonly label?: string }
+  | { readonly item: 'ADDITIONAL_ATTACK'; readonly operation: 'DEAL_DAMAGE'; readonly value: CombatNumericValue; readonly unit: 'MULTIPLIER'; readonly damageType: HpDamageType; readonly damageKind?: Extract<CombatDamageKind, { type: 'ELEMENTAL_DAMAGE' }>; readonly basis?: 'ATK' | 'ATK_STAT' | 'TARGET_DEFENSE'; readonly flatDamage?: CombatNumericValue; readonly hits?: CombatNumericValue; readonly rate: 'PER_ATTACK' | 'PER_SECOND'; readonly label?: string }
   | { readonly item: 'SP_RECOVERY'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'PER_SECOND' }
   | { readonly item: 'STATUS' | 'ATTACK_BEHAVIOR'; readonly operation: 'SET_ENABLED'; readonly value: true; readonly unit: 'BOOLEAN'; readonly status: string }
   | { readonly item: 'HP_STEAL'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly maximum: CombatNumericValue; readonly unit: 'POINT' }
@@ -141,7 +146,8 @@ const definitions: readonly Definition[] = [
     scale('SPLASH_DAMAGE_SCALE', b.read('damage_scale'), 'damage_scale', { target: attack() }),
     additional('terrain-damage', mul(b.read('attack@splash_atk_scale'), skill(3, 'splash_atk_scale_bonus', 1)), 'attack@splash_atk_scale / skill:splash_atk_scale_bonus', 'PHYSICAL', { condition: compare('terrainHitCount', 'GT', 0), target: tagged(recipients('ENEMY', 'ADJACENT'), 'adjacent_high_tile_ground', '命中した高台の隣接4マス・地上') }, { hits: metric('terrainHitCount'), label: '高台による追加ダメージ' }),
     status('terrain-slow', '足止め', 'attack@sluggish', { timing: on('ATTACK'), target: tagged(recipients('ENEMY', 'ADJACENT'), 'adjacent_high_tile_ground', '命中した高台の隣接4マス・地上'), lifetime: { type: 'FIXED_SECONDS', seconds: b.read('attack@sluggish') } }),
-  ] },
+  ], constraints: () => [{ condition: any(compare('skillIndex', 'NE', 3), eq('terrainHitCount', 0)),
+    reason: 'S3は高台由来の追加ダメージが対象に命中しない槌撃1回のみ計算できます。' }] },
   { operatorId: 'char_1051_headb2', name: '連帯のうねり', prefabKey: '2', categories: ['ABILITY'], effects: b => [
     atk('self-atk', mul(b.read('atk'), b.read('scale_bonus')), 'atk / scale_bonus', { condition: eq('source.skillActive', true), lifetime: { type: 'UNTIL_EVENT', event: 'SKILL_END' } }),
     ratio('DEFENSE_BUFF_RATIO', mul(b.read('def'), b.read('scale_bonus')), 'def / scale_bonus', { condition: eq('source.skillActive', true), lifetime: { type: 'UNTIL_EVENT', event: 'SKILL_END' } }),
@@ -169,8 +175,9 @@ const definitions: readonly Definition[] = [
   { operatorId: 'char_4098_vvana', name: '散華', prefabKey: '2', categories: ['SURVIVAL'], effects: b => [status('melee-shield', '近接攻撃を1回無効化するシールド', 'prob', { timing: on('ATTACK'), condition: eq('target.isEliteOrBoss', true), probability: { chance: b.read('prob'), rollScope: 'APPLICATION' }, lifetime: { type: 'UNSPECIFIED' }, restrictions: [{ type: 'APPLICATION_LIMIT', count: 1, scope: 'SOURCE_LIFETIME', reset: 'EFFECT_END' }] })], deferred: [{ title: 'シールドの消費時点', unresolved: '近接攻撃の回避・無効化との優先順位は未確認。', currentTreatment: '1回無効化と重複不可を保持し、消費イベントの順序は確定しない。' }] },
   { operatorId: 'char_1019_siege2', name: '諸王の息', prefabKey: '1', categories: ['ABILITY', 'SURVIVAL'], effects: b => [atk('nearby-ally-atk', mul(b.read('atk'), metric('nearbyAllyCount')), 'atk'), ratio('PHYSICAL_DAMAGE_RESISTANCE', b.read('damage_resistance'), 'damage_resistance', { target: tagged(allies('ADJACENT'), 'self_and_adjacent_eight', '自身と周囲8マス') })] },
   { operatorId: 'char_1019_siege2', name: '縛られざる鋒芒', prefabKey: '2', categories: ['STATUS'], effects: b => [status('once-tremble', '戦慄', 'not_combat', { timing: on('DAMAGE_DEALT'), target: enemy(), lifetime: { type: 'FIXED_SECONDS', seconds: b.read('not_combat') }, restrictions: [{ type: 'APPLICATION_LIMIT', count: 1, scope: 'TARGET', reset: 'UNSPECIFIED' }] })] },
-  { operatorId: 'char_1050_chen3', name: '形意洞察', prefabKey: '1', categories: ['ABILITY', 'DAMAGE'], effects: b => [atk('self-atk', b.read('atk'), 'atk'), effect('self-attack-speed', 'attack_speed', { item: 'ATTACK_SPEED', operation: 'ADD_VALUE', value: b.read('attack_speed'), unit: 'POINT' }), behavior('weakpoint-damage', '弱点ダメージ', { target: attack() })],
-    deferred: [{ title: '弱点ダメージの軽減式', unresolved: '弱点ダメージと敵の防御性能の計算順序は未確認。', currentTreatment: '攻撃力・攻撃速度の補正は構造化し、DC3の最終ダメージは保留する。' }] },
+  { operatorId: 'char_1050_chen3', name: '形意洞察', prefabKey: '1', categories: ['ABILITY', 'DAMAGE'], effects: b => [atk('self-atk', b.read('atk'), 'atk'), effect('self-attack-speed', 'attack_speed', { item: 'ATTACK_SPEED', operation: 'ADD_VALUE', value: b.read('attack_speed'), unit: 'POINT' }),
+    effect('weakpoint-damage', 'description:weaknessatk', { item: 'WEAKPOINT_DAMAGE', operation: 'SET_ENABLED', value: true, unit: 'BOOLEAN' }, { target: attack() })],
+    notes: ['物理・術それぞれの理論ダメージを比較して属性を決め、同値なら元の属性を維持する。固定弱点を持つ敵は指定した属性を優先する。'] },
   { operatorId: 'char_1050_chen3', name: '寒暑覚知', prefabKey: '2', categories: ['SURVIVAL'], effects: b => [
     effect('random-heal', 'heal_atk_scale_min / heal_atk_scale_max', { item: 'HP_RESTORE_ATK_RATIO', operation: 'RESTORE', value: null, unit: 'ATK_RATIO', range: { minimum: multiplyNumber(b.read('heal_atk_scale_min'), 0.01), maximum: multiplyNumber(b.read('heal_atk_scale_max'), 0.01), maximumInclusive: null } }, { timing: { type: 'PERIODIC', intervalSeconds: b.read('stack_time'), firstTickSeconds: null }, condition: compare('source.secondsSinceDamageReceived', 'GTE', b.read('stack_time')), parameterBindings: { minimumPercent: 'heal_atk_scale_min', maximumPercent: 'heal_atk_scale_max' } }),
     status('next-attack-dodge', '次の物理・術攻撃を回避', 'description:dodge', { timing: { type: 'PERIODIC', intervalSeconds: b.read('stack_time'), firstTickSeconds: null }, condition: compare('source.secondsSinceDamageReceived', 'GTE', b.read('stack_time')), lifetime: { type: 'UNSPECIFIED' }, restrictions: [{ type: 'APPLICATION_LIMIT', count: 1, scope: 'SOURCE_LIFETIME', reset: 'EFFECT_END' }] }),
@@ -212,7 +219,7 @@ const definitions: readonly Definition[] = [
     status('liftoff', '離陸', 'description:liftoff', { condition: eq('source.skillActive', false) }),
   ] },
   { operatorId: 'char_1043_leizi2', name: '責問', prefabKey: '2', categories: ['ADDITIONAL_DAMAGE', 'STATUS'], effects: b => [
-    additional('skill-start-lightning', b.read('atk_scale_t2'), 'atk_scale_t2', 'ARTS', { timing: on('SKILL_START'), condition: eq('actionKind', 'SKILL_ACTION'), target: tagged(recipients('ENEMY', 'ATTACK_RANGE'), 'ground_tile', '地面マス') }),
+    additional('skill-start-lightning', b.read('atk_scale_t2'), 'atk_scale_t2', 'ARTS', { timing: on('SKILL_START'), condition: all(eq('actionKind', 'SKILL_ACTION'), compare('skillIndex', 'NE', 3)), target: tagged(recipients('ENEMY', 'ATTACK_RANGE'), 'ground_tile', '地面マス') }),
     status('skill-start-tremble', '戦慄', 'not_combat', { timing: on('SKILL_START'), target: tagged(recipients('ENEMY', 'ATTACK_RANGE'), 'ground_tile', '地面マス'), lifetime: { type: 'FIXED_SECONDS', seconds: b.read('not_combat') } }),
   ] },
 ]

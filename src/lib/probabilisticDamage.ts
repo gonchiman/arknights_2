@@ -1,11 +1,12 @@
 import { calculateDamageBreakdown, type DamageCalculationBreakdown, type DamageType } from './damageCalculator.ts'
+import type { ElementalDamageBreakdown } from './elementalDamage.ts'
 
 export interface ProbabilisticDamageBranch {
   id: 'NORMAL' | 'IGNORE'
   probability: number
   defenseIgnoreRatio: number
   damage: number
-  mitigation: DamageCalculationBreakdown
+  mitigation: DamageCalculationBreakdown | ElementalDamageBreakdown
 }
 
 /** Weight actual damage outcomes, including each outcome's minimum-damage rule. */

@@ -12,6 +12,7 @@ export function guardConditionMatches(condition: NonNullable<GuardStage['when']>
   if (actual === undefined) throw new RangeError(`条件「${condition.input}」が未指定です。`)
   const expected = condition.value
   if (condition.comparison === 'EQ') return actual === expected
+  if (condition.comparison === 'NE') return actual !== expected
   if (typeof actual !== 'number' || typeof expected !== 'number' || !Number.isFinite(actual)) {
     throw new RangeError(`条件「${condition.input}」には数値が必要です。`)
   }

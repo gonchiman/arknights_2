@@ -22,6 +22,7 @@ const reviewed: Readonly<Record<string, Readonly<Record<number, readonly string[
   char_350_surtr: { 2: ['active'] },
   char_172_svrash: { 3: ['active'] },
   char_264_f12yin: { 3: ['active'] },
+  char_1050_chen3: { 1: ['active'], 2: ['normal'] },
   char_4058_pepe: { 2: ['active'] },
   char_1051_headb2: { 1: ['active'], 2: ['first'] },
   char_1026_gvial2: { 1: ['active'], 2: ['active'], 3: ['active'] },

@@ -28,7 +28,7 @@ export interface CoverageVersionInfo extends Omit<CoverageSnapshot, 'rows'> {
   file: string
   sha256: string
   skillCount: number
-  counts: Record<DamageCalculatorThreeCoverageStatus, number>
+  counts: Record<Exclude<DamageCalculatorThreeCoverageStatus, 'NOT_APPLICABLE'>, number> & { NOT_APPLICABLE?: number }
 }
 export interface CoverageIndex { schemaVersion: 1; versions: CoverageVersionInfo[] }
 export interface CoverageChange {
@@ -39,8 +39,8 @@ export interface CoverageChange {
   fields: string[]
 }
 
-const STATUSES = ['SUPPORTED', 'CONDITIONAL', 'PENDING', 'UNSUPPORTED'] as const
-const SECTION_STATUSES = [...STATUSES, 'NOT_APPLICABLE'] as const
+const LEGACY_STATUSES = ['SUPPORTED', 'CONDITIONAL', 'PENDING', 'UNSUPPORTED'] as const
+const STATUSES = [...LEGACY_STATUSES, 'NOT_APPLICABLE'] as const
 const SKILL_TEXT_FIELDS = ['id', 'operatorId', 'operatorName', 'skillId', 'skillName', 'profession', 'professionLabel', 'subProfessionName'] as const
 const LIST_FIELDS = ['calculationScope', 'supportedConditions', 'deferredReasons', 'scopeNotes'] as const
 
@@ -125,7 +125,7 @@ function uniqueRecordMap(rows: readonly CoverageRecord[]): Map<string, CoverageR
 
 export function countCoverageRecords(rows: readonly CoverageRecord[]): CoverageVersionInfo['counts'] {
   const counts: CoverageVersionInfo['counts'] = { SUPPORTED: 0, CONDITIONAL: 0, PENDING: 0, UNSUPPORTED: 0 }
-  for (const row of rows) counts[row.status]++
+  for (const row of rows) counts[row.status] = (counts[row.status] ?? 0) + 1
   return counts
 }
 
@@ -143,8 +143,8 @@ function strings(value: unknown): asserts value is string[] {
 function integer(value: unknown, min: number, max = Number.MAX_SAFE_INTEGER): asserts value is number {
   valid(Number.isSafeInteger(value) && (value as number) >= min && (value as number) <= max)
 }
-function status(value: unknown, section = false): void {
-  valid((section ? SECTION_STATUSES : STATUSES).includes(value as never))
+function status(value: unknown): void {
+  valid(STATUSES.includes(value as never))
 }
 function metadata(value: Record<string, unknown>): void {
   valid(value.schemaVersion === 1 && typeof value.id === 'string' && /^v[1-9]\d*$/.test(value.id))
@@ -161,7 +161,7 @@ function parseRecord(value: unknown): CoverageRecord {
   integer(skill.skillIndex, 1, 99); integer(skill.rarity, 1, 6)
   status(row.status)
   const sections = object(row.sections)
-  for (const key of ['skill', 'talent', 'trait']) status(sections[key], true)
+  for (const key of ['skill', 'talent', 'trait']) status(sections[key])
   for (const key of LIST_FIELDS) strings(row[key])
   if (row.conditionsLabel !== undefined) string(row.conditionsLabel)
   if (row.selection !== undefined) {
@@ -173,7 +173,7 @@ function parseRecord(value: unknown): CoverageRecord {
   const detailIds = new Set<string>()
   for (const value of row.details) {
     const detail = object(value)
-    string(detail.id); string(detail.label); string(detail.name); status(detail.status, true)
+    string(detail.id); string(detail.label); string(detail.name); status(detail.status)
     valid(/^(skill|trait|talent-none|talent-[1-9]\d*)$/.test(detail.id))
     valid(!detailIds.has(detail.id)); detailIds.add(detail.id)
   }
@@ -211,8 +211,9 @@ export function parseCoverageIndex(value: unknown): CoverageIndex {
     valid(typeof version.sha256 === 'string' && /^[a-f0-9]{64}$/.test(version.sha256))
     integer(version.skillCount, 1)
     const counts = object(version.counts)
-    for (const key of STATUSES) integer(counts[key], 0)
-    valid(STATUSES.reduce((sum, key) => sum + (counts[key] as number), 0) === version.skillCount)
+    for (const key of LEGACY_STATUSES) integer(counts[key], 0)
+    if (counts.NOT_APPLICABLE !== undefined) integer(counts.NOT_APPLICABLE, 0)
+    valid(STATUSES.reduce((sum, key) => sum + (counts[key] as number | undefined ?? 0), 0) === version.skillCount)
   }
   return structuredClone(index) as unknown as CoverageIndex
 }

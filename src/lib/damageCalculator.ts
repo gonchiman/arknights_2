@@ -7,11 +7,14 @@ import type {
 
 export const DAMAGE_TYPES = ['PHYSICAL', 'ARTS', 'TRUE'] as const
 export type DamageType = typeof DAMAGE_TYPES[number]
+/** DC3 additionally evaluates HP damage from elements; legacy selectors stay unchanged. */
+export type HpDamageType = DamageType | 'ELEMENTAL'
 
-export const DAMAGE_TYPE_LABELS: Record<DamageType, string> = {
+export const DAMAGE_TYPE_LABELS: Record<HpDamageType, string> = {
   PHYSICAL: '物理',
   ARTS: '術',
   TRUE: '確定',
+  ELEMENTAL: '元素',
 }
 
 export interface OperatorStats {
@@ -161,6 +164,18 @@ export function getOperatorStats(
     attackInterval,
     baseAttackBreakdown,
   }
+}
+
+/** DEF-referenced damage uses the same level/trust interpolation as ATK, without ATK modifiers. */
+export function getOperatorDefense(profile: OperatorCombatProfile, phaseIndex: number, level: number, trustPercent: number): number {
+  const phase = profile.phases[phaseIndex], frames = phase?.attributesKeyFrames
+  if (!frames?.length || [...frames, ...profile.favorKeyFrames].some(frame =>
+    typeof frame.data?.def !== 'number' || !Number.isFinite(frame.data.def) || frame.data.def < 0))
+    throw new RangeError('防御力の育成ステータスを確認できません。')
+  const normalizedLevel = clamp(Math.round(level), 1, Math.max(1, phase.maxLevel ?? 1))
+  const favorLevel = Math.max(0, ...profile.favorKeyFrames.map(frame => frame.level ?? 0)) * clamp(trustPercent, 0, 100) / 100
+  return Math.max(0, Math.round(interpolateAttribute(frames, normalizedLevel, 'def', 0)
+    + interpolateAttribute(profile.favorKeyFrames, favorLevel, 'def', 0)))
 }
 
 export function deriveSkillModel(

@@ -69,6 +69,174 @@
         "PENDING": 85,
         "UNSUPPORTED": 480
       }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "v4",
+      "label": "v4 職分・複合攻撃の拡張と対象外区分",
+      "capturedAt": "2026-11-05T14:03:00.373Z",
+      "source": {
+        "codeRevision": "e1cd24af168387633a9c59cbe8a33f2163e81996",
+        "codeDirty": true,
+        "codeFingerprint": "2dd0bfde8049b1bc884af62fc560818b198ddfd16526dccc16214cdb5f3464b0",
+        "gameDataRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+        "gameDataFingerprint": "e02f27762c44d0b083329e83375802cc2bef03f04777822f5f61220a0881a0ec",
+        "reconstructed": false
+      },
+      "file": "v4.json",
+      "sha256": "9469ce088454968307f55c97c05a36f98675f47e589ed97058083650e7e051f3",
+      "skillCount": 915,
+      "counts": {
+        "SUPPORTED": 454,
+        "CONDITIONAL": 20,
+        "PENDING": 86,
+        "UNSUPPORTED": 273,
+        "NOT_APPLICABLE": 82
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "v5",
+      "label": "v5 罠・貯蔵攻撃と残件の拡張",
+      "capturedAt": "2026-11-06T02:33:46.479Z",
+      "source": {
+        "codeRevision": "3543c57e17308c22b3b9da01bae27ac6e5999a12",
+        "codeDirty": true,
+        "codeFingerprint": "aa20c5a7795efa2f7488448a568b80b2592686f963c0c99fb88955eb4805c5ca",
+        "gameDataRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+        "gameDataFingerprint": "e02f27762c44d0b083329e83375802cc2bef03f04777822f5f61220a0881a0ec",
+        "reconstructed": false
+      },
+      "file": "v5.json",
+      "sha256": "d4a679c406cc066eb2ff645d980a8f0a09aabc1fe24b69099d17ca9d605b9385",
+      "skillCount": 915,
+      "counts": {
+        "SUPPORTED": 491,
+        "CONDITIONAL": 41,
+        "PENDING": 75,
+        "UNSUPPORTED": 190,
+        "NOT_APPLICABLE": 118
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "v6",
+      "label": "v6 浮遊ユニット・弱点属性と条件別攻撃",
+      "capturedAt": "2026-11-06T03:13:00.005Z",
+      "source": {
+        "codeRevision": "340b68595b79837be0a8ccdacfb2d063c202c381",
+        "codeDirty": true,
+        "codeFingerprint": "d93867110953c45a83346158343ec30ef38f08d6a8bb85116a5ff2226b30eeb6",
+        "gameDataRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+        "gameDataFingerprint": "e02f27762c44d0b083329e83375802cc2bef03f04777822f5f61220a0881a0ec",
+        "reconstructed": false
+      },
+      "file": "v6.json",
+      "sha256": "95ac5348cf81d6acdcb68a6a6ee55c350140a44df777233cc7a315386f0888f9",
+      "skillCount": 915,
+      "counts": {
+        "SUPPORTED": 511,
+        "CONDITIONAL": 64,
+        "PENDING": 77,
+        "UNSUPPORTED": 145,
+        "NOT_APPLICABLE": 118
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "v7",
+      "label": "v7 支援系ダメージ・特殊術攻撃の拡張",
+      "capturedAt": "2026-11-06T03:34:15.102Z",
+      "source": {
+        "codeRevision": "5608bbe14ae85681db7301c8e85b9fc752bf3431",
+        "codeDirty": true,
+        "codeFingerprint": "cecd93fd91e7f2361bf4c73c7e7f4efb343a71c3a114491d2a3b9010aebb37dc",
+        "gameDataRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+        "gameDataFingerprint": "e02f27762c44d0b083329e83375802cc2bef03f04777822f5f61220a0881a0ec",
+        "reconstructed": false
+      },
+      "file": "v7.json",
+      "sha256": "8255a6235475a81f3c49135b0d076ebe0b7cd410661d20a3a3320a69413642b5",
+      "skillCount": 915,
+      "counts": {
+        "SUPPORTED": 527,
+        "CONDITIONAL": 82,
+        "PENDING": 73,
+        "UNSUPPORTED": 111,
+        "NOT_APPLICABLE": 122
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "v8",
+      "label": "v8 召喚物・元素ダメージと保留スキルの拡張",
+      "capturedAt": "2026-11-06T04:00:53.250Z",
+      "source": {
+        "codeRevision": "c675e147ac42872d81751e224e6a70d0ce156222",
+        "codeDirty": true,
+        "codeFingerprint": "c00e3f7be0791602b80d0ecf3b8c7ccefaf2ebb3d2d1b3238be32bc320f24f62",
+        "gameDataRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+        "gameDataFingerprint": "e02f27762c44d0b083329e83375802cc2bef03f04777822f5f61220a0881a0ec",
+        "reconstructed": false
+      },
+      "file": "v8.json",
+      "sha256": "fe7633062a8ce18aee4552b09c07261f372c3ca0e804511108a4c0cf5acf8e4f",
+      "skillCount": 915,
+      "counts": {
+        "SUPPORTED": 562,
+        "CONDITIONAL": 88,
+        "PENDING": 47,
+        "UNSUPPORTED": 80,
+        "NOT_APPLICABLE": 138
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "v9",
+      "label": "v9 元素損傷の蓄積と召喚・特殊攻撃の拡張",
+      "capturedAt": "2026-11-06T04:24:05.133Z",
+      "source": {
+        "codeRevision": "5a4e57722985cbdfd97256a662bc80b3151dd206",
+        "codeDirty": true,
+        "codeFingerprint": "4b6a68c0f167a54d050a0fe0a5d7c3dd39ba96bd5032076c0efd78d12df3adde",
+        "gameDataRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+        "gameDataFingerprint": "e02f27762c44d0b083329e83375802cc2bef03f04777822f5f61220a0881a0ec",
+        "reconstructed": false
+      },
+      "file": "v9.json",
+      "sha256": "cd8eb9a377f57fa45e4c49a358bed3d0f579aafa003c90d23de16f468077fa43",
+      "skillCount": 915,
+      "counts": {
+        "SUPPORTED": 589,
+        "CONDITIONAL": 102,
+        "PENDING": 39,
+        "UNSUPPORTED": 45,
+        "NOT_APPLICABLE": 140
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "v10",
+      "label": "v10 未対応0・召喚と独立イベントの拡張",
+      "capturedAt": "2026-11-06T05:21:34.810Z",
+      "source": {
+        "codeRevision": "9ef2e5cf1700c7f5194a7b409e04caa6a98b744a",
+        "codeDirty": true,
+        "codeFingerprint": "c80d4fad084b82ff7e00d937fff78493f2b49d0ce310dc76d8434338d68bb16f",
+        "gameDataRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+        "gameDataFingerprint": "e02f27762c44d0b083329e83375802cc2bef03f04777822f5f61220a0881a0ec",
+        "reconstructed": false
+      },
+      "file": "v10.json",
+      "sha256": "0afb2db50caa7aabfcb1e08cba106f00bc4ac1eeb4baa8380fefb1da4fbe3919",
+      "skillCount": 915,
+      "counts": {
+        "SUPPORTED": 649,
+        "CONDITIONAL": 123,
+        "PENDING": 1,
+        "UNSUPPORTED": 0,
+        "NOT_APPLICABLE": 142
+      }
     }
   ]
 }

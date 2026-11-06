@@ -9,6 +9,7 @@ import type { GuardInput } from '../lib/guardCombatTypes'
 import type { SkillStructureSelection } from '../lib/skillStructure'
 import type { SkillRecord } from '../types/skill'
 import { AnalysisTabs } from './AnalysisTabs'
+import { ElementalBuildupTable } from './ElementalBuildupTable'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { GuardConditionFields } from './DamageCalculatorThree'
 import {
@@ -88,6 +89,9 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const output = comparison?.reference.output
   const conditionInputs: GuardInput[] = (comparison?.reference.fields ?? []).filter(field => !field.locked)
     .map(field => ({ ...field, defaultValue: field.value ?? (field.kind === 'number' ? Number.NaN : '') }))
+  const mainType = output?.mainAttackType
+  const originalLabel = mainType === 'PHYSICAL' ? '物理' : mainType === 'ARTS' ? '術'
+    : mainType === 'TRUE' ? '確定' : mainType === 'ELEMENTAL' ? '元素' : output?.rows.length ? '混合' : '未確定'
   const hasDps = comparison?.canShowDps ?? false
   const activeMetric = hasDps ? metric : 'perAttack'
   const growthConditions = selected ? [`昇進${selected.phaseIndex} Lv.${formatNumber(level)}`,
@@ -259,6 +263,10 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
           metric={activeMetric} invalid={comparison.errors.length > 0} />
         : <DamageCalculatorThreeAttributeRangeChart physical={comparison.physical} arts={comparison.arts}
           metric={activeMetric} invalid={comparison.errors.length > 0} />}
+      <ElementalBuildupTable groups={[{
+        label: `本来（${originalLabel}） · 防御力 0 · 術耐性 0`,
+        values: comparison.errors.length ? [] : comparison.reference.elementalBuildups,
+      }]} />
     </CollapsibleCalculatorPanel>}
     {image?.view === 'table' && <DamageCalculatorThreeAttributeImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
     {image?.view === 'chart' && <DamageCalculatorThreeAttributeChartImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}

@@ -1,6 +1,7 @@
 import { evaluateCombatCondition, resolveCombatNumericValue, resolveCombatProbability,
   formatCombatNumber, type CombatNumericValue, type CombatScalar } from './combatEffectStructure.ts'
 import { formatTraitStructureEffectItem, type TraitStructure, type TraitStructureEffect } from './traitStructure.ts'
+import { calculateMechAccordCurrentScale, type MechAccordRampProfile } from './mechAccordDamage.ts'
 
 export interface TraitCombatContext {
   readonly kind: 'NORMAL' | 'NEXT_ATTACK' | 'SKILL_ACTION' | 'COUNTER'
@@ -23,11 +24,14 @@ export interface TraitCombatEvaluation {
 export interface TraitCombatResult {
   damageType?: 'PHYSICAL' | 'ARTS'
   hitCount?: number
+  storedChargeCount?: number
+  droneRamp?: MechAccordRampProfile
   maxTargets?: number | null
   attackScale: number
   attackRatio: number
   splashScale?: number
   chainRetention?: number
+  aftershockScale?: number
   evaluations: TraitCombatEvaluation[]
   blockers: string[]
 }
@@ -100,6 +104,24 @@ export function evaluateTraitStructure(structure: TraitStructure | null, context
       if (effect.item === 'HIT_COUNT') result.hitCount = value
       else result.maxTargets = value
       row(effect, 'APPLIED', `${formatCombatNumber(value)}${effect.item === 'HIT_COUNT' ? '回' : '体'}`)
+    } else if (effect.item === 'DRONE_ATTACK') {
+      const initialScale = numeric(effect.value.initialScale), increment = numeric(effect.value.increment)
+      const maximumScale = numeric(effect.value.maximumScale), baseMaximumStacks = numeric(effect.value.baseMaximumStacks, true)
+      if (initialScale === null || increment === null || maximumScale === null || baseMaximumStacks === null) {
+        block(effect, '浮遊ユニットの倍率・増分・上限を解決できません。'); continue
+      }
+      const profile = { initialScale, increment, maximumScale, baseMaximumStacks }
+      try { calculateMechAccordCurrentScale(profile, 1) } catch { block(effect, '浮遊ユニットの倍率と上限が整合しません。'); continue }
+      result.droneRamp = profile
+      row(effect, 'APPLIED', `初撃×${formatCombatNumber(initialScale)}・上限×${formatCombatNumber(maximumScale)}`)
+    } else if (effect.item === 'STORED_CHARGES') {
+      if (context.kind !== 'NORMAL') { row(effect, 'NOT_RELEVANT'); continue }
+      const cap = numeric(effect.value, true), count = context.metrics.storedChargeCount
+      if (cap === null || cap < 1 || typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0 || count > cap) {
+        block(effect, '通常貯蔵数を確認済みの上限内で指定してください。'); continue
+      }
+      result.storedChargeCount = count
+      row(effect, 'APPLIED', `${count} / ${cap}発`)
     } else if (effect.item === 'ATTACK_TARGETING') {
       const count = context.metrics['attack.targetCount']
       if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 1) {
@@ -117,6 +139,11 @@ export function evaluateTraitStructure(structure: TraitStructure | null, context
       result.maxTargets = count
       result.chainRetention = retention
       row(effect, 'APPLIED', `最大${count}体・跳躍ごとに×${formatCombatNumber(retention)}`)
+    } else if (effect.item === 'AFTERSHOCK') {
+      const value = numeric(effect.value.attackScale)
+      if (value === null) { block(effect, '余震の倍率を解決できません。'); continue }
+      result.aftershockScale = value
+      row(effect, 'APPLIED', `×${formatCombatNumber(value)}・1回`)
     } else if (effect.item === 'SPLASH_DAMAGE') {
       const value = numeric(effect.value.attackScale)
       if (value === null || effect.value.includeMainTarget || effect.value.center !== 'ATTACK_TARGET'

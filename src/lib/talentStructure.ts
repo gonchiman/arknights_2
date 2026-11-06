@@ -11,6 +11,7 @@ import type { TalentCoarseCategory } from './talentCoarseClassification.ts'
 import type { RawBlackboardEntry, RawUnlockCondition, SkillRecord } from '../types/skill.ts'
 import { buildGuardTalentStructures, GUARD_TALENT_OPERATOR_IDS } from './guardTalentStructure.ts'
 import type { GuardTalentEffectPayload } from './guardTalentStructure.ts'
+import { ELEMENT_LABELS } from './elementalBuildup.ts'
 import { EXPANDED_OPERATOR_IDS, getExpandedDefinition } from './expandedCombatRegistry.ts'
 import { buildExpandedTalentStructures } from './expandedTalentStructure.ts'
 
@@ -255,19 +256,22 @@ export function formatTalentStructureEffectItem(item: TalentStructureEffect['ite
   return { REDEPLOY_TIME: '再配置時間', RESISTANCE_IGNORE_FIXED: '術耐性固定無視', STEALTH: 'ステルス',
     HP: 'HP', FORCED_RETREAT: '強制退場', DAMAGE_OVER_TIME: '継続ダメージ', DEFENSE_IGNORE_RATIO: '防御力割合無視',
     ATTACK_INTERVAL_ADD: '攻撃間隔の加算', MINIMUM_DAMAGE_RATIO: '最低ダメージの攻撃力比率', DEFENSE_IGNORE_FIXED: '防御力固定無視',
-    ATK_FLAT: '攻撃力（固定値）', MAX_HP_FLAT: '最大HP（固定値）', HP_RESTORE_FIXED: 'HP回復', SP_RESTORE: 'SP回復',
+    ATK_FLAT: '攻撃力（固定値）', ATK_FINAL_FLAT: '攻撃力（最終加算）', MAX_HP_FLAT: '最大HP（固定値）', HP_RESTORE_FIXED: 'HP回復', SP_RESTORE: 'SP回復', DAMAGE_CAP_PER_TARGET: '対象ごとのダメージ上限',
     AMMO_CAPACITY: '弾薬上限', FEVER: 'Fever', TAUNT: '狙われやすさ', DEFENSE_BUFF_RATIO: '防御力',
     PHYSICAL_DODGE: '物理回避', ARTS_DODGE: '術回避', DAMAGE_RESISTANCE: '被ダメージ軽減', PHYSICAL_DAMAGE_RESISTANCE: '物理被ダメージ軽減',
     MIN_HP_RATIO: 'HP下限', DEFENSE_REDUCTION_RATIO: '防御力低下', RESISTANCE_IGNORE_RATIO: '術耐性割合無視', RESISTANCE_REDUCTION_RATIO: '術耐性低下',
-    ATTACK_SCALE: '攻撃倍率', DAMAGE_SCALE: '与ダメージ倍率', SPLASH_DAMAGE_SCALE: '範囲対象の与ダメージ倍率', HEAL_RECEIVED_SCALE: '被治療倍率',
-    CRITICAL_ATTACK: '確率攻撃倍率', ADDITIONAL_ATTACK: '追加ダメージ', SP_RECOVERY: 'SP自然回復速度', STATUS: '状態付与', ATTACK_BEHAVIOR: '攻撃方式', HP_STEAL: '最大HP奪取', HP_RESTORE_ATK_RATIO: 'HP回復（攻撃力参照）',
+    DEFENSE_REDUCTION_FIXED: '防御力固定低下', DEFENSE_REDUCTION_FINAL_FIXED: '防御力固定低下（割合低下後）', RESISTANCE_REDUCTION_FIXED: '術耐性固定低下',
+    ARTS_DAMAGE_FLAT_ADDITION: '術ダメージ固定加算（軽減前）', WEAKPOINT_DAMAGE: '弱点ダメージ', DRONE_MAXIMUM_MULTIPLIER: '浮遊ユニットの倍率上限補正', EXTRA_DRONES: '追加浮遊ユニット数',
+    STORED_CHARGE_SCALE: '貯蔵弾の攻撃倍率', EXTRA_STORED_CHARGES: '追加貯蔵弾数', ATTACK_SCALE: '攻撃倍率', DAMAGE_SCALE: '与ダメージ倍率', SPLASH_DAMAGE_SCALE: '範囲対象の与ダメージ倍率', HEAL_RECEIVED_SCALE: '被治療倍率',
+    CRITICAL_ATTACK: '確率攻撃倍率', ADDITIONAL_ATTACK: '追加ダメージ', ELEMENTAL_BUILDUP: '元素損傷', SP_RECOVERY: 'SP自然回復速度', STATUS: '状態付与', ATTACK_BEHAVIOR: '攻撃方式', HP_STEAL: '最大HP奪取', HP_RESTORE_ATK_RATIO: 'HP回復（攻撃力参照）',
   }[item]
 }
 export function formatTalentStructureEffectOperation(effect: TalentStructureEffect): string {
   return { ADD_RATIO: '割合加算', ADD_VALUE: '数値加算', IGNORE_FIXED: '固定値無視', SET_ENABLED: '適用設定',
-    SET: '設定', EXECUTE: '実行', DEAL_DAMAGE: 'ダメージ付与', RESTORE: '回復', IGNORE_RATIO: '割合無視', MULTIPLY: '倍率乗算' }[effect.operation]
+    SET: '設定', EXECUTE: '実行', DEAL_DAMAGE: 'ダメージ付与', APPLY_ELEMENTAL_BUILDUP: '元素損傷付与', RESTORE: '回復', IGNORE_RATIO: '割合無視', MULTIPLY: '倍率乗算' }[effect.operation]
 }
 export function formatTalentStructureEffectValue(effect: TalentStructureEffect): string {
+  if (effect.item === 'ELEMENTAL_BUILDUP') return `${ELEMENT_LABELS[effect.damageKind.elementId]}：攻撃力×${formatCombatNumericValue(effect.value)}`
   if (effect.item === 'STATUS' || effect.item === 'ATTACK_BEHAVIOR') return effect.status
   if (effect.item === 'HP_RESTORE_ATK_RATIO') return '攻撃力参照のランダム量（抽選未確定）'
   if (effect.item === 'ADDITIONAL_ATTACK') {
@@ -304,6 +308,8 @@ export function formatTalentStructureEffectValue(effect: TalentStructureEffect):
   }
 }
 export function getTalentStructureEffectValueRows(effect: TalentStructureEffect): [string, string | number][] {
+  if (effect.item === 'ELEMENTAL_BUILDUP') return [['元素損傷', ELEMENT_LABELS[effect.damageKind.elementId]],
+    ['基準', '攻撃力'], ['比率', formatCombatNumericValue(effect.value)]]
   if (effect.item === 'DAMAGE_OVER_TIME') return getCombatDotDefinitionRows(effect.damage)
   const rows: [string, string | number][] = [['表示値', formatTalentStructureEffectValue(effect)], ['単位', effect.unit]]
   if (typeof effect.value === 'boolean') rows.push(['値', effect.value ? 'はい' : 'いいえ'])
@@ -336,7 +342,7 @@ function getAdditionalTalentValueRows(effect: TalentStructureEffect): [string, s
   if (effect.item === 'CRITICAL_ATTACK') rows.push(...getCombatNumericDefinitionRows(effect.probability.chance, '発動確率'))
   if (effect.item === 'ADDITIONAL_ATTACK') {
     if (effect.basis) rows.push(['参照値', effect.basis === 'TARGET_DEFENSE' ? '対象の防御力' : '攻撃力'])
-    rows.push(['ダメージ種別', { PHYSICAL: '物理', ARTS: '術', TRUE: '確定' }[effect.damageType]], ['量の時間単位', effect.rate])
+    rows.push(['ダメージ種別', { PHYSICAL: '物理', ARTS: '術', TRUE: '確定', ELEMENTAL: '元素' }[effect.damageType]], ['量の時間単位', effect.rate])
     for (const [label, value] of [['固定ダメージ', effect.flatDamage], ['命中回数', effect.hits], ['発動確率', effect.probability.chance]] as const) {
       if (value !== undefined) rows.push(...getCombatNumericDefinitionRows(value, label))
     }

@@ -97,6 +97,27 @@ test('チェンS2: 物理500%と術500%を別軽減し、通常2hitや7対象を
   assert.deepEqual(row.attackComponents.map(component => component.damageType), ['PHYSICAL', 'ARTS'])
 })
 
+test('チョンユエS2は初撃と浮遊解除時を別評価し、解除時だけ止戈を確定適用する', () => {
+  for (const talentActive of [false, true]) {
+    const initial = at('char_2024_chyue', 2, 1000, { phase: 'initial', talentActive, actualAttackTargetCount: 4 })
+    const initialAttack = initial.result.stats.attack * 4.5
+    close(initial.row.perAttack, Math.max(initialAttack - 1000, initialAttack * 0.05) * (talentActive ? 1.65 : 1))
+    close(initial.row.allTargetsPerAttack, initial.row.perAttack * 4)
+    const fall = at('char_2024_chyue', 2, 1000, { phase: 'fall', talentActive, actualAttackTargetCount: 5 })
+    const fallAttack = fall.result.stats.attack * 6.5
+    close(fall.row.perAttack, Math.max(fallAttack - 1000, fallAttack * 0.05) * 1.65)
+    close(fall.row.allTargetsPerAttack, fall.row.perAttack * 5)
+    assert.equal(fall.row.dps, null)
+    assert.equal(fall.row.attackComponents.length, 1)
+  }
+  assert.deepEqual(output('char_2024_chyue', 2, { phase: 'initial', actualAttackTargetCount: 5 }).rows, [])
+  const skill = record('char_2024_chyue', 2)
+  const virtual = buildDamageCalculatorThreeOutput({ operator: skill, skill, phaseIndex: 2, operatorLevel: 90,
+    trust: 100, skillLevelIndex: 9, conditions: { guard: { phase: 'fall', talentActive: false } }, virtualMainAttackType: 'ARTS' })
+  assert.deepEqual(virtual.unsupportedReasons, [])
+  close(virtual.rows.find(row => row.axisValue === 40)!.perAttack, virtual.stats.attack * 6.5 * 0.6 * 1.65)
+})
+
 test('マウンテンS1: 確率倍率は軽減後に加重し、対象2体へ1回ずつ与える', () => {
   const { result, row } = at('char_264_f12yin', 1, 1000, { actualAttackTargetCount: 2 })
   const normal = result.stats.attack * 2.3, critical = normal * 1.6
@@ -133,7 +154,7 @@ test('不正な入力・不明な素質と時間挙動は既定値へ置換せ�
     assert.ok(result.unsupportedReasons.length)
     assert.deepEqual(result.rows, [])
   }
-  const music = output('char_4182_oblvns', 2)
+  const music = output('char_4182_oblvns', 2, { noteAttackUnchanged: false })
   assert.ok(music.unsupportedReasons.some(reason => /音符/.test(reason)))
   const missing = record('char_1014_nearl2', 1)
   missing.operatorProfile.talents = []
@@ -160,5 +181,38 @@ test('特化3データの欠落や重複した数値キーは定数recipeでも�
       operatorLevel: 90, trust: 100, skillLevelIndex: 9 })
     assert.ok(result.unsupportedReasons.length)
     assert.deepEqual(result.rows, [])
+  }
+})
+
+
+test('豊川祥子S2は発射時のブロック・音色と命中時の音符数で1音符を計算する', () => {
+  for (const phase of ['piano', 'organ']) for (const blocked of [false, true]) for (const count of [1, 5, 10]) {
+    const { result, row } = at('char_4182_oblvns', 2, phase === 'piano' ? 1000 : 40,
+      { phase, noteEmittedWhileBlocking: blocked, noteCount: count })
+    const attack = Math.floor(785 * (phase === 'piano' ? 2.1 : 1)) * (blocked ? 1 : 0.8)
+    const expected = phase === 'piano' ? Math.max(attack - 1000 * (1 - 0.03 * count), attack * 0.05)
+      : attack * (1 - 40 * (1 - 0.02 * count) / 100)
+    close(row.perAttack, expected)
+    assert.equal(row.dps, null)
+    assert.equal(row.combinedDps, null)
+    assert.equal(result.attackInterval, null)
+    assert.equal(row.attackComponents?.length, 1)
+  }
+})
+
+test('豊川祥子S3は物理・術の1音符だけを評価し、音符数0やATK変更後を拒否する', () => {
+  for (const phase of ['piano', 'organ']) for (const blocked of [false, true]) {
+    const { result, row } = at('char_4182_oblvns', 3, phase === 'piano' ? 1000 : 40,
+      { phase, noteEmittedWhileBlocking: blocked, noteCount: 10 })
+    const attack = 785 * 2.2 * (blocked ? 1 : 0.8)
+    close(row.perAttack, phase === 'piano' ? Math.max(attack - 700, attack * 0.05) : attack * 0.68)
+    assert.equal(row.dps, null)
+    assert.equal(result.attackInterval, null)
+    assert.equal(row.attackComponents?.length, 1)
+  }
+  for (const index of [2,3]) for (const guard of [{ noteCount: 0 }, { noteAttackUnchanged: false }]) {
+    const result = output('char_4182_oblvns', index, guard)
+    assert.deepEqual(result.rows, [])
+    assert.ok(result.unsupportedReasons.length)
   }
 })

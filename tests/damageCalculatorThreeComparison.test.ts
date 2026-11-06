@@ -15,7 +15,7 @@ const guards = (JSON.parse(readFileSync(new URL('./fixtures/sixStarGuardSources.
 const profiles = JSON.parse(readFileSync(new URL('./fixtures/sixStarGuardProfiles.json', import.meta.url), 'utf8')) as {
   operatorId: string; operatorProfile: OperatorCombatProfile
 }[]
-const sources: ExpandedOperatorSource[] = ['Melee', 'Ranged', 'Arts'].flatMap(group => JSON.parse(readFileSync(
+const sources: ExpandedOperatorSource[] = ['Melee', 'Ranged', 'Arts', 'Caster', 'Support', 'Special', 'Elemental', 'Summon'].flatMap(group => JSON.parse(readFileSync(
   new URL(`../src/data/expanded${group}Sources.json`, import.meta.url), 'utf8')) as ExpandedOperatorSource[])
 const common = { defense: 123, resistance: 37, enemyCount: 3 }
 
@@ -25,6 +25,7 @@ function record(operatorId: string, skillIndex: number): SkillRecord {
   const source = (expanded?.skills ?? guard!.skills).find(skill => skill.skillIndex === skillIndex)!
   const raw = structuredClone(source.raw)
   return { id: `${operatorId}/${skillIndex}`, operatorId, operatorName: expanded?.operatorName ?? guard!.name,
+    overrideTokenKey: expanded?.profile.summonSkillTokenKeys?.[skillIndex - 1] ?? undefined,
     skillId: source.skillId, skillIndex, skillName: raw.name!, profession: expanded?.profession ?? 'WARRIOR',
     professionLabel: expanded?.profession ?? '前衛', rarity: expanded?.rarity ?? 6,
     subProfessionId: expanded?.subProfessionId ?? guard!.subProfessionId,
@@ -68,7 +69,7 @@ function compareWithOrdinary(entry: DamageThreeComparisonEntry, conditions: Dama
 }
 
 test('DC3の対応スキル全段階を一意の行として列挙し、出典にない技能は作らない', () => {
-  assert.equal(catalog.length, 435)
+  assert.equal(catalog.length, 813)
   const expected = getDamageCalculatorThreeStructures().flatMap(structure => {
     const info = structure.basicInfo
     return (structure.guardRecipe?.stages ?? structure.effectStructure.stages)
@@ -169,8 +170,8 @@ test('編集可能な条件を反映し、別段階へ移る値や不正値か�
   assert.match(evaluate('char_293_thorns', 3, 'second_and_later', { skillActivationCount: 1 }).errors.join(), /段階/)
 })
 
-test('保留技能・不正な共通入力は理由を残し、0やNaNのダメージとして表示しない', () => {
-  const unavailable = evaluate('char_4182_oblvns', 2, 'piano')
+test('未確認の音符スナップショット・不正な共通入力は0やNaNとして表示しない', () => {
+  const unavailable = evaluate('char_4182_oblvns', 2, 'piano', { 'guard.noteAttackUnchanged': false })
   assert.match(unavailable.errors.join(), /音符/)
   noNumbers(unavailable)
   for (const patch of [

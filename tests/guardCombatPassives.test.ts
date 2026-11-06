@@ -137,7 +137,8 @@ test('レッシングの被ダメージ履歴とパラスのHP素質・ブロッ
 
 test('耀騎士ニアールの防御無視は確率補正や配置時ダメージと区別する', () => {
   const result = evaluate('char_1014_nearl2')
-  close(result.defenseIgnoreRatio, 0.2)
+  close(result.defenseIgnoreRatio, 0)
+  close(result.attackDefenseIgnoreRatio ?? 0, 0.2)
   assert.equal(result.additionalActions.length, 0)
   assert.ok(result.evaluations.some(row => row.status === 'NOT_RELEVANT' && row.reason.includes('配置時')))
 })
@@ -178,7 +179,8 @@ test('豊川祥子は音符数から割合無視を計算し攻撃速度対象�
 test('デーゲンS2は他の味方によるブロックでも素質発動率を上げる', () => {
   const result = evaluate('char_4116_blkkgt', { targetBlocked: true, targetTrembling: true }, 2, 'SKILL_ACTION')
   close(result.critChance, 1)
-  close(result.defenseIgnoreRatio, 0.25)
+  close(result.defenseIgnoreRatio, 0)
+  close(result.attackDefenseIgnoreRatio ?? 0, 0.25)
   assert.equal(result.blockers.length, 0)
   close(evaluate('char_4116_blkkgt', { targetBlocked: false, targetTrembling: true }, 2, 'SKILL_ACTION').critChance, 0.1)
 })

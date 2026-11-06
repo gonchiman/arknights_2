@@ -1,4 +1,6 @@
-import { calculateAttackPipeline, calculateDamageBreakdown, getOperatorStats, type DamageType } from './damageCalculator.ts'
+import { calculateAttackPipeline, calculateDamageBreakdown, getOperatorDefense, getOperatorStats, type HpDamageType, type OperatorStats } from './damageCalculator.ts'
+import { calculateElementalDamageBreakdown } from './elementalDamage.ts'
+import { calculateElementalBuildup, ELEMENTAL_BUILDUP_INPUTS, type ElementalBuildupResult } from './elementalBuildup.ts'
 import type { DamageCalculatorThreeInput, DamageCalculatorThreeOutput, DamageCalculatorThreeAttackComponent } from './damageCalculatorThree.ts'
 import type { SkillStructure } from './skillStructure.ts'
 import type { GuardDamageAction, GuardInput, GuardPassiveModifiers, GuardStage } from './guardCombatTypes.ts'
@@ -11,32 +13,52 @@ import { evaluateGuardTraits } from './guardTraitEvaluation.ts'
 import type { TraitCombatResult } from './traitCombatEvaluation.ts'
 import { validateDamageCalculatorThreeEnemy } from './damageCalculatorThreeEnemy.ts'
 import { getGuardVirtualAttackCapability, getMainAttackType } from './damageCalculatorThreeVirtualAttack.ts'
+import { selectWeakpointDamageType } from './weakpointDamage.ts'
 
 const TARGET_INPUT: GuardInput = { key: 'actualAttackTargetCount', label: '実際の攻撃対象数', kind: 'number',
   defaultValue: 1, min: 1, max: 10000, step: 1 }
 const RESISTANCE_INPUT: GuardInput = { key: 'enemyResistance', label: '敵の術耐性', kind: 'number', defaultValue: 0, min: 0, max: 100, step: 1 }
+const ELEMENTAL_RESISTANCE_INPUT: GuardInput = { key: 'enemyElementalResistance', label: '敵の元素耐性', kind: 'number', defaultValue: 0, min: 0, max: 100, step: 1 }
+
+/** A separately validated actor may supply its own stats and passive/trait evaluators. */
+export interface GuardActorContext {
+  stats: OperatorStats
+  /** Final owner ATK, independently evaluated from live owner growth/skill/passives. Never a UI condition. */
+  ownerAttackStat?: number
+  /** Reviewed inspiration added to token ATK after percentage bonuses, exactly once. */
+  attackFinalAddition?: number
+  evaluatePassives: typeof evaluateGuardPassives
+  evaluateTraits: typeof evaluateGuardTraits
+}
 
 /** Execute the same reviewed recipe used by the structure page. No description parsing. */
 export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, structure: SkillStructure,
-  initialErrors: string[] = []): DamageCalculatorThreeOutput {
+  initialErrors: string[] = [], actor?: GuardActorContext): DamageCalculatorThreeOutput {
   const recipe = structure.guardRecipe!
   const expanded = getExpandedDefinition(recipe.operatorId)
   // Invalid values still block output; safe display statistics must not throw before that error is shown.
-  const stats = getOperatorStats(input.operator.operatorProfile,
+  const stats = actor?.stats ?? getOperatorStats(input.operator.operatorProfile,
     Number.isFinite(input.phaseIndex) ? input.phaseIndex : 0,
     Number.isFinite(input.operatorLevel) ? input.operatorLevel : 1,
     Number.isFinite(input.trust) ? input.trust : 0)
   const enemyErrors = validateDamageCalculatorThreeEnemy(input.enemy)
   const enemy = enemyErrors.length ? undefined : input.enemy
   const reasons = [...initialErrors, ...enemyErrors]
+  for (const [name, amount] of Object.entries({ 召喚者の攻撃力: actor?.ownerAttackStat, 召喚物への最終加算: actor?.attackFinalAddition }))
+    if (amount !== undefined && (!Number.isFinite(amount) || amount < 0)) reasons.push(`${name}を確認できません。`)
   const suppliedConditions = enemy
     ? { ...input.conditions?.guard, enemyResistance: enemy.resistance } : input.conditions?.guard ?? {}
   let inputs: GuardInput[] = []
-  try { inputs = mergeGuardInputs([TARGET_INPUT], getGuardPassiveInputs(input.operator.operatorId), recipe.inputs) }
+  try { inputs = mergeGuardInputs([TARGET_INPUT], getGuardPassiveInputs(input.operator.operatorId), recipe.inputs,
+    recipe.stages.some(stage => stage.elementalBuildups?.length) ? ELEMENTAL_BUILDUP_INPUTS : []) }
   catch (error) { reasons.push(message(error)) }
   const resolved = resolveGuardConditions(inputs, suppliedConditions)
   const conditions = resolved.values
   reasons.push(...resolved.errors)
+  for (const requirement of recipe.conditionRequirements ?? []) try {
+    if ((!requirement.when || guardConditionMatches(requirement.when, conditions))
+      && !guardConditionMatches(requirement.condition, conditions)) reasons.push(requirement.reason)
+  } catch (error) { reasons.push(message(error)) }
   if (input.operator.operatorId !== recipe.operatorId || input.skill.operatorId !== recipe.operatorId
     || input.skill.skillId !== structure.basicInfo.skillId || input.skillLevelIndex !== structure.basicInfo.levelIndex) reasons.push('選択したオペレーター・スキル・特化段階が一致していません。')
   const raw = input.skill.skillLevels[structure.basicInfo.levelIndex]
@@ -66,29 +88,32 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
     stage = stages[0]
   } catch (error) { reasons.push(message(error)) }
   const kind = stage?.kind ?? 'NORMAL'
-  const nativePassive = evaluateGuardPassives(input.operator, conditions, { kind, skillIndex: recipe.skillIndex, stageId: stage?.id ?? '', stage,
+  const evaluatePassives = actor?.evaluatePassives ?? evaluateGuardPassives
+  const nativePassive = evaluatePassives(input.operator, conditions, { kind, skillIndex: recipe.skillIndex, stageId: stage?.id ?? '', stage,
     phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel })
   let passive = nativePassive
   reasons.push(...passive.blockers, ...(stage?.unresolved ?? []))
   for (const [label, fraction] of Object.entries({ 発動確率: passive.critChance,
-    防御力無視: passive.defenseIgnoreRatio, 術耐性無視: passive.resistanceIgnoreRatio, 防御力低下: passive.defenseReductionRatio,
+    防御力無視: passive.defenseIgnoreRatio, 攻撃時防御力無視: passive.attackDefenseIgnoreRatio ?? 0, 術耐性無視: passive.resistanceIgnoreRatio, 防御力低下: passive.defenseReductionRatio,
     術耐性低下: passive.resistanceReductionRatio ?? 0, 最低ダメージ比率: passive.minimumDamageRatio ?? 0 })) {
     if (!Number.isFinite(fraction) || fraction < 0 || fraction > 1) reasons.push(`素質の${label}が有効範囲外です。`)
   }
   const actualTargetCount = Number(conditions.actualAttackTargetCount ?? 1)
   let traitEvaluation: TraitCombatResult | undefined
   let splashActions = new Map<GuardDamageAction, number>()
-  let maxTargets: number | null = 1, atk = 0, aspd = 0, interval: number | null = null, duration = 0
+  let maxTargets: number | null = 1, atk = 0, defenseRatio = 0, aspd = 0, interval: number | null = null, duration = 0
   let actions: GuardDamageAction[] = []
+  let damageCapPerTarget: number | null = null
   const actionPassives = new Map<GuardDamageAction, GuardPassiveModifiers>()
-  let mainAttackType: DamageType | null = null
+  let mainAttackType: HpDamageType | null = null
   let stageDefenseIgnoreRatio = 0, stageDefenseIgnoreFixed = 0, stageResistanceIgnoreFixed = 0
   let defenseIgnoreRatio = passive.defenseIgnoreRatio, defenseIgnoreFixed = passive.defenseIgnoreFixed
   let resistanceIgnoreFixed = passive.resistanceIgnoreFixed
   try {
     if (stage) {
-      const traits = evaluateGuardTraits(input.operator, stage, conditions, board,
-        { phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel })
+      const traits = (actor?.evaluateTraits ?? evaluateGuardTraits)(input.operator, stage, conditions, board,
+        { phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel },
+        { maximumMultiplier: nativePassive.droneMaximumMultiplier, extraUnits: nativePassive.extraDrones })
       traitEvaluation = traits.evaluation
       splashActions = traits.splashActions
       reasons.push(...traitEvaluation.blockers)
@@ -103,7 +128,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
         if (!capability.supported) throw new RangeError(capability.reason!)
         // Same-type selection is exactly the native evaluation, including all existing passive semantics.
         if (virtualType !== mainAttackType) {
-          const virtualPassive = evaluateGuardPassives(input.operator, conditions, { kind, skillIndex: recipe.skillIndex,
+          const virtualPassive = evaluatePassives(input.operator, conditions, { kind, skillIndex: recipe.skillIndex,
             stageId: stage.id, stage, phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel,
             virtualMainAttackType: virtualType })
           reasons.push(...virtualPassive.blockers)
@@ -113,7 +138,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
           defenseIgnoreFixed = passive.defenseIgnoreFixed
           resistanceIgnoreFixed = passive.resistanceIgnoreFixed
           const transformed = new Map(resolvedActions.map(action => [action,
-            action.role === 'MAIN' ? { ...action, damageType: virtualType } : action] as const))
+            action.role === 'MAIN' ? { ...action, damageType: virtualType, damageKind: undefined } : action] as const))
           resolvedActions = resolvedActions.map(action => transformed.get(action)!)
           splashActions = new Map([...splashActions].map(([action, scale]) => [transformed.get(action)!, scale]))
           // Attribute-restricted passives follow the transformed main attack only.
@@ -128,6 +153,8 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
       if (maxTargets !== null && actualTargetCount > maxTargets) reasons.push(`実際の攻撃対象数を1〜${maxTargets}体で指定してください。`)
       if (maxTargets !== null) inputs = inputs.map(item => item.key === TARGET_INPUT.key ? { ...item, max: maxTargets! } : item)
       atk = value(stage.atk)
+      defenseRatio = value(stage.defenseRatio)
+      if (!Number.isFinite(defenseRatio) || defenseRatio < -1) throw new RangeError('防御力増加割合が不正です。')
       aspd = value(stage.aspd)
       if (atk < -1) throw new RangeError('攻撃力増加割合が不正です。')
       stageDefenseIgnoreRatio = value(stage.defenseIgnoreRatio)
@@ -138,31 +165,56 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
       resistanceIgnoreFixed += stageResistanceIgnoreFixed
       const defenseReduction = value(stage.defenseReductionRatio)
       const resistanceReduction = value(stage.resistanceReductionRatio)
+      const defenseReductionFixed = value(stage.defenseReductionFixed)
+      const defenseReductionFinalFixed = value(stage.defenseReductionFinalFixed)
+      const attackFinalFlat = value(stage.attackFinalFlat) + (actor?.attackFinalAddition ?? 0)
+      const resistanceReductionFixed = value(stage.resistanceReductionFixed)
       const damageScale = value(stage.damageScale, 1)
+      const minimumDamageRatio = value(stage.minimumDamageRatio)
       if (defenseReduction < 0 || defenseReduction > 1 || resistanceReduction < 0 || resistanceReduction > 1)
         throw new RangeError('スキルの防御力・術耐性低下率が有効範囲外です。')
       if (damageScale < 0) throw new RangeError('スキルの与ダメージ倍率が有効範囲外です。')
+      if (minimumDamageRatio < 0 || minimumDamageRatio > 1) throw new RangeError('スキルの最低ダメージの攻撃力比率が有効範囲外です。')
+      if (defenseReductionFixed < 0 || defenseReductionFinalFixed < 0 || resistanceReductionFixed < 0) throw new RangeError('固定の防御力・術耐性低下量が有効範囲外です。')
       for (const modifiers of new Set([passive, nativePassive])) {
         modifiers.defenseReductionRatio = 1 - (1 - modifiers.defenseReductionRatio) * (1 - defenseReduction)
         modifiers.resistanceReductionRatio = 1 - (1 - (modifiers.resistanceReductionRatio ?? 0)) * (1 - resistanceReduction)
         modifiers.damageScale *= damageScale
+        modifiers.minimumDamageRatio = Math.max(modifiers.minimumDamageRatio ?? 0, minimumDamageRatio)
+        modifiers.defenseReductionFixed = (modifiers.defenseReductionFixed ?? 0) + defenseReductionFixed
+        modifiers.defenseReductionFinalFixed = (modifiers.defenseReductionFinalFixed ?? 0) + defenseReductionFinalFixed
+        modifiers.attackFinalFlat = (modifiers.attackFinalFlat ?? 0) + attackFinalFlat
+        modifiers.resistanceReductionFixed = (modifiers.resistanceReductionFixed ?? 0) + resistanceReductionFixed
       }
       const baseTime = stats.baseAttackTime * value(stage.intervalScale, 1) + value(stage.intervalAdd) + (passive.attackIntervalAdd ?? 0)
       const speed = stats.attackSpeed + aspd + passive.attackSpeed
       if (!Number.isFinite(speed) || !Number.isFinite(baseTime) || baseTime <= 0) throw new RangeError('攻撃間隔を計算できません。')
-      interval = kind === 'NORMAL' ? baseTime * 100 / Math.max(20, speed) : null
+      const fixedInterval = stage.fixedAttackInterval === undefined ? undefined : value(stage.fixedAttackInterval)
+      if (fixedInterval !== undefined && fixedInterval <= 0) throw new RangeError('固定の攻撃周期は0より大きい値で指定してください。')
+      interval = kind === 'NORMAL' ? fixedInterval ?? baseTime * 100 / Math.max(20, speed) : null
       duration = stage.duration === 'UNTIL_EXIT' ? 0 : Math.max(0, value(stage.duration, raw?.duration ?? 0))
-      const talentActions = nativePassive.additionalActions.map(action => action.basis !== 'TARGET_DEFENSE' && action.basis !== 'ATK_STAT' && (!action.timing || action.timing === 'PER_ATTACK')
+      const talentActions = nativePassive.additionalActions.map(action => !['TARGET_DEFENSE', 'ATK_STAT', 'OWNER_ATK_STAT', 'DEF_STAT'].includes(action.basis ?? '') && (!action.timing || action.timing === 'PER_ATTACK')
         ? { ...action, scale: { op: 'mul' as const, args: [action.scale, traitEvaluation!.attackScale] } } : action)
       if (nativePassive !== passive) for (const action of talentActions) actionPassives.set(action, nativePassive)
       actions = [...resolvedActions, ...talentActions].filter(action => action.timing !== 'ON_DEPLOY')
+      const caps = [stage.damageCapPerTarget === undefined ? undefined : value(stage.damageCapPerTarget),
+        ...actions.map(action => (actionPassives.get(action) ?? passive).damageCapPerTarget)]
+        .filter((cap): cap is number => cap !== undefined)
+      if (caps.length) {
+        if (caps.some(cap => !Number.isFinite(cap) || cap < 0)) throw new RangeError('対象ごとのダメージ上限が有効範囲外です。')
+        damageCapPerTarget = Math.min(...caps)
+        if (actions.length !== 1 || splashActions.size > 0 || value(actions[0].hits, 1) !== 1
+          || actions[0].isStoredCharge || actions[0].timing === 'PER_SECOND')
+          throw new RangeError('ダメージ上限は独立した1回の命中のみ対応しています。連撃・継続ダメージのHP推移は未対応です。')
+      }
     }
   } catch (error) { reasons.push(message(error)) }
   const types = new Set(actions.map(action => action.damageType))
-  const damageType: DamageType | null = types.size === 1 ? [...types][0] : null
-  const axisType: DamageType = types.has('PHYSICAL') || actions.some(action => action.basis === 'TARGET_DEFENSE')
-    ? 'PHYSICAL' : types.has('ARTS') ? 'ARTS' : 'TRUE'
-  if (axisType === 'PHYSICAL' && types.has('ARTS')) {
+  const hasWeakpointDamage = actions.some(action => (action.damageType === 'PHYSICAL' || action.damageType === 'ARTS') && (actionPassives.get(action) ?? passive).weakpointDamage)
+  const damageType: HpDamageType | null = !hasWeakpointDamage && types.size === 1 ? [...types][0] : null
+  const axisType: HpDamageType = hasWeakpointDamage || types.has('PHYSICAL') || actions.some(action => action.basis === 'TARGET_DEFENSE')
+    ? 'PHYSICAL' : types.has('ARTS') ? 'ARTS' : types.has('ELEMENTAL') ? 'ELEMENTAL' : 'TRUE'
+  if (axisType === 'PHYSICAL' && (types.has('ARTS') || hasWeakpointDamage)) {
     inputs.push(RESISTANCE_INPUT)
     if (enemy) conditions.enemyResistance = enemy.resistance
     else {
@@ -171,41 +223,86 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
       reasons.push(...resistance.errors)
     }
   }
-  const axisLabel = axisType === 'PHYSICAL' ? '敵の防御力' as const : axisType === 'ARTS' ? '敵の術耐性' as const : '防御力・術耐性' as const
+  if (types.has('ELEMENTAL') && (axisType !== 'ELEMENTAL' || enemy)) {
+    inputs.push(ELEMENTAL_RESISTANCE_INPUT)
+    const resistance = resolveGuardConditions([ELEMENTAL_RESISTANCE_INPUT], enemy?.elementalResistance === undefined
+      ? suppliedConditions : { ...suppliedConditions, enemyElementalResistance: enemy.elementalResistance })
+    Object.assign(conditions, resistance.values)
+    reasons.push(...resistance.errors)
+  }
+  const axisLabel = axisType === 'PHYSICAL' ? '敵の防御力' as const : axisType === 'ARTS' ? '敵の術耐性' as const
+    : axisType === 'ELEMENTAL' ? '敵の元素耐性' as const : '防御力・術耐性' as const
   const attackSpeed = stats.attackSpeed + aspd + passive.attackSpeed
   const pipeline = (scale = 1, extraBonus = 0, modifiers = passive, includeAttackScale = true) => calculateAttackPipeline(stats.attack, {
     directAddition: modifiers.attackFlat,
     directMultiplierPercent: (atk + modifiers.attackRatio + extraBonus) * 100,
+    finalAddition: modifiers.attackFinalFlat ?? 0,
     attackScale: scale * (includeAttackScale ? modifiers.attackScale : 1),
   })
+  const actionScale = (action: GuardDamageAction, modifiers = actionPassives.get(action) ?? passive) =>
+    value(action.scale, 1) * (action.isStoredCharge ? modifiers.storedChargeScale ?? 1 : 1)
+  const actionPipeline = (action: GuardDamageAction, modifiers = actionPassives.get(action) ?? passive) => {
+    if (action.basis === 'DEF_STAT') {
+      if (actor || action.attackBonus !== undefined || action.isStoredCharge || action.drone)
+        throw new RangeError('自身の防御力を参照する攻撃の計算条件を確認できません。')
+      const defense = getOperatorDefense(input.operator.operatorProfile, input.phaseIndex, input.operatorLevel, input.trust)
+      return calculateAttackPipeline(defense, { directMultiplierPercent: defenseRatio * 100, attackScale: value(action.scale, 1) })
+    }
+    if (action.basis !== 'OWNER_ATK_STAT')
+      return pipeline(actionScale(action, modifiers), value(action.attackBonus), modifiers, action.basis !== 'ATK_STAT')
+    if (!actor || actor.ownerAttackStat === undefined || !Number.isFinite(actor.ownerAttackStat) || actor.ownerAttackStat < 0
+      || action.attackBonus !== undefined || action.isStoredCharge || action.drone)
+      throw new RangeError('召喚者の攻撃力を参照する攻撃の計算条件を確認できません。')
+    return calculateAttackPipeline(actor.ownerAttackStat, { attackScale: value(action.scale, 1) })
+  }
   const scopeNotes = [...(recipe.notes ?? []), ...(stage?.notes ?? []), ...passive.notes,
     '選択したHP・状態・累積数が一定の条件で評価します。回復・移動・途中撃破による時間変化は含めません。']
   const directActions = actions.filter(action => action.timing !== 'PER_SECOND')
   const periodicActions = actions.filter(action => action.timing === 'PER_SECOND')
   const hasRandomTargets = directActions.some(action => action.targets !== undefined)
     || splashActions.size > 0
-  const canShowDps = kind === 'NORMAL' && interval !== null
-  const dpsReason = canShowDps ? null : kind === 'NEXT_ATTACK' ? '強化攻撃1回の値です。SP回復を含む周期DPSは計算しません。'
-    : '選択した段階の1回分の値です。動作時間・SP回復を含むDPSは計算しません。'
-  const points = enemy ? [axisType === 'PHYSICAL' ? enemy.defense : axisType === 'ARTS' ? enemy.resistance : 0]
-    : getDamageSensitivityTablePoints(axisType, directActions.map(action => {
-      try { return pipeline(value(action.scale, 1), value(action.attackBonus), actionPassives.get(action), action.basis !== 'ATK_STAT').finalAttack * 0.95 } catch { return 0 }
+  const elementalBuildupDefinitions = [...(stage?.elementalBuildups ?? []), ...(nativePassive.elementalBuildups ?? [])]
+  const hasElementalBuildup = elementalBuildupDefinitions.length > 0
+  const canShowDps = kind === 'NORMAL' && interval !== null && !stage?.dpsUnsupportedReason && damageCapPerTarget === null && !hasElementalBuildup
+  const dpsReason = canShowDps ? null : stage?.dpsUnsupportedReason ?? (hasElementalBuildup
+    ? '元素損傷を含む1回分の値です。爆発開始・終了をまたぐDPSは未対応です。' : damageCapPerTarget !== null
+    ? 'ダメージ上限を適用した1回の値です。命中後のHP変化・対象変更を含むDPSは計算しません。'
+    : kind === 'NEXT_ATTACK' ? '強化攻撃1回の値です。SP回復を含む周期DPSは計算しません。'
+    : '選択した段階の1回分の値です。動作時間・SP回復を含むDPSは計算しません。')
+  const points = enemy ? [axisType === 'PHYSICAL' ? enemy.defense : axisType === 'ARTS' ? enemy.resistance
+    : axisType === 'ELEMENTAL' ? Number(conditions.enemyElementalResistance ?? 0) : 0]
+    : getDamageSensitivityTablePoints(axisType === 'ELEMENTAL' ? 'ARTS' : axisType, directActions.map(action => {
+      try { return actionPipeline(action).finalAttack * 0.95 } catch { return 0 }
     }))
 
   function componentsAt(axis: number, list: readonly GuardDamageAction[]): DamageCalculatorThreeAttackComponent[] {
     const components: DamageCalculatorThreeAttackComponent[] = []
     for (const [index, action] of list.entries()) {
       const modifiers = actionPassives.get(action) ?? passive
-      const actionDefenseIgnoreRatio = modifiers === passive ? defenseIgnoreRatio
+      const weakpoint = modifiers.weakpointDamage === true && (action.damageType === 'PHYSICAL' || action.damageType === 'ARTS')
+      if (action.damageType === 'ELEMENTAL' ? action.damageKind?.type !== 'ELEMENTAL_DAMAGE' : action.damageKind !== undefined)
+        throw new RangeError('元素ダメージと通常ダメージの定義が一致しません。')
+      if (weakpoint && ((action.basis !== undefined && action.basis !== 'ATK') || action.timing === 'PER_SECOND')) {
+        throw new RangeError('攻撃力以外の参照・事前計算・継続ダメージと弱点判定の順序は未対応です。')
+      }
+      const typedScale = action.damageScaleWhenType === undefined ? 1 : value(action.damageScaleWhenType.scale)
+      if (typedScale < 0 || action.damageScaleWhenType !== undefined
+        && !['PHYSICAL', 'ARTS', 'TRUE'].includes(action.damageScaleWhenType.damageType)) {
+        throw new RangeError('属性限定の与ダメージ倍率が不正です。')
+      }
+      const allowsCritical = !['TARGET_DEFENSE', 'ATK_STAT', 'OWNER_ATK_STAT', 'DEF_STAT'].includes(action.basis ?? '')
+      const generalDefenseIgnoreRatio = modifiers === passive ? defenseIgnoreRatio
         : 1 - (1 - modifiers.defenseIgnoreRatio) * (1 - stageDefenseIgnoreRatio)
+      const actionDefenseIgnoreRatio = 1 - (1 - generalDefenseIgnoreRatio)
+        * (1 - (allowsCritical ? modifiers.attackDefenseIgnoreRatio ?? 0 : 0))
       const actionDefenseIgnoreFixed = modifiers === passive ? defenseIgnoreFixed : modifiers.defenseIgnoreFixed + stageDefenseIgnoreFixed
       const actionResistanceIgnoreFixed = modifiers === passive ? resistanceIgnoreFixed : modifiers.resistanceIgnoreFixed + stageResistanceIgnoreFixed
-      const scale = value(action.scale, 1), count = value(action.hits, 1), probability = value(action.probability, 1)
+      const scale = actionScale(action, modifiers), count = value(action.hits, 1) + (action.isStoredCharge ? modifiers.extraStoredCharges ?? 0 : 0), probability = value(action.probability, 1)
       const targets = value(action.targets, actualTargetCount)
       if (scale < 0 || count < 0 || (action.timing !== 'PER_SECOND' && !Number.isSafeInteger(count)) || probability < 0 || probability > 1
         || targets < 0 || targets > actualTargetCount) throw new RangeError(`「${action.label}」の倍率・回数・命中数が不正です。`)
       const includeAttackScale = action.basis !== 'ATK_STAT'
-      const basePipeline = pipeline(scale, value(action.attackBonus), modifiers, includeAttackScale)
+      const basePipeline = actionPipeline(action, modifiers)
       const normalAmount = action.basis === 'TARGET_CURRENT_HP'
         ? Math.max(Number(conditions.targetCurrentHp) * scale, pipeline(value(action.minimumAttackScale), 0, modifiers).finalAttack)
         : basePipeline.finalAttack + value(action.flatDamage)
@@ -219,9 +316,12 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
         const hitFactor = variant.targets / actualTargetCount
         const defense = enemy?.defense ?? (axisType === 'PHYSICAL' ? axis : 0)
         const resistance = enemy?.resistance ?? (axisType === 'ARTS' ? axis : Number(conditions.enemyResistance ?? 0))
-        const appliedDefense = defense * (1 - modifiers.defenseReductionRatio)
-        const appliedResistance = resistance * (1 - (modifiers.resistanceReductionRatio ?? 0)) * (1 - modifiers.resistanceIgnoreRatio)
-        const allowsCritical = action.basis !== 'TARGET_DEFENSE' && action.basis !== 'ATK_STAT'
+        // Attribute additions precede multiplicative reductions; penetration is applied afterwards.
+        // https://prts.wiki/w/游戏数据基础#属性基本公式
+        const appliedDefense = Math.max(0, (defense - (modifiers.defenseReductionFixed ?? 0)) * (1 - modifiers.defenseReductionRatio)
+          - (modifiers.defenseReductionFinalFixed ?? 0))
+        const appliedResistance = Math.max(0, (resistance - (modifiers.resistanceReductionFixed ?? 0))
+          * (1 - (modifiers.resistanceReductionRatio ?? 0))) * (1 - modifiers.resistanceIgnoreRatio)
         const branches: ProbabilisticDamageBranch[] = [
           { id: 'NORMAL' as const, probability: allowsCritical ? 1 - modifiers.critChance : 1, scale: 1, attackBonus: 0 },
           { id: 'IGNORE' as const, probability: allowsCritical ? modifiers.critChance : 0, scale: modifiers.critScale, attackBonus: modifiers.criticalAttackRatio ?? 0 },
@@ -232,21 +332,96 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
               ? branchPipeline.finalAttack + value(action.flatDamage) : normalAmount) * branch.scale * variant.factor
           const minimumDamage = (!action.basis || action.basis === 'ATK') && action.timing !== 'PER_SECOND'
             ? branchPipeline.afterFinalMultiplier * (modifiers.minimumDamageRatio ?? 0) : 0
-          const mitigation = calculateDamageBreakdown(amount, action.damageType, appliedDefense, appliedResistance,
-            { defenseIgnoreFixed: appliedDefense * actionDefenseIgnoreRatio + actionDefenseIgnoreFixed,
-              resistanceIgnoreFixed: actionResistanceIgnoreFixed, minimumDamage })
+          const branchDefenseIgnoreRatio = 1 - (1 - actionDefenseIgnoreRatio)
+            * (1 - (branch.id === 'IGNORE' ? modifiers.criticalDefenseIgnoreRatio ?? 0 : 0))
+          const penetration = { defenseIgnoreFixed: appliedDefense * branchDefenseIgnoreRatio + actionDefenseIgnoreFixed,
+            resistanceIgnoreFixed: actionResistanceIgnoreFixed }
+          const artsAddition = modifiers.artsDamageFlatAddition ?? 0
+          if (!Number.isFinite(artsAddition) || artsAddition < 0) throw new RangeError('術ダメージ固定加算が不正です。')
+          const resolvedType = weakpoint && (action.damageType === 'PHYSICAL' || action.damageType === 'ARTS') ? selectWeakpointDamageType({ attack: amount, originalType: action.damageType,
+            defense: appliedDefense, resistance: appliedResistance, penetration,
+            artsDamageFlatAddition: artsAddition,
+            fixedWeakpoint: (conditions.fixedWeakpoint ?? 'NONE') as 'NONE' | 'PHYSICAL' | 'ARTS' }) : action.damageType
+          // Add once after attack/critical/splash multipliers and before resistance.
+          // Weakpoint's theoretical comparison includes this addition, unlike damage
+          // scales: https://prts.wiki/w/伤害分类#伤害的其他特征 and /逻各斯#天赋.
+          // A per-second rate does not identify how many independent damage ticks
+          // occur; adding one fixed bonus per second would fabricate a tick count.
+          if (resolvedType === 'ARTS' && artsAddition !== 0 && action.timing === 'PER_SECOND') {
+            throw new RangeError('術ダメージ固定加算を継続ダメージへ適用するには、1秒あたりの実際の命中回数の確認が必要です。')
+          }
+          const mitigation = resolvedType === 'ELEMENTAL'
+            ? calculateElementalDamageBreakdown(amount, action.damageKind!, axisType === 'ELEMENTAL' ? axis : Number(conditions.enemyElementalResistance ?? 0))
+            : calculateDamageBreakdown(amount + (resolvedType === 'ARTS' ? artsAddition : 0), resolvedType, appliedDefense, appliedResistance,
+              { ...penetration, minimumDamage })
+          const attributeScale = action.damageScaleWhenType?.damageType === resolvedType ? typedScale : 1
+          const uncappedDamage = mitigation.result * count * modifiers.damageScale * variant.damageScale * attributeScale
+          const limitedDamage = damageCapPerTarget === null ? uncappedDamage : Math.min(uncappedDamage, damageCapPerTarget)
           return { id: branch.id, probability: branch.probability,
-            defenseIgnoreRatio: actionDefenseIgnoreRatio, damage: mitigation.result * count * modifiers.damageScale * variant.damageScale * probability * hitFactor, mitigation }
+            defenseIgnoreRatio: resolvedType === 'ELEMENTAL' ? 0 : branchDefenseIgnoreRatio, damage: limitedDamage * probability * hitFactor, mitigation }
         })
-        const expectedDamage = branches.reduce((sum, branch) => sum + branch.damage * branch.probability, 0)
-        if (!Number.isFinite(expectedDamage)) throw new RangeError('ダメージ期待値を計算できません。')
-        components.push({ id: `guard-${index}-${variantIndex}`, label: variant.label, order: components.length + 1,
-          role: action.role, damageType: action.damageType, attackScale: scale * variant.factor, count, targetAirborne: false,
-          defenseIgnoreChance: actionDefenseIgnoreRatio > 0 ? 1 : 0, defenseIgnoreRatio: actionDefenseIgnoreRatio, expectedDamage,
-          expectedHitCount: count * probability * hitFactor, attackPipeline: basePipeline, branches })
+        // A proc can select a different weakpoint attribute. Keep the original
+        // probabilities on each attribute's component; never normalize them to 1.
+        for (const resolvedType of new Set(branches.map(branch => branch.mitigation.damageType))) {
+          const typedBranches = branches.filter(branch => branch.mitigation.damageType === resolvedType)
+          const expectedDamage = typedBranches.reduce((sum, branch) => sum + branch.damage * branch.probability, 0)
+          if (!Number.isFinite(expectedDamage)) throw new RangeError('ダメージ期待値を計算できません。')
+          components.push({ id: `guard-${index}-${variantIndex}${hasWeakpointDamage ? '-' + resolvedType : ''}`, sourceActionId: action.id, label: variant.label, order: components.length + 1,
+          role: action.role, damageType: resolvedType, attackScale: scale * variant.factor, count, targetAirborne: false,
+          defenseIgnoreChance: resolvedType === 'ELEMENTAL' ? 0 : actionDefenseIgnoreRatio > 0 ? 1 : allowsCritical && (modifiers.criticalDefenseIgnoreRatio ?? 0) > 0 ? modifiers.critChance : 0,
+          defenseIgnoreRatio: Math.max(...typedBranches.map(branch => branch.defenseIgnoreRatio)), expectedDamage,
+          expectedHitCount: count * probability * hitFactor * typedBranches.reduce((sum, branch) => sum + branch.probability, 0),
+          attackPipeline: basePipeline, branches: typedBranches })
+        }
       }
     }
     return components
+  }
+
+  function buildupsAt(components: DamageCalculatorThreeAttackComponent[]): ElementalBuildupResult[] {
+    const definitions = elementalBuildupDefinitions
+    if (!definitions.length) return []
+    if (periodicActions.length || hasRandomTargets || actions.some(action => action.targets !== undefined || action.drone || action.isStoredCharge))
+      throw new RangeError('元素損傷は全対象が同じ状態の有限攻撃のみ対応しています。継続・跳躍・異なる対象配分は未対応です。')
+    const ids = definitions.map(definition => definition.id)
+    if (new Set(ids).size !== ids.length || ids.some(id => !id)) throw new RangeError('元素損傷の識別子が不正です。')
+    const remainingByElement = new Map<string, number>()
+    return definitions.map(definition => {
+      const scale = value(definition.scale)
+      if (scale < 0) throw new RangeError('元素損傷の倍率が不正です。')
+      let basis: number
+      if (definition.basis.type === 'ATK_STAT') basis = pipeline(1, 0, nativePassive, false).finalAttack
+      else if (definition.basis.type === 'FIXED') basis = 1
+      else {
+        if (definition.basis.type !== 'DEALT_DAMAGE' && definition.basis.type !== 'HP_LOST')
+          throw new RangeError('元素損傷の参照基準が不正です。')
+        const actionId = definition.basis.actionId
+        if (definition.basis.damageType !== undefined && !['PHYSICAL', 'ARTS', 'TRUE', 'ELEMENTAL'].includes(definition.basis.damageType))
+          throw new RangeError('元素損傷が参照するダメージ属性が不正です。')
+        const linked = actions.filter(action => action.id === actionId)
+        if (!actionId || linked.length !== 1 || linked[0].timing === 'PER_SECOND' || value(linked[0].probability, 1) !== 1)
+          throw new RangeError('元素損傷が参照する確定ダメージ行動を一意に指定できません。')
+        const matches = components.filter(component => component.sourceActionId === actionId)
+        if (matches.some(component => component.branches.length !== 1 || component.branches[0].probability !== 1))
+          throw new RangeError('確率ダメージに連動する元素損傷と爆発判定は未対応です。')
+        const damageType = definition.basis.damageType
+        basis = matches.filter(component => !damageType || component.damageType === damageType)
+          .reduce((sum, component) => sum + component.expectedDamage, 0)
+        if (definition.basis.type === 'HP_LOST') {
+          const hpBefore = value(definition.basis.hpBefore)
+          if (hpBefore <= 0 || value(linked[0].hits, 1) !== 1 || matches.length !== 1 || matches[0].expectedHitCount !== 1)
+            throw new RangeError('実HP減少量の参照には正の命中直前HPと単一の確定命中が必要です。')
+          basis = Math.min(hpBefore, basis)
+        }
+      }
+      const elementId = definition.damageKind.elementId
+      const result = calculateElementalBuildup(basis * scale, definition.damageKind,
+        Number(conditions.elementalBuildupResistance), remainingByElement.get(elementId) ?? Number(conditions.elementalGaugeRemaining),
+        String(conditions.targetElementalBurst), Boolean(conditions.targetElementalImmune))
+      if (result.remaining !== null) remainingByElement.set(elementId, result.remaining)
+      return { elementId, label: definition.label, basis: definition.basis.type, perApplication: result.amount,
+        allTargetsPerApplication: result.amount * actualTargetCount, status: result.status, remainingGaugeAfter: result.remaining }
+    })
   }
 
   let rows: DamageCalculatorThreeOutput['rows'] = []
@@ -257,10 +432,11 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
       const dot = periodicActions.length ? componentsAt(axisValue, periodicActions).reduce((sum, component) => sum + component.expectedDamage, 0) : null
       const dps = canShowDps && interval ? perAttack / interval : null
       const combined = dps === null ? null : dps + (dot ?? 0)
+      const elementalBuildups = buildupsAt(attackComponents)
       return { axisValue, perHit: null, perAttack, dps, allTargetsPerAttack: perAttack * actualTargetCount,
         allTargetsDps: dps === null ? null : dps * actualTargetCount, breakdown: null,
         damageOverTimeDps: dot, combinedDps: combined, allTargetsCombinedDps: combined === null ? null : combined * actualTargetCount,
-        attackComponents }
+        attackComponents, ...(hasElementalBuildup ? { elementalBuildups } : {}) }
     })
   } catch (error) { reasons.push(message(error)); rows = [] }
   const unsupportedReasons = [...new Set(reasons)]
@@ -274,7 +450,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
     damageType, axisLabel, rows, unsupportedReasons, conditionInputs: [], actualTargetCount,
     maxTargetCount: maxTargets, effects: [], canShowDps: unsupportedReasons.length === 0 && canShowDps, dpsReason,
     effectiveAttack: unsupportedReasons.length ? null : pipeline(traitEvaluation?.attackScale ?? 1).finalAttack,
-    attackSpeed: unsupportedReasons.length ? null : attackSpeed, attackInterval: unsupportedReasons.length ? null : interval,
+    attackSpeed: unsupportedReasons.length ? null : attackSpeed, attackInterval: unsupportedReasons.length || stage?.dpsUnsupportedReason || damageCapPerTarget !== null ? null : interval,
     activeStageLabel: stage?.label ?? null, attackKind: kind, attackLabel: kind === 'NORMAL' ? '1攻撃' : kind === 'NEXT_ATTACK' ? '強化攻撃' : 'スキル',
     attackDistanceType: stage?.attackTreatment ?? (conditions.attackDistanceType === 'RANGED' ? 'RANGED' : 'MELEE'), rangePenaltyMultiplier: 1,
     scopeNotes: [...scopeNotes, ...(dpsReason ? [dpsReason] : [])], counterCooldownSeconds: null,

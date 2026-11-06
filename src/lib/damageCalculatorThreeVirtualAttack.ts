@@ -1,4 +1,4 @@
-import type { DamageType } from './damageCalculator.ts'
+import type { HpDamageType } from './damageCalculator.ts'
 import type { GuardDamageAction, GuardStage } from './guardCombatTypes.ts'
 import type { SkillStructure } from './skillStructure.ts'
 
@@ -26,7 +26,7 @@ export function getGuardVirtualAttackCapability(stage: GuardStage | undefined): 
   return { supported: true, reason: null }
 }
 
-export function getMainAttackType(actions: readonly GuardDamageAction[]): DamageType | null {
+export function getMainAttackType(actions: readonly GuardDamageAction[]): HpDamageType | null {
   const types = new Set(actions.filter(action => action.role === 'MAIN').map(action => action.damageType))
   return types.size === 1 ? [...types][0] : null
 }

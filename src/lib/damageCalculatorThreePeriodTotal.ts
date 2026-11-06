@@ -57,6 +57,8 @@ export function calculateDamageThreePeriodTotal(input: DamageThreePeriodTotalInp
     durationSeconds, totalDamage: null, allTargetsTotalDamage: null, totalDamageReason,
   })
   if (input.attackKind !== 'NORMAL') return unavailable('通常攻撃型の有限期間の総ダメージのみ対応しています。')
+  if (input.stage && 'damageCapPerTarget' in input.stage && input.stage.damageCapPerTarget !== undefined)
+    return unavailable('命中後のHP変化とダメージ上限を期間全体へ積算しません。')
   const capability = input.stage?.periodTotal
   if (capability?.kind === 'UNSUPPORTED') return unavailable(capability.reason)
   if (durationSeconds === null) return unavailable('選択した段階の有限の継続時間を確定できません。')

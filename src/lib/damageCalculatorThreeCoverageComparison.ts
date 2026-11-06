@@ -64,6 +64,7 @@ export function compareCoverageVersionRows(
 export function getCoverageChangeLabel(change: CoverageChange): string {
   if (change.kind === 'ADDED') return 'カタログ追加'
   if (change.kind === 'REMOVED') return 'カタログ削除'
+  if (change.after?.status === 'NOT_APPLICABLE' && change.before?.status !== 'NOT_APPLICABLE') return '対象外に分類'
   const usable = (row: CoverageRecord | undefined) => row?.status === 'SUPPORTED' || row?.status === 'CONDITIONAL'
   if (!usable(change.before) && usable(change.after)) return '新規対応'
   if (change.before?.status === 'UNSUPPORTED' && change.after?.status === 'PENDING') return '登録追加'

@@ -5,20 +5,35 @@ import {
 import { formatTalentStructureEffectItem, formatTalentStructureEffectValue,
   type TalentStructure, type TalentStructureEffect } from './talentStructure.ts'
 import type { GuardPassiveModifiers } from './guardCombatTypes.ts'
+import { ELEMENT_LABELS } from './elementalBuildup.ts'
 
 type Metrics = Readonly<Record<string, CombatScalar | null | undefined>>
 type Evaluation = GuardPassiveModifiers['evaluations'][number]
 
 /** These are calculation operations, independent of an operator or talent identity. */
 const damageItems: ReadonlySet<TalentStructureEffect['item']> = new Set([
-  'ATK_BUFF_RATIO', 'ATK_FLAT', 'ATTACK_SCALE', 'ATTACK_SPEED', 'DAMAGE_SCALE',
+  'ELEMENTAL_BUILDUP',
+  'ARTS_DAMAGE_FLAT_ADDITION',
+  'WEAKPOINT_DAMAGE',
+  'DRONE_MAXIMUM_MULTIPLIER', 'EXTRA_DRONES',
+  'DAMAGE_CAP_PER_TARGET',
+  'STORED_CHARGE_SCALE', 'EXTRA_STORED_CHARGES', 'ATK_BUFF_RATIO', 'ATK_FLAT', 'ATK_FINAL_FLAT', 'ATTACK_SCALE', 'ATTACK_SPEED', 'DAMAGE_SCALE',
   'SPLASH_DAMAGE_SCALE', 'DEFENSE_IGNORE_RATIO', 'RESISTANCE_IGNORE_FIXED',
   'RESISTANCE_IGNORE_RATIO', 'DEFENSE_REDUCTION_RATIO', 'CRITICAL_ATTACK', 'ADDITIONAL_ATTACK',
   'DAMAGE_OVER_TIME', 'ATTACK_INTERVAL_ADD', 'MINIMUM_DAMAGE_RATIO', 'DEFENSE_IGNORE_FIXED', 'RESISTANCE_REDUCTION_RATIO',
+  'DEFENSE_REDUCTION_FIXED', 'DEFENSE_REDUCTION_FINAL_FIXED', 'RESISTANCE_REDUCTION_FIXED',
 ])
 const operations: Readonly<Record<string, readonly [string, string]>> = {
+  ELEMENTAL_BUILDUP: ['APPLY_ELEMENTAL_BUILDUP', 'MULTIPLIER'],
+  ARTS_DAMAGE_FLAT_ADDITION: ['ADD_VALUE', 'POINT'],
+  WEAKPOINT_DAMAGE: ['SET_ENABLED', 'BOOLEAN'],
+  DRONE_MAXIMUM_MULTIPLIER: ['MULTIPLY', 'MULTIPLIER'], EXTRA_DRONES: ['ADD_VALUE', 'POINT'],
+  DAMAGE_CAP_PER_TARGET: ['SET', 'POINT'],
+  STORED_CHARGE_SCALE: ['MULTIPLY', 'MULTIPLIER'], EXTRA_STORED_CHARGES: ['ADD_VALUE', 'POINT'],
   ATTACK_INTERVAL_ADD: ['ADD_VALUE', 'SECOND'], MINIMUM_DAMAGE_RATIO: ['SET', 'RATIO'],
   DEFENSE_IGNORE_FIXED: ['IGNORE_FIXED', 'POINT'],
+  DEFENSE_REDUCTION_FIXED: ['ADD_VALUE', 'POINT'], RESISTANCE_REDUCTION_FIXED: ['ADD_VALUE', 'POINT'],
+  DEFENSE_REDUCTION_FINAL_FIXED: ['ADD_VALUE', 'POINT'], ATK_FINAL_FLAT: ['ADD_VALUE', 'POINT'],
   RESISTANCE_REDUCTION_RATIO: ['ADD_RATIO', 'RATIO'],
   ATK_BUFF_RATIO: ['ADD_RATIO', 'RATIO'], ATK_FLAT: ['ADD_VALUE', 'POINT'],
   ATTACK_SCALE: ['MULTIPLY', 'MULTIPLIER'], ATTACK_SPEED: ['ADD_VALUE', 'POINT'],
@@ -29,6 +44,23 @@ const operations: Readonly<Record<string, readonly [string, string]>> = {
 }
 
 function supportsContext(effect: TalentStructureEffect, metrics: Metrics): boolean {
+  const finiteExternalEvent = effect.timing.type === 'EVENT'
+    && ['PERIODIC_TICK', 'PALSY_TRIGGER'].includes(effect.timing.event)
+  if (finiteExternalEvent && (effect.condition === null || effect.lifetime.type !== 'CURRENT_EVENT'
+    || effect.probability.chance !== 1 || effect.target.side !== 'ENEMY' || effect.target.entity !== 'UNIT'
+    || !['ATTACK_TARGET', 'ATTACK_RANGE', 'BATTLEFIELD'].includes(effect.target.scope)
+    || metrics.actionKind !== 'SKILL_ACTION'
+    || effect.target.selection.type !== 'ALL' || effect.target.factionIds.length || effect.target.tagIds.length
+    || (effect.item !== 'ELEMENTAL_BUILDUP' && effect.item !== 'ADDITIONAL_ATTACK')
+    || (effect.timing.type === 'EVENT' && effect.timing.event === 'PALSY_TRIGGER' && effect.item !== 'ADDITIONAL_ATTACK')
+    || effect.basis !== 'ATK_STAT'
+    || (effect.item === 'ADDITIONAL_ATTACK' && effect.rate !== 'PER_ATTACK'))) return false
+  if (effect.item === 'ELEMENTAL_BUILDUP' && (effect.basis !== 'ATK_STAT' || effect.timing.type !== 'EVENT'
+    || (!finiteExternalEvent && effect.timing.event !== 'ATTACK') || effect.lifetime.type !== 'CURRENT_EVENT'
+    || effect.target.side !== 'ENEMY' || (!finiteExternalEvent && effect.target.scope !== 'ATTACK_TARGET') || effect.target.entity !== 'UNIT'
+    || effect.target.factionIds.length > 0 || effect.target.tagIds.length > 0)) return false
+  if (effect.timing.type === 'EVENT' && effect.timing.event === 'ELEMENTAL_BURST'
+    && (effect.item !== 'ADDITIONAL_ATTACK' || effect.condition === null || effect.rate !== 'PER_ATTACK')) return false
   if (effect.item === 'ADDITIONAL_ATTACK' && effect.basis === 'TARGET_DEFENSE'
     && (effect.rate !== 'PER_ATTACK' || effect.flatDamage !== undefined)) return false
   const expected = operations[effect.item]
@@ -44,11 +76,12 @@ function supportsContext(effect: TalentStructureEffect, metrics: Metrics): boole
     && !(effect.probability.rollScope === 'TICK' && effect.timing.type === 'PERIODIC'
       && effect.item === 'ADDITIONAL_ATTACK' && effect.rate === 'PER_SECOND')) return false
   if (chance !== 1 && effect.item !== 'CRITICAL_ATTACK' && effect.item !== 'ADDITIONAL_ATTACK'
-    && !(effect.item === 'ATK_BUFF_RATIO' && effect.timing.type === 'EVENT' && effect.timing.event === 'ATTACK'
+    && !(['ATK_BUFF_RATIO', 'DEFENSE_IGNORE_RATIO'].includes(effect.item) && effect.timing.type === 'EVENT' && effect.timing.event === 'ATTACK'
       && effect.lifetime.type === 'CURRENT_EVENT')) return false
   if (effect.afterEffects?.length || effect.timing.type === 'AFTER_EVENT'
     || effect.lifetime.type === 'UNSPECIFIED' || effect.lifetime.type === 'WHILE_CONDITION') return false
-  if (effect.target.selection.type !== 'ALL') return false
+  if (effect.target.selection.type !== 'ALL'
+    && !(effect.item === 'ADDITIONAL_ATTACK' && ['COUNT', 'RANDOM'].includes(effect.target.selection.type))) return false
   if (effect.timing.type === 'PERIODIC'
     && (effect.item !== 'ADDITIONAL_ATTACK' || effect.rate !== 'PER_SECOND'
       || effect.timing.intervalSeconds === null || effect.timing.intervalSeconds <= 0)) return false
@@ -103,14 +136,15 @@ function matchesRecipient(effect: TalentStructureEffect, metrics: Metrics): bool
 
 function relevant(effect: TalentStructureEffect, metrics: Metrics): boolean {
   if (!damageItems.has(effect.item)) return false
+  if ((effect.item === 'STORED_CHARGE_SCALE' || effect.item === 'EXTRA_STORED_CHARGES') && metrics.actionKind !== 'NORMAL') return false
   if (effect.target.side === 'ALLY' && !effect.target.includeSelf) return false
-  if (effect.item === 'ATK_BUFF_RATIO' || effect.item === 'ATK_FLAT' || effect.item === 'ATTACK_SPEED'
+  if (effect.item === 'ATK_BUFF_RATIO' || effect.item === 'ATK_FLAT' || effect.item === 'ATK_FINAL_FLAT' || effect.item === 'ATTACK_SPEED'
     || effect.item === 'ATTACK_INTERVAL_ADD') {
     if (effect.target.side !== 'SELF' && !(effect.target.side === 'ALLY' && effect.target.includeSelf)) return false
   }
   if (effect.timing.type === 'EVENT') {
     if (effect.timing.event === 'NORMAL_ATTACK' && metrics.actionKind !== 'NORMAL') return false
-    if (effect.timing.event === 'SKILL_START' && metrics.actionKind !== 'SKILL_ACTION') return false
+    if (effect.timing.event === 'SKILL_START' && metrics.actionKind !== 'SKILL_ACTION' && metrics.includesSkillActivation !== true) return false
     if (effect.item === 'ADDITIONAL_ATTACK'
       && ['DEPLOY', 'RETREAT', 'LETHAL_DAMAGE', 'DAMAGE_RECEIVED', 'KILL', 'SKILL_END'].includes(effect.timing.event)) return false
   }
@@ -190,6 +224,12 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
         active ? 'APPLIED' : 'CONDITION_FALSE', '', details)
       continue
     }
+    if (effect.item === 'WEAKPOINT_DAMAGE') {
+      if (effect.value !== true) { block('弱点ダメージの有効化が不正です。'); continue }
+      if (active) output.weakpointDamage = true
+      addRow('弱点ダメージ', '有効', active ? 'APPLIED' : 'CONDITION_FALSE', '', details)
+      continue
+    }
     if (!('value' in effect) || typeof effect.value === 'boolean' || effect.value === undefined) {
       block(`効果「${effect.id}」の数値定義を取得できません。`)
       continue
@@ -199,6 +239,24 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
     const percent = (amount: number) => `${Math.round(amount * 100_000) / 1000}％`
     const status = active ? 'APPLIED' : 'CONDITION_FALSE'
     switch (effect.item) {
+      case 'ELEMENTAL_BUILDUP':
+        if (value < 0 || effect.damageKind?.type !== 'ELEMENTAL_BUILDUP' || !Object.hasOwn(ELEMENT_LABELS, effect.damageKind.elementId)) {
+          block('元素損傷の種類・倍率が不正です。'); break
+        }
+        if (active) (output.elementalBuildups ??= []).push({ id: `talent-${structure.basicInfo.talentIndex}-${effect.id}`,
+          label: source, damageKind: effect.damageKind, scale: value, basis: { type: 'ATK_STAT' } })
+        addRow(`${ELEMENT_LABELS[effect.damageKind.elementId]}損傷`, `攻撃力×${formatCombatNumber(value)}`, status, '', details)
+        break
+      case 'DRONE_MAXIMUM_MULTIPLIER':
+        if (value < 1) { block('浮遊ユニットの上限補正が有効範囲外です。'); break }
+        if (active) output.droneMaximumMultiplier = (output.droneMaximumMultiplier ?? 1) * value
+        addRow('浮遊ユニットの倍率上限補正', `×${formatCombatNumber(value)}`, status, '', details)
+        break
+      case 'EXTRA_DRONES':
+        if (!Number.isSafeInteger(value) || value < 0 || value > 100) { block('追加浮遊ユニット数が有効範囲外です。'); break }
+        if (active) output.extraDrones = (output.extraDrones ?? 0) + value
+        addRow('追加浮遊ユニット数', `${value}体`, status, '', details)
+        break
       case 'ATK_BUFF_RATIO':
         if (value < -1) { block('攻撃力増加割合が有効範囲外です。'); break }
         if (active && probability !== 1 && probability !== 0) {
@@ -212,6 +270,20 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
       case 'ATK_FLAT':
         if (active) output.attackFlat += value
         addRow('攻撃力（固定値）', `＋${formatCombatNumber(value)}`, status, '', details)
+        break
+      case 'ATK_FINAL_FLAT':
+        if (active) output.attackFinalFlat = (output.attackFinalFlat ?? 0) + value
+        addRow('攻撃力（最終加算）', `＋${formatCombatNumber(value)}`, status, '', details)
+        break
+      case 'STORED_CHARGE_SCALE':
+        if (value < 0) { block('貯蔵弾の倍率が有効範囲外です。'); break }
+        if (active) output.storedChargeScale = (output.storedChargeScale ?? 1) * value
+        addRow('貯蔵弾の攻撃倍率', `×${formatCombatNumber(value)}`, status, '', details)
+        break
+      case 'EXTRA_STORED_CHARGES':
+        if (!Number.isSafeInteger(value) || value < 0) { block('追加貯蔵弾数が有効範囲外です。'); break }
+        if (active) output.extraStoredCharges = (output.extraStoredCharges ?? 0) + value
+        addRow('追加貯蔵弾数', `${value}発`, status, '', details)
         break
       case 'ATTACK_SCALE':
         if (active) output.attackScale *= value
@@ -239,13 +311,36 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
         if (active) output.damageScale *= value
         addRow('与ダメージ', `×${formatCombatNumber(value)}`, status, '', details)
         break
+      case 'ARTS_DAMAGE_FLAT_ADDITION':
+        if (value < 0) { block('術ダメージ固定加算は0以上で指定してください。'); break }
+        if (active) output.artsDamageFlatAddition = (output.artsDamageFlatAddition ?? 0) + value
+        addRow('術ダメージ固定加算（軽減前）', `＋${formatCombatNumber(value)}`, status, '', details)
+        break
+      case 'DAMAGE_CAP_PER_TARGET':
+        if (value < 0) { block('対象ごとのダメージ上限が有効範囲外です。'); break }
+        if (active) output.damageCapPerTarget = Math.min(output.damageCapPerTarget ?? Infinity, value)
+        addRow('対象ごとのダメージ上限', formatCombatNumber(value), status, '', details)
+        break
       case 'SPLASH_DAMAGE_SCALE':
         if (active) output.splashDamageScale = (output.splashDamageScale ?? 1) * value
         addRow('範囲対象の与ダメージ', `×${formatCombatNumber(value)}`, status, '', details)
         break
       case 'DEFENSE_IGNORE_RATIO':
-        if (active) output.defenseIgnoreRatio = 1 - (1 - output.defenseIgnoreRatio) * (1 - value)
-        addRow('防御力無視', percent(value), status, '', details)
+        if (value < 0 || value > 1) { block('防御力無視の割合が有効範囲外です。'); break }
+        if (active && probability !== 1 && probability !== 0) {
+          if (output.critChance !== 0) { block('確率防御無視と別の確率攻撃補正の同時適用は未対応です。'); break }
+          output.critChance = probability!
+          output.critScale = 1
+          output.criticalDefenseIgnoreRatio = value
+        } else if (active && probability === 1) {
+          // A guaranteed proc still belongs to the attack event; it must not
+          // become a permanent modifier of stat-based periodic damage.
+          const attackOnly = effect.timing.type === 'EVENT' && effect.timing.event === 'ATTACK'
+            && effect.lifetime.type === 'CURRENT_EVENT'
+          if (attackOnly) output.attackDefenseIgnoreRatio = 1 - (1 - (output.attackDefenseIgnoreRatio ?? 0)) * (1 - value)
+          else output.defenseIgnoreRatio = 1 - (1 - output.defenseIgnoreRatio) * (1 - value)
+        }
+        addRow('防御力無視', percent(value), status, '', { ...details, ...(probability === 1 ? {} : { probability: probability! }) })
         break
       case 'RESISTANCE_IGNORE_FIXED':
         if (active) output.resistanceIgnoreFixed += value
@@ -259,6 +354,16 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
         if (active) output.defenseReductionRatio = 1 - (1 - output.defenseReductionRatio) * (1 - value)
         addRow('防御力低下', `－${percent(value)}`, status, '', details)
         break
+      case 'DEFENSE_REDUCTION_FIXED':
+      case 'DEFENSE_REDUCTION_FINAL_FIXED':
+      case 'RESISTANCE_REDUCTION_FIXED': {
+        if (value < 0) { block('固定低下量は0以上で指定してください。'); break }
+        const key = effect.item === 'DEFENSE_REDUCTION_FIXED' ? 'defenseReductionFixed'
+          : effect.item === 'DEFENSE_REDUCTION_FINAL_FIXED' ? 'defenseReductionFinalFixed' : 'resistanceReductionFixed'
+        if (active) output[key] = (output[key] ?? 0) + value
+        addRow(formatTalentStructureEffectItem(effect.item), `－${formatCombatNumber(value)}`, status, '', details)
+        break
+      }
       case 'RESISTANCE_REDUCTION_RATIO':
         if (value < 0 || value > 1) { block('術耐性低下の割合が有効範囲外です。'); break }
         if (active) output.resistanceReductionRatio = 1 - (1 - (output.resistanceReductionRatio ?? 0)) * (1 - value)
@@ -280,15 +385,24 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
         const chance = numeric(effect.probability.chance, '発動確率')
         const hits = numeric(effect.hits ?? 1, '攻撃回数')
         const flatDamage = effect.flatDamage === undefined ? undefined : numeric(effect.flatDamage, '固定ダメージ')
+        // RANDOM uses the same expected total for a homogeneous selected enemy pool.
+        // The recipe must constrain the pool; this does not assign hits to named enemies.
+        const targetLimit = effect.target.selection.type !== 'ALL' ? numeric(effect.target.selection.count, '対象数') : undefined
+        const actualTargets = Number(metrics.actualAttackTargetCount ?? 1)
+        if (targetLimit === null) break
+        if (targetLimit !== undefined && (!Number.isSafeInteger(targetLimit) || targetLimit < 1
+          || !Number.isSafeInteger(actualTargets) || actualTargets < 1)) { block('追加攻撃の対象数が有効範囲外です。'); break }
         if (chance === null || hits === null || flatDamage === null) break
         if (chance < 0 || chance > 1 || hits < 0 || value < 0 || (flatDamage !== undefined && flatDamage < 0)) {
           block('追加攻撃の発動確率・回数・ダメージが有効範囲外です。')
           break
         }
         if (active) output.additionalActions.push({ label: effect.label ?? source, role: 'ADDITIONAL', damageType: effect.damageType,
+          ...(effect.damageKind === undefined ? {} : { damageKind: effect.damageKind }),
           scale: value, ...(effect.hits === undefined ? {} : { hits }),
           ...(effect.basis === undefined ? {} : { basis: effect.basis }),
           ...(flatDamage === undefined ? {} : { flatDamage }),
+          ...(targetLimit === undefined ? {} : { targets: Math.min(targetLimit, actualTargets) }),
           ...(effect.probability.chance === 1 ? {} : { probability: chance }),
           ...(effect.rate === 'PER_SECOND' ? { timing: 'PER_SECOND' } : {}),
         })

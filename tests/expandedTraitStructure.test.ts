@@ -1,4 +1,5 @@
 import test from 'node:test'
+import { evaluateGuardTraits } from '../src/lib/guardTraitEvaluation.ts'
 import assert from 'node:assert/strict'
 import { EXPANDED_OPERATOR_SOURCES, EXPANDED_OPERATOR_DEFINITIONS, getExpandedDefinition } from '../src/lib/expandedCombatRegistry.ts'
 import { buildTraitStructures, isTraitStructureOperator, formatTraitStructureEffectValue,
@@ -228,9 +229,10 @@ test('領主の固定攻撃扱いを表示・対応範囲で区別し、遠距�
 })
 
 test('未確認職分や説明の追加を黙って対応済みにせず、全追加技能の計算保留時にAPPLIEDを出さない', () => {
-  const pending = byJob('merchant')
-  assert.deepEqual(buildTraitStructures([record(pending)]), [])
-  assert.equal(run(pending).rows[0].status, 'UNVERIFIED')
+  const pending = run(byJob('merchant'))
+  pending.input.operator.subProfessionId = 'future-unreviewed-job'
+  assert.deepEqual(buildTraitStructures([pending.input.operator]), [])
+  assert.equal(buildTraitApplicationRows(pending.input, pending.output)[0].status, 'UNVERIFIED')
   const changed = record(byJob('fastshot'))
   changed.operatorProfile.traitDescription += '追加で2回攻撃'
   assert.equal(buildTraitStructures([changed])[0].status, 'UNREVIEWED')
@@ -248,10 +250,11 @@ test('未確認職分や説明の追加を黙って対応済みにせず、全�
 })
 
 test('登録範囲では優先対象・治療可否・ブロック・射程だけの特性を対象外にする', () => {
-  for (const job of ['fastshot', 'longrange', 'siegesniper', 'closerange', 'pioneer', 'protector', 'shotprotector', 'unyield', 'fearless', 'fighter', 'musha']) {
+  for (const job of ['fastshot', 'longrange', 'siegesniper', 'closerange', 'pioneer', 'protector', 'shotprotector', 'unyield', 'fearless', 'fighter', 'musha', 'merchant', 'loopshooter']) {
     const id = byJob(job), stage = getExpandedDefinition(id)!.recipes[0].stages[0]
     assert.equal(getExpandedTraitCoverage(id, stage), 'NOT_APPLICABLE', job)
   }
+  assert.equal(run(byJob('loopshooter'), 2).rows[0].status, 'NOT_RELEVANT')
 })
 
 test('登録範囲は攻撃属性・全対象・ブロック連動対象数・条件倍率の使用をstageから判定する', () => {
@@ -271,10 +274,41 @@ test('登録範囲は攻撃属性・全対象・ブロック連動対象数・�
 })
 
 test('未登録職分・保留技能・変更された攻撃定義をtraitログなしという理由で対応済みにしない', () => {
-  const id = byJob('merchant'), definition = getExpandedDefinition(id)!
-  assert.equal(getExpandedTraitCoverage(id, definition.recipes[0].stages[0]), 'UNSUPPORTED')
   const aoe = byJob('splashcaster'), stage = getExpandedDefinition(aoe)!.recipes[0].stages[0]
   assert.equal(getExpandedTraitCoverage(aoe, { id: 'pending', label: '保留', kind: 'SKILL_ACTION', actions: [] }), 'UNSUPPORTED')
   assert.equal(getExpandedTraitCoverage(aoe, { ...stage, actions: [{ label: '変更', damageType: 'TRUE', scale: 100 }] }), 'UNSUPPORTED')
   assert.equal(getExpandedTraitCoverage('unknown', stage), 'UNSUPPORTED')
+})
+
+
+test('吟遊者・祈祷師・鬼才の非攻撃効果をダメージ倍率へ混ぜない', () => {
+  const bard = structure('char_1012_skadi2')
+  assert.equal(bard.status, 'STRUCTURED')
+  assert.equal(bard.effects.find(effect => effect.item === 'NORMAL_ATTACK_ENABLED')?.value, false)
+  assert.equal(bard.effects.find(effect => effect.item === 'HP_RECOVERY_ATK_RATIO_PER_SECOND')?.value, 0.1)
+  assert.equal(bard.effects.find(effect => effect.item === 'INSPIRATION_ENABLED')?.value, false)
+  const geek = structure('char_225_haak')
+  assert.equal(geek.effects.find(effect => effect.item === 'HP_LOSS_RATIO_PER_SECOND')?.value, 0.01)
+  const healer = structure('char_4202_haruka')
+  assert.equal(evaluateTraitStructure(healer, { kind: 'NORMAL', metrics: { 'source.skillActive': false } }).damageType, 'ARTS')
+  assert.ok(evaluateTraitStructure(healer, { kind: 'NORMAL', metrics: { 'source.skillActive': true } }).blockers.length)
+  assert.deepEqual(evaluateTraitStructure(healer, { kind: 'SKILL_ACTION', metrics: { 'source.skillActive': true } }).blockers, [])
+})
+
+test('ヴィーイの転置エネルギーを通常貯蔵9発と誤認せず、確認済みの技能定義を要求する', () => {
+  const operator = record('char_4226_veen')
+  const trait = structure(operator.operatorId)
+  assert.equal(trait.status, 'STRUCTURED')
+  assert.equal(trait.effects.find(effect => effect.item === 'STORED_CHARGES')?.value, 9)
+  assert.equal(trait.effects.find(effect => effect.item === 'STORED_CHARGE_MERGE_COUNT')?.value, 3)
+  const stage = { id: 'normal', label: '通常攻撃', kind: 'NORMAL' as const,
+    actions: [{ label: '通常', role: 'MAIN' as const, damageType: 'ARTS' as const, scale: 1 }] }
+  const growth = { phaseIndex: 2, operatorLevel: 70 }
+  assert.ok(evaluateGuardTraits(operator, stage, {}, new Map(), growth).evaluation.blockers.length)
+  const explicit = evaluateGuardTraits(operator, { ...stage, traitOverrides: ['STORED_CHARGES'] }, {}, new Map(), growth)
+  assert.deepEqual(explicit.evaluation.blockers, [])
+  assert.equal(explicit.actions.length, 1)
+  const changed = structuredClone(operator)
+  changed.operatorProfile.trait!.candidates![0].blackboard!.find(item => item.key === 'merge_cnt')!.value = 4
+  assert.equal(buildTraitStructures([changed])[0].status, 'PARTIAL')
 })

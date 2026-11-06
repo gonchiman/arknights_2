@@ -94,7 +94,7 @@ function mainAttackMetrics(result: DamageThreeComparisonResult): { perAttack: nu
   return { perAttack, dps }
 }
 
-function isMinimumDamage(mitigation: DamageCalculationBreakdown): boolean {
+function isMinimumDamage(mitigation: Pick<DamageCalculationBreakdown, 'result' | 'minimumDamage'>): boolean {
   return mitigation.result === mitigation.minimumDamage
 }
 
@@ -105,6 +105,8 @@ function isPhysicalDamageSettled(result: DamageThreeComparisonResult): boolean {
   if (row.breakdown) return row.perAttack === 0 || isMinimumDamage(row.breakdown.mitigation)
   return row.attackComponents.every(component => component.role !== 'MAIN' || component.expectedDamage === 0
     || (component.branches.length > 0 && component.branches.every(branch => branch.probability === 0 || branch.damage === 0
+      // Weakpoint selection can resolve to Arts; at fixed RES this branch no longer depends on DEF.
+      || branch.mitigation.damageType !== 'PHYSICAL'
       || isMinimumDamage(branch.mitigation) || branch.mitigation.defenseBeforeIgnore === 0
       || (branch.defenseIgnoreRatio === 1 && branch.mitigation.defenseIgnoreFixed > 0))))
 }
@@ -127,6 +129,10 @@ export function evaluateDamageThreeAttributeTables(input: DamageThreeAttributeTa
   const stage = entry.structure.guardRecipe?.stages.find(stage => stage.id === entry.stageId)
   if (stage?.actions.some(action => action.role === 'MAIN' && action.basis === 'TARGET_DEFENSE')) {
     errors.push('敵の防御力を基準とする主攻撃は、評価別の範囲計算に対応していません。')
+  }
+  const mainActions = stage?.actions.filter(action => action.role === 'MAIN') ?? []
+  if (mainActions.length > 0 && mainActions.every(action => action.timing === 'PER_SECOND')) {
+    errors.push('継続ダメージのみの段階は、1回の攻撃・通常攻撃DPSの範囲表に対応していません。')
   }
   // Do not let runtime nulls silently select the comparison evaluator's default growth settings.
   if (input.operatorLevel !== undefined && typeof input.operatorLevel !== 'number') errors.push('オペレーターレベルが有効な数値ではありません。')

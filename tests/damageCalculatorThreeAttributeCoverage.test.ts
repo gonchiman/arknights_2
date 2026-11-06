@@ -19,7 +19,7 @@ const json = <T>(path: string): T => JSON.parse(readFileSync(new URL(path, impor
 const guards = json<{ guards: { id: string; name: string; subProfessionId: string;
   skills: { skillId: string; skillIndex: number; raw: RawSkillLevel }[] }[] }>('./fixtures/sixStarGuardSources.json').guards
 const profiles = json<{ operatorId: string; operatorProfile: OperatorCombatProfile }[]>('./fixtures/sixStarGuardProfiles.json')
-const sources = ['Melee', 'Ranged', 'Arts'].flatMap(group =>
+const sources = ['Melee', 'Ranged', 'Arts', 'Caster', 'Support', 'Special', 'Elemental', 'Summon'].flatMap(group =>
   json<ExpandedOperatorSource[]>(`../src/data/expanded${group}Sources.json`))
 
 function record(operatorId: string, skillIndex: number): SkillRecord {
@@ -29,6 +29,7 @@ function record(operatorId: string, skillIndex: number): SkillRecord {
   const raw = structuredClone(source.raw)
   return {
     id: `${operatorId}/${skillIndex}`, operatorId, operatorName: expanded?.operatorName ?? guard!.name,
+    overrideTokenKey: expanded?.profile.summonSkillTokenKeys?.[skillIndex - 1] ?? undefined,
     skillId: source.skillId, skillIndex, skillName: raw.name!, profession: expanded?.profession ?? 'WARRIOR',
     professionLabel: expanded?.profession ?? '前衛', rarity: expanded?.rarity ?? 6,
     subProfessionId: expanded?.subProfessionId ?? guard!.subProfessionId,
@@ -81,9 +82,19 @@ test('攻撃を持つ計算可能な全段階を複数の敵条件で物理・�
       const identity = `${entry.key} DEF=${common.defense} RES=${common.resistance} N=${common.enemyCount}`
       assert.ok(original.perAttack !== null && Number.isFinite(original.perAttack), identity)
       const stage = entry.structure.guardRecipe?.stages.find(stage => stage.id === entry.stageId)
-      if (stage?.actions.length === 0) {
+      if (stage?.actions.length === 0 && original.output.rows[0].attackComponents?.length === 0) {
         assert.equal(original.perAttack, 0, identity)
         assert.deepEqual(original.output.rows[0].attackComponents, [], identity)
+        continue
+      }
+      if (stage && !stage.actions.some(action => action.role === 'MAIN')) {
+        assert.ok(stage.actions.every(action => action.role === 'ADDITIONAL'), identity)
+        for (const targetType of targetTypes) {
+          const changed = evaluateDamageThreeComparisonEntry(entry, common, {}, { virtualMainAttackType: targetType })
+          assert.match(changed.errors.join(), /主攻撃がありません/, identity)
+          assert.deepEqual(changed.output?.rows, [], identity)
+          assert.equal(changed.perAttack, null, identity)
+        }
         continue
       }
       successfulStages.add(entry.key)
@@ -158,7 +169,7 @@ test('全guardRecipeの攻撃は役割が明示され、主攻撃がない段階
       const identity = `${structure.basicInfo.operatorId}/S${structure.basicInfo.skillIndex}/${stage.id}`
       for (const action of stage.actions) assert.ok(action.role === 'MAIN' || action.role === 'ADDITIONAL', `${identity}/${action.label}`)
       if (!stage.actions.some(action => action.role === 'MAIN')) {
-        assert.ok(stage.actions.length === 0 || stage.unresolved?.length, identity)
+        assert.ok(stage.actions.every(action => action.role === 'ADDITIONAL'), identity)
         const capability = getDamageCalculatorThreeVirtualAttackCapability(structure, stage.id)
         assert.equal(capability.supported, false, identity)
         assert.ok(capability.reason, identity)
@@ -235,10 +246,11 @@ test('通常DC3で未対応の段階や不正な出典は属性変更で救済�
   const corrupt = structuredClone(findEntry('char_103_angel', 3))
   corrupt.skill.skillLevels[corrupt.levelIndex].blackboard = []
   for (const entry of [pending, unsupportedWave, corrupt]) {
-    const original = evaluateDamageThreeComparisonEntry(entry, enemyConditions[1])
+    const overrides = entry === pending ? { 'guard.noteAttackUnchanged': false } : {}
+    const original = evaluateDamageThreeComparisonEntry(entry, enemyConditions[1], overrides)
     assert.ok(original.errors.length, entry.key)
     for (const targetType of targetTypes) {
-      const changed = evaluateDamageThreeComparisonEntry(entry, enemyConditions[1], {}, { virtualMainAttackType: targetType })
+      const changed = evaluateDamageThreeComparisonEntry(entry, enemyConditions[1], overrides, { virtualMainAttackType: targetType })
       assert.ok(changed.errors.length, `${entry.key} → ${targetType}`)
       assert.equal(changed.perAttack, null)
       assert.equal(changed.dps, null)

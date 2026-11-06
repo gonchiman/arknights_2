@@ -161,7 +161,14 @@ test('レッシングS3の自身への600術ダメージを敵への攻撃に加
 })
 
 test('不明な位置・時間挙動は通常攻撃への仮置きで計算済みにしない', () => {
-  for (const [operator, skill] of [['char_4182_oblvns', 2], ['char_4182_oblvns', 3], ['char_4010_etlchi', 3], ['char_1043_leizi2', 3]] as const) {
-    assert.ok(recipe(operator, skill).stages.every(stage => stage.unresolved?.length))
+  for (const index of [2, 3]) {
+    const item = recipe('char_4182_oblvns', index)
+    assert.ok(item.conditionRequirements?.some(requirement => requirement.condition.input === 'noteAttackUnchanged'
+      && requirement.condition.value === true && requirement.supportedCondition))
+    assert.ok(item.stages.every(stage => stage.kind === 'SKILL_ACTION' && stage.periodTotal?.kind === 'UNSUPPORTED'))
+  }
+  for (const operator of ['char_4010_etlchi', 'char_1043_leizi2', 'char_1051_headb2']) {
+    assert.ok(recipe(operator, 3).stages.some(stage => stage.unresolved?.length))
+    assert.ok(recipe(operator, 3).stages.some(stage => !stage.unresolved?.length))
   }
 })

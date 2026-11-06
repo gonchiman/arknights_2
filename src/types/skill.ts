@@ -178,6 +178,18 @@ export interface OperatorCombatProfile {
   modules?: RawOperatorModule[]
   traitDescription?: string
   subProfessionTraitDescription?: string
+  /** Live character/skill source of related summons, never counted as playable operators. */
+  summonProfiles?: Record<string, SummonCombatSource>
+  summonSkillTokenKeys?: (string | null)[]
+}
+
+export interface SummonCombatSource {
+  tokenKey: string
+  name: string
+  profession: string
+  subProfessionId: string
+  profile: Omit<OperatorCombatProfile, 'summonProfiles' | 'summonSkillTokenKeys'>
+  skills: { skillId: string | null; levels: RawSkillLevel[] }[]
 }
 
 export const EFFECT_WINDOWS = [
@@ -266,6 +278,7 @@ export interface SkillClassificationOverride {
 }
 
 export interface SkillRecord {
+  overrideTokenKey?: string | null
   id: string
   operatorId: string
   operatorName: string

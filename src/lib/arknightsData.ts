@@ -7,6 +7,7 @@ import type {
   RawPotentialRank,
   RawSkillLevel,
   SkillRecord,
+  SummonCombatSource,
 } from '../types/skill'
 import { classifySkill } from './classifier'
 import { DATA_SOURCE_URLS } from './dataSources.ts'
@@ -29,7 +30,8 @@ type CharacterTable = Record<string, OperatorAffiliationIds & {
   rarity?: number | string
   profession?: string
   subProfessionId?: string
-  skills?: Array<{ skillId?: string }>
+  skills?: Array<{ skillId?: string; overrideTokenKey?: string | null }>
+  displayTokenDict?: Record<string, boolean>
   phases?: RawCharacterPhase[]
   favorKeyFrames?: RawAttributeKeyFrame[]
   trait?: RawCharacterTrait | null
@@ -84,6 +86,7 @@ export async function loadSkillRecords(client: GameDataClient = gameDataClient):
       modules: modulesByOperator.get(operatorId) ?? [],
       traitDescription: operator.description ?? '',
       subProfessionTraitDescription: subProfessions[operator.subProfessionId ?? 'UNKNOWN']?.traitDesc ?? '',
+      ...buildSummonSources(operator, characters, skills),
     }
 
     operator.skills.forEach((skillRef, index) => {
@@ -107,6 +110,7 @@ export async function loadSkillRecords(client: GameDataClient = gameDataClient):
         rarity: parseRarity(operator.rarity),
         skillIndex: index + 1,
         skillId,
+        overrideTokenKey: skillRef.overrideTokenKey ?? null,
         skillName: level.name ?? skillId,
         description: stripMarkup(level.description ?? ''),
         duration: typeof level.duration === 'number' ? level.duration : null,
@@ -124,6 +128,30 @@ export async function loadSkillRecords(client: GameDataClient = gameDataClient):
   }
 
   return rows.sort((a, b) => b.rarity - a.rarity || a.operatorName.localeCompare(b.operatorName, 'ja') || a.skillIndex - b.skillIndex)
+}
+
+/** Keep live summon sources beside their owner, including skill overrides and hidden talents. */
+function buildSummonSources(operator: CharacterTable[string], characters: CharacterTable, skills: SkillTable): {
+  summonProfiles?: Record<string, SummonCombatSource>; summonSkillTokenKeys?: (string | null)[]
+} {
+  const keys = new Set([
+    ...Object.keys(operator.displayTokenDict ?? {}),
+    ...(operator.skills ?? []).flatMap(skill => skill.overrideTokenKey ? [skill.overrideTokenKey] : []),
+    ...(operator.talents ?? []).flatMap(talent => (talent.candidates ?? []).flatMap(candidate => candidate.tokenKey ? [candidate.tokenKey] : [])),
+  ])
+  if (!keys.size) return {}
+  const summonProfiles: Record<string, SummonCombatSource> = {}
+  for (const tokenKey of keys) {
+    const token = characters[tokenKey]
+    if (!token) continue
+    summonProfiles[tokenKey] = { tokenKey, name: token.name ?? tokenKey, profession: token.profession ?? 'UNKNOWN',
+      subProfessionId: token.subProfessionId ?? 'UNKNOWN',
+      profile: { phases: token.phases ?? [], favorKeyFrames: Array.isArray(token.favorKeyFrames) ? token.favorKeyFrames : [],
+        trait: token.trait ?? null, talents: token.talents ?? [], potentialRanks: Array.isArray(token.potentialRanks) ? token.potentialRanks : [],
+        modules: [], traitDescription: token.description ?? '', subProfessionTraitDescription: '' },
+      skills: (token.skills ?? []).map(ref => ({ skillId: ref.skillId ?? null, levels: ref.skillId ? skills[ref.skillId]?.levels ?? [] : [] })) }
+  }
+  return { summonProfiles, summonSkillTokenKeys: (operator.skills ?? []).map(skill => skill.overrideTokenKey ?? null) }
 }
 
 function buildModulesByOperator(

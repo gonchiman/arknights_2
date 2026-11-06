@@ -111,7 +111,7 @@ test('guardの段階選択と可変値を既定値へ潰さず、重複しない
   assert.equal(probabilities.reduce((a, b) => a + b), 100)
 })
 
-test('guardの毎秒固定ダメージ、敵HP基準、攻撃ごとの加算を失わない', () => {
+test('guardの毎秒固定ダメージ、敵HP基準、選択した攻撃時の累積加算を失わない', () => {
   const normal = flow('char_4088_hodrer', 3).stages[0]
   const perSecond = normal.groups.find(g => g.label === '毎秒')!.layers[0][0]
   assert.equal(field(perSecond, 'ダメージ'), '確定')
@@ -120,9 +120,14 @@ test('guardの毎秒固定ダメージ、敵HP基準、攻撃ごとの加算を�
   const wave = flow('char_1050_chen3', 3).stages.find(s => s.id === 'wave')!.groups[0].layers[0][0]
   assert.equal(field(wave, '基準'), '対象の現在HP')
   assert.ok(field(wave, '最低攻撃倍率'))
-  const blows = flow('char_1051_headb2', 3).stages[0].groups.find(g => g.label === '選択段階1回')!
+  const hammer = flow('char_1051_headb2', 3).stages.find(stage => stage.id === 'hammer')!
+  const blows = hammer.groups.find(g => g.label === '攻撃時')!
   assert.equal(blows.layers.length, 1)
-  assert.ok(Number(field(blows.layers[0][4], '攻撃力増加割合')!.replace('%', '')) > Number(field(blows.layers[0][0], '攻撃力増加割合')!.replace('%', '')))
+  assert.equal(blows.layers[0].length, 1)
+  assert.equal(field(blows.layers[0][0], 'スキル倍率'), '240%')
+  const attackBonus = hammer.groups.flatMap(group => group.layers.flat()).find(step => step.title === '攻撃力増加')!
+  assert.match(field(attackBonus, '値')!, /この槌撃より前に完了した槌撃の回数×0\.3/)
+  assert.ok(flow('char_1051_headb2', 3).stages.find(stage => stage.id === 'terrain')!.warnings?.some(w => /未対応/.test(w)))
   assert.ok(flow('char_1014_nearl2', 3).stages.find(s => s.id === 'sun')!.warnings?.some(w => /適用順序/.test(w)))
 })
 
@@ -133,10 +138,13 @@ test('追加した低下割合と防御後倍率も効果フローへ保持す�
   const fartooth = steps('char_430_fartth', 3).find(step => step.title === '与ダメージ倍率')!
   assert.ok(fartooth)
   assert.match(field(fartooth, '値')!, /対象が通常の攻撃範囲外/)
+  const minimum = flow('char_4010_etlchi', 3).stages.find(stage => stage.id === 'heart')!
+    .groups.flatMap(group => group.layers.flat()).find(step => step.title === '最低ダメージの攻撃力比率')!
+  assert.equal(field(minimum, '値'), '35%')
 })
 
 test('全登録定義で各効果・攻撃を一度ずつ保持し、入力依存値を参照エラーにしない', () => {
-  assert.equal(SKILL_STRUCTURES.length, 435)
+  assert.equal(SKILL_STRUCTURES.length, 813)
   for (const structure of SKILL_STRUCTURES) {
     const model = buildSkillEffectFlow(structure)
     const sourceStages = structure.guardRecipe?.stages ?? structure.effectStructure.stages

@@ -7,7 +7,7 @@ import { evaluateExpandedPassives } from './expandedCombatEvaluation.ts'
 import type { GuardCalculationIssue, GuardConditions, GuardInput, GuardPassiveModifiers, GuardStage } from './guardCombatTypes.ts'
 
 type Context = { kind: 'NORMAL' | 'NEXT_ATTACK' | 'SKILL_ACTION'; skillIndex: number; stageId: string;
-  stage?: Pick<GuardStage, 'actions'>; phaseIndex?: number; operatorLevel?: number;
+  stage?: Pick<GuardStage, 'actions' | 'includesSkillActivation'>; phaseIndex?: number; operatorLevel?: number;
   virtualMainAttackType?: 'PHYSICAL' | 'ARTS' }
 
 export interface GuardPassiveCalculationConstraint extends GuardCalculationIssue {
@@ -22,12 +22,6 @@ export interface GuardPassiveCalculationConstraint extends GuardCalculationIssue
  * Input validation and missing/corrupt source data are deliberately not coverage states.
  */
 export function getGuardPassiveCalculationConstraints(operatorId: string, context: Context): readonly GuardPassiveCalculationConstraint[] {
-  if (operatorId === 'char_2024_chyue' && context.skillIndex === 2) return [{
-    id: 'chyue-s2-levitation-talent-order', relatedSections: ['スキル', '素質1'],
-    talentIndex: 0,
-    reason: '浮遊解除前後で止戈の適用が変わる処理順を、攻撃ごとに解決する必要があります。',
-    allows: () => false,
-  }]
   if (operatorId === 'char_4037_demetr') return [{
     id: 'demetr-target-hp-damage-curve', relatedSections: ['素質1'],
     talentIndex: 0,
@@ -50,12 +44,6 @@ export function getGuardPassiveCalculationConstraints(operatorId: string, contex
     supportedCondition: '攻撃開始前から対象が戦慄中',
     allows: conditions => conditions.targetTrembling === true,
   }]
-  if (operatorId === 'char_1050_chen3') return [{
-    id: 'chen3-weakpoint-mitigation', relatedSections: ['素質1'],
-    talentIndex: 0,
-    reason: '弱点ダメージの防御力・術耐性への適用式が未確定です。',
-    allows: () => false,
-  }]
   return []
 }
 const numberInput = (key: string, label: string, min: number, max: number, defaultValue = min, step = 1): GuardInput =>
@@ -76,7 +64,7 @@ const INPUTS: Readonly<Record<string, readonly GuardInput[]>> = {
     numberInput('defenseDebuffStacks', '防御力低下の重複数', 0, 8)],
   char_4082_qiubai: [SLOW, { key: 'attackDistanceType', label: '攻撃距離', kind: 'select', defaultValue: 'MELEE',
     options: [{ value: 'MELEE', label: '近接' }, { value: 'RANGED', label: '遠距離' }] }],
-  char_4182_oblvns: [numberInput('noteCount', '戦場中の音符数', 0, 10), booleanInput('selfInTalentRange', '自身が攻撃速度上昇の対象')],
+  char_4182_oblvns: [{ ...numberInput('noteCount', '命中時の戦場中の音符数（この音符を含む）', 0, 10), defaultValue: 1 }, booleanInput('selfInTalentRange', '自身が攻撃速度上昇の対象')],
   char_4088_hodrer: [STUN],
   char_4145_ulpia: [numberInput('killStacks', '育まれし血脈の重複数', 0, 9)],
   char_4058_pepe: [],
@@ -87,7 +75,8 @@ const INPUTS: Readonly<Record<string, readonly GuardInput[]>> = {
   char_1026_gvial2: [numberInput('blockedEnemyCount', '自身がブロックしている敵数', 0, 5)],
   char_4098_vvana: [booleanInput('eliteInRange', '攻撃範囲内にエリート・ボス')],
   char_1019_siege2: [numberInput('nearbyAllyCount', '周囲8マスの味方数', 0, 8)],
-  char_1050_chen3: [],
+  char_1050_chen3: [{ key: 'fixedWeakpoint', label: '敵の固定弱点', kind: 'select', defaultValue: 'NONE',
+    options: [{ value: 'NONE', label: 'なし' }, { value: 'PHYSICAL', label: '物理' }, { value: 'ARTS', label: '術' }] }],
   char_188_helage: [HP],
   char_4121_zuole: [HP],
   char_485_pallas: [HP, BLOCKED],
@@ -169,6 +158,10 @@ function evaluateGuardPassiveDefinitions(operator: SkillRecord, conditions: Guar
     }
   }
   if (output.blockers.length) return output
+  // S2's fall event guarantees the damage-increase mark before its own hit.
+  // The input still describes the initial event and must not disable this guaranteed effect.
+  if (operator.operatorId === 'char_2024_chyue' && context.skillIndex === 2 && context.stageId === 'fall')
+    values.talentActive = true
   const selected = getOperatorPassives(operator.operatorProfile, 2,
     operator.operatorProfile.phases[2]?.maxLevel ?? 90, 1).sources
   const talents: PassiveSource[] = registrationOnly ? getGuardTalentIdentity(operator.operatorId).map(({ name, prefabKey }, talentIndex) => ({
@@ -192,7 +185,7 @@ function evaluateGuardPassiveDefinitions(operator: SkillRecord, conditions: Guar
   const structures = buildGuardTalentStructures([operator], { phaseIndex: 2,
     operatorLevel: operator.operatorProfile.phases[2]?.maxLevel ?? 90 }, registrationOnly)
   const metrics: Record<string, number | boolean | string | undefined> = {
-    ...values, skillIndex: context.skillIndex, actionKind: context.kind,
+    ...values, skillIndex: context.skillIndex, actionKind: context.kind, includesSkillActivation: context.stage?.includesSkillActivation ?? false,
     'recipient.hpRatio': typeof values.selfHpPercent === 'number' ? values.selfHpPercent / 100 : undefined,
     'recipient.inSourceAttackRange': values.selfInTalentRange,
     'source.skillActive': true,
@@ -232,11 +225,12 @@ function evaluateGuardPassiveDefinitions(operator: SkillRecord, conditions: Guar
     applyGuardTalentStructure(output, structure, metrics, registrationOnly)
   }
   if (![output.attackRatio, output.attackFlat, output.attackScale, output.attackSpeed, output.damageScale,
-    output.defenseIgnoreRatio, output.defenseIgnoreFixed, output.resistanceIgnoreFixed,
+    output.defenseIgnoreRatio, output.attackDefenseIgnoreRatio ?? 0, output.criticalDefenseIgnoreRatio ?? 0,
+    output.defenseIgnoreFixed, output.resistanceIgnoreFixed,
     output.resistanceIgnoreRatio, output.defenseReductionRatio, output.critChance, output.critScale].every(Number.isFinite)) {
     block('素質・特性', '計算値が有限数になりません。')
   }
-  if ([output.critChance, output.defenseIgnoreRatio, output.resistanceIgnoreRatio,
+  if ([output.critChance, output.defenseIgnoreRatio, output.attackDefenseIgnoreRatio ?? 0, output.criticalDefenseIgnoreRatio ?? 0, output.resistanceIgnoreRatio,
     output.defenseReductionRatio].some(value => value < 0 || value > 1)
     || output.critScale < 0 || output.attackScale < 0 || output.damageScale < 0
     || output.attackRatio < -1 || output.resistanceIgnoreFixed < 0 || output.defenseIgnoreFixed < 0) {

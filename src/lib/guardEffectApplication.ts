@@ -4,13 +4,14 @@ import type { GuardConditions, GuardInput, GuardStage, GuardValue } from './guar
 import { getGuardRegisteredTalentNames } from './guardCombatPassives.ts'
 import { guardConditionMatches, resolveGuardValue } from './guardCombatValues.ts'
 import { evaluateGuardTraits } from './guardTraitEvaluation.ts'
+import { ELEMENT_LABELS } from './elementalBuildup.ts'
 
 const number = (value: number) => new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 6 }).format(value)
 const percent = (value: number) => `${number(value * 100)}%`
 const signed = (value: number) => `${value >= 0 ? '＋' : '−'}${number(Math.abs(value))}`
 const signedPercent = (value: number) => `${value >= 0 ? '＋' : '−'}${percent(Math.abs(value))}`
 const message = (error: unknown) => error instanceof Error ? error.message : '値を確認できません。'
-const TYPE_LABELS = { PHYSICAL: '物理', ARTS: '術', TRUE: '確定' }
+const TYPE_LABELS = { PHYSICAL: '物理', ARTS: '術', TRUE: '確定', ELEMENTAL: '元素' }
 
 function inputLabel(key: string, value: number | string | boolean | undefined, inputs: readonly GuardInput[]): string {
   const definition = inputs.find(input => input.key === key)
@@ -58,7 +59,7 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
     const baseReason = inactive ? '現在選択している段階では使用しません。'
       : blocked ? stage.unresolved!.join(' ') : baseStatus === 'UNVERIFIED' ? calculationReason || '計算する段階を確認できません。' : ''
     const stageCondition = stage.when ? (() => {
-      const comparison = { EQ: '＝', LT: '＜', LTE: '≦', GT: '＞', GTE: '≧' }[stage.when.comparison]
+      const comparison = { EQ: '＝', NE: '≠', LT: '＜', LTE: '≦', GT: '＞', GTE: '≧' }[stage.when.comparison]
       const definition = inputs.find(item => item.key === stage.when!.input)
       const expected = definition?.options?.find(option => option.value === stage.when!.value)?.label ?? String(stage.when.value)
       return `${definition?.label ?? stage.when.input} ${comparison} ${expected}`
@@ -94,6 +95,10 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
       if (expression !== undefined) add(key, item, () => format(value(expression)), [expression], options)
     }
     numeric('atk', '攻撃力', stage.atk, signedPercent)
+    for (const buildup of stage.elementalBuildups ?? []) add(`buildup-${buildup.id}`, `${ELEMENT_LABELS[buildup.damageKind.elementId]}損傷`,
+      () => buildup.basis.type === 'FIXED' ? `固定値${number(value(buildup.scale))}`
+        : `${buildup.basis.type === 'ATK_STAT' ? '攻撃力' : buildup.basis.type === 'HP_LOST' ? '実HP減少量' : buildup.basis.damageType === 'ARTS' ? '術ダメージ' : '与ダメージ'}の${percent(value(buildup.scale))}`,
+      [buildup.scale], { timing: stageTiming(stage) })
     numeric('block-count-add', 'ブロック数', stage.blockCountAdd, n => `${signed(n)}体`)
     numeric('trait-attack-ratio-scale', '特性の攻撃力上昇倍率', stage.traitAttackRatioScale, n => `×${number(n)}`)
     const intervalOptions = stage.kind === 'NORMAL' || inactive ? {} : {
@@ -102,6 +107,7 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
     numeric('aspd', '攻撃速度', stage.aspd, signed, intervalOptions)
     numeric('interval-scale', '攻撃間隔倍率', stage.intervalScale, n => `×${number(n)}`, intervalOptions)
     numeric('interval-add', '攻撃間隔の加算', stage.intervalAdd, n => `${signed(n)}秒`, intervalOptions)
+    numeric('fixed-attack-interval', '固定攻撃周期', stage.fixedAttackInterval, n => `${number(n)}秒`, intervalOptions)
     if (stage.maxTargets !== undefined) add('max-targets', '攻撃対象数上限',
       () => stage.maxTargets === null ? '上限なし' : `${number(value(stage.maxTargets))}体`, [stage.maxTargets ?? undefined])
     const mitigationOptions = (damageType: 'PHYSICAL' | 'ARTS') => inactive || !output.model
@@ -114,7 +120,17 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
     numeric('resistance-ignore-fixed', '術耐性無視', stage.resistanceIgnoreFixed, number, mitigationOptions('ARTS'))
     numeric('defense-reduction-ratio', '防御力低下', stage.defenseReductionRatio, n => `−${percent(n)}`, mitigationOptions('PHYSICAL'))
     numeric('resistance-reduction-ratio', '術耐性低下', stage.resistanceReductionRatio, n => `−${percent(n)}`, mitigationOptions('ARTS'))
+    numeric('defense-reduction-fixed', '防御力固定低下', stage.defenseReductionFixed, n => `−${number(n)}`, mitigationOptions('PHYSICAL'))
+    numeric('defense-reduction-final-fixed', '防御力固定低下（割合低下後）', stage.defenseReductionFinalFixed, n => `−${number(n)}`, mitigationOptions('PHYSICAL'))
+    numeric('attack-final-flat', '攻撃力（最終加算）', stage.attackFinalFlat, n => `＋${number(n)}`)
+    numeric('defense-ratio', '防御力', stage.defenseRatio, n => `＋${percent(n)}`)
+    numeric('resistance-reduction-fixed', '術耐性固定低下', stage.resistanceReductionFixed, n => `−${number(n)}`, mitigationOptions('ARTS'))
     numeric('damage-scale', '与ダメージ倍率', stage.damageScale, n => `×${number(n)}`)
+    numeric('minimum-damage-ratio', '最低ダメージの攻撃力比率', stage.minimumDamageRatio, percent,
+      inactive || stage.actions.some(action => (!action.basis || action.basis === 'ATK') && action.timing !== 'PER_SECOND') ? {} : {
+        status: 'NOT_RELEVANT', reason: '継続ダメージ・攻撃以外の参照値には適用しません。',
+      })
+    numeric('damage-cap-per-target', '対象ごとのダメージ上限', stage.damageCapPerTarget, number)
     if (stage.duration !== undefined) add('duration', '持続時間', () => stage.duration === 'UNTIL_EXIT' ? '退場まで' : `${number(value(stage.duration))}秒`,
       stage.duration === 'UNTIL_EXIT' ? [] : [stage.duration], inactive ? {} : {
         status: 'NOT_RELEVANT', reason: '1攻撃のダメージと攻撃中のDPSには、持続時間を乗算しません。', timing: 'スキル中',
@@ -149,7 +165,7 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
         add(`${prefix}:${key}`, `${action.label}：${item}`, read, [...actionExpressions, expression], options)
       if (inherited?.damageType === undefined || action.traitOverrides?.includes('DAMAGE_TYPE'))
         actionRow('type', 'ダメージ属性', () => TYPE_LABELS[action.damageType])
-      if (action.basis !== undefined) actionRow('basis', '計算基準', () => action.basis === 'TARGET_CURRENT_HP' ? '対象の現在HP' : action.basis === 'TARGET_DEFENSE' ? '対象の防御力' : '自身の攻撃力')
+      if (action.basis !== undefined) actionRow('basis', '計算基準', () => action.basis === 'TARGET_CURRENT_HP' ? '対象の現在HP' : action.basis === 'TARGET_DEFENSE' ? '対象の防御力' : action.basis === 'OWNER_ATK_STAT' ? '召喚者の攻撃力' : action.basis === 'DEF_STAT' ? '自身の防御力' : '自身の攻撃力')
       actionRow('scale', action.basis === 'TARGET_CURRENT_HP' ? '対象の現在HP倍率' : '攻撃倍率',
         () => `×${number(value(action.scale, 1))}`, action.scale)
       if (inherited?.hitCount === undefined || action.traitOverrides?.includes('HIT_COUNT'))
@@ -161,6 +177,17 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
         ['flat-damage', '固定ダメージ', action.flatDamage, number],
         ['minimum-scale', '下限の攻撃倍率', action.minimumAttackScale, (n: number) => `×${number(n)}`],
       ] as const) if (expression !== undefined) actionRow(key, item, () => format(value(expression)), expression)
+      if (action.damageScaleWhenType) {
+        const resolvedType = action.role === 'MAIN' ? input.virtualMainAttackType ?? action.damageType : action.damageType
+        const resolvedComponents = output.rows.flatMap(row => row.attackComponents).filter(component => component.label === action.label)
+        const matchesType = resolvedComponents.length
+          ? resolvedComponents.some(component => component.damageType === action.damageScaleWhenType!.damageType)
+          : resolvedType === action.damageScaleWhenType.damageType
+        add(`${prefix}:typed-damage-scale`, `${action.label}：${TYPE_LABELS[action.damageScaleWhenType.damageType]}の与ダメージ倍率`,
+          () => `×${number(value(action.damageScaleWhenType!.scale))}`, [action.damageScaleWhenType.scale],
+          { ...options, status: actionStatus === 'APPLIED' && !matchesType
+            ? 'NOT_RELEVANT' : actionStatus })
+      }
     })
     for (const [index, reason] of (stage.unresolved ?? []).entries()) add(`unresolved-${index}`, '未対応の処理', () => '未確認', [], {
       status: inactive ? 'INACTIVE_STAGE' : 'UNSUPPORTED', reason,

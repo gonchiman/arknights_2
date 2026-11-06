@@ -16,7 +16,9 @@ export function buildGuardSkillStructures(recipes: readonly GuardSkillRecipe[] =
   sources: readonly GuardSource[] = GUARD_SKILL_SOURCES, levelIndex = 9): SkillStructure[] {
   return recipes.map(sourceRecipe => {
     const recipe = { ...sourceRecipe, stages: sourceRecipe.stages.map(stage => ({ ...stage,
-      periodTotal: stage.periodTotal ?? getReviewedPeriodTotalCapability(sourceRecipe.operatorId, sourceRecipe.skillIndex, stage.id),
+      periodTotal: stage.elementalBuildups?.length
+        ? { kind: 'UNSUPPORTED' as const, reason: '元素損傷による爆発開始・終了を含む期間総量は未対応です。' }
+        : stage.periodTotal ?? getReviewedPeriodTotalCapability(sourceRecipe.operatorId, sourceRecipe.skillIndex, stage.id),
     })) }
     const source = sources.find(operator => operator.id === recipe.operatorId)
     const skill = source?.skills.find(skill => skill.skillIndex === recipe.skillIndex)
@@ -63,6 +65,13 @@ export function buildGuardSkillStructures(recipes: readonly GuardSkillRecipe[] =
           condition: null, target: 'ENEMIES_IN_ACTION_RANGE', sourceBinding: JSON.stringify(action.scale),
           item: 'DIRECT_DAMAGE', operation: 'DEAL_DAMAGE', unit: 'DAMAGE_ACTION',
           value: { damageType: action.damageType, attackScale: preview(action.scale), count: preview(action.hits, 1) } }))
+        for (const buildup of stage.elementalBuildups ?? []) effects.push({ id: `${stage.id}-buildup-${buildup.id}`, timing,
+          condition: null, target: 'ENEMIES_IN_ACTION_RANGE', sourceBinding: JSON.stringify(buildup),
+          item: 'ELEMENTAL_BUILDUP', operation: 'APPLY_ELEMENTAL_BUILDUP', unit: 'ELEMENTAL_BUILDUP_ACTION',
+          value: { elementId: buildup.damageKind.elementId, basis: buildup.basis.type, scale: preview(buildup.scale),
+            ...(buildup.basis.type === 'DEALT_DAMAGE' || buildup.basis.type === 'HP_LOST'
+              ? { actionId: buildup.basis.actionId, damageType: buildup.basis.damageType } : {}),
+            ...(buildup.basis.type === 'HP_LOST' ? { hpBefore: preview(buildup.basis.hpBefore) } : {}) } })
         return { id: stage.id, label: stage.label, applicability: null, periodTotal: stage.periodTotal,
           duration: stage.kind === 'NEXT_ATTACK' ? { type: 'SINGLE_ATTACK' as const }
             : stage.kind === 'SKILL_ACTION' ? { type: 'SKILL_ACTION' as const }

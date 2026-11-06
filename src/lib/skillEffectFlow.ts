@@ -8,6 +8,7 @@ import {
 } from './skillStructure.ts'
 import type { GuardDamageAction, GuardInput, GuardSkillRecipe, GuardStage, GuardValue } from './guardCombatTypes.ts'
 import { resolveGuardValue, usesBaseAttackHitCount } from './guardCombatValues.ts'
+import { ELEMENTAL_BUILDUP_INPUTS, ELEMENT_LABELS } from './elementalBuildup.ts'
 
 export interface FlowField { label: string; value: string }
 export interface FlowCondition { label: string; yesLabel: string; noLabel: string }
@@ -32,8 +33,8 @@ export interface SkillEffectFlowModel { activation: FlowField[]; trigger: string
 
 const number = (value: number) => String(Math.round(value * 1e8) / 1e8)
 const percent = (value: number) => `${number(value * 100)}%`
-const damageTypes = { PHYSICAL: '物理', ARTS: '術', TRUE: '確定' } as const
-const comparisons = { EQ: '＝', LT: '＜', LTE: '≦', GT: '＞', GTE: '≧' } as const
+const damageTypes = { PHYSICAL: '物理', ARTS: '術', TRUE: '確定', ELEMENTAL: '元素' } as const
+const comparisons = { EQ: '＝', NE: '≠', LT: '＜', LTE: '≦', GT: '＞', GTE: '≧' } as const
 const branch = (label: string): FlowCondition => ({ label, yesLabel: '成立', noLabel: '不成立' })
 
 export function buildSkillEffectFlow(structure: SkillStructure): SkillEffectFlowModel {
@@ -188,7 +189,8 @@ function nativeStep(effect: SkillStructureEffect, title: string): FlowStep {
 
 function guardStages(structure: SkillStructure, recipe: GuardSkillRecipe): FlowStage[] {
   const board = new Map(structure.source.blackboard.map(entry => [entry.key.toLowerCase(), entry.value]))
-  const inputs = new Map(recipe.inputs.map(input => [input.key, input]))
+  const inputs = new Map([...recipe.inputs, ...(recipe.stages.some(stage => stage.elementalBuildups?.length) ? ELEMENTAL_BUILDUP_INPUTS : [])]
+    .map(input => [input.key, input]))
   return recipe.stages.map(stage => {
     const warnings = [...new Set([...(stage.unresolved ?? []), ...(stage.calculationIssues?.map(issue => issue.reason) ?? [])])]
     const expression = (value: GuardValue) => guardExpression(value, board, inputs, warnings)
@@ -209,7 +211,12 @@ function guardStages(structure: SkillStructure, recipe: GuardSkillRecipe): FlowS
       ['defenseIgnoreRatio', '防御力の無視割合', '', true], ['defenseIgnoreFixed', '防御力の固定値無視', '', false],
       ['resistanceIgnoreFixed', '術耐性の固定値無視', '', false],
       ['defenseReductionRatio', '防御力の低下割合', '', true], ['resistanceReductionRatio', '術耐性の低下割合', '', true],
+      ['defenseReductionFixed', '防御力の固定値低下', '', false], ['resistanceReductionFixed', '術耐性の固定値低下', '', false],
+      ['defenseReductionFinalFixed', '防御力固定低下（割合低下後）', '', false], ['attackFinalFlat', '攻撃力（最終加算）', '', false],
+      ['fixedAttackInterval', '固定攻撃周期', '秒', false],
       ['damageScale', '与ダメージ倍率', '倍', false],
+      ['minimumDamageRatio', '最低ダメージの攻撃力比率', '', true],
+      ['damageCapPerTarget', '対象ごとのダメージ上限', '', false],
     ] as const) if (stage[key] !== undefined) modifiers.push({ id: `${stage.id}-${key}`, title: label,
       fields: [{ label: '値', value: formatted(stage[key]!, unit, ratio) }] })
     const groups: FlowGroup[] = []
@@ -221,6 +228,16 @@ function guardStages(structure: SkillStructure, recipe: GuardSkillRecipe): FlowS
       actions.set(label, [...(actions.get(label) ?? []), guardAction(stage, action, `${stage.id}-action-${index}`, formatted)])
     })
     for (const [label, steps] of actions) groups.push({ id: `${stage.id}-actions-${steps[0].id}`, label, layers: [steps] })
+    if (stage.elementalBuildups?.length) groups.push({ id: `${stage.id}-buildups`, label: '元素損傷（1回）', layers: [
+      stage.elementalBuildups.map(buildup => ({ id: `${stage.id}-buildup-${buildup.id}`, title: buildup.label, fields: [
+        { label: '元素', value: ELEMENT_LABELS[buildup.damageKind.elementId] },
+        { label: '基準', value: buildup.basis.type === 'ATK_STAT' ? '自身の攻撃力'
+          : buildup.basis.type === 'HP_LOST' ? '実HP減少量' : buildup.basis.type === 'FIXED' ? '固定値'
+            : buildup.basis.damageType === 'ARTS' ? '術ダメージ' : '与ダメージ' },
+        { label: buildup.basis.type === 'FIXED' ? '損傷量' : '比率', value: formatted(buildup.scale, '', buildup.basis.type !== 'FIXED') },
+        ...(buildup.basis.type === 'HP_LOST' ? [{ label: '命中直前HP', value: formatted(buildup.basis.hpBefore) }] : []),
+      ] })),
+    ] })
     return { id: stage.id, label: stage.label, fields, groups,
       ...(stage.when ? { condition: branch(guardWhen(stage.when, inputs)) } : {}),
       ...(warnings.length ? { warnings: [...new Set(warnings)] } : {}) }
@@ -241,6 +258,8 @@ function guardAction(stage: GuardStage, action: GuardDamageAction, id: string,
     ['probability', '発動確率', '', true], ['flatDamage', '固定ダメージ', '', false],
     ['minimumAttackScale', '最低攻撃倍率', '倍', false],
   ] as const) if (action[key] !== undefined) fields.push({ label, value: format(action[key]!, unit, ratio) })
+  if (action.damageScaleWhenType) fields.push({ label: `${damageTypes[action.damageScaleWhenType.damageType]}の与ダメージ倍率`,
+    value: format(action.damageScaleWhenType.scale, '倍') })
   return { id, title: action.label, fields }
 }
 

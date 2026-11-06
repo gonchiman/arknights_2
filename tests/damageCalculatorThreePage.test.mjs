@@ -10,7 +10,7 @@ import { createDamageCalculatorThreeHash, parseHashRoute } from '../src/lib/rout
 
 const source = JSON.parse(readFileSync(new URL('./fixtures/skillStructureFourOperators.json', import.meta.url), 'utf8'))
 const talentSource = JSON.parse(readFileSync(new URL('./fixtures/talentStructureFourOperators.json', import.meta.url), 'utf8'))
-let server, Page, ResultTable, ApplicationTable, DotTable, SteadyTable, buildOutput, buildApplications, rows
+let server, Page, ResultTable, ApplicationTable, DotTable, SteadyTable, UsedValueTable, buildOutput, buildApplications, rows
 
 const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;',
@@ -64,7 +64,8 @@ before(async () => {
   ;({ DamageCalculatorThree: Page, DamageCalculatorThreeResultTable: ResultTable,
     DamageCalculatorThreeApplicationTable: ApplicationTable,
     DamageCalculatorThreeDotTable: DotTable,
-    DamageCalculatorThreeSteadyDpsTable: SteadyTable } = await server.ssrLoadModule('/src/components/DamageCalculatorThree.tsx'))
+    DamageCalculatorThreeSteadyDpsTable: SteadyTable,
+    DamageCalculatorThreeUsedValueTable: UsedValueTable } = await server.ssrLoadModule('/src/components/DamageCalculatorThree.tsx'))
   ;({ buildDamageCalculatorThreeOutput: buildOutput } = await server.ssrLoadModule('/src/lib/damageCalculatorThree.ts'))
   ;({ buildDamageCalculatorThreeApplicationRows: buildApplications } = await server.ssrLoadModule('/src/lib/damageCalculatorThreeApplications.ts'))
   const { classifySkill } = await server.ssrLoadModule('/src/lib/classifier.ts')
@@ -658,4 +659,59 @@ test('反撃の全対象ダメージとソーンズS3の後続段階を選択し
   const later = calculate('char_293_thorns', 3, 1, { skillActivationCount: 2, attackDistanceType: 'RANGED' })
   const laterMarkup = renderToStaticMarkup(createElement(ResultTable, { output: later, precision: 1 }))
   assert.deepEqual(resultTable(laterMarkup)[1], ['0', '1,630.0', '1,880.8', '1,630.0', '1,880.8'])
+})
+
+test('召喚物の計算では本人と区別できる名前と独立した基礎攻撃力を表示する', async () => {
+  const source = JSON.parse(readFileSync(new URL('../src/data/expandedSummonSources.json', import.meta.url), 'utf8'))
+    .find(item => item.operatorId === 'char_336_folivo')
+  const skill = source.skills.find(item => item.skillIndex === 2), raw = skill.raw
+  const { classifySkill } = await server.ssrLoadModule('/src/lib/classifier.ts')
+  const row = { id: `${source.operatorId}/2`, operatorId: source.operatorId, operatorName: source.operatorName,
+    profession: source.profession, professionLabel: '補助', rarity: source.rarity,
+    subProfessionId: source.subProfessionId, subProfessionName: '召喚師', nameInitial: 'OTHER',
+    skillIndex: 2, skillId: skill.skillId, skillName: raw.name, description: raw.description,
+    duration: raw.duration, durationType: raw.durationType, skillType: raw.skillType,
+    spType: raw.spData.spType, spCost: raw.spData.spCost, initSp: raw.spData.initSp,
+    classification: classifySkill(raw), raw, skillLevels: Array.from({length:10},()=>structuredClone(raw)),
+    operatorProfile: source.profile, overrideTokenKey: source.profile.summonSkillTokenKeys[1] }
+  const markup = renderToStaticMarkup(createElement(Page, { rows:[row], loading:false,
+    initialSelection: {operatorId: row.operatorId, skillId: row.skillId, skillIndex:2, levelIndex:9} }))
+  assert.doesNotMatch(text(markup), /この条件では計算できません/)
+  const values = markup.match(/<table\b[^>]*class="[^"]*damage-three-value-table[^"]*"[^>]*>([\s\S]*?)<\/table>/)
+  assert.ok(values)
+  const cells = tableRows(values[1])
+  assert.deepEqual(cells.find(row=>row[0]==='計算主体'), ['計算主体', source.profile.summonProfiles.token_10010_folivo_car.name])
+  assert.deepEqual(cells.find(row=>row[0]==='基礎攻撃力'), ['基礎攻撃力','477'])
+})
+
+
+test('本人ATK参照があるtokenだけ参照実値を独立行に表示し、本人/通常tokenの表を変えない', async () => {
+  const { classifySkill } = await server.ssrLoadModule('/src/lib/classifier.ts')
+  const calculateToken = (name, id, index) => {
+    const source = JSON.parse(readFileSync(new URL('../src/data/' + name + '.json', import.meta.url), 'utf8')).find(source => source.operatorId === id)
+    const entry = source.skills.find(skill => skill.skillIndex === index), raw = structuredClone(entry.raw)
+    const skill = { id: id + '/' + index, operatorId: id, operatorName: source.operatorName,
+      skillIndex: index, skillId: entry.skillId, skillName: raw.name, overrideTokenKey: source.profile.summonSkillTokenKeys[index - 1],
+      profession: source.profession, rarity: source.rarity, subProfessionId: source.subProfessionId,
+      description: raw.description, duration: raw.duration, durationType: raw.durationType,
+      skillType: raw.skillType, spType: raw.spData.spType, spCost: raw.spData.spCost, initSp: raw.spData.initSp,
+      raw, classification: classifySkill(raw), skillLevels: Array.from({ length: 10 }, () => structuredClone(raw)),
+      operatorProfile: structuredClone(source.profile) }
+    return buildOutput({ operator: skill, skill, phaseIndex: 2, operatorLevel: source.profile.phases[2].maxLevel,
+      trust: 100, skillLevelIndex: 9, enemy: { defense: 500, resistance: 40 } })
+  }
+  const remnant = calculateToken('expandedArtsSources', 'char_4046_ebnhlz', 2)
+  assert.deepEqual(remnant.unsupportedReasons, [])
+  const remnantRows = tableRows(renderToStaticMarkup(createElement(UsedValueTable, { output: remnant })))
+  assert.deepEqual(remnantRows.find(row => row[0] === '基礎攻撃力'), ['基礎攻撃力', '100'])
+  assert.deepEqual(remnantRows.find(row => row[0] === '参照する本人ATK'), ['参照する本人ATK', '1,550'])
+  const ordinary = calculate('char_350_surtr', 2)
+  const ordinaryRows = tableRows(renderToStaticMarkup(createElement(UsedValueTable, { output: ordinary })))
+  assert.equal(ordinaryRows.length, 13)
+  assert.ok(!ordinaryRows.some(row => row[0] === '参照する本人ATK'))
+  const scene = calculateToken('expandedSummonSources', 'char_336_folivo', 2)
+  assert.deepEqual(scene.unsupportedReasons, [])
+  const sceneRows = tableRows(renderToStaticMarkup(createElement(UsedValueTable, { output: scene })))
+  assert.deepEqual(sceneRows.find(row => row[0] === '基礎攻撃力'), ['基礎攻撃力', '477'])
+  assert.ok(!sceneRows.some(row => row[0] === '参照する本人ATK'))
 })

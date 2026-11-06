@@ -17,7 +17,7 @@ const json = <T>(path: string): T => JSON.parse(readFileSync(new URL(path, impor
 const guards = json<{ guards: { id: string; name: string; subProfessionId: string;
   skills: { skillId: string; skillIndex: number; raw: RawSkillLevel }[] }[] }>('./fixtures/sixStarGuardSources.json').guards
 const profiles = json<{ operatorId: string; operatorProfile: OperatorCombatProfile }[]>('./fixtures/sixStarGuardProfiles.json')
-const sources = ['Melee', 'Ranged', 'Arts'].flatMap(group => json<ExpandedOperatorSource[]>(`../src/data/expanded${group}Sources.json`))
+const sources = ['Melee', 'Ranged', 'Arts', 'Caster', 'Support', 'Special', 'Elemental', 'Summon'].flatMap(group => json<ExpandedOperatorSource[]>(`../src/data/expanded${group}Sources.json`))
 const catalog: SkillRecord[] = [...guards.map(source => ({ operatorId: source.id, operatorName: source.name,
   profession: 'WARRIOR', rarity: 6, subProfessionId: source.subProfessionId, skillLevelIndex: 9,
   profile: profiles.find(profile => profile.operatorId === source.id)!.operatorProfile, skills: source.skills })), ...sources]
@@ -30,7 +30,7 @@ const catalog: SkillRecord[] = [...guards.map(source => ({ operatorId: source.id
       description: raw.description!, duration: raw.duration!, durationType: raw.durationType!, skillType: raw.skillType!,
       spType: raw.spData!.spType!, spCost: raw.spData!.spCost!, initSp: raw.spData!.initSp!, classification: classifySkill(raw),
       skillLevels: Array.from({ length: source.skillLevelIndex + 1 }, () => structuredClone(raw)), raw,
-      operatorProfile: structuredClone(source.profile),
+      operatorProfile: structuredClone(source.profile), overrideTokenKey: source.profile.summonSkillTokenKeys?.[skill.skillIndex - 1] ?? undefined,
     }
   }))
 const entries = getDamageThreeAttributeEntries(catalog)
@@ -120,6 +120,22 @@ test('防御力SSの下限は防御力5,001で最低保証に達していない�
   assert.equal(ss.maxStat, null)
   assert.deepEqual(ss.perAttack, { min: floorDefense.perAttack, max: lowDefense.perAttack })
   assert.deepEqual(ss.dps, { min: floorDefense.dps, max: lowDefense.dps })
+})
+
+test('弱点判定で術属性へ切り替わった枝はDEFに依存せず、防御力SSの下限を確定できる', () => {
+  for (const [index, stage] of [[1, 'active'], [2, 'slashes'], [2, 'normal'], [3, 'normal']] as const) {
+    const value = input('char_1050_chen3', index, stage)
+    const result = valid(value), ss = result.physical.at(-1)!
+    const atLower = ordinary(value, 'PHYSICAL', 5001), atHigher = ordinary(value, 'PHYSICAL', 1000000)
+    assert.deepEqual(atLower.errors, [])
+    assert.deepEqual(atHigher.errors, [])
+    const main = atHigher.output!.rows[0].attackComponents.filter(component => component.role === 'MAIN')
+    assert.ok(main.length > 0 && main.every(component => component.damageType === 'ARTS'))
+    const expected = main.reduce((sum, component) => sum + component.attackPipeline.finalAttack * component.count, 0)
+    close(atHigher.perAttack, expected)
+    assert.deepEqual(ss.perAttack, { min: expected, max: atLower.perAttack })
+    close(atLower.perAttack, atHigher.perAttack!)
+  }
 })
 
 test('主攻撃のみを抽出し、ケオベのDEF由来術追撃とムリナール・チューバイの追加攻撃を除く', () => {
@@ -231,15 +247,24 @@ test('入力不正・出典不一致・不明な主攻撃を数値で代用せ�
   }
 })
 
-test('現在の全カタログで計算可能な仮想対応段階を欠落なく表示し、元の登録定義を変更しない', t => {
+test('全8グループの仮想対応段階は直接攻撃を欠落なく表示し、純周期のみを理由付きで停止する', t => {
   const snapshot = JSON.stringify(getDamageCalculatorThreeStructures())
   const failures: string[] = []
+  const periodicOnlyIds: string[] = []
   const kinds = new Set<string>()
   let checked = 0
   for (const entry of entries) {
     const reference = evaluateDamageThreeComparisonEntry(entry, { defense: 0, resistance: 0, enemyCount: 1 })
     if (!entry.capability.supported || reference.errors.length) continue
     const output = evaluateDamageThreeAttributeTables({ entry, enemyCount: 1 })
+    const main = entry.structure.guardRecipe?.stages.find(stage => stage.id === entry.stageId)?.actions.filter(action => action.role === 'MAIN') ?? []
+    if (main.length > 0 && main.every(action => action.timing === 'PER_SECOND')) {
+      assert.deepEqual(output.errors, ['継続ダメージのみの段階は、1回の攻撃・通常攻撃DPSの範囲表に対応していません。'], entry.key)
+      assert.ok([...output.physical, ...output.arts].every(row => row.perAttack === null && row.dps === null), entry.key)
+      assert.deepEqual(output.reference, reference)
+      periodicOnlyIds.push(entry.key)
+      continue
+    }
     if (output.errors.length || [...output.physical, ...output.arts].some(row => !isFiniteRange(row.perAttack)
       || (output.canShowDps && !isFiniteRange(row.dps)))) {
       failures.push(`${entry.key}: ${output.errors.join(' / ') || '主攻撃の計算結果なし'}`)
@@ -252,7 +277,17 @@ test('現在の全カタログで計算可能な仮想対応段階を欠落な�
     checked++
   }
   t.diagnostic(`native計算可能・仮想対応 ${checked} 段階、テーブル欠落 ${failures.length}`)
-  assert.ok(checked >= 290)
+  assert.deepEqual(periodicOnlyIds.sort(), [
+    'char_1011_lava2:skchr_lava2_2:9:active', 'char_1012_skadi2:skchr_skadi2_3:9:event',
+    'char_1039_thorn2:skchr_thorn2_2:9:active', 'char_1039_thorn2:skchr_thorn2_3:9:stable',
+    'char_1046_sbell2:skchr_sbell2_2:9:snow_dot', 'char_134_ifrit:skchr_ifrit_3:9:active',
+    'char_2027_wang:skchr_wang_1:9:trap', 'char_213_mostma:skchr_mostma_2:9:active',
+    'char_258_podego:skchr_podego_2:9:active', 'char_297_hamoni:skchr_hamoni_2:9:water',
+    'char_4151_tinman:skchr_tinman_1:9:active', 'char_4151_tinman:skchr_tinman_2:9:active',
+    'char_4202_haruka:skchr_haruka_3:9:event', 'char_469_indigo:skchr_indigo_2:9:bind',
+    'char_478_kirara:skchr_kirara_2:9:periodic',
+  ])
+  assert.equal(checked, 847)
   assert.deepEqual([...kinds].sort(), ['COUNTER', 'NEXT_ATTACK', 'NORMAL', 'SKILL_ACTION'])
   assert.deepEqual(failures, [])
   assert.equal(JSON.stringify(getDamageCalculatorThreeStructures()), snapshot)
