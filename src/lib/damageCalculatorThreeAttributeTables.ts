@@ -29,6 +29,7 @@ export interface DamageThreeAttributeTablesInput {
   overrides?: DamageThreeComparisonOverrides
   operatorLevel?: number
   trust?: number
+  disablePenetration?: boolean
 }
 
 export interface DamageThreeAttributeTables {
@@ -121,6 +122,7 @@ export function evaluateDamageThreeAttributeTables(input: DamageThreeAttributeTa
   const settings: DamageThreeComparisonEvaluationOptions = {
     ...(input.operatorLevel === undefined ? {} : { operatorLevel: input.operatorLevel }),
     ...(input.trust === undefined ? {} : { trust: input.trust }),
+    ...(input.disablePenetration ? { disablePenetration: true } : {}),
   }
   const reference = evaluateDamageThreeComparisonEntry(entry, { defense: 0, resistance: 0, enemyCount }, overrides, settings)
   const errors = [...reference.errors]

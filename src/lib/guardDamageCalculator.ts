@@ -35,6 +35,10 @@ export interface GuardActorContext {
 export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, structure: SkillStructure,
   initialErrors: string[] = [], actor?: GuardActorContext): DamageCalculatorThreeOutput {
   const recipe = structure.guardRecipe!
+  const disablePenetration = input.disablePenetration === true
+  const criticalChance = (modifiers: GuardPassiveModifiers) =>
+    disablePenetration && modifiers.criticalDefenseIgnoreRatio !== undefined
+      && modifiers.critScale === 1 && (modifiers.criticalAttackRatio ?? 0) === 0 ? 0 : modifiers.critChance
   const expanded = getExpandedDefinition(recipe.operatorId)
   // Invalid values still block output; safe display statistics must not throw before that error is shown.
   const stats = actor?.stats ?? getOperatorStats(input.operator.operatorProfile,
@@ -293,10 +297,15 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
       const allowsCritical = !['TARGET_DEFENSE', 'ATK_STAT', 'OWNER_ATK_STAT', 'DEF_STAT'].includes(action.basis ?? '')
       const generalDefenseIgnoreRatio = modifiers === passive ? defenseIgnoreRatio
         : 1 - (1 - modifiers.defenseIgnoreRatio) * (1 - stageDefenseIgnoreRatio)
-      const actionDefenseIgnoreRatio = 1 - (1 - generalDefenseIgnoreRatio)
+      const actionDefenseIgnoreRatio = disablePenetration ? 0 : 1 - (1 - generalDefenseIgnoreRatio)
         * (1 - (allowsCritical ? modifiers.attackDefenseIgnoreRatio ?? 0 : 0))
-      const actionDefenseIgnoreFixed = modifiers === passive ? defenseIgnoreFixed : modifiers.defenseIgnoreFixed + stageDefenseIgnoreFixed
-      const actionResistanceIgnoreFixed = modifiers === passive ? resistanceIgnoreFixed : modifiers.resistanceIgnoreFixed + stageResistanceIgnoreFixed
+      const actionDefenseIgnoreFixed = disablePenetration ? 0
+        : modifiers === passive ? defenseIgnoreFixed : modifiers.defenseIgnoreFixed + stageDefenseIgnoreFixed
+      const actionResistanceIgnoreFixed = disablePenetration ? 0
+        : modifiers === passive ? resistanceIgnoreFixed : modifiers.resistanceIgnoreFixed + stageResistanceIgnoreFixed
+      const actionResistanceIgnoreRatio = disablePenetration ? 0 : modifiers.resistanceIgnoreRatio
+      const criticalDefenseIgnoreRatio = disablePenetration ? 0 : modifiers.criticalDefenseIgnoreRatio ?? 0
+      const chance = allowsCritical ? criticalChance(modifiers) : 0
       const scale = actionScale(action, modifiers), count = value(action.hits, 1) + (action.isStoredCharge ? modifiers.extraStoredCharges ?? 0 : 0), probability = value(action.probability, 1)
       const targets = value(action.targets, actualTargetCount)
       if (scale < 0 || count < 0 || (action.timing !== 'PER_SECOND' && !Number.isSafeInteger(count)) || probability < 0 || probability > 1
@@ -321,10 +330,10 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
         const appliedDefense = Math.max(0, (defense - (modifiers.defenseReductionFixed ?? 0)) * (1 - modifiers.defenseReductionRatio)
           - (modifiers.defenseReductionFinalFixed ?? 0))
         const appliedResistance = Math.max(0, (resistance - (modifiers.resistanceReductionFixed ?? 0))
-          * (1 - (modifiers.resistanceReductionRatio ?? 0))) * (1 - modifiers.resistanceIgnoreRatio)
+          * (1 - (modifiers.resistanceReductionRatio ?? 0))) * (1 - actionResistanceIgnoreRatio)
         const branches: ProbabilisticDamageBranch[] = [
-          { id: 'NORMAL' as const, probability: allowsCritical ? 1 - modifiers.critChance : 1, scale: 1, attackBonus: 0 },
-          { id: 'IGNORE' as const, probability: allowsCritical ? modifiers.critChance : 0, scale: modifiers.critScale, attackBonus: modifiers.criticalAttackRatio ?? 0 },
+          { id: 'NORMAL' as const, probability: 1 - chance, scale: 1, attackBonus: 0 },
+          { id: 'IGNORE' as const, probability: chance, scale: modifiers.critScale, attackBonus: modifiers.criticalAttackRatio ?? 0 },
         ].filter(branch => branch.probability > 0).map(branch => {
           const branchPipeline = pipeline(scale, value(action.attackBonus) + branch.attackBonus, modifiers, includeAttackScale)
           const amount = (action.basis === 'TARGET_DEFENSE' ? appliedDefense * scale
@@ -333,7 +342,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
           const minimumDamage = (!action.basis || action.basis === 'ATK') && action.timing !== 'PER_SECOND'
             ? branchPipeline.afterFinalMultiplier * (modifiers.minimumDamageRatio ?? 0) : 0
           const branchDefenseIgnoreRatio = 1 - (1 - actionDefenseIgnoreRatio)
-            * (1 - (branch.id === 'IGNORE' ? modifiers.criticalDefenseIgnoreRatio ?? 0 : 0))
+            * (1 - (branch.id === 'IGNORE' ? criticalDefenseIgnoreRatio : 0))
           const penetration = { defenseIgnoreFixed: appliedDefense * branchDefenseIgnoreRatio + actionDefenseIgnoreFixed,
             resistanceIgnoreFixed: actionResistanceIgnoreFixed }
           const artsAddition = modifiers.artsDamageFlatAddition ?? 0
@@ -368,7 +377,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
           if (!Number.isFinite(expectedDamage)) throw new RangeError('ダメージ期待値を計算できません。')
           components.push({ id: `guard-${index}-${variantIndex}${hasWeakpointDamage ? '-' + resolvedType : ''}`, sourceActionId: action.id, label: variant.label, order: components.length + 1,
           role: action.role, damageType: resolvedType, attackScale: scale * variant.factor, count, targetAirborne: false,
-          defenseIgnoreChance: resolvedType === 'ELEMENTAL' ? 0 : actionDefenseIgnoreRatio > 0 ? 1 : allowsCritical && (modifiers.criticalDefenseIgnoreRatio ?? 0) > 0 ? modifiers.critChance : 0,
+          defenseIgnoreChance: resolvedType === 'ELEMENTAL' ? 0 : actionDefenseIgnoreRatio > 0 ? 1 : criticalDefenseIgnoreRatio > 0 ? chance : 0,
           defenseIgnoreRatio: Math.max(...typedBranches.map(branch => branch.defenseIgnoreRatio)), expectedDamage,
           expectedHitCount: count * probability * hitFactor * typedBranches.reduce((sum, branch) => sum + branch.probability, 0),
           attackPipeline: basePipeline, branches: typedBranches })
@@ -440,6 +449,14 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
     })
   } catch (error) { reasons.push(message(error)); rows = [] }
   const unsupportedReasons = [...new Set(reasons)]
+  const evaluations = disablePenetration ? passive.evaluations.map(row =>
+    row.status === 'APPLIED' && ['防御力固定無視', '防御力無視', '術耐性無視'].includes(row.item)
+      ? { ...row, status: 'NOT_RELEVANT' as const, reason: '防御力・術耐性無視を適用しない設定です。' } : row)
+    : passive.evaluations
+  const probabilistic = (modifiers: GuardPassiveModifiers) => {
+    const chance = criticalChance(modifiers)
+    return chance > 0 && chance < 1
+  }
   return {
     traitEvaluation, mainAttackType,
     structure, stats, model: unsupportedReasons.length ? null : {
@@ -454,13 +471,13 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
     activeStageLabel: stage?.label ?? null, attackKind: kind, attackLabel: kind === 'NORMAL' ? '1攻撃' : kind === 'NEXT_ATTACK' ? '強化攻撃' : 'スキル',
     attackDistanceType: stage?.attackTreatment ?? (conditions.attackDistanceType === 'RANGED' ? 'RANGED' : 'MELEE'), rangePenaltyMultiplier: 1,
     scopeNotes: [...scopeNotes, ...(dpsReason ? [dpsReason] : [])], counterCooldownSeconds: null,
-    talentEffects: [], talentAttackRatio: passive.attackRatio, resistanceIgnoreFixed, hasUnsupportedTalentDamage: false,
+    talentEffects: [], talentAttackRatio: passive.attackRatio,
+    resistanceIgnoreFixed: disablePenetration ? 0 : resistanceIgnoreFixed, hasUnsupportedTalentDamage: false,
     damageOverTime: null, hasAttackSequence: true,
-    hasProbabilisticDamage: passive.critChance > 0 && passive.critChance < 1
-      || [...actionPassives.values()].some(modifiers => modifiers.critChance > 0 && modifiers.critChance < 1)
+    hasProbabilisticDamage: probabilistic(passive) || [...actionPassives.values()].some(probabilistic)
       || directActions.some(action => action.probability !== undefined),
     initialTargetState: null, hasRandomTargets,
-    guard: { inputs, conditions, evaluations: passive.evaluations, unresolved: unsupportedReasons },
+    guard: { inputs, conditions, evaluations, unresolved: unsupportedReasons },
   }
 }
 

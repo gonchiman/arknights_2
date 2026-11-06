@@ -81,6 +81,59 @@ function close(actual: number | null, expected: number) {
   assert.ok(actual !== null && Math.abs(actual - expected) <= 1e-7 * Math.max(1, Math.abs(expected)), `${actual} != ${expected}`)
 }
 
+test('無視オフはスルトS2の術耐性20無視だけを外し、物理側と攻撃間隔を保つ', () => {
+  const value = input('char_350_surtr', 2)
+  const on = valid(value)
+  const off = valid({ ...value, disablePenetration: true })
+  const before = on.arts.find(row => row.rating === 'B')!
+  const after = off.arts.find(row => row.rating === 'B')!
+  const base = on.arts[0].perAttack!.max
+
+  assert.deepEqual(off.physical, on.physical)
+  assert.equal(off.reference.output!.attackInterval, on.reference.output!.attackInterval)
+  close(before.perAttack!.max, base)
+  close(after.perAttack!.max, base * 0.8)
+  close(after.perAttack!.min, base * 0.71)
+  close(after.dps!.max, after.perAttack!.max / off.reference.output!.attackInterval!)
+})
+
+test('無視オフはアイリーニS1の地上敵への確率防御無視を外し、2ヒットを保つ', () => {
+  const value = input('char_4009_irene', 1, undefined, { targetCanBeLevitated: false })
+  const on = valid(value)
+  const off = valid({ ...value, disablePenetration: true })
+  const base = on.physical[0].perAttack!.max
+  const before = on.physical.find(row => row.rating === 'B')!
+  const after = off.physical.find(row => row.rating === 'B')!
+
+  close(before.perAttack!.max, base - 2 * 500 * (1 - 0.5 * 0.5))
+  close(after.perAttack!.max, base - 2 * 500)
+  assert.deepEqual(off.arts, on.arts)
+})
+
+test('無視オフは聖聆プラマニクスS3の術耐性10無視を外し、凍結の術耐性15低下を保つ', () => {
+  const value = input('char_1046_sbell2', 3, 'attack', { 'guard.sbellTargetFrozen': true })
+  const on = valid(value)
+  const off = valid({ ...value, disablePenetration: true })
+  const base = on.arts[0].perAttack!.max
+  const before = on.arts.find(row => row.rating === 'A+')!
+  const after = off.arts.find(row => row.rating === 'A+')!
+
+  close(before.perAttack!.max, base * (1 - (60 - 15 - 10) / 100))
+  close(after.perAttack!.max, base * (1 - (60 - 15) / 100))
+})
+
+test('無視オフはEla S2の防御800無視を外し、会心確率と倍率を保つ', () => {
+  const value = input('char_4123_ela', 2, undefined, { 'guard.elaTargetState': 'GROUND' })
+  const on = valid(value)
+  const off = valid({ ...value, disablePenetration: true })
+  const base = on.reference.output!.stats.attack
+  const before = on.physical.find(row => row.rating === 'C')!
+  const after = off.physical.find(row => row.rating === 'C')!
+
+  close(before.perAttack!.max, base * 0.7 + base * 1.5 * 0.3)
+  close(after.perAttack!.max, (base - 200) * 0.7 + (base * 1.5 - 200) * 0.3)
+})
+
 test('エクシアS3の主攻撃をゲーム内評価の両端で比較し、5連撃・攻撃間隔・最低保証を保つ', () => {
   const value = input('char_103_angel', 3)
   const before = structuredClone(value)

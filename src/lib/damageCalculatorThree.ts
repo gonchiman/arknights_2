@@ -118,6 +118,8 @@ export interface DamageCalculatorThreeInput {
   enemy?: DamageCalculatorThreeEnemy
   /** Counterfactual only: replace reviewed main direct attacks, never source definitions. */
   virtualMainAttackType?: VirtualMainAttackType
+  /** Counterfactual only: omit defense and resistance ignore effects. */
+  disablePenetration?: boolean
 }
 
 export interface DamageCalculatorThreeEffectEvaluation {
@@ -529,6 +531,20 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
     }
   }
   reasons.push(...talents.blockingReasons)
+  if (input.disablePenetration) {
+    for (const result of [talents, ...actionPlans.map(plan => plan.talents)]) {
+      result.defenseIgnore = null
+      result.resistanceIgnoreFixed = 0
+    }
+    for (const evaluation of talents.effects) {
+      const item = evaluation.effect?.item
+      if (evaluation.status === 'APPLIED' && (item === 'DEFENSE_IGNORE_RATIO' || item === 'RESISTANCE_IGNORE_FIXED')) {
+        evaluation.status = 'NOT_RELEVANT'
+        evaluation.reason = '防御力・術耐性無視がオフです。'
+        delete evaluation.appliedAttackIds
+      }
+    }
+  }
   if (!Number.isFinite(stats.attack * (1 + atkRatio + talents.attackRatio))) {
     reasons.push('スキル・素質を加算した攻撃力を計算できません。')
   }
