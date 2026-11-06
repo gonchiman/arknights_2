@@ -49,9 +49,9 @@ function total(id: string, index: number, result: ReturnType<typeof output>) {
     combinedDps: result.rows[0].combinedDps, allTargetsCombinedDps: result.rows[0].allTargetsCombinedDps })
 }
 
-test('追加術師・補助13技能の初期条件は原資料に一致し、全素質と特性を評価する', () => {
-  assert.equal(EXPANDED_CASTER_DEFINITIONS.length, 5)
-  assert.equal(EXPANDED_CASTER_DEFINITIONS.flatMap(definition => definition.recipes).length, 13)
+test('追加術師・補助25技能の初期条件は原資料に一致し、全素質と特性を評価する', () => {
+  assert.equal(EXPANDED_CASTER_DEFINITIONS.length, 9)
+  assert.equal(EXPANDED_CASTER_DEFINITIONS.flatMap(definition => definition.recipes).length, 25)
   for (const source of sources) {
     assert.equal('passives' in source, false)
     assert.equal('coverage' in source, false)
@@ -191,7 +191,8 @@ test('アロマS2は通常攻撃と浮遊終了を分離し、初撃未確認の
 
 test('未対応の召喚・状態移行・配置・初撃を実装状況に残す', () => {
   const coverage = buildDamageCalculatorThreeCoverage(sources.flatMap(source => source.skills.map(skill => record(source.operatorId, skill.skillIndex))))
-  for (const row of coverage.filter(row => !(row.skill.operatorId === 'char_446_aroma' && row.skill.skillIndex === 2))) {
+  const previousIds = ['char_2015_dusk', 'char_4080_lin', 'char_206_gnosis', 'char_135_halo', 'char_446_aroma']
+  for (const row of coverage.filter(row => previousIds.includes(row.skill.operatorId) && !(row.skill.operatorId === 'char_446_aroma' && row.skill.skillIndex === 2))) {
     assert.equal(row.status, 'CONDITIONAL', `${row.skill.operatorName} S${row.skill.skillIndex}`)
     assert.ok(row.deferredReasons.length > 0)
   }
@@ -215,6 +216,138 @@ test('追加術師のスキル・特性・素質の原資料が変更された�
     })
     assert.ok(result.unsupportedReasons.some(reason => reason.includes('累積上限')))
     assert.deepEqual(result.rows, [])
+  }
+})
+
+test('ヴィイの斉射は転置・主攻撃・通常貯蔵の順に生成し、S2の強化を各弾ごとに進める', () => {
+  for (const merged of [0, 1, 2, 3]) for (const stored of merged === 3 ? [0] : [0, 1, 2]) {
+    const guard = { veenMergedCharges: merged, veenNormalCharges: stored }
+    const first = at('char_4226_veen', 1, guard, 40)
+    const base = first.result.stats.attack
+    const talent = merged > 0 ? 0.1 : 0
+    close(first.row.perAttack, attack(base, talent) * (1 + 3 * merged + stored) * 0.6)
+    for (const starting of [0, 4, 9]) {
+      const second = at('char_4226_veen', 2, { ...guard, veenAttackStacks: starting }, 40)
+      const buffed = (previous: number) => attack(base, talent + 0.15 * Math.min(9, starting + previous))
+      const expected = Array.from({ length: merged }, (_, i) => buffed(i * 3) * 3).reduce((a, b) => a + b, 0)
+        + buffed(merged * 3)
+        + Array.from({ length: stored }, (_, i) => buffed(merged * 3 + i + 1)).reduce((a, b) => a + b, 0)
+      close(second.row.perAttack, expected * 0.6)
+      assert.equal(second.row.combinedDps, null)
+    }
+    const third = at('char_4226_veen', 3, guard, 40)
+    close(third.row.perAttack, attack(base, talent) * (1 + 1.65 * (3 * merged + stored)) * 0.6)
+    assert.equal(third.result.attackInterval, null)
+  }
+  const virtual = output('char_4226_veen', 2, { veenMergedCharges: 1, veenNormalCharges: 2 }, undefined,
+    { virtualMainAttackType: 'PHYSICAL', enemy: { defense: 500, resistance: 40 } })
+  assert.deepEqual(virtual.unsupportedReasons, [])
+  const base = virtual.stats.attack
+  close(virtual.rows[0].perAttack, attack(base, 0.1) * 3 - 500 + attack(base, 0.55) - 500
+    + attack(base, 0.7) - 500 + attack(base, 0.85) - 500)
+})
+
+test('ヴィイのDOTは90×重複数の固定術ダメージで、斉射の直撃とは合算しない', () => {
+  for (const index of [1, 2, 3]) for (const stacks of [1, 2, 3]) {
+    const { result, row } = at('char_4226_veen', index, { veenPhase: 'DOT', veenDotStacks: stacks, veenTargetAlreadyAffected: true }, 40)
+    close(row.damageOverTimeDps, 90 * stacks * 0.6)
+    assert.equal(row.perAttack, 0)
+    assert.equal(row.combinedDps, null)
+    assert.equal(total('char_4226_veen', index, result).totalDamage, null)
+  }
+  for (const invalid of [{ veenMergedCharges: 3, veenNormalCharges: 1 }, { veenTargetAlreadyAffected: true }]) {
+    const result = output('char_4226_veen', 1, invalid)
+    assert.ok(result.unsupportedReasons.length > 0)
+    assert.deepEqual(result.rows, [])
+  }
+})
+
+test('マルシルは魔力保持時のATK20%を加算し、使い魔2段階とパーティーASPDを区別する', () => {
+  const first = at('char_4141_marcil', 1, { marcilleManaAfterCost: 78 }, 40)
+  close(first.row.perAttack, attack(first.result.stats.attack, 1.6) * 0.6)
+  assert.equal(first.row.dps, null)
+  for (const mana of [0, 1, 80]) for (const upgraded of [false, true]) for (const party of [false, true]) {
+    const second = at('char_4141_marcil', 2, { marcilleManaAfterCost: mana,
+      marcilleFamiliarStage: upgraded ? 'UPGRADED' : 'FIRST', marcilleFullParty: party }, 40)
+    close(second.row.perAttack, attack(second.result.stats.attack, 1 + (mana > 0 ? 0.2 : 0)) * 0.6)
+    close(second.result.attackInterval, 2.9 / (1 + (upgraded ? 0.6 : 0) + (party ? 0.25 : 0)))
+  }
+  const third = at('char_4141_marcil', 3, { marcilleManaAfterCost: 72, actualAttackTargetCount: 4 }, 40)
+  close(third.row.perAttack, attack(third.result.stats.attack, 0.2) * 3.9 * 0.6)
+  close(third.row.allTargetsPerAttack, third.row.perAttack * 4)
+  assert.equal(total('char_4141_marcil', 3, third.result).totalDamage, null)
+  for (const [index, mana] of [[1, 0], [3, 0], [1, 79], [3, 73]]) {
+    const invalid = output('char_4141_marcil', index, { marcilleManaAfterCost: mana })
+    assert.ok(invalid.unsupportedReasons.length > 0)
+    assert.deepEqual(invalid.rows, [])
+  }
+})
+
+test('ロゴスは各対象への攻撃ごとに追加攻撃40%を抽選し、各術ダメージへ軽減前150を加える', () => {
+  for (const [index, bonus, count] of [[1, 1, 1], [3, 3, 1], [3, 3, 4]] as const) {
+    const { result, row } = at('char_4133_logos', index, { actualAttackTargetCount: count }, 40)
+    const atk = attack(result.stats.attack, bonus)
+    const expected = (atk + 150 + 0.4 * (atk * 0.6 + 150)) * 0.7
+    close(row.perAttack, expected)
+    close(row.allTargetsPerAttack, expected * count)
+  }
+  for (const stacks of [0, 5, 10]) {
+    const { result, row } = at('char_4133_logos', 2, { logosLockStacks: stacks }, 40)
+    close(row.perAttack, (result.stats.attack * (0.75 + stacks * 0.15) + 150
+      + 0.4 * (result.stats.attack * 0.6 + 150)) * 0.7)
+    close(result.attackInterval, 0.5)
+    close(row.dps, row.perAttack / 0.5)
+    assert.equal(total('char_4133_logos', 2, result).totalDamage, null)
+  }
+  const virtual = output('char_4133_logos', 3, { actualAttackTargetCount: 4 }, undefined,
+    { virtualMainAttackType: 'PHYSICAL', enemy: { defense: 500, resistance: 40 } })
+  assert.deepEqual(virtual.unsupportedReasons, [])
+  const atk = attack(virtual.stats.attack, 3)
+  close(virtual.rows[0].perAttack, atk - 500 + 0.4 * (atk * 0.6 + 150) * 0.7)
+  close(virtual.rows[0].allTargetsPerAttack, virtual.rows[0].perAttack * 4)
+})
+
+test('ロゴスの初回付与・即死転移と、異なる抽選対象の混在は数値を出さない', () => {
+  for (const index of [1, 2, 3]) for (const conditions of [
+    { logosPhase: 'INITIAL' }, { logosAllDebuffed: false }, { logosWholePoolSelected: false },
+  ]) {
+    const result = output('char_4133_logos', index, conditions)
+    assert.ok(result.unsupportedReasons.length > 0)
+    assert.deepEqual(result.rows, [])
+  }
+  const execution = output('char_4133_logos', 1, { logosPhase: 'EXECUTION' })
+  assert.ok(execution.unsupportedReasons.some(reason => reason.includes('斬殺')))
+  assert.deepEqual(execution.rows, [])
+})
+
+test('聖聆プラマニクスは直接攻撃と積雪毎秒値を分離し、凍結RES低下の後に無視を適用する', () => {
+  for (const frozen of [false, true]) for (const [index, scale, buff] of [[1, 5.2, 0], [2, 3.8, 0], [3, 2.6, 1]] as const) {
+    const { result, row } = at('char_1046_sbell2', index, { sbellTargetFrozen: frozen, actualAttackTargetCount: 3 }, 40)
+    const res = 40 - (frozen ? 15 : 0) - (index === 3 ? 10 : 0)
+    close(row.perAttack, attack(result.stats.attack, buff) * scale * (1 - res / 100))
+    close(row.allTargetsPerAttack, row.perAttack * 3)
+    if (index === 3) close(result.attackInterval, 2 / 1.3)
+  }
+  const snow = at('char_1046_sbell2', 2, { sbellPhase: 'SNOW_DOT', sbellTargetFrozen: true, actualAttackTargetCount: 3 }, 40)
+  close(snow.row.damageOverTimeDps, snow.result.stats.attack * 0.2 * 0.75)
+  assert.equal(snow.row.perAttack, 0)
+  close(snow.row.allTargetsCombinedDps, snow.row.damageOverTimeDps! * 3)
+  for (const index of [1, 2, 3]) for (const conditions of [
+    { sbellPhase: 'SNOW_ENTRY' }, { sbellTargetChangingFreeze: true }, { sbellSelfFrozen: true },
+  ]) {
+    const result = output('char_1046_sbell2', index, conditions)
+    assert.ok(result.unsupportedReasons.length > 0)
+    assert.deepEqual(result.rows, [])
+  }
+})
+
+test('追加4人の未確認イベントは実装状況の保留理由へ残す', () => {
+  const conditional = ['char_4141_marcil', 'char_4133_logos', 'char_1046_sbell2']
+  const coverage = buildDamageCalculatorThreeCoverage(sources.filter(source => conditional.includes(source.operatorId))
+    .flatMap(source => source.skills.map(skill => record(source.operatorId, skill.skillIndex))))
+  for (const row of coverage.filter(row => !(row.skill.operatorId === 'char_4141_marcil' && row.skill.skillIndex === 2))) {
+    assert.equal(row.status, 'CONDITIONAL', `${row.skill.operatorName} S${row.skill.skillIndex}`)
+    assert.ok(row.deferredReasons.length > 0)
   }
 })
 

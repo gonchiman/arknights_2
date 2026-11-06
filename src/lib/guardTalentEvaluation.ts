@@ -11,6 +11,7 @@ type Evaluation = GuardPassiveModifiers['evaluations'][number]
 
 /** These are calculation operations, independent of an operator or talent identity. */
 const damageItems: ReadonlySet<TalentStructureEffect['item']> = new Set([
+  'ARTS_DAMAGE_FLAT_ADDITION',
   'WEAKPOINT_DAMAGE',
   'DRONE_MAXIMUM_MULTIPLIER', 'EXTRA_DRONES',
   'DAMAGE_CAP_PER_TARGET',
@@ -21,6 +22,7 @@ const damageItems: ReadonlySet<TalentStructureEffect['item']> = new Set([
   'DEFENSE_REDUCTION_FIXED', 'DEFENSE_REDUCTION_FINAL_FIXED', 'RESISTANCE_REDUCTION_FIXED',
 ])
 const operations: Readonly<Record<string, readonly [string, string]>> = {
+  ARTS_DAMAGE_FLAT_ADDITION: ['ADD_VALUE', 'POINT'],
   WEAKPOINT_DAMAGE: ['SET_ENABLED', 'BOOLEAN'],
   DRONE_MAXIMUM_MULTIPLIER: ['MULTIPLY', 'MULTIPLIER'], EXTRA_DRONES: ['ADD_VALUE', 'POINT'],
   DAMAGE_CAP_PER_TARGET: ['SET', 'POINT'],
@@ -59,7 +61,7 @@ function supportsContext(effect: TalentStructureEffect, metrics: Metrics): boole
   if (effect.afterEffects?.length || effect.timing.type === 'AFTER_EVENT'
     || effect.lifetime.type === 'UNSPECIFIED' || effect.lifetime.type === 'WHILE_CONDITION') return false
   if (effect.target.selection.type !== 'ALL'
-    && !(effect.item === 'ADDITIONAL_ATTACK' && effect.target.selection.type === 'COUNT')) return false
+    && !(effect.item === 'ADDITIONAL_ATTACK' && ['COUNT', 'RANDOM'].includes(effect.target.selection.type))) return false
   if (effect.timing.type === 'PERIODIC'
     && (effect.item !== 'ADDITIONAL_ATTACK' || effect.rate !== 'PER_SECOND'
       || effect.timing.intervalSeconds === null || effect.timing.intervalSeconds <= 0)) return false
@@ -281,6 +283,11 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
         if (active) output.damageScale *= value
         addRow('与ダメージ', `×${formatCombatNumber(value)}`, status, '', details)
         break
+      case 'ARTS_DAMAGE_FLAT_ADDITION':
+        if (value < 0) { block('術ダメージ固定加算は0以上で指定してください。'); break }
+        if (active) output.artsDamageFlatAddition = (output.artsDamageFlatAddition ?? 0) + value
+        addRow('術ダメージ固定加算（軽減前）', `＋${formatCombatNumber(value)}`, status, '', details)
+        break
       case 'DAMAGE_CAP_PER_TARGET':
         if (value < 0) { block('対象ごとのダメージ上限が有効範囲外です。'); break }
         if (active) output.damageCapPerTarget = Math.min(output.damageCapPerTarget ?? Infinity, value)
@@ -350,7 +357,9 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
         const chance = numeric(effect.probability.chance, '発動確率')
         const hits = numeric(effect.hits ?? 1, '攻撃回数')
         const flatDamage = effect.flatDamage === undefined ? undefined : numeric(effect.flatDamage, '固定ダメージ')
-        const targetLimit = effect.target.selection.type === 'COUNT' ? numeric(effect.target.selection.count, '対象数') : undefined
+        // RANDOM uses the same expected total for a homogeneous selected enemy pool.
+        // The recipe must constrain the pool; this does not assign hits to named enemies.
+        const targetLimit = effect.target.selection.type !== 'ALL' ? numeric(effect.target.selection.count, '対象数') : undefined
         const actualTargets = Number(metrics.actualAttackTargetCount ?? 1)
         if (targetLimit === null) break
         if (targetLimit !== undefined && (!Number.isSafeInteger(targetLimit) || targetLimit < 1

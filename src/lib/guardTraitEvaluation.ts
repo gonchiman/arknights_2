@@ -35,6 +35,9 @@ export function evaluateGuardTraits(operator: TraitStructureOperator, stage: Gua
     disabledEffectIds: stage.attackTreatment === 'MELEE' ? ['ranged-attack-scale'] : undefined,
   }
   const evaluation = evaluateTraitStructure(structure, context)
+  if (structure?.effects.some(effect => effect.item === 'STORED_CHARGE_MERGE_COUNT')
+    && !overrides.includes('STORED_CHARGES'))
+    evaluation.blockers.push('転置エネルギーは通常貯蔵と異なる命中定義を必要とします。')
   const droneBlockers: string[] = []
   if (evaluation.droneRamp && !stage.actions.some(action => action.drone))
     droneBlockers.push('浮遊ユニットを含む確認済みの攻撃定義がありません。')

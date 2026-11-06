@@ -2,18 +2,20 @@ import meleeSources from '../data/expandedMeleeSources.json' with { type: 'json'
 import rangedSources from '../data/expandedRangedSources.json' with { type: 'json' }
 import artsSources from '../data/expandedArtsSources.json' with { type: 'json' }
 import casterSources from '../data/expandedCasterSources.json' with { type: 'json' }
+import supportSources from '../data/expandedSupportSources.json' with { type: 'json' }
 import { EXPANDED_MELEE_DEFINITIONS } from './expandedMeleeDefinitions.ts'
 import { EXPANDED_RANGED_DEFINITIONS } from './expandedRangedDefinitions.ts'
 import { EXPANDED_ARTS_DEFINITIONS } from './expandedArtsDefinitions.ts'
 import { EXPANDED_CASTER_DEFINITIONS } from './expandedCasterDefinitions.ts'
+import { EXPANDED_SUPPORT_DEFINITIONS } from './expandedSupportDefinitions.ts'
 import type { ExpandedOperatorDefinition, ExpandedOperatorSource } from './expandedCombatTypes.ts'
 import type { RawBlackboardEntry, RawSkillLevel } from '../types/skill.ts'
 import type { PassiveSource } from './operatorProfile.ts'
 
 export const EXPANDED_OPERATOR_DEFINITIONS: readonly ExpandedOperatorDefinition[] = [
-  ...EXPANDED_MELEE_DEFINITIONS, ...EXPANDED_RANGED_DEFINITIONS, ...EXPANDED_ARTS_DEFINITIONS, ...EXPANDED_CASTER_DEFINITIONS,
+  ...EXPANDED_MELEE_DEFINITIONS, ...EXPANDED_RANGED_DEFINITIONS, ...EXPANDED_ARTS_DEFINITIONS, ...EXPANDED_CASTER_DEFINITIONS, ...EXPANDED_SUPPORT_DEFINITIONS,
 ]
-export const EXPANDED_OPERATOR_SOURCES = [...meleeSources, ...rangedSources, ...artsSources, ...casterSources] as unknown as readonly ExpandedOperatorSource[]
+export const EXPANDED_OPERATOR_SOURCES = [...meleeSources, ...rangedSources, ...artsSources, ...casterSources, ...supportSources] as unknown as readonly ExpandedOperatorSource[]
 export const EXPANDED_OPERATOR_IDS = EXPANDED_OPERATOR_DEFINITIONS.map(definition => definition.operatorId)
 export const getExpandedDefinition = (id: string) => EXPANDED_OPERATOR_DEFINITIONS.find(definition => definition.operatorId === id)
 export const getExpandedSource = (id: string) => EXPANDED_OPERATOR_SOURCES.find(source => source.operatorId === id)

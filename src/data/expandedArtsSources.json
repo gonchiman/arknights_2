@@ -54517,5 +54517,1634 @@
         }
       }
     ]
+  },
+  {
+    "operatorId": "char_377_gdglow",
+    "operatorName": "ゴールデングロー",
+    "profession": "CASTER",
+    "rarity": 6,
+    "subProfessionId": "funnel",
+    "phaseIndex": 2,
+    "skillLevelIndex": 9,
+    "profile": {
+      "affiliation": "ヴィクトリア",
+      "affiliationIds": {
+        "nationId": "victoria",
+        "groupId": null,
+        "teamId": null
+      },
+      "phases": [
+        {
+          "characterPrefabKey": "char_377_gdglow",
+          "rangeId": "3-6",
+          "maxLevel": 50,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 605,
+                "atk": 153,
+                "def": 50,
+                "magicResistance": 10,
+                "cost": 20,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.3,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 50,
+              "data": {
+                "maxHp": 865,
+                "atk": 216,
+                "def": 76,
+                "magicResistance": 10,
+                "cost": 20,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.3,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "char_377_gdglow",
+          "rangeId": "3-1",
+          "maxLevel": 80,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 865,
+                "atk": 216,
+                "def": 76,
+                "magicResistance": 15,
+                "cost": 22,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.3,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 80,
+              "data": {
+                "maxHp": 1124,
+                "atk": 278,
+                "def": 105,
+                "magicResistance": 15,
+                "cost": 22,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.3,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3251",
+              "count": 5,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30052",
+              "count": 7,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30012",
+              "count": 7,
+              "type": "MATERIAL"
+            }
+          ]
+        },
+        {
+          "characterPrefabKey": "char_377_gdglow",
+          "rangeId": "3-1",
+          "maxLevel": 90,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1124,
+                "atk": 278,
+                "def": 105,
+                "magicResistance": 20,
+                "cost": 22,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.3,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 90,
+              "data": {
+                "maxHp": 1480,
+                "atk": 331,
+                "def": 125,
+                "magicResistance": 20,
+                "cost": 22,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.3,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3253",
+              "count": 4,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30125",
+              "count": 4,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30084",
+              "count": 5,
+              "type": "MATERIAL"
+            }
+          ]
+        }
+      ],
+      "favorKeyFrames": [
+        {
+          "level": 0,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        },
+        {
+          "level": 50,
+          "data": {
+            "maxHp": 0,
+            "atk": 60,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        }
+      ],
+      "trait": {
+        "candidates": [
+          {
+            "unlockCondition": {
+              "phase": "PHASE_0",
+              "level": 1
+            },
+            "requiredPotentialRank": 0,
+            "blackboard": [
+              {
+                "key": "init_atk_scale",
+                "value": 0.2,
+                "valueStr": null
+              },
+              {
+                "key": "delta_atk_scale",
+                "value": 0.15,
+                "valueStr": null
+              },
+              {
+                "key": "max_atk_scale",
+                "value": 1.1,
+                "valueStr": null
+              },
+              {
+                "key": "max_stack_cnt",
+                "value": 6,
+                "valueStr": null
+              }
+            ],
+            "overrideDescripton": "<@ba.kw>浮遊ユニット</>を操作して敵に<@ba.kw>術ダメージ</>を与える\n浮遊ユニットが連続で同一目標を攻撃時、与ダメージが上昇（最大は攻撃力の110%まで）",
+            "prefabKey": null,
+            "rangeId": null
+          }
+        ]
+      },
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "電流暴走",
+              "description": "スキル発動中、浮遊ユニットが攻撃時10%の確率で自爆（ゴールデングローの元に戻る）し、一定範囲内の敵全員にゴールデングローの攻撃力の200%の術ダメージを与える",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack@prob",
+                  "value": 0.015,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@atk_scale_2",
+                  "value": 2,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@max_stack_cnt",
+                  "value": 40,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 2,
+              "prefabKey": "1",
+              "name": "電流暴走",
+              "description": "スキル発動中、浮遊ユニットが攻撃時10%の確率で自爆（ゴールデングローの元に戻る）し、一定範囲内の敵全員にゴールデングローの攻撃力の215%<@ba.talpu>（+15%）</>の術ダメージを与える",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack@prob",
+                  "value": 0.015,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@atk_scale_2",
+                  "value": 2.15,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@max_stack_cnt",
+                  "value": 40,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "電流暴走",
+              "description": "スキル発動中、浮遊ユニットが攻撃時10%の確率で自爆（ゴールデングローの元に戻る）し、一定範囲内の敵全員にゴールデングローの攻撃力の300%の術ダメージを与える",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack@prob",
+                  "value": 0.015,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@atk_scale_2",
+                  "value": 3,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@max_stack_cnt",
+                  "value": 40,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 2,
+              "prefabKey": "1",
+              "name": "電流暴走",
+              "description": "スキル発動中、浮遊ユニットが攻撃時10%の確率で自爆（ゴールデングローの元に戻る）し、一定範囲内の敵全員にゴールデングローの攻撃力の315%<@ba.talpu>（+15%）</>の術ダメージを与える",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack@prob",
+                  "value": 0.015,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@atk_scale_2",
+                  "value": 3.15,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@max_stack_cnt",
+                  "value": 40,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        },
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "2",
+              "name": "精密誘電",
+              "description": "自身と浮遊ユニットの攻撃時、敵の術耐性を15無視",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "magic_resist_penetrate_fixed",
+                  "value": 15,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 5,
+              "prefabKey": "2",
+              "name": "精密誘電",
+              "description": "自身と浮遊ユニットの攻撃時、敵の術耐性を18<@ba.talpu>（+3）</>無視",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "magic_resist_penetrate_fixed",
+                  "value": 18,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        }
+      ],
+      "potentialRanks": [
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "CUSTOM",
+          "description": "第一素質強化",
+          "buff": null,
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "攻撃力+25",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "ATK",
+                  "formulaItem": "ADDITION",
+                  "value": 25,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "CUSTOM",
+          "description": "第二素質強化",
+          "buff": null,
+          "equivalentCost": null
+        }
+      ],
+      "modules": [
+        {
+          "uniEquipId": "uniequip_002_gdglow",
+          "uniEquipName": "「努力の翼」",
+          "uniEquipIcon": "uniequip_002_gdglow",
+          "uniEquipDesc": "ある深夜、スージーはまだ教科書をめくっていた。明日はアーツ理論の試験がある。最後の夜を無駄にしないよう、一通り復習をしなければ。教科書の隣にはノートが広げられ、以前は理解できなかった部分や、間違って覚えていた部分も、今は正しい解説が書き記されている。\nそのうちに、そろそろ眠らないと……と、落ちるまぶたがそう告げてきた。\nそこで彼女は寝る前に、明日の試験に必要なものをバッグに詰め込むと、スケジュール帳を開く。その中には、彼女の日々のタスクがわかりやすく整理されて書かれていた。これは、彼女がクエルクスの下で働いていた頃に身に着けた習慣だ。時間通り営業した上で、仕入れに在庫の確認、店舗の清掃と毎日のタスクはたくさんある。それに加えて、しばしば突発的なトラブルにも見舞われてしまうのだが、やるべきことを予めスケジュール帳に書き込んでおけば、少なからず安心できるのだ。\n明日のタスクは以下のようなものだ。\n【午前】\n・（7:30～9:30）試験！\n・（9:30～10:30）アーツ理論入門の授業でアシスタントをする\n【お昼】\n・（12:00～13:00）美容室のお手伝い\n【午後】\n・（14:00～16:00）訓練場で練習/ラナさんの花壇のお手入れ（行く前に必要かどうか確認すること）\n・（17:00～18:00）美容室のお手伝い\n・（18:00～21:00）バーのお手伝い\n・（21:00～22:00）お勉強\nスージーはスケジュール帳を眺めて暫し考えてから、バーを手伝う時間を縮めて、その下に新しい予定を追加した。\n・（20:00～？）理論の先生に将来のことを相談する\nロドスの講師もオペレーターも責任感が強いため、スージーは試験に落ちる心配はまったくしていなかった。だが、将来のことを相談するなら先生は頼れる人だと思ったのだ。\n彼女は近頃、常に自分が発している静電気をある程度制御できるようになってきた。彼女が髪を切りながら、術師としての授業で学んだちょっとしたテクニックを用いて、微弱な電気で作業を短縮していることはまだほとんど知られていない。\nこうした努力のすべてには、理由があった。\nスージーはスケジュール帳を数ページめくると、手を止めた。その先のページはほとんど真っ白だが、一か所だけ書き込まれている重要な予定がある。\n「ママへの送金」\n母からはいつも、そんなことをしなくていいと言われているのだが、それでもスージーは家族のために何かをしたいと思っていた。一方で母もまた、同じタイミングで彼女に送金をしてくれるのだ。そうしていつしか、それは二人が安否を確かめ合う方法になっていた。\nスージーはスケジュール帳を翌日のページへと戻すと、先ほど書き加えたばかりの予定を、さらに書き換えることにした。\n彼女は着実に歩みを進めるタイプの人間だ。はるか遠くの壮大な未来に思いを馳せたところで、それは今の人生に何かをもたらしてくれるわけではない。ゆえに、彼女はそれよりも一冊一冊の本を大切に読み、目の前の仕事を堅実にこなして、一つ一つの機会を確実に掴んでいきたいと考えている。結局、想像というのは現実になるとは限らないが、今ロドスで過ごしているこの毎日は、努力をすれば報われるようなものであり、彼女が求めているのはまさしくそういう生活だった。\nそこで、彼女は予定をこう改めた。\n・（20:00～？）理論の先生に今後の授業のことを相談する\n彼女にとって、今相談すべき内容はこれだった。\nそろそろ眠らないと……と、乾燥した目がまぶたを落として、今にも閉じてしまいそうになる。\n彼女はおとなしくスケジュール帳を閉じ、明かりを消して布団に入り、緊張で高鳴る心臓を鎮めようと試みた。明日の試験で良い点を得られるように願いながら。\n明日も大変な一日だろうが、いつもの如く収穫の多い日になることだろう。\n……\nスージーは満ち足りた気持ちで、暖かな夢の中へと沈んでいった。",
+          "typeIcon": "fun-x",
+          "typeName1": "FUN",
+          "typeName2": "X",
+          "equipShiningColor": "red",
+          "showEvolvePhase": "PHASE_2",
+          "unlockEvolvePhase": "PHASE_2",
+          "charId": "char_377_gdglow",
+          "tmplId": null,
+          "showLevel": 1,
+          "unlockLevel": 60,
+          "missionList": [
+            "uniequip_002_gdglow_1",
+            "uniequip_002_gdglow_2"
+          ],
+          "unlockFavors": {
+            "1": 0,
+            "2": 2732,
+            "3": 10070
+          },
+          "itemCost": {
+            "1": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30135",
+                "count": 2,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 80000,
+                "type": "GOLD"
+              }
+            ],
+            "2": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_1",
+                "count": 60,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30125",
+                "count": 3,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 100000,
+                "type": "GOLD"
+              }
+            ],
+            "3": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_2",
+                "count": 20,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30145",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 120000,
+                "type": "GOLD"
+              }
+            ]
+          },
+          "type": "ADVANCED",
+          "uniEquipGetTime": 1718935200,
+          "uniEquipShowEnd": 1718935200,
+          "charEquipOrder": 1,
+          "hasUnlockMission": true,
+          "isSpecialEquip": false,
+          "specialEquipDesc": null,
+          "specialEquipColor": null,
+          "charColor": "#ffb3b5",
+          "phases": [
+            {
+              "equipLevel": 1,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "TRAIT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "init_atk_scale",
+                            "value": 0.35,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "delta_atk_scale",
+                            "value": 0.15,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "max_atk_scale",
+                            "value": 1.1,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "max_stack_cnt",
+                            "value": 5,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": "<@ba.kw>浮遊ユニット</>を操作して敵に<@ba.kw>術ダメージ</>を与える\n浮遊ユニットが連続で同一目標を攻撃時、与ダメージが上昇（浮遊ユニットの初期与ダメージ上昇。最大は攻撃力の110%まで）",
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 90,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 22,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 2,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "TRAIT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "init_atk_scale",
+                            "value": 0.35,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "delta_atk_scale",
+                            "value": 0.15,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "max_atk_scale",
+                            "value": 1.1,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "max_stack_cnt",
+                            "value": 5,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": "<@ba.kw>浮遊ユニット</>を操作して敵に<@ba.kw>術ダメージ</>を与える\n浮遊ユニットが連続で同一目標を攻撃時、与ダメージが上昇（浮遊ユニットの初期与ダメージ上昇。最大は攻撃力の110%まで）",
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": null,
+                  "target": "TALENT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "スキル発動中、浮遊ユニットが攻撃時10%の確率で自爆（ゴールデングローの元に戻る）し、一定範囲内の敵全員にゴールデングローの攻撃力の340%の術ダメージを与える",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "1",
+                        "name": "電流暴走",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack@prob",
+                            "value": 0.015,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@atk_scale_2",
+                            "value": 3.4,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@max_stack_cnt",
+                            "value": 40,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      },
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "スキル発動中、浮遊ユニットが攻撃時10%の確率で自爆（ゴールデングローの元に戻る）し、一定範囲内の敵全員にゴールデングローの攻撃力の355%<@ba.talpu>（+15%）</>の術ダメージを与える",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 2,
+                        "prefabKey": "1",
+                        "name": "電流暴走",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack@prob",
+                            "value": 0.015,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@atk_scale_2",
+                            "value": 3.55,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@max_stack_cnt",
+                            "value": 40,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 110,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 32,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 3,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "TRAIT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "init_atk_scale",
+                            "value": 0.35,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "delta_atk_scale",
+                            "value": 0.15,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "max_atk_scale",
+                            "value": 1.1,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "max_stack_cnt",
+                            "value": 5,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": "<@ba.kw>浮遊ユニット</>を操作して敵に<@ba.kw>術ダメージ</>を与える\n浮遊ユニットが連続で同一目標を攻撃時、与ダメージが上昇（浮遊ユニットの初期与ダメージ上昇。最大は攻撃力の110%まで）",
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": null,
+                  "target": "TALENT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "スキル発動中、浮遊ユニットが攻撃時10%の確率で自爆（ゴールデングローの元に戻る）し、一定範囲内の敵全員にゴールデングローの攻撃力の360%の術ダメージを与える",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "1",
+                        "name": "電流暴走",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack@prob",
+                            "value": 0.015,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@atk_scale_2",
+                            "value": 3.6,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@max_stack_cnt",
+                            "value": 40,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      },
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "スキル発動中、浮遊ユニットが攻撃時10%の確率で自爆（ゴールデングローの元に戻る）し、一定範囲内の敵全員にゴールデングローの攻撃力の375%<@ba.talpu>（+15%）</>の術ダメージを与える",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 2,
+                        "prefabKey": "1",
+                        "name": "電流暴走",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack@prob",
+                            "value": 0.015,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@atk_scale_2",
+                            "value": 3.75,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@max_stack_cnt",
+                            "value": 40,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 125,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 38,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            }
+          ]
+        },
+        {
+          "uniEquipId": "uniequip_003_gdglow",
+          "uniEquipName": "いつか叶う夢",
+          "uniEquipIcon": "uniequip_003_gdglow",
+          "uniEquipDesc": "これは、とあるフェリーンの女の子の夢。しかし夢だからといって、美しいものとは限らない。\nグリッター家のネオン看板は色褪せていて、嫌でも父の最期の顔色を思い出させる。「グリーンスパーク」の燃え滓が彼女の視界を覆い、廃ビルから風が吹き抜けていく。周囲にはクー姉も、レイドさんも、他の知り合いもいない……彼女は小さくつぶやいた。「私、どうして美容師になろうと思ったんだっけ。」\n夢は必ず覚めるものだ。\nスージーは机に肘をついたまま、大きなあくびをした。垂れ下がった耳がぴょこんと跳ね、目をこすって目の前のノートに目を凝らす――そこにあったのは、一冊の本だった。表紙は真新しいが、中の紙が劣化してしまっている。簡単なスケッチが描かれた付箋が貼られ、ページの間にはアーツ試験の成績表が挟まっていた。\nスージーが静電気のコントロールに慣れてからというもの、ロドスの美容室は好調を続けている。数名の外勤オペレーターは、本艦に戻るや否や、新鮮さすら感じる彼女のカットを体験しに行ったほどだ。クリップを使わずにたやすく髪を分け、細かくカットしていく「技術」は大好評。髪の毛が柔らかく量も少ない客にいたっては、彼女を救世主と崇めるほどだ――どれほど細かい要望でもその場で満足いくまで調整してくれるため、パーマの結果に心配する必要がなくなったのだ。\nしかしロドスには、美容室に近寄りたがらず、遠くから眺めることしかできない感染者もいる――源石結晶が彼らの頬や額まで蝕んでいるからだ。スージーが歳の近い感染者の女の子にきれいな編み込みをしてあげた時、その子の髪の隙間から黒光りする結晶が覗いてしまった。鉱石病の痕跡があらわになったことに女の子は泣き出してしまい、フードで頭をすっぽり覆ったまま逃げるように立ち去ってしまった。\nつらい生活を甘んじて受け入れる必要はない。すべての感染者が、ヘアスタイルから始まり、自分も健康な人と同じように人生を楽しく送ってもいいのだと気づいてくれれば嬉しい、とスージーは心から願っている。しかし彼女が頑張って追い求めている美しさや可愛さは、一部の感染者にとって果てしない痛みの元になってしまうのだ。\n「私の夢は、どうしてこう悪夢みたいなんだろう……」\n私、どうして美容師になろうと思ったんだっけ……最初はただ漠然とお父さんの背中を追いかけていただけで、お母さん、きょうだい、それにカレドンの友達のみんなから励まされて今までやってこれた。でも、みんなからの応援以外に、この夢は何か一つでも素敵な思い出を与えてくれた？\n涙の粒が長いまつ毛にかかり、ノートの筆跡が滲んでいる。それでもスージーは歯を食いしばり、もう一度ペンを握ってスケッチに向かった。みんなの期待に応える方法がきっとある――髪の間から覗く源石結晶をアクセサリーに見立てることも、そういった「欠陥」をカバーしつつ綺麗にみせるヘアスタイルも、きっと……\n彼女は普通の人より強い心を持っているわけではない。ただ生活と真剣に向き合いたいだけなのだ。\n「どんなにフードを深く被っても、綺麗に見えるヘアスタイルを作ってみせます。そうすればきっと、身だしなみを整えることの大切さをわかってくれますよね！」\nヘアスタイルのデザインが出来上がっても、それが似合うかどうかは一度実際にやってみないとわからない……そうだ、明日ドクターのところに行こう。フードに関しては、ドクターが一番よく知ってるんだから。\nスージーはノートを閉じ、真面目な顔で大きく頷いた。",
+          "typeIcon": "fun-y",
+          "typeName1": "FUN",
+          "typeName2": "Y",
+          "equipShiningColor": "red",
+          "showEvolvePhase": "PHASE_2",
+          "unlockEvolvePhase": "PHASE_2",
+          "charId": "char_377_gdglow",
+          "tmplId": null,
+          "showLevel": 1,
+          "unlockLevel": 60,
+          "missionList": [
+            "uniequip_003_gdglow_1",
+            "uniequip_003_gdglow_2"
+          ],
+          "unlockFavors": {
+            "1": 0,
+            "2": 2732,
+            "3": 10070
+          },
+          "itemCost": {
+            "1": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30155",
+                "count": 2,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 80000,
+                "type": "GOLD"
+              }
+            ],
+            "2": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_1",
+                "count": 60,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30145",
+                "count": 3,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 100000,
+                "type": "GOLD"
+              }
+            ],
+            "3": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_2",
+                "count": 20,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30165",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 120000,
+                "type": "GOLD"
+              }
+            ]
+          },
+          "type": "ADVANCED",
+          "uniEquipGetTime": 1765418400,
+          "uniEquipShowEnd": 1768546800,
+          "charEquipOrder": 2,
+          "hasUnlockMission": true,
+          "isSpecialEquip": false,
+          "specialEquipDesc": null,
+          "specialEquipColor": null,
+          "charColor": "#ffb3b5",
+          "phases": [
+            {
+              "equipLevel": 1,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "TRAIT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "init_atk_scale",
+                            "value": 0.2,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "delta_atk_scale",
+                            "value": 0.15,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "max_atk_scale",
+                            "value": 1.2,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "max_stack_cnt",
+                            "value": 7,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": "<@ba.kw>浮遊ユニット</>を操作して敵に<@ba.kw>術ダメージ</>を与える\n浮遊ユニットが連続で同一目標を攻撃時、与ダメージが上昇（最大は攻撃力の120%まで）",
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "atk",
+                  "value": 30,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack_speed",
+                  "value": 5,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 2,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "TRAIT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "init_atk_scale",
+                            "value": 0.2,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "delta_atk_scale",
+                            "value": 0.15,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "max_atk_scale",
+                            "value": 1.2,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "max_stack_cnt",
+                            "value": 7,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": "<@ba.kw>浮遊ユニット</>を操作して敵に<@ba.kw>術ダメージ</>を与える\n浮遊ユニットが連続で同一目標を攻撃時、与ダメージが上昇（最大は攻撃力の120%まで）",
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": null,
+                  "target": "TALENT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "自身と浮遊ユニットの攻撃時、敵の術耐性を18無視",
+                        "talentIndex": 1,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "2",
+                        "name": "精密誘電",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "magic_resist_penetrate_fixed",
+                            "value": 18,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      },
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "自身と浮遊ユニットの攻撃時、敵の術耐性を21<@ba.talpu>（+3）</>無視",
+                        "talentIndex": 1,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 5,
+                        "prefabKey": "2",
+                        "name": "精密誘電",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "magic_resist_penetrate_fixed",
+                            "value": 21,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "atk",
+                  "value": 40,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack_speed",
+                  "value": 6,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 3,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "TRAIT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "init_atk_scale",
+                            "value": 0.2,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "delta_atk_scale",
+                            "value": 0.15,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "max_atk_scale",
+                            "value": 1.2,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "max_stack_cnt",
+                            "value": 7,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": "<@ba.kw>浮遊ユニット</>を操作して敵に<@ba.kw>術ダメージ</>を与える\n浮遊ユニットが連続で同一目標を攻撃時、与ダメージが上昇（最大は攻撃力の120%まで）",
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": null,
+                  "target": "TALENT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "自身と浮遊ユニットの攻撃時、敵の術耐性を20無視",
+                        "talentIndex": 1,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "2",
+                        "name": "精密誘電",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "magic_resist_penetrate_fixed",
+                            "value": 20,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      },
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "自身と浮遊ユニットの攻撃時、敵の術耐性を23<@ba.talpu>（+3）</>無視",
+                        "talentIndex": 1,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 5,
+                        "prefabKey": "2",
+                        "name": "精密誘電",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "magic_resist_penetrate_fixed",
+                            "value": 23,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "atk",
+                  "value": 45,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack_speed",
+                  "value": 7,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            }
+          ]
+        }
+      ],
+      "traitDescription": "<@ba.kw>ドローン</>を操作して敵に<@ba.kw>術ダメージ</>を与える\nドローンが連続で同一目標を攻撃時、与ダメージが上昇（最大は攻撃力の110%まで）",
+      "subProfessionTraitDescription": ""
+    },
+    "skills": [
+      {
+        "skillIndex": 1,
+        "skillId": "skchr_gdglow_1",
+        "raw": {
+          "name": "スパーキング",
+          "rangeId": null,
+          "description": "攻撃力<@ba.vup>+{atk:0%}</>、攻撃速度<@ba.vup>+{attack_speed}</>、浮遊ユニットの数<@ba.vup>+1</>、自動索敵して攻撃する浮遊ユニットを放出する\n<@ba.rem>索敵中の浮遊ユニットは目標が倒されるか自爆時、あるいはスキル終了時、索敵を中断する</>",
+          "skillType": "MANUAL",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 35,
+            "initSp": 20,
+            "increment": 1
+          },
+          "prefabId": "skchr_gdglow_1",
+          "duration": 25,
+          "blackboard": [
+            {
+              "key": "atk",
+              "value": 0.4,
+              "valueStr": null
+            },
+            {
+              "key": "attack_speed",
+              "value": 50,
+              "valueStr": null
+            },
+            {
+              "key": "attack@cnt",
+              "value": 1,
+              "valueStr": null
+            }
+          ]
+        }
+      },
+      {
+        "skillIndex": 2,
+        "skillId": "skchr_gdglow_2",
+        "raw": {
+          "name": "インパルスカレント",
+          "rangeId": "3-18",
+          "description": "攻撃力<@ba.vup>+{atk:0%}</>、攻撃範囲<@ba.vup>拡大</>、浮遊ユニットの数<@ba.vup>+1</>、自動索敵して攻撃する浮遊ユニットを放出する\n<@ba.rem>索敵中の浮遊ユニットは目標が倒されるか自爆時、あるいはスキル終了時、索敵を中断する</>\n<@ba.rem>退場まで効果継続</>",
+          "skillType": "AUTO",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 70,
+            "initSp": 0,
+            "increment": 1
+          },
+          "prefabId": "skchr_gdglow_2",
+          "duration": -1,
+          "blackboard": [
+            {
+              "key": "atk",
+              "value": 0.6,
+              "valueStr": null
+            },
+            {
+              "key": "attack@cnt",
+              "value": 1,
+              "valueStr": null
+            }
+          ]
+        }
+      },
+      {
+        "skillIndex": 3,
+        "skillId": "skchr_gdglow_3",
+        "raw": {
+          "name": "ゴールデングロー",
+          "rangeId": null,
+          "description": "攻撃しなくなり、攻撃力<@ba.vup>+{atk:0%}</>、攻撃範囲が戦場全体まで<@ba.vup>拡大</>し、浮遊ユニットの数<@ba.vup>+2</>、自動索敵して攻撃する浮遊ユニットを放出し、浮遊ユニットが攻撃時、攻撃対象を<@ba.vup>{attack@sluggish}</>秒<$ba.sluggish>足止め</>する\n<@ba.rem>索敵中の浮遊ユニットは目標が倒されるか自爆時、あるいはスキル終了時、索敵を中断する</>",
+          "skillType": "MANUAL",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 35,
+            "initSp": 17,
+            "increment": 1
+          },
+          "prefabId": "skchr_gdglow_3",
+          "duration": 30,
+          "blackboard": [
+            {
+              "key": "atk",
+              "value": 0.8,
+              "valueStr": null
+            },
+            {
+              "key": "attack@cnt",
+              "value": 2,
+              "valueStr": null
+            },
+            {
+              "key": "attack@sluggish",
+              "value": 0.5,
+              "valueStr": null
+            }
+          ]
+        }
+      }
+    ]
   }
 ]

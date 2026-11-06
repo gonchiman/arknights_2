@@ -8,6 +8,9 @@ const k = (key: string): GuardValue => ({ key })
 const choose = (input: string, value: string | number | boolean, yes: GuardValue, no: GuardValue = 0,
   comparison: 'EQ' | 'LT' | 'LTE' | 'GT' | 'GTE' = 'EQ'): GuardValue => ({ op: 'if', input, comparison, value, yes, no })
 const product = (...args: GuardValue[]): GuardValue => ({ op: 'mul', args })
+const sum = (...args: GuardValue[]): GuardValue => ({ op: 'add', args })
+const input = (input: string): GuardValue => ({ input })
+const minimum = (...args: GuardValue[]): GuardValue => ({ op: 'min', args })
 const n = (key: string, label: string, value: number, min: number, max: number): GuardInput =>
   ({ key, label, kind: 'number', defaultValue: value, min, max, step: 1 })
 const b = (key: string, label: string, defaultValue = false): GuardInput => ({ key, label, kind: 'boolean', defaultValue,
@@ -15,8 +18,11 @@ const b = (key: string, label: string, defaultValue = false): GuardInput => ({ k
 const select = (key: string, label: string, choices: readonly [string, string][]): GuardInput =>
   ({ key, label, kind: 'select', defaultValue: choices[0][0], options: choices.map(([value, label]) => ({ value, label })) })
 const eq = (metric: string, value: string | number | boolean): CombatCondition => ({ type: 'COMPARE', metric, comparison: 'EQ', value })
+const gt = (metric: string, value: number): CombatCondition => ({ type: 'COMPARE', metric, comparison: 'GT', value })
 const metric = (metric: string): CombatNumericValue => ({ type: 'METRIC', metric })
 const mul = (...values: CombatNumericValue[]): CombatNumericValue => ({ type: 'CALC', operation: 'MULTIPLY', values })
+const enemyTarget = { type: 'RECIPIENTS', side: 'ENEMY', entity: 'UNIT', scope: 'ATTACK_RANGE', includeSelf: false,
+  factionIds: [], tagIds: [], selection: { type: 'ALL' } } as const
 type Payload<T> = T extends CombatEffectContext ? Omit<T, keyof CombatEffectContext> : never
 const effect = (id: string, sourceBinding: string, payload: Payload<TalentStructureEffect>, options: Partial<CombatEffectContext> = {}): TalentStructureEffect =>
   ({ id, sourceBinding, timing: { type: 'CONTINUOUS', while: 'DEPLOYED' }, condition: null,
@@ -69,8 +75,128 @@ const chainActions = (scale: GuardValue): GuardDamageAction[] => [0, 1, 2, 3].ma
   targets: choose('actualAttackTargetCount', jump + 1, choose('actualAttackTargetCount', 1, 1, 2), 0, 'GTE'),
 }))
 
+const manaBoundaryReason = '魔力が0になる最終発の素質解除とダメージ判定の順序は未確認です。消費後も魔力が残る攻撃を指定してください。'
+const manaStages = (stage: GuardStage): readonly GuardStage[] => [
+  { ...stage, when: { input: 'marcilleManaAfterCost', comparison: 'GT', value: 0 } },
+  { ...unresolved('魔力を使い切る最終発', manaBoundaryReason), id: 'empty-mana', when: { input: 'marcilleManaAfterCost', comparison: 'EQ', value: 0 },
+    calculationIssues: [{ id: 'marcille-final-mana-hit', reason: manaBoundaryReason, relatedSections: ['スキル', '素質1'] }] },
+]
+const logosScope = '全対象に素質2が既に付与され、抽選範囲内の敵が今回の対象群だけである条件。ランダム追加の各対象値は平均。'
+const snowReason = '積雪への進入で発生する素質75%の独立ダメージと、移動・積雪の生成消失による累計は未対応です。'
+const snowStage = (label: string): GuardStage => ({ ...unresolved(label, snowReason),
+  calculationIssues: [{ id: 'sbell2-snow-entry', reason: snowReason, relatedSections: ['スキル', '素質1'] }] })
+const snowNormal = (options: Partial<GuardStage>): GuardStage => normal({
+  resistanceReductionFixed: choose('sbellTargetFrozen', true, 15), ...options, periodTotal: period(snowReason),
+})
+const veenScope = '発射開始時にDOTがない同じ1体への斉射と、DOTの現在の毎秒値を分離する。再貯蔵・再索敵・状態更新の時間合計は計算しない。'
+const veenHeld = gt('veenMergedCharges', 0)
+const veenBase = (options: Partial<GuardStage>): GuardStage => normal({
+  maxTargets: 1, traitOverrides: ['STORED_CHARGES'], dpsUnsupportedReason: veenScope, periodTotal: period(veenScope), ...options,
+})
+const veenShots = (stacking: boolean): GuardDamageAction[] => {
+  const bonus = (previous: GuardValue): GuardValue => stacking
+    ? product(k('attack@veen_s_2_buff[stack].atk'), minimum(9, sum(input('veenAttackStacks'), previous))) : 0
+  return [
+    ...[0, 1, 2].map(index => ({ label: `転置エネルギー${index + 1}`, role: 'MAIN' as const, damageType: 'ARTS' as const,
+      basis: 'ATK_STAT' as const, scale: 3, hits: choose('veenMergedCharges', index, 1, 0, 'GT'), attackBonus: bonus(index * 3) })),
+    { label: '主攻撃', role: 'MAIN', damageType: 'ARTS', basis: 'ATK_STAT', scale: 1,
+      attackBonus: bonus(product(input('veenMergedCharges'), 3)) },
+    ...[0, 1].map(index => ({ label: `通常貯蔵エネルギー${index + 1}`, role: 'MAIN' as const, damageType: 'ARTS' as const,
+      basis: 'ATK_STAT' as const, scale: 1, hits: choose('veenNormalCharges', index, 1, 0, 'GT'),
+      attackBonus: bonus(sum(product(input('veenMergedCharges'), 3), 1 + index)) })),
+  ]
+}
+const veenStages = (stage: GuardStage): readonly GuardStage[] => [phase('veenPhase', 'VOLLEY', stage),
+  phase('veenPhase', 'DOT', veenBase({ label: '付与済みDOTの毎秒値', kind: 'SKILL_ACTION', actions: [] }))]
+
 /** Each recipe evaluates an explicit current state; unreviewed state transitions remain blocked. */
 export const EXPANDED_CASTER_DEFINITIONS: readonly ExpandedOperatorDefinition[] = [
+  // https://prts.wiki/w/维伊: cached projectiles, ordered merged -> main -> ordinary.
+  operator('char_4226_veen', [
+    [1, veenStages(veenBase({ aspd: k('attack_speed'), actions: veenShots(false) }))],
+    [2, veenStages(veenBase({ intervalAdd: k('base_attack_time'), actions: veenShots(true) })),
+      [n('veenAttackStacks', '斉射開始前の攻撃強化段階', 0, 0, 9)]],
+    [3, veenStages(veenBase({ aspd: k('attack_speed'), actions: [
+      { label: '主攻撃', role: 'MAIN', damageType: 'ARTS', basis: 'ATK_STAT', scale: k('attack@base_atk_scale') },
+      { label: '主攻撃に加わる跳躍', role: 'MAIN', damageType: 'ARTS', basis: 'ATK_STAT', scale: k('attack@bounce_atk_scale'),
+        hits: sum(input('veenNormalCharges'), product(input('veenMergedCharges'), k('merge_hit_cnt'))) },
+    ] }))],
+  ], [talent(0, '「サーベルを振るう前に」', v => [
+    effect('merged-held-atk', 'atk', { item: 'ATK_BUFF_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: v.read('atk') }, { condition: veenHeld }),
+    effect('no-merged-speed', 'attack_speed', { item: 'ATTACK_SPEED', operation: 'ADD_VALUE', unit: 'POINT', value: v.read('attack_speed') },
+      { condition: eq('veenMergedCharges', 0) }),
+    status('merge', '3回分の通常貯蔵を転置エネルギー1個に合成'),
+  ], ['DAMAGE', 'ATTACK_BEHAVIOR']),
+  talent(1, '戦争術師の素養', v => {
+    if (v.read('attack@max_stack_cnt') !== 3) v.issue('戦争術師の素養の累積上限が3回と一致しません。')
+    return [effect('war-dot', 'attack@value / attack@duration / attack@max_stack_cnt', { item: 'DAMAGE_OVER_TIME', operation: 'DEAL_DAMAGE',
+      damage: { kind: { type: 'ORDINARY', damageType: 'ARTS' }, amount: { basis: 'FIXED', value: mul(v.read('attack@value'), metric('veenDotStacks')), referenceTime: 'NOT_APPLICABLE' },
+        rate: 'PER_SECOND', duration: { type: 'FIXED_SECONDS', seconds: v.read('attack@duration') }, cadence: { intervalSeconds: null, firstTickSeconds: null },
+        stacking: { mode: 'ADD_STACKS', maxStacks: 3 }, refresh: 'UNSPECIFIED' } },
+    { condition: eq('veenPhase', 'DOT'), target: enemyTarget, timing: { type: 'EVENT', event: 'ATTACK' }, lifetime: { type: 'CURRENT_EVENT' } }),
+    status('avoid-dot', 'DOT付与中の対象を新しい攻撃対象に選ばない')]
+  }, ['ADDITIONAL_DAMAGE', 'ATTACK_BEHAVIOR'])],
+  { inputs: [select('veenPhase', '計算対象', [['VOLLEY', '孤立した単体への斉射'], ['DOT', '付与済みDOTの毎秒値']]),
+    n('veenMergedCharges', '転置エネルギー数', 0, 0, 3), n('veenNormalCharges', '通常貯蔵エネルギー数', 0, 0, 2),
+    n('veenDotStacks', '付与済みDOTの重複数', 1, 1, 3), b('veenTargetAlreadyAffected', '斉射開始前から対象に自身のDOTがある')],
+    traitNotes: [veenScope, 'S2は転置、主攻撃、通常貯蔵の順に各弾の発射時攻撃力を計算する。S3は貯蔵の直撃を発生させず、単独対象への主攻撃と追加跳躍を評価する。'] }),
+
+  // https://prts.wiki/w/Marcille: S3 consumes eight mana per explosion, not all up front.
+  operator('char_4141_marcil', [
+    [1, manaStages(normal({ label: '詠唱後の通常攻撃', atk: k('atk'), dpsUnsupportedReason: manaBoundaryReason,
+      periodTotal: period('魔力消費と回復、詠唱、治療を含む総量は計算しません。') }))],
+    [2, normal({ label: '使い魔による置換攻撃', atk: k('atk'), aspd: choose('marcilleFamiliarStage', 'UPGRADED', k('attack_speed')),
+      periodTotal: period('詠唱完了後の現在状態を評価し、魔力回復・再発動・退場の時間を計算しません。') }),
+      [select('marcilleFamiliarStage', '使い魔の段階', [['FIRST', '1回目'], ['UPGRADED', '2回目']])]],
+    [3, manaStages(action('詠唱後の爆発1回', k('atk_scale'), {
+      periodTotal: period('指定した爆発1回のみを評価し、詠唱時間と残り魔力に応じた全爆発は合算しません。') }))],
+  ], [talent(0, '学校はじまって以来の才女', v => [effect('mana-atk', 'atk',
+    { item: 'ATK_BUFF_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: v.read('atk') }, { condition: gt('marcilleManaAfterCost', 0) }),
+    status('mana-resource', '魔力を消費し、配置待機中に回復'), status('mana-splash', '魔力保持中はダメージ発生範囲が拡大')], ['DAMAGE', 'RESOURCE']),
+  talent(1, '頼れる仲間', v => [effect('party-speed', 'attack_speed', { item: 'ATTACK_SPEED', operation: 'ADD_VALUE', unit: 'POINT', value: v.read('attack_speed') },
+    { condition: eq('marcilleFullParty', true) }), status('party-defense', '4人編成時のパーティー防御力上昇'), status('initial-mana', '初期魔力を増加')], ['RESOURCE', 'SURVIVAL'])],
+  { inputs: [n('marcilleManaAfterCost', '今回の消費後の残り魔力', 1, 0, 80), b('marcilleFullParty', 'ライオスパーティー4人編成')],
+    traitNotes: ['詠唱完了後の攻撃を評価する。S2の使い魔は本人の通常攻撃を置換するもので、別ユニットの攻撃を追加しない。',
+      'S1とS3は消費後も魔力が残る1回。魔力を使い切る最終発の素質解除順は保留。'] }),
+
+  // https://prts.wiki/w/逻各斯: the fixed 150 is after attack scale, before RES; no module is applied.
+  operator('char_4133_logos', [
+    [1, [phase('logosPhase', 'ATTACK', normal({ atk: k('atk'), periodTotal: period('即死・HP転移の発生を含まない通常攻撃だけを評価します。') })),
+      phase('logosPhase', 'EXECUTION', { ...unresolved('即死とHP転移', '斬殺固有の死亡判定・連鎖・転移先HPを追跡する処理は未対応です。'),
+        calculationIssues: [{ id: 'logos-execution', reason: '斬殺固有の死亡判定・連鎖・転移先HPを追跡する処理は未対応です。', relatedSections: ['スキル'] }] })]],
+    [2, normal({ label: 'ロックオンの1回分', fixedAttackInterval: k('attack@cooldown'),
+      actions: [{ label: 'ロックオンの1回分', role: 'MAIN', damageType: 'ARTS', scale: sum(k('attack@atk_scale_base'), product(k('attack@atk_scale_delta'), input('logosLockStacks'))) }],
+      periodTotal: period('指定したロックオン段階の1回分を評価し、0〜5秒の倍率推移・対象変更は合算しません。') }),
+      [n('logosLockStacks', 'ロックオンの強化段階', 0, 0, 10)]],
+    [3, normal({ atk: k('atk'), maxTargets: k('attack@max_target') })],
+  ], [talent(0, '変遷する言葉', v => [effect('random-additional', 'prob / atk_scale', {
+    item: 'ADDITIONAL_ATTACK', operation: 'DEAL_DAMAGE', unit: 'MULTIPLIER', value: v.read('atk_scale'), damageType: 'ARTS', rate: 'PER_ATTACK',
+    hits: metric('actualAttackTargetCount'), basis: 'ATK_STAT',
+  }, { target: { ...enemyTarget, selection: { type: 'RANDOM', count: 1 } }, probability: { chance: v.read('prob'), rollScope: 'APPLICATION' },
+    timing: { type: 'EVENT', event: 'ATTACK' }, lifetime: { type: 'CURRENT_EVENT' } }), status('additional-slow', '追加攻撃の対象を足止め')], ['ADDITIONAL_DAMAGE', 'STATUS']),
+  talent(1, '魂抉る声遣', v => [effect('resistance-debuff', 'magic_resistance', { item: 'RESISTANCE_REDUCTION_FIXED', operation: 'ADD_VALUE', unit: 'POINT',
+    value: mul(-1, v.read('magic_resistance')) }, { target: enemyTarget, condition: eq('logosAllDebuffed', true) }),
+    effect('arts-addition', 'atk_addition', { item: 'ARTS_DAMAGE_FLAT_ADDITION', operation: 'ADD_VALUE', unit: 'POINT', value: v.read('atk_addition') },
+      { target: enemyTarget, condition: eq('logosAllDebuffed', true) })], ['DAMAGE'])],
+  { inputs: [select('logosPhase', '計算対象', [['ATTACK', '付与済み対象への攻撃'], ['INITIAL', '素質2が未付与の対象への初撃'], ['EXECUTION', '即死・HP転移（S1）']]),
+    b('logosAllDebuffed', '全対象に素質2が付与済み', true), b('logosWholePoolSelected', '範囲内の全敵が今回の対象群', true)], traitNotes: [logosScope,
+    'MOD未装備。元素損傷・元素ダメージは発生しない。S1は対象群で即死が発生しない1回を評価する。'] }),
+
+  operator('char_1046_sbell2', [
+    [1, [phase('sbellPhase', 'ATTACK', action('雪嵐の直接ダメージ', k('atk_scale'), { resistanceReductionFixed: choose('sbellTargetFrozen', true, 15),
+      periodTotal: period('直接攻撃1回のみ。押し出し後の積雪進入や寒冷から凍結への移行は合算しません。') })), phase('sbellPhase', 'SNOW_ENTRY', snowStage('積雪への進入'))]],
+    [2, [phase('sbellPhase', 'ATTACK', snowNormal({ actions: [{ label: '通常攻撃', role: 'MAIN', damageType: 'ARTS', scale: k('attack@atk_scale_s2') }] })),
+      phase('sbellPhase', 'SNOW_DOT', snowNormal({ label: '積雪上の毎秒ダメージ', actions: [
+        { label: '積雪上の毎秒ダメージ', role: 'MAIN', damageType: 'ARTS', basis: 'ATK_STAT', timing: 'PER_SECOND', scale: k('talent@s2_magic_scale') },
+      ] })), phase('sbellPhase', 'SNOW_ENTRY', snowStage('積雪への進入'))]],
+    [3, [phase('sbellPhase', 'ATTACK', snowNormal({ atk: k('atk'), aspd: k('attack_speed'), resistanceIgnoreFixed: k('magic_resist_penetrate_fixed'),
+      actions: [{ label: '通常攻撃', role: 'MAIN', damageType: 'ARTS', scale: k('attack@atk_scale_s3') }] })), phase('sbellPhase', 'SNOW_ENTRY', snowStage('積雪への進入'))]],
+  ], [talent(0, '果てなき雪景色', () => [status('snow', '地面に積雪を生成し、進入時に独立ダメージを与える'), status('snow-slow', '積雪の層数に応じて移動速度低下')], ['ADDITIONAL_DAMAGE', 'STATUS']),
+  talent(1, 'カランドの祝福', () => [status('received-cold', '被撃時に攻撃者へ寒冷を付与'), status('lethal-freeze', '致命傷時に一度回復し、自身と範囲内の敵を凍結')], ['SURVIVAL', 'STATUS'])],
+  { inputs: [select('sbellPhase', '計算対象', [['ATTACK', '直接攻撃'], ['SNOW_DOT', '積雪上の毎秒ダメージ（S2）'], ['SNOW_ENTRY', '積雪への進入']]),
+    b('sbellTargetFrozen', '命中前から対象が凍結中'), b('sbellTargetChangingFreeze', '今回の寒冷付与で新たに凍結する'), b('sbellSelfFrozen', '自身が凍結中')],
+    traitNotes: ['全対象が同じ凍結状態にある固定条件。S2の積雪ダメージは積雪上に留まる地上の敵が対象。進入時75%は未対応段階へ分離する。'] }),
+
   operator('char_2015_dusk', [
     [1, normal({ label: '強化攻撃', kind: 'NEXT_ATTACK', actions: [{ label: '強化攻撃', role: 'MAIN', damageType: 'ARTS', scale: k('atk_scale') }] })],
     [2, normal({ atk: k('atk'), aspd: k('attack_speed'), maxTargets: null,
@@ -161,6 +287,40 @@ export const EXPANDED_CASTER_DEFINITIONS: readonly ExpandedOperatorDefinition[] 
 
 // Cross-field restrictions stay outside the damage formulas and fail before numerical output.
 for (const definition of EXPANDED_CASTER_DEFINITIONS) {
+  if (definition.operatorId === 'char_4226_veen') {
+    for (const recipe of definition.recipes) recipe.conditionRequirements = [
+      { when: { input: 'veenMergedCharges', comparison: 'EQ', value: 3 },
+        condition: { input: 'veenNormalCharges', comparison: 'EQ', value: 0 }, reason: '転置3個の状態では通常貯蔵エネルギーを追加できません。' },
+      { when: { input: 'veenPhase', comparison: 'EQ', value: 'VOLLEY' },
+        condition: { input: 'veenTargetAlreadyAffected', comparison: 'EQ', value: false }, reason: '自身のDOTが付いている敵を新しい斉射の主対象にはできません。' },
+    ]
+  }
+  if (definition.operatorId === 'char_4141_marcil') {
+    for (const recipe of definition.recipes.filter(recipe => recipe.skillIndex !== 2)) recipe.conditionRequirements = [{
+      condition: { input: 'marcilleManaAfterCost', comparison: 'LTE', value: recipe.skillIndex === 1 ? 78 : 72 },
+      reason: '今回の消費量を差し引いた魔力上限を超えています。',
+    }]
+  }
+  if (definition.operatorId === 'char_4133_logos') {
+    for (const recipe of definition.recipes) {
+      const reason = '主攻撃とランダム追加の付与順・付与済み対象が混在する初撃は未対応です。'
+      recipe.stages = [
+        ...recipe.stages.map(stage => stage.when ? stage : phase('logosPhase', 'ATTACK', stage)),
+        phase('logosPhase', 'INITIAL', { ...unresolved('素質2の初回付与', reason),
+          calculationIssues: [{ id: 'logos-initial-targets', reason, relatedSections: ['素質1', '素質2'] }] }),
+      ]
+      recipe.conditionRequirements = [
+        { condition: { input: 'logosAllDebuffed', comparison: 'EQ', value: true }, reason: '今回の対象群全員に素質2が既に付与されている条件を指定してください。' },
+        { condition: { input: 'logosWholePoolSelected', comparison: 'EQ', value: true }, reason: 'ランダム追加の抽選対象を今回の対象群に含めてください。' },
+      ] satisfies GuardSkillRecipe['conditionRequirements']
+    }
+  }
+  if (definition.operatorId === 'char_1046_sbell2') {
+    for (const recipe of definition.recipes) recipe.conditionRequirements = [
+      { condition: { input: 'sbellTargetChangingFreeze', comparison: 'EQ', value: false }, reason: '命中途中に寒冷から凍結へ変わる対象は未対応です。' },
+      { condition: { input: 'sbellSelfFrozen', comparison: 'EQ', value: false }, reason: '自身が凍結していない状態を指定してください。' },
+    ]
+  }
   if (definition.operatorId === 'char_2015_dusk') {
     for (const recipe of definition.recipes) {
       const reason = '小自在の独立ステータスと攻撃は未対応です。シー本体の攻撃だけを計算できます。'

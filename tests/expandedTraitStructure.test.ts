@@ -1,4 +1,5 @@
 import test from 'node:test'
+import { evaluateGuardTraits } from '../src/lib/guardTraitEvaluation.ts'
 import assert from 'node:assert/strict'
 import { EXPANDED_OPERATOR_SOURCES, EXPANDED_OPERATOR_DEFINITIONS, getExpandedDefinition } from '../src/lib/expandedCombatRegistry.ts'
 import { buildTraitStructures, isTraitStructureOperator, formatTraitStructureEffectValue,
@@ -277,4 +278,37 @@ test('未登録職分・保留技能・変更された攻撃定義をtraitログ
   assert.equal(getExpandedTraitCoverage(aoe, { id: 'pending', label: '保留', kind: 'SKILL_ACTION', actions: [] }), 'UNSUPPORTED')
   assert.equal(getExpandedTraitCoverage(aoe, { ...stage, actions: [{ label: '変更', damageType: 'TRUE', scale: 100 }] }), 'UNSUPPORTED')
   assert.equal(getExpandedTraitCoverage('unknown', stage), 'UNSUPPORTED')
+})
+
+
+test('吟遊者・祈祷師・鬼才の非攻撃効果をダメージ倍率へ混ぜない', () => {
+  const bard = structure('char_1012_skadi2')
+  assert.equal(bard.status, 'STRUCTURED')
+  assert.equal(bard.effects.find(effect => effect.item === 'NORMAL_ATTACK_ENABLED')?.value, false)
+  assert.equal(bard.effects.find(effect => effect.item === 'HP_RECOVERY_ATK_RATIO_PER_SECOND')?.value, 0.1)
+  assert.equal(bard.effects.find(effect => effect.item === 'INSPIRATION_ENABLED')?.value, false)
+  const geek = structure('char_225_haak')
+  assert.equal(geek.effects.find(effect => effect.item === 'HP_LOSS_RATIO_PER_SECOND')?.value, 0.01)
+  const healer = structure('char_4202_haruka')
+  assert.equal(evaluateTraitStructure(healer, { kind: 'NORMAL', metrics: { 'source.skillActive': false } }).damageType, 'ARTS')
+  assert.ok(evaluateTraitStructure(healer, { kind: 'NORMAL', metrics: { 'source.skillActive': true } }).blockers.length)
+  assert.deepEqual(evaluateTraitStructure(healer, { kind: 'SKILL_ACTION', metrics: { 'source.skillActive': true } }).blockers, [])
+})
+
+test('ヴィーイの転置エネルギーを通常貯蔵9発と誤認せず、確認済みの技能定義を要求する', () => {
+  const operator = record('char_4226_veen')
+  const trait = structure(operator.operatorId)
+  assert.equal(trait.status, 'STRUCTURED')
+  assert.equal(trait.effects.find(effect => effect.item === 'STORED_CHARGES')?.value, 9)
+  assert.equal(trait.effects.find(effect => effect.item === 'STORED_CHARGE_MERGE_COUNT')?.value, 3)
+  const stage = { id: 'normal', label: '通常攻撃', kind: 'NORMAL' as const,
+    actions: [{ label: '通常', role: 'MAIN' as const, damageType: 'ARTS' as const, scale: 1 }] }
+  const growth = { phaseIndex: 2, operatorLevel: 70 }
+  assert.ok(evaluateGuardTraits(operator, stage, {}, new Map(), growth).evaluation.blockers.length)
+  const explicit = evaluateGuardTraits(operator, { ...stage, traitOverrides: ['STORED_CHARGES'] }, {}, new Map(), growth)
+  assert.deepEqual(explicit.evaluation.blockers, [])
+  assert.equal(explicit.actions.length, 1)
+  const changed = structuredClone(operator)
+  changed.operatorProfile.trait!.candidates![0].blackboard!.find(item => item.key === 'merge_cnt')!.value = 4
+  assert.equal(buildTraitStructures([changed])[0].status, 'PARTIAL')
 })

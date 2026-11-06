@@ -32,10 +32,10 @@ const frozen = toCoverageRecords(coverage)
 const readSnapshot = (id: string) => parseCoverageSnapshot(JSON.parse(readFileSync(
   new URL(`../public/data/dc3-coverage/${id}.json`, import.meta.url), 'utf8')))
 
-test('レビュー済み64名118スキルだけを対象外として残し、対応件数へ加算しない', () => {
-  assert.equal(sources.length, 64)
-  assert.equal(reviewed.length, 118)
-  assert.equal(coverage.length, 118)
+test('レビュー済み68名122スキルだけを対象外として残し、対応件数へ加算しない', () => {
+  assert.equal(sources.length, 68)
+  assert.equal(reviewed.length, 122)
+  assert.equal(coverage.length, 122)
   for (const row of coverage) {
     assert.equal(row.status, 'NOT_APPLICABLE', `${row.skill.operatorName} S${row.skill.skillIndex}`)
     assert.ok(row.details.every(detail => detail.status === 'NOT_APPLICABLE'))
@@ -44,7 +44,7 @@ test('レビュー済み64名118スキルだけを対象外として残し、対
     assert.deepEqual(row.issues, [])
     assert.equal(row.selection, undefined)
   }
-  assert.deepEqual(countCoverageRecords(frozen), { SUPPORTED: 0, CONDITIONAL: 0, PENDING: 0, UNSUPPORTED: 0, NOT_APPLICABLE: 118 })
+  assert.deepEqual(countCoverageRecords(frozen), { SUPPORTED: 0, CONDITIONAL: 0, PENDING: 0, UNSUPPORTED: 0, NOT_APPLICABLE: 122 })
   assert.ok(COVERAGE_STATUS_OPTIONS.some(option => option.value === 'NOT_APPLICABLE' && option.label === '対象外'))
   const filtered = filterDamageCalculatorThreeCoverage(coverage,
     { ...EMPTY_DAMAGE_THREE_COVERAGE_FILTERS, query: 'フォリニック S1', status: 'NOT_APPLICABLE' })
@@ -127,7 +127,7 @@ test('追加対象外も治療への置換・攻撃停止を個別に確認し�
   }
 })
 
-test('915スキルの母集団は対象外118件を含み、版差分で新規対応と区別する', () => {
+test('915スキルの母集団は対象外122件を含み、版差分で新規対応と区別する', () => {
   const previous = readSnapshot('v3').rows
   const excluded = new Map(frozen.map(row => [coverageRecordKey(row), row]))
   const current = previous.map(row => excluded.get(coverageRecordKey(row)) ?? row)
@@ -136,10 +136,10 @@ test('915スキルの母集団は対象外118件を含み、版差分で新規�
   assert.equal(summary.count, 915)
   for (const section of summary.sections) assert.equal(section.buckets.reduce((sum, bucket) => sum + bucket.count, 0), 915)
   const overall = summary.sections[0].buckets
-  assert.equal(overall.find(bucket => bucket.status === 'NOT_APPLICABLE')!.count, 118)
-  assert.equal(overall.find(bucket => bucket.status === 'NOT_APPLICABLE')!.proportion, 118 / 915)
+  assert.equal(overall.find(bucket => bucket.status === 'NOT_APPLICABLE')!.count, 122)
+  assert.equal(overall.find(bucket => bucket.status === 'NOT_APPLICABLE')!.proportion, 122 / 915)
   const changes = diffCoverageRecords(previous, current)
-  assert.equal(changes.length, 118)
+  assert.equal(changes.length, 122)
   assert.ok(changes.every(change => getCoverageChangeLabel(change) === '対象外に分類'))
   const supported = { ...frozen[0], status: 'SUPPORTED' as const }
   assert.equal(getCoverageChangeLabel(diffCoverageRecords([frozen[0]], [supported])[0]), '新規対応')
@@ -166,7 +166,7 @@ test('対象外を含む新しい版の保存形式を検証し、不正件数�
   assert.deepEqual(parseCoverageIndex({ schemaVersion: 1, versions: [version] }).versions[0], version)
   const client = createCoverageHistoryClient({ fetch: async () => new Response(bytes) })
   assert.deepEqual(await client.loadSnapshot(version), snapshot)
-  for (const value of [undefined, -1, 1.5, 117, '118']) {
+  for (const value of [undefined, -1, 1.5, 117, '122']) {
     assert.throws(() => parseCoverageIndex({ schemaVersion: 1, versions: [{ ...version,
       counts: { ...version.counts, NOT_APPLICABLE: value } }] }), /不正/)
   }

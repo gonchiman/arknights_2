@@ -141,6 +141,30 @@
         "UNSUPPORTED": 145,
         "NOT_APPLICABLE": 118
       }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "v7",
+      "label": "v7 支援系ダメージ・特殊術攻撃の拡張",
+      "capturedAt": "2026-11-06T03:34:15.102Z",
+      "source": {
+        "codeRevision": "5608bbe14ae85681db7301c8e85b9fc752bf3431",
+        "codeDirty": true,
+        "codeFingerprint": "cecd93fd91e7f2361bf4c73c7e7f4efb343a71c3a114491d2a3b9010aebb37dc",
+        "gameDataRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+        "gameDataFingerprint": "e02f27762c44d0b083329e83375802cc2bef03f04777822f5f61220a0881a0ec",
+        "reconstructed": false
+      },
+      "file": "v7.json",
+      "sha256": "8255a6235475a81f3c49135b0d076ebe0b7cd410661d20a3a3320a69413642b5",
+      "skillCount": 915,
+      "counts": {
+        "SUPPORTED": 527,
+        "CONDITIONAL": 82,
+        "PENDING": 73,
+        "UNSUPPORTED": 111,
+        "NOT_APPLICABLE": 122
+      }
     }
   ]
 }

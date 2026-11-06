@@ -7,6 +7,7 @@ import type { CombatCondition, CombatNumericValue, CombatRecipientSelector, Comb
 
 /** Common effect vocabulary. The evaluator dispatches on these operations, never operator IDs. */
 export type GuardTalentEffectPayload =
+  | { readonly item: 'ARTS_DAMAGE_FLAT_ADDITION'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'POINT' }
   | { readonly item: 'WEAKPOINT_DAMAGE'; readonly operation: 'SET_ENABLED'; readonly value: true; readonly unit: 'BOOLEAN' }
   | { readonly item: 'DAMAGE_CAP_PER_TARGET'; readonly operation: 'SET'; readonly value: CombatNumericValue; readonly unit: 'POINT' }
   | { readonly item: 'ATTACK_INTERVAL_ADD'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'SECOND' }

@@ -2,7 +2,7 @@ import type { DamageType } from './damageCalculator.ts'
 import type { PeriodTotalCapability } from './damagePeriodTotal.ts'
 
 /** A skill can replace individual base-attack rules without disabling unrelated traits. */
-export type GuardTraitOverride = 'DAMAGE_TYPE' | 'HIT_COUNT' | 'MAX_TARGETS' | 'ATTACK_TARGETING' | 'ATTACK_SCALE' | 'SPLASH_DAMAGE' | 'CHAIN_ATTACK' | 'AFTERSHOCK' | 'NORMAL_ATTACK_ENABLED'
+export type GuardTraitOverride = 'DAMAGE_TYPE' | 'HIT_COUNT' | 'MAX_TARGETS' | 'ATTACK_TARGETING' | 'ATTACK_SCALE' | 'SPLASH_DAMAGE' | 'CHAIN_ATTACK' | 'AFTERSHOCK' | 'NORMAL_ATTACK_ENABLED' | 'STORED_CHARGES'
 
 /** Values in reviewed recipes remain executable data, rather than parsed descriptions. */
 export type GuardValue = number | { key: string } | { input: string }
@@ -143,6 +143,8 @@ export interface GuardPassiveModifiers {
   /** Guaranteed per-hit fraction of buffed ATK, before attack-scale multipliers. */
   minimumDamageRatio?: number
   damageScale: number
+  /** Added per arts hit after attack multipliers, before resistance mitigation. */
+  artsDamageFlatAddition?: number
   damageCapPerTarget?: number
   weakpointDamage?: boolean
   splashDamageScale?: number

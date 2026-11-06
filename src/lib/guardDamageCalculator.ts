@@ -285,10 +285,21 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
             * (1 - (branch.id === 'IGNORE' ? modifiers.criticalDefenseIgnoreRatio ?? 0 : 0))
           const penetration = { defenseIgnoreFixed: appliedDefense * branchDefenseIgnoreRatio + actionDefenseIgnoreFixed,
             resistanceIgnoreFixed: actionResistanceIgnoreFixed }
+          const artsAddition = modifiers.artsDamageFlatAddition ?? 0
+          if (!Number.isFinite(artsAddition) || artsAddition < 0) throw new RangeError('術ダメージ固定加算が不正です。')
           const resolvedType = weakpoint ? selectWeakpointDamageType({ attack: amount, originalType: action.damageType,
             defense: appliedDefense, resistance: appliedResistance, penetration,
+            artsDamageFlatAddition: artsAddition,
             fixedWeakpoint: (conditions.fixedWeakpoint ?? 'NONE') as 'NONE' | 'PHYSICAL' | 'ARTS' }) : action.damageType
-          const mitigation = calculateDamageBreakdown(amount, resolvedType, appliedDefense, appliedResistance,
+          // Add once after attack/critical/splash multipliers and before resistance.
+          // Weakpoint's theoretical comparison includes this addition, unlike damage
+          // scales: https://prts.wiki/w/伤害分类#伤害的其他特征 and /逻各斯#天赋.
+          // A per-second rate does not identify how many independent damage ticks
+          // occur; adding one fixed bonus per second would fabricate a tick count.
+          if (resolvedType === 'ARTS' && artsAddition !== 0 && action.timing === 'PER_SECOND') {
+            throw new RangeError('術ダメージ固定加算を継続ダメージへ適用するには、1秒あたりの実際の命中回数の確認が必要です。')
+          }
+          const mitigation = calculateDamageBreakdown(amount + (resolvedType === 'ARTS' ? artsAddition : 0), resolvedType, appliedDefense, appliedResistance,
             { ...penetration, minimumDamage })
           const attributeScale = action.damageScaleWhenType?.damageType === resolvedType ? typedScale : 1
           const uncappedDamage = mitigation.result * count * modifiers.damageScale * variant.damageScale * attributeScale

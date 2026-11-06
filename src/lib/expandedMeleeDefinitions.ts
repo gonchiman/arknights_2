@@ -145,8 +145,78 @@ function existingResistanceDebuff(skillIndex: number, stage: GuardStage, reason:
       periodTotal: STATE_PERIOD, unresolved: [reason] },
   ] }
 }
+const nonlethalInputs = (): GuardInput[] => [num('targetCurrentHp', '命中直前の各対象のHP', 10000, 1, 10000000, .1),
+  bool('targetCriticallyWounded', '命中前から対象が重傷中')]
+const nonlethalTalent: TalentOverride = { categories: ['DAMAGE', 'STATUS', 'RESOURCE'], effects: () => [
+  effect('leave-one-hp', 'description:nonlethal', { item: 'DAMAGE_CAP_PER_TARGET', operation: 'SET', unit: 'POINT',
+    value: calc('MAX', 0, calc('ADD', metric('targetCurrentHp'), -1)) }),
+] }
+const rejectWounded = { condition: { input: 'targetCriticallyWounded', comparison: 'EQ', value: false },
+  reason: '通常攻撃では重傷状態の対象を選べません。' } as const
 
 export const EXPANDED_MELEE_DEFINITIONS: readonly ExpandedOperatorDefinition[] = [
+  define('vulpis', [recipe(1, next(P, 1, 1, { actions: [attack(P),
+    attack(A, k('extra_damage_ratio'), 1, { role: 'ADDITIONAL', label: 'S1の追加術ダメージ', basis: 'ATK_STAT' })] })),
+    recipe(2, burst(A, k('atk_scale'), 1, { maxTargets: k('max_target') })),
+    recipe(3, normal(P, { atk: k('atk'), aspd: input('currentSkillAttackSpeed'), maxTargets: 2, periodTotal: STATE_PERIOD }),
+      [num('currentSkillAttackSpeed', '減衰後の現在の攻撃速度加算', 180, 0, 180)],
+      ['攻撃速度の減衰を積分せず、選択した現在の攻撃間隔を表示する。対象は本人がブロックしている同条件の敵。'])],
+    { 0: { categories: ['DAMAGE'], effects: b => [effect('fox-hunt-extra', 'atk_scale',
+      { item: 'ADDITIONAL_ATTACK', operation: 'DEAL_DAMAGE', unit: 'MULTIPLIER', value: b.read('atk_scale'),
+        damageType: A, basis: 'ATK_STAT', rate: 'PER_ATTACK', label: '追跡者の追加術ダメージ' },
+      { target: enemies, condition: condition('foxHuntAvailable', true), timing: { type: 'EVENT', event: 'DAMAGE_DEALT' },
+        lifetime: { type: 'CURRENT_EVENT' }, restrictions: [{ type: 'EXCLUDE_MODIFIER', modifier: 'recursive_extra_attack' }] })],
+      notes: ['初めてダメージを与える命中自身も素質の追加術が発生する。本人が与えた附加ダメージからは再発動しない。'] },
+      1: { categories: ['SURVIVAL', 'RESOURCE'], effects: () => [] } },
+    [bool('foxHuntAvailable', '全対象が初回命中か追跡者の10秒効果中', true)], {},
+    ['初回・効果中は各主攻撃対象へ素質の30%術を1回だけ加算する。S1の290%追加術と素質自身の30%追加術は新たな素質発動元にしない。効果終了後の対象は入力を無効にする。',
+      'https://prts.wiki/w/忍冬 の第一素質備考に基づき、初回命中・附加ダメージの非再帰を区別する。']),
+  define('haak', [recipe(1, normal(P, { aspd: k('attack_speed'), periodTotal: FIXED_PERIOD })),
+    ...[2, 3].map(skillIndex => recipe(skillIndex, normal(P, { label: '味方への15連射終了後の本人射撃',
+      ...(skillIndex === 3 ? { atk: k('atk'), aspd: k('attack_speed') } : {}), periodTotal: STATE_PERIOD }), [],
+      ['有効な味方へのスキル射撃が完了し、本人の強化が有効な段階。味方への500固定攻撃15発は敵へのダメージに加算しない。',
+        '開始時の味方射撃・敵への攻撃再開時刻を含むスキル全体の総量は計算しない。']))],
+    { 0: { categories: ['DAMAGE', 'SURVIVAL', 'STATUS'], effects: b => [critical(b, .25)],
+      notes: ['混合薬物弾の4効果は同確率で排他的に選ばれ、ダメージを変える150%攻撃は25%。残り75%は通常の攻撃値。https://prts.wiki/w/阿 第一素質備考。'] } }),
+  define('saga', [
+    { skillIndex: 2, inputs: [phaseInput([{ value: 'impact', label: '強制撃破前の物理ダメージ1回' },
+      { value: 'execution', label: '0.7秒後の強制撃破' }])],
+      conditionRequirements: [{ when: { input: 'targetCriticallyWounded', comparison: 'EQ', value: true },
+        condition: { input: 'targetCurrentHp', comparison: 'EQ', value: 1 }, reason: '既に重傷中の対象はHP1で指定してください。' }],
+      stages: [burst(P, k('atk_scale'), 1, { id: 'impact', label: '強制撃破前の物理ダメージ1回', when: phase('impact'), maxTargets: 6, periodTotal: STATE_PERIOD }),
+        burst(P, 0, 1, { id: 'execution', label: '0.7秒後の強制撃破', when: phase('execution'), maxTargets: 6, periodTotal: STATE_PERIOD,
+          unresolved: ['0.7秒後の重傷対象の強制撃破は通常の追加ダメージではないため、ダメージ量へ換算しない。'] })],
+      notes: ['S2は重傷済みの敵も選択できる。最初の400%物理には非致死上限を適用し、その後の強制撃破を分離する。チャージ3回を命中数にしない。'] },
+    { skillIndex: 3, inputs: [phaseInput([{ value: 'first', label: '追加攻撃前の初撃のみ' }, { value: 'sequence', label: '追加攻撃を含む1攻撃' }])],
+      conditionRequirements: [rejectWounded], stages: [
+        normal(P, { id: 'first', label: '追加攻撃前の初撃のみ', when: phase('first'), atk: k('atk'), intervalAdd: k('base_attack_time'), maxTargets: 2,
+          dpsUnsupportedReason: '追加攻撃の条件判定とHP推移を含まない初撃のみ。連続DPSは計算しない。', periodTotal: STATE_PERIOD }),
+        normal(P, { id: 'sequence', label: '追加攻撃を含む1攻撃', when: phase('sequence'), atk: k('atk'), maxTargets: 2,
+          unresolved: ['初撃後のHP判定・追加攻撃・重傷による対象外化の順序を含む連続処理は未対応。独立した初撃のみ計算する。'] }),
+      ], notes: ['選択対象が本人にブロックされ、初撃直前は重傷ではない条件。初撃と追加攻撃を1命中に合算して上限を適用しない。'] },
+  ], { 0: nonlethalTalent }, nonlethalInputs(), { 1: '瞬間的なコスト回復のみで、直接ダメージの対象外。' },
+    ['非致死のHP1残しは本人の全ダメージに適用する。対象ごとの軽減後ダメージを現在HP−1で制限する。命中後のHP変化、重傷の自然死亡、SP回復は数値へ加算しない。']),
+  define('lolxh', [
+    { skillIndex: 1, inputs: [phaseInput([{ value: 'changed', label: '切替後の近接攻撃1回' }, { value: 'initial', label: '初期状態の攻撃1回' }]), distance],
+      conditionRequirements: [rejectWounded], stages: [
+        normal(P, { id: 'changed', label: '切替後の近接攻撃1回', when: phase('changed'), aspd: k('attack_speed'),
+          attackTreatment: 'MELEE', maxTargets: 2, duration: 'UNTIL_EXIT', periodTotal: STATE_PERIOD }),
+        normal(P, { id: 'initial', label: '初期状態の攻撃1回', when: phase('initial'), duration: 'UNTIL_EXIT', periodTotal: STATE_PERIOD }),
+      ], notes: ['切替後は本人がブロックしている敵を最大2体まで攻撃し、遠距離80%補正を受けない。初期状態の遠距離攻撃には80%補正を適用する。'] },
+    { skillIndex: 2, inputs: [phaseInput([{ value: 'first', label: '追加攻撃前の初撃のみ' },
+      { value: 'extra', label: '成立済みの追加攻撃1命中' }, { value: 'sequence', label: '初撃と追加攻撃の合計' }]),
+      bool('extraAttackTriggered', '50%未満の条件で追加攻撃が成立済み')],
+      conditionRequirements: [rejectWounded, { when: phase('extra'), condition: { input: 'extraAttackTriggered', comparison: 'EQ', value: true },
+        reason: '追加攻撃は対象HP50%未満の条件が成立した命中のみ指定してください。' }], stages: [
+        normal(P, { id: 'first', label: '追加攻撃前の初撃のみ', when: phase('first'), atk: k('atk'), attackTreatment: 'MELEE', maxTargets: 2,
+          dpsUnsupportedReason: '追加攻撃の条件判定とHP推移を含まない初撃のみ。連続DPSは計算しない。', periodTotal: STATE_PERIOD }),
+        normal(P, { id: 'extra', label: '成立済みの追加攻撃1命中', when: phase('extra'), atk: k('atk'), attackTreatment: 'MELEE', maxTargets: 2,
+          defenseIgnoreFixed: k('attack@def_penetrate_fixed'), dpsUnsupportedReason: '追加攻撃直前のHPから1命中のみ評価し、初撃との合計やDPSは計算しない。', periodTotal: STATE_PERIOD }),
+        normal(P, { id: 'sequence', label: '初撃と追加攻撃の合計', when: phase('sequence'), atk: k('atk'), attackTreatment: 'MELEE', maxTargets: 2,
+          unresolved: ['初撃後のHP判定・追加攻撃・重傷による対象外化の順序を含む連続処理は未対応。選択した1命中のみ計算する。'] }),
+      ], notes: ['現在HPは選択した命中の直前の値。追加攻撃の200防御無視を初撃へ適用しない。主攻撃と同様に追加攻撃にも非致死上限を適用する。'] },
+  ], { 0: nonlethalTalent }, nonlethalInputs(), {},
+    ['本人の全ダメージにHP1を残す上限を適用する。重傷状態の対象を通常攻撃することはできない。命中ごとの対象HPが同じ場合だけ複数体を合計する。']),
   define('blitz', [{ skillIndex: 2, inputs: [phaseInput([{ value: 'normal', label: '発動後の通常射撃' },
     { value: 'activation', label: '発動時の一撃' }]), bool('targetStunned', '命中時の対象がスタン中', true)],
     stages: [normal(P, { id: 'normal', label: '発動後の通常射撃', when: phase('normal'), aspd: k('attack_speed'), periodTotal: STATE_PERIOD }),
@@ -208,7 +278,15 @@ export const EXPANDED_MELEE_DEFINITIONS: readonly ExpandedOperatorDefinition[] =
     recipe(2, next(P, k('atk_scale'), 2, { maxTargets: 2, actions: bagpipeActions(k('atk_scale'), 2) })),
     recipe(3, normal(P, { atk: k('atk'), intervalScale: add(1, k('base_attack_time')), maxTargets: 2,
       actions: bagpipeActions(1, 3), periodTotal: FIXED_PERIOD }))],
-    { 0: { categories: ['DAMAGE', 'ATTACK_BEHAVIOR'], effects: b => [critical(b)] }, 1: RESOURCE }, [], {},
+    { 0: { categories: ['DAMAGE', 'ATTACK_BEHAVIOR'], effects: b => {
+      // The second-target action binds the retained coefficient and probability.
+      // Reject live changes so its branch cannot disagree with the primary attack.
+      for (const key of ['prob', 'atk_scale']) {
+        if (b.read(key) !== retainedTalentValue('bpipe', 0, key))
+          b.issue(`主対象と2体目の攻撃に使う確認済み素質値「${key}」が変更されています。`)
+      }
+      return [critical(b)]
+    } }, 1: RESOURCE }, [], {},
     ['主対象1体と、素質発動時だけ攻撃する2体目を分けて軽減後の期待値を求める。対象は同じ防御・術耐性で、選択命中の間は生存している。連撃の回数を対象数やチャージ数に換算しない。']),
   define('ines', [
     { skillIndex: 1, inputs: [phaseInput([{ value: 'stable', label: '窃取済み・付与時から攻撃力一定' },

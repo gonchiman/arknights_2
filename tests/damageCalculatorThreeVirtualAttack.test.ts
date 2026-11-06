@@ -11,7 +11,7 @@ import type { GuardConditions } from '../src/lib/guardCombatTypes.ts'
 import type { OperatorCombatProfile, RawSkillLevel, SkillRecord } from '../src/types/skill.ts'
 
 const json = <T>(path: string): T => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'))
-const expanded = ['Arts', 'Melee', 'Ranged', 'Caster'].flatMap(group =>
+const expanded = ['Arts', 'Melee', 'Ranged', 'Caster', 'Support'].flatMap(group =>
   json<ExpandedOperatorSource[]>(`../src/data/expanded${group}Sources.json`))
 const guards = json<{ guards: { id: string; name: string; subProfessionId: string;
   skills: { skillId: string; skillIndex: number; raw: RawSkillLevel }[] }[] }>('./fixtures/sixStarGuardSources.json').guards

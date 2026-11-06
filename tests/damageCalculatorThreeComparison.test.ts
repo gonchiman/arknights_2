@@ -15,7 +15,7 @@ const guards = (JSON.parse(readFileSync(new URL('./fixtures/sixStarGuardSources.
 const profiles = JSON.parse(readFileSync(new URL('./fixtures/sixStarGuardProfiles.json', import.meta.url), 'utf8')) as {
   operatorId: string; operatorProfile: OperatorCombatProfile
 }[]
-const sources: ExpandedOperatorSource[] = ['Melee', 'Ranged', 'Arts', 'Caster'].flatMap(group => JSON.parse(readFileSync(
+const sources: ExpandedOperatorSource[] = ['Melee', 'Ranged', 'Arts', 'Caster', 'Support'].flatMap(group => JSON.parse(readFileSync(
   new URL(`../src/data/expanded${group}Sources.json`, import.meta.url), 'utf8')) as ExpandedOperatorSource[])
 const common = { defense: 123, resistance: 37, enemyCount: 3 }
 
@@ -68,7 +68,7 @@ function compareWithOrdinary(entry: DamageThreeComparisonEntry, conditions: Dama
 }
 
 test('DC3の対応スキル全段階を一意の行として列挙し、出典にない技能は作らない', () => {
-  assert.equal(catalog.length, 667)
+  assert.equal(catalog.length, 704)
   const expected = getDamageCalculatorThreeStructures().flatMap(structure => {
     const info = structure.basicInfo
     return (structure.guardRecipe?.stages ?? structure.effectStructure.stages)

@@ -1,4 +1,6 @@
 import sources from '../data/expandedArtsSources.json' with { type: 'json' }
+import type { OperatorCombatProfile } from '../types/skill.ts'
+import { getOperatorPassives } from './operatorProfile.ts'
 import type { ExpandedOperatorDefinition, ExpandedTalentDefinition } from './expandedCombatTypes.ts'
 import type { GuardDamageAction, GuardInput, GuardSkillRecipe, GuardStage, GuardValue } from './guardCombatTypes.ts'
 import type { TalentStructureEffect } from './talentStructure.ts'
@@ -106,6 +108,32 @@ const droneVolley = (drone: GuardDamageAction, options: Partial<GuardStage> = {}
 })
 const droneNotes = ['本体の攻撃範囲内にいる同じ1体を、全浮遊ユニットが攻撃する状態を評価する。初撃または上限到達状態を全ユニット共通で指定する。']
 
+/** Callers must reject changed live values when a retained value is coupled to a recipe. */
+function reviewedTalentNumber(operatorId: string, talentIndex: number, key: string): number {
+  const source = sources.find(source => source.operatorId === operatorId)!
+  const passives = getOperatorPassives(source.profile as unknown as OperatorCombatProfile, source.phaseIndex,
+    source.profile.phases[source.phaseIndex].maxLevel!, 1)
+  const value = passives.sources.find(entry => entry.sourceKind === 'TALENT' && entry.talentIndex === talentIndex)
+    ?.blackboard.find(entry => entry.key === key)?.value
+  if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(`確認済み素質値がありません: ${operatorId}/${key}`)
+  return value
+}
+const ggMisses = n('goldenglowExplosionMisses', '全ユニット共通・直前までの連続不発回数', 0, 0, 40)
+const ggBoundaryReason = '連続不発39〜40回での確定自爆への遷移境界は未確認。0〜38回の次の攻撃機会だけを計算する。'
+const ggEventReason = '本体1回と各ユニットの次の攻撃機会の期待値。命中の時間同期、帰還・再索敵、以後の確率推移は計算しません。'
+const ggNormalProbability = sum(1, product(-reviewedTalentNumber('char_377_gdglow', 0, 'attack@prob'),
+  sum(1, input('goldenglowExplosionMisses'))))
+const ggStages = (skillIndex: number): GuardStage[] => {
+  const drone = { ...droneHit(true, sum(1, k('attack@cnt'))), probability: ggNormalProbability }
+  const stage = droneVolley(drone, { atk: k('atk'), aspd: skillIndex === 1 ? k('attack_speed') : 0,
+    dpsUnsupportedReason: ggEventReason, periodTotal: unresolvedPeriod(ggEventReason),
+    ...(skillIndex === 3 ? { actions: [drone] } : {}) })
+  return [{ ...stage, when: { input: ggMisses.key, comparison: 'LTE', value: 38 } },
+    { ...stage, id: 'unconfirmed-explosion-boundary', label: '確定自爆への遷移境界',
+      when: { input: ggMisses.key, comparison: 'GTE', value: 39 }, unresolved: [ggBoundaryReason],
+      calculationIssues: [{ id: 'goldenglow-explosion-prd-boundary', reason: ggBoundaryReason, relatedSections: ['素質1'] }] }]
+}
+
 /** Reviewed JP skills. Unsupported mechanisms remain explicitly deferred, never approximated by a normal attack. */
 export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = [
   operator('char_328_cammou', [
@@ -113,17 +141,27 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
     [2, droneVolley(droneHit(true), { atk: k('atk') })],
   ], [talent(0, 'シンクロ', v => [speed(v.read('attack_speed'))])],
   { inputs: [droneState], traitNotes: [...droneNotes, 'S2のスタンは現在のダメージ値を変えず、確率・移動抑止は評価しない。'] }),
-  operator('char_4013_kjera', [[1, droneVolley(droneHit(false), { atk: k('atk') })]], [
+  operator('char_4013_kjera', [[1, droneVolley(droneHit(false), { atk: k('atk') })],
+    [2, [phase('kjeraFreezeState', 'IMMUNE', droneVolley(droneHit(true, sum(1, k('attack@cnt'))), { atk: k('atk'), label: '凍結無効の対象' })),
+      phase('kjeraFreezeState', 'CHANGING', droneVolley(droneHit(true, sum(1, k('attack@cnt'))), { atk: k('atk'), label: '凍結が有効な対象',
+        unresolved: ['寒冷の重複による凍結・術耐性変化と本体/各ユニットの命中順は未確認。凍結無効の対象だけを計算する。'] }))],
+      [select('kjeraFreezeState', '対象の凍結耐性', [['IMMUNE', '凍結無効'], ['CHANGING', '凍結が有効']])]]], [
     talent(0, '俯瞰', v => [atk(numericIf(cmp('groundTilesInRange', 'GT', v.read('cnt')), v.read('kjera_t_1[high].atk'), v.read('atk')))], ['DAMAGE']),
-  ], { inputs: [droneState, n('groundTilesInRange', '攻撃範囲内の地面マス数', 0, 0, 100)], traitNotes: droneNotes,
-    deferredSkills: [{ skillIndex: 2, reason: '寒冷の重複で攻撃途中に凍結し、術耐性が変わる場合の命中順・状態遷移を確認する必要がある。' }] }),
-  operator('char_4054_malist', [[1, droneVolley(droneHit(false), { atk: k('atk'), aspd: k('attack_speed') })]], [
+  ], { inputs: [droneState, n('groundTilesInRange', '攻撃範囲内の地面マス数', 0, 0, 100)],
+    traitNotes: [...droneNotes, 'S2は凍結無効で術耐性が変化しない対象。22%の寒冷付与を与ダメージ倍率へ換算しない。'] }),
+  operator('char_4054_malist', [[1, droneVolley(droneHit(false), { atk: k('atk'), aspd: k('attack_speed') })],
+    [2, [phase('droneState', 'CAPPED', droneVolley({ ...droneHit(false, 2), scale: k('atk_scale') }, {
+      kind: 'NEXT_ATTACK', label: '上限到達済みの強化2連撃', actions: [
+        { label: '本体の強化2連撃', role: 'MAIN', damageType: 'ARTS', scale: k('atk_scale'), hits: 2, targets: 1 },
+        { ...droneHit(false, 2), scale: k('atk_scale') },
+      ] })), phase('droneState', 'FIRST', droneVolley(droneHit(false), { kind: 'NEXT_ATTACK', label: '倍率上昇中の強化2連撃',
+        unresolved: ['2連撃に付随するユニットの倍率進行順は未確認。両命中が上限倍率の状態のみ計算する。'] }))],
+      [{ ...droneState, defaultValue: 'CAPPED' }]]], [
     talent(0, 'インスピレーション', v => [effect('critical', 'prob / atk_scale',
       { item: 'CRITICAL_ATTACK', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('atk_scale') },
       { timing: { type: 'EVENT', event: 'ATTACK' }, lifetime: { type: 'CURRENT_EVENT' },
         probability: { chance: v.read('prob'), rollScope: 'APPLICATION' } })], ['DAMAGE']),
-  ], { inputs: [droneState], traitNotes: droneNotes,
-    deferredSkills: [{ skillIndex: 2, reason: '2連撃に付随する浮遊ユニットの命中回数と特性倍率の進行順を確認する必要がある。' }] }),
+  ], { inputs: [droneState], traitNotes: [...droneNotes, 'S2の200%倍率は本体と付随ユニットの各2命中へ適用。3回チャージを命中数へ加算しない。'] }),
   operator('char_4040_rockr', [
     [1, droneVolley(droneHit(false), { aspd: k('attack_speed') })],
     [2, [phase('rockrockPhase', 'NORMAL', droneVolley(droneHit(true), { label: '前半', aspd: k('attack_speed') })),
@@ -137,6 +175,14 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
       phase('lapplandS1State', 'INITIAL', droneVolley(droneHit(false, 2, 1, true), { label: '初期状態' }))],
       [select('lapplandS1State', 'スキル状態', [['ACTIVE', '発動状態'], ['INITIAL', '初期状態']])]],
     [2, droneVolley(droneHit(true, sum(1, k('attack@cnt')), 1, true), { atk: k('atk') })],
+    [3, droneVolley({ ...droneHit(false, sum(1, k('attack@cnt')), 1, true), label: '到達済みの特殊浮遊ユニット' }, {
+      atk: k('atk'), label: '追尾対象への到達後', actions: [
+        { label: '本体の術攻撃', role: 'MAIN', damageType: 'ARTS', scale: 1, targets: 1 },
+        { ...droneHit(false, sum(1, k('attack@cnt')), 1, true), label: '到達済みの特殊浮遊ユニット' },
+        { label: '重複しない周囲の継続術ダメージ', role: 'ADDITIONAL', damageType: 'ARTS', basis: 'ATK_STAT',
+          scale: k('attack@magic_atk_scale'), timing: 'PER_SECOND', targets: 1 },
+      ],
+    })],
   ], [
     talent(0, '群狼の統率者', v => [
       effect('drone-maximum', 'scale', { item: 'DRONE_MAXIMUM_MULTIPLIER', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('scale') },
@@ -147,8 +193,30 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
     ], ['DAMAGE', 'STATUS', 'ABILITY']),
     talent(1, 'シラクーザの幸運', () => [status('squad-initial-sp', '編成中のシラクーザのストックSPを増加')], ['RESOURCE']),
   ], { inputs: [droneState, n('lapplandTalentStage', '群狼の統率者の獲得段階', 0, 0, 3)],
-    traitNotes: [...droneNotes, 'S1発動状態は静止している対象への攻撃。S1の常時追加1体は初期状態でも有効。素質は上限110%を121%にし、最終段階で1体追加する。'],
-    deferredSkills: [{ skillIndex: 3, reason: '特殊浮遊ユニットの追尾・通常攻撃と重複しない範囲継続ダメージを個別に扱う必要がある。' }] }),
+    traitNotes: [...droneNotes, 'S1発動状態は静止している対象への攻撃。S1の常時追加1体は初期状態でも有効。素質は上限110%を121%にし、最終段階で1体追加する。',
+      'S3は全ユニットが同じ対象へ到達済みで、本体の攻撃範囲とユニット周囲0.9マスにいる状態。120%の継続効果は1つだけ有効で、ユニット数を掛けない。',
+      'S3の特殊ユニットの命中は通常攻撃・スキル直接ダメージに属さず、仮想主攻撃の属性を引き継がない。1.3秒の展開時間を命中周期に換算しない。'] }),
+  operator('char_377_gdglow', [1, 2, 3].map(index => [index, ggStages(index)]), [
+    talent(0, '電流暴走', v => {
+      // The normal branch uses the complement of this retained probability. Numerical
+      // talent changes are otherwise allowed by the registry, so validate this coupling.
+      for (const key of ['attack@prob', 'attack@max_stack_cnt']) {
+        if (v.read(key) !== reviewedTalentNumber('char_377_gdglow', 0, key))
+          v.issue(`自爆と通常弾の分岐に使う確認済み素質値「${key}」が変更されています。`)
+      }
+      return [effect('explosion', 'attack@atk_scale_2 / attack@prob / attack@max_stack_cnt',
+      { item: 'ADDITIONAL_ATTACK', operation: 'DEAL_DAMAGE', unit: 'MULTIPLIER', value: v.read('attack@atk_scale_2'),
+        damageType: 'ARTS', basis: 'ATK_STAT', rate: 'PER_ATTACK', hits: add(1, metric('skill.attack@cnt')), label: '浮遊ユニットの自爆' },
+      { timing: { type: 'EVENT', event: 'ATTACK' }, lifetime: { type: 'CURRENT_EVENT' }, target: target('ENEMY', 'ATTACK_TARGET'),
+        probability: { chance: mul(v.read('attack@prob'), add(1, metric(ggMisses.key))), rollScope: 'APPLICATION' } })]
+    }, ['DAMAGE']),
+    talent(1, '精密誘電', v => [effect('resistance-ignore', 'magic_resist_penetrate_fixed',
+      { item: 'RESISTANCE_IGNORE_FIXED', operation: 'IGNORE_FIXED', unit: 'POINT', value: v.read('magic_resist_penetrate_fixed') })], ['DAMAGE']),
+  ], { inputs: [droneState, ggMisses], traitNotes: [
+    '全ユニットが同じ1体を攻撃し、同じ連続不発回数・特性倍率状態にある条件。自爆範囲内の別の敵は含めない。S1/S2ではその対象が本体の攻撃範囲にもいる。',
+    '通常弾と自爆は同じ攻撃機会の排他的な分岐。自爆へ特性の倍率を掛けず、自爆した後の特性・確率の推移や帰還時間を推測しない。',
+    'S3は本体の攻撃を含めない。自爆は素質由来の術ダメージとして仮想主攻撃属性を引き継がない。',
+  ] }),
   operator('char_338_iris', [
     [1, quickVolley()],
     [2, normal({ ...action('睡眠終了時の爆発', k('atk_scale')), actions: [{ label: '睡眠終了時の爆発', role: 'MAIN', damageType: 'ARTS',

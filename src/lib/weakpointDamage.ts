@@ -9,11 +9,13 @@ export function selectWeakpointDamageType(input: {
   originalType: DamageType
   defense: number
   resistance: number
+  /** Attribute-specific addition counted in theoretical arts damage (e.g. Logos). */
+  artsDamageFlatAddition?: number
   penetration?: Pick<MitigationModifiers, 'defenseIgnoreFixed' | 'resistanceIgnoreFixed'>
   fixedWeakpoint?: 'NONE' | 'PHYSICAL' | 'ARTS'
 }): DamageType {
   const penetration = input.penetration ?? {}
-  if (![input.attack, input.defense, input.resistance, penetration.defenseIgnoreFixed ?? 0,
+  if (![input.attack, input.defense, input.resistance, input.artsDamageFlatAddition ?? 0, penetration.defenseIgnoreFixed ?? 0,
     penetration.resistanceIgnoreFixed ?? 0].every(value => Number.isFinite(value) && value >= 0)
     || input.resistance > 100 || !['PHYSICAL', 'ARTS', 'TRUE'].includes(input.originalType)
     || !['NONE', 'PHYSICAL', 'ARTS'].includes(input.fixedWeakpoint ?? 'NONE')) {
@@ -22,7 +24,7 @@ export function selectWeakpointDamageType(input: {
   if (input.originalType === 'TRUE') return 'TRUE'
   if (input.fixedWeakpoint && input.fixedWeakpoint !== 'NONE') return input.fixedWeakpoint
   const physical = calculateDamageBreakdown(input.attack, 'PHYSICAL', input.defense, input.resistance, penetration).result
-  const arts = calculateDamageBreakdown(input.attack, 'ARTS', input.defense, input.resistance, penetration).result
+  const arts = calculateDamageBreakdown(input.attack + (input.artsDamageFlatAddition ?? 0), 'ARTS', input.defense, input.resistance, penetration).result
   // Preserve the original attribute at a tie, including numerical round-off.
   if (Math.abs(physical - arts) <= Math.max(1, physical, arts) * 1e-6) return input.originalType
   return physical > arts ? 'PHYSICAL' : 'ARTS'

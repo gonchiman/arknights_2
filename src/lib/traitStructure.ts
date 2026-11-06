@@ -14,7 +14,7 @@ export const TRAIT_STRUCTURE_JOB_IDS = ['fighter', 'lord', 'crusher', 'hammer', 
   'pioneer', 'agent', 'charger', 'stalker', 'protector', 'shotprotector', 'artsprotector', 'unyield', 'duelist', 'guardian', 'fortress', 'counsellor',
   'fastshot', 'aoesniper', 'longrange', 'siegesniper', 'reaperrange', 'closerange', 'hunter', 'bombarder', 'loopshooter', 'skybreaker', 'craftsman', 'merchant', 'dollkeeper',
   'corecaster', 'splashcaster', 'blastcaster', 'chain', 'slower', 'underminer', 'incantationmedic', 'phalanx',
-  'traper', 'skywalker', 'mercenary', 'physician', 'watchman', 'chainhealer', 'mystic', 'funnel'] as const
+  'traper', 'skywalker', 'mercenary', 'physician', 'watchman', 'chainhealer', 'mystic', 'funnel', 'geek', 'bard', 'blessing'] as const
 export type TraitStructureJobId = typeof TRAIT_STRUCTURE_JOB_IDS[number]
 export interface TraitStructureSelection { readonly operatorId: string }
 export interface TraitStructureGrowthSelection { readonly phaseIndex?: number; readonly operatorLevel?: number }
@@ -31,6 +31,8 @@ export type TraitStructureEffect = CombatEffectContext & {
 } & (
   | { readonly item: 'BLOCK_COUNT' | 'MAX_TARGETS'; readonly operation: 'SET'; readonly unit: 'ENEMY'; readonly value: CombatNumericValue }
   | { readonly item: 'HIT_COUNT' | 'STORED_CHARGES'; readonly operation: 'SET'; readonly unit: 'HIT'; readonly value: CombatNumericValue }
+  | { readonly item: 'STORED_CHARGE_MERGE_COUNT'; readonly operation: 'SET'; readonly unit: 'HIT'; readonly value: CombatNumericValue }
+  | { readonly item: 'HP_LOSS_RATIO_PER_SECOND' | 'HP_RECOVERY_ATK_RATIO_PER_SECOND'; readonly operation: 'SET'; readonly unit: 'RATIO'; readonly value: CombatNumericValue }
   | { readonly item: 'INITIAL_DEPLOYMENT_RUNTIME_COST'; readonly operation: 'SET'; readonly unit: 'POINT'; readonly value: CombatNumericValue }
   | { readonly item: 'DRONE_ATTACK'; readonly operation: 'SET'; readonly unit: 'DRONE_RULE'; readonly value: {
       readonly initialScale: CombatNumericValue; readonly increment: CombatNumericValue
@@ -38,7 +40,7 @@ export type TraitStructureEffect = CombatEffectContext & {
     } }
   | { readonly item: 'ATTACK_SCALE'; readonly operation: 'MULTIPLY'; readonly unit: 'MULTIPLIER'; readonly value: CombatNumericValue }
   | { readonly item: 'DAMAGE_TYPE'; readonly operation: 'SET'; readonly unit: 'DAMAGE_TYPE'; readonly value: 'ARTS' | 'PHYSICAL' }
-  | { readonly item: 'RANGED_ATTACK_ENABLED' | 'NORMAL_ATTACK_ENABLED' | 'ALLY_HEALING_ENABLED' | 'NATURAL_SP_RECOVERY_ENABLED'; readonly operation: 'SET_ENABLED'; readonly unit: 'BOOLEAN'; readonly value: boolean }
+  | { readonly item: 'RANGED_ATTACK_ENABLED' | 'NORMAL_ATTACK_ENABLED' | 'ALLY_HEALING_ENABLED' | 'NATURAL_SP_RECOVERY_ENABLED' | 'INSPIRATION_ENABLED'; readonly operation: 'SET_ENABLED'; readonly unit: 'BOOLEAN'; readonly value: boolean }
   | { readonly item: 'ATTACK_RANGE'; readonly operation: 'USE_BASE_ATTRIBUTE'; readonly unit: 'RANGE_DEFINITION'; readonly value: { readonly rangeId: string | null } }
   | { readonly item: 'ATTACK_PRIORITY'; readonly operation: 'SET'; readonly unit: 'PRIORITY_RULE'; readonly value: 'AIRBORNE' | 'LOWEST_DEFENSE' | 'HIGHEST_WEIGHT' }
   | { readonly item: 'STATUS'; readonly operation: 'SET_ENABLED'; readonly unit: 'STATUS'; readonly value: 'SLUGGISH' }
@@ -174,6 +176,11 @@ const DEFINITIONS: Record<TraitStructureJobId, JobDefinition> = {
   watchman: { profession: 'MEDIC', descriptions: ['味方のHPを回復 離陸できる'], keys: [], categories: ['HP_CHANGE', 'ATTACK_BEHAVIOR'] },
   chainhealer: { profession: 'MEDIC', descriptions: ['味方のHPを回復 味方を治療する際、3体目の味方まで治療が跳躍していく(跳躍するたびに治療量は25%ずつ減衰)'],
     keys: ['attack@chain.max_target', 'attack@chain.atk_scale'], prefabKey: '-1', categories: ['HP_CHANGE', 'ATTACK_BEHAVIOR'] },
+  geek: { profession: 'SPECIAL', descriptions: ['HPが徐々に減少'], keys: ['hp_ratio'], categories: ['HP_CHANGE'] },
+  bard: { profession: 'SUPPORT', descriptions: ['攻撃しない 攻撃範囲内の味方全員のHPを継続回復(1秒ごとに攻撃力の{attack@atk_to_hp_recovery_ratio:0%}回復) 自身は鼓舞状態の効果を受けない'],
+    keys: ['attack@atk_to_hp_recovery_ratio'], prefabKey: '-1', categories: ['ATTACK_BEHAVIOR', 'HP_CHANGE', 'ABILITY'] },
+  blessing: { profession: 'SUPPORT', descriptions: ['敵に術ダメージを与える スキル発動中、通常攻撃が味方に対する治療行動になる(治療量は攻撃力の{heal_scale:0%})'],
+    keys: ['heal_scale', 'attack@max_target', 'attack@max_target_heal'], prefabKey: '-1', categories: ['ATTACK_BEHAVIOR', 'DAMAGE_TYPE', 'HP_CHANGE'] },
 }
 
 export function isTraitStructureOperator(row: Pick<SkillRecord, 'profession' | 'subProfessionId'>): boolean {
@@ -204,7 +211,13 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
     const baseDefinition = DEFINITIONS[operator.subProfessionId as TraitStructureJobId]
     const chainTargetKey = operator.operatorId === 'char_135_halo' && operator.subProfessionId === 'chain'
       ? 'attack@chain.max_target' : 'attack@max_target'
-    const definition = chainTargetKey === 'attack@chain.max_target' ? { ...baseDefinition,
+    const mergedMystic = operator.operatorId === 'char_4226_veen' && operator.subProfessionId === 'mystic'
+    const bardRecoveryKey = operator.operatorId === 'char_4184_dolris' && operator.subProfessionId === 'bard'
+      ? 'atk_to_hp_recovery_ratio' : 'attack@atk_to_hp_recovery_ratio'
+    const definition = mergedMystic ? { ...baseDefinition, keys: ['times', 'merge_cnt'] }
+      : bardRecoveryKey === 'atk_to_hp_recovery_ratio' ? { ...baseDefinition,
+        descriptions: baseDefinition.descriptions.map(value => value.replaceAll('attack@atk_to_hp_recovery_ratio', bardRecoveryKey)), keys: [bardRecoveryKey] }
+      : chainTargetKey === 'attack@chain.max_target' ? { ...baseDefinition,
       descriptions: [
         '{attack@chain.max_target}体目まで跳躍していく術ダメージを敵に与え、跳躍するたびダメージが15%減衰し、敵を一瞬足止め',
         '{attack@chain.max_target}体目まで跳躍していく術ダメージを敵に与え、跳躍するたびダメージが15%減衰し、敵を一瞬足止め(昇進2で効果強化)',
@@ -322,8 +335,32 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
       if (job === 'mystic') {
         if (source.blackboard.some(entry => entry.key === 'times_2')) read('times_2', { expected: 0 })
         effects.push({ ...context('stored-energy', 'DAMAGE', 'ATTACK_RULE', 'times', 'NORMAL_ATTACK'),
-          item: 'STORED_CHARGES', operation: 'SET', unit: 'HIT', value: read('times', { expected: 3 }) })
+          item: 'STORED_CHARGES', operation: 'SET', unit: 'HIT', value: read('times', { expected: mergedMystic ? 9 : 3 }) })
+        if (mergedMystic) effects.push({ ...context('stored-energy-merge', 'CONTROL', 'DYNAMIC_RULE', 'merge_cnt'),
+          item: 'STORED_CHARGE_MERGE_COUNT', operation: 'SET', unit: 'HIT', value: read('merge_cnt', { expected: 3 }) })
         notes.push('通常弾と指定した貯蔵弾を分けて評価する。貯蔵に要する時間・攻撃間の再貯蔵は計算しない。')
+      }
+      if (job === 'geek') {
+        effects.push({ ...context('continuous-hp-loss', 'SURVIVAL', 'DYNAMIC_RULE', 'hp_ratio'),
+          item: 'HP_LOSS_RATIO_PER_SECOND', operation: 'SET', unit: 'RATIO', value: read('hp_ratio', { expected: 0.01 }) })
+        notes.push('毎秒最大HPの1%を失い、特性ではHPが1未満にならない。敵への直接ダメージ倍率には加算しない。')
+      }
+      if (job === 'bard') {
+        effects.push({ ...context('no-normal-attack', 'DAMAGE', 'ATTACK_RULE', 'description:no_attack'),
+          item: 'NORMAL_ATTACK_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: false },
+        { ...context('continuous-ally-recovery', 'SURVIVAL', 'DYNAMIC_RULE', bardRecoveryKey),
+          target: { type: 'RECIPIENTS', side: 'ALLY', entity: 'UNIT', scope: 'ATTACK_RANGE', includeSelf: true, factionIds: [], tagIds: [], selection: { type: 'ALL' } },
+          item: 'HP_RECOVERY_ATK_RATIO_PER_SECOND', operation: 'SET', unit: 'RATIO', value: read(bardRecoveryKey, { expected: 0.1 }) },
+        { ...context('no-inspiration', 'CONTROL', 'DYNAMIC_RULE', 'description:inspiration_immunity'),
+          item: 'INSPIRATION_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: false })
+      }
+      if (job === 'blessing') {
+        read('heal_scale', { expected: 0.75 }); read('attack@max_target', { expected: 1 }); read('attack@max_target_heal', { expected: 1 })
+        effects.push({ ...context('skill-healing-action', 'DAMAGE', 'ATTACK_RULE', 'description:healing_instead_of_attack'),
+          condition: compare('source.skillActive', true), item: 'NORMAL_ATTACK_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: false },
+        { ...context('inactive-arts-attack', 'DAMAGE', 'ATTACK_RULE', 'description:arts_damage', 'NORMAL_ATTACK'),
+          condition: compare('source.skillActive', false), item: 'DAMAGE_TYPE', operation: 'SET', unit: 'DAMAGE_TYPE', value: 'ARTS' })
+        notes.push('発動中の通常行動は攻撃力75%の治療。治療や状態効果に伴う敵への追加ダメージはスキル側で別の発生単位として扱う。')
       }
       if (job === 'hunter') {
         read('value', { positive: true })
@@ -495,7 +532,8 @@ export const formatTraitStructureTiming = formatCombatTiming
 export const formatTraitStructureTarget = formatCombatRecipient
 export function formatTraitStructureEffectItem(item: TraitStructureEffect['item']): string {
   return { DRONE_ATTACK: '浮遊ユニットの攻撃', INITIAL_DEPLOYMENT_RUNTIME_COST: '初回配置の内部コスト設定',
-    BLOCK_COUNT: 'ブロック数', MAX_TARGETS: '同時攻撃対象数', HIT_COUNT: '通常攻撃のヒット数', STORED_CHARGES: '通常貯蔵数の上限', ATTACK_SCALE: '攻撃力倍率',
+    BLOCK_COUNT: 'ブロック数', MAX_TARGETS: '同時攻撃対象数', HIT_COUNT: '通常攻撃のヒット数', STORED_CHARGES: '通常貯蔵数の上限', STORED_CHARGE_MERGE_COUNT: '転置エネルギー1個あたりの通常貯蔵数', ATTACK_SCALE: '攻撃力倍率',
+    HP_LOSS_RATIO_PER_SECOND: '毎秒の最大HP喪失割合', HP_RECOVERY_ATK_RATIO_PER_SECOND: '毎秒の攻撃力基準回復割合', INSPIRATION_ENABLED: '鼓舞の受け入れ',
     DAMAGE_TYPE: '通常攻撃のダメージ種別', RANGED_ATTACK_ENABLED: '遠距離攻撃', NORMAL_ATTACK_ENABLED: '通常攻撃',
     ALLY_HEALING_ENABLED: '味方からの治療', NATURAL_SP_RECOVERY_ENABLED: 'SP自然回復', ATTACK_RANGE: '基本攻撃範囲', ATTACK_TARGETING: '通常攻撃の対象',
     SPLASH_DAMAGE: '周囲へのダメージ', HP: 'HP', ATK_BUFF_RATIO: '攻撃力上昇割合', ATTACK_PRIORITY: '攻撃の優先対象',

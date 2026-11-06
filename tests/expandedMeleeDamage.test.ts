@@ -51,6 +51,170 @@ function fixed(suffix: string, index: number, guard: GuardConditions = {}, defen
   return { result, row: result.rows[0] }
 }
 
+test('ウルピスフォリアS1は通常物理・290%追加術・30%素質を分離し、附加ダメージで素質を再発動しない', () => {
+  for (const mark of [false, true]) for (const defense of [0, 1000, 10000]) for (const type of ['PHYSICAL', 'ARTS'] as const) {
+    const { result, row } = fixed('vulpis', 1, { foxHuntAvailable: mark }, defense, 60, type)
+    const atk = result.stats.attack
+    const primary = type === 'PHYSICAL' ? physical(atk, defense) : atk * .4
+    close(row.perAttack, primary + atk * 2.9 * .4 + (mark ? atk * .3 * .4 : 0))
+    assert.equal(row.attackComponents.length, mark ? 3 : 2)
+    assert.ok(row.attackComponents.filter(component => component.role === 'ADDITIONAL').every(component => component.damageType === 'ARTS'))
+    assert.equal(row.dps, null)
+  }
+})
+
+test('ウルピスフォリアS2の追加術は300%の攻撃倍率を再乗算せず、最大6体へ一度ずつ加算する', () => {
+  for (const count of [1, 6]) for (const mark of [false, true]) for (const type of ['ARTS', 'PHYSICAL'] as const) {
+    const { result, row } = fixed('vulpis', 2, { actualAttackTargetCount: count, foxHuntAvailable: mark }, 1000, 60, type)
+    const primary = type === 'ARTS' ? result.stats.attack * 3 * .4 : physical(result.stats.attack * 3, 1000)
+    const expected = primary + (mark ? result.stats.attack * .3 * .4 : 0)
+    close(row.perAttack, expected)
+    close(row.allTargetsPerAttack, expected * count)
+    assert.equal(row.dps, null)
+  }
+  assert.deepEqual(output('vulpis', 2, { actualAttackTargetCount: 7 }).rows, [])
+})
+
+test('ウルピスフォリアS3は現在ASPD0〜180のみで瞬間DPSを求め、10秒の減衰や素質の失効を積算しない', () => {
+  for (const speed of [0, 90, 180]) for (const mark of [false, true]) for (const count of [1, 2]) {
+    const { result, row } = fixed('vulpis', 3, { currentSkillAttackSpeed: speed, foxHuntAvailable: mark, actualAttackTargetCount: count })
+    const atk = buffed(result.stats.attack, 1.1), expected = physical(atk, 1000) + (mark ? atk * .3 * .4 : 0)
+    close(row.perAttack, expected)
+    close(row.allTargetsPerAttack, expected * count)
+    close(result.attackInterval, 1.05 / (1 + speed / 100))
+    close(row.dps, expected / result.attackInterval!)
+  }
+  for (const speed of [-1, 181, Number.NaN]) assert.deepEqual(output('vulpis', 3, { currentSkillAttackSpeed: speed }).rows, [])
+  assert.deepEqual(output('vulpis', 3, { actualAttackTargetCount: 3 }).rows, [])
+})
+
+test('アの4択は25%の150%攻撃と75%の通常攻撃を軽減後に平均し、S2とS3の味方15射を敵へ足さない', () => {
+  for (const index of [1, 2, 3]) for (const defense of [0, 700, 1000, 10000]) for (const type of ['PHYSICAL', 'ARTS'] as const) {
+    const { result, row } = fixed('haak', index, {}, defense, 60, type)
+    const atk = buffed(result.stats.attack, index === 3 ? .5 : 0)
+    const mitigate = (amount: number) => type === 'PHYSICAL' ? physical(amount, defense) : amount * .4
+    const expected = .75 * mitigate(atk) + .25 * mitigate(atk * 1.5)
+    close(row.perAttack, expected)
+    close(result.attackInterval, 1.3 / (index === 1 ? 2 : index === 3 ? 1.5 : 1))
+    close(row.dps, expected / result.attackInterval!)
+    assert.equal(row.attackComponents.length, 1)
+    assert.equal(row.attackComponents[0].count, 1)
+    assert.equal(row.attackComponents[0].role, 'MAIN')
+  }
+  assert.deepEqual(output('haak', 3, { actualAttackTargetCount: 2 }).rows, [])
+})
+
+test('サガS2は400%の単発を軽減後にHP1残しで制限し、強制撃破の1HPをダメージへ換算しない', () => {
+  for (const hp of [1, 2, 400, 100000]) for (const count of [1, 6]) for (const defense of [0, 1000, 10000]) {
+    for (const type of ['PHYSICAL', 'ARTS'] as const) {
+      const { result, row } = fixed('saga', 2, { targetCurrentHp: hp, actualAttackTargetCount: count }, defense, 60, type)
+      const raw = result.stats.attack * 4
+      const expected = Math.min(type === 'PHYSICAL' ? physical(raw, defense) : raw * .4, hp - 1)
+      close(row.perAttack, expected)
+      close(row.allTargetsPerAttack, expected * count)
+      assert.equal(row.dps, null)
+      assert.equal(row.attackComponents[0].count, 1)
+    }
+  }
+  close(fixed('saga', 2, { targetCurrentHp: 1, targetCriticallyWounded: true }).row.perAttack, 0)
+  assert.deepEqual(output('saga', 2, { targetCurrentHp: 2, targetCriticallyWounded: true }).rows, [])
+  const execution = output('saga', 2, { damagePhase: 'execution' })
+  assert.deepEqual(execution.rows, [])
+  assert.ok(execution.unsupportedReasons.some(reason => reason.includes('強制撃破')))
+  assert.deepEqual(output('saga', 2, { actualAttackTargetCount: 7 }).rows, [])
+})
+
+test('サガS3は130%強化後の独立初撃だけを計算し、低HP追撃を二重化も省略合算もしない', () => {
+  for (const hp of [1, 50, 100000]) for (const count of [1, 2]) for (const defense of [0, 1000, 10000]) {
+    const { result, row } = fixed('saga', 3, { targetCurrentHp: hp, actualAttackTargetCount: count }, defense)
+    const expected = Math.min(physical(buffed(result.stats.attack, 1.3), defense), hp - 1)
+    close(row.perAttack, expected)
+    close(row.allTargetsPerAttack, expected * count)
+    assert.equal(row.attackComponents[0].count, 1)
+    assert.equal(row.dps, null)
+  }
+  assert.deepEqual(output('saga', 3, { damagePhase: 'sequence' }).rows, [])
+  assert.deepEqual(output('saga', 3, { targetCurrentHp: 1, targetCriticallyWounded: true }).rows, [])
+  assert.deepEqual(output('saga', 3, { actualAttackTargetCount: 3 }).rows, [])
+})
+
+test('羅小黒S1は切替前だけ遠距離80%補正を適用し、各対象のHP1残しを最低ダメージより後に行う', () => {
+  for (const changed of [false, true]) for (const distance of ['MELEE', 'RANGED']) for (const hp of [1, 2, 100000]) {
+    for (const defense of [0, 10000]) for (const type of ['PHYSICAL', 'ARTS'] as const) {
+      const { result, row } = fixed('lolxh', 1, { damagePhase: changed ? 'changed' : 'initial',
+        attackDistanceType: distance, targetCurrentHp: hp, actualAttackTargetCount: changed ? 2 : 1 }, defense, 60, type)
+      const atk = result.stats.attack * (!changed && distance === 'RANGED' ? .8 : 1)
+      const expected = Math.min(type === 'PHYSICAL' ? physical(atk, defense) : atk * .4, hp - 1)
+      close(row.perAttack, expected)
+      close(row.allTargetsPerAttack, expected * (changed ? 2 : 1))
+      assert.equal(row.dps, null)
+      assert.equal(result.attackInterval, null)
+    }
+  }
+  assert.deepEqual(output('lolxh', 1, { damagePhase: 'initial', actualAttackTargetCount: 2 }).rows, [])
+  assert.deepEqual(output('lolxh', 1, { targetCurrentHp: 1, targetCriticallyWounded: true }).rows, [])
+})
+
+test('羅小黒S2は初撃と成立済み追撃を別のHPから評価し、200防御無視を追撃だけに適用する', () => {
+  for (const extra of [false, true]) for (const hp of [1, 25, 100000]) for (const defense of [0, 1000, 10000]) {
+    for (const type of ['PHYSICAL', 'ARTS'] as const) {
+      const { result, row } = fixed('lolxh', 2, { damagePhase: extra ? 'extra' : 'first', extraAttackTriggered: extra,
+        targetCurrentHp: hp, actualAttackTargetCount: 2, attackDistanceType: 'RANGED' }, defense, 60, type)
+      const atk = buffed(result.stats.attack, .7)
+      const expected = Math.min(type === 'PHYSICAL' ? physical(atk, Math.max(0, defense - (extra ? 200 : 0))) : atk * .4, hp - 1)
+      close(row.perAttack, expected)
+      close(row.allTargetsPerAttack, expected * 2)
+      assert.equal(row.dps, null)
+      assert.equal(row.attackComponents.length, 1)
+    }
+  }
+  assert.deepEqual(output('lolxh', 2, { damagePhase: 'extra', extraAttackTriggered: false }).rows, [])
+  assert.deepEqual(output('lolxh', 2, { damagePhase: 'sequence' }).rows, [])
+  assert.deepEqual(output('lolxh', 2, { targetCriticallyWounded: true, targetCurrentHp: 1 }).rows, [])
+})
+
+test('非致死攻撃のHP欠損・不正値を上限なしとして計算しない', () => {
+  for (const [suffix, index] of [['saga', 2], ['saga', 3], ['lolxh', 1], ['lolxh', 2]] as const) {
+    for (const targetCurrentHp of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      assert.deepEqual(output(suffix, index, { targetCurrentHp }).rows, [])
+    }
+  }
+})
+
+test('V7追加は変動状態や独立1命中を期間総量にしないが、アS1の固定期間のみ保持する', () => {
+  for (const [suffix, indices] of [['vulpis', [1, 2, 3]], ['haak', [2, 3]], ['saga', [2, 3]], ['lolxh', [1, 2]]] as const) {
+    for (const index of indices) {
+      const entry = getDamageThreeComparisonEntries([record(suffix, index)])[0]
+      const evaluated = evaluateDamageThreeComparisonEntry(entry, { defense: 1000, resistance: 60, enemyCount: 1 })
+      assert.deepEqual(evaluated.errors, [], `${suffix} S${index}`)
+      if (suffix !== 'vulpis' || index === 3) assert.equal(evaluated.totalDamage, null)
+    }
+  }
+  const entry = getDamageThreeComparisonEntries([record('haak', 1)])[0]
+  const evaluated = evaluateDamageThreeComparisonEntry(entry, { defense: 1000, resistance: 60, enemyCount: 1 })
+  close(evaluated.totalDamage, fixed('haak', 1).row.dps! * 30)
+})
+
+test('追加4名の素質原文・倍率やスキルBBが変化した場合、保存済みの式をそのまま適用しない', () => {
+  for (const [suffix, index] of [['vulpis', 1], ['haak', 1], ['saga', 2], ['lolxh', 2]] as const) {
+    const changedTalent = record(suffix, index)
+    for (const candidate of changedTalent.operatorProfile.talents![0].candidates!) {
+      candidate.description += ' 未確認の追加効果'
+    }
+    assert.deepEqual(outputRecord(changedTalent).rows, [], `${suffix}: changed talent description`)
+    const changedSkill = record(suffix, index)
+    changedSkill.skillLevels.at(-1)!.blackboard![0].value! += 1
+    assert.deepEqual(outputRecord(changedSkill).rows, [], `${suffix}: changed skill blackboard`)
+  }
+  for (const suffix of ['vulpis', 'haak']) {
+    const missing = record(suffix, 1)
+    for (const candidate of missing.operatorProfile.talents![0].candidates!) {
+      candidate.blackboard = candidate.blackboard!.filter(item => item.key !== 'atk_scale')
+    }
+    assert.deepEqual(outputRecord(missing).rows, [], `${suffix}: missing talent scale`)
+  }
+})
+
 test('ブリッツS2は発動後だけを計算し、スタン時の160%素質を1.5倍して軽減する', () => {
   for (const stunned of [false, true]) for (const defense of [0, 1000, 10000]) {
     for (const type of ['PHYSICAL', 'ARTS'] as const) {
@@ -196,6 +360,18 @@ test('バグパイプの2体目に使用する固定資料の素質も、liveパ
       candidate.blackboard = candidate.blackboard!.filter(item => item.key !== key)
     }
     assert.deepEqual(outputRecord(skill, { actualAttackTargetCount: 2 }).rows, [])
+  }
+})
+
+test('バグパイプの確率と倍率がlive側で変化したら、固定した2体目だけ古い値で計算しない', () => {
+  for (const index of [1, 2, 3]) for (const key of ['prob', 'atk_scale']) for (const count of [1, 2]) {
+    const skill = record('bpipe', index)
+    for (const candidate of skill.operatorProfile.talents![0].candidates!) {
+      candidate.blackboard!.find(item => item.key === key)!.value! += 0.1
+    }
+    const result = outputRecord(skill, { actualAttackTargetCount: count })
+    assert.deepEqual(result.rows, [])
+    assert.ok(result.unsupportedReasons.some(reason => reason.includes(key)))
   }
 })
 
@@ -1172,10 +1348,10 @@ test('属性比較は新規の主攻撃の全ヒットを術化し、ウィン�
   }
 })
 
-test('近接追加142人の250技能が実データから有限結果を返し、残り55技能は理由付き未計算', () => {
-  assert.equal(sources.length, 142)
-  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 250)
-  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + (definition.deferredSkills?.length ?? 0), 0), 55)
+test('近接追加146人の260技能が実データから有限結果を返し、残り56技能は理由付き未計算', () => {
+  assert.equal(sources.length, 146)
+  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 260)
+  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + (definition.deferredSkills?.length ?? 0), 0), 56)
   for (const definition of EXPANDED_MELEE_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     assert.equal(definition.recipes.length + (definition.deferredSkills?.length ?? 0), source.skills.length)

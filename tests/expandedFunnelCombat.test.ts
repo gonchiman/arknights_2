@@ -12,9 +12,10 @@ import { evaluateTraitStructure } from '../src/lib/traitCombatEvaluation.ts'
 import { evaluateGuardTraits } from '../src/lib/guardTraitEvaluation.ts'
 import { classifySkill } from '../src/lib/classifier.ts'
 import { calculateMechAccordCurrentScale, getMechAccordMultiplierPercent } from '../src/lib/mechAccordDamage.ts'
+import { buildDamageCalculatorThreeCoverage } from '../src/lib/damageCalculatorThreeCoverage.ts'
 
 const sources = JSON.parse(readFileSync(new URL('../src/data/expandedArtsSources.json', import.meta.url), 'utf8')) as ExpandedOperatorSource[]
-const ids = ['char_328_cammou', 'char_4013_kjera', 'char_4054_malist', 'char_4040_rockr', 'char_1038_whitw2']
+const ids = ['char_328_cammou', 'char_4013_kjera', 'char_4054_malist', 'char_4040_rockr', 'char_1038_whitw2', 'char_377_gdglow']
 function record(id: string, index: number): SkillRecord {
   const source = sources.find(source => source.operatorId === id)!
   const skill = source.skills.find(skill => skill.skillIndex === index)!
@@ -48,7 +49,7 @@ const physical = (attack: number, defense: number) => Math.max(attack * 0.05, at
 const arts = (attack: number, resistance: number) => attack * Math.max(0.05, 1 - resistance / 100)
 const profile = { initialScale: 0.2, increment: 0.15, maximumScale: 1.1, baseMaximumStacks: 6 }
 
-test('操機術師8技能の全状態は1回分だけを計算し、DPSと有限総量を推定しない', () => {
+test('操機術師14技能の確認済み状態は1回分だけを計算し、未確認状態・DPS・有限総量を推定しない', () => {
   let count = 0
   for (const definition of EXPANDED_ARTS_DEFINITIONS.filter(definition => ids.includes(definition.operatorId))) {
     for (const recipe of definition.recipes) {
@@ -56,6 +57,11 @@ test('操機術師8技能の全状態は1回分だけを計算し、DPSと有限
       for (const stage of recipe.stages) for (const droneState of ['FIRST', 'CAPPED']) {
         const guard = { droneState, ...(stage.when ? { [stage.when.input]: stage.when.value } : {}) }
         const result = output(definition.operatorId, recipe.skillIndex, guard)
+        if (stage.unresolved?.length) {
+          assert.deepEqual(result.rows, [])
+          assert.ok(result.unsupportedReasons.length)
+          continue
+        }
         assert.deepEqual(result.unsupportedReasons, [], `${definition.operatorId} S${recipe.skillIndex} ${stage.id}`)
         assert.ok(result.rows.length)
         assert.equal(result.attackInterval, null)
@@ -66,7 +72,7 @@ test('操機術師8技能の全状態は1回分だけを計算し、DPSと有限
       }
     }
   }
-  assert.equal(count, 8)
+  assert.equal(count, 14)
 })
 
 test('共通倍率関数は既存20～110%を維持し、上限変更を全攻撃倍率へ掛けない', () => {
@@ -143,9 +149,10 @@ test('荒蕪ラップランドは常時追加・素質追加・上限補正を�
   }
 })
 
-test('全8技能の同属性選択は通常計算と一致し、仮想物理はMAINだけを変える', () => {
+test('全14技能の同属性選択は通常計算と一致し、仮想物理はMAINだけを変える', () => {
   for (const definition of EXPANDED_ARTS_DEFINITIONS.filter(definition => ids.includes(definition.operatorId))) {
     for (const recipe of definition.recipes) for (const stage of recipe.stages) {
+      if (stage.unresolved?.length) continue
       const guard = { droneState: 'CAPPED', lapplandTalentStage: 3, enemyResistance: 40,
         ...(stage.when ? { [stage.when.input]: stage.when.value } : {}) }
       const native = output(definition.operatorId, recipe.skillIndex, guard)
@@ -157,11 +164,127 @@ test('全8技能の同属性選択は通常計算と一致し、仮想物理はM
       const components = native.rows[0].attackComponents!
       const expected = components.reduce((sum, component) => sum + component.branches.reduce((subtotal, branch) => {
         const amount = branch.mitigation.attack
-        return subtotal + (component.role === 'MAIN' ? physical(amount, 1000) : arts(amount, 40)) * component.count * branch.probability
+        return subtotal + (component.role === 'MAIN' ? physical(amount, 1000) : arts(amount, Math.max(0, 40 - native.resistanceIgnoreFixed)))
+          * component.expectedHitCount * branch.probability
       }, 0), 0)
       close(row.perAttack, expected)
       assert.deepEqual(row.attackComponents?.map(component => component.damageType), components.map(component => component.role === 'MAIN' ? 'PHYSICAL' : 'ARTS'))
     }
+  }
+})
+
+test('イェラS2は凍結無効の対象に本体1発と独立した放出2ユニットを計算する', () => {
+  for (const groundTilesInRange of [0, 2, 3]) for (const [droneState, ramp] of [['FIRST', 0.2], ['CAPPED', 1.1]] as const) {
+    const { row } = at('char_4013_kjera', 2, { groundTilesInRange, droneState }, 60)
+    const attack = buffed(354, 0.55 + (groundTilesInRange >= 3 ? 0.16 : 0.1))
+    close(row.perAttack, arts(attack, 60) + 2 * arts(attack * ramp, 60))
+    assert.deepEqual(row.attackComponents!.map(part => [part.role, part.count]), [['MAIN', 1], ['MAIN', 2]])
+  }
+  assert.deepEqual(output('char_4013_kjera', 2, { kjeraFreezeState: 'CHANGING' }).rows, [])
+  const changed = output('char_4013_kjera', 2, {}, row => {
+    row.skillLevels[9].blackboard!.find(entry => entry.key === 'attack@prob')!.value = 0.3
+  })
+  assert.deepEqual(changed.rows, [])
+})
+
+test('ミニマリストS2は上限到達済みの本体2発・浮遊2発に200%と会心を一度ずつ掛ける', () => {
+  const attack = 360
+  const native = at('char_4054_malist', 2, {}, 60)
+  close(native.row.perAttack, 2 * (arts(attack * 2, 60) + arts(attack * 2 * 1.1, 60)) * (0.75 + 0.25 * 1.5))
+  assert.equal(native.result.attackKind, 'NEXT_ATTACK')
+  assert.equal(native.result.attackInterval, null)
+  assert.deepEqual(native.row.attackComponents!.map(part => part.count), [2, 2])
+  const virtual = output('char_4054_malist', 2, { enemyResistance: 60 }, undefined, { virtualMainAttackType: 'PHYSICAL' })
+  const row = virtual.rows.find(row => row.axisValue === 1000)!
+  close(row.perAttack, 2 * (0.75 * physical(attack * 2, 1000) + 0.25 * physical(attack * 2 * 1.5, 1000)
+    + 0.75 * arts(attack * 2 * 1.1, 60) + 0.25 * arts(attack * 2 * 1.1 * 1.5, 60)))
+  assert.deepEqual(output('char_4054_malist', 2, { droneState: 'FIRST' }).rows, [])
+})
+
+test('荒蕪ラップランドS3は特殊ユニット3/4体と重複しない120%毎秒を独立させる', () => {
+  const attack = buffed(402, 0.8)
+  for (const lapplandTalentStage of [0, 1, 2, 3]) for (const [droneState, firstScale] of [['FIRST', 0.2], ['CAPPED', 1.1]] as const) {
+    const scale = droneState === 'CAPPED' && lapplandTalentStage >= 1 ? 1.21 : firstScale
+    const count = lapplandTalentStage === 3 ? 4 : 3
+    const { result, row } = at('char_1038_whitw2', 3, { lapplandTalentStage, droneState }, 60)
+    close(row.perAttack, arts(attack, 60) + count * arts(attack * scale, 60))
+    close(row.damageOverTimeDps!, arts(attack * 1.2, 60))
+    assert.equal(row.combinedDps, null)
+    assert.equal(result.attackInterval, null)
+    assert.deepEqual(row.attackComponents!.map(part => [part.role, part.count]), [['MAIN', 1], ['ADDITIONAL', count]])
+    const virtual = output('char_1038_whitw2', 3, { lapplandTalentStage, droneState, enemyResistance: 60 }, undefined,
+      { virtualMainAttackType: 'PHYSICAL' })
+    const vrow = virtual.rows.find(row => row.axisValue === 1000)!
+    close(vrow.perAttack, physical(attack, 1000) + count * arts(attack * scale, 60))
+    close(vrow.damageOverTimeDps!, arts(attack * 1.2, 60))
+  }
+})
+
+test('GGはPRD不発回数と特性倍率を独立させ、通常弾か自爆の排他的な期待値だけを求める', () => {
+  for (const index of [1, 2, 3]) for (const misses of [0, 1, 10, 38]) {
+    for (const [droneState, ramp] of [['FIRST', 0.2], ['CAPPED', 1.1]] as const) {
+      const attack = buffed(391, index === 1 ? 0.4 : index === 2 ? 0.6 : 0.8)
+      const count = index === 3 ? 3 : 2, chance = 0.015 * (misses + 1)
+      const { result, row } = at('char_377_gdglow', index, { droneState, goldenglowExplosionMisses: misses }, 60)
+      const normal = count * (1 - chance) * arts(attack * ramp, 45)
+      const explosion = count * chance * arts(attack * 3, 45)
+      close(row.perAttack, (index === 3 ? 0 : arts(attack, 45)) + normal + explosion)
+      const parts = row.attackComponents!
+      const exploding = parts.find(part => part.label === '浮遊ユニットの自爆')!
+      const drone = parts.find(part => part.label === '放出した浮遊ユニット')!
+      close(exploding.expectedDamage, explosion)
+      close(exploding.attackScale, 3)
+      close(drone.expectedDamage, normal)
+      close(exploding.expectedHitCount + drone.expectedHitCount, count)
+      assert.equal(exploding.role, 'ADDITIONAL')
+      assert.equal(result.attackInterval, null)
+      assert.equal(row.dps, null)
+      assert.equal(row.combinedDps, null)
+      assert.equal(parts.some(part => part.label === '本体の術攻撃'), index !== 3)
+    }
+  }
+})
+
+test('GGの仮想属性は本体・放出通常弾だけを変え、自爆の術属性とRES15無視を維持する', () => {
+  for (const index of [1, 2, 3]) for (const defense of [0, 1000, 10000]) {
+    const attack = buffed(391, index === 1 ? 0.4 : index === 2 ? 0.6 : 0.8)
+    const count = index === 3 ? 3 : 2, chance = 0.165
+    const result = output('char_377_gdglow', index, { droneState: 'CAPPED', goldenglowExplosionMisses: 10 }, undefined,
+      { enemy: { defense, resistance: 60 }, virtualMainAttackType: 'PHYSICAL' })
+    assert.deepEqual(result.unsupportedReasons, [])
+    close(result.rows[0].perAttack, (index === 3 ? 0 : physical(attack, defense))
+      + count * (1 - chance) * physical(attack * 1.1, defense) + count * chance * arts(attack * 3, 45))
+    assert.equal(result.rows[0].attackComponents!.find(part => part.label === '浮遊ユニットの自爆')!.damageType, 'ARTS')
+  }
+})
+
+test('GGの確定自爆境界は素質の保留として表示し、確率元の欠落・変更や範囲外条件を拒否する', () => {
+  for (const index of [1, 2, 3]) {
+    for (const goldenglowExplosionMisses of [-1, 0.5, 39, 40, 41]) {
+      const result = output('char_377_gdglow', index, { goldenglowExplosionMisses })
+      assert.deepEqual(result.rows, [])
+      assert.ok(result.unsupportedReasons.length)
+    }
+    for (const key of ['attack@prob', 'attack@atk_scale_2', 'attack@max_stack_cnt']) {
+      const result = output('char_377_gdglow', index, {}, skill => {
+        for (const candidate of skill.operatorProfile.talents![0].candidates ?? [])
+          candidate.blackboard = candidate.blackboard?.filter(entry => entry.key !== key)
+      })
+      assert.deepEqual(result.rows, [])
+    }
+    for (const [key, value] of [['attack@prob', 0.02], ['attack@max_stack_cnt', 41]] as const) {
+      const changed = output('char_377_gdglow', index, {}, skill => {
+        for (const candidate of skill.operatorProfile.talents![0].candidates ?? [])
+          candidate.blackboard!.find(entry => entry.key === key)!.value = value
+      })
+      assert.equal(changed.rows.length, 0)
+      assert.ok(changed.unsupportedReasons.some(reason => reason.includes(key)))
+    }
+    assert.deepEqual(output('char_377_gdglow', index, { actualAttackTargetCount: 2 }).rows, [])
+    const coverage = buildDamageCalculatorThreeCoverage([record('char_377_gdglow', index)])[0]
+    assert.equal(coverage.status, 'CONDITIONAL')
+    assert.ok(coverage.issues.some(issue => issue.id.includes('goldenglow-explosion-prd-boundary') && issue.relatedSections.includes('素質1')))
+    assert.ok(coverage.deferredReasons.some(reason => reason.includes('39〜40')))
   }
 })
 

@@ -9,6 +9,7 @@ import { getOperatorPassives } from './operatorProfile.ts'
  * Only the listed healing/attack-replacement states are outside damage calculation.
  */
 const REVIEWED_SKILLS: Readonly<Record<string, readonly number[]>> = {
+  char_123_fang: [1], char_209_ardign: [1], char_349_chiave: [1], char_362_saga: [1],
   char_147_shining: [1, 2, 3], char_179_cgbird: [1, 2, 3], char_4042_lumen: [1, 2, 3],
   char_1016_agoat2: [1, 2, 3], char_436_whispr: [1, 2], char_4224_turdus: [1, 2],
   char_108_silent: [1, 2], char_348_ceylon: [1, 2], char_402_tuye: [1, 2],

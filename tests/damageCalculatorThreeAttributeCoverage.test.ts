@@ -19,7 +19,7 @@ const json = <T>(path: string): T => JSON.parse(readFileSync(new URL(path, impor
 const guards = json<{ guards: { id: string; name: string; subProfessionId: string;
   skills: { skillId: string; skillIndex: number; raw: RawSkillLevel }[] }[] }>('./fixtures/sixStarGuardSources.json').guards
 const profiles = json<{ operatorId: string; operatorProfile: OperatorCombatProfile }[]>('./fixtures/sixStarGuardProfiles.json')
-const sources = ['Melee', 'Ranged', 'Arts', 'Caster'].flatMap(group =>
+const sources = ['Melee', 'Ranged', 'Arts', 'Caster', 'Support'].flatMap(group =>
   json<ExpandedOperatorSource[]>(`../src/data/expanded${group}Sources.json`))
 
 function record(operatorId: string, skillIndex: number): SkillRecord {
