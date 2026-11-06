@@ -13,7 +13,8 @@ export const TRAIT_STRUCTURE_JOB_IDS = ['fighter', 'lord', 'crusher', 'hammer', 
   'artsfghter', 'musha', 'instructor', 'fearless', 'reaper', 'librator',
   'pioneer', 'agent', 'charger', 'stalker', 'protector', 'shotprotector', 'artsprotector', 'unyield', 'duelist', 'guardian', 'fortress', 'counsellor',
   'fastshot', 'aoesniper', 'longrange', 'siegesniper', 'reaperrange', 'closerange', 'hunter', 'bombarder', 'loopshooter', 'skybreaker', 'craftsman', 'merchant', 'dollkeeper',
-  'corecaster', 'splashcaster', 'blastcaster', 'chain', 'slower', 'underminer', 'incantationmedic', 'phalanx'] as const
+  'corecaster', 'splashcaster', 'blastcaster', 'chain', 'slower', 'underminer', 'incantationmedic', 'phalanx',
+  'traper', 'skywalker', 'mercenary', 'physician', 'watchman', 'chainhealer', 'mystic'] as const
 export type TraitStructureJobId = typeof TRAIT_STRUCTURE_JOB_IDS[number]
 export interface TraitStructureSelection { readonly operatorId: string }
 export interface TraitStructureGrowthSelection { readonly phaseIndex?: number; readonly operatorLevel?: number }
@@ -29,7 +30,7 @@ export type TraitStructureEffect = CombatEffectContext & {
   readonly resolution: 'RESOLVED' | 'PARTIAL'
 } & (
   | { readonly item: 'BLOCK_COUNT' | 'MAX_TARGETS'; readonly operation: 'SET'; readonly unit: 'ENEMY'; readonly value: CombatNumericValue }
-  | { readonly item: 'HIT_COUNT'; readonly operation: 'SET'; readonly unit: 'HIT'; readonly value: CombatNumericValue }
+  | { readonly item: 'HIT_COUNT' | 'STORED_CHARGES'; readonly operation: 'SET'; readonly unit: 'HIT'; readonly value: CombatNumericValue }
   | { readonly item: 'ATTACK_SCALE'; readonly operation: 'MULTIPLY'; readonly unit: 'MULTIPLIER'; readonly value: CombatNumericValue }
   | { readonly item: 'DAMAGE_TYPE'; readonly operation: 'SET'; readonly unit: 'DAMAGE_TYPE'; readonly value: 'ARTS' | 'PHYSICAL' }
   | { readonly item: 'RANGED_ATTACK_ENABLED' | 'NORMAL_ATTACK_ENABLED' | 'ALLY_HEALING_ENABLED' | 'NATURAL_SP_RECOVERY_ENABLED'; readonly operation: 'SET_ENABLED'; readonly unit: 'BOOLEAN'; readonly value: boolean }
@@ -155,8 +156,17 @@ const DEFINITIONS: Record<TraitStructureJobId, JobDefinition> = {
   underminer: { profession: 'SUPPORT', descriptions: ['敵に術ダメージを与える'], keys: [], categories: ['DAMAGE_TYPE'] },
   incantationmedic: { profession: 'MEDIC', descriptions: ['術ダメージを与え、敵を攻撃するたび攻撃範囲内の味方1人のHPを与ダメージの{scale:0%}回復'],
     keys: ['scale'], categories: ['DAMAGE_TYPE', 'HP_CHANGE'] },
+  mystic: { profession: 'CASTER', descriptions: ['敵に術ダメージを与える 攻撃の対象がいない場合はエネルギーをチャージして(最大3回)次の攻撃時に一斉発射する'],
+    keys: ['times', 'times_2'], categories: ['ATTACK_BEHAVIOR', 'DAMAGE_TYPE'] },
   phalanx: { profession: 'CASTER', descriptions: ['通常時攻撃しない、防御力と術耐性大幅上昇 スキル発動中、通常攻撃が攻撃範囲内の敵全員に範囲術ダメージを与える'],
     keys: ['def', 'magic_resistance'], categories: ['ATTACK_BEHAVIOR', 'DAMAGE_TYPE', 'ABILITY'] },
+  traper: { profession: 'SPECIAL', descriptions: ['罠を使用可能、敵のいるマスに罠配置不可'], keys: [], categories: ['SUMMON', 'DEPLOYMENT'] },
+  skywalker: { profession: 'SPECIAL', descriptions: ['離陸中、空中の敵を2体までブロックできる'], keys: [], categories: ['BLOCK'] },
+  mercenary: { profession: 'WARRIOR', descriptions: ['コストを消費して戦闘能力を強化できる'], keys: [], categories: ['RESOURCE', 'ABILITY'] },
+  physician: { profession: 'MEDIC', descriptions: ['味方のHPを回復'], keys: [], categories: ['HP_CHANGE'] },
+  watchman: { profession: 'MEDIC', descriptions: ['味方のHPを回復 離陸できる'], keys: [], categories: ['HP_CHANGE', 'ATTACK_BEHAVIOR'] },
+  chainhealer: { profession: 'MEDIC', descriptions: ['味方のHPを回復 味方を治療する際、3体目の味方まで治療が跳躍していく(跳躍するたびに治療量は25%ずつ減衰)'],
+    keys: ['attack@chain.max_target', 'attack@chain.atk_scale'], prefabKey: '-1', categories: ['HP_CHANGE', 'ATTACK_BEHAVIOR'] },
 }
 
 export function isTraitStructureOperator(row: Pick<SkillRecord, 'profession' | 'subProfessionId'>): boolean {
@@ -260,7 +270,7 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
         item: 'ATTACK_PRIORITY', operation: 'SET', unit: 'PRIORITY_RULE',
         value: job === 'fastshot' ? 'AIRBORNE' : job === 'longrange' ? 'LOWEST_DEFENSE' : 'HIGHEST_WEIGHT',
       })
-      if (['corecaster', 'splashcaster', 'blastcaster', 'chain', 'slower', 'underminer', 'incantationmedic', 'phalanx', 'artsprotector', 'aoesniper'].includes(job)) {
+      if (['corecaster', 'splashcaster', 'blastcaster', 'chain', 'slower', 'underminer', 'incantationmedic', 'phalanx', 'mystic', 'artsprotector', 'aoesniper'].includes(job)) {
         effects.push({ ...context('normal-attack-damage-type', 'DAMAGE', 'ATTACK_RULE', 'description:damage_type', 'NORMAL_ATTACK'),
           condition: ['phalanx', 'artsprotector'].includes(job) ? compare('source.skillActive', true) : null,
           item: 'DAMAGE_TYPE', operation: 'SET', unit: 'DAMAGE_TYPE', value: job === 'aoesniper' ? 'PHYSICAL' : 'ARTS' })
@@ -277,6 +287,12 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
         condition: compare('target.inFrontalTiles', true), item: 'ATTACK_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: read('atk_scale', { expected: 1.5 }),
         parameterBindings: { 'condition.rangeId': source.rangeId! },
       })
+      if (job === 'mystic') {
+        if (source.blackboard.some(entry => entry.key === 'times_2')) read('times_2', { expected: 0 })
+        effects.push({ ...context('stored-energy', 'DAMAGE', 'ATTACK_RULE', 'times', 'NORMAL_ATTACK'),
+          item: 'STORED_CHARGES', operation: 'SET', unit: 'HIT', value: read('times', { expected: 3 }) })
+        notes.push('通常弾と指定した貯蔵弾を分けて評価する。貯蔵に要する時間・攻撃間の再貯蔵は計算しない。')
+      }
       if (job === 'hunter') {
         read('value', { positive: true })
         effects.push({ ...context('loaded-attack-scale', 'DAMAGE', 'ATTACK_RULE', 'atk_scale', 'NORMAL_ATTACK'),
@@ -284,6 +300,25 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
         notes.push('装填済みの弾による1攻撃を評価する。装填・消費による攻撃周期は別途確認する。')
       }
       if (job === 'loopshooter') notes.push('投擲物を所持した状態の1攻撃を評価する。飛距離による帰還時間は別途確認する。')
+      if (job === 'traper') notes.push('配置が成立した罠の効果と本人の攻撃を個別に評価する。罠の配置可否や再配置待ち時間は計算しない。')
+      if (job === 'mercenary') notes.push('コスト消費による強化量は各スキル・素質の定義に従う。特性から攻撃倍率を追加しない。')
+      if (job === 'skywalker') {
+        effects.push({ ...context('airborne-block-count', 'CONTROL', 'DYNAMIC_RULE', 'description:airborne_block_count'),
+          item: 'BLOCK_COUNT', operation: 'SET', unit: 'ENEMY', value: 2, condition: compare('source.isAirborne', true) })
+        notes.push('離陸中にブロックできる空中の敵の上限。攻撃対象数や地上の敵のブロック数として使用しない。')
+      }
+      if (['physician', 'watchman', 'chainhealer'].includes(job)) {
+        effects.push({ ...context('healing-normal-action', 'DAMAGE', 'ATTACK_RULE', 'description:healing_instead_of_attack'),
+          item: 'NORMAL_ATTACK_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: false })
+        notes.push('基本の通常行動は味方の治療。敵への攻撃に置き換える確認済みのスキル段階だけが、この規則を上書きする。')
+        if (job === 'watchman') notes.push('離陸による位置・治療対象の変化はダメージへ加算しない。')
+        if (job === 'chainhealer') {
+          const count = read('attack@chain.max_target', { expected: 3 })
+          const retention = read('attack@chain.atk_scale', { expected: 0.75 })
+          if (count === null || retention === null) verified = false
+          notes.push('治療は最大3体、跳躍ごとに25%減衰。敵への攻撃の連鎖としては適用しない。')
+        }
+      }
       if (job === 'guardian') effects.push({ ...context('healing-skills', 'SURVIVAL', 'DYNAMIC_RULE', 'description:healing_skills'),
         item: 'ALLY_HEALING_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: true })
       if (job === 'counsellor') notes.push('配置待機中の味方への効果は、本体の直接ダメージへ加算しない。')
@@ -426,7 +461,7 @@ export function formatTraitStructureCondition(condition: CombatCondition | null)
 export const formatTraitStructureTiming = formatCombatTiming
 export const formatTraitStructureTarget = formatCombatRecipient
 export function formatTraitStructureEffectItem(item: TraitStructureEffect['item']): string {
-  return { BLOCK_COUNT: 'ブロック数', MAX_TARGETS: '同時攻撃対象数', HIT_COUNT: '通常攻撃のヒット数', ATTACK_SCALE: '攻撃力倍率',
+  return { BLOCK_COUNT: 'ブロック数', MAX_TARGETS: '同時攻撃対象数', HIT_COUNT: '通常攻撃のヒット数', STORED_CHARGES: '通常貯蔵数の上限', ATTACK_SCALE: '攻撃力倍率',
     DAMAGE_TYPE: '通常攻撃のダメージ種別', RANGED_ATTACK_ENABLED: '遠距離攻撃', NORMAL_ATTACK_ENABLED: '通常攻撃',
     ALLY_HEALING_ENABLED: '味方からの治療', NATURAL_SP_RECOVERY_ENABLED: 'SP自然回復', ATTACK_RANGE: '基本攻撃範囲', ATTACK_TARGETING: '通常攻撃の対象',
     SPLASH_DAMAGE: '周囲へのダメージ', HP: 'HP', ATK_BUFF_RATIO: '攻撃力上昇割合', ATTACK_PRIORITY: '攻撃の優先対象',

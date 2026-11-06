@@ -116,6 +116,8 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
     numeric('defense-reduction-ratio', '防御力低下', stage.defenseReductionRatio, n => `−${percent(n)}`, mitigationOptions('PHYSICAL'))
     numeric('resistance-reduction-ratio', '術耐性低下', stage.resistanceReductionRatio, n => `−${percent(n)}`, mitigationOptions('ARTS'))
     numeric('defense-reduction-fixed', '防御力固定低下', stage.defenseReductionFixed, n => `−${number(n)}`, mitigationOptions('PHYSICAL'))
+    numeric('defense-reduction-final-fixed', '防御力固定低下（割合低下後）', stage.defenseReductionFinalFixed, n => `−${number(n)}`, mitigationOptions('PHYSICAL'))
+    numeric('attack-final-flat', '攻撃力（最終加算）', stage.attackFinalFlat, n => `＋${number(n)}`)
     numeric('resistance-reduction-fixed', '術耐性固定低下', stage.resistanceReductionFixed, n => `−${number(n)}`, mitigationOptions('ARTS'))
     numeric('damage-scale', '与ダメージ倍率', stage.damageScale, n => `×${number(n)}`)
     if (stage.duration !== undefined) add('duration', '持続時間', () => stage.duration === 'UNTIL_EXIT' ? '退場まで' : `${number(value(stage.duration))}秒`,

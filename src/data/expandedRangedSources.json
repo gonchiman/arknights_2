@@ -40231,5 +40231,4698 @@
         }
       }
     ]
+  },
+  {
+    "operatorId": "char_126_shotst",
+    "operatorName": "メテオ",
+    "profession": "SNIPER",
+    "rarity": 4,
+    "subProfessionId": "fastshot",
+    "phaseIndex": 2,
+    "skillLevelIndex": 9,
+    "profile": {
+      "affiliation": "カジミエーシュ",
+      "affiliationIds": {
+        "nationId": "kazimierz",
+        "groupId": null,
+        "teamId": null
+      },
+      "phases": [
+        {
+          "characterPrefabKey": "char_126_shotst",
+          "rangeId": "3-1",
+          "maxLevel": 45,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 612,
+                "atk": 159,
+                "def": 58,
+                "magicResistance": 0,
+                "cost": 10,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 45,
+              "data": {
+                "maxHp": 875,
+                "atk": 266,
+                "def": 97,
+                "magicResistance": 0,
+                "cost": 10,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "char_126_shotst",
+          "rangeId": "3-3",
+          "maxLevel": 60,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 875,
+                "atk": 266,
+                "def": 97,
+                "magicResistance": 0,
+                "cost": 12,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 60,
+              "data": {
+                "maxHp": 1123,
+                "atk": 381,
+                "def": 139,
+                "magicResistance": 0,
+                "cost": 12,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3241",
+              "count": 3,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30042",
+              "count": 1,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30062",
+              "count": 1,
+              "type": "MATERIAL"
+            }
+          ]
+        },
+        {
+          "characterPrefabKey": "char_126_shotst",
+          "rangeId": "3-3",
+          "maxLevel": 70,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1123,
+                "atk": 381,
+                "def": 139,
+                "magicResistance": 0,
+                "cost": 12,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 70,
+              "data": {
+                "maxHp": 1370,
+                "atk": 465,
+                "def": 165,
+                "magicResistance": 0,
+                "cost": 12,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3242",
+              "count": 5,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30043",
+              "count": 14,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30033",
+              "count": 12,
+              "type": "MATERIAL"
+            }
+          ]
+        }
+      ],
+      "favorKeyFrames": [
+        {
+          "level": 0,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        },
+        {
+          "level": 50,
+          "data": {
+            "maxHp": 0,
+            "atk": 65,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        }
+      ],
+      "trait": null,
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "対空エキスパート",
+              "description": "飛行ユニットを攻撃時、攻撃力が120%まで上昇",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "atk_scale",
+                  "value": 1.2,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 4,
+              "prefabKey": "1",
+              "name": "対空エキスパート",
+              "description": "飛行ユニットを攻撃時、攻撃力が125%<@ba.talpu>（+5%）</>まで上昇",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "atk_scale",
+                  "value": 1.25,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "対空エキスパート",
+              "description": "飛行ユニットを攻撃時、攻撃力が135%まで上昇",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "atk_scale",
+                  "value": 1.35,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 4,
+              "prefabKey": "1",
+              "name": "対空エキスパート",
+              "description": "飛行ユニットを攻撃時、攻撃力が140%<@ba.talpu>（+5%）</>まで上昇",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "atk_scale",
+                  "value": 1.4,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        }
+      ],
+      "potentialRanks": [
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "再配置時間-4秒",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "RESPAWN_TIME",
+                  "formulaItem": "ADDITION",
+                  "value": -4,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "攻撃力+23",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "ATK",
+                  "formulaItem": "ADDITION",
+                  "value": 23,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "CUSTOM",
+          "description": "素質強化",
+          "buff": null,
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        }
+      ],
+      "modules": [
+        {
+          "uniEquipId": "uniequip_002_shotst",
+          "uniEquipName": "ハンティングナイフ",
+          "uniEquipIcon": "uniequip_002_shotst",
+          "uniEquipDesc": "鬱蒼とした山林を駆け抜けてきて、彼女の心臓は早鐘を打っていた。足元でもがき続ける獲物がその鼻から吐き出す息は、林間に漂う寒さによって、白い霧のようにもくもくと立ち昇っていく。\n彼女は身をかがめると、獲物の耳元で慰めの言葉を優しく口にした。\n「シーッ。すぐに終わるから、じっとしててね。」\n彼女が穏やかに撫でると、獲物は少しずつ暴れるのをやめ、真っ黒な瞳を彼女へと向けた。よどんだ水たまりのような目の中で、瞳は変わらずに揺れ動いている。ぐるぐると渦を巻きながら、自分と視線を交わすその目から、粘り強く最後の慈悲を探ろうとしている。\nしかし彼女の声は、落葉を吹き散らす無情な風のように響いた。\n「すぐに終わるから。」\n腰に帯びたハンティングナイフを抜くと、素早く手際のいい動きで獲物の喉笛を切り裂く。鮮血が傷口から流れ落ち、湿った泥に染み込んでいく。残された濃い血のにおいは、腐敗した落葉のにおいと混ざり合って、彼女の鼻腔にこびりついた。\n春の気配が漂い始めた季節、氷も残る雪解け水の渓流に手を浸すと、指は赤くかじかんだ。ナイフについた血は水の流れに溶け、川の中を一筋の赤い糸が山林の端へと伸びていく。\n彼女の背後の樹上には一枚の完全な毛皮が吊るされ、その下で燃え盛る焚火が毛皮を炙り、水分を飛ばしていく。獲物は既に半分に分けられており、一方は火にかけられ、食欲をそそる脂のにおいを発している。もう一方は渓流の畔に捨て置かれており、やがて血のにおいに誘われた動物がそれを見つけ出し、持ち去ることだろう。\n夜が去って朝が訪れ、日差しが東の空から林の中に差し込んでくる。きらきらと煌く渓流の水面で繰り返し屈折したそれが、夜を無防備に過ごしていた両目に届く。彼女はさっと手の甲を目の前に掲げ、突き刺すような陽光に目が慣れるのを待った。まぶたの毛細血管を流れていく温かさが、その美しい光を自らの目で見てみてはどうかと彼女を誘う。彼女はひとつ息を吐いて、固く閉じた指を少しずつ開いた。まつげを何度か震わせてから目を見開けば、指の隙間から漏れ出してきたのは、一面に広がる鮮やかな緑の木々だった。\n林の奥では一匹の雌の獣が、木々に隠れながら悠々と草を食んでいた。その深い林が既に自らを閉じ込める檻と化していることにも、今まさに弓につがえられた一本の鋭い矢が自らの喉元に狙いを定めていることにも気づかないまま。",
+          "typeIcon": "mar-x",
+          "typeName1": "MAR",
+          "typeName2": "X",
+          "equipShiningColor": "red",
+          "showEvolvePhase": "PHASE_2",
+          "unlockEvolvePhase": "PHASE_2",
+          "charId": "char_126_shotst",
+          "tmplId": null,
+          "showLevel": 1,
+          "unlockLevel": 40,
+          "missionList": [
+            "uniequip_002_shotst_1",
+            "uniequip_002_shotst_2"
+          ],
+          "unlockFavors": {
+            "1": 0,
+            "2": 2732,
+            "3": 10070
+          },
+          "itemCost": {
+            "1": [
+              {
+                "id": "mod_unlock_token",
+                "count": 1,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30083",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 20000,
+                "type": "GOLD"
+              }
+            ],
+            "2": [
+              {
+                "id": "mod_unlock_token",
+                "count": 1,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_1",
+                "count": 15,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30093",
+                "count": 5,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 25000,
+                "type": "GOLD"
+              }
+            ],
+            "3": [
+              {
+                "id": "mod_unlock_token",
+                "count": 1,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_2",
+                "count": 5,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "31023",
+                "count": 6,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 30000,
+                "type": "GOLD"
+              }
+            ]
+          },
+          "type": "ADVANCED",
+          "uniEquipGetTime": 1678759200,
+          "uniEquipShowEnd": 1678759200,
+          "charEquipOrder": 1,
+          "hasUnlockMission": true,
+          "isSpecialEquip": false,
+          "specialEquipDesc": null,
+          "specialEquipColor": null,
+          "charColor": "#80b889",
+          "phases": [
+            {
+              "equipLevel": 1,
+              "parts": [
+                {
+                  "resKey": "shotst_equip_1_1_p1",
+                  "target": "TRAIT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": "飛行ユニットを攻撃時、攻撃力が<@ba.kw>{atk_scale:0%}</>まで上昇",
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 40
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.1,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": null,
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 100,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 22,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 2,
+              "parts": [
+                {
+                  "resKey": "shotst_equip_1_2_p1",
+                  "target": "TRAIT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": "飛行ユニットを攻撃時、攻撃力が<@ba.kw>{atk_scale:0%}</>まで上昇",
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 40
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.1,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": null,
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": null,
+                  "target": "TALENT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "飛行ユニットを攻撃時、攻撃力が140%まで上昇",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 40
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "1",
+                        "name": "対空エキスパート",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.4,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      },
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "飛行ユニットを攻撃時、攻撃力が145%<@ba.talpu>（+5%）</>まで上昇",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 40
+                        },
+                        "requiredPotentialRank": 4,
+                        "prefabKey": "1",
+                        "name": "対空エキスパート",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.45,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 150,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 27,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 3,
+              "parts": [
+                {
+                  "resKey": "shotst_equip_1_3_p1",
+                  "target": "TRAIT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": "飛行ユニットを攻撃時、攻撃力が<@ba.kw>{atk_scale:0%}</>まで上昇",
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 40
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.1,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": null,
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": null,
+                  "target": "TALENT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "飛行ユニットを攻撃時、攻撃力が150%まで上昇",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 40
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "1",
+                        "name": "対空エキスパート",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.5,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      },
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "飛行ユニットを攻撃時、攻撃力が155%<@ba.talpu>（+5%）</>まで上昇",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 40
+                        },
+                        "requiredPotentialRank": 4,
+                        "prefabKey": "1",
+                        "name": "対空エキスパート",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.55,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 180,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 30,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            }
+          ]
+        }
+      ],
+      "traitDescription": "飛行ユニットを優先して攻撃",
+      "subProfessionTraitDescription": ""
+    },
+    "skills": [
+      {
+        "skillIndex": 1,
+        "skillId": "skchr_shotst_1",
+        "raw": {
+          "name": "装甲砕き",
+          "rangeId": null,
+          "description": "次の通常攻撃時、敵に攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、{duration}秒間防御力<@ba.vup>-{-def:0%}</>",
+          "skillType": "AUTO",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WHEN_ATTACK",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 4,
+            "initSp": 0,
+            "increment": 1
+          },
+          "prefabId": "skchr_shotst_1",
+          "duration": -1,
+          "blackboard": [
+            {
+              "key": "atk_scale",
+              "value": 1.8,
+              "valueStr": null
+            },
+            {
+              "key": "def",
+              "value": -0.35,
+              "valueStr": null
+            },
+            {
+              "key": "duration",
+              "value": 5,
+              "valueStr": null
+            }
+          ]
+        }
+      },
+      {
+        "skillIndex": 2,
+        "skillId": "skchr_shotst_2",
+        "raw": {
+          "name": "装甲砕き・拡散",
+          "rangeId": null,
+          "description": "攻撃範囲内の敵最大<@ba.vup>5</>体に攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象を<@ba.vup>{duration}</>秒間防御力<@ba.vup>-{-def:0%}</>にする",
+          "skillType": "MANUAL",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WHEN_ATTACK",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 15,
+            "initSp": 0,
+            "increment": 1
+          },
+          "prefabId": "skchr_shotst_2",
+          "duration": -1,
+          "blackboard": [
+            {
+              "key": "atk_scale",
+              "value": 2,
+              "valueStr": null
+            },
+            {
+              "key": "def",
+              "value": -0.4,
+              "valueStr": null
+            },
+            {
+              "key": "duration",
+              "value": 5,
+              "valueStr": null
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "operatorId": "char_4138_narant",
+    "operatorName": "ナラントゥヤ",
+    "profession": "SNIPER",
+    "rarity": 6,
+    "subProfessionId": "loopshooter",
+    "phaseIndex": 2,
+    "skillLevelIndex": 9,
+    "profile": {
+      "affiliation": "サルゴン",
+      "affiliationIds": {
+        "nationId": "sargon",
+        "groupId": null,
+        "teamId": null
+      },
+      "phases": [
+        {
+          "characterPrefabKey": "char_4138_narant",
+          "rangeId": "3-3",
+          "maxLevel": 50,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1064,
+                "atk": 229,
+                "def": 60,
+                "magicResistance": 0,
+                "cost": 14,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 50,
+              "data": {
+                "maxHp": 1520,
+                "atk": 382,
+                "def": 100,
+                "magicResistance": 0,
+                "cost": 14,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "char_4138_narant",
+          "rangeId": "y-7",
+          "maxLevel": 80,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1520,
+                "atk": 382,
+                "def": 100,
+                "magicResistance": 0,
+                "cost": 16,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 80,
+              "data": {
+                "maxHp": 2000,
+                "atk": 546,
+                "def": 144,
+                "magicResistance": 0,
+                "cost": 16,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3241",
+              "count": 5,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30052",
+              "count": 7,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30042",
+              "count": 4,
+              "type": "MATERIAL"
+            }
+          ]
+        },
+        {
+          "characterPrefabKey": "char_4138_narant",
+          "rangeId": "y-7",
+          "maxLevel": 90,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 2000,
+                "atk": 546,
+                "def": 144,
+                "magicResistance": 0,
+                "cost": 16,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 90,
+              "data": {
+                "maxHp": 2500,
+                "atk": 675,
+                "def": 170,
+                "magicResistance": 0,
+                "cost": 16,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3243",
+              "count": 4,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30125",
+              "count": 4,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "31014",
+              "count": 7,
+              "type": "MATERIAL"
+            }
+          ]
+        }
+      ],
+      "favorKeyFrames": [
+        {
+          "level": 0,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        },
+        {
+          "level": 50,
+          "data": {
+            "maxHp": 0,
+            "atk": 90,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        }
+      ],
+      "trait": {
+        "candidates": [
+          {
+            "unlockCondition": {
+              "phase": "PHASE_0",
+              "level": 1
+            },
+            "requiredPotentialRank": 0,
+            "blackboard": {},
+            "overrideDescripton": "<@ba.kw>旋回投擲物</>を所持している場合のみ攻撃できる（投擲物は攻撃後一定速度で手元に戻る）",
+            "prefabKey": null,
+            "rangeId": null
+          }
+        ]
+      },
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "砂賊の流儀",
+              "description": "配置中、自身の攻撃が敵に命中するたびに対象から攻撃力を15（最大150まで）と防御力を10（最大100まで）<$ba.steal>奪取</>",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack@steal_atk",
+                  "value": 15,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@steal_atk_max",
+                  "value": 150,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@steal_def",
+                  "value": 10,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@steal_def_max",
+                  "value": 100,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 4,
+              "prefabKey": "1",
+              "name": "砂賊の流儀",
+              "description": "配置中、自身の攻撃が敵に命中するたびに対象から攻撃力を17<@ba.talpu>（+2）</>（最大170<@ba.talpu>（+20）</>まで）と防御力を11<@ba.talpu>（+1）</>（最大110<@ba.talpu>（+10）</>まで）<$ba.steal>奪取</>",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack@steal_atk",
+                  "value": 17,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@steal_atk_max",
+                  "value": 170,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@steal_def",
+                  "value": 11,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@steal_def_max",
+                  "value": 110,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "砂賊の流儀",
+              "description": "配置中、自身の攻撃が敵に命中するたびに対象から攻撃力を25（最大250まで）と防御力を20（最大200まで）<$ba.steal>奪取</>",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack@steal_atk",
+                  "value": 25,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@steal_atk_max",
+                  "value": 250,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@steal_def",
+                  "value": 20,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@steal_def_max",
+                  "value": 200,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 4,
+              "prefabKey": "1",
+              "name": "砂賊の流儀",
+              "description": "配置中、自身の攻撃が敵に命中するたびに対象から攻撃力を27<@ba.talpu>（+2）</>（最大270<@ba.talpu>（+20）</>まで）と防御力を21<@ba.talpu>（+1）</>（最大210<@ba.talpu>（+10）</>まで）<$ba.steal>奪取</>",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack@steal_atk",
+                  "value": 27,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@steal_atk_max",
+                  "value": 270,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@steal_def",
+                  "value": 21,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@steal_def_max",
+                  "value": 210,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        },
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "2",
+              "name": "婀娜やかな虚影",
+              "description": "35%の物理・術回避を獲得し、周囲8マス内にいる敵全員の物理・術攻撃の命中率-20%",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "prob",
+                  "value": 0.35,
+                  "valueStr": null
+                },
+                {
+                  "key": "damage_hitrate_physical",
+                  "value": -0.2,
+                  "valueStr": null
+                },
+                {
+                  "key": "damage_hitrate_magical",
+                  "value": -0.2,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 2,
+              "prefabKey": "2",
+              "name": "婀娜やかな虚影",
+              "description": "38%<@ba.talpu>（+3%）</>の物理・術回避を獲得し、周囲8マス内にいる敵全員の物理・術攻撃の命中率-20%",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "prob",
+                  "value": 0.38,
+                  "valueStr": null
+                },
+                {
+                  "key": "damage_hitrate_physical",
+                  "value": -0.2,
+                  "valueStr": null
+                },
+                {
+                  "key": "damage_hitrate_magical",
+                  "value": -0.2,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        }
+      ],
+      "potentialRanks": [
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "CUSTOM",
+          "description": "第二素質強化",
+          "buff": null,
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "攻撃力+27",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "ATK",
+                  "formulaItem": "ADDITION",
+                  "value": 27,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "CUSTOM",
+          "description": "第一素質強化",
+          "buff": null,
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        }
+      ],
+      "modules": [
+        {
+          "uniEquipId": "uniequip_002_narant",
+          "uniEquipName": "「黄砂の果てに」",
+          "uniEquipIcon": "uniequip_002_narant",
+          "uniEquipDesc": "ナラントゥヤは夢から飛び起きた。喉には熱い炭が詰まったようで、耳の奥にはまだ、夢で聞いた剣戟の音が残っている。彼女にとって、それは耐えがたい苦痛だった。\nテントを出ると、砂漠の頭上に月はなく、風は遠征に向かう騎兵隊のように、砂漠の奥へと激しく駆け抜けていく。\n「カン！キン！」鍛冶屋で聞くような音がますます大きくなる。音の源を探すナラントゥヤは、腰に差す半月刀が震えていることに気付いた。\n柄を握りしめれば止まるだろうと思いきや、逆に振動は一層激しくなり、そのせいで腕はしびれ、眩暈さえ覚えるほどだった。\n「止まれ！」彼女は怒鳴りながら、さらに強く刀を掴む。\nだが半月刀は彼女を引っ張るように、夜の闇へよろよろと走らせる。\nその時、彼女は見た。山のごとき巨槌が真っ赤な鉄床を激しく打ち叩き、戦太鼓と金属の叫び声が空に轟く光景を。凡庸な鉄を鍛えることなどない誇り高き巨槌は、やがて堅牢な鉄床そのものを刀の形に鍛え上げたのだった！\n戦太鼓の音は、ますますはっきりと聞こえてくる。そして、誰かがその刀を手に取り、遠征隊の先頭を歩いてゆく。その人物は命が尽きるまで、刀で硬い骨を断ち、傾いた旗を斬り倒していった。やがてその者の命が尽きると、刀は砂の中へ転がった。ナラントゥヤははっとした。自分は今、その砂の上に立っているのだ。\n「……違う」彼女は声をあげた。「あれはあたしじゃない！」\n彼女はもう刀の震えを止めようとせず、砂嵐の中にある幻想を打ち砕くかのように、思いきり刀を投げつけた。\n「お前の過去なんてどうでもいい！あたしはあたしの道を行く！ついてくる気がなけりゃ勝手にしな！」\nだが、自分がこの言葉をちゃんと叫んだかどうか、ナラントゥヤにはわからなかった。次の瞬間、意識は遠のき、彼女は砂漠に倒れてしまった。\n……\nナラントゥヤが目を覚ますと、傍らで飲み仲間が心配そうに、そしてどこか怯えた様子で彼女に扇子をあおいでいた。\n「飲みすぎたか？」\n客に出す酒に水を混ぜている屋台の主人は、ばつの悪そうな笑みを浮かべた。\n「あたしの刀はどこ！？」ナラントゥヤは手で腰回りを確認して刀がないことに気づき、額に脂汗を浮かべた。\nすると、飲み仲間たちは彼女を大岩の前まで案内した。\n「なあ、ナラントゥヤ。どうやったらこんなことが出来ちまうんだよ？」\nナラントゥヤは目をこすった。大岩に突き刺さっている合体した半月刀は、確かに自分のものだ。刀を引き抜こうとするが、刀も岩もびくともしない。\n「昨日の夜、雷が何発か鳴ってさ。そしたら酔っ払ったお前がテントから出てきて、雲に向かって大声で怒鳴ったかと思ったら刀を引き抜いて、この岩に叩きつけたんだよ！」飲み友達の一人が唾を飛ばしながらそう言った。「あの時のお前、本当に怖かったよ。すぐにでも借りてた酒代を全部返すわ……」\n「そうそう、マジで怖かった。しかも最後に大声で叫んでただろ——」\n「あたし、なんて叫んでた？」ナラントゥヤは断片的な記憶を思い出し、自分があんな威勢のいいセリフを思いついたことを内心ちょっと誇らしく思っていた。もう一度他の誰かの口から聞くのも悪くない。\n「こうだったぜ――『これ以上言うことを聞かないなら、売り払って純金の刀に換えちまうからね！』ってよ」」\n「え？いや違うでしょ、あたしが叫んだのはたしか……」\n「いや、それで合ってる。俺も聞いたし。お前らしいセリフだよ。」\n「……」c",
+          "typeIcon": "lps-x",
+          "typeName1": "LPS",
+          "typeName2": "X",
+          "equipShiningColor": "red",
+          "showEvolvePhase": "PHASE_2",
+          "unlockEvolvePhase": "PHASE_2",
+          "charId": "char_4138_narant",
+          "tmplId": null,
+          "showLevel": 1,
+          "unlockLevel": 60,
+          "missionList": [
+            "uniequip_002_narant_1",
+            "uniequip_002_narant_2"
+          ],
+          "unlockFavors": {
+            "1": 0,
+            "2": 2732,
+            "3": 10070
+          },
+          "itemCost": {
+            "1": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30165",
+                "count": 2,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 80000,
+                "type": "GOLD"
+              }
+            ],
+            "2": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_1",
+                "count": 60,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30115",
+                "count": 3,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 100000,
+                "type": "GOLD"
+              }
+            ],
+            "3": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_2",
+                "count": 20,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30135",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 120000,
+                "type": "GOLD"
+              }
+            ]
+          },
+          "type": "ADVANCED",
+          "uniEquipGetTime": 1773903600,
+          "uniEquipShowEnd": 1776132000,
+          "charEquipOrder": 1,
+          "hasUnlockMission": true,
+          "isSpecialEquip": false,
+          "specialEquipDesc": null,
+          "specialEquipColor": null,
+          "charColor": "#af1213",
+          "phases": [
+            {
+              "equipLevel": 1,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "DISPLAY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": "周囲8マス以内の敵を攻撃時、攻撃力が<@ba.kw>{atk_scale:0%}</>まで上昇",
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.1,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": null,
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": "narant_equip_1_1_p1",
+                  "target": "TALENT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "",
+                        "talentIndex": -1,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "10",
+                        "name": null,
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.1,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "atk",
+                  "value": 25,
+                  "valueStr": null
+                },
+                {
+                  "key": "def",
+                  "value": 25,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 2,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "DISPLAY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": "周囲8マス以内の敵を攻撃時、攻撃力が<@ba.kw>{atk_scale:0%}</>まで上昇",
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.1,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": null,
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": "narant_equip_1_2_p1",
+                  "target": "TALENT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "",
+                        "talentIndex": -1,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "10",
+                        "name": null,
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.1,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                },
+                {
+                  "resKey": "narant_equip_1_2_p2",
+                  "target": "TALENT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "配置中、自身の攻撃が敵に命中するたびに対象から攻撃力を25（最大275まで）と防御力を20（最大220まで）<$ba.steal>奪取</>。対象が周囲8マスの敵の場合は、1回の攻撃につき奪取を2回行う",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "1",
+                        "name": "砂賊の流儀",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack@steal_atk",
+                            "value": 25,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@steal_atk_max",
+                            "value": 275,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@steal_def",
+                            "value": 20,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@steal_def_max",
+                            "value": 220,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      },
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "配置中、自身の攻撃が敵に命中するたびに対象から攻撃力を27<@ba.talpu>（+2）</>（最大297<@ba.talpu>（+22）</>まで）と防御力を21<@ba.talpu>（+1）</>（最大231<@ba.talpu>（+11）</>まで）<$ba.steal>奪取</>。対象が周囲8マスの敵の場合は、1回の攻撃につき奪取を2回行う",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 4,
+                        "prefabKey": "1",
+                        "name": "砂賊の流儀",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack@steal_atk",
+                            "value": 27,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@steal_atk_max",
+                            "value": 297,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@steal_def",
+                            "value": 21,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@steal_def_max",
+                            "value": 231,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "atk",
+                  "value": 35,
+                  "valueStr": null
+                },
+                {
+                  "key": "def",
+                  "value": 35,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 3,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "DISPLAY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": "周囲8マス以内の敵を攻撃時、攻撃力が<@ba.kw>{atk_scale:0%}</>まで上昇",
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.1,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": null,
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": "narant_equip_1_3_p1",
+                  "target": "TALENT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "",
+                        "talentIndex": -1,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "10",
+                        "name": null,
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.1,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                },
+                {
+                  "resKey": "narant_equip_1_3_p2",
+                  "target": "TALENT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "配置中、自身の攻撃が敵に命中するたびに対象から攻撃力を25（最大300まで）と防御力を20（最大240まで）<$ba.steal>奪取</>。対象が周囲8マスの敵の場合は、1回の攻撃につき奪取を2回行う",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "1",
+                        "name": "砂賊の流儀",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack@steal_atk",
+                            "value": 25,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@steal_atk_max",
+                            "value": 300,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@steal_def",
+                            "value": 20,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@steal_def_max",
+                            "value": 240,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      },
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "配置中、自身の攻撃が敵に命中するたびに対象から攻撃力を27<@ba.talpu>（+2）</>（最大324<@ba.talpu>（+24）</>まで）と防御力を21<@ba.talpu>（+1）</>（最大252<@ba.talpu>（+12）</>まで）<$ba.steal>奪取</>。対象が周囲8マスの敵の場合は、1回の攻撃につき奪取を2回行う",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 4,
+                        "prefabKey": "1",
+                        "name": "砂賊の流儀",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack@steal_atk",
+                            "value": 27,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@steal_atk_max",
+                            "value": 324,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@steal_def",
+                            "value": 21,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@steal_def_max",
+                            "value": 252,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "atk",
+                  "value": 45,
+                  "valueStr": null
+                },
+                {
+                  "key": "def",
+                  "value": 45,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            }
+          ]
+        }
+      ],
+      "traitDescription": "<@ba.kw>旋回投擲物</>を所持している場合のみ攻撃できる（投擲物は攻撃後一定速度で手元に戻る）",
+      "subProfessionTraitDescription": ""
+    },
+    "skills": [
+      {
+        "skillIndex": 1,
+        "skillId": "skchr_narant_1",
+        "raw": {
+          "name": "旋刃",
+          "rangeId": null,
+          "description": "<@ba.rem>発動するたび初期状態と次の状態とが切り替わる：</>\n攻撃距離<@ba.vdown>-1</>、旋回投擲物が攻撃力の<@ba.vup>{attack@atk_scale:0%}</>の物理ダメージを与え、敵の間で数回跳躍する（最大<@ba.vup>{attack@times}</>回まで）",
+          "skillType": "MANUAL",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 5,
+            "initSp": 0,
+            "increment": 1
+          },
+          "prefabId": "skchr_narant_1",
+          "duration": 0,
+          "blackboard": [
+            {
+              "key": "attack@times",
+              "value": 3,
+              "valueStr": null
+            },
+            {
+              "key": "attack@atk_scale",
+              "value": 1.9,
+              "valueStr": null
+            },
+            {
+              "key": "ability_range_forward_extend",
+              "value": -1,
+              "valueStr": null
+            }
+          ]
+        }
+      },
+      {
+        "skillIndex": 2,
+        "skillId": "skchr_narant_2",
+        "raw": {
+          "name": "悪夢",
+          "rangeId": null,
+          "description": "攻撃時、対象に攻撃力の<@ba.vup>{attack@atk_scale:0%}</>の物理ダメージを与え、<@ba.vup>{attack@sluggish}</>秒間<$ba.sluggish>足止め</>する。投擲物が対象に命中すると、さらに前方にわずかに進んでから手元に戻る。戻る途中に通過した全ての敵に攻撃力<@ba.vup>{attack@atk_scale_comeback:0%}</>の物理ダメージを与える",
+          "skillType": "MANUAL",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WHEN_ATTACK",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 15,
+            "initSp": 8,
+            "increment": 1
+          },
+          "prefabId": "skchr_narant_2",
+          "duration": 30,
+          "blackboard": [
+            {
+              "key": "attack@move_ahead_time",
+              "value": 0.5,
+              "valueStr": null
+            },
+            {
+              "key": "attack@projectile_range",
+              "value": 1,
+              "valueStr": null
+            },
+            {
+              "key": "attack@atk_scale",
+              "value": 2.5,
+              "valueStr": null
+            },
+            {
+              "key": "attack@atk_scale_comeback",
+              "value": 2,
+              "valueStr": null
+            },
+            {
+              "key": "attack@sluggish",
+              "value": 1,
+              "valueStr": null
+            }
+          ]
+        }
+      },
+      {
+        "skillIndex": 3,
+        "skillId": "skchr_narant_3",
+        "raw": {
+          "name": "日喰",
+          "rangeId": null,
+          "description": "攻撃時、同時に<@ba.vup>{cnt}</>個の旋回投擲物を放つ（それぞれ攻撃力の<@ba.vup>{attack@atk_scale:0%}</>の物理ダメージを与える）。投擲物を全て回収した時ナラントゥヤは周囲8マスにいる最大<@ba.vup>{attack@aoe.max_target}</>体の敵に攻撃力の<@ba.vup>{atk_scale_AOE:0%}</>の物理ダメージを与え<@ba.vup>{sluggish}</>秒間<$ba.sluggish>足止め</>する",
+          "skillType": "MANUAL",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 30,
+            "initSp": 20,
+            "increment": 1
+          },
+          "prefabId": "skchr_narant_3",
+          "duration": 20,
+          "blackboard": [
+            {
+              "key": "attack@atk_scale",
+              "value": 1.75,
+              "valueStr": null
+            },
+            {
+              "key": "atk_scale_aoe",
+              "value": 1.6,
+              "valueStr": null
+            },
+            {
+              "key": "sluggish",
+              "value": 1,
+              "valueStr": null
+            },
+            {
+              "key": "attack@aoe.max_target",
+              "value": 3,
+              "valueStr": null
+            },
+            {
+              "key": "cnt",
+              "value": 3,
+              "valueStr": null
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "operatorId": "char_204_platnm",
+    "operatorName": "プラチナ",
+    "profession": "SNIPER",
+    "rarity": 5,
+    "subProfessionId": "fastshot",
+    "phaseIndex": 2,
+    "skillLevelIndex": 9,
+    "profile": {
+      "affiliation": "カジミエーシュ",
+      "affiliationIds": {
+        "nationId": "kazimierz",
+        "groupId": null,
+        "teamId": null
+      },
+      "phases": [
+        {
+          "characterPrefabKey": "char_204_platnm",
+          "rangeId": "3-1",
+          "maxLevel": 50,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 693,
+                "atk": 171,
+                "def": 58,
+                "magicResistance": 0,
+                "cost": 11,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 50,
+              "data": {
+                "maxHp": 991,
+                "atk": 285,
+                "def": 97,
+                "magicResistance": 0,
+                "cost": 11,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "char_204_platnm",
+          "rangeId": "3-3",
+          "maxLevel": 70,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 991,
+                "atk": 285,
+                "def": 97,
+                "magicResistance": 0,
+                "cost": 13,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 70,
+              "data": {
+                "maxHp": 1271,
+                "atk": 414,
+                "def": 139,
+                "magicResistance": 0,
+                "cost": 13,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3241",
+              "count": 4,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30042",
+              "count": 4,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30022",
+              "count": 3,
+              "type": "MATERIAL"
+            }
+          ]
+        },
+        {
+          "characterPrefabKey": "char_204_platnm",
+          "rangeId": "3-3",
+          "maxLevel": 80,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1271,
+                "atk": 414,
+                "def": 139,
+                "magicResistance": 0,
+                "cost": 13,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 80,
+              "data": {
+                "maxHp": 1550,
+                "atk": 505,
+                "def": 165,
+                "magicResistance": 0,
+                "cost": 13,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3243",
+              "count": 3,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30094",
+              "count": 8,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30073",
+              "count": 15,
+              "type": "MATERIAL"
+            }
+          ]
+        }
+      ],
+      "favorKeyFrames": [
+        {
+          "level": 0,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        },
+        {
+          "level": 50,
+          "data": {
+            "maxHp": 0,
+            "atk": 75,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        }
+      ],
+      "trait": null,
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "力溜め",
+              "description": "次回攻撃までの間隔が長いほど攻撃力が上昇（最大2.5秒まで、攻撃力が140%に上昇）",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack@min_delta",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@max_delta",
+                  "value": 2.5,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@min_atk_scale",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@max_atk_scale",
+                  "value": 1.4,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 4,
+              "prefabKey": "1",
+              "name": "力溜め",
+              "description": "次回攻撃までの間隔が長いほど攻撃力が上昇（最大2.5秒まで、攻撃力が150%<@ba.talpu>（+10%）</>に上昇）",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack@min_delta",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@max_delta",
+                  "value": 2.5,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@min_atk_scale",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@max_atk_scale",
+                  "value": 1.5,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "力溜め",
+              "description": "次回攻撃までの間隔が長いほど攻撃力が上昇（最大2.5秒まで、攻撃力が180%に上昇）",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack@min_delta",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@max_delta",
+                  "value": 2.5,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@min_atk_scale",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@max_atk_scale",
+                  "value": 1.8,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 4,
+              "prefabKey": "1",
+              "name": "力溜め",
+              "description": "次回攻撃までの間隔が長いほど攻撃力が上昇（最大2.5秒まで、攻撃力が190%<@ba.talpu>（+10%）</>に上昇）",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack@min_delta",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@max_delta",
+                  "value": 2.5,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@min_atk_scale",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@max_atk_scale",
+                  "value": 1.9,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        }
+      ],
+      "potentialRanks": [
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "再配置時間-4秒",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "RESPAWN_TIME",
+                  "formulaItem": "ADDITION",
+                  "value": -4,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "攻撃力+23",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "ATK",
+                  "formulaItem": "ADDITION",
+                  "value": 23,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "CUSTOM",
+          "description": "素質強化",
+          "buff": null,
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        }
+      ],
+      "modules": [
+        {
+          "uniEquipId": "uniequip_002_platnm",
+          "uniEquipName": "一人旅セット",
+          "uniEquipIcon": "uniequip_002_platnm",
+          "uniEquipDesc": "休暇を取ったプラチナは、サーミへと向かった。\n元々はドクターも誘っていたのだが、薄給なロドスの仕事に対して昇給の望みを抱かないのと同じように、書類の山に囲まれたドクターが一緒に来てくれるとは彼女も思ってはいなかった。\n何はともあれ、二ヶ月の休暇を取ることはできたのだから、それは良いことである。\nサーミの土地に足を踏み入れると、クルビア人が丁寧な物腰で自らの別荘へと招いてくれた。\n平原には雪が降っており、どこぞで摘んだのだろう花を抱えた男性を先頭にして、雪の上を静かに進む群衆の姿がある。\n彼らは黙って男性のあとをついて歩き、湖畔のほうへと向かっていた。\nその中の子供が一人、足を滑らせて転んでしまった。\nプラチナが手を貸して起こしてやると、花びらがその手のひらに舞い落ちる。\n彼女はその時、昔を思い出した。\nまだ彼女が独立騎士だった頃、押し掛けてきたファンたちが手渡してくる花々は、綺麗で、良い香りがして、いつまでもみずみずしくあるかのように思えたものだ。\nそうして彼女はふと、花を抱えて歩く人々を見て、彼らがその花を誰に捧げようとしているのかを知りたくなった。\n\n湖畔には真っ白な祭壇が高くそびえ立っていて、人々が真っ赤な花をその周りに散らしていた。\n「ここでは皆で、昔亡くなったとある英雄を弔っているんだ。先頭の男はその英雄の末裔でね。あれは、あの部族特有の習慣なのさ。」\nプラチナがガイドとして雇ったクルビア人は、そう説明してくれた。\n人々は花を湖に撒きながら、踊ったり、歌ったりしている。\n名も知らぬその歌の厳かな曲調に合わせて、焚き火の炎が揺らめいていた。\n涙を流す人もいれば、黙祷している人もいる。彼らの目は純粋な敬慕の光で輝いていた。\n人々が焚き火のそばで食べ物を分け合うさまを遠くから眺めていると、彼らはプラチナを手招きしてくれた。\n言葉が通じずとも、気持ちは通じ合うものである。\n彼女は現地の酒を味わったり、老婦人から真っ赤な花をもらったりした。\n「賑やかだな……」\nプラチナはそう思った。\nそんな時、彼女はさっき助け起こした子供に手を引かれた。\nその子は楽しげにくるくると回りながら焚き火のほうへと駆けて行き、食べ物をたくさん持って戻ってきた。\n彼女はその好意を受け止め、目の前の人々を見やった。\n部族は英雄を育み、英雄は生涯をかけてウルサスと戦って、国境で死を遂げたという。\n数え切れないほどの人間たちがその物語を記憶に刻み、外から来た彼女のような人に伝えてくれるのだ。\n一方で――逃げ延びた一人の暗殺者の物語は、ナイフとフォークで切られた肉と一緒に呑み下され、ここにない血痕と残骸は柔らかいナプキンで拭き取られていった。\n\n湖畔から平原まではかなりの距離がある。\nクルビア人は毛布に包まったまま相変わらず遠くに立っていた。\n彼は別荘の灯りに照らされながら、再びガイドを頼まれるのを待っている。\nプラチナは焚き火のそばに立ち、群衆を眺めながら、ただの一言も喋らずにいた。",
+          "typeIcon": "mar-x",
+          "typeName1": "MAR",
+          "typeName2": "X",
+          "equipShiningColor": "red",
+          "showEvolvePhase": "PHASE_2",
+          "unlockEvolvePhase": "PHASE_2",
+          "charId": "char_204_platnm",
+          "tmplId": null,
+          "showLevel": 1,
+          "unlockLevel": 50,
+          "missionList": [
+            "uniequip_002_platnm_1",
+            "uniequip_002_platnm_2"
+          ],
+          "unlockFavors": {
+            "1": 0,
+            "2": 2732,
+            "3": 10070
+          },
+          "itemCost": {
+            "1": [
+              {
+                "id": "mod_unlock_token",
+                "count": 2,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30104",
+                "count": 3,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 40000,
+                "type": "GOLD"
+              }
+            ],
+            "2": [
+              {
+                "id": "mod_unlock_token",
+                "count": 2,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_1",
+                "count": 20,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "31044",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 50000,
+                "type": "GOLD"
+              }
+            ],
+            "3": [
+              {
+                "id": "mod_unlock_token",
+                "count": 2,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_2",
+                "count": 8,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30034",
+                "count": 5,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 60000,
+                "type": "GOLD"
+              }
+            ]
+          },
+          "type": "ADVANCED",
+          "uniEquipGetTime": 1678759200,
+          "uniEquipShowEnd": 1678759200,
+          "charEquipOrder": 1,
+          "hasUnlockMission": true,
+          "isSpecialEquip": false,
+          "specialEquipDesc": null,
+          "specialEquipColor": null,
+          "charColor": "#ababab",
+          "phases": [
+            {
+              "equipLevel": 1,
+              "parts": [
+                {
+                  "resKey": "platnm_equip_1_1_p1",
+                  "target": "TRAIT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": "飛行ユニットを攻撃時、攻撃力が<@ba.kw>{atk_scale:0%}</>まで上昇",
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.1,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": null,
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 90,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 25,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 2,
+              "parts": [
+                {
+                  "resKey": "platnm_equip_1_2_p1",
+                  "target": "TRAIT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": "飛行ユニットを攻撃時、攻撃力が<@ba.kw>{atk_scale:0%}</>まで上昇",
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.1,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": null,
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": null,
+                  "target": "TALENT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "次回攻撃までの間隔が長いほど攻撃力が上昇（最大2.5秒まで、攻撃力が190%に上昇）",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "1",
+                        "name": "力溜め",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack@min_delta",
+                            "value": 1,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@max_delta",
+                            "value": 2.5,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@min_atk_scale",
+                            "value": 1,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@max_atk_scale",
+                            "value": 1.9,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      },
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "次回攻撃までの間隔が長いほど攻撃力が上昇（最大2.5秒まで、攻撃力が200%<@ba.talpu>（+10%）</>に上昇）",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 4,
+                        "prefabKey": "1",
+                        "name": "力溜め",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack@min_delta",
+                            "value": 1,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@max_delta",
+                            "value": 2.5,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@min_atk_scale",
+                            "value": 1,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@max_atk_scale",
+                            "value": 2,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 140,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 33,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 3,
+              "parts": [
+                {
+                  "resKey": "platnm_equip_1_3_p1",
+                  "target": "TRAIT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": "飛行ユニットを攻撃時、攻撃力が<@ba.kw>{atk_scale:0%}</>まで上昇",
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.1,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": null,
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": null,
+                  "target": "TALENT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "次回攻撃までの間隔が長いほど攻撃力が上昇（最大2.5秒まで、攻撃力が200%に上昇）",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "1",
+                        "name": "力溜め",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack@min_delta",
+                            "value": 1,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@max_delta",
+                            "value": 2.5,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@min_atk_scale",
+                            "value": 1,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@max_atk_scale",
+                            "value": 2,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      },
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "次回攻撃までの間隔が長いほど攻撃力が上昇（最大2.5秒まで、攻撃力が210%<@ba.talpu>（+10%）</>に上昇）",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 4,
+                        "prefabKey": "1",
+                        "name": "力溜め",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack@min_delta",
+                            "value": 1,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@max_delta",
+                            "value": 2.5,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@min_atk_scale",
+                            "value": 1,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@max_atk_scale",
+                            "value": 2.1,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 170,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 40,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            }
+          ]
+        }
+      ],
+      "traitDescription": "飛行ユニットを優先して攻撃",
+      "subProfessionTraitDescription": ""
+    },
+    "skills": [
+      {
+        "skillIndex": 1,
+        "skillId": "skcom_atk_up[3]",
+        "raw": {
+          "name": "攻撃力強化γ",
+          "rangeId": null,
+          "description": "攻撃力<@ba.vup>+{atk:0%}</>",
+          "skillType": "MANUAL",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 30,
+            "initSp": 15,
+            "increment": 1
+          },
+          "prefabId": "skcom_atk_up",
+          "duration": 30,
+          "blackboard": [
+            {
+              "key": "atk",
+              "value": 1,
+              "valueStr": null
+            }
+          ]
+        }
+      },
+      {
+        "skillIndex": 2,
+        "skillId": "skchr_platnm_2",
+        "raw": {
+          "name": "ペガサスアイ",
+          "rangeId": "3-10",
+          "description": "攻撃速度が<@ba.vdown>わずかに低下</>、攻撃力<@ba.vup>+{atk:0%}</>、攻撃範囲<@ba.vup>拡大</>\n<@ba.rem>退場まで効果継続</>",
+          "skillType": "AUTO",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 50,
+            "initSp": 0,
+            "increment": 1
+          },
+          "prefabId": "skchr_platnm_2",
+          "duration": 0,
+          "blackboard": [
+            {
+              "key": "attack_speed",
+              "value": -20,
+              "valueStr": null
+            },
+            {
+              "key": "atk",
+              "value": 1,
+              "valueStr": null
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "operatorId": "char_1035_wisdel",
+    "operatorName": "ウィシャデル",
+    "profession": "SNIPER",
+    "rarity": 6,
+    "subProfessionId": "bombarder",
+    "phaseIndex": 2,
+    "skillLevelIndex": 9,
+    "profile": {
+      "affiliation": "バベル",
+      "affiliationIds": {
+        "nationId": null,
+        "groupId": "babel",
+        "teamId": null
+      },
+      "phases": [
+        {
+          "characterPrefabKey": "char_1035_wisdel",
+          "rangeId": "3-3",
+          "maxLevel": 50,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 849,
+                "atk": 340,
+                "def": 128,
+                "magicResistance": 10,
+                "cost": 23,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 2.1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 50,
+              "data": {
+                "maxHp": 1132,
+                "atk": 460,
+                "def": 167,
+                "magicResistance": 10,
+                "cost": 23,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 2.1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "char_1035_wisdel",
+          "rangeId": "3-9",
+          "maxLevel": 80,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1132,
+                "atk": 460,
+                "def": 167,
+                "magicResistance": 10,
+                "cost": 25,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 2.1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 80,
+              "data": {
+                "maxHp": 1434,
+                "atk": 583,
+                "def": 209,
+                "magicResistance": 10,
+                "cost": 25,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 2.1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3241",
+              "count": 5,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30022",
+              "count": 9,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30062",
+              "count": 3,
+              "type": "MATERIAL"
+            }
+          ]
+        },
+        {
+          "characterPrefabKey": "char_1035_wisdel",
+          "rangeId": "3-9",
+          "maxLevel": 90,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1434,
+                "atk": 583,
+                "def": 209,
+                "magicResistance": 15,
+                "cost": 25,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 2.1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 90,
+              "data": {
+                "maxHp": 1888,
+                "atk": 687,
+                "def": 256,
+                "magicResistance": 15,
+                "cost": 25,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 2.1,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3243",
+              "count": 4,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30145",
+              "count": 3,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30064",
+              "count": 6,
+              "type": "MATERIAL"
+            }
+          ]
+        }
+      ],
+      "favorKeyFrames": [
+        {
+          "level": 0,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        },
+        {
+          "level": 50,
+          "data": {
+            "maxHp": 0,
+            "atk": 90,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        }
+      ],
+      "trait": {
+        "candidates": [
+          {
+            "unlockCondition": {
+              "phase": "PHASE_0",
+              "level": 1
+            },
+            "requiredPotentialRank": 0,
+            "blackboard": [
+              {
+                "key": "attack@append_atk_scale",
+                "value": 0.5,
+                "valueStr": null
+              },
+              {
+                "key": "attack@enable_third_attack",
+                "value": 0,
+                "valueStr": null
+              }
+            ],
+            "overrideDescripton": null,
+            "prefabKey": "-1",
+            "rangeId": null
+          }
+        ]
+      },
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "ビッグサプライズ！",
+              "description": "通常攻撃が攻撃主対象に残影を付与する。残影はウィシャデルの余震を受けると15%の確率で爆発し、周囲一定範囲内の敵全員に攻撃力の120%の物理ダメージを与え、0.5秒間<$ba.stun>スタン</>させる",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack@main_atk_scale",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@prob",
+                  "value": 0.15,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@bomb_atk_scale",
+                  "value": 1.2,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@stun",
+                  "value": 0.5,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@range_radius",
+                  "value": 1.1,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 4,
+              "prefabKey": "1",
+              "name": "ビッグサプライズ！",
+              "description": "通常攻撃が攻撃主対象に残影を付与する。残影はウィシャデルの余震を受けると15%の確率で爆発し、周囲一定範囲内の敵全員に攻撃力の130%<@ba.talpu>（+10%）</>の物理ダメージを与え、0.5秒間<$ba.stun>スタン</>させる",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack@main_atk_scale",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@prob",
+                  "value": 0.15,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@bomb_atk_scale",
+                  "value": 1.3,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@stun",
+                  "value": 0.5,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@range_radius",
+                  "value": 1.1,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "ビッグサプライズ！",
+              "description": "攻撃主対象への攻撃力が115%まで上昇し、さらに残影を付与する。残影はウィシャデルの余震を受けると15%の確率で爆発し、周囲一定範囲内の敵全員に攻撃力の150%の物理ダメージを与え、1秒間<$ba.stun>スタン</>させる",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack@main_atk_scale",
+                  "value": 1.15,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@prob",
+                  "value": 0.15,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@bomb_atk_scale",
+                  "value": 1.5,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@stun",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@range_radius",
+                  "value": 1.1,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 4,
+              "prefabKey": "1",
+              "name": "ビッグサプライズ！",
+              "description": "攻撃主対象への攻撃力が115%まで上昇し、さらに残影を付与する。残影はウィシャデルの余震を受けると15%の確率で爆発し、周囲一定範囲内の敵全員に攻撃力の160%<@ba.talpu>（+10%）</>の物理ダメージを与え、1秒間<$ba.stun>スタン</>させる",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack@main_atk_scale",
+                  "value": 1.15,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@prob",
+                  "value": 0.15,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@bomb_atk_scale",
+                  "value": 1.6,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@stun",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack@range_radius",
+                  "value": 1.1,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        },
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "2",
+              "name": "くたばり損ない",
+              "description": "配置後、攻撃範囲内に「レヴァナントの影」を1体召喚する。自身の周囲に「レヴァナントの影」がいると<$ba.camou>迷彩</>状態になる",
+              "rangeId": null,
+              "blackboard": {},
+              "tokenKey": "token_10035_wisdel_wward",
+              "isHideTalent": false
+            }
+          ]
+        }
+      ],
+      "potentialRanks": [
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "再配置時間-4秒",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "RESPAWN_TIME",
+                  "formulaItem": "ADDITION",
+                  "value": -4,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "攻撃力+32",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "ATK",
+                  "formulaItem": "ADDITION",
+                  "value": 32,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "CUSTOM",
+          "description": "第一素質強化",
+          "buff": null,
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        }
+      ],
+      "modules": [
+        {
+          "uniEquipId": "uniequip_002_wisdel",
+          "uniEquipName": "「ご先祖ランチャー」",
+          "uniEquipIcon": "uniequip_002_wisdel",
+          "uniEquipDesc": "砂丘の上に一つの鎧が立っていた。\n彼はもはや、自分がどこから来たのかすら忘れかけていた。身体もひどく損耗しており両足の長さは不揃いで、肩の鎧は片方失われ、そこから暗く空っぽな内側が露になってしまっている。\n剣もまた、折れていた。どうやら同族に斬りかかった時に折れてしまったようだ。奴は風車へと逃げ込み、日が暮れるまで手を下すのを待ってくれと懇願してきたのだ。その時になれば、自分の身体の中で遊んでいる子供たちも皆家に帰るから、と。彼はその要望に応じた。二、三時間などという時間は、彼らのような生命体にとっては取るに足らないものなのだ。彼は丘の上に腰を下ろし、日が沈むまで待つと、引き返して、唸り声をあげる風車を殺した。\n古の高塔深くに身を寄せる幽霊、大図書館の瓦礫に埋もれた書籍、舵取りのいない砂賊船、命をはかりにかける天秤……彼は魔王との約束を忘れてはおらず、長き旅を続けてきたのは、各地へ散り散りになった同族をカズデルへ連れ戻すためだった。そして彼自身が、その最後の一人なのである。\n視界に広がる果てしない金色は何だろうか？砂漠か、海か、あるいは無数に築かれてきたカズデルのうちの一つだろうか？\n鎧が沈んでいく。彼はもはや、記憶と歴史の境界線が分からなくなるのと同じように、身体と砂粒を区別できなくなっていた。このまま頭のてっぺんまで砂に覆われてしまえば、彼は完全に姿を消すことになるだろう。\n「カン、カンカン」\n頭上から何やら叩く音がした。\n羽獣が彼の頭に生えた草を食べ物として啄んでいるのかもしれない。\n「ガン――ガン――」\n彼を呑み込んだ砂丘が揺れ始めた。\nいや、揺れているのは砂丘ではなく、彼自身の身体だ。何者かが彼を足蹴にしている。その構えを見るに、どうやら彼を――最古のレヴァナントにして、カズデル最初の守護者であり、すべての魔王の側近参謀であった彼を、ボールのように蹴り転がそうとしているようだ。\n「貴様――」\n「喋れるの？だったら死んだフリなんかしないでちょうだい。あちこち回ってここまであんたを運んできてやったんだから、そろそろ役に立ってもらわないと。さもなきゃガラクタとして売り捌いてやるわよ！」\n「……目的はなんだ？」\n「あらまぁ、冷静なのね？昔図体がデカかった頃は、ひたすら『出ていけ』だの『憎い』だの『異種族め』だの宣ってたくせに。こっちはてっきり、あんたがあたしより読み書きに疎くて、それ以外の言葉を喋れないんじゃないかとすら思ってたくらいなのよ。」\n「よもや殿下がお選びになった人間が、こうも粗野な……」\n「口ぶりだけはそのまんまね。でも、口汚さを取り戻すのは後にして、それよりさっさと働いて。」\n「何を――」\n彼の身体が宙を舞う。\n「力加減は十分かしら？もっと爆薬を加えてやったほうがいい？」\n彼は飛んでいた。\n足元の砂丘を掠め、廃墟を飛び越え、そして――\nカズデルに。\n彼が二度と相まみえることのないと思っていたその場所に届くほど高く。\nこのまま飛んでいけば、彼はもうじきかつての王庭議事堂へと直撃するだろう。彼が一族の魂の残り火をもって、魔王イレーシュに誓いを立てた地に――\n「ウィシャデル、（サルカズ語）――！」\n「あらあら、そんなにご自分を呪いたいのかしら、あたしの愛しいご先祖さま？」若きサルカズは、声を上げて笑った。「さあ、もっと強烈にぶっ飛ばして、あのオンボロをきれいさっぱり片付けた後、一緒に――家に帰るわよ！」",
+          "typeIcon": "bom-x",
+          "typeName1": "BOM",
+          "typeName2": "X",
+          "equipShiningColor": "red",
+          "showEvolvePhase": "PHASE_2",
+          "unlockEvolvePhase": "PHASE_2",
+          "charId": "char_1035_wisdel",
+          "tmplId": null,
+          "showLevel": 1,
+          "unlockLevel": 60,
+          "missionList": [
+            "uniequip_002_wisdel_1",
+            "uniequip_002_wisdel_2"
+          ],
+          "unlockFavors": {
+            "1": 0,
+            "2": 2732,
+            "3": 10070
+          },
+          "itemCost": {
+            "1": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30145",
+                "count": 2,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 80000,
+                "type": "GOLD"
+              }
+            ],
+            "2": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_1",
+                "count": 60,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30135",
+                "count": 3,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 100000,
+                "type": "GOLD"
+              }
+            ],
+            "3": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_2",
+                "count": 20,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30115",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 120000,
+                "type": "GOLD"
+              }
+            ]
+          },
+          "type": "ADVANCED",
+          "uniEquipGetTime": 1730358000,
+          "uniEquipShowEnd": 1730358000,
+          "charEquipOrder": 1,
+          "hasUnlockMission": true,
+          "isSpecialEquip": false,
+          "specialEquipDesc": null,
+          "specialEquipColor": null,
+          "charColor": "#881d1e",
+          "phases": [
+            {
+              "equipLevel": 1,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "TRAIT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "attack@append_atk_scale",
+                            "value": 0.5,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@enable_third_attack",
+                            "value": 1,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": "通常攻撃は<@ba.kw>地面上</>の敵に<@ba.kw>3回</>の範囲物理ダメージを与える（2回目以降は余震、与ダメージが攻撃力の50%になる）",
+                        "prefabKey": "-1",
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "atk",
+                  "value": 45,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack_speed",
+                  "value": 5,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 2,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "TRAIT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "attack@append_atk_scale",
+                            "value": 0.5,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@enable_third_attack",
+                            "value": 1,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": "通常攻撃は<@ba.kw>地面上</>の敵に<@ba.kw>3回</>の範囲物理ダメージを与える（2回目以降は余震、与ダメージが攻撃力の50%になる）",
+                        "prefabKey": "-1",
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": null,
+                  "target": "TALENT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "攻撃主対象への攻撃力が120%まで上昇し、さらに残影を付与する。残影はウィシャデルの余震を受けると15%の確率で爆発し、周囲一定範囲内の敵全員に攻撃力の170%の物理ダメージを与え、1秒間<$ba.stun>スタン</>させる",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "1",
+                        "name": "ビッグサプライズ！",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack@main_atk_scale",
+                            "value": 1.2,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@prob",
+                            "value": 0.15,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@bomb_atk_scale",
+                            "value": 1.7,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@stun",
+                            "value": 1,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@range_radius",
+                            "value": 1.1,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      },
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "攻撃主対象への攻撃力が120%まで上昇し、さらに残影を付与する。残影はウィシャデルの余震を受けると15%の確率で爆発し、周囲一定範囲内の敵全員に攻撃力の180%<@ba.talpu>（+10%）</>の物理ダメージを与え、1秒間<$ba.stun>スタン</>させる",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 4,
+                        "prefabKey": "1",
+                        "name": "ビッグサプライズ！",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack@main_atk_scale",
+                            "value": 1.2,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@prob",
+                            "value": 0.15,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@bomb_atk_scale",
+                            "value": 1.8,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@stun",
+                            "value": 1,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@range_radius",
+                            "value": 1.1,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "atk",
+                  "value": 55,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack_speed",
+                  "value": 6,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 3,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "TRAIT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "attack@append_atk_scale",
+                            "value": 0.5,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@enable_third_attack",
+                            "value": 1,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": "通常攻撃は<@ba.kw>地面上</>の敵に<@ba.kw>3回</>の範囲物理ダメージを与える（2回目以降は余震、与ダメージが攻撃力の50%になる）",
+                        "prefabKey": "-1",
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": null,
+                  "target": "TALENT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "攻撃主対象への攻撃力が125%まで上昇し、さらに残影を付与する。残影はウィシャデルの余震を受けると15%の確率で爆発し、周囲一定範囲内の敵全員に攻撃力の175%の物理ダメージを与え、1秒間<$ba.stun>スタン</>させる",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "1",
+                        "name": "ビッグサプライズ！",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack@main_atk_scale",
+                            "value": 1.25,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@prob",
+                            "value": 0.15,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@bomb_atk_scale",
+                            "value": 1.75,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@stun",
+                            "value": 1,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@range_radius",
+                            "value": 1.1,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      },
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "攻撃主対象への攻撃力が125%まで上昇し、さらに残影を付与する。残影はウィシャデルの余震を受けると15%の確率で爆発し、周囲一定範囲内の敵全員に攻撃力の185%<@ba.talpu>（+10%）</>の物理ダメージを与え、1秒間<$ba.stun>スタン</>させる",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 4,
+                        "prefabKey": "1",
+                        "name": "ビッグサプライズ！",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack@main_atk_scale",
+                            "value": 1.25,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@prob",
+                            "value": 0.15,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@bomb_atk_scale",
+                            "value": 1.85,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@stun",
+                            "value": 1,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "attack@range_radius",
+                            "value": 1.1,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "atk",
+                  "value": 65,
+                  "valueStr": null
+                },
+                {
+                  "key": "attack_speed",
+                  "value": 7,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            }
+          ]
+        }
+      ],
+      "traitDescription": "通常攻撃は<@ba.kw>地面上</>の敵に<@ba.kw>2回</>の範囲物理ダメージを与える（2回目は余震、与ダメージが攻撃力の50%になる）",
+      "subProfessionTraitDescription": ""
+    },
+    "skills": [
+      {
+        "skillIndex": 1,
+        "skillId": "skchr_wisdel_1",
+        "raw": {
+          "name": "クリアランス",
+          "rangeId": null,
+          "description": "次の通常攻撃は余震がさらに2回発生し、対象全員を<@ba.vup>{stun_duration}</>秒間<$ba.stun>スタン</>させる。この攻撃はダメージ発生範囲が<@ba.vup>やや拡大</>し、余震のダメージが攻撃力の<@ba.vup>{append_atk_scale:0%}</>になる",
+          "skillType": "AUTO",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WHEN_ATTACK",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 2,
+            "initSp": 0,
+            "increment": 1
+          },
+          "prefabId": "skchr_wisdel_1",
+          "duration": 0,
+          "blackboard": [
+            {
+              "key": "append_atk_scale",
+              "value": 1.2,
+              "valueStr": null
+            },
+            {
+              "key": "stun_duration",
+              "value": 1.5,
+              "valueStr": null
+            }
+          ]
+        }
+      },
+      {
+        "skillIndex": 2,
+        "skillId": "skchr_wisdel_2",
+        "raw": {
+          "name": "オーバーレネゲード",
+          "rangeId": null,
+          "description": "攻撃力<@ba.vup>+{atk:0%}</>、攻撃間隔を<@ba.vup>短縮</>、敵<@ba.vup>3</>体を同時に攻撃可能\n<$ba.overdrive>オーバードライブ</>：通常攻撃が攻撃力の<@ba.vup>{attack@atk_scale_ol:0%}</>の<@ba.vup>4</>連撃になり、攻撃範囲内の敵をランダムで攻撃する\n<@ba.rem>手動でスキルを停止可能</>",
+          "skillType": "MANUAL",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 25,
+            "initSp": 15,
+            "increment": 1
+          },
+          "prefabId": "skchr_wisdel_2",
+          "duration": 25,
+          "blackboard": [
+            {
+              "key": "base_attack_time",
+              "value": -0.7,
+              "valueStr": null
+            },
+            {
+              "key": "atk",
+              "value": 0.35,
+              "valueStr": null
+            },
+            {
+              "key": "attack@atk_scale_ol",
+              "value": 0.8,
+              "valueStr": null
+            }
+          ]
+        }
+      },
+      {
+        "skillIndex": 3,
+        "skillId": "skchr_wisdel_3",
+        "raw": {
+          "name": "デイブレイクバースト",
+          "rangeId": null,
+          "description": "即座に攻撃範囲内に「レヴァナントの影」を<@ba.vup>{max_cnt}</>体召喚し（最大3体まで、スキル終了後も消失しない）、攻撃力<@ba.vup>+{atk:0%}</>、攻撃間隔が<@ba.vdown>大幅に延長</>し、攻撃時の攻撃力が<@ba.vup>{attack@atk_scale_3:0%}</>まで上昇する。ダメージ発生範囲が<@ba.vup>大幅に拡大</>し、第一素質の発動率が<@ba.vup>{attack@prob:0%}</>まで上昇する\n<@ba.rem>合計{attack@trigger_time}発の弾薬を撃ち切るとスキルが終了（手動でスキルを停止可能）</>",
+          "skillType": "MANUAL",
+          "durationType": "AMMO",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 50,
+            "initSp": 40,
+            "increment": 1
+          },
+          "prefabId": "skchr_wisdel_3",
+          "duration": -1,
+          "blackboard": [
+            {
+              "key": "atk",
+              "value": 1.8,
+              "valueStr": null
+            },
+            {
+              "key": "max_cnt",
+              "value": 2,
+              "valueStr": null
+            },
+            {
+              "key": "base_attack_time",
+              "value": 2.9,
+              "valueStr": null
+            },
+            {
+              "key": "attack@atk_scale_3",
+              "value": 2.2,
+              "valueStr": null
+            },
+            {
+              "key": "attack@prob",
+              "value": 1,
+              "valueStr": null
+            },
+            {
+              "key": "attack@trigger_time",
+              "value": 6,
+              "valueStr": null
+            },
+            {
+              "key": "sp",
+              "value": 3,
+              "valueStr": null
+            }
+          ]
+        }
+      }
+    ]
   }
 ]

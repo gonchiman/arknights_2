@@ -136,6 +136,30 @@ test('仮想属性と混在しても段階の低下・与ダメージ倍率を�
   }
 })
 
+test('最終加算の攻撃力は割合強化を受けず、最終減算の防御力は割合低下の後・防御無視の前に適用する', () => {
+  const stage: Partial<GuardStage> = { atk: 0.5, attackFinalFlat: 100,
+    defenseReductionFixed: 100, defenseReductionRatio: 0.5, defenseReductionFinalFixed: 30,
+    defenseIgnoreRatio: 0.2, defenseIgnoreFixed: 10,
+    actions: [{ label: 'main', role: 'MAIN', damageType: 'PHYSICAL', scale: 1.2 },
+      { label: 'periodic', role: 'ADDITIONAL', damageType: 'ARTS', basis: 'ATK_STAT', scale: 0.2, timing: 'PER_SECOND' }] }
+  for (const virtualMainAttackType of [undefined, 'PHYSICAL', 'ARTS'] as const) {
+    const { output, display } = calculate('char_208_melan', stage, { virtualMainAttackType })
+    assert.deepEqual(output.unsupportedReasons, [])
+    const attack = Math.floor(output.stats.attack * (1 + 0.08 + 0.5) + 100 + 1e-9)
+    const defense = ((300 - 100) * 0.5 - 30) * 0.8 - 10
+    close(output.rows[0].perAttack, virtualMainAttackType === 'ARTS' ? attack * 1.2 * 0.2 : attack * 1.2 - defense)
+    close(output.rows[0].damageOverTimeDps, attack * 0.2 * 0.2)
+    assert.equal(display.find(row => row.item === '攻撃力（最終加算）')?.value, '＋100')
+  }
+  const zero = calculate('char_208_melan', { ...stage, defenseReductionFinalFixed: 500 }).output
+  close(zero.rows[0].perAttack, Math.floor(zero.stats.attack * 1.58 + 100 + 1e-9) * 1.2)
+  for (const invalid of [Number.NaN, Number.POSITIVE_INFINITY, { key: 'missing' }]) {
+    const output = calculate('char_208_melan', { attackFinalFlat: invalid }).output
+    assert.ok(output.unsupportedReasons.length)
+    assert.deepEqual(output.rows, [])
+  }
+})
+
 test('素質由来のATK_STAT流血にも段階の術耐性低下・倍率を適用し、仮想主攻撃の特性倍率を混ぜない', () => {
   const stage: Partial<GuardStage> = {
     atk: 0.45, defenseReductionRatio: 0.5, resistanceReductionRatio: 0.3,
@@ -168,7 +192,7 @@ test('ATK_STAT継続ダメージは通常攻撃用の倍率や会心を継承し
 })
 
 test('新しい段階倍率の欠落参照・非有限値・範囲外を拒否して部分数値を返さない', () => {
-  for (const field of ['defenseReductionRatio', 'resistanceReductionRatio', 'defenseReductionFixed', 'resistanceReductionFixed', 'damageScale'] as const) {
+  for (const field of ['defenseReductionRatio', 'resistanceReductionRatio', 'defenseReductionFixed', 'defenseReductionFinalFixed', 'resistanceReductionFixed', 'damageScale'] as const) {
     for (const value of [-0.1, Number.NaN, Number.POSITIVE_INFINITY, { key: 'missing' },
       ...(field.endsWith('Ratio') ? [1.01] : [])]) {
       const { output } = calculate('char_208_melan', { [field]: value })

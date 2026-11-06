@@ -93,6 +93,30 @@
         "UNSUPPORTED": 273,
         "NOT_APPLICABLE": 82
       }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "v5",
+      "label": "v5 罠・貯蔵攻撃と残件の拡張",
+      "capturedAt": "2026-11-06T02:33:46.479Z",
+      "source": {
+        "codeRevision": "3543c57e17308c22b3b9da01bae27ac6e5999a12",
+        "codeDirty": true,
+        "codeFingerprint": "aa20c5a7795efa2f7488448a568b80b2592686f963c0c99fb88955eb4805c5ca",
+        "gameDataRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+        "gameDataFingerprint": "e02f27762c44d0b083329e83375802cc2bef03f04777822f5f61220a0881a0ec",
+        "reconstructed": false
+      },
+      "file": "v5.json",
+      "sha256": "d4a679c406cc066eb2ff645d980a8f0a09aabc1fe24b69099d17ca9d605b9385",
+      "skillCount": 915,
+      "counts": {
+        "SUPPORTED": 491,
+        "CONDITIONAL": 41,
+        "PENDING": 75,
+        "UNSUPPORTED": 190,
+        "NOT_APPLICABLE": 118
+      }
     }
   ]
 }

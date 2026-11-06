@@ -2,7 +2,7 @@ import type { DamageType } from './damageCalculator.ts'
 import type { PeriodTotalCapability } from './damagePeriodTotal.ts'
 
 /** A skill can replace individual base-attack rules without disabling unrelated traits. */
-export type GuardTraitOverride = 'DAMAGE_TYPE' | 'HIT_COUNT' | 'MAX_TARGETS' | 'ATTACK_TARGETING' | 'ATTACK_SCALE' | 'SPLASH_DAMAGE' | 'CHAIN_ATTACK' | 'AFTERSHOCK'
+export type GuardTraitOverride = 'DAMAGE_TYPE' | 'HIT_COUNT' | 'MAX_TARGETS' | 'ATTACK_TARGETING' | 'ATTACK_SCALE' | 'SPLASH_DAMAGE' | 'CHAIN_ATTACK' | 'AFTERSHOCK' | 'NORMAL_ATTACK_ENABLED'
 
 /** Values in reviewed recipes remain executable data, rather than parsed descriptions. */
 export type GuardValue = number | { key: string } | { input: string }
@@ -25,6 +25,8 @@ export interface GuardDamageAction {
   /** Reviewed provenance; virtual comparison never guesses from a label or array order. */
   role?: 'MAIN' | 'ADDITIONAL'
   damageType: DamageType
+  /** A separate mystic projectile; only this action receives stored-energy modifiers. */
+  isStoredCharge?: boolean
   scale: GuardValue
   hits?: GuardValue
   /** Total equivalent targets per action; omitted means all selected targets. */
@@ -59,6 +61,8 @@ export interface GuardStage {
   /** Skill-specific multiplication of a structured trait's selected charge amount. */
   traitAttackRatioScale?: GuardValue
   atk?: GuardValue
+  /** Added after percentage ATK bonuses, before attack-scale multipliers. */
+  attackFinalFlat?: GuardValue
   aspd?: GuardValue
   intervalScale?: GuardValue
   intervalAdd?: GuardValue
@@ -84,6 +88,8 @@ export interface GuardStage {
   defenseReductionRatio?: GuardValue
   resistanceReductionRatio?: GuardValue
   defenseReductionFixed?: GuardValue
+  /** Removed after enemy percentage reductions, before attacker penetration. */
+  defenseReductionFinalFixed?: GuardValue
   resistanceReductionFixed?: GuardValue
   /** Post-mitigation multiplier; distinct from attack scale. */
   damageScale?: GuardValue
@@ -98,6 +104,12 @@ export interface GuardSkillRecipe {
   operatorId: string
   skillIndex: number
   inputs: readonly GuardInput[]
+  /** Cross-field constraints on a valid selected state, separate from unsupported mechanics. */
+  conditionRequirements?: readonly {
+    when?: NonNullable<GuardStage['when']>
+    condition: NonNullable<GuardStage['when']>
+    reason: string
+  }[]
   stages: readonly GuardStage[]
   notes?: readonly string[]
 }
@@ -105,22 +117,30 @@ export interface GuardSkillRecipe {
 export interface GuardPassiveModifiers {
   attackRatio: number
   attackFlat: number
+  attackFinalFlat?: number
   attackScale: number
+  storedChargeScale?: number
+  extraStoredCharges?: number
   attackSpeed: number
   attackIntervalAdd?: number
   /** Additive ATK on the proc branch, before attack scales and enemy mitigation. */
   criticalAttackRatio?: number
+  /** Defense penetration on the single supported probabilistic attack branch. */
+  criticalDefenseIgnoreRatio?: number
   /** Guaranteed per-hit fraction of buffed ATK, before attack-scale multipliers. */
   minimumDamageRatio?: number
   damageScale: number
   splashDamageScale?: number
   defenseIgnoreRatio: number
+  /** Guaranteed penetration for ATTACK/CURRENT_EVENT only, excluding stat-based DOT. */
+  attackDefenseIgnoreRatio?: number
   defenseIgnoreFixed: number
   resistanceIgnoreFixed: number
   resistanceIgnoreRatio: number
   resistanceReductionRatio?: number
   defenseReductionRatio: number
   defenseReductionFixed?: number
+  defenseReductionFinalFixed?: number
   resistanceReductionFixed?: number
   critChance: number
   critScale: number

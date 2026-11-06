@@ -24,6 +24,11 @@ const REVIEWED_SKILLS: Readonly<Record<string, readonly number[]>> = {
   char_484_robrta: [2], char_4162_cathy: [2], char_4212_nasti: [2],
   char_325_bison: [2], char_150_snakek: [2], char_226_hmau: [1, 2],
   char_4109_baslin: [1, 2], char_4143_sensi: [2], char_304_zebra: [1, 2],
+  char_1031_slent2: [1, 2, 3], char_492_quercu: [1, 2], char_4172_xingzh: [1, 2],
+  char_343_tknogi: [1, 2], char_4019_ncdeer: [1, 2], char_1022_flwr2: [1, 2], char_4202_haruka: [1],
+  char_4179_monstr: [1, 2], char_1052_kalts2: [1, 3], char_4222_taraxa: [1, 2],
+  char_479_sleach: [1, 2], char_401_elysm: [1, 2], char_4119_wanqin: [1, 2], char_151_myrtle: [1, 2],
+  char_202_demkni: [1], char_2025_shu: [1, 2], char_148_nearl: [1, 2], char_196_sunbr: [1, 2], char_284_spot: [1],
 }
 
 const reviewedSources = new Map((sources as unknown as ExpandedOperatorSource[]).map(source => [source.operatorId, source]))

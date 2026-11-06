@@ -32,10 +32,10 @@ const frozen = toCoverageRecords(coverage)
 const readSnapshot = (id: string) => parseCoverageSnapshot(JSON.parse(readFileSync(
   new URL(`../public/data/dc3-coverage/${id}.json`, import.meta.url), 'utf8')))
 
-test('レビュー済み45名82スキルだけを対象外として残し、対応件数へ加算しない', () => {
-  assert.equal(sources.length, 45)
-  assert.equal(reviewed.length, 82)
-  assert.equal(coverage.length, 82)
+test('レビュー済み64名118スキルだけを対象外として残し、対応件数へ加算しない', () => {
+  assert.equal(sources.length, 64)
+  assert.equal(reviewed.length, 118)
+  assert.equal(coverage.length, 118)
   for (const row of coverage) {
     assert.equal(row.status, 'NOT_APPLICABLE', `${row.skill.operatorName} S${row.skill.skillIndex}`)
     assert.ok(row.details.every(detail => detail.status === 'NOT_APPLICABLE'))
@@ -44,7 +44,7 @@ test('レビュー済み45名82スキルだけを対象外として残し、対�
     assert.deepEqual(row.issues, [])
     assert.equal(row.selection, undefined)
   }
-  assert.deepEqual(countCoverageRecords(frozen), { SUPPORTED: 0, CONDITIONAL: 0, PENDING: 0, UNSUPPORTED: 0, NOT_APPLICABLE: 82 })
+  assert.deepEqual(countCoverageRecords(frozen), { SUPPORTED: 0, CONDITIONAL: 0, PENDING: 0, UNSUPPORTED: 0, NOT_APPLICABLE: 118 })
   assert.ok(COVERAGE_STATUS_OPTIONS.some(option => option.value === 'NOT_APPLICABLE' && option.label === '対象外'))
   const filtered = filterDamageCalculatorThreeCoverage(coverage,
     { ...EMPTY_DAMAGE_THREE_COVERAGE_FILTERS, query: 'フォリニック S1', status: 'NOT_APPLICABLE' })
@@ -83,14 +83,15 @@ test('対象外のスキル・素質・特性やスキル枠が変わると、�
 
 test('職業や回復キーワードで対象外にせず、医療の攻撃・反撃・通常攻撃継続を除外しない', () => {
   for (const [id, index] of [['char_1020_reed2', 1], ['char_1020_reed2', 2], ['char_1020_reed2', 3],
+    ['char_345_folnic', 2], ['char_4179_monstr', 3], ['char_1052_kalts2', 2],
     ['char_484_robrta', 1], ['char_4162_cathy', 1], ['char_4212_nasti', 1],
     ['char_4212_nasti', 3], ['char_358_lisa', 1], ['char_183_skgoat', 1]] as const) {
     const skill = record(getExpandedSource(id)!, index)
     assert.equal(getDamageCalculatorThreeNonDamageScope(skill), null, `${id} S${index}`)
     assert.notEqual(buildDamageCalculatorThreeCoverage([skill])[0].status, 'NOT_APPLICABLE')
   }
-  for (const [id, index] of [['char_003_kalts', 1], ['char_4179_monstr', 1], ['char_1052_kalts2', 1],
-    ['char_4056_titi', 1], ['char_4222_taraxa', 1], ['char_4184_dolris', 1],
+  for (const [id, index] of [['char_003_kalts', 1], ['char_4179_monstr', 3], ['char_1052_kalts2', 2],
+    ['char_4056_titi', 1], ['char_4202_haruka', 2], ['char_4202_haruka', 3], ['char_4184_dolris', 1],
     ['char_345_folnic', 2], ['char_1012_skadi2', 3], ['char_4134_cetsyr', 2], ['char_381_bubble', 2],
     ['char_123_fang', 1], ['char_452_bstalk', 1]] as const) {
     const skill = { ...structuredClone(reviewed[0]), operatorId: id, skillIndex: index }
@@ -98,7 +99,35 @@ test('職業や回復キーワードで対象外にせず、医療の攻撃・�
   }
 })
 
-test('915スキルの母集団は対象外82件を含み、版差分で新規対応と区別する', () => {
+test('追加対象外も治療への置換・攻撃停止を個別に確認し、同じ職業や同一OPの攻撃スキルへ広げない', () => {
+  for (const id of ['char_1031_slent2', 'char_492_quercu', 'char_4172_xingzh', 'char_343_tknogi', 'char_4019_ncdeer',
+    'char_1022_flwr2', 'char_4202_haruka', 'char_4179_monstr', 'char_1052_kalts2', 'char_4222_taraxa',
+    'char_479_sleach', 'char_401_elysm', 'char_4119_wanqin', 'char_151_myrtle',
+    'char_202_demkni', 'char_2025_shu', 'char_148_nearl', 'char_196_sunbr', 'char_284_spot']) {
+    const source = sources.find(source => source.operatorId === id)!
+    for (const raw of source.skills) {
+      const skill = record(source, raw.skillIndex)
+      assert.ok(getDamageCalculatorThreeNonDamageScope(skill), `${id} S${raw.skillIndex}`)
+      const changed = structuredClone(skill)
+      changed.operatorProfile.talents!.forEach(talent => talent.candidates!.forEach(candidate => {
+        candidate.description += '攻撃停止中も敵にダメージを与える'
+      }))
+      assert.equal(getDamageCalculatorThreeNonDamageScope(changed), null, `${id} S${raw.skillIndex} talent`)
+      const changedTrait = structuredClone(skill)
+      changedTrait.operatorProfile.trait = null
+      changedTrait.operatorProfile.traitDescription = '治療と同時に敵へダメージを与える'
+      assert.equal(getDamageCalculatorThreeNonDamageScope(changedTrait), null, `${id} S${raw.skillIndex} trait`)
+    }
+  }
+  for (const [id, index] of [['char_4202_haruka', 2], ['char_4202_haruka', 3], ['char_479_sleach', 3],
+    ['char_202_demkni', 2], ['char_202_demkni', 3], ['char_2025_shu', 3]] as const) {
+    const skill = record(sources.find(source => source.operatorId === id)!, 1)
+    skill.skillIndex = index
+    assert.equal(getDamageCalculatorThreeNonDamageScope(skill), null, `${id} S${index}`)
+  }
+})
+
+test('915スキルの母集団は対象外118件を含み、版差分で新規対応と区別する', () => {
   const previous = readSnapshot('v3').rows
   const excluded = new Map(frozen.map(row => [coverageRecordKey(row), row]))
   const current = previous.map(row => excluded.get(coverageRecordKey(row)) ?? row)
@@ -107,10 +136,10 @@ test('915スキルの母集団は対象外82件を含み、版差分で新規対
   assert.equal(summary.count, 915)
   for (const section of summary.sections) assert.equal(section.buckets.reduce((sum, bucket) => sum + bucket.count, 0), 915)
   const overall = summary.sections[0].buckets
-  assert.equal(overall.find(bucket => bucket.status === 'NOT_APPLICABLE')!.count, 82)
-  assert.equal(overall.find(bucket => bucket.status === 'NOT_APPLICABLE')!.proportion, 82 / 915)
+  assert.equal(overall.find(bucket => bucket.status === 'NOT_APPLICABLE')!.count, 118)
+  assert.equal(overall.find(bucket => bucket.status === 'NOT_APPLICABLE')!.proportion, 118 / 915)
   const changes = diffCoverageRecords(previous, current)
-  assert.equal(changes.length, 82)
+  assert.equal(changes.length, 118)
   assert.ok(changes.every(change => getCoverageChangeLabel(change) === '対象外に分類'))
   const supported = { ...frozen[0], status: 'SUPPORTED' as const }
   assert.equal(getCoverageChangeLabel(diffCoverageRecords([frozen[0]], [supported])[0]), '新規対応')
@@ -137,7 +166,7 @@ test('対象外を含む新しい版の保存形式を検証し、不正件数�
   assert.deepEqual(parseCoverageIndex({ schemaVersion: 1, versions: [version] }).versions[0], version)
   const client = createCoverageHistoryClient({ fetch: async () => new Response(bytes) })
   assert.deepEqual(await client.loadSnapshot(version), snapshot)
-  for (const value of [undefined, -1, 1.5, 81, '82']) {
+  for (const value of [undefined, -1, 1.5, 117, '118']) {
     assert.throws(() => parseCoverageIndex({ schemaVersion: 1, versions: [{ ...version,
       counts: { ...version.counts, NOT_APPLICABLE: value } }] }), /不正/)
   }

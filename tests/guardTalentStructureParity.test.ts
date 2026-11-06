@@ -100,6 +100,14 @@ for (const operatorId of new Set(baseline.cases.map(item => item.operatorId))) {
         phaseIndex: 2, operatorLevel: 90, trust: 100, skillLevelIndex: 9, conditions: { guard: item.guard } })
       const actual = snapshot(output)
       const label = `${name} S${item.skillIndex} ${JSON.stringify(item.guard)}`
+      if (item.operatorId === 'char_2024_chyue' && item.skillIndex === 2) {
+        // The old baseline blocked both S2 events. They now have separate reviewed
+        // stages; independent initial/fall formulas are tested in guardDamageCalculator.
+        assert.equal(item.expected.blocked, true)
+        assert.equal(actual.blocked, false, `${label}: reviewed S2 event`)
+        assert.ok(actual.rowCount > 0)
+        continue
+      }
       assert.equal(actual.blocked, item.expected.blocked, `${label}: output availability`)
       assert.equal(actual.rowCount, item.expected.rowCount, `${label}: row count`)
       assert.equal(actual.summary.length, item.expected.summary.length, `${label}: summary length`)

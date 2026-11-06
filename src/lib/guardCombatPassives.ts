@@ -22,12 +22,6 @@ export interface GuardPassiveCalculationConstraint extends GuardCalculationIssue
  * Input validation and missing/corrupt source data are deliberately not coverage states.
  */
 export function getGuardPassiveCalculationConstraints(operatorId: string, context: Context): readonly GuardPassiveCalculationConstraint[] {
-  if (operatorId === 'char_2024_chyue' && context.skillIndex === 2) return [{
-    id: 'chyue-s2-levitation-talent-order', relatedSections: ['スキル', '素質1'],
-    talentIndex: 0,
-    reason: '浮遊解除前後で止戈の適用が変わる処理順を、攻撃ごとに解決する必要があります。',
-    allows: () => false,
-  }]
   if (operatorId === 'char_4037_demetr') return [{
     id: 'demetr-target-hp-damage-curve', relatedSections: ['素質1'],
     talentIndex: 0,
@@ -169,6 +163,10 @@ function evaluateGuardPassiveDefinitions(operator: SkillRecord, conditions: Guar
     }
   }
   if (output.blockers.length) return output
+  // S2's fall event guarantees the damage-increase mark before its own hit.
+  // The input still describes the initial event and must not disable this guaranteed effect.
+  if (operator.operatorId === 'char_2024_chyue' && context.skillIndex === 2 && context.stageId === 'fall')
+    values.talentActive = true
   const selected = getOperatorPassives(operator.operatorProfile, 2,
     operator.operatorProfile.phases[2]?.maxLevel ?? 90, 1).sources
   const talents: PassiveSource[] = registrationOnly ? getGuardTalentIdentity(operator.operatorId).map(({ name, prefabKey }, talentIndex) => ({
@@ -232,11 +230,12 @@ function evaluateGuardPassiveDefinitions(operator: SkillRecord, conditions: Guar
     applyGuardTalentStructure(output, structure, metrics, registrationOnly)
   }
   if (![output.attackRatio, output.attackFlat, output.attackScale, output.attackSpeed, output.damageScale,
-    output.defenseIgnoreRatio, output.defenseIgnoreFixed, output.resistanceIgnoreFixed,
+    output.defenseIgnoreRatio, output.attackDefenseIgnoreRatio ?? 0, output.criticalDefenseIgnoreRatio ?? 0,
+    output.defenseIgnoreFixed, output.resistanceIgnoreFixed,
     output.resistanceIgnoreRatio, output.defenseReductionRatio, output.critChance, output.critScale].every(Number.isFinite)) {
     block('素質・特性', '計算値が有限数になりません。')
   }
-  if ([output.critChance, output.defenseIgnoreRatio, output.resistanceIgnoreRatio,
+  if ([output.critChance, output.defenseIgnoreRatio, output.attackDefenseIgnoreRatio ?? 0, output.criticalDefenseIgnoreRatio ?? 0, output.resistanceIgnoreRatio,
     output.defenseReductionRatio].some(value => value < 0 || value > 1)
     || output.critScale < 0 || output.attackScale < 0 || output.damageScale < 0
     || output.attackRatio < -1 || output.resistanceIgnoreFixed < 0 || output.defenseIgnoreFixed < 0) {

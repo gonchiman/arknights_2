@@ -75,8 +75,117 @@ const operator = (operatorId: string, stages: readonly [number, GuardStage | rea
 const hp = n('targetHpPercent', '対象のHP（%）', 100, 0, 100)
 const aoeNotes = ['選択した全対象が同じ攻撃に命中する条件。範囲外の敵と敵の位置変化は含めない。']
 
+
+const chargeInput = n('storedChargeCount', '通常貯蔵弾数', 0, 0, 3)
+const volleyReason = '現在の貯蔵弾を含む斉射1回を評価し、再貯蔵・次回発射までの時間は計算しません。'
+const volley = (options: Partial<GuardStage> = {}): GuardStage => normal({
+  dpsUnsupportedReason: volleyReason, periodTotal: unresolvedPeriod(volleyReason), ...options,
+})
+const quickVolley = (intervalScale: GuardValue = k('base_attack_time')): GuardStage => volley({ intervalScale,
+  actions: [{ label: '通常弾', role: 'MAIN', damageType: 'ARTS', scale: k('attack@atk_scale') }],
+})
+const storedScale = (value: CombatNumericValue) => effect('stored-scale', 'atk_scale',
+  { item: 'STORED_CHARGE_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value })
+const extraChargeCondition = (eligibility: CombatCondition): CombatCondition => ({ type: 'ALL',
+  conditions: [eq('extraStoredChargeHeld', true), eligibility] })
+const extraCharge = (value: CombatNumericValue, eligibility: CombatCondition) => effect('extra-stored-charge', 'times_2',
+  { item: 'EXTRA_STORED_CHARGES', operation: 'ADD_VALUE', unit: 'POINT', value }, { condition: extraChargeCondition(eligibility) })
+const numericIf = (condition: CombatCondition, whenTrue: CombatNumericValue, whenFalse: CombatNumericValue = 0): CombatNumericValue =>
+  ({ type: 'CONDITIONAL', condition, whenTrue, whenFalse })
+
 /** Reviewed JP skills. Unsupported mechanisms remain explicitly deferred, never approximated by a normal attack. */
 export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = [
+  operator('char_338_iris', [
+    [1, quickVolley()],
+    [2, normal({ ...action('睡眠終了時の爆発', k('atk_scale')), actions: [{ label: '睡眠終了時の爆発', role: 'MAIN', damageType: 'ARTS',
+      scale: k('atk_scale'), hits: input('sleepExplosionHits') }], periodTotal: unresolvedPeriod('命中する睡眠終了時の爆発だけを評価し、睡眠中の通常攻撃は加算しません。') }),
+      [n('sleepExplosionHits', '対象に命中する睡眠終了時の爆発数', 1, 1, 2)]],
+  ], [talent(0, '開かずの宝箱', v => [storedScale(v.read('atk_scale'))], ['DAMAGE'])],
+  { inputs: [chargeInput], traitNotes: ['貯蔵弾の倍率は貯蔵弾だけに適用する。S2は睡眠終了時の爆発だけを評価し、貯蔵弾を追加しない。', ...aoeNotes] }),
+  operator('char_4046_ebnhlz', [
+    [1, quickVolley()],
+    [3, [volley({ atk: k('atk'), aspd: k('attack_speed'), when: { input: 'targetEliteOrBoss', comparison: 'EQ', value: true } }),
+      volley({ id: 'ineligible-target', label: '攻撃対象外', actions: [], when: { input: 'targetEliteOrBoss', comparison: 'EQ', value: false },
+        unresolved: ['S3はエリート・ボスのみを攻撃します。対象の種別を変更してください。'] })]],
+  ], [
+    talent(0, 'デュナーミク', v => [storedScale(mul(v.read('atk_scale'), numericIf(eq('skillIndex', 3), metric('skill.talent_scale_multiplier'), 1))),
+      extraCharge(v.read('times_2'), eq('targetEliteOrBoss', true))], ['DAMAGE', 'ABILITY']),
+    talent(1, 'アポジャトゥーラ', v => [effect('isolated-additional', 'atk_scale', { item: 'ADDITIONAL_ATTACK', operation: 'DEAL_DAMAGE',
+      unit: 'MULTIPLIER', value: v.read('atk_scale'), damageType: 'ARTS', rate: 'PER_ATTACK',
+      hits: add(1, metric('storedChargeCount'), numericIf(extraChargeCondition(eq('targetEliteOrBoss', true)), 1)) },
+      { condition: eq('targetIsolated', true), target: target('ENEMY', 'ATTACK_TARGET'), timing: { type: 'EVENT', event: 'NORMAL_ATTACK' }, lifetime: { type: 'CURRENT_EVENT' } })], ['DAMAGE']),
+  ], { inputs: [chargeInput, b('extraStoredChargeHeld', 'エリート・ボス用の貯蔵弾を所持'), b('targetEliteOrBoss', '対象がエリート・ボス', true), b('targetIsolated', '対象の周囲に他の敵がいない')],
+    traitNotes: ['通常貯蔵弾と対象限定の追加貯蔵弾を分ける。孤立時の追加術ダメージは通常弾・各貯蔵弾それぞれで発生し、貯蔵弾専用倍率を受けない。'],
+    deferredSkills: [{ skillIndex: 2, reason: '残像が与える攻撃と本人の素質の関係、召喚・命中条件を確認する必要がある。' }] }),
+  operator('char_4110_delphn', [
+    [1, quickVolley()],
+    [2, [volley({ atk: k('atk'), when: { input: 'targetHpPercent', comparison: 'GTE', value: 50 }, actions: [
+      { label: '通常弾', role: 'MAIN', damageType: 'ARTS', scale: 1 },
+      { label: '付与中の継続ダメージ', role: 'ADDITIONAL', damageType: 'ARTS', basis: 'ATK_STAT', timing: 'PER_SECOND', scale: product(k('damage_addition'), input('delphineDotStacks')) },
+    ] }), periodic('付与中の継続ダメージ', product(k('damage_addition'), input('delphineDotStacks')),
+      { id: 'low-hp-dot', label: 'HP50%未満・付与済み継続ダメージ', atk: k('atk'), maxTargets: 1, when: { input: 'targetHpPercent', comparison: 'LT', value: 50 } })],
+      [n('delphineDotStacks', '現在付与中の継続ダメージ重複数', 0, 0, 4)]],
+  ], [
+    talent(0, '血で刃を濯ぐ', v => [damage(v.read('damage_scale'), cmp('targetHpPercent', 'GTE', percent(v.read('hp_ratio'))))], ['DAMAGE']),
+    talent(1, '仇討ちの決意', v => [effect('chapter-sarkaz-scale', 'atk_scale', { item: 'ATTACK_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('atk_scale') },
+      { condition: eq('chapter13Sarkaz', true) }), extraCharge(v.read('times_2'), eq('chapter13Sarkaz', true))], ['DAMAGE', 'ABILITY']),
+  ], { inputs: [chargeInput, hp, b('chapter13Sarkaz', '第13章「悪兆渦流」のサルカズが対象'), b('extraStoredChargeHeld', 'サルカズ用の貯蔵弾を所持')],
+    traitNotes: ['対象HPと付与済み継続ダメージの重複数を固定する。S2のHP50%未満の対象には通常攻撃を追加しない。命中によるHP低下・重複数の変化は計算しない。'] }),
+  operator('char_297_hamoni', [
+    [1, quickVolley()],
+    [2, [phase('harmoniePhase', 'VOLLEY', volley({ label: 'ブロック中の対象への斉射', intervalScale: k('base_attack_time') })),
+      phase('harmoniePhase', 'WATER', periodic('水域', 0, { actions: [{ label: '水域', role: 'MAIN', damageType: 'ARTS', basis: 'ATK_STAT',
+        timing: 'PER_SECOND', scale: 0, flatDamage: k('damage_value') }] }))],
+      [select('harmoniePhase', '計算対象', [['VOLLEY', 'ブロック中の対象への斉射'], ['WATER', '水域の毎秒ダメージ']])]],
+  ], [talent(0, '思わぬ出会い', v => [effect('blocked-attack-scale', 'atk_scale', { item: 'ATTACK_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('atk_scale') },
+    { condition: { type: 'ANY', conditions: [eq('targetBlocked', true), { type: 'ALL', conditions: [eq('skillIndex', 2), eq('harmoniePhase', 'VOLLEY')] }] } })], ['DAMAGE'])],
+  { inputs: [chargeInput, b('targetBlocked', '対象がブロックされている')],
+    // https://prts.wiki/w/和弦: the talent increases attack scale, not post-mitigation damage.
+    traitNotes: ['S2の通常攻撃はブロック中の対象への斉射を評価する。水域は別に評価し、攻撃力・貯蔵弾・素質の攻撃倍率を適用しない。'] }),
+  operator('char_469_indigo', [
+    [1, quickVolley(sum(1, k('base_attack_time')))],
+    [2, [phase('indigoPhase', 'VOLLEY', volley({ label: 'バインド前の対象への斉射', intervalScale: k('base_attack_time') })),
+      phase('indigoPhase', 'BIND', periodic('バインド中の継続ダメージ', k('indigo_s_2[damage].atk_scale'), { actions: [
+        { label: 'バインド中の継続ダメージ', role: 'MAIN', damageType: 'ARTS', basis: 'ATK_STAT', timing: 'PER_SECOND',
+          scale: k('indigo_s_2[damage].atk_scale'), hits: 2 },
+      ] }))],
+      [select('indigoPhase', '計算対象', [['VOLLEY', 'バインド前の対象への斉射'], ['BIND', 'バインド中の毎秒ダメージ']])]],
+  ], [talent(0, '柔光のとばり', () => [status('bind', '各弾の命中時に確率でバインド付与'), status('avoid-bound', 'バインド中の敵を通常攻撃の対象にしない')], ['STATUS', 'ATTACK_BEHAVIOR'])],
+  { inputs: [chargeInput], traitNotes: ['通常攻撃は発射時にバインドされていない対象への斉射だけを評価する。命中後のバインド確率・次回攻撃への影響は計算しない。S2継続ダメージは現在バインド中の対象の毎秒値。'] }),
+
+  operator('char_345_folnic', [[2, normal({ maxTargets: null, traitOverrides: ['NORMAL_ATTACK_ENABLED'],
+    actions: [{ label: '薬刃弾', role: 'MAIN', damageType: 'ARTS', scale: k('attack@atk_scale') }] })]], [
+    talent(0, '薬物遮断技術', () => [status('resist', '配置後レジスト'),
+      status('environment-reduction', '自然環境からの被ダメージを軽減')], ['STATUS', 'SURVIVAL']),
+  ], { traitNotes: [...aoeNotes, 'S2の薬刃弾による敵への範囲ダメージを評価する。味方への治療量は加算しない。'],
+    deferredSkills: [{ skillIndex: 1, reason: '味方への治療を強化するスキルで、直接ダメージの対象外。' }] }),
+  operator('char_1052_kalts2', [[2, normal({ atk: k('atk'), maxTargets: null,
+    traitOverrides: ['NORMAL_ATTACK_ENABLED', 'DAMAGE_TYPE'],
+    actions: [{ label: '医療ユニット射撃', role: 'MAIN', damageType: 'TRUE', scale: k('attack@atk_scale') }],
+    periodTotal: unresolvedPeriod('弾薬10発の消費時刻や治療対象への射撃を扱わず、敵に命中する1発と連続射撃中のDPSを評価します。') })]], [
+    talent(0, '遺塵の先を', () => [status('durability', '最大HP・防御力・ブロック数・ブロック範囲を増加'),
+      status('liftoff', '配置後に離陸')], ['SURVIVAL', 'ABILITY']),
+    talent(1, '医師の標', () => [status('ally-shield-heal', '範囲内に配置した自身以外の味方にシールドと継続回復を付与',
+      { target: { ...target('ALLY', 'ATTACK_RANGE'), includeSelf: false } })], ['SURVIVAL']),
+  ], { traitNotes: [...aoeNotes, 'S2の命中範囲内にいる敵への確定ダメージを評価する。治療量・足止め・離陸中の移動はダメージに含めない。'],
+    deferredSkills: [{ skillIndex: 1, reason: '治療と味方のブロック範囲を強化するスキルで、直接ダメージの対象外。' },
+      { skillIndex: 3, reason: '治療と味方の移動を行うスキルで、直接ダメージの対象外。' }] }),
+  operator('char_4179_monstr', [[3, normal({ atk: k('atk'), intervalAdd: k('base_attack_time'),
+    blockCountAdd: k('block_cnt'), maxTargets: sum(1, k('block_cnt')),
+    traitOverrides: ['NORMAL_ATTACK_ENABLED', 'DAMAGE_TYPE'],
+    actions: [{ label: 'メルトダウン', role: 'MAIN', damageType: 'TRUE', scale: 1 }],
+    periodTotal: unresolvedPeriod('現在の素質状態とブロック数を固定して評価し、回復による素質の更新・HP減少・致命傷による帰還時刻は計算しません。') })]], [
+    talent(0, '自己修復', v => [atk(v.read('atk'), 'atk', { condition: eq('monstrCoreAttackBuffActive', true) }),
+      status('healing-core', '再構成核を配置可能、核を経由する治療は減衰・跳躍数消費なし')], ['ABILITY', 'SURVIVAL']),
+    talent(1, '戦術連携', v => [speed(v.read('attack_speed'), { condition: eq('monstrHealingSpeedBuffActive', true),
+      lifetime: { type: 'FIXED_SECONDS', seconds: v.read('buff_duration') } })]),
+  ], { inputs: [b('monstrCoreAttackBuffActive', '再配置した再構成核の攻撃力強化が有効'),
+    b('monstrHealingSpeedBuffActive', '治療後の素質による攻撃速度上昇が有効', true)],
+    // https://prts.wiki/w/Mon3tr: S3 withdraws the core before moving; a new core may be placed during S3.
+    traitNotes: ['S3中に自身がブロックしている敵への攻撃を評価する。治療の跳躍は敵への攻撃に適用しない。',
+      'S3発動時の再構成核は撤退する。再配置した核の効果範囲内かと、治療後10秒間の攻撃速度上昇が現在有効かを指定する。'],
+    deferredSkills: [{ skillIndex: 1, reason: '跳躍治療を強化するスキルで、直接ダメージの対象外。' },
+      { skillIndex: 2, reason: '再構成核による治療と攻撃速度支援を強化するスキルで、直接ダメージの対象外。' }] }),
   operator('char_121_lava', [[1, normal({ aspd: k('attack_speed') })]], [
     talent(0, '高速チャージ', v => [effect('deploy-sp', 'sp', { item: 'SP_RESTORE', operation: 'ADD_VALUE', unit: 'POINT', value: v.read('sp') },
       { timing: { type: 'EVENT', event: 'DEPLOY' }, lifetime: { type: 'CURRENT_EVENT' } })], ['RESOURCE']),

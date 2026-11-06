@@ -97,6 +97,27 @@ test('チェンS2: 物理500%と術500%を別軽減し、通常2hitや7対象を
   assert.deepEqual(row.attackComponents.map(component => component.damageType), ['PHYSICAL', 'ARTS'])
 })
 
+test('チョンユエS2は初撃と浮遊解除時を別評価し、解除時だけ止戈を確定適用する', () => {
+  for (const talentActive of [false, true]) {
+    const initial = at('char_2024_chyue', 2, 1000, { phase: 'initial', talentActive, actualAttackTargetCount: 4 })
+    const initialAttack = initial.result.stats.attack * 4.5
+    close(initial.row.perAttack, Math.max(initialAttack - 1000, initialAttack * 0.05) * (talentActive ? 1.65 : 1))
+    close(initial.row.allTargetsPerAttack, initial.row.perAttack * 4)
+    const fall = at('char_2024_chyue', 2, 1000, { phase: 'fall', talentActive, actualAttackTargetCount: 5 })
+    const fallAttack = fall.result.stats.attack * 6.5
+    close(fall.row.perAttack, Math.max(fallAttack - 1000, fallAttack * 0.05) * 1.65)
+    close(fall.row.allTargetsPerAttack, fall.row.perAttack * 5)
+    assert.equal(fall.row.dps, null)
+    assert.equal(fall.row.attackComponents.length, 1)
+  }
+  assert.deepEqual(output('char_2024_chyue', 2, { phase: 'initial', actualAttackTargetCount: 5 }).rows, [])
+  const skill = record('char_2024_chyue', 2)
+  const virtual = buildDamageCalculatorThreeOutput({ operator: skill, skill, phaseIndex: 2, operatorLevel: 90,
+    trust: 100, skillLevelIndex: 9, conditions: { guard: { phase: 'fall', talentActive: false } }, virtualMainAttackType: 'ARTS' })
+  assert.deepEqual(virtual.unsupportedReasons, [])
+  close(virtual.rows.find(row => row.axisValue === 40)!.perAttack, virtual.stats.attack * 6.5 * 0.6 * 1.65)
+})
+
 test('マウンテンS1: 確率倍率は軽減後に加重し、対象2体へ1回ずつ与える', () => {
   const { result, row } = at('char_264_f12yin', 1, 1000, { actualAttackTargetCount: 2 })
   const normal = result.stats.attack * 2.3, critical = normal * 1.6

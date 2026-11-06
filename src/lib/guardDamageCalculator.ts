@@ -37,6 +37,10 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
   const resolved = resolveGuardConditions(inputs, suppliedConditions)
   const conditions = resolved.values
   reasons.push(...resolved.errors)
+  for (const requirement of recipe.conditionRequirements ?? []) try {
+    if ((!requirement.when || guardConditionMatches(requirement.when, conditions))
+      && !guardConditionMatches(requirement.condition, conditions)) reasons.push(requirement.reason)
+  } catch (error) { reasons.push(message(error)) }
   if (input.operator.operatorId !== recipe.operatorId || input.skill.operatorId !== recipe.operatorId
     || input.skill.skillId !== structure.basicInfo.skillId || input.skillLevelIndex !== structure.basicInfo.levelIndex) reasons.push('選択したオペレーター・スキル・特化段階が一致していません。')
   const raw = input.skill.skillLevels[structure.basicInfo.levelIndex]
@@ -71,7 +75,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
   let passive = nativePassive
   reasons.push(...passive.blockers, ...(stage?.unresolved ?? []))
   for (const [label, fraction] of Object.entries({ 発動確率: passive.critChance,
-    防御力無視: passive.defenseIgnoreRatio, 術耐性無視: passive.resistanceIgnoreRatio, 防御力低下: passive.defenseReductionRatio,
+    防御力無視: passive.defenseIgnoreRatio, 攻撃時防御力無視: passive.attackDefenseIgnoreRatio ?? 0, 術耐性無視: passive.resistanceIgnoreRatio, 防御力低下: passive.defenseReductionRatio,
     術耐性低下: passive.resistanceReductionRatio ?? 0, 最低ダメージ比率: passive.minimumDamageRatio ?? 0 })) {
     if (!Number.isFinite(fraction) || fraction < 0 || fraction > 1) reasons.push(`素質の${label}が有効範囲外です。`)
   }
@@ -139,17 +143,21 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
       const defenseReduction = value(stage.defenseReductionRatio)
       const resistanceReduction = value(stage.resistanceReductionRatio)
       const defenseReductionFixed = value(stage.defenseReductionFixed)
+      const defenseReductionFinalFixed = value(stage.defenseReductionFinalFixed)
+      const attackFinalFlat = value(stage.attackFinalFlat)
       const resistanceReductionFixed = value(stage.resistanceReductionFixed)
       const damageScale = value(stage.damageScale, 1)
       if (defenseReduction < 0 || defenseReduction > 1 || resistanceReduction < 0 || resistanceReduction > 1)
         throw new RangeError('スキルの防御力・術耐性低下率が有効範囲外です。')
       if (damageScale < 0) throw new RangeError('スキルの与ダメージ倍率が有効範囲外です。')
-      if (defenseReductionFixed < 0 || resistanceReductionFixed < 0) throw new RangeError('固定の防御力・術耐性低下量が有効範囲外です。')
+      if (defenseReductionFixed < 0 || defenseReductionFinalFixed < 0 || resistanceReductionFixed < 0) throw new RangeError('固定の防御力・術耐性低下量が有効範囲外です。')
       for (const modifiers of new Set([passive, nativePassive])) {
         modifiers.defenseReductionRatio = 1 - (1 - modifiers.defenseReductionRatio) * (1 - defenseReduction)
         modifiers.resistanceReductionRatio = 1 - (1 - (modifiers.resistanceReductionRatio ?? 0)) * (1 - resistanceReduction)
         modifiers.damageScale *= damageScale
         modifiers.defenseReductionFixed = (modifiers.defenseReductionFixed ?? 0) + defenseReductionFixed
+        modifiers.defenseReductionFinalFixed = (modifiers.defenseReductionFinalFixed ?? 0) + defenseReductionFinalFixed
+        modifiers.attackFinalFlat = (modifiers.attackFinalFlat ?? 0) + attackFinalFlat
         modifiers.resistanceReductionFixed = (modifiers.resistanceReductionFixed ?? 0) + resistanceReductionFixed
       }
       const baseTime = stats.baseAttackTime * value(stage.intervalScale, 1) + value(stage.intervalAdd) + (passive.attackIntervalAdd ?? 0)
@@ -183,8 +191,11 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
   const pipeline = (scale = 1, extraBonus = 0, modifiers = passive, includeAttackScale = true) => calculateAttackPipeline(stats.attack, {
     directAddition: modifiers.attackFlat,
     directMultiplierPercent: (atk + modifiers.attackRatio + extraBonus) * 100,
+    finalAddition: modifiers.attackFinalFlat ?? 0,
     attackScale: scale * (includeAttackScale ? modifiers.attackScale : 1),
   })
+  const actionScale = (action: GuardDamageAction, modifiers = actionPassives.get(action) ?? passive) =>
+    value(action.scale, 1) * (action.isStoredCharge ? modifiers.storedChargeScale ?? 1 : 1)
   const scopeNotes = [...(recipe.notes ?? []), ...(stage?.notes ?? []), ...passive.notes,
     '選択したHP・状態・累積数が一定の条件で評価します。回復・移動・途中撃破による時間変化は含めません。']
   const directActions = actions.filter(action => action.timing !== 'PER_SECOND')
@@ -196,18 +207,21 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
     : '選択した段階の1回分の値です。動作時間・SP回復を含むDPSは計算しません。')
   const points = enemy ? [axisType === 'PHYSICAL' ? enemy.defense : axisType === 'ARTS' ? enemy.resistance : 0]
     : getDamageSensitivityTablePoints(axisType, directActions.map(action => {
-      try { return pipeline(value(action.scale, 1), value(action.attackBonus), actionPassives.get(action), action.basis !== 'ATK_STAT').finalAttack * 0.95 } catch { return 0 }
+      try { return pipeline(actionScale(action), value(action.attackBonus), actionPassives.get(action), action.basis !== 'ATK_STAT').finalAttack * 0.95 } catch { return 0 }
     }))
 
   function componentsAt(axis: number, list: readonly GuardDamageAction[]): DamageCalculatorThreeAttackComponent[] {
     const components: DamageCalculatorThreeAttackComponent[] = []
     for (const [index, action] of list.entries()) {
       const modifiers = actionPassives.get(action) ?? passive
-      const actionDefenseIgnoreRatio = modifiers === passive ? defenseIgnoreRatio
+      const allowsCritical = action.basis !== 'TARGET_DEFENSE' && action.basis !== 'ATK_STAT'
+      const generalDefenseIgnoreRatio = modifiers === passive ? defenseIgnoreRatio
         : 1 - (1 - modifiers.defenseIgnoreRatio) * (1 - stageDefenseIgnoreRatio)
+      const actionDefenseIgnoreRatio = 1 - (1 - generalDefenseIgnoreRatio)
+        * (1 - (allowsCritical ? modifiers.attackDefenseIgnoreRatio ?? 0 : 0))
       const actionDefenseIgnoreFixed = modifiers === passive ? defenseIgnoreFixed : modifiers.defenseIgnoreFixed + stageDefenseIgnoreFixed
       const actionResistanceIgnoreFixed = modifiers === passive ? resistanceIgnoreFixed : modifiers.resistanceIgnoreFixed + stageResistanceIgnoreFixed
-      const scale = value(action.scale, 1), count = value(action.hits, 1), probability = value(action.probability, 1)
+      const scale = actionScale(action, modifiers), count = value(action.hits, 1) + (action.isStoredCharge ? modifiers.extraStoredCharges ?? 0 : 0), probability = value(action.probability, 1)
       const targets = value(action.targets, actualTargetCount)
       if (scale < 0 || count < 0 || (action.timing !== 'PER_SECOND' && !Number.isSafeInteger(count)) || probability < 0 || probability > 1
         || targets < 0 || targets > actualTargetCount) throw new RangeError(`「${action.label}」の倍率・回数・命中数が不正です。`)
@@ -228,10 +242,10 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
         const resistance = enemy?.resistance ?? (axisType === 'ARTS' ? axis : Number(conditions.enemyResistance ?? 0))
         // Attribute additions precede multiplicative reductions; penetration is applied afterwards.
         // https://prts.wiki/w/游戏数据基础#属性基本公式
-        const appliedDefense = Math.max(0, (defense - (modifiers.defenseReductionFixed ?? 0)) * (1 - modifiers.defenseReductionRatio))
+        const appliedDefense = Math.max(0, (defense - (modifiers.defenseReductionFixed ?? 0)) * (1 - modifiers.defenseReductionRatio)
+          - (modifiers.defenseReductionFinalFixed ?? 0))
         const appliedResistance = Math.max(0, (resistance - (modifiers.resistanceReductionFixed ?? 0))
           * (1 - (modifiers.resistanceReductionRatio ?? 0))) * (1 - modifiers.resistanceIgnoreRatio)
-        const allowsCritical = action.basis !== 'TARGET_DEFENSE' && action.basis !== 'ATK_STAT'
         const branches: ProbabilisticDamageBranch[] = [
           { id: 'NORMAL' as const, probability: allowsCritical ? 1 - modifiers.critChance : 1, scale: 1, attackBonus: 0 },
           { id: 'IGNORE' as const, probability: allowsCritical ? modifiers.critChance : 0, scale: modifiers.critScale, attackBonus: modifiers.criticalAttackRatio ?? 0 },
@@ -242,17 +256,20 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
               ? branchPipeline.finalAttack + value(action.flatDamage) : normalAmount) * branch.scale * variant.factor
           const minimumDamage = (!action.basis || action.basis === 'ATK') && action.timing !== 'PER_SECOND'
             ? branchPipeline.afterFinalMultiplier * (modifiers.minimumDamageRatio ?? 0) : 0
+          const branchDefenseIgnoreRatio = 1 - (1 - actionDefenseIgnoreRatio)
+            * (1 - (branch.id === 'IGNORE' ? modifiers.criticalDefenseIgnoreRatio ?? 0 : 0))
           const mitigation = calculateDamageBreakdown(amount, action.damageType, appliedDefense, appliedResistance,
-            { defenseIgnoreFixed: appliedDefense * actionDefenseIgnoreRatio + actionDefenseIgnoreFixed,
+            { defenseIgnoreFixed: appliedDefense * branchDefenseIgnoreRatio + actionDefenseIgnoreFixed,
               resistanceIgnoreFixed: actionResistanceIgnoreFixed, minimumDamage })
           return { id: branch.id, probability: branch.probability,
-            defenseIgnoreRatio: actionDefenseIgnoreRatio, damage: mitigation.result * count * modifiers.damageScale * variant.damageScale * probability * hitFactor, mitigation }
+            defenseIgnoreRatio: branchDefenseIgnoreRatio, damage: mitigation.result * count * modifiers.damageScale * variant.damageScale * probability * hitFactor, mitigation }
         })
         const expectedDamage = branches.reduce((sum, branch) => sum + branch.damage * branch.probability, 0)
         if (!Number.isFinite(expectedDamage)) throw new RangeError('ダメージ期待値を計算できません。')
         components.push({ id: `guard-${index}-${variantIndex}`, label: variant.label, order: components.length + 1,
           role: action.role, damageType: action.damageType, attackScale: scale * variant.factor, count, targetAirborne: false,
-          defenseIgnoreChance: actionDefenseIgnoreRatio > 0 ? 1 : 0, defenseIgnoreRatio: actionDefenseIgnoreRatio, expectedDamage,
+          defenseIgnoreChance: actionDefenseIgnoreRatio > 0 ? 1 : allowsCritical && (modifiers.criticalDefenseIgnoreRatio ?? 0) > 0 ? modifiers.critChance : 0,
+          defenseIgnoreRatio: Math.max(...branches.map(branch => branch.defenseIgnoreRatio)), expectedDamage,
           expectedHitCount: count * probability * hitFactor, attackPipeline: basePipeline, branches })
       }
     }

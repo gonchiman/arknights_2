@@ -59,6 +59,11 @@ export function evaluateGuardTraits(operator: TraitStructureOperator, stage: Gua
     }
     if (current.aftershockScale !== undefined) return [transformed, { ...transformed,
       label: `${action.label}（余震）`, scale: { op: 'mul' as const, args: [transformed.scale, current.aftershockScale] } }]
+    if (current.storedChargeCount !== undefined && stage.kind === 'NORMAL' && action.role === 'MAIN'
+      && !action.isStoredCharge && (!action.timing || action.timing === 'PER_ATTACK')
+      && (!action.basis || action.basis === 'ATK')) {
+      return [transformed, { ...transformed, label: `${action.label}（貯蔵弾）`, isStoredCharge: true, hits: current.storedChargeCount }]
+    }
     return transformed
   })
   // A multi-part skill may replace one component while another inherits a trait.

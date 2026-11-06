@@ -10,12 +10,12 @@ export type GuardTalentEffectPayload =
   | { readonly item: 'ATTACK_INTERVAL_ADD'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'SECOND' }
   | { readonly item: 'MINIMUM_DAMAGE_RATIO'; readonly operation: 'SET'; readonly value: CombatNumericValue; readonly unit: 'RATIO' }
   | { readonly item: 'DEFENSE_IGNORE_FIXED'; readonly operation: 'IGNORE_FIXED'; readonly value: CombatNumericValue; readonly unit: 'POINT' }
-  | { readonly item: 'DEFENSE_REDUCTION_FIXED' | 'RESISTANCE_REDUCTION_FIXED'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'POINT' }
-  | { readonly item: 'ATK_FLAT' | 'MAX_HP_FLAT' | 'HP_RESTORE_FIXED' | 'SP_RESTORE' | 'AMMO_CAPACITY' | 'FEVER' | 'TAUNT'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'POINT' }
+  | { readonly item: 'DEFENSE_REDUCTION_FIXED' | 'DEFENSE_REDUCTION_FINAL_FIXED' | 'RESISTANCE_REDUCTION_FIXED'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'POINT' }
+  | { readonly item: 'EXTRA_STORED_CHARGES' | 'ATK_FLAT' | 'ATK_FINAL_FLAT' | 'MAX_HP_FLAT' | 'HP_RESTORE_FIXED' | 'SP_RESTORE' | 'AMMO_CAPACITY' | 'FEVER' | 'TAUNT'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'POINT' }
   | { readonly item: 'DEFENSE_BUFF_RATIO' | 'PHYSICAL_DODGE' | 'ARTS_DODGE' | 'DAMAGE_RESISTANCE' | 'PHYSICAL_DAMAGE_RESISTANCE' | 'MIN_HP_RATIO' | 'DEFENSE_REDUCTION_RATIO'; readonly operation: 'ADD_RATIO'; readonly value: CombatNumericValue; readonly unit: 'RATIO' }
   | { readonly item: 'RESISTANCE_IGNORE_RATIO'; readonly operation: 'IGNORE_RATIO'; readonly value: CombatNumericValue; readonly unit: 'RATIO' }
   | { readonly item: 'RESISTANCE_REDUCTION_RATIO'; readonly operation: 'ADD_RATIO'; readonly value: CombatNumericValue; readonly unit: 'RATIO' }
-  | { readonly item: 'ATTACK_SCALE' | 'DAMAGE_SCALE' | 'SPLASH_DAMAGE_SCALE' | 'HEAL_RECEIVED_SCALE'; readonly operation: 'MULTIPLY'; readonly value: CombatNumericValue; readonly unit: 'MULTIPLIER' }
+  | { readonly item: 'STORED_CHARGE_SCALE' | 'ATTACK_SCALE' | 'DAMAGE_SCALE' | 'SPLASH_DAMAGE_SCALE' | 'HEAL_RECEIVED_SCALE'; readonly operation: 'MULTIPLY'; readonly value: CombatNumericValue; readonly unit: 'MULTIPLIER' }
   | { readonly item: 'CRITICAL_ATTACK'; readonly operation: 'MULTIPLY'; readonly value: CombatNumericValue; readonly unit: 'MULTIPLIER' }
   | { readonly item: 'ADDITIONAL_ATTACK'; readonly operation: 'DEAL_DAMAGE'; readonly value: CombatNumericValue; readonly unit: 'MULTIPLIER'; readonly damageType: DamageType; readonly basis?: 'ATK' | 'ATK_STAT' | 'TARGET_DEFENSE'; readonly flatDamage?: CombatNumericValue; readonly hits?: CombatNumericValue; readonly rate: 'PER_ATTACK' | 'PER_SECOND'; readonly label?: string }
   | { readonly item: 'SP_RECOVERY'; readonly operation: 'ADD_VALUE'; readonly value: CombatNumericValue; readonly unit: 'PER_SECOND' }

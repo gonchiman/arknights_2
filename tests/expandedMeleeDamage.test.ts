@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import sourcesJson from '../src/data/expandedMeleeSources.json' with { type: 'json' }
 import { EXPANDED_MELEE_DEFINITIONS } from '../src/lib/expandedMeleeDefinitions.ts'
-import { buildDamageCalculatorThreeOutput } from '../src/lib/damageCalculatorThree.ts'
+import { buildDamageCalculatorThreeOutput, type DamageCalculatorThreeInput } from '../src/lib/damageCalculatorThree.ts'
 import { getDamageThreeComparisonEntries, evaluateDamageThreeComparisonEntry } from '../src/lib/damageCalculatorThreeComparison.ts'
 import { classifySkill } from '../src/lib/classifier.ts'
 import type { ExpandedOperatorSource } from '../src/lib/expandedCombatTypes.ts'
@@ -24,11 +24,11 @@ function record(suffix: string, skillIndex: number): SkillRecord {
 function output(suffix: string, skillIndex: number, guard: GuardConditions = {}) {
   return outputRecord(record(suffix, skillIndex), guard)
 }
-function outputRecord(skill: SkillRecord, guard: GuardConditions = {}) {
+function outputRecord(skill: SkillRecord, guard: GuardConditions = {}, options: Partial<DamageCalculatorThreeInput> = {}) {
   const source = sources.find(source => source.operatorId === skill.operatorId)!
   return buildDamageCalculatorThreeOutput({ operator: skill, skill, phaseIndex: source.phaseIndex,
     operatorLevel: source.profile.phases[source.phaseIndex].maxLevel!, trust: 100,
-    skillLevelIndex: source.skillLevelIndex, conditions: { guard } })
+    skillLevelIndex: source.skillLevelIndex, conditions: { guard }, ...options })
 }
 function at(suffix: string, skillIndex: number, axis = 0, conditions: GuardConditions = {}) {
   const result = output(suffix, skillIndex, conditions)
@@ -42,6 +42,266 @@ function close(actual: number | null, expected: number) {
 }
 const buffed = (attack: number, ratio: number) => Math.floor(attack * (1 + ratio) + 1e-9)
 const physical = (attack: number, defense: number) => Math.max(attack - defense, attack * 0.05)
+
+function fixed(suffix: string, index: number, guard: GuardConditions = {}, defense = 1000, resistance = 60,
+  virtualMainAttackType?: 'PHYSICAL' | 'ARTS') {
+  const result = outputRecord(record(suffix, index), guard, { enemy: { defense, resistance }, virtualMainAttackType })
+  assert.deepEqual(result.unsupportedReasons, [], `${suffix} S${index}`)
+  assert.equal(result.rows.length, 1)
+  return { result, row: result.rows[0] }
+}
+
+test('フランカは20/50%の無視を軽減後に平均し、高防御でも非発動側の最低保証を残す', () => {
+  for (const index of [1, 2]) for (const defense of [0, 1000, 10000]) {
+    const { result, row } = fixed('franka', index, {}, defense)
+    const power = buffed(result.stats.attack, index === 1 ? 0.45 : 1), chance = index === 1 ? 0.2 : 0.5
+    const nonProc = physical(power, defense), proc = power
+    close(row.perAttack, nonProc * (1 - chance) + proc * chance)
+    const component = row.attackComponents[0]
+    close(component.defenseIgnoreChance, chance)
+    close(component.defenseIgnoreRatio, 1)
+    close(component.branches.find(branch => branch.id === 'NORMAL')!.damage, nonProc)
+    close(component.branches.find(branch => branch.id === 'IGNORE')!.damage, proc)
+    close(result.attackInterval, index === 1 ? 1.5 / 1.45 : 1.5)
+    close(row.dps, row.perAttack / result.attackInterval!)
+    if (defense === 10000) assert.notEqual(row.perAttack, physical(power, defense * (1 - chance)))
+    const entry = getDamageThreeComparisonEntries([record('franka', index)])[0]
+    assert.ok(entry)
+    const total = evaluateDamageThreeComparisonEntry(entry, { defense, resistance: 60, enemyCount: 1 })
+    close(total.totalDamage, row.dps! * (index === 1 ? 35 : 30))
+  }
+  assert.deepEqual(output('franka', 2, { actualAttackTargetCount: 2 }).rows, [])
+})
+
+test('フランカを仮想術に変えても防御無視をRES無視に変換しない', () => {
+  for (const index of [1, 2]) for (const defense of [0, 10000]) {
+    const { result, row } = fixed('franka', index, {}, defense, 60, 'ARTS')
+    const power = buffed(result.stats.attack, index === 1 ? 0.45 : 1)
+    close(row.perAttack, power * 0.4)
+    for (const branch of row.attackComponents[0].branches) close(branch.damage, power * 0.4)
+  }
+})
+
+test('フランカの発動確率やS2素質倍率の欠落・更新は、固定値で補わず計算を止める', () => {
+  for (const index of [1, 2]) {
+    const changed = record('franka', index)
+    for (const talent of changed.operatorProfile.talents ?? []) for (const candidate of talent.candidates ?? []) {
+      candidate.blackboard = candidate.blackboard?.filter(entry => entry.key !== 'prob')
+    }
+    assert.deepEqual(outputRecord(changed).rows, [])
+  }
+  const changed = record('franka', 2)
+  changed.skillLevels[9].blackboard = changed.skillLevels[9].blackboard?.filter(entry => entry.key !== 'talent_scale')
+  assert.deepEqual(outputRecord(changed).rows, [])
+})
+
+test('罠師の発動1回は本人の射撃周期を使わず、ロビンの350/380%を個別軽減する', () => {
+  for (const index of [1, 2]) for (const defense of [0, 1000, 10000]) {
+    const trap = fixed('robin', index, {}, defense)
+    close(trap.row.perAttack, physical(trap.result.stats.attack * (index === 1 ? 3.5 : 3.8), defense))
+    assert.equal(trap.row.dps, null)
+    assert.equal(trap.result.attackInterval, null)
+    const shooting = fixed('robin', index, { damagePhase: 'normal' }, defense)
+    close(shooting.row.perAttack, physical(shooting.result.stats.attack, defense))
+    close(shooting.row.dps, shooting.row.perAttack / 0.85)
+  }
+  assert.deepEqual(output('robin', 1, { actualAttackTargetCount: 2 }).rows, [])
+})
+
+test('Frostの罠と追加通常攻撃はDEFを4回別々に引き、範囲外では追撃しない', () => {
+  for (const inRange of [false, true]) for (const defense of [0, 1000, 10000]) {
+    const { result, row } = fixed('rfrost', 2, { targetInAttackRange: inRange }, defense)
+    const power = result.stats.attack
+    close(row.perAttack, physical(power * 2, defense) + (inRange ? physical(power * 1.8, defense) * 3 : 0))
+    assert.equal(row.dps, null)
+    assert.deepEqual(row.attackComponents.map(component => component.role), inRange ? ['MAIN', 'ADDITIONAL'] : ['MAIN'])
+  }
+  const first = fixed('rfrost', 1)
+  close(first.row.perAttack, physical(first.result.stats.attack * 3.5, 1000))
+  const shooting = fixed('rfrost', 2, { damagePhase: 'normal', targetInAttackRange: true })
+  close(shooting.row.perAttack, physical(shooting.result.stats.attack, 1000))
+  assert.deepEqual(output('rfrost', 2, { actualAttackTargetCount: 2 }).rows, [])
+})
+
+test('Frostの仮想属性は罠だけを変換し、追加射撃の物理属性と3ヒットを保持する', () => {
+  const { result, row } = fixed('rfrost', 2, { targetInAttackRange: true }, 1000, 60, 'ARTS')
+  close(row.perAttack, result.stats.attack * 2 * 0.4 + physical(result.stats.attack * 1.8, 1000) * 3)
+  assert.deepEqual(row.attackComponents.map(component => component.damageType), ['ARTS', 'PHYSICAL'])
+})
+
+test('ウルフェナイトは罠1個の範囲ダメージを数え、S2初回減防を推測しない', () => {
+  const first = fixed('wulfen', 1, { actualAttackTargetCount: 4 })
+  close(first.row.allTargetsPerAttack, physical(first.result.stats.attack * 2.5, 1000) * 4)
+  const second = fixed('wulfen', 2, { actualAttackTargetCount: 4 })
+  close(second.row.allTargetsPerAttack, physical(second.result.stats.attack * 2.5, 750) * 2 * 4)
+  assert.equal(second.row.dps, null)
+  for (const active of [false, true]) {
+    const normal = fixed('wulfen', 2, { damagePhase: 'normal', normalTargetDebuffActive: active })
+    close(normal.row.perAttack, physical(normal.result.stats.attack, active ? 750 : 1000))
+  }
+  const blocked = output('wulfen', 2, { damagePhase: 'first-trap' })
+  assert.deepEqual(blocked.rows, [])
+  assert.ok(blocked.unsupportedReasons.some(reason => reason.includes('適用順序')))
+  const virtual = fixed('wulfen', 2, {}, 1000, 60, 'ARTS')
+  close(virtual.row.perAttack, virtual.result.stats.attack * 2.5 * 2 * 0.4)
+})
+
+test('Elaの会心30/100%は防御軽減後の期待値で、S2の800無視を一度だけ引く', () => {
+  for (const index of [1, 2, 3]) for (const target of ['GROUND', 'MINE', 'AIR']) for (const defense of [0, 800, 1000, 10000]) {
+    const count = index === 2 ? 3 : 1
+    const { result, row } = fixed('ela', index, { elaTargetState: target, actualAttackTargetCount: count }, defense)
+    const power = buffed(result.stats.attack, index === 3 ? 0.9 : 0)
+    const appliedDefense = Math.max(0, defense - (index === 2 ? 800 : 0)), chance = target === 'MINE' ? 1 : 0.3
+    const expected = (physical(power, appliedDefense) * (1 - chance) + physical(power * 1.5, appliedDefense) * chance)
+      * (index === 3 && target === 'MINE' ? 1.35 : 1)
+    close(row.perAttack, expected)
+    close(row.allTargetsPerAttack, expected * count)
+    close(result.attackInterval, index === 3 ? 0.5 : 0.85)
+  }
+  assert.deepEqual(output('ela', 3, { elaTargetState: 'AIR_MINE' }).rows, [])
+  assert.deepEqual(output('ela', 1, { actualAttackTargetCount: 2 }).rows, [])
+})
+
+test('Elaの仮想術攻撃に防御800無視を転用せず、会心倍率は保持する', () => {
+  for (const target of ['GROUND', 'MINE']) {
+    const { result, row } = fixed('ela', 2, { elaTargetState: target }, 1000, 60, 'ARTS')
+    close(row.perAttack, result.stats.attack * 0.4 * (target === 'MINE' ? 1.5 : 1.15))
+  }
+})
+
+test('ウァンの連続配置は碁石にだけ与ダメ10%とRES9無視を適用する', () => {
+  for (const stacks of [0, 1, 3]) for (const index of [2, 3]) {
+    const { result, row } = fixed('wang', index, { stoneBonusStacks: stacks, actualAttackTargetCount: 4 })
+    close(row.allTargetsPerAttack, result.stats.attack * (index === 2 ? 5.8 : 3.8) * (1 - (60 - 9 * stacks) / 100)
+      * (1 + 0.1 * stacks) * 4)
+    assert.equal(row.dps, null)
+    const virtual = fixed('wang', index, { stoneBonusStacks: stacks }, 1000, 60, 'PHYSICAL')
+    close(virtual.row.perAttack, physical(virtual.result.stats.attack * (index === 2 ? 5.8 : 3.8), 1000) * (1 + 0.1 * stacks))
+  }
+  for (const index of [1, 2]) {
+    const { result, row } = fixed('wang', index, { damagePhase: 'normal', stoneBonusStacks: 3 })
+    close(row.perAttack, physical(result.stats.attack, 1000))
+    close(result.resistanceIgnoreFixed, 0)
+  }
+})
+
+test('ウァンS1は単一の135%毎秒効果だけ、S3本人攻撃停止と不正な重複数を拒否する', () => {
+  for (const stacks of [0, 3]) {
+    const { result, row } = fixed('wang', 1, { stoneBonusStacks: stacks })
+    close(row.perAttack, 0)
+    close(row.damageOverTimeDps, result.stats.attack * 1.35 * (1 - (60 - 9 * stacks) / 100) * (1 + 0.1 * stacks))
+    close(row.combinedDps, row.damageOverTimeDps!)
+    close(result.model!.duration, 6.5)
+  }
+  assert.deepEqual(output('wang', 1, { actualAttackTargetCount: 2 }).rows, [])
+  for (const stacks of [-1, 1.5, 4]) assert.deepEqual(output('wang', 2, { stoneBonusStacks: stacks }).rows, [])
+  const blocked = output('wang', 3, { damagePhase: 'normal' })
+  assert.deepEqual(blocked.rows, [])
+  assert.ok(blocked.unsupportedReasons.length > 0)
+})
+
+test('ドロシーの罠は配置時から10回が有効な選択命中に限定し、本体射撃の入力と混同しない', () => {
+  for (const index of [1, 2, 3]) for (const normalStacks of [0, 10]) {
+    const count = index === 1 ? 1 : 4
+    const { result, row } = fixed('doroth', index, { normalAttackTalentStacks: normalStacks, actualAttackTargetCount: count })
+    const power = buffed(result.stats.attack, 0.2)
+    close(row.allTargetsPerAttack, (index === 3 ? power * 3.5 * 0.4 : physical(power * (index === 1 ? 4.5 : 3), index === 1 ? 650 : 1000)) * count)
+    assert.equal(row.dps, null)
+    assert.ok(result.activeStageLabel?.includes('配置時から夢想家10回'))
+    const shooting = fixed('doroth', index, { damagePhase: 'normal', normalAttackTalentStacks: normalStacks })
+    close(shooting.row.perAttack, physical(buffed(shooting.result.stats.attack, 0.02 * normalStacks), 1000))
+    const blocked = output('doroth', index, { damagePhase: 'changing-trap' })
+    assert.deepEqual(blocked.rows, [])
+    assert.ok(blocked.unsupportedReasons.some(reason => reason.includes('攻撃力参照時刻')))
+  }
+  assert.deepEqual(output('doroth', 1, { actualAttackTargetCount: 2 }).rows, [])
+  assert.deepEqual(output('doroth', 2, { normalAttackTalentStacks: 11 }).rows, [])
+  const debuffed = fixed('doroth', 1, { damagePhase: 'normal', normalAttackTalentStacks: 5, normalTargetDebuffActive: true })
+  close(debuffed.row.perAttack, physical(buffed(debuffed.result.stats.attack, 0.1), 650))
+})
+
+test('ティッピの2体ブロックを同時攻撃へ流用せず、S2は3連撃を各々防御軽減する', () => {
+  for (const index of [1, 2]) for (const defense of [0, 1000, 10000]) {
+    const { result, row } = fixed('tippi', index, {}, defense)
+    close(row.perAttack, physical(buffed(result.stats.attack, index === 1 ? 1 : 0.5), defense) * (index === 1 ? 1 : 3))
+    close(row.dps, row.perAttack / 1.5)
+    assert.equal(result.maxTargetCount, 1)
+    assert.deepEqual(output('tippi', index, { actualAttackTargetCount: 2 }).rows, [])
+  }
+})
+
+test('コントレイルはスキルATKと離陸中の110%を別乗算し、S2の3体目は空中だけ', () => {
+  for (const index of [1, 2]) for (const airborne of [false, true]) {
+    const count = index === 1 ? 1 : airborne ? 3 : 2
+    const { result, row } = fixed('ctrail', index, { targetAirborne: airborne, actualAttackTargetCount: count })
+    const power = buffed(result.stats.attack, index === 1 ? 0.8 : 0.9) * 1.1
+    close(row.perAttack, physical(power, 1000))
+    close(row.allTargetsPerAttack, physical(power, 1000) * count)
+    close(row.dps, row.perAttack / 1.5)
+  }
+  assert.deepEqual(output('ctrail', 2, { targetAirborne: false, actualAttackTargetCount: 3 }).rows, [])
+  assert.deepEqual(output('ctrail', 2, { targetAirborne: true, actualAttackTargetCount: 4 }).rows, [])
+})
+
+test('ハディヤは支払後の素質4%を一度だけ加算し、換装前後のS1と3体攻撃S2を分ける', () => {
+  for (const converted of [false, true]) for (const stacks of [2, 5]) {
+    const first = fixed('hadiya', 1, { tacticalReconfiguration: converted, costBuffStacks: stacks })
+    close(first.row.perAttack, physical(buffed(first.result.stats.attack, (converted ? 1 : 0) + 0.04 * stacks), 1000))
+    const second = fixed('hadiya', 2, { costBuffStacks: stacks, actualAttackTargetCount: 3 })
+    close(second.row.allTargetsPerAttack, physical(buffed(second.result.stats.attack, 1.5 + 0.04 * stacks), 1000) * 3)
+    close(second.result.attackInterval, 1.25)
+  }
+  assert.deepEqual(output('hadiya', 1, { costBuffStacks: 0 }).rows, [])
+  assert.deepEqual(output('hadiya', 2, { costBuffStacks: 1 }).rows, [])
+  assert.deepEqual(output('hadiya', 2, { costBuffStacks: 6 }).rows, [])
+})
+
+test('ハディヤS1は配置のみ1回を許可し、戦術換装後は最低2回のコスト消費を要求する', () => {
+  const original = fixed('hadiya', 1, { tacticalReconfiguration: false, costBuffStacks: 1 })
+  close(original.row.perAttack, physical(buffed(original.result.stats.attack, 0.04), 1000))
+  const converted = fixed('hadiya', 1, { tacticalReconfiguration: true, costBuffStacks: 2 })
+  close(converted.row.perAttack, physical(buffed(converted.result.stats.attack, 1.08), 1000))
+  const invalid = output('hadiya', 1, { tacticalReconfiguration: true, costBuffStacks: 1 })
+  assert.deepEqual(invalid.rows, [])
+  assert.ok(invalid.unsupportedReasons.some(reason => reason.includes('2回')))
+})
+
+test('罠・弾薬・コスト延長へ期間総ダメージを付けず、巡空者の固定4技能だけ積算する', () => {
+  for (const suffix of ['robin', 'rfrost', 'wulfen', 'ela', 'wang', 'doroth', 'hadiya']) {
+    const source = sources.find(s => s.operatorId.endsWith(`_${suffix}`))!
+    for (const skill of source.skills) {
+      const entry = getDamageThreeComparisonEntries([record(suffix, skill.skillIndex)])[0]
+      const result = evaluateDamageThreeComparisonEntry(entry, { defense: 1000, resistance: 60, enemyCount: 1 })
+      assert.deepEqual(result.errors, [], `${suffix} S${skill.skillIndex}`)
+      assert.equal(result.totalDamage, null)
+    }
+  }
+  for (const [suffix, index, seconds] of [['tippi', 1, 40], ['tippi', 2, 15], ['ctrail', 1, 40], ['ctrail', 2, 30]] as const) {
+    const entry = getDamageThreeComparisonEntries([record(suffix, index)])[0]
+    const result = evaluateDamageThreeComparisonEntry(entry, { defense: 1000, resistance: 60, enemyCount: 1 })
+    assert.deepEqual(result.errors, [])
+    close(result.totalDamage, result.combinedDps! * seconds)
+  }
+})
+
+test('次の9名も素質/特性/スキルの改変や欠落を検出し、固定sourceで穴埋めしない', () => {
+  for (const suffix of ['robin', 'rfrost', 'wulfen', 'ela', 'wang', 'doroth', 'tippi', 'ctrail', 'hadiya']) {
+    const changedSkill = record(suffix, 1)
+    changedSkill.skillLevels[9].description += '未確認の追加ダメージ'
+    assert.deepEqual(outputRecord(changedSkill).rows, [], suffix)
+    const changedTrait = record(suffix, 1)
+    changedTrait.operatorProfile.traitDescription += '未確認の追加ダメージ'
+    assert.deepEqual(outputRecord(changedTrait).rows, [], suffix)
+    const changedTalent = record(suffix, 1)
+    for (const talent of changedTalent.operatorProfile.talents ?? []) for (const candidate of talent.candidates ?? []) candidate.description += '未確認の追加ダメージ'
+    assert.deepEqual(outputRecord(changedTalent).rows, [], suffix)
+  }
+  for (const suffix of ['ela', 'wang', 'doroth', 'ctrail', 'hadiya']) {
+    const missing = record(suffix, 1)
+    for (const talent of missing.operatorProfile.talents ?? []) for (const candidate of talent.candidates ?? []) candidate.blackboard = []
+    assert.deepEqual(outputRecord(missing).rows, [], suffix)
+  }
+})
 
 test('帰溟スペクター・ヴァーダント・若葉睦は本体の属性/連撃/HP条件を保ち、身替りを合算しない', () => {
   for (const index of [1, 2, 3]) {
@@ -658,9 +918,9 @@ test('属性比較は新規の主攻撃の全ヒットを術化し、ウィン�
   }
 })
 
-test('近接追加123人の210技能が実データから有限結果を返し、残り51技能は理由付き保留', () => {
-  assert.equal(sources.length, 123)
-  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 210)
+test('近接追加133人の233技能が実データから有限結果を返し、残り51技能は理由付き保留', () => {
+  assert.equal(sources.length, 133)
+  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 233)
   for (const definition of EXPANDED_MELEE_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     assert.equal(definition.recipes.length + (definition.deferredSkills?.length ?? 0), source.skills.length)

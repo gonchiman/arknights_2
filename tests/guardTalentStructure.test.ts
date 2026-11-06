@@ -65,6 +65,69 @@ function close(actual: number, expected: number) {
   assert.ok(Math.abs(actual - expected) <= Math.max(1, Math.abs(expected)) * 1e-10, `${actual} != ${expected}`)
 }
 
+test('最終加算・最終減算の素質を通常加算と区別し、対象・条件・不正な値を検証する', () => {
+  const original = structure(record('char_010_chen'), 1)
+  const template = original.effects.find(effect => effect.item === 'ATK_BUFF_RATIO')!
+  const finalAttack: TalentStructureEffect = { ...template, item: 'ATK_FINAL_FLAT', operation: 'ADD_VALUE', unit: 'POINT', value: 100,
+    condition: { type: 'COMPARE', metric: 'stolenActive', comparison: 'EQ', value: true },
+    timing: { type: 'CONTINUOUS', while: 'DEPLOYED' }, lifetime: { type: 'WHILE_SOURCE_ACTIVE' }, probability: { chance: 1, rollScope: 'APPLICATION' } }
+  const finalDefense: TalentStructureEffect = { ...finalAttack, item: 'DEFENSE_REDUCTION_FINAL_FIXED', value: 30,
+    target: { ...finalAttack.target, side: 'ENEMY', scope: 'ATTACK_TARGET', includeSelf: false } }
+  const result = apply({ ...original, effects: [finalAttack, finalDefense] }, { stolenActive: true })
+  assert.deepEqual(result.blockers, [])
+  close(result.attackFinalFlat!, 100)
+  close(result.defenseReductionFinalFixed!, 30)
+  close(result.attackFlat, 0)
+  close(result.defenseReductionFixed ?? 0, 0)
+  const inactive = apply({ ...original, effects: [finalAttack, finalDefense] }, { stolenActive: false })
+  close(inactive.attackFinalFlat ?? 0, 0)
+  close(inactive.defenseReductionFinalFixed ?? 0, 0)
+  const ally = apply({ ...original, effects: [{ ...finalAttack, target: { ...finalAttack.target, side: 'ALLY', includeSelf: false } }] }, { stolenActive: true })
+  close(ally.attackFinalFlat ?? 0, 0)
+  for (const value of [Number.NaN, Number.POSITIVE_INFINITY, -1]) {
+    assert.ok(apply({ ...original, effects: [{ ...finalDefense, value }] }, { stolenActive: true }).blockers.length)
+  }
+})
+
+test('確率防御無視は確率分岐へ保持し、平均防御へ変換せず相関不明の会心との合成を止める', () => {
+  const original = structure(record('char_010_chen'), 1)
+  const template = original.effects.find(effect => effect.item === 'ATK_BUFF_RATIO')!
+  const ignore: TalentStructureEffect = { ...template, item: 'DEFENSE_IGNORE_RATIO', operation: 'IGNORE_RATIO', unit: 'RATIO', value: 1,
+    condition: null, timing: { type: 'EVENT', event: 'ATTACK' }, lifetime: { type: 'CURRENT_EVENT' },
+    probability: { chance: 0.2, rollScope: 'APPLICATION' } }
+  const critical: TalentStructureEffect = { ...ignore, item: 'CRITICAL_ATTACK', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: 1.5 }
+  const probabilistic = apply({ ...original, effects: [ignore] })
+  assert.deepEqual(probabilistic.blockers, [])
+  close(probabilistic.defenseIgnoreRatio, 0)
+  close(probabilistic.criticalDefenseIgnoreRatio!, 1)
+  close(probabilistic.critChance, 0.2)
+  close(probabilistic.critScale, 1)
+  for (const effects of [[ignore, critical], [critical, ignore]]) assert.ok(apply({ ...original, effects }).blockers.length)
+  for (const chance of [0, 1]) {
+    const output = apply({ ...original, effects: [{ ...ignore, probability: { chance, rollScope: 'APPLICATION' } }] })
+    assert.deepEqual(output.blockers, [])
+    close(output.defenseIgnoreRatio, 0)
+    close(output.attackDefenseIgnoreRatio ?? 0, chance)
+    close(output.critChance, 0)
+  }
+  const guaranteed = { ...ignore, probability: { chance: 1, rollScope: 'APPLICATION' as const } }
+  for (const effects of [[guaranteed, critical], [critical, guaranteed]]) {
+    const output = apply({ ...original, effects })
+    assert.deepEqual(output.blockers, [])
+    close(output.attackDefenseIgnoreRatio!, 1)
+    close(output.critChance, .2)
+    close(output.critScale, 1.5)
+  }
+  const permanent = apply({ ...original, effects: [{ ...guaranteed, timing: { type: 'CONTINUOUS', while: 'DEPLOYED' },
+    lifetime: { type: 'WHILE_SOURCE_ACTIVE' } }] })
+  close(permanent.defenseIgnoreRatio, 1)
+  close(permanent.attackDefenseIgnoreRatio ?? 0, 0)
+  for (const value of [-0.1, 1.1, Number.NaN]) assert.ok(apply({ ...original, effects: [{ ...ignore, value }] }).blockers.length)
+  const permanentRandom = apply({ ...original, effects: [{ ...ignore, timing: { type: 'CONTINUOUS', while: 'DEPLOYED' },
+    lifetime: { type: 'WHILE_SOURCE_ACTIVE' } }] })
+  assert.ok(permanentRandom.blockers.length)
+})
+
 test('確率0の攻撃力加算は、効果順序にかかわらず後続の会心へ混入しない', () => {
   const original = structure(record('char_010_chen'), 1)
   const template = original.effects.find(effect => effect.item === 'ATK_BUFF_RATIO')!

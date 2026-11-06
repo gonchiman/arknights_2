@@ -49,6 +49,84 @@ function total(id: string, index: number, result: ReturnType<typeof output>) {
     combinedDps: result.rows[0].combinedDps, allTargetsCombinedDps: result.rows[0].allTargetsCombinedDps })
 }
 
+test('フォリニックS2は治療倍率を加算せず、薬刃弾200%の範囲術ダメージを計算する', () => {
+  for (const count of [1, 2, 5]) {
+    const { result, row } = at('char_345_folnic', 2, { actualAttackTargetCount: count }, 40)
+    close(row.perAttack, result.stats.attack * 2 * 0.6)
+    close(row.allTargetsPerAttack, row.perAttack * count)
+    close(result.attackInterval, 2.85)
+    close(row.dps, row.perAttack / 2.85)
+    assert.equal(row.attackComponents?.length, 1)
+    assert.equal(result.damageType, 'ARTS')
+  }
+})
+
+test('エスペランタS2はATK150%上昇と380%確定範囲攻撃を分離し、治療・足止めをダメージに含めない', () => {
+  const result = output('char_1052_kalts2', 2, { actualAttackTargetCount: 4 }, undefined,
+    { enemy: { defense: 1000, resistance: 80 } })
+  assert.deepEqual(result.unsupportedReasons, [])
+  const row = result.rows[0], expected = attack(result.stats.attack, 1.5) * 3.8
+  close(row.perAttack, expected)
+  close(row.allTargetsPerAttack, expected * 4)
+  close(result.attackInterval, 2.85)
+  close(row.dps, expected / 2.85)
+  assert.equal(result.damageType, 'TRUE')
+  assert.equal(row.attackComponents?.length, 1)
+  assert.equal(total('char_1052_kalts2', 2, result).totalDamage, null)
+})
+
+test('Mon3trS3は再配置核と治療後の素質を独立に適用し、治療の跳躍を敵への連鎖攻撃にしない', () => {
+  for (const core of [false, true]) for (const healed of [false, true]) for (const count of [1, 2, 3]) {
+    const result = output('char_4179_monstr', 3,
+      { monstrCoreAttackBuffActive: core, monstrHealingSpeedBuffActive: healed, actualAttackTargetCount: count }, undefined,
+      { enemy: { defense: 1000, resistance: 80 } })
+    assert.deepEqual(result.unsupportedReasons, [])
+    const row = result.rows[0], expected = attack(result.stats.attack, 3.3 + (core ? 0.15 : 0))
+    close(row.perAttack, expected)
+    close(row.allTargetsPerAttack, expected * count)
+    close(result.attackInterval, (2.85 - 1.5) / (healed ? 1.2 : 1))
+    close(row.dps, expected / result.attackInterval!)
+    assert.equal(result.maxTargetCount, 3)
+    assert.equal(result.damageType, 'TRUE')
+    assert.equal(row.attackComponents?.length, 1)
+    assert.equal(total('char_4179_monstr', 3, result).totalDamage, null)
+  }
+  const initial = at('char_4179_monstr', 3)
+  close(initial.row.perAttack, attack(initial.result.stats.attack, 3.3))
+  close(initial.result.attackInterval, 1.35 / 1.2)
+})
+
+test('医療の攻撃変換3スキルは主攻撃の仮想属性を維持し、回復専用スキルは攻撃レシピを持たない', () => {
+  for (const [id, index, scale, ratio] of [
+    ['char_345_folnic', 2, 2, 0], ['char_1052_kalts2', 2, 3.8, 1.5], ['char_4179_monstr', 3, 1, 3.3],
+  ] as const) {
+    for (const virtualMainAttackType of ['PHYSICAL', 'ARTS'] as const) {
+      const result = output(id, index, {}, undefined, { virtualMainAttackType, enemy: { defense: 100, resistance: 40 } })
+      assert.deepEqual(result.unsupportedReasons, [], `${id} ${virtualMainAttackType}`)
+      const preMitigation = attack(result.stats.attack, ratio) * scale
+      close(result.rows[0].perAttack, virtualMainAttackType === 'PHYSICAL' ? preMitigation - 100 : preMitigation * 0.6)
+      assert.equal(result.rows[0].attackComponents![0].role, 'MAIN')
+      assert.equal(result.rows[0].attackComponents![0].damageType, virtualMainAttackType)
+    }
+    const rows = buildDamageCalculatorThreeCoverage(sources.find(source => source.operatorId === id)!.skills.map(skill => record(id, skill.skillIndex)))
+    assert.equal(rows.find(row => row.skill.skillIndex === index)!.status, 'SUPPORTED')
+    assert.ok(rows.filter(row => row.skill.skillIndex !== index).every(row => row.status === 'NOT_APPLICABLE'))
+  }
+})
+
+test('追加医療スキルの原文・素質が変わると計算を停止する', () => {
+  for (const [id, index] of [['char_345_folnic', 2], ['char_1052_kalts2', 2], ['char_4179_monstr', 3]] as const) {
+    for (const change of [
+      (skill: SkillRecord) => { skill.skillLevels.at(-1)!.description += '未確認の追加攻撃' },
+      (skill: SkillRecord) => { skill.operatorProfile.talents!.forEach(talent => talent.candidates!.forEach(candidate => { candidate.description += '敵に追加ダメージ' })) },
+    ]) {
+      const result = output(id, index, {}, change)
+      assert.ok(result.unsupportedReasons.length)
+      assert.deepEqual(result.rows, [])
+    }
+  }
+})
+
 test('ホルハイヤS1は空中対象への素質倍率、S2は9命中の対象配分を反映する', () => {
   const ground = at('char_4027_heyak', 1)
   const airborne = at('char_4027_heyak', 1, { targetAirborne: true })
@@ -205,10 +283,10 @@ test('追加4名の素質数値欠落や未確認のスキル更新は計算を�
   }
 })
 
-test('術師・補助・呪癒師49名の108スキルを86レシピ・22保留に分け、全素質を登録する', () => {
-  assert.equal(sources.length, 49)
-  assert.equal(sources.reduce((sum, source) => sum + source.skills.length, 0), 108)
-  assert.equal(EXPANDED_ARTS_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 86)
+test('術師・補助・医療57名の127スキルを99レシピ・28保留に分け、全素質を登録する', () => {
+  assert.equal(sources.length, 57)
+  assert.equal(sources.reduce((sum, source) => sum + source.skills.length, 0), 127)
+  assert.equal(EXPANDED_ARTS_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 99)
   for (const definition of EXPANDED_ARTS_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     const indices = [...definition.recipes.map(recipe => recipe.skillIndex), ...(definition.deferredSkills ?? []).map(skill => skill.skillIndex)]

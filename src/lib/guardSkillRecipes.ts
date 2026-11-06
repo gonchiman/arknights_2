@@ -48,11 +48,13 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
 
   make('char_2024_chyue', 1, [burst(PHYS, k('atk_scale'), choose('charges', 3, 3, 1), { maxTargets: 1 })],
     [n('charges', '発動前のチャージ数', 1, 1, 3)]),
-  make('char_2024_chyue', 2, [burst(PHYS, 1, 1, { maxTargets: k('max_target'), actions: [
-    a(PHYS, k('atk_scale'), 1, { label: '初撃' }),
-    a(PHYS, k('atk_scale_down'), 1, { label: '浮遊解除時', targets: i('levitatedTargets') }),
-  ], ...pending('chyue-s2-levitation-talent-order', '第一素質の発動・再発動と浮遊解除ダメージの増幅順序を確認する必要があります。', ['スキル', '素質1']) })],
-    [n('levitatedTargets', '浮遊解除の対象数', 0, 0, 4)]),
+  // The second event applies 止戈 before damage and can hit externally levitated enemies.
+  // Source: https://prts.wiki/w/重岳#技能 (拂尘); do not carry the first event's four-target cap over.
+  make('char_2024_chyue', 2, [
+    at('initial', burst(PHYS, k('atk_scale'), 1, { label: '初撃', maxTargets: k('max_target') })),
+    at('fall', burst(PHYS, k('atk_scale_down'), 1, { label: '浮遊解除時', maxTargets: null })),
+  ], [phase(['initial', '初撃'], ['fall', '浮遊解除時の命中']), b('talentActive', '初撃の対象に止戈が適用中')],
+    ['各段階の命中1回を計算する。初撃は指定した止戈の適用状態、浮遊解除時は止戈の確定付与後を評価する。浮遊の成否・初撃からの対象引継ぎ・2段階の合計は計算しない。']),
   make('char_2024_chyue', 3, [burst(PHYS, k('atk_scale'), choose('enhancedMode', true, 2, 1),
     { maxTargets: null, notes: ['合計5回発動による強化後の状態を選択する。5回目の発動中の切替時刻を推定しない。強化後もスキル発動1回の値で、通常攻撃・SP回復を含む周期DPSは含めない。'] })], [b('enhancedMode', '強化後の状態')]),
 
