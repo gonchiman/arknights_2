@@ -68,6 +68,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const [operatorLevel, setOperatorLevel] = useState<number | null>(null)
   const [trust, setTrust] = useState(100)
   const [enemyCount, setEnemyCount] = useState(1)
+  const [applyPenetration, setApplyPenetration] = useState(true)
   const [overrides, setOverrides] = useState<DamageThreeComparisonOverrides>({})
   const [metric, setMetric] = useState<Metric>('dps')
   const [resultView, setResultView] = useState<ResultView>('table')
@@ -84,8 +85,8 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const levelInvalid = !Number.isSafeInteger(level) || level < 1 || level > (selected?.operatorLevel ?? 1)
   const trustInvalid = !Number.isFinite(trust) || trust < 0 || trust > 100
   const comparison = useMemo(() => selected ? evaluateDamageThreeAttributeTables({
-    entry: selected, enemyCount, overrides, operatorLevel: level, trust,
-  }) : null, [selected, enemyCount, overrides, level, trust])
+    entry: selected, enemyCount, overrides, operatorLevel: level, trust, disablePenetration: !applyPenetration,
+  }) : null, [selected, enemyCount, overrides, level, trust, applyPenetration])
   const output = comparison?.reference.output
   const conditionInputs: GuardInput[] = (comparison?.reference.fields ?? []).filter(field => !field.locked)
     .map(field => ({ ...field, defaultValue: field.value ?? (field.kind === 'number' ? Number.NaN : '') }))
@@ -100,7 +101,8 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   function openImage() {
     if (!selected || !comparison || comparison.errors.length > 0) return
     const { reference, physical, arts } = comparison
-    const conditions = [selected.structure.basicInfo.skillLevel, ...growthConditions, `敵${enemyCount}体`]
+    const penetrationConditions = applyPenetration ? [] : ['防御力・術耐性無視オフ']
+    const conditions = [selected.structure.basicInfo.skillLevel, ...penetrationConditions, ...growthConditions, `敵${enemyCount}体`]
     if (reference.actualTargetCount !== null && reference.actualTargetCount !== enemyCount) {
       conditions.push(`攻撃対象${reference.actualTargetCount}体`)
     }
@@ -122,6 +124,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
           selected.structure.basicInfo.skillLevel,
           ...(stages.length > 1 ? [selected.stageLabel] : []),
           ...(enemyCount > 1 ? [`敵${enemyCount}体`] : []),
+          ...penetrationConditions,
           '仮想比較',
           '主攻撃（1体あたり）',
         ],
@@ -251,6 +254,10 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
         {hasDps ? <AttributeButtons label="表示指標" options={[["dps", "DPS"], ["perAttack", "1回の攻撃ダメージ"]]}
           value={activeMetric} onChange={setMetric} /> : <strong className="damage-three-attribute-fixed-metric">1回の攻撃ダメージ</strong>}
         <span className="damage-three-attribute-target">1体あたり</span>
+        <label className="damage-three-attribute-penetration-toggle">
+          <input type="checkbox" checked={applyPenetration} onChange={event => setApplyPenetration(event.target.checked)} />
+          防御力・術耐性無視を適用
+        </label>
         <button type="button" className="button secondary damage-three-attribute-image-button"
           aria-label={resultView === 'table' ? '属性比較表をPNG画像で保存' : '属性比較グラフをPNG画像で保存'}
           aria-haspopup="dialog" disabled={comparison.errors.length > 0} onClick={openImage}>画像を保存</button>

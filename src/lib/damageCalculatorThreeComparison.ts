@@ -30,6 +30,7 @@ export interface DamageThreeComparisonEvaluationOptions {
   operatorLevel?: number
   trust?: number
   virtualMainAttackType?: 'PHYSICAL' | 'ARTS'
+  disablePenetration?: boolean
 }
 export interface ComparisonConditionField {
   key: string
@@ -189,7 +190,8 @@ function calculate(entry: DamageThreeComparisonEntry, common: DamageThreeCompari
   return buildDamageCalculatorThreeOutput({ operator: entry.skill, skill: entry.skill,
     phaseIndex: entry.phaseIndex, operatorLevel: options.operatorLevel ?? entry.operatorLevel, trust: options.trust ?? 100,
     skillLevelIndex: entry.levelIndex, conditions, enemy: { defense: common.defense, resistance: common.resistance },
-    ...(options.virtualMainAttackType === undefined ? {} : { virtualMainAttackType: options.virtualMainAttackType }) })
+    ...(options.virtualMainAttackType === undefined ? {} : { virtualMainAttackType: options.virtualMainAttackType }),
+    ...(options.disablePenetration ? { disablePenetration: true } : {}) })
 }
 
 function matchesEntryStage(entry: DamageThreeComparisonEntry, output: DamageCalculatorThreeOutput,

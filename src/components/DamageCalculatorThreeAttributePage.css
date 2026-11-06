@@ -85,6 +85,17 @@
   margin-bottom: 14px;
 }
 
+.damage-three-attribute-penetration-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.damage-three-attribute-penetration-toggle input {
+  margin: 0;
+}
+
 .damage-three-attribute-image-button {
   margin-inline-start: auto;
 }
