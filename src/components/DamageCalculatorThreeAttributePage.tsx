@@ -14,6 +14,7 @@ import { GuardConditionFields } from './DamageCalculatorThree'
 import {
   DamageCalculatorThreeAttributeImageDialog, type DamageCalculatorThreeAttributeImageSnapshot,
 } from './DamageCalculatorThreeAttributeImageDialog'
+import { DamageCalculatorThreeAttributeRangeChart } from './DamageCalculatorThreeAttributeRangeChart'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
 import { OperatorDetailLink } from './OperatorDetailLink'
 import { PersistentDetails } from './PersistentDetails'
@@ -30,6 +31,7 @@ interface Props {
 }
 
 type Metric = 'perAttack' | 'dps'
+type ResultView = 'table' | 'chart'
 const METRIC_LABELS: Record<Metric, string> = { perAttack: '1回の攻撃ダメージ', dps: 'DPS' }
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 const TABLE_NUMBER = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
@@ -59,6 +61,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const [enemyCount, setEnemyCount] = useState(1)
   const [overrides, setOverrides] = useState<DamageThreeComparisonOverrides>({})
   const [metric, setMetric] = useState<Metric>('dps')
+  const [resultView, setResultView] = useState<ResultView>('table')
   const [image, setImage] = useState<DamageCalculatorThreeAttributeImageSnapshot | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [filters, setFilters] = useState({ ...EMPTY_OPERATOR_FILTERS })
@@ -212,18 +215,23 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
         <span>{growthConditions.join(' · ')}</span>
       </div>
       <div className="damage-three-attribute-toolbar">
+        <AttributeButtons label="表示形式" options={[["table", "表"], ["chart", "グラフ"]]}
+          value={resultView} onChange={setResultView} />
         {hasDps ? <AttributeButtons label="表示指標" options={[["dps", "DPS"], ["perAttack", "1回の攻撃ダメージ"]]}
           value={activeMetric} onChange={setMetric} /> : <strong className="damage-three-attribute-fixed-metric">1回の攻撃ダメージ</strong>}
         <span className="damage-three-attribute-target">1体あたり</span>
-        <button type="button" className="button secondary damage-three-attribute-image-button"
+        {resultView === 'table' && <button type="button" className="button secondary damage-three-attribute-image-button"
           aria-label="属性比較表をPNG画像で保存" aria-haspopup="dialog"
-          disabled={comparison.errors.length > 0} onClick={openImage}>画像を保存</button>
+          disabled={comparison.errors.length > 0} onClick={openImage}>画像を保存</button>}
       </div>
       {comparison.errors.length > 0 && <div className="damage-two-unavailable damage-three-attribute-error" role="status">
         {comparison.errors.map(reason => <div key={reason}>{reason}</div>)}
       </div>}
-      <DamageCalculatorThreeAttributeTable physical={comparison.physical} arts={comparison.arts}
-        metric={activeMetric} invalid={comparison.errors.length > 0} />
+      {resultView === 'table'
+        ? <DamageCalculatorThreeAttributeTable physical={comparison.physical} arts={comparison.arts}
+          metric={activeMetric} invalid={comparison.errors.length > 0} />
+        : <DamageCalculatorThreeAttributeRangeChart physical={comparison.physical} arts={comparison.arts}
+          metric={activeMetric} invalid={comparison.errors.length > 0} />}
     </CollapsibleCalculatorPanel>}
     {image && <DamageCalculatorThreeAttributeImageDialog snapshot={image} onClose={() => setImage(null)} />}
   </section>
