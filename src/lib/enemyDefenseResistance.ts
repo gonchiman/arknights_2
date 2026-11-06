@@ -8,7 +8,7 @@ interface StatRange {
   max: number
 }
 
-interface EnemyDefenseResistanceBand {
+export interface EnemyDefenseResistanceBand {
   from: number
   to: number
   defense: StatRange
