@@ -1,5 +1,5 @@
 .dc3-comparison-page { min-width: 0; }
-.dc3-comparison-filters { grid-template-columns: minmax(165px, 1.2fr) minmax(240px, 2fr) repeat(2, minmax(100px, 1fr)); }
+.dc3-comparison-filters { grid-template-columns: minmax(165px, 1.2fr) minmax(240px, 2fr) repeat(3, minmax(100px, 1fr)); }
 .dc3-comparison-conditions { grid-template-columns: repeat(5, minmax(100px, 1fr)); }
 .dc3-comparison-display { grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--border); }
 .dc3-comparison-display .dc3-comparison-skill-info-toggle { display: flex; align-items: center; gap: 7px; grid-column: 1 / -1; width: fit-content; cursor: pointer; }
@@ -30,10 +30,11 @@
 .dc3-comparison-table.dc3-comparison-table-compact { width: 100%; min-width: 0; table-layout: fixed; }
 .dc3-comparison-table-compact th:nth-child(n), .dc3-comparison-table-compact td { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .dc3-comparison-table-compact th:nth-child(1) { width: 25%; }
-.dc3-comparison-table-compact th:nth-child(2) { width: 10%; }
-.dc3-comparison-table-compact th:nth-child(3) { width: 21%; }
-.dc3-comparison-table-compact th:nth-child(4) { width: 26%; }
-.dc3-comparison-table-compact th:nth-child(5) { width: 18%; }
+.dc3-comparison-table-compact th:nth-child(2) { width: 8%; }
+.dc3-comparison-table-compact th:nth-child(3) { width: 19%; }
+.dc3-comparison-table-compact th:nth-child(4) { width: 12%; }
+.dc3-comparison-table-compact th:nth-child(5) { width: 22%; }
+.dc3-comparison-table-compact th:nth-child(6) { width: 14%; }
 .dc3-comparison-table-compact .skill-coarse-link { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 .dc3-comparison-table-compact .dc3-comparison-numeric-heading button { min-width: 0; white-space: normal; text-align: right; }
 .dc3-comparison-table-compact .dc3-comparison-numeric-heading button > span:first-child { min-width: 0; overflow-wrap: anywhere; }
@@ -41,7 +42,7 @@
 .dc3-comparison-table-normal.dc3-comparison-table-skill-info { min-width: 1730px; }
 .dc3-comparison-table.dc3-comparison-table-skill-info .dc3-comparison-skill-info-heading { min-width: 84px; }
 .dc3-comparison-table.dc3-comparison-table-skill-info .dc3-comparison-skill-duration-heading { min-width: 145px; }
-.dc3-comparison-table-compact.dc3-comparison-table-skill-info { min-width: 960px; table-layout: auto; }
+.dc3-comparison-table-compact.dc3-comparison-table-skill-info { min-width: 1020px; table-layout: auto; }
 .dc3-comparison-table-compact.dc3-comparison-table-skill-info th:nth-child(n) { width: auto; }
 .dc3-comparison-table-compact.dc3-comparison-table-skill-info th:first-child { min-width: 130px; }
 .dc3-comparison-table-compact.dc3-comparison-table-skill-info th:nth-child(2) { min-width: 40px; }
