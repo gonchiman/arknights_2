@@ -83,7 +83,7 @@ export const EXPANDED_SPECIAL_DEFINITIONS: readonly ExpandedOperatorDefinition[]
   // The next-attack skill adds displacement without changing the ordinary attack's multiplier.
   // https://prts.wiki/w/Enforcer ; first-hand S1 damage measurements:
   // https://www.taptap.cn/moment/255723093023001014
-  operator('char_4036_forcer', [[1, normal({ label: '押し出し付きの通常攻撃1回', kind: 'NEXT_ATTACK', maxTargets: 2,
+  operator('char_4036_forcer', [[1, normal({ label: '押し出し付きの通常攻撃1回', kind: 'NEXT_ATTACK',
     periodTotal: period('通常攻撃1回のみ。押し出し後の位置・衝突スタン・落下撃破はダメージへ加算しません。') })]],
   [talent(0, 'テクニカルショット', v => [effect('heavy-target-penetration', 'def_penetrate_fixed / value', {
     item: 'DEFENSE_IGNORE_FIXED', operation: 'IGNORE_FIXED', unit: 'POINT', value: v.read('def_penetrate_fixed'),

@@ -676,7 +676,7 @@ export const EXPANDED_MELEE_DEFINITIONS: readonly ExpandedOperatorDefinition[] =
       notes: ['敵からの攻撃で発生する反撃は自身の通常攻撃に加算しない。被弾頻度を含む総量は計算しない。'] } }, [bool('selfBarrierActive', '自身のバリアが有効', true)]),
   // Reviewed individually against the retained JP snapshot. These recipes share
   // the existing hit/crit/target/trait evaluators; state inputs are not time simulations.
-  define('weedy', [recipe(1, next(P, k('atk_scale'), 1, { maxTargets: 2 }), [], MOVE_NOTE),
+  define('weedy', [recipe(1, next(P, k('atk_scale')), [], MOVE_NOTE),
     recipe(2, normal(P, { atk: k('atk'), intervalAdd: k('base_attack_time'), maxTargets: null, duration: 'UNTIL_EXIT' }), [], MOVE_NOTE),
     { skillIndex: 3, inputs: [phaseInput([{ value: 'shot', label: '本人の液体窒素砲1発' },
       { value: 'movement', label: '移動創傷の更新1回' }, { value: 'cannon', label: '蓄水砲の発射' }]),
@@ -932,10 +932,10 @@ export const EXPANDED_MELEE_DEFINITIONS: readonly ExpandedOperatorDefinition[] =
     {}),
 
   define('rope', [recipe(1, next(P, k('atk_scale')), [], MOVE_NOTE), recipe(2, burst(P, k('atk_scale'), 1, { maxTargets: k('max_target') }), [], MOVE_NOTE)]),
-  define('sqrrel', [recipe(1, next(P, k('atk_scale'), 1, { maxTargets: 2 }), [], MOVE_NOTE), recipe(2, burst(P, k('atk_scale'), 1, { maxTargets: null }), [], MOVE_NOTE)]),
+  define('sqrrel', [recipe(1, next(P, k('atk_scale')), [], MOVE_NOTE), recipe(2, burst(P, k('atk_scale'), 1, { maxTargets: null }), [], MOVE_NOTE)]),
   define('slchan', [recipe(1, next(A, k('atk_scale')), [], MOVE_NOTE), recipe(2, burst(T, k('atk_scale'), 1, { maxTargets: k('max_target') }), [], MOVE_NOTE)],
     { 0: ability(b => [atk(b.read('atk'), 'atk', condition('selfBlocking', false))]) }, [bool('selfBlocking', '自身が敵をブロック中')]),
-  define('panda', [recipe(1, next(P, 1, 1, { maxTargets: 2 }), [], ['次の通常攻撃の倍率は100%のまま、押し出しと減速を付与する。ブロック中の同条件の敵への1攻撃で、落下撃破は加算しない。']),
+  define('panda', [recipe(1, next(P, 1), [], ['次の通常攻撃の倍率は100%のまま、押し出しと減速を付与する。ブロック中の同条件の敵への1攻撃で、落下撃破は加算しない。']),
     recipe(2, burst(P, k('atk_scale'), 1, { maxTargets: null }), [], MOVE_NOTE)]),
   define('strong', [recipe(1, normal(P, { atk: k('atk'), duration: 'UNTIL_EXIT' })), recipe(2, normal(P, { atk: k('atk'), duration: 'UNTIL_EXIT' }))],
     { 0: { categories: ['DAMAGE'], effects: b => [scale(b.read('atk_scale'), 'atk_scale', condition('targetInfectedCreature', true))] } },

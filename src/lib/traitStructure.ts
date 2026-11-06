@@ -10,11 +10,13 @@ import {
 
 /** Job definitions are shared by the structure page and the trait combat evaluator. */
 export const TRAIT_STRUCTURE_JOB_IDS = ['fighter', 'lord', 'crusher', 'hammer', 'sword', 'centurion',
+  'pusher',
   'artsfghter', 'musha', 'instructor', 'fearless', 'reaper', 'librator',
   'pioneer', 'agent', 'charger', 'bearer', 'stalker', 'protector', 'shotprotector', 'artsprotector', 'unyield', 'duelist', 'guardian', 'fortress', 'counsellor',
   'fastshot', 'aoesniper', 'longrange', 'siegesniper', 'reaperrange', 'closerange', 'hunter', 'bombarder', 'loopshooter', 'skybreaker', 'craftsman', 'merchant', 'dollkeeper',
   'corecaster', 'splashcaster', 'blastcaster', 'chain', 'slower', 'underminer', 'incantationmedic', 'phalanx',
-  'traper', 'skywalker', 'mercenary', 'physician', 'watchman', 'chainhealer', 'mystic', 'funnel', 'geek', 'bard', 'blessing', 'primprotector', 'primcaster', 'primguard', 'ritualist', 'summoner', 'tactician', 'soulcaster', 'alchemist'] as const
+  'traper', 'skywalker', 'mercenary', 'physician', 'watchman', 'chainhealer', 'mystic', 'funnel', 'geek', 'bard', 'blessing', 'primprotector', 'primcaster', 'primguard', 'ritualist', 'summoner', 'tactician', 'soulcaster', 'alchemist',
+  'executor', 'hookmaster'] as const
 export type TraitStructureJobId = typeof TRAIT_STRUCTURE_JOB_IDS[number]
 export interface TraitStructureSelection { readonly operatorId: string }
 export interface TraitStructureGrowthSelection { readonly phaseIndex?: number; readonly operatorLevel?: number }
@@ -41,6 +43,7 @@ export type TraitStructureEffect = CombatEffectContext & {
   | { readonly item: 'ATTACK_SCALE'; readonly operation: 'MULTIPLY'; readonly unit: 'MULTIPLIER'; readonly value: CombatNumericValue }
   | { readonly item: 'DAMAGE_TYPE'; readonly operation: 'SET'; readonly unit: 'DAMAGE_TYPE'; readonly value: 'ARTS' | 'PHYSICAL' }
   | { readonly item: 'RANGED_ATTACK_ENABLED' | 'NORMAL_ATTACK_ENABLED' | 'ALLY_HEALING_ENABLED' | 'NATURAL_SP_RECOVERY_ENABLED' | 'INSPIRATION_ENABLED' | 'ELEMENTAL_DAMAGE_ENABLED' | 'ELEMENTAL_BUILDUP_ENABLED' | 'SUMMON_ENABLED'; readonly operation: 'SET_ENABLED'; readonly unit: 'BOOLEAN'; readonly value: boolean }
+  | { readonly item: 'HIGH_GROUND_DEPLOYMENT_ENABLED' | 'FORCED_MOVEMENT_SKILL_ENABLED'; readonly operation: 'SET_ENABLED'; readonly unit: 'BOOLEAN'; readonly value: boolean }
   | { readonly item: 'ATTACK_RANGE'; readonly operation: 'USE_BASE_ATTRIBUTE'; readonly unit: 'RANGE_DEFINITION'; readonly value: { readonly rangeId: string | null } }
   | { readonly item: 'ATTACK_PRIORITY'; readonly operation: 'SET'; readonly unit: 'PRIORITY_RULE'; readonly value: 'AIRBORNE' | 'LOWEST_DEFENSE' | 'HIGHEST_WEIGHT' }
   | { readonly item: 'STATUS'; readonly operation: 'SET_ENABLED'; readonly unit: 'STATUS'; readonly value: 'SLUGGISH' }
@@ -117,6 +120,7 @@ const DEFINITIONS: Record<TraitStructureJobId, JobDefinition> = {
   lord: { descriptions: ['80%の攻撃力で遠距離攻撃も行える'], keys: ['atk_scale'], categories: ['ATTACK_BEHAVIOR', 'DAMAGE'] },
   crusher: { descriptions: [MULTI], keys: [], categories: ['ATTACK_BEHAVIOR'] },
   centurion: { descriptions: [MULTI], keys: [], categories: ['ATTACK_BEHAVIOR'] },
+  pusher: { profession: 'SPECIAL', descriptions: [`${MULTI} 遠距離マスにも配置可能`], keys: [], categories: ['ATTACK_BEHAVIOR', 'DEPLOYMENT'] },
   hammer: { descriptions: ['攻撃対象の周囲にいる敵に攻撃力の{attack@atk_scale_2:0%}の範囲物理ダメージを与える',
     '攻撃対象の周囲にいる敵に攻撃力の50%の範囲物理ダメージを与える'], keys: ['attack@ability_range_radius', 'attack@atk_scale_2'], categories: ['ATTACK_BEHAVIOR', 'DAMAGE_TYPE', 'DAMAGE'] },
   sword: { descriptions: ['通常攻撃時、1回の攻撃で2回ダメージを与える'], keys: [], categories: ['ATTACK_BEHAVIOR'] },
@@ -161,6 +165,8 @@ const DEFINITIONS: Record<TraitStructureJobId, JobDefinition> = {
   skybreaker: { profession: 'SNIPER', descriptions: ['配置後離陸する 離陸中は飛行ユニットのみを攻撃 スキル発動中は降下して範囲物理攻撃を行う'], keys: [], categories: ['ATTACK_BEHAVIOR', 'DAMAGE_TYPE'] },
   craftsman: { profession: 'SUPPORT', descriptions: ['敵を2体までブロック <支援装置>を使用可能'], keys: [], categories: ['BLOCK', 'RESOURCE'] },
   merchant: { profession: 'SPECIAL', descriptions: ['再配置までの時間が短い 撤退時にコストを返却しない 配置中、3秒ごとにコストを3消費(所持コスト不足時自動的に撤退)'], keys: ['interval', 'cost'], categories: ['RESOURCE', 'DEPLOYMENT'] },
+  executor: { profession: 'SPECIAL', descriptions: ['再配置までの時間が極めて短い'], keys: [], categories: ['DEPLOYMENT'] },
+  hookmaster: { profession: 'SPECIAL', descriptions: ['強制移動スキルを所持 遠距離マスにも配置可能'], keys: [], categories: ['STATUS', 'DEPLOYMENT'] },
   dollkeeper: { profession: 'SPECIAL', descriptions: ['致命的なダメージを受けても撤退せず、<身替り>と入れ替わり戦闘を続行する(身替りのブロック数は0)。20秒後<身替り>から再び自身に入れ替わる'],
     keys: ['duration', 'atk', 'max_hp', 'talent_override_rangeid_flag'], prefabKey: '-1', rangeIds: [null, 'x-4', 'x-1', '1-1'], categories: ['HP_CHANGE', 'SUMMON'] },
   corecaster: { profession: 'CASTER', descriptions: ['敵に術ダメージを与える'], keys: [], categories: ['DAMAGE_TYPE'] },
@@ -291,9 +297,9 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
       }
       if (job === 'shotprotector' || job === 'agent') effects.push({ ...context('ranged-attack', 'DAMAGE', 'ATTACK_RULE', 'description:ranged_attack'),
         item: 'RANGED_ATTACK_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: true })
-      if (job === 'agent') {
-        if (initialDeploymentMarker) effects.push({ ...context('initial-deployment-runtime-cost', 'CONTROL', 'DYNAMIC_RULE', 'runtime_cost'),
-          item: 'INITIAL_DEPLOYMENT_RUNTIME_COST', operation: 'SET', unit: 'POINT', value: -9999 })
+      if (job === 'agent' && initialDeploymentMarker) effects.push({ ...context('initial-deployment-runtime-cost', 'CONTROL', 'DYNAMIC_RULE', 'runtime_cost'),
+        item: 'INITIAL_DEPLOYMENT_RUNTIME_COST', operation: 'SET', unit: 'POINT', value: -9999 })
+      if (job === 'agent' || job === 'executor') {
         const frames = profile.phases[phaseIndex].attributesKeyFrames ?? []
         const seconds = frames[0]?.data?.respawnTime
         const valid = typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0
@@ -302,6 +308,16 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
         effects.push({ ...context('base-redeploy-time', 'CONTROL', 'BASE_ATTRIBUTE', `phases[${phaseIndex}].attributesKeyFrames[].data.respawnTime`),
           item: 'REDEPLOY_TIME', operation: 'USE_BASE_ATTRIBUTE', unit: 'SECOND', value: valid ? seconds : null })
       }
+      if (job === 'hookmaster') effects.push({
+        ...context('forced-movement-skill', 'CONTROL', 'DYNAMIC_RULE', 'description:forced_movement_skill'),
+        timing: { type: 'CONTINUOUS', while: 'ALWAYS' },
+        item: 'FORCED_MOVEMENT_SKILL_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: true,
+      })
+      if (job === 'hookmaster' || job === 'pusher') effects.push({
+        ...context('high-ground-deployment', 'CONTROL', 'DYNAMIC_RULE', 'description:high_ground_deployment'),
+        timing: { type: 'CONTINUOUS', while: 'ALWAYS' },
+        item: 'HIGH_GROUND_DEPLOYMENT_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: true,
+      })
       if (job === 'charger') effects.push(
         { ...context('kill-deployment-points', 'CONTROL', 'DYNAMIC_RULE', 'cost', 'KILL'), item: 'DP_ON_KILL', operation: 'ADD_VALUE', unit: 'POINT', value: read('cost', { expected: 1 }) },
         { ...context('retreat-cost-refund', 'CONTROL', 'DYNAMIC_RULE', 'description:initial_cost_refund', 'RETREAT'), item: 'RETREAT_COST_REFUND', operation: 'SET', unit: 'REFUND_RULE', value: 'INITIAL_DEPLOY_COST' },
@@ -488,7 +504,7 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
         { ...context('ranged-attack-scale', 'DAMAGE', 'ATTACK_RULE', 'atk_scale', 'ATTACK'),
           condition: compare('attack.distanceType', 'RANGED'), item: 'ATTACK_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: read('atk_scale', { expected: 0.8 }) },
       )
-      if (job === 'centurion' || job === 'crusher') effects.push({
+      if (job === 'centurion' || job === 'crusher' || job === 'pusher') effects.push({
         ...context('block-count-target-limit', 'DAMAGE', 'ATTACK_RULE', 'description:blocked_enemies', 'NORMAL_ATTACK'),
         item: 'MAX_TARGETS', operation: 'SET', unit: 'ENEMY', value: blockCount(),
         parameterBindings: { 'value.metric': 'source.blockCount' },
@@ -572,6 +588,7 @@ export function formatTraitStructureEffectItem(item: TraitStructureEffect['item'
     SPLASH_DAMAGE: '周囲へのダメージ', HP: 'HP', ATK_BUFF_RATIO: '攻撃力上昇割合', ATTACK_PRIORITY: '攻撃の優先対象',
     STATUS: '付与状態', DEFENSE_BUFF_RATIO: '防御力上昇割合', MAGIC_RESISTANCE: '術耐性', DAMAGE_TO_HEAL_RATIO: '与ダメージからの回復',
     PHYSICAL_DODGE: '物理回避', ARTS_DODGE: '術回避', REDEPLOY_TIME: '基本再配置時間', DP_ON_KILL: '撃破時の所持コスト',
+    HIGH_GROUND_DEPLOYMENT_ENABLED: '遠距離マスへの配置', FORCED_MOVEMENT_SKILL_ENABLED: '強制移動スキルの所持',
     RETREAT_COST_REFUND: '撤退時のコスト返却', TARGET_PRIORITY: '狙われやすさ', CHAIN_ATTACK: '跳躍攻撃', AFTERSHOCK: '余震',
     DP_CONSUMPTION: '所持コスト消費', REPLACEMENT_DURATION: '身替りの継続時間' }[item]
 }

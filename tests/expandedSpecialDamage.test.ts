@@ -451,6 +451,7 @@ test('エンフォーサーS1は倍率100%の通常攻撃、重量3以上のみ�
     close(result.rows[0].perAttack, damage)
     close(result.rows[0].allTargetsPerAttack, damage * count)
     assert.equal(result.rows[0].dps, null)
+    assert.equal(result.traitEvaluation?.evaluations.find(effect => effect.effectId === 'block-count-target-limit')?.status, 'APPLIED')
   }
   assert.deepEqual(output('char_4036_forcer', 1, { actualAttackTargetCount: 3 }).rows, [])
   assert.equal(buildDamageCalculatorThreeCoverage([record('char_4036_forcer', 2)])[0].status, 'NOT_APPLICABLE')
