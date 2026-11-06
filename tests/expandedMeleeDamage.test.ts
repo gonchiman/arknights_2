@@ -51,6 +51,260 @@ function fixed(suffix: string, index: number, guard: GuardConditions = {}, defen
   return { result, row: result.rows[0] }
 }
 
+test('ブリッツS2は発動後だけを計算し、スタン時の160%素質を1.5倍して軽減する', () => {
+  for (const stunned of [false, true]) for (const defense of [0, 1000, 10000]) {
+    for (const type of ['PHYSICAL', 'ARTS'] as const) {
+      const { result, row } = fixed('blitz', 2, { targetStunned: stunned }, defense, 60, type)
+      const amount = result.stats.attack * (stunned ? 1.6 * 1.5 : 1)
+      close(row.perAttack, type === 'PHYSICAL' ? physical(amount, defense) : amount * .4)
+      close(result.attackInterval, 1.2 / 3)
+      close(row.dps, row.perAttack / .4)
+      assert.equal(row.attackComponents.length, 1)
+    }
+  }
+  const activation = output('blitz', 2, { damagePhase: 'activation' })
+  assert.deepEqual(activation.rows, [])
+  assert.ok(activation.unsupportedReasons.some(reason => reason.includes('適用順')))
+  assert.deepEqual(output('blitz', 2, { actualAttackTargetCount: 2 }).rows, [])
+})
+
+test('八幡海鈴S1は5発を独立軽減し、既存状態への10%強化を各対象に一度適用する', () => {
+  for (const count of [1, 4]) for (const defense of [0, 1000, 10000]) for (const type of ['ARTS', 'PHYSICAL'] as const) {
+    const { result, row } = fixed('tmoris', 1, { actualAttackTargetCount: count }, defense, 60, type)
+    const one = (type === 'ARTS' ? result.stats.attack * .7 * .4 : physical(result.stats.attack * .7, defense)) * 1.1 * 5
+    close(row.perAttack, one)
+    close(row.allTargetsPerAttack, one * count)
+    assert.equal(row.dps, null)
+    assert.equal(row.attackComponents.length, 1)
+  }
+})
+
+test('八幡海鈴S2は固定1秒の術ダメージのみを計算し、恐怖や足止めの抽選率を倍率にしない', () => {
+  for (const count of [1, 5]) for (const resistance of [0, 60, 100]) {
+    const { result, row } = fixed('tmoris', 2, { actualAttackTargetCount: count }, 10000, resistance)
+    const expected = result.stats.attack * Math.max(1 - resistance / 100, .05) * 1.1
+    close(row.perAttack, expected)
+    close(row.allTargetsPerAttack, expected * count)
+    close(row.dps, expected)
+    close(result.attackInterval, 1)
+    assert.equal(row.attackComponents.length, 1)
+    assert.equal(row.attackComponents[0].damageType, 'ARTS')
+  }
+  for (const index of [1, 2]) {
+    const unknown = output('tmoris', index, { existingSlowOrFear: false })
+    assert.deepEqual(unknown.rows, [])
+    assert.ok(unknown.unsupportedReasons.some(reason => reason.includes('新規付与')))
+  }
+})
+
+test('祐天寺にゃむは自身の8%攻撃強化と既存脆弱を適用し、強打と軽打を独立軽減する', () => {
+  for (const index of [1, 2]) for (const defense of [0, 1000, 10000]) for (const type of ['PHYSICAL', 'ARTS'] as const) {
+    const { result, row } = fixed('amoris', index, {}, defense, 60, type)
+    const power = buffed(result.stats.attack, .08)
+    const mitigate = (amount: number) => (type === 'PHYSICAL' ? physical(amount, defense) : amount * .4) * 1.08
+    const expected = index === 1 ? mitigate(power * 1.6) + 2 * mitigate(power * .2)
+      : 2 * mitigate(power * 1.25) + 6 * mitigate(power * .1)
+    close(row.perAttack, expected)
+    close(row.allTargetsPerAttack, expected)
+    assert.equal(row.dps, null)
+    assert.equal(row.attackComponents.length, 2)
+    assert.ok(row.attackComponents.every(component => component.role === 'MAIN' && component.damageType === type))
+    assert.ok(result.dpsReason?.includes('周期'))
+    assert.equal(result.attackInterval, null)
+  }
+})
+
+test('祐天寺にゃむは脆弱の新規付与・複数敵の抽選や飛び火を未計算とする', () => {
+  for (const index of [1, 2]) {
+    const unknown = output('amoris', index, { existingVulnerability: false })
+    assert.deepEqual(unknown.rows, [])
+    assert.ok(unknown.unsupportedReasons.some(reason => reason.includes('新規付与')))
+    assert.deepEqual(output('amoris', index, { actualAttackTargetCount: 2 }).rows, [])
+  }
+})
+
+test('追加5技能は部分段階だけの値をスキル期間全体に換算しない', () => {
+  for (const [suffix, indices] of [['blitz', [2]], ['tmoris', [1, 2]], ['amoris', [1, 2]]] as const) {
+    for (const index of indices) {
+      const entry = getDamageThreeComparisonEntries([record(suffix, index)])[0]
+      const evaluated = evaluateDamageThreeComparisonEntry(entry, { defense: 1000, resistance: 60, enemyCount: 1 })
+      assert.deepEqual(evaluated.errors, [])
+      assert.equal(evaluated.totalDamage, null)
+    }
+  }
+})
+
+test('シュウS3は育種・歳4名・同職3名を独立した加算条件とし、治療を攻撃へ加えない', () => {
+  for (const sown of [false, true]) for (const sui of [false, true]) for (const profession of [false, true]) {
+    const { result, row } = fixed('shu', 3, { groundEnemyOnSownTile: sown, fourSuiInSquad: sui,
+      threeSameProfessionDeployed: profession })
+    const power = buffed(result.stats.attack, .5 + (sown ? .25 : 0) + (sui ? .12 : 0))
+    close(row.perAttack, physical(power, 1000))
+    close(result.attackInterval, 1.2 / (1 + (sown ? .25 : 0) + (profession ? .12 : 0)))
+    assert.equal(row.attackComponents.length, 1)
+  }
+  assert.deepEqual(output('shu', 3, { actualAttackTargetCount: 2 }).rows, [])
+})
+
+test('エアースカーペS1は遠距離減衰なしの160%術攻撃を最大3体へ一度ずつ与える', () => {
+  for (const count of [1, 3]) for (const type of ['ARTS', 'PHYSICAL'] as const) {
+    const { result, row } = fixed('ayer', 1, { actualAttackTargetCount: count, attackDistanceType: 'RANGED' }, 1000, 60, type)
+    const one = type === 'ARTS' ? result.stats.attack * 1.6 * .4 : physical(result.stats.attack * 1.6, 1000)
+    close(row.perAttack, one)
+    close(row.allTargetsPerAttack, one * count)
+    assert.equal(row.dps, null)
+  }
+  assert.deepEqual(output('ayer', 1, { actualAttackTargetCount: 4 }).rows, [])
+})
+
+test('エアースカーペS2は主対象1体とブロック対象の170%追加術を重複対象数に合わせて集計する', () => {
+  for (const count of [1, 4]) for (const overlap of [false, true]) for (const type of ['ARTS', 'PHYSICAL'] as const) {
+    const { result, row } = fixed('ayer', 2, { actualAttackTargetCount: count, mainTargetReceivesExtra: overlap }, 1000, 60, type)
+    const primary = type === 'ARTS' ? result.stats.attack * .4 : physical(result.stats.attack, 1000)
+    const secondary = result.stats.attack * 1.7 * .4 * (count - (overlap ? 0 : 1))
+    close(row.allTargetsPerAttack, primary + secondary)
+    close(row.perAttack, (primary + secondary) / count)
+    close(result.attackInterval, 1.3 / 1.08)
+    assert.ok(row.attackComponents.filter(component => component.role === 'ADDITIONAL').every(component => component.damageType === 'ARTS'))
+    if (count === 1 && !overlap) assert.equal(row.attackComponents.length, 1)
+  }
+})
+
+test('バグパイプの25%会心と2体目は同じ主攻撃として、各連撃を軽減してから平均する', () => {
+  for (const index of [1, 2, 3]) for (const count of [1, 2]) for (const defense of [0, 1000, 10000]) {
+    for (const type of ['PHYSICAL', 'ARTS'] as const) {
+      const { result, row } = fixed('bpipe', index, { actualAttackTargetCount: count }, defense, 60, type)
+      const power = buffed(result.stats.attack, index === 1 ? .45 : index === 3 ? 1.2 : 0)
+      const skillScale = index === 2 ? 2 : 1, hits = index === 2 ? 2 : index === 3 ? 3 : 1
+      const mitigate = (amount: number) => type === 'PHYSICAL' ? physical(amount, defense) : amount * .4
+      const basic = mitigate(power * skillScale), proc = mitigate(power * skillScale * 1.3)
+      const total = hits * (.75 * basic + .25 * proc + (count - 1) * .25 * proc)
+      close(row.allTargetsPerAttack, total)
+      close(row.perAttack, total / count)
+      assert.ok(row.attackComponents.every(component => component.role === 'MAIN' && component.damageType === type))
+      if (index === 2) assert.equal(row.dps, null)
+      else close(result.attackInterval, index === 1 ? 1 / 1.45 : 1.7)
+    }
+  }
+  for (const index of [1, 2, 3]) assert.deepEqual(output('bpipe', index, { actualAttackTargetCount: 3 }).rows, [])
+})
+
+test('バグパイプの2体目に使用する固定資料の素質も、liveパラメータ欠落時は計算を停止する', () => {
+  for (const key of ['prob', 'atk_scale']) {
+    const skill = record('bpipe', 2)
+    for (const candidate of skill.operatorProfile.talents![0].candidates!) {
+      candidate.blackboard = candidate.blackboard!.filter(item => item.key !== key)
+    }
+    assert.deepEqual(outputRecord(skill, { actualAttackTargetCount: 2 }).rows, [])
+  }
+})
+
+test('イネスS1は既に窃取した値を保存した80%毎秒術と主攻撃を分け、初回の順序を推測しない', () => {
+  for (const count of [1, 20, 200]) for (const type of ['PHYSICAL', 'ARTS'] as const) {
+    const { result, row } = fixed('ines', 1, { aliveStolenTargets: count }, 1000, 60, type)
+    const power = result.stats.attack + 90 * count
+    close(row.perAttack, type === 'PHYSICAL' ? physical(power, 1000) : power * .4)
+    close(row.damageOverTimeDps, power * .8 * .4)
+    assert.equal(row.dps, null)
+    assert.equal(row.attackComponents.length, 1)
+  }
+  for (const guard of [{ aliveStolenTargets: 0 }, { aliveStolenTargets: 201 }, { aliveStolenTargets: .5 }, { damagePhase: 'first' }]) {
+    assert.deepEqual(output('ines', 1, guard).rows, [])
+  }
+})
+
+test('イネスS2の窃取ATKは110%強化の後に加算し、攻撃速度の現在累積0〜70を独立適用する', () => {
+  for (const count of [0, 1, 200]) for (const stacks of [0, 5, 10]) {
+    const { result, row } = fixed('ines', 2, { aliveStolenTargets: count, speedStealStacks: stacks })
+    const power = buffed(result.stats.attack, 1.1) + 90 * count
+    close(row.perAttack, physical(power, 1000))
+    close(result.attackInterval, 1 / (1 + .07 * stacks))
+    if (count > 0) assert.notEqual(power, buffed(result.stats.attack + 90 * count, 1.1))
+  }
+  for (const stacks of [-1, .5, 11]) assert.deepEqual(output('ines', 2, { speedStealStacks: stacks }).rows, [])
+})
+
+test('イネスS3は再配置後の通常攻撃と窃取前の影哨初命中を分け、6体分を一括加算しない', () => {
+  for (const count of [0, 2]) {
+    const { result, row } = fixed('ines', 3, { aliveStolenTargets: count })
+    close(row.perAttack, physical(buffed(result.stats.attack, 1.6) + 90 * count, 1000))
+    assert.equal(row.attackComponents.length, 1)
+  }
+  const first = fixed('ines', 3, { damagePhase: 'first-shadow' })
+  close(first.row.perAttack, physical(buffed(first.result.stats.attack, 1.6) * 2, 1000))
+  assert.equal(first.row.dps, null)
+  for (const guard of [{ damagePhase: 'first-shadow', aliveStolenTargets: 1 }, { damagePhase: 'changing-shadow' },
+    { damagePhase: 'first-shadow', actualAttackTargetCount: 2 }]) assert.deepEqual(output('ines', 3, guard).rows, [])
+})
+
+test('シャレムS1は45%の間隔短縮と既存RES25%低下を適用し、IS2だけATK15%と速度30を足す', () => {
+  for (const integrated of [false, true]) for (const count of [1, 3]) {
+    const { result, row } = fixed('aprot2', 1, { phantomIntegratedStrategies: integrated, actualAttackTargetCount: count })
+    const power = buffed(result.stats.attack, integrated ? .15 : 0)
+    close(row.perAttack, power * (1 - .6 * .75))
+    close(row.allTargetsPerAttack, row.perAttack * count)
+    close(result.attackInterval, 1.6 * .55 / (integrated ? 1.3 : 1))
+  }
+  assert.deepEqual(output('aprot2', 1, { actualAttackTargetCount: 4 }).rows, [])
+  assert.deepEqual(output('aprot2', 1, { existingResistanceDebuff: false }).rows, [])
+})
+
+test('シャレムS2は80%6発を対象数で配分し、仮想物理ではRES低下を防御低下に転用しない', () => {
+  for (const count of [1, 3, 10]) for (const integrated of [false, true]) for (const type of ['ARTS', 'PHYSICAL'] as const) {
+    const { result, row } = fixed('aprot2', 2, { phantomIntegratedStrategies: integrated, actualAttackTargetCount: count }, 1000, 60, type)
+    const power = buffed(result.stats.attack, integrated ? .15 : 0) * .8
+    const total = 6 * (type === 'ARTS' ? power * .55 : physical(power, 1000))
+    close(row.allTargetsPerAttack, total)
+    close(row.perAttack, total / count)
+    close(result.attackInterval, 1.6 / (integrated ? 1.3 : 1))
+  }
+  assert.deepEqual(output('aprot2', 2, { existingResistanceDebuff: false }).rows, [])
+})
+
+test('キアーベは配置中ロボットごとのATK11%と既存RES20%低下を350%発動に適用する', () => {
+  for (const robots of [0, 1, 8]) for (const count of [1, 5]) for (const type of ['ARTS', 'PHYSICAL'] as const) {
+    const { result, row } = fixed('chiave', 2, { deployedRobotCount: robots, actualAttackTargetCount: count }, 1000, 60, type)
+    const power = buffed(result.stats.attack, .11 * robots) * 3.5
+    close(row.perAttack, type === 'ARTS' ? power * .52 : physical(power, 1000))
+    close(row.allTargetsPerAttack, row.perAttack * count)
+    assert.equal(row.dps, null)
+  }
+  for (const guard of [{ deployedRobotCount: 9 }, { deployedRobotCount: .5 }, { existingResistanceDebuff: false }]) {
+    assert.deepEqual(output('chiave', 2, guard).rows, [])
+  }
+})
+
+test('新規6名は変化中の素質や再発動を期間積算せず、一定期間の3技能だけ総量を返す', () => {
+  for (const [suffix, index] of [['shu', 3], ['ines', 1], ['ines', 2], ['ines', 3], ['aprot2', 1], ['aprot2', 2], ['chiave', 2]] as const) {
+    const entry = getDamageThreeComparisonEntries([record(suffix, index)])[0]
+    const result = evaluateDamageThreeComparisonEntry(entry, { defense: 1000, resistance: 60, enemyCount: 1 })
+    assert.deepEqual(result.errors, [], `${suffix} S${index}`)
+    assert.equal(result.totalDamage, null)
+  }
+  for (const [suffix, index, seconds] of [['ayer', 2, 25], ['bpipe', 1, 35], ['bpipe', 3, 20]] as const) {
+    const entry = getDamageThreeComparisonEntries([record(suffix, index)])[0]
+    const result = evaluateDamageThreeComparisonEntry(entry, { defense: 1000, resistance: 60, enemyCount: 1 })
+    assert.deepEqual(result.errors, [])
+    const current = fixed(suffix, index)
+    close(result.totalDamage, current.row.dps! * seconds)
+  }
+})
+
+test('新規6名の条件定義は実資料を保持し、スキルや素質原文の変更を拒否する', () => {
+  for (const suffix of ['shu', 'ayer', 'bpipe', 'ines', 'aprot2', 'chiave']) {
+    const definition = EXPANDED_MELEE_DEFINITIONS.find(definition => definition.operatorId.endsWith(`_${suffix}`))!
+    const source = sources.find(source => source.operatorId === definition.operatorId)!
+    assert.equal('coverage' in source || 'passives' in source, false)
+    const index = definition.recipes[0].skillIndex
+    const changedSkill = record(suffix, index)
+    changedSkill.skillLevels[9].description += ' 未確認'
+    assert.deepEqual(outputRecord(changedSkill).rows, [])
+    const changedTalent = record(suffix, index)
+    for (const candidate of changedTalent.operatorProfile.talents![0].candidates!) candidate.description += ' 未確認'
+    assert.deepEqual(outputRecord(changedTalent).rows, [])
+  }
+})
+
 test('フランカは20/50%の無視を軽減後に平均し、高防御でも非発動側の最低保証を残す', () => {
   for (const index of [1, 2]) for (const defense of [0, 1000, 10000]) {
     const { result, row } = fixed('franka', index, {}, defense)
@@ -918,9 +1172,10 @@ test('属性比較は新規の主攻撃の全ヒットを術化し、ウィン�
   }
 })
 
-test('近接追加133人の233技能が実データから有限結果を返し、残り51技能は理由付き保留', () => {
-  assert.equal(sources.length, 133)
-  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 233)
+test('近接追加142人の250技能が実データから有限結果を返し、残り55技能は理由付き未計算', () => {
+  assert.equal(sources.length, 142)
+  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 250)
+  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + (definition.deferredSkills?.length ?? 0), 0), 55)
   for (const definition of EXPANDED_MELEE_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     assert.equal(definition.recipes.length + (definition.deferredSkills?.length ?? 0), source.skills.length)

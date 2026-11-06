@@ -273,12 +273,13 @@ function legacyAttackKind(stage: SkillStructureStage): 'NORMAL' | 'NEXT_ATTACK' 
 function stageLabel(recipe: GuardSkillRecipe, stage: GuardStage): string {
   if (!stage.when) return stage.label
   const input = recipe.inputs.find(input => input.key === stage.when!.input)
-  return input?.options?.find(option => option.value === stage.when!.value)?.label ?? stage.label
+  const optionLabel = input?.options?.find(option => option.value === stage.when!.value)?.label
+  return optionLabel && input?.kind === 'boolean' ? `${input.label}：${optionLabel}` : optionLabel ?? stage.label
 }
 
 function guardStageScope(stage: GuardStage): string {
   const scope = stage.kind === 'NEXT_ATTACK' ? '強化攻撃1回'
-    : stage.kind === 'SKILL_ACTION' ? '発動・命中1回' : stage.dpsUnsupportedReason ? '1攻撃' : '1攻撃・攻撃中DPS'
+    : stage.kind === 'SKILL_ACTION' ? '発動・命中1回' : stage.dpsUnsupportedReason || stage.damageCapPerTarget !== undefined ? '1攻撃' : '1攻撃・攻撃中DPS'
   return `${stage.label}：${scope}`
 }
 

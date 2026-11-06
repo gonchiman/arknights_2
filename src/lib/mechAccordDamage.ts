@@ -54,7 +54,31 @@ export interface MechAccordResistanceTableResult {
   rows: MechAccordResistanceDamageRow[]
 }
 
-const MECH_ACCORD_MULTIPLIERS = [20, 35, 50, 65, 80, 95, 110, 110] as const
+const BASE_MECH_ACCORD_RAMP: MechAccordRampProfile = { initialScale: 0.2, increment: 0.15, maximumScale: 1.1, baseMaximumStacks: 6 }
+
+export interface MechAccordRampProfile {
+  initialScale: number
+  increment: number
+  maximumScale: number
+  baseMaximumStacks: number
+}
+
+/** One drone's current hit; no attack cadence, retargeting, or reset is inferred. */
+export function calculateMechAccordCurrentScale(profile: MechAccordRampProfile, attackCount: number,
+  maximumMultiplier = 1, atMaximum = false): number {
+  const { initialScale, increment, maximumScale, baseMaximumStacks } = profile
+  if (![initialScale, increment, maximumScale, maximumMultiplier].every(value => Number.isFinite(value) && value > 0)
+    || initialScale > maximumScale || !Number.isSafeInteger(baseMaximumStacks) || baseMaximumStacks < 1
+    || Math.abs(initialScale + increment * baseMaximumStacks - maximumScale) > 1e-9
+    || !Number.isSafeInteger(attackCount) || attackCount < 1 || attackCount > 10000
+    || maximumMultiplier < 1 || !Number.isFinite(maximumScale * maximumMultiplier))
+    throw new RangeError('浮遊ユニットの確認済み倍率・攻撃段階を取得できません。')
+  // A changed cap alone does not establish the rate at which the new cap is reached.
+  if (maximumMultiplier !== 1 && attackCount !== 1 && !atMaximum)
+    throw new RangeError('上限変更中の途中段階は未確認です。初撃または上限到達状態を指定してください。')
+  return atMaximum ? maximumScale * maximumMultiplier
+    : Math.min(maximumScale, initialScale + increment * Math.min(attackCount - 1, baseMaximumStacks))
+}
 
 export function isMechAccordSubProfession(subProfessionId: string): boolean {
   return subProfessionId === MECH_ACCORD_SUB_PROFESSION_ID
@@ -62,8 +86,7 @@ export function isMechAccordSubProfession(subProfessionId: string): boolean {
 
 export function getMechAccordMultiplierPercent(attackCount: number): number {
   const normalizedAttackCount = normalizeMechAccordAttackCount(attackCount)
-  const multiplierIndex = normalizedAttackCount - 1
-  return MECH_ACCORD_MULTIPLIERS[multiplierIndex]
+  return Math.round(calculateMechAccordCurrentScale(BASE_MECH_ACCORD_RAMP, normalizedAttackCount) * 100_000) / 1000
 }
 
 export function calculateMechAccordDamageRows(

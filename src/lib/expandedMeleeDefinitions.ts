@@ -119,8 +119,138 @@ function trapRecipe(skillIndex: number, trap: GuardStage, inputs: GuardInput[] =
 const elaTargetState: GuardInput = { key: 'elaTargetState', label: '対象の状態', kind: 'select', defaultValue: 'GROUND', options: [
   { value: 'GROUND', label: '地上・罠効果なし' }, { value: 'MINE', label: '地上・罠効果中' }, { value: 'AIR', label: '空中・罠効果なし' },
 ] }
+/** These values also remain in the validated talent structure; never infer a proc from skill text. */
+function retainedTalentValue(suffix: string, talentIndex: number, key: string): number {
+  const source = sources.find(source => source.operatorId.endsWith(`_${suffix}`))!
+  const passive = getOperatorPassives(source.profile, source.phaseIndex, source.profile.phases[source.phaseIndex].maxLevel!, 1).sources
+    .find(value => value.sourceKind === 'TALENT' && value.talentIndex === talentIndex)
+  const value = passive?.blackboard.find(entry => entry.key === key)?.value
+  if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(`Reviewed talent parameter missing: ${suffix}/${talentIndex}/${key}`)
+  return value
+}
+const bagpipeActions = (skillScale: GuardValue = 1, hits: GuardValue = 1): GuardDamageAction[] => [
+  attack(P, skillScale, hits, { label: '主対象への攻撃', targets: 1 }),
+  // The second target is the same normal attack, so it also follows a virtual MAIN attribute.
+  // Its proc multiplier is explicit; ATK_STAT prevents applying the critical branch a second time.
+  attack(P, mul(skillScale, retainedTalentValue('bpipe', 0, 'atk_scale')), hits, {
+    label: '精密装填による2体目への攻撃', basis: 'ATK_STAT', probability: retainedTalentValue('bpipe', 0, 'prob'),
+    targets: add(input('actualAttackTargetCount'), -1),
+  }),
+]
+const stolenTargets = (defaultValue = 0) => num('aliveStolenTargets', '命中前の窃取攻撃力の有効対象数', defaultValue, 0, 200)
+function existingResistanceDebuff(skillIndex: number, stage: GuardStage, reason: string): Omit<GuardSkillRecipe, 'operatorId'> {
+  return { skillIndex, inputs: [bool('existingResistanceDebuff', '全対象・全命中で既存の術耐性低下が有効', true)], stages: [
+    { ...stage, when: { input: 'existingResistanceDebuff', comparison: 'EQ', value: true }, periodTotal: STATE_PERIOD },
+    { ...stage, id: 'new-resistance-debuff', label: '術耐性低下の新規付与', when: { input: 'existingResistanceDebuff', comparison: 'EQ', value: false },
+      periodTotal: STATE_PERIOD, unresolved: [reason] },
+  ] }
+}
 
 export const EXPANDED_MELEE_DEFINITIONS: readonly ExpandedOperatorDefinition[] = [
+  define('blitz', [{ skillIndex: 2, inputs: [phaseInput([{ value: 'normal', label: '発動後の通常射撃' },
+    { value: 'activation', label: '発動時の一撃' }]), bool('targetStunned', '命中時の対象がスタン中', true)],
+    stages: [normal(P, { id: 'normal', label: '発動後の通常射撃', when: phase('normal'), aspd: k('attack_speed'), periodTotal: STATE_PERIOD }),
+      burst(P, k('atk_scale'), 1, { id: 'activation', label: '発動時の一撃', when: phase('activation'), maxTargets: 3,
+        periodTotal: STATE_PERIOD, unresolved: ['発動時のダメージ・スタン付与・素質強化の適用順は未確認。発動後の通常射撃のみ計算する。'] })],
+    notes: ['発動時にはブロック対象が必要。ここでは発動後の選択命中を評価し、発動時の一撃と7秒間の総量は合算しない。'] }],
+    { 0: { categories: ['DAMAGE', 'ATTACK_BEHAVIOR'], effects: b => [
+      scale(calc('MULTIPLY', b.read('atk_scale'), metric('skill.talent_scale')), 'atk_scale / skill.talent_scale', condition('targetStunned', true)),
+    ] } }, [], { 1: 'スタン付与後に素質の160%攻撃倍率が通常攻撃へ適用される段階は未実装。直接ダメージの対象外としては扱わない。' }),
+  define('tmoris', [1, 2].map(skillIndex => {
+    const stage = skillIndex === 1
+      ? burst(A, k('atk_scale'), k('times'), { maxTargets: null })
+      : normal(A, { actions: [attack(A, k('attack@atk_scale'))], fixedAttackInterval: k('attack@interval'), maxTargets: null })
+    return { skillIndex, inputs: [bool('existingSlowOrFear', '全対象・全命中で既存の足止めか恐怖の効果が有効', true)], stages: [
+      { ...stage, when: { input: 'existingSlowOrFear', comparison: 'EQ', value: true }, periodTotal: STATE_PERIOD },
+      { ...stage, id: 'changing-control', label: '状態の新規付与・変化中', when: { input: 'existingSlowOrFear', comparison: 'EQ', value: false },
+        periodTotal: STATE_PERIOD, unresolved: ['確率足止めの新規付与・失効と各命中の順序を含む期待値は未対応。全命中で既存の足止めか恐怖の効果が有効な状態のみ計算する。'] },
+    ], notes: ['本人もAve Mujicaの与ダメージ強化対象。地上の同条件の敵への選択した発動・命中を評価する。',
+      'S1は1回の発動5連撃。チャージ・他メンバーによる再発動・Feverの連続発動を加算しない。S2は固定1秒周期で通常の物理攻撃を追加しない。',
+      '足止め免疫・恐怖免疫は内部効果の扱いが異なるため、免疫の有無から与ダメージ強化の成立を自動推測しない。'] }
+  }), { 0: CONTROL, 1: { categories: ['DAMAGE', 'RESOURCE'], effects: b => [
+    damage(b.read('damage_scale'), 'damage_scale', condition('existingSlowOrFear', true)),
+  ] } }),
+  define('amoris', [1, 2].map(skillIndex => {
+    const stage = normal(P, { label: skillIndex === 1 ? '既存脆弱中の3連撃' : '既存脆弱中の8連撃', maxTargets: 1,
+      actions: [attack(P, k('attack@atk_scale_heavy'), skillIndex === 1 ? 1 : 2, { label: '強打' }),
+        attack(P, k('attack@atk_scale_light'), skillIndex === 1 ? 2 : 6, { label: '軽打' })],
+      dpsUnsupportedReason: '特殊連撃全体の周期は未確認。選択した1組の連撃ダメージのみ計算する。', periodTotal: STATE_PERIOD })
+    return { skillIndex, inputs: [bool('existingVulnerability', '全命中で既存の8%脆弱が有効', true)], stages: [
+      { ...stage, when: { input: 'existingVulnerability', comparison: 'EQ', value: true } },
+      { ...stage, id: 'changing-vulnerability', label: '脆弱の新規付与・変化中',
+        when: { input: 'existingVulnerability', comparison: 'EQ', value: false },
+        unresolved: ['各ダメージ前に抽選される脆弱の新規付与・失効・更新を含む連撃の期待値は未対応。全命中で既存の8%脆弱が有効な状態のみ計算する。'] },
+    ], notes: ['攻撃範囲内の攻撃可能な敵が1体だけで、その敵が連撃中ずっと生存する場合。S1は前方の攻撃対象、S2は各ランダム攻撃の唯一の対象とする。',
+      '特性の範囲攻撃は主対象を重複攻撃しない。別対象への飛び火・複数対象の抽選・敵がいないマスへの攻撃・Feverの再発動は含めない。'] }
+  }), { 0: { categories: ['DAMAGE', 'ATTACK_BEHAVIOR'], effects: b => [
+    damage(b.read('damage_scale'), 'damage_scale', condition('existingVulnerability', true)),
+  ] }, 1: { categories: ['ABILITY', 'RESOURCE'], effects: b => [atk(b.read('atk'))] } }),
+  define('shu', [recipe(3, normal(P, { atk: add(k('atk'), choose('groundEnemyOnSownTile', true, k('e_atk'), 0)),
+    aspd: choose('groundEnemyOnSownTile', true, k('e_attack_speed'), 0), periodTotal: STATE_PERIOD }),
+    [bool('groundEnemyOnSownTile', '育種マス上に地上の敵がいる')])],
+    { 1: { categories: ['ABILITY', 'RESOURCE'], effects: b => [
+      atk(b.read('atk'), 'atk', condition('fourSuiInSquad', true)),
+      speed(b.read('attack_speed'), 'attack_speed', condition('threeSameProfessionDeployed', true)),
+    ] } }, [bool('fourSuiInSquad', '編成中の歳が4名以上'), bool('threeSameProfessionDeployed', '戦場の同じ職業の味方が3名以上')],
+    { 1: '治療へ置き換わるスキルで、直接ダメージの対象外。', 2: '通常攻撃を治療へ置き換えるスキルで、直接ダメージの対象外。' },
+    ['S3中の本人の通常攻撃を評価する。治療・加護・転移をダメージに換算しない。育種マスの追加強化と素質の編成・配置条件を個別に指定する。']),
+  define('ayer', [recipe(1, next(A, k('atk_scale'), 1, { maxTargets: k('max_target'), attackTreatment: 'MELEE' })),
+    recipe(2, normal(A, { maxTargets: null, attackTreatment: 'MELEE', periodTotal: FIXED_PERIOD, actions: [
+      attack(A, k('attack@atk_scale'), 1, { label: '主対象への通常攻撃', targets: 1 }),
+      attack(A, k('atk_scale'), 1, { label: 'ブロック対象への追加術攻撃', role: 'ADDITIONAL',
+        targets: add(input('actualAttackTargetCount'), choose('mainTargetReceivesExtra', true, 0, -1)) }),
+    ] }), [bool('mainTargetReceivesExtra', '主対象も追加術攻撃の対象', true)],
+    ['対象数は主対象と追加攻撃を受ける敵の合計（重複を除く）。主対象以外は本人または周囲8マスの味方がブロックしている同条件の敵。本人の1攻撃につき追加攻撃1回。'])],
+    { 0: ability(b => [speed(b.read('attack_speed'))]) }, [], {},
+    ['S1とS2はいずれも遠距離80%補正を受けない。S2は自身がブロックしている敵も追加攻撃の対象。味方の攻撃回数は加算しない。']),
+  define('bpipe', [recipe(1, normal(P, { atk: k('atk'), aspd: k('attack_speed'), maxTargets: 2,
+    actions: bagpipeActions(), periodTotal: FIXED_PERIOD })),
+    recipe(2, next(P, k('atk_scale'), 2, { maxTargets: 2, actions: bagpipeActions(k('atk_scale'), 2) })),
+    recipe(3, normal(P, { atk: k('atk'), intervalScale: add(1, k('base_attack_time')), maxTargets: 2,
+      actions: bagpipeActions(1, 3), periodTotal: FIXED_PERIOD }))],
+    { 0: { categories: ['DAMAGE', 'ATTACK_BEHAVIOR'], effects: b => [critical(b)] }, 1: RESOURCE }, [], {},
+    ['主対象1体と、素質発動時だけ攻撃する2体目を分けて軽減後の期待値を求める。対象は同じ防御・術耐性で、選択命中の間は生存している。連撃の回数を対象数やチャージ数に換算しない。']),
+  define('ines', [
+    { skillIndex: 1, inputs: [phaseInput([{ value: 'stable', label: '窃取済み・付与時から攻撃力一定' },
+      { value: 'first', label: '初回窃取・攻撃力変化中' }]), stolenTargets(1)],
+      conditionRequirements: [{ when: phase('stable'), condition: { input: 'aliveStolenTargets', comparison: 'GTE', value: 1 },
+        reason: '窃取済みの生存対象を含むため、有効対象数は1体以上で指定してください。' }],
+      stages: [next(P, 1, 1, { id: 'stable', label: '窃取済み・付与時から攻撃力一定', when: phase('stable'), periodTotal: STATE_PERIOD, actions: [
+        attack(P), attack(A, k('bleed_atk_scale'), 1, { label: '付与済み継続ダメージ', role: 'ADDITIONAL', basis: 'ATK_STAT', timing: 'PER_SECOND' }),
+      ] }), next(P, 1, 1, { id: 'first', label: '初回窃取・攻撃力変化中', when: phase('first'), periodTotal: STATE_PERIOD,
+        unresolved: ['初回命中時の窃取と継続ダメージの攻撃力保存の順序、再付与時の保存値更新は未確認。窃取済みで付与時から攻撃力が一定の状態のみ計算する。'] })],
+      notes: ['次の強化攻撃1回と、既に付与された継続効果の毎秒値を分ける。継続効果の付与時から有効な窃取対象数が同じ条件。3秒間の総量や通常攻撃を含むSP周期は計算しない。'] },
+    recipe(2, normal(P, { atk: k('atk'), aspd: mul(k('attack@steal_atk_speed'), input('speedStealStacks')), periodTotal: STATE_PERIOD }),
+      [stolenTargets(), num('speedStealStacks', '現在有効な攻撃速度窃取回数', 0, 0, 10)]),
+    { skillIndex: 3, inputs: [phaseInput([{ value: 'normal', label: '再配置後の通常攻撃' },
+      { value: 'first-shadow', label: '窃取前の影哨の初回命中' }, { value: 'changing-shadow', label: '攻撃力変化中の影哨の命中' }]), stolenTargets()],
+      conditionRequirements: [{ when: phase('first-shadow'), condition: { input: 'aliveStolenTargets', comparison: 'EQ', value: 0 },
+        reason: '窃取前の初回命中は、有効対象数0体で指定してください。' }],
+      stages: [normal(P, { id: 'normal', label: '再配置後の通常攻撃', when: phase('normal'), atk: k('atk'), periodTotal: STATE_PERIOD }),
+        burst(P, k('atk_scale'), 1, { id: 'first-shadow', label: '窃取前の影哨の初回命中', when: phase('first-shadow'), atk: k('atk'), periodTotal: STATE_PERIOD }),
+        burst(P, k('atk_scale'), 1, { id: 'changing-shadow', label: '攻撃力変化中の影哨の命中', when: phase('changing-shadow'), atk: k('atk'), periodTotal: STATE_PERIOD,
+          unresolved: ['影哨の連続衝突と素質の攻撃力加算・参照時刻を確認する必要がある。窃取前の最初の命中だけを計算する。'] })],
+      notes: ['初回配置は影哨を残して離脱する非攻撃段階。数値は2回目以降の配置を対象とし、通常攻撃と影哨の命中を合算しない。影哨の初回命中前に本人が別の敵へダメージを与えていない条件。'] },
+  ], { 0: { categories: ['ABILITY', 'STATUS'], effects: b => [effect('stolen-attack', 'steal_atk / steal_atk_max',
+    { item: 'ATK_FINAL_FLAT', operation: 'ADD_VALUE', unit: 'POINT',
+      value: calc('MIN', b.read('steal_atk_max'), calc('MULTIPLY', b.read('steal_atk'), metric('aliveStolenTargets'))) })] },
+    1: CONTROL }, [], {}, ['窃取攻撃力は通常の攻撃力増加割合を適用した後に加算する。選択した命中で新たに得る窃取は、その命中の攻撃力へ先取りしない。']),
+  define('aprot2', [existingResistanceDebuff(1, normal(A, { maxTargets: 3, intervalScale: add(1, k('base_attack_time')) }),
+    '素質による術耐性低下の新規発動と命中の順序は未確認。既存の低下が有効なブロック対象への攻撃を計算する。'),
+    existingResistanceDebuff(2, normal(A, { maxTargets: null, actions: [attack(A, k('attack@atk_scale'), k('attack@times'), { targets: 1 })] }),
+      '連撃途中の素質発動による術耐性変化は未確認。選択した全対象・6命中で既存の低下が有効な状態のみ計算する。')],
+    { 0: ability(b => [atk(b.read('atk'), 'atk', condition('phantomIntegratedStrategies', true)),
+      speed(b.read('attack_speed'), 'attack_speed', condition('phantomIntegratedStrategies', true))]),
+      1: { categories: ['DAMAGE'], effects: b => [effect('existing-resistance-debuff', 'magic_resistance / duration',
+        { item: 'RESISTANCE_REDUCTION_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: calc('MULTIPLY', -1, b.read('magic_resistance')) },
+        { target: enemies, condition: condition('existingResistanceDebuff', true), lifetime: { type: 'FIXED_SECONDS', seconds: b.read('duration') } })] } },
+    [bool('phantomIntegratedStrategies', 'ファントムと緋き貴石のステージ')], {},
+    ['S1は本人がブロックしている敵を最大3体まで攻撃。S2は同じ防御・術耐性の敵に合計6発を配分した平均値。素質の発動率を低下率へ掛けず、既に有効な25%低下を適用する。HP減少と途中退場は時間積算しない。']),
+  define('chiave', [existingResistanceDebuff(2, burst(A, k('atk_scale'), 1, { maxTargets: null, resistanceReductionRatio: mul(-1, k('magic_resistance')) }),
+    '術耐性低下の新規付与と発動ダメージの適用順序は未確認。既に同スキルの低下が有効な対象への再発動のみ計算する。')],
+    { 0: { categories: ['ABILITY', 'DEPLOYMENT'], effects: b => [atk(calc('MULTIPLY', b.read('atk'), metric('deployedRobotCount')), 'atk')] } },
+    [num('deployedRobotCount', '配置中のロボット数', 0, 0, 8)], { 1: 'コスト回復のみを行うスキルで、直接ダメージの対象外。' },
+    ['本人の発動ダメージだけを評価する。ロボットは固定データの8名を対象とし、テラ大陸調査団・U-Official・召喚物は含めない。再発動が可能なSP条件と既存の8秒間の術耐性低下を前提とする。']),
   define('franka', [recipe(1, normal(P, { atk: k('atk'), aspd: k('attack_speed'), periodTotal: FIXED_PERIOD })),
     recipe(2, normal(P, { atk: k('atk'), periodTotal: FIXED_PERIOD }))],
     { 0: { categories: ['DAMAGE'], effects: b => [effect('thermite-defense-ignore', 'prob',

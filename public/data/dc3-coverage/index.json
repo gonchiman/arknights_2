@@ -117,6 +117,30 @@
         "UNSUPPORTED": 190,
         "NOT_APPLICABLE": 118
       }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "v6",
+      "label": "v6 浮遊ユニット・弱点属性と条件別攻撃",
+      "capturedAt": "2026-11-06T03:13:00.005Z",
+      "source": {
+        "codeRevision": "340b68595b79837be0a8ccdacfb2d063c202c381",
+        "codeDirty": true,
+        "codeFingerprint": "d93867110953c45a83346158343ec30ef38f08d6a8bb85116a5ff2226b30eeb6",
+        "gameDataRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+        "gameDataFingerprint": "e02f27762c44d0b083329e83375802cc2bef03f04777822f5f61220a0881a0ec",
+        "reconstructed": false
+      },
+      "file": "v6.json",
+      "sha256": "95ac5348cf81d6acdcb68a6a6ee55c350140a44df777233cc7a315386f0888f9",
+      "skillCount": 915,
+      "counts": {
+        "SUPPORTED": 511,
+        "CONDITIONAL": 64,
+        "PENDING": 77,
+        "UNSUPPORTED": 145,
+        "NOT_APPLICABLE": 118
+      }
     }
   ]
 }

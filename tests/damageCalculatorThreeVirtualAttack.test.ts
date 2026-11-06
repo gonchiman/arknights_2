@@ -11,7 +11,7 @@ import type { GuardConditions } from '../src/lib/guardCombatTypes.ts'
 import type { OperatorCombatProfile, RawSkillLevel, SkillRecord } from '../src/types/skill.ts'
 
 const json = <T>(path: string): T => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'))
-const expanded = ['Arts', 'Melee', 'Ranged'].flatMap(group =>
+const expanded = ['Arts', 'Melee', 'Ranged', 'Caster'].flatMap(group =>
   json<ExpandedOperatorSource[]>(`../src/data/expanded${group}Sources.json`))
 const guards = json<{ guards: { id: string; name: string; subProfessionId: string;
   skills: { skillId: string; skillIndex: number; raw: RawSkillLevel }[] }[] }>('./fixtures/sixStarGuardSources.json').guards
@@ -232,7 +232,7 @@ test('1スキル内の物理・術の主攻撃を同じ仮想属性へ変更し�
 })
 
 test('本来の未対応条件は仮想属性でも隠さず、部分的な計算結果を返さない', () => {
-  for (const value of [input('char_4037_demetr', 2), input('char_1050_chen3', 1)]) {
+  for (const value of [input('char_4037_demetr', 2), input('char_1050_chen3', 3, { phase: 'wave' })]) {
     const native = buildDamageCalculatorThreeOutput(value)
     assert.ok(native.unsupportedReasons.length > 0)
     for (const virtualMainAttackType of ['PHYSICAL', 'ARTS'] as const) {

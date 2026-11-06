@@ -71,7 +71,7 @@ test('不正な入力や計算不能なスキルでは定義を適用済みと�
   for (const args of [
     input('char_350_surtr', 2, { actualAttackTargetCount: NaN }),
     input('char_4009_irene', 3, { targetWeight: 4 }),
-    input('char_1050_chen3', 2),
+    input('char_1050_chen3', 3, { guard: { phase: 'wave' } }),
   ]) {
     const { output, rows } = calculate(args)
     assert.equal(output.rows.length, 0)

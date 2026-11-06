@@ -255,11 +255,12 @@ export function formatTalentStructureEffectItem(item: TalentStructureEffect['ite
   return { REDEPLOY_TIME: '再配置時間', RESISTANCE_IGNORE_FIXED: '術耐性固定無視', STEALTH: 'ステルス',
     HP: 'HP', FORCED_RETREAT: '強制退場', DAMAGE_OVER_TIME: '継続ダメージ', DEFENSE_IGNORE_RATIO: '防御力割合無視',
     ATTACK_INTERVAL_ADD: '攻撃間隔の加算', MINIMUM_DAMAGE_RATIO: '最低ダメージの攻撃力比率', DEFENSE_IGNORE_FIXED: '防御力固定無視',
-    ATK_FLAT: '攻撃力（固定値）', ATK_FINAL_FLAT: '攻撃力（最終加算）', MAX_HP_FLAT: '最大HP（固定値）', HP_RESTORE_FIXED: 'HP回復', SP_RESTORE: 'SP回復',
+    ATK_FLAT: '攻撃力（固定値）', ATK_FINAL_FLAT: '攻撃力（最終加算）', MAX_HP_FLAT: '最大HP（固定値）', HP_RESTORE_FIXED: 'HP回復', SP_RESTORE: 'SP回復', DAMAGE_CAP_PER_TARGET: '対象ごとのダメージ上限',
     AMMO_CAPACITY: '弾薬上限', FEVER: 'Fever', TAUNT: '狙われやすさ', DEFENSE_BUFF_RATIO: '防御力',
     PHYSICAL_DODGE: '物理回避', ARTS_DODGE: '術回避', DAMAGE_RESISTANCE: '被ダメージ軽減', PHYSICAL_DAMAGE_RESISTANCE: '物理被ダメージ軽減',
     MIN_HP_RATIO: 'HP下限', DEFENSE_REDUCTION_RATIO: '防御力低下', RESISTANCE_IGNORE_RATIO: '術耐性割合無視', RESISTANCE_REDUCTION_RATIO: '術耐性低下',
     DEFENSE_REDUCTION_FIXED: '防御力固定低下', DEFENSE_REDUCTION_FINAL_FIXED: '防御力固定低下（割合低下後）', RESISTANCE_REDUCTION_FIXED: '術耐性固定低下',
+    WEAKPOINT_DAMAGE: '弱点ダメージ', DRONE_MAXIMUM_MULTIPLIER: '浮遊ユニットの倍率上限補正', EXTRA_DRONES: '追加浮遊ユニット数',
     STORED_CHARGE_SCALE: '貯蔵弾の攻撃倍率', EXTRA_STORED_CHARGES: '追加貯蔵弾数', ATTACK_SCALE: '攻撃倍率', DAMAGE_SCALE: '与ダメージ倍率', SPLASH_DAMAGE_SCALE: '範囲対象の与ダメージ倍率', HEAL_RECEIVED_SCALE: '被治療倍率',
     CRITICAL_ATTACK: '確率攻撃倍率', ADDITIONAL_ATTACK: '追加ダメージ', SP_RECOVERY: 'SP自然回復速度', STATUS: '状態付与', ATTACK_BEHAVIOR: '攻撃方式', HP_STEAL: '最大HP奪取', HP_RESTORE_ATK_RATIO: 'HP回復（攻撃力参照）',
   }[item]

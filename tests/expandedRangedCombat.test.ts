@@ -47,7 +47,7 @@ const physical = (attack: number, defense: number) => Math.max(attack - defense,
 const buff = (attack: number, ratio: number) => Math.floor(attack * (1 + ratio) + 1e-9)
 
 test('追加狙撃の全技能を計算対応または具体的な保留理由に分け、全素質を欠落なく構造化する', () => {
-  assert.equal(EXPANDED_RANGED_DEFINITIONS.length, 53)
+  assert.equal(EXPANDED_RANGED_DEFINITIONS.length, 54)
   for (const definition of EXPANDED_RANGED_DEFINITIONS) {
     const source = sources.find(s => s.operatorId === definition.operatorId)!
     assert.deepEqual([...definition.recipes.map(r => r.skillIndex), ...(definition.deferredSkills ?? []).map(s => s.skillIndex)].sort(),
@@ -68,6 +68,98 @@ test('追加狙撃の全技能を計算対応または具体的な保留理由�
       assert.ok(result.unsupportedReasons.some(r => r.includes(skill.reason)))
       assert.deepEqual(result.rows, [])
     }
+  }
+})
+
+test('ジューS1は250%を軽減してからHP1を残す上限を適用し、HP50%を含めて選択できる', () => {
+  for (const hp of [1, 1.5, 1500, 10000]) {
+    const result = output('char_4221_ju', 1, { targetCurrentHp: hp, targetHpPercent: 50 })
+    assert.deepEqual(result.unsupportedReasons, [])
+    for (const row of result.rows) {
+      close(row.perAttack, Math.min(physical(result.stats.attack * 2.5, row.axisValue), hp - 1))
+      assert.equal(row.dps, null)
+      assert.equal(row.allTargetsDps, null)
+      assert.equal(row.attackComponents.length, 1)
+    }
+    assert.equal(result.canShowDps, false)
+    assert.equal(result.attackInterval, null)
+    assert.ok(result.guard!.evaluations.some(effect => effect.source === '墨守' && effect.status === 'APPLIED'))
+  }
+  for (const conditions of [{ targetHpPercent: 50.01 }, { targetCriticallyWounded: true }, { actualAttackTargetCount: 2 }]) {
+    const result = output('char_4221_ju', 1, conditions)
+    assert.deepEqual(result.rows, [])
+    assert.ok(result.unsupportedReasons.length)
+  }
+})
+
+test('ジューS2は通常2対象と独立した追加1対象の各命中に非致死上限を適用する', () => {
+  for (const phase of ['normal', 'extra']) for (const hp of [1, 900, 10000]) {
+    const targets = phase === 'normal' ? 2 : 1
+    const result = output('char_4221_ju', 2, { phase, targetCurrentHp: hp, actualAttackTargetCount: targets,
+      targetHpPercent: phase === 'normal' ? 100 : 49.99 })
+    assert.deepEqual(result.unsupportedReasons, [])
+    for (const row of result.rows) {
+      const expected = Math.min(physical(buff(result.stats.attack, 1), row.axisValue), hp - 1)
+      close(row.perAttack, expected)
+      close(row.allTargetsPerAttack, expected * targets)
+      assert.equal(row.attackComponents.length, 1)
+      assert.equal(row.dps, null)
+      assert.equal(row.combinedDps, null)
+    }
+    assert.equal(result.attackInterval, null)
+  }
+  const alreadyMarkedNormal = output('char_4221_ju', 2, { phase: 'normal', extraDamageMarkApplied: true })
+  assert.deepEqual(alreadyMarkedNormal.unsupportedReasons, [])
+  for (const conditions of [{ targetHpPercent: 50 }, { extraDamageMarkApplied: true },
+    { actualAttackTargetCount: 2 }, { targetCriticallyWounded: true }]) {
+    const result = output('char_4221_ju', 2, { phase: 'extra', ...conditions })
+    assert.deepEqual(result.rows, [])
+    assert.ok(result.unsupportedReasons.length)
+  }
+  assert.deepEqual(output('char_4221_ju', 2, { phase: 'normal', actualAttackTargetCount: 3 }).rows, [])
+  assert.deepEqual(output('char_4221_ju', 2, { phase: 'normal', targetCriticallyWounded: true }).rows, [])
+})
+
+test('ジューの仮想術主攻撃でも上限を守り、追加ダメージだけの段階は主攻撃に置き換えない', () => {
+  for (const index of [1, 2]) {
+    const result = output('char_4221_ju', index, { targetCurrentHp: 1200 }, undefined, 'ARTS')
+    assert.deepEqual(result.unsupportedReasons, [])
+    for (const row of result.rows) {
+      const attack = index === 1 ? result.stats.attack * 2.5 : buff(result.stats.attack, 1)
+      close(row.perAttack, Math.min(attack * Math.max(0.05, 1 - row.axisValue / 100), 1199))
+      assert.equal(row.dps, null)
+    }
+  }
+  const extra = output('char_4221_ju', 2, { phase: 'extra' }, undefined, 'ARTS')
+  assert.deepEqual(extra.rows, [])
+  assert.ok(extra.unsupportedReasons.some(reason => reason.includes('主攻撃')))
+})
+
+test('ジューの不正HP・状態・原文変更は計算を止め、対応状況と比較も各命中の範囲を保つ', () => {
+  for (const guard of [{ targetCurrentHp: 0 }, { targetCurrentHp: -1 }, { targetCurrentHp: Number.NaN },
+    { targetCurrentHp: Infinity }, { targetHpPercent: 0 }, { targetHpPercent: 100.01 },
+    { targetCriticallyWounded: 'unknown' }, { phase: 'unknown' }, { extraDamageMarkApplied: 'unknown' }]) {
+    const result = output('char_4221_ju', 2, guard)
+    assert.deepEqual(result.rows, [])
+    assert.ok(result.unsupportedReasons.length)
+  }
+  const changed = output('char_4221_ju', 1, {}, skill => {
+    for (const candidate of skill.operatorProfile.talents[0].candidates ?? []) candidate.description += '追加効果'
+  })
+  assert.deepEqual(changed.rows, [])
+  assert.ok(changed.unsupportedReasons.length)
+  const records = [record('char_4221_ju', 1), record('char_4221_ju', 2)]
+  const coverage = buildDamageCalculatorThreeCoverage(records)
+  assert.deepEqual(coverage.map(row => row.status), ['SUPPORTED', 'SUPPORTED'])
+  assert.ok(coverage.every(row => row.sections.talent === 'SUPPORTED'))
+  const entries = getDamageThreeComparisonEntries(records)
+  assert.equal(entries.length, 3)
+  for (const entry of entries) {
+    const result = evaluateDamageThreeComparisonEntry(entry, { defense: 500, resistance: 0, enemyCount: 1 })
+    assert.deepEqual(result.errors, [])
+    assert.ok(result.perAttack !== null)
+    assert.equal(result.combinedDps, null)
+    assert.equal(result.totalDamage, null)
   }
 })
 

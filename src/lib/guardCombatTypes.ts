@@ -27,6 +27,13 @@ export interface GuardDamageAction {
   damageType: DamageType
   /** A separate mystic projectile; only this action receives stored-energy modifiers. */
   isStoredCharge?: boolean
+  /** A reviewed drone projectile, distinct from the operator's own attack. */
+  drone?: {
+    sameTargetAttack: GuardValue
+    atMaximum?: GuardValue
+    maximumMultiplier?: GuardValue
+    includeTalentExtraUnits?: boolean
+  }
   scale: GuardValue
   hits?: GuardValue
   /** Total equivalent targets per action; omitted means all selected targets. */
@@ -34,6 +41,8 @@ export interface GuardDamageAction {
   attackBonus?: GuardValue
   probability?: GuardValue
   flatDamage?: GuardValue
+  /** Applied after mitigation only if the resolved attribute matches (including virtual attacks). */
+  damageScaleWhenType?: { damageType: DamageType; scale: GuardValue }
   /** ATK is attack-scaled damage; ATK_STAT uses buffed ATK without attack scales or criticals. */
   basis?: 'ATK' | 'ATK_STAT' | 'TARGET_CURRENT_HP' | 'TARGET_DEFENSE'
   minimumAttackScale?: GuardValue
@@ -93,6 +102,8 @@ export interface GuardStage {
   resistanceReductionFixed?: GuardValue
   /** Post-mitigation multiplier; distinct from attack scale. */
   damageScale?: GuardValue
+  /** Per-target limit after mitigation. Currently evaluated for one independent hit only. */
+  damageCapPerTarget?: GuardValue
   /** Effects that cannot be inferred from text/data block numerical output explicitly. */
   unresolved?: readonly string[]
   /** Stable identities link a skill-stage blocker to any affected passive effects. */
@@ -121,6 +132,8 @@ export interface GuardPassiveModifiers {
   attackScale: number
   storedChargeScale?: number
   extraStoredCharges?: number
+  droneMaximumMultiplier?: number
+  extraDrones?: number
   attackSpeed: number
   attackIntervalAdd?: number
   /** Additive ATK on the proc branch, before attack scales and enemy mitigation. */
@@ -130,6 +143,8 @@ export interface GuardPassiveModifiers {
   /** Guaranteed per-hit fraction of buffed ATK, before attack-scale multipliers. */
   minimumDamageRatio?: number
   damageScale: number
+  damageCapPerTarget?: number
+  weakpointDamage?: boolean
   splashDamageScale?: number
   defenseIgnoreRatio: number
   /** Guaranteed penetration for ATTACK/CURRENT_EVENT only, excluding stat-based DOT. */

@@ -213,6 +213,7 @@ function guardStages(structure: SkillStructure, recipe: GuardSkillRecipe): FlowS
       ['defenseReductionFinalFixed', '防御力固定低下（割合低下後）', '', false], ['attackFinalFlat', '攻撃力（最終加算）', '', false],
       ['fixedAttackInterval', '固定攻撃周期', '秒', false],
       ['damageScale', '与ダメージ倍率', '倍', false],
+      ['damageCapPerTarget', '対象ごとのダメージ上限', '', false],
     ] as const) if (stage[key] !== undefined) modifiers.push({ id: `${stage.id}-${key}`, title: label,
       fields: [{ label: '値', value: formatted(stage[key]!, unit, ratio) }] })
     const groups: FlowGroup[] = []
@@ -244,6 +245,8 @@ function guardAction(stage: GuardStage, action: GuardDamageAction, id: string,
     ['probability', '発動確率', '', true], ['flatDamage', '固定ダメージ', '', false],
     ['minimumAttackScale', '最低攻撃倍率', '倍', false],
   ] as const) if (action[key] !== undefined) fields.push({ label, value: format(action[key]!, unit, ratio) })
+  if (action.damageScaleWhenType) fields.push({ label: `${damageTypes[action.damageScaleWhenType.damageType]}の与ダメージ倍率`,
+    value: format(action.damageScaleWhenType.scale, '倍') })
   return { id, title: action.label, fields }
 }
 

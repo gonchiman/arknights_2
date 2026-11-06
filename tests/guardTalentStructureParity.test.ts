@@ -100,6 +100,15 @@ for (const operatorId of new Set(baseline.cases.map(item => item.operatorId))) {
         phaseIndex: 2, operatorLevel: 90, trust: 100, skillLevelIndex: 9, conditions: { guard: item.guard } })
       const actual = snapshot(output)
       const label = `${name} S${item.skillIndex} ${JSON.stringify(item.guard)}`
+      if (item.operatorId === 'char_1050_chen3') {
+        // Keep the old blocked baseline. New formulas have independent
+        // defense/resistance, branch and virtual-attribute tests.
+        assert.equal(item.expected.blocked, true)
+        const wave = item.skillIndex === 3 && item.guard.phase === 'wave'
+        assert.equal(actual.blocked, wave, label)
+        assert.equal(actual.rowCount > 0, !wave, label)
+        continue
+      }
       if (item.operatorId === 'char_2024_chyue' && item.skillIndex === 2) {
         // The old baseline blocked both S2 events. They now have separate reviewed
         // stages; independent initial/fall formulas are tested in guardDamageCalculator.

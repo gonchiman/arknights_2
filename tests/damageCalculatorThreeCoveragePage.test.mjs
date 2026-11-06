@@ -87,21 +87,21 @@ test('初期範囲は全職業・全レアリティ、1スキル1行の8列で�
   const sakiko = rows.find(row => row[0] === '豊川祥子' && row[1] === 'S2')
   assert.deepEqual(sakiko.slice(3, 7), ['保留', '対応', '対応', '保留'])
   assert.match(markup, /91 \/ 91 スキル表示/)
-  assert.match(markup, /対応 75・条件付き 7・保留 8・未対応 1/)
+  assert.match(markup, /対応 77・条件付き 8・保留 5・未対応 1/)
   assert.match(markup, /role="region" aria-label="DC3の対応スキル" tabindex="0"/)
   assert.match(markup, /aria-label="総合の状況"/)
   assert.match(markup, /<a[^>]*href="#\/operators\/char_350_surtr"[^>]*aria-haspopup="dialog"/)
   assert.doesNotMatch(markup, /rowspan|colspan|<small|<br/)
   assert.match(markup, /絞り込み結果の対応状況<\/h2><span>91スキル<\/span>/)
   assertSummary(markup, 91,
-    [[75, 7, 8, 1, 0], [81, 4, 5, 1, 0], [77, 6, 4, 1, 3], [51, 0, 1, 1, 38]])
+    [[77, 8, 5, 1, 0], [80, 5, 5, 1, 0], [79, 7, 1, 1, 3], [51, 0, 1, 1, 38]])
 })
 
-test('保留8スキルの横棒は総合100%でもスキル・素質・特性の異なる内訳を表示する', () => {
+test('保留5スキルの横棒は総合100%でもスキル・素質・特性の異なる内訳を表示する', () => {
   const pending = filterCoverage(buildCoverage(records), { ...defaults, status: 'PENDING' })
   const markup = render(Summary, { rows: pending })
-  assert.match(markup, /<span>8スキル<\/span>/)
-  assertSummary(markup, 8, [[0, 0, 8, 0, 0], [3, 0, 5, 0, 0], [4, 0, 4, 0, 0], [7, 0, 1, 0, 0]])
+  assert.match(markup, /<span>5スキル<\/span>/)
+  assertSummary(markup, 5, [[0, 0, 5, 0, 0], [0, 0, 5, 0, 0], [4, 0, 1, 0, 0], [4, 0, 1, 0, 0]])
 })
 
 test('単一スキルでは対象外を対応に含めず独立した100%の棒で表示する', () => {
@@ -137,8 +137,8 @@ test('検索は複数語・全角S番号に対応し、職業・レアリティ�
   assert.equal(surtr.length, 1)
   assert.equal(surtr[0].skill.skillId, 'skchr_surtr_3')
   assert.equal(filterCoverage(coverage, { ...defaults, query: 'スルト S30' }).length, 0)
-  assert.equal(filterCoverage(coverage, { ...defaults, status: 'PENDING' }).length, 8)
-  assert.equal(filterCoverage(coverage, { ...defaults, status: 'CONDITIONAL' }).length, 7)
+  assert.equal(filterCoverage(coverage, { ...defaults, status: 'PENDING' }).length, 5)
+  assert.equal(filterCoverage(coverage, { ...defaults, status: 'CONDITIONAL' }).length, 8)
   assert.equal(filterCoverage(coverage, { ...defaults, query: 'スルト', status: 'PENDING' }).length, 0)
   const unsupported = { ...coverage[0], skill: { ...coverage[0].skill, profession: 'CASTER', rarity: 5 }, status: 'UNSUPPORTED' }
   assert.equal(filterCoverage([unsupported], defaults).length, 1)

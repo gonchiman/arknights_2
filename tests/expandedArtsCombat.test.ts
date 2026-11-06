@@ -283,10 +283,10 @@ test('追加4名の素質数値欠落や未確認のスキル更新は計算を�
   }
 })
 
-test('術師・補助・医療57名の127スキルを99レシピ・28保留に分け、全素質を登録する', () => {
-  assert.equal(sources.length, 57)
-  assert.equal(sources.reduce((sum, source) => sum + source.skills.length, 0), 127)
-  assert.equal(EXPANDED_ARTS_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 99)
+test('術師・補助・医療62名の138スキルを107レシピ・31保留に分け、全素質を登録する', () => {
+  assert.equal(sources.length, 62)
+  assert.equal(sources.reduce((sum, source) => sum + source.skills.length, 0), 138)
+  assert.equal(EXPANDED_ARTS_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 107)
   for (const definition of EXPANDED_ARTS_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     const indices = [...definition.recipes.map(recipe => recipe.skillIndex), ...(definition.deferredSkills ?? []).map(skill => skill.skillIndex)]

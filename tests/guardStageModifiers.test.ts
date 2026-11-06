@@ -5,6 +5,7 @@ import { getDamageCalculatorThreeStructures, type DamageCalculatorThreeInput } f
 import { buildGuardDamageOutput } from '../src/lib/guardDamageCalculator.ts'
 import { buildGuardSkillApplicationRows } from '../src/lib/guardEffectApplication.ts'
 import { classifySkill } from '../src/lib/classifier.ts'
+import { calculateDamageThreePeriodTotal } from '../src/lib/damageCalculatorThreePeriodTotal.ts'
 import type { GuardStage } from '../src/lib/guardCombatTypes.ts'
 import type { SkillRecord } from '../src/types/skill.ts'
 
@@ -34,6 +35,82 @@ function calculate(id: string, stage: Partial<GuardStage>, options: Partial<Dama
 function close(actual: number | null | undefined, expected: number) {
   assert.ok(actual !== null && actual !== undefined && Math.abs(actual - expected) < 1e-7, `${actual} != ${expected}`)
 }
+
+test('命中上限は軽減と与ダメージ倍率の後・確率平均の前に適用し、各対象に独立する', () => {
+  for (const virtualMainAttackType of [undefined, 'ARTS'] as const) {
+    const base = calculate('char_208_melan', { damageScale: 1.5 }, { virtualMainAttackType }).output
+    for (const cap of [0, 100, 10000]) {
+      const { output, display } = calculate('char_208_melan', { damageScale: 1.5,
+        damageCapPerTarget: cap, maxTargets: null },
+      { virtualMainAttackType, conditions: { guard: { actualAttackTargetCount: 3 } } })
+      assert.deepEqual(output.unsupportedReasons, [])
+      close(output.rows[0].perAttack, Math.min(base.rows[0].perAttack, cap))
+      close(output.rows[0].allTargetsPerAttack, Math.min(base.rows[0].perAttack, cap) * 3)
+      assert.equal(output.rows[0].dps, null)
+      assert.equal(output.rows[0].combinedDps, null)
+      assert.equal(output.attackInterval, null)
+      assert.equal(output.canShowDps, false)
+      assert.ok(display.some(row => row.item === '対象ごとのダメージ上限'))
+    }
+  }
+  const probabilistic = calculate('char_208_melan', { damageCapPerTarget: 100,
+    actions: [{ label: 'sample', role: 'MAIN', damageType: 'PHYSICAL', scale: 1, probability: .5 }] }).output
+  assert.deepEqual(probabilistic.unsupportedReasons, [])
+  close(probabilistic.rows[0].perAttack, 50)
+  const franka = calculate('char_106_franka', { damageCapPerTarget: 300 },
+    { enemy: { defense: 2000, resistance: 0 } }).output
+  assert.deepEqual(franka.unsupportedReasons, [])
+  const atk = franka.effectiveAttack!
+  const expected = .8 * Math.min(Math.max(atk - 2000, atk * .05), 300) + .2 * Math.min(atk, 300)
+  close(franka.rows[0].perAttack, expected)
+  assert.notEqual(expected, Math.min(.8 * Math.max(atk - 2000, atk * .05) + .2 * atk, 300))
+})
+
+test('上限の不正値と命中後HPが未追跡の連撃・複数攻撃・継続ダメージは数値を返さない', () => {
+  for (const cap of [-1, Number.NaN, Number.POSITIVE_INFINITY, { key: 'missing' }]) {
+    const { output } = calculate('char_208_melan', { damageCapPerTarget: cap })
+    assert.ok(output.unsupportedReasons.length)
+    assert.deepEqual(output.rows, [])
+  }
+  const action = { label: 'attack', role: 'MAIN' as const, damageType: 'PHYSICAL' as const, scale: 1 }
+  for (const actions of [[{ ...action, hits: 2 }], [{ ...action, timing: 'PER_SECOND' as const }],
+    [{ ...action, isStoredCharge: true }], [action, { ...action, role: 'ADDITIONAL' as const }]]) {
+    const { output } = calculate('char_208_melan', { damageCapPerTarget: 100, actions })
+    assert.ok(output.unsupportedReasons.length)
+    assert.deepEqual(output.rows, [])
+  }
+})
+
+test('命中上限のある段階を定常DPSと誤宣言しても、期間総量へ掛け算しない', () => {
+  const stage: GuardStage = { id: 'test', label: 'test', kind: 'NORMAL', actions: [],
+    damageCapPerTarget: 100, duration: 30, periodTotal: { kind: 'CONSTANT_RATE' } }
+  const result = calculateDamageThreePeriodTotal({ stage, attackKind: 'NORMAL',
+    combinedDps: 100, allTargetsCombinedDps: 200 })
+  assert.equal(result.durationSeconds, 30)
+  assert.equal(result.totalDamage, null)
+  assert.equal(result.allTargetsTotalDamage, null)
+  assert.ok(result.totalDamageReason?.includes('HP'))
+})
+
+test('属性限定の与ダメージ倍率は軽減後だけに掛け、仮想主攻撃と追加攻撃を別に判定する', () => {
+  const stage: Partial<GuardStage> = { actions: [
+    { label: 'main', role: 'MAIN', damageType: 'ARTS', scale: 1, damageScaleWhenType: { damageType: 'ARTS', scale: 1.3 } },
+    { label: 'extra', role: 'ADDITIONAL', damageType: 'ARTS', scale: .4, damageScaleWhenType: { damageType: 'ARTS', scale: 1.3 } },
+  ] }
+  for (const virtualMainAttackType of [undefined, 'PHYSICAL'] as const) {
+    const { output, display } = calculate('char_208_melan', stage, { virtualMainAttackType })
+    assert.deepEqual(output.unsupportedReasons, [])
+    const atk = output.effectiveAttack!, expectedMain = virtualMainAttackType === 'PHYSICAL' ? atk - 300 : atk * .2 * 1.3
+    close(output.rows[0].perAttack, expectedMain + atk * .4 * .2 * 1.3)
+    assert.equal(display.find(row => row.item === 'main：術の与ダメージ倍率')?.status,
+      virtualMainAttackType === 'PHYSICAL' ? 'NOT_RELEVANT' : 'APPLIED')
+    assert.equal(display.find(row => row.item === 'extra：術の与ダメージ倍率')?.status, 'APPLIED')
+  }
+  for (const scale of [-1, Number.NaN, Number.POSITIVE_INFINITY, { key: 'missing' }]) {
+    assert.ok(calculate('char_208_melan', { actions: [{ ...stage.actions![0], damageScaleWhenType: { damageType: 'ARTS', scale } }] })
+      .output.unsupportedReasons.length)
+  }
+})
 
 test('段階の与ダメージ倍率は防御軽減後に掛け、攻撃力倍率に置換しない', () => {
   const base = calculate('char_208_melan', {}).output

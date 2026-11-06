@@ -1,6 +1,6 @@
 import sources from '../data/expandedArtsSources.json' with { type: 'json' }
 import type { ExpandedOperatorDefinition, ExpandedTalentDefinition } from './expandedCombatTypes.ts'
-import type { GuardInput, GuardSkillRecipe, GuardStage, GuardValue } from './guardCombatTypes.ts'
+import type { GuardDamageAction, GuardInput, GuardSkillRecipe, GuardStage, GuardValue } from './guardCombatTypes.ts'
 import type { TalentStructureEffect } from './talentStructure.ts'
 import type { CombatCondition, CombatEffectContext, CombatNumericValue, CombatRecipientSelector } from './combatEffectStructure.ts'
 
@@ -93,8 +93,62 @@ const extraCharge = (value: CombatNumericValue, eligibility: CombatCondition) =>
 const numericIf = (condition: CombatCondition, whenTrue: CombatNumericValue, whenFalse: CombatNumericValue = 0): CombatNumericValue =>
   ({ type: 'CONDITIONAL', condition, whenTrue, whenFalse })
 
+const droneState = select('droneState', '浮遊ユニットの倍率状態', [['FIRST', '初撃'], ['CAPPED', '上限到達']])
+const droneReason = '本体と浮遊ユニットが同じ1体へ与える現在の1回分を評価します。移動・再索敵・倍率上昇中の攻撃周期は計算しません。'
+const droneHit = (released: boolean, count: GuardValue = 1, maximumMultiplier: GuardValue = 1,
+  includeTalentExtraUnits = false): GuardDamageAction => ({
+  label: released ? '放出した浮遊ユニット' : '付随する浮遊ユニット', role: released ? 'MAIN' : 'ADDITIONAL', damageType: 'ARTS',
+  scale: 1, hits: count, targets: 1, drone: { sameTargetAttack: 1, atMaximum: choose('droneState', 'CAPPED', 1), maximumMultiplier, includeTalentExtraUnits },
+})
+const droneVolley = (drone: GuardDamageAction, options: Partial<GuardStage> = {}): GuardStage => normal({
+  maxTargets: 1, dpsUnsupportedReason: droneReason, periodTotal: unresolvedPeriod(droneReason),
+  actions: [{ label: '本体の術攻撃', role: 'MAIN', damageType: 'ARTS', scale: 1, targets: 1 }, drone], ...options,
+})
+const droneNotes = ['本体の攻撃範囲内にいる同じ1体を、全浮遊ユニットが攻撃する状態を評価する。初撃または上限到達状態を全ユニット共通で指定する。']
+
 /** Reviewed JP skills. Unsupported mechanisms remain explicitly deferred, never approximated by a normal attack. */
 export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = [
+  operator('char_328_cammou', [
+    [1, droneVolley(droneHit(false), { atk: k('atk') })],
+    [2, droneVolley(droneHit(true), { atk: k('atk') })],
+  ], [talent(0, 'シンクロ', v => [speed(v.read('attack_speed'))])],
+  { inputs: [droneState], traitNotes: [...droneNotes, 'S2のスタンは現在のダメージ値を変えず、確率・移動抑止は評価しない。'] }),
+  operator('char_4013_kjera', [[1, droneVolley(droneHit(false), { atk: k('atk') })]], [
+    talent(0, '俯瞰', v => [atk(numericIf(cmp('groundTilesInRange', 'GT', v.read('cnt')), v.read('kjera_t_1[high].atk'), v.read('atk')))], ['DAMAGE']),
+  ], { inputs: [droneState, n('groundTilesInRange', '攻撃範囲内の地面マス数', 0, 0, 100)], traitNotes: droneNotes,
+    deferredSkills: [{ skillIndex: 2, reason: '寒冷の重複で攻撃途中に凍結し、術耐性が変わる場合の命中順・状態遷移を確認する必要がある。' }] }),
+  operator('char_4054_malist', [[1, droneVolley(droneHit(false), { atk: k('atk'), aspd: k('attack_speed') })]], [
+    talent(0, 'インスピレーション', v => [effect('critical', 'prob / atk_scale',
+      { item: 'CRITICAL_ATTACK', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('atk_scale') },
+      { timing: { type: 'EVENT', event: 'ATTACK' }, lifetime: { type: 'CURRENT_EVENT' },
+        probability: { chance: v.read('prob'), rollScope: 'APPLICATION' } })], ['DAMAGE']),
+  ], { inputs: [droneState], traitNotes: droneNotes,
+    deferredSkills: [{ skillIndex: 2, reason: '2連撃に付随する浮遊ユニットの命中回数と特性倍率の進行順を確認する必要がある。' }] }),
+  operator('char_4040_rockr', [
+    [1, droneVolley(droneHit(false), { aspd: k('attack_speed') })],
+    [2, [phase('rockrockPhase', 'NORMAL', droneVolley(droneHit(true), { label: '前半', aspd: k('attack_speed') })),
+      phase('rockrockPhase', 'OVERDRIVE', droneVolley(droneHit(true, 1, k('scale')), { label: 'オーバードライブ', atk: k('atk'), aspd: k('attack_speed') }))],
+      [select('rockrockPhase', 'スキル段階', [['NORMAL', '前半'], ['OVERDRIVE', 'オーバードライブ']])]],
+  ], [talent(0, '礎石', v => [atk(mul(v.read('atk'), metric('rockrockTalentStacks')), 'atk / max_stack_cnt / interval')], ['DAMAGE'])],
+  { inputs: [droneState, n('rockrockTalentStacks', '礎石の強化段階', 0, 0, 4)],
+    traitNotes: [...droneNotes, 'S2のオーバードライブは浮遊ユニットの上限だけを2倍にする。発動後の経過時間・スタン期間は計算しない。'] }),
+  operator('char_1038_whitw2', [
+    [1, [phase('lapplandS1State', 'ACTIVE', droneVolley(droneHit(true, 2, 1, true), { atk: k('atk') })),
+      phase('lapplandS1State', 'INITIAL', droneVolley(droneHit(false, 2, 1, true), { label: '初期状態' }))],
+      [select('lapplandS1State', 'スキル状態', [['ACTIVE', '発動状態'], ['INITIAL', '初期状態']])]],
+    [2, droneVolley(droneHit(true, sum(1, k('attack@cnt')), 1, true), { atk: k('atk') })],
+  ], [
+    talent(0, '群狼の統率者', v => [
+      effect('drone-maximum', 'scale', { item: 'DRONE_MAXIMUM_MULTIPLIER', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('scale') },
+        { condition: cmp('lapplandTalentStage', 'GTE', 1) }),
+      status('drone-silence', '浮遊ユニットの命中時に特殊能力を無効化', { condition: cmp('lapplandTalentStage', 'GTE', 2) }),
+      effect('extra-drone', 'description:drone_count', { item: 'EXTRA_DRONES', operation: 'ADD_VALUE', unit: 'POINT', value: 1 },
+        { condition: cmp('lapplandTalentStage', 'GTE', 3) }),
+    ], ['DAMAGE', 'STATUS', 'ABILITY']),
+    talent(1, 'シラクーザの幸運', () => [status('squad-initial-sp', '編成中のシラクーザのストックSPを増加')], ['RESOURCE']),
+  ], { inputs: [droneState, n('lapplandTalentStage', '群狼の統率者の獲得段階', 0, 0, 3)],
+    traitNotes: [...droneNotes, 'S1発動状態は静止している対象への攻撃。S1の常時追加1体は初期状態でも有効。素質は上限110%を121%にし、最終段階で1体追加する。'],
+    deferredSkills: [{ skillIndex: 3, reason: '特殊浮遊ユニットの追尾・通常攻撃と重複しない範囲継続ダメージを個別に扱う必要がある。' }] }),
   operator('char_338_iris', [
     [1, quickVolley()],
     [2, normal({ ...action('睡眠終了時の爆発', k('atk_scale')), actions: [{ label: '睡眠終了時の爆発', role: 'MAIN', damageType: 'ARTS',

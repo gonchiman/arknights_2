@@ -19,7 +19,7 @@ const json = <T>(path: string): T => JSON.parse(readFileSync(new URL(path, impor
 const guards = json<{ guards: { id: string; name: string; subProfessionId: string;
   skills: { skillId: string; skillIndex: number; raw: RawSkillLevel }[] }[] }>('./fixtures/sixStarGuardSources.json').guards
 const profiles = json<{ operatorId: string; operatorProfile: OperatorCombatProfile }[]>('./fixtures/sixStarGuardProfiles.json')
-const sources = ['Melee', 'Ranged', 'Arts'].flatMap(group =>
+const sources = ['Melee', 'Ranged', 'Arts', 'Caster'].flatMap(group =>
   json<ExpandedOperatorSource[]>(`../src/data/expanded${group}Sources.json`))
 
 function record(operatorId: string, skillIndex: number): SkillRecord {
@@ -84,6 +84,16 @@ test('攻撃を持つ計算可能な全段階を複数の敵条件で物理・�
       if (stage?.actions.length === 0) {
         assert.equal(original.perAttack, 0, identity)
         assert.deepEqual(original.output.rows[0].attackComponents, [], identity)
+        continue
+      }
+      if (stage && !stage.actions.some(action => action.role === 'MAIN')) {
+        assert.ok(stage.actions.every(action => action.role === 'ADDITIONAL'), identity)
+        for (const targetType of targetTypes) {
+          const changed = evaluateDamageThreeComparisonEntry(entry, common, {}, { virtualMainAttackType: targetType })
+          assert.match(changed.errors.join(), /主攻撃がありません/, identity)
+          assert.deepEqual(changed.output?.rows, [], identity)
+          assert.equal(changed.perAttack, null, identity)
+        }
         continue
       }
       successfulStages.add(entry.key)
@@ -158,7 +168,7 @@ test('全guardRecipeの攻撃は役割が明示され、主攻撃がない段階
       const identity = `${structure.basicInfo.operatorId}/S${structure.basicInfo.skillIndex}/${stage.id}`
       for (const action of stage.actions) assert.ok(action.role === 'MAIN' || action.role === 'ADDITIONAL', `${identity}/${action.label}`)
       if (!stage.actions.some(action => action.role === 'MAIN')) {
-        assert.ok(stage.actions.length === 0 || stage.unresolved?.length, identity)
+        assert.ok(stage.actions.every(action => action.role === 'ADDITIONAL'), identity)
         const capability = getDamageCalculatorThreeVirtualAttackCapability(structure, stage.id)
         assert.equal(capability.supported, false, identity)
         assert.ok(capability.reason, identity)

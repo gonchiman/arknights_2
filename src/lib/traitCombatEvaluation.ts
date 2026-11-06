@@ -1,6 +1,7 @@
 import { evaluateCombatCondition, resolveCombatNumericValue, resolveCombatProbability,
   formatCombatNumber, type CombatNumericValue, type CombatScalar } from './combatEffectStructure.ts'
 import { formatTraitStructureEffectItem, type TraitStructure, type TraitStructureEffect } from './traitStructure.ts'
+import { calculateMechAccordCurrentScale, type MechAccordRampProfile } from './mechAccordDamage.ts'
 
 export interface TraitCombatContext {
   readonly kind: 'NORMAL' | 'NEXT_ATTACK' | 'SKILL_ACTION' | 'COUNTER'
@@ -24,6 +25,7 @@ export interface TraitCombatResult {
   damageType?: 'PHYSICAL' | 'ARTS'
   hitCount?: number
   storedChargeCount?: number
+  droneRamp?: MechAccordRampProfile
   maxTargets?: number | null
   attackScale: number
   attackRatio: number
@@ -102,6 +104,16 @@ export function evaluateTraitStructure(structure: TraitStructure | null, context
       if (effect.item === 'HIT_COUNT') result.hitCount = value
       else result.maxTargets = value
       row(effect, 'APPLIED', `${formatCombatNumber(value)}${effect.item === 'HIT_COUNT' ? '回' : '体'}`)
+    } else if (effect.item === 'DRONE_ATTACK') {
+      const initialScale = numeric(effect.value.initialScale), increment = numeric(effect.value.increment)
+      const maximumScale = numeric(effect.value.maximumScale), baseMaximumStacks = numeric(effect.value.baseMaximumStacks, true)
+      if (initialScale === null || increment === null || maximumScale === null || baseMaximumStacks === null) {
+        block(effect, '浮遊ユニットの倍率・増分・上限を解決できません。'); continue
+      }
+      const profile = { initialScale, increment, maximumScale, baseMaximumStacks }
+      try { calculateMechAccordCurrentScale(profile, 1) } catch { block(effect, '浮遊ユニットの倍率と上限が整合しません。'); continue }
+      result.droneRamp = profile
+      row(effect, 'APPLIED', `初撃×${formatCombatNumber(initialScale)}・上限×${formatCombatNumber(maximumScale)}`)
     } else if (effect.item === 'STORED_CHARGES') {
       if (context.kind !== 'NORMAL') { row(effect, 'NOT_RELEVANT'); continue }
       const cap = numeric(effect.value, true), count = context.metrics.storedChargeCount

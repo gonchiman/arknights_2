@@ -11,6 +11,9 @@ type Evaluation = GuardPassiveModifiers['evaluations'][number]
 
 /** These are calculation operations, independent of an operator or talent identity. */
 const damageItems: ReadonlySet<TalentStructureEffect['item']> = new Set([
+  'WEAKPOINT_DAMAGE',
+  'DRONE_MAXIMUM_MULTIPLIER', 'EXTRA_DRONES',
+  'DAMAGE_CAP_PER_TARGET',
   'STORED_CHARGE_SCALE', 'EXTRA_STORED_CHARGES', 'ATK_BUFF_RATIO', 'ATK_FLAT', 'ATK_FINAL_FLAT', 'ATTACK_SCALE', 'ATTACK_SPEED', 'DAMAGE_SCALE',
   'SPLASH_DAMAGE_SCALE', 'DEFENSE_IGNORE_RATIO', 'RESISTANCE_IGNORE_FIXED',
   'RESISTANCE_IGNORE_RATIO', 'DEFENSE_REDUCTION_RATIO', 'CRITICAL_ATTACK', 'ADDITIONAL_ATTACK',
@@ -18,6 +21,9 @@ const damageItems: ReadonlySet<TalentStructureEffect['item']> = new Set([
   'DEFENSE_REDUCTION_FIXED', 'DEFENSE_REDUCTION_FINAL_FIXED', 'RESISTANCE_REDUCTION_FIXED',
 ])
 const operations: Readonly<Record<string, readonly [string, string]>> = {
+  WEAKPOINT_DAMAGE: ['SET_ENABLED', 'BOOLEAN'],
+  DRONE_MAXIMUM_MULTIPLIER: ['MULTIPLY', 'MULTIPLIER'], EXTRA_DRONES: ['ADD_VALUE', 'POINT'],
+  DAMAGE_CAP_PER_TARGET: ['SET', 'POINT'],
   STORED_CHARGE_SCALE: ['MULTIPLY', 'MULTIPLIER'], EXTRA_STORED_CHARGES: ['ADD_VALUE', 'POINT'],
   ATTACK_INTERVAL_ADD: ['ADD_VALUE', 'SECOND'], MINIMUM_DAMAGE_RATIO: ['SET', 'RATIO'],
   DEFENSE_IGNORE_FIXED: ['IGNORE_FIXED', 'POINT'],
@@ -196,6 +202,12 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
         active ? 'APPLIED' : 'CONDITION_FALSE', '', details)
       continue
     }
+    if (effect.item === 'WEAKPOINT_DAMAGE') {
+      if (effect.value !== true) { block('弱点ダメージの有効化が不正です。'); continue }
+      if (active) output.weakpointDamage = true
+      addRow('弱点ダメージ', '有効', active ? 'APPLIED' : 'CONDITION_FALSE', '', details)
+      continue
+    }
     if (!('value' in effect) || typeof effect.value === 'boolean' || effect.value === undefined) {
       block(`効果「${effect.id}」の数値定義を取得できません。`)
       continue
@@ -205,6 +217,16 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
     const percent = (amount: number) => `${Math.round(amount * 100_000) / 1000}％`
     const status = active ? 'APPLIED' : 'CONDITION_FALSE'
     switch (effect.item) {
+      case 'DRONE_MAXIMUM_MULTIPLIER':
+        if (value < 1) { block('浮遊ユニットの上限補正が有効範囲外です。'); break }
+        if (active) output.droneMaximumMultiplier = (output.droneMaximumMultiplier ?? 1) * value
+        addRow('浮遊ユニットの倍率上限補正', `×${formatCombatNumber(value)}`, status, '', details)
+        break
+      case 'EXTRA_DRONES':
+        if (!Number.isSafeInteger(value) || value < 0 || value > 100) { block('追加浮遊ユニット数が有効範囲外です。'); break }
+        if (active) output.extraDrones = (output.extraDrones ?? 0) + value
+        addRow('追加浮遊ユニット数', `${value}体`, status, '', details)
+        break
       case 'ATK_BUFF_RATIO':
         if (value < -1) { block('攻撃力増加割合が有効範囲外です。'); break }
         if (active && probability !== 1 && probability !== 0) {
@@ -258,6 +280,11 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
       case 'DAMAGE_SCALE':
         if (active) output.damageScale *= value
         addRow('与ダメージ', `×${formatCombatNumber(value)}`, status, '', details)
+        break
+      case 'DAMAGE_CAP_PER_TARGET':
+        if (value < 0) { block('対象ごとのダメージ上限が有効範囲外です。'); break }
+        if (active) output.damageCapPerTarget = Math.min(output.damageCapPerTarget ?? Infinity, value)
+        addRow('対象ごとのダメージ上限', formatCombatNumber(value), status, '', details)
         break
       case 'SPLASH_DAMAGE_SCALE':
         if (active) output.splashDamageScale = (output.splashDamageScale ?? 1) * value

@@ -44924,5 +44924,1061 @@
         }
       }
     ]
+  },
+  {
+    "operatorId": "char_4221_ju",
+    "operatorName": "ジュー",
+    "profession": "SNIPER",
+    "rarity": 5,
+    "subProfessionId": "siegesniper",
+    "phaseIndex": 2,
+    "skillLevelIndex": 9,
+    "profile": {
+      "affiliation": "炎",
+      "affiliationIds": {
+        "nationId": "yan",
+        "groupId": null,
+        "teamId": null
+      },
+      "phases": [
+        {
+          "characterPrefabKey": "char_4221_ju",
+          "rangeId": "4-4",
+          "maxLevel": 50,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 788,
+                "atk": 443,
+                "def": 58,
+                "magicResistance": 0,
+                "cost": 23,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 2.4,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 50,
+              "data": {
+                "maxHp": 1024,
+                "atk": 616,
+                "def": 78,
+                "magicResistance": 0,
+                "cost": 23,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 2.4,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "char_4221_ju",
+          "rangeId": "4-3",
+          "maxLevel": 70,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1024,
+                "atk": 616,
+                "def": 78,
+                "magicResistance": 0,
+                "cost": 25,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 2.4,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 70,
+              "data": {
+                "maxHp": 1280,
+                "atk": 811,
+                "def": 98,
+                "magicResistance": 0,
+                "cost": 25,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 2.4,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3241",
+              "count": 4,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30042",
+              "count": 4,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30052",
+              "count": 2,
+              "type": "MATERIAL"
+            }
+          ]
+        },
+        {
+          "characterPrefabKey": "char_4221_ju",
+          "rangeId": "4-3",
+          "maxLevel": 80,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1280,
+                "atk": 811,
+                "def": 98,
+                "magicResistance": 0,
+                "cost": 25,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 2.4,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 80,
+              "data": {
+                "maxHp": 1600,
+                "atk": 990,
+                "def": 120,
+                "magicResistance": 0,
+                "cost": 25,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 2.4,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3243",
+              "count": 3,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "31074",
+              "count": 8,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30073",
+              "count": 13,
+              "type": "MATERIAL"
+            }
+          ]
+        }
+      ],
+      "favorKeyFrames": [
+        {
+          "level": 0,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        },
+        {
+          "level": 50,
+          "data": {
+            "maxHp": 150,
+            "atk": 70,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        }
+      ],
+      "trait": null,
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_0",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "墨守",
+              "description": "敵に致命的なダメージを与えた時、対象のHPを1残し、<$ba.dying>重傷</>（倒すとSPが1回復）を付与する。自身は<$ba.dying>重傷</>状態の敵を攻撃しない",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "move_speed",
+                  "value": -0.8,
+                  "valueStr": null
+                },
+                {
+                  "key": "sp",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "interval",
+                  "value": 10,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "墨守",
+              "description": "敵に致命的なダメージを与えた時、対象のHPを1残し、<$ba.dying>重傷</>（倒すとSPが2回復）を付与する。自身は<$ba.dying>重傷</>状態の敵を攻撃しない",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "move_speed",
+                  "value": -0.8,
+                  "valueStr": null
+                },
+                {
+                  "key": "sp",
+                  "value": 2,
+                  "valueStr": null
+                },
+                {
+                  "key": "interval",
+                  "value": 10,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        }
+      ],
+      "potentialRanks": [
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "再配置時間-10秒",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "RESPAWN_TIME",
+                  "formulaItem": "ADDITION",
+                  "value": -10,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "攻撃力+34",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "ATK",
+                  "formulaItem": "ADDITION",
+                  "value": 34,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        }
+      ],
+      "modules": [
+        {
+          "uniEquipId": "uniequip_002_ju",
+          "uniEquipName": "案山子",
+          "uniEquipIcon": "uniequip_002_ju",
+          "uniEquipDesc": "矩は、かつてないほどの閉塞感を覚えていた。目線を落としてみれば、左脇の下側を流れる水流が若干弱まっているようだ。好奇心に駆られた矩は、書生風の服に着替えて畦道を歩き、変化の原因を探ろうとした。遠くには谷の最も狭まった部分に未完成の堤が見え、その裏側には水が貯まって小さな湖ができていた。矩が怒りを覚えることはなく、むしろ強い興味を抱いた。\n「石の間から水が漏れ出すから、ここから斜めに溝を掘って、排水口に流すんだ。」堤の上で、褐色の服を着た職人が現場を指揮していた。おそらく彼が棟梁なのだろう。\n「貴殿らは、なにゆえ川の水を堰き止める？」矩は彼らに歩み寄って尋ねた。\n「もちろん、災害を防ぐためさ。」職人は汗を拭いながら答えた。\n「災害を防ぐため？」\n「山じゃ干ばつも水害も日常茶飯事でね。堤があれば、水を貯めたり放出したりして、水量を調整できるんだ。」\n「だが川は古より止まることなく、それぞれが流れるべき道を流れている。その道を貴殿らが無理に変えてしまえば、川の神仙の怒りに触れると恐れぬのか？」\n誰かがそれを聞いて思わず吹き出したが、職人は表情を引き締めて返した。「川には川の道があるかもしれんが、人にも人の道がある。川が人の生きるための一番大事な道を奪っちまった以上、神仙が何とかしてくれないってなら、人が自ら干渉するしかないだろう。」\nそれから数日間、矩は人間たちが四六時中堤を固め続ける様子を眺めていた。口も出さず、手も貸さない矩に対し、職人は振り向いて冗談を言った。「そんな風に一日中眺めてるんじゃ、知識を求める書生と言うより、むしろ田んぼに突っ立ってる案山子（かかし）みたいだな。」矩は返事をせず、変わらず眺め続けていた。\n一ヶ月後、堤が完成しないうちに、予想外の春の雨が訪れた。そんな中でも作業員は片時も気を緩めず、職人に従って土を運んで杭を打ち、竹籠を編んでいた。だが突然発生した山津波が堤を襲い、濁流が堤に衝突して亀裂を作った。驚くべきことに、彼らは瞬時に堤に向かって駆け出し、身を挺して亀裂を塞ごうとしたのだ。その様子を見た矩が掌をくるりと返すと、濁流の勢いはすぐに弱まった。その隙に人々は手当たり次第の土嚢で亀裂を塞いだ。雨がようやく止む頃には、堤はボロボロになりながらも、ついに崩れることはなかった。職人が深い安堵の息をつき、後ろを振り向くと、そこには汚れひとつない書生風の服を着た矩が変わらず彼を見つめていた。\n「今回ばかりは川の神様の慈悲に感謝しないとな。」\n「川の神に？感謝すべきは、貴殿らの道が……理に適っていることに対してではないのか？」\n職人は首を横に振って答えた。「いや、ちゃんとわかってんだ。さっき俺たちを助けてくれたのは、理じゃなくて運だってな。そんで、運がどこから来たかって言うと――」\n彼はすっと立ち上がり、堤の向こうで鎮まりつつある川を指さした。「天気が晴れれば、明日にでも水門を開いて放水するさ。川の神よ、安心してくれ。俺たちは水に流れてほしくないわけじゃない。ただ規則を守って、流れるべき時に流れてほしいだけなんだ。」\n「……勝手にするがよい。」矩は身を翻し、その場を離れようとした。\n「ちょっと待ってくれ。」\n「ここ最近、毎日この堤に来てただろう？これは推測だが、俺たちの作ってるもんに心底興味がありそうじゃないか。だったら、ここに留まったらどうだ？」\n「田んぼに降りて、俺たちの作業を観察するとか、人里に入って……俺たちの敷いた道を見るとかすりゃいいと思うぞ。」\n「ほう？」矩は足を止めて振り返った。\n「もちろん、田んぼに突っ立ってる案山子よろしく、皆を背中から静かに眺めていたいってなら、それでも構わんが。」\n「とはいえ、やっぱり実際にその手で量ってみたいと思わないか？」\n「人の道に、どれだけの重みがあるのかをな。」",
+          "typeIcon": "sie-x",
+          "typeName1": "SIE",
+          "typeName2": "X",
+          "equipShiningColor": "red",
+          "showEvolvePhase": "PHASE_2",
+          "unlockEvolvePhase": "PHASE_2",
+          "charId": "char_4221_ju",
+          "tmplId": null,
+          "showLevel": 1,
+          "unlockLevel": 50,
+          "missionList": [
+            "uniequip_002_ju_1",
+            "uniequip_002_ju_2"
+          ],
+          "unlockFavors": {
+            "1": 0,
+            "2": 2732,
+            "3": 10070
+          },
+          "itemCost": {
+            "1": [
+              {
+                "id": "mod_unlock_token",
+                "count": 2,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "31084",
+                "count": 3,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 40000,
+                "type": "GOLD"
+              }
+            ],
+            "2": [
+              {
+                "id": "mod_unlock_token",
+                "count": 2,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_1",
+                "count": 20,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30044",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 50000,
+                "type": "GOLD"
+              }
+            ],
+            "3": [
+              {
+                "id": "mod_unlock_token",
+                "count": 2,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_2",
+                "count": 8,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "31044",
+                "count": 5,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 60000,
+                "type": "GOLD"
+              }
+            ]
+          },
+          "type": "ADVANCED",
+          "uniEquipGetTime": 1784185200,
+          "uniEquipShowEnd": 1786586400,
+          "charEquipOrder": 1,
+          "hasUnlockMission": true,
+          "isSpecialEquip": false,
+          "specialEquipDesc": null,
+          "specialEquipColor": null,
+          "charColor": "#af6f48",
+          "phases": [
+            {
+              "equipLevel": 1,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "DISPLAY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": "重量ランクが3以上の敵を攻撃時、攻撃力が<@ba.kw>115%</>まで上昇",
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": {},
+                        "overrideDescripton": null,
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": "ju_equip_1_1_p1",
+                  "target": "TALENT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "10_root",
+                        "name": null,
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.15,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "value",
+                            "value": 3,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": true
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 90,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 45,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 2,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "DISPLAY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": "重量ランクが3以上の敵を攻撃時、攻撃力が<@ba.kw>115%</>まで上昇",
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": {},
+                        "overrideDescripton": null,
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": "ju_equip_1_2_p1",
+                  "target": "TALENT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "10_root",
+                        "name": null,
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.15,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "value",
+                            "value": 3,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": true
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                },
+                {
+                  "resKey": "ju_equip_1_2_p2",
+                  "target": "TALENT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "HPが最大値の50%未満のユニットに与えるダメージ+8%。敵に致命的なダメージを与えた時、対象のHPを1残し、<$ba.dying>重傷</>（倒すとSPが2回復）を付与する。自身は<$ba.dying>重傷</>状態の敵を攻撃しない",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "11_root",
+                        "name": "墨守",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "hp_ratio",
+                            "value": 0.5,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "damage_scale",
+                            "value": 1.08,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 115,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 55,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 3,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "DISPLAY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": "重量ランクが3以上の敵を攻撃時、攻撃力が<@ba.kw>115%</>まで上昇",
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": {},
+                        "overrideDescripton": null,
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": "ju_equip_1_3_p1",
+                  "target": "TALENT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "10_root",
+                        "name": null,
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "atk_scale",
+                            "value": 1.15,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "value",
+                            "value": 3,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": true
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                },
+                {
+                  "resKey": "ju_equip_1_3_p2",
+                  "target": "TALENT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "HPが最大値の50%未満のユニットに与えるダメージ+12%。敵に致命的なダメージを与えた時、対象のHPを1残し、<$ba.dying>重傷</>（倒すとSPが2回復）を付与する。自身は<$ba.dying>重傷</>状態の敵を攻撃しない",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "11_root",
+                        "name": "墨守",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "hp_ratio",
+                            "value": 0.5,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "damage_scale",
+                            "value": 1.12,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 130,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 70,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            }
+          ]
+        }
+      ],
+      "traitDescription": "重量が最も重い敵を優先して攻撃",
+      "subProfessionTraitDescription": ""
+    },
+    "skills": [
+      {
+        "skillIndex": 1,
+        "skillId": "skchr_ju_1",
+        "raw": {
+          "name": "良弓、張り難し",
+          "rangeId": null,
+          "description": "次の通常攻撃時、残りHPが50%以下の敵のみをスキル対象として選択し、攻撃力の<@ba.vup>{atk_scale_s1:0%}</>の物理ダメージを与える\n<@ba.rem>2回チャージ可能</>",
+          "skillType": "AUTO",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 2,
+            "spCost": 8,
+            "initSp": 0,
+            "increment": 1
+          },
+          "prefabId": "skchr_ju_1",
+          "duration": 0,
+          "blackboard": [
+            {
+              "key": "atk_scale_s1",
+              "value": 2.5,
+              "valueStr": null
+            }
+          ]
+        }
+      },
+      {
+        "skillIndex": 2,
+        "skillId": "skchr_ju_2",
+        "raw": {
+          "name": "良翼、乗り難し",
+          "rangeId": null,
+          "description": "攻撃力<@ba.vup>+{atk:0%}</>、攻撃対象数+1。スキル発動中、一定間隔で攻撃範囲内のHPが50%未満の敵1体に対して、追加で攻撃力の<@ba.vup>{atk_scale_s2_extra:0%}</>の物理ダメージを与える\n<@ba.rem>追加物理ダメージの効果は敵ごとに1回のみ発動</>",
+          "skillType": "MANUAL",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 40,
+            "initSp": 25,
+            "increment": 1
+          },
+          "prefabId": "skchr_ju_2",
+          "duration": 30,
+          "blackboard": [
+            {
+              "key": "atk",
+              "value": 1,
+              "valueStr": null
+            },
+            {
+              "key": "attack@max_target_s2",
+              "value": 2,
+              "valueStr": null
+            },
+            {
+              "key": "atk_scale_s2_extra",
+              "value": 1,
+              "valueStr": null
+            },
+            {
+              "key": "hp_ratio",
+              "value": 0.5,
+              "valueStr": null
+            }
+          ]
+        }
+      }
+    ]
   }
 ]

@@ -65,6 +65,36 @@ function close(actual: number, expected: number) {
   assert.ok(Math.abs(actual - expected) <= Math.max(1, Math.abs(expected)) * 1e-10, `${actual} != ${expected}`)
 }
 
+test('素質の命中上限は対象HPから解決し、複数上限は最小値、無効状態は拒否する', () => {
+  const original = structure(record('char_010_chen'), 1)
+  const template = original.effects.find(effect => effect.item === 'ATK_BUFF_RATIO')!
+  const cap: TalentStructureEffect = { ...template, item: 'DAMAGE_CAP_PER_TARGET', operation: 'SET', unit: 'POINT',
+    value: { type: 'CALC', operation: 'ADD', values: [{ type: 'METRIC', metric: 'targetHp' }, -1] },
+    condition: { type: 'COMPARE', metric: 'capActive', comparison: 'EQ', value: true },
+    timing: { type: 'CONTINUOUS', while: 'DEPLOYED' }, lifetime: { type: 'WHILE_SOURCE_ACTIVE' },
+    probability: { chance: 1, rollScope: 'APPLICATION' } }
+  for (const targetHp of [1, 1.5, 1000]) {
+    const output = apply({ ...original, effects: [cap] }, { targetHp, capActive: true })
+    assert.deepEqual(output.blockers, [])
+    close(output.damageCapPerTarget!, targetHp - 1)
+  }
+  const second = { ...cap, value: 100 }
+  for (const effects of [[cap, second], [second, cap]]) {
+    const output = apply({ ...original, effects }, { targetHp: 1000, capActive: true })
+    assert.deepEqual(output.blockers, [])
+    close(output.damageCapPerTarget!, 100)
+  }
+  assert.equal(apply({ ...original, effects: [cap] }, { targetHp: 1000, capActive: false }).damageCapPerTarget, undefined)
+  assert.equal(apply({ ...original, effects: [{ ...cap, target: { ...cap.target, side: 'ALLY', includeSelf: false } }] },
+    { targetHp: 1000, capActive: true }).damageCapPerTarget, undefined)
+  for (const targetHp of [0, Number.NaN, Number.POSITIVE_INFINITY]) {
+    assert.ok(apply({ ...original, effects: [cap] }, { targetHp, capActive: true }).blockers.length)
+  }
+  assert.ok(apply({ ...original, effects: [cap] }, { capActive: true }).blockers.length)
+  assert.ok(apply({ ...original, effects: [{ ...cap, probability: { chance: .5, rollScope: 'APPLICATION' } }] },
+    { targetHp: 1000, capActive: true }).blockers.length)
+})
+
 test('最終加算・最終減算の素質を通常加算と区別し、対象・条件・不正な値を検証する', () => {
   const original = structure(record('char_010_chen'), 1)
   const template = original.effects.find(effect => effect.item === 'ATK_BUFF_RATIO')!

@@ -182,7 +182,8 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
   make('char_1050_chen3', 3, [
     at('normal', stage(ARTS, { maxTargets: k('attack@max_target'), duration: 20, actions: [a(ARTS, k('attack@atk_scale'), 3)] })),
     at('wave', burst(ARTS, 1, 1, { label: '剣気1回の命中', maxTargets: null, actions: [a(ARTS, k('hp_ratio'), 1,
-      { label: '剣気', basis: 'TARGET_CURRENT_HP', minimumAttackScale: k('projectile_min_atk_scale') })] })),
+      { label: '剣気', basis: 'TARGET_CURRENT_HP', minimumAttackScale: k('projectile_min_atk_scale') })],
+      ...pending('chen3-wave-weakpoint-precalculation', '剣気は事前計算型のダメージで、弱点属性への変換と攻撃力参照時刻を確認する必要があります。', ['スキル', '素質1']) })),
   ], [phase(['normal', '通常攻撃'], ['wave', '剣気1回の命中']), n('targetCurrentHp', '命中直前の敵HP', 10000, 1, 10000000)], ['剣気の反射・再命中回数は推定しない。']),
 
   make('char_188_helage', 1, [next(PHYS, k('atk_scale'), 2)]),

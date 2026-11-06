@@ -83,6 +83,53 @@ const withExistingDefenseDown = (stage: GuardStage, condition: string): readonly
 ]
 
 export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] = [
+  operator('char_4221_ju', [
+    { ...recipe('char_4221_ju', 1, next(key('atk_scale_s1'), 1, {
+      label: 'HP50%以下の対象への強化攻撃', maxTargets: 1,
+      dpsUnsupportedReason: '対象の残りHPによる非致死上限を適用した1攻撃のみ計算します。',
+      periodTotal: { kind: 'UNSUPPORTED', reason: '対象のHP減少・重傷付与とチャージの時間変化は計算しません。' },
+    })), conditionRequirements: [
+      { condition: { input: 'targetHpPercent', comparison: 'LTE', value: 50 }, reason: 'S1は残りHPが50%以下の対象のみ選択できます。' },
+      { condition: { input: 'targetCriticallyWounded', comparison: 'EQ', value: false }, reason: '重傷状態の対象への攻撃は計算対象外です。' },
+    ] },
+    { ...recipe('char_4221_ju', 2, [
+      normal({ id: 'normal', label: '通常攻撃1回', atk: key('atk'), maxTargets: key('attack@max_target_s2'),
+        when: { input: 'phase', comparison: 'EQ', value: 'normal' },
+        dpsUnsupportedReason: '対象の残りHPによる非致死上限を適用した1攻撃のみ計算します。',
+        periodTotal: { kind: 'UNSUPPORTED', reason: '対象のHP減少と別に発生する追加ダメージは時間積算しません。' } }),
+      burst(key('atk_scale_s2_extra'), { id: 'extra', label: '追加物理ダメージ1回', atk: key('atk'), maxTargets: 1,
+        actions: [damage(key('atk_scale_s2_extra'), 1, { role: 'ADDITIONAL', label: '追加物理ダメージ' })],
+        when: { input: 'phase', comparison: 'EQ', value: 'extra' },
+        dpsUnsupportedReason: '独立した追加ダメージの1命中のみ計算します。',
+        periodTotal: { kind: 'UNSUPPORTED', reason: '追加ダメージの発生待ち・対象選択・規矩の再付与は計算しません。' } }),
+    ], [{ key: 'phase', label: '計算する攻撃', kind: 'select', defaultValue: 'normal', options: [
+      { value: 'normal', label: '通常攻撃' }, { value: 'extra', label: '追加物理ダメージ' },
+    ] }, bool('extraDamageMarkApplied', '対象に規矩を付与済み')],
+    ['通常攻撃と追加物理ダメージを別の命中として評価する。追加は検出から命中までHP条件が変わらず、規矩未付与の対象に成立する最初の1回。両段階の合計は計算しない。']),
+    conditionRequirements: [
+      { condition: { input: 'targetCriticallyWounded', comparison: 'EQ', value: false }, reason: '重傷状態の対象への攻撃は計算対象外です。' },
+      { when: { input: 'phase', comparison: 'EQ', value: 'extra' }, condition: { input: 'targetHpPercent', comparison: 'LT', value: 50 },
+        reason: '追加物理ダメージは検出時から残りHPが50%未満の対象のみ計算できます。' },
+      { when: { input: 'phase', comparison: 'EQ', value: 'extra' }, condition: { input: 'extraDamageMarkApplied', comparison: 'EQ', value: false },
+        reason: '規矩を付与済みの対象には追加物理ダメージが再発動しません。' },
+    ] },
+  ], [talent(0, '墨守', ['DAMAGE', 'STATUS', 'RESOURCE', 'ATTACK_BEHAVIOR'], b => [
+    // The nonlethal limit applies to all damage from Ju, including the independent S2 effect.
+    // https://prts.wiki/w/矩#天赋
+    { ...ctx('nonlethal-damage-cap', 'description:leave_1_hp', { target: attack }),
+      item: 'DAMAGE_CAP_PER_TARGET', operation: 'SET', unit: 'POINT',
+      value: { type: 'CALC', operation: 'ADD', values: [{ type: 'METRIC', metric: 'targetCurrentHp' }, -1] } },
+    status('critical-injury', '致命ダメージを受けた対象のHPを1残して重傷を付与', { target: enemy,
+      timing: { type: 'EVENT', event: 'LETHAL_DAMAGE' }, lifetime: { type: 'FIXED_SECONDS', seconds: b.read('interval') },
+      parameterBindings: { movementSpeedRatio: 'move_speed' } }),
+    behavior('exclude-critically-wounded', '重傷状態の敵を攻撃対象に選ばない'),
+    { ...ctx('critical-injury-kill-sp', 'sp', { target: { ...self, side: 'ALLY', scope: 'DAMAGE_SOURCE' },
+      timing: { type: 'EVENT', event: 'KILL' }, condition: eq('targetCriticallyWounded', true), lifetime: { type: 'CURRENT_EVENT' } }),
+      item: 'SP_RESTORE', operation: 'ADD_VALUE', unit: 'POINT', value: b.read('sp') },
+  ])], [number('targetCurrentHp', '対象の残りHP', 10000, 1, 1000000000, 0.1),
+    number('targetHpPercent', '対象の残りHP（%）', 25, 0.01, 100, 0.01),
+    bool('targetCriticallyWounded', '対象が重傷状態')], [],
+  ['選択した全対象が同じ残りHP・HP割合・重傷状態にある1命中を評価する。HP1を残す非致死上限を反映し、重傷後の自然死亡はダメージに含めない。']),
   operator('char_1035_wisdel', [
     recipe('char_1035_wisdel', 2, [
       normal({ label: 'OD前・孤立した主対象1体', atk: key('atk'), intervalAdd: key('base_attack_time'), maxTargets: 1,

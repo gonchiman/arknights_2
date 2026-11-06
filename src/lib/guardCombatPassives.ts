@@ -44,12 +44,6 @@ export function getGuardPassiveCalculationConstraints(operatorId: string, contex
     supportedCondition: '攻撃開始前から対象が戦慄中',
     allows: conditions => conditions.targetTrembling === true,
   }]
-  if (operatorId === 'char_1050_chen3') return [{
-    id: 'chen3-weakpoint-mitigation', relatedSections: ['素質1'],
-    talentIndex: 0,
-    reason: '弱点ダメージの防御力・術耐性への適用式が未確定です。',
-    allows: () => false,
-  }]
   return []
 }
 const numberInput = (key: string, label: string, min: number, max: number, defaultValue = min, step = 1): GuardInput =>
@@ -81,7 +75,8 @@ const INPUTS: Readonly<Record<string, readonly GuardInput[]>> = {
   char_1026_gvial2: [numberInput('blockedEnemyCount', '自身がブロックしている敵数', 0, 5)],
   char_4098_vvana: [booleanInput('eliteInRange', '攻撃範囲内にエリート・ボス')],
   char_1019_siege2: [numberInput('nearbyAllyCount', '周囲8マスの味方数', 0, 8)],
-  char_1050_chen3: [],
+  char_1050_chen3: [{ key: 'fixedWeakpoint', label: '敵の固定弱点', kind: 'select', defaultValue: 'NONE',
+    options: [{ value: 'NONE', label: 'なし' }, { value: 'PHYSICAL', label: '物理' }, { value: 'ARTS', label: '術' }] }],
   char_188_helage: [HP],
   char_4121_zuole: [HP],
   char_485_pallas: [HP, BLOCKED],

@@ -120,6 +120,7 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
     numeric('attack-final-flat', '攻撃力（最終加算）', stage.attackFinalFlat, n => `＋${number(n)}`)
     numeric('resistance-reduction-fixed', '術耐性固定低下', stage.resistanceReductionFixed, n => `−${number(n)}`, mitigationOptions('ARTS'))
     numeric('damage-scale', '与ダメージ倍率', stage.damageScale, n => `×${number(n)}`)
+    numeric('damage-cap-per-target', '対象ごとのダメージ上限', stage.damageCapPerTarget, number)
     if (stage.duration !== undefined) add('duration', '持続時間', () => stage.duration === 'UNTIL_EXIT' ? '退場まで' : `${number(value(stage.duration))}秒`,
       stage.duration === 'UNTIL_EXIT' ? [] : [stage.duration], inactive ? {} : {
         status: 'NOT_RELEVANT', reason: '1攻撃のダメージと攻撃中のDPSには、持続時間を乗算しません。', timing: 'スキル中',
@@ -166,6 +167,17 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
         ['flat-damage', '固定ダメージ', action.flatDamage, number],
         ['minimum-scale', '下限の攻撃倍率', action.minimumAttackScale, (n: number) => `×${number(n)}`],
       ] as const) if (expression !== undefined) actionRow(key, item, () => format(value(expression)), expression)
+      if (action.damageScaleWhenType) {
+        const resolvedType = action.role === 'MAIN' ? input.virtualMainAttackType ?? action.damageType : action.damageType
+        const resolvedComponents = output.rows.flatMap(row => row.attackComponents).filter(component => component.label === action.label)
+        const matchesType = resolvedComponents.length
+          ? resolvedComponents.some(component => component.damageType === action.damageScaleWhenType!.damageType)
+          : resolvedType === action.damageScaleWhenType.damageType
+        add(`${prefix}:typed-damage-scale`, `${action.label}：${TYPE_LABELS[action.damageScaleWhenType.damageType]}の与ダメージ倍率`,
+          () => `×${number(value(action.damageScaleWhenType!.scale))}`, [action.damageScaleWhenType.scale],
+          { ...options, status: actionStatus === 'APPLIED' && !matchesType
+            ? 'NOT_RELEVANT' : actionStatus })
+      }
     })
     for (const [index, reason] of (stage.unresolved ?? []).entries()) add(`unresolved-${index}`, '未対応の処理', () => '未確認', [], {
       status: inactive ? 'INACTIVE_STAGE' : 'UNSUPPORTED', reason,

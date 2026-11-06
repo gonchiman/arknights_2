@@ -136,7 +136,7 @@ test('追加した低下割合と防御後倍率も効果フローへ保持す�
 })
 
 test('全登録定義で各効果・攻撃を一度ずつ保持し、入力依存値を参照エラーにしない', () => {
-  assert.equal(SKILL_STRUCTURES.length, 620)
+  assert.equal(SKILL_STRUCTURES.length, 667)
   for (const structure of SKILL_STRUCTURES) {
     const model = buildSkillEffectFlow(structure)
     const sourceStages = structure.guardRecipe?.stages ?? structure.effectStructure.stages
