@@ -35,9 +35,9 @@ function close(actual: number | null | undefined, expected: number) {
   assert.ok(typeof actual === 'number' && Math.abs(actual - expected) < 1e-7, `${actual} != ${expected}`)
 }
 
-test('支援系6技能の数値と対象外5技能を区別し、全特性の原文を厳密に照合する', () => {
-  assert.equal(EXPANDED_SUPPORT_DEFINITIONS.length, 4)
-  assert.equal(EXPANDED_SUPPORT_DEFINITIONS.reduce((sum, source) => sum + source.recipes.length, 0), 6)
+test('支援系7技能の数値と対象外5技能を区別し、全特性の原文を厳密に照合する', () => {
+  assert.equal(EXPANDED_SUPPORT_DEFINITIONS.length, 5)
+  assert.equal(EXPANDED_SUPPORT_DEFINITIONS.reduce((sum, source) => sum + source.recipes.length, 0), 7)
   for (const definition of EXPANDED_SUPPORT_DEFINITIONS) for (const recipe of definition.recipes) {
     const result = output(definition.operatorId, recipe.skillIndex)
     valid(result)
@@ -45,10 +45,10 @@ test('支援系6技能の数値と対象外5技能を区別し、全特性の原
   }
   const coverage = buildDamageCalculatorThreeCoverage(sources.flatMap(source => source.skills.map(skill => record(source.operatorId, skill.skillIndex))))
   assert.equal(coverage.filter(row => row.status === 'NOT_APPLICABLE').length, 5)
-  assert.equal(coverage.filter(row => row.status === 'SUPPORTED' || row.status === 'CONDITIONAL').length, 6)
+  assert.equal(coverage.filter(row => row.status === 'SUPPORTED' || row.status === 'CONDITIONAL').length, 7)
   for (const source of sources) {
     const result = output(source.operatorId, EXPANDED_SUPPORT_DEFINITIONS.find(item => item.operatorId === source.operatorId)!.recipes[0].skillIndex,
-      {}, {}, skill => { skill.operatorProfile.trait!.candidates![0].blackboard![0].value! += 0.01 })
+      {}, {}, skill => { const board = skill.operatorProfile.trait?.candidates?.[0].blackboard; if (board?.length) board[0].value! += 0.01; else skill.operatorProfile.traitDescription += ' 未確認効果' })
     assert.ok(result.unsupportedReasons.length)
     assert.deepEqual(result.rows, [])
   }
@@ -137,4 +137,22 @@ test('ハルカS3は浮遊効果中の毎秒80%で、治療速度や4秒全量�
   const inactive = output('char_4202_haruka', 3, { harukaLevitateActive: false })
   assert.ok(inactive.unsupportedReasons.length)
   assert.deepEqual(inactive.rows, [])
+})
+
+
+test('サイラッハS3は着弾前の30%脆弱を個別軽減後に適用し、継続通常攻撃は加算しない', () => {
+  for (const defense of [0, 500, 3000]) for (const count of [1, 3, 5]) {
+    const result = output('char_479_sleach', 3, { actualAttackTargetCount: count }, { enemy: { defense, resistance: 60 } })
+    const row = valid(result)
+    close(row.perAttack, Math.max(586 * 3 - defense, 586 * 3 * 0.05) * 1.3)
+    close(row.allTargetsPerAttack, row.perAttack * count)
+    assert.equal(row.dps, null)
+    assert.equal(result.attackInterval, null)
+    assert.equal(row.attackComponents?.length, 1)
+  }
+  const virtual = output('char_479_sleach', 3, {}, { virtualMainAttackType: 'ARTS' })
+  close(valid(virtual).perAttack, 586 * 3 * 0.6 * 1.3)
+  const changed = output('char_479_sleach', 3, {}, {}, skill => { skill.skillLevels[9].description += ' 未確認効果' })
+  assert.deepEqual(changed.rows, [])
+  assert.ok(changed.unsupportedReasons.length)
 })

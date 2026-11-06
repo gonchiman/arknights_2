@@ -23,7 +23,7 @@ function record(id: string, index: number): SkillRecord {
     description: raw.description!, duration: raw.duration!, durationType: raw.durationType!, skillType: raw.skillType!,
     spType: raw.spData!.spType!, spCost: raw.spData!.spCost!, initSp: raw.spData!.initSp!, classification: classifySkill(raw),
     skillLevels: Array.from({ length: source.skillLevelIndex + 1 }, () => structuredClone(raw)), raw,
-    operatorProfile: structuredClone(source.profile) }
+    operatorProfile: structuredClone(source.profile), overrideTokenKey: source.profile.summonSkillTokenKeys?.[index - 1] ?? undefined }
 }
 function output(id: string, index: number, guard: GuardConditions = {}, change?: (record: SkillRecord) => void,
   options: Partial<DamageCalculatorThreeInput> = {}) {
@@ -42,6 +42,7 @@ function close(actual: number | null, expected: number) {
   assert.ok(actual !== null && Math.abs(actual - expected) < 1e-7, `${actual} != ${expected}`)
 }
 const attack = (base: number, ratio = 0) => Math.floor(base * (1 + ratio) + 1e-9)
+const physicalDamage = (atk: number, defense: number) => Math.max(atk * 0.05, atk - defense)
 function total(id: string, index: number, result: ReturnType<typeof output>) {
   const stage = EXPANDED_ARTS_DEFINITIONS.find(definition => definition.operatorId === id)!
     .recipes.find(recipe => recipe.skillIndex === index)!.stages[0]
@@ -283,10 +284,10 @@ test('追加4名の素質数値欠落や未確認のスキル更新は計算を�
   }
 })
 
-test('術師・補助・医療63名の141スキルを116レシピ・25保留に分け、全素質を登録する', () => {
+test('術師・補助・医療63名の141スキルを130レシピ・11対象外に分け、全素質を登録する', () => {
   assert.equal(sources.length, 63)
   assert.equal(sources.reduce((sum, source) => sum + source.skills.length, 0), 141)
-  assert.equal(EXPANDED_ARTS_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 116)
+  assert.equal(EXPANDED_ARTS_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 130)
   for (const definition of EXPANDED_ARTS_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     const indices = [...definition.recipes.map(recipe => recipe.skillIndex), ...(definition.deferredSkills ?? []).map(skill => skill.skillIndex)]
@@ -742,4 +743,205 @@ test('グラウコスS2のドローン800%に素質150%を重ねず、地上敵4
   }
   const first = at('char_326_glacus', 1, { targetDrone: true })
   close(first.row.perAttack, attack(first.result.stats.attack, 0.5) * 1.5)
+})
+
+test('トミミS2は実現した3効果を分離し、範囲化と220%を同時適用しない', () => {
+  for (const [tomimiOutcome, count, scale] of [['STUN', 1, 1], ['POWER', 1, 2.2], ['AREA', 4, 1]] as const) {
+    for (const defense of [0, 2000, 100000]) for (const type of ['PHYSICAL', 'ARTS'] as const) {
+      const result = output('char_411_tomimi', 2, { tomimiOutcome, actualAttackTargetCount: count }, undefined,
+        { enemy: { defense, resistance: 60 }, virtualMainAttackType: type })
+      assert.deepEqual(result.unsupportedReasons, [])
+      close(result.stats.attack, 635)
+      const atk = 1270 * scale
+      const expected = type === 'ARTS' ? atk * 0.4 : physicalDamage(atk, defense)
+      close(result.rows[0].perAttack, expected)
+      close(result.rows[0].allTargetsPerAttack, expected * count)
+      assert.equal(result.rows[0].dps, null)
+      assert.equal(result.hasProbabilisticDamage, false)
+      assert.equal(result.rows[0].attackComponents.length, 1)
+    }
+  }
+  assert.deepEqual(output('char_411_tomimi', 2, { tomimiOutcome: 'EXPECTED' }).rows, [])
+  assert.deepEqual(output('char_411_tomimi', 2, { tomimiOutcome: 'POWER', actualAttackTargetCount: 2 }).rows, [])
+})
+
+test('スカイフレアS2は間隔70%延長と240%隕石、ブロック対象への術15%を独立適用する', () => {
+  for (const targetBlocked of [false, true]) for (const type of ['ARTS', 'PHYSICAL'] as const) {
+    const result = output('char_166_skfire', 2, { targetBlocked, actualAttackTargetCount: 3 }, undefined,
+      { enemy: { defense: 800, resistance: 60 }, virtualMainAttackType: type })
+    assert.deepEqual(result.unsupportedReasons, [])
+    close(result.stats.attack, 874)
+    const expected = type === 'ARTS' ? 874 * 2.4 * 0.4 * (targetBlocked ? 1.15 : 1) : physicalDamage(874 * 2.4, 800)
+    close(result.rows[0].perAttack, expected)
+    close(result.attackInterval, 2.9 * 1.7)
+    close(result.rows[0].dps, expected / (2.9 * 1.7))
+    close(result.rows[0].allTargetsPerAttack, expected * 3)
+    assert.equal(total('char_166_skfire', 2, result).totalDamage, null)
+  }
+})
+
+test('サンタラS2は命中した氷柱1本を計算し、新規凍結や落下確率を推定しない', () => {
+  for (const secondsSinceDeploy of [19, 20]) for (const santallaColdState of ['NONE', 'FROZEN', 'IMMUNE']) {
+    for (const type of ['ARTS', 'PHYSICAL'] as const) {
+      const result = output('char_341_sntlla', 2, { secondsSinceDeploy, santallaColdState, actualAttackTargetCount: 3 }, undefined,
+        { enemy: { defense: 500, resistance: 60 }, virtualMainAttackType: type })
+      assert.deepEqual(result.unsupportedReasons, [])
+      const atk = attack(result.stats.attack, secondsSinceDeploy === 20 ? 0.15 : 0) * 0.9
+      const expected = type === 'ARTS' ? atk * (santallaColdState === 'FROZEN' ? 0.55 : 0.4) : physicalDamage(atk, 500)
+      close(result.rows[0].perAttack, expected)
+      close(result.rows[0].allTargetsPerAttack, expected * 3)
+      assert.equal(result.rows[0].dps, null)
+      assert.equal(result.attackInterval, null)
+    }
+  }
+  assert.deepEqual(output('char_341_sntlla', 2, { santallaColdState: 'COLD' }).rows, [])
+})
+
+test('濯塵ハイビスカスS2は1秒攻撃の170%1回だけで、治療や移動減速を加算しない', () => {
+  for (const hibiscusWeaknessActive of [false, true]) for (const type of ['ARTS', 'PHYSICAL'] as const) {
+    const result = output('char_1024_hbisc2', 2, { hibiscusWeaknessActive, actualAttackTargetCount: 2 }, undefined,
+      { enemy: { defense: 500, resistance: 60 }, virtualMainAttackType: type })
+    assert.deepEqual(result.unsupportedReasons, [])
+    const atk = result.stats.attack * 1.7
+    const expected = type === 'ARTS' ? atk * 0.4 * (hibiscusWeaknessActive ? 1.12 : 1) : physicalDamage(atk, 500)
+    close(result.rows[0].perAttack, expected)
+    close(result.rows[0].allTargetsPerAttack, expected * 2)
+    assert.equal(result.rows[0].dps, null)
+    assert.equal(result.attackInterval, null)
+  }
+  assert.deepEqual(output('char_1024_hbisc2', 2, { actualAttackTargetCount: 3 }).rows, [])
+})
+
+test('ナイトメアS2は更新ごとの距離×1200を使い、4マス超の更新と停止中は0になる', () => {
+  for (const movementDelta of [0, 0.1, 1, 4, 4.01, 20]) for (const count of [1, 5]) {
+    const result = output('char_164_nightm', 2, { movementDelta, actualAttackTargetCount: count }, undefined,
+      { enemy: { defense: 100000, resistance: 100 } })
+    assert.deepEqual(result.unsupportedReasons, [])
+    close(result.rows[0].perAttack, movementDelta > 4 ? 0 : movementDelta * 1200)
+    close(result.rows[0].allTargetsPerAttack, result.rows[0].perAttack * count)
+    assert.equal(result.damageType, 'TRUE')
+    assert.equal(result.rows[0].dps, null)
+    assert.equal(result.attackInterval, null)
+  }
+  const normal = output('char_164_nightm', 2, { nightmareAction: 'NORMAL' }, undefined, { enemy: { defense: 9999, resistance: 50 } })
+  assert.deepEqual(normal.unsupportedReasons, [])
+  close(normal.rows[0].perAttack, attack(normal.stats.attack, 0.15) * 0.5)
+  assert.deepEqual(output('char_164_nightm', 2, { movementDelta: -1 }).rows, [])
+})
+
+test('プリンS2の2体再跳躍は4命中で各跳躍を15%減衰し、単独対象では1命中で終える', () => {
+  for (const count of [1, 2, 3, 4]) for (const type of ['ARTS', 'PHYSICAL'] as const) for (const defense of [0, 1000, 99999]) {
+    const result = output('char_4004_pudd', 2, { actualAttackTargetCount: count }, undefined,
+      { enemy: { defense, resistance: 60 }, virtualMainAttackType: type })
+    assert.deepEqual(result.unsupportedReasons, [])
+    close(result.stats.attack, 612)
+    const atk = 1346
+    const hits = count === 1 ? 1 : 4
+    const totalDamage = Array.from({ length: hits }, (_, index) => type === 'ARTS'
+      ? atk * 0.85 ** index * 0.4 : physicalDamage(atk * 0.85 ** index, defense)).reduce((a, b) => a + b, 0)
+    close(result.rows[0].allTargetsPerAttack, totalDamage)
+    close(result.rows[0].perAttack, totalDamage / count)
+    assert.equal(result.rows[0].attackComponents.length, hits)
+    assert.equal(result.rows[0].dps, null)
+    assert.equal(result.hasRandomTargets, true)
+  }
+  assert.deepEqual(output('char_4004_pudd', 2, { actualAttackTargetCount: 5 }).rows, [])
+})
+
+test('V10術師のスキル倍率と素質原文が変わると固定値へ代用しない', () => {
+  for (const id of ['char_411_tomimi', 'char_166_skfire', 'char_341_sntlla', 'char_1024_hbisc2', 'char_164_nightm', 'char_4004_pudd']) {
+    for (const mutate of [
+      (skill: SkillRecord) => { skill.skillLevels.at(-1)!.blackboard![0].value = 999 },
+      (skill: SkillRecord) => { skill.operatorProfile.talents![0].candidates!.forEach(candidate => { candidate.description += '追加ダメージ' }) },
+    ]) assert.deepEqual(output(id, 2, {}, mutate).rows, [], id)
+  }
+})
+
+
+test('カニパラートS2は継続75%と終了爆発300%を分離し、空中の対術脆弱だけを適用する', () => {
+  for (const qanikEvent of ['TICK', 'EXPLOSION']) for (const targetAirborne of [false, true]) {
+    const { result, row } = at('char_466_qanik', 2, { qanikEvent, targetAirborne, actualAttackTargetCount: 2 }, 40)
+    const scale = qanikEvent === 'TICK' ? 0.75 : 3
+    close(row.perAttack, result.stats.attack * scale * 0.6 * (targetAirborne ? 1.2 : 1))
+    close(row.allTargetsPerAttack, row.perAttack * 2)
+    assert.equal(row.dps, null)
+    assert.equal(row.combinedDps, null)
+    assert.equal(result.attackInterval, null)
+    const virtual = output('char_466_qanik', 2, { qanikEvent, targetAirborne: true }, undefined,
+      { virtualMainAttackType: 'PHYSICAL', enemy: { defense: 200, resistance: 80 } })
+    close(virtual.rows[0].perAttack, physicalDamage(virtual.stats.attack * scale, 200))
+  }
+})
+
+test('パッセンジャーS3の150%連鎖は各跳躍を個別軽減し、増幅と隣接条件を独立適用する', () => {
+  for (const count of [1, 2, 4]) for (const active of [false, true]) for (const adjacent of [false, true]) {
+    const { result, row } = at('char_472_pasngr', 3, {
+      actualAttackTargetCount: count, analysisAmplificationActive: active, adjacentEnemyPresent: adjacent,
+    }, 80)
+    const base = attack(result.stats.attack, adjacent ? 0 : 0.08) * 1.5
+    const all = Array.from({ length: count }, (_, index) => base * 0.85 ** index * 0.2 * (active ? 1.2 : 1)).reduce((a,b) => a+b, 0)
+    close(row.allTargetsPerAttack, all)
+    close(row.perAttack, all / count)
+    assert.equal(row.dps, null)
+    assert.equal(result.attackInterval, null)
+  }
+})
+
+test('ホルハイヤS3は旋風の生成後0〜1.77秒で280〜420%となり、新規浮遊は計算しない', () => {
+  for (const age of [0, 0.885, 1.77, 3, 5]) for (const targetAirborne of [false, true]) {
+    const { result, row } = at('char_4027_heyak', 3, { heyakTornadoAge: age, targetAirborne }, 40)
+    const scale = 2.8 + 1.4 * Math.min(1, age / 1.77)
+    close(row.perAttack, result.stats.attack * scale * (targetAirborne ? 1.2 : 1) * 0.6)
+    assert.equal(row.dps, null)
+    assert.equal(result.attackInterval, null)
+  }
+  const transition = output('char_4027_heyak', 3, { heyakCollision: 'TRANSITION' })
+  assert.deepEqual(transition.rows, [])
+  assert.ok(transition.unsupportedReasons.some(reason => reason.includes('浮遊')))
+})
+
+test('焔影リードS2は火球1個の240%、S3は通常・灼痕・爆発を分離し確定した術脆弱を適用する', () => {
+  for (const scar of [false, true]) {
+    const { result, row } = at('char_1020_reed2', 2, { reedScarActive: scar }, 40)
+    close(row.perAttack, result.stats.attack * 2.4 * 0.6 * (scar ? 1.3 : 1))
+    close(row.allTargetsPerAttack, row.perAttack)
+    assert.equal(row.dps, null)
+  }
+  for (const [reedEvent, scale] of [['ATTACK', 1], ['TICK', 0.6], ['EXPLOSION', 1.4]] as const) {
+    const { result, row } = at('char_1020_reed2', 3, { reedEvent, actualAttackTargetCount: 2 }, 40)
+    close(row.perAttack, attack(result.stats.attack, 0.6) * scale * 0.6 * 1.3)
+    close(row.allTargetsPerAttack, row.perAttack * 2)
+    assert.equal(row.dps, null)
+    assert.equal(row.combinedDps, null)
+    const virtual = output('char_1020_reed2', 3, { reedEvent }, undefined,
+      { virtualMainAttackType: 'PHYSICAL', enemy: { defense: 900, resistance: 40 } })
+    assert.deepEqual(virtual.unsupportedReasons, [])
+    close(virtual.rows[0].perAttack, physicalDamage(attack(virtual.stats.attack, 0.6) * scale, 900))
+  }
+})
+
+test('V10追加5スキルは未確認の説明・係数変更を受け付けない', () => {
+  for (const [id, index] of [['char_466_qanik',2], ['char_472_pasngr',3], ['char_4027_heyak',3], ['char_1020_reed2',2], ['char_1020_reed2',3]] as const) {
+    const changed = output(id, index, {}, skill => { skill.skillLevels[9].description += ' 未確認効果' })
+    assert.deepEqual(changed.rows, [])
+    assert.ok(changed.unsupportedReasons.length)
+  }
+})
+
+
+test('リプレーザS2は爆発ごとの人数で素質を判定し、発射時ATKを保つ継続効果には適用しない', () => {
+  for (const count of [1, 2, 3, 5]) {
+    const splash = at('char_4031_liesel', 2, { actualAttackTargetCount: count }, 40)
+    close(splash.row.perAttack, splash.result.stats.attack * 1.8 * (count >= 3 ? 1.2 : 1) * 0.6)
+    close(splash.row.allTargetsPerAttack, splash.row.perAttack * count)
+    const tick = at('char_4031_liesel', 2, { lieselEvent: 'DOT', actualAttackTargetCount: count }, 40)
+    close(tick.row.perAttack, tick.result.stats.attack * 0.35 * 0.6)
+    close(tick.row.allTargetsPerAttack, tick.row.perAttack * count)
+    assert.equal(tick.row.dps, null)
+    assert.equal(splash.row.dps, null)
+    assert.equal(tick.result.attackInterval, null)
+  }
+  const changed = output('char_4031_liesel', 2, { lieselEvent: 'CHANGED' })
+  assert.deepEqual(changed.rows, [])
+  assert.ok(changed.unsupportedReasons.some(reason => reason.includes('発射時')))
 })

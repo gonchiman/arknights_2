@@ -63,7 +63,7 @@ export function evaluateGuardTraits(operator: TraitStructureOperator, stage: Gua
     }
     // Stat-based DOT is not a normal attack: it keeps its own type and cadence,
     // without the job's hit count, attack scale, splash, or chain rules.
-    if (action.basis === 'ATK_STAT') return [{ ...action }]
+    if (action.basis === 'ATK_STAT' || action.basis === 'OWNER_ATK_STAT' || action.basis === 'DEF_STAT') return [{ ...action }]
     const overriddenItems: TraitStructureEffect['item'][] = [...overrides, ...(action.traitOverrides ?? [])]
     const current = action.traitOverrides?.length
       ? evaluateTraitStructure(structure, { ...context, overriddenItems }) : evaluation

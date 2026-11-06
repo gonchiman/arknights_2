@@ -166,6 +166,18 @@ export function getOperatorStats(
   }
 }
 
+/** DEF-referenced damage uses the same level/trust interpolation as ATK, without ATK modifiers. */
+export function getOperatorDefense(profile: OperatorCombatProfile, phaseIndex: number, level: number, trustPercent: number): number {
+  const phase = profile.phases[phaseIndex], frames = phase?.attributesKeyFrames
+  if (!frames?.length || [...frames, ...profile.favorKeyFrames].some(frame =>
+    typeof frame.data?.def !== 'number' || !Number.isFinite(frame.data.def) || frame.data.def < 0))
+    throw new RangeError('防御力の育成ステータスを確認できません。')
+  const normalizedLevel = clamp(Math.round(level), 1, Math.max(1, phase.maxLevel ?? 1))
+  const favorLevel = Math.max(0, ...profile.favorKeyFrames.map(frame => frame.level ?? 0)) * clamp(trustPercent, 0, 100) / 100
+  return Math.max(0, Math.round(interpolateAttribute(frames, normalizedLevel, 'def', 0)
+    + interpolateAttribute(profile.favorKeyFrames, favorLevel, 'def', 0)))
+}
+
 export function deriveSkillModel(
   level: RawSkillLevel,
   operatorAttackInterval: number,

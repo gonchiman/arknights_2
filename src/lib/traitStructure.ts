@@ -11,7 +11,7 @@ import {
 /** Job definitions are shared by the structure page and the trait combat evaluator. */
 export const TRAIT_STRUCTURE_JOB_IDS = ['fighter', 'lord', 'crusher', 'hammer', 'sword', 'centurion',
   'artsfghter', 'musha', 'instructor', 'fearless', 'reaper', 'librator',
-  'pioneer', 'agent', 'charger', 'stalker', 'protector', 'shotprotector', 'artsprotector', 'unyield', 'duelist', 'guardian', 'fortress', 'counsellor',
+  'pioneer', 'agent', 'charger', 'bearer', 'stalker', 'protector', 'shotprotector', 'artsprotector', 'unyield', 'duelist', 'guardian', 'fortress', 'counsellor',
   'fastshot', 'aoesniper', 'longrange', 'siegesniper', 'reaperrange', 'closerange', 'hunter', 'bombarder', 'loopshooter', 'skybreaker', 'craftsman', 'merchant', 'dollkeeper',
   'corecaster', 'splashcaster', 'blastcaster', 'chain', 'slower', 'underminer', 'incantationmedic', 'phalanx',
   'traper', 'skywalker', 'mercenary', 'physician', 'watchman', 'chainhealer', 'mystic', 'funnel', 'geek', 'bard', 'blessing', 'primprotector', 'primcaster', 'primguard', 'ritualist', 'summoner', 'tactician', 'soulcaster', 'alchemist'] as const
@@ -128,6 +128,7 @@ const DEFINITIONS: Record<TraitStructureJobId, JobDefinition> = {
   pioneer: { profession: 'PIONEER', descriptions: ['敵を2体までブロック'], keys: [], categories: ['BLOCK'] },
   agent: { profession: 'PIONEER', descriptions: ['再配置までの時間が短い、遠距離攻撃も行える'], keys: [], categories: ['DEPLOYMENT', 'ATTACK_BEHAVIOR'] },
   charger: { profession: 'PIONEER', descriptions: ['敵を倒す度所持コスト+1 撤退時に初期配置時のコストを返却'], keys: ['cost'], categories: ['RESOURCE', 'DEPLOYMENT'] },
+  bearer: { profession: 'PIONEER', descriptions: ['スキル発動中、ブロック数が0になる'], keys: [], categories: ['BLOCK'] },
   stalker: { profession: 'SPECIAL', descriptions: ['攻撃範囲内の敵全員を同時に攻撃 物理回避、術回避が50%上昇 敵に狙われにくい'], keys: ['prob'], categories: ['ATTACK_BEHAVIOR', 'ABILITY'] },
   protector: { profession: 'TANK', descriptions: ['敵を3体までブロック'], keys: [], categories: ['BLOCK'] },
   shotprotector: { profession: 'TANK', descriptions: ['敵を3体までブロック、遠距離攻撃も行える'], keys: [], categories: ['BLOCK', 'ATTACK_BEHAVIOR'] },
@@ -418,6 +419,8 @@ export function buildTraitStructures(rows: readonly TraitStructureOperator[], gr
       }
       if (job === 'guardian') effects.push({ ...context('healing-skills', 'SURVIVAL', 'DYNAMIC_RULE', 'description:healing_skills'),
         item: 'ALLY_HEALING_ENABLED', operation: 'SET_ENABLED', unit: 'BOOLEAN', value: true })
+      if (job === 'bearer') effects.push({ ...context('active-block-count', 'CONTROL', 'DYNAMIC_RULE', 'description:active_block_count'),
+        condition: compare('source.skillActive', true), item: 'BLOCK_COUNT', operation: 'SET', unit: 'ENEMY', value: 0 })
       if (job === 'counsellor') notes.push('配置待機中の味方への効果は、本体の直接ダメージへ加算しない。')
       if (job === 'fortress') {
         effects.push({ ...context('unblocked-ranged-attack', 'DAMAGE', 'ATTACK_RULE', 'description:unblocked_area_attack', 'NORMAL_ATTACK'),

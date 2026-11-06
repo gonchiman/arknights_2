@@ -267,7 +267,7 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
             </>}
           </>}
           <details className="damage-two-help"><summary>計算に使った値</summary>
-            <UsedValueTable output={output} />
+            <DamageCalculatorThreeUsedValueTable output={output} />
           </details>
         </>}
         <div className="damage-three-scope">{calculationScope(output)}</div>
@@ -439,11 +439,13 @@ export function DamageCalculatorThreeSteadyDpsTable({ output, precision }: { out
   </div>
 }
 
-function UsedValueTable({ output }: { output: DamageCalculatorThreeOutput }) {
+export function DamageCalculatorThreeUsedValueTable({ output }: { output: DamageCalculatorThreeOutput }) {
   const model = output.model
   const rows: [string, ReactNode][] = [
     ...(output.actor ? [['計算主体', output.actor.name] as [string, ReactNode]] : []),
     ['基礎攻撃力', formatCompact(output.stats.attack)],
+    ...(output.actor?.ownerAttackStat !== undefined
+      ? [['参照する本人ATK', formatCompact(output.actor.ownerAttackStat)] as [string, ReactNode]] : []),
     ['攻撃力増加（スキル）', model ? `＋${formatCompact(model.directMultiplierPercent)}％` : '未確認'],
     ['攻撃力増加（素質）', model ? `＋${formatCompact(output.talentAttackRatio * 100)}％` : '未確認'],
     ['攻撃力増加（合計）', model ? `＋${formatCompact(model.directMultiplierPercent + output.talentAttackRatio * 100)}％` : '未確認'],

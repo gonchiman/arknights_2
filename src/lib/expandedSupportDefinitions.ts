@@ -39,6 +39,16 @@ const operator = (operatorId: string, recipes: readonly [number, readonly GuardS
 
 /** Reviewed damage events. Healing and buffs to other operators are not self ATK bonuses. */
 export const EXPANDED_SUPPORT_DEFINITIONS: readonly ExpandedOperatorDefinition[] = [
+  // https://prts.wiki/w/Saileach : the flag aura starts before its landing damage.
+  operator('char_479_sleach', [[3, [single('軍旗の着弾1回', { maxTargets: null, blockCountAdd: -1,
+    damageScale: key('damage_scale'),
+    actions: [{ label: '軍旗の範囲物理ダメージ', role: 'MAIN', damageType: 'PHYSICAL', basis: 'ATK_STAT', scale: key('atk_scale') }],
+    dpsUnsupportedReason: '軍旗の着弾1回。スキル中の通常攻撃は停止する。',
+    notes: ['軍旗着弾前に有効になる30%脆弱を適用。全対象が旗の脆弱範囲と着弾範囲の両方にいる条件。対象数は主対象と周囲を合わせた数。'] })]]], [
+    talent(0, '決意の旗', v => { v.read('sleach_t_1[ally].attack_speed'); v.read('sleach_t_1[enemy].attack_speed')
+      return [status('flag-speed', '軍旗周囲の味方攻撃速度上昇・敵攻撃速度低下。着弾1回の威力へは加算しない')] }),
+    talent(1, '士気向上', v => { v.read('value'); return [status('deployment-cost', '次に配置するオペレーターのコスト減少')] }),
+  ]),
   operator('char_1012_skadi2', [[3, [single('自身の範囲内の毎秒ダメージ', { maxTargets: null,
     actions: [{ label: '自身の範囲内の確定ダメージ', role: 'MAIN', damageType: 'TRUE', basis: 'ATK_STAT', scale: key('atk_scale'), timing: 'PER_SECOND' },
       { label: 'シーボーン範囲の確定ダメージ', role: 'MAIN', damageType: 'TRUE', basis: 'ATK_STAT', scale: key('atk_scale'), timing: 'PER_SECOND',

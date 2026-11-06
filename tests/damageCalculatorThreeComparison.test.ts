@@ -69,7 +69,7 @@ function compareWithOrdinary(entry: DamageThreeComparisonEntry, conditions: Dama
 }
 
 test('DC3の対応スキル全段階を一意の行として列挙し、出典にない技能は作らない', () => {
-  assert.equal(catalog.length, 769)
+  assert.equal(catalog.length, 813)
   const expected = getDamageCalculatorThreeStructures().flatMap(structure => {
     const info = structure.basicInfo
     return (structure.guardRecipe?.stages ?? structure.effectStructure.stages)
@@ -170,8 +170,8 @@ test('編集可能な条件を反映し、別段階へ移る値や不正値か�
   assert.match(evaluate('char_293_thorns', 3, 'second_and_later', { skillActivationCount: 1 }).errors.join(), /段階/)
 })
 
-test('保留技能・不正な共通入力は理由を残し、0やNaNのダメージとして表示しない', () => {
-  const unavailable = evaluate('char_4182_oblvns', 2, 'piano')
+test('未確認の音符スナップショット・不正な共通入力は0やNaNとして表示しない', () => {
+  const unavailable = evaluate('char_4182_oblvns', 2, 'piano', { 'guard.noteAttackUnchanged': false })
   assert.match(unavailable.errors.join(), /音符/)
   noNumbers(unavailable)
   for (const patch of [

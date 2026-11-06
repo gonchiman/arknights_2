@@ -164,7 +164,7 @@ export interface DamageCalculatorThreeRow {
 }
 
 export interface DamageCalculatorThreeOutput {
-  actor?: { kind: 'TOKEN'; tokenKey: string; name: string }
+  actor?: { kind: 'TOKEN'; tokenKey: string; name: string; ownerAttackStat?: number }
   /** Main attack after traits, before any counterfactual override; null means not uniquely identified. */
   mainAttackType?: HpDamageType | null
   traitEvaluation?: TraitCombatResult

@@ -154,7 +154,7 @@ test('不正な入力・不明な素質と時間挙動は既定値へ置換せ�
     assert.ok(result.unsupportedReasons.length)
     assert.deepEqual(result.rows, [])
   }
-  const music = output('char_4182_oblvns', 2)
+  const music = output('char_4182_oblvns', 2, { noteAttackUnchanged: false })
   assert.ok(music.unsupportedReasons.some(reason => /音符/.test(reason)))
   const missing = record('char_1014_nearl2', 1)
   missing.operatorProfile.talents = []
@@ -181,5 +181,38 @@ test('特化3データの欠落や重複した数値キーは定数recipeでも�
       operatorLevel: 90, trust: 100, skillLevelIndex: 9 })
     assert.ok(result.unsupportedReasons.length)
     assert.deepEqual(result.rows, [])
+  }
+})
+
+
+test('豊川祥子S2は発射時のブロック・音色と命中時の音符数で1音符を計算する', () => {
+  for (const phase of ['piano', 'organ']) for (const blocked of [false, true]) for (const count of [1, 5, 10]) {
+    const { result, row } = at('char_4182_oblvns', 2, phase === 'piano' ? 1000 : 40,
+      { phase, noteEmittedWhileBlocking: blocked, noteCount: count })
+    const attack = Math.floor(785 * (phase === 'piano' ? 2.1 : 1)) * (blocked ? 1 : 0.8)
+    const expected = phase === 'piano' ? Math.max(attack - 1000 * (1 - 0.03 * count), attack * 0.05)
+      : attack * (1 - 40 * (1 - 0.02 * count) / 100)
+    close(row.perAttack, expected)
+    assert.equal(row.dps, null)
+    assert.equal(row.combinedDps, null)
+    assert.equal(result.attackInterval, null)
+    assert.equal(row.attackComponents?.length, 1)
+  }
+})
+
+test('豊川祥子S3は物理・術の1音符だけを評価し、音符数0やATK変更後を拒否する', () => {
+  for (const phase of ['piano', 'organ']) for (const blocked of [false, true]) {
+    const { result, row } = at('char_4182_oblvns', 3, phase === 'piano' ? 1000 : 40,
+      { phase, noteEmittedWhileBlocking: blocked, noteCount: 10 })
+    const attack = 785 * 2.2 * (blocked ? 1 : 0.8)
+    close(row.perAttack, phase === 'piano' ? Math.max(attack - 700, attack * 0.05) : attack * 0.68)
+    assert.equal(row.dps, null)
+    assert.equal(result.attackInterval, null)
+    assert.equal(row.attackComponents?.length, 1)
+  }
+  for (const index of [2,3]) for (const guard of [{ noteCount: 0 }, { noteAttackUnchanged: false }]) {
+    const result = output('char_4182_oblvns', index, guard)
+    assert.deepEqual(result.rows, [])
+    assert.ok(result.unsupportedReasons.length)
   }
 })

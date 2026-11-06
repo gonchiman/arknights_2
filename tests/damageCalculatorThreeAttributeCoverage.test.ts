@@ -82,7 +82,7 @@ test('攻撃を持つ計算可能な全段階を複数の敵条件で物理・�
       const identity = `${entry.key} DEF=${common.defense} RES=${common.resistance} N=${common.enemyCount}`
       assert.ok(original.perAttack !== null && Number.isFinite(original.perAttack), identity)
       const stage = entry.structure.guardRecipe?.stages.find(stage => stage.id === entry.stageId)
-      if (stage?.actions.length === 0) {
+      if (stage?.actions.length === 0 && original.output.rows[0].attackComponents?.length === 0) {
         assert.equal(original.perAttack, 0, identity)
         assert.deepEqual(original.output.rows[0].attackComponents, [], identity)
         continue
@@ -246,10 +246,11 @@ test('通常DC3で未対応の段階や不正な出典は属性変更で救済�
   const corrupt = structuredClone(findEntry('char_103_angel', 3))
   corrupt.skill.skillLevels[corrupt.levelIndex].blackboard = []
   for (const entry of [pending, unsupportedWave, corrupt]) {
-    const original = evaluateDamageThreeComparisonEntry(entry, enemyConditions[1])
+    const overrides = entry === pending ? { 'guard.noteAttackUnchanged': false } : {}
+    const original = evaluateDamageThreeComparisonEntry(entry, enemyConditions[1], overrides)
     assert.ok(original.errors.length, entry.key)
     for (const targetType of targetTypes) {
-      const changed = evaluateDamageThreeComparisonEntry(entry, enemyConditions[1], {}, { virtualMainAttackType: targetType })
+      const changed = evaluateDamageThreeComparisonEntry(entry, enemyConditions[1], overrides, { virtualMainAttackType: targetType })
       assert.ok(changed.errors.length, `${entry.key} → ${targetType}`)
       assert.equal(changed.perAttack, null)
       assert.equal(changed.dps, null)

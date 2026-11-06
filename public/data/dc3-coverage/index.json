@@ -213,6 +213,30 @@
         "UNSUPPORTED": 45,
         "NOT_APPLICABLE": 140
       }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "v10",
+      "label": "v10 未対応0・召喚と独立イベントの拡張",
+      "capturedAt": "2026-11-06T05:21:34.810Z",
+      "source": {
+        "codeRevision": "9ef2e5cf1700c7f5194a7b409e04caa6a98b744a",
+        "codeDirty": true,
+        "codeFingerprint": "c80d4fad084b82ff7e00d937fff78493f2b49d0ce310dc76d8434338d68bb16f",
+        "gameDataRevision": "ecca6444cc87b91e2a04d6a3a0c24799e8a68c0e",
+        "gameDataFingerprint": "e02f27762c44d0b083329e83375802cc2bef03f04777822f5f61220a0881a0ec",
+        "reconstructed": false
+      },
+      "file": "v10.json",
+      "sha256": "0afb2db50caa7aabfcb1e08cba106f00bc4ac1eeb4baa8380fefb1da4fbe3919",
+      "skillCount": 915,
+      "counts": {
+        "SUPPORTED": 649,
+        "CONDITIONAL": 123,
+        "PENDING": 1,
+        "UNSUPPORTED": 0,
+        "NOT_APPLICABLE": 142
+      }
     }
   ]
 }

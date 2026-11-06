@@ -91,13 +91,27 @@ test('回帰基準は旧実装から取得した25人75スキルの全初期条�
   assert.ok(baseline.cases.some(item => !item.expected.blocked && item.expected.rowCount > 0))
 })
 
+test('豊川祥子の新しい既定値は命中する音符1個を数え、S1の術耐性無視2%へ反映する', () => {
+  const skill = record('char_4182_oblvns', 1)
+  const output = buildDamageCalculatorThreeOutput({ operator: skill, skill, phaseIndex: 2, operatorLevel: 90,
+    trust: 100, skillLevelIndex: 9, enemy: { defense: 0, resistance: 50 } })
+  assert.deepEqual(output.unsupportedReasons, [])
+  assert.equal(output.rows.length, 1)
+  const expected = 785 * (1 + .92 + .75 + .58 + .42 + .33 + .17 + .05) * (1 - 50 * .98 / 100)
+  equalValue(output.rows[0].perAttack, expected, '命中する音符自身の2%術耐性無視')
+})
+
 for (const operatorId of new Set(baseline.cases.map(item => item.operatorId))) {
   const name = data.guards.find(operator => operator.id === operatorId)!.name
   test(`${name}: 素質の構造化前後で既定値・端点・条件・段階の計算結果と出力可否が一致する`, () => {
     for (const item of baseline.cases.filter(value => value.operatorId === operatorId)) {
       const skill = record(item.operatorId, item.skillIndex)
+      // V10 now defaults to counting the impact note itself. Keep the captured
+      // S1 arithmetic oracle by explicitly supplying its former zero-note state.
+      const guard = item.operatorId === 'char_4182_oblvns' && item.skillIndex === 1
+        ? { noteCount: 0, ...item.guard } : item.guard
       const output = buildDamageCalculatorThreeOutput({ operator: skill, skill,
-        phaseIndex: 2, operatorLevel: 90, trust: 100, skillLevelIndex: 9, conditions: { guard: item.guard } })
+        phaseIndex: 2, operatorLevel: 90, trust: 100, skillLevelIndex: 9, conditions: { guard } })
       const actual = snapshot(output)
       const label = `${name} S${item.skillIndex} ${JSON.stringify(item.guard)}`
       if (item.operatorId === 'char_1050_chen3') {
@@ -117,15 +131,30 @@ for (const operatorId of new Set(baseline.cases.map(item => item.operatorId))) {
         assert.ok(actual.rowCount > 0)
         continue
       }
+      const reviewedV10Event = item.operatorId === 'char_4182_oblvns' && item.skillIndex >= 2
+        || ['char_1051_headb2', 'char_4010_etlchi', 'char_1043_leizi2'].includes(item.operatorId) && item.skillIndex === 3
+      if (reviewedV10Event) {
+        // Preserve the historical blocked snapshot. Independent formulas for
+        // these newly reviewed events live in guardDamageCalculator and
+        // guardWave10Remaining; this test retains the old boundary cases.
+        assert.equal(item.expected.blocked, true)
+        const count = Number(item.guard.actualAttackTargetCount ?? 1)
+        const blocked = item.operatorId === 'char_4182_oblvns' ? count > 1 || item.guard.noteCount === 0
+          : item.operatorId === 'char_1051_headb2' ? Number(item.guard.terrainHitCount ?? 0) > 0
+            : item.operatorId === 'char_4010_etlchi' ? count > 3 : false
+        assert.equal(actual.blocked, blocked, `${label}: reviewed V10 event availability`)
+        assert.equal(actual.rowCount > 0, !blocked, `${label}: reviewed V10 rows`)
+        if (!blocked) {
+          assert.equal(output.canShowDps, false, label)
+          assert.ok(output.rows.every(row => Number.isFinite(row.perAttack) && row.dps === null), label)
+        }
+        continue
+      }
       assert.equal(actual.blocked, item.expected.blocked, `${label}: output availability`)
       assert.equal(actual.rowCount, item.expected.rowCount, `${label}: row count`)
       assert.equal(actual.summary.length, item.expected.summary.length, `${label}: summary length`)
       actual.summary.forEach((value, index) => {
-        // The former job-wide flag also marked this all-target TRUE skill as
-        // unequal target damage. The structured rule correctly excludes splash.
-        const replacedSplash = item.operatorId === 'char_1051_headb2' && item.skillIndex === 3
-          && baseline.summaryFields[index] === 'hasRandomTargets'
-        equalValue(value, replacedSplash ? false : item.expected.summary[index], `${label}: ${baseline.summaryFields[index]}`)
+        equalValue(value, item.expected.summary[index], `${label}: ${baseline.summaryFields[index]}`)
       })
       assert.equal(actual.rows.length, item.expected.rows.length, `${label}: sampled rows`)
       actual.rows.forEach((row, index) => {

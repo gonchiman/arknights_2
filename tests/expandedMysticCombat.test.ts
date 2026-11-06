@@ -29,7 +29,7 @@ function record(id: string, index: number): SkillRecord {
     description: raw.description!, duration: raw.duration!, durationType: raw.durationType!, skillType: raw.skillType!,
     spType: raw.spData!.spType!, spCost: raw.spData!.spCost!, initSp: raw.spData!.initSp!, classification: classifySkill(raw),
     skillLevels: Array.from({ length: source.skillLevelIndex + 1 }, () => structuredClone(raw)), raw,
-    operatorProfile: structuredClone(source.profile) }
+    operatorProfile: structuredClone(source.profile), overrideTokenKey: source.profile.summonSkillTokenKeys?.[index - 1] ?? undefined }
 }
 function output(id: string, index: number, guard: GuardConditions = {}, change?: (record: SkillRecord) => void,
   options: Partial<DamageCalculatorThreeInput> = {}) {

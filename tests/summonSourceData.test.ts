@@ -36,8 +36,8 @@ test('runtime loaderはtokenをOP件数へ加えず、全tokenステータス・
     }
     const tables = { character: characters, skill: skills, uniequip: { subProfDict }, battleEquip: {}, handbookTeam: {} }
     const rows = await loadSkillRecords({ readTable: async (key: keyof typeof tables) => tables[key] }) as SkillRecord[]
-    assert.equal(rows.length, 23)
-    assert.equal(new Set(rows.map(row => row.operatorId)).size, 13)
+    assert.equal(rows.length, 34)
+    assert.equal(new Set(rows.map(row => row.operatorId)).size, 14)
     assert.ok(rows.every(row => row.profession !== 'TOKEN'))
     for (const source of sources) {
       const row = rows.find(row => row.operatorId === source.operatorId)!

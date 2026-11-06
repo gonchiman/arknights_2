@@ -43,7 +43,7 @@ test('区分別集計は90スキルを共通母数とし、対象外も独立し
     ['SUPPORTED', '対応'], ['CONDITIONAL', '条件付き'], ['PENDING', '保留'], ['UNSUPPORTED', '未対応'], ['NOT_APPLICABLE', '対象外'],
   ])
   assert.deepEqual(summary.sections.map(section => section.buckets.map(bucket => bucket.count)),
-    [[77, 8, 5, 0, 0], [80, 5, 5, 0, 0], [79, 7, 1, 0, 3], [51, 0, 1, 0, 38]])
+    [[77, 13, 0, 0, 0], [80, 10, 0, 0, 0], [79, 8, 0, 0, 3], [51, 1, 0, 0, 38]])
   for (const section of summary.sections) {
     assert.equal(section.buckets.reduce((sum, bucket) => sum + bucket.count, 0), 90)
     assert.deepEqual(section.buckets.map(({ status, label }) => ({ status, label })), COVERAGE_SUMMARY_CATEGORIES)
@@ -52,13 +52,13 @@ test('区分別集計は90スキルを共通母数とし、対象外も独立し
 })
 
 test('総合状況で絞り込んだ後も各区分を独立して集計し、名前とスキル番号の絞り込みにも追従する', () => {
-  const pending = filterDamageCalculatorThreeCoverage(coverage, { ...DEFAULT_DAMAGE_THREE_COVERAGE_FILTERS, status: 'PENDING' })
-  const summary = summarizeDamageCalculatorThreeCoverage(pending)
-  assert.equal(summary.count, 5)
+  const conditional = filterDamageCalculatorThreeCoverage(coverage, { ...DEFAULT_DAMAGE_THREE_COVERAGE_FILTERS, status: 'CONDITIONAL' })
+  const summary = summarizeDamageCalculatorThreeCoverage(conditional)
+  assert.equal(summary.count, 13)
   assert.deepEqual(summary.sections.map(section => section.buckets.map(bucket => bucket.count)),
-    [[0, 0, 5, 0, 0], [0, 0, 5, 0, 0], [4, 0, 1, 0, 0], [4, 0, 1, 0, 0]])
+    [[0, 13, 0, 0, 0], [3, 10, 0, 0, 0], [5, 8, 0, 0, 0], [6, 1, 0, 0, 6]])
   for (const section of summary.sections)
-    for (const bucket of section.buckets) assert.equal(bucket.proportion, bucket.count / 5)
+    for (const bucket of section.buckets) assert.equal(bucket.proportion, bucket.count / 13)
 
   const bellone = summarizeDamageCalculatorThreeCoverage(filterDamageCalculatorThreeCoverage(coverage,
     { ...DEFAULT_DAMAGE_THREE_COVERAGE_FILTERS, query: 'ベッローネ S2', status: 'CONDITIONAL' }))
@@ -100,17 +100,17 @@ function stageConditions(stage: GuardStage): GuardConditions {
     : typeof value === 'number' && comparison === 'LT' ? value - 1 : value }
 }
 
-test('登録90スキルを対応77・条件付き8・保留5に分類し、計算可能な範囲が85件ある', () => {
+test('登録90スキルを対応77・条件付き13に分類し、全90件に計算可能な範囲がある', () => {
   assert.equal(coverage.length, 90)
   assert.equal(new Set(coverage.map(row => row.skill.id)).size, 90)
   assert.deepEqual(Object.fromEntries(Object.keys(COVERAGE_STATUS_LABELS).map(status =>
     [status, coverage.filter(row => row.status === status).length])),
-  { SUPPORTED: 77, CONDITIONAL: 8, PENDING: 5, UNSUPPORTED: 0, NOT_APPLICABLE: 0 })
-  assert.equal(coverage.filter(row => row.calculationScope.length > 0).length, 85)
+  { SUPPORTED: 77, CONDITIONAL: 13, PENDING: 0, UNSUPPORTED: 0, NOT_APPLICABLE: 0 })
+  assert.equal(coverage.filter(row => row.calculationScope.length > 0).length, 90)
   for (const row of coverage) assert.equal(row.selection?.levelIndex, 9)
   const defaults = catalog.map(skill => calculate(skill))
-  assert.equal(defaults.filter(output => output.rows.length > 0).length, 79)
-  assert.equal(defaults.filter(output => output.unsupportedReasons.length > 0).length, 11)
+  assert.equal(defaults.filter(output => output.rows.length > 0).length, 84)
+  assert.equal(defaults.filter(output => output.unsupportedReasons.length > 0).length, 6)
 })
 
 test('取得済みカタログを1スキル1行にまとめ、レベル数の多いレコードを保持する', () => {
@@ -198,18 +198,19 @@ test('耀騎士ニアールS3は通常・確定攻撃の計算可能範囲と召
   assert.deepEqual(calculate(skill, { phase: 'sun' }).rows, [])
 })
 
-test('全段階が保留の5スキルは具体的理由を持ち、弱点対応済みのチェン3を含めない', () => {
-  const pending = coverage.filter(row => row.status === 'PENDING')
-  assert.deepEqual(pending.map(row => `${row.skill.operatorId}/${row.skill.skillIndex}`).sort(), [
+test('旧保留5スキルは確認済みの命中だけを条件付きとし、未確認段階を数値化しない', () => {
+  assert.deepEqual(coverage.filter(row => row.status === 'PENDING'), [])
+  const formerlyPending = new Set([
     'char_4182_oblvns/2', 'char_4182_oblvns/3', 'char_1051_headb2/3',
     'char_4010_etlchi/3', 'char_1043_leizi2/3',
-  ].sort())
-  for (const row of pending) {
-    assert.deepEqual(row.calculationScope, [])
+  ])
+  for (const row of coverage.filter(row => formerlyPending.has(`${row.skill.operatorId}/${row.skill.skillIndex}`))) {
+    assert.equal(row.status, 'CONDITIONAL')
+    assert.ok(row.calculationScope.length > 0)
     assert.ok(row.deferredReasons.length > 0)
     const structure = getDamageCalculatorThreeStructures().find(structure =>
       structure.basicInfo.operatorId === row.skill.operatorId && structure.basicInfo.skillIndex === row.skill.skillIndex)!
-    for (const stage of structure.guardRecipe!.stages) {
+    for (const stage of structure.guardRecipe!.stages.filter(stage => stage.unresolved?.length)) {
       const output = calculate(row.skill, stageConditions(stage))
       assert.deepEqual(output.rows, [])
       assert.ok(output.unsupportedReasons.length > 0)
@@ -388,11 +389,15 @@ test('空の補助素質定義を表示せず、名前を持つ定義まで消�
 })
 
 
-test('音符の挙動が保留でも、共有する領主特性の条件分岐自体は対応済みと区別する', () => {
+test('音符のスナップショット制約はスキルの条件付きとして表示し、領主特性と区別する', () => {
   for (const index of [2, 3]) {
     const row = covered('char_4182_oblvns', index)
-    assert.equal(row.status, 'PENDING')
-    assert.equal(row.sections.skill, 'PENDING')
+    assert.equal(row.status, 'CONDITIONAL')
+    assert.equal(row.sections.skill, 'CONDITIONAL')
     assert.equal(row.sections.trait, 'SUPPORTED')
+    assert.match(row.supportedConditions.join(' '), /発射時から攻撃力・音色が変化していない/)
+    assert.ok(row.issues.some(issue => issue.relatedSections.includes('スキル') && issue.supportedCondition?.includes('音符')))
+    assert.ok(calculate(row.skill).rows.length > 0)
+    assert.deepEqual(calculate(row.skill, { noteAttackUnchanged: false }).rows, [])
   }
 })

@@ -15,7 +15,7 @@ export const ELEMENTAL_BUILDUP_INPUTS: readonly GuardInput[] = [
 export interface ElementalBuildupResult {
   elementId: string
   label: string
-  basis: 'ATK_STAT' | 'DEALT_DAMAGE'
+  basis: 'ATK_STAT' | 'DEALT_DAMAGE' | 'HP_LOST' | 'FIXED'
   perApplication: number
   allTargetsPerApplication: number
   status: 'APPLIED' | 'BURST_ACTIVE' | 'IMMUNE'

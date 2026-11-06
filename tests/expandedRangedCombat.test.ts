@@ -46,6 +46,21 @@ function close(actual: number | null, expected: number) {
 const physical = (attack: number, defense: number) => Math.max(attack - defense, attack * 0.05)
 const buff = (attack: number, ratio: number) => Math.floor(attack * (1 + ratio) + 1e-9)
 
+test('ウィシャデルS1は主100%と余震120%の3回を各軽減し、残影3回の独立抽選の期待値を加える', () => {
+  for (const defense of [0, 500, 1000, 2000]) {
+    const { result, row } = at('char_1035_wisdel', 1, defense)
+    const atk = result.stats.attack
+    close(row.perAttack, physical(atk * 1.15, defense) + 3 * physical(atk * 1.15 * 1.2, defense)
+      + 3 * .15 * physical(atk * 1.5, defense))
+    assert.equal(row.dps, null)
+  }
+  const result = output('char_1035_wisdel', 1, { enemyResistance: 60 }, undefined, 'ARTS')
+  assert.deepEqual(result.unsupportedReasons, [])
+  const row = result.rows.find(value => value.axisValue === 1000)!, atk = result.stats.attack
+  close(row.perAttack, atk * 1.15 * (1 + 3 * 1.2) * .4 + 3 * .15 * physical(atk * 1.5, 1000))
+  assert.deepEqual(output('char_1035_wisdel', 1, { actualAttackTargetCount: 2 }).rows, [])
+})
+
 test('追加狙撃の全技能を計算対応または具体的な保留理由に分け、全素質を欠落なく構造化する', () => {
   assert.equal(EXPANDED_RANGED_DEFINITIONS.length, 54)
   for (const definition of EXPANDED_RANGED_DEFINITIONS) {

@@ -88,8 +88,8 @@ export type SkillStructureEffect = SkillStructureEffectBase & (
       readonly intervalSeconds?: number
     }; readonly unit: 'DAMAGE_ACTION' }
   | { readonly item: 'ELEMENTAL_BUILDUP'; readonly operation: 'APPLY_ELEMENTAL_BUILDUP'; readonly value: {
-      readonly elementId: string; readonly basis: 'ATK_STAT' | 'DEALT_DAMAGE'; readonly scale: number
-      readonly actionId?: string; readonly damageType?: HpDamageType
+      readonly elementId: string; readonly basis: 'ATK_STAT' | 'DEALT_DAMAGE' | 'HP_LOST' | 'FIXED'; readonly scale: number
+      readonly actionId?: string; readonly damageType?: HpDamageType; readonly hpBefore?: number
     }; readonly unit: 'ELEMENTAL_BUILDUP_ACTION' }
   | { readonly item: 'APPLY_STATUS'; readonly operation: 'APPLY_STATUS'; readonly value: {
       readonly statusId: 'LEVITATE'; readonly durationSeconds: number
@@ -314,7 +314,9 @@ export function formatSkillStructureEffectValue(effect: SkillStructureEffect): s
 export function getSkillStructureEffectValueRows(effect: SkillStructureEffect): [string, string | number][] {
   if (effect.unit === 'ELEMENTAL_BUILDUP_ACTION') return [
     ['元素損傷', ELEMENT_LABELS[effect.value.elementId] ?? effect.value.elementId],
-    ['基準', effect.value.basis === 'ATK_STAT' ? '攻撃力' : '与ダメージ'], ['比率', effect.value.scale],
+    ['基準', { ATK_STAT: '攻撃力', DEALT_DAMAGE: '与ダメージ', HP_LOST: '実HP減少量', FIXED: '固定値' }[effect.value.basis]],
+    [effect.value.basis === 'FIXED' ? '損傷量' : '比率', effect.value.scale],
+    ...(effect.value.hpBefore === undefined ? [] : [['命中直前HP', effect.value.hpBefore] as [string, number]]),
     ...(effect.value.damageType ? [['参照属性', { PHYSICAL: '物理', ARTS: '術', TRUE: '確定', ELEMENTAL: '元素' }[effect.value.damageType]]] as [string, string][] : []),
   ]
   if (effect.unit === 'DAMAGE_ACTION') return [

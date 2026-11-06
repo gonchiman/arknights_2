@@ -101,8 +101,8 @@ export function buildDamageCalculatorThreeCoverage(rows: readonly SkillRecord[])
     }
     const recipe = structure.guardRecipe
     const stages = recipe.stages.map(stage => {
-      const constraints = getGuardPassiveCalculationConstraints(recipe.operatorId,
-        { kind: stage.kind, skillIndex: recipe.skillIndex, stageId: stage.id })
+      const constraints = [...getGuardPassiveCalculationConstraints(recipe.operatorId,
+        { kind: stage.kind, skillIndex: recipe.skillIndex, stageId: stage.id }), ...recipeScopeConstraints(recipe)]
       return {
         stage,
         blocked: Boolean(stage.unresolved?.length) || constraints.some(constraint => !constraint.supportedCondition),
@@ -162,7 +162,7 @@ function addSectionCoverage(row: CoverageSummary, structure: SkillStructure | un
       const conditions: GuardConditions = { ...values, ...conditionsForStage(stage) }
       const context = { kind: stage.kind, skillIndex: recipe.skillIndex, stageId: stage.id, stage }
       const evaluations = describeGuardPassiveEffects(skill, conditions, context)
-      const constraints = getGuardPassiveCalculationConstraints(skill.operatorId, context)
+      const constraints = [...getGuardPassiveCalculationConstraints(skill.operatorId, context), ...recipeScopeConstraints(recipe)]
       // Older external recipes can still supply unresolved strings. Reviewed recipes
       // carry stable IDs so cross-source issues can be merged without text matching.
       const stageIssues: readonly GuardCalculationIssue[] = stage.calculationIssues ?? (stage.unresolved ?? []).map((reason, index) => ({
@@ -235,6 +235,13 @@ function addSectionCoverage(row: CoverageSummary, structure: SkillStructure | un
     talent: combineRequiredEffects(details.filter(detail => detail.id.startsWith('talent-')).map(detail => detail.status)),
     trait: details.find(detail => detail.id === 'trait')!.status,
   } }
+}
+
+function recipeScopeConstraints(recipe: GuardSkillRecipe) {
+  return (recipe.conditionRequirements ?? []).flatMap((requirement, index) => requirement.supportedCondition ? [{
+    id: `${recipe.operatorId}-s${recipe.skillIndex}-scope-${index}`,
+    relatedSections: ['スキル'] as const, reason: requirement.reason, supportedCondition: requirement.supportedCondition,
+  }] : [])
 }
 
 function conditionsForStage(stage: GuardStage): GuardConditions {

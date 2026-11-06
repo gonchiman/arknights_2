@@ -32513,7 +32513,3766 @@
         }
       ],
       "traitDescription": "敵を2体までブロック\n<支援装置>を使用可能",
-      "subProfessionTraitDescription": ""
+      "subProfessionTraitDescription": "",
+      "summonProfiles": {
+        "token_10027_ironmn_pile1": {
+          "tokenKey": "token_10027_ironmn_pile1",
+          "name": "ステインレス™多機能プラットフォーム",
+          "profession": "TOKEN",
+          "subProfessionId": "notchar1",
+          "profile": {
+            "phases": [
+              {
+                "characterPrefabKey": "token_10027_ironmn_pile1",
+                "rangeId": "1-1",
+                "maxLevel": 50,
+                "attributesKeyFrames": [
+                  {
+                    "level": 1,
+                    "data": {
+                      "maxHp": 100,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 3,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 10,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  },
+                  {
+                    "level": 50,
+                    "data": {
+                      "maxHp": 100,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 3,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 10,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  }
+                ],
+                "evolveCost": null
+              },
+              {
+                "characterPrefabKey": "token_10027_ironmn_pile1",
+                "rangeId": "1-1",
+                "maxLevel": 80,
+                "attributesKeyFrames": [
+                  {
+                    "level": 1,
+                    "data": {
+                      "maxHp": 100,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 3,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 10,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  },
+                  {
+                    "level": 80,
+                    "data": {
+                      "maxHp": 100,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 3,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 10,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  }
+                ],
+                "evolveCost": null
+              },
+              {
+                "characterPrefabKey": "token_10027_ironmn_pile1",
+                "rangeId": "1-1",
+                "maxLevel": 90,
+                "attributesKeyFrames": [
+                  {
+                    "level": 1,
+                    "data": {
+                      "maxHp": 100,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 3,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 10,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  },
+                  {
+                    "level": 90,
+                    "data": {
+                      "maxHp": 100,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 3,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 10,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  }
+                ],
+                "evolveCost": null
+              }
+            ],
+            "favorKeyFrames": [],
+            "trait": null,
+            "talents": [
+              {
+                "candidates": [
+                  {
+                    "unlockCondition": {
+                      "phase": "PHASE_0",
+                      "level": 1
+                    },
+                    "requiredPotentialRank": 0,
+                    "prefabKey": "2",
+                    "name": "火力支援",
+                    "description": "攻撃範囲内の味方1人の攻撃力+12%\n退場まで効果継続",
+                    "rangeId": null,
+                    "blackboard": [
+                      {
+                        "key": "atk",
+                        "value": 0.12,
+                        "valueStr": null
+                      }
+                    ],
+                    "tokenKey": null,
+                    "isHideTalent": false
+                  }
+                ]
+              },
+              {
+                "candidates": [
+                  {
+                    "unlockCondition": {
+                      "phase": "PHASE_0",
+                      "level": 1
+                    },
+                    "requiredPotentialRank": 0,
+                    "prefabKey": "1",
+                    "name": null,
+                    "description": null,
+                    "rangeId": null,
+                    "blackboard": [
+                      {
+                        "key": "max_deck_stack_cnt",
+                        "value": 2,
+                        "valueStr": null
+                      },
+                      {
+                        "key": "max_deploy_count",
+                        "value": 0,
+                        "valueStr": null
+                      }
+                    ],
+                    "tokenKey": null,
+                    "isHideTalent": true
+                  },
+                  {
+                    "unlockCondition": {
+                      "phase": "PHASE_1",
+                      "level": 1
+                    },
+                    "requiredPotentialRank": 0,
+                    "prefabKey": "1",
+                    "name": null,
+                    "description": null,
+                    "rangeId": null,
+                    "blackboard": [
+                      {
+                        "key": "max_deck_stack_cnt",
+                        "value": 2,
+                        "valueStr": null
+                      },
+                      {
+                        "key": "max_deploy_count",
+                        "value": 1,
+                        "valueStr": null
+                      }
+                    ],
+                    "tokenKey": null,
+                    "isHideTalent": true
+                  },
+                  {
+                    "unlockCondition": {
+                      "phase": "PHASE_2",
+                      "level": 1
+                    },
+                    "requiredPotentialRank": 0,
+                    "prefabKey": "1",
+                    "name": null,
+                    "description": null,
+                    "rangeId": null,
+                    "blackboard": [
+                      {
+                        "key": "max_deck_stack_cnt",
+                        "value": 3,
+                        "valueStr": null
+                      },
+                      {
+                        "key": "max_deploy_count",
+                        "value": 1,
+                        "valueStr": null
+                      }
+                    ],
+                    "tokenKey": null,
+                    "isHideTalent": true
+                  }
+                ]
+              }
+            ],
+            "potentialRanks": [],
+            "modules": [],
+            "traitDescription": "攻撃されない",
+            "subProfessionTraitDescription": ""
+          },
+          "skills": [
+            {
+              "skillId": "sktok_ironmn_pile1",
+              "levels": [
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2.5,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2.5,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2.5,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 3,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 3.5,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 3.5,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 4,
+                      "valueStr": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "skillId": "sktok_ironmn_pile1",
+              "levels": [
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2.5,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2.5,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2.5,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 3,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 3.5,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 3.5,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 4,
+                      "valueStr": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "skillId": "sktok_ironmn_pile1",
+              "levels": [
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2.5,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2.5,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 2.5,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 3,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 3.5,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 3.5,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "ハイパーブースト",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質の攻撃力上昇効果が<@ba.vup>{talent_scale}</>倍まで上昇\n<@ba.rem>スキル終了時、破壊される</>",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile1",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "talent_scale",
+                      "value": 4,
+                      "valueStr": null
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "token_10027_ironmn_pile2": {
+          "tokenKey": "token_10027_ironmn_pile2",
+          "name": "ステインレス™多機能プラットフォーム",
+          "profession": "TOKEN",
+          "subProfessionId": "notchar1",
+          "profile": {
+            "phases": [
+              {
+                "characterPrefabKey": "token_10027_ironmn_pile2",
+                "rangeId": "1-1",
+                "maxLevel": 50,
+                "attributesKeyFrames": [
+                  {
+                    "level": 1,
+                    "data": {
+                      "maxHp": 2000,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 3,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 10,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  },
+                  {
+                    "level": 50,
+                    "data": {
+                      "maxHp": 2000,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 3,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 10,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  }
+                ],
+                "evolveCost": null
+              },
+              {
+                "characterPrefabKey": "token_10027_ironmn_pile2",
+                "rangeId": "1-1",
+                "maxLevel": 80,
+                "attributesKeyFrames": [
+                  {
+                    "level": 1,
+                    "data": {
+                      "maxHp": 2000,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 3,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 10,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  },
+                  {
+                    "level": 80,
+                    "data": {
+                      "maxHp": 2000,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 3,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 10,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  }
+                ],
+                "evolveCost": null
+              },
+              {
+                "characterPrefabKey": "token_10027_ironmn_pile2",
+                "rangeId": "1-1",
+                "maxLevel": 90,
+                "attributesKeyFrames": [
+                  {
+                    "level": 1,
+                    "data": {
+                      "maxHp": 2000,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 3,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 10,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  },
+                  {
+                    "level": 90,
+                    "data": {
+                      "maxHp": 2000,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 3,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 10,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  }
+                ],
+                "evolveCost": null
+              }
+            ],
+            "favorKeyFrames": [],
+            "trait": null,
+            "talents": [
+              {
+                "candidates": [
+                  {
+                    "unlockCondition": {
+                      "phase": "PHASE_0",
+                      "level": 1
+                    },
+                    "requiredPotentialRank": 0,
+                    "prefabKey": "2",
+                    "name": "ライフライン",
+                    "description": "3.5秒ごとに攻撃範囲内の味方1人のSPを1回復し、1秒ごとに自身のHPが最大値の0.4%減少\n退場まで効果継続",
+                    "rangeId": null,
+                    "blackboard": [
+                      {
+                        "key": "default.interval",
+                        "value": 3.5,
+                        "valueStr": null
+                      }
+                    ],
+                    "tokenKey": null,
+                    "isHideTalent": false
+                  }
+                ]
+              },
+              {
+                "candidates": [
+                  {
+                    "unlockCondition": {
+                      "phase": "PHASE_0",
+                      "level": 1
+                    },
+                    "requiredPotentialRank": 0,
+                    "prefabKey": "1",
+                    "name": null,
+                    "description": null,
+                    "rangeId": null,
+                    "blackboard": [
+                      {
+                        "key": "max_deck_stack_cnt",
+                        "value": 2,
+                        "valueStr": null
+                      },
+                      {
+                        "key": "max_deploy_count",
+                        "value": 0,
+                        "valueStr": null
+                      }
+                    ],
+                    "tokenKey": null,
+                    "isHideTalent": true
+                  },
+                  {
+                    "unlockCondition": {
+                      "phase": "PHASE_1",
+                      "level": 1
+                    },
+                    "requiredPotentialRank": 0,
+                    "prefabKey": "1",
+                    "name": null,
+                    "description": null,
+                    "rangeId": null,
+                    "blackboard": [
+                      {
+                        "key": "max_deck_stack_cnt",
+                        "value": 2,
+                        "valueStr": null
+                      },
+                      {
+                        "key": "max_deploy_count",
+                        "value": 1,
+                        "valueStr": null
+                      }
+                    ],
+                    "tokenKey": null,
+                    "isHideTalent": true
+                  },
+                  {
+                    "unlockCondition": {
+                      "phase": "PHASE_2",
+                      "level": 1
+                    },
+                    "requiredPotentialRank": 0,
+                    "prefabKey": "1",
+                    "name": null,
+                    "description": null,
+                    "rangeId": null,
+                    "blackboard": [
+                      {
+                        "key": "max_deck_stack_cnt",
+                        "value": 3,
+                        "valueStr": null
+                      },
+                      {
+                        "key": "max_deploy_count",
+                        "value": 1,
+                        "valueStr": null
+                      }
+                    ],
+                    "tokenKey": null,
+                    "isHideTalent": true
+                  }
+                ]
+              },
+              {
+                "candidates": [
+                  {
+                    "unlockCondition": {
+                      "phase": "PHASE_0",
+                      "level": 1
+                    },
+                    "requiredPotentialRank": 0,
+                    "prefabKey": "3",
+                    "name": null,
+                    "description": null,
+                    "rangeId": null,
+                    "blackboard": [
+                      {
+                        "key": "hp_ratio",
+                        "value": 0.004,
+                        "valueStr": null
+                      }
+                    ],
+                    "tokenKey": null,
+                    "isHideTalent": true
+                  }
+                ]
+              }
+            ],
+            "potentialRanks": [],
+            "modules": [],
+            "traitDescription": "攻撃されない",
+            "subProfessionTraitDescription": ""
+          },
+          "skills": [
+            {
+              "skillId": "sktok_ironmn_pile2",
+              "levels": [
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2.5,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2.5,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2.5,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "skillId": "sktok_ironmn_pile2",
+              "levels": [
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2.5,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2.5,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2.5,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "skillId": "sktok_ironmn_pile2",
+              "levels": [
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2.5,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2.5,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2.5,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "供給効率化システム",
+                  "rangeId": null,
+                  "description": "ステインレスがスキル発動中、素質のSP回復効果が<@ba.vup>{s2.interval}</>秒ごとに<@ba.vup>1</>回復になるが、装置のHP減少速度+100%",
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 0
+                  },
+                  "prefabId": "sktok_ironmn_pile2",
+                  "duration": -1,
+                  "blackboard": [
+                    {
+                      "key": "s2.interval",
+                      "value": 2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "s2.hp_ratio",
+                      "value": 0.008,
+                      "valueStr": null
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "token_10027_ironmn_pile3": {
+          "tokenKey": "token_10027_ironmn_pile3",
+          "name": "鉄鉗号･プロトタイプ",
+          "profession": "TOKEN",
+          "subProfessionId": "notchar1",
+          "profile": {
+            "phases": [
+              {
+                "characterPrefabKey": "token_10027_ironmn_pile3",
+                "rangeId": "3-13",
+                "maxLevel": 50,
+                "attributesKeyFrames": [
+                  {
+                    "level": 1,
+                    "data": {
+                      "maxHp": 6000,
+                      "atk": 100,
+                      "def": 2000,
+                      "magicResistance": 0,
+                      "cost": 10,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 20,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": -2,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  },
+                  {
+                    "level": 50,
+                    "data": {
+                      "maxHp": 6000,
+                      "atk": 100,
+                      "def": 2000,
+                      "magicResistance": 0,
+                      "cost": 10,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 20,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": -2,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  }
+                ],
+                "evolveCost": null
+              },
+              {
+                "characterPrefabKey": "token_10027_ironmn_pile3",
+                "rangeId": "3-13",
+                "maxLevel": 80,
+                "attributesKeyFrames": [
+                  {
+                    "level": 1,
+                    "data": {
+                      "maxHp": 6000,
+                      "atk": 100,
+                      "def": 2000,
+                      "magicResistance": 0,
+                      "cost": 10,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 20,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": -2,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  },
+                  {
+                    "level": 80,
+                    "data": {
+                      "maxHp": 6000,
+                      "atk": 100,
+                      "def": 2000,
+                      "magicResistance": 0,
+                      "cost": 10,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 20,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": -2,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  }
+                ],
+                "evolveCost": null
+              },
+              {
+                "characterPrefabKey": "token_10027_ironmn_pile3",
+                "rangeId": "3-13",
+                "maxLevel": 90,
+                "attributesKeyFrames": [
+                  {
+                    "level": 1,
+                    "data": {
+                      "maxHp": 6000,
+                      "atk": 100,
+                      "def": 2000,
+                      "magicResistance": 0,
+                      "cost": 10,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 20,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": -2,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  },
+                  {
+                    "level": 90,
+                    "data": {
+                      "maxHp": 6000,
+                      "atk": 100,
+                      "def": 2000,
+                      "magicResistance": 0,
+                      "cost": 10,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 20,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": -2,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  }
+                ],
+                "evolveCost": null
+              }
+            ],
+            "favorKeyFrames": [],
+            "trait": {
+              "candidates": [
+                {
+                  "unlockCondition": {
+                    "phase": "PHASE_0",
+                    "level": 1
+                  },
+                  "requiredPotentialRank": 0,
+                  "blackboard": [
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.01,
+                      "valueStr": null
+                    }
+                  ],
+                  "overrideDescripton": "味方の攻撃対象となるが、攻撃によるダメージを受けない。味方【工匠】の攻撃を受けた場合、自身のHPが回復",
+                  "prefabKey": null,
+                  "rangeId": null
+                }
+              ]
+            },
+            "talents": [
+              {
+                "candidates": [
+                  {
+                    "unlockCondition": {
+                      "phase": "PHASE_0",
+                      "level": 1
+                    },
+                    "requiredPotentialRank": 0,
+                    "prefabKey": "2",
+                    "name": "団結の力",
+                    "description": "自身の後ろ1マスに配置されている味方が受ける物理ダメージ-20%、退場まで効果継続",
+                    "rangeId": null,
+                    "blackboard": [
+                      {
+                        "key": "damage_resistance",
+                        "value": 0.2,
+                        "valueStr": null
+                      }
+                    ],
+                    "tokenKey": null,
+                    "isHideTalent": false
+                  }
+                ]
+              },
+              {
+                "candidates": [
+                  {
+                    "unlockCondition": {
+                      "phase": "PHASE_0",
+                      "level": 1
+                    },
+                    "requiredPotentialRank": 0,
+                    "prefabKey": "1",
+                    "name": null,
+                    "description": null,
+                    "rangeId": null,
+                    "blackboard": [
+                      {
+                        "key": "max_deck_stack_cnt",
+                        "value": 2,
+                        "valueStr": null
+                      },
+                      {
+                        "key": "max_deploy_count",
+                        "value": 0,
+                        "valueStr": null
+                      }
+                    ],
+                    "tokenKey": null,
+                    "isHideTalent": true
+                  },
+                  {
+                    "unlockCondition": {
+                      "phase": "PHASE_1",
+                      "level": 1
+                    },
+                    "requiredPotentialRank": 0,
+                    "prefabKey": "1",
+                    "name": null,
+                    "description": null,
+                    "rangeId": null,
+                    "blackboard": [
+                      {
+                        "key": "max_deck_stack_cnt",
+                        "value": 2,
+                        "valueStr": null
+                      },
+                      {
+                        "key": "max_deploy_count",
+                        "value": 1,
+                        "valueStr": null
+                      }
+                    ],
+                    "tokenKey": null,
+                    "isHideTalent": true
+                  },
+                  {
+                    "unlockCondition": {
+                      "phase": "PHASE_2",
+                      "level": 1
+                    },
+                    "requiredPotentialRank": 0,
+                    "prefabKey": "1",
+                    "name": null,
+                    "description": null,
+                    "rangeId": null,
+                    "blackboard": [
+                      {
+                        "key": "max_deck_stack_cnt",
+                        "value": 3,
+                        "valueStr": null
+                      },
+                      {
+                        "key": "max_deploy_count",
+                        "value": 1,
+                        "valueStr": null
+                      }
+                    ],
+                    "tokenKey": null,
+                    "isHideTalent": true
+                  }
+                ]
+              }
+            ],
+            "potentialRanks": [],
+            "modules": [],
+            "traitDescription": "味方の攻撃対象となるが、攻撃によるダメージを受けない。味方【工匠】の攻撃を受けた場合、自身のHPが回復",
+            "subProfessionTraitDescription": ""
+          },
+          "skills": [
+            {
+              "skillId": "sktok_ironmn_pile3",
+              "levels": [
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.4,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.5,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.6,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.7,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.85,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.4,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.5,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "skillId": "sktok_ironmn_pile3",
+              "levels": [
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.4,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.5,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.6,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.7,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.85,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.4,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.5,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "skillId": "sktok_ironmn_pile3",
+              "levels": [
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.4,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.5,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.1,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.6,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.7,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.85,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.4,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "鉄鉗号･プロトタイプ",
+                  "rangeId": "3-13",
+                  "description": "スキル発動時、自身のHPが<@ba.vup>{hp_ratio:0.0%}</>減少し、前方の敵1体にステインレスの攻撃力の<@ba.vup>{atk_scale:0%}</>の物理ダメージを与え、対象の周囲一定範囲内の敵全員にステインレスの攻撃力の<@ba.vup>{atk_scale_2:0%}</>の物理ダメージを与える",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": "INCREASE_WHEN_TAKEN_DAMAGE",
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 5,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ironmn_pile3",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "atk_scale_2",
+                      "value": 1.5,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "hp_ratio",
+                      "value": 0.025,
+                      "valueStr": null
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "summonSkillTokenKeys": [
+        "token_10027_ironmn_pile1",
+        "token_10027_ironmn_pile2",
+        "token_10027_ironmn_pile3"
+      ]
     },
     "skills": [
       {
@@ -44407,7 +48166,589 @@
         }
       ],
       "traitDescription": "敵に<@ba.kw>術ダメージ</>を与える\n攻撃の対象がいない場合はエネルギーを<@ba.kw>チャージ</>して（最大3回）次の攻撃時に一斉発射する",
-      "subProfessionTraitDescription": ""
+      "subProfessionTraitDescription": "",
+      "summonProfiles": {
+        "token_10024_ebnhlz_rcube": {
+          "tokenKey": "token_10024_ebnhlz_rcube",
+          "name": "過去の残像",
+          "profession": "TOKEN",
+          "subProfessionId": "notchar1",
+          "profile": {
+            "phases": [
+              {
+                "characterPrefabKey": "token_10024_ebnhlz_rcube",
+                "rangeId": "0-1",
+                "maxLevel": 50,
+                "attributesKeyFrames": [
+                  {
+                    "level": 1,
+                    "data": {
+                      "maxHp": 1000,
+                      "atk": 100,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 0,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 0,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  },
+                  {
+                    "level": 50,
+                    "data": {
+                      "maxHp": 1000,
+                      "atk": 100,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 0,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 0,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  }
+                ],
+                "evolveCost": null
+              },
+              {
+                "characterPrefabKey": "token_10024_ebnhlz_rcube",
+                "rangeId": "0-1",
+                "maxLevel": 80,
+                "attributesKeyFrames": [
+                  {
+                    "level": 1,
+                    "data": {
+                      "maxHp": 1000,
+                      "atk": 100,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 0,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 0,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  },
+                  {
+                    "level": 80,
+                    "data": {
+                      "maxHp": 1000,
+                      "atk": 100,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 0,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 0,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  }
+                ],
+                "evolveCost": null
+              },
+              {
+                "characterPrefabKey": "token_10024_ebnhlz_rcube",
+                "rangeId": "0-1",
+                "maxLevel": 90,
+                "attributesKeyFrames": [
+                  {
+                    "level": 1,
+                    "data": {
+                      "maxHp": 1000,
+                      "atk": 100,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 0,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 0,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  },
+                  {
+                    "level": 90,
+                    "data": {
+                      "maxHp": 1000,
+                      "atk": 100,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 0,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 1,
+                      "respawnTime": 0,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  }
+                ],
+                "evolveCost": null
+              }
+            ],
+            "favorKeyFrames": [],
+            "trait": null,
+            "talents": [
+              {
+                "candidates": [
+                  {
+                    "unlockCondition": {
+                      "phase": "PHASE_0",
+                      "level": 1
+                    },
+                    "requiredPotentialRank": 0,
+                    "prefabKey": "1",
+                    "name": null,
+                    "description": "-",
+                    "rangeId": null,
+                    "blackboard": [
+                      {
+                        "key": "duration",
+                        "value": 30,
+                        "valueStr": null
+                      }
+                    ],
+                    "tokenKey": null,
+                    "isHideTalent": true
+                  }
+                ]
+              }
+            ],
+            "potentialRanks": [],
+            "modules": [],
+            "traitDescription": "",
+            "subProfessionTraitDescription": ""
+          },
+          "skills": [
+            {
+              "skillId": null,
+              "levels": []
+            },
+            {
+              "skillId": "sktok_ebnhlz_token",
+              "levels": [
+                {
+                  "name": "フラッシュバック",
+                  "rangeId": null,
+                  "description": "敵が接近時に発動し、発動時周囲の敵全員に術ダメージを与え、<@ba.vup>相当の力で</>敵を自身の中心に引き寄せる",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ebnhlz_token",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 1.4,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "force",
+                      "value": 1,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "フラッシュバック",
+                  "rangeId": null,
+                  "description": "敵が接近時に発動し、発動時周囲の敵全員に術ダメージを与え、<@ba.vup>相当の力で</>敵を自身の中心に引き寄せる",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ebnhlz_token",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 1.5,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "force",
+                      "value": 1,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "フラッシュバック",
+                  "rangeId": null,
+                  "description": "敵が接近時に発動し、発動時周囲の敵全員に術ダメージを与え、<@ba.vup>相当の力で</>敵を自身の中心に引き寄せる",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ebnhlz_token",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 1.6,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "force",
+                      "value": 1,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "フラッシュバック",
+                  "rangeId": null,
+                  "description": "敵が接近時に発動し、発動時周囲の敵全員に術ダメージを与え、<@ba.vup>相当の力で</>敵を自身の中心に引き寄せる",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ebnhlz_token",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 1.7,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "force",
+                      "value": 1,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "フラッシュバック",
+                  "rangeId": null,
+                  "description": "敵が接近時に発動し、発動時周囲の敵全員に術ダメージを与え、<@ba.vup>相当の力で</>敵を自身の中心に引き寄せる",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ebnhlz_token",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 1.8,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "force",
+                      "value": 1,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "フラッシュバック",
+                  "rangeId": null,
+                  "description": "敵が接近時に発動し、発動時周囲の敵全員に術ダメージを与え、<@ba.vup>相当の力で</>敵を自身の中心に引き寄せる",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ebnhlz_token",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 1.9,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "force",
+                      "value": 1,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "フラッシュバック",
+                  "rangeId": null,
+                  "description": "敵が接近時に発動し、発動時周囲の敵全員に術ダメージを与え、<@ba.vup>相当の力で</>敵を自身の中心に引き寄せる",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ebnhlz_token",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "force",
+                      "value": 1,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "フラッシュバック",
+                  "rangeId": null,
+                  "description": "敵が接近時に発動し、発動時周囲の敵全員に術ダメージを与え、<@ba.vup>相当の力で</>敵を自身の中心に引き寄せる",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ebnhlz_token",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.15,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "force",
+                      "value": 1,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "フラッシュバック",
+                  "rangeId": null,
+                  "description": "敵が接近時に発動し、発動時周囲の敵全員に術ダメージを与え、<@ba.vup>相当の力で</>敵を自身の中心に引き寄せる",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ebnhlz_token",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.3,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "force",
+                      "value": 1,
+                      "valueStr": null
+                    }
+                  ]
+                },
+                {
+                  "name": "フラッシュバック",
+                  "rangeId": null,
+                  "description": "敵が接近時に発動し、発動時周囲の敵全員に術ダメージを与え、<@ba.vup>相当の力で</>敵を自身の中心に引き寄せる",
+                  "skillType": "AUTO",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 0,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_ebnhlz_token",
+                  "duration": 0,
+                  "blackboard": [
+                    {
+                      "key": "atk_scale",
+                      "value": 2.45,
+                      "valueStr": null
+                    },
+                    {
+                      "key": "force",
+                      "value": 1,
+                      "valueStr": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "skillId": null,
+              "levels": []
+            }
+          ]
+        }
+      },
+      "summonSkillTokenKeys": [
+        null,
+        "token_10024_ebnhlz_rcube",
+        null
+      ]
     },
     "skills": [
       {

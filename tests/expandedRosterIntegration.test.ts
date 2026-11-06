@@ -61,11 +61,11 @@ const catalog = sources.flatMap(source => source.skills.map(skill => record(sour
 const coverage = buildDamageCalculatorThreeCoverage(catalog)
 const structures = getDamageCalculatorThreeStructures().filter(structure => sourceMap.has(structure.basicInfo.operatorId))
 
-test('独立snapshotの307名679スキルが構造・coverage・registryに欠落や重複なく現れる', () => {
+test('独立snapshotの321名723スキルが構造・coverage・registryに欠落や重複なく現れる', () => {
   assert.deepEqual(groups.map(group => [group.length, group.reduce((sum, source) => sum + source.skills.length, 0)]),
-    [[146, 316], [54, 121], [63, 141], [9, 25], [4, 11], [11, 28], [7, 14], [13, 23]])
-  assert.equal(sources.length, 307)
-  assert.equal(catalog.length, 679)
+    [[146, 316], [54, 121], [63, 141], [9, 25], [5, 12], [14, 36], [16, 38], [14, 34]])
+  assert.equal(sources.length, 321)
+  assert.equal(catalog.length, 723)
   assert.equal(sourceMap.size, sources.length)
   const expectedIds = catalog.map(identity).sort()
   assert.deepEqual(structures.map(structure => identity(structure.basicInfo)).sort(), expectedIds)
@@ -79,34 +79,38 @@ test('独立snapshotの307名679スキルが構造・coverage・registryに欠�
   }
 })
 
-test('追加範囲は対応512・条件付き94・保留34・対象外39で、保留と対象外を対応へ混ぜない', () => {
+test('追加範囲は対応572・条件付き110・保留1・対象外40で、保留と対象外を対応へ混ぜない', () => {
   assert.deepEqual(Object.fromEntries(['SUPPORTED', 'CONDITIONAL', 'PENDING', 'UNSUPPORTED', 'NOT_APPLICABLE'].map(status =>
     [status, coverage.filter(row => row.status === status).length])),
-  { SUPPORTED: 512, CONDITIONAL: 94, PENDING: 34, UNSUPPORTED: 0, NOT_APPLICABLE: 39 })
+  { SUPPORTED: 572, CONDITIONAL: 110, PENDING: 1, UNSUPPORTED: 0, NOT_APPLICABLE: 40 })
   assert.deepEqual(coverage.filter(row => row.status === 'CONDITIONAL').map(row => `${row.skill.operatorId}/${row.skill.skillIndex}`).sort(),
     [
-      'char_1013_chen2/2', 'char_1013_chen2/3', 'char_1028_texas2/2', 'char_1033_swire2/2',
-      'char_1033_swire2/3', 'char_1035_wisdel/2', 'char_1039_thorn2/3', 'char_1045_svash2/2',
-      'char_1045_svash2/3', 'char_1046_sbell2/1', 'char_1046_sbell2/2', 'char_1046_sbell2/3',
+      'char_003_kalts/3', 'char_1013_chen2/2', 'char_1013_chen2/3', 'char_1028_texas2/2',
+      'char_1030_noirc2/1', 'char_1033_swire2/2', 'char_1033_swire2/3', 'char_1035_wisdel/2',
+      'char_1039_thorn2/3', 'char_1041_angel2/1', 'char_1041_angel2/2', 'char_1041_angel2/3',
+      'char_1045_svash2/2', 'char_1045_svash2/3', 'char_1046_sbell2/1', 'char_1046_sbell2/2',
+      'char_1046_sbell2/3', 'char_1047_halo2/1', 'char_1047_halo2/2', 'char_1047_halo2/3',
       'char_126_shotst/1', 'char_126_shotst/2', 'char_134_ifrit/3', 'char_135_halo/1',
       'char_135_halo/2', 'char_145_prove/2', 'char_2012_typhon/2', 'char_2012_typhon/3',
       'char_2015_dusk/1', 'char_2015_dusk/2', 'char_2015_dusk/3', 'char_204_platnm/1',
       'char_204_platnm/2', 'char_206_gnosis/1', 'char_206_gnosis/2', 'char_206_gnosis/3',
       'char_218_cuttle/2', 'char_219_meteo/2', 'char_249_mlyss/1', 'char_249_mlyss/2',
       'char_249_mlyss/3', 'char_340_shwaz/1', 'char_340_shwaz/2', 'char_340_shwaz/3',
-      'char_349_chiave/2', 'char_362_saga/2', 'char_362_saga/3', 'char_373_lionhd/2',
-      'char_377_gdglow/1', 'char_377_gdglow/2', 'char_377_gdglow/3', 'char_4006_melnte/2',
-      'char_4013_kjera/2', 'char_4015_spuria/1', 'char_4015_spuria/2', 'char_4025_aprot2/1',
-      'char_4025_aprot2/2', 'char_4027_heyak/2', 'char_4039_horn/2', 'char_4043_erato/1',
+      'char_341_sntlla/2', 'char_349_chiave/2', 'char_362_saga/2', 'char_362_saga/3',
+      'char_373_lionhd/2', 'char_377_gdglow/1', 'char_377_gdglow/2', 'char_377_gdglow/3',
+      'char_4006_melnte/2', 'char_400_weedy/3', 'char_4013_kjera/2', 'char_4015_spuria/1',
+      'char_4015_spuria/2', 'char_4025_aprot2/1', 'char_4025_aprot2/2', 'char_4027_heyak/2',
+      'char_4027_heyak/3', 'char_4031_liesel/2', 'char_4039_horn/2', 'char_4043_erato/1',
       'char_4046_ebnhlz/3', 'char_4048_doroth/1', 'char_4048_doroth/2', 'char_4048_doroth/3',
-      'char_4054_malist/2', 'char_4056_titi/1', 'char_4056_titi/3', 'char_405_absin/2',
-      'char_4067_lolxh/2', 'char_4072_ironmn/1', 'char_4080_lin/1', 'char_4080_lin/2',
-      'char_4080_lin/3', 'char_4087_ines/1', 'char_4087_ines/3', 'char_4133_logos/1',
-      'char_4133_logos/2', 'char_4133_logos/3', 'char_4138_narant/1', 'char_4138_narant/2',
-      'char_4138_narant/3', 'char_4141_marcil/1', 'char_4141_marcil/3', 'char_4164_tecno/1',
-      'char_4164_tecno/2', 'char_4171_wulfen/2', 'char_4177_brigid/1', 'char_4185_amoris/1',
-      'char_4185_amoris/2', 'char_4186_tmoris/1', 'char_4186_tmoris/2', 'char_4202_haruka/2',
-      'char_4202_haruka/3', 'char_433_windft/1', 'char_433_windft/2', 'char_446_aroma/1',
+      'char_4052_surfer/2', 'char_4054_malist/2', 'char_4056_titi/1', 'char_4056_titi/3',
+      'char_405_absin/2', 'char_4067_lolxh/2', 'char_4072_ironmn/1', 'char_4072_ironmn/3',
+      'char_4080_lin/1', 'char_4080_lin/2', 'char_4080_lin/3', 'char_4087_ines/1',
+      'char_4087_ines/3', 'char_411_tomimi/2', 'char_4133_logos/1', 'char_4133_logos/2',
+      'char_4133_logos/3', 'char_4138_narant/1', 'char_4138_narant/2', 'char_4138_narant/3',
+      'char_4141_marcil/1', 'char_4141_marcil/3', 'char_4164_tecno/1', 'char_4164_tecno/2',
+      'char_4171_wulfen/2', 'char_4177_brigid/1', 'char_4185_amoris/1', 'char_4185_amoris/2',
+      'char_4186_tmoris/1', 'char_4186_tmoris/2', 'char_4202_haruka/2', 'char_4202_haruka/3',
+      'char_420_flamtl/1', 'char_433_windft/1', 'char_433_windft/2', 'char_446_aroma/1',
       'char_450_necras/1', 'char_450_necras/2', 'char_450_necras/3', 'char_457_blitz/2',
       'char_476_blkngt/1', 'char_478_kirara/2',
     ])
@@ -139,7 +143,7 @@ test('coverageの特性区分は、優先対象のみ・計算に使う術属性
   assert.equal(find('char_271_spikes', 2).sections.trait, 'NOT_APPLICABLE')
 })
 
-test('全679スキルの全登録段階で対応状況と実計算が一致し、停止時に部分数値を残さない', () => {
+test('全723スキルの全登録段階で対応状況と実計算が一致し、停止時に部分数値を残さない', () => {
   let supportedSkills = 0, pendingSkills = 0, outsideSkills = 0
   for (const row of coverage) {
     const structure = structures.find(structure => identity(structure.basicInfo) === identity(row.skill))!
@@ -155,6 +159,11 @@ test('全679スキルの全登録段階で対応状況と実計算が一致し�
         if (row.skill.skillIndex === 1) conditions.targetElementalBurst = 'BURN'
         else conditions.targetBurnState = 'BURST'
       }
+      // Select physically consistent states for the independently evaluated events.
+      if (row.skill.operatorId === 'char_1040_blaze2' && stage.id === 'BURST_EVENT') conditions.targetElementalBurst = 'BURN'
+      if (row.skill.operatorId === 'char_4146_nymph' && ['ATTACK_NECROSIS', 'TALENT_TICK', 'EMPOWERED_TICK'].includes(stage.id))
+        conditions.targetElementalBurst = 'NECROSIS'
+      if (row.skill.operatorId === 'char_2023_ling' && stage.id === 'merged') conditions.lingRefundStacks = 1
       const result = calculate(row.skill.operatorId, row.skill.skillIndex, conditions)
       if (stage.unresolved?.length) {
         assert.ok(result.unsupportedReasons.length, row.skill.id)
@@ -176,12 +185,55 @@ test('全679スキルの全登録段階で対応状況と実計算が一致し�
     else if (row.status === 'NOT_APPLICABLE') outsideSkills += 1
     else pendingSkills += 1
   }
-  assert.deepEqual([supportedSkills, pendingSkills, outsideSkills], [606, 34, 39])
+  assert.deepEqual([supportedSkills, pendingSkills, outsideSkills], [682, 1, 40])
 })
 
-test('昇進1/SL7の12名と昇進2/SL10の295名でidentity・素質を混同しない', () => {
+// These event-state fixtures come from the reviewed skill mechanics, not by
+// satisfying conditionRequirements programmatically: a missing check must fail.
+test('新規段階は成立状態のみ計算し、元素状態・召喚履歴・孤立条件の矛盾では部分数値も返さない', () => {
+  const fixtures: [string, number, GuardConditions, GuardConditions[]][] = [
+    ['char_2023_ling', 3, { lingS3Actor: 'MERGED', lingRefundStacks: 1 }, [{ lingRefundStacks: 0 }]],
+    ['char_1040_blaze2', 3, { elementalEvent: 'BURST_EVENT', targetElementalBurst: 'BURN' },
+      [{ targetElementalBurst: 'NONE' }, { targetElementalBurst: 'NECROSIS' }, { blazeState: 'DOWN' }]],
+    ['char_1040_blaze2', 1, { elementalEvent: 'AURA_TICK', targetHpSpecialState: 'STANDARD' },
+      [{ targetHpSpecialState: 'OTHER' }, { blazeState: 'DOWN' }]],
+    ['char_1040_blaze2', 2, { elementalEvent: 'ATTACK', selfHpBeforeAttackPercent: 5.1 },
+      [{ selfHpBeforeAttackPercent: 5 }, { selfHpBeforeAttackPercent: 4.9 }]],
+    ['char_4146_nymph', 1, { elementalEvent: 'TALENT_TICK', targetElementalBurst: 'NECROSIS' },
+      [{ targetElementalBurst: 'NONE' }, { targetElementalBurst: 'BURN' }]],
+    ['char_4146_nymph', 2, { elementalEvent: 'EMPOWERED_TICK', targetElementalBurst: 'NECROSIS' },
+      [{ targetElementalBurst: 'NONE' }, { targetHpSpecialState: 'OTHER' }]],
+    ['char_4146_nymph', 3, { elementalEvent: 'ATTACK', targetElementalBurst: 'BURN' },
+      [{ targetElementalBurst: 'NECROSIS' }]],
+    ['char_4146_nymph', 3, { elementalEvent: 'ATTACK_NECROSIS', targetElementalBurst: 'NECROSIS' },
+      [{ targetElementalBurst: 'NONE' }, { targetElementalBurst: 'BURN' }]],
+    ['char_4146_nymph', 1, { elementalEvent: 'ATTACK', targetElementalBurst: 'CORROSION', previousCorrosionBursts: 1 },
+      [{ previousCorrosionBursts: 0 }]],
+    ['char_1042_phatm2', 1, { tragodiaEvent: 'PRIMARY_BUILDUP', tragodiaS1Bound: true },
+      [{ tragodiaS1Bound: false }]],
+    ['char_1042_phatm2', 2, { tragodiaEvent: 'TOKEN_TICK', elementalBuildupResistance: 0, tragodiaSnapshotUnchanged: true },
+      [{ elementalBuildupResistance: 1 }, { tragodiaSnapshotUnchanged: false }]],
+    ['char_1041_angel2', 1, { angelPhase: 'SHOT', angelIsolatedTarget: true }, [{ angelIsolatedTarget: false }]],
+    ['char_1047_halo2', 3, { haloPhase: 'SINGLE', haloSingleLock: true, haloFragile: 'EARLY' },
+      [{ haloSingleLock: false }, { haloFragile: 'NONE' }]],
+  ]
+  for (const [operatorId, skillIndex, valid, invalid] of fixtures) {
+    const label = operatorId + '/' + skillIndex
+    const result = calculate(operatorId, skillIndex, valid)
+    assert.deepEqual(result.unsupportedReasons, [], label)
+    assert.ok(result.rows.length, label)
+    assert.ok(result.model, label)
+    for (const contradiction of invalid) blocked(input(operatorId, skillIndex, { ...valid, ...contradiction }), label + ' ' + JSON.stringify(contradiction))
+  }
+  // Losing 5% HP stops the self attack, not the already active area tick.
+  const area = calculate('char_1040_blaze2', 2, { elementalEvent: 'AREA_TICK', selfHpBeforeAttackPercent: 5 })
+  assert.deepEqual(area.unsupportedReasons, [])
+  assert.ok(area.rows.length)
+})
+
+test('昇進1/SL7の12名と昇進2/SL10の309名でidentity・素質を混同しない', () => {
   assert.equal(sources.filter(source => source.phaseIndex === 1 && source.skillLevelIndex === 6).length, 12)
-  assert.equal(sources.filter(source => source.phaseIndex === 2 && source.skillLevelIndex === 9).length, 295)
+  assert.equal(sources.filter(source => source.phaseIndex === 2 && source.skillLevelIndex === 9).length, 309)
   for (const source of sources) {
     const row = record(source.operatorId, source.skills[0].skillIndex)
     const talents = buildExpandedTalentStructures([row])

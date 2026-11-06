@@ -51,9 +51,9 @@ test('保留がある構造も登録済みとして数え、保留事項は独�
   const surtr = coverage.skill.find(row => row.operatorId === 'char_350_surtr' && row.number === 3)!
   assert.equal(surtr.registered, true)
   assert.ok(surtr.concerns.some(value => value.title === 'HP減少の時間変化と処理時刻'))
-  const noteSkill = coverage.skill.find(row => row.operatorId === 'char_4182_oblvns' && row.number === 2)!
-  assert.equal(noteSkill.registered, true)
-  assert.ok(noteSkill.concerns.some(value => value.detail.includes('命中頻度')))
+  const terrainSkill = coverage.skill.find(row => row.operatorId === 'char_1051_headb2' && row.number === 3)!
+  assert.equal(terrainSkill.registered, true)
+  assert.ok(terrainSkill.concerns.some(value => /地形|高台/.test(value.detail)))
   const poison = coverage.talent.find(row => row.operatorId === 'char_293_thorns' && row.number === 1)!
   assert.equal(poison.registered, true)
   assert.ok(poison.concerns.some(value => value.detail.includes('初回ダメージの時刻')))

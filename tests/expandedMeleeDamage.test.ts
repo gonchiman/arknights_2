@@ -19,7 +19,7 @@ function record(suffix: string, skillIndex: number): SkillRecord {
     nameInitial: 'OTHER', description: raw.description!, duration: raw.duration!, durationType: raw.durationType!,
     skillType: raw.skillType!, spType: raw.spData!.spType!, spCost: raw.spData!.spCost!, initSp: raw.spData!.initSp!,
     classification: classifySkill(raw), skillLevels: Array.from({ length: source.skillLevelIndex + 1 }, () => structuredClone(raw)),
-    raw, operatorProfile: structuredClone(source.profile) }
+    raw, operatorProfile: structuredClone(source.profile), overrideTokenKey: source.profile.summonSkillTokenKeys?.[skillIndex - 1] ?? undefined }
 }
 function output(suffix: string, skillIndex: number, guard: GuardConditions = {}) {
   return outputRecord(record(suffix, skillIndex), guard)
@@ -1090,7 +1090,7 @@ test('追加24人の元資料は完全スキルを保持し、未確認入力・
     'phatom', 'kafka', 'ascln', 'lmlee', 'bena', 'kazema', 'mizuki', 'jesca2', 'branch', 'pianst', 'nothin', 'talr', 'judge']
   const additions = EXPANDED_MELEE_DEFINITIONS.filter(d => ids.includes(d.operatorId.split('_').at(-1)!))
   assert.equal(additions.length, 24)
-  assert.equal(additions.reduce((sum, d) => sum + d.recipes.length, 0), 45)
+  assert.equal(additions.reduce((sum, d) => sum + d.recipes.length, 0), 49)
   for (const d of additions) {
     const src = sources.find(s => s.operatorId === d.operatorId)!
     assert.equal('passives' in src || 'coverage' in src, false)
@@ -1122,11 +1122,11 @@ test('新技能の属性比較は主攻撃だけ変換し、ミヅキの限定�
 const bulkSuffixes = ['weedy', 'glady', 'flamtl', 'zumama', 'fuze', 'tachak', 'almond', 'varkis', 'sophia',
   'snsant', 'cement', 'dagda', 'takila', 'mantic', 'morgan', 'laios', 'noirc2', 'red', 'wscoot']
 
-test('大幅拡張の近接19人42技能は34対応・8保留で、元資料に調査用フィールドを混入しない', () => {
+test('大幅拡張の近接19人42技能は42対応で、元資料に調査用フィールドを混入しない', () => {
   const additions = EXPANDED_MELEE_DEFINITIONS.filter(definition => bulkSuffixes.includes(definition.operatorId.split('_').at(-1)!))
   assert.equal(additions.length, 19)
-  assert.equal(additions.reduce((sum, definition) => sum + definition.recipes.length, 0), 34)
-  assert.equal(additions.reduce((sum, definition) => sum + definition.deferredSkills!.length, 0), 8)
+  assert.equal(additions.reduce((sum, definition) => sum + definition.recipes.length, 0), 42)
+  assert.equal(additions.reduce((sum, definition) => sum + definition.deferredSkills!.length, 0), 0)
   for (const definition of additions) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     assert.equal('coverage' in source || 'passives' in source, false)
@@ -1348,10 +1348,10 @@ test('属性比較は新規の主攻撃の全ヒットを術化し、ウィン�
   }
 })
 
-test('近接追加146人の277技能が実データから有限結果を返し、残り39技能は理由付き未計算', () => {
+test('近接追加146人の295技能が実データから有限結果を返し、残り21技能は理由付き未計算', () => {
   assert.equal(sources.length, 146)
-  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 277)
-  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + (definition.deferredSkills?.length ?? 0), 0), 39)
+  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + definition.recipes.length, 0), 295)
+  assert.equal(EXPANDED_MELEE_DEFINITIONS.reduce((sum, definition) => sum + (definition.deferredSkills?.length ?? 0), 0), 21)
   for (const definition of EXPANDED_MELEE_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     assert.equal(definition.recipes.length + (definition.deferredSkills?.length ?? 0), source.skills.length)
@@ -1651,7 +1651,7 @@ test('エンカクは強撃220%と永続ATK70%・速度45、サーファーは�
   close(permanent.result.attackInterval, permanent.result.stats.baseAttackTime / 1.45)
   assert.equal(permanent.result.model?.duration, 0)
   close(surfer.row.perAttack, physical(buffed(surfer.result.stats.attack, 1), 1000))
-  assert.deepEqual(output('surfer', 2).rows, [])
+  assert.deepEqual(output('surfer', 2, { surferStealAtMaximum: false }).rows, [])
 })
 
 test('ウィンドチャイムはHP50%以上で20%を加算し、破壊者のブロック対象数を使う', () => {
@@ -1661,7 +1661,10 @@ test('ウィンドチャイムはHP50%以上で20%を加算し、破壊者のブ
   close(half.row.perAttack, physical(buffed(half.result.stats.attack, 1.2), 1000))
   close(half.row.allTargetsPerAttack, half.row.perAttack * 2)
   assert.deepEqual(output('chimes', 1, { actualAttackTargetCount: 3 }).rows, [])
-  assert.deepEqual(output('chimes', 2).rows, [])
+  const counter = output('chimes', 2)
+  assert.deepEqual(counter.unsupportedReasons, [])
+  assert.equal(counter.rows[0].dps, null)
+  assert.equal(counter.rows[0].attackComponents?.length, 1)
 })
 
 test('追加の固定期間10技能のみ期間総ダメージを返し、被弾・HP変化・永続・DOTを区別する', () => {

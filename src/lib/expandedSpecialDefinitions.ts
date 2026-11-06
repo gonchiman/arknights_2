@@ -80,6 +80,77 @@ const thornMature = (initial: string, maximum: string): GuardValue => choose('th
 const ownerTokenScope = '本人の攻撃のみ。召喚物の攻撃、召喚数・再召喚・撃破による途中変化は含めません。'
 
 export const EXPANDED_SPECIAL_DEFINITIONS: readonly ExpandedOperatorDefinition[] = [
+  // The next-attack skill adds displacement without changing the ordinary attack's multiplier.
+  // https://prts.wiki/w/Enforcer ; first-hand S1 damage measurements:
+  // https://www.taptap.cn/moment/255723093023001014
+  operator('char_4036_forcer', [[1, normal({ label: '押し出し付きの通常攻撃1回', kind: 'NEXT_ATTACK', maxTargets: 2,
+    periodTotal: period('通常攻撃1回のみ。押し出し後の位置・衝突スタン・落下撃破はダメージへ加算しません。') })]],
+  [talent(0, 'テクニカルショット', v => [effect('heavy-target-penetration', 'def_penetrate_fixed / value', {
+    item: 'DEFENSE_IGNORE_FIXED', operation: 'IGNORE_FIXED', unit: 'POINT', value: v.read('def_penetrate_fixed'),
+  }, { condition: { type: 'COMPARE', metric: 'targetWeight', comparison: 'GTE', value: v.read('value') },
+    timing: { type: 'EVENT', event: 'ATTACK' }, lifetime: { type: 'CURRENT_EVENT' } })], ['DAMAGE'])],
+  { inputs: [n('targetWeight', '対象全員の重量ランク', 0, 0, 10)],
+    deferredSkills: [{ skillIndex: 2, reason: '攻撃を置換して前方へ押し出しとスタンを与えるスキル。既存の直接ダメージ対象外の分類を維持する。' }],
+    traitNotes: ['本人がブロック中の敵を全員同時に攻撃する。S1は通常攻撃の100%を残し、重量条件に応じて防御力180を無視する。'] }),
+  // https://prts.wiki/w/Exusiai_the_New_Covenant : every consumed round rolls once;
+  // a delivery shell consumes no ammunition. Exusiai herself belongs to Laterano.
+  operator('char_1041_angel2', [1, 2, 3].map(index => [index, [
+    phase('angelPhase', 'SHOT', normal({ label: index === 3 ? '孤立した敵への5連撃と実際の爆撃' : '孤立した敵への射撃と実際の爆撃', maxTargets: 1,
+      ...(index === 3 ? { atk: k('atk') } : index === 2 ? { intervalAdd: k('base_attack_time'), aspd: choose('angelSpeedStolen', true, k('steal')) } : {}),
+      actions: [{ label: index === 3 ? '5発消費の5連撃' : '弾薬1発の射撃', role: 'MAIN', damageType: 'PHYSICAL', scale: k('attack@atk_scale'), hits: index === 3 ? 5 : 1 }],
+      dpsUnsupportedReason: '素質が実際に発動した回数を指定した1攻撃。抽選込みの周期DPSは表示しません。',
+      periodTotal: { kind: 'UNSUPPORTED', duration: 'AMMO', reason: '弾薬を消費する現在の1攻撃のみ。抽選・対象変更・他オペレーターの弾薬消費・終了処理は合算しません。' },
+    })),
+    ...(index === 3 ? [phase('angelPhase', 'DELIVERY', normal({ label: '配達先座標への配達弾1発', kind: 'SKILL_ACTION', atk: k('atk'), maxTargets: null,
+      actions: [{ label: '配達弾', role: 'MAIN', damageType: 'PHYSICAL', scale: k('attack@cannon_atk_scale') }], periodTotal: period('配達弾は弾薬を消費しないため素質の爆撃を発生させない。本人の5連撃や配置された味方の攻撃は合算しません。'),
+    }))] : []),
+    phase('angelPhase', 'OTHER', pending(index === 1 ? '複数敵・手動停止時の一斉射撃' : '複数敵・他者の弾薬消費を含む爆撃',
+      '射撃対象と独立した爆撃対象、範囲内の巻き込みと途中撃破を含む総ダメージは未対応です。', ['スキル', '素質1'])),
+  ], [select('angelPhase', '計算対象', [['SHOT', '孤立した敵への1攻撃'], ...(index === 3 ? [['DELIVERY', '配達弾1発'] as [string, string]] : []), ['OTHER', '複数敵・別起点を含む合計']]),
+    n('angelBombCount', '今回の弾薬消費で実際に起きた爆撃回数', 0, 0, index === 3 ? 5 : 1),
+    b('angelIsolatedTarget', '有効な敵が1体だけで全命中中も変わらない', true),
+    ...(index === 2 ? [b('angelSpeedStolen', '味方から攻撃速度70を奪取済み', true)] : []),
+  ]] as const), [talent(0, '火力放送局', v => {
+    if (v.read('prob') !== .25) v.issue('確認済みの弾薬1発あたりの爆撃確率25%と一致しません。')
+    return [effect('realized-ammunition-bombs', 'aoe_atk_scale / prob', { item: 'ADDITIONAL_ATTACK', operation: 'DEAL_DAMAGE', unit: 'MULTIPLIER',
+      label: '弾薬消費で実現した素質の爆撃', value: v.read('aoe_atk_scale'), basis: 'ATK_STAT', damageType: 'PHYSICAL', hits: metric('angelBombCount'), rate: 'PER_ATTACK' },
+      { target: enemyTarget, condition: all(eq('angelPhase', 'SHOT'), { type: 'COMPARE', metric: 'angelBombCount', comparison: 'GT', value: 0 }), lifetime: { type: 'CURRENT_EVENT' } }),
+      status('ammo-healing', '味方の弾薬消費ごとに自身の最大HP6%を回復')]
+  }, ['ADDITIONAL_DAMAGE', 'SURVIVAL']), talent(1, '銃弾協約', v => [effect('laterano-ammo-attack', 'atk / mult', {
+    item: 'ATK_BUFF_RATIO', operation: 'ADD_RATIO', unit: 'RATIO', value: mul(v.read('atk'), v.read('mult')),
+  })], ['DAMAGE'])], { traitNotes: ['本人へのラテラーノ効果2倍を適用。孤立した敵1体への射撃では、今回の弾薬消費で実現した爆撃回数だけを加算する。配達弾は別イベント。'] }),
+
+  // https://prts.wiki/w/溯光星源 : no chain-caster decay; S3 transmission uses damage
+  // before RES and vulnerability, not the recipient's final damage. Keep that event pending.
+  operator('char_1047_halo2', [
+    [1, [phase('haloPhase', 'HIT', action('跳躍経路中の1回の命中', 1, { atk: k('atk'), maxTargets: 1,
+      periodTotal: period('選択した敵への1回の命中のみ。跳躍順と同じ敵への再跳躍を含む攻撃全体は合算しません。') })),
+      phase('haloPhase', 'ALL', pending('再跳躍を含む攻撃全体', '敵の配置に応じた跳躍経路と同一対象への命中回数は未対応です。'))],
+      [select('haloPhase', '計算対象', [['HIT', '跳躍経路中の1命中'], ['ALL', '再跳躍を含む合計']])]],
+    [2, [phase('haloPhase', 'DIRECT', action('最初の対象への直撃', k('atk_scale'), { maxTargets: k('max_target_attack'),
+      periodTotal: period('最初に選択した対象への直撃のみ。引き寄せ対象へのダメージは別イベントとして評価します。') })),
+      phase('haloPhase', 'LINK', action('1つの直撃位置からの引き寄せ命中', k('atk_scale_link'), { maxTargets: k('max_target'),
+        periodTotal: period('1つの直撃位置から引き寄せる対象群への1回のみ。別の直撃位置との重なりや落下は合算しません。') })),
+      phase('haloPhase', 'ALL', pending('直撃と引き寄せを含む攻撃全体', '2つの直撃位置と周囲の敵の配置による複数回命中・重なりは未対応です。'))],
+      [select('haloPhase', '計算対象', [['DIRECT', '最初の対象への直撃'], ['LINK', '1か所からの引き寄せ命中'], ['ALL', '攻撃全体の合計']])]],
+    [3, [phase('haloPhase', 'SINGLE', normal({ label: 'ロック対象が1体だけの通常攻撃', maxTargets: 1, atk: k('atk'), intervalAdd: k('base_attack_time'),
+      actions: [{ label: '単独ロック対象への術攻撃', role: 'MAIN', damageType: 'ARTS', scale: 1 }],
+      dpsUnsupportedReason: '現在の攻撃1回のみ。足止めによる攻撃速度増加や脆弱の成熟を追跡しません。',
+      periodTotal: period('ロック対象が1体だけで伝導先が存在しない状態。2体の連結と伝導は別の未対応段階です。') })),
+      phase('haloPhase', 'LINKED', pending('2体への攻撃と術ダメージ伝導', '本人・他者からの術ダメージを起点とする伝導と、その軽減前参照・仮想属性との連動は未対応です。'))],
+      [select('haloPhase', '計算対象', [['SINGLE', '単独ロック対象への攻撃'], ['LINKED', '2体への攻撃と伝導']]), b('haloSingleLock', '実際のロック対象が1体だけ', true)]],
+  ], [{ ...talent(0, 'データモデリング', v => {
+    if (v.read('max_stack_cnt') !== 18) v.issue('確認済みの攻撃速度の累積上限18回と一致しません。')
+    return [effect('slow-stack-speed', 'attack_speed / max_stack_cnt', { item: 'ATTACK_SPEED', operation: 'ADD_VALUE', unit: 'POINT', value: mul(v.read('attack_speed'), metric('haloSlowStacks')) })]
+  }), prefabKey: '2' }, { ...talent(1, 'エネルギー解析', v => [
+    effect('early-fragile', 'halo2_t_1[weak].damage_scale', { item: 'DAMAGE_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('halo2_t_1[weak].damage_scale') },
+      { target: enemyTarget, condition: eq('haloFragile', 'EARLY') }),
+    effect('mature-fragile', 'halo2_t_1[weak].damage_scale_max', { item: 'DAMAGE_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('halo2_t_1[weak].damage_scale_max') },
+      { target: enemyTarget, condition: eq('haloFragile', 'MATURE') }),
+  ], ['DAMAGE']), prefabKey: '1' }], { inputs: [n('haloSlowStacks', '命中前の足止め累積回数', 18, 0, 18),
+    select('haloFragile', '対象全員に付与済みの自身の脆弱', [['EARLY', '範囲内・7秒未満（10%）'], ['MATURE', '範囲内・7秒以上（14%）'], ['NONE', '範囲外（なし）']])],
+    traitNotes: ['選択した対象群は同じ脆弱状態。跳躍・引き寄せの各命中には連鎖術師の減衰を適用しない。'] }),
+
   // https://prts.wiki/w/Necrass : S1 explosions and S2 links originate from the operator.
   operator('char_450_necras', [
     [1, [phase('necrasPhase', 'OWNER', action('召喚・強化時の爆発1回', k('atk_scale'), {
@@ -261,6 +332,16 @@ export const EXPANDED_SPECIAL_DEFINITIONS: readonly ExpandedOperatorDefinition[]
 ]
 
 for (const definition of EXPANDED_SPECIAL_DEFINITIONS) for (const recipe of definition.recipes) {
+  if (definition.operatorId === 'char_1041_angel2') recipe.conditionRequirements = [
+    { when: { input: 'angelPhase', comparison: 'EQ', value: 'SHOT' }, condition: { input: 'angelIsolatedTarget', comparison: 'EQ', value: true }, reason: '射撃と全ての爆撃が同じ1体へ命中する孤立状態を指定してください。敵の増減や射撃対象以外への爆撃は未対応です。' },
+  ] satisfies GuardSkillRecipe['conditionRequirements']
+  if (definition.operatorId === 'char_1047_halo2' && recipe.skillIndex === 2) recipe.conditionRequirements = [
+    { when: { input: 'haloFragile', comparison: 'EQ', value: 'NONE' }, condition: { input: 'haloPhase', comparison: 'EQ', value: 'LINK' }, reason: '最初の直撃対象は自身の攻撃範囲内です。範囲内で付与済みの脆弱を指定してください。' },
+  ] satisfies GuardSkillRecipe['conditionRequirements']
+  if (definition.operatorId === 'char_1047_halo2' && recipe.skillIndex === 3) recipe.conditionRequirements = [
+    { when: { input: 'haloPhase', comparison: 'EQ', value: 'SINGLE' }, condition: { input: 'haloSingleLock', comparison: 'EQ', value: true }, reason: 'ロック対象が実際に1体だけの状態を指定してください。2体の場合は術ダメージ伝導が発生します。' },
+    { when: { input: 'haloFragile', comparison: 'EQ', value: 'NONE' }, condition: { input: 'haloPhase', comparison: 'EQ', value: 'LINKED' }, reason: 'ロック対象は自身の攻撃範囲内です。範囲内で付与済みの脆弱を指定してください。' },
+  ] satisfies GuardSkillRecipe['conditionRequirements']
   if (definition.operatorId === 'char_450_necras' && recipe.skillIndex === 2) recipe.conditionRequirements = [
     { when: { input: 'necrasPhase', comparison: 'EQ', value: 'OWNER' }, condition: { input: 'necrasLinkActive', comparison: 'EQ', value: true }, reason: 'リンクが継続している対象への拘束ダメージを指定してください。中断後のダメージは発生しません。' },
   ] satisfies GuardSkillRecipe['conditionRequirements']

@@ -5,6 +5,9 @@ import { classifySkill } from '../src/lib/classifier.ts'
 import { buildDamageCalculatorThreeOutput, type DamageCalculatorThreeInput } from '../src/lib/damageCalculatorThree.ts'
 import { EXPANDED_SUMMON_DEFINITIONS } from '../src/lib/expandedSummonDefinitions.ts'
 import { sameReviewedSummon } from '../src/lib/summonActor.ts'
+import { buildGuardDamageOutput } from '../src/lib/guardDamageCalculator.ts'
+import { evaluateGuardPassives } from '../src/lib/guardCombatPassives.ts'
+import { evaluateGuardTraits } from '../src/lib/guardTraitEvaluation.ts'
 import type { ExpandedOperatorSource } from '../src/lib/expandedCombatTypes.ts'
 import type { GuardConditions } from '../src/lib/guardCombatTypes.ts'
 import type { SkillRecord } from '../src/types/skill.ts'
@@ -36,9 +39,9 @@ function close(actual: number | null | undefined, expected: number) {
 }
 const physical = (attack: number, defense: number) => Math.max(attack - defense, attack * 0.05)
 
-test('13名23技能を本人IDのまま評価し、tokenのATKと周期だけを独立させる', () => {
-  assert.equal(EXPANDED_SUMMON_DEFINITIONS.length, 13)
-  assert.equal(EXPANDED_SUMMON_DEFINITIONS.reduce((sum, source) => sum + source.recipes.length, 0), 23)
+test('14名34技能を本人IDのまま評価し、tokenのATKと周期だけを独立させる', () => {
+  assert.equal(EXPANDED_SUMMON_DEFINITIONS.length, 14)
+  assert.equal(EXPANDED_SUMMON_DEFINITIONS.reduce((sum, source) => sum + source.recipes.length, 0), 34)
   for (const definition of EXPANDED_SUMMON_DEFINITIONS) for (const recipe of definition.recipes) {
     const result = output(definition.operatorId, recipe.skillIndex)
     valid(result)
@@ -357,4 +360,199 @@ test('ケルシーのchar_idは確認済みmetadataだけを許可し、未知ID
     assert.ok(value.unsupportedReasons.length, mutation)
     assert.deepEqual(value.rows, [])
   }
+})
+
+test('支援中も攻撃を続けるClosure S1/Magallan S1は非攻撃tokenのダメージを捏造しない', () => {
+  for (const blocked of [false, true]) for (const defense of [0, 500, 10000]) {
+    const closure = output('char_4228_closur', 1, { 'target.blockedByOwnReinforcement': blocked }, { enemy: { defense, resistance: 90 } })
+    close(valid(closure).perAttack, physical(561 * (blocked ? 1.5 : 1), defense))
+    close(closure.attackInterval, 1)
+    assert.equal(closure.actor, undefined)
+    assert.equal(closure.rows[0].attackComponents.length, 1)
+  }
+  for (const resistance of [0, 40, 100]) {
+    const magallan = output('char_248_mgllan', 1, {}, { enemy: { defense: 10000, resistance } })
+    close(valid(magallan).perAttack, 509 * Math.max(0.05, 1 - resistance / 100))
+    close(magallan.attackInterval, 1.6)
+    assert.equal(magallan.actor, undefined)
+    assert.equal(magallan.rows[0].attackComponents.length, 1)
+  }
+})
+
+test('Mayer S1/Deepcolor S2の回避支援は本人とtokenの攻撃力・周期を変えない', () => {
+  for (const [id, index, ownerAttack, tokenAttack] of [['char_242_otter', 1, 478, 444], ['char_110_deepcl', 2, 403, 462]] as const) {
+    for (const defense of [0, 500, 10000]) {
+      const token = output(id, index, {}, { enemy: { defense, resistance: 40 } })
+      close(valid(token).perAttack, physical(tokenAttack, defense))
+      close(token.stats.attack, tokenAttack)
+      close(token.attackInterval, 1.25)
+      close(token.rows[0].dps, physical(tokenAttack, defense) / 1.25)
+      const changedOwner = output(id, index, {}, { enemy: { defense, resistance: 40 }, trust: 0 }, skill => {
+        skill.operatorProfile.phases[2].attributesKeyFrames!.at(-1)!.data!.atk = 99999
+      })
+      close(valid(changedOwner).perAttack, token.rows[0].perAttack)
+    }
+    const owner = output(id, index, { summonDamageActor: 'OWNER' })
+    close(valid(owner).perAttack, ownerAttack * 0.6)
+    close(owner.attackInterval, 1.6)
+    assert.equal(owner.actor, undefined)
+    const virtual = output(id, index, {}, { virtualMainAttackType: 'ARTS' })
+    close(valid(virtual).perAttack, tokenAttack * 0.6)
+    assert.ok(output(id, index, { actualAttackTargetCount: 2 }).unsupportedReasons.length)
+  }
+  const changedMeebo = output('char_242_otter', 1, {}, {}, skill => {
+    skill.operatorProfile.summonProfiles!.token_10004_otter_motter.profile.phases[2].attributesKeyFrames!.at(-1)!.data!.atk! += 1
+  })
+  assert.ok(changedMeebo.unsupportedReasons.length)
+  assert.deepEqual(changedMeebo.rows, [])
+})
+
+test('Vigil S1は0→1/1→2/2→3/3→3を反映し、各命中に個別の軽減と最低ダメージを適用する', () => {
+  for (const wolfCountBeforeSkill of [0, 1, 2, 3]) for (const blocked of [false, true]) for (const defense of [0, 500, 10000]) {
+    const wolves = Math.min(3, wolfCountBeforeSkill + 1)
+    const value = output('char_427_vigil', 1, { wolfCountBeforeSkill, 'target.blockedByOwnReinforcement': blocked }, { enemy: { defense, resistance: 40 } })
+    const expected = physical(371, Math.max(0, defense - (blocked ? 175 : 0))) * wolves
+    close(valid(value).perAttack, expected)
+    close(value.attackInterval, 1.25)
+    close(value.rows[0].dps, expected / 1.25)
+    close(value.rows[0].allTargetsPerAttack, expected)
+  }
+  for (const guard of [{ wolfCountBeforeSkill: -1 }, { wolfCountBeforeSkill: 4 }, { wolfCountBeforeSkill: 1.5 }, { actualAttackTargetCount: 2 }])
+    assert.ok(output('char_427_vigil', 1, guard).unsupportedReasons.length)
+})
+
+test('Vigil S3の狼追撃は本人ATK50%、本人追撃は自身の150%特性込みで連撃ごとに発生する', () => {
+  for (const wolfCount of [1, 2, 3]) for (const blocked of [false, true]) for (const defense of [0, 500, 10000]) {
+    const guard = { wolfCount, 'target.blockedByOwnReinforcement': blocked }
+    const wolf = output('char_427_vigil', 3, guard, { enemy: { defense, resistance: 40 } })
+    const wolfPhysical = physical(371, Math.max(0, defense - (blocked ? 175 : 0))) * wolfCount
+    const wolfArts = blocked ? 542 * 0.5 * 0.6 * wolfCount : 0
+    close(valid(wolf).perAttack, wolfPhysical + wolfArts)
+    close(wolf.rows[0].dps, (wolfPhysical + wolfArts) / 1.25)
+    if (blocked) close(wolf.rows[0].attackComponents[1].attackPipeline.baseAttack, 542)
+    const owner = output('char_427_vigil', 3, { ...guard, summonDamageActor: 'OWNER' }, { enemy: { defense, resistance: 40 } })
+    const ownerPhysical = physical(542 * (blocked ? 1.5 : 1), Math.max(0, defense - (blocked ? 175 : 0))) * 3
+    const ownerArts = blocked ? 542 * 1.5 * 0.5 * 0.6 * 3 : 0
+    close(valid(owner).perAttack, ownerPhysical + ownerArts)
+    close(owner.rows[0].dps, ownerPhysical + ownerArts)
+  }
+  const virtual = output('char_427_vigil', 3, { wolfCount: 3 }, { virtualMainAttackType: 'ARTS' })
+  close(valid(virtual).perAttack, (371 + 542 * 0.5) * 0.6 * 3)
+  const lowTrust = output('char_427_vigil', 3, { wolfCount: 1 }, { trust: 0 })
+  close(valid(lowTrust).perAttack, 371 - 325 + 462 * 0.5 * 0.6)
+  close(lowTrust.stats.attack, 371)
+})
+
+test('Ling S3は形態の80%とskill100%を加算し、本人参照の0.5秒DOTを別に軽減する', () => {
+  for (const lingRefundStacks of [1, 5]) for (const form of ['BASIC', 'MERGED']) for (const resistance of [0, 40, 100]) {
+    const factor = Math.max(0.05, 1 - resistance / 100), count = form === 'BASIC' ? 2 : 4
+    const ownerAttack = Math.floor(508 * (2 + lingRefundStacks * 0.03) + 1e-9)
+    const tokenAttack = form === 'BASIC' ? 1646 : 2304, interval = form === 'BASIC' ? 1.5 : 2.3
+    const normal = form === 'BASIC' ? physical(tokenAttack, 10000) : tokenAttack * factor
+    const value = output('char_2023_ling', 3, { lingS3Actor: form, lingRefundStacks, actualAttackTargetCount: count }, { enemy: { defense: 10000, resistance } })
+    close(valid(value).perAttack, normal)
+    close(value.effectiveAttack, tokenAttack)
+    close(value.attackInterval, interval)
+    close(value.rows[0].damageOverTimeDps, ownerAttack * 0.2 * 2 * factor)
+    close(value.rows[0].combinedDps, normal / interval + ownerAttack * 0.2 * 2 * factor)
+    close(value.rows[0].allTargetsCombinedDps, value.rows[0].combinedDps! * count)
+    const outside = output('char_2023_ling', 3, { lingS3Actor: form, lingRefundStacks, targetInLingAura: false }, { enemy: { defense: 10000, resistance } })
+    close(valid(outside).damageOverTimeDps, 0)
+    close(outside.rows[0].perAttack, normal)
+  }
+  const aura = output('char_2023_ling', 3, { lingS3Actor: 'AURA', lingRefundStacks: 5, actualAttackTargetCount: 9 })
+  close(valid(aura).perAttack, 1092 * 0.2 * 0.6)
+  close(aura.rows[0].allTargetsPerAttack, 1092 * 0.2 * 0.6 * 9)
+  assert.equal(aura.rows[0].dps, null)
+  const virtual = output('char_2023_ling', 3, { lingS3Actor: 'MERGED', lingRefundStacks: 5 }, { virtualMainAttackType: 'PHYSICAL', enemy: { defense: 10000, resistance: 40 } })
+  close(valid(virtual).perAttack, 2304 * 0.05)
+  close(virtual.rows[0].damageOverTimeDps, 1092 * 0.2 * 2 * 0.6)
+  for (const guard of [{ lingS3Actor: 'MERGED', lingRefundStacks: 0 }, { lingS3Actor: 'MERGED', lingRefundStacks: 1, actualAttackTargetCount: 5 },
+    { lingS3Actor: 'BASIC', actualAttackTargetCount: 3 }]) assert.ok(output('char_2023_ling', 3, guard).unsupportedReasons.length)
+})
+
+test('Radianの鼓舞は本人skill適用後ATKの12%をtoken割合強化の後に1回だけ最終加算する', () => {
+  const tokenAtks = [529, 1496, 1998], ownerAtks = [486, 874, 1215]
+  for (const index of [1, 2, 3]) for (const defense of [0, 500, 10000]) {
+    const result = output('char_4195_radian', index, {}, { enemy: { defense, resistance: 40 } })
+    const expected = index === 3 ? tokenAtks[2] * 0.6 * 1.35 : physical(tokenAtks[index - 1], defense)
+    close(valid(result).perAttack, expected)
+    close(result.effectiveAttack, tokenAtks[index - 1])
+    const owner = output('char_4195_radian', index, index === 3 ? { radianS3Actor: 'OWNER' } : { summonDamageActor: 'OWNER' }, { enemy: { defense, resistance: 40 } })
+    close(valid(owner).perAttack, ownerAtks[index - 1] * 0.6 * (index === 3 ? 1.35 : 1))
+    close(owner.effectiveAttack, ownerAtks[index - 1])
+    assert.equal(owner.actor, undefined)
+  }
+  for (const radianBulletHits of [1, 2, 3]) {
+    const bullets = output('char_4195_radian', 2, { radianBulletHits }, { enemy: { defense: 10000, resistance: 40 } })
+    close(valid(bullets).perAttack, 1496 * 0.05 * radianBulletHits)
+    assert.equal(bullets.rows[0].dps, null)
+  }
+  for (const guard of [{ radianBulletHits: 0 }, { radianBulletHits: 4 }, { radianBulletHits: 1.5 }, { actualAttackTargetCount: 2 }])
+    assert.ok(output('char_4195_radian', 2, guard).unsupportedReasons.length)
+  const cooperative = output('char_4195_radian', 3, { radianS3Actor: 'COOPERATIVE' })
+  close(valid(cooperative).perAttack, 1998 * 0.6 * 1.35)
+  assert.equal(cooperative.rows[0].dps, null)
+  for (const radianS3Actor of ['TOKEN', 'COOPERATIVE', 'OWNER']) {
+    const virtual = output('char_4195_radian', 3, { radianS3Actor }, { virtualMainAttackType: 'PHYSICAL', enemy: { defense: 10000, resistance: 0 } })
+    close(valid(virtual).perAttack, (radianS3Actor === 'OWNER' ? 1215 : 1998) * 0.05)
+  }
+  assert.ok(output('char_4195_radian', 1, { actualAttackTargetCount: 2 }).unsupportedReasons.length)
+})
+
+test('owner参照はlive育成値に同期し、token基礎値や別skill倍率で置き換わらない', () => {
+  const lowTrust = output('char_4195_radian', 2, {}, { trust: 0 })
+  close(lowTrust.effectiveAttack, Math.floor(773 * 1.8 + Math.floor(466 * 1.8) * 0.12))
+  const changedOwner = output('char_4195_radian', 2, {}, {}, skill => {
+    skill.operatorProfile.phases[2].attributesKeyFrames!.at(-1)!.data!.atk = 1000
+  })
+  close(valid(changedOwner).perAttack, Math.floor(773 * 1.8 + Math.floor(1020 * 1.8) * 0.12) - 500)
+  close(changedOwner.stats.attack, 773)
+  const firstLevel = output('char_2023_ling', 3, { lingRefundStacks: 1 }, { operatorLevel: 1 })
+  close(valid(firstLevel).damageOverTimeDps, Math.floor((406 + 35) * 2.03) * 0.2 * 2 * 0.6)
+  close(firstLevel.stats.attack, 732)
+  const maliciousCondition = output('char_427_vigil', 3, { ownerAttackStat: 999999, wolfCount: 1 })
+  close(valid(maliciousCondition).perAttack, 371 - 325 + 542 * 0.5 * 0.6)
+  assert.ok(!maliciousCondition.guard!.inputs.some(input => input.key === 'ownerAttackStat'))
+})
+
+test('owner参照の欠損・不正値・素質/skill/token改変は数値出力を停止する', () => {
+  const id = 'char_4195_radian'
+  for (const mutate of [
+    (skill: SkillRecord) => { skill.operatorProfile.phases[2].attributesKeyFrames!.at(-1)!.data!.atk = NaN },
+    (skill: SkillRecord) => { skill.operatorProfile.phases[2].attributesKeyFrames!.at(-1)!.data!.atk = -1 },
+    (skill: SkillRecord) => { skill.operatorProfile.talents![1].candidates!.find(candidate => candidate.unlockCondition?.phase === 'PHASE_2' && candidate.requiredPotentialRank === 0)!.blackboard!.find(entry => entry.key === 'atk')!.value = 0.15 },
+    (skill: SkillRecord) => { skill.skillLevels[9].blackboard!.find(entry => entry.key === 'atk')!.value = 2 },
+    (skill: SkillRecord) => { skill.operatorProfile.summonProfiles!.token_10052_radian_tower2.profile.phases[2].attributesKeyFrames!.at(-1)!.data!.atk! += 1 },
+  ]) {
+    const value = output(id, 2, {}, {}, mutate)
+    assert.ok(value.unsupportedReasons.length, mutate.toString())
+    assert.deepEqual(value.rows, [])
+  }
+  const skill = record('char_2023_ling', 3), original = output('char_2023_ling', 3)
+  for (const ownerAttackStat of [undefined, NaN, Infinity, -1]) {
+    const value = buildGuardDamageOutput({ operator: skill, skill, phaseIndex: 2, operatorLevel: 90, trust: 100, skillLevelIndex: 9,
+      conditions: { guard: {} }, enemy: { defense: 500, resistance: 40 } }, original.structure!, [], {
+      stats: original.stats, ownerAttackStat, evaluatePassives: evaluateGuardPassives, evaluateTraits: evaluateGuardTraits,
+    })
+    assert.ok(value.unsupportedReasons.length)
+    assert.deepEqual(value.rows, [])
+  }
+})
+
+test('Kalts S3は260%状態の確定1攻撃と死亡1200を分離し、減衰曲線を捏造しない', () => {
+  for (const defense of [0, 500, 10000]) for (const resistance of [0, 100]) {
+    const value = output('char_003_kalts', 3, {}, { enemy: { defense, resistance } })
+    close(valid(value).perAttack, 5047)
+    close(value.effectiveAttack, 5047)
+    assert.equal(value.rows[0].dps, null)
+    assert.equal(value.rows[0].attackComponents[0].damageType, 'TRUE')
+    const death = output('char_003_kalts', 3, { mon3trEvent: 'DEATH', actualAttackTargetCount: 4 }, { enemy: { defense, resistance } })
+    close(valid(death).perAttack, 1200)
+    close(death.rows[0].allTargetsPerAttack, 4800)
+  }
+  const decay = output('char_003_kalts', 3, { mon3trEvent: 'DECAY' })
+  assert.match(decay.unsupportedReasons.join(), /減衰曲線/)
+  assert.deepEqual(decay.rows, [])
+  assert.ok(output('char_003_kalts', 3, { actualAttackTargetCount: 2 }).unsupportedReasons.length)
 })

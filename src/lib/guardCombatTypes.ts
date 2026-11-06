@@ -8,7 +8,7 @@ export type GuardTraitOverride = 'DAMAGE_TYPE' | 'HIT_COUNT' | 'MAX_TARGETS' | '
 /** Values in reviewed recipes remain executable data, rather than parsed descriptions. */
 export type GuardValue = number | { key: string } | { input: string }
   | { op: 'add' | 'mul' | 'min' | 'max'; args: readonly GuardValue[] }
-  | { op: 'if'; input: string; comparison: 'EQ' | 'LT' | 'LTE' | 'GT' | 'GTE'; value: number | string | boolean; yes: GuardValue; no: GuardValue }
+  | { op: 'if'; input: string; comparison: 'EQ' | 'NE' | 'LT' | 'LTE' | 'GT' | 'GTE'; value: number | string | boolean; yes: GuardValue; no: GuardValue }
 
 export interface GuardInput {
   key: string
@@ -48,8 +48,8 @@ export interface GuardDamageAction {
   flatDamage?: GuardValue
   /** Applied after mitigation only if the resolved attribute matches (including virtual attacks). */
   damageScaleWhenType?: { damageType: DamageType; scale: GuardValue }
-  /** ATK is attack-scaled damage; ATK_STAT uses buffed ATK without attack scales or criticals. */
-  basis?: 'ATK' | 'ATK_STAT' | 'TARGET_CURRENT_HP' | 'TARGET_DEFENSE'
+  /** OWNER_ATK_STAT requires a validated actor context; it never inherits the token's ATK bonuses or criticals. */
+  basis?: 'ATK' | 'ATK_STAT' | 'OWNER_ATK_STAT' | 'DEF_STAT' | 'TARGET_CURRENT_HP' | 'TARGET_DEFENSE'
   minimumAttackScale?: GuardValue
   timing?: 'PER_ATTACK' | 'PER_SECOND' | 'ON_DEPLOY'
   /** Added skill damage may have its own type/count while the main attack inherits traits. */
@@ -62,7 +62,10 @@ export interface GuardElementalBuildup {
   damageKind: Extract<CombatDamageKind, { type: 'ELEMENTAL_BUILDUP' }>
   scale: GuardValue
   /** ATK_STAT never receives attack multipliers, mitigation, or critical effects. */
-  basis: { type: 'ATK_STAT' } | { type: 'DEALT_DAMAGE'; actionId: string; damageType?: HpDamageType }
+  basis: { type: 'ATK_STAT' } | { type: 'FIXED' }
+    | { type: 'DEALT_DAMAGE'; actionId: string; damageType?: HpDamageType }
+    /** Actual HP loss of one deterministic hit, without barriers, healing or death replacement. */
+    | { type: 'HP_LOST'; actionId: string; damageType?: HpDamageType; hpBefore: GuardValue }
 }
 
 export type GuardCalculationSection = 'スキル' | '特性' | `素質${number}`
@@ -76,7 +79,7 @@ export interface GuardCalculationIssue {
 export interface GuardStage {
   id: string
   label: string
-  when?: { input: string; comparison: 'EQ' | 'LT' | 'LTE' | 'GT' | 'GTE'; value: number | string | boolean }
+  when?: { input: string; comparison: 'EQ' | 'NE' | 'LT' | 'LTE' | 'GT' | 'GTE'; value: number | string | boolean }
   kind: 'NORMAL' | 'NEXT_ATTACK' | 'SKILL_ACTION'
   /** A separately validated unit supplies base stats and actor-specific passives. */
   actor?: { kind: 'TOKEN'; tokenKey: string }
@@ -86,6 +89,8 @@ export interface GuardStage {
   /** Skill-specific multiplication of a structured trait's selected charge amount. */
   traitAttackRatioScale?: GuardValue
   atk?: GuardValue
+  /** Reviewed skill DEF bonus for DEF_STAT damage; not an ATK bonus. */
+  defenseRatio?: GuardValue
   /** Added after percentage ATK bonuses, before attack-scale multipliers. */
   attackFinalFlat?: GuardValue
   aspd?: GuardValue
@@ -120,6 +125,8 @@ export interface GuardStage {
   resistanceReductionFixed?: GuardValue
   /** Post-mitigation multiplier; distinct from attack scale. */
   damageScale?: GuardValue
+  /** Minimum damage as a 0..1 fraction of ATK before attack multipliers; excludes periodic/stat-based actions. */
+  minimumDamageRatio?: GuardValue
   /** Per-target limit after mitigation. Currently evaluated for one independent hit only. */
   damageCapPerTarget?: GuardValue
   /** Effects that cannot be inferred from text/data block numerical output explicitly. */
@@ -138,6 +145,8 @@ export interface GuardSkillRecipe {
     when?: NonNullable<GuardStage['when']>
     condition: NonNullable<GuardStage['when']>
     reason: string
+    /** A reviewed scope restriction, as opposed to an invalid combination of inputs. */
+    supportedCondition?: string
   }[]
   stages: readonly GuardStage[]
   notes?: readonly string[]

@@ -64,7 +64,7 @@ const INPUTS: Readonly<Record<string, readonly GuardInput[]>> = {
     numberInput('defenseDebuffStacks', '防御力低下の重複数', 0, 8)],
   char_4082_qiubai: [SLOW, { key: 'attackDistanceType', label: '攻撃距離', kind: 'select', defaultValue: 'MELEE',
     options: [{ value: 'MELEE', label: '近接' }, { value: 'RANGED', label: '遠距離' }] }],
-  char_4182_oblvns: [numberInput('noteCount', '戦場中の音符数', 0, 10), booleanInput('selfInTalentRange', '自身が攻撃速度上昇の対象')],
+  char_4182_oblvns: [{ ...numberInput('noteCount', '命中時の戦場中の音符数（この音符を含む）', 0, 10), defaultValue: 1 }, booleanInput('selfInTalentRange', '自身が攻撃速度上昇の対象')],
   char_4088_hodrer: [STUN],
   char_4145_ulpia: [numberInput('killStacks', '育まれし血脈の重複数', 0, 9)],
   char_4058_pepe: [],

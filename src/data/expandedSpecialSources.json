@@ -18292,5 +18292,4359 @@
         }
       }
     ]
+  },
+  {
+    "operatorId": "char_1041_angel2",
+    "operatorName": "新約エクシア",
+    "profession": "SPECIAL",
+    "rarity": 6,
+    "subProfessionId": "geek",
+    "phaseIndex": 2,
+    "skillLevelIndex": 9,
+    "profile": {
+      "affiliation": "ペンギン急便",
+      "affiliationIds": {
+        "nationId": "lungmen",
+        "groupId": "penguin",
+        "teamId": null
+      },
+      "phases": [
+        {
+          "characterPrefabKey": "char_1041_angel2",
+          "rangeId": "3-1",
+          "maxLevel": 50,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 914,
+                "atk": 249,
+                "def": 58,
+                "magicResistance": 10,
+                "cost": 11,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.3,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 50,
+              "data": {
+                "maxHp": 1307,
+                "atk": 416,
+                "def": 90,
+                "magicResistance": 10,
+                "cost": 11,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.3,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "char_1041_angel2",
+          "rangeId": "3-3",
+          "maxLevel": 80,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1307,
+                "atk": 416,
+                "def": 90,
+                "magicResistance": 10,
+                "cost": 13,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.3,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 80,
+              "data": {
+                "maxHp": 1720,
+                "atk": 587,
+                "def": 120,
+                "magicResistance": 10,
+                "cost": 13,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.3,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3281",
+              "count": 5,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30052",
+              "count": 7,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30062",
+              "count": 3,
+              "type": "MATERIAL"
+            }
+          ]
+        },
+        {
+          "characterPrefabKey": "char_1041_angel2",
+          "rangeId": "3-3",
+          "maxLevel": 90,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1720,
+                "atk": 587,
+                "def": 120,
+                "magicResistance": 10,
+                "cost": 13,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.3,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 90,
+              "data": {
+                "maxHp": 2150,
+                "atk": 708,
+                "def": 150,
+                "magicResistance": 10,
+                "cost": 13,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.3,
+                "respawnTime": 70,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3283",
+              "count": 4,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30165",
+              "count": 4,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30104",
+              "count": 2,
+              "type": "MATERIAL"
+            }
+          ]
+        }
+      ],
+      "favorKeyFrames": [
+        {
+          "level": 0,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        },
+        {
+          "level": 50,
+          "data": {
+            "maxHp": 200,
+            "atk": 70,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        }
+      ],
+      "trait": {
+        "candidates": [
+          {
+            "unlockCondition": {
+              "phase": "PHASE_0",
+              "level": 1
+            },
+            "requiredPotentialRank": 0,
+            "blackboard": [
+              {
+                "key": "hp_ratio",
+                "value": 0.01,
+                "valueStr": null
+              }
+            ],
+            "overrideDescripton": null,
+            "prefabKey": null,
+            "rangeId": null
+          }
+        ]
+      },
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_0",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "火力放送局",
+              "description": "配置中、味方オペレーターの弾薬が消費されるたびに自身のHPが最大値の6%回復し、20%の確率で対象オペレーターの攻撃範囲内の敵に対して、自身の攻撃力の105%の物理範囲ダメージを与える爆撃を1回行う",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "hp_ratio",
+                  "value": 0.06,
+                  "valueStr": null
+                },
+                {
+                  "key": "aoe_atk_scale",
+                  "value": 1.05,
+                  "valueStr": null
+                },
+                {
+                  "key": "prob",
+                  "value": 0.2,
+                  "valueStr": null
+                },
+                {
+                  "key": "damage_scale",
+                  "value": 1.05,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_0",
+                "level": 1
+              },
+              "requiredPotentialRank": 4,
+              "prefabKey": "1",
+              "name": "火力放送局",
+              "description": "配置中、味方オペレーターの弾薬が消費されるたびに自身のHPが最大値の6%回復し、20%の確率で対象オペレーターの攻撃範囲内の敵に対して、自身の攻撃力の120%<@ba.talpu>（+15%）</>の物理範囲ダメージを与える爆撃を1回行う",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "hp_ratio",
+                  "value": 0.06,
+                  "valueStr": null
+                },
+                {
+                  "key": "aoe_atk_scale",
+                  "value": 1.2,
+                  "valueStr": null
+                },
+                {
+                  "key": "prob",
+                  "value": 0.2,
+                  "valueStr": null
+                },
+                {
+                  "key": "damage_scale",
+                  "value": 1.2,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "火力放送局",
+              "description": "配置中、味方オペレーターの弾薬が消費されるたびに自身のHPが最大値の6%回復し、25%の確率で対象オペレーターの攻撃範囲内の敵に対して、自身の攻撃力の150%の物理範囲ダメージを与える爆撃を1回行う",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "hp_ratio",
+                  "value": 0.06,
+                  "valueStr": null
+                },
+                {
+                  "key": "aoe_atk_scale",
+                  "value": 1.5,
+                  "valueStr": null
+                },
+                {
+                  "key": "prob",
+                  "value": 0.25,
+                  "valueStr": null
+                },
+                {
+                  "key": "damage_scale",
+                  "value": 1.5,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 4,
+              "prefabKey": "1",
+              "name": "火力放送局",
+              "description": "配置中、味方オペレーターの弾薬が消費されるたびに自身のHPが最大値の6%回復し、25%の確率で対象オペレーターの攻撃範囲内の敵に対して、自身の攻撃力の165%<@ba.talpu>（+15%）</>の物理範囲ダメージを与える爆撃を1回行う",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "hp_ratio",
+                  "value": 0.06,
+                  "valueStr": null
+                },
+                {
+                  "key": "aoe_atk_scale",
+                  "value": 1.65,
+                  "valueStr": null
+                },
+                {
+                  "key": "prob",
+                  "value": 0.25,
+                  "valueStr": null
+                },
+                {
+                  "key": "damage_scale",
+                  "value": 1.65,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        },
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "2",
+              "name": "銃弾協約",
+              "description": "配置中、弾薬消費系スキルを持つオペレーターの攻撃力+9%。味方【ラテラーノ】に対する効果値は倍増",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "atk",
+                  "value": 0.09,
+                  "valueStr": null
+                },
+                {
+                  "key": "mult",
+                  "value": 2,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 2,
+              "prefabKey": "2",
+              "name": "銃弾協約",
+              "description": "配置中、弾薬消費系スキルを持つオペレーターの攻撃力+13%<@ba.talpu>（+4%）</>。味方【ラテラーノ】に対する効果値は倍増",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "atk",
+                  "value": 0.13,
+                  "valueStr": null
+                },
+                {
+                  "key": "mult",
+                  "value": 2,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        },
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_0",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "4",
+              "name": null,
+              "description": null,
+              "rangeId": null,
+              "blackboard": {},
+              "tokenKey": null,
+              "isHideTalent": true
+            }
+          ]
+        },
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_0",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "3",
+              "name": null,
+              "description": null,
+              "rangeId": null,
+              "blackboard": {},
+              "tokenKey": null,
+              "isHideTalent": true
+            }
+          ]
+        }
+      ],
+      "potentialRanks": [
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "CUSTOM",
+          "description": "第二素質強化",
+          "buff": null,
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "攻撃力+30",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "ATK",
+                  "formulaItem": "ADDITION",
+                  "value": 30,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "CUSTOM",
+          "description": "第一素質強化",
+          "buff": null,
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        }
+      ],
+      "modules": [
+        {
+          "uniEquipId": "uniequip_002_angel2",
+          "uniEquipName": "聖都歓迎キット",
+          "uniEquipIcon": "uniequip_002_angel2",
+          "uniEquipDesc": "流浪の裁判官を自称するサンクタはフードを深く被っており、その顔はよく見えなかった。彼女は小さな声で讃美歌を口ずさみ、そばの巡礼者に聞かせてやっていた。巡礼者はあまりにそれに聞き入っていたため、流浪の裁判官が無意識に、この讃美歌とは違う激しいリズムで、握った輸送車のハンドルを指で叩いていることには気づかなかった。\n讃美歌が終わると、巡礼者はすぐそばにある豪華な模様の筐体に目を向け――これは故郷の古い伝説に語られていた聖遺物だろう、と確信した。たった今、この聖遺物が彼に一筋の希望を見せたからだ。巡礼者は、手についた拭い去れない塩の跡をこすると、聖遺物の側面にあるレバーを引き、期待を胸に聖なる導きを待った。\n彼は、本来なら自分は永遠に導きを得られないものとばかり思っていた。二ヶ月前、リーベリである彼に突然サンクタの光輪が現れたことで、同郷の人はそれを奇跡と見なし、裁判所の宣教師でさえも驚いて、皆彼をラテラーノへの巡礼の旅に送り出してくれた。しかし、彼は道半ばで、ラテラーノの「主」はすでに去り、サンクタでさえも今は導きを得られないらしいという知らせを受けた。その後、聖遺物を載せたその輸送車が現れた時には、彼はすでにラテラーノへと向かう道を離れていたのだが、凶報を携えて帰郷するのも忍びなく、荒野であてどなくその偽りの巡礼を続けるしかなかったのである。\n車に座った彼は、見入るように筐体を凝視しながら、聖遺物が本当に人を導くことができるのかを確かめようと、繰り返し問いを投げかけてみた。そして、不安になるほどの沈黙の後、彼は肯定の回答を得た。\nラテラーノの流浪の裁判官を名乗るサンクタは、「主」が去りし後、「主」の代わりに導きを与えているという。巡礼者が彼女の指示に従って敬虔な動作で聖遺物を操作すると、彼女が前へと進み出て、聖遺物に現れた三つの模様を繰り返し見つめた。しばらくして、彼女は主の導きを伝えた。\n「『主』曰く、汝は本日ミカエレオン区の聖像すべての手にアイスクリームを置くべし、だってさ。」\n巡礼者はこれまでの道のりで想像してきた数多の回答を思い起こしたが、これほど奇妙なものが返ってくると考えたことはなかった。\n「そ、そんな、きっと何かの間違いでしょう。『主』のお導きがそんなものであるはずが……せめて苦行や労働を課すなり、ラテラーノから物資を持ち帰れとお命じになるなり……」\n流浪の裁判官は勢いよく顔を上げると、巡礼者に向かって猛烈にうなずいた。\n「おお～！キミ、合格だよ！自分に何ができるか、ちゃんとわかってるじゃん！」\n「……えっ？」\n「こほん！つまり、『主』が去りし今となっては、こういう形で導きを与えるしかないってことだよ。主の信徒は、デタラメな言葉の中から、自分で悟って真の導きを得なければならない……そしてキミは、すでに自分がすべきことを悟ってるってわけ。あたしは物資の仕入れ方も教えられるし、物資輸送に使う物流会社も紹介できるよ！」\n巡礼者は聖遺物を、そして流浪の裁判官を見やり、それからバックミラーに映る自分を見て、肩の荷が下りたかのような顔をした。\n「……ご親切に感謝します。ですが、大丈夫です。自らそれを探し求めるのも苦行の一環だと思いますので。ありがとうございます、流浪の裁判官様。」\n巡礼者は、流浪の裁判官が車で遠くへ去っていくのを見送った。舞い上がる砂塵の中で、彼は流浪の裁判官が車の屋根から身を乗り出すのを見た。彼女がフードを取ると、炎のように赤い髪が風になびく。しばらくして、彼女が荒野に向けて高らかに歌う歌が、ようやく巡礼者の耳に届いた。その歌は、讃美歌とは違う激しいリズムをしていた。\n――あの時、古道具屋でこの小型スロットマシンを手に入れておいてよかった。エクシアはそう思った。",
+          "typeIcon": "gee-x",
+          "typeName1": "GEE",
+          "typeName2": "X",
+          "equipShiningColor": "grey",
+          "showEvolvePhase": "PHASE_2",
+          "unlockEvolvePhase": "PHASE_2",
+          "charId": "char_1041_angel2",
+          "tmplId": null,
+          "showLevel": 1,
+          "unlockLevel": 60,
+          "missionList": [
+            "uniequip_002_angel2_1",
+            "uniequip_002_angel2_2"
+          ],
+          "unlockFavors": {
+            "1": 0,
+            "2": 2732,
+            "3": 10070
+          },
+          "itemCost": {
+            "1": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30115",
+                "count": 2,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 80000,
+                "type": "GOLD"
+              }
+            ],
+            "2": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_1",
+                "count": 60,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30135",
+                "count": 3,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 100000,
+                "type": "GOLD"
+              }
+            ],
+            "3": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_2",
+                "count": 20,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30155",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 120000,
+                "type": "GOLD"
+              }
+            ]
+          },
+          "type": "ADVANCED",
+          "uniEquipGetTime": 1760407200,
+          "uniEquipShowEnd": 1763017200,
+          "charEquipOrder": 1,
+          "hasUnlockMission": true,
+          "isSpecialEquip": false,
+          "specialEquipDesc": null,
+          "specialEquipColor": null,
+          "charColor": "#b72a3b",
+          "phases": [
+            {
+              "equipLevel": 1,
+              "parts": [
+                {
+                  "resKey": "angel2_equip_1_1_p1",
+                  "target": "TRAIT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": "HPが最大値の80%以上の場合、SP自然回復速度+0.25sp/秒",
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "hp_ratio",
+                            "value": 0.01,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "angel2_tr[e].hp_ratio",
+                            "value": 0.8,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "angel2_tr[e].sp_recovery_per_sec",
+                            "value": 0.25,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": null,
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 100,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 50,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 2,
+              "parts": [
+                {
+                  "resKey": "angel2_equip_1_2_p1",
+                  "target": "TRAIT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": "HPが最大値の80%以上の場合、SP自然回復速度+0.25sp/秒",
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "hp_ratio",
+                            "value": 0.01,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "angel2_tr[e].hp_ratio",
+                            "value": 0.8,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "angel2_tr[e].sp_recovery_per_sec",
+                            "value": 0.25,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": null,
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": null,
+                  "target": "TALENT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "配置中、味方オペレーターの弾薬が消費されるたび自身のHPが6%回復し、30%の確率で対象オペレーターの攻撃範囲内の敵に対して、自身の攻撃力の165%の物理範囲ダメージを与える爆撃を1回行う",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "1",
+                        "name": "火力放送局",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "hp_ratio",
+                            "value": 0.06,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "prob",
+                            "value": 0.3,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "aoe_atk_scale",
+                            "value": 1.65,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "damage_scale",
+                            "value": 1.65,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      },
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "配置中、味方オペレーターの弾薬が消費されるたび自身のHPが6%回復し、30%の確率で対象オペレーターの攻撃範囲内の敵に対して、自身の攻撃力の180%<@ba.talpu>（+15%）</>の物理範囲ダメージを与える爆撃を1回行う",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 4,
+                        "prefabKey": "1",
+                        "name": "火力放送局",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "hp_ratio",
+                            "value": 0.06,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "prob",
+                            "value": 0.3,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "aoe_atk_scale",
+                            "value": 1.8,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "damage_scale",
+                            "value": 1.8,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 160,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 58,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 3,
+              "parts": [
+                {
+                  "resKey": "angel2_equip_1_3_p1",
+                  "target": "TRAIT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": "HPが最大値の80%以上の場合、SP自然回復速度+0.25sp/秒",
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "hp_ratio",
+                            "value": 0.01,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "angel2_tr[e].hp_ratio",
+                            "value": 0.8,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "angel2_tr[e].sp_recovery_per_sec",
+                            "value": 0.25,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": null,
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": null,
+                  "target": "TALENT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "配置中、味方オペレーターの弾薬が消費されるたび自身のHPが6%回復し、35%の確率で対象オペレーターの攻撃範囲内の敵に対して、自身の攻撃力の185%の物理範囲ダメージを与える爆撃を1回行う",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "1",
+                        "name": "火力放送局",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "hp_ratio",
+                            "value": 0.06,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "prob",
+                            "value": 0.35,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "aoe_atk_scale",
+                            "value": 1.85,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "damage_scale",
+                            "value": 1.85,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      },
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "配置中、味方オペレーターの弾薬が消費されるたび自身のHPが6%回復し、35%の確率で対象オペレーターの攻撃範囲内の敵に対して、自身の攻撃力の200%<@ba.talpu>（+15%）</>の物理範囲ダメージを与える爆撃を1回行う",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 4,
+                        "prefabKey": "1",
+                        "name": "火力放送局",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "hp_ratio",
+                            "value": 0.06,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "prob",
+                            "value": 0.35,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "aoe_atk_scale",
+                            "value": 2,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "damage_scale",
+                            "value": 2,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 210,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 65,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            }
+          ]
+        }
+      ],
+      "traitDescription": "HPが徐々に減少",
+      "subProfessionTraitDescription": "",
+      "summonProfiles": {
+        "token_10056_angel2_target": {
+          "tokenKey": "token_10056_angel2_target",
+          "name": "配達先座標",
+          "profession": "TOKEN",
+          "subProfessionId": "notchar1",
+          "profile": {
+            "phases": [
+              {
+                "characterPrefabKey": "token_10056_angel2_target",
+                "rangeId": "0-1",
+                "maxLevel": 50,
+                "attributesKeyFrames": [
+                  {
+                    "level": 1,
+                    "data": {
+                      "maxHp": 1386,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 0,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 5,
+                      "respawnTime": 70,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  },
+                  {
+                    "level": 50,
+                    "data": {
+                      "maxHp": 1848,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 0,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 5,
+                      "respawnTime": 70,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  }
+                ],
+                "evolveCost": null
+              },
+              {
+                "characterPrefabKey": "token_10056_angel2_target",
+                "rangeId": "0-1",
+                "maxLevel": 80,
+                "attributesKeyFrames": [
+                  {
+                    "level": 1,
+                    "data": {
+                      "maxHp": 1848,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 0,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 5,
+                      "respawnTime": 70,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  },
+                  {
+                    "level": 80,
+                    "data": {
+                      "maxHp": 2370,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 0,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 5,
+                      "respawnTime": 70,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  }
+                ],
+                "evolveCost": null
+              },
+              {
+                "characterPrefabKey": "token_10056_angel2_target",
+                "rangeId": "0-1",
+                "maxLevel": 90,
+                "attributesKeyFrames": [
+                  {
+                    "level": 1,
+                    "data": {
+                      "maxHp": 2370,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 0,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 5,
+                      "respawnTime": 70,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  },
+                  {
+                    "level": 90,
+                    "data": {
+                      "maxHp": 3000,
+                      "atk": 0,
+                      "def": 0,
+                      "magicResistance": 0,
+                      "cost": 0,
+                      "blockCnt": 0,
+                      "moveSpeed": 1,
+                      "attackSpeed": 100,
+                      "baseAttackTime": 5,
+                      "respawnTime": 70,
+                      "hpRecoveryPerSec": 0,
+                      "spRecoveryPerSec": 1,
+                      "maxDeployCount": 1,
+                      "maxDeckStackCnt": 0,
+                      "tauntLevel": 0,
+                      "massLevel": 0,
+                      "baseForceLevel": 0,
+                      "blockVolume": 0,
+                      "stunImmune": false,
+                      "silenceImmune": false,
+                      "sleepImmune": false,
+                      "frozenImmune": false,
+                      "levitateImmune": false,
+                      "disarmedCombatImmune": false,
+                      "fearedImmune": false,
+                      "palsyImmune": false,
+                      "attractImmune": false,
+                      "teleportImmune": false,
+                      "groundBoundImmune": false
+                    }
+                  }
+                ],
+                "evolveCost": null
+              }
+            ],
+            "favorKeyFrames": [
+              {
+                "level": 0,
+                "data": {
+                  "maxHp": 0,
+                  "atk": 0,
+                  "def": 0,
+                  "magicResistance": 0,
+                  "cost": 0,
+                  "blockCnt": 0,
+                  "moveSpeed": 0,
+                  "attackSpeed": 0,
+                  "baseAttackTime": 0,
+                  "respawnTime": 0,
+                  "hpRecoveryPerSec": 0,
+                  "spRecoveryPerSec": 0,
+                  "maxDeployCount": 0,
+                  "maxDeckStackCnt": 0,
+                  "tauntLevel": 0,
+                  "massLevel": 0,
+                  "baseForceLevel": 0,
+                  "blockVolume": 0,
+                  "stunImmune": false,
+                  "silenceImmune": false,
+                  "sleepImmune": false,
+                  "frozenImmune": false,
+                  "levitateImmune": false,
+                  "disarmedCombatImmune": false,
+                  "fearedImmune": false,
+                  "palsyImmune": false,
+                  "attractImmune": false,
+                  "teleportImmune": false,
+                  "groundBoundImmune": false
+                }
+              },
+              {
+                "level": 50,
+                "data": {
+                  "maxHp": 0,
+                  "atk": 0,
+                  "def": 0,
+                  "magicResistance": 0,
+                  "cost": 0,
+                  "blockCnt": 0,
+                  "moveSpeed": 0,
+                  "attackSpeed": 0,
+                  "baseAttackTime": 0,
+                  "respawnTime": 0,
+                  "hpRecoveryPerSec": 0,
+                  "spRecoveryPerSec": 0,
+                  "maxDeployCount": 0,
+                  "maxDeckStackCnt": 0,
+                  "tauntLevel": 0,
+                  "massLevel": 0,
+                  "baseForceLevel": 0,
+                  "blockVolume": 0,
+                  "stunImmune": false,
+                  "silenceImmune": false,
+                  "sleepImmune": false,
+                  "frozenImmune": false,
+                  "levitateImmune": false,
+                  "disarmedCombatImmune": false,
+                  "fearedImmune": false,
+                  "palsyImmune": false,
+                  "attractImmune": false,
+                  "teleportImmune": false,
+                  "groundBoundImmune": false
+                }
+              }
+            ],
+            "trait": null,
+            "talents": [],
+            "potentialRanks": [],
+            "modules": [],
+            "traitDescription": "攻撃されない",
+            "subProfessionTraitDescription": ""
+          },
+          "skills": [
+            {
+              "skillId": "sktok_angel2_target_1",
+              "levels": [
+                {
+                  "name": "スカイスイーパー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_1",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "スカイスイーパー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_1",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "スカイスイーパー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_1",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "スカイスイーパー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_1",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "スカイスイーパー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_1",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "スカイスイーパー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_1",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "スカイスイーパー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_1",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "スカイスイーパー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_1",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "スカイスイーパー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_1",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "スカイスイーパー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_1",
+                  "duration": -1,
+                  "blackboard": {}
+                }
+              ]
+            },
+            {
+              "skillId": "sktok_angel2_target_2",
+              "levels": [
+                {
+                  "name": "トリガーハッピー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_2",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "トリガーハッピー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_2",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "トリガーハッピー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_2",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "トリガーハッピー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_2",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "トリガーハッピー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_2",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "トリガーハッピー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_2",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "トリガーハッピー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_2",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "トリガーハッピー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_2",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "トリガーハッピー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_2",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "トリガーハッピー",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_2",
+                  "duration": -1,
+                  "blackboard": {}
+                }
+              ]
+            },
+            {
+              "skillId": "sktok_angel2_target_3",
+              "levels": [
+                {
+                  "name": "絶対に、確実に！",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_3",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "絶対に、確実に！",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_3",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "絶対に、確実に！",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_3",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "絶対に、確実に！",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_3",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "絶対に、確実に！",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_3",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "絶対に、確実に！",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_3",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "絶対に、確実に！",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_3",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "絶対に、確実に！",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_3",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "絶対に、確実に！",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_3",
+                  "duration": -1,
+                  "blackboard": {}
+                },
+                {
+                  "name": "絶対に、確実に！",
+                  "rangeId": null,
+                  "description": null,
+                  "skillType": "PASSIVE",
+                  "durationType": "NONE",
+                  "spData": {
+                    "spType": 8,
+                    "levelUpCost": null,
+                    "maxChargeTime": 1,
+                    "spCost": 0,
+                    "initSp": 0,
+                    "increment": 1
+                  },
+                  "prefabId": "sktok_angel2_target_3",
+                  "duration": -1,
+                  "blackboard": {}
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "summonSkillTokenKeys": [
+        null,
+        null,
+        "token_10056_angel2_target"
+      ]
+    },
+    "skills": [
+      {
+        "skillIndex": 1,
+        "skillId": "skchr_angel2_1",
+        "raw": {
+          "name": "スカイスイーパー",
+          "rangeId": null,
+          "description": "通常攻撃時、敵に攻撃力の<@ba.vup>{attack@atk_scale:0%}</>の物理ダメージを与える。飛行ユニットを優先して攻撃する。手動でスキルを停止すると残りの弾薬全てを攻撃範囲内の敵にランダムで発射する\n<@ba.rem>合計{attack@trigger_time}発の弾薬を撃ち切るとスキルが終了（手動でスキルを停止可能）</>",
+          "skillType": "AUTO",
+          "durationType": "AMMO",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 12,
+            "initSp": 8,
+            "increment": 1
+          },
+          "prefabId": "skchr_angel2_1",
+          "duration": -1,
+          "blackboard": [
+            {
+              "key": "attack@atk_scale",
+              "value": 2.5,
+              "valueStr": null
+            },
+            {
+              "key": "attack@trigger_time",
+              "value": 8,
+              "valueStr": null
+            },
+            {
+              "key": "range_id",
+              "value": 0,
+              "valueStr": "3-3"
+            }
+          ]
+        }
+      },
+      {
+        "skillIndex": 2,
+        "skillId": "skchr_angel2_2",
+        "raw": {
+          "name": "トリガーハッピー",
+          "rangeId": null,
+          "description": "攻撃範囲内の味方オペレーター<@ba.vup>1</>名の攻撃速度を即座に<@ba.vup>{steal}</><$ba.steal>奪取</>し（スキル終了、または新約エクシアが退場まで効果持続）、自身と対象に最大HPの<@ba.vup>{shield_max_hp_ratio:0%}</>の<$ba.barrier>バリア</>を付与する（<$ba.barrier>バリア</>値は徐々に減少する）。攻撃間隔が短縮し、通常攻撃時、敵に攻撃力の<@ba.vup>{attack@atk_scale:0%}</>の物理ダメージを与える\n<@ba.rem>合計{attack@trigger_time}発の弾薬を撃ち切るとスキルが終了（手動でスキルを停止可能）、攻撃速度を<$ba.steal>奪取</>できた場合追加で弾薬を5発獲得する</>",
+          "skillType": "MANUAL",
+          "durationType": "AMMO",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 30,
+            "initSp": 25,
+            "increment": 1
+          },
+          "prefabId": "skchr_angel2_2",
+          "duration": -1,
+          "blackboard": [
+            {
+              "key": "attack@atk_scale",
+              "value": 3,
+              "valueStr": null
+            },
+            {
+              "key": "attack@trigger_time",
+              "value": 35,
+              "valueStr": null
+            },
+            {
+              "key": "addtional_ammo_each",
+              "value": 5,
+              "valueStr": null
+            },
+            {
+              "key": "max_target",
+              "value": 1,
+              "valueStr": null
+            },
+            {
+              "key": "recover_each_cnt",
+              "value": 5,
+              "valueStr": null
+            },
+            {
+              "key": "shield_max_hp_ratio",
+              "value": 2.5,
+              "valueStr": null
+            },
+            {
+              "key": "shield_max_duration",
+              "value": 30,
+              "valueStr": null
+            },
+            {
+              "key": "steal",
+              "value": 70,
+              "valueStr": null
+            },
+            {
+              "key": "base_attack_time",
+              "value": -0.7,
+              "valueStr": null
+            },
+            {
+              "key": "steal_max",
+              "value": 999,
+              "valueStr": null
+            }
+          ]
+        }
+      },
+      {
+        "skillIndex": 3,
+        "skillId": "skchr_angel2_3",
+        "raw": {
+          "name": "絶対に、確実に！",
+          "rangeId": null,
+          "description": "攻撃力<@ba.vup>+{atk:0%}</>、通常攻撃が攻撃力の<@ba.vup>{attack@atk_scale:0%}</>での<@ba.vup>5</>回連続攻撃になる。「配達先座標」が配置されている場合、その場所に攻撃力の<@ba.vup>{attack@cannon_atk_scale:0%}</>の物理範囲ダメージを与え、再配置時間が最も長い近距離オペレーター1名をその場所に配置し、当該オペレーターのSPを<@ba.vup>{attack@sp}</>回復する\n<@ba.rem>配置後「配達先座標」を獲得。攻撃するたびに弾薬が5発消費され、合計{attack@trigger_time}発の弾薬を撃ち切るとスキルが終了（手動でスキルを停止可能）</>",
+          "skillType": "MANUAL",
+          "durationType": "AMMO",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 35,
+            "initSp": 30,
+            "increment": 1
+          },
+          "prefabId": "skchr_angel2_3",
+          "duration": -1,
+          "blackboard": [
+            {
+              "key": "attack@cannon_atk_scale",
+              "value": 2.5,
+              "valueStr": null
+            },
+            {
+              "key": "attack@trigger_time",
+              "value": 50,
+              "valueStr": null
+            },
+            {
+              "key": "max_deploy_character",
+              "value": 99,
+              "valueStr": null
+            },
+            {
+              "key": "attack@atk_scale",
+              "value": 1.6,
+              "valueStr": null
+            },
+            {
+              "key": "attack@sp",
+              "value": 6,
+              "valueStr": null
+            },
+            {
+              "key": "atk",
+              "value": 0.3,
+              "valueStr": null
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "operatorId": "char_1047_halo2",
+    "operatorName": "溯光アステジーニ",
+    "profession": "SUPPORT",
+    "rarity": 6,
+    "subProfessionId": "slower",
+    "phaseIndex": 2,
+    "skillLevelIndex": 9,
+    "profile": {
+      "affiliation": "ライン生命",
+      "affiliationIds": {
+        "nationId": "columbia",
+        "groupId": "rhine",
+        "teamId": null
+      },
+      "phases": [
+        {
+          "characterPrefabKey": "char_1047_halo2",
+          "rangeId": "y-2",
+          "maxLevel": 50,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 646,
+                "atk": 225,
+                "def": 56,
+                "magicResistance": 15,
+                "cost": 16,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.9,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 50,
+              "data": {
+                "maxHp": 885,
+                "atk": 331,
+                "def": 81,
+                "magicResistance": 15,
+                "cost": 16,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.9,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "char_1047_halo2",
+          "rangeId": "y-2",
+          "maxLevel": 80,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 885,
+                "atk": 331,
+                "def": 81,
+                "magicResistance": 20,
+                "cost": 18,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.9,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 80,
+              "data": {
+                "maxHp": 1136,
+                "atk": 442,
+                "def": 105,
+                "magicResistance": 20,
+                "cost": 18,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.9,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3271",
+              "count": 5,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30042",
+              "count": 8,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30012",
+              "count": 5,
+              "type": "MATERIAL"
+            }
+          ]
+        },
+        {
+          "characterPrefabKey": "char_1047_halo2",
+          "rangeId": "y-2",
+          "maxLevel": 90,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1136,
+                "atk": 442,
+                "def": 105,
+                "magicResistance": 25,
+                "cost": 18,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.9,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 90,
+              "data": {
+                "maxHp": 1420,
+                "atk": 533,
+                "def": 125,
+                "magicResistance": 25,
+                "cost": 18,
+                "blockCnt": 1,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.9,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3273",
+              "count": 4,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30115",
+              "count": 4,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "31064",
+              "count": 6,
+              "type": "MATERIAL"
+            }
+          ]
+        }
+      ],
+      "favorKeyFrames": [
+        {
+          "level": 0,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        },
+        {
+          "level": 50,
+          "data": {
+            "maxHp": 0,
+            "atk": 75,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        }
+      ],
+      "trait": {
+        "candidates": [
+          {
+            "unlockCondition": {
+              "phase": "PHASE_0",
+              "level": 1
+            },
+            "requiredPotentialRank": 0,
+            "blackboard": [
+              {
+                "key": "sluggish",
+                "value": 0.8,
+                "valueStr": null
+              }
+            ],
+            "overrideDescripton": null,
+            "prefabKey": null,
+            "rangeId": null
+          }
+        ]
+      },
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "2",
+              "name": "データモデリング",
+              "description": "敵を<$ba.sluggish>足止め</>するたび、自身の攻撃速度+1（最大12回まで重複可能）",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack_speed",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "max_stack_cnt",
+                  "value": 12,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "2",
+              "name": "データモデリング",
+              "description": "敵を<$ba.sluggish>足止め</>するたび、自身の攻撃速度+1（最大18回まで重複可能）",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "attack_speed",
+                  "value": 1,
+                  "valueStr": null
+                },
+                {
+                  "key": "max_stack_cnt",
+                  "value": 18,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        },
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "エネルギー解析",
+              "description": "攻撃範囲内の敵に10%の<$ba.fragile>脆弱</>状態を付与。溯光アステジーニの攻撃範囲内に7秒以上滞在した敵に対しては、付与する<$ba.fragile>脆弱</>の効果が14%になる",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "halo2_t_1[weak].damage_scale",
+                  "value": 1.1,
+                  "valueStr": null
+                },
+                {
+                  "key": "halo2_t_1[weak].interval",
+                  "value": 7,
+                  "valueStr": null
+                },
+                {
+                  "key": "halo2_t_1[weak].damage_scale_add",
+                  "value": 0.04,
+                  "valueStr": null
+                },
+                {
+                  "key": "halo2_t_1[weak].damage_scale_max",
+                  "value": 1.14,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 4,
+              "prefabKey": "1",
+              "name": "エネルギー解析",
+              "description": "攻撃範囲内の敵に12%<@ba.talpu>（+2%）</>の<$ba.fragile>脆弱</>状態を付与。溯光アステジーニの攻撃範囲内に7秒以上滞在した敵に対しては、付与する<$ba.fragile>脆弱</>の効果が16%<@ba.talpu>（+2%）</>になる",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "halo2_t_1[weak].damage_scale",
+                  "value": 1.12,
+                  "valueStr": null
+                },
+                {
+                  "key": "halo2_t_1[weak].interval",
+                  "value": 7,
+                  "valueStr": null
+                },
+                {
+                  "key": "halo2_t_1[weak].damage_scale_add",
+                  "value": 0.04,
+                  "valueStr": null
+                },
+                {
+                  "key": "halo2_t_1[weak].damage_scale_max",
+                  "value": 1.16,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        }
+      ],
+      "potentialRanks": [
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "再配置時間-10秒",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "RESPAWN_TIME",
+                  "formulaItem": "ADDITION",
+                  "value": -10,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "CUSTOM",
+          "description": "第二素質強化",
+          "buff": null,
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        }
+      ],
+      "modules": [
+        {
+          "uniEquipId": "uniequip_002_halo2",
+          "uniEquipName": "探索者のコレクション",
+          "uniEquipIcon": "uniequip_002_halo2",
+          "uniEquipDesc": "冒険の終わりは、決して事務作業の終わりを意味せず、むしろその始まりと言える。\nアステジーニが道中書いたメモや探査記録をデスクの傍らに積み上げて、「無断欠勤に関する始末書」を作成し始めた時、ミュルジスが新たな知らせを持ってきた。\n「エレナ、観測所の入り口に子供たちが何人か来ているんだけど、あなたに渡したいものがあるんですって。」\n「わかりました、すぐ行きます。」\n村人が訪ねてくるのは珍しいことではなかった。というのは、ライン生命はイェラグに到着してすぐ、調査員で組織したチームを複数、地理調査に派遣していたからだ。ゆえに周辺村落が最初の接触先となるのは当然のことであり、彼らと交流を重ねる中で、好奇心の中に漠然とした友情と好意が芽生え始めていた。だが、それはまだあまりに脆く、さらには、堅固なものとなる前にあの天災が襲ってきてしまった。\nその時、人々の間には、対立、恐慌、イェラグの民かそうでないかを重視する考えが広まった。そして混乱の中で、漠然とした好意は急激に変化し、幾度かの浮き沈みを経て、すべてが明らかになった今は罪悪感へと変わっていた。\n「ごめんなさい、お姉さん……」先頭の子供が、彼女の目もまともに見られない様子で、抱えていた箱を押し付けてきた。\nそれは精巧な木箱だった。地元の職人が丹精込めて作ったもののようで、その中はいくつもの小さな四角形に仕切られており、その一つ一つに大きさの異なる鉱石の欠片が入れられていた。その鉱石にはいずれも、手作業で磨いたのだろう粗い跡が残っている。\n「この石は、キミたちが見つけてきてくれたの？」\n「……うん、そうだよ。」その子は、少し気まずそうに頭を掻いた。「お詫びに何かを渡したいと思ったんだけど、何をあげたらいいかわからなくてさ。だって、お姉さんたちは、その……なんでも持ってるみたいだから。」\n「あのね、これは村に来た新しい先生のアイデアなの！」と、先頭の子より少し幼く見える女の子が、思わずといった様子で割り込んで話しかけてきた。「先生はね、お姉さんにとって必要なものとか、好きなものとかをあげたらいいよって言ってたんだよ！」\nアステジーニはその言葉にどう反応すべきかわからず、俯いた。\n教育を受け始めたばかりのこの子供たちは、雪の中や谷川を探索する調査員が必要としているものといえば鉱石だろうと、単純にそう考えたのだ。なにしろ彼らからすれば、山にはそれ以外何もないのだから。\n「あげるもの……間違えちゃった？」一人の子供が、小声で聞いてきた。\n「そんなはずないよ……」先ほど割り込んできた子は、心配そうに顔をしかめながら言った。「大人の人たちが言ってたでしょ？このお姉さんたちは、星を見るためにイェラグに来たって。地上の石は、もともと空の星なんだから、同じものじゃない？」\n「よかったらそのお話、もっと詳しく聞かせてもらえるかな？」それまで黙っていたアステジーニは、子供たちの輪に入っていき、その木箱を抱きしめて、積もった雪を丁寧に払い落とした。「私たち、もう友達でしょ？だから、キミたちの知ってる話が聞きたいんだ。地上の石と、空の星の物語を。」",
+          "typeIcon": "dec-y",
+          "typeName1": "DEC",
+          "typeName2": "Y",
+          "equipShiningColor": "grey",
+          "showEvolvePhase": "PHASE_2",
+          "unlockEvolvePhase": "PHASE_2",
+          "charId": "char_1047_halo2",
+          "tmplId": null,
+          "showLevel": 1,
+          "unlockLevel": 60,
+          "missionList": [
+            "uniequip_002_halo2_1",
+            "uniequip_002_halo2_2"
+          ],
+          "unlockFavors": {
+            "1": 0,
+            "2": 2732,
+            "3": 10070
+          },
+          "itemCost": {
+            "1": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30155",
+                "count": 2,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 80000,
+                "type": "GOLD"
+              }
+            ],
+            "2": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_1",
+                "count": 60,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30145",
+                "count": 3,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 100000,
+                "type": "GOLD"
+              }
+            ],
+            "3": [
+              {
+                "id": "mod_unlock_token",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_2",
+                "count": 20,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30165",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 120000,
+                "type": "GOLD"
+              }
+            ]
+          },
+          "type": "ADVANCED",
+          "uniEquipGetTime": 1776132000,
+          "uniEquipShowEnd": 1779346800,
+          "charEquipOrder": 2,
+          "hasUnlockMission": true,
+          "isSpecialEquip": false,
+          "specialEquipDesc": null,
+          "specialEquipColor": null,
+          "charColor": "#246aba",
+          "phases": [
+            {
+              "equipLevel": 1,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "TRAIT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "sluggish",
+                            "value": 1.2,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": "敵に<@ba.kw>術ダメージ</>を与え\n攻撃時、敵を<@ba.kw>やや長い間</><$ba.sluggish>足止め</>",
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 85,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 35,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 2,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "TRAIT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "sluggish",
+                            "value": 1.2,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": "敵に<@ba.kw>術ダメージ</>を与え\n攻撃時、敵を<@ba.kw>やや長い間</><$ba.sluggish>足止め</>",
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": null,
+                  "target": "TALENT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "敵を<$ba.sluggish>足止め</>するたび、自身の攻撃速度+1（最大23回まで重複可能）",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "2",
+                        "name": "データモデリング",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack_speed",
+                            "value": 1,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "max_stack_cnt",
+                            "value": 23,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 105,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 45,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 3,
+              "parts": [
+                {
+                  "resKey": null,
+                  "target": "TRAIT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "sluggish",
+                            "value": 1.2,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": "敵に<@ba.kw>術ダメージ</>を与え\n攻撃時、敵を<@ba.kw>やや長い間</><$ba.sluggish>足止め</>",
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": null,
+                  "target": "TALENT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "敵を<$ba.sluggish>足止め</>するたび、自身の攻撃速度+1（最大25回まで重複可能）。上昇値が最大になると、攻撃力+12%",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "2",
+                        "name": "データモデリング",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "attack_speed",
+                            "value": 1,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "max_stack_cnt",
+                            "value": 25,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                },
+                {
+                  "resKey": "halo2_equip_1_3_p1",
+                  "target": "TALENT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "",
+                        "talentIndex": -1,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 60
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "10_root",
+                        "name": "データモデリング",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "atk",
+                            "value": 0.12,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 115,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 50,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            }
+          ]
+        }
+      ],
+      "traitDescription": "敵に<@ba.kw>術ダメージ</>を与える\n攻撃時、敵を一瞬<$ba.sluggish>足止め</>",
+      "subProfessionTraitDescription": ""
+    },
+    "skills": [
+      {
+        "skillIndex": 1,
+        "skillId": "skchr_halo2_1",
+        "raw": {
+          "name": "スターチャート",
+          "rangeId": null,
+          "description": "攻撃力<@ba.vup>+{atk:0%}</>、通常攻撃が最大<@ba.vup>{attack@chain.max_target}</>回まで跳躍し、跳躍済みの対象にも再跳躍可能になる",
+          "skillType": "MANUAL",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 30,
+            "initSp": 15,
+            "increment": 1
+          },
+          "prefabId": "skchr_halo2_1",
+          "duration": 20,
+          "blackboard": [
+            {
+              "key": "atk",
+              "value": 1,
+              "valueStr": null
+            },
+            {
+              "key": "attack@chain.max_target",
+              "value": 3,
+              "valueStr": null
+            },
+            {
+              "key": "attack@projectile_range",
+              "value": 1.7,
+              "valueStr": null
+            }
+          ]
+        }
+      },
+      {
+        "skillIndex": 2,
+        "skillId": "skchr_halo2_2",
+        "raw": {
+          "name": "アストラルグラビティ",
+          "rangeId": null,
+          "description": "次の通常攻撃時、範囲内の防衛ラインから最も遠い敵<@ba.vup>{max_target_attack}</>体に攻撃力の<@ba.vup>{atk_scale:0%}</>の術ダメージを与え、<$ba.sluggish>足止め</>の効果時間が<@ba.vup>{sluggish}</>秒まで増加。さらに攻撃対象周囲一定範囲内の敵最大<@ba.vup>{max_target}</>体を<@ba.vup>相当の力で</>対象のいる位置に引き寄せ、同量の術ダメージを与える",
+          "skillType": "AUTO",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WHEN_ATTACK",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 3,
+            "initSp": 0,
+            "increment": 1
+          },
+          "prefabId": "skchr_halo2_2",
+          "duration": -1,
+          "blackboard": [
+            {
+              "key": "atk_scale",
+              "value": 1.45,
+              "valueStr": null
+            },
+            {
+              "key": "sluggish",
+              "value": 3,
+              "valueStr": null
+            },
+            {
+              "key": "max_target",
+              "value": 3,
+              "valueStr": null
+            },
+            {
+              "key": "force",
+              "value": 1,
+              "valueStr": null
+            },
+            {
+              "key": "ability_range_radius",
+              "value": 2,
+              "valueStr": null
+            },
+            {
+              "key": "atk_scale_link",
+              "value": 1.45,
+              "valueStr": null
+            },
+            {
+              "key": "max_target_attack",
+              "value": 2,
+              "valueStr": null
+            }
+          ]
+        }
+      },
+      {
+        "skillIndex": 3,
+        "skillId": "skchr_halo2_3",
+        "raw": {
+          "name": "コンカレントチェイン",
+          "rangeId": "y-4",
+          "description": "攻撃範囲<@ba.vup>拡大</>、攻撃力<@ba.vup>+{atk:0%}</>、攻撃の間隔を<@ba.vup>短縮</>し、敵<@ba.vup>{attack@max_target}</>体をロックオンして攻撃し続ける。さらにロックオンした敵同士を連結し、連結中の敵が受けた術ダメージの<@ba.vup>{attack@atk_share:0%}</>を追加で他の連結対象に伝導する",
+          "skillType": "MANUAL",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 35,
+            "initSp": 25,
+            "increment": 1
+          },
+          "prefabId": "skchr_halo2_3",
+          "duration": 25,
+          "blackboard": [
+            {
+              "key": "atk",
+              "value": 0.7,
+              "valueStr": null
+            },
+            {
+              "key": "base_attack_time",
+              "value": -0.7,
+              "valueStr": null
+            },
+            {
+              "key": "attack@max_target",
+              "value": 2,
+              "valueStr": null
+            },
+            {
+              "key": "attack@atk_share",
+              "value": 0.25,
+              "valueStr": null
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "operatorId": "char_4036_forcer",
+    "operatorName": "エンフォーサー",
+    "profession": "SPECIAL",
+    "rarity": 5,
+    "subProfessionId": "pusher",
+    "phaseIndex": 2,
+    "skillLevelIndex": 9,
+    "profile": {
+      "affiliation": "ラテラーノ",
+      "affiliationIds": {
+        "nationId": "laterano",
+        "groupId": null,
+        "teamId": null
+      },
+      "phases": [
+        {
+          "characterPrefabKey": "char_4036_forcer",
+          "rangeId": "1-1",
+          "maxLevel": 50,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 825,
+                "atk": 285,
+                "def": 158,
+                "magicResistance": 0,
+                "cost": 20,
+                "blockCnt": 2,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.2,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 50,
+              "data": {
+                "maxHp": 1147,
+                "atk": 396,
+                "def": 240,
+                "magicResistance": 0,
+                "cost": 20,
+                "blockCnt": 2,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.2,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": null
+        },
+        {
+          "characterPrefabKey": "char_4036_forcer",
+          "rangeId": "1-1",
+          "maxLevel": 70,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1147,
+                "atk": 396,
+                "def": 240,
+                "magicResistance": 0,
+                "cost": 22,
+                "blockCnt": 2,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.2,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 70,
+              "data": {
+                "maxHp": 1510,
+                "atk": 528,
+                "def": 316,
+                "magicResistance": 0,
+                "cost": 22,
+                "blockCnt": 2,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.2,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3281",
+              "count": 4,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30012",
+              "count": 8,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "30022",
+              "count": 2,
+              "type": "MATERIAL"
+            }
+          ]
+        },
+        {
+          "characterPrefabKey": "char_4036_forcer",
+          "rangeId": "1-1",
+          "maxLevel": 80,
+          "attributesKeyFrames": [
+            {
+              "level": 1,
+              "data": {
+                "maxHp": 1510,
+                "atk": 528,
+                "def": 316,
+                "magicResistance": 0,
+                "cost": 22,
+                "blockCnt": 2,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.2,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            },
+            {
+              "level": 80,
+              "data": {
+                "maxHp": 1937,
+                "atk": 653,
+                "def": 381,
+                "magicResistance": 0,
+                "cost": 22,
+                "blockCnt": 2,
+                "moveSpeed": 1,
+                "attackSpeed": 100,
+                "baseAttackTime": 1.2,
+                "respawnTime": 80,
+                "hpRecoveryPerSec": 0,
+                "spRecoveryPerSec": 1,
+                "maxDeployCount": 1,
+                "maxDeckStackCnt": 0,
+                "tauntLevel": 0,
+                "massLevel": 0,
+                "baseForceLevel": 0,
+                "blockVolume": 0,
+                "stunImmune": false,
+                "silenceImmune": false,
+                "sleepImmune": false,
+                "frozenImmune": false,
+                "levitateImmune": false,
+                "disarmedCombatImmune": false,
+                "fearedImmune": false,
+                "palsyImmune": false,
+                "attractImmune": false,
+                "teleportImmune": false,
+                "groundBoundImmune": false
+              }
+            }
+          ],
+          "evolveCost": [
+            {
+              "id": "3283",
+              "count": 3,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "31014",
+              "count": 8,
+              "type": "MATERIAL"
+            },
+            {
+              "id": "31053",
+              "count": 12,
+              "type": "MATERIAL"
+            }
+          ]
+        }
+      ],
+      "favorKeyFrames": [
+        {
+          "level": 0,
+          "data": {
+            "maxHp": 0,
+            "atk": 0,
+            "def": 0,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        },
+        {
+          "level": 50,
+          "data": {
+            "maxHp": 350,
+            "atk": 0,
+            "def": 35,
+            "magicResistance": 0,
+            "cost": 0,
+            "blockCnt": 0,
+            "moveSpeed": 0,
+            "attackSpeed": 0,
+            "baseAttackTime": 0,
+            "respawnTime": 0,
+            "hpRecoveryPerSec": 0,
+            "spRecoveryPerSec": 0,
+            "maxDeployCount": 0,
+            "maxDeckStackCnt": 0,
+            "tauntLevel": 0,
+            "massLevel": 0,
+            "baseForceLevel": 0,
+            "blockVolume": 0,
+            "stunImmune": false,
+            "silenceImmune": false,
+            "sleepImmune": false,
+            "frozenImmune": false,
+            "levitateImmune": false,
+            "disarmedCombatImmune": false,
+            "fearedImmune": false,
+            "palsyImmune": false,
+            "attractImmune": false,
+            "teleportImmune": false,
+            "groundBoundImmune": false
+          }
+        }
+      ],
+      "trait": null,
+      "talents": [
+        {
+          "candidates": [
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "テクニカルショット",
+              "description": "重量ランクが3以上の敵を攻撃時、対象の防御力を90無視",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "value",
+                  "value": 3,
+                  "valueStr": null
+                },
+                {
+                  "key": "def_penetrate_fixed",
+                  "value": 90,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_1",
+                "level": 1
+              },
+              "requiredPotentialRank": 4,
+              "prefabKey": "1",
+              "name": "テクニカルショット",
+              "description": "重量ランクが3以上の敵を攻撃時、対象の防御力を110<@ba.talpu>（+20）</>無視",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "value",
+                  "value": 3,
+                  "valueStr": null
+                },
+                {
+                  "key": "def_penetrate_fixed",
+                  "value": 110,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 0,
+              "prefabKey": "1",
+              "name": "テクニカルショット",
+              "description": "重量ランクが3以上の敵を攻撃時、対象の防御力を180無視",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "value",
+                  "value": 3,
+                  "valueStr": null
+                },
+                {
+                  "key": "def_penetrate_fixed",
+                  "value": 180,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            },
+            {
+              "unlockCondition": {
+                "phase": "PHASE_2",
+                "level": 1
+              },
+              "requiredPotentialRank": 4,
+              "prefabKey": "1",
+              "name": "テクニカルショット",
+              "description": "重量ランクが3以上の敵を攻撃時、対象の防御力を200<@ba.talpu>（+20）</>無視",
+              "rangeId": null,
+              "blackboard": [
+                {
+                  "key": "value",
+                  "value": 3,
+                  "valueStr": null
+                },
+                {
+                  "key": "def_penetrate_fixed",
+                  "value": 200,
+                  "valueStr": null
+                }
+              ],
+              "tokenKey": null,
+              "isHideTalent": false
+            }
+          ]
+        }
+      ],
+      "potentialRanks": [
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "再配置時間-10秒",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "RESPAWN_TIME",
+                  "formulaItem": "ADDITION",
+                  "value": -10,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        },
+        {
+          "type": "CUSTOM",
+          "description": "素質強化",
+          "buff": null,
+          "equivalentCost": null
+        },
+        {
+          "type": "BUFF",
+          "description": "配置コスト-1",
+          "buff": {
+            "attributes": {
+              "abnormalFlags": null,
+              "abnormalImmunes": null,
+              "abnormalAntis": null,
+              "abnormalCombos": null,
+              "abnormalComboImmunes": null,
+              "attributeModifiers": [
+                {
+                  "attributeType": "COST",
+                  "formulaItem": "ADDITION",
+                  "value": -1,
+                  "loadFromBlackboard": false,
+                  "fetchBaseValueFromSourceEntity": false
+                }
+              ]
+            }
+          },
+          "equivalentCost": null
+        }
+      ],
+      "modules": [
+        {
+          "uniEquipId": "uniequip_002_forcer",
+          "uniEquipName": "夢の「執行」計画",
+          "uniEquipIcon": "uniequip_002_forcer",
+          "uniEquipDesc": "「うちで……このパティスリーで働きたいって？公証人役場の執行人が！？」\n「はい。」\n……\n実のところ、執行人である彼がなぜこの仕事をしたがるのかをいくら説明したところで、店長がそれを理解することはないだろう。\nしかしラテラーノのサンクタは気まぐれなことでも有名な上、特段拒む理由もなかったので、店長はエゼルを店に留まらせることにしてくれた。\n初めのうち、まったくの素人であるエゼルの腕前は上手いとは言えなかったが、真面目で丁寧な仕事ぶりであることは確かだった。\nそんな彼は必要な原料と用量、割合、コツなどを漏れなく自分のノートに記録していた。\n当然、彼の正体に気付いて驚く人も周りにはいた。\n中には、エゼルが何か大きな事件のためにこの店に潜入しているのではと疑う人もいたほどだが、結局何事もなく一週間が過ぎていった。\nエゼルは公証人役場での働きぶりと同様、遅刻も早退も一度としてしなかったが、どんなに店が忙しい時も決して残業はせず、必ず定時には仕事を切り上げていた。\n\n「セシリア、ただいま。ほら、クッキーだよ。」\n「ありがとう、エゼルお兄ちゃん！」\n「おいしい！これ、お兄ちゃんが作ったの？」\n「うん。あと何日かして準備が整ったら、お父さんを探しに行こうか。」\n「わかった！」\n……\n「なんだ、もうやめちまうのか？そうか……お前さん、相当真面目にスイーツ作りの勉強してくれたのにな。まさか秘伝のレシピまで覚えちまうとは思わなかったよ、はははっ。」\n「急な話ですみません。お陰様で、いろいろ勉強になりました。」\n……\n「エゼル、お前の欲しがってた情報は全部この中だ。」\n「ありがとうございます、リケーレ先輩。」\n「ロドスへの入職後はどこへ向かうか決めてるのか？」\n「そうですね……手持ちの情報からの推測ですが、少し心当たりがあるので。」\n「さあセシリア、出発しようか。」\n……\nエゼルのノートを見ると、その内容はイメージ通りと感じるだろう。\n――そこには、仕事の日誌や今後のスケジュール、コーヒーのレシピなどがつらつらと記されているからだ。\nしかし、あるページには拙い文字で「ラテラーノのスイーツが食べたい」と書かれていて、その下にはエゼルの筆跡でスイーツの作り方がメモされていた。\n「ラテラーノを離れたら同じものを買うのは難しいですし、たくさん買い込んでも途中でダメになってしまうので、自分で作り方を学ぶのが一番だと思ったんです。」\n「今の状況では、ラテラーノを離れて一人のサルカズを見つけるなんてほとんど不可能に近いことだというのはよくわかっています。僕はずっとセシリアのそばにいる覚悟ですが、セシリアにとってはこれからの旅がきっととても辛いものになるだろうとも思うんです。」\n「だから、やりたいことをノートに書いてみてって彼女に言ったんです。それがどんなに非現実的なことでも、僕は真面目に計画を立ててその通り『執行』し、実現していくつもりです。この旅が、セシリアにとって希望に溢れたものになるように。」\nエゼルはそう説明してくれた。\n「あっ！セシリア、待って！」\n「それはブラックコーヒーだよ。そんなものを飲んだら背が伸びなくなっちゃうぞ！」",
+          "typeIcon": "pus-x",
+          "typeName1": "PUS",
+          "typeName2": "X",
+          "equipShiningColor": "grey",
+          "showEvolvePhase": "PHASE_2",
+          "unlockEvolvePhase": "PHASE_2",
+          "charId": "char_4036_forcer",
+          "tmplId": null,
+          "showLevel": 1,
+          "unlockLevel": 50,
+          "missionList": [
+            "uniequip_002_forcer_1",
+            "uniequip_002_forcer_2"
+          ],
+          "unlockFavors": {
+            "1": 0,
+            "2": 2732,
+            "3": 10070
+          },
+          "itemCost": {
+            "1": [
+              {
+                "id": "mod_unlock_token",
+                "count": 2,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30094",
+                "count": 3,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 40000,
+                "type": "GOLD"
+              }
+            ],
+            "2": [
+              {
+                "id": "mod_unlock_token",
+                "count": 2,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_1",
+                "count": 20,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30044",
+                "count": 4,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 50000,
+                "type": "GOLD"
+              }
+            ],
+            "3": [
+              {
+                "id": "mod_unlock_token",
+                "count": 2,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "mod_update_token_2",
+                "count": 8,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "30074",
+                "count": 5,
+                "type": "MATERIAL"
+              },
+              {
+                "id": "4001",
+                "count": 60000,
+                "type": "GOLD"
+              }
+            ]
+          },
+          "type": "ADVANCED",
+          "uniEquipGetTime": 1694052000,
+          "uniEquipShowEnd": 1694052000,
+          "charEquipOrder": 1,
+          "hasUnlockMission": true,
+          "isSpecialEquip": false,
+          "specialEquipDesc": null,
+          "specialEquipColor": null,
+          "charColor": "#212e3d",
+          "phases": [
+            {
+              "equipLevel": 1,
+              "parts": [
+                {
+                  "resKey": "forcer_equip_1_1_p1",
+                  "target": "TRAIT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "value",
+                            "value": 0.5,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": "ブロック中の<@ba.kw>敵全員</>を同時に攻撃\n遠距離マスにも配置でき、遠距離マスに配置後、今回の配置コストの半分を返却",
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 170,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 45,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 2,
+              "parts": [
+                {
+                  "resKey": "forcer_equip_1_2_p1",
+                  "target": "TRAIT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "value",
+                            "value": 0.5,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": "ブロック中の<@ba.kw>敵全員</>を同時に攻撃\n遠距離マスにも配置でき、遠距離マスに配置後、今回の配置コストの半分を返却",
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": null,
+                  "target": "TALENT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "重量ランクが3以上の敵を攻撃時、対象の防御力を250無視",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "1",
+                        "name": "テクニカルショット",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "value",
+                            "value": 3,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "def_penetrate_fixed",
+                            "value": 250,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      },
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "重量ランクが3以上の敵を攻撃時、対象の防御力を270<@ba.talpu>（+20）</>無視",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 4,
+                        "prefabKey": "1",
+                        "name": "テクニカルショット",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "value",
+                            "value": 3,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "def_penetrate_fixed",
+                            "value": 270,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 215,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 54,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            },
+            {
+              "equipLevel": 3,
+              "parts": [
+                {
+                  "resKey": "forcer_equip_1_3_p1",
+                  "target": "TRAIT",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": null
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": [
+                      {
+                        "additionalDescription": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "blackboard": [
+                          {
+                            "key": "value",
+                            "value": 0.5,
+                            "valueStr": null
+                          }
+                        ],
+                        "overrideDescripton": "ブロック中の<@ba.kw>敵全員</>を同時に攻撃\n遠距離マスにも配置でき、遠距離マスに配置後、今回の配置コストの半分を返却",
+                        "prefabKey": null,
+                        "rangeId": null
+                      }
+                    ]
+                  }
+                },
+                {
+                  "resKey": null,
+                  "target": "TALENT_DATA_ONLY",
+                  "isToken": false,
+                  "validInGameTag": null,
+                  "validInMapTag": null,
+                  "addOrOverrideTalentDataBundle": {
+                    "candidates": [
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "重量ランクが3以上の敵を攻撃時、対象の防御力を280無視",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 0,
+                        "prefabKey": "1",
+                        "name": "テクニカルショット",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "value",
+                            "value": 3,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "def_penetrate_fixed",
+                            "value": 280,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      },
+                      {
+                        "displayRangeId": false,
+                        "upgradeDescription": "重量ランクが3以上の敵を攻撃時、対象の防御力を300<@ba.talpu>（+20）</>無視",
+                        "talentIndex": 0,
+                        "validModeIndices": null,
+                        "unlockCondition": {
+                          "phase": "PHASE_2",
+                          "level": 50
+                        },
+                        "requiredPotentialRank": 4,
+                        "prefabKey": "1",
+                        "name": "テクニカルショット",
+                        "description": null,
+                        "rangeId": null,
+                        "blackboard": [
+                          {
+                            "key": "value",
+                            "value": 3,
+                            "valueStr": null
+                          },
+                          {
+                            "key": "def_penetrate_fixed",
+                            "value": 300,
+                            "valueStr": null
+                          }
+                        ],
+                        "tokenKey": null,
+                        "isHideTalent": false
+                      }
+                    ]
+                  },
+                  "overrideTraitDataBundle": {
+                    "candidates": null
+                  }
+                }
+              ],
+              "attributeBlackboard": [
+                {
+                  "key": "max_hp",
+                  "value": 240,
+                  "valueStr": null
+                },
+                {
+                  "key": "atk",
+                  "value": 60,
+                  "valueStr": null
+                }
+              ],
+              "tokenAttributeBlackboard": {}
+            }
+          ]
+        }
+      ],
+      "traitDescription": "ブロック中の<@ba.kw>敵全員</>を同時に攻撃\n遠距離マスにも配置可能",
+      "subProfessionTraitDescription": ""
+    },
+    "skills": [
+      {
+        "skillIndex": 1,
+        "skillId": "skchr_forcer_1",
+        "raw": {
+          "name": "デタランスショット",
+          "rangeId": null,
+          "description": "次の通常攻撃時、敵を<@ba.vup>かなりの力で</>突き飛ばし、攻撃対象が高台にぶつかると、<@ba.vup>{stun}</>秒間<$ba.stun>スタン</>させる",
+          "skillType": "AUTO",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 5,
+            "initSp": 0,
+            "increment": 1
+          },
+          "prefabId": "skchr_forcer_1",
+          "duration": -1,
+          "blackboard": [
+            {
+              "key": "force",
+              "value": 2,
+              "valueStr": null
+            },
+            {
+              "key": "stun",
+              "value": 2,
+              "valueStr": null
+            }
+          ]
+        }
+      },
+      {
+        "skillIndex": 2,
+        "skillId": "skchr_forcer_2",
+        "raw": {
+          "name": "スタガリングショット",
+          "rangeId": "2-2",
+          "description": "範囲内の全ての敵を前方に<@ba.vup>力強く</>突き飛ばし、<@ba.vup>{forcer_s_2[hit_directly].stun}</>秒間<$ba.stun>スタン</>させる（高台にぶつかると、<$ba.stun>スタン</>の効果時間が<@ba.vup>{stun}</>秒になる）。対象が他の敵にぶつかった場合、その敵を<@ba.vup>{forcer_s_2[brush].stun}</>秒間<$ba.stun>スタン</>させる",
+          "skillType": "MANUAL",
+          "durationType": "NONE",
+          "spData": {
+            "spType": "INCREASE_WITH_TIME",
+            "levelUpCost": null,
+            "maxChargeTime": 1,
+            "spCost": 17,
+            "initSp": 0,
+            "increment": 1
+          },
+          "prefabId": "skchr_forcer_2",
+          "duration": -1,
+          "blackboard": [
+            {
+              "key": "force",
+              "value": 3,
+              "valueStr": null
+            },
+            {
+              "key": "stun",
+              "value": 4,
+              "valueStr": null
+            },
+            {
+              "key": "forcer_s_2[brush].stun",
+              "value": 2.5,
+              "valueStr": null
+            },
+            {
+              "key": "forcer_s_2[hit_directly].stun",
+              "value": 2.5,
+              "valueStr": null
+            },
+            {
+              "key": "projectile_range",
+              "value": 0.33,
+              "valueStr": null
+            }
+          ]
+        }
+      }
+    ]
   }
 ]

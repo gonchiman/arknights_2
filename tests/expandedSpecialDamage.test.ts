@@ -49,9 +49,9 @@ function total(id: string, index: number, result: ReturnType<typeof output>) {
     combinedDps: result.rows[0].combinedDps, allTargetsCombinedDps: result.rows[0].allTargetsCombinedDps })
 }
 
-test('特殊イベント11人25技能は全素質を原文から評価し、既定状態で数値を出す', () => {
-  assert.equal(EXPANDED_SPECIAL_DEFINITIONS.length, 11)
-  assert.equal(EXPANDED_SPECIAL_DEFINITIONS.flatMap(value => value.recipes).length, 25)
+test('特殊イベント14人32技能は全素質を原文から評価し、既定状態で数値を出す', () => {
+  assert.equal(EXPANDED_SPECIAL_DEFINITIONS.length, 14)
+  assert.equal(EXPANDED_SPECIAL_DEFINITIONS.flatMap(value => value.recipes).length, 32)
   for (const definition of EXPANDED_SPECIAL_DEFINITIONS) {
     const source = sources.find(source => source.operatorId === definition.operatorId)!
     const registered = [...definition.recipes, ...(definition.deferredSkills ?? [])].map(skill => skill.skillIndex).sort()
@@ -335,3 +335,123 @@ test('スプリアの不発・2連撃・スタン・80%無視は排他的な実�
   assert.deepEqual(output('char_4015_spuria', 2, { spuriaMode: 'INTERRUPTED' }).rows, [])
 })
 
+
+
+test('新約エクシアS1/S2は本人ATK18%と250%/300%射撃、実現した150%爆撃を独立に軽減する', () => {
+  const physical = (value: number, defense: number) => Math.max(value - defense, value * .05)
+  for (const index of [1, 2]) for (const bombs of [0, 1]) for (const defense of [0, 1000, 10000]) for (const type of ['PHYSICAL', 'ARTS'] as const) {
+    const result = output('char_1041_angel2', index, { angelBombCount: bombs }, undefined, { enemy: { defense, resistance: 60 }, virtualMainAttackType: type })
+    assert.deepEqual(result.unsupportedReasons, [])
+    const atk = attack(result.stats.attack, .18), mainScale = index === 1 ? 2.5 : 3
+    const main = type === 'PHYSICAL' ? physical(atk * mainScale, defense) : atk * mainScale * .4
+    close(result.rows[0].perAttack, main + bombs * physical(atk * 1.5, defense))
+    assert.equal(result.rows[0].dps, null)
+    assert.equal(result.rows[0].attackComponents.filter(value => value.role === 'ADDITIONAL').length, bombs ? 1 : 0)
+    assert.equal(total('char_1041_angel2', index, result).totalDamage, null)
+  }
+})
+
+test('新約エクシアS3の爆撃は弾薬5発に対する0〜5回で、5連撃数をさらに掛けない', () => {
+  const physical = (value: number, defense: number) => Math.max(value - defense, value * .05)
+  for (const bombs of [0, 1, 3, 5]) for (const defense of [0, 1000, 10000]) for (const type of ['PHYSICAL', 'ARTS'] as const) {
+    const result = output('char_1041_angel2', 3, { angelBombCount: bombs }, undefined, { enemy: { defense, resistance: 60 }, virtualMainAttackType: type })
+    assert.deepEqual(result.unsupportedReasons, [])
+    const atk = attack(result.stats.attack, .18 + .3)
+    const shot = type === 'PHYSICAL' ? physical(atk * 1.6, defense) : atk * 1.6 * .4
+    close(result.rows[0].perAttack, 5 * shot + bombs * physical(atk * 1.5, defense))
+    close(result.rows[0].allTargetsPerAttack, result.rows[0].perAttack!)
+    assert.equal(result.rows[0].dps, null)
+  }
+  for (const count of [1, 4]) {
+    const result = output('char_1041_angel2', 3, { angelPhase: 'DELIVERY', angelBombCount: 5, actualAttackTargetCount: count }, undefined, { enemy: { defense: 1000, resistance: 60 } })
+    assert.deepEqual(result.unsupportedReasons, [])
+    const expected = physical(attack(result.stats.attack, .48) * 2.5, 1000)
+    close(result.rows[0].perAttack, expected)
+    close(result.rows[0].allTargetsPerAttack, expected * count)
+    assert.equal(result.rows[0].attackComponents.length, 1)
+    assert.equal(result.rows[0].dps, null)
+  }
+})
+
+test('新約エクシアは孤立条件・爆撃回数・未対応起点を検証し、素質のlive数値を参照する', () => {
+  for (const index of [1, 2, 3]) for (const guard of [
+    { angelIsolatedTarget: false }, { actualAttackTargetCount: 2 }, { angelBombCount: -1 },
+    { angelBombCount: index === 3 ? 6 : 2 }, { angelBombCount: .5 }, { angelBombCount: Number.NaN }, { angelPhase: 'OTHER' },
+  ]) {
+    const result = output('char_1041_angel2', index, guard)
+    assert.deepEqual(result.rows, [])
+    assert.ok(result.unsupportedReasons.length > 0)
+  }
+  const result = output('char_1041_angel2', 1, { angelBombCount: 1 }, skill => {
+    for (const candidate of skill.operatorProfile.talents[0].candidates) {
+      const entry = candidate.blackboard?.find(value => value.key === 'aoe_atk_scale')
+      if (entry) entry.value = 2
+    }
+  }, { enemy: { defense: 0, resistance: 0 } })
+  assert.deepEqual(result.unsupportedReasons, [])
+  close(result.rows[0].perAttack, attack(result.stats.attack, .18) * 4.5)
+})
+
+test('溯光アステジーニは素質識別子の順を保持し、脆弱を軽減後1回だけ掛ける', () => {
+  const physical = (value: number, defense: number) => Math.max(value - defense, value * .05)
+  for (const index of [1, 2, 3]) for (const state of ['EARLY', 'MATURE']) for (const type of ['ARTS', 'PHYSICAL'] as const) {
+    const result = output('char_1047_halo2', index, { haloFragile: state }, undefined, { enemy: { defense: 1000, resistance: 60 }, virtualMainAttackType: type })
+    assert.deepEqual(result.unsupportedReasons, [])
+    const atk = attack(result.stats.attack, index === 1 ? 1 : index === 3 ? .7 : 0), scale = index === 2 ? 1.45 : 1
+    const main = type === 'ARTS' ? atk * scale * .4 : physical(atk * scale, 1000)
+    close(result.rows[0].perAttack, main * (state === 'EARLY' ? 1.1 : 1.14))
+    assert.equal(result.rows[0].attackComponents.length, 1)
+    assert.equal(result.rows[0].dps, null)
+  }
+  const structures = buildExpandedTalentStructures([record('char_1047_halo2', 1)])
+  assert.deepEqual(structures.map(value => value.source.prefabKey), ['2', '1'])
+  assert.ok(structures.every(value => value.issues.length === 0))
+})
+
+test('溯光アステジーニS2の直撃2体と1か所からの引き寄せ3体を別イベントとして計算する', () => {
+  for (const [phase, count] of [['DIRECT', 2], ['LINK', 3]] as const) for (const state of ['EARLY', 'MATURE']) {
+    const result = output('char_1047_halo2', 2, { haloPhase: phase, haloFragile: state, actualAttackTargetCount: count }, undefined, { enemy: { defense: 0, resistance: 60 } })
+    assert.deepEqual(result.unsupportedReasons, [])
+    const expected = result.stats.attack * 1.45 * .4 * (state === 'EARLY' ? 1.1 : 1.14)
+    close(result.rows[0].perAttack, expected)
+    close(result.rows[0].allTargetsPerAttack, expected * count)
+  }
+  const outside = output('char_1047_halo2', 2, { haloPhase: 'LINK', haloFragile: 'NONE', actualAttackTargetCount: 3 }, undefined, { enemy: { defense: 0, resistance: 60 } })
+  assert.deepEqual(outside.unsupportedReasons, [])
+  close(outside.rows[0].perAttack, outside.stats.attack * 1.45 * .4)
+  assert.deepEqual(output('char_1047_halo2', 2, { haloPhase: 'DIRECT', haloFragile: 'NONE' }).rows, [])
+  for (const [phase, count] of [['DIRECT', 3], ['LINK', 4]] as const) assert.deepEqual(output('char_1047_halo2', 2, { haloPhase: phase, actualAttackTargetCount: count }).rows, [])
+})
+
+test('溯光アステジーニは再跳躍・重複命中・2体伝導を未対応に残し、ASPD累積の値と境界を検証する', () => {
+  for (const index of [1, 2, 3]) {
+    const phase = index === 3 ? 'LINKED' : 'ALL'
+    assert.deepEqual(output('char_1047_halo2', index, { haloPhase: phase }).rows, [])
+    const skill = record('char_1047_halo2', index)
+    const coverage = buildDamageCalculatorThreeCoverage([skill])[0]
+    assert.equal(coverage.status, 'CONDITIONAL')
+  }
+  for (const guard of [{ haloSingleLock: false }, { actualAttackTargetCount: 2 }, { haloFragile: 'NONE' }, { haloSlowStacks: -1 }, { haloSlowStacks: 19 }])
+    assert.deepEqual(output('char_1047_halo2', 3, guard).rows, [])
+  for (const stacks of [0, 9, 18]) {
+    const result = output('char_1047_halo2', 3, { haloSlowStacks: stacks })
+    assert.deepEqual(result.unsupportedReasons, [])
+    const speed = result.guard!.evaluations.find(value => value.source === 'データモデリング' && value.item === '攻撃速度')
+    assert.ok(speed, 'ASPD talent remains structurally applied even though a single event has no DPS')
+    assert.equal(speed.status, 'APPLIED')
+  }
+})
+
+test('エンフォーサーS1は倍率100%の通常攻撃、重量3以上のみ防御180無視、S2は対象外を維持', () => {
+  for (const weight of [0, 2, 3, 10]) for (const count of [1, 2]) for (const type of ['PHYSICAL', 'ARTS'] as const) {
+    const result = output('char_4036_forcer', 1, { targetWeight: weight, actualAttackTargetCount: count }, undefined,
+      { enemy: { defense: 500, resistance: 60 }, virtualMainAttackType: type })
+    assert.deepEqual(result.unsupportedReasons, [])
+    const damage = type === 'PHYSICAL' ? Math.max(result.stats.attack - (500 - (weight >= 3 ? 180 : 0)), result.stats.attack * .05) : result.stats.attack * .4
+    close(result.rows[0].perAttack, damage)
+    close(result.rows[0].allTargetsPerAttack, damage * count)
+    assert.equal(result.rows[0].dps, null)
+  }
+  assert.deepEqual(output('char_4036_forcer', 1, { actualAttackTargetCount: 3 }).rows, [])
+  assert.equal(buildDamageCalculatorThreeCoverage([record('char_4036_forcer', 2)])[0].status, 'NOT_APPLICABLE')
+})

@@ -146,7 +146,8 @@ const definitions: readonly Definition[] = [
     scale('SPLASH_DAMAGE_SCALE', b.read('damage_scale'), 'damage_scale', { target: attack() }),
     additional('terrain-damage', mul(b.read('attack@splash_atk_scale'), skill(3, 'splash_atk_scale_bonus', 1)), 'attack@splash_atk_scale / skill:splash_atk_scale_bonus', 'PHYSICAL', { condition: compare('terrainHitCount', 'GT', 0), target: tagged(recipients('ENEMY', 'ADJACENT'), 'adjacent_high_tile_ground', '命中した高台の隣接4マス・地上') }, { hits: metric('terrainHitCount'), label: '高台による追加ダメージ' }),
     status('terrain-slow', '足止め', 'attack@sluggish', { timing: on('ATTACK'), target: tagged(recipients('ENEMY', 'ADJACENT'), 'adjacent_high_tile_ground', '命中した高台の隣接4マス・地上'), lifetime: { type: 'FIXED_SECONDS', seconds: b.read('attack@sluggish') } }),
-  ] },
+  ], constraints: () => [{ condition: any(compare('skillIndex', 'NE', 3), eq('terrainHitCount', 0)),
+    reason: 'S3は高台由来の追加ダメージが対象に命中しない槌撃1回のみ計算できます。' }] },
   { operatorId: 'char_1051_headb2', name: '連帯のうねり', prefabKey: '2', categories: ['ABILITY'], effects: b => [
     atk('self-atk', mul(b.read('atk'), b.read('scale_bonus')), 'atk / scale_bonus', { condition: eq('source.skillActive', true), lifetime: { type: 'UNTIL_EVENT', event: 'SKILL_END' } }),
     ratio('DEFENSE_BUFF_RATIO', mul(b.read('def'), b.read('scale_bonus')), 'def / scale_bonus', { condition: eq('source.skillActive', true), lifetime: { type: 'UNTIL_EVENT', event: 'SKILL_END' } }),
@@ -218,7 +219,7 @@ const definitions: readonly Definition[] = [
     status('liftoff', '離陸', 'description:liftoff', { condition: eq('source.skillActive', false) }),
   ] },
   { operatorId: 'char_1043_leizi2', name: '責問', prefabKey: '2', categories: ['ADDITIONAL_DAMAGE', 'STATUS'], effects: b => [
-    additional('skill-start-lightning', b.read('atk_scale_t2'), 'atk_scale_t2', 'ARTS', { timing: on('SKILL_START'), condition: eq('actionKind', 'SKILL_ACTION'), target: tagged(recipients('ENEMY', 'ATTACK_RANGE'), 'ground_tile', '地面マス') }),
+    additional('skill-start-lightning', b.read('atk_scale_t2'), 'atk_scale_t2', 'ARTS', { timing: on('SKILL_START'), condition: all(eq('actionKind', 'SKILL_ACTION'), compare('skillIndex', 'NE', 3)), target: tagged(recipients('ENEMY', 'ATTACK_RANGE'), 'ground_tile', '地面マス') }),
     status('skill-start-tremble', '戦慄', 'not_combat', { timing: on('SKILL_START'), target: tagged(recipients('ENEMY', 'ATTACK_RANGE'), 'ground_tile', '地面マス'), lifetime: { type: 'FIXED_SECONDS', seconds: b.read('not_combat') } }),
   ] },
 ]

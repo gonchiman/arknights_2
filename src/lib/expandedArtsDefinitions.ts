@@ -1,4 +1,5 @@
 import sources from '../data/expandedArtsSources.json' with { type: 'json' }
+import { EBENHOLZ_SUMMON_RECIPE, STAINLESS_SUMMON_RECIPE } from './expandedSummonActorRecipes.ts'
 import type { OperatorCombatProfile } from '../types/skill.ts'
 import { getOperatorPassives } from './operatorProfile.ts'
 import type { ExpandedOperatorDefinition, ExpandedTalentDefinition } from './expandedCombatTypes.ts'
@@ -226,6 +227,7 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
   { inputs: [chargeInput], traitNotes: ['貯蔵弾の倍率は貯蔵弾だけに適用する。S2は睡眠終了時の爆発だけを評価し、貯蔵弾を追加しない。', ...aoeNotes] }),
   operator('char_4046_ebnhlz', [
     [1, quickVolley()],
+    [2, EBENHOLZ_SUMMON_RECIPE.stages, EBENHOLZ_SUMMON_RECIPE.inputs],
     [3, [volley({ atk: k('atk'), aspd: k('attack_speed'), when: { input: 'targetEliteOrBoss', comparison: 'EQ', value: true } }),
       volley({ id: 'ineligible-target', label: '攻撃対象外', actions: [], when: { input: 'targetEliteOrBoss', comparison: 'EQ', value: false },
         unresolved: ['S3はエリート・ボスのみを攻撃します。対象の種別を変更してください。'] })]],
@@ -237,8 +239,7 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
       hits: add(1, metric('storedChargeCount'), numericIf(extraChargeCondition(eq('targetEliteOrBoss', true)), 1)) },
       { condition: eq('targetIsolated', true), target: target('ENEMY', 'ATTACK_TARGET'), timing: { type: 'EVENT', event: 'NORMAL_ATTACK' }, lifetime: { type: 'CURRENT_EVENT' } })], ['DAMAGE']),
   ], { inputs: [chargeInput, b('extraStoredChargeHeld', 'エリート・ボス用の貯蔵弾を所持'), b('targetEliteOrBoss', '対象がエリート・ボス', true), b('targetIsolated', '対象の周囲に他の敵がいない')],
-    traitNotes: ['通常貯蔵弾と対象限定の追加貯蔵弾を分ける。孤立時の追加術ダメージは通常弾・各貯蔵弾それぞれで発生し、貯蔵弾専用倍率を受けない。'],
-    deferredSkills: [{ skillIndex: 2, reason: '残像が与える攻撃と本人の素質の関係、召喚・命中条件を確認する必要がある。' }] }),
+    traitNotes: ['通常貯蔵弾と対象限定の追加貯蔵弾を分ける。孤立時の追加術ダメージは本人の通常弾・各貯蔵弾それぞれで発生し、貯蔵弾専用倍率を受けない。残像の爆発には本人の攻撃素質を継承しない。'] }),
   operator('char_4110_delphn', [
     [1, quickVolley()],
     [2, [volley({ atk: k('atk'), when: { input: 'targetHpPercent', comparison: 'GTE', value: 50 }, actions: [
@@ -353,16 +354,39 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
       actions: [], unresolved: ['S2はHP50%未満の敵だけを攻撃する。対象のHP条件を変更してください。'] })]]], [
     talent(0, '法の執行者', v => [damage(v.read('damage_scale'), cmp('targetHpPercent', 'LT', percent(v.read('hp_ratio'))))], ['DAMAGE']),
   ], { inputs: [{ ...hp, defaultValue: 30 }], traitNotes: ['対象のHP割合が一定の条件で計算する。ダメージによるHPの推移は含めない。'] }),
-  operator('char_411_tomimi', [[1, normal({ aspd: k('attack_speed'), traitOverrides: ['DAMAGE_TYPE'], actions: [{ label: '物理攻撃', role: 'MAIN', damageType: 'PHYSICAL', scale: 1 }] })]], [
+  operator('char_411_tomimi', [[1, normal({ aspd: k('attack_speed'), traitOverrides: ['DAMAGE_TYPE'], actions: [{ label: '物理攻撃', role: 'MAIN', damageType: 'PHYSICAL', scale: 1 }] })],
+    [2, [
+      ...(['STUN', 'POWER', 'AREA'] as const).map(outcome => phase('tomimiOutcome', outcome, physical({
+        label: { STUN: 'スタン効果の攻撃1回', POWER: '攻撃力220%の攻撃1回', AREA: '範囲攻撃1回' }[outcome],
+        maxTargets: outcome === 'AREA' ? null : 1, traitOverrides: ['DAMAGE_TYPE'],
+        actions: [{ label: '実現した効果の攻撃', role: 'MAIN', damageType: 'PHYSICAL', scale: outcome === 'POWER' ? k('attack@tomimi_s_2.atk_scale') : 1 }],
+        dpsUnsupportedReason: '今回実現した抽選結果の1回。3効果の出現確率や連続攻撃の期待値は計算しません。',
+        periodTotal: unresolvedPeriod('攻撃ごとの抽選結果を時間方向に積算していません。'),
+      }))),
+      phase('tomimiOutcome', 'EXPECTED', physical({ label: '抽選込みの期待値', actions: [],
+        unresolved: ['3効果の出現確率と範囲攻撃の対象数分布は未確認です。実現した効果を指定してください。'] })),
+    ], [select('tomimiOutcome', '今回の効果', [['STUN', 'スタン'], ['POWER', '攻撃力上昇'], ['AREA', '範囲攻撃'], ['EXPECTED', '抽選込みの期待値']])]]], [
     talent(0, '荒野術師流戦法', v => [atk(v.read('atk')), status('physical-mode', 'スキル中は地上対象への物理攻撃・攻撃範囲縮小')], ['ABILITY', 'ATTACK_BEHAVIOR']),
-  ], { traitNotes: ['スキル中の地上の敵への攻撃を計算する。'], deferredSkills: [{ skillIndex: 2, reason: '確率選択されるスタン・攻撃倍率・範囲攻撃の分岐と命中対象を扱う必要がある。' }] }),
-  operator('char_466_qanik', [[1, normal({ aspd: k('attack_speed') })]], [
+  ], { traitNotes: ['スキル中の地上の敵への攻撃を計算する。S2は特化3の100%発動時に実現した1効果を指定し、3効果を同時適用しない。'] }),
+  // https://prts.wiki/w/Qanipalaat : the periodic link and the levitation-expiry explosion are separate effects.
+  operator('char_466_qanik', [[1, normal({ aspd: k('attack_speed') })],
+    [2, [phase('qanikEvent', 'TICK', { ...action('リンクの継続攻撃1回', k('trigger_atk_scale'), k('max_target')),
+      dpsUnsupportedReason: '0.5秒ごとの継続効果の1回。初回の浮遊付与順やリンクの中断時刻は積算しません。',
+      periodTotal: unresolvedPeriod('浮遊の付与・終了、リンクの中断を含む期間総量は未計算です。') }),
+      phase('qanikEvent', 'EXPLOSION', { ...action('浮遊終了による爆発1回', k('critical_damage_scale')),
+        dpsUnsupportedReason: '同スキルの浮遊が終了した際の爆発1回。爆発源は1体。',
+        periodTotal: unresolvedPeriod('周囲への爆発の重なりや浮遊の終了時刻は積算しません。') })],
+      [select('qanikEvent', '計算する効果', [['TICK', '継続攻撃1回'], ['EXPLOSION', '浮遊終了の爆発1回']])]]], [
     talent(0, '氷原生存術', v => [damage(v.read('damage_scale'), eq('targetAirborne', true), 'damage_scale', true)], ['DAMAGE']),
-  ], { inputs: [b('targetAirborne', '対象が空中にいる')], deferredSkills: [{ skillIndex: 2, reason: '浮遊の付与・終了時の追加ダメージを時系列で評価する必要がある。' }] }),
-  operator('char_166_skfire', [[1, normal({ atk: k('atk') })]], [
+  ], { inputs: [b('targetAirborne', 'ダメージ時に対象が空中にいる')],
+    traitNotes: ['S2は命中時の状態を指定する。継続効果は浮遊中または浮遊無効の対象への1回。爆発は浮遊の付与に成功した対象の効果終了時にのみ発生する。'] }),
+  // https://prts.wiki/w/天火 : skill interval is multiplied by 1.7, not increased by 0.7 seconds.
+  operator('char_166_skfire', [[1, normal({ atk: k('atk') })],
+    [2, normal({ label: '隕石の命中が継続する状態', intervalScale: sum(1, k('base_attack_time')), maxTargets: null,
+      actions: [{ label: '隕石1個の命中', role: 'MAIN', damageType: 'ARTS', scale: k('attack@atk_scale') }],
+      periodTotal: unresolvedPeriod('隕石の落下遅延・最初と最後の命中時点を含む期間総量は計算しません。') })]], [
     talent(0, 'アーツバースト', v => [damage(v.read('damage_scale'), eq('targetBlocked', true), 'damage_scale', true)], ['DAMAGE']),
-  ], { inputs: [b('targetBlocked', '対象がブロックされている')], traitNotes: aoeNotes,
-    deferredSkills: [{ skillIndex: 2, reason: '隕石の発生・命中時間とスキル中の攻撃間隔の適用方式を確認する必要がある。' }] }),
+  ], { inputs: [b('targetBlocked', '対象がブロックされている')], traitNotes: aoeNotes }),
   operator('char_373_lionhd', [[1, normal({ atk: k('atk') })],
     [2, [
       { ...action('弱点解析＆爆破', k('atk_scale')), resistanceReductionRatio: product(-1, k('magic_resistance')),
@@ -374,14 +398,37 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
     talent(0, '破片爆散', v => [atk(mul(v.read('atk'), { type: 'CALC', operation: 'MIN', values: [metric('nearbyEnemyCount'), v.read('max_valid_stack_cnt')] }), 'atk × 対象数')]),
   ], { inputs: [n('nearbyEnemyCount', '攻撃範囲内の敵数', 1, 0, 100)],
     traitNotes: [...aoeNotes, 'S2は同スキルの術耐性低下が既に有効な対象への1回分を計算する。初回命中は未対応。'] }),
-  operator('char_341_sntlla', [[1, normal({ atk: k('atk'), aspd: k('attack_speed') })]], [
+  operator('char_341_sntlla', [[1, normal({ atk: k('atk'), aspd: k('attack_speed') })],
+    [2, [
+      ...(['NONE', 'FROZEN', 'IMMUNE'] as const).map(state => phase('santallaColdState', state, {
+        ...action('命中した氷柱1本', k('attack@atk_scale')),
+        resistanceReductionFixed: state === 'FROZEN' ? 15 : 0,
+        dpsUnsupportedReason: '指定した全対象に命中した氷柱1本。ランダムな落下位置を実命中頻度へ置き換えません。',
+        periodTotal: unresolvedPeriod('落下位置・氷柱の命中数・凍結の発生と終了は計算しません。'),
+      })),
+      phase('santallaColdState', 'COLD', { ...action('寒冷から凍結への変化', 1), actions: [],
+        unresolved: ['今回の氷柱で寒冷から凍結へ変わる場合、術耐性低下とダメージの処理順序は未対応です。'] }),
+    ], [select('santallaColdState', '命中前の対象の状態', [['NONE', '寒冷なし'], ['FROZEN', '既に凍結中'], ['IMMUNE', '凍結無効'], ['COLD', '寒冷中・今回凍結']])]]], [
     talent(0, '寒地の民', v => [atk(v.read('atk'), 'atk', { condition: cmp('secondsSinceDeploy', 'GTE', v.read('interval')) }),
       status('status-resistance', '配置20秒後にレジスト', { condition: cmp('secondsSinceDeploy', 'GTE', v.read('interval')) })], ['ABILITY', 'STATUS']),
-  ], { inputs: [n('secondsSinceDeploy', '配置からの経過時間（秒）', 20, 0, 3600)], traitNotes: aoeNotes,
-    deferredSkills: [{ skillIndex: 2, reason: 'ランダムなマスへの氷柱と敵の位置に依存する命中確率のモデルが必要。' }] }),
-  operator('char_4031_liesel', [[1, next(k('atk_scale'))]], [
-    talent(0, '指揮者の素質', v => [damage(v.read('damage_scale'), cmp('actualAttackTargetCount', 'GTE', v.read('min_target_cnt')))], ['DAMAGE'], '0'),
-  ], { traitNotes: aoeNotes, deferredSkills: [{ skillIndex: 2, reason: '複数の爆発の重複命中と継続ダメージの付与・更新を扱う必要がある。' }] }),
+  ], { inputs: [n('secondsSinceDeploy', '配置からの経過時間（秒）', 20, 0, 3600)], traitNotes: aoeNotes }),
+  // https://prts.wiki/w/复奏 : each splash checks the talent; the cached-ATK, source-less DOT does not.
+  operator('char_4031_liesel', [[1, next(k('atk_scale'))],
+    [2, [phase('lieselEvent', 'SPLASH', { ...action('3発のうち爆発1回', k('atk_scale')),
+      dpsUnsupportedReason: '実際に命中した爆発1回。3発の位置・重複命中は合算しません。',
+      periodTotal: unresolvedPeriod('3発の落下と持続効果の更新時刻は積算しません。') }),
+      phase('lieselEvent', 'DOT', { ...action('継続効果の1秒分', k('liesel_s_2[dot].atk_scale')),
+        actions: [{ label: '継続効果の1秒分', role: 'MAIN', damageType: 'ARTS', basis: 'ATK_STAT', scale: k('liesel_s_2[dot].atk_scale') }],
+        dpsUnsupportedReason: '発射時から攻撃力が変化していない場合の継続効果1秒分。',
+        periodTotal: unresolvedPeriod('持続効果の再付与と残り時間は積算しません。') }),
+      phase('lieselEvent', 'CHANGED', { ...action('発射後に攻撃力が変化', 1), actions: [],
+        unresolved: ['継続効果は弾の発射時の攻撃力を保持します。発射後に攻撃力が変化した場合の値は未対応です。'] })],
+      [select('lieselEvent', '計算する効果', [['SPLASH', '爆発1回'], ['DOT', '攻撃力不変の継続効果'], ['CHANGED', '攻撃力変化後の継続効果']])]]], [
+    talent(0, '指揮者の素質', v => [damage(v.read('damage_scale'), { type: 'ALL', conditions: [
+      cmp('actualAttackTargetCount', 'GTE', v.read('min_target_cnt')),
+      { type: 'ANY', conditions: [eq('skillIndex', 1), eq('lieselEvent', 'SPLASH')] },
+    ] })], ['DAMAGE'], '0'),
+  ], { traitNotes: [...aoeNotes, 'S2の対象数は選択した爆発1回に巻き込む数。継続効果には素質の倍率を適用しない。'] }),
   operator('char_489_serum', [[1, normal({ atk: k('atk') })], [2, normal({ atk: k('atk') })]], [
     talent(0, '戦術的調整', v => [effect('sp-recovery', 'sp_recovery_per_sec', { item: 'SP_RECOVERY', operation: 'ADD_VALUE', unit: 'PER_SECOND', value: v.read('sp_recovery_per_sec') },
       { condition: cmp('source.secondsSinceLastNormalAttack', 'GTE', v.read('delay')) })], ['RESOURCE']),
@@ -478,12 +525,23 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
   ], { inputs: [b('targetAlreadySlowed', '命中前から対象が足止め中')],
     traitNotes: ['命中前の足止め状態が一定の条件で計算する。初回命中からの脆弱の付与・失効は再現しない。'],
     deferredSkills: [{ skillIndex: 3, reason: '攻撃を停止して回復・足止め・脆弱付与を行うスキル。直接ダメージの出力対象外。' }] }),
-  operator('char_164_nightm', [[1, normal()]], [
+  // https://prts.wiki/w/夜魔 : one Rupture update uses measured tile-distance, not ATK or a movement-speed estimate.
+  operator('char_164_nightm', [[1, normal()], [2, [
+    phase('nightmareAction', 'MOVEMENT', normal({ label: '移動創傷の更新1回', kind: 'SKILL_ACTION', maxTargets: k('max_target'), traitOverrides: ['DAMAGE_TYPE'],
+      actions: [{ label: '移動距離に比例する確定ダメージ', role: 'MAIN', damageType: 'TRUE', basis: 'ATK_STAT', scale: 0,
+        flatDamage: choose('movementDelta', 4, 0, product(k('value'), input('movementDelta')), 'GT') }],
+      dpsUnsupportedReason: '移動創傷が有効な対象の計測更新1回。移動速度や効果時間からDPSを推定しません。',
+      periodTotal: unresolvedPeriod('移動経路・更新回数・他の移動創傷との上書きは計算しません。'),
+      notes: ['前回更新からの計測移動距離が4マスを超える場合はダメージ0。ナイトメア由来の1200/マスが有効な対象のみ。'] })),
+    phase('nightmareAction', 'NORMAL', normal({ label: '通常攻撃1回',
+      dpsUnsupportedReason: '通常攻撃1回のみ。移動創傷との時間合算は計算しません。',
+      periodTotal: unresolvedPeriod('通常攻撃と移動創傷の時間合算は計算しません。') })),
+  ], [select('nightmareAction', '評価する行動', [['MOVEMENT', '移動創傷の更新1回'], ['NORMAL', '通常攻撃1回']]),
+    { ...n('movementDelta', '前回更新からの計測移動距離（マス）', 1, 0, 10000), step: 0.01 }]]], [
     talent(0, '二重人格', v => [atk(v.read('atk'), 'atk', { condition: eq('skillIndex', 2) }),
       effect('physical-dodge', 'prob', { item: 'PHYSICAL_DODGE', operation: 'ADD_RATIO', unit: 'RATIO', value: v.read('prob') }, { condition: eq('skillIndex', 1) }),
       effect('arts-dodge', 'prob', { item: 'ARTS_DODGE', operation: 'ADD_RATIO', unit: 'RATIO', value: v.read('prob') }, { condition: eq('skillIndex', 1) })], ['ABILITY', 'SURVIVAL']),
-  ], { traitNotes: ['S1の通常攻撃によるダメージを計算する。味方の回復量は含めない。'],
-    deferredSkills: [{ skillIndex: 2, reason: '対象の移動距離・移動速度・効果時間に依存する確定ダメージのモデルが必要。' }] }),
+  ], { traitNotes: ['味方の回復量は含めない。移動創傷はナイトメア自身から付与した効果のみ。他のオペレーターの効果が残る対象は含めない。'] }),
   operator('char_344_beewax', [[1, normal({ atk: k('atk') })], [2, [
     phase('beeswaxPhase', 'NORMAL', normal({
       periodTotal: unresolvedPeriod('砂の碑の出現時ダメージと自身の通常攻撃を別に評価するため、総ダメージは未計算です。') })),
@@ -561,20 +619,35 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
       item: 'ATTACK_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('atk_scale'),
     }, { condition: eq('targetBlocked', false) })], ['DAMAGE']),
   ], { inputs: [b('targetBlocked', '対象がブロックされている')] }),
-  operator('char_4004_pudd', [[1, normal({ aspd: k('attack_speed'), periodTotal: { kind: 'CONSTANT_RATE' } })]], [
+  operator('char_4004_pudd', [[1, normal({ aspd: k('attack_speed'), periodTotal: { kind: 'CONSTANT_RATE' } })],
+    [2, normal({ label: '再跳躍を含む連鎖1回', atk: k('atk'), maxTargets: k('attack@max_target'),
+      traitOverrides: ['CHAIN_ATTACK'],
+      actions: Array.from({ length: 4 }, (_, bounce) => ({ label: bounce === 0 ? '初撃' : `第${bounce}跳躍`,
+        role: 'MAIN' as const, damageType: 'ARTS' as const, scale: 0.85 ** bounce, targets: 1,
+        hits: bounce === 0 ? 1 : choose('actualAttackTargetCount', 1, 0, 1) })),
+      dpsUnsupportedReason: '互いに跳躍可能な同一防御条件の敵への連鎖1回。1体では初撃のみ、2体以上では再跳躍を含む計4命中。',
+      periodTotal: unresolvedPeriod('跳躍中の撃破・移動と次の発射までの時間は計算しません。'),
+      notes: ['全対象に命中する経路を指定した場合の1体平均。未命中の敵や跳躍範囲外の敵を対象数へ含めない。https://prts.wiki/w/布丁'] })]], [
     talent(0, '電磁波', v => [atk(v.read('atk'))]),
-  ], { deferredSkills: [{ skillIndex: 2, reason: '同じ対象への再跳躍を含む命中列と、単独対象時の跳躍終了を扱う必要がある。' }] }),
+  ]),
   operator('char_472_pasngr', [[1, next(k('pasngr_s_1.atk_scale'), k('pasngr_s_1.max_target'))],
     [2, normal({ atk: k('atk'), intervalScale: { op: 'add', args: [1, k('base_attack_time')] }, maxTargets: k('attack@max_target'),
-      periodTotal: { kind: 'UNSUPPORTED', reason: '素質の増幅の付与・更新・失効とHP推移を計算していないため、総ダメージは未計算です。' } })]], [
+      periodTotal: { kind: 'UNSUPPORTED', reason: '素質の増幅の付与・更新・失効とHP推移を計算していないため、総ダメージは未計算です。' } })],
+    [3, { ...action('サンダーストームの連鎖1回', k('atk_scale'), k('chain.max_target')),
+      traitOverrides: ['CHAIN_ATTACK'],
+      actions: Array.from({ length: 4 }, (_, bounce) => ({ label: bounce === 0 ? '雷撃の初撃' : `雷撃の第${bounce}跳躍`,
+        role: 'MAIN' as const, damageType: 'ARTS' as const, scale: product(k('atk_scale'), 0.85 ** bounce), targets: 1,
+        hits: choose('actualAttackTargetCount', bounce, 1, 0, 'GT') })),
+      dpsUnsupportedReason: '雷撃1回の連鎖。発生するストーム数、通常攻撃、ランダムな対象選択を時間方向に合算しません。',
+      periodTotal: unresolvedPeriod('ストームの初回・最終発生、複数ストームと通常攻撃の重なりは未計算です。'),
+      notes: ['同一防御条件で互いに跳躍可能な対象への1連鎖。https://prts.wiki/w/异客'] }]], [
     talent(0, 'メカニズムアナライズ', v => [effect('active-analysis-amplification', 'pasngr_t_1[enhance].damage_scale', {
       item: 'DAMAGE_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('pasngr_t_1[enhance].damage_scale'),
     }, { target: target('ENEMY', 'ATTACK_TARGET'), condition: eq('analysisAmplificationActive', true),
       lifetime: { type: 'FIXED_SECONDS', seconds: v.read('pasngr_t_1[enhance].duration') } })], ['DAMAGE']),
     talent(1, 'ラストソルジャー', v => [atk(v.read('atk'), 'atk', { condition: eq('adjacentEnemyPresent', false) })]),
   ], { inputs: [b('analysisAmplificationActive', '命中時に素質1の増幅が有効'), b('adjacentEnemyPresent', '隣接4マスに敵がいる')],
-    traitNotes: ['対象全員の命中時の増幅状態を指定する。HP80%以上の対象への命中による増幅の付与・更新、3秒後の失効はシミュレートしない。'],
-    deferredSkills: [{ skillIndex: 3, reason: 'サンダーストームの初回・最終発生、複数ストームと通常攻撃の重なりを扱う必要がある。' }] }),
+    traitNotes: ['対象全員の命中時の増幅状態を指定する。HP80%以上の対象への命中による増幅の付与・更新、3秒後の失効はシミュレートしない。'] }),
   operator('char_4027_heyak', [[1, next(k('atk_scale'), 2)],
     [2, [normal({ when: { input: 'targetCanBeLevitated', comparison: 'EQ', value: false },
       maxTargets: null, actions: [{ label: 'ランダム9連続攻撃', role: 'MAIN', damageType: 'ARTS',
@@ -583,7 +656,17 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
     normal({ id: 'levitation-transition', label: '浮遊による状態変化',
       when: { input: 'targetCanBeLevitated', comparison: 'EQ', value: true }, actions: [],
       unresolved: ['浮遊が有効な対象への9連続攻撃は、命中途中の浮遊付与と素質倍率の変化を扱う必要があるため未対応です。'] })],
-      [b('targetCanBeLevitated', '対象に浮遊が有効')]]], [
+      [b('targetCanBeLevitated', '対象に浮遊が有効')]],
+    [3, [phase('heyakCollision', 'STABLE', { ...action('旋風1個の命中',
+      sum(k('attack@min_atk_scale'), product(sum(k('attack@max_atk_scale'), product(-1, k('attack@min_atk_scale'))),
+        { op: 'min', args: [1, product(input('heyakTornadoAge'), 1 / 1.77)] })), 1),
+      dpsUnsupportedReason: '旋風1個の最初の命中。3本の進路や衝突間隔は合算しません。',
+      periodTotal: unresolvedPeriod('旋風の生成遅延・移動・対象の浮遊時間は積算しません。'),
+      notes: ['生成後1.77秒で倍率が上限になる。命中前から空中、または浮遊無効で状態が変化しない敵を指定する。https://prts.wiki/w/霍尔海雅'] }),
+      phase('heyakCollision', 'TRANSITION', { ...action('今回の命中で浮遊を付与', 1, 1), actions: [],
+        unresolved: ['新規浮遊と素質倍率の適用順が未確認です。空中状態が変化しない命中を指定してください。'] })],
+      [select('heyakCollision', '命中による状態変化', [['STABLE', '空中状態が変わらない'], ['TRANSITION', '新たに浮遊する']]),
+        { ...n('heyakTornadoAge', '旋風生成からの秒数', 1.77, 0, 5), step: 0.01 }]]], [
     talent(0, '伝承の終焉', v => [effect('airborne-attack-scale', 'atk_scale',
       { item: 'ATTACK_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: v.read('atk_scale') },
       { condition: eq('targetAirborne', true) }), status('silence', `${v.read('silence')}秒間の特殊能力無効化`,
@@ -591,30 +674,44 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
     talent(1, '今は無き翼', v => [status('antigravity', `HP${percent(v.read('hp_ratio'))}%以上の敵に反重力を付与`,
       { target: target('ENEMY', 'ATTACK_RANGE') })], ['STATUS']),
   ], { inputs: [b('targetAirborne', '命中時に対象が空中にいる')],
-    traitNotes: ['S2は飛行中または浮遊無効の敵など、浮遊付与で空中状態が変化しない対象に限定する。全対象の空中状態・防御条件が同じ場合の均等な配分期待値。浮遊が有効な対象は未対応。'],
-    deferredSkills: [{ skillIndex: 3, reason: '複数の旋風の進路・距離による倍率と最初の命中対象を扱う必要がある。' }] }),
+    traitNotes: ['S2・S3は飛行中または浮遊無効の敵など、浮遊付与で空中状態が変化しない対象に限定する。S2の全対象は空中状態・防御条件が同じ場合の均等な配分期待値。新規浮遊のある命中は未対応。'] }),
   operator('char_1020_reed2', [[1, normal({ atk: k('atk'), aspd: k('attack_speed'),
-    periodTotal: unresolvedPeriod('灼痕の確率付与・更新・失効を計算していないため、総ダメージは未計算です。') })]], [
-    talent(0, '灼けつく炎', v => [damage(v.read('damage_scale'), eq('reedScarActive', true), 'damage_scale', true),
+    periodTotal: unresolvedPeriod('灼痕の確率付与・更新・失効を計算していないため、総ダメージは未計算です。') }),
+      [b('reedScarActive', '命中時に灼痕が有効')]],
+    [2, { ...action('火球1個の接触1回', k('atk_scale'), 1),
+      dpsUnsupportedReason: '火球1個が地上の敵1体に接触した際の1回。回転・再接触の時間は合算しません。',
+      periodTotal: unresolvedPeriod('6個の火球の軌道・接触間隔・通常攻撃は積算しません。'),
+      notes: ['味方の攻撃力ではなく焔影リードの攻撃力を使う。https://prts.wiki/w/焰影苇草'] },
+      [b('reedScarActive', '命中時に灼痕が有効')]],
+    [3, [
+      phase('reedEvent', 'ATTACK', normal({ label: '通常攻撃1回', atk: k('reed2_skil_3[switch_mode].atk'), maxTargets: k('max_target'),
+        dpsUnsupportedReason: '通常攻撃1回。灼痕の継続効果や爆発を合算しません。',
+        periodTotal: unresolvedPeriod('灼痕の伝播・撃破時刻と継続効果は積算しません。') })),
+      ...(['TICK', 'EXPLOSION'] as const).map(event => phase('reedEvent', event, {
+        ...action(event === 'TICK' ? '灼痕の1秒分' : '撃破時の爆発1回', k(event === 'TICK' ? 'talent@s3_atk_scale' : 'talent@aoe_scale')),
+        atk: k('reed2_skil_3[switch_mode].atk'),
+        dpsUnsupportedReason: 'S3中に付与した灼痕の1イベント。爆発は1体の撃破を起点とし、連鎖を合算しません。',
+        periodTotal: unresolvedPeriod('灼痕の伝播・撃破時刻と複数の爆発の重なりは積算しません。'),
+        notes: ['爆発は灼痕付与の0.1秒後。S3の確定付与による術脆弱を適用する。https://prts.wiki/w/焰影苇草'],
+      })),
+    ], [select('reedEvent', '計算する効果', [['ATTACK', '通常攻撃'], ['TICK', '灼痕の1秒分'], ['EXPLOSION', '撃破時の爆発1回']])]]], [
+    talent(0, '灼けつく炎', v => [damage(v.read('damage_scale'), { type: 'ANY', conditions: [eq('skillIndex', 3), eq('reedScarActive', true)] }, 'damage_scale', true),
       status('scar-application', `${percent(v.read('prob'))}%の確率で${v.read('duration')}秒間の灼痕を付与`,
         { target: target('ENEMY', 'ATTACK_TARGET'), timing: { type: 'EVENT', event: 'ATTACK' } }),
       status('scar-attack-reduction', `灼痕中の攻撃力${percent(v.read('atk'))}%`,
         { target: target('ENEMY', 'ATTACK_TARGET'), condition: eq('reedScarActive', true) })], ['DAMAGE', 'STATUS']),
     talent(1, '耀映', v => [status('self-heal', `自身以外への治療量の${percent(v.read('scale'))}%で自身を治療`)], ['SURVIVAL']),
-  ], { inputs: [b('reedScarActive', '命中時に灼痕が有効')],
-    traitNotes: ['灼痕が有効かを命中時の条件として指定する。30%の付与確率を脆弱倍率に乗算した平均値ではない。回復量は含めない。'],
-    deferredSkills: [
-      { skillIndex: 2, reason: '複数火球と通常攻撃の発生・接触位置・再接触間隔を扱う必要がある。' },
-      { skillIndex: 3, reason: '灼痕の継続ダメージと撃破時爆発・周囲への伝播を一体で扱う必要がある。' },
-    ] }),
+  ], { traitNotes: ['S1・S2は灼痕が有効かを命中時の条件として指定する。30%の付与確率を脆弱倍率に乗算した平均値ではない。S3は確定付与のため当該ダメージにも術脆弱を適用する。回復量は含めない。'] }),
   operator('char_1024_hbisc2', [[1, normal({ atk: k('atk'),
-    periodTotal: unresolvedPeriod('対術脆弱の付与・更新・失効の時刻を計算していないため、総ダメージは未計算です。') })]], [
+    periodTotal: unresolvedPeriod('対術脆弱の付与・更新・失効の時刻を計算していないため、総ダメージは未計算です。') })],
+    [2, { ...action('毎秒攻撃の1回', k('atk_scale'), k('max_target')),
+      dpsUnsupportedReason: '命中時の対術脆弱が指定した状態での1回。付与・更新・失効を含む連続DPSは計算しません。',
+      periodTotal: unresolvedPeriod('初回・最終命中と対術脆弱の時間推移は計算しません。') }]], [
     talent(0, '朝瞬の花', v => [damage(v.read('damage_scale'), eq('hibiscusWeaknessActive', true), 'damage_scale', true),
       status('arts-weakness-application', `攻撃対象に${v.read('weak[magic][limit]')}秒間の対術脆弱を付与`,
         { target: target('ENEMY', 'ATTACK_TARGET'), timing: { type: 'EVENT', event: 'ATTACK' } })], ['DAMAGE', 'STATUS']),
   ], { inputs: [b('hibiscusWeaknessActive', '命中時に素質の対術脆弱が有効')],
-    traitNotes: ['命中時の対術脆弱の状態を指定する。付与・更新・失効と味方への回復量は含めない。'],
-    deferredSkills: [{ skillIndex: 2, reason: '通常攻撃を行わない毎秒攻撃と、素質の適用時点を扱う必要がある。' }] }),
+    traitNotes: ['命中時の対術脆弱の状態を指定する。付与・更新・失効と味方への回復量は含めない。'] }),
   operator('char_141_nights', [[1, normal({ atk: k('atk'),
     periodTotal: unresolvedPeriod('術耐性低下の付与・更新・失効の時刻を計算していないため、総ダメージは未計算です。') })],
     [2, normal({ atk: k('atk'), aspd: k('attack_speed'),
@@ -689,10 +786,11 @@ export const EXPANDED_ARTS_DEFINITIONS: readonly ExpandedOperatorDefinition[] = 
       periodTotal: unresolvedPeriod('装置の支援が一定の攻撃を評価し、装置の配置・破壊時刻は計算しません。') })),
       [n('selfDeviceCount', '自身を支援している装置の数', 0, 0, 2)]],
     [2, physical({ atk: k('atk'), maxTargets: 2 })],
+    [3, STAINLESS_SUMMON_RECIPE.stages, STAINLESS_SUMMON_RECIPE.inputs],
   ], [
     talent(0, '戦場のエンジニア', () => [status('support-devices', '支援装置を使用可能、装備スキルにより性能が変化')], ['RESOURCE']),
     talent(1, '経費削減', () => [status('device-recovery', '周囲で破壊された支援装置を確率で再獲得')], ['RESOURCE']),
-  ], { deferredSkills: [{ skillIndex: 3, reason: '装置への攻撃回数と装置の砲撃ダメージを別の攻撃主体として扱う必要がある。' }],
+  ], {
     traitNotes: ['自身の攻撃を評価する。S1は装置1基の基本攻撃力上昇12%を4倍にし、スキル倍率200%は別に適用する。S2は自身がブロックする敵だけを指定する。'] }),
 ]
 

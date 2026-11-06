@@ -199,7 +199,7 @@ function SkillStructureContent({ structure, activeTab, onTabChange }: {
   )
 }
 
-const GUARD_COMPARISONS = { EQ: '＝', LT: '＜', LTE: '≦', GT: '＞', GTE: '≧' } as const
+const GUARD_COMPARISONS = { EQ: '＝', NE: '≠', LT: '＜', LTE: '≦', GT: '＞', GTE: '≧' } as const
 const GUARD_ATTACK_KINDS = { NORMAL: '通常攻撃', NEXT_ATTACK: '次の通常攻撃', SKILL_ACTION: '選択段階1回' } as const
 const GUARD_DAMAGE_TYPES = { PHYSICAL: '物理', ARTS: '術', TRUE: '確定', ELEMENTAL: '元素' } as const
 

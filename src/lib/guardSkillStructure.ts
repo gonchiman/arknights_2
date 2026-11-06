@@ -69,7 +69,9 @@ export function buildGuardSkillStructures(recipes: readonly GuardSkillRecipe[] =
           condition: null, target: 'ENEMIES_IN_ACTION_RANGE', sourceBinding: JSON.stringify(buildup),
           item: 'ELEMENTAL_BUILDUP', operation: 'APPLY_ELEMENTAL_BUILDUP', unit: 'ELEMENTAL_BUILDUP_ACTION',
           value: { elementId: buildup.damageKind.elementId, basis: buildup.basis.type, scale: preview(buildup.scale),
-            ...(buildup.basis.type === 'DEALT_DAMAGE' ? { actionId: buildup.basis.actionId, damageType: buildup.basis.damageType } : {}) } })
+            ...(buildup.basis.type === 'DEALT_DAMAGE' || buildup.basis.type === 'HP_LOST'
+              ? { actionId: buildup.basis.actionId, damageType: buildup.basis.damageType } : {}),
+            ...(buildup.basis.type === 'HP_LOST' ? { hpBefore: preview(buildup.basis.hpBefore) } : {}) } })
         return { id: stage.id, label: stage.label, applicability: null, periodTotal: stage.periodTotal,
           duration: stage.kind === 'NEXT_ATTACK' ? { type: 'SINGLE_ATTACK' as const }
             : stage.kind === 'SKILL_ACTION' ? { type: 'SKILL_ACTION' as const }

@@ -34,7 +34,7 @@ export interface SkillEffectFlowModel { activation: FlowField[]; trigger: string
 const number = (value: number) => String(Math.round(value * 1e8) / 1e8)
 const percent = (value: number) => `${number(value * 100)}%`
 const damageTypes = { PHYSICAL: '物理', ARTS: '術', TRUE: '確定', ELEMENTAL: '元素' } as const
-const comparisons = { EQ: '＝', LT: '＜', LTE: '≦', GT: '＞', GTE: '≧' } as const
+const comparisons = { EQ: '＝', NE: '≠', LT: '＜', LTE: '≦', GT: '＞', GTE: '≧' } as const
 const branch = (label: string): FlowCondition => ({ label, yesLabel: '成立', noLabel: '不成立' })
 
 export function buildSkillEffectFlow(structure: SkillStructure): SkillEffectFlowModel {
@@ -215,6 +215,7 @@ function guardStages(structure: SkillStructure, recipe: GuardSkillRecipe): FlowS
       ['defenseReductionFinalFixed', '防御力固定低下（割合低下後）', '', false], ['attackFinalFlat', '攻撃力（最終加算）', '', false],
       ['fixedAttackInterval', '固定攻撃周期', '秒', false],
       ['damageScale', '与ダメージ倍率', '倍', false],
+      ['minimumDamageRatio', '最低ダメージの攻撃力比率', '', true],
       ['damageCapPerTarget', '対象ごとのダメージ上限', '', false],
     ] as const) if (stage[key] !== undefined) modifiers.push({ id: `${stage.id}-${key}`, title: label,
       fields: [{ label: '値', value: formatted(stage[key]!, unit, ratio) }] })
@@ -231,8 +232,10 @@ function guardStages(structure: SkillStructure, recipe: GuardSkillRecipe): FlowS
       stage.elementalBuildups.map(buildup => ({ id: `${stage.id}-buildup-${buildup.id}`, title: buildup.label, fields: [
         { label: '元素', value: ELEMENT_LABELS[buildup.damageKind.elementId] },
         { label: '基準', value: buildup.basis.type === 'ATK_STAT' ? '自身の攻撃力'
-          : buildup.basis.damageType === 'ARTS' ? '術ダメージ' : '与ダメージ' },
-        { label: '比率', value: formatted(buildup.scale, '', true) },
+          : buildup.basis.type === 'HP_LOST' ? '実HP減少量' : buildup.basis.type === 'FIXED' ? '固定値'
+            : buildup.basis.damageType === 'ARTS' ? '術ダメージ' : '与ダメージ' },
+        { label: buildup.basis.type === 'FIXED' ? '損傷量' : '比率', value: formatted(buildup.scale, '', buildup.basis.type !== 'FIXED') },
+        ...(buildup.basis.type === 'HP_LOST' ? [{ label: '命中直前HP', value: formatted(buildup.basis.hpBefore) }] : []),
       ] })),
     ] })
     return { id: stage.id, label: stage.label, fields, groups,

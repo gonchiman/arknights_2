@@ -131,6 +131,10 @@ export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] 
     bool('targetCriticallyWounded', '対象が重傷状態')], [],
   ['選択した全対象が同じ残りHP・HP割合・重傷状態にある1命中を評価する。HP1を残す非致死上限を反映し、重傷後の自然死亡はダメージに含めない。']),
   operator('char_1035_wisdel', [
+    recipe('char_1035_wisdel', 1, next(1, 1, { label: '孤立した主対象1体への強化攻撃', maxTargets: 1,
+      traitOverrides: ['AFTERSHOCK'], actions: [damage(), damage(key('append_atk_scale'), 3, { label: '余震3回' })],
+      periodTotal: { kind: 'UNSUPPORTED', reason: '別対象の残影爆発・影の攻撃・通常攻撃を含む時間合算は計算しません。' } }), [],
+    ['https://prts.wiki/w/EW：残影は無期限・非重複で退場時に消滅し、余震ごとに独立して爆発を判定する。孤立した主対象1体に3回とも余震が命中する場合。']),
     recipe('char_1035_wisdel', 2, [
       normal({ label: 'OD前・孤立した主対象1体', atk: key('atk'), intervalAdd: key('base_attack_time'), maxTargets: 1,
         when: { input: 'overdrive', comparison: 'EQ', value: false },
@@ -151,12 +155,13 @@ export const EXPANDED_RANGED_DEFINITIONS: readonly ExpandedOperatorDefinition[] 
         probability: { chance: conditional(eq('skillIndex', 3), { type: 'METRIC', metric: 'skill.attack@prob' }, b.read('attack@prob')),
           rollScope: 'APPLICATION' } }),
         item: 'ADDITIONAL_ATTACK', operation: 'DEAL_DAMAGE', unit: 'MULTIPLIER', value: b.read('attack@bomb_atk_scale'),
-        damageType: 'PHYSICAL', basis: 'ATK_STAT', rate: 'PER_ATTACK', label: '残影の爆発' },
+        damageType: 'PHYSICAL', basis: 'ATK_STAT', rate: 'PER_ATTACK', label: '残影の爆発',
+        hits: conditional(eq('skillIndex', 1), 3, 1) },
       status('afterimage-mark', '攻撃主対象に残影を付与し、爆発でスタン', { target: enemy }),
     ]),
     talent(1, 'くたばり損ない', ['SUMMON', 'SURVIVAL'], () => [status('revenant-shadow', '配置時にレヴァナントの影を召喚'),
       status('shadow-camouflage', '影が周囲にいる間は迷彩')]),
-  ], [], [{ skillIndex: 1, reason: '3回の余震の間で残影が消費・再付与される順序と爆発回数の期待値を確認する必要がある。' }],
+  ], [], [],
   ['ウィシャデル本人が孤立した対象1体を攻撃する値。別の敵の残影からの巻き込みと、別ユニットのレヴァナントの影による攻撃は合算しない。']),
   operator('char_204_platnm', [1, 2].map(index => recipe('char_204_platnm', index, [
     normal({ label: '力溜め最大の1射', atk: key('atk'), ...(index === 2 ? { aspd: key('attack_speed'), duration: 'UNTIL_EXIT' as const } : {}),

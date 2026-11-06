@@ -44,9 +44,20 @@ const operations: Readonly<Record<string, readonly [string, string]>> = {
 }
 
 function supportsContext(effect: TalentStructureEffect, metrics: Metrics): boolean {
+  const finiteExternalEvent = effect.timing.type === 'EVENT'
+    && ['PERIODIC_TICK', 'PALSY_TRIGGER'].includes(effect.timing.event)
+  if (finiteExternalEvent && (effect.condition === null || effect.lifetime.type !== 'CURRENT_EVENT'
+    || effect.probability.chance !== 1 || effect.target.side !== 'ENEMY' || effect.target.entity !== 'UNIT'
+    || !['ATTACK_TARGET', 'ATTACK_RANGE', 'BATTLEFIELD'].includes(effect.target.scope)
+    || metrics.actionKind !== 'SKILL_ACTION'
+    || effect.target.selection.type !== 'ALL' || effect.target.factionIds.length || effect.target.tagIds.length
+    || (effect.item !== 'ELEMENTAL_BUILDUP' && effect.item !== 'ADDITIONAL_ATTACK')
+    || (effect.timing.type === 'EVENT' && effect.timing.event === 'PALSY_TRIGGER' && effect.item !== 'ADDITIONAL_ATTACK')
+    || effect.basis !== 'ATK_STAT'
+    || (effect.item === 'ADDITIONAL_ATTACK' && effect.rate !== 'PER_ATTACK'))) return false
   if (effect.item === 'ELEMENTAL_BUILDUP' && (effect.basis !== 'ATK_STAT' || effect.timing.type !== 'EVENT'
-    || effect.timing.event !== 'ATTACK' || effect.lifetime.type !== 'CURRENT_EVENT'
-    || effect.target.side !== 'ENEMY' || effect.target.scope !== 'ATTACK_TARGET' || effect.target.entity !== 'UNIT'
+    || (!finiteExternalEvent && effect.timing.event !== 'ATTACK') || effect.lifetime.type !== 'CURRENT_EVENT'
+    || effect.target.side !== 'ENEMY' || (!finiteExternalEvent && effect.target.scope !== 'ATTACK_TARGET') || effect.target.entity !== 'UNIT'
     || effect.target.factionIds.length > 0 || effect.target.tagIds.length > 0)) return false
   if (effect.timing.type === 'EVENT' && effect.timing.event === 'ELEMENTAL_BURST'
     && (effect.item !== 'ADDITIONAL_ATTACK' || effect.condition === null || effect.rate !== 'PER_ATTACK')) return false

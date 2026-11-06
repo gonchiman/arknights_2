@@ -9,6 +9,8 @@ import { getOperatorPassives } from './operatorProfile.ts'
  * Only the listed healing/attack-replacement states are outside damage calculation.
  */
 const REVIEWED_SKILLS: Readonly<Record<string, readonly number[]>> = {
+  // Instant displacement/stun; instantaneous DP and reinforcement recovery.
+  char_4036_forcer: [2], char_452_bstalk: [1],
   // Separate healing alchemical throw / instantaneous DP, reserve cost and barrier.
   char_1039_thorn2: [1], char_1045_svash2: [1],
   // Individually reviewed: instantaneous DP/heal or attack-stopping recovery/support.

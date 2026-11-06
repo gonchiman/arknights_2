@@ -59,7 +59,7 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
     const baseReason = inactive ? '現在選択している段階では使用しません。'
       : blocked ? stage.unresolved!.join(' ') : baseStatus === 'UNVERIFIED' ? calculationReason || '計算する段階を確認できません。' : ''
     const stageCondition = stage.when ? (() => {
-      const comparison = { EQ: '＝', LT: '＜', LTE: '≦', GT: '＞', GTE: '≧' }[stage.when.comparison]
+      const comparison = { EQ: '＝', NE: '≠', LT: '＜', LTE: '≦', GT: '＞', GTE: '≧' }[stage.when.comparison]
       const definition = inputs.find(item => item.key === stage.when!.input)
       const expected = definition?.options?.find(option => option.value === stage.when!.value)?.label ?? String(stage.when.value)
       return `${definition?.label ?? stage.when.input} ${comparison} ${expected}`
@@ -96,7 +96,8 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
     }
     numeric('atk', '攻撃力', stage.atk, signedPercent)
     for (const buildup of stage.elementalBuildups ?? []) add(`buildup-${buildup.id}`, `${ELEMENT_LABELS[buildup.damageKind.elementId]}損傷`,
-      () => `${buildup.basis.type === 'ATK_STAT' ? '攻撃力' : buildup.basis.damageType === 'ARTS' ? '術ダメージ' : '与ダメージ'}の${percent(value(buildup.scale))}`,
+      () => buildup.basis.type === 'FIXED' ? `固定値${number(value(buildup.scale))}`
+        : `${buildup.basis.type === 'ATK_STAT' ? '攻撃力' : buildup.basis.type === 'HP_LOST' ? '実HP減少量' : buildup.basis.damageType === 'ARTS' ? '術ダメージ' : '与ダメージ'}の${percent(value(buildup.scale))}`,
       [buildup.scale], { timing: stageTiming(stage) })
     numeric('block-count-add', 'ブロック数', stage.blockCountAdd, n => `${signed(n)}体`)
     numeric('trait-attack-ratio-scale', '特性の攻撃力上昇倍率', stage.traitAttackRatioScale, n => `×${number(n)}`)
@@ -122,8 +123,13 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
     numeric('defense-reduction-fixed', '防御力固定低下', stage.defenseReductionFixed, n => `−${number(n)}`, mitigationOptions('PHYSICAL'))
     numeric('defense-reduction-final-fixed', '防御力固定低下（割合低下後）', stage.defenseReductionFinalFixed, n => `−${number(n)}`, mitigationOptions('PHYSICAL'))
     numeric('attack-final-flat', '攻撃力（最終加算）', stage.attackFinalFlat, n => `＋${number(n)}`)
+    numeric('defense-ratio', '防御力', stage.defenseRatio, n => `＋${percent(n)}`)
     numeric('resistance-reduction-fixed', '術耐性固定低下', stage.resistanceReductionFixed, n => `−${number(n)}`, mitigationOptions('ARTS'))
     numeric('damage-scale', '与ダメージ倍率', stage.damageScale, n => `×${number(n)}`)
+    numeric('minimum-damage-ratio', '最低ダメージの攻撃力比率', stage.minimumDamageRatio, percent,
+      inactive || stage.actions.some(action => (!action.basis || action.basis === 'ATK') && action.timing !== 'PER_SECOND') ? {} : {
+        status: 'NOT_RELEVANT', reason: '継続ダメージ・攻撃以外の参照値には適用しません。',
+      })
     numeric('damage-cap-per-target', '対象ごとのダメージ上限', stage.damageCapPerTarget, number)
     if (stage.duration !== undefined) add('duration', '持続時間', () => stage.duration === 'UNTIL_EXIT' ? '退場まで' : `${number(value(stage.duration))}秒`,
       stage.duration === 'UNTIL_EXIT' ? [] : [stage.duration], inactive ? {} : {
@@ -159,7 +165,7 @@ export function buildGuardSkillApplicationRows(input: DamageCalculatorThreeInput
         add(`${prefix}:${key}`, `${action.label}：${item}`, read, [...actionExpressions, expression], options)
       if (inherited?.damageType === undefined || action.traitOverrides?.includes('DAMAGE_TYPE'))
         actionRow('type', 'ダメージ属性', () => TYPE_LABELS[action.damageType])
-      if (action.basis !== undefined) actionRow('basis', '計算基準', () => action.basis === 'TARGET_CURRENT_HP' ? '対象の現在HP' : action.basis === 'TARGET_DEFENSE' ? '対象の防御力' : '自身の攻撃力')
+      if (action.basis !== undefined) actionRow('basis', '計算基準', () => action.basis === 'TARGET_CURRENT_HP' ? '対象の現在HP' : action.basis === 'TARGET_DEFENSE' ? '対象の防御力' : action.basis === 'OWNER_ATK_STAT' ? '召喚者の攻撃力' : action.basis === 'DEF_STAT' ? '自身の防御力' : '自身の攻撃力')
       actionRow('scale', action.basis === 'TARGET_CURRENT_HP' ? '対象の現在HP倍率' : '攻撃倍率',
         () => `×${number(value(action.scale, 1))}`, action.scale)
       if (inherited?.hitCount === undefined || action.traitOverrides?.includes('HIT_COUNT'))

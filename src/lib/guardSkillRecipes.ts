@@ -82,16 +82,24 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
   make('char_4182_oblvns', 1, [burst(ARTS, 1, 1, { maxTargets: 1,
     actions: Array.from({ length: 8 }, (_, index) => a(ARTS, k(index === 0 ? 'atk_scale' : `atk_scale_${index + 1}`), 1,
       { label: `第${index + 1}音符` })), notes: ['8つの音符すべてが同一対象に命中する条件。'] })]),
-  make('char_4182_oblvns', 2, [
-    at('piano', stage(PHYS, { label: 'ピアノ', atk: k('attack@atk'), maxTargets: null,
-      actions: [a(PHYS, 1, choose('fever', true, 2, 1))], ...pending('oblvns-s2-piano-hit-frequency', '音符の貫通・飛行・命中頻度を通常攻撃間隔へ換算する規則が未確定です。') })),
-    at('organ', stage(ARTS, { label: 'オルガン', aspd: k('attack@attack_speed'),
-      actions: [a(ARTS, 1, choose('fever', true, 2, 1))], ...pending('oblvns-s2-organ-hit-frequency', '音符の飛行・命中頻度を通常攻撃間隔へ換算する規則が未確定です。') })),
-  ], [phase(['piano', 'ピアノ'], ['organ', 'オルガン']), b('fever', 'Fever状態')]),
-  make('char_4182_oblvns', 3, [stage(ARTS, { duration: 25, actions: [
-    a(PHYS, k('attack@atk_scale'), 2, { label: 'ピアノの音符', targets: 1 }),
-    a(ARTS, k('attack@atk_scale'), 2, { label: 'オルガンの音符', targets: 1 }),
-  ], ...pending('oblvns-s3-note-targets', '異なる敵を追尾する音符の命中先と継続時間中の再命中頻度が未確定です。') })]),
+  // https://prts.wiki/w/丰川祥子 : notes retain emission ATK and blocking state;
+  // penetration uses the live note count at impact, including the current note.
+  ...([2, 3] as const).map(skillIndex => ({
+    ...make('char_4182_oblvns', skillIndex, ([['piano', PHYS], ['organ', ARTS]] as const).map(([mode, damageType]) =>
+      at(mode, burst(damageType, mul(skillIndex === 3 ? k('attack@atk_scale') : 1, choose('noteEmittedWhileBlocking', true, 1, 0.8)), 1, {
+        label: `${mode === 'piano' ? 'ピアノ' : 'オルガン'}の音符1命中`, maxTargets: 1,
+        atk: skillIndex === 2 && mode === 'piano' ? k('attack@atk') : 0,
+        dpsUnsupportedReason: '音符1つの1命中。発射間隔を命中頻度として扱わず、貫通やFever中の2連撃は合算しません。',
+        periodTotal: { kind: 'UNSUPPORTED', reason: '飛行・消滅・異なる命中先・音符数変化とスキル期間総量は未計算です。' },
+      }))), [phase(['piano', 'ピアノの音符1命中'], ['organ', 'オルガンの音符1命中']),
+        b('noteEmittedWhileBlocking', 'この音符の発射時にブロック中だった'),
+        b('noteAttackUnchanged', '音符発射時から攻撃力・音色が変わっていない', true)],
+      ['発射時の状態が現在と同じ音符だけを計算する。S2はFeverの有無によらず1音符1命中の値。S3の物理・術音符を別々に評価する。']),
+    conditionRequirements: [{ condition: { input: 'noteAttackUnchanged', comparison: 'EQ' as const, value: true },
+      supportedCondition: '音符の発射時から攻撃力・音色が変化していない',
+      reason: '音符は発射時の攻撃力を保持します。発射後に攻撃力や音色を変更した場合は未対応です。' },
+      { condition: { input: 'noteCount', comparison: 'GTE' as const, value: 1 }, reason: '命中する音符自身を含め、音符数は1以上が必要です。' }],
+  })),
 
   make('char_4088_hodrer', 1, [next(PHYS, k('atk_scale'))], [], ['攻撃後の最大HP25%回復は直接ダメージに加算しない。']),
   make('char_4088_hodrer', 2, [
@@ -126,10 +134,16 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
     { ...stage(PHYS, { atk: k('headb2_s_2[second].atk'), duration: 'UNTIL_EXIT' }), id: 'later', label: '2回目以降',
       when: { input: 'skillActivationCount', comparison: 'GTE', value: 2 } },
   ], [activations()]),
-  make('char_1051_headb2', 3, [burst(PHYS, 1, 1, { maxTargets: null, atk: k('atk_base'),
-    actions: Array.from({ length: 5 }, (_, index) => a(PHYS, k('atk_scale'), 1,
-      { label: `第${index + 1}撃`, attackBonus: mul(index, k('atk_step')) })),
-    ...pending('headb2-s3-terrain-splash', '連撃ごとの高台経由の追加攻撃と拡散先を確認する必要があります。', ['スキル', '素質1', '特性']) })]),
+  make('char_1051_headb2', 3, [
+    at('hammer', stage(PHYS, { label: '主対象を含む1回の槌撃', atk: add(k('atk_base'), mul(i('completedHammerCount'), k('atk_step'))),
+      actions: [a(PHYS, k('atk_scale'))],
+      dpsUnsupportedReason: '5連撃中の選択した1回。通常攻撃周期や高台への拡散回数からDPSを推定しません。',
+      periodTotal: { kind: 'UNSUPPORTED', reason: '主対象のない槌撃・高台経由の追加攻撃を含む5連撃全体は未対応です。' } })),
+    at('terrain', burst(PHYS, 0, 1, { label: '主対象なし・高台への拡散を含む連撃', actions: [],
+      ...pending('headb2-s3-terrain-splash', '主対象のない槌撃と高台経由の追加攻撃・拡散時点は未対応です。主対象を選択できた槌撃1回のみ計算します。', ['スキル', '素質1', '特性']) })),
+  ], [phase(['hammer', '主対象を含む槌撃1回'], ['terrain', '主対象なし・高台への拡散']),
+    n('completedHammerCount', 'この槌撃より前に完了した槌撃の回数', 0, 0, 4)],
+  ['https://prts.wiki/w/怒潮凛冬：正面1マスの主対象を選択できた槌撃1回と、その周囲への特性50%ダメージ。高台効果は対象に命中しない条件。命中後の累積30%は次の槌撃から反映する。']),
 
   make('char_010_chen', 1, [next(PHYS, k('atk_scale'), 1, { traitOverrides: ['HIT_COUNT'] })], [], ['強化攻撃は説明に記載されたダメージ1回として定義し、剣豪の通常攻撃2ヒットを追加乗算しない。スタン1.5秒を保持。']),
   make('char_010_chen', 2, [burst(PHYS, 1, 1, { maxTargets: k('max_target'), actions: [
@@ -230,8 +244,18 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
   make('char_4010_etlchi', 1, [next(PHYS, k('atk_scale'), 2)]),
   make('char_4010_etlchi', 2, [burst(PHYS, k('atk_scale'), 1, { label: '鎌1回の接触', maxTargets: null,
     notes: ['接触1回のダメージ。0.5秒ごとの接触判定と2本の鎌の位置・重複を通常攻撃DPSと同一視しない。'] })]),
-  make('char_4010_etlchi', 3, [stage(PHYS, { atk: k('atk'), aspd: k('attack_speed'), duration: 20,
-    ...pending('etlchi-s3-hp-transfer', '心燭の最低ダメージ35%・HP上限・敵へのHP減少転写を通常の軽減計算と分離する必要があります。') })]),
+  make('char_4010_etlchi', 3, [
+    at('heart', stage(PHYS, { label: '心燭への通常攻撃1回', atk: k('atk'), aspd: k('attack_speed'), duration: 20,
+      maxTargets: k('attack@max_target'), minimumDamageRatio: .35,
+      dpsUnsupportedReason: '心燭への1攻撃のみ。消滅や原敵への同時命中を含むDPSは計算しません。',
+      periodTotal: { kind: 'UNSUPPORTED', reason: '心燭のHP減少・消滅・原敵への転写と直接攻撃の合算は未対応です。' } })),
+    at('enemy', stage(PHYS, { label: '通常の敵への通常攻撃1回', atk: k('atk'), aspd: k('attack_speed'), duration: 20, maxTargets: null,
+      dpsUnsupportedReason: '通常の敵への直接攻撃のみ。心燭からの転写は合算しません。',
+      periodTotal: { kind: 'UNSUPPORTED', reason: '心燭からの転写を含む全期間は未対応です。' } })),
+    at('combined', burst(PHYS, 0, 1, { label: '原敵への直接攻撃・心燭からの転写の合計', actions: [],
+      ...pending('etlchi-s3-hp-transfer', '心燭と原敵への同時命中・消滅・原敵固有の無敵やHP機構を含む転写の合算は未対応です。') })),
+  ], [phase(['heart', '心燭へのダメージ'], ['enemy', '通常の敵への直接ダメージ'], ['combined', '原敵への合計'])],
+  ['https://prts.wiki/w/心烛：心燭の非継続ダメージのみATK35%を最低保証し、素質の200術/秒には適用しない。入力DEF/RESは生成時に元の敵から複製された心燭の現在値。心燭の残HPでダメージ自体を切り詰めない。原敵への同量の転写は別対象への値なのでここへ重ねて加算しない。']),
 
   make('char_4064_mlynar', 1, [stage(PHYS, { duration: 30, maxTargets: null, actions: [a(PHYS, k('attack@atk_scale'))] })]),
   make('char_4064_mlynar', 2, [stage(PHYS, { duration: 20, intervalAdd: k('base_attack_time'), maxTargets: null,
@@ -246,8 +270,17 @@ export const GUARD_SKILL_RECIPES: readonly GuardSkillRecipe[] = [
   make('char_1043_leizi2', 2, [stage(PHYS, { duration: 36, maxTargets: k('attack@max_target_s2'),
     atk: mul(k('thunder_atk'), i('attackStacks')), actions: [a(PHYS, k('attack@atk_scale_s2'))] })],
     [stacks(25, 'スキル中の落雷による累積数')]),
-  make('char_1043_leizi2', 3, [stage(PHYS, { duration: 24, intervalAdd: k('base_attack_time'), maxTargets: null,
-    actions: [a(PHYS, k('attack@atk_scale_s3'))], ...pending('leizi2-s3-current-contacts', '電流の生成・反射・再接触による術ダメージの回数と持続を確認する必要があります。') })]),
+  make('char_1043_leizi2', 3, [
+    at('normal', stage(PHYS, { label: '通常攻撃の物理範囲ダメージ1回', duration: 24, intervalAdd: k('base_attack_time'), maxTargets: null,
+      actions: [a(PHYS, k('attack@atk_scale_s3'))], dpsUnsupportedReason: '通常攻撃部分の1回のみ。電流・発動時落雷との時間合算は計算しません。',
+      periodTotal: { kind: 'UNSUPPORTED', reason: '電流の反射・接触回数を含む全期間は未対応です。' } })),
+    at('current', burst(ARTS, k('attack@atk_scale_current'), 1, { label: '電流1本のダメージ判定1回', maxTargets: null,
+      actions: [a(ARTS, k('attack@atk_scale_current'), 1, { basis: 'ATK_STAT' })],
+      periodTotal: { kind: 'UNSUPPORTED', reason: '電流の移動・反射・再接触・本数の時間合算は未対応です。' } })),
+    at('sequence', burst(PHYS, 0, 1, { label: '発動時落雷・反射を含む全体', actions: [],
+      ...pending('leizi2-s3-current-contacts', '発動時落雷の適用倍率と、電流の生成・反射・再接触を含む全体は未対応です。') })),
+  ], [phase(['normal', '通常攻撃部分'], ['current', '電流1本の判定1回'], ['sequence', '発動時落雷・反射を含む全体'])],
+  ['https://prts.wiki/w/司霆惊蛰：電流は地面の対象にのみ命中。電流1本の0.6秒ごとの判定を1回として評価し、通常攻撃倍率107%を継承しない。周期落雷は独立した毎秒期待値。']),
 ]
 
 export function findGuardSkillRecipe(operatorId: string, skillIndex: number): GuardSkillRecipe | null {

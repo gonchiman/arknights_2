@@ -36,6 +36,47 @@ function close(actual: number | null | undefined, expected: number) {
   assert.ok(actual !== null && actual !== undefined && Math.abs(actual - expected) < 1e-7, `${actual} != ${expected}`)
 }
 
+test('段階の最低保証は攻撃倍率前のATKを参照し、軽減後・与ダメージ倍率前に命中ごとに適用する', () => {
+  for (const virtualMainAttackType of [undefined, 'ARTS'] as const) for (const ratio of [0, 0.4, 1]) {
+    const { output, display } = calculate('char_208_melan', { minimumDamageRatio: ratio, damageScale: 1.5,
+      actions: [{ label: 'scaled hit', role: 'MAIN', damageType: 'PHYSICAL', scale: 2, hits: 2, probability: 0.5 }] },
+    { virtualMainAttackType, enemy: { defense: 20000, resistance: 100 } })
+    assert.deepEqual(output.unsupportedReasons, [])
+    const attack = output.effectiveAttack!
+    close(output.rows[0].perAttack, Math.max(attack * 2 * 0.05, attack * ratio) * 2 * 0.5 * 1.5)
+    assert.ok(display.some(row => row.item === '最低ダメージの攻撃力比率'))
+  }
+})
+
+test('段階と素質の最低保証は加算せず高い方だけを使い、継続・ATK_STATには広げない', () => {
+  const options = { enemy: { defense: 20000, resistance: 100 } }
+  const base = calculate('char_366_acdrop', {}, options).output
+  assert.deepEqual(base.unsupportedReasons, [])
+  for (const ratio of [0.1, 0.8]) {
+    const output = calculate('char_366_acdrop', { minimumDamageRatio: ratio }, options).output
+    assert.deepEqual(output.unsupportedReasons, [])
+    close(output.rows[0].perAttack, Math.max(base.rows[0].perAttack, base.effectiveAttack! * ratio))
+  }
+  for (const virtualMainAttackType of [undefined, 'ARTS'] as const) {
+    const output = calculate('char_208_melan', { minimumDamageRatio: 1, actions: [
+      { label: 'attack', role: 'MAIN', damageType: 'PHYSICAL', scale: 1 },
+      { label: 'stat hit', role: 'ADDITIONAL', damageType: 'ARTS', basis: 'ATK_STAT', scale: 0.2 },
+      { label: 'periodic', role: 'ADDITIONAL', damageType: 'ARTS', scale: 0.2, timing: 'PER_SECOND' },
+    ] }, { ...options, virtualMainAttackType }).output
+    assert.deepEqual(output.unsupportedReasons, [])
+    close(output.rows[0].perAttack, output.effectiveAttack! * (1 + 0.2 * 0.05))
+    close(output.rows[0].damageOverTimeDps, output.effectiveAttack! * 0.2 * 0.05)
+  }
+})
+
+test('段階の最低保証の範囲外・非有限値・未解決値は計算を停止する', () => {
+  for (const minimumDamageRatio of [-0.01, 1.01, Number.NaN, Number.POSITIVE_INFINITY, { key: 'missing' }]) {
+    const output = calculate('char_208_melan', { minimumDamageRatio }).output
+    assert.deepEqual(output.rows, [])
+    assert.ok(output.unsupportedReasons.length)
+  }
+})
+
 test('命中上限は軽減と与ダメージ倍率の後・確率平均の前に適用し、各対象に独立する', () => {
   for (const virtualMainAttackType of [undefined, 'ARTS'] as const) {
     const base = calculate('char_208_melan', { damageScale: 1.5 }, { virtualMainAttackType }).output

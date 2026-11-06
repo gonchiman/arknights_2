@@ -118,8 +118,8 @@ test('特性へ加えるスキルのブロック数と蓄積倍率を独立し�
 })
 
 test('未解決のスキル・不正入力・欠落した数値を適用扱いせず理由を維持する', () => {
-  const unresolved = evaluate(input('char_4182_oblvns', 2))
-  assert.ok(unresolved.skills.some(row => row.status === 'UNSUPPORTED' && /命中頻度/.test(row.reason)))
+  const unresolved = evaluate(input('char_4182_oblvns', 2, { noteAttackUnchanged: false }))
+  assert.ok(unresolved.skills.some(row => row.status === 'UNVERIFIED' && /音符/.test(row.reason)))
   for (const guard of [{ actualAttackTargetCount: NaN }, { phase: 'missing' }]) {
     const result = evaluate(input('char_264_f12yin', 2, guard))
     assert.ok(result.skills.every(row => row.status !== 'APPLIED'))

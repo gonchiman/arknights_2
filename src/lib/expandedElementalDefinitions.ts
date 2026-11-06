@@ -1,4 +1,6 @@
 import sources from '../data/expandedElementalSources.json' with { type: 'json' }
+import { EXPANDED_ELEMENTAL_EVENT_DEFINITIONS } from './expandedElementalEventDefinitions.ts'
+import { EXPANDED_TRAGODIA_DEFINITIONS } from './expandedTragodiaDefinitions.ts'
 import type { ExpandedOperatorDefinition, ExpandedTalentDefinition } from './expandedCombatTypes.ts'
 import type { GuardDamageAction, GuardElementalBuildup, GuardInput, GuardSkillRecipe, GuardStage, GuardValue } from './guardCombatTypes.ts'
 import type { TalentStructureEffect } from './talentStructure.ts'
@@ -204,4 +206,6 @@ export const EXPANDED_ELEMENTAL_DEFINITIONS: readonly ExpandedOperatorDefinition
   ...INITIAL_ELEMENTAL_DEFINITIONS.map(definition => ({ ...definition,
     recipes: [...definition.recipes, ...extraRecipes.filter(recipe => recipe.operatorId === definition.operatorId)] })),
   ...NEW_ELEMENTAL_DEFINITIONS,
+  ...EXPANDED_ELEMENTAL_EVENT_DEFINITIONS,
+  ...EXPANDED_TRAGODIA_DEFINITIONS,
 ]
