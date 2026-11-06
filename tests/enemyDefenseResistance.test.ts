@@ -1,0 +1,57 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { buildEnemyDefenseResistanceBands } from '../src/lib/enemyDefenseResistance.ts'
+import type { EnemyHistogramCounts } from '../src/lib/enemyHistogramCounts.ts'
+import type { EnemyRecord } from '../src/types/enemy.ts'
+
+const row = (id: string, defense: number | null, magicResistance: number | null) =>
+  ({ id, stats: { defense, magicResistance } }) as EnemyRecord
+
+function counts(spawns: Record<string, number>): EnemyHistogramCounts {
+  return {
+    schemaVersion: 1, generatedAt: '', sourceGeneratedAt: null,
+    summary: { mapCount: 1, missingMapCount: 0, spawnMapCount: 1, spawnExcludedMapCount: 0 },
+    enemies: Object.fromEntries(Object.entries(spawns).map(([id, spawnCount]) => [id, { spawnCount, mapCount: 1 }])),
+  }
+}
+
+test('同一の有効な敵集合を出現回数で重み付けし、同値がまたがる帯に両方表示する', () => {
+  const rows = [
+    row('a', 600, 50), row('b', 600, 20), row('c', 300, 20), row('d', 0, 0),
+    row('a', 600, 50), row('missingDefense', null, 95), row('missingResistance', 9999, null),
+    row('zeroWeight', 9999, 95), row('noCount', 9999, 95),
+  ]
+  const { total, bands } = buildEnemyDefenseResistanceBands(rows,
+    counts({ a: 3.5, b: 2.5, c: 2.25, d: 1.75, missingDefense: 100, missingResistance: 100, zeroWeight: 0 }))
+  assert.equal(total, 10)
+  assert.deepEqual(bands, [
+    { from: 0, to: 10, defense: { min: 600, max: 600 }, resistance: { min: 50, max: 50 } },
+    { from: 10, to: 20, defense: { min: 600, max: 600 }, resistance: { min: 50, max: 50 } },
+    { from: 20, to: 30, defense: { min: 600, max: 600 }, resistance: { min: 50, max: 50 } },
+    { from: 30, to: 40, defense: { min: 600, max: 600 }, resistance: { min: 20, max: 50 } },
+    { from: 40, to: 50, defense: { min: 600, max: 600 }, resistance: { min: 20, max: 20 } },
+    { from: 50, to: 60, defense: { min: 600, max: 600 }, resistance: { min: 20, max: 20 } },
+    { from: 60, to: 70, defense: { min: 300, max: 300 }, resistance: { min: 20, max: 20 } },
+    { from: 70, to: 80, defense: { min: 300, max: 300 }, resistance: { min: 20, max: 20 } },
+    { from: 80, to: 90, defense: { min: 0, max: 300 }, resistance: { min: 0, max: 20 } },
+    { from: 90, to: 100, defense: { min: 0, max: 0 }, resistance: { min: 0, max: 0 } },
+  ])
+})
+
+test('小数の重みを使うときも境界ちょうどの値を次の帯に混ぜない', () => {
+  const { bands } = buildEnemyDefenseResistanceBands(
+    [row('a', 200, 15), row('b', 100, 25), row('c', 0, 0)],
+    counts({ a: 0.2, b: 0.1, c: 0.7 }),
+  )
+  assert.deepEqual(bands.slice(0, 3), [
+    { from: 0, to: 10, defense: { min: 200, max: 200 }, resistance: { min: 25, max: 25 } },
+    { from: 10, to: 20, defense: { min: 200, max: 200 }, resistance: { min: 15, max: 15 } },
+    { from: 20, to: 30, defense: { min: 100, max: 100 }, resistance: { min: 15, max: 15 } },
+  ])
+  assert.deepEqual(bands[3], { from: 30, to: 40, defense: { min: 0, max: 0 }, resistance: { min: 0, max: 0 } })
+})
+
+test('両方の基礎値を照合できる出現がなければ空の結果を返す', () => {
+  assert.deepEqual(buildEnemyDefenseResistanceBands([row('a', null, 0), row('b', 0, 0)], counts({ a: 3, b: 0 })),
+    { total: 0, bands: [] })
+})
