@@ -1,10 +1,41 @@
-.damage-three-attribute-range-chart {
+.damage-three-attribute-range-chart,
+.damage-three-attribute-range-image-legend {
   --dc3-range-physical: #387590;
   --dc3-range-arts: #a85b2e;
+}
+
+.damage-three-attribute-range-chart {
   min-width: 0;
   margin: 0;
   border: 1px solid var(--border);
   background: var(--surface);
+}
+
+.damage-three-attribute-range-chart.is-image {
+  --border: #ddd;
+  --border-strong: #aaa;
+  --text-soft: #555;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 0;
+  background: none;
+}
+
+.damage-three-attribute-range-chart.is-image .damage-three-attribute-range-caption {
+  padding: 4px 0 0;
+  border: 0;
+  color: #444;
+}
+
+.damage-three-attribute-range-chart.is-image .damage-three-attribute-range-layout {
+  grid-template-rows: minmax(0, 1fr) auto;
+  padding: 10px 0 0;
+}
+
+.damage-three-attribute-range-image-legend .chart-image-frame-legend-swatch {
+  display: grid;
+  height: 12px;
+  place-items: center;
 }
 
 .damage-three-attribute-range-caption {

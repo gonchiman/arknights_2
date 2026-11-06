@@ -14,7 +14,12 @@ import { GuardConditionFields } from './DamageCalculatorThree'
 import {
   DamageCalculatorThreeAttributeImageDialog, type DamageCalculatorThreeAttributeImageSnapshot,
 } from './DamageCalculatorThreeAttributeImageDialog'
-import { DamageCalculatorThreeAttributeRangeChart } from './DamageCalculatorThreeAttributeRangeChart'
+import {
+  DamageCalculatorThreeAttributeChartImageDialog, type DamageCalculatorThreeAttributeChartImageSnapshot,
+} from './DamageCalculatorThreeAttributeChartImageDialog'
+import {
+  DamageCalculatorThreeAttributeRangeChart, DamageCalculatorThreeAttributeRangeLegend,
+} from './DamageCalculatorThreeAttributeRangeChart'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
 import { OperatorDetailLink } from './OperatorDetailLink'
 import { PersistentDetails } from './PersistentDetails'
@@ -32,6 +37,9 @@ interface Props {
 
 type Metric = 'perAttack' | 'dps'
 type ResultView = 'table' | 'chart'
+type ResultImage =
+  | { view: 'table'; snapshot: DamageCalculatorThreeAttributeImageSnapshot }
+  | { view: 'chart'; snapshot: DamageCalculatorThreeAttributeChartImageSnapshot }
 const METRIC_LABELS: Record<Metric, string> = { perAttack: '1回の攻撃ダメージ', dps: 'DPS' }
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 const TABLE_NUMBER = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
@@ -62,7 +70,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const [overrides, setOverrides] = useState<DamageThreeComparisonOverrides>({})
   const [metric, setMetric] = useState<Metric>('dps')
   const [resultView, setResultView] = useState<ResultView>('table')
-  const [image, setImage] = useState<DamageCalculatorThreeAttributeImageSnapshot | null>(null)
+  const [image, setImage] = useState<ResultImage | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [filters, setFilters] = useState({ ...EMPTY_OPERATOR_FILTERS })
   const requested = selection ?? (entries.find(entry => entry.capability.supported) ?? entries[0])?.structure.basicInfo
@@ -100,11 +108,30 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
       conditions.push(`${field.label} ${label}`)
     }
     conditions.push('ゲーム内評価', '仮想比較', '主攻撃のみ', '1体あたり')
-    setImage({
-      title: `${selected.skill.operatorName} S${selected.skill.skillIndex} 属性比較（${METRIC_LABELS[activeMetric]}）`,
+    const imageRows = structuredClone({ physical, arts })
+    const subject = `${selected.skill.operatorName} S${selected.skill.skillIndex}`
+    const metricLabel = METRIC_LABELS[activeMetric]
+    if (resultView === 'chart') {
+      setImage({ view: 'chart', snapshot: {
+        title: `${subject} 属性比較グラフ（${metricLabel}）`,
+        conditions: [
+          selected.structure.basicInfo.skillLevel,
+          ...(stages.length > 1 ? [selected.stageLabel] : []),
+          ...(enemyCount > 1 ? [`敵${enemyCount}体`] : []),
+          '仮想比較',
+          '主攻撃（1体あたり）',
+        ],
+        filenameParts: conditions,
+        legend: <DamageCalculatorThreeAttributeRangeLegend forImage />,
+        chart: ({ height }) => <DamageCalculatorThreeAttributeRangeChart {...imageRows} metric={activeMetric} imageHeight={height} />,
+      } })
+      return
+    }
+    setImage({ view: 'table', snapshot: {
+      title: `${subject} 属性比較（${metricLabel}）`,
       conditions,
-      table: <DamageCalculatorThreeAttributeTable {...structuredClone({ physical, arts })} metric={activeMetric} forImage />,
-    })
+      table: <DamageCalculatorThreeAttributeTable {...imageRows} metric={activeMetric} forImage />,
+    } })
   }
 
   function chooseSkill(entry: DamageThreeAttributeEntry) {
@@ -220,9 +247,9 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
         {hasDps ? <AttributeButtons label="表示指標" options={[["dps", "DPS"], ["perAttack", "1回の攻撃ダメージ"]]}
           value={activeMetric} onChange={setMetric} /> : <strong className="damage-three-attribute-fixed-metric">1回の攻撃ダメージ</strong>}
         <span className="damage-three-attribute-target">1体あたり</span>
-        {resultView === 'table' && <button type="button" className="button secondary damage-three-attribute-image-button"
-          aria-label="属性比較表をPNG画像で保存" aria-haspopup="dialog"
-          disabled={comparison.errors.length > 0} onClick={openImage}>画像を保存</button>}
+        <button type="button" className="button secondary damage-three-attribute-image-button"
+          aria-label={resultView === 'table' ? '属性比較表をPNG画像で保存' : '属性比較グラフをPNG画像で保存'}
+          aria-haspopup="dialog" disabled={comparison.errors.length > 0} onClick={openImage}>画像を保存</button>
       </div>
       {comparison.errors.length > 0 && <div className="damage-two-unavailable damage-three-attribute-error" role="status">
         {comparison.errors.map(reason => <div key={reason}>{reason}</div>)}
@@ -233,7 +260,8 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
         : <DamageCalculatorThreeAttributeRangeChart physical={comparison.physical} arts={comparison.arts}
           metric={activeMetric} invalid={comparison.errors.length > 0} />}
     </CollapsibleCalculatorPanel>}
-    {image && <DamageCalculatorThreeAttributeImageDialog snapshot={image} onClose={() => setImage(null)} />}
+    {image?.view === 'table' && <DamageCalculatorThreeAttributeImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
+    {image?.view === 'chart' && <DamageCalculatorThreeAttributeChartImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
   </section>
 }
 

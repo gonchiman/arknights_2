@@ -12,6 +12,7 @@ interface Props {
   arts: readonly DamageThreeAttributeTableRow[]
   metric: Metric
   invalid?: boolean
+  imageHeight?: number
 }
 
 const RATINGS = getEnemyRatingRanges('defense').map(({ rating }) => rating)
@@ -34,8 +35,20 @@ function describeRange(range: DamageRange | null) {
   return range.min === range.max ? minimum : `${minimum}〜${RANGE_NUMBER.format(range.max)}`
 }
 
+export function DamageCalculatorThreeAttributeRangeLegend({ forImage = false }: { forImage?: boolean }) {
+  return <ul className={forImage ? 'chart-image-frame-legend-list damage-three-attribute-range-image-legend'
+    : 'damage-three-attribute-range-legend'} aria-label="属性の凡例">
+    {ATTRIBUTES.map(({ key, label }) => {
+      const point = <i className={`damage-three-attribute-range-point is-${key}`} aria-hidden="true" />
+      return <li key={key} className={forImage ? 'chart-image-frame-legend-item' : undefined}>
+        {forImage ? <span className="chart-image-frame-legend-swatch">{point}</span> : point}{label}
+      </li>
+    })}
+  </ul>
+}
+
 /** Draw the same calculated endpoints as the comparison table on one shared scale. */
-export function DamageCalculatorThreeAttributeRangeChart({ physical, arts, metric, invalid = false }: Props) {
+export function DamageCalculatorThreeAttributeRangeChart({ physical, arts, metric, invalid = false, imageHeight }: Props) {
   const captionId = useId()
   const descriptionId = useId()
   const physicalByRating = new Map(physical.map((row) => [row.rating, row[metric]]))
@@ -51,14 +64,13 @@ export function DamageCalculatorThreeAttributeRangeChart({ physical, arts, metri
   const metricLabel = metric === 'dps' ? 'DPS' : '1回の攻撃ダメージ'
   const columns = { '--dc3-range-columns': RATINGS.length } as CSSProperties
 
-  return <figure className="damage-three-attribute-range-chart" aria-labelledby={captionId} aria-describedby={descriptionId}>
+  const forImage = imageHeight !== undefined
+
+  return <figure className={`damage-three-attribute-range-chart${forImage ? ' is-image' : ''}`}
+    style={forImage ? { height: imageHeight } : undefined} aria-labelledby={captionId} aria-describedby={descriptionId}>
     <figcaption className="damage-three-attribute-range-caption">
       <strong id={captionId}>{metricLabel}の最小〜最大</strong>
-      <ul className="damage-three-attribute-range-legend" aria-label="属性の凡例">
-        {ATTRIBUTES.map(({ key, label }) => <li key={key}>
-          <i className={`damage-three-attribute-range-point is-${key}`} aria-hidden="true" />{label}
-        </li>)}
-      </ul>
+      {!forImage && <DamageCalculatorThreeAttributeRangeLegend />}
     </figcaption>
     <div className="damage-three-attribute-range-layout" style={columns} aria-hidden="true">
       <div className="damage-three-attribute-range-scale">
@@ -84,7 +96,7 @@ export function DamageCalculatorThreeAttributeRangeChart({ physical, arts, metri
       <div className="damage-three-attribute-range-ratings">
         {groups.map(({ rating }) => <span key={rating}>{rating}</span>)}
       </div>
-      <div className="damage-three-attribute-range-axis">ゲーム内評価</div>
+      {!forImage && <div className="damage-three-attribute-range-axis">ゲーム内評価</div>}
     </div>
     <p className="visually-hidden" id={descriptionId}>
       {groups.map(group => `${group.rating}、物理 ${describeRange(group.physical)}、術 ${describeRange(group.arts)}`).join('。')}
