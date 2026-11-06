@@ -5,7 +5,11 @@ import { classifySkill } from '../src/lib/classifier.ts'
 import { getDamageCalculatorThreeStructures } from '../src/lib/damageCalculatorThree.ts'
 import { getDamageThreeAttributeEntries } from '../src/lib/damageCalculatorThreeAttributeComparison.ts'
 import { evaluateDamageThreeComparisonEntry, type DamageThreeComparisonOverrides } from '../src/lib/damageCalculatorThreeComparison.ts'
-import { evaluateDamageThreeAttributeTables, type DamageThreeAttributeTablesInput } from '../src/lib/damageCalculatorThreeAttributeTables.ts'
+import {
+  evaluateDamageThreeAttributeTables,
+  type DamageThreeAttributeTableRow,
+  type DamageThreeAttributeTablesInput,
+} from '../src/lib/damageCalculatorThreeAttributeTables.ts'
 import type { ExpandedOperatorSource } from '../src/lib/expandedCombatTypes.ts'
 import type { OperatorCombatProfile, RawSkillLevel, SkillRecord } from '../src/types/skill.ts'
 
@@ -36,13 +40,37 @@ function input(id: string, index: number, stageId?: string, overrides?: DamageTh
   assert.ok(entry, `${id}/S${index}/${stageId ?? '*'}`)
   return { entry, enemyCount: 1, overrides }
 }
+function assertRatingRows({ physical, arts }: ReturnType<typeof evaluateDamageThreeAttributeTables>) {
+  const ratings = ['E', 'D', 'C', 'B', 'B+', 'A', 'A+', 'S', 'S+', 'SS']
+  assert.deepEqual(physical.map(row => row.rating), ratings)
+  assert.deepEqual(arts.map(row => row.rating), ratings)
+  assert.deepEqual(physical.map(row => [row.minStat, row.maxStat]), [
+    [0, 99], [100, 199], [200, 499], [500, 799], [800, 999],
+    [1000, 1199], [1200, 1999], [2000, 2999], [3000, 5000], [5001, null],
+  ])
+  assert.deepEqual(arts.map(row => [row.minStat, row.maxStat]), [
+    [0, 0], [1, 9], [10, 19], [20, 29], [30, 49],
+    [50, 59], [60, 69], [70, 79], [80, 90], [91, 100],
+  ])
+}
+function isFiniteRange(range: DamageThreeAttributeTableRow['perAttack']) {
+  return range !== null && Number.isFinite(range.min) && Number.isFinite(range.max)
+    && range.min >= 0 && range.min <= range.max
+}
 function valid(value: DamageThreeAttributeTablesInput) {
   const output = evaluateDamageThreeAttributeTables(value)
   assert.deepEqual(output.errors, [], value.entry.key)
-  assert.deepEqual(output.physical.map(row => row.value), [0, 500, 1000, 1500, 2000])
-  assert.deepEqual(output.arts.map(row => row.value), [0, 20, 40, 60, 80])
-  assert.ok([...output.physical, ...output.arts].every(row => row.perAttack !== null && Number.isFinite(row.perAttack)))
+  assertRatingRows(output)
+  assert.ok([...output.physical, ...output.arts].every(row => isFiniteRange(row.perAttack)))
   return output
+}
+function* endpoints(rows: readonly DamageThreeAttributeTableRow[]) {
+  for (const row of rows) {
+    yield { stat: row.minStat, perAttack: row.perAttack?.max ?? null, dps: row.dps?.max ?? null }
+    if (row.maxStat !== null && row.maxStat !== row.minStat) {
+      yield { stat: row.maxStat, perAttack: row.perAttack?.min ?? null, dps: row.dps?.min ?? null }
+    }
+  }
 }
 function ordinary(value: DamageThreeAttributeTablesInput, type: 'PHYSICAL' | 'ARTS', axis: number) {
   return evaluateDamageThreeComparisonEntry(value.entry, { enemyCount: value.enemyCount,
@@ -53,7 +81,7 @@ function close(actual: number | null, expected: number) {
   assert.ok(actual !== null && Math.abs(actual - expected) <= 1e-7 * Math.max(1, Math.abs(expected)), `${actual} != ${expected}`)
 }
 
-test('エクシアS3の主攻撃を各5条件で比較し、5連撃・攻撃間隔・最低保証を保つ', () => {
+test('エクシアS3の主攻撃をゲーム内評価の両端で比較し、5連撃・攻撃間隔・最低保証を保つ', () => {
   const value = input('char_103_angel', 3)
   const before = structuredClone(value)
   const output = valid(value)
@@ -62,29 +90,50 @@ test('エクシアS3の主攻撃を各5条件で比較し、5連撃・攻撃間�
   assert.equal(output.canShowDps, true)
   const perHit = native.output!.rows[0].attackComponents[0].attackPipeline.finalAttack
   const interval = native.output!.attackInterval!
-  for (const row of output.physical) {
-    close(row.perAttack, Math.max(perHit - row.value, perHit * 0.05) * 5)
-    close(row.dps, row.perAttack! / interval)
+  for (const point of endpoints(output.physical)) {
+    close(point.perAttack, Math.max(perHit - point.stat, perHit * 0.05) * 5)
+    close(point.dps, point.perAttack! / interval)
   }
-  for (const row of output.arts) {
-    close(row.perAttack, perHit * (1 - row.value / 100) * 5)
-    close(row.dps, row.perAttack! / interval)
+  for (const point of endpoints(output.arts)) {
+    close(point.perAttack, perHit * Math.max(1 - point.stat / 100, 0.05) * 5)
+    close(point.dps, point.perAttack! / interval)
   }
+  assert.deepEqual(output.arts[0].perAttack, { min: perHit * 5, max: perHit * 5 })
+  close(output.physical.at(-1)?.perAttack?.min ?? null, perHit * 0.05 * 5)
   assert.deepEqual(value, before)
+})
+
+test('防御力SSの下限は防御力5,001で最低保証に達していない主攻撃でも正しく求める', () => {
+  const value = structuredClone(input('char_103_angel', 3))
+  const frames = value.entry.skill.operatorProfile.phases[value.entry.phaseIndex].attributesKeyFrames
+  assert.ok(frames?.length)
+  for (const frame of frames) {
+    assert.ok(frame.data)
+    frame.data.atk = 20_000
+  }
+  const ss = valid(value).physical.at(-1)!
+  const lowDefense = ordinary(value, 'PHYSICAL', 5001)
+  const floorDefense = ordinary(value, 'PHYSICAL', 100_000)
+  assert.deepEqual(lowDefense.errors, [])
+  assert.deepEqual(floorDefense.errors, [])
+  assert.ok(lowDefense.perAttack! > floorDefense.perAttack!)
+  assert.equal(ss.maxStat, null)
+  assert.deepEqual(ss.perAttack, { min: floorDefense.perAttack, max: lowDefense.perAttack })
+  assert.deepEqual(ss.dps, { min: floorDefense.dps, max: lowDefense.dps })
 })
 
 test('主攻撃のみを抽出し、ケオベのDEF由来術追撃とムリナール・チューバイの追加攻撃を除く', () => {
   for (const value of [input('char_2013_cerber', 2), input('char_4064_mlynar', 3), input('char_4082_qiubai', 1)]) {
     const output = valid(value)
     for (const [type, rows] of [['PHYSICAL', output.physical], ['ARTS', output.arts]] as const) {
-      for (const row of rows) {
-        const full = ordinary(value, type, row.value)
+      for (const point of endpoints(rows)) {
+        const full = ordinary(value, type, point.stat)
         const components = full.output!.rows[0].attackComponents
         const main = components.filter(component => component.role === 'MAIN').reduce((sum, component) => sum + component.expectedDamage, 0)
         const extra = components.filter(component => component.role === 'ADDITIONAL').reduce((sum, component) => sum + component.expectedDamage, 0)
-        close(row.perAttack, main)
+        close(point.perAttack, main)
         close(full.perAttack, main + extra)
-        if (extra > 0) assert.ok(row.perAttack! < full.perAttack!)
+        if (extra > 0) assert.ok(point.perAttack! < full.perAttack!)
       }
     }
   }
@@ -93,14 +142,14 @@ test('主攻撃のみを抽出し、ケオベのDEF由来術追撃とムリナ�
 test('guard・旧形式の継続ダメージを除き、通常攻撃と反撃の主攻撃を維持する', () => {
   for (const value of [input('char_355_ethan', 1), input('char_293_thorns', 3), input('char_293_thorns', 2)]) {
     const output = valid(value)
-    for (const [type, rows] of [['PHYSICAL', output.physical], ['ARTS', output.arts]] as const) for (const row of rows) {
-      const full = ordinary(value, type, row.value)
+    for (const [type, rows] of [['PHYSICAL', output.physical], ['ARTS', output.arts]] as const) for (const point of endpoints(rows)) {
+      const full = ordinary(value, type, point.stat)
       if (output.canShowDps) assert.ok(full.damageOverTimeDps !== null && full.damageOverTimeDps > 0)
       else assert.equal(full.damageOverTimeDps, null, '反撃頻度が未指定のDoTの定常DPSも代用しない')
-      close(row.perAttack, full.perAttack!)
-      assert.equal(row.dps, full.dps)
-      if (output.canShowDps) assert.ok(row.dps! < full.combinedDps!)
-      else assert.equal(row.dps, null)
+      close(point.perAttack, full.perAttack!)
+      assert.equal(point.dps, full.dps)
+      if (output.canShowDps) assert.ok(point.dps! < full.combinedDps!)
+      else assert.equal(point.dps, null)
     }
   }
 })
@@ -110,11 +159,11 @@ test('旧方式5人と単発・順序攻撃・混合・確定主攻撃も同じ�
     input('char_293_thorns', 1), input('char_4009_irene', 3), input('char_210_stward', 1),
     input('char_010_chen', 2), input('char_002_amiya', 3), input('char_4088_hodrer', 3, 'dot')]) {
     const output = valid(value)
-    for (const [type, rows] of [['PHYSICAL', output.physical], ['ARTS', output.arts]] as const) for (const row of rows) {
-      const full = ordinary(value, type, row.value)
-      assert.equal(row.perAttack, full.perAttack)
-      assert.equal(row.dps, full.dps)
-      if (value.entry.kind !== 'NORMAL') assert.equal(row.dps, null)
+    for (const [type, rows] of [['PHYSICAL', output.physical], ['ARTS', output.arts]] as const) for (const point of endpoints(rows)) {
+      const full = ordinary(value, type, point.stat)
+      assert.equal(point.perAttack, full.perAttack)
+      assert.equal(point.dps, full.dps)
+      if (value.entry.kind !== 'NORMAL') assert.equal(point.dps, null)
     }
   }
 })
@@ -125,18 +174,23 @@ test('トギフォンスS2は遅延爆発を除き、均等な1体あたりの�
   const output = valid(value)
   assert.equal(output.reference.actualTargetCount, 3)
   for (let index = 0; index < output.physical.length; index++) {
-    close(output.physical[index].perAttack, single.physical[index].perAttack! / 3)
-    close(output.physical[index].dps, single.physical[index].dps! / 3)
+    for (const bound of ['min', 'max'] as const) {
+      close(output.physical[index].perAttack?.[bound] ?? null, single.physical[index].perAttack![bound] / 3)
+      close(output.physical[index].dps?.[bound] ?? null, single.physical[index].dps![bound] / 3)
+    }
   }
   const full = ordinary(value, 'PHYSICAL', 0)
-  assert.ok(full.perAttack! > output.physical[0].perAttack!)
+  assert.ok(full.perAttack! > output.physical[0].perAttack!.max)
 })
 
 test('AshS3の両方未命中は正常な0、攻撃を持たない睡眠段階は未対応として区別する', () => {
   const value = input('char_456_ash', 3, undefined, { 'guard.contactHit': false, 'guard.explosionHit': false })
   const output = valid(value)
   assert.deepEqual(output.reference.output!.rows[0].attackComponents, [])
-  assert.ok([...output.physical, ...output.arts].every(row => row.perAttack === 0 && row.dps === null))
+  for (const row of [...output.physical, ...output.arts]) {
+    assert.deepEqual(row.perAttack, { min: 0, max: 0 })
+    assert.equal(row.dps, null)
+  }
   assert.equal(output.canShowDps, false)
   const sleep = evaluateDamageThreeAttributeTables(input('char_4122_grabds', 2, 'sleep'))
   assert.equal(sleep.reference.perAttack, 0)
@@ -150,13 +204,13 @@ test('レベル・信頼度・HP状態を両表で共有し、参照結果の条
   assert.ok(output.reference.fields.some(field => field.key === 'guard.targetHpPercent' && field.value === 20))
   assert.deepEqual(output.reference, evaluateDamageThreeComparisonEntry(value.entry,
     { defense: 0, resistance: 0, enemyCount: 1 }, value.overrides, { operatorLevel: 1, trust: 0 }))
-  for (const [type, rows] of [['PHYSICAL', output.physical], ['ARTS', output.arts]] as const) for (const row of rows) {
-    const full = ordinary(value, type, row.value)
-    assert.equal(row.perAttack, full.perAttack)
-    assert.equal(row.dps, full.dps)
+  for (const [type, rows] of [['PHYSICAL', output.physical], ['ARTS', output.arts]] as const) for (const point of endpoints(rows)) {
+    const full = ordinary(value, type, point.stat)
+    assert.equal(point.perAttack, full.perAttack)
+    assert.equal(point.dps, full.dps)
   }
   const unweakened = valid({ ...value, overrides: { 'guard.targetHpPercent': 100 } })
-  assert.ok(output.arts[0].dps! > unweakened.arts[0].dps!)
+  assert.ok(output.arts[0].dps!.max > unweakened.arts[0].dps!.max)
 })
 
 test('入力不正・出典不一致・不明な主攻撃を数値で代用せず全行をnullにする', () => {
@@ -172,8 +226,7 @@ test('入力不正・出典不一致・不明な主攻撃を数値で代用せ�
   ]) {
     const output = evaluateDamageThreeAttributeTables(value)
     assert.ok(output.errors.length, value.entry.key)
-    assert.deepEqual(output.physical.map(row => row.value), [0, 500, 1000, 1500, 2000])
-    assert.deepEqual(output.arts.map(row => row.value), [0, 20, 40, 60, 80])
+    assertRatingRows(output)
     assert.ok([...output.physical, ...output.arts].every(row => row.perAttack === null && row.dps === null))
   }
 })
@@ -187,8 +240,8 @@ test('現在の全カタログで計算可能な仮想対応段階を欠落な�
     const reference = evaluateDamageThreeComparisonEntry(entry, { defense: 0, resistance: 0, enemyCount: 1 })
     if (!entry.capability.supported || reference.errors.length) continue
     const output = evaluateDamageThreeAttributeTables({ entry, enemyCount: 1 })
-    if (output.errors.length || [...output.physical, ...output.arts].some(row => row.perAttack === null
-      || !Number.isFinite(row.perAttack) || (output.canShowDps && (row.dps === null || !Number.isFinite(row.dps))))) {
+    if (output.errors.length || [...output.physical, ...output.arts].some(row => !isFiniteRange(row.perAttack)
+      || (output.canShowDps && !isFiniteRange(row.dps)))) {
       failures.push(`${entry.key}: ${output.errors.join(' / ') || '主攻撃の計算結果なし'}`)
     }
     if (entry.kind !== 'NORMAL' && [...output.physical, ...output.arts].some(row => row.dps !== null)) {
