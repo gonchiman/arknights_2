@@ -78,6 +78,8 @@ function assertSummary(markup, total, expectedCounts) {
 test('初期範囲は全職業・全レアリティ、1スキル1行の8列で区分別の状態と総合を分ける', () => {
   const extra = { ...records[0], id: 'other', operatorId: 'other', profession: 'CASTER', professionLabel: '術師', rarity: 5 }
   const markup = render(Page, { rows: [...records, extra], loading: false, onOpenOperatorDetail() {} })
+  assert.match(markup, /role="tab" aria-selected="false" aria-controls="dc3-coverage-panel-modules"[^>]*>MOD対応<\/button>/)
+  assert.match(markup, /id="dc3-coverage-panel-modules" role="tabpanel" aria-labelledby="dc3-coverage-tab-modules" hidden=""/)
   const rows = table(markup)
   assert.deepEqual(rows[0], ['オペレーター', 'S番号', 'スキル名', 'スキル', '素質', '特性', '総合', '詳細'])
   assert.equal(rows.length, 92)
