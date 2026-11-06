@@ -72,6 +72,7 @@ test('physical skill keeps growth and skill information while showing one groupe
   assert.match(markup, /仮想比較 · 主攻撃のみ/)
   assert.match(markup, /aria-label="表示指標"/)
   assert.match(markup, /aria-pressed="true">DPS<\/button>/)
+  assert.match(markup, /<button(?=[^>]*aria-label="属性比較表をPNG画像で保存")(?=[^>]*aria-haspopup="dialog")(?![^>]*disabled)[^>]*>画像を保存<\/button>/)
   assert.match(markup, /<div(?=[^>]*role="region")(?=[^>]*aria-label="属性比較表（1体あたり）")(?=[^>]*tabindex="0")/)
   const tables = comparisonTables(markup)
   assert.equal(tables.length, 1)
@@ -129,6 +130,7 @@ test('an invalid deep-link selection does not silently substitute a supported op
   assert.match(markup, /指定されたスキル・レベルは属性比較の対象外です。/)
   assert.match(markup, /検索して変更/)
   assert.doesNotMatch(markup, /class="damage-two-table damage-three-attribute-table"/)
+  assert.doesNotMatch(markup, /aria-label="属性比較表をPNG画像で保存"/)
 })
 
 test('default selection uses a supported stage and conditional skills retain their explicit controls', () => {
@@ -184,6 +186,14 @@ test('shared metric preserves zero, formats ranges and keeps the stat boundaries
     ['E', [[1, '0〜99'], [1, '12.3'], [1, '15.1'], [1, '0'], [2, '20.6']]],
     ['B', [[1, '500〜799'], ...unavailable, [1, '20〜29'], ...unavailable]],
   ])
+  for (const [metric, markup] of [['dps', dps], ['perAttack', perAttack]]) {
+    const image = renderTable({ metric, forImage: true })
+    assert.match(image, /^<table class="damage-two-table damage-three-attribute-table damage-three-attribute-table-image"/)
+    assert.doesNotMatch(image, /role="region"|tabindex=/i)
+    assert.deepEqual(attributeHeadings(image), ['物理', '術'])
+    assert.deepEqual(gradeRows(image), gradeRows(markup))
+    assert.match(image, /<td(?=[^>]*data-table-image-number="true")(?=[^>]*colspan="2")[^>]*>/i)
+  }
   assert.doesNotMatch(dps + perAttack, /NaN|Infinity|増減率|合計DPS|勝|%/)
   const invalid = renderTable({ metric: 'dps', invalid: true })
   assert.deepEqual(gradeRows(invalid), [
