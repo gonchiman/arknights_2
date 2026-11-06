@@ -78,15 +78,38 @@
 }
 
 .damage-three-attribute-toolbar {
-  display: grid;
-  grid-template-columns: .7fr 1fr 1fr 1.3fr;
-  align-items: end;
-  gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 14px;
+}
+
+.damage-three-attribute-context {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+
+.damage-three-attribute-context strong,
+.damage-three-attribute-fixed-metric {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.damage-three-attribute-context span,
+.damage-three-attribute-target {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 .damage-three-attribute-segment {
   display: flex;
+  max-width: 100%;
   min-height: 34px;
   border: 1px solid var(--border);
   border-radius: 0;
@@ -111,9 +134,9 @@
 }
 
 .damage-three-attribute-segment button[aria-pressed="true"] {
-  background: var(--surface-soft, #f1f3f5);
+  background: var(--text);
+  color: var(--surface);
   font-weight: 600;
-  box-shadow: inset 0 -2px currentColor;
 }
 
 .damage-three-attribute-segment button:focus-visible {
@@ -121,35 +144,50 @@
   outline-offset: -3px;
 }
 
-.damage-three-attribute-result-heading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 6px 14px;
-  margin: 14px 0 8px;
+.damage-three-attribute-tables {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
 }
 
-.damage-three-attribute-result-heading h3 {
-  margin: 0;
+.damage-three-attribute-table-section {
+  min-width: 0;
+}
+
+.damage-three-attribute-table-section h3 {
+  margin: 0 0 6px;
   font-size: 12px;
   font-weight: 600;
 }
 
-.damage-three-attribute-result-heading span {
-  color: var(--text-soft);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
+.damage-three-attribute-page .damage-three-attribute-table {
+  width: 100%;
+  min-width: 0;
+}
+
+.damage-three-attribute-axis-column {
+  width: 40%;
 }
 
 .damage-three-attribute-page .damage-three-attribute-table th:first-child {
-  width: 31%;
+  width: auto;
+  text-align: right;
 }
 
 .damage-three-attribute-page .damage-three-attribute-table th,
 .damage-three-attribute-page .damage-three-attribute-table td {
-  padding: 8px 10px;
+  padding: 7px 10px;
   font-size: 12px;
+}
+
+.damage-three-attribute-table thead th {
+  overflow-wrap: anywhere;
+}
+
+.damage-three-attribute-table tbody th,
+.damage-three-attribute-table tbody td {
+  white-space: nowrap;
 }
 
 .damage-three-attribute-page .damage-three-attribute-error {
@@ -166,9 +204,15 @@
     gap: 8px;
   }
 
-  .damage-three-attribute-page .damage-three-attribute-skill-conditions,
-  .damage-three-attribute-toolbar {
+  .damage-three-attribute-page .damage-three-attribute-skill-conditions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .damage-three-attribute-tables {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
   }
 }
 
@@ -180,5 +224,11 @@
   .damage-three-attribute-growth-summary {
     display: block;
     margin-left: 16px;
+  }
+}
+
+@media (pointer: coarse) {
+  .damage-three-attribute-segment button {
+    min-height: 44px;
   }
 }

@@ -1,9 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import {
-  evaluateDamageThreeAttributeComparison, getDamageThreeAttributeChangeRate, getDamageThreeAttributeEntries,
-  type DamageThreeAttributeAxis, type DamageThreeAttributeComparison,
-  type DamageThreeAttributeEntry, type DamageThreeAttributeType,
+  getDamageThreeAttributeEntries, type DamageThreeAttributeEntry,
 } from '../lib/damageCalculatorThreeAttributeComparison'
+import { evaluateDamageThreeAttributeTables, type DamageThreeAttributeTableRow } from '../lib/damageCalculatorThreeAttributeTables'
 import type { DamageThreeComparisonOverrides } from '../lib/damageCalculatorThreeComparison'
 import { buildDamageCalculatorThreeSkillInformation } from '../lib/damageCalculatorThreeSkillInformation'
 import type { GuardInput } from '../lib/guardCombatTypes'
@@ -11,7 +10,6 @@ import type { SkillStructureSelection } from '../lib/skillStructure'
 import type { SkillRecord } from '../types/skill'
 import { AnalysisTabs } from './AnalysisTabs'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
-import { ComparisonChart } from './ComparisonChart'
 import { GuardConditionFields } from './DamageCalculatorThree'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
 import { OperatorDetailLink } from './OperatorDetailLink'
@@ -28,10 +26,10 @@ interface Props {
   initialSelection?: SkillStructureSelection
 }
 
-type Metric = 'perAttack' | 'dps' | 'combinedDps'
-const METRIC_LABELS: Record<Metric, string> = { perAttack: '1回の攻撃ダメージ', dps: 'DPS', combinedDps: '合計DPS' }
-const TYPE_LABELS: Record<DamageThreeAttributeType, string> = { PHYSICAL: '物理', ARTS: '術' }
+type Metric = 'perAttack' | 'dps'
+const METRIC_LABELS: Record<Metric, string> = { perAttack: '1回の攻撃ダメージ', dps: 'DPS' }
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
+const TABLE_NUMBER = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 const SKILL_TAB_ID = 'damage-three-attribute-skill'
 
 function sameSkill(entry: DamageThreeAttributeEntry, selection: SkillStructureSelection) {
@@ -55,10 +53,8 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const [stageId, setStageId] = useState<string | null>(null)
   const [operatorLevel, setOperatorLevel] = useState<number | null>(null)
   const [trust, setTrust] = useState(100)
-  const [common, setCommon] = useState({ defense: 1000, resistance: 40, enemyCount: 1 })
+  const [enemyCount, setEnemyCount] = useState(1)
   const [overrides, setOverrides] = useState<DamageThreeComparisonOverrides>({})
-  const [targetType, setTargetType] = useState<DamageThreeAttributeType>('ARTS')
-  const [axis, setAxis] = useState<DamageThreeAttributeAxis>('defense')
   const [metric, setMetric] = useState<Metric>('dps')
   const [searchOpen, setSearchOpen] = useState(false)
   const [filters, setFilters] = useState({ ...EMPTY_OPERATOR_FILTERS })
@@ -71,20 +67,14 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const level = operatorLevel ?? selected?.operatorLevel ?? 1
   const levelInvalid = !Number.isSafeInteger(level) || level < 1 || level > (selected?.operatorLevel ?? 1)
   const trustInvalid = !Number.isFinite(trust) || trust < 0 || trust > 100
-  const comparison = useMemo(() => selected ? evaluateDamageThreeAttributeComparison({
-    entry: selected, common, overrides, operatorLevel: level, trust, targetType, axis,
-  }) : null, [selected, common, overrides, level, trust, targetType, axis])
-  const output = comparison?.original.output
-  const conditionInputs: GuardInput[] = (comparison?.original.fields ?? []).filter(field => !field.locked)
+  const comparison = useMemo(() => selected ? evaluateDamageThreeAttributeTables({
+    entry: selected, enemyCount, overrides, operatorLevel: level, trust,
+  }) : null, [selected, enemyCount, overrides, level, trust])
+  const output = comparison?.reference.output
+  const conditionInputs: GuardInput[] = (comparison?.reference.fields ?? []).filter(field => !field.locked)
     .map(field => ({ ...field, defaultValue: field.value ?? (field.kind === 'number' ? Number.NaN : '') }))
-  const hasPeriodicDamage = !!comparison && [comparison.original, comparison.changed]
-    .some(result => result?.damageOverTimeDps !== null && result?.damageOverTimeDps !== undefined && result.damageOverTimeDps > 0)
-  const hasDps = output?.canShowDps ?? selected?.kind === 'NORMAL'
-  const activeMetric = !hasDps ? 'perAttack' : metric === 'combinedDps' && !hasPeriodicDamage ? 'dps' : metric
-  const mainType = output?.mainAttackType
-  const originalLabel = mainType === 'PHYSICAL' || mainType === 'ARTS' ? TYPE_LABELS[mainType]
-    : mainType === 'TRUE' ? '確定' : output?.rows.length ? '混合' : '未確定'
-  const changedLabel = TYPE_LABELS[targetType]
+  const hasDps = comparison?.canShowDps ?? false
+  const activeMetric = hasDps ? metric : 'perAttack'
 
   function chooseSkill(entry: DamageThreeAttributeEntry) {
     setSelection(entry.structure.basicInfo)
@@ -147,18 +137,10 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
         {entries.length ? '指定されたスキル・レベルは属性比較の対象外です。' : '属性比較の対象スキルを取得できません。'}
       </div> : <>
         <div className="calculator-form-grid damage-three-attribute-condition-grid">
-          <label className="calculator-field"><span>敵の防御力</span>
-            <input type="number" aria-label="敵の防御力" min={0} step={100} value={Number.isFinite(common.defense) ? common.defense : ''}
-              aria-invalid={!Number.isFinite(common.defense) || common.defense < 0 || undefined}
-              onChange={event => setCommon(previous => ({ ...previous, defense: event.target.valueAsNumber }))} /></label>
-          <label className="calculator-field"><span>敵の術耐性</span>
-            <input type="number" aria-label="敵の術耐性" min={0} max={100} step={5} value={Number.isFinite(common.resistance) ? common.resistance : ''}
-              aria-invalid={!Number.isFinite(common.resistance) || common.resistance < 0 || common.resistance > 100 || undefined}
-              onChange={event => setCommon(previous => ({ ...previous, resistance: event.target.valueAsNumber }))} /></label>
           <label className="calculator-field"><span>敵の数</span>
-            <input type="number" aria-label="敵の数" min={1} max={10000} step={1} value={Number.isFinite(common.enemyCount) ? common.enemyCount : ''}
-              aria-invalid={!Number.isSafeInteger(common.enemyCount) || common.enemyCount < 1 || common.enemyCount > 10000 || undefined}
-              onChange={event => setCommon(previous => ({ ...previous, enemyCount: event.target.valueAsNumber }))} /></label>
+            <input type="number" aria-label="敵の数" min={1} max={10000} step={1} value={Number.isFinite(enemyCount) ? enemyCount : ''}
+              aria-invalid={!Number.isSafeInteger(enemyCount) || enemyCount < 1 || enemyCount > 10000 || undefined}
+              onChange={event => setEnemyCount(event.target.valueAsNumber)} /></label>
         </div>
         {operatorSkills.map(entry => <div key={entry.skill.skillId} id={`${SKILL_TAB_ID}-panel-${entry.skill.skillId}`}
           role="tabpanel" aria-labelledby={`${SKILL_TAB_ID}-tab-${entry.skill.skillId}`}
@@ -196,34 +178,21 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
     </CollapsibleCalculatorPanel>
 
     {selected && comparison && <CollapsibleCalculatorPanel id="damage-three-attribute-results" number="02" title="属性比較"
-      titleBadge="仮想比較 · 主攻撃" summary={`${originalLabel} → ${changedLabel}`} collapsedLabel="比較を表示">
+      titleBadge="仮想比較 · 主攻撃のみ" summary={`${METRIC_LABELS[activeMetric]} · 1体あたり`} collapsedLabel="比較を表示">
+      <div className="damage-three-attribute-context">
+        <strong>{selected.skill.operatorName} S{selected.skill.skillIndex} · {selected.structure.basicInfo.skillLevel}</strong>
+        <span>昇進{selected.phaseIndex} Lv.{formatNumber(level)} · 信頼{formatNumber(trust)} · 潜在1 · 未装備</span>
+      </div>
       <div className="damage-three-attribute-toolbar">
-        <div className="calculator-field"><span>本来の主攻撃</span><div className="damage-three-fixed-value">{originalLabel}</div></div>
-        <AttributeButtons label="変更後の主攻撃" options={[["PHYSICAL", "物理"], ["ARTS", "術"]]}
-          value={targetType} onChange={setTargetType} />
-        <AttributeButtons label="横軸" options={[["defense", "防御力"], ["resistance", "術耐性"]]}
-          value={axis} onChange={setAxis} />
-        <label className="calculator-field"><span>指標（1体）</span>
-          <select aria-label="指標（1体）" value={activeMetric} onChange={event => setMetric(event.target.value as Metric)}>
-            {hasDps && <option value="dps">DPS</option>}<option value="perAttack">1回の攻撃ダメージ</option>
-            {hasDps && hasPeriodicDamage && <option value="combinedDps">合計DPS</option>}
-          </select></label>
+        {hasDps ? <AttributeButtons label="両表の表示指標" options={[["dps", "DPS"], ["perAttack", "1回の攻撃ダメージ"]]}
+          value={activeMetric} onChange={setMetric} /> : <strong className="damage-three-attribute-fixed-metric">1回の攻撃ダメージ</strong>}
+        <span className="damage-three-attribute-target">1体あたり</span>
       </div>
       {comparison.errors.length > 0 && <div className="damage-two-unavailable damage-three-attribute-error" role="status">
         {comparison.errors.map(reason => <div key={reason}>{reason}</div>)}
       </div>}
-      {comparison.samples.length > 0 && <ComparisonChart axisLabel={axis === 'defense' ? '敵の防御力' : '敵の術耐性'}
-        metricLabel={`${METRIC_LABELS[activeMetric]}（1体）`} currentX={common[axis]} showPoints={false}
-        showEndLabels={false} minHeight={270} fitYAxisLabels
-        captionDetail={axis === 'defense' ? `敵の術耐性 ${NUMBER.format(common.resistance)} 固定` : `敵の防御力 ${NUMBER.format(common.defense)} 固定`}
-        series={[
-          { id: 'original', label: `本来（${originalLabel}）`, color: '#417b8c', points: comparison.samples.map(sample => ({ x: sample.x, value: sample.original[activeMetric] })) },
-          { id: 'changed', label: `変更後（${changedLabel}）`, color: '#b4763e', points: comparison.samples.map(sample => ({ x: sample.x, value: sample.changed[activeMetric] })) },
-        ]} />}
-      <div className="damage-three-attribute-result-heading">
-        <h3>現在の条件（1体）</h3><span>防御力 {formatNumber(common.defense)} · 術耐性 {formatNumber(common.resistance)} · 攻撃対象 {formatNumber(comparison.original.actualTargetCount)}体</span>
-      </div>
-      <DamageCalculatorThreeAttributeResultTable comparison={comparison} originalLabel={originalLabel} changedLabel={changedLabel} />
+      <DamageCalculatorThreeAttributeTables physical={comparison.physical} arts={comparison.arts}
+        metric={activeMetric} invalid={comparison.errors.length > 0} />
     </CollapsibleCalculatorPanel>}
   </section>
 }
@@ -231,11 +200,9 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
 function AttributeButtons<T extends string>({ label, options, value, onChange }: {
   label: string; options: readonly (readonly [T, string])[]; value: T; onChange: (value: T) => void
 }) {
-  return <div className="calculator-field"><span>{label}</span>
-    <div className="damage-three-attribute-segment" role="group" aria-label={label}>
-      {options.map(([id, text]) => <button key={id} type="button" aria-pressed={value === id}
-        onClick={() => onChange(id)}>{text}</button>)}
-    </div>
+  return <div className="damage-three-attribute-segment" role="group" aria-label={label}>
+    {options.map(([id, text]) => <button key={id} type="button" aria-pressed={value === id}
+      onClick={() => onChange(id)}>{text}</button>)}
   </div>
 }
 
@@ -243,22 +210,28 @@ function formatNumber(value: number | null) {
   return value === null || !Number.isFinite(value) ? '—' : NUMBER.format(value)
 }
 
-export function DamageCalculatorThreeAttributeResultTable({ comparison, originalLabel, changedLabel }: {
-  comparison: DamageThreeAttributeComparison; originalLabel: string; changedLabel: string
+export function DamageCalculatorThreeAttributeTables({ physical, arts, metric, invalid = false }: {
+  physical: readonly DamageThreeAttributeTableRow[]; arts: readonly DamageThreeAttributeTableRow[]; metric: Metric; invalid?: boolean
 }) {
-  const hasPeriodic = [comparison.original, comparison.changed].some(result => (result?.damageOverTimeDps ?? 0) > 0)
-  const hasDps = comparison.original.output?.canShowDps ?? true
-  const metrics: Metric[] = !hasDps ? ['perAttack'] : hasPeriodic ? ['perAttack', 'dps', 'combinedDps'] : ['perAttack', 'dps']
-  return <div className="damage-two-table-wrap" role="region" aria-label="攻撃属性の比較結果（1体）" tabIndex={0}>
-    <table className="damage-two-table damage-three-attribute-table"><thead><tr>
-      <th scope="col">指標</th><th scope="col">本来（{originalLabel}）</th><th scope="col">変更後（{changedLabel}）</th><th scope="col">増減率</th>
-    </tr></thead><tbody>{metrics.map(metric => {
-      const original = comparison.original.errors.length ? null : comparison.original[metric]
-      const changed = comparison.errors.length || !comparison.changed || comparison.changed.errors.length ? null : comparison.changed[metric]
-      const rate = getDamageThreeAttributeChangeRate(original, changed)
-      return <tr key={metric}><th scope="row">{METRIC_LABELS[metric]}</th><td>{formatNumber(original)}</td><td>{formatNumber(changed)}</td>
-        <td>{rate === null ? '—' : `${rate > 0 ? '+' : ''}${NUMBER.format(rate)}%`}</td></tr>
-    })}</tbody></table>
+  const id = useId()
+  return <div className="damage-three-attribute-tables">
+    {([
+      ['physical', '物理', '防御力', physical], ['arts', '術', '術耐性', arts],
+    ] as const).map(([attribute, title, axisLabel, rows]) => <section key={attribute}
+      className="damage-three-attribute-table-section" aria-labelledby={`${id}-${attribute}`}>
+      <h3 id={`${id}-${attribute}`}>{title}</h3>
+      <div className="damage-two-table-wrap" role="region" aria-label={`${title}の属性比較（1体あたり）`} tabIndex={0}>
+        <table className="damage-two-table damage-three-attribute-table" aria-label={`${title}の${METRIC_LABELS[metric]}（1体あたり）`}>
+          <colgroup><col className="damage-three-attribute-axis-column" /><col /></colgroup>
+          <thead><tr><th scope="col">{axisLabel}</th><th scope="col">{METRIC_LABELS[metric]}</th></tr></thead>
+          <tbody>{rows.map(row => {
+            const value = invalid ? null : row[metric]
+            return <tr key={row.value}><th scope="row">{formatNumber(row.value)}</th>
+              <td>{value === null || !Number.isFinite(value) ? '—' : TABLE_NUMBER.format(value)}</td></tr>
+          })}</tbody>
+        </table>
+      </div>
+    </section>)}
   </div>
 }
 
