@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   getDamageThreeAttributeEntries, type DamageThreeAttributeEntry,
 } from '../lib/damageCalculatorThreeAttributeComparison'
@@ -184,14 +184,14 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
         <span>昇進{selected.phaseIndex} Lv.{formatNumber(level)} · 信頼{formatNumber(trust)} · 潜在1 · 未装備</span>
       </div>
       <div className="damage-three-attribute-toolbar">
-        {hasDps ? <AttributeButtons label="両表の表示指標" options={[["dps", "DPS"], ["perAttack", "1回の攻撃ダメージ"]]}
+        {hasDps ? <AttributeButtons label="表示指標" options={[["dps", "DPS"], ["perAttack", "1回の攻撃ダメージ"]]}
           value={activeMetric} onChange={setMetric} /> : <strong className="damage-three-attribute-fixed-metric">1回の攻撃ダメージ</strong>}
         <span className="damage-three-attribute-target">1体あたり</span>
       </div>
       {comparison.errors.length > 0 && <div className="damage-two-unavailable damage-three-attribute-error" role="status">
         {comparison.errors.map(reason => <div key={reason}>{reason}</div>)}
       </div>}
-      <DamageCalculatorThreeAttributeTables physical={comparison.physical} arts={comparison.arts}
+      <DamageCalculatorThreeAttributeTable physical={comparison.physical} arts={comparison.arts}
         metric={activeMetric} invalid={comparison.errors.length > 0} />
     </CollapsibleCalculatorPanel>}
   </section>
@@ -210,29 +210,50 @@ function formatNumber(value: number | null) {
   return value === null || !Number.isFinite(value) ? '—' : NUMBER.format(value)
 }
 
-export function DamageCalculatorThreeAttributeTables({ physical, arts, metric, invalid = false }: {
+export function DamageCalculatorThreeAttributeTable({ physical, arts, metric, invalid = false }: {
   physical: readonly DamageThreeAttributeTableRow[]; arts: readonly DamageThreeAttributeTableRow[]; metric: Metric; invalid?: boolean
 }) {
-  const id = useId()
-  return <div className="damage-three-attribute-tables">
-    {([
-      ['physical', '物理', '防御力', physical], ['arts', '術', '術耐性', arts],
-    ] as const).map(([attribute, title, axisLabel, rows]) => <section key={attribute}
-      className="damage-three-attribute-table-section" aria-labelledby={`${id}-${attribute}`}>
-      <h3 id={`${id}-${attribute}`}>{title}</h3>
-      <div className="damage-two-table-wrap" role="region" aria-label={`${title}の属性比較（1体あたり）`} tabIndex={0}>
-        <table className="damage-two-table damage-three-attribute-table" aria-label={`${title}の${METRIC_LABELS[metric]}（1体あたり）`}>
-          <colgroup><col className="damage-three-attribute-axis-column" /><col /></colgroup>
-          <thead><tr><th scope="col">{axisLabel}</th><th scope="col">{METRIC_LABELS[metric]}</th></tr></thead>
-          <tbody>{rows.map(row => {
-            const value = invalid ? null : row[metric]
-            return <tr key={row.value}><th scope="row">{formatNumber(row.value)}</th>
-              <td>{value === null || !Number.isFinite(value) ? '—' : TABLE_NUMBER.format(value)}</td></tr>
-          })}</tbody>
-        </table>
-      </div>
-    </section>)}
+  const artsByRating = new Map(arts.map(row => [row.rating, row]))
+  return <div className="damage-two-table-wrap" role="region" aria-label="属性比較表（1体あたり）" tabIndex={0}>
+    <table className="damage-two-table damage-three-attribute-table" aria-label={`${METRIC_LABELS[metric]}の属性比較（1体あたり）`}>
+      <colgroup><col className="damage-three-attribute-rating-column" /></colgroup>
+      <colgroup><col className="damage-three-attribute-axis-column" /><col /><col /></colgroup>
+      <colgroup><col className="damage-three-attribute-axis-column" /><col /><col /></colgroup>
+      <thead>
+        <tr>
+          <th className="damage-three-attribute-rating-cell" scope="col" rowSpan={2}>評価</th>
+          <th scope="colgroup" colSpan={3}>物理</th><th scope="colgroup" colSpan={3}>術</th>
+        </tr>
+        <tr>
+          <th scope="col">防御力</th><th scope="col">最小</th><th scope="col">最大</th>
+          <th scope="col">術耐性</th><th scope="col">最小</th><th scope="col">最大</th>
+        </tr>
+      </thead>
+      <tbody>{physical.map(row => <tr key={row.rating}>
+        <th className="damage-three-attribute-rating-cell" scope="row">{row.rating}</th>
+        <AttributeGradeCells row={row} metric={metric} invalid={invalid} />
+        <AttributeGradeCells row={artsByRating.get(row.rating)} metric={metric} invalid={invalid} />
+      </tr>)}</tbody>
+    </table>
   </div>
+}
+
+function AttributeGradeCells({ row, metric, invalid }: {
+  row?: DamageThreeAttributeTableRow; metric: Metric; invalid: boolean
+}) {
+  if (!row) return <><td>—</td><td>—</td><td>—</td></>
+  const { minStat, maxStat } = row
+  const min = formatNumber(minStat)
+  const axisRange = maxStat === null ? `${min}以上` : minStat === maxStat ? min : `${min}〜${formatNumber(maxStat)}`
+  const range = row[metric]
+  const damage = !invalid && range && Number.isFinite(range.min) && Number.isFinite(range.max) ? range : null
+  const minimum = damage ? TABLE_NUMBER.format(damage.min) : '—'
+  return <>
+    <td>{axisRange}</td>
+    {damage && damage.min === damage.max ? <td colSpan={2}>{minimum}</td> : <>
+      <td>{minimum}</td><td>{damage ? TABLE_NUMBER.format(damage.max) : '—'}</td>
+    </>}
+  </>
 }
 
 export default DamageCalculatorThreeAttributePage

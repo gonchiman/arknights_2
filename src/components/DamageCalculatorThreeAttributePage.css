@@ -144,35 +144,39 @@
   outline-offset: -3px;
 }
 
-.damage-three-attribute-tables {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
-  gap: 16px;
-}
-
-.damage-three-attribute-table-section {
-  min-width: 0;
-}
-
-.damage-three-attribute-table-section h3 {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
 .damage-three-attribute-page .damage-three-attribute-table {
   width: 100%;
-  min-width: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.damage-three-attribute-rating-column {
+  width: 40px;
 }
 
 .damage-three-attribute-axis-column {
-  width: 40%;
+  width: 18%;
 }
 
 .damage-three-attribute-page .damage-three-attribute-table th:first-child {
   width: auto;
-  text-align: right;
+}
+
+.damage-three-attribute-page .damage-three-attribute-table thead th,
+.damage-three-attribute-page .damage-three-attribute-table tbody td[colspan="2"] {
+  text-align: center;
+}
+
+.damage-three-attribute-page .damage-three-attribute-table .damage-three-attribute-rating-cell {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.damage-three-attribute-page .damage-three-attribute-table tbody .damage-three-attribute-rating-cell {
+  background: var(--surface);
 }
 
 .damage-three-attribute-page .damage-three-attribute-table th,
@@ -181,13 +185,8 @@
   font-size: 12px;
 }
 
-.damage-three-attribute-table thead th {
+.damage-three-attribute-table td {
   overflow-wrap: anywhere;
-}
-
-.damage-three-attribute-table tbody th,
-.damage-three-attribute-table tbody td {
-  white-space: nowrap;
 }
 
 .damage-three-attribute-page .damage-three-attribute-error {
@@ -209,10 +208,10 @@
   }
 }
 
-@media (max-width: 480px) {
-  .damage-three-attribute-tables {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 20px;
+@container (max-width: 650px) {
+  .damage-three-attribute-page .damage-three-attribute-table th,
+  .damage-three-attribute-page .damage-three-attribute-table td {
+    padding-inline: 6px;
   }
 }
 
