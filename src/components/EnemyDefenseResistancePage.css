@@ -1,0 +1,35 @@
+.enemy-defense-resistance-count {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.damage-two-table.enemy-defense-resistance-table {
+  min-width: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.enemy-defense-resistance-rank {
+  width: 29%;
+}
+
+.damage-two-table.enemy-defense-resistance-table th:first-child {
+  width: auto;
+}
+
+.damage-two-table.enemy-defense-resistance-table thead th:not([rowspan]) {
+  text-align: center;
+}
+
+.damage-two-table.enemy-defense-resistance-table tbody th {
+  background: var(--surface);
+}
+
+@media (max-width: 480px) {
+  .damage-two-table.enemy-defense-resistance-table th,
+  .damage-two-table.enemy-defense-resistance-table td {
+    padding-inline: 5px;
+  }
+}
