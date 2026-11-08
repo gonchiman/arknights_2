@@ -129,6 +129,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['damage-three-coverage', 'damage-three-coverage'],
       ['damage-three-comparison', 'damage-three-comparison'],
       ['damage-three-attribute-comparison', 'damage-three-attribute-comparison'],
+      ['physical-arts-comparison', 'physical-arts-comparison'],
       ['damage-verification', 'damage-verification'],
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
@@ -534,7 +535,7 @@ test('ダメージ検証は共通メニューから開き、スルトのトッ�
     description: '',
     section: 'analysis',
   })
-  const calculatorIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'damage-three-attribute-comparison')
+  const calculatorIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'physical-arts-comparison')
   assert.equal(APP_NAV_ITEMS[calculatorIndex + 1], DAMAGE_VERIFICATION_ITEM)
   assert.deepEqual(SURTR_HOME_ITEMS, SURTR_ANALYSIS_ITEMS)
   assert.equal(SURTR_ANALYSIS_ITEMS.some((item) => item.id === 'damage-verification'), false)

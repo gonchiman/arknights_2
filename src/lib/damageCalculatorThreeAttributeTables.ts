@@ -1,4 +1,4 @@
-import type { DamageCalculationBreakdown } from './damageCalculator.ts'
+import { calculateDamageBreakdown, type DamageCalculationBreakdown } from './damageCalculator.ts'
 import { getDamageCalculatorThreeVirtualAttackCapability } from './damageCalculatorThree.ts'
 import type { DamageThreeAttributeEntry } from './damageCalculatorThreeAttributeComparison.ts'
 import {
@@ -114,6 +114,22 @@ function isPhysicalDamageSettled(result: DamageThreeComparisonResult): boolean {
 
 function damageRange(first: number | null, last: number | null): DamageRange | null {
   return first === null || last === null ? null : { min: Math.min(first, last), max: Math.max(first, last) }
+}
+
+export function evaluateAttackAttributeTables(attack: number): Pick<DamageThreeAttributeTables, 'physical' | 'arts'> {
+  const physical = gradeRows('defense').map(row => {
+    const atLowerDefense = calculateDamageBreakdown(attack, 'PHYSICAL', row.minStat, 0)
+    const minimum = row.maxStat === null
+      ? atLowerDefense.minimumDamage
+      : calculateDamageBreakdown(attack, 'PHYSICAL', row.maxStat, 0).result
+    return { ...row, perAttack: damageRange(minimum, atLowerDefense.result) }
+  })
+  const arts = gradeRows('magicResistance').map(row => {
+    const maximum = calculateDamageBreakdown(attack, 'ARTS', 0, row.minStat).result
+    const minimum = calculateDamageBreakdown(attack, 'ARTS', 0, row.maxStat ?? 100).result
+    return { ...row, perAttack: damageRange(minimum, maximum) }
+  })
+  return { physical, arts }
 }
 
 /** Vary DEF for physical main attacks and RES for Arts main attacks; all other selected conditions stay fixed. */

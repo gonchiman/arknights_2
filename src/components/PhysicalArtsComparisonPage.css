@@ -1,0 +1,14 @@
+.physical-arts-comparison-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.physical-arts-comparison-controls .calculator-field { width: 9rem; }
+
+.physical-arts-comparison-heading {
+  margin: 0;
+  font-size: 14px;
+}
