@@ -6,6 +6,7 @@ import { getDamageCalculatorThreeStructures } from '../src/lib/damageCalculatorT
 import { getDamageThreeAttributeEntries } from '../src/lib/damageCalculatorThreeAttributeComparison.ts'
 import { evaluateDamageThreeComparisonEntry, type DamageThreeComparisonOverrides } from '../src/lib/damageCalculatorThreeComparison.ts'
 import {
+  evaluateAttackAttributeTables,
   evaluateDamageThreeAttributeTables,
   type DamageThreeAttributeTableRow,
   type DamageThreeAttributeTablesInput,
@@ -40,7 +41,7 @@ function input(id: string, index: number, stageId?: string, overrides?: DamageTh
   assert.ok(entry, `${id}/S${index}/${stageId ?? '*'}`)
   return { entry, enemyCount: 1, overrides }
 }
-function assertRatingRows({ physical, arts }: ReturnType<typeof evaluateDamageThreeAttributeTables>) {
+function assertRatingRows({ physical, arts }: ReturnType<typeof evaluateAttackAttributeTables>) {
   const ratings = ['E', 'D', 'C', 'B', 'B+', 'A', 'A+', 'S', 'S+', 'SS']
   assert.deepEqual(physical.map(row => row.rating), ratings)
   assert.deepEqual(arts.map(row => row.rating), ratings)
@@ -80,6 +81,20 @@ function ordinary(value: DamageThreeAttributeTablesInput, type: 'PHYSICAL' | 'AR
 function close(actual: number | null, expected: number) {
   assert.ok(actual !== null && Math.abs(actual - expected) <= 1e-7 * Math.max(1, Math.abs(expected)), `${actual} != ${expected}`)
 }
+
+test('攻撃力のみの属性比較は評価の境界と最低保証を使って一撃ダメージの範囲を求める', () => {
+  const { physical, arts } = evaluateAttackAttributeTables(1000)
+  assertRatingRows({ physical, arts })
+  assert.deepEqual(physical.find(row => row.rating === 'B+')!.perAttack, { min: 50, max: 200 })
+  assert.deepEqual(arts[0].perAttack, { min: 1000, max: 1000 })
+  const artsSs = arts.at(-1)!.perAttack!
+  assert.equal(artsSs.min, 50)
+  close(artsSs.max, 90)
+  assert.ok([...physical, ...arts].every(row => row.dps === null))
+
+  const highAttack = evaluateAttackAttributeTables(1_000_000)
+  assert.deepEqual(highAttack.physical.at(-1)!.perAttack, { min: 50_000, max: 994_999 })
+})
 
 test('無視オフはスルトS2の術耐性20無視だけを外し、物理側と攻撃間隔を保つ', () => {
   const value = input('char_350_surtr', 2)

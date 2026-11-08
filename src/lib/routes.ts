@@ -27,6 +27,7 @@ export type AppRoute =
   | { view: 'damage-three-coverage' }
   | { view: 'damage-three-comparison' }
   | { view: 'damage-three-attribute-comparison'; selection?: SkillRouteSelection }
+  | { view: 'physical-arts-comparison' }
   | { view: 'damage-verification' }
   | { view: 'goldenglow-home' }
   | { view: 'surtr-home' }
@@ -220,6 +221,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/damage-2') return { view: 'damage-two' }
   if (hash === '#/damage-3/coverage') return { view: 'damage-three-coverage' }
   if (hash === '#/damage-3/comparison') return { view: 'damage-three-comparison' }
+  if (hash === '#/damage-3/physical-arts-comparison') return { view: 'physical-arts-comparison' }
   if (hash === DAMAGE_THREE_ATTRIBUTE_ROUTE) return { view: 'damage-three-attribute-comparison' }
   if (hash.startsWith(`${DAMAGE_THREE_ATTRIBUTE_ROUTE}?`)) {
     return parseSkillSelectionRoute('damage-three-attribute-comparison', hash.slice(DAMAGE_THREE_ATTRIBUTE_ROUTE.length + 1))
