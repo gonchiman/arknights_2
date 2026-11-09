@@ -280,7 +280,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   </section>
 }
 
-function AttributeButtons<T extends string>({ label, options, value, onChange }: {
+export function AttributeButtons<T extends string>({ label, options, value, onChange }: {
   label: string; options: readonly (readonly [T, string])[]; value: T; onChange: (value: T) => void
 }) {
   return <div className="damage-three-attribute-segment" role="group" aria-label={label}>

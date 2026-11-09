@@ -1,0 +1,106 @@
+.physical-arts-chart,
+.physical-arts-chart-image-legend {
+  --physical-arts-chart-physical: #387590;
+  --physical-arts-chart-arts: #a85b2e;
+}
+
+.physical-arts-chart {
+  container-type: inline-size;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 12px;
+}
+
+:is(.physical-arts-chart, .physical-arts-chart-image-legend) .is-physical { color: var(--physical-arts-chart-physical); }
+:is(.physical-arts-chart, .physical-arts-chart-image-legend) .is-arts { color: var(--physical-arts-chart-arts); }
+
+.physical-arts-chart-legend {
+  display: flex;
+  gap: 14px;
+  padding: 8px 11px;
+  border-bottom: 1px solid var(--border);
+}
+
+.physical-arts-chart-legend span { display: flex; align-items: center; gap: 6px; }
+.physical-arts-chart-legend i { width: 18px; border-top: 2px solid currentColor; }
+.physical-arts-chart-legend .is-arts i { border-top-style: dashed; }
+
+.physical-arts-chart-layout {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-rows: auto clamp(150px, 32vw, 240px) auto;
+  gap: 8px;
+  padding: 8px 12px;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.physical-arts-chart-x { grid-column: 2; display: grid; gap: 3px; text-align: center; }
+.physical-arts-chart-x.is-arts { grid-row: 1; }
+.physical-arts-chart-x.is-physical { grid-row: 3; }
+.physical-arts-chart-x.is-physical > span { grid-row: 2; }
+.physical-arts-chart-x-ticks { position: relative; height: 1.4em; }
+.physical-arts-chart-x-ticks span { position: absolute; transform: translateX(-50%); }
+.physical-arts-chart-x-ticks span:first-child { transform: none; }
+.physical-arts-chart-x-ticks span:last-child { transform: translateX(-100%); }
+
+.physical-arts-chart-y-ticks {
+  grid-column: 1;
+  grid-row: 2;
+  display: grid;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.physical-arts-chart-y-ticks span {
+  position: relative;
+  grid-area: 1 / 1;
+  align-self: start;
+  transform: translateY(-50%);
+}
+
+.physical-arts-chart-plot {
+  grid-column: 2;
+  grid-row: 2;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.physical-arts-chart-plot line { stroke: var(--border); stroke-width: 1; }
+.physical-arts-chart-plot polyline { fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linejoin: round; }
+:is(.physical-arts-chart-plot, .physical-arts-chart-image-legend) .is-arts { stroke-dasharray: 5 4; }
+
+.physical-arts-chart.is-image {
+  --border: #ddd;
+  --text-soft: #555;
+  border: 0;
+  background: none;
+}
+
+.physical-arts-chart.is-image .physical-arts-chart-layout {
+  height: 100%;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding: 6px 0 0;
+  font-size: 11px;
+}
+
+.physical-arts-chart.is-image .physical-arts-chart-x > span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@container (max-width: 420px) {
+  .physical-arts-chart-x-ticks span:nth-child(even) { display: none; }
+}
+
+@container (max-width: 520px) {
+  .physical-arts-chart-x.has-large-values .physical-arts-chart-x-ticks span:nth-child(even) { display: none; }
+}
+
+@container (max-width: 340px) {
+  .physical-arts-chart-x.has-large-values .physical-arts-chart-x-ticks span:nth-child(3) { display: none; }
+}

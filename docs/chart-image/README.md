@@ -235,6 +235,7 @@ await saveComparisonChartImage({
 | 敵統計：分布比較 | [enemyDistributionComparison.ts](../../src/lib/enemyDistributionComparison.ts) |
 | 敵統計：ヒートマップ | [enemyJointImage.ts](../../src/lib/enemyJointImage.ts) |
 | DC3属性比較：評価別の最小〜最大 | [DamageCalculatorThreeAttributePage.tsx](../../src/components/DamageCalculatorThreeAttributePage.tsx) |
+| 物理・術ダメージ比較：防御力・術耐性の折れ線 | [PhysicalArtsComparisonPage.tsx](../../src/components/PhysicalArtsComparisonPage.tsx) |
 
 表画像・スライドは対象外とし、既存の読める命名を維持する。旧 `enemyChartImage.ts` の予備経路や、現在選択できないグラフの命名はこの適用済み範囲に含めない。
 
@@ -273,6 +274,8 @@ const baseFilename = createChartImageFilename(prefix, parts)
 | 個別プロット | [individual.png](examples/individual.png) | 左上の凡例とグループごとの描画領域 |
 
 共通部品を使用しているのは、敵ページの上記5種類、GGのターゲット切替２、[DC3属性比較グラフ](../../src/components/DamageCalculatorThreeAttributeChartImageDialog.tsx)の画像出力。GGの性能分析・ターゲット切替１などの既存出力は未移行であり、この仕様を保存しただけでは自動的に見た目は変わらない。共通フレームを使う出力でも、独自の凡例やSVG内部の書式は個別に移行が必要。既存出力を移行するときは、その作業の対象範囲として扱う。
+
+[物理・術ダメージ比較グラフ](../../src/components/PhysicalArtsComparisonChart.tsx)も共通フレームを使う。上軸の術耐性名と両軸の目盛りはグラフ内に配置し、下軸の防御力名は共通フレームに渡す。
 
 ## 変更時の確認
 
