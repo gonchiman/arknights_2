@@ -17,6 +17,9 @@ test('横100%棒の保存名は2配置を識別し、円グラフの保存名を
   assert.equal(createEnemyThresholdBarComparisonImageFilename({ ...options, labelLayout: 'RIGHT' }), `${prefix}_数値を右側_比率自動.png`)
   assert.equal(createEnemyThresholdComparisonImageFilename(options),
     '敵_術耐性_円グラフ比較_基準値60_種類数_条件1-通常敵_条件2-エリート敵_条件3-ボス_比率自動.png')
+  const scoped = { ...options, scopeLabel: 'メインストーリー', aspectRatio: 16 / 9 }
+  assert.match(createEnemyThresholdBarComparisonImageFilename(scoped), /_メインストーリー_基準値60_.*_比率16x9\.png$/)
+  assert.match(createEnemyThresholdComparisonImageFilename(scoped), /_メインストーリー_基準値60_.*_比率16x9\.png$/)
 })
 
 test('横100%棒の保存名は基準値・集計方法・条件の順序と内容を反映する', () => {

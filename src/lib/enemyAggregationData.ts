@@ -5,6 +5,8 @@ import { summarizeMapCoverage } from './enemyMapCoverage.ts'
 import { createChartImageFilename } from './chartImageFilename.ts'
 import { parseEnemyAggregationIndex, parseEnemyAggregationBundle,
   type EnemyAggregationVersion } from './enemyAggregationContract.ts'
+import { buildEnemyMainStoryMapCounts, parseEnemyMainStoryCounts, selectEnemyMainStoryMaps } from './enemyMainStoryScope.ts'
+import enemyMainStoryV11 from '../data/enemyMainStoryV11.json' with { type: 'json' }
 import type { EnemyRecord } from '../types/enemy.ts'
 import type { MapIndex } from '../types/map.ts'
 
@@ -12,6 +14,21 @@ export interface EnemyAggregationData {
   maps: MapIndex
   counts: EnemyHistogramCounts
   rows: EnemyRecord[]
+  mainStoryCounts?: EnemyHistogramCounts
+}
+
+export function getEnemyMainStoryScope(data: EnemyAggregationData): {
+  rows: EnemyRecord[]
+  counts: EnemyHistogramCounts
+  spawnCountsAvailable: boolean
+} {
+  const counts = data.mainStoryCounts
+    ?? buildEnemyMainStoryMapCounts(selectEnemyMainStoryMaps(data.maps.maps), data.counts)
+  const rows = data.rows.flatMap(row => {
+    const entry = counts.enemies[row.id]
+    return entry && (entry.mapCount > 0 || entry.spawnCount > 0) ? [{ ...row, stageAppearanceCount: entry.mapCount }] : []
+  })
+  return { rows, counts, spawnCountsAvailable: data.mainStoryCounts !== undefined }
 }
 
 /** Load a complete fixed dataset. A failed version must never fall back to live data. */
@@ -47,7 +64,8 @@ export function createEnemyAggregationClient({ fetch: fetchOverride, base = '/' 
     const bundle = parseEnemyAggregationBundle(JSON.parse(new TextDecoder().decode(payload)))
     if (bundle.versionId !== version.id) throw new Error('集計データの版が一致しません。')
     const maps = parseMapIndex(bundle.files['maps/index.json'])
-    const counts = parseEnemyHistogramCounts(bundle.files['enemy-histogram-counts.json'])
+    const histogramSource = bundle.files['enemy-histogram-counts.json'] as Record<string, unknown>
+    const counts = parseEnemyHistogramCounts(histogramSource)
     const coverage = summarizeMapCoverage(maps.maps, 'SPAWNS')
     if (counts.summary.spawnMapCount !== coverage.included
       || coverage.included !== version.summary.includedMapCount
@@ -60,7 +78,11 @@ export function createEnemyAggregationClient({ fetch: fetchOverride, base = '/' 
     const rows = buildEnemyRecords(bundle.files['runtime/enemy_handbook_table.json'],
       bundle.files['runtime/enemy_database.json'], bundle.files['enemy-stage-appearances.json'])
     if (!rows.length) throw new Error('集計版の敵ステータスがありません。')
-    return { maps, counts, rows }
+    // V11 predates embedded main-story weights. The backfill is bound to that exact archived payload.
+    const storySource = histogramSource.mainStory ?? (version.id === enemyMainStoryV11.versionId
+      && version.payloadSha256 === enemyMainStoryV11.payloadSha256 ? enemyMainStoryV11.counts : undefined)
+    const mainStoryCounts = storySource === undefined ? undefined : parseEnemyMainStoryCounts(storySource, maps.maps, counts)
+    return { maps, counts, rows, mainStoryCounts }
   }
   function loadVersion(version: EnemyAggregationVersion) {
     const key = JSON.stringify([version.id, version.sha256, version.payloadSha256, version.summary])

@@ -305,6 +305,7 @@ test('比較画像名は集計方法・可視条件・階級設定を読み取�
     scale: 'LINEAR' as const, yAxis: 'PERCENT' as const, countMode: 'MAPS' as const, coverage: frequencyCounts.summary }
   const name = await getEnemyComparisonImageFilename(snapshot)
   assert.match(name, /^敵_HP_分布比較_登場マップ数_縦軸割合_線形_条件1-通常敵_条件2-エリート敵_幅[\d.]+_上限[\d.]+\.png$/)
+  assert.match(getEnemyComparisonImageFilename({ ...snapshot, scopeLabel: 'メインストーリー' }), /^敵_HP_分布比較_メインストーリー_登場マップ数_/)
   assert.equal(await getEnemyComparisonImageFilename({ ...snapshot, distribution: { ...distribution,
     unionCount: 999, series: distribution.series.map((series) => ({ ...series, matchedCount: 999,
       condition: { ...series.condition, id: series.condition.id + 100 } })),

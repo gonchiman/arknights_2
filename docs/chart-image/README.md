@@ -234,10 +234,13 @@ await saveComparisonChartImage({
 | 敵統計：累積分布 | [enemyWeightedEcdf.ts](../../src/lib/enemyWeightedEcdf.ts) |
 | 敵統計：分布比較 | [enemyDistributionComparison.ts](../../src/lib/enemyDistributionComparison.ts) |
 | 敵統計：ヒートマップ | [enemyJointImage.ts](../../src/lib/enemyJointImage.ts) |
+| 敵統計：術耐性の円グラフ・100%横棒 | [enemyThresholdComparison.ts](../../src/lib/enemyThresholdComparison.ts) |
 | DC3属性比較：評価別の最小〜最大 | [DamageCalculatorThreeAttributePage.tsx](../../src/components/DamageCalculatorThreeAttributePage.tsx) |
 | 物理・術ダメージ比較：防御力・術耐性の折れ線 | [PhysicalArtsComparisonPage.tsx](../../src/components/PhysicalArtsComparisonPage.tsx) |
 
 表画像・スライドは対象外とし、既存の読める命名を維持する。旧 `enemyChartImage.ts` の予備経路や、現在選択できないグラフの命名はこの適用済み範囲に含めない。
+
+敵の統計分析で集計範囲に「メインストーリー」を選んだ場合は、画像の条件と既定名に集計範囲を記載する。
 
 実装で生成する名前の例（設定は見本用であり、今後の出力に固定しない）：
 

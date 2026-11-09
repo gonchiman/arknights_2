@@ -3,6 +3,7 @@ import { buildEnemyHistogramCounts } from './generateEnemyHistogramCounts.mjs'
 import { buildMapDatabase } from './generateMapDatabase.mjs'
 import { buildMainEnemyTrends } from './generate-main-enemy-trends.mjs'
 import { parseEnemyHistogramCounts } from '../src/lib/enemyHistogramCounts.ts'
+import { parseEnemyMainStoryCounts, selectEnemyMainStoryMaps } from '../src/lib/enemyMainStoryScope.ts'
 import { getMapDetail, parseMapDetailShard, parseMapIndex } from '../src/lib/mapDatabase.ts'
 import { parseMainEnemyTrends } from '../src/lib/mainEnemyTrends.ts'
 import { LOCAL_GAME_DATA_RUNTIME_FILES } from '../src/lib/localGameDataContract.ts'
@@ -129,12 +130,16 @@ export function generateLocalGameData(source, { generatedAt = new Date().toISOSt
   const appearances = buildEnemyStageAppearanceDocument({
     selection, handbookSource: source.handbook, levelsById: source.levels, failedLevelIds: [...missingIds], generatedAt,
   })
-  const histogram = buildEnemyHistogramCounts(selection.levels.filter(({ levelId }) => source.levels.has(levelId)).map(({ levelId }) => ({
+  const histogramLevels = selection.levels.filter(({ levelId }) => source.levels.has(levelId)).map(({ levelId }) => ({
     levelId, data: source.levels.get(levelId),
-  })), {
-    generatedAt, sourceGeneratedAt: generatedAt, sourceRevision: revision, sourceSummary: appearances.summary, spawnAggregationMode,
-    failedLevelIds: [...missingIds], excludedLevelIds: selection.excludedLevelIds,
+  }))
+  const histogramContext = {
+    generatedAt, sourceGeneratedAt: generatedAt, sourceRevision: revision, spawnAggregationMode,
     stageContexts: new Map(selection.levels.map(({ levelId, context }) => [levelId, context ?? {}])),
+  }
+  const histogram = buildEnemyHistogramCounts(histogramLevels, {
+    ...histogramContext, sourceSummary: appearances.summary,
+    failedLevelIds: [...missingIds], excludedLevelIds: selection.excludedLevelIds,
   })
   const maps = buildMapDatabase({
     stageTable: source.stageTable, zoneTable: source.zoneTable, handbook: source.handbook, database,
@@ -146,9 +151,14 @@ export function generateLocalGameData(source, { generatedAt = new Date().toISOSt
     mapIndex: maps.index, stageTable: source.stageTable, handbook: source.handbook, database,
     levels: source.levels, generatedAt, sourceRevision: revision,
   })
+  const mainIds = new Set(selectEnemyMainStoryMaps(maps.index.maps).map(({ levelId }) => levelId))
+  const mainStory = buildEnemyHistogramCounts(histogramLevels.filter(({ levelId }) => mainIds.has(levelId)), {
+    ...histogramContext, failedLevelIds: [...missingIds].filter(id => mainIds.has(id)),
+  })
+  parseEnemyMainStoryCounts(mainStory, maps.index.maps, histogram)
   validateOutput(appearances, histogram, maps, trends, allSelection, missingIds)
   const files = new Map([
-    ['enemy-stage-appearances.json', appearances], ['enemy-histogram-counts.json', histogram],
+    ['enemy-stage-appearances.json', appearances], ['enemy-histogram-counts.json', { ...histogram, mainStory }],
     ['maps/index.json', maps.index],
     ...Object.entries(maps.details).map(([filename, document]) => [`maps/${filename}`, document]),
     ['maps/main-enemy-trends.json', trends],

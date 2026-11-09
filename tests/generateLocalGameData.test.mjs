@@ -59,6 +59,8 @@ test('one revision generates matching appearances, maps, details and chapter dat
   const trends = files.get('maps/main-enemy-trends.json')
   assert.equal(appearances.enemies.enemy_a.stageCount, 2)
   assert.deepEqual(histogram.enemies.enemy_a, { mapCount: 2, spawnCount: 8 })
+  assert.deepEqual(histogram.mainStory.enemies.enemy_a, { mapCount: 1, spawnCount: 3 })
+  assert.equal(histogram.mainStory.summary.mapCount, 1)
   assert.equal(histogram.summary.excludedMapCount, 1)
   assert.equal(index.maps.length, 3)
   const main = index.maps.find((map) => map.levelId === mainId)

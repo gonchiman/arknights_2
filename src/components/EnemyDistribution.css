@@ -123,6 +123,11 @@
   font-size: 11px;
 }
 .enemy-distribution-panel .enemy-chart-visibility label:hover { background: var(--surface-hover); }
+.enemy-distribution-panel .enemy-histogram-counts label:has(input:disabled) {
+  background: var(--surface);
+  cursor: not-allowed;
+  opacity: .55;
+}
 .enemy-distribution-panel .enemy-chart-visibility label.active {
   border-bottom-color: var(--accent);
   background: var(--surface);

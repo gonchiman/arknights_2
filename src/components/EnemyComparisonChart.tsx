@@ -25,6 +25,7 @@ export interface EnemyComparisonSnapshot {
   yAxis: EnemyComparisonYAxis
   countMode?: EnemyHistogramCountMode
   coverage?: EnemyHistogramCounts['summary'] | null
+  scopeLabel?: string
 }
 
 export const comparisonColor = (index: number) => `var(--enemy-comparison-series-${index + 1})`
@@ -200,7 +201,7 @@ export function EnemyComparisonImage({ data, aspectRatio, onLayout }: {
   const mode = ENEMY_HISTOGRAM_COUNT_MODES.find((item) => item.key === (data.countMode ?? 'TYPES'))!
   const coverage = data.countMode === 'SPAWNS' ? getEnemySpawnCoverageLabel(data.coverage)
     : data.countMode === 'MAPS' ? `収録 ${format(data.coverage?.mapCount ?? 0)}マップ` : null
-  const conditions = [data.yAxis === 'PERCENT' ? `${mode.label}の割合` : mode.axisLabel, coverage,
+  const conditions = [data.scopeLabel, data.yAxis === 'PERCENT' ? `${mode.label}の割合` : mode.axisLabel, coverage,
     metadata?.binWidth != null ? `階級幅 ${format(metadata.binWidth)}` : `${data.distribution.bins.length}階級`,
     metadata ? `上限 ${format(metadata.normalRangeEnd)}${data.metric.suffix}` : null].filter(Boolean).join(' · ')
   return <ChartImageFrame className="enemy-chart-image enemy-comparison-image" title={`${data.metric.label}の分布比較`}

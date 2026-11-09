@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto'
 import { archiveEnemyAggregation } from '../scripts/enemyAggregationArchive.mjs'
 import { getLocalDataGeneratorVersion, refreshLocalGameData } from '../scripts/refreshLocalGameData.mjs'
 import { LOCAL_GAME_DATA_FILES } from '../src/lib/localGameDataContract.ts'
+import { createEnemyAggregationClient, getEnemyMainStoryScope } from '../src/lib/enemyAggregationData.ts'
 import { CURRENT_ENEMY_AGGREGATION_RULE_VERSION, ENEMY_AGGREGATION_FILES,
   parseEnemyAggregationBundle, parseEnemyAggregationIndex } from '../src/lib/enemyAggregationContract.ts'
 
@@ -92,6 +93,31 @@ test('publishes one coherent portable dataset, preserving all five original inpu
   assert.equal(catalogue.currentVersionId, bundle.versionId)
   assert.deepEqual(Object.keys(bundle.files), ENEMY_AGGREGATION_FILES)
   assert.deepEqual(bundle.files, data)
+})
+
+test('an archive with scoped counts keeps its own spawn weights and rejects inconsistent scoped totals', async t => {
+  const root = await workspace(t)
+  const data = documents()
+  const standard = 'obt/main/level_main_10-01'
+  const [map] = data['maps/index.json'].maps
+  Object.assign(map, { levelId: standard, difficulty: 'NORMAL' })
+  const histogram = data['enemy-histogram-counts.json']
+  histogram.mainStory = {
+    schemaVersion: 1, generatedAt, sourceGeneratedAt: generatedAt,
+    summary: { mapCount: 1, missingMapCount: 0, excludedMapCount: 0, spawnMapCount: 1, spawnExcludedMapCount: 0 },
+    enemies: { enemy_a: { mapCount: 1, spawnCount: 3 } },
+  }
+  const { version } = await archiveEnemyAggregation({ root, snapshot: await snapshot(root, 'scoped', data) })
+  assert.match(version.description, /メインストーリー/)
+  const client = createEnemyAggregationClient({ fetch: async () => new Response(await bundleBytes(root, version.id)) })
+  const story = getEnemyMainStoryScope(await client.loadVersion(version))
+  assert.equal(story.spawnCountsAvailable, true)
+  assert.deepEqual(story.counts.enemies.enemy_a, { mapCount: 1, spawnCount: 3 })
+
+  histogram.mainStory.enemies.enemy_a.spawnCount = 2
+  const invalid = await snapshot(root, 'wrong-scoped-total', data)
+  await assert.rejects(archiveEnemyAggregation({ root, snapshot: invalid }), /メインストーリー/)
+  assert.equal(parseEnemyAggregationIndex(JSON.parse(await indexBytes(root))).currentVersionId, version.id)
 })
 
 function lowerBoundDocuments() {

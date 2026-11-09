@@ -75,10 +75,11 @@ export function createEnemyThresholdComparisonImageFilename(options: {
   countMode: EnemyHistogramCountMode
   labelLayout?: EnemyThresholdPieLabelLayout
   aspectRatio?: number
+  scopeLabel?: string
 }): string {
-  const { comparison, countMode, labelLayout = 'BELOW', aspectRatio } = options
+  const { comparison, countMode, labelLayout = 'BELOW', aspectRatio, scopeLabel } = options
   return withChartImageAspect(createChartImageFilename('敵_術耐性_円グラフ比較', [
-    ...thresholdComparisonFilenameParts(comparison, countMode),
+    scopeLabel, ...thresholdComparisonFilenameParts(comparison, countMode),
     labelLayout === 'BELOW' ? '' : ENEMY_THRESHOLD_PIE_LABEL_LAYOUTS.find(({ key }) => key === labelLayout)!.label,
   ]), aspectRatio)
 }
@@ -88,10 +89,11 @@ export function createEnemyThresholdBarComparisonImageFilename(options: {
   countMode: EnemyHistogramCountMode
   labelLayout?: EnemyThresholdBarLayout
   aspectRatio?: number
+  scopeLabel?: string
 }): string {
-  const { comparison, countMode, labelLayout = 'AXIS', aspectRatio } = options
+  const { comparison, countMode, labelLayout = 'AXIS', aspectRatio, scopeLabel } = options
   return withChartImageAspect(createChartImageFilename('敵_術耐性_100%積み上げ横棒', [
-    ...thresholdComparisonFilenameParts(comparison, countMode),
+    scopeLabel, ...thresholdComparisonFilenameParts(comparison, countMode),
     ENEMY_THRESHOLD_BAR_LAYOUTS.find(({ key }) => key === labelLayout)!.label,
   ]), aspectRatio)
 }

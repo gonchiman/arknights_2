@@ -180,13 +180,14 @@ export function getEnemyComparisonImageFilename(options: {
   yAxis: EnemyComparisonYAxis
   countMode?: EnemyHistogramCountMode
   coverage?: EnemyHistogramCounts['summary'] | null
+  scopeLabel?: string
 }): string {
   const { distribution, metric, yAxis } = options
   const countMode = options.countMode ?? 'TYPES'
   const mode = ENEMY_HISTOGRAM_COUNT_MODES.find((item) => item.key === countMode)!
   const isLog = options.scale === 'LOG' && distribution.minimum >= 0
   return createChartImageFilename(`敵_${metric.label}_分布比較`, [
-    mode.label, yAxis === 'PERCENT' ? '縦軸割合' : '縦軸件数', isLog ? '対数' : '線形',
+    options.scopeLabel, mode.label, yAxis === 'PERCENT' ? '縦軸割合' : '縦軸件数', isLog ? '対数' : '線形',
     ...distribution.series.filter((series) => series.condition.visible)
       .map((series, index) => `条件${index + 1}-${series.label.replace(/\s*·\s*/g, '-')}`),
     !isLog && distribution.histogram?.binWidth != null ? `幅${distribution.histogram.binWidth}` : null,

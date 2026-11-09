@@ -3,7 +3,7 @@ import test from 'node:test'
 import { readFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { gzipSync, gunzipSync } from 'node:zlib'
-import { createEnemyAggregationClient, getEnemyAggregationFilename } from '../src/lib/enemyAggregationData.ts'
+import { createEnemyAggregationClient, getEnemyAggregationFilename, getEnemyMainStoryScope } from '../src/lib/enemyAggregationData.ts'
 import { parseEnemyAggregationIndex } from '../src/lib/enemyAggregationContract.ts'
 import { createEnemyMapCoverageChartSnapshot } from '../src/lib/enemyMapCoverageChartImage.ts'
 import { withChartImageAspect } from '../src/lib/chartImageFilename.ts'
@@ -47,6 +47,27 @@ test('shipped old and new datasets reproduce the same-revision 75 map increase w
   assert.equal(await client.loadVersion(entries[0]), oldData)
   assert.equal(calls.length, 3)
   assert.equal(loaded.currentVersionId, catalog.currentVersionId)
+})
+
+test('main story uses same-version map weights and exposes spawn weights only when verified', async () => {
+  const v11 = catalog.versions.find(({ id }) => id === 'v11')!
+  const client = createEnemyAggregationClient({ fetch: async input =>
+    new Response(await readFile(new URL(String(input).split('/').at(-1)!, folder))) })
+  const [older, current] = await Promise.all([client.loadVersion(entries[0]), client.loadVersion(v11)])
+  const fallback = getEnemyMainStoryScope(older)
+  assert.equal(fallback.spawnCountsAvailable, false)
+  assert.ok(fallback.rows.length < older.rows.length)
+  assert.ok(Object.values(fallback.counts.enemies).every(enemy => enemy.spawnCount === 0))
+  const scope = getEnemyMainStoryScope(current)
+  assert.equal(scope.spawnCountsAvailable, true)
+  assert.equal(scope.counts.summary.mapCount, 268)
+  assert.equal(scope.counts.summary.lowerBoundMapCount, 35)
+  const row = scope.rows.find(({ id }) => id === 'enemy_1000_gopro')!
+  const original = current.rows.find(({ id }) => id === row.id)!
+  assert.deepEqual(row.stats, original.stats)
+  assert.equal(row.stageAppearanceCount, scope.counts.enemies[row.id].mapCount)
+  assert.ok(row.stageAppearanceCount! < original.stageAppearanceCount!)
+  assert.ok(scope.counts.enemies[row.id].spawnCount < current.counts.enemies[row.id].spawnCount)
 })
 
 test('failed or corrupt fixed datasets never fall back; failures can be retried', async () => {
