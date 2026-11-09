@@ -7,6 +7,7 @@
 | 読むタイミング | 参照先 |
 | --- | --- |
 | 作業開始時 | [共通ルールの運用](instructions/shared-rules.md) |
+| 開発サーバーの起動・再起動、配信元の確認、`main` の作業フォルダを切り替えるとき | [ローカル開発サーバーの起動場所](instructions/local-development.md) |
 | AGENTS.mdまたはその参照先の指示ファイルを作成・修正・分割するとき | [指示ファイルの管理方針](instructions/agents-writing.md) |
 | このサイトの機能・UIの追加や修正について、案を提示するとき、設計するとき、または実装するとき | [既存機能・UIの調査と再利用](instructions/implementation-reuse.md) |
 | このサイトの機能・UIの追加や修正について、案を提示するとき、設計するとき、または実装するとき | [UIの補足テキスト方針](instructions/ui-text.md) |
