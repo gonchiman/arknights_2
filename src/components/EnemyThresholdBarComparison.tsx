@@ -147,7 +147,8 @@ export function getEnemyThresholdBarComparisonNaturalHeight(comparison: EnemyThr
   }, 0))
 }
 
-export function EnemyThresholdBarComparisonImage({ comparison, countMode, labelLayout, aspectRatio, onLayout }: ThresholdBarProps & {
+export function EnemyThresholdBarComparisonImage({ comparison, countMode, labelLayout, scopeLabel, aspectRatio, onLayout }: ThresholdBarProps & {
+  scopeLabel?: string
   aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
 }) {
@@ -156,7 +157,7 @@ export function EnemyThresholdBarComparisonImage({ comparison, countMode, labelL
   const mode = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === countMode)!
   return <ChartImageFrame className="enemy-chart-image enemy-threshold-bar-comparison-image"
     title="敵の術耐性の構成比" legend={<ThresholdLegend threshold={comparison.threshold} image />}
-    conditions={`基準の術耐性 ${String(comparison.threshold)} · ${mode.label}`} axisTitle="割合（%）"
+    conditions={[scopeLabel, `基準の術耐性 ${String(comparison.threshold)}`, mode.label].filter(Boolean).join(' · ')} axisTitle="割合（%）"
     naturalChartHeight={naturalHeight} aspectRatio={aspectRatio} onLayout={onLayout}>
     {({ width, height }) => <ThresholdBarChart comparison={comparison} countMode={countMode} labelLayout={labelLayout}
       width={width} height={height} onNaturalHeight={measureHeight} />}

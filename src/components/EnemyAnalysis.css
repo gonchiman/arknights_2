@@ -1,5 +1,7 @@
 .enemy-analysis-route .page-intro { display: flex; flex-wrap: wrap; gap: 10px 16px; margin: 0; }
-.enemy-analysis-page-actions { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; }
+.enemy-analysis-page-actions,
+.enemy-analysis-aggregation { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; }
+.enemy-analysis-aggregation { min-width: 0; max-width: 100%; }
 .enemy-page-link { flex: 0 0 auto; display: inline-flex; align-items: center; text-decoration: none; }
 
 .enemy-directory {
@@ -994,6 +996,11 @@
 .enemy-chart-select-label select,
 .statistics-bin-width-input-row input,
 .statistics-bin-width-input-row button { min-height: 32px; font-size: 10px; }
+.enemy-analysis-scope legend { color: var(--text-soft); font-size: 11px; font-weight: inherit; }
+.enemy-analysis-scope > div { flex-wrap: nowrap; }
+.enemy-analysis-scope label { min-height: 36px; font-size: 12px; white-space: nowrap; }
+.enemy-analysis-scope:disabled { opacity: .65; }
+.enemy-analysis-scope:disabled label { cursor: default; }
 .enemy-data-details { border: 1px solid var(--border); background: var(--surface); }
 .enemy-data-details > summary {
   min-height: 36px;

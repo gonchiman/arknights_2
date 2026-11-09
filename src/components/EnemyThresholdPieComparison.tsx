@@ -57,7 +57,8 @@ export function getEnemyThresholdPieComparisonNaturalHeight(comparison: EnemyThr
   return rowCount * (imageBodyHeight(labelLayout) + initialImageHeadingHeight(comparison)) + (rowCount - 1) * IMAGE_ROW_GAP
 }
 
-export function EnemyThresholdPieComparisonImage({ comparison, countMode, labelLayout, aspectRatio, onLayout }: ComparisonChartProps & {
+export function EnemyThresholdPieComparisonImage({ comparison, countMode, labelLayout, scopeLabel, aspectRatio, onLayout }: ComparisonChartProps & {
+  scopeLabel?: string
   aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
 }) {
@@ -71,7 +72,7 @@ export function EnemyThresholdPieComparisonImage({ comparison, countMode, labelL
   const mode = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === countMode)!
   return <ChartImageFrame className="enemy-chart-image enemy-threshold-pie-comparison-image"
     title="敵の術耐性の構成比" legend={<span>{mode.label}</span>}
-    conditions={`基準の術耐性 ${String(comparison.threshold)}`}
+    conditions={[scopeLabel, `基準の術耐性 ${String(comparison.threshold)}`].filter(Boolean).join(' · ')}
     naturalChartHeight={naturalChartHeight} aspectRatio={aspectRatio} onLayout={onLayout}>
     {({ width, height }) => <EnemyThresholdPieComparisonImageGrid comparison={comparison} countMode={countMode}
       labelLayout={labelLayout} width={width} height={height} headingHeight={headingHeight} onHeadingHeight={measureHeading} />}

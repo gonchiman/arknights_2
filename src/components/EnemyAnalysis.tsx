@@ -1,4 +1,5 @@
-import { Activity, useEffect, useMemo, useState } from 'react'
+import { Activity, useEffect, useId, useMemo, useState } from 'react'
+import { getEnemyMainStoryScope } from '../lib/enemyAggregationData'
 import { matchesEnemyFilters } from '../lib/enemyData'
 import { formatEnemyLevelSelection, type EnemyAnalysisFiltersState } from '../lib/enemyLevelSelection'
 import { formatEnemyNumericCondition, matchesEnemyNumericConditions, type EnemyNumericCondition } from '../lib/enemyNumericFilters'
@@ -13,6 +14,10 @@ import './DamageCalculator.css'
 import './EnemyAnalysis.css'
 
 const EMPTY_ROWS: EnemyRecord[] = []
+const AGGREGATION_SCOPES = [
+  { key: 'all', label: '全体' },
+  { key: 'main', label: 'メインストーリー' },
+] as const
 
 export function EnemyAnalysis() {
   const aggregation = useEnemyAggregation()
@@ -25,7 +30,15 @@ export function EnemyAnalysis() {
   // Retain the complete old pair while hidden, so changing versions preserves all
   // graph controls without showing old counts under the newly selected version.
   const displayed = ready ?? lastReady
-  const rows = displayed?.data.rows ?? EMPTY_ROWS
+  const displayedData = displayed?.data
+  const scopeInputName = useId()
+  const [aggregationScope, setAggregationScope] = useState<typeof AGGREGATION_SCOPES[number]['key']>('all')
+  const mainStory = useMemo(
+    () => aggregationScope === 'main' && displayedData ? getEnemyMainStoryScope(displayedData) : null,
+    [aggregationScope, displayedData],
+  )
+  const aggregationScopeLabel = aggregationScope === 'main' ? AGGREGATION_SCOPES[1].label : undefined
+  const rows = mainStory?.rows ?? displayedData?.rows ?? EMPTY_ROWS
   const [filters, setFilters] = useState<EnemyAnalysisFiltersState>({ levelType: 'ALL' })
   const [numericConditions, setNumericConditions] = useState<readonly EnemyNumericCondition[]>([])
   const statisticsControls = useEnemyStatisticsControls()
@@ -34,6 +47,7 @@ export function EnemyAnalysis() {
     [rows, filters, numericConditions],
   )
   const scopeLabel = [
+    aggregationScopeLabel,
     formatEnemyLevelSelection(filters.levelType),
     ...numericConditions.map(formatEnemyNumericCondition),
   ].filter(Boolean).join(' · ')
@@ -49,12 +63,28 @@ export function EnemyAnalysis() {
           <span className="page-kicker">ENEMY STATISTICS</span>
           <h1>敵の統計分析</h1>
         </div>
-        <nav className="enemy-analysis-page-actions" aria-label="集計版と敵の関連ページ">
-          <EnemyAggregationSelector state={aggregation} />
-          <EnemyAggregationHistoryButton state={aggregation} />
-          <a className="button secondary enemy-page-link" href="#/enemies">敵データベースへ</a>{' '}
-          <a className="button secondary enemy-page-link" href="#/analysis/enemies/regression">敵の重回帰分析へ</a>
-        </nav>
+        <div className="enemy-analysis-page-actions">
+          <div className="enemy-analysis-aggregation" role="group" aria-label="集計設定">
+            <EnemyAggregationSelector state={aggregation} />
+            <fieldset className="enemy-chart-visibility enemy-analysis-scope" disabled={!ready}>
+              <legend>集計範囲</legend>
+              <div>
+                {AGGREGATION_SCOPES.map(({ key, label }) => (
+                  <label key={key} className={aggregationScope === key ? 'active' : ''}>
+                    <input type="radio" name={scopeInputName} value={key} checked={aggregationScope === key}
+                      onChange={() => setAggregationScope(key)} />
+                    <span>{label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <EnemyAggregationHistoryButton state={aggregation} />
+          </div>
+          <nav className="enemy-analysis-page-actions" aria-label="敵の関連ページ">
+            <a className="button secondary enemy-page-link" href="#/enemies">敵データベースへ</a>
+            <a className="button secondary enemy-page-link" href="#/analysis/enemies/regression">敵の重回帰分析へ</a>
+          </nav>
+        </div>
       </header>
       <section className="enemy-directory" aria-label="敵の統計分析">
         <EnemyDataContent loading={loading} error={error} onRetry={retry}>
@@ -64,8 +94,10 @@ export function EnemyAnalysis() {
           {displayed && <EnemyStatisticsPanel
             rows={scopedRows}
             allRows={rows}
-            aggregationCounts={displayed.data.counts}
+            aggregationCounts={mainStory?.counts ?? displayed.data.counts}
             aggregationVersion={displayed.version}
+            aggregationScopeLabel={aggregationScopeLabel}
+            spawnCountsAvailable={mainStory?.spawnCountsAvailable}
             scopeLabel={scopeLabel}
             controls={statisticsControls}
             filterSettings={{ ...filters, numericConditions }}

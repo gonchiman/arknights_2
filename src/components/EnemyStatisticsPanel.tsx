@@ -209,7 +209,8 @@ function EnemyStatisticsSettings({ controls }: { controls: EnemyStatisticsContro
   )
 }
 
-export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filterControls, histogramEditor, filterSettings, aggregationCounts, aggregationVersion }: {
+export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filterControls, histogramEditor, filterSettings, aggregationCounts,
+  aggregationVersion, aggregationScopeLabel, spawnCountsAvailable = true }: {
   rows: EnemyRecord[]
   allRows: EnemyRecord[]
   scopeLabel: string
@@ -219,6 +220,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   filterSettings?: Pick<EnemyHistogramEditorSettings, 'levelType' | 'numericConditions' | 'sourceEnemyIds'>
   aggregationCounts?: EnemyHistogramCounts
   aggregationVersion?: EnemyHistogramAggregationVersion
+  aggregationScopeLabel?: string
+  spawnCountsAvailable?: boolean
 }) {
   const thresholdInputId = useId()
   const thresholdErrorId = useId()
@@ -238,7 +241,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const [chartChoice, setSelectedChart] = useState<ChartKind>('HISTOGRAM')
   const selectedChart = histogramEditor ? 'HISTOGRAM' : CHART_OPTIONS.some(({ key }) => key === chartChoice) ? chartChoice : 'HISTOGRAM'
   const isThresholdChart = selectedChart === 'PIE' || selectedChart === 'RATIO_BAR'
-  const [activeCountMode, setCountMode] = useState<EnemyHistogramCountMode>(histogramEditor?.initialSnapshot?.countMode ?? 'SPAWNS')
+  const [countMode, setCountMode] = useState<EnemyHistogramCountMode>(histogramEditor?.initialSnapshot?.countMode ?? 'SPAWNS')
+  const activeCountMode = countMode === 'SPAWNS' && !spawnCountsAvailable ? 'MAPS' : countMode
   const [showHistogramPercentages, setShowHistogramPercentages] = useState(histogramEditor?.initialSnapshot?.showPercentages ?? true)
   const [showHistogramBinRanges, setShowHistogramBinRanges] = useState(histogramEditor?.initialSnapshot?.showBinRanges ?? true)
   const [showHistogramCumulative, setShowHistogramCumulative] = useState(histogramEditor?.initialSnapshot?.showCumulative ?? false)
@@ -432,7 +436,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     setImageFeedback(null)
     // Keep the preview and saved image on the same data, even if the source updates.
     const snapshot: EnemyChartImageData = { kind: selectedChart, metric: selectedMetric, scale: axisScale, statistics: summaryStatistics, observations,
-      scatterObservations, scatterMetric, scatterScale, scopeLabel, customLinearUpperBound, ecdfGuides,
+      scatterObservations, scatterMetric, scatterScale, scopeLabel, aggregationScopeLabel, customLinearUpperBound, ecdfGuides,
       countMode: activeCountMode, countCoverage: activeCountMode === 'TYPES' ? null : countData.data?.summary ?? null,
       ecdfPoints,
       jointDistribution, thresholdComparison, thresholdLabelLayout, thresholdBarLayout, heatmapColorScale, referenceVisibility: { ...referenceVisibility },
@@ -445,9 +449,11 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     setPreparingImage(true)
     try {
       snapshot.filename = selectedChart === 'PIE' && snapshot.thresholdComparison
-        ? createEnemyThresholdComparisonImageFilename({ comparison: snapshot.thresholdComparison, countMode: snapshot.countMode, labelLayout: snapshot.thresholdLabelLayout })
+        ? createEnemyThresholdComparisonImageFilename({ comparison: snapshot.thresholdComparison, countMode: snapshot.countMode,
+          labelLayout: snapshot.thresholdLabelLayout, scopeLabel: snapshot.aggregationScopeLabel })
         : selectedChart === 'RATIO_BAR' && snapshot.thresholdComparison
-          ? createEnemyThresholdBarComparisonImageFilename({ comparison: snapshot.thresholdComparison, countMode: snapshot.countMode, labelLayout: snapshot.thresholdBarLayout })
+          ? createEnemyThresholdBarComparisonImageFilename({ comparison: snapshot.thresholdComparison, countMode: snapshot.countMode,
+            labelLayout: snapshot.thresholdBarLayout, scopeLabel: snapshot.aggregationScopeLabel })
         : selectedChart === 'HEATMAP' ? await getEnemyJointImageFilename(jointDistribution, scopeLabel, snapshot.countCoverage, snapshot.heatmapColorScale)
         : selectedChart === 'ECDF' ? await getWeightedEnemyEcdfImageFilename({ mode: snapshot.countMode,
           metric: selectedMetric.label, scope: scopeLabel, scale: axisScale, statistics: summaryStatistics,
@@ -554,7 +560,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         onClick={() => void openImageSaveDialog()}>{savingImage ? '画像を保存中…' : preparingImage ? '画像を準備中…' : '画像を保存'}</button>}
     </div>}
     <DistributionCountControls mode={activeCountMode} onChange={setCountMode} counts={countData.data}
-      showMapCoverageLink={!histogramEditor} />
+      showMapCoverageLink={!histogramEditor && !aggregationScopeLabel} spawnCountsAvailable={spawnCountsAvailable} />
     {countUnavailable && <div className="enemy-histogram-load-state" role="status">
       {countData.error ? <>登場データを取得できませんでした。<button type="button" className="button secondary" onClick={countData.retry}>再読み込み</button></>
         : '登場データを読み込み中…'}
@@ -681,9 +687,12 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         id="enemy-distribution"
         number="02"
         title="分布グラフ"
-        summary={isThresholdChart ? `術耐性 · ${CHART_OPTIONS.find(({ key }) => key === selectedChart)?.label} · ${countOption.label} · ${thresholdConditions.filter(({ visible }) => visible).length}条件`
+        summary={isThresholdChart ? [
+          '術耐性', CHART_OPTIONS.find(({ key }) => key === selectedChart)?.label, countOption.label, aggregationScopeLabel,
+          `${thresholdConditions.filter(({ visible }) => visible).length}条件`,
+        ].filter(Boolean).join(' · ')
           : selectedChart === 'HEATMAP' ? `HP × 術耐性 · ${countOption.label} · ${scopeLabel}`
-          : selectedChart === 'COMPARISON' ? `${selectedMetric.label} · 分布比較 · ${countOption.label}`
+          : selectedChart === 'COMPARISON' ? [selectedMetric.label, '分布比較', countOption.label, aggregationScopeLabel].filter(Boolean).join(' · ')
           : `${selectedMetric.label} · ${CHART_OPTIONS.find((chart) => chart.key === selectedChart)?.label} · ${countOption.label} · ${scopeLabel} · 対象 ${rows.length}種類`}
         defaultOpen
         collapsedLabel="グラフを開く"
@@ -722,7 +731,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
 
         <EnemyDistributionComparison rows={allRows} metric={selectedMetric} active={selectedChart === 'COMPARISON'}
           countMode={activeCountMode} counts={countData.data} countUnavailable={countUnavailable}
-          aggregationVersionId={aggregationVersion?.id} />
+          aggregationVersionId={aggregationVersion?.id} scopeLabel={aggregationScopeLabel} />
 
         <div className="enemy-chart-stack" hidden={selectedChart === 'COMPARISON'}>
           {countUnavailable ? null : !isThresholdChart && rows.length === 0 && !hasFixedEmptyHistogram ? <ChartEmpty message="条件に一致する敵がいません" /> : <>
@@ -840,6 +849,7 @@ interface EnemyChartImageData {
   ecdfPoints: EmpiricalCdfPoint[]
   filename?: string
   aggregationVersionId?: string
+  aggregationScopeLabel?: string
   jointDistribution: EnemyJointDistribution
   kind: ChartKind
   metric: StatMetric
@@ -873,11 +883,11 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
   const countOption = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === data.countMode)!
   if (kind === 'PIE' && data.thresholdComparison) {
     return <EnemyThresholdPieComparisonImage comparison={data.thresholdComparison} countMode={data.countMode}
-      labelLayout={data.thresholdLabelLayout} aspectRatio={aspectRatio} onLayout={onLayout} />
+      labelLayout={data.thresholdLabelLayout} scopeLabel={data.aggregationScopeLabel} aspectRatio={aspectRatio} onLayout={onLayout} />
   }
   if (kind === 'RATIO_BAR' && data.thresholdComparison) {
     return <EnemyThresholdBarComparisonImage comparison={data.thresholdComparison} countMode={data.countMode}
-      labelLayout={data.thresholdBarLayout} aspectRatio={aspectRatio} onLayout={onLayout} />
+      labelLayout={data.thresholdBarLayout} scopeLabel={data.aggregationScopeLabel} aspectRatio={aspectRatio} onLayout={onLayout} />
   }
   if (kind === 'HEATMAP') {
     const distribution = data.jointDistribution
@@ -1078,11 +1088,12 @@ function StatisticsSummary({ columns, countUnit }: {
   )
 }
 
-function DistributionCountControls({ mode, onChange, counts, showMapCoverageLink }: {
+function DistributionCountControls({ mode, onChange, counts, showMapCoverageLink, spawnCountsAvailable }: {
   mode: EnemyHistogramCountMode
   onChange: (mode: EnemyHistogramCountMode) => void
   counts: EnemyHistogramCounts | null
   showMapCoverageLink: boolean
+  spawnCountsAvailable: boolean
 }) {
   const id = useId()
   return <div className="enemy-histogram-counts">
@@ -1098,19 +1109,26 @@ function DistributionCountControls({ mode, onChange, counts, showMapCoverageLink
             : 'どの敵が何体出るか確定できるマップの、敵の配置数を合計します。各マップを1回分ずつ数え、ランダム出現・条件付き増援などがあるマップは集計対象外です。周回数は反映しません。'}</dd>
           <dt>ステータス</dt><dd>横軸のHPなどは敵の基礎値です。ステージ補正は含めません。平均・中央値・割合は選択した集計方法に合わせて計算します。</dd>
           {counts && <><dt>収録範囲</dt><dd>登場マップ数：{formatNumber(counts.summary.mapCount, 0)}マップ。
-            出現回数：{getEnemySpawnCoverageLabel(counts.summary)}。
-            {counts.spawnAggregationMode ? '集計対象外の' : '出現条件を確定できない'}{formatNumber(counts.summary.spawnExcludedMapCount, 0)}マップと、
-            データ未取得の{formatNumber(counts.summary.missingMapCount, 0)}マップは出現回数に含めません。
+            {spawnCountsAvailable && <>出現回数：{getEnemySpawnCoverageLabel(counts.summary)}。
+              {counts.spawnAggregationMode ? '集計対象外の' : '出現条件を確定できない'}{formatNumber(counts.summary.spawnExcludedMapCount, 0)}マップと、
+              データ未取得の{formatNumber(counts.summary.missingMapCount, 0)}マップは出現回数に含めません。</>}
             {counts.sourceGeneratedAt && `元データの集計日：${counts.sourceGeneratedAt.slice(0, 10)}。`}</dd></>}
         </dl>
       </HelpPopover></legend>
       <div role="radiogroup" aria-label="グラフの集計方法">
-        {ENEMY_HISTOGRAM_COUNT_MODES.map((option) => <label key={option.key} className={mode === option.key ? 'active' : ''}>
-          <input type="radio" name={`${id}-count-mode`} value={option.key} checked={mode === option.key}
-            onChange={() => onChange(option.key)} /><span>{option.label}</span>
-        </label>)}
+        {ENEMY_HISTOGRAM_COUNT_MODES.map((option) => {
+          const disabled = option.key === 'SPAWNS' && !spawnCountsAvailable
+          return <label key={option.key} className={mode === option.key ? 'active' : ''}>
+            <input type="radio" name={`${id}-count-mode`} value={option.key} checked={mode === option.key}
+              disabled={disabled} aria-describedby={disabled ? `${id}-spawn-unavailable` : undefined}
+              onChange={() => onChange(option.key)} /><span>{option.label}</span>
+          </label>
+        })}
       </div>
     </fieldset>
+    {!spawnCountsAvailable && <span id={`${id}-spawn-unavailable`} className="enemy-histogram-coverage" role="status">
+      この集計版ではメインストーリーの出現回数を利用できません
+    </span>}
     {counts && mode !== 'TYPES' && <span className="enemy-histogram-coverage" role="status">
       {mode === 'MAPS' ? `収録 ${formatNumber(counts.summary.mapCount, 0)}マップ`
         : getEnemySpawnCoverageLabel(counts.summary)}

@@ -7,6 +7,8 @@ import { setTimeout as delay } from 'node:timers/promises'
 import { CURRENT_ENEMY_AGGREGATION_RULE_VERSION, ENEMY_AGGREGATION_FILES,
   parseEnemyAggregationBundle, parseEnemyAggregationIndex } from '../src/lib/enemyAggregationContract.ts'
 import { getMapCoverageStatus, summarizeMapCoverage } from '../src/lib/enemyMapCoverage.ts'
+import { parseEnemyHistogramCounts } from '../src/lib/enemyHistogramCounts.ts'
+import { parseEnemyMainStoryCounts } from '../src/lib/enemyMainStoryScope.ts'
 import { parseMapIndex } from '../src/lib/mapDatabase.ts'
 
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex')
@@ -108,6 +110,11 @@ export async function archiveEnemyAggregation({ root, snapshot, ruleVersion = CU
     return [name, JSON.parse(await readFile(path, 'utf8'))]
   })))
   parseEnemyAggregationBundle({ schemaVersion: 1, versionId: 'v1', files })
+  const mapIndex = parseMapIndex(files['maps/index.json'])
+  const histogram = files['enemy-histogram-counts.json']
+  if (histogram.mainStory !== undefined) {
+    parseEnemyMainStoryCounts(histogram.mainStory, mapIndex.maps, parseEnemyHistogramCounts(histogram))
+  }
   for (const name of ENEMY_AGGREGATION_FILES.filter(name => !name.startsWith('runtime/'))) {
     if (files[name].source?.revision !== undefined && files[name].source.revision !== snapshot.revision) {
       throw new Error(`Aggregation source revision mismatch: ${name}`)
@@ -133,8 +140,11 @@ export async function archiveEnemyAggregation({ root, snapshot, ruleVersion = CU
     const bundle = { schemaVersion: 1, versionId: id, files }
     const payload = Buffer.from(`${JSON.stringify(bundle)}\n`)
     const bytes = gzipSync(payload, { level: 9 })
-    const coverage = summarizeMapCoverage(parseMapIndex(files['maps/index.json']).maps, 'SPAWNS')
-    const defaultDescription = ruleVersion !== CURRENT_ENEMY_AGGREGATION_RULE_VERSION ? '集計ルール更新'
+    const coverage = summarizeMapCoverage(mapIndex.maps, 'SPAWNS')
+    const addsMainStory = !!histogram.mainStory
+      && !previousBundle?.files['enemy-histogram-counts.json'].mainStory
+    const defaultDescription = addsMainStory ? 'メインストーリーの集計範囲に対応'
+      : ruleVersion !== CURRENT_ENEMY_AGGREGATION_RULE_VERSION ? '集計ルール更新'
       : previousEntry?.ruleVersion === ruleVersion && previousEntry.sourceRevision !== snapshot.revision
         ? '元データ更新（通常戦闘マップを集計）' : '空の出現区間に対応し、SS-EX-5を集計対象に追加'
     const version = {

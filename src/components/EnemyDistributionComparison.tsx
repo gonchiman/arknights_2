@@ -14,10 +14,12 @@ import { getChartImageSavePicker, selectChartImageDestination } from '../lib/cha
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './EnemyDistributionComparison.css'
 
-export function EnemyDistributionComparison({ rows, metric, active, countMode = 'TYPES', counts = null, countUnavailable = false, aggregationVersionId }: {
+export function EnemyDistributionComparison({ rows, metric, active, countMode = 'TYPES', counts = null, countUnavailable = false,
+  aggregationVersionId, scopeLabel }: {
   rows: readonly EnemyRecord[]; metric: EnemyComparisonMetric; active: boolean
   countMode?: EnemyHistogramCountMode; counts?: EnemyHistogramCounts | null; countUnavailable?: boolean
   aggregationVersionId?: string
+  scopeLabel?: string
 }) {
   const [conditions, setConditions] = useState(createEnemyComparisonConditions)
   const [scale, setScale] = useState<HistogramScale>('LINEAR')
@@ -59,7 +61,9 @@ export function EnemyDistributionComparison({ rows, metric, active, countMode = 
   const distribution = useMemo(() => buildEnemyComparisonDistribution(rows, conditions, metric.key, {
     ...options, customLinearBinWidth: settingsError ? null : width, customLinearUpperBound: settingsError ? null : upper,
   }), [rows, conditions, metric.key, metric.logBinCount, metric.minimumLinearBinWidth, scale, width, upper, settingsError, countMode, counts])
-  const data = useMemo<EnemyComparisonSnapshot>(() => ({ distribution, metric, scale, yAxis, countMode, coverage: counts?.summary ?? null }), [distribution, metric, scale, yAxis, countMode, counts])
+  const data = useMemo<EnemyComparisonSnapshot>(() => ({
+    distribution, metric, scale, yAxis, countMode, coverage: counts?.summary ?? null, scopeLabel,
+  }), [distribution, metric, scale, yAxis, countMode, counts, scopeLabel])
   const canSave = !unavailable && !settingsError && distribution.series.some((series) => series.condition.visible && series.count > 0)
   const picker = getChartImageSavePicker()
   const previewAspect = aspect.preset === 'auto' ? undefined : Number(aspect.width) / Number(aspect.height)

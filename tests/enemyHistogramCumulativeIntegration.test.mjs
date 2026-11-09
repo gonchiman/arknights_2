@@ -110,10 +110,10 @@ const countAxisTicks = markup => {
     .map(match => Number(match[2].replaceAll(',', '')))
 }
 
-function PanelWrapper({ initialSnapshot, editor = false, aggregationCounts, aggregationVersion }) {
+function PanelWrapper({ initialSnapshot, editor = false, aggregationCounts, aggregationVersion, spawnCountsAvailable }) {
   const controls = useControls(initialSnapshot)
   return createElement(Panel, { rows: enemies, allRows: enemies, scopeLabel: 'エリート・検証fixture', controls,
-    filterControls: null, aggregationCounts, aggregationVersion,
+    filterControls: null, aggregationCounts, aggregationVersion, spawnCountsAvailable,
     ...(editor ? { histogramEditor: { initialSnapshot: initialSnapshot ?? null, onChange() {} } } : {}) })
 }
 const renderPanel = props => renderToStaticMarkup(createElement(PanelWrapper, props))
@@ -139,6 +139,16 @@ test('指定した集計版の出現数だけを描画し、別版のキャッ�
   const unavailable = renderPanel({ initialSnapshot, aggregationVersion })
   assert.deepEqual(barTitles(unavailable), [])
   assert.match(clean(unavailable), /登場データを取得できませんでした/)
+})
+
+test('本編の出現回数を使えない版では登場マップ数で分布を描画する', () => {
+  const markup = renderPanel({ aggregationCounts: fixtureCounts, spawnCountsAvailable: false })
+  const radio = (value) => [...markup.matchAll(/<input\b[^>]*>/g)].find(([tag]) => attr(tag, 'value') === value)?.[0]
+  assert.match(radio('SPAWNS'), /\bdisabled=""/)
+  assert.doesNotMatch(radio('SPAWNS'), /\bchecked=""/)
+  assert.match(radio('MAPS'), /\bchecked=""/)
+  assert.match(clean(markup), /この集計版ではメインストーリーの出現回数を利用できません/)
+  assert.ok(barTitles(markup).some(title => title.includes('5件')))
 })
 
 test('累積オプションONだけに右軸0〜100%と線を出し、元の階級と件数は変えない', () => {
