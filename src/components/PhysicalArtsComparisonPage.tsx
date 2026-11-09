@@ -3,6 +3,9 @@ import { evaluateAttackAttributeTables } from '../lib/damageCalculatorThreeAttri
 import {
   DamageCalculatorThreeAttributeChartImageDialog, type DamageCalculatorThreeAttributeChartImageSnapshot,
 } from './DamageCalculatorThreeAttributeChartImageDialog'
+import {
+  DamageCalculatorThreeAttributeImageDialog, type DamageCalculatorThreeAttributeImageSnapshot,
+} from './DamageCalculatorThreeAttributeImageDialog'
 import { AttributeButtons, DamageCalculatorThreeAttributeTable } from './DamageCalculatorThreeAttributePage'
 import {
   PhysicalArtsComparisonChart, PhysicalArtsComparisonImageLegend, type PhysicalArtsChartRanges,
@@ -21,12 +24,15 @@ const RANGE_FIELDS = [
   { key: 'resistance', label: '術耐性', limit: 100 },
 ] as const
 const BOUNDS = [['min', '下限'], ['max', '上限']] as const
+type ResultImage =
+  | { view: 'table'; snapshot: DamageCalculatorThreeAttributeImageSnapshot }
+  | { view: 'chart'; snapshot: DamageCalculatorThreeAttributeChartImageSnapshot }
 
 export default function PhysicalArtsComparisonPage() {
   const [{ attack, ranges }, setResult] = useState({ attack: INITIAL_ATTACK, ranges: INITIAL_RANGES })
   const [view, setView] = useState<typeof VIEWS[number][0]>('table')
   const [rangeError, setRangeError] = useState<typeof RANGE_FIELDS[number] | null>(null)
-  const [image, setImage] = useState<DamageCalculatorThreeAttributeChartImageSnapshot | null>(null)
+  const [image, setImage] = useState<ResultImage | null>(null)
   const { physical, arts } = useMemo(() => evaluateAttackAttributeTables(attack), [attack])
   const showChart = view === 'chart'
 
@@ -51,18 +57,28 @@ export default function PhysicalArtsComparisonPage() {
   }
 
   function openImage() {
-    const snapshot = structuredClone({ attack, ranges })
-    setImage({
+    const conditions = [`攻撃力 ${NUMBER.format(attack)}`, '1体あたり']
+    if (view === 'table') {
+      const rows = structuredClone({ physical, arts })
+      setImage({ view, snapshot: {
+        title: '物理・術ダメージ比較表（1回の攻撃ダメージ）',
+        conditions,
+        table: <DamageCalculatorThreeAttributeTable {...rows} metric="perAttack" forImage />,
+      } })
+      return
+    }
+    const chartInput = structuredClone({ attack, ranges })
+    setImage({ view, snapshot: {
       title: '物理・術ダメージ比較（1回の攻撃ダメージ）',
       axisTitle: '防御力',
-      conditions: [`攻撃力 ${NUMBER.format(snapshot.attack)}`, '1体あたり'],
+      conditions,
       filenameParts: [
-        `攻撃力${snapshot.attack}`,
-        ...RANGE_FIELDS.map(({ key, label }) => `${label}${snapshot.ranges[key].min}-${snapshot.ranges[key].max}`),
+        `攻撃力${chartInput.attack}`,
+        ...RANGE_FIELDS.map(({ key, label }) => `${label}${chartInput.ranges[key].min}-${chartInput.ranges[key].max}`),
       ],
       legend: <PhysicalArtsComparisonImageLegend />,
-      chart: ({ height }) => <PhysicalArtsComparisonChart {...snapshot} imageHeight={height} />,
-    })
+      chart: ({ height }) => <PhysicalArtsComparisonChart {...chartInput} imageHeight={height} />,
+    } })
   }
 
   return <section className="calculator-page damage-three-attribute-page">
@@ -102,12 +118,14 @@ export default function PhysicalArtsComparisonPage() {
       </div>
       <div className="damage-three-attribute-toolbar">
         <AttributeButtons label="表示形式" options={VIEWS} value={view} onChange={setView} />
-        {showChart && <button type="button" className="button secondary damage-three-attribute-image-button"
-          aria-label="物理・術ダメージ比較グラフをPNG画像で保存" aria-haspopup="dialog" onClick={openImage}>画像を保存</button>}
+        <button type="button" className="button secondary damage-three-attribute-image-button"
+          aria-label={`物理・術ダメージ比較${showChart ? 'グラフ' : '表'}をPNG画像で保存`}
+          aria-haspopup="dialog" onClick={openImage}>画像を保存</button>
       </div>
       {showChart ? <PhysicalArtsComparisonChart attack={attack} ranges={ranges} />
         : <DamageCalculatorThreeAttributeTable physical={physical} arts={arts} metric="perAttack" />}
     </section>
-    {image && <DamageCalculatorThreeAttributeChartImageDialog snapshot={image} onClose={() => setImage(null)} />}
+    {image?.view === 'table' && <DamageCalculatorThreeAttributeImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
+    {image?.view === 'chart' && <DamageCalculatorThreeAttributeChartImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
   </section>
 }
