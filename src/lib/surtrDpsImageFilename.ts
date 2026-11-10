@@ -72,7 +72,11 @@ function finiteBound(value: number | undefined): number | string {
 export function getSurtrCombinedImageFilename(dpsFilename: string, histogramFilename: string): string {
   const dps = dpsFilename.replace(/\.png$/i, '').replace(/^スルト_S3_DPS_/, '').split('_')
   const histogram = histogramFilename.replace(/\.png$/i, '').replace(/^敵_術耐性_ヒストグラム_/, '').split('_')
+  const histogramDetails = histogram.slice(2)
+  // Keep the active percentile setting even when long DPS names truncate later chart options.
+  const percentileIndex = histogramDetails.findIndex(part => /^累積\d+(?:\.\d+)?(?:e[+-]?\d+)?%$/i.test(part))
+  const percentile = percentileIndex >= 0 ? histogramDetails.splice(percentileIndex, 1)[0] : undefined
   return createChartImageFilename('スルト_S3_DPSと術耐性分布', [
-    ...histogram.slice(0, 2), ...dps, ...histogram.slice(2),
+    ...histogram.slice(0, 2), percentile, ...dps, ...histogramDetails,
   ])
 }

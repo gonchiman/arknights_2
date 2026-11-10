@@ -69,6 +69,10 @@ test('combined export names preserve both graph identities and prioritize histog
   assert.notEqual(name, getSurtrCombinedImageFilename(getSurtrDpsImageFilename({ ...settings, potential: 5 }), histogram))
   assert.ok(new TextEncoder().encode(withChartImageAspect(name, 16 / 9)).length <= 240)
   assert.match(withChartImageAspect(name), /比率自動\.png$/)
+  const percentile = histogram.replace('_線形_', '_線形_累積75.5%_')
+  const longDps = dps.replace(/\.png$/, `_${'詳細_'.repeat(50)}.png`)
+  assert.match(getSurtrCombinedImageFilename(longDps, percentile), /_全敵_累積75\.5%_/)
+  assert.notEqual(getSurtrCombinedImageFilename(dps, percentile), name)
 })
 test('Surtr filename records all effective DPS conditions and no synthetic identifiers', () => {
   const name = getSurtrDpsImageFilename(settings)

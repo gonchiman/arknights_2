@@ -178,6 +178,11 @@ export function withHistogramDispersion(statistics: NumericStatistics): NumericS
   }
 }
 
+export interface EnemyHistogramPercentileReference {
+  percentage: number
+  value: number
+}
+
 export function getWeightedEnemyHistogramImageFilename(options: {
   mode: EnemyHistogramCountMode
   metric: string
@@ -186,6 +191,7 @@ export function getWeightedEnemyHistogramImageFilename(options: {
   customLinearUpperBound?: number | null
   statistics: NumericStatistics
   referenceVisibility: { mean: boolean; median: boolean }
+  percentileReference?: EnemyHistogramPercentileReference
   showPercentages?: boolean
   showBinRanges?: boolean
   showCumulative?: boolean
@@ -199,6 +205,7 @@ export function getWeightedEnemyHistogramImageFilename(options: {
   return createChartImageFilename(`敵_${metric}_ヒストグラム`, [
     ENEMY_HISTOGRAM_COUNT_MODES.find((option) => option.key === mode)!.label,
     ...scope.split(/\s*·\s*/), options.useRatingBins ? 'ゲーム内評価' : isLinear ? '線形' : '対数',
+    options.percentileReference && `累積${options.percentileReference.percentage}%`,
     !options.useRatingBins && isLinear && histogram?.binWidth != null ? `幅${histogram.binWidth}` : null,
     !options.useRatingBins && isLinear && histogram ? `上限${options.customLinearUpperBound == null ? '自動' : ''}${histogram.normalRangeEnd}` : null,
     !options.useRatingBins && !isLinear && histogram ? `${histogram.normalBinCount}階級` : null,

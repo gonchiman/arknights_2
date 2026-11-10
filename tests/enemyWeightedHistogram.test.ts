@@ -3,8 +3,30 @@ import assert from 'node:assert/strict'
 import { calculateNumericStatistics } from '../src/lib/enemyStatistics.ts'
 import {
   calculateWeightedHistogram,
+  calculateWeightedPercentile,
   type WeightedHistogramObservation,
 } from '../src/lib/enemyWeightedHistogram.ts'
+
+test('weighted percentiles interpolate across integer frequencies and keep the sample endpoints', () => {
+  const observations = [
+    { value: 20, weight: 2 }, { value: 40, weight: 1 }, { value: 10, weight: 1 },
+    { value: null, weight: 100 }, { value: -50, weight: 0 }, { value: 100, weight: -2 },
+    { value: NaN, weight: 1 }, { value: -100, weight: Infinity },
+  ]
+  assert.equal(calculateWeightedPercentile(observations, 0), 10)
+  assert.equal(calculateWeightedPercentile(observations, 12.5), 13.75)
+  assert.equal(calculateWeightedPercentile(observations, 50), calculateWeightedHistogram(observations).median)
+  assert.equal(calculateWeightedPercentile(observations, 100), 40)
+})
+
+test('fractional percentiles use weighted CDF midpoints, grouping ties before lookup', () => {
+  const observations = [{ value: 10, weight: .25 }, { value: 30, weight: .5 }, { value: 10, weight: .25 }]
+  assert.equal(calculateWeightedPercentile(observations, 49), 10)
+  assert.equal(calculateWeightedPercentile(observations, 50), 20)
+  assert.equal(calculateWeightedPercentile(observations, 51), 30)
+  assert.equal(calculateWeightedPercentile([{ value: null, weight: 1 }], 50), null)
+  for (const invalid of [-1, 101, NaN, Infinity]) assert.equal(calculateWeightedPercentile(observations, invalid), null)
+})
 
 function summary(result: ReturnType<typeof calculateWeightedHistogram>) {
   const { bins: _bins, histogram: _histogram, ...statistics } = result

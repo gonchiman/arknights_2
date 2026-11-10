@@ -53,7 +53,7 @@
   cursor: pointer;
 }
 .enemy-reference-controls input { margin: 0; accent-color: currentColor; }
-.enemy-reference-controls label:has(input:not(:checked)) { color: var(--text-muted); }
+.enemy-reference-controls label:has(input[type="checkbox"]:not(:checked)) { color: var(--text-muted); }
 .enemy-reference-controls label:has(input:focus-visible) {
   outline: 2px solid var(--text);
   outline-offset: 3px;
@@ -63,6 +63,11 @@
 .enemy-histogram-display-toggle { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; font-size: 11px; color: var(--text-soft); cursor: pointer; }
 .enemy-histogram-display-toggle input { margin: 0; accent-color: currentColor; }
 .enemy-histogram-display-toggle select { min-height: 28px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface); color: var(--text); font: inherit; }
+.enemy-reference-controls .enemy-percentile-control { color: var(--enemy-ecdf-guide-color); cursor: default; }
+.enemy-percentile-control i { border-top-style: dotted; }
+.enemy-percentile-control input { width: 5em; min-height: 28px; padding: 3px 5px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface); color: var(--text); font: inherit; }
+.enemy-chart-reference.percentile { stroke: var(--enemy-ecdf-guide-color); stroke-dasharray: 2 3; }
+.enemy-chart-reference-label.percentile { fill: var(--enemy-ecdf-guide-color); }
 .enemy-histogram-rating-control { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .enemy-histogram-rating-reference.button { min-height: 28px; padding: 4px 8px; font-size: 11px; }
 .enemy-stat-chart .enemy-histogram-range-label { font-size: 11px; }
