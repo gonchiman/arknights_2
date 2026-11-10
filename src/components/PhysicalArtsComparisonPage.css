@@ -8,7 +8,7 @@
 
 .physical-arts-comparison-controls .calculator-field { width: 9rem; }
 
-.physical-arts-comparison-ranges:not([hidden]) {
+.physical-arts-comparison-ranges {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 14px;

@@ -5,6 +5,7 @@ import {
 import { evaluateDamageThreeAttributeTables, type DamageThreeAttributeTableRow } from '../lib/damageCalculatorThreeAttributeTables'
 import type { DamageThreeComparisonOverrides } from '../lib/damageCalculatorThreeComparison'
 import { buildDamageCalculatorThreeSkillInformation } from '../lib/damageCalculatorThreeSkillInformation'
+import { getEnemyRatingRanges } from '../lib/enemyStatRatings'
 import type { GuardInput } from '../lib/guardCombatTypes'
 import type { SkillStructureSelection } from '../lib/skillStructure'
 import type { SkillRecord } from '../types/skill'
@@ -44,6 +45,7 @@ type ResultImage =
 const METRIC_LABELS: Record<Metric, string> = { perAttack: '1回の攻撃ダメージ', dps: 'DPS' }
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 const TABLE_NUMBER = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+const TABLE_RATINGS = getEnemyRatingRanges('defense').map(({ rating }) => rating)
 const SKILL_TAB_ID = 'damage-three-attribute-skill'
 
 function sameSkill(entry: DamageThreeAttributeEntry, selection: SkillStructureSelection) {
@@ -297,7 +299,9 @@ export function DamageCalculatorThreeAttributeTable({ physical, arts, metric, in
   physical: readonly DamageThreeAttributeTableRow[]; arts: readonly DamageThreeAttributeTableRow[]
   metric: Metric; invalid?: boolean; forImage?: boolean
 }) {
+  const physicalByRating = new Map(physical.map(row => [row.rating, row]))
   const artsByRating = new Map(arts.map(row => [row.rating, row]))
+  const ratings = TABLE_RATINGS.filter(rating => physicalByRating.has(rating) || artsByRating.has(rating))
   const table = <table className={`damage-two-table damage-three-attribute-table${forImage ? ' damage-three-attribute-table-image' : ''}`}
     aria-label={`${METRIC_LABELS[metric]}の属性比較（1体あたり）`}>
       <colgroup><col className="damage-three-attribute-rating-column" /></colgroup>
@@ -313,10 +317,10 @@ export function DamageCalculatorThreeAttributeTable({ physical, arts, metric, in
           <th scope="col">術耐性</th><th scope="col">最小</th><th scope="col">最大</th>
         </tr>
       </thead>
-      <tbody>{physical.map(row => <tr key={row.rating}>
-        <th className="damage-three-attribute-rating-cell" scope="row">{row.rating}</th>
-        <AttributeGradeCells row={row} metric={metric} invalid={invalid} />
-        <AttributeGradeCells row={artsByRating.get(row.rating)} metric={metric} invalid={invalid} />
+      <tbody>{ratings.map(rating => <tr key={rating}>
+        <th className="damage-three-attribute-rating-cell" scope="row">{rating}</th>
+        <AttributeGradeCells row={physicalByRating.get(rating)} metric={metric} invalid={invalid} />
+        <AttributeGradeCells row={artsByRating.get(rating)} metric={metric} invalid={invalid} />
       </tr>)}</tbody>
     </table>
   return forImage ? table : <div className="damage-two-table-wrap" role="region" aria-label="属性比較表（1体あたり）" tabIndex={0}>

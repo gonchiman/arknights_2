@@ -96,6 +96,28 @@ test('攻撃力のみの属性比較は評価の境界と最低保証を使っ�
   assert.deepEqual(highAttack.physical.at(-1)!.perAttack, { min: 50_000, max: 994_999 })
 })
 
+test('攻撃力のみの属性比較は指定範囲の端点で計算し、評価との重なりが1点でも保持する', () => {
+  const { physical, arts } = evaluateAttackAttributeTables(1600, {
+    defense: { min: 80, max: 120 },
+    resistance: { min: 10, max: 20 },
+  })
+  assert.deepEqual(physical.map(({ rating, minStat, maxStat, perAttack }) => [rating, minStat, maxStat, perAttack]), [
+    ['E', 80, 99, { min: 1501, max: 1520 }],
+    ['D', 100, 120, { min: 1480, max: 1500 }],
+  ])
+  assert.deepEqual(arts.map(({ rating, minStat, maxStat }) => [rating, minStat, maxStat]), [
+    ['C', 10, 19], ['B', 20, 20],
+  ])
+  close(arts[0].perAttack!.min, 1296)
+  close(arts[1].perAttack!.max, 1280)
+
+  const highDefense = evaluateAttackAttributeTables(1_000_000, {
+    defense: { min: 6000, max: 7000 },
+    resistance: { min: 0, max: 100 },
+  })
+  assert.deepEqual(highDefense.physical[0].perAttack, { min: 993_000, max: 994_000 })
+})
+
 test('無視オフはスルトS2の術耐性20無視だけを外し、物理側と攻撃間隔を保つ', () => {
   const value = input('char_350_surtr', 2)
   const on = valid(value)
