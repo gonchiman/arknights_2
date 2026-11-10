@@ -1,6 +1,6 @@
 import { getEnemyRatingNumericRanges, getEnemyStatRating } from './enemyStatRatings.ts'
 
-export type RankBandStat = 'maxHp' | 'magicResistance'
+export type RankBandStat = 'maxHp' | 'defense' | 'magicResistance'
 
 export interface StatRankBand {
   rating: string
@@ -20,9 +20,13 @@ interface StatRankBandOptions {
   min?: number
   max: number
   barValues: readonly number[]
+  /** Keep ranks that are represented by a single included axis endpoint. */
+  includeEndpointRanks?: boolean
 }
 
-export function getStatRankBands({ stat, chartKind, min = 0, max, barValues }: StatRankBandOptions): StatRankBand[] {
+export function getStatRankBands({
+  stat, chartKind, min = 0, max, barValues, includeEndpointRanks = false,
+}: StatRankBandOptions): StatRankBand[] {
   if (!Number.isFinite(max) || max < 0) return []
   const domainStart = Number.isFinite(min) && min >= 0 && min <= max ? min : 0
   const domainSpan = max - domainStart
@@ -41,10 +45,12 @@ export function getStatRankBands({ stat, chartKind, min = 0, max, barValues }: S
       if (end > start) {
         return [{ rating: range.rating, label: range.label, start: (start - domainStart) / domainSpan, end: (end - domainStart) / domainSpan, index }]
       }
-      // E includes resistance 0, but occupies no interval in the nonnegative domain.
-      // Retain that exact endpoint without widening it into the neighboring D range.
-      if (stat === 'magicResistance' && domainStart === 0 && range.upperBound === 0 && range.upperInclusive) {
-        return [{ rating: range.rating, label: range.label, start: 0, end: 0, index, pointValue: 0 }]
+      // Keep resistance E at 0 for existing charts, and any included endpoint
+      // for charts that opt in to displaying both ends of the visible range.
+      const keepResistanceZero = stat === 'magicResistance' && start === 0 && domainStart === 0
+      if (start === end && (includeEndpointRanks || keepResistanceZero) && getEnemyStatRating(stat, start) === range.rating) {
+        const position = (start - domainStart) / domainSpan
+        return [{ rating: range.rating, label: range.label, start: position, end: position, index, pointValue: start }]
       }
       return []
     })

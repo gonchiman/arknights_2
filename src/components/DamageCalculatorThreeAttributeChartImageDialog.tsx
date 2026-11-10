@@ -11,6 +11,7 @@ import './DamageCalculatorThreeAttributeChartImageDialog.css'
 export interface DamageCalculatorThreeAttributeChartImageSnapshot {
   title: string
   axisTitle?: string
+  additionalChartHeight?: number
   conditions: readonly string[]
   filenameParts: readonly string[]
   legend: ReactNode
@@ -38,7 +39,7 @@ export function DamageCalculatorThreeAttributeChartImageDialog({ snapshot, onClo
     legend: snapshot.legend,
     conditions: snapshot.conditions.join('・'),
     axisTitle: snapshot.axisTitle ?? 'ゲーム内評価',
-    naturalChartHeight: NATURAL_CHART_HEIGHT,
+    naturalChartHeight: NATURAL_CHART_HEIGHT + (snapshot.additionalChartHeight ?? 0),
     aspectRatio,
     children: snapshot.chart,
   }
