@@ -1,13 +1,18 @@
 import { useId } from 'react'
 import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
 import { calculateDamage, calculateDamageBreakdown } from '../lib/damageCalculator'
+import { getStatRankBands, type StatRankBand } from '../lib/statRankBands'
 import './PhysicalArtsComparisonChart.css'
 
 const ATTRIBUTES = [
-  { key: 'physical', label: '物理', stat: '防御力', rangeKey: 'defense' },
-  { key: 'arts', label: '術', stat: '術耐性', rangeKey: 'resistance' },
+  { key: 'physical', label: '物理', stat: '防御力', rangeKey: 'defense', ratingStat: 'defense' },
+  { key: 'arts', label: '術', stat: '術耐性', rangeKey: 'resistance', ratingStat: 'magicResistance' },
 ] as const
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
+const RATING_BAND_HEIGHT = 18
+const RATING_ENDPOINT_HEIGHT = 14
+const AXIS_GAP = 3
+export const PHYSICAL_ARTS_RATING_EXTRA_HEIGHT = 2 * (RATING_BAND_HEIGHT + RATING_ENDPOINT_HEIGHT + AXIS_GAP)
 
 export type PhysicalArtsChartRanges = {
   defense: { min: number; max: number }
@@ -25,8 +30,27 @@ export function PhysicalArtsComparisonImageLegend() {
   </ul>
 }
 
-export function PhysicalArtsComparisonChart({ attack, ranges, imageHeight }: {
-  attack: number; ranges: PhysicalArtsChartRanges; imageHeight?: number
+function AxisRatingStrip({ bands }: { bands: readonly StatRankBand[] }) {
+  const points = bands.filter(band => band.pointValue !== undefined)
+  return <div className="physical-arts-chart-ratings">
+    <div className="physical-arts-chart-rating-track" style={{ height: RATING_BAND_HEIGHT }}>
+      {bands.filter(band => band.pointValue === undefined).map(band => (
+        <div key={band.rating} className="physical-arts-chart-rating-band" data-rating={band.rating}
+          style={{ left: `${band.start * 100}%`, width: `${(band.end - band.start) * 100}%` }}>
+          <span>{band.rating}</span>
+        </div>
+      ))}
+      {points.map(band => <i key={band.rating} className={band.start === 0 ? 'at-start' : 'at-end'} />)}
+    </div>
+    {points.length > 0 && <div className="physical-arts-chart-rating-points" style={{ height: RATING_ENDPOINT_HEIGHT }}>
+      {points.map(band => <span key={band.rating} className={band.start === 0 ? 'at-start' : 'at-end'}
+        data-rating={band.rating} data-rating-point={band.pointValue}>{band.rating}</span>)}
+    </div>}
+  </div>
+}
+
+export function PhysicalArtsComparisonChart({ attack, ranges, showRatings = false, imageHeight }: {
+  attack: number; ranges: PhysicalArtsChartRanges; showRatings?: boolean; imageHeight?: number
 }) {
   const descriptionId = useId()
   const forImage = imageHeight !== undefined
@@ -43,7 +67,10 @@ export function PhysicalArtsComparisonChart({ attack, ranges, imageHeight }: {
     const points = [{ stat: min, damage: damage(min) }]
     if (min < breakpoint && breakpoint < max) points.push({ stat: breakpoint, damage: floor })
     points.push({ stat: max, damage: damage(max) })
-    return { ...attribute, min, max, points }
+    const bands = showRatings
+      ? getStatRankBands({ stat: attribute.ratingStat, chartKind: 'line', min, max, barValues: [], includeEndpointRanks: true })
+      : []
+    return { ...attribute, min, max, points, bands }
   })
 
   return <figure className={`physical-arts-chart${forImage ? ' is-image' : ''}`}
@@ -52,14 +79,16 @@ export function PhysicalArtsComparisonChart({ attack, ranges, imageHeight }: {
       {curves.map(({ key, label }) => <span className={`is-${key}`} key={key}><i aria-hidden="true" />{label}</span>)}
     </figcaption>}
     <div className="physical-arts-chart-layout" aria-hidden="true">
-      {[...curves].reverse().map(({ key, stat, min, max }) => (
-        <div className={`physical-arts-chart-x is-${key}${max >= 100000 ? ' has-large-values' : ''}`} key={key}>
+      {[...curves].reverse().map(({ key, stat, min, max, bands }) => (
+        <div className={`physical-arts-chart-x is-${key}${max >= 100000 ? ' has-large-values' : ''}`} key={key}
+          style={{ gap: AXIS_GAP }}>
           {(!forImage || key === 'arts') && <span>{stat}</span>}
           <div className="physical-arts-chart-x-ticks">
             {[0, 25, 50, 75, 100].map(tick => <span key={tick} style={{ left: `${tick}%` }}>
               {NUMBER.format(min + tick / 100 * (max - min))}
             </span>)}
           </div>
+          {bands.length > 0 && <AxisRatingStrip bands={bands} />}
         </div>
       ))}
       <div className="physical-arts-chart-y-ticks">
@@ -75,6 +104,10 @@ export function PhysicalArtsComparisonChart({ attack, ranges, imageHeight }: {
     <p className="visually-hidden" id={descriptionId}>
       {curves.map(({ label, stat, points }) => `${label}、${points.map(point =>
         `${stat} ${NUMBER.format(point.stat)}でダメージ ${NUMBER.format(point.damage)}`).join('、')}`).join('。')}
+      {showRatings && curves.map(({ stat, bands }) => (
+        `。${stat}の評価、${bands.map(band =>
+          `${band.rating} ${band.pointValue === undefined ? band.label : NUMBER.format(band.pointValue)}`).join('、')}`
+      )).join('')}
     </p>
   </figure>
 }

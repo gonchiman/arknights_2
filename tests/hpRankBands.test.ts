@@ -176,6 +176,28 @@ test('折れ線の術耐性境界にゼロ幅の次ランクを追加しない',
   }
 })
 
+test('端点のランクを表示する場合は、防御力と術耐性それぞれの境界を保つ', () => {
+  const options = { chartKind: 'line', barValues: [], includeEndpointRanks: true } as const
+  const defense = getStatRankBands({ ...options, stat: 'defense', max: 1200 })
+  const resistance = getStatRankBands({ ...options, stat: 'magicResistance', max: 60 })
+
+  assert.deepEqual(defense.filter(band => band.pointValue !== undefined)
+    .map(({ rating, start, end, pointValue }) => [rating, start, end, pointValue]), [
+    ['A+', 1, 1, 1200],
+  ])
+  assert.deepEqual(resistance.filter(band => band.pointValue !== undefined)
+    .map(({ rating, start, end, pointValue }) => [rating, start, end, pointValue]), [
+    ['E', 0, 0, 0], ['A+', 1, 1, 60],
+  ])
+  assert.equal(defense.find(band => band.rating === 'B')?.start, 500 / 1200)
+  assert.equal(resistance.find(band => band.rating === 'B')?.start, 20 / 60)
+
+  const inclusive = getStatRankBands({ ...options, stat: 'magicResistance', min: 90, max: 100 })
+  assert.deepEqual(inclusive.map(({ rating, start, end, pointValue }) => [rating, start, end, pointValue]), [
+    ['S+', 0, 0, 90], ['SS', 0, 1, undefined],
+  ])
+})
+
 test('術耐性の追加選択値も等幅の棒グループに含め、同ランクを結合する', () => {
   const source = [100, 0, 10, 20, 30, 50, 60, 70, 80, 90, 85, 45, 85]
   const bands = getStatRankBands({ stat: 'magicResistance', chartKind: 'bar', max: 100, barValues: source })

@@ -8,7 +8,7 @@ import {
 } from './DamageCalculatorThreeAttributeImageDialog'
 import { AttributeButtons, DamageCalculatorThreeAttributeTable } from './DamageCalculatorThreeAttributePage'
 import {
-  PhysicalArtsComparisonChart, PhysicalArtsComparisonImageLegend,
+  PHYSICAL_ARTS_RATING_EXTRA_HEIGHT, PhysicalArtsComparisonChart, PhysicalArtsComparisonImageLegend,
 } from './PhysicalArtsComparisonChart'
 import './PhysicalArtsComparisonPage.css'
 
@@ -34,6 +34,7 @@ type ResultImage =
 export default function PhysicalArtsComparisonPage() {
   const [{ attack, ranges }, setResult] = useState({ attack: INITIAL_ATTACK, ranges: INITIAL_RANGES })
   const [view, setView] = useState<typeof VIEWS[number][0]>('table')
+  const [showRatings, setShowRatings] = useState(false)
   const [rangeError, setRangeError] = useState<typeof RANGE_FIELDS[number] | null>(null)
   const [image, setImage] = useState<ResultImage | null>(null)
   const { physical, arts } = useMemo(() => evaluateAttackAttributeTables(attack, ranges), [attack, ranges])
@@ -84,14 +85,16 @@ export default function PhysicalArtsComparisonPage() {
       } })
       return
     }
-    const chartInput = structuredClone({ attack, ranges: chartRanges })
+    const chartInput = structuredClone({ attack, ranges: chartRanges, showRatings })
     setImage({ view, snapshot: {
       title: '物理・術ダメージ比較（1回の攻撃ダメージ）',
       axisTitle: '防御力',
+      additionalChartHeight: chartInput.showRatings ? PHYSICAL_ARTS_RATING_EXTRA_HEIGHT : undefined,
       conditions,
       filenameParts: [
         `攻撃力${chartInput.attack}`,
         ...RANGE_FIELDS.map(({ key, label }) => `${label}${chartInput.ranges[key].min}-${chartInput.ranges[key].max}`),
+        ...(chartInput.showRatings ? ['評価表示'] : []),
       ],
       legend: <PhysicalArtsComparisonImageLegend />,
       chart: ({ height }) => <PhysicalArtsComparisonChart {...chartInput} imageHeight={height} />,
@@ -141,11 +144,15 @@ export default function PhysicalArtsComparisonPage() {
       </div>
       <div className="damage-three-attribute-toolbar">
         <AttributeButtons label="表示形式" options={VIEWS} value={view} onChange={setView} />
+        {showChart && <label className="physical-arts-comparison-rating-toggle">
+          <input type="checkbox" checked={showRatings} onChange={event => setShowRatings(event.target.checked)} />
+          評価表示
+        </label>}
         <button type="button" className="button secondary damage-three-attribute-image-button"
           aria-label={`物理・術ダメージ比較${showChart ? 'グラフ' : '表'}をPNG画像で保存`}
           aria-haspopup="dialog" onClick={openImage}>画像を保存</button>
       </div>
-      {showChart ? <PhysicalArtsComparisonChart attack={attack} ranges={chartRanges} />
+      {showChart ? <PhysicalArtsComparisonChart attack={attack} ranges={chartRanges} showRatings={showRatings} />
         : <DamageCalculatorThreeAttributeTable physical={physical} arts={arts} metric="perAttack" />}
     </section>
     {image?.view === 'table' && <DamageCalculatorThreeAttributeImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}

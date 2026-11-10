@@ -37,3 +37,12 @@
   margin: 0;
   font-size: 14px;
 }
+
+.physical-arts-comparison-rating-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.physical-arts-comparison-rating-toggle input { margin: 0; }

@@ -37,14 +37,49 @@
   font-variant-numeric: tabular-nums;
 }
 
-.physical-arts-chart-x { grid-column: 2; display: grid; gap: 3px; text-align: center; }
+.physical-arts-chart-x { grid-column: 2; display: grid; text-align: center; }
 .physical-arts-chart-x.is-arts { grid-row: 1; }
 .physical-arts-chart-x.is-physical { grid-row: 3; }
-.physical-arts-chart-x.is-physical > span { grid-row: 2; }
+.physical-arts-chart-x.is-physical > span { order: 1; }
 .physical-arts-chart-x-ticks { position: relative; height: 1.4em; }
 .physical-arts-chart-x-ticks span { position: absolute; transform: translateX(-50%); }
 .physical-arts-chart-x-ticks span:first-child { transform: none; }
 .physical-arts-chart-x-ticks span:last-child { transform: translateX(-100%); }
+
+.physical-arts-chart-ratings {
+  display: grid;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+.physical-arts-chart-x.is-physical .physical-arts-chart-ratings { order: -1; }
+.physical-arts-chart-x.is-arts .physical-arts-chart-rating-points { order: -1; }
+.physical-arts-chart-rating-track, .physical-arts-chart-rating-points { position: relative; }
+.physical-arts-chart-rating-band {
+  position: absolute;
+  inset-block: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  container: physical-arts-rating-band / inline-size;
+  box-shadow: inset 1px 0 var(--border);
+  background-color: color-mix(in srgb, currentColor 8%, transparent);
+}
+.physical-arts-chart-rating-band:last-of-type { box-shadow: inset 1px 0 var(--border), inset -1px 0 var(--border); }
+.physical-arts-chart-rating-points > span,
+.physical-arts-chart-rating-track > i {
+  position: absolute;
+  inset-block: 0;
+}
+.physical-arts-chart-rating-track > i { width: 1px; background-color: currentColor; }
+.physical-arts-chart-rating-points > span { align-content: center; }
+.physical-arts-chart-ratings .at-start { inset-inline-start: 0; }
+.physical-arts-chart-ratings .at-end { inset-inline-end: 0; }
+
+@container physical-arts-rating-band (width < 22px) {
+  .physical-arts-chart-rating-band > span { visibility: hidden; }
+}
 
 .physical-arts-chart-y-ticks {
   grid-column: 1;
