@@ -12,12 +12,15 @@ import './EnemyDefenseResistancePage.css'
 
 const NUMBER = new Intl.NumberFormat('ja-JP')
 const VIEWS = [['table', '範囲表'], ['rank', '順位表'], ['chart', 'グラフ']] as const
+const DEFAULT_RANK_STEP = 10
+const MAX_RANK_PERCENTAGE = 100
 
 export function EnemyDefenseResistancePage() {
   const aggregation = useEnemyAggregation()
   const { data } = aggregation
   const result = useMemo(() => data ? buildEnemyDefenseResistanceBands(data.rows, data.counts) : null, [data])
   const [view, setView] = useState<typeof VIEWS[number][0]>('table')
+  const [rankStep, setRankStep] = useState(DEFAULT_RANK_STEP)
   const [rankInput, setRankInput] = useState('')
 
   return <section className="calculator-page enemy-analysis-route">
@@ -36,7 +39,8 @@ export function EnemyDefenseResistancePage() {
               className={view === id ? 'active' : ''} onClick={() => setView(id)}>{label}</button>)}
           </div>
           {view === 'table' && <EnemyDefenseResistanceTable bands={result.bands} />}
-          {view === 'rank' && <EnemyDefenseResistanceRankTable result={result} input={rankInput} onInputChange={setRankInput} />}
+          {view === 'rank' && <EnemyDefenseResistanceRankTable result={result} step={rankStep} onStepChange={setRankStep}
+            input={rankInput} onInputChange={setRankInput} />}
           {view === 'chart' && <EnemyDefenseResistanceChart bands={result.bands} />}
         </> : <p role="status">集計対象の出現データがありません。</p>}
       </>}
@@ -44,28 +48,38 @@ export function EnemyDefenseResistancePage() {
   </section>
 }
 
-function EnemyDefenseResistanceRankTable({ result, input, onInputChange }: {
+function EnemyDefenseResistanceRankTable({ result, step, onStepChange, input, onInputChange }: {
   result: ReturnType<typeof buildEnemyDefenseResistanceBands>
+  step: number
+  onStepChange: (step: number) => void
   input: string
   onInputChange: (value: string) => void
 }) {
+  const [stepInput, setStepInput] = useState(String(step))
+  const stepErrorId = useId()
   const errorId = useId()
+  const invalidStep = stepInput !== '' && !isValidRankStep(Number(stepInput))
   const { value, error } = parseEcdfGuideInput(input, 'y')
-  const ranks = result.bands.map(({ to, defense, resistance }) => ({
-    percentage: to,
-    defense: defense.min,
-    resistance: resistance.min,
-  }))
-  if (value !== null && !ranks.some(({ percentage }) => percentage === value)) {
-    const custom = result.getRank(value)
-    if (custom) {
-      ranks.push(custom)
-      ranks.sort((a, b) => a.percentage - b.percentage)
-    }
-  }
+  const percentages = new Set([MAX_RANK_PERCENTAGE])
+  for (let percentage = step; percentage < MAX_RANK_PERCENTAGE; percentage += step) percentages.add(percentage)
+  if (value !== null) percentages.add(value)
+  const ranks = [...percentages].sort((a, b) => a - b).map(result.getRank).filter(rank => rank !== null)
 
   return <>
     <div className="enemy-defense-resistance-rank-controls">
+      <label>
+        刻み
+        <input type="number" min={1} max={MAX_RANK_PERCENTAGE} step={1} inputMode="numeric" value={stepInput}
+          onChange={(event) => {
+            setStepInput(event.target.value)
+            const nextStep = event.target.valueAsNumber
+            if (isValidRankStep(nextStep)) onStepChange(nextStep)
+          }}
+          onBlur={() => setStepInput(String(step))}
+          onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }}
+          aria-invalid={invalidStep || undefined} aria-describedby={invalidStep ? stepErrorId : undefined} />
+        ポイント
+      </label>
       <label>
         指定順位　上位
         <input type="number" min={0} max={100} step="any" inputMode="decimal" value={input}
@@ -73,6 +87,7 @@ function EnemyDefenseResistanceRankTable({ result, input, onInputChange }: {
           aria-describedby={error ? errorId : undefined} />
         %
       </label>
+      {invalidStep && <span id={stepErrorId} className="error" role="alert">刻みは1〜100の整数で入力してください。</span>}
       {error && <span id={errorId} className="error" role="alert">{error}</span>}
     </div>
     <div className="damage-two-table-wrap" role="region" tabIndex={0} aria-label="順位表">
@@ -98,6 +113,10 @@ function EnemyDefenseResistanceRankTable({ result, input, onInputChange }: {
       </table>
     </div>
   </>
+}
+
+function isValidRankStep(step: number) {
+  return Number.isInteger(step) && step >= 1 && step <= MAX_RANK_PERCENTAGE
 }
 
 function EnemyDefenseResistanceTable({ bands }: { bands: readonly EnemyDefenseResistanceBand[] }) {
