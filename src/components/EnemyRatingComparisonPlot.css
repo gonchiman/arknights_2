@@ -4,12 +4,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-.enemy-rating-comparison-series.defense { color: light-dark(#387590, #78bfdd); }
-.enemy-rating-comparison-series.magicResistance { color: light-dark(#a85b2e, #efa377); }
-.enemy-rating-comparison-plot.is-image .enemy-rating-comparison-series.defense,
-.enemy-rating-comparison-swatch.is-image.defense { color: #387590; }
-.enemy-rating-comparison-plot.is-image .enemy-rating-comparison-series.magicResistance,
-.enemy-rating-comparison-swatch.is-image.magicResistance { color: #a85b2e; }
+.enemy-rating-comparison-series.defense { color: #387590; }
+.enemy-rating-comparison-series.magicResistance { color: #a85b2e; }
 
 .enemy-rating-comparison-gridline { stroke: var(--border, #d4d4d4); }
 .enemy-rating-comparison-baseline { stroke: var(--border-strong, #888); }
