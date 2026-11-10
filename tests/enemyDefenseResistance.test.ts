@@ -38,8 +38,8 @@ test('同一の有効な敵集合を出現回数で重み付けし、同値が�
   ])
 })
 
-test('小数の重みを使うときも境界ちょうどの値を次の帯に混ぜない', () => {
-  const { bands } = buildEnemyDefenseResistanceBands(
+test('小数の重みでも境界の順位と直前の帯の最小値が一致する', () => {
+  const { bands, getRank } = buildEnemyDefenseResistanceBands(
     [row('a', 200, 15), row('b', 100, 25), row('c', 0, 0)],
     counts({ a: 0.2, b: 0.1, c: 0.7 }),
   )
@@ -49,9 +49,28 @@ test('小数の重みを使うときも境界ちょうどの値を次の帯に�
     { from: 20, to: 30, defense: { min: 100, max: 100 }, resistance: { min: 15, max: 15 } },
   ])
   assert.deepEqual(bands[3], { from: 30, to: 40, defense: { min: 0, max: 0 }, resistance: { min: 0, max: 0 } })
+
+  assert.deepEqual([0, 10, 10.1, 20, 20.1, 30, 30.1, 100].map(getRank), [
+    { percentage: 0, defense: 200, resistance: 25 },
+    { percentage: 10, defense: 200, resistance: 25 },
+    { percentage: 10.1, defense: 200, resistance: 15 },
+    { percentage: 20, defense: 200, resistance: 15 },
+    { percentage: 20.1, defense: 100, resistance: 15 },
+    { percentage: 30, defense: 100, resistance: 15 },
+    { percentage: 30.1, defense: 0, resistance: 0 },
+    { percentage: 100, defense: 0, resistance: 0 },
+  ])
+  for (const band of bands) {
+    assert.deepEqual(getRank(band.to), { percentage: band.to, defense: band.defense.min, resistance: band.resistance.min })
+  }
+  for (const percentage of [-1, 101, Infinity, NaN]) assert.equal(getRank(percentage), null)
 })
 
 test('両方の基礎値を照合できる出現がなければ空の結果を返す', () => {
-  assert.deepEqual(buildEnemyDefenseResistanceBands([row('a', null, 0), row('b', 0, 0)], counts({ a: 3, b: 0 })),
-    { total: 0, bands: [] })
+  const { total, bands, getRank } = buildEnemyDefenseResistanceBands(
+    [row('a', null, 0), row('b', 0, 0)], counts({ a: 3, b: 0 }),
+  )
+  assert.equal(total, 0)
+  assert.deepEqual(bands, [])
+  assert.equal(getRank(50), null)
 })

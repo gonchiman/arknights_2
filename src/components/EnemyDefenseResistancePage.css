@@ -9,6 +9,28 @@
   justify-self: start;
 }
 
+.enemy-defense-resistance-rank-controls,
+.enemy-defense-resistance-rank-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.enemy-defense-resistance-rank-controls {
+  flex-wrap: wrap;
+}
+
+.enemy-defense-resistance-rank-controls input {
+  width: 5em;
+  min-height: 28px;
+  padding: 3px 5px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
 .damage-two-table.enemy-defense-resistance-table {
   min-width: 0;
   border-collapse: separate;
@@ -29,6 +51,15 @@
 
 .damage-two-table.enemy-defense-resistance-table tbody th {
   background: var(--surface);
+}
+
+.damage-two-table.enemy-defense-resistance-rank-table thead th:first-child {
+  text-align: left;
+}
+
+.damage-two-table.enemy-defense-resistance-rank-table tbody .is-selected-rank > * {
+  background: var(--surface-soft);
+  font-weight: 600;
 }
 
 @media (max-width: 480px) {
