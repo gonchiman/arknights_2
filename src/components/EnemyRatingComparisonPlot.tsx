@@ -56,7 +56,7 @@ export function EnemyRatingComparisonPlot({ data, layout, selectedRank, width, h
   const titleId = useId()
   const descriptionId = useId()
   const { rows } = data
-  const selected = rows.find((row) => row.rank === selectedRank)
+  const selected = imageMode ? undefined : rows.find((row) => row.rank === selectedRank)
   const layoutLabel = ENEMY_RATING_COMPARISON_LAYOUTS.find(({ key }) => key === layout)?.label
   const axis = createZeroBasedValueAxis(Math.max(0, ...rows.flatMap((row) =>
     ENEMY_RATING_COMPARISON_METRICS.map(({ key }) => 100 * (row.stats[key].share ?? 0)))))

@@ -475,7 +475,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     setImageFeedback(null)
     if (selectedChart === 'RATING_COMPARISON') {
       if (ratingComparison) setRatingComparisonImage({
-        data: ratingComparison, layout: ratingComparisonLayout,
+        data: ratingComparison, layout: ratingComparisonLayout, selectedRank: ratingComparisonRank,
         scopeLabel, countMode: activeCountMode, countLabel: countOption.label, aggregationVersion,
         coverage: activeCountMode === 'TYPES' ? null : countData.data?.summary,
       })
