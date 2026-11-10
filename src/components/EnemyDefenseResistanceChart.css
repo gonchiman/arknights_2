@@ -52,11 +52,11 @@
 
 .enemy-defense-resistance-chart-track {
   border-inline: 1px solid var(--border);
-  color: light-dark(#387590, #78bfdd);
+  color: #387590;
 }
 
 .enemy-defense-resistance-chart .resistance .enemy-defense-resistance-chart-track {
-  color: light-dark(#a85b2e, #efa377);
+  color: #a85b2e;
 }
 
 .enemy-defense-resistance-chart-guide {
