@@ -14,6 +14,13 @@ interface DamageRange {
   max: number
 }
 
+type StatRange = { min: number; max: number | null }
+
+export interface AttackAttributeRanges {
+  defense: StatRange
+  resistance: DamageRange
+}
+
 export interface DamageThreeAttributeTableRow {
   rating: string
   minStat: number
@@ -43,12 +50,15 @@ export interface DamageThreeAttributeTables {
 const finiteNonnegative = (value: number | null | undefined): value is number =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0
 
-function gradeRows(stat: 'defense' | 'magicResistance'): DamageThreeAttributeTableRow[] {
-  return getEnemyRatingNumericRanges(stat).map(({ rating, lowerBound, lowerInclusive, upperBound, upperInclusive }) => {
-    const minStat = lowerBound === null ? 0 : lowerInclusive ? Math.ceil(lowerBound) : Math.floor(lowerBound) + 1
+function gradeRows(stat: 'defense' | 'magicResistance', range?: StatRange): DamageThreeAttributeTableRow[] {
+  return getEnemyRatingNumericRanges(stat).flatMap(({ rating, lowerBound, lowerInclusive, upperBound, upperInclusive }) => {
+    const lower = lowerBound === null ? 0 : lowerInclusive ? Math.ceil(lowerBound) : Math.floor(lowerBound) + 1
     const upper = upperBound === null ? null : upperInclusive ? Math.floor(upperBound) : Math.ceil(upperBound) - 1
-    const maxStat = stat === 'magicResistance' ? Math.min(100, upper ?? 100) : upper
-    return { rating, minStat, maxStat, perAttack: null, dps: null }
+    const gradeMax = stat === 'magicResistance' ? Math.min(100, upper ?? 100) : upper
+    const minStat = Math.max(lower, range?.min ?? 0)
+    const maxStat = range?.max == null ? gradeMax : Math.min(range.max, gradeMax ?? range.max)
+    if (maxStat !== null && minStat > maxStat) return []
+    return [{ rating, minStat, maxStat, perAttack: null, dps: null }]
   })
 }
 
@@ -116,15 +126,15 @@ function damageRange(first: number | null, last: number | null): DamageRange | n
   return first === null || last === null ? null : { min: Math.min(first, last), max: Math.max(first, last) }
 }
 
-export function evaluateAttackAttributeTables(attack: number): Pick<DamageThreeAttributeTables, 'physical' | 'arts'> {
-  const physical = gradeRows('defense').map(row => {
+export function evaluateAttackAttributeTables(attack: number, ranges?: AttackAttributeRanges): Pick<DamageThreeAttributeTables, 'physical' | 'arts'> {
+  const physical = gradeRows('defense', ranges?.defense).map(row => {
     const atLowerDefense = calculateDamageBreakdown(attack, 'PHYSICAL', row.minStat, 0)
     const minimum = row.maxStat === null
       ? atLowerDefense.minimumDamage
       : calculateDamageBreakdown(attack, 'PHYSICAL', row.maxStat, 0).result
     return { ...row, perAttack: damageRange(minimum, atLowerDefense.result) }
   })
-  const arts = gradeRows('magicResistance').map(row => {
+  const arts = gradeRows('magicResistance', ranges?.resistance).map(row => {
     const maximum = calculateDamageBreakdown(attack, 'ARTS', 0, row.minStat).result
     const minimum = calculateDamageBreakdown(attack, 'ARTS', 0, row.maxStat ?? 100).result
     return { ...row, perAttack: damageRange(minimum, maximum) }

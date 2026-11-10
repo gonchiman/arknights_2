@@ -59,6 +59,18 @@ before(async () => {
 
 after(async () => { await server?.close() })
 
+test('shared table keeps grades that are in range on only one side', () => {
+  const row = (rating, minStat, maxStat) => ({ rating, minStat, maxStat, perAttack: { min: 80, max: 80 }, dps: null })
+  const props = { physical: [row('S', 2000, 2500)], arts: [row('B', 20, 20)], metric: 'perAttack' }
+  const expected = [
+    ['B', [[1, '—'], [1, '—'], [1, '—'], [1, '20'], [2, '80.0']]],
+    ['S', [[1, '2,000〜2,500'], [2, '80.0'], [1, '—'], [1, '—'], [1, '—']]],
+  ]
+  for (const forImage of [false, true]) {
+    assert.deepEqual(gradeRows(renderToStaticMarkup(createElement(Table, { ...props, forImage }))), expected)
+  }
+})
+
 test('physical skill keeps growth and skill information while showing one grouped game rating table', () => {
   const entry = entries.find(item => item.skill.operatorId === 'char_208_melan')
   assert.ok(entry?.capability.supported)
