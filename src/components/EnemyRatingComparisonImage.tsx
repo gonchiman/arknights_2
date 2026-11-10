@@ -20,6 +20,7 @@ import './EnemyChartImage.css'
 export interface EnemyRatingComparisonImageSnapshot {
   data: EnemyRatingComparison
   layout: EnemyRatingComparisonLayout
+  selectedRank?: string
   scopeLabel: string
   countMode: EnemyHistogramCountMode
   countLabel: string
@@ -35,7 +36,7 @@ const formatCount = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
 
 export function getEnemyRatingComparisonImageFilename({
   layout, scopeLabel, countLabel, aggregationVersion,
-}: Omit<EnemyRatingComparisonImageSnapshot, 'data' | 'coverage'>): string {
+}: Omit<EnemyRatingComparisonImageSnapshot, 'data' | 'coverage' | 'selectedRank'>): string {
   return createChartImageFilename('敵', [
     aggregationVersion && `集計${aggregationVersion.id}`,
     IMAGE_TITLE,
@@ -66,7 +67,7 @@ export function EnemyRatingComparisonImage({ snapshot, aspectRatio, onLayout }: 
   aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
 }) {
-  const { data, layout } = snapshot
+  const { data, layout, selectedRank } = snapshot
   return <ChartImageFrame className="enemy-chart-image" title={IMAGE_TITLE} conditions={getImageConditions(snapshot)}
     axisTitle={layout === 'MIRRORED' ? '評価別割合（%）' : 'ゲーム内評価'} naturalChartHeight={PLOT_HEIGHT[layout]}
     aspectRatio={aspectRatio} onLayout={onLayout}
@@ -76,7 +77,8 @@ export function EnemyRatingComparisonImage({ snapshot, aspectRatio, onLayout }: 
         <span>{label}</span>
       </li>)}
     </ul> : undefined}>
-    {({ width, height }) => <EnemyRatingComparisonPlot data={data} layout={layout} width={width} height={height} imageMode />}
+    {({ width, height }) => <EnemyRatingComparisonPlot data={data} layout={layout} selectedRank={selectedRank}
+      width={width} height={height} imageMode />}
   </ChartImageFrame>
 }
 
@@ -84,10 +86,12 @@ export function EnemyRatingComparisonSaveDialog({ onClose, ...snapshot }: EnemyR
   onClose: () => void
 }) {
   const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
+  const [showRankHighlight, setShowRankHighlight] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(false)
   const savingRef = useRef(false)
   const filename = getEnemyRatingComparisonImageFilename(snapshot)
+  const outputSnapshot = showRankHighlight ? snapshot : { ...snapshot, selectedRank: undefined }
   const validAspect = aspect.preset === 'auto' || [aspect.width, aspect.height]
     .every((value) => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100)
   const aspectRatio = aspect.preset === 'auto' || !validAspect ? undefined : Number(aspect.width) / Number(aspect.height)
@@ -103,7 +107,7 @@ export function EnemyRatingComparisonSaveDialog({ onClose, ...snapshot }: EnemyR
       if (destination.type === 'cancelled') return
       const { width } = getChartImageLayout({ naturalChartHeight: PLOT_HEIGHT[snapshot.layout], aspectRatio: ratio })
       await saveComparisonChartImage({
-        chart: <EnemyRatingComparisonImage snapshot={snapshot} aspectRatio={ratio} />,
+        chart: <EnemyRatingComparisonImage snapshot={outputSnapshot} aspectRatio={ratio} />,
         filename: selectedFilename,
         width,
         writeBlob: destination.type === 'file' ? destination.write : undefined,
@@ -121,8 +125,13 @@ export function EnemyRatingComparisonSaveDialog({ onClose, ...snapshot }: EnemyR
     getDefaultFilename={(ratio) => withChartImageAspect(filename, ratio)} aspect={aspect} onAspectChange={setAspect}
     canChooseLocation={Boolean(picker)} saving={saving} error={error} helpMode="popover"
     onClose={() => { if (!savingRef.current) onClose() }} onSave={(name, ratio) => void saveImage(name, ratio)}
+    options={<label className="enemy-histogram-display-toggle">
+      <input type="checkbox" checked={showRankHighlight} disabled={saving}
+        onChange={event => setShowRankHighlight(event.target.checked)} />
+      選択ランクを強調
+    </label>}
     preview={validAspect && <EnemyRatingComparisonImagePreview key={`${filename}:${aspectRatio ?? 'auto'}`}
-      snapshot={snapshot} aspectRatio={aspectRatio} />} />
+      snapshot={outputSnapshot} aspectRatio={aspectRatio} />} />
 }
 
 function EnemyRatingComparisonImagePreview({ snapshot, aspectRatio }: {
