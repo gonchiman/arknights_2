@@ -7,6 +7,8 @@ import react from '@vitejs/plugin-react'
 import { calculateWeightedHistogram } from '../src/lib/enemyWeightedHistogram.ts'
 import { buildEnemyRatingHistogramBins } from '../src/lib/enemyRatingHistogram.ts'
 import { createEnemyHistogramSnapshot, parseEnemyHistogramSnapshot } from '../src/lib/enemyHistogramSnapshot.ts'
+import { buildEnemyRatingComparison, ENEMY_RATING_COMPARISON_LAYOUTS } from '../src/lib/enemyRatingComparison.ts'
+import { withChartImageAspect } from '../src/lib/chartImageFilename.ts'
 
 const fixtureCounts = {
   schemaVersion: 1, generatedAt: 'fixture', sourceGeneratedAt: null,
@@ -26,7 +28,7 @@ const enemies = observations.map(({ value }, index) => ({
     moveSpeed: 1, attackSpeed: 100, baseAttackTime: 2, massLevel: 1 },
 }))
 
-let server, Plot, Panel, useControls
+let server, Plot, Panel, useControls, RatingImage, getRatingFilename
 before(async () => {
   server = await createServer({
     configFile: false, plugins: [react(), {
@@ -47,8 +49,28 @@ before(async () => {
   })
   ;({ EnemyHistogramSnapshotPlot: Plot, EnemyStatisticsPanel: Panel, useEnemyStatisticsControls: useControls }
     = await server.ssrLoadModule('/src/components/EnemyStatisticsPanel.tsx'))
+  ;({ EnemyRatingComparisonImage: RatingImage, getEnemyRatingComparisonImageFilename: getRatingFilename }
+    = await server.ssrLoadModule('/src/components/EnemyRatingComparisonImage.tsx'))
 })
 after(async () => { await server?.close() })
+
+test('防御力・術耐性の全3形式を同じ集計と選択ランクで画像に描画する', () => {
+  const data = buildEnemyRatingComparison(enemies, 'SPAWNS', fixtureCounts)
+  const filenames = ENEMY_RATING_COMPARISON_LAYOUTS.map(({ key: layout, label }) => {
+    const snapshot = { data, layout, selectedRank: 'E', scopeLabel: 'メインストーリー · 全敵',
+      countMode: 'SPAWNS', countLabel: '出現回数', coverage: fixtureCounts.summary }
+    const image = renderToStaticMarkup(createElement(RatingImage, { snapshot, aspectRatio: 16 / 9 }))
+    assert.ok(image.includes(`防御力・術耐性の評価別分布（${label}）`))
+    assert.ok(image.includes('防御力 100未満 · Eまでの累積割合 0.000%'))
+    assert.ok(image.includes('術耐性 0以下 · Eまでの累積割合 25.000%'))
+    assert.ok(image.includes('防御力 92体 / 術耐性 8体（値なし 84体）'))
+    const filename = withChartImageAspect(getRatingFilename(snapshot), 16 / 9)
+    assert.ok(filename.includes(label) && filename.includes('評価E') && filename.includes('メインストーリー'))
+    assert.ok(filename.endsWith('_比率16x9.png'))
+    return filename
+  })
+  assert.equal(new Set(filenames).size, 3)
+})
 
 function snapshot(options = {}) {
   const { kind = 'linear', showCumulative = true, cumulativeDisplay = 'line', showPercentages = false,

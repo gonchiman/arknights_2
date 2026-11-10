@@ -233,6 +233,7 @@ await saveComparisonChartImage({
 | 敵統計：ヒストグラム | [enemyHistogramCounts.ts](../../src/lib/enemyHistogramCounts.ts) |
 | 敵統計：累積分布 | [enemyWeightedEcdf.ts](../../src/lib/enemyWeightedEcdf.ts) |
 | 敵統計：分布比較 | [enemyDistributionComparison.ts](../../src/lib/enemyDistributionComparison.ts) |
+| 敵統計：防御力・術耐性の評価別分布 | [EnemyRatingComparisonImage.tsx](../../src/components/EnemyRatingComparisonImage.tsx) |
 | 敵統計：ヒートマップ | [enemyJointImage.ts](../../src/lib/enemyJointImage.ts) |
 | 敵統計：術耐性の円グラフ・100%横棒 | [enemyThresholdComparison.ts](../../src/lib/enemyThresholdComparison.ts) |
 | DC3属性比較：評価別の最小〜最大 | [DamageCalculatorThreeAttributePage.tsx](../../src/components/DamageCalculatorThreeAttributePage.tsx) |

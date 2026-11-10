@@ -23,7 +23,7 @@
 .enemy-distribution-panel .enemy-chart-picker .enemy-chart-visibility { width: 100%; }
 .enemy-distribution-panel .enemy-chart-picker .enemy-chart-visibility > div {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 .enemy-distribution-panel .enemy-chart-picker .enemy-chart-visibility label { min-width: 0; }
 /* Only the stable chooser should anchor graph switches, not controls or marks that move below it. */
@@ -220,6 +220,20 @@
 .enemy-distribution-panel .enemy-chart-legend,
 .enemy-distribution-panel .enemy-level-legend { font-size: 10px; line-height: 1.6; }
 .enemy-distribution-panel .enemy-chart-legend { flex-wrap: wrap; gap: 6px 12px; }
+
+.enemy-rating-comparison-rank { display: flex; align-items: center; gap: 6px; }
+.enemy-rating-comparison-rank select { min-width: 56px; }
+.enemy-rating-comparison-plot-container { min-width: 0; }
+.enemy-rating-comparison-legend,
+.enemy-rating-comparison-detail { list-style: none; margin: 0; padding: 0 10px; font-size: 11px; }
+.enemy-rating-comparison-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.enemy-rating-comparison-detail { display: grid; gap: 4px; padding-block: 8px 10px; font-variant-numeric: tabular-nums; }
+.enemy-rating-comparison-legend li,
+.enemy-rating-comparison-detail li,
+.enemy-rating-comparison-detail li > span:first-child { display: flex; align-items: center; gap: 4px; }
+.enemy-rating-comparison-detail li { flex-wrap: wrap; column-gap: 10px; }
+.enemy-rating-comparison-detail li > span { white-space: nowrap; }
+.enemy-rating-comparison-detail li > span:first-child { min-width: 62px; }
 .enemy-distribution-panel .enemy-chart-empty { border: 0; }
 
 .enemy-distribution-panel .enemy-frequency-details {
@@ -242,6 +256,9 @@
   .enemy-distribution-panel .enemy-chart-toolbar { align-items: stretch; gap: 8px; }
   .enemy-distribution-panel .enemy-chart-axis-control { justify-content: flex-end; }
   .enemy-distribution-panel .enemy-analysis-figure figcaption { gap: 4px; }
+  .enemy-distribution-panel .enemy-chart-picker .enemy-chart-visibility > div {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 520px) {
