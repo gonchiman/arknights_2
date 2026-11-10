@@ -56,7 +56,7 @@ before(async () => {
 })
 after(async () => { await server?.close() })
 
-test('防御力・術耐性の全3形式で選択ランクの画像強調を切り替えても集計値とファイル名を維持する', () => {
+test('防御力・術耐性の全3形式で選択ランクの強調をファイル名に反映し、集計値を維持する', () => {
   const data = buildEnemyRatingComparison(enemies, 'SPAWNS', fixtureCounts)
   const filenames = ENEMY_RATING_COMPARISON_LAYOUTS.map(({ key: layout, label }) => {
     const unselectedSnapshot = { data, layout, scopeLabel: 'メインストーリー · 全敵',
@@ -107,9 +107,14 @@ test('防御力・術耐性の全3形式で選択ランクの画像強調を切�
 
     const filename = withChartImageAspect(getRatingFilename(snapshot), 16 / 9)
     assert.ok(filename.includes(label) && filename.includes('メインストーリー'))
-    assert.doesNotMatch(filename, /評価E/)
-    assert.equal(filename, withChartImageAspect(getRatingFilename({ ...snapshot, selectedRank: 'A' }), 16 / 9))
-    assert.equal(filename, withChartImageAspect(getRatingFilename(unselectedSnapshot), 16 / 9))
+    assert.match(filename, /_評価E強調_/)
+    const otherRank = withChartImageAspect(getRatingFilename({ ...snapshot, selectedRank: 'B+' }), 16 / 9)
+    assert.equal(otherRank, filename.replace('_評価E強調', '_評価B+強調'))
+    assert.equal(withChartImageAspect(getRatingFilename(unselectedSnapshot), 16 / 9),
+      filename.replace('_評価E強調', ''))
+    const longScope = withChartImageAspect(getRatingFilename({ ...snapshot, scopeLabel: 'メインストーリー'.repeat(30) }), 16 / 9)
+    assert.match(longScope, /_評価E強調_/)
+    assert.match(longScope, /_ほか\d+項目_比率16x9\.png$/)
     assert.ok(filename.endsWith('_比率16x9.png'))
     return filename
   })
@@ -126,6 +131,7 @@ test('防御力・術耐性の保存ダイアログは選択ランクの画像�
     .find(([label]) => label.includes('選択ランクを強調'))?.[0]
   assert.match(checkboxLabel ?? '', /<input\b(?=[^>]*\btype="checkbox")(?=[^>]*\bchecked="")[^>]*>/)
   assert.match(markup, /class="enemy-rating-comparison-highlight"/)
+  assert.match(markup, /value="[^"]*_評価E強調_[^"]*_比率自動\.png"/)
 })
 
 function snapshot(options = {}) {
