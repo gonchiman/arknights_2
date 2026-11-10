@@ -35,12 +35,13 @@ const PLOT_HEIGHT: Record<EnemyRatingComparisonLayout, number> = {
 const formatCount = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
 
 export function getEnemyRatingComparisonImageFilename({
-  layout, scopeLabel, countLabel, aggregationVersion,
-}: Omit<EnemyRatingComparisonImageSnapshot, 'data' | 'coverage' | 'selectedRank'>): string {
+  layout, scopeLabel, countLabel, aggregationVersion, selectedRank,
+}: Omit<EnemyRatingComparisonImageSnapshot, 'data' | 'coverage'>): string {
   return createChartImageFilename('敵', [
     aggregationVersion && `集計${aggregationVersion.id}`,
     IMAGE_TITLE,
     countLabel,
+    selectedRank && `評価${selectedRank}強調`,
     scopeLabel,
     ENEMY_RATING_COMPARISON_LAYOUTS.find((option) => option.key === layout)?.label,
   ])
@@ -90,8 +91,8 @@ export function EnemyRatingComparisonSaveDialog({ onClose, ...snapshot }: EnemyR
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(false)
   const savingRef = useRef(false)
-  const filename = getEnemyRatingComparisonImageFilename(snapshot)
   const outputSnapshot = showRankHighlight ? snapshot : { ...snapshot, selectedRank: undefined }
+  const filename = getEnemyRatingComparisonImageFilename(outputSnapshot)
   const validAspect = aspect.preset === 'auto' || [aspect.width, aspect.height]
     .every((value) => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100)
   const aspectRatio = aspect.preset === 'auto' || !validAspect ? undefined : Number(aspect.width) / Number(aspect.height)
@@ -130,7 +131,7 @@ export function EnemyRatingComparisonSaveDialog({ onClose, ...snapshot }: EnemyR
         onChange={event => setShowRankHighlight(event.target.checked)} />
       選択ランクを強調
     </label>}
-    preview={validAspect && <EnemyRatingComparisonImagePreview key={`${filename}:${aspectRatio ?? 'auto'}`}
+    preview={validAspect && <EnemyRatingComparisonImagePreview key={aspectRatio ?? 'auto'}
       snapshot={outputSnapshot} aspectRatio={aspectRatio} />} />
 }
 
