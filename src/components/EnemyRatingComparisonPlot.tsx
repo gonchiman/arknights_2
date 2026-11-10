@@ -6,6 +6,7 @@ import {
   type EnemyRatingComparison,
   type EnemyRatingComparisonLayout,
   type EnemyRatingComparisonMetric,
+  type EnemyRatingComparisonSideValue,
 } from '../lib/enemyRatingComparison'
 import { formatHistogramPercentage } from '../lib/histogramPercentageLabels'
 import { ChartStripCell } from './ChartStripCell'
@@ -16,6 +17,7 @@ type ValueAxis = ReturnType<typeof createZeroBasedValueAxis>
 
 const BAR_AXIS_TITLE = '評価別割合（%）'
 const CUMULATIVE_AXIS_TITLE = '累積割合（%）'
+const RANK_SHARE_TITLE = '階級割合（%）'
 const RATING_AXIS_TITLE = 'ゲーム内評価'
 const DASH = '5 3'
 const INK = { 'data-chart-image-ink': 'true' }
@@ -50,20 +52,27 @@ interface PlotProps {
   width: number
   height: number
   imageMode?: boolean
+  sideValue?: EnemyRatingComparisonSideValue
 }
 
-export function EnemyRatingComparisonPlot({ data, layout, selectedRank, width, height, imageMode = false }: PlotProps) {
+export function EnemyRatingComparisonPlot({
+  data, layout, selectedRank, width, height, imageMode = false, sideValue = 'cumulative',
+}: PlotProps) {
   const titleId = useId()
   const descriptionId = useId()
   const { rows } = data
+  const showRankShare = layout === 'MIRRORED' && sideValue === 'rank'
   const selected = imageMode ? undefined : rows.find((row) => row.rank === selectedRank)
   const layoutLabel = ENEMY_RATING_COMPARISON_LAYOUTS.find(({ key }) => key === layout)?.label
   const axis = createZeroBasedValueAxis(Math.max(0, ...rows.flatMap((row) =>
     ENEMY_RATING_COMPARISON_METRICS.map(({ key }) => 100 * (row.stats[key].share ?? 0)))))
   const description = selected ? ENEMY_RATING_COMPARISON_METRICS.map(({ key, label }) => {
     const stat = selected.stats[key]
-    const share = stat.cumulativeShare === null ? 'データなし' : `${(100 * stat.cumulativeShare).toFixed(3)}%`
-    return `${label}、${stat.cumulativeRange}、${selectedRank}までの累積割合 ${share}`
+    const proportion = showRankShare ? stat.share : stat.cumulativeShare
+    const share = proportion === null ? 'データなし' : `${(100 * proportion).toFixed(3)}%`
+    return showRankShare
+      ? `${label}、${stat.range}、${selectedRank}の階級割合 ${share}`
+      : `${label}、${stat.cumulativeRange}、${selectedRank}までの累積割合 ${share}`
   }).join('。') : null
 
   return <svg className={`enemy-rating-comparison-plot${imageMode ? ' is-image' : ''}`}
@@ -72,7 +81,8 @@ export function EnemyRatingComparisonPlot({ data, layout, selectedRank, width, h
     <title id={titleId}>{`防御力・術耐性の評価別分布（${layoutLabel}）`}</title>
     {description && <desc id={descriptionId}>{description}</desc>}
     {layout === 'MIRRORED'
-      ? <MirroredPlot rows={rows} selectedRank={selectedRank} width={width} height={height} axis={axis} imageMode={imageMode} />
+      ? <MirroredPlot rows={rows} selectedRank={selectedRank} width={width} height={height}
+        axis={axis} imageMode={imageMode} showRankShare={showRankShare} />
       : <VerticalPlot rows={rows} selectedRank={selectedRank} width={width} height={height}
         axis={axis} cumulative={layout === 'CUMULATIVE'} imageMode={imageMode} />}
   </svg>
@@ -164,9 +174,14 @@ function VerticalPlot({ rows, selectedRank, width, height, axis, imageMode, cumu
   </>
 }
 
-function MirroredPlot({ rows, selectedRank, width, height, axis, imageMode }: PlotBodyProps) {
-  const cumulativeWidth = width < 460 ? 54 : 89
-  const columnTitle = width < 460 ? '累積（%）' : CUMULATIVE_AXIS_TITLE
+function MirroredPlot({
+  rows, selectedRank, width, height, axis, imageMode, showRankShare,
+}: PlotBodyProps & { showRankShare: boolean }) {
+  const compact = width < 460
+  const columnWidth = compact ? 54 : 89
+  const columnTitle = showRankShare
+    ? (compact ? '階級（%）' : RANK_SHARE_TITLE)
+    : (compact ? '累積（%）' : CUMULATIVE_AXIS_TITLE)
   const middle = width / 2
   const top = 54
   const bottom = height - (imageMode ? 5 : 28)
@@ -176,8 +191,8 @@ function MirroredPlot({ rows, selectedRank, width, height, axis, imageMode }: Pl
     return {
       key, label, direction,
       origin: middle + direction * 20,
-      edge: index === 0 ? cumulativeWidth : width - cumulativeWidth,
-      labelX: index === 0 ? cumulativeWidth / 2 : width - cumulativeWidth / 2,
+      edge: index === 0 ? columnWidth : width - columnWidth,
+      labelX: index === 0 ? columnWidth / 2 : width - columnWidth / 2,
     }
   })
   const trackWidth = Math.abs(sides[0].edge - sides[0].origin)
@@ -210,7 +225,7 @@ function MirroredPlot({ rows, selectedRank, width, height, axis, imageMode }: Pl
             {extent > 0 && <rect className={seriesClass(key)} x={direction === -1 ? origin - extent : origin}
               y={y - barHeight / 2} width={extent} height={barHeight} fill="currentColor" {...INK} />}
             <text className={`enemy-rating-comparison-value${row.rank === selectedRank ? ' is-selected' : ''}`}
-              x={labelX} y={y + 4} textAnchor="middle" {...INK}>{stripValue(cumulativeShare)}</text>
+              x={labelX} y={y + 4} textAnchor="middle" {...INK}>{stripValue(showRankShare ? share : cumulativeShare)}</text>
           </g>
         })}
       </g>

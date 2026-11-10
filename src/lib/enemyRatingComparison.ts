@@ -15,6 +15,8 @@ export const ENEMY_RATING_COMPARISON_LAYOUTS = [
 
 export type EnemyRatingComparisonLayout = typeof ENEMY_RATING_COMPARISON_LAYOUTS[number]['key']
 
+export type EnemyRatingComparisonSideValue = 'cumulative' | 'rank'
+
 export const ENEMY_RATING_COMPARISON_METRICS = [
   { key: 'defense', label: '防御力' },
   { key: 'magicResistance', label: '術耐性' },

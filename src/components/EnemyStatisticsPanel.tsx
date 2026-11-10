@@ -45,7 +45,7 @@ import { getHistogramBinRangeLabelCenters, formatHistogramBinRangeLines } from '
 import { createHistogramCategoryScale } from '../lib/histogramCategoryScale'
 import { buildEnemyRatingHistogramBins, formatEnemyRatingHistogramRangeLines, isEnemyRatingStat, type EnemyRatingHistogramBin } from '../lib/enemyRatingHistogram'
 import { buildEnemyRatingComparison, ENEMY_RATING_COMPARISON_LAYOUTS, ENEMY_RATING_COMPARISON_METRICS,
-  type EnemyRatingComparison, type EnemyRatingComparisonLayout } from '../lib/enemyRatingComparison'
+  type EnemyRatingComparison, type EnemyRatingComparisonLayout, type EnemyRatingComparisonSideValue } from '../lib/enemyRatingComparison'
 import { getEnemyStatRating } from '../lib/enemyStatRatings'
 import { placeGroupedBarValueLabels } from '../lib/groupedBarValueLabels'
 import { calculateWeightedEmpiricalCdf, getWeightedEnemyEcdfImageFilename } from '../lib/enemyWeightedEcdf'
@@ -262,6 +262,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const ratingComparisonLayoutId = useId()
   const [ratingComparisonLayout, setRatingComparisonLayout] = useState<EnemyRatingComparisonLayout>('GROUPED')
   const [ratingComparisonRank, setRatingComparisonRank] = useState('A')
+  const ratingSideValueId = useId()
+  const [ratingSideValue, setRatingSideValue] = useState<EnemyRatingComparisonSideValue>('cumulative')
   const [countMode, setCountMode] = useState<EnemyHistogramCountMode>(histogramEditor?.initialSnapshot?.countMode ?? 'SPAWNS')
   const activeCountMode = countMode === 'SPAWNS' && !spawnCountsAvailable ? 'MAPS' : countMode
   const [showHistogramPercentages, setShowHistogramPercentages] = useState(histogramEditor?.initialSnapshot?.showPercentages ?? true)
@@ -475,7 +477,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     setImageFeedback(null)
     if (selectedChart === 'RATING_COMPARISON') {
       if (ratingComparison) setRatingComparisonImage({
-        data: ratingComparison, layout: ratingComparisonLayout, selectedRank: ratingComparisonRank,
+        data: ratingComparison, layout: ratingComparisonLayout, selectedRank: ratingComparisonRank, sideValue: ratingSideValue,
         scopeLabel, countMode: activeCountMode, countLabel: countOption.label, aggregationVersion,
         coverage: activeCountMode === 'TYPES' ? null : countData.data?.summary,
       })
@@ -567,6 +569,16 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           ))}
         </div>
       </fieldset>}
+      {isRatingComparison && ratingComparisonLayout === 'MIRRORED' && <div className="statistics-bin-width-control">
+        <label htmlFor={ratingSideValueId}>左右の数値</label>
+        <div className="enemy-chart-select-label">
+          <select id={ratingSideValueId} value={ratingSideValue}
+            onChange={event => setRatingSideValue(event.target.value === 'rank' ? 'rank' : 'cumulative')}>
+            <option value="cumulative">累積割合</option>
+            <option value="rank">階級の割合</option>
+          </select>
+        </div>
+      </div>}
       {selectedChart === 'HISTOGRAM' && <div className="enemy-histogram-rating-control">
         <label className="enemy-histogram-display-toggle"
           title={ratingStat ? 'E〜SSの評価ごとに集計します' : 'HP・攻撃力・防御力・術耐性に対応しています'}>
@@ -809,7 +821,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
             colorScale={heatmapColorScale} onColorScaleChange={setHeatmapColorScale} />}
           {isRatingComparison && (ratingComparison?.hasData
             ? <EnemyRatingComparisonFigure data={ratingComparison} layout={ratingComparisonLayout}
-                selectedRank={ratingComparisonRank} onRankChange={setRatingComparisonRank}
+                selectedRank={ratingComparisonRank} onRankChange={setRatingComparisonRank} sideValue={ratingSideValue}
                 countLabel={countOption.label} countUnit={countOption.unit} />
             : <ChartEmpty />)}
           {selectedChart === 'HISTOGRAM' && (
@@ -2433,11 +2445,12 @@ function ScaleSwitch({ scale, onChange, label }: { scale: HistogramScale; onChan
   )
 }
 
-function EnemyRatingComparisonFigure({ data, layout, selectedRank, onRankChange, countLabel, countUnit }: {
+function EnemyRatingComparisonFigure({ data, layout, selectedRank, onRankChange, sideValue, countLabel, countUnit }: {
   data: EnemyRatingComparison
   layout: EnemyRatingComparisonLayout
   selectedRank: string
   onRankChange: (rank: string) => void
+  sideValue: EnemyRatingComparisonSideValue
   countLabel: string
   countUnit: string
 }) {
@@ -2469,7 +2482,7 @@ function EnemyRatingComparisonFigure({ data, layout, selectedRank, onRankChange,
       </li>)}
     </ul>}
     <div className="enemy-rating-comparison-plot-container" ref={chartRef}>
-      <EnemyRatingComparisonPlot data={data} layout={layout} selectedRank={selectedRank} width={width}
+      <EnemyRatingComparisonPlot data={data} layout={layout} selectedRank={selectedRank} sideValue={sideValue} width={width}
         height={layout === 'MIRRORED' ? 352 : 334} />
     </div>
     {selection && <ul className="enemy-rating-comparison-detail" aria-live="polite" aria-label={`評価${selectedRank}の内訳`}>

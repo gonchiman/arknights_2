@@ -134,6 +134,36 @@ test('防御力・術耐性の保存ダイアログは選択ランクの画像�
   assert.match(markup, /value="[^"]*_評価E強調_[^"]*_比率自動\.png"/)
 })
 
+test('左右の横棒は外側の数値を階級の割合に切り替え、保存画像と既定名に反映する', () => {
+  const data = buildEnemyRatingComparison(enemies, 'SPAWNS', fixtureCounts)
+  const snapshot = { data, layout: 'MIRRORED', selectedRank: 'D', scopeLabel: '全敵',
+    countMode: 'SPAWNS', countLabel: '出現回数' }
+  const renderImage = sideValue => renderToStaticMarkup(createElement(RatingImage, { snapshot: { ...snapshot, sideValue } }))
+  const getValues = markup => [...markup.matchAll(/<text\b[^>]*class="enemy-rating-comparison-value(?: is-selected)?"[^>]*>([^<]*)<\/text>/g)]
+    .map(([, value]) => value)
+
+  const cumulative = renderImage('cumulative')
+  assert.match(cumulative, /累積割合（%）/)
+  assert.deepEqual(getValues(cumulative), [
+    '0', '100', '100', '100', '100', '100', '100', '100', '100', '100',
+    '25', '25', '62.5', '75', '100', '100', '100', '100', '100', '100',
+  ])
+  const rank = renderImage('rank')
+  assert.match(rank, /階級割合（%）/)
+  assert.doesNotMatch(rank, /累積割合（%）/)
+  assert.deepEqual(getValues(rank), [
+    '0', '100', '0', '0', '0', '0', '0', '0', '0', '0',
+    '25', '0', '37.5', '12.5', '25', '0', '0', '0', '0', '0',
+  ])
+
+  const filename = getRatingFilename(snapshot)
+  assert.equal(getRatingFilename({ ...snapshot, sideValue: 'cumulative' }), filename)
+  assert.match(getRatingFilename({ ...snapshot, sideValue: 'rank' }), /_評価D強調_階級割合_全敵_左右の横棒\.png$/)
+  for (const layout of ['GROUPED', 'CUMULATIVE']) {
+    assert.equal(getRatingFilename({ ...snapshot, layout, sideValue: 'rank' }), getRatingFilename({ ...snapshot, layout }))
+  }
+})
+
 function snapshot(options = {}) {
   const { kind = 'linear', showCumulative = true, cumulativeDisplay = 'line', showPercentages = false,
     referenceVisibility = { mean: false, median: false } } = options

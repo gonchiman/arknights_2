@@ -9,7 +9,7 @@ import {
 import type { EnemyHistogramAggregationVersion } from '../lib/enemyHistogramSnapshot'
 import {
   ENEMY_RATING_COMPARISON_LAYOUTS, ENEMY_RATING_COMPARISON_METRICS,
-  type EnemyRatingComparison, type EnemyRatingComparisonLayout,
+  type EnemyRatingComparison, type EnemyRatingComparisonLayout, type EnemyRatingComparisonSideValue,
 } from '../lib/enemyRatingComparison'
 import { ChartImageFrame } from './ChartImageFrame'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
@@ -21,6 +21,7 @@ export interface EnemyRatingComparisonImageSnapshot {
   data: EnemyRatingComparison
   layout: EnemyRatingComparisonLayout
   selectedRank?: string
+  sideValue?: EnemyRatingComparisonSideValue
   scopeLabel: string
   countMode: EnemyHistogramCountMode
   countLabel: string
@@ -35,13 +36,14 @@ const PLOT_HEIGHT: Record<EnemyRatingComparisonLayout, number> = {
 const formatCount = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
 
 export function getEnemyRatingComparisonImageFilename({
-  layout, scopeLabel, countLabel, aggregationVersion, selectedRank,
+  layout, scopeLabel, countLabel, aggregationVersion, selectedRank, sideValue,
 }: Omit<EnemyRatingComparisonImageSnapshot, 'data' | 'coverage'>): string {
   return createChartImageFilename('敵', [
     aggregationVersion && `集計${aggregationVersion.id}`,
     IMAGE_TITLE,
     countLabel,
     selectedRank && `評価${selectedRank}強調`,
+    layout === 'MIRRORED' && sideValue === 'rank' && '階級割合',
     scopeLabel,
     ENEMY_RATING_COMPARISON_LAYOUTS.find((option) => option.key === layout)?.label,
   ])
@@ -68,7 +70,7 @@ export function EnemyRatingComparisonImage({ snapshot, aspectRatio, onLayout }: 
   aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
 }) {
-  const { data, layout, selectedRank } = snapshot
+  const { data, layout, selectedRank, sideValue } = snapshot
   return <ChartImageFrame className="enemy-chart-image" title={IMAGE_TITLE} conditions={getImageConditions(snapshot)}
     axisTitle={layout === 'MIRRORED' ? '評価別割合（%）' : 'ゲーム内評価'} naturalChartHeight={PLOT_HEIGHT[layout]}
     aspectRatio={aspectRatio} onLayout={onLayout}
@@ -79,7 +81,7 @@ export function EnemyRatingComparisonImage({ snapshot, aspectRatio, onLayout }: 
       </li>)}
     </ul> : undefined}>
     {({ width, height }) => <EnemyRatingComparisonPlot data={data} layout={layout} selectedRank={selectedRank}
-      width={width} height={height} imageMode />}
+      sideValue={sideValue} width={width} height={height} imageMode />}
   </ChartImageFrame>
 }
 
