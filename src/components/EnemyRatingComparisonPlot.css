@@ -1,0 +1,46 @@
+.enemy-rating-comparison-plot {
+  display: block;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.enemy-rating-comparison-series.defense { color: light-dark(#387590, #78bfdd); }
+.enemy-rating-comparison-series.magicResistance { color: light-dark(#a85b2e, #efa377); }
+.enemy-rating-comparison-plot.is-image .enemy-rating-comparison-series.defense,
+.enemy-rating-comparison-swatch.is-image.defense { color: #387590; }
+.enemy-rating-comparison-plot.is-image .enemy-rating-comparison-series.magicResistance,
+.enemy-rating-comparison-swatch.is-image.magicResistance { color: #a85b2e; }
+
+.enemy-rating-comparison-gridline { stroke: var(--border, #d4d4d4); }
+.enemy-rating-comparison-baseline { stroke: var(--border-strong, #888); }
+.enemy-rating-comparison-highlight { fill: var(--text, #222); fill-opacity: .07; }
+.enemy-rating-comparison-line-point { fill: var(--surface, #fff); }
+.enemy-rating-comparison-plot.is-image .enemy-rating-comparison-line-point { fill: #fff; }
+
+.enemy-rating-comparison-tick {
+  fill: var(--text-muted, #555);
+  font-size: 11px;
+}
+
+.enemy-rating-comparison-label,
+.enemy-rating-comparison-value,
+.enemy-rating-comparison-axis {
+  fill: var(--text-soft, #444);
+  font-size: 11px;
+}
+
+.enemy-rating-comparison-axis {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.enemy-rating-comparison-series-label {
+  fill: currentColor;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.enemy-rating-comparison-plot .is-selected {
+  fill: var(--text, #222);
+  font-weight: 700;
+}

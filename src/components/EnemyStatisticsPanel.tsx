@@ -19,6 +19,8 @@ import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImag
 import { ChartImageFrame } from './ChartImageFrame'
 import { EnemyHistogramOverflowHelp } from './EnemyHistogramOverflowHelp'
 import { EnemyRatingReferenceDialog } from './EnemyRatingReferenceDialog'
+import { EnemyRatingComparisonPlot, EnemyRatingComparisonSwatch } from './EnemyRatingComparisonPlot'
+import { EnemyRatingComparisonSaveDialog, type EnemyRatingComparisonImageSnapshot } from './EnemyRatingComparisonImage'
 import { EnemyEcdfGuideControls } from './EnemyEcdfGuideControls'
 import { EnemyDistributionComparison } from './EnemyDistributionComparison'
 import { EnemyJointHeatmap, EnemyJointHeatmapSvg } from './EnemyJointHeatmap'
@@ -42,6 +44,8 @@ import { HistogramCumulativeStrip, getHistogramCumulativeStripLayout } from './H
 import { getHistogramBinRangeLabelCenters, formatHistogramBinRangeLines } from '../lib/histogramBinRangeLabels'
 import { createHistogramCategoryScale } from '../lib/histogramCategoryScale'
 import { buildEnemyRatingHistogramBins, formatEnemyRatingHistogramRangeLines, isEnemyRatingStat, type EnemyRatingHistogramBin } from '../lib/enemyRatingHistogram'
+import { buildEnemyRatingComparison, ENEMY_RATING_COMPARISON_LAYOUTS, ENEMY_RATING_COMPARISON_METRICS,
+  type EnemyRatingComparison, type EnemyRatingComparisonLayout } from '../lib/enemyRatingComparison'
 import { getEnemyStatRating } from '../lib/enemyStatRatings'
 import { placeGroupedBarValueLabels } from '../lib/groupedBarValueLabels'
 import { calculateWeightedEmpiricalCdf, getWeightedEnemyEcdfImageFilename } from '../lib/enemyWeightedEcdf'
@@ -114,10 +118,13 @@ const STAT_METRICS: StatMetric[] = [
   { key: 'stageAppearanceCount', label: '登場ステージ数', axisLabel: '登場ステージ数', suffix: '', valueDigits: 0, summaryDigits: 2, logBinCount: 10, minimumLinearBinWidth: 1, defaultScale: 'LINEAR' },
 ]
 
-const CHART_OPTIONS: Array<{ key: ChartKind; label: string }> = [
+type DistributionChartChoice = ChartKind | 'RATING_COMPARISON'
+
+const CHART_OPTIONS: Array<{ key: DistributionChartChoice; label: string }> = [
   { key: 'HISTOGRAM', label: 'ヒストグラム' },
   { key: 'ECDF', label: '累積分布' },
   { key: 'COMPARISON', label: '分布比較' },
+  { key: 'RATING_COMPARISON', label: '防御力・術耐性' },
   { key: 'HEATMAP', label: 'ヒートマップ' },
   { key: 'PIE', label: '円グラフ' },
   { key: 'RATIO_BAR', label: '100%横棒' },
@@ -134,6 +141,9 @@ const LEVEL_LABELS: Record<EnemyLevelType, string> = {
 const CHART_HEIGHT = 310
 const SCATTER_CHART_HEIGHT = 340
 const CHART_MARGIN = { top: 44, right: 18, bottom: 52, left: 52 }
+const RATING_COMPARISON_PERCENT = new Intl.NumberFormat('ja-JP', {
+  style: 'percent', minimumFractionDigits: 3, maximumFractionDigits: 3,
+})
 
 interface ReferenceVisibility {
   mean: boolean
@@ -245,9 +255,13 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const upperBoundInputId = useId()
   const upperBoundHelpId = useId()
   const histogramSettingsHeadingId = useId()
-  const [chartChoice, setSelectedChart] = useState<ChartKind>('HISTOGRAM')
+  const [chartChoice, setSelectedChart] = useState<DistributionChartChoice>('HISTOGRAM')
   const selectedChart = histogramEditor ? 'HISTOGRAM' : CHART_OPTIONS.some(({ key }) => key === chartChoice) ? chartChoice : 'HISTOGRAM'
   const isThresholdChart = selectedChart === 'PIE' || selectedChart === 'RATIO_BAR'
+  const isRatingComparison = selectedChart === 'RATING_COMPARISON'
+  const ratingComparisonLayoutId = useId()
+  const [ratingComparisonLayout, setRatingComparisonLayout] = useState<EnemyRatingComparisonLayout>('GROUPED')
+  const [ratingComparisonRank, setRatingComparisonRank] = useState('A')
   const [countMode, setCountMode] = useState<EnemyHistogramCountMode>(histogramEditor?.initialSnapshot?.countMode ?? 'SPAWNS')
   const activeCountMode = countMode === 'SPAWNS' && !spawnCountsAvailable ? 'MAPS' : countMode
   const [showHistogramPercentages, setShowHistogramPercentages] = useState(histogramEditor?.initialSnapshot?.showPercentages ?? true)
@@ -266,6 +280,10 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     ? { data: aggregationCounts ?? null, loading: false, error: !aggregationCounts, retry: liveCountData.retry }
     : liveCountData
   const countUnavailable = activeCountMode !== 'TYPES' && !countData.data
+  const ratingComparison = useMemo(() => isRatingComparison && !countUnavailable
+    ? buildEnemyRatingComparison(rows, activeCountMode, countData.data) : null,
+  [isRatingComparison, countUnavailable, rows, activeCountMode, countData.data])
+  const [ratingComparisonImage, setRatingComparisonImage] = useState<EnemyRatingComparisonImageSnapshot | null>(null)
   const [imageData, setImageData] = useState<EnemyChartImageData | null>(null)
   const [imageAspect, setImageAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [savingImage, setSavingImage] = useState(false)
@@ -392,7 +410,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
       { preferredBinCount: metric.logBinCount, minimumLinearBinWidth: metric.minimumLinearBinWidth },
     )),
   })) : [], [showSummary, rows, activeCountMode, countData.data])
-  const canSaveImage = (isThresholdChart ? thresholdComparison?.series.filter(({ condition }) => condition.visible).reduce((sum, series) => sum + series.count, 0) ?? 0
+  const canSaveImage = (isRatingComparison ? Number(ratingComparison?.hasData)
+    : isThresholdChart ? thresholdComparison?.series.filter(({ condition }) => condition.visible).reduce((sum, series) => sum + series.count, 0) ?? 0
     : selectedChart === 'HEATMAP' ? jointDistribution.count
     : selectedChart === 'SCATTER' ? scatterObservations.length : summaryStatistics.count) > 0
     && !countUnavailable
@@ -454,6 +473,14 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const openImageSaveDialog = async () => {
     if (!canSaveImage || imageSaveInProgress.current || selectedChart === 'COMPARISON') return
     setImageFeedback(null)
+    if (selectedChart === 'RATING_COMPARISON') {
+      if (ratingComparison) setRatingComparisonImage({
+        data: ratingComparison, layout: ratingComparisonLayout, selectedRank: ratingComparisonRank,
+        scopeLabel, countMode: activeCountMode, countLabel: countOption.label, aggregationVersion,
+        coverage: activeCountMode === 'TYPES' ? null : countData.data?.summary,
+      })
+      return
+    }
     // Keep the preview and saved image on the same data, even if the source updates.
     const snapshot: EnemyChartImageData = { kind: selectedChart, metric: selectedMetric, scale: axisScale, statistics: summaryStatistics, observations,
       scatterObservations, scatterMetric, scatterScale, scopeLabel, aggregationScopeLabel, customLinearUpperBound, ecdfGuides,
@@ -526,8 +553,20 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
 
   const distributionControls = <>
     {selectedChart !== 'COMPARISON' && !isThresholdChart && filterControls}
-    {!histogramEditor && selectedChart !== 'HEATMAP' && !isThresholdChart && <EnemyStatisticsSettings controls={controls} />}
+    {!histogramEditor && selectedChart !== 'HEATMAP' && !isThresholdChart && !isRatingComparison && <EnemyStatisticsSettings controls={controls} />}
     {selectedChart !== 'COMPARISON' && <div className="enemy-chart-toolbar">
+      {isRatingComparison && <fieldset className="enemy-chart-visibility">
+        <legend>表示形式</legend>
+        <div role="radiogroup" aria-label="表示形式">
+          {ENEMY_RATING_COMPARISON_LAYOUTS.map(({ key, label }) => (
+            <label className={ratingComparisonLayout === key ? 'active' : ''} key={key}>
+              <input type="radio" name={ratingComparisonLayoutId} value={key} checked={ratingComparisonLayout === key}
+                onChange={() => setRatingComparisonLayout(key)} />
+              <span>{label}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>}
       {selectedChart === 'HISTOGRAM' && <div className="enemy-histogram-rating-control">
         <label className="enemy-histogram-display-toggle"
           title={ratingStat ? 'E〜SSの評価ごとに集計します' : 'HP・攻撃力・防御力・術耐性に対応しています'}>
@@ -539,7 +578,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           aria-haspopup="dialog" aria-label="ゲーム内評価の定義を表示"
           onClick={() => setRatingReferenceOpen(true)}>評価基準</button>
       </div>}
-      {selectedChart !== 'HEATMAP' && !isThresholdChart && !ratingMode && (histogramEditor || summaryStatistics.count > 0) && (
+      {selectedChart !== 'HEATMAP' && !isThresholdChart && !ratingMode && !isRatingComparison && (histogramEditor || summaryStatistics.count > 0) && (
         <div className="enemy-chart-axis-control">
           <span>{selectedChart === 'HISTOGRAM' ? '階級の区切り' : '横軸'}</span>
           <ScaleSwitch
@@ -715,6 +754,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         ].filter(Boolean).join(' · ')
           : selectedChart === 'HEATMAP' ? `HP × 術耐性 · ${countOption.label} · ${scopeLabel}`
           : selectedChart === 'COMPARISON' ? [selectedMetric.label, '分布比較', countOption.label, aggregationScopeLabel].filter(Boolean).join(' · ')
+          : isRatingComparison ? `防御力・術耐性 · ${countOption.label} · ${scopeLabel}`
           : `${selectedMetric.label} · ${CHART_OPTIONS.find((chart) => chart.key === selectedChart)?.label} · ${countOption.label} · ${scopeLabel} · 対象 ${rows.length}種類`}
         defaultOpen
         collapsedLabel="グラフを開く"
@@ -767,6 +807,11 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
             : <ChartEmpty message="基準の術耐性を入力してください" />)}
           {selectedChart === 'HEATMAP' && <EnemyJointHeatmap distribution={jointDistribution}
             colorScale={heatmapColorScale} onColorScaleChange={setHeatmapColorScale} />}
+          {isRatingComparison && (ratingComparison?.hasData
+            ? <EnemyRatingComparisonFigure data={ratingComparison} layout={ratingComparisonLayout}
+                selectedRank={ratingComparisonRank} onRankChange={setRatingComparisonRank}
+                countLabel={countOption.label} countUnit={countOption.unit} />
+            : <ChartEmpty />)}
           {selectedChart === 'HISTOGRAM' && (
             <HistogramFigure statistics={histogramStatistics} metric={selectedMetric} scopeLabel={scopeLabel} scale={axisScale}
               percentileReference={percentileReference} percentileControl={histogramPercentileControl}
@@ -830,6 +875,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         </p>
         </div>
       </CollapsibleCalculatorPanel>
+      {ratingComparisonImage && <EnemyRatingComparisonSaveDialog {...ratingComparisonImage} onClose={() => setRatingComparisonImage(null)} />}
       {imageData && CHART_OPTIONS.some(({ key }) => key === imageData.kind) && <ChartImageSaveDialog
         initialFilename={imageData.filename ?? getEnemyAggregationFilename(getEnemyChartImageFilename({ kind: imageData.kind, metricLabel: imageData.metric.label,
           secondaryMetricLabel: imageData.scatterMetric.label, scopeLabel: imageData.scopeLabel,
@@ -2385,6 +2431,60 @@ function ScaleSwitch({ scale, onChange, label }: { scale: HistogramScale; onChan
       <button type="button" className={scale === 'LOG' ? 'active' : ''} aria-pressed={scale === 'LOG'} onClick={() => onChange('LOG')}>対数</button>
     </div>
   )
+}
+
+function EnemyRatingComparisonFigure({ data, layout, selectedRank, onRankChange, countLabel, countUnit }: {
+  data: EnemyRatingComparison
+  layout: EnemyRatingComparisonLayout
+  selectedRank: string
+  onRankChange: (rank: string) => void
+  countLabel: string
+  countUnit: string
+}) {
+  const titleId = useId()
+  const [chartRef, width] = useChartWidth()
+  const selection = data.rows.find(({ rank }) => rank === selectedRank)
+  const { defense, magicResistance } = data.totals
+  const totals = defense.valid === magicResistance.valid
+    ? `${formatFrequency(defense.valid)}${countUnit}`
+    : ENEMY_RATING_COMPARISON_METRICS.map(({ key, label }) =>
+      `${label} ${formatFrequency(data.totals[key].valid)}${countUnit}`).join(' / ')
+
+  return <figure className="enemy-analysis-figure enemy-rating-comparison-figure" aria-labelledby={titleId}>
+    <figcaption>
+      <div>
+        <strong id={titleId}>防御力・術耐性の評価別分布</strong>
+        <span>{countLabel} · 有効 {totals}</span>
+      </div>
+      <label className="enemy-chart-select-label enemy-rating-comparison-rank">
+        選択ランク
+        <select value={selectedRank} onChange={event => onRankChange(event.target.value)}>
+          {data.rows.map(({ rank }) => <option key={rank}>{rank}</option>)}
+        </select>
+      </label>
+    </figcaption>
+    {layout === 'CUMULATIVE' && <ul className="enemy-rating-comparison-legend" aria-label="比較する系列">
+      {ENEMY_RATING_COMPARISON_METRICS.map(({ key, label }) => <li key={key}>
+        <EnemyRatingComparisonSwatch metric={key} layout={layout} />{label}
+      </li>)}
+    </ul>}
+    <div className="enemy-rating-comparison-plot-container" ref={chartRef}>
+      <EnemyRatingComparisonPlot data={data} layout={layout} selectedRank={selectedRank} width={width}
+        height={layout === 'MIRRORED' ? 352 : 334} />
+    </div>
+    {selection && <ul className="enemy-rating-comparison-detail" aria-live="polite" aria-label={`評価${selectedRank}の内訳`}>
+      {ENEMY_RATING_COMPARISON_METRICS.map(({ key, label }) => {
+        const stat = selection.stats[key]
+        const cumulative = stat.cumulativeShare === null ? '—' : RATING_COMPARISON_PERCENT.format(stat.cumulativeShare)
+        return <li key={key}>
+          <span><EnemyRatingComparisonSwatch metric={key} layout={layout} />{label}</span>
+          <span>{stat.cumulativeRange}</span>
+          <span>{selectedRank}まで {cumulative}</span>
+          <span>{selectedRank}のみ {stat.share === null ? '—' : `${formatFrequency(stat.count)}${countUnit}`}</span>
+        </li>
+      })}
+    </ul>}
+  </figure>
 }
 
 function ChartEmpty({ message = '数値データがありません' }: { message?: string }) {
