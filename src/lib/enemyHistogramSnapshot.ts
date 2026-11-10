@@ -1,4 +1,5 @@
-import { ENEMY_HISTOGRAM_COUNT_MODES, getWeightedEnemyHistogramImageFilename, type EnemyHistogramCountMode, type EnemyHistogramCounts } from './enemyHistogramCounts.ts'
+import { ENEMY_HISTOGRAM_COUNT_MODES, getWeightedEnemyHistogramImageFilename,
+  type EnemyHistogramCountMode, type EnemyHistogramCounts, type EnemyHistogramPercentileReference } from './enemyHistogramCounts.ts'
 import type { EnemyRatingHistogramBin } from './enemyRatingHistogram.ts'
 import type { HistogramCumulativeDisplay } from './histogramCumulative.ts'
 import { getEnemyRatingNumericRanges } from './enemyStatRatings.ts'
@@ -43,6 +44,7 @@ export interface EnemyHistogramSnapshotInput {
   /** Omitted in earlier v1 snapshots; treated as the existing line display. */
   cumulativeDisplay?: HistogramCumulativeDisplay
   referenceVisibility: { mean: boolean; median: boolean }
+  percentileReference?: EnemyHistogramPercentileReference
   /** Optional so v1 snapshots captured before in-place editing remain usable. */
   editorSettings?: EnemyHistogramEditorSettings
 }
@@ -139,6 +141,12 @@ function validInput(value: unknown): value is EnemyHistogramSnapshotInput {
     || !Array.isArray(stats.bins) || !stats.bins.length || stats.bins.length > 1_000
     || (input.editorSettings !== undefined && !validEditorSettings(input.editorSettings))) return false
 
+  if (input.percentileReference !== undefined) {
+    const percentile = object(input.percentileReference)
+    if (!percentile || !nonnegative(percentile.percentage) || percentile.percentage > 100
+      || !finite(percentile.value) || percentile.value < Number(stats.minimum) || percentile.value > Number(stats.maximum)) return false
+  }
+
   let total = 0
   let previousEnd: number | undefined
   for (const value of stats.bins) {
@@ -208,6 +216,9 @@ export function createEnemyHistogramSnapshot(input: EnemyHistogramSnapshotInput)
     showCumulative: input.showCumulative ?? false,
     cumulativeDisplay: input.cumulativeDisplay ?? 'line',
     referenceVisibility: input.referenceVisibility,
+    ...(input.percentileReference ? { percentileReference: {
+      percentage: input.percentileReference.percentage, value: input.percentileReference.value,
+    } } : {}),
     editorSettings: copyEditorSettings(input.editorSettings),
   }))
   const count = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === copy.countMode)!
@@ -229,7 +240,7 @@ export function createEnemyHistogramSnapshot(input: EnemyHistogramSnapshotInput)
     conditions, summary,
     filename: getEnemyAggregationFilename(getWeightedEnemyHistogramImageFilename({ mode: copy.countMode, metric: '術耐性', scope: copy.source.scopeLabel,
       scale: copy.scale, statistics: copy.statistics, customLinearUpperBound: copy.customLinearUpperBound,
-      referenceVisibility: copy.referenceVisibility, showPercentages: copy.showPercentages,
+      referenceVisibility: copy.referenceVisibility, percentileReference: copy.percentileReference, showPercentages: copy.showPercentages,
       showBinRanges: copy.showBinRanges, showCumulative: copy.showCumulative, cumulativeDisplay: copy.cumulativeDisplay,
       useRatingBins: copy.ratingBins !== null, coverage: copy.coverage }), copy.source.aggregationVersion?.id),
   })

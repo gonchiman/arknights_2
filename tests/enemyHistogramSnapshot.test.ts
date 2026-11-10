@@ -57,6 +57,28 @@ test('ページ移動・再読み込み用ストレージを経由して同じ�
   assert.notEqual(createEnemyHistogramSnapshot(changed).id, snapshot.id)
 })
 
+test('指定した累積割合の縦線を保存し、画像名には指定割合だけを反映する', () => {
+  const percentileReference = { percentage: 75, value: 25 }
+  const snapshot = createEnemyHistogramSnapshot({ ...input(), percentileReference })
+  percentileReference.value = 100
+  assert.deepEqual(snapshot.percentileReference, { percentage: 75, value: 25 })
+  assert.ok(Object.isFrozen(snapshot.percentileReference))
+  assert.match(snapshot.filename, /_累積75%_/)
+  const updatedValue = createEnemyHistogramSnapshot({ ...input(), percentileReference })
+  assert.equal(updatedValue.filename, snapshot.filename)
+  assert.notEqual(updatedValue.id, snapshot.id)
+  assert.match(createEnemyHistogramSnapshot({ ...input(), percentileReference: { percentage: 0, value: 0 } }).filename, /_累積0%_/)
+  assert.match(createEnemyHistogramSnapshot({ ...input(), percentileReference: { percentage: 100, value: 100 } }).filename, /_累積100%_/)
+
+  const storage = memoryStorage()
+  assert.equal(writeEnemyHistogramSnapshot(snapshot, storage), true)
+  assert.deepEqual(readEnemyHistogramSnapshot(storage), snapshot)
+  for (const invalid of [null, {}, { percentage: -1, value: 25 }, { percentage: 101, value: 25 },
+    { percentage: NaN, value: 25 }, { percentage: 75, value: Infinity }, { percentage: 75, value: 101 }]) {
+    assert.equal(parseEnemyHistogramSnapshot({ ...snapshot, percentileReference: invalid }), null)
+  }
+})
+
 test('集計版と固定データの根拠を複製・凍結し、保存後も同じ版で復元する', () => {
   const source = input()
   source.source.aggregationVersion = { id: 'v2', label: '第2版', sourceRevision: 'abc123', ruleVersion: 'hidden-groups-v2' }
