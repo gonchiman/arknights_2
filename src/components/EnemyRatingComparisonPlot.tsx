@@ -46,7 +46,7 @@ function stripValue(share: number | null) {
 interface PlotProps {
   data: EnemyRatingComparison
   layout: EnemyRatingComparisonLayout
-  selectedRank: string
+  selectedRank?: string
   width: number
   height: number
   imageMode?: boolean
@@ -64,13 +64,13 @@ export function EnemyRatingComparisonPlot({ data, layout, selectedRank, width, h
     const stat = selected.stats[key]
     const share = stat.cumulativeShare === null ? 'データなし' : `${(100 * stat.cumulativeShare).toFixed(3)}%`
     return `${label}、${stat.cumulativeRange}、${selectedRank}までの累積割合 ${share}`
-  }).join('。') : ''
+  }).join('。') : null
 
   return <svg className={`enemy-rating-comparison-plot${imageMode ? ' is-image' : ''}`}
     width="100%" height={height} viewBox={`0 0 ${width} ${height}`}
-    role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
+    role="img" aria-labelledby={description ? `${titleId} ${descriptionId}` : titleId}>
     <title id={titleId}>{`防御力・術耐性の評価別分布（${layoutLabel}）`}</title>
-    <desc id={descriptionId}>{description}</desc>
+    {description && <desc id={descriptionId}>{description}</desc>}
     {layout === 'MIRRORED'
       ? <MirroredPlot rows={rows} selectedRank={selectedRank} width={width} height={height} axis={axis} imageMode={imageMode} />
       : <VerticalPlot rows={rows} selectedRank={selectedRank} width={width} height={height}
@@ -80,7 +80,7 @@ export function EnemyRatingComparisonPlot({ data, layout, selectedRank, width, h
 
 interface PlotBodyProps {
   rows: RatingRows
-  selectedRank: string
+  selectedRank?: string
   width: number
   height: number
   axis: ValueAxis

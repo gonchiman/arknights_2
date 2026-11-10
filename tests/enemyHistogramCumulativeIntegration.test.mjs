@@ -28,7 +28,7 @@ const enemies = observations.map(({ value }, index) => ({
     moveSpeed: 1, attackSpeed: 100, baseAttackTime: 2, massLevel: 1 },
 }))
 
-let server, Plot, Panel, useControls, RatingImage, getRatingFilename
+let server, Plot, Panel, useControls, RatingImage, RatingPlot, getRatingFilename
 before(async () => {
   server = await createServer({
     configFile: false, plugins: [react(), {
@@ -51,21 +51,43 @@ before(async () => {
     = await server.ssrLoadModule('/src/components/EnemyStatisticsPanel.tsx'))
   ;({ EnemyRatingComparisonImage: RatingImage, getEnemyRatingComparisonImageFilename: getRatingFilename }
     = await server.ssrLoadModule('/src/components/EnemyRatingComparisonImage.tsx'))
+  ;({ EnemyRatingComparisonPlot: RatingPlot } = await server.ssrLoadModule('/src/components/EnemyRatingComparisonPlot.tsx'))
 })
 after(async () => { await server?.close() })
 
-test('防御力・術耐性の全3形式を同じ集計と選択ランクで画像に描画する', () => {
+test('防御力・術耐性の全3形式の画像とファイル名に選択ランクを含めない', () => {
   const data = buildEnemyRatingComparison(enemies, 'SPAWNS', fixtureCounts)
   const filenames = ENEMY_RATING_COMPARISON_LAYOUTS.map(({ key: layout, label }) => {
     const snapshot = { data, layout, selectedRank: 'E', scopeLabel: 'メインストーリー · 全敵',
       countMode: 'SPAWNS', countLabel: '出現回数', coverage: fixtureCounts.summary }
+    const live = renderToStaticMarkup(createElement(RatingPlot, {
+      data, layout, selectedRank: 'E', width: 960, height: 360,
+    }))
+    assert.match(live, /enemy-rating-comparison-highlight|is-selected/)
+    assert.match(live, /Eまでの累積割合 25\.000%/)
+
     const image = renderToStaticMarkup(createElement(RatingImage, { snapshot, aspectRatio: 16 / 9 }))
     assert.ok(image.includes(`防御力・術耐性の評価別分布（${label}）`))
-    assert.ok(image.includes('防御力 100未満 · Eまでの累積割合 0.000%'))
-    assert.ok(image.includes('術耐性 0以下 · Eまでの累積割合 25.000%'))
     assert.ok(image.includes('防御力 92体 / 術耐性 8体（値なし 84体）'))
+    assert.doesNotMatch(image, /enemy-rating-comparison-highlight|is-selected|stroke-width="1\.5"|Eまでの累積割合|評価Eの集計値/)
+    assert.deepEqual([...image.matchAll(/<text\b[^>]*class="enemy-rating-comparison-tick"[^>]*>([A-Z]\+?|SS)<\/text>/g)]
+      .map(([, rank]) => rank), ['E', 'D', 'C', 'B', 'B+', 'A', 'A+', 'S', 'S+', 'SS'])
+    assert.match(image, /累積割合（%）/)
+    if (layout === 'CUMULATIVE') {
+      assert.match(image, /ゲーム内評価/)
+      const lines = [...image.matchAll(/<polyline\b[^>]*points="([^"]+)"/g)]
+      assert.equal(lines.length, 2)
+      assert.ok(lines.every(([, points]) => points.split(' ').length === 10))
+    } else {
+      assert.match(image, /評価別割合（%）/)
+      assert.match(image, /<text\b[^>]*class="(?:chart-strip-label|enemy-rating-comparison-value)"[^>]*>25<\/text>/)
+      const seriesRectangles = image.match(/<rect\b[^>]*class="enemy-rating-comparison-series [^"]+"/g)
+      assert.equal(seriesRectangles?.length, layout === 'GROUPED' ? 7 : 5)
+    }
+
     const filename = withChartImageAspect(getRatingFilename(snapshot), 16 / 9)
-    assert.ok(filename.includes(label) && filename.includes('評価E') && filename.includes('メインストーリー'))
+    assert.ok(filename.includes(label) && filename.includes('メインストーリー'))
+    assert.doesNotMatch(filename, /評価E/)
     assert.ok(filename.endsWith('_比率16x9.png'))
     return filename
   })

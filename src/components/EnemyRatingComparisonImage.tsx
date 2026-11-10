@@ -20,7 +20,6 @@ import './EnemyChartImage.css'
 export interface EnemyRatingComparisonImageSnapshot {
   data: EnemyRatingComparison
   layout: EnemyRatingComparisonLayout
-  selectedRank: string
   scopeLabel: string
   countMode: EnemyHistogramCountMode
   countLabel: string
@@ -32,14 +31,10 @@ const IMAGE_TITLE = '防御力・術耐性の評価別分布'
 const PLOT_HEIGHT: Record<EnemyRatingComparisonLayout, number> = {
   GROUPED: 334, CUMULATIVE: 304, MIRRORED: 352,
 }
-const DETAIL_HEIGHT = 42
 const formatCount = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
-const formatCumulativeShare = new Intl.NumberFormat('ja-JP', {
-  style: 'percent', minimumFractionDigits: 3, maximumFractionDigits: 3,
-})
 
 export function getEnemyRatingComparisonImageFilename({
-  layout, selectedRank, scopeLabel, countLabel, aggregationVersion,
+  layout, scopeLabel, countLabel, aggregationVersion,
 }: Omit<EnemyRatingComparisonImageSnapshot, 'data' | 'coverage'>): string {
   return createChartImageFilename('敵', [
     aggregationVersion && `集計${aggregationVersion.id}`,
@@ -47,12 +42,7 @@ export function getEnemyRatingComparisonImageFilename({
     countLabel,
     scopeLabel,
     ENEMY_RATING_COMPARISON_LAYOUTS.find((option) => option.key === layout)?.label,
-    `評価${selectedRank}`,
   ])
-}
-
-function getNaturalHeight(snapshot: EnemyRatingComparisonImageSnapshot): number {
-  return PLOT_HEIGHT[snapshot.layout] + (snapshot.data.rows.some(({ rank }) => rank === snapshot.selectedRank) ? DETAIL_HEIGHT : 0)
 }
 
 function getImageConditions(snapshot: EnemyRatingComparisonImageSnapshot): string {
@@ -76,10 +66,9 @@ export function EnemyRatingComparisonImage({ snapshot, aspectRatio, onLayout }: 
   aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
 }) {
-  const { data, layout, selectedRank } = snapshot
-  const selected = data.rows.find(({ rank }) => rank === selectedRank)
+  const { data, layout } = snapshot
   return <ChartImageFrame className="enemy-chart-image" title={IMAGE_TITLE} conditions={getImageConditions(snapshot)}
-    axisTitle={layout === 'MIRRORED' ? '評価別割合（%）' : 'ゲーム内評価'} naturalChartHeight={getNaturalHeight(snapshot)}
+    axisTitle={layout === 'MIRRORED' ? '評価別割合（%）' : 'ゲーム内評価'} naturalChartHeight={PLOT_HEIGHT[layout]}
     aspectRatio={aspectRatio} onLayout={onLayout}
     legend={layout === 'CUMULATIVE' ? <ul className="chart-image-frame-legend-list" aria-label="比較する系列">
       {ENEMY_RATING_COMPARISON_METRICS.map(({ key, label }) => <li className="chart-image-frame-legend-item" key={key}>
@@ -87,18 +76,7 @@ export function EnemyRatingComparisonImage({ snapshot, aspectRatio, onLayout }: 
         <span>{label}</span>
       </li>)}
     </ul> : undefined}>
-    {({ width, height }) => <>
-      <EnemyRatingComparisonPlot data={data} layout={layout} selectedRank={selectedRank} width={width}
-        height={height - (selected ? DETAIL_HEIGHT : 0)} imageMode />
-      {selected && <svg width={width} height={DETAIL_HEIGHT} role="img" aria-label={`評価${selectedRank}の集計値`}>
-        {ENEMY_RATING_COMPARISON_METRICS.map(({ key, label }, index) => {
-          const { cumulativeRange, cumulativeShare } = selected.stats[key]
-          const share = cumulativeShare === null ? '—' : formatCumulativeShare.format(cumulativeShare)
-          const summary = `${label} ${cumulativeRange} · ${selectedRank}までの累積割合 ${share}`
-          return <text key={key} x={8} y={16 + index * 16} fill="#444" fontSize={11}>{summary}</text>
-        })}
-      </svg>}
-    </>}
+    {({ width, height }) => <EnemyRatingComparisonPlot data={data} layout={layout} width={width} height={height} imageMode />}
   </ChartImageFrame>
 }
 
@@ -123,7 +101,7 @@ export function EnemyRatingComparisonSaveDialog({ onClose, ...snapshot }: EnemyR
     try {
       const destination = await selectChartImageDestination(selectedFilename, picker)
       if (destination.type === 'cancelled') return
-      const { width } = getChartImageLayout({ naturalChartHeight: getNaturalHeight(snapshot), aspectRatio: ratio })
+      const { width } = getChartImageLayout({ naturalChartHeight: PLOT_HEIGHT[snapshot.layout], aspectRatio: ratio })
       await saveComparisonChartImage({
         chart: <EnemyRatingComparisonImage snapshot={snapshot} aspectRatio={ratio} />,
         filename: selectedFilename,
@@ -154,7 +132,7 @@ function EnemyRatingComparisonImagePreview({ snapshot, aspectRatio }: {
   const previewRef = useRef<HTMLDivElement>(null)
   const [availableWidth, setAvailableWidth] = useState(600)
   const [size, setSize] = useState<{ width: number; height: number }>(() =>
-    getChartImageLayout({ naturalChartHeight: getNaturalHeight(snapshot), aspectRatio }))
+    getChartImageLayout({ naturalChartHeight: PLOT_HEIGHT[snapshot.layout], aspectRatio }))
   useLayoutEffect(() => {
     const element = previewRef.current
     if (!element) return
