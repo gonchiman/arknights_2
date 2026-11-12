@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { createChartImageFilename, withChartImageAspect } from '../lib/chartImageFilename'
 import { getChartImageLayout } from '../lib/chartImageLayout'
+import { CHART_IMAGE_MAX_SIDE, getChartImageRasterSize, type ChartImageRasterOutput } from '../lib/chartImageRasterSize'
 import {
   ENEMY_HISTOGRAM_COUNT_MODES, getEnemySpawnCoverageLabel,
   type EnemyHistogramCountMode, type EnemyHistogramCounts,
@@ -30,20 +31,22 @@ export interface EnemyRatingComparisonImageSnapshot {
 }
 
 const IMAGE_TITLE = '防御力・術耐性の評価別分布'
+const FIXED_OUTPUT_WIDTH = 1920
 const PLOT_HEIGHT: Record<EnemyRatingComparisonLayout, number> = {
   GROUPED: 334, CUMULATIVE: 304, MIRRORED: 352,
 }
 const formatCount = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
 
 export function getEnemyRatingComparisonImageFilename({
-  layout, scopeLabel, countLabel, aggregationVersion, selectedRank, sideValue,
-}: Omit<EnemyRatingComparisonImageSnapshot, 'data' | 'coverage'>): string {
+  layout, scopeLabel, countLabel, aggregationVersion, selectedRank, sideValue, outputWidth,
+}: Omit<EnemyRatingComparisonImageSnapshot, 'data' | 'coverage'> & { outputWidth?: number }): string {
   return createChartImageFilename('敵', [
     aggregationVersion && `集計${aggregationVersion.id}`,
     IMAGE_TITLE,
     countLabel,
     selectedRank && `評価${selectedRank}強調`,
     layout === 'MIRRORED' && sideValue === 'rank' && '階級割合',
+    outputWidth && `幅${outputWidth}px`,
     scopeLabel,
     ENEMY_RATING_COMPARISON_LAYOUTS.find((option) => option.key === layout)?.label,
   ])
@@ -90,14 +93,18 @@ export function EnemyRatingComparisonSaveDialog({ onClose, ...snapshot }: EnemyR
 }) {
   const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [showRankHighlight, setShowRankHighlight] = useState(true)
+  const [fixOutputWidth, setFixOutputWidth] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(false)
   const savingRef = useRef(false)
   const outputSnapshot = showRankHighlight ? snapshot : { ...snapshot, selectedRank: undefined }
-  const filename = getEnemyRatingComparisonImageFilename(outputSnapshot)
   const validAspect = aspect.preset === 'auto' || [aspect.width, aspect.height]
     .every((value) => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100)
   const aspectRatio = aspect.preset === 'auto' || !validAspect ? undefined : Number(aspect.width) / Number(aspect.height)
+  const canFixOutputWidth = validAspect
+    && (aspectRatio === undefined || Math.round(FIXED_OUTPUT_WIDTH / aspectRatio) <= CHART_IMAGE_MAX_SIDE)
+  const output = fixOutputWidth && canFixOutputWidth ? { width: FIXED_OUTPUT_WIDTH, aspectRatio } : undefined
+  const filename = getEnemyRatingComparisonImageFilename({ ...outputSnapshot, outputWidth: output?.width })
   const picker = getChartImageSavePicker()
 
   async function saveImage(selectedFilename: string, ratio?: number) {
@@ -113,6 +120,7 @@ export function EnemyRatingComparisonSaveDialog({ onClose, ...snapshot }: EnemyR
         chart: <EnemyRatingComparisonImage snapshot={outputSnapshot} aspectRatio={ratio} />,
         filename: selectedFilename,
         width,
+        output,
         writeBlob: destination.type === 'file' ? destination.write : undefined,
       })
       onClose()
@@ -128,18 +136,26 @@ export function EnemyRatingComparisonSaveDialog({ onClose, ...snapshot }: EnemyR
     getDefaultFilename={(ratio) => withChartImageAspect(filename, ratio)} aspect={aspect} onAspectChange={setAspect}
     canChooseLocation={Boolean(picker)} saving={saving} error={error} helpMode="popover"
     onClose={() => { if (!savingRef.current) onClose() }} onSave={(name, ratio) => void saveImage(name, ratio)}
-    options={<label className="enemy-histogram-display-toggle">
-      <input type="checkbox" checked={showRankHighlight} disabled={saving}
-        onChange={event => setShowRankHighlight(event.target.checked)} />
-      選択ランクを強調
-    </label>}
+    options={<div className="enemy-histogram-display-controls">
+      <label className="enemy-histogram-display-toggle">
+        <input type="checkbox" checked={Boolean(output)} disabled={saving || !canFixOutputWidth}
+          onChange={event => setFixOutputWidth(event.target.checked)} />
+        出力幅を1,920 pxに固定
+      </label>
+      <label className="enemy-histogram-display-toggle">
+        <input type="checkbox" checked={showRankHighlight} disabled={saving}
+          onChange={event => setShowRankHighlight(event.target.checked)} />
+        選択ランクを強調
+      </label>
+    </div>}
     preview={validAspect && <EnemyRatingComparisonImagePreview key={aspectRatio ?? 'auto'}
-      snapshot={outputSnapshot} aspectRatio={aspectRatio} />} />
+      snapshot={outputSnapshot} aspectRatio={aspectRatio} output={output} />} />
 }
 
-function EnemyRatingComparisonImagePreview({ snapshot, aspectRatio }: {
+function EnemyRatingComparisonImagePreview({ snapshot, aspectRatio, output }: {
   snapshot: EnemyRatingComparisonImageSnapshot
   aspectRatio?: number
+  output?: ChartImageRasterOutput
 }) {
   const previewRef = useRef<HTMLDivElement>(null)
   const [availableWidth, setAvailableWidth] = useState(600)
@@ -155,7 +171,7 @@ function EnemyRatingComparisonImagePreview({ snapshot, aspectRatio }: {
     return () => observer.disconnect()
   }, [])
   const scale = Math.min(availableWidth / size.width, 380 / size.height, 1)
-  const pixelRatio = Math.min(2, 16_000 / size.width, 16_000 / size.height, Math.sqrt(32_000_000 / size.width / size.height))
+  const rasterSize = getChartImageRasterSize(size, output)
   return <div className="enemy-chart-image-preview">
     <div className="enemy-chart-image-preview-heading"><span>プレビュー</span><span>PNG</span></div>
     <div ref={previewRef} className="enemy-chart-image-preview-frame" style={{ height: Math.ceil(size.height * scale) }}>
@@ -165,7 +181,7 @@ function EnemyRatingComparisonImagePreview({ snapshot, aspectRatio }: {
       </div>
     </div>
     <span className="enemy-chart-image-preview-size" aria-live="polite">
-      {Math.floor(size.width * pixelRatio).toLocaleString('ja-JP')} × {Math.floor(size.height * pixelRatio).toLocaleString('ja-JP')} px
+      {rasterSize.width.toLocaleString('ja-JP')} × {rasterSize.height.toLocaleString('ja-JP')} px
     </span>
   </div>
 }
