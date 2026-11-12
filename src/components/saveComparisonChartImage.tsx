@@ -1,10 +1,9 @@
 import type { ReactNode } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot, type Root } from 'react-dom/client'
+import { getChartImageRasterSize, type ChartImageRasterOutput } from '../lib/chartImageRasterSize'
 import './saveComparisonChartImage.css'
 
-const MAX_IMAGE_PIXELS = 32_000_000
-const MAX_IMAGE_SIDE = 16_000
 const SVG_IMAGE_STYLES = [
   'fill', 'fill-opacity', 'stroke', 'stroke-opacity', 'stroke-width',
   'stroke-dasharray', 'stroke-dashoffset', 'stroke-linecap', 'stroke-linejoin',
@@ -32,11 +31,13 @@ export async function saveComparisonChartImage({
   chart,
   filename,
   width = 1120,
+  output,
   writeBlob,
 }: {
   chart: ReactNode
   filename: string
   width?: number
+  output?: ChartImageRasterOutput
   writeBlob?: (blob: Blob) => Promise<void>
 }): Promise<void> {
   const host = document.createElement('div')
@@ -66,12 +67,7 @@ export async function saveComparisonChartImage({
     const imageHeight = Math.ceil(Math.max(bounds.height, surface.scrollHeight))
     if (imageWidth <= 0 || imageHeight <= 0) throw new Error('保存するグラフの大きさを取得できませんでした。')
 
-    const pixelRatio = Math.min(
-      2,
-      MAX_IMAGE_SIDE / imageWidth,
-      MAX_IMAGE_SIDE / imageHeight,
-      Math.sqrt(MAX_IMAGE_PIXELS / imageWidth / imageHeight),
-    )
+    const raster = getChartImageRasterSize({ width: imageWidth, height: imageHeight }, output)
     // html-to-image deep-clones SVG without copying its children's stylesheet rules.
     // Inline their appearance only on this temporary export, preserving the on-page chart.
     for (const element of surface.querySelectorAll<SVGElement>('svg *')) {
@@ -84,7 +80,9 @@ export async function saveComparisonChartImage({
     const blob = await toBlob(surface, {
       width: imageWidth,
       height: imageHeight,
-      pixelRatio,
+      canvasWidth: raster.width,
+      canvasHeight: raster.height,
+      pixelRatio: 1,
       backgroundColor: '#fff',
       skipFonts: true,
     })

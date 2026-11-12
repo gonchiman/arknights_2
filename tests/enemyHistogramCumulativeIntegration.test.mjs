@@ -158,6 +158,8 @@ test('左右の横棒は外側の数値を階級の割合に切り替え、保�
 
   const filename = getRatingFilename(snapshot)
   assert.equal(getRatingFilename({ ...snapshot, sideValue: 'cumulative' }), filename)
+  assert.match(withChartImageAspect(getRatingFilename({ ...snapshot, outputWidth: 1920 }), 16 / 7),
+    /_幅1920px_全敵_左右の横棒_比率16x7\.png$/)
   assert.match(getRatingFilename({ ...snapshot, sideValue: 'rank' }), /_評価D強調_階級割合_全敵_左右の横棒\.png$/)
   for (const layout of ['GROUPED', 'CUMULATIVE']) {
     assert.equal(getRatingFilename({ ...snapshot, layout, sideValue: 'rank' }), getRatingFilename({ ...snapshot, layout }))
