@@ -15,9 +15,6 @@ import './EnemyAnalysis.css'
 import './EnemyDefenseResistancePage.css'
 
 const NUMBER = new Intl.NumberFormat('ja-JP')
-const PERCENTAGE = new Intl.NumberFormat('ja-JP', {
-  style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2,
-})
 const VIEWS = [['table', '範囲表'], ['rank', '順位表'], ['resistance', '術耐性別'], ['chart', 'グラフ']] as const
 const DEFAULT_RANK_STEP = 10
 const MAX_RANK_PERCENTAGE = 100
@@ -64,15 +61,13 @@ function EnemyResistanceThresholdTable({ rows }: { rows: readonly EnemyResistanc
       aria-label="術耐性10刻みの防御力対応表">
       <thead>
         <tr>
-          <th scope="col">術耐性（以上）</th>
-          <th scope="col">出現割合</th>
-          <th scope="col">同じ順位の防御力</th>
+          <th scope="col">術耐性</th>
+          <th scope="col">防御力</th>
         </tr>
       </thead>
       <tbody>
-        {rows.map(({ resistance, percentage, defense }) => <tr key={resistance}>
+        {rows.map(({ resistance, defense }) => <tr key={resistance}>
           <th scope="row">{NUMBER.format(resistance)}</th>
-          <td>{PERCENTAGE.format(percentage / 100)}</td>
           <td aria-label={defense === null ? '該当なし' : undefined}>
             {defense === null ? '—' : NUMBER.format(defense)}
           </td>
