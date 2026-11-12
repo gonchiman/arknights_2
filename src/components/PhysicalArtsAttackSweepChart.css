@@ -1,0 +1,18 @@
+.physical-arts-chart.is-attack-sweep .physical-arts-chart-layout {
+  grid-template-rows: clamp(150px, 32vw, 240px) auto;
+}
+
+.physical-arts-chart.is-attack-sweep.is-image .physical-arts-chart-layout {
+  grid-template-rows: minmax(0, 1fr) auto;
+  padding-top: 8px;
+}
+
+.physical-arts-chart.is-attack-sweep .physical-arts-chart-y-ticks,
+.physical-arts-chart.is-attack-sweep .physical-arts-chart-plot {
+  grid-row: 1;
+}
+
+.physical-arts-chart-x.is-attack {
+  grid-row: 2;
+  gap: 3px;
+}
