@@ -15,6 +15,9 @@ import './EnemyAnalysis.css'
 import './EnemyDefenseResistancePage.css'
 
 const NUMBER = new Intl.NumberFormat('ja-JP')
+const RANK_PERCENTAGE = new Intl.NumberFormat('ja-JP', {
+  style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2,
+})
 const VIEWS = [['table', '範囲表'], ['rank', '順位表'], ['resistance', '術耐性別'], ['chart', 'グラフ']] as const
 const DEFAULT_RANK_STEP = 10
 const MAX_RANK_PERCENTAGE = 100
@@ -26,7 +29,27 @@ export function EnemyDefenseResistancePage() {
   const [view, setView] = useState<typeof VIEWS[number][0]>('table')
   const [rankStep, setRankStep] = useState(DEFAULT_RANK_STEP)
   const [rankInput, setRankInput] = useState('')
+  const [showRankPercentage, setShowRankPercentage] = useState(false)
+  const [showRankCutoff, setShowRankCutoff] = useState(false)
   const [image, setImage] = useState<ComparisonTableImageSnapshot | null>(null)
+  const resistanceTable = view === 'resistance' && result
+    ? <EnemyResistanceThresholdGrid rows={result.resistanceThresholds} showRankPercentage={showRankPercentage}
+        showRankCutoff={showRankCutoff} estimatedRanks={Boolean(data?.counts.summary.expectedMapCount)} />
+    : null
+
+  function openResistanceImage() {
+    if (!result || !resistanceTable) return
+    const version = `集計版 ${aggregation.selectedId}`
+    const rankColumns: string[] = []
+    if (showRankPercentage) rankColumns.push('出現順位（%）')
+    if (showRankCutoff) rankColumns.push('出現順位の境目')
+    setImage({
+      title: '防御力と術耐性の対応（術耐性別）',
+      conditions: [version, `出現回数 ${NUMBER.format(result.total)}体`, '術耐性10刻み', ...rankColumns],
+      filenameConditions: [version, '出現回数', '術耐性10刻み', ...rankColumns],
+      table: resistanceTable,
+    })
+  }
 
   return <section className="calculator-page enemy-analysis-route">
     <header className="page-intro">
@@ -46,7 +69,25 @@ export function EnemyDefenseResistancePage() {
           {view === 'table' && <EnemyDefenseResistanceTable bands={result.bands} />}
           {view === 'rank' && <EnemyDefenseResistanceRankTable result={result} step={rankStep} onStepChange={setRankStep}
             input={rankInput} onInputChange={setRankInput} aggregationVersion={aggregation.selectedId} onSaveImage={setImage} />}
-          {view === 'resistance' && <EnemyResistanceThresholdTable rows={result.resistanceThresholds} />}
+          {resistanceTable && <>
+            <div className="enemy-defense-resistance-rank-controls">
+              <div className="enemy-defense-resistance-rank-controls" role="group" aria-label="表示する列">
+                <label>
+                  <input type="checkbox" checked={showRankPercentage} onChange={event => setShowRankPercentage(event.target.checked)} />
+                  出現順位（%）
+                </label>
+                <label>
+                  <input type="checkbox" checked={showRankCutoff} onChange={event => setShowRankCutoff(event.target.checked)} />
+                  出現順位の境目（位）
+                </label>
+              </div>
+              <button type="button" className="button secondary" aria-label="術耐性別の表をPNG画像で保存"
+                aria-haspopup="dialog" onClick={openResistanceImage}>画像を保存</button>
+            </div>
+            <div className="damage-two-table-wrap" role="region" tabIndex={0} aria-label="術耐性別">
+              {resistanceTable}
+            </div>
+          </>}
           {view === 'chart' && <EnemyDefenseResistanceChart bands={result.bands} />}
         </> : <p role="status">集計対象の出現データがありません。</p>}
       </>}
@@ -55,26 +96,43 @@ export function EnemyDefenseResistancePage() {
   </section>
 }
 
-function EnemyResistanceThresholdTable({ rows }: { rows: readonly EnemyResistanceThreshold[] }) {
-  return <div className="damage-two-table-wrap" role="region" tabIndex={0} aria-label="術耐性別">
-    <table className="damage-two-table enemy-defense-resistance-table enemy-defense-resistance-threshold-table"
-      aria-label="術耐性10刻みの防御力対応表">
-      <thead>
-        <tr>
-          <th scope="col">術耐性</th>
-          <th scope="col">防御力</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map(({ resistance, defense }) => <tr key={resistance}>
-          <th scope="row">{NUMBER.format(resistance)}</th>
-          <td aria-label={defense === null ? '該当なし' : undefined}>
-            {defense === null ? '—' : NUMBER.format(defense)}
-          </td>
-        </tr>)}
-      </tbody>
-    </table>
-  </div>
+function EnemyResistanceThresholdGrid({ rows, showRankPercentage, showRankCutoff, estimatedRanks }: {
+  rows: readonly EnemyResistanceThreshold[]
+  showRankPercentage: boolean
+  showRankCutoff: boolean
+  estimatedRanks: boolean
+}) {
+  return <table className="damage-two-table enemy-defense-resistance-table enemy-defense-resistance-threshold-table"
+    aria-label="術耐性10刻みの防御力対応表">
+    <thead>
+      <tr>
+        <th scope="col">術耐性</th>
+        <th scope="col">防御力</th>
+        {showRankPercentage && <th scope="col">出現順位<wbr />（高い順）</th>}
+        {showRankCutoff && <th scope="col">出現順位の境目</th>}
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map(({ resistance, defense, percentage, rankCutoff }) => <tr key={resistance}>
+        <th scope="row" data-table-image-number>{NUMBER.format(resistance)}</th>
+        <td data-table-image-number aria-label={defense === null ? '該当なし' : undefined}>
+          {defense === null ? '—' : NUMBER.format(defense)}
+        </td>
+        {showRankPercentage && <td data-table-image-number aria-label={rankCutoff === 0 ? '該当なし' : undefined}>
+          {rankCutoff === 0 ? '—' : formatRankPercentage(percentage)}
+        </td>}
+        {showRankCutoff && <td data-table-image-number aria-label={rankCutoff === 0 ? '該当なし' : undefined}>
+          {rankCutoff === 0 ? '—' : `${estimatedRanks ? '約' : ''}${NUMBER.format(Math.max(1, Math.round(rankCutoff)))}位`}
+        </td>}
+      </tr>)}
+    </tbody>
+  </table>
+}
+
+function formatRankPercentage(percentage: number) {
+  if (percentage === 100) return '100%'
+  if (percentage < 0.005) return '0.01%未満'
+  return RANK_PERCENTAGE.format(percentage / 100)
 }
 
 function EnemyDefenseResistanceRankTable({ result, step, onStepChange, input, onInputChange, aggregationVersion, onSaveImage }: {
