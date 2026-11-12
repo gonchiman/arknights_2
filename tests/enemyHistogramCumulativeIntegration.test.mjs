@@ -56,17 +56,19 @@ before(async () => {
 })
 after(async () => { await server?.close() })
 
-test('防御力・術耐性の全3形式で選択ランクの強調をファイル名に反映し、集計値を維持する', () => {
+test('防御力・術耐性の全3形式で複数ランクを強調し、同じ順序でファイル名に反映する', () => {
   const data = buildEnemyRatingComparison(enemies, 'SPAWNS', fixtureCounts)
   const filenames = ENEMY_RATING_COMPARISON_LAYOUTS.map(({ key: layout, label }) => {
     const unselectedSnapshot = { data, layout, scopeLabel: 'メインストーリー · 全敵',
       countMode: 'SPAWNS', countLabel: '出現回数', coverage: fixtureCounts.summary }
-    const snapshot = { ...unselectedSnapshot, selectedRank: 'E' }
+    const selectedRanks = ['B+', 'E', 'B+']
+    const snapshot = { ...unselectedSnapshot, selectedRanks }
     const live = renderToStaticMarkup(createElement(RatingPlot, {
-      data, layout, selectedRank: 'E', width: 960, height: 360,
+      data, layout, selectedRanks, width: 960, height: 360,
     }))
     assert.match(live, /enemy-rating-comparison-highlight|is-selected/)
     assert.match(live, /Eまでの累積割合 25\.000%/)
+    assert.match(live, /B\+までの累積割合 100\.000%/)
 
     const renderImage = snapshot => renderToStaticMarkup(createElement(RatingImage, { snapshot, aspectRatio: 16 / 9 }))
     const image = renderImage(snapshot)
@@ -77,14 +79,14 @@ test('防御力・術耐性の全3形式で選択ランクの強調をファイ�
       assert.doesNotMatch(markup, /Eまでの累積割合|評価Eの集計値/)
       assert.match(markup, /累積割合（%）/)
     }
-    assert.equal(image.match(/class="enemy-rating-comparison-highlight"/g)?.length, 1)
+    assert.equal(image.match(/class="enemy-rating-comparison-highlight"/g)?.length, 2)
     assert.doesNotMatch(unselected, /enemy-rating-comparison-highlight|is-selected|stroke-width="1\.5"/)
     const getRankTicks = markup => [...markup.matchAll(/<text\b[^>]*class="enemy-rating-comparison-tick( is-selected)?"[^>]*>([A-Z]\+?|SS)<\/text>/g)]
     const rankTicks = getRankTicks(image)
     for (const ticks of [rankTicks, getRankTicks(unselected)]) {
       assert.deepEqual(ticks.map(([, , rank]) => rank), ['E', 'D', 'C', 'B', 'B+', 'A', 'A+', 'S', 'S+', 'SS'])
     }
-    assert.deepEqual(rankTicks.filter(([, selected]) => selected).map(([, , rank]) => rank), ['E'])
+    assert.deepEqual(rankTicks.filter(([, selected]) => selected).map(([, , rank]) => rank), ['E', 'B+'])
     if (layout === 'CUMULATIVE') {
       assert.match(unselected, /ゲーム内評価/)
       const getLines = markup => [...markup.matchAll(/<polyline\b[^>]*points="([^"]+)"/g)].map(([, points]) => points)
@@ -92,7 +94,7 @@ test('防御力・術耐性の全3形式で選択ランクの強調をファイ�
       assert.equal(lines.length, 2)
       assert.ok(lines.every(points => points.split(' ').length === 10))
       assert.deepEqual(getLines(unselected), lines)
-      assert.equal(image.match(/<circle\b[^>]*stroke-width="1\.5"/g)?.length, 2)
+      assert.equal(image.match(/<circle\b[^>]*stroke-width="1\.5"/g)?.length, 4)
     } else {
       assert.match(unselected, /評価別割合（%）/)
       assert.match(image, /<text\b[^>]*class="(?:chart-strip-label|enemy-rating-comparison-value) is-selected"[^>]*>25<\/text>/)
@@ -107,13 +109,16 @@ test('防御力・術耐性の全3形式で選択ランクの強調をファイ�
 
     const filename = withChartImageAspect(getRatingFilename(snapshot), 16 / 9)
     assert.ok(filename.includes(label) && filename.includes('メインストーリー'))
-    assert.match(filename, /_評価E強調_/)
-    const otherRank = withChartImageAspect(getRatingFilename({ ...snapshot, selectedRank: 'B+' }), 16 / 9)
-    assert.equal(otherRank, filename.replace('_評価E強調', '_評価B+強調'))
+    assert.match(filename, /_評価E-B\+強調_/)
+    const inRankOrder = withChartImageAspect(getRatingFilename({ ...snapshot, selectedRanks: ['E', 'B+'] }), 16 / 9)
+    assert.equal(inRankOrder, filename)
+    const singleRank = withChartImageAspect(getRatingFilename({ ...snapshot, selectedRanks: ['B+'] }), 16 / 9)
+    assert.equal(singleRank, filename.replace('_評価E-B+強調', '_評価B+強調'))
     assert.equal(withChartImageAspect(getRatingFilename(unselectedSnapshot), 16 / 9),
-      filename.replace('_評価E強調', ''))
+      filename.replace('_評価E-B+強調', ''))
+    assert.equal(getRatingFilename({ ...snapshot, selectedRanks: [] }), getRatingFilename(unselectedSnapshot))
     const longScope = withChartImageAspect(getRatingFilename({ ...snapshot, scopeLabel: 'メインストーリー'.repeat(30) }), 16 / 9)
-    assert.match(longScope, /_評価E強調_/)
+    assert.match(longScope, /_評価E-B\+強調_/)
     assert.match(longScope, /_ほか\d+項目_比率16x9\.png$/)
     assert.ok(filename.endsWith('_比率16x9.png'))
     return filename
@@ -121,22 +126,28 @@ test('防御力・術耐性の全3形式で選択ランクの強調をファイ�
   assert.equal(new Set(filenames).size, 3)
 })
 
-test('防御力・術耐性の保存ダイアログは選択ランクの画像強調を初期表示する', () => {
+test('防御力・術耐性の保存ダイアログは選択ランクを初期状態で強調する', () => {
   const data = buildEnemyRatingComparison(enemies, 'SPAWNS', fixtureCounts)
-  const markup = renderToStaticMarkup(createElement(RatingSaveDialog, {
-    data, layout: 'GROUPED', selectedRank: 'E', scopeLabel: '全敵',
+  const renderDialog = selectedRanks => renderToStaticMarkup(createElement(RatingSaveDialog, {
+    data, layout: 'GROUPED', selectedRanks, scopeLabel: '全敵',
     countMode: 'SPAWNS', countLabel: '出現回数', onClose() {},
   }))
-  const checkboxLabel = [...markup.matchAll(/<label\b[^>]*>[\s\S]*?<\/label>/g)]
-    .find(([label]) => label.includes('選択ランクを強調'))?.[0]
-  assert.match(checkboxLabel ?? '', /<input\b(?=[^>]*\btype="checkbox")(?=[^>]*\bchecked="")[^>]*>/)
-  assert.match(markup, /class="enemy-rating-comparison-highlight"/)
-  assert.match(markup, /value="[^"]*_評価E強調_[^"]*_比率自動\.png"/)
+  const highlightCheckbox = markup => [...markup.matchAll(/<label\b[^>]*>[\s\S]*?<\/label>/g)]
+    .find(([label]) => label.includes('選択ランクを強調'))?.[0] ?? ''
+  const markup = renderDialog(['A', 'B+'])
+  assert.match(highlightCheckbox(markup), /<input\b(?=[^>]*\btype="checkbox")(?=[^>]*\bchecked="")[^>]*>/)
+  assert.equal(markup.match(/class="enemy-rating-comparison-highlight"/g)?.length, 2)
+  assert.match(markup, /value="[^"]*_評価B\+-A強調_[^"]*_比率自動\.png"/)
+
+  const unselected = renderDialog([])
+  assert.match(highlightCheckbox(unselected), /<input\b(?=[^>]*\btype="checkbox")(?=[^>]*\bdisabled="")[^>]*>/)
+  assert.doesNotMatch(highlightCheckbox(unselected), /\bchecked=/)
+  assert.doesNotMatch(unselected, /enemy-rating-comparison-highlight|評価[A-Z+\-]+強調/)
 })
 
 test('左右の横棒は外側の数値を階級の割合に切り替え、保存画像と既定名に反映する', () => {
   const data = buildEnemyRatingComparison(enemies, 'SPAWNS', fixtureCounts)
-  const snapshot = { data, layout: 'MIRRORED', selectedRank: 'D', scopeLabel: '全敵',
+  const snapshot = { data, layout: 'MIRRORED', selectedRanks: ['D'], scopeLabel: '全敵',
     countMode: 'SPAWNS', countLabel: '出現回数' }
   const renderImage = sideValue => renderToStaticMarkup(createElement(RatingImage, { snapshot: { ...snapshot, sideValue } }))
   const getValues = markup => [...markup.matchAll(/<text\b[^>]*class="enemy-rating-comparison-value(?: is-selected)?"[^>]*>([^<]*)<\/text>/g)]

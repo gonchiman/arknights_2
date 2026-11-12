@@ -8,6 +8,7 @@ import {
   type EnemyHistogramCountMode, type EnemyHistogramCounts,
 } from '../lib/enemyHistogramCounts'
 import type { EnemyHistogramAggregationVersion } from '../lib/enemyHistogramSnapshot'
+import { getEnemyRatingRanges } from '../lib/enemyStatRatings'
 import {
   ENEMY_RATING_COMPARISON_LAYOUTS, ENEMY_RATING_COMPARISON_METRICS,
   type EnemyRatingComparison, type EnemyRatingComparisonLayout, type EnemyRatingComparisonSideValue,
@@ -21,7 +22,7 @@ import './EnemyChartImage.css'
 export interface EnemyRatingComparisonImageSnapshot {
   data: EnemyRatingComparison
   layout: EnemyRatingComparisonLayout
-  selectedRank?: string
+  selectedRanks?: readonly string[]
   sideValue?: EnemyRatingComparisonSideValue
   scopeLabel: string
   countMode: EnemyHistogramCountMode
@@ -32,19 +33,21 @@ export interface EnemyRatingComparisonImageSnapshot {
 
 const IMAGE_TITLE = '防御力・術耐性の評価別分布'
 const FIXED_OUTPUT_WIDTH = 1920
+const RATING_ORDER = getEnemyRatingRanges('defense').map(({ rating }) => rating)
 const PLOT_HEIGHT: Record<EnemyRatingComparisonLayout, number> = {
   GROUPED: 334, CUMULATIVE: 304, MIRRORED: 352,
 }
 const formatCount = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
 
 export function getEnemyRatingComparisonImageFilename({
-  layout, scopeLabel, countLabel, aggregationVersion, selectedRank, sideValue, outputWidth,
+  layout, scopeLabel, countLabel, aggregationVersion, selectedRanks, sideValue, outputWidth,
 }: Omit<EnemyRatingComparisonImageSnapshot, 'data' | 'coverage'> & { outputWidth?: number }): string {
+  const rankLabel = RATING_ORDER.filter(rank => selectedRanks?.includes(rank)).join('-')
   return createChartImageFilename('敵', [
     aggregationVersion && `集計${aggregationVersion.id}`,
     IMAGE_TITLE,
     countLabel,
-    selectedRank && `評価${selectedRank}強調`,
+    rankLabel && `評価${rankLabel}強調`,
     layout === 'MIRRORED' && sideValue === 'rank' && '階級割合',
     outputWidth && `幅${outputWidth}px`,
     scopeLabel,
@@ -73,7 +76,7 @@ export function EnemyRatingComparisonImage({ snapshot, aspectRatio, onLayout }: 
   aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
 }) {
-  const { data, layout, selectedRank, sideValue } = snapshot
+  const { data, layout, selectedRanks, sideValue } = snapshot
   return <ChartImageFrame className="enemy-chart-image" title={IMAGE_TITLE} conditions={getImageConditions(snapshot)}
     axisTitle={layout === 'MIRRORED' ? '評価別割合（%）' : 'ゲーム内評価'} naturalChartHeight={PLOT_HEIGHT[layout]}
     aspectRatio={aspectRatio} onLayout={onLayout}
@@ -83,7 +86,7 @@ export function EnemyRatingComparisonImage({ snapshot, aspectRatio, onLayout }: 
         <span>{label}</span>
       </li>)}
     </ul> : undefined}>
-    {({ width, height }) => <EnemyRatingComparisonPlot data={data} layout={layout} selectedRank={selectedRank}
+    {({ width, height }) => <EnemyRatingComparisonPlot data={data} layout={layout} selectedRanks={selectedRanks}
       sideValue={sideValue} width={width} height={height} imageMode />}
   </ChartImageFrame>
 }
@@ -97,7 +100,8 @@ export function EnemyRatingComparisonSaveDialog({ onClose, ...snapshot }: EnemyR
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(false)
   const savingRef = useRef(false)
-  const outputSnapshot = showRankHighlight ? snapshot : { ...snapshot, selectedRank: undefined }
+  const hasSelectedRanks = snapshot.data.rows.some(({ rank }) => snapshot.selectedRanks?.includes(rank))
+  const outputSnapshot = showRankHighlight ? snapshot : { ...snapshot, selectedRanks: undefined }
   const validAspect = aspect.preset === 'auto' || [aspect.width, aspect.height]
     .every((value) => Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100)
   const aspectRatio = aspect.preset === 'auto' || !validAspect ? undefined : Number(aspect.width) / Number(aspect.height)
@@ -143,7 +147,7 @@ export function EnemyRatingComparisonSaveDialog({ onClose, ...snapshot }: EnemyR
         出力幅を1,920 pxに固定
       </label>
       <label className="enemy-histogram-display-toggle">
-        <input type="checkbox" checked={showRankHighlight} disabled={saving}
+        <input type="checkbox" checked={hasSelectedRanks && showRankHighlight} disabled={saving || !hasSelectedRanks}
           onChange={event => setShowRankHighlight(event.target.checked)} />
         選択ランクを強調
       </label>

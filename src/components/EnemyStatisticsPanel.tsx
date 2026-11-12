@@ -261,7 +261,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const isRatingComparison = selectedChart === 'RATING_COMPARISON'
   const ratingComparisonLayoutId = useId()
   const [ratingComparisonLayout, setRatingComparisonLayout] = useState<EnemyRatingComparisonLayout>('GROUPED')
-  const [ratingComparisonRank, setRatingComparisonRank] = useState('A')
+  const [ratingComparisonRanks, setRatingComparisonRanks] = useState<string[]>(['A'])
   const ratingSideValueId = useId()
   const [ratingSideValue, setRatingSideValue] = useState<EnemyRatingComparisonSideValue>('cumulative')
   const [countMode, setCountMode] = useState<EnemyHistogramCountMode>(histogramEditor?.initialSnapshot?.countMode ?? 'SPAWNS')
@@ -477,7 +477,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     setImageFeedback(null)
     if (selectedChart === 'RATING_COMPARISON') {
       if (ratingComparison) setRatingComparisonImage({
-        data: ratingComparison, layout: ratingComparisonLayout, selectedRank: ratingComparisonRank, sideValue: ratingSideValue,
+        data: ratingComparison, layout: ratingComparisonLayout, selectedRanks: ratingComparisonRanks, sideValue: ratingSideValue,
         scopeLabel, countMode: activeCountMode, countLabel: countOption.label, aggregationVersion,
         coverage: activeCountMode === 'TYPES' ? null : countData.data?.summary,
       })
@@ -821,7 +821,10 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
             colorScale={heatmapColorScale} onColorScaleChange={setHeatmapColorScale} />}
           {isRatingComparison && (ratingComparison?.hasData
             ? <EnemyRatingComparisonFigure data={ratingComparison} layout={ratingComparisonLayout}
-                selectedRank={ratingComparisonRank} onRankChange={setRatingComparisonRank} sideValue={ratingSideValue}
+                selectedRanks={ratingComparisonRanks} sideValue={ratingSideValue}
+                onRankToggle={rank => setRatingComparisonRanks(current => current.includes(rank)
+                  ? current.filter(value => value !== rank)
+                  : [...current, rank])}
                 countLabel={countOption.label} countUnit={countOption.unit} />
             : <ChartEmpty />)}
           {selectedChart === 'HISTOGRAM' && (
@@ -2445,18 +2448,18 @@ function ScaleSwitch({ scale, onChange, label }: { scale: HistogramScale; onChan
   )
 }
 
-function EnemyRatingComparisonFigure({ data, layout, selectedRank, onRankChange, sideValue, countLabel, countUnit }: {
+function EnemyRatingComparisonFigure({ data, layout, selectedRanks, onRankToggle, sideValue, countLabel, countUnit }: {
   data: EnemyRatingComparison
   layout: EnemyRatingComparisonLayout
-  selectedRank: string
-  onRankChange: (rank: string) => void
+  selectedRanks: readonly string[]
+  onRankToggle: (rank: string) => void
   sideValue: EnemyRatingComparisonSideValue
   countLabel: string
   countUnit: string
 }) {
   const titleId = useId()
   const [chartRef, width] = useChartWidth()
-  const selection = data.rows.find(({ rank }) => rank === selectedRank)
+  const selections = data.rows.filter(({ rank }) => selectedRanks.includes(rank))
   const { defense, magicResistance } = data.totals
   const totals = defense.valid === magicResistance.valid
     ? `${formatFrequency(defense.valid)}${countUnit}`
@@ -2469,12 +2472,16 @@ function EnemyRatingComparisonFigure({ data, layout, selectedRank, onRankChange,
         <strong id={titleId}>防御力・術耐性の評価別分布</strong>
         <span>{countLabel} · 有効 {totals}</span>
       </div>
-      <label className="enemy-chart-select-label enemy-rating-comparison-rank">
-        選択ランク
-        <select value={selectedRank} onChange={event => onRankChange(event.target.value)}>
-          {data.rows.map(({ rank }) => <option key={rank}>{rank}</option>)}
-        </select>
-      </label>
+      <div className="enemy-rating-comparison-rank" role="group" aria-label="選択ランク">
+        <span className="initial-filter-label">選択ランク</span>
+        <div className="enemy-rating-comparison-rank-options">
+          {data.rows.map(({ rank }) => {
+            const selected = selectedRanks.includes(rank)
+            return <button key={rank} type="button" className={selected ? 'initial-button active' : 'initial-button'}
+              aria-pressed={selected} onClick={() => onRankToggle(rank)}>{rank}</button>
+          })}
+        </div>
+      </div>
     </figcaption>
     {layout === 'CUMULATIVE' && <ul className="enemy-rating-comparison-legend" aria-label="比較する系列">
       {ENEMY_RATING_COMPARISON_METRICS.map(({ key, label }) => <li key={key}>
@@ -2482,21 +2489,23 @@ function EnemyRatingComparisonFigure({ data, layout, selectedRank, onRankChange,
       </li>)}
     </ul>}
     <div className="enemy-rating-comparison-plot-container" ref={chartRef}>
-      <EnemyRatingComparisonPlot data={data} layout={layout} selectedRank={selectedRank} sideValue={sideValue} width={width}
+      <EnemyRatingComparisonPlot data={data} layout={layout} selectedRanks={selectedRanks} sideValue={sideValue} width={width}
         height={layout === 'MIRRORED' ? 352 : 334} />
     </div>
-    {selection && <ul className="enemy-rating-comparison-detail" aria-live="polite" aria-label={`評価${selectedRank}の内訳`}>
-      {ENEMY_RATING_COMPARISON_METRICS.map(({ key, label }) => {
-        const stat = selection.stats[key]
-        const cumulative = stat.cumulativeShare === null ? '—' : RATING_COMPARISON_PERCENT.format(stat.cumulativeShare)
-        return <li key={key}>
-          <span><EnemyRatingComparisonSwatch metric={key} layout={layout} />{label}</span>
-          <span>{stat.cumulativeRange}</span>
-          <span>{selectedRank}まで {cumulative}</span>
-          <span>{selectedRank}のみ {stat.share === null ? '—' : `${formatFrequency(stat.count)}${countUnit}`}</span>
-        </li>
-      })}
-    </ul>}
+    <div aria-live="polite">
+      {selections.map(({ rank, stats }) => <ul key={rank} className="enemy-rating-comparison-detail" aria-label={`評価${rank}の内訳`}>
+        {ENEMY_RATING_COMPARISON_METRICS.map(({ key, label }) => {
+          const stat = stats[key]
+          const cumulative = stat.cumulativeShare === null ? '—' : RATING_COMPARISON_PERCENT.format(stat.cumulativeShare)
+          return <li key={key}>
+            <span><EnemyRatingComparisonSwatch metric={key} layout={layout} />{label}</span>
+            <span>{stat.cumulativeRange}</span>
+            <span>{rank}まで {cumulative}</span>
+            <span>{rank}のみ {stat.share === null ? '—' : `${formatFrequency(stat.count)}${countUnit}`}</span>
+          </li>
+        })}
+      </ul>)}
+    </div>
   </figure>
 }
 
