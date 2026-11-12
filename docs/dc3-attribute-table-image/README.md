@@ -2,7 +2,7 @@
 
 対象は `#/damage-3/attribute-comparison` の属性比較表と、`#/damage-3/physical-arts-comparison` の物理・術ダメージ比較表。保存画面を開いた時点の指標、計算条件、画面に表示された評価行と物理・術の全列を保持する。列見出しと最小・最大が等しいセルの結合は画面と共通にし、画像にタイトルと計算条件を載せる。
 
-[物理・術ダメージ比較ページ](../../src/components/PhysicalArtsComparisonPage.tsx)では、「出力」で確定した攻撃力、指定した防御力・術耐性の範囲、範囲内のダメージを[共通の表画像ダイアログ](../../src/components/DamageCalculatorThreeAttributeImageDialog.tsx)に渡す。指定範囲に入る評価だけを保存し、片側だけ該当する評価では範囲外の側を「—」で表示する。
+[物理・術ダメージ比較ページ](../../src/components/PhysicalArtsComparisonPage.tsx)では、「出力」で確定した攻撃力、指定した防御力・術耐性の範囲、範囲内のダメージを[共通の表画像ダイアログ](../../src/components/ComparisonTableImageDialog.tsx)に渡す。指定範囲に入る評価だけを保存し、片側だけ該当する評価では範囲外の側を「—」で表示する。
 
 [テーブル画像出力の共通仕様](../../instructions/shared/table-image.md)に従い、[ChartImageSaveDialog](../../src/components/ChartImageSaveDialog.tsx)で名前と縦横比を指定する。[ComparisonTableImageFrameとPreview](../../src/components/ComparisonTableImageFrame.tsx)が同じ内容を測定し、[saveComparisonChartImage](../../src/components/saveComparisonChartImage.tsx)で幅・高さを2倍にしたPNGを生成する。文字サイズと寸法上限は[共通の文字サイズ定義](../../src/lib/tableImageTypography.ts)と[画像寸法の検証](../../src/lib/tableImageAspect.ts)に従う。既定の名前は[共通の命名処理](../../src/lib/chartImageFilename.ts)で作る。
 
