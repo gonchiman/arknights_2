@@ -20,7 +20,12 @@
   flex-wrap: wrap;
 }
 
-.enemy-defense-resistance-rank-controls input {
+.enemy-defense-resistance-rank-controls input[type="checkbox"] {
+  margin: 0;
+  accent-color: currentColor;
+}
+
+.enemy-defense-resistance-rank-controls input[type="number"] {
   width: 5em;
   min-height: 28px;
   padding: 3px 5px;
@@ -66,7 +71,7 @@
   font-weight: 600;
 }
 
-.comparison-table-image-frame .enemy-defense-resistance-rank-table {
+.comparison-table-image-frame :is(.enemy-defense-resistance-rank-table, .enemy-defense-resistance-threshold-table) {
   border: 1px solid var(--border);
 }
 

@@ -1,9 +1,13 @@
-# 防御力と術耐性の順位表の画像出力
+# 防御力と術耐性の対応表の画像出力
 
 `#/analysis/enemies/defense-resistance` の「順位表」にある「画像を保存」から、全行をPNGに保存できる。保存画面を開いた時点の集計版、出現回数、刻み、指定順位を保持し、画面と同じ行、数値、強調をプレビューとPNGに使う。
 
-[順位表](../../src/components/EnemyDefenseResistancePage.tsx)は[共通の表画像ダイアログ](../../src/components/ComparisonTableImageDialog.tsx)へ表と条件を渡す。ファイル名、縦横比、保存先を指定できる。プレビューと2倍のPNGは[テーブル画像出力の共通仕様](../../instructions/shared/table-image.md)に従う。
+「術耐性別」の「画像を保存」では、集計版、出現回数、術耐性の刻み、表示中の順位列を保持する。術耐性・防御力の2列と、選択した順位列を含む全11行を保存する。既定のファイル名にも選択した順位列を含める。
+
+[順位表と術耐性別の表](../../src/components/EnemyDefenseResistancePage.tsx)は[共通の表画像ダイアログ](../../src/components/ComparisonTableImageDialog.tsx)へ表と条件を渡す。ファイル名、縦横比、保存先を指定できる。プレビューと2倍のPNGは[テーブル画像出力の共通仕様](../../instructions/shared/table-image.md)に従う。
 
 ## 見本の再生成
 
 集計版を `v11` にして「順位表」を開き、刻みを `30`、指定順位を `12.5` にする。「画像を保存」で縦横比を「16:9」にして保存する。[見本PNG](examples/v11-step-30-rank-12-5-16x9.png)と照合し、上位12.5%、30%、60%、90%、100%の5行と指定順位の強調を確認する。
+
+集計版を `v11` にして「術耐性別」を開き、「出現順位（%）」と「出現順位の境目（位）」をオンにする。「画像を保存」で縦横比を「16:9」にして保存する。[術耐性別の見本PNG](examples/v11-resistance-threshold-rank-columns-16x9.png)と照合し、4列と全11行、術耐性50の防御力350・15.83%・10,034位、術耐性100の「—」を確認する。

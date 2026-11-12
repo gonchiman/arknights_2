@@ -37,17 +37,17 @@ test('同一の有効な敵集合を出現回数で重み付けし、同値が�
     { from: 90, to: 100, defense: { min: 0, max: 0 }, resistance: { min: 0, max: 0 } },
   ])
   assert.deepEqual(resistanceThresholds, [
-    { resistance: 0, percentage: 100, defense: 0 },
-    { resistance: 10, percentage: 82.5, defense: 300 },
-    { resistance: 20, percentage: 82.5, defense: 300 },
-    { resistance: 30, percentage: 35, defense: 600 },
-    { resistance: 40, percentage: 35, defense: 600 },
-    { resistance: 50, percentage: 35, defense: 600 },
-    { resistance: 60, percentage: 0, defense: null },
-    { resistance: 70, percentage: 0, defense: null },
-    { resistance: 80, percentage: 0, defense: null },
-    { resistance: 90, percentage: 0, defense: null },
-    { resistance: 100, percentage: 0, defense: null },
+    { resistance: 0, percentage: 100, rankCutoff: 10, defense: 0 },
+    { resistance: 10, percentage: 82.5, rankCutoff: 8.25, defense: 300 },
+    { resistance: 20, percentage: 82.5, rankCutoff: 8.25, defense: 300 },
+    { resistance: 30, percentage: 35, rankCutoff: 3.5, defense: 600 },
+    { resistance: 40, percentage: 35, rankCutoff: 3.5, defense: 600 },
+    { resistance: 50, percentage: 35, rankCutoff: 3.5, defense: 600 },
+    { resistance: 60, percentage: 0, rankCutoff: 0, defense: null },
+    { resistance: 70, percentage: 0, rankCutoff: 0, defense: null },
+    { resistance: 80, percentage: 0, rankCutoff: 0, defense: null },
+    { resistance: 90, percentage: 0, rankCutoff: 0, defense: null },
+    { resistance: 100, percentage: 0, rankCutoff: 0, defense: null },
   ])
 })
 

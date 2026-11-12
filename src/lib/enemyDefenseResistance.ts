@@ -24,6 +24,7 @@ export interface EnemyDefenseResistanceRank {
 export interface EnemyResistanceThreshold {
   resistance: number
   percentage: number
+  rankCutoff: number
   defense: number | null
 }
 
@@ -51,9 +52,14 @@ export function buildEnemyDefenseResistanceBands(
   const resistanceTotal = resistance[resistance.length - 1].cumulativeCount
   const resistanceThresholds = Array.from({ length: 11 }, (_, index) => {
     const threshold = index * 10
-    const count = resistance.reduce((sum, point) => point.value >= threshold ? sum + point.count : sum, 0)
-    const percentage = count / resistanceTotal * 100
-    return { resistance: threshold, percentage, defense: count > 0 ? valueAtUpperRank(defense, percentage) : null }
+    const rankCutoff = resistance.reduce((sum, point) => point.value >= threshold ? sum + point.count : sum, 0)
+    const percentage = rankCutoff / resistanceTotal * 100
+    return {
+      resistance: threshold,
+      percentage,
+      rankCutoff,
+      defense: rankCutoff > 0 ? valueAtUpperRank(defense, percentage) : null,
+    }
   })
   return {
     total: defense[defense.length - 1].cumulativeCount,
