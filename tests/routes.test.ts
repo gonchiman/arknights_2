@@ -108,6 +108,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
     [
       ['operators', 'operators'],
       ['operator-pca', 'operator-pca'],
+      ['operator-wiki-views', 'operator-wiki-views'],
       ['skills', 'skills'],
       ['skill-classification', 'skill-classification'],
       ['talent-classification', 'talent-classification'],

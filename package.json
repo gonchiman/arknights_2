@@ -15,6 +15,7 @@
     "generate:maps": "node scripts/generateMapDatabase.mjs",
     "generate:roguelike": "node --use-system-ca scripts/generateRoguelikeDatabase.mjs",
     "generate:main-enemy-trends": "node --experimental-strip-types scripts/generate-main-enemy-trends.mjs",
+    "refresh:operator-wiki-views": "node --use-system-ca --experimental-strip-types scripts/refreshOperatorWikiViews.mjs",
     "preview": "vite preview",
     "rules:check": "node scripts/sync-project-rules.mjs check",
     "rules:diff": "node scripts/sync-project-rules.mjs diff",
