@@ -221,8 +221,9 @@
 .enemy-distribution-panel .enemy-level-legend { font-size: 10px; line-height: 1.6; }
 .enemy-distribution-panel .enemy-chart-legend { flex-wrap: wrap; gap: 6px 12px; }
 
-.enemy-rating-comparison-rank { display: flex; align-items: center; gap: 6px; }
-.enemy-rating-comparison-rank select { min-width: 56px; }
+.enemy-rating-comparison-rank { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.enemy-rating-comparison-rank-options { display: flex; flex-wrap: wrap; gap: 4px; }
+.enemy-rating-comparison-rank-options .initial-button { min-width: 28px; }
 .enemy-rating-comparison-plot-container { min-width: 0; }
 .enemy-rating-comparison-legend,
 .enemy-rating-comparison-detail { list-style: none; margin: 0; padding: 0 10px; font-size: 11px; }
@@ -270,6 +271,7 @@
 }
 
 @media (pointer: coarse) {
+  .enemy-rating-comparison-rank-options .initial-button { min-width: 44px; }
   .enemy-reference-controls label,
   .enemy-distribution-panel .enemy-chart-visibility label,
   .enemy-distribution-panel .enemy-chart-scale-switch button,
