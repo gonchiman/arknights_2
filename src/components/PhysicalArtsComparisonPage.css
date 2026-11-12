@@ -46,3 +46,8 @@
 }
 
 .physical-arts-comparison-rating-toggle input { margin: 0; }
+
+.physical-arts-attack-sweep-controls .calculator-field { width: 5.75rem; }
+.physical-arts-attack-sweep-controls .physical-arts-comparison-ranges fieldset { flex-wrap: wrap; }
+.damage-two-table.physical-arts-attack-sweep-table { min-width: 15rem; }
+.damage-two-table.physical-arts-attack-sweep-table tbody th:first-child { text-align: right; }

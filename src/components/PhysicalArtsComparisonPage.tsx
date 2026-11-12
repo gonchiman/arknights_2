@@ -7,6 +7,7 @@ import {
   ComparisonTableImageDialog, type ComparisonTableImageSnapshot,
 } from './ComparisonTableImageDialog'
 import { AttributeButtons, DamageCalculatorThreeAttributeTable } from './DamageCalculatorThreeAttributePage'
+import { PhysicalArtsAttackSweepPanel } from './PhysicalArtsAttackSweepPanel'
 import {
   PHYSICAL_ARTS_RATING_EXTRA_HEIGHT, PhysicalArtsComparisonChart, PhysicalArtsComparisonImageLegend,
 } from './PhysicalArtsComparisonChart'
@@ -14,6 +15,7 @@ import './PhysicalArtsComparisonPage.css'
 
 const INITIAL_ATTACK = 1000
 const NUMBER = new Intl.NumberFormat('ja-JP')
+const MODES = [['attack', '攻撃力を固定'], ['enemy', '防御力・術耐性を固定']] as const
 const VIEWS = [['table', '表'], ['chart', 'グラフ']] as const
 const DEFAULT_DEFENSE_CHART_MAX = 3000
 const MAX_DEFENSE = 1_000_000
@@ -32,6 +34,21 @@ type ResultImage =
   | { view: 'chart'; snapshot: DamageCalculatorThreeAttributeChartImageSnapshot }
 
 export default function PhysicalArtsComparisonPage() {
+  const [mode, setMode] = useState<typeof MODES[number][0]>('attack')
+
+  return <section className="calculator-page damage-three-attribute-page">
+    <header className="page-intro">
+      <h1>物理・術ダメージ比較</h1>
+    </header>
+    <div className="damage-three-attribute-toolbar">
+      <AttributeButtons label="比較方法" options={MODES} value={mode} onChange={setMode} />
+    </div>
+    <div hidden={mode !== 'attack'}><FixedAttackComparison /></div>
+    <div hidden={mode !== 'enemy'}><PhysicalArtsAttackSweepPanel /></div>
+  </section>
+}
+
+function FixedAttackComparison() {
   const [{ attack, ranges }, setResult] = useState({ attack: INITIAL_ATTACK, ranges: INITIAL_RANGES })
   const [view, setView] = useState<typeof VIEWS[number][0]>('table')
   const [showRatings, setShowRatings] = useState(false)
@@ -101,10 +118,7 @@ export default function PhysicalArtsComparisonPage() {
     } })
   }
 
-  return <section className="calculator-page damage-three-attribute-page">
-    <header className="page-intro">
-      <h1>物理・術ダメージ比較</h1>
-    </header>
+  return <>
     <section className="calculator-panel" aria-labelledby="physical-arts-result-heading">
       <form className="physical-arts-comparison-controls" onSubmit={apply}>
         <label className="calculator-field">
@@ -157,5 +171,5 @@ export default function PhysicalArtsComparisonPage() {
     </section>
     {image?.view === 'table' && <ComparisonTableImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
     {image?.view === 'chart' && <DamageCalculatorThreeAttributeChartImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
-  </section>
+  </>
 }
