@@ -21,23 +21,44 @@ export interface EnemyDefenseResistanceRank {
   resistance: number
 }
 
+export interface EnemyResistanceThreshold {
+  resistance: number
+  percentage: number
+  defense: number | null
+}
+
 export function buildEnemyDefenseResistanceBands(
   rows: readonly EnemyRecord[],
   counts: EnemyHistogramCounts,
-): { total: number; bands: EnemyDefenseResistanceBand[]; getRank: (percentage: number) => EnemyDefenseResistanceRank | null } {
+): {
+  total: number
+  bands: EnemyDefenseResistanceBand[]
+  resistanceThresholds: EnemyResistanceThreshold[]
+  getRank: (percentage: number) => EnemyDefenseResistanceRank | null
+} {
   const eligible = rows.filter(({ stats }) => Number.isFinite(stats.defense) && Number.isFinite(stats.magicResistance))
   const defense = calculateWeightedEmpiricalCdf(buildEnemyHistogramObservations(eligible, ({ stats }) => stats.defense, 'SPAWNS', counts))
   const resistance = calculateWeightedEmpiricalCdf(buildEnemyHistogramObservations(eligible, ({ stats }) => stats.magicResistance, 'SPAWNS', counts))
-  if (defense.length === 0 || resistance.length === 0) return { total: 0, bands: [], getRank: () => null }
+  if (defense.length === 0 || resistance.length === 0) {
+    return { total: 0, bands: [], resistanceThresholds: [], getRank: () => null }
+  }
 
   const bands: EnemyDefenseResistanceBand[] = []
   for (let from = 0; from < 100; from += 10) {
     const to = from + 10
     bands.push({ from, to, defense: rangeForBand(defense, from, to), resistance: rangeForBand(resistance, from, to) })
   }
+  const resistanceTotal = resistance[resistance.length - 1].cumulativeCount
+  const resistanceThresholds = Array.from({ length: 11 }, (_, index) => {
+    const threshold = index * 10
+    const count = resistance.reduce((sum, point) => point.value >= threshold ? sum + point.count : sum, 0)
+    const percentage = count / resistanceTotal * 100
+    return { resistance: threshold, percentage, defense: count > 0 ? valueAtUpperRank(defense, percentage) : null }
+  })
   return {
     total: defense[defense.length - 1].cumulativeCount,
     bands,
+    resistanceThresholds,
     getRank(percentage) {
       if (!Number.isFinite(percentage) || percentage < 0 || percentage > 100) return null
       return {

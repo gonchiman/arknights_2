@@ -1,6 +1,7 @@
 import { useId, useMemo, useState } from 'react'
 import {
   buildEnemyDefenseResistanceBands, type EnemyDefenseResistanceBand, type EnemyDefenseResistanceRank,
+  type EnemyResistanceThreshold,
 } from '../lib/enemyDefenseResistance'
 import { parseEcdfGuideInput } from '../lib/enemyEcdfGuides'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
@@ -14,7 +15,10 @@ import './EnemyAnalysis.css'
 import './EnemyDefenseResistancePage.css'
 
 const NUMBER = new Intl.NumberFormat('ja-JP')
-const VIEWS = [['table', '範囲表'], ['rank', '順位表'], ['chart', 'グラフ']] as const
+const PERCENTAGE = new Intl.NumberFormat('ja-JP', {
+  style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2,
+})
+const VIEWS = [['table', '範囲表'], ['rank', '順位表'], ['resistance', '術耐性別'], ['chart', 'グラフ']] as const
 const DEFAULT_RANK_STEP = 10
 const MAX_RANK_PERCENTAGE = 100
 
@@ -45,12 +49,37 @@ export function EnemyDefenseResistancePage() {
           {view === 'table' && <EnemyDefenseResistanceTable bands={result.bands} />}
           {view === 'rank' && <EnemyDefenseResistanceRankTable result={result} step={rankStep} onStepChange={setRankStep}
             input={rankInput} onInputChange={setRankInput} aggregationVersion={aggregation.selectedId} onSaveImage={setImage} />}
+          {view === 'resistance' && <EnemyResistanceThresholdTable rows={result.resistanceThresholds} />}
           {view === 'chart' && <EnemyDefenseResistanceChart bands={result.bands} />}
         </> : <p role="status">集計対象の出現データがありません。</p>}
       </>}
     </EnemyDataContent>
     {image && <ComparisonTableImageDialog snapshot={image} onClose={() => setImage(null)} />}
   </section>
+}
+
+function EnemyResistanceThresholdTable({ rows }: { rows: readonly EnemyResistanceThreshold[] }) {
+  return <div className="damage-two-table-wrap" role="region" tabIndex={0} aria-label="術耐性別">
+    <table className="damage-two-table enemy-defense-resistance-table enemy-defense-resistance-threshold-table"
+      aria-label="術耐性10刻みの防御力対応表">
+      <thead>
+        <tr>
+          <th scope="col">術耐性（以上）</th>
+          <th scope="col">出現割合</th>
+          <th scope="col">同じ順位の防御力</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(({ resistance, percentage, defense }) => <tr key={resistance}>
+          <th scope="row">{NUMBER.format(resistance)}</th>
+          <td>{PERCENTAGE.format(percentage / 100)}</td>
+          <td aria-label={defense === null ? '該当なし' : undefined}>
+            {defense === null ? '—' : NUMBER.format(defense)}
+          </td>
+        </tr>)}
+      </tbody>
+    </table>
+  </div>
 }
 
 function EnemyDefenseResistanceRankTable({ result, step, onStepChange, input, onInputChange, aggregationVersion, onSaveImage }: {

@@ -53,6 +53,10 @@
   background: var(--surface);
 }
 
+.damage-two-table.enemy-defense-resistance-threshold-table tbody th {
+  text-align: right;
+}
+
 .damage-two-table.enemy-defense-resistance-rank-table thead th:first-child {
   text-align: left;
 }
