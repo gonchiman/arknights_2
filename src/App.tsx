@@ -82,6 +82,7 @@ const EnemyRegressionPage = lazy(() => import('./components/EnemyRegressionPage'
 const EnemyImmunityPage = lazy(() => import('./components/EnemyImmunityPage'))
 const EnemyDefenseResistancePage = lazy(() => import('./components/EnemyDefenseResistancePage').then((module) => ({ default: module.EnemyDefenseResistancePage })))
 const OperatorPcaPage = lazy(() => import('./components/OperatorPcaPage').then((module) => ({ default: module.OperatorPcaPage })))
+const OperatorWikiViewsPage = lazy(() => import('./components/OperatorWikiViewsPage').then((module) => ({ default: module.OperatorWikiViewsPage })))
 const SkillKMeansPage = lazy(() => import('./components/SkillKMeansPage').then((module) => ({ default: module.SkillKMeansPage })))
 const SkillHdbscanPage = lazy(() => import('./components/SkillHdbscanPage').then((module) => ({ default: module.SkillHdbscanPage })))
 const SkillHierarchicalPage = lazy(() => import('./components/SkillHierarchicalPage').then((module) => ({ default: module.SkillHierarchicalPage })))
@@ -354,6 +355,10 @@ export default function App() {
         ) : displayedRoute.view === 'operator-pca' ? (
           <Suspense fallback={<p className="calculator-loading" role="status">オペレーター主成分分析を読み込み中…</p>}>
             <OperatorPcaPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />
+          </Suspense>
+        ) : displayedRoute.view === 'operator-wiki-views' ? (
+          <Suspense fallback={<p className="calculator-loading" role="status">Wiki 閲覧数を読み込み中…</p>}>
+            <OperatorWikiViewsPage operators={operatorRecords} loading={loading} />
           </Suspense>
         ) : displayedRoute.view === 'code-analysis' ? (
           <CodeAnalysisPage />
