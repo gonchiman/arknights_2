@@ -21,7 +21,7 @@ test('同一の有効な敵集合を出現回数で重み付けし、同値が�
     row('a', 600, 50), row('missingDefense', null, 95), row('missingResistance', 9999, null),
     row('zeroWeight', 9999, 95), row('noCount', 9999, 95),
   ]
-  const { total, bands } = buildEnemyDefenseResistanceBands(rows,
+  const { total, bands, resistanceThresholds } = buildEnemyDefenseResistanceBands(rows,
     counts({ a: 3.5, b: 2.5, c: 2.25, d: 1.75, missingDefense: 100, missingResistance: 100, zeroWeight: 0 }))
   assert.equal(total, 10)
   assert.deepEqual(bands, [
@@ -35,6 +35,19 @@ test('同一の有効な敵集合を出現回数で重み付けし、同値が�
     { from: 70, to: 80, defense: { min: 300, max: 300 }, resistance: { min: 20, max: 20 } },
     { from: 80, to: 90, defense: { min: 0, max: 300 }, resistance: { min: 0, max: 20 } },
     { from: 90, to: 100, defense: { min: 0, max: 0 }, resistance: { min: 0, max: 0 } },
+  ])
+  assert.deepEqual(resistanceThresholds, [
+    { resistance: 0, percentage: 100, defense: 0 },
+    { resistance: 10, percentage: 82.5, defense: 300 },
+    { resistance: 20, percentage: 82.5, defense: 300 },
+    { resistance: 30, percentage: 35, defense: 600 },
+    { resistance: 40, percentage: 35, defense: 600 },
+    { resistance: 50, percentage: 35, defense: 600 },
+    { resistance: 60, percentage: 0, defense: null },
+    { resistance: 70, percentage: 0, defense: null },
+    { resistance: 80, percentage: 0, defense: null },
+    { resistance: 90, percentage: 0, defense: null },
+    { resistance: 100, percentage: 0, defense: null },
   ])
 })
 
@@ -67,10 +80,11 @@ test('小数の重みでも境界の順位と直前の帯の最小値が一致�
 })
 
 test('両方の基礎値を照合できる出現がなければ空の結果を返す', () => {
-  const { total, bands, getRank } = buildEnemyDefenseResistanceBands(
+  const { total, bands, resistanceThresholds, getRank } = buildEnemyDefenseResistanceBands(
     [row('a', null, 0), row('b', 0, 0)], counts({ a: 3, b: 0 }),
   )
   assert.equal(total, 0)
   assert.deepEqual(bands, [])
+  assert.deepEqual(resistanceThresholds, [])
   assert.equal(getRank(50), null)
 })
