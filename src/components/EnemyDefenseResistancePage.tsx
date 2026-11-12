@@ -1,7 +1,10 @@
 import { useId, useMemo, useState } from 'react'
-import { buildEnemyDefenseResistanceBands, type EnemyDefenseResistanceBand } from '../lib/enemyDefenseResistance'
+import {
+  buildEnemyDefenseResistanceBands, type EnemyDefenseResistanceBand, type EnemyDefenseResistanceRank,
+} from '../lib/enemyDefenseResistance'
 import { parseEcdfGuideInput } from '../lib/enemyEcdfGuides'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
+import { ComparisonTableImageDialog, type ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
 import { EnemyAggregationSelector } from './EnemyAggregationSelector'
 import { EnemyDefenseResistanceChart } from './EnemyDefenseResistanceChart'
 import { EnemyDataContent } from './EnemyPageShared'
@@ -22,6 +25,7 @@ export function EnemyDefenseResistancePage() {
   const [view, setView] = useState<typeof VIEWS[number][0]>('table')
   const [rankStep, setRankStep] = useState(DEFAULT_RANK_STEP)
   const [rankInput, setRankInput] = useState('')
+  const [image, setImage] = useState<ComparisonTableImageSnapshot | null>(null)
 
   return <section className="calculator-page enemy-analysis-route">
     <header className="page-intro">
@@ -40,20 +44,23 @@ export function EnemyDefenseResistancePage() {
           </div>
           {view === 'table' && <EnemyDefenseResistanceTable bands={result.bands} />}
           {view === 'rank' && <EnemyDefenseResistanceRankTable result={result} step={rankStep} onStepChange={setRankStep}
-            input={rankInput} onInputChange={setRankInput} />}
+            input={rankInput} onInputChange={setRankInput} aggregationVersion={aggregation.selectedId} onSaveImage={setImage} />}
           {view === 'chart' && <EnemyDefenseResistanceChart bands={result.bands} />}
         </> : <p role="status">集計対象の出現データがありません。</p>}
       </>}
     </EnemyDataContent>
+    {image && <ComparisonTableImageDialog snapshot={image} onClose={() => setImage(null)} />}
   </section>
 }
 
-function EnemyDefenseResistanceRankTable({ result, step, onStepChange, input, onInputChange }: {
+function EnemyDefenseResistanceRankTable({ result, step, onStepChange, input, onInputChange, aggregationVersion, onSaveImage }: {
   result: ReturnType<typeof buildEnemyDefenseResistanceBands>
   step: number
   onStepChange: (step: number) => void
   input: string
   onInputChange: (value: string) => void
+  aggregationVersion: string
+  onSaveImage: (snapshot: ComparisonTableImageSnapshot) => void
 }) {
   const [stepInput, setStepInput] = useState(String(step))
   const stepErrorId = useId()
@@ -64,6 +71,19 @@ function EnemyDefenseResistanceRankTable({ result, step, onStepChange, input, on
   for (let percentage = step; percentage < MAX_RANK_PERCENTAGE; percentage += step) percentages.add(percentage)
   if (value !== null) percentages.add(value)
   const ranks = [...percentages].sort((a, b) => a - b).map(result.getRank).filter(rank => rank !== null)
+  const table = <EnemyDefenseResistanceRankGrid ranks={ranks} selectedRank={value} />
+
+  function openImage() {
+    const stepConditions = [`刻み ${step}ポイント`]
+    if (value !== null) stepConditions.push(`指定順位 上位${value}%`)
+    const version = `集計版 ${aggregationVersion}`
+    onSaveImage({
+      title: '防御力と術耐性の順位表',
+      conditions: [version, `出現回数 ${NUMBER.format(result.total)}体`, ...stepConditions],
+      filenameConditions: [version, '出現回数', ...stepConditions],
+      table,
+    })
+  }
 
   return <>
     <div className="enemy-defense-resistance-rank-controls">
@@ -89,30 +109,39 @@ function EnemyDefenseResistanceRankTable({ result, step, onStepChange, input, on
       </label>
       {invalidStep && <span id={stepErrorId} className="error" role="alert">刻みは1〜100の整数で入力してください。</span>}
       {error && <span id={errorId} className="error" role="alert">{error}</span>}
+      <button type="button" className="button secondary" aria-label="順位表をPNG画像で保存"
+        aria-haspopup="dialog" disabled={invalidStep || !!error || !ranks.length} onClick={openImage}>画像を保存</button>
     </div>
     <div className="damage-two-table-wrap" role="region" tabIndex={0} aria-label="順位表">
-      <table className="damage-two-table enemy-defense-resistance-table enemy-defense-resistance-rank-table"
-        aria-label="指定順位の防御力と術耐性">
-        <colgroup><col className="enemy-defense-resistance-rank" /><col /><col /></colgroup>
-        <thead>
-          <tr>
-            <th scope="col">出現順位<wbr />（高い順）</th>
-            <th scope="col">防御力</th>
-            <th scope="col">術耐性</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ranks.map(({ percentage, defense, resistance }) => (
-            <tr key={percentage} className={percentage === value ? 'is-selected-rank' : undefined}>
-              <th scope="row">上位{percentage}%</th>
-              <td>{NUMBER.format(defense)}</td>
-              <td>{NUMBER.format(resistance)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {table}
     </div>
   </>
+}
+
+function EnemyDefenseResistanceRankGrid({ ranks, selectedRank }: {
+  ranks: readonly EnemyDefenseResistanceRank[]
+  selectedRank: number | null
+}) {
+  return <table className="damage-two-table enemy-defense-resistance-table enemy-defense-resistance-rank-table"
+    aria-label="指定順位の防御力と術耐性">
+    <colgroup><col className="enemy-defense-resistance-rank" /><col /><col /></colgroup>
+    <thead>
+      <tr>
+        <th scope="col">出現順位<wbr />（高い順）</th>
+        <th scope="col">防御力</th>
+        <th scope="col">術耐性</th>
+      </tr>
+    </thead>
+    <tbody>
+      {ranks.map(({ percentage, defense, resistance }) => (
+        <tr key={percentage} className={percentage === selectedRank ? 'is-selected-rank' : undefined}>
+          <th scope="row">上位{percentage}%</th>
+          <td data-table-image-number>{NUMBER.format(defense)}</td>
+          <td data-table-image-number>{NUMBER.format(resistance)}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
 }
 
 function isValidRankStep(step: number) {

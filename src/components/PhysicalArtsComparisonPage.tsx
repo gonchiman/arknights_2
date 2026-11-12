@@ -4,8 +4,8 @@ import {
   DamageCalculatorThreeAttributeChartImageDialog, type DamageCalculatorThreeAttributeChartImageSnapshot,
 } from './DamageCalculatorThreeAttributeChartImageDialog'
 import {
-  DamageCalculatorThreeAttributeImageDialog, type DamageCalculatorThreeAttributeImageSnapshot,
-} from './DamageCalculatorThreeAttributeImageDialog'
+  ComparisonTableImageDialog, type ComparisonTableImageSnapshot,
+} from './ComparisonTableImageDialog'
 import { AttributeButtons, DamageCalculatorThreeAttributeTable } from './DamageCalculatorThreeAttributePage'
 import {
   PHYSICAL_ARTS_RATING_EXTRA_HEIGHT, PhysicalArtsComparisonChart, PhysicalArtsComparisonImageLegend,
@@ -28,7 +28,7 @@ const RANGE_FIELDS = [
 ] as const
 const BOUNDS = [['min', '下限'], ['max', '上限']] as const
 type ResultImage =
-  | { view: 'table'; snapshot: DamageCalculatorThreeAttributeImageSnapshot }
+  | { view: 'table'; snapshot: ComparisonTableImageSnapshot }
   | { view: 'chart'; snapshot: DamageCalculatorThreeAttributeChartImageSnapshot }
 
 export default function PhysicalArtsComparisonPage() {
@@ -155,7 +155,7 @@ export default function PhysicalArtsComparisonPage() {
       {showChart ? <PhysicalArtsComparisonChart attack={attack} ranges={chartRanges} showRatings={showRatings} />
         : <DamageCalculatorThreeAttributeTable physical={physical} arts={arts} metric="perAttack" />}
     </section>
-    {image?.view === 'table' && <DamageCalculatorThreeAttributeImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
+    {image?.view === 'table' && <ComparisonTableImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
     {image?.view === 'chart' && <DamageCalculatorThreeAttributeChartImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
   </section>
 }

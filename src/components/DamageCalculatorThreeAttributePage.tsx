@@ -14,8 +14,8 @@ import { ElementalBuildupTable } from './ElementalBuildupTable'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { GuardConditionFields } from './DamageCalculatorThree'
 import {
-  DamageCalculatorThreeAttributeImageDialog, type DamageCalculatorThreeAttributeImageSnapshot,
-} from './DamageCalculatorThreeAttributeImageDialog'
+  ComparisonTableImageDialog, type ComparisonTableImageSnapshot,
+} from './ComparisonTableImageDialog'
 import {
   DamageCalculatorThreeAttributeChartImageDialog, type DamageCalculatorThreeAttributeChartImageSnapshot,
 } from './DamageCalculatorThreeAttributeChartImageDialog'
@@ -40,7 +40,7 @@ interface Props {
 type Metric = 'perAttack' | 'dps'
 type ResultView = 'table' | 'chart'
 type ResultImage =
-  | { view: 'table'; snapshot: DamageCalculatorThreeAttributeImageSnapshot }
+  | { view: 'table'; snapshot: ComparisonTableImageSnapshot }
   | { view: 'chart'; snapshot: DamageCalculatorThreeAttributeChartImageSnapshot }
 const METRIC_LABELS: Record<Metric, string> = { perAttack: '1回の攻撃ダメージ', dps: 'DPS' }
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
@@ -277,7 +277,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
         values: comparison.errors.length ? [] : comparison.reference.elementalBuildups,
       }]} />
     </CollapsibleCalculatorPanel>}
-    {image?.view === 'table' && <DamageCalculatorThreeAttributeImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
+    {image?.view === 'table' && <ComparisonTableImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
     {image?.view === 'chart' && <DamageCalculatorThreeAttributeChartImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
   </section>
 }

@@ -6,17 +6,18 @@ import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImag
 import { ComparisonTableImageFrame, ComparisonTableImagePreview } from './ComparisonTableImageFrame'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 
-export interface DamageCalculatorThreeAttributeImageSnapshot {
+export interface ComparisonTableImageSnapshot {
   title: string
   conditions: readonly string[]
+  filenameConditions?: readonly string[]
   table: ReactNode
 }
 
 const IMAGE_WIDTH = 720
 const IMAGE_ASPECT_PRESETS = ['16:9', '4:3', '1:1', '2:1', '9:16'] as const
 
-export function DamageCalculatorThreeAttributeImageDialog({ snapshot, onClose }: {
-  snapshot: DamageCalculatorThreeAttributeImageSnapshot
+export function ComparisonTableImageDialog({ snapshot, onClose }: {
+  snapshot: ComparisonTableImageSnapshot
   onClose: () => void
 }) {
   const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
@@ -32,7 +33,7 @@ export function DamageCalculatorThreeAttributeImageDialog({ snapshot, onClose }:
   const onLayoutReady = useCallback(() => setReadyRatio(ratioKey), [ratioKey])
   const onLayoutError = useCallback(() => setReadyRatio(null), [])
   const picker = getChartImageSavePicker()
-  const filename = createChartImageFilename(snapshot.title, snapshot.conditions)
+  const filename = createChartImageFilename(snapshot.title, snapshot.filenameConditions ?? snapshot.conditions)
   const frameProps = {
     initialWidth: IMAGE_WIDTH,
     ariaLabel: snapshot.title,

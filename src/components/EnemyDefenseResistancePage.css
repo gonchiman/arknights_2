@@ -62,6 +62,10 @@
   font-weight: 600;
 }
 
+.comparison-table-image-frame .enemy-defense-resistance-rank-table {
+  border: 1px solid var(--border);
+}
+
 @media (max-width: 480px) {
   .damage-two-table.enemy-defense-resistance-table th,
   .damage-two-table.enemy-defense-resistance-table td {
