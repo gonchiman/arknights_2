@@ -1,0 +1,47 @@
+name: Archive daily Wiki views
+
+on:
+  schedule:
+    - cron: '17 0 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: operator-wiki-views
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba825da76410c181273ba90b1 # v7.0.0
+        with:
+          ref: main
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v6.0.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Collect and archive Wiki views
+        run: npm run refresh:operator-wiki-views
+      - name: Save collected data
+        run: |
+          git add -- public/data/operator-wiki-views.json public/data/operator-wiki-views-history/
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Archive daily Wiki views"
+          git fetch origin refs/heads/main
+          git merge-base --is-ancestor HEAD^ FETCH_HEAD
+          git rebase FETCH_HEAD
+          git push origin HEAD:refs/heads/main
+      - name: Refresh the published site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
