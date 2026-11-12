@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { parseOperatorWikiViewSnapshot } from '../src/lib/operatorWikiViews.ts'
+import { saveOperatorWikiViewHistory } from './archiveOperatorWikiViews.mjs'
 
 const SNAPSHOT_PATH = fileURLToPath(new URL('../public/data/operator-wiki-views.json', import.meta.url))
 const STAGING_DIRECTORY = fileURLToPath(new URL('../.cache/', import.meta.url))
@@ -124,18 +125,24 @@ async function readJson(path) {
 }
 
 async function refreshOperatorWikiViews(mappingPath) {
+  const previous = await readJson(SNAPSHOT_PATH).then(parseOperatorWikiViewSnapshot).catch(error => {
+    if (mappingPath && error.code === 'ENOENT') return null
+    throw error
+  })
   const mapping = mappingPath
     ? await readJson(mappingPath)
-    : parseOperatorWikiViewSnapshot(await readJson(SNAPSHOT_PATH)).entries
+    : previous.entries
   const snapshot = await collectOperatorWikiViewSnapshot(mapping)
   // Keep completed acquisitions outside Vite's public directory until publication.
   await mkdir(STAGING_DIRECTORY, { recursive: true })
   const temporary = join(STAGING_DIRECTORY, `operator-wiki-views.${randomUUID()}.json`)
   await writeFile(temporary, `${JSON.stringify(snapshot, null, 2)}\n`, { flag: 'wx' })
   try {
+    if (previous) await saveOperatorWikiViewHistory(previous)
+    await saveOperatorWikiViewHistory(snapshot)
     await rename(temporary, SNAPSHOT_PATH)
   } catch (error) {
-    throw new Error(`Wiki 閲覧数を置き換えられませんでした。取得済みデータ: ${temporary}`, { cause: error })
+    throw new Error(`Wiki 閲覧数を保存できませんでした。取得済みデータ: ${temporary}`, { cause: error })
   }
   console.log(`Wiki 閲覧数を更新しました。${snapshot.entries.length}件、${snapshot.todayDate}取得分。`)
 }
