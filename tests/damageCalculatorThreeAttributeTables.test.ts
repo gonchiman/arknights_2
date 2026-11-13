@@ -7,6 +7,7 @@ import { getDamageThreeAttributeEntries } from '../src/lib/damageCalculatorThree
 import { evaluateDamageThreeComparisonEntry, type DamageThreeComparisonOverrides } from '../src/lib/damageCalculatorThreeComparison.ts'
 import {
   evaluateAttackAttributeTables,
+  evaluateDamageThreeAttributeRankTable,
   evaluateDamageThreeAttributeTables,
   type DamageThreeAttributeTableRow,
   type DamageThreeAttributeTablesInput,
@@ -81,6 +82,60 @@ function ordinary(value: DamageThreeAttributeTablesInput, type: 'PHYSICAL' | 'AR
 function close(actual: number | null, expected: number) {
   assert.ok(actual !== null && Math.abs(actual - expected) <= 1e-7 * Math.max(1, Math.abs(expected)), `${actual} != ${expected}`)
 }
+
+test('出現順位別の物理・術を同じ防御力と術耐性で計算し、弱点判定を維持する', () => {
+  const pair = { resistance: 60, defense: 1000 }
+  const exusiai = evaluateDamageThreeAttributeRankTable(input('char_103_angel', 3), [pair])
+  assert.deepEqual(exusiai.errors, [])
+  assert.deepEqual(exusiai.rows[0], { ...pair, physical: 183.425, arts: 1467.4 })
+
+  const chen = evaluateDamageThreeAttributeRankTable(input('char_1050_chen3', 1, 'active'), [pair])
+  assert.deepEqual(chen.errors, [])
+  assert.deepEqual(chen.rows[0], { ...pair, physical: 1588, arts: 1588 })
+})
+
+test('出現順位別でも防御力由来の追加攻撃を除外し、無視効果の設定を適用する', () => {
+  const pair = { resistance: 20, defense: 500 }
+  const ceobeInput = input('char_2013_cerber', 2)
+  const ceobe = evaluateDamageThreeAttributeRankTable(ceobeInput, [pair])
+  assert.deepEqual(ceobe.errors, [])
+  for (const [type, damage] of [['PHYSICAL', ceobe.rows[0].physical], ['ARTS', ceobe.rows[0].arts]] as const) {
+    const result = evaluateDamageThreeComparisonEntry(ceobeInput.entry, { ...pair, enemyCount: 1 }, {}, { virtualMainAttackType: type })
+    assert.deepEqual(result.errors, [])
+    const main = result.output!.rows[0].attackComponents.filter(component => component.role === 'MAIN')
+    close(damage, main.reduce((sum, component) => sum + component.expectedDamage, 0))
+    assert.ok(damage! < result.perAttack!)
+  }
+
+  const surtr = input('char_350_surtr', 2)
+  const on = evaluateDamageThreeAttributeRankTable(surtr, [pair])
+  const off = evaluateDamageThreeAttributeRankTable({ ...surtr, disablePenetration: true }, [pair])
+  assert.deepEqual([...on.errors, ...off.errors], [])
+  assert.equal(off.rows[0].physical, on.rows[0].physical)
+  close(off.rows[0].arts, on.rows[0].arts! * 0.8)
+})
+
+test('出現順位別の表は対応なし・計算エラー・正常な0ダメージを区別する', () => {
+  const validPair = { resistance: 60, defense: 1000 }
+  const missingPair = { resistance: 100, defense: null }
+  const invalidPair = { resistance: 101, defense: 2000 }
+  const value = input('char_456_ash', 3, undefined, { 'guard.contactHit': false, 'guard.explosionHit': false })
+  const noMatch = evaluateDamageThreeAttributeRankTable(value, [missingPair])
+  assert.deepEqual(noMatch.errors, [])
+  assert.deepEqual(noMatch.rows, [{ ...missingPair, physical: null, arts: null }])
+
+  const rows = evaluateDamageThreeAttributeRankTable(value, [invalidPair, missingPair, validPair])
+  assert.ok(rows.errors.some(error => error.includes('術耐性')))
+  assert.deepEqual(rows.rows, [
+    { ...invalidPair, physical: null, arts: null },
+    { ...missingPair, physical: null, arts: null },
+    { ...validPair, physical: 0, arts: 0 },
+  ])
+
+  const periodic = evaluateDamageThreeAttributeRankTable(input('char_134_ifrit', 3), [validPair])
+  assert.deepEqual(periodic.errors, ['継続ダメージのみの段階は、1回の攻撃ダメージを表示できません。'])
+  assert.deepEqual(periodic.rows, [{ ...validPair, physical: null, arts: null }])
+})
 
 test('攻撃力のみの属性比較は評価の境界と最低保証を使って一撃ダメージの範囲を求める', () => {
   const { physical, arts } = evaluateAttackAttributeTables(1000)
@@ -349,7 +404,7 @@ test('全8グループの仮想対応段階は直接攻撃を欠落なく表示�
     const output = evaluateDamageThreeAttributeTables({ entry, enemyCount: 1 })
     const main = entry.structure.guardRecipe?.stages.find(stage => stage.id === entry.stageId)?.actions.filter(action => action.role === 'MAIN') ?? []
     if (main.length > 0 && main.every(action => action.timing === 'PER_SECOND')) {
-      assert.deepEqual(output.errors, ['継続ダメージのみの段階は、1回の攻撃・通常攻撃DPSの範囲表に対応していません。'], entry.key)
+      assert.deepEqual(output.errors, ['継続ダメージのみの段階は、1回の攻撃ダメージを表示できません。'], entry.key)
       assert.ok([...output.physical, ...output.arts].every(row => row.perAttack === null && row.dps === null), entry.key)
       assert.deepEqual(output.reference, reference)
       periodicOnlyIds.push(entry.key)

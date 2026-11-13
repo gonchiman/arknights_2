@@ -2,26 +2,25 @@ import { useMemo, useState } from 'react'
 import {
   getDamageThreeAttributeEntries, type DamageThreeAttributeEntry,
 } from '../lib/damageCalculatorThreeAttributeComparison'
-import { evaluateDamageThreeAttributeTables, type DamageThreeAttributeTableRow } from '../lib/damageCalculatorThreeAttributeTables'
+import {
+  evaluateDamageThreeAttributeRankTable, evaluateDamageThreeAttributeTables,
+  type DamageThreeAttributeRankRow, type DamageThreeAttributeTableRow,
+} from '../lib/damageCalculatorThreeAttributeTables'
 import type { DamageThreeComparisonOverrides } from '../lib/damageCalculatorThreeComparison'
 import { buildDamageCalculatorThreeSkillInformation } from '../lib/damageCalculatorThreeSkillInformation'
+import { buildEnemyDefenseResistanceBands } from '../lib/enemyDefenseResistance'
 import { getEnemyRatingRanges } from '../lib/enemyStatRatings'
 import type { GuardInput } from '../lib/guardCombatTypes'
 import type { SkillStructureSelection } from '../lib/skillStructure'
+import { useEnemyAggregation } from '../lib/useEnemyAggregation'
 import type { SkillRecord } from '../types/skill'
 import { AnalysisTabs } from './AnalysisTabs'
-import { ElementalBuildupTable } from './ElementalBuildupTable'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { GuardConditionFields } from './DamageCalculatorThree'
 import {
   ComparisonTableImageDialog, type ComparisonTableImageSnapshot,
 } from './ComparisonTableImageDialog'
-import {
-  DamageCalculatorThreeAttributeChartImageDialog, type DamageCalculatorThreeAttributeChartImageSnapshot,
-} from './DamageCalculatorThreeAttributeChartImageDialog'
-import {
-  DamageCalculatorThreeAttributeRangeChart, DamageCalculatorThreeAttributeRangeLegend,
-} from './DamageCalculatorThreeAttributeRangeChart'
+import { EnemyAggregationSelector, EnemyAggregationStatus } from './EnemyAggregationSelector'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
 import { OperatorDetailLink } from './OperatorDetailLink'
 import { PersistentDetails } from './PersistentDetails'
@@ -38,14 +37,11 @@ interface Props {
 }
 
 type Metric = 'perAttack' | 'dps'
-type ResultView = 'table' | 'chart'
-type ResultImage =
-  | { view: 'table'; snapshot: ComparisonTableImageSnapshot }
-  | { view: 'chart'; snapshot: DamageCalculatorThreeAttributeChartImageSnapshot }
 const METRIC_LABELS: Record<Metric, string> = { perAttack: '1回の攻撃ダメージ', dps: 'DPS' }
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 const TABLE_NUMBER = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 const TABLE_RATINGS = getEnemyRatingRanges('defense').map(({ rating }) => rating)
+const COMPARISON_BASES = [['rating', 'ゲーム内評価'], ['rank', '出現順位']] as const
 const SKILL_TAB_ID = 'damage-three-attribute-skill'
 
 function sameSkill(entry: DamageThreeAttributeEntry, selection: SkillStructureSelection) {
@@ -72,11 +68,14 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const [enemyCount, setEnemyCount] = useState(1)
   const [applyPenetration, setApplyPenetration] = useState(true)
   const [overrides, setOverrides] = useState<DamageThreeComparisonOverrides>({})
-  const [metric, setMetric] = useState<Metric>('dps')
-  const [resultView, setResultView] = useState<ResultView>('table')
-  const [image, setImage] = useState<ResultImage | null>(null)
+  const [basis, setBasis] = useState<typeof COMPARISON_BASES[number][0]>('rating')
+  const [image, setImage] = useState<ComparisonTableImageSnapshot | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [filters, setFilters] = useState({ ...EMPTY_OPERATOR_FILTERS })
+  const aggregation = useEnemyAggregation({ enabled: basis === 'rank' })
+  const rankPairs = useMemo(() => aggregation.data
+    ? buildEnemyDefenseResistanceBands(aggregation.data.rows, aggregation.data.counts).resistanceThresholds
+    : null, [aggregation.data])
   const requested = selection ?? (entries.find(entry => entry.capability.supported) ?? entries[0])?.structure.basicInfo
   const stages = requested ? entries.filter(entry => sameSkill(entry, requested)) : []
   const selected = stages.find(entry => entry.stageId === stageId)
@@ -86,23 +85,25 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const level = operatorLevel ?? selected?.operatorLevel ?? 1
   const levelInvalid = !Number.isSafeInteger(level) || level < 1 || level > (selected?.operatorLevel ?? 1)
   const trustInvalid = !Number.isFinite(trust) || trust < 0 || trust > 100
-  const comparison = useMemo(() => selected ? evaluateDamageThreeAttributeTables({
-    entry: selected, enemyCount, overrides, operatorLevel: level, trust, disablePenetration: !applyPenetration,
-  }) : null, [selected, enemyCount, overrides, level, trust, applyPenetration])
-  const output = comparison?.reference.output
-  const conditionInputs: GuardInput[] = (comparison?.reference.fields ?? []).filter(field => !field.locked)
+  const comparison = useMemo(() => {
+    if (!selected) return null
+    const input = { entry: selected, enemyCount, overrides, operatorLevel: level, trust, disablePenetration: !applyPenetration }
+    return basis === 'rank'
+      ? { basis, result: evaluateDamageThreeAttributeRankTable(input, rankPairs ?? []) }
+      : { basis, result: evaluateDamageThreeAttributeTables(input) }
+  }, [selected, enemyCount, overrides, level, trust, applyPenetration, basis, rankPairs])
+  const reference = comparison?.result.reference
+  const output = reference?.output
+  const errors = comparison?.result.errors ?? []
+  const canSaveImage = comparison !== null && errors.length === 0
+    && (comparison.basis === 'rating' || comparison.result.rows.length > 0)
+  const conditionInputs: GuardInput[] = (reference?.fields ?? []).filter(field => !field.locked)
     .map(field => ({ ...field, defaultValue: field.value ?? (field.kind === 'number' ? Number.NaN : '') }))
-  const mainType = output?.mainAttackType
-  const originalLabel = mainType === 'PHYSICAL' ? '物理' : mainType === 'ARTS' ? '術'
-    : mainType === 'TRUE' ? '確定' : mainType === 'ELEMENTAL' ? '元素' : output?.rows.length ? '混合' : '未確定'
-  const hasDps = comparison?.canShowDps ?? false
-  const activeMetric = hasDps ? metric : 'perAttack'
   const growthConditions = selected ? [`昇進${selected.phaseIndex} Lv.${formatNumber(level)}`,
     `信頼${formatNumber(trust)}`, '潜在1', '未装備'] : []
 
   function openImage() {
-    if (!selected || !comparison || comparison.errors.length > 0) return
-    const { reference, physical, arts } = comparison
+    if (!selected || !comparison || !reference || !canSaveImage) return
     const penetrationConditions = applyPenetration ? [] : ['防御力・術耐性無視オフ']
     const conditions = [selected.structure.basicInfo.skillLevel, ...penetrationConditions, ...growthConditions, `敵${enemyCount}体`]
     if (reference.actualTargetCount !== null && reference.actualTargetCount !== enemyCount) {
@@ -115,32 +116,19 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
         ?? (typeof value === 'boolean' ? value ? 'あり' : 'なし' : String(value))
       conditions.push(`${field.label} ${label}`)
     }
-    conditions.push('ゲーム内評価', '仮想比較', '主攻撃のみ', '1体あたり')
-    const imageRows = structuredClone({ physical, arts })
+    const basisConditions = comparison.basis === 'rank' ? ['出現順位', `集計版 ${aggregation.selectedId}`] : ['ゲーム内評価']
+    const notes = ['仮想比較', '主攻撃のみ', '1体あたり']
+    const table = comparison.basis === 'rank'
+      ? <DamageCalculatorThreeAttributeRankTable rows={structuredClone(comparison.result.rows)} forImage />
+      : <DamageCalculatorThreeAttributeTable physical={structuredClone(comparison.result.physical)}
+          arts={structuredClone(comparison.result.arts)} metric="perAttack" forImage />
     const subject = `${selected.skill.operatorName} S${selected.skill.skillIndex}`
-    const metricLabel = METRIC_LABELS[activeMetric]
-    if (resultView === 'chart') {
-      setImage({ view: 'chart', snapshot: {
-        title: `${subject} 属性比較グラフ（${metricLabel}）`,
-        conditions: [
-          selected.structure.basicInfo.skillLevel,
-          ...(stages.length > 1 ? [selected.stageLabel] : []),
-          ...(enemyCount > 1 ? [`敵${enemyCount}体`] : []),
-          ...penetrationConditions,
-          '仮想比較',
-          '主攻撃（1体あたり）',
-        ],
-        filenameParts: conditions,
-        legend: <DamageCalculatorThreeAttributeRangeLegend forImage />,
-        chart: ({ height }) => <DamageCalculatorThreeAttributeRangeChart {...imageRows} metric={activeMetric} imageHeight={height} />,
-      } })
-      return
-    }
-    setImage({ view: 'table', snapshot: {
-      title: `${subject} 属性比較（${metricLabel}）`,
-      conditions,
-      table: <DamageCalculatorThreeAttributeTable {...imageRows} metric={activeMetric} forImage />,
-    } })
+    setImage({
+      title: `${subject} 属性比較（${METRIC_LABELS.perAttack}）`,
+      conditions: [...conditions, ...basisConditions, ...notes],
+      filenameConditions: comparison.basis === 'rank' ? [...basisConditions, ...conditions, ...notes] : undefined,
+      table,
+    })
   }
 
   function chooseSkill(entry: DamageThreeAttributeEntry) {
@@ -245,40 +233,37 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
     </CollapsibleCalculatorPanel>
 
     {selected && comparison && <CollapsibleCalculatorPanel id="damage-three-attribute-results" number="02" title="属性比較"
-      titleBadge="仮想比較 · 主攻撃のみ" summary={`${METRIC_LABELS[activeMetric]} · 1体あたり`} collapsedLabel="比較を表示">
+      titleBadge="仮想比較 · 主攻撃のみ" summary={`${METRIC_LABELS.perAttack} · 1体あたり`} collapsedLabel="比較を表示">
       <div className="damage-three-attribute-context">
         <strong>{selected.skill.operatorName} S{selected.skill.skillIndex} · {selected.structure.basicInfo.skillLevel}</strong>
         <span>{growthConditions.join(' · ')}</span>
       </div>
       <div className="damage-three-attribute-toolbar">
-        <AttributeButtons label="表示形式" options={[["table", "表"], ["chart", "グラフ"]]}
-          value={resultView} onChange={setResultView} />
-        {hasDps ? <AttributeButtons label="表示指標" options={[["dps", "DPS"], ["perAttack", "1回の攻撃ダメージ"]]}
-          value={activeMetric} onChange={setMetric} /> : <strong className="damage-three-attribute-fixed-metric">1回の攻撃ダメージ</strong>}
+        <AttributeButtons label="対応基準" options={COMPARISON_BASES} value={basis} onChange={setBasis} />
+        {basis === 'rank' && <EnemyAggregationSelector state={aggregation} />}
+      </div>
+      <div className="damage-three-attribute-toolbar">
+        <strong className="damage-three-attribute-fixed-metric">{METRIC_LABELS.perAttack}</strong>
         <span className="damage-three-attribute-target">1体あたり</span>
         <label className="damage-three-attribute-penetration-toggle">
           <input type="checkbox" checked={applyPenetration} onChange={event => setApplyPenetration(event.target.checked)} />
           防御力・術耐性無視を適用
         </label>
         <button type="button" className="button secondary damage-three-attribute-image-button"
-          aria-label={resultView === 'table' ? '属性比較表をPNG画像で保存' : '属性比較グラフをPNG画像で保存'}
-          aria-haspopup="dialog" disabled={comparison.errors.length > 0} onClick={openImage}>画像を保存</button>
+          aria-label="属性比較表をPNG画像で保存"
+          aria-haspopup="dialog" disabled={!canSaveImage} onClick={openImage}>画像を保存</button>
       </div>
-      {comparison.errors.length > 0 && <div className="damage-two-unavailable damage-three-attribute-error" role="status">
-        {comparison.errors.map(reason => <div key={reason}>{reason}</div>)}
+      {errors.length > 0 && <div className="damage-two-unavailable damage-three-attribute-error" role="status">
+        {errors.map(reason => <div key={reason}>{reason}</div>)}
       </div>}
-      {resultView === 'table'
-        ? <DamageCalculatorThreeAttributeTable physical={comparison.physical} arts={comparison.arts}
-          metric={activeMetric} invalid={comparison.errors.length > 0} />
-        : <DamageCalculatorThreeAttributeRangeChart physical={comparison.physical} arts={comparison.arts}
-          metric={activeMetric} invalid={comparison.errors.length > 0} />}
-      <ElementalBuildupTable groups={[{
-        label: `本来（${originalLabel}） · 防御力 0 · 術耐性 0`,
-        values: comparison.errors.length ? [] : comparison.reference.elementalBuildups,
-      }]} />
+      {comparison.basis === 'rating' ? <DamageCalculatorThreeAttributeTable
+        physical={comparison.result.physical} arts={comparison.result.arts} metric="perAttack" invalid={errors.length > 0} /> : <>
+        <EnemyAggregationStatus state={aggregation} />
+        {rankPairs && (rankPairs.length ? <DamageCalculatorThreeAttributeRankTable rows={comparison.result.rows} />
+          : <p role="status">集計対象の出現データがありません。</p>)}
+      </>}
     </CollapsibleCalculatorPanel>}
-    {image?.view === 'table' && <ComparisonTableImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
-    {image?.view === 'chart' && <DamageCalculatorThreeAttributeChartImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
+    {image && <ComparisonTableImageDialog snapshot={image} onClose={() => setImage(null)} />}
   </section>
 }
 
@@ -293,6 +278,27 @@ export function AttributeButtons<T extends string>({ label, options, value, onCh
 
 function formatNumber(value: number | null) {
   return value === null || !Number.isFinite(value) ? '—' : NUMBER.format(value)
+}
+
+function DamageCalculatorThreeAttributeRankTable({ rows, forImage = false }: {
+  rows: readonly DamageThreeAttributeRankRow[]; forImage?: boolean
+}) {
+  const label = '出現順位で対応した1回の攻撃ダメージ（1体あたり）'
+  const table = <table className={`damage-two-table damage-three-attribute-table damage-three-attribute-rank-table${forImage ? ' damage-three-attribute-table-image' : ''}`}
+    aria-label={label}>
+    <thead><tr>
+      <th scope="col">術耐性</th><th scope="col">対応する防御力</th><th scope="col">物理</th><th scope="col">術</th>
+    </tr></thead>
+    <tbody>{rows.map(({ resistance, defense, physical, arts }) => <tr key={resistance}>
+      <th scope="row" className="damage-three-attribute-rating-cell" data-table-image-number>{formatNumber(resistance)}</th>
+      <td data-table-image-number>{formatNumber(defense)}</td>
+      <td data-table-image-number>{physical === null ? '—' : TABLE_NUMBER.format(physical)}</td>
+      <td data-table-image-number>{arts === null ? '—' : TABLE_NUMBER.format(arts)}</td>
+    </tr>)}</tbody>
+  </table>
+  return forImage ? table : <div className="damage-two-table-wrap" role="region" aria-label="出現順位の属性比較表" tabIndex={0}>
+    {table}
+  </div>
 }
 
 export function DamageCalculatorThreeAttributeTable({ physical, arts, metric, invalid = false, forImage = false }: {

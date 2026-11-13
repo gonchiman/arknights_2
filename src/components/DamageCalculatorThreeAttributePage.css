@@ -165,6 +165,14 @@
   border-spacing: 0;
 }
 
+.damage-two-table.damage-three-attribute-rank-table {
+  min-width: 300px;
+}
+
+.damage-three-attribute-rank-table thead th {
+  overflow-wrap: anywhere;
+}
+
 .damage-three-attribute-rating-column {
   width: 40px;
 }
