@@ -19,6 +19,8 @@ interface Props {
   onChange: (next: FilterState) => void
   onReset: () => void
   searchPlaceholder?: string
+  searchLabel?: string
+  searchFirst?: boolean
   showNameInitial?: boolean
   showSearch?: boolean
   headingLabel?: string | null
@@ -31,11 +33,29 @@ export function Filters({
   onChange,
   onReset,
   searchPlaceholder = 'オペレーター名・スキル名・説明文で検索',
+  searchLabel = '文字検索',
+  searchFirst = false,
   showNameInitial = true,
   showSearch = true,
   headingLabel = '検索条件',
 }: Props) {
   const hasActiveFilters = hasActiveOperatorFilters(value)
+  const reset = (
+    <button type="button" className="filter-reset-button" disabled={!hasActiveFilters} onClick={onReset}>
+      条件をリセット
+    </button>
+  )
+  const search = showSearch && (
+    <label className="search-filter">
+      <span className="initial-filter-label">{searchLabel}</span>
+      <input
+        className="search"
+        value={value.query}
+        onChange={(event) => onChange({ ...value, query: event.target.value })}
+        placeholder={searchPlaceholder}
+      />
+    </label>
+  )
 
   const changeProfession = (profession: string | 'ALL') => onChange({
     ...value,
@@ -45,16 +65,9 @@ export function Filters({
 
   return (
     <div className="filters">
-      {headingLabel !== null && <div className="filters-heading">
+      {searchFirst ? <div className="filters-search-first">{search}{reset}</div> : headingLabel !== null && <div className="filters-heading">
         {headingLabel && <span>{headingLabel}</span>}
-        <button
-          type="button"
-          className="filter-reset-button"
-          disabled={!hasActiveFilters}
-          onClick={onReset}
-        >
-          条件をリセット
-        </button>
+        {reset}
       </div>}
       {showNameInitial && <div className="initial-filter" role="group" aria-label="オペレーター名の頭文字">
         <span className="initial-filter-label">頭文字</span>
@@ -157,15 +170,7 @@ export function Filters({
           </button>
         ))}
       </div>
-      {showSearch && <label className="search-filter">
-        <span className="initial-filter-label">文字検索</span>
-        <input
-          className="search"
-          value={value.query}
-          onChange={(event) => onChange({ ...value, query: event.target.value })}
-          placeholder={searchPlaceholder}
-        />
-      </label>}
+      {!searchFirst && search}
     </div>
   )
 }

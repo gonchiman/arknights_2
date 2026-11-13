@@ -235,6 +235,18 @@ a { color: var(--link); }
 
 .search-filter .initial-filter-label { margin: 0; }
 
+.filters-search-first {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.filters-search-first .search-filter { flex: 1 1 210px; padding: 0; }
+.filters-search-first .filter-reset-button { white-space: nowrap; }
+
 .filters input, .filters select, .skill-classification-content select {
   width: 100%;
   min-width: 0;

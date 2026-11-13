@@ -123,8 +123,9 @@ export function buildOperatorDatabaseRecords(rows: SkillRecord[]): OperatorDatab
 }
 
 export function filterOperatorDatabaseRecords(
-  records: OperatorDatabaseRecord[],
+  records: readonly OperatorDatabaseRecord[],
   filters: OperatorDatabaseFilters,
+  searchScope: 'all' | 'name' = 'all',
 ): OperatorDatabaseRecord[] {
   const query = normalizeSearchText(filters.query)
 
@@ -134,6 +135,7 @@ export function filterOperatorDatabaseRecords(
     if (filters.subProfession !== 'ALL' && record.subProfessionId !== filters.subProfession) return false
     if (filters.rarity !== 'ALL' && record.rarity !== filters.rarity) return false
     if (!query) return true
+    if (searchScope === 'name') return normalizeSearchText(record.name).includes(query)
 
     const searchTarget = normalizeSearchText([
       record.name,
