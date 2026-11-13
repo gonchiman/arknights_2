@@ -1,7 +1,6 @@
 import type { RawOperatorModule, SkillRecord } from '../types/skill.ts'
 import { COVERAGE_STATUS_LABELS, type DamageCalculatorThreeCoverageRow, type DamageCalculatorThreeCoverageStatus } from './damageCalculatorThreeCoverage.ts'
-import { applyOperatorModule, getOperatorModuleId, getOperatorModuleLevels, getOperatorModules } from './operatorModules.ts'
-import { getOperatorPassives } from './operatorProfile.ts'
+import { getOperatorModuleId, getOperatorModuleLevels, getOperatorModules } from './operatorModules.ts'
 
 export const MODULE_COVERAGE_LEVELS = [1, 2, 3] as const
 export const MODULE_COVERAGE_STATUSES = ['SUPPORTED', 'CONDITIONAL', 'PENDING', 'UNSTARTED', 'NOT_APPLICABLE'] as const
@@ -101,21 +100,4 @@ export function summarizeDamageCalculatorThreeModuleCoverage(rows: readonly Dama
     }
   }
   return { rowCount: rows.length, stageCount, levels }
-}
-
-export function getDamageCalculatorThreeModuleStageDetails(
-  row: DamageCalculatorThreeModuleCoverageRow,
-  level: DamageCalculatorThreeModuleLevel,
-) {
-  if (!getOperatorModuleLevels(row.module).includes(level)) return { available: false, attributes: [], changes: [] }
-  const profile = row.skill.operatorProfile
-  const phaseIndex = Math.max(0, profile.phases.length - 1)
-  const levelCap = profile.phases[phaseIndex]?.maxLevel ?? 1
-  const basePassives = getOperatorPassives(profile, phaseIndex, levelCap, 1)
-  const { attributeEffects, changes } = applyOperatorModule(basePassives, row.module, level, 1)
-  return {
-    available: true,
-    attributes: attributeEffects.map(({ label, valueLabel }) => ({ label, valueLabel })),
-    changes: changes.map(({ label, description }) => ({ label, description })),
-  }
 }

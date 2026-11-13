@@ -1,5 +1,6 @@
 import { useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { createTalentStructureHash, type TalentRouteSelection } from '../lib/routes'
+import { getTalentModuleComparisons, type TalentModuleComparison } from '../lib/moduleEffectStructure'
 import { TALENT_COARSE_CATEGORY_LABELS } from '../lib/talentCoarseClassification'
 import {
   TALENT_STRUCTURE_OPERATOR_IDS,
@@ -35,6 +36,7 @@ const TABS = [
   ['activation', '適用・発動'], ['structure', '効果構造'],
 ] as const
 type StructureTab = typeof TABS[number][0]
+const talentModuleOptionValue = ({ moduleId, level }: TalentModuleComparison) => `${moduleId}:${level}`
 
 export function TalentStructurePage({ rows, loading, initialSelection, invalidSelection = false }: Props) {
   const [activeTab, setActiveTab] = useState<StructureTab>('structure')
@@ -47,6 +49,12 @@ export function TalentStructurePage({ rows, loading, initialSelection, invalidSe
   const selection = invalidSelection ? null : initialSelection ?? DEFAULT_SELECTION
   const structure = selection ? findTalentStructure(selection, structures) : null
   const selectedOperator = selection ? supportedRows.find(row => row.operatorId === selection.operatorId) : undefined
+  const moduleOptions = useMemo(() => selectedOperator && structure
+    ? getTalentModuleComparisons(selectedOperator, structure.basicInfo.talentIndex)
+      .filter(option => structure.effects.some(effect => effect.id === option.effectId && effect.value === option.baseValue))
+    : [], [selectedOperator, structure])
+  const selectedModule = moduleOptions.find(option => option.moduleId === selection?.moduleId && option.level === selection?.moduleLevel)
+  const missingModule = !loading && Boolean(structure && selection?.moduleId && !selectedModule)
   const operatorTalents = structures.filter(candidate => candidate.basicInfo.operatorId === selection?.operatorId)
     .sort((a, b) => a.basicInfo.talentIndex - b.basicInfo.talentIndex)
   const missingSelection = !loading && !structure
@@ -84,9 +92,25 @@ export function TalentStructurePage({ rows, loading, initialSelection, invalidSe
             </button>
           </div>
           <div className="skill-effects-field talent-structure-condition-field">
-            <span>表示条件</span><strong className="skill-effects-fixed-level">最大昇進・最大Lv・潜在1・MODなし</strong>
+            <span>表示条件</span>
+            <strong className="skill-effects-fixed-level">最大昇進・最大Lv・潜在1{moduleOptions.length === 0 && '・MODなし'}</strong>
           </div>
+          {moduleOptions.length > 0 && selection && <label className="skill-effects-field skill-effects-level-field talent-structure-module-field">
+            <span>MOD</span>
+            <select value={selectedModule ? talentModuleOptionValue(selectedModule) : ''} onChange={event => {
+              const option = moduleOptions.find(candidate => talentModuleOptionValue(candidate) === event.target.value)
+              const { operatorId, talentIndex } = selection
+              chooseTalent(option ? { operatorId, talentIndex, moduleId: option.moduleId, moduleLevel: option.level }
+                : { operatorId, talentIndex })
+            }}>
+              <option value="">未装備</option>
+              {moduleOptions.map(option => <option key={talentModuleOptionValue(option)} value={talentModuleOptionValue(option)}>
+                {option.moduleLabel}
+              </option>)}
+            </select>
+          </label>}
         </div>
+        {missingModule && <div className="skill-effects-notice" role="status"><strong>指定されたMODの効果を表示できません</strong></div>}
         {searchVisible && <div id={searchId} className="skill-effects-operator-search">
           <div className="skill-effects-search-heading"><strong>オペレーターを検索</strong>
             <button type="button" onClick={() => setOperatorSearchOpen(false)}>閉じる</button></div>
@@ -106,13 +130,15 @@ export function TalentStructurePage({ rows, loading, initialSelection, invalidSe
               const active = structure?.basicInfo.talentIndex === basic.talentIndex
               return <button type="button" key={basic.talentIndex} className={active ? 'active' : ''}
                 aria-pressed={active} aria-label={`素質${basic.talentIndex + 1} ${basic.talentName}`}
-                onClick={() => chooseTalent(basic)}>
+                onClick={() => { if (!active) chooseTalent(basic) }}>
                 <span>素質{basic.talentIndex + 1}</span><strong>{basic.talentName}</strong>
               </button>
             })}
           </div>
         </div>}
-        {structure && <section className="skill-structure-description talent-structure-description" aria-label="素質説明文"><p>{structure.source.description}</p></section>}
+        {structure && <section className="skill-structure-description talent-structure-description" aria-label="素質説明文">
+          <p>{selectedModule?.equippedDescription || structure.source.description}</p>
+        </section>}
       </section>
       {structure && <>
         {structure.issues.length > 0 && <div className="skill-effects-notice" role="status">
@@ -120,14 +146,15 @@ export function TalentStructurePage({ rows, loading, initialSelection, invalidSe
           <ul>{structure.issues.map(issue => <li key={issue}>{issue}</li>)}</ul>
         </div>}
         <TalentStructureContent key={`${structure.basicInfo.operatorId}:${structure.basicInfo.talentIndex}`}
-          structure={structure} activeTab={activeTab} onTabChange={setActiveTab} />
+          structure={structure} selectedModule={selectedModule} activeTab={activeTab} onTabChange={setActiveTab} />
       </>}
     </>}
   </section>
 }
 
-function TalentStructureContent({ structure, activeTab, onTabChange }: {
+function TalentStructureContent({ structure, selectedModule, activeTab, onTabChange }: {
   structure: TalentStructure
+  selectedModule?: TalentModuleComparison
   activeTab: StructureTab
   onTabChange: (tab: StructureTab) => void
 }) {
@@ -136,6 +163,13 @@ function TalentStructureContent({ structure, activeTab, onTabChange }: {
   const effectTriggerRef = useRef<HTMLButtonElement | null>(null)
   const b = structure.basicInfo
   const caption = `${b.operatorName} 素質${b.talentIndex + 1} ${b.talentName}`
+  const notes = selectedModule
+    ? structure.notes.filter(note => note !== '表示中の昇進・レベル・潜在1・モジュールなしの素質を構造化する。')
+    : structure.notes
+  const equippedEffect = (effect: TalentStructureEffect): TalentStructureEffect =>
+    selectedModule?.effectId === effect.id && effect.item === 'RESISTANCE_IGNORE_FIXED'
+      ? { ...effect, value: selectedModule.equippedValue }
+      : effect
   const changeTabWithKeyboard = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     let nextIndex: number | null = null
     if (event.key === 'ArrowRight') nextIndex = (index + 1) % TABS.length
@@ -154,7 +188,7 @@ function TalentStructureContent({ structure, activeTab, onTabChange }: {
       headers={['オペレーター', '素質番号', '素質名', '昇進段階', 'レベル', '潜在', 'MOD']}
       className="talent-structure-basic-table">
       <tr><td>{b.operatorName}</td><td>{b.talentIndex + 1}</td><td>{b.talentName}</td>
-        <td>昇進{b.phaseIndex}</td><td>{b.operatorLevel}</td><td>{b.potentialRank}</td><td>未装備</td></tr>
+        <td>昇進{b.phaseIndex}</td><td>{b.operatorLevel}</td><td>{b.potentialRank}</td><td>{selectedModule?.moduleLabel ?? '未装備'}</td></tr>
     </StructureTable>,
     classification: <StructureTable caption={`${caption}の分類情報`} headers={['大分類']}>
       {structure.classificationInfo.coarseCategories.map(category => <tr key={category}><td>{TALENT_COARSE_CATEGORY_LABELS[category]}</td></tr>)}
@@ -166,8 +200,9 @@ function TalentStructureContent({ structure, activeTab, onTabChange }: {
     </StructureTable>,
     structure: <>
       <h3 className="skill-structure-subheading">効果一覧</h3>
-      <StructureTable caption={`${caption}の効果一覧`} headers={['タイミング', '条件', '対象', '項目', '演算', '値']}
-        className="talent-structure-effects-table">
+      <StructureTable caption={`${caption}の効果一覧`} headers={['タイミング', '条件', '対象', '項目', '演算',
+        ...(selectedModule ? ['未装備', selectedModule.moduleLabel] : ['値'])]}
+        className={`talent-structure-effects-table${selectedModule ? ' talent-structure-mod-comparison' : ''}`}>
         {structure.effects.map(effect => <tr key={effect.id}>
           <td>{formatTalentStructureTiming(effect.timing)}</td><td>{formatTalentStructureCondition(effect.condition)}</td>
           <td>{formatTalentStructureTarget(effect.target)}</td>
@@ -178,6 +213,8 @@ function TalentStructureContent({ structure, activeTab, onTabChange }: {
               setSelectedEffect(effect)
             }}>{formatTalentStructureEffectItem(effect.item)}</button></td>
           <td>{formatTalentStructureEffectOperation(effect)}</td><td>{formatTalentStructureEffectValue(effect)}</td>
+          {selectedModule && <td className={selectedModule.effectId === effect.id && selectedModule.baseValue !== selectedModule.equippedValue
+            ? 'talent-structure-mod-changed' : undefined}>{formatTalentStructureEffectValue(equippedEffect(effect))}</td>}
         </tr>)}
       </StructureTable>
       <section id={`${id}-effect-definition`} className="skill-structure-definition" hidden={!selectedEffect}
@@ -188,12 +225,12 @@ function TalentStructureContent({ structure, activeTab, onTabChange }: {
               setSelectedEffect(null)
               effectTriggerRef.current?.focus({ preventScroll: true })
             }}>閉じる</button></header>
-          <TalentEffectDefinitionTable effect={selectedEffect} />
+          <TalentEffectDefinitionTable effect={equippedEffect(selectedEffect)} />
         </>}
       </section>
-      {(structure.notes.length > 0 || structure.deferred.length > 0) && <details className="skill-structure-notes">
+      {(notes.length > 0 || structure.deferred.length > 0) && <details className="skill-structure-notes">
         <summary>{structure.deferred.length > 0 ? '構造化の補足・保留事項' : '構造化の補足'}</summary>
-        {structure.notes.map(note => <p key={note}>{note}</p>)}
+        {notes.map(note => <p key={note}>{note}</p>)}
         {structure.deferred.map(entry => <StructureTable key={entry.id} caption={`${caption}の保留事項：${entry.title}`}
           headers={['項目', '内容']} className="skill-structure-definition-table">
           {[

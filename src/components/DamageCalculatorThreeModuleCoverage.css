@@ -45,6 +45,14 @@
   white-space: nowrap;
 }
 
+.gg-detail-dialog.damage-three-module-dialog { width: min(640px, calc(100vw - 32px)); }
+.damage-three-module-dialog .gg-detail-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.skill-directory-filter-grid.damage-three-module-detail-picker {
+  grid-template-columns: max-content;
+  justify-content: start;
+}
+.skill-directory-filter-grid.damage-three-module-detail-picker label { display: flex; align-items: center; gap: 8px; }
+.skill-directory-filter-grid.damage-three-module-detail-picker select { width: auto; }
 .damage-three-module-detail {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -53,7 +61,21 @@
 }
 .damage-three-module-detail dt { color: var(--text-muted); }
 .damage-three-module-detail dd { margin: 0; overflow-wrap: anywhere; }
-.damage-three-module-detail ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.damage-three-module-effects .skill-structure-table-wrap { margin: 0; }
+.damage-three-module-effects-table thead th:nth-child(1) { width: 24%; }
+.damage-three-module-effects-table thead th:nth-child(2) { width: 32%; }
+.damage-three-module-effects-table td.damage-three-module-effect-value {
+  text-align: end;
+  white-space: nowrap;
+}
+.damage-three-module-talent-links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 12px; margin-top: 6px; }
+.damage-three-module-original-effects ul { display: grid; gap: 6px; margin: 0; padding-inline-start: 1.25em; overflow-wrap: anywhere; }
+
+@media (max-width: 640px) {
+  .gg-detail-dialog.damage-three-module-dialog { width: calc(100vw - 16px); }
+  .damage-three-module-effects-table th,
+  .damage-three-module-effects-table td { padding-inline: 6px; }
+}
 
 @media (max-width: 620px) {
   .skill-directory-filter-grid.damage-three-module-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

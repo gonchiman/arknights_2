@@ -74,10 +74,10 @@ export interface TraitRouteSelection {
   operatorId: string
 }
 
-export interface TalentRouteSelection {
+export type TalentRouteSelection = {
   operatorId: string
   talentIndex: number
-}
+} & ({ moduleId: string; moduleLevel: 1 | 2 | 3 } | { moduleId?: undefined; moduleLevel?: undefined })
 
 export interface SkillRouteSelection {
   operatorId: string
@@ -127,6 +127,14 @@ export function createTalentStructureHash(selection: TalentRouteSelection): stri
   assertRouteId(selection.operatorId, 'operatorId')
   assertInteger(selection.talentIndex, 0, 'talentIndex')
   const query = new URLSearchParams({ operatorId: selection.operatorId, talentIndex: String(selection.talentIndex) })
+  if (selection.moduleId !== undefined || selection.moduleLevel !== undefined) {
+    assertRouteId(selection.moduleId, 'moduleId')
+    if (selection.moduleLevel !== 1 && selection.moduleLevel !== 2 && selection.moduleLevel !== 3) {
+      throw new RangeError('moduleLevel must be 1, 2 or 3')
+    }
+    query.set('moduleId', selection.moduleId)
+    query.set('moduleLevel', String(selection.moduleLevel))
+  }
   return `${TALENT_STRUCTURE_ROUTE}?${query.toString()}`
 }
 
@@ -166,12 +174,18 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === TALENT_STRUCTURE_ROUTE) return { view: 'talent-structure' }
   if (hash.startsWith(`${TALENT_STRUCTURE_ROUTE}?`)) {
     const params = new URLSearchParams(hash.slice(TALENT_STRUCTURE_ROUTE.length + 1))
-    if (!params.has('operatorId') && !params.has('talentIndex')) return { view: 'talent-structure' }
+    const hasModule = params.has('moduleId') || params.has('moduleLevel')
+    if (!params.has('operatorId') && !params.has('talentIndex') && !hasModule) return { view: 'talent-structure' }
     const operatorId = readRouteId(params, 'operatorId')
     const talentIndex = readInteger(params, 'talentIndex', 0)
-    return operatorId === null || talentIndex === null
-      ? { view: 'talent-structure', invalidSelection: true }
-      : { view: 'talent-structure', selection: { operatorId, talentIndex } }
+    if (operatorId === null || talentIndex === null) return { view: 'talent-structure', invalidSelection: true }
+    if (!hasModule) return { view: 'talent-structure', selection: { operatorId, talentIndex } }
+    const moduleId = readRouteId(params, 'moduleId')
+    const moduleLevel = readInteger(params, 'moduleLevel', 1)
+    if (moduleId === null || (moduleLevel !== 1 && moduleLevel !== 2 && moduleLevel !== 3)) {
+      return { view: 'talent-structure', invalidSelection: true }
+    }
+    return { view: 'talent-structure', selection: { operatorId, talentIndex, moduleId, moduleLevel } }
   }
   if (
     hash.startsWith(OPERATOR_SKILL_ROUTE_PREFIX)
@@ -298,7 +312,7 @@ function parseSkillSelectionRoute(view: 'skill-json' | 'skill-effects' | 'skill-
   }
 }
 
-function readRouteId(params: URLSearchParams, key: 'operatorId' | 'skillId'): string | null {
+function readRouteId(params: URLSearchParams, key: 'operatorId' | 'skillId' | 'moduleId'): string | null {
   const values = params.getAll(key)
   if (values.length !== 1 || !isValidRouteId(values[0])) return null
   return values[0]
@@ -306,7 +320,7 @@ function readRouteId(params: URLSearchParams, key: 'operatorId' | 'skillId'): st
 
 function readInteger(
   params: URLSearchParams,
-  key: 'skillIndex' | 'levelIndex' | 'talentIndex',
+  key: 'skillIndex' | 'levelIndex' | 'talentIndex' | 'moduleLevel',
   minimum: number,
 ): number | null {
   const values = params.getAll(key)
@@ -315,7 +329,7 @@ function readInteger(
   return Number.isSafeInteger(value) && value >= minimum ? value : null
 }
 
-function assertRouteId(value: string, name: string): void {
+function assertRouteId(value: unknown, name: string): asserts value is string {
   if (!isValidRouteId(value)) throw new TypeError(`${name} must be a non-empty ID`)
 }
 

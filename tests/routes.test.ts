@@ -297,6 +297,8 @@ test('素質構造は特性構造の後から開き、素質番号を共有URL�
   assert.deepEqual(parseHashRoute(createTalentStructureHash({ operatorId: 'char_350_surtr', talentIndex: 0 })), {
     view: 'talent-structure', selection: { operatorId: 'char_350_surtr', talentIndex: 0 },
   })
+  const equipped = { operatorId: 'char_350_surtr', talentIndex: 0, moduleId: 'uniequip_002_surtr', moduleLevel: 3 } as const
+  assert.deepEqual(parseHashRoute(createTalentStructureHash(equipped)), { view: 'talent-structure', selection: equipped })
   for (const suffix of ['/', '/extra', '-extra']) {
     assert.deepEqual(parseHashRoute(`#/talent-structure${suffix}`), { view: 'operators' })
   }
@@ -307,6 +309,10 @@ test('素質構造の不完全・不正な指定は選択エラーとして保�
     'operatorId=char_350_surtr', 'talentIndex=0', 'operatorId=&talentIndex=0',
     'operatorId=%E0%A4%A&talentIndex=0',
     'operatorId=x&operatorId=y&talentIndex=0', 'operatorId=x&talentIndex=0&talentIndex=1',
+    'moduleId=m&moduleLevel=1',
+    ...['moduleId=m', 'moduleLevel=1', 'moduleId=m&moduleLevel=4', 'moduleId=m&moduleLevel=01',
+      'moduleId=m&moduleId=n&moduleLevel=1', 'moduleId=m&moduleLevel=1&moduleLevel=2']
+      .map(module => `operatorId=x&talentIndex=0&${module}`),
     ...['-1', '1.5', '1e0', '01', 'Infinity', '9007199254740992'].map(index => `operatorId=x&talentIndex=${index}`),
   ]) {
     assert.deepEqual(parseHashRoute(`#/talent-structure?${query}`), {

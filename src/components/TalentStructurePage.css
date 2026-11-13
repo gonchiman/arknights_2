@@ -1,5 +1,6 @@
 .talent-structure-condition-field { flex: 0 1 auto; min-width: 0; }
 .talent-structure-condition-field .skill-effects-fixed-level { overflow-wrap: anywhere; }
+.talent-structure-module-field { width: 130px; }
 .talent-structure-basic-table { min-width: 700px; }
 .talent-structure-effects-table { min-width: 760px; }
 .talent-structure-effects-table thead th:nth-child(1) { width: 17%; }
@@ -7,6 +8,18 @@
 .talent-structure-effects-table thead th:nth-child(3) { width: 18%; }
 .talent-structure-effects-table thead th:nth-child(4) { width: 19%; }
 .talent-structure-effects-table thead th:nth-child(5) { width: 13%; }
+.talent-structure-mod-comparison { min-width: 800px; }
+.talent-structure-mod-comparison thead th:nth-child(2) { width: 16%; }
+.talent-structure-mod-comparison thead th:nth-child(3) { width: 15%; }
+.talent-structure-mod-comparison thead th:nth-child(4) { width: 17%; }
+.talent-structure-mod-comparison thead th:nth-child(6),
+.talent-structure-mod-comparison thead th:nth-child(7) { width: 11%; }
+.talent-structure-mod-comparison td:nth-child(n+6) { text-align: right; }
+.talent-structure-mod-comparison td.talent-structure-mod-changed {
+  background: var(--surface-soft);
+  font-weight: 700;
+}
 @media (max-width: 600px) {
   .talent-structure-condition-field .skill-effects-fixed-level { min-height: 0; }
+  .talent-structure-module-field { width: 100%; }
 }
