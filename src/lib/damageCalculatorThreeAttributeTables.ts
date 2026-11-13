@@ -1,6 +1,6 @@
 import { calculateDamageBreakdown, type DamageCalculationBreakdown } from './damageCalculator.ts'
 import { getDamageCalculatorThreeVirtualAttackCapability } from './damageCalculatorThree.ts'
-import type { DamageThreeAttributeEntry } from './damageCalculatorThreeAttributeComparison.ts'
+import type { DamageThreeAttributeEntry, DamageThreeAttributeType } from './damageCalculatorThreeAttributeComparison.ts'
 import {
   evaluateDamageThreeComparisonEntry,
   type DamageThreeComparisonEvaluationOptions,
@@ -8,6 +8,7 @@ import {
   type DamageThreeComparisonResult,
 } from './damageCalculatorThreeComparison.ts'
 import { getEnemyRatingNumericRanges } from './enemyStatRatings.ts'
+import type { EnemyResistanceThreshold } from './enemyDefenseResistance.ts'
 
 interface DamageRange {
   min: number
@@ -47,6 +48,19 @@ export interface DamageThreeAttributeTables {
   errors: string[]
 }
 
+type DamageThreeAttributeRankPair = Pick<EnemyResistanceThreshold, 'resistance' | 'defense'>
+
+export interface DamageThreeAttributeRankRow extends DamageThreeAttributeRankPair {
+  physical: number | null
+  arts: number | null
+}
+
+export interface DamageThreeAttributeRankTable {
+  reference: DamageThreeComparisonResult
+  rows: DamageThreeAttributeRankRow[]
+  errors: string[]
+}
+
 const finiteNonnegative = (value: number | null | undefined): value is number =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0
 
@@ -63,7 +77,7 @@ function gradeRows(stat: 'defense' | 'magicResistance', range?: StatRange): Dama
 }
 
 /** Aggregate DC3's already resolved per-target components, without applying mitigation or hit counts again. */
-function mainAttackMetrics(result: DamageThreeComparisonResult): { perAttack: number; dps: number | null } {
+function mainAttackDamage(result: DamageThreeComparisonResult): number {
   const output = result.output
   if (!output || output.rows.length !== 1) throw new RangeError('主攻撃の計算結果を取得できません。')
   const row = output.rows[0]
@@ -96,13 +110,18 @@ function mainAttackMetrics(result: DamageThreeComparisonResult): { perAttack: nu
     perAttack = row.perAttack
   }
   if (!finiteNonnegative(perAttack)) throw new RangeError('主攻撃のダメージが有効な数値ではありません。')
-  if (!output.canShowDps) return { perAttack, dps: null }
+  return perAttack
+}
+
+function mainAttackDps(result: DamageThreeComparisonResult, perAttack: number): number | null {
+  const output = result.output!
+  if (!output.canShowDps) return null
   if (!finiteNonnegative(output.attackInterval) || output.attackInterval <= 0) {
     throw new RangeError('主攻撃の攻撃間隔を計算できません。')
   }
   const dps = perAttack / output.attackInterval
   if (!finiteNonnegative(dps)) throw new RangeError('主攻撃のDPSが有効な数値ではありません。')
-  return { perAttack, dps }
+  return dps
 }
 
 function isMinimumDamage(mitigation: Pick<DamageCalculationBreakdown, 'result' | 'minimumDamage'>): boolean {
@@ -142,8 +161,7 @@ export function evaluateAttackAttributeTables(attack: number, ranges?: AttackAtt
   return { physical, arts }
 }
 
-/** Vary DEF for physical main attacks and RES for Arts main attacks; all other selected conditions stay fixed. */
-export function evaluateDamageThreeAttributeTables(input: DamageThreeAttributeTablesInput): DamageThreeAttributeTables {
+function createAttributeEvaluator(input: DamageThreeAttributeTablesInput, table: 'rating' | 'rank') {
   const { entry, enemyCount, overrides = {} } = input
   const settings: DamageThreeComparisonEvaluationOptions = {
     ...(input.operatorLevel === undefined ? {} : { operatorLevel: input.operatorLevel }),
@@ -156,41 +174,49 @@ export function evaluateDamageThreeAttributeTables(input: DamageThreeAttributeTa
   if (!capability.supported) errors.push(capability.reason ?? 'この段階の属性変更は未対応です。')
   const stage = entry.structure.guardRecipe?.stages.find(stage => stage.id === entry.stageId)
   if (stage?.actions.some(action => action.role === 'MAIN' && action.basis === 'TARGET_DEFENSE')) {
-    errors.push('敵の防御力を基準とする主攻撃は、評価別の範囲計算に対応していません。')
+    errors.push(table === 'rating' ? '敵の防御力を基準とする主攻撃は、評価別の範囲計算に対応していません。'
+      : '敵の防御力を基準とする主攻撃は、出現順位別の属性比較に対応していません。')
   }
   const mainActions = stage?.actions.filter(action => action.role === 'MAIN') ?? []
   if (mainActions.length > 0 && mainActions.every(action => action.timing === 'PER_SECOND')) {
-    errors.push('継続ダメージのみの段階は、1回の攻撃・通常攻撃DPSの範囲表に対応していません。')
+    errors.push('継続ダメージのみの段階は、1回の攻撃ダメージを表示できません。')
   }
   // Do not let runtime nulls silently select the comparison evaluator's default growth settings.
   if (input.operatorLevel !== undefined && typeof input.operatorLevel !== 'number') errors.push('オペレーターレベルが有効な数値ではありません。')
   if (input.trust !== undefined && typeof input.trust !== 'number') errors.push('信頼度が有効な数値ではありません。')
-  const canShowDps = reference.output?.canShowDps ?? false
-  const physical = gradeRows('defense')
-  const arts = gradeRows('magicResistance')
-  if (errors.length) return { reference, physical, arts, canShowDps, errors: [...new Set(errors)] }
-
-  const evaluate = (value: number, virtualMainAttackType: 'PHYSICAL' | 'ARTS', checkFloor = false) => {
-    const result = evaluateDamageThreeComparisonEntry(entry, {
-      defense: virtualMainAttackType === 'PHYSICAL' ? value : 0,
-      resistance: virtualMainAttackType === 'ARTS' ? value : 0,
-      enemyCount,
-    }, overrides, { ...settings, virtualMainAttackType })
+  function evaluate(defense: number, resistance: number, virtualMainAttackType: DamageThreeAttributeType, checkFloor = false) {
+    const result = evaluateDamageThreeComparisonEntry(entry, { defense, resistance, enemyCount },
+      overrides, { ...settings, virtualMainAttackType })
     const rowErrors = [...result.errors]
     if (result.actualTargetCount !== reference.actualTargetCount) rowErrors.push('属性変更で攻撃対象数が一致しません。')
     if (!rowErrors.length) {
       try {
-        return { ...mainAttackMetrics(result), settled: checkFloor && isPhysicalDamageSettled(result) }
+        const perAttack = mainAttackDamage(result)
+        const dps = table === 'rating' ? mainAttackDps(result, perAttack) : null
+        return { perAttack, dps, settled: checkFloor && isPhysicalDamageSettled(result) }
       }
       catch (error) { rowErrors.push(error instanceof Error ? error.message : '主攻撃の計算結果を取得できません。') }
     }
     errors.push(...rowErrors)
     return null
   }
+  return { reference, errors, evaluate }
+}
 
-  function evaluateGrade(row: DamageThreeAttributeTableRow, type: 'PHYSICAL' | 'ARTS'): DamageThreeAttributeTableRow {
+/** Vary DEF for physical main attacks and RES for Arts main attacks; all other selected conditions stay fixed. */
+export function evaluateDamageThreeAttributeTables(input: DamageThreeAttributeTablesInput): DamageThreeAttributeTables {
+  const { reference, errors, evaluate } = createAttributeEvaluator(input, 'rating')
+  const canShowDps = reference.output?.canShowDps ?? false
+  const physical = gradeRows('defense')
+  const arts = gradeRows('magicResistance')
+  if (errors.length) return { reference, physical, arts, canShowDps, errors: [...new Set(errors)] }
+
+  function evaluateGrade(row: DamageThreeAttributeTableRow, type: DamageThreeAttributeType): DamageThreeAttributeTableRow {
     const { minStat, maxStat } = row
-    const first = evaluate(minStat, type, maxStat === null)
+    const evaluateStat = (value: number, checkFloor = false) => type === 'PHYSICAL'
+      ? evaluate(value, 0, type, checkFloor)
+      : evaluate(0, value, type, checkFloor)
+    const first = evaluateStat(minStat, maxStat === null)
     if (!first) return row
     // With fixed skill conditions, these attributes can only reduce main attack damage.
     // Finite grades use both endpoints. An open DEF grade uses a proven plateau.
@@ -203,12 +229,12 @@ export function evaluateDamageThreeAttributeTables(input: DamageThreeAttributeTa
           errors.push('防御力SSの最低ダメージを取得できません。')
           return row
         }
-        const sample = evaluate(defense, type, true)
+        const sample = evaluateStat(defense, true)
         if (!sample) return row
         last = sample
       }
     } else if (maxStat !== minStat) {
-      const sample = evaluate(maxStat, type)
+      const sample = evaluateStat(maxStat)
       if (!sample) return row
       last = sample
     }
@@ -218,4 +244,22 @@ export function evaluateDamageThreeAttributeTables(input: DamageThreeAttributeTa
   const physicalResults = physical.map(row => evaluateGrade(row, 'PHYSICAL'))
   const artsResults = arts.map(row => evaluateGrade(row, 'ARTS'))
   return { reference, physical: physicalResults, arts: artsResults, canShowDps, errors: [...new Set(errors)] }
+}
+
+/** Use the same appearance-rank DEF/RES pair for both virtual attributes. */
+export function evaluateDamageThreeAttributeRankTable(
+  input: DamageThreeAttributeTablesInput,
+  pairs: readonly DamageThreeAttributeRankPair[],
+): DamageThreeAttributeRankTable {
+  const { reference, errors, evaluate } = createAttributeEvaluator(input, 'rank')
+  const invalidInput = errors.length > 0
+  const rows = pairs.map(({ resistance, defense }): DamageThreeAttributeRankRow => {
+    const row = { resistance, defense, physical: null, arts: null }
+    if (invalidInput || defense === null) return row
+
+    const physical = evaluate(defense, resistance, 'PHYSICAL')
+    const arts = evaluate(defense, resistance, 'ARTS')
+    return physical && arts ? { ...row, physical: physical.perAttack, arts: arts.perAttack } : row
+  })
+  return { reference, rows, errors: [...new Set(errors)] }
 }

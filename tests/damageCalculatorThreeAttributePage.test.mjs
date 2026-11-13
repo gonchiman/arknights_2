@@ -82,15 +82,20 @@ test('physical skill keeps growth and skill information while showing one groupe
   assert.match(markup, /aria-label="スキル情報"/)
   assert.match(markup, /<details class="damage-three-attribute-growth">/)
   assert.match(markup, /仮想比較 · 主攻撃のみ/)
-  assert.match(markup, /aria-label="表示指標"/)
-  assert.match(markup, /aria-pressed="true">DPS<\/button>/)
+  assert.match(markup, /class="damage-three-attribute-fixed-metric">1回の攻撃ダメージ/)
+  assert.match(markup, /防御力・術耐性無視を適用/)
+  assert.match(markup, /aria-label="対応基準"/)
+  assert.match(markup, /aria-pressed="true">ゲーム内評価<\/button>/)
+  assert.match(markup, /aria-pressed="false">出現順位<\/button>/)
+  assert.doesNotMatch(markup, /class="enemy-aggregation-selector"/)
+  assert.doesNotMatch(markup, /aria-label="表示指標"|aria-label="表示形式"|>DPS<\/button>/)
   assert.match(markup, /<button(?=[^>]*aria-label="属性比較表をPNG画像で保存")(?=[^>]*aria-haspopup="dialog")(?![^>]*disabled)[^>]*>画像を保存<\/button>/)
   assert.match(markup, /<div(?=[^>]*role="region")(?=[^>]*aria-label="属性比較表（1体あたり）")(?=[^>]*tabindex="0")/)
   const tables = comparisonTables(markup)
   assert.equal(tables.length, 1)
   const [table] = tables
   assert.equal([...table.matchAll(/<th(?=[^>]*scope="col")(?=[^>]*rowspan="2")[^>]*>評価<\/th>/gi)].length, 1)
-  assert.match(table, /aria-label="DPSの属性比較（1体あたり）"/)
+  assert.match(table, /aria-label="1回の攻撃ダメージの属性比較（1体あたり）"/)
   assert.deepEqual(attributeHeadings(table), ['物理', '術'])
   assert.deepEqual([...table.matchAll(/<th(?=[^>]*scope="col")(?![^>]*rowspan)[^>]*>([^<]*)<\/th>/gi)]
     .map(([, label]) => label), ['防御力', '最小', '最大', '術耐性', '最小', '最大'])
@@ -103,16 +108,16 @@ test('selecting an arts operator keeps that exact skill and both attribute colum
   assert.ok(entry?.capability.supported)
   const markup = render(entry.structure.basicInfo)
   assert.match(markup, /ラヴァ/)
-  assert.match(markup, /aria-label="DPSの属性比較（1体あたり）"/)
+  assert.match(markup, /aria-label="1回の攻撃ダメージの属性比較（1体あたり）"/)
   assert.deepEqual(attributeHeadings(markup), ['物理', '術'])
   assert.doesNotMatch(markup, /メランサ/)
 })
 
-test('legacy Surtr and newly included one-shot skills show a usable comparison metric', () => {
+test('legacy Surtr and one-shot skills both show damage per attack', () => {
   const surtr = entries.find(item => item.skill.operatorId === 'char_350_surtr' && item.skill.skillIndex === 3)
   assert.ok(surtr?.capability.supported)
   const sustained = render(surtr.structure.basicInfo)
-  assert.match(sustained, /aria-label="DPSの属性比較（1体あたり）"/)
+  assert.match(sustained, /aria-label="1回の攻撃ダメージの属性比較（1体あたり）"/)
   assert.doesNotMatch(sustained, /未対応です。|未確定/)
   const angel = entries.find(item => item.skill.operatorId === 'char_103_angel' && item.skill.skillIndex === 1)
   assert.ok(angel?.capability.supported)
@@ -170,9 +175,9 @@ test('Exusiai S3 shows the physical and Arts damage ranges on the same game rati
   const ratings = ['E', 'D', 'C', 'B', 'B+', 'A', 'A+', 'S', 'S+', 'SS']
   assert.deepEqual(ratingsAndCells.map(([rating]) => rating), ratings)
   assert.ok(ratingsAndCells.every(([, cells]) => cells.reduce((sum, [span]) => sum + span, 0) === 6))
-  assert.deepEqual(ratingsAndCells[0], ['E', [[1, '0〜99'], [1, '3,993.6'], [1, '4,616.5'], [1, '0'], [2, '4,616.5']]])
-  assert.deepEqual(ratingsAndCells[3], ['B', [[1, '500〜799'], [1, '230.8'], [1, '1,470.5'], [1, '20〜29'], [1, '3,277.7'], [1, '3,693.2']]])
-  assert.deepEqual(ratingsAndCells.at(-1), ['SS', [[1, '5,001以上'], [2, '230.8'], [1, '91〜100'], [1, '230.8'], [1, '415.5']]])
+  assert.deepEqual(ratingsAndCells[0], ['E', [[1, '0〜99'], [1, '3,173.5'], [1, '3,668.5'], [1, '0'], [2, '3,668.5']]])
+  assert.deepEqual(ratingsAndCells[3], ['B', [[1, '500〜799'], [1, '183.4'], [1, '1,168.5'], [1, '20〜29'], [1, '2,604.6'], [1, '2,934.8']]])
+  assert.deepEqual(ratingsAndCells.at(-1), ['SS', [[1, '5,001以上'], [2, '183.4'], [1, '91〜100'], [1, '183.4'], [1, '330.2']]])
 })
 
 test('shared metric preserves zero, formats ranges and keeps the stat boundaries when damage is unavailable', () => {

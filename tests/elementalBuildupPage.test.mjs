@@ -55,24 +55,23 @@ test('元素損傷はHP結果と分離し、0・無効・爆発中と複数回�
   assert.equal(render(Table, { groups: [{ label: 'なし', values: [] }] }), '')
 })
 
-test('通常の計算機と属性比較に元素損傷表を出し、元素を持たない技能では表示しない', () => {
-  for (const Component of [Page, AttributePage]) {
-    const skill = records.find(row => row.operatorId === 'char_499_kaitou' && row.skillIndex === 1)
-    const markup = render(Component, { rows: records, loading: false,
-      initialSelection: { operatorId: skill.operatorId, skillId: skill.skillId, skillIndex: 1, levelIndex: 9 } })
-    assert.match(markup, /elemental-buildup-table/)
-    assert.match(markup, /壊死/)
-    if (Component === AttributePage) {
-      assert.match(cellText(markup), /本来（術） · 防御力 0 · 術耐性 0/)
-      assert.match(markup, /aria-label="属性比較表（1体あたり）"/)
-      assert.match(markup, /aria-label="属性比較表をPNG画像で保存"/)
-      assert.match(markup, /aria-label="表示形式"/)
-    }
-    assert.doesNotMatch(cellText(markup), /この条件では計算できません/)
-    const other = records.find(row => row.operatorId === 'char_499_kaitou' && row.skillIndex === 2)
-    assert.doesNotMatch(render(Component, { rows: records, loading: false,
-      initialSelection: { operatorId: other.operatorId, skillId: other.skillId, skillIndex: 2, levelIndex: 9 } }), /elemental-buildup-table/)
-  }
+test('元素損傷表は通常の計算機で対象スキルに表示し、属性比較では1回の攻撃ダメージを表示する', () => {
+  const skill = records.find(row => row.operatorId === 'char_499_kaitou' && row.skillIndex === 1)
+  const props = { rows: records, loading: false,
+    initialSelection: { operatorId: skill.operatorId, skillId: skill.skillId, skillIndex: 1, levelIndex: 9 } }
+  const normal = render(Page, props)
+  assert.match(normal, /elemental-buildup-table/)
+  assert.match(normal, /壊死/)
+  assert.doesNotMatch(cellText(normal), /この条件では計算できません/)
+  const other = records.find(row => row.operatorId === 'char_499_kaitou' && row.skillIndex === 2)
+  assert.doesNotMatch(render(Page, { ...props,
+    initialSelection: { ...props.initialSelection, skillId: other.skillId, skillIndex: 2 } }), /elemental-buildup-table/)
+
+  const attribute = render(AttributePage, props)
+  assert.match(attribute, /aria-label="1回の攻撃ダメージの属性比較（1体あたり）"/)
+  assert.match(attribute, /aria-label="属性比較表をPNG画像で保存"/)
+  assert.doesNotMatch(attribute, /elemental-buildup-table|aria-label="表示形式"/)
+  assert.doesNotMatch(cellText(attribute), /この条件では計算できません/)
 })
 
 test('比較adapterは与ダメージ基準の蓄積を別項目で渡し、仮想属性と爆発越境の停止を引き継ぐ', () => {
