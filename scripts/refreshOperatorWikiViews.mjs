@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { parseOperatorWikiViewSnapshot } from '../src/lib/operatorWikiViews.ts'
-import { saveOperatorWikiViewHistory } from './archiveOperatorWikiViews.mjs'
+import { loadOperatorWikiViewHistory, saveOperatorWikiViewHistory } from './archiveOperatorWikiViews.mjs'
 
 const SNAPSHOT_PATH = fileURLToPath(new URL('../public/data/operator-wiki-views.json', import.meta.url))
 const STAGING_DIRECTORY = fileURLToPath(new URL('../.cache/', import.meta.url))
@@ -129,36 +129,78 @@ async function readJson(path) {
   return JSON.parse((await readFile(path, 'utf8')).replace(/^\uFEFF/, ''))
 }
 
-async function refreshOperatorWikiViews(mappingPath) {
-  const previous = await readJson(SNAPSHOT_PATH).then(parseOperatorWikiViewSnapshot).catch(error => {
+export async function refreshOperatorWikiViews({
+  mappingPath,
+  mode = 'refresh',
+  snapshotPath = SNAPSHOT_PATH,
+  historyDirectory,
+  stagingDirectory = STAGING_DIRECTORY,
+  collect = collectOperatorWikiViewSnapshot,
+  now = () => new Date(),
+} = {}) {
+  const previous = await readJson(snapshotPath).then(parseOperatorWikiViewSnapshot).catch(error => {
     if (mappingPath && error.code === 'ENOENT') return null
     throw error
   })
-  const mapping = mappingPath
+  let mapping = mappingPath
     ? await readJson(mappingPath)
     : previous.entries
-  const snapshot = await collectOperatorWikiViewSnapshot(mapping)
+  const historyOptions = { directory: historyDirectory, stagingDirectory }
+  const targetDate = mode === 'recover-yesterday' ? snapshotTimes(now()).yesterdayDate : null
+  const history = targetDate && await loadOperatorWikiViewHistory(targetDate, historyOptions)
+  if (history) {
+    mapping = mapping.filter(({ operatorId }) => !Number.isSafeInteger(history.counts[operatorId]))
+    if (!mapping.length) {
+      console.log(`Wiki 閲覧数は ${targetDate} 分をすべて保存済みです。`)
+      return
+    }
+    console.log(`Wiki 閲覧数の ${targetDate} 分を補完します。未取得 ${mapping.length}件。`)
+  }
+
+  const collected = parseOperatorWikiViewSnapshot(await collect(mapping))
+  if (targetDate && collected.yesterdayDate !== targetDate) {
+    throw new Error('補完対象の日付が変わったため、Wiki 閲覧数を保存しませんでした。')
+  }
+
+  let snapshot = collected
+  if (history) {
+    await saveOperatorWikiViewHistory(collected, historyOptions)
+    if (previous.yesterdayDate !== targetDate) return
+    const recovered = new Map(collected.entries.map(({ operatorId, yesterday }) => [operatorId, yesterday]))
+    const entries = previous.entries.map(entry => {
+      const yesterday = recovered.get(entry.operatorId)
+      return yesterday != null && entry.yesterday === null ? { ...entry, yesterday } : entry
+    })
+    if (entries.every((entry, index) => entry === previous.entries[index])) return
+    snapshot = { ...previous, entries }
+  }
   // Keep completed acquisitions outside Vite's public directory until publication.
-  await mkdir(STAGING_DIRECTORY, { recursive: true })
-  const temporary = join(STAGING_DIRECTORY, `operator-wiki-views.${randomUUID()}.json`)
+  await mkdir(stagingDirectory, { recursive: true })
+  const temporary = join(stagingDirectory, `operator-wiki-views.${randomUUID()}.json`)
   await writeFile(temporary, `${JSON.stringify(snapshot, null, 2)}\n`, { flag: 'wx' })
   try {
-    if (previous) await saveOperatorWikiViewHistory(previous)
-    await saveOperatorWikiViewHistory(snapshot)
-    await rename(temporary, SNAPSHOT_PATH)
+    if (!history) {
+      if (previous) await saveOperatorWikiViewHistory(previous, historyOptions)
+      await saveOperatorWikiViewHistory(snapshot, historyOptions)
+    }
+    await rename(temporary, snapshotPath)
   } catch (error) {
     throw new Error(`Wiki 閲覧数を保存できませんでした。取得済みデータ: ${temporary}`, { cause: error })
   }
-  console.log(`Wiki 閲覧数を更新しました。${snapshot.entries.length}件、${snapshot.todayDate}取得分。`)
+  console.log(history
+    ? `Wiki 閲覧数の ${targetDate} 分の未取得欄を更新しました。`
+    : `Wiki 閲覧数を更新しました。${snapshot.entries.length}件、${snapshot.todayDate}取得分。`)
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const [mappingPath, ...remaining] = process.argv.slice(2)
   if (mappingPath === '--help') {
-    console.log('node --use-system-ca --experimental-strip-types scripts/refreshOperatorWikiViews.mjs [mapping.json]')
+    console.log('npm run refresh:operator-wiki-views -- [mapping.json | --recover-yesterday]')
+  } else if (mappingPath === '--recover-yesterday' && remaining.length === 0) {
+    await refreshOperatorWikiViews({ mode: 'recover-yesterday' })
   } else if (remaining.length || mappingPath?.startsWith('-')) {
     throw new Error('引数には Wiki ページの対応表 JSON を1つ指定できます。')
   } else {
-    await refreshOperatorWikiViews(mappingPath)
+    await refreshOperatorWikiViews({ mappingPath })
   }
 }
