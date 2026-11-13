@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "currentVersionId": "v11",
+  "currentVersionId": "v12",
   "versions": [
     {
       "id": "v1",
@@ -2783,6 +2783,35 @@
         "changedMapIds": []
       },
       "previousVersionId": "v10"
+    },
+    {
+      "id": "v12",
+      "label": "集計版 v12",
+      "createdAt": "2026-11-13T06:02:58.069Z",
+      "generatedAt": "2026-11-13T06:02:45.958Z",
+      "sourceRevision": "c833e97cf3d00a929288cceb1a6cb0b8e1debda9",
+      "ruleVersion": "empty-wave-actions-v9",
+      "generatorVersion": "1430b1421e1b874b2cc1f47b1483fc292d4cd37d51a19544c1770b42fca0ad7c",
+      "description": "メインストーリーの集計範囲に対応",
+      "file": "v12.json.gz",
+      "sha256": "7424e9a1244ebeb562f2c9433750ded77996eb75d4c038960f5e62fa5a475ea2",
+      "payloadSha256": "f5e3c2ded9c19144541fae7093e0df2f11eba7a399bfcf7d73b277e5db012a77",
+      "contentSha256": "0eb927ef81ec1b92661834fd4203b0b3edb7eae8d64788c6b79586c4a59c0866",
+      "bytes": 1235003,
+      "payloadBytes": 19042370,
+      "summary": {
+        "includedMapCount": 1563,
+        "excludedMapCount": 627,
+        "missingMapCount": 152,
+        "lowerBoundMapCount": 271,
+        "expectedMapCount": 0
+      },
+      "changes": {
+        "addedMapIds": [],
+        "removedMapIds": [],
+        "changedMapIds": []
+      },
+      "previousVersionId": "v11"
     }
   ]
 }
