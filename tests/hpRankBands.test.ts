@@ -2,7 +2,15 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { getEnemyRatingNumericRanges, getEnemyRatingRanges } from '../src/lib/enemyStatRatings.ts'
 import { getHpRankBands } from '../src/lib/hpRankBands.ts'
-import { getStatRankBands } from '../src/lib/statRankBands.ts'
+import { getColumnStatRankBands, getStatRankBands } from '../src/lib/statRankBands.ts'
+
+test('対応表の評価帯は列順、重複、欠損の位置を保つ', () => {
+  const bands = getColumnStatRankBands('defense', [1000, 100, 100, null, 150, 350, null, 0])
+  assert.deepEqual(bands.map(({ rating, start, end }) => [rating, start, end]), [
+    ['A', 0, 1 / 8], ['D', 1 / 8, 3 / 8], ['D', 4 / 8, 5 / 8],
+    ['C', 5 / 8, 6 / 8], ['E', 7 / 8, 1],
+  ])
+})
 
 test('共有HP区分は数値境界と従来の範囲ラベルを返す', () => {
   const ranges = getEnemyRatingNumericRanges('maxHp')

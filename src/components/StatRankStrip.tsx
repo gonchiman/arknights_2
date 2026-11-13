@@ -8,8 +8,9 @@ export interface StatRankStripProps {
   bands: readonly StatRankBand[]
   left: number
   right: number
-  /** Top of the 24px strip; callers reserve an extra row for endpoint labels. */
+  /** Callers reserve an extra row above the strip for endpoint labels. */
   top: number
+  height?: number
   title?: string
   /** When omitted, the title is available in band tooltips only. */
   titleY?: number
@@ -17,7 +18,9 @@ export interface StatRankStripProps {
   labelFit?: 'fill' | 'band'
 }
 
-export function StatRankStrip({ bands, left, right, top, title = 'HPランク', titleY, labelFit = 'fill' }: StatRankStripProps) {
+export function StatRankStrip({
+  bands, left, right, top, height = STAT_RANK_STRIP_HEIGHT, title = 'HPランク', titleY, labelFit = 'fill',
+}: StatRankStripProps) {
   if (!bands.length) return null
   const width = Math.max(0, right - left)
   const intervals = bands.filter((band) => band.pointValue === undefined)
@@ -37,7 +40,7 @@ export function StatRankStrip({ bands, left, right, top, title = 'HPランク', 
       return <g key={`${band.rating}-${band.start}`} className="stat-rank-strip-band" data-rank={band.rating}>
         <title>{`${title} ${band.rating}：${band.label}`}</title>
         <ChartStripCell left={bandLeft} width={bandWidth} top={top} label={band.rating}
-          leftInset={leftInset} rightInset={rightInset} showLabel={showLabel}
+          leftInset={leftInset} rightInset={rightInset} height={height} labelY={top + height / 2 + 4} showLabel={showLabel}
           fillClassName="stat-rank-strip-fill" labelClassName="stat-rank-strip-label" />
       </g>
     })}
@@ -47,7 +50,7 @@ export function StatRankStrip({ bands, left, right, top, title = 'HPランク', 
         data-rank-point={band.pointValue}>
         <title>{`${title} ${band.rating}：${band.label}`}</title>
         <line className="stat-rank-strip-point-line" data-chart-image-ink="true"
-          x1={x} x2={x} y1={top - 2} y2={top + STAT_RANK_STRIP_HEIGHT} />
+          x1={x} x2={x} y1={top - 2} y2={top + height} />
         <text className="stat-rank-strip-label" data-chart-image-ink="true"
           x={x + 3} y={top - 5} textAnchor="start">{`${band.rating}·${band.pointValue}`}</text>
       </g>
