@@ -15,6 +15,8 @@ jobs:
   refresh:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    env:
+      RECOVER_YESTERDAY: ${{ github.event_name == 'schedule' && github.event.schedule != '17 0 * * *' && 'true' || 'false' }}
     permissions:
       contents: write
       actions: write
@@ -23,35 +25,23 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: main
-      - name: Check if yesterday's views need recovery
-        id: recovery
-        if: github.event_name == 'schedule' && github.event.schedule != '17 0 * * *'
-        run: |
-          date_jst=$(TZ=Asia/Tokyo date --date=yesterday +%F)
-          archive="public/data/operator-wiki-views-history/$date_jst.json"
-          if [ -f "$archive" ]; then
-            echo "Wiki views for $date_jst are already archived."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "Wiki views for $date_jst are missing. Starting recovery."
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
       - name: Set up Node
-        if: steps.recovery.outputs.skip != 'true'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           package-manager-cache: false
       - name: Collect and archive Wiki views
-        if: steps.recovery.outputs.skip != 'true'
+        if: env.RECOVER_YESTERDAY != 'true'
         run: npm run refresh:operator-wiki-views
+      - name: Recover missing Wiki views for yesterday
+        if: env.RECOVER_YESTERDAY == 'true'
+        run: npm run refresh:operator-wiki-views -- --recover-yesterday
       - name: Collect Wiki comments
-        if: steps.recovery.outcome == 'skipped'
+        if: env.RECOVER_YESTERDAY != 'true'
         continue-on-error: true
         run: npm run refresh:operator-wiki-comments
       - name: Save collected data
         id: save
-        if: steps.recovery.outputs.skip != 'true'
         run: |
           git add -- public/data/operator-wiki-views.json public/data/operator-wiki-views-history/ public/data/operator-wiki-comments.json
           if git diff --cached --quiet; then
