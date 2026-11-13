@@ -17,7 +17,7 @@ const formatDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo', da
 const COUNT_LABELS = new Map([['今日', 'today'], ['昨日', 'yesterday'], ['合計', 'total']])
 const HTML_ENTITIES = { amp: '&', apos: "'", gt: '>', lt: '<', nbsp: ' ', quot: '"' }
 
-function htmlText(html) {
+export function wikiHtmlText(html) {
   return html.replace(/<!--[^]*?-->|<[^>]*>/g, '').replace(/&(#x[\da-f]+|#\d+|amp|apos|gt|lt|nbsp|quot);/gi, (match, entity) => {
     const key = entity.toLowerCase()
     if (key[0] !== '#') return HTML_ENTITIES[key]
@@ -26,21 +26,26 @@ function htmlText(html) {
   }).trim().normalize('NFC')
 }
 
-export function parseOperatorWikiPage(html, pageTitle) {
+export function assertOperatorWikiPageTitle(html, pageTitle) {
   const pageHeading = /<h1\b[^>]*>([^]*?)<\/h1>/i.exec(html)
-  if (!pageHeading || htmlText(pageHeading[1]) !== pageTitle.normalize('NFC')) {
+  if (!pageHeading || wikiHtmlText(pageHeading[1]) !== pageTitle.normalize('NFC')) {
     throw new Error(`ページの見出しが Wiki ページ名「${pageTitle}」と一致しません。`)
   }
 
+}
+
+export function parseOperatorWikiPage(html, pageTitle) {
+  assertOperatorWikiPageTitle(html, pageTitle)
+
   const counterHeading = [...html.matchAll(/<h([2-6])\b[^>]*>([^]*?)<\/h\1>/gi)]
-    .find(match => htmlText(match[2]) === 'カウンター')
+    .find(match => wikiHtmlText(match[2]) === 'カウンター')
   if (!counterHeading) throw new Error('カウンターが見つかりません。')
 
   const section = html.slice(counterHeading.index + counterHeading[0].length).split(/<h[1-6]\b/i, 1)[0]
   const list = /<ul\b[^>]*>([^]*?)<\/ul>/i.exec(section)?.[1] ?? ''
   const counts = {}
   for (const [, item] of list.matchAll(/<li\b[^>]*>([^]*?)<\/li>/gi)) {
-    const match = /^(合計|今日|昨日)\s*[：:]\s*(\d+|\d{1,3}(?:,\d{3})+)$/.exec(htmlText(item))
+    const match = /^(合計|今日|昨日)\s*[：:]\s*(\d+|\d{1,3}(?:,\d{3})+)$/.exec(wikiHtmlText(item))
     if (!match) continue
     const key = COUNT_LABELS.get(match[1])
     const count = Number(match[2].replaceAll(',', ''))
