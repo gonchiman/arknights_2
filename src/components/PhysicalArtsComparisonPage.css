@@ -14,8 +14,11 @@
   gap: 8px 14px;
 }
 
+.physical-arts-comparison-ranges[hidden] { display: none; }
+
 .physical-arts-comparison-ranges fieldset {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   min-width: 0;
   margin: 0;
@@ -47,7 +50,74 @@
 
 .physical-arts-comparison-rating-toggle input { margin: 0; }
 
+.physical-arts-stat-switch {
+  display: flex;
+  margin-bottom: 8px;
+}
+
+.physical-arts-defense-tables {
+  --stat-column-width: 57%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.physical-arts-defense-tables:not(.is-image) {
+  max-inline-size: 480px;
+}
+
+.physical-arts-defense-tables.is-image > div {
+  border: 1px solid var(--border);
+}
+
+.physical-arts-defense-tables.is-image table {
+  border: 0;
+}
+
+/* Preserve measured row heights when the table is cloned for PNG export. */
+.physical-arts-defense-tables.is-image :is(table, thead, tbody) {
+  display: block;
+}
+
+.physical-arts-defense-tables.is-image colgroup {
+  display: none;
+}
+
+.physical-arts-defense-tables.is-image tr {
+  display: grid;
+  grid-template-columns: var(--stat-column-width) minmax(0, 1fr);
+}
+
+.physical-arts-defense-tables.is-image :is(th, td) {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.physical-arts-defense-tables.is-image thead th {
+  justify-content: center;
+}
+
+.damage-two-table.physical-arts-defense-table {
+  width: 100%;
+  min-width: 8rem;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.physical-arts-defense-table col:first-child {
+  width: var(--stat-column-width);
+}
+
+.damage-two-table.physical-arts-defense-table :is(th, td) {
+  padding-block: 6px;
+}
+
+.damage-two-table.physical-arts-defense-table tbody th {
+  text-align: right;
+  color: var(--text-muted);
+}
+
 .physical-arts-attack-sweep-controls .calculator-field { width: 5.75rem; }
-.physical-arts-attack-sweep-controls .physical-arts-comparison-ranges fieldset { flex-wrap: wrap; }
 .damage-two-table.physical-arts-attack-sweep-table { min-width: 15rem; }
 .damage-two-table.physical-arts-attack-sweep-table tbody th:first-child { text-align: right; }
