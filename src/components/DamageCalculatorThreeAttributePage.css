@@ -85,6 +85,21 @@
   margin-bottom: 14px;
 }
 
+.damage-three-attribute-result-controls {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.damage-three-attribute-result-controls > .damage-three-attribute-toolbar {
+  margin-bottom: 0;
+}
+
+.damage-three-attribute-results .collapsible-panel-heading-summary > span {
+  display: block;
+  white-space: normal;
+}
+
 .damage-three-attribute-toggle {
   display: inline-flex;
   align-items: center;
@@ -109,14 +124,12 @@
   font-size: 12px;
 }
 
-.damage-three-attribute-context strong,
-.damage-three-attribute-fixed-metric {
+.damage-three-attribute-context strong {
   font-size: 12px;
   font-weight: 600;
 }
 
-.damage-three-attribute-context span,
-.damage-three-attribute-target {
+.damage-three-attribute-context span {
   color: var(--text-soft);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
