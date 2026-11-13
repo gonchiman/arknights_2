@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
 import { calculateDamage, calculateDamageBreakdown } from '../lib/damageCalculator'
+import { toDamageReductionPercent, type PhysicalArtsMetric } from '../lib/physicalArtsDefenseSweep'
 import { getStatRankBands, type StatRankBand } from '../lib/statRankBands'
 import './PhysicalArtsComparisonChart.css'
 
@@ -9,6 +10,7 @@ const ATTRIBUTES = [
   { key: 'arts', label: '術', stat: '術耐性', rangeKey: 'resistance', ratingStat: 'magicResistance' },
 ] as const
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
+const TICK_PERCENTAGES = [0, 25, 50, 75, 100]
 const RATING_BAND_HEIGHT = 18
 const RATING_ENDPOINT_HEIGHT = 14
 const AXIS_GAP = 3
@@ -49,12 +51,15 @@ function AxisRatingStrip({ bands }: { bands: readonly StatRankBand[] }) {
   </div>
 }
 
-export function PhysicalArtsComparisonChart({ attack, ranges, showRatings = false, imageHeight }: {
-  attack: number; ranges: PhysicalArtsChartRanges; showRatings?: boolean; imageHeight?: number
+export function PhysicalArtsComparisonChart({ attack, ranges, metric = 'damage', showRatings = false, imageHeight }: {
+  attack: number; ranges: PhysicalArtsChartRanges; metric?: PhysicalArtsMetric; showRatings?: boolean; imageHeight?: number
 }) {
   const descriptionId = useId()
   const forImage = imageHeight !== undefined
-  const axis = createZeroBasedValueAxis(attack, 0)
+  const reduction = metric === 'reduction'
+  const metricLabel = reduction ? '軽減率' : 'ダメージ'
+  const formatValue = (value: number) => `${NUMBER.format(value)}${reduction ? '%' : ''}`
+  const axis = reduction ? { maximum: 100, ticks: TICK_PERCENTAGES } : createZeroBasedValueAxis(attack, 0)
   const y = (value: number) => (1 - value / axis.maximum) * 100
   const floor = calculateDamageBreakdown(attack, 'PHYSICAL', 0, 0).minimumDamage ?? 0
   const curves = ATTRIBUTES.map(attribute => {
@@ -66,15 +71,18 @@ export function PhysicalArtsComparisonChart({ attack, ranges, showRatings = fals
       : calculateDamage(attack, 'ARTS', 0, stat)
     const points = [{ stat: min, damage: damage(min) }]
     if (min < breakpoint && breakpoint < max) points.push({ stat: breakpoint, damage: floor })
-    points.push({ stat: max, damage: damage(max) })
-    const bands = showRatings
+    if (min < max) points.push({ stat: max, damage: damage(max) })
+    const bands = showRatings && min < max
       ? getStatRankBands({ stat: attribute.ratingStat, chartKind: 'line', min, max, barValues: [], includeEndpointRanks: true })
       : []
-    return { ...attribute, min, max, points, bands }
+    return { ...attribute, min, max, bands, points: points.map(point => ({
+      stat: point.stat, value: reduction ? toDamageReductionPercent(attack, point.damage) : point.damage,
+    })) }
   })
 
   return <figure className={`physical-arts-chart${forImage ? ' is-image' : ''}`}
-    style={forImage ? { height: imageHeight } : undefined} aria-label="物理・術の一撃ダメージ" aria-describedby={descriptionId}>
+    style={forImage ? { height: imageHeight } : undefined}
+    aria-label={reduction ? '物理・術のダメージ軽減率' : '物理・術の一撃ダメージ'} aria-describedby={descriptionId}>
     {!forImage && <figcaption className="physical-arts-chart-legend">
       {curves.map(({ key, label }) => <span className={`is-${key}`} key={key}><i aria-hidden="true" />{label}</span>)}
     </figcaption>}
@@ -84,27 +92,33 @@ export function PhysicalArtsComparisonChart({ attack, ranges, showRatings = fals
           style={{ gap: AXIS_GAP }}>
           {(!forImage || key === 'arts') && <span>{stat}</span>}
           <div className="physical-arts-chart-x-ticks">
-            {[0, 25, 50, 75, 100].map(tick => <span key={tick} style={{ left: `${tick}%` }}>
-              {NUMBER.format(min + tick / 100 * (max - min))}
-            </span>)}
+            {min === max ? <span style={{ left: '50%', transform: 'translateX(-50%)' }}>{NUMBER.format(min)}</span>
+              : TICK_PERCENTAGES.map(tick => <span key={tick} style={{ left: `${tick}%` }}>
+                {NUMBER.format(min + tick / 100 * (max - min))}
+              </span>)}
           </div>
           {bands.length > 0 && <AxisRatingStrip bands={bands} />}
         </div>
       ))}
       <div className="physical-arts-chart-y-ticks">
-        {axis.ticks.map(tick => <span key={tick} style={{ top: `${y(tick)}%` }}>{NUMBER.format(tick)}</span>)}
+        {axis.ticks.map(tick => <span key={tick} style={{ top: `${y(tick)}%` }}>{formatValue(tick)}</span>)}
       </div>
       <svg className="physical-arts-chart-plot" viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false">
         {axis.ticks.map(tick => <line key={tick} x1="0" x2="100" y1={y(tick)} y2={y(tick)} vectorEffect="non-scaling-stroke" />)}
-        {curves.map(({ key, min, max, points }) => <polyline className={`is-${key}`} key={key}
-          points={points.map(point => `${(point.stat - min) / (max - min) * 100},${y(point.damage)}`).join(' ')}
-          vectorEffect="non-scaling-stroke" />)}
+        {curves.map(({ key, min, max, points }) => min === max
+          ? <g className={`is-${key}`} key={key}>
+            <path d={`M50 ${y(points[0].value)} h0`} stroke="currentColor" strokeWidth="6"
+              strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          </g>
+          : <polyline className={`is-${key}`} key={key}
+            points={points.map(point => `${(point.stat - min) / (max - min) * 100},${y(point.value)}`).join(' ')}
+            vectorEffect="non-scaling-stroke" />)}
       </svg>
     </div>
     <p className="visually-hidden" id={descriptionId}>
       {curves.map(({ label, stat, points }) => `${label}、${points.map(point =>
-        `${stat} ${NUMBER.format(point.stat)}でダメージ ${NUMBER.format(point.damage)}`).join('、')}`).join('。')}
-      {showRatings && curves.map(({ stat, bands }) => (
+        `${stat} ${NUMBER.format(point.stat)}で${metricLabel} ${formatValue(point.value)}`).join('、')}`).join('。')}
+      {showRatings && curves.filter(({ bands }) => bands.length > 0).map(({ stat, bands }) => (
         `。${stat}の評価、${bands.map(band =>
           `${band.rating} ${band.pointValue === undefined ? band.label : NUMBER.format(band.pointValue)}`).join('、')}`
       )).join('')}
