@@ -61,7 +61,7 @@ before(async () => {
 
 after(async () => { await server?.close() })
 
-test('both chart types and PNG use the shared rating strip when enabled', () => {
+test('both chart types and PNG omit unpaired columns from the axis and rating strips', () => {
   const pairs = [[0, 0], [10, 100], [20, 100], [30, 200], [40, 350], [50, null], [60, 350], [100, null]]
   const chartRows = pairs.map(([resistance, defense]) => ({
     resistance, defense, physical: defense === null ? null : 500, arts: defense === null ? null : 600,
@@ -69,19 +69,24 @@ test('both chart types and PNG use the shared rating strip when enabled', () => 
   for (const chartType of ['line', 'bar']) {
     for (const imageHeight of [undefined, 380]) {
       const props = { rows: chartRows, chartType, imageHeight }
-      assert.doesNotMatch(renderToStaticMarkup(createElement(RankChart, props)), /stat-rank-strip/)
+      const plain = renderToStaticMarkup(createElement(RankChart, props))
+      assert.doesNotMatch(plain, /stat-rank-strip/)
       const markup = renderToStaticMarkup(createElement(RankChart, { ...props, showRatings: true }))
+      for (const chart of [plain, markup]) {
+        const resistanceAxis = chart.match(/class="damage-three-attribute-rank-chart-resistance">([^]*?)<\/div>/)?.[1]
+        assert.deepEqual([...resistanceAxis.matchAll(/<span[^>]*>(\d+)<\/span>/g)].map(([, tick]) => Number(tick)),
+          [0, 10, 20, 30, 40, 60])
+      }
       assert.match(markup, /rating-label" aria-hidden="true">術耐性<.*rating-label" aria-hidden="true">防御力<.*rank-chart-plot/s)
       assert.deepEqual([...markup.matchAll(/class="damage-three-attribute-rank-chart-ratings is-(\w+)" height="18"/g)]
         .map(([, series]) => series), ['arts', 'physical'])
       const strips = [...markup.matchAll(/class="damage-three-attribute-rank-chart-ratings is-\w+"[^>]*>(.*?)<\/svg>/gs)]
-        .map(([, strip]) => [...strip.matchAll(/data-rank="([^"]+)"|<text[^>]*>—<\/text>/g)]
-          .map(([, rating]) => rating ?? '—'))
+        .map(([, strip]) => [...strip.matchAll(/data-rank="([^"]+)"/g)].map(([, rating]) => rating))
       assert.deepEqual(strips, [
-        ['E', 'C', 'B', 'B+', 'A', 'A+', 'SS'],
-        ['E', 'D', 'C', 'C', '—', '—'],
+        ['E', 'C', 'B', 'B+', 'A+'],
+        ['E', 'D', 'C'],
       ])
-      if (imageHeight === undefined) assert.match(markup, /aria-label="術耐性 100（評価 SS）、防御力 —、/)
+      if (imageHeight === undefined) assert.match(markup, /aria-label="術耐性 60（評価 A\+）、防御力 350（評価 C）、/)
     }
   }
 })

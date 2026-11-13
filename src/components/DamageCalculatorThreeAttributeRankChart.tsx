@@ -35,12 +35,14 @@ export function DamageCalculatorThreeAttributeRankLegend({ chartType = 'line', f
   </ul>
 }
 
-function describeRow({ resistance, defense, physical, arts }: DamageThreeAttributeRankRow, showRatings = false) {
+type PairedRankRow = DamageThreeAttributeRankRow & { defense: number }
+
+function describeRow({ resistance, defense, physical, arts }: PairedRankRow, showRatings = false) {
   const resistanceRating = showRatings ? getEnemyStatRating('magicResistance', resistance) : null
   const defenseRating = showRatings ? getEnemyStatRating('defense', defense) : null
   return [
     ['術耐性', STAT.format(resistance) + (resistanceRating ? `（評価 ${resistanceRating}）` : '')],
-    ['防御力', defense === null ? '—' : STAT.format(defense) + (defenseRating ? `（評価 ${defenseRating}）` : '')],
+    ['防御力', STAT.format(defense) + (defenseRating ? `（評価 ${defenseRating}）` : '')],
     ['物理', physical === null ? '—' : DAMAGE.format(physical)],
     ['術', arts === null ? '—' : DAMAGE.format(arts)],
   ] as const
@@ -48,7 +50,7 @@ function describeRow({ resistance, defense, physical, arts }: DamageThreeAttribu
 
 function AttributeRankRatingRow({ label, stat, series, values, width }: {
   label: string; stat: RankBandStat; series: typeof ATTRIBUTES[number][0]
-  values: readonly (number | null)[]; width: number
+  values: readonly number[]; width: number
 }) {
   return <>
     <span className="damage-three-attribute-rank-chart-axis-label damage-three-attribute-rank-chart-rating-label"
@@ -57,13 +59,11 @@ function AttributeRankRatingRow({ label, stat, series, values, width }: {
       aria-hidden="true" focusable="false">
       <StatRankStrip bands={getColumnStatRankBands(stat, values)} left={0} right={width} top={0}
         height={RATING_ROW_HEIGHT} showTooltips={false} />
-      {values.map((value, index) => value === null && <text key={index} className="stat-rank-strip-label"
-        x={`${(index + 0.5) / values.length * 100}%`} y={RATING_ROW_HEIGHT / 2 + 4} textAnchor="middle">—</text>)}
     </svg>
   </>
 }
 
-export function DamageCalculatorThreeAttributeRankChart({ rows, chartType = 'line', showRatings = false, imageHeight }: {
+export function DamageCalculatorThreeAttributeRankChart({ rows: allRows, chartType = 'line', showRatings = false, imageHeight }: {
   rows: readonly DamageThreeAttributeRankRow[]
   chartType?: DamageThreeAttributeRankChartType
   showRatings?: boolean
@@ -71,6 +71,7 @@ export function DamageCalculatorThreeAttributeRankChart({ rows, chartType = 'lin
 }) {
   const plotRef = useRef<HTMLDivElement>(null)
   const [plotWidth, setPlotWidth] = useState(0)
+  const rows = allRows.filter((row): row is PairedRankRow => row.defense !== null)
   const hasRows = rows.length > 0
   useLayoutEffect(() => {
     const plot = plotRef.current
@@ -155,7 +156,7 @@ export function DamageCalculatorThreeAttributeRankChart({ rows, chartType = 'lin
         </div>
         <span className="damage-three-attribute-rank-chart-axis-label">防御力</span>
         <div className="damage-three-attribute-rank-chart-defense" aria-hidden="true">
-          {rows.map(row => <span key={row.resistance}>{row.defense === null ? '—' : STAT.format(row.defense)}</span>)}
+          {rows.map(row => <span key={row.resistance}>{STAT.format(row.defense)}</span>)}
         </div>
       </div>
     </div>
