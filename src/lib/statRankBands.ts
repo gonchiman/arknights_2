@@ -60,18 +60,30 @@ export function getStatRankBands({
   // the numerical distances between them. Resistance 0 is a valid E group.
   const values = [...new Set(barValues.filter((value) => Number.isFinite(value) && value >= domainStart && value <= max))]
     .sort((left, right) => left - right)
+  return buildColumnBands(stat, values, ranges)
+}
+
+/** Preserve the displayed column order, including duplicate and missing values. */
+export function getColumnStatRankBands(stat: RankBandStat, values: readonly (number | null)[]): StatRankBand[] {
+  return buildColumnBands(stat, values, getEnemyRatingNumericRanges(stat))
+}
+
+function buildColumnBands(
+  stat: RankBandStat, values: readonly (number | null)[], ranges: ReturnType<typeof getEnemyRatingNumericRanges>,
+): StatRankBand[] {
   const bands: StatRankBand[] = []
   values.forEach((value, groupIndex) => {
     const rating = getEnemyStatRating(stat, value)
     const index = ranges.findIndex((range) => range.rating === rating)
     if (index < 0) return
     const range = ranges[index]
+    const start = groupIndex / values.length
     const end = (groupIndex + 1) / values.length
     const previous = bands[bands.length - 1]
-    if (previous?.rating === rating) {
+    if (previous?.rating === rating && previous.end === start) {
       previous.end = end
     } else {
-      bands.push({ rating: range.rating, label: range.label, start: groupIndex / values.length, end, index })
+      bands.push({ rating: range.rating, label: range.label, start, end, index })
     }
   })
   return bands

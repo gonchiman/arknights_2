@@ -24,7 +24,9 @@ import {
   DamageCalculatorThreeAttributeChartImageDialog, type DamageCalculatorThreeAttributeChartImageSnapshot,
 } from './DamageCalculatorThreeAttributeChartImageDialog'
 import { DamageCalculatorThreeAttributeRangeChart, DamageCalculatorThreeAttributeRangeLegend } from './DamageCalculatorThreeAttributeRangeChart'
-import { DamageCalculatorThreeAttributeRankChart, DamageCalculatorThreeAttributeRankLegend } from './DamageCalculatorThreeAttributeRankChart'
+import {
+  ATTRIBUTE_RANK_RATING_EXTRA_HEIGHT, DamageCalculatorThreeAttributeRankChart, DamageCalculatorThreeAttributeRankLegend,
+} from './DamageCalculatorThreeAttributeRankChart'
 import { EnemyAggregationSelector, EnemyAggregationStatus } from './EnemyAggregationSelector'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
 import { OperatorDetailLink } from './OperatorDetailLink'
@@ -81,6 +83,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const [basis, setBasis] = useState<typeof COMPARISON_BASES[number][0]>('rating')
   const [resultView, setResultView] = useState<typeof RESULT_VIEWS[number][0]>('table')
   const [rankChartType, setRankChartType] = useState<typeof RANK_CHART_TYPES[number][0]>('line')
+  const [showRankRatings, setShowRankRatings] = useState(false)
   const [image, setImage] = useState<ResultImage | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [filters, setFilters] = useState({ ...EMPTY_OPERATOR_FILTERS })
@@ -142,12 +145,16 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
       if (comparison.basis === 'rank') {
         const rows = structuredClone(comparison.result.rows)
         const chartType = rankChartType
+        const showRatings = showRankRatings
         const chartLabel = chartType === 'bar' ? '集合棒グラフ' : '折れ線グラフ'
         setImage({ view: 'chart', snapshot: {
           title, axisTitle: '', conditions: chartConditions,
-          filenameParts: [skillLevel, ...basisConditions, chartLabel, ...conditions.slice(1), ...notes],
+          additionalChartHeight: showRatings ? ATTRIBUTE_RANK_RATING_EXTRA_HEIGHT : undefined,
+          filenameParts: [skillLevel, ...basisConditions, chartLabel, ...conditions.slice(1), ...notes,
+            ...(showRatings ? ['評価表示'] : [])],
           legend: <DamageCalculatorThreeAttributeRankLegend chartType={chartType} forImage />,
-          chart: ({ height }) => <DamageCalculatorThreeAttributeRankChart rows={rows} chartType={chartType} imageHeight={height} />,
+          chart: ({ height }) => <DamageCalculatorThreeAttributeRankChart rows={rows} chartType={chartType}
+            showRatings={showRatings} imageHeight={height} />,
         } })
       } else {
         const { physical, arts } = structuredClone(comparison.result)
@@ -283,13 +290,18 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
         <AttributeButtons label="対応基準" options={COMPARISON_BASES} value={basis} onChange={setBasis} />
         {basis === 'rank' && <EnemyAggregationSelector state={aggregation} />}
         <AttributeButtons label="表示形式" options={RESULT_VIEWS} value={resultView} onChange={setResultView} />
-        {basis === 'rank' && resultView === 'chart' && <AttributeButtons label="グラフの種類"
-          options={RANK_CHART_TYPES} value={rankChartType} onChange={setRankChartType} />}
+        {basis === 'rank' && resultView === 'chart' && <>
+          <AttributeButtons label="グラフの種類" options={RANK_CHART_TYPES} value={rankChartType} onChange={setRankChartType} />
+          <label className="damage-three-attribute-toggle">
+            <input type="checkbox" checked={showRankRatings} onChange={event => setShowRankRatings(event.target.checked)} />
+            評価表示
+          </label>
+        </>}
       </div>
       <div className="damage-three-attribute-toolbar">
         <strong className="damage-three-attribute-fixed-metric">{METRIC_LABELS.perAttack}</strong>
         <span className="damage-three-attribute-target">1体あたり</span>
-        <label className="damage-three-attribute-penetration-toggle">
+        <label className="damage-three-attribute-toggle">
           <input type="checkbox" checked={applyPenetration} onChange={event => setApplyPenetration(event.target.checked)} />
           防御力・術耐性無視を適用
         </label>
@@ -307,7 +319,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
       {comparison.basis === 'rank' && <>
         <EnemyAggregationStatus state={aggregation} />
         {comparison.result.rows.length > 0 && (resultView === 'chart'
-          ? <DamageCalculatorThreeAttributeRankChart rows={comparison.result.rows} chartType={rankChartType} />
+          ? <DamageCalculatorThreeAttributeRankChart rows={comparison.result.rows} chartType={rankChartType} showRatings={showRankRatings} />
           : <DamageCalculatorThreeAttributeRankTable rows={comparison.result.rows} />)}
         {rankPairs?.length === 0 && <p role="status">集計対象の出現データがありません。</p>}
       </>}

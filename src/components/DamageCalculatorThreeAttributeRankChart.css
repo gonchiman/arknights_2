@@ -51,12 +51,19 @@
 }
 
 .damage-three-attribute-rank-chart-layout {
+  --attribute-rank-plot-height: clamp(160px, 30vw, 240px);
   display: grid;
   grid-template-columns: minmax(3em, max-content) minmax(0, 1fr);
-  grid-template-rows: clamp(160px, 30vw, 240px) auto auto;
+  grid-template-rows: var(--attribute-rank-plot-height) auto auto;
   column-gap: 8px;
   min-width: calc(var(--attribute-rank-columns) * 2.8rem + 4.5rem);
   padding: 13px 12px 8px;
+}
+
+.damage-three-attribute-rank-chart.has-ratings .damage-three-attribute-rank-chart-layout {
+  grid-template-rows: calc(var(--attribute-rank-rating-height) + var(--attribute-rank-rating-row-gap))
+    calc(var(--attribute-rank-rating-height) + var(--attribute-rank-rating-plot-gap))
+    var(--attribute-rank-plot-height) auto auto;
 }
 
 .damage-three-attribute-rank-chart-scale,
@@ -157,6 +164,22 @@
   white-space: nowrap;
 }
 
+.damage-three-attribute-rank-chart-layout .damage-three-attribute-rank-chart-rating-label {
+  align-self: start;
+  line-height: var(--attribute-rank-rating-height);
+}
+
+.damage-three-attribute-rank-chart-ratings {
+  display: block;
+  align-self: start;
+  width: 100%;
+}
+
+.damage-three-attribute-rank-chart-ratings .stat-rank-strip-fill {
+  fill: var(--series-color);
+  fill-opacity: 0.12;
+}
+
 .damage-three-attribute-rank-chart-resistance button {
   min-height: 27px;
   padding: 3px 0;
@@ -217,7 +240,7 @@
 }
 
 .damage-three-attribute-rank-chart.is-image .damage-three-attribute-rank-chart-layout {
-  grid-template-rows: minmax(0, 1fr) auto auto;
+  --attribute-rank-plot-height: minmax(0, 1fr);
   min-width: 0;
   height: 100%;
   padding: 8px 0 0;

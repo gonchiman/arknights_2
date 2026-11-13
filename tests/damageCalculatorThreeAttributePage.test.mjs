@@ -16,7 +16,7 @@ const sources = [
   })),
   ...['Melee', 'Ranged', 'Arts'].flatMap(group => readJson(`../src/data/expanded${group}Sources.json`)),
 ]
-let server, Page, Table, rows, entries
+let server, Page, Table, RankChart, rows, entries
 const text = markup => markup.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
 const render = initialSelection => renderToStaticMarkup(createElement(Page, { rows, loading: false, initialSelection }))
 const comparisonTables = markup => markup.match(/<table class="damage-two-table damage-three-attribute-table"[^>]*>.*?<\/table>/gs) ?? []
@@ -38,6 +38,8 @@ before(async () => {
   })
   ;({ DamageCalculatorThreeAttributePage: Page, DamageCalculatorThreeAttributeTable: Table }
     = await server.ssrLoadModule('/src/components/DamageCalculatorThreeAttributePage.tsx'))
+  ;({ DamageCalculatorThreeAttributeRankChart: RankChart }
+    = await server.ssrLoadModule('/src/components/DamageCalculatorThreeAttributeRankChart.tsx'))
   const { classifySkill } = await server.ssrLoadModule('/src/lib/classifier.ts')
   const { getDamageThreeAttributeEntries } = await server.ssrLoadModule('/src/lib/damageCalculatorThreeAttributeComparison.ts')
   rows = sources.flatMap(source => source.skills.map(entry => {
@@ -58,6 +60,31 @@ before(async () => {
 })
 
 after(async () => { await server?.close() })
+
+test('both chart types and PNG use the shared rating strip when enabled', () => {
+  const pairs = [[0, 0], [10, 100], [20, 100], [30, 200], [40, 350], [50, null], [60, 350], [100, null]]
+  const chartRows = pairs.map(([resistance, defense]) => ({
+    resistance, defense, physical: defense === null ? null : 500, arts: defense === null ? null : 600,
+  }))
+  for (const chartType of ['line', 'bar']) {
+    for (const imageHeight of [undefined, 380]) {
+      const props = { rows: chartRows, chartType, imageHeight }
+      assert.doesNotMatch(renderToStaticMarkup(createElement(RankChart, props)), /stat-rank-strip/)
+      const markup = renderToStaticMarkup(createElement(RankChart, { ...props, showRatings: true }))
+      assert.match(markup, /rating-label" aria-hidden="true">術耐性<.*rating-label" aria-hidden="true">防御力<.*rank-chart-plot/s)
+      assert.deepEqual([...markup.matchAll(/class="damage-three-attribute-rank-chart-ratings is-(\w+)" height="18"/g)]
+        .map(([, series]) => series), ['arts', 'physical'])
+      const strips = [...markup.matchAll(/class="damage-three-attribute-rank-chart-ratings is-\w+"[^>]*>(.*?)<\/svg>/gs)]
+        .map(([, strip]) => [...strip.matchAll(/data-rank="([^"]+)"|<text[^>]*>—<\/text>/g)]
+          .map(([, rating]) => rating ?? '—'))
+      assert.deepEqual(strips, [
+        ['E', 'C', 'B', 'B+', 'A', 'A+', 'SS'],
+        ['E', 'D', 'C', 'C', '—', '—'],
+      ])
+      if (imageHeight === undefined) assert.match(markup, /aria-label="術耐性 100（評価 SS）、防御力 —、/)
+    }
+  }
+})
 
 test('shared table keeps grades that are in range on only one side', () => {
   const row = (rating, minStat, maxStat) => ({ rating, minStat, maxStat, perAttack: { min: 80, max: 80 }, dps: null })
@@ -91,6 +118,7 @@ test('physical skill keeps growth and skill information while showing one groupe
   assert.match(markup, /aria-label="表示形式"/)
   assert.match(markup, /aria-pressed="true">表<\/button>/)
   assert.match(markup, /aria-pressed="false">グラフ<\/button>/)
+  assert.doesNotMatch(markup, /評価表示/)
   assert.doesNotMatch(markup, /aria-label="表示指標"|>DPS<\/button>/)
   assert.match(markup, /<button(?=[^>]*aria-label="属性比較表をPNG画像で保存")(?=[^>]*aria-haspopup="dialog")(?![^>]*disabled)[^>]*>画像を保存<\/button>/)
   assert.match(markup, /<div(?=[^>]*role="region")(?=[^>]*aria-label="属性比較表（1体あたり）")(?=[^>]*tabindex="0")/)
