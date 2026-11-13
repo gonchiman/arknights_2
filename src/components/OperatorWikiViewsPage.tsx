@@ -50,7 +50,7 @@ type WikiRow<Metric extends string> = {
   wikiUrl: string | null
 } & Record<Metric, number | null>
 
-const PAGE_SIZE = 12
+const PAGE_SIZE = 25
 const counts = new Intl.NumberFormat('ja-JP')
 const day = new Intl.DateTimeFormat('ja-JP', { timeZone: 'UTC', month: 'numeric', day: 'numeric' })
 const rangeDay = new Intl.DateTimeFormat('ja-JP', {
