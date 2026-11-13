@@ -281,33 +281,34 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
     </CollapsibleCalculatorPanel>
 
     {selected && comparison && <CollapsibleCalculatorPanel id="damage-three-attribute-results" number="02" title="属性比較"
-      titleBadge="仮想比較 · 主攻撃のみ" summary={`${METRIC_LABELS.perAttack} · 1体あたり`} collapsedLabel="比較を表示">
+      titleBadge="仮想比較 · 主攻撃のみ" summary={`${METRIC_LABELS.perAttack} · 1体あたり`} collapsedLabel="比較を表示"
+      className="damage-three-attribute-results">
       <div className="damage-three-attribute-context">
         <strong>{selected.skill.operatorName} S{selected.skill.skillIndex} · {selected.structure.basicInfo.skillLevel}</strong>
         <span>{growthConditions.join(' · ')}</span>
       </div>
-      <div className="damage-three-attribute-toolbar">
-        <AttributeButtons label="対応基準" options={COMPARISON_BASES} value={basis} onChange={setBasis} />
-        {basis === 'rank' && <EnemyAggregationSelector state={aggregation} />}
-        <AttributeButtons label="表示形式" options={RESULT_VIEWS} value={resultView} onChange={setResultView} />
-        {basis === 'rank' && resultView === 'chart' && <>
-          <AttributeButtons label="グラフの種類" options={RANK_CHART_TYPES} value={rankChartType} onChange={setRankChartType} />
+      <div className="damage-three-attribute-result-controls">
+        <div className="damage-three-attribute-toolbar">
+          <AttributeButtons label="対応基準" options={COMPARISON_BASES} value={basis} onChange={setBasis} />
+          <AttributeButtons label="表示形式" options={RESULT_VIEWS} value={resultView} onChange={setResultView} />
+          <button type="button" className="button secondary damage-three-attribute-image-button"
+            aria-label={resultView === 'chart' ? '属性比較グラフをPNG画像で保存' : '属性比較表をPNG画像で保存'}
+            aria-haspopup="dialog" disabled={!canSaveImage} onClick={openImage}>画像を保存</button>
+        </div>
+        <div className="damage-three-attribute-toolbar">
+          {basis === 'rank' && <EnemyAggregationSelector state={aggregation} />}
           <label className="damage-three-attribute-toggle">
-            <input type="checkbox" checked={showRankRatings} onChange={event => setShowRankRatings(event.target.checked)} />
-            評価表示
+            <input type="checkbox" checked={applyPenetration} onChange={event => setApplyPenetration(event.target.checked)} />
+            防御力・術耐性無視を適用
           </label>
-        </>}
-      </div>
-      <div className="damage-three-attribute-toolbar">
-        <strong className="damage-three-attribute-fixed-metric">{METRIC_LABELS.perAttack}</strong>
-        <span className="damage-three-attribute-target">1体あたり</span>
-        <label className="damage-three-attribute-toggle">
-          <input type="checkbox" checked={applyPenetration} onChange={event => setApplyPenetration(event.target.checked)} />
-          防御力・術耐性無視を適用
-        </label>
-        <button type="button" className="button secondary damage-three-attribute-image-button"
-          aria-label={resultView === 'chart' ? '属性比較グラフをPNG画像で保存' : '属性比較表をPNG画像で保存'}
-          aria-haspopup="dialog" disabled={!canSaveImage} onClick={openImage}>画像を保存</button>
+          {basis === 'rank' && resultView === 'chart' && <>
+            <AttributeButtons label="グラフの種類" options={RANK_CHART_TYPES} value={rankChartType} onChange={setRankChartType} />
+            <label className="damage-three-attribute-toggle">
+              <input type="checkbox" checked={showRankRatings} onChange={event => setShowRankRatings(event.target.checked)} />
+              評価表示
+            </label>
+          </>}
+        </div>
       </div>
       {errors.length > 0 && <div className="damage-two-unavailable damage-three-attribute-error" role="status">
         {errors.map(reason => <div key={reason}>{reason}</div>)}
