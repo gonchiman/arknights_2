@@ -6,7 +6,6 @@ import {
 import {
   buildDamageCalculatorThreeModuleCoverage,
   filterDamageCalculatorThreeModuleCoverage,
-  getDamageCalculatorThreeModuleStageDetails,
   MODULE_COVERAGE_LEVELS,
   MODULE_COVERAGE_STATUSES,
   MODULE_COVERAGE_STATUS_LABELS,
@@ -15,9 +14,13 @@ import {
   type DamageCalculatorThreeModuleCoverageStage,
   type DamageCalculatorThreeModuleCoverageStatus,
 } from '../lib/damageCalculatorThreeModuleCoverage'
+import { getModuleEffectStructure } from '../lib/moduleEffectStructure'
+import { createTalentStructureHash } from '../lib/routes'
 import { CoverageStackedBars } from './CoverageStackedBars'
 import { COVERAGE_COLORS } from './DamageCalculatorThreeCoverageSummary'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
+import { StructureTable } from './StructureTable'
+import './SkillStructurePage.css'
 import './DamageCalculatorThreeModuleCoverage.css'
 
 const PAGE_SIZE = 50
@@ -147,30 +150,62 @@ export function DamageCalculatorThreeModuleCoverage({ rows }: {
       </table>
     </div> : <div className="operator-empty-state">条件に一致する候補はありません</div>}
 
-    {selected && <ModuleStageDialog selected={selected} onClose={() => setSelected(null)} />}
+    {selected && <ModuleStageDialog selected={selected}
+      onStageChange={stage => setSelected({ row: selected.row, stage })}
+      onClose={() => setSelected(null)} />}
   </section>
 }
 
-function ModuleStageDialog({ selected: { row, stage }, onClose }: { selected: SelectedStage; onClose: () => void }) {
-  const { available, attributes, changes } = getDamageCalculatorThreeModuleStageDetails(row, stage.level)
+function ModuleStageDialog({ selected: { row, stage }, onStageChange, onClose }: {
+  selected: SelectedStage
+  onStageChange: (stage: DamageCalculatorThreeModuleCoverageStage) => void
+  onClose: () => void
+}) {
+  const { available, rows: effects, otherChanges } = getModuleEffectStructure(row.skill, row.module, stage.level)
+  const linkedTalents = new Map(effects.flatMap(effect => effect.talentIndex === undefined
+    ? [] : [[effect.talentIndex, effect.talentName] as const]))
+
   return <GoldenglowDetailModal
     title={`${row.skill.operatorName} S${row.skill.skillIndex} · MOD ${row.moduleType} Lv.${stage.level}`}
-    closeLabel="MOD段階の詳細を閉じる" onClose={onClose}>
+    closeLabel="MOD段階の詳細を閉じる" onClose={onClose} className="damage-three-module-dialog">
+    {row.stages.length > 1 && <div className="skill-directory-filter-grid damage-three-module-detail-picker">
+      <label>
+        <span>MOD段階</span>
+        <select value={stage.level} onChange={event => {
+          const next = row.stages.find(candidate => String(candidate.level) === event.target.value)
+          if (next) onStageChange(next)
+        }}>
+          {row.stages.map(candidate => <option key={candidate.level} value={candidate.level}>Lv.{candidate.level}</option>)}
+        </select>
+      </label>
+    </div>}
     <dl className="damage-three-module-detail">
       <dt>MOD名</dt><dd>{row.moduleName}</dd>
-      <dt>MODの状態</dt><dd>{MODULE_COVERAGE_STATUS_LABELS[stage.status]}</dd>
+      <dt>DC3対応状況</dt><dd>{MODULE_COVERAGE_STATUS_LABELS[stage.status]}</dd>
       <dt>未装備の総合</dt><dd>{COVERAGE_STATUS_LABELS[row.baselineStatus]}</dd>
       {!available && <><dt>MOD効果</dt><dd>データなし</dd></>}
-      {attributes.length > 0 && <>
-        <dt>ステータス補正</dt>
-        <dd>{attributes.map(({ label, valueLabel }) => `${label} ${valueLabel}`).join('・')}</dd>
-      </>}
-      {changes.length > 0 && <>
-        <dt>MOD効果</dt>
-        <dd><ul>{changes.map(({ label, description }, index) => <li key={index}>
-          <strong>{label}</strong> {description}
-        </li>)}</ul></dd>
-      </>}
     </dl>
+    {effects.length > 0 && <section className="damage-three-module-effects">
+      <h3 className="skill-structure-subheading">MOD効果の構造</h3>
+      <StructureTable caption="MOD効果の構造" headers={['区分', '項目', '条件', '効果']}
+        className="damage-three-module-effects-table">
+        {effects.map(effect => <tr key={effect.id}>
+          <td>{effect.category}</td><th scope="row">{effect.item}</th>
+          <td>{effect.condition}</td><td className="damage-three-module-effect-value">{effect.value}</td>
+        </tr>)}
+      </StructureTable>
+      {linkedTalents.size > 0 && <div className="damage-three-module-talent-links">
+        {[...linkedTalents].map(([talentIndex, talentName]) => <a key={talentIndex} className="skill-structure-effect-link"
+          href={createTalentStructureHash({
+            operatorId: row.skill.operatorId, talentIndex, moduleId: row.moduleId, moduleLevel: stage.level,
+          })}>{talentName ? `${talentName}の素質構造を見る` : `素質${talentIndex + 1}の構造を見る`}</a>)}
+      </div>}
+    </section>}
+    {otherChanges.length > 0 && <section className="damage-three-module-original-effects">
+      <h3 className="skill-structure-subheading">MOD効果の説明</h3>
+      <ul>{otherChanges.map(({ label, description }, index) => <li key={index}>
+        <strong>{label}</strong> {description}
+      </li>)}</ul>
+    </section>}
   </GoldenglowDetailModal>
 }
