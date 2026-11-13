@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react'
+import type { CSSProperties } from 'react'
 import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
 import type { DamageThreeAttributeTableRow } from '../lib/damageCalculatorThreeAttributeTables'
 import { getEnemyRatingRanges } from '../lib/enemyStatRatings'
@@ -50,7 +50,6 @@ export function DamageCalculatorThreeAttributeRangeLegend({ forImage = false }: 
 }
 
 export function DamageCalculatorThreeAttributeRangeChart({ physical, arts, invalid = false, imageHeight }: Props) {
-  const [selected, setSelected] = useState(5)
   const forImage = imageHeight !== undefined
   const physicalByRating = new Map(physical.map(row => [row.rating, row.perAttack]))
   const artsByRating = new Map(arts.map(row => [row.rating, row.perAttack]))
@@ -78,8 +77,7 @@ export function DamageCalculatorThreeAttributeRangeChart({ physical, arts, inval
       <div className="damage-three-attribute-range-plot" aria-hidden="true">
         {axis.ticks.slice(1).map(tick => <i className="damage-three-attribute-range-gridline" key={tick}
           style={{ bottom: percentage(tick) }} />)}
-        {groups.map((group, index) => <div key={group.rating}
-          className={`damage-three-attribute-range-group${!forImage && index === selected ? ' is-selected' : ''}`}>
+        {groups.map(group => <div key={group.rating} className="damage-three-attribute-range-group">
           {ATTRIBUTES.map(({ key }) => {
             const range = group[key]
             if (!range) return null
@@ -93,12 +91,11 @@ export function DamageCalculatorThreeAttributeRangeChart({ physical, arts, inval
       </div>
       {!forImage && <span className="damage-three-attribute-range-axis" aria-hidden="true">評価</span>}
       <div className="damage-three-attribute-range-ratings" role="group" aria-label="ゲーム内評価">
-        {groups.map((group, index) => forImage ? <span key={group.rating}>{group.rating}</span> : <button key={group.rating} type="button"
-          aria-label={describeGroup(group)} aria-pressed={index === selected} onClick={() => setSelected(index)}>
+        {groups.map(group => <span key={group.rating} role={forImage ? undefined : 'img'}
+          aria-label={forImage ? undefined : describeGroup(group)}>
           {group.rating}
-        </button>)}
+        </span>)}
       </div>
     </div>
-    {!forImage && <p className="damage-three-attribute-range-detail" aria-live="polite">{describeGroup(groups[selected])}</p>}
   </figure>
 }

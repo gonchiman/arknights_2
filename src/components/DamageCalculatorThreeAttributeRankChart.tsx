@@ -56,7 +56,7 @@ function AttributeRankRatingRow({ label, stat, series, values, width }: {
     <svg className={`damage-three-attribute-rank-chart-ratings is-${series}`} height={RATING_ROW_HEIGHT}
       aria-hidden="true" focusable="false">
       <StatRankStrip bands={getColumnStatRankBands(stat, values)} left={0} right={width} top={0}
-        height={RATING_ROW_HEIGHT} title={label} />
+        height={RATING_ROW_HEIGHT} showTooltips={false} />
       {values.map((value, index) => value === null && <text key={index} className="stat-rank-strip-label"
         x={`${(index + 0.5) / values.length * 100}%`} y={RATING_ROW_HEIGHT / 2 + 4} textAnchor="middle">—</text>)}
     </svg>
@@ -69,7 +69,6 @@ export function DamageCalculatorThreeAttributeRankChart({ rows, chartType = 'lin
   showRatings?: boolean
   imageHeight?: number
 }) {
-  const [selectedResistance, setSelectedResistance] = useState<number | null>(null)
   const plotRef = useRef<HTMLDivElement>(null)
   const [plotWidth, setPlotWidth] = useState(0)
   const hasRows = rows.length > 0
@@ -90,8 +89,7 @@ export function DamageCalculatorThreeAttributeRankChart({ rows, chartType = 'lin
       cancelAnimationFrame(frame)
     }
   }, [showRatings, hasRows])
-  const selected = rows.find(row => row.resistance === selectedResistance) ?? rows[Math.floor(rows.length / 2)]
-  if (!selected) return null
+  if (!hasRows) return null
 
   const maximum = rows.reduce((value, row) => Math.max(value, row.physical ?? 0, row.arts ?? 0), 0)
   const axis = createZeroBasedValueAxis(maximum, 0)
@@ -133,7 +131,7 @@ export function DamageCalculatorThreeAttributeRankChart({ rows, chartType = 'lin
               }).join(' ')} />)}
           </svg>
           <div className="damage-three-attribute-rank-chart-columns">
-            {rows.map(row => <div key={row.resistance} className={!forImage && row === selected ? 'is-selected' : undefined}>
+            {rows.map(row => <div key={row.resistance}>
               {ATTRIBUTES.map(([key]) => {
                 const damage = row[key]
                 if (damage === null) return null
@@ -149,12 +147,11 @@ export function DamageCalculatorThreeAttributeRankChart({ rows, chartType = 'lin
           </div>
         </div>
         <span className="damage-three-attribute-rank-chart-axis-label">術耐性</span>
-        <div className="damage-three-attribute-rank-chart-resistance" role={forImage ? undefined : 'group'}
-          aria-label={forImage ? undefined : '術耐性を選択'}>
-          {rows.map(row => forImage ? <span key={row.resistance}>{STAT.format(row.resistance)}</span>
-            : <button key={row.resistance} type="button" aria-pressed={row === selected}
-            aria-label={describeRow(row, showRatings).map(([label, value]) => `${label} ${value}`).join('、')}
-            onClick={() => setSelectedResistance(row.resistance)}>{STAT.format(row.resistance)}</button>)}
+        <div className="damage-three-attribute-rank-chart-resistance">
+          {rows.map(row => <span key={row.resistance} role={forImage ? undefined : 'img'}
+            aria-label={forImage ? undefined : describeRow(row, showRatings).map(([label, value]) => `${label} ${value}`).join('、')}>
+            {STAT.format(row.resistance)}
+          </span>)}
         </div>
         <span className="damage-three-attribute-rank-chart-axis-label">防御力</span>
         <div className="damage-three-attribute-rank-chart-defense" aria-hidden="true">
@@ -162,8 +159,5 @@ export function DamageCalculatorThreeAttributeRankChart({ rows, chartType = 'lin
         </div>
       </div>
     </div>
-    {!forImage && <dl className="damage-three-attribute-rank-chart-detail" aria-live="polite">
-      {describeRow(selected).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
-    </dl>}
   </figure>
 }
