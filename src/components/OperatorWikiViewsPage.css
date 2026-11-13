@@ -1,4 +1,5 @@
 .operator-wiki-views-page .page-intro { margin-bottom: 0; }
+.operator-wiki-views-page .analysis-tabs.detail-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 .operator-wiki-views-meta,
 .operator-wiki-views-pagination {
@@ -14,6 +15,15 @@
 
 .operator-wiki-views-meta { margin-bottom: 8px; }
 .operator-wiki-views-meta a, .operator-wiki-views-page tbody a { color: var(--link); }
+.operator-wiki-comments-period,
+.operator-wiki-comments-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.operator-wiki-comments-period { gap: 4px; }
+.operator-wiki-comments-period .button { font-size: 13px; white-space: nowrap; }
+.operator-wiki-comments-period .button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--link) 9%, var(--surface));
+  border-color: var(--link);
+}
+.operator-wiki-comments-dates > span { white-space: nowrap; }
 .operator-wiki-views-pagination { margin-top: 8px; }
 .operator-wiki-views-pagination > div { display: flex; gap: 8px; }
 .operator-wiki-views-pagination .button { min-height: 34px; }
@@ -28,6 +38,7 @@
 
 .operator-wiki-views-name-column { width: 38%; }
 .operator-wiki-views-total-column { width: 24%; }
+.operator-wiki-comments-name-column { width: 55%; }
 .operator-wiki-views-scroll th, .operator-wiki-views-scroll td {
   position: static;
   border: 1px solid var(--border);

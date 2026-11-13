@@ -1,6 +1,6 @@
 import type { OperatorDatabaseRecord } from './operatorDatabase'
 
-const WIKI_ROOT = 'https://arknights.wikiru.jp/'
+export const WIKI_ROOT = 'https://arknights.wikiru.jp/'
 const SNAPSHOT_PATH = 'data/operator-wiki-views.json'
 const METRICS = ['yesterday', 'today', 'total'] as const
 const names = new Intl.Collator('ja')
@@ -19,24 +19,24 @@ export type OperatorWikiViewSnapshot = {
   entries: readonly OperatorWikiViewEntry[]
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function isCalendarDate(value: unknown): value is string {
+export function isCalendarDate(value: unknown): value is string {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
   const date = new Date(`${value}T00:00:00Z`)
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
 }
 
-function isTimestamp(value: unknown): value is string {
+export function isTimestamp(value: unknown): value is string {
   return typeof value === 'string'
     && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value)
     && isCalendarDate(value.slice(0, 10))
     && Number.isFinite(Date.parse(value))
 }
 
-function wikiPageTitle(value: unknown): string | null {
+export function wikiPageTitle(value: unknown): string | null {
   const prefix = `${WIKI_ROOT}?`
   if (typeof value !== 'string' || !value.startsWith(prefix)) return null
   const encodedTitle = value.slice(prefix.length)
@@ -109,8 +109,15 @@ export function buildOperatorWikiViewRows(
 
 export function sortOperatorWikiViewRows(
   rows: readonly OperatorWikiViewRow[],
-  { key, direction }: OperatorWikiViewSort,
+  sort: OperatorWikiViewSort,
 ): OperatorWikiViewRow[] {
+  return sortOperatorWikiMetricRows(rows, sort)
+}
+
+export function sortOperatorWikiMetricRows<K extends string, Row extends Operator & Record<K, number | null>>(
+  rows: readonly Row[],
+  { key, direction }: { key: 'name' | K; direction: 'asc' | 'desc' },
+): Row[] {
   const order = direction === 'asc' ? 1 : -1
   return [...rows].sort((left, right) => {
     const nameOrder = names.compare(left.name, right.name)
