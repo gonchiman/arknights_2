@@ -1,6 +1,10 @@
 .operator-wiki-views-page .page-intro { margin-bottom: 0; }
 .operator-wiki-views-page .analysis-tabs.detail-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
+.operator-wiki-views-filters { border: 1px solid var(--border); }
+.operator-wiki-views-filters .filters,
+.operator-wiki-views-filters .rarity-filter { border-bottom: 0; }
+
 .operator-wiki-views-meta,
 .operator-wiki-views-pagination {
   display: flex;
@@ -84,6 +88,9 @@
 }
 
 @media (pointer: coarse) {
+  .operator-wiki-views-filters .initial-button,
+  .operator-wiki-views-filters .filter-reset-button,
+  .operator-wiki-views-filters input { min-height: 44px; }
   .operator-wiki-views-pagination .button { min-height: 44px; }
   .operator-wiki-views-scroll tbody th:has(a) { padding-block: 0; }
   .operator-wiki-views-scroll tbody a { display: flex; align-items: center; min-height: 44px; }

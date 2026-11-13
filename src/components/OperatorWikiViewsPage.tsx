@@ -1,5 +1,9 @@
 import { useEffect, useId, useMemo, useState } from 'react'
-import type { OperatorDatabaseRecord } from '../lib/operatorDatabase'
+import {
+  EMPTY_OPERATOR_DATABASE_FILTERS, filterOperatorDatabaseRecords,
+  type OperatorDatabaseFilters, type OperatorDatabaseRecord,
+} from '../lib/operatorDatabase'
+import { getProfessionLabel, PROFESSION_ORDER } from '../lib/operatorFilters'
 import {
   getWikiCommentCount, getWikiCommentRange, loadOperatorWikiCommentSnapshot, WIKI_COMMENT_PERIODS,
   type OperatorWikiCommentSnapshot, type WikiCommentPeriod,
@@ -9,6 +13,7 @@ import {
   type OperatorWikiViewSnapshot,
 } from '../lib/operatorWikiViews'
 import { AnalysisTabs } from './AnalysisTabs'
+import { Filters } from './Filters'
 import { TableSortHeader, type TableSort } from './TableSortHeader'
 import './DamageCalculator.css'
 import './OperatorWikiViewsPage.css'
@@ -18,8 +23,14 @@ interface Props {
   loading: boolean
 }
 
+interface PanelProps extends Props {
+  page: number
+  setPage: (page: number) => void
+}
+
 const TABS = [['views', '閲覧数'], ['comments', 'コメント']] as const
 type Tab = typeof TABS[number][0]
+const PROFESSION_OPTIONS = PROFESSION_ORDER.map(value => ({ value, label: getProfessionLabel(value) }))
 
 const VIEW_COLUMNS = [
   { key: 'yesterday', label: '前日', dateKey: 'yesterdayDate' },
@@ -50,10 +61,20 @@ const observedTime = new Intl.DateTimeFormat('ja-JP', {
   hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
 })
 
-export function OperatorWikiViewsPage(props: Props) {
+export function OperatorWikiViewsPage({ operators, loading }: Props) {
   const id = useId()
   const [tab, setTab] = useState<Tab>('views')
   const [commentsOpened, setCommentsOpened] = useState(false)
+  const [filters, setFilters] = useState(EMPTY_OPERATOR_DATABASE_FILTERS)
+  const [viewPage, setViewPage] = useState(0)
+  const [commentPage, setCommentPage] = useState(0)
+  const filteredOperators = useMemo(() => filterOperatorDatabaseRecords(operators, filters, 'name'), [operators, filters])
+
+  function changeFilters(next: OperatorDatabaseFilters) {
+    setFilters(next)
+    setViewPage(0)
+    setCommentPage(0)
+  }
 
   return <section className="calculator-page operator-wiki-views-page">
     <header className="page-intro">
@@ -63,11 +84,16 @@ export function OperatorWikiViewsPage(props: Props) {
       setTab(next)
       if (next === 'comments') setCommentsOpened(true)
     }} idPrefix={id} label="Wiki 集計の表示" />
+    <div className="operator-wiki-views-filters" role="region" aria-label="オペレーターの絞り込み">
+      <Filters value={filters} professionOptions={PROFESSION_OPTIONS} onChange={changeFilters}
+        onReset={() => changeFilters(EMPTY_OPERATOR_DATABASE_FILTERS)} showNameInitial={false}
+        searchFirst searchLabel="オペレーター名" searchPlaceholder="オペレーター名で検索" />
+    </div>
     <section id={`${id}-panel-views`} role="tabpanel" aria-labelledby={`${id}-tab-views`} hidden={tab !== 'views'}>
-      <WikiViewPanel {...props} />
+      <WikiViewPanel operators={filteredOperators} loading={loading} page={viewPage} setPage={setViewPage} />
     </section>
     <section id={`${id}-panel-comments`} role="tabpanel" aria-labelledby={`${id}-tab-comments`} hidden={tab !== 'comments'}>
-      {commentsOpened && <WikiCommentPanel {...props} />}
+      {commentsOpened && <WikiCommentPanel operators={filteredOperators} loading={loading} page={commentPage} setPage={setCommentPage} />}
     </section>
   </section>
 }
@@ -85,9 +111,8 @@ function useWikiSnapshot<T>(load: (signal?: AbortSignal) => Promise<T>) {
   return state
 }
 
-function WikiViewPanel({ operators, loading }: Props) {
+function WikiViewPanel({ operators, loading, page, setPage }: PanelProps) {
   const state = useWikiSnapshot<OperatorWikiViewSnapshot>(loadOperatorWikiViewSnapshot)
-  const [page, setPage] = useState(0)
   const snapshot = state.status === 'ready' ? state.snapshot : null
   const rows = useMemo(() => buildOperatorWikiViewRows(operators, snapshot), [operators, snapshot])
   const columns = VIEW_COLUMNS.map(({ key, label, dateKey }) => ({
@@ -110,10 +135,9 @@ function WikiViewPanel({ operators, loading }: Props) {
   </div>
 }
 
-function WikiCommentPanel({ operators, loading }: Props) {
+function WikiCommentPanel({ operators, loading, page, setPage }: PanelProps) {
   const state = useWikiSnapshot<OperatorWikiCommentSnapshot>(loadOperatorWikiCommentSnapshot)
   const [period, setPeriod] = useState<WikiCommentPeriod | 'total'>(30)
-  const [page, setPage] = useState(0)
   const snapshot = state.status === 'ready' ? state.snapshot : null
   const range = useMemo(() => snapshot && period !== 'total'
     ? getWikiCommentRange(snapshot.throughDate, period)
@@ -222,7 +246,9 @@ function WikiStatsTable<Metric extends string>({
             })}
           </tr>)}
           {visible.length === 0 && <tr>
-            <td colSpan={columns.length + 1} className="operator-wiki-views-empty">オペレーターがいません。</td>
+            <td colSpan={columns.length + 1} className="operator-wiki-views-empty">
+              <span role="status">該当するオペレーターがいません。</span>
+            </td>
           </tr>}
         </tbody>
       </table>

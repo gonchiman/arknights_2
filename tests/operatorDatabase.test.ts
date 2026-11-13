@@ -161,6 +161,22 @@ test('名前・職分・潜在能力・素質・スキル・モジュールを�
   )
 })
 
+test('名前のみの検索では表記を正規化し、職業とレアリティを同時に適用する', () => {
+  const base = buildOperatorDatabaseRecords([createSkill({ profile: createProfile() })])[0]
+  const lancet = { ...base, operatorId: 'lancet', name: 'Lancet-2', profession: 'MEDIC', rarity: 1 }
+  const other = { ...base, operatorId: 'other', name: '別のオペレーター', traitDescription: 'Lancet-2' }
+  const sameName = { ...lancet, operatorId: 'other-rarity', rarity: 6 }
+  const records = [lancet, other, sameName]
+
+  assert.deepEqual(filterOperatorDatabaseRecords(records, filters({ query: ' ＬＡＮＣＥＴ ' }), 'name'), [lancet, sameName])
+  assert.deepEqual(filterOperatorDatabaseRecords(records, filters({
+    query: 'ＬＡＮＣＥＴ', profession: 'MEDIC', rarity: 1,
+  }), 'name'), [lancet])
+  assert.deepEqual(filterOperatorDatabaseRecords(records, filters({
+    query: 'ＬＡＮＣＥＴ', profession: 'WARRIOR', rarity: 1,
+  }), 'name'), [])
+})
+
 test('数値を指定方向へ並べ、欠落値は末尾で安定させる', () => {
   const records = buildOperatorDatabaseRecords([
     createSkill({ profile: createProfile(), operatorName: 'テスト' }),
