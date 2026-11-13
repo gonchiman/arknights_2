@@ -1,0 +1,183 @@
+.damage-three-attribute-rank-chart {
+  --rank-physical: #387590;
+  --rank-arts: #a85b2e;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.damage-three-attribute-rank-chart .is-physical { --series-color: var(--rank-physical); }
+.damage-three-attribute-rank-chart .is-arts { --series-color: var(--rank-arts); }
+
+.damage-three-attribute-rank-chart-legend {
+  display: flex;
+  gap: 14px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.damage-three-attribute-rank-chart-legend span {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.damage-three-attribute-rank-chart-legend i {
+  width: 17px;
+  border-top: 2px solid var(--series-color);
+}
+
+.damage-three-attribute-rank-chart-legend .is-arts i { border-top-style: dashed; }
+
+.damage-three-attribute-rank-chart-scroll {
+  overflow-x: auto;
+}
+
+.damage-three-attribute-rank-chart-layout {
+  display: grid;
+  grid-template-columns: minmax(3em, max-content) minmax(0, 1fr);
+  grid-template-rows: clamp(160px, 30vw, 240px) auto auto;
+  column-gap: 8px;
+  min-width: calc(var(--attribute-rank-columns) * 2.8rem + 4.5rem);
+  padding: 13px 12px 8px;
+}
+
+.damage-three-attribute-rank-chart-scale,
+.damage-three-attribute-rank-chart-plot { position: relative; }
+
+.damage-three-attribute-rank-chart-scale {
+  display: grid;
+  color: var(--text-soft);
+  font-size: 11px;
+  text-align: end;
+  white-space: nowrap;
+}
+
+.damage-three-attribute-rank-chart-scale span {
+  position: relative;
+  grid-area: 1 / 1;
+  align-self: start;
+  transform: translateY(-50%);
+}
+
+.damage-three-attribute-rank-chart-plot svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.damage-three-attribute-rank-chart-plot svg line {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.damage-three-attribute-rank-chart-plot svg path {
+  fill: none;
+  stroke: var(--series-color);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.damage-three-attribute-rank-chart-plot svg .is-arts { stroke-dasharray: 5 4; }
+
+.damage-three-attribute-rank-chart-columns,
+.damage-three-attribute-rank-chart-resistance,
+.damage-three-attribute-rank-chart-defense {
+  display: grid;
+  grid-template-columns: repeat(var(--attribute-rank-columns), minmax(0, 1fr));
+}
+
+.damage-three-attribute-rank-chart-columns {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.damage-three-attribute-rank-chart-columns > div { position: relative; }
+
+.damage-three-attribute-rank-chart-columns .is-selected {
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.damage-three-attribute-rank-chart-columns i {
+  position: absolute;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--series-color);
+  transform: translate(-50%, -50%);
+}
+
+.damage-three-attribute-rank-chart-columns i.is-coincident {
+  width: 12px;
+  height: 12px;
+}
+
+.damage-three-attribute-rank-chart-columns i.is-arts {
+  border-radius: 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.damage-three-attribute-rank-chart-axis-label {
+  align-self: center;
+  justify-self: end;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+
+.damage-three-attribute-rank-chart-resistance button {
+  min-height: 27px;
+  padding: 3px 0;
+  border: 0;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.damage-three-attribute-rank-chart-resistance button:is(:hover, [aria-pressed="true"]) {
+  background: var(--surface-soft);
+}
+
+.damage-three-attribute-rank-chart-resistance button[aria-pressed="true"] {
+  font-weight: 600;
+}
+
+.damage-three-attribute-rank-chart-resistance button:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: -2px;
+}
+
+.damage-three-attribute-rank-chart-defense {
+  padding-block: 3px;
+  color: var(--text-soft);
+  text-align: center;
+}
+
+.damage-three-attribute-rank-chart-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 7px 12px;
+  background: var(--surface-soft);
+}
+
+.damage-three-attribute-rank-chart-detail div {
+  display: flex;
+  gap: 4px;
+}
+
+.damage-three-attribute-rank-chart-detail dt { color: var(--text-soft); }
+.damage-three-attribute-rank-chart-detail dd { margin: 0; }
+
+@media (pointer: coarse) {
+  .damage-three-attribute-rank-chart-resistance button { min-height: 44px; }
+}
