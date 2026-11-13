@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-11-13T02:38:17.868Z",
+  "observedAt": "2026-11-13T03:27:37.567Z",
   "throughDate": "2026-11-12",
   "entries": [
     {
@@ -3747,10 +3747,8 @@
     {
       "operatorId": "char_164_nightm",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%A1%E3%83%B3%E3%83%88%2F%E3%83%8A%E3%82%A4%E3%83%88%E3%83%A1%E3%82%A2",
-      "coveredFrom": "2026-10-14",
-      "counts": {
-        "2026-10-22": 1
-      },
+      "coveredFrom": null,
+      "counts": {},
       "total": null
     },
     {
