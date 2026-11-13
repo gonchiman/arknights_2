@@ -70,7 +70,7 @@ test('元素損傷表は通常の計算機で対象スキルに表示し、属�
   const attribute = render(AttributePage, props)
   assert.match(attribute, /aria-label="1回の攻撃ダメージの属性比較（1体あたり）"/)
   assert.match(attribute, /aria-label="属性比較表をPNG画像で保存"/)
-  assert.doesNotMatch(attribute, /elemental-buildup-table|aria-label="表示形式"/)
+  assert.doesNotMatch(attribute, /elemental-buildup-table/)
   assert.doesNotMatch(cellText(attribute), /この条件では計算できません/)
 })
 

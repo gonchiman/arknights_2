@@ -20,6 +20,8 @@ import { GuardConditionFields } from './DamageCalculatorThree'
 import {
   ComparisonTableImageDialog, type ComparisonTableImageSnapshot,
 } from './ComparisonTableImageDialog'
+import { DamageCalculatorThreeAttributeRangeChart } from './DamageCalculatorThreeAttributeRangeChart'
+import { DamageCalculatorThreeAttributeRankChart } from './DamageCalculatorThreeAttributeRankChart'
 import { EnemyAggregationSelector, EnemyAggregationStatus } from './EnemyAggregationSelector'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
 import { OperatorDetailLink } from './OperatorDetailLink'
@@ -42,6 +44,7 @@ const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 const TABLE_NUMBER = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 const TABLE_RATINGS = getEnemyRatingRanges('defense').map(({ rating }) => rating)
 const COMPARISON_BASES = [['rating', 'ゲーム内評価'], ['rank', '出現順位']] as const
+const RESULT_VIEWS = [['table', '表'], ['chart', 'グラフ']] as const
 const SKILL_TAB_ID = 'damage-three-attribute-skill'
 
 function sameSkill(entry: DamageThreeAttributeEntry, selection: SkillStructureSelection) {
@@ -69,6 +72,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const [applyPenetration, setApplyPenetration] = useState(true)
   const [overrides, setOverrides] = useState<DamageThreeComparisonOverrides>({})
   const [basis, setBasis] = useState<typeof COMPARISON_BASES[number][0]>('rating')
+  const [resultView, setResultView] = useState<typeof RESULT_VIEWS[number][0]>('table')
   const [image, setImage] = useState<ComparisonTableImageSnapshot | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [filters, setFilters] = useState({ ...EMPTY_OPERATOR_FILTERS })
@@ -95,6 +99,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const reference = comparison?.result.reference
   const output = reference?.output
   const errors = comparison?.result.errors ?? []
+  const invalid = errors.length > 0
   const canSaveImage = comparison !== null && errors.length === 0
     && (comparison.basis === 'rating' || comparison.result.rows.length > 0)
   const conditionInputs: GuardInput[] = (reference?.fields ?? []).filter(field => !field.locked)
@@ -241,6 +246,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
       <div className="damage-three-attribute-toolbar">
         <AttributeButtons label="対応基準" options={COMPARISON_BASES} value={basis} onChange={setBasis} />
         {basis === 'rank' && <EnemyAggregationSelector state={aggregation} />}
+        <AttributeButtons label="表示形式" options={RESULT_VIEWS} value={resultView} onChange={setResultView} />
       </div>
       <div className="damage-three-attribute-toolbar">
         <strong className="damage-three-attribute-fixed-metric">{METRIC_LABELS.perAttack}</strong>
@@ -249,18 +255,23 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
           <input type="checkbox" checked={applyPenetration} onChange={event => setApplyPenetration(event.target.checked)} />
           防御力・術耐性無視を適用
         </label>
-        <button type="button" className="button secondary damage-three-attribute-image-button"
+        {resultView === 'table' && <button type="button" className="button secondary damage-three-attribute-image-button"
           aria-label="属性比較表をPNG画像で保存"
-          aria-haspopup="dialog" disabled={!canSaveImage} onClick={openImage}>画像を保存</button>
+          aria-haspopup="dialog" disabled={!canSaveImage} onClick={openImage}>画像を保存</button>}
       </div>
       {errors.length > 0 && <div className="damage-two-unavailable damage-three-attribute-error" role="status">
         {errors.map(reason => <div key={reason}>{reason}</div>)}
       </div>}
-      {comparison.basis === 'rating' ? <DamageCalculatorThreeAttributeTable
-        physical={comparison.result.physical} arts={comparison.result.arts} metric="perAttack" invalid={errors.length > 0} /> : <>
+      {comparison.basis === 'rating' && (resultView === 'chart'
+        ? <DamageCalculatorThreeAttributeRangeChart physical={comparison.result.physical} arts={comparison.result.arts} invalid={invalid} />
+        : <DamageCalculatorThreeAttributeTable physical={comparison.result.physical} arts={comparison.result.arts}
+          metric="perAttack" invalid={invalid} />)}
+      {comparison.basis === 'rank' && <>
         <EnemyAggregationStatus state={aggregation} />
-        {rankPairs && (rankPairs.length ? <DamageCalculatorThreeAttributeRankTable rows={comparison.result.rows} />
-          : <p role="status">集計対象の出現データがありません。</p>)}
+        {comparison.result.rows.length > 0 && (resultView === 'chart'
+          ? <DamageCalculatorThreeAttributeRankChart rows={comparison.result.rows} />
+          : <DamageCalculatorThreeAttributeRankTable rows={comparison.result.rows} />)}
+        {rankPairs?.length === 0 && <p role="status">集計対象の出現データがありません。</p>}
       </>}
     </CollapsibleCalculatorPanel>}
     {image && <ComparisonTableImageDialog snapshot={image} onClose={() => setImage(null)} />}
