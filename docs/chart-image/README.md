@@ -236,6 +236,7 @@ await saveComparisonChartImage({
 | 敵統計：防御力・術耐性の評価別分布 | [EnemyRatingComparisonImage.tsx](../../src/components/EnemyRatingComparisonImage.tsx) |
 | 敵統計：ヒートマップ | [enemyJointImage.ts](../../src/lib/enemyJointImage.ts) |
 | 敵統計：術耐性の円グラフ・100%横棒 | [enemyThresholdComparison.ts](../../src/lib/enemyThresholdComparison.ts) |
+| DC3属性比較：評価別の範囲、出現順位の折れ線・集合棒 | [DamageCalculatorThreeAttributePage.tsx](../../src/components/DamageCalculatorThreeAttributePage.tsx) |
 | 物理・術ダメージ比較：防御力・術耐性の折れ線／攻撃力別の折れ線 | [PhysicalArtsComparisonPage.tsx](../../src/components/PhysicalArtsComparisonPage.tsx)・[PhysicalArtsAttackSweepPanel.tsx](../../src/components/PhysicalArtsAttackSweepPanel.tsx) |
 
 表画像・スライドは対象外とし、既存の読める命名を維持する。旧 `enemyChartImage.ts` の予備経路や、現在選択できないグラフの命名はこの適用済み範囲に含めない。
@@ -287,6 +288,10 @@ const baseFilename = createChartImageFilename(prefix, parts)
 「防御力・術耐性を固定」の[攻撃力別グラフ](../../src/components/PhysicalArtsAttackSweepChart.tsx)では、下軸の攻撃力名を共通フレームに渡す。固定した防御力・術耐性と攻撃力の範囲を既定名に含める。表の刻みは表画像の条件に使う。
 
 「評価表示」をオンにすると、上下の数値軸にそれぞれのゲーム内評価帯を表示する。保存時は評価帯を含む表示状態を保持し、必要な高さを確保する。既定のファイル名には、オンのときだけ「評価表示」を追加する。
+
+[DC3属性比較](../../src/components/DamageCalculatorThreeAttributePage.tsx)も共通フレームを使う。画面で選んだゲーム内評価の範囲、出現順位の折れ線、出現順位の集合棒を保存する。出現順位では術耐性の真下に対応する防御力を置き、集計版を画像とファイル名に記載する。ファイル名には折れ線か集合棒かも記載する。
+
+スルトS2・特化3、昇進2 Lv.90、信頼100、敵1体で「防御力・術耐性無視を適用」をオンにする。「出現順位」、集計版v11、「グラフ」、「集合棒グラフ」を選び、縦横比16:9で保存すると[確認用PNG](examples/dc3-attribute-rank-bars-v11-16x9.png)を再生成できる。術耐性50の下に防御力350が並び、術耐性100は防御力が「—」で棒が空になることを確認する。
 
 ## 変更時の確認
 

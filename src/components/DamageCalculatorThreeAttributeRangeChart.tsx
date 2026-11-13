@@ -10,6 +10,7 @@ interface Props {
   physical: readonly DamageThreeAttributeTableRow[]
   arts: readonly DamageThreeAttributeTableRow[]
   invalid?: boolean
+  imageHeight?: number
 }
 
 const RATINGS = getEnemyRatingRanges('defense').map(({ rating }) => rating)
@@ -36,8 +37,21 @@ function describeGroup(group: { rating: string; physical: DamageRange | null; ar
   return `評価 ${group.rating}　物理 ${describeRange(group.physical)}　術 ${describeRange(group.arts)}`
 }
 
-export function DamageCalculatorThreeAttributeRangeChart({ physical, arts, invalid = false }: Props) {
+export function DamageCalculatorThreeAttributeRangeLegend({ forImage = false }: { forImage?: boolean }) {
+  return <ul className={forImage ? 'chart-image-frame-legend-list damage-three-attribute-range-image-legend'
+    : 'damage-three-attribute-range-legend'} aria-label="属性の凡例">
+    {ATTRIBUTES.map(({ key, label }) => {
+      const point = <i className={`damage-three-attribute-range-point is-${key}`} aria-hidden="true" />
+      return <li key={key} className={forImage ? 'chart-image-frame-legend-item' : undefined}>
+        {forImage ? <span className="chart-image-frame-legend-swatch">{point}</span> : point}{label}
+      </li>
+    })}
+  </ul>
+}
+
+export function DamageCalculatorThreeAttributeRangeChart({ physical, arts, invalid = false, imageHeight }: Props) {
   const [selected, setSelected] = useState(5)
+  const forImage = imageHeight !== undefined
   const physicalByRating = new Map(physical.map(row => [row.rating, row.perAttack]))
   const artsByRating = new Map(arts.map(row => [row.rating, row.perAttack]))
   const groups = RATINGS.map(rating => ({
@@ -50,14 +64,11 @@ export function DamageCalculatorThreeAttributeRangeChart({ physical, arts, inval
   const percentage = (value: number) => `${value / axis.maximum * 100}%`
   const columns = { '--dc3-range-columns': groups.length } as CSSProperties
 
-  return <figure className="damage-three-attribute-range-chart" aria-label="ゲーム内評価別の物理・術ダメージ">
-    <figcaption className="damage-three-attribute-range-caption">
-      <ul className="damage-three-attribute-range-legend" aria-label="属性の凡例">
-        {ATTRIBUTES.map(({ key, label }) => <li key={key}>
-          <i className={`damage-three-attribute-range-point is-${key}`} aria-hidden="true" />{label}
-        </li>)}
-      </ul>
-    </figcaption>
+  return <figure className={`damage-three-attribute-range-chart${forImage ? ' is-image' : ''}`}
+    style={{ height: imageHeight }} aria-label="ゲーム内評価別の物理・術ダメージ">
+    {!forImage && <figcaption className="damage-three-attribute-range-caption">
+      <DamageCalculatorThreeAttributeRangeLegend />
+    </figcaption>}
     <div className="damage-three-attribute-range-layout" style={columns}>
       <div className="damage-three-attribute-range-scale" aria-hidden="true">
         {axis.ticks.map(tick => <span key={tick} style={{ top: percentage(axis.maximum - tick) }}>
@@ -68,7 +79,7 @@ export function DamageCalculatorThreeAttributeRangeChart({ physical, arts, inval
         {axis.ticks.slice(1).map(tick => <i className="damage-three-attribute-range-gridline" key={tick}
           style={{ bottom: percentage(tick) }} />)}
         {groups.map((group, index) => <div key={group.rating}
-          className={`damage-three-attribute-range-group${index === selected ? ' is-selected' : ''}`}>
+          className={`damage-three-attribute-range-group${!forImage && index === selected ? ' is-selected' : ''}`}>
           {ATTRIBUTES.map(({ key }) => {
             const range = group[key]
             if (!range) return null
@@ -80,14 +91,14 @@ export function DamageCalculatorThreeAttributeRangeChart({ physical, arts, inval
           })}
         </div>)}
       </div>
-      <span className="damage-three-attribute-range-axis" aria-hidden="true">評価</span>
+      {!forImage && <span className="damage-three-attribute-range-axis" aria-hidden="true">評価</span>}
       <div className="damage-three-attribute-range-ratings" role="group" aria-label="ゲーム内評価">
-        {groups.map((group, index) => <button key={group.rating} type="button"
+        {groups.map((group, index) => forImage ? <span key={group.rating}>{group.rating}</span> : <button key={group.rating} type="button"
           aria-label={describeGroup(group)} aria-pressed={index === selected} onClick={() => setSelected(index)}>
           {group.rating}
         </button>)}
       </div>
     </div>
-    <p className="damage-three-attribute-range-detail" aria-live="polite">{describeGroup(groups[selected])}</p>
+    {!forImage && <p className="damage-three-attribute-range-detail" aria-live="polite">{describeGroup(groups[selected])}</p>}
   </figure>
 }
