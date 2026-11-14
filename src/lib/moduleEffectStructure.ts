@@ -7,7 +7,7 @@ import {
 import { getOperatorPassives, type OperatorPassives, type PassiveSource } from './operatorProfile.ts'
 
 const SURTR_OPERATOR_ID = 'char_350_surtr'
-const SURTR_X_MODULE_ID = 'uniequip_002_surtr'
+export const SURTR_X_MODULE_ID = 'uniequip_002_surtr'
 const SURTR_RESISTANCE_IGNORE_KEY = 'magic_resist_penetrate_fixed'
 const SURTR_RESISTANCE_IGNORE_EFFECT_ID = 'resistance-ignore'
 const POTENTIAL_RANK = 1
@@ -79,6 +79,21 @@ function getReviewedSurtrTalent(basePassives: OperatorPassives, application: Ope
   return { baseValue, equippedValue, equippedDescription: equipped.description, change }
 }
 
+export function getReviewedSurtrXEffects(
+  basePassives: OperatorPassives,
+  application: OperatorModuleApplication,
+  level: number,
+) {
+  const trait = application.passives.sources.find(source => source.sourceKind === 'TRAIT')
+  const speed = readNonNegativeValue(trait, 'attack_speed')
+  const change = speed === undefined ? undefined : application.changes.find(effect =>
+    effect.kind === 'TRAIT' && effect.description === `未ブロック時、攻撃速度+${speed}`)
+  return {
+    unblockedSpeed: speed !== undefined && change ? { value: speed, change } : null,
+    talent: getReviewedSurtrTalent(basePassives, application, level),
+  }
+}
+
 export function getModuleEffectStructure(operator: SkillRecord, module: RawOperatorModule, level: number): ModuleEffectStructure {
   const stage = resolveModuleStage(operator, module, level)
   if (!stage) return { available: false, rows: [], otherChanges: [] }
@@ -90,16 +105,12 @@ export function getModuleEffectStructure(operator: SkillRecord, module: RawOpera
   }))
   const represented = new Set<OperatorModuleChange>()
   if (reviewedSurtrX) {
-    const trait = application.passives.sources.find(source => source.sourceKind === 'TRAIT')
-    const speed = readNonNegativeValue(trait, 'attack_speed')
-    const speedChange = speed === undefined ? undefined : application.changes.find(effect =>
-      effect.kind === 'TRAIT' && effect.description === `未ブロック時、攻撃速度+${speed}`)
-    if (speedChange) {
+    const { unblockedSpeed, talent } = getReviewedSurtrXEffects(basePassives, application, level)
+    if (unblockedSpeed) {
       rows.push({ id: 'surtr-x-unblocked-attack-speed', category: '特性', item: '攻撃速度',
-        condition: '未ブロック時', value: `+${speed}` })
-      represented.add(speedChange)
+        condition: '未ブロック時', value: `+${unblockedSpeed.value}` })
+      represented.add(unblockedSpeed.change)
     }
-    const talent = getReviewedSurtrTalent(basePassives, application, level)
     if (talent?.change && talent.baseValue !== talent.equippedValue) {
       rows.push({ id: SURTR_RESISTANCE_IGNORE_EFFECT_ID, category: '素質', item: '劫火の術耐性固定無視',
         condition: '攻撃時', value: `${talent.baseValue} → ${talent.equippedValue}`, talentIndex: 0, talentName: '劫火' })
