@@ -64,7 +64,7 @@
 .dc3-comparison-detail-table tr:last-child th, .dc3-comparison-detail-table tr:last-child td { border-bottom: 0; }
 .dc3-comparison-detail-table tr { cursor: default; }
 .dc3-comparison-detail-table .dc3-comparison-number { text-align: right; font-variant-numeric: tabular-nums; }
-.dc3-comparison-final-attack-table .dc3-comparison-number { text-align: right; }
+.dc3-comparison-attack-detail-table .dc3-comparison-number { text-align: right; }
 .dc3-comparison-individual-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .dc3-comparison-individual-fields input:disabled, .dc3-comparison-individual-fields select:disabled { color: var(--text-soft); background: var(--surface-soft); opacity: 1; }
 .dc3-comparison-notes { margin: 0; padding: 10px 26px; color: var(--text-soft); font-size: 12px; line-height: 1.8; }

@@ -366,8 +366,11 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
           const attributeScale = action.damageScaleWhenType?.damageType === resolvedType ? typedScale : 1
           const uncappedDamage = mitigation.result * count * modifiers.damageScale * variant.damageScale * attributeScale
           const limitedDamage = damageCapPerTarget === null ? uncappedDamage : Math.min(uncappedDamage, damageCapPerTarget)
+          // Only a single independent hit can have a damage cap.
+          const perHitDamage = count === 1 ? limitedDamage : mitigation.result * modifiers.damageScale * variant.damageScale * attributeScale
           return { id: branch.id, probability: branch.probability,
-            defenseIgnoreRatio: resolvedType === 'ELEMENTAL' ? 0 : branchDefenseIgnoreRatio, damage: limitedDamage * probability * hitFactor, mitigation }
+            defenseIgnoreRatio: resolvedType === 'ELEMENTAL' ? 0 : branchDefenseIgnoreRatio,
+            perHitDamage, damage: limitedDamage * probability * hitFactor, mitigation }
         })
         // A proc can select a different weakpoint attribute. Keep the original
         // probabilities on each attribute's component; never normalize them to 1.
