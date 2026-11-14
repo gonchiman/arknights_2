@@ -85,6 +85,11 @@
   margin-top: 14px;
 }
 
+.skill-effect-information {
+  container-type: inline-size;
+  margin-top: 14px;
+}
+
 .skill-effect-modal-body > section + section {
   margin-top: 18px;
   border-top: 1px solid var(--border);

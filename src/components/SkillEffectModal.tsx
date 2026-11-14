@@ -8,11 +8,14 @@ interface Props {
   skillLevelIndex?: number
   showSkillId?: boolean
   descriptionOnly?: boolean
+  skillInformation?: ReactNode
   action?: ReactNode
   onClose: () => void
 }
 
-export function SkillEffectModal({ skill, skillLevelIndex, showSkillId = false, descriptionOnly = false, action, onClose }: Props) {
+export function SkillEffectModal({
+  skill, skillLevelIndex, showSkillId = false, descriptionOnly = false, skillInformation, action, onClose,
+}: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const titleId = useId()
@@ -92,6 +95,8 @@ export function SkillEffectModal({ skill, skillLevelIndex, showSkillId = false, 
             </div>
             <p>{description}</p>
           </section>
+
+          {skillInformation && <div className="skill-effect-information">{skillInformation}</div>}
 
           {!descriptionOnly && <section aria-labelledby={`${titleId}-activation`}>
             <h3 id={`${titleId}-activation`}>発動情報</h3>
