@@ -9,6 +9,7 @@ import {
   type DamageThreeComparisonResult,
 } from '../lib/damageCalculatorThreeComparison'
 import {
+  buildDamageCalculatorThreeSkillInformation,
   compareDamageCalculatorThreeSkillInformation,
   getDamageCalculatorThreeSkillInformationValues,
   type DamageCalculatorThreeSkillInformationKey,
@@ -19,6 +20,7 @@ import { createDamageCalculatorThreeHash } from '../lib/routes'
 import type { SkillRecord } from '../types/skill'
 import { OperatorDetailLink } from './OperatorDetailLink'
 import { SkillEffectModal } from './SkillEffectModal'
+import { SkillInformationTable } from './SkillInformationTable'
 import { TableSortHeader } from './TableSortHeader'
 import { ElementalBuildupTable } from './ElementalBuildupTable'
 import { StructureTable } from './StructureTable'
@@ -175,6 +177,7 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
   }), [results, skillInformation, sort, target])
   const detailResult = useMemo(() => detail ? evaluateDamageThreeComparisonEntry(detail.entry, common, overrides[detail.entry.key]) : null,
     [detail, common, overrides])
+  const descriptionOutput = description ? evaluatedResults.find(result => result.entry.key === description.entry.key)?.output : null
   const formatter = useMemo(() => new Intl.NumberFormat('ja-JP', { minimumFractionDigits: precision, maximumFractionDigits: precision }), [precision])
   const formatNumber = (value: number | null) => value === null || !Number.isFinite(value) ? '—' : formatter.format(value)
   const widthMatchesContent = measuredFullWidth.results === results && measuredFullWidth.precision === precision
@@ -391,6 +394,9 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
     </section>
     {description && <SkillEffectModal skill={description.entry.skill} skillLevelIndex={description.entry.levelIndex}
       descriptionOnly onClose={closeDescription}
+      skillInformation={<SkillInformationTable information={buildDamageCalculatorThreeSkillInformation(
+        description.entry.structure, description.entry.skill, descriptionOutput,
+      )} />}
       action={<a className="button" href={createDamageCalculatorThreeHash(description.entry.structure.basicInfo)}>
         計算機3で開く
       </a>} />}
