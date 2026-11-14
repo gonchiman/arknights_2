@@ -32,6 +32,8 @@
 .damage-three-result-table { min-width: 660px; }
 .damage-three-result-table th:first-child { width: 16%; }
 .damage-three-result-table thead th { vertical-align: middle; }
+.damage-three-mixed-target-table { min-width: 960px; }
+.damage-three-mixed-target-table th:first-child { width: 11%; }
 .damage-three-result-heading { margin: 16px 0 8px; color: var(--text); font-size: 12px; font-weight: 500; }
 .damage-three-result-heading:first-of-type { margin-top: 0; }
 .damage-three-dot-table { min-width: 300px; }

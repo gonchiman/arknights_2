@@ -5,9 +5,11 @@ import {
   type OperatorModuleApplication, type OperatorModuleChange,
 } from './operatorModules.ts'
 import { getOperatorPassives, type OperatorPassives, type PassiveSource } from './operatorProfile.ts'
+import { getSurtrRemnantAttackSpeedBonus } from './surtrRemnantAttackSpeed.ts'
 
 const SURTR_OPERATOR_ID = 'char_350_surtr'
 export const SURTR_X_MODULE_ID = 'uniequip_002_surtr'
+export const SURTR_Y_MODULE_ID = 'uniequip_003_surtr'
 const SURTR_RESISTANCE_IGNORE_KEY = 'magic_resist_penetrate_fixed'
 const SURTR_RESISTANCE_IGNORE_EFFECT_ID = 'resistance-ignore'
 const POTENTIAL_RANK = 1
@@ -47,8 +49,8 @@ function resolveModuleStage(operator: SkillRecord, module: RawOperatorModule, le
   const application = applyOperatorModule(basePassives, module, level, POTENTIAL_RANK)
   return {
     basePassives, application,
-    reviewedSurtrX: operator.operatorId === SURTR_OPERATOR_ID && module.uniEquipId === SURTR_X_MODULE_ID
-      && phaseIndex === 2 && isOperatorModuleUnlocked(module, phaseIndex, operatorLevel),
+    reviewedSurtr: operator.operatorId === SURTR_OPERATOR_ID && phaseIndex === 2
+      && isOperatorModuleUnlocked(module, phaseIndex, operatorLevel),
   }
 }
 
@@ -94,17 +96,54 @@ export function getReviewedSurtrXEffects(
   }
 }
 
+export function getReviewedSurtrYEffects(
+  basePassives: OperatorPassives,
+  application: OperatorModuleApplication,
+  level: number,
+) {
+  const trait = application.passives.sources.find(source => source.sourceKind === 'TRAIT')
+  const scale = readNonNegativeValue(trait, 'damage_scale')
+  const percent = scale === undefined ? null : formatFragilityPercent(scale)
+  const fragilityChange = application.changes.find(effect => effect.kind === 'TRAIT'
+    && effect.description === `自身がブロックしている敵に${percent}の対術脆弱状態を付与`)
+  const blockedFragility = scale !== undefined && scale > 1 && fragilityChange
+    ? { value: scale, change: fragilityChange } : null
+
+  const original = basePassives.sources.find(isSurtrRemnantTalent)
+  const equipped = application.passives.sources.find(isSurtrRemnantTalent)
+  const speed = getSurtrRemnantAttackSpeedBonus(application.passives, 'Y', level)
+  const originalDuration = readNonNegativeValue(original, 'surtr_t_2[withdraw].interval')
+  const duration = readNonNegativeValue(equipped, 'surtr_t_2[withdraw].interval')
+  const change = application.changes.find(effect => effect.kind === 'TALENT' && effect.talentIndex === 1)
+  const remnantSpeed = original && equipped && speed !== null && originalDuration !== undefined && duration !== undefined
+    && original.description.replace(/\s+/g, ' ') === `致命的なダメージを受けてもHPが1残る 効果発動から${originalDuration}秒後強制退場`
+    && (level === 1
+      ? !change && speed === 0 && originalDuration === duration
+      : speed > 0 && change?.description === `致命的なダメージを受けてもHPが1残り、攻撃速度+${speed} 効果発動から${duration}秒後強制退場`)
+    ? { value: speed, change, originalDuration, duration } : null
+  return { blockedFragility, remnantSpeed }
+}
+
+function isSurtrRemnantTalent(source: PassiveSource): boolean {
+  return source.sourceKind === 'TALENT' && source.talentIndex === 1 && source.sourceName === '余燼'
+    && source.prefabKey === '2' && source.requiredPotentialRank === 0
+}
+
+export function formatFragilityPercent(multiplier: number): string {
+  return `${Number(((multiplier - 1) * 100).toFixed(4))}%`
+}
+
 export function getModuleEffectStructure(operator: SkillRecord, module: RawOperatorModule, level: number): ModuleEffectStructure {
   const stage = resolveModuleStage(operator, module, level)
   if (!stage) return { available: false, rows: [], otherChanges: [] }
-  const { application, basePassives, reviewedSurtrX } = stage
+  const { application, basePassives, reviewedSurtr } = stage
   const rows: ModuleEffectStructureRow[] = application.attributeEffects.map((effect, index) => ({
     id: `attribute-${effect.key}-${index}`, category: 'ステータス',
     item: effect.key === 'magic_resistance' ? '自身の術耐性' : effect.label,
     condition: '常時', value: effect.valueLabel,
   }))
   const represented = new Set<OperatorModuleChange>()
-  if (reviewedSurtrX) {
+  if (reviewedSurtr && module.uniEquipId === SURTR_X_MODULE_ID) {
     const { unblockedSpeed, talent } = getReviewedSurtrXEffects(basePassives, application, level)
     if (unblockedSpeed) {
       rows.push({ id: 'surtr-x-unblocked-attack-speed', category: '特性', item: '攻撃速度',
@@ -117,6 +156,23 @@ export function getModuleEffectStructure(operator: SkillRecord, module: RawOpera
       represented.add(talent.change)
     }
   }
+  if (reviewedSurtr && module.uniEquipId === SURTR_Y_MODULE_ID) {
+    const { blockedFragility, remnantSpeed } = getReviewedSurtrYEffects(basePassives, application, level)
+    if (blockedFragility) {
+      rows.push({ id: 'surtr-y-blocked-arts-fragility', category: '特性', item: '対術脆弱',
+        condition: '自身がブロックしている敵', value: formatFragilityPercent(blockedFragility.value) })
+      represented.add(blockedFragility.change)
+    }
+    if (remnantSpeed?.change) {
+      rows.push({ id: 'surtr-y-remnant-attack-speed', category: '素質', item: '余燼の攻撃速度',
+        condition: '余燼発動中', value: `+${remnantSpeed.value}` })
+      if (remnantSpeed.duration !== remnantSpeed.originalDuration) {
+        rows.push({ id: 'surtr-y-remnant-duration', category: '素質', item: '余燼の退場までの時間',
+          condition: '余燼発動後', value: `${remnantSpeed.originalDuration}秒 → ${remnantSpeed.duration}秒` })
+      }
+      represented.add(remnantSpeed.change)
+    }
+  }
   return { available: true, rows, otherChanges: application.changes.filter(change => !represented.has(change)) }
 }
 
@@ -126,7 +182,7 @@ export function getTalentModuleComparisons(operator: SkillRecord, talentIndex: n
   if (!module) return []
   return ([1, 2, 3] as const).flatMap(level => {
     const stage = resolveModuleStage(operator, module, level)
-    if (!stage?.reviewedSurtrX) return []
+    if (!stage?.reviewedSurtr) return []
     const talent = getReviewedSurtrTalent(stage.basePassives, stage.application, level)
     if (!talent) return []
     const { baseValue, equippedValue, equippedDescription } = talent

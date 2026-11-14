@@ -1,6 +1,6 @@
 import type { RawOperatorModule, SkillRecord } from '../types/skill.ts'
 import { COVERAGE_STATUS_LABELS, type DamageCalculatorThreeCoverageRow, type DamageCalculatorThreeCoverageStatus } from './damageCalculatorThreeCoverage.ts'
-import { DAMAGE_CALCULATOR_THREE_SURTR_X_ID, getDamageCalculatorThreeSurtrXModuleLevels } from './damageCalculatorThreeSurtrModule.ts'
+import { getDamageCalculatorThreeSurtrModuleLevels } from './damageCalculatorThreeSurtrModule.ts'
 import { getOperatorModuleId, getOperatorModuleLevels, getOperatorModules } from './operatorModules.ts'
 
 export const MODULE_COVERAGE_LEVELS = [1, 2, 3] as const
@@ -53,8 +53,8 @@ export function buildDamageCalculatorThreeModuleCoverage(
     const levels = availableLevels.length
       ? MODULE_COVERAGE_LEVELS.filter(level => availableLevels.includes(level))
       : MODULE_COVERAGE_LEVELS
-    const supportedLevels = moduleId === DAMAGE_CALCULATOR_THREE_SURTR_X_ID && status === 'SUPPORTED'
-      ? getDamageCalculatorThreeSurtrXModuleLevels(skill, 2, skill.operatorProfile.phases[2]?.maxLevel ?? 0)
+    const supportedLevels = status === 'SUPPORTED'
+      ? getDamageCalculatorThreeSurtrModuleLevels(skill, 2, skill.operatorProfile.phases[2]?.maxLevel ?? 0, moduleId)
       : []
     const stages = levels.map(level => ({
       level, status: overrides[`${id}:lv${level}`] ?? (supportedLevels.includes(level) ? 'SUPPORTED' : 'UNSTARTED'),

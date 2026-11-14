@@ -4,9 +4,8 @@ import type { ElementalBuildupResult } from './elementalBuildup.ts'
 import { buildGuardDamageOutput } from './guardDamageCalculator.ts'
 import { buildSummonDamageOutput } from './summonActor.ts'
 import {
-  DAMAGE_CALCULATOR_THREE_SURTR_X_SKILL_LEVEL_INDEX,
-  isDamageCalculatorThreeSurtrXSkill,
-  resolveDamageCalculatorThreeSurtrXModule,
+  DAMAGE_CALCULATOR_THREE_SURTR_MODULE_SKILL_LEVEL_INDEX,
+  resolveDamageCalculatorThreeSurtrModule,
   type DamageCalculatorThreeModuleSelection,
 } from './damageCalculatorThreeSurtrModule.ts'
 import type { VirtualMainAttackType } from './damageCalculatorThreeVirtualAttack.ts'
@@ -88,11 +87,13 @@ export interface DamageCalculatorThreeConditions {
   airborneHitCount?: number
   /** Whether Surtr is blocking any enemy while using the reviewed module trait. */
   blocking?: boolean
+  blockedTargetCount?: number
+  remnantActive?: boolean
 }
 
 export type DamageCalculatorThreeConditionInput = {
   kind: 'number'
-  metric: 'actualAttackTargetCount' | 'skillActivationCount' | 'enemyResistance' | 'targetWeight' | 'splashTargetCount' | 'airborneHitCount'
+  metric: 'actualAttackTargetCount' | 'skillActivationCount' | 'enemyResistance' | 'targetWeight' | 'splashTargetCount' | 'airborneHitCount' | 'blockedTargetCount'
   label: string
   min: number
   max: number
@@ -108,7 +109,7 @@ export type DamageCalculatorThreeConditionInput = {
   defaultValue: string
 } | {
   kind: 'boolean'
-  metric: 'targetCanBeLevitated' | 'seaMonsterPresent' | 'blocking'
+  metric: 'targetCanBeLevitated' | 'seaMonsterPresent' | 'blocking' | 'remnantActive'
   label: string
   options: readonly { value: boolean; label: string }[]
   defaultValue: boolean
@@ -167,6 +168,10 @@ export interface DamageCalculatorThreeRow {
   dps: number | null
   allTargetsPerAttack: number
   allTargetsDps: number | null
+  blockedTargetPerAttack?: number | null
+  unblockedTargetPerAttack?: number | null
+  blockedTargetDps?: number | null
+  unblockedTargetDps?: number | null
   breakdown: SkillDamageBreakdown | null
   damageOverTimeDps: number | null
   combinedDps: number | null
@@ -176,10 +181,15 @@ export interface DamageCalculatorThreeRow {
 
 export interface DamageCalculatorThreeOutput {
   module?: DamageCalculatorThreeModuleSelection & {
+    type: 'X' | 'Y'
     attackBonus: number
     attackSpeedBonus: number
     unblockedAttackSpeedBonus: number
     blocking: boolean
+    blockedTargetCount: number
+    remnantActive: boolean
+    remnantAttackSpeedBonus: number
+    artsFragilityMultiplier: number
   }
   actor?: { kind: 'TOKEN'; tokenKey: string; name: string; ownerAttackStat?: number }
   /** Main attack after traits, before any counterfactual override; null means not uniquely identified. */
@@ -292,9 +302,9 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
     skillIndex: input.skill.skillIndex, levelIndex: input.skillLevelIndex })
   const moduleRequested = input.module !== undefined
   const moduleEffects = input.module && !guardStructure?.guardRecipe
-    && input.skillLevelIndex === DAMAGE_CALCULATOR_THREE_SURTR_X_SKILL_LEVEL_INDEX
-    && isDamageCalculatorThreeSurtrXSkill(input.skill) && input.operator.operatorId === input.skill.operatorId
-    ? resolveDamageCalculatorThreeSurtrXModule({ ...input.skill, operatorProfile: input.operator.operatorProfile },
+    && input.skillLevelIndex === DAMAGE_CALCULATOR_THREE_SURTR_MODULE_SKILL_LEVEL_INDEX
+    && input.operator.operatorId === input.skill.operatorId
+    ? resolveDamageCalculatorThreeSurtrModule({ ...input.skill, operatorProfile: input.operator.operatorProfile },
       input.phaseIndex, input.operatorLevel, input.module)
     : null
   const validationErrors = validateOperator(input)
@@ -314,12 +324,8 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   const conditionErrors = validateConditions(context)
   reasons.push(...conditionErrors)
   const safeContext = conditionErrors.length ? resolveConditions() : context
-  if (moduleEffects && typeof context.blocking !== 'boolean') reasons.push('スルトのブロック状態を選択してください。')
-  const module: DamageCalculatorThreeOutput['module'] = moduleEffects && typeof context.blocking === 'boolean'
-    ? { id: moduleEffects.id, level: moduleEffects.level, attackBonus: moduleEffects.attackBonus,
-      unblockedAttackSpeedBonus: moduleEffects.unblockedAttackSpeedBonus,
-      blocking: context.blocking, attackSpeedBonus: context.blocking ? 0 : moduleEffects.unblockedAttackSpeedBonus }
-    : undefined
+  const maxBlockedTargetCount = moduleEffects?.type === 'Y' ? Math.min(safeContext.actualAttackTargetCount, moduleEffects.blockCount) : 0
+  const module = resolveModuleConditions(moduleEffects, context, maxBlockedTargetCount, reasons)
   // Invalid numbers are rejected; defaults only let us prepare an error output.
   const stats = getOperatorStats(input.operator.operatorProfile,
     Number.isFinite(input.phaseIndex) ? input.phaseIndex : 0,
@@ -352,8 +358,16 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
       reasons.push(error instanceof Error ? error.message : '条件の入力を解決できません。')
     }
   }
-  if (moduleEffects) conditionInputs.push({ kind: 'boolean', metric: 'blocking', label: 'ブロック状態',
+  if (moduleEffects?.type === 'X') conditionInputs.push({ kind: 'boolean', metric: 'blocking', label: 'ブロック状態',
     options: [{ value: false, label: '未ブロック' }, { value: true, label: 'ブロック中' }], defaultValue: false })
+  if (moduleEffects?.type === 'Y') {
+    conditionInputs.push({ kind: 'number', metric: 'blockedTargetCount', label: 'ブロック中の攻撃対象数',
+      min: 0, max: maxBlockedTargetCount, defaultValue: 0 })
+    if (moduleEffects.remnantAttackSpeedBonus > 0) {
+      conditionInputs.push({ kind: 'boolean', metric: 'remnantActive', label: '余燼',
+        options: [{ value: false, label: '発動前' }, { value: true, label: '発動中' }], defaultValue: false })
+    }
+  }
   const attackKind = attack?.kind ?? 'NORMAL'
   const attackLabel = attackKind === 'NEXT_ATTACK' ? '強化攻撃' : attackKind === 'COUNTER' ? '反撃' : attackKind === 'SKILL_ACTION' ? 'スキル' : '1攻撃'
   const attackDistanceType = attack?.treatment ?? 'MELEE'
@@ -400,7 +414,7 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   let talents = evaluateDamageCalculatorThreeTalents({ operator: input.operator,
     phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel, attackKind,
     enemyAttackCapability: context.enemyAttackCapability, seaMonsterPresent: context.seaMonsterPresent })
-  if (moduleEffects) {
+  if (moduleEffects?.type === 'X') {
     const talent = talents.effects.find(entry => entry.talentIndex === 0 && entry.status === 'APPLIED'
       && entry.effect?.item === 'RESISTANCE_IGNORE_FIXED')
     if (talent?.effect?.item === 'RESISTANCE_IGNORE_FIXED' && talent.effect.value === moduleEffects.baseResistanceIgnore
@@ -612,6 +626,9 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   if (stage?.effects.some(effect => effect.item === 'HP_LOSS_RATE')) {
     scopeNotes.push('HP減少の詳細、継続時間、退場までの総ダメージは計算対象外です。')
   }
+  if (module?.type === 'Y' && (hasAttackSequence || attackKind !== 'NORMAL')) {
+    reasons.push('MOD Yの対術脆弱はスキル発動中の連続攻撃に対応しています。')
+  }
   const attackSpeedValue = stats.attackSpeed + attackSpeedBonus + talents.attackSpeedBonus
   const normalInterval = stats.baseAttackTime * 100 / Math.max(20, attackSpeedValue)
   if (!Number.isFinite(normalInterval) || normalInterval <= 0) reasons.push('攻撃間隔を計算できません。')
@@ -665,9 +682,27 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
       const mitigation = calculateDamageBreakdown(attackPipeline.finalAttack, damageType,
         enemyDefense, enemyResistance,
         { resistanceIgnoreFixed: talents.resistanceIgnoreFixed })
-      const perHit = mitigation.result
+      const targetGroups = module?.type === 'Y' ? {
+        blockedCount: module.blockedTargetCount,
+        unblockedCount: actualTargetCount - module.blockedTargetCount,
+        blockedPerHit: mitigation.result * (damageType === 'ARTS' ? module.artsFragilityMultiplier : 1),
+      } : null
+      const perHit = targetGroups && targetGroups.blockedCount > 0 ? targetGroups.blockedPerHit : mitigation.result
       const perAttack = perHit * model.hitCount
       const dps = canShowDps && attackInterval ? perAttack / attackInterval : null
+      const allTargetsPerAttack = targetGroups
+        ? (targetGroups.blockedPerHit * targetGroups.blockedCount + mitigation.result * targetGroups.unblockedCount) * model.hitCount
+        : perAttack * actualTargetCount
+      const allTargetsDps = dps === null || !attackInterval ? null
+        : targetGroups ? allTargetsPerAttack / attackInterval : dps * actualTargetCount
+      const groupedDamage = targetGroups ? {
+        blockedTargetPerAttack: targetGroups.blockedCount > 0 ? targetGroups.blockedPerHit * model.hitCount : null,
+        unblockedTargetPerAttack: targetGroups.unblockedCount > 0 ? mitigation.result * model.hitCount : null,
+        blockedTargetDps: targetGroups.blockedCount > 0 && canShowDps && attackInterval
+          ? targetGroups.blockedPerHit * model.hitCount / attackInterval : null,
+        unblockedTargetDps: targetGroups.unblockedCount > 0 && canShowDps && attackInterval
+          ? mitigation.result * model.hitCount / attackInterval : null,
+      } : {}
       // Poison keeps its own Arts type. When the virtual main attack sweeps RES, it sees that same enemy RES.
       const rowDamageOverTime = !enemy && virtualMainAttackType === 'ARTS' && virtualMainAttackType !== nativeDamageType
         && model && talents.damageOverTimeRate ? calculateMaintainedDamageOverTime(talents.damageOverTimeRate, {
@@ -683,9 +718,8 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
         hitCount: model.hitCount, attackInterval: model.attackInterval, duration, ammoCount: 0,
         canShowDps, totalMode: 'NONE',
       }
-      return { axisValue, perHit, perAttack, dps, allTargetsPerAttack: perAttack * actualTargetCount,
-        allTargetsDps: dps === null ? null : dps * actualTargetCount, breakdown,
-        damageOverTimeDps, combinedDps, allTargetsCombinedDps: combinedDps === null ? null : combinedDps * actualTargetCount,
+      return { axisValue, perHit, perAttack, dps, allTargetsPerAttack, allTargetsDps, breakdown, ...groupedDamage,
+        damageOverTimeDps, combinedDps, allTargetsCombinedDps: combinedDps === null ? null : targetGroups ? allTargetsDps : combinedDps * actualTargetCount,
         attackComponents: [] }
     }) : []
   return { ...(module ? { module } : {}), structure, stats, model, damageType, mainAttackType, axisLabel, rows, unsupportedReasons, conditionInputs, traitEvaluation,
@@ -771,7 +805,42 @@ function resolveConditions(conditions: DamageCalculatorThreeConditions = {}): Co
     splashTargetCount: conditions.splashTargetCount ?? 1,
     airborneHitCount: conditions.airborneHitCount,
     blocking: conditions.blocking === undefined ? false : conditions.blocking,
+    blockedTargetCount: conditions.blockedTargetCount === undefined ? 0 : conditions.blockedTargetCount,
+    remnantActive: conditions.remnantActive === undefined ? false : conditions.remnantActive,
   }
+}
+
+function resolveModuleConditions(
+  effects: ReturnType<typeof resolveDamageCalculatorThreeSurtrModule>,
+  context: ConditionContext,
+  maxBlockedTargetCount: number,
+  reasons: string[],
+): DamageCalculatorThreeOutput['module'] {
+  if (!effects) return undefined
+  const { id, level, type, attackBonus } = effects
+  if (type === 'X') {
+    if (typeof context.blocking !== 'boolean') {
+      reasons.push('スルトのブロック状態を選択してください。')
+      return undefined
+    }
+    return { id, level, type, attackBonus, blocking: context.blocking,
+      unblockedAttackSpeedBonus: effects.unblockedAttackSpeedBonus,
+      attackSpeedBonus: context.blocking ? 0 : effects.unblockedAttackSpeedBonus,
+      blockedTargetCount: 0, remnantActive: false, remnantAttackSpeedBonus: 0, artsFragilityMultiplier: 1 }
+  }
+
+  const { blockedTargetCount, remnantActive } = context
+  if (!Number.isSafeInteger(blockedTargetCount) || blockedTargetCount < 0 || blockedTargetCount > maxBlockedTargetCount) {
+    reasons.push(`ブロック中の攻撃対象数は0〜${maxBlockedTargetCount}体の整数で指定してください。`)
+    return undefined
+  }
+  if (typeof remnantActive !== 'boolean') {
+    reasons.push('余燼の発動状態を選択してください。')
+    return undefined
+  }
+  return { id, level, type, attackBonus, blocking: blockedTargetCount > 0, blockedTargetCount, remnantActive,
+    artsFragilityMultiplier: effects.artsFragilityMultiplier, unblockedAttackSpeedBonus: 0,
+    remnantAttackSpeedBonus: effects.remnantAttackSpeedBonus, attackSpeedBonus: remnantActive ? effects.remnantAttackSpeedBonus : 0 }
 }
 
 function validateConditions(context: ConditionContext): string[] {
