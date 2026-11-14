@@ -59,6 +59,7 @@
 }
 
 .damage-two-table.enemy-defense-resistance-threshold-table tbody th {
+  color: var(--text);
   text-align: right;
 }
 
