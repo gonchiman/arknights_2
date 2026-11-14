@@ -40,7 +40,9 @@ export interface TalentModuleComparison {
   equippedDescription: string
 }
 
-function resolveModuleStage(operator: SkillRecord, module: RawOperatorModule, level: number) {
+type ModuleEffectOperator = Pick<SkillRecord, 'operatorId' | 'operatorProfile'>
+
+function resolveModuleStage(operator: ModuleEffectOperator, module: RawOperatorModule, level: number) {
   if (!getOperatorModuleLevels(module).includes(level)) return null
   const profile = operator.operatorProfile
   const phaseIndex = Math.max(0, profile.phases.length - 1)
@@ -133,7 +135,7 @@ export function formatFragilityPercent(multiplier: number): string {
   return `${Number(((multiplier - 1) * 100).toFixed(4))}%`
 }
 
-export function getModuleEffectStructure(operator: SkillRecord, module: RawOperatorModule, level: number): ModuleEffectStructure {
+export function getModuleEffectStructure(operator: ModuleEffectOperator, module: RawOperatorModule, level: number): ModuleEffectStructure {
   const stage = resolveModuleStage(operator, module, level)
   if (!stage) return { available: false, rows: [], otherChanges: [] }
   const { application, basePassives, reviewedSurtr } = stage

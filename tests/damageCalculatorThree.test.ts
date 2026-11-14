@@ -11,7 +11,10 @@ import {
   type DamageCalculatorThreeInput,
 } from '../src/lib/damageCalculatorThree.ts'
 import { buildDamageCalculatorThreeApplicationRows } from '../src/lib/damageCalculatorThreeApplications.ts'
-import { buildDamageCalculatorThreeModuleCoverage } from '../src/lib/damageCalculatorThreeModuleCoverage.ts'
+import {
+  buildDamageCalculatorThreeGroupedModuleCoverage, buildDamageCalculatorThreeModuleCoverage,
+  filterDamageCalculatorThreeModuleCoverage, summarizeDamageCalculatorThreeModuleCoverage,
+} from '../src/lib/damageCalculatorThreeModuleCoverage.ts'
 import { findSkillStructure, type SkillStructure } from '../src/lib/skillStructure.ts'
 import { deriveSurtrDpsModel } from '../src/lib/surtrDps.ts'
 import { calculateSurtrDpsCalculation } from '../src/lib/surtrDpsCalculation.ts'
@@ -289,6 +292,57 @@ test('MOD対応一覧はスルトS3の確認できたX段階のみを対応と�
   ])
   delete moduleX.phases
   assert.deepEqual(findSurtrS3X()?.stages, [1, 2, 3].map(level => ({ level, status: 'UNSTARTED' })))
+})
+
+test('MOD対応の一覧・絞り込み・集計はオペレーターとMODごとにまとめる', () => {
+  const skill = surtrS3WithModuleY()
+  const surtrS2 = { ...sourceRecord('char_350_surtr', 2), operatorProfile: skill.operatorProfile }
+  const rows = buildDamageCalculatorThreeGroupedModuleCoverage(buildDamageCalculatorThreeModuleCoverage([
+    { skill: surtrS2, status: 'SUPPORTED' }, { skill, status: 'SUPPORTED' },
+  ]))
+  assert.deepEqual(rows.map(row => row.moduleId), [surtrModuleXId, surtrModuleYId])
+  for (const row of rows) {
+    assert.equal(row.operator.operatorId, skill.operatorId)
+    assert.deepEqual(row.stages, [1, 2, 3].map(level => ({ level, status: 'PARTIAL' })))
+  }
+
+  const summary = summarizeDamageCalculatorThreeModuleCoverage(rows)
+  assert.equal(summary.rowCount, 2)
+  assert.equal(summary.stageCount, 6)
+  assert.deepEqual(summary.levels.map(level => [level.total, level.counts.PARTIAL]), [[2, 2], [2, 2], [2, 2]])
+
+  const filters = { query: 'スルト Ｙ 旅の必需品', moduleType: 'Y', status: 'PARTIAL' } as const
+  assert.deepEqual(filterDamageCalculatorThreeModuleCoverage(rows, filters).map(row => row.moduleId), [surtrModuleYId])
+  assert.deepEqual(filterDamageCalculatorThreeModuleCoverage(rows, { ...filters, status: 'SUPPORTED' }), [])
+  assert.deepEqual(filterDamageCalculatorThreeModuleCoverage(rows, { ...filters, query: 'スルト Ｓ３' }), [])
+})
+
+test('MOD対応の段階ごとの集約は対象外と未確認を区別し、存在しない段階を数えない', () => {
+  const skill = surtrS3WithModuleY()
+  const surtrS2 = { ...sourceRecord('char_350_surtr', 2), operatorProfile: skill.operatorProfile }
+  const [moduleX] = skill.operatorProfile.modules!
+  moduleX.phases = moduleX.phases!.filter(phase => phase.equipLevel !== 2)
+  skill.operatorProfile.modules!.push({
+    ...moduleX, uniEquipId: 'same-type-mod', uniEquipName: '同種別の別MOD', phases: [{ equipLevel: 2 }],
+  })
+  const rows = buildDamageCalculatorThreeGroupedModuleCoverage(buildDamageCalculatorThreeModuleCoverage([
+    { skill: surtrS2, status: 'SUPPORTED' }, { skill, status: 'SUPPORTED' },
+  ], {
+    [`${skill.operatorId}:s2:${surtrModuleXId}:lv1`]: 'NOT_APPLICABLE',
+    [`${skill.operatorId}:s2:${surtrModuleXId}:lv3`]: 'PENDING',
+    [`${skill.operatorId}:s3:${surtrModuleXId}:lv3`]: 'NOT_APPLICABLE',
+    [`${skill.operatorId}:s2:${surtrModuleYId}:lv1`]: 'CONDITIONAL',
+    [`${skill.operatorId}:s2:${surtrModuleYId}:lv2`]: 'NOT_APPLICABLE',
+    [`${skill.operatorId}:s3:${surtrModuleYId}:lv2`]: 'NOT_APPLICABLE',
+    [`${skill.operatorId}:s3:${surtrModuleYId}:lv3`]: 'UNSTARTED',
+  }))
+  assert.equal(rows.length, 3)
+  assert.deepEqual(rows[0].stages, [{ level: 1, status: 'SUPPORTED' }, { level: 3, status: 'PENDING' }])
+  assert.deepEqual(rows[1].stages, [
+    { level: 1, status: 'CONDITIONAL' }, { level: 2, status: 'NOT_APPLICABLE' }, { level: 3, status: 'UNSTARTED' },
+  ])
+  assert.deepEqual(rows[2].stages, [{ level: 2, status: 'UNSTARTED' }])
+  assert.equal(summarizeDamageCalculatorThreeModuleCoverage(rows).stageCount, 6)
 })
 
 test('スルトS3のMOD Y Lv.1〜3は、余燼・ブロック・術耐性別に専用分析と一致し、混在時は対象ごとに合計する', () => {
