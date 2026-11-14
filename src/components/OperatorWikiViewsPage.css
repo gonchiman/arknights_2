@@ -40,9 +40,10 @@
   font-variant-numeric: tabular-nums;
 }
 
-.operator-wiki-views-name-column { width: 38%; }
-.operator-wiki-views-total-column { width: 24%; }
-.operator-wiki-comments-name-column { width: 55%; }
+.operator-wiki-views-rank-column { width: 5em; }
+.operator-wiki-views-name-column { width: 31%; }
+.operator-wiki-views-total-column { width: 20%; }
+.operator-wiki-comments-name-column { width: 49%; }
 .operator-wiki-views-scroll th, .operator-wiki-views-scroll td {
   position: static;
   border: 1px solid var(--border);
@@ -57,7 +58,7 @@
 }
 
 .operator-wiki-views-scroll .skill-sort-button { font-weight: 500; }
-.operator-wiki-views-scroll thead th:not(:first-child) .skill-sort-button {
+.operator-wiki-views-scroll thead th:nth-child(n + 3) .skill-sort-button {
   justify-content: flex-end;
   text-align: right;
 }
@@ -74,6 +75,7 @@
 }
 
 .operator-wiki-views-scroll td { text-align: right; white-space: nowrap; }
+.operator-wiki-views-scroll .operator-wiki-views-rank { text-align: center; }
 .operator-wiki-views-scroll .operator-wiki-views-sorted {
   background: color-mix(in srgb, var(--link) 4%, var(--surface));
 }

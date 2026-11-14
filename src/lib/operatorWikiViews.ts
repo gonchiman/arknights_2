@@ -114,6 +114,26 @@ export function sortOperatorWikiViewRows(
   return sortOperatorWikiMetricRows(rows, sort)
 }
 
+export function rankOperatorWikiTotals(
+  operators: readonly Pick<Operator, 'operatorId'>[],
+  entries: readonly { operatorId: string; total: number | null }[],
+): ReadonlyMap<string, number> {
+  const operatorIds = new Set(operators.map(({ operatorId }) => operatorId))
+  const totals = entries.flatMap(({ operatorId, total }) =>
+    total !== null && operatorIds.has(operatorId) ? [{ operatorId, total }] : [],
+  ).sort((a, b) => b.total - a.total)
+
+  const ranks = new Map<string, number>()
+  let previousTotal: number | null = null
+  let rank = 0
+  totals.forEach(({ operatorId, total }, index) => {
+    if (total !== previousTotal) rank = index + 1
+    ranks.set(operatorId, rank)
+    previousTotal = total
+  })
+  return ranks
+}
+
 export function sortOperatorWikiMetricRows<K extends string, Row extends Operator & Record<K, number | null>>(
   rows: readonly Row[],
   { key, direction }: { key: 'name' | K; direction: 'asc' | 'desc' },
