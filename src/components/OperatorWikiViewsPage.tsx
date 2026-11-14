@@ -9,7 +9,7 @@ import {
   type OperatorWikiCommentSnapshot, type WikiCommentPeriod,
 } from '../lib/operatorWikiComments'
 import {
-  buildOperatorWikiViewRows, loadOperatorWikiViewSnapshot, sortOperatorWikiMetricRows,
+  buildOperatorWikiViewRows, loadOperatorWikiViewSnapshot, rankOperatorWikiTotals, sortOperatorWikiMetricRows,
   type OperatorWikiViewSnapshot,
 } from '../lib/operatorWikiViews'
 import { AnalysisTabs } from './AnalysisTabs'
@@ -24,6 +24,7 @@ interface Props {
 }
 
 interface PanelProps extends Props {
+  allOperators: Props['operators']
   page: number
   setPage: (page: number) => void
 }
@@ -90,10 +91,12 @@ export function OperatorWikiViewsPage({ operators, loading }: Props) {
         searchFirst searchLabel="オペレーター名" searchPlaceholder="オペレーター名で検索" />
     </div>
     <section id={`${id}-panel-views`} role="tabpanel" aria-labelledby={`${id}-tab-views`} hidden={tab !== 'views'}>
-      <WikiViewPanel operators={filteredOperators} loading={loading} page={viewPage} setPage={setViewPage} />
+      <WikiViewPanel operators={filteredOperators} allOperators={operators}
+        loading={loading} page={viewPage} setPage={setViewPage} />
     </section>
     <section id={`${id}-panel-comments`} role="tabpanel" aria-labelledby={`${id}-tab-comments`} hidden={tab !== 'comments'}>
-      {commentsOpened && <WikiCommentPanel operators={filteredOperators} loading={loading} page={commentPage} setPage={setCommentPage} />}
+      {commentsOpened && <WikiCommentPanel operators={filteredOperators} allOperators={operators}
+        loading={loading} page={commentPage} setPage={setCommentPage} />}
     </section>
   </section>
 }
@@ -111,9 +114,10 @@ function useWikiSnapshot<T>(load: (signal?: AbortSignal) => Promise<T>) {
   return state
 }
 
-function WikiViewPanel({ operators, loading, page, setPage }: PanelProps) {
+function WikiViewPanel({ operators, allOperators, loading, page, setPage }: PanelProps) {
   const state = useWikiSnapshot<OperatorWikiViewSnapshot>(loadOperatorWikiViewSnapshot)
   const snapshot = state.status === 'ready' ? state.snapshot : null
+  const ranks = useMemo(() => rankOperatorWikiTotals(allOperators, snapshot?.entries ?? []), [allOperators, snapshot])
   const rows = useMemo(() => buildOperatorWikiViewRows(operators, snapshot), [operators, snapshot])
   const columns = VIEW_COLUMNS.map(({ key, label, dateKey }) => ({
     key,
@@ -129,16 +133,17 @@ function WikiViewPanel({ operators, loading, page, setPage }: PanelProps) {
       {snapshot && <ObservedTime observedAt={snapshot.observedAt} />}
     </div>
     {state.status === 'error' && <p className="error-box" role="alert">Wiki 閲覧数を読み込めませんでした。</p>}
-    <WikiStatsTable columns={columns} rows={rows} defaultSort="yesterday"
+    <WikiStatsTable columns={columns} rows={rows} ranks={ranks} defaultSort="yesterday"
       page={page} onPageChange={setPage} label="Wiki 閲覧数一覧" tableLabel="オペレーター別のページ閲覧数（回）"
       metricLabel="閲覧数" linkLabel="Wiki ページ" nameColumnClass="operator-wiki-views-name-column" />
   </div>
 }
 
-function WikiCommentPanel({ operators, loading, page, setPage }: PanelProps) {
+function WikiCommentPanel({ operators, allOperators, loading, page, setPage }: PanelProps) {
   const state = useWikiSnapshot<OperatorWikiCommentSnapshot>(loadOperatorWikiCommentSnapshot)
   const [period, setPeriod] = useState<WikiCommentPeriod | 'total'>(30)
   const snapshot = state.status === 'ready' ? state.snapshot : null
+  const ranks = useMemo(() => rankOperatorWikiTotals(allOperators, snapshot?.entries ?? []), [allOperators, snapshot])
   const range = useMemo(() => snapshot && period !== 'total'
     ? getWikiCommentRange(snapshot.throughDate, period)
     : null, [snapshot, period])
@@ -177,7 +182,7 @@ function WikiCommentPanel({ operators, loading, page, setPage }: PanelProps) {
       </div>}
     </div>
     {state.status === 'error' && <p className="error-box" role="alert">Wiki コメント件数を読み込めませんでした。</p>}
-    <WikiStatsTable columns={COMMENT_COLUMNS} rows={rows} defaultSort="comments"
+    <WikiStatsTable columns={COMMENT_COLUMNS} rows={rows} ranks={ranks} defaultSort="comments"
       page={page} onPageChange={setPage} label="Wiki コメント件数一覧" tableLabel="オペレーター別のコメント件数（件）"
       metricLabel="コメント件数" linkLabel="Wiki コメントページ" nameColumnClass="operator-wiki-comments-name-column" />
   </div>
@@ -188,10 +193,11 @@ function ObservedTime({ observedAt }: { observedAt: string }) {
 }
 
 function WikiStatsTable<Metric extends string>({
-  columns, rows, defaultSort, page, onPageChange, label, tableLabel, metricLabel, linkLabel, nameColumnClass,
+  columns, rows, ranks, defaultSort, page, onPageChange, label, tableLabel, metricLabel, linkLabel, nameColumnClass,
 }: {
   columns: readonly { key: Metric; label: string; className?: string }[]
   rows: WikiRow<Metric>[]
+  ranks: ReadonlyMap<string, number>
   defaultSort: Metric
   page: number
   onPageChange: (page: number) => void
@@ -221,10 +227,11 @@ function WikiStatsTable<Metric extends string>({
   return <>
     <div className="operator-wiki-views-scroll" role="region" aria-label={label} tabIndex={0}>
       <table aria-label={tableLabel}>
-        <colgroup><col className={nameColumnClass} />
+        <colgroup><col className="operator-wiki-views-rank-column" /><col className={nameColumnClass} />
           {columns.map(column => <col key={column.key} className={column.className} />)}
         </colgroup>
         <thead><tr>
+          <th scope="col" className="operator-wiki-views-rank">累計順位</th>
           <TableSortHeader label="オペレーター" ariaLabel="オペレーター名で並べ替え" sortKey="name"
             sort={sort} onSort={changeSort} />
           {columns.map(column => <TableSortHeader key={column.key} label={column.label}
@@ -233,6 +240,7 @@ function WikiStatsTable<Metric extends string>({
         </tr></thead>
         <tbody>
           {visible.map(row => <tr key={row.operatorId}>
+            <td className="operator-wiki-views-rank">{ranks.get(row.operatorId) ?? '—'}</td>
             <th scope="row" className={sort.key === 'name' ? 'operator-wiki-views-sorted' : undefined}>
               {row.wikiUrl
                 ? <a href={row.wikiUrl} target="_blank" rel="noopener noreferrer" aria-label={`${row.name}の ${linkLabel}を開く`}>{row.name}</a>
@@ -246,7 +254,7 @@ function WikiStatsTable<Metric extends string>({
             })}
           </tr>)}
           {visible.length === 0 && <tr>
-            <td colSpan={columns.length + 1} className="operator-wiki-views-empty">
+            <td colSpan={columns.length + 2} className="operator-wiki-views-empty">
               <span role="status">該当するオペレーターがいません。</span>
             </td>
           </tr>}

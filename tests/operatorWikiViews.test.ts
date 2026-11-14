@@ -5,6 +5,7 @@ import { APP_NAV_ITEMS } from '../src/lib/navigation.ts'
 import {
   buildOperatorWikiViewRows,
   parseOperatorWikiViewSnapshot,
+  rankOperatorWikiTotals,
   sortOperatorWikiViewRows,
 } from '../src/lib/operatorWikiViews.ts'
 import { parseHashRoute } from '../src/lib/routes.ts'
@@ -67,6 +68,22 @@ test('閲覧数は表示名にかかわらずオペレーター ID で照合し�
   assert.deepEqual(sortOperatorWikiViewRows(rows, { key: 'yesterday', direction: 'asc' }).map(row => row.yesterday), [
     0, 105, null,
   ])
+})
+
+test('累計順位はオペレーターIDで対応し、同数、実測0、未取得を区別する', () => {
+  const operators = ['top', 'tie-a', 'tie-b', 'zero', 'missing', 'absent'].map(operatorId => ({ operatorId }))
+  const entries = [
+    { operatorId: 'zero', total: 0 },
+    { operatorId: 'tie-b', total: 80 },
+    { operatorId: 'missing', total: null },
+    { operatorId: 'top', total: 100 },
+    { operatorId: 'outside', total: 150 },
+    { operatorId: 'tie-a', total: 80 },
+  ]
+
+  const ranks = rankOperatorWikiTotals(operators, entries)
+  assert.deepEqual(operators.map(({ operatorId }) => ranks.get(operatorId)), [1, 2, 2, 4, undefined, undefined])
+  assert.equal(ranks.has('outside'), false)
 })
 
 test('オペレーター別 Wiki 閲覧数は分析メニューのリンクから開く', () => {
