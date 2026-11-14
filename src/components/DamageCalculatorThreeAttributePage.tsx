@@ -3,8 +3,8 @@ import {
   getDamageThreeAttributeEntries, type DamageThreeAttributeEntry,
 } from '../lib/damageCalculatorThreeAttributeComparison'
 import {
-  evaluateDamageThreeAttributeRankTable, evaluateDamageThreeAttributeTables,
-  type DamageThreeAttributeRankRow, type DamageThreeAttributeTableRow,
+  evaluateDamageThreeAttributeRankTable, evaluateDamageThreeAttributeTables, getDamageThreeMainAttackDetails,
+  type DamageThreeAttributeRankRow, type DamageThreeAttributeTableRow, type DamageThreeMainAttackDetail,
 } from '../lib/damageCalculatorThreeAttributeTables'
 import type { DamageThreeComparisonOverrides } from '../lib/damageCalculatorThreeComparison'
 import { buildDamageCalculatorThreeSkillInformation } from '../lib/damageCalculatorThreeSkillInformation'
@@ -30,14 +30,17 @@ import {
   DamageCalculatorThreeAttributeRankChart, DamageCalculatorThreeAttributeRankLegend,
 } from './DamageCalculatorThreeAttributeRankChart'
 import { EnemyAggregationSelector, EnemyAggregationStatus } from './EnemyAggregationSelector'
+import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
 import { OperatorDetailLink } from './OperatorDetailLink'
 import { PersistentDetails } from './PersistentDetails'
 import { SkillInformationTable } from './SkillInformationTable'
+import { StructureTable } from './StructureTable'
 import './DamageCalculator.css'
 import './DamageCalculatorTwo.css'
 import './DamageCalculatorThree.css'
 import './DamageCalculatorThreeAttributePage.css'
+import './SkillStructurePage.css'
 
 interface Props {
   rows: SkillRecord[]
@@ -51,6 +54,7 @@ type ResultImage =
   | { view: 'chart'; snapshot: DamageCalculatorThreeAttributeChartImageSnapshot }
 const METRIC_LABELS: Record<Metric, string> = { perAttack: '1回の攻撃ダメージ', dps: 'DPS' }
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
+const ATTACK_NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
 const TABLE_NUMBER = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 const TABLE_RATINGS = getEnemyRatingRanges('defense').map(({ rating }) => rating)
 const COMPARISON_BASES = [['rating', 'ゲーム内評価'], ['rank', '出現順位']] as const
@@ -90,6 +94,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const [showRankRatings, setShowRankRatings] = useState(false)
   const [showRankPercentage, setShowRankPercentage] = useState(false)
   const [image, setImage] = useState<ResultImage | null>(null)
+  const [mainAttack, setMainAttack] = useState<{ details: DamageThreeMainAttackDetail[]; error?: string } | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [filters, setFilters] = useState({ ...EMPTY_OPERATOR_FILTERS })
   const aggregation = useEnemyAggregation({ enabled: basis === 'rank', defaultToLatest: true })
@@ -130,6 +135,15 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
     .map(field => ({ ...field, defaultValue: field.value ?? (field.kind === 'number' ? Number.NaN : '') }))
   const growthConditions = selected ? [`昇進${selected.phaseIndex} Lv.${formatNumber(level)}`,
     `信頼${formatNumber(trust)}`, '潜在1', '未装備'] : []
+
+  function openMainAttack() {
+    if (!reference?.output || invalid) return
+    try {
+      setMainAttack({ details: getDamageThreeMainAttackDetails(reference) })
+    } catch (error) {
+      setMainAttack({ details: [], error: error instanceof Error ? error.message : '主攻撃の内訳を取得できません。' })
+    }
+  }
 
   function openImage() {
     if (!selected || !comparison || !reference || !canSaveImage) return
@@ -306,9 +320,13 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
         <div className="damage-three-attribute-toolbar">
           <AttributeButtons label="対応基準" options={COMPARISON_BASES} value={basis} onChange={setBasis} />
           <AttributeButtons label="表示形式" options={RESULT_VIEWS} value={resultView} onChange={setResultView} />
-          <button type="button" className="button secondary damage-three-attribute-image-button"
-            aria-label={resultView === 'chart' ? '属性比較グラフをPNG画像で保存' : '属性比較表をPNG画像で保存'}
-            aria-haspopup="dialog" disabled={!canSaveImage} onClick={openImage}>画像を保存</button>
+          <div className="damage-three-attribute-result-actions">
+            <button type="button" className="button secondary" aria-haspopup="dialog"
+              disabled={!output || invalid} onClick={openMainAttack}>主攻撃の内訳</button>
+            <button type="button" className="button secondary"
+              aria-label={resultView === 'chart' ? '属性比較グラフをPNG画像で保存' : '属性比較表をPNG画像で保存'}
+              aria-haspopup="dialog" disabled={!canSaveImage} onClick={openImage}>画像を保存</button>
+          </div>
         </div>
         <div className="damage-three-attribute-toolbar">
           {basis === 'rank' && <>
@@ -351,9 +369,34 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
         {rankPairs?.length === 0 && <p role="status">集計対象の出現データがありません。</p>}
       </>}
     </CollapsibleCalculatorPanel>}
+    {mainAttack && selected && <MainAttackBreakdown details={mainAttack.details} error={mainAttack.error}
+      context={[`${selected.skill.operatorName} S${selected.skill.skillIndex}`, selected.structure.basicInfo.skillLevel,
+        ...(stages.length > 1 ? [selected.stageLabel] : []), `敵${enemyCount}体`, '元の属性'].join(' · ')}
+      onClose={() => setMainAttack(null)} />}
     {image?.view === 'table' && <ComparisonTableImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
     {image?.view === 'chart' && <DamageCalculatorThreeAttributeChartImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
   </section>
+}
+
+function MainAttackBreakdown({ details, error, context, onClose }: {
+  details: readonly DamageThreeMainAttackDetail[]
+  error?: string
+  context: string
+  onClose: () => void
+}) {
+  const showExpectedHits = details.some(detail => Math.abs(detail.expectedHitCount - detail.count) > 1e-9)
+  return <GoldenglowDetailModal title="主攻撃の内訳" closeLabel="主攻撃の内訳を閉じる"
+    className="damage-three-attribute-main-attack" onClose={onClose}>
+    <p className="damage-three-attribute-context">{context}</p>
+    {details.length ? <StructureTable caption="主攻撃の内訳"
+      headers={['攻撃要素', showExpectedHits ? '1体あたりの期待命中数' : '回数', '軽減前・1ヒット']}>
+      {details.map(({ label, count, expectedHitCount, attack, condition }, index) => <tr key={index}>
+        <th scope="row">{condition ? `${label}（${condition}）` : label}</th>
+        <td>{ATTACK_NUMBER.format(showExpectedHits ? expectedHitCount : count)}</td>
+        <td>{attack === null ? '—' : ATTACK_NUMBER.format(attack)}</td>
+      </tr>)}
+    </StructureTable> : <p role="status">{error ?? '命中なし'}</p>}
+  </GoldenglowDetailModal>
 }
 
 export function AttributeButtons<T extends string>({ label, options, value, onChange }: {

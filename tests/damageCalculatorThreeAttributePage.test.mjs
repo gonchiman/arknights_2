@@ -139,6 +139,7 @@ test('attribute comparison opens with a main story appearance-rank line chart', 
   assert.match(markup, /集計データを読み込んでいます/)
   assert.doesNotMatch(markup, /aria-label="表示指標"|>DPS<\/button>/)
   assert.match(markup, /<button(?=[^>]*aria-label="属性比較グラフをPNG画像で保存")(?=[^>]*aria-haspopup="dialog")(?=[^>]*disabled)[^>]*>画像を保存<\/button>/)
+  assert.match(markup, /<button(?=[^>]*aria-haspopup="dialog")(?![^>]*disabled)[^>]*>主攻撃の内訳<\/button>/)
   const table = renderRatingTable(entry)
   assert.match(table, /<div(?=[^>]*role="region")(?=[^>]*aria-label="属性比較表（1体あたり）")(?=[^>]*tabindex="0")/)
   assert.equal([...table.matchAll(/<th(?=[^>]*scope="col")(?=[^>]*rowspan="2")[^>]*>評価<\/th>/gi)].length, 1)

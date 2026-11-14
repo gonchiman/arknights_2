@@ -111,9 +111,23 @@
   margin: 0;
 }
 
+.damage-three-attribute-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.damage-three-attribute-result-actions,
 .damage-three-attribute-image-button {
   margin-inline-start: auto;
 }
+
+.damage-three-attribute-main-attack.gg-detail-dialog {
+  width: min(520px, calc(100vw - 16px));
+}
+
+.damage-three-attribute-main-attack .skill-structure-table-wrap { margin-bottom: 0; }
+.damage-three-attribute-main-attack .skill-structure-table tr > :not(:first-child) { text-align: end; }
 
 .damage-three-attribute-context {
   display: flex;
