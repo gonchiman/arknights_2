@@ -8,6 +8,7 @@ import {
 } from '../lib/damageCalculatorThreeAttributeTables'
 import type { DamageThreeComparisonOverrides } from '../lib/damageCalculatorThreeComparison'
 import { buildDamageCalculatorThreeSkillInformation } from '../lib/damageCalculatorThreeSkillInformation'
+import { getEnemyMainStoryScope } from '../lib/enemyAggregationData'
 import { buildEnemyDefenseResistanceBands } from '../lib/enemyDefenseResistance'
 import { getEnemyRatingRanges } from '../lib/enemyStatRatings'
 import type { GuardInput } from '../lib/guardCombatTypes'
@@ -52,6 +53,7 @@ const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 const TABLE_NUMBER = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 const TABLE_RATINGS = getEnemyRatingRanges('defense').map(({ rating }) => rating)
 const COMPARISON_BASES = [['rating', 'ゲーム内評価'], ['rank', '出現順位']] as const
+const RANK_SCOPES = [['all', '全ステージ'], ['main', 'メインストーリー']] as const
 const RESULT_VIEWS = [['table', '表'], ['chart', 'グラフ']] as const
 const RANK_CHART_TYPES = [['line', '折れ線グラフ'], ['bar', '集合棒グラフ']] as const
 const SKILL_TAB_ID = 'damage-three-attribute-skill'
@@ -81,6 +83,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const [applyPenetration, setApplyPenetration] = useState(true)
   const [overrides, setOverrides] = useState<DamageThreeComparisonOverrides>({})
   const [basis, setBasis] = useState<typeof COMPARISON_BASES[number][0]>('rating')
+  const [rankScope, setRankScope] = useState<typeof RANK_SCOPES[number][0]>('all')
   const [resultView, setResultView] = useState<typeof RESULT_VIEWS[number][0]>('table')
   const [rankChartType, setRankChartType] = useState<typeof RANK_CHART_TYPES[number][0]>('line')
   const [showRankRatings, setShowRankRatings] = useState(false)
@@ -88,9 +91,15 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const [searchOpen, setSearchOpen] = useState(false)
   const [filters, setFilters] = useState({ ...EMPTY_OPERATOR_FILTERS })
   const aggregation = useEnemyAggregation({ enabled: basis === 'rank' })
-  const rankPairs = useMemo(() => aggregation.data
-    ? buildEnemyDefenseResistanceBands(aggregation.data.rows, aggregation.data.counts).resistanceThresholds
-    : null, [aggregation.data])
+  const mainStory = useMemo(() => rankScope === 'main' && aggregation.data
+    ? getEnemyMainStoryScope(aggregation.data) : null, [rankScope, aggregation.data])
+  const mainStoryUnavailable = mainStory?.spawnCountsAvailable === false
+  const rankPairs = useMemo(() => {
+    const data = mainStory ?? aggregation.data
+    return data && !mainStoryUnavailable
+      ? buildEnemyDefenseResistanceBands(data.rows, data.counts).resistanceThresholds
+      : null
+  }, [mainStory, mainStoryUnavailable, aggregation.data])
   const requested = selection ?? (entries.find(entry => entry.capability.supported) ?? entries[0])?.structure.basicInfo
   const stages = requested ? entries.filter(entry => sameSkill(entry, requested)) : []
   const selected = stages.find(entry => entry.stageId === stageId)
@@ -134,7 +143,9 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
         ?? (typeof value === 'boolean' ? value ? 'あり' : 'なし' : String(value))
       conditions.push(`${field.label} ${label}`)
     }
-    const basisConditions = comparison.basis === 'rank' ? ['出現順位', `集計版 ${aggregation.selectedId}`] : ['ゲーム内評価']
+    const basisConditions = comparison.basis === 'rank'
+      ? ['出現順位', `集計版 ${aggregation.selectedId}`, ...(rankScope === 'main' ? [RANK_SCOPES[1][1]] : [])]
+      : ['ゲーム内評価']
     const notes = ['仮想比較', '主攻撃のみ', '1体あたり']
     const subject = `${selected.skill.operatorName} S${selected.skill.skillIndex}`
     if (resultView === 'chart') {
@@ -296,7 +307,10 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
             aria-haspopup="dialog" disabled={!canSaveImage} onClick={openImage}>画像を保存</button>
         </div>
         <div className="damage-three-attribute-toolbar">
-          {basis === 'rank' && <EnemyAggregationSelector state={aggregation} />}
+          {basis === 'rank' && <>
+            <EnemyAggregationSelector state={aggregation} />
+            <AttributeButtons label="集計範囲" options={RANK_SCOPES} value={rankScope} onChange={setRankScope} />
+          </>}
           <label className="damage-three-attribute-toggle">
             <input type="checkbox" checked={applyPenetration} onChange={event => setApplyPenetration(event.target.checked)} />
             防御力・術耐性無視を適用
@@ -319,6 +333,9 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
           metric="perAttack" invalid={invalid} />)}
       {comparison.basis === 'rank' && <>
         <EnemyAggregationStatus state={aggregation} />
+        {mainStoryUnavailable && <p className="enemy-aggregation-status" role="status">
+          この集計版ではメインストーリーの出現回数を利用できません
+        </p>}
         {comparison.result.rows.length > 0 && (resultView === 'chart'
           ? <DamageCalculatorThreeAttributeRankChart rows={comparison.result.rows} chartType={rankChartType} showRatings={showRankRatings} />
           : <DamageCalculatorThreeAttributeRankTable rows={comparison.result.rows} />)}
