@@ -8,8 +8,8 @@
 .dc3-comparison-build { padding: 8px 10px; color: var(--text-soft); font-size: 11px; line-height: 1.8; }
 .dc3-comparison-meta { flex-wrap: wrap; }
 .dc3-comparison-table-wrap { border-right: 0; border-bottom: 0; border-left: 0; }
-.dc3-comparison-table { min-width: 950px; table-layout: auto; }
-.dc3-comparison-table-normal { min-width: 1250px; }
+.dc3-comparison-table { min-width: 1100px; table-layout: auto; }
+.dc3-comparison-table-normal { min-width: 1400px; }
 .dc3-comparison-table th:nth-child(n) { width: auto; }
 .dc3-comparison-table th:nth-child(1) { min-width: 130px; }
 .dc3-comparison-table th:nth-child(2) { min-width: 54px; }
@@ -38,8 +38,8 @@
 .dc3-comparison-table-compact .skill-coarse-link { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 .dc3-comparison-table-compact .dc3-comparison-numeric-heading button { min-width: 0; white-space: normal; text-align: right; }
 .dc3-comparison-table-compact .dc3-comparison-numeric-heading button > span:first-child { min-width: 0; overflow-wrap: anywhere; }
-.dc3-comparison-table-skill-info { min-width: 1430px; }
-.dc3-comparison-table-normal.dc3-comparison-table-skill-info { min-width: 1730px; }
+.dc3-comparison-table-skill-info { min-width: 1580px; }
+.dc3-comparison-table-normal.dc3-comparison-table-skill-info { min-width: 1880px; }
 .dc3-comparison-table.dc3-comparison-table-skill-info .dc3-comparison-skill-info-heading { min-width: 84px; }
 .dc3-comparison-table.dc3-comparison-table-skill-info .dc3-comparison-skill-duration-heading { min-width: 145px; }
 .dc3-comparison-table-compact.dc3-comparison-table-skill-info { min-width: 1020px; table-layout: auto; }
@@ -64,6 +64,7 @@
 .dc3-comparison-detail-table tr:last-child th, .dc3-comparison-detail-table tr:last-child td { border-bottom: 0; }
 .dc3-comparison-detail-table tr { cursor: default; }
 .dc3-comparison-detail-table .dc3-comparison-number { text-align: right; font-variant-numeric: tabular-nums; }
+.dc3-comparison-final-attack-table .dc3-comparison-number { text-align: right; }
 .dc3-comparison-individual-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .dc3-comparison-individual-fields input:disabled, .dc3-comparison-individual-fields select:disabled { color: var(--text-soft); background: var(--surface-soft); opacity: 1; }
 .dc3-comparison-notes { margin: 0; padding: 10px 26px; color: var(--text-soft); font-size: 12px; line-height: 1.8; }

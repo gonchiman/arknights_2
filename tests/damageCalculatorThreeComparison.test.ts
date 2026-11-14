@@ -50,8 +50,9 @@ function evaluate(operatorId: string, skillIndex: number, stageId?: string,
   return evaluateDamageThreeComparisonEntry(entry(operatorId, skillIndex, stageId), common, overrides)
 }
 function noNumbers(value: ReturnType<typeof evaluateDamageThreeComparisonEntry>) {
-  for (const key of ['perAttack', 'allTargetsPerAttack', 'dps', 'allTargetsDps', 'damageOverTimeDps',
+  for (const key of ['finalAttack', 'perAttack', 'allTargetsPerAttack', 'dps', 'allTargetsDps', 'damageOverTimeDps',
     'allTargetsDamageOverTimeDps', 'combinedDps', 'allTargetsCombinedDps', 'totalDamage', 'allTargetsTotalDamage'] as const) assert.equal(value[key], null, key)
+  assert.deepEqual(value.finalAttackDetails, [])
 }
 function compareWithOrdinary(entry: DamageThreeComparisonEntry, conditions: DamageCalculatorThreeConditions) {
   const actual = evaluateDamageThreeComparisonEntry(entry, common)
@@ -101,6 +102,63 @@ test('共通敵3体を上限に従って設定し、任意DEF123/RES37の通常D
   assert.equal(unlimited.output!.maxTargetCount, null)
   assert.equal(unlimited.actualTargetCount, 3)
   assert.ok(unlimited.allTargetsPerAttack! > unlimited.perAttack!)
+})
+
+test('最終攻撃力は軽減・連撃・複数対象の集計前の1ヒット分を表示する', () => {
+  const surtr = evaluate('char_350_surtr', 3)
+  assert.deepEqual(surtr.errors, [])
+  assert.equal(surtr.finalAttack, surtr.output!.effectiveAttack)
+  assert.ok(surtr.finalAttack! > surtr.perAttack!)
+  assert.deepEqual(surtr.finalAttackDetails, [])
+  const unmitigated = evaluateDamageThreeComparisonEntry(surtr.entry, { defense: 0, resistance: 0, enemyCount: 1 })
+  assert.equal(surtr.finalAttack, unmitigated.perAttack)
+  assert.equal(surtr.actualTargetCount, 3)
+  assert.equal(unmitigated.actualTargetCount, 1)
+
+  const exusiai = evaluate('char_103_angel', 3)
+  assert.deepEqual(exusiai.errors, [])
+  const [attack] = exusiai.output!.rows[0].attackComponents
+  assert.equal(attack.count, 5)
+  assert.equal(exusiai.finalAttack, attack.branches[0].mitigation.attack)
+  assert.notEqual(exusiai.finalAttack, exusiai.perAttack)
+  assert.deepEqual(exusiai.finalAttackDetails, [])
+})
+
+test('攻撃成分や会心で軽減前の値が分かれるときは、各条件の値を内訳に残す', () => {
+  const mlynar = evaluate('char_4064_mlynar', 3)
+  assert.deepEqual(mlynar.errors, [])
+  assert.equal(mlynar.finalAttack, null)
+  assert.deepEqual(mlynar.finalAttackDetails.map(detail => detail.damageType), ['PHYSICAL', 'TRUE'])
+
+  const provence = evaluate('char_145_prove', 1)
+  assert.deepEqual(provence.errors, [])
+  assert.equal(provence.finalAttack, null)
+  const [normal, critical] = provence.finalAttackDetails
+  assert.equal(provence.finalAttackDetails.length, 2)
+  assert.equal(normal.damageType, 'PHYSICAL')
+  assert.equal(normal.condition, '確率効果なし')
+  assert.equal(critical.condition, '確率効果あり')
+  assert.equal(critical.attack, normal.attack * 1.8)
+
+  const ceobe = entry('char_2013_cerber', 2)
+  for (const defense of [0, 1000]) {
+    const result = evaluateDamageThreeComparisonEntry(ceobe, { ...common, defense })
+    assert.deepEqual(result.errors, [])
+    assert.equal(result.finalAttack, null)
+    assert.equal(result.finalAttackDetails.find(detail => detail.label === 'そぎおとし')?.attack, defense * 0.4)
+  }
+})
+
+test('未命中・継続ダメージのみの段階には1ヒット分の最終攻撃力を表示しない', () => {
+  const miss = evaluate('char_456_ash', 3, undefined, { 'guard.contactHit': false, 'guard.explosionHit': false })
+  const periodic = evaluate('char_134_ifrit', 3, 'active')
+  for (const result of [miss, periodic]) {
+    assert.deepEqual(result.errors, [])
+    assert.equal(result.perAttack, 0)
+    assert.equal(result.finalAttack, null)
+    assert.deepEqual(result.finalAttackDetails, [])
+  }
+  assert.ok(periodic.damageOverTimeDps! > 0)
 })
 
 test('ソーンズS2を反撃型に分類し、S3は初回と2回目以降の別行で計算する', () => {
