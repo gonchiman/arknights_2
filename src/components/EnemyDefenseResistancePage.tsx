@@ -1,4 +1,5 @@
 import { useId, useMemo, useState } from 'react'
+import { getEnemyMainStoryScope } from '../lib/enemyAggregationData'
 import {
   buildEnemyDefenseResistanceBands, type EnemyDefenseResistanceBand, type EnemyDefenseResistanceRank,
   type EnemyResistanceThreshold,
@@ -6,6 +7,7 @@ import {
 import { parseEcdfGuideInput } from '../lib/enemyEcdfGuides'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
 import { ComparisonTableImageDialog, type ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
+import { EnemyAggregationScopeSelector, ENEMY_MAIN_STORY_LABEL, type EnemyAggregationScope } from './EnemyAggregationScopeSelector'
 import { EnemyAggregationSelector } from './EnemyAggregationSelector'
 import { EnemyDefenseResistanceChart } from './EnemyDefenseResistanceChart'
 import { EnemyDataContent } from './EnemyPageShared'
@@ -25,28 +27,33 @@ const MAX_RANK_PERCENTAGE = 100
 export function EnemyDefenseResistancePage() {
   const aggregation = useEnemyAggregation()
   const { data } = aggregation
-  const result = useMemo(() => data ? buildEnemyDefenseResistanceBands(data.rows, data.counts) : null, [data])
+  const [scope, setScope] = useState<EnemyAggregationScope>('all')
+  const mainStory = useMemo(() => data && scope === 'main' ? getEnemyMainStoryScope(data) : null, [data, scope])
+  const scopedData = mainStory ?? data
+  const unavailable = mainStory?.spawnCountsAvailable === false
+  const result = useMemo(() => scopedData && !unavailable
+    ? buildEnemyDefenseResistanceBands(scopedData.rows, scopedData.counts) : null, [scopedData, unavailable])
   const [view, setView] = useState<typeof VIEWS[number][0]>('table')
   const [rankStep, setRankStep] = useState(DEFAULT_RANK_STEP)
   const [rankInput, setRankInput] = useState('')
   const [showRankPercentage, setShowRankPercentage] = useState(false)
   const [showRankCutoff, setShowRankCutoff] = useState(false)
   const [image, setImage] = useState<ComparisonTableImageSnapshot | null>(null)
+  const aggregationConditions = [`集計版 ${aggregation.selectedId}`, ...(scope === 'main' ? [ENEMY_MAIN_STORY_LABEL] : [])]
   const resistanceTable = view === 'resistance' && result
     ? <EnemyResistanceThresholdGrid rows={result.resistanceThresholds} showRankPercentage={showRankPercentage}
-        showRankCutoff={showRankCutoff} estimatedRanks={Boolean(data?.counts.summary.expectedMapCount)} />
+        showRankCutoff={showRankCutoff} estimatedRanks={Boolean(scopedData?.counts.summary.expectedMapCount)} />
     : null
 
   function openResistanceImage() {
     if (!result || !resistanceTable) return
-    const version = `集計版 ${aggregation.selectedId}`
     const rankColumns: string[] = []
     if (showRankPercentage) rankColumns.push('出現順位（%）')
     if (showRankCutoff) rankColumns.push('出現順位の境目')
     setImage({
       title: '防御力と術耐性の対応（術耐性別）',
-      conditions: [version, `出現回数 ${NUMBER.format(result.total)}体`, '術耐性10刻み', ...rankColumns],
-      filenameConditions: [version, '出現回数', '術耐性10刻み', ...rankColumns],
+      conditions: [...aggregationConditions, `出現回数 ${NUMBER.format(result.total)}体`, '術耐性10刻み', ...rankColumns],
+      filenameConditions: [...aggregationConditions, '出現回数', '術耐性10刻み', ...rankColumns],
       table: resistanceTable,
     })
   }
@@ -55,12 +62,16 @@ export function EnemyDefenseResistancePage() {
     <header className="page-intro">
       <h1>防御力と術耐性の対応</h1>
       <div className="enemy-analysis-page-actions">
-        <EnemyAggregationSelector state={aggregation} />
+        <div className="enemy-analysis-aggregation" role="group" aria-label="集計設定">
+          <EnemyAggregationSelector state={aggregation} />
+          <EnemyAggregationScopeSelector scope={scope} onChange={setScope} disabled={!data} />
+        </div>
       </div>
     </header>
     <EnemyDataContent loading={aggregation.loading} error={aggregation.error} onRetry={aggregation.retry}>
+      {unavailable && <p role="status">この集計版ではメインストーリーの出現回数を利用できません。</p>}
       {result && <>
-        <p className="enemy-defense-resistance-count">出現回数 · {NUMBER.format(result.total)}体</p>
+        <p className="enemy-defense-resistance-count" role="status">出現回数 · {NUMBER.format(result.total)}体</p>
         {result.bands.length > 0 ? <>
           <div className="enemy-chart-scale-switch enemy-defense-resistance-view-switch" role="group" aria-label="表示形式">
             {VIEWS.map(([id, label]) => <button key={id} type="button" aria-pressed={view === id}
@@ -68,7 +79,7 @@ export function EnemyDefenseResistancePage() {
           </div>
           {view === 'table' && <EnemyDefenseResistanceTable bands={result.bands} />}
           {view === 'rank' && <EnemyDefenseResistanceRankTable result={result} step={rankStep} onStepChange={setRankStep}
-            input={rankInput} onInputChange={setRankInput} aggregationVersion={aggregation.selectedId} onSaveImage={setImage} />}
+            input={rankInput} onInputChange={setRankInput} aggregationConditions={aggregationConditions} onSaveImage={setImage} />}
           {resistanceTable && <>
             <div className="enemy-defense-resistance-rank-controls">
               <div className="enemy-defense-resistance-rank-controls" role="group" aria-label="表示する列">
@@ -135,13 +146,13 @@ function formatRankPercentage(percentage: number) {
   return RANK_PERCENTAGE.format(percentage / 100)
 }
 
-function EnemyDefenseResistanceRankTable({ result, step, onStepChange, input, onInputChange, aggregationVersion, onSaveImage }: {
+function EnemyDefenseResistanceRankTable({ result, step, onStepChange, input, onInputChange, aggregationConditions, onSaveImage }: {
   result: ReturnType<typeof buildEnemyDefenseResistanceBands>
   step: number
   onStepChange: (step: number) => void
   input: string
   onInputChange: (value: string) => void
-  aggregationVersion: string
+  aggregationConditions: readonly string[]
   onSaveImage: (snapshot: ComparisonTableImageSnapshot) => void
 }) {
   const [stepInput, setStepInput] = useState(String(step))
@@ -158,11 +169,10 @@ function EnemyDefenseResistanceRankTable({ result, step, onStepChange, input, on
   function openImage() {
     const stepConditions = [`刻み ${step}ポイント`]
     if (value !== null) stepConditions.push(`指定順位 上位${value}%`)
-    const version = `集計版 ${aggregationVersion}`
     onSaveImage({
       title: '防御力と術耐性の順位表',
-      conditions: [version, `出現回数 ${NUMBER.format(result.total)}体`, ...stepConditions],
-      filenameConditions: [version, '出現回数', ...stepConditions],
+      conditions: [...aggregationConditions, `出現回数 ${NUMBER.format(result.total)}体`, ...stepConditions],
+      filenameConditions: [...aggregationConditions, '出現回数', ...stepConditions],
       table,
     })
   }
