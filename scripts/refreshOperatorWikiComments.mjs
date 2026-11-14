@@ -317,21 +317,49 @@ export async function collectOperatorWikiCommentSnapshot(views, {
   return { observedAt: observedAt.toISOString(), throughDate: window.throughDate, entries }
 }
 
-async function refreshOperatorWikiComments(operatorId) {
-  const mapping = JSON.parse((await readFile(VIEWS_PATH, 'utf8')).replace(/^\uFEFF/, ''))
+export async function refreshOperatorWikiComments({
+  operatorId,
+  ifStale = false,
+  viewsPath = VIEWS_PATH,
+  snapshotPath = SNAPSHOT_PATH,
+  stagingDirectory = STAGING_DIRECTORY,
+  collect = collectOperatorWikiCommentSnapshot,
+  now = () => new Date(),
+} = {}) {
+  const observedAt = now()
+  if (ifStale) {
+    const { throughDate } = commentWindow(observedAt)
+    const saved = await readFile(snapshotPath, 'utf8').catch(error => {
+      if (error.code === 'ENOENT') return null
+      throw error
+    })
+    let current
+    if (saved !== null) {
+      try {
+        current = parseOperatorWikiCommentSnapshot(JSON.parse(saved.replace(/^\uFEFF/, '')))
+      } catch {
+        console.warn('保存済みの Wiki コメントを読み取れなかったため、再取得します。')
+      }
+    }
+    if (current && current.throughDate >= throughDate) {
+      console.log('Wiki コメントは ' + current.throughDate + ' まで更新済みです。')
+      return
+    }
+  }
+  const mapping = JSON.parse((await readFile(viewsPath, 'utf8')).replace(/^\uFEFF/, ''))
   const operatorIds = operatorId ? new Set([operatorId]) : undefined
-  const snapshot = parseOperatorWikiCommentSnapshot(await collectOperatorWikiCommentSnapshot(mapping, { operatorIds }))
+  const snapshot = parseOperatorWikiCommentSnapshot(await collect(mapping, { operatorIds, now: () => observedAt }))
   if (operatorId) {
     console.log(JSON.stringify(snapshot, null, 2))
     return
   }
   // Keep the finished file outside the public directory until it can be moved in one step.
-  await mkdir(STAGING_DIRECTORY, { recursive: true })
-  const temporary = join(STAGING_DIRECTORY, 'operator-wiki-comments.' + randomUUID() + '.json')
+  await mkdir(stagingDirectory, { recursive: true })
+  const temporary = join(stagingDirectory, 'operator-wiki-comments.' + randomUUID() + '.json')
   await writeFile(temporary, JSON.stringify(snapshot, null, 2) + '\n', { flag: 'wx' })
   for (let attempt = 0; ; attempt += 1) {
     try {
-      await rename(temporary, SNAPSHOT_PATH)
+      await rename(temporary, snapshotPath)
       break
     } catch (error) {
       const mayBeLocked = process.platform === 'win32' && ['EPERM', 'EACCES', 'EBUSY'].includes(error.code)
@@ -346,11 +374,14 @@ async function refreshOperatorWikiComments(operatorId) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const [flag, operatorId, ...rest] = process.argv.slice(2)
-  if (flag === '--help') {
-    console.log('npm run refresh:operator-wiki-comments -- [--operator <operatorId>]')
-  } else if (rest.length || (flag && (flag !== '--operator' || !operatorId))) {
-    throw new Error('動作確認には --operator にオペレーターIDを指定してください。')
+  const usage = 'npm run refresh:operator-wiki-comments -- [--if-stale | --operator <operatorId>]'
+  if (!flag || (flag === '--if-stale' && operatorId === undefined)) {
+    await refreshOperatorWikiComments({ ifStale: flag === '--if-stale' })
+  } else if (flag === '--operator' && operatorId && !operatorId.startsWith('--') && rest.length === 0) {
+    await refreshOperatorWikiComments({ operatorId })
+  } else if (flag === '--help' && operatorId === undefined) {
+    console.log(usage)
   } else {
-    await refreshOperatorWikiComments(operatorId)
+    throw new Error(usage)
   }
 }

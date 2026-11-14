@@ -3,8 +3,8 @@ name: Archive daily Wiki views
 on:
   schedule:
     - cron: '17 0 * * *'  # 09:17 JST
-    - cron: '37 6 * * *'  # 15:37 JST, views recovery
-    - cron: '47 12 * * *' # 21:47 JST, views recovery
+    - cron: '37 6 * * *'  # 15:37 JST, recovery
+    - cron: '47 12 * * *' # 21:47 JST, recovery
   workflow_dispatch:
 
 concurrency:
@@ -26,6 +26,7 @@ jobs:
         with:
           ref: main
       - name: Set up Node
+        id: node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
@@ -37,13 +38,22 @@ jobs:
         if: env.RECOVER_YESTERDAY == 'true'
         run: npm run refresh:operator-wiki-views -- --recover-yesterday
       - name: Collect Wiki comments
-        if: env.RECOVER_YESTERDAY != 'true'
+        if: ${{ !cancelled() && steps.node.outcome == 'success' }}
         continue-on-error: true
-        run: npm run refresh:operator-wiki-comments
+        run: |
+          if [ "$RECOVER_YESTERDAY" = true ]; then
+            npm run refresh:operator-wiki-comments -- --if-stale
+          else
+            npm run refresh:operator-wiki-comments
+          fi
       - name: Save collected data
+        if: ${{ !cancelled() && steps.node.outcome == 'success' }}
         id: save
         run: |
-          git add -- public/data/operator-wiki-views.json public/data/operator-wiki-views-history/ public/data/operator-wiki-comments.json
+          git add -- public/data/operator-wiki-views.json public/data/operator-wiki-views-history/
+          if [ -f public/data/operator-wiki-comments.json ]; then
+            git add -- public/data/operator-wiki-comments.json
+          fi
           if git diff --cached --quiet; then
             exit 0
           fi
@@ -56,7 +66,7 @@ jobs:
           git push origin HEAD:refs/heads/main
           echo "pushed=true" >> "$GITHUB_OUTPUT"
       - name: Refresh the published site
-        if: steps.save.outputs.pushed == 'true'
+        if: ${{ !cancelled() && steps.save.outputs.pushed == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main

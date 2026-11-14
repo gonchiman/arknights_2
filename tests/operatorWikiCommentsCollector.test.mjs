@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import test from 'node:test'
 import {
   collectOperatorCommentEntry,
   commentWindow,
   parseCommentCatalog,
   parseCommentLog,
+  refreshOperatorWikiComments,
 } from '../scripts/refreshOperatorWikiComments.mjs'
 
 const root = 'https://arknights.wikiru.jp'
@@ -17,6 +21,61 @@ const page = (pageTitle, body) => '<head><link rel="canonical" href="' + root + 
 const post = date => '<li>投稿 <span class="comment_date">' + marker(date) + '</span></li>'
 const list = posts => '<ul class="list1 list-indent1">' + posts + '</ul>'
 const link = pageTitle => '<a href="./?' + pageTitle.split('/').map(encodeURIComponent).join('/') + '">リンク</a>'
+
+function commentSnapshot(observedAt) {
+  return {
+    observedAt: observedAt.toISOString(),
+    throughDate: commentWindow(observedAt).throughDate,
+    entries: [{ operatorId: 'amiya', wikiUrl: url(log), coveredFrom: null, counts: {}, total: null }],
+  }
+}
+
+test('再取得は日本時間の前日まで保存済みなら、未取得の行があっても収集しない', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'wiki-comments-'))
+  try {
+    const snapshotPath = join(directory, 'comments.json')
+    const saved = JSON.stringify(commentSnapshot(new Date('2026-11-13T00:17:00Z')))
+    await writeFile(snapshotPath, saved)
+    await refreshOperatorWikiComments({
+      ifStale: true, snapshotPath, viewsPath: join(directory, 'missing-views.json'),
+      now: () => new Date('2026-11-13T14:59:59Z'),
+      collect: () => assert.fail('更新済みのため収集しない'),
+    })
+    assert.equal(await readFile(snapshotPath, 'utf8'), saved)
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test('日付が変わると再取得し、失敗時は前回データを保持して次回に再試行できる', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'wiki-comments-'))
+  try {
+    const snapshotPath = join(directory, 'comments.json')
+    const viewsPath = join(directory, 'views.json')
+    const stagingDirectory = join(directory, 'staging')
+    const saved = JSON.stringify(commentSnapshot(new Date('2026-11-13T00:17:00Z')))
+    await writeFile(snapshotPath, saved)
+    await writeFile(viewsPath, '{}')
+    const observedAt = new Date('2026-11-13T15:00:00Z')
+    const options = { ifStale: true, snapshotPath, viewsPath, stagingDirectory, now: () => observedAt }
+    await assert.rejects(refreshOperatorWikiComments({
+      ...options, collect: async () => { throw new Error('取得失敗') },
+    }), /取得失敗/)
+    assert.equal(await readFile(snapshotPath, 'utf8'), saved)
+
+    const refreshed = commentSnapshot(observedAt)
+    const collect = async (_views, { now }) => {
+      assert.equal(now().toISOString(), observedAt.toISOString())
+      return refreshed
+    }
+    for (const path of [snapshotPath, join(directory, 'missing-comments.json')]) {
+      await refreshOperatorWikiComments({ ...options, snapshotPath: path, collect })
+      assert.deepEqual(JSON.parse(await readFile(path, 'utf8')), refreshed)
+    }
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
 
 test('本文のコメントと返信だけを日本時間で数える', () => {
   const first = marker('2026-11-01T23:59:00+09:00')
