@@ -7,9 +7,14 @@ const CHANGE_EVENT = 'enemy-aggregation-version-change'
 const QUERY_KEY = 'aggregationVersion'
 let memorySelection = ''
 
+function readUrlSelection() {
+  if (typeof window === 'undefined') return ''
+  return new URLSearchParams(window.location.hash.split('?')[1] ?? '').get(QUERY_KEY) || ''
+}
+
 function readSelection() {
   if (typeof window === 'undefined') return ''
-  const fromUrl = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get(QUERY_KEY)
+  const fromUrl = readUrlSelection()
   if (fromUrl) return fromUrl
   try { return window.localStorage.getItem(STORAGE_KEY) || memorySelection } catch { return memorySelection }
 }
@@ -35,8 +40,12 @@ function persistSelection(id: string) {
   window.dispatchEvent(new Event(CHANGE_EVENT))
 }
 
-export function useEnemyAggregation({ versionId, enabled = true }: { versionId?: string; enabled?: boolean } = {}) {
-  const selection = useSyncExternalStore(subscribe, readSelection, () => '')
+export function useEnemyAggregation({ versionId, enabled = true, defaultToLatest = false }: {
+  versionId?: string
+  enabled?: boolean
+  defaultToLatest?: boolean
+} = {}) {
+  const selection = useSyncExternalStore(subscribe, defaultToLatest ? readUrlSelection : readSelection, () => '')
   const [catalog, setCatalog] = useState<EnemyAggregationIndex | null>(null)
   const [catalogError, setCatalogError] = useState<string | null>(null)
   const [loaded, setLoaded] = useState<{ key: string; data?: EnemyAggregationData; error?: string } | null>(null)
@@ -45,10 +54,10 @@ export function useEnemyAggregation({ versionId, enabled = true }: { versionId?:
   const version = catalog?.versions.find(item => item.id === selectedId) ?? null
   const key = version ? `${version.id}:${version.sha256}` : ''
   useEffect(() => {
-    if (!enabled || versionId || !version) return
+    if (!enabled || versionId || !version || (defaultToLatest && !selection)) return
     memorySelection = version.id
     try { window.localStorage.setItem(STORAGE_KEY, version.id) } catch { /* Session selection is sufficient. */ }
-  }, [enabled, versionId, key])
+  }, [enabled, versionId, key, defaultToLatest, selection])
   useEffect(() => {
     if (!enabled) return
     let active = true

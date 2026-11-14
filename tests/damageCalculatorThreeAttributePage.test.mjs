@@ -16,10 +16,14 @@ const sources = [
   })),
   ...['Melee', 'Ranged', 'Arts'].flatMap(group => readJson(`../src/data/expanded${group}Sources.json`)),
 ]
-let server, Page, Table, RankChart, rows, entries
+let server, Page, Table, RankChart, evaluateRating, rows, entries
 const text = markup => markup.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
 const render = initialSelection => renderToStaticMarkup(createElement(Page, { rows, loading: false, initialSelection }))
-const comparisonTables = markup => markup.match(/<table class="damage-two-table damage-three-attribute-table"[^>]*>.*?<\/table>/gs) ?? []
+const renderRatingTable = entry => {
+  const { physical, arts, errors } = evaluateRating({ entry, enemyCount: 1 })
+  assert.deepEqual(errors, [])
+  return renderToStaticMarkup(createElement(Table, { physical, arts, metric: 'perAttack' }))
+}
 const attributeHeadings = markup => [...markup.matchAll(
   /<th(?=[^>]*scope="colgroup")(?=[^>]*colspan="3")[^>]*>([^<]*)<\/th>/gi,
 )].map(([, label]) => label)
@@ -40,6 +44,8 @@ before(async () => {
     = await server.ssrLoadModule('/src/components/DamageCalculatorThreeAttributePage.tsx'))
   ;({ DamageCalculatorThreeAttributeRankChart: RankChart }
     = await server.ssrLoadModule('/src/components/DamageCalculatorThreeAttributeRankChart.tsx'))
+  ;({ evaluateDamageThreeAttributeTables: evaluateRating }
+    = await server.ssrLoadModule('/src/lib/damageCalculatorThreeAttributeTables.ts'))
   const { classifySkill } = await server.ssrLoadModule('/src/lib/classifier.ts')
   const { getDamageThreeAttributeEntries } = await server.ssrLoadModule('/src/lib/damageCalculatorThreeAttributeComparison.ts')
   rows = sources.flatMap(source => source.skills.map(entry => {
@@ -103,7 +109,7 @@ test('shared table keeps grades that are in range on only one side', () => {
   }
 })
 
-test('physical skill keeps growth and skill information while showing one grouped game rating table', () => {
+test('attribute comparison opens with a main story appearance-rank line chart', () => {
   const entry = entries.find(item => item.skill.operatorId === 'char_208_melan')
   assert.ok(entry?.capability.supported)
   const markup = render(entry.structure.basicInfo)
@@ -117,19 +123,19 @@ test('physical skill keeps growth and skill information while showing one groupe
   assert.match(markup, /class="collapsible-panel-heading-summary"><span>1回の攻撃ダメージ · 1体あたり<\/span>/)
   assert.match(markup, /防御力・術耐性無視を適用/)
   assert.match(markup, /aria-label="対応基準"/)
-  assert.match(markup, /aria-pressed="true">ゲーム内評価<\/button>/)
-  assert.match(markup, /aria-pressed="false">出現順位<\/button>/)
-  assert.doesNotMatch(markup, /class="enemy-aggregation-selector"/)
+  assert.match(markup, /aria-pressed="false">ゲーム内評価<\/button>/)
+  assert.match(markup, /aria-pressed="true">出現順位<\/button>/)
+  assert.match(markup, /class="enemy-aggregation-selector"/)
+  assert.match(markup, /aria-pressed="true">メインストーリー<\/button>/)
   assert.match(markup, /aria-label="表示形式"/)
-  assert.match(markup, /aria-pressed="true">表<\/button>/)
-  assert.match(markup, /aria-pressed="false">グラフ<\/button>/)
-  assert.doesNotMatch(markup, /評価表示/)
+  assert.match(markup, /aria-pressed="false">表<\/button>/)
+  assert.match(markup, /aria-pressed="true">グラフ<\/button>/)
+  assert.match(markup, /aria-pressed="true">折れ線グラフ<\/button>/)
+  assert.match(markup, /集計データを読み込んでいます/)
   assert.doesNotMatch(markup, /aria-label="表示指標"|>DPS<\/button>/)
-  assert.match(markup, /<button(?=[^>]*aria-label="属性比較表をPNG画像で保存")(?=[^>]*aria-haspopup="dialog")(?![^>]*disabled)[^>]*>画像を保存<\/button>/)
-  assert.match(markup, /<div(?=[^>]*role="region")(?=[^>]*aria-label="属性比較表（1体あたり）")(?=[^>]*tabindex="0")/)
-  const tables = comparisonTables(markup)
-  assert.equal(tables.length, 1)
-  const [table] = tables
+  assert.match(markup, /<button(?=[^>]*aria-label="属性比較グラフをPNG画像で保存")(?=[^>]*aria-haspopup="dialog")(?=[^>]*disabled)[^>]*>画像を保存<\/button>/)
+  const table = renderRatingTable(entry)
+  assert.match(table, /<div(?=[^>]*role="region")(?=[^>]*aria-label="属性比較表（1体あたり）")(?=[^>]*tabindex="0")/)
   assert.equal([...table.matchAll(/<th(?=[^>]*scope="col")(?=[^>]*rowspan="2")[^>]*>評価<\/th>/gi)].length, 1)
   assert.match(table, /aria-label="1回の攻撃ダメージの属性比較（1体あたり）"/)
   assert.deepEqual(attributeHeadings(table), ['物理', '術'])
@@ -144,8 +150,9 @@ test('selecting an arts operator keeps that exact skill and both attribute colum
   assert.ok(entry?.capability.supported)
   const markup = render(entry.structure.basicInfo)
   assert.match(markup, /ラヴァ/)
-  assert.match(markup, /aria-label="1回の攻撃ダメージの属性比較（1体あたり）"/)
-  assert.deepEqual(attributeHeadings(markup), ['物理', '術'])
+  const table = renderRatingTable(entry)
+  assert.match(table, /aria-label="1回の攻撃ダメージの属性比較（1体あたり）"/)
+  assert.deepEqual(attributeHeadings(table), ['物理', '術'])
   assert.doesNotMatch(markup, /メランサ/)
 })
 
@@ -153,7 +160,7 @@ test('legacy Surtr and one-shot skills both show damage per attack', () => {
   const surtr = entries.find(item => item.skill.operatorId === 'char_350_surtr' && item.skill.skillIndex === 3)
   assert.ok(surtr?.capability.supported)
   const sustained = render(surtr.structure.basicInfo)
-  assert.match(sustained, /aria-label="1回の攻撃ダメージの属性比較（1体あたり）"/)
+  assert.match(renderRatingTable(surtr), /aria-label="1回の攻撃ダメージの属性比較（1体あたり）"/)
   assert.doesNotMatch(sustained, /未対応です。|未確定/)
   const angel = entries.find(item => item.skill.operatorId === 'char_103_angel' && item.skill.skillIndex === 1)
   assert.ok(angel?.capability.supported)
@@ -161,7 +168,7 @@ test('legacy Surtr and one-shot skills both show damage per attack', () => {
   const once = render(angel.structure.basicInfo)
   assert.match(once, /S1 アサルトモード/)
   assert.match(once, /class="collapsible-panel-heading-summary"><span>1回の攻撃ダメージ · 1体あたり<\/span>/)
-  assert.match(once, /aria-label="1回の攻撃ダメージの属性比較（1体あたり）"/)
+  assert.match(renderRatingTable(angel), /aria-label="1回の攻撃ダメージの属性比較（1体あたり）"/)
   assert.doesNotMatch(once, /aria-label="表示指標"|aria-label="DPSの属性比較（1体あたり）"|未対応です。/)
 })
 
@@ -172,7 +179,7 @@ test('true and mixed native main attacks also render both physical and Arts colu
   assert.ok(chen?.capability.supported)
   for (const entry of [amiya, chen]) {
     const markup = render(entry.structure.basicInfo)
-    assert.deepEqual(attributeHeadings(markup), ['物理', '術'])
+    assert.deepEqual(attributeHeadings(renderRatingTable(entry)), ['物理', '術'])
     assert.doesNotMatch(markup, /未対応です。|未確定|NaN|Infinity/)
   }
 })
@@ -183,7 +190,7 @@ test('an invalid deep-link selection does not silently substitute a supported op
   assert.match(markup, /指定されたスキル・レベルは属性比較の対象外です。/)
   assert.match(markup, /検索して変更/)
   assert.doesNotMatch(markup, /class="damage-two-table damage-three-attribute-table"/)
-  assert.doesNotMatch(markup, /aria-label="属性比較表をPNG画像で保存"/)
+  assert.doesNotMatch(markup, /aria-label="属性比較(?:表|グラフ)をPNG画像で保存"/)
 })
 
 test('default selection uses a supported stage and conditional skills retain their explicit controls', () => {
@@ -204,9 +211,7 @@ test('default selection uses a supported stage and conditional skills retain the
 test('Exusiai S3 shows the physical and Arts damage ranges on the same game rating row', () => {
   const entry = entries.find(item => item.skill.operatorId === 'char_103_angel' && item.skill.skillIndex === 3)
   assert.ok(entry?.capability.supported)
-  const markup = render(entry.structure.basicInfo)
-  const [table] = comparisonTables(markup)
-  assert.ok(table)
+  const table = renderRatingTable(entry)
   const ratingsAndCells = gradeRows(table)
   const ratings = ['E', 'D', 'C', 'B', 'B+', 'A', 'A+', 'S', 'S+', 'SS']
   assert.deepEqual(ratingsAndCells.map(([rating]) => rating), ratings)
