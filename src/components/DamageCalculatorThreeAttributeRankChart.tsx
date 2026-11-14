@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
 import type { DamageThreeAttributeRankRow } from '../lib/damageCalculatorThreeAttributeTables'
+import { formatEnemyRankPercentage } from '../lib/enemyDefenseResistance'
 import { getEnemyStatRating } from '../lib/enemyStatRatings'
 import { getColumnStatRankBands, type RankBandStat } from '../lib/statRankBands'
 import { StatRankStrip } from './StatRankStrip'
@@ -14,6 +15,8 @@ const RATING_ROW_HEIGHT = 18
 const RATING_ROW_GAP = 2
 const RATING_PLOT_GAP = 7
 export const ATTRIBUTE_RANK_RATING_EXTRA_HEIGHT = 2 * RATING_ROW_HEIGHT + RATING_ROW_GAP + RATING_PLOT_GAP
+export const ATTRIBUTE_RANK_PERCENTAGE_ROW_HEIGHT = 24
+export const ATTRIBUTE_RANK_PERCENTAGE_LABEL = '出現順位（%）'
 
 export type DamageThreeAttributeRankChartType = 'line' | 'bar'
 
@@ -37,12 +40,13 @@ export function DamageCalculatorThreeAttributeRankLegend({ chartType = 'line', f
 
 type PairedRankRow = DamageThreeAttributeRankRow & { defense: number }
 
-function describeRow({ resistance, defense, physical, arts }: PairedRankRow, showRatings = false) {
+function describeRow({ resistance, defense, percentage, physical, arts }: PairedRankRow, showRatings: boolean, showRankPercentage: boolean) {
   const resistanceRating = showRatings ? getEnemyStatRating('magicResistance', resistance) : null
   const defenseRating = showRatings ? getEnemyStatRating('defense', defense) : null
   return [
     ['術耐性', STAT.format(resistance) + (resistanceRating ? `（評価 ${resistanceRating}）` : '')],
     ['防御力', STAT.format(defense) + (defenseRating ? `（評価 ${defenseRating}）` : '')],
+    ...(showRankPercentage ? [[ATTRIBUTE_RANK_PERCENTAGE_LABEL, formatEnemyRankPercentage(percentage, true)]] : []),
     ['物理', physical === null ? '—' : DAMAGE.format(physical)],
     ['術', arts === null ? '—' : DAMAGE.format(arts)],
   ] as const
@@ -63,10 +67,13 @@ function AttributeRankRatingRow({ label, stat, series, values, width }: {
   </>
 }
 
-export function DamageCalculatorThreeAttributeRankChart({ rows: allRows, chartType = 'line', showRatings = false, imageHeight }: {
+export function DamageCalculatorThreeAttributeRankChart({
+  rows: allRows, chartType = 'line', showRatings = false, showRankPercentage = false, imageHeight,
+}: {
   rows: readonly DamageThreeAttributeRankRow[]
   chartType?: DamageThreeAttributeRankChartType
   showRatings?: boolean
+  showRankPercentage?: boolean
   imageHeight?: number
 }) {
   const plotRef = useRef<HTMLDivElement>(null)
@@ -101,11 +108,12 @@ export function DamageCalculatorThreeAttributeRankChart({ rows: allRows, chartTy
     '--attribute-rank-rating-height': `${RATING_ROW_HEIGHT}px`,
     '--attribute-rank-rating-row-gap': `${RATING_ROW_GAP}px`,
     '--attribute-rank-rating-plot-gap': `${RATING_PLOT_GAP}px`,
+    '--attribute-rank-percentage-height': `${showRankPercentage ? ATTRIBUTE_RANK_PERCENTAGE_ROW_HEIGHT : 0}px`,
   } as CSSProperties
   const isBar = chartType === 'bar'
   const forImage = imageHeight !== undefined
 
-  return <figure className={`damage-three-attribute-rank-chart${isBar ? ' is-bar' : ''}${forImage ? ' is-image' : ''}${showRatings ? ' has-ratings' : ''}`}
+  return <figure className={`damage-three-attribute-rank-chart${isBar ? ' is-bar' : ''}${forImage ? ' is-image' : ''}${showRatings ? ' has-ratings' : ''}${showRankPercentage ? ' has-rank-percentage' : ''}`}
     style={forImage ? { height: imageHeight } : undefined}
     aria-label="出現順位別の1回の攻撃ダメージ（1体あたり）">
     {!forImage && <figcaption><DamageCalculatorThreeAttributeRankLegend chartType={chartType} /></figcaption>}
@@ -150,7 +158,7 @@ export function DamageCalculatorThreeAttributeRankChart({ rows: allRows, chartTy
         <span className="damage-three-attribute-rank-chart-axis-label">術耐性</span>
         <div className="damage-three-attribute-rank-chart-resistance">
           {rows.map(row => <span key={row.resistance} role={forImage ? undefined : 'img'}
-            aria-label={forImage ? undefined : describeRow(row, showRatings).map(([label, value]) => `${label} ${value}`).join('、')}>
+            aria-label={forImage ? undefined : describeRow(row, showRatings, showRankPercentage).map(([label, value]) => `${label} ${value}`).join('、')}>
             {STAT.format(row.resistance)}
           </span>)}
         </div>
@@ -158,6 +166,12 @@ export function DamageCalculatorThreeAttributeRankChart({ rows: allRows, chartTy
         <div className="damage-three-attribute-rank-chart-defense" aria-hidden="true">
           {rows.map(row => <span key={row.resistance}>{STAT.format(row.defense)}</span>)}
         </div>
+        {showRankPercentage && <>
+          <span className="damage-three-attribute-rank-chart-axis-label" aria-hidden="true">{ATTRIBUTE_RANK_PERCENTAGE_LABEL}</span>
+          <div className="damage-three-attribute-rank-chart-percentage" aria-hidden="true">
+            {rows.map(row => <span key={row.resistance}>{formatEnemyRankPercentage(row.percentage, true)}</span>)}
+          </div>
+        </>}
       </div>
     </div>
   </figure>

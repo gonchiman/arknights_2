@@ -52,18 +52,25 @@
 
 .damage-three-attribute-rank-chart-layout {
   --attribute-rank-plot-height: clamp(160px, 30vw, 240px);
+  --attribute-rank-column-min: 2.8rem;
+  --attribute-rank-axis-min: 4.5rem;
   display: grid;
   grid-template-columns: minmax(3em, max-content) minmax(0, 1fr);
-  grid-template-rows: var(--attribute-rank-plot-height) auto auto;
+  grid-template-rows: var(--attribute-rank-plot-height) auto auto var(--attribute-rank-percentage-height);
   column-gap: 8px;
-  min-width: calc(var(--attribute-rank-columns) * 2.8rem + 4.5rem);
+  min-width: calc(var(--attribute-rank-columns) * var(--attribute-rank-column-min) + var(--attribute-rank-axis-min));
   padding: 13px 12px 8px;
 }
 
 .damage-three-attribute-rank-chart.has-ratings .damage-three-attribute-rank-chart-layout {
   grid-template-rows: calc(var(--attribute-rank-rating-height) + var(--attribute-rank-rating-row-gap))
     calc(var(--attribute-rank-rating-height) + var(--attribute-rank-rating-plot-gap))
-    var(--attribute-rank-plot-height) auto auto;
+    var(--attribute-rank-plot-height) auto auto var(--attribute-rank-percentage-height);
+}
+
+.damage-three-attribute-rank-chart.has-rank-percentage .damage-three-attribute-rank-chart-layout {
+  --attribute-rank-column-min: 4rem;
+  --attribute-rank-axis-min: 7.5rem;
 }
 
 .damage-three-attribute-rank-chart-scale,
@@ -109,7 +116,8 @@
 
 .damage-three-attribute-rank-chart-columns,
 .damage-three-attribute-rank-chart-resistance,
-.damage-three-attribute-rank-chart-defense {
+.damage-three-attribute-rank-chart-defense,
+.damage-three-attribute-rank-chart-percentage {
   display: grid;
   grid-template-columns: repeat(var(--attribute-rank-columns), minmax(0, 1fr));
 }
@@ -177,11 +185,14 @@
 }
 
 .damage-three-attribute-rank-chart-resistance,
-.damage-three-attribute-rank-chart-defense {
+.damage-three-attribute-rank-chart-defense,
+.damage-three-attribute-rank-chart-percentage {
   padding-block: 3px;
   color: var(--text-soft);
   text-align: center;
 }
+
+.damage-three-attribute-rank-chart-percentage { line-height: 18px; white-space: nowrap; }
 
 .damage-three-attribute-rank-chart.is-image {
   --border: #ddd;
