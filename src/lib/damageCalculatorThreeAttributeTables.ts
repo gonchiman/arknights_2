@@ -76,12 +76,11 @@ function gradeRows(stat: 'defense' | 'magicResistance', range?: StatRange): Dama
   })
 }
 
-/** Aggregate DC3's already resolved per-target components, without applying mitigation or hit counts again. */
-function mainAttackDamage(result: DamageThreeComparisonResult): number {
+/** Use the same resolved main attack for the comparison and its breakdown. */
+function getMainAttack(result: DamageThreeComparisonResult) {
   const output = result.output
   if (!output || output.rows.length !== 1) throw new RangeError('主攻撃の計算結果を取得できません。')
   const row = output.rows[0]
-  let perAttack: number
   if (output.guard || output.hasAttackSequence) {
     if (row.attackComponents.some(component => component.role !== 'MAIN' && component.role !== 'ADDITIONAL')) {
       throw new RangeError('主攻撃と追加ダメージの区分が未確認です。')
@@ -99,18 +98,48 @@ function mainAttackDamage(result: DamageThreeComparisonResult): number {
     if (row.perAttack !== row.attackComponents.reduce((sum, component) => sum + component.expectedDamage, 0)) {
       throw new RangeError('主攻撃の内訳と計算結果が一致しません。')
     }
-    perAttack = main.reduce((sum, component) => sum + component.expectedDamage, 0)
-  } else {
-    // Legacy ordinary/counter attacks expose their sole direct attack through the breakdown instead.
-    // Poison is separately stored as damageOverTimeDps and is never added here.
-    if (output.structure?.guardRecipe || !row.breakdown || row.attackComponents.length
-      || !finiteNonnegative(row.perAttack) || row.breakdown.perAttack !== row.perAttack) {
-      throw new RangeError('主攻撃の内訳を取得できません。')
-    }
-    perAttack = row.perAttack
+    const perAttack = main.reduce((sum, component) => sum + component.expectedDamage, 0)
+    if (!finiteNonnegative(perAttack)) throw new RangeError('主攻撃のダメージが有効な数値ではありません。')
+    return { perAttack, components: main, breakdown: null }
   }
-  if (!finiteNonnegative(perAttack)) throw new RangeError('主攻撃のダメージが有効な数値ではありません。')
-  return perAttack
+
+  // Legacy direct attacks store their hit count and damage in the breakdown.
+  if (output.structure?.guardRecipe || !row.breakdown || row.attackComponents.length
+    || !finiteNonnegative(row.perAttack) || row.breakdown.perAttack !== row.perAttack) {
+    throw new RangeError('主攻撃の内訳を取得できません。')
+  }
+  return { perAttack: row.perAttack, components: [], breakdown: row.breakdown }
+}
+
+export interface DamageThreeMainAttackDetail {
+  label: string
+  count: number
+  expectedHitCount: number
+  attack: number | null
+  condition: string | null
+}
+
+export function getDamageThreeMainAttackDetails(result: DamageThreeComparisonResult): DamageThreeMainAttackDetail[] {
+  const { components, breakdown } = getMainAttack(result)
+  if (breakdown) {
+    return [{
+      label: result.entry.kind === 'COUNTER' ? '反撃' : '攻撃',
+      count: breakdown.hitCount, expectedHitCount: breakdown.hitCount, attack: breakdown.mitigation.attack, condition: null,
+    }]
+  }
+  return components.flatMap<DamageThreeMainAttackDetail>(({ label, count, expectedHitCount, branches }) => {
+    const activeBranches = branches.filter(branch => branch.probability > 0)
+    const attacks = new Set(activeBranches.map(branch => branch.mitigation.attack))
+    if (attacks.size <= 1) {
+      const [attack] = attacks
+      return [{ label, count, expectedHitCount, attack: finiteNonnegative(attack) ? attack : null, condition: null }]
+    }
+    const totalProbability = activeBranches.reduce((sum, branch) => sum + branch.probability, 0)
+    return activeBranches.map(branch => ({
+      label, count, expectedHitCount: expectedHitCount * branch.probability / totalProbability,
+      attack: branch.mitigation.attack, condition: branch.id === 'IGNORE' ? '確率効果あり' : '確率効果なし',
+    }))
+  })
 }
 
 function mainAttackDps(result: DamageThreeComparisonResult, perAttack: number): number | null {
@@ -191,7 +220,7 @@ function createAttributeEvaluator(input: DamageThreeAttributeTablesInput, table:
     if (result.actualTargetCount !== reference.actualTargetCount) rowErrors.push('属性変更で攻撃対象数が一致しません。')
     if (!rowErrors.length) {
       try {
-        const perAttack = mainAttackDamage(result)
+        const { perAttack } = getMainAttack(result)
         const dps = table === 'rating' ? mainAttackDps(result, perAttack) : null
         return { perAttack, dps, settled: checkFloor && isPhysicalDamageSettled(result) }
       }

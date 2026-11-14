@@ -9,6 +9,7 @@ import {
   evaluateAttackAttributeTables,
   evaluateDamageThreeAttributeRankTable,
   evaluateDamageThreeAttributeTables,
+  getDamageThreeMainAttackDetails,
   type DamageThreeAttributeTableRow,
   type DamageThreeAttributeTablesInput,
 } from '../src/lib/damageCalculatorThreeAttributeTables.ts'
@@ -298,6 +299,31 @@ test('主攻撃のみを抽出し、ケオベのDEF由来術追撃とムリナ�
       }
     }
   }
+})
+
+test('主攻撃の内訳にはウィシャデルS3の初撃と余震の軽減前の値だけを表示する', () => {
+  const result = evaluateDamageThreeAttributeRankTable(input('char_1035_wisdel', 3), [
+    { resistance: 0, defense: 0, percentage: 100 },
+  ])
+  assert.deepEqual(result.errors, [])
+  const details = getDamageThreeMainAttackDetails(result.reference)
+  assert.deepEqual(details.map(({ count, expectedHitCount }) => [count, expectedHitCount]), [[1, 1], [1, 1]])
+  assert.match(details[0].label, /初撃|攻撃/)
+  assert.match(details[1].label, /余震/)
+  close(details[0].attack, 5502.75)
+  close(details[1].attack, 2751.375)
+  close(result.rows[0].physical, details[0].attack! + details[1].attack!)
+  assert.ok(result.reference.perAttack! > result.rows[0].physical!)
+})
+
+test('旧形式のスルトS2も主攻撃の内訳に1ヒットの軽減前の値を表示する', () => {
+  const result = evaluateDamageThreeAttributeRankTable(input('char_350_surtr', 2), [])
+  assert.deepEqual(result.errors, [])
+  const details = getDamageThreeMainAttackDetails(result.reference)
+  assert.equal(details.length, 1)
+  assert.equal(details[0].count, 1)
+  assert.equal(details[0].expectedHitCount, 1)
+  close(details[0].attack, result.reference.perAttack!)
 })
 
 test('guard・旧形式の継続ダメージを除き、通常攻撃と反撃の主攻撃を維持する', () => {
