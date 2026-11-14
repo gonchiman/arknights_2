@@ -70,7 +70,7 @@
 
 .damage-three-attribute-rank-chart.has-rank-percentage .damage-three-attribute-rank-chart-layout {
   --attribute-rank-column-min: 4rem;
-  --attribute-rank-axis-min: 7.5rem;
+  --attribute-rank-axis-min: 5rem;
 }
 
 .damage-three-attribute-rank-chart-scale,
