@@ -26,7 +26,8 @@ import {
 } from './DamageCalculatorThreeAttributeChartImageDialog'
 import { DamageCalculatorThreeAttributeRangeChart, DamageCalculatorThreeAttributeRangeLegend } from './DamageCalculatorThreeAttributeRangeChart'
 import {
-  ATTRIBUTE_RANK_RATING_EXTRA_HEIGHT, DamageCalculatorThreeAttributeRankChart, DamageCalculatorThreeAttributeRankLegend,
+  ATTRIBUTE_RANK_PERCENTAGE_LABEL, ATTRIBUTE_RANK_PERCENTAGE_ROW_HEIGHT, ATTRIBUTE_RANK_RATING_EXTRA_HEIGHT,
+  DamageCalculatorThreeAttributeRankChart, DamageCalculatorThreeAttributeRankLegend,
 } from './DamageCalculatorThreeAttributeRankChart'
 import { EnemyAggregationSelector, EnemyAggregationStatus } from './EnemyAggregationSelector'
 import { EMPTY_OPERATOR_FILTERS, OperatorSearch } from './OperatorSearch'
@@ -87,6 +88,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const [resultView, setResultView] = useState<typeof RESULT_VIEWS[number][0]>('chart')
   const [rankChartType, setRankChartType] = useState<typeof RANK_CHART_TYPES[number][0]>('line')
   const [showRankRatings, setShowRankRatings] = useState(false)
+  const [showRankPercentage, setShowRankPercentage] = useState(false)
   const [image, setImage] = useState<ResultImage | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [filters, setFilters] = useState({ ...EMPTY_OPERATOR_FILTERS })
@@ -160,12 +162,14 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
         const chartLabel = chartType === 'bar' ? '集合棒グラフ' : '折れ線グラフ'
         setImage({ view: 'chart', snapshot: {
           title, axisTitle: '', conditions: chartConditions,
-          additionalChartHeight: showRatings ? ATTRIBUTE_RANK_RATING_EXTRA_HEIGHT : undefined,
-          filenameParts: [skillLevel, ...basisConditions, chartLabel, ...conditions.slice(1), ...notes,
-            ...(showRatings ? ['評価表示'] : [])],
+          additionalChartHeight: (showRatings ? ATTRIBUTE_RANK_RATING_EXTRA_HEIGHT : 0)
+            + (showRankPercentage ? ATTRIBUTE_RANK_PERCENTAGE_ROW_HEIGHT : 0),
+          filenameParts: [skillLevel, ...basisConditions, chartLabel,
+            ...(showRankPercentage ? [ATTRIBUTE_RANK_PERCENTAGE_LABEL] : []),
+            ...conditions.slice(1), ...notes, ...(showRatings ? ['評価表示'] : [])],
           legend: <DamageCalculatorThreeAttributeRankLegend chartType={chartType} forImage />,
           chart: ({ height }) => <DamageCalculatorThreeAttributeRankChart rows={rows} chartType={chartType}
-            showRatings={showRatings} imageHeight={height} />,
+            showRatings={showRatings} showRankPercentage={showRankPercentage} imageHeight={height} />,
         } })
       } else {
         const { physical, arts } = structuredClone(comparison.result)
@@ -321,6 +325,10 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
               <input type="checkbox" checked={showRankRatings} onChange={event => setShowRankRatings(event.target.checked)} />
               評価表示
             </label>
+            <label className="damage-three-attribute-toggle">
+              <input type="checkbox" checked={showRankPercentage} onChange={event => setShowRankPercentage(event.target.checked)} />
+              {ATTRIBUTE_RANK_PERCENTAGE_LABEL}
+            </label>
           </>}
         </div>
       </div>
@@ -337,7 +345,8 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
           この集計版ではメインストーリーの出現回数を利用できません
         </p>}
         {comparison.result.rows.length > 0 && (resultView === 'chart'
-          ? <DamageCalculatorThreeAttributeRankChart rows={comparison.result.rows} chartType={rankChartType} showRatings={showRankRatings} />
+          ? <DamageCalculatorThreeAttributeRankChart rows={comparison.result.rows} chartType={rankChartType}
+              showRatings={showRankRatings} showRankPercentage={showRankPercentage} />
           : <DamageCalculatorThreeAttributeRankTable rows={comparison.result.rows} />)}
         {rankPairs?.length === 0 && <p role="status">集計対象の出現データがありません。</p>}
       </>}

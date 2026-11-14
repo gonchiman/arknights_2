@@ -84,7 +84,7 @@ function close(actual: number | null, expected: number) {
 }
 
 test('出現順位別の物理・術を同じ防御力と術耐性で計算し、弱点判定を維持する', () => {
-  const pair = { resistance: 60, defense: 1000 }
+  const pair = { resistance: 60, defense: 1000, percentage: 10 }
   const exusiai = evaluateDamageThreeAttributeRankTable(input('char_103_angel', 3), [pair])
   assert.deepEqual(exusiai.errors, [])
   assert.deepEqual(exusiai.rows[0], { ...pair, physical: 183.425, arts: 1467.4 })
@@ -95,7 +95,7 @@ test('出現順位別の物理・術を同じ防御力と術耐性で計算し�
 })
 
 test('出現順位別でも防御力由来の追加攻撃を除外し、無視効果の設定を適用する', () => {
-  const pair = { resistance: 20, defense: 500 }
+  const pair = { resistance: 20, defense: 500, percentage: 60 }
   const ceobeInput = input('char_2013_cerber', 2)
   const ceobe = evaluateDamageThreeAttributeRankTable(ceobeInput, [pair])
   assert.deepEqual(ceobe.errors, [])
@@ -116,9 +116,9 @@ test('出現順位別でも防御力由来の追加攻撃を除外し、無視�
 })
 
 test('出現順位別の表は対応なし・計算エラー・正常な0ダメージを区別する', () => {
-  const validPair = { resistance: 60, defense: 1000 }
-  const missingPair = { resistance: 100, defense: null }
-  const invalidPair = { resistance: 101, defense: 2000 }
+  const validPair = { resistance: 60, defense: 1000, percentage: 10 }
+  const missingPair = { resistance: 100, defense: null, percentage: 0 }
+  const invalidPair = { resistance: 101, defense: 2000, percentage: 0 }
   const value = input('char_456_ash', 3, undefined, { 'guard.contactHit': false, 'guard.explosionHit': false })
   const noMatch = evaluateDamageThreeAttributeRankTable(value, [missingPair])
   assert.deepEqual(noMatch.errors, [])

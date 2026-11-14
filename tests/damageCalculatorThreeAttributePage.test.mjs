@@ -67,17 +67,22 @@ before(async () => {
 
 after(async () => { await server?.close() })
 
-test('both chart types and PNG omit unpaired columns from the axis and rating strips', () => {
-  const pairs = [[0, 0], [10, 100], [20, 100], [30, 200], [40, 350], [50, null], [60, 350], [100, null]]
-  const chartRows = pairs.map(([resistance, defense]) => ({
-    resistance, defense, physical: defense === null ? null : 500, arts: defense === null ? null : 600,
+test('both chart types and PNG omit unpaired columns from all axis rows and rating strips', () => {
+  const pairs = [[0, 0, 100], [10, 100, 68.89], [20, 100, 64.64], [30, 200, 33.78], [40, 350, 18],
+    [50, null, 0], [60, 350, 0.003], [100, null, 0]]
+  const chartRows = pairs.map(([resistance, defense, percentage]) => ({
+    resistance, defense, percentage, physical: defense === null ? null : 500, arts: defense === null ? null : 600,
   }))
   for (const chartType of ['line', 'bar']) {
     for (const imageHeight of [undefined, 380]) {
       const props = { rows: chartRows, chartType, imageHeight }
       const plain = renderToStaticMarkup(createElement(RankChart, props))
       assert.doesNotMatch(plain, /stat-rank-strip/)
-      const markup = renderToStaticMarkup(createElement(RankChart, { ...props, showRatings: true }))
+      assert.doesNotMatch(plain, /出現順位（%）/)
+      const markup = renderToStaticMarkup(createElement(RankChart, { ...props, showRatings: true, showRankPercentage: true }))
+      const percentageAxis = markup.match(/class="damage-three-attribute-rank-chart-percentage"[^>]*>([^]*?)<\/div>/)?.[1]
+      assert.deepEqual([...percentageAxis.matchAll(/<span>([^<]+)<\/span>/g)].map(([, tick]) => tick),
+        ['100%', '68.9%', '64.6%', '33.8%', '18.0%', '0.01%未満'])
       for (const chart of [plain, markup]) {
         const resistanceAxis = chart.match(/class="damage-three-attribute-rank-chart-resistance">([^]*?)<\/div>/)?.[1]
         assert.deepEqual([...resistanceAxis.matchAll(/<span[^>]*>(\d+)<\/span>/g)].map(([, tick]) => Number(tick)),
@@ -92,7 +97,7 @@ test('both chart types and PNG omit unpaired columns from the axis and rating st
         ['E', 'C', 'B', 'B+', 'A+'],
         ['E', 'D', 'C'],
       ])
-      if (imageHeight === undefined) assert.match(markup, /aria-label="術耐性 60（評価 A\+）、防御力 350（評価 C）、/)
+      if (imageHeight === undefined) assert.match(markup, /aria-label="術耐性 60（評価 A\+）、防御力 350（評価 C）、出現順位（%） 0.01%未満、/)
     }
   }
 })

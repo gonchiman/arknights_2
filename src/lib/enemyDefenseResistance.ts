@@ -28,6 +28,19 @@ export interface EnemyResistanceThreshold {
   defense: number | null
 }
 
+const rankPercentageFormat = (fractionDigits: number) => new Intl.NumberFormat('ja-JP', {
+  style: 'percent', minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits,
+})
+const detailedRankPercentage = rankPercentageFormat(2)
+const compactRankPercentage = rankPercentageFormat(1)
+
+export function formatEnemyRankPercentage(percentage: number, compact = false): string {
+  if (percentage === 100) return '100%'
+  if (percentage < 0.005) return '0.01%未満'
+  const formatter = compact && percentage >= 0.1 ? compactRankPercentage : detailedRankPercentage
+  return formatter.format(percentage / 100)
+}
+
 export function buildEnemyDefenseResistanceBands(
   rows: readonly EnemyRecord[],
   counts: EnemyHistogramCounts,

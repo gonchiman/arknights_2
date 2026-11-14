@@ -1,7 +1,7 @@
 import { useId, useMemo, useState } from 'react'
 import { getEnemyMainStoryScope } from '../lib/enemyAggregationData'
 import {
-  buildEnemyDefenseResistanceBands, type EnemyDefenseResistanceBand, type EnemyDefenseResistanceRank,
+  buildEnemyDefenseResistanceBands, formatEnemyRankPercentage, type EnemyDefenseResistanceBand, type EnemyDefenseResistanceRank,
   type EnemyResistanceThreshold,
 } from '../lib/enemyDefenseResistance'
 import { parseEcdfGuideInput } from '../lib/enemyEcdfGuides'
@@ -17,9 +17,6 @@ import './EnemyAnalysis.css'
 import './EnemyDefenseResistancePage.css'
 
 const NUMBER = new Intl.NumberFormat('ja-JP')
-const RANK_PERCENTAGE = new Intl.NumberFormat('ja-JP', {
-  style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2,
-})
 const VIEWS = [['table', '範囲表'], ['rank', '順位表'], ['resistance', '術耐性別'], ['chart', 'グラフ']] as const
 const DEFAULT_RANK_STEP = 10
 const MAX_RANK_PERCENTAGE = 100
@@ -130,7 +127,7 @@ function EnemyResistanceThresholdGrid({ rows, showRankPercentage, showRankCutoff
           {defense === null ? '—' : NUMBER.format(defense)}
         </td>
         {showRankPercentage && <td data-table-image-number aria-label={rankCutoff === 0 ? '該当なし' : undefined}>
-          {rankCutoff === 0 ? '—' : formatRankPercentage(percentage)}
+          {rankCutoff === 0 ? '—' : formatEnemyRankPercentage(percentage)}
         </td>}
         {showRankCutoff && <td data-table-image-number aria-label={rankCutoff === 0 ? '該当なし' : undefined}>
           {rankCutoff === 0 ? '—' : `${estimatedRanks ? '約' : ''}${NUMBER.format(Math.max(1, Math.round(rankCutoff)))}位`}
@@ -138,12 +135,6 @@ function EnemyResistanceThresholdGrid({ rows, showRankPercentage, showRankCutoff
       </tr>)}
     </tbody>
   </table>
-}
-
-function formatRankPercentage(percentage: number) {
-  if (percentage === 100) return '100%'
-  if (percentage < 0.005) return '0.01%未満'
-  return RANK_PERCENTAGE.format(percentage / 100)
 }
 
 function EnemyDefenseResistanceRankTable({ result, step, onStepChange, input, onInputChange, aggregationConditions, onSaveImage }: {

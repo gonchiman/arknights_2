@@ -48,7 +48,7 @@ export interface DamageThreeAttributeTables {
   errors: string[]
 }
 
-type DamageThreeAttributeRankPair = Pick<EnemyResistanceThreshold, 'resistance' | 'defense'>
+type DamageThreeAttributeRankPair = Pick<EnemyResistanceThreshold, 'resistance' | 'defense' | 'percentage'>
 
 export interface DamageThreeAttributeRankRow extends DamageThreeAttributeRankPair {
   physical: number | null
@@ -253,8 +253,8 @@ export function evaluateDamageThreeAttributeRankTable(
 ): DamageThreeAttributeRankTable {
   const { reference, errors, evaluate } = createAttributeEvaluator(input, 'rank')
   const invalidInput = errors.length > 0
-  const rows = pairs.map(({ resistance, defense }): DamageThreeAttributeRankRow => {
-    const row = { resistance, defense, physical: null, arts: null }
+  const rows = pairs.map(({ resistance, defense, percentage }): DamageThreeAttributeRankRow => {
+    const row = { resistance, defense, percentage, physical: null, arts: null }
     if (invalidInput || defense === null) return row
 
     const physical = evaluate(defense, resistance, 'PHYSICAL')
