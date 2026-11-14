@@ -1,7 +1,7 @@
 /** A calculation-backed display row; definitions alone do not imply application. */
 export interface EffectApplicationRow {
   id: string
-  category: 'SKILL' | 'TRAIT' | 'TALENT'
+  category: 'SKILL' | 'TRAIT' | 'TALENT' | 'MODULE'
   categoryLabel?: string
   name: string
   item: string

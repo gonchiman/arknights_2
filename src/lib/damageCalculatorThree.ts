@@ -3,6 +3,12 @@ import type { GuardConditions, GuardInput, GuardPassiveModifiers } from './guard
 import type { ElementalBuildupResult } from './elementalBuildup.ts'
 import { buildGuardDamageOutput } from './guardDamageCalculator.ts'
 import { buildSummonDamageOutput } from './summonActor.ts'
+import {
+  DAMAGE_CALCULATOR_THREE_SURTR_X_SKILL_LEVEL_INDEX,
+  isDamageCalculatorThreeSurtrXSkill,
+  resolveDamageCalculatorThreeSurtrXModule,
+  type DamageCalculatorThreeModuleSelection,
+} from './damageCalculatorThreeSurtrModule.ts'
 import type { VirtualMainAttackType } from './damageCalculatorThreeVirtualAttack.ts'
 export { getDamageCalculatorThreeVirtualAttackCapability } from './damageCalculatorThreeVirtualAttack.ts'
 export type { VirtualMainAttackType, VirtualAttackCapability } from './damageCalculatorThreeVirtualAttack.ts'
@@ -80,6 +86,8 @@ export interface DamageCalculatorThreeConditions {
   targetInitialState?: 'GROUND' | 'AIRBORNE'
   splashTargetCount?: number
   airborneHitCount?: number
+  /** Whether Surtr is blocking any enemy while using the reviewed module trait. */
+  blocking?: boolean
 }
 
 export type DamageCalculatorThreeConditionInput = {
@@ -100,7 +108,7 @@ export type DamageCalculatorThreeConditionInput = {
   defaultValue: string
 } | {
   kind: 'boolean'
-  metric: 'targetCanBeLevitated' | 'seaMonsterPresent'
+  metric: 'targetCanBeLevitated' | 'seaMonsterPresent' | 'blocking'
   label: string
   options: readonly { value: boolean; label: string }[]
   defaultValue: boolean
@@ -113,6 +121,7 @@ export interface DamageCalculatorThreeInput {
   operatorLevel: number
   trust: number
   skillLevelIndex: number
+  module?: DamageCalculatorThreeModuleSelection
   conditions?: DamageCalculatorThreeConditions
   /** Omit for the sensitivity table; supply to calculate exactly one enemy. */
   enemy?: DamageCalculatorThreeEnemy
@@ -166,6 +175,12 @@ export interface DamageCalculatorThreeRow {
 }
 
 export interface DamageCalculatorThreeOutput {
+  module?: DamageCalculatorThreeModuleSelection & {
+    attackBonus: number
+    attackSpeedBonus: number
+    unblockedAttackSpeedBonus: number
+    blocking: boolean
+  }
   actor?: { kind: 'TOKEN'; tokenKey: string; name: string; ownerAttackStat?: number }
   /** Main attack after traits, before any counterfactual override; null means not uniquely identified. */
   mainAttackType?: HpDamageType | null
@@ -269,18 +284,27 @@ export function getDamageCalculatorThreeInputs(
 /**
  * Only reviewed structures are executable. No description or blackboard
  * heuristics are used to select skill values. Verified talent effects are
- * evaluated separately; potential, modules and external modifiers remain out
- * of scope. Reviewed normal-attack traits supply damage type and Lord scaling.
+ * evaluated separately. Equipment is supported only for reviewed skill and
+ * module combinations. Reviewed normal-attack traits supply damage type and Lord scaling.
  */
 export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInput): DamageCalculatorThreeOutput {
   const guardStructure = findSkillStructure({ operatorId: input.skill.operatorId, skillId: input.skill.skillId,
     skillIndex: input.skill.skillIndex, levelIndex: input.skillLevelIndex })
+  const moduleRequested = input.module !== undefined
+  const moduleEffects = input.module && !guardStructure?.guardRecipe
+    && input.skillLevelIndex === DAMAGE_CALCULATOR_THREE_SURTR_X_SKILL_LEVEL_INDEX
+    && isDamageCalculatorThreeSurtrXSkill(input.skill) && input.operator.operatorId === input.skill.operatorId
+    ? resolveDamageCalculatorThreeSurtrXModule({ ...input.skill, operatorProfile: input.operator.operatorProfile },
+      input.phaseIndex, input.operatorLevel, input.module)
+    : null
+  const validationErrors = validateOperator(input)
+  if (moduleRequested && !moduleEffects) validationErrors.push('選択したスキル・育成条件・段階のMOD効果を確認できません。')
   if (guardStructure?.guardRecipe) return guardStructure.guardRecipe.stages.some(stage => stage.actor)
-    ? buildSummonDamageOutput(input, guardStructure, validateOperator(input))
-    : buildGuardDamageOutput(input, guardStructure, validateOperator(input))
+    ? buildSummonDamageOutput(input, guardStructure, validationErrors)
+    : buildGuardDamageOutput(input, guardStructure, validationErrors)
   const enemyErrors = validateDamageCalculatorThreeEnemy(input.enemy)
   const enemy = enemyErrors.length ? undefined : input.enemy
-  const reasons = [...validateOperator(input), ...enemyErrors]
+  const reasons = [...validationErrors, ...enemyErrors]
   const virtualMainAttackType = input.virtualMainAttackType === 'PHYSICAL' || input.virtualMainAttackType === 'ARTS'
     ? input.virtualMainAttackType : undefined
   if (input.virtualMainAttackType !== undefined && virtualMainAttackType === undefined) {
@@ -290,11 +314,18 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   const conditionErrors = validateConditions(context)
   reasons.push(...conditionErrors)
   const safeContext = conditionErrors.length ? resolveConditions() : context
+  if (moduleEffects && typeof context.blocking !== 'boolean') reasons.push('スルトのブロック状態を選択してください。')
+  const module: DamageCalculatorThreeOutput['module'] = moduleEffects && typeof context.blocking === 'boolean'
+    ? { id: moduleEffects.id, level: moduleEffects.level, attackBonus: moduleEffects.attackBonus,
+      unblockedAttackSpeedBonus: moduleEffects.unblockedAttackSpeedBonus,
+      blocking: context.blocking, attackSpeedBonus: context.blocking ? 0 : moduleEffects.unblockedAttackSpeedBonus }
+    : undefined
   // Invalid numbers are rejected; defaults only let us prepare an error output.
   const stats = getOperatorStats(input.operator.operatorProfile,
     Number.isFinite(input.phaseIndex) ? input.phaseIndex : 0,
     Number.isFinite(input.operatorLevel) ? input.operatorLevel : 1,
-    Number.isFinite(input.trust) ? input.trust : 0)
+    Number.isFinite(input.trust) ? input.trust : 0,
+    module ? { moduleAttack: module.attackBonus, attackSpeedBonus: module.attackSpeedBonus } : undefined)
   const selection: SkillStructureSelection = {
     operatorId: input.skill.operatorId, skillId: input.skill.skillId,
     skillIndex: input.skill.skillIndex, levelIndex: input.skillLevelIndex,
@@ -321,6 +352,8 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
       reasons.push(error instanceof Error ? error.message : '条件の入力を解決できません。')
     }
   }
+  if (moduleEffects) conditionInputs.push({ kind: 'boolean', metric: 'blocking', label: 'ブロック状態',
+    options: [{ value: false, label: '未ブロック' }, { value: true, label: 'ブロック中' }], defaultValue: false })
   const attackKind = attack?.kind ?? 'NORMAL'
   const attackLabel = attackKind === 'NEXT_ATTACK' ? '強化攻撃' : attackKind === 'COUNTER' ? '反撃' : attackKind === 'SKILL_ACTION' ? 'スキル' : '1攻撃'
   const attackDistanceType = attack?.treatment ?? 'MELEE'
@@ -367,6 +400,20 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   let talents = evaluateDamageCalculatorThreeTalents({ operator: input.operator,
     phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel, attackKind,
     enemyAttackCapability: context.enemyAttackCapability, seaMonsterPresent: context.seaMonsterPresent })
+  if (moduleEffects) {
+    const talent = talents.effects.find(entry => entry.talentIndex === 0 && entry.status === 'APPLIED'
+      && entry.effect?.item === 'RESISTANCE_IGNORE_FIXED')
+    if (talent?.effect?.item === 'RESISTANCE_IGNORE_FIXED' && talent.effect.value === moduleEffects.baseResistanceIgnore
+      && talents.resistanceIgnoreFixed === moduleEffects.baseResistanceIgnore && !hasAttackSequence) {
+      talents.resistanceIgnoreFixed = moduleEffects.resistanceIgnore
+      if (moduleEffects.baseResistanceIgnore !== moduleEffects.resistanceIgnore) {
+        talent.effect = { ...talent.effect, value: moduleEffects.resistanceIgnore }
+        talent.reason = 'MOD Xで変更された術耐性固定無視を適用します。'
+      }
+    } else {
+      reasons.push('MOD Xで変更する素質の計算を確認できません。')
+    }
+  }
   if (talents.effects.some(entry => entry.effect && conditionUsesMetric(entry.effect.condition, 'battlefield.hasSeaMonster'))) {
     conditionInputs.push({ kind: 'boolean', metric: 'seaMonsterPresent', label: '戦場の海の怪物',
       options: [{ value: false, label: 'なし' }, { value: true, label: 'あり' }], defaultValue: false })
@@ -641,7 +688,7 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
         damageOverTimeDps, combinedDps, allTargetsCombinedDps: combinedDps === null ? null : combinedDps * actualTargetCount,
         attackComponents: [] }
     }) : []
-  return { structure, stats, model, damageType, mainAttackType, axisLabel, rows, unsupportedReasons, conditionInputs, traitEvaluation,
+  return { ...(module ? { module } : {}), structure, stats, model, damageType, mainAttackType, axisLabel, rows, unsupportedReasons, conditionInputs, traitEvaluation,
     actualTargetCount, maxTargetCount, effects, canShowDps, dpsReason, effectiveAttack,
     attackSpeed: model ? attackSpeedValue : null,
     attackInterval: model ? attackInterval : null, activeStageLabel: stage?.label ?? null,
@@ -723,6 +770,7 @@ function resolveConditions(conditions: DamageCalculatorThreeConditions = {}): Co
     targetInitialState: conditions.targetInitialState ?? 'GROUND',
     splashTargetCount: conditions.splashTargetCount ?? 1,
     airborneHitCount: conditions.airborneHitCount,
+    blocking: conditions.blocking === undefined ? false : conditions.blocking,
   }
 }
 

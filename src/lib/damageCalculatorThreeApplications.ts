@@ -21,9 +21,25 @@ export function buildDamageCalculatorThreeApplicationRows(
     ...(output.guard ? buildGuardSkillApplicationRows(input, output) : buildSkillApplicationRows(output)),
     ...buildTraitApplicationRows(input, output),
     ...(output.guard ? buildGuardTalentApplicationRows(input, output) : buildTalentApplicationRows(output)),
+    ...buildModuleApplicationRows(output),
   ].map(row => output.rows.length === 0 && row.status === 'APPLIED'
     ? { ...row, status: 'UNVERIFIED', reason: output.unsupportedReasons.join(' / ') || '計算結果を確定できません。' }
     : row)
+}
+
+function buildModuleApplicationRows(output: DamageCalculatorThreeOutput): EffectApplicationRow[] {
+  const module = output.module
+  if (!module) return []
+  const name = `MOD X Lv.${module.level}`
+  return [{
+    id: 'module/attack', category: 'MODULE', name, item: '攻撃力', value: `+${number(module.attackBonus)}`,
+    timing: '常時', condition: 'なし', status: 'APPLIED', reason: '基礎攻撃力に加算します。',
+  }, {
+    id: 'module/unblocked-attack-speed', category: 'MODULE', name, item: '攻撃速度',
+    value: `+${number(module.unblockedAttackSpeedBonus)}`, timing: '常時', condition: '未ブロック時',
+    status: module.blocking ? 'CONDITION_FALSE' : 'APPLIED',
+    reason: module.blocking ? '自身がブロック中です。' : '攻撃間隔に反映します。',
+  }]
 }
 
 function buildSkillApplicationRows(output: DamageCalculatorThreeOutput): EffectApplicationRow[] {

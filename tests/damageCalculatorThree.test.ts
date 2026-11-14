@@ -10,8 +10,12 @@ import {
   getDamageCalculatorThreeStructures,
   type DamageCalculatorThreeInput,
 } from '../src/lib/damageCalculatorThree.ts'
+import { buildDamageCalculatorThreeApplicationRows } from '../src/lib/damageCalculatorThreeApplications.ts'
+import { buildDamageCalculatorThreeModuleCoverage } from '../src/lib/damageCalculatorThreeModuleCoverage.ts'
 import { findSkillStructure, type SkillStructure } from '../src/lib/skillStructure.ts'
-import type { OperatorCombatProfile, RawSkillLevel, SkillRecord } from '../src/types/skill.ts'
+import { deriveSurtrDpsModel } from '../src/lib/surtrDps.ts'
+import { calculateSurtrDpsCalculation } from '../src/lib/surtrDpsCalculation.ts'
+import type { OperatorCombatProfile, RawOperatorModule, RawSkillLevel, SkillRecord } from '../src/types/skill.ts'
 
 const source = JSON.parse(readFileSync(new URL('./fixtures/skillStructureFourOperators.json', import.meta.url), 'utf8')) as {
   operatorId: string; operatorName: string; skills: (RawSkillLevel & { skillId: string; skillIndex: number })[]
@@ -69,6 +73,173 @@ function output(skill = record(), patch: Partial<DamageCalculatorThreeInput> = {
 function close(actual: number | null | undefined, expected: number) {
   assert.ok(actual !== null && actual !== undefined && Math.abs(actual - expected) < 1e-8, `${actual} != ${expected}`)
 }
+
+const surtrModuleXId = 'uniequip_002_surtr'
+
+function surtrS3WithModuleX(): SkillRecord {
+  const skill = sourceRecord('char_350_surtr', 3)
+  // Reviewed JP MOD X stages at potential 1, retaining separate trait and talent candidates.
+  const moduleX: RawOperatorModule = {
+    uniEquipId: surtrModuleXId,
+    uniEquipName: 'サーミの不滅なる心臓の欠片',
+    type: 'ADVANCED',
+    typeName2: 'X',
+    unlockEvolvePhase: 'PHASE_2',
+    unlockLevel: 60,
+    phases: ([1, 2, 3] as const).map((level) => {
+      const unlockCondition = { phase: 'PHASE_2', level: 60 }
+      const resistanceIgnore = level === 2 ? 24 : 26
+      return {
+        equipLevel: level,
+        attributeBlackboard: [
+          { key: 'atk', value: [30, 48, 60][level - 1] },
+          { key: 'magic_resistance', value: 5 },
+        ],
+        parts: [
+          {
+            target: 'TRAIT',
+            isToken: false,
+            overrideTraitDataBundle: { candidates: [{
+              unlockCondition, requiredPotentialRank: 0,
+              additionalDescription: '未ブロック時、攻撃速度<@ba.kw>+{attack_speed}</>',
+              blackboard: [{ key: 'attack_speed', value: 8 }],
+            }] },
+          },
+          ...(level === 1 ? [] : [{
+            target: 'TALENT_DATA_ONLY',
+            isToken: false,
+            addOrOverrideTalentDataBundle: { candidates: [0, 4].map(requiredPotentialRank => {
+              const value = resistanceIgnore + (requiredPotentialRank ? 2 : 0)
+              return {
+                talentIndex: 0, name: '劫火', prefabKey: '1', requiredPotentialRank, unlockCondition,
+                upgradeDescription: `攻撃時、対象の術耐性を${value}無視`,
+                blackboard: [{ key: 'magic_resist_penetrate_fixed', value }],
+              }
+            }) },
+          }]),
+        ],
+      }
+    }),
+  }
+  skill.operatorProfile.modules = [moduleX]
+  return skill
+}
+
+test('スルトS3の未装備とMOD X Lv.1〜3は、ブロック有無・術耐性別に専用分析の1撃と攻撃間隔に一致する', () => {
+  const skill = surtrS3WithModuleX()
+  const cases = [
+    { level: 0, moduleAttack: 0, attack: 3319, resistanceIgnore: 20 },
+    { level: 1, moduleAttack: 30, attack: 3448, resistanceIgnore: 20 },
+    { level: 2, moduleAttack: 48, attack: 3526, resistanceIgnore: 24 },
+    { level: 3, moduleAttack: 60, attack: 3577, resistanceIgnore: 26 },
+  ] as const
+  for (const { level, moduleAttack, attack, resistanceIgnore } of cases) {
+    const module = level === 0 ? undefined : { id: surtrModuleXId, level }
+    for (const blocking of [false, true]) {
+      const reference = deriveSurtrDpsModel(skill, {
+        level: 90, trust: 100, potential: 1, skillLevelIndex: 9, blocking, remnantActive: false,
+      }, module?.id, level)
+      assert.ok(reference)
+      const interval = level > 0 && !blocking ? 1.25 / 1.08 : 1.25
+      for (const resistance of [0, 20, 24, 26, 27, 60, 100]) {
+        const expected = calculateSurtrDpsCalculation(reference, resistance)
+        assert.ok(expected)
+        const result = output(skill, {
+          module, conditions: { blocking, actualAttackTargetCount: 4 },
+          enemy: { defense: 0, resistance },
+        })
+        assert.deepEqual(result.unsupportedReasons, [])
+        assert.equal(result.stats.baseAttackBreakdown.moduleAttack, moduleAttack)
+        assert.equal(result.effectiveAttack, attack)
+        assert.equal(result.resistanceIgnoreFixed, resistanceIgnore)
+        close(result.attackInterval, interval)
+        close(result.attackInterval, expected.attackInterval)
+        assert.equal(result.rows.length, 1)
+        const [row] = result.rows
+        const damage = attack * (1 - Math.max(0, resistance - resistanceIgnore) / 100)
+        close(row.perHit, damage)
+        close(row.perHit, expected.perHit)
+        close(row.dps, expected.dps)
+        close(row.allTargetsPerAttack, expected.perHit * 4)
+        close(row.allTargetsDps, expected.dps * 4)
+        assert.equal(row.breakdown?.totalMode, 'NONE')
+      }
+    }
+  }
+
+  const module = { id: surtrModuleXId, level: 3 } as const
+  close(output(skill, { module }).attackInterval, 1.25 / 1.08)
+  const ignoreDisabled = output(skill, { module, disablePenetration: true, enemy: { defense: 0, resistance: 60 } })
+  assert.deepEqual(ignoreDisabled.unsupportedReasons, [])
+  assert.equal(ignoreDisabled.resistanceIgnoreFixed, 0)
+  close(ignoreDisabled.rows[0].perHit, 3577 * 0.4)
+  close(ignoreDisabled.attackInterval, 1.25 / 1.08)
+})
+
+test('スルトS3のMOD Xは解放条件・正確なLv.・対象スキルを満たす場合だけ計算する', () => {
+  const skill = surtrS3WithModuleX()
+  const module = { id: surtrModuleXId, level: 3 } as const
+  const surtrS2 = { ...sourceRecord('char_350_surtr', 2), operatorProfile: skill.operatorProfile }
+  assert.deepEqual(output(skill, { module, operatorLevel: 60 }).unsupportedReasons, [])
+  for (const invalid of [
+    output(skill, { module: { id: 'uniequip_003_surtr', level: 3 } }),
+    output(skill, { module: { id: surtrModuleXId, level: 4 as 3 } }),
+    output(skill, { module, operatorLevel: 59 }),
+    output(skill, { module, phaseIndex: 1, operatorLevel: 80 }),
+    output(skill, { module, conditions: { blocking: null as unknown as boolean } }),
+    output(surtrS2, { module }),
+  ]) {
+    assert.ok(invalid.unsupportedReasons.length > 0)
+    assert.deepEqual(invalid.rows, [])
+  }
+  const phases = skill.operatorProfile.modules![0].phases!
+  const trait = phases[2].parts![0].overrideTraitDataBundle!.candidates![0]
+  trait.additionalDescription = 'ブロック中、攻撃速度+8'
+  const unknownEffect = output(skill, { module })
+  assert.ok(unknownEffect.unsupportedReasons.length > 0)
+  assert.deepEqual(unknownEffect.rows, [])
+  phases.pop()
+  const missingStage = output(skill, { module })
+  assert.ok(missingStage.unsupportedReasons.length > 0)
+  assert.deepEqual(missingStage.rows, [])
+})
+
+test('MOD適用欄はブロック中の攻速を条件不成立とし、劫火の置換後の値を表示する', () => {
+  const skill = surtrS3WithModuleX()
+  const input: DamageCalculatorThreeInput = { operator: skill, skill, phaseIndex: 2, operatorLevel: 90, trust: 100,
+    skillLevelIndex: 9, module: { id: surtrModuleXId, level: 3 }, conditions: { blocking: true } }
+  const result = buildDamageCalculatorThreeOutput(input)
+  const rows = buildDamageCalculatorThreeApplicationRows(input, result)
+  const speed = rows.find(row => row.category === 'MODULE' && row.item === '攻撃速度')
+  assert.equal(speed?.status, 'CONDITION_FALSE')
+  assert.equal(speed.value, '+8')
+  const talent = rows.find(row => row.category === 'TALENT' && row.name === '劫火')
+  assert.equal(talent?.status, 'APPLIED')
+  assert.equal(talent.value, '26')
+})
+
+test('MOD対応一覧はスルトS3の確認できたX段階のみを対応と判定する', () => {
+  const skill = surtrS3WithModuleX()
+  const [moduleX] = skill.operatorProfile.modules!
+  skill.operatorProfile.modules!.push({ ...moduleX, uniEquipId: 'uniequip_003_surtr', typeName2: 'Y' })
+  const surtrS2 = { ...sourceRecord('char_350_surtr', 2), operatorProfile: skill.operatorProfile }
+  const coverage = () => buildDamageCalculatorThreeModuleCoverage([
+    { skill, status: 'SUPPORTED' }, { skill: surtrS2, status: 'SUPPORTED' },
+  ])
+  const rows = coverage()
+  assert.equal(rows.length, 4)
+  for (const row of rows) {
+    const expected = row.skill.skillIndex === 3 && row.moduleId === surtrModuleXId ? 'SUPPORTED' : 'UNSTARTED'
+    assert.deepEqual(row.stages, [1, 2, 3].map(level => ({ level, status: expected })))
+  }
+  moduleX.phases!.pop()
+  const findSurtrS3X = () => coverage().find(row => row.skill.skillIndex === 3 && row.moduleId === surtrModuleXId)
+  assert.deepEqual(findSurtrS3X()?.stages, [
+    { level: 1, status: 'SUPPORTED' }, { level: 2, status: 'SUPPORTED' },
+  ])
+  delete moduleX.phases
+  assert.deepEqual(findSurtrS3X()?.stages, [1, 2, 3].map(level => ({ level, status: 'UNSTARTED' })))
+})
 
 test('既存4人の12技能とアイリーニ3技能の特化3に同じ構造化レコードを使う', () => {
   const allStructures = getDamageCalculatorThreeStructures()
