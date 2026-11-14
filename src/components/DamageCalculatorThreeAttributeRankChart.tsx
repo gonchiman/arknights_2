@@ -16,7 +16,8 @@ const RATING_ROW_GAP = 2
 const RATING_PLOT_GAP = 7
 export const ATTRIBUTE_RANK_RATING_EXTRA_HEIGHT = 2 * RATING_ROW_HEIGHT + RATING_ROW_GAP + RATING_PLOT_GAP
 export const ATTRIBUTE_RANK_PERCENTAGE_ROW_HEIGHT = 24
-export const ATTRIBUTE_RANK_PERCENTAGE_LABEL = '出現順位（%）'
+const RANK_PERCENTAGE_AXIS_LABEL = '出現順位'
+export const ATTRIBUTE_RANK_PERCENTAGE_LABEL = `${RANK_PERCENTAGE_AXIS_LABEL}（%）`
 
 export type DamageThreeAttributeRankChartType = 'line' | 'bar'
 
@@ -167,7 +168,7 @@ export function DamageCalculatorThreeAttributeRankChart({
           {rows.map(row => <span key={row.resistance}>{STAT.format(row.defense)}</span>)}
         </div>
         {showRankPercentage && <>
-          <span className="damage-three-attribute-rank-chart-axis-label" aria-hidden="true">{ATTRIBUTE_RANK_PERCENTAGE_LABEL}</span>
+          <span className="damage-three-attribute-rank-chart-axis-label" aria-hidden="true">{RANK_PERCENTAGE_AXIS_LABEL}</span>
           <div className="damage-three-attribute-rank-chart-percentage" aria-hidden="true">
             {rows.map(row => <span key={row.resistance}>{formatEnemyRankPercentage(row.percentage, true)}</span>)}
           </div>
