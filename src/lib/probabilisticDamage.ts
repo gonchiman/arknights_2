@@ -5,6 +5,8 @@ export interface ProbabilisticDamageBranch {
   id: 'NORMAL' | 'IGNORE'
   probability: number
   defenseIgnoreRatio: number
+  /** Damage after mitigation and damage modifiers, before hit count, target share, or probability weighting. */
+  perHitDamage: number
   damage: number
   mitigation: DamageCalculationBreakdown | ElementalDamageBreakdown
 }
@@ -28,7 +30,7 @@ export function calculateProbabilisticDefenseIgnoreDamage(input: {
     // Materialize this branch's ignored defense, keeping the original axis in the breakdown.
     const mitigation = calculateDamageBreakdown(input.attack, input.damageType, input.enemyDefense, input.enemyResistance,
       { defenseIgnoreFixed: input.enemyDefense * branch.defenseIgnoreRatio, resistanceIgnoreFixed: input.resistanceIgnoreFixed })
-    return { ...branch, damage: mitigation.result * input.count, mitigation }
+    return { ...branch, perHitDamage: mitigation.result, damage: mitigation.result * input.count, mitigation }
   })
   const expectedDamage = branches.reduce((sum, branch) => sum + branch.probability * branch.damage, 0)
   if (!Number.isFinite(expectedDamage)) throw new RangeError('防御無視を含むダメージ期待値を計算できません。')

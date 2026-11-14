@@ -7,6 +7,7 @@ import {
 } from './damageCalculatorThree.ts'
 import { getExpandedDefinition } from './expandedCombatRegistry.ts'
 import { guardConditionMatches } from './guardCombatValues.ts'
+import type { ProbabilisticDamageBranch } from './probabilisticDamage.ts'
 import type { SkillStructure } from './skillStructure.ts'
 import { calculateDamageThreePeriodTotal, type DamageThreePeriodTotal } from './damageCalculatorThreePeriodTotal.ts'
 
@@ -44,11 +45,16 @@ export interface ComparisonConditionField {
   options?: readonly { value: number | string | boolean; label: string }[]
   locked: boolean
 }
-interface ComparisonFinalAttackDetail {
+interface ComparisonHitDetail {
   label: string
   damageType: HpDamageType
   condition: string | null
+}
+interface ComparisonFinalAttackDetail extends ComparisonHitDetail {
   attack: number
+}
+interface ComparisonPerHitDetail extends ComparisonHitDetail {
+  damage: number
 }
 export interface DamageThreeComparisonResult extends DamageThreePeriodTotal {
   entry: DamageThreeComparisonEntry
@@ -60,6 +66,9 @@ export interface DamageThreeComparisonResult extends DamageThreePeriodTotal {
   damageType: string | null
   finalAttack: number | null
   finalAttackDetails: readonly ComparisonFinalAttackDetail[]
+  perHit: number | null
+  maxPerHit: number | null
+  perHitDetails: readonly ComparisonPerHitDetail[]
   perAttack: number | null
   allTargetsPerAttack: number | null
   dps: number | null
@@ -71,30 +80,27 @@ export interface DamageThreeComparisonResult extends DamageThreePeriodTotal {
   elementalBuildups: readonly ElementalBuildupResult[]
 }
 
-function getFinalAttack(row: DamageCalculatorThreeRow | null): Pick<DamageThreeComparisonResult, 'finalAttack' | 'finalAttackDetails'> {
-  const breakdown = row?.breakdown
-  if (breakdown && breakdown.hitCount > 0) {
-    return { finalAttack: Number.isFinite(breakdown.mitigation.attack) ? breakdown.mitigation.attack : null, finalAttackDetails: [] }
+function getComparisonHitValues(row: DamageCalculatorThreeRow | null, directValue: number | null,
+  branchValue: (branch: ProbabilisticDamageBranch) => number,
+): { value: number | null; details: (ComparisonHitDetail & { value: number })[] } {
+  if (row?.breakdown && row.breakdown.hitCount > 0) {
+    return { value: Number.isFinite(directValue) ? directValue : null, details: [] }
   }
-
-  const details: ComparisonFinalAttackDetail[] = []
+  const details: (ComparisonHitDetail & { value: number })[] = []
   for (const component of row?.attackComponents ?? []) {
     if (!(component.expectedHitCount > 0)) continue
     const branches = component.branches.filter(branch => branch.probability > 0)
-    // Defense penetration alone can produce several damage outcomes from the same hit strength.
-    const byAttack = new Map(branches.map(branch => [branch.mitigation.attack, branch]))
-    const sharesAttack = byAttack.size < branches.length
-    for (const [attack, branch] of byAttack) {
-      if (!Number.isFinite(attack)) return { finalAttack: null, finalAttackDetails: [] }
+    const byValue = new Map(branches.map(branch => [branchValue(branch), branch]))
+    const sharesValue = byValue.size < branches.length
+    for (const [value, branch] of byValue) {
+      if (!Number.isFinite(value)) return { value: null, details: [] }
       const branchLabel = branch.id === 'IGNORE' ? '確率効果あり' : '確率効果なし'
-      const condition = branch.probability < 1 && !sharesAttack ? branchLabel : null
-      details.push({ label: component.label, damageType: component.damageType, condition, attack })
+      const condition = branch.probability < 1 && !sharesValue ? branchLabel : null
+      details.push({ label: component.label, damageType: component.damageType, condition, value })
     }
   }
-  const attack = details[0]?.attack ?? null
-  return details.every(detail => detail.attack === attack)
-    ? { finalAttack: attack, finalAttackDetails: [] }
-    : { finalAttack: null, finalAttackDetails: details }
+  const value = details[0]?.value ?? null
+  return details.every(detail => detail.value === value) ? { value, details: [] } : { value: null, details }
 }
 
 /** Only reviewed DC3 selections are enumerated; source descriptions are never interpreted here. */
@@ -159,6 +165,8 @@ export function evaluateDamageThreeComparisonEntry(
       locked: ['actualAttackTargetCount', 'enemyResistance'].includes(input.metric) || fixed?.key === input.metric,
     }))
   const row = !errors.length && output?.rows.length === 1 ? output.rows[0] : null
+  const finalAttack = getComparisonHitValues(row, row?.breakdown?.mitigation.attack ?? null, branch => branch.mitigation.attack)
+  const perHit = getComparisonHitValues(row, row?.perHit ?? null, branch => branch.perHitDamage)
   const directDps = row?.dps ?? null
   const combinedDps = row?.combinedDps ?? null
   // Null means not calculable; zero only means the engine confirmed there is no periodic contribution.
@@ -181,7 +189,11 @@ export function evaluateDamageThreeComparisonEntry(
     notes: [...new Set([...(output?.scopeNotes ?? []), ...(output?.talentEffects.filter(effect => effect.status === 'UNSUPPORTED').map(effect => effect.reason) ?? [])])],
     actualTargetCount: Number.isSafeInteger(output?.actualTargetCount) && output!.actualTargetCount > 0 ? output!.actualTargetCount : null,
     damageType: output?.damageType ?? (row ? 'MIXED' : null),
-    ...getFinalAttack(row),
+    finalAttack: finalAttack.value,
+    finalAttackDetails: finalAttack.details.map(({ value, ...detail }) => ({ ...detail, attack: value })),
+    perHit: perHit.value,
+    maxPerHit: perHit.details.length ? Math.max(...perHit.details.map(detail => detail.value)) : perHit.value,
+    perHitDetails: perHit.details.map(({ value, ...detail }) => ({ ...detail, damage: value })),
     perAttack: row?.perAttack ?? null, allTargetsPerAttack: row?.allTargetsPerAttack ?? null,
     dps: directDps, allTargetsDps: row?.allTargetsDps ?? null,
     damageOverTimeDps: periodic,

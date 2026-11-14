@@ -87,6 +87,7 @@ test('命中上限は軽減と与ダメージ倍率の後・確率平均の前�
       assert.deepEqual(output.unsupportedReasons, [])
       close(output.rows[0].perAttack, Math.min(base.rows[0].perAttack, cap))
       close(output.rows[0].allTargetsPerAttack, Math.min(base.rows[0].perAttack, cap) * 3)
+      assert.equal(output.rows[0].attackComponents[0].branches[0].perHitDamage, Math.min(base.rows[0].perAttack, cap))
       assert.equal(output.rows[0].dps, null)
       assert.equal(output.rows[0].combinedDps, null)
       assert.equal(output.attackInterval, null)
@@ -98,6 +99,7 @@ test('命中上限は軽減と与ダメージ倍率の後・確率平均の前�
     actions: [{ label: 'sample', role: 'MAIN', damageType: 'PHYSICAL', scale: 1, probability: .5 }] }).output
   assert.deepEqual(probabilistic.unsupportedReasons, [])
   close(probabilistic.rows[0].perAttack, 50)
+  assert.equal(probabilistic.rows[0].attackComponents[0].branches[0].perHitDamage, 100)
   const franka = calculate('char_106_franka', { damageCapPerTarget: 300 },
     { enemy: { defense: 2000, resistance: 0 } }).output
   assert.deepEqual(franka.unsupportedReasons, [])

@@ -50,9 +50,10 @@ function evaluate(operatorId: string, skillIndex: number, stageId?: string,
   return evaluateDamageThreeComparisonEntry(entry(operatorId, skillIndex, stageId), common, overrides)
 }
 function noNumbers(value: ReturnType<typeof evaluateDamageThreeComparisonEntry>) {
-  for (const key of ['finalAttack', 'perAttack', 'allTargetsPerAttack', 'dps', 'allTargetsDps', 'damageOverTimeDps',
+  for (const key of ['finalAttack', 'perHit', 'maxPerHit', 'perAttack', 'allTargetsPerAttack', 'dps', 'allTargetsDps', 'damageOverTimeDps',
     'allTargetsDamageOverTimeDps', 'combinedDps', 'allTargetsCombinedDps', 'totalDamage', 'allTargetsTotalDamage'] as const) assert.equal(value[key], null, key)
   assert.deepEqual(value.finalAttackDetails, [])
+  assert.deepEqual(value.perHitDetails, [])
 }
 function compareWithOrdinary(entry: DamageThreeComparisonEntry, conditions: DamageCalculatorThreeConditions) {
   const actual = evaluateDamageThreeComparisonEntry(entry, common)
@@ -149,7 +150,61 @@ test('攻撃成分や会心で軽減前の値が分かれるときは、各条�
   }
 })
 
-test('未命中・継続ダメージのみの段階には1ヒット分の最終攻撃力を表示しない', () => {
+test('1ヒットダメージは敵1体への軽減後の値で、連撃回数と対象数を掛けない', () => {
+  const surtr = evaluate('char_350_surtr', 3)
+  assert.deepEqual(surtr.errors, [])
+  assert.equal(surtr.actualTargetCount, 3)
+  const resistanceAfterIgnore = common.resistance - surtr.output!.resistanceIgnoreFixed
+  assert.equal(surtr.perHit, surtr.finalAttack! * (1 - resistanceAfterIgnore / 100))
+  assert.equal(surtr.perAttack, surtr.perHit)
+  assert.equal(surtr.allTargetsPerAttack, surtr.perHit! * 3)
+  assert.deepEqual(surtr.perHitDetails, [])
+
+  const exusiai = evaluate('char_103_angel', 3)
+  assert.deepEqual(exusiai.errors, [])
+  assert.equal(exusiai.output!.rows[0].attackComponents[0].count, 5)
+  assert.equal(exusiai.perHit, exusiai.finalAttack! - common.defense)
+  assert.equal(exusiai.perAttack, exusiai.perHit! * 5)
+  assert.equal(exusiai.maxPerHit, exusiai.perHit)
+  assert.deepEqual(exusiai.perHitDetails, [])
+})
+
+test('確率で変わる1ヒットダメージは期待値にせず、実際に0となる命中も内訳に残す', () => {
+  const provence = evaluate('char_145_prove', 1)
+  assert.deepEqual(provence.errors, [])
+  assert.equal(provence.perHit, null)
+  assert.deepEqual(provence.perHitDetails, provence.finalAttackDetails.map(({ attack, ...detail }) => ({
+    ...detail, damage: attack - common.defense,
+  })))
+  assert.ok(provence.perAttack! > provence.perHitDetails[0].damage)
+  assert.ok(provence.perAttack! < provence.perHitDetails[1].damage)
+  assert.equal(provence.maxPerHit, provence.perHitDetails[1].damage)
+
+  const ceobe = evaluateDamageThreeComparisonEntry(entry('char_2013_cerber', 2), { ...common, defense: 0 })
+  assert.deepEqual(ceobe.errors, [])
+  assert.equal(ceobe.perHit, null)
+  assert.equal(ceobe.perHitDetails.find(detail => detail.label === 'そぎおとし')?.damage, 0)
+})
+
+test('ウィシャデルS3の最大1ヒットダメージには余震と残影の爆発を合算しない', () => {
+  const result = evaluateDamageThreeComparisonEntry(entry('char_1035_wisdel', 3),
+    { defense: 0, resistance: 0, enemyCount: 1 })
+  assert.deepEqual(result.errors, [])
+  assert.equal(result.maxPerHit, 5502.75)
+  assert.equal(result.perAttack, 11516.625)
+})
+
+test('1ヒットダメージには軽減後の与ダメージ倍率を含める', () => {
+  const result = evaluate('char_479_sleach', 3)
+  assert.deepEqual(result.errors, [])
+  assert.equal(result.actualTargetCount, 3)
+  const mitigated = result.finalAttack! - common.defense
+  assert.ok(mitigated > 0)
+  assert.equal(result.perHit, mitigated * 1.3)
+  assert.equal(result.perHit, result.perAttack)
+})
+
+test('未命中・継続ダメージのみの段階には1ヒット分の指標を表示しない', () => {
   const miss = evaluate('char_456_ash', 3, undefined, { 'guard.contactHit': false, 'guard.explosionHit': false })
   const periodic = evaluate('char_134_ifrit', 3, 'active')
   for (const result of [miss, periodic]) {
@@ -157,6 +212,9 @@ test('未命中・継続ダメージのみの段階には1ヒット分の最終�
     assert.equal(result.perAttack, 0)
     assert.equal(result.finalAttack, null)
     assert.deepEqual(result.finalAttackDetails, [])
+    assert.equal(result.perHit, null)
+    assert.equal(result.maxPerHit, null)
+    assert.deepEqual(result.perHitDetails, [])
   }
   assert.ok(periodic.damageOverTimeDps! > 0)
 })

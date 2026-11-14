@@ -36,7 +36,8 @@ interface Props {
 }
 
 type OutputKind = DamageThreeComparisonEntry['kind']
-type Metric = 'actualTargetCount' | 'finalAttack' | 'perAttack' | 'dps' | 'damageOverTimeDps' | 'combinedDps' | 'durationSeconds' | 'totalDamage'
+type AttackDetailMetric = 'finalAttack' | 'perHit'
+type Metric = AttackDetailMetric | 'actualTargetCount' | 'perAttack' | 'dps' | 'damageOverTimeDps' | 'combinedDps' | 'durationSeconds' | 'totalDamage'
 type SortKey = Metric | DamageCalculatorThreeSkillInformationKey
 type TargetDisplay = 'single' | 'all'
 type TableDisplay = 'auto' | 'full' | 'compact'
@@ -48,6 +49,7 @@ const ATTACK_LABELS: Record<OutputKind, string> = {
 }
 const METRIC_LABELS = {
   finalAttack: '最終攻撃力',
+  perHit: '最大1ヒットダメージ',
   actualTargetCount: '攻撃対象数', dps: '直接DPS', damageOverTimeDps: '継続DPS', combinedDps: '合計DPS',
   durationSeconds: '段階時間（秒）', totalDamage: '総ダメージ（概算）',
 }
@@ -61,15 +63,17 @@ const SKILL_INFORMATION_COLUMNS: { key: DamageCalculatorThreeSkillInformationKey
 function isSkillInformationKey(key: SortKey): key is DamageCalculatorThreeSkillInformationKey {
   return SKILL_INFORMATION_COLUMNS.some(column => column.key === key)
 }
-const NORMAL_METRICS: Metric[] = ['combinedDps', 'durationSeconds', 'totalDamage', 'dps', 'damageOverTimeDps', 'perAttack', 'finalAttack', 'actualTargetCount']
+const NORMAL_METRICS: Metric[] = ['combinedDps', 'durationSeconds', 'totalDamage', 'dps', 'damageOverTimeDps', 'perAttack', 'perHit', 'finalAttack', 'actualTargetCount']
 const NORMAL_RESULT_METRICS: Metric[] = ['dps', 'damageOverTimeDps', 'combinedDps', 'durationSeconds', 'totalDamage']
-const ACTION_METRICS: Metric[] = ['perAttack', 'finalAttack', 'actualTargetCount']
+const ACTION_METRICS: Metric[] = ['perAttack', 'perHit', 'finalAttack', 'actualTargetCount']
 function metricLabel(metric: Metric, kind: OutputKind): string {
   return metric === 'perAttack' ? ATTACK_LABELS[kind] : METRIC_LABELS[metric]
 }
 
 function metricValue(result: DamageThreeComparisonResult, metric: Metric, target: TargetDisplay): number | null {
-  if (target === 'single' || metric === 'actualTargetCount' || metric === 'durationSeconds' || metric === 'finalAttack') return result[metric]
+  if (metric === 'perHit') return result.maxPerHit
+  if (target === 'single' || metric === 'actualTargetCount' || metric === 'durationSeconds'
+    || metric === 'finalAttack') return result[metric]
   switch (metric) {
     case 'perAttack': return result.allTargetsPerAttack
     case 'dps': return result.allTargetsDps
@@ -77,6 +81,11 @@ function metricValue(result: DamageThreeComparisonResult, metric: Metric, target
     case 'combinedDps': return result.allTargetsCombinedDps
     case 'totalDamage': return result.allTargetsTotalDamage
   }
+}
+
+function attackDetailMetric(result: DamageThreeComparisonResult, metric: Metric): AttackDetailMetric | undefined {
+  if (metric === 'finalAttack' && result.finalAttackDetails.length) return metric
+  if (metric === 'perHit' && result.perHitDetails.length) return metric
 }
 
 function formatMetricValue(
@@ -122,7 +131,7 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
   const tableRegionRef = useRef<HTMLDivElement>(null)
   const [overrides, setOverrides] = useState<Record<string, DamageThreeComparisonOverrides>>({})
   const [sort, setSort] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'combinedDps', direction: 'desc' })
-  const [detail, setDetail] = useState<{ entry: DamageThreeComparisonEntry; trigger: HTMLButtonElement; focusAttackDetails?: boolean } | null>(null)
+  const [detail, setDetail] = useState<{ entry: DamageThreeComparisonEntry; trigger: HTMLButtonElement; focusMetric?: AttackDetailMetric } | null>(null)
   const [description, setDescription] = useState<{ entry: DamageThreeComparisonEntry; trigger: HTMLButtonElement } | null>(null)
   const metrics = kind === 'NORMAL' ? NORMAL_METRICS : ACTION_METRICS
   useEffect(() => {
@@ -259,12 +268,13 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
   const renderMetricCell = (result: DamageThreeComparisonResult, metric: Metric) => {
     const { entry } = result
     const value = formatMetricValue(result, metric, target, formatNumber)
+    const focusMetric = attackDetailMetric(result, metric)
     return <td key={metric} className="dc3-comparison-number">
-      {metric === 'finalAttack' && result.finalAttackDetails.length > 0
+      {focusMetric
         ? <button type="button" className="skill-coarse-description-trigger" aria-haspopup="dialog"
           data-condition-key={entry.key}
-          aria-label={`${entry.skill.operatorName} S${entry.skill.skillIndex} ${entry.stageLabel}の最終攻撃力の内訳`}
-          onClick={(event) => setDetail({ entry, trigger: event.currentTarget, focusAttackDetails: true })}>{value}</button>
+          aria-label={`${entry.skill.operatorName} S${entry.skill.skillIndex} ${entry.stageLabel}の${focusMetric === 'perHit' ? `最大1ヒットダメージ ${value}、内訳を表示` : '最終攻撃力の内訳'}`}
+          onClick={(event) => setDetail({ entry, trigger: event.currentTarget, focusMetric })}>{value}</button>
         : value}
     </td>
   }
@@ -401,18 +411,18 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
         計算機3で開く
       </a>} />}
     {detailResult && <ComparisonConditionsDialog result={detailResult} customized={Object.keys(overrides[detailResult.entry.key] ?? {}).length > 0}
-      target={target} common={common} formatNumber={formatNumber} focusAttackDetails={detail?.focusAttackDetails}
+      target={target} common={common} formatNumber={formatNumber} focusMetric={detail?.focusMetric}
       onChange={updateCondition} onReset={resetConditions} onClose={closeDetail} />}
   </section>
 }
 
-function ComparisonConditionsDialog({ result, customized, target, common, formatNumber, focusAttackDetails, onChange, onReset, onClose }: {
+function ComparisonConditionsDialog({ result, customized, target, common, formatNumber, focusMetric, onChange, onReset, onClose }: {
   result: DamageThreeComparisonResult
   customized: boolean
   target: TargetDisplay
   common: DamageThreeComparisonCommon
   formatNumber: (value: number | null) => string
-  focusAttackDetails?: boolean
+  focusMetric?: AttackDetailMetric
   onChange: (key: string, value: ConditionValue) => void
   onReset: () => void
   onClose: () => void
@@ -428,7 +438,7 @@ function ComparisonConditionsDialog({ result, customized, target, common, format
     if (!dialog) return
     if (!dialog.open) dialog.showModal()
     const focusFrame = window.requestAnimationFrame(() => {
-      const focusTarget = (focusAttackDetails && attackDetailsRef.current) || closeRef.current
+      const focusTarget = attackDetailsRef.current ?? closeRef.current
       focusTarget?.focus()
     })
     const unlockScroll = lockPageScroll(document.documentElement)
@@ -437,10 +447,19 @@ function ComparisonConditionsDialog({ result, customized, target, common, format
       unlockScroll()
       if (dialog.open) dialog.close()
     }
-  }, [focusAttackDetails])
+  }, [focusMetric])
   const levelLabel = entry.levelIndex < 7 ? `Lv${entry.levelIndex + 1}` : `特化${entry.levelIndex - 6}`
   const formatCondition = (value: number) => Number.isFinite(value) ? String(value) : '—'
-  const showBranchConditions = result.finalAttackDetails.some(detail => detail.condition !== null)
+  const attackDetails = [
+    {
+      metric: 'finalAttack', heading: '攻撃内訳', valueLabel: '軽減前・1ヒット',
+      rows: result.finalAttackDetails.map(({ attack, ...detail }) => ({ ...detail, value: attack })),
+    },
+    {
+      metric: 'perHit', heading: '1ヒットダメージの内訳', valueLabel: '1ヒットダメージ',
+      rows: result.perHitDetails.map(({ damage, ...detail }) => ({ ...detail, value: damage })),
+    },
+  ] as const
   const detailRows = [
     ['スキル名', entry.skill.skillName], ['段階', entry.stageLabel], ['出力型', DAMAGE_THREE_OUTPUT_KIND_LABELS[entry.kind]],
     ['属性', result.damageType ? DAMAGE_TYPE_LABELS[result.damageType] ?? result.damageType : '—'],
@@ -448,7 +467,7 @@ function ComparisonConditionsDialog({ result, customized, target, common, format
     ['敵の数', Number.isFinite(common.enemyCount) ? String(common.enemyCount) : '—'],
     ['攻撃対象数', result.actualTargetCount ?? '—'], ['ダメージの表示対象', target === 'single' ? '1体' : '全対象'],
     ...(entry.kind === 'NORMAL' ? [['集計範囲', '選択段階']] : []),
-    ...(['finalAttack', 'perAttack', ...(entry.kind === 'NORMAL' ? NORMAL_RESULT_METRICS : [])] as Metric[])
+    ...(['finalAttack', 'perHit', 'perAttack', ...(entry.kind === 'NORMAL' ? NORMAL_RESULT_METRICS : [])] as Metric[])
       .map((metric) => [metricLabel(metric, entry.kind), formatMetricValue(result, metric, target, formatNumber)]),
     ...(entry.kind === 'NORMAL' && metricValue(result, 'totalDamage', target) === null && result.totalDamageReason
       ? [['総ダメージの未算出理由', result.totalDamageReason]] : []),
@@ -471,18 +490,21 @@ function ComparisonConditionsDialog({ result, customized, target, common, format
         <table className="dc3-comparison-detail-table"><caption className="visually-hidden">スキルの詳細と計算結果</caption>
           <tbody>{detailRows.map(([label, value]) => <tr key={label}><th scope="row">{label}</th><td>{value}</td></tr>)}</tbody>
         </table>
-        {result.finalAttackDetails.length > 0 && <>
-          <div ref={attackDetailsRef} className="filters-heading" tabIndex={-1}><span>攻撃内訳</span></div>
-          <StructureTable caption="最終攻撃力の内訳"
-            headers={['攻撃', '属性', ...(showBranchConditions ? ['条件'] : []), '軽減前・1ヒット']}
-            className="dc3-comparison-final-attack-table">
-            {result.finalAttackDetails.map(({ label, damageType, condition, attack }, index) => <tr key={index}>
-              <th scope="row">{label}</th><td>{DAMAGE_TYPE_LABELS[damageType] ?? damageType}</td>
-              {showBranchConditions && <td>{condition ?? '—'}</td>}
-              <td className="dc3-comparison-number">{formatNumber(attack)}</td>
-            </tr>)}
-          </StructureTable>
-        </>}
+        {attackDetails.filter(({ rows }) => rows.length > 0).map(({ metric, heading, valueLabel, rows }) => {
+          const showBranchConditions = rows.some(({ condition }) => condition !== null)
+          return <div key={metric}>
+            <div ref={focusMetric === metric ? attackDetailsRef : undefined} className="filters-heading" tabIndex={-1}><span>{heading}</span></div>
+            <StructureTable caption={heading}
+              headers={['攻撃', '属性', ...(showBranchConditions ? ['条件'] : []), valueLabel]}
+              className="dc3-comparison-attack-detail-table">
+              {rows.map(({ label, damageType, condition, value }, index) => <tr key={index}>
+                <th scope="row">{label}</th><td>{DAMAGE_TYPE_LABELS[damageType] ?? damageType}</td>
+                {showBranchConditions && <td>{condition ?? '—'}</td>}
+                <td className="dc3-comparison-number">{formatNumber(value)}</td>
+              </tr>)}
+            </StructureTable>
+          </div>
+        })}
         <ElementalBuildupTable groups={[{ label: entry.stageLabel, values: result.elementalBuildups }]} />
         <div className="filters-heading"><span>個別条件</span>
           <button type="button" className="filter-reset-button" disabled={!customized} onClick={onReset}>既定値に戻す</button></div>
