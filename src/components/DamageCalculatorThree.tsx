@@ -8,6 +8,7 @@ import { expandSkillDescription } from '../lib/skillJsonAnalysis'
 import {
   buildDamageCalculatorThreeOutput,
   getDamageCalculatorThreeStructures,
+  type DamageCalculatorThreeConditionInput,
   type DamageCalculatorThreeConditions,
   type DamageCalculatorThreeInput,
   type DamageCalculatorThreeOutput,
@@ -16,7 +17,8 @@ import { buildDamageCalculatorThreeApplicationRows } from '../lib/damageCalculat
 import { buildDamageCalculatorThreeSkillInformation } from '../lib/damageCalculatorThreeSkillInformation'
 import {
   DAMAGE_CALCULATOR_THREE_SURTR_X_ID,
-  getDamageCalculatorThreeSurtrXModuleLevels,
+  DAMAGE_CALCULATOR_THREE_SURTR_Y_ID,
+  getDamageCalculatorThreeSurtrModuleLevels,
 } from '../lib/damageCalculatorThreeSurtrModule'
 import { EFFECT_APPLICATION_STATUS_LABELS, type EffectApplicationRow } from '../lib/effectApplication'
 import type { SkillStructureSelection } from '../lib/skillStructure'
@@ -45,14 +47,20 @@ const RESULT_KIND_LABELS: Record<DamageCalculatorThreeOutput['attackKind'], stri
   COUNTER: '反撃型',
   SKILL_ACTION: 'スキル動作型',
 }
-type ModuleLevel = NonNullable<DamageCalculatorThreeInput['module']>['level']
-const surtrModuleLabel = (level: ModuleLevel) => `MOD X Lv.${level}`
+type ModuleSelection = NonNullable<DamageCalculatorThreeInput['module']>
+const SURTR_MODULES = [
+  { id: DAMAGE_CALCULATOR_THREE_SURTR_X_ID, type: 'X' },
+  { id: DAMAGE_CALCULATOR_THREE_SURTR_Y_ID, type: 'Y' },
+] as const
+const surtrModuleLabel = (type: 'X' | 'Y', level: ModuleSelection['level']) => `MOD ${type} Lv.${level}`
+const moduleOptionValue = ({ id, level }: ModuleSelection) =>
+  id === DAMAGE_CALCULATOR_THREE_SURTR_X_ID ? String(level) : `Y:${level}`
 
 export function DamageCalculatorThree({ rows, loading, initialSelection }: Props) {
   const [selection, setSelection] = useState<SkillStructureSelection | null>(initialSelection ?? null)
   const [operatorLevel, setOperatorLevel] = useState(90)
   const [trust, setTrust] = useState(100)
-  const [moduleLevel, setModuleLevel] = useState<ModuleLevel | null>(null)
+  const [moduleSelection, setModuleSelection] = useState<ModuleSelection | null>(null)
   const [conditions, setConditions] = useState<DamageCalculatorThreeConditions>({})
   const [precision, setPrecision] = useState(0)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -68,28 +76,41 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
   const phaseIndex = operator ? getExpandedDefinition(operator.operatorId)?.phaseIndex ?? 2 : 2
   const maxLevel = operator?.operatorProfile.phases[phaseIndex]?.maxLevel ?? 90
   const safeLevel = clampInteger(operatorLevel, 1, maxLevel)
-  const moduleLevels = useMemo(() => operator
-    ? getDamageCalculatorThreeSurtrXModuleLevels(operator, phaseIndex, maxLevel) : [], [operator, phaseIndex, maxLevel])
-  const availableModuleLevels = useMemo(() => operator && safeLevel !== maxLevel
-    ? getDamageCalculatorThreeSurtrXModuleLevels(operator, phaseIndex, safeLevel) : moduleLevels,
-  [operator, phaseIndex, safeLevel, maxLevel, moduleLevels])
-  const moduleChoice = operator && moduleLevels.length > 0
-    ? getOperatorModules(operator.operatorProfile).find(module => module.uniEquipId === DAMAGE_CALCULATOR_THREE_SURTR_X_ID)
-    : undefined
-  const equippedModuleLevel = moduleLevel !== null && availableModuleLevels.includes(moduleLevel) ? moduleLevel : null
+  const moduleChoices = useMemo(() => {
+    if (!operator) return []
+    const modules = getOperatorModules(operator.operatorProfile)
+    return SURTR_MODULES.flatMap(({ id, type }) => {
+      const module = modules.find(candidate => candidate.uniEquipId === id)
+      if (!module) return []
+      const levels = getDamageCalculatorThreeSurtrModuleLevels(operator, phaseIndex, maxLevel, id)
+      if (levels.length === 0) return []
+      const availableLevels = safeLevel === maxLevel ? levels
+        : getDamageCalculatorThreeSurtrModuleLevels(operator, phaseIndex, safeLevel, id)
+      return levels.map(level => ({
+        id, level, label: surtrModuleLabel(type, level), unlocked: availableLevels.includes(level),
+        unlockLabel: getOperatorModuleUnlockLabel(module),
+      }))
+    })
+  }, [operator, phaseIndex, safeLevel, maxLevel])
+  const equippedModule = moduleSelection && moduleChoices.some(choice =>
+    choice.id === moduleSelection.id && choice.level === moduleSelection.level && choice.unlocked) ? moduleSelection : null
   const calculationInput = useMemo<DamageCalculatorThreeInput | null>(() => operator && structure ? {
     operator, skill: operator, phaseIndex, operatorLevel: safeLevel, trust,
     skillLevelIndex: structure.basicInfo.levelIndex, conditions,
-    ...(equippedModuleLevel === null ? {} : { module: { id: DAMAGE_CALCULATOR_THREE_SURTR_X_ID, level: equippedModuleLevel } }),
-  } : null, [operator, structure, phaseIndex, safeLevel, trust, conditions, equippedModuleLevel])
+    ...(equippedModule ? { module: equippedModule } : {}),
+  } : null, [operator, structure, phaseIndex, safeLevel, trust, conditions, equippedModule])
   const output = useMemo(() => calculationInput ? buildDamageCalculatorThreeOutput(calculationInput) : null, [calculationInput])
-  const appliedModuleLevel = output?.module?.level
-  const equippedModuleLabel = appliedModuleLevel === undefined ? undefined : surtrModuleLabel(appliedModuleLevel)
+  const appliedModule = output?.module
+  const equippedModuleLabel = appliedModule ? surtrModuleLabel(appliedModule.type, appliedModule.level) : undefined
+  const appliedModuleId = appliedModule?.id
+  const appliedModuleLevel = appliedModule?.level
   const passiveDescriptions = useMemo(() => {
     if (!operator) return []
     const basePassives = getOperatorPassives(operator.operatorProfile, phaseIndex, safeLevel, 1)
-    const passives = appliedModuleLevel === undefined ? basePassives
-      : applyOperatorModule(basePassives, moduleChoice, appliedModuleLevel, 1).passives
+    const module = appliedModuleId && getOperatorModules(operator.operatorProfile)
+      .find(candidate => candidate.uniEquipId === appliedModuleId)
+    const passives = module && appliedModuleLevel !== undefined
+      ? applyOperatorModule(basePassives, module, appliedModuleLevel, 1).passives : basePassives
     return passives.sources.flatMap(source =>
       source.sourceKind === 'TRAIT' || (source.sourceKind === 'TALENT' && source.talentIndex !== null) ? [{
         id: source.sourceKind === 'TRAIT' ? 'damage-three-trait-description' : `damage-three-talent-description-${source.talentIndex}`,
@@ -98,15 +119,35 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
         description: expandSkillDescription(source.description, source.blackboard)
           .replace(/<[^>]+>/g, '').replace(/\\n/g, '\n').trim() || '説明文を取得できません。',
       }] : [])
-  }, [operator, phaseIndex, safeLevel, moduleChoice, appliedModuleLevel])
+  }, [operator, phaseIndex, safeLevel, appliedModuleId, appliedModuleLevel])
   const applicationRows = useMemo(() => calculationInput && output
     ? buildDamageCalculatorThreeApplicationRows(calculationInput, output) : [], [calculationInput, output])
   const operatorSkills = available.filter(({ structure: candidate }) => candidate.basicInfo.operatorId === requested?.operatorId)
     .sort((a, b) => a.structure.basicInfo.skillIndex - b.structure.basicInfo.skillIndex)
 
+  function chooseModule(next: ModuleSelection | null) {
+    setModuleSelection(next)
+    if (next?.id !== moduleSelection?.id) {
+      setConditions(previous => ({
+        ...previous, blocking: undefined, blockedTargetCount: undefined, remnantActive: undefined,
+      }))
+    }
+  }
+
+  function changeCondition(metric: DamageCalculatorThreeConditionInput['metric'], value: number | boolean | string) {
+    setConditions(previous => {
+      const next = { ...previous, [metric]: value }
+      if (metric === 'actualAttackTargetCount' && typeof value === 'number' && Number.isFinite(value)
+        && previous.blockedTargetCount !== undefined && previous.blockedTargetCount > value) {
+        next.blockedTargetCount = Math.max(0, value)
+      }
+      return next
+    })
+  }
+
   function chooseSkill(next: SkillStructureSelection) {
     setSelection(next)
-    setModuleLevel(null)
+    setModuleSelection(null)
     setConditions({})
     setSearchOpen(false)
   }
@@ -163,31 +204,31 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
         {available.length > 0 && <button type="button" className="button secondary"
           onClick={() => chooseSkill(available[0].structure.basicInfo)}>対応スキルを表示</button>}
       </div> : <>
-        <div className={`calculator-form-grid growth-form-grid damage-three-growth${moduleChoice ? ' damage-three-growth-with-module' : ''}`}>
+        <div className={`calculator-form-grid growth-form-grid damage-three-growth${moduleChoices.length ? ' damage-three-growth-with-module' : ''}`}>
           <div className="calculator-field"><span>昇進段階</span><div className="damage-three-fixed-value">昇進{phaseIndex}</div></div>
           <label className="calculator-field"><span>オペレーターレベル</span>
             <input type="number" aria-label="オペレーターレベル" min={1} max={maxLevel} step={1} value={safeLevel}
               onChange={event => {
                 const level = clampInteger(event.target.valueAsNumber, 1, maxLevel)
                 setOperatorLevel(level)
-                if (moduleLevel !== null && operator
-                  && !getDamageCalculatorThreeSurtrXModuleLevels(operator, phaseIndex, level).includes(moduleLevel)) {
-                  setModuleLevel(null)
+                if (moduleSelection && operator
+                  && !getDamageCalculatorThreeSurtrModuleLevels(operator, phaseIndex, level, moduleSelection.id).includes(moduleSelection.level)) {
+                  chooseModule(null)
                 }
               }} /></label>
           <label className="calculator-field"><span>信頼度（%）</span>
             <input type="number" aria-label="信頼度（%）" min={0} max={100} step={1} value={trust}
               onChange={event => setTrust(clampInteger(Number(event.target.value), 0, 100))} /></label>
           <div className="calculator-field"><span>スキルレベル</span><div className="damage-three-fixed-value">{structure?.basicInfo.skillLevel}</div></div>
-          {moduleChoice && <label className="calculator-field"><span>MOD</span>
-            <select aria-label="MOD" value={equippedModuleLevel ?? ''} onChange={event => {
-              const level = availableModuleLevels.find(candidate => String(candidate) === event.target.value)
-              setModuleLevel(level ?? null)
+          {moduleChoices.length > 0 && <label className="calculator-field"><span>MOD</span>
+            <select aria-label="MOD" value={equippedModule ? moduleOptionValue(equippedModule) : ''} onChange={event => {
+              const choice = moduleChoices.find(candidate => candidate.unlocked && moduleOptionValue(candidate) === event.target.value)
+              chooseModule(choice ? { id: choice.id, level: choice.level } : null)
             }}>
               <option value="">未装備</option>
-              {moduleLevels.map(level => <option key={level} value={level} disabled={!availableModuleLevels.includes(level)}>
-                {surtrModuleLabel(level)}
-                {!availableModuleLevels.includes(level) && `（${getOperatorModuleUnlockLabel(moduleChoice)}で解放）`}
+              {moduleChoices.map(choice => <option key={moduleOptionValue(choice)} value={moduleOptionValue(choice)} disabled={!choice.unlocked}>
+                {choice.label}
+                {!choice.unlocked && `（${choice.unlockLabel}で解放）`}
               </option>)}
             </select>
           </label>}
@@ -235,14 +276,14 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
             {input.kind === 'number' && input.control === 'input' ? <input type="number" aria-label={input.label}
               min={input.min} max={input.max} step={input.step ?? 1}
               value={Number.isFinite(conditions[input.metric] ?? input.defaultValue) ? conditions[input.metric] ?? input.defaultValue ?? '' : ''}
-              onChange={event => setConditions(previous => ({ ...previous, [input.metric]: event.target.valueAsNumber }))} />
+              onChange={event => changeCondition(input.metric, event.target.valueAsNumber)} />
               : <select aria-label={input.label} value={input.kind === 'boolean' ? String(conditions[input.metric] ?? input.defaultValue) : conditions[input.metric] ?? input.defaultValue ?? ''}
-              onChange={event => setConditions(previous => ({ ...previous,
-                [input.metric]: input.kind === 'number' ? Number(event.target.value) : input.kind === 'boolean' ? event.target.value === 'true' : event.target.value,
-              }))}>
+              onChange={event => changeCondition(input.metric,
+                input.kind === 'number' ? Number(event.target.value) : input.kind === 'boolean' ? event.target.value === 'true' : event.target.value)}>
               {(input.kind !== 'number' ? input.options : input.options
                 ?? Array.from({ length: input.max - input.min + 1 }, (_, index) => ({
-                  value: input.min + index, label: `${input.min + index}${input.metric === 'actualAttackTargetCount' ? '体' : '回'}`,
+                  value: input.min + index,
+                  label: `${input.min + index}${input.metric === 'actualAttackTargetCount' || input.metric === 'blockedTargetCount' ? '体' : '回'}`,
                 }))).map(option => <option key={String(option.value)} value={String(option.value)}>{option.label}</option>)}
             </select>}
           </label>)}
@@ -277,7 +318,11 @@ export function DamageCalculatorThree({ rows, loading, initialSelection }: Props
           </select></label>}>
         <p className="damage-two-context" role="status" aria-live="polite">
           {operator?.operatorName} · S{structure?.basicInfo.skillIndex} {structure?.basicInfo.skillLevel} · 攻撃対象{output.actualTargetCount}体
-          {output.module && <> · {equippedModuleLabel} · {output.module.blocking ? 'ブロック中' : '未ブロック'}</>}
+          {output.module && <> · {equippedModuleLabel}
+            {output.module.type === 'X' ? ` · ${output.module.blocking ? 'ブロック中' : '未ブロック'}`
+              : ` · ブロック中の攻撃対象${output.module.blockedTargetCount}体`}
+            {output.module.remnantAttackSpeedBonus > 0 && ` · 余燼${output.module.remnantActive ? '発動中' : '発動前'}`}
+          </>}
           {output.activeStageLabel && output.activeStageLabel !== '通常' && <> · {output.activeStageLabel}</>}
           {output.initialTargetState === 'GROUND' && <> · 地上の敵</>}
           {output.initialTargetState === 'AIRBORNE' && <> · 飛行の敵</>}
@@ -326,16 +371,31 @@ export function DamageCalculatorThreeResultTable({ output, precision }: { output
   const damageLabel = `${output.attackKind === 'NORMAL' ? '1攻撃ダメージ' : output.attackKind === 'SKILL_ACTION'
     ? output.guard ? '選択段階1回のダメージ' : 'スキル1回の総ダメージ'
     : `${output.attackLabel}1回のダメージ`}${output.hasProbabilisticDamage ? '期待値' : ''}`
+  const blockedCount = output.module?.type === 'Y' ? output.module.blockedTargetCount : 0
+  const hasBlockedTargets = blockedCount > 0
+  const hasMixedTargets = hasBlockedTargets && blockedCount < output.actualTargetCount
+  const unblockedTargetLabel = '自身でブロックしていない1体への'
+  const firstTargetLabel = output.module?.type === 'Y' ? hasBlockedTargets ? '自身でブロック中の1体への' : unblockedTargetLabel
+    : output.hasRandomTargets ? '1体平均の' : '1体への'
   return <div className="damage-two-table-wrap" tabIndex={0} role="region" aria-label="計算機３のダメージ計算結果">
-    <table className={`damage-two-table damage-three-result-table${output.canShowDps ? '' : ' damage-three-single-attack-table'}`}>
+    <table className={`damage-two-table damage-three-result-table${output.canShowDps ? '' : ' damage-three-single-attack-table'}${hasMixedTargets ? ' damage-three-mixed-target-table' : ''}`}>
       <caption className="visually-hidden">{output.hasUnsupportedTalentDamage && '直接攻撃分（継続ダメージを除く）：'}敵の防御性能別の1体・全対象の{output.canShowDps ? 'ダメージとDPS' : damageLabel}</caption>
-      <thead><tr><th scope="col">{output.axisLabel}</th><th scope="col">{output.hasRandomTargets ? '1体平均の' : '1体への'}<br />{damageLabel}</th>
-        {output.canShowDps && <th scope="col">1体への<br />DPS</th>}
+      <thead><tr><th scope="col">{output.axisLabel}</th><th scope="col">{firstTargetLabel}<br />{damageLabel}</th>
+        {output.canShowDps && <th scope="col">{output.module?.type === 'Y' ? firstTargetLabel : '1体への'}<br />DPS</th>}
+        {hasMixedTargets && <>
+          <th scope="col">{unblockedTargetLabel}<br />{damageLabel}</th>
+          {output.canShowDps && <th scope="col">{unblockedTargetLabel}<br />DPS</th>}
+        </>}
         <th scope="col">全対象の<br />{damageLabel}</th>{output.canShowDps && <th scope="col">全対象の<br />DPS</th>}</tr></thead>
       <tbody>{output.rows.map(row => <tr key={row.axisValue}>
         <th scope="row">{output.damageType === 'TRUE' ? '軽減なし' : formatCompact(row.axisValue)}</th>
         <td>{format(row.perAttack)}{hasMinimumDamageApplied(row) && <sup aria-label="最低保証ダメージ">＊</sup>}</td>
-        {output.canShowDps && <td>{format(row.dps)}</td>}<td>{format(row.allTargetsPerAttack)}</td>
+        {output.canShowDps && <td>{format(row.dps)}</td>}
+        {hasMixedTargets && <>
+          <td>{format(row.unblockedTargetPerAttack ?? null)}{hasMinimumDamageApplied(row) && <sup aria-label="最低保証ダメージ">＊</sup>}</td>
+          {output.canShowDps && <td>{format(row.unblockedTargetDps ?? null)}</td>}
+        </>}
+        <td>{format(row.allTargetsPerAttack)}</td>
         {output.canShowDps && <td>{format(row.allTargetsDps)}</td>}
       </tr>)}</tbody>
     </table>

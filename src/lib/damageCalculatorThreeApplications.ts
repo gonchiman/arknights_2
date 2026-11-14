@@ -12,6 +12,7 @@ import {
 } from './talentStructure.ts'
 import { DAMAGE_TYPE_LABELS } from './damageCalculator.ts'
 import { resolveCombatProbability } from './combatEffectStructure.ts'
+import { formatFragilityPercent } from './moduleEffectStructure.ts'
 
 /** Display adapters consume the same input/output pair as the result table. */
 export function buildDamageCalculatorThreeApplicationRows(
@@ -30,16 +31,35 @@ export function buildDamageCalculatorThreeApplicationRows(
 function buildModuleApplicationRows(output: DamageCalculatorThreeOutput): EffectApplicationRow[] {
   const module = output.module
   if (!module) return []
-  const name = `MOD X Lv.${module.level}`
-  return [{
+  const name = `MOD ${module.type} Lv.${module.level}`
+  const rows: EffectApplicationRow[] = [{
     id: 'module/attack', category: 'MODULE', name, item: '攻撃力', value: `+${number(module.attackBonus)}`,
     timing: '常時', condition: 'なし', status: 'APPLIED', reason: '基礎攻撃力に加算します。',
-  }, {
-    id: 'module/unblocked-attack-speed', category: 'MODULE', name, item: '攻撃速度',
-    value: `+${number(module.unblockedAttackSpeedBonus)}`, timing: '常時', condition: '未ブロック時',
-    status: module.blocking ? 'CONDITION_FALSE' : 'APPLIED',
-    reason: module.blocking ? '自身がブロック中です。' : '攻撃間隔に反映します。',
   }]
+  if (module.type === 'X') {
+    rows.push({
+      id: 'module/unblocked-attack-speed', category: 'MODULE', name, item: '攻撃速度',
+      value: `+${number(module.unblockedAttackSpeedBonus)}`, timing: '常時', condition: '未ブロック時',
+      status: module.blocking ? 'CONDITION_FALSE' : 'APPLIED',
+      reason: module.blocking ? '自身がブロック中です。' : '攻撃間隔に反映します。',
+    })
+  } else {
+    const affectsArts = output.damageType === 'ARTS'
+    rows.push({
+      id: 'module/blocked-arts-fragility', category: 'MODULE', name, item: '対術脆弱',
+      value: formatFragilityPercent(module.artsFragilityMultiplier), timing: '命中時', condition: '自身がブロックしている敵',
+      status: !affectsArts ? 'NOT_RELEVANT' : module.blockedTargetCount > 0 ? 'APPLIED' : 'CONDITION_FALSE',
+      reason: !affectsArts ? '術ダメージに適用します。' : module.blockedTargetCount > 0
+        ? 'ブロック中の攻撃対象への術ダメージに適用します。' : 'ブロック中の攻撃対象がいません。',
+    })
+    if (module.remnantAttackSpeedBonus > 0) rows.push({
+      id: 'module/remnant-attack-speed', category: 'MODULE', name, item: '余燼の攻撃速度',
+      value: `+${number(module.remnantAttackSpeedBonus)}`, timing: '常時', condition: '余燼発動中',
+      status: module.remnantActive ? 'APPLIED' : 'CONDITION_FALSE',
+      reason: module.remnantActive ? '攻撃間隔に反映します。' : '余燼が発動していません。',
+    })
+  }
+  return rows
 }
 
 function buildSkillApplicationRows(output: DamageCalculatorThreeOutput): EffectApplicationRow[] {
