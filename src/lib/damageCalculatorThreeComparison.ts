@@ -1,8 +1,9 @@
 import type { SkillRecord } from '../types/skill.ts'
+import type { HpDamageType } from './damageCalculator.ts'
 import type { ElementalBuildupResult } from './elementalBuildup.ts'
 import {
   buildDamageCalculatorThreeOutput, getDamageCalculatorThreeStructures,
-  type DamageCalculatorThreeConditions, type DamageCalculatorThreeOutput,
+  type DamageCalculatorThreeConditions, type DamageCalculatorThreeOutput, type DamageCalculatorThreeRow,
 } from './damageCalculatorThree.ts'
 import { getExpandedDefinition } from './expandedCombatRegistry.ts'
 import { guardConditionMatches } from './guardCombatValues.ts'
@@ -43,6 +44,12 @@ export interface ComparisonConditionField {
   options?: readonly { value: number | string | boolean; label: string }[]
   locked: boolean
 }
+interface ComparisonFinalAttackDetail {
+  label: string
+  damageType: HpDamageType
+  condition: string | null
+  attack: number
+}
 export interface DamageThreeComparisonResult extends DamageThreePeriodTotal {
   entry: DamageThreeComparisonEntry
   output: DamageCalculatorThreeOutput | null
@@ -51,6 +58,8 @@ export interface DamageThreeComparisonResult extends DamageThreePeriodTotal {
   fields: ComparisonConditionField[]
   actualTargetCount: number | null
   damageType: string | null
+  finalAttack: number | null
+  finalAttackDetails: readonly ComparisonFinalAttackDetail[]
   perAttack: number | null
   allTargetsPerAttack: number | null
   dps: number | null
@@ -60,6 +69,32 @@ export interface DamageThreeComparisonResult extends DamageThreePeriodTotal {
   combinedDps: number | null
   allTargetsCombinedDps: number | null
   elementalBuildups: readonly ElementalBuildupResult[]
+}
+
+function getFinalAttack(row: DamageCalculatorThreeRow | null): Pick<DamageThreeComparisonResult, 'finalAttack' | 'finalAttackDetails'> {
+  const breakdown = row?.breakdown
+  if (breakdown && breakdown.hitCount > 0) {
+    return { finalAttack: Number.isFinite(breakdown.mitigation.attack) ? breakdown.mitigation.attack : null, finalAttackDetails: [] }
+  }
+
+  const details: ComparisonFinalAttackDetail[] = []
+  for (const component of row?.attackComponents ?? []) {
+    if (!(component.expectedHitCount > 0)) continue
+    const branches = component.branches.filter(branch => branch.probability > 0)
+    // Defense penetration alone can produce several damage outcomes from the same hit strength.
+    const byAttack = new Map(branches.map(branch => [branch.mitigation.attack, branch]))
+    const sharesAttack = byAttack.size < branches.length
+    for (const [attack, branch] of byAttack) {
+      if (!Number.isFinite(attack)) return { finalAttack: null, finalAttackDetails: [] }
+      const branchLabel = branch.id === 'IGNORE' ? '確率効果あり' : '確率効果なし'
+      const condition = branch.probability < 1 && !sharesAttack ? branchLabel : null
+      details.push({ label: component.label, damageType: component.damageType, condition, attack })
+    }
+  }
+  const attack = details[0]?.attack ?? null
+  return details.every(detail => detail.attack === attack)
+    ? { finalAttack: attack, finalAttackDetails: [] }
+    : { finalAttack: null, finalAttackDetails: details }
 }
 
 /** Only reviewed DC3 selections are enumerated; source descriptions are never interpreted here. */
@@ -146,6 +181,7 @@ export function evaluateDamageThreeComparisonEntry(
     notes: [...new Set([...(output?.scopeNotes ?? []), ...(output?.talentEffects.filter(effect => effect.status === 'UNSUPPORTED').map(effect => effect.reason) ?? [])])],
     actualTargetCount: Number.isSafeInteger(output?.actualTargetCount) && output!.actualTargetCount > 0 ? output!.actualTargetCount : null,
     damageType: output?.damageType ?? (row ? 'MIXED' : null),
+    ...getFinalAttack(row),
     perAttack: row?.perAttack ?? null, allTargetsPerAttack: row?.allTargetsPerAttack ?? null,
     dps: directDps, allTargetsDps: row?.allTargetsDps ?? null,
     damageOverTimeDps: periodic,
