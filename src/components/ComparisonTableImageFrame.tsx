@@ -1,5 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { getTableImageDimensions, parseTableImageAspect, type TableImageAspect } from '../lib/tableImageAspect'
+import { getChartImageRasterSize, type ChartImageRasterOutput } from '../lib/chartImageRasterSize'
 import {
   COMPARISON_TABLE_IMAGE_NUMBER_BASE_SIZE, getComparisonTableNumberFontSize,
   normalizeComparisonTableTypography, type ComparisonTableImageTypography, type ComparisonTableNumberCell,
@@ -8,6 +9,7 @@ import './ComparisonTableImageFrame.css'
 
 export interface ComparisonTableImageFrameProps {
   initialWidth: number
+  minimumHeight?: number
   aspectRatio?: number
   exporting?: boolean
   onLayout?: (size: { width: number; height: number }) => void
@@ -35,7 +37,7 @@ function tableAspect(value?: number): TableImageAspect | null {
 }
 
 /** One sizing and typography pipeline for numeric and winning-module tables. */
-export function ComparisonTableImageFrame({ initialWidth, aspectRatio, exporting = false, onLayout, onLayoutError,
+export function ComparisonTableImageFrame({ initialWidth, minimumHeight, aspectRatio, exporting = false, onLayout, onLayoutError,
   title, footer, typography: requestedTypography, children, layoutKey, className = '', ariaLabel }: ComparisonTableImageFrameProps) {
   const imageRef = useRef<HTMLElement>(null)
   const typography = normalizeComparisonTableTypography(requestedTypography)
@@ -74,7 +76,7 @@ export function ComparisonTableImageFrame({ initialWidth, aspectRatio, exporting
             image.style.height = 'auto'
             // A compact winning label is kept on one line at its original size.
             if (image.scrollWidth > width || tables.some(table => table.scrollWidth > table.clientWidth + 1)) return 8001
-            return image.offsetHeight
+            return Math.max(image.offsetHeight, minimumHeight ?? 0)
           } })
         if (size.width > 8000 || size.height > 8000 || size.width * size.height > 8_000_000) {
           throw new Error('表全体を画像に収められません。項目数を減らすか、配置を変更してください。')
@@ -116,7 +118,7 @@ export function ComparisonTableImageFrame({ initialWidth, aspectRatio, exporting
       document.fonts.removeEventListener('loadingdone', measure)
       reset()
     }
-  }, [initialWidth, aspectRatio, exporting, typographyKey, layoutKey, children, title, footer, onLayout, onLayoutError])
+  }, [initialWidth, minimumHeight, aspectRatio, exporting, typographyKey, layoutKey, children, title, footer, onLayout, onLayoutError])
 
   const style = { width: initialWidth, '--comparison-table-title-size': `${typography.titleSize}px`,
     '--comparison-table-detail-size': `${typography.detailSize}px`,
@@ -162,9 +164,10 @@ function measureNumberCells(image: HTMLElement): ComparisonTableNumberCell[] {
 
 export type ComparisonTableImagePreviewProps = Omit<ComparisonTableImageFrameProps, 'onLayout' | 'exporting'> & {
   onLayoutReady?: () => void
+  output?: ChartImageRasterOutput
 }
 
-export function ComparisonTableImagePreview({ onLayoutReady, onLayoutError, ...props }: ComparisonTableImagePreviewProps) {
+export function ComparisonTableImagePreview({ onLayoutReady, onLayoutError, output, ...props }: ComparisonTableImagePreviewProps) {
   const previewRef = useRef<HTMLDivElement>(null)
   const [availableWidth, setAvailableWidth] = useState(600)
   const [size, setSize] = useState({ width: props.initialWidth, height: 420 })
@@ -188,6 +191,7 @@ export function ComparisonTableImagePreview({ onLayoutReady, onLayoutError, ...p
     onLayoutError?.(cause)
   }, [onLayoutError])
   const scale = Math.min(availableWidth / size.width, 380 / size.height, 1)
+  const rasterSize = getChartImageRasterSize(size, output)
   return <div className="comparison-table-image-preview">
     <div className="comparison-table-image-preview-heading"><span>プレビュー</span><span>PNG</span></div>
     <div ref={previewRef} className="comparison-table-image-preview-frame" style={{ height: Math.ceil(size.height * scale) }}>
@@ -197,6 +201,6 @@ export function ComparisonTableImagePreview({ onLayoutReady, onLayoutError, ...p
       </div>
     </div>
     {error ? <p className="comparison-table-image-error" role="alert">{error}</p>
-      : <span className="comparison-table-image-preview-size" aria-live="polite">{(size.width * 2).toLocaleString('ja-JP')} × {(size.height * 2).toLocaleString('ja-JP')} px</span>}
+      : <span className="comparison-table-image-preview-size" aria-live="polite">{rasterSize.width.toLocaleString('ja-JP')} × {rasterSize.height.toLocaleString('ja-JP')} px</span>}
   </div>
 }

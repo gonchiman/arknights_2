@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { createChartImageFilename, withChartImageAspect } from '../lib/chartImageFilename'
 import { getChartImageLayout } from '../lib/chartImageLayout'
+import { getChartImageRasterSize, type ChartImageRasterOutput } from '../lib/chartImageRasterSize'
 import { parseTableImageAspect } from '../lib/tableImageAspect'
 import { ChartImageFrame, type ChartImageFrameProps } from './ChartImageFrame'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
@@ -84,12 +85,12 @@ export function DamageCalculatorThreeAttributeChartImageDialog({ snapshot, onClo
       label: 'ダウンロード',
       onSave: selectedFilename => { void saveImage(selectedFilename, false) },
     } : undefined}
-    preview={!invalidAspect && <AttributeChartImagePreview
+    preview={!invalidAspect && <ChartFrameImagePreview
       key={`${filename}:${aspectRatio ?? 'auto'}`} {...frameProps} />}
   />
 }
 
-function AttributeChartImagePreview(props: ChartImageFrameProps) {
+export function ChartFrameImagePreview({ output, ...props }: ChartImageFrameProps & { output?: ChartImageRasterOutput }) {
   const previewRef = useRef<HTMLDivElement>(null)
   const [availableWidth, setAvailableWidth] = useState(600)
   const [size, setSize] = useState<{ width: number; height: number }>(() => getChartImageLayout(props))
@@ -112,7 +113,7 @@ function AttributeChartImagePreview(props: ChartImageFrameProps) {
   }, [])
 
   const scale = Math.min(availableWidth / size.width, 380 / size.height, 1)
-  const pixelRatio = Math.min(2, 16_000 / size.width, 16_000 / size.height, Math.sqrt(32_000_000 / size.width / size.height))
+  const rasterSize = getChartImageRasterSize(size, output)
   return <div className="dc3-attribute-chart-image-preview">
     <div className="dc3-attribute-chart-image-preview-heading"><span>プレビュー</span><span>PNG</span></div>
     <div ref={previewRef} className="dc3-attribute-chart-image-preview-frame" style={{ height: Math.ceil(size.height * scale) }}>
@@ -123,7 +124,7 @@ function AttributeChartImagePreview(props: ChartImageFrameProps) {
       </div>
     </div>
     <span className="dc3-attribute-chart-image-preview-size" aria-live="polite">
-      {Math.floor(size.width * pixelRatio).toLocaleString('ja-JP')} × {Math.floor(size.height * pixelRatio).toLocaleString('ja-JP')} px
+      {rasterSize.width.toLocaleString('ja-JP')} × {rasterSize.height.toLocaleString('ja-JP')} px
     </span>
   </div>
 }

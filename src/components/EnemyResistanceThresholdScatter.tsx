@@ -4,9 +4,11 @@ import { formatEnemyRankPercentage, type EnemyResistanceThreshold } from '../lib
 const NUMBER = new Intl.NumberFormat('ja-JP')
 export const ENEMY_RESISTANCE_THRESHOLD_AXIS_TITLE = '術耐性（下限）'
 
-export function EnemyResistanceThresholdScatter({ rows, imageHeight }: {
+export function EnemyResistanceThresholdScatter({ rows, imageHeight, showXAxisTitle = imageHeight === undefined, showMissingCaption = true }: {
   rows: readonly EnemyResistanceThreshold[]
   imageHeight?: number
+  showXAxisTitle?: boolean
+  showMissingCaption?: boolean
 }) {
   const forImage = imageHeight !== undefined
   const { maximum, ticks } = createZeroBasedValueAxis(Math.max(0, ...rows.map(row => row.defense ?? 0)))
@@ -44,9 +46,9 @@ export function EnemyResistanceThresholdScatter({ rows, imageHeight }: {
             {resistance}
           </span>)}
         </div>
-        {!forImage && <span className="enemy-resistance-scatter-x-title">{ENEMY_RESISTANCE_THRESHOLD_AXIS_TITLE}</span>}
+        {showXAxisTitle && <span className="enemy-resistance-scatter-x-title">{ENEMY_RESISTANCE_THRESHOLD_AXIS_TITLE}</span>}
       </div>
     </div>
-    {firstMissing && <figcaption>術耐性{firstMissing.resistance}以上 · 該当なし</figcaption>}
+    {showMissingCaption && firstMissing && <figcaption>術耐性{firstMissing.resistance}以上 · 該当なし</figcaption>}
   </figure>
 }

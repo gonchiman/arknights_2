@@ -6,6 +6,10 @@
 
 集計範囲が「メインストーリー」の場合は、両方の表で画像の条件欄と既定のファイル名に「メインストーリー」を含める。
 
+「術耐性別」の保存画面で「散布図＋表」を選ぶと、同じ集計結果の散布図と表示列を反映した表を横並びで保存できる。[配置と見本PNG](../chart-image/README.md#見本画像と適用状況)
+
+「術耐性別」の保存画面では、表を単体で保存するときも「出力幅を1,920 pxに固定」を選べる。
+
 [順位表と術耐性別の表](../../src/components/EnemyDefenseResistancePage.tsx)は[共通の表画像ダイアログ](../../src/components/ComparisonTableImageDialog.tsx)へ表と条件を渡す。ファイル名、縦横比、保存先を指定できる。プレビューと2倍のPNGは[テーブル画像出力の共通仕様](../../instructions/shared/table-image.md)に従う。
 
 ## 見本の再生成
