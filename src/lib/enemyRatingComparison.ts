@@ -39,6 +39,36 @@ export interface EnemyRatingComparison {
   hasData: boolean
 }
 
+export function summarizeEnemyRatingSelection(
+  data: EnemyRatingComparison,
+  selectedRanks: readonly string[],
+): { label: string; counts: Record<EnemyRatingComparisonMetric, number> } | null {
+  const selected = new Set(selectedRanks)
+  const counts = { defense: 0, magicResistance: 0 }
+  const ranges: { first: string; last: string }[] = []
+  let currentRange: { first: string; last: string } | undefined
+
+  for (const { rank, stats } of data.rows) {
+    if (!selected.has(rank)) {
+      currentRange = undefined
+      continue
+    }
+    if (currentRange) {
+      currentRange.last = rank
+    } else {
+      currentRange = { first: rank, last: rank }
+      ranges.push(currentRange)
+    }
+    for (const { key } of ENEMY_RATING_COMPARISON_METRICS) {
+      counts[key] += stats[key].count
+    }
+  }
+
+  if (!ranges.length) return null
+  const label = ranges.map(({ first, last }) => first === last ? first : `${first}〜${last}`).join('・')
+  return { label, counts }
+}
+
 export function buildEnemyRatingComparison(
   rows: readonly EnemyRecord[],
   mode: EnemyHistogramCountMode,

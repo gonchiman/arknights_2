@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { createEnemyAggregationClient, getEnemyMainStoryScope } from '../src/lib/enemyAggregationData.ts'
 import type { EnemyHistogramCounts } from '../src/lib/enemyHistogramCounts.ts'
-import { buildEnemyRatingComparison } from '../src/lib/enemyRatingComparison.ts'
+import { buildEnemyRatingComparison, summarizeEnemyRatingSelection } from '../src/lib/enemyRatingComparison.ts'
 import type { EnemyRecord } from '../src/types/enemy.ts'
 
 const row = (id: string, defense: number | null, magicResistance: number | null) => (
@@ -63,6 +63,20 @@ test('preserves empty ranks and distinguishes an unavailable series from a zero 
   assert.equal(buildEnemyRatingComparison(rows, 'SPAWNS', null).hasData, false)
 })
 
+test('summarizes only the selected ranks in chart order', () => {
+  const result = buildEnemyRatingComparison([row('low', 50, 0), row('middle', 150, 10), row('high', 1100, null)], 'TYPES', null)
+  assert.deepEqual(summarizeEnemyRatingSelection(result, ['A', 'D', 'E', 'A', 'unknown']), {
+    label: 'E〜D・A',
+    counts: { defense: 3, magicResistance: 1 },
+  })
+  assert.deepEqual(summarizeEnemyRatingSelection(result, ['SS']), {
+    label: 'SS',
+    counts: { defense: 0, magicResistance: 0 },
+  })
+  assert.equal(summarizeEnemyRatingSelection(result, []), null)
+  assert.equal(summarizeEnemyRatingSelection(result, ['unknown']), null)
+})
+
 test('reproduces the unequal rank-A cumulative counts behind the rounded v11 main-story percentages', async () => {
   const folder = new URL('../public/data/enemy-aggregation/', import.meta.url)
   const client = createEnemyAggregationClient({ fetch: async input =>
@@ -77,4 +91,8 @@ test('reproduces the unequal rank-A cumulative counts behind the rounded v11 mai
   const a = result.rows.find(({ rank }) => rank === 'A')!.stats
   assert.equal(a.defense.cumulativeCount, 10_982)
   assert.equal(a.magicResistance.cumulativeCount, 10_988)
+  assert.deepEqual(summarizeEnemyRatingSelection(result, ['E', 'D', 'C']), {
+    label: 'E〜C',
+    counts: { defense: 10_218, magicResistance: 4_034 },
+  })
 })

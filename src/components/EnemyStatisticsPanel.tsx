@@ -44,7 +44,7 @@ import { HistogramCumulativeStrip, getHistogramCumulativeStripLayout } from './H
 import { getHistogramBinRangeLabelCenters, formatHistogramBinRangeLines } from '../lib/histogramBinRangeLabels'
 import { createHistogramCategoryScale } from '../lib/histogramCategoryScale'
 import { buildEnemyRatingHistogramBins, formatEnemyRatingHistogramRangeLines, isEnemyRatingStat, type EnemyRatingHistogramBin } from '../lib/enemyRatingHistogram'
-import { buildEnemyRatingComparison, ENEMY_RATING_COMPARISON_LAYOUTS, ENEMY_RATING_COMPARISON_METRICS,
+import { buildEnemyRatingComparison, ENEMY_RATING_COMPARISON_LAYOUTS, ENEMY_RATING_COMPARISON_METRICS, summarizeEnemyRatingSelection,
   type EnemyRatingComparison, type EnemyRatingComparisonLayout, type EnemyRatingComparisonSideValue } from '../lib/enemyRatingComparison'
 import { getEnemyStatRating } from '../lib/enemyStatRatings'
 import { placeGroupedBarValueLabels } from '../lib/groupedBarValueLabels'
@@ -2460,6 +2460,7 @@ function EnemyRatingComparisonFigure({ data, layout, selectedRanks, onRankToggle
   const titleId = useId()
   const [chartRef, width] = useChartWidth()
   const selections = data.rows.filter(({ rank }) => selectedRanks.includes(rank))
+  const selectionSummary = summarizeEnemyRatingSelection(data, selectedRanks)
   const { defense, magicResistance } = data.totals
   const totals = defense.valid === magicResistance.valid
     ? `${formatFrequency(defense.valid)}${countUnit}`
@@ -2483,6 +2484,15 @@ function EnemyRatingComparisonFigure({ data, layout, selectedRanks, onRankToggle
         </div>
       </div>
     </figcaption>
+    <div className="enemy-rating-selection-total" role="status" aria-atomic="true">
+      {selectionSummary && <>
+        <span>選択階級の合計</span>
+        <strong>{selectionSummary.label}</strong>
+        {ENEMY_RATING_COMPARISON_METRICS.map(({ key, label }) => <span key={key}>
+          {label} <strong>{formatHistogramPercentage(selectionSummary.counts[key], data.totals[key].valid) ?? '—'}</strong>
+        </span>)}
+      </>}
+    </div>
     {layout === 'CUMULATIVE' && <ul className="enemy-rating-comparison-legend" aria-label="比較する系列">
       {ENEMY_RATING_COMPARISON_METRICS.map(({ key, label }) => <li key={key}>
         <EnemyRatingComparisonSwatch metric={key} layout={layout} />{label}
