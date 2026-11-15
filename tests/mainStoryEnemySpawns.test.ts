@@ -191,3 +191,52 @@ test('表示形式にない列を指定しても出現順と集約順を保つ',
   assert.deepEqual(getMainStorySpawnRows(lists, '', 'units', 0, Infinity, { key: 'count', direction: 'asc' }), units)
   assert.deepEqual(getMainStorySpawnRows(lists, '', 'counts', 0, Infinity, { key: 'time', direction: 'asc' }), counts)
 })
+
+function rankFixtures() {
+  const stats = (hp: number, defense: number | null = null) => ({ hp, attack: null, defense, resistance: null })
+  const first = fixture('0-1')
+  const second = fixture('1-7')
+  return [
+    buildMainStorySpawnList(first.stage, first.map, first.detail, index.enemies, new Map([
+      ['enemy_1007_slime', stats(100)],
+      ['enemy_1002_nsabr', stats(20, 0)],
+    ])),
+    buildMainStorySpawnList(second.stage, second.map, second.detail, index.enemies, new Map([
+      ['enemy_1002_nsabr', stats(100, 5)],
+      ['enemy_1007_slime_2', stats(50)],
+    ])),
+  ]
+}
+
+test('1体ずつ表示する順位は同値の17体を同率1位とし、並べ替え方向と出力範囲を変えても維持する', () => {
+  const lists = rankFixtures()
+  const descending = { key: 'hp', direction: 'desc' } as const
+  const ascending = { key: 'hp', direction: 'asc' } as const
+  const firstPage = getMainStorySpawnRows(lists, '', 'units', 0, 18, descending)
+  assert.equal(firstPage.rowCount, 52)
+  assert.equal(firstPage.rows.filter(row => row.stats.hp === 100 && row.rank === 1).length, 17)
+  assert.deepEqual(firstPage.rows.slice(-1).map(row => [row.stats.hp, row.rank]), [[50, 18]])
+  const selectedRange = getMainStorySpawnRows(lists, '', 'units', 17, 2, descending)
+  assert.deepEqual(selectedRange.rows.map(row => [row.stats.hp, row.rank]), [[50, 18], [50, 18]])
+  const reversePage = getMainStorySpawnRows(lists, '', 'units', 0, 2, ascending)
+  assert.deepEqual(reversePage.rows.map(row => [row.stats.hp, row.rank]), [[20, 41], [50, 18]])
+})
+
+test('体数をまとめる表示ではステージごとの敵を1行として数え、欠測のステータスに順位を付けない', () => {
+  const lists = rankFixtures()
+  const { rows } = getMainStorySpawnRows(lists, '', 'counts', 0, Infinity, { key: 'hp', direction: 'desc' })
+  assert.deepEqual(rows.map(row => [row.stats.hp, row.rank]), [
+    [100, 1], [100, 1], [50, 3], [20, 4],
+    [null, null], [null, null], [null, null], [null, null],
+  ])
+})
+
+test('検索に一致する行で順位を付け、ステータス以外で並べ替えると順位を表示しない', () => {
+  const lists = rankFixtures()
+  const hp = getMainStorySpawnRows(lists, '兵士', 'units', 0, 2, { key: 'hp', direction: 'asc' })
+  const defense = getMainStorySpawnRows(lists, '兵士', 'units', 0, 2, { key: 'defense', direction: 'asc' })
+  assert.deepEqual(hp.rows.map(row => [row.stage.code, row.rank]), [['0-1', 8], ['1-7', 1]])
+  assert.deepEqual(defense.rows.map(row => [row.stats.defense, row.rank]), [[0, 8], [5, 1]])
+  const byStage = getMainStorySpawnRows(lists, '兵士', 'units', 0, 2, { key: 'stage', direction: 'asc' })
+  assert.ok(byStage.rows.every(row => row.rank === undefined))
+})
