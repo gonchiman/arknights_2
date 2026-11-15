@@ -55,7 +55,7 @@ test('元素損傷はHP結果と分離し、0・無効・爆発中と複数回�
   assert.equal(render(Table, { groups: [{ label: 'なし', values: [] }] }), '')
 })
 
-test('元素損傷表は通常の計算機で対象スキルに表示し、属性比較では1回の攻撃ダメージを表示する', () => {
+test('元素損傷表は通常の計算機で対象スキルに表示し、属性比較の初期表示では1回の攻撃ダメージを指標にする', () => {
   const skill = records.find(row => row.operatorId === 'char_499_kaitou' && row.skillIndex === 1)
   const props = { rows: records, loading: false,
     initialSelection: { operatorId: skill.operatorId, skillId: skill.skillId, skillIndex: 1, levelIndex: 9 } }
@@ -68,8 +68,7 @@ test('元素損傷表は通常の計算機で対象スキルに表示し、属�
     initialSelection: { ...props.initialSelection, skillId: other.skillId, skillIndex: 2 } }), /elemental-buildup-table/)
 
   const attribute = render(AttributePage, props)
-  assert.match(attribute, /aria-label="1回の攻撃ダメージの属性比較（1体あたり）"/)
-  assert.match(attribute, /aria-label="属性比較表をPNG画像で保存"/)
+  assert.match(attribute, /class="collapsible-panel-heading-summary"><span>1回の攻撃ダメージ · 1体あたり<\/span>/)
   assert.doesNotMatch(attribute, /elemental-buildup-table/)
   assert.doesNotMatch(cellText(attribute), /この条件では計算できません/)
 })
