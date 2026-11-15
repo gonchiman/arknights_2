@@ -224,6 +224,20 @@
 .enemy-rating-comparison-rank { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .enemy-rating-comparison-rank-options { display: flex; flex-wrap: wrap; gap: 4px; }
 .enemy-rating-comparison-rank-options .initial-button { min-width: 28px; }
+.enemy-rating-selection-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3px 12px;
+  margin: 0 10px 8px;
+  padding: 6px 0;
+  border-block: 1px solid var(--border);
+  color: var(--text-soft);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.enemy-rating-selection-total:empty { margin: 0; padding: 0; border: 0; }
 .enemy-rating-comparison-plot-container { min-width: 0; }
 .enemy-rating-comparison-legend,
 .enemy-rating-comparison-detail { list-style: none; margin: 0; padding: 0 10px; font-size: 11px; }
