@@ -138,6 +138,7 @@ test('防御力・術耐性の保存ダイアログは選択ランクを初期�
   assert.match(highlightCheckbox(markup), /<input\b(?=[^>]*\btype="checkbox")(?=[^>]*\bchecked="")[^>]*>/)
   assert.equal(markup.match(/class="enemy-rating-comparison-highlight"/g)?.length, 2)
   assert.match(markup, /value="[^"]*_評価B\+-A強調_[^"]*_比率自動\.png"/)
+  assert.doesNotMatch(markup, /棒・縦線の出し方/)
 
   const unselected = renderDialog([])
   assert.match(highlightCheckbox(unselected), /<input\b(?=[^>]*\btype="checkbox")(?=[^>]*\bdisabled="")[^>]*>/)
@@ -178,7 +179,9 @@ test('左右の横棒は外側の数値を階級の割合に切り替え、保�
 })
 
 test('左右の横棒の動画は集計条件・階級割合・強調を引き継ぎ、対応する拡張子で16:7に保存する', () => {
-  const data = buildEnemyRatingComparison(enemies, 'SPAWNS', fixtureCounts)
+  const pairedEnemies = enemies.map((enemy, index) =>
+    index === 1 ? { ...enemy, stats: { ...enemy.stats, magicResistance: 5 } } : enemy)
+  const data = buildEnemyRatingComparison(pairedEnemies, 'SPAWNS', fixtureCounts)
   const renderVideoDialog = () => renderToStaticMarkup(createElement(RatingSaveDialog, {
     media: 'video', data, layout: 'MIRRORED', selectedRanks: ['D'], scopeLabel: 'メインストーリー・全敵',
     sideValue: 'rank', countMode: 'SPAWNS', countLabel: '出現回数', onClose() {},
@@ -219,6 +222,15 @@ test('左右の横棒の動画は集計条件・階級割合・強調を引き�
       assert.match(holdField, /<input\b[^>]*type="number"[^>]*value="0"/)
       assert.doesNotMatch(markup, /開始（秒）/)
       assert.match(markup, /<option value="instant">一斉に表示<\/option>/)
+      const shapeControl = markup.match(/<label\b[^>]*>.*?<\/label>/g)?.find(label => label.includes('棒・縦線の出し方'))
+      assert.ok(shapeControl)
+      const shapeOptions = [...shapeControl.matchAll(/<option value="([^"]+)"( selected="")?>([^<]+)<\/option>/g)]
+        .map(([, value, selected, label]) => [value, Boolean(selected), label])
+      assert.deepEqual(shapeOptions, [['grow', false, '伸びる'], ['stagger', true, '順に表示']])
+      const videoBars = markup.match(/<rect\b[^>]*data-rating-video-bar="[^"]+"[^>]*>/g) ?? []
+      assert.deepEqual(videoBars.map(bar => [attr(bar, 'data-rating-video-bar'), attr(bar, 'data-rating-video-bar-rank')]),
+        [['-1', '1'], ['1', '0'], ['1', '1'], ['1', '3'], ['1', '4']])
+      assert.ok(videoBars.every(bar => Number(attr(bar, 'width')) > 0))
       assert.equal(markup.match(/class="enemy-rating-comparison-highlight"/g)?.length, 1)
       assert.doesNotMatch(markup, /画像の縦横比|出力幅を1,920 pxに固定/)
     }

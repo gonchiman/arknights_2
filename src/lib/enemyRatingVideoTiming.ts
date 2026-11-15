@@ -5,21 +5,25 @@ export const ENEMY_RATING_VIDEO_TEMPOS = ['short', 'standard', 'slow'] as const
 export type EnemyRatingVideoTempo = typeof ENEMY_RATING_VIDEO_TEMPOS[number]
 export const ENEMY_RATING_VIDEO_TEXT_MODES = ['fade', 'instant', 'stagger'] as const
 export type EnemyRatingVideoTextMode = typeof ENEMY_RATING_VIDEO_TEXT_MODES[number]
+export type EnemyRatingVideoShapeMode = 'grow' | 'stagger'
 
 interface VideoPhaseTiming {
   start: number
   duration: number
 }
 
-export type EnemyRatingVideoTiming = Readonly<
-  Record<EnemyRatingVideoPhase, Readonly<VideoPhaseTiming>> & { hold: number; textMode: EnemyRatingVideoTextMode }
->
+export type EnemyRatingVideoTiming = Readonly<Record<EnemyRatingVideoPhase, Readonly<VideoPhaseTiming>> & {
+  hold: number
+  textMode: EnemyRatingVideoTextMode
+  shapeMode: EnemyRatingVideoShapeMode
+}>
 export interface EnemyRatingVideoTimingDraft {
   order: EnemyRatingVideoPhase[]
   tempo: EnemyRatingVideoTempo
   finishSeconds: string
   overrides: Partial<Record<EnemyRatingVideoTimingField, string>>
   textMode: EnemyRatingVideoTextMode
+  shapeMode: EnemyRatingVideoShapeMode
 }
 
 // The renderer describes each mark using its original position within these phase windows.
@@ -41,7 +45,8 @@ export function getEnemyRatingVideoDefaultDuration(field: EnemyRatingVideoTiming
 }
 
 export function createEnemyRatingVideoTimingDraft(): EnemyRatingVideoTimingDraft {
-  return { order: [...ENEMY_RATING_VIDEO_PHASES], tempo: 'standard', finishSeconds: '', overrides: {}, textMode: 'fade' }
+  return { order: [...ENEMY_RATING_VIDEO_PHASES], tempo: 'standard', finishSeconds: '', overrides: {},
+    textMode: 'fade', shapeMode: 'stagger' }
 }
 
 export function getEnemyRatingVideoTimingBounds(timing: EnemyRatingVideoTiming) {
@@ -111,7 +116,7 @@ export function parseEnemyRatingVideoTiming(draft: EnemyRatingVideoTimingDraft):
     phases[phase] = { start, duration }
     start += duration
   }
-  const timing = { ...phases, hold: durations.hold, textMode: draft.textMode }
+  const timing = { ...phases, hold: durations.hold, textMode: draft.textMode, shapeMode: draft.shapeMode }
   const bounds = getEnemyRatingVideoTimingBounds(timing)
   if (!Number.isFinite(bounds.duration) || bounds.duration <= 0) {
     return { timing: null, finish: null, duration: null, error: '動画全体には0秒より長い時間を指定してください。' }
