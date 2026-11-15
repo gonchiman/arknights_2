@@ -27,3 +27,12 @@ test('小数寸法は切り上げ、不正な高さや比率は画像寸法に�
     assert.equal(layout.height, invalid === 0 ? 334 : 410)
   }
 })
+
+test('横並び出力では画像全体の整数比と必要な描画高さを維持する', () => {
+  assert.deepEqual(getChartImageLayout({ naturalChartHeight: 400, exactAspect: { width: 16, height: 9 } }),
+    { width: 960, height: 540, chartHeight: 464 })
+  assert.deepEqual(getChartImageLayout({ naturalChartHeight: 400, exactAspect: { width: 9, height: 16 } }),
+    { width: 963, height: 1712, chartHeight: 1636 })
+  const wide = getChartImageLayout({ naturalChartHeight: 400, exactAspect: { width: 3, height: 1 }, chromeHeight: 90 })
+  assert.deepEqual(wide, { width: 1470, height: 490, chartHeight: 400 })
+})

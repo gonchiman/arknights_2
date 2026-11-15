@@ -1,0 +1,19 @@
+.enemy-resistance-combined-image {
+  display: grid;
+  align-items: start;
+}
+
+.enemy-resistance-combined-image .enemy-resistance-threshold-scatter.is-image .enemy-resistance-scatter-layout {
+  grid-template-rows: auto minmax(0, 1fr) 1.4em auto;
+}
+
+.enemy-resistance-combined-image .enemy-resistance-scatter-x-title {
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.enemy-resistance-combined-image .enemy-defense-resistance-threshold-table th,
+.enemy-resistance-combined-image .enemy-defense-resistance-threshold-table td {
+  padding: 5px 8px;
+  line-height: 1.4;
+}

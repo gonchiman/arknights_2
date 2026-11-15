@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState, type ReactNode, type Ref } from 'react'
 import { CHART_IMAGE_DEFAULT_CHROME_HEIGHT, getChartImageLayout, type ChartImageLayout } from '../lib/chartImageLayout'
 import { hasChartImageInkCollision } from '../lib/chartImageInkCollision'
+import type { TableImageAspect } from '../lib/tableImageAspect'
 import './ChartImageFrame.css'
 
 export interface ChartImageFrameProps {
@@ -11,6 +12,7 @@ export interface ChartImageFrameProps {
   naturalChartHeight: number
   informationPlacement?: 'header' | 'top-right-box'
   aspectRatio?: number
+  exactAspect?: TableImageAspect
   className?: string
   onLayout?: (size: { width: number; height: number }) => void
   children: (size: { width: number; height: number }) => ReactNode
@@ -18,12 +20,12 @@ export interface ChartImageFrameProps {
 
 /** Shared export layout. Usage and approved examples: docs/chart-image/README.md. */
 export function ChartImageFrame({
-  naturalChartHeight, aspectRatio, onLayout, ...props
+  naturalChartHeight, aspectRatio, exactAspect, onLayout, ...props
 }: ChartImageFrameProps) {
   const [measurement, setMeasurement] = useState({ chromeHeight: CHART_IMAGE_DEFAULT_CHROME_HEIGHT, minimumChartHeight: 0 })
   const naturalHeight = Number.isFinite(naturalChartHeight) && naturalChartHeight > 0 ? naturalChartHeight : 334
   const layout = getChartImageLayout({ naturalChartHeight: Math.max(naturalHeight, measurement.minimumChartHeight),
-    aspectRatio, chromeHeight: measurement.chromeHeight })
+    aspectRatio, exactAspect, chromeHeight: measurement.chromeHeight })
   const onMeasure = useCallback((next: ChartImageSurfaceMeasurement) => {
     // Only grow within one snapshot: wider images can wrap less and otherwise oscillate.
     setMeasurement((current) => current.chromeHeight >= next.chromeHeight && current.minimumChartHeight >= next.minimumChartHeight
@@ -59,7 +61,7 @@ export function ChartImageHeading({ title, legend, conditions, informationPlacem
 
 /** Shared rendering surface for single and stacked exports; dimensions are owned by their frames. */
 export function ChartImageSurface({ title, legend, conditions, axisTitle, informationPlacement = 'header', className, children,
-  layout, onMeasure }: Omit<ChartImageFrameProps, 'naturalChartHeight' | 'aspectRatio' | 'onLayout'> & {
+  layout, onMeasure }: Omit<ChartImageFrameProps, 'naturalChartHeight' | 'aspectRatio' | 'exactAspect' | 'onLayout'> & {
   layout: ChartImageLayout
   onMeasure: (measurement: ChartImageSurfaceMeasurement) => void
 }) {

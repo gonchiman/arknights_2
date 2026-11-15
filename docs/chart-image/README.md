@@ -234,7 +234,7 @@ await saveComparisonChartImage({
 | 敵統計：累積分布 | [enemyWeightedEcdf.ts](../../src/lib/enemyWeightedEcdf.ts) |
 | 敵統計：分布比較 | [enemyDistributionComparison.ts](../../src/lib/enemyDistributionComparison.ts) |
 | 敵統計：防御力・術耐性の評価別分布 | [EnemyRatingComparisonImage.tsx](../../src/components/EnemyRatingComparisonImage.tsx) |
-| 防御力と術耐性の対応：術耐性別の散布図 | [EnemyDefenseResistancePage.tsx](../../src/components/EnemyDefenseResistancePage.tsx) |
+| 防御力と術耐性の対応：術耐性別の散布図、散布図＋表 | [EnemyResistanceImageDialog.tsx](../../src/components/EnemyResistanceImageDialog.tsx) |
 | 敵統計：ヒートマップ | [enemyJointImage.ts](../../src/lib/enemyJointImage.ts) |
 | 敵統計：術耐性の円グラフ・100%横棒 | [enemyThresholdComparison.ts](../../src/lib/enemyThresholdComparison.ts) |
 | DC3属性比較：評価別の範囲、出現順位の折れ線・集合棒 | [DamageCalculatorThreeAttributePage.tsx](../../src/components/DamageCalculatorThreeAttributePage.tsx) |
@@ -244,7 +244,7 @@ await saveComparisonChartImage({
 
 敵の統計分析で集計範囲に「メインストーリー」を選んだ場合は、画像の条件と既定名に集計範囲を記載する。
 
-敵統計の防御力・術耐性の評価別分布では、出力幅を1,920 pxに固定できる。縦横比の指定があればその比率からPNGの高さを求め、指定なしでは描画領域と見出しを含む画像の比率を使う。プレビューとPNGで同じ寸法を使い、固定幅が有効なときは既定名に `幅1920px` を加える。
+敵統計の防御力・術耐性の評価別分布と、術耐性別の画像保存（「表」「散布図」「散布図＋表」）では、出力幅を1,920 pxに固定できる。縦横比の指定があればその比率からPNGの高さを求め、指定なしでは内容と見出しを含む画像の比率を使う。プレビューとPNGで同じ寸法を使い、固定幅が有効なときは既定名に `幅1920px` を加える。
 
 敵のヒストグラムで累積割合の縦線を表示した場合は、ヒストグラムとスルトS3との合成画像の既定名に「累積75%」のように指定割合を記載する。
 
@@ -301,6 +301,12 @@ const baseFilename = createChartImageFilename(prefix, parts)
 スルトS2・特化3、昇進2 Lv.90、信頼100、敵1体で「防御力・術耐性無視を適用」をオンにする。「出現順位」、集計版v11、「全ステージ」、「グラフ」、「集合棒グラフ」を選び、縦横比16:9で保存すると[確認用PNG](examples/dc3-attribute-rank-bars-v11-16x9.png)を再生成できる。術耐性50の下に防御力350が並び、横軸が術耐性90・防御力4,000で終わることを確認する。
 
 [術耐性別の散布図](../../src/components/EnemyResistanceThresholdScatter.tsx)は、画面と同じ点・数値ラベルを共通フレームで保存する。下軸名をフレームに渡し、画像と既定名に集計版と集計範囲を入れる。[確認用PNG](examples/enemy-resistance-threshold-scatter-v12-main-16x9.png)は「防御力と術耐性の対応」で `v12`・「メインストーリー」・「術耐性別」・「散布図」を選び、「画像を保存」から16:9で保存したもの。術耐性0の点と術耐性100以上の「該当なし」、術耐性50と60の防御力300と1,200を確認できる。
+
+「散布図＋表」は [EnemyResistanceCombinedImage](../../src/components/EnemyResistanceCombinedImage.tsx) で、左に散布図、右に表を約60:40で並べる。共通のタイトルと集計条件を一度だけ表示し、横軸名は散布図の直下に置く。表は保存画面を開いた時点の表示列で全11行を描画する。16:9を初期値とし、指定時は画像全体を指定の整数比に合わせる。左右の配置はプレビューとPNGで共通とする。
+
+[横並びの確認用PNG](examples/enemy-resistance-chart-table-v12-main-16x9.png)は「防御力と術耐性の対応」で `v12`・「メインストーリー」・「術耐性別」を選び、表の「出現順位（%）」と「出現順位の境目（位）」をオンにしてから「画像を保存」→「散布図＋表」で保存したもの。図と表で術耐性50と60の値が一致し、術耐性100の欠損が表に残ることを確認できる。
+
+[幅固定の確認用PNG](examples/enemy-resistance-chart-table-v12-main-width1920-16x7.png)は、同じ集計版と集計範囲で順位の2列をオフにし、カスタム比率を16:7にして「出力幅を1,920 pxに固定」をオンにしたもの。プレビューとPNGの寸法は1,920×840 px。
 
 ## 変更時の確認
 

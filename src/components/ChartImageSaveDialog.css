@@ -10,6 +10,7 @@
 .chart-image-save-field > span,
 .chart-image-save-aspect legend { color: var(--text); font-size: 13px; font-weight: 600; }
 .chart-image-save-field input,
+.chart-image-save-field select,
 .chart-image-save-aspect select {
   box-sizing: border-box;
   width: 100%;
@@ -23,6 +24,7 @@
   font-size: 14px;
 }
 .chart-image-save-field input:focus-visible,
+.chart-image-save-field select:focus-visible,
 .chart-image-save-aspect select:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 .chart-image-save-field input[aria-invalid="true"] { border-color: #a32c2c; }
 .chart-image-save-hint,

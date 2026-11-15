@@ -7,14 +7,12 @@ import {
 import { parseEcdfGuideInput } from '../lib/enemyEcdfGuides'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
 import { ComparisonTableImageDialog, type ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
-import {
-  DamageCalculatorThreeAttributeChartImageDialog, type DamageCalculatorThreeAttributeChartImageSnapshot,
-} from './DamageCalculatorThreeAttributeChartImageDialog'
 import { EnemyAggregationScopeSelector, ENEMY_MAIN_STORY_LABEL, type EnemyAggregationScope } from './EnemyAggregationScopeSelector'
 import { EnemyAggregationSelector } from './EnemyAggregationSelector'
 import { EnemyDefenseResistanceChart } from './EnemyDefenseResistanceChart'
 import { EnemyDataContent } from './EnemyPageShared'
-import { ENEMY_RESISTANCE_THRESHOLD_AXIS_TITLE, EnemyResistanceThresholdScatter } from './EnemyResistanceThresholdScatter'
+import { EnemyResistanceImageDialog, type EnemyResistanceImageSnapshot } from './EnemyResistanceImageDialog'
+import { EnemyResistanceThresholdScatter } from './EnemyResistanceThresholdScatter'
 import './DamageCalculator.css'
 import './DamageCalculatorTwo.css'
 import './EnemyAnalysis.css'
@@ -25,9 +23,6 @@ const VIEWS = [['table', '範囲表'], ['rank', '順位表'], ['resistance', '�
 const RESISTANCE_VIEWS = [['table', '表'], ['scatter', '散布図']] as const
 const DEFAULT_RANK_STEP = 10
 const MAX_RANK_PERCENTAGE = 100
-type ResultImage =
-  | { kind: 'table'; snapshot: ComparisonTableImageSnapshot }
-  | { kind: 'scatter'; snapshot: DamageCalculatorThreeAttributeChartImageSnapshot }
 
 export function EnemyDefenseResistancePage() {
   const aggregation = useEnemyAggregation()
@@ -44,9 +39,10 @@ export function EnemyDefenseResistancePage() {
   const [rankInput, setRankInput] = useState('')
   const [showRankPercentage, setShowRankPercentage] = useState(false)
   const [showRankCutoff, setShowRankCutoff] = useState(false)
-  const [image, setImage] = useState<ResultImage | null>(null)
+  const [rankImage, setRankImage] = useState<ComparisonTableImageSnapshot | null>(null)
+  const [resistanceImage, setResistanceImage] = useState<EnemyResistanceImageSnapshot | null>(null)
   const aggregationConditions = [`集計版 ${aggregation.selectedId}`, ...(scope === 'main' ? [ENEMY_MAIN_STORY_LABEL] : [])]
-  const resistanceTable = view === 'resistance' && resistanceView === 'table' && result
+  const resistanceTable = view === 'resistance' && result
     ? <EnemyResistanceThresholdGrid rows={result.resistanceThresholds} showRankPercentage={showRankPercentage}
         showRankCutoff={showRankCutoff} estimatedRanks={Boolean(scopedData?.counts.summary.expectedMapCount)} />
     : null
@@ -56,25 +52,21 @@ export function EnemyDefenseResistancePage() {
     const rankColumns: string[] = []
     if (showRankPercentage) rankColumns.push('出現順位（%）')
     if (showRankCutoff) rankColumns.push('出現順位の境目')
-    setImage({ kind: 'table', snapshot: {
-      title: '防御力と術耐性の対応（術耐性別）',
-      conditions: [...aggregationConditions, `出現回数 ${NUMBER.format(result.total)}体`, '術耐性10刻み', ...rankColumns],
-      filenameConditions: [...aggregationConditions, '出現回数', '術耐性10刻み', ...rankColumns],
-      table: resistanceTable,
-    } })
-  }
-
-  function openScatterImage(rows: readonly EnemyResistanceThreshold[], total: number) {
-    const version = `集計版 ${aggregation.selectedId}`
+    const appearances = `出現回数 ${NUMBER.format(result.total)}体`
     const scopeLabel = scope === 'main' ? ENEMY_MAIN_STORY_LABEL : '全体'
-    setImage({ kind: 'scatter', snapshot: {
-      title: '防御力と術耐性の対応（散布図）',
-      axisTitle: ENEMY_RESISTANCE_THRESHOLD_AXIS_TITLE,
-      conditions: [version, scopeLabel, `出現回数 ${NUMBER.format(total)}体`],
-      filenameParts: [version, scopeLabel, '出現回数', '術耐性10刻み'],
-      legend: null,
-      chart: ({ height }) => <EnemyResistanceThresholdScatter rows={rows} imageHeight={height} />,
-    } })
+    setResistanceImage({
+      initialMode: resistanceView,
+      rows: result.resistanceThresholds,
+      table: {
+        title: '防御力と術耐性の対応（術耐性別）',
+        conditions: [...aggregationConditions, appearances, '術耐性10刻み', ...rankColumns],
+        filenameConditions: [...aggregationConditions, '出現回数', '術耐性10刻み', ...rankColumns],
+        table: resistanceTable,
+      },
+      chartConditions: [aggregationConditions[0], scopeLabel, appearances],
+      chartFilenameParts: [aggregationConditions[0], scopeLabel, '出現回数', '術耐性10刻み'],
+      rankColumns,
+    })
   }
 
   return <section className="calculator-page enemy-analysis-route">
@@ -99,7 +91,7 @@ export function EnemyDefenseResistancePage() {
           {view === 'table' && <EnemyDefenseResistanceTable bands={result.bands} />}
           {view === 'rank' && <EnemyDefenseResistanceRankTable result={result} step={rankStep} onStepChange={setRankStep}
             input={rankInput} onInputChange={setRankInput} aggregationConditions={aggregationConditions}
-            onSaveImage={snapshot => setImage({ kind: 'table', snapshot })} />}
+            onSaveImage={setRankImage} />}
           {view === 'resistance' && <>
             <div className="enemy-defense-resistance-rank-controls">
               <div className="enemy-chart-scale-switch" role="group" aria-label="術耐性別の表示形式">
@@ -108,11 +100,11 @@ export function EnemyDefenseResistancePage() {
               </div>
               {resistanceView === 'scatter' && <button type="button" className="button secondary"
                 aria-label="術耐性別の散布図をPNG画像で保存" aria-haspopup="dialog"
-                onClick={() => openScatterImage(result.resistanceThresholds, result.total)}>画像を保存</button>}
+                onClick={openResistanceImage}>画像を保存</button>}
             </div>
             {resistanceView === 'scatter' && <EnemyResistanceThresholdScatter rows={result.resistanceThresholds} />}
           </>}
-          {resistanceTable && <>
+          {resistanceTable && resistanceView === 'table' && <>
             <div className="enemy-defense-resistance-rank-controls">
               <div className="enemy-defense-resistance-rank-controls" role="group" aria-label="表示する列">
                 <label>
@@ -135,8 +127,8 @@ export function EnemyDefenseResistancePage() {
         </> : <p role="status">集計対象の出現データがありません。</p>}
       </>}
     </EnemyDataContent>
-    {image?.kind === 'table' && <ComparisonTableImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
-    {image?.kind === 'scatter' && <DamageCalculatorThreeAttributeChartImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
+    {rankImage && <ComparisonTableImageDialog snapshot={rankImage} onClose={() => setRankImage(null)} />}
+    {resistanceImage && <EnemyResistanceImageDialog snapshot={resistanceImage} onClose={() => setResistanceImage(null)} />}
   </section>
 }
 

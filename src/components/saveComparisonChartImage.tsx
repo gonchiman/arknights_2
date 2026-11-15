@@ -94,12 +94,15 @@ export async function withComparisonChartImageSurface<T>({
 export async function saveComparisonChartImage({
   filename,
   writeBlob,
+  validateLayout,
   ...source
 }: ComparisonChartImageSource & {
   filename: string
   writeBlob?: (blob: Blob) => Promise<void>
+  validateLayout?: (size: { width: number; height: number }) => void
 }): Promise<void> {
   const blob = await withComparisonChartImageSurface(source, async (surface, size) => {
+    validateLayout?.(size)
     const { toBlob } = await import('html-to-image')
     return toBlob(surface, { ...size, pixelRatio: 1, backgroundColor: '#fff', skipFonts: true })
   })
