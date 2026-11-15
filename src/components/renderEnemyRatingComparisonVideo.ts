@@ -32,6 +32,10 @@ function step(phase: EnemyRatingVideoPhase, start: number, duration: number): Or
   return { phase, start, duration }
 }
 
+function instantStep(phase: Step, fraction: number): Step {
+  return { start: phase.start + fraction * phase.duration, duration: 0 }
+}
+
 export async function prepareEnemyRatingComparisonVideo(
   chart: ReactNode,
   timing: EnemyRatingVideoTiming,
@@ -97,9 +101,11 @@ export async function prepareEnemyRatingComparisonVideo(
     const guides = shapes('data-rating-video-guide', (shape, style, order) => {
       const width = parseFloat(style.strokeWidth) * scaleX
       return { ...shape, color: style.stroke, box: { ...shape.box, x: shape.box.x - width / 2, width },
-        step: step('axes', .42 + .30 * order, .38) }
+        order, step: step('axes', .42 + .30 * order, .38) }
     })
-    const bars = shapes('data-rating-video-bar', (shape, _style, direction) => ({ ...shape, fromRight: direction < 0 }))
+    const bars = shapes('data-rating-video-bar', (shape, _style, direction) => ({
+      ...shape, rank: Number(shape.element.getAttribute('data-rating-video-bar-rank')), fromRight: direction < 0,
+    }))
 
     if (!guides.length || !surface.querySelector('[data-rating-video-rank]')) {
       throw new Error('左右の横棒グラフを取得できませんでした。')
@@ -121,16 +127,24 @@ export async function prepareEnemyRatingComparisonVideo(
     }
   })
 
+  const barRanks = [...new Set(scene.bars.map(({ rank }) => rank))].sort((a, b) => a - b)
+  const barIntervals = Math.max(barRanks.length - 1, 1)
+
   function withTiming(settings: EnemyRatingVideoTiming): EnemyRatingVideoAnimation {
     const { finish, duration } = getEnemyRatingVideoTimingBounds(settings)
-    const { size, textImage, bars } = scene
+    const { size, textImage } = scene
+    const staggerShapes = settings.shapeMode === 'stagger'
     const retime = ({ phase, start, duration }: OriginalStep) => retimeEnemyRatingVideoStep(settings, phase, start, duration)
     const highlights = scene.highlights.map(mark => ({ ...mark, step: retime(mark.step) }))
-    const guides = scene.guides.map(mark => ({ ...mark, step: retime(mark.step) }))
+    const guides = scene.guides.map(({ order, ...mark }) => ({
+      ...mark, step: staggerShapes ? instantStep(settings.axes, order) : retime(mark.step),
+    }))
+    const bars = scene.bars.map(({ rank, ...bar }) => ({
+      ...bar, step: staggerShapes ? instantStep(settings.bars, barRanks.indexOf(rank) / barIntervals) : settings.bars,
+    }))
     const labels = scene.text.map(({ box, step: { phase, start, duration } }) => ({
       box, step: retimeEnemyRatingVideoText(settings, phase, start, duration),
     }))
-    const barStep = retime(step('bars', 1.37, .88))
 
     return {
       width: size.canvasWidth,
@@ -151,9 +165,8 @@ export async function prepareEnemyRatingComparisonVideo(
           context.fillStyle = color
           context.fillRect(box.x, box.y, box.width, box.height * reveal(time, step))
         }
-        const sizeRatio = reveal(time, barStep)
-        for (const { box, color, fromRight } of bars) {
-          const width = box.width * sizeRatio
+        for (const { box, color, fromRight, step } of bars) {
+          const width = box.width * reveal(time, step)
           context.fillStyle = color
           context.fillRect(fromRight ? box.x + box.width - width : box.x, box.y, width, box.height)
         }

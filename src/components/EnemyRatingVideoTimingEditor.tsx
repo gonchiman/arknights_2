@@ -2,7 +2,7 @@ import { useId, useLayoutEffect, useRef, useState, type FocusEvent } from 'react
 import type { EnemyRatingComparisonSideValue } from '../lib/enemyRatingComparison'
 import {
   createEnemyRatingVideoTimingDraft, ENEMY_RATING_VIDEO_TEMPOS, getEnemyRatingVideoDefaultDuration, parseEnemyRatingVideoTiming,
-  type EnemyRatingVideoPhase, type EnemyRatingVideoTempo, type EnemyRatingVideoTextMode,
+  type EnemyRatingVideoPhase, type EnemyRatingVideoShapeMode, type EnemyRatingVideoTempo, type EnemyRatingVideoTextMode,
   type EnemyRatingVideoTimingDraft, type EnemyRatingVideoTimingField, type ParsedEnemyRatingVideoTiming,
 } from '../lib/enemyRatingVideoTiming'
 import './EnemyRatingVideoTimingEditor.css'
@@ -135,15 +135,25 @@ export function EnemyRatingVideoTimingEditor({
           {durationInput('finish', draft.finishSeconds || (parsed.finish === null ? '' : formatSeconds(parsed.finish)))}
         </label>
       </div>
-      <label className="enemy-rating-video-text-mode">
-        文字の出し方
-        <select value={draft.textMode} disabled={disabled} onChange={event =>
-          onChange({ ...draft, textMode: event.target.value as EnemyRatingVideoTextMode })}>
-          <option value="fade">フェード</option>
-          <option value="instant">一斉に表示</option>
-          <option value="stagger">順に表示</option>
-        </select>
-      </label>
+      <div className="enemy-rating-video-effect-options">
+        <label>
+          文字の出し方
+          <select value={draft.textMode} disabled={disabled} onChange={event =>
+            onChange({ ...draft, textMode: event.target.value as EnemyRatingVideoTextMode })}>
+            <option value="fade">フェード</option>
+            <option value="instant">一斉に表示</option>
+            <option value="stagger">順に表示</option>
+          </select>
+        </label>
+        <label>
+          棒・縦線の出し方
+          <select value={draft.shapeMode} disabled={disabled} onChange={event =>
+            onChange({ ...draft, shapeMode: event.target.value as EnemyRatingVideoShapeMode })}>
+            <option value="grow">伸びる</option>
+            <option value="stagger">順に表示</option>
+          </select>
+        </label>
+      </div>
     </div>
     {inputError?.field === 'finish' && durationError}
     <details className="enemy-rating-video-timing-precision" onToggle={event => {

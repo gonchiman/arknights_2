@@ -228,7 +228,8 @@ function MirroredPlot({
           return <g key={row.rank}>
             {extent > 0 && <rect className={seriesClass(key)} x={direction === -1 ? origin - extent : origin}
               y={y - barHeight / 2} width={extent} height={barHeight} fill="currentColor" {...INK}
-              data-rating-video-bar={imageMode ? direction : undefined} />}
+              data-rating-video-bar={imageMode ? direction : undefined}
+              data-rating-video-bar-rank={imageMode ? index : undefined} />}
             <text className={`enemy-rating-comparison-value${selection.has(row.rank) ? ' is-selected' : ''}`}
               x={labelX} y={y + 4} textAnchor="middle" {...INK}
               data-rating-video-value={imageMode ? index : undefined}>{stripValue(showRankShare ? share : cumulativeShare)}</text>

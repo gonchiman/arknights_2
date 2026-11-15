@@ -20,6 +20,7 @@ test('動画の初期設定はタイトルから順に描画し、5秒で完成�
   }
   assert.equal(parsed.timing.hold, 0)
   assert.equal(parsed.timing.textMode, 'fade')
+  assert.equal(parsed.timing.shapeMode, 'stagger')
   closeTo(parsed.finish, 5)
   assert.equal(parsed.duration, parsed.finish)
 })
@@ -154,6 +155,14 @@ test('文字の出し方を変更しても表示順と全体尺を引き継ぐ',
   assert.equal(instant.duration, fade.duration)
   assert.equal(stagger.duration, fade.duration)
   assert.deepEqual(retimeEnemyRatingVideoStep(stagger.timing, 'bars', 1.37, .88), stagger.timing.bars)
+})
+
+test('棒・縦線の出し方を変更しても文字の出し方と描画時間は変わらない', () => {
+  const draft = { ...createEnemyRatingVideoTimingDraft(), finishSeconds: '10', textMode: 'instant' as const }
+  const stagger = parseEnemyRatingVideoTiming(draft)
+  const grow = parseEnemyRatingVideoTiming({ ...draft, shapeMode: 'grow' })
+  assert.ok(grow.timing && stagger.timing)
+  assert.deepEqual(grow, { ...stagger, timing: { ...stagger.timing, shapeMode: 'grow' } })
 })
 
 test('不正な表示順・秒数・全体尺では書き出し条件を作らない', () => {
