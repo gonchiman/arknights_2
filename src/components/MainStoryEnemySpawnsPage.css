@@ -44,6 +44,7 @@
 
 .main-story-spawns-toolbar,
 .main-story-spawns-views,
+.main-story-spawns-actions,
 .main-story-spawns-total {
   display: flex;
   flex-wrap: wrap;
@@ -56,7 +57,8 @@
   margin: 14px 0 8px;
 }
 
-.main-story-spawns-views .button {
+.main-story-spawns-views .button,
+.main-story-spawns-actions .button {
   min-height: 34px;
   padding: 5px 10px;
   font-size: 13px;
@@ -140,6 +142,23 @@
   color: var(--text-muted);
 }
 
+.main-story-spawns-image-table {
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.main-story-spawns-image-table thead th {
+  padding: 6px 8px;
+}
+
+.main-story-spawns-image-table tbody tr {
+  height: var(--main-story-spawns-image-row-height);
+}
+
+.main-story-spawns-image-table tbody :is(th, td) {
+  padding-block: 2px;
+}
+
 .main-story-spawns-panel .main-story-spawns-pagination {
   flex-wrap: wrap;
   border: 1px solid var(--border);
@@ -166,6 +185,7 @@
 @media (pointer: coarse) {
   .main-story-spawns-filters :is(select, input),
   .main-story-spawns-views .button,
+  .main-story-spawns-actions .button,
   .main-story-spawns-pagination button {
     min-height: 44px;
   }

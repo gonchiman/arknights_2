@@ -16,22 +16,33 @@ export interface ComparisonTableImageSnapshot {
 const IMAGE_WIDTH = 720
 const IMAGE_ASPECT_PRESETS = ['16:9', '4:3', '1:1', '2:1', '9:16'] as const
 
-export function ComparisonTableImageDialog({ snapshot, onClose }: {
+export function ComparisonTableImageDialog({ snapshot, onClose, options, selectionError }: {
   snapshot: ComparisonTableImageSnapshot
   onClose: () => void
+  options?: (saving: boolean) => ReactNode
+  selectionError?: string
 }) {
   const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
-  const [readyRatio, setReadyRatio] = useState<number | 'auto' | null>(null)
+  const [readyLayout, setReadyLayout] = useState<{
+    snapshot: ComparisonTableImageSnapshot; ratio: number | 'auto'
+  } | null>(null)
   const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState<boolean | string>(false)
+  const [saveFailure, setSaveFailure] = useState<{
+    snapshot: ComparisonTableImageSnapshot; message: true | string
+  } | null>(null)
   const saveInProgress = useRef(false)
   const parsedAspect = aspect.preset === 'auto' ? null : parseTableImageAspect(aspect.width, aspect.height)
   const invalidAspect = aspect.preset !== 'auto' && !parsedAspect
   const aspectRatio = parsedAspect ? parsedAspect.width / parsedAspect.height : undefined
   const ratioKey = aspectRatio ?? 'auto'
-  const layoutReady = !invalidAspect && readyRatio === ratioKey
-  const onLayoutReady = useCallback(() => setReadyRatio(ratioKey), [ratioKey])
-  const onLayoutError = useCallback(() => setReadyRatio(null), [])
+  const showPreview = !invalidAspect && !selectionError
+  const layoutReady = showPreview && readyLayout?.snapshot === snapshot && readyLayout.ratio === ratioKey
+  const onLayoutReady = useCallback(() => {
+    setReadyLayout(previous => previous?.snapshot === snapshot && previous.ratio === ratioKey
+      ? previous : { snapshot, ratio: ratioKey })
+  }, [snapshot, ratioKey])
+  const onLayoutError = useCallback(() => setReadyLayout(null), [])
+  const saveError = saveFailure?.snapshot === snapshot ? saveFailure.message : false
   const picker = getChartImageSavePicker()
   const filename = createChartImageFilename(snapshot.title, snapshot.filenameConditions ?? snapshot.conditions)
   const frameProps = {
@@ -47,21 +58,33 @@ export function ComparisonTableImageDialog({ snapshot, onClose }: {
     if (!layoutReady || saveInProgress.current) return
     saveInProgress.current = true
     setSaving(true)
-    setSaveError(false)
+    setSaveFailure(null)
+    let exportSize: { width: number; height: number } | null = null
     let exportLayoutError: unknown
     try {
       const destination = await selectChartImageDestination(selectedFilename, chooseLocation ? picker : undefined)
       if (destination.type === 'cancelled') return
       await document.fonts.ready
       await saveComparisonChartImage({
-        chart: <ComparisonTableImageFrame {...frameProps} exporting onLayoutError={cause => { exportLayoutError = cause }} />,
+        chart: <ComparisonTableImageFrame {...frameProps} exporting onLayout={size => {
+          exportSize = size
+          exportLayoutError = undefined
+        }} onLayoutError={cause => {
+          exportSize = null
+          exportLayoutError = cause
+        }} />,
         filename: selectedFilename,
         width: IMAGE_WIDTH,
         writeBlob: destination.type === 'file' ? destination.write : undefined,
+        validateLayout: size => {
+          if (exportSize?.width === size.width && exportSize.height === size.height) return
+          exportLayoutError ??= new Error('保存する表の大きさを確認できませんでした。')
+          throw exportLayoutError
+        },
       })
       onClose()
     } catch {
-      setSaveError(exportLayoutError instanceof Error ? exportLayoutError.message : true)
+      setSaveFailure({ snapshot, message: exportLayoutError instanceof Error ? exportLayoutError.message : true })
     } finally {
       saveInProgress.current = false
       setSaving(false)
@@ -74,12 +97,15 @@ export function ComparisonTableImageDialog({ snapshot, onClose }: {
     aspect={aspect}
     aspectPresets={IMAGE_ASPECT_PRESETS}
     aspectError={invalidAspect ? '幅と高さは1〜100の整数、縦横比は1:10〜10:1で指定してください。' : undefined}
-    onAspectChange={next => { setAspect(next); setSaveError(false) }}
+    onAspectChange={next => { setAspect(next); setSaveFailure(null) }}
     canChooseLocation={Boolean(picker)}
     saving={saving}
     saveDisabled={!layoutReady}
-    error={saveError === true}
-    options={typeof saveError === 'string' ? <p className="chart-image-save-error" role="alert">{saveError}</p> : undefined}
+    error={selectionError ?? (saveError === true)}
+    options={<>
+      {options?.(saving)}
+      {!selectionError && typeof saveError === 'string' && <p className="chart-image-save-error" role="alert">{saveError}</p>}
+    </>}
     helpMode="popover"
     onClose={onClose}
     onSave={selectedFilename => { void saveImage(selectedFilename, true) }}
@@ -87,7 +113,7 @@ export function ComparisonTableImageDialog({ snapshot, onClose }: {
       label: 'ダウンロード',
       onSave: selectedFilename => { void saveImage(selectedFilename, false) },
     } : undefined}
-    preview={!invalidAspect && <ComparisonTableImagePreview {...frameProps}
+    preview={showPreview && <ComparisonTableImagePreview {...frameProps}
       onLayoutReady={onLayoutReady} onLayoutError={onLayoutError} />}
   />
 }
