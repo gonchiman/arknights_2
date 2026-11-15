@@ -76,6 +76,94 @@
   border: 1px solid var(--border);
 }
 
+.enemy-resistance-threshold-scatter {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.enemy-resistance-scatter-scroll { overflow-x: auto; }
+.enemy-resistance-scatter-scroll:focus-visible { outline: 2px solid var(--link); outline-offset: -2px; }
+
+.enemy-resistance-scatter-layout {
+  display: grid;
+  grid-template-columns: 4ch minmax(0, 1fr);
+  grid-template-rows: auto clamp(180px, 28vw, 280px) 1.4em auto;
+  gap: 8px 10px;
+  min-width: 22rem;
+  padding: 12px 24px 10px 16px;
+}
+
+.enemy-resistance-scatter-y-title { grid-column: 1 / -1; margin-bottom: 8px; }
+.enemy-resistance-scatter-x-title { grid-column: 2; text-align: center; }
+.enemy-resistance-scatter-y-title,
+.enemy-resistance-scatter-x-title { color: var(--text-soft); font-weight: 600; }
+
+.enemy-resistance-scatter-scale,
+.enemy-resistance-scatter-plot,
+.enemy-resistance-scatter-x-ticks { position: relative; }
+
+.enemy-resistance-scatter-scale span {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  color: var(--text-soft);
+}
+
+.enemy-resistance-scatter-plot svg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.enemy-resistance-scatter-point {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 6px));
+  white-space: nowrap;
+}
+
+.enemy-resistance-scatter-point::after {
+  position: absolute;
+  inset: calc(100% + 2px) auto auto 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--link);
+  transform: translateX(-50%);
+  content: '';
+}
+
+.enemy-resistance-scatter-x-ticks { grid-column: 2; color: var(--text-soft); }
+.enemy-resistance-scatter-x-ticks span { position: absolute; transform: translateX(-50%); }
+.enemy-resistance-threshold-scatter figcaption { padding: 0 16px 10px; text-align: right; color: var(--text-soft); }
+
+.enemy-resistance-threshold-scatter.is-image {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  border: 0;
+}
+
+.enemy-resistance-threshold-scatter.is-image .enemy-resistance-scatter-scroll { overflow: visible; }
+
+.enemy-resistance-threshold-scatter.is-image .enemy-resistance-scatter-layout {
+  box-sizing: border-box;
+  height: 100%;
+  min-width: 0;
+  grid-template-rows: auto minmax(0, 1fr) 1.4em;
+  padding: 8px 14px 0 0;
+}
+
+.enemy-resistance-threshold-scatter.is-image :is(.enemy-resistance-scatter-x-ticks, .enemy-resistance-scatter-scale, figcaption) {
+  color: #555;
+  font-size: 11px;
+}
+
+.enemy-resistance-threshold-scatter.is-image figcaption { padding: 4px 0 0; }
+
 @media (max-width: 480px) {
   .damage-two-table.enemy-defense-resistance-table th,
   .damage-two-table.enemy-defense-resistance-table td {
