@@ -8,7 +8,7 @@ import { calculateMechAccordCurrentScale } from './mechAccordDamage.ts'
 /** Resolve the shared trait first, then apply the skill's explicit replacements. */
 export function evaluateGuardTraits(operator: TraitStructureOperator, stage: GuardStage, conditions: GuardConditions,
   board: ReadonlyMap<string, number>, growth: { phaseIndex: number; operatorLevel: number },
-  droneModifiers: { maximumMultiplier?: number; extraUnits?: number } = {}) {
+  droneModifiers: { maximumMultiplier?: number; extraUnits?: number } = {}, skillActive = true) {
   const structure = buildTraitStructures([operator], growth)[0] ?? null
   const reviewed = GUARD_SKILL_SOURCES.find(source => source.id === operator.operatorId)
   const identityErrors = reviewed && (operator.profession !== 'WARRIOR' || operator.subProfessionId !== reviewed.subProfessionId)
@@ -23,7 +23,7 @@ export function evaluateGuardTraits(operator: TraitStructureOperator, stage: Gua
     ...(stage.maxTargets === undefined ? [] : ['MAX_TARGETS', 'ATTACK_TARGETING'] as const)]
   const context = {
     kind: stage.kind,
-    metrics: { ...conditions, 'source.skillActive': true, 'source.blockCount': blockCount,
+    metrics: { ...conditions, 'source.skillActive': skillActive, 'source.blockCount': blockCount,
       'attack.targetCount': conditions.actualAttackTargetCount ?? 1,
       'attack.distanceType': stage.attackTreatment ?? conditions.attackDistanceType ?? 'MELEE',
       'target.blockedBySource': conditions.targetBlockedBySelf,

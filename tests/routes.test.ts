@@ -489,6 +489,20 @@ test('DC3属性比較は専用ページと選択を保持するURLを持ち、�
   })
 })
 
+test('DC3属性比較の共有URLは通常攻撃とオペレーターを復元する', () => {
+  const base = '#/damage-3/attribute-comparison'
+  const selection = { operatorId: 'char_123_日本', attack: 'normal' } as const
+  const hash = createDamageCalculatorThreeAttributeHash(selection)
+  assert.equal(hash, `${base}?operatorId=char_123_%E6%97%A5%E6%9C%AC&attack=normal`)
+  assert.deepEqual(parseHashRoute(`${hash}&aggregationVersion=v12`), { view: 'damage-three-attribute-comparison', selection })
+
+  const withoutSelection = { view: 'damage-three-attribute-comparison' }
+  for (const invalid of [`${base}?attack=normal`, `${hash}&attack=normal`,
+    `${hash}&operatorId=other`, `${hash}&skillIndex=1&skillId=x&levelIndex=0`]) {
+    assert.deepEqual(parseHashRoute(invalid), withoutSelection)
+  }
+})
+
 test('DC3の不完全・不正・重複したクエリは選択なしの計算機へ戻す', () => {
   const selection = { operatorId: 'char_test', skillIndex: '1', skillId: 'skill_test', levelIndex: '0' }
   const invalidValues = {

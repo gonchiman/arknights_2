@@ -71,6 +71,49 @@ export const DAMAGE_CALCULATOR_THREE_BASE_ATTACKS: Readonly<Record<string, {
   char_293_thorns: { damageType: 'PHYSICAL', hitCount: 1, maxTargets: 1, rangedAttackEnabled: true },
 }
 
+export const DAMAGE_CALCULATOR_THREE_NORMAL_ATTACK_STAGE_ID = 'normal-attack'
+export const DAMAGE_CALCULATOR_THREE_NORMAL_ATTACK_LABEL = '通常攻撃'
+
+const LEGACY_NORMAL_ATTACK_OPERATORS = new Set([
+  'char_350_surtr', 'char_263_skadi', 'char_172_svrash', 'char_293_thorns',
+])
+
+/** Reviewed main hits outside skill activation; the combat trait supplies any extra hits or scaling. */
+const GUARD_NORMAL_ATTACK_TYPES: Readonly<Record<string, VirtualMainAttackType | undefined>> = {
+  char_208_melan: 'PHYSICAL',
+  char_1035_wisdel: 'PHYSICAL',
+  char_124_kroos: 'PHYSICAL',
+  char_211_adnach: 'PHYSICAL',
+  char_235_jesica: 'PHYSICAL',
+  char_133_mm: 'PHYSICAL',
+  char_103_angel: 'PHYSICAL',
+  char_210_stward: 'ARTS',
+  char_002_amiya: 'ARTS',
+  char_180_amgoat: 'ARTS',
+  char_141_nights: 'ARTS',
+}
+
+export function canEvaluateDamageCalculatorThreeNormalAttack(operatorId: string): boolean {
+  return LEGACY_NORMAL_ATTACK_OPERATORS.has(operatorId) || Object.hasOwn(GUARD_NORMAL_ATTACK_TYPES, operatorId)
+}
+
+function getNormalAttackStructure(anchor: SkillStructure): SkillStructure {
+  const id = DAMAGE_CALCULATOR_THREE_NORMAL_ATTACK_STAGE_ID
+  const label = DAMAGE_CALCULATOR_THREE_NORMAL_ATTACK_LABEL
+  const operatorId = anchor.basicInfo.operatorId
+  if (anchor.guardRecipe) return { ...anchor, guardRecipe: {
+    ...anchor.guardRecipe, inputs: [], conditionRequirements: undefined, notes: undefined,
+    stages: [{ id, label, kind: 'NORMAL', duration: 0,
+      ...(operatorId === 'char_1035_wisdel' ? { maxTargets: 1 } : {}),
+      actions: [{ label: operatorId === 'char_1035_wisdel' ? '初撃' : '攻撃', role: 'MAIN',
+        damageType: GUARD_NORMAL_ATTACK_TYPES[operatorId] ?? 'PHYSICAL', scale: 1, hits: 1 }] }],
+  } }
+  return { ...anchor, effectStructure: { stages: [{
+    id, label, applicability: null, duration: { type: 'UNTIL_EXIT' },
+    endCondition: { type: 'OPERATOR_EXIT' }, effects: [],
+  }] } }
+}
+
 export interface DamageCalculatorThreeConditions {
   guard?: GuardConditions
   actualAttackTargetCount?: number
@@ -298,20 +341,32 @@ export function getDamageCalculatorThreeInputs(
  * module combinations. Reviewed normal-attack traits supply damage type and Lord scaling.
  */
 export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInput): DamageCalculatorThreeOutput {
-  const guardStructure = findSkillStructure({ operatorId: input.skill.operatorId, skillId: input.skill.skillId,
+  return buildDamageCalculatorThree(input, false)
+}
+
+export function buildDamageCalculatorThreeNormalAttackOutput(input: DamageCalculatorThreeInput): DamageCalculatorThreeOutput {
+  return buildDamageCalculatorThree(input, true)
+}
+
+function buildDamageCalculatorThree(input: DamageCalculatorThreeInput, normalAttack: boolean): DamageCalculatorThreeOutput {
+  const reviewed = findSkillStructure({ operatorId: input.skill.operatorId, skillId: input.skill.skillId,
     skillIndex: input.skill.skillIndex, levelIndex: input.skillLevelIndex })
+  const structure = normalAttack && reviewed ? getNormalAttackStructure(reviewed) : reviewed
   const moduleRequested = input.module !== undefined
-  const moduleEffects = input.module && !guardStructure?.guardRecipe
+  const moduleEffects = input.module && !structure?.guardRecipe
     && input.skillLevelIndex === DAMAGE_CALCULATOR_THREE_SURTR_MODULE_SKILL_LEVEL_INDEX
     && input.operator.operatorId === input.skill.operatorId
     ? resolveDamageCalculatorThreeSurtrModule({ ...input.skill, operatorProfile: input.operator.operatorProfile },
       input.phaseIndex, input.operatorLevel, input.module)
     : null
-  const validationErrors = validateOperator(input)
+  const validationErrors = validateOperator(input, normalAttack)
+  if (normalAttack && !canEvaluateDamageCalculatorThreeNormalAttack(input.operator.operatorId)) {
+    validationErrors.push('このオペレーターの通常攻撃は未対応です。')
+  }
   if (moduleRequested && !moduleEffects) validationErrors.push('選択したスキル・育成条件・段階のMOD効果を確認できません。')
-  if (guardStructure?.guardRecipe) return guardStructure.guardRecipe.stages.some(stage => stage.actor)
-    ? buildSummonDamageOutput(input, guardStructure, validationErrors)
-    : buildGuardDamageOutput(input, guardStructure, validationErrors)
+  if (structure?.guardRecipe) return structure.guardRecipe.stages.some(stage => stage.actor)
+    ? buildSummonDamageOutput(input, structure, validationErrors)
+    : buildGuardDamageOutput(input, structure, validationErrors, undefined, !normalAttack)
   const enemyErrors = validateDamageCalculatorThreeEnemy(input.enemy)
   const enemy = enemyErrors.length ? undefined : input.enemy
   const reasons = [...validationErrors, ...enemyErrors]
@@ -337,12 +392,11 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
     skillIndex: input.skill.skillIndex, levelIndex: input.skillLevelIndex,
   }
   const allowed = DAMAGE_CALCULATOR_THREE_SELECTIONS.some(value => sameSelection(value, selection))
-  const structure = allowed ? findSkillStructure(selection) : null
   const base = DAMAGE_CALCULATOR_THREE_BASE_ATTACKS[input.operator.operatorId]
   if (input.skill.operatorId !== input.operator.operatorId) reasons.push('選択したオペレーターとスキルが一致していません。')
-  if (!structure) reasons.push('選択したスキル・スキルレベルの構造化データは、計算機３では未対応です。')
+  if (!allowed || !structure) reasons.push('選択したスキル・スキルレベルの構造化データは、計算機３では未対応です。')
   if (!base) reasons.push('通常攻撃の基礎定義が未対応です。')
-  if (!Number.isInteger(input.skillLevelIndex) || !input.skill.skillLevels[input.skillLevelIndex]) {
+  if (!normalAttack && (!Number.isInteger(input.skillLevelIndex) || !input.skill.skillLevels[input.skillLevelIndex])) {
     reasons.push('選択したスキルレベルのデータを取得できません。')
   }
 
@@ -384,7 +438,7 @@ export function buildDamageCalculatorThreeOutput(input: DamageCalculatorThreeInp
   const traitStructure = buildTraitStructures([input.operator], { phaseIndex: input.phaseIndex,
     operatorLevel: input.operatorLevel })[0] ?? null
   const traitEvaluation = evaluateTraitStructure(traitStructure, {
-    kind: attackKind, metrics: { 'attack.distanceType': attackDistanceType, 'source.skillActive': true,
+    kind: attackKind, metrics: { 'attack.distanceType': attackDistanceType, 'source.skillActive': !normalAttack,
       'attack.targetCount': context.actualAttackTargetCount },
     overriddenItems, disabledEffectIds: attack?.rangePenaltyEnabled === false ? ['ranged-attack-scale'] : [],
   })
@@ -950,11 +1004,11 @@ function isOutsideDamageScope(effect: SkillStructureEffect): boolean {
   return ['ATTACK_RANGE', 'DEF_BUFF_RATIO', 'MAX_HP_BUFF_RATIO', 'MAX_HP', 'HP', 'SP', 'HP_RESTORE_RATIO', 'HP_LOSS_RATE'].includes(effect.item)
 }
 
-function validateOperator(input: DamageCalculatorThreeInput): string[] {
+function validateOperator(input: DamageCalculatorThreeInput, normalAttack: boolean): string[] {
   const reasons: string[] = []
   const phase = input.operator.operatorProfile.phases[input.phaseIndex]
   if (!Number.isInteger(input.phaseIndex) || !phase) reasons.push('選択した昇進段階のデータを取得できません。')
-  if (Number.isInteger(input.phaseIndex) && phase) {
+  if (!normalAttack && Number.isInteger(input.phaseIndex) && phase) {
     if (input.phaseIndex < getComparisonMinimumPhaseIndex(input.skill)) {
       reasons.push('選択した昇進段階では、このスキルは解放されていません。')
     }

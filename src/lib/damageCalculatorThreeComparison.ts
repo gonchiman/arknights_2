@@ -2,7 +2,8 @@ import type { SkillRecord } from '../types/skill.ts'
 import type { HpDamageType } from './damageCalculator.ts'
 import type { ElementalBuildupResult } from './elementalBuildup.ts'
 import {
-  buildDamageCalculatorThreeOutput, getDamageCalculatorThreeStructures,
+  buildDamageCalculatorThreeNormalAttackOutput, buildDamageCalculatorThreeOutput, getDamageCalculatorThreeStructures,
+  DAMAGE_CALCULATOR_THREE_NORMAL_ATTACK_LABEL, DAMAGE_CALCULATOR_THREE_NORMAL_ATTACK_STAGE_ID,
   type DamageCalculatorThreeConditions, type DamageCalculatorThreeOutput, type DamageCalculatorThreeRow,
 } from './damageCalculatorThree.ts'
 import { getExpandedDefinition } from './expandedCombatRegistry.ts'
@@ -29,6 +30,7 @@ export interface DamageThreeComparisonCommon { defense: number; resistance: numb
 export type DamageThreeComparisonOverrides = Record<string, number | string | boolean | undefined>
 /** Optional per-evaluation settings; normal comparison callers keep their existing defaults. */
 export interface DamageThreeComparisonEvaluationOptions {
+  normalAttack?: boolean
   operatorLevel?: number
   trust?: number
   virtualMainAttackType?: 'PHYSICAL' | 'ARTS'
@@ -135,12 +137,16 @@ export function evaluateDamageThreeComparisonEntry(
   overrides: DamageThreeComparisonOverrides = {},
   options: DamageThreeComparisonEvaluationOptions = {},
 ): DamageThreeComparisonResult {
+  const resultEntry: DamageThreeComparisonEntry = options.normalAttack ? {
+    ...entry, stageId: DAMAGE_CALCULATOR_THREE_NORMAL_ATTACK_STAGE_ID,
+    stageLabel: DAMAGE_CALCULATOR_THREE_NORMAL_ATTACK_LABEL, kind: 'NORMAL',
+  } : entry
   const errors: string[] = []
   if (!Number.isSafeInteger(common.enemyCount) || common.enemyCount < 1 || common.enemyCount > 10000) {
     errors.push('敵数を1〜10000の整数で入力してください。')
   }
-  const values = { ...stageDefaults(entry), ...overrides }
-  const fixed = fixedStageValue(entry)
+  const values = options.normalAttack ? { ...overrides } : { ...stageDefaults(entry), ...overrides }
+  const fixed = options.normalAttack ? null : fixedStageValue(entry)
   if (fixed) values[fixed.key] = fixed.value
   let output: DamageCalculatorThreeOutput | null = null
   try {
@@ -150,8 +156,9 @@ export function evaluateDamageThreeComparisonEntry(
     const count = Math.min(common.enemyCount, initial.maxTargetCount ?? common.enemyCount)
     output = count === 1 ? initial : calculate(entry, common, values, count, options)
     errors.push(...output.unsupportedReasons)
-    if (output.activeStageLabel !== entry.stageLabel || output.attackKind !== entry.kind || !matchesEntryStage(entry, output, values)) {
-      errors.push(`段階「${entry.stageLabel}」の条件を満たしていません。`)
+    if (output.activeStageLabel !== resultEntry.stageLabel || output.attackKind !== resultEntry.kind
+      || (!options.normalAttack && !matchesEntryStage(entry, output, values))) {
+      errors.push(`段階「${resultEntry.stageLabel}」の条件を満たしていません。`)
     }
   } catch (error) { errors.push(error instanceof Error ? error.message : '計算条件を解決できません。') }
   const fields: ComparisonConditionField[] = output?.guard
@@ -175,8 +182,9 @@ export function evaluateDamageThreeComparisonEntry(
   const selectedStage = structure?.guardRecipe
     ? structure.guardRecipe.stages.find(stage => stage.id === entry.stageId)
     : structure?.effectStructure.stages.find(stage => stage.id === entry.stageId)
-  const raw = entry.skill.skillLevels[entry.levelIndex]
-  const periodTotal = calculateDamageThreePeriodTotal({ stage: selectedStage, attackKind: entry.kind,
+  const raw = options.normalAttack ? undefined : entry.skill.skillLevels[entry.levelIndex]
+  const periodTotal = calculateDamageThreePeriodTotal({ stage: options.normalAttack ? undefined : selectedStage,
+    attackKind: resultEntry.kind,
     durationContext: { sourceDuration: raw?.duration, blackboard: raw?.blackboard, conditions: output?.guard?.conditions },
     combinedDps, allTargetsCombinedDps: row?.allTargetsCombinedDps ?? null,
     damageOverTimeDps: row?.damageOverTimeDps,
@@ -185,7 +193,7 @@ export function evaluateDamageThreeComparisonEntry(
   })
   return {
     ...periodTotal,
-    entry, output, errors: [...new Set(errors)], fields,
+    entry: resultEntry, output, errors: [...new Set(errors)], fields,
     notes: [...new Set([...(output?.scopeNotes ?? []), ...(output?.talentEffects.filter(effect => effect.status === 'UNSUPPORTED').map(effect => effect.reason) ?? [])])],
     actualTargetCount: Number.isSafeInteger(output?.actualTargetCount) && output!.actualTargetCount > 0 ? output!.actualTargetCount : null,
     damageType: output?.damageType ?? (row ? 'MIXED' : null),
@@ -235,7 +243,8 @@ function calculate(entry: DamageThreeComparisonEntry, common: DamageThreeCompari
       actualAttackTargetCount: count, enemyResistance: common.resistance } }
     : { ...Object.fromEntries(Object.entries(values).filter(([key]) => !key.startsWith('guard.'))),
       actualAttackTargetCount: count, enemyResistance: common.resistance }
-  return buildDamageCalculatorThreeOutput({ operator: entry.skill, skill: entry.skill,
+  const buildOutput = options.normalAttack ? buildDamageCalculatorThreeNormalAttackOutput : buildDamageCalculatorThreeOutput
+  return buildOutput({ operator: entry.skill, skill: entry.skill,
     phaseIndex: entry.phaseIndex, operatorLevel: options.operatorLevel ?? entry.operatorLevel, trust: options.trust ?? 100,
     skillLevelIndex: entry.levelIndex, conditions, enemy: { defense: common.defense, resistance: common.resistance },
     ...(options.virtualMainAttackType === undefined ? {} : { virtualMainAttackType: options.virtualMainAttackType }),
