@@ -234,6 +234,7 @@ await saveComparisonChartImage({
 | 敵統計：累積分布 | [enemyWeightedEcdf.ts](../../src/lib/enemyWeightedEcdf.ts) |
 | 敵統計：分布比較 | [enemyDistributionComparison.ts](../../src/lib/enemyDistributionComparison.ts) |
 | 敵統計：防御力・術耐性の評価別分布 | [EnemyRatingComparisonImage.tsx](../../src/components/EnemyRatingComparisonImage.tsx) |
+| 防御力と術耐性の対応：術耐性別の散布図 | [EnemyDefenseResistancePage.tsx](../../src/components/EnemyDefenseResistancePage.tsx) |
 | 敵統計：ヒートマップ | [enemyJointImage.ts](../../src/lib/enemyJointImage.ts) |
 | 敵統計：術耐性の円グラフ・100%横棒 | [enemyThresholdComparison.ts](../../src/lib/enemyThresholdComparison.ts) |
 | DC3属性比較：評価別の範囲、出現順位の折れ線・集合棒 | [DamageCalculatorThreeAttributePage.tsx](../../src/components/DamageCalculatorThreeAttributePage.tsx) |
@@ -298,6 +299,8 @@ const baseFilename = createChartImageFilename(prefix, parts)
 「出現順位（%）」をオンにすると、対応の計算に使った出現割合を防御力の下に表示する。保存画像にも同じ行を含め、既定名に「出現順位（%）」を加える。
 
 スルトS2・特化3、昇進2 Lv.90、信頼100、敵1体で「防御力・術耐性無視を適用」をオンにする。「出現順位」、集計版v11、「全ステージ」、「グラフ」、「集合棒グラフ」を選び、縦横比16:9で保存すると[確認用PNG](examples/dc3-attribute-rank-bars-v11-16x9.png)を再生成できる。術耐性50の下に防御力350が並び、横軸が術耐性90・防御力4,000で終わることを確認する。
+
+[術耐性別の散布図](../../src/components/EnemyResistanceThresholdScatter.tsx)は、画面と同じ点・数値ラベルを共通フレームで保存する。下軸名をフレームに渡し、画像と既定名に集計版と集計範囲を入れる。[確認用PNG](examples/enemy-resistance-threshold-scatter-v12-main-16x9.png)は「防御力と術耐性の対応」で `v12`・「メインストーリー」・「術耐性別」・「散布図」を選び、「画像を保存」から16:9で保存したもの。術耐性0の点と術耐性100以上の「該当なし」、術耐性50と60の防御力300と1,200を確認できる。
 
 ## 変更時の確認
 
