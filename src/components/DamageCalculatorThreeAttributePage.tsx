@@ -12,6 +12,7 @@ import { getEnemyMainStoryScope } from '../lib/enemyAggregationData'
 import { buildEnemyDefenseResistanceBands } from '../lib/enemyDefenseResistance'
 import { getEnemyRatingRanges } from '../lib/enemyStatRatings'
 import type { GuardInput } from '../lib/guardCombatTypes'
+import type { DamageThreeAttributeRouteSelection } from '../lib/routes'
 import type { SkillStructureSelection } from '../lib/skillStructure'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
 import type { SkillRecord } from '../types/skill'
@@ -45,7 +46,7 @@ import './SkillStructurePage.css'
 interface Props {
   rows: SkillRecord[]
   loading: boolean
-  initialSelection?: SkillStructureSelection
+  initialSelection?: DamageThreeAttributeRouteSelection
 }
 
 type Metric = 'perAttack' | 'dps'
@@ -62,6 +63,8 @@ const RANK_SCOPES = [['all', '全ステージ'], ['main', 'メインストーリ
 const RESULT_VIEWS = [['table', '表'], ['chart', 'グラフ']] as const
 const RANK_CHART_TYPES = [['line', '折れ線グラフ'], ['bar', '集合棒グラフ']] as const
 const SKILL_TAB_ID = 'damage-three-attribute-skill'
+const NORMAL_ATTACK_TAB = 'normal-attack'
+const NORMAL_ATTACK_LABEL = '通常攻撃'
 
 function sameSkill(entry: DamageThreeAttributeEntry, selection: SkillStructureSelection) {
   const info = entry.structure.basicInfo
@@ -80,13 +83,18 @@ function uniqueSkills(entries: DamageThreeAttributeEntry[]) {
 
 export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelection }: Props) {
   const entries = useMemo(() => getDamageThreeAttributeEntries(rows), [rows])
-  const [selection, setSelection] = useState<SkillStructureSelection | null>(initialSelection ?? null)
+  const initialNormalOperatorId = initialSelection && 'attack' in initialSelection ? initialSelection.operatorId : null
+  const [normalAttack, setNormalAttack] = useState(initialNormalOperatorId !== null)
+  const [selection, setSelection] = useState<SkillStructureSelection | null>(
+    initialSelection && !('attack' in initialSelection) ? initialSelection : null,
+  )
   const [stageId, setStageId] = useState<string | null>(null)
   const [operatorLevel, setOperatorLevel] = useState<number | null>(null)
   const [trust, setTrust] = useState(100)
   const [enemyCount, setEnemyCount] = useState(1)
   const [applyPenetration, setApplyPenetration] = useState(true)
   const [overrides, setOverrides] = useState<DamageThreeComparisonOverrides>({})
+  const [normalOverrides, setNormalOverrides] = useState<DamageThreeComparisonOverrides>({})
   const [basis, setBasis] = useState<typeof COMPARISON_BASES[number][0]>('rank')
   const [rankScope, setRankScope] = useState<typeof RANK_SCOPES[number][0]>('main')
   const [resultView, setResultView] = useState<typeof RESULT_VIEWS[number][0]>('chart')
@@ -107,22 +115,33 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
       ? buildEnemyDefenseResistanceBands(data.rows, data.counts).resistanceThresholds
       : null
   }, [mainStory, mainStoryUnavailable, aggregation.data])
-  const requested = selection ?? (entries.find(entry => entry.capability.supported) ?? entries[0])?.structure.basicInfo
+  const candidates = initialNormalOperatorId && !selection
+    ? entries.filter(entry => entry.skill.operatorId === initialNormalOperatorId) : entries
+  const requested = selection ?? (candidates.find(entry => entry.capability.supported) ?? candidates[0])?.structure.basicInfo
   const stages = requested ? entries.filter(entry => sameSkill(entry, requested)) : []
   const selected = stages.find(entry => entry.stageId === stageId)
     ?? stages.find(entry => entry.capability.supported) ?? stages[0]
   const operator = selected?.skill
   const operatorSkills = uniqueSkills(entries.filter(entry => entry.skill.operatorId === requested?.operatorId))
+  const attackTabs = [[NORMAL_ATTACK_TAB, NORMAL_ATTACK_LABEL] as const, ...operatorSkills.map(entry => [
+    entry.skill.skillId, `S${entry.skill.skillIndex} ${entry.structure.basicInfo.skillName}`,
+  ] as const)]
+  const activeAttackTab = selected && (normalAttack ? NORMAL_ATTACK_TAB : selected.skill.skillId)
+  const attackLabel = normalAttack ? NORMAL_ATTACK_LABEL : operator ? `S${operator.skillIndex}` : ''
+  const subject = operator ? `${operator.operatorName} ${attackLabel}` : ''
+  const skillConditions = selected && !normalAttack ? [selected.structure.basicInfo.skillLevel] : []
+  const stageConditions = selected && !normalAttack && stages.length > 1 ? [selected.stageLabel] : []
   const level = operatorLevel ?? selected?.operatorLevel ?? 1
   const levelInvalid = !Number.isSafeInteger(level) || level < 1 || level > (selected?.operatorLevel ?? 1)
   const trustInvalid = !Number.isFinite(trust) || trust < 0 || trust > 100
   const comparison = useMemo(() => {
     if (!selected) return null
-    const input = { entry: selected, enemyCount, overrides, operatorLevel: level, trust, disablePenetration: !applyPenetration }
+    const input = { entry: selected, enemyCount, overrides: normalAttack ? normalOverrides : overrides,
+      operatorLevel: level, trust, disablePenetration: !applyPenetration, normalAttack }
     return basis === 'rank'
       ? { basis, result: evaluateDamageThreeAttributeRankTable(input, rankPairs ?? []) }
       : { basis, result: evaluateDamageThreeAttributeTables(input) }
-  }, [selected, enemyCount, overrides, level, trust, applyPenetration, basis, rankPairs])
+  }, [selected, enemyCount, overrides, normalOverrides, normalAttack, level, trust, applyPenetration, basis, rankPairs])
   const reference = comparison?.result.reference
   const output = reference?.output
   const errors = comparison?.result.errors ?? []
@@ -148,25 +167,23 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   function openImage() {
     if (!selected || !comparison || !reference || !canSaveImage) return
     const penetrationConditions = applyPenetration ? [] : ['防御力・術耐性無視オフ']
-    const conditions = [selected.structure.basicInfo.skillLevel, ...penetrationConditions, ...growthConditions, `敵${enemyCount}体`]
+    const battleConditions = [...penetrationConditions, ...growthConditions, `敵${enemyCount}体`]
     if (reference.actualTargetCount !== null && reference.actualTargetCount !== enemyCount) {
-      conditions.push(`攻撃対象${reference.actualTargetCount}体`)
+      battleConditions.push(`攻撃対象${reference.actualTargetCount}体`)
     }
-    if (stages.length > 1) conditions.push(selected.stageLabel)
+    battleConditions.push(...stageConditions)
     for (const field of conditionInputs) {
       const value = field.defaultValue
       const label = field.options?.find(option => option.value === value)?.label
         ?? (typeof value === 'boolean' ? value ? 'あり' : 'なし' : String(value))
-      conditions.push(`${field.label} ${label}`)
+      battleConditions.push(`${field.label} ${label}`)
     }
     const basisConditions = comparison.basis === 'rank'
       ? ['出現順位', `集計版 ${aggregation.selectedId}`, ...(rankScope === 'main' ? [RANK_SCOPES[1][1]] : [])]
       : ['ゲーム内評価']
     const notes = ['仮想比較', '主攻撃のみ', '1体あたり']
-    const subject = `${selected.skill.operatorName} S${selected.skill.skillIndex}`
     if (resultView === 'chart') {
-      const { skillLevel } = selected.structure.basicInfo
-      const chartConditions = [skillLevel, ...basisConditions, ...(stages.length > 1 ? [selected.stageLabel] : []),
+      const chartConditions = [...skillConditions, ...basisConditions, ...stageConditions,
         ...(enemyCount > 1 ? [`敵${enemyCount}体`] : []), ...penetrationConditions, '主攻撃（1体あたり）']
       const title = `${subject} 属性比較グラフ（${METRIC_LABELS.perAttack}）`
       if (comparison.basis === 'rank') {
@@ -178,9 +195,9 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
           title, axisTitle: '', conditions: chartConditions,
           additionalChartHeight: (showRatings ? ATTRIBUTE_RANK_RATING_EXTRA_HEIGHT : 0)
             + (showRankPercentage ? ATTRIBUTE_RANK_PERCENTAGE_ROW_HEIGHT : 0),
-          filenameParts: [skillLevel, ...basisConditions, chartLabel,
+          filenameParts: [...skillConditions, ...basisConditions, chartLabel,
             ...(showRankPercentage ? [ATTRIBUTE_RANK_PERCENTAGE_LABEL] : []),
-            ...conditions.slice(1), ...notes, ...(showRatings ? ['評価表示'] : [])],
+            ...battleConditions, ...notes, ...(showRatings ? ['評価表示'] : [])],
           legend: <DamageCalculatorThreeAttributeRankLegend chartType={chartType} forImage />,
           chart: ({ height }) => <DamageCalculatorThreeAttributeRankChart rows={rows} chartType={chartType}
             showRatings={showRatings} showRankPercentage={showRankPercentage} imageHeight={height} />,
@@ -189,7 +206,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
         const { physical, arts } = structuredClone(comparison.result)
         setImage({ view: 'chart', snapshot: {
           title, conditions: chartConditions,
-          filenameParts: [skillLevel, ...basisConditions, ...conditions.slice(1), ...notes],
+          filenameParts: [...skillConditions, ...basisConditions, ...battleConditions, ...notes],
           legend: <DamageCalculatorThreeAttributeRangeLegend forImage />,
           chart: ({ height }) => <DamageCalculatorThreeAttributeRangeChart physical={physical} arts={arts} imageHeight={height} />,
         } })
@@ -202,16 +219,16 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
           arts={structuredClone(comparison.result.arts)} metric="perAttack" forImage />
     setImage({ view: 'table', snapshot: {
       title: `${subject} 属性比較（${METRIC_LABELS.perAttack}）`,
-      conditions: [...conditions, ...basisConditions, ...notes],
-      filenameConditions: comparison.basis === 'rank' ? [...basisConditions, ...conditions, ...notes] : undefined,
+      conditions: [...skillConditions, ...battleConditions, ...basisConditions, ...notes],
+      filenameConditions: comparison.basis === 'rank' ? [...basisConditions, ...skillConditions, ...battleConditions, ...notes] : undefined,
       table,
     } })
   }
 
-  function chooseSkill(entry: DamageThreeAttributeEntry) {
+  function chooseSkill(entry: DamageThreeAttributeEntry, preserveLevel = false) {
     setSelection(entry.structure.basicInfo)
     setStageId(entry.stageId)
-    setOperatorLevel(entry.operatorLevel)
+    if (!preserveLevel) setOperatorLevel(entry.operatorLevel)
     setOverrides({})
     setSearchOpen(false)
   }
@@ -219,7 +236,10 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   function selectOperator(row: SkillRecord) {
     const candidates = entries.filter(entry => entry.skill.operatorId === row.operatorId)
     const next = candidates.find(entry => entry.capability.supported) ?? candidates[0]
-    if (next) chooseSkill(next)
+    if (next) {
+      chooseSkill(next)
+      setNormalOverrides({})
+    }
   }
 
   if (!rows.length) return <p className="calculator-loading" role="status">
@@ -234,7 +254,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
       <a className="button secondary" href="#/damage-3/coverage">実装範囲</a>
     </nav>
     <CollapsibleCalculatorPanel id="damage-three-attribute-conditions" number="01" title="スキル・共通条件"
-      summary={operator ? `${operator.operatorName} · S${operator.skillIndex}` : '未選択'} collapsedLabel="条件を表示">
+      summary={operator ? `${operator.operatorName} · ${attackLabel}` : '未選択'} collapsedLabel="条件を表示">
       <div className="damage-three-attribute-selection-row">
         <div className="calculator-field">
           <span>オペレーター</span>
@@ -250,13 +270,18 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
               {searchOpen ? '検索を閉じる' : '検索して変更'}</button>
           </div>
         </div>
-        {selected && <div className="damage-three-skills damage-three-attribute-skills">
-          <AnalysisTabs tabs={operatorSkills.map(entry => [entry.skill.skillId,
-            `S${entry.skill.skillIndex} ${entry.structure.basicInfo.skillName}`] as const)}
-            activeTab={selected.skill.skillId} idPrefix={SKILL_TAB_ID} label="スキル選択"
+        {activeAttackTab && <div className="damage-three-skills damage-three-attribute-skills">
+          <AnalysisTabs tabs={attackTabs}
+            activeTab={activeAttackTab} idPrefix={SKILL_TAB_ID} label="攻撃選択"
             onChange={id => {
+              if (id === NORMAL_ATTACK_TAB) {
+                setNormalAttack(true)
+                return
+              }
               const entry = operatorSkills.find(item => item.skill.skillId === id)
-              if (entry && id !== selected.skill.skillId) chooseSkill(entry)
+              if (!entry) return
+              setNormalAttack(false)
+              if (id !== selected?.skill.skillId) chooseSkill(entry, normalAttack)
             }} />
         </div>}
       </div>
@@ -266,7 +291,8 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
           className="damage-operator-search-results" selectedOperatorId={operator?.operatorId} />
       </div>}
       {!selected ? <div className="damage-two-unavailable" role="status">
-        {entries.length ? '指定されたスキル・レベルは属性比較の対象外です。' : '属性比較の対象スキルを取得できません。'}
+        {initialNormalOperatorId ? '指定されたオペレーターは属性比較の対象外です。'
+          : entries.length ? '指定されたスキル・レベルは属性比較の対象外です。' : '属性比較の対象スキルを取得できません。'}
       </div> : <>
         <div className="calculator-form-grid damage-three-attribute-condition-grid">
           <label className="calculator-field"><span>敵の数</span>
@@ -274,21 +300,21 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
               aria-invalid={!Number.isSafeInteger(enemyCount) || enemyCount < 1 || enemyCount > 10000 || undefined}
               onChange={event => setEnemyCount(event.target.valueAsNumber)} /></label>
         </div>
-        {operatorSkills.map(entry => <div key={entry.skill.skillId} id={`${SKILL_TAB_ID}-panel-${entry.skill.skillId}`}
-          role="tabpanel" aria-labelledby={`${SKILL_TAB_ID}-tab-${entry.skill.skillId}`}
-          hidden={selected.skill.skillId !== entry.skill.skillId} className="damage-three-skill-panel">
-          {selected.skill.skillId === entry.skill.skillId && <>
-            {(stages.length > 1 || conditionInputs.length > 0) && <div className="calculator-form-grid damage-three-attribute-condition-grid damage-three-attribute-skill-conditions">
-              {stages.length > 1 && <label className="calculator-field"><span>スキルの段階</span>
+        {attackTabs.map(([tab]) => <div key={tab} id={`${SKILL_TAB_ID}-panel-${tab}`}
+          role="tabpanel" aria-labelledby={`${SKILL_TAB_ID}-tab-${tab}`}
+          hidden={activeAttackTab !== tab} className="damage-three-skill-panel">
+          {activeAttackTab === tab && <>
+            {(stageConditions.length > 0 || conditionInputs.length > 0) && <div className="calculator-form-grid damage-three-attribute-condition-grid damage-three-attribute-skill-conditions">
+              {stageConditions.length > 0 && <label className="calculator-field"><span>スキルの段階</span>
                 <select aria-label="スキルの段階" value={selected.stageId} onChange={event => { setStageId(event.target.value); setOverrides({}) }}>
                   {stages.map(stage => <option key={stage.stageId} value={stage.stageId}>{stage.stageLabel}</option>)}
                 </select></label>}
               <GuardConditionFields inputs={conditionInputs} values={{}}
-                onChange={(key, value) => setOverrides(previous => ({ ...previous, [key]: value }))} />
+                onChange={(key, value) => (normalAttack ? setNormalOverrides : setOverrides)(previous => ({ ...previous, [key]: value }))} />
             </div>}
             <PersistentDetails persistenceId="damage-three-attribute-growth" defaultOpen={false} className="damage-three-attribute-growth">
-              <summary><strong>育成・スキル情報</strong><span className="damage-three-attribute-growth-summary">
-                昇進{selected.phaseIndex} · Lv.{formatNumber(level)} · 信頼{formatNumber(trust)} · {selected.structure.basicInfo.skillLevel}
+              <summary><strong>{normalAttack ? '育成' : '育成・スキル情報'}</strong><span className="damage-three-attribute-growth-summary">
+                {[`昇進${selected.phaseIndex}`, `Lv.${formatNumber(level)}`, `信頼${formatNumber(trust)}`, ...skillConditions].join(' · ')}
               </span>{(levelInvalid || trustInvalid) && <span className="damage-three-attribute-growth-error">入力エラー</span>}</summary>
               <div className="damage-three-attribute-growth-content">
                 <div className="calculator-form-grid damage-three-attribute-growth-grid">
@@ -301,7 +327,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
                       value={Number.isFinite(trust) ? trust : ''} aria-invalid={trustInvalid || undefined}
                       onChange={event => setTrust(event.target.valueAsNumber)} /></label>
                 </div>
-                <SkillInformationTable information={buildDamageCalculatorThreeSkillInformation(selected.structure, selected.skill, output ?? null)} />
+                {!normalAttack && <SkillInformationTable information={buildDamageCalculatorThreeSkillInformation(selected.structure, selected.skill, output ?? null)} />}
               </div>
             </PersistentDetails>
           </>}
@@ -313,7 +339,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
       titleBadge="仮想比較 · 主攻撃のみ" summary={`${METRIC_LABELS.perAttack} · 1体あたり`} collapsedLabel="比較を表示"
       className="damage-three-attribute-results">
       <div className="damage-three-attribute-context">
-        <strong>{selected.skill.operatorName} S{selected.skill.skillIndex} · {selected.structure.basicInfo.skillLevel}</strong>
+        <strong>{[subject, ...skillConditions].join(' · ')}</strong>
         <span>{growthConditions.join(' · ')}</span>
       </div>
       <div className="damage-three-attribute-result-controls">
@@ -370,8 +396,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
       </>}
     </CollapsibleCalculatorPanel>}
     {mainAttack && selected && <MainAttackBreakdown details={mainAttack.details} error={mainAttack.error}
-      context={[`${selected.skill.operatorName} S${selected.skill.skillIndex}`, selected.structure.basicInfo.skillLevel,
-        ...(stages.length > 1 ? [selected.stageLabel] : []), `敵${enemyCount}体`, '元の属性'].join(' · ')}
+      context={[subject, ...skillConditions, ...stageConditions, `敵${enemyCount}体`, '元の属性'].join(' · ')}
       onClose={() => setMainAttack(null)} />}
     {image?.view === 'table' && <ComparisonTableImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}
     {image?.view === 'chart' && <DamageCalculatorThreeAttributeChartImageDialog snapshot={image.snapshot} onClose={() => setImage(null)} />}

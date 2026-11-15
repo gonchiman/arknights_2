@@ -38,6 +38,7 @@ export interface DamageThreeAttributeTablesInput {
   operatorLevel?: number
   trust?: number
   disablePenetration?: boolean
+  normalAttack?: boolean
 }
 
 export interface DamageThreeAttributeTables {
@@ -196,19 +197,22 @@ function createAttributeEvaluator(input: DamageThreeAttributeTablesInput, table:
     ...(input.operatorLevel === undefined ? {} : { operatorLevel: input.operatorLevel }),
     ...(input.trust === undefined ? {} : { trust: input.trust }),
     ...(input.disablePenetration ? { disablePenetration: true } : {}),
+    ...(input.normalAttack ? { normalAttack: true } : {}),
   }
   const reference = evaluateDamageThreeComparisonEntry(entry, { defense: 0, resistance: 0, enemyCount }, overrides, settings)
   const errors = [...reference.errors]
-  const capability = getDamageCalculatorThreeVirtualAttackCapability(entry.structure, entry.stageId)
-  if (!capability.supported) errors.push(capability.reason ?? 'この段階の属性変更は未対応です。')
-  const stage = entry.structure.guardRecipe?.stages.find(stage => stage.id === entry.stageId)
-  if (stage?.actions.some(action => action.role === 'MAIN' && action.basis === 'TARGET_DEFENSE')) {
-    errors.push(table === 'rating' ? '敵の防御力を基準とする主攻撃は、評価別の範囲計算に対応していません。'
-      : '敵の防御力を基準とする主攻撃は、出現順位別の属性比較に対応していません。')
-  }
-  const mainActions = stage?.actions.filter(action => action.role === 'MAIN') ?? []
-  if (mainActions.length > 0 && mainActions.every(action => action.timing === 'PER_SECOND')) {
-    errors.push('継続ダメージのみの段階は、1回の攻撃ダメージを表示できません。')
+  if (!input.normalAttack) {
+    const capability = getDamageCalculatorThreeVirtualAttackCapability(entry.structure, entry.stageId)
+    if (!capability.supported) errors.push(capability.reason ?? 'この段階の属性変更は未対応です。')
+    const stage = entry.structure.guardRecipe?.stages.find(stage => stage.id === entry.stageId)
+    const mainActions = stage?.actions.filter(action => action.role === 'MAIN') ?? []
+    if (mainActions.some(action => action.basis === 'TARGET_DEFENSE')) {
+      errors.push(table === 'rating' ? '敵の防御力を基準とする主攻撃は、評価別の範囲計算に対応していません。'
+        : '敵の防御力を基準とする主攻撃は、出現順位別の属性比較に対応していません。')
+    }
+    if (mainActions.length > 0 && mainActions.every(action => action.timing === 'PER_SECOND')) {
+      errors.push('継続ダメージのみの段階は、1回の攻撃ダメージを表示できません。')
+    }
   }
   // Do not let runtime nulls silently select the comparison evaluator's default growth settings.
   if (input.operatorLevel !== undefined && typeof input.operatorLevel !== 'number') errors.push('オペレーターレベルが有効な数値ではありません。')

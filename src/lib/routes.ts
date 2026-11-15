@@ -27,7 +27,7 @@ export type AppRoute =
   | { view: 'damage-three'; selection?: SkillRouteSelection }
   | { view: 'damage-three-coverage' }
   | { view: 'damage-three-comparison' }
-  | { view: 'damage-three-attribute-comparison'; selection?: SkillRouteSelection }
+  | { view: 'damage-three-attribute-comparison'; selection?: DamageThreeAttributeRouteSelection }
   | { view: 'physical-arts-comparison' }
   | { view: 'damage-verification' }
   | { view: 'goldenglow-home' }
@@ -86,6 +86,8 @@ export interface SkillRouteSelection {
   levelIndex: number
 }
 
+export type DamageThreeAttributeRouteSelection = SkillRouteSelection | { operatorId: string; attack: 'normal' }
+
 export type SkillJsonRouteSelection = SkillRouteSelection
 export type SkillEffectsRouteSelection = SkillRouteSelection
 
@@ -119,8 +121,14 @@ export function createDamageCalculatorThreeHash(selection?: SkillRouteSelection)
   return selection ? createSkillSelectionHash(DAMAGE_THREE_ROUTE, selection) : DAMAGE_THREE_ROUTE
 }
 
-export function createDamageCalculatorThreeAttributeHash(selection?: SkillRouteSelection): string {
-  return selection ? createSkillSelectionHash(DAMAGE_THREE_ATTRIBUTE_ROUTE, selection) : DAMAGE_THREE_ATTRIBUTE_ROUTE
+export function createDamageCalculatorThreeAttributeHash(selection?: DamageThreeAttributeRouteSelection): string {
+  if (!selection) return DAMAGE_THREE_ATTRIBUTE_ROUTE
+  if ('attack' in selection) {
+    assertRouteId(selection.operatorId, 'operatorId')
+    const query = new URLSearchParams({ operatorId: selection.operatorId, attack: selection.attack })
+    return `${DAMAGE_THREE_ATTRIBUTE_ROUTE}?${query.toString()}`
+  }
+  return createSkillSelectionHash(DAMAGE_THREE_ATTRIBUTE_ROUTE, selection)
 }
 
 export function createTalentStructureHash(selection: TalentRouteSelection): string {
@@ -298,6 +306,13 @@ function matchesEnemyAggregationRoute(hash: string, path: string): boolean {
 function parseSkillSelectionRoute(view: 'skill-json' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'damage-three' | 'damage-three-attribute-comparison', query: string): AppRoute {
   const params = new URLSearchParams(query)
   const operatorId = readRouteId(params, 'operatorId')
+  if (view === 'damage-three-attribute-comparison' && params.has('attack')) {
+    const attacks = params.getAll('attack')
+    const hasSkillSelection = ['skillId', 'skillIndex', 'levelIndex'].some(key => params.has(key))
+    return operatorId !== null && attacks.length === 1 && attacks[0] === 'normal' && !hasSkillSelection
+      ? { view, selection: { operatorId, attack: 'normal' } }
+      : { view }
+  }
   const skillId = readRouteId(params, 'skillId')
   const skillIndex = readInteger(params, 'skillIndex', 1)
   const levelIndex = readInteger(params, 'levelIndex', 0)

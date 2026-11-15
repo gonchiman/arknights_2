@@ -326,6 +326,47 @@ test('旧形式のスルトS2も主攻撃の内訳に1ヒットの軽減前の�
   close(details[0].attack, result.reference.perAttack!)
 })
 
+test('ウィシャデルの通常攻撃はスキル補正を外し、初撃と余震を別々に軽減する', () => {
+  const entry = input('char_1035_wisdel', 3)
+  const pairs = [
+    { resistance: 0, defense: 0, percentage: 100 },
+    { resistance: 60, defense: 1200, percentage: 10 },
+  ]
+  const normal = evaluateDamageThreeAttributeRankTable({ ...entry, normalAttack: true }, pairs)
+  assert.deepEqual(normal.errors, [])
+  const hits = getDamageThreeMainAttackDetails(normal.reference)
+  assert.deepEqual(hits.map(hit => hit.count), [1, 1])
+  assert.match(hits[1].label, /余震/)
+  close(hits[0].attack, 893.55)
+  close(hits[1].attack, 446.775)
+  close(normal.rows[0].physical, 1340.325)
+  close(normal.rows[0].arts, 1340.325)
+  close(normal.rows[1].physical, 67.01625)
+  close(normal.rows[1].arts, 536.13)
+  const skill = evaluateDamageThreeAttributeRankTable(entry, pairs)
+  close(skill.rows[0].physical, 8254.125)
+})
+
+test('スルトの通常攻撃は術耐性無視を選択設定に応じて適用する', () => {
+  const value = { ...input('char_350_surtr', 3), normalAttack: true }
+  const pairs = [
+    { resistance: 0, defense: 0, percentage: 100 },
+    { resistance: 40, defense: 200, percentage: 45 },
+  ]
+  const on = evaluateDamageThreeAttributeRankTable(value, pairs)
+  const off = evaluateDamageThreeAttributeRankTable({ ...value, disablePenetration: true }, pairs)
+  assert.deepEqual(on.errors, [])
+  assert.deepEqual(off.errors, [])
+  const baseAttack = on.reference.output!.stats!.attack
+  close(on.rows[0].arts, baseAttack)
+  close(on.rows[1].arts, baseAttack * 0.8)
+  close(off.rows[1].arts, baseAttack * 0.6)
+  close(on.rows[1].physical, baseAttack - 200)
+  assert.equal(on.rows[1].physical, off.rows[1].physical)
+  const rating = valid(value)
+  close(rating.arts[0].perAttack!.max, baseAttack)
+})
+
 test('guard・旧形式の継続ダメージを除き、通常攻撃と反撃の主攻撃を維持する', () => {
   for (const value of [input('char_355_ethan', 1), input('char_293_thorns', 3), input('char_293_thorns', 2)]) {
     const output = valid(value)

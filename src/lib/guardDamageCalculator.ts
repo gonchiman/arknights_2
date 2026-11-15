@@ -33,7 +33,7 @@ export interface GuardActorContext {
 
 /** Execute the same reviewed recipe used by the structure page. No description parsing. */
 export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, structure: SkillStructure,
-  initialErrors: string[] = [], actor?: GuardActorContext): DamageCalculatorThreeOutput {
+  initialErrors: string[] = [], actor?: GuardActorContext, skillActive = true): DamageCalculatorThreeOutput {
   const recipe = structure.guardRecipe!
   const disablePenetration = input.disablePenetration === true
   const criticalChance = (modifiers: GuardPassiveModifiers) =>
@@ -64,10 +64,12 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
       && !guardConditionMatches(requirement.condition, conditions)) reasons.push(requirement.reason)
   } catch (error) { reasons.push(message(error)) }
   if (input.operator.operatorId !== recipe.operatorId || input.skill.operatorId !== recipe.operatorId
-    || input.skill.skillId !== structure.basicInfo.skillId || input.skillLevelIndex !== structure.basicInfo.levelIndex) reasons.push('選択したオペレーター・スキル・特化段階が一致していません。')
-  const raw = input.skill.skillLevels[structure.basicInfo.levelIndex]
-  if (!raw) reasons.push('選択したスキルレベルのデータがありません。')
-  if (expanded) {
+    || (skillActive && (input.skill.skillId !== structure.basicInfo.skillId || input.skillLevelIndex !== structure.basicInfo.levelIndex))) {
+    reasons.push(skillActive ? '選択したオペレーター・スキル・特化段階が一致していません。' : '選択したオペレーターが一致していません。')
+  }
+  const raw = skillActive ? input.skill.skillLevels[structure.basicInfo.levelIndex] : undefined
+  if (skillActive && !raw) reasons.push('選択したスキルレベルのデータがありません。')
+  if (skillActive && expanded) {
     const reviewed = getExpandedSource(recipe.operatorId)?.skills.find(skill => skill.skillId === input.skill.skillId && skill.skillIndex === recipe.skillIndex)?.raw
     if (!sameReviewedSkill(raw, reviewed)
       || input.phaseIndex !== expanded.phaseIndex) reasons.push('確認済みのスキル説明文・数値・昇進段階と一致しません。')
@@ -93,8 +95,9 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
   } catch (error) { reasons.push(message(error)) }
   const kind = stage?.kind ?? 'NORMAL'
   const evaluatePassives = actor?.evaluatePassives ?? evaluateGuardPassives
-  const nativePassive = evaluatePassives(input.operator, conditions, { kind, skillIndex: recipe.skillIndex, stageId: stage?.id ?? '', stage,
-    phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel })
+  const passiveContext = { kind, skillIndex: skillActive ? recipe.skillIndex : 0, skillActive, stageId: stage?.id ?? '', stage,
+    phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel }
+  const nativePassive = evaluatePassives(input.operator, conditions, passiveContext)
   let passive = nativePassive
   reasons.push(...passive.blockers, ...(stage?.unresolved ?? []))
   for (const [label, fraction] of Object.entries({ 発動確率: passive.critChance,
@@ -117,7 +120,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
     if (stage) {
       const traits = (actor?.evaluateTraits ?? evaluateGuardTraits)(input.operator, stage, conditions, board,
         { phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel },
-        { maximumMultiplier: nativePassive.droneMaximumMultiplier, extraUnits: nativePassive.extraDrones })
+        { maximumMultiplier: nativePassive.droneMaximumMultiplier, extraUnits: nativePassive.extraDrones }, skillActive)
       traitEvaluation = traits.evaluation
       splashActions = traits.splashActions
       reasons.push(...traitEvaluation.blockers)
@@ -132,8 +135,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
         if (!capability.supported) throw new RangeError(capability.reason!)
         // Same-type selection is exactly the native evaluation, including all existing passive semantics.
         if (virtualType !== mainAttackType) {
-          const virtualPassive = evaluatePassives(input.operator, conditions, { kind, skillIndex: recipe.skillIndex,
-            stageId: stage.id, stage, phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel,
+          const virtualPassive = evaluatePassives(input.operator, conditions, { ...passiveContext,
             virtualMainAttackType: virtualType })
           reasons.push(...virtualPassive.blockers)
           passive = virtualPassive

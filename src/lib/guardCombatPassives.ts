@@ -8,7 +8,7 @@ import type { GuardCalculationIssue, GuardConditions, GuardInput, GuardPassiveMo
 
 type Context = { kind: 'NORMAL' | 'NEXT_ATTACK' | 'SKILL_ACTION'; skillIndex: number; stageId: string;
   stage?: Pick<GuardStage, 'actions' | 'includesSkillActivation'>; phaseIndex?: number; operatorLevel?: number;
-  virtualMainAttackType?: 'PHYSICAL' | 'ARTS' }
+  skillActive?: boolean; virtualMainAttackType?: 'PHYSICAL' | 'ARTS' }
 
 export interface GuardPassiveCalculationConstraint extends GuardCalculationIssue {
   readonly talentIndex: number
@@ -188,7 +188,7 @@ function evaluateGuardPassiveDefinitions(operator: SkillRecord, conditions: Guar
     ...values, skillIndex: context.skillIndex, actionKind: context.kind, includesSkillActivation: context.stage?.includesSkillActivation ?? false,
     'recipient.hpRatio': typeof values.selfHpPercent === 'number' ? values.selfHpPercent / 100 : undefined,
     'recipient.inSourceAttackRange': values.selfInTalentRange,
-    'source.skillActive': true,
+    'source.skillActive': context.skillActive ?? true,
     'source.profession': operator.profession,
     'virtual.attackTypeComparison': context.virtualMainAttackType !== undefined,
     'attack.damageType': context.virtualMainAttackType ?? (context.stage?.actions.length
@@ -201,7 +201,7 @@ function evaluateGuardPassiveDefinitions(operator: SkillRecord, conditions: Guar
     metrics[`source.faction.${id}`] = affiliationIds?.includes(id) ? true
       : affiliationIds?.every(value => value === null || (typeof value === 'string' && value.trim().length > 0)) ? false : undefined
   }
-  for (const entry of skill.blackboard ?? []) {
+  for (const entry of context.skillActive === false ? [] : skill.blackboard ?? []) {
     if (entry.key && typeof entry.value === 'number' && Number.isFinite(entry.value)) {
       metrics[`skill.${entry.key}`] = entry.value
       metrics[`skill.${entry.key.toLowerCase()}`] = entry.value

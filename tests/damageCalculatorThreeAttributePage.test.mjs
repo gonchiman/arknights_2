@@ -162,6 +162,23 @@ test('selecting an arts operator keeps that exact skill and both attribute colum
   assert.doesNotMatch(markup, /メランサ/)
 })
 
+test('通常攻撃がスキルの前に並び、通常攻撃のURLから結果パネルを開ける', () => {
+  const entry = entries.find(item => item.skill.operatorId === 'char_1035_wisdel' && item.skill.skillIndex === 3)
+  assert.ok(entry?.capability.supported)
+  const skill = render(entry.structure.basicInfo)
+  const selectedTab = markup => /<button(?=[^>]*role="tab")(?=[^>]*aria-selected="true")[^>]*>([^<]+)/.exec(markup)?.[1]
+  assert.match(selectedTab(skill), /^S3/)
+  assert.match(skill, /<button(?=[^>]*role="tab")[^>]*>通常攻撃<\/button>.*<button(?=[^>]*role="tab")[^>]*>S1/s)
+
+  const normal = render({ operatorId: entry.skill.operatorId, attack: 'normal' })
+  assert.equal(selectedTab(normal), '通常攻撃')
+  assert.match(normal, /ウィシャデル/)
+  assert.match(normal, /aria-label="オペレーターレベル"/)
+  assert.match(normal, /aria-label="信頼度（%）"/)
+  assert.doesNotMatch(normal, /aria-label="スキルの段階"|aria-label="スキル情報"/)
+  assert.match(normal, /<button(?=[^>]*aria-haspopup="dialog")(?![^>]*disabled)[^>]*>主攻撃の内訳<\/button>/)
+})
+
 test('legacy Surtr and one-shot skills both show damage per attack', () => {
   const surtr = entries.find(item => item.skill.operatorId === 'char_350_surtr' && item.skill.skillIndex === 3)
   assert.ok(surtr?.capability.supported)
