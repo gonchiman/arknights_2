@@ -27,19 +27,22 @@ async function waitForLayout(host: HTMLElement, surface: HTMLElement): Promise<v
   throw new Error('グラフのサイズ調整が完了しませんでした。')
 }
 
-export async function saveComparisonChartImage({
-  chart,
-  filename,
-  width = 1120,
-  output,
-  writeBlob,
-}: {
+interface ComparisonChartImageSource {
   chart: ReactNode
-  filename: string
   width?: number
   output?: ChartImageRasterOutput
-  writeBlob?: (blob: Blob) => Promise<void>
-}): Promise<void> {
+}
+
+export async function withComparisonChartImageSurface<T>({
+  chart,
+  width = 1120,
+  output,
+}: ComparisonChartImageSource, capture: (surface: HTMLElement, size: {
+  width: number
+  height: number
+  canvasWidth: number
+  canvasHeight: number
+}) => Promise<T>): Promise<T> {
   const host = document.createElement('div')
   host.className = 'comparison-chart-image-host'
   host.inert = true
@@ -47,9 +50,6 @@ export async function saveComparisonChartImage({
   host.style.width = `${Number.isFinite(width) ? Math.max(320, Math.ceil(width)) : 1120}px`
   document.body.appendChild(host)
   let root: Root | null = null
-  let imageUrl: string | null = null
-  let downloadStarted = false
-
   try {
     root = createRoot(host)
     const exportRoot = root
@@ -76,19 +76,38 @@ export async function saveComparisonChartImage({
         element.style.setProperty(property, appearance.getPropertyValue(property))
       }
     }
-    const { toBlob } = await import('html-to-image')
-    const blob = await toBlob(surface, {
+    return await capture(surface, {
       width: imageWidth,
       height: imageHeight,
       canvasWidth: raster.width,
       canvasHeight: raster.height,
-      pixelRatio: 1,
-      backgroundColor: '#fff',
-      skipFonts: true,
     })
-    if (!blob) throw new Error('グラフのPNG画像を作成できませんでした。')
+  } finally {
+    try {
+      root?.unmount()
+    } finally {
+      host.remove()
+    }
+  }
+}
 
-    imageUrl = URL.createObjectURL(blob)
+export async function saveComparisonChartImage({
+  filename,
+  writeBlob,
+  ...source
+}: ComparisonChartImageSource & {
+  filename: string
+  writeBlob?: (blob: Blob) => Promise<void>
+}): Promise<void> {
+  const blob = await withComparisonChartImageSurface(source, async (surface, size) => {
+    const { toBlob } = await import('html-to-image')
+    return toBlob(surface, { ...size, pixelRatio: 1, backgroundColor: '#fff', skipFonts: true })
+  })
+  if (!blob) throw new Error('グラフのPNG画像を作成できませんでした。')
+
+  const imageUrl = URL.createObjectURL(blob)
+  let downloadStarted = false
+  try {
     const image = new Image()
     image.src = imageUrl
     await image.decode()
@@ -113,15 +132,7 @@ export async function saveComparisonChartImage({
       anchor.remove()
     }
   } finally {
-    try {
-      root?.unmount()
-    } finally {
-      host.remove()
-      if (imageUrl) {
-        const url = imageUrl
-        if (downloadStarted) window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
-        else URL.revokeObjectURL(url)
-      }
-    }
+    if (downloadStarted) window.setTimeout(() => URL.revokeObjectURL(imageUrl), 60_000)
+    else URL.revokeObjectURL(imageUrl)
   }
 }

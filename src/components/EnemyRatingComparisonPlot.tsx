@@ -200,20 +200,24 @@ function MirroredPlot({
   const ticks = trackWidth < 90 ? [0, axis.maximum] : axis.ticks
   return <>
     {rows.map(({ rank }, index) => selection.has(rank) && <rect key={rank} className="enemy-rating-comparison-highlight" x="0"
-      y={top + step * index} width={width} height={step} />)}
-    <text className="enemy-rating-comparison-label" x={middle} y="26" textAnchor="middle" {...INK}>評価</text>
+      y={top + step * index} width={width} height={step} data-rating-video-highlight={imageMode ? index : undefined} />)}
+    <text className="enemy-rating-comparison-label" x={middle} y="26" textAnchor="middle" {...INK}
+      data-rating-video-heading={imageMode ? 'rank' : undefined}>評価</text>
     {sides.map(({ key, label, direction, origin, edge, labelX }) => {
       const center = (origin + edge) / 2
       return <g key={key}>
-        <text className="enemy-rating-comparison-label" x={labelX} y="26" textAnchor="middle" {...INK}>{columnTitle}</text>
+        <text className="enemy-rating-comparison-label" x={labelX} y="26" textAnchor="middle" {...INK}
+          data-rating-video-heading={imageMode ? 'value' : undefined}>{columnTitle}</text>
         <text className={`enemy-rating-comparison-series-label ${seriesClass(key)}`} x={center}
-          y="17" textAnchor="middle" {...INK}>{label}</text>
-        {ticks.map((tick) => {
+          y="17" textAnchor="middle" {...INK} data-rating-video-heading={imageMode ? 'series' : undefined}>{label}</text>
+        {ticks.map((tick, index) => {
           const x = origin + direction * trackWidth * tick / axis.maximum
+          const revealOrder = imageMode ? index / Math.max(ticks.length - 1, 1) : undefined
           return <g key={tick}>
             <line className={tick === 0 ? 'enemy-rating-comparison-baseline' : 'enemy-rating-comparison-gridline'}
-              x1={x} x2={x} y1={top} y2={bottom} />
-            <text className="enemy-rating-comparison-tick" x={x} y="46" textAnchor="middle">{tick}</text>
+              x1={x} x2={x} y1={top} y2={bottom} data-rating-video-guide={revealOrder} />
+            <text className="enemy-rating-comparison-tick" x={x} y="46" textAnchor="middle"
+              data-rating-video-tick={revealOrder}>{tick}</text>
           </g>
         })}
         {rows.map((row, index) => {
@@ -223,15 +227,18 @@ function MirroredPlot({
           const barHeight = step * 0.58
           return <g key={row.rank}>
             {extent > 0 && <rect className={seriesClass(key)} x={direction === -1 ? origin - extent : origin}
-              y={y - barHeight / 2} width={extent} height={barHeight} fill="currentColor" {...INK} />}
+              y={y - barHeight / 2} width={extent} height={barHeight} fill="currentColor" {...INK}
+              data-rating-video-bar={imageMode ? direction : undefined} />}
             <text className={`enemy-rating-comparison-value${selection.has(row.rank) ? ' is-selected' : ''}`}
-              x={labelX} y={y + 4} textAnchor="middle" {...INK}>{stripValue(showRankShare ? share : cumulativeShare)}</text>
+              x={labelX} y={y + 4} textAnchor="middle" {...INK}
+              data-rating-video-value={imageMode ? index : undefined}>{stripValue(showRankShare ? share : cumulativeShare)}</text>
           </g>
         })}
       </g>
     })}
     {rows.map(({ rank }, index) => <text className={`enemy-rating-comparison-tick${selection.has(rank) ? ' is-selected' : ''}`}
-      key={rank} x={middle} y={top + (index + 0.5) * step + 4} textAnchor="middle">{rank}</text>)}
+      key={rank} x={middle} y={top + (index + 0.5) * step + 4} textAnchor="middle"
+      data-rating-video-rank={imageMode ? index : undefined}>{rank}</text>)}
     {!imageMode && <text className="enemy-rating-comparison-axis" x={middle} y={height - 7}
       textAnchor="middle">{BAR_AXIS_TITLE}</text>}
   </>

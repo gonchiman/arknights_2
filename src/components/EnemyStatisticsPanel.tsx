@@ -285,7 +285,9 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const ratingComparison = useMemo(() => isRatingComparison && !countUnavailable
     ? buildEnemyRatingComparison(rows, activeCountMode, countData.data) : null,
   [isRatingComparison, countUnavailable, rows, activeCountMode, countData.data])
-  const [ratingComparisonImage, setRatingComparisonImage] = useState<EnemyRatingComparisonImageSnapshot | null>(null)
+  const [ratingComparisonImage, setRatingComparisonImage] = useState<
+    (EnemyRatingComparisonImageSnapshot & { media: 'image' | 'video' }) | null
+  >(null)
   const [imageData, setImageData] = useState<EnemyChartImageData | null>(null)
   const [imageAspect, setImageAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [savingImage, setSavingImage] = useState(false)
@@ -472,11 +474,14 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     onHistogramChange(currentHistogramSnapshot)
   }, [currentHistogramSnapshot, onHistogramChange])
 
-  const openImageSaveDialog = async () => {
+  const canOpenVideoSaveDialog = isRatingComparison && ratingComparisonLayout === 'MIRRORED'
+  const openImageSaveDialog = async (media: 'image' | 'video' = 'image') => {
     if (!canSaveImage || imageSaveInProgress.current || selectedChart === 'COMPARISON') return
+    if (media === 'video' && !canOpenVideoSaveDialog) return
     setImageFeedback(null)
     if (selectedChart === 'RATING_COMPARISON') {
       if (ratingComparison) setRatingComparisonImage({
+        media,
         data: ratingComparison, layout: ratingComparisonLayout, selectedRanks: ratingComparisonRanks, sideValue: ratingSideValue,
         scopeLabel, countMode: activeCountMode, countLabel: countOption.label, aggregationVersion,
         coverage: activeCountMode === 'TYPES' ? null : countData.data?.summary,
@@ -630,6 +635,9 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
       {!histogramEditor && <button type="button" className="button secondary enemy-chart-save-button"
         aria-haspopup="dialog" disabled={!canSaveImage || savingImage || preparingImage} aria-busy={savingImage || preparingImage}
         onClick={() => void openImageSaveDialog()}>{savingImage ? '画像を保存中…' : preparingImage ? '画像を準備中…' : '画像を保存'}</button>}
+      {!histogramEditor && canOpenVideoSaveDialog && <button type="button" className="button secondary enemy-chart-save-button"
+        aria-haspopup="dialog" disabled={!canSaveImage || savingImage || preparingImage} style={{ marginLeft: 0 }}
+        onClick={() => void openImageSaveDialog('video')}>動画を保存</button>}
     </div>}
     <DistributionCountControls mode={activeCountMode} onChange={setCountMode} counts={countData.data}
       showMapCoverageLink={!histogramEditor && !aggregationScopeLabel} spawnCountsAvailable={spawnCountsAvailable} />

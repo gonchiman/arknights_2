@@ -177,6 +177,44 @@ test('左右の横棒は外側の数値を階級の割合に切り替え、保�
   }
 })
 
+test('左右の横棒の動画は集計条件・階級割合・強調を引き継ぎ、対応する拡張子で16:7に保存する', () => {
+  const data = buildEnemyRatingComparison(enemies, 'SPAWNS', fixtureCounts)
+  const renderVideoDialog = () => renderToStaticMarkup(createElement(RatingSaveDialog, {
+    media: 'video', data, layout: 'MIRRORED', selectedRanks: ['D'], scopeLabel: 'メインストーリー・全敵',
+    sideValue: 'rank', countMode: 'SPAWNS', countLabel: '出現回数', onClose() {},
+  }))
+  const canvasDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'HTMLCanvasElement')
+  const recorderDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'MediaRecorder')
+  try {
+    class Canvas { captureStream() {} }
+    Object.defineProperty(globalThis, 'HTMLCanvasElement', { configurable: true, value: Canvas })
+    for (const [extension, format] of [['mp4', 'MP4'], ['webm', 'WebM']]) {
+      Object.defineProperty(globalThis, 'MediaRecorder', { configurable: true, value: {
+        isTypeSupported: mimeType => mimeType.startsWith(`video/${extension}`),
+      } })
+      const markup = renderVideoDialog()
+      assert.match(markup, /動画を保存/)
+      assert.match(markup, /完成図/)
+      assert.match(markup, new RegExp(`>${format}<`))
+      assert.match(markup.replace(/<!--.*?-->/g, ''), /1,920 × 840 px · 5秒/)
+      assert.match(markup, /敵_防御力・術耐性の評価別分布_出現回数_評価D強調_階級割合_幅1920px_メインストーリー・全敵_左右の横棒_比率16x7\.(mp4|webm)/)
+      assert.match(markup, new RegExp(`_比率16x7\\.${extension}"`))
+      assert.match(markup, /階級割合（%）/)
+      assert.equal(markup.match(/class="enemy-rating-comparison-highlight"/g)?.length, 1)
+      assert.doesNotMatch(markup, /画像の縦横比|出力幅を1,920 pxに固定/)
+    }
+    Reflect.deleteProperty(globalThis, 'MediaRecorder')
+    const unsupported = renderVideoDialog()
+    assert.match(unsupported, /このブラウザーは動画の出力に対応していません。/)
+    assert.match(unsupported, /type="submit"[^>]*disabled=""/)
+  } finally {
+    if (canvasDescriptor) Object.defineProperty(globalThis, 'HTMLCanvasElement', canvasDescriptor)
+    else Reflect.deleteProperty(globalThis, 'HTMLCanvasElement')
+    if (recorderDescriptor) Object.defineProperty(globalThis, 'MediaRecorder', recorderDescriptor)
+    else Reflect.deleteProperty(globalThis, 'MediaRecorder')
+  }
+})
+
 function snapshot(options = {}) {
   const { kind = 'linear', showCumulative = true, cumulativeDisplay = 'line', showPercentages = false,
     referenceVisibility = { mean: false, median: false } } = options

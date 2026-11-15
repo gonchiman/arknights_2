@@ -1,6 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { getChartImageSavePicker, selectChartArchiveDestination, selectChartImageDestination, type ChartImageSavePicker } from '../src/lib/chartImageDestination.ts'
+import {
+  getChartImageSavePicker, selectChartArchiveDestination, selectChartImageDestination, selectChartVideoDestination,
+  type ChartImageSavePicker,
+} from '../src/lib/chartImageDestination.ts'
 
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void
@@ -13,6 +16,28 @@ const unusedHandle = {
     throw new Error('保存先を選ぶだけでは書き込まない')
   },
 }
+
+test('動画は操作中に対応形式の拡張子で保存先を選び、取消後は書き込まない', async () => {
+  for (const [format, description] of [['mp4', 'MP4動画'], ['webm', 'WebM動画']] as const) {
+    const selection = deferred<typeof unusedHandle>()
+    let called = false
+    const result = selectChartVideoDestination(' 比較.MP4 ', options => {
+      called = true
+      assert.deepEqual(options, {
+        id: 'enemy-rating-chart-video', suggestedName: `比較.${format}`, excludeAcceptAllOption: true,
+        types: [{ description, accept: { [`video/${format}`]: [`.${format}`] } }],
+      })
+      return selection.promise
+    }, format)
+    assert.equal(called, true)
+    selection.resolve(unusedHandle)
+    assert.equal((await result).type, 'file')
+  }
+  assert.deepEqual(await selectChartVideoDestination('比較', undefined, 'mp4'), { type: 'download' })
+  assert.deepEqual(await selectChartVideoDestination('比較', async () => {
+    throw new DOMException('cancelled', 'AbortError')
+  }, 'mp4'), { type: 'cancelled' })
+})
 
 test('ZIP保存もユーザー操作中にpickerを呼び、ZIP専用の種別と名前を指定する', async () => {
   let called = false

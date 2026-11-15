@@ -11,7 +11,7 @@ export interface ChartImageAspectSettings {
   height: string
 }
 
-export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspect, onAspectChange, aspectError, aspectPresets = imageAspectPresets, aspectHint = 'タイトル・凡例を含む画像全体の比率です。指定なしでは内容に合わせて自動調整します。', canChooseLocation, saving, saveDisabled = false, error, onClose, onSave, additionalSaveAction, helpMode = 'inline', options, preview }: {
+export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspect, onAspectChange, aspectError, aspectPresets = imageAspectPresets, aspectHint = 'タイトル・凡例を含む画像全体の比率です。指定なしでは内容に合わせて自動調整します。', canChooseLocation, saving, saveDisabled = false, error, onClose, onSave, additionalSaveAction, helpMode = 'inline', options, preview, videoExtension, cancelWhileSaving = false }: {
   initialFilename: string
   getDefaultFilename?: (aspectRatio?: number) => string
   aspect?: ChartImageAspectSettings
@@ -22,7 +22,9 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
   canChooseLocation: boolean
   saving: boolean
   saveDisabled?: boolean
-  error: boolean
+  error: boolean | string
+  videoExtension?: 'mp4' | 'webm'
+  cancelWhileSaving?: boolean
   onClose: () => void
   onSave: (filename: string, aspectRatio?: number) => void
   additionalSaveAction?: {
@@ -49,16 +51,22 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
   const invalidAspect = Boolean(aspectValidationError)
   const aspectRatio = !aspect || aspect.preset === 'auto' ? undefined : Number(aspect.width) / Number(aspect.height)
   const filename = customFilename ?? (getDefaultFilename?.(invalidAspect ? undefined : aspectRatio) ?? initialFilename)
-  const validationError = validateFilename(filename)
-  const filenameHint = '.png は省略できます。'
+  const extensionPattern = videoExtension ? /\.(?:mp4|webm)$/i : /\.png$/i
+  const validationError = validateFilename(filename, extensionPattern)
+  const filenameHint = `.${videoExtension ?? 'png'} は省略できます。`
   const destinationHint = canChooseLocation
     ? '次の画面で保存先フォルダを選べます。'
     : 'このブラウザーでは保存先フォルダを選択できません。ブラウザーの設定に従ってダウンロードします。'
   const popoverHelp = helpMode === 'popover'
   const hasPreview = Boolean(preview)
+  const mediaLabel = videoExtension ? '動画' : '画像'
+  const closeDisabled = saving && !cancelWhileSaving
+  const errorMessage = error === true
+    ? `${mediaLabel}を保存できませんでした。保存先を確認して、もう一度お試しください。`
+    : error
 
-  return <GoldenglowDetailModal title="画像を保存" closeLabel="画像の保存を閉じる"
-    className={`chart-image-save-dialog${hasPreview ? ' chart-image-save-dialog-with-preview' : ''}`} initialFocusRef={inputRef} closeDisabled={saving} onClose={onClose}>
+  return <GoldenglowDetailModal title={`${mediaLabel}を保存`} closeLabel={`${mediaLabel}の保存を閉じる`}
+    className={`chart-image-save-dialog${hasPreview ? ' chart-image-save-dialog-with-preview' : ''}`} initialFocusRef={inputRef} closeDisabled={closeDisabled} onClose={onClose}>
     <form className="chart-image-save-form" aria-busy={saving}
       onSubmit={(event) => {
         event.preventDefault()
@@ -85,7 +93,7 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
             if (selectedInitialName.current) return
             selectedInitialName.current = true
             const value = event.currentTarget.value
-            event.currentTarget.setSelectionRange(0, /\.png$/i.test(value) ? value.length - 4 : value.length)
+            event.currentTarget.setSelectionRange(0, value.replace(extensionPattern, '').length)
           }} />
         <p id={hintId} className={popoverHelp ? 'visually-hidden' : 'chart-image-save-hint'}>{filenameHint}</p>
         {validationError && <p id={validationId} className="chart-image-save-error" role="alert">{validationError}</p>}
@@ -125,25 +133,25 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
       {options}
       {hasPreview && <div className="chart-image-save-preview">{preview}</div>}
       {!popoverHelp && <p className="chart-image-save-hint">{destinationHint}</p>}
-      {error && <p className="chart-image-save-error" role="alert">画像を保存できませんでした。保存先を確認して、もう一度お試しください。</p>}
+      {errorMessage && <p className="chart-image-save-error" role="alert">{errorMessage}</p>}
       <div className="chart-image-save-actions">
-        <button type="button" className="button secondary" disabled={saving} onClick={onClose}>キャンセル</button>
+        <button type="button" className="button secondary" disabled={closeDisabled} onClick={onClose}>キャンセル</button>
         {additionalSaveAction && <button type="button" className="button secondary"
           disabled={saving || saveDisabled || !!validationError || invalidAspect}
           onClick={() => { if (!composing.current) additionalSaveAction.onSave(filename.trim(), aspectRatio) }}>
           {additionalSaveAction.label}
         </button>}
         <button type="submit" className="button" disabled={saving || saveDisabled || !!validationError || invalidAspect}>
-          {saving ? '画像を保存中…' : canChooseLocation ? '保存先を選ぶ' : 'ダウンロード'}
+          {saving ? `${mediaLabel}を保存中…` : canChooseLocation ? '保存先を選ぶ' : 'ダウンロード'}
         </button>
       </div>
     </form>
   </GoldenglowDetailModal>
 }
 
-function validateFilename(value: string): string | null {
+function validateFilename(value: string, extensionPattern: RegExp): string | null {
   const filename = value.trim()
-  if (!filename || /^\.png$/i.test(filename)) return 'ファイル名を入力してください。'
+  if (!filename.replace(extensionPattern, '').trim()) return 'ファイル名を入力してください。'
   if (/[<>:"/\\|?*\u0000-\u001f]/.test(filename)) return 'ファイル名に使えない文字が含まれています。'
   if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(filename)) return 'このファイル名は使用できません。別の名前を入力してください。'
   return null
