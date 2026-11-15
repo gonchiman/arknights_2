@@ -2,9 +2,9 @@ import { MAIN_ENEMY_EXCLUSIONS } from '../../scripts/lib/enemyUnitRoles.mjs'
 import type { MapDetail, MapIndex, MapSummary, MapWaveAction } from '../types/map.ts'
 import { selectEnemyMainStoryMaps } from './enemyMainStoryScope.ts'
 import { compareNumericValues } from './enemyTableSort.ts'
-import { loadMainEnemyTrends } from './mainEnemyTrends.ts'
-import { loadMapDatabase, loadMapDetail } from './mapDatabase.ts'
 import { getMapSpawnFlow } from './mapWaves.ts'
+
+export const MAIN_STORY_SPAWN_AGGREGATION_VERSION = 'v12'
 
 export interface MainStorySpawnStage {
   id: string
@@ -51,6 +51,11 @@ export interface MainStorySpawnSort {
   direction: 'asc' | 'desc'
 }
 
+export interface MainStorySpawnJumpTarget {
+  kind: 'rank' | 'stat'
+  value: number
+}
+
 const UNKNOWN_STATS: MainStorySpawnStats = { hp: null, attack: null, defense: null, resistance: null }
 const nameOrder = new Intl.Collator('ja-JP', { numeric: true })
 const stageOrder = new Intl.Collator('en', { numeric: true })
@@ -74,32 +79,59 @@ export function getMainStorySpawnStages(index: MapIndex): MainStorySpawnStage[] 
     .sort(compareStages)
 }
 
+interface ArchivedSpawnData {
+  version: string
+  enemies: Record<string, { name: string; stats: MainStorySpawnStats }>
+  lists: (Omit<MainStorySpawnList, 'groups'> & {
+    groups: Omit<SpawnGroup, 'enemyName' | 'stats'>[]
+  })[]
+}
+
+const archivePath = `${import.meta.env?.BASE_URL ?? '/'}data/enemy-aggregation/${MAIN_STORY_SPAWN_AGGREGATION_VERSION}-main-story-spawns.json`
+let archiveRequest: Promise<Map<string, MainStorySpawnList>> | null = null
+
+function loadMainStorySpawnArchive() {
+  archiveRequest ??= fetch(archivePath).then(async response => {
+    if (!response.ok) throw new Error('集計版 v12 の出現データを読み込めませんでした。')
+    const data = await response.json() as ArchivedSpawnData
+    if (data?.version !== MAIN_STORY_SPAWN_AGGREGATION_VERSION || !Array.isArray(data.lists)
+      || !data.enemies || data.lists.length === 0) {
+      throw new Error('出現データと集計版が一致しません。')
+    }
+
+    const lists = new Map<string, MainStorySpawnList>()
+    for (const { stage, status, groups } of data.lists) {
+      if (lists.has(stage.id)) throw new Error('出現データに重複したステージがあります。')
+      lists.set(stage.id, {
+        stage, status, groups: groups.map(group => {
+          const enemy = Object.hasOwn(data.enemies, group.enemyId) ? data.enemies[group.enemyId] : undefined
+          if (!enemy || !Number.isSafeInteger(group.count) || group.count < 1) {
+            throw new Error('集計版 v12 の出現データが不正です。')
+          }
+          return { ...group, enemyName: enemy.name, stats: enemy.stats }
+        }),
+      })
+    }
+    return lists
+  }).catch(cause => {
+    archiveRequest = null
+    throw cause
+  })
+  return archiveRequest
+}
+
 export async function loadMainStorySpawnStages(): Promise<MainStorySpawnStage[]> {
-  return getMainStorySpawnStages(await loadMapDatabase())
+  return Array.from((await loadMainStorySpawnArchive()).values(), ({ stage }) => stage)
 }
 
 export async function loadMainStorySpawnLists(stages: readonly MainStorySpawnStage[]): Promise<MainStorySpawnList[]> {
-  if (!stages.length) return []
-  const [index, trends] = await Promise.all([loadMapDatabase(), loadMainEnemyTrends().catch(() => null)])
-  const maps = new Map(index.maps.map(map => [map.levelId, map]))
-  // The trend data records the map index generation it used for stage overrides.
-  const matchingTrends = trends?.sourceGeneratedAt === index.generatedAt ? trends : null
-  const observations = new Map(matchingTrends?.maps.map(map => [map.levelId, map.enemies]))
-  const exclusions = new Map<string, Set<string>>()
-  for (const unit of matchingTrends?.diagnostics.excludedUnits ?? []) {
-    const ids = exclusions.get(unit.levelId) ?? new Set<string>()
-    ids.add(unit.enemyId)
-    exclusions.set(unit.levelId, ids)
-  }
-  return Promise.all(stages.map(async (stage) => {
-    const map = maps.get(stage.id)
-    if (!map || map.status === 'missing' || !map.detailFile) {
-      return { stage, status: 'unavailable', groups: [] }
-    }
-    const detail = await loadMapDetail(map)
-    const stats = new Map(observations.get(stage.id)?.map(enemy => [enemy.enemyId, enemy]))
-    return buildMainStorySpawnList(stage, map, detail, index.enemies, stats, exclusions.get(stage.id))
-  }))
+  if (stages.length === 0) return []
+  const lists = await loadMainStorySpawnArchive()
+  return stages.map(stage => {
+    const list = lists.get(stage.id)
+    if (!list) throw new Error('集計版 v12 に選択したステージがありません。')
+    return list
+  })
 }
 
 function confirmedAction(action: MapWaveAction): MapWaveAction[] {
@@ -124,9 +156,11 @@ export function buildMainStorySpawnList(
   registry: MapIndex['enemies'],
   stats?: ReadonlyMap<string, MainStorySpawnStats>,
   excludedUnits?: ReadonlySet<string>,
+  includedEnemyIds?: ReadonlySet<string>,
 ): MainStorySpawnList {
   if (!detail) return { stage, status: 'unavailable', groups: [] }
-  const isEnemy = (id: string) => !Object.hasOwn(MAIN_ENEMY_EXCLUSIONS, id) && !excludedUnits?.has(id)
+  const isEnemy = (id: string) => includedEnemyIds?.has(id)
+    ?? (!Object.hasOwn(MAIN_ENEMY_EXCLUSIONS, id) && !excludedUnits?.has(id))
   const makeGroup = (enemyId: string, count: number, wave: number | null = null, fragment: number | null = null,
     time: number | null = null, entrance: string | null = null): SpawnGroup => ({
     enemyId, enemyName: registry[enemyId]?.name ?? enemyId, count, wave, fragment, time, entrance,
@@ -192,7 +226,7 @@ function compareSpawnRows(left: MainStorySpawnRow, right: MainStorySpawnRow, sor
 
 function rankSpawnValues(
   entries: readonly MainStorySpawnRow[], metric: keyof MainStorySpawnStats, mode: 'units' | 'counts',
-): Map<number, number> {
+) {
   const frequencies = new Map<number, number>()
   for (const entry of entries) {
     const value = entry.stats[metric]
@@ -209,13 +243,12 @@ function rankSpawnValues(
     ranks.set(value, rank)
     rank += weight
   }
-  return ranks
+  return { ranks, rankedRowCount: rank - 1 }
 }
 
-export function getMainStorySpawnRows(
-  lists: readonly MainStorySpawnList[], query: string, mode: 'units' | 'counts', offset = 0, limit = Infinity,
-  sort?: MainStorySpawnSort,
-): { rows: MainStorySpawnRow[]; confirmedCount: number; rowCount: number } {
+function getSpawnEntries(
+  lists: readonly MainStorySpawnList[], query: string, mode: 'units' | 'counts', sort?: MainStorySpawnSort,
+): MainStorySpawnRow[] {
   const term = normalizeName(query)
   const entries: MainStorySpawnRow[] = []
   for (const { stage, groups } of lists) {
@@ -238,8 +271,49 @@ export function getMainStorySpawnRows(
   const sortable = mode === 'units' ? sort?.key !== 'count'
     : sort?.key !== 'wave' && sort?.key !== 'time' && sort?.key !== 'entrance'
   if (sort && sortable) entries.sort((left, right) => compareSpawnRows(left, right, sort))
+  return entries
+}
+
+export function findMainStorySpawnJump(
+  lists: readonly MainStorySpawnList[], query: string, mode: 'units' | 'counts', sort: MainStorySpawnSort,
+  target: MainStorySpawnJumpTarget,
+): { offset: number; key: string; rank: number; value: number } | null {
+  const metric = getMainStorySpawnRankMetric(sort)
+  if (metric === null || !Number.isFinite(target.value) || target.value < 0) return null
+  if (target.kind === 'rank' && (!Number.isSafeInteger(target.value) || target.value < 1)) return null
+
+  const entries = getSpawnEntries(lists, query, mode, sort)
+  const { ranks, rankedRowCount } = rankSpawnValues(entries, metric, mode)
+  if (target.kind === 'rank' && target.value > rankedRowCount) return null
+
+  let match: { value: number; rank: number } | null = null
+  // Ranks are visited in high-to-low stat order. A skipped rank belongs to
+  // the preceding tie, and equal stat distances favor the higher value.
+  for (const [value, rank] of ranks) {
+    if (target.kind === 'rank') {
+      if (rank > target.value) break
+    } else if (match && Math.abs(value - target.value) >= Math.abs(match.value - target.value)) {
+      continue
+    }
+    match = { value, rank }
+  }
+  if (!match) return null
+
+  let offset = 0
+  for (const entry of entries) {
+    if (entry.stats[metric] === match.value) return { offset, key: `${entry.key}:0`, ...match }
+    offset += mode === 'units' ? entry.count : 1
+  }
+  return null
+}
+
+export function getMainStorySpawnRows(
+  lists: readonly MainStorySpawnList[], query: string, mode: 'units' | 'counts', offset = 0, limit = Infinity,
+  sort?: MainStorySpawnSort,
+): { rows: MainStorySpawnRow[]; confirmedCount: number; rowCount: number; rankedRowCount: number } {
+  const entries = getSpawnEntries(lists, query, mode, sort)
   const rankMetric = getMainStorySpawnRankMetric(sort)
-  const ranks = rankMetric === null ? null : rankSpawnValues(entries, rankMetric, mode)
+  const ranking = rankMetric === null ? null : rankSpawnValues(entries, rankMetric, mode)
 
   // Sort the compressed groups first and expand only the individual rows on the page.
   const rows: MainStorySpawnRow[] = []
@@ -250,7 +324,7 @@ export function getMainStorySpawnRows(
     const first = Math.max(0, offset - rowCount)
     const end = Math.min(units, offset + limit - rowCount)
     const value = rankMetric === null ? null : entry.stats[rankMetric]
-    const rank = value === null ? null : ranks?.get(value) ?? null
+    const rank = value === null ? null : ranking?.ranks.get(value) ?? null
     for (let i = first; i < end; i += 1) {
       rows.push({ ...entry, count: mode === 'units' ? 1 : entry.count, key: `${entry.key}:${i}`,
         ...(rankMetric === null ? {} : { rank }) })
@@ -258,5 +332,5 @@ export function getMainStorySpawnRows(
     rowCount += units
     confirmedCount += entry.count
   }
-  return { rows, confirmedCount, rowCount }
+  return { rows, confirmedCount, rowCount, rankedRowCount: ranking?.rankedRowCount ?? 0 }
 }
