@@ -53,6 +53,7 @@ export type AppRoute =
   | { view: 'enemy-defense-resistance' }
   | { view: 'enemy-map-coverage' }
   | { view: 'main-enemy-trends' }
+  | { view: 'main-enemy-spawns' }
   | { view: 'maps' }
   | { view: 'roguelike' }
   | { view: 'sources' }
@@ -286,6 +287,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies/defense-resistance')) return { view: 'enemy-defense-resistance' }
   if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies/maps')) return { view: 'enemy-map-coverage' }
   if (hash === '#/analysis/enemies/main-trends') return { view: 'main-enemy-trends' }
+  if (hash === '#/analysis/enemies/main-spawns') return { view: 'main-enemy-spawns' }
   if (hash === '#/maps') return { view: 'maps' }
   if (hash === '#/roguelike') return { view: 'roguelike' }
   if (hash === '#/sources') return { view: 'sources' }

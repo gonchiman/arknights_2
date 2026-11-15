@@ -39,7 +39,7 @@ function getNumericValue(enemy: EnemyRecord, key: Exclude<EnemyTableSortKey, 'na
   return value !== null && Number.isFinite(value) ? value : null
 }
 
-function compareNumericValues(left: number | null, right: number | null, direction: number): number {
+export function compareNumericValues(left: number | null, right: number | null, direction: number): number {
   // Missing values stay last even when the requested order is descending.
   if (left === null) return right === null ? 0 : 1
   if (right === null) return -1

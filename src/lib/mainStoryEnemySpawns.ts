@@ -1,0 +1,230 @@
+import { MAIN_ENEMY_EXCLUSIONS } from '../../scripts/lib/enemyUnitRoles.mjs'
+import type { MapDetail, MapIndex, MapSummary, MapWaveAction } from '../types/map.ts'
+import { selectEnemyMainStoryMaps } from './enemyMainStoryScope.ts'
+import { compareNumericValues } from './enemyTableSort.ts'
+import { loadMainEnemyTrends } from './mainEnemyTrends.ts'
+import { loadMapDatabase, loadMapDetail } from './mapDatabase.ts'
+import { getMapSpawnFlow } from './mapWaves.ts'
+
+export interface MainStorySpawnStage {
+  id: string
+  code: string
+  name: string
+  chapter: number
+}
+
+export interface MainStorySpawnStats {
+  hp: number | null
+  attack: number | null
+  defense: number | null
+  resistance: number | null
+}
+
+interface SpawnGroup {
+  enemyId: string
+  enemyName: string
+  count: number
+  wave: number | null
+  fragment: number | null
+  time: number | null
+  entrance: string | null
+  fromBranch?: boolean
+  stats: MainStorySpawnStats
+}
+
+export interface MainStorySpawnList {
+  stage: MainStorySpawnStage
+  status: 'confirmed' | 'unconfirmed' | 'unavailable'
+  groups: SpawnGroup[]
+}
+
+export interface MainStorySpawnRow extends Omit<SpawnGroup, 'enemyId'> {
+  key: string
+  stage: MainStorySpawnStage
+}
+
+export type MainStorySpawnSortKey = keyof MainStorySpawnStats | 'stage' | 'enemyName' | 'wave' | 'time' | 'entrance' | 'count'
+
+export interface MainStorySpawnSort {
+  key: MainStorySpawnSortKey
+  direction: 'asc' | 'desc'
+}
+
+const UNKNOWN_STATS: MainStorySpawnStats = { hp: null, attack: null, defense: null, resistance: null }
+const nameOrder = new Intl.Collator('ja-JP', { numeric: true })
+const stageOrder = new Intl.Collator('en', { numeric: true })
+
+function compareStages(left: MainStorySpawnStage, right: MainStorySpawnStage): number {
+  return left.chapter - right.chapter || stageOrder.compare(left.id, right.id)
+}
+
+export function getMainStorySpawnStages(index: MapIndex): MainStorySpawnStage[] {
+  return selectEnemyMainStoryMaps(index.maps)
+    .map(map => ({
+      id: map.levelId,
+      code: map.code,
+      name: map.name,
+      chapter: Number(map.levelId.match(/_(\d+)-\d+$/)![1]),
+    }))
+    .sort(compareStages)
+}
+
+export async function loadMainStorySpawnStages(): Promise<MainStorySpawnStage[]> {
+  return getMainStorySpawnStages(await loadMapDatabase())
+}
+
+export async function loadMainStorySpawnLists(stages: readonly MainStorySpawnStage[]): Promise<MainStorySpawnList[]> {
+  if (!stages.length) return []
+  const [index, trends] = await Promise.all([loadMapDatabase(), loadMainEnemyTrends().catch(() => null)])
+  const maps = new Map(index.maps.map(map => [map.levelId, map]))
+  // The trend data records the map index generation it used for stage overrides.
+  const matchingTrends = trends?.sourceGeneratedAt === index.generatedAt ? trends : null
+  const observations = new Map(matchingTrends?.maps.map(map => [map.levelId, map.enemies]))
+  const exclusions = new Map<string, Set<string>>()
+  for (const unit of matchingTrends?.diagnostics.excludedUnits ?? []) {
+    const ids = exclusions.get(unit.levelId) ?? new Set<string>()
+    ids.add(unit.enemyId)
+    exclusions.set(unit.levelId, ids)
+  }
+  return Promise.all(stages.map(async (stage) => {
+    const map = maps.get(stage.id)
+    if (!map || map.status === 'missing' || !map.detailFile) {
+      return { stage, status: 'unavailable', groups: [] }
+    }
+    const detail = await loadMapDetail(map)
+    const stats = new Map(observations.get(stage.id)?.map(enemy => [enemy.enemyId, enemy]))
+    return buildMainStorySpawnList(stage, map, detail, index.enemies, stats, exclusions.get(stage.id))
+  }))
+}
+
+function confirmedAction(action: MapWaveAction): MapWaveAction[] {
+  if (action.actionType !== 'SPAWN') return []
+  const resolution = action.resolution
+  const count = resolution
+    ? resolution.status === 'included' ? resolution.resolvedCount : null
+    : action.spawnKind === 'fixed' ? action.count : null
+  return count !== null && count > 0 ? [{ ...action, count }] : []
+}
+
+function addCount(counts: Map<string, number>, enemyId: string, count: number) {
+  const total = (counts.get(enemyId) ?? 0) + count
+  if (!Number.isSafeInteger(total)) throw new Error('敵の出現体数を確認できませんでした。')
+  counts.set(enemyId, total)
+}
+
+export function buildMainStorySpawnList(
+  stage: MainStorySpawnStage,
+  map: MapSummary,
+  detail: MapDetail | null,
+  registry: MapIndex['enemies'],
+  stats?: ReadonlyMap<string, MainStorySpawnStats>,
+  excludedUnits?: ReadonlySet<string>,
+): MainStorySpawnList {
+  if (!detail) return { stage, status: 'unavailable', groups: [] }
+  const isEnemy = (id: string) => !Object.hasOwn(MAIN_ENEMY_EXCLUSIONS, id) && !excludedUnits?.has(id)
+  const makeGroup = (enemyId: string, count: number, wave: number | null = null, fragment: number | null = null,
+    time: number | null = null, entrance: string | null = null): SpawnGroup => ({
+    enemyId, enemyName: registry[enemyId]?.name ?? enemyId, count, wave, fragment, time, entrance,
+    stats: stats?.get(enemyId) ?? UNKNOWN_STATS,
+  })
+  const resolvedCounts = new Map<string, number>()
+  const timedGroups = (detail.waves ?? []).flatMap((wave, waveIndex) => wave.fragments.flatMap((fragment, fragmentIndex) => {
+    // The shared wave view expands configured candidates. Pass only accepted
+    // actions and their resolved counts here, retaining the original routing.
+    const actions = fragment.actions.flatMap(confirmedAction).filter(action => {
+      const id = action.resolution?.resolvedEnemyId ?? action.key
+      if (!id || !isEnemy(id)) return false
+      addCount(resolvedCounts, id, action.count!)
+      return true
+    })
+    if (!actions.length) return []
+    return getMapSpawnFlow(detail, { ...fragment, actions }).rows.flatMap(row =>
+      row.enemies.flatMap(({ key, count }) => key && count !== null && count > 0
+        ? [makeGroup(key, count, waveIndex + 1, fragmentIndex + 1, row.time, row.entrance?.label ?? null)] : []))
+  }))
+  for (const { enemyId, count } of map.countedBranchSpawns ?? []) {
+    if (count <= 0 || !isEnemy(enemyId)) continue
+    addCount(resolvedCounts, enemyId, count)
+    timedGroups.push({ ...makeGroup(enemyId, count), fromBranch: true })
+  }
+
+  const confirmed = map.status === 'supported' && detail.enemies.every(enemy => enemy.count !== null)
+  const totals = confirmed
+    ? new Map(detail.enemies.flatMap(({ id, count }) => count && isEnemy(id) ? [[id, count] as const] : []))
+    : resolvedCounts
+  const timedCounts = new Map<string, number>()
+  for (const group of timedGroups) addCount(timedCounts, group.enemyId, group.count)
+
+  // Keep verified totals even if a legacy map has no timing or the wave display
+  // cap is reached. Disagreements retain the verified count without a time.
+  const groups = timedGroups.filter(({ enemyId }) => (timedCounts.get(enemyId) ?? 0) <= (totals.get(enemyId) ?? 0))
+  for (const [id, total] of totals) {
+    const fromFlow = timedCounts.get(id) ?? 0
+    if (fromFlow !== total) groups.push(makeGroup(id, fromFlow > total ? total : total - fromFlow))
+  }
+  return { stage, status: confirmed ? 'confirmed' : 'unconfirmed', groups }
+}
+
+const normalizeName = (value: string) => value.trim().normalize('NFKC').toLocaleLowerCase('ja-JP')
+
+function compareSpawnRows(left: MainStorySpawnRow, right: MainStorySpawnRow, sort: MainStorySpawnSort): number {
+  const direction = sort.direction === 'asc' ? 1 : -1
+  switch (sort.key) {
+    case 'stage': return compareStages(left.stage, right.stage) * direction
+    case 'enemyName': return nameOrder.compare(left.enemyName, right.enemyName) * direction
+    case 'wave':
+      return compareNumericValues(left.wave, right.wave, direction)
+        || compareNumericValues(left.fragment, right.fragment, direction)
+    case 'entrance':
+      if (left.entrance === null) return right.entrance === null ? 0 : 1
+      if (right.entrance === null) return -1
+      return (left.entrance.length - right.entrance.length || nameOrder.compare(left.entrance, right.entrance)) * direction
+    case 'time':
+    case 'count': return compareNumericValues(left[sort.key], right[sort.key], direction)
+    default: return compareNumericValues(left.stats[sort.key], right.stats[sort.key], direction)
+  }
+}
+
+export function getMainStorySpawnRows(
+  lists: readonly MainStorySpawnList[], query: string, mode: 'units' | 'counts', offset = 0, limit = Infinity,
+  sort?: MainStorySpawnSort,
+): { rows: MainStorySpawnRow[]; confirmedCount: number; rowCount: number } {
+  const term = normalizeName(query)
+  const entries: MainStorySpawnRow[] = []
+  for (const { stage, groups } of lists) {
+    let visibleGroups = term ? groups.filter(group => normalizeName(group.enemyName).includes(term)) : groups
+    if (mode === 'counts') {
+      const byEnemy = new Map<string, SpawnGroup>()
+      for (const group of visibleGroups) {
+        const previous = byEnemy.get(group.enemyId)
+        if (previous) previous.count += group.count
+        else byEnemy.set(group.enemyId, { ...group, wave: null, fragment: null, entrance: null, time: null, fromBranch: undefined })
+      }
+      visibleGroups = [...byEnemy.values()].sort((a, b) => b.count - a.count)
+    }
+
+    visibleGroups.forEach(({ enemyId, ...group }, groupIndex) => {
+      entries.push({ ...group, key: `${stage.id}:${groupIndex}`, stage })
+    })
+  }
+
+  const sortable = mode === 'units' ? sort?.key !== 'count'
+    : sort?.key !== 'wave' && sort?.key !== 'time' && sort?.key !== 'entrance'
+  if (sort && sortable) entries.sort((left, right) => compareSpawnRows(left, right, sort))
+
+  // Sort the compressed groups first and expand only the individual rows on the page.
+  const rows: MainStorySpawnRow[] = []
+  let rowCount = 0
+  let confirmedCount = 0
+  for (const entry of entries) {
+    const units = mode === 'units' ? entry.count : 1
+    const first = Math.max(0, offset - rowCount)
+    const end = Math.min(units, offset + limit - rowCount)
+    for (let i = first; i < end; i += 1) {
+      rows.push({ ...entry, count: mode === 'units' ? 1 : entry.count, key: `${entry.key}:${i}` })
+    }
+    rowCount += units
+    confirmedCount += entry.count
+  }
+  return { rows, confirmedCount, rowCount }
+}
