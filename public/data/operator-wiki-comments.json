@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-11-14T18:39:07.666Z",
+  "observedAt": "2026-11-15T06:42:49.229Z",
   "throughDate": "2026-11-14",
   "entries": [
     {
@@ -409,7 +409,7 @@
       "counts": {
         "2026-11-01": 2
       },
-      "total": 1786
+      "total": 1787
     },
     {
       "operatorId": "char_452_bstalk",
@@ -2078,7 +2078,7 @@
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%A1%E3%83%B3%E3%83%88%2F%E3%83%B4%E3%82%A1%E3%83%A9%E3%83%AB%E3%82%AF%E3%83%93%E3%83%B3",
       "coveredFrom": "2026-10-16",
       "counts": {},
-      "total": 205
+      "total": 206
     },
     {
       "operatorId": "char_487_bobb",
@@ -2458,7 +2458,7 @@
         "2026-11-01": 3,
         "2026-11-03": 2
       },
-      "total": 2599
+      "total": 2600
     },
     {
       "operatorId": "char_4228_closur",
@@ -2850,7 +2850,7 @@
         "2026-11-01": 1,
         "2026-11-03": 2
       },
-      "total": 620
+      "total": 621
     },
     {
       "operatorId": "char_2023_ling",
@@ -3445,7 +3445,7 @@
         "2026-10-28": 1,
         "2026-10-29": 4
       },
-      "total": 3028
+      "total": 3029
     },
     {
       "operatorId": "char_4058_pepe",
