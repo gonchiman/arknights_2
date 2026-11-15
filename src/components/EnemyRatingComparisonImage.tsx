@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   getChartImageSavePicker, selectChartImageDestination, selectChartVideoDestination, withChartVideoExtension,
 } from '../lib/chartImageDestination'
@@ -16,11 +16,16 @@ import {
   ENEMY_RATING_COMPARISON_LAYOUTS, ENEMY_RATING_COMPARISON_METRICS,
   type EnemyRatingComparison, type EnemyRatingComparisonLayout, type EnemyRatingComparisonSideValue,
 } from '../lib/enemyRatingComparison'
+import {
+  createEnemyRatingVideoTimingDraft, ENEMY_RATING_VIDEO_PHASES, parseEnemyRatingVideoTiming,
+  type EnemyRatingVideoPhase, type EnemyRatingVideoTiming,
+} from '../lib/enemyRatingVideoTiming'
 import { ChartImageFrame } from './ChartImageFrame'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
 import { EnemyRatingComparisonPlot, EnemyRatingComparisonSwatch } from './EnemyRatingComparisonPlot'
+import { EnemyRatingVideoTimingEditor, type EnemyRatingVideoDurationError } from './EnemyRatingVideoTimingEditor'
 import {
-  ENEMY_RATING_VIDEO_ASPECT, ENEMY_RATING_VIDEO_DURATION, ENEMY_RATING_VIDEO_WIDTH,
+  ENEMY_RATING_VIDEO_ASPECT, ENEMY_RATING_VIDEO_WIDTH,
   prepareEnemyRatingComparisonVideo, renderEnemyRatingComparisonVideo,
 } from './renderEnemyRatingComparisonVideo'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
@@ -109,6 +114,10 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(false)
   const [canCancelVideo, setCanCancelVideo] = useState(false)
+  const [timingDraft, setTimingDraft] = useState(createEnemyRatingVideoTimingDraft)
+  const timing = useMemo(() => parseEnemyRatingVideoTiming(timingDraft), [timingDraft])
+  const [timingInputError, setTimingInputError] = useState<EnemyRatingVideoDurationError | null>(null)
+  const [activeVideoPhase, setActiveVideoPhase] = useState<EnemyRatingVideoPhase | null>(null)
   const savingRef = useRef(false)
   const videoAbort = useRef<AbortController | null>(null)
   useEffect(() => () => videoAbort.current?.abort(), [])
@@ -158,7 +167,7 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
   }
 
   async function saveVideo(selectedFilename: string) {
-    if (savingRef.current || !videoFormat) return
+    if (savingRef.current || !videoFormat || !timing.timing || timingInputError) return
     const controller = new AbortController()
     videoAbort.current = controller
     savingRef.current = true
@@ -172,6 +181,7 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
       const blob = await renderEnemyRatingComparisonVideo(
         <EnemyRatingComparisonImage snapshot={outputSnapshot} aspectRatio={ENEMY_RATING_VIDEO_ASPECT} />,
         videoFormat,
+        timing.timing,
         controller.signal,
       )
       controller.signal.throwIfAborted()
@@ -203,11 +213,15 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
 
   const previewRatio = video ? ENEMY_RATING_VIDEO_ASPECT : aspectRatio
   const formatLabel = videoFormat?.extension === 'mp4' ? 'MP4' : videoFormat ? 'WebM' : undefined
+  const preview = <EnemyRatingComparisonImagePreview key={previewRatio ?? 'auto'}
+    snapshot={outputSnapshot} aspectRatio={previewRatio} output={output}
+    video={video ? { timing: timing.timing, duration: timing.duration, formatLabel, saving, onActivePhase: setActiveVideoPhase }
+      : undefined} />
   return <ChartImageSaveDialog initialFilename={getDefaultFilename()} getDefaultFilename={getDefaultFilename}
     aspect={video ? undefined : aspect} onAspectChange={video ? undefined : setAspect}
     canChooseLocation={Boolean(picker)} saving={saving} helpMode="popover"
     videoExtension={video ? videoExtension : undefined} cancelWhileSaving={canCancelVideo}
-    saveDisabled={video && !videoFormat}
+    saveDisabled={video && (!videoFormat || !timing.timing || Boolean(timingInputError))}
     error={video && !videoFormat ? 'このブラウザーは動画の出力に対応していません。' : error}
     onClose={closeDialog} onSave={(name, ratio) => { void (video ? saveVideo(name) : saveImage(name, ratio)) }}
     options={<div className="enemy-histogram-display-controls">
@@ -222,9 +236,12 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
         選択ランクを強調
       </label>
     </div>}
-    preview={(video || validAspect) && <EnemyRatingComparisonImagePreview key={previewRatio ?? 'auto'}
-      snapshot={outputSnapshot} aspectRatio={previewRatio} output={output}
-      video={video} formatLabel={formatLabel} saving={saving} />} />
+    preview={video ? <div className="enemy-rating-video-preview">
+      {preview}
+      <EnemyRatingVideoTimingEditor draft={timingDraft} onChange={setTimingDraft} parsed={timing}
+        inputError={timingInputError} onInputError={setTimingInputError} activePhase={activeVideoPhase}
+        sideValue={snapshot.sideValue} disabled={saving} />
+    </div> : validAspect && preview} />
 }
 
 function downloadVideo(blob: Blob, filename: string) {
@@ -242,21 +259,66 @@ function downloadVideo(blob: Blob, filename: string) {
   }
 }
 
-function EnemyRatingComparisonImagePreview({ snapshot, aspectRatio, output, video, formatLabel, saving }: {
+interface RatingVideoPreview {
+  timing: EnemyRatingVideoTiming | null
+  duration: number | null
+  formatLabel?: string
+  saving: boolean
+  onActivePhase: (phase: EnemyRatingVideoPhase | null) => void
+}
+
+interface VideoPreviewRun {
+  timing: EnemyRatingVideoTiming | null
+  duration: number | null
+  seconds: number
+  pausedBeforeInvalid?: number
+  frame: number
+  playWhenReady: boolean
+  scene?: VideoPreviewScene
+}
+
+interface VideoPreviewScene {
+  animation: Awaited<ReturnType<typeof prepareEnemyRatingComparisonVideo>>
+  context: CanvasRenderingContext2D
+}
+
+interface VideoPreviewCapture {
+  preparation?: AbortController
+  scene?: VideoPreviewScene
+}
+
+function formatVideoClock(seconds: number, duration: number | null) {
+  return duration === null ? '— / — 秒' : `${seconds.toFixed(2)} / ${duration.toFixed(2)} 秒`
+}
+
+function EnemyRatingComparisonImagePreview({ snapshot, aspectRatio, output, video }: {
   snapshot: EnemyRatingComparisonImageSnapshot
   aspectRatio?: number
   output?: ChartImageRasterOutput
-  video: boolean
-  formatLabel?: string
-  saving: boolean
+  video?: RatingVideoPreview
 }) {
+  const isVideo = Boolean(video)
+  const duration = video?.duration ?? null
+  const timing = video?.timing ?? null
+  const saving = video?.saving ?? false
   const previewRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const playbackRun = useRef<{ controller: AbortController; frame: number } | null>(null)
-  const [playback, setPlayback] = useState<'ready' | 'preparing' | 'playing' | 'ended' | 'error'>('ready')
+  const seekRef = useRef<HTMLInputElement>(null)
+  const clockRef = useRef<HTMLOutputElement>(null)
+  const activePhaseRef = useRef<EnemyRatingVideoPhase | null>(null)
+  const previewCapture = useRef<VideoPreviewCapture>({})
+  const playbackRun = useRef<VideoPreviewRun>({
+    timing, duration, seconds: duration ?? 0, frame: 0, playWhenReady: false,
+  })
+  const [playback, setPlayback] = useState<'ready' | 'preparing' | 'playing' | 'paused' | 'start' | 'error'>('ready')
   const [availableWidth, setAvailableWidth] = useState(600)
   const [size, setSize] = useState<{ width: number; height: number }>(() =>
     getChartImageLayout({ naturalChartHeight: PLOT_HEIGHT[snapshot.layout], aspectRatio }))
+  const captureChart = useMemo(() => <EnemyRatingComparisonImage snapshot={snapshot}
+    aspectRatio={ENEMY_RATING_VIDEO_ASPECT} />, [
+    snapshot.data, snapshot.layout, snapshot.selectedRanks, snapshot.sideValue, snapshot.scopeLabel,
+    snapshot.countMode, snapshot.countLabel, snapshot.aggregationVersion, snapshot.coverage,
+  ])
   useLayoutEffect(() => {
     const element = previewRef.current
     if (!element) return
@@ -267,92 +329,188 @@ function EnemyRatingComparisonImagePreview({ snapshot, aspectRatio, output, vide
     return () => observer.disconnect()
   }, [])
   useLayoutEffect(() => {
-    if (!video) return
-    setPlayback('ready')
-    return () => {
-      const run = playbackRun.current
-      if (!run) return
-      playbackRun.current = null
-      run.controller.abort()
-      window.cancelAnimationFrame(run.frame)
-    }
-  }, [video, snapshot.selectedRanks, saving])
+    if (!isVideo) return
+    const capture: VideoPreviewCapture = {}
+    previewCapture.current = capture
+    return () => capture.preparation?.abort()
+  }, [isVideo, captureChart])
 
-  async function playVideoPreview() {
-    const canvas = canvasRef.current
-    if (!canvas || saving || playbackRun.current) return
-    const run = { controller: new AbortController(), frame: 0 }
+  useLayoutEffect(() => {
+    if (!isVideo) return
+    const capture = previewCapture.current
+    if (saving && capture.preparation) {
+      capture.preparation.abort()
+      capture.preparation = undefined
+    }
+    const previous = playbackRun.current
+    const previousPosition = previous.duration === null ? previous.pausedBeforeInvalid
+      : previous.seconds < previous.duration ? previous.seconds : undefined
+    const pausedPosition = saving ? undefined : previousPosition
+    const seconds = duration === null ? 0 : Math.min(pausedPosition ?? duration, duration)
+    const run: VideoPreviewRun = {
+      timing, duration, seconds, pausedBeforeInvalid: duration === null ? pausedPosition : undefined,
+      frame: 0, playWhenReady: false,
+    }
     playbackRun.current = run
+    updatePlayhead(seconds, duration)
+    if (duration !== null && seconds < duration) {
+      setPlayback(capture.scene ? (seconds > 0 ? 'paused' : 'start') : 'preparing')
+      // Redraw the current preview frame after its timing changes.
+      run.frame = window.requestAnimationFrame(() => void showVideoFrame(seconds, false))
+    } else {
+      setPlayback('ready')
+    }
+    return () => window.cancelAnimationFrame(run.frame)
+  }, [isVideo, captureChart, timing, duration, saving])
+
+  function updatePlayhead(seconds: number, total: number | null) {
+    const text = formatVideoClock(seconds, total)
+    const seek = seekRef.current
+    if (seek) {
+      seek.value = String(seconds)
+      if (seek.getAttribute('aria-valuetext') !== text) seek.setAttribute('aria-valuetext', text)
+    }
+    if (clockRef.current && clockRef.current.textContent !== text) clockRef.current.textContent = text
+    const activePhase = (timing && ENEMY_RATING_VIDEO_PHASES.find(phase => {
+      const { start, duration } = timing[phase]
+      return seconds >= start && seconds < start + duration
+    })) ?? null
+    if (activePhase !== activePhaseRef.current) {
+      activePhaseRef.current = activePhase
+      video?.onActivePhase(activePhase)
+    }
+  }
+
+  function showPreparedFrame(run: VideoPreviewRun) {
+    const { scene, duration: length } = run
+    if (!scene || length === null) return
+    const { animation, context } = scene
+    const drawFrame = (seconds: number) => {
+      try {
+        animation.drawFrame(context, seconds)
+        run.seconds = seconds
+        updatePlayhead(seconds, length)
+        return true
+      } catch {
+        setPlayback('error')
+        return false
+      }
+    }
+    if (run.seconds >= length) {
+      setPlayback('ready')
+      return
+    }
+    if (!drawFrame(run.seconds)) return
+    if (!run.playWhenReady) {
+      setPlayback(run.seconds > 0 ? 'paused' : 'start')
+      return
+    }
+    setPlayback('playing')
+    const startedAt = performance.now() - run.seconds * 1000
+    const animate = (now: number) => {
+      if (playbackRun.current !== run) return
+      const seconds = Math.min(Math.max(0, (now - startedAt) / 1000), length)
+      if (!drawFrame(seconds)) return
+      if (seconds < length) run.frame = window.requestAnimationFrame(animate)
+      else setPlayback('ready')
+    }
+    run.frame = window.requestAnimationFrame(animate)
+  }
+
+  function showCapturedFrame(run: VideoPreviewRun, scene: VideoPreviewScene) {
+    if (!run.timing || run.duration === null || run.seconds >= run.duration) return
+    run.scene ??= { animation: scene.animation.withTiming(run.timing), context: scene.context }
+    showPreparedFrame(run)
+  }
+
+  async function showVideoFrame(seconds: number, playWhenReady: boolean) {
+    const canvas = canvasRef.current
+    const run = playbackRun.current
+    if (!canvas || saving || !timing || duration === null) return
+    const capture = previewCapture.current
+    window.cancelAnimationFrame(run.frame)
+    run.seconds = Math.min(duration, Math.max(0, seconds))
+    run.playWhenReady = playWhenReady
+    updatePlayhead(run.seconds, duration)
+    if (run.seconds >= duration) {
+      setPlayback('ready')
+      return
+    }
+    if (capture.scene) {
+      showCapturedFrame(run, capture.scene)
+      return
+    }
+    if (capture.preparation) {
+      setPlayback('preparing')
+      return
+    }
+    const preparation = new AbortController()
+    capture.preparation = preparation
     setPlayback('preparing')
 
-    const fail = () => {
-      if (playbackRun.current !== run) return
-      playbackRun.current = null
-      setPlayback('error')
-    }
-
     try {
-      const animation = await prepareEnemyRatingComparisonVideo(
-        <EnemyRatingComparisonImage snapshot={snapshot} aspectRatio={ENEMY_RATING_VIDEO_ASPECT} />,
-        run.controller.signal,
-      )
-      if (run.controller.signal.aborted) return
+      const animation = await prepareEnemyRatingComparisonVideo(captureChart, timing, preparation.signal)
+      if (preparation.signal.aborted || previewCapture.current !== capture) return
       canvas.width = animation.width
       canvas.height = animation.height
       const context = canvas.getContext('2d', { alpha: false })
       if (!context) throw new Error('動画プレビューの描画領域を作成できませんでした。')
-      animation.drawFrame(context, 0)
-      setPlayback('playing')
-      const startedAt = performance.now()
-
-      const animate = (now: number) => {
-        if (playbackRun.current !== run) return
-        const seconds = Math.min((now - startedAt) / 1000, animation.duration)
-        try {
-          animation.drawFrame(context, seconds)
-        } catch {
-          fail()
-          return
-        }
-        if (seconds < animation.duration) run.frame = window.requestAnimationFrame(animate)
-        else {
-          playbackRun.current = null
-          setPlayback('ended')
-        }
-      }
-
-      run.frame = window.requestAnimationFrame(animate)
+      capture.scene = { animation, context }
+      const activeRun = playbackRun.current
+      window.cancelAnimationFrame(activeRun.frame)
+      showCapturedFrame(activeRun, capture.scene)
     } catch {
-      fail()
+      const activeRun = playbackRun.current
+      if (!preparation.signal.aborted && activeRun.duration !== null && activeRun.seconds < activeRun.duration) {
+        setPlayback('error')
+      }
+    } finally {
+      if (capture.preparation === preparation) capture.preparation = undefined
     }
+  }
+
+  function togglePlayback() {
+    if (duration === null) return
+    const run = playbackRun.current
+    if (playback === 'playing') {
+      window.cancelAnimationFrame(run.frame)
+      setPlayback(run.seconds > 0 ? 'paused' : 'start')
+      return
+    }
+    void showVideoFrame(run.seconds >= duration ? 0 : run.seconds, true)
   }
 
   const scale = Math.min(availableWidth / size.width, 380 / size.height, 1)
   const rasterSize = getChartImageRasterSize(size, output)
+  const showCanvas = playback === 'playing' || playback === 'paused' || playback === 'start'
   const playbackLabels = {
-    ready: '再生', preparing: '準備中…', playing: '再生中…', ended: 'もう一度再生', error: '再生',
+    ready: '再生', preparing: '準備中…', playing: '一時停止', paused: '再開', start: '再生', error: '再生',
   }
   return <div className="enemy-chart-image-preview">
     <div className={`enemy-chart-image-preview-heading${video ? ' is-video' : ''}`}>
-      <span>{video && playback !== 'playing' ? '完成図' : 'プレビュー'}</span>
-      {video ? <div className="enemy-chart-video-preview-controls">
-        <span>{formatLabel}</span>
-        <button className="button secondary" type="button"
-          disabled={saving || playback === 'preparing' || playback === 'playing'}
-          onClick={() => void playVideoPreview()}>{playbackLabels[playback]}</button>
-      </div> : <span>PNG</span>}
+      <span>{video && !showCanvas ? '完成図' : 'プレビュー'}</span>
+      <span>{video ? video.formatLabel : 'PNG'}</span>
     </div>
     <div ref={previewRef} className="enemy-chart-image-preview-frame" style={{ height: Math.ceil(size.height * scale) }}>
       <div className="enemy-chart-image-preview-position" style={{ width: size.width, height: size.height,
         left: (availableWidth - size.width * scale) / 2, transform: `scale(${scale})` }}>
         <EnemyRatingComparisonImage snapshot={snapshot} aspectRatio={aspectRatio} onLayout={setSize} />
         {video && <canvas ref={canvasRef} className="enemy-chart-video-preview-canvas"
-          hidden={playback !== 'playing'} aria-hidden="true" />}
+          hidden={!showCanvas} aria-hidden="true" />}
       </div>
     </div>
+    {video && <div className="enemy-chart-video-preview-controls">
+      <button className="button secondary" type="button"
+        disabled={saving || duration === null || playback === 'preparing'}
+        onClick={togglePlayback}>{playbackLabels[playback]}</button>
+      <input ref={seekRef} type="range" min="0" max={duration ?? 1} step="any" defaultValue={duration ?? 0}
+        aria-label="再生位置" aria-valuetext={formatVideoClock(duration ?? 0, duration)}
+        disabled={saving || duration === null}
+        onChange={event => void showVideoFrame(event.currentTarget.valueAsNumber, false)} />
+      <output ref={clockRef} aria-live="off">{formatVideoClock(duration ?? 0, duration)}</output>
+    </div>}
     <span className="enemy-chart-image-preview-size" aria-live="polite">
       {rasterSize.width.toLocaleString('ja-JP')} × {rasterSize.height.toLocaleString('ja-JP')} px
-      {video && ` · ${ENEMY_RATING_VIDEO_DURATION}秒`}
     </span>
     {playback === 'error' && <p className="chart-image-save-error" role="alert">
       動画を再生できませんでした。

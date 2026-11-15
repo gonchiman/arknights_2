@@ -28,10 +28,19 @@
 }
 
 .enemy-chart-image-preview { display: grid; gap: 8px; min-width: 0; }
+.enemy-rating-video-preview { display: grid; gap: 12px; min-width: 0; }
 .enemy-chart-image-preview-heading { display: flex; justify-content: space-between; gap: 12px; color: var(--text-muted); font-size: 12px; }
 .enemy-chart-image-preview-heading.is-video { align-items: center; }
-.enemy-chart-video-preview-controls { display: flex; align-items: center; gap: 8px; }
-.enemy-chart-video-preview-controls .button { min-height: 28px; padding: 3px 8px; font-size: inherit; }
+.enemy-chart-video-preview-controls {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.enemy-chart-video-preview-controls .button { min-width: 66px; min-height: 28px; padding: 3px 8px; font-size: inherit; }
+.enemy-chart-video-preview-controls input[type="range"] { width: 100%; min-width: 0; margin: 0; accent-color: var(--text); }
+.enemy-chart-video-preview-controls output { color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .enemy-chart-image-preview-frame {
   position: relative;
   min-width: 0;
