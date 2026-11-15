@@ -29,6 +29,9 @@
 
 .enemy-chart-image-preview { display: grid; gap: 8px; min-width: 0; }
 .enemy-chart-image-preview-heading { display: flex; justify-content: space-between; gap: 12px; color: var(--text-muted); font-size: 12px; }
+.enemy-chart-image-preview-heading.is-video { align-items: center; }
+.enemy-chart-video-preview-controls { display: flex; align-items: center; gap: 8px; }
+.enemy-chart-video-preview-controls .button { min-height: 28px; padding: 3px 8px; font-size: inherit; }
 .enemy-chart-image-preview-frame {
   position: relative;
   min-width: 0;
@@ -36,8 +39,10 @@
   background: var(--surface-soft);
 }
 .enemy-chart-image-preview-position { position: absolute; top: 0; transform-origin: top left; pointer-events: none; }
+.enemy-chart-video-preview-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .enemy-chart-image-preview-size { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 
 @media (pointer: coarse) {
   .enemy-distribution-panel .enemy-chart-save-button { min-height: 44px; }
+  .enemy-chart-video-preview-controls .button { min-height: 44px; }
 }
