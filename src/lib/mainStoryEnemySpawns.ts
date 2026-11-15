@@ -41,6 +41,7 @@ export interface MainStorySpawnList {
 export interface MainStorySpawnRow extends Omit<SpawnGroup, 'enemyId'> {
   key: string
   stage: MainStorySpawnStage
+  rank?: number | null
 }
 
 export type MainStorySpawnSortKey = keyof MainStorySpawnStats | 'stage' | 'enemyName' | 'wave' | 'time' | 'entrance' | 'count'
@@ -53,6 +54,10 @@ export interface MainStorySpawnSort {
 const UNKNOWN_STATS: MainStorySpawnStats = { hp: null, attack: null, defense: null, resistance: null }
 const nameOrder = new Intl.Collator('ja-JP', { numeric: true })
 const stageOrder = new Intl.Collator('en', { numeric: true })
+
+export function getMainStorySpawnRankMetric(sort?: MainStorySpawnSort): keyof MainStorySpawnStats | null {
+  return sort && Object.hasOwn(UNKNOWN_STATS, sort.key) ? sort.key as keyof MainStorySpawnStats : null
+}
 
 function compareStages(left: MainStorySpawnStage, right: MainStorySpawnStage): number {
   return left.chapter - right.chapter || stageOrder.compare(left.id, right.id)
@@ -185,6 +190,28 @@ function compareSpawnRows(left: MainStorySpawnRow, right: MainStorySpawnRow, sor
   }
 }
 
+function rankSpawnValues(
+  entries: readonly MainStorySpawnRow[], metric: keyof MainStorySpawnStats, mode: 'units' | 'counts',
+): Map<number, number> {
+  const frequencies = new Map<number, number>()
+  for (const entry of entries) {
+    const value = entry.stats[metric]
+    if (value === null || !Number.isFinite(value)) continue
+    const weight = mode === 'units' ? entry.count : 1
+    frequencies.set(value, (frequencies.get(value) ?? 0) + weight)
+  }
+
+  // Rank depends on how many displayed rows have a higher value, even when the
+  // table is ascending or a page or image range starts in the middle of a tie.
+  const ranks = new Map<number, number>()
+  let rank = 1
+  for (const [value, weight] of [...frequencies].sort(([left], [right]) => right - left)) {
+    ranks.set(value, rank)
+    rank += weight
+  }
+  return ranks
+}
+
 export function getMainStorySpawnRows(
   lists: readonly MainStorySpawnList[], query: string, mode: 'units' | 'counts', offset = 0, limit = Infinity,
   sort?: MainStorySpawnSort,
@@ -211,6 +238,8 @@ export function getMainStorySpawnRows(
   const sortable = mode === 'units' ? sort?.key !== 'count'
     : sort?.key !== 'wave' && sort?.key !== 'time' && sort?.key !== 'entrance'
   if (sort && sortable) entries.sort((left, right) => compareSpawnRows(left, right, sort))
+  const rankMetric = getMainStorySpawnRankMetric(sort)
+  const ranks = rankMetric === null ? null : rankSpawnValues(entries, rankMetric, mode)
 
   // Sort the compressed groups first and expand only the individual rows on the page.
   const rows: MainStorySpawnRow[] = []
@@ -220,8 +249,11 @@ export function getMainStorySpawnRows(
     const units = mode === 'units' ? entry.count : 1
     const first = Math.max(0, offset - rowCount)
     const end = Math.min(units, offset + limit - rowCount)
+    const value = rankMetric === null ? null : entry.stats[rankMetric]
+    const rank = value === null ? null : ranks?.get(value) ?? null
     for (let i = first; i < end; i += 1) {
-      rows.push({ ...entry, count: mode === 'units' ? 1 : entry.count, key: `${entry.key}:${i}` })
+      rows.push({ ...entry, count: mode === 'units' ? 1 : entry.count, key: `${entry.key}:${i}`,
+        ...(rankMetric === null ? {} : { rank }) })
     }
     rowCount += units
     confirmedCount += entry.count

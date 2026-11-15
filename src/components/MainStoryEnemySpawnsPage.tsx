@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import {
-  getMainStorySpawnRows, loadMainStorySpawnLists, loadMainStorySpawnStages,
+  getMainStorySpawnRankMetric, getMainStorySpawnRows, loadMainStorySpawnLists, loadMainStorySpawnStages,
   type MainStorySpawnList, type MainStorySpawnRow, type MainStorySpawnSort,
   type MainStorySpawnSortKey, type MainStorySpawnStage,
 } from '../lib/mainStoryEnemySpawns'
@@ -17,16 +17,17 @@ const PAGE_SIZE = 25
 const NUMBER_FORMAT = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 6 })
 const VIEWS = [{ value: 'units', label: '1体ずつ' }, { value: 'counts', label: '体数をまとめる' }] as const
 const STATS = [['hp', 'HP'], ['attack', '攻撃力'], ['defense', '防御力'], ['resistance', '術耐性']] as const
-const IDENTITY_COLUMNS = [['stage', 'ステージ'], ['enemyName', '敵名']] as const
-const UNIT_COLUMNS = [...IDENTITY_COLUMNS, ['wave', 'ウェーブ／区間'], ['time', '区間内時刻（秒）'],
-  ['entrance', '出現口'], ...STATS] as const
-const COUNT_COLUMNS = [...IDENTITY_COLUMNS, ['count', '出現体数'], ...STATS] as const
+const COMMON_COLUMNS = [['enemyName', '敵名'], ...STATS, ['stage', 'ステージ']] as const
+const UNIT_COLUMNS = [...COMMON_COLUMNS, ['wave', 'ウェーブ／区間'], ['time', '区間内時刻（秒）'],
+  ['entrance', '出現口']] as const
+const COUNT_COLUMNS = [...COMMON_COLUMNS, ['count', '出現体数']] as const
 const DEFAULT_SORT: MainStorySpawnSort = { key: 'stage', direction: 'asc' }
 const STAGE_STATUS = { unconfirmed: '出現未確定', unavailable: '出現データ未取得' } as const
 const NO_STAGES: MainStorySpawnStage[] = []
 const NO_LISTS: MainStorySpawnList[] = []
 
 type View = typeof VIEWS[number]['value']
+type RankMetric = ReturnType<typeof getMainStorySpawnRankMetric>
 type LoadResult<T> = { attempt: number } & ({ data: T; error?: never } | { data?: never; error: string })
 
 function formatNumber(value: number | null) {
@@ -40,6 +41,10 @@ function errorMessage(cause: unknown) {
 function nextSortDirection(key: MainStorySpawnSortKey, sort: MainStorySpawnSort): MainStorySpawnSort['direction'] {
   if (key === sort.key) return sort.direction === 'asc' ? 'desc' : 'asc'
   return key === 'stage' || key === 'enemyName' || key === 'entrance' ? 'asc' : 'desc'
+}
+
+function textColumnClass(column: MainStorySpawnSortKey) {
+  return column === 'enemyName' || column === 'stage' ? 'main-story-spawns-text-cell' : undefined
 }
 
 function getStatusRowsInRange(statuses: readonly MainStorySpawnList[], offset: number, limit: number, rowCount: number) {
@@ -105,6 +110,7 @@ export function MainStoryEnemySpawnsPage() {
   const tableRowCount = rowCount + statuses.length
   const pageCount = Math.max(1, Math.ceil(tableRowCount / PAGE_SIZE))
   const columns = view === 'units' ? UNIT_COLUMNS : COUNT_COLUMNS
+  const rankMetric = getMainStorySpawnRankMetric(sort)
   const loading = scope.length > 0 && currentListLoad === null
 
   function changeChapter(value: string) {
@@ -148,7 +154,8 @@ export function MainStoryEnemySpawnsPage() {
         return {
           title: TITLE,
           conditions: [...conditions, `${rangeLabel}行目`],
-          table: <MainStorySpawnTable view={view} rows={result.rows} statusRows={stageStatuses} forImage />,
+          table: <MainStorySpawnTable view={view} rows={result.rows} statusRows={stageStatuses}
+            rankMetric={rankMetric} forImage />,
         }
       },
     })
@@ -199,7 +206,8 @@ export function MainStoryEnemySpawnsPage() {
           <EnemyDataContent loading={loading} error={currentListLoad?.error ?? null}
             onRetry={() => { setPage(0); setListAttempt(previous => previous + 1) }}>
             <div className="table-wrap main-story-spawns-table-wrap" role="region" tabIndex={0} aria-label="出現敵一覧の表">
-              <MainStorySpawnTable view={view} rows={rows} statusRows={statusRows} sorting={{ sort, onSort: changeSort }} />
+              <MainStorySpawnTable view={view} rows={rows} statusRows={statusRows} rankMetric={rankMetric}
+                sorting={{ sort, onSort: changeSort }} />
             </div>
             {pageCount > 1 && <nav className="enemy-pagination main-story-spawns-pagination" aria-label="出現敵一覧のページ切り替え">
               <span>{formatNumber(offset + 1)}–{formatNumber(Math.min(offset + PAGE_SIZE, tableRowCount))} / {formatNumber(tableRowCount)}行</span>
@@ -217,31 +225,40 @@ export function MainStoryEnemySpawnsPage() {
   </section>
 }
 
-function MainStorySpawnTable({ view, rows, statusRows, sorting, forImage = false }: {
+function MainStorySpawnTable({ view, rows, statusRows, rankMetric, sorting, forImage = false }: {
   view: View
   rows: readonly MainStorySpawnRow[]
   statusRows: readonly MainStorySpawnList[]
+  rankMetric: RankMetric
   sorting?: { sort: MainStorySpawnSort; onSort: (key: MainStorySpawnSortKey) => void }
   forImage?: boolean
 }) {
   const showUnits = view === 'units'
   const columns = showUnits ? UNIT_COLUMNS : COUNT_COLUMNS
+  const rankLabel = STATS.find(([key]) => key === rankMetric)?.[1]
+  const showRank = rankLabel !== undefined
   const style = forImage ? { '--main-story-spawns-image-row-height': `${MAIN_STORY_SPAWN_IMAGE_ROW_MIN_HEIGHT}px` } as CSSProperties : undefined
   return <table className={forImage ? 'main-story-spawns-table main-story-spawns-image-table' : 'main-story-spawns-table'}
     data-view={view} aria-label="出現敵一覧" style={style}>
-    {forImage && <colgroup>{columns.map(([key]) => <col key={key} />)}</colgroup>}
-    <thead><tr>{columns.map(([key, label]) => sorting
-      ? <MainStorySpawnSortableHeader key={key} column={key} label={label} {...sorting} />
-      : <th key={key} scope="col">{label}</th>)}</tr></thead>
+    {forImage && <colgroup>{showRank && <col />}{columns.map(([key]) => <col key={key} />)}</colgroup>}
+    <thead><tr>
+      {showRank && <th scope="col" className="main-story-spawns-rank-heading">{rankLabel}順位</th>}
+      {columns.map(([key, label]) => sorting
+        ? <MainStorySpawnSortableHeader key={key} column={key} label={label} {...sorting} />
+        : <th key={key} scope="col" className={textColumnClass(key)}>{label}</th>)}
+    </tr></thead>
     <tbody>
-      {rows.map(row => <MainStorySpawnTableRow key={row.key} row={row} showUnits={showUnits} forImage={forImage} />)}
+      {rows.map(row => <MainStorySpawnTableRow key={row.key} row={row} showUnits={showUnits} showRank={showRank}
+        forImage={forImage} />)}
       {statusRows.map(({ stage, status }) => status !== 'confirmed' &&
         <tr key={stage.id} className="main-story-spawns-status-row">
-          <td>{stage.code}</td>
-          <th scope="row" colSpan={columns.length - 1}>{STAGE_STATUS[status]}</th>
+          {showRank && <td>—</td>}
+          <th scope="row" colSpan={STATS.length + 1} className="main-story-spawns-text-cell">{STAGE_STATUS[status]}</th>
+          <td className="main-story-spawns-text-cell">{stage.code}</td>
+          <td colSpan={columns.length - COMMON_COLUMNS.length}>—</td>
         </tr>)}
       {rows.length === 0 && statusRows.length === 0 && <tr>
-        <td className="main-story-spawns-empty" colSpan={columns.length}>該当する敵はいません</td>
+        <td className="main-story-spawns-empty" colSpan={columns.length + Number(showRank)}>該当する敵はいません</td>
       </tr>}
     </tbody>
   </table>
@@ -255,7 +272,7 @@ function MainStorySpawnSortableHeader({ column, label, sort, onSort }: {
 }) {
   const active = column === sort.key
   const directionLabel = nextSortDirection(column, sort) === 'asc' ? '昇順' : '降順'
-  return <th scope="col" className={column === 'stage' || column === 'enemyName' ? undefined : 'numeric-heading'}
+  return <th scope="col" className={textColumnClass(column) ?? 'numeric-heading'}
     aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : undefined}>
     <button type="button" className="enemy-sort-button" aria-label={`${label}を${directionLabel}に並べ替え`}
       onClick={() => onSort(column)}>
@@ -265,9 +282,10 @@ function MainStorySpawnSortableHeader({ column, label, sort, onSort }: {
   </th>
 }
 
-function MainStorySpawnTableRow({ row, showUnits, forImage }: {
+function MainStorySpawnTableRow({ row, showUnits, showRank, forImage }: {
   row: MainStorySpawnRow
   showUnits: boolean
+  showRank: boolean
   forImage: boolean
 }) {
   const waveFragment = row.wave === null && row.fragment === null
@@ -275,13 +293,16 @@ function MainStorySpawnTableRow({ row, showUnits, forImage }: {
     : `${formatNumber(row.wave)}／${formatNumber(row.fragment)}`
   const imageNumber = forImage ? true : undefined
   return <tr>
-    <td>{row.stage.code}</td>
-    <th scope="row">{row.enemyName}</th>
+    {showRank && <td data-table-image-number={imageNumber}>
+      {row.rank == null ? '—' : `${formatNumber(row.rank)}位`}
+    </td>}
+    <th scope="row" className="main-story-spawns-text-cell">{row.enemyName}</th>
+    {STATS.map(([key]) => <td key={key} data-table-image-number={imageNumber}>{formatNumber(row.stats[key])}</td>)}
+    <td className="main-story-spawns-text-cell">{row.stage.code}</td>
     {showUnits ? <>
       <td>{waveFragment}</td>
       <td data-table-image-number={imageNumber}>{formatNumber(row.time)}</td>
       <td>{row.entrance ?? '—'}</td>
     </> : <td data-table-image-number={imageNumber}>{formatNumber(row.count)}</td>}
-    {STATS.map(([key]) => <td key={key} data-table-image-number={imageNumber}>{formatNumber(row.stats[key])}</td>)}
   </tr>
 }
