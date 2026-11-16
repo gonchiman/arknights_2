@@ -30,8 +30,8 @@
   font-size: 13px;
 }
 
-.main-story-spawns-filters :is(select, input) {
-  width: 100%;
+.main-story-spawns-filters :is(select, input),
+.main-story-spawns-jump input {
   min-width: 0;
   min-height: 34px;
   padding: 5px 8px;
@@ -42,10 +42,16 @@
   font: inherit;
 }
 
+.main-story-spawns-filters :is(select, input) {
+  width: 100%;
+}
+
 .main-story-spawns-toolbar,
 .main-story-spawns-views,
 .main-story-spawns-actions,
-.main-story-spawns-total {
+.main-story-spawns-total,
+.main-story-spawns-jump,
+.main-story-spawns-jump-options {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -58,16 +64,40 @@
 }
 
 .main-story-spawns-views .button,
-.main-story-spawns-actions .button {
+.main-story-spawns-actions .button,
+.main-story-spawns-jump .button {
   min-height: 34px;
   padding: 5px 10px;
   font-size: 13px;
 }
 
-.main-story-spawns-total {
+.main-story-spawns-total,
+.main-story-spawns-jump {
   color: var(--text-soft);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
+}
+
+.main-story-spawns-jump {
+  margin-bottom: 10px;
+}
+
+.main-story-spawns-jump input {
+  width: 110px;
+}
+
+.main-story-spawns-jump .button[aria-pressed="true"] {
+  border-color: var(--link);
+  background: color-mix(in srgb, var(--link) 9%, var(--surface));
+  color: var(--link);
+}
+
+.main-story-spawns-jump input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.main-story-spawns-jump output[data-invalid="true"] {
+  color: var(--danger);
 }
 
 .main-story-spawns-table-wrap {
@@ -146,6 +176,14 @@
   color: var(--text-muted);
 }
 
+.main-story-spawns-table tr[aria-current="true"] > * {
+  background: color-mix(in srgb, var(--link) 9%, var(--surface));
+}
+
+.main-story-spawns-table tr[aria-current="true"] th {
+  font-weight: 600;
+}
+
 .main-story-spawns-image-table {
   border: 1px solid var(--border);
   background: var(--surface);
@@ -190,6 +228,7 @@
   .main-story-spawns-filters :is(select, input),
   .main-story-spawns-views .button,
   .main-story-spawns-actions .button,
+  .main-story-spawns-jump :is(input, button),
   .main-story-spawns-pagination button {
     min-height: 44px;
   }

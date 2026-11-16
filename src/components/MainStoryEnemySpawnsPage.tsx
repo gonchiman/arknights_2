@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type FormEvent, type Ref } from 'react'
 import {
-  getMainStorySpawnRankMetric, getMainStorySpawnRows, loadMainStorySpawnLists, loadMainStorySpawnStages,
+  findMainStorySpawnJump, getMainStorySpawnRankMetric, getMainStorySpawnRows, loadMainStorySpawnLists, loadMainStorySpawnStages,
+  MAIN_STORY_SPAWN_AGGREGATION_VERSION,
   type MainStorySpawnList, type MainStorySpawnRow, type MainStorySpawnSort,
   type MainStorySpawnSortKey, type MainStorySpawnStage,
 } from '../lib/mainStoryEnemySpawns'
@@ -13,6 +14,7 @@ import './EnemyAnalysis.css'
 import './MainStoryEnemySpawnsPage.css'
 
 const TITLE = 'メインストーリーの出現敵一覧'
+const DATA_CONDITIONS = [`集計版 ${MAIN_STORY_SPAWN_AGGREGATION_VERSION}`, '通常環境', '基礎ステータス']
 const PAGE_SIZE = 25
 const NUMBER_FORMAT = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 6 })
 const VIEWS = [{ value: 'units', label: '1体ずつ' }, { value: 'counts', label: '体数をまとめる' }] as const
@@ -27,7 +29,7 @@ const NO_STAGES: MainStorySpawnStage[] = []
 const NO_LISTS: MainStorySpawnList[] = []
 
 type View = typeof VIEWS[number]['value']
-type RankMetric = ReturnType<typeof getMainStorySpawnRankMetric>
+type JumpKind = 'rank' | 'stat'
 type LoadResult<T> = { attempt: number } & ({ data: T; error?: never } | { data?: never; error: string })
 
 function formatNumber(value: number | null) {
@@ -65,6 +67,20 @@ export function MainStoryEnemySpawnsPage() {
   const [sort, setSort] = useState(DEFAULT_SORT)
   const [page, setPage] = useState(0)
   const [imageSelection, setImageSelection] = useState<MainStorySpawnImageSelection | null>(null)
+  const [jumpKind, setJumpKind] = useState<JumpKind>('rank')
+  const [jumpValue, setJumpValue] = useState('')
+  const [jumpTarget, setJumpTarget] = useState<ReturnType<typeof findMainStorySpawnJump>>(null)
+  const [jumpFeedback, setJumpFeedback] = useState<{ message: string; invalid?: boolean } | null>(null)
+  const jumpInput = useRef<HTMLInputElement>(null)
+  const jumpRow = useRef<HTMLTableRowElement>(null)
+  const jumpFeedbackId = useId()
+
+  useEffect(() => {
+    const row = jumpRow.current
+    if (!jumpTarget || !row) return
+    row.focus({ preventScroll: true })
+    row.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [jumpTarget])
 
   useEffect(() => {
     let active = true
@@ -99,7 +115,7 @@ export function MainStoryEnemySpawnsPage() {
   const currentListLoad = listLoad?.stages === scope && listLoad.attempt === listAttempt ? listLoad : null
   const lists = currentListLoad?.data ?? NO_LISTS
   const offset = page * PAGE_SIZE
-  const { rows, rowCount, confirmedCount } = useMemo(
+  const { rows, rowCount, confirmedCount, rankedRowCount } = useMemo(
     () => getMainStorySpawnRows(lists, query, view, offset, PAGE_SIZE, sort), [lists, query, view, offset, sort],
   )
   const statuses = lists.filter(item => item.status !== 'confirmed')
@@ -111,24 +127,74 @@ export function MainStoryEnemySpawnsPage() {
   const pageCount = Math.max(1, Math.ceil(tableRowCount / PAGE_SIZE))
   const columns = view === 'units' ? UNIT_COLUMNS : COUNT_COLUMNS
   const rankMetric = getMainStorySpawnRankMetric(sort)
+  const rankLabel = STATS.find(([key]) => key === rankMetric)?.[1]
+  const jumpByRank = jumpKind === 'rank'
   const loading = scope.length > 0 && currentListLoad === null
+
+  function clearJump() {
+    setJumpTarget(null)
+    setJumpFeedback(null)
+  }
+
+  function changePage(value: number) {
+    setPage(value)
+    clearJump()
+  }
 
   function changeChapter(value: string) {
     setChapter(value)
     if (value !== '' && !stages.some(item => item.id === stageId && item.chapter === Number(value))) setStage('')
-    setPage(0)
+    changePage(0)
   }
 
   function changeView(value: View) {
     const availableColumns = value === 'units' ? UNIT_COLUMNS : COUNT_COLUMNS
     setSort(current => availableColumns.some(([key]) => key === current.key) ? current : DEFAULT_SORT)
     setView(value)
-    setPage(0)
+    changePage(0)
   }
 
   function changeSort(key: MainStorySpawnSortKey) {
+    if (sort.key !== key) setJumpValue('')
     setSort(current => ({ key, direction: nextSortDirection(key, current) }))
-    setPage(0)
+    changePage(0)
+  }
+
+  function changeJumpKind(value: JumpKind) {
+    if (value === jumpKind) return
+    setJumpKind(value)
+    setJumpValue('')
+    clearJump()
+    jumpInput.current?.focus({ preventScroll: true })
+  }
+
+  function jumpToRow(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const value = Number(jumpValue)
+    const invalidRank = jumpByRank && (!Number.isSafeInteger(value) || value < 1 || value > rankedRowCount)
+    if (!jumpValue.trim() || !Number.isFinite(value) || value < 0 || invalidRank) {
+      setJumpTarget(null)
+      setJumpFeedback({
+        message: jumpByRank ? `1〜${formatNumber(rankedRowCount)}位を入力` : '0以上の値を入力',
+        invalid: true,
+      })
+      jumpInput.current?.focus({ preventScroll: true })
+      return
+    }
+
+    const target = findMainStorySpawnJump(lists, query, view, sort, { kind: jumpKind, value })
+    if (!target) {
+      setJumpTarget(null)
+      setJumpFeedback({ message: '該当する行がありません' })
+      return
+    }
+    setPage(Math.floor(target.offset / PAGE_SIZE))
+    setJumpTarget(target)
+    const match = jumpByRank ? target.rank : target.value
+    setJumpFeedback(match === value ? null : {
+      message: jumpByRank ? `${formatNumber(value)}位 → 同順位の${formatNumber(match)}位`
+        : `${formatNumber(value)} → ${formatNumber(match)}`,
+    })
   }
 
   function openImage() {
@@ -139,7 +205,7 @@ export function MainStoryEnemySpawnsPage() {
     const displayMode = view === 'units' ? VIEWS[0].label : VIEWS[1].label
     const sortLabel = columns.find(([key]) => key === sort.key)?.[1] ?? 'ステージ'
     const conditions = [
-      '通常環境', scopeLabel, displayMode, `${sortLabel} ${sort.direction === 'asc' ? '昇順' : '降順'}`,
+      ...DATA_CONDITIONS, scopeLabel, displayMode, `${sortLabel} ${sort.direction === 'asc' ? '昇順' : '降順'}`,
       ...(query.trim() ? [`敵名「${query.trim()}」`] : []),
     ]
     setImageSelection({
@@ -155,7 +221,7 @@ export function MainStoryEnemySpawnsPage() {
           title: TITLE,
           conditions: [...conditions, `${rangeLabel}行目`],
           table: <MainStorySpawnTable view={view} rows={result.rows} statusRows={stageStatuses}
-            rankMetric={rankMetric} forImage />,
+            rankLabel={rankLabel} forImage />,
         }
       },
     })
@@ -165,7 +231,7 @@ export function MainStoryEnemySpawnsPage() {
     <PageBreadcrumbs parents={[{ label: '敵データベース', href: '#/enemies' }]} current={TITLE} />
     <header className="page-intro main-story-spawns-intro">
       <h1>{TITLE}</h1>
-      <span>通常環境</span>
+      <span>{DATA_CONDITIONS.join('・')}</span>
     </header>
     <EnemyDataContent loading={currentStageLoad === null} error={currentStageLoad?.error ?? null}
       onRetry={() => setStageAttempt(previous => previous + 1)}>
@@ -177,14 +243,14 @@ export function MainStoryEnemySpawnsPage() {
           </select></label>
           <label><span>ステージ</span><select value={stageId} onChange={event => {
             setStage(event.target.value)
-            setPage(0)
+            changePage(0)
           }}>
             <option value="">全ステージ</option>
             {chapterStages.map(item => <option key={item.id} value={item.id}>{item.code} {item.name}</option>)}
           </select></label>
           <label><span>敵名</span><input type="search" placeholder="敵名を検索" value={query} onChange={event => {
             setQuery(event.target.value)
-            setPage(0)
+            changePage(0)
           }} /></label>
         </div>
         <div className="main-story-spawns-toolbar">
@@ -204,17 +270,35 @@ export function MainStoryEnemySpawnsPage() {
         </div>
         <div aria-busy={loading}>
           <EnemyDataContent loading={loading} error={currentListLoad?.error ?? null}
-            onRetry={() => { setPage(0); setListAttempt(previous => previous + 1) }}>
+            onRetry={() => { changePage(0); setListAttempt(previous => previous + 1) }}>
+            {rankLabel && rankedRowCount > 0 && <form className="main-story-spawns-jump" noValidate
+              aria-label="順位・ステータス値へ移動" onSubmit={jumpToRow}>
+              <div className="main-story-spawns-jump-options" role="group" aria-label="移動先">
+                <button type="button" className="button secondary" aria-pressed={jumpByRank}
+                  onClick={() => changeJumpKind('rank')}>順位</button>
+                <button type="button" className="button secondary" aria-pressed={!jumpByRank}
+                  onClick={() => changeJumpKind('stat')}>{rankLabel}</button>
+              </div>
+              <input ref={jumpInput} type="number" value={jumpValue} autoComplete="off"
+                min={jumpByRank ? 1 : 0} max={jumpByRank ? rankedRowCount : undefined} step={jumpByRank ? 1 : 'any'}
+                inputMode={jumpByRank ? 'numeric' : 'decimal'} aria-label={jumpByRank ? '指定する順位' : `指定する${rankLabel}`}
+                aria-invalid={jumpFeedback?.invalid} aria-describedby={jumpFeedback ? jumpFeedbackId : undefined}
+                onChange={event => { setJumpValue(event.target.value); setJumpFeedback(null) }} />
+              <button type="submit" className="button">移動</button>
+              <output id={jumpFeedbackId} aria-live="polite" data-invalid={jumpFeedback?.invalid}>
+                {jumpFeedback?.message}
+              </output>
+            </form>}
             <div className="table-wrap main-story-spawns-table-wrap" role="region" tabIndex={0} aria-label="出現敵一覧の表">
-              <MainStorySpawnTable view={view} rows={rows} statusRows={statusRows} rankMetric={rankMetric}
-                sorting={{ sort, onSort: changeSort }} />
+              <MainStorySpawnTable view={view} rows={rows} statusRows={statusRows} rankLabel={rankLabel}
+                sorting={{ sort, onSort: changeSort }} selectedKey={jumpTarget?.key} selectedRowRef={jumpRow} />
             </div>
             {pageCount > 1 && <nav className="enemy-pagination main-story-spawns-pagination" aria-label="出現敵一覧のページ切り替え">
               <span>{formatNumber(offset + 1)}–{formatNumber(Math.min(offset + PAGE_SIZE, tableRowCount))} / {formatNumber(tableRowCount)}行</span>
               <div>
-                <button type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>前へ</button>
+                <button type="button" disabled={page === 0} onClick={() => changePage(page - 1)}>前へ</button>
                 <span aria-live="polite">{page + 1} / {pageCount}</span>
-                <button type="button" disabled={page + 1 >= pageCount} onClick={() => setPage(page + 1)}>次へ</button>
+                <button type="button" disabled={page + 1 >= pageCount} onClick={() => changePage(page + 1)}>次へ</button>
               </div>
             </nav>}
           </EnemyDataContent>
@@ -225,17 +309,18 @@ export function MainStoryEnemySpawnsPage() {
   </section>
 }
 
-function MainStorySpawnTable({ view, rows, statusRows, rankMetric, sorting, forImage = false }: {
+function MainStorySpawnTable({ view, rows, statusRows, rankLabel, sorting, selectedKey, selectedRowRef, forImage = false }: {
   view: View
   rows: readonly MainStorySpawnRow[]
   statusRows: readonly MainStorySpawnList[]
-  rankMetric: RankMetric
+  rankLabel?: string
   sorting?: { sort: MainStorySpawnSort; onSort: (key: MainStorySpawnSortKey) => void }
+  selectedKey?: string
+  selectedRowRef?: Ref<HTMLTableRowElement>
   forImage?: boolean
 }) {
   const showUnits = view === 'units'
   const columns = showUnits ? UNIT_COLUMNS : COUNT_COLUMNS
-  const rankLabel = STATS.find(([key]) => key === rankMetric)?.[1]
   const showRank = rankLabel !== undefined
   const style = forImage ? { '--main-story-spawns-image-row-height': `${MAIN_STORY_SPAWN_IMAGE_ROW_MIN_HEIGHT}px` } as CSSProperties : undefined
   return <table className={forImage ? 'main-story-spawns-table main-story-spawns-image-table' : 'main-story-spawns-table'}
@@ -249,7 +334,7 @@ function MainStorySpawnTable({ view, rows, statusRows, rankMetric, sorting, forI
     </tr></thead>
     <tbody>
       {rows.map(row => <MainStorySpawnTableRow key={row.key} row={row} showUnits={showUnits} showRank={showRank}
-        forImage={forImage} />)}
+        forImage={forImage} selected={row.key === selectedKey} selectedRef={selectedRowRef} />)}
       {statusRows.map(({ stage, status }) => status !== 'confirmed' &&
         <tr key={stage.id} className="main-story-spawns-status-row">
           {showRank && <td>—</td>}
@@ -282,17 +367,19 @@ function MainStorySpawnSortableHeader({ column, label, sort, onSort }: {
   </th>
 }
 
-function MainStorySpawnTableRow({ row, showUnits, showRank, forImage }: {
+function MainStorySpawnTableRow({ row, showUnits, showRank, forImage, selected, selectedRef }: {
   row: MainStorySpawnRow
   showUnits: boolean
   showRank: boolean
   forImage: boolean
+  selected: boolean
+  selectedRef?: Ref<HTMLTableRowElement>
 }) {
   const waveFragment = row.wave === null && row.fragment === null
     ? row.fromBranch ? '分岐' : '—'
     : `${formatNumber(row.wave)}／${formatNumber(row.fragment)}`
   const imageNumber = forImage ? true : undefined
-  return <tr>
+  return <tr aria-current={selected || undefined} tabIndex={selected ? -1 : undefined} ref={selected ? selectedRef : undefined}>
     {showRank && <td data-table-image-number={imageNumber}>
       {row.rank == null ? '—' : `${formatNumber(row.rank)}位`}
     </td>}

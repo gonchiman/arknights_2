@@ -1,7 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { buildMainStorySpawnList, getMainStorySpawnRows, getMainStorySpawnStages, loadMainStorySpawnLists } from '../src/lib/mainStoryEnemySpawns.ts'
+import { gunzipSync } from 'node:zlib'
+import { buildEnemyRecords } from '../src/lib/enemyData.ts'
+import { buildMainStorySpawnList, findMainStorySpawnJump, getMainStorySpawnRows, getMainStorySpawnStages, loadMainStorySpawnLists, loadMainStorySpawnStages } from '../src/lib/mainStoryEnemySpawns.ts'
 import { getMapDetail, parseMapDetailShard, parseMapIndex } from '../src/lib/mapDatabase.ts'
 import type { MapDetailShard } from '../src/types/map.ts'
 
@@ -84,7 +86,7 @@ test('ステージの詳細が未取得の場合は出現一覧を未取得と�
   const { stage, map } = fixture('0-1')
   const list = buildMainStorySpawnList(stage, map, null, index.enemies)
   assert.equal(list.status, 'unavailable')
-  assert.deepEqual(getMainStorySpawnRows([list], '', 'units'), { rows: [], confirmedCount: 0, rowCount: 0 })
+  assert.deepEqual(getMainStorySpawnRows([list], '', 'units'), { rows: [], confirmedCount: 0, rowCount: 0, rankedRowCount: 0 })
 })
 
 test('未確定ステージでは置換後の敵と検証済み分岐を表示し、条件未確定と無効の出現を除く', () => {
@@ -123,19 +125,57 @@ test('未確定ステージでは置換後の敵と検証済み分岐を表示�
   assert.ok(units.rows.slice(1).every(row => row.time === null))
 })
 
-test('同じ版のステージデータを読み込んで0-1の兵士にステージ固有の防御力を使う', async context => {
-  const { stage, map } = fixture('0-1')
-  const filenames = ['index.json', 'main-enemy-trends.json', map.detailFile]
+test('全章の出現体数と術耐性順位を集計版v12に揃え、同値の順位から先頭行に移動する', async context => {
+  const archiveDirectory = new URL('../public/data/enemy-aggregation/', import.meta.url)
+  const archive = JSON.parse(gunzipSync(readFileSync(new URL('v12.json.gz', archiveDirectory))).toString('utf8'))
+  const archivedIndex = parseMapIndex(archive.files['maps/index.json'])
+  const archivedStages = new Map(archivedIndex.maps.map(map => [map.levelId, map]))
+  const archivedEnemies = new Set(buildEnemyRecords(archive.files['runtime/enemy_handbook_table.json'],
+    archive.files['runtime/enemy_database.json'], archive.files['enemy-stage-appearances.json']).map(enemy => enemy.id))
+  const archivedCounts = archive.files['enemy-histogram-counts.json'].mainStory.enemies as Record<string, { spawnCount: number }>
   context.mock.method(globalThis, 'fetch', async (url: string | URL | Request) => {
     const { pathname } = new URL(String(url), 'http://localhost')
-    const filename = pathname.replace(/^\/data\/maps\//, '')
-    assert.ok(filenames.includes(filename), pathname)
-    return new Response(readFileSync(new URL(filename, dataDirectory), 'utf8'))
+    assert.equal(pathname, '/data/enemy-aggregation/v12-main-story-spawns.json')
+    return new Response(readFileSync(new URL('v12-main-story-spawns.json', archiveDirectory), 'utf8'))
   })
-  const [list] = await loadMainStorySpawnLists([stage])
-  const { rows } = getMainStorySpawnRows([list], '兵士', 'units')
-  assert.equal(rows.length, 1)
-  assert.equal(rows[0].stats.defense, 30)
+
+  const stages = await loadMainStorySpawnStages()
+  assert.equal(stages.length, 268)
+  assert.deepEqual(stages, getMainStorySpawnStages(archivedIndex))
+  assert.ok(stages.some(stage => stage.code === '17-2'))
+
+  const lists = await loadMainStorySpawnLists(stages)
+  const appearances = new Map<string, number>()
+  for (const { stage, status, groups } of lists) {
+    const archived = archivedStages.get(stage.id)
+    assert.ok(archived, stage.code)
+    if (archived.enemyIds.every(id => archivedEnemies.has(id))) {
+      assert.equal(groups.reduce((total, group) => total + group.count, 0),
+        archived.spawnCount ?? archived.spawnAggregation?.count, stage.code)
+    }
+    assert.equal(status, archived.spawnAggregation?.kind === 'lower-bound' ? 'unconfirmed' : 'confirmed', stage.code)
+    for (const group of groups) {
+      appearances.set(group.enemyId, (appearances.get(group.enemyId) ?? 0) + group.count)
+    }
+  }
+  assert.deepEqual(appearances, new Map(
+    Object.entries(archivedCounts).filter(([id, row]) => row.spawnCount > 0 && archivedEnemies.has(id))
+      .map(([id, row]) => [id, row.spawnCount]),
+  ))
+
+  const sort = { key: 'resistance', direction: 'desc' } as const
+  const ranked = getMainStorySpawnRows(lists, '', 'units', 0, Infinity, sort)
+  assert.equal(ranked.confirmedCount, 11_610)
+  assert.equal(ranked.rankedRowCount, 11_409)
+  const higher = ranked.rows[420].stats.resistance
+  const lower = ranked.rows[1857].stats.resistance
+  assert.ok(higher !== null && higher > 50)
+  assert.ok(ranked.rows.slice(421, 1857).every(row => row.stats.resistance === 50 && row.rank === 422))
+  assert.ok(lower !== null && lower < 50)
+
+  assert.deepEqual(findMainStorySpawnJump(lists, '', 'units', sort, { kind: 'rank', value: 1857 }), {
+    offset: 421, key: ranked.rows[421].key, rank: 422, value: 50,
+  })
 })
 
 test('体数での並べ替えは全ステージを対象にしてからページを切り出す', () => {
@@ -239,4 +279,68 @@ test('検索に一致する行で順位を付け、ステータス以外で並�
   assert.deepEqual(defense.rows.map(row => [row.stats.defense, row.rank]), [[0, 8], [5, 1]])
   const byStage = getMainStorySpawnRows(lists, '兵士', 'units', 0, 2, { key: 'stage', direction: 'asc' })
   assert.ok(byStage.rows.every(row => row.rank === undefined))
+})
+
+test('順位の移動先は同率グループの先頭行になり、並べ替えとページの行キーを保つ', () => {
+  const lists = rankFixtures()
+  const cases = [
+    { direction: 'desc', target: 18, offset: 17, rank: 18, value: 50 },
+    { direction: 'asc', target: 40, offset: 1, rank: 18, value: 50 },
+    { direction: 'desc', target: 41, offset: 40, rank: 41, value: 20 },
+    { direction: 'asc', target: 1, offset: 24, rank: 1, value: 100 },
+  ] as const
+  for (const { direction, target, offset, rank, value } of cases) {
+    const sort = { key: 'hp', direction } as const
+    const destination = findMainStorySpawnJump(lists, '', 'units', sort, { kind: 'rank', value: target })
+    const start = Math.floor(offset / 25) * 25
+    const page = getMainStorySpawnRows(lists, '', 'units', start, 25, sort)
+    assert.equal(page.rankedRowCount, 41)
+    const expectedRow = page.rows[offset - start]
+    assert.deepEqual(destination, { offset, key: expectedRow.key, rank, value })
+    assert.equal(expectedRow.rank, rank)
+  }
+})
+
+test('値で移動すると最も近い値を選び、同じ差なら高い値を優先する', () => {
+  const lists = rankFixtures()
+  const ascending = { key: 'hp', direction: 'asc' } as const
+  for (const [target, offset, rank, value] of [[40, 1, 18, 50], [75, 24, 1, 100], [500, 24, 1, 100]]) {
+    const destination = findMainStorySpawnJump(lists, '', 'units', ascending, { kind: 'stat', value: target })
+    assert.ok(destination)
+    assert.deepEqual([destination.offset, destination.rank, destination.value], [offset, rank, value])
+  }
+
+  const defense = { key: 'defense', direction: 'asc' } as const
+  const zero = findMainStorySpawnJump(lists, '', 'units', defense, { kind: 'stat', value: 0 })
+  assert.ok(zero)
+  assert.deepEqual([zero.offset, zero.rank, zero.value], [0, 8, 0])
+})
+
+test('絞り込みと表示形式に合わせて順位の移動範囲を決める', () => {
+  const lists = rankFixtures()
+  const sort = { key: 'hp', direction: 'desc' } as const
+  const units = getMainStorySpawnRows(lists, '兵士', 'units', 0, 1, sort)
+  const counts = getMainStorySpawnRows(lists, '兵士', 'counts', 0, 1, sort)
+  assert.equal(units.rankedRowCount, 8)
+  assert.equal(counts.rankedRowCount, 2)
+
+  const destination = findMainStorySpawnJump(lists, '兵士', 'counts', sort, { kind: 'rank', value: 2 })
+  assert.ok(destination)
+  assert.deepEqual([destination.offset, destination.rank, destination.value], [1, 2, 20])
+  assert.equal(findMainStorySpawnJump(lists, '兵士', 'counts', sort, { kind: 'rank', value: 3 }), null)
+})
+
+test('不正な移動入力と、順位を持つ行がない場合に移動先を返さない', () => {
+  const lists = rankFixtures()
+  const sort = { key: 'hp', direction: 'desc' } as const
+  for (const value of [0, -1, 1.5, 42, Infinity, NaN, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.equal(findMainStorySpawnJump(lists, '', 'units', sort, { kind: 'rank', value }), null)
+  }
+  for (const value of [-1, Infinity, NaN]) {
+    assert.equal(findMainStorySpawnJump(lists, '', 'units', sort, { kind: 'stat', value }), null)
+  }
+  assert.equal(findMainStorySpawnJump(lists, '', 'units', { key: 'stage', direction: 'asc' },
+    { kind: 'rank', value: 1 }), null)
+  assert.equal(findMainStorySpawnJump([listFor('0-1')], '', 'units', sort, { kind: 'stat', value: 0 }), null)
+  assert.equal(findMainStorySpawnJump(lists, '該当なし', 'units', sort, { kind: 'rank', value: 1 }), null)
 })
