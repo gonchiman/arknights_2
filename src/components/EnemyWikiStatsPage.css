@@ -1,0 +1,33 @@
+.enemy-wiki-stats-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.enemy-wiki-stats-filters label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.enemy-wiki-stats-filters input,
+.enemy-wiki-stats-filters select {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 32px;
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  color: var(--text);
+  background: var(--surface);
+  font: inherit;
+}
+
+.enemy-wiki-stats-filters input { width: 13em; }
+
+@media (pointer: coarse) {
+  .enemy-wiki-stats-filters input, .enemy-wiki-stats-filters select { min-height: 44px; }
+}

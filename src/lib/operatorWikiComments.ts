@@ -33,7 +33,7 @@ export function getWikiCommentRange(throughDate: string, days: WikiCommentPeriod
 }
 
 export function getWikiCommentCount(
-  entry: OperatorWikiCommentEntry | undefined,
+  entry: Pick<OperatorWikiCommentEntry, 'coveredFrom' | 'counts'> | undefined,
   { start, end }: CommentRange,
 ): number | null {
   if (!entry?.coveredFrom || start < entry.coveredFrom) return null

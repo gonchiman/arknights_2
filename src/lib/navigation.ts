@@ -1,4 +1,4 @@
-export type NavigationPage = 'home' | 'operators' | 'operator-pca' | 'operator-wiki-views' | 'skills' | 'skill-classification' | 'talent-classification' | 'trait-classification' | 'trait-structure' | 'talent-structure' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'structure-coverage' | 'skill-json' | 'skill-kmeans' | 'skill-hdbscan' | 'skill-hierarchical' | 'code-analysis' | 'damage' | 'damage-two' | 'damage-three' | 'damage-three-coverage' | 'damage-three-comparison' | 'damage-verification' | 'comparison' | 'enemies' | 'enemy-analysis' | 'enemy-regression' | 'enemy-immunities' | 'enemy-defense-resistance' | 'enemy-map-coverage' | 'main-enemy-trends' | 'maps' | 'roguelike' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-s3-comparison' | 'surtr-skill-comparison' | 'surtr-total-damage' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-target-switch-three' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
+export type NavigationPage = 'home' | 'operators' | 'operator-pca' | 'operator-wiki-views' | 'skills' | 'skill-classification' | 'talent-classification' | 'trait-classification' | 'trait-structure' | 'talent-structure' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'structure-coverage' | 'skill-json' | 'skill-kmeans' | 'skill-hdbscan' | 'skill-hierarchical' | 'code-analysis' | 'damage' | 'damage-two' | 'damage-three' | 'damage-three-coverage' | 'damage-three-comparison' | 'damage-verification' | 'comparison' | 'enemies' | 'enemy-analysis' | 'enemy-wiki-stats' | 'enemy-regression' | 'enemy-immunities' | 'enemy-defense-resistance' | 'enemy-map-coverage' | 'main-enemy-trends' | 'maps' | 'roguelike' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-s3-comparison' | 'surtr-skill-comparison' | 'surtr-total-damage' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-target-switch-three' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
   | 'damage-three-attribute-comparison'
   | 'physical-arts-comparison'
   | 'main-enemy-spawns'
@@ -370,6 +370,13 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     href: '#/analysis/enemies/main-spawns',
     label: 'メインストーリーの出現敵一覧',
     description: '',
+    section: 'analysis',
+  },
+  {
+    id: 'enemy-wiki-stats',
+    href: '#/analysis/enemies/wiki-stats',
+    label: '敵別 Wiki 閲覧数',
+    description: '敵ページの閲覧数・コメント件数',
     section: 'analysis',
   },
   {

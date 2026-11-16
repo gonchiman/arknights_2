@@ -141,6 +141,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['enemy-map-coverage', 'enemy-map-coverage'],
       ['main-enemy-trends', 'main-enemy-trends'],
       ['main-enemy-spawns', 'main-enemy-spawns'],
+      ['enemy-wiki-stats', 'enemy-wiki-stats'],
       ['roguelike', 'roguelike'],
       ['maps', 'maps'],
       ['goldenglow-home', 'goldenglow-home'],
