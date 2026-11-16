@@ -227,8 +227,16 @@ test('左右の横棒の動画は集計条件と強調を引き継ぎ、縦横�
       assert.equal(orderList?.[1], orderHeading[1])
       assert.deepEqual([...orderList[2].matchAll(/aria-label="([^"]+)を上へ"/g)].map(([, label]) => label),
         ['タイトル・条件', '軸・目盛り', '階級名', '左右の棒', '階級割合'])
-      assert.match(markup, /aria-label="テンポ"/)
-      assert.match(markup, />短め<.*aria-pressed="true"[^>]*>標準<.*>ゆっくり</)
+      const tempoSlider = markup.match(/<input\b[^>]*aria-label="テンポ"[^>]*>/)?.[0]
+      assert.ok(tempoSlider)
+      assert.deepEqual(['type', 'min', 'max', 'step', 'value', 'aria-valuetext'].map(name => attr(tempoSlider, name)),
+        ['range', '0', '9', '1', '3', '5秒（標準）'])
+      const tempoMarks = markup.match(/<datalist\b[^>]*>.*?<\/datalist>/)?.[0]
+      assert.ok(tempoMarks)
+      assert.equal(attr(tempoSlider, 'list'), attr(tempoMarks, 'id'))
+      assert.deepEqual([...tempoMarks.matchAll(/<option value="(\d)"><\/option>/g)].map(([, value]) => value),
+        ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'])
+      assert.match(previewText, /enemy-rating-video-tempo-ticks[^>]*>.*?<span>20秒<\/span>/)
       assert.match(markup, /描画完了まで（秒）<\/span><input\b[^>]*type="number"[^>]*value="5"/)
       assert.match(markup, />既定値に戻す<\/button>/)
       assert.match(markup, /<summary>秒数で調整<\/summary>/)

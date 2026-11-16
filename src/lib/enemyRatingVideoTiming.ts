@@ -1,8 +1,22 @@
 export const ENEMY_RATING_VIDEO_PHASES = ['title', 'axes', 'ranks', 'bars', 'values'] as const
 export type EnemyRatingVideoPhase = typeof ENEMY_RATING_VIDEO_PHASES[number]
 export type EnemyRatingVideoTimingField = EnemyRatingVideoPhase | 'hold'
-export const ENEMY_RATING_VIDEO_TEMPOS = ['short', 'standard', 'slow'] as const
+export const ENEMY_RATING_VIDEO_TEMPOS = [
+  'veryShort', 'short', 'mediumShort', 'standard', 'mediumSlow', 'slow', 'verySlow', 'slow12', 'slow15', 'slow20',
+] as const
 export type EnemyRatingVideoTempo = typeof ENEMY_RATING_VIDEO_TEMPOS[number]
+export const ENEMY_RATING_VIDEO_TEMPO_SECONDS = {
+  veryShort: 2.5,
+  short: 3.5,
+  mediumShort: 4,
+  standard: 5,
+  mediumSlow: 6,
+  slow: 7,
+  verySlow: 10,
+  slow12: 12,
+  slow15: 15,
+  slow20: 20,
+} as const satisfies Record<EnemyRatingVideoTempo, number>
 export const ENEMY_RATING_VIDEO_TEXT_MODES = ['fade', 'instant', 'stagger'] as const
 export type EnemyRatingVideoTextMode = typeof ENEMY_RATING_VIDEO_TEXT_MODES[number]
 export type EnemyRatingVideoShapeMode = 'grow' | 'stagger'
@@ -36,12 +50,11 @@ const ORIGINAL_PHASE_TIMING: Record<EnemyRatingVideoPhase, VideoPhaseTiming> = {
 }
 
 const ORIGINAL_DRAWING_SECONDS = ENEMY_RATING_VIDEO_PHASES.reduce((sum, phase) => sum + ORIGINAL_PHASE_TIMING[phase].duration, 0)
-const TEMPO_DRAWING_SECONDS: Record<EnemyRatingVideoTempo, number> = { short: 3.5, standard: 5, slow: 7 }
 const TIMING_FIELDS = [...ENEMY_RATING_VIDEO_PHASES, 'hold'] as const
 
 export function getEnemyRatingVideoDefaultDuration(field: EnemyRatingVideoTimingField, tempo: EnemyRatingVideoTempo) {
   if (field === 'hold') return 0
-  return ORIGINAL_PHASE_TIMING[field].duration / ORIGINAL_DRAWING_SECONDS * TEMPO_DRAWING_SECONDS[tempo]
+  return ORIGINAL_PHASE_TIMING[field].duration / ORIGINAL_DRAWING_SECONDS * ENEMY_RATING_VIDEO_TEMPO_SECONDS[tempo]
 }
 
 export function createEnemyRatingVideoTimingDraft(): EnemyRatingVideoTimingDraft {

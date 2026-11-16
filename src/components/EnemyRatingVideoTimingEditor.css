@@ -19,7 +19,7 @@
 }
 .enemy-rating-video-order li[aria-current="step"] { background: var(--surface-hover); }
 .enemy-rating-video-order li > span:first-child { color: var(--text-muted); text-align: center; }
-.enemy-rating-video-order-actions, .enemy-rating-video-tempo, .enemy-rating-video-finish, .enemy-rating-video-effect-options label {
+.enemy-rating-video-order-actions, .enemy-rating-video-finish, .enemy-rating-video-effect-options label {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -28,10 +28,21 @@
 .enemy-rating-video-duration-options, .enemy-rating-video-effect-options {
   display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px;
 }
-.enemy-rating-video-tempo, .enemy-rating-video-effect-options label { flex-wrap: wrap; }
-.enemy-rating-video-tempo > span { margin-inline-end: 4px; }
-.enemy-rating-video-tempo .button { padding-inline: 8px; }
-.enemy-rating-video-tempo .button[aria-pressed="true"]:not(:disabled) { background: #222; color: #fff; }
+.enemy-rating-video-effect-options label { flex-wrap: wrap; }
+.enemy-rating-video-tempo {
+  display: flex; align-items: flex-start; gap: 8px;
+  flex: 0 1 260px; min-width: 0;
+}
+.enemy-rating-video-tempo > span:first-child { padding-top: 5px; flex-shrink: 0; }
+.enemy-rating-video-tempo-track { flex: 1; min-width: 0; }
+.enemy-rating-video-tempo-track input { display: block; width: 100%; min-height: 26px; margin: 0; accent-color: var(--text); }
+.enemy-rating-video-tempo-track input[data-custom] { opacity: .55; }
+.enemy-rating-video-tempo-ticks {
+  position: relative;
+  display: flex; justify-content: space-between;
+  color: var(--text-muted); font-variant-numeric: tabular-nums;
+}
+.enemy-rating-video-tempo-standard { position: absolute; transform: translateX(-50%); }
 .enemy-rating-video-timing-precision summary { width: fit-content; font-weight: 600; cursor: pointer; }
 .enemy-rating-video-timing-fields {
   display: grid;
@@ -40,7 +51,7 @@
   margin-top: 6px;
 }
 .enemy-rating-video-timing-fields label { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
-.enemy-rating-video-timing :is(input, select) {
+.enemy-rating-video-timing :is(input[type="number"], select) {
   min-height: 32px;
   padding-inline: 6px;
   border: 1px solid var(--border-strong);
@@ -48,11 +59,13 @@
   color: var(--text);
   font: inherit;
 }
-.enemy-rating-video-timing input { width: 5.75em; font-variant-numeric: tabular-nums; }
+.enemy-rating-video-timing input[type="number"] { width: 5.75em; font-variant-numeric: tabular-nums; }
 .enemy-rating-video-timing input[aria-invalid="true"] { border-color: var(--danger); }
 
 @media (pointer: coarse) {
   .enemy-rating-video-order-actions .button { width: 44px; }
   .enemy-rating-video-timing-precision summary { display: list-item; padding-block: 12px; }
-  .enemy-rating-video-timing :is(input, select) { min-height: 44px; font-size: 16px; }
+  .enemy-rating-video-tempo > span:first-child { padding-top: 13px; }
+  .enemy-rating-video-tempo-track input { min-height: 44px; }
+  .enemy-rating-video-timing :is(input[type="number"], select) { min-height: 44px; font-size: 16px; }
 }
