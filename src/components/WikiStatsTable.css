@@ -1,0 +1,101 @@
+.wiki-stats-page .page-intro { margin-bottom: 0; }
+.wiki-stats-page .analysis-tabs.detail-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.wiki-stats-meta,
+.wiki-stats-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wiki-stats-meta { margin-bottom: 8px; }
+.wiki-stats-meta a, .wiki-stats-page tbody a { color: var(--link); }
+.wiki-stats-period,
+.wiki-stats-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.wiki-stats-period { gap: 4px; }
+.wiki-stats-period .button { font-size: 13px; white-space: nowrap; }
+.wiki-stats-period .button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--link) 9%, var(--surface));
+  border-color: var(--link);
+}
+.wiki-stats-dates > span { white-space: nowrap; }
+.wiki-stats-pagination { margin-top: 8px; }
+.wiki-stats-pagination > div { display: flex; gap: 8px; }
+.wiki-stats-pagination .button { min-height: 34px; }
+.wiki-stats-scroll { max-width: 100%; overflow-x: auto; }
+
+.wiki-stats-scroll table {
+  min-width: 304px;
+  table-layout: fixed;
+  border: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+.wiki-stats-rank-column { width: 5em; }
+.wiki-stats-name-column { width: 31%; }
+.wiki-stats-index-column { width: 5em; }
+.wiki-stats-scroll .wiki-stats-indexed-table { min-width: 480px; }
+.wiki-stats-scroll .wiki-stats-indexed-table:has(col:nth-child(4):last-child) { min-width: 340px; }
+.wiki-stats-total-column { width: 20%; }
+.wiki-stats-comments-name-column { width: 49%; }
+.wiki-stats-scroll th, .wiki-stats-scroll td {
+  position: static;
+  border: 1px solid var(--border);
+  font-size: inherit;
+  vertical-align: middle;
+}
+
+.wiki-stats-scroll thead th { padding: 0; background: var(--surface-soft); }
+.wiki-stats-scroll thead th[aria-sort="ascending"],
+.wiki-stats-scroll thead th[aria-sort="descending"] {
+  background: color-mix(in srgb, var(--link) 9%, var(--surface-soft));
+}
+
+.wiki-stats-scroll .skill-sort-button { font-weight: 500; }
+.wiki-stats-scroll thead th:nth-child(n + 3) .skill-sort-button {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.wiki-stats-scroll .wiki-stats-indexed-table thead th:nth-child(3) .skill-sort-button {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.wiki-stats-scroll tbody tr { cursor: default; }
+.wiki-stats-scroll tbody tr:hover { background: transparent; }
+.wiki-stats-scroll tbody th, .wiki-stats-scroll td { padding: 7px 8px; }
+.wiki-stats-scroll tbody th {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 500;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.wiki-stats-scroll td { text-align: right; white-space: nowrap; }
+.wiki-stats-scroll .wiki-stats-rank,
+.wiki-stats-scroll .wiki-stats-index { text-align: center; }
+.wiki-stats-scroll .wiki-stats-sorted {
+  background: color-mix(in srgb, var(--link) 4%, var(--surface));
+}
+
+.wiki-stats-scroll .wiki-stats-empty { text-align: center; }
+.wiki-stats-missing { color: var(--text-muted); }
+
+@media (max-width: 480px) {
+  .wiki-stats-page .calculator-panel { padding-inline: 8px; }
+  .wiki-stats-scroll .skill-sort-button,
+  .wiki-stats-scroll tbody th, .wiki-stats-scroll td { padding-inline: 5px; }
+}
+
+@media (pointer: coarse) {
+  .wiki-stats-pagination .button { min-height: 44px; }
+  .wiki-stats-scroll tbody th:has(a) { padding-block: 0; }
+  .wiki-stats-scroll tbody a { display: flex; align-items: center; min-height: 44px; }
+}

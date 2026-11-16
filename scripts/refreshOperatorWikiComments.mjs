@@ -47,7 +47,7 @@ function readLegacySignatureDate(html) {
   return isTimestamp(date + 'T' + hour + ':' + minute + ':' + second + '+09:00') ? date : null
 }
 
-function extractPageBody(html, expectedTitle, isCatalog = false) {
+export function extractPageBody(html, expectedTitle, isCatalog = false, readTitle = wikiPageTitle) {
   const clean = html.replace(/<!--[^]*?(?:-->|$)|<(script|style)\b[^>]*>[^]*?<\/\1>/gi, '')
   assertOperatorWikiPageTitle(clean, expectedTitle)
   const head = clean.split(/<\/head>/i, 1)[0]
@@ -55,7 +55,7 @@ function extractPageBody(html, expectedTitle, isCatalog = false) {
     !closing && tag.toLowerCase() === 'link' && attribute(attributes, 'rel') === 'canonical')
   const canonicalUrl = new URL(attribute(canonicalLink?.[3] ?? '', 'href') ?? '', WIKI_ROOT)
   const matchesCanonical = isCatalog ? canonicalUrl.href === WIKI_ROOT
-    : wikiPageTitle(canonicalUrl.href)?.normalize('NFC') === expectedTitle.normalize('NFC')
+    : readTitle(canonicalUrl.href)?.normalize('NFC') === expectedTitle.normalize('NFC')
   if (!matchesCanonical) {
     throw new Error('Wiki ページの正規 URL が一致しません。')
   }
@@ -86,8 +86,8 @@ export function commentWindow(date) {
   return { throughDate: dateBefore(today, 1), start: dateBefore(today, WINDOW_DAYS) }
 }
 
-export function parseCommentLog(html, title) {
-  const body = extractPageBody(html, title)
+export function parseCommentLog(html, title, readTitle) {
+  const body = extractPageBody(html, title, false, readTitle)
   const dates = []
   const lists = []
   const items = []
@@ -136,7 +136,7 @@ export function parseCommentLog(html, title) {
   return dates.sort()
 }
 
-function readLinkedWikiTitles(body) {
+export function readLinkedWikiTitles(body, decodeTitle = decodeURIComponent) {
   const titles = new Set()
   for (const [, closing, tag, attributes] of body.matchAll(HTML_TAG)) {
     if (closing || tag.toLowerCase() !== 'a') continue
@@ -145,7 +145,7 @@ function readLinkedWikiTitles(body) {
     try {
       const url = new URL(href, WIKI_ROOT)
       if (url.origin + url.pathname !== WIKI_ROOT || url.username || url.password || url.hash) continue
-      titles.add(decodeURIComponent(url.search.slice(1)).normalize('NFC'))
+      titles.add(decodeTitle(url.search.slice(1)).normalize('NFC'))
     } catch {
       continue
     }
@@ -153,7 +153,7 @@ function readLinkedWikiTitles(body) {
   return titles
 }
 
-function findNumberedArchives(titles, commentTitle) {
+export function findNumberedArchives(titles, commentTitle) {
   const archives = new Map()
   const prefix = commentTitle.normalize('NFC') + '/'
   for (const title of titles) {
@@ -192,14 +192,14 @@ function countsWithin(dates, start, end) {
   return Object.fromEntries(Object.entries(counts).sort(([left], [right]) => left.localeCompare(right)))
 }
 
-function createWikiRequester() {
+export function createWikiRequester({ userAgent = 'Arknights Analyze Tool (Wiki comment snapshot)' } = {}) {
   let nextRequestAt = 0
   async function request(url) {
     const remaining = nextRequestAt - performance.now()
     if (remaining > 0) await delay(Math.ceil(remaining))
     nextRequestAt = performance.now() + REQUEST_INTERVAL_MS
     const response = await fetch(url, {
-      headers: { Accept: 'text/html', 'User-Agent': 'Arknights Analyze Tool (Wiki comment snapshot)' },
+      headers: { Accept: 'text/html', 'User-Agent': userAgent },
       redirect: 'error',
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     })

@@ -48,6 +48,7 @@ export type AppRoute =
   | { view: 'comparison' }
   | { view: 'enemies' }
   | { view: 'enemy-analysis' }
+  | { view: 'enemy-wiki-stats' }
   | { view: 'enemy-regression' }
   | { view: 'enemy-immunities' }
   | { view: 'enemy-defense-resistance' }
@@ -282,6 +283,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/comparison') return { view: 'comparison' }
   if (hash === '#/enemies') return { view: 'enemies' }
   if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies')) return { view: 'enemy-analysis' }
+  if (hash === '#/analysis/enemies/wiki-stats') return { view: 'enemy-wiki-stats' }
   if (hash === '#/analysis/enemies/regression') return { view: 'enemy-regression' }
   if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies/immunities')) return { view: 'enemy-immunities' }
   if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies/defense-resistance')) return { view: 'enemy-defense-resistance' }

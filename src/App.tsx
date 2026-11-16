@@ -77,6 +77,7 @@ const GoldenglowSingleTrialPage = lazy(() => import('./components/GoldenglowSing
 const IntegratedStrategiesPage = lazy(() => import('./components/IntegratedStrategiesPage').then((module) => ({ default: module.IntegratedStrategiesPage })))
 const MapDatabase = lazy(() => import('./components/MapDatabase').then((module) => ({ default: module.MapDatabase })))
 const EnemyMapCoveragePage = lazy(() => import('./components/EnemyMapCoveragePage').then((module) => ({ default: module.EnemyMapCoveragePage })))
+const EnemyWikiStatsPage = lazy(() => import('./components/EnemyWikiStatsPage').then((module) => ({ default: module.EnemyWikiStatsPage })))
 const MainEnemyTrendsPage = lazy(() => import('./components/MainEnemyTrendsPage').then((module) => ({ default: module.MainEnemyTrendsPage })))
 const MainStoryEnemySpawnsPage = lazy(() => import('./components/MainStoryEnemySpawnsPage').then((module) => ({ default: module.MainStoryEnemySpawnsPage })))
 const EnemyRegressionPage = lazy(() => import('./components/EnemyRegressionPage').then((module) => ({ default: module.EnemyRegressionPage })))
@@ -129,7 +130,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (route.view === 'home' || route.view === 'enemies' || route.view === 'enemy-analysis' || route.view === 'enemy-regression' || route.view === 'enemy-immunities' || route.view === 'enemy-defense-resistance' || route.view === 'enemy-map-coverage' || route.view === 'main-enemy-trends' || route.view === 'main-enemy-spawns' || route.view === 'maps' || route.view === 'roguelike' || route.view === 'sources' || route.view === 'code-analysis' || route.view === 'slide-maker' || route.view === 'damage-verification' || route.view === 'physical-arts-comparison' || route.view === 'goldenglow-home' || route.view === 'surtr-home' || skillDataRequestStarted.current) return
+    if (route.view === 'home' || route.view === 'enemies' || route.view === 'enemy-analysis' || route.view === 'enemy-regression' || route.view === 'enemy-immunities' || route.view === 'enemy-defense-resistance' || route.view === 'enemy-map-coverage' || route.view === 'enemy-wiki-stats' || route.view === 'main-enemy-trends' || route.view === 'main-enemy-spawns' || route.view === 'maps' || route.view === 'roguelike' || route.view === 'sources' || route.view === 'code-analysis' || route.view === 'slide-maker' || route.view === 'damage-verification' || route.view === 'physical-arts-comparison' || route.view === 'goldenglow-home' || route.view === 'surtr-home' || skillDataRequestStarted.current) return
     skillDataRequestStarted.current = true
     void load()
   }, [route.view])
@@ -330,7 +331,7 @@ export default function App() {
 
         <main className="app-content">
         <PanelStateScope.Provider value={displayedRoute.view}>
-        {error && displayedRoute.view !== 'home' && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'enemy-analysis' && displayedRoute.view !== 'enemy-regression' && displayedRoute.view !== 'enemy-immunities' && displayedRoute.view !== 'enemy-defense-resistance' && displayedRoute.view !== 'enemy-map-coverage' && displayedRoute.view !== 'main-enemy-trends' && displayedRoute.view !== 'main-enemy-spawns' && displayedRoute.view !== 'maps' && displayedRoute.view !== 'roguelike' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'damage-verification' && displayedRoute.view !== 'physical-arts-comparison' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'surtr-home' && displayedRoute.view !== 'surtr-s3' && displayedRoute.view !== 'surtr-s3-comparison' && displayedRoute.view !== 'surtr-skill-comparison' && displayedRoute.view !== 'surtr-total-damage' && displayedRoute.view !== 'surtr-duration' && displayedRoute.view !== 'surtr-remnant-attacks' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-target-switch-two' && displayedRoute.view !== 'goldenglow-target-switch-three' && displayedRoute.view !== 'goldenglow-single-trial' && displayedRoute.view !== 'goldenglow-trial-benchmark' && <section className="error-box" role="alert">{error}</section>}
+        {error && displayedRoute.view !== 'home' && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'enemy-analysis' && displayedRoute.view !== 'enemy-regression' && displayedRoute.view !== 'enemy-immunities' && displayedRoute.view !== 'enemy-defense-resistance' && displayedRoute.view !== 'enemy-map-coverage' && displayedRoute.view !== 'enemy-wiki-stats' && displayedRoute.view !== 'main-enemy-trends' && displayedRoute.view !== 'main-enemy-spawns' && displayedRoute.view !== 'maps' && displayedRoute.view !== 'roguelike' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'damage-verification' && displayedRoute.view !== 'physical-arts-comparison' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'surtr-home' && displayedRoute.view !== 'surtr-s3' && displayedRoute.view !== 'surtr-s3-comparison' && displayedRoute.view !== 'surtr-skill-comparison' && displayedRoute.view !== 'surtr-total-damage' && displayedRoute.view !== 'surtr-duration' && displayedRoute.view !== 'surtr-remnant-attacks' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-target-switch-two' && displayedRoute.view !== 'goldenglow-target-switch-three' && displayedRoute.view !== 'goldenglow-single-trial' && displayedRoute.view !== 'goldenglow-trial-benchmark' && <section className="error-box" role="alert">{error}</section>}
 
         {/* Keep the directory mounted while viewing a detail page so filters, sort and charts survive returning. */}
         {operatorDirectoryVisited && (displayedRoute.view === 'operators' || displayedRoute.view === 'operator-detail') && (
@@ -434,6 +435,10 @@ export default function App() {
         ) : displayedRoute.view === 'enemy-regression' ? (
           <Suspense fallback={<p className="calculator-loading" role="status">敵の重回帰分析を読み込み中…</p>}>
             <EnemyRegressionPage />
+          </Suspense>
+        ) : displayedRoute.view === 'enemy-wiki-stats' ? (
+          <Suspense fallback={<p className="calculator-loading" role="status">敵別 Wiki 集計を読み込み中…</p>}>
+            <EnemyWikiStatsPage />
           </Suspense>
         ) : displayedRoute.view === 'enemy-immunities' ? (
           <Suspense fallback={<p className="calculator-loading" role="status">敵の状態異常耐性を読み込み中…</p>}>
