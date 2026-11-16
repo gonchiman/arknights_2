@@ -1,5 +1,7 @@
 export const ENEMY_RATING_VIDEO_PHASES = ['title', 'axes', 'ranks', 'bars', 'values'] as const
 export type EnemyRatingVideoPhase = typeof ENEMY_RATING_VIDEO_PHASES[number]
+export const ENEMY_RATING_VIDEO_PHASE_TEMPOS = [1, 2, 3, 4, 5] as const
+export type EnemyRatingVideoPhaseTempo = typeof ENEMY_RATING_VIDEO_PHASE_TEMPOS[number]
 export type EnemyRatingVideoTimingField = EnemyRatingVideoPhase | 'hold'
 export const ENEMY_RATING_VIDEO_TEMPOS = [
   'veryShort', 'short', 'mediumShort', 'standard', 'mediumSlow', 'slow', 'verySlow', 'slow12', 'slow15', 'slow20',
@@ -34,6 +36,7 @@ export type EnemyRatingVideoTiming = Readonly<Record<EnemyRatingVideoPhase, Read
 export interface EnemyRatingVideoTimingDraft {
   order: EnemyRatingVideoPhase[]
   tempo: EnemyRatingVideoTempo
+  phaseTempos?: Partial<Record<EnemyRatingVideoPhase, EnemyRatingVideoPhaseTempo>>
   finishSeconds: string
   overrides: Partial<Record<EnemyRatingVideoTimingField, string>>
   textMode: EnemyRatingVideoTextMode
@@ -51,6 +54,7 @@ const ORIGINAL_PHASE_TIMING: Record<EnemyRatingVideoPhase, VideoPhaseTiming> = {
 
 const ORIGINAL_DRAWING_SECONDS = ENEMY_RATING_VIDEO_PHASES.reduce((sum, phase) => sum + ORIGINAL_PHASE_TIMING[phase].duration, 0)
 const TIMING_FIELDS = [...ENEMY_RATING_VIDEO_PHASES, 'hold'] as const
+const PHASE_TEMPO_WEIGHTS: Record<EnemyRatingVideoPhaseTempo, number> = { 1: .4, 2: .65, 3: 1, 4: 1.5, 5: 2.25 }
 
 export function getEnemyRatingVideoDefaultDuration(field: EnemyRatingVideoTimingField, tempo: EnemyRatingVideoTempo) {
   if (field === 'hold') return 0
@@ -97,6 +101,7 @@ export function parseEnemyRatingVideoTiming(draft: EnemyRatingVideoTimingDraft):
     if (field !== 'hold') fixedDrawingTime += seconds
   }
 
+  let automaticDrawingTime = automatic.reduce((sum, phase) => sum + durations[phase], 0)
   if (requestedFinish) {
     const target = Number(requestedFinish)
     if (!Number.isFinite(target) || target <= 0) {
@@ -110,14 +115,19 @@ export function parseEnemyRatingVideoTiming(draft: EnemyRatingVideoTimingDraft):
     if (automatic.length === 0 && remaining > tolerance) {
       return { timing: null, finish: null, duration: null, error: 'すべての描画時間を指定している場合は、その合計を入力してください。' }
     }
-    const weight = automatic.reduce((sum, field) => sum + durations[field], 0)
-    const available = Math.max(0, remaining)
+    automaticDrawingTime = Math.max(0, remaining)
+  }
+
+  if (requestedFinish || automatic.some(phase => (draft.phaseTempos?.[phase] ?? 3) !== 3)) {
+    // Keep explicitly timed phases and distribute the time available for automatic phases.
+    const weights = automatic.map(phase => durations[phase] * PHASE_TEMPO_WEIGHTS[draft.phaseTempos?.[phase] ?? 3])
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0)
     let usedWeight = 0
     let start = 0
-    for (const field of automatic) {
-      usedWeight += durations[field]
-      const end = usedWeight / weight * available
-      durations[field] = end - start
+    for (const [index, phase] of automatic.entries()) {
+      usedWeight += weights[index]
+      const end = usedWeight / totalWeight * automaticDrawingTime
+      durations[phase] = end - start
       start = end
     }
   }

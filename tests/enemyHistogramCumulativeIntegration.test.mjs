@@ -221,12 +221,22 @@ test('左右の横棒の動画は集計条件と強調を引き継ぎ、縦横�
       assert.match(markup, /敵_防御力・術耐性の評価別分布_出現回数_評価D強調_階級割合_幅1920px_メインストーリー・全敵_左右の横棒_比率16x7\.(mp4|webm)/)
       assert.match(markup, new RegExp(`_比率16x7\\.${extension}"`))
       assert.match(markup, /階級割合（%）/)
-      const orderHeading = markup.match(/<h[2-6][^>]*id="([^"]+)"[^>]*>表示順<\/h[2-6]>/)
+      const orderHeading = markup.match(/<h[2-6][^>]*id="([^"]+)"[^>]*>表示順・テンポ<\/h[2-6]>/)
       assert.ok(orderHeading)
       const orderList = markup.match(/<ol\b[^>]*aria-labelledby="([^"]+)"[^>]*>(.*?)<\/ol>/)
       assert.equal(orderList?.[1], orderHeading[1])
       assert.deepEqual([...orderList[2].matchAll(/aria-label="([^"]+)を上へ"/g)].map(([, label]) => label),
         ['タイトル・条件', '軸・目盛り', '階級名', '左右の棒', '階級割合'])
+      assert.doesNotMatch(markup, /aria-label="テンポの表記"/)
+      const phaseControls = [...orderList[2].matchAll(/aria-label="([^"]+)のテンポ">(.*?)<\/div>/g)]
+      assert.deepEqual(phaseControls.map(([, label]) => label), ['タイトル・条件', '軸・目盛り', '階級名', '左右の棒', '階級割合'])
+      for (const [, , controls] of phaseControls) {
+        assert.match(controls, /^<span aria-hidden="true">短い<\/span>.*<span aria-hidden="true">長い<\/span>$/)
+        assert.deepEqual([...controls.matchAll(/aria-label="([^"]+)" aria-pressed="(true|false)">(\d)<\/button>/g)]
+          .map(([, label, pressed, number]) => [number, label, pressed]),
+          [['1', '1（最短）', 'false'], ['2', '2（短め）', 'false'], ['3', '3（標準）', 'true'],
+            ['4', '4（長め）', 'false'], ['5', '5（最長）', 'false']])
+      }
       const tempoSlider = markup.match(/<input\b[^>]*aria-label="テンポ"[^>]*>/)?.[0]
       assert.ok(tempoSlider)
       assert.deepEqual(['type', 'min', 'max', 'step', 'value', 'aria-valuetext'].map(name => attr(tempoSlider, name)),

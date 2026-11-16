@@ -1,9 +1,9 @@
 import { useId, useLayoutEffect, useRef, useState, type FocusEvent } from 'react'
 import type { EnemyRatingComparisonSideValue } from '../lib/enemyRatingComparison'
 import {
-  createEnemyRatingVideoTimingDraft, ENEMY_RATING_VIDEO_TEMPOS, ENEMY_RATING_VIDEO_TEMPO_SECONDS,
+  createEnemyRatingVideoTimingDraft, ENEMY_RATING_VIDEO_PHASE_TEMPOS, ENEMY_RATING_VIDEO_TEMPOS, ENEMY_RATING_VIDEO_TEMPO_SECONDS,
   getEnemyRatingVideoDefaultDuration, parseEnemyRatingVideoTiming,
-  type EnemyRatingVideoPhase, type EnemyRatingVideoShapeMode, type EnemyRatingVideoTextMode,
+  type EnemyRatingVideoPhase, type EnemyRatingVideoPhaseTempo, type EnemyRatingVideoShapeMode, type EnemyRatingVideoTextMode,
   type EnemyRatingVideoTimingDraft, type EnemyRatingVideoTimingField, type ParsedEnemyRatingVideoTiming,
 } from '../lib/enemyRatingVideoTiming'
 import './EnemyRatingVideoTimingEditor.css'
@@ -21,6 +21,7 @@ interface EnemyRatingVideoTimingEditorProps {
 
 type DurationField = EnemyRatingVideoTimingField | 'finish'
 export interface EnemyRatingVideoDurationError { field: DurationField; message: string }
+const phaseTempoNumberLabels = ['最短', '短め', '標準', '長め', '最長'] as const
 
 export function EnemyRatingVideoTimingEditor({
   draft, onChange, parsed, inputError, onInputError, activePhase, sideValue, disabled,
@@ -110,11 +111,19 @@ export function EnemyRatingVideoTimingEditor({
     onChange({ ...draft, tempo, finishSeconds: '' })
   }
 
+  function selectPhaseTempo(phase: EnemyRatingVideoPhase, tempo: EnemyRatingVideoPhaseTempo) {
+    if (editing?.field === phase) setEditing(null)
+    if (inputError?.field === phase) onInputError(null)
+    const overrides = { ...draft.overrides }
+    delete overrides[phase]
+    onChange({ ...draft, overrides, phaseTempos: { ...draft.phaseTempos, [phase]: tempo } })
+  }
+
   const durationError = inputError && <p id={errorId} className="chart-image-save-error" role="alert">{inputError.message}</p>
 
   return <section className="enemy-rating-video-timing" aria-labelledby={headingId}>
     <div className="enemy-rating-video-timing-heading">
-      <h3 id={headingId}>表示順</h3>
+      <h3 id={headingId}>表示順・テンポ</h3>
       <button type="button" className="filter-reset-button" disabled={disabled} onClick={() => {
         setEditing(null)
         onInputError(null)
@@ -123,16 +132,34 @@ export function EnemyRatingVideoTimingEditor({
       }}>既定値に戻す</button>
     </div>
     <ol className="enemy-rating-video-order" role="list" aria-labelledby={headingId}>
-      {draft.order.map((phase, index) => <li key={phase} aria-current={phase === activePhase ? 'step' : undefined}>
-        <span aria-hidden="true">{index + 1}</span>
-        <span>{labels[phase]}</span>
-        <div className="enemy-rating-video-order-actions">
-          <button type="button" className="button secondary" aria-label={labels[phase] + 'を上へ'}
-            disabled={disabled || index === 0} onClick={event => movePhase(index, -1, event.currentTarget)}>↑</button>
-          <button type="button" className="button secondary" aria-label={labels[phase] + 'を下へ'}
-            disabled={disabled || index === draft.order.length - 1} onClick={event => movePhase(index, 1, event.currentTarget)}>↓</button>
-        </div>
-      </li>)}
+      {draft.order.map((phase, index) => {
+        const duration = parsed.timing?.[phase].duration
+        const exact = Boolean(draft.overrides[phase]?.trim())
+        return <li key={phase} aria-current={phase === activePhase ? 'step' : undefined}>
+          <span aria-hidden="true">{index + 1}</span>
+          <span>{labels[phase]}</span>
+          <span className="enemy-rating-video-phase-seconds">
+            {duration === undefined ? '—' : `${Number(duration.toFixed(2))}秒${exact ? '指定' : ''}`}
+          </span>
+          <div className="enemy-rating-video-phase-tempo" role="group" aria-label={labels[phase] + 'のテンポ'}>
+            <span aria-hidden="true">短い</span>
+            {ENEMY_RATING_VIDEO_PHASE_TEMPOS.map((tempo, tempoIndex) =>
+              <button key={tempo} type="button" className="button secondary" disabled={disabled}
+                aria-label={`${tempo}（${phaseTempoNumberLabels[tempoIndex]}）`}
+                aria-pressed={!exact && (draft.phaseTempos?.[phase] ?? 3) === tempo}
+                onClick={() => selectPhaseTempo(phase, tempo)}>
+                {tempo}
+              </button>)}
+            <span aria-hidden="true">長い</span>
+          </div>
+          <div className="enemy-rating-video-order-actions">
+            <button type="button" className="button secondary" aria-label={labels[phase] + 'を上へ'}
+              disabled={disabled || index === 0} onClick={event => movePhase(index, -1, event.currentTarget)}>↑</button>
+            <button type="button" className="button secondary" aria-label={labels[phase] + 'を下へ'}
+              disabled={disabled || index === draft.order.length - 1} onClick={event => movePhase(index, 1, event.currentTarget)}>↓</button>
+          </div>
+        </li>
+      })}
     </ol>
     <div className="enemy-rating-video-timing-options">
       <div className="enemy-rating-video-duration-options">
