@@ -46,7 +46,7 @@ export function getEnemyRatingVideoDefaultDuration(field: EnemyRatingVideoTiming
 
 export function createEnemyRatingVideoTimingDraft(): EnemyRatingVideoTimingDraft {
   return { order: [...ENEMY_RATING_VIDEO_PHASES], tempo: 'standard', finishSeconds: '', overrides: {},
-    textMode: 'fade', shapeMode: 'stagger' }
+    textMode: 'stagger', shapeMode: 'stagger' }
 }
 
 export function getEnemyRatingVideoTimingBounds(timing: EnemyRatingVideoTiming) {

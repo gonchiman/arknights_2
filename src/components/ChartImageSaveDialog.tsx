@@ -3,7 +3,7 @@ import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { HelpPopover } from './HelpPopover'
 import './ChartImageSaveDialog.css'
 
-const imageAspectPresets = ['16:9', '2:1', '21:9', '3:1'] as const
+export const CHART_IMAGE_ASPECT_PRESETS = ['16:9', '2:1', '21:9', '3:1'] as const
 
 export interface ChartImageAspectSettings {
   preset: string
@@ -11,7 +11,7 @@ export interface ChartImageAspectSettings {
   height: string
 }
 
-export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspect, onAspectChange, aspectError, aspectPresets = imageAspectPresets, aspectHint = 'タイトル・凡例を含む画像全体の比率です。指定なしでは内容に合わせて自動調整します。', canChooseLocation, saving, saveDisabled = false, error, onClose, onSave, additionalSaveAction, helpMode = 'inline', options, preview, videoExtension, cancelWhileSaving = false }: {
+export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspect, onAspectChange, aspectError, aspectPresets = CHART_IMAGE_ASPECT_PRESETS, aspectHint, canChooseLocation, saving, saveDisabled = false, error, onClose, onSave, additionalSaveAction, helpMode = 'inline', options, preview, videoExtension, cancelWhileSaving = false }: {
   initialFilename: string
   getDefaultFilename?: (aspectRatio?: number) => string
   aspect?: ChartImageAspectSettings
@@ -60,6 +60,8 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
   const popoverHelp = helpMode === 'popover'
   const hasPreview = Boolean(preview)
   const mediaLabel = videoExtension ? '動画' : '画像'
+  const aspectLabel = `${mediaLabel}の縦横比`
+  const aspectDescription = aspectHint ?? `タイトル・凡例を含む${mediaLabel}全体の比率です。指定なしでは内容に合わせて自動調整します。`
   const closeDisabled = saving && !cancelWhileSaving
   const errorMessage = error === true
     ? `${mediaLabel}を保存できませんでした。保存先を確認して、もう一度お試しください。`
@@ -99,11 +101,11 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
         {validationError && <p id={validationId} className="chart-image-save-error" role="alert">{validationError}</p>}
       </div>
       {aspect && onAspectChange && <fieldset className="chart-image-save-aspect" disabled={saving} aria-describedby={aspectHintId}>
-        <legend>{popoverHelp ? <HelpPopover label="画像の縦横比の説明" triggerText="画像の縦横比（幅:高さ）">
-          <p>{aspectHint}</p>
-        </HelpPopover> : '画像の縦横比（幅:高さ）'}</legend>
+        <legend>{popoverHelp ? <HelpPopover label={`${aspectLabel}の説明`} triggerText={`${aspectLabel}（幅:高さ）`}>
+          <p>{aspectDescription}</p>
+        </HelpPopover> : `${aspectLabel}（幅:高さ）`}</legend>
         <div className="chart-image-save-aspect-controls">
-          <select aria-label="画像の縦横比" value={aspect.preset} onChange={(event) => {
+          <select aria-label={aspectLabel} value={aspect.preset} onChange={(event) => {
             const preset = event.target.value
             const [width, height] = preset.split(':')
             onAspectChange(preset === 'auto' || preset === 'custom'
@@ -128,7 +130,7 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
           </label>)}
         </div>}
         {invalidAspect && <p id={aspectErrorId} className="chart-image-save-error" role="alert">{aspectValidationError}</p>}
-        <p id={aspectHintId} className={popoverHelp ? 'visually-hidden' : 'chart-image-save-hint'}>{aspectHint}</p>
+        <p id={aspectHintId} className={popoverHelp ? 'visually-hidden' : 'chart-image-save-hint'}>{aspectDescription}</p>
       </fieldset>}
       {options}
       {hasPreview && <div className="chart-image-save-preview">{preview}</div>}

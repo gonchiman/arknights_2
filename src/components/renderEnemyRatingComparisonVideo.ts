@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { ChartImageRasterOutput } from '../lib/chartImageRasterSize'
 import { recordChartVideo, type ChartVideoFormat } from '../lib/chartVideoRecorder'
 import {
   getEnemyRatingVideoTimingBounds, retimeEnemyRatingVideoStep, retimeEnemyRatingVideoText,
@@ -7,7 +8,6 @@ import {
 import { withComparisonChartImageSurface } from './saveComparisonChartImage'
 
 export const ENEMY_RATING_VIDEO_WIDTH = 1920
-export const ENEMY_RATING_VIDEO_ASPECT = 16 / 7
 type Box = { x: number; y: number; width: number; height: number }
 type Step = ReturnType<typeof retimeEnemyRatingVideoStep>
 type OriginalStep = Step & { phase: EnemyRatingVideoPhase }
@@ -39,14 +39,14 @@ function instantStep(phase: Step, fraction: number): Step {
 export async function prepareEnemyRatingComparisonVideo(
   chart: ReactNode,
   timing: EnemyRatingVideoTiming,
+  output: ChartImageRasterOutput,
   signal?: AbortSignal,
 ): Promise<EnemyRatingVideoAnimation> {
   signal?.throwIfAborted()
-  const aspectRatio = ENEMY_RATING_VIDEO_ASPECT
   const scene = await withComparisonChartImageSurface({
     chart,
     width: 960,
-    output: { width: ENEMY_RATING_VIDEO_WIDTH, aspectRatio },
+    output,
   }, async (surface, size) => {
     signal?.throwIfAborted()
     const frame = surface.querySelector<HTMLElement>('.chart-image-frame')
@@ -187,8 +187,9 @@ export async function renderEnemyRatingComparisonVideo(
   chart: ReactNode,
   format: ChartVideoFormat,
   timing: EnemyRatingVideoTiming,
+  output: ChartImageRasterOutput,
   signal?: AbortSignal,
 ): Promise<Blob> {
-  const { width, height, duration, drawFrame } = await prepareEnemyRatingComparisonVideo(chart, timing, signal)
+  const { width, height, duration, drawFrame } = await prepareEnemyRatingComparisonVideo(chart, timing, output, signal)
   return recordChartVideo({ width, height, duration, drawFrame, format, signal })
 }
