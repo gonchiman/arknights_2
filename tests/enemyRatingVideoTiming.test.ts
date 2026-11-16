@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
-  createEnemyRatingVideoTimingDraft, ENEMY_RATING_VIDEO_PHASES, getEnemyRatingVideoDefaultDuration,
+  createEnemyRatingVideoTimingDraft, ENEMY_RATING_VIDEO_PHASES, ENEMY_RATING_VIDEO_TEMPOS, getEnemyRatingVideoDefaultDuration,
   parseEnemyRatingVideoTiming, retimeEnemyRatingVideoStep, retimeEnemyRatingVideoText, type EnemyRatingVideoTiming,
 } from '../src/lib/enemyRatingVideoTiming.ts'
 
@@ -44,7 +44,10 @@ test('累積割合を棒より上に移すと先に描画され、開始時刻�
 
 test('テンポは描画時間を変更し、個別指定は順序やテンポを変更しても優先される', () => {
   const draft = createEnemyRatingVideoTimingDraft()
-  for (const [tempo, seconds] of [['short', 3.5], ['slow', 7]] as const) {
+  const expectedSeconds = [2.5, 3.5, 4, 5, 6, 7, 10, 12, 15, 20]
+  assert.equal(ENEMY_RATING_VIDEO_TEMPOS.length, expectedSeconds.length)
+  for (const [index, seconds] of expectedSeconds.entries()) {
+    const tempo = ENEMY_RATING_VIDEO_TEMPOS[index]
     const parsed = parseEnemyRatingVideoTiming({ ...draft, tempo })
     assert.ok(parsed.timing)
     closeTo(parsed.finish, seconds)

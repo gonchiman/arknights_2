@@ -1,8 +1,9 @@
 import { useId, useLayoutEffect, useRef, useState, type FocusEvent } from 'react'
 import type { EnemyRatingComparisonSideValue } from '../lib/enemyRatingComparison'
 import {
-  createEnemyRatingVideoTimingDraft, ENEMY_RATING_VIDEO_TEMPOS, getEnemyRatingVideoDefaultDuration, parseEnemyRatingVideoTiming,
-  type EnemyRatingVideoPhase, type EnemyRatingVideoShapeMode, type EnemyRatingVideoTempo, type EnemyRatingVideoTextMode,
+  createEnemyRatingVideoTimingDraft, ENEMY_RATING_VIDEO_TEMPOS, ENEMY_RATING_VIDEO_TEMPO_SECONDS,
+  getEnemyRatingVideoDefaultDuration, parseEnemyRatingVideoTiming,
+  type EnemyRatingVideoPhase, type EnemyRatingVideoShapeMode, type EnemyRatingVideoTextMode,
   type EnemyRatingVideoTimingDraft, type EnemyRatingVideoTimingField, type ParsedEnemyRatingVideoTiming,
 } from '../lib/enemyRatingVideoTiming'
 import './EnemyRatingVideoTimingEditor.css'
@@ -18,7 +19,6 @@ interface EnemyRatingVideoTimingEditorProps {
   disabled: boolean
 }
 
-const tempoLabels: Record<EnemyRatingVideoTempo, string> = { short: '短め', standard: '標準', slow: 'ゆっくり' }
 type DurationField = EnemyRatingVideoTimingField | 'finish'
 export interface EnemyRatingVideoDurationError { field: DurationField; message: string }
 
@@ -27,9 +27,16 @@ export function EnemyRatingVideoTimingEditor({
 }: EnemyRatingVideoTimingEditorProps) {
   const headingId = useId()
   const errorId = useId()
+  const tempoMarksId = useId()
   const focusAfterMove = useRef<HTMLButtonElement | null>(null)
   const [status, setStatus] = useState('')
   const [editing, setEditing] = useState<{ field: DurationField; value: string } | null>(null)
+  const tempoIndex = ENEMY_RATING_VIDEO_TEMPOS.indexOf(draft.tempo)
+  const lastTempoIndex = ENEMY_RATING_VIDEO_TEMPOS.length - 1
+  const standardTempoPosition = ENEMY_RATING_VIDEO_TEMPOS.indexOf('standard') / lastTempoIndex * 100
+  const customFinish = Boolean(draft.finishSeconds)
+  const tempoValue = customFinish ? `${draft.finishSeconds}秒（秒数指定）`
+    : `${ENEMY_RATING_VIDEO_TEMPO_SECONDS[draft.tempo]}秒${draft.tempo === 'standard' ? '（標準）' : ''}`
 
   const labels = {
     title: 'タイトル・条件',
@@ -95,6 +102,14 @@ export function EnemyRatingVideoTimingEditor({
     return String(Number(seconds.toPrecision(12)))
   }
 
+  function selectTempo(index: number) {
+    const tempo = ENEMY_RATING_VIDEO_TEMPOS[index]
+    if (tempo === undefined) return
+    setEditing(null)
+    onInputError(null)
+    onChange({ ...draft, tempo, finishSeconds: '' })
+  }
+
   const durationError = inputError && <p id={errorId} className="chart-image-save-error" role="alert">{inputError.message}</p>
 
   return <section className="enemy-rating-video-timing" aria-labelledby={headingId}>
@@ -121,15 +136,27 @@ export function EnemyRatingVideoTimingEditor({
     </ol>
     <div className="enemy-rating-video-timing-options">
       <div className="enemy-rating-video-duration-options">
-        <div className="enemy-rating-video-tempo" role="group" aria-label="テンポ">
+        <label className="enemy-rating-video-tempo">
           <span>テンポ</span>
-          {ENEMY_RATING_VIDEO_TEMPOS.map(tempo => <button key={tempo} type="button" className="button secondary"
-            aria-pressed={!draft.finishSeconds && draft.tempo === tempo} disabled={disabled} onClick={() => {
-              setEditing(null)
-              onInputError(null)
-              onChange({ ...draft, tempo, finishSeconds: '' })
-            }}>{tempoLabels[tempo]}</button>)}
-        </div>
+          <span className="enemy-rating-video-tempo-track">
+            <input type="range" min={0} max={lastTempoIndex} step={1} value={tempoIndex} list={tempoMarksId}
+              aria-label="テンポ" aria-valuetext={tempoValue} disabled={disabled} data-custom={customFinish || undefined}
+              onChange={event => selectTempo(event.currentTarget.valueAsNumber)}
+              onClick={event => {
+                if (customFinish) selectTempo(event.currentTarget.valueAsNumber)
+              }} />
+            <span className="enemy-rating-video-tempo-ticks" aria-hidden="true">
+              <span>{ENEMY_RATING_VIDEO_TEMPO_SECONDS[ENEMY_RATING_VIDEO_TEMPOS[0]]}秒</span>
+              <span className="enemy-rating-video-tempo-standard" style={{ left: `${standardTempoPosition}%` }}>
+                {ENEMY_RATING_VIDEO_TEMPO_SECONDS.standard}秒
+              </span>
+              <span>{ENEMY_RATING_VIDEO_TEMPO_SECONDS[ENEMY_RATING_VIDEO_TEMPOS[lastTempoIndex]]}秒</span>
+            </span>
+          </span>
+        </label>
+        <datalist id={tempoMarksId}>
+          {ENEMY_RATING_VIDEO_TEMPOS.map((tempo, index) => <option key={tempo} value={index} />)}
+        </datalist>
         <label className="enemy-rating-video-finish">
           <span>描画完了まで（秒）</span>
           {durationInput('finish', draft.finishSeconds || (parsed.finish === null ? '' : formatSeconds(parsed.finish)))}
