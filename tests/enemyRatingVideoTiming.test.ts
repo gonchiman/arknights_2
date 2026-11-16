@@ -19,7 +19,7 @@ test('動画の初期設定はタイトルから順に描画し、5秒で完成�
     closeTo(parsed.timing[draft.order[index]].duration, original / 3.64 * 5)
   }
   assert.equal(parsed.timing.hold, 0)
-  assert.equal(parsed.timing.textMode, 'fade')
+  assert.equal(parsed.timing.textMode, 'stagger')
   assert.equal(parsed.timing.shapeMode, 'stagger')
   closeTo(parsed.finish, 5)
   assert.equal(parsed.duration, parsed.finish)
@@ -142,9 +142,9 @@ test('文字の出し方を変更しても表示順と全体尺を引き継ぐ',
   draft.overrides = { ranks: '.99' }
   const rankLabel = (timing: EnemyRatingVideoTiming) =>
     retimeEnemyRatingVideoText(timing, 'ranks', .98 + .035, .18)
-  const fade = parseEnemyRatingVideoTiming(draft)
+  const fade = parseEnemyRatingVideoTiming({ ...draft, textMode: 'fade' })
   const instant = parseEnemyRatingVideoTiming({ ...draft, textMode: 'instant' })
-  const stagger = parseEnemyRatingVideoTiming({ ...draft, textMode: 'stagger' })
+  const stagger = parseEnemyRatingVideoTiming(draft)
   assert.ok(fade.timing && instant.timing && stagger.timing)
   const rankLabelStart = 1.06 / 3.64 * 5 + .07
   closeTo(rankLabel(fade.timing).start, rankLabelStart)

@@ -126,7 +126,14 @@ test('防御力・術耐性の全3形式で複数ランクを強調し、同じ�
   assert.equal(new Set(filenames).size, 3)
 })
 
-test('防御力・術耐性の保存ダイアログは選択ランクを初期状態で強調する', () => {
+const getAspectOptions = (markup, mediaLabel) => {
+  const select = markup.match(new RegExp(`<select\\b[^>]*aria-label="${mediaLabel}の縦横比"[^>]*>(.*?)<\\/select>`))
+  assert.ok(select, `${mediaLabel}の縦横比を選べる`)
+  return [...select[1].matchAll(/<option value="([^"]+)"( selected="")?>([^<]+)<\/option>/g)]
+    .map(([, value, selected, label]) => ({ value, selected: Boolean(selected), label }))
+}
+
+test('防御力・術耐性の画像保存は選択ランクを初期状態で強調し、縦横比を指定なしにする', () => {
   const data = buildEnemyRatingComparison(enemies, 'SPAWNS', fixtureCounts)
   const renderDialog = selectedRanks => renderToStaticMarkup(createElement(RatingSaveDialog, {
     data, layout: 'GROUPED', selectedRanks, scopeLabel: '全敵',
@@ -139,6 +146,9 @@ test('防御力・術耐性の保存ダイアログは選択ランクを初期�
   assert.equal(markup.match(/class="enemy-rating-comparison-highlight"/g)?.length, 2)
   assert.match(markup, /value="[^"]*_評価B\+-A強調_[^"]*_比率自動\.png"/)
   assert.doesNotMatch(markup, /棒・縦線の出し方/)
+  const aspectOptions = getAspectOptions(markup, '画像')
+  assert.deepEqual(aspectOptions.map(({ value }) => value), ['auto', '16:9', '2:1', '21:9', '3:1', 'custom'])
+  assert.deepEqual(aspectOptions.filter(({ selected }) => selected), [{ value: 'auto', selected: true, label: '指定なし' }])
 
   const unselected = renderDialog([])
   assert.match(highlightCheckbox(unselected), /<input\b(?=[^>]*\btype="checkbox")(?=[^>]*\bdisabled="")[^>]*>/)
@@ -178,7 +188,7 @@ test('左右の横棒は外側の数値を階級の割合に切り替え、保�
   }
 })
 
-test('左右の横棒の動画は集計条件・階級割合・強調を引き継ぎ、対応する拡張子で16:7に保存する', () => {
+test('左右の横棒の動画は集計条件と強調を引き継ぎ、縦横比を選べる。初期値は幅1,920 pxの16:7', () => {
   const pairedEnemies = enemies.map((enemy, index) =>
     index === 1 ? { ...enemy, stats: { ...enemy.stats, magicResistance: 5 } } : enemy)
   const data = buildEnemyRatingComparison(pairedEnemies, 'SPAWNS', fixtureCounts)
@@ -199,6 +209,11 @@ test('左右の横棒の動画は集計条件・階級割合・強調を引き�
       assert.match(markup, /動画を保存/)
       assert.match(markup, /完成図/)
       assert.match(markup, new RegExp(`>${format}<`))
+      const aspectOptions = getAspectOptions(markup, '動画')
+      assert.deepEqual(aspectOptions.map(({ value }) => value).sort(), ['auto', '16:7', '16:9', '2:1', '21:9', '3:1', 'custom'].sort())
+      assert.deepEqual(aspectOptions.filter(({ selected }) => selected), [{ value: '16:7', selected: true, label: '16:7' }])
+      assert.equal(aspectOptions.find(({ value }) => value === 'auto')?.label, '指定なし')
+      assert.equal(aspectOptions.find(({ value }) => value === 'custom')?.label, 'カスタム')
       const previewText = markup.replace(/<!--.*?-->/g, '')
       assert.match(previewText, /1,920 × 840 px/)
       assert.match(previewText, /5\.00 \/ 5\.00 秒/)
@@ -221,7 +236,10 @@ test('左右の横棒の動画は集計条件・階級割合・強調を引き�
       assert.ok(holdField)
       assert.match(holdField, /<input\b[^>]*type="number"[^>]*value="0"/)
       assert.doesNotMatch(markup, /開始（秒）/)
-      assert.match(markup, /<option value="instant">一斉に表示<\/option>/)
+      const textControl = markup.match(/<label\b[^>]*>.*?<\/label>/g)?.find(label => label.includes('文字の出し方'))
+      assert.ok(textControl)
+      assert.match(textControl, /<option value="instant">一斉に表示<\/option>/)
+      assert.match(textControl, /<option value="stagger" selected="">順に表示<\/option>/)
       const shapeControl = markup.match(/<label\b[^>]*>.*?<\/label>/g)?.find(label => label.includes('棒・縦線の出し方'))
       assert.ok(shapeControl)
       const shapeOptions = [...shapeControl.matchAll(/<option value="([^"]+)"( selected="")?>([^<]+)<\/option>/g)]

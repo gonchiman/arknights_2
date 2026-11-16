@@ -21,11 +21,11 @@ import {
   type EnemyRatingVideoPhase, type EnemyRatingVideoTiming,
 } from '../lib/enemyRatingVideoTiming'
 import { ChartImageFrame } from './ChartImageFrame'
-import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
+import { CHART_IMAGE_ASPECT_PRESETS, ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
 import { EnemyRatingComparisonPlot, EnemyRatingComparisonSwatch } from './EnemyRatingComparisonPlot'
 import { EnemyRatingVideoTimingEditor, type EnemyRatingVideoDurationError } from './EnemyRatingVideoTimingEditor'
 import {
-  ENEMY_RATING_VIDEO_ASPECT, ENEMY_RATING_VIDEO_WIDTH,
+  ENEMY_RATING_VIDEO_WIDTH,
   prepareEnemyRatingComparisonVideo, renderEnemyRatingComparisonVideo,
 } from './renderEnemyRatingComparisonVideo'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
@@ -45,7 +45,7 @@ export interface EnemyRatingComparisonImageSnapshot {
 
 const IMAGE_TITLE = '防御力・術耐性の評価別分布'
 const FIXED_OUTPUT_WIDTH = 1920
-const VIDEO_OUTPUT = { width: ENEMY_RATING_VIDEO_WIDTH, aspectRatio: ENEMY_RATING_VIDEO_ASPECT }
+const VIDEO_ASPECT_PRESETS = ['16:7', ...CHART_IMAGE_ASPECT_PRESETS]
 const RATING_ORDER = getEnemyRatingRanges('defense').map(({ rating }) => rating)
 const PLOT_HEIGHT: Record<EnemyRatingComparisonLayout, number> = {
   GROUPED: 334, CUMULATIVE: 304, MIRRORED: 352,
@@ -108,7 +108,9 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
   onClose: () => void
   media?: 'image' | 'video'
 }) {
-  const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
+  const video = media === 'video'
+  const [aspect, setAspect] = useState<ChartImageAspectSettings>(() => video
+    ? { preset: '16:7', width: '16', height: '7' } : { preset: 'auto', width: '16', height: '9' })
   const [showRankHighlight, setShowRankHighlight] = useState(true)
   const [fixOutputWidth, setFixOutputWidth] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -121,7 +123,6 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
   const savingRef = useRef(false)
   const videoAbort = useRef<AbortController | null>(null)
   useEffect(() => () => videoAbort.current?.abort(), [])
-  const video = media === 'video'
   const videoFormat = video ? getChartVideoFormat() : undefined
   const videoExtension = videoFormat?.extension ?? 'mp4'
   const hasSelectedRanks = snapshot.data.rows.some(({ rank }) => snapshot.selectedRanks?.includes(rank))
@@ -131,13 +132,21 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
   const aspectRatio = aspect.preset === 'auto' || !validAspect ? undefined : Number(aspect.width) / Number(aspect.height)
   const canFixOutputWidth = validAspect
     && (aspectRatio === undefined || Math.round(FIXED_OUTPUT_WIDTH / aspectRatio) <= CHART_IMAGE_MAX_SIDE)
-  const output = video ? VIDEO_OUTPUT
+  // Use even video dimensions for the encoder. Auto layout already renders at twice its 960px base width.
+  const videoHeight = video && aspectRatio !== undefined
+    ? Math.max(2, Math.round(ENEMY_RATING_VIDEO_WIDTH / aspectRatio / 2) * 2) : undefined
+  const aspectError = videoHeight !== undefined && videoHeight > CHART_IMAGE_MAX_SIDE
+    ? 'この比率では動画の高さが保存可能な範囲を超えます。' : undefined
+  const videoOutput = video && validAspect && !aspectError
+    ? { width: ENEMY_RATING_VIDEO_WIDTH, aspectRatio: videoHeight === undefined ? undefined : ENEMY_RATING_VIDEO_WIDTH / videoHeight }
+    : undefined
+  const output = video ? videoOutput
     : fixOutputWidth && canFixOutputWidth ? { width: FIXED_OUTPUT_WIDTH, aspectRatio } : undefined
   const filename = getEnemyRatingComparisonImageFilename({ ...outputSnapshot, outputWidth: output?.width })
   const picker = getChartImageSavePicker()
 
   function getDefaultFilename(ratio?: number) {
-    const imageName = withChartImageAspect(filename, video ? ENEMY_RATING_VIDEO_ASPECT : ratio)
+    const imageName = withChartImageAspect(filename, ratio)
     return video ? withChartVideoExtension(imageName.replace(/\.png$/i, ''), videoExtension) : imageName
   }
 
@@ -167,7 +176,7 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
   }
 
   async function saveVideo(selectedFilename: string) {
-    if (savingRef.current || !videoFormat || !timing.timing || timingInputError) return
+    if (savingRef.current || !videoFormat || !videoOutput || !timing.timing || timingInputError) return
     const controller = new AbortController()
     videoAbort.current = controller
     savingRef.current = true
@@ -179,9 +188,10 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
       if (destination.type === 'cancelled') return
       controller.signal.throwIfAborted()
       const blob = await renderEnemyRatingComparisonVideo(
-        <EnemyRatingComparisonImage snapshot={outputSnapshot} aspectRatio={ENEMY_RATING_VIDEO_ASPECT} />,
+        <EnemyRatingComparisonImage snapshot={outputSnapshot} aspectRatio={videoOutput.aspectRatio} />,
         videoFormat,
         timing.timing,
+        videoOutput,
         controller.signal,
       )
       controller.signal.throwIfAborted()
@@ -211,17 +221,21 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
     onClose()
   }
 
-  const previewRatio = video ? ENEMY_RATING_VIDEO_ASPECT : aspectRatio
+  const previewRatio = video ? videoOutput?.aspectRatio : aspectRatio
   const formatLabel = videoFormat?.extension === 'mp4' ? 'MP4' : videoFormat ? 'WebM' : undefined
-  const preview = <EnemyRatingComparisonImagePreview key={previewRatio ?? 'auto'}
+  const preview = <EnemyRatingComparisonImagePreview key={video ? `${aspect.preset}:${aspect.width}:${aspect.height}` : previewRatio ?? 'auto'}
     snapshot={outputSnapshot} aspectRatio={previewRatio} output={output}
     video={video ? { timing: timing.timing, duration: timing.duration, formatLabel, saving, onActivePhase: setActiveVideoPhase }
       : undefined} />
-  return <ChartImageSaveDialog initialFilename={getDefaultFilename()} getDefaultFilename={getDefaultFilename}
-    aspect={video ? undefined : aspect} onAspectChange={video ? undefined : setAspect}
+  return <ChartImageSaveDialog initialFilename={getDefaultFilename(aspectRatio)} getDefaultFilename={getDefaultFilename}
+    aspect={aspect} aspectPresets={video ? VIDEO_ASPECT_PRESETS : undefined} aspectError={aspectError}
+    onAspectChange={next => {
+      if (video && (next.preset !== aspect.preset || next.width !== aspect.width || next.height !== aspect.height)) setActiveVideoPhase(null)
+      setAspect(next)
+    }}
     canChooseLocation={Boolean(picker)} saving={saving} helpMode="popover"
     videoExtension={video ? videoExtension : undefined} cancelWhileSaving={canCancelVideo}
-    saveDisabled={video && (!videoFormat || !timing.timing || Boolean(timingInputError))}
+    saveDisabled={video && (!videoFormat || !videoOutput || !timing.timing || Boolean(timingInputError))}
     error={video && !videoFormat ? 'このブラウザーは動画の出力に対応していません。' : error}
     onClose={closeDialog} onSave={(name, ratio) => { void (video ? saveVideo(name) : saveImage(name, ratio)) }}
     options={<div className="enemy-histogram-display-controls">
@@ -237,7 +251,7 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
       </label>
     </div>}
     preview={video ? <div className="enemy-rating-video-preview">
-      {preview}
+      {videoOutput && preview}
       <EnemyRatingVideoTimingEditor draft={timingDraft} onChange={setTimingDraft} parsed={timing}
         inputError={timingInputError} onInputError={setTimingInputError} activePhase={activeVideoPhase}
         sideValue={snapshot.sideValue} disabled={saving} />
@@ -315,9 +329,9 @@ function EnemyRatingComparisonImagePreview({ snapshot, aspectRatio, output, vide
   const [size, setSize] = useState<{ width: number; height: number }>(() =>
     getChartImageLayout({ naturalChartHeight: PLOT_HEIGHT[snapshot.layout], aspectRatio }))
   const captureChart = useMemo(() => <EnemyRatingComparisonImage snapshot={snapshot}
-    aspectRatio={ENEMY_RATING_VIDEO_ASPECT} />, [
+    aspectRatio={aspectRatio} />, [
     snapshot.data, snapshot.layout, snapshot.selectedRanks, snapshot.sideValue, snapshot.scopeLabel,
-    snapshot.countMode, snapshot.countLabel, snapshot.aggregationVersion, snapshot.coverage,
+    snapshot.countMode, snapshot.countLabel, snapshot.aggregationVersion, snapshot.coverage, aspectRatio,
   ])
   useLayoutEffect(() => {
     const element = previewRef.current
@@ -426,7 +440,7 @@ function EnemyRatingComparisonImagePreview({ snapshot, aspectRatio, output, vide
   async function showVideoFrame(seconds: number, playWhenReady: boolean) {
     const canvas = canvasRef.current
     const run = playbackRun.current
-    if (!canvas || saving || !timing || duration === null) return
+    if (!canvas || !output || saving || !timing || duration === null) return
     const capture = previewCapture.current
     window.cancelAnimationFrame(run.frame)
     run.seconds = Math.min(duration, Math.max(0, seconds))
@@ -449,7 +463,7 @@ function EnemyRatingComparisonImagePreview({ snapshot, aspectRatio, output, vide
     setPlayback('preparing')
 
     try {
-      const animation = await prepareEnemyRatingComparisonVideo(captureChart, timing, preparation.signal)
+      const animation = await prepareEnemyRatingComparisonVideo(captureChart, timing, output, preparation.signal)
       if (preparation.signal.aborted || previewCapture.current !== capture) return
       canvas.width = animation.width
       canvas.height = animation.height
