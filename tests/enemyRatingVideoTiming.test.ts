@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
-  createEnemyRatingVideoTimingDraft, ENEMY_RATING_VIDEO_PHASES, ENEMY_RATING_VIDEO_TEMPOS, getEnemyRatingVideoDefaultDuration,
+  createEnemyRatingVideoTimingDraft, ENEMY_RATING_VIDEO_PHASES, ENEMY_RATING_VIDEO_PHASE_TEMPOS, ENEMY_RATING_VIDEO_TEMPOS,
+  getEnemyRatingVideoDefaultDuration,
   parseEnemyRatingVideoTiming, retimeEnemyRatingVideoStep, retimeEnemyRatingVideoText, type EnemyRatingVideoTiming,
 } from '../src/lib/enemyRatingVideoTiming.ts'
 
@@ -89,6 +90,55 @@ test('10秒で描画を完了し、初期設定の保持時間ではそこで終
   for (const phase of draft.order) {
     assert.equal(reordered.timing[phase].duration, parsed.timing[phase].duration)
   }
+})
+
+test('項目別の5段階は全体の描画時間を保ってその項目への配分を変える', () => {
+  const draft = { ...createEnemyRatingVideoTimingDraft(), tempo: 'verySlow' as const }
+  const expectedWeights = [.4, .65, 1, 1.5, 2.25]
+  assert.equal(ENEMY_RATING_VIDEO_PHASE_TEMPOS.length, expectedWeights.length)
+  for (const [index, tempo] of ENEMY_RATING_VIDEO_PHASE_TEMPOS.entries()) {
+    const parsed = parseEnemyRatingVideoTiming({ ...draft, phaseTempos: { bars: tempo } })
+    assert.ok(parsed.timing)
+    const barsWeight = .88 * expectedWeights[index]
+    closeTo(parsed.timing.bars.duration, 10 * barsWeight / (3.64 - .88 + barsWeight))
+    closeTo(parsed.finish, 10)
+    assert.equal(parsed.duration, parsed.finish)
+  }
+  assert.deepEqual(parseEnemyRatingVideoTiming({ ...draft, phaseTempos: { bars: 3 } }), parseEnemyRatingVideoTiming(draft))
+})
+
+test('項目別のテンポは表示順を変えても同じ項目に適用される', () => {
+  const draft = { ...createEnemyRatingVideoTimingDraft(), phaseTempos: { bars: 5, values: 1 } as const }
+  const original = parseEnemyRatingVideoTiming(draft)
+  const reordered = parseEnemyRatingVideoTiming({ ...draft, order: ['bars', 'title', 'axes', 'ranks', 'values'] })
+  assert.ok(original.timing && reordered.timing)
+  for (const phase of draft.order) {
+    assert.equal(reordered.timing[phase].duration, original.timing[phase].duration)
+  }
+  assert.equal(reordered.timing.bars.start, 0)
+  assert.equal(reordered.timing.title.start, reordered.timing.bars.duration)
+  closeTo(reordered.finish, original.finish)
+})
+
+test('項目別のテンポは個別の秒数と保持時間を確保して未指定項目の時間を再配分する', () => {
+  const draft = {
+    ...createEnemyRatingVideoTimingDraft(),
+    overrides: { bars: '1.2', hold: '2' },
+    phaseTempos: { bars: 5, title: 4 } as const,
+  }
+  const manual = parseEnemyRatingVideoTiming({ ...draft, finishSeconds: '8' })
+  const automatic = parseEnemyRatingVideoTiming(draft)
+  const original = parseEnemyRatingVideoTiming({ ...draft, phaseTempos: undefined })
+  assert.ok(manual.timing && automatic.timing && original.timing)
+  for (const { timing } of [manual, automatic]) {
+    assert.equal(timing.bars.duration, 1.2)
+    assert.equal(timing.hold, 2)
+    closeTo(timing.title.duration / timing.axes.duration, .38 * 1.5 / .68)
+  }
+  closeTo(manual.finish, 8)
+  closeTo(manual.duration, 10)
+  closeTo(automatic.finish, original.finish)
+  closeTo(automatic.duration, original.duration)
 })
 
 test('個別指定の描画時間を確保して残りを配分し、保持時間を描画終了後に加える', () => {

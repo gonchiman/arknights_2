@@ -8,10 +8,13 @@
 }
 .enemy-rating-video-timing-options { display: grid; gap: 6px; }
 .enemy-rating-video-timing-heading h3 { margin: 0; font-size: inherit; font-weight: 600; }
-.enemy-rating-video-order { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--border); }
+.enemy-rating-video-order {
+  margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--border);
+  container-type: inline-size;
+}
 .enemy-rating-video-order li {
   display: grid;
-  grid-template-columns: 1.5em minmax(0, 1fr) auto;
+  grid-template-columns: 1.5em minmax(0, 1fr) max-content max-content auto;
   align-items: center;
   gap: 6px;
   padding: 3px 6px;
@@ -19,6 +22,17 @@
 }
 .enemy-rating-video-order li[aria-current="step"] { background: var(--surface-hover); }
 .enemy-rating-video-order li > span:first-child { color: var(--text-muted); text-align: center; }
+.enemy-rating-video-phase-seconds { color: var(--text-muted); text-align: right; font-variant-numeric: tabular-nums; }
+.enemy-rating-video-phase-tempo {
+  display: flex; align-items: center; flex-wrap: wrap; justify-content: end; gap: 4px;
+}
+.enemy-rating-video-phase-tempo > span { color: var(--text-muted); white-space: nowrap; }
+.enemy-rating-video-phase-tempo .button {
+  min-width: 30px; min-height: 32px; padding: 2px 5px; white-space: nowrap;
+}
+.enemy-rating-video-phase-tempo .button[aria-pressed="true"]:not(:disabled) {
+  background: #222; color: #fff;
+}
 .enemy-rating-video-order-actions, .enemy-rating-video-finish, .enemy-rating-video-effect-options label {
   display: flex;
   align-items: center;
@@ -62,8 +76,15 @@
 .enemy-rating-video-timing input[type="number"] { width: 5.75em; font-variant-numeric: tabular-nums; }
 .enemy-rating-video-timing input[aria-invalid="true"] { border-color: var(--danger); }
 
+@container (max-width: 610px) {
+  .enemy-rating-video-order li { grid-template-columns: 1.5em minmax(0, 1fr) max-content auto; }
+  .enemy-rating-video-order-actions { grid-column: 4; grid-row: 1; }
+  .enemy-rating-video-phase-tempo { grid-column: 2 / -1; grid-row: 2; justify-content: start; }
+}
+
 @media (pointer: coarse) {
   .enemy-rating-video-order-actions .button { width: 44px; }
+  .enemy-rating-video-phase-tempo .button { min-width: 44px; min-height: 44px; }
   .enemy-rating-video-timing-precision summary { display: list-item; padding-block: 12px; }
   .enemy-rating-video-tempo > span:first-child { padding-top: 13px; }
   .enemy-rating-video-tempo-track input { min-height: 44px; }
