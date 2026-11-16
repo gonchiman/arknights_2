@@ -53,8 +53,8 @@ const PLOT_HEIGHT: Record<EnemyRatingComparisonLayout, number> = {
 const formatCount = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
 
 export function getEnemyRatingComparisonImageFilename({
-  layout, scopeLabel, countLabel, aggregationVersion, selectedRanks, sideValue, outputWidth,
-}: Omit<EnemyRatingComparisonImageSnapshot, 'data' | 'coverage'> & { outputWidth?: number }): string {
+  layout, scopeLabel, countLabel, aggregationVersion, selectedRanks, sideValue, outputWidth, videoDuration,
+}: Omit<EnemyRatingComparisonImageSnapshot, 'data' | 'coverage'> & { outputWidth?: number; videoDuration?: number }): string {
   const rankLabel = RATING_ORDER.filter(rank => selectedRanks?.includes(rank)).join('-')
   return createChartImageFilename('敵', [
     aggregationVersion && `集計${aggregationVersion.id}`,
@@ -65,6 +65,7 @@ export function getEnemyRatingComparisonImageFilename({
     outputWidth && `幅${outputWidth}px`,
     scopeLabel,
     ENEMY_RATING_COMPARISON_LAYOUTS.find((option) => option.key === layout)?.label,
+    videoDuration !== undefined && `${Number(videoDuration.toPrecision(12))}秒`,
   ])
 }
 
@@ -142,7 +143,10 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
     : undefined
   const output = video ? videoOutput
     : fixOutputWidth && canFixOutputWidth ? { width: FIXED_OUTPUT_WIDTH, aspectRatio } : undefined
-  const filename = getEnemyRatingComparisonImageFilename({ ...outputSnapshot, outputWidth: output?.width })
+  const filename = getEnemyRatingComparisonImageFilename({
+    ...outputSnapshot, outputWidth: output?.width,
+    videoDuration: video ? timing.duration ?? undefined : undefined,
+  })
   const picker = getChartImageSavePicker()
 
   function getDefaultFilename(ratio?: number) {
