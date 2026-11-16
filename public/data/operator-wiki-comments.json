@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-11-15T19:16:21.454Z",
+  "observedAt": "2026-11-16T06:39:17.725Z",
   "throughDate": "2026-11-15",
   "entries": [
     {
@@ -2157,7 +2157,7 @@
       "counts": {
         "2026-11-14": 2
       },
-      "total": 147
+      "total": 148
     },
     {
       "operatorId": "char_369_bena",
@@ -2411,7 +2411,7 @@
         "2026-11-03": 1,
         "2026-11-10": 1
       },
-      "total": 1513
+      "total": 1514
     },
     {
       "operatorId": "char_479_sleach",
@@ -3197,7 +3197,7 @@
         "2026-11-11": 1,
         "2026-11-12": 4
       },
-      "total": 539
+      "total": 540
     },
     {
       "operatorId": "char_136_hsguma",
@@ -3679,7 +3679,7 @@
       "counts": {
         "2026-11-13": 1
       },
-      "total": 226
+      "total": 227
     },
     {
       "operatorId": "char_283_midn",
