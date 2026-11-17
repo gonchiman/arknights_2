@@ -176,3 +176,114 @@ test('Wiki bare query + means space while encoded %2B means a literal plus', asy
   assert.equal(comments.total, 2)
   assert.deepEqual(comments.counts, { '2026-11-03': 2 })
 })
+
+test('daily mode publishes each batch, retries missing data, and skips a complete day without contacting Wiki', async t => {
+  const { pages, settings, names } = await collectionFixture(t)
+  const calls = []
+  const missing = url('Enemy 2')
+  const path = join(settings.historyDirectory, '2026-11-15.json')
+  const request = async address => {
+    if (address === missing && !calls.includes(missing)) {
+      calls.push(address)
+      throw new Error('counter temporarily unavailable')
+    }
+    calls.push(address)
+    if (address === url('Enemy 51')) {
+      const partial = JSON.parse(await readFile(settings.snapshotPath, 'utf8'))
+      assert.equal(partial.entries.filter(entry => entry.view).length, 49)
+      assert.equal(partial.entries[0].view.yesterday, 0)
+      assert.equal(JSON.parse(await readFile(path, 'utf8')).counts[url('Enemy 1')], 0)
+    }
+    assert.ok(pages.has(address))
+    return pages.get(address)
+  }
+  const complete = await refreshEnemyWikiStats({ ...settings, daily: true, batchSize: 50, request })
+  assert.equal(complete.entries.filter(entry => entry.view).length, names.length)
+  assert.equal(calls.filter(address => address === missing).length, 2)
+  assert.equal(calls.filter(address => address === url('Enemy 1')).length, 1)
+  assert.equal(calls.filter(address => address === url('コメント/Enemy 1')).length, 1)
+
+  const saved = await readFile(settings.snapshotPath, 'utf8')
+  const history = await readFile(path, 'utf8')
+  await rm(path)
+  const skip = {
+    ...settings, daily: true, now: () => new Date('2026-11-16T14:59:59Z'),
+    request: async () => assert.fail('Completed same-day coverage needs no Wiki request.'),
+  }
+  await refreshEnemyWikiStats(skip)
+  assert.equal(await readFile(settings.snapshotPath, 'utf8'), saved)
+  assert.deepEqual(JSON.parse(await readFile(path, 'utf8')), JSON.parse(history))
+  await refreshEnemyWikiStats(skip)
+  assert.equal(await readFile(settings.snapshotPath, 'utf8'), saved)
+})
+
+test('another daily runner fills missing rows from the public same-day snapshot', async t => {
+  const { pages, settings } = await collectionFixture(t)
+  const savedAt = settings.now().toISOString()
+  const controller = new AbortController()
+  const lookup = address => {
+    assert.ok(pages.has(address))
+    return pages.get(address)
+  }
+  await refreshEnemyWikiStats({
+    ...settings, daily: true, signal: controller.signal, request: async address => {
+      if (address === url('コメント/Enemy 1')) controller.abort()
+      return lookup(address)
+    },
+  })
+  const resumedAt = '2026-11-16T14:00:00.000Z'
+  const calls = []
+  const recovered = await refreshEnemyWikiStats({
+    ...settings, daily: true, now: () => new Date(resumedAt), stagingDirectory: settings.stagingDirectory + '-next',
+    request: async address => {
+      calls.push(address)
+      return lookup(address)
+    },
+  })
+  assert.ok(calls.includes(url('敵一覧')))
+  assert.ok(calls.includes(url('Enemy 2')))
+  assert.ok(!calls.includes(url('Enemy 1')))
+  assert.ok(!calls.includes(url('コメント/Enemy 1')))
+  assert.equal(recovered.entries[0].view.yesterday, 0)
+  assert.equal(recovered.entries[0].comment.total, 1)
+  assert.equal(recovered.commentsObservedAt, savedAt)
+  assert.equal(recovered.viewsObservedAt, resumedAt)
+})
+
+test('a daily transport failure never replaces the preceding day with catalog-only data', async t => {
+  const { pages, settings } = await collectionFixture(t)
+  await refreshEnemyWikiStats({ ...settings, batchSize: 1, request: async address => pages.get(address) })
+  const saved = await readFile(settings.snapshotPath, 'utf8')
+  const priorHistory = join(settings.historyDirectory, '2026-11-15.json')
+  const prior = await readFile(priorHistory, 'utf8')
+  await assert.rejects(refreshEnemyWikiStats({
+    ...settings, daily: true, now: () => new Date('2026-11-17T12:00:00Z'),
+    request: async address => {
+      if (address === url('敵一覧') || address === root + '?cmd=list') return pages.get(address)
+      throw new TypeError('connection failed')
+    },
+  }), /取得失敗が連続/)
+  assert.equal(await readFile(settings.snapshotPath, 'utf8'), saved)
+  assert.equal(await readFile(priorHistory, 'utf8'), prior)
+  await assert.rejects(readFile(join(settings.historyDirectory, '2026-11-16.json')), { code: 'ENOENT' })
+})
+
+test('an empty current enemy log contributes zero but cannot hide an unavailable archive', async () => {
+  const name = 'Patriot'
+  const row = { wikiUrl: url(name), name }
+  const comment = 'コメント/' + name
+  const range = { start: '2026-11-01', throughDate: '2026-11-30' }
+  const catalog = { page: true, current: true, archives: [comment + '/1'] }
+  const empty = page(comment, '<p>' + link(name) + '</p>')
+  const failed = await collectEnemyComment(row, catalog, range, async address => {
+    if (address === url(comment)) return empty
+    throw new Error('archive inaccessible')
+  })
+  assert.equal(failed.coveredFrom, null)
+  assert.equal(failed.total, null)
+
+  const complete = await collectEnemyComment(row, catalog, range, async address => address === url(comment)
+    ? empty : logPage(comment + '/1', ['2026-11-03']))
+  assert.equal(complete.total, 1)
+  assert.deepEqual(complete.counts, { '2026-11-03': 1 })
+})

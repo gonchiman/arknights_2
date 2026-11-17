@@ -170,3 +170,34 @@ test('公開ページ一覧に現行ログが載っていなくても掲載済�
     + '/"></head><h1>ページの一覧</h1><div id="body">' + body + '</div>'
   assert.deepEqual(parseCommentCatalog(html, mapping).get(log), [log + '/1'])
 })
+
+test('敵ログだけで削除マーカーの誤字と壊れた署名を除く', () => {
+  const dated = post('2026-11-16T12:00:00+09:00')
+  const typo = '<li><span style="color:#ff0000"><strong>投降者本人が削除しました</strong></span></li>'
+  const missingBracket = ' -- [example] 2024-03-19 (火) 21:48:46};'
+  const signedDeletion = '<li><span style="color:#ff0000"><strong>投稿者本人が削除しました</strong></span>'
+    + missingBracket + '</li>'
+  const source = page(log, list(dated + typo + signedDeletion))
+  const options = { enemyLogOwner: title }
+  assert.deepEqual(parseCommentLog(source, log, undefined, options), ['2026-11-16'])
+  assert.throws(() => parseCommentLog(source, log), /投稿日時のない/)
+  assert.throws(() => parseCommentLog(page(log, list(dated + '<li>投稿日時なし</li>')), log, undefined, options),
+    /投稿日時のない/)
+  const unverifiedTail = signedDeletion.replace(missingBracket, ' 投稿本文')
+  assert.throws(() => parseCommentLog(page(log, list(dated + unverifiedTail)), log, undefined, options),
+    /投稿日時のない/)
+})
+
+test('敵ログだけで正しい個別ページへの戻りリンクだけを0件として扱う', () => {
+  const backLink = link(title).replace('>リンク<', '>' + title + '<')
+  const empty = '<p>' + backLink + '</p>'
+  const options = { enemyLogOwner: title }
+  assert.deepEqual(parseCommentLog(page(log, empty), log, undefined, options), [])
+  assert.deepEqual(parseCommentLog(page(log + '/1', empty), log + '/1', undefined, options), [])
+  assert.throws(() => parseCommentLog(page(log, empty), log), /ログを確認できません/)
+  assert.throws(() => parseCommentLog(page(log, ''), log, undefined, options), /ログを確認できません/)
+  assert.throws(() => parseCommentLog(page(log, '<p>' + link('他の敵') + '</p>'), log, undefined, options),
+    /ログを確認できません/)
+  assert.throws(() => parseCommentLog(page(log, empty + '<p>投稿に見える記述</p>'), log, undefined, options),
+    /ログを確認できません/)
+})
