@@ -29,7 +29,7 @@ const NO_STAGES: MainStorySpawnStage[] = []
 const NO_LISTS: MainStorySpawnList[] = []
 
 type View = typeof VIEWS[number]['value']
-type JumpKind = 'rank' | 'stat'
+type JumpKind = 'row' | 'rank' | 'stat'
 type LoadResult<T> = { attempt: number } & ({ data: T; error?: never } | { data?: never; error: string })
 
 function formatNumber(value: number | null) {
@@ -61,18 +61,19 @@ export function MainStoryEnemySpawnsPage() {
     stages: readonly MainStorySpawnStage[]
   }) | null>(null)
   const [chapter, setChapter] = useState('')
-  const [stage, setStage] = useState<string | null>(null)
+  const [stageId, setStageId] = useState('')
   const [query, setQuery] = useState('')
   const [view, setView] = useState<View>('units')
   const [sort, setSort] = useState(DEFAULT_SORT)
   const [page, setPage] = useState(0)
   const [imageSelection, setImageSelection] = useState<MainStorySpawnImageSelection | null>(null)
-  const [jumpKind, setJumpKind] = useState<JumpKind>('rank')
+  const [jumpKind, setJumpKind] = useState<JumpKind>('row')
   const [jumpValue, setJumpValue] = useState('')
-  const [jumpTarget, setJumpTarget] = useState<ReturnType<typeof findMainStorySpawnJump>>(null)
+  const [jumpTarget, setJumpTarget] = useState<{ rowNumber: number } | null>(null)
   const [jumpFeedback, setJumpFeedback] = useState<{ message: string; invalid?: boolean } | null>(null)
   const jumpInput = useRef<HTMLInputElement>(null)
   const jumpRow = useRef<HTMLTableRowElement>(null)
+  const jumpInputId = useId()
   const jumpFeedbackId = useId()
 
   useEffect(() => {
@@ -97,7 +98,6 @@ export function MainStoryEnemySpawnsPage() {
   const chapters = useMemo(() => [...new Set(stages.map(item => item.chapter))], [stages])
   const chapterStages = useMemo(() => chapter === '' ? stages : stages.filter(item => item.chapter === Number(chapter)),
     [chapter, stages])
-  const stageId = stage ?? stages[0]?.id ?? ''
   const scope = useMemo(() => stageId === '' ? chapterStages : chapterStages.filter(item => item.id === stageId),
     [chapterStages, stageId])
 
@@ -128,7 +128,10 @@ export function MainStoryEnemySpawnsPage() {
   const columns = view === 'units' ? UNIT_COLUMNS : COUNT_COLUMNS
   const rankMetric = getMainStorySpawnRankMetric(sort)
   const rankLabel = STATS.find(([key]) => key === rankMetric)?.[1]
-  const jumpByRank = jumpKind === 'rank'
+  const canJumpByStat = rankLabel !== undefined && rankedRowCount > 0
+  const activeJumpKind = canJumpByStat ? jumpKind : 'row'
+  const jumpLabel = activeJumpKind === 'row' ? '行番号' : activeJumpKind === 'rank' ? '順位' : rankLabel
+  const maxJumpValue = activeJumpKind === 'row' ? tableRowCount : activeJumpKind === 'rank' ? rankedRowCount : undefined
   const loading = scope.length > 0 && currentListLoad === null
 
   function clearJump() {
@@ -143,7 +146,7 @@ export function MainStoryEnemySpawnsPage() {
 
   function changeChapter(value: string) {
     setChapter(value)
-    if (value !== '' && !stages.some(item => item.id === stageId && item.chapter === Number(value))) setStage('')
+    if (value !== '' && !stages.some(item => item.id === stageId && item.chapter === Number(value))) setStageId('')
     changePage(0)
   }
 
@@ -161,35 +164,47 @@ export function MainStoryEnemySpawnsPage() {
   }
 
   function changeJumpKind(value: JumpKind) {
-    if (value === jumpKind) return
+    if (value === activeJumpKind) return
     setJumpKind(value)
     setJumpValue('')
     clearJump()
     jumpInput.current?.focus({ preventScroll: true })
   }
 
+  function moveToRow(rowNumber: number) {
+    setPage(Math.floor((rowNumber - 1) / PAGE_SIZE))
+    setJumpTarget({ rowNumber })
+  }
+
   function jumpToRow(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const value = Number(jumpValue)
-    const invalidRank = jumpByRank && (!Number.isSafeInteger(value) || value < 1 || value > rankedRowCount)
-    if (!jumpValue.trim() || !Number.isFinite(value) || value < 0 || invalidRank) {
+    const invalidPosition = maxJumpValue !== undefined && (!Number.isSafeInteger(value) || value < 1 || value > maxJumpValue)
+    if (!jumpValue.trim() || !Number.isFinite(value) || value < 0 || invalidPosition) {
       setJumpTarget(null)
       setJumpFeedback({
-        message: jumpByRank ? `1〜${formatNumber(rankedRowCount)}位を入力` : '0以上の値を入力',
+        message: maxJumpValue === undefined ? '0以上の値を入力'
+          : `1〜${formatNumber(maxJumpValue)}${activeJumpKind === 'rank' ? '位' : '行目'}を入力`,
         invalid: true,
       })
       jumpInput.current?.focus({ preventScroll: true })
       return
     }
 
-    const target = findMainStorySpawnJump(lists, query, view, sort, { kind: jumpKind, value })
+    if (activeJumpKind === 'row') {
+      moveToRow(value)
+      setJumpFeedback(null)
+      return
+    }
+
+    const target = findMainStorySpawnJump(lists, query, view, sort, { kind: activeJumpKind, value })
     if (!target) {
       setJumpTarget(null)
       setJumpFeedback({ message: '該当する行がありません' })
       return
     }
-    setPage(Math.floor(target.offset / PAGE_SIZE))
-    setJumpTarget(target)
+    moveToRow(target.offset + 1)
+    const jumpByRank = activeJumpKind === 'rank'
     const match = jumpByRank ? target.rank : target.value
     setJumpFeedback(match === value ? null : {
       message: jumpByRank ? `${formatNumber(value)}位 → 同順位の${formatNumber(match)}位`
@@ -242,7 +257,7 @@ export function MainStoryEnemySpawnsPage() {
             {chapters.map(value => <option key={value} value={value}>{value}章</option>)}
           </select></label>
           <label><span>ステージ</span><select value={stageId} onChange={event => {
-            setStage(event.target.value)
+            setStageId(event.target.value)
             changePage(0)
           }}>
             <option value="">全ステージ</option>
@@ -271,19 +286,25 @@ export function MainStoryEnemySpawnsPage() {
         <div aria-busy={loading}>
           <EnemyDataContent loading={loading} error={currentListLoad?.error ?? null}
             onRetry={() => { changePage(0); setListAttempt(previous => previous + 1) }}>
-            {rankLabel && rankedRowCount > 0 && <form className="main-story-spawns-jump" noValidate
-              aria-label="順位・ステータス値へ移動" onSubmit={jumpToRow}>
-              <div className="main-story-spawns-jump-options" role="group" aria-label="移動先">
-                <button type="button" className="button secondary" aria-pressed={jumpByRank}
+            {tableRowCount > 0 && <form className="main-story-spawns-jump" noValidate
+              aria-label="行へ移動" onSubmit={jumpToRow}>
+              {canJumpByStat ? <div className="main-story-spawns-jump-options" role="group" aria-label="移動先">
+                <button type="button" className="button secondary" aria-pressed={activeJumpKind === 'row'}
+                  onClick={() => changeJumpKind('row')}>行番号</button>
+                <button type="button" className="button secondary" aria-pressed={activeJumpKind === 'rank'}
                   onClick={() => changeJumpKind('rank')}>順位</button>
-                <button type="button" className="button secondary" aria-pressed={!jumpByRank}
+                <button type="button" className="button secondary" aria-pressed={activeJumpKind === 'stat'}
                   onClick={() => changeJumpKind('stat')}>{rankLabel}</button>
-              </div>
-              <input ref={jumpInput} type="number" value={jumpValue} autoComplete="off"
-                min={jumpByRank ? 1 : 0} max={jumpByRank ? rankedRowCount : undefined} step={jumpByRank ? 1 : 'any'}
-                inputMode={jumpByRank ? 'numeric' : 'decimal'} aria-label={jumpByRank ? '指定する順位' : `指定する${rankLabel}`}
+              </div> : <label htmlFor={jumpInputId}>行番号</label>}
+              <input id={jumpInputId} ref={jumpInput} type="number" value={jumpValue} autoComplete="off"
+                min={maxJumpValue === undefined ? 0 : 1} max={maxJumpValue} step={maxJumpValue === undefined ? 'any' : 1}
+                inputMode={maxJumpValue === undefined ? 'decimal' : 'numeric'} aria-label={`指定する${jumpLabel}`}
                 aria-invalid={jumpFeedback?.invalid} aria-describedby={jumpFeedback ? jumpFeedbackId : undefined}
-                onChange={event => { setJumpValue(event.target.value); setJumpFeedback(null) }} />
+                onChange={event => {
+                  setJumpKind(activeJumpKind)
+                  setJumpValue(event.target.value)
+                  setJumpFeedback(null)
+                }} />
               <button type="submit" className="button">移動</button>
               <output id={jumpFeedbackId} aria-live="polite" data-invalid={jumpFeedback?.invalid}>
                 {jumpFeedback?.message}
@@ -292,7 +313,7 @@ export function MainStoryEnemySpawnsPage() {
             <div className="table-wrap main-story-spawns-table-wrap" role="region" tabIndex={0} aria-label="出現敵一覧の表">
               <MainStorySpawnTable view={view} rows={rows} statusRows={statusRows}
                 startRowNumber={offset + 1} rankLabel={rankLabel}
-                sorting={{ sort, onSort: changeSort }} selectedKey={jumpTarget?.key} selectedRowRef={jumpRow} />
+                sorting={{ sort, onSort: changeSort }} selectedRowNumber={jumpTarget?.rowNumber} selectedRowRef={jumpRow} />
             </div>
             {pageCount > 1 && <nav className="enemy-pagination main-story-spawns-pagination" aria-label="出現敵一覧のページ切り替え">
               <span>{formatNumber(offset + 1)}–{formatNumber(Math.min(offset + PAGE_SIZE, tableRowCount))} / {formatNumber(tableRowCount)}行</span>
@@ -310,14 +331,15 @@ export function MainStoryEnemySpawnsPage() {
   </section>
 }
 
-function MainStorySpawnTable({ view, rows, statusRows, startRowNumber, rankLabel, sorting, selectedKey, selectedRowRef, forImage = false }: {
+function MainStorySpawnTable({ view, rows, statusRows, startRowNumber, rankLabel, sorting,
+  selectedRowNumber, selectedRowRef, forImage = false }: {
   view: View
   rows: readonly MainStorySpawnRow[]
   statusRows: readonly MainStorySpawnList[]
   startRowNumber: number
   rankLabel?: string
   sorting?: { sort: MainStorySpawnSort; onSort: (key: MainStorySpawnSortKey) => void }
-  selectedKey?: string
+  selectedRowNumber?: number
   selectedRowRef?: Ref<HTMLTableRowElement>
   forImage?: boolean
 }) {
@@ -339,15 +361,20 @@ function MainStorySpawnTable({ view, rows, statusRows, startRowNumber, rankLabel
     <tbody>
       {rows.map((row, index) => <MainStorySpawnTableRow key={row.key} row={row} rowNumber={startRowNumber + index}
         showUnits={showUnits} showRank={showRank}
-        forImage={forImage} selected={row.key === selectedKey} selectedRef={selectedRowRef} />)}
-      {statusRows.map(({ stage, status }, index) => status !== 'confirmed' &&
-        <tr key={stage.id} className="main-story-spawns-status-row">
-          <td data-table-image-number={imageNumber}>{formatNumber(startRowNumber + rows.length + index)}</td>
+        forImage={forImage} selected={startRowNumber + index === selectedRowNumber} selectedRef={selectedRowRef} />)}
+      {statusRows.map(({ stage, status }, index) => {
+        if (status === 'confirmed') return null
+        const rowNumber = startRowNumber + rows.length + index
+        const selected = rowNumber === selectedRowNumber
+        return <tr key={stage.id} className="main-story-spawns-status-row" aria-current={selected || undefined}
+          tabIndex={selected ? -1 : undefined} ref={selected ? selectedRowRef : undefined}>
+          <td data-table-image-number={imageNumber}>{formatNumber(rowNumber)}</td>
           {showRank && <td>—</td>}
           <th scope="row" colSpan={STATS.length + 1} className="main-story-spawns-text-cell">{STAGE_STATUS[status]}</th>
           <td className="main-story-spawns-text-cell">{stage.code}</td>
           <td colSpan={columns.length - COMMON_COLUMNS.length}>—</td>
-        </tr>)}
+        </tr>
+      })}
       {rows.length === 0 && statusRows.length === 0 && <tr>
         <td className="main-story-spawns-empty" colSpan={1 + columns.length + Number(showRank)}>該当する敵はいません</td>
       </tr>}
