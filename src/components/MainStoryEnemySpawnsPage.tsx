@@ -221,7 +221,7 @@ export function MainStoryEnemySpawnsPage() {
           title: TITLE,
           conditions: [...conditions, `${rangeLabel}行目`],
           table: <MainStorySpawnTable view={view} rows={result.rows} statusRows={stageStatuses}
-            rankLabel={rankLabel} forImage />,
+            startRowNumber={start} rankLabel={rankLabel} forImage />,
         }
       },
     })
@@ -290,7 +290,8 @@ export function MainStoryEnemySpawnsPage() {
               </output>
             </form>}
             <div className="table-wrap main-story-spawns-table-wrap" role="region" tabIndex={0} aria-label="出現敵一覧の表">
-              <MainStorySpawnTable view={view} rows={rows} statusRows={statusRows} rankLabel={rankLabel}
+              <MainStorySpawnTable view={view} rows={rows} statusRows={statusRows}
+                startRowNumber={offset + 1} rankLabel={rankLabel}
                 sorting={{ sort, onSort: changeSort }} selectedKey={jumpTarget?.key} selectedRowRef={jumpRow} />
             </div>
             {pageCount > 1 && <nav className="enemy-pagination main-story-spawns-pagination" aria-label="出現敵一覧のページ切り替え">
@@ -309,10 +310,11 @@ export function MainStoryEnemySpawnsPage() {
   </section>
 }
 
-function MainStorySpawnTable({ view, rows, statusRows, rankLabel, sorting, selectedKey, selectedRowRef, forImage = false }: {
+function MainStorySpawnTable({ view, rows, statusRows, startRowNumber, rankLabel, sorting, selectedKey, selectedRowRef, forImage = false }: {
   view: View
   rows: readonly MainStorySpawnRow[]
   statusRows: readonly MainStorySpawnList[]
+  startRowNumber: number
   rankLabel?: string
   sorting?: { sort: MainStorySpawnSort; onSort: (key: MainStorySpawnSortKey) => void }
   selectedKey?: string
@@ -322,28 +324,32 @@ function MainStorySpawnTable({ view, rows, statusRows, rankLabel, sorting, selec
   const showUnits = view === 'units'
   const columns = showUnits ? UNIT_COLUMNS : COUNT_COLUMNS
   const showRank = rankLabel !== undefined
+  const imageNumber = forImage ? true : undefined
   const style = forImage ? { '--main-story-spawns-image-row-height': `${MAIN_STORY_SPAWN_IMAGE_ROW_MIN_HEIGHT}px` } as CSSProperties : undefined
   return <table className={forImage ? 'main-story-spawns-table main-story-spawns-image-table' : 'main-story-spawns-table'}
     data-view={view} aria-label="出現敵一覧" style={style}>
-    {forImage && <colgroup>{showRank && <col />}{columns.map(([key]) => <col key={key} />)}</colgroup>}
+    {forImage && <colgroup><col />{showRank && <col />}{columns.map(([key]) => <col key={key} />)}</colgroup>}
     <thead><tr>
-      {showRank && <th scope="col" className="main-story-spawns-rank-heading">{rankLabel}順位</th>}
+      <th scope="col" className="main-story-spawns-static-heading">行番号</th>
+      {showRank && <th scope="col" className="main-story-spawns-static-heading">{rankLabel}順位</th>}
       {columns.map(([key, label]) => sorting
         ? <MainStorySpawnSortableHeader key={key} column={key} label={label} {...sorting} />
         : <th key={key} scope="col" className={textColumnClass(key)}>{label}</th>)}
     </tr></thead>
     <tbody>
-      {rows.map(row => <MainStorySpawnTableRow key={row.key} row={row} showUnits={showUnits} showRank={showRank}
+      {rows.map((row, index) => <MainStorySpawnTableRow key={row.key} row={row} rowNumber={startRowNumber + index}
+        showUnits={showUnits} showRank={showRank}
         forImage={forImage} selected={row.key === selectedKey} selectedRef={selectedRowRef} />)}
-      {statusRows.map(({ stage, status }) => status !== 'confirmed' &&
+      {statusRows.map(({ stage, status }, index) => status !== 'confirmed' &&
         <tr key={stage.id} className="main-story-spawns-status-row">
+          <td data-table-image-number={imageNumber}>{formatNumber(startRowNumber + rows.length + index)}</td>
           {showRank && <td>—</td>}
           <th scope="row" colSpan={STATS.length + 1} className="main-story-spawns-text-cell">{STAGE_STATUS[status]}</th>
           <td className="main-story-spawns-text-cell">{stage.code}</td>
           <td colSpan={columns.length - COMMON_COLUMNS.length}>—</td>
         </tr>)}
       {rows.length === 0 && statusRows.length === 0 && <tr>
-        <td className="main-story-spawns-empty" colSpan={columns.length + Number(showRank)}>該当する敵はいません</td>
+        <td className="main-story-spawns-empty" colSpan={1 + columns.length + Number(showRank)}>該当する敵はいません</td>
       </tr>}
     </tbody>
   </table>
@@ -367,8 +373,9 @@ function MainStorySpawnSortableHeader({ column, label, sort, onSort }: {
   </th>
 }
 
-function MainStorySpawnTableRow({ row, showUnits, showRank, forImage, selected, selectedRef }: {
+function MainStorySpawnTableRow({ row, rowNumber, showUnits, showRank, forImage, selected, selectedRef }: {
   row: MainStorySpawnRow
+  rowNumber: number
   showUnits: boolean
   showRank: boolean
   forImage: boolean
@@ -380,6 +387,7 @@ function MainStorySpawnTableRow({ row, showUnits, showRank, forImage, selected, 
     : `${formatNumber(row.wave)}／${formatNumber(row.fragment)}`
   const imageNumber = forImage ? true : undefined
   return <tr aria-current={selected || undefined} tabIndex={selected ? -1 : undefined} ref={selected ? selectedRef : undefined}>
+    <td data-table-image-number={imageNumber}>{formatNumber(rowNumber)}</td>
     {showRank && <td data-table-image-number={imageNumber}>
       {row.rank == null ? '—' : `${formatNumber(row.rank)}位`}
     </td>}
