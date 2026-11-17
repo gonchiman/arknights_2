@@ -145,7 +145,7 @@ test('防御力・術耐性の画像保存は選択ランクを初期状態で�
   assert.match(highlightCheckbox(markup), /<input\b(?=[^>]*\btype="checkbox")(?=[^>]*\bchecked="")[^>]*>/)
   assert.equal(markup.match(/class="enemy-rating-comparison-highlight"/g)?.length, 2)
   assert.match(markup, /value="[^"]*_評価B\+-A強調_[^"]*_比率自動\.png"/)
-  assert.doesNotMatch(markup, /棒・縦線の出し方/)
+  assert.doesNotMatch(markup, /棒の出し方|縦線の出し方/)
   const aspectOptions = getAspectOptions(markup, '画像')
   assert.deepEqual(aspectOptions.map(({ value }) => value), ['auto', '16:9', '2:1', '21:9', '3:1', 'custom'])
   assert.deepEqual(aspectOptions.filter(({ selected }) => selected), [{ value: 'auto', selected: true, label: '指定なし' }])
@@ -258,11 +258,18 @@ test('左右の横棒の動画は集計条件と強調を引き継ぎ、縦横�
       assert.ok(textControl)
       assert.match(textControl, /<option value="instant">一斉に表示<\/option>/)
       assert.match(textControl, /<option value="stagger" selected="">順に表示<\/option>/)
-      const shapeControl = markup.match(/<label\b[^>]*>.*?<\/label>/g)?.find(label => label.includes('棒・縦線の出し方'))
-      assert.ok(shapeControl)
-      const shapeOptions = [...shapeControl.matchAll(/<option value="([^"]+)"( selected="")?>([^<]+)<\/option>/g)]
-        .map(([, value, selected, label]) => [value, Boolean(selected), label])
-      assert.deepEqual(shapeOptions, [['grow', false, '伸びる'], ['stagger', true, '順に表示']])
+      const effectControls = markup.match(/<label\b[^>]*>.*?<\/label>/g) ?? []
+      const guideOptions = [['grow', false, '伸びる'], ['stagger', true, '順に表示']]
+      for (const [controlLabel, expectedOptions] of [
+        ['棒の出し方', [...guideOptions, ['staggerGrow', false, '順に伸びる']]],
+        ['縦線の出し方', guideOptions],
+      ]) {
+        const control = effectControls.find(label => label.includes(controlLabel))
+        assert.ok(control, `${controlLabel}を選べる`)
+        const options = [...control.matchAll(/<option value="([^"]+)"( selected="")?>([^<]+)<\/option>/g)]
+          .map(([, value, selected, label]) => [value, Boolean(selected), label])
+        assert.deepEqual(options, expectedOptions)
+      }
       const videoBars = markup.match(/<rect\b[^>]*data-rating-video-bar="[^"]+"[^>]*>/g) ?? []
       assert.deepEqual(videoBars.map(bar => [attr(bar, 'data-rating-video-bar'), attr(bar, 'data-rating-video-bar-rank')]),
         [['-1', '1'], ['1', '0'], ['1', '1'], ['1', '3'], ['1', '4']])

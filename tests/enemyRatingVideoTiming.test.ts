@@ -3,7 +3,8 @@ import test from 'node:test'
 import {
   createEnemyRatingVideoTimingDraft, ENEMY_RATING_VIDEO_PHASES, ENEMY_RATING_VIDEO_PHASE_TEMPOS, ENEMY_RATING_VIDEO_TEMPOS,
   getEnemyRatingVideoDefaultDuration,
-  parseEnemyRatingVideoTiming, retimeEnemyRatingVideoStep, retimeEnemyRatingVideoText, type EnemyRatingVideoTiming,
+  getEnemyRatingVideoBarStep, parseEnemyRatingVideoTiming, retimeEnemyRatingVideoStep, retimeEnemyRatingVideoText,
+  type EnemyRatingVideoTiming,
 } from '../src/lib/enemyRatingVideoTiming.ts'
 
 function closeTo(actual: number, expected: number) {
@@ -21,7 +22,8 @@ test('動画の初期設定はタイトルから順に描画し、5秒で完成�
   }
   assert.equal(parsed.timing.hold, 0)
   assert.equal(parsed.timing.textMode, 'stagger')
-  assert.equal(parsed.timing.shapeMode, 'stagger')
+  assert.equal(parsed.timing.barMode, 'stagger')
+  assert.equal(parsed.timing.guideMode, 'stagger')
   closeTo(parsed.finish, 5)
   assert.equal(parsed.duration, parsed.finish)
 })
@@ -210,12 +212,29 @@ test('文字の出し方を変更しても表示順と全体尺を引き継ぐ',
   assert.deepEqual(retimeEnemyRatingVideoStep(stagger.timing, 'bars', 1.37, .88), stagger.timing.bars)
 })
 
-test('棒・縦線の出し方を変更しても文字の出し方と描画時間は変わらない', () => {
+test('棒と縦線の出し方を独立して指定でき、文字の出し方と描画時間を引き継ぐ', () => {
   const draft = { ...createEnemyRatingVideoTimingDraft(), finishSeconds: '10', textMode: 'instant' as const }
-  const stagger = parseEnemyRatingVideoTiming(draft)
-  const grow = parseEnemyRatingVideoTiming({ ...draft, shapeMode: 'grow' })
-  assert.ok(grow.timing && stagger.timing)
-  assert.deepEqual(grow, { ...stagger, timing: { ...stagger.timing, shapeMode: 'grow' } })
+  const defaults = parseEnemyRatingVideoTiming(draft)
+  assert.ok(defaults.timing)
+  assert.deepEqual(parseEnemyRatingVideoTiming({ ...draft, barMode: 'staggerGrow' }),
+    { ...defaults, timing: { ...defaults.timing, barMode: 'staggerGrow' } })
+  assert.deepEqual(parseEnemyRatingVideoTiming({ ...draft, guideMode: 'grow' }),
+    { ...defaults, timing: { ...defaults.timing, guideMode: 'grow' } })
+})
+
+test('順に伸びる棒は各ランクの描画を重ねず、左右の棒の描画時間内で伸び切る', () => {
+  const parsed = parseEnemyRatingVideoTiming({ ...createEnemyRatingVideoTimingDraft(), barMode: 'staggerGrow' })
+  assert.ok(parsed.timing)
+  const timing = parsed.timing
+  const steps = [0, 1, 2].map(rankIndex => getEnemyRatingVideoBarStep(timing, rankIndex, 3))
+  assert.equal(steps[0].start, timing.bars.start)
+  assert.ok(steps.every(step => step.duration > 0))
+  closeTo(steps[1].start, steps[0].start + steps[0].duration)
+  closeTo(steps[2].start, steps[1].start + steps[1].duration)
+  closeTo(steps[2].start + steps[2].duration, timing.bars.start + timing.bars.duration)
+  assert.deepEqual(getEnemyRatingVideoBarStep(timing, 0, 1), timing.bars)
+  assert.deepEqual(getEnemyRatingVideoBarStep({ ...timing, bars: { start: 2, duration: 0 } }, 2, 3),
+    { start: 2, duration: 0 })
 })
 
 test('不正な表示順・秒数・全体尺では書き出し条件を作らない', () => {

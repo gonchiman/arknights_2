@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { ChartImageRasterOutput } from '../lib/chartImageRasterSize'
 import { recordChartVideo, type ChartVideoFormat } from '../lib/chartVideoRecorder'
 import {
-  getEnemyRatingVideoTimingBounds, retimeEnemyRatingVideoStep, retimeEnemyRatingVideoText,
+  getEnemyRatingVideoBarStep, getEnemyRatingVideoTimingBounds, retimeEnemyRatingVideoStep, retimeEnemyRatingVideoText,
   type EnemyRatingVideoPhase, type EnemyRatingVideoTiming,
 } from '../lib/enemyRatingVideoTiming'
 import { withComparisonChartImageSurface } from './saveComparisonChartImage'
@@ -128,19 +128,17 @@ export async function prepareEnemyRatingComparisonVideo(
   })
 
   const barRanks = [...new Set(scene.bars.map(({ rank }) => rank))].sort((a, b) => a - b)
-  const barIntervals = Math.max(barRanks.length - 1, 1)
 
   function withTiming(settings: EnemyRatingVideoTiming): EnemyRatingVideoAnimation {
     const { finish, duration } = getEnemyRatingVideoTimingBounds(settings)
     const { size, textImage } = scene
-    const staggerShapes = settings.shapeMode === 'stagger'
     const retime = ({ phase, start, duration }: OriginalStep) => retimeEnemyRatingVideoStep(settings, phase, start, duration)
     const highlights = scene.highlights.map(mark => ({ ...mark, step: retime(mark.step) }))
     const guides = scene.guides.map(({ order, ...mark }) => ({
-      ...mark, step: staggerShapes ? instantStep(settings.axes, order) : retime(mark.step),
+      ...mark, step: settings.guideMode === 'stagger' ? instantStep(settings.axes, order) : retime(mark.step),
     }))
     const bars = scene.bars.map(({ rank, ...bar }) => ({
-      ...bar, step: staggerShapes ? instantStep(settings.bars, barRanks.indexOf(rank) / barIntervals) : settings.bars,
+      ...bar, step: getEnemyRatingVideoBarStep(settings, barRanks.indexOf(rank), barRanks.length),
     }))
     const labels = scene.text.map(({ box, step: { phase, start, duration } }) => ({
       box, step: retimeEnemyRatingVideoText(settings, phase, start, duration),
