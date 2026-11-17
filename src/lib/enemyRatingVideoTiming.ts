@@ -2,7 +2,6 @@ export const ENEMY_RATING_VIDEO_PHASES = ['title', 'axes', 'ranks', 'bars', 'val
 export type EnemyRatingVideoPhase = typeof ENEMY_RATING_VIDEO_PHASES[number]
 export const ENEMY_RATING_VIDEO_PHASE_TEMPOS = [1, 2, 3, 4, 5] as const
 export type EnemyRatingVideoPhaseTempo = typeof ENEMY_RATING_VIDEO_PHASE_TEMPOS[number]
-export type EnemyRatingVideoTimingField = EnemyRatingVideoPhase | 'hold'
 export const ENEMY_RATING_VIDEO_TEMPOS = [
   'veryShort', 'short', 'mediumShort', 'standard', 'mediumSlow', 'slow', 'verySlow', 'slow12', 'slow15', 'slow20',
 ] as const
@@ -29,22 +28,34 @@ interface VideoPhaseTiming {
   duration: number
 }
 
-export type EnemyRatingVideoTiming = Readonly<Record<EnemyRatingVideoPhase, Readonly<VideoPhaseTiming>> & {
+export type ChartVideoTimingField<Phase extends string> = Phase | 'hold'
+
+export interface ChartVideoTimingDefinition<Phase extends string> {
+  phases: readonly Phase[]
+  weights: Readonly<Record<Phase, number>>
+}
+
+export type ChartVideoTiming<Phase extends string> = Readonly<Record<Phase, Readonly<VideoPhaseTiming>> & {
   hold: number
   textMode: EnemyRatingVideoTextMode
   barMode: EnemyRatingVideoBarMode
   guideMode: EnemyRatingVideoGuideMode
 }>
-export interface EnemyRatingVideoTimingDraft {
-  order: EnemyRatingVideoPhase[]
+
+export interface ChartVideoTimingDraft<Phase extends string> {
+  order: Phase[]
   tempo: EnemyRatingVideoTempo
-  phaseTempos?: Partial<Record<EnemyRatingVideoPhase, EnemyRatingVideoPhaseTempo>>
+  phaseTempos?: Partial<Record<Phase, EnemyRatingVideoPhaseTempo>>
   finishSeconds: string
-  overrides: Partial<Record<EnemyRatingVideoTimingField, string>>
+  overrides: Partial<Record<ChartVideoTimingField<Phase>, string>>
   textMode: EnemyRatingVideoTextMode
   barMode: EnemyRatingVideoBarMode
   guideMode: EnemyRatingVideoGuideMode
 }
+
+export type EnemyRatingVideoTimingField = ChartVideoTimingField<EnemyRatingVideoPhase>
+export type EnemyRatingVideoTiming = ChartVideoTiming<EnemyRatingVideoPhase>
+export type EnemyRatingVideoTimingDraft = ChartVideoTimingDraft<EnemyRatingVideoPhase>
 
 // The renderer describes each mark using its original position within these phase windows.
 const ORIGINAL_PHASE_TIMING: Record<EnemyRatingVideoPhase, VideoPhaseTiming> = {
@@ -55,44 +66,74 @@ const ORIGINAL_PHASE_TIMING: Record<EnemyRatingVideoPhase, VideoPhaseTiming> = {
   values: { start: 2.22, duration: 1.205 },
 }
 
-const ORIGINAL_DRAWING_SECONDS = ENEMY_RATING_VIDEO_PHASES.reduce((sum, phase) => sum + ORIGINAL_PHASE_TIMING[phase].duration, 0)
-const TIMING_FIELDS = [...ENEMY_RATING_VIDEO_PHASES, 'hold'] as const
-const PHASE_TEMPO_WEIGHTS: Record<EnemyRatingVideoPhaseTempo, number> = { 1: .4, 2: .65, 3: 1, 4: 1.5, 5: 2.25 }
-
-export function getEnemyRatingVideoDefaultDuration(field: EnemyRatingVideoTimingField, tempo: EnemyRatingVideoTempo) {
-  if (field === 'hold') return 0
-  return ORIGINAL_PHASE_TIMING[field].duration / ORIGINAL_DRAWING_SECONDS * ENEMY_RATING_VIDEO_TEMPO_SECONDS[tempo]
+export const ENEMY_RATING_VIDEO_DEFINITION: ChartVideoTimingDefinition<EnemyRatingVideoPhase> = {
+  phases: ENEMY_RATING_VIDEO_PHASES,
+  weights: Object.fromEntries(ENEMY_RATING_VIDEO_PHASES.map(phase => [phase, ORIGINAL_PHASE_TIMING[phase].duration])) as Record<EnemyRatingVideoPhase, number>,
 }
 
-export function createEnemyRatingVideoTimingDraft(): EnemyRatingVideoTimingDraft {
-  return { order: [...ENEMY_RATING_VIDEO_PHASES], tempo: 'standard', finishSeconds: '', overrides: {},
+const PHASE_TEMPO_WEIGHTS: Record<EnemyRatingVideoPhaseTempo, number> = { 1: .4, 2: .65, 3: 1, 4: 1.5, 5: 2.25 }
+
+export function getChartVideoDefaultDuration<Phase extends string>(
+  field: ChartVideoTimingField<Phase>,
+  tempo: EnemyRatingVideoTempo,
+  definition: ChartVideoTimingDefinition<Phase>,
+): number {
+  if (field === 'hold') return 0
+  const totalWeight = definition.phases.reduce((sum, phase) => sum + definition.weights[phase], 0)
+  return definition.weights[field] / totalWeight * ENEMY_RATING_VIDEO_TEMPO_SECONDS[tempo]
+}
+
+export function getEnemyRatingVideoDefaultDuration(field: EnemyRatingVideoTimingField, tempo: EnemyRatingVideoTempo) {
+  return getChartVideoDefaultDuration(field, tempo, ENEMY_RATING_VIDEO_DEFINITION)
+}
+
+export function createChartVideoTimingDraft<Phase extends string>(
+  definition: ChartVideoTimingDefinition<Phase>,
+): ChartVideoTimingDraft<Phase> {
+  return { order: [...definition.phases], tempo: 'standard', finishSeconds: '', overrides: {},
     textMode: 'stagger', barMode: 'stagger', guideMode: 'stagger' }
 }
 
-export function getEnemyRatingVideoTimingBounds(timing: EnemyRatingVideoTiming) {
-  const finish = Math.max(...ENEMY_RATING_VIDEO_PHASES.map(phase => timing[phase].start + timing[phase].duration))
+export function createEnemyRatingVideoTimingDraft(): EnemyRatingVideoTimingDraft {
+  return createChartVideoTimingDraft(ENEMY_RATING_VIDEO_DEFINITION)
+}
+
+export function getChartVideoTimingBounds<Phase extends string>(
+  timing: ChartVideoTiming<Phase>,
+  definition: ChartVideoTimingDefinition<Phase>,
+) {
+  const finish = Math.max(...definition.phases.map(phase => timing[phase].start + timing[phase].duration))
   return { finish, duration: finish + timing.hold }
 }
 
-export type ParsedEnemyRatingVideoTiming =
-  | { timing: EnemyRatingVideoTiming; finish: number; duration: number; error: null }
+export function getEnemyRatingVideoTimingBounds(timing: EnemyRatingVideoTiming) {
+  return getChartVideoTimingBounds(timing, ENEMY_RATING_VIDEO_DEFINITION)
+}
+
+export type ParsedChartVideoTiming<Phase extends string> =
+  | { timing: ChartVideoTiming<Phase>; finish: number; duration: number; error: null }
   | { timing: null; finish: null; duration: null; error: string }
 
-export function parseEnemyRatingVideoTiming(draft: EnemyRatingVideoTimingDraft): ParsedEnemyRatingVideoTiming {
+export type ParsedEnemyRatingVideoTiming = ParsedChartVideoTiming<EnemyRatingVideoPhase>
+
+export function parseChartVideoTiming<Phase extends string>(
+  draft: ChartVideoTimingDraft<Phase>,
+  definition: ChartVideoTimingDefinition<Phase>,
+): ParsedChartVideoTiming<Phase> {
   const orderedPhases = new Set(draft.order)
-  if (draft.order.length !== ENEMY_RATING_VIDEO_PHASES.length ||
-      ENEMY_RATING_VIDEO_PHASES.some(phase => !orderedPhases.has(phase))) {
+  if (draft.order.length !== definition.phases.length ||
+      definition.phases.some(phase => !orderedPhases.has(phase))) {
     return { timing: null, finish: null, duration: null, error: '表示順を確認してください。' }
   }
 
   const requestedFinish = draft.finishSeconds.trim()
-  const durations = {} as Record<EnemyRatingVideoTimingField, number>
-  const automatic: EnemyRatingVideoPhase[] = []
+  const durations = {} as Record<ChartVideoTimingField<Phase>, number>
+  const automatic: Phase[] = []
   let fixedDrawingTime = 0
-  for (const field of TIMING_FIELDS) {
+  for (const field of [...definition.phases, 'hold' as const]) {
     const override = draft.overrides[field]?.trim()
     if (!override) {
-      durations[field] = getEnemyRatingVideoDefaultDuration(field, requestedFinish ? 'standard' : draft.tempo)
+      durations[field] = getChartVideoDefaultDuration(field, requestedFinish ? 'standard' : draft.tempo, definition)
       if (field !== 'hold') automatic.push(field)
       continue
     }
@@ -135,7 +176,7 @@ export function parseEnemyRatingVideoTiming(draft: EnemyRatingVideoTimingDraft):
     }
   }
 
-  const phases = {} as Record<EnemyRatingVideoPhase, VideoPhaseTiming>
+  const phases = {} as Record<Phase, VideoPhaseTiming>
   let start = 0
   for (const phase of draft.order) {
     const duration = durations[phase]
@@ -144,11 +185,15 @@ export function parseEnemyRatingVideoTiming(draft: EnemyRatingVideoTimingDraft):
   }
   const timing = { ...phases, hold: durations.hold, textMode: draft.textMode,
     barMode: draft.barMode, guideMode: draft.guideMode }
-  const bounds = getEnemyRatingVideoTimingBounds(timing)
+  const bounds = getChartVideoTimingBounds(timing, definition)
   if (!Number.isFinite(bounds.duration) || bounds.duration <= 0) {
     return { timing: null, finish: null, duration: null, error: '動画全体には0秒より長い時間を指定してください。' }
   }
   return { timing, ...bounds, error: null }
+}
+
+export function parseEnemyRatingVideoTiming(draft: EnemyRatingVideoTimingDraft): ParsedEnemyRatingVideoTiming {
+  return parseChartVideoTiming(draft, ENEMY_RATING_VIDEO_DEFINITION)
 }
 
 export function getEnemyRatingVideoBarStep(
