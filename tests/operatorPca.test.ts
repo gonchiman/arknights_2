@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { OperatorDatabaseRecord, OperatorDatabaseStats } from '../src/lib/operatorDatabase.ts'
-import { OPERATOR_PCA_METRICS, runOperatorPca, findOperatorPcaNeighbors, type OperatorPcaPoint } from '../src/lib/operatorPca.ts'
+import { BASIC_OPERATOR_PCA_METRICS, OPERATOR_PCA_METRICS, runOperatorPca, findOperatorPcaNeighbors, type OperatorPcaPoint } from '../src/lib/operatorPca.ts'
 
 function createOperator(id: string, overrides: Partial<OperatorDatabaseStats> = {}): OperatorDatabaseRecord {
   return {
@@ -27,6 +27,23 @@ test('既存ステータスを8項目で利用し、攻撃速度は二重計上�
   assert.equal(result.points[1].x, 1)
   assert.equal(result.points[0].y, 0)
   assert.equal(result.points[1].y, 0)
+})
+
+test('4項目の分析では術耐性0と対象外項目の欠損を許容し、対象項目の欠損を除く', () => {
+  const result = runOperatorPca([
+    createOperator('zero-resistance', {
+      magicResistance: 0, deploymentCost: null, blockCount: null, redeployTime: null, attackInterval: null,
+    }),
+    createOperator('complete', { maxHp: 2000, attack: 350, defense: 250 }),
+    createOperator('missing-resistance', { magicResistance: null }),
+  ], BASIC_OPERATOR_PCA_METRICS)
+
+  assert.equal(result.targetCount, 3)
+  assert.equal(result.excludedCount, 1)
+  assert.deepEqual(result.points.map(point => point.operator.operatorId), ['zero-resistance', 'complete'])
+  assert.deepEqual(result.points.map(point => point.values), [[1000, 300, 200, 0], [2000, 350, 250, 10]])
+  assert.equal(result.fit.featureCount, 4)
+  assert.equal(result.points[0].scores.length, 4)
 })
 
 test('敵と同様にIDを1票とし、欠損・非有限値を除いた件数を返す', () => {

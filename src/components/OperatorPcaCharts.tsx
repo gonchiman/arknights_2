@@ -23,23 +23,26 @@ function usePlotWidth() {
 
 const format = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 export function OperatorPcaScatter({ points, selectedId, neighborIds, onSelect, colorBy, groups }: {
-  points: readonly OperatorPcaPoint[]; selectedId: string; neighborIds: readonly string[]; onSelect: (id: string) => void
-  colorBy: OperatorPcaColorBy; groups: readonly OperatorPcaGroup[]
+  points: readonly OperatorPcaPoint[]; selectedId: string; neighborIds?: readonly string[]; onSelect?: (id: string) => void
+  colorBy?: OperatorPcaColorBy; groups?: readonly OperatorPcaGroup[]
 }) {
   const [ref, width] = usePlotWidth()
   const id = useId()
   const height = width < 400 ? 320 : 380
   const left = 54, right = width - 16, top = 16, bottom = height - 56
+  const showYAxis = Boolean(onSelect) || (points[0]?.scores.length ?? 0) > 1
   const xAxis = useMemo(() => getHpChartValueAxis(points.map(point => point.x), { mode: 'auto' }), [points])
-  const yAxis = useMemo(() => getHpChartValueAxis(points.map(point => point.y), { mode: 'auto' }), [points])
+  const yAxis = useMemo(() => showYAxis ? getHpChartValueAxis(points.map(point => point.y), { mode: 'auto' }) : null, [points, showYAxis])
   const x = (value: number) => left + (value - xAxis.lowerLimit) / (xAxis.upperLimit - xAxis.lowerLimit) * (right - left)
-  const y = (value: number) => bottom - (value - yAxis.lowerLimit) / (yAxis.upperLimit - yAxis.lowerLimit) * (bottom - top)
+  const y = (value: number) => yAxis
+    ? bottom - (value - yAxis.lowerLimit) / (yAxis.upperLimit - yAxis.lowerLimit) * (bottom - top)
+    : (top + bottom) / 2
   const selectedIndex = points.findIndex(point => point.operator.operatorId === selectedId)
   const selected = points[selectedIndex]
   const neighbors = new Set(neighborIds)
-  const groupsById = useMemo(() => new Map(groups.map(group => [group.id, group])), [groups])
-  const visibleGroupIds = new Set(points.map(point => getOperatorPcaGroupId(point.operator, colorBy)))
-  const visibleGroups = groups.filter(group => visibleGroupIds.has(group.id))
+  const groupsById = useMemo(() => new Map(groups?.map(group => [group.id, group])), [groups])
+  const visibleGroupIds = new Set(colorBy ? points.map(point => getOperatorPcaGroupId(point.operator, colorBy)) : [])
+  const visibleGroups = groups?.filter(group => visibleGroupIds.has(group.id)) ?? []
   const colorByLabel = OPERATOR_PCA_COLOR_BY_OPTIONS.find(option => option.value === colorBy)?.label ?? '職業'
   const denseLegend = visibleGroups.length > 12
   const priority = (point: OperatorPcaPoint) => point.operator.operatorId === selectedId ? 2 : neighbors.has(point.operator.operatorId) ? 1 : 0
@@ -47,6 +50,7 @@ export function OperatorPcaScatter({ points, selectedId, neighborIds, onSelect, 
   const xTicks = xAxis.yTicks.filter((_, index) => width >= 430 || index % 2 === 0)
 
   function navigate(event: KeyboardEvent<SVGSVGElement>) {
+    if (!onSelect || points.length === 0) return
     let index: number
     if (event.key === 'ArrowRight' || event.key === 'ArrowDown') index = (selectedIndex + 1) % points.length
     else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') index = (selectedIndex - 1 + points.length) % points.length
@@ -57,7 +61,7 @@ export function OperatorPcaScatter({ points, selectedId, neighborIds, onSelect, 
     if (points[index]) onSelect(points[index].operator.operatorId)
   }
 
-  const legend = <div className={`operator-pca-legend${denseLegend ? ' operator-pca-legend-dense' : ''}`} aria-label={`${colorByLabel}の凡例`}>
+  const legend = visibleGroups.length > 0 && <div className={`operator-pca-legend${denseLegend ? ' operator-pca-legend-dense' : ''}`} aria-label={`${colorByLabel}の凡例`}>
       {visibleGroups.map(group => <span key={group.id}>
         <i className={group.shape === 'square' ? 'square' : ''} style={{ background: group.color }} aria-hidden="true" />{group.label}
       </span>)}
@@ -66,13 +70,13 @@ export function OperatorPcaScatter({ points, selectedId, neighborIds, onSelect, 
   return <div className="operator-pca-scatter">
     {!denseLegend && legend}
     <div className="operator-pca-plot" ref={ref}>
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} tabIndex={0} role="group"
-        aria-label="オペレーターの主成分分布" aria-describedby={`${id}-description ${id}-selection`} onKeyDown={navigate}>
-        <desc id={`${id}-description`}>横軸は第1主成分、縦軸は第2主成分。{colorByLabel}で色分け。点をクリックして選択。矢印キーでオペレーターを切り替えます。</desc>
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} tabIndex={onSelect ? 0 : undefined} role={onSelect ? 'group' : 'img'}
+        aria-label="オペレーターの主成分分布" aria-describedby={`${id}-description ${id}-selection`} onKeyDown={onSelect ? navigate : undefined}>
+        <desc id={`${id}-description`}>横軸は第1主成分{showYAxis && '、縦軸は第2主成分'}。{visibleGroups.length > 0 && `${colorByLabel}で色分け。`}{onSelect && '点をクリックして選択。矢印キーでオペレーターを切り替えます。'}</desc>
         <defs><clipPath id={`${id}-clip`}><rect x={left} y={top} width={Math.max(1, right - left)} height={bottom - top} /></clipPath></defs>
         {xTicks.map(tick => <g key={`x-${tick}`}><line className={`operator-pca-gridline${tick === 0 ? ' zero' : ''}`} x1={x(tick)} x2={x(tick)} y1={top} y2={bottom} />
           <text x={x(tick)} y={bottom + 21} textAnchor="middle">{format.format(tick)}</text></g>)}
-        {yAxis.yTicks.map(tick => <g key={`y-${tick}`}><line className={`operator-pca-gridline${tick === 0 ? ' zero' : ''}`} x1={left} x2={right} y1={y(tick)} y2={y(tick)} />
+        {yAxis?.yTicks.map(tick => <g key={`y-${tick}`}><line className={`operator-pca-gridline${tick === 0 ? ' zero' : ''}`} x1={left} x2={right} y1={y(tick)} y2={y(tick)} />
           <text x={left - 8} y={y(tick) + 4} textAnchor="end">{format.format(tick)}</text></g>)}
         <rect className="operator-pca-frame" x={left} y={top} width={Math.max(1, right - left)} height={bottom - top} />
         <g clipPath={`url(#${id}-clip)`} aria-hidden="true">
@@ -80,22 +84,25 @@ export function OperatorPcaScatter({ points, selectedId, neighborIds, onSelect, 
             const active = point.operator.operatorId === selectedId
             const near = neighbors.has(point.operator.operatorId)
             const radius = active || near ? 5.2 : 3.3
-            const group = groupsById.get(getOperatorPcaGroupId(point.operator, colorBy))
-            const color = group?.color ?? 'var(--text-muted)'
-            return <g className="operator-pca-point" key={point.operator.operatorId} onClick={() => onSelect(point.operator.operatorId)}>
-              <circle cx={x(point.x)} cy={y(point.y)} r={8} fill="transparent" />
+            const group = colorBy ? groupsById.get(getOperatorPcaGroupId(point.operator, colorBy)) : undefined
+            const color = group?.color ?? (colorBy ? 'var(--text-muted)' : 'var(--pca-first)')
+            const cx = x(point.x), cy = y(point.y)
+            return <g className={onSelect ? 'operator-pca-point' : undefined} key={point.operator.operatorId}
+              onClick={onSelect && (() => onSelect(point.operator.operatorId))}>
+              {onSelect && <circle cx={cx} cy={cy} r={8} fill="transparent" />}
               {group?.shape === 'square'
-                ? <rect x={x(point.x) - radius} y={y(point.y) - radius} width={radius * 2} height={radius * 2}
+                ? <rect x={cx - radius} y={cy - radius} width={radius * 2} height={radius * 2}
                   fill={color} opacity={active || near ? 1 : 0.7} />
-                : <circle cx={x(point.x)} cy={y(point.y)} r={radius} fill={color} opacity={active || near ? 1 : 0.7} />}
-              {(active || near) && <circle className={`operator-pca-ring${active ? ' selected' : ''}`} cx={x(point.x)} cy={y(point.y)} r={active ? 9 : 7} />}
+                : <circle cx={cx} cy={cy} r={radius} fill={color} opacity={active || near ? 1 : 0.7} />}
+              {(active || near) && <circle className={`operator-pca-ring${active ? ' selected' : ''}`} cx={cx} cy={cy} r={active ? 9 : 7} />}
             </g>
           })}
         </g>
         <text x={(left + right) / 2} y={height - 9} textAnchor="middle">第1主成分（無次元）</text>
-        <text x={14} y={(top + bottom) / 2} transform={`rotate(-90 14 ${(top + bottom) / 2})`} textAnchor="middle">第2主成分（無次元）</text>
+        {showYAxis && <text x={14} y={(top + bottom) / 2} transform={`rotate(-90 14 ${(top + bottom) / 2})`} textAnchor="middle">第2主成分（無次元）</text>}
       </svg>
-      <span className="visually-hidden" id={`${id}-selection`} aria-live="polite">{selected && `${selected.operator.name}：第1主成分 ${format.format(selected.x)}、第2主成分 ${format.format(selected.y)}`}</span>
+      <span className="visually-hidden" id={`${id}-selection`} aria-live="polite">{selected && `${selected.operator.name}：第1主成分 ${format.format(selected.x)}`}
+        {selected && showYAxis && `、第2主成分 ${format.format(selected.y)}`}</span>
     </div>
     {denseLegend && legend}
   </div>
