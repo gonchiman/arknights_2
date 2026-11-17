@@ -21,7 +21,8 @@ export const ENEMY_RATING_VIDEO_TEMPO_SECONDS = {
 } as const satisfies Record<EnemyRatingVideoTempo, number>
 export const ENEMY_RATING_VIDEO_TEXT_MODES = ['fade', 'instant', 'stagger'] as const
 export type EnemyRatingVideoTextMode = typeof ENEMY_RATING_VIDEO_TEXT_MODES[number]
-export type EnemyRatingVideoShapeMode = 'grow' | 'stagger'
+export type EnemyRatingVideoGuideMode = 'grow' | 'stagger'
+export type EnemyRatingVideoBarMode = EnemyRatingVideoGuideMode | 'staggerGrow'
 
 interface VideoPhaseTiming {
   start: number
@@ -31,7 +32,8 @@ interface VideoPhaseTiming {
 export type EnemyRatingVideoTiming = Readonly<Record<EnemyRatingVideoPhase, Readonly<VideoPhaseTiming>> & {
   hold: number
   textMode: EnemyRatingVideoTextMode
-  shapeMode: EnemyRatingVideoShapeMode
+  barMode: EnemyRatingVideoBarMode
+  guideMode: EnemyRatingVideoGuideMode
 }>
 export interface EnemyRatingVideoTimingDraft {
   order: EnemyRatingVideoPhase[]
@@ -40,7 +42,8 @@ export interface EnemyRatingVideoTimingDraft {
   finishSeconds: string
   overrides: Partial<Record<EnemyRatingVideoTimingField, string>>
   textMode: EnemyRatingVideoTextMode
-  shapeMode: EnemyRatingVideoShapeMode
+  barMode: EnemyRatingVideoBarMode
+  guideMode: EnemyRatingVideoGuideMode
 }
 
 // The renderer describes each mark using its original position within these phase windows.
@@ -63,7 +66,7 @@ export function getEnemyRatingVideoDefaultDuration(field: EnemyRatingVideoTiming
 
 export function createEnemyRatingVideoTimingDraft(): EnemyRatingVideoTimingDraft {
   return { order: [...ENEMY_RATING_VIDEO_PHASES], tempo: 'standard', finishSeconds: '', overrides: {},
-    textMode: 'stagger', shapeMode: 'stagger' }
+    textMode: 'stagger', barMode: 'stagger', guideMode: 'stagger' }
 }
 
 export function getEnemyRatingVideoTimingBounds(timing: EnemyRatingVideoTiming) {
@@ -139,12 +142,27 @@ export function parseEnemyRatingVideoTiming(draft: EnemyRatingVideoTimingDraft):
     phases[phase] = { start, duration }
     start += duration
   }
-  const timing = { ...phases, hold: durations.hold, textMode: draft.textMode, shapeMode: draft.shapeMode }
+  const timing = { ...phases, hold: durations.hold, textMode: draft.textMode,
+    barMode: draft.barMode, guideMode: draft.guideMode }
   const bounds = getEnemyRatingVideoTimingBounds(timing)
   if (!Number.isFinite(bounds.duration) || bounds.duration <= 0) {
     return { timing: null, finish: null, duration: null, error: '動画全体には0秒より長い時間を指定してください。' }
   }
   return { timing, ...bounds, error: null }
+}
+
+export function getEnemyRatingVideoBarStep(
+  { bars, barMode }: EnemyRatingVideoTiming,
+  rankIndex: number,
+  rankCount: number,
+): VideoPhaseTiming {
+  if (barMode === 'grow') return bars
+  if (barMode === 'stagger') {
+    const fraction = rankIndex / Math.max(rankCount - 1, 1)
+    return { start: bars.start + fraction * bars.duration, duration: 0 }
+  }
+  const duration = bars.duration / rankCount
+  return { start: bars.start + rankIndex * duration, duration }
 }
 
 /** Preserve the relative order and easing of the individual marks within a phase. */

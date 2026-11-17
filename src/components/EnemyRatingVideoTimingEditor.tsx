@@ -3,8 +3,8 @@ import type { EnemyRatingComparisonSideValue } from '../lib/enemyRatingCompariso
 import {
   createEnemyRatingVideoTimingDraft, ENEMY_RATING_VIDEO_PHASE_TEMPOS, ENEMY_RATING_VIDEO_TEMPOS, ENEMY_RATING_VIDEO_TEMPO_SECONDS,
   getEnemyRatingVideoDefaultDuration, parseEnemyRatingVideoTiming,
-  type EnemyRatingVideoPhase, type EnemyRatingVideoPhaseTempo, type EnemyRatingVideoShapeMode, type EnemyRatingVideoTextMode,
-  type EnemyRatingVideoTimingDraft, type EnemyRatingVideoTimingField, type ParsedEnemyRatingVideoTiming,
+  type EnemyRatingVideoBarMode, type EnemyRatingVideoGuideMode, type EnemyRatingVideoPhase, type EnemyRatingVideoPhaseTempo,
+  type EnemyRatingVideoTextMode, type EnemyRatingVideoTimingDraft, type EnemyRatingVideoTimingField, type ParsedEnemyRatingVideoTiming,
 } from '../lib/enemyRatingVideoTiming'
 import './EnemyRatingVideoTimingEditor.css'
 
@@ -200,9 +200,18 @@ export function EnemyRatingVideoTimingEditor({
           </select>
         </label>
         <label>
-          棒・縦線の出し方
-          <select value={draft.shapeMode} disabled={disabled} onChange={event =>
-            onChange({ ...draft, shapeMode: event.target.value as EnemyRatingVideoShapeMode })}>
+          棒の出し方
+          <select value={draft.barMode} disabled={disabled} onChange={event =>
+            onChange({ ...draft, barMode: event.target.value as EnemyRatingVideoBarMode })}>
+            <option value="grow">伸びる</option>
+            <option value="stagger">順に表示</option>
+            <option value="staggerGrow">順に伸びる</option>
+          </select>
+        </label>
+        <label>
+          縦線の出し方
+          <select value={draft.guideMode} disabled={disabled} onChange={event =>
+            onChange({ ...draft, guideMode: event.target.value as EnemyRatingVideoGuideMode })}>
             <option value="grow">伸びる</option>
             <option value="stagger">順に表示</option>
           </select>
