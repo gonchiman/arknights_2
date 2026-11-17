@@ -1,12 +1,16 @@
 import type { OperatorDatabaseRecord } from './operatorDatabase.ts'
-import { getOperatorStatMetric } from './operatorStatistics.ts'
+import { getOperatorStatMetric, type OperatorStatMetric } from './operatorStatistics.ts'
 import { fitStandardizedPca, type StandardizedPcaResult } from './principalComponentAnalysis.ts'
 
-// Attack interval already accounts for attack speed. Do not count both inputs.
-export const OPERATOR_PCA_METRICS = ([
+export const BASIC_OPERATOR_PCA_METRICS = ([
   'maxHp', 'attack', 'defense', 'magicResistance',
-  'deploymentCost', 'blockCount', 'redeployTime', 'attackInterval',
 ] as const).map(getOperatorStatMetric)
+
+// Attack interval already accounts for attack speed. Do not count both inputs.
+export const OPERATOR_PCA_METRICS = [
+  ...BASIC_OPERATOR_PCA_METRICS,
+  ...(['deploymentCost', 'blockCount', 'redeployTime', 'attackInterval'] as const).map(getOperatorStatMetric),
+]
 
 export interface OperatorPcaPoint {
   operator: OperatorDatabaseRecord
@@ -31,18 +35,21 @@ export interface OperatorPcaNeighbor {
 }
 
 /** Fit once to the whole population. Display filters should only select points afterwards. */
-export function runOperatorPca(rows: readonly OperatorDatabaseRecord[]): OperatorPcaResult {
+export function runOperatorPca(
+  rows: readonly OperatorDatabaseRecord[],
+  metrics: readonly OperatorStatMetric[] = OPERATOR_PCA_METRICS,
+): OperatorPcaResult {
   const seen = new Set<string>()
   const targets = rows.filter(({ operatorId }) => {
     if (seen.has(operatorId)) return false
     seen.add(operatorId)
     return true
   })
-  const complete = targets.filter(operator => OPERATOR_PCA_METRICS.every(({ key }) => {
+  const complete = targets.filter(operator => metrics.every(({ key }) => {
     const value = operator.stats[key]
     return typeof value === 'number' && Number.isFinite(value)
   }))
-  const values = complete.map(operator => OPERATOR_PCA_METRICS.map(({ key }) => operator.stats[key]!))
+  const values = complete.map(operator => metrics.map(({ key }) => operator.stats[key]!))
   const fit = fitStandardizedPca(values)
   const points = complete.map((operator, index) => ({
     operator,

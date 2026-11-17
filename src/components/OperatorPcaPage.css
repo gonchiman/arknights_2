@@ -83,6 +83,14 @@
 .operator-pca-score-actions { display: flex; gap: 8px; margin-left: auto; }
 .operator-pca-empty, .operator-pca-error { margin: 0; padding: 32px 16px; border: 1px solid var(--border); }
 .operator-pca-error { color: var(--danger); }
+.operator-pca-four-operator { display: grid; gap: 6px; width: min(100%, 340px); color: var(--text-soft); }
+.operator-pca-four-variance { color: var(--text-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
+.operator-pca-four-selection { display: flex; align-items: center; gap: 7px; min-height: 22px; }
+.operator-pca-four-selection i { width: 10px; height: 10px; border: 1px solid var(--text); border-radius: 50%; background: var(--pca-first); }
+.operator-pca-four-page .operator-pca-four-table { min-width: 0; }
+.operator-pca-four-page .operator-pca-four-table th:first-child { position: static; width: auto; box-shadow: none; white-space: normal; }
+.operator-pca-four-page .operator-pca-four-matrix th:first-child { width: 28%; }
+.operator-pca-four-scores { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 @container operator-pca (max-width: 640px) {
   .operator-pca-component-overview { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .operator-pca-component-profile { border-top: 1px solid var(--border); padding-top: 16px; }
@@ -91,6 +99,8 @@
   .operator-pca-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .operator-pca-operator-field { grid-column: 1 / -1; }
   .operator-pca-page .analysis-panel-body { padding: 12px; }
+  .operator-pca-four-scores { grid-template-columns: minmax(0, 1fr); }
+  .operator-pca-four-page .operator-pca-four-table th, .operator-pca-four-page .operator-pca-four-table td { padding: 7px 4px; font-size: 12px; }
 }
 @media (max-width: 760px), (pointer: coarse) {
   .operator-pca-page .button, .operator-pca-filters select, .operator-pca-component-picker, .operator-pca-color-picker select { min-height: 44px; }

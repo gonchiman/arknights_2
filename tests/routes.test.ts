@@ -89,16 +89,22 @@ test('集計版を含むURLの直接アクセスでも敵の集計ページを�
   assert.deepEqual(parseHashRoute('#/maps?aggregationVersion=v4'), { view: 'operators' })
 })
 
-test('オペレーター主成分分析は図鑑の隣から独立したページとして開く', () => {
+test('オペレーター主成分分析の2ページは図鑑の隣から別々に開く', () => {
   assert.deepEqual(parseHashRoute('#/analysis/operators/pca'), { view: 'operator-pca' })
+  assert.deepEqual(parseHashRoute('#/analysis/operators/pca-2'), { view: 'operator-pca-two' })
   assert.deepEqual(parseHashRoute('#/operators'), { view: 'operators' })
   const databaseIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'operators')
   assert.deepEqual(APP_NAV_ITEMS[databaseIndex + 1], {
     id: 'operator-pca', href: '#/analysis/operators/pca', label: 'オペレーター主成分分析',
     description: '', section: 'analysis',
   })
+  assert.deepEqual(APP_NAV_ITEMS[databaseIndex + 2], {
+    id: 'operator-pca-two', href: '#/analysis/operators/pca-2', label: 'オペレーター主成分分析２',
+    description: '', section: 'analysis',
+  })
   for (const suffix of ['/', '/extra', '?operator=char_test', '-extra']) {
     assert.deepEqual(parseHashRoute(`#/analysis/operators/pca${suffix}`), { view: 'operators' })
+    assert.deepEqual(parseHashRoute(`#/analysis/operators/pca-2${suffix}`), { view: 'operators' })
   }
 })
 
@@ -108,6 +114,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
     [
       ['operators', 'operators'],
       ['operator-pca', 'operator-pca'],
+      ['operator-pca-two', 'operator-pca-two'],
       ['operator-wiki-views', 'operator-wiki-views'],
       ['skills', 'skills'],
       ['skill-classification', 'skill-classification'],
