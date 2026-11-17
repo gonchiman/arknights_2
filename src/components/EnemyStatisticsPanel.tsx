@@ -35,7 +35,10 @@ import { buildEnemyJointDistribution, type EnemyJointDistribution } from '../lib
 import { getEnemyJointImageFilename, getEnemyJointImageConditions } from '../lib/enemyJointImage'
 import type { EnemyHeatmapColorScale } from '../lib/enemyHeatmapColor'
 import { withChartImageAspect } from '../lib/chartImageFilename'
-import { calculateWeightedHistogram, calculateWeightedPercentile } from '../lib/enemyWeightedHistogram'
+import {
+  calculateWeightedHistogram, calculateWeightedHistogramMoments, calculateWeightedPercentile,
+  type WeightedHistogramObservation,
+} from '../lib/enemyWeightedHistogram'
 import { avoidHistogramCumulativeLine, avoidHistogramReferenceLines, formatHistogramPercentage } from '../lib/histogramPercentageLabels'
 import { buildHistogramCumulativeRows, getHistogramCumulativePoints, type HistogramCumulativeDisplay } from '../lib/histogramCumulative'
 import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
@@ -407,13 +410,18 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   [allRows, thresholdConditions, activeCountMode, countData.data, threshold, thresholdError])
   const summaryStatistics = histogramStatistics
   const showSummary = !histogramEditor
-  const allMetricSummaries = useMemo(() => showSummary ? STAT_METRICS.map((metric) => ({
-    metric,
-    statistics: withHistogramDispersion(calculateWeightedHistogram(
-      buildEnemyHistogramObservations(rows, (enemy) => getEnemyMetricValue(enemy, metric.key), activeCountMode, countData.data),
-      { preferredBinCount: metric.logBinCount, minimumLinearBinWidth: metric.minimumLinearBinWidth },
-    )),
-  })) : [], [showSummary, rows, activeCountMode, countData.data])
+  const allMetricSummaries = useMemo(() => showSummary ? STAT_METRICS.map((metric) => {
+    const metricObservations = buildEnemyHistogramObservations(
+      rows, (enemy) => getEnemyMetricValue(enemy, metric.key), activeCountMode, countData.data,
+    )
+    const histogram = calculateWeightedHistogram(metricObservations, {
+      preferredBinCount: metric.logBinCount, minimumLinearBinWidth: metric.minimumLinearBinWidth,
+    })
+    return {
+      metric,
+      statistics: { ...withHistogramDispersion(histogram), ...calculateWeightedHistogramMoments(metricObservations) },
+    }
+  }) : [], [showSummary, rows, activeCountMode, countData.data])
   const canSaveImage = (isRatingComparison ? Number(ratingComparison?.hasData)
     : isThresholdChart ? thresholdComparison?.series.filter(({ condition }) => condition.visible).reduce((sum, series) => sum + series.count, 0) ?? 0
     : selectedChart === 'HEATMAP' ? jointDistribution.count
@@ -836,7 +844,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
                 countLabel={countOption.label} countUnit={countOption.unit} />
             : <ChartEmpty />)}
           {selectedChart === 'HISTOGRAM' && (
-            <HistogramFigure statistics={histogramStatistics} metric={selectedMetric} scopeLabel={scopeLabel} scale={axisScale}
+            <HistogramFigure statistics={histogramStatistics} observations={weightedObservations}
+              metric={selectedMetric} scopeLabel={scopeLabel} scale={axisScale}
               percentileReference={percentileReference} percentileControl={histogramPercentileControl}
               ratingBins={ratingBins}
               showPercentages={showHistogramPercentages} onShowPercentagesChange={setShowHistogramPercentages}
@@ -1103,6 +1112,8 @@ const SUMMARY_STATISTICS = [
   { key: 'maximum', label: '最大' },
   { key: 'mean', label: '平均' },
   { key: 'standardDeviation', label: '標準偏差' },
+  { key: 'skewness', label: '歪度' },
+  { key: 'excessKurtosis', label: '超過尖度' },
   { key: 'coefficientOfVariation', label: '変動係数（CV）' },
   { key: 'interquartileRange', label: 'IQR' },
   { key: 'normalizedInterquartileRange', label: '正規化IQR' },
@@ -1110,12 +1121,15 @@ const SUMMARY_STATISTICS = [
   { key: 'missingCount', label: '値なし' },
 ] as const
 
+type SummaryStatistics = NumericStatisticsWithDispersion & ReturnType<typeof calculateWeightedHistogramMoments>
+
 function StatisticsSummary({ columns, countUnit }: {
-  columns: Array<{ metric: StatMetric; statistics: NumericStatisticsWithDispersion }>
+  columns: Array<{ metric: StatMetric; statistics: SummaryStatistics }>
   countUnit: string
 }) {
-  const formatStatistic = (statistics: NumericStatisticsWithDispersion, metric: StatMetric, key: typeof SUMMARY_STATISTICS[number]['key']) => {
+  const formatStatistic = (statistics: SummaryStatistics, metric: StatMetric, key: typeof SUMMARY_STATISTICS[number]['key']) => {
     const value = statistics[key]
+    if (key === 'skewness' || key === 'excessKurtosis') return formatDistributionMoment(value)
     if (value === null) return '—'
     if (key === 'coefficientOfVariation' || key === 'normalizedInterquartileRange') {
       return new Intl.NumberFormat('ja-JP', { style: 'percent', maximumFractionDigits: 1 }).format(value)
@@ -1290,9 +1304,18 @@ function HistogramDisplayControls({
   </div>
 }
 
+const distributionMomentFormatter = new Intl.NumberFormat('ja-JP', {
+  minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'exceptZero',
+})
+
+function formatDistributionMoment(value: number | null): string {
+  return value === null ? '—' : distributionMomentFormatter.format(value)
+}
+
 function HistogramFigure({
   ratingBins,
   statistics,
+  observations,
   metric,
   scopeLabel,
   scale,
@@ -1312,6 +1335,7 @@ function HistogramFigure({
 }: {
   ratingBins: EnemyRatingHistogramBin[] | null
   statistics: NumericStatistics
+  observations: readonly WeightedHistogramObservation[]
   metric: StatMetric
   scopeLabel: string
   scale: HistogramScale
@@ -1333,6 +1357,7 @@ function HistogramFigure({
   const titleId = useId()
   const descriptionId = useId()
   const bins = ratingBins ?? statistics.bins
+  const { skewness, excessKurtosis } = useMemo(() => calculateWeightedHistogramMoments(observations), [observations])
   const axisLabel = ratingBins ? `${metric.axisLabel}（ゲーム内評価）` : `${metric.axisLabel}（階級）`
   const countOption = ENEMY_HISTOGRAM_COUNT_MODES.find(({ key }) => key === countMode)!
   const chartDescription = statistics.count === 0
@@ -1346,6 +1371,10 @@ function HistogramFigure({
         <div>
           <strong>{metric.label}のヒストグラム</strong>
           <span>横軸：{axisLabel} · 縦軸：{countOption.axisLabel}{showCumulative && cumulativeDisplay !== 'strip' && ' · 右軸：累積割合'}</span>
+          <dl className="enemy-histogram-moments">
+            <div><dt>歪度</dt><dd>{formatDistributionMoment(skewness)}</dd></div>
+            <div><dt>超過尖度</dt><dd>{formatDistributionMoment(excessKurtosis)}</dd></div>
+          </dl>
           {ratingBins && <span>数値から評価に換算して集計します。{(referenceVisibility.mean || referenceVisibility.median || percentileReference) && '基準線は、その値が属する評価の中央に表示します。'}</span>}
           {(showPercentages || showCumulative) && statistics.count > 0 && <span>割合の基準：{scopeLabel} · {formatFrequency(statistics.count)}{countOption.unit}（有効データ）</span>}
         </div>

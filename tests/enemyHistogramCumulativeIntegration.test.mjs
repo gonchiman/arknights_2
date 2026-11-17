@@ -356,6 +356,39 @@ function PanelWrapper({ initialSnapshot, editor = false, aggregationCounts, aggr
     ...(editor ? { histogramEditor: { initialSnapshot: initialSnapshot ?? null, onChange() {} } } : {}) })
 }
 const renderPanel = props => renderToStaticMarkup(createElement(PanelWrapper, props))
+
+test('ヒストグラムの見出しは元の値と集計方法から歪度・超過尖度を表示する', () => {
+  const moments = markup => markup.match(/<dl class="enemy-histogram-moments">(.*?)<\/dl>/)?.[1]
+  for (const kind of ['linear', 'log']) {
+    const markup = renderPanel({ initialSnapshot: snapshot({ kind }), aggregationCounts: fixtureCounts })
+    assert.match(moments(markup), /<dt>歪度<\/dt><dd>\+0\.32<\/dd>.*<dt>超過尖度<\/dt><dd>-1\.25<\/dd>/)
+  }
+  const mapCounts = renderPanel({ initialSnapshot: snapshot(), aggregationCounts: fixtureCounts, spawnCountsAvailable: false })
+  assert.match(moments(mapCounts), /<dt>歪度<\/dt><dd>0\.00<\/dd>.*<dt>超過尖度<\/dt><dd>-1\.36<\/dd>/)
+  const constantHp = renderPanel({ aggregationCounts: fixtureCounts })
+  assert.match(moments(constantHp), /<dt>歪度<\/dt><dd>—<\/dd>.*<dt>超過尖度<\/dt><dd>—<\/dd>/)
+})
+
+test('統計サマリーは選択中のステータスにかかわらず全列の歪度・超過尖度を表示する', () => {
+  const markup = renderPanel({ aggregationCounts: fixtureCounts })
+  assert.match(markup, /<strong>HPのヒストグラム<\/strong>/)
+  const readSummaryRow = (panel, label) => {
+    const table = panel.match(/<table class="enemy-stat-summary-table"[^>]*>[\s\S]*?<\/table>/)?.[0]
+    assert.ok(table)
+    const row = [...table.matchAll(/<tr><th scope="row">([^<]+)<\/th>((?:<td>[^<]*<\/td>)+)<\/tr>/g)]
+      .find(([, title]) => title === label)
+    assert.ok(row, label)
+    return [...row[2].matchAll(/<td>([^<]*)<\/td>/g)].map(([, value]) => value)
+  }
+
+  assert.deepEqual(readSummaryRow(markup, '歪度'), ['—', '—', '—', '+0.32', '—', '—', '—', '—'])
+  assert.deepEqual(readSummaryRow(markup, '超過尖度'), ['—', '—', '—', '-1.25', '—', '—', '—', '—'])
+
+  const mapCounts = renderPanel({ aggregationCounts: fixtureCounts, spawnCountsAvailable: false })
+  assert.equal(readSummaryRow(mapCounts, '歪度')[3], '0.00')
+  assert.equal(readSummaryRow(mapCounts, '超過尖度')[3], '-1.36')
+})
+
 const cumulativeSelect = markup => [...markup.matchAll(/<label\b[^>]*>([\s\S]*?)<\/label>/g)]
   .find(match => clean(match[1]).startsWith('累積割合'))?.[1]
 const selectedCumulativeDisplay = markup => {
