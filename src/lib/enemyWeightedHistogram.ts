@@ -64,6 +64,34 @@ export function calculateWeightedPercentile(
   return weightedQuantile(frequencies, count, percentage / 100, frequencies.every(({ weight }) => Number.isInteger(weight)))
 }
 
+/** Descriptive moments of the original values, independent of histogram bins. */
+export function calculateWeightedHistogramMoments(
+  source: readonly WeightedHistogramObservation[],
+): { skewness: number | null; excessKurtosis: number | null } {
+  const { observations, count } = prepareObservations(source)
+  if (!Number.isFinite(count) || observations[0]?.value === observations.at(-1)?.value) {
+    return { skewness: null, excessKurtosis: null }
+  }
+
+  const mean = observations.reduce((sum, { value, weight }) => sum + value * (weight / count), 0)
+  const variance = observations.reduce((sum, { value, weight }) => sum + (value - mean) ** 2 * (weight / count), 0)
+  if (!Number.isFinite(variance) || variance <= 0) return { skewness: null, excessKurtosis: null }
+
+  const standardDeviation = Math.sqrt(variance)
+  let skewness = 0
+  let kurtosis = 0
+  for (const { value, weight } of observations) {
+    const standardized = (value - mean) / standardDeviation
+    const probability = weight / count
+    skewness += standardized ** 3 * probability
+    kurtosis += standardized ** 4 * probability
+  }
+  return {
+    skewness: Number.isFinite(skewness) ? skewness : null,
+    excessKurtosis: Number.isFinite(kurtosis) ? kurtosis - 3 : null,
+  }
+}
+
 /**
  * Weights are frequencies (or expected frequencies); nonpositive/nonfinite weights
  * are excluded. Bin boundaries use each eligible observation once, so changing

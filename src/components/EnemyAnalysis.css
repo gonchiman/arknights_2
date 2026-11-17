@@ -318,6 +318,18 @@
   line-height: 1.45;
 }
 
+.enemy-histogram-moments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+
+.enemy-histogram-moments > div { display: flex; align-items: baseline; gap: 6px; }
+.enemy-histogram-moments dt { color: var(--text-muted); }
+.enemy-histogram-moments dd { margin: 0; font-variant-numeric: tabular-nums; }
+
 .enemy-chart-legend {
   flex: 0 0 auto;
   display: flex;

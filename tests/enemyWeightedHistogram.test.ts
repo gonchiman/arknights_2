@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { calculateNumericStatistics } from '../src/lib/enemyStatistics.ts'
 import {
   calculateWeightedHistogram,
+  calculateWeightedHistogramMoments,
   calculateWeightedPercentile,
   type WeightedHistogramObservation,
 } from '../src/lib/enemyWeightedHistogram.ts'
@@ -26,6 +27,36 @@ test('fractional percentiles use weighted CDF midpoints, grouping ties before lo
   assert.equal(calculateWeightedPercentile(observations, 51), 30)
   assert.equal(calculateWeightedPercentile([{ value: null, weight: 1 }], 50), null)
   for (const invalid of [-1, 101, NaN, Infinity]) assert.equal(calculateWeightedPercentile(observations, invalid), null)
+})
+
+test('歪度と超過尖度は欠損を除いた元の値を小数の出現数で重み付けする', () => {
+  const weighted = calculateWeightedHistogramMoments([
+    { value: 0, weight: 0.75 },
+    { value: 10, weight: 0.25 },
+    { value: null, weight: 3 },
+    { value: Infinity, weight: 2 },
+    { value: 100, weight: 0 },
+    { value: -100, weight: -1 },
+    { value: -1000, weight: NaN },
+  ])
+  const expanded = calculateWeightedHistogramMoments([0, 0, 0, 10].map(value => ({ value, weight: 1 })))
+  assert.deepEqual(weighted, expanded)
+  assert.ok(weighted.skewness !== null && Math.abs(weighted.skewness - 2 / Math.sqrt(3)) < 1e-12)
+  assert.ok(weighted.excessKurtosis !== null && Math.abs(weighted.excessKurtosis + 2 / 3) < 1e-12)
+  assert.deepEqual(calculateWeightedHistogramMoments([{ value: 0, weight: 1 }, { value: 10, weight: 1 }]), {
+    skewness: 0, excessKurtosis: -2,
+  })
+})
+
+test('歪度と超過尖度は有効値なし・分散ゼロ・非有限の分散で算出しない', () => {
+  for (const observations of [
+    [],
+    [{ value: null, weight: 1 }],
+    [{ value: 0.3, weight: 0.1 }, { value: 0.3, weight: 0.5 }],
+    [{ value: 0, weight: 1 }, { value: 1e200, weight: 1 }],
+  ]) {
+    assert.deepEqual(calculateWeightedHistogramMoments(observations), { skewness: null, excessKurtosis: null })
+  }
 })
 
 function summary(result: ReturnType<typeof calculateWeightedHistogram>) {
