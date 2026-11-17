@@ -61,12 +61,15 @@ Wiki 閲覧数の定期取得は日本時間9:17に起動します。15:37と21:
 
 「敵別 Wiki 閲覧数」は、wikiru の敵一覧から辿れる個別ページを URL 単位で集計します。閲覧数は当日・前日・累計を、コメント件数は日本時間の前日までの期間別件数と累計を保存します。公開コメントログのないページは「ログなし」、取得や確認が済んでいない項目は「未取得」です。
 
+敵の閲覧数とコメント件数は GitHub Actions が毎日10:17（日本時間）に取得します。16:37と22:07の補完枠では、前日分の閲覧数履歴と当日の集計データを確認します。朝の実行がなければ全件、途中まで取得済みなら不足分だけを取得します。
+
 ```bash
 npm run refresh:enemy-wiki-stats
 npm run refresh:enemy-wiki-stats -- --retry
+npm run refresh:enemy-wiki-stats -- --daily
 ```
 
-通常実行は最大150ページを処理し、同じ日本時間の日付に同じ作業フォルダーで再実行すると続きから取得します。1回の上限は `--batch-size N`、対象の図鑑番号は `--index PT` のように指定できます。`--retry` は試行済みの未取得項目を再取得します。画面は `public/data/enemy-wiki-stats.json` を読み、前日分の閲覧数は `public/data/enemy-wiki-stats-history/` に日別で保存されます。
+通常実行は最大150ページを処理し、同じ日本時間の日付に同じ作業フォルダーで再実行すると続きから取得します。1回の上限は `--batch-size N`、対象の図鑑番号は `--index PT` のように指定できます。`--retry` は試行済みの未取得項目を再取得します。`--daily` は全件を対象に定期取得と同じ処理を行います。画面は `public/data/enemy-wiki-stats.json` を読み、前日分の閲覧数は `public/data/enemy-wiki-stats-history/` に日別で保存されます。
 
 途中で止める場合は Ctrl+C を一度押し、処理中の敵を保存するまで待ちます。強制終了で `.cache/enemy-wiki-stats/collection.lock` が残った場合は、ファイル内のプロセス ID の収集処理が終了していることを確認してからロックファイルを削除します。出力先が使用中で置き換えに失敗した場合は、使用中のプロセスを止めて `npm run refresh:enemy-wiki-stats -- --catalog-only` を実行すると、チェックポイントを保存データに反映できます。
 

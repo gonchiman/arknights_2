@@ -86,8 +86,35 @@ export function commentWindow(date) {
   return { throughDate: dateBefore(today, 1), start: dateBefore(today, WINDOW_DAYS) }
 }
 
-export function parseCommentLog(html, title, readTitle) {
+function isDeletedEnemyLogItem(html) {
+  // These log entries carry the Wiki deletion marker, sometimes with a typo or a broken signature tail.
+  const marker = /^\s*<span style="color:#ff0000"><strong>投[稿降]者本人が削除しました<\/strong><\/span>([^]*)$/u.exec(html)
+  if (!marker) return false
+  const tail = wikiHtmlText(marker[1])
+  return !tail || /^-- \[[^\]\s]+\]\s+\d{4}-\d{2}-\d{2}\s+\([日月火水木金土]\)\s+\d{2}:\d{2}:\d{2}\};$/u.test(tail)
+}
+
+function isEmptyEnemyLog(body, title, owner, readTitle) {
+  const prefix = 'コメント/' + owner
+  if (title !== prefix && !(title.startsWith(prefix + '/') && /^[1-9]\d*$/.test(title.slice(prefix.length + 1)))) {
+    return false
+  }
+  // An existing, intentionally empty log contains only a backlink to its own enemy page.
+  const backLink = /^\s*<p>\s*<a\b([^>]*)>([^<]*)<\/a>\s*<\/p>\s*$/u.exec(body)
+  if (!backLink || wikiHtmlText(backLink[2]) !== owner) return false
+  const href = attribute(backLink[1], 'href')
+  if (!href) return false
+  try {
+    const address = new URL(href, WIKI_ROOT)
+    return !address.hash && (readTitle ?? wikiPageTitle)(address.href) === owner
+  } catch {
+    return false
+  }
+}
+
+export function parseCommentLog(html, title, readTitle, { enemyLogOwner } = {}) {
   const body = extractPageBody(html, title, false, readTitle)
+  if (enemyLogOwner && isEmptyEnemyLog(body, title, enemyLogOwner, readTitle)) return []
   const dates = []
   const lists = []
   const items = []
@@ -112,7 +139,9 @@ export function parseCommentLog(html, title, readTitle) {
           const content = body.slice(item.contentStart, item.contentEnd ?? match.index)
           const legacyDate = readLegacySignatureDate(content)
           if (legacyDate) dates.push(legacyDate)
-          else if (!canOmitUnsignedItem(content, items.at(-1))) throw new Error('投稿日時のないコメントが見つかりました。')
+          else if (!canOmitUnsignedItem(content, items.at(-1)) && !(enemyLogOwner && isDeletedEnemyLogItem(content))) {
+            throw new Error('投稿日時のないコメントが見つかりました。')
+          }
         }
       }
       continue
