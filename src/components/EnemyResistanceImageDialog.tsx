@@ -19,19 +19,34 @@ type ImageMode = typeof MODES[number][0]
 type ImageSize = { width: number; height: number }
 const TABLE_WIDTH = 720
 const FIXED_OUTPUT_WIDTH = 1920
-const IMAGE_ASPECT_PRESETS = ['16:9', '4:3', '1:1', '2:1', '9:16'] as const
+export const ENEMY_RESISTANCE_ASPECT_PRESETS = ['16:9', '4:3', '1:1', '2:1', '9:16'] as const
+export const ENEMY_RESISTANCE_SCATTER_TITLE = '防御力と術耐性の対応（散布図）'
 const AUTO_ASPECT: ChartImageAspectSettings = { preset: 'auto', width: '16', height: '9' }
 const COMBINED_ASPECT: ChartImageAspectSettings = { ...AUTO_ASPECT, preset: '16:9' }
 const SIZE_ERROR = 'この縦横比では散布図と表を画像に収められません。縦横比を変更してください。'
 const LAYOUT_ERROR = '散布図と表の配置を確認できませんでした。'
 
-export interface EnemyResistanceImageSnapshot {
-  initialMode: 'table' | 'scatter'
+export interface EnemyResistanceScatterSnapshot {
   rows: readonly EnemyResistanceThreshold[]
-  table: ComparisonTableImageSnapshot
   chartConditions: readonly string[]
   chartFilenameParts: readonly string[]
+}
+
+export interface EnemyResistanceImageSnapshot extends EnemyResistanceScatterSnapshot {
+  initialMode: 'table' | 'scatter'
+  table: ComparisonTableImageSnapshot
   rankColumns: readonly string[]
+}
+
+export function getEnemyResistanceScatterFrame(snapshot: EnemyResistanceScatterSnapshot, aspectRatio?: number): ChartImageFrameProps {
+  return {
+    title: ENEMY_RESISTANCE_SCATTER_TITLE,
+    conditions: snapshot.chartConditions.join('・'),
+    axisTitle: ENEMY_RESISTANCE_THRESHOLD_AXIS_TITLE,
+    naturalChartHeight: 334,
+    aspectRatio,
+    children: ({ height }) => <EnemyResistanceThresholdScatter rows={snapshot.rows} imageHeight={height} />,
+  }
 }
 
 export function EnemyResistanceImageDialog({ snapshot, onClose }: {
@@ -62,7 +77,7 @@ export function EnemyResistanceImageDialog({ snapshot, onClose }: {
     setFit(previous => previous?.key === layoutKey && previous.error === error ? previous : { key: layoutKey, error })
   }, [layoutKey])
   const picker = getChartImageSavePicker()
-  const title = tableOnly ? snapshot.table.title : combined ? '防御力と術耐性の対応' : '防御力と術耐性の対応（散布図）'
+  const title = tableOnly ? snapshot.table.title : combined ? '防御力と術耐性の対応' : ENEMY_RESISTANCE_SCATTER_TITLE
   const filenameParts = [
     ...(tableOnly ? snapshot.table.filenameConditions ?? snapshot.table.conditions : snapshot.chartFilenameParts),
     ...(combined ? ['散布図＋表'] : []),
@@ -78,18 +93,15 @@ export function EnemyResistanceImageDialog({ snapshot, onClose }: {
     aspectRatio,
     children: snapshot.table.table,
   }
-  const chartFrame: ChartImageFrameProps = {
+  const chartFrame: ChartImageFrameProps = combined ? {
     title,
     conditions: snapshot.chartConditions.join('・'),
-    axisTitle: combined ? undefined : ENEMY_RESISTANCE_THRESHOLD_AXIS_TITLE,
-    naturalChartHeight: combined ? ENEMY_RESISTANCE_COMBINED_CHART_HEIGHT : 334,
+    naturalChartHeight: ENEMY_RESISTANCE_COMBINED_CHART_HEIGHT,
     aspectRatio,
-    exactAspect: combined ? exactAspect ?? undefined : undefined,
-    children: ({ width, height }) => combined
-      ? <EnemyResistanceCombinedImage width={width} height={height} rows={snapshot.rows} table={snapshot.table.table}
-        onLayout={onLayoutReady} onLayoutError={onLayoutError} />
-      : <EnemyResistanceThresholdScatter rows={snapshot.rows} imageHeight={height} />,
-  }
+    exactAspect: exactAspect ?? undefined,
+    children: ({ width, height }) => <EnemyResistanceCombinedImage width={width} height={height} rows={snapshot.rows}
+      table={snapshot.table.table} onLayout={onLayoutReady} onLayoutError={onLayoutError} />,
+  } : getEnemyResistanceScatterFrame(snapshot, aspectRatio)
   const chartSize = getChartImageLayout(chartFrame)
   const aspectError = aspect.preset !== 'auto' && !exactAspect
     ? '幅と高さは1〜100の整数、縦横比は1:10〜10:1で指定してください。'
@@ -142,7 +154,7 @@ export function EnemyResistanceImageDialog({ snapshot, onClose }: {
   }
 
   return <ChartImageSaveDialog initialFilename={filename} getDefaultFilename={ratio => withChartImageAspect(filename, ratio)}
-    aspect={aspect} aspectPresets={IMAGE_ASPECT_PRESETS} aspectError={aspectError}
+    aspect={aspect} aspectPresets={ENEMY_RESISTANCE_ASPECT_PRESETS} aspectError={aspectError}
     onAspectChange={next => { setAspects(previous => ({ ...previous, [mode]: next })); setSaveError(false) }}
     canChooseLocation={Boolean(picker)} saving={saving} saveDisabled={!layoutReady} error={saveError || layoutError}
     helpMode="popover" onClose={onClose} onSave={selectedFilename => { void saveImage(selectedFilename, true) }}

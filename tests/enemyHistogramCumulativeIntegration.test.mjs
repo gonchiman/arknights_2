@@ -29,6 +29,7 @@ const enemies = observations.map(({ value }, index) => ({
 }))
 
 let server, Plot, Panel, useControls, RatingImage, RatingPlot, RatingSaveDialog, getRatingFilename
+let ScatterVideoDialog
 before(async () => {
   server = await createServer({
     configFile: false, plugins: [react(), {
@@ -53,6 +54,8 @@ before(async () => {
     getEnemyRatingComparisonImageFilename: getRatingFilename }
     = await server.ssrLoadModule('/src/components/EnemyRatingComparisonImage.tsx'))
   ;({ EnemyRatingComparisonPlot: RatingPlot } = await server.ssrLoadModule('/src/components/EnemyRatingComparisonPlot.tsx'))
+  ;({ EnemyResistanceScatterVideoDialog: ScatterVideoDialog }
+    = await server.ssrLoadModule('/src/components/EnemyResistanceScatterVideoDialog.tsx'))
 })
 after(async () => { await server?.close() })
 
@@ -281,6 +284,59 @@ test('左右の横棒の動画は集計条件と強調を引き継ぎ、縦横�
     const unsupported = renderVideoDialog()
     assert.match(unsupported, /このブラウザーは動画の出力に対応していません。/)
     assert.match(unsupported, /type="submit"[^>]*disabled=""/)
+  } finally {
+    if (canvasDescriptor) Object.defineProperty(globalThis, 'HTMLCanvasElement', canvasDescriptor)
+    else Reflect.deleteProperty(globalThis, 'HTMLCanvasElement')
+    if (recorderDescriptor) Object.defineProperty(globalThis, 'MediaRecorder', recorderDescriptor)
+    else Reflect.deleteProperty(globalThis, 'MediaRecorder')
+  }
+})
+
+test('術耐性別の散布図動画は集計条件と点を引き継ぎ、16:9・5秒で保存できる', () => {
+  const snapshot = {
+    rows: [
+      { resistance: 0, defense: 0, percentage: 100, rankCutoff: 10 },
+      { resistance: 50, defense: 350, percentage: 10, rankCutoff: 1 },
+      { resistance: 100, defense: null, percentage: 0, rankCutoff: 0 },
+    ],
+    chartConditions: ['集計版 v12', '全体', '出現回数10体'],
+    chartFilenameParts: ['集計版v12', '全体', '出現回数', '術耐性10刻み'],
+  }
+  const canvasDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'HTMLCanvasElement')
+  const recorderDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'MediaRecorder')
+  try {
+    class Canvas { captureStream() {} }
+    Object.defineProperty(globalThis, 'HTMLCanvasElement', { configurable: true, value: Canvas })
+    for (const [extension, format] of [['mp4', 'MP4'], ['webm', 'WebM']]) {
+      Object.defineProperty(globalThis, 'MediaRecorder', { configurable: true, value: {
+        isTypeSupported: mimeType => mimeType.startsWith(`video/${extension}`),
+      } })
+      const markup = renderToStaticMarkup(createElement(ScatterVideoDialog, { snapshot, onClose() {} }))
+      assert.match(markup, /動画を保存/)
+      assert.match(markup, new RegExp(`>${format}<`))
+      const aspect = getAspectOptions(markup, '動画')
+      assert.deepEqual(aspect.filter(({ selected }) => selected), [{ value: '16:9', selected: true, label: '16:9' }])
+      assert.ok(aspect.some(({ value }) => value === '16:7'))
+      const phases = ['タイトル・条件', 'グラフの枠', '軸・目盛り', '点と数値', '該当なしの注記']
+      assert.deepEqual([...markup.matchAll(/aria-label="([^"]+)を上へ"/g)].map(([, label]) => label), phases)
+      assert.deepEqual([...markup.matchAll(/aria-label="([^"]+)のテンポ"/g)].map(([, label]) => label), phases)
+      for (const label of ['文字の出し方', '点の出し方', '枠・目盛り線の出し方', '既定値に戻す', '秒数で調整', '完成図の保持（秒）']) {
+        assert.ok(markup.includes(label), label)
+      }
+      const previewText = markup.replace(/<!--.*?-->/g, '')
+      assert.match(previewText, /1,920 × 1,080 px/)
+      assert.match(previewText, /5\.00 \/ 5\.00 秒/)
+      assert.match(previewText, /集計版 v12・全体・出現回数10体/)
+      assert.match(markup, /type="range"[^>]*aria-label="再生位置"/)
+      assert.match(markup, new RegExp(`value="防御力と術耐性の対応（散布図）_集計版v12_全体_出現回数_術耐性10刻み_幅1920px_5秒_比率16x9\\.${extension}"`))
+      assert.deepEqual([...markup.matchAll(/data-resistance-video-point="(\d+)"[^>]*>(\d+)<\/span>/g)]
+        .map(([, resistance, defense]) => [resistance, defense]), [['0', '0'], ['50', '350']])
+      assert.match(previewText, /<figcaption data-resistance-video-missing="true">術耐性100以上 · 該当なし<\/figcaption>/)
+      const allMatched = renderToStaticMarkup(createElement(ScatterVideoDialog, {
+        snapshot: { ...snapshot, rows: snapshot.rows.slice(0, -1) }, onClose() {},
+      }))
+      assert.doesNotMatch(allMatched, /該当なしの注記/)
+    }
   } finally {
     if (canvasDescriptor) Object.defineProperty(globalThis, 'HTMLCanvasElement', canvasDescriptor)
     else Reflect.deleteProperty(globalThis, 'HTMLCanvasElement')

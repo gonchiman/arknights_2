@@ -4,6 +4,7 @@ import { HelpPopover } from './HelpPopover'
 import './ChartImageSaveDialog.css'
 
 export const CHART_IMAGE_ASPECT_PRESETS = ['16:9', '2:1', '21:9', '3:1'] as const
+export const CHART_VIDEO_ASPECT_PRESETS = ['16:7', ...CHART_IMAGE_ASPECT_PRESETS] as const
 
 export interface ChartImageAspectSettings {
   preset: string

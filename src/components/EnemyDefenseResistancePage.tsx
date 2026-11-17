@@ -11,8 +11,9 @@ import { EnemyAggregationScopeSelector, ENEMY_MAIN_STORY_LABEL, type EnemyAggreg
 import { EnemyAggregationSelector } from './EnemyAggregationSelector'
 import { EnemyDefenseResistanceChart } from './EnemyDefenseResistanceChart'
 import { EnemyDataContent } from './EnemyPageShared'
-import { EnemyResistanceImageDialog, type EnemyResistanceImageSnapshot } from './EnemyResistanceImageDialog'
+import { EnemyResistanceImageDialog, type EnemyResistanceImageSnapshot, type EnemyResistanceScatterSnapshot } from './EnemyResistanceImageDialog'
 import { EnemyResistanceThresholdScatter } from './EnemyResistanceThresholdScatter'
+import { EnemyResistanceScatterVideoDialog } from './EnemyResistanceScatterVideoDialog'
 import './DamageCalculator.css'
 import './DamageCalculatorTwo.css'
 import './EnemyAnalysis.css'
@@ -41,30 +42,39 @@ export function EnemyDefenseResistancePage() {
   const [showRankCutoff, setShowRankCutoff] = useState(false)
   const [rankImage, setRankImage] = useState<ComparisonTableImageSnapshot | null>(null)
   const [resistanceImage, setResistanceImage] = useState<EnemyResistanceImageSnapshot | null>(null)
+  const [resistanceVideo, setResistanceVideo] = useState<EnemyResistanceScatterSnapshot | null>(null)
   const aggregationConditions = [`集計版 ${aggregation.selectedId}`, ...(scope === 'main' ? [ENEMY_MAIN_STORY_LABEL] : [])]
+  const appearances = result ? `出現回数 ${NUMBER.format(result.total)}体` : ''
   const resistanceTable = view === 'resistance' && result
     ? <EnemyResistanceThresholdGrid rows={result.resistanceThresholds} showRankPercentage={showRankPercentage}
         showRankCutoff={showRankCutoff} estimatedRanks={Boolean(scopedData?.counts.summary.expectedMapCount)} />
     : null
 
+  function getResistanceScatterSnapshot(): EnemyResistanceScatterSnapshot | null {
+    if (!result) return null
+    const scopeLabel = scope === 'main' ? ENEMY_MAIN_STORY_LABEL : '全体'
+    return {
+      rows: result.resistanceThresholds,
+      chartConditions: [aggregationConditions[0], scopeLabel, appearances],
+      chartFilenameParts: [aggregationConditions[0], scopeLabel, '出現回数', '術耐性10刻み'],
+    }
+  }
+
   function openResistanceImage() {
-    if (!result || !resistanceTable) return
+    const scatter = getResistanceScatterSnapshot()
+    if (!scatter || !resistanceTable) return
     const rankColumns: string[] = []
     if (showRankPercentage) rankColumns.push('出現順位（%）')
     if (showRankCutoff) rankColumns.push('出現順位の境目')
-    const appearances = `出現回数 ${NUMBER.format(result.total)}体`
-    const scopeLabel = scope === 'main' ? ENEMY_MAIN_STORY_LABEL : '全体'
     setResistanceImage({
+      ...scatter,
       initialMode: resistanceView,
-      rows: result.resistanceThresholds,
       table: {
         title: '防御力と術耐性の対応（術耐性別）',
         conditions: [...aggregationConditions, appearances, '術耐性10刻み', ...rankColumns],
         filenameConditions: [...aggregationConditions, '出現回数', '術耐性10刻み', ...rankColumns],
         table: resistanceTable,
       },
-      chartConditions: [aggregationConditions[0], scopeLabel, appearances],
-      chartFilenameParts: [aggregationConditions[0], scopeLabel, '出現回数', '術耐性10刻み'],
       rankColumns,
     })
   }
@@ -98,9 +108,12 @@ export function EnemyDefenseResistancePage() {
                 {RESISTANCE_VIEWS.map(([id, label]) => <button key={id} type="button" aria-pressed={resistanceView === id}
                   className={resistanceView === id ? 'active' : ''} onClick={() => setResistanceView(id)}>{label}</button>)}
               </div>
-              {resistanceView === 'scatter' && <button type="button" className="button secondary"
-                aria-label="術耐性別の散布図をPNG画像で保存" aria-haspopup="dialog"
-                onClick={openResistanceImage}>画像を保存</button>}
+              {resistanceView === 'scatter' && <>
+                <button type="button" className="button secondary" aria-label="術耐性別の散布図をPNG画像で保存"
+                  aria-haspopup="dialog" onClick={openResistanceImage}>画像を保存</button>
+                <button type="button" className="button secondary" aria-label="術耐性別の散布図を動画で保存"
+                  aria-haspopup="dialog" onClick={() => setResistanceVideo(getResistanceScatterSnapshot())}>動画を保存</button>
+              </>}
             </div>
             {resistanceView === 'scatter' && <EnemyResistanceThresholdScatter rows={result.resistanceThresholds} />}
           </>}
@@ -129,6 +142,7 @@ export function EnemyDefenseResistancePage() {
     </EnemyDataContent>
     {rankImage && <ComparisonTableImageDialog snapshot={rankImage} onClose={() => setRankImage(null)} />}
     {resistanceImage && <EnemyResistanceImageDialog snapshot={resistanceImage} onClose={() => setResistanceImage(null)} />}
+    {resistanceVideo && <EnemyResistanceScatterVideoDialog snapshot={resistanceVideo} onClose={() => setResistanceVideo(null)} />}
   </section>
 }
 

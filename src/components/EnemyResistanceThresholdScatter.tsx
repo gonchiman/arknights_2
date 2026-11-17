@@ -34,6 +34,7 @@ export function EnemyResistanceThresholdScatter({ rows, imageHeight, showXAxisTi
           </svg>
           {rows.map(({ resistance, defense }) => defense === null ? null : (
             <span key={resistance} className="enemy-resistance-scatter-point"
+              data-resistance-video-point={forImage ? resistance : undefined}
               style={{ left: x(resistance), top: `${y(defense)}%` }}>
               {NUMBER.format(defense)}
             </span>
@@ -49,6 +50,8 @@ export function EnemyResistanceThresholdScatter({ rows, imageHeight, showXAxisTi
         {showXAxisTitle && <span className="enemy-resistance-scatter-x-title">{ENEMY_RESISTANCE_THRESHOLD_AXIS_TITLE}</span>}
       </div>
     </div>
-    {showMissingCaption && firstMissing && <figcaption>術耐性{firstMissing.resistance}以上 · 該当なし</figcaption>}
+    {showMissingCaption && firstMissing && <figcaption data-resistance-video-missing={forImage || undefined}>
+      術耐性{firstMissing.resistance}以上 · 該当なし
+    </figcaption>}
   </figure>
 }
