@@ -9,6 +9,7 @@ import './ComparisonTableImageFrame.css'
 
 export interface ComparisonTableImageFrameProps {
   initialWidth: number
+  fixedWidth?: boolean
   minimumHeight?: number
   aspectRatio?: number
   exporting?: boolean
@@ -37,7 +38,7 @@ function tableAspect(value?: number): TableImageAspect | null {
 }
 
 /** One sizing and typography pipeline for numeric and winning-module tables. */
-export function ComparisonTableImageFrame({ initialWidth, minimumHeight, aspectRatio, exporting = false, onLayout, onLayoutError,
+export function ComparisonTableImageFrame({ initialWidth, fixedWidth, minimumHeight, aspectRatio, exporting = false, onLayout, onLayoutError,
   title, footer, typography: requestedTypography, children, layoutKey, className = '', ariaLabel }: ComparisonTableImageFrameProps) {
   const imageRef = useRef<HTMLElement>(null)
   const typography = normalizeComparisonTableTypography(requestedTypography)
@@ -69,17 +70,22 @@ export function ComparisonTableImageFrame({ initialWidth, minimumHeight, aspectR
         // Auto-layout tables may be wider than their suggested starting width.
         // Start from their complete natural width before applying a ratio.
         image.style.width = `${initialWidth}px`
-        const naturalWidth = Math.max(initialWidth, image.scrollWidth, ...tables.map(table => table.scrollWidth))
-        const size = getTableImageDimensions({ initialWidth: naturalWidth, aspect: tableAspect(aspectRatio),
+        const naturalWidth = fixedWidth ? initialWidth
+          : Math.max(initialWidth, image.scrollWidth, ...tables.map(table => table.scrollWidth))
+        const size = getTableImageDimensions({ initialWidth: naturalWidth, aspect: tableAspect(aspectRatio), fixedWidth,
           measureHeight: width => {
             image.style.width = `${width}px`
             image.style.height = 'auto'
             // A compact winning label is kept on one line at its original size.
-            if (image.scrollWidth > width || tables.some(table => table.scrollWidth > table.clientWidth + 1)) return 8001
+            if (image.scrollWidth > width || tables.some(table => table.scrollWidth > table.clientWidth + 1)) {
+              if (fixedWidth) throw new Error('指定した出力幅に表全体が収まりません。')
+              return 8001
+            }
             return Math.max(image.offsetHeight, minimumHeight ?? 0)
           } })
         if (size.width > 8000 || size.height > 8000 || size.width * size.height > 8_000_000) {
-          throw new Error('表全体を画像に収められません。項目数を減らすか、配置を変更してください。')
+          throw new Error(fixedWidth ? '保存可能な画像の高さを超えています。出力する行を減らすか、縦横比を変更してください。'
+            : '表全体を画像に収められません。項目数を減らすか、配置を変更してください。')
         }
         image.style.width = `${size.width}px`
         image.style.height = 'auto'
@@ -118,7 +124,7 @@ export function ComparisonTableImageFrame({ initialWidth, minimumHeight, aspectR
       document.fonts.removeEventListener('loadingdone', measure)
       reset()
     }
-  }, [initialWidth, minimumHeight, aspectRatio, exporting, typographyKey, layoutKey, children, title, footer, onLayout, onLayoutError])
+  }, [initialWidth, fixedWidth, minimumHeight, aspectRatio, exporting, typographyKey, layoutKey, children, title, footer, onLayout, onLayoutError])
 
   const style = { width: initialWidth, '--comparison-table-title-size': `${typography.titleSize}px`,
     '--comparison-table-detail-size': `${typography.detailSize}px`,

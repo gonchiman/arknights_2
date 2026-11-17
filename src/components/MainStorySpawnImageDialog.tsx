@@ -24,7 +24,7 @@ export function MainStorySpawnImageDialog({ selection, onClose }: {
   const outputRange = range && !selectionError ? range : selection.currentPageRange
   const snapshot = useMemo(() => selection.createSnapshot(outputRange), [selection, outputRange])
 
-  return <ComparisonTableImageDialog snapshot={snapshot} onClose={onClose} selectionError={selectionError}
+  return <ComparisonTableImageDialog snapshot={snapshot} onClose={onClose} selectionError={selectionError} fixedOutputWidth={1920}
     options={saving => <fieldset className="chart-image-save-aspect" disabled={saving}>
       <legend>出力範囲</legend>
       <div className="chart-image-save-ratio">

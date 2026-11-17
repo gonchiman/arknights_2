@@ -16,15 +16,17 @@ export interface ComparisonTableImageSnapshot {
 const IMAGE_WIDTH = 720
 const IMAGE_ASPECT_PRESETS = ['16:9', '4:3', '1:1', '2:1', '9:16'] as const
 
-export function ComparisonTableImageDialog({ snapshot, onClose, options, selectionError }: {
+export function ComparisonTableImageDialog({ snapshot, onClose, options, selectionError, fixedOutputWidth }: {
   snapshot: ComparisonTableImageSnapshot
   onClose: () => void
   options?: (saving: boolean) => ReactNode
   selectionError?: string
+  fixedOutputWidth?: number
 }) {
   const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
+  const [fixOutputWidth, setFixOutputWidth] = useState(false)
   const [readyLayout, setReadyLayout] = useState<{
-    snapshot: ComparisonTableImageSnapshot; ratio: number | 'auto'
+    snapshot: ComparisonTableImageSnapshot; key: string
   } | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveFailure, setSaveFailure] = useState<{
@@ -34,19 +36,24 @@ export function ComparisonTableImageDialog({ snapshot, onClose, options, selecti
   const parsedAspect = aspect.preset === 'auto' ? null : parseTableImageAspect(aspect.width, aspect.height)
   const invalidAspect = aspect.preset !== 'auto' && !parsedAspect
   const aspectRatio = parsedAspect ? parsedAspect.width / parsedAspect.height : undefined
-  const ratioKey = aspectRatio ?? 'auto'
+  const outputWidth = fixOutputWidth ? fixedOutputWidth : undefined
+  const initialWidth = outputWidth === undefined ? IMAGE_WIDTH : outputWidth / 2
+  const layoutKey = `${outputWidth ?? 'auto'}:${aspectRatio ?? 'auto'}`
   const showPreview = !invalidAspect && !selectionError
-  const layoutReady = showPreview && readyLayout?.snapshot === snapshot && readyLayout.ratio === ratioKey
+  const layoutReady = showPreview && readyLayout?.snapshot === snapshot && readyLayout.key === layoutKey
   const onLayoutReady = useCallback(() => {
-    setReadyLayout(previous => previous?.snapshot === snapshot && previous.ratio === ratioKey
-      ? previous : { snapshot, ratio: ratioKey })
-  }, [snapshot, ratioKey])
+    setReadyLayout(previous => previous?.snapshot === snapshot && previous.key === layoutKey
+      ? previous : { snapshot, key: layoutKey })
+  }, [snapshot, layoutKey])
   const onLayoutError = useCallback(() => setReadyLayout(null), [])
   const saveError = saveFailure?.snapshot === snapshot ? saveFailure.message : false
   const picker = getChartImageSavePicker()
-  const filename = createChartImageFilename(snapshot.title, snapshot.filenameConditions ?? snapshot.conditions)
+  const filename = createChartImageFilename(snapshot.title, [
+    ...(snapshot.filenameConditions ?? snapshot.conditions), ...(outputWidth === undefined ? [] : [`幅${outputWidth}px`]),
+  ])
   const frameProps = {
-    initialWidth: IMAGE_WIDTH,
+    initialWidth,
+    fixedWidth: outputWidth !== undefined,
     ariaLabel: snapshot.title,
     title: snapshot.title,
     footer: snapshot.conditions.join(' · '),
@@ -74,7 +81,7 @@ export function ComparisonTableImageDialog({ snapshot, onClose, options, selecti
           exportLayoutError = cause
         }} />,
         filename: selectedFilename,
-        width: IMAGE_WIDTH,
+        width: initialWidth,
         writeBlob: destination.type === 'file' ? destination.write : undefined,
         validateLayout: size => {
           if (exportSize?.width === size.width && exportSize.height === size.height) return
@@ -103,6 +110,13 @@ export function ComparisonTableImageDialog({ snapshot, onClose, options, selecti
     saveDisabled={!layoutReady}
     error={selectionError ?? (saveError === true)}
     options={<>
+      {fixedOutputWidth !== undefined && <label>
+        <input type="checkbox" checked={fixOutputWidth} disabled={saving} onChange={event => {
+          setFixOutputWidth(event.target.checked)
+          setSaveFailure(null)
+        }} />
+        出力幅を{fixedOutputWidth.toLocaleString('ja-JP')} pxに固定
+      </label>}
       {options?.(saving)}
       {!selectionError && typeof saveError === 'string' && <p className="chart-image-save-error" role="alert">{saveError}</p>}
     </>}

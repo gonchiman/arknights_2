@@ -19,10 +19,12 @@ export function parseTableImageAspect(width: string, height: string): TableImage
 export function getTableImageDimensions({
   initialWidth,
   aspect,
+  fixedWidth = false,
   measureHeight,
 }: {
   initialWidth: number
   aspect: TableImageAspect | null
+  fixedWidth?: boolean
   measureHeight: (width: number) => number
 }): { width: number; height: number } {
   if (!Number.isFinite(initialWidth) || initialWidth <= 0) throw new Error('保存する表の幅を取得できませんでした。')
@@ -42,6 +44,15 @@ export function getTableImageDimensions({
   }
   const ratio = parseTableImageAspect(String(aspect.width), String(aspect.height))
   if (!ratio) throw new Error('画像の縦横比が正しくありません。')
+
+  if (fixedWidth) {
+    const width = Math.ceil(initialWidth)
+    const height = Math.round(width * ratio.height / ratio.width)
+    if (naturalHeight(width) > height) {
+      throw new Error('指定した幅と縦横比では表全体が収まりません。出力する行を減らすか、縦横比を変更してください。')
+    }
+    return { width, height }
+  }
 
   // Keep the shared exporter's 2x rasterization within its 16,000px / 32MP
   // limits, so neither downsampling nor pixel rounding alters the chosen ratio.
