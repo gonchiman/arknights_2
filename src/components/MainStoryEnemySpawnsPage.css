@@ -176,8 +176,14 @@
   color: var(--text-muted);
 }
 
-.main-story-spawns-table tr[aria-current="true"] > * {
+.main-story-spawns-table tr[aria-current="true"] > *,
+.main-story-spawns-image-table tr[data-image-highlight-row="true"] > *,
+.main-story-spawns-image-table [data-image-highlight-column="true"] {
   background: color-mix(in srgb, var(--link) 9%, var(--surface));
+}
+
+.main-story-spawns-image-table tr[data-image-highlight-row="true"] > [data-image-highlight-column="true"] {
+  background: color-mix(in srgb, var(--link) 18%, var(--surface));
 }
 
 .main-story-spawns-table tr[aria-current="true"] th {

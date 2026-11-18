@@ -6,6 +6,9 @@ import {
   type MainStorySpawnSortKey, type MainStorySpawnStage,
 } from '../lib/mainStoryEnemySpawns'
 import { MAIN_STORY_SPAWN_IMAGE_ROW_MIN_HEIGHT } from '../lib/mainStorySpawnImageRange'
+import {
+  formatMainStorySpawnImageHighlightRows, type MainStorySpawnImageColumnKey, type MainStorySpawnImageHighlights,
+} from '../lib/mainStorySpawnImageHighlights'
 import { EnemyDataContent } from './EnemyPageShared'
 import { MainStorySpawnImageDialog, type MainStorySpawnImageSelection } from './MainStorySpawnImageDialog'
 import { PageBreadcrumbs } from './PageBreadcrumbs'
@@ -223,20 +226,31 @@ export function MainStoryEnemySpawnsPage() {
       ...DATA_CONDITIONS, scopeLabel, displayMode, `${sortLabel} ${sort.direction === 'asc' ? '昇順' : '降順'}`,
       ...(query.trim() ? [`敵名「${query.trim()}」`] : []),
     ]
+    const imageColumns: readonly (readonly [MainStorySpawnImageColumnKey, string])[] = [
+      ['rowNumber', '行番号'], ...(rankLabel ? [['rank', `${rankLabel}順位`] as const] : []), ...columns,
+    ]
     setImageSelection({
       currentPageRange: { start: offset + 1, end: Math.min(offset + PAGE_SIZE, tableRowCount) },
       totalRows: tableRowCount,
-      createSnapshot: ({ start, end }) => {
+      columns: imageColumns,
+      createSnapshot: ({ start, end }, highlights) => {
         const startOffset = start - 1
         const limit = end - start + 1
         const result = getMainStorySpawnRows(lists, query, view, startOffset, limit, sort)
         const stageStatuses = getStatusRowsInRange(statuses, startOffset, limit, result.rowCount)
         const rangeLabel = start === end ? formatNumber(start) : `${formatNumber(start)}〜${formatNumber(end)}`
+        const highlightedColumns = imageColumns.filter(([key]) => highlights.columns.includes(key)).map(([, label]) => label)
+        const highlightConditions = [
+          ...(highlights.rows.length ? [`強調行 ${formatMainStorySpawnImageHighlightRows(highlights.rows)}`] : []),
+          ...(highlightedColumns.length ? [`強調列 ${highlightedColumns.join('・')}`] : []),
+        ]
+        const outputConditions = [...conditions, `${rangeLabel}行目`, ...highlightConditions]
         return {
           title: TITLE,
-          conditions: [...conditions, `${rangeLabel}行目`],
+          conditions: outputConditions,
+          filenameConditions: highlightConditions.length ? [...highlightConditions, ...conditions, `${rangeLabel}行目`] : undefined,
           table: <MainStorySpawnTable view={view} rows={result.rows} statusRows={stageStatuses}
-            startRowNumber={start} rankLabel={rankLabel} forImage />,
+            startRowNumber={start} rankLabel={rankLabel} highlights={highlights} forImage />,
         }
       },
     })
@@ -332,7 +346,7 @@ export function MainStoryEnemySpawnsPage() {
 }
 
 function MainStorySpawnTable({ view, rows, statusRows, startRowNumber, rankLabel, sorting,
-  selectedRowNumber, selectedRowRef, forImage = false }: {
+  selectedRowNumber, selectedRowRef, highlights, forImage = false }: {
   view: View
   rows: readonly MainStorySpawnRow[]
   statusRows: readonly MainStorySpawnList[]
@@ -341,6 +355,7 @@ function MainStorySpawnTable({ view, rows, statusRows, startRowNumber, rankLabel
   sorting?: { sort: MainStorySpawnSort; onSort: (key: MainStorySpawnSortKey) => void }
   selectedRowNumber?: number
   selectedRowRef?: Ref<HTMLTableRowElement>
+  highlights?: MainStorySpawnImageHighlights
   forImage?: boolean
 }) {
   const showUnits = view === 'units'
@@ -352,27 +367,40 @@ function MainStorySpawnTable({ view, rows, statusRows, startRowNumber, rankLabel
     data-view={view} aria-label="出現敵一覧" style={style}>
     {forImage && <colgroup><col />{showRank && <col />}{columns.map(([key]) => <col key={key} />)}</colgroup>}
     <thead><tr>
-      <th scope="col" className="main-story-spawns-static-heading">行番号</th>
-      {showRank && <th scope="col" className="main-story-spawns-static-heading">{rankLabel}順位</th>}
+      <th scope="col" className="main-story-spawns-static-heading"
+        data-image-highlight-column={highlights?.columns.includes('rowNumber') || undefined}>行番号</th>
+      {showRank && <th scope="col" className="main-story-spawns-static-heading"
+        data-image-highlight-column={highlights?.columns.includes('rank') || undefined}>{rankLabel}順位</th>}
       {columns.map(([key, label]) => sorting
         ? <MainStorySpawnSortableHeader key={key} column={key} label={label} {...sorting} />
-        : <th key={key} scope="col" className={textColumnClass(key)}>{label}</th>)}
+        : <th key={key} scope="col" className={textColumnClass(key)}
+          data-image-highlight-column={highlights?.columns.includes(key) || undefined}>{label}</th>)}
     </tr></thead>
     <tbody>
       {rows.map((row, index) => <MainStorySpawnTableRow key={row.key} row={row} rowNumber={startRowNumber + index}
         showUnits={showUnits} showRank={showRank}
-        forImage={forImage} selected={startRowNumber + index === selectedRowNumber} selectedRef={selectedRowRef} />)}
+        forImage={forImage} highlights={highlights}
+        selected={startRowNumber + index === selectedRowNumber} selectedRef={selectedRowRef} />)}
       {statusRows.map(({ stage, status }, index) => {
         if (status === 'confirmed') return null
         const rowNumber = startRowNumber + rows.length + index
         const selected = rowNumber === selectedRowNumber
         return <tr key={stage.id} className="main-story-spawns-status-row" aria-current={selected || undefined}
+          data-image-highlight-row={highlights?.rows.includes(rowNumber) || undefined}
           tabIndex={selected ? -1 : undefined} ref={selected ? selectedRowRef : undefined}>
-          <td data-table-image-number={imageNumber}>{formatNumber(rowNumber)}</td>
-          {showRank && <td>—</td>}
-          <th scope="row" colSpan={STATS.length + 1} className="main-story-spawns-text-cell">{STAGE_STATUS[status]}</th>
-          <td className="main-story-spawns-text-cell">{stage.code}</td>
-          <td colSpan={columns.length - COMMON_COLUMNS.length}>—</td>
+          <td data-table-image-number={imageNumber}
+            data-image-highlight-column={highlights?.columns.includes('rowNumber') || undefined}>{formatNumber(rowNumber)}</td>
+          {showRank && <td data-image-highlight-column={highlights?.columns.includes('rank') || undefined}>—</td>}
+          {forImage && highlights?.columns.length ? columns.map(([key]) => key === 'enemyName'
+            ? <th key={key} scope="row" className="main-story-spawns-text-cell"
+              data-image-highlight-column={highlights?.columns.includes(key) || undefined}>{STAGE_STATUS[status]}</th>
+            : <td key={key} className={textColumnClass(key)}
+              data-image-highlight-column={highlights?.columns.includes(key) || undefined}>{key === 'stage' ? stage.code : '—'}</td>)
+            : <>
+              <th scope="row" colSpan={STATS.length + 1} className="main-story-spawns-text-cell">{STAGE_STATUS[status]}</th>
+              <td className="main-story-spawns-text-cell">{stage.code}</td>
+              <td colSpan={columns.length - COMMON_COLUMNS.length}>—</td>
+            </>}
         </tr>
       })}
       {rows.length === 0 && statusRows.length === 0 && <tr>
@@ -400,12 +428,13 @@ function MainStorySpawnSortableHeader({ column, label, sort, onSort }: {
   </th>
 }
 
-function MainStorySpawnTableRow({ row, rowNumber, showUnits, showRank, forImage, selected, selectedRef }: {
+function MainStorySpawnTableRow({ row, rowNumber, showUnits, showRank, forImage, highlights, selected, selectedRef }: {
   row: MainStorySpawnRow
   rowNumber: number
   showUnits: boolean
   showRank: boolean
   forImage: boolean
+  highlights?: MainStorySpawnImageHighlights
   selected: boolean
   selectedRef?: Ref<HTMLTableRowElement>
 }) {
@@ -413,18 +442,24 @@ function MainStorySpawnTableRow({ row, rowNumber, showUnits, showRank, forImage,
     ? row.fromBranch ? '分岐' : '—'
     : `${formatNumber(row.wave)}／${formatNumber(row.fragment)}`
   const imageNumber = forImage ? true : undefined
-  return <tr aria-current={selected || undefined} tabIndex={selected ? -1 : undefined} ref={selected ? selectedRef : undefined}>
-    <td data-table-image-number={imageNumber}>{formatNumber(rowNumber)}</td>
-    {showRank && <td data-table-image-number={imageNumber}>
+  return <tr aria-current={selected || undefined} tabIndex={selected ? -1 : undefined} ref={selected ? selectedRef : undefined}
+    data-image-highlight-row={highlights?.rows.includes(rowNumber) || undefined}>
+    <td data-table-image-number={imageNumber}
+      data-image-highlight-column={highlights?.columns.includes('rowNumber') || undefined}>{formatNumber(rowNumber)}</td>
+    {showRank && <td data-table-image-number={imageNumber} data-image-highlight-column={highlights?.columns.includes('rank') || undefined}>
       {row.rank == null ? '—' : `${formatNumber(row.rank)}位`}
     </td>}
-    <th scope="row" className="main-story-spawns-text-cell">{row.enemyName}</th>
-    {STATS.map(([key]) => <td key={key} data-table-image-number={imageNumber}>{formatNumber(row.stats[key])}</td>)}
-    <td className="main-story-spawns-text-cell">{row.stage.code}</td>
+    <th scope="row" className="main-story-spawns-text-cell"
+      data-image-highlight-column={highlights?.columns.includes('enemyName') || undefined}>{row.enemyName}</th>
+    {STATS.map(([key]) => <td key={key} data-table-image-number={imageNumber}
+      data-image-highlight-column={highlights?.columns.includes(key) || undefined}>{formatNumber(row.stats[key])}</td>)}
+    <td className="main-story-spawns-text-cell" data-image-highlight-column={highlights?.columns.includes('stage') || undefined}>{row.stage.code}</td>
     {showUnits ? <>
-      <td>{waveFragment}</td>
-      <td data-table-image-number={imageNumber}>{formatNumber(row.time)}</td>
-      <td>{row.entrance ?? '—'}</td>
-    </> : <td data-table-image-number={imageNumber}>{formatNumber(row.count)}</td>}
+      <td data-image-highlight-column={highlights?.columns.includes('wave') || undefined}>{waveFragment}</td>
+      <td data-table-image-number={imageNumber}
+        data-image-highlight-column={highlights?.columns.includes('time') || undefined}>{formatNumber(row.time)}</td>
+      <td data-image-highlight-column={highlights?.columns.includes('entrance') || undefined}>{row.entrance ?? '—'}</td>
+    </> : <td data-table-image-number={imageNumber}
+      data-image-highlight-column={highlights?.columns.includes('count') || undefined}>{formatNumber(row.count)}</td>}
   </tr>
 }
