@@ -3,6 +3,7 @@ export type NavigationPage = 'home' | 'operators' | 'operator-pca' | 'operator-w
   | 'damage-three-attribute-comparison'
   | 'physical-arts-comparison'
   | 'main-enemy-spawns'
+  | 'enemy-defense-resistance-formula'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -356,6 +357,13 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     id: 'enemy-defense-resistance',
     href: '#/analysis/enemies/defense-resistance',
     label: '防御力と術耐性の対応',
+    description: '',
+    section: 'analysis',
+  },
+  {
+    id: 'enemy-defense-resistance-formula',
+    href: '#/analysis/enemies/defense-resistance/formula',
+    label: '防御力・術耐性の対応式',
     description: '',
     section: 'analysis',
   },

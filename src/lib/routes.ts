@@ -53,6 +53,7 @@ export type AppRoute =
   | { view: 'enemy-regression' }
   | { view: 'enemy-immunities' }
   | { view: 'enemy-defense-resistance' }
+  | { view: 'enemy-defense-resistance-formula' }
   | { view: 'enemy-map-coverage' }
   | { view: 'main-enemy-trends' }
   | { view: 'main-enemy-spawns' }
@@ -289,6 +290,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/analysis/enemies/regression') return { view: 'enemy-regression' }
   if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies/immunities')) return { view: 'enemy-immunities' }
   if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies/defense-resistance')) return { view: 'enemy-defense-resistance' }
+  if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies/defense-resistance/formula')) return { view: 'enemy-defense-resistance-formula' }
   if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies/maps')) return { view: 'enemy-map-coverage' }
   if (hash === '#/analysis/enemies/main-trends') return { view: 'main-enemy-trends' }
   if (hash === '#/analysis/enemies/main-spawns') return { view: 'main-enemy-spawns' }
