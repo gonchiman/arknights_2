@@ -179,7 +179,7 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
     }
   }
 
-  async function saveVideo(selectedFilename: string) {
+  async function saveVideo(selectedFilename: string, chooseLocation = true) {
     if (savingRef.current || !videoFormat || !videoOutput || !timing.timing || timingInputError) return
     const controller = new AbortController()
     videoAbort.current = controller
@@ -188,7 +188,7 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
     setCanCancelVideo(true)
     setError(false)
     try {
-      const destination = await selectChartVideoDestination(selectedFilename, picker, videoFormat.extension)
+      const destination = await selectChartVideoDestination(selectedFilename, chooseLocation ? picker : undefined, videoFormat.extension)
       if (destination.type === 'cancelled') return
       controller.signal.throwIfAborted()
       const blob = await renderEnemyRatingComparisonVideo(
@@ -242,6 +242,10 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
     saveDisabled={video && (!videoFormat || !videoOutput || !timing.timing || Boolean(timingInputError))}
     error={video && !videoFormat ? 'このブラウザーは動画の出力に対応していません。' : error}
     onClose={closeDialog} onSave={(name, ratio) => { void (video ? saveVideo(name) : saveImage(name, ratio)) }}
+    additionalSaveAction={video && picker ? {
+      label: 'ダウンロード',
+      onSave: name => { void saveVideo(name, false) },
+    } : undefined}
     options={<div className="enemy-histogram-display-controls">
       {!video && <label className="enemy-histogram-display-toggle">
         <input type="checkbox" checked={Boolean(output)} disabled={saving || !canFixOutputWidth}

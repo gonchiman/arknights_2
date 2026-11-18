@@ -16,7 +16,16 @@ async function waitForLayout(host: HTMLElement, surface: HTMLElement): Promise<v
   let stableFrames = 0
   // Responsive charts can need several renders to fit their caption and dense table rows.
   for (let frame = 0; frame < 30; frame += 1) {
-    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+    // Hidden tabs can suspend animation frames during export preparation.
+    await new Promise<void>((resolve) => {
+      const finish = () => {
+        window.cancelAnimationFrame(animationFrame)
+        window.clearTimeout(timer)
+        resolve()
+      }
+      const animationFrame = window.requestAnimationFrame(finish)
+      const timer = window.setTimeout(finish, 100)
+    })
     if (surface.scrollWidth > surface.clientWidth) host.style.width = `${surface.scrollWidth}px`
     const bounds = surface.getBoundingClientRect()
     const size = `${bounds.width}:${bounds.height}:${surface.scrollWidth}:${surface.scrollHeight}`

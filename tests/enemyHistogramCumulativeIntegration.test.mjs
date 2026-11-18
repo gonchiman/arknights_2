@@ -201,7 +201,11 @@ test('左右の横棒の動画は集計条件と強調を引き継ぎ、縦横�
   }))
   const canvasDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'HTMLCanvasElement')
   const recorderDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'MediaRecorder')
+  const encoderDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'VideoEncoder')
+  const frameDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'VideoFrame')
   try {
+    Object.defineProperty(globalThis, 'VideoEncoder', { configurable: true, value: class {} })
+    Object.defineProperty(globalThis, 'VideoFrame', { configurable: true, value: class {} })
     class Canvas { captureStream() {} }
     Object.defineProperty(globalThis, 'HTMLCanvasElement', { configurable: true, value: Canvas })
     for (const [extension, format] of [['mp4', 'MP4'], ['webm', 'WebM']]) {
@@ -281,6 +285,8 @@ test('左右の横棒の動画は集計条件と強調を引き継ぎ、縦横�
       assert.doesNotMatch(markup, /画像の縦横比|出力幅を1,920 pxに固定/)
     }
     Reflect.deleteProperty(globalThis, 'MediaRecorder')
+    assert.match(renderVideoDialog(), />MP4</)
+    Reflect.deleteProperty(globalThis, 'VideoEncoder')
     const unsupported = renderVideoDialog()
     assert.match(unsupported, /このブラウザーは動画の出力に対応していません。/)
     assert.match(unsupported, /type="submit"[^>]*disabled=""/)
@@ -289,6 +295,10 @@ test('左右の横棒の動画は集計条件と強調を引き継ぎ、縦横�
     else Reflect.deleteProperty(globalThis, 'HTMLCanvasElement')
     if (recorderDescriptor) Object.defineProperty(globalThis, 'MediaRecorder', recorderDescriptor)
     else Reflect.deleteProperty(globalThis, 'MediaRecorder')
+    if (encoderDescriptor) Object.defineProperty(globalThis, 'VideoEncoder', encoderDescriptor)
+    else Reflect.deleteProperty(globalThis, 'VideoEncoder')
+    if (frameDescriptor) Object.defineProperty(globalThis, 'VideoFrame', frameDescriptor)
+    else Reflect.deleteProperty(globalThis, 'VideoFrame')
   }
 })
 
@@ -304,7 +314,11 @@ test('術耐性別の散布図動画は集計条件と点を引き継ぎ、16:9�
   }
   const canvasDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'HTMLCanvasElement')
   const recorderDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'MediaRecorder')
+  const encoderDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'VideoEncoder')
+  const frameDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'VideoFrame')
   try {
+    Object.defineProperty(globalThis, 'VideoEncoder', { configurable: true, value: class {} })
+    Object.defineProperty(globalThis, 'VideoFrame', { configurable: true, value: class {} })
     class Canvas { captureStream() {} }
     Object.defineProperty(globalThis, 'HTMLCanvasElement', { configurable: true, value: Canvas })
     for (const [extension, format] of [['mp4', 'MP4'], ['webm', 'WebM']]) {
@@ -342,6 +356,10 @@ test('術耐性別の散布図動画は集計条件と点を引き継ぎ、16:9�
     else Reflect.deleteProperty(globalThis, 'HTMLCanvasElement')
     if (recorderDescriptor) Object.defineProperty(globalThis, 'MediaRecorder', recorderDescriptor)
     else Reflect.deleteProperty(globalThis, 'MediaRecorder')
+    if (encoderDescriptor) Object.defineProperty(globalThis, 'VideoEncoder', encoderDescriptor)
+    else Reflect.deleteProperty(globalThis, 'VideoEncoder')
+    if (frameDescriptor) Object.defineProperty(globalThis, 'VideoFrame', frameDescriptor)
+    else Reflect.deleteProperty(globalThis, 'VideoFrame')
   }
 })
 
