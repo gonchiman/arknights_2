@@ -9,10 +9,12 @@ import {
   type FormulaSegment,
 } from '../lib/enemyDefenseResistanceFormula'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
+import type { EnemyFormulaChartImageSnapshot } from '../lib/enemyFormulaChartImage'
 import { AnalysisTabs } from './AnalysisTabs'
 import { EnemyAggregationScopeSelector, type EnemyAggregationScope } from './EnemyAggregationScopeSelector'
 import { EnemyAggregationSelector } from './EnemyAggregationSelector'
 import { EnemyDefenseResistanceFormulaChart } from './EnemyDefenseResistanceFormulaChart'
+import { EnemyDefenseResistanceFormulaImageDialog } from './EnemyDefenseResistanceFormulaImageDialog'
 import { EnemyDataContent } from './EnemyPageShared'
 import './DamageCalculator.css'
 import './EnemyAnalysis.css'
@@ -53,16 +55,17 @@ export function EnemyDefenseResistanceFormulaPage() {
     <EnemyDataContent loading={aggregation.loading} error={aggregation.error} onRetry={aggregation.retry}>
       {unavailable && <p role="status">この集計版ではメインストーリーの出現回数を利用できません。</p>}
       {correspondence && (correspondence.points.length > 0
-        ? <FormulaResults data={correspondence} />
+        ? <FormulaResults data={correspondence} versionId={aggregation.selectedId} scopeLabel={scope === 'main' ? 'メインストーリー' : '全体'} />
         : <p role="status">防御力と術耐性の両方が有効な出現データがありません。</p>)}
     </EnemyDataContent>
   </section>
 }
 
-function FormulaResults({ data }: { data: CorrespondenceData }) {
+function FormulaResults({ data, versionId, scopeLabel }: { data: CorrespondenceData; versionId: string; scopeLabel: string }) {
   const [method, setMethod] = useState<CorrespondenceMethod>('exact')
   const [degree, setDegree] = useState<2 | 3>(2)
   const [breakpointDraft, setBreakpointDraft] = useState<string | null>(null)
+  const [imageSnapshot, setImageSnapshot] = useState<EnemyFormulaChartImageSnapshot | null>(null)
   const minimum = data.points[0].x
   const maximum = data.points[data.points.length - 1].x
   const defaultBreakpoints = minimum === maximum ? '' : [1 / 3, 5 / 9, 5 / 6]
@@ -129,9 +132,22 @@ function FormulaResults({ data }: { data: CorrespondenceData }) {
           {method === 'exact' ? `Y = ${NUMBER.format(segment.coefficients[0])}` : formatSegmentEquation(segment, method)}</dd>
       </div>)}</dl>
     </details>}
-    <div className="enemy-formula-legend">
-      <span><i className="enemy-formula-reference-swatch" aria-hidden="true" />累積割合による対応</span>
-      <span><i className="enemy-formula-model-swatch" aria-hidden="true" />{methodLabel}</span>
+    <div className="enemy-formula-chart-toolbar">
+      <div className="enemy-formula-legend">
+        <span><i className="enemy-formula-reference-swatch" aria-hidden="true" />累積割合による対応</span>
+        <span><i className="enemy-formula-model-swatch" aria-hidden="true" />{methodLabel}</span>
+      </div>
+      <button type="button" className="button secondary" disabled={!fit.model}
+        aria-label="対応式のグラフをPNG画像で保存" aria-haspopup="dialog" aria-expanded={imageSnapshot !== null}
+        onClick={() => {
+          if (!fit.model) return
+          setImageSnapshot({
+            points: data.points.map(point => ({ ...point })),
+            model: fit.model,
+            probe: probeValid ? probe : null,
+            versionId, scopeLabel, total: data.total, methodLabel,
+          })
+        }}>画像を保存</button>
     </div>
     <EnemyDefenseResistanceFormulaChart points={data.points} model={fit.model} probe={probeValid ? probe : null} />
     <div className="enemy-formula-probe">
@@ -164,6 +180,7 @@ function FormulaResults({ data }: { data: CorrespondenceData }) {
     <AnalysisTabs tabs={METHODS} activeTab={method} onChange={setMethod} idPrefix={tabsId} label="式を作る方法" />
     {METHODS.map(([key]) => <section key={key} id={`${tabsId}-panel-${key}`} role="tabpanel"
       aria-labelledby={`${tabsId}-tab-${key}`} hidden={method !== key}>{method === key && result}</section>)}
+    {imageSnapshot && <EnemyDefenseResistanceFormulaImageDialog snapshot={imageSnapshot} onClose={() => setImageSnapshot(null)} />}
   </>
 }
 
