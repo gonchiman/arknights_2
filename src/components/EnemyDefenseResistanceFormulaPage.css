@@ -27,6 +27,7 @@
 .enemy-formula-segments dt { color: var(--text-muted); }
 .enemy-formula-segments dd { margin: 0; overflow-wrap: anywhere; }
 .enemy-formula-legend { font-size: 12px; }
+.enemy-formula-chart-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
 .enemy-formula-legend > span { display: inline-flex; align-items: center; gap: 6px; }
 .enemy-formula-legend i { display: inline-block; width: 22px; height: 2px; }
 .enemy-formula-reference-swatch { background: var(--text-muted); }

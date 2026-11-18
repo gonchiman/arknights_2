@@ -7,6 +7,7 @@ interface Props {
   points: readonly CorrespondencePoint[]
   model: CorrespondenceModel | null
   probe: number | null
+  imageSize?: { width: number; height: number }
 }
 
 interface CurvePoint {
@@ -45,23 +46,27 @@ function sampleModel(model: CorrespondenceModel | null): CurvePoint[] {
   })
 }
 
-export function EnemyDefenseResistanceFormulaChart({ points, model, probe }: Props) {
+export function EnemyDefenseResistanceFormulaChart({ points, model, probe, imageSize }: Props) {
   const titleId = useId()
   const descriptionId = useId()
   const containerRef = useRef<HTMLDivElement>(null)
-  const [width, setWidth] = useState(640)
+  const [measuredWidth, setMeasuredWidth] = useState(640)
+  const forImage = imageSize !== undefined
+  const width = imageSize?.width ?? measuredWidth
+  const height = imageSize?.height ?? HEIGHT
   useLayoutEffect(() => {
+    if (forImage) return
     const container = containerRef.current
     if (!container) return
     const measure = () => {
       const measuredWidth = Math.floor(container.clientWidth)
-      if (measuredWidth > 0) setWidth(previous => previous === measuredWidth ? previous : measuredWidth)
+      if (measuredWidth > 0) setMeasuredWidth(previous => previous === measuredWidth ? previous : measuredWidth)
     }
     measure()
     const observer = new ResizeObserver(measure)
     observer.observe(container)
     return () => observer.disconnect()
-  }, [])
+  }, [forImage])
 
   const finitePoints = useMemo(() => points.filter(point => Number.isFinite(point.x) && Number.isFinite(point.y)), [points])
   const samples = useMemo(() => sampleModel(model), [model])
@@ -79,7 +84,7 @@ export function EnemyDefenseResistanceFormulaChart({ points, model, probe }: Pro
   const left = width < 430 ? 58 : 68
   const right = Math.max(left + 1, width - 20)
   const top = 28
-  const bottom = HEIGHT - 50
+  const bottom = height - (forImage ? 28 : 50)
   const x = (value: number) => left + (value - xStart) / (xEnd - xStart) * (right - left)
   const y = (value: number) => bottom - (value - yAxis.lowerLimit) / (yAxis.upperLimit - yAxis.lowerLimit) * (bottom - top)
   const xTickCount = width < 430 ? 3 : 6
@@ -89,8 +94,8 @@ export function EnemyDefenseResistanceFormulaChart({ points, model, probe }: Pro
   const activeProbe = probe !== null && Number.isFinite(probe) && probe >= minimumX && probe <= maximumX
   const hasProbeValue = probeValue !== null && Number.isFinite(probeValue)
 
-  return <div className="enemy-defense-resistance-formula-chart" ref={containerRef}>
-    {finitePoints.length === 0 ? <p className="enemy-formula-chart-empty" role="status">対応する数値データがありません。</p> : <svg className="enemy-formula-chart-svg" width={width} height={HEIGHT} viewBox={`0 0 ${width} ${HEIGHT}`}
+  return <div className={`enemy-defense-resistance-formula-chart${forImage ? ' is-image' : ''}`} ref={containerRef} style={imageSize}>
+    {finitePoints.length === 0 ? <p className="enemy-formula-chart-empty" role="status">対応する数値データがありません。</p> : <svg className="enemy-formula-chart-svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={imageSize}
       role="img" aria-labelledby={titleId} aria-describedby={descriptionId} focusable="false">
       <title id={titleId}>術耐性と対応する防御力</title>
       <desc id={descriptionId}>横軸は術耐性、縦軸は対応する防御力。灰色の階段線は累積割合による対応、青色の線は選択した方法の式です。</desc>
@@ -111,7 +116,7 @@ export function EnemyDefenseResistanceFormulaChart({ points, model, probe }: Pro
       {activeProbe && <line className="enemy-formula-chart-probe" x1={x(probe)} x2={x(probe)} y1={top} y2={bottom} />}
       {activeProbe && hasProbeValue && <circle className="enemy-formula-chart-model-point" cx={x(probe)} cy={y(probeValue)} r={4} />}
       <text className="enemy-formula-chart-axis-title" x={left} y={13}>対応する防御力 Y</text>
-      <text className="enemy-formula-chart-axis-title" x={(left + right) / 2} y={HEIGHT - 8} textAnchor="middle">術耐性 X</text>
+      {!forImage && <text className="enemy-formula-chart-axis-title" x={(left + right) / 2} y={height - 8} textAnchor="middle">術耐性 X</text>}
     </svg>}
   </div>
 }

@@ -58,3 +58,14 @@
   color: var(--text-soft);
   font-size: 12px;
 }
+
+.enemy-defense-resistance-formula-chart.is-image .enemy-formula-chart-tick {
+  fill: #555;
+  font-size: 11px;
+}
+
+.enemy-defense-resistance-formula-chart.is-image .enemy-formula-chart-axis-title {
+  fill: #444;
+  font-size: 12px;
+  font-weight: 700;
+}
