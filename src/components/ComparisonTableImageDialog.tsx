@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { createChartImageFilename, withChartImageAspect } from '../lib/chartImageFilename'
+import { getChartImageRasterSize } from '../lib/chartImageRasterSize'
 import { parseTableImageAspect } from '../lib/tableImageAspect'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
 import { ComparisonTableImageFrame, ComparisonTableImagePreview } from './ComparisonTableImageFrame'
@@ -38,8 +39,17 @@ export function ComparisonTableImageDialog({ snapshot, onClose, options, selecti
   const aspectRatio = parsedAspect ? parsedAspect.width / parsedAspect.height : undefined
   const outputWidth = fixOutputWidth ? fixedOutputWidth : undefined
   const initialWidth = outputWidth === undefined ? IMAGE_WIDTH : outputWidth / 2
+  const output = outputWidth === undefined ? undefined : { width: outputWidth, aspectRatio }
+  let outputError: string | undefined
+  if (output) {
+    try {
+      getChartImageRasterSize({ width: initialWidth, height: 1 }, output)
+    } catch (cause) {
+      outputError = cause instanceof Error ? cause.message : '指定した画像の大きさで保存できません。'
+    }
+  }
   const layoutKey = `${outputWidth ?? 'auto'}:${aspectRatio ?? 'auto'}`
-  const showPreview = !invalidAspect && !selectionError
+  const showPreview = !invalidAspect && !selectionError && !outputError
   const layoutReady = showPreview && readyLayout?.snapshot === snapshot && readyLayout.key === layoutKey
   const onLayoutReady = useCallback(() => {
     setReadyLayout(previous => previous?.snapshot === snapshot && previous.key === layoutKey
@@ -53,7 +63,6 @@ export function ComparisonTableImageDialog({ snapshot, onClose, options, selecti
   ])
   const frameProps = {
     initialWidth,
-    fixedWidth: outputWidth !== undefined,
     ariaLabel: snapshot.title,
     title: snapshot.title,
     footer: snapshot.conditions.join(' · '),
@@ -82,6 +91,7 @@ export function ComparisonTableImageDialog({ snapshot, onClose, options, selecti
         }} />,
         filename: selectedFilename,
         width: initialWidth,
+        output,
         writeBlob: destination.type === 'file' ? destination.write : undefined,
         validateLayout: size => {
           if (exportSize?.width === size.width && exportSize.height === size.height) return
@@ -103,7 +113,7 @@ export function ComparisonTableImageDialog({ snapshot, onClose, options, selecti
     getDefaultFilename={ratio => withChartImageAspect(filename, ratio)}
     aspect={aspect}
     aspectPresets={IMAGE_ASPECT_PRESETS}
-    aspectError={invalidAspect ? '幅と高さは1〜100の整数、縦横比は1:10〜10:1で指定してください。' : undefined}
+    aspectError={invalidAspect ? '幅と高さは1〜100の整数、縦横比は1:10〜10:1で指定してください。' : outputError}
     onAspectChange={next => { setAspect(next); setSaveFailure(null) }}
     canChooseLocation={Boolean(picker)}
     saving={saving}
@@ -127,7 +137,7 @@ export function ComparisonTableImageDialog({ snapshot, onClose, options, selecti
       label: 'ダウンロード',
       onSave: selectedFilename => { void saveImage(selectedFilename, false) },
     } : undefined}
-    preview={showPreview && <ComparisonTableImagePreview {...frameProps}
+    preview={showPreview && <ComparisonTableImagePreview key={layoutKey} {...frameProps} output={output}
       onLayoutReady={onLayoutReady} onLayoutError={onLayoutError} />}
   />
 }

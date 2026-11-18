@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { getChartImageRasterSize } from '../src/lib/chartImageRasterSize.ts'
 import { getTableImageDimensions, parseTableImageAspect } from '../src/lib/tableImageAspect.ts'
 
 test('比率の整数入力を検証し、同じ比率を最小の整数にそろえる', () => {
@@ -21,33 +22,24 @@ test('自動では表の自然な高さと元の幅を維持する', () => {
   assert.deepEqual(widths, [960])
 })
 
-test('幅固定では16:9と端数のある縦横比を指定幅で描画する', () => {
-  const fixed = { initialWidth: 960, fixedWidth: true, measureHeight: () => 400 }
-  assert.deepEqual(getTableImageDimensions({ ...fixed, aspect: { width: 16, height: 9 } }),
-    { width: 960, height: 540 })
-  assert.deepEqual(getTableImageDimensions({ ...fixed, aspect: { width: 7, height: 4 } }),
-    { width: 960, height: 549 })
-})
-
-test('幅固定の縦横比「自動」は指定幅で測った表の高さを使う', () => {
-  assert.deepEqual(getTableImageDimensions({
-    initialWidth: 960, fixedWidth: true, aspect: null, measureHeight: width => {
-      assert.equal(width, 960)
-      return 713.25
-    },
-  }), { width: 960, height: 714 })
-})
-
-test('幅固定で表の高さが指定比率に収まらないときは幅を広げずエラーにする', () => {
-  const widths: number[] = []
-  assert.throws(() => getTableImageDimensions({
-    initialWidth: 960, fixedWidth: true, aspect: { width: 16, height: 9 },
-    measureHeight: width => {
-      widths.push(width)
-      return 541
-    },
-  }))
-  assert.deepEqual(widths, [960])
+test('25行の表全体を収めてから出力幅を1920pxに揃え、自動・指定比率を維持する', () => {
+  const contentHeight = 25 * 24 + 90
+  const cases = [
+    { aspect: { width: 16, height: 9 }, expected: { width: 1920, height: 1080 } },
+    { aspect: { width: 35, height: 17 }, expected: { width: 1920, height: 933 } },
+    { aspect: null, expected: { width: 1920, height: 1380 } },
+  ]
+  for (const { aspect, expected } of cases) {
+    const layout = getTableImageDimensions({
+      initialWidth: 960, aspect, measureHeight: () => contentHeight,
+    })
+    assert.ok(layout.width >= 960)
+    assert.ok(layout.height >= contentHeight)
+    if (aspect) assert.equal(layout.width * aspect.height, layout.height * aspect.width)
+    const aspectRatio = aspect ? aspect.width / aspect.height : undefined
+    assert.deepEqual(getChartImageRasterSize(layout, { width: 1920, aspectRatio }), expected)
+    assert.equal(Math.round(layout.height * expected.width / layout.width), expected.height)
+  }
 })
 
 test('内容が指定比率の高さに収まらない場合は幅を広げ、文字を欠落させず収める', () => {
