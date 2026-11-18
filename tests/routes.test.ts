@@ -67,6 +67,7 @@ test('集計版を含むURLの直接アクセスでも敵の集計ページを�
   const routes = [
     ['#/analysis/enemies', 'enemy-analysis'],
     ['#/analysis/enemies/defense-resistance', 'enemy-defense-resistance'],
+    ['#/analysis/enemies/defense-resistance/formula', 'enemy-defense-resistance-formula'],
     ['#/analysis/enemies/maps', 'enemy-map-coverage'],
   ] as const
   for (const [path, view] of routes) {
@@ -145,6 +146,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['enemy-regression', 'enemy-regression'],
       ['enemy-immunities', 'enemy-immunities'],
       ['enemy-defense-resistance', 'enemy-defense-resistance'],
+      ['enemy-defense-resistance-formula', 'enemy-defense-resistance-formula'],
       ['enemy-map-coverage', 'enemy-map-coverage'],
       ['main-enemy-trends', 'main-enemy-trends'],
       ['main-enemy-spawns', 'main-enemy-spawns'],

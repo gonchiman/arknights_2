@@ -1,0 +1,58 @@
+.enemy-formula-page { gap: 14px; }
+.enemy-formula-page .analysis-tabs.detail-tabs { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.enemy-formula-source,
+.enemy-formula-options,
+.enemy-formula-legend,
+.enemy-formula-errors { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; }
+.enemy-formula-source { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.enemy-formula-results { min-width: 0; display: grid; gap: 12px; padding: 16px; border: 1px solid var(--border); background: var(--surface); }
+.enemy-formula-muted { color: var(--text-muted); }
+.enemy-formula-options { gap: 6px 8px; font-size: 13px; }
+.enemy-formula-options input,
+.enemy-formula-options select,
+.enemy-formula-probe input { min-width: 0; max-width: 100%; padding: 5px 7px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface); color: var(--text); font: inherit; }
+.enemy-formula-options input { width: 150px; }
+.enemy-formula-equation { min-width: 0; display: grid; gap: 7px; padding: 12px; border: 1px solid var(--border); background: var(--surface-soft); }
+.enemy-formula-equation-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+.enemy-formula-equation-heading h2 { margin: 0; font-size: 13px; font-weight: 500; }
+.enemy-formula-equation-heading span { color: var(--text-muted); font-size: 12px; }
+.enemy-formula-math { font-size: 16px; line-height: 1.6; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.enemy-formula-math sub { font-size: 11px; }
+.enemy-formula-interval { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.enemy-formula-error { margin: 0; color: var(--danger); font-size: 12px; }
+.enemy-formula-segments { min-width: 0; font-size: 12px; }
+.enemy-formula-segments summary { padding: 3px 0; }
+.enemy-formula-segments dl { margin: 8px 0 0; display: grid; gap: 6px; font-variant-numeric: tabular-nums; }
+.enemy-formula-segments dl > div { display: grid; grid-template-columns: 125px minmax(0, 1fr); gap: 8px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+.enemy-formula-segments dt { color: var(--text-muted); }
+.enemy-formula-segments dd { margin: 0; overflow-wrap: anywhere; }
+.enemy-formula-legend { font-size: 12px; }
+.enemy-formula-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.enemy-formula-legend i { display: inline-block; width: 22px; height: 2px; }
+.enemy-formula-reference-swatch { background: var(--text-muted); }
+.enemy-formula-model-swatch { background: var(--link); }
+.enemy-formula-probe { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; padding-top: 12px; border-top: 1px solid var(--border); }
+.enemy-formula-probe label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.enemy-formula-probe input { width: 85px; }
+.enemy-formula-probe dl { display: flex; flex-wrap: wrap; gap: 12px 28px; margin: 0; }
+.enemy-formula-probe dt { font-size: 12px; color: var(--text-muted); }
+.enemy-formula-probe dd { margin: 2px 0 0; font-size: 17px; font-variant-numeric: tabular-nums; }
+.enemy-formula-errors { font-size: 12px; font-variant-numeric: tabular-nums; align-items: baseline; }
+.enemy-formula-errors strong { font-weight: 500; }
+
+@media (max-width: 600px) {
+  .enemy-formula-page .analysis-tabs.detail-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .enemy-formula-page .analysis-tabs .detail-tab:nth-child(4) { border-left: 0; }
+  .enemy-formula-page .analysis-tabs .detail-tab:nth-child(n + 4) { border-top: 1px solid var(--border); }
+  .enemy-formula-results { padding: 12px; }
+  .enemy-formula-segments dl > div { grid-template-columns: 1fr; gap: 2px; }
+}
+
+@media (pointer: coarse) {
+  .enemy-formula-options input,
+  .enemy-formula-options select,
+  .enemy-formula-probe input,
+  .enemy-formula-segments summary { min-height: 44px; }
+  .enemy-formula-options input,
+  .enemy-formula-probe input { font-size: 16px; }
+}

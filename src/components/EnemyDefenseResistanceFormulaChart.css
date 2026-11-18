@@ -1,0 +1,60 @@
+.enemy-defense-resistance-formula-chart {
+  min-width: 0;
+  width: 100%;
+}
+
+.enemy-formula-chart-svg {
+  display: block;
+  width: 100%;
+  height: 290px;
+  overflow: visible;
+}
+
+.enemy-formula-chart-tick,
+.enemy-formula-chart-axis-title {
+  fill: var(--text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.enemy-formula-chart-axis-title {
+  fill: var(--text-soft);
+  font-weight: 500;
+}
+
+.enemy-formula-chart-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.enemy-formula-chart-zero,
+.enemy-formula-chart-tick-line {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.enemy-formula-chart-reference {
+  stroke: var(--text-muted);
+  stroke-width: 1.8;
+}
+
+.enemy-formula-chart-model {
+  stroke: var(--link);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.enemy-formula-chart-reference-point { fill: var(--text-muted); }
+.enemy-formula-chart-model-point { fill: var(--link); }
+.enemy-formula-chart-probe {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.enemy-formula-chart-empty {
+  margin: 0;
+  padding: 20px 16px;
+  color: var(--text-soft);
+  font-size: 12px;
+}

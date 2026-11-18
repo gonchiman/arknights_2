@@ -87,6 +87,7 @@ export function EnemyDefenseResistancePage() {
           <EnemyAggregationSelector state={aggregation} />
           <EnemyAggregationScopeSelector scope={scope} onChange={setScope} disabled={!data} />
         </div>
+        <a className="button secondary enemy-page-link" href={`#/analysis/enemies/defense-resistance/formula?aggregationVersion=${encodeURIComponent(aggregation.selectedId)}`}>対応式へ</a>
       </div>
     </header>
     <EnemyDataContent loading={aggregation.loading} error={aggregation.error} onRetry={aggregation.retry}>
