@@ -11,20 +11,25 @@ import type { ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
 import { ComparisonTableImageFrame, ComparisonTableImagePreview } from './ComparisonTableImageFrame'
 import { ChartFrameImagePreview } from './DamageCalculatorThreeAttributeChartImageDialog'
 import { ENEMY_RESISTANCE_COMBINED_CHART_HEIGHT, EnemyResistanceCombinedImage } from './EnemyResistanceCombinedImage'
-import { ENEMY_RESISTANCE_THRESHOLD_AXIS_TITLE, EnemyResistanceThresholdScatter } from './EnemyResistanceThresholdScatter'
+import {
+  ENEMY_RESISTANCE_THRESHOLD_AXIS_TITLE, EnemyResistanceThresholdScatter, type EnemyResistanceChartType,
+} from './EnemyResistanceThresholdScatter'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 
-const MODES = [['table', '表'], ['scatter', '散布図'], ['combined', '散布図＋表']] as const
+const MODES = [
+  ['table', '表'], ['scatter', '散布図'], ['bar', '棒グラフ'], ['combined', '散布図＋表'], ['bar-combined', '棒グラフ＋表'],
+] as const
 type ImageMode = typeof MODES[number][0]
 type ImageSize = { width: number; height: number }
 const TABLE_WIDTH = 720
 const FIXED_OUTPUT_WIDTH = 1920
 export const ENEMY_RESISTANCE_ASPECT_PRESETS = ['16:9', '4:3', '1:1', '2:1', '9:16'] as const
 export const ENEMY_RESISTANCE_SCATTER_TITLE = '防御力と術耐性の対応（散布図）'
+export const ENEMY_RESISTANCE_BAR_TITLE = '防御力と術耐性の対応（棒グラフ）'
 const AUTO_ASPECT: ChartImageAspectSettings = { preset: 'auto', width: '16', height: '9' }
 const COMBINED_ASPECT: ChartImageAspectSettings = { ...AUTO_ASPECT, preset: '16:9' }
-const SIZE_ERROR = 'この縦横比では散布図と表を画像に収められません。縦横比を変更してください。'
-const LAYOUT_ERROR = '散布図と表の配置を確認できませんでした。'
+const SIZE_ERROR = 'この縦横比ではグラフと表を画像に収められません。縦横比を変更してください。'
+const LAYOUT_ERROR = 'グラフと表の配置を確認できませんでした。'
 
 export interface EnemyResistanceScatterSnapshot {
   rows: readonly EnemyResistanceThreshold[]
@@ -33,19 +38,20 @@ export interface EnemyResistanceScatterSnapshot {
 }
 
 export interface EnemyResistanceImageSnapshot extends EnemyResistanceScatterSnapshot {
-  initialMode: 'table' | 'scatter'
+  initialMode: 'table' | EnemyResistanceChartType
   table: ComparisonTableImageSnapshot
   rankColumns: readonly string[]
 }
 
-export function getEnemyResistanceScatterFrame(snapshot: EnemyResistanceScatterSnapshot, aspectRatio?: number): ChartImageFrameProps {
+export function getEnemyResistanceScatterFrame(snapshot: EnemyResistanceScatterSnapshot, aspectRatio?: number,
+  chartType: EnemyResistanceChartType = 'scatter'): ChartImageFrameProps {
   return {
-    title: ENEMY_RESISTANCE_SCATTER_TITLE,
+    title: chartType === 'bar' ? ENEMY_RESISTANCE_BAR_TITLE : ENEMY_RESISTANCE_SCATTER_TITLE,
     conditions: snapshot.chartConditions.join('・'),
     axisTitle: ENEMY_RESISTANCE_THRESHOLD_AXIS_TITLE,
     naturalChartHeight: 334,
     aspectRatio,
-    children: ({ height }) => <EnemyResistanceThresholdScatter rows={snapshot.rows} imageHeight={height} />,
+    children: ({ height }) => <EnemyResistanceThresholdScatter rows={snapshot.rows} chartType={chartType} imageHeight={height} />,
   }
 }
 
@@ -61,14 +67,15 @@ export function EnemyResistanceImageDialog({ snapshot, onClose }: {
   const [saveError, setSaveError] = useState<boolean | string>(false)
   const saveInProgress = useRef(false)
   const tableOnly = mode === 'table'
-  const combined = mode === 'combined'
+  const combined = mode === 'combined' || mode === 'bar-combined'
+  const chartType: EnemyResistanceChartType = mode === 'bar' || mode === 'bar-combined' ? 'bar' : 'scatter'
   const aspect = aspects[mode] ?? (combined ? COMBINED_ASPECT : AUTO_ASPECT)
   const exactAspect = aspect.preset === 'auto' ? null : parseTableImageAspect(aspect.width, aspect.height)
   const aspectRatio = exactAspect ? exactAspect.width / exactAspect.height : undefined
   const output = fixOutputWidth ? { width: FIXED_OUTPUT_WIDTH, aspectRatio } : undefined
   const layoutKey = `${mode}:${aspectRatio ?? 'auto'}:${output?.width ?? 'auto'}`
   const layoutError = fit?.key === layoutKey ? fit.error : ''
-  const layoutReady = mode === 'scatter' || (fit?.key === layoutKey && !fit.error)
+  const layoutReady = (!tableOnly && !combined) || (fit?.key === layoutKey && !fit.error)
   const onLayoutReady = useCallback(() => {
     setFit(previous => previous?.key === layoutKey && !previous.error ? previous : { key: layoutKey, error: '' })
   }, [layoutKey])
@@ -77,10 +84,11 @@ export function EnemyResistanceImageDialog({ snapshot, onClose }: {
     setFit(previous => previous?.key === layoutKey && previous.error === error ? previous : { key: layoutKey, error })
   }, [layoutKey])
   const picker = getChartImageSavePicker()
-  const title = tableOnly ? snapshot.table.title : combined ? '防御力と術耐性の対応' : ENEMY_RESISTANCE_SCATTER_TITLE
+  const chartTitle = chartType === 'bar' ? ENEMY_RESISTANCE_BAR_TITLE : ENEMY_RESISTANCE_SCATTER_TITLE
+  const title = tableOnly ? snapshot.table.title : combined ? '防御力と術耐性の対応' : chartTitle
   const filenameParts = [
     ...(tableOnly ? snapshot.table.filenameConditions ?? snapshot.table.conditions : snapshot.chartFilenameParts),
-    ...(combined ? ['散布図＋表'] : []),
+    ...(combined ? [chartType === 'bar' ? '棒グラフ＋表' : '散布図＋表'] : []),
     ...(output ? [`幅${output.width}px`] : []),
     ...(combined ? snapshot.rankColumns : []),
   ]
@@ -100,8 +108,8 @@ export function EnemyResistanceImageDialog({ snapshot, onClose }: {
     aspectRatio,
     exactAspect: exactAspect ?? undefined,
     children: ({ width, height }) => <EnemyResistanceCombinedImage width={width} height={height} rows={snapshot.rows}
-      table={snapshot.table.table} onLayout={onLayoutReady} onLayoutError={onLayoutError} />,
-  } : getEnemyResistanceScatterFrame(snapshot, aspectRatio)
+      chartType={chartType} table={snapshot.table.table} onLayout={onLayoutReady} onLayoutError={onLayoutError} />,
+  } : getEnemyResistanceScatterFrame(snapshot, aspectRatio, chartType)
   const chartSize = getChartImageLayout(chartFrame)
   const aspectError = aspect.preset !== 'auto' && !exactAspect
     ? '幅と高さは1〜100の整数、縦横比は1:10〜10:1で指定してください。'
@@ -114,7 +122,7 @@ export function EnemyResistanceImageDialog({ snapshot, onClose }: {
     saveInProgress.current = true
     setSaving(true)
     setSaveError(false)
-    let exportReady = mode === 'scatter'
+    let exportReady = !tableOnly && !combined
     let exportError: unknown
     let exportSize: ImageSize | undefined
     const markReady = () => { exportReady = true; exportError = undefined }
@@ -127,7 +135,7 @@ export function EnemyResistanceImageDialog({ snapshot, onClose }: {
         ...chartFrame,
         onLayout: (size: ImageSize) => { exportSize = size },
         children: ({ width, height }: ImageSize) => <EnemyResistanceCombinedImage width={width} height={height}
-          rows={snapshot.rows} table={snapshot.table.table} onLayout={markReady} onLayoutError={markError} />,
+          rows={snapshot.rows} chartType={chartType} table={snapshot.table.table} onLayout={markReady} onLayoutError={markError} />,
       } : chartFrame
       await saveComparisonChartImage({
         chart: tableOnly

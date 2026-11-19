@@ -29,7 +29,7 @@ const enemies = observations.map(({ value }, index) => ({
 }))
 
 let server, Plot, Panel, useControls, RatingImage, RatingPlot, RatingSaveDialog, getRatingFilename
-let ScatterVideoDialog
+let ScatterVideoDialog, ThresholdChart
 before(async () => {
   server = await createServer({
     configFile: false, plugins: [react(), {
@@ -56,6 +56,8 @@ before(async () => {
   ;({ EnemyRatingComparisonPlot: RatingPlot } = await server.ssrLoadModule('/src/components/EnemyRatingComparisonPlot.tsx'))
   ;({ EnemyResistanceScatterVideoDialog: ScatterVideoDialog }
     = await server.ssrLoadModule('/src/components/EnemyResistanceScatterVideoDialog.tsx'))
+  ;({ EnemyResistanceThresholdScatter: ThresholdChart }
+    = await server.ssrLoadModule('/src/components/EnemyResistanceThresholdScatter.tsx'))
 })
 after(async () => { await server?.close() })
 
@@ -299,6 +301,26 @@ test('左右の横棒の動画は集計条件と強調を引き継ぎ、縦横�
     else Reflect.deleteProperty(globalThis, 'VideoEncoder')
     if (frameDescriptor) Object.defineProperty(globalThis, 'VideoFrame', frameDescriptor)
     else Reflect.deleteProperty(globalThis, 'VideoFrame')
+  }
+})
+
+test('術耐性別の棒グラフは0と欠損を区別し、全階級を保って画面と画像に表示する', () => {
+  const rows = [
+    { resistance: 0, defense: 0, percentage: 100, rankCutoff: 10 },
+    { resistance: 50, defense: 350, percentage: 10, rankCutoff: 1 },
+    { resistance: 100, defense: null, percentage: 0, rankCutoff: 0 },
+  ]
+  for (const imageHeight of [undefined, 334]) {
+    const markup = renderToStaticMarkup(createElement(ThresholdChart, { rows, chartType: 'bar', imageHeight }))
+    assert.match(markup, /術耐性と対応する防御力の棒グラフ/)
+    assert.match(markup, /術耐性0以上、対応する防御力0/)
+    assert.match(markup, /術耐性50以上、対応する防御力350/)
+    assert.match(markup, /術耐性100以上、該当なし/)
+    assert.equal(markup.match(/class="enemy-resistance-threshold-bar"/g)?.length, 2)
+    const labels = [...markup.matchAll(/class="enemy-resistance-threshold-bar-value"[^>]*>(.*?)<\/span>/g)]
+      .map(([, label]) => label)
+    assert.deepEqual(labels, ['0', '350', '—'])
+    assert.doesNotMatch(markup, /data-resistance-video-point|data-resistance-video-missing/)
   }
 })
 
