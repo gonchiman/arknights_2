@@ -99,6 +99,7 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const [rankScope, setRankScope] = useState<typeof RANK_SCOPES[number][0]>('main')
   const [resultView, setResultView] = useState<typeof RESULT_VIEWS[number][0]>('chart')
   const [rankChartType, setRankChartType] = useState<typeof RANK_CHART_TYPES[number][0]>('line')
+  const [selectedBarResistances, setSelectedBarResistances] = useState<readonly number[] | null>(null)
   const [showRankRatings, setShowRankRatings] = useState(false)
   const [showRankPercentage, setShowRankPercentage] = useState(false)
   const [image, setImage] = useState<ResultImage | null>(null)
@@ -146,9 +147,13 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
   const output = reference?.output
   const errors = comparison?.result.errors ?? []
   const invalid = errors.length > 0
+  const pairedRankRows = comparison?.basis === 'rank'
+    ? comparison.result.rows.filter(row => row.defense !== null) : []
+  const rankChartRows = rankChartType === 'bar' && selectedBarResistances !== null
+    ? pairedRankRows.filter(row => selectedBarResistances.includes(row.resistance)) : pairedRankRows
   const canSaveImage = comparison !== null && errors.length === 0
     && (comparison.basis === 'rating' || (resultView === 'chart'
-      ? comparison.result.rows.some(row => row.physical !== null || row.arts !== null)
+      ? rankChartRows.some(row => row.physical !== null || row.arts !== null)
       : comparison.result.rows.length > 0))
   const conditionInputs: GuardInput[] = (reference?.fields ?? []).filter(field => !field.locked)
     .map(field => ({ ...field, defaultValue: field.value ?? (field.kind === 'number' ? Number.NaN : '') }))
@@ -185,17 +190,19 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
     if (resultView === 'chart') {
       const chartConditions = [...skillConditions, ...basisConditions, ...stageConditions,
         ...(enemyCount > 1 ? [`敵${enemyCount}体`] : []), ...penetrationConditions, '主攻撃（1体あたり）']
-      const title = `${subject} 属性比較グラフ（${METRIC_LABELS.perAttack}）`
+      const title = `${subject}比較（1回あたり）`
       if (comparison.basis === 'rank') {
-        const rows = structuredClone(comparison.result.rows)
+        const rows = structuredClone(rankChartRows)
         const chartType = rankChartType
         const showRatings = showRankRatings
         const chartLabel = chartType === 'bar' ? '集合棒グラフ' : '折れ線グラフ'
+        const resistanceConditions = chartType === 'bar' && rows.length !== pairedRankRows.length
+          ? [`術耐性${rows.map(row => formatNumber(row.resistance)).join('・')}`] : []
         setImage({ view: 'chart', snapshot: {
           title, axisTitle: '', conditions: chartConditions,
           additionalChartHeight: (showRatings ? ATTRIBUTE_RANK_RATING_EXTRA_HEIGHT : 0)
             + (showRankPercentage ? ATTRIBUTE_RANK_PERCENTAGE_ROW_HEIGHT : 0),
-          filenameParts: [...skillConditions, ...basisConditions, chartLabel,
+          filenameParts: [...skillConditions, ...basisConditions, chartLabel, ...resistanceConditions,
             ...(showRankPercentage ? [ATTRIBUTE_RANK_PERCENTAGE_LABEL] : []),
             ...battleConditions, ...notes, ...(showRatings ? ['評価表示'] : [])],
           legend: <DamageCalculatorThreeAttributeRankLegend chartType={chartType} forImage />,
@@ -376,6 +383,27 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
           </>}
         </div>
       </div>
+      {basis === 'rank' && resultView === 'chart' && rankChartType === 'bar' && pairedRankRows.length > 0 &&
+        <fieldset className="damage-three-attribute-resistances">
+          <legend>表示術耐性</legend>
+          <div className="damage-three-attribute-resistance-actions">
+            <button type="button" className="button secondary" disabled={rankChartRows.length === pairedRankRows.length}
+              onClick={() => setSelectedBarResistances(null)}>すべて表示</button>
+            <button type="button" className="button secondary" disabled={rankChartRows.length === 0}
+              onClick={() => setSelectedBarResistances([])}>すべて非表示</button>
+          </div>
+          <div className="damage-three-attribute-resistance-buttons" role="group" aria-label="グラフに表示する術耐性">
+            {pairedRankRows.map(({ resistance }) => {
+              const active = selectedBarResistances === null || selectedBarResistances.includes(resistance)
+              return <button key={resistance} type="button" className="button secondary"
+                aria-label={`術耐性 ${formatNumber(resistance)}`} aria-pressed={active}
+                onClick={() => setSelectedBarResistances(previous => {
+                  const values = previous ?? pairedRankRows.map(row => row.resistance)
+                  return values.includes(resistance) ? values.filter(value => value !== resistance) : [...values, resistance]
+                })}>{formatNumber(resistance)}</button>
+            })}
+          </div>
+        </fieldset>}
       {errors.length > 0 && <div className="damage-two-unavailable damage-three-attribute-error" role="status">
         {errors.map(reason => <div key={reason}>{reason}</div>)}
       </div>}
@@ -389,8 +417,10 @@ export function DamageCalculatorThreeAttributePage({ rows, loading, initialSelec
           この集計版ではメインストーリーの出現回数を利用できません
         </p>}
         {comparison.result.rows.length > 0 && (resultView === 'chart'
-          ? <DamageCalculatorThreeAttributeRankChart rows={comparison.result.rows} chartType={rankChartType}
-              showRatings={showRankRatings} showRankPercentage={showRankPercentage} />
+          ? rankChartType === 'bar' && pairedRankRows.length > 0 && rankChartRows.length === 0
+            ? <p role="status">表示する術耐性がありません。</p>
+            : <DamageCalculatorThreeAttributeRankChart rows={rankChartRows} chartType={rankChartType}
+                showRatings={showRankRatings} showRankPercentage={showRankPercentage} />
           : <DamageCalculatorThreeAttributeRankTable rows={comparison.result.rows} />)}
         {rankPairs?.length === 0 && <p role="status">集計対象の出現データがありません。</p>}
       </>}

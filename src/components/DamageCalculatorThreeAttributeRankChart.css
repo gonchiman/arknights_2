@@ -73,6 +73,13 @@
   --attribute-rank-axis-min: 5rem;
 }
 
+.damage-three-attribute-rank-chart.is-bar .damage-three-attribute-rank-chart-layout {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: calc(var(--attribute-rank-columns) * 220px + var(--attribute-rank-axis-min));
+  margin-inline: auto;
+}
+
 .damage-three-attribute-rank-chart-scale,
 .damage-three-attribute-rank-chart-plot { position: relative; }
 
@@ -153,7 +160,7 @@
 .damage-three-attribute-rank-chart-bar {
   position: absolute;
   bottom: 0;
-  width: min(32%, 28px);
+  width: min(32%, 40px);
   background: var(--series-color);
 }
 
