@@ -80,8 +80,15 @@ export function ChartVideoTimingEditor<Phase extends string>({
   function commitDuration(event: FocusEvent<HTMLInputElement>, field: DurationField<Phase>) {
     const { value, validity } = event.currentTarget
     if (disabled || editing?.field !== field) return
-    const next = field === 'finish' ? { ...draft, finishSeconds: value }
+    let next = field === 'finish' ? { ...draft, finishSeconds: value }
       : { ...draft, overrides: { ...draft.overrides, [field]: value || undefined } }
+    if (draft.animatedPhase !== undefined && (field === draft.animatedPhase || field === 'finish')) {
+      const instant = field !== 'finish' && value !== '' && Number(value) === 0
+      const overrides = { ...draft.overrides }
+      delete overrides[draft.animatedPhase]
+      if (instant) overrides[draft.animatedPhase] = value
+      next = { ...draft, finishSeconds: instant ? '' : value, overrides }
+    }
     const error = validity.badInput
       ? field === 'finish' ? '描画完了までの時間は0秒より長くしてください。' : '0以上の秒数を入力してください。'
       : parseChartVideoTiming(next, definition).error
@@ -95,7 +102,8 @@ export function ChartVideoTimingEditor<Phase extends string>({
 
   function durationInput(field: DurationField<Phase>, value: string) {
     const currentError = inputError?.field === field
-    return <input type="number" min={0} step="any" inputMode="decimal" disabled={disabled}
+    const fixed = Boolean(draft.animatedPhase && field !== 'finish' && field !== 'hold' && field !== draft.animatedPhase)
+    return <input type="number" min={0} step="any" inputMode="decimal" disabled={disabled || fixed}
       value={editing?.field === field ? editing.value : value}
       aria-invalid={currentError || undefined} aria-describedby={currentError ? errorId : undefined}
       onChange={event => {
@@ -118,7 +126,9 @@ export function ChartVideoTimingEditor<Phase extends string>({
     if (tempo === undefined) return
     setEditing(null)
     onInputError(null)
-    onChange({ ...draft, tempo, finishSeconds: '' })
+    const overrides = { ...draft.overrides }
+    if (draft.animatedPhase !== undefined) delete overrides[draft.animatedPhase]
+    onChange({ ...draft, tempo, finishSeconds: '', overrides })
   }
 
   function selectPhaseTempo(phase: Phase, tempo: EnemyRatingVideoPhaseTempo) {
@@ -154,7 +164,7 @@ export function ChartVideoTimingEditor<Phase extends string>({
           <div className="enemy-rating-video-phase-tempo" role="group" aria-label={phaseLabels[phase] + 'のテンポ'}>
             <span aria-hidden="true">短い</span>
             {ENEMY_RATING_VIDEO_PHASE_TEMPOS.map((tempo, tempoIndex) =>
-              <button key={tempo} type="button" className="button secondary" disabled={disabled}
+              <button key={tempo} type="button" className="button secondary" disabled={disabled || Boolean(draft.animatedPhase)}
                 aria-label={`${tempo}（${phaseTempoNumberLabels[tempoIndex]}）`}
                 aria-pressed={!exact && (draft.phaseTempos?.[phase] ?? 3) === tempo}
                 onClick={() => selectPhaseTempo(phase, tempo)}>
@@ -164,9 +174,9 @@ export function ChartVideoTimingEditor<Phase extends string>({
           </div>
           <div className="enemy-rating-video-order-actions">
             <button type="button" className="button secondary" aria-label={phaseLabels[phase] + 'を上へ'}
-              disabled={disabled || index === 0} onClick={event => movePhase(index, -1, event.currentTarget)}>↑</button>
+              disabled={disabled || Boolean(draft.animatedPhase) || index === 0} onClick={event => movePhase(index, -1, event.currentTarget)}>↑</button>
             <button type="button" className="button secondary" aria-label={phaseLabels[phase] + 'を下へ'}
-              disabled={disabled || index === draft.order.length - 1} onClick={event => movePhase(index, 1, event.currentTarget)}>↓</button>
+              disabled={disabled || Boolean(draft.animatedPhase) || index === draft.order.length - 1} onClick={event => movePhase(index, 1, event.currentTarget)}>↓</button>
           </div>
         </li>
       })}
@@ -202,7 +212,7 @@ export function ChartVideoTimingEditor<Phase extends string>({
       <div className="enemy-rating-video-effect-options">
         <label>
           文字の出し方
-          <select value={draft.textMode} disabled={disabled} onChange={event =>
+          <select value={draft.textMode} disabled={disabled || Boolean(draft.animatedPhase)} onChange={event =>
             onChange({ ...draft, textMode: event.target.value as EnemyRatingVideoTextMode })}>
             <option value="fade">フェード</option>
             <option value="instant">一斉に表示</option>
@@ -220,7 +230,7 @@ export function ChartVideoTimingEditor<Phase extends string>({
         </label>
         <label>
           {guideLabel}
-          <select value={draft.guideMode} disabled={disabled} onChange={event =>
+          <select value={draft.guideMode} disabled={disabled || Boolean(draft.animatedPhase)} onChange={event =>
             onChange({ ...draft, guideMode: event.target.value as EnemyRatingVideoGuideMode })}>
             <option value="grow">伸びる</option>
             <option value="stagger">順に表示</option>

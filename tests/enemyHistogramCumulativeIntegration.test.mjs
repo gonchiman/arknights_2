@@ -150,7 +150,7 @@ test('防御力・術耐性の画像保存は選択ランクを初期状態で�
   assert.match(highlightCheckbox(markup), /<input\b(?=[^>]*\btype="checkbox")(?=[^>]*\bchecked="")[^>]*>/)
   assert.equal(markup.match(/class="enemy-rating-comparison-highlight"/g)?.length, 2)
   assert.match(markup, /value="[^"]*_評価B\+-A強調_[^"]*_比率自動\.png"/)
-  assert.doesNotMatch(markup, /棒の出し方|縦線の出し方/)
+  assert.doesNotMatch(markup, /棒の出し方|縦線の出し方|全体を生成|棒だけ伸ばす/)
   const aspectOptions = getAspectOptions(markup, '画像')
   assert.deepEqual(aspectOptions.map(({ value }) => value), ['auto', '16:9', '2:1', '21:9', '3:1', 'custom'])
   assert.deepEqual(aspectOptions.filter(({ selected }) => selected), [{ value: 'auto', selected: true, label: '指定なし' }])
@@ -188,6 +188,12 @@ test('左右の横棒は外側の数値を階級の割合に切り替え、保�
   assert.match(withChartImageAspect(getRatingFilename({ ...snapshot, outputWidth: 1920 }), 16 / 7),
     /_幅1920px_全敵_左右の横棒_比率16x7\.png$/)
   assert.match(getRatingFilename({ ...snapshot, sideValue: 'rank' }), /_評価D強調_階級割合_全敵_左右の横棒\.png$/)
+  const barsOnlyFilename = withChartImageAspect(getRatingFilename({
+    ...snapshot, outputWidth: 1920, videoDuration: 5, videoAnimation: 'barsOnly',
+  }), 16 / 9)
+  assert.match(barsOnlyFilename, /棒だけ伸ばす/)
+  assert.match(barsOnlyFilename, /_5秒_比率16x9\.png$/)
+  assert.doesNotMatch(filename, /棒だけ伸ばす/)
   for (const layout of ['GROUPED', 'CUMULATIVE']) {
     assert.equal(getRatingFilename({ ...snapshot, layout, sideValue: 'rank' }), getRatingFilename({ ...snapshot, layout }))
   }
@@ -217,6 +223,11 @@ test('左右の横棒の動画は集計条件と強調を引き継ぎ、縦横�
       const markup = renderVideoDialog()
       assert.match(markup, /動画を保存/)
       assert.match(markup, /完成図/)
+      const animationSelector = markup.match(/<div\b[^>]*role="group" aria-label="動画の演出"[^>]*>(.*?)<\/div>/)?.[1]
+      assert.ok(animationSelector, '動画の生成方法を選べる')
+      assert.deepEqual([...animationSelector.matchAll(/<button\b[^>]*aria-pressed="(true|false)"[^>]*>([^<]+)<\/button>/g)]
+        .map(([, selected, label]) => [selected, label]),
+        [['true', '全体を生成'], ['false', '棒だけ伸ばす']])
       assert.match(markup, new RegExp(`>${format}<`))
       const aspectOptions = getAspectOptions(markup, '動画')
       assert.deepEqual(aspectOptions.map(({ value }) => value).sort(), ['auto', '16:7', '16:9', '2:1', '21:9', '3:1', 'custom'].sort())
@@ -349,6 +360,7 @@ test('術耐性別の散布図動画は集計条件と点を引き継ぎ、16:9�
       } })
       const markup = renderToStaticMarkup(createElement(ScatterVideoDialog, { snapshot, onClose() {} }))
       assert.match(markup, /動画を保存/)
+      assert.doesNotMatch(markup, /全体を生成|棒だけ伸ばす/)
       assert.match(markup, new RegExp(`>${format}<`))
       const aspect = getAspectOptions(markup, '動画')
       assert.deepEqual(aspect.filter(({ selected }) => selected), [{ value: '16:9', selected: true, label: '16:9' }])

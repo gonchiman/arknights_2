@@ -17,8 +17,8 @@ import {
   type EnemyRatingComparison, type EnemyRatingComparisonLayout, type EnemyRatingComparisonSideValue,
 } from '../lib/enemyRatingComparison'
 import {
-  createEnemyRatingVideoTimingDraft, ENEMY_RATING_VIDEO_PHASES, parseEnemyRatingVideoTiming,
-  type EnemyRatingVideoPhase, type EnemyRatingVideoTiming,
+  createEnemyRatingBarsOnlyDraft, createEnemyRatingVideoTimingDraft, ENEMY_RATING_VIDEO_PHASES, parseEnemyRatingVideoTiming,
+  type EnemyRatingVideoPhase, type EnemyRatingVideoTiming, type EnemyRatingVideoTimingDraft,
 } from '../lib/enemyRatingVideoTiming'
 import { ChartImageFrame } from './ChartImageFrame'
 import { CHART_VIDEO_ASPECT_PRESETS, ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
@@ -53,8 +53,12 @@ const PLOT_HEIGHT: Record<EnemyRatingComparisonLayout, number> = {
 const formatCount = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
 
 export function getEnemyRatingComparisonImageFilename({
-  layout, scopeLabel, countLabel, aggregationVersion, selectedRanks, sideValue, outputWidth, videoDuration,
-}: Omit<EnemyRatingComparisonImageSnapshot, 'data' | 'coverage'> & { outputWidth?: number; videoDuration?: number }): string {
+  layout, scopeLabel, countLabel, aggregationVersion, selectedRanks, sideValue, outputWidth, videoDuration, videoAnimation,
+}: Omit<EnemyRatingComparisonImageSnapshot, 'data' | 'coverage'> & {
+  outputWidth?: number
+  videoDuration?: number
+  videoAnimation?: 'barsOnly'
+}): string {
   const rankLabel = RATING_ORDER.filter(rank => selectedRanks?.includes(rank)).join('-')
   return createChartImageFilename('敵', [
     aggregationVersion && `集計${aggregationVersion.id}`,
@@ -65,6 +69,7 @@ export function getEnemyRatingComparisonImageFilename({
     outputWidth && `幅${outputWidth}px`,
     scopeLabel,
     ENEMY_RATING_COMPARISON_LAYOUTS.find((option) => option.key === layout)?.label,
+    videoAnimation === 'barsOnly' && '棒だけ伸ばす',
     videoDuration !== undefined && `${Number(videoDuration.toPrecision(12))}秒`,
   ])
 }
@@ -118,6 +123,8 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
   const [error, setError] = useState(false)
   const [canCancelVideo, setCanCancelVideo] = useState(false)
   const [timingDraft, setTimingDraft] = useState(createEnemyRatingVideoTimingDraft)
+  const wholeTimingDraft = useRef<EnemyRatingVideoTimingDraft | null>(null)
+  const barsOnly = timingDraft.animatedPhase === 'bars'
   const timing = useMemo(() => parseEnemyRatingVideoTiming(timingDraft), [timingDraft])
   const [timingInputError, setTimingInputError] = useState<EnemyRatingVideoDurationError | null>(null)
   const [activeVideoPhase, setActiveVideoPhase] = useState<EnemyRatingVideoPhase | null>(null)
@@ -146,8 +153,30 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
   const filename = getEnemyRatingComparisonImageFilename({
     ...outputSnapshot, outputWidth: output?.width,
     videoDuration: video ? timing.duration ?? undefined : undefined,
+    videoAnimation: video && barsOnly ? 'barsOnly' : undefined,
   })
   const picker = getChartImageSavePicker()
+
+  function changeVideoAnimation(onlyBars: boolean) {
+    if (saving || onlyBars === barsOnly) return
+    if (onlyBars) {
+      if (timingInputError) return
+      const next = createEnemyRatingBarsOnlyDraft(timingDraft)
+      if (!next) return
+      wholeTimingDraft.current = timingDraft
+      setTimingDraft(next)
+    } else {
+      setTimingDraft(wholeTimingDraft.current ?? createEnemyRatingVideoTimingDraft())
+      wholeTimingDraft.current = null
+    }
+    setTimingInputError(null)
+    setActiveVideoPhase(null)
+  }
+
+  function updateTimingDraft(next: EnemyRatingVideoTimingDraft) {
+    if (!next.animatedPhase) wholeTimingDraft.current = null
+    setTimingDraft(next)
+  }
 
   function getDefaultFilename(ratio?: number) {
     const imageName = withChartImageAspect(filename, ratio)
@@ -259,8 +288,18 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
       </label>
     </div>}
     preview={video ? <div className="enemy-rating-video-preview">
+      <div className="enemy-rating-video-animation">
+        <span>演出</span>
+        <div className="enemy-rating-video-animation-options" role="group" aria-label="動画の演出">
+          <button type="button" className="button secondary" aria-pressed={!barsOnly} disabled={saving}
+            onClick={() => changeVideoAnimation(false)}>全体を生成</button>
+          <button type="button" className="button secondary" aria-pressed={barsOnly}
+            disabled={saving || !timing.timing || Boolean(timingInputError)}
+            onClick={() => changeVideoAnimation(true)}>棒だけ伸ばす</button>
+        </div>
+      </div>
       {videoOutput && preview}
-      <EnemyRatingVideoTimingEditor draft={timingDraft} onChange={setTimingDraft} parsed={timing}
+      <EnemyRatingVideoTimingEditor key={barsOnly ? 'barsOnly' : 'whole'} draft={timingDraft} onChange={updateTimingDraft} parsed={timing}
         inputError={timingInputError} onInputError={setTimingInputError} activePhase={activeVideoPhase}
         sideValue={snapshot.sideValue} disabled={saving} />
     </div> : validAspect && preview} />

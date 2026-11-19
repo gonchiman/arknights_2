@@ -44,6 +44,7 @@ export type ChartVideoTiming<Phase extends string> = Readonly<Record<Phase, Read
 
 export interface ChartVideoTimingDraft<Phase extends string> {
   order: Phase[]
+  animatedPhase?: Phase
   tempo: EnemyRatingVideoTempo
   phaseTempos?: Partial<Record<Phase, EnemyRatingVideoPhaseTempo>>
   finishSeconds: string
@@ -125,15 +126,24 @@ export function parseChartVideoTiming<Phase extends string>(
       definition.phases.some(phase => !orderedPhases.has(phase))) {
     return { timing: null, finish: null, duration: null, error: '表示順を確認してください。' }
   }
+  if (draft.animatedPhase !== undefined && !definition.phases.includes(draft.animatedPhase)) {
+    return { timing: null, finish: null, duration: null, error: '描画対象を確認してください。' }
+  }
+  const timingDefinition = draft.animatedPhase === undefined ? definition
+    : { ...definition, phases: [draft.animatedPhase] }
 
   const requestedFinish = draft.finishSeconds.trim()
   const durations = {} as Record<ChartVideoTimingField<Phase>, number>
   const automatic: Phase[] = []
   let fixedDrawingTime = 0
   for (const field of [...definition.phases, 'hold' as const]) {
+    if (field !== 'hold' && draft.animatedPhase !== undefined && field !== draft.animatedPhase) {
+      durations[field] = 0
+      continue
+    }
     const override = draft.overrides[field]?.trim()
     if (!override) {
-      durations[field] = getChartVideoDefaultDuration(field, requestedFinish ? 'standard' : draft.tempo, definition)
+      durations[field] = getChartVideoDefaultDuration(field, requestedFinish ? 'standard' : draft.tempo, timingDefinition)
       if (field !== 'hold') automatic.push(field)
       continue
     }
@@ -180,7 +190,8 @@ export function parseChartVideoTiming<Phase extends string>(
   let start = 0
   for (const phase of draft.order) {
     const duration = durations[phase]
-    phases[phase] = { start, duration }
+    const instant = draft.animatedPhase !== undefined && phase !== draft.animatedPhase
+    phases[phase] = { start: instant ? 0 : start, duration }
     start += duration
   }
   const timing = { ...phases, hold: durations.hold, textMode: draft.textMode,
@@ -194,6 +205,26 @@ export function parseChartVideoTiming<Phase extends string>(
 
 export function parseEnemyRatingVideoTiming(draft: EnemyRatingVideoTimingDraft): ParsedEnemyRatingVideoTiming {
   return parseChartVideoTiming(draft, ENEMY_RATING_VIDEO_DEFINITION)
+}
+
+export function createEnemyRatingBarsOnlyDraft(draft: EnemyRatingVideoTimingDraft): EnemyRatingVideoTimingDraft | null {
+  const parsed = parseEnemyRatingVideoTiming(draft)
+  if (!parsed.timing) return null
+  return {
+    ...draft,
+    order: [...draft.order.filter(phase => phase !== 'bars'), 'bars'],
+    animatedPhase: 'bars',
+    phaseTempos: draft.phaseTempos && { ...draft.phaseTempos },
+    finishSeconds: parsed.finish > 0 ? String(parsed.finish) : '',
+    overrides: {
+      title: '0', axes: '0', ranks: '0', values: '0',
+      ...(draft.overrides.hold !== undefined ? { hold: draft.overrides.hold } : {}),
+      ...(parsed.finish === 0 ? { bars: '0' } : {}),
+    },
+    textMode: 'instant',
+    barMode: 'grow',
+    guideMode: 'stagger',
+  }
 }
 
 export function getEnemyRatingVideoBarStep(
