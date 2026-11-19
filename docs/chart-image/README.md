@@ -234,7 +234,7 @@ await saveComparisonChartImage({
 | 敵統計：累積分布 | [enemyWeightedEcdf.ts](../../src/lib/enemyWeightedEcdf.ts) |
 | 敵統計：分布比較 | [enemyDistributionComparison.ts](../../src/lib/enemyDistributionComparison.ts) |
 | 敵統計：防御力・術耐性の評価別分布 | [EnemyRatingComparisonImage.tsx](../../src/components/EnemyRatingComparisonImage.tsx) |
-| 防御力と術耐性の対応：術耐性別の散布図、散布図＋表 | [EnemyResistanceImageDialog.tsx](../../src/components/EnemyResistanceImageDialog.tsx) |
+| 防御力と術耐性の対応：術耐性別の散布図・棒グラフ、各グラフ＋表 | [EnemyResistanceImageDialog.tsx](../../src/components/EnemyResistanceImageDialog.tsx) |
 | 敵統計：ヒートマップ | [enemyJointImage.ts](../../src/lib/enemyJointImage.ts) |
 | 敵統計：術耐性の円グラフ・100%横棒 | [enemyThresholdComparison.ts](../../src/lib/enemyThresholdComparison.ts) |
 | DC3属性比較：評価別の範囲、出現順位の折れ線・集合棒 | [DamageCalculatorThreeAttributePage.tsx](../../src/components/DamageCalculatorThreeAttributePage.tsx) |
@@ -244,7 +244,7 @@ await saveComparisonChartImage({
 
 敵の統計分析で集計範囲に「メインストーリー」を選んだ場合は、画像の条件と既定名に集計範囲を記載する。
 
-敵統計の防御力・術耐性の評価別分布と、術耐性別の画像保存（「表」「散布図」「散布図＋表」）では、出力幅を1,920 pxに固定できる。縦横比の指定があればその比率からPNGの高さを求め、指定なしでは内容と見出しを含む画像の比率を使う。プレビューとPNGで同じ寸法を使い、固定幅が有効なときは既定名に `幅1920px` を加える。
+敵統計の防御力・術耐性の評価別分布と、術耐性別の画像保存（「表」「散布図」「棒グラフ」「散布図＋表」「棒グラフ＋表」）では、出力幅を1,920 pxに固定できる。縦横比の指定があればその比率からPNGの高さを求め、指定なしでは内容と見出しを含む画像の比率を使う。プレビューとPNGで同じ寸法を使い、固定幅が有効なときは既定名に `幅1920px` を加える。
 
 敵のヒストグラムで累積割合の縦線を表示した場合は、ヒストグラムとスルトS3との合成画像の既定名に「累積75%」のように指定割合を記載する。
 
@@ -302,7 +302,13 @@ const baseFilename = createChartImageFilename(prefix, parts)
 
 [術耐性別の散布図](../../src/components/EnemyResistanceThresholdScatter.tsx)は、画面と同じ点・数値ラベルを共通フレームで保存する。下軸名をフレームに渡し、画像と既定名に集計版と集計範囲を入れる。[確認用PNG](examples/enemy-resistance-threshold-scatter-v12-main-16x9.png)は「防御力と術耐性の対応」で `v12`・「メインストーリー」・「術耐性別」・「散布図」を選び、「画像を保存」から16:9で保存したもの。術耐性0の点と術耐性100以上の「該当なし」、術耐性50と60の防御力300と1,200を確認できる。
 
-「散布図＋表」は [EnemyResistanceCombinedImage](../../src/components/EnemyResistanceCombinedImage.tsx) で、左に散布図、右に表を約60:40で並べる。共通のタイトルと集計条件を一度だけ表示し、横軸名は散布図の直下に置く。表は保存画面を開いた時点の表示列で全11行を描画する。16:9を初期値とし、指定時は画像全体を指定の整数比に合わせる。左右の配置はプレビューとPNGで共通とする。
+「術耐性別」の「棒グラフ」は、散布図と同じ対応データ・縦軸・直接ラベルを使う。棒と横軸の術耐性を、欠損を含めた全階級の中央に配置する。防御力0は高さ0の棒と「0」のラベル、該当なしは棒を描かず「—」のラベルで区別する。画像名のタイトルにも「棒グラフ」を記載する。
+
+[棒グラフの確認用PNG](examples/enemy-resistance-threshold-bars-v12-all-16x9.png)は `v12`・「全体」・「術耐性別」・「棒グラフ」で、16:9・幅1,920px固定として生成したもの。術耐性0の「0」、術耐性50の350、術耐性60の1,000、術耐性100の「—」を確認できる。確認用PNGは保存先だけを模擬し、アプリの描画・PNG生成処理で作成した。
+
+「散布図＋表」「棒グラフ＋表」は [EnemyResistanceCombinedImage](../../src/components/EnemyResistanceCombinedImage.tsx) で、左に選択したグラフ、右に表を約60:40で並べる。共通のタイトルと集計条件を一度だけ表示し、横軸名はグラフの直下に置く。表は保存画面を開いた時点の表示列で全11行を描画する。16:9を初期値とし、指定時は画像全体を指定の整数比に合わせる。左右の配置はプレビューとPNGで共通とする。
+
+[棒グラフと表の確認用PNG](examples/enemy-resistance-bars-table-v12-all-width1920-16x7.png)は同じ集計条件で順位の2列をオフにし、「棒グラフ＋表」、16:7・幅1,920px固定で生成した1,920×840pxの画像。左右の値と欠損の一致を確認できる。
 
 [横並びの確認用PNG](examples/enemy-resistance-chart-table-v12-main-16x9.png)は「防御力と術耐性の対応」で `v12`・「メインストーリー」・「術耐性別」を選び、表の「出現順位（%）」と「出現順位の境目（位）」をオンにしてから「画像を保存」→「散布図＋表」で保存したもの。図と表で術耐性50と60の値が一致し、術耐性100の欠損が表に残ることを確認できる。
 
