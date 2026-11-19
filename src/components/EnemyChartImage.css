@@ -29,6 +29,15 @@
 
 .enemy-chart-image-preview { display: grid; gap: 8px; min-width: 0; }
 .enemy-rating-video-preview { display: grid; gap: 12px; min-width: 0; }
+.enemy-rating-video-animation,
+.enemy-rating-video-animation-options { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.enemy-rating-video-animation { font-size: 13px; }
+.enemy-rating-video-animation-options .button { min-height: 32px; }
+.enemy-rating-video-animation-options .button[aria-pressed="true"] {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--surface);
+}
 .enemy-chart-image-preview-heading { display: flex; justify-content: space-between; gap: 12px; color: var(--text-muted); font-size: 12px; }
 .enemy-chart-image-preview-heading.is-video { align-items: center; }
 .enemy-chart-video-preview-controls {
@@ -52,6 +61,7 @@
 .enemy-chart-image-preview-size { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 
 @media (pointer: coarse) {
+  .enemy-rating-video-animation-options .button { min-height: 44px; }
   .enemy-distribution-panel .enemy-chart-save-button { min-height: 44px; }
   .enemy-chart-video-preview-controls .button { min-height: 44px; }
 }

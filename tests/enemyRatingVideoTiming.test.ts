@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
-  createEnemyRatingVideoTimingDraft, ENEMY_RATING_VIDEO_PHASES, ENEMY_RATING_VIDEO_PHASE_TEMPOS, ENEMY_RATING_VIDEO_TEMPOS,
+  createEnemyRatingBarsOnlyDraft, createEnemyRatingVideoTimingDraft,
+  ENEMY_RATING_VIDEO_PHASES, ENEMY_RATING_VIDEO_PHASE_TEMPOS, ENEMY_RATING_VIDEO_TEMPOS,
   getEnemyRatingVideoDefaultDuration,
   getEnemyRatingVideoBarStep, parseEnemyRatingVideoTiming, retimeEnemyRatingVideoStep, retimeEnemyRatingVideoText,
   type EnemyRatingVideoTiming,
@@ -246,4 +247,88 @@ test('不正な表示順・秒数・全体尺では書き出し条件を作ら�
   const zero = { title: '0', axes: '0', ranks: '0', bars: '0', values: '0', hold: '0' }
   assert.equal(parseEnemyRatingVideoTiming({ ...draft, overrides: zero }).timing, null)
   assert.equal(parseEnemyRatingVideoTiming({ ...draft, overrides: { title: '1e308', hold: '1e308' } }).timing, null)
+})
+
+test('棒だけ伸ばす設定は個別調整済みの描画時間と保持時間を引き継ぎ、元の設定を変更しない', () => {
+  const original = {
+    ...createEnemyRatingVideoTimingDraft(),
+    order: ['values', 'bars', 'ranks', 'axes', 'title'] as const,
+    overrides: { title: '.2', axes: '.7', ranks: '.4', bars: '1.2', values: '.5', hold: ' 1.250 ' },
+    phaseTempos: { title: 4, bars: 5 } as const,
+    textMode: 'fade' as const,
+    barMode: 'staggerGrow' as const,
+    guideMode: 'grow' as const,
+  }
+  const draft = { ...original, order: [...original.order] }
+  const previous = structuredClone(draft)
+  const parsed = parseEnemyRatingVideoTiming(draft)
+  const barsOnly = createEnemyRatingBarsOnlyDraft(draft)
+  assert.ok(parsed.timing && barsOnly)
+  const result = parseEnemyRatingVideoTiming(barsOnly)
+  assert.ok(result.timing)
+  closeTo(result.finish, parsed.finish)
+  closeTo(result.duration, parsed.duration)
+  assert.equal(result.timing.hold, parsed.timing.hold)
+  assert.equal(barsOnly.overrides.hold, ' 1.250 ')
+  assert.equal(barsOnly.animatedPhase, 'bars')
+  assert.equal(result.timing.textMode, 'instant')
+  assert.equal(result.timing.barMode, 'grow')
+  assert.deepEqual(result.timing.bars, { start: 0, duration: parsed.finish })
+  for (const phase of ['title', 'axes', 'ranks', 'values'] as const) {
+    assert.deepEqual(result.timing[phase], { start: 0, duration: 0 })
+    assert.deepEqual(retimeEnemyRatingVideoText(result.timing, phase, 1, .2), { start: 0, duration: 0 })
+  }
+  assert.deepEqual(getEnemyRatingVideoBarStep(result.timing, 0, 6), result.timing.bars)
+  assert.deepEqual(getEnemyRatingVideoBarStep(result.timing, 5, 6), result.timing.bars)
+  assert.deepEqual(draft, previous)
+  assert.notEqual(barsOnly.order, draft.order)
+  assert.notEqual(barsOnly.overrides, draft.overrides)
+  assert.notEqual(barsOnly.phaseTempos, draft.phaseTempos)
+})
+
+test('棒だけ伸ばす設定では全体のテンポや描画完了秒数をすべて棒の描画に使う', () => {
+  const barsOnly = createEnemyRatingBarsOnlyDraft(createEnemyRatingVideoTimingDraft())
+  assert.ok(barsOnly)
+  for (const tempo of ['veryShort', 'standard', 'slow20'] as const) {
+    const parsed = parseEnemyRatingVideoTiming({ ...barsOnly, tempo, finishSeconds: '' })
+    assert.ok(parsed.timing)
+    assert.equal(parsed.timing.bars.duration, { veryShort: 2.5, standard: 5, slow20: 20 }[tempo])
+  }
+  const explicit = parseEnemyRatingVideoTiming({ ...barsOnly, finishSeconds: '8', overrides: { hold: '2' } })
+  assert.ok(explicit.timing)
+  assert.deepEqual(explicit.timing.bars, { start: 0, duration: 8 })
+  assert.equal(explicit.finish, 8)
+  assert.equal(explicit.duration, 10)
+
+  const manual = parseEnemyRatingVideoTiming({ ...barsOnly, finishSeconds: '', overrides: { bars: '3.5', hold: '2' } })
+  assert.ok(manual.timing)
+  assert.deepEqual(manual.timing.bars, { start: 0, duration: 3.5 })
+  assert.equal(manual.duration, 5.5)
+  assert.equal(parseEnemyRatingVideoTiming({ ...barsOnly, finishSeconds: '8', overrides: { bars: '3.5' } }).timing, null)
+})
+
+test('棒以外は表示順によらず0秒から表示し、描画時間0秒でも完成図の保持を引き継ぐ', () => {
+  const barsOnly = createEnemyRatingBarsOnlyDraft(createEnemyRatingVideoTimingDraft())
+  assert.ok(barsOnly)
+  const reordered = parseEnemyRatingVideoTiming({ ...barsOnly, order: ['bars', 'title', 'axes', 'ranks', 'values'] })
+  assert.ok(reordered.timing)
+  assert.deepEqual(reordered.timing.values, { start: 0, duration: 0 })
+  const instant = createEnemyRatingBarsOnlyDraft({
+    ...createEnemyRatingVideoTimingDraft(),
+    overrides: { title: '0', axes: '0', ranks: '0', bars: '0', values: '0', hold: '2' },
+  })
+  assert.ok(instant)
+  const result = parseEnemyRatingVideoTiming(instant)
+  assert.ok(result.timing)
+  assert.equal(result.finish, 0)
+  assert.equal(result.duration, 2)
+  assert.deepEqual(result.timing.bars, { start: 0, duration: 0 })
+})
+
+test('棒だけ伸ばす設定へ変換する前に元の秒数と表示順を検証する', () => {
+  const draft = createEnemyRatingVideoTimingDraft()
+  assert.equal(createEnemyRatingBarsOnlyDraft({ ...draft, overrides: { bars: '-1' } }), null)
+  assert.equal(createEnemyRatingBarsOnlyDraft({ ...draft, finishSeconds: 'abc' }), null)
+  assert.equal(createEnemyRatingBarsOnlyDraft({ ...draft, order: ['bars', 'bars', 'axes', 'ranks', 'values'] }), null)
+  assert.equal(parseEnemyRatingVideoTiming({ ...draft, animatedPhase: 'unknown' as 'bars' }).timing, null)
 })
