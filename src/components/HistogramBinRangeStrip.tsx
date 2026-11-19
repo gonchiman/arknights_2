@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { getHistogramBinRangeStripLayout, type HistogramBinRangeStripLayout } from '../lib/histogramBinRangeStrip'
+import { getHistogramBinRangeStripLayout, getHistogramBinRangeWrappedLines, type HistogramBinRangeStripLayout } from '../lib/histogramBinRangeStrip'
 import { ChartStripCell } from './ChartStripCell'
 
 export { getHistogramBinRangeStripLayout } from '../lib/histogramBinRangeStrip'
@@ -21,7 +21,7 @@ export function useHistogramBinRangeStripLayout(labels: readonly (readonly strin
     if (!enabled || !probe) return
     let active = true
     const currentLabels = JSON.parse(labelKey) as string[][]
-    const texts = [...new Set(currentLabels.flatMap(lines => [lines.join(''), ...lines]))]
+    const texts = [...new Set(currentLabels.flatMap(lines => [lines.join(''), ...lines, ...getHistogramBinRangeWrappedLines(lines)]))]
     const measure = () => {
       if (!active) return
       const context = document.createElement('canvas').getContext('2d')
@@ -62,13 +62,13 @@ export function HistogramBinRangeStrip({ layout, plotLeft, plotRight, top }: His
       x={plotLeft - 8} y={top + layout.height / 2 + 4} textAnchor="end">階級</text>
     {layout.labels.map((lines, index) => {
       const left = plotLeft + index * cellWidth
-      const labelY = lines.length > 1 ? top + 16 : top + layout.height / 2 + 4
+      const labelY = top + Math.floor(layout.height / 2 + 4 - (lines.length - 1) * 15 / 2)
       return <g key={index} data-bin-range-index={index}>
         <ChartStripCell left={left} width={cellWidth} top={top} height={layout.height}
           leftInset={index > 0 ? cellInset : 0} rightInset={index < layout.labels.length - 1 ? cellInset : 0}
           label={lines[0]} labelY={labelY} />
-        {lines.length > 1 && <text className="chart-strip-label" data-chart-image-ink="true"
-          x={left + cellWidth / 2} y={labelY + 15} textAnchor="middle">{lines[1]}</text>}
+        {lines.slice(1).map((line, lineIndex) => <text key={lineIndex} className="chart-strip-label" data-chart-image-ink="true"
+          x={left + cellWidth / 2} y={labelY + (lineIndex + 1) * 15} textAnchor="middle">{line}</text>)}
       </g>
     })}
   </g>

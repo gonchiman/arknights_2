@@ -30,6 +30,24 @@ test('a single oversized cell keeps the entire strip on the existing tick fallba
   assert.equal(getHistogramBinRangeStripLayout(Array.from({ length: 100 }, () => ['0〜', '10']), 220), null)
 })
 
+test('a range marker can move to a third line without splitting numeric boundaries', () => {
+  const labels = [['-0.5〜', '-0.1'], ['0.1〜', '0.5'], ['0.5超']]
+  const original = structuredClone(labels)
+  const layout = getHistogramBinRangeStripLayout(labels, 66, measure)
+  assert.deepEqual(layout, { labels: [['-0.5', '〜', '-0.1'], ['0.1', '〜', '0.5'], ['0.5', '超']], height: 56 })
+  assert.deepEqual(labels, original, 'reflow keeps the source boundaries unchanged')
+  assert.equal(layout.labels.map(parts => parts.join('')).join('|'), labels.map(parts => parts.join('')).join('|'))
+  assert.ok(layout.labels.flat().every(text => measure(text) <= 66 / labels.length - 6))
+  assert.equal(getHistogramBinRangeStripLayout(labels, 65.9, measure), null,
+    'when a complete number cannot fit, preserve the existing tick fallback instead of splitting its digits')
+})
+
+test('the three-line estimate also splits a one-piece overflow label and retains all cells', () => {
+  const layout = getHistogramBinRangeStripLayout([['0〜', '10'], ['10〜', '20'], ['20超']], 78)
+  assert.deepEqual(layout, { labels: [['0', '〜', '10'], ['10', '〜', '20'], ['20', '超']], height: 56 })
+  assert.deepEqual(getHistogramBinRangeStripLayout([['10', '超']], 20), { labels: [['10', '超']], height: 40 })
+})
+
 test('empty labels, invalid geometry and invalid measurements do not create a strip', () => {
   for (const labels of [[], [[]], [['']], [[' ']], [['0'], []], [['0', '1', '2']]]) {
     assert.equal(getHistogramBinRangeStripLayout(labels, 500, measure), null)
@@ -89,6 +107,27 @@ test('two-line strips preserve decimal, negative and overflow text inside their 
   for (const text of ['-1.5〜', '-0.1', '0.1〜', '1.5', '1,000.25超']) assert.ok(markup.includes(`>${text}</text>`))
 })
 
+test('three-line strips keep fixed slot widths and horizontal text inside the taller band', () => {
+  const layout = { labels: [['900', '〜', '950'], ['950', '〜', '1,000'], ['1,000', '超']], height: 56 }
+  const markup = render(layout)
+  const fills = tags(markup, 'rect', 'chart-strip-fill')
+  assert.equal(fills.length, 3)
+  assert.deepEqual(fills.map(fill => [+fill.x, +fill.width]), [[50, 98.5], [151.5, 97], [251.5, 98.5]])
+  assert.ok(fills.every(fill => fill.y === '12' && fill.height === '56'))
+  const labels = tags(markup, 'text', 'chart-strip-label')
+  assert.equal(labels.length, 8)
+  assert.deepEqual(labels.slice(0, 3).map(label => +label.x), [100, 100, 100])
+  assert.deepEqual(labels.slice(3, 6).map(label => +label.x), [200, 200, 200])
+  for (const offset of [0, 3]) {
+    const baselines = labels.slice(offset, offset + 3).map(label => +label.y)
+    assert.equal(baselines[1] - baselines[0], 15)
+    assert.equal(baselines[2] - baselines[1], 15)
+  }
+  assert.ok(labels.every(label => +label.y - 11 >= 12 && +label.y + 3 <= 68))
+  for (const text of ['900', '950', '1,000', '〜', '超']) assert.ok(markup.includes(`>${text}</text>`))
+  assert.doesNotMatch(markup, /rotate\(|font-size=|textLength=|lengthAdjust=|overflow|scroll/)
+})
+
 test('invalid component bounds do not produce SVG coordinates', () => {
   const layout = { labels: [['0〜1']], height: 24 }
   for (const extra of [{ plotRight: 50 }, { plotRight: 49 }, { plotLeft: NaN }, { plotRight: Infinity }, { top: NaN }]) {
@@ -108,6 +147,7 @@ test('SSR uses the conservative estimate and the existing enabled switch', () =>
   const renderHook = props => renderToStaticMarkup(createElement(HookFixture, props))
   assert.match(renderHook({ enabled: true, width: 80 }), /data-histogram-range-strip="bottom"/)
   assert.match(renderHook({ enabled: true, width: 30 }), /height="40"/)
+  assert.match(renderHook({ enabled: true, width: 21 }), /height="56"/)
   assert.doesNotMatch(renderHook({ enabled: true, width: 15 }), /data-histogram-range-strip=/)
   assert.doesNotMatch(renderHook({ enabled: false, width: 80 }), /data-histogram-range-strip=/)
 })
