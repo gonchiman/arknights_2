@@ -31,6 +31,9 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
+      - name: Discover new Wiki operators
+        continue-on-error: true
+        run: npm run refresh:operator-wiki-roster
       - name: Collect and archive Wiki views
         if: env.RECOVER_YESTERDAY != 'true'
         run: npm run refresh:operator-wiki-views
@@ -51,6 +54,9 @@ jobs:
         id: save
         run: |
           git add -- public/data/operator-wiki-views.json public/data/operator-wiki-views-history/
+          if [ -f public/data/operator-wiki-roster.json ]; then
+            git add -- public/data/operator-wiki-roster.json
+          fi
           if [ -f public/data/operator-wiki-comments.json ]; then
             git add -- public/data/operator-wiki-comments.json
           fi

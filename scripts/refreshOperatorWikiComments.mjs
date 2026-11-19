@@ -47,7 +47,20 @@ function readLegacySignatureDate(html) {
   return isTimestamp(date + 'T' + hour + ':' + minute + ':' + second + '+09:00') ? date : null
 }
 
-export function extractPageBody(html, expectedTitle, isCatalog = false, readTitle = wikiPageTitle) {
+function readWikiCanonicalTitle(address) {
+  try {
+    const url = new URL(address, WIKI_ROOT)
+    if (url.origin + url.pathname !== WIKI_ROOT || url.username || url.password || url.hash || !url.search) return null
+    const query = url.search.slice(1)
+    if (/[=&]/u.test(query)) return null
+    const title = decodeURIComponent(query.replaceAll('+', ' ')).normalize('NFC')
+    return title.trim() && !/[\u0000-\u001f\u007f=]/u.test(title) ? title : null
+  } catch {
+    return null
+  }
+}
+
+export function extractPageBody(html, expectedTitle, isCatalog = false, readTitle = readWikiCanonicalTitle) {
   const clean = html.replace(/<!--[^]*?(?:-->|$)|<(script|style)\b[^>]*>[^]*?<\/\1>/gi, '')
   assertOperatorWikiPageTitle(clean, expectedTitle)
   const head = clean.split(/<\/head>/i, 1)[0]
@@ -356,13 +369,15 @@ export async function refreshOperatorWikiComments({
   now = () => new Date(),
 } = {}) {
   const observedAt = now()
+  let mapping
+  let current
+  let missingIds
   if (ifStale) {
     const { throughDate } = commentWindow(observedAt)
     const saved = await readFile(snapshotPath, 'utf8').catch(error => {
       if (error.code === 'ENOENT') return null
       throw error
     })
-    let current
     if (saved !== null) {
       try {
         current = parseOperatorWikiCommentSnapshot(JSON.parse(saved.replace(/^\uFEFF/, '')))
@@ -371,13 +386,42 @@ export async function refreshOperatorWikiComments({
       }
     }
     if (current && current.throughDate >= throughDate) {
-      console.log('Wiki コメントは ' + current.throughDate + ' まで更新済みです。')
-      return
+      if (current.throughDate === throughDate) {
+        const source = await readFile(viewsPath, 'utf8').catch(error => {
+          if (error.code === 'ENOENT') return null
+          throw error
+        })
+        if (source !== null) {
+          mapping = parseOperatorWikiViewSnapshot(JSON.parse(source.replace(/^\uFEFF/, '')))
+          const savedEntries = new Map(current.entries.map(entry => [entry.operatorId, entry]))
+          missingIds = new Set(mapping.entries.filter(entry => {
+            const savedEntry = savedEntries.get(entry.operatorId)
+            return savedEntry?.wikiUrl !== wikiUrl('コメント/' + wikiPageTitle(entry.wikiUrl))
+              || (savedEntry.coveredFrom === null && savedEntry.total === null)
+          }).map(entry => entry.operatorId))
+        }
+      }
+      if (!missingIds?.size) {
+        console.log('Wiki コメントは ' + current.throughDate + ' まで更新済みです。')
+        return
+      }
     }
   }
-  const mapping = JSON.parse((await readFile(viewsPath, 'utf8')).replace(/^\uFEFF/, ''))
-  const operatorIds = operatorId ? new Set([operatorId]) : undefined
-  const snapshot = parseOperatorWikiCommentSnapshot(await collect(mapping, { operatorIds, now: () => observedAt }))
+  mapping ??= JSON.parse((await readFile(viewsPath, 'utf8')).replace(/^\uFEFF/, ''))
+  const operatorIds = operatorId ? new Set([operatorId]) : missingIds
+  const collected = parseOperatorWikiCommentSnapshot(await collect(mapping, { operatorIds, now: () => observedAt }))
+  let snapshot = collected
+  if (missingIds) {
+    if (collected.throughDate !== current.throughDate) {
+      throw new Error('補完対象の日付が変わったため、Wiki コメントを保存しませんでした。')
+    }
+    const usable = collected.entries.filter(entry =>
+      missingIds.has(entry.operatorId) && (entry.coveredFrom !== null || entry.total !== null))
+    if (!usable.length) return
+    const entries = new Map(current.entries.map(entry => [entry.operatorId, entry]))
+    for (const entry of usable) entries.set(entry.operatorId, entry)
+    snapshot = parseOperatorWikiCommentSnapshot({ ...collected, entries: [...entries.values()] })
+  }
   if (operatorId) {
     console.log(JSON.stringify(snapshot, null, 2))
     return
