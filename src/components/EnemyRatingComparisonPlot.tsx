@@ -8,7 +8,7 @@ import {
   type EnemyRatingComparisonMetric,
   type EnemyRatingComparisonSideValue,
 } from '../lib/enemyRatingComparison'
-import { formatHistogramPercentage } from '../lib/histogramPercentageLabels'
+import { formatEnemyRatingVideoShare } from '../lib/enemyRatingVideoValues'
 import { ChartStripCell } from './ChartStripCell'
 import './EnemyRatingComparisonPlot.css'
 
@@ -38,11 +38,6 @@ export function EnemyRatingComparisonSwatch({ metric, layout, imageMode = false 
         strokeDasharray={metric === 'magicResistance' ? DASH : undefined} />
       : <rect x="5" y="2" width="8" height="8" fill="currentColor" />}
   </svg>
-}
-
-function stripValue(share: number | null) {
-  if (share === null) return '—'
-  return formatHistogramPercentage(share, 1)?.replace(/%$/, '').replace(/\.0$/, '') ?? '—'
 }
 
 interface PlotProps {
@@ -124,7 +119,7 @@ function VerticalPlot({ rows, selection, width, height, axis, imageMode, cumulat
           <rect className={seriesClass(key)} x="3" y={y + bandHeight / 2 - 4} width="8" height="8" fill="currentColor" {...INK} />
           <text className="enemy-rating-comparison-label" x="15" y={y + bandHeight / 2 + 4} {...INK}>{label}</text>
           {rows.map((row, index) => <ChartStripCell key={row.rank} left={left + index * step} width={step}
-            top={y} label={stripValue(row.stats[key].cumulativeShare)} height={bandHeight}
+            top={y} label={formatEnemyRatingVideoShare(row.stats[key].cumulativeShare)} height={bandHeight}
             leftInset={1} rightInset={1} labelRotation={bandRotation}
             labelY={bandRotation ? y + bandHeight / 2 : y + bandHeight / 2 + 4}
             labelClassName={selection.has(row.rank) ? 'chart-strip-label is-selected' : 'chart-strip-label'} />)}
@@ -232,7 +227,13 @@ function MirroredPlot({
               data-rating-video-bar-rank={imageMode ? index : undefined} />}
             <text className={`enemy-rating-comparison-value${selection.has(row.rank) ? ' is-selected' : ''}`}
               x={labelX} y={y + 4} textAnchor="middle" {...INK}
-              data-rating-video-value={imageMode ? index : undefined}>{stripValue(showRankShare ? share : cumulativeShare)}</text>
+              data-rating-video-value={imageMode ? index : undefined}
+              data-rating-video-metric={imageMode ? key : undefined}
+              data-rating-video-share={imageMode ? share ?? '' : undefined}
+              data-rating-video-cumulative={imageMode ? cumulativeShare ?? '' : undefined}
+              data-rating-video-value-mode={imageMode ? showRankShare ? 'rank' : 'cumulative' : undefined}>
+              {formatEnemyRatingVideoShare(showRankShare ? share : cumulativeShare)}
+            </text>
           </g>
         })}
       </g>

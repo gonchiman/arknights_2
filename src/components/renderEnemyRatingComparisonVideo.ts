@@ -1,18 +1,34 @@
 import type { ReactNode } from 'react'
 import type { ChartImageRasterOutput } from '../lib/chartImageRasterSize'
 import { recordChartVideo, type ChartVideoFormat } from '../lib/chartVideoRecorder'
+import { ENEMY_RATING_COMPARISON_METRICS, type EnemyRatingComparisonSideValue } from '../lib/enemyRatingComparison'
 import {
   getEnemyRatingVideoBarStep, getEnemyRatingVideoTimingBounds, retimeEnemyRatingVideoStep, retimeEnemyRatingVideoText,
   type EnemyRatingVideoPhase, type EnemyRatingVideoTiming,
 } from '../lib/enemyRatingVideoTiming'
+import { formatEnemyRatingVideoShare, getAnimatedEnemyRatingShares, getEnemyRatingVideoProgress as reveal } from '../lib/enemyRatingVideoValues'
 import { withComparisonChartImageSurface } from './saveComparisonChartImage'
 
 export const ENEMY_RATING_VIDEO_WIDTH = 1920
 type Box = { x: number; y: number; width: number; height: number }
 type Step = ReturnType<typeof retimeEnemyRatingVideoStep>
 type OriginalStep = Step & { phase: EnemyRatingVideoPhase }
-type Label = { box: Box; step: OriginalStep }
+type Label = { box: Box; step: OriginalStep; kind: 'text' | 'value' | 'valueHeading' }
 type Shape = { element: SVGElement; box: Box; color: string }
+type Value = {
+  box: Box
+  rank: number
+  metric: string
+  mode: EnemyRatingComparisonSideValue
+  share: number | null
+  cumulativeShare: number | null
+  x: number
+  y: number
+  maxWidth: number
+  font: string
+  color: string
+  align: CanvasTextAlign
+}
 
 export interface EnemyRatingVideoAnimation {
   width: number
@@ -20,12 +36,6 @@ export interface EnemyRatingVideoAnimation {
   duration: number
   drawFrame: (context: CanvasRenderingContext2D, seconds: number) => void
   withTiming: (timing: EnemyRatingVideoTiming) => EnemyRatingVideoAnimation
-}
-
-function reveal(seconds: number, { start, duration }: Step): number {
-  if (duration === 0) return Number(seconds >= start)
-  const progress = Math.max(0, Math.min(1, (seconds - start) / duration))
-  return progress * progress * (3 - 2 * progress)
 }
 
 function step(phase: EnemyRatingVideoPhase, start: number, duration: number): OriginalStep {
@@ -61,17 +71,23 @@ export async function prepareEnemyRatingComparisonVideo(
         width: rect.width * scaleX, height: rect.height * scaleY }
     }
 
+    function getTextBox(element: Element): Box {
+      const box = getBox(element)
+      // Include the antialiased edges of the rasterized glyphs.
+      const x = Math.max(0, Math.floor(box.x - 2 * scaleX))
+      const y = Math.max(0, Math.floor(box.y - 2 * scaleY))
+      const right = Math.min(size.canvasWidth, Math.ceil(box.x + box.width + 2 * scaleX))
+      const bottom = Math.min(size.canvasHeight, Math.ceil(box.y + box.height + 2 * scaleY))
+      return { x, y, width: right - x, height: bottom - y }
+    }
+
     function labels(selector: string, phase: EnemyRatingVideoPhase,
       delay: number, order?: string, stagger = 0, duration = .18): Label[] {
       return Array.from(surface.querySelectorAll(selector), element => {
-        const box = getBox(element)
-        // Include the antialiased edges of the rasterized glyphs.
-        const x = Math.max(0, Math.floor(box.x - 2 * scaleX))
-        const y = Math.max(0, Math.floor(box.y - 2 * scaleY))
-        const right = Math.min(size.canvasWidth, Math.ceil(box.x + box.width + 2 * scaleX))
-        const bottom = Math.min(size.canvasHeight, Math.ceil(box.y + box.height + 2 * scaleY))
         const start = delay + (order ? Number(element.getAttribute(order)) * stagger : 0)
-        return { box: { x, y, width: right - x, height: bottom - y }, step: step(phase, start, duration) }
+        const kind: Label['kind'] = element.hasAttribute('data-rating-video-value') ? 'value'
+          : element.getAttribute('data-rating-video-heading') === 'value' ? 'valueHeading' : 'text'
+        return { box: getTextBox(element), step: step(phase, start, duration), kind }
       }).filter(({ box }) => box.width > 0 && box.height > 0)
     }
 
@@ -86,6 +102,34 @@ export async function prepareEnemyRatingComparisonVideo(
       ...labels('[data-rating-video-heading="value"]', 'values', 2.22),
       ...labels('[data-rating-video-value]', 'values', 2.39, 'data-rating-video-value', .095),
     ]
+
+    function rawShare(element: Element, attribute: string) {
+      const value = element.getAttribute(attribute)
+      return value === null || value === '' ? null : Number(value)
+    }
+
+    const values = Array.from(surface.querySelectorAll<SVGTextElement>('[data-rating-video-value]'), (element): Value => {
+      const matrix = element.getScreenCTM()
+      const svg = element.ownerSVGElement
+      if (!matrix || !svg) throw new Error('割合の描画位置を取得できませんでした。')
+      const point = new DOMPoint(element.x.baseVal.getItem(0).value, element.y.baseVal.getItem(0).value).matrixTransform(matrix)
+      const x = (point.x - bounds.left) * scaleX
+      const y = (point.y - bounds.top) * scaleY
+      const svgBox = getBox(svg)
+      const style = getComputedStyle(element)
+      const fontSize = Number.parseFloat(style.fontSize) * Math.hypot(matrix.c, matrix.d) * scaleY
+      return {
+        box: getTextBox(element), rank: Number(element.getAttribute('data-rating-video-value')),
+        metric: element.getAttribute('data-rating-video-metric') ?? '',
+        mode: element.getAttribute('data-rating-video-value-mode') === 'rank' ? 'rank' : 'cumulative',
+        share: rawShare(element, 'data-rating-video-share'),
+        cumulativeShare: rawShare(element, 'data-rating-video-cumulative'),
+        x, y, maxWidth: Math.max(1, 2 * Math.min(x - svgBox.x, svgBox.x + svgBox.width - x) - 4 * scaleX),
+        font: `${style.fontStyle} ${style.fontWeight} ${fontSize}px ${style.fontFamily}`,
+        color: style.fill === 'currentcolor' ? style.color : style.fill,
+        align: style.textAnchor === 'middle' ? 'center' : style.textAnchor === 'end' ? 'right' : 'left',
+      }
+    })
 
     function shapes<T>(attribute: string, describe: (shape: Shape, style: CSSStyleDeclaration, order: number) => T) {
       return Array.from(surface.querySelectorAll<SVGElement>(`[${attribute}]`), element => {
@@ -120,7 +164,7 @@ export async function prepareEnemyRatingComparisonVideo(
     const textImage = await toCanvas(surface, { ...size, pixelRatio: 1, skipFonts: true })
     signal?.throwIfAborted()
     return {
-      size, text, textImage,
+      size, text, textImage, values,
       highlights: highlights.map(({ element: _element, ...mark }) => mark),
       guides: guides.map(({ element: _element, ...mark }) => mark),
       bars: bars.map(({ element: _element, ...mark }) => mark),
@@ -132,6 +176,7 @@ export async function prepareEnemyRatingComparisonVideo(
   function withTiming(settings: EnemyRatingVideoTiming): EnemyRatingVideoAnimation {
     const { finish, duration } = getEnemyRatingVideoTimingBounds(settings)
     const { size, textImage } = scene
+    const linked = settings.valueMode === 'linked'
     const retime = ({ phase, start, duration }: OriginalStep) => retimeEnemyRatingVideoStep(settings, phase, start, duration)
     const highlights = scene.highlights.map(mark => ({ ...mark, step: retime(mark.step) }))
     const guides = scene.guides.map(({ order, ...mark }) => ({
@@ -140,8 +185,12 @@ export async function prepareEnemyRatingComparisonVideo(
     const bars = scene.bars.map(({ rank, ...bar }) => ({
       ...bar, step: getEnemyRatingVideoBarStep(settings, barRanks.indexOf(rank), barRanks.length),
     }))
-    const labels = scene.text.map(({ box, step: { phase, start, duration } }) => ({
-      box, step: retimeEnemyRatingVideoText(settings, phase, start, duration),
+    const barSteps = new Map(barRanks.map((rank, index) => [rank, getEnemyRatingVideoBarStep(settings, index, barRanks.length)]))
+    const valueSeries = ENEMY_RATING_COMPARISON_METRICS.map(({ key }) => scene.values
+      .filter(value => value.metric === key).sort((a, b) => a.rank - b.rank))
+    const labels = scene.text.filter(label => !linked || label.kind !== 'value').map(({ box, kind, step: { phase, start, duration } }) => ({
+      box, step: linked && kind === 'valueHeading' ? { start: settings.bars.start, duration: 0 }
+        : retimeEnemyRatingVideoText(settings, phase, start, duration),
     }))
 
     return {
@@ -175,6 +224,28 @@ export async function prepareEnemyRatingComparisonVideo(
           context.drawImage(textImage, x, y, width, height, x, y, width, height)
         }
         context.globalAlpha = 1
+        if (linked && time >= settings.bars.start) {
+          for (const values of valueSeries) {
+            const shares = getAnimatedEnemyRatingShares(values,
+              values.map(({ rank }) => reveal(time, barSteps.get(rank) ?? settings.bars)), values[0]?.mode ?? 'cumulative')
+            for (const [index, value] of values.entries()) {
+              const share = shares[index]
+              const finalShare = value.mode === 'rank' ? value.share : value.cumulativeShare
+              if (share === finalShare) {
+                const { x, y, width, height } = value.box
+                context.drawImage(textImage, x, y, width, height, x, y, width, height)
+                continue
+              }
+              context.save()
+              context.font = value.font
+              context.fillStyle = value.color
+              context.textAlign = value.align
+              context.textBaseline = 'alphabetic'
+              context.fillText(formatEnemyRatingVideoShare(share), value.x, value.y, value.maxWidth)
+              context.restore()
+            }
+          }
+        }
       },
     }
   }

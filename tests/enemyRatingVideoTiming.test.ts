@@ -5,6 +5,7 @@ import {
   ENEMY_RATING_VIDEO_PHASES, ENEMY_RATING_VIDEO_PHASE_TEMPOS, ENEMY_RATING_VIDEO_TEMPOS,
   getEnemyRatingVideoDefaultDuration,
   getEnemyRatingVideoBarStep, parseEnemyRatingVideoTiming, retimeEnemyRatingVideoStep, retimeEnemyRatingVideoText,
+  setEnemyRatingVideoValueMode,
   type EnemyRatingVideoTiming,
 } from '../src/lib/enemyRatingVideoTiming.ts'
 
@@ -331,4 +332,50 @@ test('棒だけ伸ばす設定へ変換する前に元の秒数と表示順を�
   assert.equal(createEnemyRatingBarsOnlyDraft({ ...draft, finishSeconds: 'abc' }), null)
   assert.equal(createEnemyRatingBarsOnlyDraft({ ...draft, order: ['bars', 'bars', 'axes', 'ranks', 'values'] }), null)
   assert.equal(parseEnemyRatingVideoTiming({ ...draft, animatedPhase: 'unknown' as 'bars' }).timing, null)
+})
+
+test('割合連動では数値を棒と同時に表示し、独立した数値待ちの時間を作らない', () => {
+  const draft = { ...createEnemyRatingVideoTimingDraft(), valueMode: 'linked' as const }
+  const parsed = parseEnemyRatingVideoTiming(draft)
+  assert.ok(parsed.timing)
+  assert.equal(parsed.timing.valueMode, 'linked')
+  assert.deepEqual(parsed.timing.values, { start: parsed.timing.bars.start, duration: 0 })
+  closeTo(parsed.timing.bars.start + parsed.timing.bars.duration, 5)
+  assert.equal(parsed.duration, 5)
+  const reordered = parseEnemyRatingVideoTiming({ ...draft, order: ['values', 'title', 'axes', 'ranks', 'bars'] })
+  assert.deepEqual(reordered, parsed)
+  const fixed = parseEnemyRatingVideoTiming({ ...draft, valueMode: 'fixed' })
+  assert.ok(fixed.timing)
+  assert.ok(fixed.timing.values.duration > 0)
+  assert.ok(fixed.timing.values.start >= fixed.timing.bars.start + fixed.timing.bars.duration)
+})
+
+test('割合の動きを切り替えても手動の描画完了時間と完成図保持を引き継ぐ', () => {
+  const draft = { ...createEnemyRatingVideoTimingDraft(),
+    overrides: { title: '.2', axes: '.5', ranks: '.3', bars: '1', values: '1.5', hold: '2' } }
+  const previous = structuredClone(draft)
+  const linked = setEnemyRatingVideoValueMode(draft, 'linked')
+  const parsed = parseEnemyRatingVideoTiming(linked)
+  assert.ok(parsed.timing)
+  assert.equal(parsed.finish, 3.5)
+  assert.equal(parsed.duration, 5.5)
+  assert.deepEqual(parsed.timing.values, { start: parsed.timing.bars.start, duration: 0 })
+  const fixed = parseEnemyRatingVideoTiming(setEnemyRatingVideoValueMode(linked, 'fixed'))
+  assert.ok(fixed.timing)
+  assert.equal(fixed.finish, 3.5)
+  assert.equal(fixed.duration, 5.5)
+  assert.deepEqual(draft, previous)
+})
+
+test('棒だけ伸ばすプリセットは割合の動きとゼロ秒・保持設定も保持する', () => {
+  const linked = { ...createEnemyRatingVideoTimingDraft(), valueMode: 'linked' as const }
+  const preset = createEnemyRatingBarsOnlyDraft(linked)
+  assert.ok(preset)
+  assert.equal(preset.valueMode, 'linked')
+  assert.equal(parseEnemyRatingVideoTiming(preset).finish, 5)
+  const instant = { ...linked, overrides: { title: '0', axes: '0', ranks: '0', bars: '0', values: '0', hold: '1' } }
+  const fixed = parseEnemyRatingVideoTiming(setEnemyRatingVideoValueMode(instant, 'fixed'))
+  assert.ok(fixed.timing)
+  assert.equal(fixed.finish, 0)
+  assert.equal(fixed.duration, 1)
 })
