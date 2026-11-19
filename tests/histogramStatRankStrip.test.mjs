@@ -178,6 +178,41 @@ test('幅に応じて範囲を2行にし、収まらないときは通常の目�
   assert.ok(strip(crowded))
 })
 
+test('固定幅で3行に折り返し、上部の帯と下部のランク帯を維持する', () => {
+  const source = snapshot({ showStatRanks: true, showFrequencies: false,
+    showPercentages: true, showCumulative: true, cumulativeDisplay: 'strip' })
+  const width = 148
+  const original = renderPlot({ ...source, showBinRanges: false }, { width })
+  const markup = renderPlot(source, { width })
+  const ranges = group(markup, 'data-histogram-range-strip="bottom"')
+  assert.ok(ranges)
+  assert.match(markup, /data-histogram-axis="ranges"/)
+  assert.equal(attr(markup.match(/<svg\b[^>]*>/)?.[0] ?? '', 'viewBox').split(' ')[2], String(width))
+  const cells = rectangleAttributes(ranges, 'chart-strip-fill')
+  assert.equal(cells.length, source.statistics.bins.length)
+  assert.ok(cells.every(cell => Number(cell.height) === 56))
+  const labels = [...ranges.matchAll(/<text\b([^>]*class="chart-strip-label"[^>]*)>([^<]*)<\/text>/g)]
+  assert.deepEqual(labels.map(([, , label]) => label), ['0', '〜', '10', '10', '〜', '20', '20', '超'])
+  assert.doesNotMatch(ranges, /rotate\(|font-size=|textLength=|lengthAdjust=/)
+  assert.deepEqual(bars(markup), bars(original), '折り返しは棒の幅や高さ、計算結果を変更しない')
+  assert.deepEqual(frame(markup), frame(original), '描画領域の横幅を広げない')
+  for (const marker of ['data-histogram-cumulative="strip"', 'data-histogram-percentage="strip"']) {
+    assert.equal(group(markup, marker), group(original, marker), '上部の帯をそのまま維持する')
+  }
+  const rangeBottom = Number(cells[0].y) + Number(cells[0].height)
+  const rankFills = rectangleAttributes(strip(markup), 'stat-rank-strip-fill')
+  assert.equal(Number(rankFills[0].y) - rangeBottom, 4)
+  assert.ok(rankFills.every(fill => Number(fill.y) + Number(fill.height) <= svgHeight(markup)))
+  assert.ok(svgHeight(markup) > svgHeight(original), '増やした帯の高さを画像内に確保する')
+  const reserved = svgHeight(markup) - 334
+  const measured = renderPlot(source, { width, height: 334 + reserved, reservedLabelHeight: reserved })
+  assert.equal(svgHeight(measured), svgHeight(markup), '保存プレビューの計測で帯の高さを二重加算しない')
+  assert.deepEqual(frame(measured), frame(markup))
+  assert.deepEqual(bars(measured), bars(markup))
+  assert.equal(group(measured, 'data-histogram-range-strip="bottom"'), ranges)
+  assert.equal(strip(measured), strip(markup))
+})
+
 test('合成出力の予約高を引いても帯と棒の位置に高さを重複加算しない', () => {
   const source = snapshot({ showStatRanks: true })
   const original = renderPlot(source)
