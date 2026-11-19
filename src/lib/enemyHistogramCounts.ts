@@ -3,6 +3,7 @@ import type { HistogramCumulativeDisplay } from './histogramCumulative.ts'
 import type { WeightedHistogramObservation } from './enemyWeightedHistogram.ts'
 import type { NumericStatistics, NumericStatisticsWithDispersion } from './enemyStatistics.ts'
 import { createChartImageFilename } from './chartImageFilename.ts'
+import { ENEMY_RATING_STATS } from './enemyStatRatings.ts'
 
 export type EnemyHistogramCountMode = 'TYPES' | 'MAPS' | 'SPAWNS'
 export const ENEMY_HISTOGRAM_COUNT_MODES = [
@@ -194,6 +195,7 @@ export function getWeightedEnemyHistogramImageFilename(options: {
   percentileReference?: EnemyHistogramPercentileReference
   showPercentages?: boolean
   showBinRanges?: boolean
+  showStatRanks?: boolean
   showCumulative?: boolean
   cumulativeDisplay?: HistogramCumulativeDisplay
   useRatingBins?: boolean
@@ -202,6 +204,8 @@ export function getWeightedEnemyHistogramImageFilename(options: {
   const { mode, metric, scope, scale, statistics, referenceVisibility } = options
   const histogram = statistics.histogram
   const isLinear = scale === 'LINEAR'
+  const showStatRanks = options.showStatRanks && !options.useRatingBins
+    && (metric === 'HP' || ENEMY_RATING_STATS.some(({ label }) => label === metric))
   return createChartImageFilename(`敵_${metric}_ヒストグラム`, [
     ENEMY_HISTOGRAM_COUNT_MODES.find((option) => option.key === mode)!.label,
     ...scope.split(/\s*·\s*/), options.useRatingBins ? 'ゲーム内評価' : isLinear ? '線形' : '対数',
@@ -213,6 +217,7 @@ export function getWeightedEnemyHistogramImageFilename(options: {
     options.showCumulative && (options.cumulativeDisplay === 'both' ? '累積割合線＋帯'
       : options.cumulativeDisplay === 'strip' ? '累積割合帯' : '累積割合表示'),
     options.showBinRanges && '階級範囲表示',
+    showStatRanks && 'ランク帯表示',
     [referenceVisibility.mean && '平均', referenceVisibility.median && '中央値'].filter(Boolean).join('-'),
   ])
 }

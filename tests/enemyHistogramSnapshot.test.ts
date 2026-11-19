@@ -57,6 +57,62 @@ test('ページ移動・再読み込み用ストレージを経由して同じ�
   assert.notEqual(createEnemyHistogramSnapshot(changed).id, snapshot.id)
 })
 
+test('ランク帯を省略した旧v1はOFFで復元し、既存の識別子と保存名を維持する', () => {
+  const omitted = createEnemyHistogramSnapshot(input())
+  const off = createEnemyHistogramSnapshot({ ...input(), showStatRanks: false })
+  assert.equal(omitted.showStatRanks, false)
+  assert.deepEqual(off, omitted)
+  assert.equal(omitted.id, 'resistance-histogram-bacf1e83cafbeb64')
+  assert.doesNotMatch(omitted.filename, /ランク帯表示/)
+  const { showStatRanks: _rankStrip, ...legacy } = omitted
+  assert.deepEqual(parseEnemyHistogramSnapshot(legacy), omitted)
+  const storage = memoryStorage()
+  storage.setItem(ENEMY_HISTOGRAM_SNAPSHOT_KEY, JSON.stringify(legacy))
+  assert.deepEqual(readEnemyHistogramSnapshot(storage), omitted)
+})
+
+test('有効なランク帯を複製・保存・復元し、集計値を変えず識別子と画像名に反映する', () => {
+  const source = { ...input(), showStatRanks: true }
+  const snapshot = createEnemyHistogramSnapshot(source)
+  const off = createEnemyHistogramSnapshot(input())
+  source.showStatRanks = false
+  assert.equal(snapshot.showStatRanks, true)
+  assert.ok(Object.isFrozen(snapshot))
+  assert.notEqual(snapshot.id, off.id)
+  assert.match(snapshot.filename, /_階級範囲表示_ランク帯表示_中央値\.png$/)
+  assert.deepEqual(snapshot.statistics, off.statistics)
+  assert.deepEqual(snapshot.source, off.source)
+  const storage = memoryStorage()
+  assert.equal(writeEnemyHistogramSnapshot(snapshot, storage), true)
+  assert.deepEqual(readEnemyHistogramSnapshot(storage), snapshot)
+  assert.deepEqual(parseEnemyHistogramSnapshot(JSON.parse(JSON.stringify(snapshot))), snapshot)
+  const log = createEnemyHistogramSnapshot({ ...input(), scale: 'LOG', showStatRanks: true })
+  assert.equal(log.showStatRanks, true)
+  assert.match(log.filename, /_ランク帯表示_/)
+})
+
+test('評価別区分ではランク帯を無効化し、保存名と識別子に残さない', () => {
+  const source = { ...input(), ratingBins: buildEnemyRatingHistogramBins(observations, 'magicResistance') }
+  const off = createEnemyHistogramSnapshot(source)
+  const hidden = createEnemyHistogramSnapshot({ ...source, showStatRanks: true })
+  assert.equal(hidden.showStatRanks, false)
+  assert.deepEqual(hidden, off)
+  assert.doesNotMatch(hidden.filename, /ランク帯表示/)
+})
+
+test('ランク帯の不正な型を拒否し、保存済みの分布を維持する', () => {
+  const snapshot = createEnemyHistogramSnapshot({ ...input(), showStatRanks: true })
+  const storage = memoryStorage()
+  assert.equal(writeEnemyHistogramSnapshot(snapshot, storage), true)
+  for (const showStatRanks of [null, 0, 1, 'true', [], {}]) {
+    const invalid = { ...snapshot, showStatRanks }
+    assert.equal(parseEnemyHistogramSnapshot(invalid), null)
+    assert.throws(() => createEnemyHistogramSnapshot(invalid as unknown as EnemyHistogramSnapshotInput))
+    assert.equal(writeEnemyHistogramSnapshot(invalid as unknown as typeof snapshot, storage), false)
+  }
+  assert.deepEqual(readEnemyHistogramSnapshot(storage), snapshot)
+})
+
 test('指定した累積割合の縦線を保存し、画像名には指定割合だけを反映する', () => {
   const percentileReference = { percentage: 75, value: 25 }
   const snapshot = createEnemyHistogramSnapshot({ ...input(), percentileReference })

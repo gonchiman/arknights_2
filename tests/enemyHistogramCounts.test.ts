@@ -211,6 +211,45 @@ test('階級範囲を有効にした保存名を区別し、無効時は省略�
   }
 })
 
+test('数値階級のランク帯は対応する全指標・尺度・集計方法で保存名を区別する', () => {
+  const options = { scope: '全敵',
+    statistics: calculateWeightedHistogram([{ value: 100, weight: 3 }, { value: 500, weight: 1 }]),
+    referenceVisibility: { mean: false, median: false }, coverage: source.summary }
+  for (const metric of ['HP', '攻撃力', '防御力', '術耐性']) {
+    for (const mode of ['TYPES', 'MAPS', 'SPAWNS'] as const) for (const scale of ['LINEAR', 'LOG']) {
+      const snapshot = { ...options, metric, mode, scale }
+      const original = getWeightedEnemyHistogramImageFilename(snapshot)
+      assert.equal(getWeightedEnemyHistogramImageFilename({ ...snapshot, showStatRanks: false }), original)
+      const active = getWeightedEnemyHistogramImageFilename({ ...snapshot, showStatRanks: true })
+      assert.equal(active, original.replace(/\.png$/, '_ランク帯表示.png'))
+      assert.notEqual(active, original)
+      assert.equal(getWeightedEnemyHistogramImageFilename({ ...snapshot, showStatRanks: true,
+        statistics: { ...snapshot.statistics, bins: snapshot.statistics.bins.map(bin => ({ ...bin, count: bin.count * 2 })) },
+      }), active)
+      const combined = getWeightedEnemyHistogramImageFilename({ ...snapshot, showStatRanks: true,
+        showPercentages: true, showCumulative: true, cumulativeDisplay: 'both', showBinRanges: true,
+        referenceVisibility: { mean: true, median: true } })
+      assert.match(combined, /_割合表示_累積割合線＋帯_階級範囲表示_ランク帯表示_平均-中央値\.png$/)
+    }
+  }
+})
+
+test('評価別区分とランク非対応指標の画像名には無効なランク帯設定を含めない', () => {
+  const options = { mode: 'SPAWNS' as const, scope: '全敵', scale: 'LINEAR',
+    statistics: calculateWeightedHistogram([{ value: 100, weight: 3 }, { value: 500, weight: 1 }]),
+    referenceVisibility: { mean: false, median: false }, coverage: source.summary }
+  for (const metric of ['HP', '攻撃力', '防御力', '術耐性']) {
+    const rated = { ...options, metric, useRatingBins: true }
+    assert.equal(getWeightedEnemyHistogramImageFilename({ ...rated, showStatRanks: true }),
+      getWeightedEnemyHistogramImageFilename(rated))
+  }
+  for (const metric of ['移動速度', '攻撃間隔', '重量']) {
+    const unsupported = { ...options, metric }
+    assert.equal(getWeightedEnemyHistogramImageFilename({ ...unsupported, showStatRanks: true }),
+      getWeightedEnemyHistogramImageFilename(unsupported))
+  }
+})
+
 test('ゲーム内評価の保存名は全集計方法で数値階級と区別し、無効時は従来名を維持する', () => {
   const options = { metric: 'HP', scope: '全敵', scale: 'LINEAR',
     statistics: calculateWeightedHistogram([{ value: 100, weight: 3 }, { value: 500, weight: 1 }]),
