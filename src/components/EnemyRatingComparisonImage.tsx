@@ -18,6 +18,7 @@ import {
 } from '../lib/enemyRatingComparison'
 import {
   createEnemyRatingBarsOnlyDraft, createEnemyRatingVideoTimingDraft, ENEMY_RATING_VIDEO_PHASES, parseEnemyRatingVideoTiming,
+  setEnemyRatingVideoValueMode, type EnemyRatingVideoValueMode,
   type EnemyRatingVideoPhase, type EnemyRatingVideoTiming, type EnemyRatingVideoTimingDraft,
 } from '../lib/enemyRatingVideoTiming'
 import { ChartImageFrame } from './ChartImageFrame'
@@ -53,11 +54,12 @@ const PLOT_HEIGHT: Record<EnemyRatingComparisonLayout, number> = {
 const formatCount = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
 
 export function getEnemyRatingComparisonImageFilename({
-  layout, scopeLabel, countLabel, aggregationVersion, selectedRanks, sideValue, outputWidth, videoDuration, videoAnimation,
+  layout, scopeLabel, countLabel, aggregationVersion, selectedRanks, sideValue, outputWidth, videoDuration, videoAnimation, videoValues,
 }: Omit<EnemyRatingComparisonImageSnapshot, 'data' | 'coverage'> & {
   outputWidth?: number
   videoDuration?: number
   videoAnimation?: 'barsOnly'
+  videoValues?: 'linked'
 }): string {
   const rankLabel = RATING_ORDER.filter(rank => selectedRanks?.includes(rank)).join('-')
   return createChartImageFilename('敵', [
@@ -70,6 +72,7 @@ export function getEnemyRatingComparisonImageFilename({
     scopeLabel,
     ENEMY_RATING_COMPARISON_LAYOUTS.find((option) => option.key === layout)?.label,
     videoAnimation === 'barsOnly' && '棒だけ伸ばす',
+    videoValues === 'linked' && '割合連動',
     videoDuration !== undefined && `${Number(videoDuration.toPrecision(12))}秒`,
   ])
 }
@@ -122,9 +125,12 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(false)
   const [canCancelVideo, setCanCancelVideo] = useState(false)
-  const [timingDraft, setTimingDraft] = useState(createEnemyRatingVideoTimingDraft)
+  const [timingDraft, setTimingDraft] = useState<EnemyRatingVideoTimingDraft>(() => ({
+    ...createEnemyRatingVideoTimingDraft(), valueMode: 'linked',
+  }))
   const wholeTimingDraft = useRef<EnemyRatingVideoTimingDraft | null>(null)
   const barsOnly = timingDraft.animatedPhase === 'bars'
+  const valuesLinked = timingDraft.valueMode === 'linked'
   const timing = useMemo(() => parseEnemyRatingVideoTiming(timingDraft), [timingDraft])
   const [timingInputError, setTimingInputError] = useState<EnemyRatingVideoDurationError | null>(null)
   const [activeVideoPhase, setActiveVideoPhase] = useState<EnemyRatingVideoPhase | null>(null)
@@ -154,6 +160,7 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
     ...outputSnapshot, outputWidth: output?.width,
     videoDuration: video ? timing.duration ?? undefined : undefined,
     videoAnimation: video && barsOnly ? 'barsOnly' : undefined,
+    videoValues: video && valuesLinked ? 'linked' : undefined,
   })
   const picker = getChartImageSavePicker()
 
@@ -176,6 +183,14 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
   function updateTimingDraft(next: EnemyRatingVideoTimingDraft) {
     if (!next.animatedPhase) wholeTimingDraft.current = null
     setTimingDraft(next)
+  }
+
+  function changeValueMode(valueMode: EnemyRatingVideoValueMode) {
+    if (saving) return
+    setTimingDraft(current => setEnemyRatingVideoValueMode(current, valueMode))
+    if (wholeTimingDraft.current) wholeTimingDraft.current = setEnemyRatingVideoValueMode(wholeTimingDraft.current, valueMode)
+    setTimingInputError(null)
+    setActiveVideoPhase(null)
   }
 
   function getDefaultFilename(ratio?: number) {
@@ -298,8 +313,17 @@ export function EnemyRatingComparisonSaveDialog({ onClose, media = 'image', ...s
             onClick={() => changeVideoAnimation(true)}>棒だけ伸ばす</button>
         </div>
       </div>
+      <div className="enemy-rating-video-animation">
+        <span>割合の動き</span>
+        <div className="enemy-rating-video-animation-options" role="group" aria-label="割合の動き">
+          <button type="button" className="button secondary" aria-pressed={valuesLinked} disabled={saving}
+            onClick={() => changeValueMode('linked')}>棒に連動</button>
+          <button type="button" className="button secondary" aria-pressed={!valuesLinked} disabled={saving}
+            onClick={() => changeValueMode('fixed')}>固定</button>
+        </div>
+      </div>
       {videoOutput && preview}
-      <EnemyRatingVideoTimingEditor key={barsOnly ? 'barsOnly' : 'whole'} draft={timingDraft} onChange={updateTimingDraft} parsed={timing}
+      <EnemyRatingVideoTimingEditor key={`${barsOnly}:${valuesLinked}`} draft={timingDraft} onChange={updateTimingDraft} parsed={timing}
         inputError={timingInputError} onInputError={setTimingInputError} activePhase={activeVideoPhase}
         sideValue={snapshot.sideValue} disabled={saving} />
     </div> : validAspect && preview} />

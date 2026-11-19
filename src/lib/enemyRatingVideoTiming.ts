@@ -22,6 +22,7 @@ export const ENEMY_RATING_VIDEO_TEXT_MODES = ['fade', 'instant', 'stagger'] as c
 export type EnemyRatingVideoTextMode = typeof ENEMY_RATING_VIDEO_TEXT_MODES[number]
 export type EnemyRatingVideoGuideMode = 'grow' | 'stagger'
 export type EnemyRatingVideoBarMode = EnemyRatingVideoGuideMode | 'staggerGrow'
+export type EnemyRatingVideoValueMode = 'linked' | 'fixed'
 
 interface VideoPhaseTiming {
   start: number
@@ -40,6 +41,7 @@ export type ChartVideoTiming<Phase extends string> = Readonly<Record<Phase, Read
   textMode: EnemyRatingVideoTextMode
   barMode: EnemyRatingVideoBarMode
   guideMode: EnemyRatingVideoGuideMode
+  valueMode?: EnemyRatingVideoValueMode
 }>
 
 export interface ChartVideoTimingDraft<Phase extends string> {
@@ -52,6 +54,7 @@ export interface ChartVideoTimingDraft<Phase extends string> {
   textMode: EnemyRatingVideoTextMode
   barMode: EnemyRatingVideoBarMode
   guideMode: EnemyRatingVideoGuideMode
+  valueMode?: EnemyRatingVideoValueMode
 }
 
 export type EnemyRatingVideoTimingField = ChartVideoTimingField<EnemyRatingVideoPhase>
@@ -129,15 +132,18 @@ export function parseChartVideoTiming<Phase extends string>(
   if (draft.animatedPhase !== undefined && !definition.phases.includes(draft.animatedPhase)) {
     return { timing: null, finish: null, duration: null, error: '描画対象を確認してください。' }
   }
-  const timingDefinition = draft.animatedPhase === undefined ? definition
-    : { ...definition, phases: [draft.animatedPhase] }
+  const barsPhase = definition.phases.find(phase => phase === 'bars')
+  const linkedPhase = draft.valueMode === 'linked' && barsPhase && draft.animatedPhase !== 'values'
+    ? definition.phases.find(phase => phase === 'values') : undefined
+  const timingDefinition = { ...definition, phases: draft.animatedPhase === undefined
+    ? definition.phases.filter(phase => phase !== linkedPhase) : [draft.animatedPhase] }
 
   const requestedFinish = draft.finishSeconds.trim()
   const durations = {} as Record<ChartVideoTimingField<Phase>, number>
   const automatic: Phase[] = []
   let fixedDrawingTime = 0
   for (const field of [...definition.phases, 'hold' as const]) {
-    if (field !== 'hold' && draft.animatedPhase !== undefined && field !== draft.animatedPhase) {
+    if (field === linkedPhase || (field !== 'hold' && draft.animatedPhase !== undefined && field !== draft.animatedPhase)) {
       durations[field] = 0
       continue
     }
@@ -194,8 +200,10 @@ export function parseChartVideoTiming<Phase extends string>(
     phases[phase] = { start: instant ? 0 : start, duration }
     start += duration
   }
+  if (linkedPhase && barsPhase) phases[linkedPhase] = { start: phases[barsPhase].start, duration: 0 }
   const timing = { ...phases, hold: durations.hold, textMode: draft.textMode,
-    barMode: draft.barMode, guideMode: draft.guideMode }
+    barMode: draft.barMode, guideMode: draft.guideMode,
+    ...(draft.valueMode !== undefined ? { valueMode: draft.valueMode } : {}) }
   const bounds = getChartVideoTimingBounds(timing, definition)
   if (!Number.isFinite(bounds.duration) || bounds.duration <= 0) {
     return { timing: null, finish: null, duration: null, error: '動画全体には0秒より長い時間を指定してください。' }
@@ -205,6 +213,23 @@ export function parseChartVideoTiming<Phase extends string>(
 
 export function parseEnemyRatingVideoTiming(draft: EnemyRatingVideoTimingDraft): ParsedEnemyRatingVideoTiming {
   return parseChartVideoTiming(draft, ENEMY_RATING_VIDEO_DEFINITION)
+}
+
+export function setEnemyRatingVideoValueMode(
+  draft: EnemyRatingVideoTimingDraft,
+  valueMode: EnemyRatingVideoValueMode,
+): EnemyRatingVideoTimingDraft {
+  const next = { ...draft, valueMode }
+  const previous = parseEnemyRatingVideoTiming(draft)
+  const parsed = parseEnemyRatingVideoTiming(next)
+  if (!previous.timing || (parsed.timing && Math.abs(parsed.finish - previous.finish) < 1e-10)) return next
+  next.finishSeconds = previous.finish > 0 ? String(previous.finish) : ''
+  if (!parseEnemyRatingVideoTiming(next).timing) {
+    next.overrides = { ...draft.overrides }
+    delete next.overrides.bars
+    if (valueMode === 'fixed') delete next.overrides.values
+  }
+  return next
 }
 
 export function createEnemyRatingBarsOnlyDraft(draft: EnemyRatingVideoTimingDraft): EnemyRatingVideoTimingDraft | null {
