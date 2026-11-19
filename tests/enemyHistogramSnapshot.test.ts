@@ -34,13 +34,14 @@ test('登録後の元データ・設定変更から独立し、計算結果と�
   assert.equal(snapshot.statistics.bins[0].count, 12)
   assert.deepEqual(snapshot.source.enemyIds, ['enemy_a', 'enemy_b', 'enemy_c'])
   assert.equal(snapshot.referenceVisibility.median, true)
+  assert.equal(snapshot.showFrequencies, true)
   assert.equal(snapshot.showPercentages, true)
   assert.equal(snapshot.showBinRanges, true)
   assert.equal(snapshot.source.scopeLabel, '全敵 · 地上')
   assert.ok(Object.isFrozen(snapshot.statistics.bins[0]))
   assert.ok(Object.isFrozen(snapshot.source.enemyIds))
   assert.throws(() => { snapshot.statistics.bins[0].count = 99 }, TypeError)
-  assert.match(snapshot.filename, /出現回数_全敵_地上_線形_幅10_上限自動100_割合表示_階級範囲表示_中央値/)
+  assert.match(snapshot.filename, /出現回数_全敵_地上_線形_幅10_上限自動100_度数表示_割合帯_階級範囲表示_中央値/)
   assert.match(snapshot.summary, /値なし 3体を除外/)
 })
 
@@ -55,6 +56,63 @@ test('ページ移動・再読み込み用ストレージを経由して同じ�
   const changed = input()
   changed.showPercentages = false
   assert.notEqual(createEnemyHistogramSnapshot(changed).id, snapshot.id)
+})
+
+test('度数表示を省略した旧v1はONで復元し、既存の識別子を維持する', () => {
+  const omitted = createEnemyHistogramSnapshot(input())
+  const on = createEnemyHistogramSnapshot({ ...input(), showFrequencies: true })
+  assert.equal(omitted.showFrequencies, true)
+  assert.deepEqual(on, omitted)
+  assert.equal(omitted.id, 'resistance-histogram-bacf1e83cafbeb64')
+  assert.match(omitted.filename, /_度数表示_割合帯_/)
+  const { showFrequencies: _frequencies, ...legacy } = omitted
+  const restored = parseEnemyHistogramSnapshot(legacy)
+  assert.deepEqual(restored, omitted)
+  assert.ok(Object.isFrozen(restored))
+  const storage = memoryStorage()
+  storage.setItem(ENEMY_HISTOGRAM_SNAPSHOT_KEY, JSON.stringify(legacy))
+  assert.deepEqual(readEnemyHistogramSnapshot(storage), omitted)
+})
+
+test('度数表示OFFを独立して保存・復元し、分布と集計対象を変えず識別子と画像名に反映する', () => {
+  for (const countMode of ['TYPES', 'MAPS', 'SPAWNS'] as const) {
+    for (const ratingBins of [null, buildEnemyRatingHistogramBins(observations, 'magicResistance')]) {
+      const source: EnemyHistogramSnapshotInput = { ...input(), countMode, ratingBins,
+        showFrequencies: false, showCumulative: true, cumulativeDisplay: 'both' }
+      const off = createEnemyHistogramSnapshot(source)
+      const on = createEnemyHistogramSnapshot({ ...source, showFrequencies: true })
+      source.showFrequencies = true
+      assert.equal(off.showFrequencies, false)
+      assert.equal(off.showPercentages, true)
+      assert.equal(off.showCumulative, true)
+      assert.equal(off.cumulativeDisplay, 'both')
+      assert.ok(Object.isFrozen(off))
+      assert.notEqual(off.id, on.id)
+      assert.doesNotMatch(off.filename, /度数表示/)
+      assert.match(off.filename, /_割合帯_累積割合線＋帯_/)
+      assert.equal(on.filename.replace('_度数表示', ''), off.filename)
+      assert.deepEqual(off.statistics, on.statistics)
+      assert.deepEqual(off.source, on.source)
+      assert.equal(off.countMode, on.countMode)
+      const storage = memoryStorage()
+      assert.equal(writeEnemyHistogramSnapshot(off, storage), true)
+      assert.deepEqual(readEnemyHistogramSnapshot(storage), off)
+      assert.deepEqual(parseEnemyHistogramSnapshot(JSON.parse(JSON.stringify(off))), off)
+    }
+  }
+})
+
+test('度数表示の不正な型を拒否し、保存済みの分布を維持する', () => {
+  const snapshot = createEnemyHistogramSnapshot({ ...input(), showFrequencies: false })
+  const storage = memoryStorage()
+  assert.equal(writeEnemyHistogramSnapshot(snapshot, storage), true)
+  for (const showFrequencies of [null, 0, 1, 'true', [], {}]) {
+    const invalid = { ...snapshot, showFrequencies }
+    assert.equal(parseEnemyHistogramSnapshot(invalid), null)
+    assert.throws(() => createEnemyHistogramSnapshot(invalid as unknown as EnemyHistogramSnapshotInput))
+    assert.equal(writeEnemyHistogramSnapshot(invalid as unknown as typeof snapshot, storage), false)
+  }
+  assert.deepEqual(readEnemyHistogramSnapshot(storage), snapshot)
 })
 
 test('ランク帯を省略した旧v1はOFFで復元し、既存の識別子と保存名を維持する', () => {
@@ -196,7 +254,7 @@ test('累積割合ONを複製・凍結・保存・復元し、値を再集計せ
   assert.ok(Object.isFrozen(snapshot))
   assert.notEqual(snapshot.id, off.id)
   assert.notEqual(snapshot.filename, off.filename)
-  assert.match(snapshot.filename, /_割合表示_累積割合表示_階級範囲表示_/)
+  assert.match(snapshot.filename, /_割合帯_累積割合表示_階級範囲表示_/)
   assert.deepEqual(snapshot.statistics, off.statistics)
   assert.deepEqual(snapshot.source, off.source)
   const storage = memoryStorage()
@@ -244,7 +302,7 @@ test('累積割合帯を複製・保存・復元し、有効な場合だけ画�
   assert.ok(Object.isFrozen(strip))
   assert.notEqual(strip.id, line.id)
   assert.notEqual(strip.filename, line.filename)
-  assert.match(strip.filename, /_割合表示_累積割合帯_階級範囲表示_/)
+  assert.match(strip.filename, /_割合帯_累積割合帯_階級範囲表示_/)
   assert.doesNotMatch(strip.filename, /累積割合表示/)
   assert.deepEqual(strip.statistics, line.statistics)
   assert.deepEqual(strip.source, line.source)
@@ -266,7 +324,7 @@ test('折れ線と帯の併用を保存・復元し、有効時だけ単独表�
   source.cumulativeDisplay = 'line'
   assert.equal(both.cumulativeDisplay, 'both')
   assert.ok(Object.isFrozen(both))
-  assert.match(both.filename, /_割合表示_累積割合線＋帯_階級範囲表示_/)
+  assert.match(both.filename, /_割合帯_累積割合線＋帯_階級範囲表示_/)
   for (const cumulativeDisplay of ['line', 'strip'] as const) {
     const single = createEnemyHistogramSnapshot({ ...input(), showCumulative: true, cumulativeDisplay })
     assert.notEqual(both.id, single.id)

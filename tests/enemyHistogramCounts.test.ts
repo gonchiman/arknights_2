@@ -94,7 +94,7 @@ test('保存名は集計方法と表示対象を識別し、非表示の設定�
     statistics: calculateWeightedHistogram([{ value: 100, weight: 3 }, { value: 500, weight: 1 }]),
     referenceVisibility: { mean: true, median: true }, coverage: source.summary }
   const name = await getWeightedEnemyHistogramImageFilename(options)
-  assert.match(name, /^敵_HP_ヒストグラム_登場マップ数_全敵_線形_幅[\d.]+_上限自動[\d.]+_平均-中央値\.png$/)
+  assert.match(name, /^敵_HP_ヒストグラム_登場マップ数_全敵_線形_幅[\d.]+_上限自動[\d.]+_度数表示_平均-中央値\.png$/)
   assert.equal(await getWeightedEnemyHistogramImageFilename({ ...options, coverage: { ...source.summary, spawnMapCount: 99 } }), name)
   assert.notEqual(await getWeightedEnemyHistogramImageFilename({ ...options, mode: 'SPAWNS' }), name)
   assert.notEqual(await getWeightedEnemyHistogramImageFilename({ ...options, scope: 'ボス' }), name)
@@ -111,10 +111,35 @@ test('保存名は集計方法と表示対象を識別し、非表示の設定�
     bins: options.statistics.bins.map((bin) => ({ ...bin, count: bin.count * 2 })),
   } }), name)
   assert.match(await getWeightedEnemyHistogramImageFilename({ ...options, scope: '全敵 · 術耐性＝50',
-    customLinearUpperBound: 500, showPercentages: true }), /_全敵_術耐性＝50_線形_幅[\d.]+_上限[\d.]+_割合表示_平均-中央値\.png$/)
+    customLinearUpperBound: 500, showPercentages: true }), /_全敵_術耐性＝50_線形_幅[\d.]+_上限[\d.]+_度数表示_割合帯_平均-中央値\.png$/)
 })
 
-test('割合ラベルを有効にした保存名を区別し、無効時は省略時の名前を維持する', async () => {
+test('度数表示は既定で保存名へ反映し、割合帯・累積割合とは独立して切り替える', () => {
+  const options = { metric: '術耐性', scope: '全敵',
+    statistics: calculateWeightedHistogram([{ value: 0, weight: 3 }, { value: 50, weight: 1 }]),
+    referenceVisibility: { mean: false, median: false }, coverage: source.summary }
+  for (const mode of ['TYPES', 'MAPS', 'SPAWNS'] as const) for (const scale of ['LINEAR', 'LOG']) {
+    for (const useRatingBins of [false, true]) {
+      for (const showPercentages of [false, true]) for (const showCumulative of [false, true]) {
+        const snapshot = { ...options, mode, scale, useRatingBins, showPercentages, showCumulative }
+        const omitted = getWeightedEnemyHistogramImageFilename(snapshot)
+        const on = getWeightedEnemyHistogramImageFilename({ ...snapshot, showFrequencies: true })
+        const off = getWeightedEnemyHistogramImageFilename({ ...snapshot, showFrequencies: false })
+        assert.equal(omitted, on)
+        assert.match(on, /_度数表示(?:_|\.png$)/)
+        assert.doesNotMatch(off, /度数表示/)
+        assert.equal(on.replace('_度数表示', ''), off)
+        assert.equal(on.includes('_割合帯'), showPercentages)
+        assert.equal(off.includes('_割合帯'), showPercentages)
+        assert.equal(on.includes('_累積割合表示'), showCumulative)
+        assert.equal(off.includes('_累積割合表示'), showCumulative)
+        assert.doesNotMatch(on, /_割合表示(?:_|\.png$)/)
+      }
+    }
+  }
+})
+
+test('割合帯を有効にした保存名を区別し、無効時は省略時の名前を維持する', async () => {
   const options = { metric: 'HP', scope: '全敵', scale: 'LINEAR',
     statistics: calculateWeightedHistogram([{ value: 100, weight: 3 }, { value: 500, weight: 1 }]),
     referenceVisibility: { mean: true, median: true }, coverage: source.summary }
@@ -122,7 +147,7 @@ test('割合ラベルを有効にした保存名を区別し、無効時は省�
     const withoutLabels = await getWeightedEnemyHistogramImageFilename({ ...options, mode })
     assert.equal(await getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: false }), withoutLabels)
     const withLabels = await getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: true })
-    assert.ok(withLabels.includes('_割合表示_'))
+    assert.ok(withLabels.includes('_割合帯_'))
     assert.notEqual(withLabels, withoutLabels)
     assert.equal(await getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: true }), withLabels)
   }
@@ -142,7 +167,7 @@ test('累積割合ONだけを画像名に記録し、OFFと省略は全対象・
       assert.notEqual(active, original)
       const combined = getWeightedEnemyHistogramImageFilename({ ...snapshot, showCumulative: true,
         showPercentages: true, showBinRanges: true, referenceVisibility: { mean: true, median: true } })
-      assert.match(combined, /_割合表示_累積割合表示_階級範囲表示_平均-中央値\.png$/)
+      assert.match(combined, /_割合帯_累積割合表示_階級範囲表示_平均-中央値\.png$/)
       assert.equal((combined.match(/累積割合表示/g) ?? []).length, 1)
     }
   }
@@ -168,7 +193,7 @@ test('累積割合帯の保存名を折れ線と区別し、非表示時は方�
       }
       const combined = getWeightedEnemyHistogramImageFilename({ ...snapshot, showCumulative: true, cumulativeDisplay: 'strip',
         showPercentages: true, showBinRanges: true, referenceVisibility: { mean: true, median: true } })
-      assert.match(combined, /_割合表示_累積割合帯_階級範囲表示_平均-中央値\.png$/)
+      assert.match(combined, /_割合帯_累積割合帯_階級範囲表示_平均-中央値\.png$/)
       assert.equal((combined.match(/累積割合帯/g) ?? []).length, 1)
     }
   }
@@ -189,7 +214,7 @@ test('折れ線と帯の併用画像名は全集計方法・尺度で単独表�
       }
       const withLabels = getWeightedEnemyHistogramImageFilename({ ...snapshot, showCumulative: true, cumulativeDisplay: 'both',
         showPercentages: true, showBinRanges: true, referenceVisibility: { mean: true, median: true } })
-      assert.match(withLabels, /_割合表示_累積割合線＋帯_階級範囲表示_平均-中央値\.png$/)
+      assert.match(withLabels, /_割合帯_累積割合線＋帯_階級範囲表示_平均-中央値\.png$/)
       assert.equal((withLabels.match(/累積割合線＋帯/g) ?? []).length, 1)
     }
   }
@@ -229,7 +254,7 @@ test('数値階級のランク帯は対応する全指標・尺度・集計方�
       const combined = getWeightedEnemyHistogramImageFilename({ ...snapshot, showStatRanks: true,
         showPercentages: true, showCumulative: true, cumulativeDisplay: 'both', showBinRanges: true,
         referenceVisibility: { mean: true, median: true } })
-      assert.match(combined, /_割合表示_累積割合線＋帯_階級範囲表示_ランク帯表示_平均-中央値\.png$/)
+      assert.match(combined, /_割合帯_累積割合線＋帯_階級範囲表示_ランク帯表示_平均-中央値\.png$/)
     }
   }
 })
@@ -256,7 +281,7 @@ test('ゲーム内評価の保存名は全集計方法で数値階級と区別�
     referenceVisibility: { mean: false, median: false }, coverage: source.summary }
   for (const [mode, label] of [['TYPES', '種類数'], ['MAPS', '登場マップ数'], ['SPAWNS', '出現回数']] as const) {
     const rated = getWeightedEnemyHistogramImageFilename({ ...options, mode, useRatingBins: true })
-    assert.equal(rated, `敵_HP_ヒストグラム_${label}_全敵_ゲーム内評価.png`)
+    assert.equal(rated, `敵_HP_ヒストグラム_${label}_全敵_ゲーム内評価_度数表示.png`)
     for (const scale of ['LINEAR', 'LOG']) {
       const numeric = getWeightedEnemyHistogramImageFilename({ ...options, mode, scale })
       assert.equal(getWeightedEnemyHistogramImageFilename({ ...options, mode, scale, useRatingBins: false }), numeric)
@@ -290,12 +315,12 @@ test('ゲーム内評価の保存名も割合・階級範囲・平均・中央�
     const name = getWeightedEnemyHistogramImageFilename({ ...options, mode })
     assert.equal(getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: false, showBinRanges: false }), name)
     const suffixes = [
-      [getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: true }), '割合表示'],
+      [getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: true }), '割合帯'],
       [getWeightedEnemyHistogramImageFilename({ ...options, mode, showBinRanges: true }), '階級範囲表示'],
       [getWeightedEnemyHistogramImageFilename({ ...options, mode, referenceVisibility: { mean: true, median: false } }), '平均'],
       [getWeightedEnemyHistogramImageFilename({ ...options, mode, referenceVisibility: { mean: false, median: true } }), '中央値'],
       [getWeightedEnemyHistogramImageFilename({ ...options, mode, showPercentages: true, showBinRanges: true,
-        referenceVisibility: { mean: true, median: true } }), '割合表示_階級範囲表示_平均-中央値'],
+        referenceVisibility: { mean: true, median: true } }), '割合帯_階級範囲表示_平均-中央値'],
     ]
     for (const [actual, suffix] of suffixes) assert.equal(actual, name.replace(/\.png$/, `_${suffix}.png`))
   }
