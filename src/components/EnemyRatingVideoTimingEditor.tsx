@@ -57,6 +57,7 @@ export function ChartVideoTimingEditor<Phase extends string>({
   const customFinish = Boolean(draft.finishSeconds)
   const tempoValue = customFinish ? `${draft.finishSeconds}秒（秒数指定）`
     : `${ENEMY_RATING_VIDEO_TEMPO_SECONDS[draft.tempo]}秒${draft.tempo === 'standard' ? '（標準）' : ''}`
+  const followsBars = (phase: DurationField<Phase>) => dataEffect === 'bars' && draft.valueMode === 'linked' && phase === 'values'
 
   useLayoutEffect(() => {
     const button = focusAfterMove.current
@@ -102,7 +103,7 @@ export function ChartVideoTimingEditor<Phase extends string>({
 
   function durationInput(field: DurationField<Phase>, value: string) {
     const currentError = inputError?.field === field
-    const fixed = Boolean(draft.animatedPhase && field !== 'finish' && field !== 'hold' && field !== draft.animatedPhase)
+    const fixed = followsBars(field) || Boolean(draft.animatedPhase && field !== 'finish' && field !== 'hold' && field !== draft.animatedPhase)
     return <input type="number" min={0} step="any" inputMode="decimal" disabled={disabled || fixed}
       value={editing?.field === field ? editing.value : value}
       aria-invalid={currentError || undefined} aria-describedby={currentError ? errorId : undefined}
@@ -148,7 +149,8 @@ export function ChartVideoTimingEditor<Phase extends string>({
         setEditing(null)
         onInputError(null)
         setStatus('既定値に戻しました')
-        onChange(createChartVideoTimingDraft(definition))
+        onChange({ ...createChartVideoTimingDraft(definition),
+          ...(draft.valueMode !== undefined ? { valueMode: 'linked' } : {}) })
       }}>既定値に戻す</button>
     </div>
     <ol className="enemy-rating-video-order" role="list" aria-labelledby={headingId}>
@@ -159,12 +161,12 @@ export function ChartVideoTimingEditor<Phase extends string>({
           <span aria-hidden="true">{index + 1}</span>
           <span>{phaseLabels[phase]}</span>
           <span className="enemy-rating-video-phase-seconds">
-            {duration === undefined ? '—' : `${Number(duration.toFixed(2))}秒${exact ? '指定' : ''}`}
+            {followsBars(phase) ? '棒に連動' : duration === undefined ? '—' : `${Number(duration.toFixed(2))}秒${exact ? '指定' : ''}`}
           </span>
           <div className="enemy-rating-video-phase-tempo" role="group" aria-label={phaseLabels[phase] + 'のテンポ'}>
             <span aria-hidden="true">短い</span>
             {ENEMY_RATING_VIDEO_PHASE_TEMPOS.map((tempo, tempoIndex) =>
-              <button key={tempo} type="button" className="button secondary" disabled={disabled || Boolean(draft.animatedPhase)}
+              <button key={tempo} type="button" className="button secondary" disabled={disabled || Boolean(draft.animatedPhase) || followsBars(phase)}
                 aria-label={`${tempo}（${phaseTempoNumberLabels[tempoIndex]}）`}
                 aria-pressed={!exact && (draft.phaseTempos?.[phase] ?? 3) === tempo}
                 onClick={() => selectPhaseTempo(phase, tempo)}>
@@ -174,9 +176,9 @@ export function ChartVideoTimingEditor<Phase extends string>({
           </div>
           <div className="enemy-rating-video-order-actions">
             <button type="button" className="button secondary" aria-label={phaseLabels[phase] + 'を上へ'}
-              disabled={disabled || Boolean(draft.animatedPhase) || index === 0} onClick={event => movePhase(index, -1, event.currentTarget)}>↑</button>
+              disabled={disabled || Boolean(draft.animatedPhase) || followsBars(phase) || index === 0} onClick={event => movePhase(index, -1, event.currentTarget)}>↑</button>
             <button type="button" className="button secondary" aria-label={phaseLabels[phase] + 'を下へ'}
-              disabled={disabled || Boolean(draft.animatedPhase) || index === draft.order.length - 1} onClick={event => movePhase(index, 1, event.currentTarget)}>↓</button>
+              disabled={disabled || Boolean(draft.animatedPhase) || followsBars(phase) || index === draft.order.length - 1} onClick={event => movePhase(index, 1, event.currentTarget)}>↓</button>
           </div>
         </li>
       })}
@@ -249,7 +251,7 @@ export function ChartVideoTimingEditor<Phase extends string>({
       <div className="enemy-rating-video-timing-fields">
         {draft.order.map(field => {
           const duration = parsed.timing?.[field].duration ?? getChartVideoDefaultDuration(field, draft.tempo, definition)
-          const value = draft.overrides[field] ?? formatSeconds(duration)
+          const value = followsBars(field) ? '0' : draft.overrides[field] ?? formatSeconds(duration)
           return <label key={field}>
             <span>{phaseLabels[field]}（秒）</span>
             {durationInput(field, value)}

@@ -150,7 +150,7 @@ test('防御力・術耐性の画像保存は選択ランクを初期状態で�
   assert.match(highlightCheckbox(markup), /<input\b(?=[^>]*\btype="checkbox")(?=[^>]*\bchecked="")[^>]*>/)
   assert.equal(markup.match(/class="enemy-rating-comparison-highlight"/g)?.length, 2)
   assert.match(markup, /value="[^"]*_評価B\+-A強調_[^"]*_比率自動\.png"/)
-  assert.doesNotMatch(markup, /棒の出し方|縦線の出し方|全体を生成|棒だけ伸ばす/)
+  assert.doesNotMatch(markup, /棒の出し方|縦線の出し方|全体を生成|棒だけ伸ばす|割合の動き|棒に連動|割合連動/)
   const aspectOptions = getAspectOptions(markup, '画像')
   assert.deepEqual(aspectOptions.map(({ value }) => value), ['auto', '16:9', '2:1', '21:9', '3:1', 'custom'])
   assert.deepEqual(aspectOptions.filter(({ selected }) => selected), [{ value: 'auto', selected: true, label: '指定なし' }])
@@ -193,7 +193,18 @@ test('左右の横棒は外側の数値を階級の割合に切り替え、保�
   }), 16 / 9)
   assert.match(barsOnlyFilename, /棒だけ伸ばす/)
   assert.match(barsOnlyFilename, /_5秒_比率16x9\.png$/)
-  assert.doesNotMatch(filename, /棒だけ伸ばす/)
+  const linkedFilename = withChartImageAspect(getRatingFilename({
+    ...snapshot, outputWidth: 1920, videoDuration: 10, videoValues: 'linked',
+  }), 16 / 7)
+  assert.match(linkedFilename, /_左右の横棒_割合連動_10秒_比率16x7\.png$/)
+  const linkedBarsOnlyFilename = getRatingFilename({
+    ...snapshot, videoDuration: 5, videoAnimation: 'barsOnly', videoValues: 'linked',
+  })
+  assert.match(linkedBarsOnlyFilename, /_左右の横棒_棒だけ伸ばす_割合連動_5秒\.png$/)
+  const fixedVideoFilename = getRatingFilename({ ...snapshot, videoDuration: 10 })
+  assert.match(fixedVideoFilename, /_左右の横棒_10秒\.png$/)
+  assert.doesNotMatch(fixedVideoFilename, /割合連動/)
+  assert.doesNotMatch(filename, /棒だけ伸ばす|割合連動/)
   for (const layout of ['GROUPED', 'CUMULATIVE']) {
     assert.equal(getRatingFilename({ ...snapshot, layout, sideValue: 'rank' }), getRatingFilename({ ...snapshot, layout }))
   }
@@ -228,6 +239,11 @@ test('左右の横棒の動画は集計条件と強調を引き継ぎ、縦横�
       assert.deepEqual([...animationSelector.matchAll(/<button\b[^>]*aria-pressed="(true|false)"[^>]*>([^<]+)<\/button>/g)]
         .map(([, selected, label]) => [selected, label]),
         [['true', '全体を生成'], ['false', '棒だけ伸ばす']])
+      const valuesSelector = markup.match(/<div\b[^>]*role="group" aria-label="割合の動き"[^>]*>(.*?)<\/div>/)?.[1]
+      assert.ok(valuesSelector, '割合を棒に連動させるか選べる')
+      assert.deepEqual([...valuesSelector.matchAll(/<button\b[^>]*aria-pressed="(true|false)"[^>]*>([^<]+)<\/button>/g)]
+        .map(([, selected, label]) => [selected, label]),
+        [['true', '棒に連動'], ['false', '固定']])
       assert.match(markup, new RegExp(`>${format}<`))
       const aspectOptions = getAspectOptions(markup, '動画')
       assert.deepEqual(aspectOptions.map(({ value }) => value).sort(), ['auto', '16:7', '16:9', '2:1', '21:9', '3:1', 'custom'].sort())
@@ -238,7 +254,7 @@ test('左右の横棒の動画は集計条件と強調を引き継ぎ、縦横�
       assert.match(previewText, /1,920 × 840 px/)
       assert.match(previewText, /5\.00 \/ 5\.00 秒/)
       assert.match(markup, /type="range"[^>]*aria-label="再生位置"/)
-      assert.match(markup, /敵_防御力・術耐性の評価別分布_出現回数_評価D強調_階級割合_幅1920px_メインストーリー・全敵_左右の横棒_5秒_比率16x7\.(mp4|webm)/)
+      assert.match(markup, /敵_防御力・術耐性の評価別分布_出現回数_評価D強調_階級割合_幅1920px_メインストーリー・全敵_左右の横棒_割合連動_5秒_比率16x7\.(mp4|webm)/)
       assert.match(markup, new RegExp(`_5秒_比率16x7\\.${extension}"`))
       assert.match(markup, /階級割合（%）/)
       const orderHeading = markup.match(/<h[2-6][^>]*id="([^"]+)"[^>]*>表示順・テンポ<\/h[2-6]>/)
@@ -250,13 +266,24 @@ test('左右の横棒の動画は集計条件と強調を引き継ぎ、縦横�
       assert.doesNotMatch(markup, /aria-label="テンポの表記"/)
       const phaseControls = [...orderList[2].matchAll(/aria-label="([^"]+)のテンポ">(.*?)<\/div>/g)]
       assert.deepEqual(phaseControls.map(([, label]) => label), ['タイトル・条件', '軸・目盛り', '階級名', '左右の棒', '階級割合'])
-      for (const [, , controls] of phaseControls) {
+      for (const [, label, controls] of phaseControls) {
         assert.match(controls, /^<span aria-hidden="true">短い<\/span>.*<span aria-hidden="true">長い<\/span>$/)
-        assert.deepEqual([...controls.matchAll(/aria-label="([^"]+)" aria-pressed="(true|false)">(\d)<\/button>/g)]
-          .map(([, label, pressed, number]) => [number, label, pressed]),
+        const tempoButtons = [...controls.matchAll(/<button\b([^>]*)>(\d)<\/button>/g)]
+        assert.deepEqual(tempoButtons.map(([, attributes, number]) =>
+          [number, attr(attributes, 'aria-label'), attr(attributes, 'aria-pressed')]),
           [['1', '1（最短）', 'false'], ['2', '2（短め）', 'false'], ['3', '3（標準）', 'true'],
             ['4', '4（長め）', 'false'], ['5', '5（最長）', 'false']])
+        assert.ok(tempoButtons.every(([, attributes]) => /\bdisabled=""/.test(attributes) === (label === '階級割合')),
+          `${label}のテンポは棒に連動する項目だけ固定される`)
       }
+      const valuesOrderRow = [...orderList[2].matchAll(/<li\b[^>]*>(.*?)<\/li>/g)]
+        .find(([, row]) => row.includes('階級割合'))?.[1]
+      assert.ok(valuesOrderRow)
+      assert.match(valuesOrderRow, /enemy-rating-video-phase-seconds">棒に連動<\/span>/)
+      assert.ok([...valuesOrderRow.matchAll(/<button\b([^>]*)>/g)].every(([, attributes]) => /\bdisabled=""/.test(attributes)))
+      const valuesDuration = markup.match(/<label\b[^>]*>.*?<\/label>/g)?.find(label => label.includes('階級割合（秒）'))
+      assert.ok(valuesDuration)
+      assert.match(valuesDuration, /<input\b(?=[^>]*\bdisabled="")(?=[^>]*\bvalue="0")[^>]*>/)
       const tempoSlider = markup.match(/<input\b[^>]*aria-label="テンポ"[^>]*>/)?.[0]
       assert.ok(tempoSlider)
       assert.deepEqual(['type', 'min', 'max', 'step', 'value', 'aria-valuetext'].map(name => attr(tempoSlider, name)),
@@ -360,7 +387,7 @@ test('術耐性別の散布図動画は集計条件と点を引き継ぎ、16:9�
       } })
       const markup = renderToStaticMarkup(createElement(ScatterVideoDialog, { snapshot, onClose() {} }))
       assert.match(markup, /動画を保存/)
-      assert.doesNotMatch(markup, /全体を生成|棒だけ伸ばす/)
+      assert.doesNotMatch(markup, /全体を生成|棒だけ伸ばす|割合の動き|棒に連動|割合連動/)
       assert.match(markup, new RegExp(`>${format}<`))
       const aspect = getAspectOptions(markup, '動画')
       assert.deepEqual(aspect.filter(({ selected }) => selected), [{ value: '16:9', selected: true, label: '16:9' }])
